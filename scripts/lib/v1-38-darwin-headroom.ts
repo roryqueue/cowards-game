@@ -167,3 +167,24 @@ export const observeDarwinHeadroom = async (
     owned = undefined
   }
 }
+
+/**
+ * Owned live-command boundary. Unlike the fixture-friendly provider above,
+ * this function takes ownership of the exact mutable buffers returned by the
+ * process adapter and overwrites them before the promise settles.
+ */
+export const observeDarwinHeadroomOwned = async (
+  execute: V138DarwinHeadroomExecutor,
+): Promise<V138DarwinHeadroomResult> => {
+  let owned: MemoryPressureQCommandResult | undefined
+  try {
+    owned = await execute(MEMORY_PRESSURE_Q_REQUEST)
+    return parseMemoryPressureQ(owned)
+  } catch {
+    return unavailable
+  } finally {
+    owned?.stdout.fill(0)
+    owned?.stderr.fill(0)
+    owned = undefined
+  }
+}

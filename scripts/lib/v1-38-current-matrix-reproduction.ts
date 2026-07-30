@@ -37,6 +37,9 @@ import {
   V138_DARWIN_HEADROOM_PARSER_ID,
   V138_DARWIN_HEADROOM_PROVIDER_ID,
   V138_DARWIN_HEADROOM_THRESHOLD_BASIS_POINTS,
+  MEMORY_PRESSURE_Q_REQUEST,
+  observeDarwinHeadroomOwned,
+  type MemoryPressureQCommandResult,
   type V138DarwinHeadroomResult,
 } from "./v1-38-darwin-headroom.js"
 import {
@@ -1424,7 +1427,7 @@ export const calibrateV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   repoRoot?: string | undefined
-  executionIdentityVersion?: "v1" | "v2" | "v3" | "v4" | undefined
+  executionIdentityVersion?: "v1" | "v2" | "v3" | "v4" | "v5" | undefined
 }): Promise<Readonly<V138ParallelCalibrationReceipt>> => {
   const policy = V138ParallelCalibrationPolicySchema.parse(
     input.policy ?? deriveV138ParallelCalibrationPolicy(input.inventory),
@@ -1484,6 +1487,11 @@ export const calibrateV138ParallelMatrix = async (input: {
                     /^calibration:v1:/u,
                     "calibration:v4:",
                   )
+                : input.executionIdentityVersion === "v5"
+                  ? record.calibrationAttemptId.replace(
+                      /^calibration:v1:/u,
+                      "calibration:v5:",
+                    )
               : record.calibrationAttemptId,
         templateAttemptId: record.templateAttemptId,
         request: template.request,
@@ -6507,7 +6515,7 @@ const assertLegacyStoppedPredecessor = (
 const validateParallelCalibrationReceipt = (
   inventory: Readonly<V138CurrentMatrixInventory>,
   receipt: Readonly<V138ParallelCalibrationReceipt>,
-  executionIdentityVersion: "v1" | "v2" | "v3" | "v4" = "v1",
+  executionIdentityVersion: "v1" | "v2" | "v3" | "v4" | "v5" = "v1",
 ): void => {
   const policy = deriveV138ParallelCalibrationPolicy(inventory)
   const projection = projectV138ParallelMatrix(policy, receipt.rawObservation)
@@ -6520,6 +6528,8 @@ const validateParallelCalibrationReceipt = (
           ? attemptId.replace(/^calibration:v1:/u, "calibration:v3:")
           : executionIdentityVersion === "v4"
             ? attemptId.replace(/^calibration:v1:/u, "calibration:v4:")
+          : executionIdentityVersion === "v5"
+            ? attemptId.replace(/^calibration:v1:/u, "calibration:v5:")
           : attemptId,
     )
   const actualAttemptIds = receipt.terminals.flatMap(({ outcomes }) =>
@@ -6944,6 +6954,13 @@ const exactRecord = (
 
 export interface V138ExecutionContextV5Receipt {
   readonly schemaVersion: "v1.38-current-matrix-execution-context-v5"
+  readonly mode: "gsd-pattern-c-inline-main"
+  readonly cwd: "/Users/roryquinlan/runtime/cowards-game"
+  readonly terminalAgentRegistry: Readonly<{
+    schemaVersion: "v1.38-plan-262-16-terminal-agent-registry-v1"
+    activeExecutorCount: 0
+    agents: readonly Readonly<{ id: string; status: "completed" | "failed" }>[]
+  }>
   readonly sourceA: string
   readonly authorizationRoot: Sha256
   readonly sealRoot: Sha256
@@ -6963,6 +6980,9 @@ export const buildV138ExecutionContextV5Receipt = (input: {
   readonly repoRoot: string
   readonly authorization: V138Plan26215Authorization
   readonly seal: V138SuccessorSourceSeal
+  readonly mode: "gsd-pattern-c-inline-main"
+  readonly cwd: "/Users/roryquinlan/runtime/cowards-game"
+  readonly terminalAgentRegistry: V138ExecutionContextV5Receipt["terminalAgentRegistry"]
 }): Readonly<V138ExecutionContextV5Receipt> => {
   const authorization = checkV138Plan26215Authorization(
     input.repoRoot,
@@ -6973,8 +6993,34 @@ export const buildV138ExecutionContextV5Receipt = (input: {
     input.seal,
     authorization,
   )
+  const registry = exactRecord(
+    input.terminalAgentRegistry,
+    ["schemaVersion", "activeExecutorCount", "agents"],
+    "MATRIX_EXECUTION_CONTEXT_V5_REGISTRY_INVALID",
+  )
+  if (
+    registry.schemaVersion !==
+      "v1.38-plan-262-16-terminal-agent-registry-v1" ||
+    registry.activeExecutorCount !== 0 ||
+    !Array.isArray(registry.agents) ||
+    registry.agents.some((agent) => {
+      const row = exactRecord(
+        agent,
+        ["id", "status"],
+        "MATRIX_EXECUTION_CONTEXT_V5_REGISTRY_INVALID",
+      )
+      return (
+        typeof row.id !== "string" ||
+        row.id.length === 0 ||
+        (row.status !== "completed" && row.status !== "failed")
+      )
+    })
+  ) throw new TypeError("MATRIX_EXECUTION_CONTEXT_V5_REGISTRY_INVALID")
   const body = {
     schemaVersion: "v1.38-current-matrix-execution-context-v5" as const,
+    mode: input.mode,
+    cwd: input.cwd,
+    terminalAgentRegistry: input.terminalAgentRegistry,
     sourceA: authorization.sourceA,
     authorizationRoot: authorization.authorizationRoot,
     sealRoot: seal.sealRoot,
@@ -7016,7 +7062,8 @@ export const checkV138ExecutionContextV5Receipt = (
   const record = exactRecord(
     value,
     [
-      "schemaVersion", "sourceA", "authorizationRoot", "sealRoot",
+      "schemaVersion", "mode", "cwd", "terminalAgentRegistry",
+      "sourceA", "authorizationRoot", "sealRoot",
       "selectedRouteClosureRoot", "frozenPolicyRoot", "toolIdentityRoot",
       "hostIdentityRoot", "patternCOwnership", "formationAbsenceBound",
       "runtimeRoute", "acceptedCellCount", "noRetry", "receiptRoot",
@@ -7024,8 +7071,31 @@ export const checkV138ExecutionContextV5Receipt = (
     "MATRIX_EXECUTION_CONTEXT_V5_INVALID",
   ) as unknown as V138ExecutionContextV5Receipt
   const { receiptRoot, ...body } = record
+  const registry = exactRecord(
+    record.terminalAgentRegistry,
+    ["schemaVersion", "activeExecutorCount", "agents"],
+    "MATRIX_EXECUTION_CONTEXT_V5_INVALID",
+  )
   if (
     record.schemaVersion !== "v1.38-current-matrix-execution-context-v5" ||
+    record.mode !== "gsd-pattern-c-inline-main" ||
+    record.cwd !== "/Users/roryquinlan/runtime/cowards-game" ||
+    registry.schemaVersion !==
+      "v1.38-plan-262-16-terminal-agent-registry-v1" ||
+    registry.activeExecutorCount !== 0 ||
+    !Array.isArray(registry.agents) ||
+    registry.agents.some((agent) => {
+      const row = exactRecord(
+        agent,
+        ["id", "status"],
+        "MATRIX_EXECUTION_CONTEXT_V5_INVALID",
+      )
+      return (
+        typeof row.id !== "string" ||
+        row.id.length === 0 ||
+        (row.status !== "completed" && row.status !== "failed")
+      )
+    }) ||
     !/^[0-9a-f]{40}$/u.test(record.sourceA) ||
     record.patternCOwnership !== "main_orchestrator_only" ||
     record.formationAbsenceBound !== true ||
@@ -7141,6 +7211,7 @@ export const buildV138ParallelCalibrationV5PreflightTerminal = (
     shardCount: 4 as const,
     samplerMode: "one_shared_observation_per_tick" as const,
     sharedObservationTicks: Object.freeze([]),
+    supervisedCalibration: null,
     childLaunchCount: 0 as const,
     acceptedCellCount: 0 as const,
     noRetry: true as const,
@@ -7165,16 +7236,60 @@ export const checkV138HostHeadroomPreflightV5Receipt = (
     "MATRIX_PREFLIGHT_V5_INVALID",
   ) as unknown as V138HostHeadroomPreflightV5Receipt
   const { receiptRoot, ...body } = record
+  const observation =
+    record.observation === null
+      ? null
+      : exactRecord(
+          record.observation,
+          [
+            "stdoutByteLength",
+            "stdoutSha256",
+            "totalBytes",
+            "pageCount",
+            "pageSizeBytes",
+            "percentage",
+            "observedBasisPoints",
+          ],
+          "MATRIX_PREFLIGHT_V5_INVALID",
+        )
+  const available =
+    observation !== null &&
+    Number.isSafeInteger(observation.stdoutByteLength) &&
+    Number(observation.stdoutByteLength) > 0 &&
+    Number(observation.stdoutByteLength) <= 4_096 &&
+    typeof observation.stdoutSha256 === "string" &&
+    /^sha256:[0-9a-f]{64}$/u.test(observation.stdoutSha256) &&
+    Number.isSafeInteger(observation.totalBytes) &&
+    Number(observation.totalBytes) > 0 &&
+    Number.isSafeInteger(observation.pageCount) &&
+    Number(observation.pageCount) > 0 &&
+    Number.isSafeInteger(observation.pageSizeBytes) &&
+    Number(observation.pageSizeBytes) > 0 &&
+    Number(observation.pageCount) ===
+      Math.floor(Number(observation.totalBytes) / Number(observation.pageSizeBytes)) &&
+    Number.isSafeInteger(observation.percentage) &&
+    Number(observation.percentage) >= 0 &&
+    Number(observation.percentage) <= 100 &&
+    observation.observedBasisPoints === Number(observation.percentage) * 100
+  const expectedDisposition = available
+    ? Number(observation!.observedBasisPoints) >= 2_500
+      ? "preflight_admitted"
+      : "preflight_refused"
+    : "preflight_unavailable"
   if (
     record.schemaVersion !== "v1.38-current-matrix-headroom-preflight-v5" ||
     record.metricId !== V138_DARWIN_HEADROOM_METRIC_ID ||
     record.providerId !== V138_DARWIN_HEADROOM_PROVIDER_ID ||
     record.parserId !== V138_DARWIN_HEADROOM_PARSER_ID ||
     record.requiredHostHeadroomBasisPoints !== 2_500 ||
+    record.chargedIdentityId !== "preflight:v5:0" ||
     record.acceptedCellCount !== 0 ||
     record.noRetry !== true ||
-    (record.disposition === "preflight_unavailable") !==
-      (record.status === "preflight_unavailable") ||
+    record.disposition !== expectedDisposition ||
+    record.status !==
+      (expectedDisposition === "preflight_unavailable"
+        ? "preflight_unavailable"
+        : "preflight_complete") ||
     receiptRoot !==
       v138SuccessorRoot("canonicalJsonProfile", record.schemaVersion, body)
   ) throw new TypeError("MATRIX_PREFLIGHT_V5_INVALID")
@@ -7183,35 +7298,133 @@ export const checkV138HostHeadroomPreflightV5Receipt = (
 
 export const checkV138ParallelCalibrationV5Receipt = (
   value: unknown,
+  repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."),
 ): Readonly<Record<string, unknown>> => {
   const record = exactRecord(
     value,
     [
       "schemaVersion", "executionContextRoot", "preflightRoot", "status",
       "chargedAttemptCount", "chargedAttempts", "shardCount", "samplerMode",
-      "sharedObservationTicks", "childLaunchCount", "acceptedCellCount",
+      "sharedObservationTicks", "supervisedCalibration", "childLaunchCount", "acceptedCellCount",
       "noRetry", "receiptRoot",
     ],
     "MATRIX_CALIBRATION_V5_INVALID",
   )
   const { receiptRoot, ...body } = record
   const attempts = record.chargedAttempts
+  const expectedIds = Array.from(
+    { length: 8 },
+    (_, index) => `calibration:v5:${index}`,
+  )
+  const parsedAttempts = Array.isArray(attempts)
+    ? attempts.map((attempt) =>
+        exactRecord(
+          attempt,
+          ["attemptId", "shardId", "outcome", "childLaunched", "accepted"],
+          "MATRIX_CALIBRATION_V5_INVALID",
+        ),
+      )
+    : []
+  const allowedOutcomes = new Set([
+    "accepted",
+    "player_violation",
+    "system_failure",
+    "unfilled",
+    "unfilled_resource_preflight_refusal",
+    "unfilled_resource_measurement_unavailable",
+  ])
+  const ticks = Array.isArray(record.sharedObservationTicks)
+    ? record.sharedObservationTicks.map((tick) =>
+        exactRecord(
+          tick,
+          ["tickId", "observationRoot", "shardIds"],
+          "MATRIX_CALIBRATION_V5_INVALID",
+        ),
+      )
+    : []
+  const launchedCount = parsedAttempts.filter(
+    (attempt) => attempt.childLaunched === true,
+  ).length
+  const admitted = record.status === "admitted"
+  const supervised = record.supervisedCalibration as
+    | V138ParallelCalibrationReceipt
+    | null
+  const supervisedOutcomes = supervised?.terminals
+    .flatMap((terminal) => terminal.outcomes)
+    .sort((left, right) => left.attemptId.localeCompare(right.attemptId))
   if (
     record.schemaVersion !== "v1.38-current-matrix-calibration-v5" ||
     record.chargedAttemptCount !== 8 ||
     record.shardCount !== 4 ||
     record.samplerMode !== "one_shared_observation_per_tick" ||
-    !Array.isArray(attempts) ||
-    attempts.length !== 8 ||
-    new Set(
-      attempts.map((attempt) =>
-        exactRecord(
-          attempt,
-          ["attemptId", "shardId", "outcome", "childLaunched", "accepted"],
-          "MATRIX_CALIBRATION_V5_INVALID",
-        ).attemptId,
-      ),
-    ).size !== 8 ||
+    !["admitted", "stopped_process_failure"].includes(String(record.status)) ||
+    parsedAttempts.length !== 8 ||
+    canonical(parsedAttempts.map((attempt) => attempt.attemptId)) !==
+      canonical(expectedIds) ||
+    parsedAttempts.some(
+      (attempt, index) =>
+        attempt.shardId !== `calibration-shard:${index % 4}` ||
+        typeof attempt.childLaunched !== "boolean" ||
+        typeof attempt.accepted !== "boolean" ||
+        !allowedOutcomes.has(String(attempt.outcome)) ||
+        (attempt.accepted === true &&
+          (attempt.outcome !== "accepted" || attempt.childLaunched !== true)),
+    ) ||
+    record.childLaunchCount !== launchedCount ||
+    (admitted
+      ? record.acceptedCellCount !== 8 ||
+        launchedCount !== 8 ||
+        parsedAttempts.some(
+          (attempt) =>
+            attempt.outcome !== "accepted" || attempt.accepted !== true,
+        ) ||
+        ticks.length === 0
+      : record.acceptedCellCount !== 0 ||
+        parsedAttempts.some((attempt) => attempt.accepted === true)) ||
+    ticks.some(
+      (tick) =>
+        typeof tick.tickId !== "string" ||
+        !/^sha256:[0-9a-f]{64}$/u.test(String(tick.observationRoot)) ||
+        !Array.isArray(tick.shardIds) ||
+        tick.shardIds.length === 0 ||
+        new Set(tick.shardIds).size !== tick.shardIds.length ||
+        tick.shardIds.some(
+          (id) =>
+            typeof id !== "string" ||
+            !/^calibration-shard:[0-3]$/u.test(id),
+        ),
+    ) ||
+    (admitted &&
+      new Set(ticks.flatMap((tick) => tick.shardIds as string[])).size !== 4) ||
+    (admitted
+      ? record.supervisedCalibration === null ||
+        (() => {
+          try {
+            validateParallelCalibrationReceipt(
+              enumerateV138CurrentMatrix(repoRoot),
+              record.supervisedCalibration as V138ParallelCalibrationReceipt,
+              "v5",
+            )
+            return false
+          } catch {
+            return true
+          }
+        })() ||
+        canonical(
+          parsedAttempts.map((attempt) => ({
+            attemptId: attempt.attemptId,
+            outcome: attempt.outcome,
+          })),
+        ) !==
+          canonical(
+            supervisedOutcomes?.map((outcome) => ({
+              attemptId: outcome.attemptId,
+              outcome: outcome.classification === "success"
+                ? "accepted"
+                : outcome.classification,
+            })) ?? [],
+          )
+      : record.supervisedCalibration !== null) ||
     record.noRetry !== true ||
     receiptRoot !== v138SuccessorRoot("budgetProfile", String(record.schemaVersion), body)
   ) throw new TypeError("MATRIX_CALIBRATION_V5_INVALID")
@@ -7223,7 +7436,11 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
   readonly attempts: readonly Readonly<{
     attemptId: string
     shardId: string
-    outcome: "accepted" | "player_violation" | "system_failure" | "unfilled"
+    outcome:
+      | "accepted"
+      | "player_violation"
+      | "system_failure"
+      | "unfilled"
     childLaunched: boolean
     accepted: boolean
   }>[]
@@ -7232,6 +7449,7 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
     observationRoot: Sha256
     shardIds: readonly string[]
   }>[]
+  readonly supervisedCalibration?: Readonly<V138ParallelCalibrationReceipt>
 }): Readonly<Record<string, unknown>> => {
   const preflight = checkV138HostHeadroomPreflightV5Receipt(input.preflight)
   if (preflight.disposition !== "preflight_admitted") {
@@ -7239,8 +7457,11 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
   }
   if (
     input.attempts.length !== 8 ||
-    new Set(input.attempts.map((attempt) => attempt.attemptId)).size !== 8 ||
-    new Set(input.attempts.map((attempt) => attempt.shardId)).size !== 4
+    input.attempts.some(
+      (attempt, index) =>
+        attempt.attemptId !== `calibration:v5:${index}` ||
+        attempt.shardId !== `calibration-shard:${index % 4}`,
+    )
   ) throw new TypeError("MATRIX_CALIBRATION_V5_ATTEMPT_INVENTORY_INVALID")
   const accepted = input.attempts.filter((attempt) => attempt.accepted).length
   const admitted =
@@ -7256,14 +7477,18 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
     shardCount: 4 as const,
     samplerMode: "one_shared_observation_per_tick" as const,
     sharedObservationTicks: Object.freeze([...input.sharedObservationTicks]),
+    supervisedCalibration: admitted
+      ? input.supervisedCalibration ?? null
+      : null,
     childLaunchCount: input.attempts.filter((attempt) => attempt.childLaunched).length,
     acceptedCellCount: admitted ? 8 as const : 0 as const,
     noRetry: true as const,
   }
-  return deepFreeze({
+  const receipt = deepFreeze({
     ...body,
     receiptRoot: v138SuccessorRoot("budgetProfile", body.schemaVersion, body),
   })
+  return checkV138ParallelCalibrationV5Receipt(receipt)
 }
 
 export interface V138AuthoritativeMatrixV6Receipt {
@@ -7285,20 +7510,70 @@ export const buildV138AuthoritativeMatrixV6Receipt = (input: {
   readonly repoRoot: string
   readonly executionContext: V138ExecutionContextV5Receipt
   readonly calibration: Record<string, unknown>
-  readonly v5Receipt: V138AuthoritativeMatrixV5Receipt
+  readonly execution: V138ParallelMatrixExecutionResult
 }): Readonly<V138AuthoritativeMatrixV6Receipt> => {
   const context = checkV138ExecutionContextV5Receipt(input.executionContext)
-  const calibration = checkV138ParallelCalibrationV5Receipt(input.calibration)
+  const calibration = checkV138ParallelCalibrationV5Receipt(
+    input.calibration,
+    input.repoRoot,
+  )
   if (
     calibration.status !== "admitted" ||
     calibration.acceptedCellCount !== 8 ||
     calibration.executionContextRoot !== context.receiptRoot
   ) throw new TypeError("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
-  const v5 = checkV138AuthoritativeMatrixV5Receipt(
-    input.repoRoot,
-    input.v5Receipt,
+  const inventory = enumerateV138CurrentMatrix(input.repoRoot)
+  const expectedIds = inventory.attempts.map(
+    ({ attemptId }) => `reproduction:v5:${attemptId}`,
   )
-  const passed = v5.status === "passed_exact" && v5.acceptedCellCount === 540
+  const actualIds = input.execution.terminals.flatMap(({ outcomes }) =>
+    outcomes.map(({ attemptId }) => attemptId),
+  )
+  const canonicalTerminals = input.execution.terminals.map((terminal) => ({
+    ...terminal,
+    outcomes: terminal.outcomes.map((outcome) => ({
+      ...outcome,
+      attemptId: outcome.attemptId.replace(/^reproduction:v5:/u, ""),
+    })),
+  }))
+  const plan = planV138MatrixShards(inventory)
+  const recomputedAccounting = reduceV138ParallelMatrixAccounting({
+    inventory,
+    plan,
+    terminals: canonicalTerminals,
+    unlaunchedShardIds: plan.shards
+      .filter(
+        ({ shardId }) =>
+          !input.execution.terminals.some(
+            (terminal) => terminal.shardId === shardId,
+          ),
+      )
+      .map(({ shardId }) => shardId),
+  })
+  if (
+    canonical(input.execution.accounting) !== canonical(recomputedAccounting) ||
+    actualIds.some((id) => !id.startsWith("reproduction:v5:")) ||
+    new Set(actualIds).size !== actualIds.length ||
+    (input.execution.status === "complete_pending_publication" &&
+      canonical(actualIds) !== canonical(expectedIds))
+  ) throw new TypeError("MATRIX_REPRODUCTION_V6_EXECUTION_INVALID")
+  const canonicalOutcomes = input.execution.canonicalOutcomes.map((outcome) => ({
+    ...outcome,
+    attemptId: outcome.attemptId.replace(/^reproduction:v5:/u, ""),
+  })) as V138CurrentMatrixAttemptOutcome[]
+  const canonicalReceipt =
+    input.execution.status === "complete_pending_publication"
+      ? reduceV138CurrentMatrix(inventory, canonicalOutcomes)
+      : null
+  const passed = canonicalReceipt !== null
+  const attemptLedgerRoot = sha256(
+    canonical({
+      calibrationRoot: calibration.receiptRoot,
+      execution: input.execution,
+      canonicalChargedAttemptLedgerRoot:
+        canonicalReceipt?.chargedAttemptLedgerRoot ?? sha256(canonical([])),
+    }),
+  )
   const body = {
     schemaVersion: "v1.38-current-matrix-reproduction-v6" as const,
     executionContextRoot: context.receiptRoot,
@@ -7308,8 +7583,8 @@ export const buildV138AuthoritativeMatrixV6Receipt = (input: {
       : "stopped_process_failure" as const,
     chargedAttemptCount: 540 as const,
     acceptedCellCount: passed ? 540 as const : 0 as const,
-    attemptLedgerRoot: v5.chargedAttemptLedgerRoot,
-    acceptedCellRoot: passed ? v5.acceptedCellLedgerRoot : null,
+    attemptLedgerRoot,
+    acceptedCellRoot: canonicalReceipt?.acceptedCellLedgerRoot ?? null,
     runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
     partialAcceptedEvidenceReusable: false as const,
     noRetry: true as const,
@@ -7337,6 +7612,12 @@ export const checkV138AuthoritativeMatrixV6Receipt = (
   const passed = record.status === "passed_exact"
   if (
     record.schemaVersion !== "v1.38-current-matrix-reproduction-v6" ||
+    !["passed_exact", "stopped_process_failure"].includes(record.status) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(record.executionContextRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(record.calibrationRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(record.attemptLedgerRoot) ||
+    (record.acceptedCellRoot !== null &&
+      !/^sha256:[0-9a-f]{64}$/u.test(record.acceptedCellRoot)) ||
     record.chargedAttemptCount !== 540 ||
     record.acceptedCellCount !== (passed ? 540 : 0) ||
     (passed ? record.acceptedCellRoot === null : record.acceptedCellRoot !== null) ||
@@ -7346,6 +7627,240 @@ export const checkV138AuthoritativeMatrixV6Receipt = (
     receiptRoot !== v138SuccessorRoot("evidenceBundle", record.schemaVersion, body)
   ) throw new TypeError("MATRIX_REPRODUCTION_V6_INVALID")
   return record
+}
+
+const executeOwnedMemoryPressureQ = async (
+  request: typeof MEMORY_PRESSURE_Q_REQUEST,
+): Promise<MemoryPressureQCommandResult> =>
+  await new Promise((resolve) => {
+    let timedOut = false
+    const child = execFile(
+      request.executable,
+      [...request.args],
+      {
+        encoding: "buffer",
+        env: { ...request.env },
+        timeout: request.timeoutMilliseconds,
+        maxBuffer: request.maximumOutputBytes,
+        shell: request.shell,
+        windowsHide: true,
+      },
+      (error, stdout, stderr) => {
+        const processError = error as
+          | (NodeJS.ErrnoException & { killed?: boolean; signal?: NodeJS.Signals })
+          | null
+        timedOut =
+          timedOut ||
+          processError?.killed === true ||
+          processError?.code === "ETIMEDOUT"
+        resolve({
+          stdout: Buffer.isBuffer(stdout) ? stdout : Buffer.from(stdout),
+          stderr: Buffer.isBuffer(stderr) ? stderr : Buffer.from(stderr),
+          exitCode: processError === null
+            ? 0
+            : typeof child.exitCode === "number"
+              ? child.exitCode
+              : null,
+          signal: child.signalCode ?? processError?.signal ?? null,
+          timedOut,
+        })
+      },
+    )
+    child.once("error", (error) => {
+      if ((error as NodeJS.ErrnoException).code === "ETIMEDOUT") timedOut = true
+    })
+  })
+
+export const writeV138ExecutionContextV5Receipt = (
+  repoRoot: string,
+  targetPath: string,
+  mode: string,
+  cwd: string,
+  terminalAgentRegistry: unknown,
+  authorizationPath: string,
+  sealPath: string,
+): Readonly<V138ExecutionContextV5Receipt> => {
+  const target = plan26216Path(repoRoot, targetPath, "context")
+  const authorizationArtifact = plan26216Read(
+    plan26216Path(repoRoot, authorizationPath, "authorization"),
+    true,
+  )!
+  const authorization = checkV138Plan26215Authorization(
+    repoRoot,
+    authorizationArtifact.value,
+  )
+  const seal = checkV138SuccessorSourceSeal(
+    repoRoot,
+    plan26216Read(plan26216Path(repoRoot, sealPath, "seal"), true)!.value,
+    authorization,
+  )
+  const receipt = buildV138ExecutionContextV5Receipt({
+    repoRoot,
+    authorization,
+    seal,
+    mode: mode as V138ExecutionContextV5Receipt["mode"],
+    cwd: cwd as V138ExecutionContextV5Receipt["cwd"],
+    terminalAgentRegistry:
+      terminalAgentRegistry as V138ExecutionContextV5Receipt["terminalAgentRegistry"],
+  })
+  writeV138ImmutableReceipt(target, receipt)
+  return receipt
+}
+
+export const writeV138HostHeadroomPreflightV5Receipt = async (
+  repoRoot: string,
+  targetPath: string,
+  executionContextPath: string,
+  authorizationPath: string,
+  sealPath: string,
+): Promise<Readonly<V138HostHeadroomPreflightV5Receipt>> => {
+  const target = plan26216Path(repoRoot, targetPath, "preflight")
+  const authorization = checkV138Plan26215Authorization(
+    repoRoot,
+    plan26216Read(
+      plan26216Path(repoRoot, authorizationPath, "authorization"),
+      true,
+    )!.value,
+  )
+  const seal = checkV138SuccessorSourceSeal(
+    repoRoot,
+    plan26216Read(plan26216Path(repoRoot, sealPath, "seal"), true)!.value,
+    authorization,
+  )
+  const context = checkV138ExecutionContextV5Receipt(
+    plan26216Read(
+      plan26216Path(repoRoot, executionContextPath, "context"),
+      true,
+    )!.value,
+  )
+  if (
+    context.authorizationRoot !== authorization.authorizationRoot ||
+    context.sealRoot !== seal.sealRoot
+  ) throw new TypeError("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
+  const receipt = buildV138HostHeadroomPreflightV5Receipt({
+    result: await observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ),
+    executionContext: context,
+  })
+  writeV138ImmutableReceipt(target, receipt)
+  return receipt
+}
+
+export const writeV138ParallelCalibrationV5Receipt = async (
+  repoRoot: string,
+  targetPath: string,
+  preflightPath: string,
+  executionContextPath: string,
+): Promise<Readonly<Record<string, unknown>>> => {
+  const target = plan26216Path(repoRoot, targetPath, "calibration")
+  const context = checkV138ExecutionContextV5Receipt(
+    plan26216Read(
+      plan26216Path(repoRoot, executionContextPath, "context"),
+      true,
+    )!.value,
+  )
+  const preflight = checkV138HostHeadroomPreflightV5Receipt(
+    plan26216Read(
+      plan26216Path(repoRoot, preflightPath, "preflight"),
+      true,
+    )!.value,
+  )
+  if (preflight.executionContextRoot !== context.receiptRoot) {
+    throw new TypeError("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
+  }
+  let receipt: Readonly<Record<string, unknown>>
+  if (preflight.disposition !== "preflight_admitted") {
+    receipt = buildV138ParallelCalibrationV5PreflightTerminal(preflight)
+  } else {
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory: enumerateV138CurrentMatrix(repoRoot),
+      hardwareIdentity: {
+        operatingSystem: `${platform()} ${release()}`,
+        architecture: arch(),
+        nodeVersion: process.version,
+        cpuIdentity: cpus()[0]?.model ?? "unavailable",
+      },
+      repoRoot,
+      executionIdentityVersion: "v5",
+    })
+    const outcomes = calibration.terminals
+      .flatMap((terminal) => terminal.outcomes)
+      .sort((left, right) => left.attemptId.localeCompare(right.attemptId))
+    const attempts = Array.from({ length: 8 }, (_, index) => {
+      const outcome = outcomes.find(
+        (candidate) => candidate.attemptId === `calibration:v5:${index}`,
+      )
+      return {
+        attemptId: `calibration:v5:${index}`,
+        shardId: `calibration-shard:${index % 4}`,
+        outcome: outcome === undefined
+          ? "unfilled" as const
+          : outcome.classification === "success"
+            ? "accepted" as const
+            : outcome.classification,
+        childLaunched: outcome !== undefined,
+        accepted: outcome?.classification === "success",
+      }
+    })
+    receipt = buildV138ParallelCalibrationV5Receipt({
+      preflight,
+      attempts,
+      sharedObservationTicks: [{
+        tickId: "supervisor-summary:v5:0",
+        observationRoot: sha256(canonical(calibration.rawObservation)),
+        shardIds: [
+          "calibration-shard:0",
+          "calibration-shard:1",
+          "calibration-shard:2",
+          "calibration-shard:3",
+        ],
+      }],
+      supervisedCalibration: calibration,
+    })
+  }
+  writeV138ImmutableReceipt(target, receipt)
+  return receipt
+}
+
+export const writeV138AuthoritativeMatrixV6Receipt = async (
+  repoRoot: string,
+  targetPath: string,
+  calibrationPath: string,
+  executionContextPath: string,
+): Promise<Readonly<V138AuthoritativeMatrixV6Receipt>> => {
+  const target = plan26216Path(repoRoot, targetPath, "reproduction")
+  const context = checkV138ExecutionContextV5Receipt(
+    plan26216Read(
+      plan26216Path(repoRoot, executionContextPath, "context"),
+      true,
+    )!.value,
+  )
+  const calibration = checkV138ParallelCalibrationV5Receipt(
+    plan26216Read(
+      plan26216Path(repoRoot, calibrationPath, "calibration"),
+      true,
+    )!.value,
+    repoRoot,
+  )
+  if (
+    calibration.status !== "admitted" ||
+    calibration.executionContextRoot !== context.receiptRoot ||
+    calibration.supervisedCalibration === null
+  ) throw new TypeError("MATRIX_REPRODUCTION_V6_CALIBRATION_NOT_ADMITTED")
+  const execution = await executeV138ParallelMatrix({
+    inventory: enumerateV138CurrentMatrix(repoRoot),
+    calibration:
+      calibration.supervisedCalibration as V138ParallelCalibrationReceipt,
+    repoRoot,
+    executionIdentityVersion: "v5",
+  })
+  const receipt = buildV138AuthoritativeMatrixV6Receipt({
+    repoRoot,
+    executionContext: context,
+    calibration,
+    execution,
+  })
+  writeV138ImmutableReceipt(target, receipt)
+  return receipt
 }
 
 export type V138Plan26216TerminalDisposition =
@@ -7521,7 +8036,7 @@ export const checkV138Plan26216TerminalBranch = (
     : checkV138HostHeadroomPreflightV5Receipt(preflightArtifact.value)
   const calibration = calibrationArtifact === undefined
     ? undefined
-    : checkV138ParallelCalibrationV5Receipt(calibrationArtifact.value)
+    : checkV138ParallelCalibrationV5Receipt(calibrationArtifact.value, repoRoot)
   const reproduction = reproductionArtifact === undefined
     ? undefined
     : checkV138AuthoritativeMatrixV6Receipt(reproductionArtifact.value)
@@ -7658,6 +8173,80 @@ const runReceiptCli = async (): Promise<void> => {
     path.dirname(fileURLToPath(import.meta.url)),
     "../..",
   )
+  if (
+    command === "--write-execution-context-v5-receipt" ||
+    command === "--write-headroom-preflight-v5-receipt" ||
+    command === "--calibrate-parallel-v5-receipt" ||
+    command === "--write-authoritative-v6-receipt"
+  ) {
+    let output: unknown
+    if (command === "--write-execution-context-v5-receipt") {
+      if (
+        process.argv.length !== 14 ||
+        process.argv[4] !== "--mode" ||
+        process.argv[6] !== "--cwd" ||
+        process.argv[8] !== "--terminal-agent-registry-json" ||
+        process.argv[10] !== "--authorization" ||
+        process.argv[12] !== "--seal"
+      ) throw new TypeError("MATRIX_EXECUTION_CONTEXT_V5_CLI_ARGUMENTS_INVALID")
+      output = writeV138ExecutionContextV5Receipt(
+        repoRoot,
+        process.argv[3]!,
+        process.argv[5]!,
+        process.argv[7]!,
+        JSON.parse(process.argv[9]!),
+        process.argv[11]!,
+        process.argv[13]!,
+      )
+    } else if (command === "--write-headroom-preflight-v5-receipt") {
+      if (
+        process.argv.length !== 10 ||
+        process.argv[4] !== "--execution-context" ||
+        process.argv[6] !== "--authorization" ||
+        process.argv[8] !== "--seal"
+      ) throw new TypeError("MATRIX_PREFLIGHT_V5_CLI_ARGUMENTS_INVALID")
+      output = await writeV138HostHeadroomPreflightV5Receipt(
+        repoRoot,
+        process.argv[3]!,
+        process.argv[5]!,
+        process.argv[7]!,
+        process.argv[9]!,
+      )
+    } else if (command === "--calibrate-parallel-v5-receipt") {
+      if (
+        process.argv.length !== 8 ||
+        process.argv[4] !== "--preflight" ||
+        process.argv[6] !== "--execution-context"
+      ) throw new TypeError("MATRIX_CALIBRATION_V5_CLI_ARGUMENTS_INVALID")
+      output = await writeV138ParallelCalibrationV5Receipt(
+        repoRoot,
+        process.argv[3]!,
+        process.argv[5]!,
+        process.argv[7]!,
+      )
+    } else {
+      if (
+        process.argv.length !== 8 ||
+        process.argv[4] !== "--calibration" ||
+        process.argv[6] !== "--execution-context"
+      ) throw new TypeError("MATRIX_REPRODUCTION_V6_CLI_ARGUMENTS_INVALID")
+      output = await writeV138AuthoritativeMatrixV6Receipt(
+        repoRoot,
+        process.argv[3]!,
+        process.argv[5]!,
+        process.argv[7]!,
+      )
+    }
+    const receipt = output as Record<string, unknown>
+    process.stdout.write(`${canonical({
+      schemaVersion: receipt.schemaVersion,
+      status: receipt.status ?? null,
+      disposition: receipt.disposition ?? null,
+      receiptRoot: receipt.receiptRoot,
+      acceptedCellCount: receipt.acceptedCellCount,
+    })}\n`)
+    return
+  }
   if (
     command === "--write-plan-262-16-terminal-v1" ||
     command === "--check-plan-262-16-terminal"
@@ -8107,7 +8696,7 @@ const runReceiptCli = async (): Promise<void> => {
       "--require-stopped-process-failure",
     ].includes(command ?? "")
   ) {
-    return
+    throw new TypeError("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
   }
   if (process.argv.length !== 4 || process.argv[3] === undefined) {
     throw new TypeError("MATRIX_CALIBRATION_CLI_ARGUMENTS_INVALID")
