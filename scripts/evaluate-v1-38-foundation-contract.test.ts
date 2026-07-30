@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { EventEmitter } from "node:events"
 import {
   appendFileSync,
+  chmodSync,
   closeSync,
   existsSync,
   fsyncSync,
@@ -58,6 +59,7 @@ import {
   buildV138HostHeadroomPreflightV5Receipt,
   buildV138ExecutionContextV5Receipt,
   buildV138ParallelCalibrationV5PreflightTerminal,
+  buildV138ParallelCalibrationV5Receipt,
   buildV138ParallelCalibrationV4Receipt,
   buildV138ParallelCalibrationV3Receipt,
   buildV138AuthoritativeMatrixV3Receipt,
@@ -90,6 +92,7 @@ import {
   renderV138CurrentMatrixReceipt,
   sampleV138ChildRss,
   validateV138HistoricalMatrixExpectation,
+  v138SuccessorRoot,
   writeV138AuthoritativeMatrixV5Receipt,
   writeV138ExecutionContextV4Receipt,
   writeV138HostHeadroomPreflightV4Receipt,
@@ -429,6 +432,12 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
           writePlan26215Terminal(root, paths.terminal, disposition)
         }
         expect(checkPlan26215ArtifactBranch(root, paths)).toBe(disposition)
+        const required =
+          disposition === "sealed" ? paths.seal : paths.terminal
+        const requiredBytes = readFileSync(path.resolve(root, required))
+        unlinkSync(path.resolve(root, required))
+        expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow()
+        writeFileSync(path.resolve(root, required), requiredBytes)
         const forbidden =
           disposition === "seal_refused"
             ? paths.authorization
@@ -437,6 +446,48 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
               : paths.terminal
         writeFileSync(path.resolve(root, forbidden), "{}\n")
         expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow()
+
+        if (disposition === "seal_refused") {
+          unlinkSync(path.resolve(root, forbidden))
+          const reviewTarget = path.resolve(root, paths.review)
+          const reviewBytes = readFileSync(reviewTarget)
+          unlinkSync(reviewTarget)
+          symlinkSync(path.resolve(root, "outside-review"), reviewTarget)
+          expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow(
+            "V138_PLAN_262_15_ARTIFACT_TYPE_INVALID",
+          )
+          unlinkSync(reviewTarget)
+          mkdirSync(reviewTarget)
+          expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow(
+            "V138_PLAN_262_15_ARTIFACT_TYPE_INVALID",
+          )
+          rmSync(reviewTarget, { recursive: true })
+          writeFileSync(reviewTarget, reviewBytes)
+          expect(() =>
+            checkPlan26215ArtifactBranch(root, {
+              ...paths,
+              review: "../outside-review.md",
+            }),
+          ).toThrow("V138_PLAN_262_15_CANONICAL_PATH_REQUIRED")
+          writeFileSync(
+            reviewTarget,
+            reviewBytes.toString("utf8").replace(
+              "status: clean",
+              "fixes_applied: true\nstatus: clean",
+            ),
+          )
+          expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow(
+            "V138_PLAN_262_15_ARTIFACT_REQUIRED",
+          )
+          writeFileSync(
+            path.resolve(root, paths.reviewFix),
+            "---\nfixed: 1\n---\n# Fix report\n",
+          )
+          expect(checkPlan26215ArtifactBranch(root, paths)).toBe(disposition)
+          chmodSync(reviewTarget, 0o000)
+          expect(() => checkPlan26215ArtifactBranch(root, paths)).toThrow()
+          chmodSync(reviewTarget, 0o600)
+        }
       } finally {
         rmSync(root, { recursive: true, force: true })
       }
@@ -521,10 +572,244 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
       expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
         "MATRIX_PLAN_262_16_ARTIFACT_MUST_BE_ABSENT",
       )
+      unlinkSync(path.resolve(root, paths.reproduction))
+
+      const artifactRoot = (repoPath: string): `sha256:${string}` =>
+        `sha256:${createHash("sha256")
+          .update(readFileSync(path.resolve(root, repoPath)))
+          .digest("hex")}`
+      const publish = (repoPath: string, value: unknown): void => {
+        writeFileSync(path.resolve(root, repoPath), `${JSON.stringify(value)}\n`)
+      }
+      const removeIfPresent = (repoPath: string): void => {
+        try {
+          unlinkSync(path.resolve(root, repoPath))
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+        }
+      }
+      const publishTerminal = (
+        disposition:
+          | "tool_identity_failed"
+          | "protected_history_failed"
+          | "formation_absence_failed"
+          | "pattern_c_ownership_failed"
+          | "preflight_unavailable"
+          | "preflight_refused"
+          | "calibration_stopped"
+          | "reproduction_stopped"
+          | "reproduction_passed",
+        required: {
+          context: boolean
+          preflight: boolean
+          calibration: boolean
+          reproduction: boolean
+        },
+      ): void => {
+        const body = {
+          schemaVersion: "v1.38-plan-262-16-terminal-v1" as const,
+          disposition,
+          authorityExpired: true as const,
+          noRetry: true as const,
+          artifactRoots: {
+            authorization: artifactRoot(paths.authorization),
+            seal: artifactRoot(paths.seal),
+            context: required.context ? artifactRoot(paths.context) : null,
+            preflight: required.preflight ? artifactRoot(paths.preflight) : null,
+            calibration: required.calibration
+              ? artifactRoot(paths.calibration)
+              : null,
+            reproduction: required.reproduction
+              ? artifactRoot(paths.reproduction)
+              : null,
+          },
+        }
+        publish(paths.terminal, {
+          ...body,
+          terminalRoot: v138SuccessorRoot(
+            "canonicalJsonProfile",
+            body.schemaVersion,
+            body,
+          ),
+        })
+      }
+
+      // Every before-observation disposition has the same exact absence row
+      // but a distinct terminal reason that the production checker must accept.
+      for (const disposition of [
+        "tool_identity_failed",
+        "protected_history_failed",
+        "formation_absence_failed",
+        "pattern_c_ownership_failed",
+      ] as const) {
+        for (const repoPath of [
+          paths.context,
+          paths.preflight,
+          paths.calibration,
+          paths.reproduction,
+          paths.terminal,
+        ]) removeIfPresent(repoPath)
+        publishTerminal(disposition, {
+          context: false,
+          preflight: false,
+          calibration: false,
+          reproduction: false,
+        })
+        expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(disposition)
+      }
+
+      publish(paths.context, context)
+      const unavailablePreflight = buildV138HostHeadroomPreflightV5Receipt({
+        executionContext: context,
+        result: { ok: false, reason: "resource_measurement_unavailable" },
+      })
+      const unavailableCalibration =
+        buildV138ParallelCalibrationV5PreflightTerminal(unavailablePreflight)
+      publish(paths.preflight, unavailablePreflight)
+      publish(paths.calibration, unavailableCalibration)
+      removeIfPresent(paths.terminal)
+      publishTerminal("preflight_unavailable", {
+        context: true,
+        preflight: true,
+        calibration: true,
+        reproduction: false,
+      })
+      expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(
+        "preflight_unavailable",
+      )
+
+      const admittedPreflight = buildV138HostHeadroomPreflightV5Receipt({
+        executionContext: context,
+        result: parseMemoryPressureQ({
+          stdout: Buffer.from(
+            "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+          ),
+          stderr: Buffer.alloc(0),
+          exitCode: 0,
+          signal: null,
+          timedOut: false,
+        }),
+      })
+      const attempts = Array.from({ length: 8 }, (_, index) => ({
+        attemptId: `calibration:v5:${index}`,
+        shardId: `calibration-shard:${index % 4}`,
+        outcome: "accepted" as const,
+        childLaunched: true,
+        accepted: true,
+      }))
+      const stoppedCalibration = buildV138ParallelCalibrationV5Receipt({
+        preflight: admittedPreflight,
+        attempts: attempts.map((attempt, index) =>
+          index === 0
+            ? { ...attempt, outcome: "system_failure" as const, accepted: false }
+            : attempt,
+        ),
+        sharedObservationTicks: [],
+      })
+      publish(paths.preflight, admittedPreflight)
+      publish(paths.calibration, stoppedCalibration)
+      removeIfPresent(paths.terminal)
+      publishTerminal("calibration_stopped", {
+        context: true,
+        preflight: true,
+        calibration: true,
+        reproduction: false,
+      })
+      expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(
+        "calibration_stopped",
+      )
+
+      const admittedCalibration = buildV138ParallelCalibrationV5Receipt({
+        preflight: admittedPreflight,
+        attempts,
+        sharedObservationTicks: [{
+          tickId: "tick:0",
+          observationRoot: admittedPreflight.receiptRoot,
+          shardIds: [
+            "calibration-shard:0",
+            "calibration-shard:1",
+            "calibration-shard:2",
+            "calibration-shard:3",
+          ],
+        }],
+      })
+      publish(paths.calibration, admittedCalibration)
+      for (const disposition of [
+        "reproduction_stopped",
+        "reproduction_passed",
+      ] as const) {
+        const passed = disposition === "reproduction_passed"
+        const reproductionBody = {
+          schemaVersion: "v1.38-current-matrix-reproduction-v6" as const,
+          executionContextRoot: context.receiptRoot,
+          calibrationRoot: admittedCalibration.receiptRoot,
+          status: passed
+            ? "passed_exact" as const
+            : "stopped_process_failure" as const,
+          chargedAttemptCount: 540 as const,
+          acceptedCellCount: passed ? 540 as const : 0 as const,
+          attemptLedgerRoot: admittedPreflight.receiptRoot,
+          acceptedCellRoot: passed ? admittedCalibration.receiptRoot : null,
+          runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+          partialAcceptedEvidenceReusable: false as const,
+          noRetry: true as const,
+        }
+        publish(paths.reproduction, {
+          ...reproductionBody,
+          receiptRoot: v138SuccessorRoot(
+            "evidenceBundle",
+            reproductionBody.schemaVersion,
+            reproductionBody,
+          ),
+        })
+        removeIfPresent(paths.terminal)
+        publishTerminal(disposition, {
+          context: true,
+          preflight: true,
+          calibration: true,
+          reproduction: true,
+        })
+        expect(checkV138Plan26216TerminalBranch(root, paths)).toBe(disposition)
+      }
+
+      const terminalBytes = readFileSync(path.resolve(root, paths.terminal))
+      const terminalValue = JSON.parse(terminalBytes.toString("utf8")) as Record<
+        string,
+        unknown
+      >
+      publish(paths.terminal, { ...terminalValue, unexpected: true })
+      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+        "MATRIX_PLAN_262_16_TERMINAL_INVALID",
+      )
+      writeFileSync(path.resolve(root, paths.terminal), terminalBytes)
+      expect(() =>
+        checkV138Plan26216TerminalBranch(root, {
+          ...paths,
+          terminal: "../outside-terminal.json",
+        }),
+      ).toThrow("MATRIX_PLAN_262_16_CANONICAL_PATH_REQUIRED")
+      const reproductionPath = path.resolve(root, paths.reproduction)
+      const reproductionBytes = readFileSync(reproductionPath)
+      unlinkSync(reproductionPath)
+      symlinkSync(path.resolve(root, "outside-reproduction"), reproductionPath)
+      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+        "MATRIX_PLAN_262_16_ARTIFACT_TYPE_INVALID",
+      )
+      unlinkSync(reproductionPath)
+      mkdirSync(reproductionPath)
+      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow(
+        "MATRIX_PLAN_262_16_ARTIFACT_TYPE_INVALID",
+      )
+      rmSync(reproductionPath, { recursive: true })
+      writeFileSync(reproductionPath, reproductionBytes)
+      const preflightPath = path.resolve(root, paths.preflight)
+      chmodSync(preflightPath, 0o000)
+      expect(() => checkV138Plan26216TerminalBranch(root, paths)).toThrow()
+      chmodSync(preflightPath, 0o600)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
-  }, 180_000)
+  }, 600_000)
 })
 
 describe("v1.38 foundation admission", () => {

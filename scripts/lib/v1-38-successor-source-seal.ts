@@ -1257,10 +1257,12 @@ export const checkPlan26215ArtifactBranch = (
     disposition = candidate.disposition as V138Plan26215Disposition
   }
   const reviewText = regularFile(resolved.review, "required")!.toString("utf8")
+  const reviewFrontmatter = /^---\n([\s\S]*?)\n---(?:\n|$)/u.exec(reviewText)?.[1]
   if (
-    !/^---\n[\s\S]*?\nstatus: clean\n[\s\S]*?\n---\n/u.test(reviewText) ||
-    !/\n\s*critical:\s*0(?:\n|$)/u.test(reviewText) ||
-    !/\n\s*warning:\s*0(?:\n|$)/u.test(reviewText)
+    reviewFrontmatter === undefined ||
+    !/(?:^|\n)status:\s*clean(?:\n|$)/u.test(reviewFrontmatter) ||
+    !/(?:^|\n)\s*critical:\s*0(?:\n|$)/u.test(reviewFrontmatter) ||
+    !/(?:^|\n)\s*warning:\s*0(?:\n|$)/u.test(reviewFrontmatter)
   ) {
     fail("V138_PLAN_262_15_REVIEW_NOT_CLEAN")
   }

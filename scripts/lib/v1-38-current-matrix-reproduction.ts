@@ -6913,7 +6913,7 @@ const v138SuccessorCanonicalBytes = (value: unknown): Uint8Array => {
   return encoded.bytes
 }
 
-const v138SuccessorRoot = (
+export const v138SuccessorRoot = (
   domain:
     | "evidenceBundle"
     | "containmentPolicy"
