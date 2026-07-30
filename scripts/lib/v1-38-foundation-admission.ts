@@ -44,7 +44,18 @@ const CORRECTION_PATH =
 const ADMISSION_PRODUCING_COMMIT =
   "d3893cc27a967f0b382a14571e274b5451dbdbbd"
 
-const SOURCE_PATHS = [
+/**
+ * The persisted admission receipt seals these paths at
+ * ADMISSION_PRODUCING_COMMIT. That historical binding must not be rewritten
+ * merely because the operational checker advances.
+ *
+ * Before any authority-producing work runs, the resolver also requires every
+ * live byte below to match the blob at the checkout's current HEAD. This is a
+ * separate operational-authenticity boundary: the executing gate may advance
+ * only as a committed Git object and cannot silently run dirty/substituted
+ * bytes while reusing the historical sealed receipt.
+ */
+export const V138_FOUNDATION_LIVE_SOURCE_PATHS = [
   "scripts/check-v1-37-audit-reproduction.ts",
   "scripts/check-v1-37-release-tag.ts",
   "scripts/lib/v1-38-foundation-admission.ts",
@@ -53,6 +64,7 @@ const SOURCE_PATHS = [
   FOUNDATION_PATH,
   CORRECTION_PATH,
 ] as const
+const SOURCE_PATHS = V138_FOUNDATION_LIVE_SOURCE_PATHS
 
 type Sha256 = `sha256:${string}`
 
@@ -650,6 +662,40 @@ const gitBlob = (
     maxBuffer: 2 * 1024 * 1024,
   })
 
+const gitBlobBytes = (
+  repoRoot: string,
+  commit: string,
+  repoPath: string,
+): Buffer =>
+  execFileSync("git", ["show", `${commit}:${repoPath}`], {
+    cwd: repoRoot,
+    maxBuffer: 2 * 1024 * 1024,
+  })
+
+const assertLiveSourcesMatchProducingGitObject = (
+  repoRoot: string,
+): void => {
+  const producingCommit = git(repoRoot, [
+    "rev-parse",
+    "--verify",
+    "HEAD^{commit}",
+  ])
+  for (const repoPath of V138_FOUNDATION_LIVE_SOURCE_PATHS) {
+    const liveBytes = readFileSync(path.resolve(repoRoot, repoPath))
+    const producingBytes = gitBlobBytes(
+      repoRoot,
+      producingCommit,
+      repoPath,
+    )
+    if (
+      liveBytes.byteLength !== producingBytes.byteLength ||
+      !Buffer.from(liveBytes).equals(producingBytes)
+    ) {
+      throw new TypeError("V138_ADMISSION_LIVE_SOURCE_DRIFT")
+    }
+  }
+}
+
 const record = (value: unknown, code: string): Record<string, unknown> => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError(code)
@@ -909,6 +955,7 @@ export const resolveV138FoundationAdmissionInput = (
   repoRoot: string,
 ): V138FoundationAdmissionInput => {
   const root = path.resolve(repoRoot)
+  assertLiveSourcesMatchProducingGitObject(root)
   const correctionLineage = parseCorrectionAuthority(root)
   const release = releaseInput(root, correctionLineage)
   const foundationBytes = gitBlob(
