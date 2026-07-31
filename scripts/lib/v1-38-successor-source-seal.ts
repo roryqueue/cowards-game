@@ -1927,7 +1927,100 @@ const canonicalPath = (
   if (resolved !== path.resolve(repoRoot, expected)) {
     fail("V138_PLAN_262_15_CANONICAL_PATH_REQUIRED")
   }
+  validateV138CanonicalParentChain(repoRoot, resolved)
   return resolved
+}
+
+export interface V138CanonicalParentChain {
+  readonly repoRoot: string
+  readonly target: string
+  readonly parent: string
+  readonly directories: readonly Readonly<{
+    path: string
+    device: number
+    inode: number
+    mode: number
+  }>[]
+}
+
+const inspectNoFollowDirectory = (
+  directoryPath: string,
+): V138CanonicalParentChain["directories"][number] => {
+  const linked = lstatSync(directoryPath)
+  if (!linked.isDirectory() || linked.isSymbolicLink()) {
+    fail("V138_CANONICAL_PARENT_CHAIN_INVALID")
+  }
+  const descriptor = openSync(
+    directoryPath,
+    constants.O_RDONLY |
+      (constants.O_DIRECTORY ?? 0) |
+      (constants.O_NOFOLLOW ?? 0),
+  )
+  try {
+    const opened = fstatSync(descriptor)
+    if (
+      !opened.isDirectory() ||
+      opened.dev !== linked.dev ||
+      opened.ino !== linked.ino
+    ) {
+      fail("V138_CANONICAL_PARENT_CHAIN_IDENTITY_INVALID")
+    }
+    return Object.freeze({
+      path: directoryPath,
+      device: opened.dev,
+      inode: opened.ino,
+      mode: opened.mode,
+    })
+  } finally {
+    closeSync(descriptor)
+  }
+}
+
+export const validateV138CanonicalParentChain = (
+  repoRootInput: string,
+  targetInput: string,
+): Readonly<V138CanonicalParentChain> => {
+  const repoRoot = path.resolve(repoRootInput)
+  const target = path.resolve(repoRoot, targetInput)
+  const relative = path.relative(repoRoot, target)
+  if (
+    relative.length === 0 ||
+    path.isAbsolute(relative) ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`)
+  ) {
+    fail("V138_CANONICAL_PATH_OUTSIDE_REPOSITORY")
+  }
+  const parent = path.dirname(target)
+  const parentRelative = path.relative(repoRoot, parent)
+  const directories = [repoRoot]
+  if (parentRelative.length !== 0) {
+    let current = repoRoot
+    for (const component of parentRelative.split(path.sep)) {
+      if (component.length === 0 || component === "." || component === "..") {
+        fail("V138_CANONICAL_PARENT_CHAIN_INVALID")
+      }
+      current = path.join(current, component)
+      directories.push(current)
+    }
+  }
+  const inspected = directories.map(inspectNoFollowDirectory)
+  return Object.freeze({
+    repoRoot,
+    target,
+    parent,
+    directories: Object.freeze(inspected),
+  })
+}
+
+export const checkV138CanonicalParentChain = (
+  chain: Readonly<V138CanonicalParentChain>,
+): true => {
+  const checked = validateV138CanonicalParentChain(chain.repoRoot, chain.target)
+  if (canonical(checked) !== canonical(chain)) {
+    fail("V138_CANONICAL_PARENT_CHAIN_REPLACED")
+  }
+  return true
 }
 
 const regularFile = (
@@ -1974,8 +2067,13 @@ const regularFile = (
   }
 }
 
-const writeCanonicalExclusive = (target: string, value: unknown): void => {
+const writeCanonicalExclusive = (
+  repoRoot: string,
+  target: string,
+  value: unknown,
+): void => {
   const bytes = Buffer.from(canonical(value), "utf8")
+  const parentChain = validateV138CanonicalParentChain(repoRoot, target)
   let published: ReturnType<typeof fstatSync>
   const descriptor = openSync(
     target,
@@ -1986,9 +2084,11 @@ const writeCanonicalExclusive = (target: string, value: unknown): void => {
     0o600,
   )
   try {
+    checkV138CanonicalParentChain(parentChain)
     writeFileSync(descriptor, bytes)
     fsyncSync(descriptor)
     published = fstatSync(descriptor)
+    checkV138CanonicalParentChain(parentChain)
   } finally {
     closeSync(descriptor)
   }
@@ -1997,6 +2097,7 @@ const writeCanonicalExclusive = (target: string, value: unknown): void => {
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
   )
   try {
+    checkV138CanonicalParentChain(parentChain)
     const checked = fstatSync(checkDescriptor)
     const checkedBytes = readFileSync(checkDescriptor)
     if (
@@ -2006,6 +2107,7 @@ const writeCanonicalExclusive = (target: string, value: unknown): void => {
     ) {
       fail("V138_PLAN_262_15_READBACK_FAILED")
     }
+    checkV138CanonicalParentChain(parentChain)
   } finally {
     closeSync(checkDescriptor)
   }
@@ -2027,7 +2129,7 @@ export const writeV138Plan26215Authorization = (
     sourceA,
     literalBytes,
   )
-  writeCanonicalExclusive(target, authorization)
+  writeCanonicalExclusive(repoRoot, target, authorization)
   return authorization
 }
 
@@ -2039,7 +2141,7 @@ export const writeV138SuccessorSourceSeal = (
 ): Readonly<V138SuccessorSourceSeal> => {
   const target = canonicalPath(repoRoot, targetPath, CANONICAL_PATHS.seal)
   const checked = checkV138SuccessorSourceSeal(repoRoot, seal, authorization)
-  writeCanonicalExclusive(target, checked)
+  writeCanonicalExclusive(repoRoot, target, checked)
   return checked
 }
 
@@ -2996,7 +3098,7 @@ export const writeV138Plan26218AuthorizationV2 = (
     sourceA2,
     literalBytes,
   )
-  writeCanonicalExclusive(target, value)
+  writeCanonicalExclusive(repoRoot, target, value)
   return value
 }
 
@@ -3014,7 +3116,7 @@ export const writeV138SuccessorSourceSealV2 = (
     repoRoot,
     authorization: authorizationValue,
   })
-  writeCanonicalExclusive(target, value)
+  writeCanonicalExclusive(repoRoot, target, value)
   return value
 }
 
@@ -3235,7 +3337,7 @@ export const writeV138Plan26218TerminalV2 = (
       body,
     ),
   })
-  writeCanonicalExclusive(target, terminal)
+  writeCanonicalExclusive(repoRoot, target, terminal)
   return terminal
 }
 
@@ -3436,7 +3538,7 @@ export const writePlan26215Terminal = (
       body,
     ),
   })
-  writeCanonicalExclusive(target, terminal)
+  writeCanonicalExclusive(repoRoot, target, terminal)
   return terminal
 }
 
