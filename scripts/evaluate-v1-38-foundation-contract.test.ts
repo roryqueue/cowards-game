@@ -4,6 +4,7 @@ import {
   appendFileSync,
   chmodSync,
   closeSync,
+  copyFileSync,
   existsSync,
   fsyncSync,
   mkdirSync,
@@ -116,6 +117,7 @@ import {
   checkV138ParallelCalibrationV7Receipt,
   checkV138AuthoritativeMatrixV8Receipt,
   checkV138Plan26222TerminalV1,
+  checkV138Plan26222TerminalBranch,
   checkV138Plan26222ConsumptionMarker,
   checkV138Plan26222Obstruction,
   checkV138HostHeadroomPreflightV5Receipt,
@@ -137,6 +139,7 @@ import {
   dispatchV138CurrentMatrixDirectEntry,
   deriveV138CalibrationAttemptMappings,
   deriveV138Plan26222Obstruction,
+  deriveV138Plan26222InterruptionProof,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
@@ -165,6 +168,8 @@ import {
   writeV138ExecutionContextV7Receipt,
   writeV138HostHeadroomPreflightV7Receipt,
   writeV138ParallelCalibrationV7Receipt,
+  writeV138AuthoritativeMatrixV8Receipt,
+  writeV138Plan26222TerminalV1,
   writeV138HostHeadroomPreflightV4Receipt,
   writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
@@ -6285,11 +6290,26 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
   const prepareRoutedV7 = () => {
     const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v7-"))
     execFileSync("git", ["clone", "-q", "--no-hardlinks", repoRoot, tempRoot])
-    const sourceA3 = "d20438a7c58a4b1c849762a4d116028b1ccf412b"
-    execFileSync("git", ["checkout", "-q", sourceA3], { cwd: tempRoot })
+    execFileSync("git", ["checkout", "-q",
+      "89a1fe0026e2573710ec1f2c24339aa66a0b4d53"], { cwd: tempRoot })
     execFileSync("git", ["config", "user.email", "test@example.invalid"],
       { cwd: tempRoot })
     execFileSync("git", ["config", "user.name", "Test"], { cwd: tempRoot })
+    for (const repoPath of [
+      "scripts/evaluate-v1-38-foundation-contract.test.ts",
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts",
+    ]) copyFileSync(path.resolve(repoRoot, repoPath),
+      path.resolve(tempRoot, repoPath))
+    execFileSync("git", ["add", "scripts/evaluate-v1-38-foundation-contract.test.ts",
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts"], { cwd: tempRoot })
+    execFileSync("git", ["commit", "-qm", "synthetic reviewed A3"], {
+      cwd: tempRoot,
+    })
+    const sourceA3 = execFileSync("git", ["rev-parse", "HEAD^{commit}"], {
+      cwd: tempRoot, encoding: "utf8",
+    }).trim()
     const reviewPath = path.resolve(tempRoot,
       V138_PLAN_262_21_CANONICAL_PATHS.review)
     mkdirSync(path.dirname(reviewPath), { recursive: true })
@@ -6411,6 +6431,17 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
         context, predecessorRoot: context.receiptRoot,
         chargedAttemptIds: ["preflight:v7:0"] }
       const markerRoot = consumeV138Plan26222Stage(input)
+      expect(existsSync(path.resolve(tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[1]))).toBe(false)
+      expect(existsSync(path.resolve(tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[5]))).toBe(true)
+      expect(JSON.parse(readFileSync(path.resolve(tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[5]), "utf8"))).toMatchObject({
+          markerRoot,
+        })
+      expect(deriveV138Plan26222InterruptionProof(tempRoot)).toMatchObject({
+        stage: "preflight", markerRoot, chargedAttemptCount: 1,
+      })
       expect(checkV138Plan26222ConsumptionMarker(input).markerRoot)
         .toBe(markerRoot)
       expect(() => consumeV138Plan26222Stage(input)).toThrow()
@@ -6510,6 +6541,91 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
       expect(callbackCalls).toBe(0)
       expect(existsSync(path.resolve(fixture.tempRoot,
         V138_PLAN_262_22_FRESH_DESTINATIONS[6]))).toBe(false)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("terminalizes a valid marker-without-receipt as consumed interruption", () => {
+    const fixture = prepareRoutedV7()
+    try {
+      consumeV138Plan26222Stage({ repoRoot: fixture.tempRoot,
+        stage: "preflight", context: fixture.context,
+        predecessorRoot: fixture.context.receiptRoot,
+        chargedAttemptIds: ["preflight:v7:0"] })
+      const terminal = writeV138Plan26222TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[4],
+        "fresh_destination_failed", fixture.sourceA3, fixture.sourceB3)
+      expect(terminal).toMatchObject({
+        disposition: "consumed_stage_interrupted",
+        interruptionProof: { stage: "preflight", chargedAttemptCount: 1,
+          chargedIdentityId: "preflight:v7:0",
+          observationMode: "unknown_after_consumption",
+          childLaunchCount: null, terminalOutcomeCount: null,
+          completeCleanup: false },
+        obstructionProof: null, completeCleanup: false,
+        chargedCalibrationAttemptCount: 0,
+        chargedReproductionAttemptCount: 0, acceptedCellCount: 0,
+        authorityExpired: true,
+      })
+      expect(checkV138Plan26222TerminalBranch(fixture.tempRoot,
+        fixture.sourceA3, fixture.sourceB3).disposition)
+        .toBe("consumed_stage_interrupted")
+      expect(existsSync(path.resolve(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[1]))).toBe(false)
+      expect(existsSync(path.resolve(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[2]))).toBe(false)
+      expect(existsSync(path.resolve(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[3]))).toBe(false)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("routes successful calibration and reproduction once, then rejects replay", async () => {
+    const fixture = prepareRoutedV7()
+    try {
+      const preflightPath = V138_PLAN_262_22_FRESH_DESTINATIONS[1]
+      await writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        preflightPath, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3,
+        admittedInjectedHeadroom)
+      let calibrationCalls = 0
+      const calibrationPath = V138_PLAN_262_22_FRESH_DESTINATIONS[2]
+      const calibration = await writeV138ParallelCalibrationV7Receipt(
+        fixture.tempRoot, calibrationPath, preflightPath, fixture.contextPath,
+        fixture.sourceA3, fixture.sourceB3, async (input) => {
+          calibrationCalls += 1
+          return calibrateV138ParallelMatrix({ ...input,
+            runner: successfulInjectedRunner(),
+            sharedHeadroomObserver: admittedInjectedHeadroom })
+        })
+      expect(calibration).toMatchObject({ status: "admitted",
+        acceptedCellCount: 8, completeCleanup: true })
+      expect(calibrationCalls).toBe(1)
+      let reproductionCalls = 0
+      const reproductionPath = V138_PLAN_262_22_FRESH_DESTINATIONS[3]
+      const reproduction = await writeV138AuthoritativeMatrixV8Receipt(
+        fixture.tempRoot, reproductionPath, calibrationPath,
+        fixture.contextPath, fixture.sourceA3, fixture.sourceB3,
+        async (input) => {
+          reproductionCalls += 1
+          return executeV138ParallelMatrix({ ...input,
+            runner: successfulInjectedRunner(),
+            sharedHeadroomObserver: admittedInjectedHeadroom })
+        })
+      expect(reproduction).toMatchObject({ status: "passed_exact",
+        acceptedCellCount: 540, completeCleanup: true })
+      expect(reproductionCalls).toBe(1)
+      await expect(writeV138AuthoritativeMatrixV8Receipt(fixture.tempRoot,
+        reproductionPath, calibrationPath, fixture.contextPath,
+        fixture.sourceA3, fixture.sourceB3, async (input) => {
+          reproductionCalls += 1
+          return executeV138ParallelMatrix({ ...input,
+            runner: successfulInjectedRunner(),
+            sharedHeadroomObserver: admittedInjectedHeadroom })
+        })).rejects.toThrow()
+      expect(reproductionCalls).toBe(1)
     } finally {
       rmSync(fixture.tempRoot, { recursive: true, force: true })
     }
@@ -6667,6 +6783,35 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     })).toThrow()
   })
 
+  it("binds consumed-stage interruption proof separately from obstruction", () => {
+    const context = contextV7()
+    const markerRoot = root("interrupted-preflight-marker")
+    const interruptionProof = { stage: "preflight" as const, markerRoot,
+      chargedAttemptCount: 1 as const,
+      chargedIdentityId: "preflight:v7:0" as const,
+      observationMode: "unknown_after_consumption" as const,
+      childLaunchCount: null, terminalOutcomeCount: null,
+      completeCleanup: false as const }
+    const evidence = { sourceA3: context.sourceA3, sourceB3: context.sourceB3,
+      authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
+      context, consumptionMarkerRoots: { preflight: markerRoot,
+        calibration: null, reproduction: null }, interruptionProof }
+    const terminal = buildV138Plan26222TerminalV1({ ...evidence,
+      disposition: "consumed_stage_interrupted" })
+    expect(checkV138Plan26222TerminalV1(clone(terminal), evidence))
+      .toEqual(terminal)
+    expect(terminal).toMatchObject({ disposition: "consumed_stage_interrupted",
+      chargedCalibrationAttemptCount: 0,
+      chargedReproductionAttemptCount: 0, acceptedCellCount: 0,
+      completeCleanup: false, obstructionProof: null })
+    const forged = clone(terminal)
+    forged.interruptionProof.chargedAttemptCount = 8
+    const { terminalRoot: _old, ...body } = forged
+    forged.terminalRoot = v138SuccessorRoot("canonicalJsonProfile",
+      forged.schemaVersion, body)
+    expect(() => checkV138Plan26222TerminalV1(forged, evidence)).toThrow()
+  })
+
   it("binds fresh-destination obstruction stage, metadata, and later absence", () => {
     const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-262-22-obstruct-"))
     try {
@@ -6691,6 +6836,23 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
       writeFileSync(path.resolve(tempRoot,
         V138_PLAN_262_22_FRESH_DESTINATIONS[1]), "later\n")
       expect(() => checkV138Plan26222Obstruction(tempRoot, proof)).toThrow()
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("keeps an untrusted occupied marker on the fresh-obstruction branch", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-262-22-bad-marker-"))
+    try {
+      const markerPath = V138_PLAN_262_22_FRESH_DESTINATIONS[5]
+      mkdirSync(path.dirname(path.resolve(tempRoot, markerPath)), {
+        recursive: true,
+      })
+      writeFileSync(path.resolve(tempRoot, markerPath), "{}\n")
+      expect(deriveV138Plan26222InterruptionProof(tempRoot)).toBeUndefined()
+      expect(deriveV138Plan26222Obstruction(tempRoot)).toMatchObject({
+        stage: "preflight", path: markerPath, type: "file",
+      })
     } finally {
       rmSync(tempRoot, { recursive: true, force: true })
     }
