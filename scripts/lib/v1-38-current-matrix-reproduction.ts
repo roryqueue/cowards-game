@@ -7158,6 +7158,7 @@ export interface V138ImmutableReceiptPublicationOptions {
     directoryDescriptor: number,
     phase: "publication" | "cleanup",
   ) => void
+  readonly fsyncRollbackDirectory?: (directoryDescriptor: number) => void
   readonly unlinkTemporaryFile?: (temporaryPath: string) => void
   readonly closeTemporaryFile?: (fileDescriptor: number) => void
 }
@@ -9410,8 +9411,9 @@ export interface V138AuthoritativeMatrixV7Receipt {
   readonly calibrationRoot: Sha256
   readonly status: "passed_exact" | "stopped_process_failure"
   readonly chargedAttemptCount: 540
-  readonly childLaunchCount: number
-  readonly terminalOutcomeCount: number
+  readonly observationMode: "exact" | "unknown_after_consumption"
+  readonly childLaunchCount: number | null
+  readonly terminalOutcomeCount: number | null
   readonly acceptedCellCount: 0 | 540
   readonly completeCleanup: boolean
   readonly publicStopReason: V138ParallelStopReason | null
@@ -9427,8 +9429,8 @@ export interface V138AuthoritativeMatrixV7Receipt {
     templateAttemptId: string
     shardId: string
     laneId: string
-    childLaunched: boolean
-    terminalObserved: boolean
+    childLaunched: boolean | null
+    terminalObserved: boolean | null
     classification:
       | "success"
       | "player_violation"
@@ -9436,6 +9438,7 @@ export interface V138AuthoritativeMatrixV7Receipt {
       | "timeout"
       | "cancelled"
       | "unlaunched"
+      | "unknown"
     result:
       | "bottom_win"
       | "top_win"
@@ -9459,7 +9462,8 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
   readonly executionContext: V138ExecutionContextV6Receipt
   readonly preflight: V138HostHeadroomPreflightV6Receipt
   readonly calibration: V138ParallelCalibrationV6Receipt
-  readonly execution: V138ParallelMatrixExecutionResult
+  readonly execution?: V138ParallelMatrixExecutionResult | undefined
+  readonly callbackFailureAfterConsumption?: true | undefined
 }): Readonly<V138AuthoritativeMatrixV7Receipt> => {
   const context = checkV138ExecutionContextV6Receipt(input.executionContext)
   const preflight = checkV138HostHeadroomPreflightV6Receipt(
@@ -9479,23 +9483,161 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
     calibration.sourceB2 !== context.sourceB2 ||
     calibration.sourceB2CustodyRoot !== context.sourceB2CustodyRoot ||
     calibration.executionContextRoot !== context.receiptRoot ||
-    calibration.preflightRoot !== preflight.receiptRoot ||
-    input.execution.calibrationRoot !== calibration.supervisionRoot
+    calibration.preflightRoot !== preflight.receiptRoot
   ) {
     throw new TypeError("MATRIX_REPRODUCTION_V7_CALIBRATION_NOT_ADMITTED")
   }
   const inventory = enumerateV138CurrentMatrix(input.repoRoot)
   const plan = planV138MatrixShards(inventory)
+  if (
+    (input.execution === undefined) !==
+      (input.callbackFailureAfterConsumption === true)
+  ) {
+    throw new TypeError("MATRIX_REPRODUCTION_V7_EXECUTION_INVALID")
+  }
+  if (input.callbackFailureAfterConsumption === true) {
+    const attempts = Object.freeze(
+      plan.shards.flatMap((shard) =>
+        shard.attemptIds.map((templateAttemptId) =>
+          Object.freeze({
+            executionAttemptId: `reproduction:v6:${templateAttemptId}`,
+            templateAttemptId,
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            childLaunched: null,
+            terminalObserved: null,
+            classification: "unknown" as const,
+            result: null,
+            cleanupComplete: false,
+          })
+        )
+      ),
+    )
+    const launchProjection = {
+      observationMode: "unknown_after_consumption" as const,
+      attempts: attempts.map(
+        ({ executionAttemptId, templateAttemptId, shardId, laneId }) => ({
+          executionAttemptId,
+          templateAttemptId,
+          shardId,
+          laneId,
+          childLaunched: null,
+        }),
+      ),
+    }
+    const terminalProjection = {
+      observationMode: "unknown_after_consumption" as const,
+      attempts: attempts.map(
+        ({
+          executionAttemptId,
+          templateAttemptId,
+          shardId,
+          laneId,
+          terminalObserved,
+          classification,
+          result,
+          cleanupComplete,
+        }) => ({
+          executionAttemptId,
+          templateAttemptId,
+          shardId,
+          laneId,
+          terminalObserved,
+          classification,
+          result,
+          cleanupComplete,
+        }),
+      ),
+    }
+    const accountingProjection = {
+      observationMode: "unknown_after_consumption" as const,
+      childLaunchCount: null,
+      terminalOutcomeCount: null,
+      acceptedCellCount: 0 as const,
+      completeCleanup: false,
+    }
+    const attemptLedgerRoot = v138SuccessorRoot(
+      "evidenceBundle",
+      "v1.38-current-matrix-reproduction-v7-attempt-ledger-v1",
+      {
+        calibrationRoot: calibration.receiptRoot,
+        attempts,
+      },
+    )
+    const body = {
+      schemaVersion: "v1.38-current-matrix-reproduction-v7" as const,
+      sourceA2: context.sourceA2,
+      sourceB2: context.sourceB2,
+      sourceB2CustodyRoot: context.sourceB2CustodyRoot,
+      executionContextRoot: context.receiptRoot,
+      preflightRoot: preflight.receiptRoot,
+      calibrationRoot: calibration.receiptRoot,
+      status: "stopped_process_failure" as const,
+      chargedAttemptCount: 540 as const,
+      observationMode: "unknown_after_consumption" as const,
+      childLaunchCount: null,
+      terminalOutcomeCount: null,
+      acceptedCellCount: 0 as const,
+      completeCleanup: false,
+      publicStopReason: "PARENT_EXCEPTION" as const,
+      executionRoot: v138SuccessorRoot(
+        "evidenceBundle",
+        "v1.38-parallel-matrix-execution-v1",
+        {
+          observationMode: "unknown_after_consumption" as const,
+          status: "stopped_process_failure" as const,
+          reason: "PARENT_EXCEPTION" as const,
+          calibrationRoot: calibration.supervisionRoot,
+          planRoot: plan.planRoot,
+          attempts,
+        },
+      ),
+      planRoot: plan.planRoot,
+      accountingRoot: v138SuccessorRoot(
+        "evidenceBundle",
+        "v1.38-current-matrix-reproduction-v7-accounting-v1",
+        accountingProjection,
+      ),
+      launchRoot: v138SuccessorRoot(
+        "evidenceBundle",
+        "v1.38-current-matrix-reproduction-v7-launch-v1",
+        launchProjection,
+      ),
+      terminalRoot: v138SuccessorRoot(
+        "evidenceBundle",
+        "v1.38-current-matrix-reproduction-v7-terminal-v1",
+        terminalProjection,
+      ),
+      attemptLedgerRoot,
+      acceptedCellRoot: null,
+      attempts,
+      runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+      privacyProjection: "closed_public_safe_fields_only" as const,
+      partialAcceptedEvidenceReusable: false as const,
+      noRetry: true as const,
+    }
+    return deepFreeze({
+      ...body,
+      receiptRoot: v138SuccessorRoot("evidenceBundle", body.schemaVersion, body),
+    })
+  }
+  const execution = input.execution
+  if (
+    execution === undefined ||
+    execution.calibrationRoot !== calibration.supervisionRoot
+  ) {
+    throw new TypeError("MATRIX_REPRODUCTION_V7_CALIBRATION_NOT_ADMITTED")
+  }
   const expectedExecutionIds = plan.shards.flatMap(({ attemptIds }) =>
     attemptIds.map((attemptId) => `reproduction:v6:${attemptId}`),
   )
-  const canonicalLaunchEvents = input.execution.launchEvents.map((event) => ({
+  const canonicalLaunchEvents = execution.launchEvents.map((event) => ({
     ...event,
     executionAttemptIds: event.executionAttemptIds.map((attemptId) =>
       attemptId.replace(/^reproduction:v6:/u, ""),
     ),
   }))
-  const canonicalTerminals = input.execution.terminals.map((terminal) => ({
+  const canonicalTerminals = execution.terminals.map((terminal) => ({
     ...terminal,
     outcomes: terminal.outcomes.map((outcome) => ({
       ...outcome,
@@ -9505,7 +9647,7 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
   const unlaunchedShardIds = plan.shards
     .filter(
       ({ shardId }) =>
-        !input.execution.launchEvents.some(
+        !execution.launchEvents.some(
           (event) => event.shardId === shardId,
         ),
     )
@@ -9517,18 +9659,18 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
     launchEvents: canonicalLaunchEvents,
     unlaunchedShardIds,
   })
-  const launchedAttemptIds = input.execution.launchEvents.flatMap(
+  const launchedAttemptIds = execution.launchEvents.flatMap(
     ({ executionAttemptIds }) => executionAttemptIds,
   )
-  const terminalOutcomeCount = input.execution.terminals.reduce(
+  const terminalOutcomeCount = execution.terminals.reduce(
     (count, { outcomes }) => count + outcomes.length,
     0,
   )
   const launchedShardIds = new Set(
-    input.execution.launchEvents.map(({ shardId }) => shardId),
+    execution.launchEvents.map(({ shardId }) => shardId),
   )
   const terminalByShardId = new Map(
-    input.execution.terminals.map((terminal) => [terminal.shardId, terminal]),
+    execution.terminals.map((terminal) => [terminal.shardId, terminal]),
   )
   const completeCleanup =
     [...launchedShardIds].every((shardId) => {
@@ -9539,14 +9681,14 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
         terminal.cleanup.orphanProcessIds.length === 0
       )
     }) &&
-    input.execution.terminals.every(({ shardId }) =>
+    execution.terminals.every(({ shardId }) =>
       launchedShardIds.has(shardId),
     )
-  const terminalOutcomes = input.execution.terminals.flatMap(
+  const terminalOutcomes = execution.terminals.flatMap(
     ({ outcomes }) => outcomes,
   )
   const expectedCanonicalOutcomes = plan.shards.flatMap((shard) => {
-    const terminal = input.execution.terminals.find(
+    const terminal = execution.terminals.find(
       ({ shardId }) => shardId === shard.shardId,
     )
     const byId = new Map(
@@ -9563,9 +9705,9 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
       ({ classification }) => classification === "success",
     )
   const structuralValid =
-    input.execution.planRoot === plan.planRoot &&
-    canonical(input.execution.accounting) === canonical(recomputedAccounting) &&
-    canonical(input.execution.canonicalOutcomes) ===
+    execution.planRoot === plan.planRoot &&
+    canonical(execution.accounting) === canonical(recomputedAccounting) &&
+    canonical(execution.canonicalOutcomes) ===
       canonical(expectedCanonicalOutcomes) &&
     launchedAttemptIds.length === new Set(launchedAttemptIds).size &&
     launchedAttemptIds.every((attemptId) =>
@@ -9574,9 +9716,9 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
     terminalOutcomeCount === recomputedAccounting.terminalAttemptCount
   const exactComplete =
     structuralValid &&
-    input.execution.terminals.length === plan.shards.length &&
+    execution.terminals.length === plan.shards.length &&
     canonical(
-      input.execution.terminals.map(({ shardId, laneId }) => ({
+      execution.terminals.map(({ shardId, laneId }) => ({
       shardId,
       laneId,
       })),
@@ -9595,11 +9737,11 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
     completeCleanup
   if (
     !structuralValid ||
-    (input.execution.status === "complete_pending_publication") !==
+    (execution.status === "complete_pending_publication") !==
       exactComplete ||
     (exactComplete
-      ? input.execution.reason !== null
-      : input.execution.reason === null)
+      ? execution.reason !== null
+      : execution.reason === null)
   ) {
     throw new TypeError("MATRIX_REPRODUCTION_V7_EXECUTION_INVALID")
   }
@@ -9612,10 +9754,10 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
       : null
   const passed = canonicalReceipt !== null
   const launchByShard = new Map(
-    input.execution.launchEvents.map((event) => [event.shardId, event]),
+    execution.launchEvents.map((event) => [event.shardId, event]),
   )
   const terminalByShard = new Map(
-    input.execution.terminals.map((terminal) => [terminal.shardId, terminal]),
+    execution.terminals.map((terminal) => [terminal.shardId, terminal]),
   )
   const attempts = Object.freeze(
     plan.shards.flatMap((shard) => {
@@ -9656,14 +9798,19 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
       })
     }),
   )
-  const launchProjection = attempts
-    .filter(({ childLaunched }) => childLaunched)
-    .map(({ executionAttemptId, templateAttemptId, shardId, laneId }) => ({
-      executionAttemptId, templateAttemptId, shardId, laneId,
-    }))
-  const terminalProjection = attempts
-    .filter(({ terminalObserved }) => terminalObserved)
-    .map(
+  const launchProjection = {
+    observationMode: "exact" as const,
+    events: attempts
+      .filter(({ childLaunched }) => childLaunched)
+      .map(({ executionAttemptId, templateAttemptId, shardId, laneId }) => ({
+        executionAttemptId, templateAttemptId, shardId, laneId,
+      })),
+  }
+  const terminalProjection = {
+    observationMode: "exact" as const,
+    outcomes: attempts
+      .filter(({ terminalObserved }) => terminalObserved)
+      .map(
       ({
         executionAttemptId,
         templateAttemptId,
@@ -9681,10 +9828,12 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
         result,
         cleanupComplete,
       }),
-    )
+      ),
+  }
   const accountingProjection = {
-    childLaunchCount: launchProjection.length,
-    terminalOutcomeCount: terminalProjection.length,
+    observationMode: "exact" as const,
+    childLaunchCount: launchProjection.events.length,
+    terminalOutcomeCount: terminalProjection.outcomes.length,
     acceptedCellCount: passed ? 540 : 0,
     completeCleanup,
   }
@@ -9708,23 +9857,25 @@ export const buildV138AuthoritativeMatrixV7Receipt = (input: {
       ? "passed_exact" as const
       : "stopped_process_failure" as const,
     chargedAttemptCount: 540 as const,
+    observationMode: "exact" as const,
     childLaunchCount: launchedAttemptIds.length,
     terminalOutcomeCount,
     acceptedCellCount: passed ? 540 as const : 0 as const,
     completeCleanup,
-    publicStopReason: input.execution.reason,
+    publicStopReason: execution.reason,
     executionRoot: v138SuccessorRoot(
       "evidenceBundle",
       "v1.38-parallel-matrix-execution-v1",
       {
-        status: input.execution.status,
-        reason: input.execution.reason,
-        calibrationRoot: input.execution.calibrationRoot,
-        planRoot: input.execution.planRoot,
+        observationMode: "exact" as const,
+        status: execution.status,
+        reason: execution.reason,
+        calibrationRoot: execution.calibrationRoot,
+        planRoot: execution.planRoot,
         attempts,
       },
     ),
-    planRoot: input.execution.planRoot,
+    planRoot: execution.planRoot,
     accountingRoot: v138SuccessorRoot(
       "evidenceBundle",
       "v1.38-current-matrix-reproduction-v7-accounting-v1",
@@ -9768,7 +9919,8 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
     [
       "schemaVersion", "sourceA2", "sourceB2", "sourceB2CustodyRoot",
       "executionContextRoot", "preflightRoot", "calibrationRoot", "status",
-      "chargedAttemptCount", "childLaunchCount", "terminalOutcomeCount",
+      "chargedAttemptCount", "observationMode", "childLaunchCount",
+      "terminalOutcomeCount",
       "acceptedCellCount", "completeCleanup", "publicStopReason",
       "executionRoot", "planRoot", "accountingRoot", "launchRoot",
       "terminalRoot", "attemptLedgerRoot", "acceptedCellRoot",
@@ -9819,12 +9971,21 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
         attempt.templateAttemptId === expected.templateAttemptId &&
         attempt.shardId === expected.shardId &&
         attempt.laneId === expected.laneId &&
-        typeof attempt.childLaunched === "boolean" &&
-        typeof attempt.terminalObserved === "boolean" &&
+        (typeof attempt.childLaunched === "boolean" ||
+          attempt.childLaunched === null) &&
+        (typeof attempt.terminalObserved === "boolean" ||
+          attempt.terminalObserved === null) &&
         typeof attempt.cleanupComplete === "boolean" &&
         ["success", "player_violation", "system_failure", "timeout",
-          "cancelled", "unlaunched"].includes(attempt.classification) &&
-        (attempt.classification === "unlaunched"
+          "cancelled", "unlaunched", "unknown"].includes(
+            attempt.classification,
+          ) &&
+        (attempt.classification === "unknown"
+          ? attempt.result === null &&
+            attempt.childLaunched === null &&
+            attempt.terminalObserved === null &&
+            attempt.cleanupComplete === false
+          : attempt.classification === "unlaunched"
           ? attempt.result === null && attempt.terminalObserved === false
           : attempt.classification === "success"
             ? ["bottom_win", "top_win", "draw"].includes(attempt.result ?? "") &&
@@ -9842,13 +10003,13 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
         (!attempt.terminalObserved ? attempt.cleanupComplete === false : true)
       )
     })
-  const launchProjection = receipt.attempts
-    .filter(({ childLaunched }) => childLaunched)
+  const exactLaunchEvents = receipt.attempts
+    .filter(({ childLaunched }) => childLaunched === true)
     .map(({ executionAttemptId, templateAttemptId, shardId, laneId }) => ({
       executionAttemptId, templateAttemptId, shardId, laneId,
     }))
-  const terminalProjection = receipt.attempts
-    .filter(({ terminalObserved }) => terminalObserved)
+  const exactTerminalOutcomes = receipt.attempts
+    .filter(({ terminalObserved }) => terminalObserved === true)
     .map(
       ({
         executionAttemptId,
@@ -9868,14 +10029,70 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
         cleanupComplete,
       }),
     )
+  const launchProjection =
+    receipt.observationMode === "exact"
+      ? {
+          observationMode: "exact" as const,
+          events: exactLaunchEvents,
+        }
+      : {
+          observationMode: "unknown_after_consumption" as const,
+          attempts: receipt.attempts.map(
+            ({
+              executionAttemptId,
+              templateAttemptId,
+              shardId,
+              laneId,
+              childLaunched,
+            }) => ({
+              executionAttemptId,
+              templateAttemptId,
+              shardId,
+              laneId,
+              childLaunched,
+            }),
+          ),
+        }
+  const terminalProjection =
+    receipt.observationMode === "exact"
+      ? {
+          observationMode: "exact" as const,
+          outcomes: exactTerminalOutcomes,
+        }
+      : {
+          observationMode: "unknown_after_consumption" as const,
+          attempts: receipt.attempts.map(
+            ({
+              executionAttemptId,
+              templateAttemptId,
+              shardId,
+              laneId,
+              terminalObserved,
+              classification,
+              result,
+              cleanupComplete,
+            }) => ({
+              executionAttemptId,
+              templateAttemptId,
+              shardId,
+              laneId,
+              terminalObserved,
+              classification,
+              result,
+              cleanupComplete,
+            }),
+          ),
+        }
   const derivedCleanup =
+    receipt.observationMode === "exact" &&
     receipt.attempts.every(
       ({ childLaunched, terminalObserved, cleanupComplete }) =>
-        !childLaunched || (terminalObserved && cleanupComplete),
+        childLaunched !== true ||
+        (terminalObserved === true && cleanupComplete),
     ) &&
     receipt.attempts.every(
       ({ childLaunched, terminalObserved }) =>
-        !terminalObserved || childLaunched,
+        terminalObserved !== true || childLaunched === true,
     )
   const derivedPassed = receipt.attempts.every(
       ({
@@ -9885,8 +10102,8 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
       result,
         cleanupComplete,
       }) =>
-        childLaunched &&
-        terminalObserved &&
+        childLaunched === true &&
+        terminalObserved === true &&
         classification === "success" &&
         ["bottom_win", "top_win", "draw"].includes(result ?? "") &&
         cleanupComplete,
@@ -9905,8 +10122,11 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
       )
     : null
   const accountingProjection = {
-    childLaunchCount: launchProjection.length,
-    terminalOutcomeCount: terminalProjection.length,
+    observationMode: receipt.observationMode,
+    childLaunchCount:
+      receipt.observationMode === "exact" ? exactLaunchEvents.length : null,
+    terminalOutcomeCount:
+      receipt.observationMode === "exact" ? exactTerminalOutcomes.length : null,
     acceptedCellCount: derivedPassed ? 540 : 0,
     completeCleanup: derivedCleanup,
   }
@@ -9914,6 +10134,7 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
     "evidenceBundle",
     "v1.38-parallel-matrix-execution-v1",
     {
+      observationMode: receipt.observationMode,
       status:
         receipt.status === "passed_exact"
         ? "complete_pending_publication"
@@ -9951,12 +10172,32 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
     calibration.status !== "admitted" ||
     roots.some((root) => !/^sha256:[0-9a-f]{64}$/u.test(root)) ||
     receipt.chargedAttemptCount !== 540 ||
-    !Number.isSafeInteger(receipt.childLaunchCount) ||
-    !Number.isSafeInteger(receipt.terminalOutcomeCount) ||
-    receipt.childLaunchCount < 0 ||
-    receipt.childLaunchCount > 540 ||
-    receipt.terminalOutcomeCount < 0 ||
-    receipt.terminalOutcomeCount > 540 ||
+    !["exact", "unknown_after_consumption"].includes(
+      receipt.observationMode,
+    ) ||
+    (receipt.observationMode === "exact"
+      ? !Number.isSafeInteger(receipt.childLaunchCount) ||
+        !Number.isSafeInteger(receipt.terminalOutcomeCount) ||
+        receipt.childLaunchCount! < 0 ||
+        receipt.childLaunchCount! > 540 ||
+        receipt.terminalOutcomeCount! < 0 ||
+        receipt.terminalOutcomeCount! > 540
+      : receipt.childLaunchCount !== null ||
+        receipt.terminalOutcomeCount !== null ||
+        receipt.attempts.some(
+          ({
+            childLaunched,
+            terminalObserved,
+            classification,
+            result,
+            cleanupComplete,
+          }) =>
+            childLaunched !== null ||
+            terminalObserved !== null ||
+            classification !== "unknown" ||
+            result !== null ||
+            cleanupComplete !== false,
+        )) ||
     typeof receipt.completeCleanup !== "boolean" ||
     receipt.runtimeRoute !== "v1.18/v1.19/MATCH_KERNEL" ||
     receipt.privacyProjection !== "closed_public_safe_fields_only" ||
@@ -9964,8 +10205,9 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
     receipt.noRetry !== true ||
     (receipt.publicStopReason !== null &&
       !V138_PUBLIC_STOP_REASONS.has(receipt.publicStopReason)) ||
-    receipt.childLaunchCount !== launchProjection.length ||
-    receipt.terminalOutcomeCount !== terminalProjection.length ||
+    (receipt.observationMode === "exact" &&
+      (receipt.childLaunchCount !== exactLaunchEvents.length ||
+        receipt.terminalOutcomeCount !== exactTerminalOutcomes.length)) ||
     receipt.completeCleanup !== derivedCleanup ||
     receipt.executionRoot !== expectedExecutionRoot ||
     receipt.accountingRoot !==
@@ -9998,7 +10240,8 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
     receipt.acceptedCellRoot !==
       (acceptedReceipt?.acceptedCellLedgerRoot ?? null) ||
     (receipt.status === "passed_exact"
-      ? receipt.childLaunchCount !== 540 ||
+      ? receipt.observationMode !== "exact" ||
+        receipt.childLaunchCount !== 540 ||
         receipt.terminalOutcomeCount !== 540 ||
         receipt.acceptedCellCount !== 540 ||
         receipt.completeCleanup !== true ||
@@ -10009,7 +10252,10 @@ export const checkV138AuthoritativeMatrixV7Receipt = (
         receipt.acceptedCellCount !== 0 ||
         receipt.publicStopReason === null ||
         derivedPassed ||
-        receipt.acceptedCellRoot !== null) ||
+        receipt.acceptedCellRoot !== null ||
+        (receipt.observationMode === "unknown_after_consumption" &&
+          (receipt.publicStopReason !== "PARENT_EXCEPTION" ||
+            receipt.completeCleanup !== false))) ||
     receipt.receiptRoot !==
       v138SuccessorRoot("evidenceBundle", receipt.schemaVersion, body)
   ) {
@@ -10653,12 +10899,21 @@ export const writeV138Plan26219Immutable = (
       } finally {
         closeSync(descriptor)
       }
-      unlinkSync(target)
-      const directoryDescriptor = openSync(path.dirname(target), "r")
       try {
-        fsyncSync(directoryDescriptor)
-      } finally {
-        closeSync(directoryDescriptor)
+        unlinkSync(target)
+        const directoryDescriptor = openSync(path.dirname(target), "r")
+        try {
+          ;(options.fsyncRollbackDirectory ?? fsyncSync)(
+            directoryDescriptor,
+          )
+        } finally {
+          closeSync(directoryDescriptor)
+        }
+        checkV138CanonicalParentChain(parentChain)
+      } catch {
+        throw new TypeError(
+          "MATRIX_PLAN_262_19_ROLLBACK_INDETERMINATE",
+        )
       }
       throw new TypeError(
         "MATRIX_PLAN_262_19_PUBLICATION_DURABLY_ROLLED_BACK",
@@ -11143,7 +11398,8 @@ export const writeV138AuthoritativeMatrixV7Receipt = async (
         attemptIds.map((attemptId) => `reproduction:v6:${attemptId}`),
     ),
   })
-  let execution: V138ParallelMatrixExecutionResult
+  let execution: V138ParallelMatrixExecutionResult | undefined
+  let callbackFailureAfterConsumption: true | undefined
   try {
     execution = await runReproduction({
     inventory,
@@ -11157,25 +11413,7 @@ export const writeV138AuthoritativeMatrixV7Receipt = async (
     executionIdentityVersion: "v6",
     })
   } catch {
-    const plan = planV138MatrixShards(inventory)
-    execution = deepFreeze({
-      schemaVersion: "v1.38-parallel-matrix-execution-v1",
-      status: "stopped_process_failure",
-      reason: "PARENT_EXCEPTION",
-      calibrationRoot: calibration.supervisionRoot,
-      planRoot: plan.planRoot,
-      terminals: Object.freeze([]),
-      launchEvents: Object.freeze([]),
-      accounting: reduceV138ParallelMatrixAccounting({
-        inventory,
-        plan,
-        terminals: [],
-        launchEvents: [],
-        unlaunchedShardIds: plan.shards.map(({ shardId }) => shardId),
-      }),
-      canonicalOutcomes: Object.freeze([]),
-      batchWallMilliseconds: 0,
-    })
+    callbackFailureAfterConsumption = true
   }
   assertV138Plan26219AuthorityOpen(repoRoot)
   checkV138SealedWorktreeAtA2(repoRoot, route.seal)
@@ -11199,6 +11437,7 @@ export const writeV138AuthoritativeMatrixV7Receipt = async (
     preflight,
     calibration,
     execution,
+    callbackFailureAfterConsumption,
   })
   writeV138Plan26219Immutable(target, parentChain, receipt)
   return receipt
@@ -11210,6 +11449,7 @@ export type V138Plan26219TerminalDisposition =
   | "formation_absence_failed"
   | "pattern_c_ownership_failed"
   | "fresh_destination_failed"
+  | "consumed_stage_interrupted"
   | "preflight_unavailable"
   | "preflight_refused"
   | "calibration_stopped"
@@ -11238,6 +11478,15 @@ export interface V138Plan26219TerminalV2 {
     type: "file" | "directory" | "symlink" | "other"
     metadataRoot: Sha256
   }> | null
+  readonly interruptionProof: Readonly<{
+    stage: "preflight" | "calibration" | "reproduction"
+    markerRoot: Sha256
+    chargedAttemptCount: 1 | 8 | 540
+    observationMode: "unknown_after_consumption"
+    childLaunchCount: null
+    terminalOutcomeCount: null
+    completeCleanup: false
+  }> | null
   readonly chargedCalibrationAttemptCount: 0 | 8
   readonly chargedReproductionAttemptCount: 0 | 540
   readonly acceptedCellCount: 0 | 540
@@ -11251,6 +11500,7 @@ export interface V138Plan26219TerminalV2 {
 const plan26219Needs = (
   disposition: V138Plan26219TerminalDisposition,
   obstructionStage?: "context" | "preflight" | "calibration" | "reproduction",
+  interruptedStage?: "preflight" | "calibration" | "reproduction",
 ) => {
   const beforeObservation = [
     "tool_identity_failed",
@@ -11271,6 +11521,16 @@ const plan26219Needs = (
       reproduction: false,
     }
   }
+  if (disposition === "consumed_stage_interrupted") {
+    return {
+      context: true,
+      preflight:
+        interruptedStage === "calibration" ||
+        interruptedStage === "reproduction",
+      calibration: interruptedStage === "reproduction",
+      reproduction: false,
+    }
+  }
   return {
     context: !beforeObservation,
     preflight: !beforeObservation,
@@ -11280,6 +11540,25 @@ const plan26219Needs = (
       disposition === "reproduction_passed",
   }
 }
+
+const plan26219MarkerNeeds = (
+  disposition: V138Plan26219TerminalDisposition,
+  artifactNeeds: ReturnType<typeof plan26219Needs>,
+  interruptedStage?: "preflight" | "calibration" | "reproduction",
+) =>
+  disposition === "consumed_stage_interrupted"
+    ? {
+        preflight: true,
+        calibration:
+          interruptedStage === "calibration" ||
+          interruptedStage === "reproduction",
+        reproduction: interruptedStage === "reproduction",
+      }
+    : {
+        preflight: artifactNeeds.preflight,
+        calibration: artifactNeeds.calibration,
+        reproduction: artifactNeeds.reproduction,
+      }
 
 export const buildV138Plan26219TerminalV2 = (input: {
   readonly disposition: V138Plan26219TerminalDisposition
@@ -11293,21 +11572,40 @@ export const buildV138Plan26219TerminalV2 = (input: {
   readonly reproduction?: V138AuthoritativeMatrixV7Receipt | undefined
   readonly consumptionMarkerRoots?: V138Plan26219TerminalV2["consumptionMarkerRoots"]
   readonly obstructionProof?: V138Plan26219TerminalV2["obstructionProof"]
+  readonly interruptionProof?: V138Plan26219TerminalV2["interruptionProof"]
 }): Readonly<V138Plan26219TerminalV2> => {
-  const needs = plan26219Needs(input.disposition, input.obstructionProof?.stage)
+  const needs = plan26219Needs(
+    input.disposition,
+    input.obstructionProof?.stage,
+    input.interruptionProof?.stage,
+  )
+  const markerNeeds = plan26219MarkerNeeds(
+    input.disposition,
+    needs,
+    input.interruptionProof?.stage,
+  )
   if (
     (input.context !== undefined) !== needs.context ||
     (input.preflight !== undefined) !== needs.preflight ||
     (input.calibration !== undefined) !== needs.calibration ||
     (input.reproduction !== undefined) !== needs.reproduction ||
     input.consumptionMarkerRoots === undefined ||
-    (input.consumptionMarkerRoots.preflight !== null) !== needs.preflight ||
-    (input.consumptionMarkerRoots.calibration !== null) !== needs.calibration ||
+    (input.consumptionMarkerRoots.preflight !== null) !== markerNeeds.preflight ||
+    (input.consumptionMarkerRoots.calibration !== null) !==
+      markerNeeds.calibration ||
     (input.consumptionMarkerRoots.reproduction !== null) !==
-      needs.reproduction ||
+      markerNeeds.reproduction ||
     (input.disposition === "fresh_destination_failed") !==
       (input.obstructionProof !== undefined &&
         input.obstructionProof !== null) ||
+    (input.disposition === "consumed_stage_interrupted") !==
+      (input.interruptionProof !== undefined &&
+        input.interruptionProof !== null) ||
+    (input.disposition === "consumed_stage_interrupted" &&
+      input.interruptionProof!.markerRoot !==
+        input.consumptionMarkerRoots[
+          input.interruptionProof!.stage
+        ]) ||
     input.authorization.sourceCustody.sourceA2 !== input.sourceA2 ||
     input.seal.sourceCustody.sourceA2 !== input.sourceA2 ||
     input.seal.authorizationRoot !== input.authorization.authorizationRoot
@@ -11381,12 +11679,23 @@ export const buildV138Plan26219TerminalV2 = (input: {
     reproductionRoot: reproduction?.receiptRoot ?? null,
     consumptionMarkerRoots: input.consumptionMarkerRoots,
     obstructionProof: input.obstructionProof ?? null,
+    interruptionProof: input.interruptionProof ?? null,
     chargedCalibrationAttemptCount:
-      calibration === undefined ? 0 as const : 8 as const,
+      calibration === undefined &&
+        input.interruptionProof?.stage !== "calibration" &&
+        input.interruptionProof?.stage !== "reproduction"
+        ? 0 as const
+        : 8 as const,
     chargedReproductionAttemptCount:
-      reproduction === undefined ? 0 as const : 540 as const,
+      reproduction === undefined &&
+        input.interruptionProof?.stage !== "reproduction"
+        ? 0 as const
+        : 540 as const,
     acceptedCellCount,
-    completeCleanup,
+    completeCleanup:
+      input.disposition === "consumed_stage_interrupted"
+        ? false
+        : completeCleanup,
     authorityExpired: true as const,
     noRetry: true as const,
     partialAcceptedEvidenceReusable: false as const,
@@ -11419,6 +11728,7 @@ export const checkV138Plan26219TerminalV2 = (
       "reproductionRoot",
       "consumptionMarkerRoots",
       "obstructionProof",
+      "interruptionProof",
       "chargedCalibrationAttemptCount", "chargedReproductionAttemptCount",
       "acceptedCellCount", "completeCleanup", "authorityExpired", "noRetry",
       "partialAcceptedEvidenceReusable", "terminalRoot",
@@ -11429,8 +11739,15 @@ export const checkV138Plan26219TerminalV2 = (
   const needs = plan26219Needs(
     terminal.disposition,
     terminal.obstructionProof?.stage,
+    terminal.interruptionProof?.stage,
+  )
+  const markerNeeds = plan26219MarkerNeeds(
+    terminal.disposition,
+    needs,
+    terminal.interruptionProof?.stage,
   )
   const obstruction = terminal.obstructionProof
+  const interruption = terminal.interruptionProof
   const markerRoots = exactRecord(
     terminal.consumptionMarkerRoots,
     ["preflight", "calibration", "reproduction"],
@@ -11462,6 +11779,33 @@ export const checkV138Plan26219TerminalV2 = (
     ).includes(obstruction.path as never) &&
     ["file", "directory", "symlink", "other"].includes(obstruction.type) &&
     isV138CanonicalSha256(obstruction.metadataRoot)
+  const interruptionValid =
+    interruption !== null &&
+    canonical(Object.keys(interruption)) ===
+      canonical([
+        "stage",
+        "markerRoot",
+        "chargedAttemptCount",
+        "observationMode",
+        "childLaunchCount",
+        "terminalOutcomeCount",
+        "completeCleanup",
+      ]) &&
+    ["preflight", "calibration", "reproduction"].includes(
+      interruption.stage,
+    ) &&
+    isV138CanonicalSha256(interruption.markerRoot) &&
+    interruption.chargedAttemptCount ===
+      (interruption.stage === "preflight"
+        ? 1
+        : interruption.stage === "calibration"
+          ? 8
+          : 540) &&
+    interruption.observationMode === "unknown_after_consumption" &&
+    interruption.childLaunchCount === null &&
+    interruption.terminalOutcomeCount === null &&
+    interruption.completeCleanup === false &&
+    interruption.markerRoot === markerRoots[interruption.stage]
   if (
     terminal.disposition === "fresh_destination_failed" &&
     !obstructionValid
@@ -11473,7 +11817,8 @@ export const checkV138Plan26219TerminalV2 = (
     ![
       "tool_identity_failed", "protected_history_failed",
       "formation_absence_failed", "pattern_c_ownership_failed",
-      "fresh_destination_failed", "preflight_unavailable",
+      "fresh_destination_failed", "consumed_stage_interrupted",
+      "preflight_unavailable",
       "preflight_refused", "calibration_stopped", "reproduction_stopped",
       "reproduction_passed",
     ].includes(terminal.disposition) ||
@@ -11488,22 +11833,36 @@ export const checkV138Plan26219TerminalV2 = (
     (terminal.preflightRoot !== null) !== needs.preflight ||
     (terminal.calibrationRoot !== null) !== needs.calibration ||
     (terminal.reproductionRoot !== null) !== needs.reproduction ||
-    (markerRoots.preflight !== null) !== needs.preflight ||
-    (markerRoots.calibration !== null) !== needs.calibration ||
-    (markerRoots.reproduction !== null) !== needs.reproduction ||
+    (markerRoots.preflight !== null) !== markerNeeds.preflight ||
+    (markerRoots.calibration !== null) !== markerNeeds.calibration ||
+    (markerRoots.reproduction !== null) !== markerNeeds.reproduction ||
     Object.values(markerRoots).some(
       (root) => root !== null && !isV138CanonicalSha256(root),
     ) ||
     (terminal.disposition === "fresh_destination_failed") !==
       obstructionValid ||
-    terminal.chargedCalibrationAttemptCount !== (needs.calibration ? 8 : 0) ||
+    (terminal.disposition === "consumed_stage_interrupted") !==
+      interruptionValid ||
     terminal.chargedReproductionAttemptCount !==
-      (needs.reproduction ? 540 : 0) ||
+      (terminal.disposition === "consumed_stage_interrupted" &&
+          terminal.interruptionProof?.stage === "reproduction" ||
+        needs.reproduction
+        ? 540
+        : 0) ||
+    terminal.chargedCalibrationAttemptCount !==
+      (terminal.disposition === "consumed_stage_interrupted" &&
+        (terminal.interruptionProof?.stage === "calibration" ||
+          terminal.interruptionProof?.stage === "reproduction") ||
+        needs.calibration
+        ? 8
+        : 0) ||
     terminal.acceptedCellCount !==
       (terminal.disposition === "reproduction_passed" ? 540 : 0) ||
     terminal.authorityExpired !== true ||
     terminal.noRetry !== true ||
     terminal.partialAcceptedEvidenceReusable !== false ||
+    (terminal.disposition === "consumed_stage_interrupted" &&
+      terminal.completeCleanup !== false) ||
     terminalRoot !==
       v138SuccessorRoot("canonicalJsonProfile", terminal.schemaVersion, body)
   ) {
@@ -11525,6 +11884,7 @@ const readV138Plan26219BranchArtifacts = (
   const needs = plan26219Needs(
     terminal.disposition,
     terminal.obstructionProof?.stage,
+    terminal.interruptionProof?.stage,
   )
   const read = <
     K extends "context" | "preflight" | "calibration" | "reproduction",
@@ -11697,9 +12057,18 @@ export const checkV138Plan26219TerminalBranch = (
     }
   }
   const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const markerNeeds = plan26219MarkerNeeds(
+    branch.terminal.disposition,
+    plan26219Needs(
+      branch.terminal.disposition,
+      branch.terminal.obstructionProof?.stage,
+      branch.terminal.interruptionProof?.stage,
+    ),
+    branch.terminal.interruptionProof?.stage,
+  )
   const consumptionMarkerRoots = {
     preflight:
-      context === undefined || preflight === undefined
+      !markerNeeds.preflight || context === undefined
         ? null
         : checkV138Plan26219ConsumptionMarker({
             repoRoot,
@@ -11709,9 +12078,9 @@ export const checkV138Plan26219TerminalBranch = (
             chargedAttemptIds: ["preflight:v6:0"],
           }).markerRoot,
     calibration:
+      !markerNeeds.calibration ||
       context === undefined ||
-      preflight === undefined ||
-      calibration === undefined
+      preflight === undefined
         ? null
         : checkV138Plan26219ConsumptionMarker({
             repoRoot,
@@ -11724,9 +12093,9 @@ export const checkV138Plan26219TerminalBranch = (
             ).map(({ executionAttemptId }) => executionAttemptId),
           }).markerRoot,
     reproduction:
+      !markerNeeds.reproduction ||
       context === undefined ||
-      calibration === undefined ||
-      reproduction === undefined
+      calibration === undefined
         ? null
         : checkV138Plan26219ConsumptionMarker({
             repoRoot,
@@ -11739,6 +12108,35 @@ export const checkV138Plan26219TerminalBranch = (
             ),
           }).markerRoot,
   } as const
+  if (branch.terminal.disposition === "consumed_stage_interrupted") {
+    const stage = branch.terminal.interruptionProof!.stage
+    const stageOrder = ["preflight", "calibration", "reproduction"] as const
+    const publicPaths = {
+      preflight: supplied.preflight,
+      calibration: supplied.calibration,
+      reproduction: supplied.reproduction,
+    } as const
+    const markerPaths = {
+      preflight: V138_PLAN_262_19_FRESH_DESTINATIONS[5]!,
+      calibration: V138_PLAN_262_19_FRESH_DESTINATIONS[6]!,
+      reproduction: V138_PLAN_262_19_FRESH_DESTINATIONS[7]!,
+    } as const
+    const stageIndex = stageOrder.indexOf(stage)
+    for (const [index, candidateStage] of stageOrder.entries()) {
+      if (index >= stageIndex) {
+        plan26216Read(
+          path.resolve(repoRoot, publicPaths[candidateStage]),
+          false,
+        )
+      }
+      if (index > stageIndex) {
+        plan26216Read(
+          path.resolve(repoRoot, markerPaths[candidateStage]),
+          false,
+        )
+      }
+    }
+  }
   if (branch.terminal.disposition === "fresh_destination_failed") {
     const proof = branch.terminal.obstructionProof!
     let validCanonicalMarker = false
@@ -11807,6 +12205,7 @@ export const checkV138Plan26219TerminalBranch = (
     reproduction,
     consumptionMarkerRoots,
     obstructionProof: branch.terminal.obstructionProof,
+    interruptionProof: branch.terminal.interruptionProof,
   })
   if (canonical(expected) !== canonical(branch.terminal)) {
     throw new TypeError("MATRIX_PLAN_262_19_TERMINAL_JOIN_INVALID")
@@ -11906,7 +12305,60 @@ export const writeV138Plan26219TerminalV2 = (
           }
           return Object.freeze(active.candidates[0]!)
         })()
-  const needs = plan26219Needs(disposition, obstructionProof?.stage)
+  const interruptedStage =
+    disposition !== "consumed_stage_interrupted"
+      ? undefined
+      : (() => {
+          const stages = [
+            {
+              stage: "preflight" as const,
+              publicPath: supplied.preflight,
+              markerPath: V138_PLAN_262_19_FRESH_DESTINATIONS[5]!,
+            },
+            {
+              stage: "calibration" as const,
+              publicPath: supplied.calibration,
+              markerPath: V138_PLAN_262_19_FRESH_DESTINATIONS[6]!,
+            },
+            {
+              stage: "reproduction" as const,
+              publicPath: supplied.reproduction,
+              markerPath: V138_PLAN_262_19_FRESH_DESTINATIONS[7]!,
+            },
+          ]
+          const exists = (repoPath: string) => {
+            try {
+              lstatSync(path.resolve(repoRoot, repoPath))
+              return true
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === "ENOENT")
+                return false
+              throw error
+            }
+          }
+          const candidates = stages.filter(
+            ({ publicPath, markerPath }) =>
+              !exists(publicPath) && exists(markerPath),
+          )
+          const active = candidates.at(-1)
+          if (active === undefined) {
+            throw new TypeError("MATRIX_PLAN_262_19_INTERRUPTION_INVALID")
+          }
+          const activeIndex = stages.findIndex(
+            ({ stage }) => stage === active.stage,
+          )
+          for (const later of stages.slice(activeIndex + 1)) {
+            if (exists(later.publicPath) || exists(later.markerPath)) {
+              throw new TypeError("MATRIX_PLAN_262_19_INTERRUPTION_INVALID")
+            }
+          }
+          return active.stage
+        })()
+  const needs = plan26219Needs(
+    disposition,
+    obstructionProof?.stage,
+    interruptedStage,
+  )
   const route = checkV138Plan26219AuthorityRoute({
     repoRoot,
     authorizationValue: plan26216Read(
@@ -11964,9 +12416,14 @@ export const writeV138Plan26219TerminalV2 = (
           calibration,
         })
   const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const markerNeeds = plan26219MarkerNeeds(
+    disposition,
+    needs,
+    interruptedStage,
+  )
   const consumptionMarkerRoots = {
     preflight:
-      context === undefined || preflight === undefined
+      !markerNeeds.preflight || context === undefined
         ? null
         : checkV138Plan26219ConsumptionMarker({
             repoRoot,
@@ -11976,9 +12433,9 @@ export const writeV138Plan26219TerminalV2 = (
             chargedAttemptIds: ["preflight:v6:0"],
           }).markerRoot,
     calibration:
+      !markerNeeds.calibration ||
       context === undefined ||
-      preflight === undefined ||
-      calibration === undefined
+      preflight === undefined
         ? null
         : checkV138Plan26219ConsumptionMarker({
             repoRoot,
@@ -11991,9 +12448,9 @@ export const writeV138Plan26219TerminalV2 = (
             ).map(({ executionAttemptId }) => executionAttemptId),
           }).markerRoot,
     reproduction:
+      !markerNeeds.reproduction ||
       context === undefined ||
-      calibration === undefined ||
-      reproduction === undefined
+      calibration === undefined
         ? null
         : checkV138Plan26219ConsumptionMarker({
             repoRoot,
@@ -12006,6 +12463,23 @@ export const writeV138Plan26219TerminalV2 = (
             ),
           }).markerRoot,
   } as const
+  const interruptionProof =
+    interruptedStage === undefined
+      ? undefined
+      : Object.freeze({
+          stage: interruptedStage,
+          markerRoot: consumptionMarkerRoots[interruptedStage]!,
+          chargedAttemptCount:
+            interruptedStage === "preflight"
+              ? 1 as const
+              : interruptedStage === "calibration"
+                ? 8 as const
+                : 540 as const,
+          observationMode: "unknown_after_consumption" as const,
+          childLaunchCount: null,
+          terminalOutcomeCount: null,
+          completeCleanup: false as const,
+        })
   const terminal = buildV138Plan26219TerminalV2({
     disposition,
     authorization: route.authorization,
@@ -12018,6 +12492,7 @@ export const writeV138Plan26219TerminalV2 = (
     reproduction,
     consumptionMarkerRoots,
     obstructionProof,
+    interruptionProof,
   })
   writeV138Plan26219Immutable(target, parentChain, terminal)
   return terminal

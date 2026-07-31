@@ -10,6 +10,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -4562,6 +4563,44 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
     }
   })
 
+  it("classifies a parent swap during Plan 262-19 rollback as indeterminate", () => {
+    const root = mkdtempSync(
+      path.join(tmpdir(), "cowards-262-19-rollback-parent-swap-"),
+    )
+    const artifacts = path.resolve(root, ".planning/artifacts")
+    const displaced = path.resolve(root, ".planning/artifacts-displaced")
+    const target = path.resolve(
+      root,
+      V138_PLAN_262_19_FRESH_DESTINATIONS[0]!,
+    )
+    try {
+      mkdirSync(artifacts, { recursive: true })
+      const parentChain = validateV138CanonicalParentChain(root, target)
+      expect(() =>
+        writeV138Plan26219Immutable(
+          target,
+          parentChain,
+          { stageOrdinal: 0 },
+          {
+            fsyncDirectory(_descriptor, phase) {
+              if (phase === "publication") {
+                throw new Error("injected publication uncertainty")
+              }
+            },
+            fsyncRollbackDirectory(descriptor) {
+              renameSync(artifacts, displaced)
+              mkdirSync(artifacts)
+              fsyncSync(descriptor)
+            },
+          },
+        ),
+      ).toThrow("MATRIX_PLAN_262_19_ROLLBACK_INDETERMINATE")
+      expect(existsSync(target)).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("v2 publication rolls back injected write, fsync, link, readback, and cleanup faults", () => {
     const root = mkdtempSync(path.join(tmpdir(), "cowards-v2-publish-faults-"))
     try {
@@ -5413,6 +5452,124 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
           calibration,
         }),
       ).toEqual(reproduction)
+      const interruptedReproduction =
+        buildV138AuthoritativeMatrixV7Receipt({
+          repoRoot: root,
+          executionContext: context,
+          preflight,
+          calibration,
+          callbackFailureAfterConsumption: true,
+        })
+      expect(interruptedReproduction).toMatchObject({
+        status: "stopped_process_failure",
+        chargedAttemptCount: 540,
+        observationMode: "unknown_after_consumption",
+        childLaunchCount: null,
+        terminalOutcomeCount: null,
+        acceptedCellCount: 0,
+        completeCleanup: false,
+        publicStopReason: "PARENT_EXCEPTION",
+        noRetry: true,
+      })
+      expect(interruptedReproduction.attempts).toHaveLength(540)
+      expect(
+        interruptedReproduction.attempts.every(
+          ({
+            childLaunched,
+            terminalObserved,
+            classification,
+            cleanupComplete,
+          }) =>
+            childLaunched === null &&
+            terminalObserved === null &&
+            classification === "unknown" &&
+            cleanupComplete === false,
+        ),
+      ).toBe(true)
+      expect(
+        checkV138AuthoritativeMatrixV7Receipt(
+          clone(interruptedReproduction),
+          {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          },
+        ),
+      ).toEqual(interruptedReproduction)
+      const falseZeroReproduction = clone(interruptedReproduction)
+      falseZeroReproduction.attempts[0]!.childLaunched = false
+      const {
+        receiptRoot: _falseZeroRoot,
+        ...falseZeroReproductionBody
+      } = falseZeroReproduction
+      falseZeroReproduction.receiptRoot = v138SuccessorRoot(
+        "evidenceBundle",
+        falseZeroReproduction.schemaVersion,
+        falseZeroReproductionBody,
+      )
+      expect(() =>
+        checkV138AuthoritativeMatrixV7Receipt(falseZeroReproduction, {
+          repoRoot: root,
+          executionContext: context,
+          preflight,
+          calibration,
+        }),
+      ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
+        canonicalManifest(context),
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[1]),
+        canonicalManifest(preflight),
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[2]),
+        canonicalManifest(calibration),
+      )
+      let possibleLaunchesBeforeThrow = 0
+      const callbackInterruptedReceipt =
+        await writeV138AuthoritativeMatrixV7Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            possibleLaunchesBeforeThrow += 1
+            throw new Error("injected after possible child launch")
+          },
+        )
+      expect(possibleLaunchesBeforeThrow).toBe(1)
+      expect(callbackInterruptedReceipt).toMatchObject({
+        observationMode: "unknown_after_consumption",
+        childLaunchCount: null,
+        terminalOutcomeCount: null,
+        completeCleanup: false,
+        publicStopReason: "PARENT_EXCEPTION",
+      })
+      expect(
+        checkV138AuthoritativeMatrixV7Receipt(
+          clone(callbackInterruptedReceipt),
+          {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          },
+        ),
+      ).toEqual(callbackInterruptedReceipt)
+      for (const repoPath of [
+        V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[1],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[7],
+      ]) {
+        unlinkSync(path.resolve(root, repoPath!))
+      }
       for (const mutate of [
         (candidate: typeof reproduction) => {
           candidate.attempts[0]!.executionAttemptId =
@@ -5532,6 +5689,81 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         authorityExpired: true,
         noRetry: true,
       })
+      const marker = (name: string) =>
+        `sha256:${createHash("sha256").update(name).digest("hex")}` as const
+      const interruptionCases = [
+        {
+          stage: "preflight" as const,
+          markerRoots: {
+            preflight: marker("preflight-interrupted"),
+            calibration: null,
+            reproduction: null,
+          },
+          artifacts: { context },
+          chargedAttemptCount: 1 as const,
+          chargedCalibrationAttemptCount: 0,
+          chargedReproductionAttemptCount: 0,
+        },
+        {
+          stage: "calibration" as const,
+          markerRoots: {
+            preflight: marker("preflight-complete"),
+            calibration: marker("calibration-interrupted"),
+            reproduction: null,
+          },
+          artifacts: { context, preflight },
+          chargedAttemptCount: 8 as const,
+          chargedCalibrationAttemptCount: 8,
+          chargedReproductionAttemptCount: 0,
+        },
+        {
+          stage: "reproduction" as const,
+          markerRoots: {
+            preflight: marker("preflight-complete"),
+            calibration: marker("calibration-complete"),
+            reproduction: marker("reproduction-interrupted"),
+          },
+          artifacts: { context, preflight, calibration },
+          chargedAttemptCount: 540 as const,
+          chargedCalibrationAttemptCount: 8,
+          chargedReproductionAttemptCount: 540,
+        },
+      ]
+      for (const interruptionCase of interruptionCases) {
+        const interruptedTerminal = buildV138Plan26219TerminalV2({
+          disposition: "consumed_stage_interrupted",
+          authorization,
+          seal,
+          sourceA2,
+          sourceB2,
+          ...interruptionCase.artifacts,
+          consumptionMarkerRoots: interruptionCase.markerRoots,
+          interruptionProof: {
+            stage: interruptionCase.stage,
+            markerRoot:
+              interruptionCase.markerRoots[interruptionCase.stage]!,
+            chargedAttemptCount: interruptionCase.chargedAttemptCount,
+            observationMode: "unknown_after_consumption",
+            childLaunchCount: null,
+            terminalOutcomeCount: null,
+            completeCleanup: false,
+          },
+        })
+        expect(
+          checkV138Plan26219TerminalV2(clone(interruptedTerminal)),
+        ).toEqual(interruptedTerminal)
+        expect(interruptedTerminal).toMatchObject({
+          disposition: "consumed_stage_interrupted",
+          chargedCalibrationAttemptCount:
+            interruptionCase.chargedCalibrationAttemptCount,
+          chargedReproductionAttemptCount:
+            interruptionCase.chargedReproductionAttemptCount,
+          acceptedCellCount: 0,
+          completeCleanup: false,
+          authorityExpired: true,
+          noRetry: true,
+        })
+      }
       expect(
         buildV138Plan26219TerminalV2({
           disposition: "tool_identity_failed",
