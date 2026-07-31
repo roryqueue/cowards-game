@@ -29,6 +29,11 @@ import {
 } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import {
+  V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+  classifyV138CurrentMatrixChildFailure,
+  type V138CurrentMatrixChildFailureCode,
+} from "./v1-38-current-matrix-child-protocol.js"
+import {
   type V138FoundationAdmissionPassed,
 } from "./v1-38-foundation-admission.js"
 import {
@@ -97,6 +102,9 @@ import {
   V138_PLAN_262_19_FRESH_DESTINATIONS,
   V138_PLAN_262_21_CANONICAL_PATHS,
   V138_PLAN_262_22_FRESH_DESTINATIONS,
+  V138_PLAN_262_25_FRESH_DESTINATIONS,
+  V138_PLAN_262_24_AUTHORIZATION_SCHEMA,
+  V138_SUCCESSOR_SOURCE_SEAL_V4_SCHEMA,
   type V138Plan26218AuthorizationV2,
   type V138CanonicalParentChain,
   type V138Plan26215Authorization,
@@ -3765,6 +3773,12 @@ export function createV138SubprocessShardRunner(
           : parsed === undefined
             ? "RESOURCE_POLICY_SHARD_OUTPUT_INVALID"
             : undefined)
+      const protocolFailure = effectiveFailureCode === undefined
+        ? undefined
+        : classifyV138CurrentMatrixChildFailure({
+            schemaVersion: V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+            failureCode: effectiveFailureCode as V138CurrentMatrixChildFailureCode,
+          })
       const mappedOutcomes: V138ParallelChargedOutcome[] = shard.attempts.map(
         ({ executionAttemptId }, index) => {
           if (cancelled) {
@@ -3777,9 +3791,7 @@ export function createV138SubprocessShardRunner(
           if (effectiveFailureCode !== undefined) {
             return {
               attemptId: executionAttemptId,
-              classification: "system_failure",
-              code: effectiveFailureCode,
-              retryable: false,
+              ...protocolFailure!,
             }
           }
           const outcome = parsed!.outcomes[index]!
@@ -12891,6 +12903,12 @@ export const writeV138Plan26216Terminal = (
 
 const V138_RECEIPT_DIRECT_COMMANDS = Object.freeze(
   new Set([
+  "--write-execution-context-v8-receipt",
+  "--write-headroom-preflight-v8-receipt",
+  "--calibrate-parallel-v8-receipt",
+  "--write-authoritative-v9-receipt",
+  "--write-plan-262-25-terminal-v1",
+  "--check-plan-262-25-terminal-v1",
   "--write-execution-context-v7-receipt",
   "--write-headroom-preflight-v7-receipt",
   "--calibrate-parallel-v7-receipt",
@@ -12937,6 +12955,37 @@ const V138_RECEIPT_DIRECT_COMMANDS = Object.freeze(
   "--require-stopped-process-failure",
   ]),
 )
+
+export const V138_PLAN_262_25_ROUTE_CONTRACT = Object.freeze({
+  schemaVersion: "v1.38-plan-262-25-route-contract-v1" as const,
+  routeOrdinal: 4 as const,
+  authorizationSchema: V138_PLAN_262_24_AUTHORIZATION_SCHEMA,
+  sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V4_SCHEMA,
+  executionContextSchema:
+    "v1.38-current-matrix-execution-context-v8" as const,
+  preflightSchema:
+    "v1.38-current-matrix-headroom-preflight-v8" as const,
+  calibrationSchema: "v1.38-current-matrix-calibration-v8" as const,
+  reproductionSchema: "v1.38-current-matrix-reproduction-v9" as const,
+  consumptionSchema: "v1.38-plan-262-25-consumption-v1" as const,
+  terminalSchema: "v1.38-plan-262-25-terminal-v1" as const,
+  failureProtocolSchema: V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+  resourceSampleMilliseconds: 200 as const,
+  requiredHostHeadroomBasisPoints: 2500 as const,
+  calibrationAttemptCount: 8 as const,
+  calibrationShardCount: 4 as const,
+  reproductionCellCount: 540 as const,
+  canonicalDestinations: V138_PLAN_262_25_FRESH_DESTINATIONS,
+  noRetry: true as const,
+  partialAcceptedEvidenceReusable: false as const,
+})
+
+export const checkV138Plan26225RouteContract = (value: unknown) => {
+  if (canonical(value) !== canonical(V138_PLAN_262_25_ROUTE_CONTRACT)) {
+    throw new TypeError("MATRIX_PLAN_262_25_ROUTE_CONTRACT_INVALID")
+  }
+  return V138_PLAN_262_25_ROUTE_CONTRACT
+}
 
 type V138Route3 = ReturnType<typeof checkV138Plan26221AuthorityRoute>
 

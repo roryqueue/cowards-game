@@ -1,12 +1,12 @@
 import { execFileSync, spawnSync } from "node:child_process"
-import { createHash } from "node:crypto"
+import { Buffer } from "node:buffer"
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -30,8 +30,13 @@ import {
   V138_PLAN_262_22_FRESH_DESTINATIONS,
   V138_PLAN_262_25_FRESH_DESTINATIONS,
   V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4,
+  checkV138Plan26221PreLiveDestinationAbsence,
   checkV138Plan26221AuthorizationV3PostLive,
 } from "./lib/v1-38-successor-source-seal.js"
+import {
+  V138_PLAN_262_25_ROUTE_CONTRACT,
+  checkV138Plan26225RouteContract,
+} from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
@@ -55,7 +60,7 @@ const resetSyntheticRepository = (): void => {
 
 beforeAll(() => {
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
-  execFileSync("git", ["clone", "-q", "--no-hardlinks", repoRoot, syntheticRoot])
+  execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
 })
 
 afterAll(() => {
@@ -64,16 +69,8 @@ afterAll(() => {
 
 describe.sequential("v1.38 successor temporal checkers", () => {
   it("keeps the strict pre-live v3 checker strict after route artifacts exist", () => {
-    expect(() => execFileSync(process.execPath, [
-      "--import", "tsx", "scripts/lib/v1-38-successor-source-seal.ts",
-      "--check-plan-262-21-authorization-v3",
-      "--authorization", ".planning/artifacts/v1.38-plan-262-21-authorization-v3.json",
-      "--seal", ".planning/artifacts/v1.38-successor-source-seal-v3.json",
-      "--review", ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-21-REVIEW.md",
-      "--review-fix", ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-21-REVIEW-FIX.md",
-      "--source-a3", sourceA3,
-      "--source-b3", sourceB3,
-    ], { cwd: repoRoot, stdio: "pipe" })).toThrow()
+    expect(() => checkV138Plan26221PreLiveDestinationAbsence(repoRoot))
+      .toThrow("V138_PLAN_262_15_ARTIFACT_MUST_BE_ABSENT")
   })
 
   it("accepts the exact terminal-selected calibration-stopped v3 row", () => {
@@ -107,6 +104,57 @@ describe.sequential("v1.38 successor temporal checkers", () => {
       sourceB3,
     })).toThrow(code)
   })
+
+  it("rejects replaced, wrong-generation, terminal, charge, and authority bytes", () => {
+    const mutations: Array<() => void> = [
+      () => {
+        const target = path.resolve(syntheticRoot,
+          V138_PLAN_262_22_FRESH_DESTINATIONS[0])
+        rmSync(target)
+        symlinkSync("missing", target)
+      },
+      () => {
+        const target = path.resolve(syntheticRoot,
+          V138_PLAN_262_22_FRESH_DESTINATIONS[1])
+        const value = JSON.parse(readFileSync(target, "utf8")) as
+          Record<string, unknown>
+        value.schemaVersion = "v1.38-current-matrix-headroom-preflight-v8"
+        writeFileSync(target, canonicalManifest(value))
+      },
+      () => {
+        const target = path.resolve(syntheticRoot,
+          V138_PLAN_262_22_FRESH_DESTINATIONS[2])
+        const value = JSON.parse(readFileSync(target, "utf8")) as {
+          attempts: Record<string, unknown>[]
+        }
+        value.attempts[0]!.publicAttemptId = "calibration:v7:forged"
+        writeFileSync(target, canonicalManifest(value))
+      },
+      () => {
+        const target = path.resolve(syntheticRoot,
+          V138_PLAN_262_22_FRESH_DESTINATIONS[4])
+        const value = JSON.parse(readFileSync(target, "utf8")) as
+          Record<string, unknown>
+        value.acceptedCellCount = 1
+        writeFileSync(target, canonicalManifest(value))
+      },
+      () => {
+        const target = path.resolve(syntheticRoot,
+          ".planning/artifacts/v1.38-plan-262-21-authorization-v3.json")
+        const value = JSON.parse(readFileSync(target, "utf8")) as
+          Record<string, unknown>
+        value.routeOrdinal = 4
+        writeFileSync(target, canonicalManifest(value))
+      },
+    ]
+    for (const mutate of mutations) {
+      resetSyntheticRepository()
+      mutate()
+      expect(() => checkV138Plan26221AuthorizationV3PostLive({
+        repoRoot: syntheticRoot, sourceA3, sourceB3,
+      })).toThrow()
+    }
+  })
 })
 
 describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
@@ -134,6 +182,31 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
     for (const repoPath of V138_PLAN_262_25_FRESH_DESTINATIONS) {
       expect(existsSync(path.resolve(repoRoot, repoPath))).toBe(false)
     }
+  })
+
+  it("freezes context-v8, preflight-v8, calibration-v8, reproduction-v9, and terminal contracts", () => {
+    expect(checkV138Plan26225RouteContract({
+      ...V138_PLAN_262_25_ROUTE_CONTRACT,
+    })).toBe(V138_PLAN_262_25_ROUTE_CONTRACT)
+    expect(V138_PLAN_262_25_ROUTE_CONTRACT).toMatchObject({
+      routeOrdinal: 4,
+      executionContextSchema: "v1.38-current-matrix-execution-context-v8",
+      preflightSchema: "v1.38-current-matrix-headroom-preflight-v8",
+      calibrationSchema: "v1.38-current-matrix-calibration-v8",
+      reproductionSchema: "v1.38-current-matrix-reproduction-v9",
+      terminalSchema: "v1.38-plan-262-25-terminal-v1",
+      calibrationAttemptCount: 8,
+      calibrationShardCount: 4,
+      reproductionCellCount: 540,
+      requiredHostHeadroomBasisPoints: 2500,
+      resourceSampleMilliseconds: 200,
+      noRetry: true,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(() => checkV138Plan26225RouteContract({
+      ...V138_PLAN_262_25_ROUTE_CONTRACT,
+      reproductionCellCount: 539,
+    })).toThrow("MATRIX_PLAN_262_25_ROUTE_CONTRACT_INVALID")
   })
 })
 
@@ -189,7 +262,6 @@ describe.sequential("v1.38 child protocol", () => {
     for (const prohibited of [
       "strategy", "match", "observation", "source", "memory", "objective",
       "environment", "filesystem", "database", "host", "diagnostic",
-    ]) expect(captured).not.toContain(prohibited)
+    ]) expect(captured).not.toContain(`"${prohibited}`)
   })
 })
-

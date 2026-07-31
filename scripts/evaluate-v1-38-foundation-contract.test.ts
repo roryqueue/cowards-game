@@ -58,6 +58,8 @@ import {
   checkV138SuccessorSealCommitV2,
   checkV138SealedWorktreeAtA2,
   checkV138SealedWorktreeAtA3,
+  checkV138Plan26221PreLiveDestinationAbsence,
+  checkV138Plan26221AuthorizationV3PostLive,
   deriveV138ProtectedHistoryV2,
   deriveFormationAbsence,
   deriveSelectedRouteClosureAtCommit,
@@ -75,6 +77,10 @@ import {
   writePlan26215Terminal,
   writeV138CanonicalExclusiveV2,
 } from "./lib/v1-38-successor-source-seal.js"
+import {
+  V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+  classifyV138CurrentMatrixChildFailure,
+} from "./lib/v1-38-current-matrix-child-protocol.js"
 import {
   V138_FOUNDATION_LIVE_SOURCE_PATHS,
   evaluateV138FoundationAdmission,
@@ -345,6 +351,29 @@ const nested = (
   draft: Record<string, unknown>,
   key: string,
 ): Record<string, unknown> => draft[key] as Record<string, unknown>
+
+describe("v1.38 pre-live post-live child protocol compatibility", () => {
+  it("pre-live remains strict after route-3 consumption", () => {
+    expect(() => checkV138Plan26221PreLiveDestinationAbsence(repoRoot))
+      .toThrow("V138_PLAN_262_15_ARTIFACT_MUST_BE_ABSENT")
+  })
+
+  it("post-live accepts the exact terminal-selected stopped row", () => {
+    expect(checkV138Plan26221AuthorizationV3PostLive({
+      repoRoot,
+      sourceA3: "7ec7bae62fac9344bed9919b6e5095f9451c7eea",
+      sourceB3: "1387813e9f7262ac0c5916635addee9cdb96354b",
+    }).disposition).toBe("calibration_stopped")
+  })
+
+  it("child protocol maps only a closed public-safe failure code", () => {
+    expect(classifyV138CurrentMatrixChildFailure({
+      schemaVersion: V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+      failureCode: "RESOURCE_POLICY_SHARD_FAILED",
+    })).toEqual({ classification: "system_failure",
+      code: "RESOURCE_POLICY_SHARD_FAILED", retryable: false })
+  })
+})
 
 describe("v1.38 darwin headroom", () => {
   const stdout = (percentage: number): Buffer =>
