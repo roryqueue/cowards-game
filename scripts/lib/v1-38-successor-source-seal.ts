@@ -2435,16 +2435,66 @@ const frontmatterScalars = (bytes: Uint8Array, code: string) => {
   return values
 }
 
+const frontmatterList = (
+  bytes: Uint8Array,
+  listKey: string,
+  code: string,
+): readonly string[] => {
+  const match = /^---\n([\s\S]*?)\n---(?:\n|$)/u.exec(
+    Buffer.from(bytes).toString("utf8"),
+  )
+  const frontmatter = match?.[1]
+  if (frontmatter === undefined) throw new TypeError(code)
+  const header = `${listKey}:`
+  const items: string[] = []
+  let found = false
+  let collecting = false
+  for (const line of frontmatter.split("\n")) {
+    if (line === header) {
+      if (found) fail(code)
+      found = true
+      collecting = true
+      continue
+    }
+    if (!collecting) continue
+    const item = /^  - (\S(?:.*\S)?)$/u.exec(line)
+    if (item !== null) {
+      items.push(item[1]!)
+      continue
+    }
+    if (line.length === 0 || /^\S/u.test(line)) {
+      collecting = false
+      continue
+    }
+    fail(code)
+  }
+  if (!found) fail(code)
+  return Object.freeze(items)
+}
+
 const strictReviewMetadataV2 = (bytes: Uint8Array): ReviewMetadataV2 => {
   const values = frontmatterScalars(bytes, "V138_PLAN_262_18_REVIEW_INVALID")
+  const reviewedPaths = frontmatterList(
+    bytes,
+    "files_reviewed_list",
+    "V138_PLAN_262_18_REVIEW_INVALID",
+  )
   const repairStartHead2 = values.get("repair_start_head2") ?? ""
   const sourceBase2 = values.get("source_base2") ?? ""
   const sourceA2 = values.get("source_a2") ?? ""
   const fixes = values.get("fixes_applied") ?? "false"
   if (
+    values.get("plan") !== "18" ||
+    values.get("depth") !== "deep" ||
     values.get("status") !== "clean" ||
-    (values.get("findings.critical") ?? values.get("critical")) !== "0" ||
-    (values.get("findings.warning") ?? values.get("warning")) !== "0" ||
+    values.get("files_reviewed") !== "3" ||
+    values.get("findings.critical") !== "0" ||
+    values.get("findings.warning") !== "0" ||
+    values.get("findings.info") !== "0" ||
+    values.get("findings.total") !== "0" ||
+    reviewedPaths.length !== V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V2.length ||
+    canonical(sorted(reviewedPaths)) !==
+      canonical(sorted(V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V2)) ||
     !/^[0-9a-f]{40}$/u.test(repairStartHead2) ||
     !/^[0-9a-f]{40}$/u.test(sourceBase2) ||
     !/^[0-9a-f]{40}$/u.test(sourceA2) ||
