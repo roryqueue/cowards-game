@@ -121,7 +121,14 @@ export const decodeV138CurrentMatrixChildProtocolResult = (
   } catch {
     fail("V138_CHILD_PROTOCOL_JSON_INVALID")
   }
-  return classifyV138CurrentMatrixChildFailure(value)
+  const checked = checkV138CurrentMatrixChildFailureMessage(value)
+  const expected = canonicalMessage(checked.failureCode)
+  if (!result.stdout.equals(Buffer.from(expected, "utf8"))) {
+    // This also rejects duplicate JSON keys: JSON.parse would otherwise keep
+    // only the final occurrence and silently normalize ambiguous bytes.
+    fail("V138_CHILD_PROTOCOL_CANONICAL_BYTES_INVALID")
+  }
+  return classifyV138CurrentMatrixChildFailure(checked)
 }
 
 const canonicalMessage = (failureCode: V138CurrentMatrixChildFailureCode) =>
@@ -160,6 +167,12 @@ const runProtocolFixtureChild = (): void => {
       return
     case "duplicate-message":
       process.stdout.write(`${valid}${valid}`)
+      return
+    case "duplicate-key":
+      process.stdout.write(`{"failureCode":"RESOURCE_POLICY_SHARD_FAILED","failureCode":"RESOURCE_POLICY_SHARD_FAILED","schemaVersion":"${V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA}"}\n`)
+      return
+    case "whitespace":
+      process.stdout.write(` ${valid}`)
       return
     case "oversize":
       process.stdout.write(Buffer.alloc(

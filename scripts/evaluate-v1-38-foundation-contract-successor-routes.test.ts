@@ -19,7 +19,8 @@ import {
   expect,
   it,
 } from "vitest"
-import { encodeCanonicalJson, type JsonValue } from "@cowards/spec"
+import { encodeCanonicalJson, hashCanonicalIdentity,
+  type JsonValue } from "@cowards/spec"
 import {
   V138_CURRENT_MATRIX_CHILD_PROTOCOL_MAX_BYTES,
   V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
@@ -32,15 +33,29 @@ import {
   V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4,
   checkV138Plan26221PreLiveDestinationAbsence,
   checkV138Plan26221AuthorizationV3PostLive,
+  checkV138SealedWorktreeAtA4,
+  checkV138SuccessorSealCommitV4,
+  deriveV138ProtectedHistoryV4,
+  inspectSourceCustodyA4,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_PLAN_262_25_ROUTE_CONTRACT,
   checkV138Plan26225RouteContract,
+  dispatchV138CurrentMatrixDirectEntry,
+  buildV138ExecutionContextV8Receipt,
+  checkV138ExecutionContextV8Receipt,
+  buildV138HostHeadroomPreflightV8Receipt,
+  checkV138HostHeadroomPreflightV8Receipt,
+  buildV138ParallelCalibrationV8Receipt,
+  checkV138ParallelCalibrationV8Receipt,
+  buildV138Plan26225TerminalV1,
+  enumerateV138CurrentMatrix,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
 const sourceB3 = "1387813e9f7262ac0c5916635addee9cdb96354b"
+const sourceA4 = "cffd54262c4b0a382402b2d1a088e574ab4fee5c"
 let syntheticRoot = ""
 
 const canonicalManifest = (value: unknown): string => {
@@ -49,6 +64,14 @@ const canonicalManifest = (value: unknown): string => {
   })
   if (!encoded.ok) throw new TypeError("test canonical manifest invalid")
   return `${Buffer.from(encoded.bytes).toString("utf8")}\n`
+}
+
+const canonicalRoot = (domain: "canonicalJsonProfile", schema: string,
+  value: unknown) => {
+  const bytes = Buffer.from(canonicalManifest(value).slice(0, -1), "utf8")
+  return `sha256:${hashCanonicalIdentity(domain, [
+    Buffer.from(schema, "utf8"), bytes,
+  ])}`
 }
 
 const resetSyntheticRepository = (): void => {
@@ -155,6 +178,42 @@ describe.sequential("v1.38 successor temporal checkers", () => {
       })).toThrow()
     }
   })
+
+  it.each([
+    ["authorization", "V138_ROUTE_3_AUTHORIZATION_INVALID"],
+    ["seal", "V138_ROUTE_3_SEAL_INVALID"],
+  ] as const)("scopes malformed %s JSON exactly", (kind, code) => {
+    resetSyntheticRepository()
+    const repoPath = kind === "authorization" ?
+      ".planning/artifacts/v1.38-plan-262-21-authorization-v3.json" :
+      ".planning/artifacts/v1.38-successor-source-seal-v3.json"
+    writeFileSync(path.resolve(syntheticRoot, repoPath), "{\n")
+    expect(() => checkV138Plan26221AuthorizationV3PostLive({
+      repoRoot: syntheticRoot, sourceA3, sourceB3,
+    })).toThrow(code)
+  })
+
+  it.each(["unknown", "extra-key", "forged-root"])(
+    "rejects hostile terminal disposition form %s", (mode) => {
+      resetSyntheticRepository()
+      const target = path.resolve(syntheticRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[4])
+      const value = JSON.parse(readFileSync(target, "utf8")) as
+        Record<string, unknown>
+      if (mode === "unknown") value.disposition = "unknown"
+      if (mode === "extra-key") value.extra = true
+      if (mode === "forged-root") {
+        value.acceptedCellCount = 1
+        const { terminalRoot: _ignored, ...body } = value
+        value.terminalRoot = canonicalRoot("canonicalJsonProfile",
+          String(value.schemaVersion), body)
+      }
+      writeFileSync(target, canonicalManifest(value))
+      expect(() => checkV138Plan26221AuthorizationV3PostLive({
+        repoRoot: syntheticRoot, sourceA3, sourceB3,
+      })).toThrow()
+    },
+  )
 })
 
 describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
@@ -208,6 +267,145 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
       reproductionCellCount: 539,
     })).toThrow("MATRIX_PLAN_262_25_ROUTE_CONTRACT_INVALID")
   })
+
+  it("revalidates exact A2/B2/A3/B3 ancestry, v5/v6/v7 history, prior authorization bytes, and 24 charges", () => {
+    const custody = inspectSourceCustodyA4({ repoRoot,
+      repairStartHead4: "7d2b23d2be79b57d1e88e6254169629f61fd9ef0",
+      sourceBase4: "52377f2cf5c019b6a7979f98ab5aa5d625778302",
+      sourceA4 })
+    expect(custody.aggregateChangedPaths).toEqual(
+      V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4)
+    const history = deriveV138ProtectedHistoryV4(repoRoot, sourceA4)
+    expect(history).toMatchObject({ sourceA3, sourceB3,
+      terminalDisposition: "calibration_stopped",
+      reproductionV8Absent: true,
+      reproductionV8ConsumptionMarkerAbsent: true,
+      acceptedEvidenceCount: 0 })
+    expect(history.cumulativeChargedPublicAttemptIds).toHaveLength(24)
+    expect(history.priorAuthorizationBytes).toHaveLength(3)
+    expect(history.artifacts).toHaveLength(8)
+  })
+
+  it("rejects wrong A4 custody and hostile B4 parent or delta before authority parsing", () => {
+    expect(() => inspectSourceCustodyA4({ repoRoot,
+      repairStartHead4: "7d2b23d2be79b57d1e88e6254169629f61fd9ef0",
+      sourceBase4: "52377f2cf5c019b6a7979f98ab5aa5d625778302",
+      sourceA4: "7d2b23d2be79b57d1e88e6254169629f61fd9ef0",
+    })).toThrow()
+    expect(() => checkV138SuccessorSealCommitV4({ repoRoot,
+      sourceA4, sourceB4: sourceA4 })).toThrow(
+      "V138_SUCCESSOR_SEAL_B4_PARENT_INVALID")
+    resetSyntheticRepository()
+    execFileSync("git", ["reset", "--hard", "-q", sourceA4],
+      { cwd: syntheticRoot })
+    execFileSync("git", ["config", "user.email", "route4@example.invalid"],
+      { cwd: syntheticRoot })
+    execFileSync("git", ["config", "user.name", "Route Four"],
+      { cwd: syntheticRoot })
+    writeFileSync(path.resolve(syntheticRoot, "route4-unexpected"), "x\n")
+    execFileSync("git", ["add", "route4-unexpected"], { cwd: syntheticRoot })
+    execFileSync("git", ["commit", "-q", "-m", "hostile delta"],
+      { cwd: syntheticRoot })
+    const sourceB4 = execFileSync("git", ["rev-parse", "HEAD"],
+      { cwd: syntheticRoot, encoding: "utf8" }).trim()
+    expect(() => checkV138SuccessorSealCommitV4({ repoRoot: syntheticRoot,
+      sourceA4, sourceB4 })).toThrow("V138_SUCCESSOR_SEAL_B4_DELTA_INVALID")
+  })
+
+  it("detects reviewed A4 source and selected dependency worktree drift", () => {
+    resetSyntheticRepository()
+    const custody = inspectSourceCustodyA4({ repoRoot: syntheticRoot,
+      repairStartHead4: "7d2b23d2be79b57d1e88e6254169629f61fd9ef0",
+      sourceBase4: "52377f2cf5c019b6a7979f98ab5aa5d625778302",
+      sourceA4 })
+    const history = deriveV138ProtectedHistoryV4(syntheticRoot, sourceA4)
+    const first = custody.sourceBlobs[0]!
+    const dependency = history.artifacts[0]!
+    const closure = { sourceBlobs: [first], resolverMetadata: [dependency] }
+    const seal = { sourceCustody: custody, protectedHistory: history,
+      selectedRouteClosure: closure }
+    expect(checkV138SealedWorktreeAtA4(syntheticRoot,
+      seal as never)).toBe(true)
+    writeFileSync(path.resolve(syntheticRoot, first.path), "drift\n")
+    expect(() => checkV138SealedWorktreeAtA4(syntheticRoot,
+      seal as never)).toThrow("V138_SEALED_WORKTREE_V4_DRIFT")
+    resetSyntheticRepository()
+    writeFileSync(path.resolve(syntheticRoot, dependency.path), "drift\n")
+    expect(() => checkV138SealedWorktreeAtA4(syntheticRoot,
+      seal as never)).toThrow("V138_SEALED_WORKTREE_V4_DRIFT")
+  })
+
+  it("routes every Plan 262-25 direct CLI command to a real receipt handler", async () => {
+    for (const command of ["--write-execution-context-v8-receipt",
+      "--write-headroom-preflight-v8-receipt",
+      "--calibrate-parallel-v8-receipt", "--write-authoritative-v9-receipt",
+      "--write-plan-262-25-terminal-v1", "--check-plan-262-25-terminal-v1",
+      "--check-plan-262-25-preflight-v8"]) {
+      await expect(dispatchV138CurrentMatrixDirectEntry(command, {
+        runShard: () => "shard", runReceipt: () => `receipt:${command}`,
+      })).resolves.toBe(`receipt:${command}`)
+    }
+    await expect(dispatchV138CurrentMatrixDirectEntry(
+      "--not-a-route", { runShard: () => "shard", runReceipt: () => "x" },
+    )).rejects.toThrow("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
+  })
+
+  it("round-trips pure context:v8, preflight:v8, stopped calibration:v8, and terminal contracts", () => {
+    const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    const route = { custody: { sourceA4, sourceB4: sourceA4,
+      custodyRoot: root }, authorization: { authorizationRoot: root },
+      seal: { sealRoot: root,
+        selectedRouteClosure: { closureRoot: root },
+        protectedHistory: { protectedHistoryRoot: root,
+          priorAuthorizationBytes: [] } } }
+    const context = buildV138ExecutionContextV8Receipt({ route: route as never,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      terminalAgentRegistry: { schemaVersion:
+        "v1.38-plan-262-25-terminal-agent-registry-v1",
+        activeExecutorCount: 0, agents: [] } })
+    expect(checkV138ExecutionContextV8Receipt(context, route as never))
+      .toEqual(context)
+    const preflight = buildV138HostHeadroomPreflightV8Receipt({
+      result: { ok: false, reason: "resource_measurement_unavailable" },
+      context })
+    expect(checkV138HostHeadroomPreflightV8Receipt(preflight, context))
+      .toEqual(preflight)
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const calibration = buildV138ParallelCalibrationV8Receipt({ inventory,
+      context, preflight })
+    expect(checkV138ParallelCalibrationV8Receipt(inventory, calibration,
+      context, preflight)).toEqual(calibration)
+    expect(buildV138Plan26225TerminalV1({
+      disposition: "preflight_unavailable", sourceA4, sourceB4: sourceA4,
+      authorizationRoot: root, sealRoot: root, context, preflight,
+      markerRoots: { preflight: root, calibration: null,
+        reproduction: null },
+    })).toMatchObject({ disposition: "preflight_unavailable",
+      chargedCalibrationAttemptCount: 0,
+      chargedReproductionAttemptCount: 0, acceptedCellCount: 0,
+      authorityExpired: true, noRetry: true })
+  })
+
+  it.each([
+    ["--write-execution-context-v8-receipt",
+      "MATRIX_EXECUTION_CONTEXT_V8_CLI_ARGUMENTS_INVALID"],
+    ["--write-headroom-preflight-v8-receipt",
+      "MATRIX_PREFLIGHT_V8_CLI_ARGUMENTS_INVALID"],
+    ["--calibrate-parallel-v8-receipt",
+      "MATRIX_CALIBRATION_V8_CLI_ARGUMENTS_INVALID"],
+    ["--write-authoritative-v9-receipt",
+      "MATRIX_REPRODUCTION_V9_CLI_ARGUMENTS_INVALID"],
+  ] as const)("dispatches actual CLI handler %s", (command, code) => {
+    const modulePath = path.resolve(repoRoot,
+      "scripts/lib/v1-38-current-matrix-reproduction.ts")
+    const result = spawnSync(process.execPath,
+      ["--import", "tsx", modulePath, command],
+      { cwd: repoRoot, encoding: "utf8" })
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain(code)
+    expect(result.stderr).not.toContain("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
+  })
 })
 
 describe.sequential("v1.38 child protocol", () => {
@@ -243,6 +441,8 @@ describe.sequential("v1.38 child protocol", () => {
     "unknown-key",
     "unknown-code",
     "duplicate-message",
+    "duplicate-key",
+    "whitespace",
     "oversize",
     "stderr-contamination",
     "nonzero-exit",
