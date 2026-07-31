@@ -35,18 +35,30 @@ import {
 } from "./lib/v1-38-darwin-headroom.js"
 import {
   buildV138Plan26215Authorization,
+  buildV138Plan26218AuthorizationV2,
   buildV138SuccessorSourceSeal,
+  buildV138SuccessorSourceSealV2,
+  checkV138Plan26218ArtifactBranch,
+  checkV138Plan26218AuthorizationV2,
+  checkV138ReviewedSourceA2,
   checkV138ReplacementMetricContract,
   checkV138SuccessorSourceSeal,
+  checkV138SuccessorSourceSealV2,
   checkSelectedRouteClosureAtCommit,
   checkSelectedRouteEdgeInventory,
   checkPlan26215ArtifactBranch,
   checkV138SuccessorSealCommit,
+  checkV138SuccessorSealCommitV2,
+  deriveV138ProtectedHistoryV2,
   deriveFormationAbsence,
   deriveSelectedRouteClosureAtCommit,
   deriveV138StaticSourceEdgesFromSnapshot,
   inspectSourceCustody,
+  V138_PLAN_262_18_CANONICAL_PATHS,
+  V138_PLAN_262_18_TERMINAL_SCHEMA,
+  V138_PLAN_262_19_FRESH_DESTINATIONS,
   v138Plan26215AuthorizationLiteral,
+  v138Plan26218AuthorizationLiteral,
   writePlan26215Terminal,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
@@ -152,6 +164,36 @@ findings:
 status: clean
 ---
 # Clean review
+`
+
+const V138_PLAN_262_18_REPAIR_START =
+  "a9770d3f7fe29dca042ed2068c4905a0338463ae"
+const V138_PLAN_262_18_SOURCE_BASE =
+  "95395308a5eeea68766613e6e72524792046e73a"
+const currentPlan26218SourceA2 = (): string =>
+  execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  }).trim()
+const cleanPlan26218Review = (
+  sourceA2: string,
+  overrides: Partial<{
+    repairStartHead2: string
+    sourceBase2: string
+    sourceA2: string
+  }> = {},
+): string =>
+  `---
+status: clean
+findings:
+  critical: 0
+  warning: 0
+repair_start_head2: ${overrides.repairStartHead2 ?? V138_PLAN_262_18_REPAIR_START}
+source_base2: ${overrides.sourceBase2 ?? V138_PLAN_262_18_SOURCE_BASE}
+source_a2: ${overrides.sourceA2 ?? sourceA2}
+fixes_applied: false
+---
+# Clean Plan 262-18 review
 `
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -3978,6 +4020,363 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
       expect(receiptCalls).toBe(0)
     },
   )
+})
+
+describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
+  const prepare = () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-262-18-seal-v2-"))
+    const sourceA2 = currentPlan26218SourceA2()
+    execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+    execFileSync("git", ["checkout", "--quiet", sourceA2], { cwd: root })
+    execFileSync("git", ["config", "user.name", "plan 262-18 test"], {
+      cwd: root,
+    })
+    execFileSync("git", ["config", "user.email", "plan-262-18@test.invalid"], {
+      cwd: root,
+    })
+    mkdirSync(
+      path.dirname(
+        path.resolve(root, V138_PLAN_262_18_CANONICAL_PATHS.review),
+      ),
+      { recursive: true },
+    )
+    writeFileSync(
+      path.resolve(root, V138_PLAN_262_18_CANONICAL_PATHS.review),
+      cleanPlan26218Review(sourceA2),
+    )
+    const literal = Buffer.from(
+      v138Plan26218AuthorizationLiteral(root, sourceA2),
+      "utf8",
+    )
+    return { root, sourceA2, literal }
+  }
+
+  const branchInput = (
+    root: string,
+    sourceA2: string,
+    sourceB2?: string,
+  ) => ({
+    repoRoot: root,
+    authorizationPath: V138_PLAN_262_18_CANONICAL_PATHS.authorization,
+    sealPath: V138_PLAN_262_18_CANONICAL_PATHS.seal,
+    terminalPath: V138_PLAN_262_18_CANONICAL_PATHS.terminal,
+    reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+    reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+    oldAuthorizationPath: V138_PLAN_262_18_CANONICAL_PATHS.oldAuthorization,
+    oldSealPath: V138_PLAN_262_18_CANONICAL_PATHS.oldSeal,
+    oldContextPath: V138_PLAN_262_18_CANONICAL_PATHS.oldContext,
+    oldPreflightPath: V138_PLAN_262_18_CANONICAL_PATHS.oldPreflight,
+    oldCalibrationPath: V138_PLAN_262_18_CANONICAL_PATHS.oldCalibration,
+    oldTerminalPath: V138_PLAN_262_18_CANONICAL_PATHS.oldTerminal,
+    sourceA2,
+    ...(sourceB2 === undefined ? {} : { sourceB2 }),
+  })
+
+  const terminal = (
+    sourceA2: string,
+    disposition: "seal_refused" | "seal_failed",
+  ) => {
+    const body = {
+      schemaVersion: V138_PLAN_262_18_TERMINAL_SCHEMA,
+      disposition,
+      sourceA2,
+      authorityExpired: true as const,
+      acceptedCellCount: 0 as const,
+    }
+    return {
+      ...body,
+      terminalRoot: v138SuccessorRoot(
+        "canonicalJsonProfile",
+        body.schemaVersion,
+        body,
+      ),
+    }
+  }
+
+  it("binds exact authorization keys, reviewed source, protected history, fresh targets, and selected-route closure", () => {
+    const { root, sourceA2, literal } = prepare()
+    try {
+      const reviewed = checkV138ReviewedSourceA2({
+        repoRoot: root,
+        repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+        sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+        sourceA2,
+        reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+        reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+      })
+      expect(reviewed).toMatchObject({
+        repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+        sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+        sourceA2,
+      })
+
+      const history = deriveV138ProtectedHistoryV2(root, sourceA2)
+      expect(history).toMatchObject({
+        predecessorSourceA: "61d1c470e9a77ffa1f70538cb0c5173f6a792bfa",
+        predecessorSourceB: "1bfb413192f113ac7949cde676d7b55aea77f4fe",
+        predecessorRoots: {
+          authorizationRoot:
+            "sha256:870e317f662d5f869c39c0257dd8e702dd0c8f3c30316bc8fd4c9c0534cc6a00",
+          contextRoot:
+            "sha256:4a3006c0cd389011f6d7676668bed4cd2b2655958a6dd34901bd79db52dafa2c",
+          preflightRoot:
+            "sha256:8b949daede99588f5f3d6bd4cb78147bc19cc3a3d1dc0998ac7308b6fccbdde8",
+          calibrationRoot:
+            "sha256:3c37ae3ef54318de78d2a014bd26b5574ad0bdc530bcccf60456ef70481c1d44",
+          terminalRoot:
+            "sha256:9fa253ddd5ee40d0ef464706172b99425f7ee2dfafd2fe071845daa9bc0a824c",
+        },
+        chargedPublicAttemptIds: Array.from(
+          { length: 8 },
+          (_, index) => `calibration:v5:${index}`,
+        ),
+        acceptedEvidenceCount: 0,
+        oldReproductionV6Absent: true,
+      })
+
+      const authorization = buildV138Plan26218AuthorizationV2(
+        root,
+        sourceA2,
+        literal,
+      )
+      expect(checkV138Plan26218AuthorizationV2(root, clone(authorization))).toEqual(
+        authorization,
+      )
+      for (const mutation of [
+        (value: Record<string, unknown>) => {
+          value.unexpected = true
+        },
+        (value: Record<string, unknown>) => {
+          delete value.noRetry
+        },
+      ]) {
+        const mutated = clone(authorization) as unknown as Record<string, unknown>
+        mutation(mutated)
+        expect(() =>
+          checkV138Plan26218AuthorizationV2(root, mutated),
+        ).toThrow("V138_PLAN_262_18_AUTHORIZATION_SCHEMA_INVALID")
+      }
+      for (const rejectedLiteral of [
+        Buffer.from(literal.toString("utf8").replace(sourceA2, "0".repeat(40))),
+        Buffer.from(v138Plan26215AuthorizationLiteral(sourceA2), "utf8"),
+      ]) {
+        expect(() =>
+          buildV138Plan26218AuthorizationV2(
+            root,
+            sourceA2,
+            rejectedLiteral,
+          ),
+        ).toThrow("V138_PLAN_262_18_AUTHORIZATION_LITERAL_INVALID")
+      }
+
+      const reviewPath = path.resolve(
+        root,
+        V138_PLAN_262_18_CANONICAL_PATHS.review,
+      )
+      for (const overrides of [
+        { repairStartHead2: "0".repeat(40) },
+        { sourceBase2: "0".repeat(40) },
+        { sourceA2: "0".repeat(40) },
+      ]) {
+        writeFileSync(
+          reviewPath,
+          cleanPlan26218Review(sourceA2, overrides),
+        )
+        expect(() =>
+          checkV138ReviewedSourceA2({
+            repoRoot: root,
+            repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+            sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+            sourceA2,
+            reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+            reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+          }),
+        ).toThrow("V138_PLAN_262_18_REVIEW_SOURCE_JOIN_INVALID")
+      }
+      writeFileSync(reviewPath, cleanPlan26218Review(sourceA2))
+
+      const freshTarget = path.resolve(
+        root,
+        V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+      )
+      mkdirSync(path.dirname(freshTarget), { recursive: true })
+      for (const occupy of [
+        () => writeFileSync(freshTarget, "{}\n"),
+        () => symlinkSync("missing-target", freshTarget),
+        () => mkdirSync(freshTarget),
+      ]) {
+        occupy()
+        expect(() =>
+          buildV138Plan26218AuthorizationV2(root, sourceA2, literal),
+        ).toThrow()
+        rmSync(freshTarget, { recursive: true, force: true })
+      }
+
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_18_CANONICAL_PATHS.authorization),
+        canonicalManifest(authorization),
+      )
+      const seal = buildV138SuccessorSourceSealV2({
+        repoRoot: root,
+        authorization,
+      })
+      expect(
+        checkSelectedRouteClosureAtCommit(
+          root,
+          sourceA2,
+          seal.selectedRouteClosure,
+        ),
+      ).toEqual(seal.selectedRouteClosure)
+      expect(
+        checkV138SuccessorSourceSealV2(root, clone(seal), authorization),
+      ).toEqual(seal)
+      const wrongClosure = clone(seal)
+      wrongClosure.selectedRouteClosure.closureRoot =
+        `sha256:${"0".repeat(64)}`
+      expect(() =>
+        checkV138SuccessorSourceSealV2(root, wrongClosure, authorization),
+      ).toThrow("V138_SUCCESSOR_SEAL_V2_INVALID")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 180_000)
+
+  it("enforces sealed/refused/failed presence and rejects invalid B2 parent, delta, and working blobs", () => {
+    const { root, sourceA2, literal } = prepare()
+    const authorizationPath =
+      V138_PLAN_262_18_CANONICAL_PATHS.authorization
+    const sealPath = V138_PLAN_262_18_CANONICAL_PATHS.seal
+    const terminalPath = V138_PLAN_262_18_CANONICAL_PATHS.terminal
+    try {
+      const authorization = buildV138Plan26218AuthorizationV2(
+        root,
+        sourceA2,
+        literal,
+      )
+      const authorizationBytes = canonicalManifest(authorization)
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      const seal = buildV138SuccessorSourceSealV2({
+        repoRoot: root,
+        authorization,
+      })
+      const sealBytes = canonicalManifest(seal)
+      writeFileSync(path.resolve(root, sealPath), sealBytes)
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: source B2"], {
+        cwd: root,
+      })
+      const validB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: validB2,
+        }),
+      ).toMatchObject({
+        sourceA2,
+        sourceB2: validB2,
+        sourceB2Parent: sourceA2,
+        changedPaths: [authorizationPath, sealPath],
+      })
+      expect(
+        checkV138Plan26218ArtifactBranch(
+          branchInput(root, sourceA2, validB2),
+        ),
+      ).toBe("sealed")
+
+      writeFileSync(path.resolve(root, sealPath), "{}\n")
+      expect(() =>
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: validB2,
+        }),
+      ).toThrow("V138_SUCCESSOR_SEAL_B2_WORKTREE_DRIFT")
+
+      const resetA2 = () => {
+        execFileSync("git", ["reset", "--hard", sourceA2], {
+          cwd: root,
+          stdio: "ignore",
+        })
+        rmSync(path.resolve(root, terminalPath), { force: true })
+      }
+      resetA2()
+      writeFileSync(
+        path.resolve(root, terminalPath),
+        canonicalManifest(terminal(sourceA2, "seal_refused")),
+      )
+      expect(checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2))).toBe(
+        "seal_refused",
+      )
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      expect(() =>
+        checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2)),
+      ).toThrow()
+
+      resetA2()
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      writeFileSync(
+        path.resolve(root, terminalPath),
+        canonicalManifest(terminal(sourceA2, "seal_failed")),
+      )
+      expect(checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2))).toBe(
+        "seal_failed",
+      )
+      unlinkSync(path.resolve(root, authorizationPath))
+      expect(() =>
+        checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2)),
+      ).toThrow()
+
+      resetA2()
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      writeFileSync(path.resolve(root, sealPath), sealBytes)
+      const extraPath = ".planning/artifacts/v1.38-source-b2-extra.json"
+      writeFileSync(path.resolve(root, extraPath), "{}\n")
+      execFileSync("git", ["add", authorizationPath, sealPath, extraPath], {
+        cwd: root,
+      })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: extra B2 path"], {
+        cwd: root,
+      })
+      const extraB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: extraB2,
+        }),
+      ).toThrow("V138_SUCCESSOR_SEAL_B2_DELTA_INVALID")
+
+      execFileSync("git", ["checkout", "--quiet", `${sourceA2}^`], {
+        cwd: root,
+      })
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      writeFileSync(path.resolve(root, sealPath), sealBytes)
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: wrong-parent B2"], {
+        cwd: root,
+      })
+      const wrongParentB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: wrongParentB2,
+        }),
+      ).toThrow("V138_SUCCESSOR_SEAL_B2_PARENT_INVALID")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 300_000)
 })
 
 describe("v1.38 shared Darwin scheduler observation", () => {
