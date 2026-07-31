@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 12/20 plans executed
+**Plans:** 15/20 plans executed
 
-**Current verdict:** BLOCKED — Plans 262-15 through 262-17 are executed; Plan 262-17 independently verified the immutable `calibration_stopped` route and reported `gaps_found` (1/5 truths). Research subsequently found that calibration:v5 preserves eight authoritative charges but its projected shard and child-launch fields cannot establish physical shard ownership or OS launches. Plans 262-18 through 262-20 are the unexecuted repair, fresh Pattern C attempt, and independent read-only verification route. ADMIT-03 and Plan 262-03 remain blocked unless Plan 262-20 verifies a literal `reproduction_passed` Plan 262-19 terminal with exactly 540/540 accepted fresh cells and every prerequisite.
+**Current verdict:** BLOCKED — Plans 262-18 through 262-20 are executed. Reviewed A2 `6db9f79e38340b303d73d6e379c13f667b5eadc9` and direct-child B2 `b00af0406b97aa5f0538209d1f31a6e36659e570` pass custody and selected-route checks without drift. The one fresh Pattern C route admitted preflight at 7,200 basis points, then calibration:v6 stopped after eight charged, eight launched, and eight terminal attempts across four shards with complete cleanup and zero accepted cells. Terminal is `calibration_stopped`, authority is expired, and reproduction:v7 is absent. Plan 262-20 reports `gaps_found` (1/5 truths); ADMIT-03 and Plan 262-03 remain blocked. Three post-integration temporary-clone regression fixtures also require separately planned repair before a clean Nyquist claim.
 
 Plans:
 **Wave 1**
@@ -105,15 +105,15 @@ Plans:
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
-- [ ] 262-18-PLAN.md — TDD-repair full attempt-ID correlation, frozen-inventory shard attribution, direct-entry dispatch, exact-one outcome mapping, and four clone-isolation cases; freeze reviewed A2 and exact two-artifact direct-child B2 only after full closure display and fresh authority.
+- [x] 262-18-PLAN.md — TDD-repaired full attempt-ID correlation, inventory shard attribution, direct-entry dispatch, exact-one outcome mapping, and clone isolation; froze zero-finding reviewed A2 and exact two-artifact direct-child B2 after full closure display and fresh authority.
 
 **Wave 14** *(blocked on Wave 13 completion)*
 
-- [ ] 262-19-PLAN.md — Under main-orchestrator Pattern C, execute exactly one checked preflight:v6, one 8/4 calibration:v6 allocation, and at most one conditional fresh 540-cell reproduction:v7, then seal the actual terminal without retry or raw-data retention.
+- [x] 262-19-PLAN.md — Main-orchestrator Pattern C admitted the one preflight:v6, then the sole 8/4 calibration:v6 stopped with eight terminal process failures, complete cleanup, and zero accepted evidence; reproduction:v7 remained absent and terminal authority expired without retry.
 
 **Wave 15** *(blocked on Wave 14 completion)*
 
-- [ ] 262-20-PLAN.md — Independently recheck A2/B2, old roots and charges, and the current terminal; refresh validation, verification, and tracking without mutating historical evidence or summaries.
+- [x] 262-20-PLAN.md — Independently rechecked A2/B2, old roots and charges, closure, privacy, formation absence, and the `calibration_stopped` terminal without drift; validation remains partial and verification remains `gaps_found` (1/5), so Plan 262-03 stays blocked.
 
 **Wave 16** *(blocked on Wave 15 completion)*
 
@@ -270,7 +270,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 12/20 | Blocked — Plans 262-18..20 planned; gaps_found 1/5 |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 15/20 | Blocked — successor route calibration_stopped; gaps_found 1/5 |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

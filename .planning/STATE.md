@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Planned 262-18 through 262-20 successor route; repair and full A2 closure display must precede fresh authority
-last_updated: "2026-07-30T22:17:50-04:00"
-last_activity: 2026-07-30
-last_activity_desc: Planned the unexecuted A2/B2 repair, Pattern C attempt, and independent read-only verification successor.
+stopped_at: Plan 262-20 independently verified calibration_stopped; fresh separately planned successor authority is required
+last_updated: "2026-07-31T12:49:10Z"
+last_activity: 2026-07-31
+last_activity_desc: Completed reviewed A2/direct-child B2, one Pattern C successor route, and independent read-only verification; route remains blocked at calibration_stopped.
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 20
-  completed_plans: 12
-  percent: 60
+  completed_plans: 15
+  percent: 75
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 12 of 20
-Status: Plans 262-15 through 262-17 are executed; Plans 262-18 through 262-20 are planned and unexecuted. The independently checked terminal remains `calibration_stopped`; reproduction:v6 is absent, accepted cells are 0/540, validation is partial, verification is `gaps_found` (1/5), and ADMIT-03 remains blocked.
-Last activity: 2026-07-30 — Planned a separately authorized A2/B2 repair route, one Pattern C attempt, and an independent read-only verifier without changing source or evidence.
+Plan: 15 of 20
+Status: Plans 262-18 through 262-20 are executed. A2/B2 and the selected route have no drift; the one successor terminal is `calibration_stopped`, reproduction:v7 is absent, accepted cells are 0/540, validation is partial, verification is `gaps_found` (1/5), and ADMIT-03 remains blocked.
+Last activity: 2026-07-31 — Completed reviewed A2/direct-child B2, one main-only Pattern C attempt, and independent read-only Plan 262-20 verification.
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
-**Current milestone:** 12 of 20 Phase 262 plans complete; the Plan 262-16 authority expired at a checked `calibration_stopped` terminal, Plans 262-18 through 262-20 are unexecuted, and ADMIT-03 plus Plans 262-03 through 262-07 remain blocked.
+**Current milestone:** 15 of 20 Phase 262 plans complete; the Plan 262-19 authority expired at a checked `calibration_stopped` terminal, and ADMIT-03 plus Plans 262-03 through 262-07 remain blocked.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -54,9 +54,9 @@ Progress: [██████░░░░] 60%
 | Phase 262 P15 | source/review gate | 3 tasks | reviewed A + authorization/seal B |
 | Phase 262 P16 | 8min | 2 tasks | 5 files |
 | Phase 262 P17 | independent verification | 3 tasks | validation, verification, tracking |
-| Phase 262 P18 | planned | 3 tasks | TDD repair, A2 review, direct-child B2 authority |
-| Phase 262 P19 | planned | 2 tasks | main-only Pattern C live route |
-| Phase 262 P20 | planned | 3 tasks | independent read-only verification and tracking |
+| Phase 262 P18 | source/review gate | 3 tasks | reviewed A2 + direct-child B2 authority |
+| Phase 262 P19 | 24min | 2 tasks | main-only Pattern C stopped route |
+| Phase 262 P20 | independent verification | 3 tasks | validation, verification, tracking |
 
 ## Accumulated Context
 
@@ -96,6 +96,10 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Record Plan 262-17 validation as partial and verification as `gaps_found` (1/5); clean custody and a valid stopped terminal do not satisfy ADMIT-03 or unblock Plan 262-03.
 - [Phase 262]: Preserve calibration:v5's eight charges while treating its shard and child-launch fields only as historical lossy projections; correct the interpretation in successor documents, never by mutating historical receipts or summaries.
 - [Phase 262]: Require TDD-repaired, zero-warning source A2 and a fresh exact two-artifact direct-child seal B2 before one new Pattern C attempt; no fresh authority may be requested until A2 and its complete derived closure are displayed.
+- [Phase 262]: Bind the successor route to reviewed A2 `6db9f79e38340b303d73d6e379c13f667b5eadc9` and exact direct-child B2 `b00af0406b97aa5f0538209d1f31a6e36659e570`; independent closure and working-blob checks report no drift.
+- [Phase 262]: Admit the sole preflight:v6 at 7,200 basis points, then stop calibration:v6 after eight charged, eight launched, and eight terminal attempts across four inventory-owned shards with complete cleanup, zero accepted cells, and no reproduction:v7.
+- [Phase 262]: Expire the Plan 262-19 authority at `calibration_stopped`; partial evidence is not reusable and no retry exists.
+- [Phase 262]: Record Plan 262-20 validation as partial and verification as `gaps_found` (1/5); retain three post-integration temporary-clone fixture failures for separately planned repair.
 
 ### Pending Todos
 
@@ -117,7 +121,9 @@ None.
 - The Plan 262-16 authority is expired. A future attempt requires a newly planned, separately authorized successor retaining A, B, every stopped root, and every charged attempt; Plan 262-16 cannot be retried.
 - Plan 262-03 remains blocked until an independent verifier confirms a future `reproduction_passed` terminal with exactly 540/540 accepted cells and every authority, closure, drift, cleanup, protected-history, formation, and privacy prerequisite.
 - Validation is partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification is `gaps_found` with 1/5 roadmap truths satisfied.
-- Plans 262-18 through 262-20 are planned but unexecuted. Plan 262-18 must first repair full-ID joins, inventory shard attribution, CLI dispatch, exact-one outcome mapping, and four clone-isolation cases; fresh authority remains unavailable until reviewed A2 and its full closure are displayed.
+- Plans 262-18 through 262-20 are complete. Canonical A2/B2, selected-route, protected-history, privacy, formation, cleanup, and terminal checks pass without drift.
+- ADMIT-03 remains blocked: Plan 262-19 preflight admitted at 7,200 basis points, but calibration:v6 stopped after eight charged/launched/terminal attempts and zero accepted cells; reproduction:v7 was not launched and authority is expired.
+- Three focused post-integration temporary-clone fixtures fail with `V138_SOURCE_A2_AGGREGATE_DELTA_INVALID`; canonical checkers pass, but a clean Nyquist claim requires separately planned source/test repair.
 
 ## Deferred Items
 
@@ -130,7 +136,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-30T22:17:50-04:00
-Stopped at: Planned 262-18 through 262-20; repair and A2 closure display must precede any fresh authority
+Last session: 2026-07-31T12:49:10Z
+Stopped at: Plan 262-20 independently verified calibration_stopped; fresh separately planned successor authority is required
 Resume file: None
-Next command: Execute Plan 262-18 source/test repair and zero-warning A2 review. Do not ask for fresh execution authority until full A2 custody and the complete derived closure are displayed. Plan 262-03 and Phases 263-270 remain blocked.
+Next command: Plan a separately reviewed successor that fixes the three post-integration clone-fixture failures, retains every A2/B2 and stopped-route root/charge, and reaches a fresh exact authorization checkpoint before any further unchanged-policy calibration/reproduction attempt. Plan 262-03 and Phases 263-270 remain blocked.
