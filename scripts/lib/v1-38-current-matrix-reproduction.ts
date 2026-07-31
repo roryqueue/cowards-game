@@ -507,6 +507,45 @@ export interface V138ParallelCalibrationPolicy {
   readonly policyRoot: Sha256
 }
 
+export interface V138CalibrationAttemptMapping {
+  readonly publicAttemptId: string
+  readonly executionAttemptId: string
+  readonly templateAttemptId: string
+  readonly inventoryOrdinal: number
+  readonly shardId: string
+}
+
+export const deriveV138CalibrationAttemptMappings = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  version: "v5" | "v6",
+): readonly Readonly<V138CalibrationAttemptMapping>[] => {
+  const policy = deriveV138ParallelCalibrationPolicy(inventory)
+  const mappings = policy.inventory.attempts.map((attempt, index) => {
+    if (
+      attempt.ordinalInShard !== index % 2 ||
+      attempt.shardId !== `calibration-shard:${Math.floor(index / 2)}` ||
+      attempt.templateAttemptId !== inventory.attempts[index]?.attemptId
+    ) {
+      throw new TypeError("MATRIX_CALIBRATION_ATTEMPT_MAPPING_INVALID")
+    }
+    return Object.freeze({
+      publicAttemptId: `calibration:${version}:${index}`,
+      executionAttemptId: `calibration:${version}:${index}:${attempt.templateAttemptId}`,
+      templateAttemptId: attempt.templateAttemptId,
+      inventoryOrdinal: index,
+      shardId: attempt.shardId,
+    })
+  })
+  if (
+    mappings.length !== 8 ||
+    new Set(mappings.map(({ publicAttemptId }) => publicAttemptId)).size !== 8 ||
+    new Set(mappings.map(({ executionAttemptId }) => executionAttemptId)).size !== 8
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_ATTEMPT_MAPPING_INVALID")
+  }
+  return Object.freeze(mappings)
+}
+
 const parallelPolicyWithoutRoot = (
   policy: V138ParallelCalibrationPolicy,
 ): Omit<V138ParallelCalibrationPolicy, "policyRoot"> => {
@@ -1610,7 +1649,14 @@ export const calibrateV138ParallelMatrix = async (input: {
   parentSignal?: AbortSignal | undefined
   sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
   repoRoot?: string | undefined
-  executionIdentityVersion?: "v1" | "v2" | "v3" | "v4" | "v5" | undefined
+  executionIdentityVersion?:
+    | "v1"
+    | "v2"
+    | "v3"
+    | "v4"
+    | "v5"
+    | "v6"
+    | undefined
 }): Promise<Readonly<V138ParallelCalibrationReceipt>> => {
   const policy = V138ParallelCalibrationPolicySchema.parse(
     input.policy ?? deriveV138ParallelCalibrationPolicy(input.inventory),
@@ -1653,6 +1699,25 @@ export const calibrateV138ParallelMatrix = async (input: {
       ) {
         throw new TypeError("MATRIX_PARALLEL_CALIBRATION_INVENTORY_INVALID")
       }
+      const successorMapping =
+        input.executionIdentityVersion === "v5" ||
+          input.executionIdentityVersion === "v6"
+          ? deriveV138CalibrationAttemptMappings(
+              input.inventory,
+              input.executionIdentityVersion,
+            ).find(
+              ({ templateAttemptId }) =>
+                templateAttemptId === record.templateAttemptId,
+            )
+          : undefined
+      if (
+        (input.executionIdentityVersion === "v5" ||
+          input.executionIdentityVersion === "v6") &&
+        (successorMapping === undefined ||
+          successorMapping.shardId !== shard.shardId)
+      ) {
+        throw new TypeError("MATRIX_CALIBRATION_ATTEMPT_MAPPING_INVALID")
+      }
       return {
         executionAttemptId:
           input.executionIdentityVersion === "v2"
@@ -1670,11 +1735,9 @@ export const calibrateV138ParallelMatrix = async (input: {
                     /^calibration:v1:/u,
                     "calibration:v4:",
                   )
-                : input.executionIdentityVersion === "v5"
-                  ? record.calibrationAttemptId.replace(
-                      /^calibration:v1:/u,
-                      "calibration:v5:",
-                    )
+                : input.executionIdentityVersion === "v5" ||
+                    input.executionIdentityVersion === "v6"
+                  ? successorMapping!.executionAttemptId
               : record.calibrationAttemptId,
         templateAttemptId: record.templateAttemptId,
         request: template.request,
@@ -6719,7 +6782,13 @@ const assertLegacyStoppedPredecessor = (
 const validateParallelCalibrationReceipt = (
   inventory: Readonly<V138CurrentMatrixInventory>,
   receipt: Readonly<V138ParallelCalibrationReceipt>,
-  executionIdentityVersion: "v1" | "v2" | "v3" | "v4" | "v5" = "v1",
+  executionIdentityVersion:
+    | "v1"
+    | "v2"
+    | "v3"
+    | "v4"
+    | "v5"
+    | "v6" = "v1",
 ): void => {
   const policy = deriveV138ParallelCalibrationPolicy(inventory)
   const projection = projectV138ParallelMatrix(policy, receipt.rawObservation)
@@ -6732,8 +6801,15 @@ const validateParallelCalibrationReceipt = (
           ? attemptId.replace(/^calibration:v1:/u, "calibration:v3:")
           : executionIdentityVersion === "v4"
             ? attemptId.replace(/^calibration:v1:/u, "calibration:v4:")
-          : executionIdentityVersion === "v5"
-            ? attemptId.replace(/^calibration:v1:/u, "calibration:v5:")
+          : executionIdentityVersion === "v5" ||
+              executionIdentityVersion === "v6"
+            ? deriveV138CalibrationAttemptMappings(
+                inventory,
+                executionIdentityVersion,
+              ).find(
+                ({ templateAttemptId }) =>
+                  attemptId.endsWith(`:${templateAttemptId}`),
+              )?.executionAttemptId ?? attemptId
           : attemptId,
     )
   const actualAttemptIds = receipt.terminals.flatMap(({ outcomes }) =>
@@ -7870,6 +7946,109 @@ export const buildV138ParallelCalibrationV5Receipt = (input: {
   return checkV138ParallelCalibrationV5Receipt(receipt)
 }
 
+export type V138CalibrationMappedOutcome =
+  | Readonly<{
+      publicAttemptId: string
+      executionAttemptId: string
+      templateAttemptId: string
+      inventoryOrdinal: number
+      shardId: string
+      state: "terminal_success"
+      classification: "success"
+      outcome: "bottom_win" | "top_win" | "draw"
+      childLaunched: true
+      terminalObserved: true
+    }>
+  | Readonly<{
+      publicAttemptId: string
+      executionAttemptId: string
+      templateAttemptId: string
+      inventoryOrdinal: number
+      shardId: string
+      state: "terminal_player_violation" | "terminal_system_failure"
+      classification: "player_violation" | "system_failure"
+      code: string
+      childLaunched: true
+      terminalObserved: true
+    }>
+
+export const mapV138CalibrationTerminalOutcomes = (input: {
+  readonly mappings: readonly Readonly<V138CalibrationAttemptMapping>[]
+  readonly terminals: readonly Readonly<V138ParallelShardTerminal>[]
+}): readonly Readonly<V138CalibrationMappedOutcome>[] => {
+  const expectedByExecutionId = new Map(
+    input.mappings.map((mapping) => [mapping.executionAttemptId, mapping]),
+  )
+  if (
+    input.mappings.length !== 8 ||
+    expectedByExecutionId.size !== 8 ||
+    new Set(input.mappings.map(({ publicAttemptId }) => publicAttemptId)).size !== 8
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+  }
+  const observed = new Map<
+    string,
+    Readonly<{
+      terminal: Readonly<V138ParallelShardTerminal>
+      outcome: Readonly<V138ParallelChargedOutcome>
+    }>
+  >()
+  for (const terminal of input.terminals) {
+    for (const outcome of terminal.outcomes) {
+      const mapping = expectedByExecutionId.get(outcome.attemptId)
+      if (
+        mapping === undefined ||
+        terminal.shardId !== mapping.shardId ||
+        observed.has(outcome.attemptId)
+      ) {
+        throw new TypeError("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+      }
+      observed.set(outcome.attemptId, { terminal, outcome })
+    }
+  }
+  if (
+    observed.size !== input.mappings.length ||
+    [...expectedByExecutionId.keys()].some((id) => !observed.has(id))
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+  }
+  return Object.freeze(
+    input.mappings.map((mapping) => {
+      const outcome = observed.get(mapping.executionAttemptId)!.outcome
+      const identity = {
+        ...mapping,
+        childLaunched: true as const,
+        terminalObserved: true as const,
+      }
+      if (outcome.classification === "success") {
+        return Object.freeze({
+          ...identity,
+          state: "terminal_success" as const,
+          classification: "success" as const,
+          outcome: outcome.outcome,
+        })
+      }
+      if (outcome.classification === "player_violation") {
+        return Object.freeze({
+          ...identity,
+          state: "terminal_player_violation" as const,
+          classification: "player_violation" as const,
+          code: outcome.code,
+        })
+      }
+      if (outcome.classification === "system_failure") {
+        return Object.freeze({
+          ...identity,
+          state: "terminal_system_failure" as const,
+          classification: "system_failure" as const,
+          code: outcome.code,
+        })
+      }
+      throw new TypeError("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+    }),
+  )
+}
+
 export interface V138AuthoritativeMatrixV6Receipt {
   readonly schemaVersion: "v1.38-current-matrix-reproduction-v6"
   readonly sourceB: string
@@ -8824,6 +9003,55 @@ export const writeV138Plan26216Terminal = (
   return terminal
 }
 
+const V138_RECEIPT_DIRECT_COMMANDS = Object.freeze(new Set([
+  "--write-execution-context-v5-receipt",
+  "--write-headroom-preflight-v5-receipt",
+  "--calibrate-parallel-v5-receipt",
+  "--write-authoritative-v6-receipt",
+  "--write-plan-262-16-terminal-v1",
+  "--check-plan-262-16-terminal",
+  "--write-diagnostic-v2-receipt",
+  "--check-diagnostic-v2-receipt",
+  "--write-execution-context-v4-receipt",
+  "--check-execution-context-v4-receipt",
+  "--write-headroom-preflight-v4-receipt",
+  "--check-headroom-preflight-v4-receipt",
+  "--calibrate-parallel-v4-receipt",
+  "--check-calibration-v4-receipt",
+  "--write-authoritative-v5-receipt",
+  "--check-successor-v4-v5-branch",
+  "--write-headroom-preflight-v3-receipt",
+  "--check-headroom-preflight-v3-receipt",
+  "--calibrate-parallel-v3-receipt",
+  "--check-calibration-v3-receipt",
+  "--write-authoritative-v4-receipt",
+  "--check-authoritative-v4-receipt",
+  "--check-successor-v3-v4-branch",
+  "--calibrate-parallel-v2-receipt",
+  "--check-calibration-v2-receipt",
+  "--write-authoritative-v3-receipt",
+  "--check-authoritative-v3-receipt",
+  "--check-successor-v2-v3-branch",
+  "--calibrate-parallel-receipt",
+  "--check-calibration-receipt",
+  "--require-calibration-admitted",
+  "--require-stopped-process-failure",
+]))
+
+export const dispatchV138CurrentMatrixDirectEntry = async <T>(
+  command: string | undefined,
+  handlers: Readonly<{
+    runShard: () => T | Promise<T>
+    runReceipt: () => T | Promise<T>
+  }>,
+): Promise<T> => {
+  if (command === "--execute-shard") return handlers.runShard()
+  if (command !== undefined && V138_RECEIPT_DIRECT_COMMANDS.has(command)) {
+    return handlers.runReceipt()
+  }
+  throw new TypeError("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
+}
+
 const runReceiptCli = async (): Promise<void> => {
   if (process.argv[1] !== fileURLToPath(import.meta.url)) return
   const command = process.argv[2]
@@ -9420,5 +9648,9 @@ const runReceiptCli = async (): Promise<void> => {
   }
 }
 
-await runReceiptCli()
-runShardCli()
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await dispatchV138CurrentMatrixDirectEntry(process.argv[2], {
+    runShard: async () => runShardCli(),
+    runReceipt: runReceiptCli,
+  })
+}
