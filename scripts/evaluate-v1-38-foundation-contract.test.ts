@@ -140,6 +140,8 @@ import {
   writeV138MatrixDiagnosticV2Receipt,
   writeV138ParallelCalibrationV4Receipt,
   writeV138ParallelCalibrationV5Receipt,
+  writeV138ParallelCalibrationV6Receipt,
+  writeV138AuthoritativeMatrixV7Receipt,
   writeV138Plan26216Terminal,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
@@ -3515,6 +3517,12 @@ describe("v1.38 matrix accounting", () => {
     return {
       inventory,
       plan,
+      launchEvents: plan.shards.map((shard) => ({
+        event: "child_launched" as const,
+        shardId: shard.shardId,
+        laneId: shard.laneId,
+        executionAttemptIds: shard.attemptIds,
+      })),
       terminals: plan.shards.map((shard) => ({
         shardId: shard.shardId,
         laneId: shard.laneId,
@@ -3537,16 +3545,18 @@ describe("v1.38 matrix accounting", () => {
   }
 
   it("matrix accounting is invariant to valid terminal completion order", () => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     const forward = reduceV138ParallelMatrixAccounting({
       inventory,
       plan,
       terminals,
+      launchEvents,
     })
     const reversed = reduceV138ParallelMatrixAccounting({
       inventory,
       plan,
       terminals: [...terminals].reverse(),
+      launchEvents,
     })
 
     expect(reversed).toEqual(forward)
@@ -3637,18 +3647,19 @@ describe("v1.38 matrix accounting", () => {
       ...rows.slice(1),
     ]],
   ])("matrix accounting rejects %s terminal identities", (_label, change) => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     expect(() =>
       reduceV138ParallelMatrixAccounting({
         inventory,
         plan,
         terminals: change(clone(terminals)),
+        launchEvents,
       }),
     ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
   })
 
   it("matrix accounting charges every failure class and publishes no partial evidence", () => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     const mutated = clone(terminals)
     mutated[0] = {
       ...mutated[0]!,
@@ -3681,6 +3692,7 @@ describe("v1.38 matrix accounting", () => {
       inventory,
       plan,
       terminals: mutated,
+      launchEvents,
     })
 
     expect(accounting).toMatchObject({
@@ -3696,7 +3708,7 @@ describe("v1.38 matrix accounting", () => {
   })
 
   it("matrix accounting rejects reordered or mutated allocation plans", () => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     const mutatedPlan = clone(plan)
     mutatedPlan.shards.reverse()
 
@@ -3705,6 +3717,7 @@ describe("v1.38 matrix accounting", () => {
         inventory,
         plan: mutatedPlan,
         terminals,
+        launchEvents,
       }),
     ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
   })
@@ -3978,7 +3991,11 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
       noRetry: true,
       partialAcceptedEvidenceReusable: false,
     })
-    expect(admitted.supervisedCalibration).not.toBeNull()
+    expect(admitted.supervisionRoot).toBe(calibration.calibrationRoot)
+    expect(admitted.completeCleanup).toBe(true)
+    expect(JSON.stringify(admitted)).not.toMatch(
+      /hardwareIdentity|rawObservation|sharedObservationTicks|terminals|launchEvents|orphanProcessIds/,
+    )
     expect(
       checkV138ParallelCalibrationV6Receipt(inventory, structuredClone(admitted)),
     ).toEqual(admitted)
@@ -4050,7 +4067,8 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
       childLaunchCount: 0,
       terminalOutcomeCount: 0,
       acceptedCellCount: 0,
-      supervisedCalibration: null,
+      supervisionRoot: null,
+      completeCleanup: true,
     })
     expect(
       preflightStopped.chargedAttempts.every(
@@ -4136,6 +4154,23 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
         ...identity,
         preflightDisposition: "preflight_admitted",
         calibration: drifted,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_RECEIPT_INVALID")
+
+    const wrongCoverage = clone(supervised)
+    wrongCoverage.sharedObservationTicks![0]!.shardIds[0] =
+      "calibration-shard:foreign"
+    wrongCoverage.sharedObservationTicks![0]!.fanout[0]!.shardId =
+      "calibration-shard:foreign"
+    const { calibrationRoot: _coverageRoot, ...coverageBody } = wrongCoverage
+    wrongCoverage.calibrationRoot =
+      `sha256:${createHash("sha256").update(JSON.stringify(coverageBody)).digest("hex")}`
+    expect(() =>
+      buildV138ParallelCalibrationV6Receipt({
+        inventory,
+        ...identity,
+        preflightDisposition: "preflight_admitted",
+        calibration: wrongCoverage,
       }),
     ).toThrow("MATRIX_CALIBRATION_RECEIPT_INVALID")
   })
@@ -4663,6 +4698,18 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
       expect(
         checkV138HostHeadroomPreflightV6Receipt(clone(preflight), context),
       ).toEqual(preflight)
+      const malformedPreflight = clone(preflight)
+      malformedPreflight.observation!.totalBytes += 1
+      const { receiptRoot: _malformedRoot, ...malformedBody } =
+        malformedPreflight
+      malformedPreflight.receiptRoot = v138SuccessorRoot(
+        "canonicalJsonProfile",
+        malformedPreflight.schemaVersion,
+        malformedBody,
+      )
+      expect(() =>
+        checkV138HostHeadroomPreflightV6Receipt(malformedPreflight, context),
+      ).toThrow("MATRIX_PREFLIGHT_V6_INVALID")
 
       const inventory = enumerateV138CurrentMatrix(root)
       const supervised = await calibrateV138ParallelMatrix({
@@ -4729,6 +4776,33 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         calibration,
         execution,
       })
+      for (const mutate of [
+        (candidate: typeof execution) => {
+          candidate.launchEvents[0]!.executionAttemptIds[0] =
+            "reproduction:v6:foreign"
+        },
+        (candidate: typeof execution) => {
+          candidate.terminals[0]!.laneId = "lane:foreign"
+        },
+        (candidate: typeof execution) => {
+          candidate.canonicalOutcomes.reverse()
+        },
+        (candidate: typeof execution) => {
+          candidate.reason = null
+        },
+      ]) {
+        const invalidExecution = clone(execution)
+        mutate(invalidExecution)
+        expect(() =>
+          buildV138AuthoritativeMatrixV7Receipt({
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+            execution: invalidExecution,
+          }),
+        ).toThrow("MATRIX_REPRODUCTION_V7_EXECUTION_INVALID")
+      }
       expect(reproduction).toMatchObject({
         status: "stopped_process_failure",
         chargedAttemptCount: 540,
@@ -4737,6 +4811,9 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         partialAcceptedEvidenceReusable: false,
         noRetry: true,
       })
+      expect(JSON.stringify(reproduction)).not.toMatch(
+        /\"execution\"|terminals|launchEvents|orphanProcessIds|maxRssKilobytes|sharedObservationTicks/,
+      )
       expect(
         checkV138AuthoritativeMatrixV7Receipt(clone(reproduction), {
           repoRoot: root,
@@ -4745,6 +4822,66 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
           calibration,
         }),
       ).toEqual(reproduction)
+
+      const forgedContext = clone(context)
+      forgedContext.hostIdentityRoot = `sha256:${"f".repeat(64)}`
+      const { receiptRoot: _forgedContextRoot, ...forgedContextBody } =
+        forgedContext
+      forgedContext.receiptRoot = v138SuccessorRoot(
+        "evidenceBundle",
+        forgedContext.schemaVersion,
+        forgedContextBody,
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
+        canonicalManifest(forgedContext),
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[1]),
+        canonicalManifest(preflight),
+      )
+      let calibrationCallbacks = 0
+      await expect(
+        writeV138ParallelCalibrationV6Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[1],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            calibrationCallbacks += 1
+            return supervised
+          },
+        ),
+      ).rejects.toThrow(/MATRIX_EXECUTION_CONTEXT_V6_(?:ROUTE_)?INVALID/u)
+      expect(calibrationCallbacks).toBe(0)
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[2]),
+        canonicalManifest(calibration),
+      )
+      let reproductionCallbacks = 0
+      await expect(
+        writeV138AuthoritativeMatrixV7Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            reproductionCallbacks += 1
+            return execution
+          },
+        ),
+      ).rejects.toThrow(/MATRIX_EXECUTION_CONTEXT_V6_(?:ROUTE_)?INVALID/u)
+      expect(reproductionCallbacks).toBe(0)
+      expect(
+        existsSync(
+          path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[3]),
+        ),
+      ).toBe(false)
+
       const terminal = buildV138Plan26219TerminalV2({
         disposition: "reproduction_stopped",
         authorization,
