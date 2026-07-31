@@ -37,6 +37,8 @@ import {
 import {
   buildV138Plan26215Authorization,
   buildV138Plan26218AuthorizationV2,
+  deriveV138ProtectedHistoryV3,
+  inspectSourceCustodyA3,
   buildV138SuccessorSourceSeal,
   buildV138SuccessorSourceSealV2,
   checkV138Plan26218ArtifactBranch,
@@ -61,6 +63,7 @@ import {
   V138_PLAN_262_18_CANONICAL_PATHS,
   V138_PLAN_262_18_TERMINAL_SCHEMA,
   V138_PLAN_262_19_FRESH_DESTINATIONS,
+  V138_PLAN_262_22_FRESH_DESTINATIONS,
   v138Plan26215AuthorizationLiteral,
   v138Plan26218AuthorizationLiteral,
   writePlan26215Terminal,
@@ -87,6 +90,8 @@ import {
   buildV138HostHeadroomPreflightV6Receipt,
   buildV138ExecutionContextV5Receipt,
   buildV138ExecutionContextV6Receipt,
+  buildV138HostHeadroomPreflightV7Receipt,
+  buildV138ParallelCalibrationV7Receipt,
   buildV138Plan26219TerminalV2,
   buildV138ParallelCalibrationV5PreflightTerminal,
   buildV138ParallelCalibrationV5Receipt,
@@ -100,6 +105,8 @@ import {
   checkV138ExecutionContextV4Receipt,
   checkV138ExecutionContextV5Receipt,
   checkV138ExecutionContextV6Receipt,
+  checkV138HostHeadroomPreflightV7Receipt,
+  checkV138ParallelCalibrationV7Receipt,
   checkV138HostHeadroomPreflightV5Receipt,
   checkV138HostHeadroomPreflightV6Receipt,
   checkV138HistoricalFoundationAdmission,
@@ -6017,6 +6024,90 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
 })
 
 describe("v1.38 shared Darwin scheduler observation", () => {
+  it("cancels all four shards after an injected Darwin failure following valid ticks", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    let observerCalls = 0
+    const runner: V138ParallelShardRunner = {
+      async run(shard, control) {
+        control.onLaunch({
+          event: "child_launched",
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          executionAttemptIds: shard.attempts.map(
+            ({ executionAttemptId }) => executionAttemptId,
+          ),
+        })
+        control.onResourceSample({
+          childId: `child:${shard.shardId}`,
+          childRssKilobytes: 100,
+          hostTotalMemoryKilobytes: 10_000,
+          hostFreeMemoryKilobytes: 5_000,
+        })
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 1_000)
+          control.signal.addEventListener("abort", () => {
+            clearTimeout(timer)
+            resolve()
+          }, { once: true })
+        })
+        const cancelled = control.signal.aborted
+        return {
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          classification: cancelled ? "cancelled" : "success",
+          elapsedMilliseconds: 500,
+          maxRssKilobytes: 100,
+          cleanup: {
+            gracefulTerminationSent: cancelled,
+            forceTerminationSent: false,
+            exitAwaited: true,
+            orphanProcessIds: [],
+          },
+          outcomes: shard.attempts.map(({ executionAttemptId }) =>
+            cancelled ? {
+              attemptId: executionAttemptId,
+              classification: "cancelled" as const,
+              code: "CANCELLED_AFTER_HARD_FAILURE",
+            } : {
+              attemptId: executionAttemptId,
+              classification: "success" as const,
+              outcome: "draw" as const,
+            }),
+        }
+      },
+    }
+    const result = await calibrateV138ParallelMatrix({
+      inventory,
+      runner,
+      hardwareIdentity: {
+        operatingSystem: "test-darwin",
+        architecture: "test-arch",
+        nodeVersion: "test-node",
+        cpuIdentity: "test-cpu",
+      },
+      executionIdentityVersion: "v7",
+      sharedHeadroomObserver: async () => {
+        observerCalls += 1
+        if (observerCalls > 1) {
+          throw new Error("injected Darwin observer failure")
+        }
+        return admittedInjectedHeadroom()
+      },
+    })
+    expect(observerCalls).toBe(2)
+    expect(result).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+      attemptCount: 8,
+      acceptedCellsPublished: 0,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(result.terminals).toHaveLength(4)
+    expect(result.terminals.every(({ cleanup }) =>
+      cleanup.exitAwaited && cleanup.orphanProcessIds.length === 0)).toBe(true)
+    expect(result.terminals.flatMap(({ outcomes }) => outcomes)).toHaveLength(8)
+  })
+
   it("observes once for one tick and fans the immutable observation to all four active shards", async () => {
     const inventory = {
       schemaVersion: "test-inventory",
@@ -6114,6 +6205,155 @@ describe("v1.38 shared Darwin scheduler observation", () => {
         acceptedCellsPublished: 0,
       },
     })
+  })
+})
+
+describe("v1.38 route ordinal 3 additive contracts", () => {
+  const root = (label: string) =>
+    `sha256:${createHash("sha256").update(label).digest("hex")}` as const
+
+  const contextV7 = () => {
+    const body = {
+      schemaVersion: "v1.38-current-matrix-execution-context-v7" as const,
+      mode: "gsd-pattern-c-inline-main" as const,
+      cwd: "/Users/roryquinlan/runtime/cowards-game" as const,
+      terminalAgentRegistry: {
+        schemaVersion: "v1.38-plan-262-22-terminal-agent-registry-v1" as const,
+        activeExecutorCount: 0 as const,
+        agents: [{ id: "test:terminal", status: "completed" as const }],
+      },
+      sourceA3: "a".repeat(40),
+      sourceB3: "b".repeat(40),
+      sourceB3Custody: { custodyRoot: root("b3-custody") },
+      sourceB3CustodyRoot: root("b3-custody"),
+      authorizationRoot: root("authorization-v3"),
+      sealRoot: root("seal-v3"),
+      selectedRouteClosureRoot: root("closure-v3"),
+      protectedHistoryRoot: root("history-v3"),
+      patternCOwnership: "main_orchestrator_only" as const,
+      formationAbsenceBound: true as const,
+      runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+      resourceSampleMilliseconds: 200 as const,
+      acceptedCellCount: 0 as const,
+      noRetry: true as const,
+    }
+    return {
+      ...body,
+      receiptRoot: v138SuccessorRoot("evidenceBundle", body.schemaVersion, body),
+    }
+  }
+
+  it("binds archived A2/B2 and exact v6 roots, markers, absence, and cumulative charges", () => {
+    const sourceA3 = execFileSync("git", ["log", "-1", "--format=%H", "--",
+      "scripts/evaluate-v1-38-foundation-contract.test.ts",
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).trim()
+    const custody = inspectSourceCustodyA3({
+      repoRoot,
+      repairStartHead3: "93dfd673afbf5fbbce63d59e1b874f169eaefb7e",
+      sourceBase3: "89a1fe0026e2573710ec1f2c24339aa66a0b4d53",
+      sourceA3,
+    })
+    expect(custody.aggregateChangedPaths.every((repoPath) => [
+      "scripts/evaluate-v1-38-foundation-contract.test.ts",
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts",
+    ].includes(repoPath))).toBe(true)
+    const history = deriveV138ProtectedHistoryV3(repoRoot, sourceA3)
+    expect(history).toMatchObject({
+      sourceA2: V138_PLAN_262_18_SOURCE_A2,
+      sourceB2: "b00af0406b97aa5f0538209d1f31a6e36659e570",
+      reproductionV7Absent: true,
+      reproductionV7ConsumptionMarkerAbsent: true,
+      acceptedEvidenceCount: 0,
+    })
+    expect(history.cumulativeChargedPublicAttemptIds).toEqual([
+      ...Array.from({ length: 8 }, (_, index) => `calibration:v5:${index}`),
+      ...Array.from({ length: 8 }, (_, index) => `calibration:v6:${index}`),
+    ])
+    expect(V138_PLAN_262_22_FRESH_DESTINATIONS).toEqual([
+      ".planning/artifacts/v1.38-current-matrix-execution-context-v7.json",
+      ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v7.json",
+      ".planning/artifacts/v1.38-current-matrix-calibration-v7.json",
+      ".planning/artifacts/v1.38-current-matrix-reproduction-v8.json",
+      ".planning/artifacts/v1.38-plan-262-22-terminal-v1.json",
+    ])
+  })
+
+  it("keeps the inclusive 2500-basis-point v7 gate and charges all eight identities before launch", async () => {
+    const context = contextV7()
+    const admitted = buildV138HostHeadroomPreflightV7Receipt({
+      result: await admittedInjectedHeadroom(),
+      executionContext: context,
+    })
+    expect(checkV138HostHeadroomPreflightV7Receipt(
+      clone(admitted), context,
+    )).toEqual(admitted)
+    expect(admitted).toMatchObject({
+      disposition: "preflight_admitted",
+      requiredHostHeadroomBasisPoints: 2500,
+      chargedIdentityId: "preflight:v7:0",
+    })
+
+    const refusedResult = parseMemoryPressureQ({
+      stdout: Buffer.from(
+        "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 24%\n",
+      ),
+      stderr: Buffer.alloc(0),
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+    })
+    const refused = buildV138HostHeadroomPreflightV7Receipt({
+      result: refusedResult,
+      executionContext: context,
+    })
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const calibration = buildV138ParallelCalibrationV7Receipt({
+      inventory,
+      executionContext: context,
+      preflight: refused,
+    })
+    expect(checkV138ParallelCalibrationV7Receipt(
+      inventory,
+      clone(calibration),
+      context,
+      refused,
+    )).toEqual(calibration)
+    expect(calibration).toMatchObject({
+      status: "preflight_refused",
+      chargedAttemptCount: 8,
+      calibrationShardCount: 4,
+      childLaunchCount: 0,
+      terminalOutcomeCount: 0,
+      acceptedCellCount: 0,
+      noRetry: true,
+    })
+    expect(calibration.attempts.map(({ publicAttemptId }) => publicAttemptId))
+      .toEqual(Array.from({ length: 8 }, (_, index) =>
+        `calibration:v7:${index}`))
+  })
+
+  it.each([
+    "--write-execution-context-v7-receipt",
+    "--write-headroom-preflight-v7-receipt",
+    "--calibrate-parallel-v7-receipt",
+    "--write-authoritative-v8-receipt",
+    "--write-plan-262-22-terminal-v1",
+    "--check-plan-262-22-terminal-v1",
+  ])("dispatches additive command %s to exactly one receipt owner", async (command) => {
+    let receiptCalls = 0
+    await expect(dispatchV138CurrentMatrixDirectEntry(command, {
+      runShard: () => "shard",
+      runReceipt: () => {
+        receiptCalls += 1
+        return "receipt"
+      },
+    })).resolves.toBe("receipt")
+    expect(receiptCalls).toBe(1)
   })
 })
 
@@ -6305,6 +6545,60 @@ describe("v1.38 matrix real process boundary", () => {
       expect((await run(true)).classification).toBe("success")
     },
   )
+
+  it("drains four concurrent successful shard exits without sibling cancellation", async () => {
+    const cases = Array.from({ length: 4 }, (_, ordinal) => {
+      const callbacks: Array<Parameters<V138RssCommandAdapter["execFile"]>[3]> = []
+      let child: ChildProcessWithoutNullStreams | undefined
+      const runner = createV138SubprocessShardRunner(repoRoot, {
+        useLegacyHostMemory: false,
+        rssCommandAdapter: adapter((_command, _args, _options, callback) => {
+          callbacks.push(callback)
+        }),
+        shardProcessFactory: controlledShardProcessFactory((spawned) => {
+          child = spawned
+        }),
+      })
+      const terminal = runner.run({
+        ...testShard,
+        shardId: `calibration-shard:concurrent:${ordinal}`,
+        laneId: `lane:${ordinal}`,
+        ordinal,
+        attempts: [{
+          ...testShard.attempts[0]!,
+          executionAttemptId: `calibration:v7:concurrent:${ordinal}`,
+          templateAttemptId: `template:concurrent:${ordinal}`,
+        }],
+      }, {
+        signal: new AbortController().signal,
+        onLaunch: () => undefined,
+        onResourceSample: () => undefined,
+      })
+      return { callbacks, child: () => child!, terminal }
+    })
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    for (const candidate of cases) candidate.callbacks[0]!(null, "100\n", "")
+    await new Promise((resolve) => setTimeout(resolve, 275))
+    for (const candidate of cases) {
+      candidate.child().stdout.end()
+      candidate.child().stderr.end()
+      candidate.child().emit("close", 0, null)
+    }
+    for (const candidate of cases) {
+      candidate.callbacks[1]!(Object.assign(new Error("exited"), {
+        code: "ESRCH",
+      }), "", "")
+    }
+    const terminals = await Promise.all(cases.map(({ terminal }) => terminal))
+    expect(terminals).toHaveLength(4)
+    expect(terminals.every((terminal) =>
+      terminal.classification === "success" &&
+      terminal.cleanup.exitAwaited &&
+      terminal.cleanup.orphanProcessIds.length === 0)).toBe(true)
+    expect(terminals.flatMap(({ outcomes }) => outcomes).every(
+      ({ classification }) => classification === "success",
+    )).toBe(true)
+  })
 
   it("shared-observer runner mode never calls the legacy host-memory sampler", async () => {
     let legacySamplerCalls = 0
@@ -6526,6 +6820,19 @@ describe("v1.38 matrix real process boundary", () => {
       status: "unavailable",
       code: "RESOURCE_SAMPLER_SPAWN_DENIED",
     })
+  })
+
+  it("keeps the external RSS observer timeout fixed at 200 ms", async () => {
+    let timeout: number | undefined
+    const measured = adapter((_command, _args, options, done) => {
+      timeout = options.timeout
+      done(null, "100\n", "")
+    })
+    await expect(sampleV138ChildRss(123, measured)).resolves.toEqual({
+      status: "measured",
+      rssKilobytes: 100,
+    })
+    expect(timeout).toBe(200)
   })
 
   it.each(["", "0", "-1", "12 13", "12.5", "unknown"])(
