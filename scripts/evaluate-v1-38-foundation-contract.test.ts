@@ -190,11 +190,9 @@ const V138_PLAN_262_18_REPAIR_START =
   "a9770d3f7fe29dca042ed2068c4905a0338463ae"
 const V138_PLAN_262_18_SOURCE_BASE =
   "95395308a5eeea68766613e6e72524792046e73a"
-const currentPlan26218SourceA2 = (): string =>
-  execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  }).trim()
+const V138_PLAN_262_18_SOURCE_A2 =
+  "6db9f79e38340b303d73d6e379c13f667b5eadc9"
+const currentPlan26218SourceA2 = (): string => V138_PLAN_262_18_SOURCE_A2
 const cleanPlan26218Review = (
   sourceA2: string,
   overrides: Partial<{
@@ -6169,6 +6167,144 @@ describe("v1.38 matrix real process boundary", () => {
       return child
     },
   })
+
+  const controlledShardProcessFactory = (
+    onSpawn: (child: ChildProcessWithoutNullStreams) => void,
+  ): V138ShardProcessFactory => ({
+    spawn: (_command, args) => {
+      const encodedPayload = args.at(-1)
+      if (encodedPayload === undefined) {
+        throw new TypeError("missing injected shard payload")
+      }
+      const payload = JSON.parse(
+        Buffer.from(encodedPayload, "base64").toString("utf8"),
+      ) as { attemptIds: string[] }
+      const child = new EventEmitter() as ChildProcessWithoutNullStreams
+      const stdout = new PassThrough()
+      const stderr = new PassThrough()
+      const stdin = new PassThrough()
+      Object.assign(child, {
+        pid: 987_654,
+        stdin,
+        stdout,
+        stderr,
+        kill: () => true,
+      })
+      stdout.write(JSON.stringify({
+        outcomes: payload.attemptIds.map((attemptId) => ({
+          attemptId,
+          classification: "success",
+          outcome: "draw",
+        })),
+        maxRssKilobytes: 100,
+      }))
+      setImmediate(() => {
+        child.emit("spawn")
+        onSpawn(child)
+      })
+      return child
+    },
+  })
+
+  const testShard = {
+    kind: "calibration" as const,
+    shardId: "calibration-shard:rss-lifecycle",
+    laneId: "lane:rss-lifecycle",
+    ordinal: 0,
+    attempts: [{
+      executionAttemptId: "calibration:v7:rss-lifecycle",
+      templateAttemptId: "calibration-template:rss-lifecycle",
+      request: {} as V138CurrentMatrixAttempt["request"],
+    }],
+  }
+
+  it("serializes pending RSS ticks and drains the owned request before one successful terminal", async () => {
+    const callbacks: Array<Parameters<V138RssCommandAdapter["execFile"]>[3]> = []
+    let child: ChildProcessWithoutNullStreams | undefined
+    const runner = createV138SubprocessShardRunner(repoRoot, {
+      useLegacyHostMemory: false,
+      rssCommandAdapter: adapter((_command, _args, _options, callback) => {
+        callbacks.push(callback)
+      }),
+      shardProcessFactory: controlledShardProcessFactory((spawned) => {
+        child = spawned
+      }),
+    })
+    const terminalPromise = runner.run(testShard, {
+      signal: new AbortController().signal,
+      onLaunch: () => undefined,
+      onResourceSample: () => undefined,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    expect(callbacks).toHaveLength(1)
+    callbacks[0]!(null, "100\n", "")
+    await new Promise((resolve) => setTimeout(resolve, 475))
+    const observerChildrenStarted = callbacks.length
+    child!.stdout.end()
+    child!.stderr.end()
+    child!.emit("close", 0, null)
+    let settled = false
+    void terminalPromise.then(() => {
+      settled = true
+    })
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    const settledBeforeDrain = settled
+    for (const callback of callbacks.slice(1)) {
+      callback(Object.assign(new Error("exited"), { code: "ESRCH" }), "", "")
+    }
+    const terminal = await terminalPromise
+    expect(settledBeforeDrain).toBe(false)
+    expect(observerChildrenStarted).toBe(2)
+    expect(terminal.classification).toBe("success")
+    expect(terminal.outcomes).toEqual([{
+      attemptId: "calibration:v7:rss-lifecycle",
+      classification: "success",
+      outcome: "draw",
+    }])
+    expect(callbacks).toHaveLength(2)
+  })
+
+  it.each([
+    ["ESRCH", Object.assign(new Error("exited"), { code: "ESRCH" }), ""],
+    ["no-row", null, ""],
+  ] as const)(
+    "fails closed on pre-first-sample %s but treats it as benign after a valid sample",
+    async (_label, error, stdout) => {
+      const run = async (priorValid: boolean) => {
+        const callbacks: Array<Parameters<V138RssCommandAdapter["execFile"]>[3]> = []
+        let child: ChildProcessWithoutNullStreams | undefined
+        const runner = createV138SubprocessShardRunner(repoRoot, {
+          useLegacyHostMemory: false,
+          rssCommandAdapter: adapter((_command, _args, _options, callback) => {
+            callbacks.push(callback)
+          }),
+          shardProcessFactory: controlledShardProcessFactory((spawned) => {
+            child = spawned
+          }),
+        })
+        const terminalPromise = runner.run(testShard, {
+          signal: new AbortController().signal,
+          onLaunch: () => undefined,
+          onResourceSample: () => undefined,
+        })
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        if (priorValid) {
+          callbacks.shift()!(null, "100\n", "")
+          await new Promise((resolve) => setTimeout(resolve, 475))
+        }
+        child!.stdout.end()
+        child!.stderr.end()
+        child!.emit("close", 0, null)
+        const pending = callbacks.shift()
+        expect(pending).toBeTypeOf("function")
+        pending!(error, stdout, "")
+        return terminalPromise
+      }
+
+      expect((await run(false)).classification).toBe("failed")
+      expect((await run(true)).classification).toBe("success")
+    },
+  )
 
   it("shared-observer runner mode never calls the legacy host-memory sampler", async () => {
     let legacySamplerCalls = 0
