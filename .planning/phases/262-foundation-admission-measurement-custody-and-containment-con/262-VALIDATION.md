@@ -5,110 +5,133 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-07-28
+last_audited: 2026-07-30
 ---
 
 # Phase 262 — Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution.
+> Nyquist coverage for the actual immutable Plan 262-15/16 terminal route. This audit is read-only with respect to source, tests, configuration, and evidence.
+
+## Actual Terminal Route
+
+| Fact | Checked value |
+|---|---|
+| Source A | `61d1c470e9a77ffa1f70538cb0c5173f6a792bfa` |
+| Seal B | `1bfb413192f113ac7949cde676d7b55aea77f4fe` |
+| Selected-route derivation | Recomputed from the two A entrypoints by `typescript-static-source-closure-v1` |
+| Current derived path count | 215 |
+| Selected-route closure root | `sha256:9dd774f2520ed81995118052ab920820d74f16d75dfe1b63b75ecadbfe7a68d7` |
+| Plan 262-16 terminal | `calibration_stopped` |
+| Preflight | admitted at 6,900 basis points against the unchanged 2,500-basis-point threshold |
+| Calibration | 8 charged identities across 4 shards; 0 child launches; 0 accepted cells |
+| Reproduction | not invoked; `v1.38-current-matrix-reproduction-v6.json` absent |
+| Authority | single-use authority expired; no retry |
+| Downstream gate | Plan 262-03 remains blocked; ADMIT-03 is not satisfied |
+
+The path count above is an observation from the checked current derivation at A. Completeness authority is the recomputed path list, per-path A blob records, resolver metadata, and closure root—not a copied count.
 
 ## Test Infrastructure
 
 | Property | Value |
-|----------|-------|
-| **Framework** | Vitest 4.1.6 |
-| **Config file** | Package scripts and root Vitest defaults |
-| **Quick run command** | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts --maxWorkers=1` |
-| **Full suite command** | `pnpm turbo test --concurrency=1` |
-| **Estimated runtime** | Calibrate during Wave 0; focused checks must remain under 60 seconds |
+|---|---|
+| **Framework** | Vitest 4.1.6 plus read-only TypeScript CLI checkers |
+| **Config** | Package scripts and root Vitest defaults |
+| **Safe injected command** | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "<non-live selector>" --maxWorkers=1 --reporter=verbose` |
+| **Canonical Plan 262-15 check** | `node --import tsx scripts/lib/v1-38-successor-source-seal.ts --check-plan-262-15-authorization-v1 ...` |
+| **Canonical closure check** | `node --import tsx scripts/lib/v1-38-successor-source-seal.ts --check-selected-route-closure-from-seal --seal .planning/artifacts/v1.38-successor-source-seal-v1.json` |
+| **Canonical Plan 262-16 check** | `node --import tsx scripts/lib/v1-38-current-matrix-reproduction.ts --check-plan-262-16-terminal ...` |
+| **Prohibited in this audit** | Writers, `memory_pressure`, audit reproducer, preflight, calibration, Match, reproduction, Strategy execution, or evidence generation |
 
-## Sampling Rate
+## Requirement Coverage
 
-- **After every task commit:** Run the focused `-t` selector for the touched gate followed by `pnpm typecheck`.
-- **After every plan wave:** Run `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts --maxWorkers=1 && pnpm typecheck`. Also run each immutable checker whose producer exists in that wave: admission after Wave 1; expectation reconstruction after Wave 3; injected scheduler/resource/cleanup checks after Wave 4; the stopped Plan 262-10 checker after Wave 5; repaired sampler/cleanup and stopped v2/v3 checks after Wave 6; stopped preflight:v3/calibration:v3 checks after Wave 7; stopped v4/v5 evidence checks after Wave 8; producing-source and ambient-isolation checks after Wave 9; sourceBase..A custody, derived selected-route closure, review, authorization, and B checks after Wave 10; the branch-aware Pattern C Plan 262-16 terminal checker after Wave 11; independent closure/terminal recomputation plus Nyquist/verifier refresh after Wave 12; pre-search regeneration only after a successful independently verified Wave 12 route; the containment monitor after its dependent wave; and `pnpm v1.38:foundation-contract:check` after the authorized custody route.
-- **Before `$gsd-verify-work`:** The serialized full suite, exact regeneration checks, and forbidden-artifact inventory must be green.
-- **Max feedback latency:** 60 seconds for focused checks; long matrix reproduction is a separately reported integration gate.
+Requirement status is behavioral: a green helper or stopped-branch checker does not satisfy a requirement whose demanded successful artifact is absent.
+
+| Requirement | Owning tasks/plans | Behavioral verification | Status |
+|---|---|---|---|
+| ADMIT-01 | 262-01, 262-G8, 262-G9, 262-G10 | Admission mutations; checked A/B authorization and terminal lineage | COVERED |
+| ADMIT-02 | 262-01, 262-G8, 262-G9, 262-G10 | Exact tuple/source bindings; A-derived route and resolver identity recheck | COVERED |
+| ADMIT-03 | 262-02, 262-G1..G10, 262-CR1 | Inventory, expectation, scheduler/accounting, hostile-output, custody and terminal checks exist; actual route has 0/540 accepted cells | PARTIAL — requirement unmet |
+| ADMIT-04 | 262-01, 262-G8, 262-G9, 262-G10 | Fail-closed mutation tests and stopped terminal with no retry/reproduction | COVERED |
+| MEAS-01 | 262-03 | `contract` behavior and immutable study contract | MISSING — plan unexecuted |
+| MEAS-02 | 262-03 | `accounting` structural opportunity vector | MISSING — plan unexecuted |
+| MEAS-03 | 262-03 | `contract` stopping/selection/claim grammar | MISSING — plan unexecuted |
+| MEAS-04 | 262-03 | `accounting` failure-ledger separation | MISSING — plan unexecuted |
+| MEAS-05 | 262-04 | `gates` source/runtime feasibility values | MISSING — plan unexecuted |
+| MEAS-06 | 262-04 | `gates` population/core/finalist thresholds | MISSING — plan unexecuted |
+| MEAS-07 | 262-04 | `gates` response/probe/red-team thresholds | MISSING — plan unexecuted |
+| MEAS-08 | 262-04 | `gates` Advanced regression-only and bounded claims | MISSING — plan unexecuted |
+| MEAS-09 | 262-04 | `reporting` orthogonal terminal states | MISSING — plan unexecuted |
+| MEAS-10 | 262-05 | `classifiers`, protocol-only lineage/order/holdout, containment | MISSING — plan unexecuted |
+| SEAL-01 | 262-06, 262-07 | Synthetic custody plus real separately authorized custody/root path | MISSING — implementation and operational authority absent |
+| DECI-02 | 262-05 | Profile-neutral classifier and invariant fixture suite | MISSING — plan unexecuted |
+
+### Requirement Coverage Counts
+
+| Classification | Count |
+|---|---:|
+| COVERED | 3 |
+| PARTIAL | 1 |
+| MISSING | 12 |
+| Total | 16 |
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 262-01 | 262-01 | 1 | ADMIT-01, ADMIT-02, ADMIT-04 | T-262-01 | Exact authority join or typed fail-closed stop | unit + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t admission` | ✅ | ⚠️ PARTIAL — historical coverage exists; current successor HEAD requires separately sealed authority and this audit did not run the prohibited reproducer |
-| 262-02 | 262-02 | 2 | ADMIT-03 | T-262-04 | Historical matrix executes only through supervised runtime and canonical kernel | integration | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t matrix` | ✅ | ⚠️ PARTIAL — exact 540/540 reproduction remains stopped with zero accepted cells |
-| 262-G1 | 262-08 | 3 | ADMIT-03 | T-262-30 | Historical expectation is independently bound to immutable pre-v1.38 evidence | unit + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix expectation"` | ✅ | ✅ green |
-| 262-G2 | 262-09 | 4 | ADMIT-03 | T-262-34 | Precommitted calibration policy/projector, deterministic bounded scheduler, exact accounting, resource refusal, cancellation, and cleanup | property + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix calibration policy\|matrix scheduler\|matrix accounting\|matrix resources\|matrix cleanup\|matrix cancellation"` | ✅ | ✅ green |
-| 262-G3 | 262-10 | 5 | ADMIT-03 | T-262-40 | Exact calibration CLI with admitted/stopped receipt verification and exact 540-cell authoritative receipt under the unchanged 90-minute gate | integration + mutation | Plan 262-10 calibration/check commands | ✅ | ❌ stopped |
-| 262-G4 | 262-11 | 6 | ADMIT-03 | T-262-45 | Repaired sampler/cleanup, immutable diagnostic:v2, recorded authorization, and stopped calibration:v2 with no v3 launch | real process + mutation + integration | Plan 262-11 diagnostic:v2, calibration:v2, and stopped branch checkers | ✅ | ❌ stopped at 3.45% headroom |
-| 262-G5 | 262-12 | 7 | ADMIT-03 | T-262-51 | Exact single-use retry, stopped 4.02% preflight:v3, eight charged unfilled calibration:v3 identities, and no v4 launch | real process + mutation + integration | Plan 262-12 preflight:v3, calibration:v3, and stopped branch checkers | ✅ | ❌ stopped at 4.02% headroom |
-| 262-G6 | 262-13 | 8 | ADMIT-03 | T-262-58 | Pattern C context, stopped 4.37% preflight:v4, eight charged unfilled calibration:v4 identities, no v5, and explicit isolation gap | inline context + real process + mutation + integration | Plan 262-13 persisted context/preflight/calibration/stopped branch checkers | ✅ | ⚠️ PARTIAL — stopped with zero accepted cells |
-| 262-G7 | 262-14 | 9 | ADMIT-03 | T-262-66 | Producing-Git-object historical validation and explicit persisted/supplied branch isolation with no measurement authority | unit + mutation + regression | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix historical execution context source evolution\|matrix authoritative v5 ambient isolation\|matrix inline execution context v4\|matrix authoritative v5 branches"` plus read-only persisted v4 checkers | ✅ | ⚠️ PARTIAL — repair tests exist, but current post-review HEAD is not successor-sealed and the persisted calibration checker now fails |
-| 262-G8 | 262-15 | 10 | ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04 | T-262-68..73 | Ephemeral-only raw stdout, sourceBase..A aggregate custody, independent zero-warning review/fix, derived A-resolved selected-route closure, exact full-A/operator authority, and sealed/stopped branch checker | injected unit + Git/import-edge mutation + independent review + exact checkpoint | `check-reviewed-source-a`, `check-selected-route-closure-at-a`, and `check-plan-262-15-authorization-v1` | ❌ | ⬜ PLANNED — no implementation, review, A, computed closure, authorization, or B exists |
-| 262-G9 | 262-16 | 11 | ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04 | T-262-74..79 | Main-orchestrator-only Pattern C execution, immediate terminal-agent/zero-executor proof, one preflight/calibration/conditional v6, exclusive terminal writer, exact canonical branch presence/absence, expiry, 8/540 charging, child count, and zero-or-540 acceptance | routing checkpoint + real process integration + immutable terminal checker | `check-plan-262-16-terminal` | ❌ | ⬜ PLANNED — depends on checked Plan 262-15 B and future exact full-A/operator response |
-| 262-G10 | 262-17 | 12 | ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04 | T-262-80..84 | Read-only independent closure/terminal recomputation, conditional drift review, Nyquist refresh, all-truths verification, and truthful tracking | read-only integration + validation + goal-backward verification | canonical Plan 262-15/16 checkers plus refreshed `262-VALIDATION.md` and `262-VERIFICATION.md` | ❌ | ⬜ PLANNED — depends on one immutable Plan 262-16 terminal |
-| 262-CR1 | 262-REVIEW-FIX | review | ADMIT-03 | CR-01 | Malformed child output cannot become calibration admission or accepted evidence | injected integration + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix parent boundary rejects" --maxWorkers=1` | ✅ | ✅ COVERED — 10/10 passed 2026-07-30; no subprocess or Match launched |
-| 262-03 | 262-03 | 13 | MEAS-01, MEAS-02, MEAS-03 | T-262-08 | Contract, complete cells, opportunity vector, and claims are immutable | unit + property | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t contract` | ❌ | ❌ MISSING — blocked until a successful independently verified 262-17 route over a 262-16 `reproduction_passed` terminal with 540/540 accepted cells and passed prerequisite truths |
-| 262-04 | 262-03 | 13 | MEAS-04 | T-262-09 | Failures remain charged and cannot become accepted cells | mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t accounting` | ❌ | ❌ MISSING — blocked on the same successful independently verified 262-17 route |
-| 262-05 | 262-04 | 14 | MEAS-05, MEAS-06, MEAS-07, MEAS-08 | T-262-12 | Numeric gates have frozen denominators and claims stay oracle-relative | unit | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t gates` | ❌ | ❌ MISSING — dependent plan is unexecuted |
-| 262-06 | 262-04 | 14 | MEAS-09 | T-262-13 | Process, current, formation, and contamination states remain orthogonal | table + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t reporting` | ❌ | ❌ MISSING — dependent plan is unexecuted |
-| 262-07 | 262-05 | 15 | MEAS-10, DECI-02 | T-262-18 | Classifiers remain profile-neutral and profiles remain protocol-only | property + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t classifiers` | ❌ | ❌ MISSING — dependent plan is unexecuted |
-| 262-08 | 262-06, 262-07 | 16-17 | SEAL-01 | T-262-20 | Commitment/open-once/safe-projection/contamination/retirement state machine | integration + mutation | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t custody` | ❌ | ❌ MISSING — synthetic custody and later operational authority are unimplemented |
-| 262-09 | 262-05 | 15 | MEAS-10 | T-262-16 | Forbidden imports, namespaces, and artifacts are detected | boundary integration | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t containment` | ❌ | ❌ MISSING — containment implementation/fixtures are absent |
+| Task ID | Plan | Wave | Requirement | Test/check | Current status |
+|---|---|---:|---|---|---|
+| 262-01 | 262-01 | 1 | ADMIT-01, ADMIT-02, ADMIT-04 | `-t admission` | COVERED — historical exact admission and fail-closed mutations exist |
+| 262-02 | 262-02 | 2 | ADMIT-03 | `-t matrix` | PARTIAL — exact supervised 540-cell reproduction absent |
+| 262-G1 | 262-08 | 3 | ADMIT-03 | `-t "matrix expectation"` | COVERED helper — independent historical predicate |
+| 262-G2 | 262-09 | 4 | ADMIT-03 | injected calibration policy/scheduler/accounting/resources/cleanup/cancellation | COVERED helper |
+| 262-G3 | 262-10 | 5 | ADMIT-03 | Plan 262-10 branch checker | PARTIAL — stopped with 0 accepted cells |
+| 262-G4 | 262-11 | 6 | ADMIT-03 | diagnostic:v2 and calibration:v2 branch checkers | PARTIAL — stopped at 3.45% headroom |
+| 262-G5 | 262-12 | 7 | ADMIT-03 | preflight:v3/calibration:v3/v4-absence checkers | PARTIAL — stopped at 4.02% headroom |
+| 262-G6 | 262-13 | 8 | ADMIT-03 | context:v4/preflight:v4/calibration:v4/v5-absence checkers | PARTIAL — stopped at 4.37% headroom |
+| 262-G7 | 262-14 | 9 | ADMIT-03 | producing-Git-object and persisted/supplied isolation tests | COVERED helper — grants no measurement authority |
+| 262-G8 | 262-15 | 10 | ADMIT-01..04 | checked authorization/seal plus closure recomputation | COVERED helper — A/B and derived closure passed; not ADMIT-03 success |
+| 262-G9 | 262-16 | 11 | ADMIT-01..04 | canonical terminal-first checker | COVERED stopped branch — `calibration_stopped`, 8 charged, 0 children, 0 accepted, reproduction absent |
+| 262-G10 | 262-17 | 12 | ADMIT-01..04 | read-only Plan 262-15/16 checkers plus this refresh | PARTIAL — Nyquist refresh complete, but full Plan 262-17 verification/tracking is outside this file and route is stopped |
+| 262-CR1 | review fix | review | ADMIT-03 | `-t "matrix parent boundary rejects"` | COVERED helper — malformed child output cannot enter calibration evidence |
+| 262-03 | 262-03 | 13 | MEAS-01..04 | `-t "contract|accounting|calibration"` | MISSING — blocked by stopped route |
+| 262-05/06 | 262-04 | 14 | MEAS-05..09 | `-t "gates|reporting"` | MISSING — plan unexecuted |
+| 262-07/09 | 262-05 | 15 | MEAS-10, DECI-02 | `-t "classifiers|protocol.only|containment"` | MISSING — plan unexecuted |
+| 262-08 | 262-06/07 | 16–17 | SEAL-01 | `-t custody` plus operational handoff/root checks | MISSING — synthetic implementation and real custody authority absent |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+## Manual and Missing Blockers
 
-## Wave 0 Requirements
+| Behavior | Requirement | Classification | Blocker / required evidence |
+|---|---|---|---|
+| Exact current-rules reproduction | ADMIT-03 | Manual/resource-consuming | A new separately planned and authorized successor must produce a checked `reproduction_passed` terminal with exactly 540/540 accepted cells; Plan 262-16 authority is expired |
+| Artifact-presence selector isolation | ADMIT-01..04 | Warning | Four focused presence tests currently fail because the test dirties `262-15-REVIEW.md` before attempting `git checkout`; Plan 262-17 forbids test changes, so the canonical read-only checkers are the current authority |
+| Study/accounting contract | MEAS-01..04 | Missing implementation/test | Plan 262-03 remains blocked |
+| Numeric gates/report grammar | MEAS-05..09 | Missing implementation/test | Plan 262-04 is unexecuted |
+| Protocol/classifier/containment behavior | MEAS-10, DECI-02 | Missing implementation/test | Plan 262-05 is unexecuted |
+| Synthetic custody mechanics | SEAL-01 | Missing implementation/test | Plan 262-06 is unexecuted |
+| Real custody identities and encrypted store | SEAL-01 | Manual/external authority | Named custodian, one-open actor, approved external encrypted store, key/trust domain, retention, retirement, and authenticated bounded handoff cannot be invented by tests |
+| Aggregate custody/containment root | SEAL-01 | Missing implementation/test | Plan 262-07 cannot execute before the upstream measurement and custody gates |
 
-- [x] `scripts/evaluate-v1-38-foundation-contract.test.ts` — shared Phase 262 test entrypoint; gap selectors are added by Plans 262-08 through 262-10.
-- [ ] Synthetic canonical classifier fixtures that never materialize a formation `GameState`.
-- [ ] Temporary external-directory custody fixture with restrictive permissions.
-- [ ] Runtime-service Advanced-revision request helper that does not import fixture trust.
-- [ ] `v1.38:foundation-contract:write` and `v1.38:foundation-contract:check` package scripts.
-- [ ] Boundary mutation fixtures that seed forbidden imports/artifacts and prove detection.
+## Validation Audit 2026-07-30 — Plan 262-17 Refresh
 
-## Manual-Only Verifications
+| Check | Actual result | Classification |
+|---|---|---|
+| Canonical Plan 262-15 authorization/seal checker | passed from canonical destinations | COVERED |
+| Selected-route closure recomputation from seal | passed; current derivation returned 215 paths and root `sha256:9dd774f2520ed81995118052ab920820d74f16d75dfe1b63b75ecadbfe7a68d7` | COVERED |
+| Canonical Plan 262-16 terminal checker | passed; `calibration_stopped`, 8 charged, 4 shards, 0 child launches, 0 accepted, reproduction absent | COVERED stopped branch |
+| Injected Darwin parser/provider selector | 19 passed, 170 skipped | COVERED |
+| Combined selected-route/source-custody selector | runner printed no terminal summary under host pressure; canonical closure checker independently passed | WARNING |
+| Artifact-presence/hostile-receipt selector | 5 hostile-receipt tests passed; 4 presence tests failed on self-created dirty `262-15-REVIEW.md` blocking Git checkout | WARNING — test isolation gap retained |
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Real custody role and encrypted private-store authorization | SEAL-01 | Repository code cannot name or authorize an external human/store | Record the named custodian role, opening actor, store identity, and authorization receipt; verify no secret/preimage enters Git |
-| Recorded Plan 262-11 resource sampler policy | ADMIT-03 | Host process sampling required explicit external permission | Verify the recorded `authorized-unsandboxed-ps` selection, literal authorization, exact read-only boundary, and policy root; Plan 262-12 does not broaden or replace this policy |
-| Plan 262-12 single-use environmental retry | ADMIT-03 | The frozen sampler policy does not authorize a new resource-consuming retry | Grant the exact literal scoped to one preflight:v3, one eight-attempt calibration:v3 set, and conditionally one 540-cell reproduction:v4; verify distinct root, no default, single use, and expiry at terminal outcome |
-| Plan 262-13 lean-main single-use retry | ADMIT-03 | Removing resident executor pressure changes execution context and requires a new bounded run grant | Verify Pattern C main ownership, terminal Plan 262-13 helpers, plan-scoped no-active-executor proof without OS-global claim, and exact literal for one preflight:v4, one calibration:v4 set, conditional at-most-one v5, distinct root, single use, and expiry |
-| Exact current-rules reproduction | ADMIT-03 | The required 540/540 supervised run is resource-consuming and expressly prohibited in this validation audit | Plan 262-15 must produce independently reviewed exact source A and checked B; Plan 262-16 then runs directly under Pattern C and must produce a checked successful `reproduction_passed` v6 terminal with exactly 540 accepted cells, unchanged v1.18/v1.19/MATCH_KERNEL tuple, exact historical predicate match, complete cleanup, and no partial reuse |
-| Successor-HEAD sealing authority | ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04 | Code-review commits changed live source after the sealed Plan 262-13 evidence; repository tests cannot invent authority for the new HEAD | Plan 262-15 requires an independent main-orchestrator zero-warning review/fix loop, exact four-path source-only A proof, then the future literal containing full A and exact `roryquinlan-repository-operator` before separate B |
-| New measurement-policy authority | ADMIT-03 | Existing stopped authorizations are consumed/expired and cannot authorize another preflight, calibration, or reproduction | The future exact full-A/operator response authorizes only one main-orchestrator Plan 262-16 preflight:v5, one calibration:v5 allocation, and conditional at-most-one v6 while leaving every frozen boundary unchanged |
-| Later custody authority | SEAL-01 | A real custodian, one-open actor, encrypted store, key/trust domain, retention, and retirement authority cannot be invented in repository tests | Supply and authenticate the exact bounded operational handoff only after ADMIT-03 and Plans 262-03 through 262-05 pass |
+No writer, `memory_pressure`, audit reproducer, preflight, calibration, Match, reproduction, Strategy execution, or evidence-generating command was invoked. No source, test, configuration, or evidence file was modified.
 
 ## Validation Sign-Off
 
-- [ ] All planned behaviors have an automated check or explicit Wave 0 dependency; blocked Plans 262-03 through 262-07 still lack their behavioral tests and implementations.
-- [x] Sampling continuity requires an automated check after every task.
-- [ ] Wave 0 covers every missing test reference.
-- [x] Commands use no watch-mode flags.
-- [x] Focused feedback latency target is under 60 seconds.
-- [x] Numeric freeze is automated by the preregistered deterministic selector policy; completed manual checkpoints are Plan 262-11 sampler-policy authorization and Plans 262-12/13 retry authorizations, while real custody authority/encrypted-store naming remains pending. Plans 262-15/16/17 are unexecuted; their future exact full-A plus `roryquinlan-repository-operator` checkpoint is unsatisfied and no live authority exists.
-- [ ] Nyquist compliance remains false until the missing safe tests are created by their authorized plans and the external/manual blockers are satisfied without implying ADMIT-03 success.
+- [x] All 16 Phase 262 requirement IDs map to owning tasks and behavioral verification.
+- [x] Plan 262-15 custody and the selected route were checked from immutable A/B evidence.
+- [x] The closure is described as derived at A; its checked current count/root are recorded without making the count a completeness authority.
+- [x] The actual Plan 262-16 stopped branch is recorded without treating a green checker as ADMIT-03 success.
+- [x] Every downstream missing implementation/test and manual authority blocker remains explicit.
+- [x] Commands use no watch mode and this refresh invoked only injected/non-live tests and read-only checkers.
+- [ ] ADMIT-03 remains unmet because reproduction:v6 is absent and accepted cells are 0/540.
+- [ ] Plans 262-03 through 262-07 remain unexecuted.
+- [ ] Nyquist compliance remains false: 3/16 requirements are covered, 1/16 is partial, and 12/16 are missing.
 
-**Approval:** approved for planning 2026-07-28; validation is partial and Phase 262 remains stopped.
-
-## Validation Audit 2026-07-30
-
-| Metric | Count |
-|--------|-------|
-| Requirement/task rows audited | 17 |
-| COVERED | 3 |
-| PARTIAL | 7 |
-| MISSING | 7 |
-| Safe gaps resolved in this audit | 0 new tests required; CR-01 already had a real injected regression |
-| Escalated/manual-only blockers | 4 |
-
-### Audit Trail
-
-| Check | Command | Actual result | Classification |
-|---|---|---|---|
-| Code-review CR-01 malformed child-output boundary | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix parent boundary rejects" --maxWorkers=1` | 10 passed, 142 skipped; no subprocess, sampler, Match, reproduction, or writer | COVERED |
-| TypeScript contract check | `pnpm exec tsc --noEmit --pretty false` | passed | COVERED |
-| Plan 262-14 safe-selector attempt | `pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t "matrix parent boundary rejects\|matrix historical execution context source evolution\|matrix authoritative v5 ambient isolation" --maxWorkers=1` | 11 passed, 1 failed at `MATRIX_ADMISSION_INVALID`; invalid audit evidence because the selector transitively invoked the prohibited audit reproducer before branch isolation | PARTIAL; not counted as a valid branch-isolation run |
-| Read-only execution-context:v4 checker | `node --import tsx scripts/lib/v1-38-current-matrix-reproduction.ts --check-execution-context-v4-receipt .planning/artifacts/v1.38-current-matrix-execution-context-v4.json` | passed; root `sha256:7ff8e5b8a3d580ba6b1f821ebe35ff8688fb3247b4772ada979c2975f46c0a71`, 0 accepted | COVERED |
-| Read-only headroom-preflight:v4 checker | `node --import tsx scripts/lib/v1-38-current-matrix-reproduction.ts --check-headroom-preflight-v4-receipt .planning/artifacts/v1.38-current-matrix-headroom-preflight-v4.json` | passed; `preflight_refused`, 437 basis points, 0 accepted | COVERED |
-| Persisted calibration:v4 checker attempt | `node --import tsx scripts/lib/v1-38-current-matrix-reproduction.ts --check-calibration-v4-receipt .planning/artifacts/v1.38-current-matrix-calibration-v4.json` | failed `MATRIX_CALIBRATION_V4_RECEIPT_INVALID` after later code-review source commits; static call-graph review confirmed this checker transitively re-enters live matrix admission and the retained audit gate | PARTIAL — successor-HEAD seal required; implementation/evidence not modified; the attempt is not counted as a purely read-only safe check |
-
-No sampler, real subprocess calibration, preflight writer, Match, reproduction, or evidence writer was intentionally run. The rejected selector and persisted calibration checker attempt are recorded because each transitively entered the audit reproducer contrary to the safe-command assumption; neither result is counted as safe validation evidence, and no artifact bytes were written.
+**Exact status:** PARTIAL / NOT NYQUIST-COMPLIANT. Plan 262-03 remains blocked.

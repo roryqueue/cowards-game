@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Completed 262-14-PLAN.md; ADMIT-03 and downstream remain blocked
-last_updated: "2026-07-30T17:10:26.846Z"
+stopped_at: Completed 262-17-PLAN.md; independently verified calibration_stopped route leaves ADMIT-03 and downstream blocked
+last_updated: "2026-07-30T22:00:37-04:00"
 last_activity: 2026-07-30
-last_activity_desc: Plan 262-14 verified the sealed stopped v4 branch from producing Git objects and preserved every prior artifact byte
+last_activity_desc: Plan 262-17 independently verified the A/B route and calibration_stopped terminal; validation is partial and verification is gaps_found 1/5
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 17
-  completed_plans: 9
-  percent: 53
+  completed_plans: 12
+  percent: 71
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 9 of 17
-Status: Plans 262-15, 262-16, and 262-17 separate source/authority custody, Pattern C live evidence, and independent post-terminal verification/tracking; none is executed and ADMIT-03 remains blocked
-Last activity: 2026-07-30 — Plan 262-14 verified the sealed stopped v4 branch from producing Git objects and preserved every prior artifact byte
+Plan: 12 of 17
+Status: Plans 262-15 through 262-17 are executed. The independently checked terminal is `calibration_stopped`; reproduction:v6 is absent, accepted cells are 0/540, validation is partial, verification is `gaps_found` (1/5), and ADMIT-03 remains blocked.
+Last activity: 2026-07-30 — Plan 262-17 independently rechecked A/B, the derived selected route, and the immutable stopped terminal without evidence or source mutation.
 
-Progress: [█████░░░░░] 53%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
-**Current milestone:** 9 of 17 Phase 262 plans complete; Plans 262-15 through 262-17 are planned but unexecuted, so ADMIT-03 remains blocked.
+**Current milestone:** 12 of 17 Phase 262 plans complete; the Plan 262-16 authority expired at a checked `calibration_stopped` terminal, so ADMIT-03 and Plans 262-03 through 262-07 remain blocked.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -51,6 +51,9 @@ Progress: [█████░░░░░] 53%
 | Phase 262 P12 | 13min | 3 tasks | 5 files |
 | Phase 262 P13 | 24min | 3 tasks | 5 files |
 | Phase 262 P14 | 20min | 2 tasks | 3 files |
+| Phase 262 P15 | source/review gate | 3 tasks | reviewed A + authorization/seal B |
+| Phase 262 P16 | 8min | 2 tasks | 5 files |
+| Phase 262 P17 | independent verification | 3 tasks | validation, verification, tracking |
 
 ## Accumulated Context
 
@@ -84,6 +87,10 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Verify sealed Plan 262-13 history from exact producing Git commit, receipt blob, and source blobs rather than mutable current HEAD bytes.
 - [Phase 262]: Require explicit persisted or supplied v4/v5 branch evidence; supplied synthetic branches never consult ambient artifact paths.
 - [Phase 262]: Keep ADMIT-03 incomplete after the verification-only repair; no measurement authority or accepted evidence was created.
+- [Phase 262]: Bind the effective-available-memory successor to clean source A `61d1c470e9a77ffa1f70538cb0c5173f6a792bfa` and direct-child authorization/seal B `1bfb413192f113ac7949cde676d7b55aea77f4fe`; derive the selected route at A rather than trusting a fixed inventory count.
+- [Phase 262]: Admit the one Pattern C preflight at 6,900 basis points, then stop calibration:v5 on process failure with all eight identities charged, zero child launches, zero accepted cells, and no reproduction:v6.
+- [Phase 262]: Expire the single-use authority at `calibration_stopped`; no retry or partial reuse is permitted.
+- [Phase 262]: Record Plan 262-17 validation as partial and verification as `gaps_found` (1/5); clean custody and a valid stopped terminal do not satisfy ADMIT-03 or unblock Plan 262-03.
 
 ### Pending Todos
 
@@ -100,9 +107,11 @@ None.
 - ADMIT-03 remains blocked: Plan 262-11 calibration:v2 stopped at 3.45% host headroom under the unchanged 25% gate; reproduction:v3 was not launched and zero cells were accepted.
 - ADMIT-03 remains blocked: Plan 262-12 terminally stopped at 4.02% host headroom, accepted zero cells, launched no calibration children or reproduction:v4, and its single-use authorization is expired.
 - ADMIT-03 remains blocked: Plan 262-13 terminally stopped at 4.37% node:os headroom, charged all eight calibration:v4 identities, launched zero children and no reproduction:v5; Plan 262-14 repaired the historical-source and ambient-artifact verification gaps without creating evidence.
-- Plan 262-15 must record pre-implementation sourceBase, preserve atomic candidate/fix lineage through final reviewed A, derive and seal the complete selected-route closure at A, obtain the future exact full-A plus `roryquinlan-repository-operator` authorization, and check one sealed or stopped branch before Plan 262-16 can run.
-- Plan 262-16 must be executed directly by the main orchestrator under Pattern C and may modify only immutable live evidence plus its summary.
-- Plan 262-17 must independently recompute/recheck the route, refresh Nyquist and verifier artifacts, and update tracking; Plan 262-03 depends only on a successful independently verified 262-17 route over a 262-16 `reproduction_passed` terminal with 540/540 accepted cells and passed prerequisite truths.
+- Plans 262-15 through 262-17 are complete: A/B custody and all canonical checkers pass, no unexpected drift exists across the checked selected-route/source/config union, and the stopped branch preserves history, formation absence, privacy, charging, and no-retry boundaries.
+- ADMIT-03 remains blocked: Plan 262-16 preflight admitted at 6,900 basis points, but calibration:v5 stopped with process failure after eight charged identities, four shards, zero child launches, zero accepted cells, and no reproduction:v6.
+- The Plan 262-16 authority is expired. A future attempt requires a newly planned, separately authorized successor retaining A, B, every stopped root, and every charged attempt; Plan 262-16 cannot be retried.
+- Plan 262-03 remains blocked until an independent verifier confirms a future `reproduction_passed` terminal with exactly 540/540 accepted cells and every authority, closure, drift, cleanup, protected-history, formation, and privacy prerequisite.
+- Validation is partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification is `gaps_found` with 1/5 roadmap truths satisfied.
 
 ## Deferred Items
 
@@ -115,7 +124,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-30T13:14:01.908Z
-Stopped at: Completed 262-14-PLAN.md; ADMIT-03 and downstream remain blocked
+Last session: 2026-07-30T22:00:37-04:00
+Stopped at: Completed 262-17-PLAN.md; independently verified calibration_stopped route leaves ADMIT-03 and downstream blocked
 Resume file: None
-Next command: Execute Plan 262-15 implementation only, terminate the executor, then have the main orchestrator independently review/fix to zero warnings and present exact source A plus its derived selected-route closure for the future full-A/operator checkpoint. Plans 262-16, 262-17, and 262-03 remain blocked.
+Next command: Create a new separately planned successor that retains A, B, every immutable stopped root, and all charged attempts; obtain fresh exact single-use authority before any unchanged-policy calibration/reproduction attempt. Plan 262-03 and Phases 263-270 remain blocked.

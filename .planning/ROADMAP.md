@@ -50,7 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 9/17 plans executed
+**Plans:** 12/17 plans executed
+
+**Current verdict:** BLOCKED — Plan 262-17 independently verified the immutable `calibration_stopped` route and reported `gaps_found` (1/5 truths). The selected route is derived at A with a current checked count of 215 and root `sha256:9dd774f2520ed81995118052ab920820d74f16d75dfe1b63b75ecadbfe7a68d7`; the count is not a completeness authority. ADMIT-03 remains unmet because reproduction:v6 is absent, accepted cells are 0/540, and the single-use authority is expired.
 
 Plans:
 **Wave 1**
@@ -91,15 +93,15 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 262-15-PLAN.md — Bind sourceBase through final reviewed A, derive the selected-route source closure at A, require the exact full-A/operator literal, and create/check one sealed or stopped authority branch.
+- [x] 262-15-PLAN.md — Bound sourceBase through clean reviewed A `61d1c470e9a77ffa1f70538cb0c5173f6a792bfa`, derived the selected route, accepted exact authority, and committed direct-child seal B `1bfb413192f113ac7949cde676d7b55aea77f4fe`.
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
-- [ ] 262-16-PLAN.md — Main-orchestrator-only Pattern C preflight:v5/calibration:v5/conditional reproduction:v6 with one exclusive immutable terminal; no tracking mutation.
+- [x] 262-16-PLAN.md — Pattern C terminal: preflight admitted at 6,900 basis points; calibration stopped with process failure after eight charged identities, zero child launches, zero accepted cells, and no reproduction:v6.
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
-- [ ] 262-17-PLAN.md — Independently recheck the terminal route, refresh Nyquist and full verification, and update tracking from the actual verifier verdict.
+- [x] 262-17-PLAN.md — Independently rechecked A/B, the derived selected route, and the immutable terminal; validation is partial and verification is `gaps_found` (1/5), so Plan 262-03 remains blocked.
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
@@ -256,7 +258,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 9/17 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 12/17 | Blocked — gaps_found 1/5 |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
