@@ -4073,6 +4073,7 @@ export const checkV138SealedWorktreeAtA3 = (
 ): true => {
   const sourceA3 = seal.sourceCustody.sourceA3
   const records = [
+    ...seal.sourceCustody.sourceBlobs,
     ...seal.protectedHistory.artifacts,
     ...seal.selectedRouteClosure.sourceBlobs,
     ...seal.selectedRouteClosure.resolverMetadata,
@@ -4098,6 +4099,8 @@ export const checkV138SealedWorktreeAtA3 = (
     "V138_PROTECTED_HISTORY_V3_REPRODUCTION_PRESENT")
   requireAbsentAtCommit(repoRoot, sourceA3, V138_V6_REPRODUCTION_MARKER,
     "V138_PROTECTED_HISTORY_V3_REPRODUCTION_MARKER_PRESENT")
+  regularFile(path.resolve(repoRoot, V138_V6_REPRODUCTION), "absent")
+  regularFile(path.resolve(repoRoot, V138_V6_REPRODUCTION_MARKER), "absent")
   return true
 }
 

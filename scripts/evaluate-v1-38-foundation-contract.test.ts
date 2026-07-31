@@ -37,10 +37,12 @@ import {
 import {
   buildV138Plan26215Authorization,
   buildV138Plan26218AuthorizationV2,
+  buildV138Plan26221AuthorizationV3,
   deriveV138ProtectedHistoryV3,
   inspectSourceCustodyA3,
   buildV138SuccessorSourceSeal,
   buildV138SuccessorSourceSealV2,
+  buildV138SuccessorSourceSealV3,
   checkV138Plan26218ArtifactBranch,
   checkV138Plan26218AuthorizationV2,
   checkV138ReviewedSourceA2,
@@ -54,6 +56,7 @@ import {
   checkV138SuccessorSealCommit,
   checkV138SuccessorSealCommitV2,
   checkV138SealedWorktreeAtA2,
+  checkV138SealedWorktreeAtA3,
   deriveV138ProtectedHistoryV2,
   deriveFormationAbsence,
   deriveSelectedRouteClosureAtCommit,
@@ -62,10 +65,12 @@ import {
   validateV138CanonicalParentChain,
   V138_PLAN_262_18_CANONICAL_PATHS,
   V138_PLAN_262_18_TERMINAL_SCHEMA,
+  V138_PLAN_262_21_CANONICAL_PATHS,
   V138_PLAN_262_19_FRESH_DESTINATIONS,
   V138_PLAN_262_22_FRESH_DESTINATIONS,
   v138Plan26215AuthorizationLiteral,
   v138Plan26218AuthorizationLiteral,
+  v138Plan26221AuthorizationLiteral,
   writePlan26215Terminal,
   writeV138CanonicalExclusiveV2,
 } from "./lib/v1-38-successor-source-seal.js"
@@ -112,6 +117,7 @@ import {
   checkV138AuthoritativeMatrixV8Receipt,
   checkV138Plan26222TerminalV1,
   checkV138Plan26222ConsumptionMarker,
+  checkV138Plan26222Obstruction,
   checkV138HostHeadroomPreflightV5Receipt,
   checkV138HostHeadroomPreflightV6Receipt,
   checkV138HistoricalFoundationAdmission,
@@ -130,6 +136,7 @@ import {
   consumeV138Plan26222Stage,
   dispatchV138CurrentMatrixDirectEntry,
   deriveV138CalibrationAttemptMappings,
+  deriveV138Plan26222Obstruction,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
@@ -155,6 +162,9 @@ import {
   writeV138HostHeadroomPreflightV5Receipt,
   writeV138HostHeadroomPreflightV6Receipt,
   writeV138ExecutionContextV6Receipt,
+  writeV138ExecutionContextV7Receipt,
+  writeV138HostHeadroomPreflightV7Receipt,
+  writeV138ParallelCalibrationV7Receipt,
   writeV138HostHeadroomPreflightV4Receipt,
   writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
@@ -234,6 +244,29 @@ source_a2: ${overrides.sourceA2 ?? sourceA2}
 fixes_applied: false
 ---
 # Clean Plan 262-18 review
+`
+
+const cleanPlan26221Review = (sourceA3: string): string =>
+  `---
+plan: 21
+depth: deep
+status: clean
+files_reviewed: 3
+files_reviewed_list:
+  - scripts/evaluate-v1-38-foundation-contract.test.ts
+  - scripts/lib/v1-38-current-matrix-reproduction.ts
+  - scripts/lib/v1-38-successor-source-seal.ts
+findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+repair_start_head3: 93dfd673afbf5fbbce63d59e1b874f169eaefb7e
+source_base3: 89a1fe0026e2573710ec1f2c24339aa66a0b4d53
+source_a3: ${sourceA3}
+fixes_applied: false
+---
+# Clean Plan 262-21 review
 `
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -6249,6 +6282,44 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     }
   }
 
+  const prepareRoutedV7 = () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v7-"))
+    execFileSync("git", ["clone", "-q", "--no-hardlinks", repoRoot, tempRoot])
+    const sourceA3 = "d20438a7c58a4b1c849762a4d116028b1ccf412b"
+    execFileSync("git", ["checkout", "-q", sourceA3], { cwd: tempRoot })
+    execFileSync("git", ["config", "user.email", "test@example.invalid"],
+      { cwd: tempRoot })
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: tempRoot })
+    const reviewPath = path.resolve(tempRoot,
+      V138_PLAN_262_21_CANONICAL_PATHS.review)
+    mkdirSync(path.dirname(reviewPath), { recursive: true })
+    writeFileSync(reviewPath, cleanPlan26221Review(sourceA3))
+    const literal = Buffer.from(v138Plan26221AuthorizationLiteral(tempRoot,
+      sourceA3), "utf8")
+    const authorization = buildV138Plan26221AuthorizationV3(tempRoot,
+      sourceA3, literal)
+    const authorizationPath = V138_PLAN_262_21_CANONICAL_PATHS.authorization
+    const sealPath = V138_PLAN_262_21_CANONICAL_PATHS.seal
+    writeFileSync(path.resolve(tempRoot, authorizationPath),
+      canonicalManifest(authorization))
+    const seal = buildV138SuccessorSourceSealV3({ repoRoot: tempRoot,
+      authorization })
+    writeFileSync(path.resolve(tempRoot, sealPath), canonicalManifest(seal))
+    execFileSync("git", ["add", authorizationPath, sealPath], { cwd: tempRoot })
+    execFileSync("git", ["commit", "-qm", "seal B3"], { cwd: tempRoot })
+    const sourceB3 = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: tempRoot, encoding: "utf8",
+    }).trim()
+    const contextPath = V138_PLAN_262_22_FRESH_DESTINATIONS[0]
+    const context = writeV138ExecutionContextV7Receipt(tempRoot, contextPath,
+      "gsd-pattern-c-inline-main", "/Users/roryquinlan/runtime/cowards-game", {
+        schemaVersion: "v1.38-plan-262-22-terminal-agent-registry-v1",
+        activeExecutorCount: 0, agents: [],
+      }, authorizationPath, sealPath, sourceA3, sourceB3)
+    return { tempRoot, sourceA3, sourceB3, authorizationPath, sealPath,
+      contextPath, context }
+  }
+
   it("binds archived A2/B2 and exact v6 roots, markers, absence, and cumulative charges", () => {
     const sourceA3 = execFileSync("git", ["log", "-1", "--format=%H", "--",
       "scripts/evaluate-v1-38-foundation-contract.test.ts",
@@ -6292,6 +6363,43 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     ])
   })
 
+  it("checks A3 custody source blobs and current protected-v7 absence no-follow", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-a3-worktree-"))
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: tempRoot })
+      execFileSync("git", ["config", "user.email", "test@example.invalid"],
+        { cwd: tempRoot })
+      execFileSync("git", ["config", "user.name", "Test"], { cwd: tempRoot })
+      mkdirSync(path.resolve(tempRoot, "sealed"), { recursive: true })
+      writeFileSync(path.resolve(tempRoot, "sealed/source.ts"), "sealed\n")
+      execFileSync("git", ["add", "sealed/source.ts"], { cwd: tempRoot })
+      execFileSync("git", ["commit", "-qm", "fixture"], { cwd: tempRoot })
+      const sourceA3 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      const bytes = readFileSync(path.resolve(tempRoot, "sealed/source.ts"))
+      const record = { path: "sealed/source.ts",
+        sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}` }
+      const seal = { sourceCustody: { sourceA3, sourceBlobs: [record] },
+        protectedHistory: { artifacts: [] }, selectedRouteClosure: {
+          sourceBlobs: [], resolverMetadata: [],
+        } }
+      expect(checkV138SealedWorktreeAtA3(tempRoot, seal as never)).toBe(true)
+      writeFileSync(path.resolve(tempRoot, "sealed/source.ts"), "drift\n")
+      expect(() => checkV138SealedWorktreeAtA3(tempRoot, seal as never))
+        .toThrow("V138_SEALED_WORKTREE_V3_DRIFT")
+      writeFileSync(path.resolve(tempRoot, "sealed/source.ts"), bytes)
+      const protectedPath = path.resolve(tempRoot,
+        ".planning/artifacts/v1.38-current-matrix-reproduction-v7.json")
+      mkdirSync(path.dirname(protectedPath), { recursive: true })
+      symlinkSync("missing", protectedPath)
+      expect(() => checkV138SealedWorktreeAtA3(tempRoot, seal as never))
+        .toThrow()
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  })
+
   it("durably consumes each Plan 262-22 stage once and rejects mutation", () => {
     const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-262-22-marker-"))
     try {
@@ -6317,6 +6425,95 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
       rmSync(tempRoot, { recursive: true, force: true })
     }
   })
+
+  it("routes concurrent/replayed preflight writers through one marker and callback", async () => {
+    const fixture = prepareRoutedV7()
+    try {
+      let observerCalls = 0
+      let releaseObservation!: (value: Awaited<ReturnType<
+        typeof admittedInjectedHeadroom>>) => void
+      const observe = () => {
+        observerCalls += 1
+        return new Promise<Awaited<ReturnType<typeof admittedInjectedHeadroom>>>(
+          (resolve) => { releaseObservation = resolve },
+        )
+      }
+      const target = V138_PLAN_262_22_FRESH_DESTINATIONS[1]
+      const first = writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        target, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3, observe)
+      expect(observerCalls).toBe(1)
+      await expect(writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        target, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3, observe))
+        .rejects.toThrow()
+      expect(observerCalls).toBe(1)
+      releaseObservation(await admittedInjectedHeadroom())
+      await expect(first).resolves.toMatchObject({
+        disposition: "preflight_admitted",
+      })
+      await expect(writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        target, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3, observe))
+        .rejects.toThrow()
+      expect(observerCalls).toBe(1)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("blocks publication after an awaited prerequisite mutation", async () => {
+    const fixture = prepareRoutedV7()
+    try {
+      let releaseObservation!: (value: Awaited<ReturnType<
+        typeof admittedInjectedHeadroom>>) => void
+      const observe = () => new Promise<Awaited<ReturnType<
+        typeof admittedInjectedHeadroom>>>((resolve) => {
+          releaseObservation = resolve
+        })
+      const target = V138_PLAN_262_22_FRESH_DESTINATIONS[1]
+      const pending = writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        target, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3, observe)
+      const contextTarget = path.resolve(fixture.tempRoot, fixture.contextPath)
+      const mutated = JSON.parse(readFileSync(contextTarget, "utf8")) as
+        Record<string, unknown>
+      mutated.acceptedCellCount = 1
+      writeFileSync(contextTarget, JSON.stringify(mutated))
+      releaseObservation(await admittedInjectedHeadroom())
+      await expect(pending).rejects.toThrow()
+      expect(existsSync(path.resolve(fixture.tempRoot, target))).toBe(false)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("blocks calibration before callback when its predecessor marker is missing", async () => {
+    const fixture = prepareRoutedV7()
+    try {
+      const preflightPath = V138_PLAN_262_22_FRESH_DESTINATIONS[1]
+      await writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        preflightPath, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3,
+        admittedInjectedHeadroom)
+      unlinkSync(path.resolve(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[5]))
+      let callbackCalls = 0
+      const injected = async () => {
+        callbackCalls += 1
+        throw new Error("must not run")
+      }
+      await expect(writeV138ParallelCalibrationV7Receipt(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[2], preflightPath,
+        fixture.contextPath, fixture.sourceA3, fixture.sourceB3,
+        injected as never)).rejects.toThrow()
+      expect(callbackCalls).toBe(0)
+      expect(existsSync(path.resolve(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[6]))).toBe(false)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
 
   it("keeps the inclusive 2500-basis-point v7 gate and charges all eight identities before launch", async () => {
     const context = contextV7()
@@ -6376,6 +6573,24 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     nestedExtra.attempts[0]!.privateDiagnostic = "must-not-persist"
     expect(() => checkV138ParallelCalibrationV7Receipt(inventory,
       nestedExtra, context, refused)).toThrow()
+
+    for (const mutate of [
+      (value: Record<string, unknown>) => { value.providerId = "forged" },
+      (value: Record<string, unknown>) => {
+        ;(value.observation as Record<string, unknown>).stdoutByteLength = 0
+      },
+      (value: Record<string, unknown>) => {
+        ;(value.observation as Record<string, unknown>).totalBytes = 4_097
+      },
+    ]) {
+      const forged = clone(admitted) as unknown as Record<string, unknown>
+      mutate(forged)
+      const { receiptRoot: _old, ...body } = forged
+      forged.receiptRoot = v138SuccessorRoot("canonicalJsonProfile",
+        String(forged.schemaVersion), body)
+      expect(() => checkV138HostHeadroomPreflightV7Receipt(forged, context))
+        .toThrow()
+    }
   })
 
   it("fails closed on unknown reproduction accounting and nested payloads", async () => {
@@ -6391,6 +6606,25 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
         nodeVersion: "test", cpuIdentity: "test" } })
     const calibration = buildV138ParallelCalibrationV7Receipt({ inventory,
       executionContext: context, preflight, calibration: supervised })
+    for (const mutate of [
+      (value: Record<string, unknown>) => { value.status = "preflight_refused" },
+      (value: Record<string, unknown>) => {
+        const attempt = (value.attempts as Record<string, unknown>[])[0]!
+        attempt.childLaunched = false
+      },
+      (value: Record<string, unknown>) => {
+        const attempt = (value.attempts as Record<string, unknown>[])[0]!
+        attempt.classification = "unlaunched"
+      },
+    ]) {
+      const forged = clone(calibration) as unknown as Record<string, unknown>
+      mutate(forged)
+      const { receiptRoot: _old, ...body } = forged
+      forged.receiptRoot = v138SuccessorRoot("evidenceBundle",
+        String(forged.schemaVersion), body)
+      expect(() => checkV138ParallelCalibrationV7Receipt(inventory, forged,
+        context, preflight)).toThrow()
+    }
     const reproduction = buildV138AuthoritativeMatrixV8Receipt({ inventory,
       context, preflight, calibration,
       callbackFailureAfterConsumption: true })
@@ -6407,6 +6641,16 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     expect(() => checkV138AuthoritativeMatrixV8Receipt(nestedExtra, {
       inventory, context, preflight, calibration,
     })).toThrow()
+    const contradictory = clone(reproduction) as unknown as
+      Record<string, unknown>
+    const attempt = (contradictory.attempts as Record<string, unknown>[])[0]!
+    attempt.terminalObserved = true
+    const { receiptRoot: _old, ...body } = contradictory
+    contradictory.receiptRoot = v138SuccessorRoot("evidenceBundle",
+      String(contradictory.schemaVersion), body)
+    expect(() => checkV138AuthoritativeMatrixV8Receipt(contradictory, {
+      inventory, context, preflight, calibration,
+    })).toThrow()
   })
 
   it("requires pre-observation terminals to carry no later evidence", () => {
@@ -6421,6 +6665,35 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     expect(() => checkV138Plan26222TerminalV1(clone(terminal), {
       ...evidence, context,
     })).toThrow()
+  })
+
+  it("binds fresh-destination obstruction stage, metadata, and later absence", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-262-22-obstruct-"))
+    try {
+      mkdirSync(path.resolve(tempRoot, ".planning/artifacts"), {
+        recursive: true,
+      })
+      const obstructionPath = V138_PLAN_262_22_FRESH_DESTINATIONS[0]
+      writeFileSync(path.resolve(tempRoot, obstructionPath), "obstruction\n")
+      const proof = deriveV138Plan26222Obstruction(tempRoot)
+      expect(proof).toMatchObject({ stage: "context", path: obstructionPath,
+        type: "file" })
+      expect(checkV138Plan26222Obstruction(tempRoot, proof)).toBe(true)
+      const context = contextV7()
+      const evidence = { sourceA3: context.sourceA3,
+        sourceB3: context.sourceB3,
+        authorizationRoot: context.authorizationRoot,
+        sealRoot: context.sealRoot, obstructionProof: proof }
+      const terminal = buildV138Plan26222TerminalV1({ ...evidence,
+        disposition: "fresh_destination_failed" })
+      expect(checkV138Plan26222TerminalV1(clone(terminal), evidence))
+        .toEqual(terminal)
+      writeFileSync(path.resolve(tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[1]), "later\n")
+      expect(() => checkV138Plan26222Obstruction(tempRoot, proof)).toThrow()
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
   })
 
   it.each([
