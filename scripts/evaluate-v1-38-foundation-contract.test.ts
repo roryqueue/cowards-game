@@ -10,6 +10,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -35,19 +36,35 @@ import {
 } from "./lib/v1-38-darwin-headroom.js"
 import {
   buildV138Plan26215Authorization,
+  buildV138Plan26218AuthorizationV2,
   buildV138SuccessorSourceSeal,
+  buildV138SuccessorSourceSealV2,
+  checkV138Plan26218ArtifactBranch,
+  checkV138Plan26218AuthorizationV2,
+  checkV138ReviewedSourceA2,
+  checkV138CanonicalParentChain,
   checkV138ReplacementMetricContract,
   checkV138SuccessorSourceSeal,
+  checkV138SuccessorSourceSealV2,
   checkSelectedRouteClosureAtCommit,
   checkSelectedRouteEdgeInventory,
   checkPlan26215ArtifactBranch,
   checkV138SuccessorSealCommit,
+  checkV138SuccessorSealCommitV2,
+  checkV138SealedWorktreeAtA2,
+  deriveV138ProtectedHistoryV2,
   deriveFormationAbsence,
   deriveSelectedRouteClosureAtCommit,
   deriveV138StaticSourceEdgesFromSnapshot,
   inspectSourceCustody,
+  validateV138CanonicalParentChain,
+  V138_PLAN_262_18_CANONICAL_PATHS,
+  V138_PLAN_262_18_TERMINAL_SCHEMA,
+  V138_PLAN_262_19_FRESH_DESTINATIONS,
   v138Plan26215AuthorizationLiteral,
+  v138Plan26218AuthorizationLiteral,
   writePlan26215Terminal,
+  writeV138CanonicalExclusiveV2,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_FOUNDATION_LIVE_SOURCE_PATHS,
@@ -61,14 +78,19 @@ import {
   PLAN_262_13_EXECUTION_AUTHORIZATION_LITERAL,
   PLAN_262_12_EXECUTION_AUTHORIZATION_LITERAL,
   buildV138AuthoritativeMatrixV5Receipt,
+  buildV138AuthoritativeMatrixV7Receipt,
   buildV138AuthoritativeMatrixV4Receipt,
   buildV138ExecutionContextV4Receipt,
   buildV138HostHeadroomPreflightV4Receipt,
   buildV138HostHeadroomPreflightV3Receipt,
   buildV138HostHeadroomPreflightV5Receipt,
+  buildV138HostHeadroomPreflightV6Receipt,
   buildV138ExecutionContextV5Receipt,
+  buildV138ExecutionContextV6Receipt,
+  buildV138Plan26219TerminalV2,
   buildV138ParallelCalibrationV5PreflightTerminal,
   buildV138ParallelCalibrationV5Receipt,
+  buildV138ParallelCalibrationV6Receipt,
   buildV138ParallelCalibrationV4Receipt,
   buildV138ParallelCalibrationV3Receipt,
   buildV138AuthoritativeMatrixV3Receipt,
@@ -77,15 +99,24 @@ import {
   calibrateV138ParallelMatrix,
   checkV138ExecutionContextV4Receipt,
   checkV138ExecutionContextV5Receipt,
+  checkV138ExecutionContextV6Receipt,
   checkV138HostHeadroomPreflightV5Receipt,
+  checkV138HostHeadroomPreflightV6Receipt,
   checkV138HistoricalFoundationAdmission,
   checkV138ParallelCalibrationV5Receipt,
+  checkV138ParallelCalibrationV6Receipt,
   checkV138AuthoritativeMatrixV6Receipt,
+  checkV138AuthoritativeMatrixV7Receipt,
   checkV138Plan26216TerminalBranch,
+  checkV138Plan26219ConsumptionMarker,
+  checkV138Plan26219TerminalV2,
   checkV138SuccessorV4V5Branch,
   checkV138MatrixDiagnosticV2Receipt,
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
+  consumeV138Plan26219Stage,
+  dispatchV138CurrentMatrixDirectEntry,
+  deriveV138CalibrationAttemptMappings,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
@@ -93,6 +124,7 @@ import {
   executeV138ParallelMatrix,
   isV138ParallelProjectedTotalAdmitted,
   loadV138HistoricalMatrixExpectation,
+  mapV138CalibrationTerminalOutcomes,
   planV138MatrixShards,
   parseV138SamplerAuthorization,
   parseV138Plan26213ExecutionAuthorization,
@@ -108,11 +140,16 @@ import {
   writeV138ExecutionContextV4Receipt,
   writeV138AuthoritativeMatrixV6Receipt,
   writeV138HostHeadroomPreflightV5Receipt,
+  writeV138HostHeadroomPreflightV6Receipt,
+  writeV138ExecutionContextV6Receipt,
   writeV138HostHeadroomPreflightV4Receipt,
   writeV138ImmutableReceipt,
   writeV138MatrixDiagnosticV2Receipt,
   writeV138ParallelCalibrationV4Receipt,
   writeV138ParallelCalibrationV5Receipt,
+  writeV138ParallelCalibrationV6Receipt,
+  writeV138AuthoritativeMatrixV7Receipt,
+  writeV138Plan26219Immutable,
   writeV138Plan26216Terminal,
   type V138CurrentMatrixAttempt,
   type V138CurrentMatrixAttemptOutcome,
@@ -147,6 +184,45 @@ findings:
 status: clean
 ---
 # Clean review
+`
+
+const V138_PLAN_262_18_REPAIR_START =
+  "a9770d3f7fe29dca042ed2068c4905a0338463ae"
+const V138_PLAN_262_18_SOURCE_BASE =
+  "95395308a5eeea68766613e6e72524792046e73a"
+const currentPlan26218SourceA2 = (): string =>
+  execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  }).trim()
+const cleanPlan26218Review = (
+  sourceA2: string,
+  overrides: Partial<{
+    repairStartHead2: string
+    sourceBase2: string
+    sourceA2: string
+  }> = {},
+): string =>
+  `---
+plan: 18
+depth: deep
+status: clean
+files_reviewed: 3
+files_reviewed_list:
+  - scripts/evaluate-v1-38-foundation-contract.test.ts
+  - scripts/lib/v1-38-current-matrix-reproduction.ts
+  - scripts/lib/v1-38-successor-source-seal.ts
+findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+repair_start_head2: ${overrides.repairStartHead2 ?? V138_PLAN_262_18_REPAIR_START}
+source_base2: ${overrides.sourceBase2 ?? V138_PLAN_262_18_SOURCE_BASE}
+source_a2: ${overrides.sourceA2 ?? sourceA2}
+fixes_applied: false
+---
+# Clean Plan 262-18 review
 `
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -975,17 +1051,25 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
     "plan 262-15 terminal enforces %s artifact presence",
     (disposition) => {
       const root = mkdtempSync(path.join(tmpdir(), "cowards-262-15-terminal-"))
+      const originalHead = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })
+      const originalStatus = execFileSync("git", ["status", "--porcelain"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })
       try {
         execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+        execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+          cwd: root,
+        })
         mkdirSync(path.dirname(path.resolve(root, paths.authorization)), { recursive: true })
         mkdirSync(path.dirname(path.resolve(root, paths.review)), { recursive: true })
         writeFileSync(
           path.resolve(root, paths.review),
           cleanPlan26215Review(),
         )
-        execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
-          cwd: root,
-        })
         const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
         const authorization = buildV138Plan26215Authorization(
           root,
@@ -1173,6 +1257,14 @@ status: all_fixed
       } finally {
         rmSync(root, { recursive: true, force: true })
       }
+      expect(execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })).toBe(originalHead)
+      expect(execFileSync("git", ["status", "--porcelain"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })).toBe(originalStatus)
     },
     120_000,
   )
@@ -1374,6 +1466,14 @@ describe("v1.38 plan 262-16 hostile receipt validation", () => {
 describe("v1.38 plan 262-16 terminal artifact presence", () => {
   it("plan 262-16 terminal validates the preflight-refused charged branch", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "cowards-262-16-terminal-"))
+    const originalHead = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })
+    const originalStatus = execFileSync("git", ["status", "--porcelain"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })
     const paths = {
       authorization: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
       seal: ".planning/artifacts/v1.38-successor-source-seal-v1.json",
@@ -1385,6 +1485,9 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
     } as const
     try {
       execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+        cwd: root,
+      })
       mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
       const reviewPath =
         ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW.md"
@@ -1393,9 +1496,6 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         path.resolve(root, reviewPath),
         cleanPlan26215Review(),
       )
-      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
-        cwd: root,
-      })
       const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
       const authorization = buildV138Plan26215Authorization(
         root,
@@ -1597,6 +1697,51 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
           sourceB,
         ).disposition,
       ).toBe("preflight_refused")
+      let expiredProviderCalls = 0
+      await expect(
+        writeV138HostHeadroomPreflightV5Receipt(
+          root,
+          paths.preflight,
+          paths.context,
+          paths.authorization,
+          paths.seal,
+          sourceA,
+          sourceB,
+          async () => {
+            expiredProviderCalls += 1
+            return injectedResult
+          },
+        ),
+      ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
+      await expect(
+        writeV138ParallelCalibrationV5Receipt(
+          root,
+          paths.calibration,
+          paths.preflight,
+          paths.context,
+          sourceA,
+          sourceB,
+          async () => {
+            expiredProviderCalls += 1
+            throw new Error("expired calibration callback")
+          },
+        ),
+      ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
+      await expect(
+        writeV138AuthoritativeMatrixV6Receipt(
+          root,
+          paths.reproduction,
+          paths.calibration,
+          paths.context,
+          sourceA,
+          sourceB,
+          async () => {
+            expiredProviderCalls += 1
+            throw new Error("expired reproduction callback")
+          },
+        ),
+      ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
+      expect(expiredProviderCalls).toBe(0)
       const inspectionOrder: string[] = []
       expect(
         checkV138Plan26216TerminalBranch(
@@ -1815,7 +1960,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
               return injectedResult
             },
           ),
-        ).rejects.toThrow("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
+        ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
         expect(forgedPreflightObserverCount).toBe(0)
         publish(paths.preflight, forgedPreflight)
         removeIfPresent(paths.calibration)
@@ -1833,7 +1978,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
               throw new TypeError("INJECTED_CALIBRATION_MUST_NOT_RUN")
             },
           ),
-        ).rejects.toThrow("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
+        ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
         expect(forgedCalibrationRunCount).toBe(0)
         publish(paths.calibration, forgedCalibration)
         removeIfPresent(paths.reproduction)
@@ -1851,7 +1996,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
               throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
             },
           ),
-        ).rejects.toThrow("MATRIX_REPRODUCTION_V6_CONTEXT_JOIN_INVALID")
+        ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
         expect(forgedReproductionRunCount).toBe(0)
         removeIfPresent(paths.terminal)
         publishTerminal("preflight_refused", {
@@ -1865,6 +2010,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         ).toThrow("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
       }
 
+      removeIfPresent(paths.terminal)
       publish(paths.context, context)
       const liveAdmittedPreflight = buildV138HostHeadroomPreflightV5Receipt({
         executionContext: context,
@@ -2197,6 +2343,14 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+    expect(execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })).toBe(originalHead)
+    expect(execFileSync("git", ["status", "--porcelain"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })).toBe(originalStatus)
   }, 600_000)
 })
 
@@ -3417,6 +3571,12 @@ describe("v1.38 matrix accounting", () => {
     return {
       inventory,
       plan,
+      launchEvents: plan.shards.map((shard) => ({
+        event: "child_launched" as const,
+        shardId: shard.shardId,
+        laneId: shard.laneId,
+        executionAttemptIds: shard.attemptIds,
+      })),
       terminals: plan.shards.map((shard) => ({
         shardId: shard.shardId,
         laneId: shard.laneId,
@@ -3439,16 +3599,18 @@ describe("v1.38 matrix accounting", () => {
   }
 
   it("matrix accounting is invariant to valid terminal completion order", () => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     const forward = reduceV138ParallelMatrixAccounting({
       inventory,
       plan,
       terminals,
+      launchEvents,
     })
     const reversed = reduceV138ParallelMatrixAccounting({
       inventory,
       plan,
       terminals: [...terminals].reverse(),
+      launchEvents,
     })
 
     expect(reversed).toEqual(forward)
@@ -3539,18 +3701,19 @@ describe("v1.38 matrix accounting", () => {
       ...rows.slice(1),
     ]],
   ])("matrix accounting rejects %s terminal identities", (_label, change) => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     expect(() =>
       reduceV138ParallelMatrixAccounting({
         inventory,
         plan,
         terminals: change(clone(terminals)),
+        launchEvents,
       }),
     ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
   })
 
   it("matrix accounting charges every failure class and publishes no partial evidence", () => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     const mutated = clone(terminals)
     mutated[0] = {
       ...mutated[0]!,
@@ -3583,6 +3746,7 @@ describe("v1.38 matrix accounting", () => {
       inventory,
       plan,
       terminals: mutated,
+      launchEvents,
     })
 
     expect(accounting).toMatchObject({
@@ -3598,7 +3762,7 @@ describe("v1.38 matrix accounting", () => {
   })
 
   it("matrix accounting rejects reordered or mutated allocation plans", () => {
-    const { inventory, plan, terminals } = successTerminals()
+    const { inventory, plan, launchEvents, terminals } = successTerminals()
     const mutatedPlan = clone(plan)
     mutatedPlan.shards.reverse()
 
@@ -3607,6 +3771,7 @@ describe("v1.38 matrix accounting", () => {
         inventory,
         plan: mutatedPlan,
         terminals,
+        launchEvents,
       }),
     ).toThrow("MATRIX_PARALLEL_ACCOUNTING_INVALID")
   })
@@ -3624,6 +3789,14 @@ const successfulInjectedRunner = (input?: {
   let active = 0
   return {
     async run(shard, control) {
+      control.onLaunch({
+        event: "child_launched",
+        shardId: shard.shardId,
+        laneId: shard.laneId,
+        executionAttemptIds: shard.attempts.map(
+          ({ executionAttemptId }) => executionAttemptId,
+        ),
+      })
       const childRssKilobytes =
         input?.childRssByOrdinal?.[shard.ordinal] ??
         input?.childRssKilobytes ??
@@ -3683,6 +3856,17 @@ const successfulInjectedRunner = (input?: {
   }
 }
 
+const admittedInjectedHeadroom = async () =>
+  parseMemoryPressureQ({
+    stdout: Buffer.from(
+      "The system has 4096 (1 pages with a page size of 4096).\nSystem-wide memory free percentage: 25%\n",
+    ),
+    stderr: Buffer.alloc(0),
+    exitCode: 0,
+    signal: null,
+    timedOut: false,
+  })
+
 const admittedInjectedCalibration = (
   inventory: ReturnType<typeof enumerateV138CurrentMatrix>,
 ) =>
@@ -3697,6 +3881,2142 @@ const admittedInjectedCalibration = (
       cpuIdentity: "test-cpu",
     },
   })
+
+describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
+  it("derives stable public identities with full scheduler identities and inventory-owned shards", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const mappings = deriveV138CalibrationAttemptMappings(inventory, "v6")
+
+    expect(mappings.map(({ publicAttemptId }) => publicAttemptId)).toEqual(
+      Array.from({ length: 8 }, (_, index) => `calibration:v6:${index}`),
+    )
+    expect(mappings.map(({ shardId }) => shardId)).toEqual([
+      "calibration-shard:0",
+      "calibration-shard:0",
+      "calibration-shard:1",
+      "calibration-shard:1",
+      "calibration-shard:2",
+      "calibration-shard:2",
+      "calibration-shard:3",
+      "calibration-shard:3",
+    ])
+    expect(new Set(mappings.map(({ executionAttemptId }) => executionAttemptId)).size)
+      .toBe(8)
+    for (const [index, mapping] of mappings.entries()) {
+      expect(mapping).toMatchObject({
+        inventoryOrdinal: index,
+        templateAttemptId: inventory.attempts[index]!.attemptId,
+      })
+      expect(mapping.executionAttemptId).toBe(
+        `${mapping.publicAttemptId}:${mapping.templateAttemptId}`,
+      )
+      expect(Object.isFrozen(mapping)).toBe(true)
+    }
+  })
+
+  it("joins each full scheduler identity exactly once and copies inventory shard ownership", () => {
+    const mappings = deriveV138CalibrationAttemptMappings(
+      enumerateV138CurrentMatrix(repoRoot),
+      "v6",
+    )
+    const terminals = Array.from({ length: 4 }, (_, shardOrdinal) => ({
+      shardId: `calibration-shard:${shardOrdinal}`,
+      laneId: `lane:${shardOrdinal}`,
+      classification: "success" as const,
+      elapsedMilliseconds: 1,
+      maxRssKilobytes: 1,
+      cleanup: {
+        gracefulTerminationSent: false,
+        forceTerminationSent: false,
+        exitAwaited: true,
+        orphanProcessIds: [],
+      },
+      outcomes: mappings
+        .filter(({ shardId }) => shardId === `calibration-shard:${shardOrdinal}`)
+        .map(({ executionAttemptId }) => ({
+          attemptId: executionAttemptId,
+          classification: "success" as const,
+          outcome: "draw" as const,
+        })),
+    }))
+
+    const launchEvents = terminals.map((terminal) => ({
+      event: "child_launched" as const,
+      shardId: terminal.shardId,
+      laneId: terminal.laneId,
+      executionAttemptIds: terminal.outcomes.map(({ attemptId }) => attemptId),
+    }))
+    const projected = mapV138CalibrationTerminalOutcomes({
+      mappings,
+      terminals,
+      launchEvents,
+    })
+    expect(projected).toHaveLength(8)
+    expect(projected.every(({ childLaunched }) => childLaunched)).toBe(true)
+    expect(projected.every(({ terminalObserved }) => terminalObserved)).toBe(true)
+    expect(projected.map(({ shardId }) => shardId)).toEqual(
+      mappings.map(({ shardId }) => shardId),
+    )
+
+    const duplicated = structuredClone(terminals)
+    duplicated[0]!.outcomes.push(duplicated[0]!.outcomes[0]!)
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: duplicated }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const missing = structuredClone(terminals)
+    missing[0]!.outcomes.pop()
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: missing }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const foreign = structuredClone(terminals)
+    foreign[0]!.outcomes[0]!.attemptId = "calibration:v6:foreign"
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: foreign }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const wrongShard = structuredClone(terminals)
+    wrongShard[0]!.shardId = "calibration-shard:3"
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: wrongShard }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    for (const invalidTerminals of [
+      terminals.slice(0, 3),
+      [...terminals, {
+        ...terminals[0]!,
+        shardId: "calibration-shard:foreign",
+        laneId: "lane:foreign",
+        outcomes: [],
+      }],
+      [
+        terminals[0]!,
+        { ...terminals[1]!, shardId: terminals[0]!.shardId },
+        terminals[2]!,
+        terminals[3]!,
+      ],
+      [...terminals, { ...terminals[0]!, outcomes: [] }],
+    ]) {
+      expect(() =>
+        mapV138CalibrationTerminalOutcomes({
+          mappings,
+          terminals: invalidTerminals,
+          launchEvents,
+        }),
+      ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+    }
+    const splitLaunches = clone(launchEvents)
+    const secondId = splitLaunches[0]!.executionAttemptIds.pop()!
+    splitLaunches.push({
+      ...splitLaunches[0]!,
+      executionAttemptIds: [secondId],
+    })
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({
+        mappings,
+        terminals,
+        launchEvents: splitLaunches,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const incoherent = clone(terminals)
+    incoherent[0]!.outcomes[0] = {
+      attemptId: incoherent[0]!.outcomes[0]!.attemptId,
+      classification: "system_failure",
+      code: "INJECTED_FAILURE",
+      retryable: false,
+    }
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({
+        mappings,
+        terminals: incoherent,
+        launchEvents,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+  })
+
+  it("builds admitted and stopped v6 receipts from exact injected terminal mappings", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const identity = {
+      sourceB2: "1".repeat(40),
+      sourceB2CustodyRoot: `sha256:${"2".repeat(64)}` as const,
+      executionContextRoot: `sha256:${"3".repeat(64)}` as const,
+      preflightRoot: `sha256:${"4".repeat(64)}` as const,
+    }
+    const hardwareIdentity = {
+      operatingSystem: "test-os",
+      architecture: "test-arch",
+      nodeVersion: "test-node",
+      cpuIdentity: "test-cpu",
+    }
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity,
+      executionIdentityVersion: "v6",
+      sharedHeadroomObserver: admittedInjectedHeadroom,
+    })
+    const admitted = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_admitted",
+      calibration,
+    })
+    expect(admitted).toMatchObject({
+      status: "admitted",
+      chargedAttemptCount: 8,
+      childLaunchCount: 8,
+      terminalOutcomeCount: 8,
+      acceptedCellCount: 8,
+      publicStopReason: null,
+      noRetry: true,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(admitted.supervisionRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(admitted.supervisionRoot).not.toBe(calibration.calibrationRoot)
+    expect(admitted.completeCleanup).toBe(true)
+    expect(JSON.stringify(admitted)).not.toMatch(
+      /hardwareIdentity|rawObservation|sharedObservationTicks|terminals|launchEvents|orphanProcessIds/,
+    )
+    expect(
+      checkV138ParallelCalibrationV6Receipt(inventory, structuredClone(admitted)),
+    ).toEqual(admitted)
+    for (const mutate of [
+      (candidate: typeof admitted) => {
+        candidate.chargedAttempts[0]!.outcome = "bottom_win"
+      },
+      (candidate: typeof admitted) => {
+        candidate.shardProof[0]!.laneId = "lane:foreign"
+      },
+      (candidate: typeof admitted) => {
+        candidate.sharedTickProof[0]!.shardIds[0] =
+          "calibration-shard:foreign"
+      },
+      (candidate: typeof admitted) => {
+        candidate.supervisionRoot = `sha256:${"f".repeat(64)}`
+      },
+    ]) {
+      const forged = clone(admitted)
+      mutate(forged)
+      const { receiptRoot: _forgedRoot, ...forgedBody } = forged
+      forged.receiptRoot = v138SuccessorRoot(
+        "budgetProfile",
+        forged.schemaVersion,
+        forgedBody,
+      )
+      expect(() =>
+        checkV138ParallelCalibrationV6Receipt(inventory, forged),
+      ).toThrow("MATRIX_CALIBRATION_V6_INVALID")
+    }
+
+    const stoppedCalibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: {
+        async run(shard, control) {
+          control.onLaunch({
+            event: "child_launched",
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            executionAttemptIds: shard.attempts.map(
+              ({ executionAttemptId }) => executionAttemptId,
+            ),
+          })
+          return {
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            classification: "failed",
+            elapsedMilliseconds: 1,
+            maxRssKilobytes: 1,
+            cleanup: {
+              gracefulTerminationSent: false,
+              forceTerminationSent: false,
+              exitAwaited: true,
+              orphanProcessIds: [],
+            },
+            outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+              attemptId: executionAttemptId,
+              classification: "system_failure" as const,
+              code: "INJECTED_SYSTEM_FAILURE",
+              retryable: false,
+            })),
+          }
+        },
+      },
+      hardwareIdentity,
+      executionIdentityVersion: "v6",
+      sharedHeadroomObserver: admittedInjectedHeadroom,
+    })
+    const stopped = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_admitted",
+      calibration: stoppedCalibration,
+    })
+    expect(stopped).toMatchObject({
+      status: "stopped_process_failure",
+      childLaunchCount: 8,
+      terminalOutcomeCount: 8,
+      acceptedCellCount: 0,
+      publicStopReason: "SHARD_EXECUTION_FAILED",
+      noRetry: true,
+    })
+    expect(
+      stopped.chargedAttempts.every(
+        (attempt) => attempt.state === "terminal_system_failure",
+      ),
+    ).toBe(true)
+    for (const forbidden of [
+      "stderr: secret",
+      "source=StrategyMemory",
+      "objectivePayload",
+      "pid=12345",
+      "x".repeat(4_097),
+    ]) {
+      const leaked = clone(stopped)
+      leaked.chargedAttempts[0]!.code = forbidden
+      const { receiptRoot: _leakedRoot, ...leakedBody } = leaked
+      leaked.receiptRoot = v138SuccessorRoot(
+        "budgetProfile",
+        leaked.schemaVersion,
+        leakedBody,
+      )
+      expect(() =>
+        checkV138ParallelCalibrationV6Receipt(inventory, leaked),
+      ).toThrow("MATRIX_CALIBRATION_V6_INVALID")
+    }
+
+    const preflightStopped = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_refused",
+    })
+    expect(preflightStopped).toMatchObject({
+      status: "preflight_refused",
+      childLaunchCount: 0,
+      terminalOutcomeCount: 0,
+      acceptedCellCount: 0,
+      supervisionRoot: null,
+      completeCleanup: true,
+    })
+    expect(
+      preflightStopped.chargedAttempts.every(
+        (attempt) => attempt.state === "not_launched_preflight_refused",
+      ),
+    ).toBe(true)
+  })
+
+  it("derives v6 launch counts only from typed launch events and rejects shared-tick drift", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const hardwareIdentity = {
+      operatingSystem: "test-os",
+      architecture: "test-arch",
+      nodeVersion: "test-node",
+      cpuIdentity: "test-cpu",
+    }
+    const identity = {
+      sourceB2: "1".repeat(40),
+      sourceB2CustodyRoot: `sha256:${"2".repeat(64)}` as const,
+      executionContextRoot: `sha256:${"3".repeat(64)}` as const,
+      preflightRoot: `sha256:${"4".repeat(64)}` as const,
+    }
+    for (const launchedShardCount of [0, 1, 2, 3, 4] as const) {
+      const expectedLaunchCount = launchedShardCount * 2
+      const supervised = await calibrateV138ParallelMatrix({
+        inventory,
+        runner: {
+          async run(shard, control) {
+            const shardOrdinal = Number(shard.shardId.split(":").at(-1))
+            if (shardOrdinal < launchedShardCount) {
+              control.onLaunch({
+                event: "child_launched",
+                shardId: shard.shardId,
+                laneId: shard.laneId,
+                executionAttemptIds: shard.attempts.map(
+                  ({ executionAttemptId }) => executionAttemptId,
+                ),
+              })
+            }
+            throw new Error("injected runner failure")
+          },
+        },
+        hardwareIdentity,
+        sharedHeadroomObserver: admittedInjectedHeadroom,
+        executionIdentityVersion: "v6",
+      })
+      const receipt = buildV138ParallelCalibrationV6Receipt({
+        inventory,
+        ...identity,
+        preflightDisposition: "preflight_admitted",
+        calibration: supervised,
+      })
+      expect(receipt).toMatchObject({
+        status: "stopped_process_failure",
+        childLaunchCount: expectedLaunchCount,
+        terminalOutcomeCount: 8,
+        acceptedCellCount: 0,
+      })
+      expect(
+        receipt.chargedAttempts.filter(({ childLaunched }) => childLaunched)
+          .length,
+      ).toBe(expectedLaunchCount)
+    }
+
+    const unknownAfterConsumption = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_admitted",
+      callbackFailureAfterConsumption: true,
+      })
+    expect(unknownAfterConsumption).toMatchObject({
+        status: "stopped_process_failure",
+      observationMode: "unknown_after_consumption",
+      childLaunchCount: null,
+      terminalOutcomeCount: null,
+        acceptedCellCount: 0,
+      publicStopReason: "PARENT_EXCEPTION",
+      completeCleanup: false,
+      noRetry: true,
+      })
+      expect(
+      unknownAfterConsumption.chargedAttempts.every(
+        ({ state, childLaunched, terminalObserved }) =>
+          state === "unknown_after_consumption" &&
+          childLaunched === null &&
+          terminalObserved === null,
+        ),
+      ).toBe(true)
+    expect(
+      unknownAfterConsumption.shardProof.every(
+        ({
+          childLaunched,
+          terminalObserved,
+          classification,
+          cleanupComplete,
+        }) =>
+          childLaunched === null &&
+          terminalObserved === null &&
+          classification === "unknown" &&
+          cleanupComplete === false,
+      ),
+    ).toBe(true)
+    expect(
+      checkV138ParallelCalibrationV6Receipt(
+        inventory,
+        clone(unknownAfterConsumption),
+      ),
+    ).toEqual(unknownAfterConsumption)
+
+    const supervised = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity,
+      sharedHeadroomObserver: admittedInjectedHeadroom,
+      executionIdentityVersion: "v6",
+    })
+    const drifted = clone(supervised)
+    drifted.sharedObservationTicks![0]!.fanout[0]!.observationRoot =
+      `sha256:${"f".repeat(64)}`
+    const { calibrationRoot: _oldRoot, ...body } = drifted
+    drifted.calibrationRoot =
+      `sha256:${createHash("sha256").update(JSON.stringify(body)).digest("hex")}`
+    expect(() =>
+      buildV138ParallelCalibrationV6Receipt({
+        inventory,
+        ...identity,
+        preflightDisposition: "preflight_admitted",
+        calibration: drifted,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_RECEIPT_INVALID")
+
+    const unavailable = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity,
+      sharedHeadroomObserver: async () => {
+        throw new Error("injected observation unavailable")
+      },
+      executionIdentityVersion: "v6",
+    })
+    expect(unavailable).toMatchObject({
+      status: "stopped_process_failure",
+      reason: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+      sharedObservationTicks: [],
+    })
+    const unavailableReceipt = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_admitted",
+      calibration: unavailable,
+    })
+    expect(unavailableReceipt).toMatchObject({
+      status: "stopped_process_failure",
+      publicStopReason: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+      sharedTickProof: [],
+      acceptedCellCount: 0,
+      noRetry: true,
+    })
+    expect(
+      checkV138ParallelCalibrationV6Receipt(
+        inventory,
+        clone(unavailableReceipt),
+      ),
+    ).toEqual(unavailableReceipt)
+
+    const wrongCoverage = clone(supervised)
+    wrongCoverage.sharedObservationTicks![0]!.shardIds[0] =
+      "calibration-shard:foreign"
+    wrongCoverage.sharedObservationTicks![0]!.fanout[0]!.shardId =
+      "calibration-shard:foreign"
+    const { calibrationRoot: _coverageRoot, ...coverageBody } = wrongCoverage
+    wrongCoverage.calibrationRoot =
+      `sha256:${createHash("sha256").update(JSON.stringify(coverageBody)).digest("hex")}`
+    expect(() =>
+      buildV138ParallelCalibrationV6Receipt({
+        inventory,
+        ...identity,
+        preflightDisposition: "preflight_admitted",
+        calibration: wrongCoverage,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_RECEIPT_INVALID")
+  })
+
+  it.each([
+    ["--execute-shard", 1, 0, "shard"],
+    ["--check-calibration-receipt", 0, 1, "receipt"],
+    ["--write-execution-context-v6-receipt", 0, 1, "receipt"],
+    ["--write-headroom-preflight-v6-receipt", 0, 1, "receipt"],
+    ["--calibrate-parallel-v6-receipt", 0, 1, "receipt"],
+    ["--write-authoritative-v7-receipt", 0, 1, "receipt"],
+    ["--write-plan-262-19-terminal-v2", 0, 1, "receipt"],
+    ["--check-plan-262-19-terminal-v2", 0, 1, "receipt"],
+  ] as const)(
+    "CLI dispatch gives %s exactly one handler owner",
+    async (command, expectedShardCalls, expectedReceiptCalls, expectedResult) => {
+      let shardCalls = 0
+      let receiptCalls = 0
+      const result = await dispatchV138CurrentMatrixDirectEntry(command, {
+        runShard: async () => {
+          shardCalls += 1
+          return "shard"
+        },
+        runReceipt: async () => {
+          receiptCalls += 1
+          return "receipt"
+        },
+      })
+
+      expect(result).toBe(expectedResult)
+      expect(shardCalls).toBe(expectedShardCalls)
+      expect(receiptCalls).toBe(expectedReceiptCalls)
+    },
+  )
+
+  it.each([undefined, "", "--unknown", "--execute-shard-again"])(
+    "CLI dispatch rejects unknown command %j before either handler",
+    async (command) => {
+      let shardCalls = 0
+      let receiptCalls = 0
+      await expect(
+        dispatchV138CurrentMatrixDirectEntry(command, {
+          runShard: async () => {
+            shardCalls += 1
+          },
+          runReceipt: async () => {
+            receiptCalls += 1
+          },
+        }),
+      ).rejects.toThrow("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
+      expect(shardCalls).toBe(0)
+      expect(receiptCalls).toBe(0)
+    },
+  )
+})
+
+describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
+  const prepare = () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-262-18-seal-v2-"))
+    const sourceA2 = currentPlan26218SourceA2()
+    execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+    execFileSync("git", ["checkout", "--quiet", sourceA2], { cwd: root })
+    execFileSync("git", ["config", "user.name", "plan 262-18 test"], {
+      cwd: root,
+    })
+    execFileSync("git", ["config", "user.email", "plan-262-18@test.invalid"], {
+      cwd: root,
+    })
+    mkdirSync(
+      path.dirname(
+        path.resolve(root, V138_PLAN_262_18_CANONICAL_PATHS.review),
+      ),
+      { recursive: true },
+    )
+    writeFileSync(
+      path.resolve(root, V138_PLAN_262_18_CANONICAL_PATHS.review),
+      cleanPlan26218Review(sourceA2),
+    )
+    const literal = Buffer.from(
+      v138Plan26218AuthorizationLiteral(root, sourceA2),
+      "utf8",
+    )
+    return { root, sourceA2, literal }
+  }
+
+  const branchInput = (
+    root: string,
+    sourceA2: string,
+    sourceB2?: string,
+  ) => ({
+    repoRoot: root,
+    authorizationPath: V138_PLAN_262_18_CANONICAL_PATHS.authorization,
+    sealPath: V138_PLAN_262_18_CANONICAL_PATHS.seal,
+    terminalPath: V138_PLAN_262_18_CANONICAL_PATHS.terminal,
+    reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+    reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+    oldAuthorizationPath: V138_PLAN_262_18_CANONICAL_PATHS.oldAuthorization,
+    oldSealPath: V138_PLAN_262_18_CANONICAL_PATHS.oldSeal,
+    oldContextPath: V138_PLAN_262_18_CANONICAL_PATHS.oldContext,
+    oldPreflightPath: V138_PLAN_262_18_CANONICAL_PATHS.oldPreflight,
+    oldCalibrationPath: V138_PLAN_262_18_CANONICAL_PATHS.oldCalibration,
+    oldTerminalPath: V138_PLAN_262_18_CANONICAL_PATHS.oldTerminal,
+    sourceA2,
+    ...(sourceB2 === undefined ? {} : { sourceB2 }),
+  })
+
+  const terminal = (
+    sourceA2: string,
+    disposition: "seal_refused" | "seal_failed",
+  ) => {
+    const body = {
+      schemaVersion: V138_PLAN_262_18_TERMINAL_SCHEMA,
+      disposition,
+      sourceA2,
+      authorityExpired: true as const,
+      acceptedCellCount: 0 as const,
+    }
+    return {
+      ...body,
+      terminalRoot: v138SuccessorRoot(
+        "canonicalJsonProfile",
+        body.schemaVersion,
+        body,
+      ),
+    }
+  }
+
+  it("rejects symlinked or replaced canonical parent chains before any leaf creation", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-262-18-parent-chain-"))
+    const target = path.resolve(
+      root,
+      ".planning/artifacts/v1.38-plan-262-18-authorization-v2.json",
+    )
+    try {
+      mkdirSync(path.resolve(root, "planning-real/artifacts"), {
+        recursive: true,
+      })
+      symlinkSync("planning-real", path.resolve(root, ".planning"), "dir")
+      expect(() =>
+        validateV138CanonicalParentChain(root, target),
+      ).toThrow("V138_CANONICAL_PARENT_CHAIN_INVALID")
+      expect(existsSync(target)).toBe(false)
+
+      unlinkSync(path.resolve(root, ".planning"))
+      mkdirSync(path.dirname(target), { recursive: true })
+      const chain = validateV138CanonicalParentChain(root, target)
+      rmSync(path.dirname(target), { recursive: true, force: true })
+      mkdirSync(path.dirname(target), { recursive: true })
+      expect(() => checkV138CanonicalParentChain(chain)).toThrow(
+        "V138_CANONICAL_PARENT_CHAIN_REPLACED",
+      )
+      expect(existsSync(target)).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("durably rolls back every Plan 262-19 stage after directory-fsync uncertainty", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-262-19-durability-"))
+    try {
+      mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      for (const [ordinal, repoPath] of
+        V138_PLAN_262_19_FRESH_DESTINATIONS.entries()) {
+        const target = path.resolve(root, repoPath)
+        const parentChain = validateV138CanonicalParentChain(root, target)
+        expect(() =>
+          writeV138Plan26219Immutable(
+            target,
+            parentChain,
+            { stageOrdinal: ordinal },
+            {
+              fsyncDirectory(_descriptor, phase) {
+                if (phase === "publication") {
+                  throw new Error("injected directory fsync failure")
+                }
+              },
+            },
+          ),
+        ).toThrow("MATRIX_PLAN_262_19_PUBLICATION_DURABLY_ROLLED_BACK")
+        expect(existsSync(target)).toBe(false)
+        expect(checkV138CanonicalParentChain(parentChain)).toBe(true)
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("classifies a parent swap during Plan 262-19 rollback as indeterminate", () => {
+    const root = mkdtempSync(
+      path.join(tmpdir(), "cowards-262-19-rollback-parent-swap-"),
+    )
+    const artifacts = path.resolve(root, ".planning/artifacts")
+    const displaced = path.resolve(root, ".planning/artifacts-displaced")
+    const target = path.resolve(
+      root,
+      V138_PLAN_262_19_FRESH_DESTINATIONS[0]!,
+    )
+    try {
+      mkdirSync(artifacts, { recursive: true })
+      const parentChain = validateV138CanonicalParentChain(root, target)
+      expect(() =>
+        writeV138Plan26219Immutable(
+          target,
+          parentChain,
+          { stageOrdinal: 0 },
+          {
+            fsyncDirectory(_descriptor, phase) {
+              if (phase === "publication") {
+                throw new Error("injected publication uncertainty")
+              }
+            },
+            fsyncRollbackDirectory(descriptor) {
+              renameSync(artifacts, displaced)
+              mkdirSync(artifacts)
+              fsyncSync(descriptor)
+            },
+          },
+        ),
+      ).toThrow("MATRIX_PLAN_262_19_ROLLBACK_INDETERMINATE")
+      expect(existsSync(target)).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("rejects standalone Plan 262-19 terminal schema mutations after root recomputation", () => {
+    const sha = (label: string) =>
+      `sha256:${createHash("sha256").update(label).digest("hex")}`
+    const sealTerminal = (body: Record<string, unknown>) => ({
+      ...body,
+      terminalRoot: v138SuccessorRoot(
+        "canonicalJsonProfile",
+        "v1.38-plan-262-19-terminal-v2",
+        body,
+      ),
+    })
+    const beforeObservationBody = {
+      schemaVersion: "v1.38-plan-262-19-terminal-v2",
+      disposition: "tool_identity_failed",
+      sourceA2: "a".repeat(40),
+      sourceB2: "b".repeat(40),
+      authorizationRoot: sha("authorization"),
+      sealRoot: sha("seal"),
+      executionContextRoot: null,
+      preflightRoot: null,
+      calibrationRoot: null,
+      reproductionRoot: null,
+      consumptionMarkerRoots: {
+        preflight: null,
+        calibration: null,
+        reproduction: null,
+      },
+      obstructionProof: null,
+      interruptionProof: null,
+      chargedCalibrationAttemptCount: 0,
+      chargedReproductionAttemptCount: 0,
+      acceptedCellCount: 0,
+      completeCleanup: true,
+      authorityExpired: true,
+      noRetry: true,
+      partialAcceptedEvidenceReusable: false,
+    }
+    const beforeObservation = sealTerminal(beforeObservationBody)
+    expect(
+      checkV138Plan26219TerminalV2(clone(beforeObservation)),
+    ).toEqual(beforeObservation)
+    const observedStopBody = {
+      ...beforeObservationBody,
+      disposition: "preflight_unavailable",
+      executionContextRoot: sha("context"),
+      preflightRoot: sha("preflight"),
+      calibrationRoot: sha("calibration"),
+      consumptionMarkerRoots: {
+        preflight: sha("preflight-marker"),
+        calibration: sha("calibration-marker"),
+        reproduction: null,
+      },
+      chargedCalibrationAttemptCount: 8,
+    }
+    expect(
+      checkV138Plan26219TerminalV2(sealTerminal(observedStopBody)),
+    ).toEqual(sealTerminal(observedStopBody))
+    const mutations: Array<
+      (candidate: Record<string, unknown>) => void
+    > = [
+      (candidate) => {
+        candidate.privateDiagnostic = "x".repeat(8_192)
+      },
+      (candidate) => {
+        candidate.obstructionProof = {
+          stage: "context",
+          path: V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          type: "file",
+          metadataRoot: sha("metadata"),
+          privateDiagnostic: "x".repeat(8_192),
+        }
+      },
+      (candidate) => {
+        candidate.interruptionProof = {
+          stage: "preflight",
+          markerRoot: sha("interrupted-marker"),
+          chargedAttemptCount: 1,
+          observationMode: "unknown_after_consumption",
+          childLaunchCount: null,
+          terminalOutcomeCount: null,
+          completeCleanup: false,
+          privateDiagnostic: "x".repeat(8_192),
+        }
+      },
+      (candidate) => {
+        candidate.completeCleanup = "false"
+      },
+      (candidate) => {
+        candidate.disposition = "tool_identity_failed "
+      },
+    ]
+    for (const mutate of mutations) {
+      const candidate = clone(beforeObservation) as Record<string, unknown>
+      delete candidate.terminalRoot
+      mutate(candidate)
+      expect(() =>
+        checkV138Plan26219TerminalV2(sealTerminal(candidate)),
+      ).toThrow("MATRIX_PLAN_262_19_TERMINAL_INVALID")
+    }
+    for (const mutate of [
+      (candidate: Record<string, unknown>) => {
+        candidate.executionContextRoot = "sha256:malformed"
+      },
+      (candidate: Record<string, unknown>) => {
+        candidate.consumptionMarkerRoots = {
+          ...(candidate.consumptionMarkerRoots as Record<string, unknown>),
+          calibration: "sha256:malformed",
+        }
+      },
+    ]) {
+      const candidate = clone(observedStopBody) as Record<string, unknown>
+      mutate(candidate)
+      expect(() =>
+        checkV138Plan26219TerminalV2(sealTerminal(candidate)),
+      ).toThrow("MATRIX_PLAN_262_19_TERMINAL_INVALID")
+    }
+  })
+
+  it("v2 publication rolls back injected write, fsync, link, readback, and cleanup faults", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-v2-publish-faults-"))
+    try {
+      mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      const cases = [
+        { write: () => { throw new Error("write") } },
+        { fsyncFile: () => { throw new Error("file-fsync") } },
+        { link: () => { throw new Error("link") } },
+        {
+          fsyncDirectory: (
+            _fd: number,
+            phase: "publish" | "cleanup" | "rollback",
+          ) => {
+            if (phase === "publish") throw new Error("directory-fsync")
+          },
+        },
+        { readback: () => Buffer.from("corrupt") },
+        {
+          unlink: (candidate: string, kind: "temporary" | "rollback") => {
+            if (kind === "temporary") throw new Error("temp-cleanup")
+            unlinkSync(candidate)
+          },
+        },
+      ]
+      for (const [ordinal, options] of cases.entries()) {
+        const target = path.resolve(
+          root,
+          `.planning/artifacts/fault-${ordinal}.json`,
+        )
+        expect(() =>
+          writeV138CanonicalExclusiveV2(
+            root,
+            target,
+            { ordinal },
+            options,
+          ),
+        ).toThrow()
+        expect(existsSync(target)).toBe(false)
+      }
+      const rollbackTarget = path.resolve(
+        root,
+        ".planning/artifacts/rollback-fsync.json",
+      )
+      expect(() =>
+        writeV138CanonicalExclusiveV2(
+          root,
+          rollbackTarget,
+          { rollback: true },
+          {
+            readback: () => Buffer.from("corrupt"),
+            fsyncDirectory(_fd, phase) {
+              if (phase === "rollback") throw new Error("rollback-fsync")
+            },
+          },
+        ),
+      ).toThrow("V138_V2_PUBLICATION_ROLLBACK_INDETERMINATE")
+      expect(existsSync(rollbackTarget)).toBe(false)
+
+      const replacedParentTarget = path.resolve(
+        root,
+        ".planning/artifacts/rollback-parent-replaced.json",
+      )
+      expect(() =>
+        writeV138CanonicalExclusiveV2(
+          root,
+          replacedParentTarget,
+          { rollback: "parent-replaced" },
+          {
+            readback: () => Buffer.from("corrupt"),
+            fsyncDirectory(_fd, phase) {
+              if (phase === "rollback") {
+                const parent = path.dirname(replacedParentTarget)
+                rmSync(parent, { recursive: true })
+                mkdirSync(parent, { recursive: true })
+              }
+            },
+          },
+        ),
+      ).toThrow("V138_V2_PUBLICATION_ROLLBACK_INDETERMINATE")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("durably consumes each callback stage exactly once", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-stage-consumption-"))
+    try {
+      mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      const context = {
+        sourceA2: "1".repeat(40),
+        sourceB2: "2".repeat(40),
+        authorizationRoot: `sha256:${"3".repeat(64)}`,
+        sealRoot: `sha256:${"4".repeat(64)}`,
+        receiptRoot: `sha256:${"5".repeat(64)}`,
+      } as never
+      for (const stage of [
+        "preflight",
+        "calibration",
+        "reproduction",
+      ] as const) {
+        const chargedAttemptIds = [`${stage}:charged:0`]
+        const markerRoot = consumeV138Plan26219Stage({
+          repoRoot: root,
+          stage,
+          context,
+          predecessorRoot: `sha256:${"6".repeat(64)}`,
+          chargedAttemptIds,
+        })
+        expect(markerRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+        expect(
+          checkV138Plan26219ConsumptionMarker({
+            repoRoot: root,
+            stage,
+            context,
+            predecessorRoot: `sha256:${"6".repeat(64)}`,
+            chargedAttemptIds,
+          }).markerRoot,
+        ).toBe(markerRoot)
+        expect(() =>
+          consumeV138Plan26219Stage({
+            repoRoot: root,
+            stage,
+            context,
+            predecessorRoot: `sha256:${"6".repeat(64)}`,
+            chargedAttemptIds: [`${stage}:charged:0`],
+          }),
+        ).toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
+        const markerIndex =
+          stage === "preflight" ? 5 : stage === "calibration" ? 6 : 7
+        const markerPath = path.resolve(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[markerIndex]!,
+        )
+        unlinkSync(markerPath)
+        expect(() =>
+          checkV138Plan26219ConsumptionMarker({
+            repoRoot: root,
+            stage,
+            context,
+            predecessorRoot: `sha256:${"6".repeat(64)}`,
+            chargedAttemptIds,
+          }),
+        ).toThrow("MATRIX_PLAN_262_16_ARTIFACT_REQUIRED")
+        consumeV138Plan26219Stage({
+          repoRoot: root,
+          stage,
+          context,
+          predecessorRoot: `sha256:${"6".repeat(64)}`,
+          chargedAttemptIds,
+        })
+        const forged = JSON.parse(readFileSync(markerPath, "utf8"))
+        forged.markerRoot = `sha256:${"f".repeat(64)}`
+        writeFileSync(markerPath, `${JSON.stringify(forged)}\n`)
+        expect(() =>
+          checkV138Plan26219ConsumptionMarker({
+            repoRoot: root,
+            stage,
+            context,
+            predecessorRoot: `sha256:${"6".repeat(64)}`,
+            chargedAttemptIds,
+          }),
+        ).toThrow("MATRIX_PLAN_262_19_CONSUMPTION_MARKER_INVALID")
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("binds every fresh obstruction to its stage and exact next destination", () => {
+    const root = (label: string) =>
+      `sha256:${createHash("sha256").update(label).digest("hex")}` as const
+    const cases = [
+      {
+        stage: "context",
+        path: V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+        context: false,
+        preflight: false,
+        calibration: false,
+      },
+      {
+        stage: "preflight",
+        path: V138_PLAN_262_19_FRESH_DESTINATIONS[5],
+        context: true,
+        preflight: false,
+        calibration: false,
+      },
+      {
+        stage: "calibration",
+        path: V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+        context: true,
+        preflight: true,
+        calibration: false,
+      },
+      {
+        stage: "reproduction",
+        path: V138_PLAN_262_19_FRESH_DESTINATIONS[7],
+        context: true,
+        preflight: true,
+        calibration: true,
+      },
+    ] as const
+    for (const candidate of cases) {
+      const body = {
+        schemaVersion: "v1.38-plan-262-19-terminal-v2",
+        disposition: "fresh_destination_failed",
+        sourceA2: "1".repeat(40),
+        sourceB2: "2".repeat(40),
+        authorizationRoot: root("3"),
+        sealRoot: root("4"),
+        executionContextRoot: candidate.context ? root("5") : null,
+        preflightRoot: candidate.preflight ? root("6") : null,
+        calibrationRoot: candidate.calibration ? root("7") : null,
+        reproductionRoot: null,
+        consumptionMarkerRoots: {
+          preflight: candidate.preflight ? root("8") : null,
+          calibration: candidate.calibration ? root("9") : null,
+          reproduction: null,
+        },
+        obstructionProof: {
+          stage: candidate.stage,
+          path: candidate.path,
+          type: "file",
+          metadataRoot: root("a"),
+        },
+        interruptionProof: null,
+        chargedCalibrationAttemptCount: candidate.calibration ? 8 : 0,
+        chargedReproductionAttemptCount: 0,
+        acceptedCellCount: 0,
+        completeCleanup: !candidate.calibration,
+        authorityExpired: true,
+        noRetry: true,
+        partialAcceptedEvidenceReusable: false,
+      }
+      const terminal = {
+        ...body,
+        terminalRoot: v138SuccessorRoot(
+          "canonicalJsonProfile",
+          body.schemaVersion,
+          body,
+        ),
+      }
+      expect(checkV138Plan26219TerminalV2(terminal)).toEqual(terminal)
+      const forged = clone(terminal)
+      forged.obstructionProof.path =
+        V138_PLAN_262_19_FRESH_DESTINATIONS[
+          candidate.stage === "context" ? 1 : 0
+        ]
+      const { terminalRoot: _old, ...forgedBody } = forged
+      forged.terminalRoot = v138SuccessorRoot(
+        "canonicalJsonProfile",
+        forged.schemaVersion,
+        forgedBody,
+      )
+      expect(() => checkV138Plan26219TerminalV2(forged)).toThrow(
+        "MATRIX_PLAN_262_19_OBSTRUCTION_INVALID",
+      )
+    }
+  })
+
+  it("binds exact authorization keys, reviewed source, protected history, fresh targets, and selected-route closure", () => {
+    const { root, sourceA2, literal } = prepare()
+    try {
+      const reviewed = checkV138ReviewedSourceA2({
+        repoRoot: root,
+        repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+        sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+        sourceA2,
+        reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+        reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+      })
+      expect(reviewed).toMatchObject({
+        repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+        sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+        sourceA2,
+      })
+      const reviewPath = path.resolve(
+        root,
+        V138_PLAN_262_18_CANONICAL_PATHS.review,
+      )
+      const cleanReview = cleanPlan26218Review(sourceA2)
+      for (const invalidReview of [
+        cleanReview.replace("depth: deep\n", ""),
+        cleanReview.replace(
+          "scripts/lib/v1-38-current-matrix-reproduction.ts",
+          "scripts/lib/v1-38-foundation-admission.ts",
+        ),
+        cleanReview.replace("  info: 0", "  info: 1"),
+        cleanReview.replace("  total: 0", "  total: 1"),
+        cleanReview.replace("fixes_applied: false\n", ""),
+      ]) {
+        writeFileSync(reviewPath, invalidReview)
+        expect(() =>
+          checkV138ReviewedSourceA2({
+            repoRoot: root,
+            repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+            sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+            sourceA2,
+            reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+            reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+          }),
+        ).toThrow("V138_PLAN_262_18_REVIEW_NOT_CLEAN")
+      }
+      writeFileSync(reviewPath, cleanReview)
+
+      const history = deriveV138ProtectedHistoryV2(root, sourceA2)
+      expect(history).toMatchObject({
+        predecessorSourceA: "61d1c470e9a77ffa1f70538cb0c5173f6a792bfa",
+        predecessorSourceB: "1bfb413192f113ac7949cde676d7b55aea77f4fe",
+        predecessorRoots: {
+          authorizationRoot:
+            "sha256:870e317f662d5f869c39c0257dd8e702dd0c8f3c30316bc8fd4c9c0534cc6a00",
+          contextRoot:
+            "sha256:4a3006c0cd389011f6d7676668bed4cd2b2655958a6dd34901bd79db52dafa2c",
+          preflightRoot:
+            "sha256:8b949daede99588f5f3d6bd4cb78147bc19cc3a3d1dc0998ac7308b6fccbdde8",
+          calibrationRoot:
+            "sha256:3c37ae3ef54318de78d2a014bd26b5574ad0bdc530bcccf60456ef70481c1d44",
+          terminalRoot:
+            "sha256:9fa253ddd5ee40d0ef464706172b99425f7ee2dfafd2fe071845daa9bc0a824c",
+        },
+        chargedPublicAttemptIds: Array.from(
+          { length: 8 },
+          (_, index) => `calibration:v5:${index}`,
+        ),
+        acceptedEvidenceCount: 0,
+        oldReproductionV6Absent: true,
+      })
+
+      const authorization = buildV138Plan26218AuthorizationV2(
+        root,
+        sourceA2,
+        literal,
+      )
+      expect(checkV138Plan26218AuthorizationV2(root, clone(authorization))).toEqual(
+        authorization,
+      )
+      for (const mutation of [
+        (value: Record<string, unknown>) => {
+          value.unexpected = true
+        },
+        (value: Record<string, unknown>) => {
+          delete value.noRetry
+        },
+      ]) {
+        const mutated = clone(authorization) as unknown as Record<string, unknown>
+        mutation(mutated)
+        expect(() =>
+          checkV138Plan26218AuthorizationV2(root, mutated),
+        ).toThrow("V138_PLAN_262_18_AUTHORIZATION_SCHEMA_INVALID")
+      }
+      for (const rejectedLiteral of [
+        Buffer.from(literal.toString("utf8").replace(sourceA2, "0".repeat(40))),
+        Buffer.from(v138Plan26215AuthorizationLiteral(sourceA2), "utf8"),
+      ]) {
+        expect(() =>
+          buildV138Plan26218AuthorizationV2(
+            root,
+            sourceA2,
+            rejectedLiteral,
+          ),
+        ).toThrow("V138_PLAN_262_18_AUTHORIZATION_LITERAL_INVALID")
+      }
+
+      for (const overrides of [
+        { repairStartHead2: "0".repeat(40) },
+        { sourceBase2: "0".repeat(40) },
+        { sourceA2: "0".repeat(40) },
+      ]) {
+        writeFileSync(
+          reviewPath,
+          cleanPlan26218Review(sourceA2, overrides),
+        )
+        expect(() =>
+          checkV138ReviewedSourceA2({
+            repoRoot: root,
+            repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+            sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+            sourceA2,
+            reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+            reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+          }),
+        ).toThrow("V138_PLAN_262_18_REVIEW_SOURCE_JOIN_INVALID")
+      }
+      writeFileSync(reviewPath, cleanPlan26218Review(sourceA2))
+
+      const freshTarget = path.resolve(
+        root,
+        V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+      )
+      mkdirSync(path.dirname(freshTarget), { recursive: true })
+      for (const occupy of [
+        () => writeFileSync(freshTarget, "{}\n"),
+        () => symlinkSync("missing-target", freshTarget),
+        () => mkdirSync(freshTarget),
+      ]) {
+        occupy()
+        expect(() =>
+          buildV138Plan26218AuthorizationV2(root, sourceA2, literal),
+        ).toThrow()
+        rmSync(freshTarget, { recursive: true, force: true })
+      }
+
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_18_CANONICAL_PATHS.authorization),
+        canonicalManifest(authorization),
+      )
+      const seal = buildV138SuccessorSourceSealV2({
+        repoRoot: root,
+        authorization,
+      })
+      expect(
+        checkSelectedRouteClosureAtCommit(
+          root,
+          sourceA2,
+          seal.selectedRouteClosure,
+        ),
+      ).toEqual(seal.selectedRouteClosure)
+      expect(
+        checkV138SuccessorSourceSealV2(root, clone(seal), authorization),
+      ).toEqual(seal)
+      expect(checkV138SealedWorktreeAtA2(root, seal)).toBe(true)
+      for (const driftPath of [
+        V138_PLAN_262_18_CANONICAL_PATHS.oldCalibration,
+        seal.selectedRouteClosure.paths.find(
+          (repoPath) =>
+            ![
+              "scripts/evaluate-v1-38-foundation-contract.test.ts",
+              "scripts/lib/v1-38-current-matrix-reproduction.ts",
+              "scripts/lib/v1-38-successor-source-seal.ts",
+            ].includes(repoPath),
+        )!,
+      ]) {
+        const driftTarget = path.resolve(root, driftPath)
+        const original = readFileSync(driftTarget)
+        writeFileSync(driftTarget, Buffer.concat([original, Buffer.from("\n")]))
+        expect(() => checkV138SealedWorktreeAtA2(root, seal)).toThrow(
+          "V138_SEALED_WORKTREE_DRIFT",
+        )
+        writeFileSync(driftTarget, original)
+      }
+      const wrongClosure = clone(seal)
+      wrongClosure.selectedRouteClosure.closureRoot =
+        `sha256:${"0".repeat(64)}`
+      expect(() =>
+        checkV138SuccessorSourceSealV2(root, wrongClosure, authorization),
+      ).toThrow("V138_SUCCESSOR_SEAL_V2_INVALID")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 180_000)
+
+  it("enforces sealed/refused/failed presence and rejects invalid B2 parent, delta, and working blobs", () => {
+    const { root, sourceA2, literal } = prepare()
+    const authorizationPath =
+      V138_PLAN_262_18_CANONICAL_PATHS.authorization
+    const sealPath = V138_PLAN_262_18_CANONICAL_PATHS.seal
+    const terminalPath = V138_PLAN_262_18_CANONICAL_PATHS.terminal
+    try {
+      const authorization = buildV138Plan26218AuthorizationV2(
+        root,
+        sourceA2,
+        literal,
+      )
+      const authorizationBytes = canonicalManifest(authorization)
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      const seal = buildV138SuccessorSourceSealV2({
+        repoRoot: root,
+        authorization,
+      })
+      const sealBytes = canonicalManifest(seal)
+      writeFileSync(path.resolve(root, sealPath), sealBytes)
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: source B2"], {
+        cwd: root,
+      })
+      const validB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: validB2,
+        }),
+      ).toMatchObject({
+        sourceA2,
+        sourceB2: validB2,
+        sourceB2Parent: sourceA2,
+        changedPaths: [authorizationPath, sealPath],
+      })
+      expect(
+        checkV138Plan26218ArtifactBranch(
+          branchInput(root, sourceA2, validB2),
+        ),
+      ).toBe("sealed")
+
+      writeFileSync(path.resolve(root, sealPath), "{}\n")
+      expect(() =>
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: validB2,
+        }),
+      ).toThrow("V138_SUCCESSOR_SEAL_B2_WORKTREE_DRIFT")
+
+      const resetA2 = () => {
+        execFileSync("git", ["reset", "--hard", sourceA2], {
+          cwd: root,
+          stdio: "ignore",
+        })
+        rmSync(path.resolve(root, terminalPath), { force: true })
+      }
+      resetA2()
+      writeFileSync(
+        path.resolve(root, terminalPath),
+        canonicalManifest(terminal(sourceA2, "seal_refused")),
+      )
+      expect(checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2))).toBe(
+        "seal_refused",
+      )
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      expect(() =>
+        checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2)),
+      ).toThrow()
+
+      resetA2()
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      writeFileSync(
+        path.resolve(root, terminalPath),
+        canonicalManifest(terminal(sourceA2, "seal_failed")),
+      )
+      expect(checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2))).toBe(
+        "seal_failed",
+      )
+      unlinkSync(path.resolve(root, authorizationPath))
+      expect(() =>
+        checkV138Plan26218ArtifactBranch(branchInput(root, sourceA2)),
+      ).toThrow()
+
+      resetA2()
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      writeFileSync(path.resolve(root, sealPath), sealBytes)
+      const extraPath = ".planning/artifacts/v1.38-source-b2-extra.json"
+      writeFileSync(path.resolve(root, extraPath), "{}\n")
+      execFileSync("git", ["add", authorizationPath, sealPath, extraPath], {
+        cwd: root,
+      })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: extra B2 path"], {
+        cwd: root,
+      })
+      const extraB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: extraB2,
+        }),
+      ).toThrow("V138_SUCCESSOR_SEAL_B2_DELTA_INVALID")
+
+      execFileSync("git", ["checkout", "--quiet", `${sourceA2}^`], {
+        cwd: root,
+      })
+      writeFileSync(path.resolve(root, authorizationPath), authorizationBytes)
+      writeFileSync(path.resolve(root, sealPath), sealBytes)
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: root })
+      execFileSync(
+        "git",
+        ["commit", "--quiet", "-m", "test: wrong-parent B2"],
+        {
+        cwd: root,
+        },
+      )
+      const wrongParentB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      expect(() =>
+        checkV138SuccessorSealCommitV2({
+          repoRoot: root,
+          sourceA2,
+          sourceB2: wrongParentB2,
+        }),
+      ).toThrow("V138_SUCCESSOR_SEAL_B2_PARENT_INVALID")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 300_000)
+
+  it("builds the injected Plan 262-19 passed route with exact A2/B2 joins and terminal expiry", async () => {
+    const { root, sourceA2, literal } = prepare()
+    const authorizationPath =
+      V138_PLAN_262_18_CANONICAL_PATHS.authorization
+    const sealPath = V138_PLAN_262_18_CANONICAL_PATHS.seal
+    try {
+      const authorization = buildV138Plan26218AuthorizationV2(
+        root,
+        sourceA2,
+        literal,
+      )
+      writeFileSync(
+        path.resolve(root, authorizationPath),
+        canonicalManifest(authorization),
+      )
+      const seal = buildV138SuccessorSourceSealV2({
+        repoRoot: root,
+        authorization,
+      })
+      writeFileSync(path.resolve(root, sealPath), canonicalManifest(seal))
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: root })
+      execFileSync("git", ["commit", "--quiet", "-m", "test: source B2"], {
+        cwd: root,
+      })
+      const sourceB2 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim()
+      const sourceB2Custody = checkV138SuccessorSealCommitV2({
+        repoRoot: root,
+        sourceA2,
+        sourceB2,
+      })
+      const context = buildV138ExecutionContextV6Receipt({
+        repoRoot: root,
+        authorization,
+        seal,
+        sourceB2Custody,
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        terminalAgentRegistry: {
+          schemaVersion: "v1.38-plan-262-19-terminal-agent-registry-v2",
+          activeExecutorCount: 0,
+          agents: [{ id: "test:terminal", status: "completed" }],
+        },
+      })
+      expect(
+        checkV138ExecutionContextV6Receipt(clone(context), {
+          repoRoot: root,
+          authorization,
+          seal,
+          sourceB2Custody,
+        }),
+      ).toEqual(context)
+      const preflight = buildV138HostHeadroomPreflightV6Receipt({
+        result: await admittedInjectedHeadroom(),
+        executionContext: context,
+      })
+      expect(
+        checkV138HostHeadroomPreflightV6Receipt(clone(preflight), context),
+      ).toEqual(preflight)
+      const malformedPreflight = clone(preflight)
+      malformedPreflight.observation!.totalBytes += 1
+      const { receiptRoot: _malformedRoot, ...malformedBody } =
+        malformedPreflight
+      malformedPreflight.receiptRoot = v138SuccessorRoot(
+        "canonicalJsonProfile",
+        malformedPreflight.schemaVersion,
+        malformedBody,
+      )
+      expect(() =>
+        checkV138HostHeadroomPreflightV6Receipt(malformedPreflight, context),
+      ).toThrow("MATRIX_PREFLIGHT_V6_INVALID")
+
+      const inventory = enumerateV138CurrentMatrix(root)
+      const supervised = await calibrateV138ParallelMatrix({
+        inventory,
+        runner: successfulInjectedRunner(),
+        sharedHeadroomObserver: admittedInjectedHeadroom,
+        hardwareIdentity: {
+          operatingSystem: "test-os",
+          architecture: "test-arch",
+          nodeVersion: "test-node",
+          cpuIdentity: "test-cpu",
+        },
+        executionIdentityVersion: "v6",
+      })
+      const calibration = buildV138ParallelCalibrationV6Receipt({
+        inventory,
+        sourceB2,
+        sourceB2CustodyRoot: context.sourceB2CustodyRoot,
+        executionContextRoot: context.receiptRoot,
+        preflightRoot: preflight.receiptRoot,
+        preflightDisposition: "preflight_admitted",
+        calibration: supervised,
+      })
+      const unavailableSupervision = await calibrateV138ParallelMatrix({
+        inventory,
+        runner: successfulInjectedRunner(),
+        sharedHeadroomObserver: async () => {
+          throw new Error("injected observation unavailable")
+        },
+        hardwareIdentity: {
+          operatingSystem: "test-os",
+          architecture: "test-arch",
+          nodeVersion: "test-node",
+          cpuIdentity: "test-cpu",
+        },
+        executionIdentityVersion: "v6",
+      })
+      const unavailableCalibration = buildV138ParallelCalibrationV6Receipt({
+        inventory,
+        sourceB2,
+        sourceB2CustodyRoot: context.sourceB2CustodyRoot,
+        executionContextRoot: context.receiptRoot,
+        preflightRoot: preflight.receiptRoot,
+        preflightDisposition: "preflight_admitted",
+        calibration: unavailableSupervision,
+      })
+      const unavailableTerminal = buildV138Plan26219TerminalV2({
+        disposition: "calibration_stopped",
+        authorization,
+        seal,
+        sourceA2,
+        sourceB2,
+        context,
+        preflight,
+        calibration: unavailableCalibration,
+        consumptionMarkerRoots: {
+          preflight: `sha256:${createHash("sha256").update("preflight-marker").digest("hex")}`,
+          calibration: `sha256:${createHash("sha256").update("calibration-marker").digest("hex")}`,
+          reproduction: null,
+        },
+      })
+      expect(
+        checkV138Plan26219TerminalV2(clone(unavailableTerminal)),
+      ).toEqual(unavailableTerminal)
+      expect(unavailableTerminal).toMatchObject({
+        disposition: "calibration_stopped",
+        chargedCalibrationAttemptCount: 8,
+        acceptedCellCount: 0,
+        authorityExpired: true,
+        noRetry: true,
+      })
+      const execution = await executeV138ParallelMatrix({
+        inventory,
+        admittedCalibrationRoot: calibration.supervisionRoot!,
+        runner: {
+          async run(shard, control) {
+            control.onLaunch({
+              event: "child_launched",
+              shardId: shard.shardId,
+              laneId: shard.laneId,
+              executionAttemptIds: shard.attempts.map(
+                ({ executionAttemptId }) => executionAttemptId,
+              ),
+            })
+            return {
+              shardId: shard.shardId,
+              laneId: shard.laneId,
+              classification: "failed",
+              elapsedMilliseconds: 1,
+              maxRssKilobytes: 1,
+              cleanup: {
+                gracefulTerminationSent: false,
+                forceTerminationSent: false,
+                exitAwaited: true,
+                orphanProcessIds: [],
+              },
+              outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+                attemptId: executionAttemptId,
+                classification: "system_failure" as const,
+                code: "INJECTED_REPRODUCTION_FAILURE",
+                retryable: false,
+              })),
+            }
+          },
+        },
+        executionIdentityVersion: "v6",
+      })
+      const reproduction = buildV138AuthoritativeMatrixV7Receipt({
+        repoRoot: root,
+        executionContext: context,
+        preflight,
+        calibration,
+        execution,
+      })
+      for (const mutate of [
+        (candidate: typeof execution) => {
+          candidate.launchEvents[0]!.executionAttemptIds[0] =
+            "reproduction:v6:foreign"
+        },
+        (candidate: typeof execution) => {
+          candidate.terminals[0]!.laneId = "lane:foreign"
+        },
+        (candidate: typeof execution) => {
+          candidate.canonicalOutcomes[0]!.attemptId =
+            "reproduction:v6:foreign"
+        },
+        (candidate: typeof execution) => {
+          candidate.reason = null
+        },
+      ]) {
+        const invalidExecution = clone(execution)
+        mutate(invalidExecution)
+        expect(() =>
+          buildV138AuthoritativeMatrixV7Receipt({
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+            execution: invalidExecution,
+          }),
+        ).toThrow(
+          /MATRIX_(?:REPRODUCTION_V7_EXECUTION|PARALLEL_ACCOUNTING)_INVALID/u,
+        )
+      }
+      for (const forbidden of [
+        "stderr: secret",
+        "source=StrategyMemory",
+        "objectivePayload",
+        "pid=12345",
+        "x".repeat(4_097),
+      ]) {
+        const leaked = clone(reproduction)
+        leaked.attempts[0]!.result = forbidden
+        const { receiptRoot: _leakedRoot, ...leakedBody } = leaked
+        leaked.receiptRoot = v138SuccessorRoot(
+          "evidenceBundle",
+          leaked.schemaVersion,
+          leakedBody,
+        )
+        expect(() =>
+          checkV138AuthoritativeMatrixV7Receipt(leaked, {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          }),
+        ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
+      }
+      expect(reproduction).toMatchObject({
+        status: "stopped_process_failure",
+        chargedAttemptCount: 540,
+        acceptedCellCount: 0,
+        completeCleanup: true,
+        partialAcceptedEvidenceReusable: false,
+        noRetry: true,
+      })
+      expect(JSON.stringify(reproduction)).not.toMatch(
+        /\"execution\"|terminals|launchEvents|orphanProcessIds|maxRssKilobytes|sharedObservationTicks/,
+      )
+      expect(
+        checkV138AuthoritativeMatrixV7Receipt(clone(reproduction), {
+          repoRoot: root,
+          executionContext: context,
+          preflight,
+          calibration,
+        }),
+      ).toEqual(reproduction)
+      const interruptedReproduction =
+        buildV138AuthoritativeMatrixV7Receipt({
+          repoRoot: root,
+          executionContext: context,
+          preflight,
+          calibration,
+          callbackFailureAfterConsumption: true,
+        })
+      expect(interruptedReproduction).toMatchObject({
+        status: "stopped_process_failure",
+        chargedAttemptCount: 540,
+        observationMode: "unknown_after_consumption",
+        childLaunchCount: null,
+        terminalOutcomeCount: null,
+        acceptedCellCount: 0,
+        completeCleanup: false,
+        publicStopReason: "PARENT_EXCEPTION",
+        noRetry: true,
+      })
+      expect(interruptedReproduction.attempts).toHaveLength(540)
+      expect(
+        interruptedReproduction.attempts.every(
+          ({
+            childLaunched,
+            terminalObserved,
+            classification,
+            cleanupComplete,
+          }) =>
+            childLaunched === null &&
+            terminalObserved === null &&
+            classification === "unknown" &&
+            cleanupComplete === false,
+        ),
+      ).toBe(true)
+      expect(
+        checkV138AuthoritativeMatrixV7Receipt(
+          clone(interruptedReproduction),
+          {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          },
+        ),
+      ).toEqual(interruptedReproduction)
+      const falseZeroReproduction = clone(interruptedReproduction)
+      falseZeroReproduction.attempts[0]!.childLaunched = false
+      const {
+        receiptRoot: _falseZeroRoot,
+        ...falseZeroReproductionBody
+      } = falseZeroReproduction
+      falseZeroReproduction.receiptRoot = v138SuccessorRoot(
+        "evidenceBundle",
+        falseZeroReproduction.schemaVersion,
+        falseZeroReproductionBody,
+      )
+      expect(() =>
+        checkV138AuthoritativeMatrixV7Receipt(falseZeroReproduction, {
+          repoRoot: root,
+          executionContext: context,
+          preflight,
+          calibration,
+        }),
+      ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
+        `${JSON.stringify(context)}\n`,
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[1]),
+        `${JSON.stringify(preflight)}\n`,
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[2]),
+        `${JSON.stringify(calibration)}\n`,
+      )
+      const persistedCallbackContext = JSON.parse(
+        readFileSync(
+          path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
+          "utf8",
+        ),
+      )
+      expect(Object.keys(persistedCallbackContext).sort()).toEqual(
+        Object.keys(context).sort(),
+      )
+      expect(
+        checkV138ExecutionContextV6Receipt(persistedCallbackContext, {
+          repoRoot: root,
+          authorization,
+          seal,
+          sourceB2Custody,
+        }),
+      ).toEqual(context)
+      let possibleLaunchesBeforeThrow = 0
+      const callbackInterruptedReceipt =
+        await writeV138AuthoritativeMatrixV7Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            possibleLaunchesBeforeThrow += 1
+            throw new Error("injected after possible child launch")
+          },
+        )
+      expect(possibleLaunchesBeforeThrow).toBe(1)
+      expect(callbackInterruptedReceipt).toMatchObject({
+        observationMode: "unknown_after_consumption",
+        childLaunchCount: null,
+        terminalOutcomeCount: null,
+        completeCleanup: false,
+        publicStopReason: "PARENT_EXCEPTION",
+      })
+      expect(
+        checkV138AuthoritativeMatrixV7Receipt(
+          clone(callbackInterruptedReceipt),
+          {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          },
+        ),
+      ).toEqual(callbackInterruptedReceipt)
+      for (const repoPath of [
+        V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[1],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+        V138_PLAN_262_19_FRESH_DESTINATIONS[7],
+      ]) {
+        unlinkSync(path.resolve(root, repoPath!))
+      }
+      for (const mutate of [
+        (candidate: typeof reproduction) => {
+          candidate.attempts[0]!.executionAttemptId =
+            "reproduction:v6:foreign"
+        },
+        (candidate: typeof reproduction) => {
+          candidate.launchRoot = `sha256:${"f".repeat(64)}`
+        },
+        (candidate: typeof reproduction) => {
+          candidate.terminalRoot = `sha256:${"f".repeat(64)}`
+        },
+        (candidate: typeof reproduction) => {
+          candidate.accountingRoot = `sha256:${"f".repeat(64)}`
+        },
+        (candidate: typeof reproduction) => {
+          candidate.executionRoot = `sha256:${"f".repeat(64)}`
+        },
+      ]) {
+        const forged = clone(reproduction)
+        mutate(forged)
+        const { receiptRoot: _forgedRoot, ...forgedBody } = forged
+        forged.receiptRoot = v138SuccessorRoot(
+          "evidenceBundle",
+          forged.schemaVersion,
+          forgedBody,
+        )
+        expect(() =>
+          checkV138AuthoritativeMatrixV7Receipt(forged, {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          }),
+        ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
+      }
+
+      const forgedContext = clone(context)
+      forgedContext.hostIdentityRoot = `sha256:${"f".repeat(64)}`
+      const { receiptRoot: _forgedContextRoot, ...forgedContextBody } =
+        forgedContext
+      forgedContext.receiptRoot = v138SuccessorRoot(
+        "evidenceBundle",
+        forgedContext.schemaVersion,
+        forgedContextBody,
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
+        canonicalManifest(forgedContext),
+      )
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[1]),
+        canonicalManifest(preflight),
+      )
+      let calibrationCallbacks = 0
+      await expect(
+        writeV138ParallelCalibrationV6Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[1],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            calibrationCallbacks += 1
+            return supervised
+          },
+        ),
+      ).rejects.toThrow(/MATRIX_EXECUTION_CONTEXT_V6_(?:ROUTE_)?INVALID/u)
+      expect(calibrationCallbacks).toBe(0)
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[2]),
+        canonicalManifest(calibration),
+      )
+      let reproductionCallbacks = 0
+      await expect(
+        writeV138AuthoritativeMatrixV7Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            reproductionCallbacks += 1
+            return execution
+          },
+        ),
+      ).rejects.toThrow(/MATRIX_EXECUTION_CONTEXT_V6_(?:ROUTE_)?INVALID/u)
+      expect(reproductionCallbacks).toBe(0)
+      expect(
+        existsSync(
+          path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[3]),
+        ),
+      ).toBe(false)
+      const terminal = buildV138Plan26219TerminalV2({
+        disposition: "reproduction_stopped",
+        authorization,
+        seal,
+        sourceA2,
+        sourceB2,
+        context,
+        preflight,
+        calibration,
+        reproduction,
+        consumptionMarkerRoots: {
+          preflight: `sha256:${createHash("sha256").update("preflight-marker").digest("hex")}`,
+          calibration: `sha256:${createHash("sha256").update("calibration-marker").digest("hex")}`,
+          reproduction: `sha256:${createHash("sha256").update("reproduction-marker").digest("hex")}`,
+        },
+      })
+      expect(checkV138Plan26219TerminalV2(clone(terminal))).toEqual(terminal)
+      expect(terminal).toMatchObject({
+        chargedCalibrationAttemptCount: 8,
+        chargedReproductionAttemptCount: 540,
+        acceptedCellCount: 0,
+        completeCleanup: true,
+        authorityExpired: true,
+        noRetry: true,
+      })
+      const marker = (name: string) =>
+        `sha256:${createHash("sha256").update(name).digest("hex")}` as const
+      const interruptionCases = [
+        {
+          stage: "preflight" as const,
+          markerRoots: {
+            preflight: marker("preflight-interrupted"),
+            calibration: null,
+            reproduction: null,
+          },
+          artifacts: { context },
+          chargedAttemptCount: 1 as const,
+          chargedCalibrationAttemptCount: 0,
+          chargedReproductionAttemptCount: 0,
+        },
+        {
+          stage: "calibration" as const,
+          markerRoots: {
+            preflight: marker("preflight-complete"),
+            calibration: marker("calibration-interrupted"),
+            reproduction: null,
+          },
+          artifacts: { context, preflight },
+          chargedAttemptCount: 8 as const,
+          chargedCalibrationAttemptCount: 8,
+          chargedReproductionAttemptCount: 0,
+        },
+        {
+          stage: "reproduction" as const,
+          markerRoots: {
+            preflight: marker("preflight-complete"),
+            calibration: marker("calibration-complete"),
+            reproduction: marker("reproduction-interrupted"),
+          },
+          artifacts: { context, preflight, calibration },
+          chargedAttemptCount: 540 as const,
+          chargedCalibrationAttemptCount: 8,
+          chargedReproductionAttemptCount: 540,
+        },
+      ]
+      for (const interruptionCase of interruptionCases) {
+        const interruptedTerminal = buildV138Plan26219TerminalV2({
+          disposition: "consumed_stage_interrupted",
+          authorization,
+          seal,
+          sourceA2,
+          sourceB2,
+          ...interruptionCase.artifacts,
+          consumptionMarkerRoots: interruptionCase.markerRoots,
+          interruptionProof: {
+            stage: interruptionCase.stage,
+            markerRoot:
+              interruptionCase.markerRoots[interruptionCase.stage]!,
+            chargedAttemptCount: interruptionCase.chargedAttemptCount,
+            observationMode: "unknown_after_consumption",
+            childLaunchCount: null,
+            terminalOutcomeCount: null,
+            completeCleanup: false,
+          },
+        })
+        expect(
+          checkV138Plan26219TerminalV2(clone(interruptedTerminal)),
+        ).toEqual(interruptedTerminal)
+        expect(interruptedTerminal).toMatchObject({
+          disposition: "consumed_stage_interrupted",
+          chargedCalibrationAttemptCount:
+            interruptionCase.chargedCalibrationAttemptCount,
+          chargedReproductionAttemptCount:
+            interruptionCase.chargedReproductionAttemptCount,
+          acceptedCellCount: 0,
+          completeCleanup: false,
+          authorityExpired: true,
+          noRetry: true,
+        })
+      }
+      expect(
+        buildV138Plan26219TerminalV2({
+          disposition: "tool_identity_failed",
+          authorization,
+          seal,
+          sourceA2,
+          sourceB2,
+          consumptionMarkerRoots: {
+            preflight: null,
+            calibration: null,
+            reproduction: null,
+          },
+        }),
+      ).toMatchObject({
+        executionContextRoot: null,
+        preflightRoot: null,
+        calibrationRoot: null,
+        reproductionRoot: null,
+        acceptedCellCount: 0,
+        authorityExpired: true,
+      })
+      expect(() =>
+        buildV138Plan26219TerminalV2({
+          disposition: "reproduction_passed",
+          authorization,
+          seal,
+          sourceA2,
+          sourceB2,
+          context,
+          preflight,
+          calibration,
+          consumptionMarkerRoots: {
+            preflight: `sha256:${createHash("sha256").update("preflight-marker").digest("hex")}`,
+            calibration: `sha256:${createHash("sha256").update("calibration-marker").digest("hex")}`,
+            reproduction: `sha256:${createHash("sha256").update("reproduction-marker").digest("hex")}`,
+          },
+        }),
+      ).toThrow("MATRIX_PLAN_262_19_PRESENCE_INVALID")
+      const invalidAccepted = clone(reproduction)
+      invalidAccepted.acceptedCellCount = 1 as never
+      expect(() =>
+        checkV138AuthoritativeMatrixV7Receipt(invalidAccepted, {
+          repoRoot: root,
+          executionContext: context,
+          preflight,
+          calibration,
+        }),
+      ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
+
+      writeFileSync(
+        path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[4]),
+        canonicalManifest(terminal),
+      )
+      expect(() =>
+        writeV138ExecutionContextV6Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          "gsd-pattern-c-inline-main",
+          "/Users/roryquinlan/runtime/cowards-game",
+          context.terminalAgentRegistry,
+          authorizationPath,
+          sealPath,
+          sourceA2,
+          sourceB2,
+        ),
+      ).toThrow("MATRIX_PLAN_262_19_AUTHORITY_EXPIRED")
+      let expiredCallbacks = 0
+      await expect(
+        writeV138HostHeadroomPreflightV6Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[1],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          authorizationPath,
+          sealPath,
+          sourceA2,
+          sourceB2,
+          async () => {
+            expiredCallbacks += 1
+            return admittedInjectedHeadroom()
+          },
+        ),
+      ).rejects.toThrow("MATRIX_PLAN_262_19_AUTHORITY_EXPIRED")
+      await expect(
+        writeV138ParallelCalibrationV6Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[1],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            expiredCallbacks += 1
+            return supervised
+          },
+        ),
+      ).rejects.toThrow("MATRIX_PLAN_262_19_AUTHORITY_EXPIRED")
+      await expect(
+        writeV138AuthoritativeMatrixV7Receipt(
+          root,
+          V138_PLAN_262_19_FRESH_DESTINATIONS[3],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
+          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          sourceA2,
+          sourceB2,
+          async () => {
+            expiredCallbacks += 1
+            return execution
+          },
+        ),
+      ).rejects.toThrow("MATRIX_PLAN_262_19_AUTHORITY_EXPIRED")
+      expect(expiredCallbacks).toBe(0)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }, 600_000)
+})
 
 describe("v1.38 shared Darwin scheduler observation", () => {
   it("observes once for one tick and fans the immutable observation to all four active shards", async () => {
@@ -3852,6 +6172,7 @@ describe("v1.38 matrix real process boundary", () => {
 
   it("shared-observer runner mode never calls the legacy host-memory sampler", async () => {
     let legacySamplerCalls = 0
+    let zeroedOutputBuffers = 0
     const runner = createV138SubprocessShardRunner(repoRoot, {
       useLegacyHostMemory: false,
       legacyHostMemorySampler: () => {
@@ -3863,6 +6184,12 @@ describe("v1.38 matrix real process boundary", () => {
         return new EventEmitter() as ReturnType<V138RssCommandAdapter["execFile"]>
       }),
       shardProcessFactory: injectedShardProcessFactory((value) => value),
+      onOutputBuffersZeroed: (buffers) => {
+        zeroedOutputBuffers += buffers.length
+        expect(
+          buffers.every((buffer) => buffer.every((byte) => byte === 0)),
+        ).toBe(true)
+      },
     })
     await runner.run(
       {
@@ -3882,6 +6209,7 @@ describe("v1.38 matrix real process boundary", () => {
       },
     )
     expect(legacySamplerCalls).toBe(0)
+    expect(zeroedOutputBuffers).toBeGreaterThan(0)
   })
 
   it.each([
