@@ -41,6 +41,7 @@ import {
   checkV138Plan26218ArtifactBranch,
   checkV138Plan26218AuthorizationV2,
   checkV138ReviewedSourceA2,
+  checkV138CanonicalParentChain,
   checkV138ReplacementMetricContract,
   checkV138SuccessorSourceSeal,
   checkV138SuccessorSourceSealV2,
@@ -54,6 +55,7 @@ import {
   deriveSelectedRouteClosureAtCommit,
   deriveV138StaticSourceEdgesFromSnapshot,
   inspectSourceCustody,
+  validateV138CanonicalParentChain,
   V138_PLAN_262_18_CANONICAL_PATHS,
   V138_PLAN_262_18_TERMINAL_SCHEMA,
   V138_PLAN_262_19_FRESH_DESTINATIONS,
@@ -192,10 +194,19 @@ const cleanPlan26218Review = (
   }> = {},
 ): string =>
   `---
+plan: 18
+depth: deep
 status: clean
+files_reviewed: 3
+files_reviewed_list:
+  - scripts/evaluate-v1-38-foundation-contract.test.ts
+  - scripts/lib/v1-38-current-matrix-reproduction.ts
+  - scripts/lib/v1-38-successor-source-seal.ts
 findings:
   critical: 0
   warning: 0
+  info: 0
+  total: 0
 repair_start_head2: ${overrides.repairStartHead2 ?? V138_PLAN_262_18_REPAIR_START}
 source_base2: ${overrides.sourceBase2 ?? V138_PLAN_262_18_SOURCE_BASE}
 source_a2: ${overrides.sourceA2 ?? sourceA2}
@@ -4252,6 +4263,36 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
     }
   }
 
+  it("rejects symlinked or replaced canonical parent chains before any leaf creation", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-262-18-parent-chain-"))
+    const target = path.resolve(
+      root,
+      ".planning/artifacts/v1.38-plan-262-18-authorization-v2.json",
+    )
+    try {
+      mkdirSync(path.resolve(root, "planning-real/artifacts"), {
+        recursive: true,
+      })
+      symlinkSync("planning-real", path.resolve(root, ".planning"), "dir")
+      expect(() =>
+        validateV138CanonicalParentChain(root, target),
+      ).toThrow("V138_CANONICAL_PARENT_CHAIN_INVALID")
+      expect(existsSync(target)).toBe(false)
+
+      unlinkSync(path.resolve(root, ".planning"))
+      mkdirSync(path.dirname(target), { recursive: true })
+      const chain = validateV138CanonicalParentChain(root, target)
+      rmSync(path.dirname(target), { recursive: true, force: true })
+      mkdirSync(path.dirname(target), { recursive: true })
+      expect(() => checkV138CanonicalParentChain(chain)).toThrow(
+        "V138_CANONICAL_PARENT_CHAIN_REPLACED",
+      )
+      expect(existsSync(target)).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("binds exact authorization keys, reviewed source, protected history, fresh targets, and selected-route closure", () => {
     const { root, sourceA2, literal } = prepare()
     try {
@@ -4268,6 +4309,34 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
         sourceA2,
       })
+      const reviewPath = path.resolve(
+        root,
+        V138_PLAN_262_18_CANONICAL_PATHS.review,
+      )
+      const cleanReview = cleanPlan26218Review(sourceA2)
+      for (const invalidReview of [
+        cleanReview.replace("depth: deep\n", ""),
+        cleanReview.replace(
+          "scripts/lib/v1-38-current-matrix-reproduction.ts",
+          "scripts/lib/v1-38-foundation-admission.ts",
+        ),
+        cleanReview.replace("  info: 0", "  info: 1"),
+        cleanReview.replace("  total: 0", "  total: 1"),
+        cleanReview.replace("fixes_applied: false\n", ""),
+      ]) {
+        writeFileSync(reviewPath, invalidReview)
+        expect(() =>
+          checkV138ReviewedSourceA2({
+            repoRoot: root,
+            repairStartHead2: V138_PLAN_262_18_REPAIR_START,
+            sourceBase2: V138_PLAN_262_18_SOURCE_BASE,
+            sourceA2,
+            reviewPath: V138_PLAN_262_18_CANONICAL_PATHS.review,
+            reviewFixPath: V138_PLAN_262_18_CANONICAL_PATHS.reviewFix,
+          }),
+        ).toThrow("V138_PLAN_262_18_REVIEW_NOT_CLEAN")
+      }
+      writeFileSync(reviewPath, cleanReview)
 
       const history = deriveV138ProtectedHistoryV2(root, sourceA2)
       expect(history).toMatchObject({
@@ -4328,10 +4397,6 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         ).toThrow("V138_PLAN_262_18_AUTHORIZATION_LITERAL_INVALID")
       }
 
-      const reviewPath = path.resolve(
-        root,
-        V138_PLAN_262_18_CANONICAL_PATHS.review,
-      )
       for (const overrides of [
         { repairStartHead2: "0".repeat(40) },
         { sourceBase2: "0".repeat(40) },
