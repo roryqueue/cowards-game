@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 18/23 plans executed
+**Plans:** 18/26 plans executed
 
-**Current verdict:** BLOCKED / `gaps_found` — 18 of 23 plans are executed. Plans 262-21/22 produced reviewed A3/direct-child B3 and one route-ordinal-3 terminal, while Plan 262-23 independently stopped the gate: terminal-v1 is `calibration_stopped`, reproduction:v8 is absent at 0/540, the canonical v3 authorization checker rejects protected Plan 262-15 artifact presence, the required non-live selector yields no verdict, and boundary monitors require the unavailable PostgreSQL proof environment. ADMIT-03 and Plan 262-03 remain blocked without override or retry. Plans 262-03 through 262-07 separately own roadmap truths 3–5.
+**Current verdict:** BLOCKED / `gaps_found` — 18 of 26 plans are executed. Plans 262-21/22 produced reviewed A3/direct-child B3 and one route-ordinal-3 `calibration_stopped` terminal; Plan 262-23 independently kept ADMIT-03 blocked on 0/540 plus checker, bounded-selector, and PostgreSQL boundary-proof gaps. Plans 262-24 through 262-26 are now planned as a non-overlapping successor: offline repair/review/exact-literal direct-child B4, one main-only route-ordinal-4 v8/v9 execution, then independent read-only verification. There is no retry or reuse of Plan 262-22. Plan 262-03 can unblock only after Plan 262-26 verifies literal `reproduction_passed` with exact fresh 540/540; Plans 262-03 through 262-07 separately own roadmap truths 3–5.
 
 Plans:
 **Wave 1**
@@ -129,21 +129,33 @@ Plans:
 
 **Wave 19** *(blocked on Wave 18 completion)*
 
-- [ ] 262-03-PLAN.md — Only after Plan 262-23 independently verifies a literal Plan 262-22 `reproduction_passed` terminal with exactly 540/540 accepted fresh cells and every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
+- [ ] 262-24-PLAN.md — Offline-only repair: preserve strict pre-live checking, add terminal-aware post-live checking and scoped errors, bound the complete route test suite, close the privacy-safe child protocol, prove database boundaries in isolation, freeze zero-finding A4, and seal exact-literal direct-child B4.
 
 **Wave 20** *(blocked on Wave 19 completion)*
 
-- [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
+- [ ] 262-25-PLAN.md — Consume B4 once through one main-only Pattern C route: fresh context/preflight/calibration:v8, conditional reproduction:v9, exact Plan-262-25 stage markers, and one terminal-v1 under unchanged gates and no retry.
 
 **Wave 21** *(blocked on Wave 20 completion)*
 
-- [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+- [ ] 262-26-PLAN.md — Independently and read-only run terminal-aware custody, bounded tests, strict database-backed boundary monitors, and the literal `reproduction_passed` 540/540 gate; every other result remains blocked without retry.
 
 **Wave 22** *(blocked on Wave 21 completion)*
 
-- [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+- [ ] 262-03-PLAN.md — Only after Plan 262-26 independently verifies a literal Plan 262-25 `reproduction_passed` terminal with exactly 540/540 accepted fresh cells and every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
 
 **Wave 23** *(blocked on Wave 22 completion)*
+
+- [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
+
+**Wave 24** *(blocked on Wave 23 completion)*
+
+- [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+
+**Wave 25** *(blocked on Wave 24 completion)*
+
+- [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+
+**Wave 26** *(blocked on Wave 25 completion)*
 
 - [ ] 262-07-PLAN.md — Bind the safe custody reference and all passed gates into the aggregate foundation root.
 

@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Plan 262-23 independent verification complete; ADMIT-03 blocked on calibration_stopped 0/540 plus checker/test/boundary failures
-last_updated: "2026-07-31T18:10:00Z"
+stopped_at: Plans 262-24 through 262-26 planned; Plan 262-24 offline repair and B4 authorization gate is next
+last_updated: "2026-07-31T22:24:43Z"
 last_activity: 2026-07-31
-last_activity_desc: Independently verified A3/B3 and terminal-v1 read-only; route remains blocked and Phase 262 remains gaps_found.
+last_activity_desc: Planned the offline A4/B4 repair gate, one main-only route-ordinal-4 attempt, and independent exact 540/540 verification.
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 23
+  total_plans: 26
   completed_plans: 18
-  percent: 78
+  percent: 69
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 18 of 23
-Status: Plans 262-21 through 262-23 are executed. A3/B3 custody and the stopped terminal are immutable, but independent Plan 262-23 verification found `calibration_stopped`, absent reproduction:v8 at 0/540, a failing canonical authorization checker, non-terminating required selectors, and a red boundary-monitor chain. ADMIT-03 and Plan 262-03 remain blocked; Plans 262-03 through 262-07 separately own roadmap truths 3–5.
-Last activity: 2026-07-31 — Completed the read-only Plan 262-23 escalation gate and recorded `gaps_found` without source/evidence repair.
+Plan: 18 of 26
+Status: Plans 262-21 through 262-23 are executed and immutable. Plans 262-24 through 262-26 are planned to repair only the checker/test/boundary proof source offline, freeze reviewed A4/direct-child B4 under an exact literal, consume one main-only v8/v9 route, and independently verify exact fresh 540/540. ADMIT-03 and Plan 262-03 remain blocked; no Plan-262-22 retry or partial reuse is authorized, and Plans 262-03 through 262-07 separately own roadmap truths 3–5.
+Last activity: 2026-07-31 — Created implementation-ready successor research and Plans 262-24 through 262-26; execution has not begun.
 
-Progress: [████████░░] 78%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
-**Current milestone:** 18 of 23 Phase 262 plans complete; terminal-v1 is checked `calibration_stopped` at 0/540 with expired authority, and ADMIT-03 plus Plans 262-03 through 262-07 remain blocked.
+**Current milestone:** 18 of 26 Phase 262 plans complete; terminal-v1 remains `calibration_stopped` at 0/540 with expired authority, Plans 262-24 through 262-26 are planned but unexecuted, and ADMIT-03 plus Plans 262-03 through 262-07 remain blocked.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -60,6 +60,9 @@ Progress: [████████░░] 78%
 | Phase 262 P21 | source/review gate | 3 tasks | exact A2/RSS repair, reviewed A3, direct-child B3 |
 | Phase 262 P22 | Pattern C stopped route | 2 tasks | admitted preflight:v7, stopped 8/4 calibration:v7, no reproduction:v8 |
 | Phase 262 P23 | independent verification | 3 tasks | read-only blocked route, validation, verification, tracking |
+| Phase 262 P24 | planned source/review gate | 3 tasks | offline checker/test/protocol repair, reviewed A4, direct-child B4 |
+| Phase 262 P25 | planned Pattern C route | 2 tasks | main-only v8/v9 route with terminal and stage markers |
+| Phase 262 P26 | planned independent verification | 3 tasks | terminal-aware exact 540/540 gate, validation, verification, tracking |
 
 ## Accumulated Context
 
@@ -133,6 +136,8 @@ None.
 - Plans 262-18 through 262-20 are complete. Canonical A2/B2, selected-route, protected-history, privacy, formation, cleanup, and terminal checks pass without drift.
 - ADMIT-03 remains blocked: Plan 262-19 preflight admitted at 7,200 basis points, but calibration:v6 stopped after eight charged/launched/terminal attempts and zero accepted cells; reproduction:v7 was not launched and authority is expired.
 - Plans 262-21 through 262-23 are complete as execution/documentation steps. A3/B3 and all current route artifacts are committed and manually custody-checked.
+- Plans 262-24 through 262-26 are planned and unexecuted: offline source/test/protocol repair plus exact-literal A4/B4 custody, one main-only route-ordinal-4 v8/v9 attempt, then independent read-only verification.
+- The successor protects A2/B2/A3/B3, all v5/v6/v7 roots/markers/absence, terminal-v1, all 24 calibration charges, and every prior authorization byte; it grants no retry or reuse of Plan 262-22.
 - ADMIT-03 remains blocked: Plan 262-22 terminal-v1 is `calibration_stopped`; calibration:v7 has eight charged/launched/terminal attempts and zero accepted cells, while reproduction:v8 and its marker are absent at 0/540.
 - The canonical authorization-v3 checker fails with `V138_PLAN_262_15_ARTIFACT_MUST_BE_ABSENT` because protected Plan 262-15 artifacts are present on current main.
 - The required full non-live selector produced no verdict after about 44 minutes; a one-worker focused Darwin/route3 selector also produced no verdict before its hard 600-second bound.
@@ -149,7 +154,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-31T18:10:00Z
-Stopped at: Plan 262-23 independent verification complete; route and Phase 262 remain blocked
+Last session: 2026-07-31T22:24:43Z
+Stopped at: Plans 262-24 through 262-26 planned; route and Phase 262 remain blocked
 Resume file: None
-Next command: Create a separately planned remediation/successor authority that preserves A2/B2/A3/B3, every protected root and all calibration:v5/v6/v7 charges, resolves the canonical checker/test/boundary proof gaps, and only then permits a fresh unchanged-policy route. Do not retry Plan 262-22 or begin Plan 262-03.
+Next command: Execute Plan 262-24 offline through its deep-review, isolated PostgreSQL proof, and exact authorization-v4 literal checkpoint. Do not run Plan 262-25, retry Plan 262-22, or begin Plan 262-03 before checked direct-child B4 exists.
