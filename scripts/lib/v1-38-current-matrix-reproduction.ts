@@ -3498,7 +3498,7 @@ export function createV138SubprocessShardRunner(
         ) ??
         spawn(process.execPath, childArguments, childOptions)
       child.once("spawn", () => {
-        control.onLaunch({
+        control.onLaunch?.({
           event: "child_launched",
           shardId: shard.shardId,
           laneId: shard.laneId,
@@ -3521,6 +3521,11 @@ export function createV138SubprocessShardRunner(
       let status: number | null = null
       let closeSignal: NodeJS.Signals | null = null
       let terminalEventCaptured = false
+      let resourceSamplingOpen = true
+      let resourceSamplingGeneration = 0
+      let pendingRssSample: Promise<void> | undefined
+      let resourceSampleInterval: NodeJS.Timeout | undefined
+      let hasValidExternalRssSample = false
       let samplerCode:
         | "RESOURCE_SAMPLER_SPAWN_DENIED"
         | "RESOURCE_MEASUREMENT_UNAVAILABLE"
@@ -3557,12 +3562,20 @@ export function createV138SubprocessShardRunner(
       control.signal.addEventListener("abort", onAbort, { once: true })
       const closeReceipt = new Promise<void>((resolve) => {
         child.on("error", () => {
+          resourceSamplingOpen = false
+          if (resourceSampleInterval !== undefined) {
+            clearInterval(resourceSampleInterval)
+          }
           spawnError = true
           terminalEventCaptured = true
           resolve()
         })
         child.on("close", (exitStatus, signal) => {
           closed = true
+          resourceSamplingOpen = false
+          if (resourceSampleInterval !== undefined) {
+            clearInterval(resourceSampleInterval)
+          }
           terminalEventCaptured = true
           status = exitStatus
           closeSignal = signal
@@ -3591,44 +3604,60 @@ export function createV138SubprocessShardRunner(
       child.stderr.on("data", (value: Buffer) =>
         append(stderr, Buffer.from(value), "stderr"),
       )
-      const sample = async (): Promise<void> => {
-        if (closed || child.pid === undefined) return
-        const rss = await sampleV138ChildRss(
-          child.pid,
-          options.rssCommandAdapter ?? defaultV138RssCommandAdapter,
-        )
-        const legacyHostMemory =
-          options.useLegacyHostMemory === false
-            ? { totalKilobytes: 1, freeKilobytes: 1 }
-            : (options.legacyHostMemorySampler?.() ?? {
-                totalKilobytes: Math.floor(totalmem() / 1024),
-                freeKilobytes: Math.floor(freemem() / 1024),
-              })
-        if (rss.status === "unavailable") {
-          samplerCode = rss.code
+      const sample = (): Promise<void> => {
+        if (
+          !resourceSamplingOpen ||
+          closed ||
+          child.pid === undefined
+        ) return Promise.resolve()
+        if (pendingRssSample !== undefined) return pendingRssSample
+        const generation = resourceSamplingGeneration
+        const ownedSample = (async (): Promise<void> => {
+          const rss = await sampleV138ChildRss(
+            child.pid!,
+            options.rssCommandAdapter ?? defaultV138RssCommandAdapter,
+          )
+          if (generation !== resourceSamplingGeneration) return
+          const legacyHostMemory =
+            options.useLegacyHostMemory === false
+              ? { totalKilobytes: 1, freeKilobytes: 1 }
+              : (options.legacyHostMemorySampler?.() ?? {
+                  totalKilobytes: Math.floor(totalmem() / 1024),
+                  freeKilobytes: Math.floor(freemem() / 1024),
+                })
+          if (rss.status === "unavailable") {
+            if (closed && hasValidExternalRssSample) return
+            samplerCode = rss.code
+            control.onResourceSample({
+              childId: `pid:${child.pid}`,
+              childRssKilobytes: -1,
+              hostTotalMemoryKilobytes: legacyHostMemory.totalKilobytes,
+              hostFreeMemoryKilobytes: legacyHostMemory.freeKilobytes,
+            })
+            await terminate()
+            return
+          }
+          hasValidExternalRssSample = true
+          maximumRssKilobytes = Math.max(
+            maximumRssKilobytes,
+            rss.rssKilobytes,
+          )
           control.onResourceSample({
             childId: `pid:${child.pid}`,
-            childRssKilobytes: -1,
+            childRssKilobytes: rss.rssKilobytes,
             hostTotalMemoryKilobytes: legacyHostMemory.totalKilobytes,
             hostFreeMemoryKilobytes: legacyHostMemory.freeKilobytes,
           })
-          await terminate()
-          return
-        }
-        maximumRssKilobytes = Math.max(
-          maximumRssKilobytes,
-          rss.rssKilobytes,
-        )
-        control.onResourceSample({
-          childId: `pid:${child.pid}`,
-          childRssKilobytes: rss.rssKilobytes,
-          hostTotalMemoryKilobytes: legacyHostMemory.totalKilobytes,
-          hostFreeMemoryKilobytes: legacyHostMemory.freeKilobytes,
+        })()
+        const trackedSample = ownedSample.finally(() => {
+          if (pendingRssSample === trackedSample) pendingRssSample = undefined
         })
+        pendingRssSample = trackedSample
+        return pendingRssSample
       }
       try {
       await sample()
-      const interval = closed || samplerCode !== undefined
+      resourceSampleInterval = closed || samplerCode !== undefined
         ? undefined
         : setInterval(() => {
             void sample()
@@ -3637,7 +3666,12 @@ export function createV138SubprocessShardRunner(
         void terminate()
       }, V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds)
       await closeReceipt
-      if (interval !== undefined) clearInterval(interval)
+      resourceSamplingOpen = false
+      if (resourceSampleInterval !== undefined) {
+        clearInterval(resourceSampleInterval)
+      }
+      if (pendingRssSample !== undefined) await pendingRssSample
+      resourceSamplingGeneration += 1
       clearTimeout(timeout)
       control.signal.removeEventListener("abort", onAbort)
       if (terminationPromise !== undefined) await terminationPromise
