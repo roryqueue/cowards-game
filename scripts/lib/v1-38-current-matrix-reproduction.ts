@@ -11806,12 +11806,15 @@ export const checkV138Plan26219TerminalV2 = (
     interruption.terminalOutcomeCount === null &&
     interruption.completeCleanup === false &&
     interruption.markerRoot === markerRoots[interruption.stage]
-  if (
-    terminal.disposition === "fresh_destination_failed" &&
-    !obstructionValid
-  ) {
+  if (terminal.disposition === "fresh_destination_failed" && !obstructionValid) {
     throw new TypeError("MATRIX_PLAN_262_19_OBSTRUCTION_INVALID")
   }
+  const artifactRoots = [
+    terminal.executionContextRoot,
+    terminal.preflightRoot,
+    terminal.calibrationRoot,
+    terminal.reproductionRoot,
+  ]
   if (
     terminal.schemaVersion !== "v1.38-plan-262-19-terminal-v2" ||
     ![
@@ -11826,6 +11829,9 @@ export const checkV138Plan26219TerminalV2 = (
     !/^[0-9a-f]{40}$/u.test(terminal.sourceB2) ||
     !isV138CanonicalSha256(terminal.authorizationRoot) ||
     !isV138CanonicalSha256(terminal.sealRoot) ||
+    artifactRoots.some(
+      (root) => root !== null && !isV138CanonicalSha256(root),
+    ) ||
     ![0, 8].includes(terminal.chargedCalibrationAttemptCount) ||
     ![0, 540].includes(terminal.chargedReproductionAttemptCount) ||
     ![0, 540].includes(terminal.acceptedCellCount) ||
@@ -11839,10 +11845,12 @@ export const checkV138Plan26219TerminalV2 = (
     Object.values(markerRoots).some(
       (root) => root !== null && !isV138CanonicalSha256(root),
     ) ||
-    (terminal.disposition === "fresh_destination_failed") !==
-      obstructionValid ||
-    (terminal.disposition === "consumed_stage_interrupted") !==
-      interruptionValid ||
+    (terminal.disposition === "fresh_destination_failed"
+      ? !obstructionValid
+      : obstruction !== null) ||
+    (terminal.disposition === "consumed_stage_interrupted"
+      ? !interruptionValid
+      : interruption !== null) ||
     terminal.chargedReproductionAttemptCount !==
       (terminal.disposition === "consumed_stage_interrupted" &&
           terminal.interruptionProof?.stage === "reproduction" ||
@@ -11858,6 +11866,7 @@ export const checkV138Plan26219TerminalV2 = (
         : 0) ||
     terminal.acceptedCellCount !==
       (terminal.disposition === "reproduction_passed" ? 540 : 0) ||
+    typeof terminal.completeCleanup !== "boolean" ||
     terminal.authorityExpired !== true ||
     terminal.noRetry !== true ||
     terminal.partialAcceptedEvidenceReusable !== false ||

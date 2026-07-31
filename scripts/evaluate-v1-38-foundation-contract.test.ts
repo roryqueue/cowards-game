@@ -4601,6 +4601,124 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
     }
   })
 
+  it("rejects standalone Plan 262-19 terminal schema mutations after root recomputation", () => {
+    const sha = (label: string) =>
+      `sha256:${createHash("sha256").update(label).digest("hex")}`
+    const sealTerminal = (body: Record<string, unknown>) => ({
+      ...body,
+      terminalRoot: v138SuccessorRoot(
+        "canonicalJsonProfile",
+        "v1.38-plan-262-19-terminal-v2",
+        body,
+      ),
+    })
+    const beforeObservationBody = {
+      schemaVersion: "v1.38-plan-262-19-terminal-v2",
+      disposition: "tool_identity_failed",
+      sourceA2: "a".repeat(40),
+      sourceB2: "b".repeat(40),
+      authorizationRoot: sha("authorization"),
+      sealRoot: sha("seal"),
+      executionContextRoot: null,
+      preflightRoot: null,
+      calibrationRoot: null,
+      reproductionRoot: null,
+      consumptionMarkerRoots: {
+        preflight: null,
+        calibration: null,
+        reproduction: null,
+      },
+      obstructionProof: null,
+      interruptionProof: null,
+      chargedCalibrationAttemptCount: 0,
+      chargedReproductionAttemptCount: 0,
+      acceptedCellCount: 0,
+      completeCleanup: true,
+      authorityExpired: true,
+      noRetry: true,
+      partialAcceptedEvidenceReusable: false,
+    }
+    const beforeObservation = sealTerminal(beforeObservationBody)
+    expect(
+      checkV138Plan26219TerminalV2(clone(beforeObservation)),
+    ).toEqual(beforeObservation)
+    const observedStopBody = {
+      ...beforeObservationBody,
+      disposition: "preflight_unavailable",
+      executionContextRoot: sha("context"),
+      preflightRoot: sha("preflight"),
+      calibrationRoot: sha("calibration"),
+      consumptionMarkerRoots: {
+        preflight: sha("preflight-marker"),
+        calibration: sha("calibration-marker"),
+        reproduction: null,
+      },
+      chargedCalibrationAttemptCount: 8,
+    }
+    expect(
+      checkV138Plan26219TerminalV2(sealTerminal(observedStopBody)),
+    ).toEqual(sealTerminal(observedStopBody))
+    const mutations: Array<
+      (candidate: Record<string, unknown>) => void
+    > = [
+      (candidate) => {
+        candidate.privateDiagnostic = "x".repeat(8_192)
+      },
+      (candidate) => {
+        candidate.obstructionProof = {
+          stage: "context",
+          path: V138_PLAN_262_19_FRESH_DESTINATIONS[0],
+          type: "file",
+          metadataRoot: sha("metadata"),
+          privateDiagnostic: "x".repeat(8_192),
+        }
+      },
+      (candidate) => {
+        candidate.interruptionProof = {
+          stage: "preflight",
+          markerRoot: sha("interrupted-marker"),
+          chargedAttemptCount: 1,
+          observationMode: "unknown_after_consumption",
+          childLaunchCount: null,
+          terminalOutcomeCount: null,
+          completeCleanup: false,
+          privateDiagnostic: "x".repeat(8_192),
+        }
+      },
+      (candidate) => {
+        candidate.completeCleanup = "false"
+      },
+      (candidate) => {
+        candidate.disposition = "tool_identity_failed "
+      },
+    ]
+    for (const mutate of mutations) {
+      const candidate = clone(beforeObservation) as Record<string, unknown>
+      delete candidate.terminalRoot
+      mutate(candidate)
+      expect(() =>
+        checkV138Plan26219TerminalV2(sealTerminal(candidate)),
+      ).toThrow("MATRIX_PLAN_262_19_TERMINAL_INVALID")
+    }
+    for (const mutate of [
+      (candidate: Record<string, unknown>) => {
+        candidate.executionContextRoot = "sha256:malformed"
+      },
+      (candidate: Record<string, unknown>) => {
+        candidate.consumptionMarkerRoots = {
+          ...(candidate.consumptionMarkerRoots as Record<string, unknown>),
+          calibration: "sha256:malformed",
+        }
+      },
+    ]) {
+      const candidate = clone(observedStopBody) as Record<string, unknown>
+      mutate(candidate)
+      expect(() =>
+        checkV138Plan26219TerminalV2(sealTerminal(candidate)),
+      ).toThrow("MATRIX_PLAN_262_19_TERMINAL_INVALID")
+    }
+  })
+
   it("v2 publication rolls back injected write, fsync, link, readback, and cleanup faults", () => {
     const root = mkdtempSync(path.join(tmpdir(), "cowards-v2-publish-faults-"))
     try {
