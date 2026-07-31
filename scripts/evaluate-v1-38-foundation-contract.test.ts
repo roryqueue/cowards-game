@@ -6582,6 +6582,114 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     }
   }, 900_000)
 
+  it("terminalizes a valid calibration marker without invoking calibration", async () => {
+    const fixture = prepareRoutedV7()
+    try {
+      const preflightPath = V138_PLAN_262_22_FRESH_DESTINATIONS[1]
+      await writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        preflightPath, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3,
+        admittedInjectedHeadroom)
+      const inventory = enumerateV138CurrentMatrix(fixture.tempRoot)
+      const calibrationIds = deriveV138CalibrationAttemptMappings(inventory,
+        "v7").map(({ executionAttemptId }) => executionAttemptId)
+      const preflight = JSON.parse(readFileSync(path.resolve(fixture.tempRoot,
+        preflightPath), "utf8")) as { receiptRoot: `sha256:${string}` }
+      const markerRoot = consumeV138Plan26222Stage({
+        repoRoot: fixture.tempRoot, stage: "calibration",
+        context: fixture.context, predecessorRoot: preflight.receiptRoot,
+        chargedAttemptIds: calibrationIds,
+      })
+      const preflightMarkerRoot = (JSON.parse(readFileSync(path.resolve(
+        fixture.tempRoot, V138_PLAN_262_22_FRESH_DESTINATIONS[5]), "utf8")) as
+        { markerRoot: string }).markerRoot
+      const terminal = writeV138Plan26222TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[4],
+        "fresh_destination_failed", fixture.sourceA3, fixture.sourceB3)
+      expect(terminal).toMatchObject({
+        disposition: "consumed_stage_interrupted",
+        consumptionMarkerRoots: {
+          preflight: preflightMarkerRoot,
+          calibration: markerRoot, reproduction: null,
+        },
+        interruptionProof: { stage: "calibration", markerRoot,
+          chargedAttemptCount: 8, chargedIdentityId: null,
+          observationMode: "unknown_after_consumption",
+          childLaunchCount: null, terminalOutcomeCount: null,
+          completeCleanup: false },
+        chargedCalibrationAttemptCount: 8,
+        chargedReproductionAttemptCount: 0, acceptedCellCount: 0,
+        completeCleanup: false, authorityExpired: true, noRetry: true,
+      })
+      expect(checkV138Plan26222TerminalBranch(fixture.tempRoot,
+        fixture.sourceA3, fixture.sourceB3).disposition)
+        .toBe("consumed_stage_interrupted")
+      for (const index of [2, 3, 7]) expect(existsSync(path.resolve(
+        fixture.tempRoot, V138_PLAN_262_22_FRESH_DESTINATIONS[index]!)))
+        .toBe(false)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("terminalizes a valid reproduction marker without invoking reproduction", async () => {
+    const fixture = prepareRoutedV7()
+    try {
+      const preflightPath = V138_PLAN_262_22_FRESH_DESTINATIONS[1]
+      await writeV138HostHeadroomPreflightV7Receipt(fixture.tempRoot,
+        preflightPath, fixture.contextPath, fixture.authorizationPath,
+        fixture.sealPath, fixture.sourceA3, fixture.sourceB3,
+        admittedInjectedHeadroom)
+      const calibrationPath = V138_PLAN_262_22_FRESH_DESTINATIONS[2]
+      const calibration = await writeV138ParallelCalibrationV7Receipt(
+        fixture.tempRoot, calibrationPath, preflightPath, fixture.contextPath,
+        fixture.sourceA3, fixture.sourceB3, async (input) =>
+          calibrateV138ParallelMatrix({ ...input,
+            runner: successfulInjectedRunner(),
+            sharedHeadroomObserver: admittedInjectedHeadroom }))
+      const inventory = enumerateV138CurrentMatrix(fixture.tempRoot)
+      const reproductionIds = planV138MatrixShards(inventory).shards.flatMap(
+        ({ attemptIds }) => attemptIds.map((id) => `reproduction:v7:${id}`))
+      const markerRoot = consumeV138Plan26222Stage({
+        repoRoot: fixture.tempRoot, stage: "reproduction",
+        context: fixture.context, predecessorRoot: calibration.receiptRoot,
+        chargedAttemptIds: reproductionIds,
+      })
+      const preflightMarkerRoot = (JSON.parse(readFileSync(path.resolve(
+        fixture.tempRoot, V138_PLAN_262_22_FRESH_DESTINATIONS[5]), "utf8")) as
+        { markerRoot: string }).markerRoot
+      const calibrationMarkerRoot = (JSON.parse(readFileSync(path.resolve(
+        fixture.tempRoot, V138_PLAN_262_22_FRESH_DESTINATIONS[6]), "utf8")) as
+        { markerRoot: string }).markerRoot
+      const terminal = writeV138Plan26222TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[4],
+        "fresh_destination_failed", fixture.sourceA3, fixture.sourceB3)
+      expect(terminal).toMatchObject({
+        disposition: "consumed_stage_interrupted",
+        consumptionMarkerRoots: {
+          preflight: preflightMarkerRoot,
+          calibration: calibrationMarkerRoot,
+          reproduction: markerRoot,
+        },
+        interruptionProof: { stage: "reproduction", markerRoot,
+          chargedAttemptCount: 540, chargedIdentityId: null,
+          observationMode: "unknown_after_consumption",
+          childLaunchCount: null, terminalOutcomeCount: null,
+          completeCleanup: false },
+        chargedCalibrationAttemptCount: 8,
+        chargedReproductionAttemptCount: 540, acceptedCellCount: 0,
+        completeCleanup: false, authorityExpired: true, noRetry: true,
+      })
+      expect(checkV138Plan26222TerminalBranch(fixture.tempRoot,
+        fixture.sourceA3, fixture.sourceB3).disposition)
+        .toBe("consumed_stage_interrupted")
+      expect(existsSync(path.resolve(fixture.tempRoot,
+        V138_PLAN_262_22_FRESH_DESTINATIONS[3]))).toBe(false)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
   it("routes successful calibration and reproduction once, then rejects replay", async () => {
     const fixture = prepareRoutedV7()
     try {
@@ -6602,6 +6710,15 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
         })
       expect(calibration).toMatchObject({ status: "admitted",
         acceptedCellCount: 8, completeCleanup: true })
+      expect(calibrationCalls).toBe(1)
+      await expect(writeV138ParallelCalibrationV7Receipt(fixture.tempRoot,
+        calibrationPath, preflightPath, fixture.contextPath,
+        fixture.sourceA3, fixture.sourceB3, async (input) => {
+          calibrationCalls += 1
+          return calibrateV138ParallelMatrix({ ...input,
+            runner: successfulInjectedRunner(),
+            sharedHeadroomObserver: admittedInjectedHeadroom })
+        })).rejects.toThrow()
       expect(calibrationCalls).toBe(1)
       let reproductionCalls = 0
       const reproductionPath = V138_PLAN_262_22_FRESH_DESTINATIONS[3]
