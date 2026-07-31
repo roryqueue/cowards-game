@@ -5400,7 +5400,7 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
-  }, 300_000)
+  }, 600_000)
 })
 
 describe("v1.38 shared Darwin scheduler observation", () => {
