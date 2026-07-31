@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 12/17 plans executed
+**Plans:** 12/20 plans executed
 
-**Current verdict:** BLOCKED — Plan 262-17 independently verified the immutable `calibration_stopped` route and reported `gaps_found` (1/5 truths). The selected route is derived at A with a current checked count of 215 and root `sha256:9dd774f2520ed81995118052ab920820d74f16d75dfe1b63b75ecadbfe7a68d7`; the count is not a completeness authority. ADMIT-03 remains unmet because reproduction:v6 is absent, accepted cells are 0/540, and the single-use authority is expired.
+**Current verdict:** BLOCKED — Plans 262-15 through 262-17 are executed; Plan 262-17 independently verified the immutable `calibration_stopped` route and reported `gaps_found` (1/5 truths). Research subsequently found that calibration:v5 preserves eight authoritative charges but its projected shard and child-launch fields cannot establish physical shard ownership or OS launches. Plans 262-18 through 262-20 are the unexecuted repair, fresh Pattern C attempt, and independent read-only verification route. ADMIT-03 and Plan 262-03 remain blocked unless Plan 262-20 verifies a literal `reproduction_passed` Plan 262-19 terminal with exactly 540/540 accepted fresh cells and every prerequisite.
 
 Plans:
 **Wave 1**
@@ -97,7 +97,7 @@ Plans:
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
-- [x] 262-16-PLAN.md — Pattern C terminal: preflight admitted at 6,900 basis points; calibration stopped with process failure after eight charged identities, zero child launches, zero accepted cells, and no reproduction:v6.
+- [x] 262-16-PLAN.md — Pattern C terminal: preflight admitted at 6,900 basis points; calibration:v5 stopped after eight charged identities and zero accepted cells, while its lossy shard/launch projections remain historical fields rather than physical-process facts; no reproduction:v6 exists.
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
@@ -105,21 +105,33 @@ Plans:
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
-- [ ] 262-03-PLAN.md — Only after a successful independently verified 262-17 route over a 262-16 reproduction-passed 540/540 terminal, define and calibrate the immutable study and two-ledger accounting contract.
+- [ ] 262-18-PLAN.md — TDD-repair full attempt-ID correlation, frozen-inventory shard attribution, direct-entry dispatch, exact-one outcome mapping, and four clone-isolation cases; freeze reviewed A2 and exact two-artifact direct-child B2 only after full closure display and fresh authority.
 
 **Wave 14** *(blocked on Wave 13 completion)*
 
-- [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
+- [ ] 262-19-PLAN.md — Under main-orchestrator Pattern C, execute exactly one checked preflight:v6, one 8/4 calibration:v6 allocation, and at most one conditional fresh 540-cell reproduction:v7, then seal the actual terminal without retry or raw-data retention.
 
 **Wave 15** *(blocked on Wave 14 completion)*
 
-- [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+- [ ] 262-20-PLAN.md — Independently recheck A2/B2, old roots and charges, and the current terminal; refresh validation, verification, and tracking without mutating historical evidence or summaries.
 
 **Wave 16** *(blocked on Wave 15 completion)*
 
-- [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+- [ ] 262-03-PLAN.md — Only after Plan 262-20 independently verifies a literal Plan 262-19 `reproduction_passed` terminal with exactly 540/540 accepted fresh cells and every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
 
 **Wave 17** *(blocked on Wave 16 completion)*
+
+- [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
+
+**Wave 18** *(blocked on Wave 17 completion)*
+
+- [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+
+**Wave 19** *(blocked on Wave 18 completion)*
+
+- [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+
+**Wave 20** *(blocked on Wave 19 completion)*
 
 - [ ] 262-07-PLAN.md — Bind the safe custody reference and all passed gates into the aggregate foundation root.
 
@@ -258,7 +270,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 12/17 | Blocked — gaps_found 1/5 |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 12/20 | Blocked — Plans 262-18..20 planned; gaps_found 1/5 |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
