@@ -3702,6 +3702,9 @@ export const V138_PLAN_262_22_FRESH_DESTINATIONS = Object.freeze([
   ".planning/artifacts/v1.38-current-matrix-calibration-v7.json",
   ".planning/artifacts/v1.38-current-matrix-reproduction-v8.json",
   ".planning/artifacts/v1.38-plan-262-22-terminal-v1.json",
+  ".planning/artifacts/v1.38-plan-262-22-preflight-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-22-calibration-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-22-reproduction-consumption-v1.json",
 ] as const)
 
 const V138_REVIEWED_SOURCE_A2 = "6db9f79e38340b303d73d6e379c13f667b5eadc9"
@@ -4062,6 +4065,40 @@ export const buildV138SuccessorSourceSealV3 = (input: {
   return Object.freeze({ ...body, sealRoot: identityRoot(
     "containmentPolicy", V138_SUCCESSOR_SOURCE_SEAL_V3_SCHEMA, body,
   ) })
+}
+
+export const checkV138SealedWorktreeAtA3 = (
+  repoRoot: string,
+  seal: ReturnType<typeof buildV138SuccessorSourceSealV3>,
+): true => {
+  const sourceA3 = seal.sourceCustody.sourceA3
+  const records = [
+    ...seal.protectedHistory.artifacts,
+    ...seal.selectedRouteClosure.sourceBlobs,
+    ...seal.selectedRouteClosure.resolverMetadata,
+  ]
+  const seen = new Map<string, Sha256>()
+  for (const record of records) {
+    const prior = seen.get(record.path)
+    if (prior !== undefined && prior !== record.sha256) {
+      fail("V138_SEALED_WORKTREE_V3_IDENTITY_CONFLICT")
+    }
+    seen.set(record.path, record.sha256)
+  }
+  for (const [repoPath, expectedRoot] of seen) {
+    const working = regularFile(path.resolve(repoRoot, repoPath), "required")!
+    const committed = readCommitFile(repoRoot, sourceA3, repoPath)
+    if (
+      sha256(working) !== expectedRoot ||
+      sha256(committed) !== expectedRoot ||
+      !working.equals(committed)
+    ) fail("V138_SEALED_WORKTREE_V3_DRIFT")
+  }
+  requireAbsentAtCommit(repoRoot, sourceA3, V138_V6_REPRODUCTION,
+    "V138_PROTECTED_HISTORY_V3_REPRODUCTION_PRESENT")
+  requireAbsentAtCommit(repoRoot, sourceA3, V138_V6_REPRODUCTION_MARKER,
+    "V138_PROTECTED_HISTORY_V3_REPRODUCTION_MARKER_PRESENT")
+  return true
 }
 
 export const checkV138SuccessorSourceSealV3 = (

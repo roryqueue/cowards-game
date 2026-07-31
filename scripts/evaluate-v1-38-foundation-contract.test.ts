@@ -92,6 +92,8 @@ import {
   buildV138ExecutionContextV6Receipt,
   buildV138HostHeadroomPreflightV7Receipt,
   buildV138ParallelCalibrationV7Receipt,
+  buildV138AuthoritativeMatrixV8Receipt,
+  buildV138Plan26222TerminalV1,
   buildV138Plan26219TerminalV2,
   buildV138ParallelCalibrationV5PreflightTerminal,
   buildV138ParallelCalibrationV5Receipt,
@@ -107,6 +109,9 @@ import {
   checkV138ExecutionContextV6Receipt,
   checkV138HostHeadroomPreflightV7Receipt,
   checkV138ParallelCalibrationV7Receipt,
+  checkV138AuthoritativeMatrixV8Receipt,
+  checkV138Plan26222TerminalV1,
+  checkV138Plan26222ConsumptionMarker,
   checkV138HostHeadroomPreflightV5Receipt,
   checkV138HostHeadroomPreflightV6Receipt,
   checkV138HistoricalFoundationAdmission,
@@ -122,6 +127,7 @@ import {
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
   consumeV138Plan26219Stage,
+  consumeV138Plan26222Stage,
   dispatchV138CurrentMatrixDirectEntry,
   deriveV138CalibrationAttemptMappings,
   deriveV138ParallelCalibrationPolicy,
@@ -6280,7 +6286,36 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
       ".planning/artifacts/v1.38-current-matrix-calibration-v7.json",
       ".planning/artifacts/v1.38-current-matrix-reproduction-v8.json",
       ".planning/artifacts/v1.38-plan-262-22-terminal-v1.json",
+      ".planning/artifacts/v1.38-plan-262-22-preflight-consumption-v1.json",
+      ".planning/artifacts/v1.38-plan-262-22-calibration-consumption-v1.json",
+      ".planning/artifacts/v1.38-plan-262-22-reproduction-consumption-v1.json",
     ])
+  })
+
+  it("durably consumes each Plan 262-22 stage once and rejects mutation", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-262-22-marker-"))
+    try {
+      mkdirSync(path.resolve(tempRoot, ".planning/artifacts"), {
+        recursive: true,
+      })
+      const context = contextV7()
+      const input = { repoRoot: tempRoot, stage: "preflight" as const,
+        context, predecessorRoot: context.receiptRoot,
+        chargedAttemptIds: ["preflight:v7:0"] }
+      const markerRoot = consumeV138Plan26222Stage(input)
+      expect(checkV138Plan26222ConsumptionMarker(input).markerRoot)
+        .toBe(markerRoot)
+      expect(() => consumeV138Plan26222Stage(input)).toThrow()
+      const target = path.resolve(tempRoot,
+        ".planning/artifacts/v1.38-plan-262-22-preflight-consumption-v1.json")
+      const mutated = JSON.parse(readFileSync(target, "utf8")) as
+        Record<string, unknown>
+      mutated.chargedAttemptCount = 2
+      writeFileSync(target, JSON.stringify(mutated))
+      expect(() => checkV138Plan26222ConsumptionMarker(input)).toThrow()
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
   })
 
   it("keeps the inclusive 2500-basis-point v7 gate and charges all eight identities before launch", async () => {
@@ -6335,6 +6370,57 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
     expect(calibration.attempts.map(({ publicAttemptId }) => publicAttemptId))
       .toEqual(Array.from({ length: 8 }, (_, index) =>
         `calibration:v7:${index}`))
+    const nestedExtra = clone(calibration) as unknown as {
+      attempts: Record<string, unknown>[]
+    }
+    nestedExtra.attempts[0]!.privateDiagnostic = "must-not-persist"
+    expect(() => checkV138ParallelCalibrationV7Receipt(inventory,
+      nestedExtra, context, refused)).toThrow()
+  })
+
+  it("fails closed on unknown reproduction accounting and nested payloads", async () => {
+    const context = contextV7()
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const preflight = buildV138HostHeadroomPreflightV7Receipt({
+      result: await admittedInjectedHeadroom(), executionContext: context,
+    })
+    const supervised = await calibrateV138ParallelMatrix({ inventory,
+      runner: successfulInjectedRunner(), executionIdentityVersion: "v7",
+      sharedHeadroomObserver: admittedInjectedHeadroom,
+      hardwareIdentity: { operatingSystem: "test", architecture: "test",
+        nodeVersion: "test", cpuIdentity: "test" } })
+    const calibration = buildV138ParallelCalibrationV7Receipt({ inventory,
+      executionContext: context, preflight, calibration: supervised })
+    const reproduction = buildV138AuthoritativeMatrixV8Receipt({ inventory,
+      context, preflight, calibration,
+      callbackFailureAfterConsumption: true })
+    expect(checkV138AuthoritativeMatrixV8Receipt(clone(reproduction), {
+      inventory, context, preflight, calibration,
+    })).toEqual(reproduction)
+    expect(reproduction).toMatchObject({ status: "stopped_process_failure",
+      observationMode: "unknown_after_consumption", childLaunchCount: null,
+      terminalOutcomeCount: null, acceptedCellCount: 0 })
+    const nestedExtra = clone(reproduction) as unknown as {
+      attempts: Record<string, unknown>[]
+    }
+    nestedExtra.attempts[0]!.strategyMemory = "private"
+    expect(() => checkV138AuthoritativeMatrixV8Receipt(nestedExtra, {
+      inventory, context, preflight, calibration,
+    })).toThrow()
+  })
+
+  it("requires pre-observation terminals to carry no later evidence", () => {
+    const context = contextV7()
+    const evidence = { sourceA3: context.sourceA3, sourceB3: context.sourceB3,
+      authorizationRoot: context.authorizationRoot,
+      sealRoot: context.sealRoot }
+    const terminal = buildV138Plan26222TerminalV1({ ...evidence,
+      disposition: "tool_identity_failed" })
+    expect(checkV138Plan26222TerminalV1(clone(terminal), evidence))
+      .toEqual(terminal)
+    expect(() => checkV138Plan26222TerminalV1(clone(terminal), {
+      ...evidence, context,
+    })).toThrow()
   })
 
   it.each([
@@ -6507,6 +6593,8 @@ describe("v1.38 matrix real process boundary", () => {
   it.each([
     ["ESRCH", Object.assign(new Error("exited"), { code: "ESRCH" }), ""],
     ["no-row", null, ""],
+    ["default-ps-no-row", Object.assign(new Error("exited"), { code: 1 }),
+      "  \n"],
   ] as const)(
     "fails closed on pre-first-sample %s but treats it as benign after a valid sample",
     async (_label, error, stdout) => {
