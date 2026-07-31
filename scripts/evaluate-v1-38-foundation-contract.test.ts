@@ -69,6 +69,7 @@ import {
   buildV138ExecutionContextV5Receipt,
   buildV138ParallelCalibrationV5PreflightTerminal,
   buildV138ParallelCalibrationV5Receipt,
+  buildV138ParallelCalibrationV6Receipt,
   buildV138ParallelCalibrationV4Receipt,
   buildV138ParallelCalibrationV3Receipt,
   buildV138AuthoritativeMatrixV3Receipt,
@@ -80,6 +81,7 @@ import {
   checkV138HostHeadroomPreflightV5Receipt,
   checkV138HistoricalFoundationAdmission,
   checkV138ParallelCalibrationV5Receipt,
+  checkV138ParallelCalibrationV6Receipt,
   checkV138AuthoritativeMatrixV6Receipt,
   checkV138Plan26216TerminalBranch,
   checkV138SuccessorV4V5Branch,
@@ -95,6 +97,7 @@ import {
   executeV138ParallelMatrix,
   isV138ParallelProjectedTotalAdmitted,
   loadV138HistoricalMatrixExpectation,
+  mapV138CalibrationTerminalOutcomes,
   planV138MatrixShards,
   parseV138SamplerAuthorization,
   parseV138Plan26213ExecutionAuthorization,
@@ -977,17 +980,25 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
     "plan 262-15 terminal enforces %s artifact presence",
     (disposition) => {
       const root = mkdtempSync(path.join(tmpdir(), "cowards-262-15-terminal-"))
+      const originalHead = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })
+      const originalStatus = execFileSync("git", ["status", "--porcelain"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })
       try {
         execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+        execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+          cwd: root,
+        })
         mkdirSync(path.dirname(path.resolve(root, paths.authorization)), { recursive: true })
         mkdirSync(path.dirname(path.resolve(root, paths.review)), { recursive: true })
         writeFileSync(
           path.resolve(root, paths.review),
           cleanPlan26215Review(),
         )
-        execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
-          cwd: root,
-        })
         const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
         const authorization = buildV138Plan26215Authorization(
           root,
@@ -1175,6 +1186,14 @@ status: all_fixed
       } finally {
         rmSync(root, { recursive: true, force: true })
       }
+      expect(execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })).toBe(originalHead)
+      expect(execFileSync("git", ["status", "--porcelain"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      })).toBe(originalStatus)
     },
     120_000,
   )
@@ -1376,6 +1395,14 @@ describe("v1.38 plan 262-16 hostile receipt validation", () => {
 describe("v1.38 plan 262-16 terminal artifact presence", () => {
   it("plan 262-16 terminal validates the preflight-refused charged branch", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "cowards-262-16-terminal-"))
+    const originalHead = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })
+    const originalStatus = execFileSync("git", ["status", "--porcelain"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })
     const paths = {
       authorization: ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json",
       seal: ".planning/artifacts/v1.38-successor-source-seal-v1.json",
@@ -1387,6 +1414,9 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
     } as const
     try {
       execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, root])
+      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
+        cwd: root,
+      })
       mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
       const reviewPath =
         ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-15-REVIEW.md"
@@ -1395,9 +1425,6 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         path.resolve(root, reviewPath),
         cleanPlan26215Review(),
       )
-      execFileSync("git", ["checkout", "--quiet", V138_REVIEWED_SOURCE_A_FIXTURE], {
-        cwd: root,
-      })
       const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
       const authorization = buildV138Plan26215Authorization(
         root,
@@ -2199,6 +2226,14 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+    expect(execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })).toBe(originalHead)
+    expect(execFileSync("git", ["status", "--porcelain"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })).toBe(originalStatus)
   }, 600_000)
 })
 
@@ -3725,9 +3760,178 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
         inventoryOrdinal: index,
         templateAttemptId: inventory.attempts[index]!.attemptId,
       })
-      expect(mapping.executionAttemptId).toBe(mapping.publicAttemptId)
+      expect(mapping.executionAttemptId).toBe(
+        `${mapping.publicAttemptId}:${mapping.templateAttemptId}`,
+      )
       expect(Object.isFrozen(mapping)).toBe(true)
     }
+  })
+
+  it("joins each full scheduler identity exactly once and copies inventory shard ownership", () => {
+    const mappings = deriveV138CalibrationAttemptMappings(
+      enumerateV138CurrentMatrix(repoRoot),
+      "v6",
+    )
+    const terminals = Array.from({ length: 4 }, (_, shardOrdinal) => ({
+      shardId: `calibration-shard:${shardOrdinal}`,
+      laneId: `lane:${shardOrdinal}`,
+      classification: "success" as const,
+      elapsedMilliseconds: 1,
+      maxRssKilobytes: 1,
+      cleanup: {
+        gracefulTerminationSent: false,
+        forceTerminationSent: false,
+        exitAwaited: true,
+        orphanProcessIds: [],
+      },
+      outcomes: mappings
+        .filter(({ shardId }) => shardId === `calibration-shard:${shardOrdinal}`)
+        .map(({ executionAttemptId }) => ({
+          attemptId: executionAttemptId,
+          classification: "success" as const,
+          outcome: "draw" as const,
+        })),
+    }))
+
+    const projected = mapV138CalibrationTerminalOutcomes({ mappings, terminals })
+    expect(projected).toHaveLength(8)
+    expect(projected.every(({ childLaunched }) => childLaunched)).toBe(true)
+    expect(projected.every(({ terminalObserved }) => terminalObserved)).toBe(true)
+    expect(projected.map(({ shardId }) => shardId)).toEqual(
+      mappings.map(({ shardId }) => shardId),
+    )
+
+    const duplicated = structuredClone(terminals)
+    duplicated[0]!.outcomes.push(duplicated[0]!.outcomes[0]!)
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: duplicated }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const missing = structuredClone(terminals)
+    missing[0]!.outcomes.pop()
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: missing }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const foreign = structuredClone(terminals)
+    foreign[0]!.outcomes[0]!.attemptId = "calibration:v6:foreign"
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: foreign }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const wrongShard = structuredClone(terminals)
+    wrongShard[0]!.shardId = "calibration-shard:3"
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({ mappings, terminals: wrongShard }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+  })
+
+  it("builds admitted and stopped v6 receipts from exact injected terminal mappings", async () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const identity = {
+      sourceB2: "1".repeat(40),
+      sourceB2CustodyRoot: `sha256:${"2".repeat(64)}` as const,
+      executionContextRoot: `sha256:${"3".repeat(64)}` as const,
+      preflightRoot: `sha256:${"4".repeat(64)}` as const,
+    }
+    const hardwareIdentity = {
+      operatingSystem: "test-os",
+      architecture: "test-arch",
+      nodeVersion: "test-node",
+      cpuIdentity: "test-cpu",
+    }
+    const calibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: successfulInjectedRunner(),
+      hardwareIdentity,
+      executionIdentityVersion: "v6",
+    })
+    const admitted = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_admitted",
+      calibration,
+    })
+    expect(admitted).toMatchObject({
+      status: "admitted",
+      chargedAttemptCount: 8,
+      childLaunchCount: 8,
+      terminalOutcomeCount: 8,
+      acceptedCellCount: 8,
+      publicStopReason: null,
+      noRetry: true,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(admitted.supervisedCalibration).not.toBeNull()
+    expect(
+      checkV138ParallelCalibrationV6Receipt(inventory, structuredClone(admitted)),
+    ).toEqual(admitted)
+
+    const stoppedCalibration = await calibrateV138ParallelMatrix({
+      inventory,
+      runner: {
+        async run(shard) {
+          return {
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            classification: "failed",
+            elapsedMilliseconds: 1,
+            maxRssKilobytes: 1,
+            cleanup: {
+              gracefulTerminationSent: false,
+              forceTerminationSent: false,
+              exitAwaited: true,
+              orphanProcessIds: [],
+            },
+            outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+              attemptId: executionAttemptId,
+              classification: "system_failure" as const,
+              code: "INJECTED_SYSTEM_FAILURE",
+              retryable: false,
+            })),
+          }
+        },
+      },
+      hardwareIdentity,
+      executionIdentityVersion: "v6",
+    })
+    const stopped = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_admitted",
+      calibration: stoppedCalibration,
+    })
+    expect(stopped).toMatchObject({
+      status: "stopped_process_failure",
+      childLaunchCount: 8,
+      terminalOutcomeCount: 8,
+      acceptedCellCount: 0,
+      publicStopReason: "SHARD_EXECUTION_FAILED",
+      noRetry: true,
+    })
+    expect(
+      stopped.chargedAttempts.every(
+        (attempt) => attempt.state === "terminal_system_failure",
+      ),
+    ).toBe(true)
+
+    const preflightStopped = buildV138ParallelCalibrationV6Receipt({
+      inventory,
+      ...identity,
+      preflightDisposition: "preflight_refused",
+    })
+    expect(preflightStopped).toMatchObject({
+      status: "preflight_refused",
+      childLaunchCount: 0,
+      terminalOutcomeCount: 0,
+      acceptedCellCount: 0,
+      supervisedCalibration: null,
+    })
+    expect(
+      preflightStopped.chargedAttempts.every(
+        (attempt) => attempt.state === "not_launched_preflight_refused",
+      ),
+    ).toBe(true)
   })
 
   it.each([
