@@ -1,13 +1,15 @@
 import { Buffer } from "node:buffer"
-import { createHash } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 import {
   closeSync,
   constants,
   fstatSync,
   fsyncSync,
   lstatSync,
+  linkSync,
   openSync,
   readFileSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs"
 import { execFileSync } from "node:child_process"
@@ -2113,6 +2115,119 @@ const writeCanonicalExclusive = (
   }
 }
 
+export interface V138CanonicalPublicationV2Options {
+  write?: (descriptor: number, bytes: Uint8Array) => void
+  fsyncFile?: (descriptor: number) => void
+  link?: (temporaryPath: string, targetPath: string) => void
+  fsyncDirectory?: (
+    descriptor: number,
+    phase: "publish" | "cleanup" | "rollback",
+  ) => void
+  readback?: (descriptor: number) => Buffer
+  unlink?: (targetPath: string, kind: "temporary" | "rollback") => void
+}
+
+export const writeV138CanonicalExclusiveV2 = (
+  repoRoot: string,
+  target: string,
+  value: unknown,
+  options: V138CanonicalPublicationV2Options = {},
+): void => {
+  const bytes = Buffer.from(canonical(value), "utf8")
+  const parentChain = validateV138CanonicalParentChain(repoRoot, target)
+  const temporaryPath = path.join(
+    path.dirname(target),
+    `.${path.basename(target)}.${process.pid}.${randomBytes(16).toString("hex")}.tmp`,
+  )
+  let descriptor: number | undefined
+  let linked = false
+  let failure: unknown
+  const syncDirectory = (phase: "publish" | "cleanup" | "rollback") => {
+    const directoryDescriptor = openSync(path.dirname(target), "r")
+    try {
+      ;(options.fsyncDirectory ?? ((fd) => fsyncSync(fd)))(
+        directoryDescriptor,
+        phase,
+      )
+    } finally {
+      closeSync(directoryDescriptor)
+    }
+  }
+  try {
+    descriptor = openSync(
+      temporaryPath,
+      constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY |
+        (constants.O_NOFOLLOW ?? 0),
+      0o600,
+    )
+    ;(options.write ?? ((fd, complete) => writeFileSync(fd, complete)))(
+      descriptor,
+      bytes,
+    )
+    ;(options.fsyncFile ?? fsyncSync)(descriptor)
+    closeSync(descriptor)
+    descriptor = undefined
+    checkV138CanonicalParentChain(parentChain)
+    ;(options.link ?? linkSync)(temporaryPath, target)
+    linked = true
+    syncDirectory("publish")
+    const checkDescriptor = openSync(
+      target,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    )
+    try {
+      const checked = (options.readback ?? readFileSync)(checkDescriptor)
+      if (!checked.equals(bytes)) fail("V138_V2_PUBLICATION_READBACK_FAILED")
+    } finally {
+      closeSync(checkDescriptor)
+    }
+    checkV138CanonicalParentChain(parentChain)
+  } catch (error) {
+    failure = error
+  } finally {
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor)
+      } catch (error) {
+        failure ??= error
+      }
+    }
+    let temporaryRemoved = false
+    try {
+      ;(options.unlink ?? ((candidate) => unlinkSync(candidate)))(
+        temporaryPath,
+        "temporary",
+      )
+      temporaryRemoved = true
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") failure ??= error
+    }
+    if (temporaryRemoved) {
+      try {
+        syncDirectory("cleanup")
+      } catch (error) {
+        failure ??= error
+      }
+    }
+  }
+  if (failure !== undefined && linked) {
+    try {
+      ;(options.unlink ?? ((candidate) => unlinkSync(candidate)))(
+        target,
+        "rollback",
+      )
+      syncDirectory("rollback")
+      linked = false
+    } catch (rollbackError) {
+      throw new AggregateError(
+        [failure, rollbackError],
+        "V138_V2_PUBLICATION_ROLLBACK_INDETERMINATE",
+      )
+    }
+  }
+  if (failure !== undefined) throw failure
+}
+
 export const writeV138Plan26215Authorization = (
   repoRoot: string,
   targetPath: string,
@@ -2191,6 +2306,9 @@ export const V138_PLAN_262_19_FRESH_DESTINATIONS = Object.freeze([
   ".planning/artifacts/v1.38-current-matrix-calibration-v6.json",
   ".planning/artifacts/v1.38-current-matrix-reproduction-v7.json",
   ".planning/artifacts/v1.38-plan-262-19-terminal-v2.json",
+  ".planning/artifacts/v1.38-plan-262-19-preflight-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-19-calibration-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-19-reproduction-consumption-v1.json",
 ] as const)
 
 const V138_OLD_REPRODUCTION_V6 =
@@ -3148,7 +3266,7 @@ export const writeV138Plan26218AuthorizationV2 = (
     sourceA2,
     literalBytes,
   )
-  writeCanonicalExclusive(repoRoot, target, value)
+  writeV138CanonicalExclusiveV2(repoRoot, target, value)
   return value
 }
 
@@ -3166,7 +3284,7 @@ export const writeV138SuccessorSourceSealV2 = (
     repoRoot,
     authorization: authorizationValue,
   })
-  writeCanonicalExclusive(repoRoot, target, value)
+  writeV138CanonicalExclusiveV2(repoRoot, target, value)
   return value
 }
 
@@ -3387,7 +3505,7 @@ export const writeV138Plan26218TerminalV2 = (
       body,
     ),
   })
-  writeCanonicalExclusive(repoRoot, target, terminal)
+  writeV138CanonicalExclusiveV2(repoRoot, target, terminal)
   return terminal
 }
 
