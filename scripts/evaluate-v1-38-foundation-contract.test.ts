@@ -62,6 +62,7 @@ import {
   v138Plan26215AuthorizationLiteral,
   v138Plan26218AuthorizationLiteral,
   writePlan26215Terminal,
+  writeV138CanonicalExclusiveV2,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_FOUNDATION_LIVE_SOURCE_PATHS,
@@ -110,6 +111,7 @@ import {
   checkV138MatrixDiagnosticV2Receipt,
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
+  consumeV138Plan26219Stage,
   dispatchV138CurrentMatrixDirectEntry,
   deriveV138CalibrationAttemptMappings,
   deriveV138ParallelCalibrationPolicy,
@@ -4000,6 +4002,34 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
         }),
       ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
     }
+    const splitLaunches = clone(launchEvents)
+    const secondId = splitLaunches[0]!.executionAttemptIds.pop()!
+    splitLaunches.push({
+      ...splitLaunches[0]!,
+      executionAttemptIds: [secondId],
+    })
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({
+        mappings,
+        terminals,
+        launchEvents: splitLaunches,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
+
+    const incoherent = clone(terminals)
+    incoherent[0]!.outcomes[0] = {
+      attemptId: incoherent[0]!.outcomes[0]!.attemptId,
+      classification: "system_failure",
+      code: "INJECTED_FAILURE",
+      retryable: false,
+    }
+    expect(() =>
+      mapV138CalibrationTerminalOutcomes({
+        mappings,
+        terminals: incoherent,
+        launchEvents,
+      }),
+    ).toThrow("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
   })
 
   it("builds admitted and stopped v6 receipts from exact injected terminal mappings", async () => {
@@ -4132,6 +4162,25 @@ describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
         (attempt) => attempt.state === "terminal_system_failure",
       ),
     ).toBe(true)
+    for (const forbidden of [
+      "stderr: secret",
+      "source=StrategyMemory",
+      "objectivePayload",
+      "pid=12345",
+      "x".repeat(4_097),
+    ]) {
+      const leaked = clone(stopped)
+      leaked.chargedAttempts[0]!.code = forbidden
+      const { receiptRoot: _leakedRoot, ...leakedBody } = leaked
+      leaked.receiptRoot = v138SuccessorRoot(
+        "budgetProfile",
+        leaked.schemaVersion,
+        leakedBody,
+      )
+      expect(() =>
+        checkV138ParallelCalibrationV6Receipt(inventory, leaked),
+      ).toThrow("MATRIX_CALIBRATION_V6_INVALID")
+    }
 
     const preflightStopped = buildV138ParallelCalibrationV6Receipt({
       inventory,
@@ -4462,6 +4511,107 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         ).toThrow("MATRIX_PLAN_262_19_PUBLICATION_DURABLY_ROLLED_BACK")
         expect(existsSync(target)).toBe(false)
         expect(checkV138CanonicalParentChain(parentChain)).toBe(true)
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("v2 publication rolls back injected write, fsync, link, readback, and cleanup faults", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-v2-publish-faults-"))
+    try {
+      mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      const cases = [
+        { write: () => { throw new Error("write") } },
+        { fsyncFile: () => { throw new Error("file-fsync") } },
+        { link: () => { throw new Error("link") } },
+        {
+          fsyncDirectory: (
+            _fd: number,
+            phase: "publish" | "cleanup" | "rollback",
+          ) => {
+            if (phase === "publish") throw new Error("directory-fsync")
+          },
+        },
+        { readback: () => Buffer.from("corrupt") },
+        {
+          unlink: (candidate: string, kind: "temporary" | "rollback") => {
+            if (kind === "temporary") throw new Error("temp-cleanup")
+            unlinkSync(candidate)
+          },
+        },
+      ]
+      for (const [ordinal, options] of cases.entries()) {
+        const target = path.resolve(
+          root,
+          `.planning/artifacts/fault-${ordinal}.json`,
+        )
+        expect(() =>
+          writeV138CanonicalExclusiveV2(
+            root,
+            target,
+            { ordinal },
+            options,
+          ),
+        ).toThrow()
+        expect(existsSync(target)).toBe(false)
+      }
+      const rollbackTarget = path.resolve(
+        root,
+        ".planning/artifacts/rollback-fsync.json",
+      )
+      expect(() =>
+        writeV138CanonicalExclusiveV2(
+          root,
+          rollbackTarget,
+          { rollback: true },
+          {
+            readback: () => Buffer.from("corrupt"),
+            fsyncDirectory(_fd, phase) {
+              if (phase === "rollback") throw new Error("rollback-fsync")
+            },
+          },
+        ),
+      ).toThrow("V138_V2_PUBLICATION_ROLLBACK_INDETERMINATE")
+      expect(existsSync(rollbackTarget)).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("durably consumes each callback stage exactly once", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "cowards-stage-consumption-"))
+    try {
+      mkdirSync(path.resolve(root, ".planning/artifacts"), { recursive: true })
+      const context = {
+        sourceA2: "1".repeat(40),
+        sourceB2: "2".repeat(40),
+        authorizationRoot: `sha256:${"3".repeat(64)}`,
+        sealRoot: `sha256:${"4".repeat(64)}`,
+        receiptRoot: `sha256:${"5".repeat(64)}`,
+      } as never
+      for (const stage of [
+        "preflight",
+        "calibration",
+        "reproduction",
+      ] as const) {
+        const markerRoot = consumeV138Plan26219Stage({
+          repoRoot: root,
+          stage,
+          context,
+          predecessorRoot: `sha256:${"6".repeat(64)}`,
+          chargedAttemptIds: [`${stage}:charged:0`],
+        })
+        expect(markerRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+        expect(() =>
+          consumeV138Plan26219Stage({
+            repoRoot: root,
+            stage,
+            context,
+            predecessorRoot: `sha256:${"6".repeat(64)}`,
+            chargedAttemptIds: [`${stage}:charged:0`],
+          }),
+        ).toThrow("MATRIX_SUCCESSOR_TARGET_NOT_FRESH")
       }
     } finally {
       rmSync(root, { recursive: true, force: true })
@@ -4989,6 +5139,30 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
           /MATRIX_(?:REPRODUCTION_V7_EXECUTION|PARALLEL_ACCOUNTING)_INVALID/u,
         )
       }
+      for (const forbidden of [
+        "stderr: secret",
+        "source=StrategyMemory",
+        "objectivePayload",
+        "pid=12345",
+        "x".repeat(4_097),
+      ]) {
+        const leaked = clone(reproduction)
+        leaked.attempts[0]!.result = forbidden
+        const { receiptRoot: _leakedRoot, ...leakedBody } = leaked
+        leaked.receiptRoot = v138SuccessorRoot(
+          "evidenceBundle",
+          leaked.schemaVersion,
+          leakedBody,
+        )
+        expect(() =>
+          checkV138AuthoritativeMatrixV7Receipt(leaked, {
+            repoRoot: root,
+            executionContext: context,
+            preflight,
+            calibration,
+          }),
+        ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
+      }
       expect(reproduction).toMatchObject({
         status: "stopped_process_failure",
         chargedAttemptCount: 540,
@@ -5383,6 +5557,7 @@ describe("v1.38 matrix real process boundary", () => {
 
   it("shared-observer runner mode never calls the legacy host-memory sampler", async () => {
     let legacySamplerCalls = 0
+    let zeroedOutputBuffers = 0
     const runner = createV138SubprocessShardRunner(repoRoot, {
       useLegacyHostMemory: false,
       legacyHostMemorySampler: () => {
@@ -5394,6 +5569,12 @@ describe("v1.38 matrix real process boundary", () => {
         return new EventEmitter() as ReturnType<V138RssCommandAdapter["execFile"]>
       }),
       shardProcessFactory: injectedShardProcessFactory((value) => value),
+      onOutputBuffersZeroed: (buffers) => {
+        zeroedOutputBuffers += buffers.length
+        expect(
+          buffers.every((buffer) => buffer.every((byte) => byte === 0)),
+        ).toBe(true)
+      },
     })
     await runner.run(
       {
@@ -5413,6 +5594,7 @@ describe("v1.38 matrix real process boundary", () => {
       },
     )
     expect(legacySamplerCalls).toBe(0)
+    expect(zeroedOutputBuffers).toBeGreaterThan(0)
   })
 
   it.each([
