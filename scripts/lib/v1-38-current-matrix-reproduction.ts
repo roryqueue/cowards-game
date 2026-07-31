@@ -6792,26 +6792,23 @@ const validateParallelCalibrationReceipt = (
 ): void => {
   const policy = deriveV138ParallelCalibrationPolicy(inventory)
   const projection = projectV138ParallelMatrix(policy, receipt.rawObservation)
-  const expectedAttemptIds = policy.inventory.shards
-    .flatMap(({ attemptIds }) => attemptIds)
-    .map((attemptId) =>
-      executionIdentityVersion === "v2"
-        ? attemptId.replace(/^calibration:v1:/u, "calibration:v2:")
-        : executionIdentityVersion === "v3"
-          ? attemptId.replace(/^calibration:v1:/u, "calibration:v3:")
-          : executionIdentityVersion === "v4"
-            ? attemptId.replace(/^calibration:v1:/u, "calibration:v4:")
-          : executionIdentityVersion === "v5" ||
-              executionIdentityVersion === "v6"
-            ? deriveV138CalibrationAttemptMappings(
-                inventory,
-                executionIdentityVersion,
-              ).find(
-                ({ templateAttemptId }) =>
-                  attemptId.endsWith(`:${templateAttemptId}`),
-              )?.executionAttemptId ?? attemptId
-          : attemptId,
-    )
+  const expectedAttemptIds =
+    executionIdentityVersion === "v5" || executionIdentityVersion === "v6"
+      ? deriveV138CalibrationAttemptMappings(
+          inventory,
+          executionIdentityVersion,
+        ).map(({ executionAttemptId }) => executionAttemptId)
+      : policy.inventory.shards
+          .flatMap(({ attemptIds }) => attemptIds)
+          .map((attemptId) =>
+            executionIdentityVersion === "v2"
+              ? attemptId.replace(/^calibration:v1:/u, "calibration:v2:")
+              : executionIdentityVersion === "v3"
+                ? attemptId.replace(/^calibration:v1:/u, "calibration:v3:")
+                : executionIdentityVersion === "v4"
+                  ? attemptId.replace(/^calibration:v1:/u, "calibration:v4:")
+                  : attemptId,
+          )
   const actualAttemptIds = receipt.terminals.flatMap(({ outcomes }) =>
     outcomes.map(({ attemptId }) => attemptId),
   )
@@ -8044,9 +8041,311 @@ export const mapV138CalibrationTerminalOutcomes = (input: {
           code: outcome.code,
         })
       }
+      if (
+        outcome.classification === "timeout" ||
+        outcome.classification === "cancelled"
+      ) {
+        return Object.freeze({
+          ...identity,
+          state: "terminal_system_failure" as const,
+          classification: "system_failure" as const,
+          code: outcome.code,
+        })
+      }
       throw new TypeError("MATRIX_CALIBRATION_OUTCOME_MAPPING_INVALID")
     }),
   )
+}
+
+export interface V138ParallelCalibrationV6Receipt {
+  readonly schemaVersion: "v1.38-current-matrix-calibration-v6"
+  readonly sourceB2: string
+  readonly sourceB2CustodyRoot: Sha256
+  readonly executionContextRoot: Sha256
+  readonly preflightRoot: Sha256
+  readonly status:
+    | "admitted"
+    | "stopped_process_failure"
+    | "preflight_refused"
+    | "preflight_unavailable"
+  readonly chargedAttemptCount: 8
+  readonly chargedAttempts: readonly Readonly<
+    | V138CalibrationMappedOutcome
+    | (V138CalibrationAttemptMapping & {
+        state:
+          | "not_launched_preflight_refused"
+          | "not_launched_preflight_unavailable"
+        childLaunched: false
+        terminalObserved: false
+      })
+  >[]
+  readonly shardCount: 4
+  readonly childLaunchCount: number
+  readonly terminalOutcomeCount: number
+  readonly acceptedCellCount: 0 | 8
+  readonly publicStopReason: V138ParallelStopReason | null
+  readonly supervisedCalibration: V138ParallelCalibrationReceipt | null
+  readonly noRetry: true
+  readonly partialAcceptedEvidenceReusable: false
+  readonly receiptRoot: Sha256
+}
+
+const V138_CALIBRATION_V6_KEYS = Object.freeze([
+  "schemaVersion",
+  "sourceB2",
+  "sourceB2CustodyRoot",
+  "executionContextRoot",
+  "preflightRoot",
+  "status",
+  "chargedAttemptCount",
+  "chargedAttempts",
+  "shardCount",
+  "childLaunchCount",
+  "terminalOutcomeCount",
+  "acceptedCellCount",
+  "publicStopReason",
+  "supervisedCalibration",
+  "noRetry",
+  "partialAcceptedEvidenceReusable",
+  "receiptRoot",
+] as const)
+
+export const buildV138ParallelCalibrationV6Receipt = (input: {
+  readonly inventory: Readonly<V138CurrentMatrixInventory>
+  readonly sourceB2: string
+  readonly sourceB2CustodyRoot: Sha256
+  readonly executionContextRoot: Sha256
+  readonly preflightRoot: Sha256
+  readonly preflightDisposition:
+    | "preflight_admitted"
+    | "preflight_refused"
+    | "preflight_unavailable"
+  readonly calibration?: Readonly<V138ParallelCalibrationReceipt> | undefined
+}): Readonly<V138ParallelCalibrationV6Receipt> => {
+  const mappings = deriveV138CalibrationAttemptMappings(input.inventory, "v6")
+  const preflightAdmitted = input.preflightDisposition === "preflight_admitted"
+  if (preflightAdmitted !== (input.calibration !== undefined)) {
+    throw new TypeError("MATRIX_CALIBRATION_V6_PREFLIGHT_JOIN_INVALID")
+  }
+  let chargedAttempts: V138ParallelCalibrationV6Receipt["chargedAttempts"]
+  if (input.calibration === undefined) {
+    const state =
+      input.preflightDisposition === "preflight_refused"
+        ? "not_launched_preflight_refused" as const
+        : "not_launched_preflight_unavailable" as const
+    chargedAttempts = Object.freeze(
+      mappings.map((mapping) =>
+        Object.freeze({
+          ...mapping,
+          state,
+          childLaunched: false as const,
+          terminalObserved: false as const,
+        }),
+      ),
+    )
+  } else {
+    validateParallelCalibrationReceipt(input.inventory, input.calibration, "v6")
+    chargedAttempts = mapV138CalibrationTerminalOutcomes({
+      mappings,
+      terminals: input.calibration.terminals,
+    })
+  }
+  const admitted =
+    input.calibration?.status === "admitted" &&
+    chargedAttempts.every(
+      (attempt) =>
+        attempt.state === "terminal_success" &&
+        attempt.classification === "success",
+    )
+  const status = admitted
+    ? "admitted" as const
+    : input.preflightDisposition === "preflight_refused"
+      ? "preflight_refused" as const
+      : input.preflightDisposition === "preflight_unavailable"
+        ? "preflight_unavailable" as const
+        : "stopped_process_failure" as const
+  const body = {
+    schemaVersion: "v1.38-current-matrix-calibration-v6" as const,
+    sourceB2: input.sourceB2,
+    sourceB2CustodyRoot: input.sourceB2CustodyRoot,
+    executionContextRoot: input.executionContextRoot,
+    preflightRoot: input.preflightRoot,
+    status,
+    chargedAttemptCount: 8 as const,
+    chargedAttempts,
+    shardCount: 4 as const,
+    childLaunchCount: chargedAttempts.filter(
+      ({ childLaunched }) => childLaunched,
+    ).length,
+    terminalOutcomeCount: chargedAttempts.filter(
+      ({ terminalObserved }) => terminalObserved,
+    ).length,
+    acceptedCellCount: admitted ? 8 as const : 0 as const,
+    publicStopReason: admitted
+      ? null
+      : input.calibration?.reason ?? null,
+    supervisedCalibration: input.calibration ?? null,
+    noRetry: true as const,
+    partialAcceptedEvidenceReusable: false as const,
+  }
+  const receipt = deepFreeze({
+    ...body,
+    receiptRoot: v138SuccessorRoot(
+      "budgetProfile",
+      body.schemaVersion,
+      body,
+    ),
+  })
+  return checkV138ParallelCalibrationV6Receipt(input.inventory, receipt)
+}
+
+export const checkV138ParallelCalibrationV6Receipt = (
+  inventory: Readonly<V138CurrentMatrixInventory>,
+  value: unknown,
+): Readonly<V138ParallelCalibrationV6Receipt> => {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    canonical(Object.keys(value)) !== canonical(V138_CALIBRATION_V6_KEYS)
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V6_INVALID")
+  }
+  const receipt = value as V138ParallelCalibrationV6Receipt
+  const { receiptRoot: _root, ...body } = receipt
+  if (
+    receipt.schemaVersion !== "v1.38-current-matrix-calibration-v6" ||
+    !/^[0-9a-f]{40}$/u.test(receipt.sourceB2) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(receipt.sourceB2CustodyRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(receipt.executionContextRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(receipt.preflightRoot) ||
+    receipt.chargedAttemptCount !== 8 ||
+    receipt.shardCount !== 4 ||
+    receipt.noRetry !== true ||
+    receipt.partialAcceptedEvidenceReusable !== false ||
+    receipt.receiptRoot !==
+      v138SuccessorRoot("budgetProfile", receipt.schemaVersion, body)
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V6_INVALID")
+  }
+  const expectedMappings = deriveV138CalibrationAttemptMappings(inventory, "v6")
+  const stopReasons = new Set<V138ParallelStopReason>([
+    "RESOURCE_SAMPLER_SPAWN_DENIED",
+    "RESOURCE_MEASUREMENT_UNAVAILABLE",
+    "RESOURCE_POLICY_CHILD_RSS",
+    "RESOURCE_POLICY_AGGREGATE_RSS",
+    "RESOURCE_POLICY_HOST_HEADROOM",
+    "RESOURCE_POLICY_SHARD_TIMEOUT",
+    "RESOURCE_POLICY_TOTAL_TIMEOUT",
+    "SHARD_EXECUTION_FAILED",
+    "SHARD_RUNNER_EXCEPTION",
+    "CLEANUP_PROOF_FAILED",
+    "PARENT_EXCEPTION",
+    "PARENT_INTERRUPT",
+  ])
+  if (
+    receipt.chargedAttempts.length !== 8 ||
+    receipt.chargedAttempts.some((attempt, index) => {
+      const expected = expectedMappings[index]!
+      const identityKeys = [
+        "publicAttemptId",
+        "executionAttemptId",
+        "templateAttemptId",
+        "inventoryOrdinal",
+        "shardId",
+        "state",
+        "childLaunched",
+        "terminalObserved",
+      ]
+      const keys =
+        attempt.state === "terminal_success"
+          ? [...identityKeys, "classification", "outcome"]
+          : attempt.state === "terminal_player_violation" ||
+              attempt.state === "terminal_system_failure"
+            ? [...identityKeys, "classification", "code"]
+            : identityKeys
+      return (
+        canonical(Object.keys(attempt).sort()) !== canonical(keys.sort()) ||
+        attempt.publicAttemptId !== expected.publicAttemptId ||
+        attempt.executionAttemptId !== expected.executionAttemptId ||
+        attempt.templateAttemptId !== expected.templateAttemptId ||
+        attempt.inventoryOrdinal !== expected.inventoryOrdinal ||
+        attempt.shardId !== expected.shardId ||
+        (attempt.state === "terminal_success"
+          ? attempt.classification !== "success" ||
+            !["bottom_win", "top_win", "draw"].includes(attempt.outcome) ||
+            attempt.childLaunched !== true ||
+            attempt.terminalObserved !== true
+          : attempt.state === "terminal_player_violation"
+            ? attempt.classification !== "player_violation" ||
+              typeof attempt.code !== "string" ||
+              attempt.code.length === 0 ||
+              attempt.childLaunched !== true ||
+              attempt.terminalObserved !== true
+            : attempt.state === "terminal_system_failure"
+              ? attempt.classification !== "system_failure" ||
+                typeof attempt.code !== "string" ||
+                attempt.code.length === 0 ||
+                attempt.childLaunched !== true ||
+                attempt.terminalObserved !== true
+              : attempt.state === "not_launched_preflight_refused" ||
+                  attempt.state === "not_launched_preflight_unavailable"
+                ? attempt.childLaunched !== false ||
+                  attempt.terminalObserved !== false
+                : true)
+      )
+    }) ||
+    receipt.childLaunchCount !==
+      receipt.chargedAttempts.filter(({ childLaunched }) => childLaunched).length ||
+    receipt.terminalOutcomeCount !==
+      receipt.chargedAttempts.filter(({ terminalObserved }) => terminalObserved)
+        .length ||
+    (receipt.publicStopReason !== null &&
+      !stopReasons.has(receipt.publicStopReason))
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V6_INVALID")
+  }
+  if (receipt.supervisedCalibration !== null) {
+    validateParallelCalibrationReceipt(
+      inventory,
+      receipt.supervisedCalibration,
+      "v6",
+    )
+    const remapped = mapV138CalibrationTerminalOutcomes({
+      mappings: expectedMappings,
+      terminals: receipt.supervisedCalibration.terminals,
+    })
+    if (
+      canonical(remapped) !== canonical(receipt.chargedAttempts) ||
+      receipt.childLaunchCount !== 8 ||
+      receipt.terminalOutcomeCount !== 8 ||
+      (receipt.status === "admitted") !==
+        (receipt.supervisedCalibration.status === "admitted") ||
+      (receipt.status === "admitted"
+        ? receipt.acceptedCellCount !== 8 ||
+          receipt.publicStopReason !== null
+        : receipt.acceptedCellCount !== 0 ||
+          receipt.publicStopReason !== receipt.supervisedCalibration.reason)
+    ) {
+      throw new TypeError("MATRIX_CALIBRATION_V6_INVALID")
+    }
+  } else if (
+    !["preflight_refused", "preflight_unavailable"].includes(receipt.status) ||
+    receipt.childLaunchCount !== 0 ||
+    receipt.terminalOutcomeCount !== 0 ||
+    receipt.acceptedCellCount !== 0 ||
+    receipt.publicStopReason !== null ||
+    receipt.chargedAttempts.some(
+      ({ state }) =>
+        state !==
+        (receipt.status === "preflight_refused"
+          ? "not_launched_preflight_refused"
+          : "not_launched_preflight_unavailable"),
+    )
+  ) {
+    throw new TypeError("MATRIX_CALIBRATION_V6_INVALID")
+  }
+  return deepFreeze(receipt)
 }
 
 export interface V138AuthoritativeMatrixV6Receipt {
