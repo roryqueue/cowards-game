@@ -6600,6 +6600,39 @@ describe("v1.38 matrix real process boundary", () => {
     )).toBe(true)
   })
 
+  it("does not forgive a late permission denial after a prior valid RSS sample", async () => {
+    const callbacks: Array<Parameters<V138RssCommandAdapter["execFile"]>[3]> = []
+    let child: ChildProcessWithoutNullStreams | undefined
+    const runner = createV138SubprocessShardRunner(repoRoot, {
+      useLegacyHostMemory: false,
+      rssCommandAdapter: adapter((_command, _args, _options, callback) => {
+        callbacks.push(callback)
+      }),
+      shardProcessFactory: controlledShardProcessFactory((spawned) => {
+        child = spawned
+      }),
+    })
+    const terminalPromise = runner.run(testShard, {
+      signal: new AbortController().signal,
+      onLaunch: () => undefined,
+      onResourceSample: () => undefined,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 25))
+    callbacks[0]!(null, "100\n", "")
+    await new Promise((resolve) => setTimeout(resolve, 275))
+    child!.stdout.end()
+    child!.stderr.end()
+    child!.emit("close", 0, null)
+    callbacks[1]!(Object.assign(new Error("denied"), { code: "EPERM" }), "", "")
+    await expect(terminalPromise).resolves.toMatchObject({
+      classification: "failed",
+      outcomes: [{
+        classification: "system_failure",
+        code: "RESOURCE_SAMPLER_SPAWN_DENIED",
+      }],
+    })
+  })
+
   it("shared-observer runner mode never calls the legacy host-memory sampler", async () => {
     let legacySamplerCalls = 0
     let zeroedOutputBuffers = 0

@@ -3304,6 +3304,20 @@ export type V138RssSample =
         | "RESOURCE_MEASUREMENT_UNAVAILABLE"
     }>
 
+const V138_RSS_CHILD_EXIT_RACE = Symbol("v1.38-rss-child-exit-race")
+type V138InternalRssSample = V138RssSample & Readonly<{
+  [V138_RSS_CHILD_EXIT_RACE]?: true
+}>
+const childExitRaceSample = (): V138InternalRssSample =>
+  Object.defineProperty(
+    {
+      status: "unavailable" as const,
+      code: "RESOURCE_MEASUREMENT_UNAVAILABLE" as const,
+    },
+    V138_RSS_CHILD_EXIT_RACE,
+    { value: true, enumerable: false, configurable: false, writable: false },
+  )
+
 const defaultV138RssCommandAdapter: V138RssCommandAdapter = Object.freeze({
   adapterId: "node-execfile-ps-rss-exact-pid-v1",
   command: "ps",
@@ -3350,7 +3364,7 @@ export const sampleV138ChildRss = (
     }
     let callbackCount = 0
     let settled = false
-    const settle = (sample: V138RssSample): void => {
+    const settle = (sample: V138InternalRssSample): void => {
       queueMicrotask(() => {
         if (settled) return
         settled = true
@@ -3372,15 +3386,23 @@ export const sampleV138ChildRss = (
         (error, stdout) => {
           callbackCount += 1
           if (error !== null) {
-            settle({ status: "unavailable", code: samplerFailureCode(error) })
+            settle(
+              error.code === "ESRCH"
+                ? childExitRaceSample()
+                : { status: "unavailable", code: samplerFailureCode(error) },
+            )
             return
           }
           const trimmed = stdout.trim()
           if (!/^[1-9][0-9]*$/u.test(trimmed)) {
-            settle({
-              status: "unavailable",
-              code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
-            })
+            settle(
+              stdout === ""
+                ? childExitRaceSample()
+                : {
+                    status: "unavailable",
+                    code: "RESOURCE_MEASUREMENT_UNAVAILABLE",
+                  },
+            )
             return
           }
           const rssKilobytes = Number(trimmed)
@@ -3637,7 +3659,11 @@ export function createV138SubprocessShardRunner(
                   freeKilobytes: Math.floor(freemem() / 1024),
                 })
           if (rss.status === "unavailable") {
-            if (closed && hasValidExternalRssSample) return
+            if (
+              closed &&
+              hasValidExternalRssSample &&
+              (rss as V138InternalRssSample)[V138_RSS_CHILD_EXIT_RACE] === true
+            ) return
             samplerCode = rss.code
             control.onResourceSample({
               childId: `pid:${child.pid}`,
