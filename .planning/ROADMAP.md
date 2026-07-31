@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 15/23 plans executed
+**Plans:** 18/23 plans executed
 
-**Current verdict:** BLOCKED — 15 of 23 plans are executed. Plans 262-21 through 262-23 are planned to repair the three exact-A2 temporary-clone fixtures and the diagnosed direct-child RSS lifecycle, freeze reviewed sourceBase3/A3 and exact two-artifact direct-child B3 authority, execute one route-ordinal-3 main-only Pattern C preflight:v7/calibration:v7/conditional reproduction:v8 route, and independently verify it. Existing A2/B2 and the immutable v6 `calibration_stopped` terminal remain authoritative; reproduction:v7 is absent, ADMIT-03 and Plan 262-03 remain blocked, and only Plan 262-23 may pass that route gate on literal `reproduction_passed` with exactly 540/540 fresh cells.
+**Current verdict:** BLOCKED / `gaps_found` — 18 of 23 plans are executed. Plans 262-21/22 produced reviewed A3/direct-child B3 and one route-ordinal-3 terminal, while Plan 262-23 independently stopped the gate: terminal-v1 is `calibration_stopped`, reproduction:v8 is absent at 0/540, the canonical v3 authorization checker rejects protected Plan 262-15 artifact presence, the required non-live selector yields no verdict, and boundary monitors require the unavailable PostgreSQL proof environment. ADMIT-03 and Plan 262-03 remain blocked without override or retry. Plans 262-03 through 262-07 separately own roadmap truths 3–5.
 
 Plans:
 **Wave 1**
@@ -117,15 +117,15 @@ Plans:
 
 **Wave 16** *(blocked on Wave 15 completion)*
 
-- [ ] 262-21-PLAN.md — Pin the archived fixture to exact A2, repair and test serialized direct-child RSS lifecycle while preserving legitimate Darwin global failure, deep-review sourceBase3/A3, and seal fresh route-ordinal-3 authorization-v3/seal-v3 as exact two-artifact direct-child B3.
+- [x] 262-21-PLAN.md — Pinned archived A2, repaired the serialized direct-child RSS lifecycle, froze reviewed A3 `7ec7bae6...`, and sealed exact two-artifact direct-child B3 `1387813e...`.
 
 **Wave 17** *(blocked on Wave 16 completion)*
 
-- [ ] 262-22-PLAN.md — Under checked B3 and main-only Pattern C, consume exactly one preflight:v7, one 8-attempt/4-shard calibration:v7, at most one conditional 540-cell reproduction:v8, and one terminal-v1 with no retry.
+- [x] 262-22-PLAN.md — Main-only Pattern C admitted preflight:v7, then calibration:v7 stopped after 8 charged/launched/terminal attempts across 4 shards; reproduction:v8 remained absent and authority expired.
 
 **Wave 18** *(blocked on Wave 17 completion)*
 
-- [ ] 262-23-PLAN.md — Independently and read-only verify A3/B3, protected history, repaired lifecycle tests, and terminal-v1; pass ADMIT-03 only for literal `reproduction_passed` with exactly 540 charged and 540 accepted fresh cells.
+- [x] 262-23-PLAN.md — Independently and read-only verified the terminal as `calibration_stopped` and kept ADMIT-03 blocked; documented checker/test/boundary drift in `262-23-REVIEW.md` without repair.
 
 **Wave 19** *(blocked on Wave 18 completion)*
 
