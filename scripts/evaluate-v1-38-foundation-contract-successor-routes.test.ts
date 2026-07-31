@@ -40,7 +40,9 @@ import {
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_PLAN_262_25_ROUTE_CONTRACT,
+  V138_PLAN_262_25_DISPOSITIONS,
   checkV138Plan26225RouteContract,
+  checkV138Plan26225PrerequisiteRoots,
   dispatchV138CurrentMatrixDirectEntry,
   buildV138ExecutionContextV8Receipt,
   checkV138ExecutionContextV8Receipt,
@@ -48,6 +50,8 @@ import {
   checkV138HostHeadroomPreflightV8Receipt,
   buildV138ParallelCalibrationV8Receipt,
   checkV138ParallelCalibrationV8Receipt,
+  checkV138AuthoritativeMatrixV9Receipt,
+  buildV138AuthoritativeMatrixV9Receipt,
   buildV138Plan26225TerminalV1,
   enumerateV138CurrentMatrix,
 } from "./lib/v1-38-current-matrix-reproduction.js"
@@ -55,7 +59,12 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
 const sourceB3 = "1387813e9f7262ac0c5916635addee9cdb96354b"
-const sourceA4 = "cffd54262c4b0a382402b2d1a088e574ab4fee5c"
+// The reviewed candidate is the immutable commit containing this suite. Binding
+// to HEAD avoids an impossible self-referential source hash while custody still
+// proves the complete sourceBase4..candidate lineage and exact five-path delta.
+const sourceA4 = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: repoRoot, encoding: "utf8",
+}).trim()
 let syntheticRoot = ""
 
 const canonicalManifest = (value: unknown): string => {
@@ -266,6 +275,8 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
       ...V138_PLAN_262_25_ROUTE_CONTRACT,
       reproductionCellCount: 539,
     })).toThrow("MATRIX_PLAN_262_25_ROUTE_CONTRACT_INVALID")
+    expect(V138_PLAN_262_25_ROUTE_CONTRACT.terminalDispositions)
+      .toEqual(V138_PLAN_262_25_DISPOSITIONS)
   })
 
   it("revalidates exact A2/B2/A3/B3 ancestry, v5/v6/v7 history, prior authorization bytes, and 24 charges", () => {
@@ -386,6 +397,185 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
       chargedReproductionAttemptCount: 0, acceptedCellCount: 0,
       authorityExpired: true, noRetry: true })
   })
+
+  it.each([
+    ["totalBytes-zero", (value: Record<string, unknown>) => {
+      value.totalBytes = 0
+    }],
+    ["pageCount-zero", (value: Record<string, unknown>) => {
+      value.pageCount = 0
+    }],
+    ["pageSize-zero", (value: Record<string, unknown>) => {
+      value.pageSizeBytes = 0
+    }],
+    ["percentage-negative", (value: Record<string, unknown>) => {
+      value.percentage = -1; value.observedBasisPoints = -100
+    }],
+    ["percentage-over-range", (value: Record<string, unknown>) => {
+      value.percentage = 101; value.observedBasisPoints = 10_100
+    }],
+    ["unsafe-product", (value: Record<string, unknown>) => {
+      value.pageCount = Number.MAX_SAFE_INTEGER
+      value.pageSizeBytes = 2
+      value.totalBytes = Number.MAX_SAFE_INTEGER * 2
+    }],
+  ] as const)("rejects hostile v8 preflight observation %s", (_name, mutate) => {
+    const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    const route = { custody: { sourceA4, sourceB4: sourceA4,
+      custodyRoot: root }, authorization: { authorizationRoot: root },
+      seal: { sealRoot: root, selectedRouteClosure: { closureRoot: root },
+        protectedHistory: { protectedHistoryRoot: root,
+          priorAuthorizationBytes: [] } } }
+    const context = buildV138ExecutionContextV8Receipt({ route: route as never,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      terminalAgentRegistry: { schemaVersion:
+        "v1.38-plan-262-25-terminal-agent-registry-v1",
+        activeExecutorCount: 0, agents: [] } })
+    const receipt = buildV138HostHeadroomPreflightV8Receipt({ context,
+      result: { ok: true, observation: { metricId:
+        "darwin-memorystatus-effective-available-basis-points-v1",
+        providerId: "apple-memory-pressure-q-v1",
+        parserId: "apple-memory-pressure-q-c-locale-parser-v1",
+        stdoutByteLength: 100, stdoutSha256: root, totalBytes: 4096,
+        pageCount: 1, pageSizeBytes: 4096, percentage: 25,
+        observedBasisPoints: 2500, disposition: "preflight_admitted" } } })
+    const hostile = JSON.parse(JSON.stringify(receipt)) as Record<string, unknown>
+    mutate(hostile.observation as Record<string, unknown>)
+    const { receiptRoot: _ignored, ...body } = hostile
+    hostile.receiptRoot = canonicalRoot("canonicalJsonProfile",
+      String(hostile.schemaVersion), body)
+    expect(() => checkV138HostHeadroomPreflightV8Receipt(hostile, context))
+      .toThrow("MATRIX_PREFLIGHT_V8_INVALID")
+  })
+
+  it("requires admitted calibration before V9 or reproduction terminal outcomes", () => {
+    const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    const route = { custody: { sourceA4, sourceB4: sourceA4,
+      custodyRoot: root }, authorization: { authorizationRoot: root },
+      seal: { sealRoot: root, selectedRouteClosure: { closureRoot: root },
+        protectedHistory: { protectedHistoryRoot: root,
+          priorAuthorizationBytes: [] } } }
+    const context = buildV138ExecutionContextV8Receipt({ route: route as never,
+      mode: "gsd-pattern-c-inline-main",
+      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      terminalAgentRegistry: { schemaVersion:
+        "v1.38-plan-262-25-terminal-agent-registry-v1",
+        activeExecutorCount: 0, agents: [] } })
+    const preflight = buildV138HostHeadroomPreflightV8Receipt({ context,
+      result: { ok: false, reason: "resource_measurement_unavailable" } })
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const calibration = buildV138ParallelCalibrationV8Receipt({ inventory,
+      context, preflight })
+    expect(() => buildV138AuthoritativeMatrixV9Receipt({ inventory, context,
+      preflight, calibration })).toThrow(
+        "MATRIX_REPRODUCTION_V9_CALIBRATION_NOT_ADMITTED")
+    expect(() => checkV138AuthoritativeMatrixV9Receipt({}, { inventory, context,
+      preflight, calibration })).toThrow(
+        "MATRIX_REPRODUCTION_V9_CALIBRATION_NOT_ADMITTED")
+    expect(() => buildV138Plan26225TerminalV1({
+      disposition: "reproduction_stopped", sourceA4, sourceB4: sourceA4,
+      authorizationRoot: root, sealRoot: root, context, preflight,
+      calibration, reproduction: { receiptRoot: root, chargedAttemptCount: 540,
+        acceptedCellCount: 0, completeCleanup: true },
+      markerRoots: { preflight: root, calibration: root, reproduction: root },
+    })).toThrow("MATRIX_PLAN_262_25_DISPOSITION_JOIN_INVALID")
+  })
+
+  it("rejects async publication races across every prerequisite root", () => {
+    const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    const changed = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    expect(checkV138Plan26225PrerequisiteRoots({ context: root,
+      preflight: root, calibration: root }, { context: root,
+      preflight: root, calibration: root })).toBe(true)
+    for (const key of ["context", "preflight", "calibration"] as const) {
+      expect(() => checkV138Plan26225PrerequisiteRoots({ context: root,
+        preflight: root, calibration: root }, { context: root,
+        preflight: root, calibration: root, [key]: changed })).toThrow(
+          "MATRIX_PLAN_262_25_PREREQUISITE_CHANGED")
+    }
+  })
+
+  it("rejects an unknown Plan 262-25 disposition in builder and CLI", () => {
+    const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    expect(() => buildV138Plan26225TerminalV1({
+      disposition: "unknown" as never, sourceA4, sourceB4: sourceA4,
+      authorizationRoot: root, sealRoot: root,
+      markerRoots: { preflight: null, calibration: null, reproduction: null },
+    })).toThrow("MATRIX_PLAN_262_25_DISPOSITION_INVALID")
+    const modulePath = path.resolve(repoRoot,
+      "scripts/lib/v1-38-current-matrix-reproduction.ts")
+    const result = spawnSync(process.execPath, ["--import", "tsx", modulePath,
+      "--write-plan-262-25-terminal-v1",
+      V138_PLAN_262_25_FRESH_DESTINATIONS[4],
+      "--authorization",
+      ".planning/artifacts/v1.38-plan-262-24-authorization-v4.json",
+      "--seal", ".planning/artifacts/v1.38-successor-source-seal-v4.json",
+      "--context", V138_PLAN_262_25_FRESH_DESTINATIONS[0],
+      "--preflight", V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+      "--calibration", V138_PLAN_262_25_FRESH_DESTINATIONS[2],
+      "--reproduction", V138_PLAN_262_25_FRESH_DESTINATIONS[3],
+      "--source-a4", sourceA4, "--source-b4", sourceA4,
+      "--disposition", "unknown"], { cwd: repoRoot, encoding: "utf8" })
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("MATRIX_PLAN_262_25_CLI_ARGUMENTS_INVALID")
+  })
+
+  it.each(["preflight", "calibration", "reproduction"] as const)(
+    "accounts truthfully for consumed %s interruption", (stage) => {
+      const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      const needsPreflight = stage !== "preflight"
+      const needsCalibration = stage === "reproduction"
+      const terminal = buildV138Plan26225TerminalV1({
+        disposition: "consumed_stage_interrupted", sourceA4,
+        sourceB4: sourceA4, authorizationRoot: root, sealRoot: root,
+        context: { receiptRoot: root },
+        preflight: needsPreflight ? { receiptRoot: root } : undefined,
+        calibration: needsCalibration ? { receiptRoot: root,
+          chargedAttemptCount: 8, completeCleanup: true, status: "admitted" } :
+          undefined,
+        markerRoots: { preflight: root,
+          calibration: needsPreflight ? root : null,
+          reproduction: needsCalibration ? root : null },
+        interruptionProof: { stage, markerRoot: root,
+          chargedAttemptCount: stage === "preflight" ? 1 :
+            stage === "calibration" ? 8 : 540,
+          chargedIdentityId: stage === "preflight" ? "preflight:v8:0" : null,
+          observationMode: "unknown_after_consumption", childLaunchCount: null,
+          terminalOutcomeCount: null, completeCleanup: false },
+      })
+      expect(terminal).toMatchObject({ disposition: "consumed_stage_interrupted",
+        chargedCalibrationAttemptCount: stage === "preflight" ? 0 : 8,
+        chargedReproductionAttemptCount: stage === "reproduction" ? 540 : 0,
+        acceptedCellCount: 0, completeCleanup: false })
+    })
+
+  it.each(["context", "preflight", "calibration", "reproduction"] as const)(
+    "records truthful fresh-destination obstruction at %s", (stage) => {
+      const root = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      const needsContext = stage !== "context"
+      const needsPreflight = stage === "calibration" || stage === "reproduction"
+      const needsCalibration = stage === "reproduction"
+      const terminal = buildV138Plan26225TerminalV1({
+        disposition: "fresh_destination_failed", sourceA4,
+        sourceB4: sourceA4, authorizationRoot: root, sealRoot: root,
+        context: needsContext ? { receiptRoot: root } : undefined,
+        preflight: needsPreflight ? { receiptRoot: root } : undefined,
+        calibration: needsCalibration ? { receiptRoot: root,
+          chargedAttemptCount: 8, completeCleanup: true, status: "admitted" } :
+          undefined,
+        markerRoots: { preflight: needsPreflight ? root : null,
+          calibration: needsCalibration ? root : null, reproduction: null },
+        obstructionProof: { stage,
+          path: V138_PLAN_262_25_FRESH_DESTINATIONS[stage === "context" ? 0 :
+            stage === "preflight" ? 1 : stage === "calibration" ? 2 : 3],
+          type: "file", metadataRoot: root },
+      })
+      expect(terminal).toMatchObject({ disposition: "fresh_destination_failed",
+        chargedCalibrationAttemptCount: needsCalibration ? 8 : 0,
+        chargedReproductionAttemptCount: 0, acceptedCellCount: 0,
+        completeCleanup: true })
+    })
 
   it.each([
     ["--write-execution-context-v8-receipt",
