@@ -2482,7 +2482,7 @@ const strictReviewMetadataV2 = (bytes: Uint8Array): ReviewMetadataV2 => {
   const repairStartHead2 = values.get("repair_start_head2") ?? ""
   const sourceBase2 = values.get("source_base2") ?? ""
   const sourceA2 = values.get("source_a2") ?? ""
-  const fixes = values.get("fixes_applied") ?? "false"
+  const fixes = values.get("fixes_applied") ?? ""
   if (
     values.get("plan") !== "18" ||
     values.get("depth") !== "deep" ||
