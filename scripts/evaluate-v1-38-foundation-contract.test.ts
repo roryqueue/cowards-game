@@ -86,6 +86,8 @@ import {
   checkV138MatrixDiagnosticV2Receipt,
   checkV138ParallelCalibrationSuccessorReceipt,
   createV138SubprocessShardRunner,
+  dispatchV138CurrentMatrixDirectEntry,
+  deriveV138CalibrationAttemptMappings,
   deriveV138ParallelCalibrationPolicy,
   deriveV138HistoricalMatrixExpectation,
   enumerateV138CurrentMatrix,
@@ -3697,6 +3699,82 @@ const admittedInjectedCalibration = (
       cpuIdentity: "test-cpu",
     },
   })
+
+describe("v1.38 plan 262-18 attempt identity and CLI dispatch", () => {
+  it("derives stable public identities with full scheduler identities and inventory-owned shards", () => {
+    const inventory = enumerateV138CurrentMatrix(repoRoot)
+    const mappings = deriveV138CalibrationAttemptMappings(inventory, "v6")
+
+    expect(mappings.map(({ publicAttemptId }) => publicAttemptId)).toEqual(
+      Array.from({ length: 8 }, (_, index) => `calibration:v6:${index}`),
+    )
+    expect(mappings.map(({ shardId }) => shardId)).toEqual([
+      "calibration-shard:0",
+      "calibration-shard:0",
+      "calibration-shard:1",
+      "calibration-shard:1",
+      "calibration-shard:2",
+      "calibration-shard:2",
+      "calibration-shard:3",
+      "calibration-shard:3",
+    ])
+    expect(new Set(mappings.map(({ executionAttemptId }) => executionAttemptId)).size)
+      .toBe(8)
+    for (const [index, mapping] of mappings.entries()) {
+      expect(mapping).toMatchObject({
+        inventoryOrdinal: index,
+        templateAttemptId: inventory.attempts[index]!.attemptId,
+      })
+      expect(mapping.executionAttemptId).toBe(mapping.publicAttemptId)
+      expect(Object.isFrozen(mapping)).toBe(true)
+    }
+  })
+
+  it.each([
+    ["--execute-shard", 1, 0, "shard"],
+    ["--check-calibration-receipt", 0, 1, "receipt"],
+  ] as const)(
+    "CLI dispatch gives %s exactly one handler owner",
+    async (command, expectedShardCalls, expectedReceiptCalls, expectedResult) => {
+      let shardCalls = 0
+      let receiptCalls = 0
+      const result = await dispatchV138CurrentMatrixDirectEntry(command, {
+        runShard: async () => {
+          shardCalls += 1
+          return "shard"
+        },
+        runReceipt: async () => {
+          receiptCalls += 1
+          return "receipt"
+        },
+      })
+
+      expect(result).toBe(expectedResult)
+      expect(shardCalls).toBe(expectedShardCalls)
+      expect(receiptCalls).toBe(expectedReceiptCalls)
+    },
+  )
+
+  it.each([undefined, "", "--unknown", "--execute-shard-again"])(
+    "CLI dispatch rejects unknown command %j before either handler",
+    async (command) => {
+      let shardCalls = 0
+      let receiptCalls = 0
+      await expect(
+        dispatchV138CurrentMatrixDirectEntry(command, {
+          runShard: async () => {
+            shardCalls += 1
+          },
+          runReceipt: async () => {
+            receiptCalls += 1
+          },
+        }),
+      ).rejects.toThrow("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
+      expect(shardCalls).toBe(0)
+      expect(receiptCalls).toBe(0)
+    },
+  )
+})
 
 describe("v1.38 shared Darwin scheduler observation", () => {
   it("observes once for one tick and fans the immutable observation to all four active shards", async () => {
