@@ -1960,7 +1960,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
               return injectedResult
             },
           ),
-        ).rejects.toThrow("MATRIX_PREFLIGHT_V5_CONTEXT_JOIN_INVALID")
+        ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
         expect(forgedPreflightObserverCount).toBe(0)
         publish(paths.preflight, forgedPreflight)
         removeIfPresent(paths.calibration)
@@ -1978,7 +1978,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
               throw new TypeError("INJECTED_CALIBRATION_MUST_NOT_RUN")
             },
           ),
-        ).rejects.toThrow("MATRIX_CALIBRATION_V5_CONTEXT_JOIN_INVALID")
+        ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
         expect(forgedCalibrationRunCount).toBe(0)
         publish(paths.calibration, forgedCalibration)
         removeIfPresent(paths.reproduction)
@@ -1996,7 +1996,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
               throw new TypeError("INJECTED_REPRODUCTION_MUST_NOT_RUN")
             },
           ),
-        ).rejects.toThrow("MATRIX_REPRODUCTION_V6_CONTEXT_JOIN_INVALID")
+        ).rejects.toThrow("MATRIX_PLAN_262_16_AUTHORITY_EXPIRED")
         expect(forgedReproductionRunCount).toBe(0)
         removeIfPresent(paths.terminal)
         publishTerminal("preflight_refused", {
@@ -2010,6 +2010,7 @@ describe("v1.38 plan 262-16 terminal artifact presence", () => {
         ).toThrow("MATRIX_PLAN_262_16_CONTEXT_JOIN_INVALID")
       }
 
+      removeIfPresent(paths.terminal)
       publish(paths.context, context)
       const liveAdmittedPreflight = buildV138HostHeadroomPreflightV5Receipt({
         executionContext: context,
@@ -4943,6 +4944,7 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
           type: "file",
           metadataRoot: root("a"),
         },
+        interruptionProof: null,
         chargedCalibrationAttemptCount: candidate.calibration ? 8 : 0,
         chargedReproductionAttemptCount: 0,
         acceptedCellCount: 0,
@@ -5636,16 +5638,33 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
       ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
       writeFileSync(
         path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
-        canonicalManifest(context),
+        `${JSON.stringify(context)}\n`,
       )
       writeFileSync(
         path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[1]),
-        canonicalManifest(preflight),
+        `${JSON.stringify(preflight)}\n`,
       )
       writeFileSync(
         path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[2]),
-        canonicalManifest(calibration),
+        `${JSON.stringify(calibration)}\n`,
       )
+      const persistedCallbackContext = JSON.parse(
+        readFileSync(
+          path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
+          "utf8",
+        ),
+      )
+      expect(Object.keys(persistedCallbackContext).sort()).toEqual(
+        Object.keys(context).sort(),
+      )
+      expect(
+        checkV138ExecutionContextV6Receipt(persistedCallbackContext, {
+          repoRoot: root,
+          authorization,
+          seal,
+          sourceB2Custody,
+        }),
+      ).toEqual(context)
       let possibleLaunchesBeforeThrow = 0
       const callbackInterruptedReceipt =
         await writeV138AuthoritativeMatrixV7Receipt(
