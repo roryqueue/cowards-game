@@ -2217,6 +2217,9 @@ export const writeV138CanonicalExclusiveV2 = (
         "rollback",
       )
       syncDirectory("rollback")
+      // The rollback is not durable evidence unless the originally validated
+      // parent chain is still the chain whose directory entry was synced.
+      checkV138CanonicalParentChain(parentChain)
       linked = false
     } catch (rollbackError) {
       throw new AggregateError(
@@ -3134,6 +3137,44 @@ export interface V138SuccessorSourceSealV2 {
   readonly canonicalDestinations: readonly string[]
   readonly authorizationRoot: Sha256
   readonly sealRoot: Sha256
+}
+
+/**
+ * Recheck every byte whose identity the successor seal attributes to A2.
+ * This is intentionally a worktree check (not merely a Git-object check) and
+ * is used on both sides of every single-use live callback.
+ */
+export const checkV138SealedWorktreeAtA2 = (
+  repoRoot: string,
+  seal: Readonly<V138SuccessorSourceSealV2>,
+): true => {
+  const sourceA2 = seal.sourceCustody.sourceA2
+  const records = [
+    ...seal.protectedHistory.artifacts,
+    ...seal.selectedRouteClosure.sourceBlobs,
+    ...seal.selectedRouteClosure.resolverMetadata,
+  ]
+  const seen = new Map<string, Sha256>()
+  for (const record of records) {
+    const prior = seen.get(record.path)
+    if (prior !== undefined && prior !== record.sha256) {
+      fail("V138_SEALED_WORKTREE_IDENTITY_CONFLICT")
+    }
+    seen.set(record.path, record.sha256)
+  }
+  for (const [repoPath, expectedRoot] of seen) {
+    const working = regularFile(path.resolve(repoRoot, repoPath), "required")!
+    const committed = readCommitFile(repoRoot, sourceA2, repoPath)
+    if (
+      sha256(working) !== expectedRoot ||
+      sha256(committed) !== expectedRoot ||
+      !working.equals(committed)
+    ) {
+      fail("V138_SEALED_WORKTREE_DRIFT")
+    }
+  }
+  regularFile(path.resolve(repoRoot, V138_OLD_REPRODUCTION_V6), "absent")
+  return true
 }
 
 const SEAL_V2_KEYS = [
