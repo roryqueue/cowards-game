@@ -18,6 +18,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest"
 import { encodeCanonicalJson, hashCanonicalIdentity,
   type JsonValue } from "@cowards/spec"
@@ -55,14 +56,36 @@ import {
   calibrateV138ParallelMatrix,
   deriveV138CalibrationAttemptMappings,
   planV138MatrixShards,
-  consumeV138Plan26225Stage,
   deriveV138Plan26225InterruptionProof,
-  writeV138Plan26225TerminalV1,
-  checkV138Plan26225TerminalBranch,
   buildV138Plan26225TerminalV1,
   enumerateV138CurrentMatrix,
   type V138ParallelShardRunner,
 } from "./lib/v1-38-current-matrix-reproduction.js"
+import * as v138Reproduction from
+  "./lib/v1-38-current-matrix-reproduction.js"
+
+const privateHarnessRegistration = vi.hoisted(() => {
+  let harness: unknown
+  const key = Symbol.for(
+    "cowards-game:v1.38-plan-262-25-private-test-harness")
+  const scope = globalThis as unknown as Record<PropertyKey, unknown>
+  scope[key] = (value: unknown) => { harness = value }
+  return { get: () => harness }
+})
+
+type Plan26225PrivateHarness = Readonly<{
+  consume: (input: { repoRoot: string; stage: "preflight" | "calibration" |
+    "reproduction"; context: Record<string, unknown>; predecessorRoot: unknown;
+    chargedAttemptIds: readonly string[] }) => string
+  writeTerminal: (...args: readonly unknown[]) => Record<string, unknown>
+  checkTerminalBranch: (...args: readonly unknown[]) => Record<string, unknown>
+}>
+
+const plan26225PrivateHarness = () => {
+  const harness = privateHarnessRegistration.get()
+  if (harness === undefined) throw new TypeError("private harness unavailable")
+  return harness as Plan26225PrivateHarness
+}
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
@@ -285,6 +308,12 @@ describe.sequential("v1.38 successor temporal checkers", () => {
 })
 
 describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
+  it("keeps marker fabrication and route bypasses out of the public API", () => {
+    expect("consumeV138Plan26225Stage" in v138Reproduction).toBe(false)
+    expect(v138Reproduction.writeV138Plan26225TerminalV1.length).toBe(5)
+    expect(v138Reproduction.checkV138Plan26225TerminalBranch.length).toBe(3)
+  })
+
   it("declares only the five reviewed A4 source paths", () => {
     expect(V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4).toEqual([
       "scripts/evaluate-v1-38-foundation-contract-successor-routes.test.ts",
@@ -617,6 +646,7 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
           path.resolve(fixture.tempRoot,
             V138_PLAN_262_25_FRESH_DESTINATIONS[0]), "utf8")), fixture.route))
           .toEqual(fixture.context)
+        const harness = plan26225PrivateHarness()
         let preflight: Record<string, unknown> | undefined
         if (stage !== "preflight") {
           preflight = buildV138HostHeadroomPreflightV8Receipt({
@@ -624,8 +654,8 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
           writeFileSync(path.resolve(fixture.tempRoot,
             V138_PLAN_262_25_FRESH_DESTINATIONS[1]),
           `${JSON.stringify(preflight)}\n`)
-          consumeV138Plan26225Stage({ repoRoot: fixture.tempRoot,
-            stage: "preflight", context: fixture.context,
+          harness.consume({ repoRoot: fixture.tempRoot, stage: "preflight",
+            context: fixture.context,
             predecessorRoot: fixture.context.receiptRoot,
             chargedAttemptIds: ["preflight:v8:0"] })
         }
@@ -644,9 +674,8 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
           writeFileSync(path.resolve(fixture.tempRoot,
             V138_PLAN_262_25_FRESH_DESTINATIONS[2]),
           `${JSON.stringify(calibration)}\n`)
-          consumeV138Plan26225Stage({ repoRoot: fixture.tempRoot,
-            stage: "calibration", context: fixture.context,
-            predecessorRoot: preflight!.receiptRoot,
+          harness.consume({ repoRoot: fixture.tempRoot, stage: "calibration",
+            context: fixture.context, predecessorRoot: preflight!.receiptRoot,
             chargedAttemptIds: deriveV138CalibrationAttemptMappings(inventory,
               "v8").map(({ executionAttemptId }) => executionAttemptId) })
           expect(calibration.status).toBe("admitted")
@@ -661,17 +690,17 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
         const predecessorRoot = stage === "preflight" ?
           fixture.context.receiptRoot : stage === "calibration" ?
             preflight!.receiptRoot : calibration!.receiptRoot
-        const markerRoot = consumeV138Plan26225Stage({
-          repoRoot: fixture.tempRoot, stage, context: fixture.context,
-          predecessorRoot, chargedAttemptIds })
+        const markerRoot = harness.consume({ repoRoot: fixture.tempRoot, stage,
+          context: fixture.context, predecessorRoot, chargedAttemptIds })
         expect(deriveV138Plan26225InterruptionProof(fixture.tempRoot))
           .toMatchObject({ stage, markerRoot,
             chargedAttemptCount: stage === "preflight" ? 1 :
               stage === "calibration" ? 8 : 540 })
-        const terminal = writeV138Plan26225TerminalV1(fixture.tempRoot,
+        const terminal = harness.writeTerminal(fixture.tempRoot,
           V138_PLAN_262_25_FRESH_DESTINATIONS[4],
           "fresh_destination_failed", fixture.sourceA4, fixture.sourceB4,
-          fixture.route)
+          fixture.route,
+        )
         expect(terminal).toMatchObject({
           disposition: "consumed_stage_interrupted",
           interruptionProof: { stage, markerRoot }, completeCleanup: false,
@@ -679,7 +708,7 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
           chargedReproductionAttemptCount: stage === "reproduction" ? 540 : 0,
           acceptedCellCount: 0, authorityExpired: true, noRetry: true,
         })
-        expect(checkV138Plan26225TerminalBranch(fixture.tempRoot,
+        expect(harness.checkTerminalBranch(fixture.tempRoot,
           fixture.sourceA4, fixture.sourceB4, fixture.route).disposition)
           .toBe("consumed_stage_interrupted")
         expect(existsSync(path.resolve(fixture.tempRoot,

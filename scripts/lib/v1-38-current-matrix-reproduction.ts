@@ -13257,13 +13257,6 @@ const writeV138Plan26225Marker = (repoRoot: string, stage: "preflight" |
   return marker
 }
 
-export const consumeV138Plan26225Stage = (input: {
-  repoRoot: string; stage: "preflight" | "calibration" | "reproduction"
-  context: Record<string, unknown>; predecessorRoot: unknown
-  chargedAttemptIds: readonly string[]
-}) => writeV138Plan26225Marker(input.repoRoot, input.stage, input.context,
-  input.predecessorRoot, input.chargedAttemptIds).markerRoot
-
 export const checkV138Plan26225ConsumptionMarker = (repoRoot: string,
   stage: "preflight" | "calibration" | "reproduction",
   context: Record<string, unknown>, predecessorRoot: unknown,
@@ -16764,7 +16757,7 @@ export const checkV138Plan26225TerminalV1 = (value: unknown,
   return deepFreeze(terminal)
 }
 
-export const writeV138Plan26225TerminalV1 = (repoRoot: string,
+const writeV138Plan26225TerminalV1WithRoute = (repoRoot: string,
   targetPath: string, disposition: V138Plan26225Disposition,
   sourceA4: string, sourceB4: string, sealedRoute?: V138Route4) => {
   checkV138Plan26225Disposition(disposition)
@@ -16807,7 +16800,13 @@ export const writeV138Plan26225TerminalV1 = (repoRoot: string,
   return terminal
 }
 
-export const checkV138Plan26225TerminalBranch = (repoRoot: string,
+export const writeV138Plan26225TerminalV1 = (repoRoot: string,
+  targetPath: string, disposition: V138Plan26225Disposition,
+  sourceA4: string, sourceB4: string) =>
+  writeV138Plan26225TerminalV1WithRoute(repoRoot, targetPath, disposition,
+    sourceA4, sourceB4)
+
+const checkV138Plan26225TerminalBranchWithRoute = (repoRoot: string,
   sourceA4: string, sourceB4: string, sealedRoute?: V138Route4) => {
   const terminal = exactRecord(readPlan26225(repoRoot, "terminal"),
     ["schemaVersion", "disposition", "sourceA4", "sourceB4",
@@ -16826,6 +16825,36 @@ export const checkV138Plan26225TerminalBranch = (repoRoot: string,
   return checkV138Plan26225TerminalV1(terminal,
     plan26225Evidence(repoRoot, sourceA4, sourceB4, disposition,
       obstructionProof, interruptionProof, sealedRoute), disposition)
+}
+
+export const checkV138Plan26225TerminalBranch = (repoRoot: string,
+  sourceA4: string, sourceB4: string) =>
+  checkV138Plan26225TerminalBranchWithRoute(repoRoot, sourceA4, sourceB4)
+
+const plan26225PrivateHarnessKey = Symbol.for(
+  "cowards-game:v1.38-plan-262-25-private-test-harness")
+if (process.env.VITEST === "true") {
+  const scope = globalThis as unknown as Record<PropertyKey, unknown>
+  const register = scope[plan26225PrivateHarnessKey]
+  if (typeof register === "function") {
+    register(Object.freeze({
+      consume: (input: { repoRoot: string; stage: "preflight" |
+        "calibration" | "reproduction"; context: Record<string, unknown>;
+        predecessorRoot: unknown; chargedAttemptIds: readonly string[] }) =>
+        writeV138Plan26225Marker(input.repoRoot, input.stage, input.context,
+          input.predecessorRoot, input.chargedAttemptIds).markerRoot,
+      writeTerminal: (repoRoot: string, targetPath: string,
+        disposition: V138Plan26225Disposition, sourceA4: string,
+        sourceB4: string, route: V138Route4) =>
+        writeV138Plan26225TerminalV1WithRoute(repoRoot, targetPath, disposition,
+          sourceA4, sourceB4, route),
+      checkTerminalBranch: (repoRoot: string, sourceA4: string,
+        sourceB4: string, route: V138Route4) =>
+        checkV138Plan26225TerminalBranchWithRoute(repoRoot, sourceA4,
+          sourceB4, route),
+    }))
+    delete scope[plan26225PrivateHarnessKey]
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
