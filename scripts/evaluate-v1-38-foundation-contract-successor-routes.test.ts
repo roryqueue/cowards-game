@@ -18,7 +18,6 @@ import {
   describe,
   expect,
   it,
-  vi,
 } from "vitest"
 import { encodeCanonicalJson, hashCanonicalIdentity,
   type JsonValue } from "@cowards/spec"
@@ -38,6 +37,9 @@ import {
   checkV138SuccessorSealCommitV4,
   deriveV138ProtectedHistoryV4,
   inspectSourceCustodyA4,
+  v138Plan26224AuthorizationLiteral,
+  writeV138Plan26224AuthorizationV4,
+  writeV138SuccessorSourceSealV4,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_PLAN_262_25_ROUTE_CONTRACT,
@@ -54,38 +56,19 @@ import {
   checkV138AuthoritativeMatrixV9Receipt,
   buildV138AuthoritativeMatrixV9Receipt,
   calibrateV138ParallelMatrix,
-  deriveV138CalibrationAttemptMappings,
-  planV138MatrixShards,
   deriveV138Plan26225InterruptionProof,
+  writeV138ExecutionContextV8Receipt,
+  writeV138HostHeadroomPreflightV8Receipt,
+  writeV138ParallelCalibrationV8Receipt,
+  writeV138AuthoritativeMatrixV9Receipt,
+  writeV138Plan26225TerminalV1,
+  checkV138Plan26225TerminalBranch,
   buildV138Plan26225TerminalV1,
   enumerateV138CurrentMatrix,
   type V138ParallelShardRunner,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import * as v138Reproduction from
   "./lib/v1-38-current-matrix-reproduction.js"
-
-const privateHarnessRegistration = vi.hoisted(() => {
-  let harness: unknown
-  const key = Symbol.for(
-    "cowards-game:v1.38-plan-262-25-private-test-harness")
-  const scope = globalThis as unknown as Record<PropertyKey, unknown>
-  scope[key] = (value: unknown) => { harness = value }
-  return { get: () => harness }
-})
-
-type Plan26225PrivateHarness = Readonly<{
-  consume: (input: { repoRoot: string; stage: "preflight" | "calibration" |
-    "reproduction"; context: Record<string, unknown>; predecessorRoot: unknown;
-    chargedAttemptIds: readonly string[] }) => string
-  writeTerminal: (...args: readonly unknown[]) => Record<string, unknown>
-  checkTerminalBranch: (...args: readonly unknown[]) => Record<string, unknown>
-}>
-
-const plan26225PrivateHarness = () => {
-  const harness = privateHarnessRegistration.get()
-  if (harness === undefined) throw new TypeError("private harness unavailable")
-  return harness as Plan26225PrivateHarness
-}
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
@@ -97,6 +80,7 @@ const sourceA4 = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: repoRoot, encoding: "utf8",
 }).trim()
 let syntheticRoot = ""
+let sealedRouteRoot = ""
 
 const canonicalManifest = (value: unknown): string => {
   const encoded = encodeCanonicalJson(value as JsonValue, {
@@ -143,6 +127,11 @@ const successfulV8Runner = (): V138ParallelShardRunner => ({ async run(
       classification: "success" as const, outcome: "draw" as const })) }
 } })
 
+const runSuccessfulV8Calibration: typeof calibrateV138ParallelMatrix =
+  (input) => calibrateV138ParallelMatrix({ ...input,
+    runner: successfulV8Runner(),
+    sharedHeadroomObserver: admittedV8Headroom })
+
 const resetSyntheticRepository = (): void => {
   execFileSync("git", ["reset", "--hard", "-q", "HEAD"], {
     cwd: syntheticRoot,
@@ -152,33 +141,81 @@ const resetSyntheticRepository = (): void => {
 
 const prepareRoutedV8 = () => {
   const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-case-"))
-  execFileSync("git", ["clone", "-q", "--shared", repoRoot, tempRoot])
-  const root =
-    "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-  const route = { custody: { sourceA4, sourceB4: sourceA4,
-    custodyRoot: root }, authorization: { authorizationRoot: root },
-    seal: { sealRoot: root, selectedRouteClosure: { closureRoot: root },
-      protectedHistory: { protectedHistoryRoot: root,
-        priorAuthorizationBytes: [] } } }
-  const context = buildV138ExecutionContextV8Receipt({ route: route as never,
-    mode: "gsd-pattern-c-inline-main",
-    cwd: "/Users/roryquinlan/runtime/cowards-game",
-    terminalAgentRegistry: { schemaVersion:
+  execFileSync("git", ["clone", "-q", "--shared", sealedRouteRoot, tempRoot])
+  writeSyntheticReview(tempRoot)
+  const sourceB4 = execFileSync("git", ["rev-parse", "HEAD"],
+    { cwd: tempRoot, encoding: "utf8" }).trim()
+  const authorizationPath =
+    ".planning/artifacts/v1.38-plan-262-24-authorization-v4.json"
+  const sealPath =
+    ".planning/artifacts/v1.38-successor-source-seal-v4.json"
+  const context = writeV138ExecutionContextV8Receipt(tempRoot,
+    V138_PLAN_262_25_FRESH_DESTINATIONS[0], "gsd-pattern-c-inline-main",
+    "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
       "v1.38-plan-262-25-terminal-agent-registry-v1",
-      activeExecutorCount: 0, agents: [] } })
-  writeFileSync(path.resolve(tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[0]),
-    `${JSON.stringify(context)}\n`)
-  return { tempRoot, sourceA4, sourceB4: sourceA4, context,
-    route: route as never }
+      activeExecutorCount: 0, agents: [] }, authorizationPath, sealPath,
+    sourceA4, sourceB4)
+  return { tempRoot, sourceA4, sourceB4, context, authorizationPath, sealPath }
+}
+
+const reviewPath =
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-24-REVIEW.md"
+const writeSyntheticReview = (targetRoot: string) => writeFileSync(
+  path.resolve(targetRoot, reviewPath), `---
+plan: 24
+depth: deep
+repair_start_head4: 7d2b23d2be79b57d1e88e6254169629f61fd9ef0
+source_base4: 52377f2cf5c019b6a7979f98ab5aa5d625778302
+source_a4: ${sourceA4}
+fixes_applied: false
+files_reviewed: 5
+files_reviewed_list:
+${V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4.map((repoPath) =>
+    `  - ${repoPath}`).join("\n")}
+findings:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  warning: 0
+  info: 0
+  total: 0
+status: clean
+---
+`)
+
+const prepareSealedRouteBase = () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-sealed-"))
+  execFileSync("git", ["clone", "-q", "--shared", repoRoot, tempRoot])
+  execFileSync("git", ["config", "user.email", "route4@example.invalid"],
+    { cwd: tempRoot })
+  execFileSync("git", ["config", "user.name", "Route Four"],
+    { cwd: tempRoot })
+  writeSyntheticReview(tempRoot)
+  const authorizationPath =
+    ".planning/artifacts/v1.38-plan-262-24-authorization-v4.json"
+  const sealPath =
+    ".planning/artifacts/v1.38-successor-source-seal-v4.json"
+  const authorization = writeV138Plan26224AuthorizationV4(tempRoot,
+    authorizationPath, sourceA4, Buffer.from(
+      v138Plan26224AuthorizationLiteral(tempRoot, sourceA4), "utf8"))
+  writeV138SuccessorSourceSealV4(tempRoot, sealPath, authorization)
+  execFileSync("git", ["add", authorizationPath, sealPath], { cwd: tempRoot })
+  execFileSync("git", ["commit", "-q", "-m", "seal route four"],
+    { cwd: tempRoot })
+  return tempRoot
 }
 
 beforeAll(() => {
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
-})
+  sealedRouteRoot = prepareSealedRouteBase()
+}, 900_000)
 
 afterAll(() => {
   if (syntheticRoot !== "") rmSync(syntheticRoot, { recursive: true, force: true })
+  if (sealedRouteRoot !== "") rmSync(sealedRouteRoot,
+    { recursive: true, force: true })
 })
 
 describe.sequential("v1.38 successor temporal checkers", () => {
@@ -644,62 +681,70 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
       try {
         expect(checkV138ExecutionContextV8Receipt(JSON.parse(readFileSync(
           path.resolve(fixture.tempRoot,
-            V138_PLAN_262_25_FRESH_DESTINATIONS[0]), "utf8")), fixture.route))
+            V138_PLAN_262_25_FRESH_DESTINATIONS[0]), "utf8"))))
           .toEqual(fixture.context)
-        const harness = plan26225PrivateHarness()
-        let preflight: Record<string, unknown> | undefined
         if (stage !== "preflight") {
-          preflight = buildV138HostHeadroomPreflightV8Receipt({
-            context: fixture.context, result: await admittedV8Headroom() })
-          writeFileSync(path.resolve(fixture.tempRoot,
-            V138_PLAN_262_25_FRESH_DESTINATIONS[1]),
-          `${JSON.stringify(preflight)}\n`)
-          harness.consume({ repoRoot: fixture.tempRoot, stage: "preflight",
-            context: fixture.context,
-            predecessorRoot: fixture.context.receiptRoot,
-            chargedAttemptIds: ["preflight:v8:0"] })
+          await writeV138HostHeadroomPreflightV8Receipt(fixture.tempRoot,
+            V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+            V138_PLAN_262_25_FRESH_DESTINATIONS[0],
+            fixture.authorizationPath, fixture.sealPath, fixture.sourceA4,
+            fixture.sourceB4, admittedV8Headroom)
         }
-        let calibration: Record<string, unknown> | undefined
         if (stage === "reproduction") {
-          const inventory = enumerateV138CurrentMatrix(fixture.tempRoot)
-          const supervised = await calibrateV138ParallelMatrix({ inventory,
-            runner: successfulV8Runner(),
-            sharedHeadroomObserver: admittedV8Headroom,
-            hardwareIdentity: { operatingSystem: "test",
-              architecture: "test", nodeVersion: "test", cpuIdentity: "test" },
-            executionIdentityVersion: "v8" })
-          calibration = buildV138ParallelCalibrationV8Receipt({ inventory,
-            context: fixture.context, preflight: preflight!,
-            calibration: supervised })
-          writeFileSync(path.resolve(fixture.tempRoot,
-            V138_PLAN_262_25_FRESH_DESTINATIONS[2]),
-          `${JSON.stringify(calibration)}\n`)
-          harness.consume({ repoRoot: fixture.tempRoot, stage: "calibration",
-            context: fixture.context, predecessorRoot: preflight!.receiptRoot,
-            chargedAttemptIds: deriveV138CalibrationAttemptMappings(inventory,
-              "v8").map(({ executionAttemptId }) => executionAttemptId) })
+          const calibration = await writeV138ParallelCalibrationV8Receipt(
+            fixture.tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[2],
+            V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+            V138_PLAN_262_25_FRESH_DESTINATIONS[0], fixture.sourceA4,
+            fixture.sourceB4, runSuccessfulV8Calibration)
           expect(calibration.status).toBe("admitted")
         }
-        const inventory = enumerateV138CurrentMatrix(fixture.tempRoot)
-        const chargedAttemptIds = stage === "preflight" ? ["preflight:v8:0"] :
-          stage === "calibration" ? deriveV138CalibrationAttemptMappings(
-            inventory, "v8").map(({ executionAttemptId }) =>
-            executionAttemptId) : planV138MatrixShards(inventory).shards.flatMap(
-              ({ attemptIds }) => attemptIds.map((id) =>
-                `reproduction:v8:${id}`))
-        const predecessorRoot = stage === "preflight" ?
-          fixture.context.receiptRoot : stage === "calibration" ?
-            preflight!.receiptRoot : calibration!.receiptRoot
-        const markerRoot = harness.consume({ repoRoot: fixture.tempRoot, stage,
-          context: fixture.context, predecessorRoot, chargedAttemptIds })
+        const authorizationTarget = path.resolve(fixture.tempRoot,
+          fixture.authorizationPath)
+        const authorizationBytes = readFileSync(authorizationTarget)
+        const sabotageAuthority = () => writeFileSync(authorizationTarget,
+          "{}\n")
+        try {
+          if (stage === "preflight") {
+            await expect(writeV138HostHeadroomPreflightV8Receipt(
+              fixture.tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+              V138_PLAN_262_25_FRESH_DESTINATIONS[0],
+              fixture.authorizationPath, fixture.sealPath, fixture.sourceA4,
+              fixture.sourceB4, async () => {
+                sabotageAuthority()
+                return admittedV8Headroom()
+              })).rejects.toThrow()
+          } else if (stage === "calibration") {
+            await expect(writeV138ParallelCalibrationV8Receipt(
+              fixture.tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[2],
+              V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+              V138_PLAN_262_25_FRESH_DESTINATIONS[0], fixture.sourceA4,
+              fixture.sourceB4, async (input) => {
+                sabotageAuthority()
+                return runSuccessfulV8Calibration(input)
+              })).rejects.toThrow()
+          } else {
+            await expect(writeV138AuthoritativeMatrixV9Receipt(
+              fixture.tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[3],
+              V138_PLAN_262_25_FRESH_DESTINATIONS[2],
+              V138_PLAN_262_25_FRESH_DESTINATIONS[0], fixture.sourceA4,
+              fixture.sourceB4, async () => {
+                sabotageAuthority()
+                throw new Error("controlled post-consumption failure")
+              })).rejects.toThrow()
+          }
+        } finally {
+          writeFileSync(authorizationTarget, authorizationBytes)
+        }
+        const interruption = deriveV138Plan26225InterruptionProof(
+          fixture.tempRoot)
+        const markerRoot = interruption?.markerRoot
         expect(deriveV138Plan26225InterruptionProof(fixture.tempRoot))
           .toMatchObject({ stage, markerRoot,
             chargedAttemptCount: stage === "preflight" ? 1 :
               stage === "calibration" ? 8 : 540 })
-        const terminal = harness.writeTerminal(fixture.tempRoot,
+        const terminal = writeV138Plan26225TerminalV1(fixture.tempRoot,
           V138_PLAN_262_25_FRESH_DESTINATIONS[4],
           "fresh_destination_failed", fixture.sourceA4, fixture.sourceB4,
-          fixture.route,
         )
         expect(terminal).toMatchObject({
           disposition: "consumed_stage_interrupted",
@@ -708,8 +753,8 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
           chargedReproductionAttemptCount: stage === "reproduction" ? 540 : 0,
           acceptedCellCount: 0, authorityExpired: true, noRetry: true,
         })
-        expect(harness.checkTerminalBranch(fixture.tempRoot,
-          fixture.sourceA4, fixture.sourceB4, fixture.route).disposition)
+        expect(checkV138Plan26225TerminalBranch(fixture.tempRoot,
+          fixture.sourceA4, fixture.sourceB4).disposition)
           .toBe("consumed_stage_interrupted")
         expect(existsSync(path.resolve(fixture.tempRoot,
           V138_PLAN_262_25_FRESH_DESTINATIONS[stage === "preflight" ? 1 :
@@ -717,7 +762,7 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
       } finally {
         rmSync(fixture.tempRoot, { recursive: true, force: true })
       }
-    }, 60_000)
+    }, 900_000)
 
   it.each(["context", "preflight", "calibration", "reproduction"] as const)(
     "records truthful fresh-destination obstruction at %s", (stage) => {
