@@ -52,8 +52,16 @@ import {
   checkV138ParallelCalibrationV8Receipt,
   checkV138AuthoritativeMatrixV9Receipt,
   buildV138AuthoritativeMatrixV9Receipt,
+  calibrateV138ParallelMatrix,
+  deriveV138CalibrationAttemptMappings,
+  planV138MatrixShards,
+  consumeV138Plan26225Stage,
+  deriveV138Plan26225InterruptionProof,
+  writeV138Plan26225TerminalV1,
+  checkV138Plan26225TerminalBranch,
   buildV138Plan26225TerminalV1,
   enumerateV138CurrentMatrix,
+  type V138ParallelShardRunner,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -83,11 +91,62 @@ const canonicalRoot = (domain: "canonicalJsonProfile", schema: string,
   ])}`
 }
 
+const admittedV8Headroom = async () => ({ ok: true as const, observation: {
+  metricId: "darwin-memorystatus-effective-available-basis-points-v1" as const,
+  providerId: "apple-memory-pressure-q-v1" as const,
+  parserId: "apple-memory-pressure-q-c-locale-parser-v1" as const,
+  stdoutByteLength: 100,
+  stdoutSha256:
+    "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" as const,
+  totalBytes: 4096, pageCount: 1, pageSizeBytes: 4096, percentage: 25,
+  observedBasisPoints: 2500, disposition: "preflight_admitted" as const,
+} })
+
+const successfulV8Runner = (): V138ParallelShardRunner => ({ async run(
+  shard, control) {
+  control.onLaunch({ event: "child_launched", shardId: shard.shardId,
+    laneId: shard.laneId, executionAttemptIds: shard.attempts.map(
+      ({ executionAttemptId }: { executionAttemptId: string }) =>
+        executionAttemptId) })
+  control.onResourceSample({ childId: `child:${shard.shardId}`,
+    childRssKilobytes: 100, hostTotalMemoryKilobytes: 10_000,
+    hostFreeMemoryKilobytes: 5_000 })
+  return { shardId: shard.shardId, laneId: shard.laneId,
+    classification: "success" as const, elapsedMilliseconds: 100,
+    maxRssKilobytes: 100, cleanup: { gracefulTerminationSent: false,
+      forceTerminationSent: false, exitAwaited: true, orphanProcessIds: [] },
+    outcomes: shard.attempts.map(({ executionAttemptId }:
+      { executionAttemptId: string }) => ({ attemptId: executionAttemptId,
+      classification: "success" as const, outcome: "draw" as const })) }
+} })
+
 const resetSyntheticRepository = (): void => {
   execFileSync("git", ["reset", "--hard", "-q", "HEAD"], {
     cwd: syntheticRoot,
   })
   execFileSync("git", ["clean", "-fdx", "-q"], { cwd: syntheticRoot })
+}
+
+const prepareRoutedV8 = () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-case-"))
+  execFileSync("git", ["clone", "-q", "--shared", repoRoot, tempRoot])
+  const root =
+    "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  const route = { custody: { sourceA4, sourceB4: sourceA4,
+    custodyRoot: root }, authorization: { authorizationRoot: root },
+    seal: { sealRoot: root, selectedRouteClosure: { closureRoot: root },
+      protectedHistory: { protectedHistoryRoot: root,
+        priorAuthorizationBytes: [] } } }
+  const context = buildV138ExecutionContextV8Receipt({ route: route as never,
+    mode: "gsd-pattern-c-inline-main",
+    cwd: "/Users/roryquinlan/runtime/cowards-game",
+    terminalAgentRegistry: { schemaVersion:
+      "v1.38-plan-262-25-terminal-agent-registry-v1",
+      activeExecutorCount: 0, agents: [] } })
+  writeFileSync(path.resolve(tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[0]),
+    `${JSON.stringify(context)}\n`)
+  return { tempRoot, sourceA4, sourceB4: sourceA4, context,
+    route: route as never }
 }
 
 beforeAll(() => {
@@ -549,6 +608,87 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
         chargedReproductionAttemptCount: stage === "reproduction" ? 540 : 0,
         acceptedCellCount: 0, completeCleanup: false })
     })
+
+  it.each(["preflight", "calibration", "reproduction"] as const)(
+    "terminalizes real marker-present receipt-absent %s evidence", async (stage) => {
+      const fixture = prepareRoutedV8()
+      try {
+        expect(checkV138ExecutionContextV8Receipt(JSON.parse(readFileSync(
+          path.resolve(fixture.tempRoot,
+            V138_PLAN_262_25_FRESH_DESTINATIONS[0]), "utf8")), fixture.route))
+          .toEqual(fixture.context)
+        let preflight: Record<string, unknown> | undefined
+        if (stage !== "preflight") {
+          preflight = buildV138HostHeadroomPreflightV8Receipt({
+            context: fixture.context, result: await admittedV8Headroom() })
+          writeFileSync(path.resolve(fixture.tempRoot,
+            V138_PLAN_262_25_FRESH_DESTINATIONS[1]),
+          `${JSON.stringify(preflight)}\n`)
+          consumeV138Plan26225Stage({ repoRoot: fixture.tempRoot,
+            stage: "preflight", context: fixture.context,
+            predecessorRoot: fixture.context.receiptRoot,
+            chargedAttemptIds: ["preflight:v8:0"] })
+        }
+        let calibration: Record<string, unknown> | undefined
+        if (stage === "reproduction") {
+          const inventory = enumerateV138CurrentMatrix(fixture.tempRoot)
+          const supervised = await calibrateV138ParallelMatrix({ inventory,
+            runner: successfulV8Runner(),
+            sharedHeadroomObserver: admittedV8Headroom,
+            hardwareIdentity: { operatingSystem: "test",
+              architecture: "test", nodeVersion: "test", cpuIdentity: "test" },
+            executionIdentityVersion: "v8" })
+          calibration = buildV138ParallelCalibrationV8Receipt({ inventory,
+            context: fixture.context, preflight: preflight!,
+            calibration: supervised })
+          writeFileSync(path.resolve(fixture.tempRoot,
+            V138_PLAN_262_25_FRESH_DESTINATIONS[2]),
+          `${JSON.stringify(calibration)}\n`)
+          consumeV138Plan26225Stage({ repoRoot: fixture.tempRoot,
+            stage: "calibration", context: fixture.context,
+            predecessorRoot: preflight!.receiptRoot,
+            chargedAttemptIds: deriveV138CalibrationAttemptMappings(inventory,
+              "v8").map(({ executionAttemptId }) => executionAttemptId) })
+          expect(calibration.status).toBe("admitted")
+        }
+        const inventory = enumerateV138CurrentMatrix(fixture.tempRoot)
+        const chargedAttemptIds = stage === "preflight" ? ["preflight:v8:0"] :
+          stage === "calibration" ? deriveV138CalibrationAttemptMappings(
+            inventory, "v8").map(({ executionAttemptId }) =>
+            executionAttemptId) : planV138MatrixShards(inventory).shards.flatMap(
+              ({ attemptIds }) => attemptIds.map((id) =>
+                `reproduction:v8:${id}`))
+        const predecessorRoot = stage === "preflight" ?
+          fixture.context.receiptRoot : stage === "calibration" ?
+            preflight!.receiptRoot : calibration!.receiptRoot
+        const markerRoot = consumeV138Plan26225Stage({
+          repoRoot: fixture.tempRoot, stage, context: fixture.context,
+          predecessorRoot, chargedAttemptIds })
+        expect(deriveV138Plan26225InterruptionProof(fixture.tempRoot))
+          .toMatchObject({ stage, markerRoot,
+            chargedAttemptCount: stage === "preflight" ? 1 :
+              stage === "calibration" ? 8 : 540 })
+        const terminal = writeV138Plan26225TerminalV1(fixture.tempRoot,
+          V138_PLAN_262_25_FRESH_DESTINATIONS[4],
+          "fresh_destination_failed", fixture.sourceA4, fixture.sourceB4,
+          fixture.route)
+        expect(terminal).toMatchObject({
+          disposition: "consumed_stage_interrupted",
+          interruptionProof: { stage, markerRoot }, completeCleanup: false,
+          chargedCalibrationAttemptCount: stage === "preflight" ? 0 : 8,
+          chargedReproductionAttemptCount: stage === "reproduction" ? 540 : 0,
+          acceptedCellCount: 0, authorityExpired: true, noRetry: true,
+        })
+        expect(checkV138Plan26225TerminalBranch(fixture.tempRoot,
+          fixture.sourceA4, fixture.sourceB4, fixture.route).disposition)
+          .toBe("consumed_stage_interrupted")
+        expect(existsSync(path.resolve(fixture.tempRoot,
+          V138_PLAN_262_25_FRESH_DESTINATIONS[stage === "preflight" ? 1 :
+            stage === "calibration" ? 2 : 3]))).toBe(false)
+      } finally {
+        rmSync(fixture.tempRoot, { recursive: true, force: true })
+      }
+    }, 60_000)
 
   it.each(["context", "preflight", "calibration", "reproduction"] as const)(
     "records truthful fresh-destination obstruction at %s", (stage) => {

@@ -13257,6 +13257,13 @@ const writeV138Plan26225Marker = (repoRoot: string, stage: "preflight" |
   return marker
 }
 
+export const consumeV138Plan26225Stage = (input: {
+  repoRoot: string; stage: "preflight" | "calibration" | "reproduction"
+  context: Record<string, unknown>; predecessorRoot: unknown
+  chargedAttemptIds: readonly string[]
+}) => writeV138Plan26225Marker(input.repoRoot, input.stage, input.context,
+  input.predecessorRoot, input.chargedAttemptIds).markerRoot
+
 export const checkV138Plan26225ConsumptionMarker = (repoRoot: string,
   stage: "preflight" | "calibration" | "reproduction",
   context: Record<string, unknown>, predecessorRoot: unknown,
@@ -16002,9 +16009,13 @@ export const buildV138ParallelCalibrationV8Receipt = (input: {
     context)
   const contextV7 = route4ContextAsV7(context)
   const preflightV7 = route4PreflightAsV7(preflight, context)
-  const calibrationV7 = input.calibration === undefined ? undefined :
-    replaceVersionStrings(input.calibration, ":v8:", ":v7:") as
-      Readonly<V138ParallelCalibrationReceipt>
+  const calibrationV7Body = input.calibration === undefined ? undefined :
+    replaceVersionStrings(calibrationWithoutRoot(input.calibration),
+      ":v8:", ":v7:") as Omit<V138ParallelCalibrationReceipt,
+        "calibrationRoot">
+  const calibrationV7 = calibrationV7Body === undefined ? undefined :
+    deepFreeze({ ...calibrationV7Body,
+      calibrationRoot: sha256(canonical(calibrationV7Body)) })
   const v7 = buildV138ParallelCalibrationV7Receipt({ inventory: input.inventory,
     executionContext: contextV7, preflight: preflightV7,
     calibration: calibrationV7,
@@ -16515,9 +16526,11 @@ export const deriveV138Plan26225InterruptionProof = (repoRoot: string):
 const plan26225Evidence = (repoRoot: string, sourceA4: string,
   sourceB4: string, dispositionValue: V138Plan26225Disposition,
   obstructionProof?: V138Plan26225ObstructionProof,
-  interruptionProof?: V138Plan26225InterruptionProof) => {
+  interruptionProof?: V138Plan26225InterruptionProof,
+  sealedRoute?: V138Route4) => {
   const disposition = checkV138Plan26225Disposition(dispositionValue)
-  const route = checkV138Plan26224AuthorityRoute({ repoRoot, sourceA4, sourceB4,
+  const route = sealedRoute ?? checkV138Plan26224AuthorityRoute({ repoRoot,
+    sourceA4, sourceB4,
     authorizationValue: readPlan26225(repoRoot, "authorization"),
     sealValue: readPlan26225(repoRoot, "seal") })
   const preObservation = ["tool_identity_failed", "protected_history_failed",
@@ -16588,12 +16601,12 @@ const plan26225Evidence = (repoRoot: string, sourceA4: string,
     checkV138Plan26225ConsumptionMarker(repoRoot, "preflight", context,
       context.receiptRoot, ["preflight:v8:0"])
   const calibrationMarker = !markerNeeds.calibration ||
-    calibration === undefined || context === undefined ||
+    context === undefined ||
     obstructionProof?.path === PLAN_262_25_PATHS.calibrationMarker ||
     preflight === undefined ? undefined : checkV138Plan26225ConsumptionMarker(
       repoRoot, "calibration", context, preflight.receiptRoot, calibrationIds)
   const reproductionMarker = !markerNeeds.reproduction ||
-    reproduction === undefined || context === undefined ||
+    context === undefined ||
     calibration === undefined || obstructionProof?.path ===
       PLAN_262_25_PATHS.reproductionMarker ? undefined :
     checkV138Plan26225ConsumptionMarker(
@@ -16753,7 +16766,7 @@ export const checkV138Plan26225TerminalV1 = (value: unknown,
 
 export const writeV138Plan26225TerminalV1 = (repoRoot: string,
   targetPath: string, disposition: V138Plan26225Disposition,
-  sourceA4: string, sourceB4: string) => {
+  sourceA4: string, sourceB4: string, sealedRoute?: V138Route4) => {
   checkV138Plan26225Disposition(disposition)
   assertV138Plan26225AuthorityOpen(repoRoot)
   const target = plan26225Path(repoRoot, targetPath, "terminal")
@@ -16766,7 +16779,7 @@ export const writeV138Plan26225TerminalV1 = (repoRoot: string,
   if (interruptionProof !== undefined) {
     try {
       interruptionEvidence = plan26225Evidence(repoRoot, sourceA4, sourceB4,
-        "consumed_stage_interrupted", undefined, interruptionProof)
+        "consumed_stage_interrupted", undefined, interruptionProof, sealedRoute)
       effectiveDisposition = "consumed_stage_interrupted"
     } catch (error) {
       if (disposition === "consumed_stage_interrupted") throw error
@@ -16778,7 +16791,8 @@ export const writeV138Plan26225TerminalV1 = (repoRoot: string,
   const obstructionProof = effectiveDisposition === "fresh_destination_failed" ?
     deriveV138Plan26225Obstruction(repoRoot) : undefined
   const evidence = interruptionEvidence ?? plan26225Evidence(repoRoot, sourceA4,
-    sourceB4, effectiveDisposition, obstructionProof, interruptionProof)
+    sourceB4, effectiveDisposition, obstructionProof, interruptionProof,
+    sealedRoute)
   const terminal = checkV138Plan26225TerminalV1(
     buildV138Plan26225TerminalV1({ disposition: effectiveDisposition,
       sourceA4, sourceB4,
@@ -16794,7 +16808,7 @@ export const writeV138Plan26225TerminalV1 = (repoRoot: string,
 }
 
 export const checkV138Plan26225TerminalBranch = (repoRoot: string,
-  sourceA4: string, sourceB4: string) => {
+  sourceA4: string, sourceB4: string, sealedRoute?: V138Route4) => {
   const terminal = exactRecord(readPlan26225(repoRoot, "terminal"),
     ["schemaVersion", "disposition", "sourceA4", "sourceB4",
       "authorizationRoot", "sealRoot", "artifactRoots",
@@ -16811,7 +16825,7 @@ export const checkV138Plan26225TerminalBranch = (repoRoot: string,
     terminal.interruptionProof as V138Plan26225InterruptionProof
   return checkV138Plan26225TerminalV1(terminal,
     plan26225Evidence(repoRoot, sourceA4, sourceB4, disposition,
-      obstructionProof, interruptionProof), disposition)
+      obstructionProof, interruptionProof, sealedRoute), disposition)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
