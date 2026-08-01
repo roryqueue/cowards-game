@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: blocked
-stopped_at: Plans 262-24 through 262-26 planned; Plan 262-24 offline repair and B4 authorization gate is next
+stopped_at: Plan 262-24 reviewed A4 is frozen; exact authorization-v4 literal and direct-child B4 gate are next
 last_updated: "2026-07-31T22:24:43Z"
 last_activity: 2026-07-31
 last_activity_desc: Planned the offline A4/B4 repair gate, one main-only route-ordinal-4 attempt, and independent exact 540/540 verification.
@@ -30,8 +30,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
 Plan: 18 of 26
-Status: Plans 262-21 through 262-23 are executed and immutable. Plans 262-24 through 262-26 are planned to repair only the checker/test/boundary proof source offline, freeze reviewed A4/direct-child B4 under an exact literal, consume one main-only v8/v9 route, and independently verify exact fresh 540/540. ADMIT-03 and Plan 262-03 remain blocked; no Plan-262-22 retry or partial reuse is authorized, and Plans 262-03 through 262-07 separately own roadmap truths 3–5.
-Last activity: 2026-07-31 — Created implementation-ready successor research and Plans 262-24 through 262-26; execution has not begun.
+Status: Plans 262-21 through 262-23 are executed and immutable. Plan 262-24 source A4 is frozen after six review/fix rounds, zero final findings, complete genuine interruption proofs, and an isolated PostgreSQL boundary pass; exact authorization-v4 and direct-child B4 remain pending. Plans 262-25 and 262-26 remain unexecuted. ADMIT-03 and Plan 262-03 remain blocked; no Plan-262-22 retry or partial reuse is authorized, and Plans 262-03 through 262-07 separately own roadmap truths 3–5.
+Last activity: 2026-08-01 — Froze reviewed A4 `1be54efe`; exact authorization-v4 literal is the next gate.
 
 Progress: [███████░░░] 69%
 
@@ -136,7 +136,7 @@ None.
 - Plans 262-18 through 262-20 are complete. Canonical A2/B2, selected-route, protected-history, privacy, formation, cleanup, and terminal checks pass without drift.
 - ADMIT-03 remains blocked: Plan 262-19 preflight admitted at 7,200 basis points, but calibration:v6 stopped after eight charged/launched/terminal attempts and zero accepted cells; reproduction:v7 was not launched and authority is expired.
 - Plans 262-21 through 262-23 are complete as execution/documentation steps. A3/B3 and all current route artifacts are committed and manually custody-checked.
-- Plans 262-24 through 262-26 are planned and unexecuted: offline source/test/protocol repair plus exact-literal A4/B4 custody, one main-only route-ordinal-4 v8/v9 attempt, then independent read-only verification.
+- Plan 262-24 has frozen reviewed A4 after zero final findings and complete offline proof; exact-literal direct-child B4 is still pending. Plans 262-25 and 262-26 remain unexecuted.
 - The successor protects A2/B2/A3/B3, all v5/v6/v7 roots/markers/absence, terminal-v1, all 24 calibration charges, and every prior authorization byte; it grants no retry or reuse of Plan 262-22.
 - ADMIT-03 remains blocked: Plan 262-22 terminal-v1 is `calibration_stopped`; calibration:v7 has eight charged/launched/terminal attempts and zero accepted cells, while reproduction:v8 and its marker are absent at 0/540.
 - The canonical authorization-v3 checker fails with `V138_PLAN_262_15_ARTIFACT_MUST_BE_ABSENT` because protected Plan 262-15 artifacts are present on current main.
@@ -155,6 +155,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-07-31T22:24:43Z
-Stopped at: Plans 262-24 through 262-26 planned; route and Phase 262 remain blocked
+Stopped at: Plan 262-24 reviewed A4 frozen; exact authorization-v4/direct-child B4 gate pending
 Resume file: None
-Next command: Execute Plan 262-24 offline through its deep-review, isolated PostgreSQL proof, and exact authorization-v4 literal checkpoint. Do not run Plan 262-25, retry Plan 262-22, or begin Plan 262-03 before checked direct-child B4 exists.
+Next command: Render and obtain the exact authorization-v4 literal for frozen A4, then create and check exactly one direct-child B4. Do not run Plan 262-25, retry Plan 262-22, or begin Plan 262-03 before checked direct-child B4 exists.
