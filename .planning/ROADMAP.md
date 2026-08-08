@@ -52,7 +52,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 18/26 plans executed
 
-**Current verdict:** BLOCKED / `gaps_found` — 18 of 26 plans are executed. Plans 262-21/22 produced reviewed A3/direct-child B3 and one route-ordinal-3 `calibration_stopped` terminal; Plan 262-23 independently kept ADMIT-03 blocked on 0/540 plus checker, bounded-selector, and PostgreSQL boundary-proof gaps. Plans 262-24 through 262-26 are now planned as a non-overlapping successor: offline repair/review/exact-literal direct-child B4, one main-only route-ordinal-4 v8/v9 execution, then independent read-only verification. There is no retry or reuse of Plan 262-22. Plan 262-03 can unblock only after Plan 262-26 verifies literal `reproduction_passed` with exact fresh 540/540; Plans 262-03 through 262-07 separately own roadmap truths 3–5.
+**Current verdict:** BLOCKED / `gaps_found` — 19 of 26 plans are executed. Plan 262-24 produced zero-finding A4 and checked exact two-artifact direct-child B4; Plan 262-25 now owns the sole fresh route-ordinal-4 v8/v9 execution, followed by independent Plan 262-26 verification. The archived route-3 `calibration_stopped` terminal remains immutable and there is no retry or reuse of any prior route. Plan 262-03 can unblock only after Plan 262-26 verifies literal `reproduction_passed` with exact fresh 540/540; Plans 262-03 through 262-07 separately own roadmap truths 3–5.
 
 Plans:
 **Wave 1**
@@ -129,7 +129,7 @@ Plans:
 
 **Wave 19** *(blocked on Wave 18 completion)*
 
-- [ ] 262-24-PLAN.md — Offline-only repair: preserve strict pre-live checking, add terminal-aware post-live checking and scoped errors, bound the complete route test suite, close the privacy-safe child protocol, prove database boundaries in isolation, freeze zero-finding A4, and seal exact-literal direct-child B4.
+- [x] 262-24-PLAN.md — Offline-only repair: preserve strict pre-live checking, add terminal-aware post-live checking and scoped errors, bound the complete route test suite, close the privacy-safe child protocol, prove database boundaries in isolation, freeze zero-finding A4, and seal exact-literal direct-child B4.
 
 **Wave 20** *(blocked on Wave 19 completion)*
 
