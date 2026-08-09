@@ -4738,6 +4738,67 @@ export const writeV138SuccessorSourceSealV5 = (repoRoot: string,
   return value
 }
 
+const checkV138Plan26229AuthorizationV5ExceptProtectedHistory = (
+  repoRoot: string, value: unknown, sourceA5: string,
+) => {
+  if (!isRecord(value) || !isRecord(value.sourceCustody) ||
+    !isRecord(value.selectedRouteClosure)) {
+    fail("V138_PLAN_262_29_AUTHORIZATION_SCHEMA_INVALID")
+  }
+  const custody = inspectSourceCustodyA5({ repoRoot,
+    sourceBase5: V138_PLAN_262_28_SOURCE_BASE5, sourceA5 })
+  const closure = deriveSelectedRouteClosureAtCommit(repoRoot, sourceA5)
+  const exactNonHistory: Record<string, unknown> = {
+    schemaVersion: V138_PLAN_262_29_AUTHORIZATION_SCHEMA, routeOrdinal: 5,
+    operator: V138_PLAN_262_15_OPERATOR, sourceCustody: custody,
+    selectedRouteClosure: closure, selectedRouteClosureRoot: closure.closureRoot,
+    sourceA2: V138_REVIEWED_SOURCE_A2, sourceB2: V138_REVIEWED_SOURCE_B2,
+    sourceA3: V138_REVIEWED_SOURCE_A3, sourceB3: V138_REVIEWED_SOURCE_B3,
+    sourceA4: V138_REVIEWED_SOURCE_A4, sourceB4: V138_REVIEWED_SOURCE_B4,
+    canonicalDestinations: plan26229Destinations(),
+    frozenPolicyRoot: frozenPolicyRootV2(), sealCount: 1, contextCount: 1,
+    preflightCount: 1, calibrationAllocationCount: 1,
+    calibrationAttemptCount: 8, calibrationShardCount: 4,
+    reproductionMaximumCount: 1, reproductionCellCount: 540,
+    resourceSampleMilliseconds: 200,
+    requiredHostHeadroomBasisPoints: 2500, singleUse: true, noRetry: true,
+    noPriorAuthorityReuse: true, noExecutionBeforeCheckedB5: true,
+    expiresAt: "first_seal_refusal_failure_or_plan_262_30_terminal",
+  }
+  for (const [key, expected] of Object.entries(exactNonHistory)) {
+    if (canonical(value[key]) !== canonical(expected)) {
+      fail("V138_PLAN_262_29_AUTHORIZATION_NON_HISTORY_INVALID")
+    }
+  }
+  const expectedKeys = [...Object.keys(exactNonHistory),
+    "protectedHistoryRoot", "cumulativeChargedPublicAttemptIds",
+    "priorAuthorizationBytes", "literalSha256", "authorizationRoot"]
+  if (canonical(sorted(Object.keys(value))) !==
+    canonical(sorted(expectedKeys))) {
+    fail("V138_PLAN_262_29_AUTHORIZATION_SCHEMA_INVALID")
+  }
+  if (!isV138CanonicalSha256(value.protectedHistoryRoot) ||
+    !isV138CanonicalSha256(value.literalSha256) ||
+    !Array.isArray(value.cumulativeChargedPublicAttemptIds) ||
+    value.cumulativeChargedPublicAttemptIds.length !== 32 ||
+    value.cumulativeChargedPublicAttemptIds.some((id) =>
+      typeof id !== "string" || id.length === 0) ||
+    new Set(value.cumulativeChargedPublicAttemptIds).size !== 32 ||
+    !Array.isArray(value.priorAuthorizationBytes) ||
+    value.priorAuthorizationBytes.length !== 4 ||
+    value.priorAuthorizationBytes.some((entry) => !isRecord(entry) ||
+      typeof entry.path !== "string" || !isV138CanonicalSha256(entry.sha256)) ||
+    !isV138CanonicalSha256(value.authorizationRoot)) {
+    fail("V138_PLAN_262_29_AUTHORIZATION_HISTORY_ANCHOR_INVALID")
+  }
+  const body = { ...value }; delete body.authorizationRoot
+  if (value.authorizationRoot !== identityRoot("evidenceBundle",
+    V138_PLAN_262_29_AUTHORIZATION_SCHEMA, body)) {
+    fail("V138_PLAN_262_29_AUTHORIZATION_HISTORY_ANCHOR_INVALID")
+  }
+  return value
+}
+
 /**
  * Validates only the immutable B5 byte/custody anchor. Unlike the full route
  * checker it deliberately does not re-observe tool identity, protected
@@ -4746,7 +4807,7 @@ export const writeV138SuccessorSourceSealV5 = (repoRoot: string,
  */
 export const inspectV138SuccessorSealCommitV5Anchor = (input: {
   readonly repoRoot: string; readonly sourceA5: string;
-  readonly sourceB5: string
+  readonly sourceB5: string; readonly allowProtectedHistoryFailure?: true
 }) => {
   const sourceA5 = fullCommit(input.repoRoot, input.sourceA5)
   const sourceB5 = fullCommit(input.repoRoot, input.sourceB5)
@@ -4776,8 +4837,10 @@ export const inspectV138SuccessorSealCommitV5Anchor = (input: {
     V138_PLAN_262_29_CANONICAL_PATHS.authorization).toString("utf8"))
   const seal = JSON.parse(readCommitFile(input.repoRoot, sourceB5,
     V138_PLAN_262_29_CANONICAL_PATHS.seal).toString("utf8"))
-  const authorization = checkV138Plan26229AuthorizationV5(input.repoRoot,
-    authorizationValue)
+  const authorization = input.allowProtectedHistoryFailure === true ?
+    checkV138Plan26229AuthorizationV5ExceptProtectedHistory(input.repoRoot,
+      authorizationValue, sourceA5) :
+    checkV138Plan26229AuthorizationV5(input.repoRoot, authorizationValue)
   const sealKeys = ["schemaVersion", "sealOrdinal", "canonicalizationId",
     "sourceCustody", "selectedRouteClosure", "reviewRoots",
     "protectedHistory", "frozenPolicy", "toolIdentity", "hostIdentity",
@@ -4816,8 +4879,14 @@ export const checkV138SuccessorSourceSealV5Except = (
   authorizationValue: unknown,
   omitted: "toolIdentity" | "protectedHistory" | "formationAbsence" | null,
 ) => {
-  const authorization = checkV138Plan26229AuthorizationV5(repoRoot,
-    authorizationValue)
+  const authorizationRecord = isRecord(authorizationValue) ?
+    authorizationValue : undefined
+  const authorization = omitted === "protectedHistory" ?
+    checkV138Plan26229AuthorizationV5ExceptProtectedHistory(repoRoot,
+      authorizationValue, authorizationRecord !== undefined &&
+        isRecord(authorizationRecord.sourceCustody) ?
+        String(authorizationRecord.sourceCustody.sourceA5) : "") :
+    checkV138Plan26229AuthorizationV5(repoRoot, authorizationValue)
   if (!isRecord(sealValue)) fail("V138_SUCCESSOR_SEAL_V5_SCHEMA_INVALID")
   if (omitted === null) {
     return checkV138SuccessorSourceSealV5(repoRoot, sealValue, authorization)

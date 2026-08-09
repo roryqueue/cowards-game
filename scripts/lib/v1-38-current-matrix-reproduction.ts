@@ -18298,7 +18298,9 @@ const plan26230Evidence = (repoRoot: string, sourceA5: string,
     "formation_absence_failed", "pattern_c_ownership_failed"]
     .includes(disposition)
   const anchor = preObservation ? inspectV138SuccessorSealCommitV5Anchor({
-    repoRoot, sourceA5, sourceB5 }) : undefined
+    repoRoot, sourceA5, sourceB5,
+    ...(disposition === "protected_history_failed" ?
+      { allowProtectedHistoryFailure: true as const } : {}) }) : undefined
   const route = anchor === undefined ? checkV138Plan26229AuthorityRoute({
     repoRoot, sourceA5, sourceB5,
     authorizationValue: readPlan26230(repoRoot, "authorization"),
