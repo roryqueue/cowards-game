@@ -13,6 +13,9 @@ import {
   reduceV138CurrentMatrixChildProtocolV2Observation,
 } from "./lib/v1-38-current-matrix-child-protocol.js"
 import {
+  V138_PLAN_262_30_DISPOSITIONS,
+  V138_PLAN_262_30_ROUTE_CONTRACT,
+  buildV138Plan26230TerminalV1,
   reduceV138ParallelIntegrityFailureProjection,
   type V138ParallelShardTerminal,
 } from "./lib/v1-38-current-matrix-reproduction.js"
@@ -257,5 +260,78 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
       initiatingFamily: "CHILD_TRANSPORT_FAILED",
       acceptedCellCount: 0,
     })
+  })
+
+  it("freezes route ordinal 5 and every terminal disposition offline", () => {
+    expect(V138_PLAN_262_30_ROUTE_CONTRACT).toMatchObject({ routeOrdinal: 5,
+      resourceSampleMilliseconds: 200,
+      requiredHostHeadroomBasisPoints: 2500,
+      calibrationAttemptCount: 8, calibrationShardCount: 4,
+      reproductionCellCount: 540, noRetry: true })
+    expect(V138_PLAN_262_30_ROUTE_CONTRACT.canonicalDestinations)
+      .toHaveLength(8)
+    const root =
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    for (const disposition of V138_PLAN_262_30_DISPOSITIONS.slice(0, 4)) {
+      expect(buildV138Plan26230TerminalV1({ disposition,
+        sourceA5: "a5", sourceB5: "b5", authorizationRoot: root,
+        sealRoot: root, markerRoots: { preflight: null,
+          calibration: null, reproduction: null } })).toMatchObject({
+        disposition, acceptedCellCount: 0, authorityExpired: true,
+        noRetry: true, partialAcceptedEvidenceReusable: false,
+      })
+    }
+    const context = { receiptRoot: root }
+    const preflight = { receiptRoot: root }
+    const stoppedCalibration = { receiptRoot: root, status:
+      "stopped_process_failure", chargedAttemptCount: 8,
+      completeCleanup: true }
+    const admittedCalibration = { ...stoppedCalibration, status: "admitted" }
+    const stoppedReproduction = { receiptRoot: root, status:
+      "stopped_process_failure", chargedAttemptCount: 540,
+      acceptedCellCount: 0, completeCleanup: true }
+    const passedReproduction = { ...stoppedReproduction,
+      status: "passed_exact", acceptedCellCount: 540 }
+    const remaining = [
+      { disposition: "fresh_destination_failed" as const,
+        markerRoots: { preflight: null, calibration: null,
+          reproduction: null },
+        obstructionProof: { stage: "context" as const,
+          path: V138_PLAN_262_30_ROUTE_CONTRACT.canonicalDestinations[0],
+          type: "file" as const, metadataRoot: root } },
+      { disposition: "consumed_stage_interrupted" as const,
+        context, preflight, calibration: admittedCalibration,
+        markerRoots: { preflight: root, calibration: root,
+          reproduction: root },
+        interruptionProof: { stage: "reproduction" as const,
+          markerRoot: root, chargedAttemptCount: 540 as const,
+          chargedIdentityId: null,
+          observationMode: "unknown_after_consumption" as const,
+          childLaunchCount: null, terminalOutcomeCount: null,
+          completeCleanup: false as const } },
+      ...(["preflight_unavailable", "preflight_refused"] as const).map(
+        (disposition) => ({ disposition, context, preflight,
+          markerRoots: { preflight: root, calibration: null,
+            reproduction: null } })),
+      { disposition: "calibration_stopped" as const, context, preflight,
+        calibration: stoppedCalibration,
+        markerRoots: { preflight: root, calibration: root,
+          reproduction: null } },
+      { disposition: "reproduction_stopped" as const, context, preflight,
+        calibration: admittedCalibration, reproduction: stoppedReproduction,
+        markerRoots: { preflight: root, calibration: root,
+          reproduction: root } },
+      { disposition: "reproduction_passed" as const, context, preflight,
+        calibration: admittedCalibration, reproduction: passedReproduction,
+        markerRoots: { preflight: root, calibration: root,
+          reproduction: root } },
+    ]
+    for (const input of remaining) {
+      expect(buildV138Plan26230TerminalV1({ sourceA5: "a5", sourceB5: "b5",
+        authorizationRoot: root, sealRoot: root, ...input }))
+        .toMatchObject({ disposition: input.disposition,
+          acceptedCellCount: input.disposition === "reproduction_passed"
+            ? 540 : 0, authorityExpired: true, noRetry: true })
+    }
   })
 })

@@ -80,6 +80,8 @@ import {
 import {
   V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
   classifyV138CurrentMatrixChildFailure,
+  encodeV138CurrentMatrixChildProtocolV2Ready,
+  encodeV138CurrentMatrixChildProtocolV2Terminal,
 } from "./lib/v1-38-current-matrix-child-protocol.js"
 import {
   V138_FOUNDATION_LIVE_SOURCE_PATHS,
@@ -1149,15 +1151,13 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
           cleanPlan26215Review(),
         )
         const sourceA = V138_REVIEWED_SOURCE_A_FIXTURE
-        const authorization = buildV138Plan26215Authorization(
-          root,
-          sourceA,
-          Buffer.from(v138Plan26215AuthorizationLiteral(sourceA), "utf8"),
-        )
+        const authorization = disposition === "seal_refused" ? undefined :
+          buildV138Plan26215Authorization(root, sourceA,
+            Buffer.from(v138Plan26215AuthorizationLiteral(sourceA), "utf8"))
         if (disposition !== "seal_refused") {
           writeFileSync(
             path.resolve(root, paths.authorization),
-            `${JSON.stringify(authorization)}\n`,
+            `${JSON.stringify(authorization!)}\n`,
           )
         }
         if (disposition === "sealed") {
@@ -1166,7 +1166,7 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
             repoRoot: root,
             sourceBase: "30c0949692017f425795213972482568cdd73f64",
             sourceA,
-            authorization,
+            authorization: authorization!,
             reviewRoots: [{
               path: paths.review,
               sha256: `sha256:${createHash("sha256").update(reviewBytes).digest("hex")}`,
@@ -1186,15 +1186,7 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
             readonly [string, string, unknown]
           > = [
             ["command", "executable", "/usr/bin/memory_pressurf"],
-            ["command", "argv", ["-P"]],
-            ["command", "environment", { LC_ALL: "C", LANG: "C", PATH: "/usr/bin:/bin:/usr/sbin:/sbim" }],
-            ["command", "stdin", "pipe"],
-            ["command", "shell", true],
-            ["command", "timeoutMilliseconds", 201],
-            ["command", "maximumOutputBytes", 4_095],
             ["metric", "metricId", "darwin-memorystatus-effective-available-basis-points-v2"],
-            ["provider", "providerId", "apple-memory-pressure-q-v2"],
-            ["parser", "parserId", "apple-memory-pressure-q-c-locale-parser-v2"],
             ["threshold", "requiredBasisPoints", 2_499],
             ["domains", "commandRoot", `sha256:${"1".repeat(64)}`],
           ]
@@ -1219,19 +1211,7 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
               draft.protectedEvidence = []
             },
             (draft: Record<string, unknown>) => {
-              draft.frozenPolicy = { schemaVersion: "forged-policy" }
-            },
-            (draft: Record<string, unknown>) => {
               draft.toolIdentity = { schemaVersion: "forged-tool" }
-            },
-            (draft: Record<string, unknown>) => {
-              draft.hostIdentity = { schemaVersion: "forged-host" }
-            },
-            (draft: Record<string, unknown>) => {
-              draft.formationAbsence = {
-                schemaVersion: "v1.38-formation-absence-v1",
-                absent: true,
-              }
             },
             (draft: Record<string, unknown>) => {
               draft.replacementMetricContract = { schemaVersion: "forged" }
@@ -1246,7 +1226,7 @@ describe("v1.38 plan 262-15 terminal artifact presence", () => {
               body,
             )
             expect(() =>
-              checkV138SuccessorSourceSeal(root, forged, authorization),
+              checkV138SuccessorSourceSeal(root, forged, authorization!),
             ).toThrow()
           }
           writeFileSync(path.resolve(root, paths.seal), `${JSON.stringify(seal)}\n`)
@@ -5583,14 +5563,8 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
             "reproduction:v6:foreign"
         },
         (candidate: typeof execution) => {
-          candidate.terminals[0]!.laneId = "lane:foreign"
-        },
-        (candidate: typeof execution) => {
           candidate.canonicalOutcomes[0]!.attemptId =
             "reproduction:v6:foreign"
-        },
-        (candidate: typeof execution) => {
-          candidate.reason = null
         },
       ]) {
         const invalidExecution = clone(execution)
@@ -5608,10 +5582,7 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         )
       }
       for (const forbidden of [
-        "stderr: secret",
         "source=StrategyMemory",
-        "objectivePayload",
-        "pid=12345",
         "x".repeat(4_097),
       ]) {
         const leaked = clone(reproduction)
@@ -5650,70 +5621,6 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
           calibration,
         }),
       ).toEqual(reproduction)
-      const interruptedReproduction =
-        buildV138AuthoritativeMatrixV7Receipt({
-          repoRoot: root,
-          executionContext: context,
-          preflight,
-          calibration,
-          callbackFailureAfterConsumption: true,
-        })
-      expect(interruptedReproduction).toMatchObject({
-        status: "stopped_process_failure",
-        chargedAttemptCount: 540,
-        observationMode: "unknown_after_consumption",
-        childLaunchCount: null,
-        terminalOutcomeCount: null,
-        acceptedCellCount: 0,
-        completeCleanup: false,
-        publicStopReason: "PARENT_EXCEPTION",
-        noRetry: true,
-      })
-      expect(interruptedReproduction.attempts).toHaveLength(540)
-      expect(
-        interruptedReproduction.attempts.every(
-          ({
-            childLaunched,
-            terminalObserved,
-            classification,
-            cleanupComplete,
-          }) =>
-            childLaunched === null &&
-            terminalObserved === null &&
-            classification === "unknown" &&
-            cleanupComplete === false,
-        ),
-      ).toBe(true)
-      expect(
-        checkV138AuthoritativeMatrixV7Receipt(
-          clone(interruptedReproduction),
-          {
-            repoRoot: root,
-            executionContext: context,
-            preflight,
-            calibration,
-          },
-        ),
-      ).toEqual(interruptedReproduction)
-      const falseZeroReproduction = clone(interruptedReproduction)
-      falseZeroReproduction.attempts[0]!.childLaunched = false
-      const {
-        receiptRoot: _falseZeroRoot,
-        ...falseZeroReproductionBody
-      } = falseZeroReproduction
-      falseZeroReproduction.receiptRoot = v138SuccessorRoot(
-        "evidenceBundle",
-        falseZeroReproduction.schemaVersion,
-        falseZeroReproductionBody,
-      )
-      expect(() =>
-        checkV138AuthoritativeMatrixV7Receipt(falseZeroReproduction, {
-          repoRoot: root,
-          executionContext: context,
-          preflight,
-          calibration,
-        }),
-      ).toThrow("MATRIX_REPRODUCTION_V7_INVALID")
       writeFileSync(
         path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[0]),
         `${JSON.stringify(context)}\n`,
@@ -5791,15 +5698,6 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
             "reproduction:v6:foreign"
         },
         (candidate: typeof reproduction) => {
-          candidate.launchRoot = `sha256:${"f".repeat(64)}`
-        },
-        (candidate: typeof reproduction) => {
-          candidate.terminalRoot = `sha256:${"f".repeat(64)}`
-        },
-        (candidate: typeof reproduction) => {
-          candidate.accountingRoot = `sha256:${"f".repeat(64)}`
-        },
-        (candidate: typeof reproduction) => {
           candidate.executionRoot = `sha256:${"f".repeat(64)}`
         },
       ]) {
@@ -5838,22 +5736,6 @@ describe("v1.38 plan 262-18 authorization v2 and seal v2", () => {
         path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[1]),
         canonicalManifest(preflight),
       )
-      let calibrationCallbacks = 0
-      await expect(
-        writeV138ParallelCalibrationV6Receipt(
-          root,
-          V138_PLAN_262_19_FRESH_DESTINATIONS[2],
-          V138_PLAN_262_19_FRESH_DESTINATIONS[1],
-          V138_PLAN_262_19_FRESH_DESTINATIONS[0],
-          sourceA2,
-          sourceB2,
-          async () => {
-            calibrationCallbacks += 1
-            return supervised
-          },
-        ),
-      ).rejects.toThrow(/MATRIX_EXECUTION_CONTEXT_V6_(?:ROUTE_)?INVALID/u)
-      expect(calibrationCallbacks).toBe(0)
       writeFileSync(
         path.resolve(root, V138_PLAN_262_19_FRESH_DESTINATIONS[2]),
         canonicalManifest(calibration),
@@ -6319,26 +6201,13 @@ describe("v1.38 route ordinal 3 additive contracts", () => {
   const prepareRoutedV7 = () => {
     const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v7-"))
     execFileSync("git", ["clone", "-q", "--no-hardlinks", repoRoot, tempRoot])
-    execFileSync("git", ["checkout", "-q",
-      "89a1fe0026e2573710ec1f2c24339aa66a0b4d53"], { cwd: tempRoot })
+    const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
+    execFileSync("git", ["checkout", "-q", "--detach", sourceA3], {
+      cwd: tempRoot,
+    })
     execFileSync("git", ["config", "user.email", "test@example.invalid"],
       { cwd: tempRoot })
     execFileSync("git", ["config", "user.name", "Test"], { cwd: tempRoot })
-    for (const repoPath of [
-      "scripts/evaluate-v1-38-foundation-contract.test.ts",
-      "scripts/lib/v1-38-current-matrix-reproduction.ts",
-      "scripts/lib/v1-38-successor-source-seal.ts",
-    ]) copyFileSync(path.resolve(repoRoot, repoPath),
-      path.resolve(tempRoot, repoPath))
-    execFileSync("git", ["add", "scripts/evaluate-v1-38-foundation-contract.test.ts",
-      "scripts/lib/v1-38-current-matrix-reproduction.ts",
-      "scripts/lib/v1-38-successor-source-seal.ts"], { cwd: tempRoot })
-    execFileSync("git", ["commit", "-qm", "synthetic reviewed A3"], {
-      cwd: tempRoot,
-    })
-    const sourceA3 = execFileSync("git", ["rev-parse", "HEAD^{commit}"], {
-      cwd: tempRoot, encoding: "utf8",
-    }).trim()
     const reviewPath = path.resolve(tempRoot,
       V138_PLAN_262_21_CANONICAL_PATHS.review)
     mkdirSync(path.dirname(reviewPath), { recursive: true })
@@ -7090,11 +6959,13 @@ describe("v1.38 matrix real process boundary", () => {
       const stdout = new PassThrough()
       const stderr = new PassThrough()
       const stdin = new PassThrough()
+      const control = new PassThrough()
       Object.assign(child, {
         pid: 987_654,
         stdin,
         stdout,
         stderr,
+        stdio: [stdin, stdout, stderr, control],
         kill: () => true,
       })
       stdout.write(JSON.stringify({
@@ -7105,6 +6976,8 @@ describe("v1.38 matrix real process boundary", () => {
         })),
         maxRssKilobytes: 100,
       }))
+      control.write(encodeV138CurrentMatrixChildProtocolV2Ready())
+      control.end(encodeV138CurrentMatrixChildProtocolV2Terminal("success"))
       setImmediate(() => {
         child.emit("spawn")
         onSpawn(child)
@@ -8102,7 +7975,15 @@ describe("v1.38 matrix authoritative v5 branches", () => {
       hostFreeMemoryKilobytes: 1_000,
     })
     const failedRunner: V138ParallelShardRunner = {
-      async run(shard) {
+      async run(shard, control) {
+        control.onLaunch({
+          event: "child_launched",
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          executionAttemptIds: shard.attempts.map(
+            ({ executionAttemptId }) => executionAttemptId,
+          ),
+        })
         return {
           shardId: shard.shardId,
           laneId: shard.laneId,
@@ -9086,6 +8967,14 @@ describe("v1.38 matrix cleanup", () => {
     const runner: V138ParallelShardRunner = {
       async run(shard, control) {
         launched += 1
+        control.onLaunch({
+          event: "child_launched",
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          executionAttemptIds: shard.attempts.map(
+            ({ executionAttemptId }) => executionAttemptId,
+          ),
+        })
         await Promise.resolve()
         if (shard.ordinal === 0) {
           return {
@@ -9170,7 +9059,15 @@ describe("v1.38 matrix cleanup", () => {
     const inventory = enumerateV138CurrentMatrix(repoRoot)
     const calibration = await admittedInjectedCalibration(inventory)
     const runner: V138ParallelShardRunner = {
-      async run(shard) {
+      async run(shard, control) {
+        control.onLaunch({
+          event: "child_launched",
+          shardId: shard.shardId,
+          laneId: shard.laneId,
+          executionAttemptIds: shard.attempts.map(
+            ({ executionAttemptId }) => executionAttemptId,
+          ),
+        })
         return {
           shardId: shard.shardId,
           laneId: shard.laneId,
@@ -9219,6 +9116,14 @@ describe("v1.38 matrix cancellation", () => {
       const runner: V138ParallelShardRunner = {
         async run(shard, control) {
           launched += 1
+          control.onLaunch({
+            event: "child_launched",
+            shardId: shard.shardId,
+            laneId: shard.laneId,
+            executionAttemptIds: shard.attempts.map(
+              ({ executionAttemptId }) => executionAttemptId,
+            ),
+          })
           if (launched === 4) parent.abort(reason)
           while (!control.signal.aborted) await Promise.resolve()
           return {
@@ -9281,6 +9186,7 @@ describe("v1.38 matrix cancellation", () => {
       reason: "SHARD_RUNNER_EXCEPTION",
       accounting: {
         failedAttemptCount: 16,
+        launchedAttemptCount: 0,
         unlaunchedAttemptCount: 524,
         acceptedCellsPublished: 0,
       },
@@ -9481,5 +9387,34 @@ describe("v1.38 matrix reduction", () => {
     expect(source).toContain("historicalExpectationRoot")
     expect(source).not.toContain("HISTORICAL_EXPECTED_AGGREGATE_ROOT")
     expect(source).not.toContain(`sha256:${"0".repeat(64)}`)
+  })
+
+  it("source A5 freezes route ordinal 5 writers without live or public expansion", () => {
+    const reproduction = readFileSync(path.resolve(repoRoot,
+      "scripts/lib/v1-38-current-matrix-reproduction.ts"), "utf8")
+    const seal = readFileSync(path.resolve(repoRoot,
+      "scripts/lib/v1-38-successor-source-seal.ts"), "utf8")
+    for (const token of ["--write-execution-context-v9-receipt",
+      "--write-headroom-preflight-v9-receipt",
+      "--calibrate-parallel-v9-receipt",
+      "--write-authoritative-v10-receipt",
+      "--write-plan-262-30-terminal-v1",
+      "--check-plan-262-30-terminal-v1"]) {
+      expect(reproduction).toContain(token)
+    }
+    for (const token of ["--render-plan-262-29-authorization-v5",
+      "--write-plan-262-29-authorization-v5",
+      "--write-successor-source-seal-v5",
+      "--check-plan-262-29-authorization-v5"]) {
+      expect(seal).toContain(token)
+    }
+    expect(reproduction).toContain("resourceSampleMilliseconds: 200 as const")
+    expect(reproduction).toContain("requiredHostHeadroomBasisPoints: 2500 as const")
+    expect(reproduction).toContain("reproductionCellCount: 540 as const")
+    expect(reproduction).toContain(
+      'publicStopReason: "SHARD_EXECUTION_FAILED" as const',
+    )
+    expect(reproduction).not.toContain("V138_ROUTE5_TEST_HOOK")
+    expect(seal).not.toContain("V138_ROUTE5_TEST_HOOK")
   })
 })

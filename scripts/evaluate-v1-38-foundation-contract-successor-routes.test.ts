@@ -30,6 +30,9 @@ import {
 import {
   V138_PLAN_262_22_FRESH_DESTINATIONS,
   V138_PLAN_262_25_FRESH_DESTINATIONS,
+  V138_PLAN_262_30_FRESH_DESTINATIONS,
+  V138_PLAN_262_28_SOURCE_BASE5,
+  V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5,
   V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4,
   checkV138Plan26221PreLiveDestinationAbsence,
   checkV138Plan26221AuthorizationV3PostLive,
@@ -44,6 +47,9 @@ import {
 import {
   V138_PLAN_262_25_ROUTE_CONTRACT,
   V138_PLAN_262_25_DISPOSITIONS,
+  V138_PLAN_262_30_ROUTE_CONTRACT,
+  V138_PLAN_262_30_DISPOSITIONS,
+  buildV138Plan26230TerminalV1,
   checkV138Plan26225RouteContract,
   checkV138Plan26225PrerequisiteRoots,
   dispatchV138CurrentMatrixDirectEntry,
@@ -73,12 +79,7 @@ import * as v138Reproduction from
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceA3 = "7ec7bae62fac9344bed9919b6e5095f9451c7eea"
 const sourceB3 = "1387813e9f7262ac0c5916635addee9cdb96354b"
-// The reviewed candidate is the immutable commit containing this suite. Binding
-// to HEAD avoids an impossible self-referential source hash while custody still
-// proves the complete sourceBase4..candidate lineage and exact five-path delta.
-const sourceA4 = execFileSync("git", ["rev-parse", "HEAD"], {
-  cwd: repoRoot, encoding: "utf8",
-}).trim()
+const sourceA4 = "1be54efec080436ea47ba5be3644ab1ab1686163"
 let syntheticRoot = ""
 let sealedRouteRoot = ""
 
@@ -187,6 +188,9 @@ status: clean
 const prepareSealedRouteBase = () => {
   const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-sealed-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, tempRoot])
+  execFileSync("git", ["checkout", "-q", "--detach", sourceA4], {
+    cwd: tempRoot,
+  })
   execFileSync("git", ["config", "user.email", "route4@example.invalid"],
     { cwd: tempRoot })
   execFileSync("git", ["config", "user.name", "Route Four"],
@@ -373,7 +377,7 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
       ".planning/artifacts/v1.38-plan-262-25-reproduction-consumption-v1.json",
     ])
     for (const repoPath of V138_PLAN_262_25_FRESH_DESTINATIONS) {
-      expect(existsSync(path.resolve(repoRoot, repoPath))).toBe(false)
+      expect(existsSync(path.resolve(sealedRouteRoot, repoPath))).toBe(false)
     }
   })
 
@@ -812,14 +816,146 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
   })
 })
 
-describe.sequential("v1.38 child protocol", () => {
-  const protocolModule = path.resolve(
-    repoRoot,
-    "scripts/lib/v1-38-current-matrix-child-protocol.ts",
+describe.sequential("v1.38 route ordinal 5 offline contract", () => {
+  const root =
+    "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  const context = { receiptRoot: root }
+  const preflight = { receiptRoot: root }
+  const stoppedCalibration = { receiptRoot: root, chargedAttemptCount: 8,
+    completeCleanup: true, status: "stopped_process_failure" }
+  const admittedCalibration = { ...stoppedCalibration, status: "admitted" }
+  const stoppedReproduction = { receiptRoot: root, chargedAttemptCount: 540,
+    acceptedCellCount: 0, completeCleanup: true,
+    status: "stopped_process_failure" }
+  const passedReproduction = { ...stoppedReproduction,
+    acceptedCellCount: 540, status: "passed_exact" }
+
+  it("freezes the noncolliding v5/v9/v10 route and exact policy constants", () => {
+    expect(V138_PLAN_262_30_ROUTE_CONTRACT).toEqual({
+      schemaVersion: "v1.38-plan-262-30-route-contract-v1",
+      routeOrdinal: 5,
+      authorizationSchema: "v1.38-plan-262-29-authorization-v5",
+      sealSchema: "v1.38-successor-source-seal-v5",
+      executionContextSchema: "v1.38-current-matrix-execution-context-v9",
+      preflightSchema: "v1.38-current-matrix-headroom-preflight-v9",
+      calibrationSchema: "v1.38-current-matrix-calibration-v9",
+      reproductionSchema: "v1.38-current-matrix-reproduction-v10",
+      consumptionSchema: "v1.38-plan-262-30-consumption-v1",
+      terminalSchema: "v1.38-plan-262-30-terminal-v1",
+      terminalDispositions: V138_PLAN_262_30_DISPOSITIONS,
+      failureProtocolSchema: "v1.38-current-matrix-child-failure-v1",
+      resourceSampleMilliseconds: 200,
+      requiredHostHeadroomBasisPoints: 2500,
+      calibrationAttemptCount: 8,
+      calibrationShardCount: 4,
+      reproductionCellCount: 540,
+      canonicalDestinations: V138_PLAN_262_30_FRESH_DESTINATIONS,
+      noRetry: true,
+      partialAcceptedEvidenceReusable: false,
+    })
+    expect(new Set(V138_PLAN_262_30_FRESH_DESTINATIONS).size).toBe(8)
+    expect(V138_PLAN_262_30_FRESH_DESTINATIONS.every((repoPath) =>
+      !existsSync(path.resolve(repoRoot, repoPath)))).toBe(true)
+    expect(V138_PLAN_262_28_SOURCE_BASE5).toBe(
+      "1cd79971145eff892f49aad928642b0d875fef53",
+    )
+    expect(V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5).toHaveLength(5)
+  })
+
+  it.each(V138_PLAN_262_30_DISPOSITIONS)(
+    "builds the closed terminal disposition %s with fail-closed presence rules",
+    (disposition) => {
+      const preObservation = ["tool_identity_failed", "protected_history_failed",
+        "formation_absence_failed", "pattern_c_ownership_failed"]
+        .includes(disposition)
+      const fresh = disposition === "fresh_destination_failed"
+      const interrupted = disposition === "consumed_stage_interrupted"
+      const calibrationStage = ["calibration_stopped", "reproduction_stopped",
+        "reproduction_passed"].includes(disposition)
+      const reproductionStage = ["reproduction_stopped",
+        "reproduction_passed"].includes(disposition)
+      const needsContext = !preObservation && !fresh
+      const needsPreflight = needsContext
+      const needsCalibration = calibrationStage || interrupted
+      const needsReproduction = reproductionStage
+      const terminal = buildV138Plan26230TerminalV1({ disposition,
+        sourceA5: "a5", sourceB5: "b5", authorizationRoot: root,
+        sealRoot: root,
+        ...(needsContext ? { context } : {}),
+        ...(needsPreflight ? { preflight } : {}),
+        ...(needsCalibration ? { calibration: reproductionStage
+          ? admittedCalibration : stoppedCalibration } : {}),
+        ...(needsReproduction ? { reproduction: disposition ===
+          "reproduction_passed" ? passedReproduction : stoppedReproduction } : {}),
+        markerRoots: { preflight: needsPreflight || interrupted ? root : null,
+          calibration: needsCalibration || interrupted ? root : null,
+          reproduction: needsReproduction || interrupted ? root : null },
+        ...(fresh ? { obstructionProof: { stage: "context" as const,
+          path: V138_PLAN_262_30_FRESH_DESTINATIONS[0], type: "file" as const,
+          metadataRoot: root } } : {}),
+        ...(interrupted ? {
+          interruptionProof: { stage: "reproduction" as const,
+            markerRoot: root, chargedAttemptCount: 540 as const,
+            chargedIdentityId: null,
+            observationMode: "unknown_after_consumption" as const,
+            childLaunchCount: null, terminalOutcomeCount: null,
+            completeCleanup: false as const } } : {}),
+      })
+      expect(terminal).toMatchObject({ disposition, sourceA5: "a5",
+        sourceB5: "b5", acceptedCellCount: disposition ===
+          "reproduction_passed" ? 540 : 0,
+        authorityExpired: true, noRetry: true,
+        partialAcceptedEvidenceReusable: false })
+    },
   )
-  const run = (mode: string) => spawnSync(process.execPath, [
-    "--import", "tsx", protocolModule, "--protocol-fixture-child", mode,
-  ], { cwd: repoRoot, encoding: null })
+
+  it("dispatches every future v9/v10 CLI mode without falling through", () => {
+    const modulePath = path.resolve(repoRoot,
+      "scripts/lib/v1-38-current-matrix-reproduction.ts")
+    for (const [command, code] of [
+      ["--write-execution-context-v9-receipt",
+        "MATRIX_EXECUTION_CONTEXT_V9_CLI_ARGUMENTS_INVALID"],
+      ["--write-headroom-preflight-v9-receipt",
+        "MATRIX_PREFLIGHT_V9_CLI_ARGUMENTS_INVALID"],
+      ["--calibrate-parallel-v9-receipt",
+        "MATRIX_CALIBRATION_V9_CLI_ARGUMENTS_INVALID"],
+      ["--write-authoritative-v10-receipt",
+        "MATRIX_REPRODUCTION_V10_CLI_ARGUMENTS_INVALID"],
+      ["--write-plan-262-30-terminal-v1",
+        "MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID"],
+      ["--check-plan-262-30-terminal-v1",
+        "MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID"],
+    ] as const) {
+      const result = spawnSync(process.execPath,
+        ["--import", "tsx", modulePath, command],
+        { cwd: repoRoot, encoding: "utf8" })
+      expect(result.status, command).not.toBe(0)
+      expect(result.stderr, command).toContain(code)
+      expect(result.stderr, command).not.toContain(
+        "MATRIX_RECEIPT_CLI_COMMAND_INVALID",
+      )
+    }
+  })
+})
+
+describe.sequential("v1.38 child protocol", () => {
+  const protocolFixture = `
+const mode = process.argv[1]
+const valid = '{"failureCode":"RESOURCE_POLICY_SHARD_FAILED","schemaVersion":"v1.38-current-matrix-child-failure-v1"}\\n'
+if (mode === "valid") process.stdout.write(valid)
+else if (mode === "malformed-json") process.stdout.write("{\\n")
+else if (mode === "malformed-utf8") process.stdout.write(Buffer.from([255]))
+else if (mode === "unknown-key") process.stdout.write('{"extra":true,"failureCode":"RESOURCE_POLICY_SHARD_FAILED","schemaVersion":"v1.38-current-matrix-child-failure-v1"}\\n')
+else if (mode === "unknown-code") process.stdout.write('{"failureCode":"UNKNOWN","schemaVersion":"v1.38-current-matrix-child-failure-v1"}\\n')
+else if (mode === "duplicate-message") process.stdout.write(valid + valid)
+else if (mode === "duplicate-key") process.stdout.write('{"failureCode":"RESOURCE_POLICY_SHARD_FAILED","failureCode":"RESOURCE_POLICY_SHARD_FAILED","schemaVersion":"v1.38-current-matrix-child-failure-v1"}\\n')
+else if (mode === "whitespace") process.stdout.write(" " + valid)
+else if (mode === "oversize") process.stdout.write(Buffer.alloc(${V138_CURRENT_MATRIX_CHILD_PROTOCOL_MAX_BYTES + 1}, 120))
+else if (mode === "stderr-contamination") { process.stdout.write(valid); process.stderr.write("x") }
+else if (mode === "nonzero-exit") { process.stdout.write(valid); process.exitCode = 1 }
+`
+  const run = (mode: string) => spawnSync(process.execPath,
+    ["-e", protocolFixture, mode], { cwd: repoRoot, encoding: null })
 
   it("maps one exact finite failure code through the public-safe handler", () => {
     const message = {
