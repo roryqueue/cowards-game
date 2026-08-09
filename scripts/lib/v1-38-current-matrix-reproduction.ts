@@ -18079,18 +18079,14 @@ export const deriveV138Plan26230PreObservationProof = (input: {
       "v1.38-tool-identity-observation-failure-v1",
       deriveV138ToolIdentityRoot)
   } else if (input.disposition === "protected_history_failed") {
-    const history = exactRecord(seal.protectedHistory,
-      ["schemaVersion", "sourceA2", "sourceB2", "sourceA3", "sourceB3",
-        "sourceA4", "sourceB4", "protectedV4Root", "artifacts",
-        "priorAuthorizationBytes", "cumulativeChargedPublicAttemptIds",
-        "reproductionV9Absent", "reproductionV9ConsumptionMarkerAbsent",
-        "terminalDisposition", "acceptedEvidenceCount",
-        "protectedHistoryRoot"],
-      "MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
-    if (!isV138CanonicalSha256(history.protectedHistoryRoot)) {
+    const history = seal.protectedHistory
+    if (history === null || typeof history !== "object" ||
+      Array.isArray(history) || !isV138CanonicalSha256(
+        (history as { protectedHistoryRoot?: unknown }).protectedHistoryRoot)) {
       throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
     }
-    sealedRoot = history.protectedHistoryRoot
+    sealedRoot = (history as { protectedHistoryRoot: Sha256 })
+      .protectedHistoryRoot
     observedRoot = plan26230ObservedRoot(
       "v1.38-protected-history-observation-failure-v1", () =>
         deriveV138ProtectedHistoryV5(input.repoRoot, input.sourceA5)
