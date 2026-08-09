@@ -135,7 +135,7 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
       readFileSync(file, "utf8"))
     for (const source of sources) {
       expect(source).not.toMatch(/from ["'][^"']*(?:strategy|match|provider|darwin-headroom|successor-source-seal|runtime-service|database)/iu)
-      expect(source).not.toContain(".planning/artifacts")
+      expect(source).not.toContain([".planning", "artifacts"].join("/"))
     }
   })
 })
