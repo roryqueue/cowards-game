@@ -2036,7 +2036,7 @@ export const calibrateV138ParallelMatrix = async (input: {
 
 /** Dedicated private operator/lab boundary. Public calibration callers use
  * calibrateV138ParallelMatrix and cannot inject diagnostic hooks. */
-export const calibrateV138ParallelMatrixWithOperatorEvidence = async (
+const calibrateV138ParallelMatrixWithOperatorEvidence = async (
   input: Parameters<typeof calibrateV138ParallelMatrix>[0],
 ) => {
   const receipt = await calibrateV138ParallelMatrix(input)
@@ -2047,6 +2047,16 @@ export const calibrateV138ParallelMatrixWithOperatorEvidence = async (
     integrityFailureProjection: receipt.status === "stopped_process_failure" &&
       hasIntegrityFailure ?
       reduceV138ParallelIntegrityFailureProjection(receipt.terminals) : null })
+}
+
+const emitV138OperatorIntegrityEvidence = (projection: ReturnType<
+  typeof reduceV138ParallelIntegrityFailureProjection> | null): void => {
+  if (projection === null) return
+  const bytes = Buffer.from(`${canonical(projection)}\n`, "utf8")
+  try { writeSync(3, bytes) } catch {
+    // fd 3 is an optional private operator channel. Diagnostics must never
+    // alter the deterministic public calibration outcome.
+  } finally { bytes.fill(0) }
 }
 
 export type V138ParallelMatrixExecutionResult = Readonly<{
@@ -15314,7 +15324,12 @@ const runReceiptCli = async (): Promise<void> => {
     if (effectiveDisposition === "pattern_c_ownership_failed") {
       const bytes = Buffer.alloc(4097)
       try {
-        const length = readSync(0, bytes, 0, bytes.length, null)
+        let length = 0
+        while (length < bytes.length) {
+          const count = readSync(0, bytes, length, bytes.length - length, null)
+          if (count === 0) break
+          length += count
+        }
         if (length === 0 || length > 4096) {
           throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_STDIN_INVALID")
         }
@@ -17736,8 +17751,6 @@ export const writeV138ParallelCalibrationV9Receipt = async (repoRoot: string,
   writeV138Plan26230Marker(repoRoot, "calibration", context,
     preflight.receiptRoot, calibrationIds)
   let calibration: Readonly<V138ParallelCalibrationReceipt> | undefined
-  let operatorIntegrityFailureProjection: ReturnType<
-    typeof reduceV138ParallelIntegrityFailureProjection> | null = null
   let callbackFailureAfterConsumption: true | undefined
   if (preflight.disposition === "preflight_admitted") {
     try {
@@ -17754,16 +17767,13 @@ export const writeV138ParallelCalibrationV9Receipt = async (repoRoot: string,
         const operatorEvidence =
           await calibrateV138ParallelMatrixWithOperatorEvidence(calibrationInput)
         calibration = operatorEvidence.receipt
-        operatorIntegrityFailureProjection =
-          operatorEvidence.integrityFailureProjection
+        emitV138OperatorIntegrityEvidence(
+          operatorEvidence.integrityFailureProjection)
       } else {
         calibration = await run(calibrationInput)
       }
     } catch { callbackFailureAfterConsumption = true }
   }
-  // Private operator evidence is intentionally consumed only at this boundary;
-  // it is never joined into the public receipt or written to canonical storage.
-  void operatorIntegrityFailureProjection
   assertV138Plan26230AuthorityOpen(repoRoot)
   const currentRoute = checkV138Plan26229AuthorityRoute({ repoRoot, sourceA5,
     sourceB5, authorizationValue: readPlan26230(repoRoot, "authorization"),

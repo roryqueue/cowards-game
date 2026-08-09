@@ -4474,8 +4474,6 @@ export const checkV138SuccessorSealCommitV4 = (input: {
     fail("V138_SUCCESSOR_SEAL_B4_DELTA_INVALID")
   }
   for (const repoPath of expectedPaths) {
-    requireAbsentAtCommit(input.repoRoot, sourceA5, repoPath,
-      "V138_SUCCESSOR_SEAL_V5_EXISTED_AT_A5")
     requireAbsentAtCommit(input.repoRoot, sourceA4, repoPath,
       "V138_SUCCESSOR_SEAL_V4_EXISTED_AT_A4")
     const working = regularFile(path.resolve(input.repoRoot, repoPath),
@@ -4766,6 +4764,8 @@ export const inspectV138SuccessorSealCommitV5Anchor = (input: {
     fail("V138_SUCCESSOR_SEAL_B5_DELTA_INVALID")
   }
   for (const repoPath of expectedPaths) {
+    requireAbsentAtCommit(input.repoRoot, sourceA5, repoPath,
+      "V138_SUCCESSOR_SEAL_V5_EXISTED_AT_A5")
     const working = regularFile(path.resolve(input.repoRoot, repoPath),
       "required")!
     if (!working.equals(readCommitFile(input.repoRoot, sourceB5, repoPath))) {

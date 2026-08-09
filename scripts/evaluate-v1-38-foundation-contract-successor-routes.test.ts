@@ -296,6 +296,52 @@ const prepareSealedRouteV5 = () => {
   return tempRoot
 }
 
+const prepareMutatedSealV5 = (field: "toolIdentity" | "protectedHistory" |
+  "formationAbsence") => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-failure-"))
+  execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root, tempRoot])
+  execFileSync("git", ["checkout", "-q", "--detach", sourceA5],
+    { cwd: tempRoot })
+  execFileSync("git", ["config", "user.email", "failure@example.invalid"],
+    { cwd: tempRoot })
+  execFileSync("git", ["config", "user.name", "Failure Route"],
+    { cwd: tempRoot })
+  writeSyntheticReviewV5(tempRoot, sourceA5)
+  const authorizationPath =
+    ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json"
+  const sealPath = ".planning/artifacts/v1.38-successor-source-seal-v5.json"
+  const authorization = readFileSync(path.resolve(sealedRouteV5Root,
+    authorizationPath))
+  const seal = JSON.parse(readFileSync(path.resolve(sealedRouteV5Root,
+    sealPath), "utf8")) as Record<string, unknown>
+  if (field === "toolIdentity") {
+    const value = seal.toolIdentity as Record<string, unknown>
+    seal.toolIdentity = { ...value, inode: Number(value.inode) + 1 }
+  } else if (field === "formationAbsence") {
+    const value = seal.formationAbsence as Record<string, unknown>
+    seal.formationAbsence = { ...value, forbiddenPathCount: 1 }
+  } else {
+    const value = { ...(seal.protectedHistory as Record<string, unknown>) }
+    delete value.protectedHistoryRoot
+    value.acceptedEvidenceCount = 1
+    value.protectedHistoryRoot = canonicalRoot("evidenceBundle",
+      String(value.schemaVersion), value)
+    seal.protectedHistory = value
+  }
+  delete seal.sealRoot
+  seal.sealRoot = canonicalRoot("containmentPolicy",
+    String(seal.schemaVersion), seal)
+  mkdirSync(path.dirname(path.resolve(tempRoot, authorizationPath)),
+    { recursive: true })
+  writeFileSync(path.resolve(tempRoot, authorizationPath), authorization)
+  writeFileSync(path.resolve(tempRoot, sealPath), canonicalManifest(seal))
+  execFileSync("git", ["add", authorizationPath, sealPath], { cwd: tempRoot })
+  execFileSync("git", ["commit", "-q", "-m", `failed ${field}`],
+    { cwd: tempRoot })
+  return { tempRoot, sourceB5: execFileSync("git", ["rev-parse", "HEAD"],
+    { cwd: tempRoot, encoding: "utf8" }).trim() }
+}
+
 beforeAll(() => {
   sourceA5 = execFileSync("git", ["log", "-1", "--format=%H", "HEAD", "--",
     ...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5],
@@ -1023,6 +1069,76 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
       expect(() => inspectV138SuccessorSealCommitV5Anchor({ repoRoot: tempRoot,
         sourceA5, sourceB5: forgedB5 })).toThrow(
         "V138_PLAN_262_29_AUTHORIZATION_INVALID")
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it.each([
+    ["toolIdentity", "tool_identity_failed"],
+    ["protectedHistory", "protected_history_failed"],
+    ["formationAbsence", "formation_absence_failed"],
+  ] as const)("writes and rechecks a genuine %s prerequisite failure",
+  (field, disposition) => {
+    const fixture = prepareMutatedSealV5(field)
+    try {
+      const terminal = writeV138Plan26230TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4], disposition, sourceA5,
+        fixture.sourceB5)
+      expect(terminal).toMatchObject({ disposition, acceptedCellCount: 0,
+        completeCleanup: true, preObservationProof: { disposition } })
+      expect(checkV138Plan26230TerminalBranch(fixture.tempRoot, sourceA5,
+        fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("writes and rechecks a privacy-safe Pattern C ownership failure", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-pattern-c-fail-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      const observation = { mode: "delegated-worker", cwd: "/private/cwd",
+        terminalAgentRegistry: { schemaVersion:
+          "v1.38-plan-262-30-terminal-agent-registry-v1",
+          activeExecutorCount: 0,
+          agents: [{ id: "private-agent-id", status: "failed" }] } }
+      const terminal = writeV138Plan26230TerminalV1(tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4],
+        "pattern_c_ownership_failed", sourceA5, sourceB5, observation)
+      expect(JSON.stringify(terminal)).not.toContain("private-agent-id")
+      expect(checkV138Plan26230TerminalBranch(tempRoot, sourceA5, sourceB5,
+        observation).terminalRoot).toBe(terminal.terminalRoot)
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("writes and rechecks a truthful fresh-context obstruction", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-blocked-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      const contextPath = V138_PLAN_262_30_FRESH_DESTINATIONS[0]
+      mkdirSync(path.dirname(path.resolve(tempRoot, contextPath)),
+        { recursive: true })
+      writeFileSync(path.resolve(tempRoot, contextPath), "occupied\n")
+      const terminal = writeV138Plan26230TerminalV1(tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4], "fresh_destination_failed",
+        sourceA5, sourceB5)
+      expect(terminal).toMatchObject({ disposition: "fresh_destination_failed",
+        obstructionProof: { stage: "context", path: contextPath } })
+      expect(checkV138Plan26230TerminalBranch(tempRoot, sourceA5, sourceB5)
+        .terminalRoot).toBe(terminal.terminalRoot)
     } finally {
       rmSync(tempRoot, { recursive: true, force: true })
     }
