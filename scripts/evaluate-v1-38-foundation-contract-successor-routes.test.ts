@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process"
 import { Buffer } from "node:buffer"
 import {
   existsSync,
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -42,6 +43,7 @@ import {
   checkV138SuccessorSourceSealV5,
   checkV138SuccessorSealCommitV5,
   inspectV138SuccessorSealCommitV5Anchor,
+  inspectV138ProtectedHistoryFailureSealCommitV5Anchor,
   checkV138SuccessorSealCommitV4,
   deriveV138ProtectedHistoryV4,
   deriveV138ProtectedHistoryV5,
@@ -1097,9 +1099,58 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
     }
   }, 900_000)
 
+  it("rejects forged retained history even through the failure-only anchor", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-history-forged-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      execFileSync("git", ["checkout", "-q", "--detach", sourceA5],
+        { cwd: tempRoot })
+      execFileSync("git", ["config", "user.email", "history@example.invalid"],
+        { cwd: tempRoot })
+      execFileSync("git", ["config", "user.name", "History Forgery"],
+        { cwd: tempRoot })
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const authorizationPath =
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json"
+      const sealPath =
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json"
+      const authorization = JSON.parse(readFileSync(path.resolve(
+        sealedRouteV5Root, authorizationPath), "utf8")) as Record<string, unknown>
+      const seal = JSON.parse(readFileSync(path.resolve(sealedRouteV5Root,
+        sealPath), "utf8")) as Record<string, unknown>
+      const forgedRoot =
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      delete authorization.authorizationRoot
+      authorization.protectedHistoryRoot = forgedRoot
+      authorization.authorizationRoot = canonicalRoot("evidenceBundle",
+        String(authorization.schemaVersion), authorization)
+      const protectedHistory = seal.protectedHistory as Record<string, unknown>
+      seal.protectedHistory = { ...protectedHistory,
+        protectedHistoryRoot: forgedRoot }
+      delete seal.sealRoot
+      seal.authorizationRoot = authorization.authorizationRoot
+      seal.sealRoot = canonicalRoot("containmentPolicy",
+        String(seal.schemaVersion), seal)
+      mkdirSync(path.dirname(path.resolve(tempRoot, authorizationPath)),
+        { recursive: true })
+      writeFileSync(path.resolve(tempRoot, authorizationPath),
+        canonicalManifest(authorization))
+      writeFileSync(path.resolve(tempRoot, sealPath), canonicalManifest(seal))
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: tempRoot })
+      execFileSync("git", ["commit", "-q", "-m", "forged retained history"],
+        { cwd: tempRoot })
+      const forgedB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      expect(() => inspectV138ProtectedHistoryFailureSealCommitV5Anchor({
+        repoRoot: tempRoot, sourceA5, sourceB5: forgedB5 })).toThrow(
+        "V138_PLAN_262_29_AUTHORIZATION_HISTORY_ANCHOR_INVALID")
+    } finally { rmSync(tempRoot, { recursive: true, force: true }) }
+  }, 900_000)
+
   it.each([
     ["toolIdentity", "tool_identity_failed"],
-    ["protectedHistory", "protected_history_failed"],
     ["formationAbsence", "formation_absence_failed"],
   ] as const)("writes and rechecks a genuine %s prerequisite failure",
   (field, disposition) => {
@@ -1114,6 +1165,42 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
         fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
     } finally {
       rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("terminalizes an actual protected-history derivation failure", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-history-fail-"))
+    const wrapperRoot = mkdtempSync(path.join(tmpdir(), "cowards-git-wrapper-"))
+    const priorPath = process.env.PATH
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      const gitBinary = execFileSync("which", ["git"],
+        { encoding: "utf8" }).trim()
+      const wrapper = path.resolve(wrapperRoot, "git")
+      writeFileSync(wrapper, `#!/bin/sh
+case "$*" in
+  *":.planning/artifacts/v1.38-plan-262-24-authorization-v4.json"*) exit 91 ;;
+esac
+exec ${JSON.stringify(gitBinary)} "$@"
+`)
+      chmodSync(wrapper, 0o700)
+      process.env.PATH = `${wrapperRoot}:${priorPath ?? ""}`
+      const terminal = writeV138Plan26230TerminalV1(tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4], "protected_history_failed",
+        sourceA5, sourceB5)
+      expect(terminal).toMatchObject({ disposition: "protected_history_failed",
+        preObservationProof: { disposition: "protected_history_failed" } })
+      expect(checkV138Plan26230TerminalBranch(tempRoot, sourceA5, sourceB5)
+        .terminalRoot).toBe(terminal.terminalRoot)
+    } finally {
+      process.env.PATH = priorPath
+      rmSync(tempRoot, { recursive: true, force: true })
+      rmSync(wrapperRoot, { recursive: true, force: true })
     }
   }, 900_000)
 

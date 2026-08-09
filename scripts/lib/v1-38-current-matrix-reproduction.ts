@@ -113,6 +113,7 @@ import {
   checkV138SuccessorSourceSealV5,
   checkV138SuccessorSourceSealV5Except,
   inspectV138SuccessorSealCommitV5Anchor,
+  inspectV138ProtectedHistoryFailureSealCommitV5Anchor,
   deriveV138ToolIdentityRoot,
   deriveV138FormationAbsenceRoot,
   deriveV138ProtectedHistoryV5,
@@ -18297,10 +18298,10 @@ const plan26230Evidence = (repoRoot: string, sourceA5: string,
   const preObservation = ["tool_identity_failed", "protected_history_failed",
     "formation_absence_failed", "pattern_c_ownership_failed"]
     .includes(disposition)
-  const anchor = preObservation ? inspectV138SuccessorSealCommitV5Anchor({
-    repoRoot, sourceA5, sourceB5,
-    ...(disposition === "protected_history_failed" ?
-      { allowProtectedHistoryFailure: true as const } : {}) }) : undefined
+  const anchor = preObservation ? (disposition === "protected_history_failed" ?
+    inspectV138ProtectedHistoryFailureSealCommitV5Anchor({ repoRoot, sourceA5,
+      sourceB5 }) : inspectV138SuccessorSealCommitV5Anchor({ repoRoot,
+      sourceA5, sourceB5 })) : undefined
   const route = anchor === undefined ? checkV138Plan26229AuthorityRoute({
     repoRoot, sourceA5, sourceB5,
     authorizationValue: readPlan26230(repoRoot, "authorization"),
