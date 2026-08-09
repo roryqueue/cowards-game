@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Successor Plans 262-27 through 262-31 planned; next action is offline Plan 262-27 protocol-v2 TDD with no authority or live execution
-last_updated: "2026-08-09T13:18:52Z"
+stopped_at: Plan 262-27 complete; next action is offline Plan 262-28 scheduler/privacy/accounting integration and review with no authority or live execution
+last_updated: "2026-08-09T14:25:19.514Z"
 last_activity: 2026-08-09
-last_activity_desc: Planned the separately authorized five-gate offline diagnostic successor while preserving the immutable stopped route and all prior evidence.
+last_activity_desc: Completed offline protocol-v2 TDD and production child/parent wiring without authority, live execution, or artifact mutation.
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 31
-  completed_plans: 21
-  percent: 68
+  completed_plans: 22
+  percent: 71
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
-Plan: 21 of 31
-Status: Plans 262-21 through 262-26 remain executed and immutable. Plans 262-27 through 262-31 are planned as a separately gated successor: offline protocol-v2; offline scheduler/privacy/accounting integration and reviewed A5 exact-literal checkpoint; exact two-artifact B5; one main-only route ordinal 5; independent verification/tracking. Plan 262-25 remains `calibration_stopped` with 8 charged/launched/terminal attempts over four shards, complete cleanup, absent reproduction:v9, 0/540 accepted, and expired no-retry authority. ADMIT-03 and Plan 262-03 remain blocked pending exact Plan 262-31 verification.
-Last activity: 2026-08-09 — Added executable successor plans without altering prior evidence or source.
+Plan: 22 of 31
+Status: Plans 262-21 through 262-27 are executed. Plan 262-27 replaces the lossy child seam with standalone-tested child-emitted protocol-v2 but creates no authority or accepted evidence. Plans 262-28 through 262-31 remain separately gated: offline integration/review and A5 exact-literal checkpoint; exact two-artifact B5; one main-only route ordinal 5; independent verification/tracking. Plan 262-25 remains `calibration_stopped` with 8 charged/launched/terminal attempts over four shards, complete cleanup, absent reproduction:v9, 0/540 accepted, and expired no-retry authority. ADMIT-03 and Plan 262-03 remain blocked pending exact Plan 262-31 verification.
+Last activity: 2026-08-09 — Completed offline protocol-v2 production wiring with standalone proof and no authority or live execution.
 
-Progress: [███████░░░] 68%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
-**Current milestone:** 21 of 31 Phase 262 plans complete. Plans 262-27 through 262-31 are ready; route-4 remains immutable `calibration_stopped` with reproduction:v9 absent and 0/540 accepted. ADMIT-03 plus Plans 262-03 through 262-07 remain blocked until an independently verified future exact fresh 540/540 pass.
+**Current milestone:** 22 of 31 Phase 262 plans complete. Plan 262-28 is next and remains wholly offline; route-4 remains immutable `calibration_stopped` with reproduction:v9 absent and 0/540 accepted. ADMIT-03 plus Plans 262-03 through 262-07 remain blocked until an independently verified future exact fresh 540/540 pass.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -63,7 +63,7 @@ Progress: [███████░░░] 68%
 | Phase 262 P24 | source/review gate | 3 tasks | offline checker/test/protocol repair, reviewed A4, direct-child B4 |
 | Phase 262 P25 | Pattern C stopped route | 2 tasks | admitted preflight:v8, stopped 8/4 calibration:v8, no reproduction:v9 |
 | Phase 262 P26 | independent verification | 3 tasks | green verifier infrastructure; stopped exact 0/540 route verdict |
-| Phase 262 P27 | offline protocol-v2 TDD | 2 tasks | standalone synthetic proof plus production child/parent wiring |
+| Phase 262 P27 | 9min | 2 tasks | 5 files |
 | Phase 262 P28 | offline integration/review | 2 tasks | scheduler/privacy/accounting, zero-finding A5, frozen proof, exact-literal checkpoint |
 | Phase 262 P29 | authority/seal | 2 tasks | exact two-artifact direct-child B5, no live execution |
 | Phase 262 P30 | Pattern C route ordinal 5 | 2 tasks | main-only v9/v10 route, conditional 540, terminal/no retry |
@@ -123,6 +123,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Plan the offline diagnostic successor as five non-overlapping gates: 262-27 replaces the lossy production child seam with standalone-tested child-emitted protocol-v2; 262-28 integrates scheduler/privacy/accounting, freezes zero-finding A5, and requires the exact full rendered literal without writing it; 262-29 alone creates exact two-artifact B5; 262-30 alone consumes one main-only route ordinal 5; 262-31 independently verifies and tracks the literal result.
 - [Phase 262]: Keep expected typed runtime-service failures in the normal result envelope; classify unexpected integrity exceptions only as CHILD_BOOTSTRAP_FAILED, CHILD_TRANSPORT_FAILED, RUNTIME_EXECUTION_FAILED, or SHARD_COORDINATION_FAILED in operator/lab evidence while public/default output remains coarse.
 - [Phase 262]: Preserve exact 200 ms RSS observation, inclusive 2,500-basis-point gate, 8 attempts/4 shards, conditional 540 cells, runtime/kernel/historical predicate, gameplay, privacy, formation absence, A2/B2/A3/B3/A4/B4 ancestry, 32 prior charges, and every prior authorization byte.
+- [Phase 262]: Reserve CHILD_BOOTSTRAP_FAILED and CHILD_TRANSPORT_FAILED for parent-observed process state; only the child may emit RUNTIME_EXECUTION_FAILED or SHARD_COORDINATION_FAILED.
+- [Phase 262]: Keep stdout as the unchanged ordinary shard-result envelope, stderr empty, and canonical protocol-v2 bytes on inherited descriptor 3.
+- [Phase 262]: Keep expected typed runtime-service failures in ordinary per-attempt outcomes rather than relabeling them as integrity failures.
 
 ### Pending Todos
 
@@ -167,7 +170,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-09T13:18:52Z
-Stopped at: Successor Plans 262-27 through 262-31 planned; immutable route-4 remains stopped and untouched
+Last session: 2026-08-09T14:25:19.502Z
+Stopped at: Completed 262-27-PLAN.md; next is offline Plan 262-28
 Resume file: None
-Next command: `$gsd-execute-phase 262` beginning with Plan 262-27 only. Plans 262-27 and 262-28 are offline; do not retry Plan 262-25, create authority early, invoke live work early, reuse partial evidence, or begin Plan 262-03.
+Next command: `$gsd-execute-phase 262` beginning with Plan 262-28 only. Plan 262-28 is offline; do not retry Plan 262-25, create authority early, invoke live work early, reuse partial evidence, or begin Plan 262-03.
