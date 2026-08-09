@@ -4,17 +4,17 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: blocked
-stopped_at: Plan 262-26 verification complete; ADMIT-03 blocked on immutable calibration_stopped route-4 terminal with expired authority and no retry
-last_updated: "2026-08-09T04:16:49Z"
+status: in_progress
+stopped_at: Successor Plans 262-27 through 262-31 planned; next action is offline Plan 262-27 protocol-v2 TDD with no authority or live execution
+last_updated: "2026-08-09T13:18:52Z"
 last_activity: 2026-08-09
-last_activity_desc: Independently verified clean A4/B4 custody and green verifier infrastructure; preserved the stopped 0/540 terminal and escalated the exhausted route.
+last_activity_desc: Planned the separately authorized five-gate offline diagnostic successor while preserving the immutable stopped route and all prior evidence.
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 26
+  total_plans: 31
   completed_plans: 21
-  percent: 81
+  percent: 68
 ---
 
 # State: Coward's Game
@@ -28,16 +28,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 ## Current Position
 
-Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 21 of 26
-Status: Plans 262-21 through 262-26 are executed and immutable. Independent Plan 262-26 passed terminal-aware A4/B4 custody, exact 55/55 bounded tests, 27/27 typecheck, and strict isolated PostgreSQL boundary monitors. The actual route terminal is `calibration_stopped` with 8 charged/launched/terminal attempts over four shards, complete cleanup, absent reproduction:v9, and 0/540 accepted. ADMIT-03 and Plan 262-03 remain blocked; authority is expired with no retry or partial reuse.
-Last activity: 2026-08-09 — Completed independent route-4 verification and preserved the literal stopped verdict.
+Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
+Plan: 21 of 31
+Status: Plans 262-21 through 262-26 remain executed and immutable. Plans 262-27 through 262-31 are planned as a separately gated successor: offline protocol-v2; offline scheduler/privacy/accounting integration and reviewed A5 exact-literal checkpoint; exact two-artifact B5; one main-only route ordinal 5; independent verification/tracking. Plan 262-25 remains `calibration_stopped` with 8 charged/launched/terminal attempts over four shards, complete cleanup, absent reproduction:v9, 0/540 accepted, and expired no-retry authority. ADMIT-03 and Plan 262-03 remain blocked pending exact Plan 262-31 verification.
+Last activity: 2026-08-09 — Added executable successor plans without altering prior evidence or source.
 
-Progress: [████████░░] 81%
+Progress: [███████░░░] 68%
 
 ## Performance Metrics
 
-**Current milestone:** 21 of 26 Phase 262 plans complete; route-4 verification infrastructure is fully green, but its immutable terminal is `calibration_stopped` with reproduction:v9 absent and 0/540 accepted. ADMIT-03 plus Plans 262-03 through 262-07 remain blocked under expired no-retry authority.
+**Current milestone:** 21 of 31 Phase 262 plans complete. Plans 262-27 through 262-31 are ready; route-4 remains immutable `calibration_stopped` with reproduction:v9 absent and 0/540 accepted. ADMIT-03 plus Plans 262-03 through 262-07 remain blocked until an independently verified future exact fresh 540/540 pass.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -63,6 +63,11 @@ Progress: [████████░░] 81%
 | Phase 262 P24 | source/review gate | 3 tasks | offline checker/test/protocol repair, reviewed A4, direct-child B4 |
 | Phase 262 P25 | Pattern C stopped route | 2 tasks | admitted preflight:v8, stopped 8/4 calibration:v8, no reproduction:v9 |
 | Phase 262 P26 | independent verification | 3 tasks | green verifier infrastructure; stopped exact 0/540 route verdict |
+| Phase 262 P27 | offline protocol-v2 TDD | 2 tasks | standalone synthetic proof plus production child/parent wiring |
+| Phase 262 P28 | offline integration/review | 2 tasks | scheduler/privacy/accounting, zero-finding A5, frozen proof, exact-literal checkpoint |
+| Phase 262 P29 | authority/seal | 2 tasks | exact two-artifact direct-child B5, no live execution |
+| Phase 262 P30 | Pattern C route ordinal 5 | 2 tasks | main-only v9/v10 route, conditional 540, terminal/no retry |
+| Phase 262 P31 | independent verification | 3 tasks | read-only proof, validation, verification, tracking |
 
 ## Accumulated Context
 
@@ -115,6 +120,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Bind route ordinal 4 to reviewed A4 `1be54efec080436ea47ba5be3644ab1ab1686163` and exact direct-child B4 `d0e3a2cae3d0849aec7f8b1c783f7ed16c8e2947`; preserve all prior custody, authorization bytes, and 24 protected charges.
 - [Phase 262]: Record the route-4 terminal as `calibration_stopped` after calibration:v8 charged, launched, and terminalized 8/8/8 attempts across four shards with complete cleanup; reproduction:v9 and its marker are absent and accepted evidence is 0/540.
 - [Phase 262]: Treat Plan 262-26 as a completed read-only escalation gate: both canonical checkers, frozen-A4 55/55 tests, 27/27 typecheck, and strict isolated PostgreSQL boundary monitors pass, while ADMIT-03 remains blocked under expired no-retry authority.
+- [Phase 262]: Plan the offline diagnostic successor as five non-overlapping gates: 262-27 replaces the lossy production child seam with standalone-tested child-emitted protocol-v2; 262-28 integrates scheduler/privacy/accounting, freezes zero-finding A5, and requires the exact full rendered literal without writing it; 262-29 alone creates exact two-artifact B5; 262-30 alone consumes one main-only route ordinal 5; 262-31 independently verifies and tracks the literal result.
+- [Phase 262]: Keep expected typed runtime-service failures in the normal result envelope; classify unexpected integrity exceptions only as CHILD_BOOTSTRAP_FAILED, CHILD_TRANSPORT_FAILED, RUNTIME_EXECUTION_FAILED, or SHARD_COORDINATION_FAILED in operator/lab evidence while public/default output remains coarse.
+- [Phase 262]: Preserve exact 200 ms RSS observation, inclusive 2,500-basis-point gate, 8 attempts/4 shards, conditional 540 cells, runtime/kernel/historical predicate, gameplay, privacy, formation absence, A2/B2/A3/B3/A4/B4 ancestry, 32 prior charges, and every prior authorization byte.
 
 ### Pending Todos
 
@@ -144,6 +152,8 @@ None.
 - ADMIT-03 remains blocked: Plan 262-22 terminal-v1 is `calibration_stopped`; calibration:v7 has eight charged/launched/terminal attempts and zero accepted cells, while reproduction:v8 and its marker are absent at 0/540.
 - ADMIT-03 remains blocked: Plan 262-25 terminal-v1 is `calibration_stopped`; calibration:v8 has eight charged/launched/terminal attempts across four shards and zero accepted cells, while reproduction:v9 and its marker are absent at 0/540.
 - Plan 262-25 authority is expired. It cannot be retried, repaired, or partially reused; the next action requires a developer decision on a separately planned successor, milestone dependency revision, or stop.
+- Plans 262-27 and 262-28 are strictly offline: no writer CLI, provider, live observation, `ps`, memory-pressure command, Strategy, Match, preflight, calibration, reproduction, or artifact mutation. Authority remains absent until the exact Plan-262-28 full-byte checkpoint and Plan 262-29 direct-child B5.
+- Plan 262-30 is the only owner of one future route-ordinal-5 live attempt; Plan 262-31 is the only owner of its interpretation. ADMIT-03 and Plan 262-03 remain blocked unless Plan 262-31 independently verifies literal `reproduction_passed` with exact fresh 540/540.
 - Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied despite fully green verifier infrastructure.
 
 ## Deferred Items
@@ -157,7 +167,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-09T04:16:49Z
-Stopped at: Plan 262-26 complete; immutable route-4 terminal blocked at calibration_stopped and 0/540
+Last session: 2026-08-09T13:18:52Z
+Stopped at: Successor Plans 262-27 through 262-31 planned; immutable route-4 remains stopped and untouched
 Resume file: None
-Next command: Developer escalation decision: authorize only a separately planned successor, revise the milestone dependency while keeping ADMIT-03 unmet, or stop the milestone. Do not retry Plan 262-25, reuse partial evidence, or begin Plan 262-03.
+Next command: `$gsd-execute-phase 262` beginning with Plan 262-27 only. Plans 262-27 and 262-28 are offline; do not retry Plan 262-25, create authority early, invoke live work early, reuse partial evidence, or begin Plan 262-03.
