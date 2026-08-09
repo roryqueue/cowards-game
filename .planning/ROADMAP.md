@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 18/26 plans executed
+**Plans:** 21/26 plans executed
 
-**Current verdict:** BLOCKED / `gaps_found` — 19 of 26 plans are executed. Plan 262-24 produced zero-finding A4 and checked exact two-artifact direct-child B4; Plan 262-25 now owns the sole fresh route-ordinal-4 v8/v9 execution, followed by independent Plan 262-26 verification. The archived route-3 `calibration_stopped` terminal remains immutable and there is no retry or reuse of any prior route. Plan 262-03 can unblock only after Plan 262-26 verifies literal `reproduction_passed` with exact fresh 540/540; Plans 262-03 through 262-07 separately own roadmap truths 3–5.
+**Current verdict:** BLOCKED / `gaps_found` — 21 of 26 plans are executed. Plan 262-26 independently passed terminal-aware A4/B4 custody, the frozen-A4 bounded suite (55/55), main typecheck (27/27), and strict database-backed boundary monitors, but the actual Plan 262-25 terminal is `calibration_stopped`: calibration:v8 charged/launched/terminalized 8/8/8 across four shards with complete cleanup, reproduction:v9 and its marker are absent, and accepted evidence is 0/540. Authority is expired with no retry or reuse. ADMIT-03 and Plan 262-03 remain blocked; Plans 262-03 through 262-07 separately own roadmap truths 3–5.
 
 Plans:
 **Wave 1**
@@ -133,11 +133,11 @@ Plans:
 
 **Wave 20** *(blocked on Wave 19 completion)*
 
-- [ ] 262-25-PLAN.md — Consume B4 once through one main-only Pattern C route: fresh context/preflight/calibration:v8, conditional reproduction:v9, exact Plan-262-25 stage markers, and one terminal-v1 under unchanged gates and no retry.
+- [x] 262-25-PLAN.md — Consumed B4 once: preflight:v8 admitted, calibration:v8 stopped after 8 charged/launched/terminal attempts over four shards with complete cleanup, reproduction:v9 remained absent, and authority expired without retry.
 
 **Wave 21** *(blocked on Wave 20 completion)*
 
-- [ ] 262-26-PLAN.md — Independently and read-only run terminal-aware custody, bounded tests, strict database-backed boundary monitors, and the literal `reproduction_passed` 540/540 gate; every other result remains blocked without retry.
+- [x] 262-26-PLAN.md — Independently passed terminal-aware custody, exact frozen-A4 55/55 tests, 27/27 typecheck, and strict isolated PostgreSQL boundary monitors; the literal stopped terminal keeps ADMIT-03 blocked without retry.
 
 **Wave 22** *(blocked on Wave 21 completion)*
 
@@ -294,7 +294,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 15/20 | Blocked — successor route calibration_stopped; gaps_found 1/5 |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 21/26 | Blocked — route-4 calibration_stopped, 0/540; gaps_found 1/5 |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

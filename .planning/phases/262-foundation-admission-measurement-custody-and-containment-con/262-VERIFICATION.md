@@ -1,6 +1,6 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-verified: 2026-07-31T18:10:00Z
+verified: 2026-08-09T04:16:49Z
 status: gaps_found
 score: "1/5 must-haves verified"
 behavior_unverified: 0
@@ -9,53 +9,43 @@ re_verification:
   previous_status: gaps_found
   previous_score: "1/5"
   gaps_closed:
-    - "The exact archived-A2 pin and A3/B3 lineage/source/blob custody are present and manually recompute cleanly."
-    - "The terminal-v1 branch records eight charged/launched/terminal calibration:v7 attempts across four shards with complete cleanup."
+    - "Terminal-aware v4 custody and Plan-262-25 terminal checkers both pass the actual immutable terminal row."
+    - "The frozen-A4 bounded successor suite completes with literal 55/55, main typecheck passes 27/27, and strict database-backed boundary monitors pass with complete isolated cleanup."
   gaps_remaining:
-    - "Terminal-v1 is calibration_stopped; reproduction:v8 is absent and accepted cells are 0/540."
-    - "The canonical v3 authorization checker fails on protected Plan 262-15 artifact presence."
-    - "Required non-live behavioral selectors do not complete to a verdict and boundary monitors are red."
+    - "Terminal-v1 is calibration_stopped; reproduction:v9 and its marker are absent, with 0 charged and 0 accepted reproduction cells."
     - "Plans 262-03 through 262-07 remain blocked and unexecuted."
   regressions: []
 gaps:
-  - truth: "The persisted current-rules matrix is reproduced fixture-only under exact checked custody."
+  - truth: "Researchers reproduce the persisted current-rules matrix under exact checked custody before candidate search."
     status: failed
-    reason: "Terminal-v1 is calibration_stopped; reproduction:v8 and its marker are absent, with 0 charged and 0 accepted cells."
+    reason: "Terminal-v1 is calibration_stopped, not reproduction_passed; reproduction:v9 is absent with 0/540 accepted fresh cells."
     artifacts:
-      - path: ".planning/artifacts/v1.38-plan-262-22-terminal-v1.json"
-        issue: "Disposition is calibration_stopped, not reproduction_passed."
-      - path: ".planning/artifacts/v1.38-current-matrix-reproduction-v8.json"
-        issue: "Required reproduction artifact is absent."
+      - path: ".planning/artifacts/v1.38-plan-262-25-terminal-v1.json"
+        issue: "Disposition is calibration_stopped with expired authority and no retry."
+      - path: ".planning/artifacts/v1.38-current-matrix-reproduction-v9.json"
+        issue: "Required reproduction artifact and its consumption marker are absent."
     missing:
-      - "A separately planned and authorized successor yielding literal reproduction_passed with exactly 540 charged and 540 accepted fresh cells."
-  - truth: "The A3/B3 route passes every independent canonical checker and required non-live regression."
-    status: failed
-    reason: "Authorization-v3 checker fails; full and focused Vitest selectors yield no verdict; boundary monitors fail without the PostgreSQL proof environment."
-    artifacts:
-      - path: "scripts/lib/v1-38-successor-source-seal.ts"
-        issue: "Checker emits V138_PLAN_262_15_ARTIFACT_MUST_BE_ABSENT on current main."
-      - path: "scripts/evaluate-v1-38-foundation-contract.test.ts"
-        issue: "Full selector hung and bounded focused selector timed out without verdict."
-    missing:
-      - "Separately authorized remediation for checker/test execution drift and a complete green non-live/boundary proof."
+      - "Literal reproduction_passed terminal with exactly 540 charged and 540 accepted fresh reproduction:v9 cells; immutable stopped authority cannot supply it."
   - truth: "Immutable scientific, budget, accounting, gate, report, custody, and three-profile contracts are complete."
     status: failed
-    reason: "Plans 262-03 through 262-07 remain unexecuted and own roadmap truths 3-5."
+    reason: "Plans 262-03 through 262-07 remain unexecuted and own roadmap truths 3 through 5."
     artifacts:
       - path: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-03-PLAN.md"
         issue: "Still blocked on ADMIT-03."
     missing:
-      - "Execute Plans 262-03 through 262-07 only after the route gate passes."
+      - "A developer decision on the exhausted stopped route before any new authority; do not retry Plan 262-25."
+      - "Execute Plans 262-03 through 262-07 only if their admission dependency is validly resolved."
 ---
 
-# Phase 262 Verification Report — Plan 262-23 Refresh
+# Phase 262 Verification Report — Plan 262-26 Refresh
 
 **Phase Goal:** Maintainers can begin v1.38 research only under the exact released
 v1.37 authority and an immutable pre-search scientific, budget, custody, claim,
 and containment contract.
 
-**Verdict:** `gaps_found`, score **1/5**. ADMIT-03 and Plan 262-03 remain
-**BLOCKED**. No override exists or was applied.
+**Verdict:** `gaps_found`, score **1/5**. Plan 262-26's independent verification
+execution is complete and green, but ADMIT-03 and Plan 262-03 remain **BLOCKED**.
+No override exists or was applied.
 
 ## Goal Achievement
 
@@ -63,11 +53,11 @@ and containment contract.
 
 | # | Roadmap truth | Status | Evidence |
 |---|---|---|---|
-| 1 | Exact predecessor/current admission and explicit drift stop | VERIFIED | A2/B2/A3/B3 ancestry, blobs, closure, protected charges and committed evidence recompute; failed checks force this stop report. |
-| 2 | Persisted current-rules matrix reproduced fixture-only | FAILED | `calibration_stopped`; reproduction:v8 absent; 0/540. |
+| 1 | Exact predecessor/current admission and explicit drift stop | VERIFIED | A2/B2/A3/B3/A4/B4 ancestry, blobs, authorization bytes, roots, 32 cumulative charges, cleanup, privacy, runtime/gameplay identity, and formation absence independently recompute; both canonical checkers pass. |
+| 2 | Persisted current-rules matrix reproduced fixture-only | FAILED | `calibration_stopped`; reproduction:v9 and marker absent; 0/540 accepted. |
 | 3 | Immutable scientific/budget/accounting/gate/report contract | FAILED | Plans 262-03/04 unexecuted. |
 | 4 | Separately permissioned custody and orthogonal reporting | FAILED | Plans 262-06/07 unexecuted. |
-| 5 | Three-profile protocol/classifiers precommitted without formation material | FAILED | Formation absence remains preserved, but Plan 262-05 positive artifacts do not exist. |
+| 5 | Three-profile protocol/classifiers precommitted without formation material | FAILED | Formation absence is preserved, but Plan 262-05 positive artifacts do not exist. |
 
 **Score:** 1/5 truths verified (0 present-but-behavior-unverified).
 
@@ -75,73 +65,86 @@ and containment contract.
 
 | Artifact | Exists | Substantive / wired | Status |
 |---|---:|---|---|
-| authorization-v3 / seal-v3 | yes | B3 changes exactly these two artifacts; source blobs and closure are bound | PARTIAL — canonical checker fails on ambient protected artifacts |
-| execution context / preflight:v7 / calibration:v7 | yes | roots join through terminal; 8/8/8 and cleanup recorded | VERIFIED stopped branch |
-| reproduction:v8 | no | terminal explicitly binds absence and zero charges | FAILED for route success |
-| terminal-v1 | yes | terminal-first checker accepts matching `calibration_stopped` branch | VERIFIED stopped branch, not ADMIT-03 |
-| Plan 262-23 review/validation/tracking | yes | derives from independent commands, not summaries | VERIFIED documentation path |
+| authorization-v4 / seal-v4 | yes | B4 has sole parent A4 and changes exactly these two paths; roots and all five sealed source blobs match | VERIFIED |
+| execution context / preflight:v8 / calibration:v8 | yes | roots join through terminal; 8/8/8 over 4 shards; complete cleanup | VERIFIED stopped branch |
+| reproduction:v9 | no | terminal binds absence, 0 reproduction charges, and 0 accepted cells | FAILED for route success |
+| terminal-v1 | yes | both independent checkers accept the exact `calibration_stopped` row | VERIFIED stopped branch, not ADMIT-03 |
+| Plan 262-26 validation/verification/tracking | yes | derives from independent commands rather than Plan 262-25 narration | VERIFIED documentation path |
 
-No UI/dynamic-data artifact is introduced; Level-4 rendering flow is not
-applicable. The key link terminal-v1 -> verification is wired and fails closed.
-The key link seal-v3 -> verification is partial because manual custody passes
-while the canonical authorization checker fails.
+No UI or dynamic-data artifact is introduced, so Level-4 rendering flow is not
+applicable. The B4 -> terminal -> verification link is fully wired and fails
+closed on the literal terminal discriminator.
 
-## Behavioral and Boundary Checks
+## Independent Custody and Accounting
 
-| Check | Result | Status |
-|---|---|---|
-| authorization-v3 checker | `V138_PLAN_262_15_ARTIFACT_MUST_BE_ABSENT` | FAIL |
-| selected-route closure | root `sha256:c7334d...` | PASS |
-| terminal-v1 checker | `calibration_stopped` | PASS stopped branch |
-| literal foundation selector | unsupported `--poolOptions` | FAIL command |
-| supported full selector | ~44m without verdict; exit 130 on escalation | INCONCLUSIVE |
-| focused one-worker route3/Darwin selector | 600s bound; exit 142 without verdict | INCONCLUSIVE |
-| `pnpm typecheck` | 27/27 | PASS |
-| `pnpm boundary:monitors` | seven PostgreSQL proofs require database URL | FAIL |
+- A4 is `1be54efec080436ea47ba5be3644ab1ab1686163`; its parent, tree,
+  allowlisted lineage, and five source blobs match the seal and working bytes.
+- B4 is `d0e3a2cae3d0849aec7f8b1c783f7ed16c8e2947`; it has A4 as sole parent and
+  changes exactly authorization-v4 and seal-v4.
+- A2/B2/A3/B3 ancestry passes. All three prior authorization byte hashes match.
+- The 24 protected charge identities are unique. The eight calibration:v8
+  identities are unique and disjoint, producing 32 cumulative charges.
+- All eight v8 attempts launched, reached terminal state, and cleaned up across
+  four inventory-owned shards. No cell was accepted.
+- Context, preflight, calibration, and their two applicable stage markers are
+  present. Reproduction:v9 and its marker are absent exactly as required for
+  `calibration_stopped`.
+- Authority is expired, `noRetry` is true, and partial accepted evidence is not
+  reusable.
 
-Step 7c probe execution is not applicable: the plan names canonical checkers,
-not `probe-*.sh` scripts, and those checkers were executed directly.
+## Behavioral Spot-Checks
 
-## Literal Current Terminal
-
-| Property | Required | Actual | Status |
+| Behavior | Command class | Result | Status |
 |---|---|---|---|
-| Disposition | `reproduction_passed` | `calibration_stopped` | FAIL |
-| Preflight | admitted | 7,100 bp >= 2,500 bp | PASS |
-| Calibration | admitted 8/8 | stopped process failure; 8 charged/launched/terminal, 4 shards | FAIL |
-| Reproduction | 540 charged and accepted | absent; 0 charged, 0 accepted | FAIL |
-| Cleanup | complete | true | PASS |
-| Authority | expired, no retry/reuse | true | PASS |
-| Terminal root | valid | `sha256:1a40d1b01e2d121aea73da14a485f400085ed4c3d43b4670f64b5665020c168d` | PASS |
+| terminal-aware A4/B4 custody | post-live v4 checker | `calibration_stopped`, matching terminal root | PASS |
+| actual terminal discrimination | Plan-262-25 terminal-v1 checker | `calibration_stopped`, matching terminal root | PASS stopped branch |
+| successor route mutations and closed child protocol | frozen-A4 Vitest 4 suite with exact required flags | 1 file, 55/55 tests | PASS |
+| workspace typing | `pnpm typecheck` on main | 27/27 tasks | PASS |
+| strict boundaries | unchanged boundary monitor chain with isolated PostgreSQL 18 | all rows pass; owned container removed | PASS |
+
+The successor suite ran in a uniquely named disposable detached worktree at A4
+with only the two review documents copied untracked and an offline frozen-lockfile
+dependency installation local to that checkout. It used `caffeinate`, forks,
+one worker, no file parallelism, `testTimeout=120000`, and `bail=1`, and completed
+in 2012.38 seconds. The disposable worktree was removed afterward.
+
+## Probe Execution
+
+Not applicable. The plan declares canonical checkers and a Vitest suite, not
+`probe-*.sh` artifacts; every declared executable proof was run directly.
 
 ## Requirements Coverage
 
 | Requirements | Verdict |
 |---|---|
-| ADMIT-01, ADMIT-02, ADMIT-04 | SATISFIED by exact manual custody/closure and fail-closed behavior |
-| ADMIT-03 | BLOCKED — not `reproduction_passed`, 0/540 |
+| ADMIT-01, ADMIT-02, ADMIT-04 | SATISFIED by independent custody/identity recomputation and exact fail-closed terminal behavior |
+| ADMIT-03 | BLOCKED — not `reproduction_passed`; reproduction:v9 absent; 0/540 |
 | MEAS-01..MEAS-10, SEAL-01, DECI-02 | BLOCKED — Plans 262-03..07 unexecuted |
 
 Coverage remains 3 covered, 1 partial, and 12 missing.
 
 ## Anti-Patterns and Human Verification
 
-No source was modified by Plan 262-23. The three A3 source files were scanned
-for completion markers as an audit aid; no new Plan 262-23 debt was introduced.
-No human verification item can convert this terminal into a pass: the missing
-540/540 artifact and failed automated gates are observable blockers.
+No source was modified by Plan 262-26, no debt marker was introduced, and no
+review file is warranted because all verifier infrastructure is green with no
+custody drift. No human test can convert the observable stopped terminal into a
+pass; the route gap is deterministic and requires an escalation decision, not
+UAT.
 
-## Gaps Summary and Exact Next Action
+## Gaps Summary and Escalation Gate
 
-Plan 262-23 is complete as a read-only escalation gate, but the route and phase
-goals are not achieved. Preserve A2/B2/A3/B3, all protected roots and 24 total
-calibration:v5/v6/v7 charges, terminal-v1, and all artifacts byte-for-byte.
-Create a separately planned remediation/successor authority before any further
-unchanged-policy calibration or conditional reproduction. Do not retry Plan
-262-22, reuse partial evidence, soften the threshold, or begin Plan 262-03.
+Plan 262-26 is complete as an independent read-only verification execution.
+The route and phase goals are not achieved. Preserve A2/B2/A3/B3/A4/B4, all
+protected roots and 32 cumulative charges, the stopped terminal, and every
+artifact byte-for-byte. Plan 262-25 authority is expired: do not retry it,
+reuse partial evidence, invoke a writer, repair evidence, soften the threshold,
+or begin Plan 262-03.
 
-Plans 262-03 through 262-07 remain separate blockers for roadmap truths 3–5.
+The developer must decide whether to authorize a separately planned successor
+route, revise the milestone dependency while preserving ADMIT-03 as unmet, or
+stop the milestone. Plans 262-03 through 262-07 remain separate blockers for
+roadmap truths 3–5.
 
 ---
-_Verified: 2026-07-31T18:10:00Z_
-_Verifier: independent read-only Plan 262-23 process_
+_Verified: 2026-08-09T04:16:49Z_
+_Verifier: independent read-only Plan 262-26 process_
