@@ -76,6 +76,13 @@ import {
   deriveV138Plan26230PreObservationProof,
   writeV138ExecutionContextV8Receipt,
   writeV138ExecutionContextV9Receipt,
+  writeV138HostHeadroomPreflightV9Receipt,
+  checkV138Plan26230PreflightV9,
+  writeV138ParallelCalibrationV9Receipt,
+  writeV138AuthoritativeMatrixV10Receipt,
+  writeV138Plan26230TerminalV1,
+  checkV138Plan26230TerminalBranch,
+  executeV138ParallelMatrix,
   writeV138HostHeadroomPreflightV8Receipt,
   writeV138ParallelCalibrationV8Receipt,
   writeV138AuthoritativeMatrixV9Receipt,
@@ -105,7 +112,8 @@ const canonicalManifest = (value: unknown): string => {
   return `${Buffer.from(encoded.bytes).toString("utf8")}\n`
 }
 
-const canonicalRoot = (domain: "canonicalJsonProfile", schema: string,
+const canonicalRoot = (domain: "canonicalJsonProfile" | "evidenceBundle" |
+  "containmentPolicy", schema: string,
   value: unknown) => {
   const bytes = Buffer.from(canonicalManifest(value).slice(0, -1), "utf8")
   return `sha256:${hashCanonicalIdentity(domain, [
@@ -144,6 +152,11 @@ const successfulV8Runner = (): V138ParallelShardRunner => ({ async run(
 
 const runSuccessfulV8Calibration: typeof calibrateV138ParallelMatrix =
   (input) => calibrateV138ParallelMatrix({ ...input,
+    runner: successfulV8Runner(),
+    sharedHeadroomObserver: admittedV8Headroom })
+
+const runSuccessfulV9Execution: typeof executeV138ParallelMatrix =
+  (input) => executeV138ParallelMatrix({ ...input,
     runner: successfulV8Runner(),
     sharedHeadroomObserver: admittedV8Headroom })
 
@@ -284,8 +297,10 @@ const prepareSealedRouteV5 = () => {
 }
 
 beforeAll(() => {
-  sourceA5 = execFileSync("git", ["rev-parse", "HEAD"],
-    { cwd: repoRoot, encoding: "utf8" }).trim()
+  sourceA5 = execFileSync("git", ["log", "-1", "--format=%H", "HEAD", "--",
+    ...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5],
+  { cwd: repoRoot, encoding: "utf8" }).trim()
+  if (sourceA5.length === 0) throw new TypeError("route-five A5 not found")
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
   sealedRouteRoot = prepareSealedRouteBase()
@@ -966,6 +981,53 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
     })).toThrow("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
   }, 900_000)
 
+  it("rejects a direct-child B5 with self-hashed unauthorized authority", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-forged-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      execFileSync("git", ["checkout", "-q", "--detach", sourceA5],
+        { cwd: tempRoot })
+      execFileSync("git", ["config", "user.email", "forged@example.invalid"],
+        { cwd: tempRoot })
+      execFileSync("git", ["config", "user.name", "Forged Route"],
+        { cwd: tempRoot })
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const authorizationPath =
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json"
+      const sealPath =
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json"
+      const authorization = JSON.parse(readFileSync(path.resolve(
+        sealedRouteV5Root, authorizationPath), "utf8")) as Record<string, unknown>
+      const seal = JSON.parse(readFileSync(path.resolve(sealedRouteV5Root,
+        sealPath), "utf8")) as Record<string, unknown>
+      delete authorization.authorizationRoot
+      authorization.operator = "unauthorized-operator"
+      authorization.authorizationRoot = canonicalRoot("evidenceBundle",
+        String(authorization.schemaVersion), authorization)
+      delete seal.sealRoot
+      seal.authorizationRoot = authorization.authorizationRoot
+      seal.sealRoot = canonicalRoot("containmentPolicy",
+        String(seal.schemaVersion), seal)
+      mkdirSync(path.dirname(path.resolve(tempRoot, authorizationPath)),
+        { recursive: true })
+      writeFileSync(path.resolve(tempRoot, authorizationPath),
+        canonicalManifest(authorization))
+      writeFileSync(path.resolve(tempRoot, sealPath), canonicalManifest(seal))
+      execFileSync("git", ["add", authorizationPath, sealPath], { cwd: tempRoot })
+      execFileSync("git", ["commit", "-q", "-m", "forged route five"],
+        { cwd: tempRoot })
+      const forgedB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      expect(() => inspectV138SuccessorSealCommitV5Anchor({ repoRoot: tempRoot,
+        sourceA5, sourceB5: forgedB5 })).toThrow(
+        "V138_PLAN_262_29_AUTHORIZATION_INVALID")
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
   it("writes and rejects collisions for the exact v9 context destination", () => {
     const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-case-"))
     try {
@@ -996,6 +1058,53 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
         ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
         ".planning/artifacts/v1.38-successor-source-seal-v5.json",
         sourceA5, sourceB5)).toThrow("MATRIX_PLAN_262_30_DESTINATION_NOT_FRESH")
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("writes and rechecks the complete admitted v9/v10 route and terminal", async () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v10-case-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      const [contextPath, preflightPath, calibrationPath, reproductionPath,
+        terminalPath] = V138_PLAN_262_30_FRESH_DESTINATIONS
+      writeV138ExecutionContextV9Receipt(tempRoot, contextPath,
+        "gsd-pattern-c-inline-main",
+        "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
+          "v1.38-plan-262-30-terminal-agent-registry-v1",
+          activeExecutorCount: 0, agents: [] },
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, sourceB5)
+      await writeV138HostHeadroomPreflightV9Receipt(tempRoot, preflightPath,
+        contextPath,
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, sourceB5, admittedV8Headroom)
+      expect(checkV138Plan26230PreflightV9(tempRoot, sourceA5, sourceB5)
+        .disposition).toBe("preflight_admitted")
+      const calibration = await writeV138ParallelCalibrationV9Receipt(tempRoot,
+        calibrationPath, preflightPath, contextPath, sourceA5, sourceB5,
+        runSuccessfulV8Calibration)
+      expect(calibration.status).toBe("admitted")
+      const reproduction = await writeV138AuthoritativeMatrixV10Receipt(
+        tempRoot, reproductionPath, calibrationPath, contextPath,
+        sourceA5, sourceB5, runSuccessfulV9Execution)
+      expect(reproduction).toMatchObject({ status: "passed_exact",
+        acceptedCellCount: 540 })
+      const terminal = writeV138Plan26230TerminalV1(tempRoot, terminalPath,
+        "reproduction_passed", sourceA5, sourceB5)
+      expect(terminal).toMatchObject({ disposition: "reproduction_passed",
+        chargedCalibrationAttemptCount: 8,
+        chargedReproductionAttemptCount: 540, acceptedCellCount: 540 })
+      expect(checkV138Plan26230TerminalBranch(tempRoot, sourceA5, sourceB5)
+        .terminalRoot).toBe(terminal.terminalRoot)
     } finally {
       rmSync(tempRoot, { recursive: true, force: true })
     }

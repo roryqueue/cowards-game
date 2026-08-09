@@ -198,9 +198,11 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
     expect(parent).toContain("child.stdio?.[3]")
     expect(parent).toContain("decodeV138CurrentMatrixChildProtocolV2(")
     expect(parent).toContain("reduceV138CurrentMatrixChildProtocolV2Observation(")
-    expect(production).toContain("input.onIntegrityFailureProjection?.(")
     expect(production).toContain(
-      "reduceV138ParallelIntegrityFailureProjection(supervised.terminals)",
+      "calibrateV138ParallelMatrixWithOperatorEvidence",
+    )
+    expect(production).toContain(
+      "reduceV138ParallelIntegrityFailureProjection(receipt.terminals)",
     )
     expect(parent).not.toContain("classifyV138CurrentMatrixChildFailure({")
     expect(child).toContain("encodeV138CurrentMatrixChildProtocolV2Ready()")

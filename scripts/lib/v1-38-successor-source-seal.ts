@@ -4474,6 +4474,8 @@ export const checkV138SuccessorSealCommitV4 = (input: {
     fail("V138_SUCCESSOR_SEAL_B4_DELTA_INVALID")
   }
   for (const repoPath of expectedPaths) {
+    requireAbsentAtCommit(input.repoRoot, sourceA5, repoPath,
+      "V138_SUCCESSOR_SEAL_V5_EXISTED_AT_A5")
     requireAbsentAtCommit(input.repoRoot, sourceA4, repoPath,
       "V138_SUCCESSOR_SEAL_V4_EXISTED_AT_A4")
     const working = regularFile(path.resolve(input.repoRoot, repoPath),
@@ -4770,16 +4772,21 @@ export const inspectV138SuccessorSealCommitV5Anchor = (input: {
       fail("V138_SUCCESSOR_SEAL_B5_WORKTREE_DRIFT")
     }
   }
-  const authorization = JSON.parse(readCommitFile(input.repoRoot, sourceB5,
+  const authorizationValue = JSON.parse(readCommitFile(input.repoRoot, sourceB5,
     V138_PLAN_262_29_CANONICAL_PATHS.authorization).toString("utf8"))
   const seal = JSON.parse(readCommitFile(input.repoRoot, sourceB5,
     V138_PLAN_262_29_CANONICAL_PATHS.seal).toString("utf8"))
-  if (!isRecord(authorization) || !isRecord(seal) ||
-    authorization.schemaVersion !== V138_PLAN_262_29_AUTHORIZATION_SCHEMA ||
+  const authorization = checkV138Plan26229AuthorizationV5(input.repoRoot,
+    authorizationValue)
+  const sealKeys = ["schemaVersion", "sealOrdinal", "canonicalizationId",
+    "sourceCustody", "selectedRouteClosure", "reviewRoots",
+    "protectedHistory", "frozenPolicy", "toolIdentity", "hostIdentity",
+    "formationAbsence", "replacementMetricContract", "canonicalDestinations",
+    "authorizationRoot", "sealRoot"]
+  if (!isRecord(seal) ||
+    canonical(sorted(Object.keys(seal))) !== canonical(sorted(sealKeys)) ||
     seal.schemaVersion !== V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA ||
-    !isRecord(authorization.sourceCustody) ||
     authorization.sourceCustody.sourceA5 !== sourceA5 ||
-    !isRecord(authorization.selectedRouteClosure) ||
     !isRecord(seal.sourceCustody) || !isRecord(seal.selectedRouteClosure) ||
     canonical(seal.sourceCustody) !== canonical(authorization.sourceCustody) ||
     canonical(seal.selectedRouteClosure) !==
@@ -4787,13 +4794,9 @@ export const inspectV138SuccessorSealCommitV5Anchor = (input: {
     seal.authorizationRoot !== authorization.authorizationRoot) {
     fail("V138_SUCCESSOR_SEAL_V5_ANCHOR_INVALID")
   }
-  const authorizationBody = { ...authorization }
-  delete authorizationBody.authorizationRoot
   const sealBody = { ...seal }
   delete sealBody.sealRoot
-  if (authorization.authorizationRoot !== identityRoot("evidenceBundle",
-    V138_PLAN_262_29_AUTHORIZATION_SCHEMA, authorizationBody) ||
-    seal.sealRoot !== identityRoot("containmentPolicy",
+  if (seal.sealRoot !== identityRoot("containmentPolicy",
       V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA, sealBody)) {
     fail("V138_SUCCESSOR_SEAL_V5_ANCHOR_INVALID")
   }
@@ -4805,6 +4808,31 @@ export const inspectV138SuccessorSealCommitV5Anchor = (input: {
     sealRoot: seal.sealRoot as Sha256 }
   return Object.freeze({ ...body, authorization, seal,
     anchorRoot: identityRoot("containmentPolicy", body.schemaVersion, body) })
+}
+
+export const checkV138SuccessorSourceSealV5Except = (
+  repoRoot: string,
+  sealValue: unknown,
+  authorizationValue: unknown,
+  omitted: "toolIdentity" | "protectedHistory" | "formationAbsence" | null,
+) => {
+  const authorization = checkV138Plan26229AuthorizationV5(repoRoot,
+    authorizationValue)
+  if (!isRecord(sealValue)) fail("V138_SUCCESSOR_SEAL_V5_SCHEMA_INVALID")
+  if (omitted === null) {
+    return checkV138SuccessorSourceSealV5(repoRoot, sealValue, authorization)
+  }
+  const expected = buildV138SuccessorSourceSealV5({ repoRoot, authorization })
+  const keys = Object.keys(expected)
+  if (canonical(sorted(Object.keys(sealValue))) !== canonical(sorted(keys))) {
+    fail("V138_SUCCESSOR_SEAL_V5_SCHEMA_INVALID")
+  }
+  for (const key of keys) {
+    if (key === omitted || key === "sealRoot") continue
+    if (canonical(sealValue[key]) !== canonical(expected[key as keyof
+      typeof expected])) fail("V138_SUCCESSOR_SEAL_V5_NONFAILING_FIELD_INVALID")
+  }
+  return sealValue
 }
 
 export const checkV138SuccessorSealCommitV5 = (input: {

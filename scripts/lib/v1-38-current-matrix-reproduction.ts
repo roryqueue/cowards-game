@@ -16,6 +16,7 @@ import {
   lstatSync,
   openSync,
   readFileSync,
+  readSync,
   unlinkSync,
   writeFileSync,
   writeSync,
@@ -110,6 +111,7 @@ import {
   checkV138Plan26229AuthorizationV5,
   checkV138SuccessorSealCommitV5,
   checkV138SuccessorSourceSealV5,
+  checkV138SuccessorSourceSealV5Except,
   inspectV138SuccessorSealCommitV5Anchor,
   deriveV138ToolIdentityRoot,
   deriveV138FormationAbsenceRoot,
@@ -1847,10 +1849,6 @@ export const calibrateV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
-  /** Private lab/operator sink. This projection is never serialized into the
-   * ordinary calibration receipt or any public replay surface. */
-  onIntegrityFailureProjection?: ((projection: ReturnType<
-    typeof reduceV138ParallelIntegrityFailureProjection>) => void) | undefined
   repoRoot?: string | undefined
   executionIdentityVersion?:
     | "v1"
@@ -2003,13 +2001,6 @@ export const calibrateV138ParallelMatrix = async (input: {
     ) &&
     projection.admittedByTime &&
     resourceAdmitted
-  if (!admitted && supervised.terminals.some(({ outcomes }) =>
-    outcomes.some((outcome) => outcome.classification === "system_failure" &&
-      V138_PARALLEL_INTEGRITY_FAILURE_FAMILIES.has(outcome.code as never)))) {
-    input.onIntegrityFailureProjection?.(
-      reduceV138ParallelIntegrityFailureProjection(supervised.terminals),
-    )
-  }
   const withoutRoot = {
     schemaVersion: "v1.38-parallel-calibration-receipt-v1" as const,
     status: admitted
@@ -2041,6 +2032,21 @@ export const calibrateV138ParallelMatrix = async (input: {
     ...withoutRoot,
     calibrationRoot: sha256(canonical(withoutRoot)),
   })
+}
+
+/** Dedicated private operator/lab boundary. Public calibration callers use
+ * calibrateV138ParallelMatrix and cannot inject diagnostic hooks. */
+export const calibrateV138ParallelMatrixWithOperatorEvidence = async (
+  input: Parameters<typeof calibrateV138ParallelMatrix>[0],
+) => {
+  const receipt = await calibrateV138ParallelMatrix(input)
+  const hasIntegrityFailure = receipt.terminals.some(({ outcomes }) =>
+    outcomes.some((outcome) => outcome.classification === "system_failure" &&
+      V138_PARALLEL_INTEGRITY_FAILURE_FAMILIES.has(outcome.code as never)))
+  return deepFreeze({ receipt,
+    integrityFailureProjection: receipt.status === "stopped_process_failure" &&
+      hasIntegrityFailure ?
+      reduceV138ParallelIntegrityFailureProjection(receipt.terminals) : null })
 }
 
 export type V138ParallelMatrixExecutionResult = Readonly<{
@@ -15270,8 +15276,6 @@ const runReceiptCli = async (): Promise<void> => {
       }
       flags.set(flag, value)
     }
-    const patternCObservationJson = flags.get("--pattern-c-observation-json")
-    flags.delete("--pattern-c-observation-json")
     const expectedFlags = new Set(write ? ["--authorization", "--seal",
       "--context", "--preflight", "--calibration", "--reproduction",
       "--source-a5", "--source-b5", "--disposition"] :
@@ -15300,14 +15304,26 @@ const runReceiptCli = async (): Promise<void> => {
           disposition as never))) {
       throw new TypeError("MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID")
     }
-    if (write && (disposition === "pattern_c_ownership_failed") !==
-      (patternCObservationJson !== undefined)) {
-      throw new TypeError("MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID")
-    }
     let patternCObservation: V138Plan26230PatternCObservation | undefined
-    if (patternCObservationJson !== undefined) {
-      try { patternCObservation = JSON.parse(patternCObservationJson) } catch {
+    const effectiveDisposition = write ? disposition : (() => {
+      const terminalValue = readPlan26230(repoRoot, "terminal")
+      return terminalValue !== null && typeof terminalValue === "object" &&
+        !Array.isArray(terminalValue) ?
+        (terminalValue as { disposition?: unknown }).disposition : undefined
+    })()
+    if (effectiveDisposition === "pattern_c_ownership_failed") {
+      const bytes = Buffer.alloc(4097)
+      try {
+        const length = readSync(0, bytes, 0, bytes.length, null)
+        if (length === 0 || length > 4096) {
+          throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_STDIN_INVALID")
+        }
+        patternCObservation = JSON.parse(bytes.subarray(0, length)
+          .toString("utf8"))
+      } catch {
         throw new TypeError("MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID")
+      } finally {
+        bytes.fill(0)
       }
     }
     const result = write ? writeV138Plan26230TerminalV1(repoRoot, target!,
@@ -17720,19 +17736,34 @@ export const writeV138ParallelCalibrationV9Receipt = async (repoRoot: string,
   writeV138Plan26230Marker(repoRoot, "calibration", context,
     preflight.receiptRoot, calibrationIds)
   let calibration: Readonly<V138ParallelCalibrationReceipt> | undefined
+  let operatorIntegrityFailureProjection: ReturnType<
+    typeof reduceV138ParallelIntegrityFailureProjection> | null = null
   let callbackFailureAfterConsumption: true | undefined
   if (preflight.disposition === "preflight_admitted") {
-    try { calibration = await run({ inventory,
-      runner: createV138SubprocessShardRunner(repoRoot,
-        { useLegacyHostMemory: false }),
-      sharedHeadroomObserver: () => observeDarwinHeadroomOwned(
-        executeOwnedMemoryPressureQ),
-      hardwareIdentity: { operatingSystem: `${platform()} ${release()}`,
-        architecture: arch(), nodeVersion: process.version,
-        cpuIdentity: cpus()[0]?.model ?? "unavailable" },
-      repoRoot, executionIdentityVersion: "v9" })
+    try {
+      const calibrationInput = { inventory,
+        runner: createV138SubprocessShardRunner(repoRoot,
+          { useLegacyHostMemory: false }),
+        sharedHeadroomObserver: () => observeDarwinHeadroomOwned(
+          executeOwnedMemoryPressureQ),
+        hardwareIdentity: { operatingSystem: `${platform()} ${release()}`,
+          architecture: arch(), nodeVersion: process.version,
+          cpuIdentity: cpus()[0]?.model ?? "unavailable" },
+        repoRoot, executionIdentityVersion: "v9" as const }
+      if (run === calibrateV138ParallelMatrix) {
+        const operatorEvidence =
+          await calibrateV138ParallelMatrixWithOperatorEvidence(calibrationInput)
+        calibration = operatorEvidence.receipt
+        operatorIntegrityFailureProjection =
+          operatorEvidence.integrityFailureProjection
+      } else {
+        calibration = await run(calibrationInput)
+      }
     } catch { callbackFailureAfterConsumption = true }
   }
+  // Private operator evidence is intentionally consumed only at this boundary;
+  // it is never joined into the public receipt or written to canonical storage.
+  void operatorIntegrityFailureProjection
   assertV138Plan26230AuthorityOpen(repoRoot)
   const currentRoute = checkV138Plan26229AuthorityRoute({ repoRoot, sourceA5,
     sourceB5, authorizationValue: readPlan26230(repoRoot, "authorization"),
@@ -18021,6 +18052,12 @@ export const deriveV138Plan26230PreObservationProof = (input: {
   patternCObservation?: V138Plan26230PatternCObservation | undefined
 }): V138Plan26230PreObservationProof => {
   const seal = input.anchor.seal
+  checkV138SuccessorSourceSealV5Except(input.repoRoot, seal,
+    input.anchor.authorization,
+    input.disposition === "tool_identity_failed" ? "toolIdentity" :
+      input.disposition === "protected_history_failed" ? "protectedHistory" :
+        input.disposition === "formation_absence_failed" ?
+          "formationAbsence" : null)
   let sealedRoot: Sha256 | null = null
   let observedRoot: Sha256
   let expectedContractRoot: Sha256 | null = null
