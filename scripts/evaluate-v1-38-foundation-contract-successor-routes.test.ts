@@ -1119,17 +1119,10 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
         sealedRouteV5Root, authorizationPath), "utf8")) as Record<string, unknown>
       const seal = JSON.parse(readFileSync(path.resolve(sealedRouteV5Root,
         sealPath), "utf8")) as Record<string, unknown>
-      const forgedRoot =
-        "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-      delete authorization.authorizationRoot
-      authorization.protectedHistoryRoot = forgedRoot
-      authorization.authorizationRoot = canonicalRoot("evidenceBundle",
-        String(authorization.schemaVersion), authorization)
       const protectedHistory = seal.protectedHistory as Record<string, unknown>
       seal.protectedHistory = { ...protectedHistory,
-        protectedHistoryRoot: forgedRoot }
+        acceptedEvidenceCount: 99 }
       delete seal.sealRoot
-      seal.authorizationRoot = authorization.authorizationRoot
       seal.sealRoot = canonicalRoot("containmentPolicy",
         String(seal.schemaVersion), seal)
       mkdirSync(path.dirname(path.resolve(tempRoot, authorizationPath)),
@@ -1145,7 +1138,7 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
       }).trim()
       expect(() => inspectV138ProtectedHistoryFailureSealCommitV5Anchor({
         repoRoot: tempRoot, sourceA5, sourceB5: forgedB5 })).toThrow(
-        "V138_PLAN_262_29_AUTHORIZATION_HISTORY_ANCHOR_INVALID")
+        "V138_SUCCESSOR_SEAL_V5_ANCHOR_INVALID")
     } finally { rmSync(tempRoot, { recursive: true, force: true }) }
   }, 900_000)
 

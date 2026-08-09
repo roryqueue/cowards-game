@@ -4891,8 +4891,15 @@ const inspectV138SuccessorSealCommitV5AnchorInternal = (input: {
   }
   const sealBody = { ...seal }
   delete sealBody.sealRoot
+  const retainedHistory = { ...(seal.protectedHistory as Record<string,
+    unknown>) }
+  const retainedHistoryRoot = retainedHistory.protectedHistoryRoot
+  delete retainedHistory.protectedHistoryRoot
   if (seal.sealRoot !== identityRoot("containmentPolicy",
-      V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA, sealBody)) {
+      V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA, sealBody) ||
+    retainedHistory.schemaVersion !== "v1.38-protected-stopped-history-v5" ||
+    retainedHistoryRoot !== identityRoot("evidenceBundle",
+      "v1.38-protected-stopped-history-v5", retainedHistory)) {
     fail("V138_SUCCESSOR_SEAL_V5_ANCHOR_INVALID")
   }
   const body = { schemaVersion: "v1.38-source-b5-anchor-v1" as const,
