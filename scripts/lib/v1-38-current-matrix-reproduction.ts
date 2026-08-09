@@ -18,6 +18,7 @@ import {
   readFileSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs"
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os"
 import path from "node:path"
@@ -30,8 +31,11 @@ import {
 import { fileURLToPath } from "node:url"
 import {
   V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
-  classifyV138CurrentMatrixChildFailure,
-  type V138CurrentMatrixChildFailureCode,
+  V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_MAX_BYTES,
+  decodeV138CurrentMatrixChildProtocolV2,
+  encodeV138CurrentMatrixChildProtocolV2Ready,
+  encodeV138CurrentMatrixChildProtocolV2Terminal,
+  reduceV138CurrentMatrixChildProtocolV2Observation,
 } from "./v1-38-current-matrix-child-protocol.js"
 import {
   type V138FoundationAdmissionPassed,
@@ -3292,7 +3296,7 @@ export interface V138ShardProcessFactory {
       detached: boolean
       env: Readonly<Record<string, string>>
       shell: false
-      stdio: readonly ["ignore", "pipe", "pipe"]
+      stdio: readonly ["ignore", "pipe", "pipe", "pipe"]
       windowsHide: true
     }>,
   ) => ChildProcessWithoutNullStreams
@@ -3543,7 +3547,7 @@ export function createV138SubprocessShardRunner(
             PATH: process.env.PATH ?? "",
           },
           shell: false,
-          stdio: ["ignore", "pipe", "pipe"] as const,
+          stdio: ["ignore", "pipe", "pipe", "pipe"] as const,
           windowsHide: true,
         } as const
       const child =
@@ -3553,7 +3557,9 @@ export function createV138SubprocessShardRunner(
           childOptions,
         ) ??
         spawn(process.execPath, childArguments, childOptions)
+      let spawned = false
       child.once("spawn", () => {
+        spawned = true
         control.onLaunch?.({
           event: "child_launched",
           shardId: shard.shardId,
@@ -3565,12 +3571,17 @@ export function createV138SubprocessShardRunner(
       })
       const stdout: Buffer[] = []
       const stderr: Buffer[] = []
+      const controlFrames: Buffer[] = []
       let concatenatedStdout: Buffer | undefined
+      let concatenatedControl: Buffer | undefined
       let stdoutBytes = 0
       let stderrBytes = 0
+      let controlBytes = 0
       let maximumRssKilobytes = 0
       let outputOverflow = false
+      let controlOverflow = false
       let spawnError = false
+      let timedOut = false
       let gracefulTerminationSent = false
       let forceTerminationSent = false
       let closed = false
@@ -3660,6 +3671,19 @@ export function createV138SubprocessShardRunner(
       child.stderr.on("data", (value: Buffer) =>
         append(stderr, Buffer.from(value), "stderr"),
       )
+      child.stdio[3]?.on("data", (value: Buffer) => {
+        const bytes = Buffer.from(value)
+        const remaining = Math.max(
+          0,
+          V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_MAX_BYTES + 1 - controlBytes,
+        )
+        if (remaining > 0) controlFrames.push(bytes.subarray(0, remaining))
+        controlBytes += bytes.byteLength
+        if (controlBytes > V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_MAX_BYTES) {
+          controlOverflow = true
+          void terminate()
+        }
+      })
       const sample = (): Promise<void> => {
         if (
           !resourceSamplingOpen ||
@@ -3723,6 +3747,7 @@ export function createV138SubprocessShardRunner(
             void sample()
           }, V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds)
       const timeout = setTimeout(() => {
+        timedOut = true
         void terminate()
       }, V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds)
       await closeReceipt
@@ -3749,20 +3774,41 @@ export function createV138SubprocessShardRunner(
         orphanProbe = probeV138ProcessGroup(pid)
       }
       const cancelled = control.signal.aborted
-      const failureCode = outputOverflow
+      const resourceFailureCode = outputOverflow
         ? "RESOURCE_POLICY_SHARD_OUTPUT_INVALID"
-        : elapsedMilliseconds >
-            V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds
-          ? "RESOURCE_POLICY_SHARD_TIMEOUT"
-          : spawnError
-            ? "RESOURCE_POLICY_SHARD_SPAWN_FAILED"
-            : samplerCode !== undefined
-              ? samplerCode
-            : status !== 0 || closeSignal !== null
-              ? "RESOURCE_POLICY_SHARD_FAILED"
-              : undefined
+        : samplerCode
+      concatenatedControl = Buffer.concat(controlFrames)
+      let decodedControlState:
+        | ReturnType<typeof decodeV138CurrentMatrixChildProtocolV2>
+        | undefined
+      if (!controlOverflow) {
+        try {
+          decodedControlState = decodeV138CurrentMatrixChildProtocolV2(
+            concatenatedControl,
+          )
+        } catch {
+          decodedControlState = undefined
+        }
+      }
+      const protocolClassification = cancelled ||
+          resourceFailureCode !== undefined
+        ? undefined
+        : reduceV138CurrentMatrixChildProtocolV2Observation({
+            spawned: spawned && !spawnError,
+            controlBytes: controlOverflow
+              ? Buffer.alloc(
+                  V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_MAX_BYTES + 1,
+                )
+              : concatenatedControl,
+            stderrBytes: Buffer.concat(stderr),
+            exitStatus: status,
+            signal: closeSignal,
+            timedOut,
+          })
       let parsed: ShardExecutionResult | undefined
-      if (!cancelled && failureCode === undefined) {
+      if (!cancelled && resourceFailureCode === undefined &&
+          protocolClassification?.classification === "success" &&
+          decodedControlState?.terminal === "success") {
         try {
           concatenatedStdout = Buffer.concat(stdout)
           parsed = parseV138ShardExecutionResult(
@@ -3777,19 +3823,23 @@ export function createV138SubprocessShardRunner(
           parsed = undefined
         }
       }
-      const effectiveFailureCode =
-        failureCode ??
-        (cancelled
-          ? undefined
-          : parsed === undefined
-            ? "RESOURCE_POLICY_SHARD_OUTPUT_INVALID"
-            : undefined)
-      const protocolFailure = effectiveFailureCode === undefined
+      const effectiveFailure = cancelled
         ? undefined
-        : classifyV138CurrentMatrixChildFailure({
-            schemaVersion: V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
-            failureCode: effectiveFailureCode as V138CurrentMatrixChildFailureCode,
-          })
+        : resourceFailureCode !== undefined
+          ? {
+              classification: "system_failure" as const,
+              code: resourceFailureCode,
+              retryable: false as const,
+            }
+          : protocolClassification?.classification === "system_failure"
+            ? protocolClassification
+            : parsed === undefined
+              ? {
+                  classification: "system_failure" as const,
+                  code: "CHILD_TRANSPORT_FAILED" as const,
+                  retryable: false as const,
+                }
+              : undefined
       const mappedOutcomes: V138ParallelChargedOutcome[] = shard.attempts.map(
         ({ executionAttemptId }, index) => {
           if (cancelled) {
@@ -3799,10 +3849,10 @@ export function createV138SubprocessShardRunner(
               code: "CANCELLED_AFTER_HARD_FAILURE",
             }
           }
-          if (effectiveFailureCode !== undefined) {
+          if (effectiveFailure !== undefined) {
             return {
               attemptId: executionAttemptId,
-              ...protocolFailure!,
+              ...effectiveFailure,
             }
           }
           const outcome = parsed!.outcomes[index]!
@@ -3814,7 +3864,7 @@ export function createV138SubprocessShardRunner(
         laneId: shard.laneId,
         classification: cancelled
           ? "cancelled"
-          : effectiveFailureCode !== undefined ||
+          : effectiveFailure !== undefined ||
               mappedOutcomes.some(
                 ({ classification }) => classification !== "success",
               )
@@ -3835,16 +3885,23 @@ export function createV138SubprocessShardRunner(
       } finally {
         for (const chunk of stdout) chunk.fill(0)
         for (const chunk of stderr) chunk.fill(0)
+        for (const chunk of controlFrames) chunk.fill(0)
         concatenatedStdout?.fill(0)
+        concatenatedControl?.fill(0)
         options.onOutputBuffersZeroed?.(
           Object.freeze([
             ...stdout,
             ...stderr,
+            ...controlFrames,
             ...(concatenatedStdout === undefined ? [] : [concatenatedStdout]),
+            ...(concatenatedControl === undefined
+              ? []
+              : [concatenatedControl]),
           ]),
         )
         stdout.length = 0
         stderr.length = 0
+        controlFrames.length = 0
       }
     },
   }
@@ -7466,30 +7523,73 @@ const runShardCli = (): void => {
   ) {
     return
   }
+
+  const emitControl = (
+    bytes: Buffer,
+  ): void => {
+    try {
+      writeSync(3, bytes)
+    } finally {
+      bytes.fill(0)
+    }
+  }
+  const failChild = (
+    family: "RUNTIME_EXECUTION_FAILED" | "SHARD_COORDINATION_FAILED",
+  ): void => {
+    emitControl(encodeV138CurrentMatrixChildProtocolV2Terminal(family))
+    process.exitCode = 1
+  }
+
+  emitControl(encodeV138CurrentMatrixChildProtocolV2Ready())
+  let inventory: Readonly<V138CurrentMatrixInventory>
+  let attempts: V138CurrentMatrixAttempt[]
   try {
     const decoded = JSON.parse(
       Buffer.from(process.argv[3] ?? "", "base64").toString("utf8"),
     ) as { repoRoot: string; attemptIds: string[] }
-    const inventory = enumerateV138CurrentMatrix(decoded.repoRoot)
+    if (!hasExactKeys(decoded, ["repoRoot", "attemptIds"]) ||
+        typeof decoded.repoRoot !== "string" ||
+        !Array.isArray(decoded.attemptIds) ||
+        !decoded.attemptIds.every((value) => typeof value === "string")) {
+      throw new TypeError("MATRIX_SHARD_REQUEST_INVALID")
+    }
+    inventory = enumerateV138CurrentMatrix(decoded.repoRoot)
     const byId = new Map(
       inventory.attempts.map((attempt) => [attempt.attemptId, attempt]),
     )
-    const attempts = decoded.attemptIds.map((attemptId) => {
+    attempts = decoded.attemptIds.map((attemptId) => {
       const attempt = byId.get(attemptId)
       if (attempt === undefined) {
         throw new TypeError("MATRIX_SHARD_ATTEMPT_UNKNOWN")
       }
       return attempt
     })
-    const outcomes = executeAttemptsInProcess(inventory, attempts)
-    process.stdout.write(
-      JSON.stringify({
-        outcomes,
-        maxRssKilobytes: process.resourceUsage().maxRSS,
-      }),
-    )
   } catch {
-    process.exitCode = 1
+    failChild("SHARD_COORDINATION_FAILED")
+    return
+  }
+
+  let outcomes: V138CurrentMatrixAttemptOutcome[]
+  try {
+    outcomes = executeAttemptsInProcess(inventory, attempts)
+  } catch {
+    failChild("RUNTIME_EXECUTION_FAILED")
+    return
+  }
+
+  try {
+    const result = {
+      outcomes,
+      maxRssKilobytes: process.resourceUsage().maxRSS,
+    }
+    parseV138ShardExecutionResult(
+      result,
+      attempts.map(({ attemptId }) => attemptId),
+    )
+    process.stdout.write(JSON.stringify(result))
+    emitControl(encodeV138CurrentMatrixChildProtocolV2Terminal("success"))
+  } catch {
+    failChild("SHARD_COORDINATION_FAILED")
   }
 }
 

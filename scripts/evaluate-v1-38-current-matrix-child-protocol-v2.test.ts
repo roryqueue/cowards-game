@@ -138,4 +138,32 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
       expect(source).not.toContain([".planning", "artifacts"].join("/"))
     }
   })
+
+  it("wires the production parent to child-emitted control bytes", () => {
+    const production = readFileSync(path.resolve(
+      repoRoot,
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+    ), "utf8")
+    const parentStart = production.indexOf(
+      "export function createV138SubprocessShardRunner",
+    )
+    const childStart = production.indexOf("const runShardCli = (): void =>")
+    const parent = production.slice(parentStart, childStart)
+    const child = production.slice(childStart, production.indexOf(
+      "const v138SuccessorCanonicalBytes",
+      childStart,
+    ))
+    expect(parent).toContain('stdio: ["ignore", "pipe", "pipe", "pipe"]')
+    expect(parent).toContain("child.stdio[3]")
+    expect(parent).toContain("decodeV138CurrentMatrixChildProtocolV2(")
+    expect(parent).toContain("reduceV138CurrentMatrixChildProtocolV2Observation(")
+    expect(parent).not.toContain("classifyV138CurrentMatrixChildFailure({")
+    expect(child).toContain("encodeV138CurrentMatrixChildProtocolV2Ready()")
+    expect(child).toContain('failChild("RUNTIME_EXECUTION_FAILED")')
+    expect(child).toContain('failChild("SHARD_COORDINATION_FAILED")')
+    expect(child).toContain(
+      'encodeV138CurrentMatrixChildProtocolV2Terminal("success")',
+    )
+    expect(child).not.toContain("catch {\n    process.exitCode = 1")
+  })
 })
