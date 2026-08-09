@@ -1428,6 +1428,19 @@ const deriveToolIdentity = (): Readonly<Record<string, JsonValue>> => {
   }
 }
 
+export const deriveV138ToolIdentityRoot = (): Sha256 => identityRoot(
+  "artifactManifest", "v1.38-tool-identity-observation-v1",
+  deriveToolIdentity(),
+)
+
+export const deriveV138FormationAbsenceRoot = (
+  repoRoot: string,
+  sourceA: string,
+): Sha256 => identityRoot("artifactManifest",
+  "v1.38-formation-absence-observation-v1",
+  deriveFormationAbsence(repoRoot, sourceA),
+)
+
 const deriveHostIdentity = (): Readonly<Record<string, JsonValue>> => {
   if (platform() !== "darwin") {
     fail("V138_SUCCESSOR_SEAL_HOST_IDENTITY_INVALID")
@@ -4725,6 +4738,75 @@ export const writeV138SuccessorSourceSealV5 = (repoRoot: string,
   return value
 }
 
+/**
+ * Validates only the immutable B5 byte/custody anchor. Unlike the full route
+ * checker it deliberately does not re-observe tool identity, protected
+ * history, formation absence, or executor ownership, so an independently
+ * proven failure of one of those prerequisites can still be terminalized.
+ */
+export const inspectV138SuccessorSealCommitV5Anchor = (input: {
+  readonly repoRoot: string; readonly sourceA5: string;
+  readonly sourceB5: string
+}) => {
+  const sourceA5 = fullCommit(input.repoRoot, input.sourceA5)
+  const sourceB5 = fullCommit(input.repoRoot, input.sourceB5)
+  const parents = gitText(input.repoRoot, ["rev-list", "--parents", "-n", "1",
+    sourceB5]).split(" ")
+  if (parents.length !== 2 || parents[1] !== sourceA5) {
+    fail("V138_SUCCESSOR_SEAL_B5_PARENT_INVALID")
+  }
+  const changedPaths = sorted(gitText(input.repoRoot, ["diff-tree",
+    "--no-commit-id", "--name-only", "-r", "--no-renames", sourceB5])
+    .split("\n").filter(Boolean).map(normalize))
+  const expectedPaths = sorted([V138_PLAN_262_29_CANONICAL_PATHS.authorization,
+    V138_PLAN_262_29_CANONICAL_PATHS.seal])
+  if (canonical(changedPaths) !== canonical(expectedPaths)) {
+    fail("V138_SUCCESSOR_SEAL_B5_DELTA_INVALID")
+  }
+  for (const repoPath of expectedPaths) {
+    const working = regularFile(path.resolve(input.repoRoot, repoPath),
+      "required")!
+    if (!working.equals(readCommitFile(input.repoRoot, sourceB5, repoPath))) {
+      fail("V138_SUCCESSOR_SEAL_B5_WORKTREE_DRIFT")
+    }
+  }
+  const authorization = JSON.parse(readCommitFile(input.repoRoot, sourceB5,
+    V138_PLAN_262_29_CANONICAL_PATHS.authorization).toString("utf8"))
+  const seal = JSON.parse(readCommitFile(input.repoRoot, sourceB5,
+    V138_PLAN_262_29_CANONICAL_PATHS.seal).toString("utf8"))
+  if (!isRecord(authorization) || !isRecord(seal) ||
+    authorization.schemaVersion !== V138_PLAN_262_29_AUTHORIZATION_SCHEMA ||
+    seal.schemaVersion !== V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA ||
+    !isRecord(authorization.sourceCustody) ||
+    authorization.sourceCustody.sourceA5 !== sourceA5 ||
+    !isRecord(authorization.selectedRouteClosure) ||
+    !isRecord(seal.sourceCustody) || !isRecord(seal.selectedRouteClosure) ||
+    canonical(seal.sourceCustody) !== canonical(authorization.sourceCustody) ||
+    canonical(seal.selectedRouteClosure) !==
+      canonical(authorization.selectedRouteClosure) ||
+    seal.authorizationRoot !== authorization.authorizationRoot) {
+    fail("V138_SUCCESSOR_SEAL_V5_ANCHOR_INVALID")
+  }
+  const authorizationBody = { ...authorization }
+  delete authorizationBody.authorizationRoot
+  const sealBody = { ...seal }
+  delete sealBody.sealRoot
+  if (authorization.authorizationRoot !== identityRoot("evidenceBundle",
+    V138_PLAN_262_29_AUTHORIZATION_SCHEMA, authorizationBody) ||
+    seal.sealRoot !== identityRoot("containmentPolicy",
+      V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA, sealBody)) {
+    fail("V138_SUCCESSOR_SEAL_V5_ANCHOR_INVALID")
+  }
+  const body = { schemaVersion: "v1.38-source-b5-anchor-v1" as const,
+    sourceA5, sourceB5, sourceB5Tree: gitText(input.repoRoot,
+      ["rev-parse", `${sourceB5}^{tree}`]), sourceB5Parent: sourceA5,
+    changedPaths: Object.freeze(changedPaths),
+    authorizationRoot: authorization.authorizationRoot as Sha256,
+    sealRoot: seal.sealRoot as Sha256 }
+  return Object.freeze({ ...body, authorization, seal,
+    anchorRoot: identityRoot("containmentPolicy", body.schemaVersion, body) })
+}
+
 export const checkV138SuccessorSealCommitV5 = (input: {
   readonly repoRoot: string
   readonly sourceA5: string
@@ -5727,13 +5809,19 @@ const runCli = async (): Promise<void> => {
     writeV138SuccessorSourceSealV5(repoRoot, args[1]!, checked)
   } else if (args[0] === "--check-plan-262-29-authorization-v5") {
     const values = new Map<string, string>()
+    const expectedNames = new Set(["--authorization", "--seal", "--review",
+      "--review-fix", "--source-a5", "--source-b5"])
     for (let index = 1; index < args.length; index += 2) {
       if (args[index] === undefined || args[index + 1] === undefined ||
-        values.has(args[index]!)) fail("V138_PLAN_262_29_CHECK_CLI_INVALID")
+        values.has(args[index]!) || !expectedNames.has(args[index]!)) {
+        fail("V138_PLAN_262_29_CHECK_CLI_INVALID")
+      }
       values.set(args[index]!, args[index + 1]!)
     }
-    for (const name of ["--authorization", "--seal", "--review",
-      "--review-fix", "--source-a5", "--source-b5"]) {
+    if (values.size !== expectedNames.size) {
+      fail("V138_PLAN_262_29_CHECK_CLI_INVALID")
+    }
+    for (const name of expectedNames) {
       if (!values.has(name)) fail("V138_PLAN_262_29_CHECK_CLI_INVALID")
     }
     canonicalPath(repoRoot, values.get("--review")!,

@@ -37,12 +37,22 @@ import {
   checkV138Plan26221PreLiveDestinationAbsence,
   checkV138Plan26221AuthorizationV3PostLive,
   checkV138SealedWorktreeAtA4,
+  checkV138SealedWorktreeAtA5,
+  checkV138Plan26229AuthorizationV5,
+  checkV138SuccessorSourceSealV5,
+  checkV138SuccessorSealCommitV5,
+  inspectV138SuccessorSealCommitV5Anchor,
   checkV138SuccessorSealCommitV4,
   deriveV138ProtectedHistoryV4,
+  deriveV138ProtectedHistoryV5,
   inspectSourceCustodyA4,
+  inspectSourceCustodyA5,
   v138Plan26224AuthorizationLiteral,
+  v138Plan26229AuthorizationLiteral,
   writeV138Plan26224AuthorizationV4,
+  writeV138Plan26229AuthorizationV5,
   writeV138SuccessorSourceSealV4,
+  writeV138SuccessorSourceSealV5,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_PLAN_262_25_ROUTE_CONTRACT,
@@ -63,7 +73,9 @@ import {
   buildV138AuthoritativeMatrixV9Receipt,
   calibrateV138ParallelMatrix,
   deriveV138Plan26225InterruptionProof,
+  deriveV138Plan26230PreObservationProof,
   writeV138ExecutionContextV8Receipt,
+  writeV138ExecutionContextV9Receipt,
   writeV138HostHeadroomPreflightV8Receipt,
   writeV138ParallelCalibrationV8Receipt,
   writeV138AuthoritativeMatrixV9Receipt,
@@ -82,6 +94,8 @@ const sourceB3 = "1387813e9f7262ac0c5916635addee9cdb96354b"
 const sourceA4 = "1be54efec080436ea47ba5be3644ab1ab1686163"
 let syntheticRoot = ""
 let sealedRouteRoot = ""
+let sealedRouteV5Root = ""
+let sourceA5 = ""
 
 const canonicalManifest = (value: unknown): string => {
   const encoded = encodeCanonicalJson(value as JsonValue, {
@@ -210,15 +224,79 @@ const prepareSealedRouteBase = () => {
   return tempRoot
 }
 
+const reviewV5Path =
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-28-REVIEW.md"
+const reviewFixV5Path =
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-28-REVIEW-FIX.md"
+const writeSyntheticReviewV5 = (targetRoot: string, commit: string) => {
+  mkdirSync(path.dirname(path.resolve(targetRoot, reviewV5Path)),
+    { recursive: true })
+  writeFileSync(path.resolve(targetRoot, reviewV5Path), `---
+plan: 28
+depth: deep
+source_base5: ${V138_PLAN_262_28_SOURCE_BASE5}
+source_a5: ${commit}
+fixes_applied: true
+files_reviewed: 5
+files_reviewed_list:
+${V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5.map((repoPath) =>
+    `  - ${repoPath}`).join("\n")}
+findings:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  warning: 0
+  info: 0
+  total: 0
+status: clean
+---
+`)
+  writeFileSync(path.resolve(targetRoot, reviewFixV5Path), `---
+status: all_fixed
+skipped: 0
+final_source_a5: ${commit}
+---
+`)
+}
+
+const prepareSealedRouteV5 = () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-sealed-"))
+  execFileSync("git", ["clone", "-q", "--shared", repoRoot, tempRoot])
+  execFileSync("git", ["checkout", "-q", "--detach", sourceA5],
+    { cwd: tempRoot })
+  execFileSync("git", ["config", "user.email", "route5@example.invalid"],
+    { cwd: tempRoot })
+  execFileSync("git", ["config", "user.name", "Route Five"],
+    { cwd: tempRoot })
+  writeSyntheticReviewV5(tempRoot, sourceA5)
+  const authorizationPath =
+    ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json"
+  const sealPath = ".planning/artifacts/v1.38-successor-source-seal-v5.json"
+  const authorization = writeV138Plan26229AuthorizationV5(tempRoot,
+    authorizationPath, sourceA5, Buffer.from(
+      v138Plan26229AuthorizationLiteral(tempRoot, sourceA5), "utf8"))
+  writeV138SuccessorSourceSealV5(tempRoot, sealPath, authorization)
+  execFileSync("git", ["add", authorizationPath, sealPath], { cwd: tempRoot })
+  execFileSync("git", ["commit", "-q", "-m", "seal route five"],
+    { cwd: tempRoot })
+  return tempRoot
+}
+
 beforeAll(() => {
+  sourceA5 = execFileSync("git", ["rev-parse", "HEAD"],
+    { cwd: repoRoot, encoding: "utf8" }).trim()
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
   sealedRouteRoot = prepareSealedRouteBase()
+  sealedRouteV5Root = prepareSealedRouteV5()
 }, 900_000)
 
 afterAll(() => {
   if (syntheticRoot !== "") rmSync(syntheticRoot, { recursive: true, force: true })
   if (sealedRouteRoot !== "") rmSync(sealedRouteRoot,
+    { recursive: true, force: true })
+  if (sealedRouteV5Root !== "") rmSync(sealedRouteV5Root,
     { recursive: true, force: true })
 })
 
@@ -830,6 +908,99 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
   const passedReproduction = { ...stoppedReproduction,
     acceptedCellCount: 540, status: "passed_exact" }
 
+  it("checks A5 custody, protected history, authorization, seal, and B5 custody behaviorally", () => {
+    const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: sealedRouteV5Root, encoding: "utf8",
+    }).trim()
+    const authorizationPath =
+      ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json"
+    const sealPath =
+      ".planning/artifacts/v1.38-successor-source-seal-v5.json"
+    const authorization = JSON.parse(readFileSync(path.resolve(
+      sealedRouteV5Root, authorizationPath), "utf8"))
+    const seal = JSON.parse(readFileSync(path.resolve(
+      sealedRouteV5Root, sealPath), "utf8"))
+    expect(inspectSourceCustodyA5({ repoRoot: sealedRouteV5Root,
+      sourceBase5: V138_PLAN_262_28_SOURCE_BASE5,
+      sourceA5 }).aggregateChangedPaths)
+      .toEqual([...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5].sort())
+    expect(deriveV138ProtectedHistoryV5(sealedRouteV5Root, sourceA5)
+      .cumulativeChargedPublicAttemptIds).toHaveLength(32)
+    const checkedAuthorization = checkV138Plan26229AuthorizationV5(
+      sealedRouteV5Root, authorization)
+    const checkedSeal = checkV138SuccessorSourceSealV5(sealedRouteV5Root,
+      seal, checkedAuthorization)
+    expect(checkV138SealedWorktreeAtA5(sealedRouteV5Root, checkedSeal)).toBe(true)
+    expect(checkV138SuccessorSealCommitV5({ repoRoot: sealedRouteV5Root,
+      sourceA5, sourceB5 })).toMatchObject({ sourceA5, sourceB5,
+      authorizationRoot: checkedAuthorization.authorizationRoot,
+      sealRoot: checkedSeal.sealRoot })
+    const anchor = inspectV138SuccessorSealCommitV5Anchor({
+      repoRoot: sealedRouteV5Root, sourceA5, sourceB5 })
+    for (const disposition of ["tool_identity_failed",
+      "protected_history_failed", "formation_absence_failed"] as const) {
+      expect(() => deriveV138Plan26230PreObservationProof({
+        repoRoot: sealedRouteV5Root, sourceA5, anchor, disposition,
+      })).toThrow("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+    }
+    const invalidObservation = { mode: "delegated-worker",
+      cwd: "/tmp/not-the-main-orchestrator", terminalAgentRegistry: {
+        schemaVersion: "v1.38-plan-262-30-terminal-agent-registry-v1",
+        activeExecutorCount: 0,
+        agents: [{ id: "private-agent-id", status: "completed" }] } }
+    const failureProof = deriveV138Plan26230PreObservationProof({
+      repoRoot: sealedRouteV5Root, sourceA5, anchor,
+      disposition: "pattern_c_ownership_failed",
+      patternCObservation: invalidObservation })
+    expect(failureProof).toMatchObject({
+      disposition: "pattern_c_ownership_failed", sealedRoot: null })
+    expect(JSON.stringify(failureProof)).not.toContain("private-agent-id")
+    expect(() => deriveV138Plan26230PreObservationProof({
+      repoRoot: sealedRouteV5Root, sourceA5, anchor,
+      disposition: "pattern_c_ownership_failed", patternCObservation: {
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        terminalAgentRegistry: { schemaVersion:
+          "v1.38-plan-262-30-terminal-agent-registry-v1",
+          activeExecutorCount: 0, agents: [] } },
+    })).toThrow("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+  }, 900_000)
+
+  it("writes and rejects collisions for the exact v9 context destination", () => {
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-case-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
+        tempRoot])
+      writeSyntheticReviewV5(tempRoot, sourceA5)
+      const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: tempRoot, encoding: "utf8",
+      }).trim()
+      const target = V138_PLAN_262_30_FRESH_DESTINATIONS[0]
+      const receipt = writeV138ExecutionContextV9Receipt(tempRoot, target,
+        "gsd-pattern-c-inline-main",
+        "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
+          "v1.38-plan-262-30-terminal-agent-registry-v1",
+          activeExecutorCount: 0, agents: [] },
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, sourceB5)
+      expect(receipt).toMatchObject({ schemaVersion:
+        "v1.38-current-matrix-execution-context-v9",
+        patternCOwnership: "main_orchestrator_only", acceptedCellCount: 0,
+        noRetry: true })
+      expect(() => writeV138ExecutionContextV9Receipt(tempRoot, target,
+        "gsd-pattern-c-inline-main",
+        "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
+          "v1.38-plan-262-30-terminal-agent-registry-v1",
+          activeExecutorCount: 0, agents: [] },
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, sourceB5)).toThrow("MATRIX_PLAN_262_30_DESTINATION_NOT_FRESH")
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
   it("freezes the noncolliding v5/v9/v10 route and exact policy constants", () => {
     expect(V138_PLAN_262_30_ROUTE_CONTRACT).toEqual({
       schemaVersion: "v1.38-plan-262-30-route-contract-v1",
@@ -843,7 +1014,7 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
       consumptionSchema: "v1.38-plan-262-30-consumption-v1",
       terminalSchema: "v1.38-plan-262-30-terminal-v1",
       terminalDispositions: V138_PLAN_262_30_DISPOSITIONS,
-      failureProtocolSchema: "v1.38-current-matrix-child-failure-v1",
+      failureProtocolSchema: "v1.38-current-matrix-child-control-v2",
       resourceSampleMilliseconds: 200,
       requiredHostHeadroomBasisPoints: 2500,
       calibrationAttemptCount: 8,
@@ -900,6 +1071,14 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
             observationMode: "unknown_after_consumption" as const,
             childLaunchCount: null, terminalOutcomeCount: null,
             completeCleanup: false as const } } : {}),
+        ...(preObservation ? { preObservationProof: {
+          schemaVersion:
+            "v1.38-plan-262-30-pre-observation-proof-v1" as const,
+          disposition: disposition as "tool_identity_failed",
+          sealedRoot: disposition === "pattern_c_ownership_failed" ? null : root,
+          observedRoot: root, expectedContractRoot: disposition ===
+            "pattern_c_ownership_failed" ? root : null, proofRoot: root,
+        } } : {}),
       })
       expect(terminal).toMatchObject({ disposition, sourceA5: "a5",
         sourceB5: "b5", acceptedCellCount: disposition ===
@@ -935,7 +1114,7 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
         "MATRIX_RECEIPT_CLI_COMMAND_INVALID",
       )
     }
-  })
+  }, 30_000)
 })
 
 describe.sequential("v1.38 child protocol", () => {

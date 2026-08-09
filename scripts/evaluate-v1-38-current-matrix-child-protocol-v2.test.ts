@@ -195,9 +195,13 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
       childStart,
     ))
     expect(parent).toContain('stdio: ["ignore", "pipe", "pipe", "pipe"]')
-    expect(parent).toContain("child.stdio[3]")
+    expect(parent).toContain("child.stdio?.[3]")
     expect(parent).toContain("decodeV138CurrentMatrixChildProtocolV2(")
     expect(parent).toContain("reduceV138CurrentMatrixChildProtocolV2Observation(")
+    expect(production).toContain("input.onIntegrityFailureProjection?.(")
+    expect(production).toContain(
+      "reduceV138ParallelIntegrityFailureProjection(supervised.terminals)",
+    )
     expect(parent).not.toContain("classifyV138CurrentMatrixChildFailure({")
     expect(child).toContain("encodeV138CurrentMatrixChildProtocolV2Ready()")
     expect(child).toContain('failChild("RUNTIME_EXECUTION_FAILED")')
@@ -276,7 +280,13 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
       expect(buildV138Plan26230TerminalV1({ disposition,
         sourceA5: "a5", sourceB5: "b5", authorizationRoot: root,
         sealRoot: root, markerRoots: { preflight: null,
-          calibration: null, reproduction: null } })).toMatchObject({
+          calibration: null, reproduction: null }, preObservationProof: {
+          schemaVersion: "v1.38-plan-262-30-pre-observation-proof-v1",
+          disposition, sealedRoot: disposition ===
+            "pattern_c_ownership_failed" ? null : root,
+          observedRoot: root, expectedContractRoot: disposition ===
+            "pattern_c_ownership_failed" ? root : null, proofRoot: root,
+        } })).toMatchObject({
         disposition, acceptedCellCount: 0, authorityExpired: true,
         noRetry: true, partialAcceptedEvidenceReusable: false,
       })

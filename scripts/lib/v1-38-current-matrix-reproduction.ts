@@ -31,6 +31,7 @@ import {
 import { fileURLToPath } from "node:url"
 import {
   V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+  V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_SCHEMA,
   V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_MAX_BYTES,
   decodeV138CurrentMatrixChildProtocolV2,
   encodeV138CurrentMatrixChildProtocolV2Ready,
@@ -109,6 +110,10 @@ import {
   checkV138Plan26229AuthorizationV5,
   checkV138SuccessorSealCommitV5,
   checkV138SuccessorSourceSealV5,
+  inspectV138SuccessorSealCommitV5Anchor,
+  deriveV138ToolIdentityRoot,
+  deriveV138FormationAbsenceRoot,
+  deriveV138ProtectedHistoryV5,
   registerV138Plan26222AuthoritativeBranchChecker,
   validateV138CanonicalParentChain,
   V138_PLAN_262_18_CANONICAL_PATHS,
@@ -1842,6 +1847,10 @@ export const calibrateV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
+  /** Private lab/operator sink. This projection is never serialized into the
+   * ordinary calibration receipt or any public replay surface. */
+  onIntegrityFailureProjection?: ((projection: ReturnType<
+    typeof reduceV138ParallelIntegrityFailureProjection>) => void) | undefined
   repoRoot?: string | undefined
   executionIdentityVersion?:
     | "v1"
@@ -1994,6 +2003,13 @@ export const calibrateV138ParallelMatrix = async (input: {
     ) &&
     projection.admittedByTime &&
     resourceAdmitted
+  if (!admitted && supervised.terminals.some(({ outcomes }) =>
+    outcomes.some((outcome) => outcome.classification === "system_failure" &&
+      V138_PARALLEL_INTEGRITY_FAILURE_FAMILIES.has(outcome.code as never)))) {
+    input.onIntegrityFailureProjection?.(
+      reduceV138ParallelIntegrityFailureProjection(supervised.terminals),
+    )
+  }
   const withoutRoot = {
     schemaVersion: "v1.38-parallel-calibration-receipt-v1" as const,
     status: admitted
@@ -2150,12 +2166,12 @@ export const executeV138ParallelMatrix = async (input: {
         plan.shards
           .flatMap(({ attemptIds }) => attemptIds)
           .indexOf(
-            left.attemptId.replace(/^reproduction:v[345678]:/u, ""),
+            left.attemptId.replace(/^reproduction:v[3456789]:/u, ""),
           ) -
         plan.shards
           .flatMap(({ attemptIds }) => attemptIds)
           .indexOf(
-            right.attemptId.replace(/^reproduction:v[345678]:/u, ""),
+            right.attemptId.replace(/^reproduction:v[3456789]:/u, ""),
           ),
     )
   const complete =
@@ -15254,6 +15270,8 @@ const runReceiptCli = async (): Promise<void> => {
       }
       flags.set(flag, value)
     }
+    const patternCObservationJson = flags.get("--pattern-c-observation-json")
+    flags.delete("--pattern-c-observation-json")
     const expectedFlags = new Set(write ? ["--authorization", "--seal",
       "--context", "--preflight", "--calibration", "--reproduction",
       "--source-a5", "--source-b5", "--disposition"] :
@@ -15282,9 +15300,20 @@ const runReceiptCli = async (): Promise<void> => {
           disposition as never))) {
       throw new TypeError("MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID")
     }
+    if (write && (disposition === "pattern_c_ownership_failed") !==
+      (patternCObservationJson !== undefined)) {
+      throw new TypeError("MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID")
+    }
+    let patternCObservation: V138Plan26230PatternCObservation | undefined
+    if (patternCObservationJson !== undefined) {
+      try { patternCObservation = JSON.parse(patternCObservationJson) } catch {
+        throw new TypeError("MATRIX_PLAN_262_30_CLI_ARGUMENTS_INVALID")
+      }
+    }
     const result = write ? writeV138Plan26230TerminalV1(repoRoot, target!,
-      disposition as V138Plan26230Disposition, sourceA5, sourceB5) :
-      checkV138Plan26230TerminalBranch(repoRoot, sourceA5, sourceB5)
+      disposition as V138Plan26230Disposition, sourceA5, sourceB5,
+      patternCObservation) : checkV138Plan26230TerminalBranch(repoRoot,
+        sourceA5, sourceB5, patternCObservation)
     process.stdout.write(`${canonical({ disposition: result.disposition,
       terminalRoot: result.terminalRoot })}\n`)
     return
@@ -17120,7 +17149,7 @@ export const V138_PLAN_262_30_ROUTE_CONTRACT = Object.freeze({
   consumptionSchema: "v1.38-plan-262-30-consumption-v1" as const,
   terminalSchema: "v1.38-plan-262-30-terminal-v1" as const,
   terminalDispositions: V138_PLAN_262_30_DISPOSITIONS,
-  failureProtocolSchema: V138_CURRENT_MATRIX_CHILD_PROTOCOL_SCHEMA,
+  failureProtocolSchema: V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_SCHEMA,
   resourceSampleMilliseconds: 200 as const,
   requiredHostHeadroomBasisPoints: 2500 as const,
   calibrationAttemptCount: 8 as const,
@@ -17212,16 +17241,25 @@ const checkRegistryV5 = (value: unknown) => {
   return registry
 }
 
-export const buildV138ExecutionContextV9Receipt = (input: { route: V138Route5;
-  mode: string; cwd: string; terminalAgentRegistry: unknown }) => {
+export const checkV138PatternCOwnershipV9 = (input: {
+  mode: unknown; cwd: unknown; terminalAgentRegistry: unknown
+}) => {
+  const registry = checkRegistryV5(input.terminalAgentRegistry)
   if (input.mode !== "gsd-pattern-c-inline-main" ||
     input.cwd !== "/Users/roryquinlan/runtime/cowards-game") {
     throw new TypeError("MATRIX_EXECUTION_CONTEXT_V9_ROUTE_INVALID")
   }
+  return deepFreeze({ mode: input.mode, cwd: input.cwd,
+    terminalAgentRegistry: registry })
+}
+
+export const buildV138ExecutionContextV9Receipt = (input: { route: V138Route5;
+  mode: string; cwd: string; terminalAgentRegistry: unknown }) => {
+  const ownership = checkV138PatternCOwnershipV9(input)
   const body = { schemaVersion:
     "v1.38-current-matrix-execution-context-v9" as const,
-    mode: input.mode, cwd: input.cwd,
-    terminalAgentRegistry: checkRegistryV5(input.terminalAgentRegistry),
+    mode: ownership.mode, cwd: ownership.cwd,
+    terminalAgentRegistry: ownership.terminalAgentRegistry,
     sourceA5: input.route.custody.sourceA5,
     sourceB5: input.route.custody.sourceB5,
     sourceB5Custody: input.route.custody,
@@ -17951,6 +17989,106 @@ export type V138Plan26230InterruptionProof = Readonly<{
   observationMode: "unknown_after_consumption"
   childLaunchCount: null; terminalOutcomeCount: null; completeCleanup: false
 }>
+export type V138Plan26230PatternCObservation = Readonly<{
+  mode: unknown; cwd: unknown; terminalAgentRegistry: unknown
+}>
+export type V138Plan26230PreObservationProof = Readonly<{
+  schemaVersion: "v1.38-plan-262-30-pre-observation-proof-v1"
+  disposition: "tool_identity_failed" | "protected_history_failed" |
+    "formation_absence_failed" | "pattern_c_ownership_failed"
+  sealedRoot: Sha256 | null
+  observedRoot: Sha256
+  expectedContractRoot: Sha256 | null
+  proofRoot: Sha256
+}>
+
+const V138_PLAN_262_30_PRE_OBSERVATION = new Set([
+  "tool_identity_failed", "protected_history_failed",
+  "formation_absence_failed", "pattern_c_ownership_failed",
+] as const)
+
+const plan26230ObservedRoot = (schema: string, derive: () => Sha256): Sha256 => {
+  try { return derive() } catch (error) {
+    return v138SuccessorRoot("artifactManifest", schema, { errorCode:
+      error instanceof Error ? error.message : "UNKNOWN_DERIVATION_FAILURE" })
+  }
+}
+
+export const deriveV138Plan26230PreObservationProof = (input: {
+  repoRoot: string; sourceA5: string;
+  anchor: ReturnType<typeof inspectV138SuccessorSealCommitV5Anchor>;
+  disposition: V138Plan26230PreObservationProof["disposition"];
+  patternCObservation?: V138Plan26230PatternCObservation | undefined
+}): V138Plan26230PreObservationProof => {
+  const seal = input.anchor.seal
+  let sealedRoot: Sha256 | null = null
+  let observedRoot: Sha256
+  let expectedContractRoot: Sha256 | null = null
+  if (input.disposition === "tool_identity_failed") {
+    sealedRoot = v138SuccessorRoot("artifactManifest",
+      "v1.38-tool-identity-observation-v1", seal.toolIdentity)
+    observedRoot = plan26230ObservedRoot(
+      "v1.38-tool-identity-observation-failure-v1",
+      deriveV138ToolIdentityRoot)
+  } else if (input.disposition === "protected_history_failed") {
+    const history = exactRecord(seal.protectedHistory,
+      ["schemaVersion", "sourceA2", "sourceB2", "sourceA3", "sourceB3",
+        "sourceA4", "sourceB4", "protectedV4Root", "artifacts",
+        "priorAuthorizationBytes", "cumulativeChargedPublicAttemptIds",
+        "reproductionV9Absent", "reproductionV9ConsumptionMarkerAbsent",
+        "terminalDisposition", "acceptedEvidenceCount",
+        "protectedHistoryRoot"],
+      "MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+    if (!isV138CanonicalSha256(history.protectedHistoryRoot)) {
+      throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+    }
+    sealedRoot = history.protectedHistoryRoot
+    observedRoot = plan26230ObservedRoot(
+      "v1.38-protected-history-observation-failure-v1", () =>
+        deriveV138ProtectedHistoryV5(input.repoRoot, input.sourceA5)
+          .protectedHistoryRoot)
+  } else if (input.disposition === "formation_absence_failed") {
+    sealedRoot = v138SuccessorRoot("artifactManifest",
+      "v1.38-formation-absence-observation-v1", seal.formationAbsence)
+    observedRoot = plan26230ObservedRoot(
+      "v1.38-formation-absence-observation-failure-v1", () =>
+        deriveV138FormationAbsenceRoot(input.repoRoot, input.sourceA5))
+  } else {
+    if (input.patternCObservation === undefined) {
+      throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_REQUIRED")
+    }
+    const observation = exactRecord(input.patternCObservation,
+      ["mode", "cwd", "terminalAgentRegistry"],
+      "MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_INVALID")
+    try {
+      checkV138PatternCOwnershipV9({ mode: observation.mode,
+        cwd: observation.cwd,
+        terminalAgentRegistry: observation.terminalAgentRegistry })
+      throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+    } catch (error) {
+      if (error instanceof Error && error.message ===
+        "MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED") throw error
+    }
+    observedRoot = v138SuccessorRoot("artifactManifest",
+      "v1.38-pattern-c-ownership-observation-v1", observation)
+    expectedContractRoot = v138SuccessorRoot("containmentPolicy",
+      "v1.38-pattern-c-ownership-contract-v1", {
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        registrySchema:
+          "v1.38-plan-262-30-terminal-agent-registry-v1",
+        activeExecutorCount: 0 })
+  }
+  if (sealedRoot !== null && sealedRoot === observedRoot) {
+    throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+  }
+  const body = { schemaVersion:
+    "v1.38-plan-262-30-pre-observation-proof-v1" as const,
+    disposition: input.disposition, sealedRoot, observedRoot,
+    expectedContractRoot }
+  return deepFreeze({ ...body, proofRoot: v138SuccessorRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
 
 const checkV138Plan26230Disposition = (value: unknown):
   V138Plan26230Disposition => {
@@ -18105,14 +18243,32 @@ export const deriveV138Plan26230InterruptionProof = (repoRoot: string):
 const plan26230Evidence = (repoRoot: string, sourceA5: string,
   sourceB5: string, dispositionValue: V138Plan26230Disposition,
   obstructionProof?: V138Plan26230ObstructionProof,
-  interruptionProof?: V138Plan26230InterruptionProof) => {
+  interruptionProof?: V138Plan26230InterruptionProof,
+  patternCObservation?: V138Plan26230PatternCObservation,
+  claimedPreObservationProof?: V138Plan26230PreObservationProof) => {
   const disposition = checkV138Plan26230Disposition(dispositionValue)
-  const route = checkV138Plan26229AuthorityRoute({ repoRoot, sourceA5, sourceB5,
-    authorizationValue: readPlan26230(repoRoot, "authorization"),
-    sealValue: readPlan26230(repoRoot, "seal") })
   const preObservation = ["tool_identity_failed", "protected_history_failed",
     "formation_absence_failed", "pattern_c_ownership_failed"]
     .includes(disposition)
+  const anchor = preObservation ? inspectV138SuccessorSealCommitV5Anchor({
+    repoRoot, sourceA5, sourceB5 }) : undefined
+  const route = anchor === undefined ? checkV138Plan26229AuthorityRoute({
+    repoRoot, sourceA5, sourceB5,
+    authorizationValue: readPlan26230(repoRoot, "authorization"),
+    sealValue: readPlan26230(repoRoot, "seal") }) : {
+      custody: { sourceA5: anchor.sourceA5, sourceB5: anchor.sourceB5,
+        custodyRoot: anchor.anchorRoot },
+      authorization: anchor.authorization,
+      seal: anchor.seal,
+    }
+  const preObservationProof = !preObservation ? undefined :
+    deriveV138Plan26230PreObservationProof({ repoRoot, sourceA5, anchor: anchor!,
+      disposition: disposition as V138Plan26230PreObservationProof["disposition"],
+      patternCObservation })
+  if (claimedPreObservationProof !== undefined &&
+    canonical(claimedPreObservationProof) !== canonical(preObservationProof)) {
+    throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+  }
   const needs = plan26230Needs(disposition, obstructionProof?.stage,
     interruptionProof?.stage)
   const markerNeeds = plan26230MarkerNeeds(disposition, needs,
@@ -18190,7 +18346,7 @@ const plan26230Evidence = (repoRoot: string, sourceA5: string,
       repoRoot, "reproduction", context, calibration.receiptRoot,
       reproductionIds)
   return { route, context, preflight, calibration, reproduction,
-    obstructionProof, interruptionProof,
+    obstructionProof, interruptionProof, preObservationProof,
     markerRoots: { preflight: preflightMarker?.markerRoot ?? null,
       calibration: calibrationMarker?.markerRoot ?? null,
       reproduction: reproductionMarker?.markerRoot ?? null } }
@@ -18204,7 +18360,8 @@ export const buildV138Plan26230TerminalV1 = (input: {
   markerRoots: Readonly<{ preflight: unknown; calibration: unknown;
     reproduction: unknown }>
   obstructionProof?: V138Plan26230ObstructionProof
-  interruptionProof?: V138Plan26230InterruptionProof }) => {
+  interruptionProof?: V138Plan26230InterruptionProof
+  preObservationProof?: V138Plan26230PreObservationProof }) => {
   const disposition = checkV138Plan26230Disposition(input.disposition)
   const needs = plan26230Needs(disposition, input.obstructionProof?.stage,
     input.interruptionProof?.stage)
@@ -18221,6 +18378,10 @@ export const buildV138Plan26230TerminalV1 = (input: {
       (input.obstructionProof !== undefined) ||
     (disposition === "consumed_stage_interrupted") !==
       (input.interruptionProof !== undefined) ||
+    V138_PLAN_262_30_PRE_OBSERVATION.has(disposition as never) !==
+      (input.preObservationProof !== undefined) ||
+    input.preObservationProof !== undefined &&
+      input.preObservationProof.disposition !== disposition ||
     (input.interruptionProof !== undefined &&
       input.interruptionProof.markerRoot !==
         input.markerRoots[input.interruptionProof.stage])) {
@@ -18247,6 +18408,7 @@ export const buildV138Plan26230TerminalV1 = (input: {
     consumptionMarkerRoots: input.markerRoots,
     obstructionProof: input.obstructionProof ?? null,
     interruptionProof: input.interruptionProof ?? null,
+    preObservationProof: input.preObservationProof ?? null,
     chargedCalibrationAttemptCount: calibrationCharged,
     chargedReproductionAttemptCount: reproductionCharged,
     acceptedCellCount: input.reproduction?.acceptedCellCount ?? 0,
@@ -18267,6 +18429,7 @@ export const checkV138Plan26230TerminalV1 = (value: unknown,
   const terminal = exactRecord(value, ["schemaVersion", "disposition",
     "sourceA5", "sourceB5", "authorizationRoot", "sealRoot", "artifactRoots",
     "consumptionMarkerRoots", "obstructionProof", "interruptionProof",
+    "preObservationProof",
     "chargedCalibrationAttemptCount",
     "chargedReproductionAttemptCount", "acceptedCellCount", "completeCleanup",
     "authorityExpired", "noRetry", "partialAcceptedEvidenceReusable",
@@ -18280,7 +18443,8 @@ export const checkV138Plan26230TerminalV1 = (value: unknown,
     preflight: evidence.preflight, calibration: evidence.calibration,
     reproduction: evidence.reproduction, markerRoots: evidence.markerRoots,
     obstructionProof: evidence.obstructionProof,
-    interruptionProof: evidence.interruptionProof })
+    interruptionProof: evidence.interruptionProof,
+    preObservationProof: evidence.preObservationProof })
   const obstruction = terminal.obstructionProof === null ? null : exactRecord(
     terminal.obstructionProof, ["stage", "path", "type", "metadataRoot"],
     "MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
@@ -18289,6 +18453,27 @@ export const checkV138Plan26230TerminalV1 = (value: unknown,
       "chargedIdentityId", "observationMode", "childLaunchCount",
       "terminalOutcomeCount", "completeCleanup"],
     "MATRIX_PLAN_262_30_INTERRUPTION_INVALID")
+  const preObservation = terminal.preObservationProof === null ? null :
+    exactRecord(terminal.preObservationProof, ["schemaVersion", "disposition",
+      "sealedRoot", "observedRoot", "expectedContractRoot", "proofRoot"],
+    "MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+  const preObservationBody = preObservation === null ? undefined : {
+    schemaVersion: preObservation.schemaVersion,
+    disposition: preObservation.disposition,
+    sealedRoot: preObservation.sealedRoot,
+    observedRoot: preObservation.observedRoot,
+    expectedContractRoot: preObservation.expectedContractRoot }
+  const preObservationValid = preObservation !== null &&
+    preObservation.schemaVersion ===
+      "v1.38-plan-262-30-pre-observation-proof-v1" &&
+    preObservation.disposition === disposition &&
+    (preObservation.sealedRoot === null ||
+      isV138CanonicalSha256(preObservation.sealedRoot)) &&
+    isV138CanonicalSha256(preObservation.observedRoot) &&
+    (preObservation.expectedContractRoot === null ||
+      isV138CanonicalSha256(preObservation.expectedContractRoot)) &&
+    preObservation.proofRoot === v138SuccessorRoot("evidenceBundle",
+      "v1.38-plan-262-30-pre-observation-proof-v1", preObservationBody)
   const obstructionValid = obstruction !== null &&
     ["context", "preflight", "calibration", "reproduction"].includes(
       String(obstruction.stage)) &&
@@ -18316,6 +18501,8 @@ export const checkV138Plan26230TerminalV1 = (value: unknown,
     interruption.terminalOutcomeCount === null &&
     interruption.completeCleanup === false
   if (canonical(terminal) !== canonical(expected) ||
+    V138_PLAN_262_30_PRE_OBSERVATION.has(disposition as never) !==
+      preObservationValid ||
     disposition === "fresh_destination_failed" && (!obstructionValid ||
       obstruction?.stage === "reproduction" &&
         (evidence.preflight?.disposition !== "preflight_admitted" ||
@@ -18343,7 +18530,8 @@ export const checkV138Plan26230TerminalV1 = (value: unknown,
 
 export const writeV138Plan26230TerminalV1 = (repoRoot: string,
   targetPath: string, disposition: V138Plan26230Disposition,
-  sourceA5: string, sourceB5: string) => {
+  sourceA5: string, sourceB5: string,
+  patternCObservation?: V138Plan26230PatternCObservation) => {
   checkV138Plan26230Disposition(disposition)
   assertV138Plan26230AuthorityOpen(repoRoot)
   const target = plan26230Path(repoRoot, targetPath, "terminal")
@@ -18368,7 +18556,8 @@ export const writeV138Plan26230TerminalV1 = (repoRoot: string,
   const obstructionProof = effectiveDisposition === "fresh_destination_failed" ?
     deriveV138Plan26230Obstruction(repoRoot) : undefined
   const evidence = interruptionEvidence ?? plan26230Evidence(repoRoot, sourceA5,
-    sourceB5, effectiveDisposition, obstructionProof, interruptionProof)
+    sourceB5, effectiveDisposition, obstructionProof, interruptionProof,
+    patternCObservation)
   const terminal = checkV138Plan26230TerminalV1(
     buildV138Plan26230TerminalV1({ disposition: effectiveDisposition,
       sourceA5, sourceB5,
@@ -18377,31 +18566,41 @@ export const writeV138Plan26230TerminalV1 = (repoRoot: string,
       preflight: evidence.preflight, calibration: evidence.calibration,
       reproduction: evidence.reproduction, markerRoots: evidence.markerRoots,
       obstructionProof: evidence.obstructionProof,
-      interruptionProof: evidence.interruptionProof }),
+      interruptionProof: evidence.interruptionProof,
+      preObservationProof: evidence.preObservationProof }),
     evidence, effectiveDisposition)
   writeV138Plan26219Immutable(target, chain, terminal)
   return terminal
 }
 
 export const checkV138Plan26230TerminalBranch = (repoRoot: string,
-  sourceA5: string, sourceB5: string) => {
+  sourceA5: string, sourceB5: string,
+  patternCObservation?: V138Plan26230PatternCObservation) => {
   const terminal = exactRecord(readPlan26230(repoRoot, "terminal"),
     ["schemaVersion", "disposition", "sourceA5", "sourceB5",
       "authorizationRoot", "sealRoot", "artifactRoots",
       "consumptionMarkerRoots", "obstructionProof", "interruptionProof",
+      "preObservationProof",
       "chargedCalibrationAttemptCount",
       "chargedReproductionAttemptCount", "acceptedCellCount",
       "completeCleanup", "authorityExpired", "noRetry",
       "partialAcceptedEvidenceReusable", "terminalRoot"],
     "MATRIX_PLAN_262_30_TERMINAL_INVALID")
   const disposition = checkV138Plan26230Disposition(terminal.disposition)
+  if ((disposition === "pattern_c_ownership_failed") !==
+    (patternCObservation !== undefined)) {
+    throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_INVALID")
+  }
   const obstructionProof = terminal.obstructionProof === null ? undefined :
     terminal.obstructionProof as V138Plan26230ObstructionProof
   const interruptionProof = terminal.interruptionProof === null ? undefined :
     terminal.interruptionProof as V138Plan26230InterruptionProof
+  const preObservationProof = terminal.preObservationProof === null ? undefined :
+    terminal.preObservationProof as V138Plan26230PreObservationProof
   return checkV138Plan26230TerminalV1(terminal,
     plan26230Evidence(repoRoot, sourceA5, sourceB5, disposition,
-      obstructionProof, interruptionProof), disposition)
+      obstructionProof, interruptionProof, patternCObservation,
+      preObservationProof), disposition)
 }
 
 
