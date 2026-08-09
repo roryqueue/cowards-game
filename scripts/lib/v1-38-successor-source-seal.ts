@@ -4817,7 +4817,7 @@ const checkV138Plan26229AuthorizationV5ExceptProtectedHistory = (
       V138_RETAINED_PROTECTED_HISTORY_V5.cumulativeChargedPublicAttemptIds) ||
     canonical(value.priorAuthorizationBytes) !== canonical(
       V138_RETAINED_PROTECTED_HISTORY_V5.priorAuthorizationBytes) ||
-    !isV138CanonicalSha256(value.authorizationRoot)) {
+    !isSha256(value.authorizationRoot)) {
     fail("V138_PLAN_262_29_AUTHORIZATION_HISTORY_ANCHOR_INVALID")
   }
   const body = { ...value }; delete body.authorizationRoot
