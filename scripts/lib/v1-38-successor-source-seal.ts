@@ -4822,15 +4822,45 @@ export const checkV138SuccessorSourceSealV5Except = (
   if (omitted === null) {
     return checkV138SuccessorSourceSealV5(repoRoot, sealValue, authorization)
   }
-  const expected = buildV138SuccessorSourceSealV5({ repoRoot, authorization })
-  const keys = Object.keys(expected)
+  const sourceA5 = authorization.sourceCustody.sourceA5
+  const review = reviewMetadataV5(repoRoot, sourceA5)
+  const expected: Record<string, unknown> = {
+    schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V5_SCHEMA,
+    sealOrdinal: 5 as const,
+    canonicalizationId: "canonical-json-v1.1" as const,
+    sourceCustody: authorization.sourceCustody,
+    selectedRouteClosure: authorization.selectedRouteClosure,
+    reviewRoots: Object.freeze([
+      Object.freeze({ path: V138_PLAN_262_29_CANONICAL_PATHS.review,
+        sha256: sha256(review.bytes) }),
+      ...(review.fix === undefined ? [] : [Object.freeze({
+        path: V138_PLAN_262_29_CANONICAL_PATHS.reviewFix,
+        sha256: sha256(review.fix) })]),
+    ]),
+    frozenPolicy: deriveFrozenPolicy(),
+    hostIdentity: deriveHostIdentity(),
+    replacementMetricContract: deriveReplacementMetricContract(repoRoot,
+      sourceA5),
+    canonicalDestinations: authorization.canonicalDestinations,
+    authorizationRoot: authorization.authorizationRoot,
+  }
+  if (omitted !== "protectedHistory") {
+    expected.protectedHistory = deriveV138ProtectedHistoryV5(repoRoot,
+      sourceA5)
+  }
+  if (omitted !== "toolIdentity") expected.toolIdentity = deriveToolIdentity()
+  if (omitted !== "formationAbsence") {
+    expected.formationAbsence = deriveFormationAbsence(repoRoot, sourceA5)
+  }
+  const keys = [...Object.keys(expected), omitted, "sealRoot"]
   if (canonical(sorted(Object.keys(sealValue))) !== canonical(sorted(keys))) {
     fail("V138_SUCCESSOR_SEAL_V5_SCHEMA_INVALID")
   }
   for (const key of keys) {
     if (key === omitted || key === "sealRoot") continue
-    if (canonical(sealValue[key]) !== canonical(expected[key as keyof
-      typeof expected])) fail("V138_SUCCESSOR_SEAL_V5_NONFAILING_FIELD_INVALID")
+    if (canonical(sealValue[key]) !== canonical(expected[key])) {
+      fail("V138_SUCCESSOR_SEAL_V5_NONFAILING_FIELD_INVALID")
+    }
   }
   return sealValue
 }

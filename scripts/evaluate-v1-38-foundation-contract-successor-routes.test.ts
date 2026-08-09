@@ -131,6 +131,11 @@ const admittedV8Headroom = async () => ({ ok: true as const, observation: {
   totalBytes: 4096, pageCount: 1, pageSizeBytes: 4096, percentage: 25,
   observedBasisPoints: 2500, disposition: "preflight_admitted" as const,
 } })
+const refusedV9Headroom = async () => ({ ok: true as const, observation: {
+  ...(await admittedV8Headroom()).observation,
+  percentage: 24, observedBasisPoints: 2400,
+  disposition: "preflight_refused" as const,
+} })
 
 const successfulV8Runner = (): V138ParallelShardRunner => ({ async run(
   shard, control) {
@@ -340,6 +345,24 @@ const prepareMutatedSealV5 = (field: "toolIdentity" | "protectedHistory" |
     { cwd: tempRoot })
   return { tempRoot, sourceB5: execFileSync("git", ["rev-parse", "HEAD"],
     { cwd: tempRoot, encoding: "utf8" }).trim() }
+}
+
+const prepareContextV9 = () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-stage-"))
+  execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root, tempRoot])
+  writeSyntheticReviewV5(tempRoot, sourceA5)
+  const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: tempRoot, encoding: "utf8",
+  }).trim()
+  const contextPath = V138_PLAN_262_30_FRESH_DESTINATIONS[0]
+  writeV138ExecutionContextV9Receipt(tempRoot, contextPath,
+    "gsd-pattern-c-inline-main", "/Users/roryquinlan/runtime/cowards-game",
+    { schemaVersion: "v1.38-plan-262-30-terminal-agent-registry-v1",
+      activeExecutorCount: 0, agents: [] },
+    ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+    ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+    sourceA5, sourceB5)
+  return { tempRoot, sourceB5, contextPath }
 }
 
 beforeAll(() => {
@@ -1141,6 +1164,102 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
         .terminalRoot).toBe(terminal.terminalRoot)
     } finally {
       rmSync(tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it.each([
+    ["preflight_unavailable", async () => ({ ok: false as const,
+      reason: "resource_measurement_unavailable" as const })],
+    ["preflight_refused", refusedV9Headroom],
+  ] as const)("writes and rechecks %s", async (disposition, observe) => {
+    const fixture = prepareContextV9()
+    try {
+      await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[1], fixture.contextPath,
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, fixture.sourceB5, observe)
+      const terminal = writeV138Plan26230TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4], disposition, sourceA5,
+        fixture.sourceB5)
+      expect(checkV138Plan26230TerminalBranch(fixture.tempRoot, sourceA5,
+        fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
+    } finally {
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
+    }
+  }, 900_000)
+
+  it("writes and rechecks calibration_stopped", async () => {
+    const fixture = prepareContextV9()
+    try {
+      const preflightPath = V138_PLAN_262_30_FRESH_DESTINATIONS[1]
+      await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
+        preflightPath, fixture.contextPath,
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, fixture.sourceB5, admittedV8Headroom)
+      await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[2], preflightPath,
+        fixture.contextPath, sourceA5, fixture.sourceB5,
+        async () => { throw new TypeError("owned calibration stop") })
+      const terminal = writeV138Plan26230TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4], "calibration_stopped",
+        sourceA5, fixture.sourceB5)
+      expect(checkV138Plan26230TerminalBranch(fixture.tempRoot, sourceA5,
+        fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
+    } finally { rmSync(fixture.tempRoot, { recursive: true, force: true }) }
+  }, 900_000)
+
+  it("writes and rechecks reproduction_stopped", async () => {
+    const fixture = prepareContextV9()
+    try {
+      const preflightPath = V138_PLAN_262_30_FRESH_DESTINATIONS[1]
+      const calibrationPath = V138_PLAN_262_30_FRESH_DESTINATIONS[2]
+      await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
+        preflightPath, fixture.contextPath,
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, fixture.sourceB5, admittedV8Headroom)
+      await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
+        calibrationPath, preflightPath, fixture.contextPath, sourceA5,
+        fixture.sourceB5, runSuccessfulV8Calibration)
+      await writeV138AuthoritativeMatrixV10Receipt(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[3], calibrationPath,
+        fixture.contextPath, sourceA5, fixture.sourceB5,
+        async () => { throw new TypeError("owned reproduction stop") })
+      const terminal = writeV138Plan26230TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4], "reproduction_stopped",
+        sourceA5, fixture.sourceB5)
+      expect(checkV138Plan26230TerminalBranch(fixture.tempRoot, sourceA5,
+        fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
+    } finally { rmSync(fixture.tempRoot, { recursive: true, force: true }) }
+  }, 900_000)
+
+  it("writes and rechecks consumed_stage_interrupted after marker custody", async () => {
+    const fixture = prepareContextV9()
+    const sealPath = path.resolve(fixture.tempRoot,
+      ".planning/artifacts/v1.38-successor-source-seal-v5.json")
+    const originalSeal = readFileSync(sealPath)
+    try {
+      await expect(writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[1], fixture.contextPath,
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, fixture.sourceB5, async () => {
+          writeFileSync(sealPath, "{}\n")
+          return admittedV8Headroom()
+        })).rejects.toThrow()
+      writeFileSync(sealPath, originalSeal)
+      const terminal = writeV138Plan26230TerminalV1(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[4],
+        "consumed_stage_interrupted", sourceA5, fixture.sourceB5)
+      expect(terminal).toMatchObject({ disposition: "consumed_stage_interrupted",
+        completeCleanup: false, chargedCalibrationAttemptCount: 0 })
+      expect(checkV138Plan26230TerminalBranch(fixture.tempRoot, sourceA5,
+        fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
+    } finally {
+      writeFileSync(sealPath, originalSeal)
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
     }
   }, 900_000)
 
