@@ -1,8 +1,8 @@
 # Phase 262: Foundation Admission, Measurement, Custody, and Containment Contract - Pattern Map
 
-**Mapped:** 2026-07-28
-**Files analyzed:** 15 new/modified files
-**Analogs found:** 15 / 15
+**Mapped:** 2026-08-09 (successor refresh)
+**Files analyzed:** 20 new/modified files
+**Analogs found:** 20 / 20
 
 ## Scope Guard
 
@@ -18,6 +18,11 @@ Do not create or make reachable any `formation/`, `profiles/`, `candidates/`, `p
 | `scripts/evaluate-v1-38-foundation-contract.test.ts` | test | batch + mutation | `scripts/check-v1-37-audit-reproduction.test.ts` | exact |
 | `scripts/lib/v1-38-foundation-admission.ts` | service / validator | transform + request-response | `scripts/check-v1-37-audit-reproduction.ts` | exact |
 | `scripts/lib/v1-38-current-matrix-reproduction.ts` | service | batch + request-response | `apps/runtime-service/src/execute-match.ts` | role-match |
+| `scripts/lib/v1-38-current-matrix-child-protocol.ts` | boundary protocol / validator | request-response + child control frames | exact-key validators in `scripts/check-v1-37-audit-reproduction.ts` plus child-process ownership in `scripts/lib/v1-38-current-matrix-reproduction.ts` | composite role-match |
+| `scripts/evaluate-v1-38-current-matrix-child-protocol-v2.test.ts` | standalone boundary test / synthetic subprocess fixture | mutation + real synthetic subprocess | `scripts/check-v1-37-audit-reproduction.test.ts` plus subprocess tests in `scripts/evaluate-v1-38-foundation-contract-successor-routes.test.ts` | composite role-match |
+| `scripts/lib/v1-38-successor-source-seal.ts` | custody / authorization / route checker-writer | transform + Git/object validation + exclusive file-I/O | A2/B2/A3/B3/A4/B4 source/seal branches in the same module and immutable generator/checker pattern in `scripts/generate-v1-37-strategy-foundation-handoff.ts` | exact lineage analog |
+| `.planning/artifacts/v1.38-plan-262-29-authorization-v5.json` | immutable single-use authority | canonical transform + exclusive file-I/O | prior authorization-v2/v3/v4 artifacts checked by `scripts/lib/v1-38-successor-source-seal.ts` | exact lineage analog |
+| `.planning/artifacts/v1.38-successor-source-seal-v5.json` | immutable source/authority seal | Git custody + exclusive file-I/O | prior successor-source-seal-v2/v3/v4 artifacts checked by `scripts/lib/v1-38-successor-source-seal.ts` | exact lineage analog |
 | `scripts/lib/v1-38-study-contract.ts` | model / config | transform | `scripts/generate-v1-37-strategy-foundation-handoff.ts` | role-match |
 | `scripts/lib/v1-38-measurement.ts` | utility | transform | `scripts/check-v1-37-audit-reproduction.ts` | role-match |
 | `scripts/lib/v1-38-custody.ts` | service / store | event-driven + file-I/O | `scripts/lib/v1-37-restricted-evidence-store.ts` | exact |
@@ -31,6 +36,14 @@ Do not create or make reachable any `formation/`, `profiles/`, `candidates/`, `p
 | `.planning/artifacts/v1.38-foundation-contract-root.json` | aggregate root | transform + file-I/O | `.planning/artifacts/v1.37-strategy-evaluation-foundation.json` | role-match |
 
 ## Pattern Assignments
+
+### Successor protocol-v2, standalone fixture, and A5/B5 seal files
+
+**Applies to:** `scripts/lib/v1-38-current-matrix-child-protocol.ts`, `scripts/evaluate-v1-38-current-matrix-child-protocol-v2.test.ts`, `scripts/lib/v1-38-successor-source-seal.ts`, authorization-v5, and successor-source-seal-v5.
+
+The protocol module follows the repository's exact-key, fixed-discriminant, bounded-byte, typed-failure validator pattern and the existing reproduction module's parent/child ownership boundary. It must keep the four-family control vocabulary closed, reject missing/duplicate/out-of-order/trailing frames, and preserve successful result-envelope bytes. The standalone test follows the v1.37 mutation-fixture style while deriving the repository root from `import.meta.url`; it uses deterministic injected functions and real synthetic subprocesses, never temporal route setup, provider execution, Strategy execution, live observation, or mutable `.planning/artifacts` inputs.
+
+The successor seal extends the existing A2/B2/A3/B3/A4/B4 lineage in the same module. Plan 262-28 adds A5 closure plus render, checker, all exclusive v5/v9/v10 writer entry points, and every terminal branch; writer behavior is proved only against owned temporary destinations and supplied synthetic inputs in offline tests. Plans 262-29 and 262-30 alone invoke those already-tested writers against canonical artifact destinations. Authorization-v5 and seal-v5 use canonical bytes, exclusive-create semantics, full Git parent/tree/path/blob custody, exact destination inventories, and the same no-mutable-alias rule as prior authorities.
 
 ### `scripts/evaluate-v1-38-foundation-contract.ts` (controller, batch + file-I/O)
 
@@ -567,4 +580,4 @@ No planned file is completely without an analog. The closest analogs are structu
 **Analog search scope:** `scripts/`, `scripts/lib/`, `packages/spec/src/`, `packages/engine/src/`, `apps/runtime-service/src/`, `.planning/artifacts/`, and root `package.json`  
 **Strong analogs read:** 5 primary implementations plus corresponding tests/config  
 **Files scanned:** repository file inventory plus focused v1.37 evidence/runtime/boundary sources  
-**Pattern extraction date:** 2026-07-28
+**Pattern extraction date:** 2026-08-09 successor refresh

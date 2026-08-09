@@ -328,17 +328,17 @@ The resume signal must be the full literal itself, not “approved,” a token, 
 | A1 | Repeated shard-3 failure ownership may indicate a deterministic content-specific runtime or shard exception. [ASSUMED] | Could bias a fix toward gameplay/runtime content when the cause was bootstrap or scheduling. | Do not diagnose or patch from it; cover all four families offline. |
 | A2 | A dedicated control pipe is the smallest robust way to separate control frames from success result bytes. [ASSUMED] | Another framing design may be simpler while meeting every gate. | Planner may choose an equivalent closed channel only if all state/order/privacy tests remain exact. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should expected typed runtime-service failures cross in the success result envelope or the control envelope?**
+1. **RESOLVED — Expected typed runtime-service failures remain in the success result envelope; unexpected process/shard integrity failures use the control envelope.**
    - Known: current expected failures are per-attempt typed outcomes, while unexpected throws disappear into the catch-all. [VERIFIED: `executeAttemptsInProcess`]
-   - Recommendation: keep expected typed outcomes in the result envelope; reserve control failure families for process/shard integrity failures. [RECOMMENDATION]
-2. **Should the public calibration receipt expose the initiating family or only bind a private diagnostic root?**
+   - Selected decision: keep expected typed outcomes in the result envelope and reserve control failure families for process/shard integrity failures. [RESOLVED]
+2. **RESOLVED — The initiating family is operator/lab-only; public/default calibration output retains the existing coarse disposition.**
    - Known: the four proposed families contain no raw detail and are materially safer than current extensible outcome codes, but public/default minimization remains mandatory. [RECOMMENDATION]
-   - Recommendation: expose the finite family only in operator/lab evidence and let public/default surfaces retain the existing coarse system-failure disposition unless a separate schema/privacy review approves wider projection. [RECOMMENDATION]
-3. **Can bootstrap be distinguished without a ready frame?**
+   - Selected decision: expose the finite family only in operator/lab evidence; public/default surfaces retain the existing coarse system-failure disposition. [RESOLVED]
+3. **RESOLVED — Bootstrap requires parent-observed spawn followed by an exact ready frame; pre-ready exit is bootstrap failure.**
    - Known: the current handler cannot report loader failure because it has not executed. [VERIFIED: launch topology]
-   - Recommendation: no; require parent-observed spawn plus an exact ready frame, otherwise classify the pre-ready exit as bootstrap failure. [RECOMMENDATION]
+   - Selected decision: require parent-observed spawn plus an exact ready frame; classify any pre-ready exit as bootstrap failure. [RESOLVED]
 
 ## Package Legitimacy Audit
 
