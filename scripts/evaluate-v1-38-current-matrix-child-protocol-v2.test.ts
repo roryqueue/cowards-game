@@ -12,6 +12,10 @@ import {
   encodeV138CurrentMatrixChildProtocolV2Terminal,
   reduceV138CurrentMatrixChildProtocolV2Observation,
 } from "./lib/v1-38-current-matrix-child-protocol.js"
+import {
+  reduceV138ParallelIntegrityFailureProjection,
+  type V138ParallelShardTerminal,
+} from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const fixture = path.resolve(
@@ -38,6 +42,40 @@ const observe = (result: FixtureResult) =>
   })
 
 describe.sequential("v1.38 current-matrix child protocol v2", () => {
+  const terminal = (
+    shardId: string,
+    code: "RUNTIME_EXECUTION_FAILED" | "SHARD_COORDINATION_FAILED" |
+      "CHILD_BOOTSTRAP_FAILED" | "CHILD_TRANSPORT_FAILED" |
+      "CANCELLED_AFTER_HARD_FAILURE",
+  ): V138ParallelShardTerminal => ({
+    shardId,
+    laneId: `lane:${shardId}`,
+    classification: code === "CANCELLED_AFTER_HARD_FAILURE"
+      ? "cancelled"
+      : "failed",
+    elapsedMilliseconds: 1,
+    maxRssKilobytes: 1,
+    cleanup: {
+      gracefulTerminationSent: code === "CANCELLED_AFTER_HARD_FAILURE",
+      forceTerminationSent: false,
+      exitAwaited: true,
+      orphanProcessIds: [],
+    },
+    outcomes: [0, 1].map((ordinal) => code ===
+        "CANCELLED_AFTER_HARD_FAILURE"
+      ? ({
+          attemptId: `${shardId}:${ordinal}`,
+          classification: "cancelled" as const,
+          code,
+        })
+      : ({
+          attemptId: `${shardId}:${ordinal}`,
+          classification: "system_failure" as const,
+          code,
+          retryable: false as const,
+        })),
+  })
+
   it("accepts exact ready then success, runtime, or shard terminal frames", () => {
     expect(V138_CURRENT_MATRIX_CHILD_INTEGRITY_FAMILIES).toEqual([
       "CHILD_BOOTSTRAP_FAILED",
@@ -165,5 +203,59 @@ describe.sequential("v1.38 current-matrix child protocol v2", () => {
       'encodeV138CurrentMatrixChildProtocolV2Terminal("success")',
     )
     expect(child).not.toContain("catch {\n    process.exitCode = 1")
+  })
+
+  it("reduces one initiating family deterministically without widening public output", () => {
+    const terminals = [
+      terminal("calibration-shard:0", "RUNTIME_EXECUTION_FAILED"),
+      terminal("calibration-shard:1", "CANCELLED_AFTER_HARD_FAILURE"),
+      terminal("calibration-shard:2", "CANCELLED_AFTER_HARD_FAILURE"),
+      terminal("calibration-shard:3", "CANCELLED_AFTER_HARD_FAILURE"),
+    ]
+    const expected = {
+      schemaVersion: "v1.38-parallel-integrity-failure-projection-v1",
+      publicStopReason: "SHARD_EXECUTION_FAILED",
+      initiatingFamily: "RUNTIME_EXECUTION_FAILED",
+      initiatingFamilyCount: 1,
+      chargedAttemptCount: 8,
+      terminalAttemptCount: 8,
+      cancelledSiblingAttemptCount: 6,
+      acceptedCellCount: 0,
+      completeCleanup: true,
+    }
+    expect(reduceV138ParallelIntegrityFailureProjection(terminals))
+      .toEqual(expected)
+    expect(reduceV138ParallelIntegrityFailureProjection(
+      [...terminals].reverse(),
+    )).toEqual(expected)
+    expect(JSON.stringify(expected)).not.toMatch(
+      /detail|stderr|source|memory|objective|path|environment|host|process|token|database|strategy|match|observation/iu,
+    )
+  })
+
+  it("fails conflicting or malformed initiating families closed as transport", () => {
+    const conflicting = [
+      terminal("calibration-shard:0", "RUNTIME_EXECUTION_FAILED"),
+      terminal("calibration-shard:1", "SHARD_COORDINATION_FAILED"),
+      terminal("calibration-shard:2", "CANCELLED_AFTER_HARD_FAILURE"),
+      terminal("calibration-shard:3", "CANCELLED_AFTER_HARD_FAILURE"),
+    ]
+    expect(reduceV138ParallelIntegrityFailureProjection(conflicting))
+      .toMatchObject({
+        publicStopReason: "SHARD_EXECUTION_FAILED",
+        initiatingFamily: "CHILD_TRANSPORT_FAILED",
+        initiatingFamilyCount: 2,
+        chargedAttemptCount: 8,
+        terminalAttemptCount: 8,
+        acceptedCellCount: 0,
+        completeCleanup: true,
+      })
+    expect(reduceV138ParallelIntegrityFailureProjection([
+      ...conflicting.slice(0, 3),
+      { ...conflicting[3]!, outcomes: conflicting[3]!.outcomes.slice(0, 1) },
+    ])).toMatchObject({
+      initiatingFamily: "CHILD_TRANSPORT_FAILED",
+      acceptedCellCount: 0,
+    })
   })
 })
