@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 24/31 plans executed; Plan 262-30 is the next main-only route-consumption step
+**Plans:** 25/31 plans executed; Plan 262-31 is the next independent verification step
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 24 of 31 plans are executed. Plan 262-29 created exact two-artifact direct-child B5 `a0a37e8ca8420faa42cb57bdb5a210779d2fff23` from fresh full operator bytes and integrated it immutably into main without live execution. All context:v9, preflight:v9, calibration:v9, reproduction:v10, consumption-marker, and terminal destinations remain absent; the single-use no-retry authority is unconsumed. Plan 262-30 alone owns one main-only route ordinal 5, and Plan 262-31 alone owns independent read-only verification/tracking. ADMIT-03 and Plan 262-03 remain blocked unless Plan 262-31 independently verifies literal `reproduction_passed` with exact fresh 540/540.
+**Current verdict:** IN PROGRESS / `gaps_found` — 25 of 31 plans are executed. Plan 262-30 consumed exact checked B5 once on main: preflight:v9 admitted at 7,300 basis points, then calibration:v9 stopped with 8 charged/launched/terminal attempts across 4 shards, complete cleanup, and 0 accepted cells. Reproduction:v10 and its marker remain absent; terminal-v1 is literal `calibration_stopped`, authority is expired, and no retry exists. Plan 262-31 alone owns independent read-only verification/tracking. ADMIT-03 and Plan 262-03 remain blocked because no exact fresh 540/540 reproduction exists.
 
 Plans:
 **Wave 1**
@@ -153,7 +153,7 @@ Plans:
 
 **Wave 25** *(blocked on Wave 24 completion)*
 
-- [ ] 262-30-PLAN.md — Consume B5 once in one main-only unchanged-policy route using fresh v9/v10 destinations, conditional exact 540 reproduction, terminal expiry, and no retry.
+- [x] 262-30-PLAN.md — Consumed B5 once: preflight:v9 admitted at 7,300 basis points; calibration:v9 stopped after 8 charged/launched/terminal attempts over 4 shards with complete cleanup; reproduction:v10 remained absent and authority expired.
 
 **Wave 26** *(blocked on Wave 25 completion)*
 
@@ -314,7 +314,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 24/31 | In Progress — exact A5/B5 custody checked and integrated; route 5 unconsumed, 0/540 |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 25/31 | In Progress — route 5 terminal is calibration_stopped; reproduction:v10 absent, 0/540; Plan 262-31 next |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
