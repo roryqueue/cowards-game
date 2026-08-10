@@ -34,6 +34,7 @@ import {
   V138_PLAN_262_25_FRESH_DESTINATIONS,
   V138_PLAN_262_30_FRESH_DESTINATIONS,
   V138_PLAN_262_28_SOURCE_BASE5,
+  V138_REVIEWED_SOURCE_B4,
   V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5,
   V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V4,
   checkV138Plan26221PreLiveDestinationAbsence,
@@ -1201,7 +1202,7 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
       const wrapper = path.resolve(wrapperRoot, "git")
       writeFileSync(wrapper, `#!/bin/sh
 case "$*" in
-  *":.planning/artifacts/v1.38-plan-262-24-authorization-v4.json"*) exit 91 ;;
+  "merge-base --is-ancestor ${V138_REVIEWED_SOURCE_B4} ${sourceA5}") exit 91 ;;
 esac
 exec ${JSON.stringify(gitBinary)} "$@"
 `)
