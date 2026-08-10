@@ -1445,49 +1445,27 @@ exec ${JSON.stringify(gitBinary)} "$@"
   }, 900_000)
 
   it("writes and rechecks the complete admitted v9/v10 route and terminal", async () => {
-    const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v10-case-"))
+    const fixture = prepareContextV9("calibration")
     try {
-      execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root,
-        tempRoot])
-      writeSyntheticReviewV5(tempRoot, sourceA5)
-      const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: tempRoot, encoding: "utf8",
-      }).trim()
-      const [contextPath, preflightPath, calibrationPath, reproductionPath,
+      const [contextPath, , calibrationPath, reproductionPath,
         terminalPath] = V138_PLAN_262_30_FRESH_DESTINATIONS
-      writeV138ExecutionContextV9Receipt(tempRoot, contextPath,
-        "gsd-pattern-c-inline-main",
-        "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
-          "v1.38-plan-262-30-terminal-agent-registry-v1",
-          activeExecutorCount: 0, agents: [] },
-        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
-        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
-        sourceA5, sourceB5)
-      await writeV138HostHeadroomPreflightV9Receipt(tempRoot, preflightPath,
-        contextPath,
-        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
-        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
-        sourceA5, sourceB5, admittedV8Headroom)
-      expect(checkV138Plan26230PreflightV9(tempRoot, sourceA5, sourceB5)
+      expect(checkV138Plan26230PreflightV9(fixture.tempRoot, sourceA5,
+        fixture.sourceB5)
         .disposition).toBe("preflight_admitted")
-      const calibration = await writeV138ParallelCalibrationV9Receipt(tempRoot,
-        calibrationPath, preflightPath, contextPath, sourceA5, sourceB5,
-        runSuccessfulV8Calibration)
-      expect(calibration.status).toBe("admitted")
       const reproduction = await writeV138AuthoritativeMatrixV10Receipt(
-        tempRoot, reproductionPath, calibrationPath, contextPath,
-        sourceA5, sourceB5, runSuccessfulV9Execution)
+        fixture.tempRoot, reproductionPath, calibrationPath, contextPath,
+        sourceA5, fixture.sourceB5, runSuccessfulV9Execution)
       expect(reproduction).toMatchObject({ status: "passed_exact",
         acceptedCellCount: 540 })
-      const terminal = writeV138Plan26230TerminalV1(tempRoot, terminalPath,
-        "reproduction_passed", sourceA5, sourceB5)
+      const terminal = writeV138Plan26230TerminalV1(fixture.tempRoot,
+        terminalPath, "reproduction_passed", sourceA5, fixture.sourceB5)
       expect(terminal).toMatchObject({ disposition: "reproduction_passed",
         chargedCalibrationAttemptCount: 8,
         chargedReproductionAttemptCount: 540, acceptedCellCount: 540 })
-      expect(checkV138Plan26230TerminalBranch(tempRoot, sourceA5, sourceB5)
-        .terminalRoot).toBe(terminal.terminalRoot)
+      expect(checkV138Plan26230TerminalBranch(fixture.tempRoot, sourceA5,
+        fixture.sourceB5).terminalRoot).toBe(terminal.terminalRoot)
     } finally {
-      rmSync(tempRoot, { recursive: true, force: true })
+      rmSync(fixture.tempRoot, { recursive: true, force: true })
     }
   }, 900_000)
 
