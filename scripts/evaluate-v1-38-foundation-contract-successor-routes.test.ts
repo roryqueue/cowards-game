@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import {
   existsSync,
   chmodSync,
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -103,6 +104,7 @@ const sourceB3 = "1387813e9f7262ac0c5916635addee9cdb96354b"
 const sourceA4 = "1be54efec080436ea47ba5be3644ab1ab1686163"
 let syntheticRoot = ""
 let sealedRouteRoot = ""
+let routedV8TemplateRoot = ""
 let sealedRouteV5Root = ""
 let sourceA5 = ""
 
@@ -174,8 +176,8 @@ const resetSyntheticRepository = (): void => {
   execFileSync("git", ["clean", "-fdx", "-q"], { cwd: syntheticRoot })
 }
 
-const prepareRoutedV8 = () => {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-case-"))
+const prepareRoutedV8Template = async () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-template-"))
   execFileSync("git", ["clone", "-q", "--shared", sealedRouteRoot, tempRoot])
   writeSyntheticReview(tempRoot)
   const sourceB4 = execFileSync("git", ["rev-parse", "HEAD"],
@@ -188,8 +190,41 @@ const prepareRoutedV8 = () => {
     V138_PLAN_262_25_FRESH_DESTINATIONS[0], "gsd-pattern-c-inline-main",
     "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
       "v1.38-plan-262-25-terminal-agent-registry-v1",
-      activeExecutorCount: 0, agents: [] }, authorizationPath, sealPath,
+    activeExecutorCount: 0, agents: [] }, authorizationPath, sealPath,
     sourceA4, sourceB4)
+  await writeV138HostHeadroomPreflightV8Receipt(tempRoot,
+    V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+    V138_PLAN_262_25_FRESH_DESTINATIONS[0], authorizationPath, sealPath,
+    sourceA4, sourceB4, admittedV8Headroom)
+  const calibration = await writeV138ParallelCalibrationV8Receipt(tempRoot,
+    V138_PLAN_262_25_FRESH_DESTINATIONS[2],
+    V138_PLAN_262_25_FRESH_DESTINATIONS[1],
+    V138_PLAN_262_25_FRESH_DESTINATIONS[0], sourceA4, sourceB4,
+    runSuccessfulV8Calibration)
+  if (calibration.status !== "admitted") {
+    throw new TypeError("route-v8 template calibration not admitted")
+  }
+  return { tempRoot, sourceA4, sourceB4, context, authorizationPath, sealPath }
+}
+
+const prepareRoutedV8 = (stage: "preflight" | "calibration" |
+  "reproduction") => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v8-case-"))
+  cpSync(routedV8TemplateRoot, tempRoot, { recursive: true })
+  const sourceB4 = execFileSync("git", ["rev-parse", "HEAD"],
+    { cwd: tempRoot, encoding: "utf8" }).trim()
+  const authorizationPath =
+    ".planning/artifacts/v1.38-plan-262-24-authorization-v4.json"
+  const sealPath =
+    ".planning/artifacts/v1.38-successor-source-seal-v4.json"
+  const context = JSON.parse(readFileSync(path.resolve(tempRoot,
+    V138_PLAN_262_25_FRESH_DESTINATIONS[0]), "utf8"))
+  const removeIndexes = stage === "preflight" ? [1, 2, 5, 6] :
+    stage === "calibration" ? [2, 6] : []
+  for (const index of removeIndexes) {
+    rmSync(path.resolve(tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[index]!),
+      { force: true })
+  }
   return { tempRoot, sourceA4, sourceB4, context, authorizationPath, sealPath }
 }
 
@@ -367,7 +402,7 @@ const prepareContextV9 = () => {
   return { tempRoot, sourceB5, contextPath }
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   sourceA5 = execFileSync("git", ["log", "-1", "--format=%H", "HEAD", "--",
     ...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5],
   { cwd: repoRoot, encoding: "utf8" }).trim()
@@ -375,12 +410,15 @@ beforeAll(() => {
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
   sealedRouteRoot = prepareSealedRouteBase()
+  routedV8TemplateRoot = (await prepareRoutedV8Template()).tempRoot
   sealedRouteV5Root = prepareSealedRouteV5()
 }, 900_000)
 
 afterAll(() => {
   if (syntheticRoot !== "") rmSync(syntheticRoot, { recursive: true, force: true })
   if (sealedRouteRoot !== "") rmSync(sealedRouteRoot,
+    { recursive: true, force: true })
+  if (routedV8TemplateRoot !== "") rmSync(routedV8TemplateRoot,
     { recursive: true, force: true })
   if (sealedRouteV5Root !== "") rmSync(sealedRouteV5Root,
     { recursive: true, force: true })
@@ -845,27 +883,12 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
 
   it.each(["preflight", "calibration", "reproduction"] as const)(
     "terminalizes real marker-present receipt-absent %s evidence", async (stage) => {
-      const fixture = prepareRoutedV8()
+      const fixture = prepareRoutedV8(stage)
       try {
         expect(checkV138ExecutionContextV8Receipt(JSON.parse(readFileSync(
           path.resolve(fixture.tempRoot,
             V138_PLAN_262_25_FRESH_DESTINATIONS[0]), "utf8"))))
           .toEqual(fixture.context)
-        if (stage !== "preflight") {
-          await writeV138HostHeadroomPreflightV8Receipt(fixture.tempRoot,
-            V138_PLAN_262_25_FRESH_DESTINATIONS[1],
-            V138_PLAN_262_25_FRESH_DESTINATIONS[0],
-            fixture.authorizationPath, fixture.sealPath, fixture.sourceA4,
-            fixture.sourceB4, admittedV8Headroom)
-        }
-        if (stage === "reproduction") {
-          const calibration = await writeV138ParallelCalibrationV8Receipt(
-            fixture.tempRoot, V138_PLAN_262_25_FRESH_DESTINATIONS[2],
-            V138_PLAN_262_25_FRESH_DESTINATIONS[1],
-            V138_PLAN_262_25_FRESH_DESTINATIONS[0], fixture.sourceA4,
-            fixture.sourceB4, runSuccessfulV8Calibration)
-          expect(calibration.status).toBe("admitted")
-        }
         const authorizationTarget = path.resolve(fixture.tempRoot,
           fixture.authorizationPath)
         const authorizationBytes = readFileSync(authorizationTarget)
