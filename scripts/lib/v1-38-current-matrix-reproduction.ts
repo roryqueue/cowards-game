@@ -16286,6 +16286,48 @@ const replaceVersionStrings = (value: unknown, from: string,
     Object.fromEntries(Object.entries(value).map(([key, entry]) => [key,
       replaceVersionStrings(entry, from, to)])) : value
 
+export const V138_ROUTE5_ADAPTER_KEY_INVENTORIES = Object.freeze({
+  contextV8: Object.freeze(["schemaVersion", "mode", "cwd",
+    "terminalAgentRegistry", "sourceA4", "sourceB4", "sourceB4Custody",
+    "sourceB4CustodyRoot", "authorizationRoot", "sealRoot",
+    "selectedRouteClosureRoot", "protectedHistoryRoot",
+    "priorAuthorizationBytes", "patternCOwnership", "formationAbsenceBound",
+    "runtimeRoute", "resourceSampleMilliseconds", "acceptedCellCount",
+    "noRetry"]),
+  preflightV8: Object.freeze(["schemaVersion", "sourceA4", "sourceB4",
+    "executionContextRoot", "authorizationRoot", "sealRoot",
+    "chargedIdentityId", "metricId", "providerId", "parserId",
+    "requiredHostHeadroomBasisPoints", "observation", "disposition",
+    "acceptedCellCount", "noRetry"]),
+  calibrationV8: Object.freeze(["schemaVersion", "executionContextRoot",
+    "preflightRoot", "status", "chargedAttemptCount",
+    "calibrationShardCount", "observationMode", "childLaunchCount",
+    "terminalOutcomeCount", "acceptedCellCount", "completeCleanup",
+    "publicStopReason", "supervisionRoot", "attempts", "runtimeRoute",
+    "privacyProjection", "noRetry", "sourceA4", "sourceB4"]),
+  reproductionV9: Object.freeze(["schemaVersion", "executionContextRoot",
+    "preflightRoot", "calibrationRoot", "status", "chargedAttemptCount",
+    "observationMode", "childLaunchCount", "terminalOutcomeCount",
+    "acceptedCellCount", "completeCleanup", "publicStopReason", "planRoot",
+    "attempts", "attemptLedgerRoot", "runtimeRoute", "privacyProjection",
+    "partialAcceptedEvidenceReusable", "noRetry", "sourceA4", "sourceB4"]),
+  markerV9: Object.freeze(["schemaVersion", "stage", "sourceA5", "sourceB5",
+    "sourceB5CustodyRoot", "authorizationRoot", "sealRoot",
+    "executionContextRoot", "predecessorRoot", "chargedAttemptCount",
+    "chargedAttemptRoot", "noRetry"]),
+})
+
+export const checkV138Route5AdapterKeyInventory = (
+  adapter: keyof typeof V138_ROUTE5_ADAPTER_KEY_INVENTORIES,
+  value: Record<string, unknown>,
+): true => {
+  if (canonical(Object.keys(value)) !== canonical(
+    V138_ROUTE5_ADAPTER_KEY_INVENTORIES[adapter])) {
+    throw new TypeError("MATRIX_ROUTE5_ADAPTER_KEY_INVENTORY_INVALID")
+  }
+  return true
+}
+
 const route4ContextAsV7 = (value: Record<string, unknown>) => {
   const context = checkV138ExecutionContextV8Receipt(value)
   const body = { schemaVersion:
@@ -17451,6 +17493,7 @@ const writeV138Plan26230Marker = (repoRoot: string, stage: "preflight" |
     chargedAttemptRoot: v138SuccessorRoot("artifactManifest",
       `v1.38-plan-262-30-${stage}-charged-attempts-v1`, chargedAttemptIds),
     noRetry: true as const }
+  checkV138Route5AdapterKeyInventory("markerV9", body)
   const marker = deepFreeze({ ...body, markerRoot: v138SuccessorRoot(
     "evidenceBundle", body.schemaVersion, body) })
   writeV138Plan26219Immutable(target, chain, marker)
@@ -17614,11 +17657,13 @@ const route5ContextAsV8 = (value: Record<string, unknown>) => {
     authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
     selectedRouteClosureRoot: context.selectedRouteClosureRoot,
     protectedHistoryRoot: context.protectedHistoryRoot,
+    priorAuthorizationBytes: context.priorAuthorizationBytes,
     patternCOwnership: context.patternCOwnership,
     formationAbsenceBound: context.formationAbsenceBound,
     runtimeRoute: context.runtimeRoute,
     resourceSampleMilliseconds: context.resourceSampleMilliseconds,
     acceptedCellCount: context.acceptedCellCount, noRetry: context.noRetry }
+  checkV138Route5AdapterKeyInventory("contextV8", body)
   return checkV138ExecutionContextV8Receipt({ ...body,
     receiptRoot: v138SuccessorRoot("evidenceBundle",
       String(body.schemaVersion), body) })
@@ -17643,6 +17688,7 @@ const route5PreflightAsV8 = (value: Record<string, unknown>,
     acceptedCellCount: preflight.acceptedCellCount,
     noRetry: preflight.noRetry }, ":v9:", ":v8:") as
     Record<string, unknown>
+  checkV138Route5AdapterKeyInventory("preflightV8", body)
   return checkV138HostHeadroomPreflightV8Receipt({ ...body,
     receiptRoot: v138SuccessorRoot("canonicalJsonProfile",
       String(body.schemaVersion), body) }, contextV8)
@@ -17706,7 +17752,6 @@ export const checkV138ParallelCalibrationV9Receipt = (inventory:
   const preflightV8 = route5PreflightAsV8(preflight, context)
   const v8Body = replaceVersionStrings({
     schemaVersion: "v1.38-current-matrix-calibration-v8",
-    sourceA4: contextV8.sourceA4, sourceB4: contextV8.sourceB4,
     executionContextRoot: contextV8.receiptRoot,
     preflightRoot: preflightV8.receiptRoot, status: receipt.status,
     chargedAttemptCount: receipt.chargedAttemptCount,
@@ -17720,8 +17765,11 @@ export const checkV138ParallelCalibrationV9Receipt = (inventory:
     supervisionRoot: receipt.supervisionRoot, attempts: receipt.attempts,
     runtimeRoute: receipt.runtimeRoute,
     privacyProjection: receipt.privacyProjection,
-    noRetry: receipt.noRetry }, ":v9:", ":v8:") as
+    noRetry: receipt.noRetry,
+    sourceA4: contextV8.sourceA4, sourceB4: contextV8.sourceB4 },
+  ":v9:", ":v8:") as
     Record<string, unknown>
+  checkV138Route5AdapterKeyInventory("calibrationV8", v8Body)
   checkV138ParallelCalibrationV8Receipt(inventory, { ...v8Body,
     receiptRoot: v138SuccessorRoot("evidenceBundle",
       String(v8Body.schemaVersion), v8Body) }, contextV8, preflightV8)
@@ -17809,7 +17857,6 @@ const route5CalibrationAsV8 = (inventory: Readonly<V138CurrentMatrixInventory>,
   const preflightV8 = route5PreflightAsV8(preflight, context)
   const body = replaceVersionStrings({
     schemaVersion: "v1.38-current-matrix-calibration-v8",
-    sourceA4: contextV8.sourceA4, sourceB4: contextV8.sourceB4,
     executionContextRoot: contextV8.receiptRoot,
     preflightRoot: preflightV8.receiptRoot, status: checked.status,
     chargedAttemptCount: checked.chargedAttemptCount,
@@ -17823,8 +17870,11 @@ const route5CalibrationAsV8 = (inventory: Readonly<V138CurrentMatrixInventory>,
     supervisionRoot: checked.supervisionRoot, attempts: checked.attempts,
     runtimeRoute: checked.runtimeRoute,
     privacyProjection: checked.privacyProjection,
-    noRetry: checked.noRetry }, ":v9:", ":v8:") as
+    noRetry: checked.noRetry,
+    sourceA4: contextV8.sourceA4, sourceB4: contextV8.sourceB4 },
+  ":v9:", ":v8:") as
     Record<string, unknown>
+  checkV138Route5AdapterKeyInventory("calibrationV8", body)
   return checkV138ParallelCalibrationV8Receipt(inventory, { ...body,
     receiptRoot: v138SuccessorRoot("evidenceBundle",
       String(body.schemaVersion), body) }, contextV8, preflightV8)
@@ -17914,7 +17964,6 @@ export const checkV138AuthoritativeMatrixV10Receipt = (value: unknown,
     context, preflight)
   const v9Body = replaceVersionStrings({
     schemaVersion: "v1.38-current-matrix-reproduction-v9",
-    sourceA4: contextV8.sourceA4, sourceB4: contextV8.sourceB4,
     executionContextRoot: contextV8.receiptRoot,
     preflightRoot: preflightV8.receiptRoot,
     calibrationRoot: calibrationV8.receiptRoot, status: receipt.status,
@@ -17930,8 +17979,11 @@ export const checkV138AuthoritativeMatrixV10Receipt = (value: unknown,
     privacyProjection: receipt.privacyProjection,
     partialAcceptedEvidenceReusable:
       receipt.partialAcceptedEvidenceReusable,
-    noRetry: receipt.noRetry }, ":v9:", ":v8:") as
+    noRetry: receipt.noRetry,
+    sourceA4: contextV8.sourceA4, sourceB4: contextV8.sourceB4 },
+  ":v9:", ":v8:") as
     Record<string, unknown>
+  checkV138Route5AdapterKeyInventory("reproductionV9", v9Body)
   v9Body.attemptLedgerRoot = v138SuccessorRoot("evidenceBundle",
     "v1.38-current-matrix-reproduction-v9-attempt-ledger-v1",
     { calibrationRoot: calibrationV8.receiptRoot,

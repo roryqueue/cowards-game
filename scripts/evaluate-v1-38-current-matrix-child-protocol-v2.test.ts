@@ -15,7 +15,9 @@ import {
 import {
   V138_PLAN_262_30_DISPOSITIONS,
   V138_PLAN_262_30_ROUTE_CONTRACT,
+  V138_ROUTE5_ADAPTER_KEY_INVENTORIES,
   buildV138Plan26230TerminalV1,
+  checkV138Route5AdapterKeyInventory,
   reduceV138ParallelIntegrityFailureProjection,
   type V138ParallelShardTerminal,
 } from "./lib/v1-38-current-matrix-reproduction.js"
@@ -45,6 +47,21 @@ const observe = (result: FixtureResult) =>
   })
 
 describe.sequential("v1.38 current-matrix child protocol v2", () => {
+  it("pins every route-five compatibility adapter key inventory", () => {
+    for (const [adapter, keys] of Object.entries(
+      V138_ROUTE5_ADAPTER_KEY_INVENTORIES)) {
+      const name = adapter as keyof typeof V138_ROUTE5_ADAPTER_KEY_INVENTORIES
+      const exact = Object.fromEntries(keys.map((key) => [key, null]))
+      expect(checkV138Route5AdapterKeyInventory(name, exact)).toBe(true)
+      expect(() => checkV138Route5AdapterKeyInventory(name,
+        Object.fromEntries(keys.slice(1).map((key) => [key, null])))).toThrow(
+          "MATRIX_ROUTE5_ADAPTER_KEY_INVENTORY_INVALID")
+      expect(() => checkV138Route5AdapterKeyInventory(name,
+        Object.fromEntries([...keys].reverse().map((key) => [key, null]))))
+        .toThrow("MATRIX_ROUTE5_ADAPTER_KEY_INVENTORY_INVALID")
+    }
+  })
+
   const terminal = (
     shardId: string,
     code: "RUNTIME_EXECUTION_FAILED" | "SHARD_COORDINATION_FAILED" |

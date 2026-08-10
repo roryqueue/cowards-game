@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url"
 import {
   afterAll,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -107,6 +108,9 @@ let syntheticRoot = ""
 let sealedRouteRoot = ""
 let routedV8TemplateRoot = ""
 let sealedRouteV5Root = ""
+let routedV9ContextTemplateRoot = ""
+let routedV9PreflightTemplateRoot = ""
+let routedV9CalibrationTemplateRoot = ""
 let sourceA5 = ""
 
 const canonicalManifest = (value: unknown): string => {
@@ -386,8 +390,8 @@ const prepareMutatedSealV5 = (field: "toolIdentity" | "protectedHistory" |
     { cwd: tempRoot, encoding: "utf8" }).trim() }
 }
 
-const prepareContextV9 = () => {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-stage-"))
+const prepareContextV9Template = () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-template-"))
   execFileSync("git", ["clone", "-q", "--shared", sealedRouteV5Root, tempRoot])
   writeSyntheticReviewV5(tempRoot, sourceA5)
   const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -403,6 +407,22 @@ const prepareContextV9 = () => {
     sourceA5, sourceB5)
   return { tempRoot, sourceB5, contextPath }
 }
+
+const copyRoutedV9Template = (templateRoot: string) => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "cowards-route-v9-stage-"))
+  cpSync(templateRoot, tempRoot, { recursive: true })
+  const sourceB5 = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: tempRoot, encoding: "utf8",
+  }).trim()
+  return { tempRoot, sourceB5,
+    contextPath: V138_PLAN_262_30_FRESH_DESTINATIONS[0] }
+}
+
+const prepareContextV9 = (stage: "context" | "preflight" |
+  "calibration" = "context") => copyRoutedV9Template(
+  stage === "context" ? routedV9ContextTemplateRoot :
+    stage === "preflight" ? routedV9PreflightTemplateRoot :
+      routedV9CalibrationTemplateRoot)
 
 beforeAll(async () => {
   sourceA5 = execFileSync("git", ["log", "-1", "--format=%H", "HEAD", "--",
@@ -424,6 +444,12 @@ afterAll(() => {
     { recursive: true, force: true })
   if (sealedRouteV5Root !== "") rmSync(sealedRouteV5Root,
     { recursive: true, force: true })
+  if (routedV9ContextTemplateRoot !== "") rmSync(routedV9ContextTemplateRoot,
+    { recursive: true, force: true })
+  if (routedV9PreflightTemplateRoot !== "") rmSync(
+    routedV9PreflightTemplateRoot, { recursive: true, force: true })
+  if (routedV9CalibrationTemplateRoot !== "") rmSync(
+    routedV9CalibrationTemplateRoot, { recursive: true, force: true })
 })
 
 describe.sequential("v1.38 successor temporal checkers", () => {
@@ -1006,6 +1032,35 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
 })
 
 describe.sequential("v1.38 route ordinal 5 offline contract", () => {
+  beforeEach(() => {
+    if (routedV9ContextTemplateRoot === "") {
+      routedV9ContextTemplateRoot = prepareContextV9Template().tempRoot
+    }
+  }, 900_000)
+
+  beforeEach(async () => {
+    if (routedV9PreflightTemplateRoot === "") {
+      const fixture = prepareContextV9()
+      await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[1], fixture.contextPath,
+        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
+        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
+        sourceA5, fixture.sourceB5, admittedV8Headroom)
+      routedV9PreflightTemplateRoot = fixture.tempRoot
+    }
+  }, 900_000)
+
+  beforeEach(async () => {
+    if (routedV9CalibrationTemplateRoot === "") {
+      const fixture = prepareContextV9("preflight")
+      await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[2],
+        V138_PLAN_262_30_FRESH_DESTINATIONS[1], fixture.contextPath,
+        sourceA5, fixture.sourceB5, runSuccessfulV8Calibration)
+      routedV9CalibrationTemplateRoot = fixture.tempRoot
+    }
+  }, 900_000)
+
   const root =
     "sha256:0000000000000000000000000000000000000000000000000000000000000000"
   const context = { receiptRoot: root }
@@ -1295,14 +1350,9 @@ exec ${JSON.stringify(gitBinary)} "$@"
   }, 900_000)
 
   it("writes and rechecks calibration_stopped", async () => {
-    const fixture = prepareContextV9()
+    const fixture = prepareContextV9("preflight")
     try {
       const preflightPath = V138_PLAN_262_30_FRESH_DESTINATIONS[1]
-      await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
-        preflightPath, fixture.contextPath,
-        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
-        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
-        sourceA5, fixture.sourceB5, admittedV8Headroom)
       await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
         V138_PLAN_262_30_FRESH_DESTINATIONS[2], preflightPath,
         fixture.contextPath, sourceA5, fixture.sourceB5,
@@ -1316,18 +1366,9 @@ exec ${JSON.stringify(gitBinary)} "$@"
   }, 900_000)
 
   it("writes and rechecks reproduction_stopped", async () => {
-    const fixture = prepareContextV9()
+    const fixture = prepareContextV9("calibration")
     try {
-      const preflightPath = V138_PLAN_262_30_FRESH_DESTINATIONS[1]
       const calibrationPath = V138_PLAN_262_30_FRESH_DESTINATIONS[2]
-      await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
-        preflightPath, fixture.contextPath,
-        ".planning/artifacts/v1.38-plan-262-29-authorization-v5.json",
-        ".planning/artifacts/v1.38-successor-source-seal-v5.json",
-        sourceA5, fixture.sourceB5, admittedV8Headroom)
-      await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
-        calibrationPath, preflightPath, fixture.contextPath, sourceA5,
-        fixture.sourceB5, runSuccessfulV8Calibration)
       await writeV138AuthoritativeMatrixV10Receipt(fixture.tempRoot,
         V138_PLAN_262_30_FRESH_DESTINATIONS[3], calibrationPath,
         fixture.contextPath, sourceA5, fixture.sourceB5,
