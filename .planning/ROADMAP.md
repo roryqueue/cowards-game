@@ -169,7 +169,7 @@ Plans:
 
 - [ ] 262-33-PLAN.md — Independently prove exact detached A6 read-only, preserve the stopped route and blocked ADMIT-03 truth, synchronize tracking, and stop for a developer decision.
 
-**Wave 29** *(blocked on Plan 262-33 plus a later explicit developer decision; a green offline A6 does not satisfy ADMIT-03)*
+**Wave 29** *(blocked on Plan 262-33 and the blocking-human checkpoint at the start of Plan 262-03; the current offline-successor selection and a green A6 are not permission to proceed and do not satisfy ADMIT-03)*
 
 - [ ] 262-03-PLAN.md — Only after separately authorized evidence establishes literal `reproduction_passed` with exactly 540 fresh charged and 540 accepted cells plus every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
 

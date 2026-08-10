@@ -252,7 +252,11 @@ expect(checkExistingRouteFiveTerminal(repoRoot)).toMatchObject({
 
 **When to use:** the focused scheduler/accounting/privacy proof where broad words currently select historical terminal/context tests. [VERIFIED: Plan-28 selector and current test names]
 
-**Acceptance rule:** retain the frozen inventory and behavioral assertions. The repaired proof must still reach exactly 52 passed and 197 skipped for the focused file and exactly 83/83 for the successor-route file; any deliberate inventory change requires a new reviewed contract rather than silent denominator drift. [VERIFIED: `262-28-REVIEW.md`, `262-31-PLAN.md`]
+**Acceptance rule:** retain the frozen inventory and behavioral assertions. Compare the complete ordered A5 and A6 full-name arrays, not only their totals: protocol stays at 10 names, successor route at 83, foundation at 249, and the anchored focused selection at exactly 52 of those 249 names. The repaired proof must report 52 passed and 197 pending/skipped for the focused file and exactly 83/83 for the successor-route file; any deliberate inventory change requires a new reviewed contract rather than silent denominator drift. [VERIFIED: `262-28-REVIEW.md`, `262-31-PLAN.md`]
+
+**Mutation placement rule:** extend the existing cases `v1.38 matrix inline execution context v4 matrix inline execution context v4 binds lean main ownership and terminal plan agents` and `v1.38 route ordinal 5 offline contract freezes the noncolliding v5/v9/v10 route and exact policy constants`. Put commit/tree/blob mutations inside the first case and phase/destination/terminal/count mutations inside the second. Add no `it`, `test`, `it.each`, or `describe` declaration. Follow the exact-key and table-driven mutation style already used by `scripts/check-v1-37-audit-reproduction.test.ts`. [VERIFIED: current test names and local mutation-test pattern]
+
+**Machine-report rule:** use a separate Vitest JSON report for protocol, route, and focused proof. Parse `success`, `numTotalTests`, `numPassedTests`, `numFailedTests`, `numPendingTests`, `numTodoTests`, and every `testResults[].assertionResults[].fullName/status`; never infer exact totals from ANSI narration. Run Turbo with `typecheck --summarize --output-logs=none` and parse the newly created `.turbo/runs` summary for exactly 27 unique `#typecheck` task IDs, each with `execution.exitCode === 0` and no error. Remove owned reports after parsing. [VERIFIED: Vitest 4.1.6 JSON reporter and local Turbo summary contract]
 
 **Example:**
 
@@ -480,22 +484,25 @@ The status formula must read the checked immutable terminal; narration or green 
 |---|---|---|---|
 | — | None. All factual claims used for the recommendation were checked against repository evidence, local tools, Git objects, or official Vitest documentation. | All | — |
 
-## Open Questions
+## Resolved Questions for This Offline Successor
 
 1. **Which exact assertion first failed in Plan 262-31's isolated successor-route run?**
+   - **Resolution for this successor: Intentionally unknown; not reconstructed.**
    - What we know: exact 83/83 was not reached, raw output was intentionally deleted, and the same A5 test blob passed before the live route. [VERIFIED: Plans 262-28 and 262-31]
-   - What's unclear: whether the isolated run hit a fixture/resource/command-state failure or another assertion before any temporal contradiction. [VERIFIED: retained evidence does not say]
-   - Recommendation: do not reconstruct the answer. Make the complete suite phase-neutral, then independently rerun it from exact A6 with bounded output. [VERIFIED: safe successor design]
+   - Retained evidence does not identify whether the isolated run hit a fixture/resource/command-state failure or another assertion before any temporal contradiction. The answer stays unknown. [VERIFIED: retained evidence does not say]
+   - The bounded offline A6 rerun tests only harness portability and exact regression counts; it does not recover or relabel the deleted historical first failure. [VERIFIED: safe successor design]
 
 2. **Which protocol-v2 failure family initiated route-5 calibration stop?**
+   - **Resolution for this successor: Intentionally unknown; not reconstructed.**
    - What we know: the public reason is `SHARD_EXECUTION_FAILED`; two attempts are `system_failure`, six are cancelled, cleanup is complete, and accepted evidence is zero. [VERIFIED: route-v9 receipt projection]
-   - What's unclear: bootstrap, transport, runtime execution, coordination, or a malformed/conflicting family projection. [VERIFIED: canonical v9 omits initiating family]
-   - Recommendation: leave it unknown. Do not authorize another route until a separate developer decision defines prospective, privacy-safe, persisted diagnostics and a repairable hypothesis. [VERIFIED: evidence limitations]
+   - Canonical v9 omits whether bootstrap, transport, runtime execution, coordination, or a malformed/conflicting family projection initiated the stop; the offline A6 rerun cannot reconstruct it and does not repair calibration. [VERIFIED: canonical v9 evidence limitations]
+   - Any prospective privacy-safe diagnostic or repair hypothesis requires a separate later developer decision; it is not part of this successor. [VERIFIED: least-authority boundary]
 
 3. **What happens after A6 proof?**
+   - **Resolution for this successor: Resolved.**
    - What we know: Plan 262-31 requires a developer decision; ADMIT-03 and Plans 262-03..07 remain blocked/unexecuted. [VERIFIED: `262-31-VERDICT.md`, `262-31-SUMMARY.md`]
-   - What's unclear: whether to stop the milestone, revise the dependency while preserving ADMIT-03 as unmet, or authorize planning for a separate route 6. [VERIFIED: unresolved user decision]
-   - Recommendation: present these choices after Gate 262-33. Do not pre-render a literal or B6 in anticipation. [VERIFIED: least-authority boundary]
+   - The developer selected exactly the two-plan offline successor: Plan 262-32 creates reviewed test-only A6 and Plan 262-33 independently proves it, synchronizes truthful tracking, and stops. [VERIFIED: developer selection]
+   - After Plan 262-33, the next action is always a fresh explicit developer decision. No current selection authorizes Plan 262-03, B6, route 6, or live work, including when the offline verdict passes. [VERIFIED: least-authority boundary]
 
 ## Environment Availability
 
@@ -506,10 +513,10 @@ The status formula must read the checked immutable terminal; narration or green 
 | Vitest | Selector proof | ✓ | 4.1.6 | — [VERIFIED: local probe] |
 | Git | Custody/detached proof | ✓ | 2.50.1 Apple Git-155 | — [VERIFIED: local probe] |
 | jq | Bounded artifact projections | ✓ | 1.7.1-apple | Node exact-key projection if needed. [VERIFIED: local probe] |
-| Docker | Owned validation database | ✓ | 29.4.0 | No silent fallback; block Gate 262-33 if required isolation cannot run. [VERIFIED: local probe; boundary policy] |
-| PostgreSQL 18 image/service | Gate-262-33 boundary chain | Not probed | — | No fallback; research was prohibited from starting/probing live PostgreSQL. [VERIFIED: research execution boundary] |
+| Docker | Owned validation database | ✓ | 29.4.0 | No silent fallback; record the boundary proof inconclusive if required isolation cannot run. [VERIFIED: local probe; boundary policy] |
+| PostgreSQL 18 image/service | Gate-262-33 boundary chain | Not probed | — | No fallback; an unavailable/unrun boundary proof is inconclusive, while the bounded verdict must still be written. [VERIFIED: research execution boundary] |
 
-**Missing dependencies with no fallback:** none currently proven missing. PostgreSQL 18 availability remains deliberately unprobed and becomes a fail-closed Gate-262-33 precondition. [VERIFIED: environment audit scope]
+**Missing dependencies with no fallback:** none currently proven missing. PostgreSQL 18 availability remains deliberately unprobed; if the unchanged boundary monitor requires it and isolation is unavailable, the proof records `inconclusive` without aborting verdict creation. [VERIFIED: environment audit scope]
 
 **Missing dependencies with fallback:** none. [VERIFIED: environment audit]
 
@@ -546,15 +553,15 @@ The status formula must read the checked immutable terminal; narration or green 
 
 ### Sampling Rate
 
-- **Per test-only commit:** standalone protocol-v2 suite plus the directly changed test file's narrow regression. [VERIFIED: recommended TDD]
-- **Per Gate-262-32 review iteration:** full successor-route 83/83, focused 52/197, protocol 10/10, and `pnpm typecheck`. [VERIFIED: frozen counts]
+- **RED/GREEN test-only commits:** run only the two exact existing named cases containing the new internal mutation loops. [VERIFIED: fast targeted TDD contract]
+- **Final A6 closure only:** after the final source-only A6 is selected, run protocol 10/10, successor-route 83/83, focused 52 passed/197 pending/249 total, and typecheck 27/27 with machine-readable reports. If a review fix changes A6, that new endpoint receives the final closure. [VERIFIED: frozen counts]
 - **Gate-262-33 phase proof:** repeat all commands independently from exact detached A6, then unchanged boundaries, Git custody, artifact digest, privacy scan, and cleanup. [VERIFIED: independent proof pattern]
 - **Phase status gate:** keep `gaps_found`, ADMIT-03 partial/blocked, terminal stopped, and next action developer decision. [VERIFIED: immutable status inputs]
 
 ### Wave 0 Gaps
 
-- [ ] Add descendant-canonical-HEAD regression inside `scripts/evaluate-v1-38-foundation-contract.test.ts`. [VERIFIED: missing regression]
-- [ ] Add explicit pre-live/post-live phase-state regressions inside `scripts/evaluate-v1-38-foundation-contract-successor-routes.test.ts`. [VERIFIED: missing regression]
+- [ ] Add the descendant-canonical-HEAD mutation loop inside the existing matrix-inline named case without adding a test declaration. [VERIFIED: missing regression]
+- [ ] Add explicit pre-live/post-live phase-state mutations inside the existing route-ordinal-5 named case without adding a test declaration. [VERIFIED: missing regression]
 - [ ] Freeze the exact 52 full-name focused selector inventory in the plan/review evidence without adding a broad token. [VERIFIED: selector gap]
 - [ ] Define a bounded Gate-262-33 verdict schema that cannot mark ADMIT-03 passed from selector counts alone. [VERIFIED: status risk]
 - [ ] No framework installation or new test file is needed. [VERIFIED: existing infrastructure]
@@ -647,4 +654,3 @@ Security enforcement is enabled because `.planning/config.json` does not set it 
 
 **Research date:** 2026-08-10
 **Valid until:** 2026-09-09, or immediately invalidated by any change to the two test blobs, the two production blobs, package/lock/config blobs, A5/B5 topology, or route-v9/terminal artifact bytes. [VERIFIED: content-addressed validity model]
-

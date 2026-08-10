@@ -32,7 +32,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
 Plan: 26 of 33
-Status: Plans 262-21 through 262-31 are executed; Plans 262-32 and 262-33 are planned as the developer-selected offline diagnostic successor. Plan 262-32 may repair only the two test harnesses and freeze source-only A6; Plan 262-33 may only prove exact detached A6 and synchronize tracking. No B6, route 6, or live authority is authorized. Terminal-v1 remains `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, authority is expired without retry, and ADMIT-03 plus Plan 262-03 remain blocked pending a later explicit developer decision.
+Status: Plans 262-21 through 262-31 are executed; Plans 262-32 and 262-33 are planned as the developer-selected offline diagnostic successor. Plan 262-32 may repair only the two test harnesses and freeze source-only A6; Plan 262-33 may only prove exact detached A6 and synchronize tracking. No B6, route 6, or live authority is authorized. Terminal-v1 remains `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, authority is expired without retry, and Plans 262-03 through 262-07 remain blocked/pending. After Plan 262-33, the blocking-human checkpoint at the start of Plan 262-03 requires a fresh explicit developer decision; the current successor selection and any green offline A6 are not permission to proceed.
 Last activity: 2026-08-10 — Planned the two-gate offline diagnostic successor without changing the stopped route or admission authority.
 
 Progress: [████████░░] 79%
@@ -193,4 +193,4 @@ None.
 Last session: 2026-08-10T21:13:17Z
 Stopped at: Planned 262-32/33 offline diagnostic successor; Plan 262-32 is next
 Resume file: None
-Next command: Execute Phase 262 beginning with Plan 262-32. Do not retry Plan 262-30, create a live successor, or begin Plan 262-03.
+Next command: Execute only Plans 262-32 and 262-33, then stop at `developer_decision`; do not retry Plan 262-30, create a live successor, auto-advance past Plan 262-33, or begin Plan 262-03.
