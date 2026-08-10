@@ -7532,10 +7532,24 @@ const terminalPlan26213Snapshot = () => ({
 
 describe("v1.38 matrix inline execution context v4", () => {
   it("matrix inline execution context v4 binds lean main ownership and terminal plan agents", () => {
+    const canonicalRepoRoot = "/Users/roryquinlan/runtime/cowards-game"
+    if (repoRoot !== canonicalRepoRoot) {
+      expect(() => buildV138ExecutionContextV4Receipt({
+        repoRoot,
+        mode: "gsd-pattern-c-inline-main",
+        cwd: canonicalRepoRoot,
+        planAgentSnapshot: terminalPlan26213Snapshot(),
+      })).toThrow("MATRIX_EXECUTION_CONTEXT_V4_INPUT_INVALID")
+      expect(execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot, encoding: "utf8",
+      }).trim()).toBe(execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: canonicalRepoRoot, encoding: "utf8",
+      }).trim())
+    }
     const receipt = buildV138ExecutionContextV4Receipt({
-      repoRoot,
+      repoRoot: canonicalRepoRoot,
       mode: "gsd-pattern-c-inline-main",
-      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      cwd: canonicalRepoRoot,
       planAgentSnapshot: terminalPlan26213Snapshot(),
     })
 
@@ -7543,7 +7557,7 @@ describe("v1.38 matrix inline execution context v4", () => {
       schemaVersion: "v1.38-current-matrix-execution-context-v4",
       mode: "gsd-pattern-c-inline-main",
       executionOwner: "lean-main-orchestrator",
-      cwd: "/Users/roryquinlan/runtime/cowards-game",
+      cwd: canonicalRepoRoot,
       claimScope: "plan_scoped_orchestrator_registry_not_os_global",
       implementationSource: {
         path: "scripts/lib/v1-38-current-matrix-reproduction.ts",
