@@ -358,7 +358,8 @@ const prepareMutatedSealV5 = (field: "toolIdentity" | "protectedHistory" |
     sealPath), "utf8")) as Record<string, unknown>
   if (field === "toolIdentity") {
     const value = seal.toolIdentity as Record<string, unknown>
-    seal.toolIdentity = { ...value, inode: Number(value.inode) + 1 }
+    seal.toolIdentity = { ...value,
+      sha256: "sha256:1111111111111111111111111111111111111111111111111111111111111111" }
   } else if (field === "formationAbsence") {
     const value = seal.formationAbsence as Record<string, unknown>
     seal.formationAbsence = { ...value, forbiddenPathCount: 1 }
