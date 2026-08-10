@@ -50,9 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 25/31 plans executed; Plan 262-31 is the next independent verification step
+**Plans:** 26/31 plans executed; Plan 262-31 verification is complete and requires a developer decision
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 25 of 31 plans are executed. Plan 262-30 consumed exact checked B5 once on main: preflight:v9 admitted at 7,300 basis points, then calibration:v9 stopped with 8 charged/launched/terminal attempts across 4 shards, complete cleanup, and 0 accepted cells. Reproduction:v10 and its marker remain absent; terminal-v1 is literal `calibration_stopped`, authority is expired, and no retry exists. Plan 262-31 alone owns independent read-only verification/tracking. ADMIT-03 and Plan 262-03 remain blocked because no exact fresh 540/540 reproduction exists.
+**Current verdict:** IN PROGRESS / `gaps_found` — 26 of 31 plans are executed. Plan 262-31 independently passed A5/B5 custody, protocol material change, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks. The frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. Terminal-v1 is literal `calibration_stopped`, reproduction:v10 and its marker remain absent at fresh 0/0, authority is expired, and no retry exists. ADMIT-03 and Plan 262-03 remain blocked; a developer decision is required before any separately authorized successor route or dependency revision.
+
+<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":31,"completed_plans":26} -->
 
 Plans:
 **Wave 1**
@@ -157,9 +159,9 @@ Plans:
 
 **Wave 26** *(blocked on Wave 25 completion)*
 
-- [ ] 262-31-PLAN.md — Independently and read-only verify A5/B5, protocol material change, actual terminal, exact fresh 540/540, boundaries, validation, and tracking.
+- [x] 262-31-PLAN.md — Independently passed A5/B5 custody, protocol, typecheck, isolated boundaries, cleanup, drift, terminal, and counts; frozen route/focused selectors blocked and the stopped fresh 0/0 route requires a developer decision.
 
-**Wave 27** *(blocked on Wave 26 completion and exact Plan 262-31 verification)*
+**Wave 27** *(blocked on Plan 262-31's fail-closed verdict and a new developer decision)*
 
 - [ ] 262-03-PLAN.md — Only after Plan 262-31 independently verifies literal `reproduction_passed` with exactly 540 fresh charged and 540 accepted cells plus every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
 
@@ -314,7 +316,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 25/31 | In Progress — route 5 terminal is calibration_stopped; reproduction:v10 absent, 0/540; Plan 262-31 next |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 26/31 | In Progress / gaps found — Plan 262-31 test/privacy proof blocked; route 5 is calibration_stopped at fresh 0/540; developer decision required |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

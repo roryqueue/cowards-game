@@ -4,20 +4,22 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: paused
-stopped_at: Completed 262-30-PLAN.md; next is independent Plan 262-31 verification of the stopped route
-last_updated: "2026-08-10T18:24:06Z"
+status: in_progress
+stopped_at: Completed 262-31-PLAN.md; blocked verdict requires a developer decision
+last_updated: "2026-08-10T19:36:35Z"
 last_activity: 2026-08-10
-last_activity_desc: Consumed B5 once; preflight:v9 admitted, calibration:v9 stopped 8/8/8 over four shards with complete cleanup, reproduction:v10 absent, and authority expired.
+last_activity_desc: Independently verified A5/B5 and the stopped route; frozen route/focused tests are blocked, terminal is calibration_stopped at fresh 0/0, and developer decision is required.
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 31
-  completed_plans: 25
-  percent: 81
+  completed_plans: 26
+  percent: 84
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":31,"completed_plans":26} -->
 
 ## Project Reference
 
@@ -29,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
-Plan: 25 of 31
-Status: Plans 262-21 through 262-30 are executed. Plan 262-30 consumed checked B5 once: preflight:v9 admitted at 7,300 basis points, calibration:v9 stopped with 8 charged/launched/terminal attempts across 4 shards and complete cleanup, reproduction:v10 remained absent, and terminal-v1 expired authority without retry. Plan 262-31 alone owns independent verification/tracking. ADMIT-03 and Plan 262-03 remain blocked because no exact fresh 540/540 reproduction exists.
-Last activity: 2026-08-10 — Sealed the one route-ordinal-5 terminal as `calibration_stopped` with zero accepted evidence and no retry.
+Plan: 26 of 31
+Status: Plans 262-21 through 262-31 are executed. Plan 262-31 independently passed A5/B5 custody, production protocol-v2, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks. The frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. Terminal-v1 is `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, and authority is expired without retry. ADMIT-03 and Plan 262-03 remain blocked; a developer decision is required.
+Last activity: 2026-08-10 — Completed the read-only route-ordinal-5 verification with blocked test/privacy classes and an immutable stopped fresh 0/0 terminal.
 
-Progress: [████████░░] 81%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
-**Current milestone:** 25 of 31 Phase 262 plans executed. Route ordinal 5 terminalized at `calibration_stopped` with reproduction:v10 absent and 0/540 accepted. Plan 262-31 alone interprets the result; ADMIT-03 remains blocked.
+**Current milestone:** 26 of 31 Phase 262 plans executed. Plan 262-31 independently confirmed blocked frozen tests and a route-ordinal-5 `calibration_stopped` terminal with reproduction:v10 absent at fresh 0/540. ADMIT-03 remains blocked pending a developer decision.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -67,7 +69,7 @@ Progress: [████████░░] 81%
 | Phase 262 P28 | offline integration/review | 2 tasks | scheduler/privacy/accounting, zero-finding A5, frozen proof, exact-literal checkpoint |
 | Phase 262 P29 | authority/seal | 2 tasks | exact two-artifact direct-child B5, no live execution |
 | Phase 262 P30 | 62min | 2 tasks | admitted preflight:v9, stopped 8/4 calibration:v9, no reproduction:v10 |
-| Phase 262 P31 | independent verification | 3 tasks | read-only proof, validation, verification, tracking |
+| Phase 262 P31 | 70min | 3 tasks | mixed read-only proof, stopped route, validation, verification, tracking |
 | Phase 262 P28 | 1588min | 2 tasks | 8 files |
 | Phase 262 P29 | 10min | 3 tasks | 5 files |
 
@@ -136,6 +138,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Keep every Plan-262-30 live destination absent; B5 grants single-use no-retry authority but does not consume it.
 - [Phase 262]: Admit the sole preflight:v9 at 7,300 basis points, then stop calibration:v9 after eight charged, eight launched, and eight terminal attempts across four shards with complete cleanup and zero accepted cells.
 - [Phase 262]: Keep reproduction:v10 and its marker absent, seal terminal-v1 as `calibration_stopped`, and expire the Plan-262-30 authority without retry, repair, resume, or partial reuse.
+- [Phase 262]: Treat Plan 262-31 as a completed fail-closed verification: A5/B5 custody, protocol, typecheck, isolated boundaries, cleanup, no-drift, terminal, and counts pass, while the frozen route and focused privacy-bearing selectors are blocked without repair or retry.
+- [Phase 262]: Keep ADMIT-03 and Plan 262-03 blocked on the immutable `calibration_stopped` fresh 0/0 route; require a developer decision before any separately authorized successor or dependency revision.
 
 ### Pending Todos
 
@@ -165,10 +169,11 @@ None.
 - ADMIT-03 remains blocked: Plan 262-22 terminal-v1 is `calibration_stopped`; calibration:v7 has eight charged/launched/terminal attempts and zero accepted cells, while reproduction:v8 and its marker are absent at 0/540.
 - ADMIT-03 remains blocked: Plan 262-25 terminal-v1 is `calibration_stopped`; calibration:v8 has eight charged/launched/terminal attempts across four shards and zero accepted cells, while reproduction:v9 and its marker are absent at 0/540.
 - Plan 262-25 authority is expired. It cannot be retried, repaired, or partially reused; the next action requires a developer decision on a separately planned successor, milestone dependency revision, or stop.
-- Plans 262-27 through 262-30 are complete: zero-finding A5 and exact direct-child B5 custody pass, and the one main-only route-ordinal-5 authority has terminalized without retry.
+- Plans 262-27 through 262-31 are complete as execution/documentation steps: zero-finding A5 and exact direct-child B5 custody pass, the one route-ordinal-5 authority terminalized without retry, and independent verification failed closed.
 - ADMIT-03 remains blocked: Plan 262-30 terminal-v1 is `calibration_stopped`; calibration:v9 has eight charged/launched/terminal attempts across four shards and zero accepted cells, while reproduction:v10 and its marker are absent at 0/540.
-- Plan 262-30 authority is expired and cannot be retried, repaired, resumed, or partially reused. Plan 262-31 alone owns independent interpretation and tracking of the immutable stopped route.
-- Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied despite fully green verifier infrastructure.
+- Plan 262-31 frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. They cannot be repaired, retried, or waived inside the read-only verification plan.
+- Plan 262-30 authority is expired and cannot be retried, repaired, resumed, or partially reused. The next action is a developer decision on a separately planned successor, dependency revision that preserves ADMIT-03 as unmet, or milestone stop.
+- Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied.
 
 ## Deferred Items
 
@@ -181,7 +186,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-10T18:24:06Z
-Stopped at: Completed 262-30-PLAN.md; next is independent Plan 262-31 verification
+Last session: 2026-08-10T19:36:35Z
+Stopped at: Completed 262-31-PLAN.md; blocked verdict requires a developer decision
 Resume file: None
-Next command: $gsd-execute-phase 262 beginning with Plan 262-31 only. Verify the immutable stopped route read-only; do not retry Plan 262-30, reinterpret partial evidence, or begin Plan 262-03.
+Next command: None until a developer decision. Do not retry Plan 262-30, repair or reinterpret the blocked proof, or begin Plan 262-03.
