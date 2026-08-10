@@ -4,17 +4,17 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: in_progress
-stopped_at: Plan 262-27 complete; next action is offline Plan 262-28 scheduler/privacy/accounting integration and review with no authority or live execution
-last_updated: "2026-08-09T14:25:19.514Z"
-last_activity: 2026-08-09
-last_activity_desc: Completed offline protocol-v2 TDD and production child/parent wiring without authority, live execution, or artifact mutation.
+status: paused
+stopped_at: Completed 262-28-PLAN.md; next is separately gated Plan 262-29 exact-literal authority/seal
+last_updated: "2026-08-10T17:02:09.919Z"
+last_activity: 2026-08-10
+last_activity_desc: Completed offline scheduler/privacy/accounting integration, zero-finding A5 review, frozen proof, and exact hash-only checkpoint confirmation without authority materialization.
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 31
-  completed_plans: 22
-  percent: 71
+  completed_plans: 23
+  percent: 74
 ---
 
 # State: Coward's Game
@@ -29,15 +29,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
-Plan: 22 of 31
-Status: Plans 262-21 through 262-27 are executed. Plan 262-27 replaces the lossy child seam with standalone-tested child-emitted protocol-v2 but creates no authority or accepted evidence. Plans 262-28 through 262-31 remain separately gated: offline integration/review and A5 exact-literal checkpoint; exact two-artifact B5; one main-only route ordinal 5; independent verification/tracking. Plan 262-25 remains `calibration_stopped` with 8 charged/launched/terminal attempts over four shards, complete cleanup, absent reproduction:v9, 0/540 accepted, and expired no-retry authority. ADMIT-03 and Plan 262-03 remain blocked pending exact Plan 262-31 verification.
-Last activity: 2026-08-09 — Completed offline protocol-v2 production wiring with standalone proof and no authority or live execution.
+Plan: 23 of 31
+Status: Plans 262-21 through 262-28 are executed. Plan 262-28 freezes zero-finding A5 and confirms the exact checkpoint bytes in memory while retaining only their hash; no authority or live artifact exists. Plans 262-29 through 262-31 remain separately gated: exact two-artifact B5, one main-only route ordinal 5, and independent verification/tracking. Route 4 remains calibration_stopped with reproduction:v9 absent and 0/540 accepted. ADMIT-03 and Plan 262-03 remain blocked pending exact Plan 262-31 verification.
+Last activity: 2026-08-10 — Completed offline scheduler/privacy/accounting integration, zero-finding A5 review, frozen proof, and exact hash-only checkpoint confirmation without authority materialization.
 
-Progress: [███████░░░] 71%
+Progress: [███████░░░] 74%
 
 ## Performance Metrics
 
-**Current milestone:** 22 of 31 Phase 262 plans complete. Plan 262-28 is next and remains wholly offline; route-4 remains immutable `calibration_stopped` with reproduction:v9 absent and 0/540 accepted. ADMIT-03 plus Plans 262-03 through 262-07 remain blocked until an independently verified future exact fresh 540/540 pass.
+**Current milestone:** 23 of 31 Phase 262 plans executed. Plan 262-29 is next and requires a fresh complete exact-literal checkpoint before creating exactly two B5 artifacts; route 4 remains immutable calibration_stopped with reproduction:v9 absent and 0/540 accepted. ADMIT-03 remains blocked pending Plan 262-31.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -68,6 +68,7 @@ Progress: [███████░░░] 71%
 | Phase 262 P29 | authority/seal | 2 tasks | exact two-artifact direct-child B5, no live execution |
 | Phase 262 P30 | Pattern C route ordinal 5 | 2 tasks | main-only v9/v10 route, conditional 540, terminal/no retry |
 | Phase 262 P31 | independent verification | 3 tasks | read-only proof, validation, verification, tracking |
+| Phase 262 P28 | 1588min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Reserve CHILD_BOOTSTRAP_FAILED and CHILD_TRANSPORT_FAILED for parent-observed process state; only the child may emit RUNTIME_EXECUTION_FAILED or SHARD_COORDINATION_FAILED.
 - [Phase 262]: Keep stdout as the unchanged ordinary shard-result envelope, stderr empty, and canonical protocol-v2 bytes on inherited descriptor 3.
 - [Phase 262]: Keep expected typed runtime-service failures in ordinary per-attempt outcomes rather than relabeling them as integrity failures.
+- [Phase 262]: Preserve the canonical fixed-root historical contract and fail closed when detached proof state diverges.
+- [Phase 262]: Retain only the canonical authorization-v5 hash after exact in-memory checkpoint equality; Plan 262-29 must request the complete bytes again.
+- [Phase 262]: Keep ADMIT-03 blocked because Plan 262-28 is offline and creates no reproduction evidence or authority artifact.
 
 ### Pending Todos
 
@@ -170,7 +174,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-09T14:25:19.502Z
-Stopped at: Completed 262-27-PLAN.md; next is offline Plan 262-28
+Last session: 2026-08-10T17:00:27.261Z
+Stopped at: Completed 262-28-PLAN.md; next is separately gated Plan 262-29 exact-literal authority/seal
 Resume file: None
-Next command: `$gsd-execute-phase 262` beginning with Plan 262-28 only. Plan 262-28 is offline; do not retry Plan 262-25, create authority early, invoke live work early, reuse partial evidence, or begin Plan 262-03.
+Next command: $gsd-execute-phase 262 beginning with separately gated Plan 262-29 only. Request the complete exact literal again; do not infer authority from Plan 262-28 hash or summary, invoke live work, or begin Plan 262-03.

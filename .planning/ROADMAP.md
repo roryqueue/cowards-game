@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 22/31 plans executed; Plan 262-28 is the next offline gate
+**Plans:** 23/31 plans executed; Plan 262-29 is the next separately gated authority/seal step
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 22 of 31 plans are executed. Plan 262-27 completed offline protocol-v2 production wiring without authority, live execution, or artifact mutation. Plan 262-25 remains immutable at `calibration_stopped`, 8/8/8 calibration attempts over four shards, complete cleanup, absent reproduction:v9, 0/540 accepted, and expired no-retry authority. Plans 262-28 through 262-31 remain separately gated: offline scheduler/privacy/accounting integration plus zero-finding A5 proof and exact-literal checkpoint; exact two-artifact B5; one main-only single-use route ordinal 5; and independent read-only verification/tracking. ADMIT-03 and Plan 262-03 remain blocked unless Plan 262-31 independently verifies literal `reproduction_passed` with exact fresh 540/540.
+**Current verdict:** IN PROGRESS / `gaps_found` — 23 of 31 plans are executed. Plan 262-28 completed offline scheduler/privacy/accounting integration, froze zero-finding A5, passed frozen PostgreSQL proof, and confirmed the exact checkpoint bytes while retaining only their hash; it created no authority or live artifact. Plan 262-25 remains immutable at `calibration_stopped`, 8/8/8 calibration attempts over four shards, complete cleanup, absent reproduction:v9, 0/540 accepted, and expired no-retry authority. Plans 262-29 through 262-31 remain separately gated: exact two-artifact B5 after a new complete exact-literal checkpoint; one main-only single-use route ordinal 5; and independent read-only verification/tracking. ADMIT-03 and Plan 262-03 remain blocked unless Plan 262-31 independently verifies literal `reproduction_passed` with exact fresh 540/540.
 
 Plans:
 **Wave 1**
@@ -145,7 +145,7 @@ Plans:
 
 **Wave 23** *(blocked on Wave 22 completion)*
 
-- [ ] 262-28-PLAN.md — Integrate scheduler/accounting/privacy compatibility, converge independent zero-finding A5 review and frozen PostgreSQL proof, then render but do not write the exact route-ordinal-5 literal and require the full operator bytes.
+- [x] 262-28-PLAN.md — Integrate scheduler/accounting/privacy compatibility, converge independent zero-finding A5 review and frozen PostgreSQL proof, then render but do not write the exact route-ordinal-5 literal and require the full operator bytes.
 
 **Wave 24** *(blocked on Wave 23 completion)*
 
@@ -314,7 +314,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 22/31 | In Progress — protocol-v2 complete offline; Plan 262-28 next; route-4 remains immutable calibration_stopped, 0/540 |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 23/31 | In Progress — zero-finding A5 frozen offline; Plan 262-29 requires fresh exact bytes; route 4 remains immutable calibration_stopped, 0/540 |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
