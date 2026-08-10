@@ -52,7 +52,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 26/33 plans executed; developer selected the offline diagnostic successor
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 26 of 33 plans are executed. Plan 262-31 independently passed A5/B5 custody, protocol material change, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks, while its frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors remained blocked. The developer selected only a test-only A6 repair followed by detached read-only proof in Plans 262-32 and 262-33; this creates no live authority. Terminal-v1 remains literal `calibration_stopped`, reproduction:v10 and its marker remain absent at fresh 0/0, authority is expired, no retry exists, and ADMIT-03 plus Plan 262-03 remain blocked pending a later explicit developer decision.
+**Current verdict:** IN PROGRESS / `gaps_found` — 26 of 33 plans are executed. Plan 262-31 independently passed A5/B5 custody, protocol material change, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks, while its frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors remained blocked. The developer selected only a test-only A6 repair followed by detached read-only proof in Plans 262-32 and 262-33; this creates no live authority. Terminal-v1 remains literal `calibration_stopped`, reproduction:v10 and its marker remain absent at fresh 0/0, authority is expired, no retry exists, and ADMIT-03 remains blocked. Plan 262-03 is now only a dormant blocking-human routing checkpoint: every available choice stops execution and requires a fresh `$gsd-plan-phase 262` run before any measurement implementation.
 
 <!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":33,"completed_plans":26} -->
 
@@ -169,9 +169,9 @@ Plans:
 
 - [ ] 262-33-PLAN.md — Independently prove exact detached A6 read-only, preserve the stopped route and blocked ADMIT-03 truth, synchronize tracking, and stop for a developer decision.
 
-**Wave 29** *(blocked on Plan 262-33 and the blocking-human checkpoint at the start of Plan 262-03; the current offline-successor selection and a green A6 are not permission to proceed and do not satisfy ADMIT-03)*
+**Wave 29** *(blocked on Plan 262-33; Plan 262-03 is a checkpoint-only developer-routing stop, not an executable measurement plan, and every option requires `$gsd-plan-phase 262` before further work)*
 
-- [ ] 262-03-PLAN.md — Only after separately authorized evidence establishes literal `reproduction_passed` with exactly 540 fresh charged and 540 accepted cells plus every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
+- [ ] 262-03-PLAN.md — Dormant blocking-human checkpoint only: confirm `calibration_stopped`/fresh 0/0/ADMIT-03 blocked, then choose milestone stop, planning a new route, or planning a dependency revision; every option requires a fresh plan-phase and cannot complete measurement requirements.
 
 **Wave 30** *(blocked on Wave 29 completion)*
 
@@ -324,7 +324,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 26/33 | In Progress / gaps found — offline diagnostic Plans 262-32/33 planned; route 5 remains calibration_stopped at fresh 0 charged/0 accepted, ADMIT-03 blocked, and later developer decision required |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 26/33 | In Progress / gaps found — offline diagnostic Plans 262-32/33 planned; route 5 remains calibration_stopped at fresh 0 charged/0 accepted, ADMIT-03 blocked, and Plan 262-03 is a checkpoint requiring replan |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

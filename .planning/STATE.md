@@ -32,7 +32,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
 Plan: 26 of 33
-Status: Plans 262-21 through 262-31 are executed; Plans 262-32 and 262-33 are planned as the developer-selected offline diagnostic successor. Plan 262-32 may repair only the two test harnesses and freeze source-only A6; Plan 262-33 may only prove exact detached A6 and synchronize tracking. No B6, route 6, or live authority is authorized. Terminal-v1 remains `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, authority is expired without retry, and Plans 262-03 through 262-07 remain blocked/pending. After Plan 262-33, the blocking-human checkpoint at the start of Plan 262-03 requires a fresh explicit developer decision; the current successor selection and any green offline A6 are not permission to proceed.
+Status: Plans 262-21 through 262-31 are executed; Plans 262-32 and 262-33 are planned as the developer-selected offline diagnostic successor. Plan 262-32 may repair only the two test harnesses and freeze source-only A6; Plan 262-33 may only prove exact detached A6 and synchronize tracking. No B6, route 6, or live authority is authorized. Terminal-v1 remains `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, authority is expired without retry, and Plans 262-03 through 262-07 remain blocked/pending. Plan 262-03 is a dormant blocking-human routing checkpoint only: milestone stop, planning a new route, or planning a dependency revision each requires a fresh `$gsd-plan-phase 262` run and cannot begin or complete measurement work.
 Last activity: 2026-08-10 — Planned the two-gate offline diagnostic successor without changing the stopped route or admission authority.
 
 Progress: [████████░░] 79%
@@ -141,7 +141,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Treat Plan 262-31 as a completed fail-closed verification: A5/B5 custody, protocol, typecheck, isolated boundaries, cleanup, no-drift, terminal, and counts pass, while the frozen route and focused privacy-bearing selectors are blocked without repair or retry.
 - [Phase 262]: Keep ADMIT-03 and Plan 262-03 blocked on the immutable `calibration_stopped` fresh 0/0 route; require a developer decision before any separately authorized successor or dependency revision.
 - [Phase 262]: The developer selected only the offline diagnostic successor: Plan 262-32 repairs the two test harnesses and freezes reviewed source-only A6; Plan 262-33 independently proves exact detached A6 read-only. No B6, route ordinal 6, or live authority is authorized.
-- [Phase 262]: A green A6 closes only the Plan 262-31 offline selector/privacy proof block. Plan 262-03 depends on Plan 262-33 plus a later explicit developer decision because ADMIT-03 remains unmet.
+- [Phase 262]: A green A6 closes only the Plan 262-31 offline selector/privacy proof block. Plan 262-03 is a checkpoint-only dormant routing gate after Plan 262-33; all three developer options require a fresh plan-phase because ADMIT-03 remains unmet.
 
 ### Pending Todos
 
@@ -161,7 +161,7 @@ None.
 - Plans 262-15 through 262-17 are complete: A/B custody and all canonical checkers pass, no unexpected drift exists across the checked selected-route/source/config union, and the stopped branch preserves history, formation absence, privacy, charging, and no-retry boundaries.
 - ADMIT-03 remains blocked: Plan 262-16 preflight admitted at 6,900 basis points, but calibration:v5 stopped with process failure after eight charged identities and zero accepted cells; its projected shard/launch fields do not establish physical execution, and no reproduction:v6 exists.
 - The Plan 262-16 authority is expired. A future attempt requires a newly planned, separately authorized successor retaining A, B, every stopped root, and every charged attempt; Plan 262-16 cannot be retried.
-- Plan 262-03 remains blocked until an independent verifier confirms a future `reproduction_passed` terminal with exactly 540/540 accepted cells and every authority, closure, drift, cleanup, protected-history, formation, and privacy prerequisite.
+- Plan 262-03 contains no runnable measurement task or requirement credit. It only records a developer routing choice and mandates replanning before any future route, dependency revision, or measurement implementation.
 - Validation is partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification is `gaps_found` with 1/5 roadmap truths satisfied.
 - Plans 262-18 through 262-20 are complete. Canonical A2/B2, selected-route, protected-history, privacy, formation, cleanup, and terminal checks pass without drift.
 - ADMIT-03 remains blocked: Plan 262-19 preflight admitted at 7,200 basis points, but calibration:v6 stopped after eight charged/launched/terminal attempts and zero accepted cells; reproduction:v7 was not launched and authority is expired.
@@ -176,7 +176,7 @@ None.
 - Plan 262-31 frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. They cannot be repaired, retried, or waived inside the read-only verification plan.
 - Plan 262-30 authority is expired and cannot be retried, repaired, resumed, or partially reused. The next action is a developer decision on a separately planned successor, dependency revision that preserves ADMIT-03 as unmet, or milestone stop.
 - Plans 262-32 and 262-33 are authorized only for offline test-harness repair and detached proof. They cannot create or infer a replacement live route, authorization literal, writer, preflight, calibration, reproduction, or accepted evidence.
-- Plan 262-03 remains blocked after the offline successor unless a later explicit developer decision supplies separately authorized evidence satisfying ADMIT-03; an offline pass is not that evidence.
+- Plan 262-03 remains a dormant checkpoint after the offline successor; an offline pass is not ADMIT-03 evidence, and every checkpoint option routes to `$gsd-plan-phase 262` rather than implementation.
 - Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied.
 
 ## Deferred Items
@@ -193,4 +193,4 @@ None.
 Last session: 2026-08-10T21:13:17Z
 Stopped at: Planned 262-32/33 offline diagnostic successor; Plan 262-32 is next
 Resume file: None
-Next command: Execute only Plans 262-32 and 262-33, then stop at `developer_decision`; do not retry Plan 262-30, create a live successor, auto-advance past Plan 262-33, or begin Plan 262-03.
+Next command: Execute only Plans 262-32 and 262-33, then stop at the dormant Plan-262-03 `developer_decision` checkpoint; do not retry Plan 262-30, create a live successor, auto-advance into measurement work, or bypass the required `$gsd-plan-phase 262` replan.
