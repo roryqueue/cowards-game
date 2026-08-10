@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 26/31 plans executed; Plan 262-31 verification is complete and requires a developer decision
+**Plans:** 26/33 plans executed; developer selected the offline diagnostic successor
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 26 of 31 plans are executed. Plan 262-31 independently passed A5/B5 custody, protocol material change, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks. The frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. Terminal-v1 is literal `calibration_stopped`, reproduction:v10 and its marker remain absent at fresh 0/0, authority is expired, and no retry exists. ADMIT-03 and Plan 262-03 remain blocked; a developer decision is required before any separately authorized successor route or dependency revision.
+**Current verdict:** IN PROGRESS / `gaps_found` — 26 of 33 plans are executed. Plan 262-31 independently passed A5/B5 custody, protocol material change, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks, while its frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors remained blocked. The developer selected only a test-only A6 repair followed by detached read-only proof in Plans 262-32 and 262-33; this creates no live authority. Terminal-v1 remains literal `calibration_stopped`, reproduction:v10 and its marker remain absent at fresh 0/0, authority is expired, no retry exists, and ADMIT-03 plus Plan 262-03 remain blocked pending a later explicit developer decision.
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":31,"completed_plans":26} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":33,"completed_plans":26} -->
 
 Plans:
 **Wave 1**
@@ -161,23 +161,31 @@ Plans:
 
 - [x] 262-31-PLAN.md — Independently passed A5/B5 custody, protocol, typecheck, isolated boundaries, cleanup, drift, terminal, and counts; frozen route/focused selectors blocked and the stopped fresh 0/0 route requires a developer decision.
 
-**Wave 27** *(blocked on Plan 262-31's fail-closed verdict and a new developer decision)*
+**Wave 27** *(depends on Plan 262-31 and the developer-selected offline diagnostic successor)*
 
-- [ ] 262-03-PLAN.md — Only after Plan 262-31 independently verifies literal `reproduction_passed` with exactly 540 fresh charged and 540 accepted cells plus every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
+- [ ] 262-32-PLAN.md — Repair only the two phase-coupled test harnesses through TDD, freeze a reviewed source-only A6, and create no live authority.
 
 **Wave 28** *(blocked on Wave 27 completion)*
 
-- [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
+- [ ] 262-33-PLAN.md — Independently prove exact detached A6 read-only, preserve the stopped route and blocked ADMIT-03 truth, synchronize tracking, and stop for a developer decision.
 
-**Wave 29** *(blocked on Wave 28 completion)*
+**Wave 29** *(blocked on Plan 262-33 plus a later explicit developer decision; a green offline A6 does not satisfy ADMIT-03)*
 
-- [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+- [ ] 262-03-PLAN.md — Only after separately authorized evidence establishes literal `reproduction_passed` with exactly 540 fresh charged and 540 accepted cells plus every authority, closure, cleanup, protected-history, privacy, and formation prerequisite, define and calibrate the immutable study and two-ledger accounting contract.
 
 **Wave 30** *(blocked on Wave 29 completion)*
 
-- [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+- [ ] 262-04-PLAN.md — Freeze numeric gates, report states, and bounded empirical claims.
 
 **Wave 31** *(blocked on Wave 30 completion)*
+
+- [ ] 262-05-PLAN.md — Precommit profile-neutral classifiers and prove pre-formation containment.
+
+**Wave 32** *(blocked on Wave 31 completion)*
+
+- [ ] 262-06-PLAN.md — Prove synthetic custody mechanics and obtain genuine operational authorization.
+
+**Wave 33** *(blocked on Wave 32 completion)*
 
 - [ ] 262-07-PLAN.md — Bind the safe custody reference and all passed gates into the aggregate foundation root.
 
@@ -316,7 +324,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 26/31 | In Progress / gaps found — Plan 262-31 test/privacy proof blocked; route 5 is calibration_stopped at fresh 0/540; developer decision required |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 26/33 | In Progress / gaps found — offline diagnostic Plans 262-32/33 planned; route 5 remains calibration_stopped at fresh 0 charged/0 accepted, ADMIT-03 blocked, and later developer decision required |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

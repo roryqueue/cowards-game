@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed 262-31-PLAN.md; blocked verdict requires a developer decision
-last_updated: "2026-08-10T19:36:35Z"
+stopped_at: Planned 262-32/33 offline diagnostic successor; Plan 262-32 is next
+last_updated: "2026-08-10T21:13:17Z"
 last_activity: 2026-08-10
-last_activity_desc: Independently verified A5/B5 and the stopped route; frozen route/focused tests are blocked, terminal is calibration_stopped at fresh 0/0, and developer decision is required.
+last_activity_desc: Developer selected a test-only A6 harness repair and detached read-only proof; no live authority was added and ADMIT-03 remains blocked.
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 31
+  total_plans: 33
   completed_plans: 26
-  percent: 84
+  percent: 79
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":31,"completed_plans":26} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":33,"completed_plans":26} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS
-Plan: 26 of 31
-Status: Plans 262-21 through 262-31 are executed. Plan 262-31 independently passed A5/B5 custody, production protocol-v2, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks. The frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. Terminal-v1 is `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, and authority is expired without retry. ADMIT-03 and Plan 262-03 remain blocked; a developer decision is required.
-Last activity: 2026-08-10 — Completed the read-only route-ordinal-5 verification with blocked test/privacy classes and an immutable stopped fresh 0/0 terminal.
+Plan: 26 of 33
+Status: Plans 262-21 through 262-31 are executed; Plans 262-32 and 262-33 are planned as the developer-selected offline diagnostic successor. Plan 262-32 may repair only the two test harnesses and freeze source-only A6; Plan 262-33 may only prove exact detached A6 and synchronize tracking. No B6, route 6, or live authority is authorized. Terminal-v1 remains `calibration_stopped`, reproduction:v10 is absent at fresh 0/0, authority is expired without retry, and ADMIT-03 plus Plan 262-03 remain blocked pending a later explicit developer decision.
+Last activity: 2026-08-10 — Planned the two-gate offline diagnostic successor without changing the stopped route or admission authority.
 
-Progress: [████████░░] 84%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
-**Current milestone:** 26 of 31 Phase 262 plans executed. Plan 262-31 independently confirmed blocked frozen tests and a route-ordinal-5 `calibration_stopped` terminal with reproduction:v10 absent at fresh 0/540. ADMIT-03 remains blocked pending a developer decision.
+**Current milestone:** 26 of 33 Phase 262 plans executed. Plans 262-32/33 are planned for test-only A6 repair and detached read-only proof; route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted, and ADMIT-03 remains blocked pending a later explicit developer decision.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -140,6 +140,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Keep reproduction:v10 and its marker absent, seal terminal-v1 as `calibration_stopped`, and expire the Plan-262-30 authority without retry, repair, resume, or partial reuse.
 - [Phase 262]: Treat Plan 262-31 as a completed fail-closed verification: A5/B5 custody, protocol, typecheck, isolated boundaries, cleanup, no-drift, terminal, and counts pass, while the frozen route and focused privacy-bearing selectors are blocked without repair or retry.
 - [Phase 262]: Keep ADMIT-03 and Plan 262-03 blocked on the immutable `calibration_stopped` fresh 0/0 route; require a developer decision before any separately authorized successor or dependency revision.
+- [Phase 262]: The developer selected only the offline diagnostic successor: Plan 262-32 repairs the two test harnesses and freezes reviewed source-only A6; Plan 262-33 independently proves exact detached A6 read-only. No B6, route ordinal 6, or live authority is authorized.
+- [Phase 262]: A green A6 closes only the Plan 262-31 offline selector/privacy proof block. Plan 262-03 depends on Plan 262-33 plus a later explicit developer decision because ADMIT-03 remains unmet.
 
 ### Pending Todos
 
@@ -173,6 +175,8 @@ None.
 - ADMIT-03 remains blocked: Plan 262-30 terminal-v1 is `calibration_stopped`; calibration:v9 has eight charged/launched/terminal attempts across four shards and zero accepted cells, while reproduction:v10 and its marker are absent at 0/540.
 - Plan 262-31 frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors are blocked. They cannot be repaired, retried, or waived inside the read-only verification plan.
 - Plan 262-30 authority is expired and cannot be retried, repaired, resumed, or partially reused. The next action is a developer decision on a separately planned successor, dependency revision that preserves ADMIT-03 as unmet, or milestone stop.
+- Plans 262-32 and 262-33 are authorized only for offline test-harness repair and detached proof. They cannot create or infer a replacement live route, authorization literal, writer, preflight, calibration, reproduction, or accepted evidence.
+- Plan 262-03 remains blocked after the offline successor unless a later explicit developer decision supplies separately authorized evidence satisfying ADMIT-03; an offline pass is not that evidence.
 - Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied.
 
 ## Deferred Items
@@ -186,7 +190,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-10T19:36:35Z
-Stopped at: Completed 262-31-PLAN.md; blocked verdict requires a developer decision
+Last session: 2026-08-10T21:13:17Z
+Stopped at: Planned 262-32/33 offline diagnostic successor; Plan 262-32 is next
 Resume file: None
-Next command: None until a developer decision. Do not retry Plan 262-30, repair or reinterpret the blocked proof, or begin Plan 262-03.
+Next command: Execute Phase 262 beginning with Plan 262-32. Do not retry Plan 262-30, create a live successor, or begin Plan 262-03.
