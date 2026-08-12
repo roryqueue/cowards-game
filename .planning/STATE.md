@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-35-PLAN.md
-last_updated: "2026-08-12T21:47:34.819Z"
+stopped_at: Completed 262-36-PLAN.md
+last_updated: "2026-08-12T21:57:55.167Z"
 last_activity: 2026-08-12
-last_activity_desc: Plan 262-35 completed; non-authorizing study policy is ready while admission remains blocked
+last_activity_desc: Plan 262-36 completed; profile-neutral gates and claims are frozen while admission remains blocked
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 35
-  completed_plans: 30
-  percent: 86
+  completed_plans: 31
+  percent: 89
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","next_action":"262-36","total_plans":35,"completed_plans":30,"active_successors":["262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","measurement_policy_root":"sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95","next_action":"262-37","total_plans":35,"completed_plans":31,"active_successors":["262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — EXECUTING
-Plan: 31 of 35
+Plan: 32 of 35
 Status: Ready to execute
-Last activity: 2026-08-12 — Plan 262-35 completed; non-authorizing study policy is ready while admission remains blocked
+Last activity: 2026-08-12 — Plan 262-36 completed; profile-neutral gates and claims are frozen while admission remains blocked
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
-**Current milestone:** 30 of 35 active executable Phase 262 plans completed. Plan 262-35 freezes a ready non-authorizing study/opportunity/accounting policy while granting no downstream authority. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet.
+**Current milestone:** 31 of 35 active executable Phase 262 plans completed. Plan 262-36 freezes profile-neutral exact-denominator gates, orthogonal reports, and bounded oracle-relative claims while granting no downstream authority. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -74,6 +74,7 @@ Progress: [█████████░] 86%
 | Phase 262 P29 | 10min | 3 tasks | 5 files |
 | Phase 262 P34 | 7min | 2 tasks | 5 files |
 | Phase 262 P35 | 9min | 2 tasks | 3 files |
+| Phase 262 P36 | 7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Keep fixed-policy transfer mechanically secondary-screening-only and ineligible for primary evidence or finalist selection. — Prevents screening evidence from becoming primary or selection authority.
 - [Phase 262]: Represent every resource as a distinct bounded opportunity dimension; no fungible aggregate compute scalar exists. — Preserves structural equal-opportunity accounting across resource classes.
 - [Phase 262]: Make policy readiness explicit while retaining blocked admission, unmet custody, and false downstream authority fields. — Policy readiness cannot satisfy ADMIT-03 or SEAL-01.
+- [Phase 262]: Use activation-prompt starting values unless an exact bounded profile-neutral calibration replacement passes every denominator and root check. — Stopped-route and later empirical outcomes cannot tune the frozen policy.
+- [Phase 262]: Keep process, current-rules, formation, and holdout states orthogonal through an exhaustive 16-tuple grammar. — Honest empirical failure and contamination must remain independently reportable.
+- [Phase 262]: Keep Advanced-library evidence regression-only and every robustness claim oracle-relative with named frozen scope. — Regression fixtures cannot establish balance or robustness.
 
 ### Pending Todos
 
@@ -159,7 +163,7 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 262 must freeze exact denominators, structural work units, budgets, retry/burn rules, named custody, contamination response, and report logic before tuning.
+- Phase 262 has frozen exact denominators, structural work units, budgets, retry/burn rules, and report logic; profile-neutral containment/classifier policy and genuine named custody remain outstanding before any tuning authority can exist.
 - Any failure of v1.37 admission, evidence completeness, provenance, reproducibility, custody, or information integrity is a hard stop rather than an empirical result.
 - Formation materialization remains blocked until Phase 266 emits a valid root; a process-valid current-rules empirical failure may still proceed under the original contract.
 - Holdout contamination or unproved cross-branch compute equality invalidates the comparison and blocks successful release closure.
@@ -188,7 +192,7 @@ None.
 - Plans 262-32 and 262-33 are authorized only for offline test-harness repair and detached proof. They cannot create or infer a replacement live route, authorization literal, writer, preflight, calibration, reproduction, or accepted evidence.
 - Plan 262-03 remains a dormant checkpoint after the offline successor; an offline pass is not ADMIT-03 evidence, and every checkpoint option routes to `$gsd-plan-phase 262` rather than implementation.
 - Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied.
-- Plan 262-34 is complete; Plans 262-35..40 remain planning-only active successors. The current state grants no live route, retry, candidate-search, Phase 263, formation, or production authority; Plan 262-40 remains blocking without a mechanically valid authenticated custody handoff plus genuine human-confirmed separation of duties. The dormant 262-41 activation contract is not executable or index-discoverable.
+- Plans 262-34 through 262-36 are complete; Plans 262-37..40 remain active non-authorizing successors. The current state grants no live route, retry, candidate-search, Phase 263, formation, holdout, or production authority; Plan 262-40 remains blocking without a mechanically valid authenticated custody handoff plus genuine human-confirmed separation of duties. The dormant 262-41 activation contract is not executable or index-discoverable.
 - The frozen replay manifest's unreachable commit is a separate tooling dependency. It may not be repaired, substituted, waived, or credited as Phase 262 closure by this dependency revision.
 
 ## Deferred Items
@@ -202,7 +206,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-12T21:47:34.807Z
-Stopped at: Completed 262-35-PLAN.md
+Last session: 2026-08-12T21:57:55.155Z
+Stopped at: Completed 262-36-PLAN.md
 Resume file: None
-Next command: Execute only the active successor graph beginning at Plan 262-36. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.
+Next command: Execute only the active successor graph beginning at Plan 262-37. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.
