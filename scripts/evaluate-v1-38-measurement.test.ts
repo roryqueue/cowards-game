@@ -7,7 +7,7 @@ import {
 const HASH_A = `sha256:${"a".repeat(64)}` as const
 const HASH_B = `sha256:${"b".repeat(64)}` as const
 const HASH_C = `sha256:${"c".repeat(64)}` as const
-const HASH_D = `sha256:${"d".repeat(64)}` as const
+const HASH_D = "sha256:6d0fdbfa92179e0a3a2d6024c1171d5f066da8f1db6e524358967551dc226134" as const
 const HASH_E = `sha256:${"e".repeat(64)}` as const
 
 const fallbackInput = () => ({
