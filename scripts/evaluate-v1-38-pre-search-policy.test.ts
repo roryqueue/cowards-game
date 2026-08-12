@@ -55,7 +55,7 @@ describe("Phase 262 pre-search policy root", () => {
       authorityExpired: true,
       noRetry: true,
     })
-    expect(result.toolingDependency).toBe("frozen_replay_commit_unreachable")
+    expect(result.tooling_dependency).toBe("frozen_replay_commit_unreachable")
     expect(result.policyRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
   })
 
@@ -69,12 +69,17 @@ describe("Phase 262 pre-search policy root", () => {
       supersessionPath: ".planning/artifacts/v1.38-phase-262-plan-supersession.json",
       selectedPredecessorAdmissionRoot: "sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c",
       supersessionManifestRoot: "sha256:5a98bda88cbd2316faa0279d6a22e1f0c1cee3439a3e5f997ea31f217832c8a6",
+      replayTestPath: "packages/replay/src/historical-v1-4.test.ts",
+      replayManifestPath: "packages/replay/src/fixtures/historical-v1-4-chronicle-manifest.json",
+      frozenReplayCommit: "4fab0afc058232f37ba11506b5d04a1d59b2f4e0",
     }))
     for (const key of [
       "generatorCheckerSha256",
       "testSha256",
       "authoritySha256",
       "supersessionArtifactSha256",
+      "replayTestSha256",
+      "replayManifestSha256",
     ] as const) expect(result.sourceBindings[key]).toMatch(/^sha256:[0-9a-f]{64}$/u)
   })
 
@@ -110,7 +115,7 @@ describe("Phase 262 pre-search policy root", () => {
     const input = {
       components: exact.components,
       sourceBindings: exact.sourceBindings,
-      toolingDependency: exact.toolingDependency,
+      tooling_dependency: exact.tooling_dependency,
     }
     for (const forbidden of [
       { route5Admission: true },
@@ -135,17 +140,17 @@ describe("Phase 262 pre-search policy root", () => {
     const changed = buildV138PreSearchPolicyRoot({
       components: mutated,
       sourceBindings: first.sourceBindings,
-      toolingDependency: first.toolingDependency,
+      tooling_dependency: first.tooling_dependency,
     })
     expect(changed.policyRoot).not.toBe(first.policyRoot)
 
     expect(JSON.stringify(first)).not.toMatch(/StrategyMemory|SoldierMemory|objective payload|DATABASE_URL|\/Users\/|private path|holdout preimage/iu)
   })
 
-  it("matches the committed artifact exactly when present", () => {
+  it("matches the committed artifact exactly and check mode rejects prerequisite drift", () => {
     const expected = renderV138PreSearchPolicyRoot(generateV138PreSearchPolicyRoot(repoRoot))
     const artifactPath = path.join(repoRoot, ".planning/artifacts/v1.38-pre-search-policy-root.json")
-    expect(() => readFileSync(artifactPath, "utf8")).toThrow()
+    expect(readFileSync(artifactPath, "utf8")).toBe(expected)
     expect(expected.endsWith("\n")).toBe(true)
   })
 })

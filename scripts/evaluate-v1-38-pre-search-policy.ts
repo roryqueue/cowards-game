@@ -1,5 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { Buffer } from "node:buffer"
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -23,6 +24,9 @@ const supersessionPath = ".planning/artifacts/v1.38-phase-262-plan-supersession.
 const generatorCheckerPath = "scripts/evaluate-v1-38-pre-search-policy.ts"
 const testPath = "scripts/evaluate-v1-38-pre-search-policy.test.ts"
 const authorityPath = "scripts/lib/v1-38-policy-authority.ts"
+const replayTestPath = "packages/replay/src/historical-v1-4.test.ts"
+const replayManifestPath = "packages/replay/src/fixtures/historical-v1-4-chronicle-manifest.json"
+const frozenReplayCommit = "4fab0afc058232f37ba11506b5d04a1d59b2f4e0" as const
 const SHA256 = /^sha256:[0-9a-f]{64}$/u
 
 const componentSpecifications = Object.freeze([
@@ -110,6 +114,11 @@ export interface V138PreSearchPolicySourceBindings {
   readonly supersessionPath: typeof supersessionPath
   readonly supersessionArtifactSha256: Sha256
   readonly supersessionManifestRoot: Sha256
+  readonly replayTestPath: typeof replayTestPath
+  readonly replayTestSha256: Sha256
+  readonly replayManifestPath: typeof replayManifestPath
+  readonly replayManifestSha256: Sha256
+  readonly frozenReplayCommit: typeof frozenReplayCommit
 }
 
 export interface V138PreSearchPolicyRoot {
@@ -150,7 +159,7 @@ export interface V138PreSearchPolicyRoot {
     noRetry: true
   }>
   readonly sourceBindings: V138PreSearchPolicySourceBindings
-  readonly toolingDependency: "frozen_replay_commit_unreachable"
+  readonly tooling_dependency: "frozen_replay_commit_unreachable"
   readonly policyRoot: Sha256
 }
 
@@ -175,6 +184,11 @@ const sourceBindingKeys = Object.freeze([
   "supersessionPath",
   "supersessionArtifactSha256",
   "supersessionManifestRoot",
+  "replayTestPath",
+  "replayTestSha256",
+  "replayManifestPath",
+  "replayManifestSha256",
+  "frozenReplayCommit",
 ] as const)
 const rootKeys = Object.freeze([
   "schemaVersion",
@@ -190,7 +204,7 @@ const rootKeys = Object.freeze([
   "components",
   "predecessor",
   "sourceBindings",
-  "toolingDependency",
+  "tooling_dependency",
   "policyRoot",
 ] as const)
 
@@ -226,8 +240,11 @@ const validateSourceBindings = (value: unknown): V138PreSearchPolicySourceBindin
     bindings.authorityPath !== authorityPath || bindings.supersessionPath !== supersessionPath ||
     bindings.selectedPredecessorAdmissionRoot !== V138_PREDECESSOR_AUTHORITY.admissionRoot ||
     bindings.supersessionManifestRoot !== "sha256:5a98bda88cbd2316faa0279d6a22e1f0c1cee3439a3e5f997ea31f217832c8a6" ||
+    bindings.replayTestPath !== replayTestPath || bindings.replayManifestPath !== replayManifestPath ||
+    bindings.frozenReplayCommit !== frozenReplayCommit ||
     [bindings.generatorCheckerSha256, bindings.testSha256, bindings.authoritySha256,
-      bindings.supersessionArtifactSha256, bindings.supersessionManifestRoot]
+      bindings.supersessionArtifactSha256, bindings.supersessionManifestRoot,
+      bindings.replayTestSha256, bindings.replayManifestSha256]
       .some((entry) => typeof entry !== "string" || !SHA256.test(entry))) {
     throw new TypeError("V138_PRE_SEARCH_POLICY_SOURCE_BINDINGS_INVALID")
   }
@@ -237,16 +254,16 @@ const validateSourceBindings = (value: unknown): V138PreSearchPolicySourceBindin
 export interface V138PreSearchPolicyBuildInput {
   readonly components: readonly V138PreSearchPolicyComponent[]
   readonly sourceBindings: V138PreSearchPolicySourceBindings
-  readonly toolingDependency: "frozen_replay_commit_unreachable"
+  readonly tooling_dependency: "frozen_replay_commit_unreachable"
 }
 
 export const buildV138PreSearchPolicyRoot = (input: V138PreSearchPolicyBuildInput): V138PreSearchPolicyRoot => {
-  if (!isRecord(input) || !exactKeys(input, ["components", "sourceBindings", "toolingDependency"])) {
+  if (!isRecord(input) || !exactKeys(input, ["components", "sourceBindings", "tooling_dependency"])) {
     throw new TypeError("V138_PRE_SEARCH_POLICY_INPUT_INVALID")
   }
   const components = validateComponents(input.components)
   const sourceBindings = validateSourceBindings(input.sourceBindings)
-  if (input.toolingDependency !== "frozen_replay_commit_unreachable") {
+  if (input.tooling_dependency !== "frozen_replay_commit_unreachable") {
     throw new TypeError("V138_PRE_SEARCH_POLICY_INPUT_INVALID")
   }
   const downstreamAuthority = evaluateV138DownstreamAuthority({
@@ -296,7 +313,7 @@ export const buildV138PreSearchPolicyRoot = (input: V138PreSearchPolicyBuildInpu
       noRetry: V138_CURRENT_STOPPED_BRANCH.noRetry,
     }),
     sourceBindings: Object.freeze({ ...sourceBindings }),
-    toolingDependency: input.toolingDependency,
+    tooling_dependency: input.tooling_dependency,
   }
   const result = Object.freeze({ ...frame, policyRoot: rootIdentity(frame) })
   assertPublicOutputLeakSafe(result, "v1.38 pre-search policy root")
@@ -370,9 +387,20 @@ export const generateV138PreSearchPolicyRoot = (repoRoot = defaultRepoRoot): V13
     throw new TypeError("V138_PRE_SEARCH_POLICY_SUPERSESSION_INVALID")
   }
   const tooling = asRecord(supersession.value.toolingDependency, "V138_PRE_SEARCH_POLICY_TOOLING_INVALID")
+  const replayTestBytes = readFileSync(path.join(repoRoot, replayTestPath))
+  const replayManifestBytes = readFileSync(path.join(repoRoot, replayManifestPath))
+  const replayManifest = asRecord(JSON.parse(replayManifestBytes.toString("utf8")), "V138_PRE_SEARCH_POLICY_TOOLING_INVALID")
+  const frozenSources = asRecord(replayManifest.frozenSources, "V138_PRE_SEARCH_POLICY_TOOLING_INVALID")
+  const replayCommitProbe = spawnSync("git", ["cat-file", "-e", `${frozenReplayCommit}^{commit}`], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  })
   if (tooling.tooling_dependency !== "frozen_replay_commit_unreachable" ||
-    tooling.frozenCommit !== "4fab0afc058232f37ba11506b5d04a1d59b2f4e0" ||
-    tooling.substitutionAllowed !== false || tooling.replayManifestMutationAllowed !== false) {
+    tooling.frozenCommit !== frozenReplayCommit || tooling.substitutionAllowed !== false ||
+    tooling.replayManifestMutationAllowed !== false || frozenSources.commit !== frozenReplayCommit ||
+    !replayTestBytes.toString("utf8").includes(`const expectedFrozenSourceCommit =\n  "${frozenReplayCommit}" as const`) ||
+    replayCommitProbe.status === 0) {
     throw new TypeError("V138_PRE_SEARCH_POLICY_TOOLING_INVALID")
   }
   return buildV138PreSearchPolicyRoot({
@@ -388,8 +416,13 @@ export const generateV138PreSearchPolicyRoot = (repoRoot = defaultRepoRoot): V13
       supersessionPath,
       supersessionArtifactSha256: sha256(supersession.bytes),
       supersessionManifestRoot: supersession.value.manifestRoot as Sha256,
+      replayTestPath,
+      replayTestSha256: sha256(replayTestBytes),
+      replayManifestPath,
+      replayManifestSha256: sha256(replayManifestBytes),
+      frozenReplayCommit,
     },
-    toolingDependency: "frozen_replay_commit_unreachable",
+    tooling_dependency: "frozen_replay_commit_unreachable",
   })
 }
 
@@ -398,7 +431,7 @@ export const validateV138PreSearchPolicyRoot = (input: unknown): V138PreSearchPo
   if (!exactKeys(value, rootKeys) || value.schemaVersion !== "v1.38-pre-search-policy-root-v1" ||
     value.rootKind !== "pre_search_policy_root" || value.identityDomain !== "cowards-game:v1.38:pre-search-policy-root:v1" ||
     value.policyStatus !== "ready" || value.matrixAdmissionStatus !== "blocked" || value.custodyStatus !== "unavailable" ||
-    value.downstreamAuthority !== "denied" || value.toolingDependency !== "frozen_replay_commit_unreachable") {
+    value.downstreamAuthority !== "denied" || value.tooling_dependency !== "frozen_replay_commit_unreachable") {
     throw new TypeError("V138_PRE_SEARCH_POLICY_ROOT_INVALID")
   }
   const denials = asRecord(value.denials, "V138_PRE_SEARCH_POLICY_DENIALS_INVALID")
@@ -467,7 +500,7 @@ const publicSummary = (result: V138PreSearchPolicyRoot) => Object.freeze({
   downstreamAuthority: result.downstreamAuthority,
   phaseStatus: result.phaseStatus,
   denials: result.denials,
-  toolingDependency: result.toolingDependency,
+  tooling_dependency: result.tooling_dependency,
 })
 
 const isDirectExecution = process.argv[1] !== undefined &&
