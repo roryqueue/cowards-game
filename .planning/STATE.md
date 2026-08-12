@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-39-PLAN.md
+stopped_at: Plan 262-40 genuine external-custody checkpoint
 last_updated: "2026-08-12T22:35:41.307Z"
 last_activity: 2026-08-12
-last_activity_desc: Plan 262-39 completed; the non-authorizing pre-search policy root is frozen while ADMIT-03 and SEAL-01 remain blocked
+last_activity_desc: Plan 262-40 preflight passed and stopped fail-closed because no authenticated external custody handoff is available
 progress:
   total_phases: 9
   completed_phases: 0
@@ -19,7 +19,7 @@ progress:
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","measurement_policy_root":"sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95","protocol_policy_sha256":"34cec9aa1efc317cf07a33b6ff6cc31dd9bcc112625b0ff8fc1961fdda823cf3","containment_policy_sha256":"4bdc3e87dc91ed67cc946be448eabd6d2a0bd08e0ec2f73f55b265ce6b9ad504","next_action":"262-40","total_plans":35,"completed_plans":34,"active_successors":["262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","measurement_policy_root":"sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95","protocol_policy_sha256":"34cec9aa1efc317cf07a33b6ff6cc31dd9bcc112625b0ff8fc1961fdda823cf3","containment_policy_sha256":"4bdc3e87dc91ed67cc946be448eabd6d2a0bd08e0ec2f73f55b265ce6b9ad504","next_action":"external_custody_handoff","checkpoint":"262-40-human-action","total_plans":35,"completed_plans":34,"active_successors":["262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,9 +31,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — EXECUTING
-Plan: 35 of 35
-Status: Ready to execute
-Last activity: 2026-08-12 — Plan 262-39 completed; the non-authorizing pre-search policy root is frozen while ADMIT-03 and SEAL-01 remain blocked
+Plan: 34 of 35 complete; Plan 262-40 at blocking human-action checkpoint
+Status: Mechanical custody preflight passed, but `COWARDS_V1_38_AUTHORIZED_CUSTODY_HANDOFF` is unset and no approved external identity/provenance verifier is available. No public custody reference or SEAL-01 credit was emitted.
+Last activity: 2026-08-12 — Plan 262-40 stopped fail-closed at the genuine external-custody checkpoint
 
 Progress: [██████████] 97%
 
