@@ -16,6 +16,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   afterAll,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -577,9 +578,6 @@ const prepareLegacyRouteFixtures = async () => {
   if (syntheticRoot !== "") return
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
-  sealedRouteRoot = prepareSealedRouteBase()
-  routedV8TemplateRoot = (await prepareRoutedV8Template()).tempRoot
-  sealedRouteV5Root = prepareSealedRouteV5()
 }
 
 beforeEach(async ({ task }) => {
@@ -589,18 +587,6 @@ beforeEach(async ({ task }) => {
 
 afterAll(() => {
   if (syntheticRoot !== "") rmSync(syntheticRoot, { recursive: true, force: true })
-  if (sealedRouteRoot !== "") rmSync(sealedRouteRoot,
-    { recursive: true, force: true })
-  if (routedV8TemplateRoot !== "") rmSync(routedV8TemplateRoot,
-    { recursive: true, force: true })
-  if (sealedRouteV5Root !== "") rmSync(sealedRouteV5Root,
-    { recursive: true, force: true })
-  if (routedV9ContextTemplateRoot !== "") rmSync(routedV9ContextTemplateRoot,
-    { recursive: true, force: true })
-  if (routedV9PreflightTemplateRoot !== "") rmSync(
-    routedV9PreflightTemplateRoot, { recursive: true, force: true })
-  if (routedV9CalibrationTemplateRoot !== "") rmSync(
-    routedV9CalibrationTemplateRoot, { recursive: true, force: true })
 })
 
 describe.sequential("v1.38 successor temporal checkers", () => {
@@ -730,6 +716,20 @@ describe.sequential("v1.38 successor temporal checkers", () => {
 })
 
 describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
+  beforeAll(async () => {
+    sealedRouteRoot = prepareSealedRouteBase()
+    routedV8TemplateRoot = (await prepareRoutedV8Template()).tempRoot
+  }, 900_000)
+
+  afterAll(() => {
+    if (routedV8TemplateRoot !== "") rmSync(routedV8TemplateRoot,
+      { recursive: true, force: true })
+    if (sealedRouteRoot !== "") rmSync(sealedRouteRoot,
+      { recursive: true, force: true })
+    routedV8TemplateRoot = ""
+    sealedRouteRoot = ""
+  })
+
   it("keeps marker fabrication and route bypasses out of the public API", () => {
     expect("consumeV138Plan26225Stage" in v138Reproduction).toBe(false)
     expect(v138Reproduction.writeV138Plan26225TerminalV1.length).toBe(5)
@@ -1185,10 +1185,26 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
 describe.sequential("v1.38 route ordinal 5 offline contract", () => {
   beforeEach(({ task }) => {
     if (task.name.endsWith(PLAN_262_32_ROUTE_CASE_NAME)) return
+    if (sealedRouteV5Root === "") sealedRouteV5Root = prepareSealedRouteV5()
     if (routedV9ContextTemplateRoot === "") {
       routedV9ContextTemplateRoot = prepareContextV9Template().tempRoot
     }
   }, 900_000)
+
+  afterAll(() => {
+    if (routedV9CalibrationTemplateRoot !== "") rmSync(
+      routedV9CalibrationTemplateRoot, { recursive: true, force: true })
+    if (routedV9PreflightTemplateRoot !== "") rmSync(
+      routedV9PreflightTemplateRoot, { recursive: true, force: true })
+    if (routedV9ContextTemplateRoot !== "") rmSync(
+      routedV9ContextTemplateRoot, { recursive: true, force: true })
+    if (sealedRouteV5Root !== "") rmSync(sealedRouteV5Root,
+      { recursive: true, force: true })
+    routedV9CalibrationTemplateRoot = ""
+    routedV9PreflightTemplateRoot = ""
+    routedV9ContextTemplateRoot = ""
+    sealedRouteV5Root = ""
+  })
 
   beforeEach(async ({ task }) => {
     if (task.name.endsWith(PLAN_262_32_ROUTE_CASE_NAME)) return
