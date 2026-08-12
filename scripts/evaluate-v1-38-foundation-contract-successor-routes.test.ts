@@ -16,7 +16,6 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   afterAll,
-  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -66,6 +65,7 @@ import {
   V138_PLAN_262_30_DISPOSITIONS,
   buildV138Plan26230TerminalV1,
   checkV138Plan26225RouteContract,
+  checkV138Plan26230RouteContract,
   checkV138Plan26225PrerequisiteRoots,
   dispatchV138CurrentMatrixDirectEntry,
   buildV138ExecutionContextV8Receipt,
@@ -112,25 +112,151 @@ let routedV9ContextTemplateRoot = ""
 let routedV9PreflightTemplateRoot = ""
 let routedV9CalibrationTemplateRoot = ""
 const sourceA5 = "243c9340bc7afea89c10f21b7c0e89423249826f"
-const sourceB5 = "a0a37e8ca8420faa42cb57bdb5a210779d2fff23"
 
 type Plan26232RoutePhaseState = "pre_live" | "post_live"
+type Plan26232RouteTerminalState = Readonly<{
+  disposition: "calibration_stopped"
+  chargedCalibrationAttemptCount: 8
+  chargedReproductionAttemptCount: 0
+  acceptedCellCount: 0
+  completeCleanup: true
+  authorityExpired: true
+  noRetry: true
+  partialAcceptedEvidenceReusable: false
+}>
+type Plan26232RouteCalibrationState = Readonly<{
+  chargedAttemptCount: 8
+  childLaunchCount: 8
+  terminalOutcomeCount: 8
+  calibrationShardCount: 4
+  systemFailureCount: 2
+  cancelledCount: 6
+  cleanupCompleteCount: 8
+  acceptedCellCount: 0
+}>
 type Plan26232RouteStateFixture = Readonly<{
-  phase: Plan26232RoutePhaseState
+  phase: Plan26232RoutePhaseState | string
   repoRoot: string
+  destinationPresence: readonly boolean[]
+  terminal: Plan26232RouteTerminalState | null
+  calibration: Plan26232RouteCalibrationState | null
   cleanup: () => void
 }>
 
 const preparePlan26232RouteStateFixture = (
   phase: Plan26232RoutePhaseState,
-): Plan26232RouteStateFixture => ({ phase, repoRoot, cleanup: () => undefined })
+): Plan26232RouteStateFixture => {
+  if (phase === "pre_live") {
+    const ownedRoot = mkdtempSync(path.join(tmpdir(), "plan-262-32-pre-live-"))
+    mkdirSync(path.resolve(ownedRoot, ".planning/artifacts"), {
+      recursive: true,
+    })
+    return Object.freeze({
+      phase,
+      repoRoot: ownedRoot,
+      destinationPresence: Object.freeze(
+        V138_PLAN_262_30_FRESH_DESTINATIONS.map((repoPath) =>
+          existsSync(path.resolve(ownedRoot, repoPath))),
+      ),
+      terminal: null,
+      calibration: null,
+      cleanup: () => rmSync(ownedRoot, { recursive: true, force: true }),
+    })
+  }
+  checkV138Plan26230RouteContract(V138_PLAN_262_30_ROUTE_CONTRACT)
+  const checkedTerminal = JSON.parse(readFileSync(path.resolve(
+    repoRoot,
+    V138_PLAN_262_30_FRESH_DESTINATIONS[4],
+  ), "utf8")) as Plan26232RouteTerminalState
+  const calibration = JSON.parse(readFileSync(path.resolve(
+    repoRoot,
+    V138_PLAN_262_30_FRESH_DESTINATIONS[2],
+  ), "utf8")) as {
+    chargedAttemptCount: number
+    childLaunchCount: number
+    terminalOutcomeCount: number
+    calibrationShardCount: number
+    acceptedCellCount: number
+    attempts: Array<{ classification: string; cleanupComplete: boolean }>
+  }
+  return Object.freeze({
+    phase,
+    repoRoot,
+    destinationPresence: Object.freeze(
+      V138_PLAN_262_30_FRESH_DESTINATIONS.map((repoPath) =>
+        existsSync(path.resolve(repoRoot, repoPath))),
+    ),
+    terminal: Object.freeze({
+      disposition: checkedTerminal.disposition,
+      chargedCalibrationAttemptCount:
+        checkedTerminal.chargedCalibrationAttemptCount,
+      chargedReproductionAttemptCount:
+        checkedTerminal.chargedReproductionAttemptCount,
+      acceptedCellCount: checkedTerminal.acceptedCellCount,
+      completeCleanup: checkedTerminal.completeCleanup,
+      authorityExpired: checkedTerminal.authorityExpired,
+      noRetry: checkedTerminal.noRetry,
+      partialAcceptedEvidenceReusable:
+        checkedTerminal.partialAcceptedEvidenceReusable,
+    }) as Plan26232RouteTerminalState,
+    calibration: Object.freeze({
+      chargedAttemptCount: calibration.chargedAttemptCount,
+      childLaunchCount: calibration.childLaunchCount,
+      terminalOutcomeCount: calibration.terminalOutcomeCount,
+      calibrationShardCount: calibration.calibrationShardCount,
+      systemFailureCount: calibration.attempts.filter((attempt) =>
+        attempt.classification === "system_failure").length,
+      cancelledCount: calibration.attempts.filter((attempt) =>
+        attempt.classification === "cancelled").length,
+      cleanupCompleteCount: calibration.attempts.filter((attempt) =>
+        attempt.cleanupComplete).length,
+      acceptedCellCount: calibration.acceptedCellCount,
+    }) as Plan26232RouteCalibrationState,
+    cleanup: () => undefined,
+  })
+}
 
 const assertPlan26232RouteState = (
-  _fixture: Plan26232RouteStateFixture,
+  fixture: Plan26232RouteStateFixture,
 ): void => {
-  const error = new Error("PLAN_262_32_EXPLICIT_ROUTE_PHASE_FIXTURE_RED")
-  error.stack = `${error.name}: ${error.message}\n    at assertPlan26232RouteState (${fileURLToPath(import.meta.url)}:1:1)`
-  throw error
+  const fail = (): never => {
+    throw new TypeError("PLAN_262_32_ROUTE_PHASE_STATE_INVALID")
+  }
+  if (fixture === null || typeof fixture !== "object" ||
+    JSON.stringify(Object.keys(fixture).sort()) !== JSON.stringify([
+      "calibration", "cleanup", "destinationPresence", "phase", "repoRoot",
+      "terminal",
+    ]) || !path.isAbsolute(fixture.repoRoot) ||
+    fixture.destinationPresence.length !==
+      V138_PLAN_262_30_FRESH_DESTINATIONS.length) fail()
+  if (fixture.phase === "pre_live") {
+    if (fixture.destinationPresence.some(Boolean) || fixture.terminal !== null ||
+      fixture.calibration !== null) fail()
+    return
+  }
+  if (fixture.phase !== "post_live") fail()
+  checkV138Plan26230RouteContract(V138_PLAN_262_30_ROUTE_CONTRACT)
+  if (JSON.stringify(fixture.destinationPresence) !== JSON.stringify([
+    true, true, true, false, true, true, true, false,
+  ]) || JSON.stringify(fixture.terminal) !== JSON.stringify({
+    disposition: "calibration_stopped",
+    chargedCalibrationAttemptCount: 8,
+    chargedReproductionAttemptCount: 0,
+    acceptedCellCount: 0,
+    completeCleanup: true,
+    authorityExpired: true,
+    noRetry: true,
+    partialAcceptedEvidenceReusable: false,
+  }) || JSON.stringify(fixture.calibration) !== JSON.stringify({
+    chargedAttemptCount: 8,
+    childLaunchCount: 8,
+    terminalOutcomeCount: 8,
+    calibrationShardCount: 4,
+    systemFailureCount: 2,
+    cancelledCount: 6,
+    cleanupCompleteCount: 8,
+    acceptedCellCount: 0,
+  })) fail()
 }
 
 const canonicalManifest = (value: unknown): string => {
@@ -457,7 +583,7 @@ const prepareLegacyRouteFixtures = async () => {
 }
 
 beforeEach(async ({ task }) => {
-  if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
+  if (task.name.endsWith(PLAN_262_32_ROUTE_CASE_NAME)) return
   await prepareLegacyRouteFixtures()
 }, 900_000)
 
@@ -1058,14 +1184,14 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
 
 describe.sequential("v1.38 route ordinal 5 offline contract", () => {
   beforeEach(({ task }) => {
-    if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
+    if (task.name.endsWith(PLAN_262_32_ROUTE_CASE_NAME)) return
     if (routedV9ContextTemplateRoot === "") {
       routedV9ContextTemplateRoot = prepareContextV9Template().tempRoot
     }
   }, 900_000)
 
   beforeEach(async ({ task }) => {
-    if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
+    if (task.name.endsWith(PLAN_262_32_ROUTE_CASE_NAME)) return
     if (routedV9PreflightTemplateRoot === "") {
       const fixture = prepareContextV9()
       await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
@@ -1078,7 +1204,7 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
   }, 900_000)
 
   beforeEach(async ({ task }) => {
-    if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
+    if (task.name.endsWith(PLAN_262_32_ROUTE_CASE_NAME)) return
     if (routedV9CalibrationTemplateRoot === "") {
       const fixture = prepareContextV9("preflight")
       await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
@@ -1500,13 +1626,47 @@ exec ${JSON.stringify(gitBinary)} "$@"
   it("freezes the noncolliding v5/v9/v10 route and exact policy constants", () => {
     const preLive = preparePlan26232RouteStateFixture("pre_live")
     const postLive = preparePlan26232RouteStateFixture("post_live")
+    const preLiveRoot = preLive.repoRoot
     try {
       assertPlan26232RouteState(preLive)
       assertPlan26232RouteState(postLive)
+      for (const mutation of [
+        { ...preLive, phase: "unknown" },
+        { ...preLive, destinationPresence: [
+          true, ...preLive.destinationPresence.slice(1),
+        ] },
+        { ...postLive, destinationPresence: postLive.destinationPresence.map(
+          (present, index) => index === 3 ? true : present,
+        ) },
+        { ...postLive, terminal: {
+          ...postLive.terminal!, disposition: "reproduction_passed",
+        } },
+        { ...postLive, terminal: {
+          ...postLive.terminal!, chargedCalibrationAttemptCount: 7,
+        } },
+        { ...postLive, terminal: {
+          ...postLive.terminal!, acceptedCellCount: 1,
+        } },
+        { ...postLive, terminal: {
+          ...postLive.terminal!, authorityExpired: false,
+        } },
+        { ...postLive, terminal: {
+          ...postLive.terminal!, noRetry: false,
+        } },
+        { ...postLive, calibration: {
+          ...postLive.calibration!, childLaunchCount: 7,
+        } },
+      ]) {
+        expect(() => assertPlan26232RouteState(
+          mutation as unknown as Plan26232RouteStateFixture,
+        ))
+          .toThrow("PLAN_262_32_ROUTE_PHASE_STATE_INVALID")
+      }
     } finally {
       preLive.cleanup()
       postLive.cleanup()
     }
+    expect(existsSync(preLiveRoot)).toBe(false)
     expect(V138_PLAN_262_30_ROUTE_CONTRACT).toEqual({
       schemaVersion: "v1.38-plan-262-30-route-contract-v1",
       routeOrdinal: 5,
@@ -1530,8 +1690,10 @@ exec ${JSON.stringify(gitBinary)} "$@"
       partialAcceptedEvidenceReusable: false,
     })
     expect(new Set(V138_PLAN_262_30_FRESH_DESTINATIONS).size).toBe(8)
-    expect(V138_PLAN_262_30_FRESH_DESTINATIONS.every((repoPath) =>
-      !existsSync(path.resolve(repoRoot, repoPath)))).toBe(true)
+    expect(preLive.destinationPresence.every((present) => !present)).toBe(true)
+    expect(postLive.destinationPresence).toEqual([
+      true, true, true, false, true, true, true, false,
+    ])
     expect(V138_PLAN_262_28_SOURCE_BASE5).toBe(
       "1cd79971145eff892f49aad928642b0d875fef53",
     )

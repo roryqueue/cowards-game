@@ -20,6 +20,7 @@ import {
 } from "node:fs"
 import {
   execFileSync,
+  spawnSync,
   type ChildProcessWithoutNullStreams,
 } from "node:child_process"
 import { tmpdir } from "node:os"
@@ -221,11 +222,57 @@ type Plan26232ImmutableGitFixture = Readonly<{
 }>
 
 const resolvePlan26232ImmutableGitFixture = (
-  _input: Plan26232ImmutableGitFixture,
+  input: Plan26232ImmutableGitFixture,
 ): Plan26232ImmutableGitFixture => {
-  const error = new Error("PLAN_262_32_DESCENDANT_IDENTITY_FIXTURE_RED")
-  error.stack = `${error.name}: ${error.message}\n    at resolvePlan26232ImmutableGitFixture (${fileURLToPath(import.meta.url)}:1:1)`
-  throw error
+  const fail = (): never => {
+    throw new TypeError("PLAN_262_32_IMMUTABLE_GIT_FIXTURE_INVALID")
+  }
+  if (input === null || typeof input !== "object" ||
+    JSON.stringify(Object.keys(input).sort()) !== JSON.stringify([
+      "changedPaths", "protectedBlobs", "repoRoot", "sourceA5",
+      "sourceA5Parent", "sourceA5Tree", "sourceBase5",
+    ])) fail()
+  const git = (args: readonly string[]): string => {
+    try {
+      return execFileSync("git", args, {
+        cwd: input.repoRoot,
+        encoding: "utf8",
+      }).trim()
+    } catch {
+      return fail()
+    }
+  }
+  const sourceBase5 = git(["rev-parse", `${input.sourceBase5}^{commit}`])
+  const sourceA5 = git(["rev-parse", `${input.sourceA5}^{commit}`])
+  const [tree = "", parents = ""] = git([
+    "show", "-s", "--format=%T%n%P", sourceA5,
+  ]).split("\n")
+  const changedPaths = git([
+    "diff", "--name-only", "--no-renames", sourceBase5, sourceA5, "--",
+  ]).split("\n").filter(Boolean).sort()
+  const expectedPaths = [...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5].sort()
+  const protectedBlobs = Object.fromEntries(expectedPaths.map((repoPath) => [
+    repoPath,
+    git(["rev-parse", `${sourceA5}:${repoPath}`]),
+  ]))
+  const descendant = spawnSync("git", [
+    "merge-base", "--is-ancestor", sourceA5, "HEAD",
+  ], { cwd: input.repoRoot }).status === 0
+  if (sourceBase5 !== PLAN_262_32_SOURCE_BASE5 ||
+    sourceA5 !== PLAN_262_32_A5_COMMIT ||
+    tree !== PLAN_262_32_A5_TREE ||
+    parents !== PLAN_262_32_A5_PARENT ||
+    input.sourceBase5 !== sourceBase5 || input.sourceA5 !== sourceA5 ||
+    input.sourceA5Tree !== tree || input.sourceA5Parent !== parents ||
+    JSON.stringify([...input.changedPaths].sort()) !==
+      JSON.stringify(expectedPaths) ||
+    JSON.stringify(changedPaths) !== JSON.stringify(expectedPaths) ||
+    JSON.stringify(input.protectedBlobs) !== JSON.stringify(protectedBlobs) ||
+    !descendant) fail()
+  return Object.freeze({ ...input,
+    changedPaths: Object.freeze([...input.changedPaths]),
+    protectedBlobs: Object.freeze({ ...input.protectedBlobs }),
+  })
 }
 const V138_REVIEWED_SOURCE_A_FIXTURE =
   "da4390513c48e795581a9b98069dcfa11d097cd0"
@@ -7557,7 +7604,7 @@ const terminalPlan26213Snapshot = () => ({
 
 describe("v1.38 matrix inline execution context v4", () => {
   it("matrix inline execution context v4 binds lean main ownership and terminal plan agents", () => {
-    resolvePlan26232ImmutableGitFixture({
+    const immutableFixture: Plan26232ImmutableGitFixture = {
       repoRoot,
       sourceBase5: PLAN_262_32_SOURCE_BASE5,
       sourceA5: PLAN_262_32_A5_COMMIT,
@@ -7571,7 +7618,33 @@ describe("v1.38 matrix inline execution context v4", () => {
         "scripts/lib/v1-38-current-matrix-reproduction.ts": "7d8b7320df3f5a065bbabbc6a94f8de15af717b3",
         "scripts/lib/v1-38-successor-source-seal.ts": "55093a8d4b1e425a2c29d5e6f44b9589bc88bacc",
       },
-    })
+    }
+    expect(resolvePlan26232ImmutableGitFixture(immutableFixture)).toEqual(
+      immutableFixture,
+    )
+    for (const mutation of [
+      { sourceA5: PLAN_262_32_A5_PARENT },
+      { sourceA5Tree: "0".repeat(40) },
+      { sourceA5Parent: "0".repeat(40) },
+      { changedPaths: immutableFixture.changedPaths.slice(1) },
+      { protectedBlobs: {
+        ...immutableFixture.protectedBlobs,
+        "scripts/evaluate-v1-38-foundation-contract.test.ts": "0".repeat(40),
+      } },
+    ]) {
+      expect(() => resolvePlan26232ImmutableGitFixture({
+        ...immutableFixture,
+        ...mutation,
+      })).toThrow("PLAN_262_32_IMMUTABLE_GIT_FIXTURE_INVALID")
+    }
+    expect(PLAN_262_32_FOCUSED_TEST_FULL_NAMES).toHaveLength(52)
+    expect(new Set(PLAN_262_32_FOCUSED_TEST_FULL_NAMES).size).toBe(52)
+    const focusedPattern = new RegExp(PLAN_262_32_FOCUSED_TEST_NAME_PATTERN)
+    expect(PLAN_262_32_FOCUSED_TEST_FULL_NAMES.every((name) =>
+      focusedPattern.test(name))).toBe(true)
+    expect(focusedPattern.test(
+      `${PLAN_262_32_FOCUSED_TEST_FULL_NAMES[0]} extra`,
+    )).toBe(false)
     const canonicalRepoRoot = "/Users/roryquinlan/runtime/cowards-game"
     if (repoRoot !== canonicalRepoRoot) {
       expect(() => buildV138ExecutionContextV4Receipt({
@@ -7580,11 +7653,6 @@ describe("v1.38 matrix inline execution context v4", () => {
         cwd: canonicalRepoRoot,
         planAgentSnapshot: terminalPlan26213Snapshot(),
       })).toThrow("MATRIX_EXECUTION_CONTEXT_V4_INPUT_INVALID")
-      expect(execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: repoRoot, encoding: "utf8",
-      }).trim()).toBe(execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: canonicalRepoRoot, encoding: "utf8",
-      }).trim())
     }
     const receipt = buildV138ExecutionContextV4Receipt({
       repoRoot: canonicalRepoRoot,
