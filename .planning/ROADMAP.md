@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 26/33 plans executed; developer selected the offline diagnostic successor
+**Plans:** 28/33 plans executed; offline diagnostic successor completed fail-closed
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 26 of 33 plans are executed. Plan 262-31 independently passed A5/B5 custody, protocol material change, typecheck, isolated boundaries, cleanup, no-drift, terminal, and count checks, while its frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors remained blocked. The developer selected only a test-only A6 repair followed by detached read-only proof in Plans 262-32 and 262-33; this creates no live authority. Terminal-v1 remains literal `calibration_stopped`, reproduction:v10 and its marker remain absent at fresh 0/0, authority is expired, no retry exists, and ADMIT-03 remains blocked. Plan 262-03 is now only a dormant blocking-human routing checkpoint: every available choice stops execution and requires a fresh `$gsd-plan-phase 262` run before any measurement implementation.
+**Current verdict:** IN PROGRESS / `gaps_found` — 28 of 33 plans are executed. Plan 262-33 independently proves exact A6 custody and artifact no-drift, while its bounded offline proof is blocked. Terminal-v1 remains `calibration_stopped` at fresh 0/0 with expired no-retry authority; ADMIT-03 remains blocked. Plan 262-03 is a dormant blocking-human routing checkpoint and every option requires `$gsd-plan-phase 262`.
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"0dc87e4e401622a25a4da9e2fafacbd4282de16fda52d56c2cd990d1277f5b47","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":33,"completed_plans":26} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":33,"completed_plans":28} -->
 
 Plans:
 **Wave 1**
@@ -163,11 +163,11 @@ Plans:
 
 **Wave 27** *(depends on Plan 262-31 and the developer-selected offline diagnostic successor)*
 
-- [ ] 262-32-PLAN.md — Repair only the two phase-coupled test harnesses through TDD, freeze a reviewed source-only A6, and create no live authority.
+- [x] 262-32-PLAN.md — Repair only the two phase-coupled test harnesses through TDD, freeze a reviewed source-only A6, and create no live authority.
 
 **Wave 28** *(blocked on Wave 27 completion)*
 
-- [ ] 262-33-PLAN.md — Independently prove exact detached A6 read-only, preserve the stopped route and blocked ADMIT-03 truth, synchronize tracking, and stop for a developer decision.
+- [x] 262-33-PLAN.md — Independently prove exact detached A6 read-only, preserve the stopped route and blocked ADMIT-03 truth, synchronize tracking, and stop for a developer decision.
 
 **Wave 29** *(blocked on Plan 262-33; Plan 262-03 is a checkpoint-only developer-routing stop, not an executable measurement plan, and every option requires `$gsd-plan-phase 262` before further work)*
 
