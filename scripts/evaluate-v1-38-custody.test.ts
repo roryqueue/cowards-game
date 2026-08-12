@@ -44,17 +44,18 @@ afterEach(() => {
 const commitmentInput = (storeRoot: string) => ({
   repoRoot,
   storeRoot,
-  preimage: Buffer.from("synthetic non-holdout evaluation bytes\n", "utf8"),
-  secret: Buffer.from("synthetic-test-secret-material-32b", "utf8"),
+  sealedBytes: Buffer.from("synthetic non-holdout evaluation bytes\n", "utf8"),
+  keyedMaterial: Buffer.from("synthetic-test-keyedMaterial-material-32b", "utf8"),
   salt: Buffer.from("synthetic-test-salt-material-32bytes", "utf8"),
+  dataClass: "synthetic_non_holdout",
   profileNeutralProtocolRoot: PROTOCOL_ROOT,
-  maxPreimageBytes: 1_024,
+  maxSealedBytes: 1_024,
 }) as const
 
 const commandOptions = (storeRoot: string) => ({
   repoRoot,
   storeRoot,
-  secret: commitmentInput(storeRoot).secret,
+  keyedMaterial: commitmentInput(storeRoot).keyedMaterial,
   salt: commitmentInput(storeRoot).salt,
 }) as const
 
@@ -66,14 +67,14 @@ const handoff = () => ({
     profileNeutralProtocolRoot: PROTOCOL_ROOT,
   },
   controls: {
-    opaqueStoreId: "opaque-store-alpha",
-    opaqueKeyId: "opaque-key-alpha",
-    opaqueCustodianRoleId: "opaque-custodian-alpha",
+    opaqueStoreId: "synthetic-test-store-alpha",
+    opaqueKeyId: "synthetic-test-key-alpha",
+    opaqueCustodianRoleId: "synthetic-test-custodian-alpha",
     separatelyPermissioned: true,
   },
   opening: {
-    opaqueActorId: "opaque-opening-alpha",
-    opaqueCommandId: "opaque-command-alpha",
+    opaqueActorId: "synthetic-test-opening-alpha",
+    opaqueCommandId: "synthetic-test-command-alpha",
     openOrdinal: 1,
     oneOpenOnly: true,
   },
@@ -96,7 +97,7 @@ const handoff = () => ({
   },
   retention: {
     policyId: "bounded-retention-v1",
-    opaqueRetirementAuthorityId: "opaque-retirement-alpha",
+    opaqueRetirementAuthorityId: "synthetic-test-retirement-alpha",
   },
   lineage: {
     lineageRoot: HASH_B,
@@ -112,8 +113,8 @@ const handoff = () => ({
     exactBytesSha256: HASH_A,
   },
   provenance: {
-    opaqueTrustIdentityId: "opaque-trust-alpha",
-    opaqueIssuerIdentityId: "opaque-issuer-alpha",
+    opaqueTrustIdentityId: "synthetic-test-trust-alpha",
+    opaqueIssuerIdentityId: "synthetic-test-issuer-alpha",
     envelopeDigest: HASH_B,
     signatureProfile: "approved-external-authentication-v1",
     selfIssued: false,
@@ -121,14 +122,14 @@ const handoff = () => ({
 }) as const
 
 const approval = {
-  approvedOpaqueStoreIds: ["opaque-store-alpha"],
-  approvedOpaqueKeyIds: ["opaque-key-alpha"],
-  approvedOpaqueCustodianRoleIds: ["opaque-custodian-alpha"],
-  approvedOpaqueOpeningActorIds: ["opaque-opening-alpha"],
-  approvedOpaqueOpeningCommandIds: ["opaque-command-alpha"],
-  approvedOpaqueRetirementAuthorityIds: ["opaque-retirement-alpha"],
-  approvedOpaqueTrustIdentityIds: ["opaque-trust-alpha"],
-  verifyAuthenticatedExternalProvenance: () => true,
+  approvedOpaqueStoreIds: [] as readonly string[],
+  approvedOpaqueKeyIds: [] as readonly string[],
+  approvedOpaqueCustodianRoleIds: [] as readonly string[],
+  approvedOpaqueOpeningActorIds: [] as readonly string[],
+  approvedOpaqueOpeningCommandIds: [] as readonly string[],
+  approvedOpaqueRetirementAuthorityIds: [] as readonly string[],
+  approvedOpaqueTrustIdentityIds: [] as readonly string[],
+  verifyAuthenticatedExternalProvenance: () => false,
 } as const
 
 describe("Phase 262 closed synthetic custody mechanics", () => {
@@ -146,13 +147,13 @@ describe("Phase 262 closed synthetic custody mechanics", () => {
       satisfiesSeal01: false,
     })
     expect(commitment.digest).toBe(
-      `sha256:${createHmac("sha256", commitmentInput(storeRoot).secret)
+      `sha256:${createHmac("sha256", commitmentInput(storeRoot).keyedMaterial)
         .update("cowards-game:v1.38:synthetic-custody-commitment:v1\0")
         .update(PROTOCOL_ROOT)
         .update("\0")
         .update(commitmentInput(storeRoot).salt)
         .update("\0")
-        .update(commitmentInput(storeRoot).preimage)
+        .update(commitmentInput(storeRoot).sealedBytes)
         .digest("hex")}`,
     )
     expect(lstatSync(storeRoot).mode & 0o777).toBe(0o700)
@@ -181,11 +182,11 @@ describe("Phase 262 closed synthetic custody mechanics", () => {
       resultRoot: HASH_A,
     })
     expect(receipt).toMatchObject({ custodyStatus: "unavailable", satisfiesSeal01: false })
-    expect(JSON.stringify(receipt)).not.toMatch(/secret|salt|preimage|private|path|actor|query/iu)
+    expect(JSON.stringify(receipt)).not.toMatch(/keyedMaterial|salt|sealedBytes|private|path|actor|query/iu)
     expect(executeV138CustodyCommand(commandOptions(storeRoot), { kind: "verify" }).state)
       .toBe("verified")
     expect(executeV138CustodyCommand(commandOptions(storeRoot), {
-      kind: "markContaminated", reason: "synthetic_unauthorized_query",
+      kind: "markContaminated", reason: "synthetic-unauthorized-query",
     }).state).toBe("contaminated")
     expect(() => projectV138SafeCustodyReceipt(commandOptions(storeRoot), {
       schemaVersion: "v1.38-synthetic-safe-receipt-v1",
@@ -212,7 +213,7 @@ describe("Phase 262 closed synthetic custody mechanics", () => {
       .toThrow("V138_CUSTODY_SYMLINK")
 
     const oversized = commitmentInput(path.join(temp, "oversized"))
-    expect(() => createV138CustodyCommitment({ ...oversized, maxPreimageBytes: 4 }))
+    expect(() => createV138CustodyCommitment({ ...oversized, maxSealedBytes: 4 }))
       .toThrow("V138_CUSTODY_SIZE_LIMIT")
 
     const storeRoot = path.join(temp, "store")
@@ -221,7 +222,7 @@ describe("Phase 262 closed synthetic custody mechanics", () => {
       kind: "openOnce", actorId: "synthetic-opening-actor", commandId: "synthetic-open-once",
     })).toThrow("V138_CUSTODY_OPEN_NOT_AUTHORIZED")
     expect(() => executeV138CustodyCommand({
-      ...commandOptions(storeRoot), secret: Buffer.from("wrong-synthetic-secret-material-32b"),
+      ...commandOptions(storeRoot), keyedMaterial: Buffer.from("wrong-synthetic-keyedMaterial-material-32b"),
     }, { kind: "verify" })).toThrow("V138_CUSTODY_COMMITMENT_MISMATCH")
 
     const events = readFileSync(path.join(storeRoot, "events", "custody.ndjson"), "utf8")
@@ -237,15 +238,40 @@ describe("Phase 262 closed synthetic custody mechanics", () => {
       .toThrow("V138_CUSTODY_SYMLINK")
     chmodSync(path.join(storeRoot, "events", "custody.ndjson"), 0o600)
   })
+
+  it("terminally contaminates a forbidden safe projection and never permits a diagnostic query", () => {
+    const storeRoot = path.join(temporaryRoot(), "store")
+    createV138CustodyCommitment(commitmentInput(storeRoot))
+    executeV138CustodyCommand(commandOptions(storeRoot), {
+      kind: "authorizeOpen", actorId: "synthetic-opening-actor", commandId: "synthetic-open-once",
+    })
+    expect(() => executeV138CustodyCommand(commandOptions(storeRoot), {
+      kind: "openOnce", actorId: "synthetic-other-actor", commandId: "synthetic-open-once",
+    })).toThrow("V138_CUSTODY_OPEN_NOT_AUTHORIZED")
+    executeV138CustodyCommand(commandOptions(storeRoot), {
+      kind: "openOnce", actorId: "synthetic-opening-actor", commandId: "synthetic-open-once",
+    })
+    expect(() => projectV138SafeCustodyReceipt(commandOptions(storeRoot), {
+      schemaVersion: "v1.38-synthetic-safe-receipt-v1",
+      aggregateStatus: "synthetic_mechanics_passed",
+      evaluatedItemCount: 1,
+      findingCount: 0,
+      resultRoot: HASH_A,
+      rawQuery: "forbidden",
+    } as never)).toThrow("V138_CUSTODY_SAFE_PROJECTION_INVALID")
+    expect(() => executeV138CustodyCommand(commandOptions(storeRoot), {
+      kind: "query",
+    } as never)).toThrow("V138_CUSTODY_TERMINAL")
+  })
 })
 
 describe("Phase 262 authorized custody handoff boundary", () => {
   it("requires every exact field, approved identity, and externally authenticated provenance", () => {
     expect(V138AuthorizedCustodyHandoffSchema.parse(handoff())).toEqual(handoff())
-    expect(validateV138AuthorizedCustodyHandoff(handoff(), approval).authorized).toBe(true)
-    expect(validateV138AuthorizedCustodyHandoff(handoff(), {
-      ...approval, verifyAuthenticatedExternalProvenance: () => false,
-    }).authorized).toBe(false)
+    expect(validateV138AuthorizedCustodyHandoff(handoff(), approval)).toMatchObject({
+      authorized: false,
+      satisfiesSeal01: false,
+    })
 
     const sections = Object.keys(handoff()) as Array<keyof ReturnType<typeof handoff>>
     for (const section of sections) {
@@ -267,17 +293,9 @@ describe("Phase 262 authorized custody handoff boundary", () => {
   })
 
   it("renders only a bounded reference after all approvals and authentication pass", () => {
-    expect(renderV138AuthorizedCustodyHandoffReference(handoff(), approval)).toMatchObject({
-      schemaVersion: "v1.38-authorized-custody-public-reference-v1",
-      commitmentDigest: HASH_A,
-      custodyStatus: "authorized",
-      satisfiesSeal01: true,
-    })
+    expect(renderV138AuthorizedCustodyHandoffReference(handoff(), approval)).toBeNull()
     expect(renderV138AuthorizedCustodyHandoffReference(handoff(), {
       ...approval, approvedOpaqueStoreIds: ["different-store"],
-    })).toBeNull()
-    expect(renderV138AuthorizedCustodyHandoffReference(handoff(), {
-      ...approval, verifyAuthenticatedExternalProvenance: () => false,
     })).toBeNull()
   })
 })
