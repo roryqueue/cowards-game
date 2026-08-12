@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 28/35 active executable plans completed; dependency revision Plans 262-34 through 262-40 remain active
+**Plans:** 29/35 active executable plans completed; dependency revision Plans 262-35 through 262-40 remain active
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 28 of 35 active executable plans are complete. Plan 262-33 independently proves exact A6 custody and artifact no-drift, while its bounded offline proof is blocked. Terminal-v1 remains `calibration_stopped` at fresh 0/0 with expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet. Active dependency-revision Plans 262-34 through 262-40 separate non-authorizing policy readiness from genuine custody. They authorize no live route, candidate search, formation, production, or Phase 263 work. The 262-41 activation contract is dormant outside executable plan discovery until a future separately planned literal ADMIT-03 pass exists.
+**Current verdict:** IN PROGRESS / `gaps_found` — 29 of 35 active executable plans are complete. Plan 262-34 enforces capability-separated acceptance, preserves the exact stopped-route and predecessor facts, and monitors protected history, privacy, formation absence, no live work, and no authority. Terminal-v1 remains `calibration_stopped` at fresh 0/0 with expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet. Active dependency-revision Plans 262-35 through 262-40 authorize no live route, candidate search, formation, production, or Phase 263 work. The 262-41 activation contract is dormant outside executable plan discovery until a future separately planned literal ADMIT-03 pass exists.
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"262-34","total_plans":35,"completed_plans":28,"active_successors":["262-34","262-35","262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"262-35","total_plans":35,"completed_plans":29,"active_successors":["262-35","262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 Plans:
 **Wave 1**
@@ -179,7 +179,7 @@ Plans:
 
 **Wave 29** *(blocked on Plan 262-33; no live work or authority)*
 
-- [ ] 262-34-PLAN.md — Revise the dependency/status graph, preserve every stopped fact and protected historical byte, and monitor formation absence, privacy, no authority, and no live work.
+- [x] 262-34-PLAN.md — Revise the dependency/status graph, preserve every stopped fact and protected historical byte, and monitor formation absence, privacy, no authority, and no live work.
 
 **Wave 30** *(blocked on Wave 29 completion)*
 
@@ -344,7 +344,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 28/35 | In Progress / gaps found — active dependency-revision Plans 262-34..40 are planned; ADMIT-03 remains blocked, SEAL-01 unmet, route 5 expired/no-retry, dormant 262-41 is outside plan discovery, and no candidate-search, formation, production, or Phase 263 authority exists |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 29/35 | In Progress / gaps found — Plan 262-34 enforces separated acceptance; ADMIT-03 remains blocked, SEAL-01 unmet, route 5 expired/no-retry, dormant 262-41 is outside plan discovery, and no candidate-search, formation, production, or Phase 263 authority exists |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

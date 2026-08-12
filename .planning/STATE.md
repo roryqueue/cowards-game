@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Dependency revision planned; next executable plan is 262-34
-last_updated: "2026-08-12T21:22:26.411Z"
+stopped_at: Completed 262-34-PLAN.md
+last_updated: "2026-08-12T21:34:31.574Z"
 last_activity: 2026-08-12
-last_activity_desc: Phase 262 execution started
+last_activity_desc: Plan 262-34 completed; capability-separated acceptance remains fail-closed
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 35
-  completed_plans: 28
-  percent: 0
+  completed_plans: 29
+  percent: 83
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"262-34","total_plans":35,"completed_plans":28,"active_successors":["262-34","262-35","262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"262-35","total_plans":35,"completed_plans":29,"active_successors":["262-35","262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — EXECUTING
-Plan: 1 of 35
-Status: Executing Phase 262
-Last activity: 2026-08-12 — Phase 262 execution started
+Plan: 30 of 35
+Status: Ready to execute
+Last activity: 2026-08-12 — Plan 262-34 completed; capability-separated acceptance remains fail-closed
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
-**Current milestone:** 28 of 35 active executable Phase 262 plans completed. The dependency revision is planned, not executed. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet.
+**Current milestone:** 29 of 35 active executable Phase 262 plans completed. Plan 262-34 now enforces capability-separated acceptance while granting no downstream authority. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -72,6 +72,7 @@ Progress: [████████░░] 80%
 | Phase 262 P31 | 70min | 3 tasks | mixed read-only proof, stopped route, validation, verification, tracking |
 | Phase 262 P28 | 1588min | 2 tasks | 8 files |
 | Phase 262 P29 | 10min | 3 tasks | 5 files |
+| Phase 262 P34 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: The selected dependency revision is additive: active Plans 262-34..40 supersede only the future responsibilities of byte-preserved archived 262-03..07; the former 262-41 is a dormant non-executable activation contract, and every historical summary, root, charge, authority, and artifact byte remains protected.
 - [Phase 262]: Separate `pre_search_policy_root` readiness from `foundation_activation_root` authority. Policy readiness cannot satisfy ADMIT-03 or SEAL-01 and cannot authorize Phase 263, candidate search, formation, or production.
 - [Phase 262]: Require literal future current-rules ADMIT-03 plus genuine separately controlled SEAL-01 evidence before dormant Plan 262-41 can activate; formation remains independently gated by the Phase 266 current-rules league freeze.
+- [Phase 262]: Grant downstream authority only through the exact conjunction of policy readiness, a literal fresh matrix pass, authorized custody, containment pass, and exact identity join. — Policy readiness alone is deliberately non-authorizing and no substitute condition may compensate for a failed latch.
+- [Phase 262]: Keep Plans 262-03 through 262-07 historical, Plans 262-35 through 262-40 active, and the 262-41 activation contract dormant. — Activation requires a future separately planned literal ADMIT-03 pass; the current stopped route grants no live, formation, or product authority.
 
 ### Pending Todos
 
@@ -181,7 +184,7 @@ None.
 - Plans 262-32 and 262-33 are authorized only for offline test-harness repair and detached proof. They cannot create or infer a replacement live route, authorization literal, writer, preflight, calibration, reproduction, or accepted evidence.
 - Plan 262-03 remains a dormant checkpoint after the offline successor; an offline pass is not ADMIT-03 evidence, and every checkpoint option routes to `$gsd-plan-phase 262` rather than implementation.
 - Validation remains partial/not Nyquist-compliant (3/16 covered, 1/16 partial, 12/16 missing); verification remains `gaps_found` with 1/5 roadmap truths satisfied.
-- Plans 262-34..40 are planning-only active successors. The current state grants no live route, retry, candidate-search, Phase 263, formation, or production authority; Plan 262-40 remains blocking without a mechanically valid authenticated custody handoff plus genuine human-confirmed separation of duties. The dormant 262-41 activation contract is not executable or index-discoverable.
+- Plan 262-34 is complete; Plans 262-35..40 remain planning-only active successors. The current state grants no live route, retry, candidate-search, Phase 263, formation, or production authority; Plan 262-40 remains blocking without a mechanically valid authenticated custody handoff plus genuine human-confirmed separation of duties. The dormant 262-41 activation contract is not executable or index-discoverable.
 - The frozen replay manifest's unreachable commit is a separate tooling dependency. It may not be repaired, substituted, waived, or credited as Phase 262 closure by this dependency revision.
 
 ## Deferred Items
@@ -195,7 +198,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-12
-Stopped at: Dependency revision planned; next executable plan is 262-34
+Last session: 2026-08-12T21:34:31.563Z
+Stopped at: Completed 262-34-PLAN.md
 Resume file: None
-Next command: Execute only the active successor graph beginning at Plan 262-34. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.
+Next command: Execute only the active successor graph beginning at Plan 262-35. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.
