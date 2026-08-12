@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 34/35 plans executed
+**Plans:** 34/35 active executable plans complete; terminal Plan 262-42 pending
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 34 of 35 active executable plans are complete. Plan 262-39 freezes capability-specific policy root `sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382` while custody remains unavailable, `satisfiesSeal01` remains false, and every downstream authority remains denied. Terminal-v1 remains `calibration_stopped` at fresh 0/0 with expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet. Plan 262-40 is the sole active successor and authorizes no live route, candidate search, formation, production, or Phase 263 work. The 262-41 activation contract is dormant outside executable plan discovery until a future separately planned literal ADMIT-03 pass exists.
+**Current verdict:** IN PROGRESS / `gaps_found` — 34 of 35 active executable plans are complete. The operator confirms that no external custody system exists, so Plan 262-40 is archived byte-for-byte and cannot satisfy SEAL-01. Plan 262-42 is the sole active terminal/defer disposition plan. It may record policy readiness, blocked ADMIT-03 at fresh 0/540 with expired no-retry authority, unavailable custody, absent public custody and activation roots, formation absence, privacy, and denied downstream authority; it cannot complete Phase 262, ADMIT-03, SEAL-01, or milestone v1.38. After Plan 262-42 concludes, verification remains `gaps_found` and v1.38 pauses/defer at Phase 262. Phases 263–270 remain blocked. Future resumption requires a fresh plan-phase only after a real external custody system exists and a separately planned literal ADMIT-03 pass route is authorized.
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","measurement_policy_root":"sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95","protocol_policy_sha256":"34cec9aa1efc317cf07a33b6ff6cc31dd9bcc112625b0ff8fc1961fdda823cf3","containment_policy_sha256":"4bdc3e87dc91ed67cc946be448eabd6d2a0bd08e0ec2f73f55b265ce6b9ad504","next_action":"262-40","total_plans":35,"completed_plans":34,"active_successors":["262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","public_custody_reference_present":false,"foundation_activation_root_present":false,"next_action":"262-42","terminal_after_execution":"paused_deferred_at_phase_262","total_plans":35,"completed_plans":34,"active_successors":["262-42"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_checkpoint_sha256":"e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 Plans:
 **Wave 1**
@@ -174,7 +174,7 @@ Plans:
 - `262-03-PLAN.md` -> `archived/262-03-HISTORICAL.md` — SHA-256 `d25cf4eede098232cc0b9022eed71da2867582f36e5bbc7c2a3f13d8681745b3`; routing responsibility superseded by 262-34.
 - `262-04-PLAN.md` -> `archived/262-04-HISTORICAL.md` — SHA-256 `7b9fbfef375f2439246740b26fa3c8c1d45baaf54f23ff884ea364fa53effc68`; measurement responsibilities superseded by 262-35 and 262-36.
 - `262-05-PLAN.md` -> `archived/262-05-HISTORICAL.md` — SHA-256 `53e027d767e2a753adc0c1d2d577cb367bd7f7808ff453d29b3e5aa6203dbcf3`; classifier/containment responsibility superseded by 262-37.
-- `262-06-PLAN.md` -> `archived/262-06-HISTORICAL.md` — SHA-256 `7f07cc1f2baf300b4d4dc9200799eabbfb390a96ac7daef26905c9973ddc06b0`; custody responsibilities superseded by 262-38 and 262-40.
+- `262-06-PLAN.md` -> `archived/262-06-HISTORICAL.md` — SHA-256 `7f07cc1f2baf300b4d4dc9200799eabbfb390a96ac7daef26905c9973ddc06b0`; custody mechanics responsibility superseded by 262-38, while terminal custody disposition is owned by 262-42.
 - `262-07-PLAN.md` -> `archived/262-07-HISTORICAL.md` — SHA-256 `5c86c379a31e8bd7706c857666d31edc974600242e0e0ef5f78934151f23704d`; non-authorizing policy responsibility superseded by 262-39.
 
 **Wave 29** *(blocked on Plan 262-33; no live work or authority)*
@@ -201,9 +201,13 @@ Plans:
 
 - [x] 262-39-PLAN.md — Bind policy-lane readiness into a non-authorizing `pre_search_policy_root` with six exact downstream denials.
 
-**Wave 35** *(blocked on Wave 34 completion)*
+**Archived unavailable-custody checkpoint** *(byte-preserved outside active `*-PLAN.md` discovery)*
 
-- [ ] 262-40-PLAN.md — Blocking-human checkpoint for genuine operational custody; remain blocked if separate controls are unavailable.
+- `262-40-PLAN.md` -> `archived/262-40-HISTORICAL.md` — SHA-256 `e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231`; exact bytes preserved after the operator confirmed no external custody system exists. It receives no summary and grants no SEAL-01 or downstream credit.
+
+**Wave 35** *(blocked on Wave 34 completion; terminal disposition only)*
+
+- [ ] 262-42-PLAN.md — Record and verify deferred-incomplete Phase 262/v1.38 status, then pause at Phase 262 without completing ADMIT-03, SEAL-01, the phase, or the milestone.
 
 **Dormant activation contract** *(not an executable wave and absent from phase-plan-index)*
 

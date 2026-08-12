@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.38
-milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
+milestone_name: Competitive Strategy Factory and Adversarial League — TERMINAL DEFERMENT PLANNED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: executing
-stopped_at: Plan 262-40 genuine external-custody checkpoint
-last_updated: "2026-08-12T22:35:41.307Z"
+status: planned
+stopped_at: Plan 262-42 terminal/defer disposition pending
+last_updated: "2026-08-12T23:30:00.000Z"
 last_activity: 2026-08-12
-last_activity_desc: Plan 262-40 preflight passed and stopped fail-closed because no authenticated external custody handoff is available
+last_activity_desc: Replanned from confirmed no-external-custody fact; archived Plan 262-40 byte-for-byte and created terminal Plan 262-42
 progress:
   total_phases: 9
   completed_phases: 0
@@ -19,7 +19,7 @@ progress:
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","measurement_policy_root":"sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95","protocol_policy_sha256":"34cec9aa1efc317cf07a33b6ff6cc31dd9bcc112625b0ff8fc1961fdda823cf3","containment_policy_sha256":"4bdc3e87dc91ed67cc946be448eabd6d2a0bd08e0ec2f73f55b265ce6b9ad504","next_action":"external_custody_handoff","checkpoint":"262-40-human-action","total_plans":35,"completed_plans":34,"active_successors":["262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","public_custody_reference_present":false,"foundation_activation_root_present":false,"next_action":"262-42","terminal_after_execution":"paused_deferred_at_phase_262","total_plans":35,"completed_plans":34,"active_successors":["262-42"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_checkpoint_sha256":"e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -30,16 +30,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 ## Current Position
 
-Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — EXECUTING
-Plan: 34 of 35 complete; Plan 262-40 at blocking human-action checkpoint
-Status: Mechanical custody preflight passed, but `COWARDS_V1_38_AUTHORIZED_CUSTODY_HANDOFF` is unset and no approved external identity/provenance verifier is available. No public custody reference or SEAL-01 credit was emitted.
-Last activity: 2026-08-12 — Plan 262-40 stopped fail-closed at the genuine external-custody checkpoint
+Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — TERMINAL DEFERMENT PLANNED
+Plan: 34 of 35 active executable plans complete; Plan 262-42 pending
+Status: The operator confirms no external custody system exists. Plan 262-40 is archived unchanged at SHA-256 `e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231`; SEAL-01 remains unmet, ADMIT-03 remains blocked, and Plan 262-42 may only record terminal/defer status.
+Last activity: 2026-08-12 — Replanned Phase 262 to conclude the executable queue without completing the phase or milestone
 
 Progress: [██████████] 97%
 
 ## Performance Metrics
 
-**Current milestone:** 34 of 35 active executable Phase 262 plans completed. Plan 262-39 freezes non-authorizing policy root `sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382` while custody remains unavailable and SEAL-01 remains unmet. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked.
+**Current milestone:** 34 of 35 active executable Phase 262 plans completed. Plan 262-42 is the only incomplete plan and will pause/defer v1.38 at Phase 262 after recording the confirmed absence of an external custody system. Plan 262-39's non-authorizing policy root remains ready; route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0/540, expired no-retry authority, and blocked ADMIT-03. SEAL-01 remains unmet.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -167,6 +167,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Use only the capability-specific pre_search_policy_root schema and domain; the policy identity is never generic foundation or activation authority.
 - [Phase 262]: Keep exactly six false root denials while validating broader public, live, holdout, persistence, scheduling, replay, and result denials in the joined components.
 - [Phase 262]: Classify the exact unreachable frozen replay commit as a separate tooling dependency without repair, waiver, admission credit, or Phase closure.
+- [Phase 262]: Archive Plan 262-40 byte-for-byte at `archived/262-40-HISTORICAL.md` with SHA-256 `e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231` because the operator confirms no external custody system exists; do not write a 262-40 summary or infer SEAL-01 credit.
+- [Phase 262]: Use Plan 262-42 only for terminal/defer disposition. After it concludes, keep verification `gaps_found`, Phase 262 incomplete, milestone v1.38 paused/deferred at Phase 262, and Phases 263–270 unauthorized.
+- [Phase 262]: Resume only through a fresh plan-phase after both a real external custody system exists and a separately planned literal ADMIT-03 pass route is authorized; never revive archived Plan 262-40 or dormant Plan 262-41 directly.
 
 ### Pending Todos
 
@@ -203,7 +206,7 @@ None.
 - Plans 262-32 and 262-33 are authorized only for offline test-harness repair and detached proof. They cannot create or infer a replacement live route, authorization literal, writer, preflight, calibration, reproduction, or accepted evidence.
 - Plan 262-03 remains a dormant checkpoint after the offline successor; an offline pass is not ADMIT-03 evidence, and every checkpoint option routes to `$gsd-plan-phase 262` rather than implementation.
 - `262-VALIDATION.md` predates the dependency revision and remains separately stale/not Nyquist-compliant; current requirement tracking records 14 covered, ADMIT-03 blocked/partial, and SEAL-01 unmet, while verification remains `gaps_found`.
-- Plans 262-34 through 262-39 are complete; Plan 262-40 remains the sole active non-authorizing successor. Policy root `sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382` is ready, but custody remains unavailable and SEAL-01 unmet. The current state grants no live route, retry, candidate-search, Phase 263, formation, holdout, or production authority; Plan 262-40 remains blocking without a mechanically valid authenticated custody handoff plus genuine human-confirmed separation of duties. The dormant 262-41 activation contract is not executable or index-discoverable.
+- Plans 262-34 through 262-39 are complete; Plan 262-40 is archived unchanged because no external custody system exists. Plan 262-42 is the sole active terminal/defer successor. Policy root `sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382` is ready, but custody remains unavailable, SEAL-01 remains unmet, and ADMIT-03 remains blocked. The current state grants no live route, retry, candidate-search, Phase 263, formation, holdout, public custody reference, activation root, or production authority. Dormant 262-41 remains non-executable and index-excluded.
 - The frozen replay manifest's unreachable commit is a separate tooling dependency. It may not be repaired, substituted, waived, or credited as Phase 262 closure by this dependency revision.
 
 ## Deferred Items
@@ -217,7 +220,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-12T22:35:41.295Z
-Stopped at: Completed 262-39-PLAN.md
+Last session: 2026-08-12T23:30:00.000Z
+Stopped at: Planned 262-42 terminal/defer disposition
 Resume file: None
-Next command: Execute Plan 262-40 only if genuine separately controlled custody evidence is available; otherwise retain the blocking-human checkpoint. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.
+Next command: Execute Plan 262-42 only. After it concludes, no downstream phase proceeds. Future resumption requires a fresh `$gsd-plan-phase 262` only after a real external custody system exists and a separately planned literal ADMIT-03 pass route is authorized; archived Plan 262-40 and dormant Plan 262-41 remain non-executable.
