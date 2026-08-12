@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   V138_CURRENT_STOPPED_BRANCH,
@@ -8,6 +12,13 @@ import {
   evaluateV138DownstreamAuthority,
   evaluateV138MatrixAdmission,
 } from "./lib/v1-38-policy-authority.js"
+import {
+  V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY,
+  analyzeV138DependencyRevisionSources,
+  analyzeV138ProtectedHistory,
+  buildV138PlanSupersessionManifest,
+  renderV138PlanSupersessionManifest,
+} from "./check-v1-38-dependency-revision-boundaries.js"
 
 describe("Phase 262 dependency-revision acceptance", () => {
   it("keeps every capability status closed and exact", () => {
@@ -102,6 +113,86 @@ describe("Phase 262 dependency-revision acceptance", () => {
       authorityExpired: true,
       noRetry: true,
       admit03: "blocked",
+    })
+  })
+})
+
+describe("Phase 262 dependency-revision supersession boundaries", () => {
+  it("renders the exact active, historical, and dormant graph deterministically", () => {
+    const manifest = buildV138PlanSupersessionManifest()
+    expect(manifest.historicalPlans.map((entry) => [entry.planId, entry.sha256]))
+      .toEqual([
+        ["262-03", "sha256:d25cf4eede098232cc0b9022eed71da2867582f36e5bbc7c2a3f13d8681745b3"],
+        ["262-04", "sha256:7b9fbfef375f2439246740b26fa3c8c1d45baaf54f23ff884ea364fa53effc68"],
+        ["262-05", "sha256:53e027d767e2a753adc0c1d2d577cb367bd7f7808ff453d29b3e5aa6203dbcf3"],
+        ["262-06", "sha256:7f07cc1f2baf300b4d4dc9200799eabbfb390a96ac7daef26905c9973ddc06b0"],
+        ["262-07", "sha256:5c86c379a31e8bd7706c857666d31edc974600242e0e0ef5f78934151f23704d"],
+      ])
+    expect(manifest.activePlans.map((entry) => entry.planId)).toEqual([
+      "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-40",
+    ])
+    expect(manifest.dormantActivation).toMatchObject({
+      planId: "262-41",
+      path: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/dormant/262-41-ACTIVATION-CONTRACT.md",
+      sha256: "sha256:5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641",
+      executable: false,
+      requiresFutureLiteralAdmit03Pass: true,
+    })
+    expect(renderV138PlanSupersessionManifest(manifest))
+      .toBe(renderV138PlanSupersessionManifest(buildV138PlanSupersessionManifest()))
+    expect(manifest.authority).toEqual({
+      matrixAdmissionStatus: "blocked",
+      downstreamAuthority: "denied",
+      candidateSearchAuthorized: false,
+      phase263Authorized: false,
+      formationMaterializationAuthorized: false,
+      productionAuthorized: false,
+    })
+  })
+
+  it("detects seeded protected-history edits and deletions", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-dependency-history-"))
+    mkdirSync(path.join(root, "history"), { recursive: true })
+    const expectedBytes = "immutable\n"
+    writeFileSync(path.join(root, "history", "kept.md"), expectedBytes)
+    const expected = [{
+      path: "history/kept.md",
+      sha256: `sha256:${createHash("sha256").update(expectedBytes).digest("hex")}`,
+    }] as const
+    expect(analyzeV138ProtectedHistory(root, expected)).toEqual([])
+    writeFileSync(path.join(root, "history", "kept.md"), "edited\n")
+    expect(analyzeV138ProtectedHistory(root, expected).map((finding) => finding.code))
+      .toEqual(["PROTECTED_HISTORY_DRIFT"])
+    expect(readFileSync(path.join(root, "history", "kept.md"), "utf8")).toBe("edited\n")
+    expect(analyzeV138ProtectedHistory(root, [{
+      path: "history/deleted.md",
+      sha256: expected[0]!.sha256,
+    }]).map((finding) => finding.code)).toEqual(["PROTECTED_HISTORY_MISSING"])
+  })
+
+  it("detects every seeded authority, privacy, live-work, and formation bypass", () => {
+    const fixtures = [
+      ["ROUTE5_REUSE", 'import { executeV138ParallelMatrix } from "./lib/v1-38-current-matrix-reproduction.js"'],
+      ["AUTHORITY_WRITER", "export const writeFoundationActivationRoot = () => undefined"],
+      ["LIVE_WORK_COMMAND", 'spawnSync("pnpm", ["v1.38:matrix:run"])'],
+      ["CANDIDATE_FORMATION_SURFACE", "export const materializeFormationState = () => ({})"],
+      ["PRODUCT_PUBLIC_IMPORT", 'import { createMatch } from "../packages/persistence/src/match-service.js"'],
+      ["PRIVATE_DATA_EXPOSURE", 'const publicReceipt = { privateKey: "secret" }'],
+      ["MUTABLE_ALIAS", 'const policyPath = "latest/policy.json"'],
+    ] as const
+    for (const [code, source] of fixtures) {
+      expect(analyzeV138DependencyRevisionSources({ "scripts/seed.ts": source })
+        .map((finding) => finding.code)).toContain(code)
+    }
+  })
+
+  it("keeps the frozen replay issue separately attributed without substitution", () => {
+    expect(V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY).toEqual({
+      tooling_dependency: "frozen_replay_commit_unreachable",
+      frozenCommit: "4fab0afc058232f37ba11506b5d04a1d59b2f4e0",
+      disposition: "unresolved_external_to_plan_262_34",
+      substitutionAllowed: false,
+      replayManifestMutationAllowed: false,
     })
   })
 })
