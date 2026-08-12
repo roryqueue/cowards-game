@@ -6,6 +6,11 @@ import {
   evaluateV138Classifiers,
   renderV138PreFormationProtocolPolicy,
 } from "./lib/v1-38-classifiers.js"
+import {
+  analyzeV138PreFormationContainment,
+  buildV138PreFormationContainmentPolicy,
+  renderV138PreFormationContainmentPolicy,
+} from "./lib/v1-38-containment.js"
 
 const HASH_A = `sha256:${"a".repeat(64)}` as const
 const HASH_B = `sha256:${"b".repeat(64)}` as const
@@ -187,5 +192,151 @@ describe("Phase 262 profile-neutral classifiers and protocol", () => {
     expect(artifact.holdoutConstruction.profileConditionedInputs).toBe(0)
     expect(artifact.holdoutConstruction.currentTrainedInputs).toBe(0)
     expect(renderV138PreFormationProtocolPolicy(artifact)).toBe(renderV138PreFormationProtocolPolicy(artifact))
+  })
+})
+
+const cleanContainmentInput = () => ({
+  schemaVersion: "v1.38-pre-formation-containment-input-v1",
+  phase266FreezePresent: false,
+  phase267MaterializationGateOpen: false,
+  allowlistedProtocolPaths: [
+    "scripts/lib/v1-38-classifiers.ts",
+    ".planning/artifacts/v1.38-pre-formation-protocol-policy.json",
+  ],
+  sources: {
+    "scripts/lib/v1-38-classifiers.ts": "export const protocolOnly = true as const\n",
+    "scripts/evaluate-v1-38-classifiers-containment.test.ts": "export const syntheticFixture = Object.freeze({ profileNeutral: true })\n",
+  },
+  artifacts: {
+    ".planning/artifacts/v1.38-pre-formation-protocol-policy.json": {
+      schemaVersion: "v1.38-pre-formation-protocol-policy-v1",
+      protocolOnly: true,
+      materialization: "forbidden_before_phase_267",
+      authority: {
+        candidateSearchAuthorized: false,
+        formationMaterializationAuthorized: false,
+        productionAuthorized: false,
+        publicExposureAuthorized: false,
+      },
+    },
+  },
+}) as const
+
+describe("Phase 262 pre-formation containment", () => {
+  it("detects every seeded direct, alias, renamed, filename, namespace, and schema bypass", () => {
+    const mutations: Array<[string, unknown, string]> = [
+      ["direct engine state", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "import { GameState } from '@cowards/engine'\nexport const state: GameState = {} as GameState" },
+      }, "FORBIDDEN_ENGINE_STATE"],
+      ["aliased constructor", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "import { createInitialGameState as allowed } from '@cowards/engine'\nconst renamed = allowed\nrenamed({})" },
+      }, "FORBIDDEN_ENGINE_STATE"],
+      ["allowed filename executable value", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/lib/v1-38-classifiers.ts": "const materializedInitialState = { soldiers: [], phase: 'ACTIVE' }\nexport { materializedInitialState }" },
+      }, "EXECUTABLE_MATERIALIZATION"],
+      ["alternate scheduler", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "export function resolveRoundWithProfile() { while (true) break }" },
+      }, "ALTERNATE_RULES_OR_SCHEDULER"],
+      ["dynamic execution", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "const make = Function\nmake('return 1')()" },
+      }, "DYNAMIC_CODE"],
+      ["node vm", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "import vm from 'node:vm'\nvm.runInNewContext('1')" },
+      }, "DYNAMIC_CODE"],
+      ["strategy execution", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "const invoke = executeStrategy\ninvoke(source)" },
+      }, "STRATEGY_EXECUTION"],
+      ["formation namespace", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/formations/bracket.ts": "export const protocolOnly = true" },
+      }, "FORBIDDEN_NAMESPACE"],
+      ["candidate namespace", {
+        ...cleanContainmentInput(),
+        artifacts: { ".planning/artifacts/candidates/entry.json": { protocolOnly: true } },
+      }, "FORBIDDEN_NAMESPACE"],
+      ["product import", {
+        ...cleanContainmentInput(),
+        sources: { "apps/web/seed.ts": "import { protocolOnly } from '../../scripts/lib/v1-38-classifiers'\nvoid protocolOnly" },
+      }, "PRODUCT_OR_PUBLIC_REACHABILITY"],
+      ["persistence import", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "import { db } from '@cowards/persistence'\nvoid db" },
+      }, "PRODUCT_OR_PUBLIC_REACHABILITY"],
+      ["mutable alias", {
+        ...cleanContainmentInput(),
+        sources: { "scripts/seed.ts": "export const latestProfile = 'bracket'" },
+      }, "MUTABLE_ALIAS"],
+      ["schema materialization key", {
+        ...cleanContainmentInput(),
+        artifacts: { ".planning/artifacts/v1.38-pre-formation-protocol-policy.json": { ...cleanContainmentInput().artifacts[".planning/artifacts/v1.38-pre-formation-protocol-policy.json"], initialState: {} } },
+      }, "FORBIDDEN_SCHEMA_KEY"],
+      ["private receipt key", {
+        ...cleanContainmentInput(),
+        artifacts: { ".planning/artifacts/v1.38-pre-formation-protocol-policy.json": { ...cleanContainmentInput().artifacts[".planning/artifacts/v1.38-pre-formation-protocol-policy.json"], StrategyMemory: {} } },
+      }, "PRIVATE_RECEIPT_FIELD"],
+    ]
+    for (const [name, mutation, expectedCode] of mutations) {
+      const analysis = analyzeV138PreFormationContainment(mutation)
+      expect(analysis.findings.map((finding) => finding.code), name).toContain(expectedCode)
+    }
+  })
+
+  it("rejects a bypass suite that omits a required seeded class", () => {
+    const clean = analyzeV138PreFormationContainment(cleanContainmentInput())
+    expect(() => buildV138PreFormationContainmentPolicy({
+      protocolPolicyRoot: HASH_A,
+      monitorImplementationRoot: HASH_B,
+      scannedInventoryRoot: clean.scannedInventoryRoot,
+      allowlistRoot: clean.allowlistRoot,
+      realTreeAnalysis: clean,
+      seededBypassResults: [{ seedId: "direct_engine_state", detectedCode: "FORBIDDEN_ENGINE_STATE" }],
+    })).toThrow("V138_CONTAINMENT_POLICY_INPUT_INVALID")
+  })
+
+  it("passes only a zero-finding declared tree after every required seeded bypass is detected", () => {
+    const analysis = analyzeV138PreFormationContainment(cleanContainmentInput())
+    expect(analysis.findings).toEqual([])
+    expect(analysis.status).toBe("passed_absence")
+    const required = [
+      ["direct_engine_state", "FORBIDDEN_ENGINE_STATE"],
+      ["aliased_engine_constructor", "FORBIDDEN_ENGINE_STATE"],
+      ["allowed_filename_state", "EXECUTABLE_MATERIALIZATION"],
+      ["alternate_scheduler", "ALTERNATE_RULES_OR_SCHEDULER"],
+      ["dynamic_code", "DYNAMIC_CODE"],
+      ["node_vm", "DYNAMIC_CODE"],
+      ["strategy_execution", "STRATEGY_EXECUTION"],
+      ["forbidden_namespace", "FORBIDDEN_NAMESPACE"],
+      ["product_import", "PRODUCT_OR_PUBLIC_REACHABILITY"],
+      ["persistence_import", "PRODUCT_OR_PUBLIC_REACHABILITY"],
+      ["mutable_alias", "MUTABLE_ALIAS"],
+      ["schema_key", "FORBIDDEN_SCHEMA_KEY"],
+      ["private_field", "PRIVATE_RECEIPT_FIELD"],
+    ].map(([seedId, detectedCode]) => ({ seedId, detectedCode }))
+    const policy = buildV138PreFormationContainmentPolicy({
+      protocolPolicyRoot: HASH_A,
+      monitorImplementationRoot: HASH_B,
+      scannedInventoryRoot: analysis.scannedInventoryRoot,
+      allowlistRoot: analysis.allowlistRoot,
+      realTreeAnalysis: analysis,
+      seededBypassResults: required,
+    })
+    expect(policy.status).toBe("passed_absence")
+    expect(policy.denials).toEqual({
+      formation: "denied_until_valid_phase_266_freeze_then_phase_267",
+      candidate: "denied",
+      production: "denied",
+      public: "denied",
+      persistence: "denied",
+      scheduling: "denied",
+      replayAndResult: "denied",
+    })
+    expect(renderV138PreFormationContainmentPolicy(policy)).toBe(renderV138PreFormationContainmentPolicy(policy))
   })
 })
