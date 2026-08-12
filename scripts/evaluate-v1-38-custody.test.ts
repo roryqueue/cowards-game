@@ -16,9 +16,11 @@ import { afterEach, describe, expect, it } from "vitest"
 import * as custodySurface from "./lib/v1-38-custody.js"
 import {
   V138AuthorizedCustodyHandoffSchema,
+  buildV138SyntheticCustodyMechanicsReceipt,
   createV138CustodyCommitment,
   executeV138CustodyCommand,
   projectV138SafeCustodyReceipt,
+  renderV138SyntheticCustodyMechanicsReceipt,
   validateV138AuthorizedCustodyHandoff,
 } from "./lib/v1-38-custody.js"
 import { renderV138AuthorizedCustodyHandoffReference } from "./check-v1-38-authorized-custody-handoff.js"
@@ -297,5 +299,78 @@ describe("Phase 262 authorized custody handoff boundary", () => {
     expect(renderV138AuthorizedCustodyHandoffReference(handoff(), {
       ...approval, approvedOpaqueStoreIds: ["different-store"],
     })).toBeNull()
+  })
+})
+
+describe("Phase 262 explicit no-credit synthetic custody receipt", () => {
+  const receiptInput = () => ({
+    custodySourceBytes: readFileSync(path.join(repoRoot, "scripts/lib/v1-38-custody.ts")),
+    checkerSourceBytes: readFileSync(path.join(repoRoot, "scripts/check-v1-38-authorized-custody-handoff.ts")),
+    testSourceBytes: readFileSync(path.join(repoRoot, "scripts/evaluate-v1-38-custody.test.ts")),
+    protocolPolicyBytes: readFileSync(path.join(repoRoot, ".planning/artifacts/v1.38-pre-formation-protocol-policy.json")),
+    containmentPolicyBytes: readFileSync(path.join(repoRoot, ".planning/artifacts/v1.38-pre-formation-containment-policy.json")),
+  }) as const
+
+  it("renders a byte-stable privacy-safe receipt with unavailable custody and every denial", () => {
+    const receipt = buildV138SyntheticCustodyMechanicsReceipt(receiptInput())
+    expect(receipt).toMatchObject({
+      schemaVersion: "v1.38-synthetic-custody-mechanics-v1",
+      evidenceClass: "synthetic_mechanics_only",
+      custodyStatus: "unavailable",
+      satisfiesSeal01: false,
+      authority: {
+        candidateSearchAuthorized: false,
+        phase263Authorized: false,
+        formationMaterializationAuthorized: false,
+        productionAuthorized: false,
+      },
+      genuineControls: {
+        present: false,
+        acceptedOnlyByPlan: "262-40",
+      },
+    })
+    const rendered = renderV138SyntheticCustodyMechanicsReceipt(receipt)
+    expect(rendered).toBe(renderV138SyntheticCustodyMechanicsReceipt(
+      buildV138SyntheticCustodyMechanicsReceipt(receiptInput()),
+    ))
+    expect(rendered).not.toMatch(/\/Users\/|privateKey|managedSignature|externalReceipt|opaqueStoreId|opaqueKeyId/iu)
+  })
+
+  it("binds every implementation and policy byte and cannot convert synthetic success into authority", () => {
+    const baseline = buildV138SyntheticCustodyMechanicsReceipt(receiptInput())
+    for (const key of [
+      "custodySourceBytes", "checkerSourceBytes", "testSourceBytes",
+      "protocolPolicyBytes", "containmentPolicyBytes",
+    ] as const) {
+      const input = receiptInput()
+      const mutated = buildV138SyntheticCustodyMechanicsReceipt({
+        ...input,
+        [key]: Buffer.concat([Buffer.from(input[key]), Buffer.from("\nsynthetic mutation")]),
+      })
+      expect(mutated.receiptRoot).not.toBe(baseline.receiptRoot)
+    }
+    for (const mutation of [
+      { ...baseline, custodyStatus: "authorized" },
+      { ...baseline, satisfiesSeal01: true },
+      { ...baseline, authority: { ...baseline.authority, candidateSearchAuthorized: true } },
+      { ...baseline, authority: { ...baseline.authority, phase263Authorized: true } },
+      { ...baseline, authority: { ...baseline.authority, formationMaterializationAuthorized: true } },
+      { ...baseline, authority: { ...baseline.authority, productionAuthorized: true } },
+      { ...baseline, opaqueStoreId: "looks-real" },
+      { ...baseline, managedSignature: HASH_A },
+      { ...baseline, externalReceipt: HASH_B },
+      { ...baseline, privatePath: "/tmp/private" },
+    ]) expect(() => renderV138SyntheticCustodyMechanicsReceipt(mutation))
+      .toThrow("V138_SYNTHETIC_CUSTODY_RECEIPT_INVALID")
+  })
+
+  it("matches the committed canonical receipt exactly", () => {
+    const expected = renderV138SyntheticCustodyMechanicsReceipt(
+      buildV138SyntheticCustodyMechanicsReceipt(receiptInput()),
+    )
+    expect(readFileSync(
+      path.join(repoRoot, ".planning/artifacts/v1.38-synthetic-custody-mechanics.json"),
+      "utf8",
+    )).toBe(expected)
   })
 })
