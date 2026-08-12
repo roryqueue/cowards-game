@@ -65,7 +65,7 @@
 | MEAS-05..07 | Pending | May be completed only from bounded profile-neutral calibration or the precommitted starting-value fallback with exact denominators; no candidate, formation, holdout, or stopped-route outcome may influence selection. [VERIFIED: `.planning/REQUIREMENTS.md`; D-14..D-17] |
 | MEAS-08..09 | Pending | May be completed as claim/report denial logic independent of matrix acceptance. [VERIFIED: `.planning/REQUIREMENTS.md`; D-18] |
 | MEAS-10 | Pending | May be completed as protocol-only data and synthetic fixtures; executable profiles remain forbidden until the valid Phase 266 freeze. [VERIFIED: `.planning/REQUIREMENTS.md`; D-22] |
-| SEAL-01 | Pending | Synthetic custody mechanics can be completed, but requirement credit needs genuine separately permissioned controls; no identity or authority may be invented. [VERIFIED: `.planning/REQUIREMENTS.md`; D-19..D-21; `262-06-PLAN.md`] |
+| SEAL-01 | Pending | Synthetic custody mechanics can be completed, but requirement credit needs genuine separately permissioned controls; no identity or authority may be invented. [VERIFIED: `.planning/REQUIREMENTS.md`; D-19..D-21; `archived/262-06-HISTORICAL.md`] |
 | DECI-02 | Pending | May be completed through profile-neutral metric code, exact denominators, and synthetic invariant fixtures without formation materialization. [VERIFIED: `.planning/REQUIREMENTS.md`; D-22] |
 </phase_requirements>
 
@@ -77,16 +77,16 @@ This revision does not waive or soften ADMIT-03. It narrows what ADMIT-03 gates:
 
 The current-rules-league-before-formation order remains unchanged and stronger under the revised graph. Protocol-only coordinate text and synthetic classifiers may be frozen now, but executable current-edge, inward, or bracket state still requires the valid Phase 266 current-league root. [VERIFIED: D-22; Phase 267 depends on Phase 266 in `.planning/ROADMAP.md`; activation prompt Stages 4–5]
 
-**Primary recommendation:** supersede Plans 262-03..07 with additive replacement plans that produce a non-authorizing policy root and a separately gated activation root. Never rewrite those historical plan files, never consume or extend route-5 authority, and never let the policy root satisfy ADMIT-03, SEAL-01, Phase 262 completion, or Phase 263 authorization. [VERIFIED: `262-03-PLAN.md` requires a fresh replan for this selected route; D-01/D-02 preserve prior evidence]
+**Primary recommendation:** supersede Plans 262-03..07 with additive replacement plans that produce a non-authorizing policy root, while preserving the dormant activation contract outside executable plan discovery. Preserve the historical plan bytes under audited archival names, never consume or extend route-5 authority, and never let the policy root satisfy ADMIT-03, SEAL-01, Phase 262 completion, or Phase 263 authorization. [VERIFIED: archived 262-03 bytes require a fresh replan for this selected route; D-01/D-02 preserve prior evidence]
 
 ## Architectural Responsibility Map
 
 | Capability | Primary tier | Secondary tier | Rationale |
 |---|---|---|---|
-| Dependency/acceptance revision | Planning control plane | Immutable Git evidence | The change is to plan edges and acceptance semantics, not runtime behavior. [VERIFIED: selected `plan-dependency-revision` route; `262-03-PLAN.md`] |
+| Dependency/acceptance revision | Planning control plane | Immutable Git evidence | The change is to plan edges and acceptance semantics, not runtime behavior. [VERIFIED: selected `plan-dependency-revision` route; `archived/262-03-HISTORICAL.md`] |
 | Pre-search policy root | Offline research tooling | Canonical spec identity | It freezes schemas, budgets, gates, claims, classifiers, and denial rules without producing Strategy evidence. [VERIFIED: MEAS-01..10; DECI-02] |
 | Current-matrix admission | Supervised runtime evidence | Canonical kernel | Only literal accepted reproduction evidence can satisfy ADMIT-03. [VERIFIED: ADMIT-03; D-03/D-10/D-16] |
-| Custody readiness | Offline synthetic security tooling | External authorized control plane | Repository code may prove mechanics but cannot invent the real custodian/store. [VERIFIED: D-19..D-21; `262-06-PLAN.md`] |
+| Custody readiness | Offline synthetic security tooling | External authorized control plane | Repository code may prove mechanics but cannot invent the real custodian/store. [VERIFIED: D-19..D-21; `archived/262-06-HISTORICAL.md`] |
 | Candidate/search authorization | Planning gate | Phase 263/264 execution | It remains false until both admission and policy/custody predicates pass. [VERIFIED: Phase 262 goal and Phase 263 dependency] |
 | Formation materialization | Phase 267 private lab | Phase 266 freeze root | Executable profiles remain post-current-league-freeze only. [VERIFIED: Phase 266/267 roadmap order; D-22] |
 | Browser, API, Go, persistence, public output | None | Denial monitors | No product tier receives new capability in this route. [VERIFIED: AGENTS.md; D-03/D-04/D-06] |
@@ -97,7 +97,7 @@ The current-rules-league-before-formation order remains unchanged and stronger u
 |---|---|
 | Route terminal is `calibration_stopped`. | Preserve; it is not an empirical matrix result. [VERIFIED: `262-33-VERDICT.md`] |
 | Fresh reproduction is 0 charged / 0 accepted; reproduction:v10 and marker are absent. | ADMIT-03 is unmet. [VERIFIED: `262-33-SUMMARY.md`] |
-| Route-5 authority is expired and no-retry. | No plan may reuse, resume, repair, or derive authority from it. [VERIFIED: `262-33-VERDICT.md`; `262-03-PLAN.md`] |
+| Route-5 authority is expired and no-retry. | No plan may reuse, resume, repair, or derive authority from it. [VERIFIED: `262-33-VERDICT.md`; `archived/262-03-HISTORICAL.md`] |
 | A6 custody and artifact no-drift pass; offline proof is blocked. | A6 is diagnostic/test custody only, never execution authority. [VERIFIED: `262-33-REVIEW.md`] |
 | Plans 262-03..07 are pending and own the scientific/custody truths. | Their old dependencies and acceptance claims are stale after the developer selected dependency revision. [VERIFIED: `.planning/ROADMAP.md`; `.planning/STATE.md`] |
 | No candidate, executable formation, holdout open, or Phase 263 authority exists. | The revised plan must preserve those absences. [VERIFIED: `262-33-SUMMARY.md`; D-22] |
@@ -195,13 +195,24 @@ Do not edit or overwrite any of the five files. Their dependency graph, contexts
 
 | Existing plan | Disposition | Replacement responsibility |
 |---|---|---|
-| 262-03 | **Supersede.** Do not execute and do not create `262-03-SUMMARY.md`. Its checkpoint purpose is fulfilled by the developer's `plan-dependency-revision` selection, and it explicitly requires a fresh replan. [VERIFIED: `262-03-PLAN.md`] | New dependency-revision plan records the two-latch contract, immutable stopped facts, supersession map, and zero implementation/authority credit. |
-| 262-04 | **Supersede and split.** It depends on nonexistent `262-03-SUMMARY.md` and assumes the former Plan-03 calibration artifact. [VERIFIED: `262-04-PLAN.md`] | Replacement A freezes base study/accounting/policy schemas; replacement B freezes numeric gates, reporting, and claim grammar from profile-neutral inputs or exact starting-value fallback. Neither consumes matrix gameplay evidence. |
-| 262-05 | **Supersede with a dependency-corrected replacement.** Its core classifier/protocol-only scope remains valid, but it must consume the new non-authorizing policy root and emit no executable state. [VERIFIED: `262-05-PLAN.md`; D-22] | One replacement plan owns classifiers, exact denominators, literal protocol-only records, and negative-reachability tests. |
-| 262-06 | **Supersede and split.** Synthetic mechanics and real operational authorization are distinct acceptance classes. [VERIFIED: `262-06-PLAN.md`] | First replacement proves synthetic custody mechanics with no requirement credit for real custody; a later blocking-human plan may accept only approved existing controls and remains pending without them. It does not depend on ADMIT-03, but cannot authorize candidate work. |
-| 262-07 | **Supersede and split.** Its current aggregate claims ADMIT-03 coverage and downstream authority, which is false on the retained branch. [VERIFIED: `262-07-PLAN.md` coverage table and success criteria] | First replacement emits the explicitly non-authorizing policy/containment root. Second replacement remains blocked until literal ADMIT-03 pass plus genuine SEAL-01 evidence; only it may emit an activation root. |
+| 262-03 | **Supersede.** Do not execute and do not create `262-03-SUMMARY.md`. Its checkpoint purpose is fulfilled by the developer's `plan-dependency-revision` selection, and it explicitly requires a fresh replan. [VERIFIED: `archived/262-03-HISTORICAL.md`] | New dependency-revision plan records the two-latch contract, immutable stopped facts, supersession map, and zero implementation/authority credit. |
+| 262-04 | **Supersede and split.** It depends on nonexistent `262-03-SUMMARY.md` and assumes the former Plan-03 calibration artifact. [VERIFIED: `archived/262-04-HISTORICAL.md`] | Replacement A freezes base study/accounting/policy schemas; replacement B freezes numeric gates, reporting, and claim grammar from profile-neutral inputs or exact starting-value fallback. Neither consumes matrix gameplay evidence. |
+| 262-05 | **Supersede with a dependency-corrected replacement.** Its core classifier/protocol-only scope remains valid, but it must consume the new non-authorizing policy root and emit no executable state. [VERIFIED: `archived/262-05-HISTORICAL.md`; D-22] | One replacement plan owns classifiers, exact denominators, literal protocol-only records, and negative-reachability tests. |
+| 262-06 | **Supersede and split.** Synthetic mechanics and real operational authorization are distinct acceptance classes. [VERIFIED: `archived/262-06-HISTORICAL.md`] | First replacement proves synthetic custody mechanics with no requirement credit for real custody; a later blocking-human plan may accept only approved existing controls and remains pending without them. It does not depend on ADMIT-03, but cannot authorize candidate work. |
+| 262-07 | **Supersede and split.** Its current aggregate claims ADMIT-03 coverage and downstream authority, which is false on the retained branch. [VERIFIED: `archived/262-07-HISTORICAL.md` coverage table and success criteria] | First replacement emits the explicitly non-authorizing policy/containment root. The dormant activation contract remains non-executable until literal ADMIT-03 pass plus genuine SEAL-01 evidence can be consumed by a future separately planned activation plan. |
 
-The additive replacement plans should use new plan numbers after 262-33. Reusing 03..07 numbers or rewriting their YAML would make the old and new acceptance histories ambiguous. [RECOMMENDED from D-01 and existing 33-plan chronology]
+The additive replacement plans use new plan numbers after 262-33. Reusing 03..07 numbers or rewriting their YAML would make the old and new acceptance histories ambiguous. The original bytes are therefore archived outside `*-PLAN.md` discovery, and the dormant 262-41 activation contract is likewise outside executable discovery until a future separately planned literal ADMIT-03 pass exists. [RESOLVED from D-01, actual `phase-plan-index 262` behavior, and existing 33-plan chronology]
+
+### Audited archival and dormant-contract classification
+
+| Original executable path | Preserved non-executable path | SHA-256 | Disposition |
+|---|---|---|---|
+| `262-03-PLAN.md` | `archived/262-03-HISTORICAL.md` | `d25cf4eede098232cc0b9022eed71da2867582f36e5bbc7c2a3f13d8681745b3` | Historical routing checkpoint; byte-preserved and absent from active plan discovery. |
+| `262-04-PLAN.md` | `archived/262-04-HISTORICAL.md` | `7b9fbfef375f2439246740b26fa3c8c1d45baaf54f23ff884ea364fa53effc68` | Historical combined measurement plan; byte-preserved and absent from active plan discovery. |
+| `262-05-PLAN.md` | `archived/262-05-HISTORICAL.md` | `53e027d767e2a753adc0c1d2d577cb367bd7f7808ff453d29b3e5aa6203dbcf3` | Historical classifier/containment plan; byte-preserved and absent from active plan discovery. |
+| `262-06-PLAN.md` | `archived/262-06-HISTORICAL.md` | `7f07cc1f2baf300b4d4dc9200799eabbfb390a96ac7daef26905c9973ddc06b0` | Historical combined custody plan; byte-preserved and absent from active plan discovery. |
+| `262-07-PLAN.md` | `archived/262-07-HISTORICAL.md` | `5c86c379a31e8bd7706c857666d31edc974600242e0e0ef5f78934151f23704d` | Historical aggregate-root plan; byte-preserved and absent from active plan discovery. |
+| `262-41-PLAN.md` | `dormant/262-41-ACTIVATION-CONTRACT.md` | `5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641` | Dormant activation contract only; non-executable until separately planned literal ADMIT-03 work exists. |
 
 ## Requirement Completion Boundary
 
@@ -217,7 +228,7 @@ Completion credit requires immutable evidence and executable denial for each req
 ### Cannot be completed on this route
 
 - `ADMIT-03`: no accepted reproduction exists, and dependency revision is not reproduction evidence. [VERIFIED: `262-33-VERDICT.md`]
-- `SEAL-01`: cannot pass from synthetic identities or repository-local fixtures; it remains pending until approved existing controls are supplied. [VERIFIED: `262-06-PLAN.md`; D-19]
+- `SEAL-01`: cannot pass from synthetic identities or repository-local fixtures; it remains pending until approved existing controls are supplied. [VERIFIED: `archived/262-06-HISTORICAL.md`; D-19]
 - Phase 262 completion and success truth 2: impossible while ADMIT-03 is blocked. [VERIFIED: `.planning/ROADMAP.md`]
 - Phase 263 execution or candidate search: remains denied while the activation root is absent. [VERIFIED: Phase 263 depends on Phase 262; ADMIT-03 says before candidate search]
 - Any executable formation profile or Phase 267 work: remains denied until the valid Phase 266 current-league freeze, irrespective of Phase 262 policy readiness. [VERIFIED: roadmap ordering; D-22]
@@ -305,7 +316,7 @@ Exact-schema tests must reject missing, extra, or flipped denial fields. [RECOMM
 |---|---|---|---|
 | Root identities | Ad hoc JSON/string hashes | Existing canonical JSON and domain-separated identity primitives | Existing project authority already uses these patterns. [VERIFIED: `packages/spec/src/canonical-json.ts`; `canonical-identity-domains.ts`] |
 | Contract validation | Loose property checks | Existing exact-schema validation pattern | Missing/extra fields must fail closed. [VERIFIED: Phase 262 research and tests] |
-| Cryptography | Custom hash/signature/encryption | Node built-ins and only an already-authorized managed control plane | D-19 forbids invented custody trust. [VERIFIED: `262-06-PLAN.md`] |
+| Cryptography | Custom hash/signature/encryption | Node built-ins and only an already-authorized managed control plane | D-19 forbids invented custody trust. [VERIFIED: `archived/262-06-HISTORICAL.md`] |
 | Dependency authorization | Filename presence or prose status | Exact typed latch evaluator plus mutation tests | Presence does not establish capability or authority. [VERIFIED: D-01/D-02] |
 | Git evidence repair | Recreated commits or substituted hashes | Read-only exact object checks and a separately planned fix | Historical identity is part of the contract. [VERIFIED: frozen replay test; D-08] |
 
@@ -323,7 +334,7 @@ A downstream task may see a valid content hash and assume it is sufficient. Requ
 
 ### Pitfall 3: Completing SEAL-01 from a synthetic drill
 
-Synthetic storage/state-machine proof shows mechanics only. Without a separately permissioned custodian and approved store, custody remains unavailable. [VERIFIED: D-19; `262-06-PLAN.md`]
+Synthetic storage/state-machine proof shows mechanics only. Without a separately permissioned custodian and approved store, custody remains unavailable. [VERIFIED: D-19; `archived/262-06-HISTORICAL.md`]
 
 ### Pitfall 4: Smuggling empirical calibration into policy work
 
@@ -360,7 +371,7 @@ Literal coordinate records are permitted; callable adapters and executable initi
 | pnpm | Workspace commands | Yes | 11.1.2 | None needed. [VERIFIED: local probe and `packageManager`] |
 | Git | Exact historical custody | Yes | 2.50.1 Apple Git-155 | None; fail closed on missing objects. [VERIFIED: local probe] |
 | Vitest | Focused policy/mutation tests | Yes | Existing workspace dependency | No new framework. [VERIFIED: repository test stack] |
-| Real custody control plane | SEAL-01 | Not available from repository evidence | — | No synthetic fallback; leave pending. [VERIFIED: `262-06-PLAN.md`] |
+| Real custody control plane | SEAL-01 | Not available from repository evidence | — | No synthetic fallback; leave pending. [VERIFIED: `archived/262-06-HISTORICAL.md`] |
 | Frozen commit `4fab0afc...` | Historical replay full-suite test | No | — | No substitution in this route; report separate tooling block. [VERIFIED: read-only Git probe] |
 
 ## Validation Architecture
@@ -384,7 +395,7 @@ Nyquist validation is enabled. Replacement plans need fast, exact per-task comma
 | G1 Historical custody | Hash/read-only checks of Plan-262-33 verdict, stopped terminal, 0/0 counts, expired/no-retry, and protected source/artifact bytes. | Allows policy work only; never authority. [VERIFIED: `262-33-VERDICT.md`] |
 | G2 Policy schemas | Exact-key validation and deterministic regeneration for MEAS-01..09, with missing/extra/root/denominator mutations. | May mark individually proven MEAS requirements complete. |
 | G3 Classifier/protocol containment | Synthetic positive/negative/mirrored/renamed/permuted fixtures plus AST/import/artifact denial; no `GameState` or profile materialization. | May mark MEAS-10/DECI-02 complete. [VERIFIED: D-22] |
-| G4 Custody mechanics | Synthetic outside-repo command/state-machine tests with no real identities or secrets. | Mechanics ready only; SEAL-01 remains pending. [VERIFIED: `262-06-PLAN.md`] |
+| G4 Custody mechanics | Synthetic outside-repo command/state-machine tests with no real identities or secrets. | Mechanics ready only; SEAL-01 remains pending. [VERIFIED: `archived/262-06-HISTORICAL.md`] |
 | G5 Policy root denial | Mutation tests prove policy root cannot satisfy ADMIT-03/SEAL-01, grant downstream authority, invoke a writer, or authorize candidate/formation paths. | Emits non-authorizing policy root. |
 | G6 Matrix admission | Future separately authorized exact reproduction check: literal pass, fresh 540/540, zero integrity failures, exact tuple/runtime. | ADMIT-03 only. Not runnable under this route. [VERIFIED: current blocked/no-retry state] |
 | G7 Operational custody | Exact approved existing-control handoff and safe projection. | SEAL-01 only; remains a blocking-human gate. [VERIFIED: D-19] |
@@ -464,24 +475,22 @@ Security enforcement is enabled because `.planning/config.json` does not disable
 |---|---|---|---|
 | — | None. Recommendations are derived from current repository contracts and immutable Phase-262 evidence. | — | — |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Will genuine custody controls be supplied before ADMIT-03 is resolved?**
-   - What is known: custody authorization is independent of the matrix in principle, but SEAL-01 requires real external controls. [VERIFIED: D-19; `262-06-PLAN.md`]
-   - What is unclear: availability and timing are outside repository evidence.
-   - Recommendation: finish synthetic mechanics and policy procedure without requirement credit; leave the operational checkpoint blocked until approved controls exist.
+1. **RESOLVED — Will genuine custody controls be supplied before ADMIT-03 is resolved?**
+   - What is known: custody authorization is independent of the matrix in principle, but SEAL-01 requires real external controls. [VERIFIED: D-19; `archived/262-06-HISTORICAL.md`]
+   - Resolution: availability and timing remain outside repository evidence. If genuine custody is unavailable, Plan 262-40 remains a blocking-human plan, SEAL-01 remains pending, and no public custody reference is emitted. Synthetic mechanics and broad human approval cannot substitute for the closed authenticated handoff.
 
-2. **Will a future separately authorized ADMIT-03 route ever be requested?**
+2. **RESOLVED — Will a future separately authorized ADMIT-03 route ever be requested?**
    - What is known: no current authority exists and route 5 cannot be retried. [VERIFIED: `262-33-VERDICT.md`]
-   - What is unclear: the developer has selected dependency revision, not a new live route.
-   - Recommendation: do not plan or imply one in the policy-lane plans; leave the activation plan dormant behind an explicit future decision.
+   - Resolution: no new ADMIT-03 route was requested, so this revision creates no such plan, authority, writer, or execution path. The activation contract is retained only as `dormant/262-41-ACTIVATION-CONTRACT.md`, outside `*-PLAN.md` discovery; activation remains dormant until a future separately planned literal ADMIT-03 pass exists.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
 - `262-CONTEXT.md` — locked D-01..D-22, discretion, and deferred boundaries.
-- `262-03-PLAN.md` through `262-07-PLAN.md` — current pending graph and stale acceptance assumptions.
+- `archived/262-03-HISTORICAL.md` through `archived/262-07-HISTORICAL.md` — byte-preserved historical graph and stale acceptance assumptions.
 - `262-31-VERDICT.md`, `262-32-RESEARCH.md`, `262-32-SUMMARY.md`, `262-33-PLAN.md`, `262-33-REVIEW.md`, `262-33-SUMMARY.md`, and `262-33-VERDICT.md` — stopped route, offline repair/proof, no-retry, and developer-decision boundary.
 - `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `.planning/ROADMAP.md`, `.planning/STATE.md`, and `.planning/research/SUMMARY.md` — milestone contract, exact requirement language, ordering, and current tracking.
 - v1.38 `ACTIVATION-PROMPT.md`, competitive-strategy research handoff, and SEED-002 — measurement-before-search and current-league-before-formation order.

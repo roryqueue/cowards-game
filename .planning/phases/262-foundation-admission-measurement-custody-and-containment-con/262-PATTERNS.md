@@ -1,8 +1,8 @@
 # Phase 262: Foundation Admission, Measurement, Custody, and Containment Contract - Pattern Map
 
-**Mapped:** 2026-08-09 (successor refresh)
-**Files analyzed:** 20 new/modified files
-**Analogs found:** 20 / 20
+**Mapped:** 2026-08-12 (dependency-revision refresh)
+**Files analyzed:** 43 plan-file assignments across the original foundation map and active dependency-revision Plans 262-34..40 (38 unique paths)
+**Analogs found:** 43 / 43 assignments
 
 ## Scope Guard
 
@@ -35,6 +35,36 @@ Do not create or make reachable any `formation/`, `profiles/`, `candidates/`, `p
 | `.planning/artifacts/v1.38-custody-public-reference.json` | public-safe reference | file-I/O | `V137PublicRestrictedEvidenceRef` in `scripts/lib/v1-37-restricted-evidence-store.ts` | role-match |
 | `.planning/artifacts/v1.38-pre-formation-containment.json` | immutable receipt | batch + file-I/O | v1.37 integrity-boundary analysis output | role-match |
 | `.planning/artifacts/v1.38-foundation-contract-root.json` | aggregate root | transform + file-I/O | `.planning/artifacts/v1.37-strategy-evaluation-foundation.json` | role-match |
+
+### Active dependency-revision files (Plans 262-34..40)
+
+| New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
+|---|---|---|---|---|
+| `scripts/lib/v1-38-policy-authority.ts` | capability-specific status model / evaluator | pure transform | exact-key typed stop/pass joins in `scripts/check-v1-37-audit-reproduction.ts` | role-match |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | archival, authority, privacy, and reachability monitor | batch + static analysis | `scripts/check-v1-37-integrity-boundaries.ts` | exact |
+| `scripts/evaluate-v1-38-dependency-revision.test.ts` | mutation and boundary test | batch + mutation | `scripts/check-v1-37-audit-reproduction.test.ts` | exact |
+| `.planning/artifacts/v1.38-phase-262-plan-supersession.json` | immutable archival/supersession manifest | canonical transform + file-I/O | source-binding inventory in `scripts/generate-v1-37-strategy-foundation-handoff.ts` | role-match |
+| `scripts/lib/v1-38-study-contract.ts` | study/opportunity/accounting schema | pure transform | exact readonly schema sections in `scripts/generate-v1-37-strategy-foundation-handoff.ts` | role-match |
+| `scripts/evaluate-v1-38-study-contract.test.ts` | exact-schema/property test | mutation | `scripts/check-v1-37-audit-reproduction.test.ts` | role-match |
+| `.planning/artifacts/v1.38-pre-search-study-policy.json` | immutable non-authorizing policy | canonical transform + file-I/O | `.planning/artifacts/v1.37-strategy-evaluation-foundation.json` | role-match |
+| `scripts/lib/v1-38-measurement.ts` | numeric freeze/report/claim evaluator | pure transform | pure canonical-analysis half of `scripts/check-v1-37-audit-reproduction.ts` | role-match |
+| `scripts/evaluate-v1-38-measurement.test.ts` | table/property/mutation test | mutation | `scripts/check-v1-37-audit-reproduction.test.ts` | role-match |
+| `.planning/artifacts/v1.38-pre-search-measurement-policy.json` | immutable numeric/report policy | canonical transform + file-I/O | `.planning/artifacts/v1.37-strategy-evaluation-foundation.json` | role-match |
+| `scripts/lib/v1-38-classifiers.ts` | profile-neutral canonical classifier utility | pure transform | canonical inventory/normalization logic in `scripts/check-v1-37-audit-reproduction.ts` | role-match |
+| `scripts/lib/v1-38-containment.ts` | AST/import/artifact containment monitor | batch + static analysis | `scripts/check-v1-37-integrity-boundaries.ts` | exact |
+| `scripts/evaluate-v1-38-classifiers-containment.test.ts` | property/mutation/bypass test | mutation + synthetic fixtures | seeded boundary tests in `scripts/check-v1-37-integrity-boundaries.test.ts` | exact |
+| `.planning/artifacts/v1.38-pre-formation-protocol-policy.json` | protocol-only immutable policy | canonical transform + file-I/O | exact schema renderer in `scripts/generate-v1-37-strategy-foundation-handoff.ts` | role-match |
+| `.planning/artifacts/v1.38-pre-formation-containment-policy.json` | containment proof/policy | batch + file-I/O | v1.37 integrity-boundary analysis output | role-match |
+| `scripts/lib/v1-38-custody.ts` | synthetic restricted store plus closed authorized-handoff schema | event-driven + external-input validation | `scripts/lib/v1-37-restricted-evidence-store.ts` plus exact-key validators in `scripts/check-v1-37-audit-reproduction.ts` | composite role-match |
+| `scripts/check-v1-38-authorized-custody-handoff.ts` | authenticated external-handoff checker / bounded reference renderer | request-response + file-I/O | public-reference projection in `scripts/lib/v1-37-restricted-evidence-store.ts` and strict `--write`/`--check` dispatch in `scripts/generate-v1-37-strategy-foundation-handoff.ts` | composite role-match |
+| `scripts/evaluate-v1-38-custody.test.ts` | synthetic lifecycle and authorized-handoff mutation test | external temp store + mutation | `scripts/lib/v1-37-restricted-evidence-store.test.ts` | exact |
+| `.planning/artifacts/v1.38-synthetic-custody-mechanics.json` | explicit no-credit mechanics receipt | canonical transform + file-I/O | bounded restricted-evidence public reference | role-match |
+| `scripts/evaluate-v1-38-pre-search-policy.ts` | non-authorizing aggregate-root writer/checker | batch + file-I/O | `scripts/generate-v1-37-strategy-foundation-handoff.ts` | exact |
+| `scripts/evaluate-v1-38-pre-search-policy.test.ts` | aggregate join/denial mutation test | mutation | `scripts/check-v1-37-audit-reproduction.test.ts` | role-match |
+| `.planning/artifacts/v1.38-pre-search-policy-root.json` | capability-specific non-authorizing root | canonical transform + file-I/O | `.planning/artifacts/v1.37-strategy-evaluation-foundation.json` | role-match |
+| `.planning/artifacts/v1.38-custody-public-reference.json` | bounded genuine-custody reference | authenticated external projection + file-I/O | `V137PublicRestrictedEvidenceRef` in `scripts/lib/v1-37-restricted-evidence-store.ts` | role-match |
+
+The archival planning files under `archived/` and the dormant activation contract under `dormant/` are byte-preserved evidence, not implementation inputs. Their pattern is Git-object custody: original path, non-discoverable destination, and SHA-256 must agree exactly, while `phase-plan-index 262` must omit their former plan IDs. The dormant contract is not an analog for an executable writer until a future separately planned literal ADMIT-03 pass exists.
 
 ## Pattern Assignments
 
