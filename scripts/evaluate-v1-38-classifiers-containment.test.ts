@@ -124,8 +124,11 @@ describe("Phase 262 profile-neutral classifiers and protocol", () => {
 
   it("keeps hard rejection logic non-compensating at exact boundaries", () => {
     const input = classifierInput()
-    const observations = input.observations.map((entry, index) =>
-      index === 0 ? { ...entry, convoy: true, interaction: false } : entry)
+    const observations = input.observations.map((entry, index) => ({
+      ...entry,
+      convoy: index === 0,
+      interaction: false,
+    }))
     const failed = evaluateV138Classifiers({ ...input, observations })
     expect(failed.status).toBe("rejected")
     expect(failed.failedHardGates).toContain("interaction")
