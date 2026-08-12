@@ -1,7 +1,15 @@
+import { readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
+  V138AccountingClosureSchema,
   V138OpportunityVectorSchema,
   V138StudyPolicySchema,
+  buildV138PreSearchStudyPolicy,
+  deriveV138AllocationRoot,
+  renderV138PreSearchStudyPolicy,
+  validateV138AccountingClosure,
 } from "./lib/v1-38-study-contract.js"
 
 const HASH_A = `sha256:${"a".repeat(64)}` as const
@@ -178,5 +186,139 @@ describe("Phase 262 pre-search study and opportunity contract", () => {
       .toThrow("V138_OPPORTUNITY_VECTOR_INVALID")
     expect(() => V138OpportunityVectorSchema.parse({ ...opportunity(), modelTokens: -1 }))
       .toThrow("V138_OPPORTUNITY_VECTOR_INVALID")
+  })
+})
+
+const accountingClosure = () => {
+  const dispositions = [
+    "accepted", "rejected", "invalid", "duplicate_identical", "duplicate_conflicting",
+    "player_violation", "system_failure", "retried", "unfilled", "unused",
+  ] as const
+  const allocationIds = dispositions.map((_, index) => `allocation:${index + 1}`)
+  const attempts = dispositions.map((disposition, index) => ({
+    allocationId: allocationIds[index]!,
+    attemptId: `attempt:${index + 1}`,
+    disposition,
+    cellIdentity: disposition === "accepted" ? "cell:accepted" : null,
+    processValid: disposition === "accepted",
+    completeCell: disposition === "accepted",
+    runtimeValid: disposition === "accepted",
+    systemValid: disposition === "accepted",
+    legalInformationValid: disposition === "accepted",
+    privacyValid: disposition === "accepted",
+    identityJoinProved: disposition === "accepted",
+    retryOf: disposition === "retried" ? "attempt:2" : null,
+  }))
+  return {
+    schemaVersion: "v1.38-accounting-closure-v1",
+    identityDomain: "cowards-game:v1.38:accounting-closure:v1",
+    declaredAllocationCount: allocationIds.length,
+    declaredAllocationRoot: deriveV138AllocationRoot(allocationIds),
+    allocationIds,
+    attempts,
+    acceptedCells: [{ cellIdentity: "cell:accepted", attemptId: "attempt:1" }],
+  } as const
+}
+
+describe("Phase 262 two-ledger accounting and study artifact", () => {
+  it("charges every disposition while admitting only unique process-valid complete cells", () => {
+    const fixture = accountingClosure()
+    expect(V138AccountingClosureSchema.parse(fixture)).toEqual(fixture)
+    expect(validateV138AccountingClosure(fixture)).toMatchObject({
+      status: "stopped",
+      chargedCount: 10,
+      acceptedCount: 1,
+      reason: "conflicting_duplicate",
+    })
+
+    const withoutConflict = {
+      ...fixture,
+      attempts: fixture.attempts.map((attempt) =>
+        attempt.disposition === "duplicate_conflicting"
+          ? { ...attempt, disposition: "rejected" as const }
+          : attempt),
+    }
+    expect(validateV138AccountingClosure(withoutConflict)).toMatchObject({
+      status: "closed",
+      chargedCount: 10,
+      acceptedCount: 1,
+      reason: null,
+    })
+  })
+
+  it("fails closed on hidden charges, accepted failures, duplicate cells, and unproved joins", () => {
+    const fixture = accountingClosure()
+    const clean = {
+      ...fixture,
+      attempts: fixture.attempts.map((attempt) =>
+        attempt.disposition === "duplicate_conflicting"
+          ? { ...attempt, disposition: "rejected" as const }
+          : attempt),
+    }
+    const acceptedIndex = clean.attempts.findIndex(({ disposition }) => disposition === "accepted")
+    const accepted = clean.attempts[acceptedIndex]!
+    for (const mutation of [
+      { ...clean, attempts: clean.attempts.slice(0, -1) },
+      { ...clean, declaredAllocationCount: clean.declaredAllocationCount - 1 },
+      { ...clean, declaredAllocationRoot: HASH_A },
+      { ...clean, attempts: clean.attempts.map((entry, index) => index === acceptedIndex ? { ...accepted, systemValid: false } : entry) },
+      { ...clean, attempts: clean.attempts.map((entry, index) => index === acceptedIndex ? { ...accepted, identityJoinProved: false } : entry) },
+      { ...clean, acceptedCells: [...clean.acceptedCells, clean.acceptedCells[0]!] },
+    ]) expect(validateV138AccountingClosure(mutation).status).toBe("stopped")
+
+    expect(() => V138AccountingClosureSchema.parse({ ...clean, route5Outcome: "passed" }))
+      .toThrow("V138_ACCOUNTING_CLOSURE_INVALID")
+  })
+
+  it("renders a byte-stable ready policy whose roots bind every source and whose authority remains denied", () => {
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+    const sourceBytes = readFileSync(path.join(root, "scripts/lib/v1-38-study-contract.ts"))
+    const testBytes = readFileSync(path.join(root, "scripts/evaluate-v1-38-study-contract.test.ts"))
+    const inputPolicyBytes = Buffer.from(JSON.stringify(studyPolicy()))
+    const input = {
+      studyPolicy: studyPolicy(),
+      sourceBytes,
+      testBytes,
+      inputPolicyBytes,
+      generatorBytes: sourceBytes,
+    }
+    const policy = buildV138PreSearchStudyPolicy(input)
+    expect(renderV138PreSearchStudyPolicy(policy))
+      .toBe(renderV138PreSearchStudyPolicy(buildV138PreSearchStudyPolicy(input)))
+    expect(policy).toMatchObject({
+      policyStatus: "ready",
+      admission: { admit03: "blocked", matrixAdmissionStatus: "blocked" },
+      custody: { seal01: "unmet", custodyClaimed: false },
+      authority: {
+        candidateSearchAuthorized: false,
+        phase263Authorized: false,
+        formationMaterializationAuthorized: false,
+        productionAuthorized: false,
+        liveWorkAuthorized: false,
+      },
+    })
+    const sourceMutation = buildV138PreSearchStudyPolicy({
+      ...input,
+      sourceBytes: Buffer.concat([sourceBytes, Buffer.from("\n// mutation")]),
+    })
+    const testMutation = buildV138PreSearchStudyPolicy({
+      ...input,
+      testBytes: Buffer.concat([testBytes, Buffer.from("\n// mutation")]),
+    })
+    const inputMutation = buildV138PreSearchStudyPolicy({
+      ...input,
+      inputPolicyBytes: Buffer.concat([inputPolicyBytes, Buffer.from(" ")]),
+    })
+    expect(new Set([
+      policy.policyRoot,
+      sourceMutation.policyRoot,
+      testMutation.policyRoot,
+      inputMutation.policyRoot,
+    ]).size).toBe(4)
+
+    for (const forbidden of ["candidateOutput", "profile", "holdout", "route5Outcome"]) {
+      expect(() => buildV138PreSearchStudyPolicy({ ...input, [forbidden]: {} } as never))
+        .toThrow("V138_PRE_SEARCH_STUDY_POLICY_INPUT_INVALID")
+    }
   })
 })
