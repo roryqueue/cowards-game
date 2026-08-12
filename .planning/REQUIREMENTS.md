@@ -26,7 +26,7 @@ Each requirement is complete only when its named behavior has an immutable evide
 - [x] **MEAS-07**: The starting response contract targets two consecutive responses above 55% Set score against the preceding frozen mixture on untouched conditions, at least one deployable Strategy above 60% against an independent probe field, and a fresh red team below 60% or a discovered counter followed by the next declared response iteration clearing the frozen adaptation target, denominator, and pass threshold against the updated mixture.
 - [x] **MEAS-08**: Results above 70% against the Advanced library remain regression-only evidence, and every robustness claim is limited to named frozen oracles, budgets, populations, conditions, identities, and versions.
 - [x] **MEAS-09**: Reports distinguish process/integrity failure, valid current-rules metagame failure, formation rejection, formation empirical pass, and holdout contamination; thresholds and interpretations cannot be softened after results.
-- [ ] **MEAS-10**: Before tuning, maintainers precommit the literal three-profile protocol, profile-agnostic cold common root, matched execution order, unchanged-rule comparison, equal-compute dimensions, common profile-agnostic holdout opponent/schedule construction, telemetry, rejection gates, holdout commitment and custody procedure, access/query policy, safe receipt, contamination response, and non-authorization semantics; the holdout lineage proves its source, training data, prompts, caches, and selection use no profile-conditioned or current-trained input, and profile-agnostic metric code and synthetic classifier fixtures may exist while no executable formation state or evidence is materialized.
+- [x] **MEAS-10**: Before tuning, maintainers precommit the literal three-profile protocol, profile-agnostic cold common root, matched execution order, unchanged-rule comparison, equal-compute dimensions, common profile-agnostic holdout opponent/schedule construction, telemetry, rejection gates, holdout commitment and custody procedure, access/query policy, safe receipt, contamination response, and non-authorization semantics; the holdout lineage proves its source, training data, prompts, caches, and selection use no profile-conditioned or current-trained input, and profile-agnostic metric code and synthetic classifier fixtures may exist while no executable formation state or evidence is materialized.
 
 ### Legal Hierarchical Planner
 
@@ -112,7 +112,7 @@ Each requirement is complete only when its named behavior has an immutable evide
 ### Formation Decision and Non-Authorization
 
 - [ ] **DECI-01**: The causal report measures canonicalized opening selection entropy and clusters, viable openings, forced evacuation, unselected first-Contraction reserves, first Awareness, contact, push, Backstab, STONE, and decisive-event timing, Backstabs by timing/cause including stationary reserves, same-direction blocks, blocked and resolved pushes, no-Advance STONE/cleanup by cause, center/wing/convoy/turtle behavior, draws, Match length, Contractions, ACTIVE survival, response gaps, pure worst cases, and best-response graphs.
-- [ ] **DECI-02**: Before results, researchers operationalize symmetry/ID/orientation-canonical opening clusters, entropy normalized to feasible opening choices, scripted-opening, convoy, reserve-hoarding, persistent turtle, STONE-shield, interaction, inactivity, draw, Match-length, response-gap, pure-worst-case, and confounder thresholds with exact denominators, replication treatment, validated positive/negative/mirrored/obfuscated fixtures, and non-compensating logic.
+- [x] **DECI-02**: Before results, researchers operationalize symmetry/ID/orientation-canonical opening clusters, entropy normalized to feasible opening choices, scripted-opening, convoy, reserve-hoarding, persistent turtle, STONE-shield, interaction, inactivity, draw, Match-length, response-gap, pure-worst-case, and confounder thresholds with exact denominators, replication treatment, validated positive/negative/mirrored/obfuscated fixtures, and non-compensating logic.
 - [ ] **DECI-03**: The bracket is rejected when independent adapted best responses converge on a robust scripted opening or materially collapse viable opening diversity under the frozen rule.
 - [ ] **DECI-04**: The bracket is rejected when convoy, reserve-hoarding, persistent turtle, STONE-shield behavior, materially lower or later interaction, inactivity, draws, or pathological blocking crosses any frozen hard gate.
 - [ ] **DECI-05**: The bracket is rejected when oracle-relative response gap, pure-policy worst case, invariance, compute equality, information integrity, or any declared causal confounder is worse than the frozen comparison permits.
@@ -196,7 +196,7 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | MEAS-07 | Phase 262 | Complete |
 | MEAS-08 | Phase 262 | Complete |
 | MEAS-09 | Phase 262 | Complete |
-| MEAS-10 | Phase 262 | Pending |
+| MEAS-10 | Phase 262 | Complete |
 | PLAN-01 | Phase 263 | Pending |
 | PLAN-02 | Phase 263 | Pending |
 | PLAN-03 | Phase 263 | Pending |
@@ -255,7 +255,7 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | SEAL-06 | Phase 269 | Pending |
 | SEAL-07 | Phase 269 | Pending |
 | DECI-01 | Phase 269 | Pending |
-| DECI-02 | Phase 262 | Pending |
+| DECI-02 | Phase 262 | Complete |
 | DECI-03 | Phase 269 | Pending |
 | DECI-04 | Phase 269 | Pending |
 | DECI-05 | Phase 269 | Pending |
