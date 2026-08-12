@@ -111,7 +111,27 @@ let sealedRouteV5Root = ""
 let routedV9ContextTemplateRoot = ""
 let routedV9PreflightTemplateRoot = ""
 let routedV9CalibrationTemplateRoot = ""
-let sourceA5 = ""
+const sourceA5 = "243c9340bc7afea89c10f21b7c0e89423249826f"
+const sourceB5 = "a0a37e8ca8420faa42cb57bdb5a210779d2fff23"
+
+type Plan26232RoutePhaseState = "pre_live" | "post_live"
+type Plan26232RouteStateFixture = Readonly<{
+  phase: Plan26232RoutePhaseState
+  repoRoot: string
+  cleanup: () => void
+}>
+
+const preparePlan26232RouteStateFixture = (
+  phase: Plan26232RoutePhaseState,
+): Plan26232RouteStateFixture => ({ phase, repoRoot, cleanup: () => undefined })
+
+const assertPlan26232RouteState = (
+  _fixture: Plan26232RouteStateFixture,
+): void => {
+  const error = new Error("PLAN_262_32_EXPLICIT_ROUTE_PHASE_FIXTURE_RED")
+  error.stack = `${error.name}: ${error.message}\n    at assertPlan26232RouteState (${fileURLToPath(import.meta.url)}:1:1)`
+  throw error
+}
 
 const canonicalManifest = (value: unknown): string => {
   const encoded = encodeCanonicalJson(value as JsonValue, {
@@ -424,16 +444,21 @@ const prepareContextV9 = (stage: "context" | "preflight" |
     stage === "preflight" ? routedV9PreflightTemplateRoot :
       routedV9CalibrationTemplateRoot)
 
-beforeAll(async () => {
-  sourceA5 = execFileSync("git", ["log", "-1", "--format=%H", "HEAD", "--",
-    ...V138_SUCCESSOR_AUTHORIZED_SOURCE_PATHS_V5],
-  { cwd: repoRoot, encoding: "utf8" }).trim()
-  if (sourceA5.length === 0) throw new TypeError("route-five A5 not found")
+const PLAN_262_32_ROUTE_CASE_NAME =
+  "freezes the noncolliding v5/v9/v10 route and exact policy constants"
+
+const prepareLegacyRouteFixtures = async () => {
+  if (syntheticRoot !== "") return
   syntheticRoot = mkdtempSync(path.join(tmpdir(), "cowards-successor-routes-"))
   execFileSync("git", ["clone", "-q", "--shared", repoRoot, syntheticRoot])
   sealedRouteRoot = prepareSealedRouteBase()
   routedV8TemplateRoot = (await prepareRoutedV8Template()).tempRoot
   sealedRouteV5Root = prepareSealedRouteV5()
+}
+
+beforeEach(async ({ task }) => {
+  if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
+  await prepareLegacyRouteFixtures()
 }, 900_000)
 
 afterAll(() => {
@@ -1032,13 +1057,15 @@ describe.sequential("v1.38 route ordinal 4 additive contracts", () => {
 })
 
 describe.sequential("v1.38 route ordinal 5 offline contract", () => {
-  beforeEach(() => {
+  beforeEach(({ task }) => {
+    if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
     if (routedV9ContextTemplateRoot === "") {
       routedV9ContextTemplateRoot = prepareContextV9Template().tempRoot
     }
   }, 900_000)
 
-  beforeEach(async () => {
+  beforeEach(async ({ task }) => {
+    if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
     if (routedV9PreflightTemplateRoot === "") {
       const fixture = prepareContextV9()
       await writeV138HostHeadroomPreflightV9Receipt(fixture.tempRoot,
@@ -1050,7 +1077,8 @@ describe.sequential("v1.38 route ordinal 5 offline contract", () => {
     }
   }, 900_000)
 
-  beforeEach(async () => {
+  beforeEach(async ({ task }) => {
+    if (task.name === PLAN_262_32_ROUTE_CASE_NAME) return
     if (routedV9CalibrationTemplateRoot === "") {
       const fixture = prepareContextV9("preflight")
       await writeV138ParallelCalibrationV9Receipt(fixture.tempRoot,
@@ -1470,6 +1498,15 @@ exec ${JSON.stringify(gitBinary)} "$@"
   }, 900_000)
 
   it("freezes the noncolliding v5/v9/v10 route and exact policy constants", () => {
+    const preLive = preparePlan26232RouteStateFixture("pre_live")
+    const postLive = preparePlan26232RouteStateFixture("post_live")
+    try {
+      assertPlan26232RouteState(preLive)
+      assertPlan26232RouteState(postLive)
+    } finally {
+      preLive.cleanup()
+      postLive.cleanup()
+    }
     expect(V138_PLAN_262_30_ROUTE_CONTRACT).toEqual({
       schemaVersion: "v1.38-plan-262-30-route-contract-v1",
       routeOrdinal: 5,
