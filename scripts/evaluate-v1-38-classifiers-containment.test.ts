@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -15,6 +19,9 @@ import {
 const HASH_A = `sha256:${"a".repeat(64)}` as const
 const HASH_B = `sha256:${"b".repeat(64)}` as const
 const HASH_C = `sha256:${"c".repeat(64)}` as const
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const fileHash = (repoPath: string) =>
+  `sha256:${createHash("sha256").update(readFileSync(path.join(repoRoot, repoPath))).digest("hex")}` as const
 
 const opening = () => ({
   schemaVersion: "v1.38-synthetic-opening-projection-v1",
@@ -338,5 +345,55 @@ describe("Phase 262 pre-formation containment", () => {
       replayAndResult: "denied",
     })
     expect(renderV138PreFormationContainmentPolicy(policy)).toBe(renderV138PreFormationContainmentPolicy(policy))
+  })
+
+  it("binds a zero-finding real declared inventory and regenerates its committed policy", () => {
+    const sourcePaths = [
+      "scripts/lib/v1-38-classifiers.ts",
+      "scripts/lib/v1-38-containment.ts",
+      "scripts/evaluate-v1-38-classifiers-containment.test.ts",
+    ]
+    const protocolPath = ".planning/artifacts/v1.38-pre-formation-protocol-policy.json"
+    const containmentPath = ".planning/artifacts/v1.38-pre-formation-containment-policy.json"
+    const sources = Object.fromEntries(sourcePaths.map((repoPath) => [
+      repoPath,
+      readFileSync(path.join(repoRoot, repoPath), "utf8"),
+    ]))
+    const protocolBytes = readFileSync(path.join(repoRoot, protocolPath))
+    const analysis = analyzeV138PreFormationContainment({
+      schemaVersion: "v1.38-pre-formation-containment-input-v1",
+      phase266FreezePresent: false,
+      phase267MaterializationGateOpen: false,
+      allowlistedProtocolPaths: [...sourcePaths, protocolPath],
+      sources,
+      artifacts: { [protocolPath]: JSON.parse(protocolBytes.toString("utf8")) },
+    })
+    expect(analysis.status).toBe("passed_absence")
+    expect(analysis.findings).toEqual([])
+    const seededBypassResults = [
+      ["direct_engine_state", "FORBIDDEN_ENGINE_STATE"],
+      ["aliased_engine_constructor", "FORBIDDEN_ENGINE_STATE"],
+      ["allowed_filename_state", "EXECUTABLE_MATERIALIZATION"],
+      ["alternate_scheduler", "ALTERNATE_RULES_OR_SCHEDULER"],
+      ["dynamic_code", "DYNAMIC_CODE"],
+      ["node_vm", "DYNAMIC_CODE"],
+      ["strategy_execution", "STRATEGY_EXECUTION"],
+      ["forbidden_namespace", "FORBIDDEN_NAMESPACE"],
+      ["product_import", "PRODUCT_OR_PUBLIC_REACHABILITY"],
+      ["persistence_import", "PRODUCT_OR_PUBLIC_REACHABILITY"],
+      ["mutable_alias", "MUTABLE_ALIAS"],
+      ["schema_key", "FORBIDDEN_SCHEMA_KEY"],
+      ["private_field", "PRIVATE_RECEIPT_FIELD"],
+    ].map(([seedId, detectedCode]) => ({ seedId, detectedCode }))
+    const policy = buildV138PreFormationContainmentPolicy({
+      protocolPolicyRoot: `sha256:${createHash("sha256").update(protocolBytes).digest("hex")}`,
+      monitorImplementationRoot: fileHash("scripts/lib/v1-38-containment.ts"),
+      scannedInventoryRoot: analysis.scannedInventoryRoot,
+      allowlistRoot: analysis.allowlistRoot,
+      realTreeAnalysis: analysis,
+      seededBypassResults,
+    })
+    expect(readFileSync(path.join(repoRoot, containmentPath), "utf8"))
+      .toBe(renderV138PreFormationContainmentPolicy(policy))
   })
 })
