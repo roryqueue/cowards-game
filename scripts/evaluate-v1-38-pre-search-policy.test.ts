@@ -130,7 +130,7 @@ describe("Phase 262 pre-search policy root", () => {
     const second = generateV138PreSearchPolicyRoot(repoRoot)
     expect(renderV138PreSearchPolicyRoot(first)).toBe(renderV138PreSearchPolicyRoot(second))
 
-    const mutated = clone(first.components)
+    const mutated = clone(first.components) as Array<(typeof first.components)[number]>
     mutated[0] = { ...mutated[0]!, artifactSha256: `sha256:${"0".repeat(64)}` }
     const changed = buildV138PreSearchPolicyRoot({
       components: mutated,
