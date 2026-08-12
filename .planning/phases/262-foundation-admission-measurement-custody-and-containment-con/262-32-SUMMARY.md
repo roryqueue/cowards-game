@@ -1,10 +1,11 @@
 ---
-phase: 262
+phase: 262-foundation-admission-measurement-custody-and-containment-con
 plan: 32
 subsystem: offline-successor-proof
 tags: [vitest, custody, deterministic, offline]
 requires:
-  - 262-31
+  - phase: 262-31
+    provides: stopped-route verdict and immutable A5/B5 custody inputs
 provides:
   - phase-neutral immutable A5 fixture
   - exact 52-name anchored focused selector
@@ -18,14 +19,57 @@ key-files:
   created:
     - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-32-REVIEW.md
     - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-32-REVIEW-FIX.md
+    - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-32-SUMMARY.md
   modified:
     - scripts/evaluate-v1-38-foundation-contract.test.ts
     - scripts/evaluate-v1-38-foundation-contract-successor-routes.test.ts
-decisions:
+key-decisions:
   - Keep the harness offline and phase-neutral; do not reinterpret passing tests as admission.
   - Accept both Vitest list and runtime suite separators inside the same exact anchored selector.
-status: complete
+patterns-established:
+  - "Immutable Git fixture: resolve historical commit, tree, parent, paths, and blobs explicitly without comparing to moving HEAD."
+  - "Discriminated phase state: pre_live and post_live checks consume only owned state and clean disposable fixtures unconditionally."
+requirements-completed: [ADMIT-01, ADMIT-02, ADMIT-04]
+coverage:
+  - id: D1
+    description: Immutable A5 Git custody fixture independent of moving canonical HEAD
+    requirement: ADMIT-01
+    verification:
+      - kind: unit
+        ref: "scripts/evaluate-v1-38-foundation-contract.test.ts#matrix inline execution context v4 binds lean main ownership and terminal plan agents"
+        status: pass
+      - kind: integration
+        ref: "detached A5/A6 vitest list comparison: foundation 249 names identical"
+        status: pass
+    human_judgment: false
+  - id: D2
+    description: Explicit owned pre_live and post_live route-state fixtures preserving stopped terminal truth
+    requirement: ADMIT-02
+    verification:
+      - kind: unit
+        ref: "scripts/evaluate-v1-38-foundation-contract-successor-routes.test.ts#freezes the noncolliding v5/v9/v10 route and exact policy constants"
+        status: pass
+      - kind: integration
+        ref: "detached A6 route suite: 83 passed, 0 failed"
+        status: pass
+    human_judgment: false
+  - id: D3
+    description: Exact anchored 52-test focused proof with reviewed source-only A6 custody
+    requirement: ADMIT-04
+    verification:
+      - kind: integration
+        ref: "detached A5 legacy and A6 anchored inventory comparison: 52 ordered names identical"
+        status: pass
+      - kind: integration
+        ref: "detached A6 focused run: 52 passed, 197 pending, 249 total"
+        status: pass
+      - kind: other
+        ref: "sourceBase6..A6 custody verifier and complete-range review: 0 open findings"
+        status: pass
+    human_judgment: false
+duration: 5h 20m
 completed: 2026-08-12
+status: complete
 ---
 
 # Phase 262 Plan 32: Phase-Neutral Offline Successor Harness Summary
