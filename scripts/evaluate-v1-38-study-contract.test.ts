@@ -4,16 +4,19 @@ import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
   V138AccountingClosureSchema,
+  V138_CANONICAL_STUDY_POLICY,
   V138OpportunityVectorSchema,
   V138StudyPolicySchema,
   buildV138PreSearchStudyPolicy,
   deriveV138AllocationRoot,
   renderV138PreSearchStudyPolicy,
+  serializeV138StudyPolicyInput,
   validateV138AccountingClosure,
 } from "./lib/v1-38-study-contract.js"
 
 const HASH_A = `sha256:${"a".repeat(64)}` as const
 const HASH_B = `sha256:${"b".repeat(64)}` as const
+const HASH_C = `sha256:${"c".repeat(64)}` as const
 
 const studyPolicy = () => ({
   schemaVersion: "v1.38-study-policy-v1",
@@ -274,7 +277,7 @@ describe("Phase 262 two-ledger accounting and study artifact", () => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
     const sourceBytes = readFileSync(path.join(root, "scripts/lib/v1-38-study-contract.ts"))
     const testBytes = readFileSync(path.join(root, "scripts/evaluate-v1-38-study-contract.test.ts"))
-    const inputPolicyBytes = Buffer.from(JSON.stringify(studyPolicy()))
+    const inputPolicyBytes = serializeV138StudyPolicyInput(studyPolicy())
     const input = {
       studyPolicy: studyPolicy(),
       sourceBytes,
@@ -283,8 +286,19 @@ describe("Phase 262 two-ledger accounting and study artifact", () => {
       generatorBytes: sourceBytes,
     }
     const policy = buildV138PreSearchStudyPolicy(input)
-    expect(renderV138PreSearchStudyPolicy(policy))
-      .toBe(renderV138PreSearchStudyPolicy(buildV138PreSearchStudyPolicy(input)))
+    const rendered = renderV138PreSearchStudyPolicy(policy)
+    expect(rendered).toBe(
+      renderV138PreSearchStudyPolicy(buildV138PreSearchStudyPolicy(input)),
+    )
+    const canonicalPolicy = buildV138PreSearchStudyPolicy({
+      ...input,
+      studyPolicy: V138_CANONICAL_STUDY_POLICY,
+      inputPolicyBytes: serializeV138StudyPolicyInput(V138_CANONICAL_STUDY_POLICY),
+    })
+    expect(readFileSync(
+      path.join(root, ".planning/artifacts/v1.38-pre-search-study-policy.json"),
+      "utf8",
+    )).toBe(renderV138PreSearchStudyPolicy(canonicalPolicy))
     expect(policy).toMatchObject({
       policyStatus: "ready",
       admission: { admit03: "blocked", matrixAdmissionStatus: "blocked" },
@@ -305,9 +319,17 @@ describe("Phase 262 two-ledger accounting and study artifact", () => {
       ...input,
       testBytes: Buffer.concat([testBytes, Buffer.from("\n// mutation")]),
     })
+    const mutatedStudyPolicy = {
+      ...studyPolicy(),
+      arenas: {
+        ...studyPolicy().arenas,
+        designSemanticGeometryHashes: [HASH_A, HASH_C],
+      },
+    }
     const inputMutation = buildV138PreSearchStudyPolicy({
       ...input,
-      inputPolicyBytes: Buffer.concat([inputPolicyBytes, Buffer.from(" ")]),
+      studyPolicy: mutatedStudyPolicy,
+      inputPolicyBytes: serializeV138StudyPolicyInput(mutatedStudyPolicy),
     })
     expect(new Set([
       policy.policyRoot,

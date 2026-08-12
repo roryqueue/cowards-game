@@ -306,3 +306,346 @@ export const V138OpportunityVectorSchema = schema(
   parseOpportunityVector,
   "V138_OPPORTUNITY_VECTOR_INVALID",
 )
+
+export const V138_ACCOUNTING_DISPOSITIONS = Object.freeze([
+  "accepted",
+  "rejected",
+  "invalid",
+  "duplicate_identical",
+  "duplicate_conflicting",
+  "player_violation",
+  "system_failure",
+  "retried",
+  "unfilled",
+  "unused",
+] as const)
+
+type V138AccountingDisposition = typeof V138_ACCOUNTING_DISPOSITIONS[number]
+
+export interface V138AccountingAttempt {
+  readonly allocationId: string
+  readonly attemptId: string
+  readonly disposition: V138AccountingDisposition
+  readonly cellIdentity: string | null
+  readonly processValid: boolean
+  readonly completeCell: boolean
+  readonly runtimeValid: boolean
+  readonly systemValid: boolean
+  readonly legalInformationValid: boolean
+  readonly privacyValid: boolean
+  readonly identityJoinProved: boolean
+  readonly retryOf: string | null
+}
+
+export interface V138AccountingClosure {
+  readonly schemaVersion: "v1.38-accounting-closure-v1"
+  readonly identityDomain: "cowards-game:v1.38:accounting-closure:v1"
+  readonly declaredAllocationCount: number
+  readonly declaredAllocationRoot: `sha256:${string}`
+  readonly allocationIds: readonly string[]
+  readonly attempts: readonly V138AccountingAttempt[]
+  readonly acceptedCells: readonly Readonly<{
+    cellIdentity: string
+    attemptId: string
+  }>[]
+}
+
+const canonicalBytes = (value: unknown): Uint8Array => {
+  const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
+  if (!admitted.ok) throw new TypeError("V138_CANONICAL_JSON_INVALID")
+  return admitted.canonicalBytes
+}
+
+const sha256 = (value: string | Uint8Array): `sha256:${string}` =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+const domainRoot = (domain: string, value: unknown): `sha256:${string}` =>
+  sha256(Buffer.concat([
+    Buffer.from(domain, "utf8"),
+    Buffer.from([0]),
+    canonicalBytes(value),
+  ]))
+
+const id = (value: unknown, prefix: string): value is string =>
+  typeof value === "string" && new RegExp(`^${prefix}:[A-Za-z0-9._:-]{1,240}$`, "u").test(value)
+
+export const deriveV138AllocationRoot = (
+  allocationIds: readonly string[],
+): `sha256:${string}` => domainRoot(
+  "cowards-game:v1.38:declared-allocations:v1",
+  allocationIds,
+)
+
+const parseAccountingClosure = (input: unknown): V138AccountingClosure => {
+  if (!isRecord(input) || !exactKeys(input, [
+    "schemaVersion", "identityDomain", "declaredAllocationCount", "declaredAllocationRoot",
+    "allocationIds", "attempts", "acceptedCells",
+  ]) || input.schemaVersion !== "v1.38-accounting-closure-v1" ||
+    input.identityDomain !== "cowards-game:v1.38:accounting-closure:v1" ||
+    !isBoundedInteger(input.declaredAllocationCount, 1_000_000) ||
+    typeof input.declaredAllocationRoot !== "string" || !SHA256.test(input.declaredAllocationRoot) ||
+    !Array.isArray(input.allocationIds) || input.allocationIds.length > 1_000_000 ||
+    !input.allocationIds.every((value) => id(value, "allocation")) ||
+    !Array.isArray(input.attempts) || input.attempts.length > 1_000_000 ||
+    !Array.isArray(input.acceptedCells) || input.acceptedCells.length > 1_000_000) throw new TypeError()
+
+  for (const attempt of input.attempts) {
+    if (!isRecord(attempt) || !exactKeys(attempt, [
+      "allocationId", "attemptId", "disposition", "cellIdentity", "processValid",
+      "completeCell", "runtimeValid", "systemValid", "legalInformationValid",
+      "privacyValid", "identityJoinProved", "retryOf",
+    ]) || !id(attempt.allocationId, "allocation") || !id(attempt.attemptId, "attempt") ||
+      !V138_ACCOUNTING_DISPOSITIONS.includes(attempt.disposition as V138AccountingDisposition) ||
+      (attempt.cellIdentity !== null && !id(attempt.cellIdentity, "cell")) ||
+      (attempt.retryOf !== null && !id(attempt.retryOf, "attempt")) ||
+      !["processValid", "completeCell", "runtimeValid", "systemValid", "legalInformationValid",
+        "privacyValid", "identityJoinProved"].every((key) => typeof attempt[key] === "boolean")) {
+      throw new TypeError()
+    }
+  }
+  for (const cell of input.acceptedCells) {
+    if (!isRecord(cell) || !exactKeys(cell, ["cellIdentity", "attemptId"]) ||
+      !id(cell.cellIdentity, "cell") || !id(cell.attemptId, "attempt")) throw new TypeError()
+  }
+  return input as unknown as V138AccountingClosure
+}
+
+export const V138AccountingClosureSchema = schema(
+  parseAccountingClosure,
+  "V138_ACCOUNTING_CLOSURE_INVALID",
+)
+
+export type V138AccountingStopReason =
+  | "allocation_inventory_mismatch"
+  | "missing_or_conflicting_identity"
+  | "conflicting_duplicate"
+  | "accepted_integrity_failure"
+  | "accepted_cell_mismatch"
+
+export interface V138AccountingClosureResult {
+  readonly status: "closed" | "stopped"
+  readonly reason: V138AccountingStopReason | null
+  readonly chargedCount: number
+  readonly acceptedCount: number
+  readonly chargedLedgerRoot: `sha256:${string}`
+  readonly acceptedCellRoot: `sha256:${string}`
+}
+
+export const validateV138AccountingClosure = (
+  input: unknown,
+): Readonly<V138AccountingClosureResult> => {
+  let closure: Readonly<V138AccountingClosure>
+  try {
+    closure = V138AccountingClosureSchema.parse(input)
+  } catch {
+    return deepFreeze({
+      status: "stopped",
+      reason: "missing_or_conflicting_identity",
+      chargedCount: 0,
+      acceptedCount: 0,
+      chargedLedgerRoot: domainRoot("cowards-game:v1.38:charged-ledger:v1", []),
+      acceptedCellRoot: domainRoot("cowards-game:v1.38:accepted-cells:v1", []),
+    })
+  }
+  const chargedCount = closure.attempts.length
+  const acceptedAttempts = closure.attempts.filter(({ disposition }) => disposition === "accepted")
+  const roots = {
+    chargedLedgerRoot: domainRoot("cowards-game:v1.38:charged-ledger:v1", closure.attempts),
+    acceptedCellRoot: domainRoot("cowards-game:v1.38:accepted-cells:v1", closure.acceptedCells),
+  }
+  const stop = (reason: V138AccountingStopReason): Readonly<V138AccountingClosureResult> => deepFreeze({
+    status: "stopped",
+    reason,
+    chargedCount,
+    acceptedCount: acceptedAttempts.length,
+    ...roots,
+  })
+  if (closure.declaredAllocationCount !== closure.allocationIds.length ||
+    closure.declaredAllocationRoot !== deriveV138AllocationRoot(closure.allocationIds) ||
+    new Set(closure.allocationIds).size !== closure.allocationIds.length) {
+    return stop("allocation_inventory_mismatch")
+  }
+  const allocations = new Set(closure.allocationIds)
+  if (closure.attempts.length !== closure.allocationIds.length ||
+    new Set(closure.attempts.map(({ attemptId }) => attemptId)).size !== closure.attempts.length ||
+    new Set(closure.attempts.map(({ allocationId }) => allocationId)).size !== closure.attempts.length ||
+    closure.attempts.some(({ allocationId }) => !allocations.has(allocationId))) {
+    return stop("missing_or_conflicting_identity")
+  }
+  if (closure.attempts.some(({ disposition }) => disposition === "duplicate_conflicting")) {
+    return stop("conflicting_duplicate")
+  }
+  if (acceptedAttempts.some((attempt) =>
+    attempt.cellIdentity === null || attempt.retryOf !== null || !attempt.processValid ||
+    !attempt.completeCell || !attempt.runtimeValid || !attempt.systemValid ||
+    !attempt.legalInformationValid || !attempt.privacyValid || !attempt.identityJoinProved)) {
+    return stop("accepted_integrity_failure")
+  }
+  const acceptedIdentities = acceptedAttempts.map(({ cellIdentity }) => cellIdentity as string)
+  if (new Set(acceptedIdentities).size !== acceptedIdentities.length ||
+    new Set(closure.acceptedCells.map(({ cellIdentity }) => cellIdentity)).size !== closure.acceptedCells.length ||
+    closure.acceptedCells.length !== acceptedAttempts.length ||
+    closure.acceptedCells.some((cell) => !acceptedAttempts.some((attempt) =>
+      attempt.attemptId === cell.attemptId && attempt.cellIdentity === cell.cellIdentity))) {
+    return stop("accepted_cell_mismatch")
+  }
+  return deepFreeze({
+    status: "closed",
+    reason: null,
+    chargedCount,
+    acceptedCount: acceptedAttempts.length,
+    ...roots,
+  })
+}
+
+const uniqueGeometryHashes = [...new Set(
+  CANONICAL_ARENA_CATALOG_V1_37.arenas.map(({ semanticGeometryHash }) => semanticGeometryHash),
+)]
+
+export const V138_CANONICAL_STUDY_POLICY = V138StudyPolicySchema.parse({
+  schemaVersion: "v1.38-study-policy-v1",
+  policyKind: "pre_search_study_policy",
+  identityDomain: "cowards-game:v1.38:pre-search-study-policy:v1",
+  primaryEstimand: {
+    unit: "adapted_metagame_set_score_difference",
+    factoryPolicy: "fixed_across_arms",
+    adaptation: "separate_per_arm",
+    arms: ARMS,
+  },
+  pairedContrasts: CONTRASTS,
+  fixedPolicyTransfer: {
+    role: "secondary_screening_only",
+    primaryEvidence: false,
+    finalistSelectionEligible: false,
+  },
+  scoring: { win: 1, draw: 0.5, loss: 0 },
+  conditions: {
+    sides: ["bottom", "top"],
+    entrantInitiativeStates: ["entrant_a", "entrant_b"],
+    requiresFullCartesianProduct: true,
+    seedCarriesFairnessSemantics: false,
+  },
+  arenas: {
+    catalogVersion: "canonical-arena-catalog-v1.37",
+    semanticGeometryIdentityDomain: "cowards-game:arena-semantic-geometry:v1",
+    designSemanticGeometryHashes: uniqueGeometryHashes,
+    duplicateLabelsDoNotCreateCells: true,
+  },
+  splits: SPLITS,
+  matchedRootSeedBlocks: {
+    required: true,
+    identityDomain: "cowards-game:v1.38:matched-root-seed-block:v1",
+    pairingScope: "all_arms_contrasts_conditions_arenas_splits_opponents",
+  },
+  completeCells: {
+    identityFields: CELL_IDENTITY_FIELDS,
+    requireUniqueIdentity: true,
+    missingDisposition: "stop_incomplete",
+    identicalDuplicateDisposition: "charge_and_exclude_duplicate",
+    conflictingDuplicateDisposition: "stop_integrity",
+  },
+  stoppingAndResponseAdmission: {
+    stoppingRuleFrozenBeforeCandidateOutput: true,
+    responseRequiresProcessValidCompleteCells: true,
+    systemFailureAdmissible: false,
+    legalInformationViolationAdmissible: false,
+    privateDataLeakAdmissible: false,
+  },
+  selection: {
+    finalistEligibility: "complete_validation_and_probe_only",
+    finalistMinimum: 3,
+    finalistMaximum: 3,
+    portfolioSelection: "diverse_pure_strategies",
+    robustPureSelection: "maximin_oracle_relative_pure",
+    finalistHashesFreezeBeforeSealedAccess: true,
+  },
+  claims: {
+    scope: "oracle_relative_only",
+    compositeCannotOverrideHardGate: true,
+    forbidden: FORBIDDEN_CLAIMS,
+  },
+  forbiddenInputs: FORBIDDEN_INPUTS,
+})
+
+export interface V138PreSearchStudyPolicyBuildInput {
+  readonly studyPolicy: unknown
+  readonly sourceBytes: Uint8Array
+  readonly testBytes: Uint8Array
+  readonly inputPolicyBytes: Uint8Array
+  readonly generatorBytes: Uint8Array
+}
+
+const isBytes = (value: unknown): value is Uint8Array => value instanceof Uint8Array
+
+export const serializeV138StudyPolicyInput = (input: unknown): Uint8Array =>
+  canonicalBytes(V138StudyPolicySchema.parse(input))
+
+export const buildV138PreSearchStudyPolicy = (input: V138PreSearchStudyPolicyBuildInput) => {
+  if (!isRecord(input) || !exactKeys(input, [
+    "studyPolicy", "sourceBytes", "testBytes", "inputPolicyBytes", "generatorBytes",
+  ]) || !isBytes(input.sourceBytes) || !isBytes(input.testBytes) ||
+    !isBytes(input.inputPolicyBytes) || !isBytes(input.generatorBytes)) {
+    throw new TypeError("V138_PRE_SEARCH_STUDY_POLICY_INPUT_INVALID")
+  }
+  const studyPolicy = V138StudyPolicySchema.parse(input.studyPolicy)
+  const expectedInputPolicyBytes = serializeV138StudyPolicyInput(studyPolicy)
+  if (input.inputPolicyBytes.byteLength !== expectedInputPolicyBytes.byteLength ||
+    !input.inputPolicyBytes.every((value, index) => value === expectedInputPolicyBytes[index])) {
+    throw new TypeError("V138_PRE_SEARCH_STUDY_POLICY_INPUT_INVALID")
+  }
+  const sourceBindings = {
+    studyContractSourceSha256: sha256(input.sourceBytes),
+    testSourceSha256: sha256(input.testBytes),
+    inputPolicySha256: sha256(input.inputPolicyBytes),
+    generatorSha256: sha256(input.generatorBytes),
+  }
+  const schemaRoots = {
+    studySchemaRoot: domainRoot("cowards-game:v1.38:study-schema:v1", {
+      sourceSha256: sourceBindings.studyContractSourceSha256,
+      policy: studyPolicy,
+    }),
+    opportunitySchemaRoot: domainRoot("cowards-game:v1.38:opportunity-schema:v1", {
+      sourceSha256: sourceBindings.studyContractSourceSha256,
+      dimensions: V138_OPPORTUNITY_DIMENSIONS,
+    }),
+    accountingSchemaRoot: domainRoot("cowards-game:v1.38:accounting-schema:v1", {
+      sourceSha256: sourceBindings.studyContractSourceSha256,
+      dispositions: V138_ACCOUNTING_DISPOSITIONS,
+    }),
+  }
+  const payload = {
+    schemaVersion: "v1.38-pre-search-study-policy-v1" as const,
+    policyKind: "pre_search_study_policy" as const,
+    policyStatus: "ready" as const,
+    studyPolicy,
+    opportunityDimensions: V138_OPPORTUNITY_DIMENSIONS,
+    accountingDispositions: V138_ACCOUNTING_DISPOSITIONS,
+    sourceBindings,
+    schemaRoots,
+    admission: { admit03: "blocked" as const, matrixAdmissionStatus: "blocked" as const },
+    custody: { seal01: "unmet" as const, custodyClaimed: false as const },
+    authority: {
+      candidateSearchAuthorized: false as const,
+      phase263Authorized: false as const,
+      formationMaterializationAuthorized: false as const,
+      productionAuthorized: false as const,
+      liveWorkAuthorized: false as const,
+    },
+  }
+  const policy = deepFreeze({
+    ...payload,
+    policyRoot: domainRoot("cowards-game:v1.38:pre-search-study-policy-root:v1", payload),
+  })
+  assertPublicOutputLeakSafe(policy, "v1.38 pre-search study policy")
+  return policy
+}
+
+export const renderV138PreSearchStudyPolicy = (policy: unknown): string =>
+  `${new TextDecoder().decode(canonicalBytes(policy as JsonValue))}\n`
+import { createHash } from "node:crypto"
+import {
+  CANONICAL_ARENA_CATALOG_V1_37,
+  admitCanonicalJsonValue,
+  assertPublicOutputLeakSafe,
+  type JsonValue,
+} from "@cowards/spec"
