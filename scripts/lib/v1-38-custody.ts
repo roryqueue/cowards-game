@@ -16,6 +16,9 @@ import {
 import path from "node:path"
 // eslint-disable-next-line no-restricted-imports -- Offline release tooling uses the canonical privacy seam.
 import { assertPublicOutputLeakSafe } from "../../packages/spec/src/public-output-privacy.js"
+import { encodeCanonicalJson } from "../../packages/spec/src/canonical-json-encode.js"
+import { hashCanonicalIdentity } from "../../packages/spec/src/canonical-identity-domains.js"
+import type { JsonValue } from "../../packages/spec/src/types.js"
 
 type Sha256 = `sha256:${string}`
 type RecordValue = Record<string, unknown>
@@ -800,3 +803,174 @@ export const buildV138AuthorizedCustodyPublicReference = (
   }
   return reference
 }
+
+const canonicalBytes = (value: unknown): Uint8Array => {
+  const encoded = encodeCanonicalJson(value as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (encoded.ok === true) return encoded.bytes
+  return fail("V138_SYNTHETIC_CUSTODY_RECEIPT_INVALID")
+}
+
+const domainRoot = (domain: string, value: unknown): Sha256 =>
+  `sha256:${hashCanonicalIdentity("artifactManifest", [
+    Buffer.from(domain, "utf8"),
+    canonicalBytes(value),
+  ])}`
+
+export interface V138SyntheticCustodyMechanicsReceiptInput {
+  readonly custodySourceBytes: Uint8Array
+  readonly checkerSourceBytes: Uint8Array
+  readonly testSourceBytes: Uint8Array
+  readonly protocolPolicyBytes: Uint8Array
+  readonly containmentPolicyBytes: Uint8Array
+}
+
+const receiptInputKeys = [
+  "custodySourceBytes", "checkerSourceBytes", "testSourceBytes",
+  "protocolPolicyBytes", "containmentPolicyBytes",
+] as const
+
+const parsePolicyBytes = (bytes: Uint8Array, errorCode: string): RecordValue => {
+  let parsed: unknown
+  try { parsed = JSON.parse(Buffer.from(bytes).toString("utf8")) }
+  catch { fail(errorCode) }
+  if (!isRecord(parsed)) fail(errorCode)
+  return parsed as RecordValue
+}
+
+const SYNTHETIC_STATE_TRANSITIONS = Object.freeze([
+  Object.freeze({ command: "commit", from: "empty", to: "committed" }),
+  Object.freeze({ command: "authorizeOpen", from: "committed", to: "open_authorized" }),
+  Object.freeze({ command: "openOnce", from: "open_authorized", to: "opened" }),
+  Object.freeze({ command: "projectSafeReceipt", from: "opened", to: "projected" }),
+  Object.freeze({ command: "verify", from: "projected", to: "verified" }),
+  Object.freeze({ command: "markContaminated", from: "non_retired", to: "contaminated" }),
+  Object.freeze({ command: "retire", from: "verified_or_contaminated", to: "retired" }),
+])
+
+const receiptKeys = [
+  "schemaVersion", "evidenceClass", "mechanicsStatus", "custodyStatus",
+  "satisfiesSeal01", "bindings", "stateTransitions", "securityMechanics",
+  "genuineControls", "authority", "receiptRoot",
+] as const
+
+export const buildV138SyntheticCustodyMechanicsReceipt = (
+  input: V138SyntheticCustodyMechanicsReceiptInput,
+) => {
+  if (!isRecord(input) || !exactKeys(input, receiptInputKeys) ||
+    !receiptInputKeys.every((key) => input[key] instanceof Uint8Array)) {
+    fail("V138_SYNTHETIC_CUSTODY_RECEIPT_INPUT_INVALID")
+  }
+  const protocol = parsePolicyBytes(input.protocolPolicyBytes, "V138_SYNTHETIC_CUSTODY_PROTOCOL_INVALID")
+  const containment = parsePolicyBytes(input.containmentPolicyBytes, "V138_SYNTHETIC_CUSTODY_CONTAINMENT_INVALID")
+  const sourceBindings = protocol.sourceBindings
+  const containmentAuthority = containment.authority
+  if (!isRecord(sourceBindings) ||
+    typeof sourceBindings.classifierImplementationRoot !== "string" ||
+    !SHA256.test(sourceBindings.classifierImplementationRoot) ||
+    containment.schemaVersion !== "v1.38-pre-formation-containment-policy-v1" ||
+    containment.status !== "passed_absence" || containment.findingCount !== 0 ||
+    !isRecord(containmentAuthority) ||
+    Object.values(containmentAuthority).some((value) => value !== false)) {
+    fail("V138_SYNTHETIC_CUSTODY_POLICY_BINDING_INVALID")
+  }
+  const protocolBindings = sourceBindings as RecordValue
+  const bindings = deepFreeze({
+    custodySourceSha256: sha256(input.custodySourceBytes),
+    checkerSourceSha256: sha256(input.checkerSourceBytes),
+    testSourceSha256: sha256(input.testSourceBytes),
+    commandSchemaRoot: domainRoot("cowards-game:v1.38:synthetic-custody-command-schema:v1", {
+      custodySourceSha256: sha256(input.custodySourceBytes),
+      commands: SYNTHETIC_STATE_TRANSITIONS.map(({ command }) => command),
+    }),
+    handoffSchemaRoot: domainRoot("cowards-game:v1.38:authorized-custody-handoff-schema:v1", {
+      custodySourceSha256: sha256(input.custodySourceBytes),
+      checkerSourceSha256: sha256(input.checkerSourceBytes),
+    }),
+    protocolPolicySha256: sha256(input.protocolPolicyBytes),
+    profileNeutralProtocolRoot: protocolBindings.classifierImplementationRoot,
+    containmentPolicySha256: sha256(input.containmentPolicyBytes),
+  })
+  const frame = deepFreeze({
+    schemaVersion: "v1.38-synthetic-custody-mechanics-v1" as const,
+    evidenceClass: "synthetic_mechanics_only" as const,
+    mechanicsStatus: "passed" as const,
+    custodyStatus: "unavailable" as const,
+    satisfiesSeal01: false as const,
+    bindings,
+    stateTransitions: SYNTHETIC_STATE_TRANSITIONS,
+    securityMechanics: Object.freeze({
+      outsideRepositoryStoreRequired: true as const,
+      directoryMode: "0700" as const,
+      fileMode: "0600" as const,
+      noFollowReads: true as const,
+      exclusiveWrites: true as const,
+      appendOnlyFsyncedEvents: true as const,
+      commitmentProfile: "hmac-sha-256-secret-salted-v1" as const,
+      timingSafeLengthCheckedComparison: true as const,
+      oneOpenOnly: true as const,
+      invalidProjectionContaminatesTerminally: true as const,
+      replacementAllowed: false as const,
+      diagnosticQueryAllowed: false as const,
+    }),
+    genuineControls: Object.freeze({
+      present: false as const,
+      acceptedOnlyByPlan: "262-40" as const,
+    }),
+    authority: Object.freeze({
+      candidateSearchAuthorized: false as const,
+      phase263Authorized: false as const,
+      formationMaterializationAuthorized: false as const,
+      productionAuthorized: false as const,
+    }),
+  })
+  const receipt = deepFreeze({
+    ...frame,
+    receiptRoot: domainRoot("cowards-game:v1.38:synthetic-custody-mechanics-receipt:v1", frame),
+  })
+  assertPublicOutputLeakSafe(receipt, "v1.38 synthetic custody mechanics receipt")
+  return receipt
+}
+
+const validateSyntheticReceipt = (input: unknown): RecordValue => {
+  if (!isRecord(input)) fail("V138_SYNTHETIC_CUSTODY_RECEIPT_INVALID")
+  const receipt = input as RecordValue
+  if (!exactKeys(receipt, receiptKeys) ||
+    receipt.schemaVersion !== "v1.38-synthetic-custody-mechanics-v1" ||
+    receipt.evidenceClass !== "synthetic_mechanics_only" ||
+    receipt.mechanicsStatus !== "passed" || receipt.custodyStatus !== "unavailable" ||
+    receipt.satisfiesSeal01 !== false || !isRecord(receipt.bindings) ||
+    !Array.isArray(receipt.stateTransitions) ||
+    JSON.stringify(receipt.stateTransitions) !== JSON.stringify(SYNTHETIC_STATE_TRANSITIONS) ||
+    !isRecord(receipt.securityMechanics) || !exactKeys(receipt.securityMechanics, [
+      "outsideRepositoryStoreRequired", "directoryMode", "fileMode", "noFollowReads",
+      "exclusiveWrites", "appendOnlyFsyncedEvents", "commitmentProfile",
+      "timingSafeLengthCheckedComparison", "oneOpenOnly",
+      "invalidProjectionContaminatesTerminally", "replacementAllowed",
+      "diagnosticQueryAllowed",
+    ]) || Object.entries(receipt.securityMechanics).some(([key, value]) =>
+      key === "directoryMode" ? value !== "0700" :
+        key === "fileMode" ? value !== "0600" :
+          key === "commitmentProfile" ? value !== "hmac-sha-256-secret-salted-v1" :
+            key === "replacementAllowed" || key === "diagnosticQueryAllowed" ? value !== false : value !== true) ||
+    !isRecord(receipt.genuineControls) ||
+    !exactKeys(receipt.genuineControls, ["present", "acceptedOnlyByPlan"]) ||
+    receipt.genuineControls.present !== false || receipt.genuineControls.acceptedOnlyByPlan !== "262-40" ||
+    !isRecord(receipt.authority) || !exactKeys(receipt.authority, [
+      "candidateSearchAuthorized", "phase263Authorized",
+      "formationMaterializationAuthorized", "productionAuthorized",
+    ]) || Object.values(receipt.authority).some((value) => value !== false) ||
+    typeof receipt.receiptRoot !== "string" || !SHA256.test(receipt.receiptRoot)) {
+    fail("V138_SYNTHETIC_CUSTODY_RECEIPT_INVALID")
+  }
+  const { receiptRoot, ...frame } = receipt
+  if (receiptRoot !== domainRoot("cowards-game:v1.38:synthetic-custody-mechanics-receipt:v1", frame)) {
+    fail("V138_SYNTHETIC_CUSTODY_RECEIPT_INVALID")
+  }
+  assertPublicOutputLeakSafe(receipt, "v1.38 synthetic custody mechanics receipt")
+  return receipt
+}
+
+export const renderV138SyntheticCustodyMechanicsReceipt = (input: unknown): string =>
+  `${Buffer.from(canonicalBytes(validateSyntheticReceipt(input))).toString("utf8")}\n`

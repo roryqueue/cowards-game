@@ -124,13 +124,13 @@ const handoff = () => ({
 }) as const
 
 const approval = {
-  approvedOpaqueStoreIds: [] as readonly string[],
-  approvedOpaqueKeyIds: [] as readonly string[],
-  approvedOpaqueCustodianRoleIds: [] as readonly string[],
-  approvedOpaqueOpeningActorIds: [] as readonly string[],
-  approvedOpaqueOpeningCommandIds: [] as readonly string[],
-  approvedOpaqueRetirementAuthorityIds: [] as readonly string[],
-  approvedOpaqueTrustIdentityIds: [] as readonly string[],
+  approvedOpaqueStoreIds: ["synthetic-test-store-alpha"],
+  approvedOpaqueKeyIds: ["synthetic-test-key-alpha"],
+  approvedOpaqueCustodianRoleIds: ["synthetic-test-custodian-alpha"],
+  approvedOpaqueOpeningActorIds: ["synthetic-test-opening-alpha"],
+  approvedOpaqueOpeningCommandIds: ["synthetic-test-command-alpha"],
+  approvedOpaqueRetirementAuthorityIds: ["synthetic-test-retirement-alpha"],
+  approvedOpaqueTrustIdentityIds: ["synthetic-test-trust-alpha"],
   verifyAuthenticatedExternalProvenance: () => false,
 } as const
 
@@ -281,6 +281,15 @@ describe("Phase 262 authorized custody handoff boundary", () => {
       expect(() => V138AuthorizedCustodyHandoffSchema.parse(missing))
         .toThrow("V138_AUTHORIZED_CUSTODY_HANDOFF_INVALID")
     }
+    for (const [section, sectionValue] of Object.entries(handoff())) {
+      if (section === "schemaVersion" || typeof sectionValue !== "object") continue
+      for (const field of Object.keys(sectionValue)) {
+        const mutation = structuredClone(handoff()) as unknown as Record<string, Record<string, unknown>>
+        delete mutation[section]![field]
+        expect(() => V138AuthorizedCustodyHandoffSchema.parse(mutation))
+          .toThrow("V138_AUTHORIZED_CUSTODY_HANDOFF_INVALID")
+      }
+    }
     for (const mutation of [
       { ...handoff(), waiver: true },
       { ...handoff(), controls: { ...handoff().controls, separatelyPermissioned: false } },
@@ -299,6 +308,17 @@ describe("Phase 262 authorized custody handoff boundary", () => {
     expect(renderV138AuthorizedCustodyHandoffReference(handoff(), {
       ...approval, approvedOpaqueStoreIds: ["different-store"],
     })).toBeNull()
+    for (const key of [
+      "approvedOpaqueStoreIds", "approvedOpaqueKeyIds",
+      "approvedOpaqueCustodianRoleIds", "approvedOpaqueOpeningActorIds",
+      "approvedOpaqueOpeningCommandIds", "approvedOpaqueRetirementAuthorityIds",
+      "approvedOpaqueTrustIdentityIds",
+    ] as const) {
+      expect(renderV138AuthorizedCustodyHandoffReference(handoff(), {
+        ...approval,
+        [key]: ["synthetic-test-unapproved"],
+      })).toBeNull()
+    }
   })
 })
 
@@ -340,7 +360,6 @@ describe("Phase 262 explicit no-credit synthetic custody receipt", () => {
     const baseline = buildV138SyntheticCustodyMechanicsReceipt(receiptInput())
     for (const key of [
       "custodySourceBytes", "checkerSourceBytes", "testSourceBytes",
-      "protocolPolicyBytes", "containmentPolicyBytes",
     ] as const) {
       const input = receiptInput()
       const mutated = buildV138SyntheticCustodyMechanicsReceipt({
@@ -348,6 +367,13 @@ describe("Phase 262 explicit no-credit synthetic custody receipt", () => {
         [key]: Buffer.concat([Buffer.from(input[key]), Buffer.from("\nsynthetic mutation")]),
       })
       expect(mutated.receiptRoot).not.toBe(baseline.receiptRoot)
+    }
+    for (const key of ["protocolPolicyBytes", "containmentPolicyBytes"] as const) {
+      const input = receiptInput()
+      expect(() => buildV138SyntheticCustodyMechanicsReceipt({
+        ...input,
+        [key]: Buffer.concat([Buffer.from(input[key]), Buffer.from("\nsynthetic mutation")]),
+      })).toThrow()
     }
     for (const mutation of [
       { ...baseline, custodyStatus: "authorized" },
