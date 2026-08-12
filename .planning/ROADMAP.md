@@ -324,7 +324,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 26/33 | In Progress / gaps found — offline diagnostic Plans 262-32/33 planned; route 5 remains calibration_stopped at fresh 0 charged/0 accepted, ADMIT-03 blocked, and Plan 262-03 is a checkpoint requiring replan |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 28/33 | In Progress / gaps found — offline diagnostic Plans 262-32/33 completed fail-closed; route 5 remains calibration_stopped at fresh 0 charged/0 accepted, ADMIT-03 blocked, and Plan 262-03 is a dormant developer-decision checkpoint requiring replan |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
