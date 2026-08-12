@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — ACTIVE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-34-PLAN.md
-last_updated: "2026-08-12T21:34:31.574Z"
+stopped_at: Completed 262-35-PLAN.md
+last_updated: "2026-08-12T21:47:34.819Z"
 last_activity: 2026-08-12
-last_activity_desc: Plan 262-34 completed; capability-separated acceptance remains fail-closed
+last_activity_desc: Plan 262-35 completed; non-authorizing study policy is ready while admission remains blocked
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 35
-  completed_plans: 29
-  percent: 83
+  completed_plans: 30
+  percent: 86
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"262-35","total_plans":35,"completed_plans":29,"active_successors":["262-35","262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"policy_status":"ready","study_policy_root":"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17","next_action":"262-36","total_plans":35,"completed_plans":30,"active_successors":["262-36","262-37","262-38","262-39","262-40"],"dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — EXECUTING
-Plan: 30 of 35
+Plan: 31 of 35
 Status: Ready to execute
-Last activity: 2026-08-12 — Plan 262-34 completed; capability-separated acceptance remains fail-closed
+Last activity: 2026-08-12 — Plan 262-35 completed; non-authorizing study policy is ready while admission remains blocked
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
-**Current milestone:** 29 of 35 active executable Phase 262 plans completed. Plan 262-34 now enforces capability-separated acceptance while granting no downstream authority. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet.
+**Current milestone:** 30 of 35 active executable Phase 262 plans completed. Plan 262-35 freezes a ready non-authorizing study/opportunity/accounting policy while granting no downstream authority. Route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0 charged/0 accepted and expired no-retry authority; ADMIT-03 remains blocked and SEAL-01 remains unmet.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -73,6 +73,7 @@ Progress: [████████░░] 83%
 | Phase 262 P28 | 1588min | 2 tasks | 8 files |
 | Phase 262 P29 | 10min | 3 tasks | 5 files |
 | Phase 262 P34 | 7min | 2 tasks | 5 files |
+| Phase 262 P35 | 9min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Require literal future current-rules ADMIT-03 plus genuine separately controlled SEAL-01 evidence before dormant Plan 262-41 can activate; formation remains independently gated by the Phase 266 current-rules league freeze.
 - [Phase 262]: Grant downstream authority only through the exact conjunction of policy readiness, a literal fresh matrix pass, authorized custody, containment pass, and exact identity join. — Policy readiness alone is deliberately non-authorizing and no substitute condition may compensate for a failed latch.
 - [Phase 262]: Keep Plans 262-03 through 262-07 historical, Plans 262-35 through 262-40 active, and the 262-41 activation contract dormant. — Activation requires a future separately planned literal ADMIT-03 pass; the current stopped route grants no live, formation, or product authority.
+- [Phase 262]: Keep fixed-policy transfer mechanically secondary-screening-only and ineligible for primary evidence or finalist selection. — Prevents screening evidence from becoming primary or selection authority.
+- [Phase 262]: Represent every resource as a distinct bounded opportunity dimension; no fungible aggregate compute scalar exists. — Preserves structural equal-opportunity accounting across resource classes.
+- [Phase 262]: Make policy readiness explicit while retaining blocked admission, unmet custody, and false downstream authority fields. — Policy readiness cannot satisfy ADMIT-03 or SEAL-01.
 
 ### Pending Todos
 
@@ -198,7 +202,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-12T21:34:31.563Z
-Stopped at: Completed 262-34-PLAN.md
+Last session: 2026-08-12T21:47:34.807Z
+Stopped at: Completed 262-35-PLAN.md
 Resume file: None
-Next command: Execute only the active successor graph beginning at Plan 262-35. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.
+Next command: Execute only the active successor graph beginning at Plan 262-36. Archived Plans 262-03..07 and `dormant/262-41-ACTIVATION-CONTRACT.md` are non-executable; a future literal ADMIT-03 pass requires separate planning before any activation plan can exist.

@@ -17,10 +17,10 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 ### Measurement, Claims, Budgets, and Custody Contract
 
-- [ ] **MEAS-01**: Researchers have one immutable pre-search contract for the primary estimand—formation-specific adapted metagames under the frozen factory—plus bracket/current, inward/current, and bracket/inward contrasts, scoring, draw value, conditions, both sides, both entrant-level initiative states, semantically distinct design arenas, development/validation/probe/sealed splits, opponent fields, and complete-cell requirements; fixed-policy transfer is labeled secondary screening only.
-- [ ] **MEAS-02**: The pre-search contract fixes matched root-seed blocks, attempted-candidate ceilings, accepted-response-slot rules and unfilled-slot disposition, response rounds, search nodes, Matches, model tokens/attempts, human effort/submissions, replay review, retries, cache behavior, hardware class, runtime, source, objective, memory, and output budgets with named structural units.
-- [ ] **MEAS-03**: The pre-search contract fixes metric code, canonicalization and normalization, denominators, materiality thresholds, replication treatment, hard versus compensating gates, stopping rules, retry/burn policy, response admission, finalist eligibility/cardinality and selection rules, portfolio and robust-pure selection, formation pass/reject logic, report interpretation, and permitted claim language before candidate output is inspected; resulting finalist hashes freeze only after selection and before holdout access.
-- [ ] **MEAS-04**: Accepted evidence requires zero runtime violations, system failures, legal-information violations, private-data leaks, missing cells, duplicate/conflicting task results, and unproved identity joins; system-failed attempts may remain only in the charged failure ledger and can never become an accepted cell or gameplay result.
+- [x] **MEAS-01**: Researchers have one immutable pre-search contract for the primary estimand—formation-specific adapted metagames under the frozen factory—plus bracket/current, inward/current, and bracket/inward contrasts, scoring, draw value, conditions, both sides, both entrant-level initiative states, semantically distinct design arenas, development/validation/probe/sealed splits, opponent fields, and complete-cell requirements; fixed-policy transfer is labeled secondary screening only.
+- [x] **MEAS-02**: The pre-search contract fixes matched root-seed blocks, attempted-candidate ceilings, accepted-response-slot rules and unfilled-slot disposition, response rounds, search nodes, Matches, model tokens/attempts, human effort/submissions, replay review, retries, cache behavior, hardware class, runtime, source, objective, memory, and output budgets with named structural units.
+- [x] **MEAS-03**: The pre-search contract fixes metric code, canonicalization and normalization, denominators, materiality thresholds, replication treatment, hard versus compensating gates, stopping rules, retry/burn policy, response admission, finalist eligibility/cardinality and selection rules, portfolio and robust-pure selection, formation pass/reject logic, report interpretation, and permitted claim language before candidate output is inspected; resulting finalist hashes freeze only after selection and before holdout access.
+- [x] **MEAS-04**: Accepted evidence requires zero runtime violations, system failures, legal-information violations, private-data leaks, missing cells, duplicate/conflicting task results, and unproved identity joins; system-failed attempts may remain only in the charged failure ledger and can never become an accepted cell or gameplay result.
 - [ ] **MEAS-05**: Planner feasibility records the canonical 64 KB source cap, a preferred under-48 KB target, and a starting direct-execution target below 5 ms p99 on one fixed identified benchmark; any replacement values and exact denominators freeze before search.
 - [ ] **MEAS-06**: The starting population contract targets at least 12 Strategies across six behavioral families and five genuinely independent planner cores, at least three structurally and behaviorally distinct finalists, and records any justified pre-search calibration change.
 - [ ] **MEAS-07**: The starting response contract targets two consecutive responses above 55% Set score against the preceding frozen mixture on untouched conditions, at least one deployable Strategy above 60% against an independent probe field, and a fresh red team below 60% or a discovered counter followed by the next declared response iteration clearing the frozen adaptation target, denominator, and pass threshold against the updated mixture.
@@ -187,10 +187,10 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | ADMIT-02 | Phase 262 | Complete |
 | ADMIT-03 | Phase 262 | Pending |
 | ADMIT-04 | Phase 262 | Complete |
-| MEAS-01 | Phase 262 | Pending |
-| MEAS-02 | Phase 262 | Pending |
-| MEAS-03 | Phase 262 | Pending |
-| MEAS-04 | Phase 262 | Pending |
+| MEAS-01 | Phase 262 | Complete |
+| MEAS-02 | Phase 262 | Complete |
+| MEAS-03 | Phase 262 | Complete |
+| MEAS-04 | Phase 262 | Complete |
 | MEAS-05 | Phase 262 | Pending |
 | MEAS-06 | Phase 262 | Pending |
 | MEAS-07 | Phase 262 | Pending |
