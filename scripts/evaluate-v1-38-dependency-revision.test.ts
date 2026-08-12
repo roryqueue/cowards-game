@@ -14,6 +14,7 @@ import {
 } from "./lib/v1-38-policy-authority.js"
 import {
   V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY,
+  analyzeV138DependencyRevisionPaths,
   analyzeV138DependencyRevisionSources,
   analyzeV138ProtectedHistory,
   buildV138PlanSupersessionManifest,
@@ -184,6 +185,9 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
       expect(analyzeV138DependencyRevisionSources({ "scripts/seed.ts": source })
         .map((finding) => finding.code)).toContain(code)
     }
+    expect(analyzeV138DependencyRevisionPaths([
+      ".planning/artifacts/formations/current-edge/state.json",
+    ]).map((finding) => finding.code)).toEqual(["CANDIDATE_FORMATION_SURFACE"])
   })
 
   it("keeps the frozen replay issue separately attributed without substitution", () => {
