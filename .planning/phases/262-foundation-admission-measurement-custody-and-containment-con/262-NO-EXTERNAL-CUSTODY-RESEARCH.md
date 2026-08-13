@@ -70,9 +70,9 @@
 
 The honest result is **not Phase 262 completion**. It is a terminally deferred v1.38 milestone with a partially successful Phase 262: the policy lane is ready, but the phase goal and milestone admission remain unmet because ADMIT-03 is still blocked and SEAL-01 cannot be satisfied when no external custody system exists. The milestone contract cannot be weakened, and no downstream phase may proceed. [VERIFIED: operator statement 2026-08-12; `.planning/ROADMAP.md` Phase 262 criteria 2 and 4; `.planning/REQUIREMENTS.md` ADMIT-03 and SEAL-01]
 
-Plan 262-40 should be archived byte-for-byte and superseded by one planning-only terminal/defer plan. Leaving 262-40 active is mechanically dishonest and operationally noisy: GSD discovers direct `*-PLAN.md` files, treats the absence of a matching summary as incomplete, and routes execution back to that plan. Writing a normal “complete” 262-40 summary would be equally misleading because its objective is to obtain genuine custody, which did not occur. [VERIFIED: installed `gsd-core/bin/lib/phase.cjs`; installed `gsd-core/workflows/progress.md`; `262-40-PLAN.md`; SHA-256 `e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231`]
+Plan 262-40 should be archived byte-for-byte and superseded by a two-plan terminal design. Plan 262-42 implements and normally closes the terminal/defer disposition; Plan 262-43 remains an active, non-autonomous, read-only prerequisite sentinel with no summary while ADMIT-03 and SEAL-01 are absent. Leaving 262-40 active is mechanically dishonest and operationally noisy because it repeatedly requests custody from a system that does not exist. Merely closing Plan 262-42 without the sentinel would create an empty incomplete-plan index and risk ordinary phase-completion routing despite two unmet requirements. [VERIFIED: installed `gsd-core/bin/lib/phase.cjs`; installed `gsd-core/workflows/progress.md`; `262-40-PLAN.md`; SHA-256 `e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231`; plan-checker correction]
 
-**Primary recommendation:** create a new `262-42-PLAN.md` that archives 262-40 as `archived/262-40-HISTORICAL.md`, writes a truthful terminal/defer planning record, updates ROADMAP/STATE/REQUIREMENTS without changing requirement text or completion checkboxes, preserves dormant 262-41, and ends with the milestone paused at Phase 262. [VERIFIED: repository archival pattern in `262-34-PLAN.md`; installed direct-file plan discovery; D-01/D-02]
+**Primary recommendation:** create `262-42-PLAN.md` to archive 262-40 as `archived/262-40-HISTORICAL.md`, write the truthful terminal/defer record, and update ROADMAP/STATE/REQUIREMENTS; also create `262-43-PLAN.md` as the non-waivable active prerequisite sentinel. Plan 262-42 receives a normal summary. Plan 262-43 has `depends_on: [262-42]`, `autonomous: false`, `requirements: []`, performs read-only assertions only, and deliberately has no summary while either prerequisite is absent. This leaves Phase 262 and v1.38 paused/`gaps_found` and all downstream authority denied. [VERIFIED: repository archival pattern in `262-34-PLAN.md`; installed direct-file plan discovery; D-01/D-02; plan-checker correction]
 
 ## Operator Fact and Consequence
 
@@ -102,9 +102,9 @@ The terminal plan should move the exact current bytes of `262-40-PLAN.md` to `ar
 
 Do not create `262-40-SUMMARY.md`. A matching summary would tell GSD that the plan completed, while the plan's objective and success criteria require genuine custody evidence. The operator's negative fact resolves availability, not the requirement. [VERIFIED: `262-40-PLAN.md`; installed `phase.cjs` summary matching]
 
-### 2. Add one terminal/defer plan, recommended ID `262-42`
+### 2. Add terminal/defer implementation Plan 262-42
 
-Use `262-42-PLAN.md` because 262-41 is already a byte-preserved dormant activation contract with a fixed hash and must remain outside executable discovery. The new plan should depend on 262-39, supersede 262-40's active checkpoint responsibility, be planning-only, and contain no custody writer, route, provider, candidate, formation, Match, database, or production task. [VERIFIED: `dormant/262-41-ACTIVATION-CONTRACT.md` SHA-256 `5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641`; task scope]
+Use `262-42-PLAN.md` because 262-41 is already a byte-preserved dormant activation contract with a fixed hash and must remain outside executable discovery. Plan 262-42 should depend on 262-39, supersede 262-40's active custody-checkpoint responsibility, be planning-only, and contain no custody writer, route, provider, candidate, formation, Match, database, or production task. It completes normally and receives `262-42-SUMMARY.md`, whose scope is only the terminal/defer implementation—not Phase 262 completion. [VERIFIED: `dormant/262-41-ACTIVATION-CONTRACT.md` SHA-256 `5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641`; task scope]
 
 Recommended outputs of the terminal plan:
 
@@ -115,7 +115,15 @@ Recommended outputs of the terminal plan:
 - Updated `.planning/ROADMAP.md`, `.planning/STATE.md`, and `.planning/REQUIREMENTS.md` status projections only. [VERIFIED: current status carriers]
 - `262-42-SUMMARY.md` — records that the **terminal disposition plan** completed, not that Phase 262 or v1.38 completed. [RECOMMENDED from GSD summary discovery behavior]
 
-### 3. Represent the phase and milestone truthfully
+### 3. Add active prerequisite sentinel Plan 262-43
+
+Create `262-43-PLAN.md` in the phase root with `depends_on: [262-42]`, `autonomous: false`, and `requirements: []`. Its sole purpose is to preserve the mechanically incomplete phase boundary after Plan 262-42 closes. It is non-waivable under the current milestone contract and must never receive `262-43-SUMMARY.md` while ADMIT-03 or SEAL-01 is non-pass. [VERIFIED: installed plan/summary discovery; plan-checker correction; D-02]
+
+Plan 262-43 is not a continuation plan and owns no requirement implementation. Its checkpoint performs read-only assertions over the post-Plan-42 repository: ROADMAP remains unchecked/deferred, STATE remains paused at Phase 262, REQUIREMENTS keeps ADMIT-03 and SEAL-01 unchecked, the activation and custody-reference artifacts remain absent, the policy root remains non-authorizing, the index contains only 262-43 as incomplete, and every downstream authority remains false. It must not accept a human waiver, emit an attestation, create a custody system, run an ADMIT-03 route, or execute dormant Plan 262-41. [RECOMMENDED from D-01/D-02/D-18 and exact GSD discovery behavior]
+
+If real custody and a separately planned ADMIT-03 change later become possible, Plan 262-43 routes the operator to a fresh `$gsd-plan-phase 262`. The new plan must supersede the sentinel additively and create new content-addressed branches. Execution never “continues” Plan 262-43, archived Plan 262-40, dormant 262-41, or an expired matrix route. [VERIFIED: no-retry evidence; D-01/D-02; dormant 262-41]
+
+### 4. Represent the phase and milestone truthfully
 
 Use these distinct statuses:
 
@@ -128,11 +136,11 @@ Use these distinct statuses:
 | Milestone v1.38 | `paused` / `deferred` at Phase 262 | Work is intentionally stopped without claiming success, archive, release, or tag. [RECOMMENDED from installed GSD paused-state routing and milestone contract] |
 | Phases 263–270 | `blocked_by_phase_262` / unchecked | No downstream phase may discuss, plan, execute, or count progress under current authority. [VERIFIED: ROADMAP dependencies and dormant activation contract] |
 
-### 4. Exact ROADMAP, STATE, and REQUIREMENTS representation
+### 5. Exact ROADMAP, STATE, and REQUIREMENTS representation
 
-**ROADMAP.md** should keep the Phase 262 checkbox unchecked, keep all five success criteria unchanged, and replace the current verdict with `TERMINAL / DEFERRED — policy ready, phase incomplete`. It should state that the terminal plan is complete, ADMIT-03 and SEAL-01 remain unmet, no activation root exists, and Phases 263–270 are blocked. A completed-plan count may read `35/35 executable plans concluded` only when immediately qualified as terminal disposition rather than phase completion. [VERIFIED: current ROADMAP structure; installed plan/summary counting]
+**ROADMAP.md** should keep the Phase 262 checkbox unchecked, keep all five success criteria unchanged, and replace the current verdict with `TERMINAL / DEFERRED — policy ready, phase incomplete`. It should state that Plan 262-42 is complete, Plan 262-43 remains the sole active prerequisite sentinel, ADMIT-03 and SEAL-01 remain unmet, no activation root exists, and Phases 263–270 are blocked. After Plan 42 closeout, the exact count is **36 plans / 35 summaries**, with only Plan 262-43 incomplete. [VERIFIED: current ROADMAP structure; installed plan/summary counting; plan-checker correction]
 
-**STATE.md** should set normalized workflow status to `paused`, keep `current_phase: 262`, add a concrete `paused_at`/`stopped_at` reason naming `no_external_custody_system` and unresolved ADMIT-03, set `next_action` to `none_until_resumption_prerequisites`, and remove Plan 262-40 from active successors. It must not advance `current_phase` to 263. Installed GSD normalizes status strings containing “paused” or “stopped” to `paused` and routes paused work to resume instead of the next phase. [VERIFIED: installed `state-document.cjs`; installed `workflows/next.md`]
+**STATE.md** should set normalized workflow status to `paused`, keep `current_phase: 262`, add a concrete `paused_at`/`stopped_at` reason naming `no_external_custody_system` and unresolved ADMIT-03, set `next_action` to `fresh_$gsd-plan-phase_262_only_after_both_prerequisites`, remove Plan 262-40 from active successors, and identify Plan 262-43 as the sole active non-waivable sentinel. It must not advance `current_phase` to 263. Installed GSD normalizes status strings containing “paused” or “stopped” to `paused`, while the unsummarized sentinel independently prevents phase-complete routing. [VERIFIED: installed `state-document.cjs`; installed `workflows/next.md`; installed `phase.cjs`]
 
 **REQUIREMENTS.md** should preserve the exact requirement text and checkbox state: ADMIT-03 and SEAL-01 remain `[ ]`, while the already completed policy requirements stay `[x]`. In traceability, both remain mapped to Phase 262 and gain an explicit disposition note such as `Deferred — prerequisite absent; contract unchanged`; they must not be moved to another phase merely to make Phase 262 look complete. [VERIFIED: current requirement and traceability tables; D-02]
 
@@ -158,7 +166,9 @@ Therefore the terminal replan must produce this discovery state:
 ```text
 phase root:
   262-42-PLAN.md
-  262-42-SUMMARY.md
+  262-43-PLAN.md
+  # before Plan 42 execution: no 262-42-SUMMARY.md, no 262-43-SUMMARY.md
+  # after Plan 42 closeout: 262-42-SUMMARY.md, no 262-43-SUMMARY.md
   no 262-40-PLAN.md
   no 262-41-PLAN.md
 
@@ -169,14 +179,20 @@ dormant/:
   262-41-ACTIVATION-CONTRACT.md  # exact SHA-256 5d42af...
 ```
 
-After terminal-plan execution, `phase-plan-index 262` must report neither 262-40 nor 262-41 in `plans`, `waves`, or `incomplete`, must report 262-42 with `has_summary: true`, and must report an empty `incomplete` array. That removes the impossible checkpoint from auto-resume without pretending Phase 262 passed verification. [VERIFIED: installed `phase.cjs`; current index shows only 262-40 incomplete]
+The index transition is exact:
+
+1. After planning creates Plans 262-42 and 262-43 and archives Plan 262-40, but before execution, `phase-plan-index 262` reports **36 plans / 34 summaries** with `incomplete: ["262-42", "262-43"]`.
+2. After Plan 262-42 executes and receives its normal summary, the index reports **36 plans / 35 summaries** with `incomplete: ["262-43"]` only.
+3. Plan 262-43 remains unsummarized and active while either prerequisite is absent. The index must never become empty under the current facts.
+
+This removes the impossible custody-acquisition Plan 262-40 while mechanically preventing Phase 262 auto-completion. The sentinel converts the indefinite blocker into a read-only, truthful prerequisite boundary rather than an executable custody request. [VERIFIED: installed `phase.cjs`; installed progress resume invariant; plan-checker correction]
 
 ## Future Resumption Contract
 
 Future resumption is allowed only if circumstances materially change; it is not a retry of Plan 262-40 or any stopped ADMIT-03 route. [VERIFIED: D-01/D-02; expired no-retry evidence]
 
 1. A real, separately controlled custody system must first exist outside this repository with approved identities, private storage, independent opening authority, authenticated provenance, access/query ledgers, bounded safe projection, contamination response, retention, and retirement. [VERIFIED: SEAL-01; `262-40-PLAN.md`]
-2. The operator runs `$gsd-resume-work`, then `$gsd-plan-phase 262`; the new plan gets the next unused ID and creates a new branch/root. It must not restore or execute archived 262-40 in place. [RECOMMENDED from D-01 and installed paused routing]
+2. Plan 262-43's only future route is a fresh `$gsd-plan-phase 262` after the operator can evidence both a real custody-system change and separately authorized ADMIT-03 planning. The new plan gets the next unused ID and creates a new branch/root. It must not continue the sentinel or restore/execute archived 262-40 in place. [RECOMMENDED from D-01, installed paused routing, and sentinel contract]
 3. The new custody plan may reuse the already tested closed handoff validator only after revalidating exact source/policy identities; it emits `.planning/artifacts/v1.38-custody-public-reference.json` only after mechanical validation and independent human separation-of-duties approval. [VERIFIED: `262-38-SUMMARY.md`; `262-40-PLAN.md`]
 4. ADMIT-03 requires a different separately planned, newly authorized route that preserves all old charges and stopped roots and produces a literal fresh `reproduction_passed` receipt with exactly 540 charged and 540 accepted cells, zero invalid/system/privacy/legal-information failures, and valid exact identities. No old route may be retried or partially reused. [VERIFIED: dormant 262-41; `262-VERIFICATION.md`]
 5. Only after both evidence streams independently pass should another `$gsd-plan-phase 262` create an executable activation plan derived from, but not mutating, the dormant 262-41 contract. [VERIFIED: dormant 262-41]
@@ -190,13 +206,15 @@ Future resumption is allowed only if circumstances materially change; it is not 
 | T1 Operator disposition | `262-TERMINAL-DEFERMENT.md` contains `no_external_custody_system`, blocked ADMIT-03, unmet SEAL-01, policy ready, and all six authority denials false. | Pass; no custody claim. [RECOMMENDED from D-18] |
 | T2 Plan-40 custody | SHA-256 of `archived/262-40-HISTORICAL.md` equals `e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231`; direct `262-40-PLAN.md` is absent. | Exact pass. [VERIFIED: current hash] |
 | T3 Dormant activation custody | SHA-256 of `dormant/262-41-ACTIVATION-CONTRACT.md` remains `5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641`. | Exact pass. [VERIFIED: current hash] |
-| T4 Discovery | `gsd-tools query phase-plan-index 262` omits 262-40/262-41 and reports 262-42 summarized with no incomplete plans. | Pass. [VERIFIED: installed discovery semantics] |
+| T4 Pre-execution discovery | After Plan 40 archival and Plans 42/43 creation, `phase-plan-index 262` omits 262-40/262-41 and reports 36 plans / 34 summaries with `incomplete: ["262-42","262-43"]`. | Exact pass. [VERIFIED: installed discovery semantics; plan-checker correction] |
+| T4b Post-summary discovery | After normal Plan 42 closeout, the index reports 36 plans / 35 summaries; 262-42 has a summary and `incomplete` equals exactly `["262-43"]`. | Exact pass; empty incomplete index is forbidden. [VERIFIED: installed discovery semantics; plan-checker correction] |
 | T5 Policy integrity | `pnpm exec tsx scripts/evaluate-v1-38-pre-search-policy.ts --check` and focused policy tests pass; root remains `sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382`. | Pass; authority remains denied. [VERIFIED: `262-39-SUMMARY.md`] |
 | T6 Protected history | `pnpm exec tsx scripts/check-v1-38-dependency-revision-boundaries.ts --check` passes after updating only the additive supersession inventory. | Pass with stopped-route facts unchanged. [VERIFIED: existing monitor contract] |
 | T7 Missing authority artifacts | Both `.planning/artifacts/v1.38-custody-public-reference.json` and `.planning/artifacts/v1.38-foundation-activation-root.json` remain absent. | Pass by absence. [VERIFIED: current probe; required current state] |
 | T8 Requirements truth | ADMIT-03 and SEAL-01 remain unchecked; no requirement wording changes; all other Phase 262 checkbox states remain unchanged. | Exact pass. [VERIFIED: REQUIREMENTS] |
-| T9 Roadmap truth | Phase 262 and Phases 263–270 remain unchecked; verdict says deferred/incomplete; no downstream authorization language exists. | Exact pass. [VERIFIED: ROADMAP dependency order] |
-| T10 State truth | STATE is paused at Phase 262 with no next action until both resumption prerequisites exist. | Exact pass. [RECOMMENDED from installed paused-state semantics] |
+| T9 Roadmap truth | Phase 262 and Phases 263–270 remain unchecked; verdict says deferred/incomplete; Plan 43 is the sole active sentinel; no downstream authorization language exists. | Exact pass. [VERIFIED: ROADMAP dependency order] |
+| T10 State truth | STATE is paused at Phase 262, names Plan 43 as the active non-waivable sentinel, and permits only fresh `$gsd-plan-phase 262` after both resumption prerequisites materially change. | Exact pass. [RECOMMENDED from installed paused-state semantics and sentinel contract] |
+| T10b Sentinel read-only scope | Plan 43 has `depends_on: [262-42]`, `autonomous: false`, `requirements: []`, no writer/live-work task, no waiver path, and no summary while blocked. | Exact pass. [RECOMMENDED from plan-checker correction] |
 | T11 Boundary/privacy | No candidate, formation, live route, provider, database, production, public, custody secret, preimage, private identity, or fake attestation is added. | Zero findings. [VERIFIED: D-03/D-04/D-19/D-22] |
 | T12 Git scope | Diff contains only the additive/archival planning artifacts named by the terminal plan; protected evidence blobs are unchanged. | Exact allowlist pass. [VERIFIED: task scope; D-01] |
 
@@ -224,19 +242,22 @@ Nyquist validation is enabled, so the terminal plan needs a focused validation m
 | MEAS-01..10, DECI-02 | policy integrity | focused policy suites and root check | Ready, non-authorizing. |
 | SEAL-01 | negative availability | custody reference absence plus terminal record | Unmet; no external system. |
 | Phase status | planning consistency | ROADMAP/STATE/REQUIREMENTS exact assertions | Deferred incomplete; downstream blocked. |
-| Plan discovery | workflow integration | phase-plan-index JSON assertions | No incomplete executable plans; no 262-40/41 discovery. |
+| Plan discovery | workflow integration | phase-plan-index JSON assertions before and after Plan 42 summary | First `[262-42,262-43]`, then only `[262-43]`; never empty. |
+| Prerequisite sentinel | read-only integration | Plan 43 structure plus ROADMAP/STATE/REQUIREMENTS/index assertions | Active, non-autonomous, non-waivable, requirements empty, no summary. |
 
 ### Sampling Rate
 
 - **Per terminal-plan task:** exact hashes, phase-plan-index, and changed-file allowlist. [RECOMMENDED]
-- **Before writing the summary:** focused policy suites, policy root check, dependency boundary monitor, authority-artifact absence, and planning-carrier consistency. [RECOMMENDED]
-- **Phase gate:** do not run phase completion/transition; verification must remain `gaps_found` or an explicit deferred-incomplete equivalent. [VERIFIED: unmet requirements]
+- **Before writing the Plan 42 summary:** focused policy suites, policy root check, dependency boundary monitor, authority-artifact absence, planning-carrier consistency, and exact 36/34 index with both Plans 42/43 incomplete. [RECOMMENDED]
+- **After writing the Plan 42 summary:** rerun the read-only Plan 43 assertions and require exact 36/35 indexing with only Plan 43 incomplete. [RECOMMENDED from sentinel design]
+- **Phase gate:** Plan 43 must remain unsummarized; do not run phase completion/transition; verification remains `gaps_found`/deferred-incomplete. [VERIFIED: unmet requirements]
 
 ### Wave 0 Gaps
 
 - [ ] Extend the supersession manifest/monitor to protect archived Plan 262-40 and the new terminal disposition without changing earlier baselines. [RECOMMENDED]
 - [ ] Add exact static assertions for paused STATE, unchecked ROADMAP/requirements, absent authority artifacts, and no downstream phase authorization. [RECOMMENDED]
-- [ ] Add a plan-discovery assertion proving 262-40/262-41 are non-discoverable and 262-42 is summarized. [RECOMMENDED]
+- [ ] Add two plan-discovery assertions: 36/34 with Plans 42/43 incomplete before execution, then 36/35 with only Plan 43 incomplete after Plan 42 summary. [RECOMMENDED]
+- [ ] Add Plan 43 structural assertions for non-autonomous, read-only, `requirements: []`, non-waivable, fresh-replan-only routing, and absent summary. [RECOMMENDED]
 
 ## Runtime State Inventory
 
@@ -257,7 +278,7 @@ No new library, service, package, database, signer, or custody product is recomm
 | Problem | Do not build | Use instead | Why |
 |---|---|---|---|
 | Missing custody | Repository-local “custodian,” self-signed receipt, fake operator split, or synthetic attestation | Honest unmet SEAL-01 plus milestone deferment | Separate operational control is the requirement. [VERIFIED: SEAL-01; D-19] |
-| Terminal workflow | Hidden prose note while leaving 262-40 active | Canonical terminal/defer plan plus archived checkpoint | GSD routing is file-discovery based. [VERIFIED: installed GSD code] |
+| Terminal workflow | Hidden prose note, active Plan 40, or empty incomplete-plan index | Archived checkpoint plus normally closed Plan 42 and unsummarized Plan 43 sentinel | GSD routing is file-discovery based and the sentinel must mechanically retain the block. [VERIFIED: installed GSD code; plan-checker correction] |
 | Phase completion | Checkbox/status override | Keep requirement and phase incomplete | The contract cannot be weakened. [VERIFIED: ROADMAP/REQUIREMENTS] |
 | Future activation | Revive old plan/route in place | Fresh replan and new content-addressed branch | Old authority is expired/no-retry. [VERIFIED: STATE/VERIFICATION] |
 | Evidence identity | Ad hoc hashes or mutable aliases | Existing canonical roots and protected-history monitor | D-01 requires immutable content-addressed evidence. [VERIFIED: D-01; existing tooling] |
@@ -266,7 +287,7 @@ No new library, service, package, database, signer, or custody product is recomm
 
 ### Pitfall 1: Confusing terminal planning completion with phase completion
 
-The terminal plan may receive a summary, but Phase 262 remains unchecked and verification remains non-pass. Put this distinction in the plan objective, summary headline, ROADMAP verdict, STATE status, and terminal record. [RECOMMENDED from installed summary discovery and D-18]
+Plan 262-42 receives a summary, but Phase 262 remains unchecked and verification remains non-pass because Plan 262-43 deliberately remains unsummarized. Put this distinction in Plan 42's objective and summary, Plan 43's sentinel contract, the ROADMAP verdict, STATE status, and terminal record. [RECOMMENDED from installed summary discovery, plan-checker correction, and D-18]
 
 ### Pitfall 2: Treating “no system exists” as permission to lower the requirement
 
@@ -276,9 +297,9 @@ It is evidence that the prerequisite is absent, not evidence that custody is unn
 
 Even if custody appears later, Phase 263 remains blocked until a fresh literal matrix pass exists. Future planning must show both latches separately. [VERIFIED: dormant 262-41]
 
-### Pitfall 4: Letting GSD auto-advance because all direct plans have summaries
+### Pitfall 4: Letting GSD auto-advance after Plan 262-42 closes
 
-The terminal plan must set STATE to paused at Phase 262 and ROADMAP must keep the phase unchecked. Do not invoke phase completion or transition commands. [VERIFIED: installed `next.md`; unmet phase requirements]
+Paused prose alone is not the full mechanical guard. Plan 262-43 must remain an active direct `*-PLAN.md` with no summary, leaving the index at 36/35 with exactly that sentinel incomplete. ROADMAP keeps Phase 262 unchecked, STATE stays paused, and no phase-completion or transition command runs. [VERIFIED: installed `next.md`; installed `phase.cjs`; unmet phase requirements; plan-checker correction]
 
 ### Pitfall 5: Mutating the activation prompt or seed to make the milestone achievable
 
@@ -306,11 +327,11 @@ Security enforcement is enabled because it is not disabled in `.planning/config.
 | Pattern | STRIDE | Mitigation |
 |---|---|---|
 | Fake custody evidence | Spoofing | No SEAL-01 credit without a real external system and authenticated independent provenance. [VERIFIED: Plan 262-40] |
-| Status changed to “complete” | Elevation of Privilege | Exact unchecked requirements/phase assertions and no transition command. [RECOMMENDED] |
+| Status changed to “complete” | Elevation of Privilege | Exact unchecked requirements/phase assertions, active unsummarized Plan 43, and no transition command. [RECOMMENDED] |
 | Plan 262-40 silently edited | Tampering | Archive exact bytes under known SHA-256 and extend protected-history monitor. [VERIFIED: current hash; D-01] |
 | Old route reused | Tampering / Repudiation | Preserve expired/no-retry terminal and reject every old authority root. [VERIFIED: STATE/VERIFICATION] |
 | Private custody data added to planning docs | Information Disclosure | Bounded operator fact only; no identity, credential, path, preimage, or raw diagnostic. [VERIFIED: D-04/D-20] |
-| Downstream phase starts from policy root | Elevation of Privilege | Paused STATE, unchecked ROADMAP, absent activation root, and exact six denials. [VERIFIED: `262-39-SUMMARY.md`] |
+| Downstream phase starts from policy root | Elevation of Privilege | Paused STATE, unchecked ROADMAP, active unsummarized Plan 43, absent activation root, and exact six denials. [VERIFIED: `262-39-SUMMARY.md`; sentinel design] |
 
 ## Project Constraints (from AGENTS.md)
 
@@ -336,10 +357,10 @@ Security enforcement is enabled because it is not disabled in `.planning/config.
 ## Open Questions (Formally Resolved)
 
 1. **Should Plan 262-40 remain active? — RESOLVED: No.**
-   - It assumes an operational control plane that the operator confirms does not exist and otherwise remains perpetually discoverable as incomplete. Archive it byte-for-byte and supersede it with the terminal plan. [VERIFIED: operator statement; installed plan discovery]
+   - It assumes an operational control plane that the operator confirms does not exist and otherwise remains perpetually discoverable as incomplete. Archive it byte-for-byte; Plan 262-42 replaces its terminal-disposition responsibility and Plan 262-43 preserves the active prerequisite block. [VERIFIED: operator statement; installed plan discovery; sentinel design]
 
 2. **Should Plan 262-40 receive a normal completion summary? — RESOLVED: No.**
-   - Its objective was not delivered. Only the new terminal/defer plan receives a summary. [VERIFIED: Plan 262-40 objective]
+   - Its objective was not delivered. Plan 262-42 receives a normal summary for terminal/defer implementation; Plan 262-43 deliberately receives none while prerequisites are absent. [VERIFIED: Plan 262-40 objective; sentinel design]
 
 3. **Should Phase 262 be marked complete? — RESOLVED: No.**
    - ADMIT-03 and SEAL-01 remain unchecked and Phase 262 criteria 2 and 4 remain false. [VERIFIED: REQUIREMENTS; ROADMAP]
@@ -354,7 +375,7 @@ Security enforcement is enabled because it is not disabled in `.planning/config.
    - MEAS-01..10 and DECI-02 are frozen under the non-authorizing policy root; this is a valuable partial result but not research admission, phase completion, milestone completion, archive, release, or tag. [VERIFIED: `262-39-SUMMARY.md`]
 
 7. **How can work resume later? — RESOLVED: only by fresh planning after a real custody system exists and a separate fresh ADMIT-03 route is authorized.**
-   - Neither archived Plan 262-40 nor any expired matrix route may be revived. Dormant 262-41 remains a contract reference until both new evidence streams pass. [VERIFIED: D-01/D-02; dormant 262-41]
+   - Plan 262-43 routes the changed facts to fresh `$gsd-plan-phase 262`; it is never continued or summarized as a waiver. Neither archived Plan 262-40 nor any expired matrix route may be revived. Dormant 262-41 remains a contract reference until both new evidence streams pass. [VERIFIED: D-01/D-02; dormant 262-41; sentinel design]
 
 ## Sources
 
