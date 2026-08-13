@@ -172,7 +172,7 @@ The batch request must bind the exact three branch freeze roots and preselected 
 ### Privacy and retention
 
 - Keep sealed bytes and keyed material in an absolute out-of-repository directory with `0700` directories, `0600` regular files, no symlinks, bounded reads, and exclusive writes. [VERIFIED: current implementation]
-- Keep secrets out of environment dumps, command arguments, Git, test snapshots, CI, logs, receipts, and public/default output. Prefer a private input file descriptor or interactive/local file input over command-line literal secrets. [RECOMMENDED]
+- Use one concrete secret-file interface: before `commit`, the repository operator creates `input/commitment-secret.bin` inside the already validated absolute out-of-repository local-seal root. The root and `input/` directory are owner-only `0700`; the secret is a current-effective-UID-owned, regular, non-symlink `0600` file with a bounded 32..4096-byte payload. The tool opens it with `O_NOFOLLOW`, verifies ownership/mode/type/size before reading, reads it once during commitment, derives the domain-separated commitment, closes the descriptor, zero-fills its in-process Buffer in `finally`, unlinks the authoritative secret file, and fsyncs the parent directory before reporting success. Permission, ownership, type, symlink, size, short-read, unlink, or fsync uncertainty fails closed. Secret bytes never enter CLI arguments, environment variables, Git, test snapshots, CI, logs, receipts, artifacts, or public/default output. Buffer zeroization and unlink are best-effort process/storage hygiene, not proof against OS copies, swap, backups, forensic recovery, or a malicious owner. [DECIDED: operator-approved local-seal model; concrete planning choice]
 - Commit only opaque roots, bounded counts, coarse status, and approved aggregate metrics. [VERIFIED: D-04; current safe receipt]
 - Retirement deletes the authoritative local store only after the receipt and audit roots are fixed, but the report must call this `local_store_retired`, not “cryptographically erased.” [RECOMMENDED honest claim]
 - Synthetic tests continue to use synthetic non-holdout bytes and must never access real holdout material. [VERIFIED: existing tests]
@@ -395,7 +395,7 @@ Nyquist validation remains enabled. [VERIFIED: `.planning/config.json`]
 | Stored data | No real holdout store exists yet; only synthetic temporary-store tests and a synthetic mechanics artifact exist. [VERIFIED: repository scan] | Create the real store only in the later sealed-evaluation phase, never during Phase 262 mechanics tests. |
 | Live service config | No external custody service exists. [VERIFIED: operator statement] | Remove it as a prerequisite; do not simulate it. |
 | OS-registered state | None required. [VERIFIED: proposed architecture] | None. |
-| Secrets/env vars | No approved external handoff or trust verifier exists; local-seal secrets must not be committed or passed as CLI literals. [VERIFIED: checker/current state; RECOMMENDED] | Define a private local input seam during implementation. |
+| Secrets/env vars | No approved external handoff or trust verifier exists. Commitment secret bytes enter only through `<absolute-local-seal-root>/input/commitment-secret.bin`, validated as owner-only and consumed once during commitment; they never enter CLI/env/log/artifact output. [DECIDED] | Fail closed if the restricted file contract or cleanup cannot be proved. |
 | Build artifacts/packages | Existing Node/TypeScript workspace is sufficient. [VERIFIED: current code] | No installation. |
 
 ## Environment Availability
@@ -411,21 +411,14 @@ Nyquist validation remains enabled. [VERIFIED: `.planning/config.json`]
 
 | # | Claim | Risk if wrong |
 |---|---|---|
-| A1 | The user intends their explicit “replan around that limitation” instruction to authorize changing the previously approved separate-custody milestone requirement, not merely pausing again. [ASSUMED] | Planner should surface the exact contract diff for confirmation before implementation if orchestration requires a gate. |
-| A2 | A single-operator procedural seal is acceptable despite its stated inability to resist a malicious machine owner. [ASSUMED] | If not acceptable, no local architecture can replace external custody honestly. |
+| A1 | The user's explicit instruction authorizes changing the future contract from external custody to `single_operator_local_seal_v1`. [VERIFIED: operator instruction] | None; the reduced assurance and exclusions remain binding. |
+| A2 | The single-operator procedural seal is accepted despite its stated inability to resist a malicious machine owner. [VERIFIED: operator instruction] | None; implementations must not widen the accepted claim. |
 
-## Open Questions
+## Resolved Decisions
 
-1. **Should the revised assurance class be considered sufficient for SEAL-01?**
-   - What we know: the operator explicitly requested replanning around the lack of external custody. [VERIFIED]
-   - Recommendation: revise SEAL-01 to the exact local-seal wording above and make the reduced assurance explicit, rather than retaining an impossible requirement. [RECOMMENDED]
-
-2. **How should a real local secret enter the sealing command?**
-   - What we know: CLI literals and Git are inappropriate; existing tests pass bytes directly. [VERIFIED: code]
-   - Recommendation: use a restricted local file or inherited descriptor that is never printed, logged, hashed into public paths, or retained after retirement. Final choice belongs in Plan 262-45 threat review. [RECOMMENDED]
-
-3. **Can the milestone proceed immediately after local-seal verification?**
-   - No. ADMIT-03 remains a separate unmet requirement and requires its own fresh route. [VERIFIED: REQUIREMENTS/STATE]
+1. **Revised assurance sufficiency:** the operator's explicit instruction accepts `single_operator_local_seal_v1` as the future SEAL-01 assurance model. It remains truthful only with every limitation above and does not retroactively change the former external-custody terminal history. [VERIFIED]
+2. **Secret ingress:** use only `<absolute-local-seal-root>/input/commitment-secret.bin` under the exact owner/type/mode/size/no-follow/read-once/zero-fill/unlink/fsync contract above. Secret bytes never enter CLI, environment, logs, Git, tests, artifacts, or output. [DECIDED]
+3. **Downstream sequencing:** local-seal verification does not unblock the milestone alone. ADMIT-03 remains a separate unmet latch and requires its own fresh route; activation is the exact conjunction. [VERIFIED: REQUIREMENTS/STATE]
 
 ## Sources
 
@@ -445,7 +438,7 @@ Nyquist validation remains enabled. [VERIFIED: `.planning/config.json`]
 
 ### Tertiary (LOW confidence)
 
-- None beyond assumptions A1–A2.
+- None; A1–A2 and the secret-ingress choice are resolved by the operator instruction and this replan.
 
 ## Metadata
 
