@@ -227,15 +227,17 @@ Plans:
 
 - [ ] 262-49-PLAN.md — Repair the three Plan 262-46 findings through separately committed TDD while preserving the failed review bytes.
 
+  **Failed closed:** The independent review froze a finding artifact under `sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6`; no summary or SEAL-01 credit exists.
+
+**Wave 39** *(blocked on Wave 38 completion)*
+
 - [ ] 262-50-PLAN.md — Perform a fresh source-separated full review and grant revised SEAL-01 only on an exact zero-finding v2 verdict.
 
-  **Failed closed:** The independent review froze a finding artifact under `sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6`; no summary or SEAL-01 credit exists. Corrective replanning and a fresh full rerun are required.
-
-**Wave 39** *(blocked on Wave 38 completion and fresh exact operator authority)*
+**Wave 40** *(blocked on Wave 39 completion and fresh exact operator authority)*
 
 - [ ] 262-47-PLAN.md — Prepare, authorize, seal, and consume exactly one fresh unchanged-policy ADMIT-03 successor route with permanent no-retry terminalization.
 
-**Wave 40** *(blocked on Wave 39 completion)*
+**Wave 41** *(blocked on Wave 40 completion)*
 
 - [ ] 262-48-PLAN.md — Join literal ADMIT-03 and revised SEAL-01 as two noncompensating latches, refresh validation/verification, and grant at most Phase 263 planning authority.
 

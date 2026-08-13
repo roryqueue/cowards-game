@@ -35,7 +35,7 @@ Plan: 37 of 41 — Plans 262-49 and 262-50 are the corrective path
 Status: Corrective execution ready; Plans 262-47 and 262-48 remain gated
 Last activity: 2026-08-13 — Planned repair and fresh independent rerun
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
