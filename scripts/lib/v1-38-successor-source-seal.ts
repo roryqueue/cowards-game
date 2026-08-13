@@ -5049,6 +5049,8 @@ export const V138_PLAN_262_47_CANONICAL_PATHS = Object.freeze({
     ".planning/artifacts/v1.38-local-seal-independent-verification-v3.json",
   localSealReview:
     ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-52-REVIEW.md",
+  sourceReview:
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-47-REVIEW.md",
 })
 export const V138_PLAN_262_47_FRESH_DESTINATIONS = Object.freeze([
   ".planning/artifacts/v1.38-current-matrix-execution-context-v10.json",
@@ -5202,6 +5204,21 @@ const derivePlan26247LocalSealPrerequisite = (repoRoot: string,
     artifactSha256: sha256(artifactBytes), reviewSha256: sha256(reviewBytes) })
 }
 
+const derivePlan26247SourceReview = (repoRoot: string, sourceCommit: string) => {
+  const bytes = readCommitFile(repoRoot, sourceCommit,
+    V138_PLAN_262_47_CANONICAL_PATHS.sourceReview)
+  const values = frontmatterScalars(bytes, "V138_PLAN_262_47_REVIEW_INVALID")
+  const parent = inspectV138SourceIdentityA6(repoRoot, sourceCommit)
+    .reviewedSourceParents[0]
+  if (values.get("plan") !== "47" || values.get("depth") !== "deep" ||
+    values.get("status") !== "clean" || values.get("finding_count") !== "0" ||
+    values.get("reviewed_source_commit") !== parent) {
+    fail("V138_PLAN_262_47_REVIEW_INVALID")
+  }
+  return Object.freeze({ path: V138_PLAN_262_47_CANONICAL_PATHS.sourceReview,
+    reviewedSourceCommit: parent!, sha256: sha256(bytes) })
+}
+
 const derivePlan26247AuthorizationV6 = (repoRoot: string,
   sourceInput: string, literalBytes: Uint8Array) => {
   const source = inspectV138SourceIdentityA6(repoRoot, sourceInput)
@@ -5214,11 +5231,13 @@ const derivePlan26247AuthorizationV6 = (repoRoot: string,
     source.reviewedSourceCommit)
   const localSeal = derivePlan26247LocalSealPrerequisite(repoRoot,
     source.reviewedSourceCommit)
+  const sourceReview = derivePlan26247SourceReview(repoRoot,
+    source.reviewedSourceCommit)
   const selectedRouteClosure = plan26247Closure(repoRoot,
     source.reviewedSourceCommit)
   const body = { schemaVersion: V138_PLAN_262_47_AUTHORIZATION_SCHEMA,
     routeOrdinal: 6 as const, operator: V138_PLAN_262_15_OPERATOR,
-    ...source, localSeal, preSearchPolicyRoot:
+    ...source, sourceReview, localSeal, preSearchPolicyRoot:
       "sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382" as Sha256,
     selectedRouteClosure, selectedRouteClosureRoot: selectedRouteClosure.closureRoot,
     protectedHistory, protectedHistoryRoot:
@@ -5250,8 +5269,10 @@ export const v138Plan26247AuthorizationLiteral = (repoRoot: string,
     source.reviewedSourceCommit)
   const localSeal = derivePlan26247LocalSealPrerequisite(repoRoot,
     source.reviewedSourceCommit)
+  const sourceReview = derivePlan26247SourceReview(repoRoot,
+    source.reviewedSourceCommit)
   const closure = plan26247Closure(repoRoot, source.reviewedSourceCommit)
-  return `Authorize Phase 262 Plan 262-47 over independently reviewed source commit ${source.reviewedSourceCommit} (tree ${source.reviewedSourceTree}; parents ${source.reviewedSourceParents.join(",")}; local-seal ${localSeal.independentVerificationRoot}; local-seal-protocol ${localSeal.localSealProtocolRoot}; assurance ${localSeal.assuranceClass}; independent-custody false; pre-search-policy sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382; selected-route ${closure.closureRoot}) as roryquinlan-repository-operator for route ordinal 6: exactly one separately committed direct-child successor-source seal B6, exactly one Pattern C main-orchestrator execution-context:v10, exactly one darwin-memorystatus-effective-available-basis-points-v1 headroom-preflight:v10 at the unchanged inclusive 2,500-basis-point threshold, exactly one calibration:v10 eight-attempt/four-shard allocation, and—only if calibration:v10 is admitted—at most one fresh reproduction:v11 540-cell run. This authority binds canonical destinations ${plan26247Destinations().join(",")}; protected history ${history.protectedHistoryRoot}; cumulative charged identities ${history.cumulativeChargedPublicAttemptIds.join(",")}; and every prior authorization byte ${history.priorAuthorizationBytes.map(({ sha256: root }) => root).join(",")}. Every frozen 200 ms sampling, inclusive 2,500-basis-point gate, eight-attempt/four-shard allocation, conditional 540-cell reproduction, runtime/kernel/historical predicate, lineage, accounting, gameplay, privacy, and formation-absence bound remains unchanged. The local-seal prerequisite grants no matrix authority by itself. This authorization grants no authority to mutate, replace, delete, reinterpret, retry, reuse, or consume any v5/v6/v7/v8/v9 artifact or prior authorization bytes, and grants no candidate, formation, holdout-opening, public, production, or live execution authority before B6 is checked. It is single-use, has no retry, and expires at the first seal refusal or failure or any Plan 262-47 terminal outcome.`
+  return `Authorize Phase 262 Plan 262-47 over independently reviewed source commit ${source.reviewedSourceCommit} (tree ${source.reviewedSourceTree}; parents ${source.reviewedSourceParents.join(",")}; source-review ${sourceReview.sha256}; local-seal ${localSeal.independentVerificationRoot}; local-seal-protocol ${localSeal.localSealProtocolRoot}; assurance ${localSeal.assuranceClass}; independent-custody false; pre-search-policy sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382; selected-route ${closure.closureRoot}) as roryquinlan-repository-operator for route ordinal 6: exactly one separately committed direct-child successor-source seal B6, exactly one Pattern C main-orchestrator execution-context:v10, exactly one darwin-memorystatus-effective-available-basis-points-v1 headroom-preflight:v10 at the unchanged inclusive 2,500-basis-point threshold, exactly one calibration:v10 eight-attempt/four-shard allocation, and—only if calibration:v10 is admitted—at most one fresh reproduction:v11 540-cell run. This authority binds canonical destinations ${plan26247Destinations().join(",")}; protected history ${history.protectedHistoryRoot}; cumulative charged identities ${history.cumulativeChargedPublicAttemptIds.join(",")}; and every prior authorization byte ${history.priorAuthorizationBytes.map(({ sha256: root }) => root).join(",")}. Every frozen 200 ms sampling, inclusive 2,500-basis-point gate, eight-attempt/four-shard allocation, conditional 540-cell reproduction, runtime/kernel/historical predicate, lineage, accounting, gameplay, privacy, and formation-absence bound remains unchanged. The local-seal prerequisite grants no matrix authority by itself. This authorization grants no authority to mutate, replace, delete, reinterpret, retry, reuse, or consume any v5/v6/v7/v8/v9 artifact or prior authorization bytes, and grants no candidate, formation, holdout-opening, public, production, or live execution authority before B6 is checked. It is single-use, has no retry, and expires at the first seal refusal or failure or any Plan 262-47 terminal outcome.`
 }
 
 export const buildV138Plan26247AuthorizationV6 = (repoRoot: string,
