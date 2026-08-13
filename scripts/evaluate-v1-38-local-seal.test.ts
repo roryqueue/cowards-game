@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer"
-import { chmodSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, chownSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -122,15 +122,25 @@ describe("v1.38 single-operator local seal", () => {
     const outside = path.join(link.storeRoot, "outside.bin")
     writeFileSync(outside, Buffer.alloc(32), { mode: 0o600 })
     // replace only the fixture secret; the implementation must never follow it
-    const { unlinkSync } = require("node:fs") as typeof import("node:fs")
     unlinkSync(link.secretPath)
     symlinkSync(outside, link.secretPath)
     expect(() => commit(link.storeRoot)).toThrow("V138_LOCAL_SEAL_SECRET_SYMLINK")
+
+    const directory = temporaryStore()
+    unlinkSync(directory.secretPath)
+    mkdirSync(directory.secretPath, { mode: 0o700 })
+    expect(() => commit(directory.storeRoot)).toThrow("V138_LOCAL_SEAL_SECRET_TYPE_INVALID")
 
     for (const size of [31, 4097]) {
       const fixture = temporaryStore(Buffer.alloc(size))
       expect(() => commit(fixture.storeRoot)).toThrow("V138_LOCAL_SEAL_SECRET_SIZE_INVALID")
     }
+  })
+
+  it.skipIf(typeof process.getuid !== "function" || process.getuid() !== 0)("rejects a secret owned by a different uid when fixtureable", () => {
+    const fixture = temporaryStore()
+    chownSync(fixture.secretPath, 1, 1)
+    expect(() => commit(fixture.storeRoot)).toThrow("V138_LOCAL_SEAL_OWNER_INVALID")
   })
 
   it("fails closed on short read, unlink, or input-directory fsync uncertainty", () => {
@@ -168,7 +178,7 @@ describe("v1.38 single-operator local seal", () => {
       { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), () => projection(),
     )
     const receipt = projectV138LocalSealReceipt(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), opened.evaluation,
+      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), opened.evaluationRoot,
     )
     expect(verifyV138LocalSealReceipt(
       { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), receipt,
@@ -194,11 +204,12 @@ describe("v1.38 single-operator local seal", () => {
     const secondCommit = commit(second.storeRoot)
     armV138LocalSealOpening({ repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(), secondCommit.commitmentRoot)
     const opened = consumeV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(), () => projection(),
+      { repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(),
+      () => ({ ...projection(), strategySource: "PRIVATE_secret" }),
     )
     expect(() => projectV138LocalSealReceipt(
       { repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(),
-      { ...opened.evaluation, strategySource: "PRIVATE_secret" } as never,
+      opened.evaluationRoot,
     )).toThrow("V138_LOCAL_SEAL_SAFE_PROJECTION_INVALID")
   })
 
@@ -240,6 +251,10 @@ describe("v1.38 single-operator local seal", () => {
     }
     expect(JSON.stringify(module)).not.toContain("separatelyPermissioned")
     expect(JSON.stringify(module)).not.toContain("independent_custody")
+    const cli = readFileSync(path.join(REPO_ROOT, "scripts/evaluate-v1-38-local-seal.ts"), "utf8")
+    expect(cli).not.toContain("process.env")
+    expect(cli).not.toMatch(/--(?:secret|key|preimage|store-root)/u)
+    expect(cli).not.toContain("commitment-secret.bin")
   })
 
   it("builds a deterministic synthetic-only, non-authorizing protocol artifact", () => {
