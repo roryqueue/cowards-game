@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planned
-stopped_at: Plan 262-51 complete; Plan 262-52 fresh source-separated v3 review is next
-last_updated: "2026-08-13T02:56:39.648Z"
+stopped_at: Completed 262-52-PLAN.md
+last_updated: "2026-08-13T03:03:48.385Z"
 last_activity: 2026-08-13
-last_activity_desc: Completed clean-checkout, lifecycle, and privacy-classifier repairs
+last_activity_desc: Completed the zero-finding source-separated v3 local-seal review
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 42
-  completed_plans: 39
-  percent: 93
+  completed_plans: 40
+  percent: 95
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"local_seal_v3_review_ready","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"v2_cli_gap_repaired_v3_checker_ready","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_evidence_verification":"failed_with_findings_v2_preserved_pending_v3","independent_verification_root":"sha256:e55933eb22d7bf028d3eb25f64861b8be078776a4c97156761977efdabf33b34","finding_codes":["V2_VERIFIER_MODE_MISSING"],"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-52","total_plans":42,"completed_plans":39,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-47","262-48"],"incomplete":["262-47","262-48","262-52"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_failed_review_v2":"archived/262-50-HISTORICAL.md","archived_failed_review_v2_sha256":"e7ebdabdd057c541b09ab2337cd5f9fc505212f2b965a70aa042f8d0dcda81c8","archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"local_seal_v3_pass_admit_pending","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_evidence_verification":"passed_zero_findings_v3","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","finding_codes":[],"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-47","total_plans":42,"completed_plans":40,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-47","262-48"],"incomplete":["262-47","262-48"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_failed_review_v2":"archived/262-50-HISTORICAL.md","archived_failed_review_v2_sha256":"e7ebdabdd057c541b09ab2337cd5f9fc505212f2b965a70aa042f8d0dcda81c8","archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 39 of 42 — Plan 262-51 complete; Plan 262-52 owns the fresh v3 verdict
-Status: Source-separated v3 review ready; Plans 262-47 and 262-48 remain gated
-Last activity: 2026-08-13 — Added exact read-only v2/v3 verification and the 42-plan lifecycle
+Plan: 40 of 42 — Plan 262-52 complete; Plan 262-47 is next
+Status: Revised SEAL-01 passed under reduced assurance; ADMIT-03 and Plan 262-48 remain gated
+Last activity: 2026-08-13 — Completed the zero-finding source-separated v3 local-seal review
 
-Progress: [█████████░] 93%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
-**Current milestone:** 39 of 42 active Phase 262 plans have summaries. Plan 262-51 repaired the exact read-only v2 command and added mutation-tested v3 validation without changing the exclusive v2 FAIL root `sha256:e55933eb22d7bf028d3eb25f64861b8be078776a4c97156761977efdabf33b34`. Plan 262-52 alone owns the fresh source-separated v3 verdict. Plans 262-47 and 262-48 remain blocked, ADMIT-03 and revised SEAL-01 remain unmet, and every downstream authority remains false.
+**Current milestone:** 40 of 42 active Phase 262 plans have summaries. Plan 262-52 independently resolved all four historical local-seal findings and froze the exclusive v3 PASS root `sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b`. Revised SEAL-01 is proven only under `single_operator_local_seal_v1`; independent custody remains false. Plan 262-47 still owns the separately authorized literal 540/540 reproduction, ADMIT-03 remains blocked, Plan 262-48 remains gated, and every downstream authority remains false.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -83,6 +83,7 @@ Progress: [█████████░] 93%
 | Phase 262 P45 | 12min | 1 tasks | 4 files |
 | Phase 262 P49 | 15min | 3 tasks | 8 files |
 | Phase 262 P51 | 6min | 2 tasks | 4 files |
+| Phase 262 P52 | 14min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -183,6 +184,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Use one named `repository_operator`, a restricted out-of-repository local store, and one closed command with the exact secret-file ingress contract; claim only tool-mediated procedural sealing. — Independent/third-party custody, separate permissioning, non-collusion, comprehensive host monitoring, cryptographic erasure, forensic deletion, and malicious-owner resistance are explicitly excluded.
 - [Phase 262]: Keep ADMIT-03 blocked and revised SEAL-01 pending until independently verified mechanics and one fresh literal 540/540 reproduction pass are joined exactly. — Contract revision alone grants no candidate-search, Phase 263, formation, holdout-opening, public, activation, or production authority.
 - [Phase 262]: Consume local-seal secret bytes only from the fixed owner-only file, burn opening durably before evaluation, and expose only opaque roots under single_operator_local_seal_v1. — Preserves one-shot procedural integrity without claiming independent custody or malicious-owner resistance.
+- [Phase 262]: Grant revised SEAL-01 only under single_operator_local_seal_v1 after all four historical findings pass together from the exact clean source. — Zero findings are necessary and independent custody remains explicitly excluded.
+- [Phase 262]: Keep independent custody false, ADMIT-03 blocked, and every downstream authority false despite the mechanics pass. — The local-seal review cannot substitute for the separately authorized literal 540/540 reproduction.
 
 ### Pending Todos
 
@@ -234,7 +237,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-13T02:56:39.636Z
-Stopped at: Plans 262-51 and 262-52 planned after the v2 review failure
+Last session: 2026-08-13T03:03:48.373Z
+Stopped at: Completed 262-52-PLAN.md
 Resume file: None
-Next command: Run Plan 262-51, then Plan 262-52 as a fresh source-separated review. Do not execute Plan 262-47 or Plan 262-48 unless Plan 262-52 produces an exact zero-finding summary.
+Next command: Execute Plan 262-47 Task 1, then stop at its exact fresh authorization-literal checkpoint before any live route work.

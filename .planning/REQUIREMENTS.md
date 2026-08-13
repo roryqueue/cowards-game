@@ -26,7 +26,7 @@ Each requirement is complete only when its named behavior has an immutable evide
 - [x] **MEAS-07**: The starting response contract targets two consecutive responses above 55% Set score against the preceding frozen mixture on untouched conditions, at least one deployable Strategy above 60% against an independent probe field, and a fresh red team below 60% or a discovered counter followed by the next declared response iteration clearing the frozen adaptation target, denominator, and pass threshold against the updated mixture.
 - [x] **MEAS-08**: Results above 70% against the Advanced library remain regression-only evidence, and every robustness claim is limited to named frozen oracles, budgets, populations, conditions, identities, and versions.
 - [x] **MEAS-09**: Reports distinguish process/integrity failure, valid current-rules metagame failure, formation rejection, formation empirical pass, and holdout contamination; thresholds and interpretations cannot be softened after results.
-- [ ] **MEAS-10**: Before tuning, maintainers precommit the literal three-profile protocol, profile-agnostic cold common root, matched execution order, unchanged-rule comparison, equal-compute dimensions, common profile-agnostic holdout opponent/schedule construction, telemetry, rejection gates, holdout commitment and single-operator local sealing procedure, access/query policy, safe receipt, contamination response, and non-authorization semantics; the holdout lineage proves its source, training data, prompts, caches, and selection use no profile-conditioned or current-trained input, and profile-agnostic metric code and synthetic classifier fixtures may exist while no executable formation state or evidence is materialized. The procedure identifies `single_operator_local_seal_v1` and remains pending until its mechanics and claim boundary are implemented and independently verified.
+- [x] **MEAS-10**: Before tuning, maintainers precommit the literal three-profile protocol, profile-agnostic cold common root, matched execution order, unchanged-rule comparison, equal-compute dimensions, common profile-agnostic holdout opponent/schedule construction, telemetry, rejection gates, holdout commitment and single-operator local sealing procedure, access/query policy, safe receipt, contamination response, and non-authorization semantics; the holdout lineage proves its source, training data, prompts, caches, and selection use no profile-conditioned or current-trained input, and profile-agnostic metric code and synthetic classifier fixtures may exist while no executable formation state or evidence is materialized. The procedure identifies `single_operator_local_seal_v1` and remains pending until its mechanics and claim boundary are implemented and independently verified.
 
 ### Legal Hierarchical Planner
 
@@ -101,7 +101,7 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 ### One-Shot Sealed Evaluation
 
-- [ ] **SEAL-01**: A named repository operator controls a restricted out-of-repository local holdout store and one closed opening command. The immutable protocol binds secret-salted commitment material, pre-open freeze checks, application-level access/query events, one consumed opening before evaluation launch, bounded safe aggregate projection, terminal contamination, retention, and retirement. The evidence explicitly identifies `single_operator_local_seal_v1` and makes no independent-custody, third-party-custody, separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim.
+- [x] **SEAL-01**: A named repository operator controls a restricted out-of-repository local holdout store and one closed opening command. The immutable protocol binds secret-salted commitment material, pre-open freeze checks, application-level access/query events, one consumed opening before evaluation launch, bounded safe aggregate projection, terminal contamination, retention, and retirement. The evidence explicitly identifies `single_operator_local_seal_v1` and makes no independent-custody, third-party-custody, separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim.
 - [ ] **SEAL-02**: The holdout evaluator verifies all three branch freezes, the exact preselected finalist hash sets, threshold and analysis roots, equal-compute receipts, common profile-agnostic opponent/schedule root, and the original commitment before accepting one common batch request.
 - [ ] **SEAL-03**: The same common arena, opponent, and schedule holdout opens exactly once in one batch for all frozen profiles; the content-addressed receipt binds commitment verification, the request and all three freeze roots, evaluator/schema/kernel/runtime identities, result roots, the bounded released metric set, and `openOrdinal: 1`, and the evaluator cannot nominate a different finalist after seeing results.
 - [ ] **SEAL-04**: After the opening, no source, candidate, population, finalist, threshold, selection rule, metric, classifier, interpretation, prompt, or analysis code can change and no second diagnostic or substitute holdout query is allowed.
@@ -196,7 +196,7 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | MEAS-07 | Phase 262 | Complete |
 | MEAS-08 | Phase 262 | Complete |
 | MEAS-09 | Phase 262 | Complete |
-| MEAS-10 | Phase 262 | Pending |
+| MEAS-10 | Phase 262 | Complete |
 | PLAN-01 | Phase 263 | Pending |
 | PLAN-02 | Phase 263 | Pending |
 | PLAN-03 | Phase 263 | Pending |
@@ -247,7 +247,7 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | EQAL-06 | Phase 268 | Pending |
 | EQAL-07 | Phase 268 | Pending |
 | EQAL-08 | Phase 268 | Pending |
-| SEAL-01 | Phase 262 | Pending |
+| SEAL-01 | Phase 262 | Complete |
 | SEAL-02 | Phase 269 | Pending |
 | SEAL-03 | Phase 269 | Pending |
 | SEAL-04 | Phase 269 | Pending |
