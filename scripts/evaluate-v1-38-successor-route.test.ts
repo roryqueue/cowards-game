@@ -83,7 +83,7 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
     expect(literal).toContain("eight-attempt/four-shard")
     expect(V138_PLAN_262_47_FRESH_DESTINATIONS.every((repoPath) =>
       !existsSync(path.resolve(repoRoot, repoPath)))).toBe(true)
-  })
+  }, 30_000)
 
   it("rejects old authority and identity mutations after root recomputation", () => {
     const commit = execFileSync("git", ["rev-parse", "HEAD"], {

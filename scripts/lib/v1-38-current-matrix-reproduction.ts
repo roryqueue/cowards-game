@@ -18701,6 +18701,76 @@ export const checkV138Plan26230TerminalBranch = (repoRoot: string,
       preObservationProof), disposition)
 }
 
+export const V138_PLAN_262_47_ROUTE_CONTRACT = Object.freeze({
+  schemaVersion: "v1.38-plan-262-47-route-contract-v1" as const,
+  routeOrdinal: 6 as const,
+  authorizationSchema: "v1.38-plan-262-47-authorization-v6" as const,
+  sealSchema: "v1.38-successor-source-seal-v6" as const,
+  executionContextSchema:
+    "v1.38-current-matrix-execution-context-v10" as const,
+  preflightSchema:
+    "v1.38-current-matrix-headroom-preflight-v10" as const,
+  calibrationSchema: "v1.38-current-matrix-calibration-v10" as const,
+  reproductionSchema: "v1.38-current-matrix-reproduction-v11" as const,
+  consumptionSchema: "v1.38-plan-262-47-consumption-v1" as const,
+  terminalSchema: "v1.38-plan-262-47-terminal-v1" as const,
+  resourceSampleMilliseconds: 200 as const,
+  requiredHostHeadroomBasisPoints: 2500 as const,
+  calibrationAttemptCount: 8 as const,
+  calibrationShardCount: 4 as const,
+  reproductionCellCount: 540 as const,
+  noRetry: true as const,
+  partialAcceptedEvidenceReusable: false as const,
+})
+
+export const checkV138Plan26247RouteContract = (value: unknown) => {
+  if (canonical(value) !== canonical(V138_PLAN_262_47_ROUTE_CONTRACT)) {
+    throw new TypeError("MATRIX_PLAN_262_47_ROUTE_CONTRACT_INVALID")
+  }
+  return V138_PLAN_262_47_ROUTE_CONTRACT
+}
+
+export const checkV138Plan26247SyntheticRoute = (input: {
+  readonly calibration: Readonly<{
+    admitted: boolean
+    chargedAttemptIds: readonly string[]
+    shardCount: number
+    completeCleanup: boolean
+    systemFailureCount: number
+  }>
+  readonly cells: readonly Readonly<{
+    cellId: string
+    accepted: boolean
+    systemFailure: boolean
+    legalityViolation: boolean
+    privacyViolation: boolean
+    formationPresent: boolean
+  }>[]
+}) => {
+  const expectedAttempts = Array.from({ length: 8 }, (_, index) =>
+    `calibration:v10:${index}`)
+  if (input.calibration.admitted !== true ||
+    canonical(input.calibration.chargedAttemptIds) !==
+      canonical(expectedAttempts) || input.calibration.shardCount !== 4 ||
+    input.calibration.completeCleanup !== true ||
+    input.calibration.systemFailureCount !== 0) {
+    throw new TypeError("MATRIX_PLAN_262_47_CALIBRATION_INVALID")
+  }
+  const cellIds = input.cells.map(({ cellId }) => cellId)
+  if (input.cells.length !== 540 || new Set(cellIds).size !== 540 ||
+    input.cells.some((cell) => cell.accepted !== true ||
+      cell.systemFailure !== false || cell.legalityViolation !== false ||
+      cell.privacyViolation !== false || cell.formationPresent !== false)) {
+    throw new TypeError("MATRIX_PLAN_262_47_REPRODUCTION_INVALID")
+  }
+  return deepFreeze({ disposition: "reproduction_passed" as const,
+    chargedCalibrationAttemptCount: 8 as const,
+    chargedReproductionAttemptCount: 540 as const,
+    acceptedCellCount: 540 as const, completeCleanup: true as const,
+    authorityExpired: true as const, noRetry: true as const,
+    partialAcceptedEvidenceReusable: false as const })
+}
+
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await dispatchV138CurrentMatrixDirectEntry(process.argv[2], {
