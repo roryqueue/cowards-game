@@ -25,9 +25,10 @@ import { assertPublicOutputLeakSafe } from "../packages/spec/src/public-output-p
 import type { JsonValue } from "../packages/spec/src/types.js"
 import {
   armV138LocalSealOpening,
-  buildV138LocalSealProtocolArtifact,
+  buildV138LocalSealProtocolArtifactV2,
   commitV138LocalSeal,
   consumeV138LocalSealOpening,
+  deriveV138LocalSealCheckoutIdentity,
   projectV138LocalSealReceipt,
   retireV138LocalSeal,
   verifyV138LocalSealReceipt,
@@ -143,12 +144,28 @@ const mutateJsonFile = (target: string, mutate: (value: Record<string, unknown>)
   writeFileSync(target, `${JSON.stringify(value)}\n`, { mode: 0o600 })
 }
 
-const protocolFor = (repoRoot: string) => buildV138LocalSealProtocolArtifact({
+const protocolFor = (repoRoot: string) => buildV138LocalSealProtocolArtifactV2({
   moduleSourceBytes: readFileSync(path.join(repoRoot, "scripts/lib/v1-38-local-seal.ts")),
   testSourceBytes: readFileSync(path.join(repoRoot, "scripts/evaluate-v1-38-local-seal.test.ts")),
   cliSourceBytes: readFileSync(path.join(repoRoot, "scripts/evaluate-v1-38-local-seal.ts")),
   preSearchPolicyBytes: readFileSync(path.join(repoRoot, ".planning/artifacts/v1.38-pre-search-policy-root.json")),
 })
+
+const makeCleanSealCheckout = (scratchRoot: string): Readonly<{
+  repoRoot: string
+  request: V138LocalSealOpenRequest
+}> => {
+  const repoRoot = mkdtempSync(path.join(scratchRoot, "checkout-"))
+  chmodSync(repoRoot, 0o700)
+  execFileSync("git", ["-C", repoRoot, "init", "--quiet"], { stdio: "ignore" })
+  execFileSync("git", ["-C", repoRoot, "config", "user.email", "local-seal-review@example.invalid"], { stdio: "ignore" })
+  execFileSync("git", ["-C", repoRoot, "config", "user.name", "Local Seal Review"], { stdio: "ignore" })
+  writeFileSync(path.join(repoRoot, "freeze-carrier.json"), "{\"schemaVersion\":\"review-fixture-v2\"}\n", { mode: 0o600 })
+  execFileSync("git", ["-C", repoRoot, "add", "freeze-carrier.json"], { stdio: "ignore" })
+  execFileSync("git", ["-C", repoRoot, "commit", "--quiet", "-m", "freeze carrier"], { stdio: "ignore" })
+  const checkout = deriveV138LocalSealCheckoutIdentity(repoRoot)
+  return { repoRoot, request: request({ currentLeagueFreezeRoot: checkout.currentLeagueFreezeRoot }) }
+}
 
 const claimInflated = (source: string): boolean => [
   /(?:provides?|guarantees?|establishes?|achieves?|with)\s+(?:independent|third-party)\s+custody/iu,
@@ -189,87 +206,90 @@ export const analyzeV138LocalSealIndependentVerification = (input: Readonly<{
     throw new TypeError("V138_LOCAL_SEAL_REVIEW_SCRATCH_INVALID")
   }
   chmodSync(scratchRoot, 0o700)
+  const sealCheckout = makeCleanSealCheckout(scratchRoot)
+  const sealRepoRoot = sealCheckout.repoRoot
+  const sealRequest = sealCheckout.request
   const expectedProtocol = protocolFor(repoRoot)
   const expectedProtocolBytes = Buffer.from(`${JSON.stringify(expectedProtocol)}\n`)
-  const actualProtocolBytes = readFileSync(path.join(repoRoot, ".planning/artifacts/v1.38-local-seal-protocol-v1.json"))
+  const actualProtocolBytes = readFileSync(path.join(repoRoot, ".planning/artifacts/v1.38-local-seal-protocol-v2.json"))
 
   const storeCommitment = makeStore(scratchRoot)
-  const committedForMutation = commitV138LocalSeal({ repoRoot, storeRoot: storeCommitment, request: request() })
+  const committedForMutation = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeCommitment, request: sealRequest })
   mutateJsonFile(path.join(storeCommitment, "commitment/record.json"), (value) => { value.commitmentRoot = ROOT_C })
   const commitmentMutationRejected = rejects(() => armV138LocalSealOpening(
-    { repoRoot, storeRoot: storeCommitment }, request(), committedForMutation.commitmentRoot,
+    { repoRoot: sealRepoRoot, storeRoot: storeCommitment }, sealRequest, committedForMutation.commitmentRoot,
   ))
 
   const storeLedger = makeStore(scratchRoot)
-  const committedForLedger = commitV138LocalSeal({ repoRoot, storeRoot: storeLedger, request: request() })
+  const committedForLedger = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeLedger, request: sealRequest })
   const ledgerPath = path.join(storeLedger, "events/ledger.ndjson")
   writeFileSync(ledgerPath, readFileSync(ledgerPath, "utf8").replace("committed", "projected"), { mode: 0o600 })
   const eventChainMutationRejected = rejects(() => armV138LocalSealOpening(
-    { repoRoot, storeRoot: storeLedger }, request(), committedForLedger.commitmentRoot,
+    { repoRoot: sealRepoRoot, storeRoot: storeLedger }, sealRequest, committedForLedger.commitmentRoot,
   ))
 
   const storeRequest = makeStore(scratchRoot)
-  const committedForRequest = commitV138LocalSeal({ repoRoot, storeRoot: storeRequest, request: request() })
+  const committedForRequest = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeRequest, request: sealRequest })
   const requestMutationRejected = rejects(() => armV138LocalSealOpening(
-    { repoRoot, storeRoot: storeRequest }, request({ scheduleRoot: ROOT_C }), committedForRequest.commitmentRoot,
+    { repoRoot: sealRepoRoot, storeRoot: storeRequest }, { ...sealRequest, scheduleRoot: ROOT_C }, committedForRequest.commitmentRoot,
   ))
 
   const storeFreeze = makeStore(scratchRoot)
-  const committedForFreeze = commitV138LocalSeal({ repoRoot, storeRoot: storeFreeze, request: request() })
+  const committedForFreeze = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeFreeze, request: sealRequest })
   const freezeRootMutationRejected = rejects(() => armV138LocalSealOpening(
-    { repoRoot, storeRoot: storeFreeze }, request({ currentLeagueFreezeRoot: ROOT_B }), committedForFreeze.commitmentRoot,
+    { repoRoot: sealRepoRoot, storeRoot: storeFreeze }, { ...sealRequest, currentLeagueFreezeRoot: ROOT_B }, committedForFreeze.commitmentRoot,
   ))
 
   const storeResult = makeStore(scratchRoot)
-  const committedForResult = commitV138LocalSeal({ repoRoot, storeRoot: storeResult, request: request() })
-  armV138LocalSealOpening({ repoRoot, storeRoot: storeResult }, request(), committedForResult.commitmentRoot)
-  const openedForResult = consumeV138LocalSealOpening({ repoRoot, storeRoot: storeResult }, request(), projection)
+  const committedForResult = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeResult, request: sealRequest })
+  armV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeResult }, sealRequest, committedForResult.commitmentRoot)
+  const openedForResult = consumeV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeResult }, sealRequest, projection)
   mutateJsonFile(path.join(storeResult, "private/evaluation.json"), (value) => { value.resultRoot = ROOT_C })
   const resultMutationRejected = rejects(() => projectV138LocalSealReceipt(
-    { repoRoot, storeRoot: storeResult }, request(), openedForResult.evaluationRoot,
+    { repoRoot: sealRepoRoot, storeRoot: storeResult }, sealRequest, openedForResult.evaluationRoot,
   ))
 
   const storeReceipt = makeStore(scratchRoot)
-  const committedForReceipt = commitV138LocalSeal({ repoRoot, storeRoot: storeReceipt, request: request() })
-  armV138LocalSealOpening({ repoRoot, storeRoot: storeReceipt }, request(), committedForReceipt.commitmentRoot)
-  const openedForReceipt = consumeV138LocalSealOpening({ repoRoot, storeRoot: storeReceipt }, request(), projection)
-  const receipt = projectV138LocalSealReceipt({ repoRoot, storeRoot: storeReceipt }, request(), openedForReceipt.evaluationRoot)
+  const committedForReceipt = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeReceipt, request: sealRequest })
+  armV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeReceipt }, sealRequest, committedForReceipt.commitmentRoot)
+  const openedForReceipt = consumeV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeReceipt }, sealRequest, projection)
+  const receipt = projectV138LocalSealReceipt({ repoRoot: sealRepoRoot, storeRoot: storeReceipt }, sealRequest, openedForReceipt.evaluationRoot)
   const receiptMutationRejected = rejects(() => verifyV138LocalSealReceipt(
-    { repoRoot, storeRoot: storeReceipt }, request(), { ...receipt, findingCount: 1 },
+    { repoRoot: sealRepoRoot, storeRoot: storeReceipt }, sealRequest, { ...receipt, findingCount: 1 },
   ))
 
   const storeSecond = makeStore(scratchRoot)
-  const committedForSecond = commitV138LocalSeal({ repoRoot, storeRoot: storeSecond, request: request() })
-  armV138LocalSealOpening({ repoRoot, storeRoot: storeSecond }, request(), committedForSecond.commitmentRoot)
-  consumeV138LocalSealOpening({ repoRoot, storeRoot: storeSecond }, request(), projection)
+  const committedForSecond = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeSecond, request: sealRequest })
+  armV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeSecond }, sealRequest, committedForSecond.commitmentRoot)
+  consumeV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeSecond }, sealRequest, projection)
   const secondOpeningRejected = rejects(() => consumeV138LocalSealOpening(
-    { repoRoot, storeRoot: storeSecond }, request(), projection,
+    { repoRoot: sealRepoRoot, storeRoot: storeSecond }, sealRequest, projection,
   ))
 
   const storeCrash = makeStore(scratchRoot)
-  const committedForCrash = commitV138LocalSeal({ repoRoot, storeRoot: storeCrash, request: request() })
-  armV138LocalSealOpening({ repoRoot, storeRoot: storeCrash }, request(), committedForCrash.commitmentRoot)
+  const committedForCrash = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeCrash, request: sealRequest })
+  armV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeCrash }, sealRequest, committedForCrash.commitmentRoot)
   const crashBeforeResultRejected = rejects(() => consumeV138LocalSealOpening(
-    { repoRoot, storeRoot: storeCrash }, request(), () => { throw new Error("synthetic-review-crash") },
-  )) && rejects(() => consumeV138LocalSealOpening({ repoRoot, storeRoot: storeCrash }, request(), projection))
+    { repoRoot: sealRepoRoot, storeRoot: storeCrash }, sealRequest, () => { throw new Error("synthetic-review-crash") },
+  )) && rejects(() => consumeV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeCrash }, sealRequest, projection))
 
   const storePrivacy = makeStore(scratchRoot)
-  const committedForPrivacy = commitV138LocalSeal({ repoRoot, storeRoot: storePrivacy, request: request() })
-  armV138LocalSealOpening({ repoRoot, storeRoot: storePrivacy }, request(), committedForPrivacy.commitmentRoot)
+  const committedForPrivacy = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storePrivacy, request: sealRequest })
+  armV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storePrivacy }, sealRequest, committedForPrivacy.commitmentRoot)
   const openedForPrivacy = consumeV138LocalSealOpening(
-    { repoRoot, storeRoot: storePrivacy }, request(), () => ({ ...projection(), StrategyMemory: "PRIVATE_review_seed" }),
+    { repoRoot: sealRepoRoot, storeRoot: storePrivacy }, sealRequest, () => ({ ...projection(), StrategyMemory: "PRIVATE_review_seed" }),
   )
   const privacySeedRejected = rejects(() => projectV138LocalSealReceipt(
-    { repoRoot, storeRoot: storePrivacy }, request(), openedForPrivacy.evaluationRoot,
+    { repoRoot: sealRepoRoot, storeRoot: storePrivacy }, sealRequest, openedForPrivacy.evaluationRoot,
   ))
 
   const storeLifecycle = makeStore(scratchRoot)
-  const committedForLifecycle = commitV138LocalSeal({ repoRoot, storeRoot: storeLifecycle, request: request() })
-  armV138LocalSealOpening({ repoRoot, storeRoot: storeLifecycle }, request(), committedForLifecycle.commitmentRoot)
-  const openedLifecycle = consumeV138LocalSealOpening({ repoRoot, storeRoot: storeLifecycle }, request(), projection)
-  const receiptLifecycle = projectV138LocalSealReceipt({ repoRoot, storeRoot: storeLifecycle }, request(), openedLifecycle.evaluationRoot)
-  verifyV138LocalSealReceipt({ repoRoot, storeRoot: storeLifecycle }, request(), receiptLifecycle)
-  retireV138LocalSeal({ repoRoot, storeRoot: storeLifecycle }, request())
+  const committedForLifecycle = commitV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeLifecycle, request: sealRequest })
+  armV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeLifecycle }, sealRequest, committedForLifecycle.commitmentRoot)
+  const openedLifecycle = consumeV138LocalSealOpening({ repoRoot: sealRepoRoot, storeRoot: storeLifecycle }, sealRequest, projection)
+  const receiptLifecycle = projectV138LocalSealReceipt({ repoRoot: sealRepoRoot, storeRoot: storeLifecycle }, sealRequest, openedLifecycle.evaluationRoot)
+  verifyV138LocalSealReceipt({ repoRoot: sealRepoRoot, storeRoot: storeLifecycle }, sealRequest, receiptLifecycle)
+  retireV138LocalSeal({ repoRoot: sealRepoRoot, storeRoot: storeLifecycle }, sealRequest)
 
   const localSealModuleSource = readFileSync(path.join(repoRoot, "scripts/lib/v1-38-local-seal.ts"), "utf8")
   const exportedNames = [...localSealModuleSource.matchAll(/export\s+(?:const|interface|type|function|class)\s+([A-Za-z0-9_]+)/gu)].map((match) => match[1]!)

@@ -42,13 +42,14 @@ const roots = {
   retirementPolicyRoot: ROOT_C,
 }
 
-const request = () => ({
+const request = (currentLeagueFreezeRoot = ROOT_A) => ({
   schemaVersion: "v1.38-local-seal-open-request-v1" as const,
   assuranceClass: "single_operator_local_seal_v1" as const,
   repositoryOperator: "roryquinlan-repository-operator",
   toolMediatedLedger: true as const,
   operatorNoPrematureAccessDeclaration: true as const,
   ...roots,
+  currentLeagueFreezeRoot,
 })
 
 const git = (repoRoot: string, args: readonly string[]): string =>
@@ -63,8 +64,10 @@ const temporaryGitCheckout = () => {
   git(repoRoot, ["add", "freeze-carrier.json"])
   git(repoRoot, ["commit", "--quiet", "-m", "fixture"])
   const checkout = deriveV138LocalSealCheckoutIdentity(repoRoot)
-  return { repoRoot, checkout, request: { ...request(), currentLeagueFreezeRoot: checkout.currentLeagueFreezeRoot } }
+  return { repoRoot, checkout, request: request(checkout.currentLeagueFreezeRoot) }
 }
+
+const DEFAULT_CHECKOUT = temporaryGitCheckout()
 
 const temporaryStore = (secret = Buffer.alloc(32, 0x5a)) => {
   const storeRoot = mkdtempSync(path.join(tmpdir(), "v138-local-seal-"))
@@ -77,7 +80,7 @@ const temporaryStore = (secret = Buffer.alloc(32, 0x5a)) => {
 }
 
 const commit = (storeRoot: string, faults?: Parameters<typeof commitV138LocalSeal>[1]) =>
-  commitV138LocalSeal({ repoRoot: REPO_ROOT, storeRoot, request: request() }, faults)
+  commitV138LocalSeal({ repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot, request: DEFAULT_CHECKOUT.request }, faults)
 
 const projection = () => ({
   schemaVersion: "v1.38-local-seal-safe-receipt-v1" as const,
@@ -131,7 +134,7 @@ describe("v1.38 single-operator local seal", () => {
         writeFileSync(path.join(repoRoot, "untracked.txt"), "untracked\n")
       }
       const store = temporaryStore()
-      expect(() => commitV138LocalSeal({ repoRoot, storeRoot: store.storeRoot, request: request() }))
+      expect(() => commitV138LocalSeal({ repoRoot, storeRoot: store.storeRoot, request: DEFAULT_CHECKOUT.request }))
         .toThrow(mutation === "non-git" ? "V138_LOCAL_SEAL_GIT_UNAVAILABLE" : "V138_LOCAL_SEAL_CHECKOUT_DIRTY")
       expect(() => readFileSync(path.join(store.storeRoot, "commitment", "record.json"))).toThrow()
     },
@@ -177,9 +180,9 @@ describe("v1.38 single-operator local seal", () => {
 
     const bad = temporaryStore()
     expect(() => commitV138LocalSeal({
-      repoRoot: REPO_ROOT,
+      repoRoot: DEFAULT_CHECKOUT.repoRoot,
       storeRoot: bad.storeRoot,
-      request: { ...request(), assuranceClass: "external_custody" } as never,
+      request: { ...DEFAULT_CHECKOUT.request, assuranceClass: "external_custody" } as never,
     })).toThrow("V138_LOCAL_SEAL_REQUEST_INVALID")
   })
 
@@ -242,11 +245,11 @@ describe("v1.38 single-operator local seal", () => {
   it("persists open_consumed before launching evaluation and burns crashes without retry", () => {
     const fixture = temporaryStore()
     const committed = commit(fixture.storeRoot)
-    armV138LocalSealOpening({ repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), committed.commitmentRoot)
+    armV138LocalSealOpening({ repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, committed.commitmentRoot)
     let stateSeen = ""
     expect(() => consumeV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot },
-      request(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot },
+      DEFAULT_CHECKOUT.request,
       () => {
         stateSeen = readFileSync(path.join(fixture.storeRoot, "state", "state.json"), "utf8")
         throw new Error("synthetic callback crash")
@@ -254,25 +257,25 @@ describe("v1.38 single-operator local seal", () => {
     )).toThrow("V138_LOCAL_SEAL_EVALUATION_SYSTEM_FAILURE")
     expect(stateSeen).toContain('"state":"open_consumed"')
     expect(() => consumeV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), () => projection(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, () => projection(),
     )).toThrow("V138_LOCAL_SEAL_TERMINAL")
   })
 
   it("joins the exact request before accepting projection and receipt verification", () => {
     const fixture = temporaryStore()
     const committed = commit(fixture.storeRoot)
-    armV138LocalSealOpening({ repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), committed.commitmentRoot)
+    armV138LocalSealOpening({ repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, committed.commitmentRoot)
     const opened = consumeV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), () => projection(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, () => projection(),
     )
     const receipt = projectV138LocalSealReceipt(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), opened.evaluationRoot,
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, opened.evaluationRoot,
     )
     expect(verifyV138LocalSealReceipt(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), receipt,
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, receipt,
     )).toMatchObject({ state: "verified", satisfiesSeal01Mechanics: true, downstreamAuthority: "denied" })
     expect(() => retireV138LocalSeal(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request,
     )).not.toThrow()
   })
 
@@ -280,23 +283,23 @@ describe("v1.38 single-operator local seal", () => {
     const fixture = temporaryStore()
     const committed = commit(fixture.storeRoot)
     expect(() => armV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot },
-      { ...request(), scheduleRoot: ROOT_C },
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot },
+      { ...DEFAULT_CHECKOUT.request, scheduleRoot: ROOT_C },
       committed.commitmentRoot,
     )).toThrow("V138_LOCAL_SEAL_REQUEST_MISMATCH")
     expect(() => armV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), committed.commitmentRoot,
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, committed.commitmentRoot,
     )).toThrow("V138_LOCAL_SEAL_TERMINAL")
 
     const second = temporaryStore()
     const secondCommit = commit(second.storeRoot)
-    armV138LocalSealOpening({ repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(), secondCommit.commitmentRoot)
+    armV138LocalSealOpening({ repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: second.storeRoot }, DEFAULT_CHECKOUT.request, secondCommit.commitmentRoot)
     const opened = consumeV138LocalSealOpening(
-      { repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: second.storeRoot }, DEFAULT_CHECKOUT.request,
       () => ({ ...projection(), strategySource: "PRIVATE_secret" }),
     )
     expect(() => projectV138LocalSealReceipt(
-      { repoRoot: REPO_ROOT, storeRoot: second.storeRoot }, request(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: second.storeRoot }, DEFAULT_CHECKOUT.request,
       opened.evaluationRoot,
     )).toThrow("V138_LOCAL_SEAL_SAFE_PROJECTION_INVALID")
   })
@@ -305,7 +308,7 @@ describe("v1.38 single-operator local seal", () => {
     for (const mutation of ["delete", "reorder", "mutate", "duplicate", "truncate"] as const) {
       const fixture = temporaryStore()
       const committed = commit(fixture.storeRoot)
-      armV138LocalSealOpening({ repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), committed.commitmentRoot)
+      armV138LocalSealOpening({ repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, committed.commitmentRoot)
       const ledgerPath = path.join(fixture.storeRoot, "events", "ledger.ndjson")
       const lines = readFileSync(ledgerPath, "utf8").trimEnd().split("\n")
       const changed = mutation === "delete" ? lines.slice(1)
@@ -315,7 +318,7 @@ describe("v1.38 single-operator local seal", () => {
               : [lines[0]!.slice(0, -2)]
       writeFileSync(ledgerPath, `${changed.join("\n")}\n`, { mode: 0o600 })
       expect(() => consumeV138LocalSealOpening(
-        { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(), () => projection(),
+        { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request, () => projection(),
       )).toThrow("V138_LOCAL_SEAL_LEDGER_INVALID")
     }
   })
@@ -324,11 +327,11 @@ describe("v1.38 single-operator local seal", () => {
     const fixture = temporaryStore()
     commit(fixture.storeRoot)
     const contaminated = markV138LocalSealContaminated(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, "operator-declared-contamination",
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, "operator-declared-contamination",
     )
     expect(contaminated.state).toBe("contaminated")
     expect(retireV138LocalSeal(
-      { repoRoot: REPO_ROOT, storeRoot: fixture.storeRoot }, request(),
+      { repoRoot: DEFAULT_CHECKOUT.repoRoot, storeRoot: fixture.storeRoot }, DEFAULT_CHECKOUT.request,
     ).state).toBe("retired")
   })
 

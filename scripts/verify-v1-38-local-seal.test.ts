@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { createHash } from "node:crypto"
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -31,7 +32,11 @@ describe("v1.38 local-seal independent verification", () => {
       scratchRoot: temporaryDirectory("v138-local-seal-independent-"),
     })
 
-    expect(analysis.protocolRoot).toBe("sha256:0d7f7ec3edd89638226105b7ae035330265f19634bb7acfc58fb204dba157e62")
+    const protocolV2 = JSON.parse(readFileSync(
+      path.join(REPO_ROOT, ".planning/artifacts/v1.38-local-seal-protocol-v2.json"),
+      "utf8",
+    )) as { protocolRoot: string }
+    expect(analysis.protocolRoot).toBe(protocolV2.protocolRoot)
     expect(analysis.protocolByteIdentical).toBe(true)
     expect(analysis.mutationChecks).toEqual({
       bundleMutationRejected: true,
@@ -51,21 +56,19 @@ describe("v1.38 local-seal independent verification", () => {
     })
     expect(analysis.protectedHistoryExact).toBe(true)
     expect(analysis.downstreamAuthorityDenied).toBe(true)
-  })
+  }, 15_000)
 
-  it("reports the missing dirty-checkout/freeze binding without altering Plan 262-45", () => {
+  it("rejects the former dirty-checkout/freeze-binding reproduction without altering v1 evidence", () => {
     const analysis = analyzeV138LocalSealIndependentVerification({
       repoRoot: REPO_ROOT,
       scratchRoot: temporaryDirectory("v138-local-seal-independent-"),
     })
 
-    expect(analysis.findings).toContainEqual({
-      code: "DIRTY_FREEZE_BINDING_MISSING",
-      severity: "critical",
-      publicReason: "pre_open_freeze_checkout_binding_not_enforced",
-    })
-    expect(analysis.verdict).toBe("fail")
-  })
+    expect(analysis.findings.map((finding) => finding.code)).not.toContain("DIRTY_FREEZE_BINDING_MISSING")
+    expect(createHash("sha256").update(readFileSync(
+      path.join(REPO_ROOT, ".planning/artifacts/v1.38-local-seal-independent-verification-v1.json"),
+    )).digest("hex")).toBe("01a7e1e8e5534a762845cf39be3ed4c79ff98c6cda8bcd3e86f7ffaafe1c6c3e")
+  }, 15_000)
 
   it("builds an exact-schema public-safe FAIL artifact with every authority denied", () => {
     const analysis = analyzeV138LocalSealIndependentVerification({
@@ -73,7 +76,15 @@ describe("v1.38 local-seal independent verification", () => {
       scratchRoot: temporaryDirectory("v138-local-seal-independent-"),
     })
     const artifact = buildV138LocalSealIndependentVerificationArtifact({
-      analysis,
+      analysis: {
+        ...analysis,
+        verdict: "fail",
+        findings: [{
+          code: "DIRTY_FREEZE_BINDING_MISSING",
+          severity: "critical",
+          publicReason: "pre_open_freeze_checkout_binding_not_enforced",
+        }],
+      },
       sourceCommit: "755f6ce77f7f5554cba2a07f4913de900a3c7523",
       sourceTree: "0123456789abcdef0123456789abcdef01234567",
       reviewerCommit: "89abcdef0123456789abcdef0123456789abcdef",
@@ -119,7 +130,7 @@ describe("v1.38 local-seal independent verification", () => {
     expect(rendered).toBe(`${JSON.stringify(artifact)}\n`)
     expect(rendered).not.toContain(tmpdir())
     expect(rendered).not.toMatch(/PRIVATE_|StrategyMemory|SoldierMemory|objectivePayload|commitment-secret/u)
-  })
+  }, 15_000)
 
   it("rejects claim inflation and local path or secret material in review carriers", () => {
     const scratch = temporaryDirectory("v138-local-seal-independent-claim-")
@@ -137,5 +148,5 @@ describe("v1.38 local-seal independent verification", () => {
     expect(analysis.findings.map((finding) => finding.code)).toContain("INFLATED_CUSTODY_CLAIM")
     expect(JSON.stringify(analysis)).not.toContain(fakeRepo)
     expect(JSON.stringify(analysis)).not.toContain(readFileSync(path.join(fakeRepo, "dirty.txt"), "utf8"))
-  })
+  }, 15_000)
 })

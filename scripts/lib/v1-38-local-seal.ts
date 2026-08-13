@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer"
 import { createHash, createHmac } from "node:crypto"
+import { execFileSync } from "node:child_process"
 import {
   closeSync,
   constants,
@@ -11,6 +12,7 @@ import {
   openSync,
   readFileSync,
   readSync,
+  realpathSync,
   renameSync,
   unlinkSync,
   writeFileSync,
@@ -37,6 +39,7 @@ const OPEN_REQUEST_PATH = "private/open-request.json"
 const EVALUATION_PATH = "private/evaluation.json"
 const PROJECTION_PATH = "private/safe-projection.json"
 const LOCK_PATH = "state/command.lock"
+const GIT_OBJECT = /^[0-9a-f]{40}$/u
 
 const REQUEST_KEYS = Object.freeze([
   "schemaVersion", "assuranceClass", "repositoryOperator", "toolMediatedLedger",
@@ -81,6 +84,62 @@ const domainRoot = (domain: string, value: unknown): Sha256 =>
 
 const sha256 = (value: Uint8Array): Sha256 =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+export interface V138LocalSealCheckoutIdentity {
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly freezeCarrierIdentity: Sha256
+  readonly currentLeagueFreezeRoot: Sha256
+}
+
+const git = (repoRoot: string, args: readonly string[]): Buffer => {
+  try {
+    return execFileSync("git", ["-C", repoRoot, ...args], {
+      encoding: "buffer",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 8 * 1024 * 1024,
+    })
+  } catch {
+    return fail("V138_LOCAL_SEAL_GIT_UNAVAILABLE")
+  }
+}
+
+const deriveCheckoutIdentity = (repoRootInput: string): Readonly<V138LocalSealCheckoutIdentity & { repoRoot: string }> => {
+  if (typeof repoRootInput !== "string" || !path.isAbsolute(repoRootInput)) {
+    fail("V138_LOCAL_SEAL_GIT_UNAVAILABLE")
+  }
+  const requestedRoot = realpathSync(path.resolve(repoRootInput))
+  const resolvedRoot = git(requestedRoot, ["rev-parse", "--show-toplevel"]).toString("utf8").trim()
+  if (!path.isAbsolute(resolvedRoot) || realpathSync(resolvedRoot) !== requestedRoot) {
+    fail("V138_LOCAL_SEAL_GIT_ROOT_MISMATCH")
+  }
+  const sourceCommit = git(resolvedRoot, ["rev-parse", "--verify", "HEAD^{commit}"]).toString("utf8").trim()
+  const sourceTree = git(resolvedRoot, ["rev-parse", "--verify", "HEAD^{tree}"]).toString("utf8").trim()
+  if (!GIT_OBJECT.test(sourceCommit) || !GIT_OBJECT.test(sourceTree)) fail("V138_LOCAL_SEAL_GIT_IDENTITY_INVALID")
+  const dirty = [
+    git(resolvedRoot, ["diff", "--cached", "--name-only", "-z"]),
+    git(resolvedRoot, ["diff", "--name-only", "-z"]),
+    git(resolvedRoot, ["ls-files", "--others", "--exclude-standard", "-z"]),
+  ]
+  if (dirty.some((bytes) => bytes.byteLength !== 0)) fail("V138_LOCAL_SEAL_CHECKOUT_DIRTY")
+  const freezeCarrierIdentity = domainRoot("cowards-game:v1.38:current-league-freeze-carrier:v2", {
+    schemaVersion: "v1.38-current-league-freeze-carrier-v2",
+    sourceCommit,
+    sourceTree,
+  })
+  const currentLeagueFreezeRoot = domainRoot("cowards-game:v1.38:current-league-freeze:v2", {
+    schemaVersion: "v1.38-current-league-freeze-v2",
+    sourceCommit,
+    sourceTree,
+    freezeCarrierIdentity,
+  })
+  return deepFreeze({ repoRoot: resolvedRoot, sourceCommit, sourceTree, freezeCarrierIdentity, currentLeagueFreezeRoot })
+}
+
+export const deriveV138LocalSealCheckoutIdentity = (repoRoot: string): Readonly<V138LocalSealCheckoutIdentity> => {
+  const { sourceCommit, sourceTree, freezeCarrierIdentity, currentLeagueFreezeRoot } = deriveCheckoutIdentity(repoRoot)
+  return deepFreeze({ sourceCommit, sourceTree, freezeCarrierIdentity, currentLeagueFreezeRoot })
+}
 
 const effectiveUid = (): number => {
   if (typeof process.geteuid === "function") return process.geteuid()
@@ -266,11 +325,16 @@ interface CommitmentRecord {
   readonly commitmentRoot: Sha256
   readonly secretByteLength: number
   readonly secretIngress: "fixed_owner_only_file_v1"
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly freezeCarrierIdentity: Sha256
+  readonly currentLeagueFreezeRoot: Sha256
 }
 
 const COMMITMENT_KEYS = [
   "schemaVersion", "assuranceClass", "requestRoot", "commitmentDigest", "commitmentRoot",
   "secretByteLength", "secretIngress",
+  "sourceCommit", "sourceTree", "freezeCarrierIdentity", "currentLeagueFreezeRoot",
 ] as const
 
 const loadCommitment = (root: string): Readonly<CommitmentRecord> => {
@@ -283,7 +347,13 @@ const loadCommitment = (root: string): Readonly<CommitmentRecord> => {
     typeof value.commitmentRoot !== "string" || !SHA256.test(value.commitmentRoot) ||
     typeof value.secretByteLength !== "number" || !Number.isSafeInteger(value.secretByteLength) ||
     value.secretByteLength < 32 || value.secretByteLength > 4096 ||
-    value.secretIngress !== "fixed_owner_only_file_v1") fail("V138_LOCAL_SEAL_COMMITMENT_INVALID")
+    value.secretIngress !== "fixed_owner_only_file_v1" ||
+    typeof value.sourceCommit !== "string" || !GIT_OBJECT.test(value.sourceCommit) ||
+    typeof value.sourceTree !== "string" || !GIT_OBJECT.test(value.sourceTree) ||
+    typeof value.freezeCarrierIdentity !== "string" || !SHA256.test(value.freezeCarrierIdentity) ||
+    typeof value.currentLeagueFreezeRoot !== "string" || !SHA256.test(value.currentLeagueFreezeRoot)) {
+    fail("V138_LOCAL_SEAL_COMMITMENT_INVALID")
+  }
   return deepFreeze({ ...(value as unknown as CommitmentRecord) })
 }
 
@@ -322,11 +392,13 @@ const loadLedger = (root: string, commitment: CommitmentRecord): readonly Ledger
   })
   const stored = parseCanonicalRecord(root, STATE_PATH, 4096)
   const last = events.at(-1)
-  if (!last || !exactKeys(stored, ["schemaVersion", "state", "eventCount", "ledgerRoot", "requestRoot", "commitmentRoot", "stateRoot"]) ||
+  if (!last || !exactKeys(stored, ["schemaVersion", "state", "eventCount", "ledgerRoot", "requestRoot", "commitmentRoot", "stateRoot", "sourceCommit", "sourceTree", "freezeCarrierIdentity", "currentLeagueFreezeRoot"]) ||
     stored.schemaVersion !== "v1.38-local-seal-state-v1" || stored.state !== last.state ||
     stored.eventCount !== events.length || stored.ledgerRoot !== last.eventHash ||
     stored.requestRoot !== commitment.requestRoot || stored.commitmentRoot !== commitment.commitmentRoot ||
-    stored.stateRoot !== last.resultingStateRoot) fail("V138_LOCAL_SEAL_LEDGER_INVALID")
+    stored.stateRoot !== last.resultingStateRoot || stored.sourceCommit !== commitment.sourceCommit ||
+    stored.sourceTree !== commitment.sourceTree || stored.freezeCarrierIdentity !== commitment.freezeCarrierIdentity ||
+    stored.currentLeagueFreezeRoot !== commitment.currentLeagueFreezeRoot) fail("V138_LOCAL_SEAL_LEDGER_INVALID")
   return Object.freeze(events)
 }
 
@@ -338,6 +410,10 @@ const stateRecord = (event: LedgerEvent, commitment: CommitmentRecord): RecordVa
   requestRoot: commitment.requestRoot,
   commitmentRoot: commitment.commitmentRoot,
   stateRoot: event.resultingStateRoot,
+  sourceCommit: commitment.sourceCommit,
+  sourceTree: commitment.sourceTree,
+  freezeCarrierIdentity: commitment.freezeCarrierIdentity,
+  currentLeagueFreezeRoot: commitment.currentLeagueFreezeRoot,
 })
 
 const appendEvent = (root: string, commitment: CommitmentRecord, prior: readonly LedgerEvent[], input: Omit<LedgerEventCore, "schemaVersion" | "sequence" | "previousEventHash" | "requestRoot" | "resultingStateRoot">): LedgerEvent => {
@@ -436,7 +512,11 @@ export const commitV138LocalSeal = (
     fail("V138_LOCAL_SEAL_COMMIT_INPUT_INVALID")
   }
   const request = parseRequest(input.request)
-  const root = assertStoreRoot(input.repoRoot, input.storeRoot)
+  const checkout = deriveCheckoutIdentity(input.repoRoot)
+  if (request.currentLeagueFreezeRoot !== checkout.currentLeagueFreezeRoot) {
+    fail("V138_LOCAL_SEAL_FREEZE_IDENTITY_MISMATCH")
+  }
+  const root = assertStoreRoot(checkout.repoRoot, input.storeRoot)
   const inputRoot = inside(root, "input")
   assertOwnedDirectory(inputRoot)
   const secretPath = inside(root, SECRET_RELATIVE_PATH)
@@ -478,6 +558,10 @@ export const commitV138LocalSeal = (
       commitmentDigest,
       secretByteLength: secret.byteLength,
       secretIngress: "fixed_owner_only_file_v1" as const,
+      sourceCommit: checkout.sourceCommit,
+      sourceTree: checkout.sourceTree,
+      freezeCarrierIdentity: checkout.freezeCarrierIdentity,
+      currentLeagueFreezeRoot: checkout.currentLeagueFreezeRoot,
     }
     commitment = deepFreeze({
       ...base,
@@ -564,6 +648,13 @@ export const armV138LocalSealOpening = (optionsInput: unknown, requestInput: unk
     try {
       const request = assertRequestMatches(options.storeRoot, requestInput, commitment)
       if (commitmentRoot !== commitment.commitmentRoot) fail("V138_LOCAL_SEAL_COMMITMENT_MISMATCH")
+      const checkout = deriveCheckoutIdentity(options.repoRoot)
+      if (checkout.sourceCommit !== commitment.sourceCommit || checkout.sourceTree !== commitment.sourceTree ||
+        checkout.freezeCarrierIdentity !== commitment.freezeCarrierIdentity ||
+        checkout.currentLeagueFreezeRoot !== commitment.currentLeagueFreezeRoot ||
+        request.currentLeagueFreezeRoot !== checkout.currentLeagueFreezeRoot) {
+        fail("V138_LOCAL_SEAL_CHECKOUT_IDENTITY_DRIFT")
+      }
       writeExclusiveDurable(options.storeRoot, OPEN_REQUEST_PATH, Buffer.from(`${JSON.stringify(request)}\n`))
       appendEvent(options.storeRoot, commitment, events, { command: "arm_open", outcome: "accepted", reason: "V138_LOCAL_SEAL_OPEN_ARMED", state: "open_armed" })
       return publicStatus("open_armed", commitment)
@@ -770,5 +861,57 @@ export const buildV138LocalSealProtocolArtifact = (input: V138LocalSealProtocolA
     protocolRoot: domainRoot("cowards-game:v1.38:local-seal-protocol:v1", body),
   })
   assertPublicOutputLeakSafe(artifact, "v1.38 local seal protocol artifact")
+  return artifact
+}
+
+export const buildV138LocalSealProtocolArtifactV2 = (input: V138LocalSealProtocolArtifactInput) => {
+  if (!isRecord(input) || !exactKeys(input, ["moduleSourceBytes", "testSourceBytes", "cliSourceBytes", "preSearchPolicyBytes"]) ||
+    !Object.values(input).every((value) => value instanceof Uint8Array)) fail("V138_LOCAL_SEAL_ARTIFACT_INPUT_INVALID")
+  let policy: unknown
+  try { policy = JSON.parse(Buffer.from(input.preSearchPolicyBytes).toString("utf8")) }
+  catch { fail("V138_LOCAL_SEAL_POLICY_INVALID") }
+  if (!isRecord(policy) || policy.policyRoot !== "sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382" ||
+    policy.rootKind !== "pre_search_policy_root") fail("V138_LOCAL_SEAL_POLICY_INVALID")
+  const body = {
+    schemaVersion: "v1.38-local-seal-protocol-v2" as const,
+    assuranceClass: "single_operator_local_seal_v1" as const,
+    repositoryOperator: "roryquinlan-repository-operator" as const,
+    toolMediatedLedger: true as const,
+    operatorNoPrematureAccessDeclarationRequired: true as const,
+    secretIngress: "fixed_owner_only_file_v1" as const,
+    secretFileContract: "input/commitment-secret.bin:owner-only-0600:32..4096:read-once:no-follow:unlink-and-parent-fsync-before-evidence" as const,
+    cleanCheckoutRequiredAtCommit: true as const,
+    exactCheckoutRecheckRequiredAtArm: true as const,
+    gitIdentityContract: "full_head_commit_full_head_tree_staged_unstaged_untracked_empty_v1" as const,
+    freezeIdentityContract: "domain_separated_full_commit_tree_and_committed_carrier_v2" as const,
+    callerProvidedFreezeIdentityAccepted: false as const,
+    checkoutIdentityJoinedToCommitmentAndState: true as const,
+    openingConsumptionDurableBeforeEvaluation: true as const,
+    evaluationFailureDisposition: "charged_terminal_system_failure_no_retry" as const,
+    eventLedger: "fsynced_sha256_hash_chain_with_state_root" as const,
+    preSearchPolicyRoot: policy.policyRoot as Sha256,
+    moduleSourceSha256: sha256(input.moduleSourceBytes),
+    testSourceSha256: sha256(input.testSourceBytes),
+    cliSourceSha256: sha256(input.cliSourceBytes),
+    realHoldoutMaterialPresent: false as const,
+    satisfiesSeal01Mechanics: true as const,
+    satisfiesSeal01: false as const,
+    independentCustodyClaimed: false as const,
+    maliciousOwnerResistanceClaimed: false as const,
+    admit03: "blocked" as const,
+    seal01: "pending_independent_verification" as const,
+    candidateSearchAuthorized: false as const,
+    phase263Authorized: false as const,
+    formationMaterializationAuthorized: false as const,
+    holdoutOpeningAuthorized: false as const,
+    publicAuthorized: false as const,
+    productionAuthorized: false as const,
+    downstreamAuthority: "denied" as const,
+  }
+  const artifact = deepFreeze({
+    ...body,
+    protocolRoot: domainRoot("cowards-game:v1.38:local-seal-protocol:v2", body),
+  })
+  assertPublicOutputLeakSafe(artifact, "v1.38 local seal protocol artifact v2")
   return artifact
 }
