@@ -468,17 +468,67 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
       line: 1,
       detail: "phase-plan-index 262 includes archived or dormant plan IDs.",
     })
-    const summary26244Present = existsSync(path.join(repoRoot, phaseDirectory, "262-44-SUMMARY.md"))
-    const expected = evaluateV138PhasePlanIndexTransition({ summary26244Present })
     const plans = Array.isArray(parsed.plans) ? parsed.plans : []
     const actualIncomplete = Array.isArray(parsed.incomplete) ? parsed.incomplete : []
     const actualSummaryCount = plans.filter((entry) => isRecord(entry) && entry.has_summary === true).length
-    if (plans.length !== expected.planCount || actualSummaryCount !== expected.summaryCount ||
-      JSON.stringify(actualIncomplete) !== JSON.stringify(expected.incomplete)) findings.push({
+    const planIds = plans.map((entry) => isRecord(entry) ? entry.id : undefined)
+    const expectedPlanIds = [
+      "262-01", "262-02", "262-08", "262-09", "262-10", "262-11", "262-12", "262-13", "262-14",
+      "262-15", "262-16", "262-17", "262-18", "262-19", "262-20", "262-21", "262-22", "262-23",
+      "262-24", "262-25", "262-26", "262-27", "262-28", "262-29", "262-30", "262-31", "262-32",
+      "262-33", "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-42", "262-44",
+      "262-45", "262-47", "262-48", "262-49", "262-50",
+    ]
+    const waves = isRecord(parsed.waves) ? parsed.waves : {}
+    const activeWavesExact = JSON.stringify({
+      "38": waves["38"], "39": waves["39"], "40": waves["40"], "41": waves["41"],
+    }) === JSON.stringify({ "38": ["262-49"], "39": ["262-50"], "40": ["262-47"], "41": ["262-48"] })
+    const summary = (planId: string): boolean =>
+      existsSync(path.join(repoRoot, phaseDirectory, `${planId}-SUMMARY.md`))
+    const artifactPath = path.join(repoRoot, ".planning/artifacts/v1.38-local-seal-independent-verification-v2.json")
+    const reviewPath = path.join(repoRoot, phaseDirectory, "262-50-REVIEW.md")
+    const failArtifactCanonical = isCanonicalPlan50Artifact(artifactPath, "fail")
+    const failReviewCanonical = failArtifactCanonical && isCanonicalPlan50Review(reviewPath, artifactPath, "fail")
+    const passArtifactCanonical = isCanonicalPlan50Artifact(artifactPath, "pass")
+    const passReviewCanonical = passArtifactCanonical && isCanonicalPlan50Review(reviewPath, artifactPath, "pass")
+    let lifecycle: V138PhasePlanIndexLifecycle
+    if (!summary("262-49")) lifecycle = "pre_49"
+    else if (summary("262-48")) lifecycle = "post_48"
+    else if (summary("262-47")) lifecycle = "post_47"
+    else if (summary("262-50")) lifecycle = "post_50_pass"
+    else if (failArtifactCanonical && failReviewCanonical) lifecycle = "plan_50_fail"
+    else lifecycle = "post_49_pre_50"
+    let expected: Readonly<{ planCount: 41; summaryCount: number; incomplete: readonly string[] }>
+    try {
+      expected = evaluateV138PhasePlanIndexTransition({
+        lifecycle,
+        planCount: plans.length,
+        summaryCount: actualSummaryCount,
+        incomplete: actualIncomplete.filter((value): value is string => typeof value === "string"),
+        failArtifactCanonical,
+        failReviewCanonical,
+        summary26250Present: summary("262-50"),
+      })
+      if ((lifecycle === "post_50_pass" || lifecycle === "post_47" || lifecycle === "post_48") &&
+        (!passArtifactCanonical || !passReviewCanonical)) throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
+      if (lifecycle === "post_47" && !summary("262-50")) throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
+      if (lifecycle === "post_48" && (!summary("262-47") || !summary("262-50"))) {
+        throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
+      }
+    } catch {
+      findings.push({
+        code: "PLAN_DISCOVERY_DRIFT",
+        path: phaseDirectory,
+        line: 1,
+        detail: "Phase 262 plan index does not match any declared lifecycle state.",
+      })
+      return findings
+    }
+    if (JSON.stringify(planIds) !== JSON.stringify(expectedPlanIds) || !activeWavesExact) findings.push({
       code: "PLAN_DISCOVERY_DRIFT",
       path: phaseDirectory,
       line: 1,
-      detail: `phase-plan-index 262 must report ${expected.planCount}/${expected.summaryCount} with incomplete ${JSON.stringify(expected.incomplete)}.`,
+      detail: `phase-plan-index 262 must preserve the exact declared plan inventory and waves; expected ${expected.planCount}/${expected.summaryCount} with incomplete ${JSON.stringify(expected.incomplete)}.`,
     })
   } catch {
     findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1, detail: "phase-plan-index 262 returned invalid JSON." })
@@ -489,16 +539,68 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
 
+type V138PhasePlanIndexLifecycle =
+  | "pre_49" | "post_49_pre_50" | "post_50_pass" | "post_47" | "post_48" | "plan_50_fail"
+
+const isCanonicalPlan50Artifact = (target: string, expected: "pass" | "fail"): boolean => {
+  if (!existsSync(target)) return false
+  try {
+    const bytes = readFileSync(target, "utf8")
+    const value = JSON.parse(bytes) as unknown
+    if (!isRecord(value) || bytes !== `${JSON.stringify(value)}\n` ||
+      value.schemaVersion !== "v1.38-local-seal-independent-verification-v2" ||
+      typeof value.verificationRoot !== "string" || !/^sha256:[0-9a-f]{64}$/u.test(value.verificationRoot) ||
+      value.independentCustodyClaimed !== false || value.candidateSearchAuthorized !== false ||
+      value.phase263Authorized !== false || value.formationMaterializationAuthorized !== false ||
+      value.holdoutOpeningAuthorized !== false || value.publicAuthorized !== false || value.productionAuthorized !== false) return false
+    const findingCount = value.findingCount
+    return expected === "pass"
+      ? value.independentEvidenceVerification === "passed" && value.satisfiesRevisedSeal01 === true && findingCount === 0
+      : value.independentEvidenceVerification === "failed_with_findings" && value.satisfiesRevisedSeal01 === false &&
+          typeof findingCount === "number" && Number.isSafeInteger(findingCount) && findingCount > 0
+  } catch { return false }
+}
+
+const isCanonicalPlan50Review = (reviewTarget: string, artifactTarget: string, expected: "pass" | "fail"): boolean => {
+  if (!existsSync(reviewTarget) || !existsSync(artifactTarget)) return false
+  try {
+    const artifact = JSON.parse(readFileSync(artifactTarget, "utf8")) as { verificationRoot?: unknown }
+    const review = readFileSync(reviewTarget, "utf8")
+    return typeof artifact.verificationRoot === "string" && review.includes(artifact.verificationRoot) &&
+      (expected === "pass" ? /\bPASS\b/u.test(review) : /\bFAIL\b/u.test(review))
+  } catch { return false }
+}
+
 export const evaluateV138PhasePlanIndexTransition = (
-  input: Readonly<{ summary26244Present: boolean }>,
-): Readonly<{ planCount: 40; summaryCount: 35 | 36; incomplete: readonly string[] }> => {
-  if (!isRecord(input) || Object.keys(input).length !== 1 ||
-    typeof input.summary26244Present !== "boolean") {
-    throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INPUT_INVALID")
-  }
-  return input.summary26244Present
-    ? Object.freeze({ planCount: 40 as const, summaryCount: 36 as const, incomplete: Object.freeze(["262-45", "262-46", "262-47", "262-48"]) })
-    : Object.freeze({ planCount: 40 as const, summaryCount: 35 as const, incomplete: Object.freeze(["262-44", "262-45", "262-46", "262-47", "262-48"]) })
+  input: Readonly<{
+    lifecycle: V138PhasePlanIndexLifecycle
+    planCount: number
+    summaryCount: number
+    incomplete: readonly string[]
+    failArtifactCanonical: boolean
+    failReviewCanonical: boolean
+    summary26250Present: boolean
+  }>,
+): Readonly<{ planCount: 41; summaryCount: number; incomplete: readonly string[] }> => {
+  const keys = ["lifecycle", "planCount", "summaryCount", "incomplete", "failArtifactCanonical", "failReviewCanonical", "summary26250Present"]
+  if (!isRecord(input) || JSON.stringify(Object.keys(input).sort()) !== JSON.stringify(keys.sort()) ||
+    !["pre_49", "post_49_pre_50", "post_50_pass", "post_47", "post_48", "plan_50_fail"].includes(input.lifecycle as string) ||
+    typeof input.planCount !== "number" || typeof input.summaryCount !== "number" || !Array.isArray(input.incomplete) ||
+    typeof input.failArtifactCanonical !== "boolean" || typeof input.failReviewCanonical !== "boolean" ||
+    typeof input.summary26250Present !== "boolean") throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
+  const expected = {
+    pre_49: { summaryCount: 37, incomplete: ["262-47", "262-48", "262-49", "262-50"], fail: false, summary50: false },
+    post_49_pre_50: { summaryCount: 38, incomplete: ["262-47", "262-48", "262-50"], fail: false, summary50: false },
+    post_50_pass: { summaryCount: 39, incomplete: ["262-47", "262-48"], fail: false, summary50: true },
+    post_47: { summaryCount: 40, incomplete: ["262-48"], fail: false, summary50: true },
+    post_48: { summaryCount: 41, incomplete: [], fail: false, summary50: true },
+    plan_50_fail: { summaryCount: 38, incomplete: ["262-47", "262-48", "262-50"], fail: true, summary50: false },
+  }[input.lifecycle]
+  if (input.planCount !== 41 || input.summaryCount !== expected.summaryCount ||
+    JSON.stringify(input.incomplete) !== JSON.stringify(expected.incomplete) ||
+    input.failArtifactCanonical !== expected.fail || input.failReviewCanonical !== expected.fail ||
+    input.summary26250Present !== expected.summary50) throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
+  return Object.freeze({ planCount: 41 as const, summaryCount: expected.summaryCount, incomplete: Object.freeze([...expected.incomplete]) })
 }
 
 export const checkV138DependencyRevisionBoundaries = (
