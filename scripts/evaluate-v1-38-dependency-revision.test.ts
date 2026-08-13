@@ -18,6 +18,7 @@ import {
   analyzeV138DependencyRevisionSources,
   analyzeV138ProtectedHistory,
   buildV138PlanSupersessionManifest,
+  evaluateV138PhasePlanIndexTransition,
   renderV138PlanSupersessionManifest,
 } from "./check-v1-38-dependency-revision-boundaries.js"
 
@@ -130,8 +131,16 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
         ["262-07", "sha256:5c86c379a31e8bd7706c857666d31edc974600242e0e0ef5f78934151f23704d"],
       ])
     expect(manifest.activePlans.map((entry) => entry.planId)).toEqual([
-      "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-40",
+      "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-42", "262-43",
     ])
+    expect(manifest.archivedCheckpoint).toEqual({
+      planId: "262-40",
+      originalExecutablePath: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-40-PLAN.md",
+      archivalPath: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-40-HISTORICAL.md",
+      sha256: "sha256:e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231",
+      replacementPlan: "262-42",
+      resumable: false,
+    })
     expect(manifest.dormantActivation).toMatchObject({
       planId: "262-41",
       path: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/dormant/262-41-ACTIVATION-CONTRACT.md",
@@ -149,6 +158,21 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
       formationMaterializationAuthorized: false,
       productionAuthorized: false,
     })
+  })
+
+  it("models the exact pre-summary and post-summary incomplete-plan transition", () => {
+    expect(evaluateV138PhasePlanIndexTransition({ summary26242Present: false })).toEqual({
+      planCount: 36,
+      summaryCount: 34,
+      incomplete: ["262-42", "262-43"],
+    })
+    expect(evaluateV138PhasePlanIndexTransition({ summary26242Present: true })).toEqual({
+      planCount: 36,
+      summaryCount: 35,
+      incomplete: ["262-43"],
+    })
+    expect(() => evaluateV138PhasePlanIndexTransition({ summary26242Present: false, waiver: true } as never))
+      .toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INPUT_INVALID")
   })
 
   it("detects seeded protected-history edits and deletions", () => {
