@@ -14,6 +14,7 @@ import ts from "typescript"
 import { encodeCanonicalJson } from "../packages/spec/src/canonical-json-encode.js"
 import { hashCanonicalIdentity } from "../packages/spec/src/canonical-identity-domains.js"
 import type { JsonValue } from "../packages/spec/src/types.js"
+import { checkV138TerminalDisposition } from "./evaluate-v1-38-terminal-disposition.js"
 
 type Sha256 = `sha256:${string}`
 
@@ -96,8 +97,18 @@ const activePlans = Object.freeze([
   { planId: "262-37", responsibility: "protocol-only classifiers and pre-formation containment" },
   { planId: "262-38", responsibility: "synthetic custody mechanics without operational credit" },
   { planId: "262-39", responsibility: "non-authorizing pre-search policy root" },
-  { planId: "262-40", responsibility: "genuine separately controlled custody handoff" },
+  { planId: "262-42", responsibility: "privacy-safe terminal disposition and paused tracking" },
+  { planId: "262-43", responsibility: "pending non-waivable future-resumption prerequisite sentinel" },
 ] as const)
+
+const archivedCheckpoint = Object.freeze({
+  planId: "262-40" as const,
+  originalExecutablePath: `${phaseDirectory}/262-40-PLAN.md`,
+  archivalPath: `${phaseDirectory}/archived/262-40-HISTORICAL.md`,
+  sha256: "sha256:e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231" as Sha256,
+  replacementPlan: "262-42" as const,
+  resumable: false as const,
+})
 
 export interface V138PlanSupersessionManifest {
   readonly schemaVersion: "v1.38-phase-262-plan-supersession-v1"
@@ -105,6 +116,7 @@ export interface V138PlanSupersessionManifest {
   readonly baselineCommit: typeof planBaselineCommit
   readonly historicalPlans: typeof historicalPlans
   readonly activePlans: typeof activePlans
+  readonly archivedCheckpoint: typeof archivedCheckpoint
   readonly dormantActivation: Readonly<{
     planId: "262-41"
     path: string
@@ -140,6 +152,7 @@ export const buildV138PlanSupersessionManifest = (): V138PlanSupersessionManifes
     baselineCommit: planBaselineCommit,
     historicalPlans,
     activePlans,
+    archivedCheckpoint,
     dormantActivation: Object.freeze({
       planId: "262-41" as const,
       path: `${phaseDirectory}/dormant/262-41-ACTIVATION-CONTRACT.md`,
@@ -189,6 +202,8 @@ export type V138DependencyRevisionFindingCode =
   | "PLAN_DISCOVERY_DRIFT"
   | "MANIFEST_DRIFT"
   | "TOOLING_DEPENDENCY_DRIFT"
+  | "TERMINAL_DISPOSITION_DRIFT"
+  | "AUTHORITY_ARTIFACT_PRESENT"
 
 export interface V138DependencyRevisionFinding {
   readonly code: V138DependencyRevisionFindingCode
@@ -322,6 +337,7 @@ const protectedInventory = (
   const paths = git(repoRoot, ["ls-tree", "-r", "--name-only", planBaselineCommit])
     .split("\n")
     .filter(Boolean)
+    .filter((repoPath) => repoPath !== archivedCheckpoint.originalExecutablePath)
     .filter((repoPath) =>
       repoPath.startsWith(`${phaseDirectory}/`) ||
       (repoPath.startsWith(".planning/artifacts/v1.38-") &&
@@ -357,7 +373,7 @@ const changedPaths = (repoRoot: string): readonly string[] => [...new Set([
 
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
   const findings: V138DependencyRevisionFinding[] = []
-  const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-41"])
+  const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41"])
   const directPlans = readdirSync(path.join(repoRoot, phaseDirectory))
     .filter((name) => /^262-\d+-PLAN\.md$/u.test(name))
     .map((name) => name.slice(0, 6))
@@ -378,7 +394,7 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
     return findings
   }
   try {
-    const parsed = JSON.parse(indexed.stdout) as { incomplete?: unknown; waves?: unknown }
+    const parsed = JSON.parse(indexed.stdout) as { plans?: unknown; incomplete?: unknown; waves?: unknown }
     const discovered = [
       ...(Array.isArray(parsed.incomplete) ? parsed.incomplete : []),
       ...Object.values(parsed.waves ?? {}).flatMap((value) => Array.isArray(value) ? value : []),
@@ -389,10 +405,37 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
       line: 1,
       detail: "phase-plan-index 262 includes archived or dormant plan IDs.",
     })
+    const summary26242Present = existsSync(path.join(repoRoot, phaseDirectory, "262-42-SUMMARY.md"))
+    const expected = evaluateV138PhasePlanIndexTransition({ summary26242Present })
+    const plans = Array.isArray(parsed.plans) ? parsed.plans : []
+    const actualIncomplete = Array.isArray(parsed.incomplete) ? parsed.incomplete : []
+    const actualSummaryCount = plans.filter((entry) => isRecord(entry) && entry.has_summary === true).length
+    if (plans.length !== expected.planCount || actualSummaryCount !== expected.summaryCount ||
+      JSON.stringify(actualIncomplete) !== JSON.stringify(expected.incomplete)) findings.push({
+      code: "PLAN_DISCOVERY_DRIFT",
+      path: phaseDirectory,
+      line: 1,
+      detail: `phase-plan-index 262 must report ${expected.planCount}/${expected.summaryCount} with incomplete ${JSON.stringify(expected.incomplete)}.`,
+    })
   } catch {
     findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1, detail: "phase-plan-index 262 returned invalid JSON." })
   }
   return findings
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+
+export const evaluateV138PhasePlanIndexTransition = (
+  input: Readonly<{ summary26242Present: boolean }>,
+): Readonly<{ planCount: 36; summaryCount: 34 | 35; incomplete: readonly string[] }> => {
+  if (!isRecord(input) || Object.keys(input).length !== 1 ||
+    typeof input.summary26242Present !== "boolean") {
+    throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INPUT_INVALID")
+  }
+  return input.summary26242Present
+    ? Object.freeze({ planCount: 36 as const, summaryCount: 35 as const, incomplete: Object.freeze(["262-43"]) })
+    : Object.freeze({ planCount: 36 as const, summaryCount: 34 as const, incomplete: Object.freeze(["262-42", "262-43"]) })
 }
 
 export const checkV138DependencyRevisionBoundaries = (
@@ -402,6 +445,13 @@ export const checkV138DependencyRevisionBoundaries = (
   const sources = changedPolicySources(repoRoot)
   const findings = [
     ...analyzeV138ProtectedHistory(repoRoot, protectedEntries),
+    ...analyzeV138ProtectedHistory(repoRoot, [
+      { path: archivedCheckpoint.archivalPath, sha256: archivedCheckpoint.sha256 },
+      {
+        path: `${phaseDirectory}/dormant/262-41-ACTIVATION-CONTRACT.md`,
+        sha256: "sha256:5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641",
+      },
+    ]),
     ...analyzeV138DependencyRevisionSources(sources),
     ...analyzeV138DependencyRevisionPaths(changedPaths(repoRoot)),
     ...planDiscoveryFindings(repoRoot),
@@ -413,6 +463,26 @@ export const checkV138DependencyRevisionBoundaries = (
     path: manifestPath,
     line: 1,
     detail: "Supersession manifest is missing or not byte-identical to its canonical rendering.",
+  })
+  try {
+    checkV138TerminalDisposition(repoRoot)
+  } catch {
+    findings.push({
+      code: "TERMINAL_DISPOSITION_DRIFT",
+      path: ".planning/artifacts/v1.38-phase-262-terminal-deferment.json",
+      line: 1,
+      detail: "Terminal disposition is missing, edited, non-canonical, or no longer fail-closed.",
+    })
+  }
+  for (const forbiddenPath of [
+    ".planning/artifacts/v1.38-custody-public-reference.json",
+    ".planning/artifacts/v1.38-foundation-activation-root.json",
+    ".planning/artifacts/v1.38-current-matrix-reproduction-v10.json",
+  ]) if (existsSync(path.join(repoRoot, forbiddenPath))) findings.push({
+    code: "AUTHORITY_ARTIFACT_PRESENT",
+    path: forbiddenPath,
+    line: 1,
+    detail: "Custody, activation, or reproduction:v10 authority artifact must remain absent.",
   })
   for (const repoPath of [
     "packages/replay/src/historical-v1-4.test.ts",
