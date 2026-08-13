@@ -43,7 +43,7 @@ Production boundaries:
 Stage 1 — Freeze the measurement contract:
 
 - Reproduce the persisted current-rules matrix as a regression fixture.
-- Freeze engine/rules/runtime identities, scoring, sides, initiative states, design arenas, sealed holdouts, opponent splits, candidate budgets, search-node budgets, model/prompt/token budgets, human-review procedure, metrics, and pass/fail interpretation before tuning.
+- Freeze engine/rules/runtime identities, scoring, sides, initiative states, design arenas, a precommitted single-operator local sealed holdout and its explicit assurance limits, opponent splits, candidate budgets, search-node budgets, model/prompt/token budgets, human-review procedure, metrics, and pass/fail interpretation before tuning.
 - Separate process success from metagame success. A rigorous failure of the practical anti-dominance gate is a valid milestone result.
 
 Stage 2 — Legal hierarchical planner spike:
@@ -102,10 +102,14 @@ Stage 6 — Equal human/model red team and sealed evaluation:
 
 - Give each frozen profile the same independently budgeted model and human attack process.
 - Preserve failed attacks as evidence and apply identical legality/runtime gates.
-- Freeze every population before opening the common sealed arena/opponent holdout once.
+- Freeze every population before opening the common operator-sealed local arena/opponent holdout once.
 - Do not tune after holdout disclosure.
 - Test side, initiative, symmetry, opaque-ID, Soldier-order, deterministic-repeat, and held-out-opponent invariance.
 - Certify current-rules finalists through supported runtimes, runtime-service, replay, persistence, privacy, standings, and E2E paths. Experimental-profile artifacts remain lab evidence only.
+
+The sealed-holdout assurance class is `single_operator_local_seal_v1`. One named repository operator controls a restricted out-of-repository local store and one closed opening command. This process provides procedural blindness, one-shot consumption, tamper-evident application records, terminal contamination, and bounded safe receipts; it does not claim independent or third-party custody, separate permissioning, non-collusion, comprehensive host-access monitoring, cryptographic or forensic erasure, or resistance to a malicious machine owner.
+
+Commitment-secret ingress is only `<absolute-local-seal-root>/input/commitment-secret.bin`: owner-only `0700` ancestors and an effective-UID-owned regular non-symlink `0600` file containing 32..4096 bytes. The commitment tool must open with no-follow semantics, validate ownership, mode, type, and size, read once during commitment, zero-fill the in-process Buffer, unlink the file, and fsync its parent before success; any uncertainty fails closed. Secret bytes never enter CLI arguments, environment variables, Git, tests, logs, receipts, artifacts, or public/default output.
 
 Starting competitive gates to calibrate and precommit:
 
