@@ -269,6 +269,8 @@ describe("v1.38 single-operator local seal", () => {
       realHoldoutMaterialPresent: false,
       satisfiesSeal01Mechanics: true,
       independentCustodyClaimed: false,
+      openingConsumptionDurableBeforeEvaluation: true,
+      evaluationFailureDisposition: "charged_terminal_system_failure_no_retry",
       downstreamAuthority: "denied",
     })
     expect(JSON.stringify(artifact)).not.toContain(tmpdir())
