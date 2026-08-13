@@ -37,9 +37,9 @@ gaps:
       - "A real separately controlled external custody system with authenticated provenance and separation of duties."
 ---
 
-# Phase 262 Verification Report — Plan 262-42 Pre-Summary Refresh
+# Phase 262 Verification Report — Plan 262-42 Closeout Refresh
 
-<!-- phase-262-successor-status: {"proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","terminal_disposition_root":"sha256:2eff8d9ee93fa4259537a981e8a2ce08a83b82863c595da7ee4cb30c24b4327e","public_custody_reference_present":false,"foundation_activation_root_present":false,"phase_status":"deferred_incomplete","milestone_status":"paused_deferred","total_plans":36,"completed_plans":34,"incomplete":["262-42","262-43"],"expected_post_262_42_incomplete":["262-43"],"next_action":"262-42"} -->
+<!-- phase-262-successor-status: {"proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","terminal_disposition_root":"sha256:2eff8d9ee93fa4259537a981e8a2ce08a83b82863c595da7ee4cb30c24b4327e","public_custody_reference_present":false,"foundation_activation_root_present":false,"phase_status":"deferred_incomplete","milestone_status":"paused_deferred","total_plans":36,"completed_plans":35,"incomplete":["262-43"],"next_action":"262-43"} -->
 
 **Verdict:** `gaps_found`, score **3/5**. The scientific, accounting, reporting, classifier, and containment policy is ready but non-authorizing. The terminal disposition truthfully records unavailable custody and the stopped matrix route; it is not Phase success and grants no requirement, candidate-search, Phase 263, formation, or production authority.
 
@@ -61,6 +61,6 @@ gaps:
 
 ## Plan-index transition
 
-This refresh records the actual pre-summary state only: 36 indexed plans, 34 summaries, and incomplete `[262-42, 262-43]`. After the executor creates `262-42-SUMMARY.md` and runs generic progress synchronization, the required state is 35/36 with incomplete `[262-43]`. Plan 262-43 must receive no summary while either prerequisite is absent.
+The pre-summary state was verified as 36 indexed plans, 34 summaries, and incomplete `[262-42, 262-43]`. After normal Plan 262-42 summary creation and progress synchronization, the actual state is 35/36 with incomplete `[262-43]`. Plan 262-43 must receive no summary while either prerequisite is absent.
 
 Future resumption requires both a real external custody system and a separately planned literal ADMIT-03 pass route. If both facts later exist, run a fresh `$gsd-plan-phase 262`; never resume archived Plan 262-40, execute dormant Plan 262-41, or turn pending Plan 262-43 into authority.
