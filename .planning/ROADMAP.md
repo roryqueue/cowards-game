@@ -50,7 +50,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 37/41 plans executed
+**Plans:** 38/41 plans executed
 
 **Current verdict:** CORRECTIVE PLANS READY / `gaps_found` — 37 of 41 active plans have summaries. Failed Plan 262-46 is byte-preserved as historical evidence; Plans 262-49 and 262-50 own the separately committed repair and fresh independent rerun. Plans 262-47 and 262-48 remain blocked behind an exact zero-finding Plan 262-50 verdict. Revised SEAL-01 and ADMIT-03 remain unmet, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
 
@@ -225,7 +225,7 @@ Plans:
 
 - `262-46-PLAN.md` -> `archived/262-46-HISTORICAL.md` — SHA-256 `ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41`; the durable FAIL review and v1 artifact remain authoritative historical evidence with no summary or requirement credit.
 
-- [ ] 262-49-PLAN.md — Repair the three Plan 262-46 findings through separately committed TDD while preserving the failed review bytes.
+- [x] 262-49-PLAN.md — Repair the three Plan 262-46 findings through separately committed TDD while preserving the failed review bytes.
 
   **Failed closed:** The independent review froze a finding artifact under `sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6`; no summary or SEAL-01 credit exists.
 
@@ -380,7 +380,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 37/41 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 38/41 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
