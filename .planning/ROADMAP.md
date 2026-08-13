@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A separately permissioned custodian can demonstrate the profile-agnostic commitment, storage, access/query ledger, one-open authorization, safe receipt, contamination response, and retirement workflow whose lineage contains no profile-conditioned or current-trained input, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 35/36 plans executed
+**Plans:** 35/40 plans executed
 
-**Current verdict:** PAUSED/DEFERRED / `gaps_found` — 35 of 36 indexed plans have summaries, and the actual incomplete index is `[262-43]`. Plan 262-42's privacy-safe terminal disposition records the operator fact that no external custody system exists without completing Phase 262, ADMIT-03, or SEAL-01. ADMIT-03 remains blocked at the expired no-retry `calibration_stopped` route with fresh 0/540 accepted, and SEAL-01 remains unmet. Plan 262-43 grants no requirement credit and remains incomplete while real external custody and a separately planned literal ADMIT-03 pass route are absent. Phases 263–270 remain unauthorized. If both prerequisites later appear, run a fresh `$gsd-plan-phase 262`; never resume Plan 262-43 into authority.
+**Current verdict:** REPLANNED / `gaps_found` — 35 of 40 indexed plans have summaries. The operator-approved no-external-custody revision archives the former Plan 262-43 prerequisite sentinel byte-for-byte and activates successor Plans 262-44 through 262-48. Those plans first amend the contract to the honest `single_operator_local_seal_v1` assurance model, then implement and independently verify the mechanics, attempt one separately authorized fresh ADMIT-03 route, and create activation only through the exact two-latch join. Until those plans pass, ADMIT-03 remains blocked, revised SEAL-01 remains pending, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
 
 <!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","public_custody_reference_present":false,"foundation_activation_root_present":false,"next_action":"262-42","terminal_after_execution":"paused_deferred_at_phase_262","total_plans":36,"completed_plans":34,"active_successors":["262-42","262-43"],"expected_post_262_42_incomplete":["262-43"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_checkpoint_sha256":"e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
@@ -209,9 +209,29 @@ Plans:
 
 - [x] 262-42-PLAN.md — Create and verify the privacy-safe terminal disposition, publish paused/gaps_found tracking, and leave Plan 262-43 pending so normal summary creation cannot complete the phase.
 
-**Wave 36** *(blocked on Wave 35 completion and the existence of `262-42-SUMMARY.md`; deliberately incomplete prerequisite sentinel)*
+**Archived former external-custody sentinel** *(byte-preserved outside active `*-PLAN.md` discovery)*
 
-- [ ] 262-43-PLAN.md — Recheck the actual post-summary index and tracking, then stop at the non-approvable future-resumption prerequisite checkpoint while external custody and a separately planned literal ADMIT-03 pass route are absent.
+- `262-43-PLAN.md` -> `archived/262-43-HISTORICAL.md` — SHA-256 `aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239`; truthful under the former external-custody contract and superseded only for future routing by the operator-approved local-seal revision.
+
+**Wave 36** *(blocked on Wave 35 completion; contract revision only)*
+
+- [ ] 262-44-PLAN.md — Amend every binding contract carrier to `single_operator_local_seal_v1`, archive the old sentinel additively, and retain false downstream authority.
+
+**Wave 37** *(blocked on Wave 36 completion)*
+
+- [ ] 262-45-PLAN.md — TDD the closed local-seal commitment, durable pre-launch opening burn, hash-chained ledger, bounded receipt, contamination, retirement, privacy, and honest assurance limits.
+
+**Wave 38** *(blocked on Wave 37 completion)*
+
+- [ ] 262-46-PLAN.md — Independently reproduce and red-team the local-seal mechanics and claim boundary without claiming independent custody.
+
+**Wave 39** *(blocked on Wave 38 completion and fresh exact operator authority)*
+
+- [ ] 262-47-PLAN.md — Prepare, authorize, seal, and consume exactly one fresh unchanged-policy ADMIT-03 successor route with permanent no-retry terminalization.
+
+**Wave 40** *(blocked on Wave 39 completion)*
+
+- [ ] 262-48-PLAN.md — Join literal ADMIT-03 and revised SEAL-01 as two noncompensating latches, refresh validation/verification, and grant at most Phase 263 planning authority.
 
 **Dormant activation contract** *(not an executable wave and absent from phase-plan-index)*
 
