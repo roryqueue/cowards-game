@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer"
+import { execFileSync } from "node:child_process"
 import { chmodSync, chownSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -8,8 +9,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   armV138LocalSealOpening,
   buildV138LocalSealProtocolArtifact,
+  buildV138LocalSealProtocolArtifactV2,
   commitV138LocalSeal,
   consumeV138LocalSealOpening,
+  deriveV138LocalSealCheckoutIdentity,
   markV138LocalSealContaminated,
   projectV138LocalSealReceipt,
   retireV138LocalSeal,
@@ -48,6 +51,21 @@ const request = () => ({
   ...roots,
 })
 
+const git = (repoRoot: string, args: readonly string[]): string =>
+  execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8" }).trim()
+
+const temporaryGitCheckout = () => {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), "v138-local-seal-git-"))
+  git(repoRoot, ["init", "--quiet"])
+  git(repoRoot, ["config", "user.email", "local-seal@example.invalid"])
+  git(repoRoot, ["config", "user.name", "Local Seal Test"])
+  writeFileSync(path.join(repoRoot, "freeze-carrier.json"), "{\"schemaVersion\":\"fixture-v1\"}\n")
+  git(repoRoot, ["add", "freeze-carrier.json"])
+  git(repoRoot, ["commit", "--quiet", "-m", "fixture"])
+  const checkout = deriveV138LocalSealCheckoutIdentity(repoRoot)
+  return { repoRoot, checkout, request: { ...request(), currentLeagueFreezeRoot: checkout.currentLeagueFreezeRoot } }
+}
+
 const temporaryStore = (secret = Buffer.alloc(32, 0x5a)) => {
   const storeRoot = mkdtempSync(path.join(tmpdir(), "v138-local-seal-"))
   chmodSync(storeRoot, 0o700)
@@ -74,6 +92,76 @@ const projection = () => ({
 afterEach(() => vi.restoreAllMocks())
 
 describe("v1.38 single-operator local seal", () => {
+  it("derives one stable full Git checkout identity and rejects invented or abbreviated roots", () => {
+    const fixture = temporaryGitCheckout()
+    expect(deriveV138LocalSealCheckoutIdentity(fixture.repoRoot)).toEqual(fixture.checkout)
+    expect(fixture.checkout).toMatchObject({
+      sourceCommit: expect.stringMatching(/^[0-9a-f]{40}$/u),
+      sourceTree: expect.stringMatching(/^[0-9a-f]{40}$/u),
+      freezeCarrierIdentity: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      currentLeagueFreezeRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+    })
+
+    const invented = temporaryStore()
+    expect(() => commitV138LocalSeal({
+      repoRoot: fixture.repoRoot,
+      storeRoot: invented.storeRoot,
+      request: { ...fixture.request, currentLeagueFreezeRoot: ROOT_A },
+    })).toThrow("V138_LOCAL_SEAL_FREEZE_IDENTITY_MISMATCH")
+    const abbreviated = temporaryStore()
+    expect(() => commitV138LocalSeal({
+      repoRoot: fixture.repoRoot,
+      storeRoot: abbreviated.storeRoot,
+      request: { ...fixture.request, currentLeagueFreezeRoot: `sha256:${fixture.checkout.currentLeagueFreezeRoot.slice(7, 47).padEnd(64, "0")}` as const },
+    })).toThrow("V138_LOCAL_SEAL_FREEZE_IDENTITY_MISMATCH")
+  })
+
+  it.each(["non-git", "staged", "unstaged", "untracked"] as const)(
+    "rejects a %s checkout before commitment evidence exists",
+    (mutation) => {
+      const repoRoot = mutation === "non-git"
+        ? mkdtempSync(path.join(tmpdir(), "v138-local-seal-non-git-"))
+        : temporaryGitCheckout().repoRoot
+      if (mutation === "staged") {
+        writeFileSync(path.join(repoRoot, "freeze-carrier.json"), "staged\n")
+        git(repoRoot, ["add", "freeze-carrier.json"])
+      } else if (mutation === "unstaged") {
+        writeFileSync(path.join(repoRoot, "freeze-carrier.json"), "unstaged\n")
+      } else if (mutation === "untracked") {
+        writeFileSync(path.join(repoRoot, "untracked.txt"), "untracked\n")
+      }
+      const store = temporaryStore()
+      expect(() => commitV138LocalSeal({ repoRoot, storeRoot: store.storeRoot, request: request() }))
+        .toThrow(mutation === "non-git" ? "V138_LOCAL_SEAL_GIT_UNAVAILABLE" : "V138_LOCAL_SEAL_CHECKOUT_DIRTY")
+      expect(() => readFileSync(path.join(store.storeRoot, "commitment", "record.json"))).toThrow()
+    },
+  )
+
+  it("rechecks the exact committed HEAD/tree/freeze join when arming and never reaches evaluation after drift", () => {
+    for (const mutation of ["head", "tree", "between-stages"] as const) {
+      const fixture = temporaryGitCheckout()
+      const store = temporaryStore()
+      const committed = commitV138LocalSeal({ repoRoot: fixture.repoRoot, storeRoot: store.storeRoot, request: fixture.request })
+      if (mutation === "head") {
+        writeFileSync(path.join(fixture.repoRoot, "second.txt"), "second\n")
+        git(fixture.repoRoot, ["add", "second.txt"])
+        git(fixture.repoRoot, ["commit", "--quiet", "-m", "second"])
+      } else if (mutation === "tree") {
+        writeFileSync(path.join(fixture.repoRoot, "freeze-carrier.json"), "tree-change\n")
+        git(fixture.repoRoot, ["add", "freeze-carrier.json"])
+        git(fixture.repoRoot, ["commit", "--quiet", "-m", "tree change"])
+      } else {
+        writeFileSync(path.join(fixture.repoRoot, "untracked-after-commit.txt"), "drift\n")
+      }
+      expect(() => armV138LocalSealOpening(
+        { repoRoot: fixture.repoRoot, storeRoot: store.storeRoot }, fixture.request, committed.commitmentRoot,
+      )).toThrow(mutation === "between-stages" ? "V138_LOCAL_SEAL_CHECKOUT_DIRTY" : "V138_LOCAL_SEAL_CHECKOUT_IDENTITY_DRIFT")
+      expect(() => consumeV138LocalSealOpening(
+        { repoRoot: fixture.repoRoot, storeRoot: store.storeRoot }, fixture.request, () => projection(),
+      )).toThrow("V138_LOCAL_SEAL_TERMINAL")
+    }
+  })
+
   it("accepts only the exact reduced-assurance request and approved roots", () => {
     const { storeRoot } = temporaryStore()
     const result = commit(storeRoot)
@@ -274,5 +362,23 @@ describe("v1.38 single-operator local seal", () => {
       downstreamAuthority: "denied",
     })
     expect(JSON.stringify(artifact)).not.toContain(tmpdir())
+  })
+
+  it("builds additive protocol v2 evidence without changing the v1 schema", () => {
+    const input = {
+      moduleSourceBytes: Buffer.from("synthetic module fixture"),
+      testSourceBytes: Buffer.from("synthetic test fixture"),
+      cliSourceBytes: Buffer.from("synthetic cli fixture"),
+      preSearchPolicyBytes: readFileSync(path.join(REPO_ROOT, ".planning/artifacts/v1.38-pre-search-policy-root.json")),
+    }
+    expect(buildV138LocalSealProtocolArtifact(input).schemaVersion).toBe("v1.38-local-seal-protocol-v1")
+    expect(buildV138LocalSealProtocolArtifactV2(input)).toMatchObject({
+      schemaVersion: "v1.38-local-seal-protocol-v2",
+      cleanCheckoutRequiredAtCommit: true,
+      exactCheckoutRecheckRequiredAtArm: true,
+      callerProvidedFreezeIdentityAccepted: false,
+      satisfiesSeal01: false,
+      downstreamAuthority: "denied",
+    })
   })
 })
