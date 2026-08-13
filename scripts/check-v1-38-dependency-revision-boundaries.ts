@@ -306,6 +306,86 @@ export const analyzeV138ProtectedHistory = (
 const lineOf = (sourceFile: ts.SourceFile, node: ts.Node): number =>
   sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
 
+const PRIVATE_DATA_NAMES = new Set([
+  "privatekey", "secret", "preimage", "rawdiagnostics", "strategymemory", "soldiermemory", "objectivepayload",
+])
+
+const normalizedName = (value: string): string => value.replace(/[^A-Za-z0-9]/gu, "").toLowerCase()
+
+const propertyName = (name: ts.PropertyName | ts.BindingName | undefined): string | undefined => {
+  if (name === undefined) return undefined
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) return name.text
+  if (ts.isComputedPropertyName(name) && (ts.isStringLiteral(name.expression) || ts.isNoSubstitutionTemplateLiteral(name.expression))) {
+    return name.expression.text
+  }
+  return undefined
+}
+
+const isPrivateDataName = (value: string | undefined): boolean =>
+  value !== undefined && PRIVATE_DATA_NAMES.has(normalizedName(value))
+
+const isPublicProjectionName = (value: string | undefined): boolean =>
+  value !== undefined && /(?:public|receipt|projection|output|artifact|render|response)/iu.test(value)
+
+const isPassedToCanonicalPrivacyValidator = (sourceFile: ts.SourceFile, identifier: string): boolean => {
+  let validated = false
+  const visit = (node: ts.Node): void => {
+    if (validated) return
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+      node.expression.text === "assertPublicOutputLeakSafe" && node.arguments[0] !== undefined &&
+      ts.isIdentifier(node.arguments[0]) && node.arguments[0].text === identifier) validated = true
+    else ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return validated
+}
+
+const expressionCarriesPrivateData = (node: ts.Node, tainted: ReadonlySet<string>): boolean => {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return false
+  if (ts.isIdentifier(node) && tainted.has(node.text)) return true
+  if (ts.isPropertyAccessExpression(node) && isPrivateDataName(node.name.text)) return true
+  if (ts.isElementAccessExpression(node) && node.argumentExpression !== undefined &&
+    (ts.isStringLiteral(node.argumentExpression) || ts.isNoSubstitutionTemplateLiteral(node.argumentExpression)) &&
+    isPrivateDataName(node.argumentExpression.text)) return true
+  if ((ts.isPropertyAssignment(node) || ts.isPropertySignature(node) || ts.isMethodSignature(node)) &&
+    isPrivateDataName(propertyName(node.name))) return true
+  if (ts.isShorthandPropertyAssignment(node) &&
+    (isPrivateDataName(node.name.text) || tainted.has(node.name.text))) return true
+  let carries = false
+  ts.forEachChild(node, (child) => { if (!carries && expressionCarriesPrivateData(child, tainted)) carries = true })
+  return carries
+}
+
+const collectPrivateAliases = (sourceFile: ts.SourceFile): ReadonlySet<string> => {
+  const tainted = new Set<string>()
+  let changed = true
+  while (changed) {
+    changed = false
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node)) {
+        if (ts.isIdentifier(node.name) && node.initializer !== undefined &&
+          !ts.isArrowFunction(node.initializer) && !ts.isFunctionExpression(node.initializer) &&
+          expressionCarriesPrivateData(node.initializer, tainted) && !tainted.has(node.name.text)) {
+          tainted.add(node.name.text)
+          changed = true
+        } else if (ts.isObjectBindingPattern(node.name)) {
+          for (const element of node.name.elements) {
+            const bound = ts.isIdentifier(element.name) ? element.name.text : undefined
+            if (bound !== undefined && (isPrivateDataName(propertyName(element.propertyName ?? element.name)) ||
+              (element.initializer !== undefined && expressionCarriesPrivateData(element.initializer, tainted))) && !tainted.has(bound)) {
+              tainted.add(bound)
+              changed = true
+            }
+          }
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(sourceFile)
+  }
+  return tainted
+}
+
 export const analyzeV138DependencyRevisionSources = (
   sources: Readonly<Record<string, string>>,
 ): readonly V138DependencyRevisionFinding[] => {
@@ -322,6 +402,7 @@ export const analyzeV138DependencyRevisionSources = (
 
   for (const [repoPath, source] of Object.entries(sources).sort(([a], [b]) => a.localeCompare(b))) {
     const sourceFile = ts.createSourceFile(repoPath, source, ts.ScriptTarget.Latest, true)
+    const privateAliases = collectPrivateAliases(sourceFile)
     const visit = (node: ts.Node): void => {
       if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
         const moduleName = node.moduleSpecifier.text
@@ -361,13 +442,31 @@ export const analyzeV138DependencyRevisionSources = (
             /(?:matrix|preflight|calibration|reproduction|candidate|formation).*(?:run|write|execute|launch)/iu.test(callText))
         ) add("LIVE_WORK_COMMAND", repoPath, sourceFile, node, "Live matrix, calibration, reproduction, candidate, or formation work is forbidden.")
       }
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && isPublicProjectionName(node.name.text) &&
+        node.initializer !== undefined && !ts.isArrowFunction(node.initializer) && !ts.isFunctionExpression(node.initializer) &&
+        expressionCarriesPrivateData(node.initializer, privateAliases) &&
+        !isPassedToCanonicalPrivacyValidator(sourceFile, node.name.text)) {
+        add("PRIVATE_DATA_EXPOSURE", repoPath, sourceFile, node, "Executable private data enters a public projection or receipt.")
+      }
+      if ((ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node) || ts.isClassDeclaration(node)) &&
+        isPublicProjectionName(node.name?.text) && expressionCarriesPrivateData(node, privateAliases)) {
+        add("PRIVATE_DATA_EXPOSURE", repoPath, sourceFile, node, "A public projection type carries a private-data member.")
+      }
+      if (ts.isReturnStatement(node) && node.expression !== undefined) {
+        const owner = node.parent
+        const namedOwner = ts.isBlock(owner) && owner.parent !== undefined &&
+          (ts.isFunctionDeclaration(owner.parent) || ts.isFunctionExpression(owner.parent) || ts.isArrowFunction(owner.parent))
+          ? owner.parent : undefined
+        const ownerName = namedOwner !== undefined && "name" in namedOwner && namedOwner.name !== undefined && ts.isIdentifier(namedOwner.name)
+          ? namedOwner.name.text : undefined
+        if (isPublicProjectionName(ownerName) && expressionCarriesPrivateData(node.expression, privateAliases)) {
+          add("PRIVATE_DATA_EXPOSURE", repoPath, sourceFile, node, "Executable private data is returned from a public projection function.")
+        }
+      }
       ts.forEachChild(node, visit)
     }
     visit(sourceFile)
     const firstNode = sourceFile.statements[0] ?? sourceFile
-    if (/\b(?:privateKey|secret|preimage|rawDiagnostics|strategyMemory|soldierMemory|objectivePayload)\s*:/iu.test(source)) {
-      add("PRIVATE_DATA_EXPOSURE", repoPath, sourceFile, firstNode, "Private keys, preimages, raw diagnostics, memories, and objectives cannot enter dependency-revision output.")
-    }
     if (/(?:^|[/'"`])latest(?:[/'"`]|$)/iu.test(source)) {
       add("MUTABLE_ALIAS", repoPath, sourceFile, firstNode, "Mutable latest aliases are forbidden.")
     }
