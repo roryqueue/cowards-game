@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 37/40 plans executed
+**Plans:** 37/41 plans executed
 
-**Current verdict:** BLOCKED / `gaps_found` — 37 of 40 indexed plans have summaries. Plan 262-45 implemented the reduced-assurance mechanics, but Plan 262-46 independently found missing pre-open clean-checkout/freeze binding and two non-pass required boundary checks. The review froze a FAIL artifact and intentionally created no summary or requirement credit. Revised SEAL-01 is unmet, Plan 262-47 and Plan 262-48 are blocked pending a separately committed fix and fresh full independent rerun, ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
+**Current verdict:** CORRECTIVE PLANS READY / `gaps_found` — 37 of 41 active plans have summaries. Failed Plan 262-46 is byte-preserved as historical evidence; Plans 262-49 and 262-50 own the separately committed repair and fresh independent rerun. Plans 262-47 and 262-48 remain blocked behind an exact zero-finding Plan 262-50 verdict. Revised SEAL-01 and ADMIT-03 remain unmet, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
 
-<!-- phase-262-successor-status: {"proof_status":"local_seal_independent_review_failed","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"fresh_plan_262_corrective_route","total_plans":40,"completed_plans":37,"active_successors":["262-44","262-45","262-46","262-47","262-48"],"incomplete":["262-46","262-47","262-48"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_sentinel":"archived/262-43-HISTORICAL.md","archived_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"local_seal_corrective_plans_ready","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-49","total_plans":41,"completed_plans":37,"active_successors":["262-44","262-45","262-49","262-50","262-47","262-48"],"incomplete":["262-49","262-50","262-47","262-48"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_sentinel":"archived/262-43-HISTORICAL.md","archived_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 Plans:
 **Wave 1**
@@ -223,7 +223,11 @@ Plans:
 
 **Wave 38** *(blocked on Wave 37 completion)*
 
-- [ ] 262-46-PLAN.md — Independently reproduce and red-team the local-seal mechanics and claim boundary without claiming independent custody.
+- `262-46-PLAN.md` -> `archived/262-46-HISTORICAL.md` — SHA-256 `ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41`; the durable FAIL review and v1 artifact remain authoritative historical evidence with no summary or requirement credit.
+
+- [ ] 262-49-PLAN.md — Repair the three Plan 262-46 findings through separately committed TDD while preserving the failed review bytes.
+
+- [ ] 262-50-PLAN.md — Perform a fresh source-separated full review and grant revised SEAL-01 only on an exact zero-finding v2 verdict.
 
   **Failed closed:** The independent review froze a finding artifact under `sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6`; no summary or SEAL-01 credit exists. Corrective replanning and a fresh full rerun are required.
 
@@ -374,7 +378,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 37/40 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 37/41 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

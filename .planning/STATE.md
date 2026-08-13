@@ -4,22 +4,22 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: blocked
-stopped_at: Plan 262-46 independent verification failed with open findings
+status: planned
+stopped_at: Corrective Plans 262-49 and 262-50 planned after the Plan 262-46 durable FAIL
 last_updated: "2026-08-13T01:47:00Z"
 last_activity: 2026-08-13
-last_activity_desc: Plan 262-46 failed closed; revised SEAL-01 remains unmet
+last_activity_desc: Planned the local-seal repair and fresh independent rerun
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 40
+  total_plans: 41
   completed_plans: 37
-  percent: 0
+  percent: 90
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"local_seal_independent_review_failed","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"finding_open","local_seal_protocol_root":"sha256:0d7f7ec3edd89638226105b7ae035330265f19634bb7acfc58fb204dba157e62","independent_evidence_verification":"failed_with_findings","independent_verification_root":"sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"fresh_plan_262_corrective_route","total_plans":40,"completed_plans":37,"active_successors":["262-44","262-45","262-46","262-47","262-48"],"incomplete":["262-46","262-47","262-48"],"archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"local_seal_corrective_plans_ready","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"finding_open_repair_planned","local_seal_protocol_root":"sha256:0d7f7ec3edd89638226105b7ae035330265f19634bb7acfc58fb204dba157e62","independent_evidence_verification":"failed_with_findings","independent_verification_root":"sha256:41274611d007e75dcb359e19f73a5e7535de7a52bd7ec164f731c98a49cfd5a6","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-49","total_plans":41,"completed_plans":37,"active_successors":["262-44","262-45","262-49","262-50","262-47","262-48"],"incomplete":["262-49","262-50","262-47","262-48"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -30,16 +30,16 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 ## Current Position
 
-Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED
-Plan: 37 of 40 — Plan 262-46 failed closed; no summary or SEAL-01 credit
-Status: Corrective replanning required before any successor execution
-Last activity: 2026-08-13 — Independent local-seal review recorded open findings
+Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
+Plan: 37 of 41 — Plans 262-49 and 262-50 are the corrective path
+Status: Corrective execution ready; Plans 262-47 and 262-48 remain gated
+Last activity: 2026-08-13 — Planned repair and fresh independent rerun
 
 Progress: [█████████░] 93%
 
 ## Performance Metrics
 
-**Current milestone:** 37 of 40 indexed Phase 262 plans have summaries; Plans 262-46 through 262-48 are incomplete. Plan 262-46 independently reproduced the protocol and most adversarial mechanics but failed the revised SEAL-01 gate because pre-open clean-checkout/freeze binding is absent and the required dependency-revision boundary checker is non-pass. No 262-46 summary or requirement credit exists. Plan 262-47 and Plan 262-48 are blocked pending separately committed corrective work and a fresh full independent rerun. ADMIT-03 remains blocked, the policy root remains non-authorizing, and every downstream authority remains false.
+**Current milestone:** 37 of 41 active Phase 262 plans have summaries. Failed Plan 262-46 is archived byte-for-byte while its review and v1 FAIL artifact remain authoritative. Plans 262-49 and 262-50 own the repair and fresh independent rerun; Plans 262-47 and 262-48 remain gated behind an exact zero-finding v2 verdict. ADMIT-03 and revised SEAL-01 remain blocked, the policy root remains non-authorizing, and every downstream authority remains false.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -231,6 +231,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-08-13T01:47:00Z
-Stopped at: Plan 262-46 independent verification failed with open findings
+Stopped at: Corrective Plans 262-49 and 262-50 planned
 Resume file: None
-Next command: Run a fresh `$gsd-plan-phase 262` corrective route for the Plan 262-46 findings, then perform a fresh full independent rerun. Do not execute Plan 262-47 or Plan 262-48 while revised SEAL-01 is unmet.
+Next command: Run `$gsd-execute-phase 262` beginning with Plan 262-49. Do not execute Plan 262-47 or Plan 262-48 unless Plan 262-50 produces an exact zero-finding summary.
