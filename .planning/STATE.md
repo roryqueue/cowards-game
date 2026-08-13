@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planned
-stopped_at: Plans 262-51 and 262-52 planned after the Plan 262-50 v2 FAIL
-last_updated: "2026-08-13T02:45:00.000Z"
+stopped_at: Plan 262-51 complete; Plan 262-52 fresh source-separated v3 review is next
+last_updated: "2026-08-13T02:56:39.648Z"
 last_activity: 2026-08-13
-last_activity_desc: Planned the exact verifier-v2 repair and fresh v3 independent review
+last_activity_desc: Completed clean-checkout, lifecycle, and privacy-classifier repairs
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 42
-  completed_plans: 38
+  completed_plans: 39
   percent: 93
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"local_seal_v3_corrective_plans_ready","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"repaired_v2_cli_gap_planned","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_evidence_verification":"failed_with_findings_v2","independent_verification_root":"sha256:e55933eb22d7bf028d3eb25f64861b8be078776a4c97156761977efdabf33b34","finding_codes":["V2_VERIFIER_MODE_MISSING"],"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-51","total_plans":42,"completed_plans":38,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-47","262-48"],"incomplete":["262-47","262-48","262-51","262-52"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_failed_review_v2":"archived/262-50-HISTORICAL.md","archived_failed_review_v2_sha256":"e7ebdabdd057c541b09ab2337cd5f9fc505212f2b965a70aa042f8d0dcda81c8","archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"local_seal_v3_review_ready","admit_03":"blocked","seal_01":"unmet","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"v2_cli_gap_repaired_v3_checker_ready","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_evidence_verification":"failed_with_findings_v2_preserved_pending_v3","independent_verification_root":"sha256:e55933eb22d7bf028d3eb25f64861b8be078776a4c97156761977efdabf33b34","finding_codes":["V2_VERIFIER_MODE_MISSING"],"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-52","total_plans":42,"completed_plans":39,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-47","262-48"],"incomplete":["262-47","262-48","262-52"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_failed_review_v2":"archived/262-50-HISTORICAL.md","archived_failed_review_v2_sha256":"e7ebdabdd057c541b09ab2337cd5f9fc505212f2b965a70aa042f8d0dcda81c8","archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 38 of 42 — Plans 262-51 and 262-52 are the corrective path
-Status: Corrective execution ready; Plans 262-47 and 262-48 remain gated
-Last activity: 2026-08-13 — Completed clean-checkout, lifecycle, and privacy-classifier repairs
+Plan: 39 of 42 — Plan 262-51 complete; Plan 262-52 owns the fresh v3 verdict
+Status: Source-separated v3 review ready; Plans 262-47 and 262-48 remain gated
+Last activity: 2026-08-13 — Added exact read-only v2/v3 verification and the 42-plan lifecycle
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
-**Current milestone:** 38 of 42 active Phase 262 plans have summaries. Plan 262-50 is archived byte-for-byte after freezing the exclusive v2 FAIL root `sha256:e55933eb22d7bf028d3eb25f64861b8be078776a4c97156761977efdabf33b34`. Plans 262-51 and 262-52 own the narrow CLI repair and fresh v3 review. Plans 262-47 and 262-48 remain blocked, ADMIT-03 and revised SEAL-01 remain unmet, and every downstream authority remains false.
+**Current milestone:** 39 of 42 active Phase 262 plans have summaries. Plan 262-51 repaired the exact read-only v2 command and added mutation-tested v3 validation without changing the exclusive v2 FAIL root `sha256:e55933eb22d7bf028d3eb25f64861b8be078776a4c97156761977efdabf33b34`. Plan 262-52 alone owns the fresh source-separated v3 verdict. Plans 262-47 and 262-48 remain blocked, ADMIT-03 and revised SEAL-01 remain unmet, and every downstream authority remains false.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -82,6 +82,7 @@ Progress: [█████████░] 90%
 | Phase 262 P44 | 11min | 3 tasks | 12 files |
 | Phase 262 P45 | 12min | 1 tasks | 4 files |
 | Phase 262 P49 | 15min | 3 tasks | 8 files |
+| Phase 262 P51 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Progress: [█████████░] 90%
 Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 
 - v1.38 begins only from the exact passed v1.37 audit/archive/tag/post-tag authority; predecessor drift returns to the integrity foundation.
+- [Phase 262]: Validate immutable v2 FAIL evidence read-only and reserve the exclusive v3 verdict for source-separated Plan 262-52 review.
+- [Phase 262]: Accept only six exact 42-plan successor states; Plan 262-52 FAIL evidence remains unsummarized and non-authorizing.
 - Measurement, structural budgets, claims, classifiers, holdout custody, and process-versus-empirical semantics freeze before candidate output is inspected.
 - No formation namespace or executable artifact may exist before the content-addressed current-league freeze in Phase 266.
 - Current-edge, inward, and bracket arms are all private lab evidence; only exact eligible pre-formation current finalists may enter ordinary product certification.
@@ -231,7 +234,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-13T02:32:41.129Z
+Last session: 2026-08-13T02:56:39.636Z
 Stopped at: Plans 262-51 and 262-52 planned after the v2 review failure
 Resume file: None
 Next command: Run Plan 262-51, then Plan 262-52 as a fresh source-separated review. Do not execute Plan 262-47 or Plan 262-48 unless Plan 262-52 produces an exact zero-finding summary.
