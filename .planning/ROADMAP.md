@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 35/40 plans executed
+**Plans:** 36/40 plans executed
 
-**Current verdict:** REPLANNED / `gaps_found` — 35 of 40 indexed plans have summaries. The operator-approved no-external-custody revision archives the former Plan 262-43 prerequisite sentinel byte-for-byte and activates successor Plans 262-44 through 262-48. Those plans first amend the contract to the honest `single_operator_local_seal_v1` assurance model, then implement and independently verify the mechanics, attempt one separately authorized fresh ADMIT-03 route, and create activation only through the exact two-latch join. Until those plans pass, ADMIT-03 remains blocked, revised SEAL-01 remains pending, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
+**Current verdict:** REPLANNED / `gaps_found` — 36 of 40 indexed plans have summaries. Plan 262-44 has amended the binding contract to the honest `single_operator_local_seal_v1` assurance model while preserving the former Plan 262-43 sentinel byte-for-byte. Plans 262-45 through 262-48 must still implement and independently verify the mechanics, attempt one separately authorized fresh ADMIT-03 route, and create activation only through the exact two-latch join. Until those plans pass, ADMIT-03 remains blocked, revised SEAL-01 remains pending, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
 
-<!-- phase-262-successor-status: {"proof_status":"contract_revised_pending_mechanics","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"pending","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-45","total_plans":40,"completed_plans":35,"active_successors":["262-44","262-45","262-46","262-47","262-48"],"incomplete":["262-44","262-45","262-46","262-47","262-48"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_sentinel":"archived/262-43-HISTORICAL.md","archived_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"contract_revised_pending_mechanics","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"pending","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-45","total_plans":40,"completed_plans":36,"active_successors":["262-44","262-45","262-46","262-47","262-48"],"incomplete":["262-45","262-46","262-47","262-48"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_sentinel":"archived/262-43-HISTORICAL.md","archived_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 Plans:
 **Wave 1**
@@ -215,7 +215,7 @@ Plans:
 
 **Wave 36** *(blocked on Wave 35 completion; contract revision only)*
 
-- [ ] 262-44-PLAN.md — Amend every binding contract carrier to `single_operator_local_seal_v1`, archive the old sentinel additively, and retain false downstream authority.
+- [x] 262-44-PLAN.md — Amend every binding contract carrier to `single_operator_local_seal_v1`, archive the old sentinel additively, and retain false downstream authority.
 
 **Wave 37** *(blocked on Wave 36 completion)*
 
@@ -372,7 +372,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 35/36 | Paused/deferred (`gaps_found`) |  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 36/40 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
