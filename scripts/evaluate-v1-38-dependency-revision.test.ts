@@ -219,59 +219,82 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
     })
   })
 
-  it("accepts exactly the six declared Phase 262 lifecycle index states", () => {
+  it("accepts exactly the six declared Phase 262 v3 lifecycle index states", () => {
     const states = [
-      ["pre_49", 37, ["262-47", "262-48", "262-49", "262-50"], false, false, false],
-      ["post_49_pre_50", 38, ["262-47", "262-48", "262-50"], false, false, false],
-      ["post_50_pass", 39, ["262-47", "262-48"], false, false, true],
-      ["post_47", 40, ["262-48"], false, false, true],
-      ["post_48", 41, [], false, false, true],
-      ["plan_50_fail", 38, ["262-47", "262-48", "262-50"], true, true, false],
+      ["pre_51", 38, ["262-47", "262-48", "262-51", "262-52"], "absent", false, false, false, false],
+      ["post_51_pre_52", 39, ["262-47", "262-48", "262-52"], "absent", false, false, true, false],
+      ["plan_52_pass", 40, ["262-47", "262-48"], "pass", true, true, true, true],
+      ["plan_52_fail", 39, ["262-47", "262-48", "262-52"], "fail", true, true, true, false],
+      ["post_47", 41, ["262-48"], "pass", true, true, true, true],
+      ["post_48", 42, [], "pass", true, true, true, true],
     ] as const
-    for (const [lifecycle, summaryCount, incomplete, failArtifactCanonical, failReviewCanonical, summary26250Present] of states) {
+    for (const [
+      lifecycle, summaryCount, incomplete, v3Verdict, v3ArtifactCanonical, v3ReviewCanonical,
+      summary26251Present, summary26252Present,
+    ] of states) {
       expect(evaluateV138PhasePlanIndexTransition({
         lifecycle,
-        planCount: 41,
+        planCount: 42,
         summaryCount,
         incomplete,
-        failArtifactCanonical,
-        failReviewCanonical,
-        summary26250Present,
-      })).toEqual({ planCount: 41, summaryCount, incomplete })
+        v2FailArtifactCanonical: true,
+        v2FailReviewCanonical: true,
+        summary26250Present: false,
+        v3Verdict,
+        v3ArtifactCanonical,
+        v3ReviewCanonical,
+        summary26251Present,
+        summary26252Present,
+      })).toEqual({ planCount: 42, summaryCount, incomplete })
     }
   })
 
-  it("rejects one-input-at-a-time lifecycle drift and compensating counts", () => {
+  it("rejects one-input-at-a-time v3 lifecycle drift and compensating counts", () => {
     const exact = {
-      lifecycle: "pre_49",
-      planCount: 41,
-      summaryCount: 37,
-      incomplete: ["262-47", "262-48", "262-49", "262-50"],
-      failArtifactCanonical: false,
-      failReviewCanonical: false,
+      lifecycle: "pre_51",
+      planCount: 42,
+      summaryCount: 38,
+      incomplete: ["262-47", "262-48", "262-51", "262-52"],
+      v2FailArtifactCanonical: true,
+      v2FailReviewCanonical: true,
       summary26250Present: false,
+      v3Verdict: "absent",
+      v3ArtifactCanonical: false,
+      v3ReviewCanonical: false,
+      summary26251Present: false,
+      summary26252Present: false,
     } as const
     for (const mutation of [
-      { ...exact, planCount: 42 },
-      { ...exact, summaryCount: 38 },
-      { ...exact, incomplete: ["262-47", "262-48", "262-50", "262-49"] },
-      { ...exact, incomplete: ["262-47", "262-48", "262-50"] },
-      { ...exact, failArtifactCanonical: true },
-      { ...exact, failReviewCanonical: true },
+      { ...exact, planCount: 41 },
+      { ...exact, summaryCount: 39 },
+      { ...exact, incomplete: ["262-47", "262-48", "262-52", "262-51"] },
+      { ...exact, incomplete: ["262-47", "262-48", "262-52"] },
+      { ...exact, v2FailArtifactCanonical: false },
+      { ...exact, v2FailReviewCanonical: false },
       { ...exact, summary26250Present: true },
-      { ...exact, planCount: 42, summaryCount: 38 },
+      { ...exact, v3Verdict: "pass" as const },
+      { ...exact, v3ArtifactCanonical: true },
+      { ...exact, v3ReviewCanonical: true },
+      { ...exact, summary26251Present: true },
+      { ...exact, summary26252Present: true },
+      { ...exact, planCount: 43, summaryCount: 39 },
       { ...exact, waiver: true },
     ]) expect(() => evaluateV138PhasePlanIndexTransition(mutation as never))
       .toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
 
     expect(() => evaluateV138PhasePlanIndexTransition({
-      lifecycle: "plan_50_fail",
-      planCount: 41,
-      summaryCount: 38,
-      incomplete: ["262-47", "262-48", "262-50"],
-      failArtifactCanonical: false,
-      failReviewCanonical: true,
+      lifecycle: "plan_52_fail",
+      planCount: 42,
+      summaryCount: 39,
+      incomplete: ["262-47", "262-48", "262-52"],
+      v2FailArtifactCanonical: true,
+      v2FailReviewCanonical: true,
       summary26250Present: false,
+      v3Verdict: "fail",
+      v3ArtifactCanonical: true,
+      v3ReviewCanonical: false,
+      summary26251Present: true,
+      summary26252Present: false,
     })).toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
   })
 
