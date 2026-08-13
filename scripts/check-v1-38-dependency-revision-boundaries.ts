@@ -14,7 +14,6 @@ import ts from "typescript"
 import { encodeCanonicalJson } from "../packages/spec/src/canonical-json-encode.js"
 import { hashCanonicalIdentity } from "../packages/spec/src/canonical-identity-domains.js"
 import type { JsonValue } from "../packages/spec/src/types.js"
-import { checkV138TerminalDisposition } from "./evaluate-v1-38-terminal-disposition.js"
 
 type Sha256 = `sha256:${string}`
 
@@ -98,7 +97,11 @@ const activePlans = Object.freeze([
   { planId: "262-38", responsibility: "synthetic custody mechanics without operational credit" },
   { planId: "262-39", responsibility: "non-authorizing pre-search policy root" },
   { planId: "262-42", responsibility: "privacy-safe terminal disposition and paused tracking" },
-  { planId: "262-43", responsibility: "pending non-waivable future-resumption prerequisite sentinel" },
+  { planId: "262-44", responsibility: "binding local-seal contract and additive sentinel supersession" },
+  { planId: "262-45", responsibility: "single-operator local-seal mechanics" },
+  { planId: "262-46", responsibility: "independent evidence and claim-boundary verification" },
+  { planId: "262-47", responsibility: "separately authorized fresh literal ADMIT-03 route" },
+  { planId: "262-48", responsibility: "exact two-latch foundation activation join" },
 ] as const)
 
 const archivedCheckpoint = Object.freeze({
@@ -110,6 +113,32 @@ const archivedCheckpoint = Object.freeze({
   resumable: false as const,
 })
 
+const archivedSentinel = Object.freeze({
+  planId: "262-43" as const,
+  originalExecutablePath: `${phaseDirectory}/262-43-PLAN.md`,
+  archivalPath: `${phaseDirectory}/archived/262-43-HISTORICAL.md`,
+  sha256: "sha256:aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239" as Sha256,
+  truthfulUnderFormerContract: true as const,
+  resumable: false as const,
+  futureReplacementPlans: Object.freeze(["262-44", "262-45", "262-46", "262-47", "262-48"] as const),
+})
+
+const protectedTerminalHistory = Object.freeze({
+  plan26242SummarySha256: "sha256:297aacff196884d5cbdd5e97dfc69c596055359ac6cf55a91f2ef7ac2555808b" as Sha256,
+  terminalDispositionSha256: "sha256:ac612457eacefd5333d4d179027cf1f48a6235dbb47fb4c0a259b81132a73f15" as Sha256,
+  terminalDispositionRoot: "sha256:2eff8d9ee93fa4259537a981e8a2ce08a83b82863c595da7ee4cb30c24b4327e" as Sha256,
+})
+
+const successorContract = Object.freeze({
+  researchInputSha256: "sha256:a268ebfa78d1ab26e0dc5958b33af032e75ba41208e5cfb333982336a8331ad4" as Sha256,
+  assuranceClass: "single_operator_local_seal_v1" as const,
+  operatorRole: "repository_operator" as const,
+  localSealMechanics: "pending" as const,
+  independentEvidenceVerification: "pending" as const,
+  admit03: "blocked" as const,
+  seal01: "pending" as const,
+})
+
 export interface V138PlanSupersessionManifest {
   readonly schemaVersion: "v1.38-phase-262-plan-supersession-v1"
   readonly kind: "plan-dependency-revision"
@@ -117,6 +146,9 @@ export interface V138PlanSupersessionManifest {
   readonly historicalPlans: typeof historicalPlans
   readonly activePlans: typeof activePlans
   readonly archivedCheckpoint: typeof archivedCheckpoint
+  readonly archivedSentinel: typeof archivedSentinel
+  readonly protectedTerminalHistory: typeof protectedTerminalHistory
+  readonly successorContract: typeof successorContract
   readonly dormantActivation: Readonly<{
     planId: "262-41"
     path: string
@@ -153,6 +185,9 @@ export const buildV138PlanSupersessionManifest = (): V138PlanSupersessionManifes
     historicalPlans,
     activePlans,
     archivedCheckpoint,
+    archivedSentinel,
+    protectedTerminalHistory,
+    successorContract,
     dormantActivation: Object.freeze({
       planId: "262-41" as const,
       path: `${phaseDirectory}/dormant/262-41-ACTIVATION-CONTRACT.md`,
@@ -204,6 +239,7 @@ export type V138DependencyRevisionFindingCode =
   | "TOOLING_DEPENDENCY_DRIFT"
   | "TERMINAL_DISPOSITION_DRIFT"
   | "AUTHORITY_ARTIFACT_PRESENT"
+  | "LOCAL_SEAL_CONTRACT_DRIFT"
 
 export interface V138DependencyRevisionFinding {
   readonly code: V138DependencyRevisionFindingCode
@@ -218,6 +254,31 @@ export interface V138DependencyRevisionBoundaryAnalysis {
   readonly scannedSourceCount: number
   readonly protectedInventoryRoot: Sha256
 }
+
+const localSealCarrierPatterns = Object.freeze([
+  /single_operator_local_seal_v1/u,
+  /repository[_ -]operator/iu,
+  /independent(?:\/third-party| or third-party|-custody| custody)/iu,
+  /ADMIT-03/iu,
+  /SEAL-01/iu,
+  /blocked/iu,
+  /pending/iu,
+  /Phase[ _-]?263/iu,
+  /production/iu,
+] as const)
+
+export const analyzeV138LocalSealCarriers = (
+  carriers: Readonly<Record<string, string>>,
+): readonly V138DependencyRevisionFinding[] => Object.entries(carriers)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .flatMap(([carrier, source]) => localSealCarrierPatterns
+    .filter((pattern) => !pattern.test(source))
+    .map((pattern) => ({
+      code: "LOCAL_SEAL_CONTRACT_DRIFT" as const,
+      path: carrier,
+      line: 1,
+      detail: `Active carrier is missing required local-seal contract pattern ${pattern.source}.`,
+    })))
 
 export const analyzeV138ProtectedHistory = (
   repoRoot: string,
@@ -339,6 +400,7 @@ const protectedInventory = (
     .filter(Boolean)
     .filter((repoPath) => repoPath !== archivedCheckpoint.originalExecutablePath)
     .filter((repoPath) => repoPath !== `${phaseDirectory}/262-VERIFICATION.md`)
+    .filter((repoPath) => repoPath !== `${phaseDirectory}/262-CONTEXT.md`)
     .filter((repoPath) =>
       repoPath.startsWith(`${phaseDirectory}/`) ||
       (repoPath.startsWith(".planning/artifacts/v1.38-") &&
@@ -374,7 +436,7 @@ const changedPaths = (repoRoot: string): readonly string[] => [...new Set([
 
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
   const findings: V138DependencyRevisionFinding[] = []
-  const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41"])
+  const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41", "262-43"])
   const directPlans = readdirSync(path.join(repoRoot, phaseDirectory))
     .filter((name) => /^262-\d+-PLAN\.md$/u.test(name))
     .map((name) => name.slice(0, 6))
@@ -406,8 +468,8 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
       line: 1,
       detail: "phase-plan-index 262 includes archived or dormant plan IDs.",
     })
-    const summary26242Present = existsSync(path.join(repoRoot, phaseDirectory, "262-42-SUMMARY.md"))
-    const expected = evaluateV138PhasePlanIndexTransition({ summary26242Present })
+    const summary26244Present = existsSync(path.join(repoRoot, phaseDirectory, "262-44-SUMMARY.md"))
+    const expected = evaluateV138PhasePlanIndexTransition({ summary26244Present })
     const plans = Array.isArray(parsed.plans) ? parsed.plans : []
     const actualIncomplete = Array.isArray(parsed.incomplete) ? parsed.incomplete : []
     const actualSummaryCount = plans.filter((entry) => isRecord(entry) && entry.has_summary === true).length
@@ -428,15 +490,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
 
 export const evaluateV138PhasePlanIndexTransition = (
-  input: Readonly<{ summary26242Present: boolean }>,
-): Readonly<{ planCount: 36; summaryCount: 34 | 35; incomplete: readonly string[] }> => {
+  input: Readonly<{ summary26244Present: boolean }>,
+): Readonly<{ planCount: 40; summaryCount: 35 | 36; incomplete: readonly string[] }> => {
   if (!isRecord(input) || Object.keys(input).length !== 1 ||
-    typeof input.summary26242Present !== "boolean") {
+    typeof input.summary26244Present !== "boolean") {
     throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INPUT_INVALID")
   }
-  return input.summary26242Present
-    ? Object.freeze({ planCount: 36 as const, summaryCount: 35 as const, incomplete: Object.freeze(["262-43"]) })
-    : Object.freeze({ planCount: 36 as const, summaryCount: 34 as const, incomplete: Object.freeze(["262-42", "262-43"]) })
+  return input.summary26244Present
+    ? Object.freeze({ planCount: 40 as const, summaryCount: 36 as const, incomplete: Object.freeze(["262-45", "262-46", "262-47", "262-48"]) })
+    : Object.freeze({ planCount: 40 as const, summaryCount: 35 as const, incomplete: Object.freeze(["262-44", "262-45", "262-46", "262-47", "262-48"]) })
 }
 
 export const checkV138DependencyRevisionBoundaries = (
@@ -448,6 +510,19 @@ export const checkV138DependencyRevisionBoundaries = (
     ...analyzeV138ProtectedHistory(repoRoot, protectedEntries),
     ...analyzeV138ProtectedHistory(repoRoot, [
       { path: archivedCheckpoint.archivalPath, sha256: archivedCheckpoint.sha256 },
+      { path: archivedSentinel.archivalPath, sha256: archivedSentinel.sha256 },
+      {
+        path: `${phaseDirectory}/262-42-SUMMARY.md`,
+        sha256: protectedTerminalHistory.plan26242SummarySha256,
+      },
+      {
+        path: ".planning/artifacts/v1.38-phase-262-terminal-deferment.json",
+        sha256: protectedTerminalHistory.terminalDispositionSha256,
+      },
+      {
+        path: `${phaseDirectory}/262-LOCAL-SEALED-HOLDOUT-RESEARCH.md`,
+        sha256: successorContract.researchInputSha256,
+      },
       {
         path: `${phaseDirectory}/dormant/262-41-ACTIVATION-CONTRACT.md`,
         sha256: "sha256:5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641",
@@ -455,6 +530,16 @@ export const checkV138DependencyRevisionBoundaries = (
     ]),
     ...analyzeV138DependencyRevisionSources(sources),
     ...analyzeV138DependencyRevisionPaths(changedPaths(repoRoot)),
+    ...analyzeV138LocalSealCarriers(Object.fromEntries([
+      [".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md"],
+      [".planning/REQUIREMENTS.md"],
+      [`${phaseDirectory}/262-CONTEXT.md`],
+      [".planning/ROADMAP.md"],
+      [".planning/research/SUMMARY.md"],
+      [".planning/research/competitive-strategy-factory-and-adversarial-league.md"],
+      [".planning/seeds/SEED-002-competitive-strategy-factory-and-adversarial-league.md"],
+      [".planning/STATE.md"],
+    ].map(([repoPath]) => [repoPath, readFileSync(path.join(repoRoot, repoPath), "utf8")]))),
     ...planDiscoveryFindings(repoRoot),
   ]
   const expectedManifest = renderV138PlanSupersessionManifest()
@@ -465,18 +550,9 @@ export const checkV138DependencyRevisionBoundaries = (
     line: 1,
     detail: "Supersession manifest is missing or not byte-identical to its canonical rendering.",
   })
-  try {
-    checkV138TerminalDisposition(repoRoot)
-  } catch {
-    findings.push({
-      code: "TERMINAL_DISPOSITION_DRIFT",
-      path: ".planning/artifacts/v1.38-phase-262-terminal-deferment.json",
-      line: 1,
-      detail: "Terminal disposition is missing, edited, non-canonical, or no longer fail-closed.",
-    })
-  }
   for (const forbiddenPath of [
     ".planning/artifacts/v1.38-custody-public-reference.json",
+    ".planning/artifacts/v1.38-local-seal-public-reference.json",
     ".planning/artifacts/v1.38-foundation-activation-root.json",
     ".planning/artifacts/v1.38-current-matrix-reproduction-v10.json",
   ]) if (existsSync(path.join(repoRoot, forbiddenPath))) findings.push({

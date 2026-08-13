@@ -109,6 +109,8 @@ Stage 6 — Equal human/model red team and sealed evaluation:
 
 The sealed-holdout assurance class is `single_operator_local_seal_v1`. One named repository operator controls a restricted out-of-repository local store and one closed opening command. This process provides procedural blindness, one-shot consumption, tamper-evident application records, terminal contamination, and bounded safe receipts; it does not claim independent or third-party custody, separate permissioning, non-collusion, comprehensive host-access monitoring, cryptographic or forensic erasure, or resistance to a malicious machine owner.
 
+This contract revision leaves ADMIT-03 blocked and SEAL-01 pending. Candidate search, Phase 263, formation materialization, holdout opening, public exposure, activation, and production remain unauthorized until the exact two-latch join passes.
+
 Commitment-secret ingress is only `<absolute-local-seal-root>/input/commitment-secret.bin`: owner-only `0700` ancestors and an effective-UID-owned regular non-symlink `0600` file containing 32..4096 bytes. The commitment tool must open with no-follow semantics, validate ownership, mode, type, and size, read once during commitment, zero-fill the in-process Buffer, unlink the file, and fsync its parent before success; any uncertainty fails closed. Secret bytes never enter CLI arguments, environment variables, Git, tests, logs, receipts, artifacts, or public/default output.
 
 Starting competitive gates to calibrate and precommit:

@@ -11,7 +11,7 @@ scope: large
 
 ## Binding Local-Seal Update (2026-08-12)
 
-Future execution uses `single_operator_local_seal_v1`: one named repository operator, a restricted out-of-repository local holdout store, one closed opening command, application-level access events, a bounded safe receipt, and terminal contamination. No independent/third-party custody, separate permissioning, non-collusion, comprehensive host monitoring, cryptographic erasure, forensic deletion, or malicious-owner resistance is claimed. Mechanics and independent evidence verification remain pending; ADMIT-03 and SEAL-01 remain incomplete, and no candidate-search, Phase 263, formation, holdout-opening, public, activation, or production authority exists until the exact two-latch join passes.
+Future execution uses `single_operator_local_seal_v1`: one named repository operator, a restricted out-of-repository local holdout store, one closed opening command, application-level access events, a bounded safe receipt, and terminal contamination. No independent/third-party custody, separate permissioning, non-collusion, comprehensive host monitoring, cryptographic erasure, forensic deletion, or malicious-owner resistance is claimed. Mechanics and independent evidence verification remain pending; ADMIT-03 remains blocked and SEAL-01 remains pending, and no candidate-search, Phase 263, formation, holdout-opening, public, activation, or production authority exists until the exact two-latch join passes.
 
 ## Why This Matters
 
