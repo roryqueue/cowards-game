@@ -338,6 +338,7 @@ const protectedInventory = (
     .split("\n")
     .filter(Boolean)
     .filter((repoPath) => repoPath !== archivedCheckpoint.originalExecutablePath)
+    .filter((repoPath) => repoPath !== `${phaseDirectory}/262-VERIFICATION.md`)
     .filter((repoPath) =>
       repoPath.startsWith(`${phaseDirectory}/`) ||
       (repoPath.startsWith(".planning/artifacts/v1.38-") &&

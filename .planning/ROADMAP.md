@@ -5,9 +5,9 @@
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
 - **v1.36 Competition Maturity** - Phases 249-255, shipped 2026-07-12 ([archive](milestones/v1.36-ROADMAP.md))
 - **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, shipped 2026-07-22 ([archive](milestones/v1.37-ROADMAP.md))
-- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, planning
+- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, paused/deferred at Phase 262
 
-## v1.38 Competitive Strategy Factory and Adversarial League — ACTIVE
+## v1.38 Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 
 ## Overview
 
@@ -52,7 +52,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 34/36 indexed plans complete; terminal Plan 262-42 and prerequisite sentinel Plan 262-43 pending
 
-**Current verdict:** IN PROGRESS / `gaps_found` — 34 of 36 indexed plans are complete. The operator confirms that no external custody system exists, so Plan 262-40 is archived byte-for-byte and cannot satisfy SEAL-01. Plan 262-42 records the privacy-safe terminal/defer disposition and pauses v1.38 without completing Phase 262, ADMIT-03, or SEAL-01. Plan 262-43 is the dependent future-resumption prerequisite sentinel: it grants no requirement credit, remains incomplete while real external custody and a separately planned literal ADMIT-03 pass route are absent, and prevents generic plan-summary closeout from completing the phase. The actual incomplete index is expected to transition from `[262-42, 262-43]` before execution to `[262-43]` after `262-42-SUMMARY.md` exists. Phases 263–270 remain blocked. If both prerequisites later appear, run a fresh `$gsd-plan-phase 262`; never resume Plan 262-43 into authority.
+**Current verdict:** PAUSED/DEFERRED / `gaps_found` — 34 of 36 indexed plans have summaries before Plan 262-42 closeout. The privacy-safe terminal disposition now records the operator fact that no external custody system exists, but this task does not pre-claim Plan 262-42 completion: the actual incomplete index remains `[262-42, 262-43]` until its normal summary exists. ADMIT-03 remains blocked at the expired no-retry `calibration_stopped` route with fresh 0/540 accepted, and SEAL-01 remains unmet. Plan 262-43 grants no requirement credit and remains incomplete while real external custody and a separately planned literal ADMIT-03 pass route are absent. After normal Plan 262-42 summary closeout, the expected index is 35/36 with only `[262-43]` incomplete. Phases 263–270 remain unauthorized. If both prerequisites later appear, run a fresh `$gsd-plan-phase 262`; never resume Plan 262-43 into authority.
 
 <!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","synthetic_custody_receipt_root":"sha256:5615979933dfcf3aa0a65556084565adeaf5a0cfb7cc590b4126e0a02e295890","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","public_custody_reference_present":false,"foundation_activation_root_present":false,"next_action":"262-42","terminal_after_execution":"paused_deferred_at_phase_262","total_plans":36,"completed_plans":34,"active_successors":["262-42","262-43"],"expected_post_262_42_incomplete":["262-43"],"archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_checkpoint_sha256":"e745ba878fcd0090a968762f314c787dae86896d27f2bc8a72498d684ed39231","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
@@ -352,7 +352,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 34/36 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 34/36 | Paused/deferred (`gaps_found`) |  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |

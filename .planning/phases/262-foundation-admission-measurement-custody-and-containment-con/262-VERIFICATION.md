@@ -1,55 +1,66 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-verified: 2026-08-12T20:30:22.319Z
+verified: 2026-08-13T00:17:00.000Z
 status: gaps_found
-score: "1/5 must-haves verified"
+score: "3/5 must-haves verified"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
   previous_score: "1/5"
   gaps_closed:
-    - "A5/B5 custody, production protocol-v2 structure and standalone coverage, terminal/count binding, typecheck, isolated boundaries, cleanup, and protected-byte immutability pass independently."
+    - "MEAS-01 through MEAS-10 and DECI-02 are frozen under the ready, explicitly non-authorizing pre_search_policy_root."
+    - "The terminal/defer disposition records the bounded operator fact, exact stopped route, protected archival lineage, privacy-safe absences, and denied downstream authority."
   gaps_remaining:
-    - "The frozen successor-route and focused scheduler/RSS/privacy/route-5 selectors did not reach their exact bounded results."
-    - "Terminal-v1 is calibration_stopped; reproduction:v10 and its marker are absent, with 0 charged and 0 accepted fresh reproduction cells."
-    - "Plans 262-03 through 262-07 remain blocked and unexecuted."
-  regressions:
-    - "Frozen A5 route and focused selectors are blocked in this independent execution; no repair or retry was attempted."
+    - "ADMIT-03 is blocked: route ordinal 5 is calibration_stopped with expired no-retry authority and fresh 0 accepted of 540 required cells; reproduction:v10 is absent."
+    - "SEAL-01 is unmet because no separately controlled external custody system exists; no custody reference exists."
+    - "Plan 262-43 must remain incomplete after Plan 262-42 receives its normal summary, so Phase 262 and v1.38 remain paused/deferred."
+  regressions: []
 gaps:
   - truth: "Researchers reproduce the persisted current-rules matrix under exact checked custody before candidate search."
     status: failed
-    reason: "Required frozen selectors are blocked and terminal-v1 is calibration_stopped, not reproduction_passed; reproduction:v10 is absent with fresh 0/540 accepted."
+    reason: "The immutable terminal is calibration_stopped with expired no-retry authority, fresh 0/540 accepted, and absent reproduction:v10."
     artifacts:
       - path: ".planning/artifacts/v1.38-plan-262-30-terminal-v1.json"
-        issue: "Disposition is calibration_stopped with expired authority and no retry."
+        issue: "Disposition remains calibration_stopped and cannot be retried or reused."
       - path: ".planning/artifacts/v1.38-current-matrix-reproduction-v10.json"
-        issue: "Required reproduction artifact and its consumption marker are absent."
+        issue: "Required literal reproduction artifact and its marker remain absent."
     missing:
-      - "Green frozen route and focused proof classes plus literal reproduction_passed with exactly 540 charged and 540 accepted fresh reproduction:v10 cells; immutable stopped authority cannot supply them."
-  - truth: "Immutable scientific, budget, accounting, gate, report, custody, and three-profile contracts are complete."
+      - "A separately planned fresh route producing literal reproduction_passed evidence with exactly 540 charged and 540 accepted cells and valid authority."
+  - truth: "Separately permissioned external custody controls the holdout and issues only the bounded safe receipt."
     status: failed
-    reason: "Plans 262-03 through 262-07 remain unexecuted and own roadmap truths 3 through 5."
+    reason: "The operator confirms no external custody system exists; synthetic mechanics cannot satisfy SEAL-01."
     artifacts:
-      - path: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-03-PLAN.md"
-        issue: "Still blocked on ADMIT-03."
+      - path: ".planning/artifacts/v1.38-custody-public-reference.json"
+        issue: "Correctly absent while genuine operational custody is unavailable."
     missing:
-      - "A developer decision on the exhausted stopped route before any new authority; do not retry Plan 262-30."
-      - "Execute Plans 262-03 through 262-07 only if their admission dependency is validly resolved."
+      - "A real separately controlled external custody system with authenticated provenance and separation of duties."
 ---
 
-# Phase 262 Verification Report — Plan 262-33 Refresh
+# Phase 262 Verification Report — Plan 262-42 Pre-Summary Refresh
 
-<!-- phase-262-successor-status: {"full_verdict_sha256":"7bf8fe2cde8e0aeb8db92ed545871d77189a3af746f05ccdbd787c6e0f3b4861","proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"authority_expired":true,"no_retry":true,"next_action":"developer_decision","total_plans":33,"completed_plans":28} -->
+<!-- phase-262-successor-status: {"proof_status":"blocked","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"unmet","custody_status":"unavailable","external_custody_system":"absent_confirmed","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","terminal_disposition_root":"sha256:2eff8d9ee93fa4259537a981e8a2ce08a83b82863c595da7ee4cb30c24b4327e","public_custody_reference_present":false,"foundation_activation_root_present":false,"phase_status":"deferred_incomplete","milestone_status":"paused_deferred","total_plans":36,"completed_plans":34,"incomplete":["262-42","262-43"],"expected_post_262_42_incomplete":["262-43"],"next_action":"262-42"} -->
 
-**Verdict:** `gaps_found`, score **1/5**. Exact A6 custody is independently proven and artifact bytes have no drift. Offline proof remains blocked because route/focused/privacy/count evidence is incomplete at the bounded limits and the checked boundary/terminal components are blocked.
+**Verdict:** `gaps_found`, score **3/5**. The scientific, accounting, reporting, classifier, and containment policy is ready but non-authorizing. The terminal disposition truthfully records unavailable custody and the stopped matrix route; it is not Phase success and grants no requirement, candidate-search, Phase 263, formation, or production authority.
 
 | Truth | Result |
 |---|---|
 | Exact predecessor/current admission and explicit drift stop | VERIFIED |
-| Persisted current-rules matrix reproduced fixture-only | FAILED — offline proof blocked; terminal calibration_stopped at fresh 0/0 |
-| Immutable scientific/budget/accounting/gate/report contract | FAILED — Plans 262-03/04 pending |
-| Separately permissioned custody and orthogonal reporting | FAILED — Plans 262-06/07 pending |
-| Three-profile protocol/classifiers precommitted without formation material | FAILED — Plan 262-05 pending |
+| Persisted current-rules matrix reproduced fixture-only | FAILED — `calibration_stopped`, fresh 0/540, reproduction:v10 absent |
+| Immutable scientific/budget/accounting/gate/report contract | VERIFIED — policy ready, non-authorizing |
+| Separately permissioned custody and orthogonal reporting | FAILED — external custody absent, SEAL-01 unmet |
+| Three-profile protocol/classifiers precommitted without formation material | VERIFIED — protocol-only and zero executable formation artifacts |
 
-ADMIT-03 remains blocked. Plan 262-03 is only a dormant blocking-human routing checkpoint; milestone stop, a new route, or a dependency revision each requires a fresh `$gsd-plan-phase 262` run.
+## Terminal disposition
+
+- Operator fact: `no_external_custody_system`; custody is `unavailable`; SEAL-01 is `unmet`.
+- ADMIT-03 remains `blocked`; authority is expired and no-retry; fresh charged/accepted is 0/0 against 540 required.
+- The `pre_search_policy_root` remains `ready` and non-authorizing.
+- Custody reference, activation root, reproduction:v10, route writer, candidate-search authority, Phase 263 authority, executable formation artifacts, and production authority are absent.
+- Archived Plan 262-40 and dormant Plan 262-41 remain byte-identical and non-resumable/non-executable.
+
+## Plan-index transition
+
+This refresh records the actual pre-summary state only: 36 indexed plans, 34 summaries, and incomplete `[262-42, 262-43]`. After the executor creates `262-42-SUMMARY.md` and runs generic progress synchronization, the required state is 35/36 with incomplete `[262-43]`. Plan 262-43 must receive no summary while either prerequisite is absent.
+
+Future resumption requires both a real external custody system and a separately planned literal ADMIT-03 pass route. If both facts later exist, run a fresh `$gsd-plan-phase 262`; never resume archived Plan 262-40, execute dormant Plan 262-41, or turn pending Plan 262-43 into authority.
