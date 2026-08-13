@@ -1,7 +1,7 @@
 # Phase 262: No External Custody System - Replan Research
 
-**Researched:** 2026-08-12  
-**Domain:** Fail-closed phase termination, milestone deferral, immutable evidence custody, and future resumption  
+**Researched:** 2026-08-12
+**Domain:** Fail-closed phase termination, milestone deferral, immutable evidence custody, and future resumption
 **Confidence:** HIGH
 
 <user_constraints>
@@ -408,5 +408,5 @@ Security enforcement is enabled because it is not disabled in `.planning/config.
 - Downstream prohibition: HIGH — exact two-latch dormant activation contract and absent activation root.
 - Future custody timing: unknown — deliberately not predicted; resumption is conditional.
 
-**Research date:** 2026-08-12  
+**Research date:** 2026-08-12
 **Valid until:** The operator reports that a real external custody system exists, a separately planned fresh ADMIT-03 route is authorized, or the locked milestone contract is explicitly replaced by a new approved milestone.
