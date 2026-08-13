@@ -185,19 +185,60 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
     })
   })
 
-  it("models the exact Plan 262-44 pre-summary and post-summary incomplete-plan transition", () => {
-    expect(evaluateV138PhasePlanIndexTransition({ summary26244Present: false })).toEqual({
-      planCount: 40,
-      summaryCount: 35,
-      incomplete: ["262-44", "262-45", "262-46", "262-47", "262-48"],
-    })
-    expect(evaluateV138PhasePlanIndexTransition({ summary26244Present: true })).toEqual({
-      planCount: 40,
-      summaryCount: 36,
-      incomplete: ["262-45", "262-46", "262-47", "262-48"],
-    })
-    expect(() => evaluateV138PhasePlanIndexTransition({ summary26244Present: false, waiver: true } as never))
-      .toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INPUT_INVALID")
+  it("accepts exactly the six declared Phase 262 lifecycle index states", () => {
+    const states = [
+      ["pre_49", 37, ["262-47", "262-48", "262-49", "262-50"], false, false, false],
+      ["post_49_pre_50", 38, ["262-47", "262-48", "262-50"], false, false, false],
+      ["post_50_pass", 39, ["262-47", "262-48"], false, false, true],
+      ["post_47", 40, ["262-48"], false, false, true],
+      ["post_48", 41, [], false, false, true],
+      ["plan_50_fail", 38, ["262-47", "262-48", "262-50"], true, true, false],
+    ] as const
+    for (const [lifecycle, summaryCount, incomplete, failArtifactCanonical, failReviewCanonical, summary26250Present] of states) {
+      expect(evaluateV138PhasePlanIndexTransition({
+        lifecycle,
+        planCount: 41,
+        summaryCount,
+        incomplete,
+        failArtifactCanonical,
+        failReviewCanonical,
+        summary26250Present,
+      })).toEqual({ planCount: 41, summaryCount, incomplete })
+    }
+  })
+
+  it("rejects one-input-at-a-time lifecycle drift and compensating counts", () => {
+    const exact = {
+      lifecycle: "pre_49",
+      planCount: 41,
+      summaryCount: 37,
+      incomplete: ["262-47", "262-48", "262-49", "262-50"],
+      failArtifactCanonical: false,
+      failReviewCanonical: false,
+      summary26250Present: false,
+    } as const
+    for (const mutation of [
+      { ...exact, planCount: 42 },
+      { ...exact, summaryCount: 38 },
+      { ...exact, incomplete: ["262-47", "262-48", "262-50", "262-49"] },
+      { ...exact, incomplete: ["262-47", "262-48", "262-50"] },
+      { ...exact, failArtifactCanonical: true },
+      { ...exact, failReviewCanonical: true },
+      { ...exact, summary26250Present: true },
+      { ...exact, planCount: 42, summaryCount: 38 },
+      { ...exact, waiver: true },
+    ]) expect(() => evaluateV138PhasePlanIndexTransition(mutation as never))
+      .toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
+
+    expect(() => evaluateV138PhasePlanIndexTransition({
+      lifecycle: "plan_50_fail",
+      planCount: 41,
+      summaryCount: 38,
+      incomplete: ["262-47", "262-48", "262-50"],
+      failArtifactCanonical: false,
+      failReviewCanonical: true,
+      summary26250Present: false,
+    })).toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
   })
 
   it("requires all active carriers to agree on the reduced assurance and denied authority", () => {
