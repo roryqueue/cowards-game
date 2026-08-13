@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
   V138_CURRENT_STOPPED_BRANCH,
@@ -121,6 +122,39 @@ describe("Phase 262 dependency-revision acceptance", () => {
 })
 
 describe("Phase 262 dependency-revision supersession boundaries", () => {
+  it("accepts the canonical privacy seam and closed local-seal private storage identifiers", () => {
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+    const source = readFileSync(path.join(repoRoot, "scripts/lib/v1-38-local-seal.ts"), "utf8")
+    expect(analyzeV138DependencyRevisionSources({ "scripts/lib/v1-38-local-seal.ts": source })
+      .filter((finding) => finding.code === "PRIVATE_DATA_EXPOSURE")).toEqual([])
+  })
+
+  it("detects executable private-data carriers across AST projection shapes", () => {
+    const seeds = [
+      "const publicReceipt = { StrategyMemory: privateState.value }",
+      "interface PublicReceipt { SoldierMemory: string }",
+      "const alias = privateState.objectivePayload; const publicOutput = { alias }",
+      "const publicReceipt = { [\"privateKey\"]: keyMaterial }",
+      "const publicReceipt = { nested: { rawDiagnostics: diagnosticState } }",
+      "const publicReceipt = { safeName: privateState.preimage }",
+      "const { secret: alias } = privateState; const publicProjection = { alias }",
+    ]
+    for (const [index, source] of seeds.entries()) {
+      expect(analyzeV138DependencyRevisionSources({ [`scripts/privacy-seed-${index}.ts`]: source })
+        .map((finding) => finding.code)).toContain("PRIVATE_DATA_EXPOSURE")
+    }
+  })
+
+  it("ignores privacy vocabulary in comments and descriptive string literals", () => {
+    const source = [
+      "// StrategyMemory must never enter public output.",
+      "const description = \"SoldierMemory objectivePayload privateKey secret preimage rawDiagnostics\"",
+      "const publicReceipt = { description: \"StrategyMemory is forbidden\" }",
+    ].join("\n")
+    expect(analyzeV138DependencyRevisionSources({ "scripts/privacy-description.ts": source })
+      .filter((finding) => finding.code === "PRIVATE_DATA_EXPOSURE")).toEqual([])
+  })
+
   it("renders the exact active, historical, and dormant graph deterministically", () => {
     const manifest = buildV138PlanSupersessionManifest()
     expect(manifest.historicalPlans.map((entry) => [entry.planId, entry.sha256]))
