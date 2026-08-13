@@ -9,11 +9,15 @@ scope: large
 
 # SEED-002: Competitive Strategy Factory and Adversarial League
 
+## Binding Local-Seal Update (2026-08-12)
+
+Future execution uses `single_operator_local_seal_v1`: one named repository operator, a restricted out-of-repository local holdout store, one closed opening command, application-level access events, a bounded safe receipt, and terminal contamination. No independent/third-party custody, separate permissioning, non-collusion, comprehensive host monitoring, cryptographic erasure, forensic deletion, or malicious-owner resistance is claimed. Mechanics and independent evidence verification remain pending; ADMIT-03 and SEAL-01 remain incomplete, and no candidate-search, Phase 263, formation, holdout-opening, public, activation, or production authority exists until the exact two-latch join passes.
+
 ## Why This Matters
 
 The existing Strategy field is useful for smoke tests but is too weak and too dependent on one generated decision skeleton to support balance conclusions. Stronger human- or model-authored controllers could discover qualitatively different tactics and counters.
 
-Before changing rules based on toy-agent statistics, build a reproducible best-response factory: legal hierarchical controllers, offline search and optimization distilled to deterministic source, a frozen multi-oracle league, independent red teams, sealed holdouts, and equal-compute retraining for every future rule profile.
+Before changing rules based on toy-agent statistics, build a reproducible best-response factory: legal hierarchical controllers, offline search and optimization distilled to deterministic source, a frozen multi-oracle league, independent red teams, an honestly bounded single-operator local sealed holdout, and equal-compute retraining for every future rule profile.
 
 ## When to Surface
 

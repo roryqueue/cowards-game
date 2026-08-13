@@ -5,7 +5,7 @@ milestone_name: Competitive Strategy Factory and Adversarial League — REPLANNE
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Phase 262 successor Plans 262-44 through 262-48 planned; execution not started
+stopped_at: Plan 262-44 contract revision in progress; local-seal mechanics not yet implemented
 last_updated: "2026-08-13T01:10:22.466Z"
 last_activity: 2026-08-13
 last_activity_desc: Phase 262 execution started
@@ -19,7 +19,7 @@ progress:
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"planned","admit_03":"blocked","seal_01":"pending_revised_contract","assurance_class_planned":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required_after_contract_revision","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"production_authorized":false,"next_action":"262-44","total_plans":40,"completed_plans":35,"active_successors":["262-44","262-45","262-46","262-47","262-48"],"incomplete":["262-44","262-45","262-46","262-47","262-48"],"archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"contract_revised_pending_mechanics","admit_03":"blocked","seal_01":"pending","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"pending","independent_evidence_verification":"pending","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-45","total_plans":40,"completed_plans":35,"active_successors":["262-44","262-45","262-46","262-47","262-48"],"incomplete":["262-44","262-45","262-46","262-47","262-48"],"archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -39,7 +39,7 @@ Progress: [█████████░] 88%
 
 ## Performance Metrics
 
-**Current milestone:** 35 of 36 indexed Phase 262 plans have summaries, and the actual incomplete index is `[262-43]`. Plan 262-43 remains incomplete while external custody and a separately planned literal ADMIT-03 pass route are absent. Plan 262-39's non-authorizing policy root remains ready; route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0/540, expired no-retry authority, blocked ADMIT-03, and unmet SEAL-01.
+**Current milestone:** 35 of 40 indexed Phase 262 plans have summaries; active successors 262-44 through 262-48 are incomplete. External custody is unavailable and no longer required by the revised future contract. `single_operator_local_seal_v1` mechanics and independent evidence verification remain pending, so SEAL-01 is pending. Plan 262-39's policy root remains ready but non-authorizing; route ordinal 5 remains `calibration_stopped` with reproduction:v10 absent at fresh 0/540, expired no-retry authority, and blocked ADMIT-03. Candidate search, Phase 263, formation, holdout opening, public exposure, activation, and production remain denied until both latches and the exact activation join pass.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -173,6 +173,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Resume only through a fresh plan-phase after both a real external custody system exists and a separately planned literal ADMIT-03 pass route is authorized; never revive archived Plan 262-40 or dormant Plan 262-41 directly.
 - [Phase 262]: Record no_external_custody_system as a terminal availability fact that leaves custody unavailable and SEAL-01 unmet. — An absent external system cannot be replaced by synthetic or self-issued custody evidence.
 - [Phase 262]: Keep Plan 262-43 incomplete and non-authorizing after Plan 262-42 closeout; future prerequisites require a fresh Phase 262 plan. — The sentinel preserves the incomplete index and cannot become an approval-based authority path.
+- [Phase 262]: The operator-approved future contract accepts `single_operator_local_seal_v1`; this supersedes the external-custody routing in the preceding decisions only for successor Plans 262-44 through 262-48. — All preceding decisions 171 through 175, terminal roots, archived hashes, stopped routes, charges, and no-retry facts remain truthful immutable history.
+- [Phase 262]: Use one named `repository_operator`, a restricted out-of-repository local store, and one closed command with the exact secret-file ingress contract; claim only tool-mediated procedural sealing. — Independent/third-party custody, separate permissioning, non-collusion, comprehensive host monitoring, cryptographic erasure, forensic deletion, and malicious-owner resistance are explicitly excluded.
+- [Phase 262]: Keep ADMIT-03 blocked and revised SEAL-01 pending until independently verified mechanics and one fresh literal 540/540 reproduction pass are joined exactly. — Contract revision alone grants no candidate-search, Phase 263, formation, holdout-opening, public, activation, or production authority.
 
 ### Pending Todos
 
@@ -180,7 +183,7 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 262 has frozen exact denominators, structural work units, budgets, retry/burn rules, and report logic; profile-neutral containment/classifier policy and genuine named custody remain outstanding before any tuning authority can exist.
+- Phase 262 has frozen exact denominators, structural work units, budgets, retry/burn rules, and report logic; local-seal mechanics and independent evidence verification remain pending before revised SEAL-01 can pass.
 - Any failure of v1.37 admission, evidence completeness, provenance, reproducibility, custody, or information integrity is a hard stop rather than an empirical result.
 - Formation materialization remains blocked until Phase 266 emits a valid root; a process-valid current-rules empirical failure may still proceed under the original contract.
 - Holdout contamination or unproved cross-branch compute equality invalidates the comparison and blocks successful release closure.
@@ -224,6 +227,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-08-12
-Stopped at: Successor planning complete; Plan 262-44 is next
+Stopped at: Plan 262-44 contract revision in progress; local-seal mechanics remain pending
 Resume file: None
-Next command: Run `$gsd-execute-phase 262` beginning with Plan 262-44. Plan 262-47 will require a fresh exact operator authorization literal before its sole live route. Archived Plans 262-40/43 and dormant Plan 262-41 remain non-executable historical evidence.
+Next command: Complete Plan 262-44, then execute Plan 262-45. Plan 262-47 will require a fresh exact operator authorization literal before its sole live route. Archived Plans 262-40/43 and dormant Plan 262-41 remain non-executable historical evidence.

@@ -5,6 +5,12 @@
 **Rules baseline:** Current canonical `cowards-rules-v1.4` behavior
 **Relationship to v2:** Prerequisite evidence for the proposed metagame lab and any later rule comparison; not approval to change rules
 
+## 2026-08-12 Binding Local-Seal Revision
+
+The operator confirmed that no external custody system exists and approved the future `single_operator_local_seal_v1` contract. One named repository operator controls a restricted out-of-repository local holdout store and one closed opening command. This is process separation rather than independent custody and makes no independent/third-party custody, separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim. Local-seal mechanics and independent verification of their evidence remain pending; ADMIT-03 remains blocked; SEAL-01 remains pending; and candidate search, Phase 263, formation, holdout opening, public exposure, activation, and production authority remain false until the exact two-latch join passes.
+
+The only commitment-secret ingress is `<absolute-local-seal-root>/input/commitment-secret.bin` under the binding owner/type/mode/size/no-follow/read-once/zero-fill/unlink/parent-fsync contract. No secret byte may enter CLI, environment, logs, Git, tests, receipts, artifacts, or output. Historical external-custody records remain immutable evidence and are superseded only for future routing.
+
 ## Decision summary
 
 The current Starter and Advanced Strategies are useful smoke tests, teaching examples, and regression fixtures. They are not strong enough, independent enough, or adversarially developed enough to support claims about balance or a long-term metagame.
