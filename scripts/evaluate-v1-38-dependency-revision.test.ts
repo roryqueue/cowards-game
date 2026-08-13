@@ -16,6 +16,7 @@ import {
   V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY,
   analyzeV138DependencyRevisionPaths,
   analyzeV138DependencyRevisionSources,
+  analyzeV138LocalSealCarriers,
   analyzeV138ProtectedHistory,
   buildV138PlanSupersessionManifest,
   evaluateV138PhasePlanIndexTransition,
@@ -131,7 +132,8 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
         ["262-07", "sha256:5c86c379a31e8bd7706c857666d31edc974600242e0e0ef5f78934151f23704d"],
       ])
     expect(manifest.activePlans.map((entry) => entry.planId)).toEqual([
-      "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-42", "262-43",
+      "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-42",
+      "262-44", "262-45", "262-46", "262-47", "262-48",
     ])
     expect(manifest.archivedCheckpoint).toEqual({
       planId: "262-40",
@@ -148,6 +150,29 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
       executable: false,
       requiresFutureLiteralAdmit03Pass: true,
     })
+    expect(manifest.archivedSentinel).toEqual({
+      planId: "262-43",
+      originalExecutablePath: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-43-PLAN.md",
+      archivalPath: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-43-HISTORICAL.md",
+      sha256: "sha256:aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239",
+      truthfulUnderFormerContract: true,
+      resumable: false,
+      futureReplacementPlans: ["262-44", "262-45", "262-46", "262-47", "262-48"],
+    })
+    expect(manifest.protectedTerminalHistory).toEqual({
+      plan26242SummarySha256: "sha256:297aacff196884d5cbdd5e97dfc69c596055359ac6cf55a91f2ef7ac2555808b",
+      terminalDispositionSha256: "sha256:ac612457eacefd5333d4d179027cf1f48a6235dbb47fb4c0a259b81132a73f15",
+      terminalDispositionRoot: "sha256:2eff8d9ee93fa4259537a981e8a2ce08a83b82863c595da7ee4cb30c24b4327e",
+    })
+    expect(manifest.successorContract).toEqual({
+      researchInputSha256: "sha256:a268ebfa78d1ab26e0dc5958b33af032e75ba41208e5cfb333982336a8331ad4",
+      assuranceClass: "single_operator_local_seal_v1",
+      operatorRole: "repository_operator",
+      localSealMechanics: "pending",
+      independentEvidenceVerification: "pending",
+      admit03: "blocked",
+      seal01: "pending",
+    })
     expect(renderV138PlanSupersessionManifest(manifest))
       .toBe(renderV138PlanSupersessionManifest(buildV138PlanSupersessionManifest()))
     expect(manifest.authority).toEqual({
@@ -160,19 +185,47 @@ describe("Phase 262 dependency-revision supersession boundaries", () => {
     })
   })
 
-  it("models the exact pre-summary and post-summary incomplete-plan transition", () => {
-    expect(evaluateV138PhasePlanIndexTransition({ summary26242Present: false })).toEqual({
-      planCount: 36,
-      summaryCount: 34,
-      incomplete: ["262-42", "262-43"],
-    })
-    expect(evaluateV138PhasePlanIndexTransition({ summary26242Present: true })).toEqual({
-      planCount: 36,
+  it("models the exact Plan 262-44 pre-summary and post-summary incomplete-plan transition", () => {
+    expect(evaluateV138PhasePlanIndexTransition({ summary26244Present: false })).toEqual({
+      planCount: 40,
       summaryCount: 35,
-      incomplete: ["262-43"],
+      incomplete: ["262-44", "262-45", "262-46", "262-47", "262-48"],
     })
-    expect(() => evaluateV138PhasePlanIndexTransition({ summary26242Present: false, waiver: true } as never))
+    expect(evaluateV138PhasePlanIndexTransition({ summary26244Present: true })).toEqual({
+      planCount: 40,
+      summaryCount: 36,
+      incomplete: ["262-45", "262-46", "262-47", "262-48"],
+    })
+    expect(() => evaluateV138PhasePlanIndexTransition({ summary26244Present: false, waiver: true } as never))
       .toThrow("V138_PHASE_PLAN_INDEX_TRANSITION_INPUT_INVALID")
+  })
+
+  it("requires all active carriers to agree on the reduced assurance and denied authority", () => {
+    const valid = Object.fromEntries([
+      "activation", "requirements", "context", "roadmap", "summary", "research", "seed", "state",
+    ].map((name) => [name, [
+      "single_operator_local_seal_v1",
+      "named repository operator",
+      "no independent custody or separate permissioning claim",
+      "ADMIT-03 remains blocked",
+      "SEAL-01 remains pending",
+      "candidate search Phase 263 formation holdout opening public activation production remain unauthorized",
+    ].join("\n")]))
+    expect(analyzeV138LocalSealCarriers(valid)).toEqual([])
+
+    for (const missing of [
+      "single_operator_local_seal_v1",
+      "repository operator",
+      "independent custody",
+      "ADMIT-03",
+      "SEAL-01",
+      "Phase 263",
+      "production",
+    ]) {
+      const mutated = { ...valid, activation: valid.activation!.replace(missing, "removed") }
+      expect(analyzeV138LocalSealCarriers(mutated).map((finding) => finding.code))
+        .toContain("LOCAL_SEAL_CONTRACT_DRIFT")
+    }
   })
 
   it("detects seeded protected-history edits and deletions", () => {
