@@ -507,6 +507,8 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
     ])
     expect(new Set(V138_PLAN_262_57_FRESH_DESTINATIONS).size)
       .toBe(V138_PLAN_262_57_FRESH_DESTINATIONS.length)
+    expect(V138_PLAN_262_57_ROUTE_CONTRACT.canonicalDestinations)
+      .toEqual(V138_PLAN_262_57_ROUTE_DESTINATIONS)
   })
 
   it("represents initial obstruction outside the terminal path", () => {

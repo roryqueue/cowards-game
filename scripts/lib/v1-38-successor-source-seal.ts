@@ -5683,7 +5683,7 @@ export const V138_PLAN_262_57_FRESH_DESTINATIONS = Object.freeze([
 ] as const)
 
 export const V138_PLAN_262_54_SOURCE_BASE7 =
-  "04960b164ba0ace2ca052d636a2fa1fbc8f6a6af" as const
+  "7c6e23f9e3c856198560093152df61f8ab614222" as const
 export const V138_PLAN_262_54_SOURCE_PATHS = Object.freeze([
   "scripts/evaluate-v1-38-successor-route.test.ts",
   "scripts/evaluate-v1-38-successor-source-complete.test.ts",
@@ -5777,17 +5777,18 @@ export const inspectV138SourceIdentityA7 = (repoRoot: string,
 const V138_PLAN_262_55_REVIEW_KEYS = Object.freeze([
   "schemaVersion", "plan", "a7", "a7Tree", "a7Parent", "sourceBase7",
   "sourceRangeCommits", "sourcePaths", "implementationAuthorRun",
-  "reviewerAgentRun", "reviewerSeparated", "findingCount",
+  "reviewerProtocol", "reviewerIdentityDomain", "findingCount",
   "sourceCompletenessPassed", "reviewRoot",
 ] as const)
 
+export const V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN =
+  "plan-262-55.review.cowards.invalid" as const
+export const V138_PLAN_262_55_REVIEWER_PROTOCOL =
+  "git-commit-authorship-and-reviewer-run-trailer-v1" as const
+
 export const buildV138Plan26255ReviewDocument = (repoRoot: string,
-  sourceA7: string, reviewerAgentRun: string) => {
+  sourceA7: string) => {
   const source = inspectV138SourceIdentityA7(repoRoot, sourceA7)
-  if (reviewerAgentRun.length === 0 ||
-    reviewerAgentRun === source.implementationAuthorRun) {
-    fail("V138_PLAN_262_55_REVIEWER_SEPARATION_INVALID")
-  }
   const body = { schemaVersion: V138_PLAN_262_55_REVIEW_SCHEMA,
     plan: "262-55" as const, a7: source.sourceA7,
     a7Tree: source.reviewedSourceTree,
@@ -5796,7 +5797,8 @@ export const buildV138Plan26255ReviewDocument = (repoRoot: string,
     sourceRangeCommits: source.sourceRangeCommits,
     sourcePaths: V138_PLAN_262_54_SOURCE_PATHS,
     implementationAuthorRun: source.implementationAuthorRun,
-    reviewerAgentRun, reviewerSeparated: true as const,
+    reviewerProtocol: V138_PLAN_262_55_REVIEWER_PROTOCOL,
+    reviewerIdentityDomain: V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN,
     findingCount: 0 as const, sourceCompletenessPassed: true as const }
   return Object.freeze({ ...body, reviewRoot: identityRoot("evidenceBundle",
     V138_PLAN_262_55_REVIEW_SCHEMA, body) })
@@ -5818,10 +5820,9 @@ const checkV138Plan26255ReviewDocument = (value: unknown,
     canonical(value.sourcePaths) !==
       canonical(V138_PLAN_262_54_SOURCE_PATHS) ||
     value.implementationAuthorRun !== source.implementationAuthorRun ||
-    typeof value.reviewerAgentRun !== "string" ||
-    value.reviewerAgentRun.length === 0 ||
-    value.reviewerAgentRun === source.implementationAuthorRun ||
-    value.reviewerSeparated !== true || value.findingCount !== 0 ||
+    value.reviewerProtocol !== V138_PLAN_262_55_REVIEWER_PROTOCOL ||
+    value.reviewerIdentityDomain !== V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN ||
+    value.findingCount !== 0 ||
     value.sourceCompletenessPassed !== true || reviewRoot !== identityRoot(
       "evidenceBundle", V138_PLAN_262_55_REVIEW_SCHEMA, body)) {
     fail("V138_PLAN_262_55_REVIEW_INVALID")
@@ -5854,6 +5855,28 @@ const deriveV138Plan26255Review = (repoRoot: string, sourceA7: string) => {
   const candidate = candidates[0]!
   const parents = gitText(repoRoot, ["show", "-s", "--format=%P",
     candidate.reviewCommit]).split(" ").filter(Boolean)
+  const changedPaths = sorted(gitText(repoRoot, ["diff-tree",
+    "--no-commit-id", "--name-only", "-r", "--no-renames",
+    candidate.reviewCommit]).split("\n").filter(Boolean).map(normalize))
+  const [reviewerName = "", reviewerEmail = ""] = gitText(repoRoot,
+    ["show", "-s", "--format=%an%n%ae", candidate.reviewCommit]).split("\n")
+  const reviewerRuns = gitText(repoRoot, ["show", "-s",
+    "--format=%(trailers:key=Plan-262-55-Reviewer-Run,valueonly)",
+    candidate.reviewCommit]).split("\n").map((entry) => entry.trim())
+    .filter(Boolean)
+  const implementationAuthors = new Set(source.sourceRangeCommits.map(
+    (commit) => gitText(repoRoot, ["show", "-s", "--format=%an%x00%ae",
+      commit])))
+  const reviewerIdentity = `${reviewerName}\0${reviewerEmail}`
+  if (parents.length !== 1 || parents[0] !== source.sourceA7 ||
+    canonical(changedPaths) !== canonical([
+      V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview]) ||
+    reviewerRuns.length !== 1 || reviewerRuns[0] ===
+      source.implementationAuthorRun || implementationAuthors.has(
+        reviewerIdentity) || !reviewerEmail.endsWith(
+          `@${V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN}`)) {
+    fail("V138_PLAN_262_55_REVIEWER_SEPARATION_INVALID")
+  }
   const result = Object.freeze({ path:
     V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview,
     reviewCommit: candidate.reviewCommit,
@@ -5863,8 +5886,11 @@ const deriveV138Plan26255Review = (repoRoot: string, sourceA7: string) => {
     blobOid: gitText(repoRoot, ["rev-parse",
       `${candidate.reviewCommit}:${V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview}`]),
     sha256: sha256(candidate.bytes), reviewRoot:
-      candidate.document.reviewRoot, reviewerAgentRun:
-      candidate.document.reviewerAgentRun, document: candidate.document })
+      candidate.document.reviewRoot, reviewerIdentity: Object.freeze({
+        name: reviewerName, email: reviewerEmail,
+        domain: V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN,
+        reviewerRun: reviewerRuns[0]!, protocol:
+          V138_PLAN_262_55_REVIEWER_PROTOCOL }), document: candidate.document })
   v138Plan26255ReviewCache.set(cacheKey, result)
   return result
 }
@@ -5985,10 +6011,45 @@ export const checkV138Plan26256AuthorizationV7 = (repoRoot: string,
   return expected
 }
 
-export const buildV138SuccessorSourceSealV7 = (repoRoot: string,
-  authorizationValue: unknown) => {
-  const authorization = checkV138Plan26256AuthorizationV7(repoRoot,
-    authorizationValue)
+export type V138SuccessorSealV7ObservationException =
+  "toolIdentity" | "protectedHistory" | "formationAbsence"
+
+export const checkV138Plan26256AuthorizationV7Except = (repoRoot: string,
+  value: unknown, except: V138SuccessorSealV7ObservationException) => {
+  if (!isRecord(value) || !exactKeys(value, V138_PLAN_262_56_AUTHORIZATION_KEYS)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_SCHEMA_INVALID")
+  }
+  const candidate = value as Record<string, unknown>
+  const { authorizationRoot, ...body } = candidate
+  if (authorizationRoot !== identityRoot("evidenceBundle",
+      V138_PLAN_262_56_AUTHORIZATION_SCHEMA, body) ||
+    typeof candidate.reviewedSourceCommit !== "string") {
+    fail("V138_PLAN_262_56_AUTHORIZATION_INVALID")
+  }
+  const review = deriveV138Plan26255Review(repoRoot,
+    candidate.reviewedSourceCommit)
+  const literal = Buffer.from(v138Plan26256AuthorizationLiteral(repoRoot,
+    candidate.reviewedSourceCommit, review.document), "utf8")
+  const expected = buildV138Plan26256AuthorizationV7({ repoRoot,
+    sourceA7: candidate.reviewedSourceCommit, review: review.document,
+    literalBytes: literal }) as unknown as Record<string, unknown>
+  const omitted = new Set<string>([except, "authorizationRoot"])
+  if (except === "protectedHistory") {
+    omitted.add("protectedHistoryRoot")
+    omitted.add("cumulativeChargedPublicAttemptIds")
+    omitted.add("priorAuthorizationBytes")
+    omitted.add("literalSha256")
+  }
+  const stable = (record: Record<string, unknown>) => Object.fromEntries(
+    Object.entries(record).filter(([key]) => !omitted.has(key)))
+  if (canonical(stable(candidate)) !== canonical(stable(expected))) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_INVALID")
+  }
+  return Object.freeze(candidate)
+}
+
+const buildV138SuccessorSourceSealV7FromAuthorization = (
+  authorization: Record<string, unknown>) => {
   const body = { schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
     routeOrdinal: 7 as const,
     sealedSourceCommit: authorization.reviewedSourceCommit,
@@ -6010,10 +6071,22 @@ export const buildV138SuccessorSourceSealV7 = (repoRoot: string,
     body.schemaVersion, body) })
 }
 
+export const buildV138SuccessorSourceSealV7 = (repoRoot: string,
+  authorizationValue: unknown) => {
+  const authorization = checkV138Plan26256AuthorizationV7(repoRoot,
+    authorizationValue) as unknown as Record<string, unknown>
+  return buildV138SuccessorSourceSealV7FromAuthorization(authorization)
+}
+
 export const checkV138SuccessorSourceSealV7 = (repoRoot: string,
-  value: unknown, authorizationValue: unknown, _except?: unknown) => {
-  const expected = buildV138SuccessorSourceSealV7(repoRoot,
-    authorizationValue)
+  value: unknown, authorizationValue: unknown,
+  except?: V138SuccessorSealV7ObservationException) => {
+  const authorization = except === undefined ?
+    checkV138Plan26256AuthorizationV7(repoRoot, authorizationValue) :
+    checkV138Plan26256AuthorizationV7Except(repoRoot, authorizationValue,
+      except)
+  const expected = buildV138SuccessorSourceSealV7FromAuthorization(
+    authorization as unknown as Record<string, unknown>)
   if (canonical(value) !== canonical(expected)) {
     fail("V138_SUCCESSOR_SEAL_V7_INVALID")
   }
@@ -6069,6 +6142,7 @@ export const checkV138SuccessorSealCommitV7 = (input: {
   readonly authorizationValue: unknown
   readonly sealValue: unknown
   readonly allowPlan26257Artifacts?: true
+  readonly observationException?: V138SuccessorSealV7ObservationException
 }) => {
   const sourceA7 = fullCommit(input.repoRoot, input.sourceA7)
   const sourceB7 = fullCommit(input.repoRoot, input.sourceB7)
@@ -6091,10 +6165,15 @@ export const checkV138SuccessorSealCommitV7 = (input: {
     V138_PLAN_262_56_CANONICAL_PATHS.authorization)
   const sealBytes = readCommitFile(input.repoRoot, sourceB7,
     V138_PLAN_262_56_CANONICAL_PATHS.seal)
-  const authorization = checkV138Plan26256AuthorizationV7(input.repoRoot,
-    JSON.parse(authorizationBytes.toString("utf8")))
+  const authorization = input.observationException === undefined ?
+    checkV138Plan26256AuthorizationV7(input.repoRoot,
+      JSON.parse(authorizationBytes.toString("utf8"))) :
+    checkV138Plan26256AuthorizationV7Except(input.repoRoot,
+      JSON.parse(authorizationBytes.toString("utf8")),
+      input.observationException)
   const seal = checkV138SuccessorSourceSealV7(input.repoRoot,
-    JSON.parse(sealBytes.toString("utf8")), authorization)
+    JSON.parse(sealBytes.toString("utf8")), authorization,
+    input.observationException)
   if (!authorizationBytes.equals(Buffer.from(canonical(authorization), "utf8")) ||
     !sealBytes.equals(Buffer.from(canonical(seal), "utf8")) ||
     canonical(input.authorizationValue) !== canonical(authorization) ||
@@ -6139,6 +6218,7 @@ const inspectV138SuccessorSealCommitV7AnchorInternal = (input: {
   readonly repoRoot: string
   readonly sourceA7: string
   readonly sourceB7: string
+  readonly observationException?: V138SuccessorSealV7ObservationException
 }) => {
   const authorization = JSON.parse(readCommitFile(input.repoRoot,
     input.sourceB7, V138_PLAN_262_56_CANONICAL_PATHS.authorization)
@@ -6147,7 +6227,8 @@ const inspectV138SuccessorSealCommitV7AnchorInternal = (input: {
     V138_PLAN_262_56_CANONICAL_PATHS.seal).toString("utf8"))
   const custody = checkV138SuccessorSealCommitV7({ ...input,
     authorizationValue: authorization, sealValue: seal,
-    allowPlan26257Artifacts: true })
+    allowPlan26257Artifacts: true,
+    observationException: input.observationException })
   return Object.freeze({ sourceA7: custody.sourceA7,
     sourceB7: custody.sourceB7, authorization, seal,
     anchorRoot: custody.custodyRoot })
