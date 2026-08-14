@@ -317,6 +317,26 @@ const correctiveRequirementDispositionFindings = (repoRoot: string):
   }))
 }
 
+const correctiveLifecycleCarrierFindings = (repoRoot: string):
+  readonly V138DependencyRevisionFinding[] => {
+  const post53 = existsSync(path.join(repoRoot, phaseDirectory,
+    "262-53-SUMMARY.md"))
+  const expected = post53
+    ? ['"next_action":"262-54"', '"completed_plans":41',
+      '"incomplete":["262-54","262-55","262-56","262-57","262-48"]']
+    : ['"next_action":"262-53"', '"completed_plans":40',
+      '"incomplete":["262-53","262-54","262-55","262-56","262-57","262-48"]']
+  return [".planning/ROADMAP.md", ".planning/STATE.md"].flatMap((repoPath) => {
+    const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
+    return expected.filter((token) => !source.includes(token)).map((token) => ({
+      code: "PLAN_DISCOVERY_DRIFT" as const,
+      path: repoPath,
+      line: 1,
+      detail: `Corrective lifecycle carrier is missing ${token}.`,
+    }))
+  })
+}
+
 export const analyzeV138ProtectedHistory = (
   repoRoot: string,
   entries: readonly Readonly<{ path: string; sha256: Sha256 }>[],
@@ -862,6 +882,7 @@ export const checkV138DependencyRevisionBoundaries = (
       [".planning/STATE.md"],
     ].map(([repoPath]) => [repoPath, readFileSync(path.join(repoRoot, repoPath), "utf8")]))),
     ...correctiveRequirementDispositionFindings(repoRoot),
+    ...correctiveLifecycleCarrierFindings(repoRoot),
     ...planDiscoveryFindings(repoRoot),
   ]
   const expectedManifest = renderV138PlanSupersessionManifest()
