@@ -1,8 +1,14 @@
 import { execFileSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
+import { Buffer } from "node:buffer"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import {
+  encodeCanonicalJson,
+  hashCanonicalIdentity,
+  type JsonValue,
+} from "@cowards/spec"
 import {
   V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH,
   V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_SCHEMA,
@@ -15,6 +21,7 @@ import {
   checkV138Plan26247AuthorizationV6,
   inspectV138SourceIdentityA6,
   v138Plan26247AuthorizationLiteral,
+  writeV138Plan26247PreExecutionSourceFailureV1,
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_PLAN_262_47_ROUTE_CONTRACT,
@@ -23,6 +30,21 @@ import {
 } from "./lib/v1-38-current-matrix-reproduction.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+
+const sha256Zero = `sha256:${"0".repeat(64)}`
+const mutableClone = (value: unknown): Record<string, any> =>
+  JSON.parse(JSON.stringify(value)) as Record<string, any>
+const recomputeDispositionRoot = (value: Record<string, any>): string => {
+  const { dispositionRoot: _discarded, ...body } = value
+  const encoded = encodeCanonicalJson(body as JsonValue, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new TypeError("TEST_CANONICAL_INVALID")
+  return `sha256:${hashCanonicalIdentity("evidenceBundle", [
+    Buffer.from(body.schemaVersion as string, "utf8"),
+    encoded.bytes,
+  ])}`
+}
 
 describe("v1.38 Plan 262-47 fresh successor route", () => {
   it("records the sealed source-incomplete branch without inventing route history", () => {
@@ -70,7 +92,7 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
 
   it("fails closed when any disposition identity, absence, count, or authority changes", () => {
     const disposition = buildV138Plan26247PreExecutionSourceFailureV1(repoRoot)
-    const mutations = [
+    const mutations: unknown[] = [
       { ...disposition, reason: "route_failed" },
       { ...disposition, sourceA6: "0".repeat(40) },
       { ...disposition, sourceB6: "0".repeat(40) },
@@ -92,10 +114,78 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
       { ...disposition, activationAuthorized: true },
       { ...disposition, productionAuthorized: true },
     ]
+    const nestedMutations: Array<(value: Record<string, any>) => void> = [
+      (value) => { value.sourceCustody.sourceA6Tree = "0".repeat(40) },
+      (value) => { value.sourceCustody.sourceA6Parents = [] },
+      (value) => { value.sourceCustody.sourceA6Blobs[0].sha256 = sha256Zero },
+      (value) => { value.sourceCustody.sourceB6Tree = "0".repeat(40) },
+      (value) => { value.sourceCustody.sourceB6Parent = "0".repeat(40) },
+      (value) => { value.sourceCustody.sourceB6ChangedPaths = [] },
+      (value) => { value.sourceCustody.sourceB6Blobs[0].blobOid = "0".repeat(40) },
+      (value) => { value.authorizationBytesSha256 = sha256Zero },
+      (value) => { value.sealBytesSha256 = sha256Zero },
+      (value) => { value.sourceReview.path = "forged-review.md" },
+      (value) => { value.sourceReview.sha256 = sha256Zero },
+      (value) => { value.sourceReview.historicalVerdict = "PASS" },
+      (value) => { value.sourceReview.historicalBytesPreserved = false },
+      (value) => { value.sourceReview.establishesCliSourceCompleteness = true },
+      ...Object.keys(disposition.protectedRoots).map((key) =>
+        (value: Record<string, any>) => { value.protectedRoots[key] = sha256Zero }),
+      (value) => { value.historicalChargedPublicAttemptIds[0] = "forged" },
+      (value) => { value.historicalChargedPublicAttemptIds[1] =
+        value.historicalChargedPublicAttemptIds[0] },
+      (value) => { value.historicalChargedPublicAttemptIds.pop() },
+      (value) => { value.historicalChargedAttemptCount = 39 },
+      (value) => { value.freshAttemptLedgerRoot = sha256Zero },
+      (value) => { value.freshAcceptedCellLedgerRoot = sha256Zero },
+      (value) => { value.requiredAcceptedCellCount = 539 },
+      (value) => { value.seal01Status = "passed" },
+      (value) => { value.assuranceClass = "independent_custody" },
+      (value) => { value.independentCustodyClaimed = true },
+      (value) => { value.dispositionRoot = sha256Zero },
+      (value) => { value.unexpectedAuthority = true },
+      (value) => { delete value.protectedRoots },
+      (value) => {
+        value.sourceReview.sha256 = sha256Zero
+        value.dispositionRoot = recomputeDispositionRoot(value)
+      },
+    ]
+    for (const mutate of nestedMutations) {
+      const mutation = mutableClone(disposition)
+      mutate(mutation)
+      mutations.push(mutation)
+    }
     for (const mutation of mutations) {
       expect(() => checkV138Plan26247PreExecutionSourceFailureV1(repoRoot,
         mutation)).toThrow("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_INVALID")
     }
+  }, 120_000)
+
+  it("checks canonical serialized bytes through the CLI and never overwrites the artifact", () => {
+    const artifactPath = path.resolve(repoRoot,
+      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH)
+    const before = readFileSync(artifactPath)
+    const disposition = buildV138Plan26247PreExecutionSourceFailureV1(repoRoot)
+    const encoded = encodeCanonicalJson(disposition as JsonValue, {
+      context: "canonical-manifest",
+    })
+    if (!encoded.ok) throw new TypeError("TEST_CANONICAL_INVALID")
+    expect(before).toEqual(Buffer.concat([Buffer.from(encoded.bytes),
+      Buffer.from("\n", "utf8")]))
+    const output = execFileSync("pnpm", ["exec", "tsx",
+      "scripts/lib/v1-38-successor-source-seal.ts",
+      "--check-plan-262-47-pre-execution-source-failure-v1"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      timeout: 120_000,
+    })
+    expect(JSON.parse(output)).toMatchObject({
+      dispositionRoot: disposition.dispositionRoot,
+      reason: "sealed_source_incomplete",
+    })
+    expect(() => writeV138Plan26247PreExecutionSourceFailureV1(repoRoot,
+      artifactPath)).toThrow()
+    expect(readFileSync(artifactPath)).toEqual(before)
   }, 120_000)
 
   it("freezes isolated v6/v10/v11 schemas and exclusive destinations", () => {
