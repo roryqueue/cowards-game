@@ -4,8 +4,10 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs"
 import { Buffer } from "node:buffer"
@@ -39,8 +41,10 @@ import {
   checkV138Plan26247SyntheticRoute,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import {
+  V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256,
   analyzeV138PolicySourcesWithFrozenRouteAllowlist,
   checkV138ExactMachineStatus,
+  collectV138ChangedPolicySources,
 } from "./check-v1-38-dependency-revision-boundaries.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -271,15 +275,18 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
   })
 
   it("denies drift and scans future authority or live work in both route-capable modules", () => {
-    for (const repoPath of [
-      "scripts/lib/v1-38-current-matrix-reproduction.ts",
-      "scripts/lib/v1-38-successor-source-seal.ts",
-    ]) {
-      const source = readFileSync(path.resolve(repoRoot, repoPath), "utf8")
-      expect(analyzeV138PolicySourcesWithFrozenRouteAllowlist({
-        [repoPath]: source,
-      })).toEqual([])
+    const frozenSources = Object.fromEntries(
+      Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256).map((repoPath) => [
+        repoPath,
+        readFileSync(path.resolve(repoRoot, repoPath), "utf8"),
+      ]),
+    )
+    expect(analyzeV138PolicySourcesWithFrozenRouteAllowlist(frozenSources))
+      .toEqual([])
+    for (const repoPath of Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)) {
+      const source = frozenSources[repoPath]!
       const findings = analyzeV138PolicySourcesWithFrozenRouteAllowlist({
+        ...frozenSources,
         [repoPath]: `${source}\nexport const writeFutureAuthorityRoute = () => {
           executeV138ParallelMatrix()
         }\n`,
@@ -293,6 +300,83 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
       )
     }
   })
+
+  it("requires the frozen route-capable inventory through deletion, rename, and inventory tamper", () => {
+    expect(Object.isFrozen(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)).toBe(true)
+    expect(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256).toEqual({
+      "scripts/lib/v1-38-current-matrix-reproduction.ts":
+        "sha256:23353f5f94d97f1bf2786831f961549e19dec4518cfeb0839cf2c5a67c729f05",
+      "scripts/lib/v1-38-successor-source-seal.ts":
+        "sha256:f91eb5173a7731b0c4425fdc56b4c697a48022ed3d6f5b44cbb78325cd7cf5ce",
+    })
+
+    const canonicalCollection = collectV138ChangedPolicySources(repoRoot)
+    expect(canonicalCollection.findings).toEqual([])
+    for (const repoPath of Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)) {
+      expect(canonicalCollection.sources).toHaveProperty(repoPath)
+      const tamperedInventory = { ...canonicalCollection.sources }
+      delete tamperedInventory[repoPath]
+      expect(analyzeV138PolicySourcesWithFrozenRouteAllowlist(tamperedInventory))
+        .toContainEqual({
+          code: "ROUTE_CAPABLE_SOURCE_DRIFT",
+          path: repoPath,
+          line: 1,
+          detail:
+            "V138_ROUTE_CAPABLE_SOURCE_INVENTORY_REQUIRED: required frozen route-capable source is absent from the policy source inventory.",
+        })
+    }
+
+    const fixtureParent = mkdtempSync(path.join(tmpdir(),
+      "v138-route-capable-inventory-"))
+    const fixtureRoot = path.join(fixtureParent, "repository")
+    execFileSync("git", ["clone", "--shared", "--quiet", repoRoot,
+      fixtureRoot], { timeout: 120_000 })
+    try {
+      for (const repoPath of Object.keys(
+        V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)) {
+        const target = path.join(fixtureRoot, repoPath)
+        const renamed = `${target}.renamed`
+        const expectCollectionFailure = (reason: string) => {
+          expect(collectV138ChangedPolicySources(fixtureRoot).findings)
+            .toContainEqual({
+              code: "ROUTE_CAPABLE_SOURCE_DRIFT",
+              path: repoPath,
+              line: 1,
+              detail: `${reason}: required frozen route-capable source could not be read as its canonical regular file.`,
+            })
+        }
+
+        unlinkSync(target)
+        expectCollectionFailure("V138_PLAN_262_15_ARTIFACT_REQUIRED")
+        execFileSync("git", ["checkout", "--", repoPath], {
+          cwd: fixtureRoot,
+        })
+
+        renameSync(target, renamed)
+        expectCollectionFailure("V138_PLAN_262_15_ARTIFACT_REQUIRED")
+        renameSync(renamed, target)
+
+        unlinkSync(target)
+        mkdirSync(target)
+        expectCollectionFailure("V138_PLAN_262_15_ARTIFACT_TYPE_INVALID")
+        rmSync(target, { recursive: true })
+        execFileSync("git", ["checkout", "--", repoPath], {
+          cwd: fixtureRoot,
+        })
+
+        unlinkSync(target)
+        symlinkSync(path.join(fixtureRoot,
+          "scripts/lib/v1-38-darwin-headroom.ts"), target, "file")
+        expectCollectionFailure("V138_PLAN_262_15_ARTIFACT_TYPE_INVALID")
+        unlinkSync(target)
+        execFileSync("git", ["checkout", "--", repoPath], {
+          cwd: fixtureRoot,
+        })
+      }
+    } finally {
+      rmSync(fixtureParent, { recursive: true, force: true })
+    }
+  }, 120_000)
 
   it("freezes isolated v6/v10/v11 schemas and exclusive destinations", () => {
     expect(V138_PLAN_262_47_AUTHORIZATION_SCHEMA)

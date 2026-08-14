@@ -639,7 +639,7 @@ export const analyzeV138DependencyRevisionSources = (
   return findings.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line || a.code.localeCompare(b.code))
 }
 
-const frozenRouteCapableSourceSha256 = Object.freeze({
+export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256 = Object.freeze({
   "scripts/lib/v1-38-current-matrix-reproduction.ts":
     "sha256:23353f5f94d97f1bf2786831f961549e19dec4518cfeb0839cf2c5a67c729f05" as Sha256,
   "scripts/lib/v1-38-successor-source-seal.ts":
@@ -651,9 +651,19 @@ export const analyzeV138PolicySourcesWithFrozenRouteAllowlist = (
 ): readonly V138DependencyRevisionFinding[] => {
   const ordinary: Record<string, string> = {}
   const findings: V138DependencyRevisionFinding[] = []
+  for (const repoPath of Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)) {
+    if (Object.hasOwn(sources, repoPath)) continue
+    findings.push({
+      code: "ROUTE_CAPABLE_SOURCE_DRIFT",
+      path: repoPath,
+      line: 1,
+      detail:
+        "V138_ROUTE_CAPABLE_SOURCE_INVENTORY_REQUIRED: required frozen route-capable source is absent from the policy source inventory.",
+    })
+  }
   for (const [repoPath, source] of Object.entries(sources)) {
-    const frozenHash = frozenRouteCapableSourceSha256[
-      repoPath as keyof typeof frozenRouteCapableSourceSha256
+    const frozenHash = V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256[
+      repoPath as keyof typeof V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256
     ]
     if (frozenHash === undefined) {
       ordinary[repoPath] = source
@@ -718,17 +728,50 @@ const protectedInventory = (
   }))
 }
 
-const changedPolicySources = (repoRoot: string): Readonly<Record<string, string>> => {
-  const names = new Set(changedPaths(repoRoot).filter((repoPath) => repoPath.startsWith("scripts/")))
+interface V138PolicySourceCollection {
+  readonly sources: Readonly<Record<string, string>>
+  readonly findings: readonly V138DependencyRevisionFinding[]
+}
+
+const exactFailureReason = (error: unknown): string =>
+  error instanceof Error && error.message.length > 0
+    ? error.message
+    : "V138_ROUTE_CAPABLE_SOURCE_READ_FAILED"
+
+export const collectV138ChangedPolicySources = (
+  repoRoot: string,
+): Readonly<V138PolicySourceCollection> => {
+  const requiredPaths = Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)
+  const names = new Set([
+    ...requiredPaths,
+    ...changedPaths(repoRoot).filter((repoPath) => repoPath.startsWith("scripts/")),
+  ])
   const sources: Record<string, string> = {}
+  const findings: V138DependencyRevisionFinding[] = []
   for (const repoPath of [...names].sort()) {
     if (!repoPath.endsWith(".ts") || repoPath.endsWith(".test.ts") ||
       repoPath === "scripts/check-v1-38-dependency-revision-boundaries.ts") continue
     const target = path.join(repoRoot, repoPath)
-    const bytes = readV138RepositoryFileNoFollow(repoRoot, target, "optional")
-    if (bytes !== undefined) sources[repoPath] = bytes.toString("utf8")
+    const required = Object.hasOwn(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256,
+      repoPath)
+    try {
+      const bytes = readV138RepositoryFileNoFollow(repoRoot, target,
+        required ? "required" : "optional")
+      if (bytes !== undefined) sources[repoPath] = bytes.toString("utf8")
+    } catch (error) {
+      if (!required) throw error
+      findings.push({
+        code: "ROUTE_CAPABLE_SOURCE_DRIFT",
+        path: repoPath,
+        line: 1,
+        detail: `${exactFailureReason(error)}: required frozen route-capable source could not be read as its canonical regular file.`,
+      })
+    }
   }
-  return sources
+  return Object.freeze({
+    sources: Object.freeze(sources),
+    findings: Object.freeze(findings),
+  })
 }
 
 const changedPaths = (repoRoot: string): readonly string[] => [...new Set([
@@ -988,7 +1031,12 @@ export const checkV138DependencyRevisionBoundaries = (
   repoRoot = defaultRepoRoot,
 ): V138DependencyRevisionBoundaryAnalysis => {
   const protectedEntries = protectedInventory(repoRoot)
-  const sources = changedPolicySources(repoRoot)
+  const policySourceCollection = collectV138ChangedPolicySources(repoRoot)
+  const sources = policySourceCollection.sources
+  const policyFindings = analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources)
+    .filter((finding) => !policySourceCollection.findings.some((collectionFinding) =>
+      collectionFinding.code === finding.code &&
+      collectionFinding.path === finding.path))
   const findings = [
     ...analyzeV138ProtectedHistory(repoRoot, protectedEntries),
     ...analyzeV138ProtectedHistory(repoRoot, [
@@ -1011,7 +1059,8 @@ export const checkV138DependencyRevisionBoundaries = (
         sha256: "sha256:5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641",
       },
     ]),
-    ...analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources),
+    ...policySourceCollection.findings,
+    ...policyFindings,
     ...analyzeV138DependencyRevisionPaths(changedPaths(repoRoot)),
     ...analyzeV138LocalSealCarriers(Object.fromEntries([
       [".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md"],
