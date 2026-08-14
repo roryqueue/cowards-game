@@ -27,6 +27,11 @@ import {
   V138_PLAN_262_47_CANONICAL_PATHS,
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA,
+  V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+  V138_PLAN_262_57_FRESH_DESTINATIONS,
+  V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+  V138_PLAN_262_57_ROUTE_DESTINATIONS,
+  V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
   buildV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
@@ -37,6 +42,10 @@ import {
 } from "./lib/v1-38-successor-source-seal.js"
 import {
   V138_PLAN_262_47_ROUTE_CONTRACT,
+  V138_PLAN_262_57_ROUTE_CONTRACT,
+  buildV138Plan26257PreStartObstructionV1,
+  checkV138Plan26257PreStartObstructionV1,
+  checkV138Plan26257RouteContract,
   checkV138Plan26247RouteContract,
   checkV138Plan26247SyntheticRoute,
 } from "./lib/v1-38-current-matrix-reproduction.js"
@@ -275,10 +284,12 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
   })
 
   it("denies drift and scans future authority or live work in both route-capable modules", () => {
+    const frozenCommit = "b975f1abc958ed31d144a39fe7f765d2790e8b10"
     const frozenSources = Object.fromEntries(
       Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256).map((repoPath) => [
         repoPath,
-        readFileSync(path.resolve(repoRoot, repoPath), "utf8"),
+        execFileSync("git", ["show", `${frozenCommit}:${repoPath}`], {
+          cwd: repoRoot, encoding: "utf8" }),
       ]),
     )
     expect(analyzeV138PolicySourcesWithFrozenRouteAllowlist(frozenSources))
@@ -473,5 +484,41 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
     expect(() => checkV138Plan26247SyntheticRoute({ calibration, cells: [
       ...cells.slice(0, 539), { ...cells[539]!, privacyViolation: true },
     ] })).toThrow("MATRIX_PLAN_262_47_REPRODUCTION_INVALID")
+  })
+})
+
+describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
+  it("keeps v7 authority, v11/v12 execution, and fresh destinations exclusive", () => {
+    expect(checkV138Plan26257RouteContract()).toBe(
+      V138_PLAN_262_57_ROUTE_CONTRACT)
+    expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({ routeOrdinal: 7,
+      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+      executionContextSchema: "v1.38-current-matrix-execution-context-v11",
+      preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
+      calibrationSchema: "v1.38-current-matrix-calibration-v11",
+      reproductionSchema: "v1.38-current-matrix-reproduction-v12",
+      reproductionCellCount: 540, noRetry: true })
+    expect(V138_PLAN_262_57_FRESH_DESTINATIONS).toEqual([
+      ...V138_PLAN_262_57_ROUTE_DESTINATIONS,
+      V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+    ])
+    expect(new Set(V138_PLAN_262_57_FRESH_DESTINATIONS).size)
+      .toBe(V138_PLAN_262_57_FRESH_DESTINATIONS.length)
+  })
+
+  it("represents initial obstruction outside the terminal path", () => {
+    const root = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    const disposition = buildV138Plan26257PreStartObstructionV1({
+      path: V138_PLAN_262_57_ROUTE_DESTINATIONS[0]!, type: "file",
+      metadataRoot: root, authorizationRoot: root, sealRoot: root })
+    expect(checkV138Plan26257PreStartObstructionV1(disposition))
+      .toEqual(disposition)
+    expect(disposition).toMatchObject({ routeStarted: false,
+      isRouteTerminal: false, chargedAttemptCount: 0, acceptedCellCount: 0,
+      authorityExpired: true, satisfiesAdmit03: false })
+    expect(() => checkV138Plan26257PreStartObstructionV1({ ...disposition,
+      routeStarted: true })).toThrow(
+        "MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
   })
 })

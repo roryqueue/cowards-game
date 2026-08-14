@@ -112,6 +112,13 @@ import {
   checkV138SuccessorSealCommitV5,
   checkV138SuccessorSourceSealV5,
   checkV138SuccessorSourceSealV5Except,
+  checkV138Plan26256AuthorizationV7,
+  checkV138SuccessorSealCommitV7,
+  checkV138SuccessorSourceSealV7,
+  checkV138SealedWorktreeAtA7,
+  deriveV138ProtectedHistoryV7,
+  inspectV138SuccessorSealCommitV7Anchor,
+  inspectV138ProtectedHistoryFailureSealCommitV7Anchor,
   inspectV138SuccessorSealCommitV5Anchor,
   inspectV138ProtectedHistoryFailureSealCommitV5Anchor,
   deriveV138ToolIdentityRoot,
@@ -126,6 +133,11 @@ import {
   V138_PLAN_262_25_FRESH_DESTINATIONS,
   V138_PLAN_262_29_CANONICAL_PATHS,
   V138_PLAN_262_30_FRESH_DESTINATIONS,
+  V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+  V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+  V138_PLAN_262_56_CANONICAL_PATHS,
+  V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+  V138_PLAN_262_57_ROUTE_DESTINATIONS,
   V138_PLAN_262_24_AUTHORIZATION_SCHEMA,
   V138_SUCCESSOR_SOURCE_SEAL_V4_SCHEMA,
   V138_PLAN_262_29_AUTHORIZATION_SCHEMA,
@@ -13119,8 +13131,18 @@ export const writeV138Plan26216Terminal = (
   return terminal
 }
 
-const V138_RECEIPT_DIRECT_COMMANDS = Object.freeze(
+export const V138_RECEIPT_DIRECT_COMMANDS = Object.freeze(
   new Set([
+  "--check-plan-262-57-pre-execution-readiness-v1",
+  "--resolve-plan-262-57-pre-start-v1",
+  "--check-plan-262-57-pre-start-obstruction-v1",
+  "--write-execution-context-v11-receipt",
+  "--write-plan-262-57-route-start-v1",
+  "--write-headroom-preflight-v11-receipt",
+  "--calibrate-parallel-v11-receipt",
+  "--write-authoritative-v12-receipt",
+  "--write-plan-262-57-terminal-v1",
+  "--check-plan-262-57-terminal-v1",
   "--write-execution-context-v9-receipt",
   "--write-headroom-preflight-v9-receipt",
   "--calibrate-parallel-v9-receipt",
@@ -15215,13 +15237,159 @@ export const dispatchV138CurrentMatrixDirectEntry = async <T>(
   throw new TypeError("MATRIX_RECEIPT_CLI_COMMAND_INVALID")
 }
 
-const runReceiptCli = async (): Promise<void> => {
-  if (process.argv[1] !== fileURLToPath(import.meta.url)) return
-  const command = process.argv[2]
-  const repoRoot = path.resolve(
+export interface V138ReceiptCliDependencies {
+  readonly argv?: readonly string[]
+  readonly repoRoot?: string
+  readonly observeHeadroom?: () => Promise<V138DarwinHeadroomResult>
+  readonly calibrate?: typeof calibrateV138ParallelMatrix
+  readonly executeMatrix?: typeof executeV138ParallelMatrix
+  readonly writeOutput?: (value: string) => void
+}
+
+export const runReceiptCli = async (
+  dependencies: V138ReceiptCliDependencies = {},
+): Promise<void> => {
+  const argv = dependencies.argv ?? process.argv
+  if (dependencies.argv === undefined &&
+    argv[1] !== fileURLToPath(import.meta.url)) return
+  const command = argv[2]
+  const repoRoot = dependencies.repoRoot ?? path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../..",
   )
+  const output = dependencies.writeOutput ?? ((value: string) =>
+    process.stdout.write(value))
+  if (["--check-plan-262-57-pre-execution-readiness-v1",
+    "--resolve-plan-262-57-pre-start-v1",
+    "--check-plan-262-57-pre-start-obstruction-v1"].includes(
+      String(command))) {
+    const write = command === "--resolve-plan-262-57-pre-start-v1"
+    const args = [...argv.slice(3)]
+    const target = write ? args.shift() : undefined
+    const flags = new Map<string, string>()
+    while (args.length > 0) {
+      const flag = args.shift(); const value = args.shift()
+      if (flag === undefined || value === undefined || flags.has(flag)) {
+        throw new TypeError("MATRIX_PLAN_262_57_PRE_START_CLI_ARGUMENTS_INVALID")
+      }
+      flags.set(flag, value)
+    }
+    const expected = new Set(["--authorization", "--seal", "--source-a7",
+      "--source-b7"])
+    if (write && (target === undefined || target === "") ||
+      flags.size !== expected.size ||
+      [...flags.keys()].some((flag) => !expected.has(flag))) {
+      throw new TypeError("MATRIX_PLAN_262_57_PRE_START_CLI_ARGUMENTS_INVALID")
+    }
+    const sourceA7 = flags.get("--source-a7")!
+    const sourceB7 = flags.get("--source-b7")!
+    const result = write ? writeV138Plan26257PreStartObstructionV1(repoRoot,
+      target!, flags.get("--authorization")!, flags.get("--seal")!,
+      sourceA7, sourceB7) : command ===
+        "--check-plan-262-57-pre-start-obstruction-v1" ?
+          checkV138Plan26257PreStartObstructionBranch(repoRoot, sourceA7,
+            sourceB7) : checkV138Plan26257PreExecutionReadinessV1(repoRoot,
+            sourceA7, sourceB7)
+    output(`${canonical(result)}\n`)
+    return
+  }
+  if (["--write-execution-context-v11-receipt",
+    "--write-plan-262-57-route-start-v1",
+    "--write-headroom-preflight-v11-receipt",
+    "--calibrate-parallel-v11-receipt",
+    "--write-authoritative-v12-receipt"].includes(String(command))) {
+    let result: Record<string, unknown>
+    if (command === "--write-execution-context-v11-receipt" ||
+      command === "--write-plan-262-57-route-start-v1") {
+      if (argv.length !== 18 || argv[4] !== "--mode" ||
+        argv[6] !== "--cwd" || argv[8] !== "--terminal-agent-registry-json" ||
+        argv[10] !== "--authorization" || argv[12] !== "--seal" ||
+        argv[14] !== "--source-a7" || argv[16] !== "--source-b7") {
+        throw new TypeError("MATRIX_PLAN_262_57_ROUTE_START_CLI_ARGUMENTS_INVALID")
+      }
+      result = writeV138Plan26257RouteStartV1(repoRoot, argv[3]!, argv[5]!,
+        argv[7]!, JSON.parse(argv[9]!), argv[11]!, argv[13]!, argv[15]!,
+        argv[17]!)
+    } else if (command === "--write-headroom-preflight-v11-receipt") {
+      if (argv.length !== 14 || argv[4] !== "--route-start" ||
+        argv[6] !== "--authorization" || argv[8] !== "--seal" ||
+        argv[10] !== "--source-a7" || argv[12] !== "--source-b7") {
+        throw new TypeError("MATRIX_PREFLIGHT_V11_CLI_ARGUMENTS_INVALID")
+      }
+      result = await writeV138HostHeadroomPreflightV11Receipt(repoRoot,
+        argv[3]!, argv[5]!, argv[7]!, argv[9]!, argv[11]!, argv[13]!,
+        dependencies.observeHeadroom)
+    } else if (command === "--calibrate-parallel-v11-receipt") {
+      if (argv.length !== 12 || argv[4] !== "--preflight" ||
+        argv[6] !== "--route-start" || argv[8] !== "--source-a7" ||
+        argv[10] !== "--source-b7") {
+        throw new TypeError("MATRIX_CALIBRATION_V11_CLI_ARGUMENTS_INVALID")
+      }
+      result = await writeV138ParallelCalibrationV11Receipt(repoRoot,
+        argv[3]!, argv[5]!, argv[7]!, argv[9]!, argv[11]!,
+        dependencies.calibrate)
+    } else {
+      if (argv.length !== 12 || argv[4] !== "--calibration" ||
+        argv[6] !== "--route-start" || argv[8] !== "--source-a7" ||
+        argv[10] !== "--source-b7") {
+        throw new TypeError("MATRIX_REPRODUCTION_V12_CLI_ARGUMENTS_INVALID")
+      }
+      result = await writeV138AuthoritativeMatrixV12Receipt(repoRoot,
+        argv[3]!, argv[5]!, argv[7]!, argv[9]!, argv[11]!,
+        dependencies.executeMatrix)
+    }
+    output(`${canonical({ schemaVersion: result.schemaVersion,
+      disposition: result.disposition ?? null,
+      receiptRoot: result.receiptRoot ?? result.routeStartRoot ?? null })}\n`)
+    return
+  }
+  if (command === "--write-plan-262-57-terminal-v1" ||
+    command === "--check-plan-262-57-terminal-v1") {
+    const write = command === "--write-plan-262-57-terminal-v1"
+    const args = [...argv.slice(3)]
+    const target = write ? args.shift() : undefined
+    const flags = new Map<string, string>()
+    while (args.length > 0) {
+      const flag = args.shift(); const value = args.shift()
+      if (flag === undefined || value === undefined || flags.has(flag)) {
+        throw new TypeError("MATRIX_PLAN_262_57_CLI_ARGUMENTS_INVALID")
+      }
+      flags.set(flag, value)
+    }
+    const expected = new Set(write ? ["--authorization", "--seal",
+      "--route-start", "--preflight", "--calibration", "--reproduction",
+      "--source-a7", "--source-b7", "--disposition"] :
+      ["--authorization", "--seal", "--route-start", "--preflight",
+        "--calibration", "--reproduction", "--terminal", "--source-a7",
+        "--source-b7"])
+    if (write && (target === undefined || target === "") ||
+      flags.size !== expected.size ||
+      [...flags.keys()].some((flag) => !expected.has(flag))) {
+      throw new TypeError("MATRIX_PLAN_262_57_CLI_ARGUMENTS_INVALID")
+    }
+    for (const [flag, key] of [["--authorization", "authorization"],
+      ["--seal", "seal"], ["--route-start", "context"],
+      ["--preflight", "preflight"], ["--calibration", "calibration"],
+      ["--reproduction", "reproduction"], ["--terminal", "terminal"]] as const) {
+      if (!write || key !== "terminal") {
+        plan26257Path(repoRoot, flags.get(flag) ?? "", key)
+      }
+    }
+    const sourceA7 = flags.get("--source-a7")
+    const sourceB7 = flags.get("--source-b7")
+    const disposition = flags.get("--disposition")
+    if (sourceA7 === undefined || sourceB7 === undefined || write &&
+      (disposition === undefined || !V138_PLAN_262_57_DISPOSITIONS.includes(
+        disposition as never))) {
+      throw new TypeError("MATRIX_PLAN_262_57_CLI_ARGUMENTS_INVALID")
+    }
+    const terminal = write ? writeV138Plan26257TerminalV1(repoRoot, target!,
+      disposition as V138Plan26257Disposition, sourceA7, sourceB7) :
+      checkV138Plan26257TerminalBranch(repoRoot, sourceA7, sourceB7)
+    output(`${canonical({ disposition: terminal.disposition,
+      terminalRoot: terminal.terminalRoot })}\n`)
+    return
+  }
   if (["--write-execution-context-v9-receipt",
     "--write-headroom-preflight-v9-receipt",
     "--calibrate-parallel-v9-receipt",
@@ -18699,6 +18867,1819 @@ export const checkV138Plan26230TerminalBranch = (repoRoot: string,
     plan26230Evidence(repoRoot, sourceA5, sourceB5, disposition,
       obstructionProof, interruptionProof, patternCObservation,
       preObservationProof), disposition)
+}
+
+const checkV138Route7AdapterKeyInventory = (
+  kind: keyof typeof V138_ROUTE5_ADAPTER_KEY_INVENTORIES,
+  value: Readonly<Record<string, unknown>>,
+) => checkV138Route5AdapterKeyInventory(kind, value)
+
+export const V138_PLAN_262_57_DISPOSITIONS = Object.freeze([
+  "tool_identity_failed", "protected_history_failed",
+  "formation_absence_failed", "pattern_c_ownership_failed",
+  "consumed_stage_interrupted",
+  "preflight_unavailable", "preflight_refused", "calibration_stopped",
+  "reproduction_stopped", "reproduction_passed",
+] as const)
+
+export const V138_PLAN_262_57_ROUTE_CONTRACT = Object.freeze({
+  schemaVersion: "v1.38-plan-262-57-route-contract-v1" as const,
+  routeOrdinal: 7 as const,
+  authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+  sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+  executionContextSchema:
+    "v1.38-current-matrix-execution-context-v11" as const,
+  preflightSchema:
+    "v1.38-current-matrix-headroom-preflight-v11" as const,
+  calibrationSchema: "v1.38-current-matrix-calibration-v11" as const,
+  reproductionSchema: "v1.38-current-matrix-reproduction-v12" as const,
+  consumptionSchema: "v1.38-plan-262-57-consumption-v1" as const,
+  terminalSchema: "v1.38-plan-262-57-terminal-v1" as const,
+  terminalDispositions: V138_PLAN_262_57_DISPOSITIONS,
+  failureProtocolSchema: V138_CURRENT_MATRIX_CHILD_PROTOCOL_V2_SCHEMA,
+  resourceSampleMilliseconds: 200 as const,
+  requiredHostHeadroomBasisPoints: 2500 as const,
+  calibrationAttemptCount: 8 as const,
+  calibrationShardCount: 4 as const,
+  reproductionCellCount: 540 as const,
+  canonicalDestinations: V138_PLAN_262_57_ROUTE_DESTINATIONS,
+  noRetry: true as const,
+  partialAcceptedEvidenceReusable: false as const,
+})
+
+export const checkV138Plan26257RouteContract = (value: unknown =
+  V138_PLAN_262_57_ROUTE_CONTRACT) => {
+  if (canonical(value) !== canonical(V138_PLAN_262_57_ROUTE_CONTRACT)) {
+    throw new TypeError("MATRIX_PLAN_262_30_ROUTE_CONTRACT_INVALID")
+  }
+  return V138_PLAN_262_57_ROUTE_CONTRACT
+}
+
+export const buildV138Plan26257RouteStartV1 = (input: {
+  readonly context: Record<string, unknown>
+}) => {
+  const context = checkV138ExecutionContextV11Receipt(input.context)
+  const preflightConsumptionBody = {
+    schemaVersion: "v1.38-plan-262-57-consumption-v1" as const,
+    stage: "preflight" as const,
+    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    sourceB7CustodyRoot: context.sourceB7CustodyRoot,
+    authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
+    executionContextRoot: context.receiptRoot,
+    predecessorRoot: context.receiptRoot,
+    chargedAttemptCount: 1 as const,
+    chargedAttemptRoot: v138SuccessorRoot("artifactManifest",
+      "v1.38-plan-262-57-preflight-charged-attempts-v1",
+      ["preflight:v11:0"]),
+    noRetry: true as const,
+  }
+  const preflightConsumption = deepFreeze({ ...preflightConsumptionBody,
+    markerRoot: v138SuccessorRoot("evidenceBundle",
+      preflightConsumptionBody.schemaVersion, preflightConsumptionBody) })
+  const body = { schemaVersion: "v1.38-plan-262-57-route-start-v1" as const,
+    routeOrdinal: 7 as const, context,
+    executionContextRoot: context.receiptRoot,
+    preflightConsumption,
+    preflightConsumptionRoot: preflightConsumption.markerRoot,
+    routeStarted: true as const, acceptedCellCount: 0 as const,
+    noRetry: true as const }
+  return deepFreeze({ ...body, routeStartRoot: v138SuccessorRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const checkV138Plan26257RouteStartV1 = (value: unknown,
+  route?: V138Route7) => {
+  const start = exactRecord(value, ["schemaVersion", "routeOrdinal", "context",
+    "executionContextRoot", "preflightConsumption",
+    "preflightConsumptionRoot", "routeStarted", "acceptedCellCount",
+    "noRetry", "routeStartRoot"], "MATRIX_PLAN_262_57_ROUTE_START_INVALID")
+  const context = checkV138ExecutionContextV11Receipt(start.context, route)
+  const consumption = exactRecord(start.preflightConsumption,
+    ["schemaVersion", "stage", "sourceA7", "sourceB7",
+      "sourceB7CustodyRoot", "authorizationRoot", "sealRoot",
+      "executionContextRoot", "predecessorRoot", "chargedAttemptCount",
+      "chargedAttemptRoot", "noRetry", "markerRoot"],
+    "MATRIX_PLAN_262_57_ROUTE_START_INVALID")
+  const { markerRoot, ...consumptionBody } = consumption
+  const { routeStartRoot, ...body } = start
+  if (start.schemaVersion !== "v1.38-plan-262-57-route-start-v1" ||
+    start.routeOrdinal !== 7 || start.executionContextRoot !==
+      context.receiptRoot || consumption.stage !== "preflight" ||
+    consumption.sourceA7 !== context.sourceA7 ||
+    consumption.sourceB7 !== context.sourceB7 ||
+    consumption.sourceB7CustodyRoot !== context.sourceB7CustodyRoot ||
+    consumption.authorizationRoot !== context.authorizationRoot ||
+    consumption.sealRoot !== context.sealRoot ||
+    consumption.executionContextRoot !== context.receiptRoot ||
+    consumption.predecessorRoot !== context.receiptRoot ||
+    consumption.chargedAttemptCount !== 1 ||
+    consumption.chargedAttemptRoot !== v138SuccessorRoot("artifactManifest",
+      "v1.38-plan-262-57-preflight-charged-attempts-v1",
+      ["preflight:v11:0"]) || consumption.noRetry !== true ||
+    markerRoot !== v138SuccessorRoot("evidenceBundle",
+      "v1.38-plan-262-57-consumption-v1", consumptionBody) ||
+    start.preflightConsumptionRoot !== markerRoot ||
+    start.routeStarted !== true || start.acceptedCellCount !== 0 ||
+    start.noRetry !== true || routeStartRoot !== v138SuccessorRoot(
+      "evidenceBundle", "v1.38-plan-262-57-route-start-v1", body)) {
+    throw new TypeError("MATRIX_PLAN_262_57_ROUTE_START_INVALID")
+  }
+  return deepFreeze(start)
+}
+
+export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
+  targetPath: string, mode: string, cwd: string,
+  terminalAgentRegistry: unknown, authorizationPath: string, sealPath: string,
+  sourceA7: string, sourceB7: string) => {
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  for (const repoPath of V138_PLAN_262_57_ROUTE_DESTINATIONS) {
+    if (existsSync(path.resolve(repoRoot, repoPath))) {
+      throw new TypeError("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+    }
+  }
+  const target = plan26257Path(repoRoot, targetPath, "context")
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  plan26257Path(repoRoot, authorizationPath, "authorization")
+  plan26257Path(repoRoot, sealPath, "seal")
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const context = buildV138ExecutionContextV11Receipt({ route, mode, cwd,
+    terminalAgentRegistry })
+  const start = checkV138Plan26257RouteStartV1(
+    buildV138Plan26257RouteStartV1({ context }), route)
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7, route)
+  writeV138Plan26219Immutable(target, chain, start)
+  return start
+}
+
+const PLAN_262_57_PATHS = Object.freeze({
+  authorization: V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+  seal: V138_PLAN_262_56_CANONICAL_PATHS.seal,
+  context: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
+  preflight: V138_PLAN_262_57_ROUTE_DESTINATIONS[1],
+  calibration: V138_PLAN_262_57_ROUTE_DESTINATIONS[2],
+  reproduction: V138_PLAN_262_57_ROUTE_DESTINATIONS[3],
+  terminal: V138_PLAN_262_57_ROUTE_DESTINATIONS[4],
+  preflightMarker: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
+  calibrationMarker: V138_PLAN_262_57_ROUTE_DESTINATIONS[5],
+  reproductionMarker: V138_PLAN_262_57_ROUTE_DESTINATIONS[6],
+})
+
+const plan26257Path = (repoRoot: string, supplied: string,
+  key: keyof typeof PLAN_262_57_PATHS): string => {
+  const resolved = path.resolve(repoRoot, supplied)
+  if (resolved !== path.resolve(repoRoot, PLAN_262_57_PATHS[key])) {
+    throw new TypeError("MATRIX_PLAN_262_30_PATH_INVALID")
+  }
+  return resolved
+}
+
+const readPlan26257 = (repoRoot: string, key: keyof typeof PLAN_262_57_PATHS,
+  required = true): unknown => {
+  const target = path.resolve(repoRoot, PLAN_262_57_PATHS[key])
+  if (!existsSync(target)) {
+    if (required) throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_REQUIRED`)
+    return undefined
+  }
+  const stat = lstatSync(target)
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_INVALID`)
+  }
+  try {
+    const value = JSON.parse(readFileSync(target, "utf8")) as unknown
+    if (key === "context" && value !== null && typeof value === "object" &&
+      !Array.isArray(value) && (value as { schemaVersion?: unknown })
+        .schemaVersion === "v1.38-plan-262-57-route-start-v1") {
+      return (value as { context: unknown }).context
+    }
+    return value
+  } catch {
+    throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_INVALID`)
+  }
+}
+
+const checkV138Plan26256AuthorityRoute = (input: { repoRoot: string;
+  sourceA7: string; sourceB7: string; authorizationValue: unknown;
+  sealValue: unknown }) => {
+  const custody = checkV138SuccessorSealCommitV7({ repoRoot: input.repoRoot,
+    sourceA7: input.sourceA7, sourceB7: input.sourceB7,
+    authorizationValue: input.authorizationValue,
+    sealValue: input.sealValue,
+    allowPlan26257Artifacts: true })
+  const authorization = checkV138Plan26256AuthorizationV7(input.repoRoot,
+    input.authorizationValue)
+  const seal = checkV138SuccessorSourceSealV7(input.repoRoot, input.sealValue,
+    authorization)
+  checkV138SealedWorktreeAtA7(input.repoRoot, seal)
+  if (custody.authorizationRoot !== authorization.authorizationRoot ||
+    custody.sealRoot !== seal.sealRoot) {
+    throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_JOIN_INVALID")
+  }
+  return { custody, authorization, seal }
+}
+
+type V138Route7 = ReturnType<typeof checkV138Plan26256AuthorityRoute>
+
+const checkRegistryV7 = (value: unknown) => {
+  const registry = exactRecord(value,
+    ["schemaVersion", "activeExecutorCount", "agents"],
+    "MATRIX_EXECUTION_CONTEXT_V9_REGISTRY_INVALID")
+  if (registry.schemaVersion !==
+    "v1.38-plan-262-57-terminal-agent-registry-v1" ||
+    registry.activeExecutorCount !== 0 || !Array.isArray(registry.agents) ||
+    registry.agents.some((entry) => {
+      const agent = exactRecord(entry, ["id", "status"],
+        "MATRIX_EXECUTION_CONTEXT_V9_REGISTRY_INVALID")
+      return typeof agent.id !== "string" || agent.id.length === 0 ||
+        !["completed", "failed"].includes(String(agent.status))
+    })) throw new TypeError("MATRIX_EXECUTION_CONTEXT_V9_REGISTRY_INVALID")
+  return registry
+}
+
+export const checkV138PatternCOwnershipV11 = (input: {
+  mode: unknown; cwd: unknown; terminalAgentRegistry: unknown
+}) => {
+  const registry = checkRegistryV7(input.terminalAgentRegistry)
+  if (input.mode !== "gsd-pattern-c-inline-main" ||
+    input.cwd !== "/Users/roryquinlan/runtime/cowards-game") {
+    throw new TypeError("MATRIX_EXECUTION_CONTEXT_V9_ROUTE_INVALID")
+  }
+  return deepFreeze({ mode: input.mode, cwd: input.cwd,
+    terminalAgentRegistry: registry })
+}
+
+export const buildV138ExecutionContextV11Receipt = (input: { route: V138Route7;
+  mode: string; cwd: string; terminalAgentRegistry: unknown }) => {
+  const ownership = checkV138PatternCOwnershipV11(input)
+  const body = { schemaVersion:
+    "v1.38-current-matrix-execution-context-v11" as const,
+    mode: ownership.mode, cwd: ownership.cwd,
+    terminalAgentRegistry: ownership.terminalAgentRegistry,
+    sourceA7: input.route.custody.sourceA7,
+    sourceB7: input.route.custody.sourceB7,
+    sourceB7Custody: input.route.custody,
+    sourceB7CustodyRoot: input.route.custody.custodyRoot,
+    authorizationRoot: input.route.authorization.authorizationRoot,
+    sealRoot: input.route.seal.sealRoot,
+    selectedRouteClosureRoot: input.route.seal.selectedRouteClosure.closureRoot,
+    protectedHistoryRoot:
+      input.route.seal.protectedHistory.protectedHistoryRoot,
+    priorAuthorizationBytes:
+      input.route.seal.protectedHistory.priorAuthorizationBytes,
+    patternCOwnership: "main_orchestrator_only" as const,
+    formationAbsenceBound: true as const,
+    runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+    resourceSampleMilliseconds: 200 as const, acceptedCellCount: 0 as const,
+    noRetry: true as const }
+  return deepFreeze({ ...body, receiptRoot: v138SuccessorRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const checkV138ExecutionContextV11Receipt = (value: unknown,
+  route?: V138Route7) => {
+  const receipt = exactRecord(value, ["schemaVersion", "mode", "cwd",
+    "terminalAgentRegistry", "sourceA7", "sourceB7", "sourceB7Custody",
+    "sourceB7CustodyRoot", "authorizationRoot", "sealRoot",
+    "selectedRouteClosureRoot", "protectedHistoryRoot",
+    "priorAuthorizationBytes", "patternCOwnership", "formationAbsenceBound",
+    "runtimeRoute", "resourceSampleMilliseconds", "acceptedCellCount",
+    "noRetry", "receiptRoot"], "MATRIX_EXECUTION_CONTEXT_V9_INVALID")
+  checkRegistryV7(receipt.terminalAgentRegistry)
+  const { receiptRoot, ...body } = receipt
+  if (receipt.schemaVersion !== "v1.38-current-matrix-execution-context-v11" ||
+    receipt.mode !== "gsd-pattern-c-inline-main" ||
+    receipt.cwd !== "/Users/roryquinlan/runtime/cowards-game" ||
+    receipt.patternCOwnership !== "main_orchestrator_only" ||
+    receipt.formationAbsenceBound !== true ||
+    receipt.runtimeRoute !== "v1.18/v1.19/MATCH_KERNEL" ||
+    receipt.resourceSampleMilliseconds !== 200 ||
+    receipt.acceptedCellCount !== 0 || receipt.noRetry !== true ||
+    receiptRoot !== v138SuccessorRoot("evidenceBundle",
+      String(receipt.schemaVersion), body) || route !== undefined && (
+      receipt.sourceA7 !== route.custody.sourceA7 ||
+      receipt.sourceB7 !== route.custody.sourceB7 ||
+      canonical(receipt.sourceB7Custody) !== canonical(route.custody) ||
+      receipt.authorizationRoot !== route.authorization.authorizationRoot ||
+      receipt.sealRoot !== route.seal.sealRoot ||
+      receipt.selectedRouteClosureRoot !==
+        route.seal.selectedRouteClosure.closureRoot ||
+      receipt.protectedHistoryRoot !==
+        route.seal.protectedHistory.protectedHistoryRoot ||
+      canonical(receipt.priorAuthorizationBytes) !== canonical(
+        route.seal.protectedHistory.priorAuthorizationBytes))) {
+    throw new TypeError("MATRIX_EXECUTION_CONTEXT_V9_INVALID")
+  }
+  return deepFreeze(receipt)
+}
+
+export const buildV138HostHeadroomPreflightV11Receipt = (input: {
+  result: V138DarwinHeadroomResult; context: Record<string, unknown> }) => {
+  const context = checkV138ExecutionContextV11Receipt(input.context)
+  const observation = input.result.ok ? {
+    stdoutByteLength: input.result.observation.stdoutByteLength,
+    stdoutSha256: input.result.observation.stdoutSha256,
+    totalBytes: input.result.observation.totalBytes,
+    pageCount: input.result.observation.pageCount,
+    pageSizeBytes: input.result.observation.pageSizeBytes,
+    percentage: input.result.observation.percentage,
+    observedBasisPoints: input.result.observation.observedBasisPoints,
+  } : null
+  const body = { schemaVersion:
+    "v1.38-current-matrix-headroom-preflight-v11" as const,
+    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    executionContextRoot: context.receiptRoot,
+    authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
+    chargedIdentityId: "preflight:v11:0" as const,
+    metricId: V138_DARWIN_HEADROOM_METRIC_ID,
+    providerId: V138_DARWIN_HEADROOM_PROVIDER_ID,
+    parserId: V138_DARWIN_HEADROOM_PARSER_ID,
+    requiredHostHeadroomBasisPoints: 2500 as const, observation,
+    disposition: input.result.ok ? input.result.observation.disposition :
+      "preflight_unavailable" as const,
+    acceptedCellCount: 0 as const, noRetry: true as const }
+  return deepFreeze({ ...body, receiptRoot: v138SuccessorRoot(
+    "canonicalJsonProfile", body.schemaVersion, body) })
+}
+
+export const checkV138HostHeadroomPreflightV11Receipt = (value: unknown,
+  contextValue: Record<string, unknown>) => {
+  const context = checkV138ExecutionContextV11Receipt(contextValue)
+  const receipt = exactRecord(value, ["schemaVersion", "sourceA7", "sourceB7",
+    "executionContextRoot", "authorizationRoot", "sealRoot",
+    "chargedIdentityId", "metricId", "providerId", "parserId",
+    "requiredHostHeadroomBasisPoints", "observation", "disposition",
+    "acceptedCellCount", "noRetry", "receiptRoot"],
+  "MATRIX_PREFLIGHT_V9_INVALID")
+  const observed = receipt.observation === null ? null : exactRecord(
+    receipt.observation, ["stdoutByteLength", "stdoutSha256", "totalBytes",
+      "pageCount", "pageSizeBytes", "percentage", "observedBasisPoints"],
+    "MATRIX_PREFLIGHT_V9_INVALID")
+  const expectedDisposition = observed === null ? "preflight_unavailable" :
+    Number(observed.observedBasisPoints) >= 2500 ? "preflight_admitted" :
+      "preflight_refused"
+  const { receiptRoot, ...body } = receipt
+  if (receipt.schemaVersion !==
+    "v1.38-current-matrix-headroom-preflight-v11" ||
+    receipt.sourceA7 !== context.sourceA7 ||
+    receipt.sourceB7 !== context.sourceB7 ||
+    receipt.executionContextRoot !== context.receiptRoot ||
+    receipt.authorizationRoot !== context.authorizationRoot ||
+    receipt.sealRoot !== context.sealRoot ||
+    receipt.chargedIdentityId !== "preflight:v11:0" ||
+    receipt.metricId !== V138_DARWIN_HEADROOM_METRIC_ID ||
+    receipt.providerId !== V138_DARWIN_HEADROOM_PROVIDER_ID ||
+    receipt.parserId !== V138_DARWIN_HEADROOM_PARSER_ID ||
+    receipt.requiredHostHeadroomBasisPoints !== 2500 ||
+    receipt.disposition !== expectedDisposition ||
+    receipt.acceptedCellCount !== 0 || receipt.noRetry !== true ||
+    observed !== null && (!Number.isSafeInteger(observed.stdoutByteLength) ||
+      Number(observed.stdoutByteLength) <= 0 ||
+      Number(observed.stdoutByteLength) > 4096 ||
+      !isV138CanonicalSha256(observed.stdoutSha256) ||
+      !Number.isSafeInteger(observed.totalBytes) ||
+      Number(observed.totalBytes) <= 0 ||
+      !Number.isSafeInteger(observed.pageCount) ||
+      Number(observed.pageCount) <= 0 ||
+      !Number.isSafeInteger(observed.pageSizeBytes) ||
+      Number(observed.pageSizeBytes) <= 0 ||
+      !Number.isSafeInteger(Number(observed.pageCount) *
+        Number(observed.pageSizeBytes)) ||
+      Number(observed.totalBytes) !== Number(observed.pageCount) *
+        Number(observed.pageSizeBytes) ||
+      !Number.isSafeInteger(observed.percentage) ||
+      Number(observed.percentage) < 0 || Number(observed.percentage) > 100 ||
+      !Number.isSafeInteger(observed.observedBasisPoints) ||
+      Number(observed.observedBasisPoints) !==
+        Number(observed.percentage) * 100) ||
+    receiptRoot !== v138SuccessorRoot("canonicalJsonProfile",
+      String(receipt.schemaVersion), body)) {
+    throw new TypeError("MATRIX_PREFLIGHT_V9_INVALID")
+  }
+  return deepFreeze(receipt)
+}
+
+const writeV138Plan26257Marker = (repoRoot: string, stage: "preflight" |
+  "calibration" | "reproduction", context: Record<string, unknown>,
+  predecessorRoot: unknown, chargedAttemptIds: readonly string[]) => {
+  if (stage === "preflight") {
+    const start = checkV138Plan26257RouteStartV1(JSON.parse(readFileSync(
+      path.resolve(repoRoot, PLAN_262_57_PATHS.context), "utf8")))
+    return start.preflightConsumption as Record<string, unknown>
+  }
+  const key = `${stage}Marker` as "preflightMarker" | "calibrationMarker" |
+    "reproductionMarker"
+  const target = plan26257Path(repoRoot, PLAN_262_57_PATHS[key], key)
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  const body = { schemaVersion: "v1.38-plan-262-57-consumption-v1" as const,
+    stage, sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    sourceB7CustodyRoot: context.sourceB7CustodyRoot,
+    authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
+    executionContextRoot: context.receiptRoot, predecessorRoot,
+    chargedAttemptCount: chargedAttemptIds.length,
+    chargedAttemptRoot: v138SuccessorRoot("artifactManifest",
+      `v1.38-plan-262-57-${stage}-charged-attempts-v1`, chargedAttemptIds),
+    noRetry: true as const }
+  checkV138Route7AdapterKeyInventory("markerV9", body)
+  const marker = deepFreeze({ ...body, markerRoot: v138SuccessorRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+  writeV138Plan26219Immutable(target, chain, marker)
+  return marker
+}
+
+export const checkV138Plan26257ConsumptionMarker = (repoRoot: string,
+  stage: "preflight" | "calibration" | "reproduction",
+  context: Record<string, unknown>, predecessorRoot: unknown,
+  chargedAttemptIds: readonly string[]) => {
+  const checkedContext = checkV138ExecutionContextV11Receipt(context)
+  const key = `${stage}Marker` as "preflightMarker" | "calibrationMarker" |
+    "reproductionMarker"
+  const value = stage === "preflight" ?
+    checkV138Plan26257RouteStartV1(JSON.parse(readFileSync(path.resolve(
+      repoRoot, PLAN_262_57_PATHS.context), "utf8"))).preflightConsumption :
+    readPlan26257(repoRoot, key)
+  const marker = exactRecord(value, ["schemaVersion", "stage", "sourceA7",
+    "sourceB7", "sourceB7CustodyRoot", "authorizationRoot", "sealRoot",
+    "executionContextRoot", "predecessorRoot", "chargedAttemptCount",
+    "chargedAttemptRoot", "noRetry", "markerRoot"],
+  "MATRIX_PLAN_262_30_CONSUMPTION_MARKER_INVALID")
+  const { markerRoot, ...body } = marker
+  if (marker.schemaVersion !== "v1.38-plan-262-57-consumption-v1" ||
+    marker.stage !== stage || marker.sourceA7 !== checkedContext.sourceA7 ||
+    marker.sourceB7 !== checkedContext.sourceB7 ||
+    marker.sourceB7CustodyRoot !== checkedContext.sourceB7CustodyRoot ||
+    marker.authorizationRoot !== checkedContext.authorizationRoot ||
+    marker.sealRoot !== checkedContext.sealRoot ||
+    marker.executionContextRoot !== checkedContext.receiptRoot ||
+    marker.predecessorRoot !== predecessorRoot ||
+    marker.chargedAttemptCount !== chargedAttemptIds.length ||
+    marker.chargedAttemptRoot !== v138SuccessorRoot("artifactManifest",
+      `v1.38-plan-262-57-${stage}-charged-attempts-v1`, chargedAttemptIds) ||
+    marker.noRetry !== true || markerRoot !== v138SuccessorRoot(
+      "evidenceBundle", String(marker.schemaVersion), body)) {
+    throw new TypeError("MATRIX_PLAN_262_30_CONSUMPTION_MARKER_INVALID")
+  }
+  return deepFreeze(marker)
+}
+
+const assertV138Plan26257AuthorityOpen = (repoRoot: string) => {
+  if (existsSync(path.resolve(repoRoot, PLAN_262_57_PATHS.terminal))) {
+    throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_EXPIRED")
+  }
+}
+
+const assertV138Plan26257PublicationRoute = (repoRoot: string,
+  sourceA7: string, sourceB7: string, expectedRoute: V138Route7): V138Route7 => {
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  if (canonical(currentRoute) !== canonical(expectedRoute)) {
+    throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_CHANGED")
+  }
+  return currentRoute
+}
+
+export const checkV138Plan26257PrerequisiteRoots = (
+  expected: Readonly<Record<string, unknown>>,
+  current: Readonly<Record<string, unknown>>,
+): true => {
+  const keys = Object.keys(expected)
+  if (keys.length !== Object.keys(current).length || keys.some((key) =>
+    !Object.hasOwn(current, key) || expected[key] !== current[key])) {
+    throw new TypeError("MATRIX_PLAN_262_30_PREREQUISITE_CHANGED")
+  }
+  return true
+}
+
+export const writeV138ExecutionContextV11Receipt = (repoRoot: string,
+  targetPath: string, mode: string, cwd: string,
+  terminalAgentRegistry: unknown, authorizationPath: string, sealPath: string,
+  sourceA7: string, sourceB7: string) => {
+  return writeV138Plan26257RouteStartV1(repoRoot, targetPath, mode, cwd,
+    terminalAgentRegistry, authorizationPath, sealPath, sourceA7, sourceB7)
+}
+
+export const writeV138HostHeadroomPreflightV11Receipt = async (
+  repoRoot: string, targetPath: string, contextPath: string,
+  authorizationPath: string, sealPath: string, sourceA7: string,
+  sourceB7: string, observe: () => Promise<V138DarwinHeadroomResult> = () =>
+    observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ)) => {
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const target = plan26257Path(repoRoot, targetPath, "preflight")
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  plan26257Path(repoRoot, contextPath, "context")
+  plan26257Path(repoRoot, authorizationPath, "authorization")
+  plan26257Path(repoRoot, sealPath, "seal")
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+    authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const context = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), route)
+  writeV138Plan26257Marker(repoRoot, "preflight", context,
+    context.receiptRoot, ["preflight:v11:0"])
+  let result: V138DarwinHeadroomResult
+  try { result = await observe() } catch {
+    result = { ok: false, reason: "resource_measurement_unavailable" }
+  }
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const currentContext = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), currentRoute)
+  checkV138Plan26257PrerequisiteRoots({ context: context.receiptRoot },
+    { context: currentContext.receiptRoot })
+  checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", currentContext,
+    currentContext.receiptRoot, ["preflight:v11:0"])
+  const receipt = checkV138HostHeadroomPreflightV11Receipt(
+    buildV138HostHeadroomPreflightV11Receipt({ result,
+      context: currentContext }), currentContext)
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7,
+    currentRoute)
+  writeV138Plan26219Immutable(target, chain, receipt)
+  return receipt
+}
+
+export const checkV138Plan26257PreflightV11 = (repoRoot: string,
+  sourceA7: string, sourceB7: string) => {
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+    authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const context = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), route)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(
+    readPlan26257(repoRoot, "preflight"), context)
+  const marker = checkV138Plan26257ConsumptionMarker(repoRoot, "preflight",
+    context, context.receiptRoot, ["preflight:v11:0"])
+  return deepFreeze({ routeOrdinal: 7 as const, contextRoot: context.receiptRoot,
+    preflightRoot: preflight.receiptRoot, markerRoot: marker.markerRoot,
+    disposition: preflight.disposition })
+}
+
+const route7ContextAsV9 = (value: Record<string, unknown>) => {
+  const context = checkV138ExecutionContextV11Receipt(value)
+  const body = { schemaVersion:
+    "v1.38-current-matrix-execution-context-v9" as const,
+    mode: context.mode, cwd: context.cwd,
+    terminalAgentRegistry: { ...(context.terminalAgentRegistry as object),
+      schemaVersion: "v1.38-plan-262-25-terminal-agent-registry-v1" },
+    sourceA5: context.sourceA7, sourceB5: context.sourceB7,
+    sourceB5Custody: context.sourceB7Custody,
+    sourceB5CustodyRoot: context.sourceB7CustodyRoot,
+    authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
+    selectedRouteClosureRoot: context.selectedRouteClosureRoot,
+    protectedHistoryRoot: context.protectedHistoryRoot,
+    priorAuthorizationBytes: context.priorAuthorizationBytes,
+    patternCOwnership: context.patternCOwnership,
+    formationAbsenceBound: context.formationAbsenceBound,
+    runtimeRoute: context.runtimeRoute,
+    resourceSampleMilliseconds: context.resourceSampleMilliseconds,
+    acceptedCellCount: context.acceptedCellCount, noRetry: context.noRetry }
+  checkV138Route7AdapterKeyInventory("contextV9Adapter", body)
+  return checkV138ExecutionContextV9Receipt({ ...body,
+    receiptRoot: v138SuccessorRoot("evidenceBundle",
+      String(body.schemaVersion), body) })
+}
+
+const route7PreflightAsV9 = (value: Record<string, unknown>,
+  contextV9: Record<string, unknown>) => {
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(value, contextV9)
+  const contextV9Adapter = route7ContextAsV9(contextV9)
+  const body = replaceVersionStrings({
+    schemaVersion: "v1.38-current-matrix-headroom-preflight-v9" as const,
+    sourceA5: preflight.sourceA7, sourceB5: preflight.sourceB7,
+    executionContextRoot: contextV9Adapter.receiptRoot,
+    authorizationRoot: preflight.authorizationRoot,
+    sealRoot: preflight.sealRoot,
+    chargedIdentityId: preflight.chargedIdentityId,
+    metricId: preflight.metricId, providerId: preflight.providerId,
+    parserId: preflight.parserId,
+    requiredHostHeadroomBasisPoints:
+      preflight.requiredHostHeadroomBasisPoints,
+    observation: preflight.observation, disposition: preflight.disposition,
+    acceptedCellCount: preflight.acceptedCellCount,
+    noRetry: preflight.noRetry }, ":v11:", ":v9:") as
+    Record<string, unknown>
+  checkV138Route7AdapterKeyInventory("preflightV9Adapter", body)
+  return checkV138HostHeadroomPreflightV9Receipt({ ...body,
+    receiptRoot: v138SuccessorRoot("canonicalJsonProfile",
+      String(body.schemaVersion), body) }, contextV9Adapter)
+}
+
+export const buildV138ParallelCalibrationV11Receipt = (input: {
+  inventory: Readonly<V138CurrentMatrixInventory>;
+  context: Record<string, unknown>; preflight: Record<string, unknown>;
+  calibration?: Readonly<V138ParallelCalibrationReceipt>;
+  callbackFailureAfterConsumption?: true }) => {
+  const context = checkV138ExecutionContextV11Receipt(input.context)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(input.preflight,
+    context)
+  const contextV9Adapter = route7ContextAsV9(context)
+  const preflightV9Adapter = route7PreflightAsV9(preflight, context)
+  const calibrationV9AdapterBody = input.calibration === undefined ? undefined :
+    replaceVersionStrings(calibrationWithoutRoot(input.calibration),
+      ":v11:", ":v9:") as Omit<V138ParallelCalibrationReceipt,
+        "calibrationRoot">
+  const calibrationV9Adapter = calibrationV9AdapterBody === undefined ? undefined :
+    deepFreeze({ ...calibrationV9AdapterBody,
+      calibrationRoot: sha256(canonical(calibrationV9AdapterBody)) })
+  const v8 = buildV138ParallelCalibrationV9Receipt({ inventory: input.inventory,
+    context: contextV9Adapter, preflight: preflightV9Adapter,
+    calibration: calibrationV9Adapter,
+    callbackFailureAfterConsumption: input.callbackFailureAfterConsumption })
+  const body = replaceVersionStrings({ ...v8,
+    schemaVersion: "v1.38-current-matrix-calibration-v11",
+    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    executionContextRoot: context.receiptRoot,
+    preflightRoot: preflight.receiptRoot }, ":v9:", ":v11:") as
+    Record<string, unknown>
+  delete body.sourceA5; delete body.sourceB5; delete body.receiptRoot
+  return deepFreeze({ ...body, receiptRoot: v138SuccessorRoot(
+    "evidenceBundle", String(body.schemaVersion), body) })
+}
+
+export const checkV138ParallelCalibrationV11Receipt = (inventory:
+  Readonly<V138CurrentMatrixInventory>, value: unknown,
+  contextValue: Record<string, unknown>, preflightValue: Record<string, unknown>) => {
+  const context = checkV138ExecutionContextV11Receipt(contextValue)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(preflightValue,
+    context)
+  const receipt = exactRecord(value, ["schemaVersion",
+    "executionContextRoot", "preflightRoot", "status", "chargedAttemptCount",
+    "calibrationShardCount", "observationMode", "childLaunchCount",
+    "terminalOutcomeCount", "acceptedCellCount", "completeCleanup",
+    "publicStopReason", "supervisionRoot", "attempts", "runtimeRoute",
+    "privacyProjection", "noRetry", "sourceA7", "sourceB7", "receiptRoot"],
+  "MATRIX_CALIBRATION_V9_INVALID")
+  const { receiptRoot, ...body } = receipt
+  if (receipt.schemaVersion !== "v1.38-current-matrix-calibration-v11" ||
+    receipt.sourceA7 !== context.sourceA7 || receipt.sourceB7 !== context.sourceB7 ||
+    receipt.executionContextRoot !== context.receiptRoot ||
+    receipt.preflightRoot !== preflight.receiptRoot ||
+    receiptRoot !== v138SuccessorRoot("evidenceBundle",
+      String(receipt.schemaVersion), body)) {
+    throw new TypeError("MATRIX_CALIBRATION_V9_INVALID")
+  }
+  const contextV9Adapter = route7ContextAsV9(context)
+  const preflightV9Adapter = route7PreflightAsV9(preflight, context)
+  const v9AdapterBody = replaceVersionStrings({
+    schemaVersion: "v1.38-current-matrix-calibration-v9",
+    executionContextRoot: contextV9Adapter.receiptRoot,
+    preflightRoot: preflightV9Adapter.receiptRoot, status: receipt.status,
+    chargedAttemptCount: receipt.chargedAttemptCount,
+    calibrationShardCount: receipt.calibrationShardCount,
+    observationMode: receipt.observationMode,
+    childLaunchCount: receipt.childLaunchCount,
+    terminalOutcomeCount: receipt.terminalOutcomeCount,
+    acceptedCellCount: receipt.acceptedCellCount,
+    completeCleanup: receipt.completeCleanup,
+    publicStopReason: receipt.publicStopReason,
+    supervisionRoot: receipt.supervisionRoot, attempts: receipt.attempts,
+    runtimeRoute: receipt.runtimeRoute,
+    privacyProjection: receipt.privacyProjection,
+    noRetry: receipt.noRetry,
+    sourceA5: contextV9Adapter.sourceA5, sourceB5: contextV9Adapter.sourceB5 },
+  ":v11:", ":v9:") as
+    Record<string, unknown>
+  checkV138Route7AdapterKeyInventory("calibrationV9Adapter", v9AdapterBody)
+  checkV138ParallelCalibrationV9Receipt(inventory, { ...v9AdapterBody,
+    receiptRoot: v138SuccessorRoot("evidenceBundle",
+      String(v9AdapterBody.schemaVersion), v9AdapterBody) }, contextV9Adapter, preflightV9Adapter)
+  return deepFreeze(receipt)
+}
+
+export const writeV138ParallelCalibrationV11Receipt = async (repoRoot: string,
+  targetPath: string, preflightPath: string, contextPath: string,
+  sourceA7: string, sourceB7: string,
+  run: typeof calibrateV138ParallelMatrix = calibrateV138ParallelMatrix) => {
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const target = plan26257Path(repoRoot, targetPath, "calibration")
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  plan26257Path(repoRoot, preflightPath, "preflight")
+  plan26257Path(repoRoot, contextPath, "context")
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+    authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const context = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), route)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(
+    readPlan26257(repoRoot, "preflight"), context)
+  checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", context,
+    context.receiptRoot, ["preflight:v11:0"])
+  const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v9")
+    .map(({ executionAttemptId }) => executionAttemptId)
+  writeV138Plan26257Marker(repoRoot, "calibration", context,
+    preflight.receiptRoot, calibrationIds)
+  let calibration: Readonly<V138ParallelCalibrationReceipt> | undefined
+  let callbackFailureAfterConsumption: true | undefined
+  if (preflight.disposition === "preflight_admitted") {
+    try {
+      const calibrationInput = { inventory,
+        runner: createV138SubprocessShardRunner(repoRoot,
+          { useLegacyHostMemory: false }),
+        sharedHeadroomObserver: () => observeDarwinHeadroomOwned(
+          executeOwnedMemoryPressureQ),
+        hardwareIdentity: { operatingSystem: `${platform()} ${release()}`,
+          architecture: arch(), nodeVersion: process.version,
+          cpuIdentity: cpus()[0]?.model ?? "unavailable" },
+        repoRoot, executionIdentityVersion: "v9" as const }
+      if (run === calibrateV138ParallelMatrix) {
+        const operatorEvidence =
+          await calibrateV138ParallelMatrixWithOperatorEvidence(calibrationInput)
+        calibration = operatorEvidence.receipt
+        emitV138OperatorIntegrityEvidence(
+          operatorEvidence.integrityFailureProjection)
+      } else {
+        calibration = await run(calibrationInput)
+      }
+    } catch { callbackFailureAfterConsumption = true }
+  }
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const currentContext = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), currentRoute)
+  const currentPreflight = checkV138HostHeadroomPreflightV11Receipt(
+    readPlan26257(repoRoot, "preflight"), currentContext)
+  checkV138Plan26257PrerequisiteRoots({ context: context.receiptRoot,
+    preflight: preflight.receiptRoot }, { context: currentContext.receiptRoot,
+    preflight: currentPreflight.receiptRoot })
+  checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", currentContext,
+    currentContext.receiptRoot, ["preflight:v11:0"])
+  checkV138Plan26257ConsumptionMarker(repoRoot, "calibration", currentContext,
+    currentPreflight.receiptRoot, calibrationIds)
+  const receipt = checkV138ParallelCalibrationV11Receipt(inventory,
+    buildV138ParallelCalibrationV11Receipt({ inventory, context: currentContext,
+      preflight: currentPreflight, calibration,
+      callbackFailureAfterConsumption }), currentContext, currentPreflight)
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7,
+    currentRoute)
+  writeV138Plan26219Immutable(target, chain, receipt)
+  return receipt
+}
+
+const route7CalibrationAsV9 = (inventory: Readonly<V138CurrentMatrixInventory>,
+  value: Record<string, unknown>, context: Record<string, unknown>,
+  preflight: Record<string, unknown>) => {
+  const checked = checkV138ParallelCalibrationV11Receipt(inventory, value,
+    context, preflight)
+  const contextV9Adapter = route7ContextAsV9(context)
+  const preflightV9Adapter = route7PreflightAsV9(preflight, context)
+  const body = replaceVersionStrings({
+    schemaVersion: "v1.38-current-matrix-calibration-v9",
+    executionContextRoot: contextV9Adapter.receiptRoot,
+    preflightRoot: preflightV9Adapter.receiptRoot, status: checked.status,
+    chargedAttemptCount: checked.chargedAttemptCount,
+    calibrationShardCount: checked.calibrationShardCount,
+    observationMode: checked.observationMode,
+    childLaunchCount: checked.childLaunchCount,
+    terminalOutcomeCount: checked.terminalOutcomeCount,
+    acceptedCellCount: checked.acceptedCellCount,
+    completeCleanup: checked.completeCleanup,
+    publicStopReason: checked.publicStopReason,
+    supervisionRoot: checked.supervisionRoot, attempts: checked.attempts,
+    runtimeRoute: checked.runtimeRoute,
+    privacyProjection: checked.privacyProjection,
+    noRetry: checked.noRetry,
+    sourceA5: contextV9Adapter.sourceA5, sourceB5: contextV9Adapter.sourceB5 },
+  ":v11:", ":v9:") as
+    Record<string, unknown>
+  checkV138Route7AdapterKeyInventory("calibrationV9Adapter", body)
+  return checkV138ParallelCalibrationV9Receipt(inventory, { ...body,
+    receiptRoot: v138SuccessorRoot("evidenceBundle",
+      String(body.schemaVersion), body) }, contextV9Adapter, preflightV9Adapter)
+}
+
+export const buildV138AuthoritativeMatrixV12Receipt = (input: {
+  inventory: Readonly<V138CurrentMatrixInventory>;
+  context: Record<string, unknown>; preflight: Record<string, unknown>;
+  calibration: Record<string, unknown>;
+  execution?: V138ParallelMatrixExecutionResult;
+  callbackFailureAfterConsumption?: true }) => {
+  const context = checkV138ExecutionContextV11Receipt(input.context)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(input.preflight,
+    context)
+  const calibration = checkV138ParallelCalibrationV11Receipt(input.inventory,
+    input.calibration, context, preflight)
+  if (calibration.status !== "admitted" ||
+    typeof calibration.supervisionRoot !== "string") {
+    throw new TypeError("MATRIX_REPRODUCTION_V10_CALIBRATION_NOT_ADMITTED")
+  }
+  const contextV9Adapter = route7ContextAsV9(context)
+  const preflightV9Adapter = route7PreflightAsV9(preflight, context)
+  const calibrationV9Adapter = route7CalibrationAsV9(input.inventory, calibration,
+    context, preflight)
+  const executionV9Adapter = input.execution === undefined ? undefined :
+    replaceVersionStrings(input.execution, ":v11:", ":v9:") as
+      V138ParallelMatrixExecutionResult
+  const v9 = buildV138AuthoritativeMatrixV10Receipt({ inventory: input.inventory,
+    context: contextV9Adapter, preflight: preflightV9Adapter, calibration: calibrationV9Adapter,
+    execution: executionV9Adapter,
+    callbackFailureAfterConsumption: input.callbackFailureAfterConsumption })
+  const body = replaceVersionStrings({ ...v9,
+    schemaVersion: "v1.38-current-matrix-reproduction-v12",
+    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    executionContextRoot: context.receiptRoot,
+    preflightRoot: preflight.receiptRoot,
+    calibrationRoot: calibration.receiptRoot }, ":v9:", ":v11:") as
+    Record<string, unknown>
+  delete body.sourceA5; delete body.sourceB5; delete body.receiptRoot
+  const attempts = body.attempts
+  body.attemptLedgerRoot = v138SuccessorRoot("evidenceBundle",
+    "v1.38-current-matrix-reproduction-v12-attempt-ledger-v1",
+    { calibrationRoot: calibration.receiptRoot, planRoot: body.planRoot,
+      attempts })
+  return deepFreeze({ ...body, receiptRoot: v138SuccessorRoot(
+    "evidenceBundle", String(body.schemaVersion), body) })
+}
+
+export const checkV138AuthoritativeMatrixV12Receipt = (value: unknown,
+  evidence: { inventory: Readonly<V138CurrentMatrixInventory>;
+    context: Record<string, unknown>; preflight: Record<string, unknown>;
+    calibration: Record<string, unknown> }) => {
+  const context = checkV138ExecutionContextV11Receipt(evidence.context)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(evidence.preflight,
+    context)
+  const calibration = checkV138ParallelCalibrationV11Receipt(evidence.inventory,
+    evidence.calibration, context, preflight)
+  if (calibration.status !== "admitted" ||
+    typeof calibration.supervisionRoot !== "string") {
+    throw new TypeError("MATRIX_REPRODUCTION_V10_CALIBRATION_NOT_ADMITTED")
+  }
+  const receipt = exactRecord(value, ["schemaVersion",
+    "executionContextRoot", "preflightRoot", "calibrationRoot", "status",
+    "chargedAttemptCount", "observationMode", "childLaunchCount",
+    "terminalOutcomeCount", "acceptedCellCount", "completeCleanup",
+    "publicStopReason", "planRoot", "attempts", "attemptLedgerRoot",
+    "runtimeRoute", "privacyProjection", "partialAcceptedEvidenceReusable",
+    "noRetry", "sourceA7", "sourceB7", "receiptRoot"],
+  "MATRIX_REPRODUCTION_V10_INVALID")
+  const { receiptRoot, ...body } = receipt
+  if (receipt.schemaVersion !== "v1.38-current-matrix-reproduction-v12" ||
+    receipt.sourceA7 !== context.sourceA7 || receipt.sourceB7 !== context.sourceB7 ||
+    receipt.executionContextRoot !== context.receiptRoot ||
+    receipt.preflightRoot !== preflight.receiptRoot ||
+    receipt.calibrationRoot !== calibration.receiptRoot ||
+    receipt.attemptLedgerRoot !== v138SuccessorRoot("evidenceBundle",
+      "v1.38-current-matrix-reproduction-v12-attempt-ledger-v1",
+      { calibrationRoot: calibration.receiptRoot, planRoot: receipt.planRoot,
+        attempts: receipt.attempts }) ||
+    receiptRoot !== v138SuccessorRoot("evidenceBundle",
+      String(receipt.schemaVersion), body)) {
+    throw new TypeError("MATRIX_REPRODUCTION_V10_INVALID")
+  }
+  const contextV9Adapter = route7ContextAsV9(context)
+  const preflightV9Adapter = route7PreflightAsV9(preflight, context)
+  const calibrationV9Adapter = route7CalibrationAsV9(evidence.inventory, calibration,
+    context, preflight)
+  const v9Body = replaceVersionStrings({
+    schemaVersion: "v1.38-current-matrix-reproduction-v9",
+    executionContextRoot: contextV9Adapter.receiptRoot,
+    preflightRoot: preflightV9Adapter.receiptRoot,
+    calibrationRoot: calibrationV9Adapter.receiptRoot, status: receipt.status,
+    chargedAttemptCount: receipt.chargedAttemptCount,
+    observationMode: receipt.observationMode,
+    childLaunchCount: receipt.childLaunchCount,
+    terminalOutcomeCount: receipt.terminalOutcomeCount,
+    acceptedCellCount: receipt.acceptedCellCount,
+    completeCleanup: receipt.completeCleanup,
+    publicStopReason: receipt.publicStopReason, planRoot: receipt.planRoot,
+    attempts: receipt.attempts, attemptLedgerRoot: receipt.attemptLedgerRoot,
+    runtimeRoute: receipt.runtimeRoute,
+    privacyProjection: receipt.privacyProjection,
+    partialAcceptedEvidenceReusable:
+      receipt.partialAcceptedEvidenceReusable,
+    noRetry: receipt.noRetry,
+    sourceA5: contextV9Adapter.sourceA5, sourceB5: contextV9Adapter.sourceB5 },
+  ":v11:", ":v9:") as
+    Record<string, unknown>
+  checkV138Route7AdapterKeyInventory("reproductionV9", v9Body)
+  v9Body.attemptLedgerRoot = v138SuccessorRoot("evidenceBundle",
+    "v1.38-current-matrix-reproduction-v9-attempt-ledger-v1",
+    { calibrationRoot: calibrationV9Adapter.receiptRoot,
+      planRoot: v9Body.planRoot, attempts: v9Body.attempts })
+  checkV138AuthoritativeMatrixV10Receipt({ ...v9Body,
+    receiptRoot: v138SuccessorRoot("evidenceBundle",
+      String(v9Body.schemaVersion), v9Body) }, { inventory: evidence.inventory,
+    context: contextV9Adapter, preflight: preflightV9Adapter, calibration: calibrationV9Adapter })
+  return deepFreeze(receipt)
+}
+
+export const writeV138AuthoritativeMatrixV12Receipt = async (repoRoot: string,
+  targetPath: string, calibrationPath: string, contextPath: string,
+  sourceA7: string, sourceB7: string,
+  run: typeof executeV138ParallelMatrix = executeV138ParallelMatrix) => {
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const target = plan26257Path(repoRoot, targetPath, "reproduction")
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  plan26257Path(repoRoot, calibrationPath, "calibration")
+  plan26257Path(repoRoot, contextPath, "context")
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+    authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const context = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), route)
+  const preflight = checkV138HostHeadroomPreflightV11Receipt(
+    readPlan26257(repoRoot, "preflight"), context)
+  const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const calibration = checkV138ParallelCalibrationV11Receipt(inventory,
+    readPlan26257(repoRoot, "calibration"), context, preflight)
+  if (calibration.status !== "admitted" ||
+    typeof calibration.supervisionRoot !== "string") {
+    throw new TypeError("MATRIX_REPRODUCTION_V10_CALIBRATION_NOT_ADMITTED")
+  }
+  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v9")
+    .map(({ executionAttemptId }) => executionAttemptId)
+  const reproductionIds = planV138MatrixShards(inventory).shards.flatMap(
+    ({ attemptIds }) => attemptIds.map((id) => `reproduction:v11:${id}`))
+  checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", context,
+    context.receiptRoot, ["preflight:v11:0"])
+  checkV138Plan26257ConsumptionMarker(repoRoot, "calibration", context,
+    preflight.receiptRoot, calibrationIds)
+  writeV138Plan26257Marker(repoRoot, "reproduction", context,
+    calibration.receiptRoot, reproductionIds)
+  let execution: V138ParallelMatrixExecutionResult | undefined
+  let callbackFailureAfterConsumption: true | undefined
+  try { execution = await run({ inventory,
+    admittedCalibrationRoot: calibration.supervisionRoot as Sha256,
+    runner: createV138SubprocessShardRunner(repoRoot,
+      { useLegacyHostMemory: false }),
+    sharedHeadroomObserver: () => observeDarwinHeadroomOwned(
+      executeOwnedMemoryPressureQ), repoRoot, executionIdentityVersion: "v9" })
+  } catch { callbackFailureAfterConsumption = true }
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const currentContext = checkV138ExecutionContextV11Receipt(
+    readPlan26257(repoRoot, "context"), currentRoute)
+  const currentPreflight = checkV138HostHeadroomPreflightV11Receipt(
+    readPlan26257(repoRoot, "preflight"), currentContext)
+  const currentCalibration = checkV138ParallelCalibrationV11Receipt(inventory,
+    readPlan26257(repoRoot, "calibration"), currentContext, currentPreflight)
+  checkV138Plan26257PrerequisiteRoots({ context: context.receiptRoot,
+    preflight: preflight.receiptRoot, calibration: calibration.receiptRoot },
+  { context: currentContext.receiptRoot,
+    preflight: currentPreflight.receiptRoot,
+    calibration: currentCalibration.receiptRoot })
+  checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", currentContext,
+    currentContext.receiptRoot, ["preflight:v11:0"])
+  checkV138Plan26257ConsumptionMarker(repoRoot, "calibration", currentContext,
+    currentPreflight.receiptRoot, calibrationIds)
+  checkV138Plan26257ConsumptionMarker(repoRoot, "reproduction", currentContext,
+    currentCalibration.receiptRoot, reproductionIds)
+  const receipt = checkV138AuthoritativeMatrixV12Receipt(
+    buildV138AuthoritativeMatrixV12Receipt({ inventory, context: currentContext,
+      preflight: currentPreflight, calibration: currentCalibration, execution,
+      callbackFailureAfterConsumption }), { inventory, context: currentContext,
+      preflight: currentPreflight, calibration: currentCalibration })
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7,
+    currentRoute)
+  writeV138Plan26219Immutable(target, chain, receipt)
+  return receipt
+}
+
+type V138Plan26257Disposition =
+  typeof V138_PLAN_262_57_DISPOSITIONS[number]
+export type V138Plan26257ObstructionProof = Readonly<{
+  stage: "context" | "preflight" | "calibration" | "reproduction"
+  path: string; type: "file" | "directory" | "symlink" | "other"
+  metadataRoot: Sha256
+}>
+export type V138Plan26257InterruptionProof = Readonly<{
+  stage: "preflight" | "calibration" | "reproduction"
+  markerRoot: Sha256; chargedAttemptCount: 1 | 8 | 540
+  chargedIdentityId: "preflight:v11:0" | null
+  observationMode: "unknown_after_consumption"
+  childLaunchCount: null; terminalOutcomeCount: null; completeCleanup: false
+}>
+export type V138Plan26257PatternCObservation = Readonly<{
+  mode: unknown; cwd: unknown; terminalAgentRegistry: unknown
+}>
+export type V138Plan26257PreObservationProof = Readonly<{
+  schemaVersion: "v1.38-plan-262-57-pre-observation-proof-v1"
+  disposition: "tool_identity_failed" | "protected_history_failed" |
+    "formation_absence_failed" | "pattern_c_ownership_failed"
+  sealedRoot: Sha256 | null
+  observedRoot: Sha256
+  expectedContractRoot: Sha256 | null
+  proofRoot: Sha256
+}>
+
+const V138_PLAN_262_57_PRE_OBSERVATION = new Set([
+  "tool_identity_failed", "protected_history_failed",
+  "formation_absence_failed", "pattern_c_ownership_failed",
+] as const)
+
+const plan26257ObservedRoot = (schema: string, derive: () => Sha256): Sha256 => {
+  try { return derive() } catch (error) {
+    return v138SuccessorRoot("artifactManifest", schema, { errorCode:
+      error instanceof Error ? error.message : "UNKNOWN_DERIVATION_FAILURE" })
+  }
+}
+
+export const deriveV138Plan26257PreObservationProof = (input: {
+  repoRoot: string; sourceA7: string;
+  anchor: ReturnType<typeof inspectV138SuccessorSealCommitV7Anchor>;
+  disposition: V138Plan26257PreObservationProof["disposition"];
+  patternCObservation?: V138Plan26257PatternCObservation | undefined
+}): V138Plan26257PreObservationProof => {
+  const seal = input.anchor.seal
+  checkV138SuccessorSourceSealV7(input.repoRoot, seal,
+    input.anchor.authorization,
+    input.disposition === "tool_identity_failed" ? "toolIdentity" :
+      input.disposition === "protected_history_failed" ? "protectedHistory" :
+        input.disposition === "formation_absence_failed" ?
+          "formationAbsence" : null)
+  let sealedRoot: Sha256 | null = null
+  let observedRoot: Sha256
+  let expectedContractRoot: Sha256 | null = null
+  if (input.disposition === "tool_identity_failed") {
+    sealedRoot = v138SuccessorRoot("artifactManifest",
+      "v1.38-tool-identity-observation-v1", seal.toolIdentity)
+    observedRoot = plan26257ObservedRoot(
+      "v1.38-tool-identity-observation-failure-v1",
+      deriveV138ToolIdentityRoot)
+  } else if (input.disposition === "protected_history_failed") {
+    const history = seal.protectedHistory
+    if (history === null || typeof history !== "object" ||
+      Array.isArray(history) || !isV138CanonicalSha256(
+        (history as { protectedHistoryRoot?: unknown }).protectedHistoryRoot)) {
+      throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+    }
+    sealedRoot = (history as { protectedHistoryRoot: Sha256 })
+      .protectedHistoryRoot
+    observedRoot = plan26257ObservedRoot(
+      "v1.38-protected-history-observation-failure-v1", () =>
+        deriveV138ProtectedHistoryV7(input.repoRoot, input.sourceA7)
+          .protectedHistoryRoot)
+  } else if (input.disposition === "formation_absence_failed") {
+    sealedRoot = v138SuccessorRoot("artifactManifest",
+      "v1.38-formation-absence-observation-v1", seal.formationAbsence)
+    observedRoot = plan26257ObservedRoot(
+      "v1.38-formation-absence-observation-failure-v1", () =>
+        deriveV138FormationAbsenceRoot(input.repoRoot, input.sourceA7))
+  } else {
+    if (input.patternCObservation === undefined) {
+      throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_REQUIRED")
+    }
+    const observation = exactRecord(input.patternCObservation,
+      ["mode", "cwd", "terminalAgentRegistry"],
+      "MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_INVALID")
+    try {
+      checkV138PatternCOwnershipV11({ mode: observation.mode,
+        cwd: observation.cwd,
+        terminalAgentRegistry: observation.terminalAgentRegistry })
+      throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+    } catch (error) {
+      if (error instanceof Error && error.message ===
+        "MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED") throw error
+    }
+    observedRoot = v138SuccessorRoot("artifactManifest",
+      "v1.38-pattern-c-ownership-observation-v1", observation)
+    expectedContractRoot = v138SuccessorRoot("containmentPolicy",
+      "v1.38-pattern-c-ownership-contract-v1", {
+        mode: "gsd-pattern-c-inline-main",
+        cwd: "/Users/roryquinlan/runtime/cowards-game",
+        registrySchema:
+          "v1.38-plan-262-57-terminal-agent-registry-v1",
+        activeExecutorCount: 0 })
+  }
+  if (sealedRoot !== null && sealedRoot === observedRoot) {
+    throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+  }
+  const body = { schemaVersion:
+    "v1.38-plan-262-57-pre-observation-proof-v1" as const,
+    disposition: input.disposition, sealedRoot, observedRoot,
+    expectedContractRoot }
+  return deepFreeze({ ...body, proofRoot: v138SuccessorRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+const checkV138Plan26257Disposition = (value: unknown):
+  V138Plan26257Disposition => {
+  if (typeof value !== "string" ||
+    !V138_PLAN_262_57_DISPOSITIONS.includes(value as never)) {
+    throw new TypeError("MATRIX_PLAN_262_30_DISPOSITION_INVALID")
+  }
+  return value as V138Plan26257Disposition
+}
+
+const plan26257Needs = (disposition: V138Plan26257Disposition,
+  obstructionStage?: V138Plan26257ObstructionProof["stage"],
+  interruptedStage?: V138Plan26257InterruptionProof["stage"]) => {
+  if (disposition === "fresh_destination_failed") return {
+    context: obstructionStage !== "context",
+    preflight: obstructionStage === "calibration" ||
+      obstructionStage === "reproduction",
+    calibration: obstructionStage === "reproduction", reproduction: false }
+  if (disposition === "consumed_stage_interrupted") return {
+    context: true, preflight: interruptedStage === "calibration" ||
+      interruptedStage === "reproduction",
+    calibration: interruptedStage === "reproduction", reproduction: false }
+  const pre = ["tool_identity_failed", "protected_history_failed",
+    "formation_absence_failed", "pattern_c_ownership_failed"]
+    .includes(disposition)
+  return { context: !pre, preflight: !pre,
+    calibration: ["calibration_stopped", "reproduction_stopped",
+      "reproduction_passed"].includes(disposition),
+    reproduction: ["reproduction_stopped", "reproduction_passed"]
+      .includes(disposition) }
+}
+
+const plan26257MarkerNeeds = (disposition: V138Plan26257Disposition,
+  needs: ReturnType<typeof plan26257Needs>,
+  interruptedStage?: V138Plan26257InterruptionProof["stage"]) => disposition ===
+  "consumed_stage_interrupted" ? { preflight: true,
+    calibration: interruptedStage === "calibration" ||
+      interruptedStage === "reproduction",
+    reproduction: interruptedStage === "reproduction" } : disposition ===
+  "fresh_destination_failed" ? { preflight: needs.preflight,
+    calibration: needs.calibration, reproduction: false } : {
+    preflight: needs.preflight, calibration: needs.calibration,
+    reproduction: needs.reproduction }
+
+const plan26257StagePaths = Object.freeze({
+  context: [PLAN_262_57_PATHS.context],
+  preflight: [PLAN_262_57_PATHS.preflight, PLAN_262_57_PATHS.preflightMarker],
+  calibration: [PLAN_262_57_PATHS.calibration,
+    PLAN_262_57_PATHS.calibrationMarker],
+  reproduction: [PLAN_262_57_PATHS.reproduction,
+    PLAN_262_57_PATHS.reproductionMarker],
+})
+const plan26257StageOrder = ["context", "preflight", "calibration",
+  "reproduction"] as const
+
+const inspectV138Plan26257Obstruction = (repoRoot: string, repoPath: string,
+  stage: V138Plan26257ObstructionProof["stage"]):
+  V138Plan26257ObstructionProof | undefined => {
+  try {
+    const stat = lstatSync(path.resolve(repoRoot, repoPath))
+    const type = stat.isSymbolicLink() ? "symlink" as const : stat.isFile() ?
+      "file" as const : stat.isDirectory() ? "directory" as const :
+        "other" as const
+    return Object.freeze({ stage, path: repoPath, type,
+      metadataRoot: v138SuccessorRoot("artifactManifest",
+        "v1.38-plan-262-57-obstruction-metadata-v1", { type, mode: stat.mode,
+          size: stat.size, modifiedMilliseconds: Math.trunc(stat.mtimeMs) }) })
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") return undefined
+    throw error
+  }
+}
+
+export const deriveV138Plan26257Obstruction = (repoRoot: string) => {
+  const stages = plan26257StageOrder.map((stage) => ({ stage,
+    candidates: plan26257StagePaths[stage].flatMap((repoPath) => {
+      const candidate = inspectV138Plan26257Obstruction(repoRoot, repoPath, stage)
+      return candidate === undefined ? [] : [candidate]
+    }) }))
+  const active = stages.filter(({ candidates }) => candidates.length > 0).at(-1)
+  if (active === undefined || active.candidates.length !== 1) {
+    throw new TypeError("MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
+  }
+  return active.candidates[0]!
+}
+
+export const checkV138Plan26257Obstruction = (repoRoot: string,
+  proof: V138Plan26257ObstructionProof): true => {
+  const current = inspectV138Plan26257Obstruction(repoRoot, proof.path,
+    proof.stage)
+  if (current === undefined || canonical(current) !== canonical(proof)) {
+    throw new TypeError("MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
+  }
+  for (const repoPath of plan26257StagePaths[proof.stage]) {
+    if (repoPath !== proof.path && inspectV138Plan26257Obstruction(repoRoot,
+      repoPath, proof.stage) !== undefined) {
+      throw new TypeError("MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
+    }
+  }
+  const stageIndex = plan26257StageOrder.indexOf(proof.stage)
+  for (const stage of plan26257StageOrder.slice(stageIndex + 1)) {
+    for (const repoPath of plan26257StagePaths[stage]) {
+      if (inspectV138Plan26257Obstruction(repoRoot, repoPath, stage) !==
+        undefined) throw new TypeError("MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
+    }
+  }
+  return true
+}
+
+export const deriveV138Plan26257InterruptionProof = (repoRoot: string):
+  V138Plan26257InterruptionProof | undefined => {
+  const stages = [
+    { stage: "preflight" as const, publicPath: PLAN_262_57_PATHS.preflight,
+      markerPath: PLAN_262_57_PATHS.preflightMarker },
+    { stage: "calibration" as const, publicPath: PLAN_262_57_PATHS.calibration,
+      markerPath: PLAN_262_57_PATHS.calibrationMarker },
+    { stage: "reproduction" as const,
+      publicPath: PLAN_262_57_PATHS.reproduction,
+      markerPath: PLAN_262_57_PATHS.reproductionMarker },
+  ]
+  const present = (repoPath: string) => {
+    try { lstatSync(path.resolve(repoRoot, repoPath)); return true } catch (error) {
+      if ((error as { code?: string }).code === "ENOENT") return false
+      throw error
+    }
+  }
+  const active = stages.filter(({ publicPath, markerPath }) =>
+    !present(publicPath) && present(markerPath)).at(-1)
+  if (active === undefined) return undefined
+  const activeIndex = stages.indexOf(active)
+  if (stages.slice(activeIndex + 1).some(({ publicPath, markerPath }) =>
+    present(publicPath) || present(markerPath))) return undefined
+  let marker: unknown
+  try { marker = readPlan26257(repoRoot,
+    `${active.stage}Marker` as "preflightMarker" | "calibrationMarker" |
+      "reproductionMarker") } catch { return undefined }
+  if (marker === null || typeof marker !== "object" || Array.isArray(marker) ||
+    !isV138CanonicalSha256((marker as { markerRoot?: unknown }).markerRoot)) {
+    return undefined
+  }
+  return Object.freeze({ stage: active.stage,
+    markerRoot: (marker as { markerRoot: Sha256 }).markerRoot,
+    chargedAttemptCount: active.stage === "preflight" ? 1 as const :
+      active.stage === "calibration" ? 8 as const : 540 as const,
+    chargedIdentityId: active.stage === "preflight" ?
+      "preflight:v11:0" as const : null,
+    observationMode: "unknown_after_consumption" as const,
+    childLaunchCount: null, terminalOutcomeCount: null,
+    completeCleanup: false as const })
+}
+
+const plan26257Evidence = (repoRoot: string, sourceA7: string,
+  sourceB7: string, dispositionValue: V138Plan26257Disposition,
+  obstructionProof?: V138Plan26257ObstructionProof,
+  interruptionProof?: V138Plan26257InterruptionProof,
+  patternCObservation?: V138Plan26257PatternCObservation,
+  claimedPreObservationProof?: V138Plan26257PreObservationProof) => {
+  const disposition = checkV138Plan26257Disposition(dispositionValue)
+  const preObservation = ["tool_identity_failed", "protected_history_failed",
+    "formation_absence_failed", "pattern_c_ownership_failed"]
+    .includes(disposition)
+  const anchor = preObservation ? (disposition === "protected_history_failed" ?
+    inspectV138ProtectedHistoryFailureSealCommitV7Anchor({ repoRoot, sourceA7,
+      sourceB7 }) : inspectV138SuccessorSealCommitV7Anchor({ repoRoot,
+      sourceA7, sourceB7 })) : undefined
+  const route = anchor === undefined ? checkV138Plan26256AuthorityRoute({
+    repoRoot, sourceA7, sourceB7,
+    authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") }) : {
+      custody: { sourceA7: anchor.sourceA7, sourceB7: anchor.sourceB7,
+        custodyRoot: anchor.anchorRoot },
+      authorization: anchor.authorization,
+      seal: anchor.seal,
+    }
+  const preObservationProof = !preObservation ? undefined :
+    deriveV138Plan26257PreObservationProof({ repoRoot, sourceA7, anchor: anchor!,
+      disposition: disposition as V138Plan26257PreObservationProof["disposition"],
+      patternCObservation })
+  if (claimedPreObservationProof !== undefined &&
+    canonical(claimedPreObservationProof) !== canonical(preObservationProof)) {
+    throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+  }
+  const needs = plan26257Needs(disposition, obstructionProof?.stage,
+    interruptionProof?.stage)
+  const markerNeeds = plan26257MarkerNeeds(disposition, needs,
+    interruptionProof?.stage)
+  if (disposition === "fresh_destination_failed") {
+    if (obstructionProof === undefined) {
+      throw new TypeError("MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
+    }
+    checkV138Plan26257Obstruction(repoRoot, obstructionProof)
+  }
+  if (disposition === "consumed_stage_interrupted") {
+    const current = deriveV138Plan26257InterruptionProof(repoRoot)
+    if (interruptionProof === undefined || current === undefined ||
+      canonical(current) !== canonical(interruptionProof)) {
+      throw new TypeError("MATRIX_PLAN_262_30_INTERRUPTION_INVALID")
+    }
+  }
+  if (preObservation) {
+    for (const key of ["context", "preflight", "calibration", "reproduction",
+      "preflightMarker", "calibrationMarker", "reproductionMarker"] as const) {
+      if (existsSync(path.resolve(repoRoot, PLAN_262_57_PATHS[key]))) {
+        throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_EVIDENCE_INVALID")
+      }
+    }
+  }
+  for (const [key, required] of [["context", needs.context],
+    ["preflight", needs.preflight], ["calibration", needs.calibration],
+    ["reproduction", needs.reproduction],
+    ["preflightMarker", markerNeeds.preflight],
+    ["calibrationMarker", markerNeeds.calibration],
+    ["reproductionMarker", markerNeeds.reproduction]] as const) {
+    const obstructed = obstructionProof?.path === PLAN_262_57_PATHS[key]
+    if (!required && !obstructed &&
+      existsSync(path.resolve(repoRoot, PLAN_262_57_PATHS[key]))) {
+      throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_MUST_BE_ABSENT`)
+    }
+  }
+  const value = (key: "context" | "preflight" | "calibration" |
+    "reproduction") => obstructionProof?.path === PLAN_262_57_PATHS[key] ?
+    undefined : readPlan26257(repoRoot, key, needs[key])
+  const contextValue = preObservation ? undefined : value("context")
+  const context = contextValue === undefined ? undefined :
+    checkV138ExecutionContextV11Receipt(contextValue, route)
+  const preflightValue = preObservation ? undefined : value("preflight")
+  const preflight = preflightValue === undefined || context === undefined ?
+    undefined : checkV138HostHeadroomPreflightV11Receipt(preflightValue, context)
+  const inventory = enumerateV138CurrentMatrix(repoRoot)
+  const calibrationValue = preObservation ? undefined : value("calibration")
+  const calibration = calibrationValue === undefined || context === undefined ||
+    preflight === undefined ? undefined : checkV138ParallelCalibrationV11Receipt(
+      inventory, calibrationValue, context, preflight)
+  const reproductionValue = preObservation ? undefined : value("reproduction")
+  const reproduction = reproductionValue === undefined || context === undefined ||
+    preflight === undefined || calibration === undefined ? undefined :
+    checkV138AuthoritativeMatrixV12Receipt(reproductionValue, { inventory,
+      context, preflight, calibration })
+  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v9")
+    .map(({ executionAttemptId }) => executionAttemptId)
+  const reproductionIds = planV138MatrixShards(inventory).shards.flatMap(
+    ({ attemptIds }) => attemptIds.map((id) => `reproduction:v11:${id}`))
+  const preflightMarker = !markerNeeds.preflight || context === undefined ||
+    obstructionProof?.path === PLAN_262_57_PATHS.preflightMarker ? undefined :
+    checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", context,
+      context.receiptRoot, ["preflight:v11:0"])
+  const calibrationMarker = !markerNeeds.calibration ||
+    context === undefined ||
+    obstructionProof?.path === PLAN_262_57_PATHS.calibrationMarker ||
+    preflight === undefined ? undefined : checkV138Plan26257ConsumptionMarker(
+      repoRoot, "calibration", context, preflight.receiptRoot, calibrationIds)
+  const reproductionMarker = !markerNeeds.reproduction ||
+    context === undefined ||
+    calibration === undefined || obstructionProof?.path ===
+      PLAN_262_57_PATHS.reproductionMarker ? undefined :
+    checkV138Plan26257ConsumptionMarker(
+      repoRoot, "reproduction", context, calibration.receiptRoot,
+      reproductionIds)
+  return { route, context, preflight, calibration, reproduction,
+    obstructionProof, interruptionProof, preObservationProof,
+    markerRoots: { preflight: preflightMarker?.markerRoot ?? null,
+      calibration: calibrationMarker?.markerRoot ?? null,
+      reproduction: reproductionMarker?.markerRoot ?? null } }
+}
+
+export const buildV138Plan26257TerminalV1 = (input: {
+  disposition: V138Plan26257Disposition; sourceA7: string; sourceB7: string;
+  authorizationRoot: unknown; sealRoot: unknown;
+  context?: Record<string, unknown>; preflight?: Record<string, unknown>;
+  calibration?: Record<string, unknown>; reproduction?: Record<string, unknown>;
+  markerRoots: Readonly<{ preflight: unknown; calibration: unknown;
+    reproduction: unknown }>
+  obstructionProof?: V138Plan26257ObstructionProof
+  interruptionProof?: V138Plan26257InterruptionProof
+  preObservationProof?: V138Plan26257PreObservationProof }) => {
+  const disposition = checkV138Plan26257Disposition(input.disposition)
+  const needs = plan26257Needs(disposition, input.obstructionProof?.stage,
+    input.interruptionProof?.stage)
+  const markerNeeds = plan26257MarkerNeeds(disposition, needs,
+    input.interruptionProof?.stage)
+  if ((input.context !== undefined) !== needs.context ||
+    (input.preflight !== undefined) !== needs.preflight ||
+    (input.calibration !== undefined) !== needs.calibration ||
+    (input.reproduction !== undefined) !== needs.reproduction ||
+    (input.markerRoots.preflight !== null) !== markerNeeds.preflight ||
+    (input.markerRoots.calibration !== null) !== markerNeeds.calibration ||
+    (input.markerRoots.reproduction !== null) !== markerNeeds.reproduction ||
+    (disposition === "fresh_destination_failed") !==
+      (input.obstructionProof !== undefined) ||
+    (disposition === "consumed_stage_interrupted") !==
+      (input.interruptionProof !== undefined) ||
+    V138_PLAN_262_57_PRE_OBSERVATION.has(disposition as never) !==
+      (input.preObservationProof !== undefined) ||
+    input.preObservationProof !== undefined &&
+      input.preObservationProof.disposition !== disposition ||
+    (input.interruptionProof !== undefined &&
+      input.interruptionProof.markerRoot !==
+        input.markerRoots[input.interruptionProof.stage])) {
+    throw new TypeError("MATRIX_PLAN_262_30_PRESENCE_INVALID")
+  }
+  if ((disposition === "reproduction_stopped" ||
+      disposition === "reproduction_passed") &&
+    input.calibration?.status !== "admitted") {
+    throw new TypeError("MATRIX_PLAN_262_30_DISPOSITION_JOIN_INVALID")
+  }
+  const calibrationCharged = input.calibration?.chargedAttemptCount ??
+    (input.interruptionProof?.stage === "calibration" ||
+      input.interruptionProof?.stage === "reproduction" ? 8 : 0)
+  const reproductionCharged = input.reproduction?.chargedAttemptCount ??
+    (input.interruptionProof?.stage === "reproduction" ? 540 : 0)
+  const body = { schemaVersion: "v1.38-plan-262-57-terminal-v1" as const,
+    disposition, sourceA7: input.sourceA7,
+    sourceB7: input.sourceB7, authorizationRoot: input.authorizationRoot,
+    sealRoot: input.sealRoot,
+    artifactRoots: { context: input.context?.receiptRoot ?? null,
+      preflight: input.preflight?.receiptRoot ?? null,
+      calibration: input.calibration?.receiptRoot ?? null,
+      reproduction: input.reproduction?.receiptRoot ?? null },
+    consumptionMarkerRoots: input.markerRoots,
+    obstructionProof: input.obstructionProof ?? null,
+    interruptionProof: input.interruptionProof ?? null,
+    preObservationProof: input.preObservationProof ?? null,
+    chargedCalibrationAttemptCount: calibrationCharged,
+    chargedReproductionAttemptCount: reproductionCharged,
+    acceptedCellCount: input.reproduction?.acceptedCellCount ?? 0,
+    completeCleanup: disposition === "consumed_stage_interrupted" ?
+      false as const : (input.calibration === undefined ||
+      input.calibration.completeCleanup === true) &&
+      (input.reproduction === undefined ||
+        input.reproduction.completeCleanup === true),
+    authorityExpired: true as const, noRetry: true as const,
+    partialAcceptedEvidenceReusable: false as const }
+  return deepFreeze({ ...body, terminalRoot: v138SuccessorRoot(
+    "canonicalJsonProfile", body.schemaVersion, body) })
+}
+
+export const checkV138Plan26257TerminalV1 = (value: unknown,
+  evidence: ReturnType<typeof plan26257Evidence>, disposition:
+  V138Plan26257Disposition) => {
+  const terminal = exactRecord(value, ["schemaVersion", "disposition",
+    "sourceA7", "sourceB7", "authorizationRoot", "sealRoot", "artifactRoots",
+    "consumptionMarkerRoots", "obstructionProof", "interruptionProof",
+    "preObservationProof",
+    "chargedCalibrationAttemptCount",
+    "chargedReproductionAttemptCount", "acceptedCellCount", "completeCleanup",
+    "authorityExpired", "noRetry", "partialAcceptedEvidenceReusable",
+    "terminalRoot"], "MATRIX_PLAN_262_30_TERMINAL_INVALID")
+  checkV138Plan26257Disposition(disposition)
+  const expected = buildV138Plan26257TerminalV1({ disposition,
+    sourceA7: evidence.route.custody.sourceA7,
+    sourceB7: evidence.route.custody.sourceB7,
+    authorizationRoot: evidence.route.authorization.authorizationRoot,
+    sealRoot: evidence.route.seal.sealRoot, context: evidence.context,
+    preflight: evidence.preflight, calibration: evidence.calibration,
+    reproduction: evidence.reproduction, markerRoots: evidence.markerRoots,
+    obstructionProof: evidence.obstructionProof,
+    interruptionProof: evidence.interruptionProof,
+    preObservationProof: evidence.preObservationProof })
+  const obstruction = terminal.obstructionProof === null ? null : exactRecord(
+    terminal.obstructionProof, ["stage", "path", "type", "metadataRoot"],
+    "MATRIX_PLAN_262_30_OBSTRUCTION_INVALID")
+  const interruption = terminal.interruptionProof === null ? null : exactRecord(
+    terminal.interruptionProof, ["stage", "markerRoot", "chargedAttemptCount",
+      "chargedIdentityId", "observationMode", "childLaunchCount",
+      "terminalOutcomeCount", "completeCleanup"],
+    "MATRIX_PLAN_262_30_INTERRUPTION_INVALID")
+  const preObservation = terminal.preObservationProof === null ? null :
+    exactRecord(terminal.preObservationProof, ["schemaVersion", "disposition",
+      "sealedRoot", "observedRoot", "expectedContractRoot", "proofRoot"],
+    "MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+  const preObservationBody = preObservation === null ? undefined : {
+    schemaVersion: preObservation.schemaVersion,
+    disposition: preObservation.disposition,
+    sealedRoot: preObservation.sealedRoot,
+    observedRoot: preObservation.observedRoot,
+    expectedContractRoot: preObservation.expectedContractRoot }
+  const preObservationValid = preObservation !== null &&
+    preObservation.schemaVersion ===
+      "v1.38-plan-262-57-pre-observation-proof-v1" &&
+    preObservation.disposition === disposition &&
+    (preObservation.sealedRoot === null ||
+      isV138CanonicalSha256(preObservation.sealedRoot)) &&
+    isV138CanonicalSha256(preObservation.observedRoot) &&
+    (preObservation.expectedContractRoot === null ||
+      isV138CanonicalSha256(preObservation.expectedContractRoot)) &&
+    preObservation.proofRoot === v138SuccessorRoot("evidenceBundle",
+      "v1.38-plan-262-57-pre-observation-proof-v1", preObservationBody)
+  const obstructionValid = obstruction !== null &&
+    ["context", "preflight", "calibration", "reproduction"].includes(
+      String(obstruction.stage)) &&
+    (obstruction.stage === "context" ? [PLAN_262_57_PATHS.context] :
+      obstruction.stage === "preflight" ? [PLAN_262_57_PATHS.preflight,
+        PLAN_262_57_PATHS.preflightMarker] : obstruction.stage === "calibration" ?
+        [PLAN_262_57_PATHS.calibration, PLAN_262_57_PATHS.calibrationMarker] :
+        [PLAN_262_57_PATHS.reproduction,
+          PLAN_262_57_PATHS.reproductionMarker])
+      .includes(String(obstruction.path)) &&
+    ["file", "directory", "symlink", "other"].includes(
+      String(obstruction.type)) && isV138CanonicalSha256(obstruction.metadataRoot)
+  const interruptionValid = interruption !== null &&
+    ["preflight", "calibration", "reproduction"].includes(
+      String(interruption.stage)) &&
+    isV138CanonicalSha256(interruption.markerRoot) &&
+    interruption.markerRoot === evidence.markerRoots[interruption.stage as
+      "preflight" | "calibration" | "reproduction"] &&
+    interruption.chargedAttemptCount === (interruption.stage === "preflight" ?
+      1 : interruption.stage === "calibration" ? 8 : 540) &&
+    interruption.chargedIdentityId === (interruption.stage === "preflight" ?
+      "preflight:v11:0" : null) &&
+    interruption.observationMode === "unknown_after_consumption" &&
+    interruption.childLaunchCount === null &&
+    interruption.terminalOutcomeCount === null &&
+    interruption.completeCleanup === false
+  if (canonical(terminal) !== canonical(expected) ||
+    V138_PLAN_262_57_PRE_OBSERVATION.has(disposition as never) !==
+      preObservationValid ||
+    disposition === "fresh_destination_failed" && (!obstructionValid ||
+      obstruction?.stage === "reproduction" &&
+        (evidence.preflight?.disposition !== "preflight_admitted" ||
+          evidence.calibration?.status !== "admitted")) ||
+    disposition === "consumed_stage_interrupted" &&
+      (!interruptionValid || evidence.reproduction !== undefined ||
+        terminal.completeCleanup !== false) ||
+    disposition === "preflight_unavailable" &&
+      evidence.preflight?.disposition !== "preflight_unavailable" ||
+    disposition === "preflight_refused" &&
+      evidence.preflight?.disposition !== "preflight_refused" ||
+    disposition === "calibration_stopped" &&
+      evidence.calibration?.status !== "stopped_process_failure" ||
+    disposition === "reproduction_stopped" &&
+      (evidence.calibration?.status !== "admitted" ||
+        evidence.reproduction?.status !== "stopped_process_failure") ||
+    disposition === "reproduction_passed" && (
+      evidence.calibration?.status !== "admitted" ||
+      evidence.reproduction?.status !== "passed_exact" ||
+      evidence.reproduction?.acceptedCellCount !== 540)) {
+    throw new TypeError("MATRIX_PLAN_262_30_TERMINAL_INVALID")
+  }
+  return deepFreeze(terminal)
+}
+
+export const writeV138Plan26257TerminalV1 = (repoRoot: string,
+  targetPath: string, disposition: V138Plan26257Disposition,
+  sourceA7: string, sourceB7: string,
+  patternCObservation?: V138Plan26257PatternCObservation) => {
+  checkV138Plan26257Disposition(disposition)
+  assertV138Plan26257AuthorityOpen(repoRoot)
+  const target = plan26257Path(repoRoot, targetPath, "terminal")
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  let effectiveDisposition = disposition
+  let interruptionProof = disposition === "fresh_destination_failed" ||
+    disposition === "consumed_stage_interrupted" ?
+    deriveV138Plan26257InterruptionProof(repoRoot) : undefined
+  let interruptionEvidence: ReturnType<typeof plan26257Evidence> | undefined
+  if (interruptionProof !== undefined) {
+    try {
+      interruptionEvidence = plan26257Evidence(repoRoot, sourceA7, sourceB7,
+        "consumed_stage_interrupted", undefined, interruptionProof)
+      effectiveDisposition = "consumed_stage_interrupted"
+    } catch (error) {
+      if (disposition === "consumed_stage_interrupted") throw error
+      interruptionProof = undefined
+    }
+  } else if (disposition === "consumed_stage_interrupted") {
+    throw new TypeError("MATRIX_PLAN_262_30_INTERRUPTION_INVALID")
+  }
+  const obstructionProof = effectiveDisposition === "fresh_destination_failed" ?
+    deriveV138Plan26257Obstruction(repoRoot) : undefined
+  const evidence = interruptionEvidence ?? plan26257Evidence(repoRoot, sourceA7,
+    sourceB7, effectiveDisposition, obstructionProof, interruptionProof,
+    patternCObservation)
+  const terminal = checkV138Plan26257TerminalV1(
+    buildV138Plan26257TerminalV1({ disposition: effectiveDisposition,
+      sourceA7, sourceB7,
+      authorizationRoot: evidence.route.authorization.authorizationRoot,
+      sealRoot: evidence.route.seal.sealRoot, context: evidence.context,
+      preflight: evidence.preflight, calibration: evidence.calibration,
+      reproduction: evidence.reproduction, markerRoots: evidence.markerRoots,
+      obstructionProof: evidence.obstructionProof,
+      interruptionProof: evidence.interruptionProof,
+      preObservationProof: evidence.preObservationProof }),
+    evidence, effectiveDisposition)
+  writeV138Plan26219Immutable(target, chain, terminal)
+  return terminal
+}
+
+export const checkV138Plan26257TerminalBranch = (repoRoot: string,
+  sourceA7: string, sourceB7: string,
+  patternCObservation?: V138Plan26257PatternCObservation) => {
+  const terminal = exactRecord(readPlan26257(repoRoot, "terminal"),
+    ["schemaVersion", "disposition", "sourceA7", "sourceB7",
+      "authorizationRoot", "sealRoot", "artifactRoots",
+      "consumptionMarkerRoots", "obstructionProof", "interruptionProof",
+      "preObservationProof",
+      "chargedCalibrationAttemptCount",
+      "chargedReproductionAttemptCount", "acceptedCellCount",
+      "completeCleanup", "authorityExpired", "noRetry",
+      "partialAcceptedEvidenceReusable", "terminalRoot"],
+    "MATRIX_PLAN_262_30_TERMINAL_INVALID")
+  const disposition = checkV138Plan26257Disposition(terminal.disposition)
+  if ((disposition === "pattern_c_ownership_failed") !==
+    (patternCObservation !== undefined)) {
+    throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_INVALID")
+  }
+  const obstructionProof = terminal.obstructionProof === null ? undefined :
+    terminal.obstructionProof as V138Plan26257ObstructionProof
+  const interruptionProof = terminal.interruptionProof === null ? undefined :
+    terminal.interruptionProof as V138Plan26257InterruptionProof
+  const preObservationProof = terminal.preObservationProof === null ? undefined :
+    terminal.preObservationProof as V138Plan26257PreObservationProof
+  return checkV138Plan26257TerminalV1(terminal,
+    plan26257Evidence(repoRoot, sourceA7, sourceB7, disposition,
+      obstructionProof, interruptionProof, patternCObservation,
+      preObservationProof), disposition)
+}
+
+export const buildV138Plan26257PreStartObstructionV1 = (input: {
+  readonly path: string
+  readonly type: "file" | "directory" | "symlink" | "other"
+  readonly metadataRoot: Sha256
+  readonly authorizationRoot: unknown
+  readonly sealRoot: unknown
+}) => {
+  if (!V138_PLAN_262_57_ROUTE_DESTINATIONS.includes(input.path as never) ||
+    !["file", "directory", "symlink", "other"].includes(input.type) ||
+    !isV138CanonicalSha256(input.metadataRoot) ||
+    !isV138CanonicalSha256(input.authorizationRoot) ||
+    !isV138CanonicalSha256(input.sealRoot)) {
+    throw new TypeError("MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  }
+  const body = { schemaVersion:
+    "v1.38-plan-262-57-pre-start-obstruction-v1" as const,
+    obstruction: Object.freeze({ path: input.path, type: input.type,
+      metadataRoot: input.metadataRoot }),
+    authorizationRoot: input.authorizationRoot, sealRoot: input.sealRoot,
+    routeStarted: false as const, isRouteTerminal: false as const,
+    chargedAttemptCount: 0 as const, acceptedCellCount: 0 as const,
+    authorityExpired: true as const, noRetry: true as const,
+    satisfiesAdmit03: false as const,
+    downstreamAuthority: Object.freeze({ candidateSearch: false,
+      phase263: false, formation: false, holdoutOpen: false,
+      public: false, production: false }) }
+  return deepFreeze({ ...body, dispositionRoot: v138SuccessorRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const checkV138Plan26257PreStartObstructionV1 = (value: unknown) => {
+  const record = exactRecord(value, ["schemaVersion", "obstruction",
+    "authorizationRoot", "sealRoot", "routeStarted", "isRouteTerminal",
+    "chargedAttemptCount", "acceptedCellCount", "authorityExpired", "noRetry",
+    "satisfiesAdmit03", "downstreamAuthority", "dispositionRoot"],
+  "MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  const obstruction = exactRecord(record.obstruction,
+    ["path", "type", "metadataRoot"],
+    "MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  const expected = buildV138Plan26257PreStartObstructionV1({
+    path: String(obstruction.path), type: obstruction.type as
+      "file" | "directory" | "symlink" | "other",
+    metadataRoot: obstruction.metadataRoot as Sha256,
+    authorizationRoot: record.authorizationRoot,
+    sealRoot: record.sealRoot })
+  if (canonical(record) !== canonical(expected)) {
+    throw new TypeError("MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  }
+  return expected
+}
+
+const inspectV138Plan26257PreStartDestination = (repoRoot: string,
+  repoPath: string) => {
+  try {
+    const stat = lstatSync(path.resolve(repoRoot, repoPath))
+    const type = stat.isSymbolicLink() ? "symlink" as const : stat.isFile() ?
+      "file" as const : stat.isDirectory() ? "directory" as const :
+        "other" as const
+    return Object.freeze({ path: repoPath, type,
+      metadataRoot: v138SuccessorRoot("artifactManifest",
+        "v1.38-plan-262-57-pre-start-obstruction-metadata-v1",
+        { type, mode: stat.mode, size: stat.size,
+          modifiedMilliseconds: Math.trunc(stat.mtimeMs) }) })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
+    throw error
+  }
+}
+
+export const checkV138Plan26257PreExecutionReadinessV1 = (repoRoot: string,
+  sourceA7: string, sourceB7: string) => {
+  if (existsSync(path.resolve(repoRoot,
+    V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH)) ||
+    V138_PLAN_262_57_ROUTE_DESTINATIONS.some((repoPath) =>
+      inspectV138Plan26257PreStartDestination(repoRoot, repoPath) !==
+        undefined)) {
+    throw new TypeError("MATRIX_PLAN_262_57_PRE_EXECUTION_NOT_READY")
+  }
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  return deepFreeze({ schemaVersion:
+    "v1.38-plan-262-57-pre-execution-readiness-v1" as const,
+    sourceA7, sourceB7,
+    authorizationRoot: route.authorization.authorizationRoot,
+    sealRoot: route.seal.sealRoot,
+    absentDestinations: V138_PLAN_262_57_ROUTE_DESTINATIONS,
+    routeStarted: false as const, chargedAttemptCount: 0 as const,
+    acceptedCellCount: 0 as const })
+}
+
+export const writeV138Plan26257PreStartObstructionV1 = (repoRoot: string,
+  targetPath: string, authorizationPath: string, sealPath: string,
+  sourceA7: string, sourceB7: string) => {
+  const target = path.resolve(repoRoot, targetPath)
+  if (target !== path.resolve(repoRoot,
+    V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH)) {
+    throw new TypeError("MATRIX_PLAN_262_57_PRE_START_PATH_INVALID")
+  }
+  const chain = validateV138CanonicalParentChain(repoRoot, target)
+  plan26257Path(repoRoot, authorizationPath, "authorization")
+  plan26257Path(repoRoot, sealPath, "seal")
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const obstructions = V138_PLAN_262_57_ROUTE_DESTINATIONS.flatMap(
+    (repoPath) => {
+      const value = inspectV138Plan26257PreStartDestination(repoRoot, repoPath)
+      return value === undefined ? [] : [value]
+    })
+  if (obstructions.length !== 1) {
+    throw new TypeError("MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  }
+  const disposition = checkV138Plan26257PreStartObstructionV1(
+    buildV138Plan26257PreStartObstructionV1({ ...obstructions[0]!,
+      authorizationRoot: route.authorization.authorizationRoot,
+      sealRoot: route.seal.sealRoot }))
+  writeV138Plan26219Immutable(target, chain, disposition)
+  return disposition
+}
+
+export const checkV138Plan26257PreStartObstructionBranch = (repoRoot: string,
+  sourceA7: string, sourceB7: string) => {
+  const target = path.resolve(repoRoot,
+    V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH)
+  const value = JSON.parse(readFileSync(target, "utf8")) as unknown
+  const disposition = checkV138Plan26257PreStartObstructionV1(value)
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    sealValue: readPlan26257(repoRoot, "seal") })
+  const current = inspectV138Plan26257PreStartDestination(repoRoot,
+    disposition.obstruction.path)
+  if (current === undefined || canonical(current) !==
+    canonical(disposition.obstruction) || disposition.authorizationRoot !==
+    route.authorization.authorizationRoot || disposition.sealRoot !==
+    route.seal.sealRoot) {
+    throw new TypeError("MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  }
+  return disposition
+}
+
+export const V138_ROUTE_7_SOURCE_MANIFEST = Object.freeze([
+  { command: "--check-plan-262-57-pre-execution-readiness-v1",
+    handler: "checkV138Plan26257PreExecutionReadinessV1",
+    destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+    prerequisite: "authorization-v7/seal-v7/all-route-destinations-absent",
+    sideEffect: "none", terminalDisposition: null },
+  { command: "--resolve-plan-262-57-pre-start-v1",
+    handler: "writeV138Plan26257PreStartObstructionV1",
+    destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+    prerequisite: "authorization-v7/seal-v7/exactly-one-obstruction",
+    sideEffect: "fixture-write-only", terminalDisposition: null },
+  { command: "--check-plan-262-57-pre-start-obstruction-v1",
+    handler: "checkV138Plan26257PreStartObstructionBranch",
+    destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+    prerequisite: "pre-start-disposition-present", sideEffect: "none",
+    terminalDisposition: null },
+  { command: "--write-execution-context-v11-receipt",
+    handler: "writeV138ExecutionContextV11Receipt",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
+    prerequisite: "authorization-v7/seal-v7/fresh-route",
+    sideEffect: "fixture-write-only", terminalDisposition: null },
+  { command: "--write-plan-262-57-route-start-v1",
+    handler: "writeV138Plan26257RouteStartV1",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
+    prerequisite: "authorization-v7/seal-v7/fresh-route",
+    sideEffect: "fixture-write-only", terminalDisposition: null },
+  { command: "--write-headroom-preflight-v11-receipt",
+    handler: "writeV138HostHeadroomPreflightV11Receipt",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[1],
+    prerequisite: "atomic-route-start", sideEffect: "injected-headroom",
+    terminalDisposition: "preflight_unavailable|preflight_refused" },
+  { command: "--calibrate-parallel-v11-receipt",
+    handler: "writeV138ParallelCalibrationV11Receipt",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[2],
+    prerequisite: "preflight_admitted", sideEffect: "injected-child-runner",
+    terminalDisposition: "calibration_stopped" },
+  { command: "--write-authoritative-v12-receipt",
+    handler: "writeV138AuthoritativeMatrixV12Receipt",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[3],
+    prerequisite: "calibration-admitted-8/8/4",
+    sideEffect: "injected-child-runner",
+    terminalDisposition: "reproduction_stopped|reproduction_passed" },
+  { command: "--write-plan-262-57-terminal-v1",
+    handler: "writeV138Plan26257TerminalV1",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[4],
+    prerequisite: "route-started", sideEffect: "fixture-write-only",
+    terminalDisposition: V138_PLAN_262_57_DISPOSITIONS.join("|") },
+  { command: "--check-plan-262-57-terminal-v1",
+    handler: "checkV138Plan26257TerminalBranch",
+    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[4],
+    prerequisite: "terminal-present", sideEffect: "none",
+    terminalDisposition: V138_PLAN_262_57_DISPOSITIONS.join("|") },
+] as const)
+
+export const checkV138Route7SourceCompleteness = (value: unknown =
+  V138_ROUTE_7_SOURCE_MANIFEST) => {
+  if (canonical(value) !== canonical(V138_ROUTE_7_SOURCE_MANIFEST)) {
+    throw new TypeError("V138_PLAN_262_54_ROUTE_7_MANIFEST_INVALID")
+  }
+  const commands = V138_ROUTE_7_SOURCE_MANIFEST.map(({ command }) => command)
+  if (commands.length !== new Set(commands).size || commands.some((command) =>
+    !V138_RECEIPT_DIRECT_COMMANDS.has(command))) {
+    throw new TypeError("V138_PLAN_262_54_ROUTE_7_CAPABILITY_MISSING")
+  }
+  return V138_ROUTE_7_SOURCE_MANIFEST
 }
 
 export const V138_PLAN_262_47_ROUTE_CONTRACT = Object.freeze({

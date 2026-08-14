@@ -5652,6 +5652,348 @@ export const writeV138Plan26247PreExecutionSourceFailureV1 =
     return value
   }
 
+// Route 7 is source-only until Plan 262-56 supplies a reviewed A7 and creates
+// the two authorization artifacts.  These contracts deliberately contain no
+// ambient "latest" lookup and no live operation.
+export const V138_PLAN_262_56_AUTHORIZATION_SCHEMA =
+  "v1.38-plan-262-56-authorization-v7" as const
+export const V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA =
+  "v1.38-successor-source-seal-v7" as const
+export const V138_PLAN_262_56_CANONICAL_PATHS = Object.freeze({
+  authorization:
+    ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
+  seal: ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+  sourceCompletenessReview:
+    ".planning/artifacts/v1.38-plan-262-55-source-completeness-review-v1.json",
+})
+export const V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH =
+  ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json" as const
+export const V138_PLAN_262_57_ROUTE_DESTINATIONS = Object.freeze([
+  ".planning/artifacts/v1.38-plan-262-57-route-start-v1.json",
+  ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v11.json",
+  ".planning/artifacts/v1.38-current-matrix-calibration-v11.json",
+  ".planning/artifacts/v1.38-current-matrix-reproduction-v12.json",
+  ".planning/artifacts/v1.38-plan-262-57-terminal-v1.json",
+  ".planning/artifacts/v1.38-plan-262-57-calibration-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-57-reproduction-consumption-v1.json",
+] as const)
+export const V138_PLAN_262_57_FRESH_DESTINATIONS = Object.freeze([
+  ...V138_PLAN_262_57_ROUTE_DESTINATIONS,
+  V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
+] as const)
+
+const V138_PLAN_262_56_AUTHORIZATION_KEYS = Object.freeze([
+  "schemaVersion", "routeOrdinal", "operator", "reviewedSourceCommit",
+  "reviewedSourceTree", "reviewedSourceParents", "reviewedSourceBlobs",
+  "sourceCompletenessReview", "selectedRouteClosure",
+  "selectedRouteClosureRoot", "toolIdentity", "formationAbsence",
+  "protectedHistory", "protectedHistoryRoot",
+  "cumulativeChargedPublicAttemptIds", "priorAuthorizationBytes",
+  "preSearchPolicyRoot", "canonicalDestinations", "frozenPolicyRoot",
+  "literalSha256", "sealCount", "routeStartCount", "preflightCount",
+  "calibrationAllocationCount", "calibrationAttemptCount",
+  "calibrationShardCount", "reproductionMaximumCount",
+  "reproductionCellCount", "resourceSampleMilliseconds",
+  "requiredHostHeadroomBasisPoints", "singleUse", "noRetry",
+  "noPriorAuthorizationReusable", "satisfiesAdmit03",
+  "downstreamAuthority", "authorizationRoot",
+] as const)
+
+export const inspectV138SourceIdentityA7 = (repoRoot: string,
+  sourceInput: string) => inspectV138SourceIdentityA6(repoRoot, sourceInput)
+
+const checkV138Plan26255ReviewProjection = (value: unknown) => {
+  if (!isRecord(value) || typeof value.a7 !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(value.a7) || value.findingCount !== 0 ||
+    value.sourceCompletenessPassed !== true ||
+    typeof value.reviewRoot !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/u.test(value.reviewRoot)) {
+    fail("V138_PLAN_262_55_REVIEW_INVALID")
+  }
+  return value
+}
+
+export const v138Plan26256AuthorizationLiteral = (repoRoot: string,
+  sourceA7: string, reviewValue: unknown): string => {
+  const source = inspectV138SourceIdentityA7(repoRoot, sourceA7)
+  const review = checkV138Plan26255ReviewProjection(reviewValue)
+  if (review.a7 !== source.reviewedSourceCommit) {
+    fail("V138_PLAN_262_56_REVIEW_SOURCE_INVALID")
+  }
+  const history = deriveV138ProtectedHistoryV6(repoRoot,
+    source.reviewedSourceCommit)
+  return [
+    "Coward's Game Plan 262-56 exact authorization-v7",
+    `reviewed source A7 ${source.reviewedSourceCommit}`,
+    `review root ${String(review.reviewRoot)}`,
+    "route ordinal 7",
+    "one atomic Plan-262-57 route-start receipt binding context:v11 and preflight consumption",
+    "one 200 ms preflight with inclusive 2,500-basis-point threshold",
+    "one eight-attempt/four-shard calibration:v11",
+    "at most one conditional reproduction:v12 540-cell run",
+    `protected history ${history.protectedHistoryRoot}`,
+    "all forty historical charged identities and all prior authorization bytes remain immutable",
+    "single_operator_local_seal_v1 remains reduced assurance",
+    "single use; no retry; no prior authorization reusable; no downstream authority",
+  ].join("\n")
+}
+
+export const buildV138Plan26256AuthorizationV7 = (input: {
+  readonly repoRoot: string
+  readonly sourceA7: string
+  readonly review: unknown
+  readonly literalBytes: Uint8Array
+}) => {
+  const source = inspectV138SourceIdentityA7(input.repoRoot, input.sourceA7)
+  const review = checkV138Plan26255ReviewProjection(input.review)
+  if (review.a7 !== source.reviewedSourceCommit) {
+    fail("V138_PLAN_262_56_REVIEW_SOURCE_INVALID")
+  }
+  if (!Buffer.from(v138Plan26256AuthorizationLiteral(input.repoRoot,
+    source.reviewedSourceCommit, review), "utf8").equals(
+      Buffer.from(input.literalBytes))) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_LITERAL_INVALID")
+  }
+  const history = deriveV138ProtectedHistoryV6(input.repoRoot,
+    source.reviewedSourceCommit)
+  const selectedRouteClosure = plan26247Closure(input.repoRoot,
+    source.reviewedSourceCommit)
+  const toolIdentity = Object.freeze({ toolIdentityRoot:
+    deriveV138ToolIdentityRoot() })
+  const formationAbsence = Object.freeze({ scannedRoot:
+    deriveV138FormationAbsenceRoot(input.repoRoot,
+      source.reviewedSourceCommit) })
+  const reviewBody = { a7: review.a7, findingCount: review.findingCount,
+    sourceCompletenessPassed: review.sourceCompletenessPassed,
+    reviewRoot: review.reviewRoot }
+  const body = {
+    schemaVersion: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+    routeOrdinal: 7 as const,
+    operator: V138_PLAN_262_15_OPERATOR,
+    ...source,
+    sourceCompletenessReview: Object.freeze(reviewBody),
+    selectedRouteClosure,
+    selectedRouteClosureRoot: selectedRouteClosure.closureRoot,
+    toolIdentity,
+    formationAbsence,
+    protectedHistory: history,
+    protectedHistoryRoot: history.protectedHistoryRoot,
+    cumulativeChargedPublicAttemptIds:
+      history.cumulativeChargedPublicAttemptIds,
+    priorAuthorizationBytes: history.priorAuthorizationBytes,
+    preSearchPolicyRoot:
+      "sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382" as Sha256,
+    canonicalDestinations: V138_PLAN_262_57_ROUTE_DESTINATIONS,
+    frozenPolicyRoot: frozenPolicyRootV2(),
+    literalSha256: sha256(input.literalBytes),
+    sealCount: 1 as const, routeStartCount: 1 as const,
+    preflightCount: 1 as const, calibrationAllocationCount: 1 as const,
+    calibrationAttemptCount: 8 as const, calibrationShardCount: 4 as const,
+    reproductionMaximumCount: 1 as const, reproductionCellCount: 540 as const,
+    resourceSampleMilliseconds: 200 as const,
+    requiredHostHeadroomBasisPoints: 2500 as const,
+    singleUse: true as const, noRetry: true as const,
+    noPriorAuthorizationReusable: true as const,
+    satisfiesAdmit03: false as const,
+    downstreamAuthority: Object.freeze({ candidateSearch: false,
+      phase263: false, formation: false, holdoutOpen: false,
+      public: false, production: false }),
+  }
+  return Object.freeze({ ...body, authorizationRoot: identityRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const checkV138Plan26256AuthorizationV7 = (repoRoot: string,
+  value: unknown) => {
+  if (!isRecord(value) || !exactKeys(value, V138_PLAN_262_56_AUTHORIZATION_KEYS)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_SCHEMA_INVALID")
+  }
+  const candidate = value as Record<string, unknown>
+  const { authorizationRoot, ...body } = candidate
+  if (candidate.schemaVersion !== V138_PLAN_262_56_AUTHORIZATION_SCHEMA ||
+    candidate.routeOrdinal !== 7 || candidate.operator !==
+      V138_PLAN_262_15_OPERATOR || candidate.sealCount !== 1 ||
+    candidate.routeStartCount !== 1 || candidate.preflightCount !== 1 ||
+    candidate.calibrationAllocationCount !== 1 ||
+    candidate.calibrationAttemptCount !== 8 ||
+    candidate.calibrationShardCount !== 4 ||
+    candidate.reproductionMaximumCount !== 1 ||
+    candidate.reproductionCellCount !== 540 ||
+    candidate.resourceSampleMilliseconds !== 200 ||
+    candidate.requiredHostHeadroomBasisPoints !== 2500 ||
+    candidate.singleUse !== true || candidate.noRetry !== true ||
+    candidate.noPriorAuthorizationReusable !== true ||
+    candidate.satisfiesAdmit03 !== false ||
+    canonical(candidate.canonicalDestinations) !==
+      canonical(V138_PLAN_262_57_ROUTE_DESTINATIONS) ||
+    !Array.isArray(candidate.cumulativeChargedPublicAttemptIds) ||
+    candidate.cumulativeChargedPublicAttemptIds.length !== 40 ||
+    new Set(candidate.cumulativeChargedPublicAttemptIds).size !== 40 ||
+    authorizationRoot !== identityRoot("evidenceBundle",
+      V138_PLAN_262_56_AUTHORIZATION_SCHEMA, body)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_INVALID")
+  }
+  inspectV138SourceIdentityA7(repoRoot,
+    String(candidate.reviewedSourceCommit))
+  return Object.freeze(candidate)
+}
+
+export const buildV138SuccessorSourceSealV7 = (repoRoot: string,
+  authorizationValue: unknown) => {
+  const authorization = checkV138Plan26256AuthorizationV7(repoRoot,
+    authorizationValue)
+  const body = { schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+    routeOrdinal: 7 as const,
+    sealedSourceCommit: authorization.reviewedSourceCommit,
+    sealedSourceTree: authorization.reviewedSourceTree,
+    sealedSourceParents: authorization.reviewedSourceParents,
+    authorizationRoot: authorization.authorizationRoot,
+    sourceCompletenessReview: authorization.sourceCompletenessReview,
+    selectedRouteClosure: authorization.selectedRouteClosure,
+    toolIdentity: authorization.toolIdentity,
+    formationAbsence: authorization.formationAbsence,
+    protectedHistory: authorization.protectedHistory,
+    protectedHistoryRoot: authorization.protectedHistoryRoot,
+    priorAuthorizationBytes: authorization.priorAuthorizationBytes,
+    canonicalDestinations: authorization.canonicalDestinations,
+    formationAbsenceBound: true as const,
+    runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
+    singleUse: true as const, noRetry: true as const }
+  return Object.freeze({ ...body, sealRoot: identityRoot("containmentPolicy",
+    body.schemaVersion, body) })
+}
+
+export const checkV138SuccessorSourceSealV7 = (repoRoot: string,
+  value: unknown, authorizationValue: unknown, _except?: unknown) => {
+  const expected = buildV138SuccessorSourceSealV7(repoRoot,
+    authorizationValue)
+  if (canonical(value) !== canonical(expected)) {
+    fail("V138_SUCCESSOR_SEAL_V7_INVALID")
+  }
+  return expected
+}
+
+export const checkV138SealedWorktreeAtA7 = (repoRoot: string,
+  sealValue: unknown) => {
+  if (!isRecord(sealValue) || typeof sealValue.sealedSourceCommit !== "string") {
+    fail("V138_SUCCESSOR_SEAL_V7_INVALID")
+  }
+  return inspectV138SourceIdentityA7(repoRoot, sealValue.sealedSourceCommit)
+}
+
+export const writeV138Plan26256AuthorizationV7 = (repoRoot: string,
+  targetPath: string, sourceA7: string, review: unknown,
+  literalBytes: Uint8Array) => {
+  const target = canonicalPath(repoRoot, targetPath,
+    V138_PLAN_262_56_CANONICAL_PATHS.authorization)
+  regularFile(target, "absent")
+  const value = buildV138Plan26256AuthorizationV7({ repoRoot, sourceA7,
+    review, literalBytes })
+  writeV138CanonicalExclusiveV2(repoRoot, target, value)
+  return value
+}
+
+export const writeV138SuccessorSourceSealV7 = (repoRoot: string,
+  targetPath: string, authorizationValue: unknown) => {
+  const target = canonicalPath(repoRoot, targetPath,
+    V138_PLAN_262_56_CANONICAL_PATHS.seal)
+  regularFile(target, "absent")
+  const value = buildV138SuccessorSourceSealV7(repoRoot, authorizationValue)
+  writeV138CanonicalExclusiveV2(repoRoot, target, value)
+  return value
+}
+
+export const checkV138SuccessorSealCommitV7 = (input: {
+  readonly repoRoot: string
+  readonly sourceA7: string
+  readonly sourceB7: string
+  readonly authorizationValue: unknown
+  readonly sealValue: unknown
+  readonly allowPlan26257Artifacts?: true
+}) => {
+  const sourceA7 = fullCommit(input.repoRoot, input.sourceA7)
+  const sourceB7 = fullCommit(input.repoRoot, input.sourceB7)
+  const parents = gitText(input.repoRoot, ["show", "-s", "--format=%P",
+    sourceB7]).split(" ").filter(Boolean)
+  const expectedPaths = sorted([V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+    V138_PLAN_262_56_CANONICAL_PATHS.seal])
+  const changedPaths = sorted(gitText(input.repoRoot, ["diff-tree",
+    "--no-commit-id", "--name-only", "-r", "--no-renames", sourceB7])
+    .split("\n").filter(Boolean).map(normalize))
+  if (parents.length !== 1 || parents[0] !== sourceA7 ||
+    canonical(changedPaths) !== canonical(expectedPaths)) {
+    fail("V138_SUCCESSOR_SEAL_B7_CUSTODY_INVALID")
+  }
+  const authorization = checkV138Plan26256AuthorizationV7(input.repoRoot,
+    input.authorizationValue)
+  const seal = checkV138SuccessorSourceSealV7(input.repoRoot, input.sealValue,
+    authorization)
+  if (authorization.reviewedSourceCommit !== sourceA7 ||
+    seal.sealedSourceCommit !== sourceA7) {
+    fail("V138_SUCCESSOR_SEAL_B7_SOURCE_INVALID")
+  }
+  if (input.allowPlan26257Artifacts !== true) {
+    for (const repoPath of V138_PLAN_262_57_FRESH_DESTINATIONS) {
+      readV138RepositoryFileNoFollow(input.repoRoot,
+        path.resolve(input.repoRoot, repoPath), "absent")
+    }
+  }
+  const body = { schemaVersion: "v1.38-source-b7-custody-v1" as const,
+    sourceA7, sourceB7,
+    sourceB7Tree: gitText(input.repoRoot, ["rev-parse", `${sourceB7}^{tree}`]),
+    sourceB7Parent: sourceA7, changedPaths: Object.freeze(changedPaths),
+    blobs: Object.freeze(expectedPaths.map((repoPath) =>
+      blobRecord(input.repoRoot, sourceB7, repoPath))),
+    authorizationRoot: authorization.authorizationRoot,
+    sealRoot: seal.sealRoot }
+  return Object.freeze({ ...body, custodyRoot: identityRoot(
+    "containmentPolicy", body.schemaVersion, body) })
+}
+
+export const deriveV138ProtectedHistoryV7 = (repoRoot: string,
+  sourceA7: string) => deriveV138ProtectedHistoryV6(repoRoot, sourceA7)
+
+const inspectV138SuccessorSealCommitV7AnchorInternal = (input: {
+  readonly repoRoot: string
+  readonly sourceA7: string
+  readonly sourceB7: string
+}) => {
+  const authorization = JSON.parse(readCommitFile(input.repoRoot,
+    input.sourceB7, V138_PLAN_262_56_CANONICAL_PATHS.authorization)
+    .toString("utf8"))
+  const seal = JSON.parse(readCommitFile(input.repoRoot, input.sourceB7,
+    V138_PLAN_262_56_CANONICAL_PATHS.seal).toString("utf8"))
+  const custody = checkV138SuccessorSealCommitV7({ ...input,
+    authorizationValue: authorization, sealValue: seal,
+    allowPlan26257Artifacts: true })
+  return Object.freeze({ sourceA7: custody.sourceA7,
+    sourceB7: custody.sourceB7, authorization, seal,
+    anchorRoot: custody.custodyRoot })
+}
+
+export const inspectV138SuccessorSealCommitV7Anchor =
+  inspectV138SuccessorSealCommitV7AnchorInternal
+export const inspectV138ProtectedHistoryFailureSealCommitV7Anchor =
+  inspectV138SuccessorSealCommitV7AnchorInternal
+
+const deriveV138SourceB7 = (repoRoot: string, sourceA7: string) => {
+  const candidates = gitText(repoRoot, ["log", "--all", "--format=%H", "--",
+    V138_PLAN_262_56_CANONICAL_PATHS.authorization]).split("\n")
+    .filter(Boolean).filter((candidate) => {
+      const parents = gitText(repoRoot, ["show", "-s", "--format=%P",
+        candidate]).split(" ").filter(Boolean)
+      if (parents.length !== 1 || parents[0] !== sourceA7) return false
+      const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+        "--name-only", "-r", "--no-renames", candidate]).split("\n")
+        .filter(Boolean).map(normalize))
+      return canonical(changed) === canonical(sorted([
+        V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+        V138_PLAN_262_56_CANONICAL_PATHS.seal]))
+    })
+  if (candidates.length !== 1) fail("V138_SUCCESSOR_SEAL_B7_AMBIGUOUS")
+  return fullCommit(repoRoot, candidates[0]!)
+}
+
 const V138_REVIEWED_SOURCE_A2 = "6db9f79e38340b303d73d6e379c13f667b5eadc9"
 const V138_REVIEWED_SOURCE_B2 = "b00af0406b97aa5f0538209d1f31a6e36659e570"
 const V138_PLAN_262_21_REPAIR_START =
@@ -6554,7 +6896,53 @@ const runCli = async (): Promise<void> => {
     "../..",
   )
   const args = process.argv.slice(2)
-  if (args[0] === "--write-plan-262-47-pre-execution-source-failure-v1") {
+  if (args[0] === "--render-plan-262-56-authorization-v7") {
+    if (args.length !== 3 || !["--source-a7-from-review",
+      "--review-input-absolute"].includes(args[1]!)) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_RENDER_CLI_INVALID")
+    }
+    const reviewBytes = regularFile(path.resolve(args[2]!), "required")!
+    const review = JSON.parse(reviewBytes.toString("utf8")) as unknown
+    const checked = checkV138Plan26255ReviewProjection(review)
+    process.stdout.write(`${v138Plan26256AuthorizationLiteral(repoRoot,
+      String(checked.a7), checked)}\n`)
+  } else if (args[0] === "--write-plan-262-56-authorization-v7") {
+    if (args.length !== 8 || args[2] !== "--source-a7" ||
+      args[4] !== "--review-input-absolute" ||
+      args[6] !== "--operator-literal") {
+      fail("V138_PLAN_262_56_AUTHORIZATION_CLI_INVALID")
+    }
+    const review = JSON.parse(regularFile(path.resolve(args[5]!), "required")!
+      .toString("utf8"))
+    writeV138Plan26256AuthorizationV7(repoRoot, args[1]!, args[3]!, review,
+      Buffer.from(args[7] ?? "", "utf8"))
+  } else if (args[0] === "--write-successor-source-seal-v7") {
+    if (args.length !== 4 || args[2] !== "--authorization") {
+      fail("V138_SUCCESSOR_SOURCE_SEAL_V7_CLI_INVALID")
+    }
+    const authorization = JSON.parse(regularFile(canonicalPath(repoRoot,
+      args[3]!, V138_PLAN_262_56_CANONICAL_PATHS.authorization), "required")!
+      .toString("utf8"))
+    writeV138SuccessorSourceSealV7(repoRoot, args[1]!, authorization)
+  } else if (args[0] === "--check-plan-262-56-authorization-v7") {
+    if (args.length !== 5 || args[1] !== "--authorization" ||
+      args[3] !== "--seal") {
+      fail("V138_PLAN_262_56_CHECK_CLI_INVALID")
+    }
+    const authorization = JSON.parse(regularFile(canonicalPath(repoRoot,
+      args[2]!, V138_PLAN_262_56_CANONICAL_PATHS.authorization), "required")!
+      .toString("utf8"))
+    const seal = JSON.parse(regularFile(canonicalPath(repoRoot, args[4]!,
+      V138_PLAN_262_56_CANONICAL_PATHS.seal), "required")!.toString("utf8"))
+    const checked = checkV138Plan26256AuthorizationV7(repoRoot, authorization)
+    const custody = checkV138SuccessorSealCommitV7({ repoRoot,
+      sourceA7: String(checked.reviewedSourceCommit),
+      sourceB7: deriveV138SourceB7(repoRoot,
+        String(checked.reviewedSourceCommit)), authorizationValue: checked,
+      sealValue: seal })
+    process.stdout.write(`${canonical({ authorizationRoot:
+      checked.authorizationRoot, sealRoot: custody.sealRoot, custody })}`)
+  } else if (args[0] === "--write-plan-262-47-pre-execution-source-failure-v1") {
     if (args.length !== 1) {
       fail("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_CLI_INVALID")
     }
