@@ -279,6 +279,7 @@ export const renderV138PlanSupersessionManifest = (
 export type V138DependencyRevisionFindingCode =
   | "PROTECTED_HISTORY_DRIFT"
   | "PROTECTED_HISTORY_MISSING"
+  | "ROUTE_CAPABLE_SOURCE_DRIFT"
   | "ROUTE5_REUSE"
   | "AUTHORITY_WRITER"
   | "LIVE_WORK_COMMAND"
@@ -575,6 +576,43 @@ export const analyzeV138DependencyRevisionSources = (
   return findings.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line || a.code.localeCompare(b.code))
 }
 
+const frozenRouteCapableSourceSha256 = Object.freeze({
+  "scripts/lib/v1-38-current-matrix-reproduction.ts":
+    "sha256:23353f5f94d97f1bf2786831f961549e19dec4518cfeb0839cf2c5a67c729f05" as Sha256,
+  "scripts/lib/v1-38-successor-source-seal.ts":
+    "sha256:466095498d211d2a37f933de3f4c8df3a3a04651701596e746581249faccd863" as Sha256,
+} as const)
+
+export const analyzeV138PolicySourcesWithFrozenRouteAllowlist = (
+  sources: Readonly<Record<string, string>>,
+): readonly V138DependencyRevisionFinding[] => {
+  const ordinary: Record<string, string> = {}
+  const findings: V138DependencyRevisionFinding[] = []
+  for (const [repoPath, source] of Object.entries(sources)) {
+    const frozenHash = frozenRouteCapableSourceSha256[
+      repoPath as keyof typeof frozenRouteCapableSourceSha256
+    ]
+    if (frozenHash === undefined) {
+      ordinary[repoPath] = source
+      continue
+    }
+    if (sha256(source) === frozenHash) continue
+    findings.push({
+      code: "ROUTE_CAPABLE_SOURCE_DRIFT",
+      path: repoPath,
+      line: 1,
+      detail:
+        "Route-capable source no longer matches its exact frozen historical byte allowlist.",
+    })
+    findings.push(...analyzeV138DependencyRevisionSources({
+      [repoPath]: source,
+    }))
+  }
+  findings.push(...analyzeV138DependencyRevisionSources(ordinary))
+  return findings.sort((a, b) =>
+    a.path.localeCompare(b.path) || a.line - b.line || a.code.localeCompare(b.code))
+}
+
 export const analyzeV138DependencyRevisionPaths = (
   repoPaths: readonly string[],
 ): readonly V138DependencyRevisionFinding[] => repoPaths
@@ -622,9 +660,7 @@ const changedPolicySources = (repoRoot: string): Readonly<Record<string, string>
   const sources: Record<string, string> = {}
   for (const repoPath of [...names].sort()) {
     if (!repoPath.endsWith(".ts") || repoPath.endsWith(".test.ts") ||
-      repoPath === "scripts/check-v1-38-dependency-revision-boundaries.ts" ||
-      repoPath === "scripts/lib/v1-38-current-matrix-reproduction.ts" ||
-      repoPath === "scripts/lib/v1-38-successor-source-seal.ts") continue
+      repoPath === "scripts/check-v1-38-dependency-revision-boundaries.ts") continue
     const target = path.join(repoRoot, repoPath)
     if (existsSync(target)) sources[repoPath] = readFileSync(target, "utf8")
   }
@@ -892,7 +928,7 @@ export const checkV138DependencyRevisionBoundaries = (
         sha256: "sha256:5d42af52835c2bbd8eaba1868d50bde1384d143f7f8822b6a9e725bac1075641",
       },
     ]),
-    ...analyzeV138DependencyRevisionSources(sources),
+    ...analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources),
     ...analyzeV138DependencyRevisionPaths(changedPaths(repoRoot)),
     ...analyzeV138LocalSealCarriers(Object.fromEntries([
       [".planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md"],
