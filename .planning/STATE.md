@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planned
-stopped_at: Completed 262-52-PLAN.md
-last_updated: "2026-08-13T03:03:48.385Z"
-last_activity: 2026-08-13
-last_activity_desc: Completed the zero-finding source-separated v3 local-seal review
+stopped_at: Replanned Phase 262 corrective successor after Plan 262-47 source-completeness failure
+last_updated: "2026-08-14T21:17:48.000Z"
+last_activity: 2026-08-14
+last_activity_desc: Archived original Plans 262-47/48 and created corrective Plans 262-53..57 plus rewired 262-48
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 42
+  total_plans: 46
   completed_plans: 40
-  percent: 95
+  percent: 87
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"local_seal_v3_pass_admit_pending","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_evidence_verification":"passed_zero_findings_v3","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","finding_codes":[],"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-47","total_plans":42,"completed_plans":40,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-47","262-48"],"incomplete":["262-47","262-48"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_failed_review_v2":"archived/262-50-HISTORICAL.md","archived_failed_review_v2_sha256":"e7ebdabdd057c541b09ab2337cd5f9fc505212f2b965a70aa042f8d0dcda81c8","archived_external_custody_checkpoint":"archived/262-40-HISTORICAL.md","archived_external_custody_sentinel":"archived/262-43-HISTORICAL.md","archived_external_custody_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"source_incomplete_pre_execution","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"route_started":false,"plan_262_47_terminal_present":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-53","total_plans":46,"completed_plans":40,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-55","262-56","262-57","262-48"],"incomplete":["262-53","262-54","262-55","262-56","262-57","262-48"],"archived_source_incomplete_plan":"archived/262-47-HISTORICAL.md","archived_source_incomplete_plan_sha256":"5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e","archived_original_activation_plan":"archived/262-48-HISTORICAL.md","archived_original_activation_plan_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 40 of 42 — Plan 262-52 complete; Plan 262-47 is next
-Status: Revised SEAL-01 passed under reduced assurance; ADMIT-03 and Plan 262-48 remain gated
-Last activity: 2026-08-13 — Completed the zero-finding source-separated v3 local-seal review
+Plan: 40 of 46 — Plan 262-52 complete; corrective Plan 262-53 is next
+Status: Plan 262-47 source incomplete before execution; revised SEAL-01 remains passed under reduced assurance and ADMIT-03 remains blocked
+Last activity: 2026-08-14 — Archived original Plans 262-47/48 and replanned the source-complete route-7 successor
 
-Progress: [██████████] 95%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
-**Current milestone:** 40 of 42 active Phase 262 plans have summaries. Plan 262-52 independently resolved all four historical local-seal findings and froze the exclusive v3 PASS root `sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b`. Revised SEAL-01 is proven only under `single_operator_local_seal_v1`; independent custody remains false. Plan 262-47 still owns the separately authorized literal 540/540 reproduction, ADMIT-03 remains blocked, Plan 262-48 remains gated, and every downstream authority remains false.
+**Current milestone:** 40 of 46 active Phase 262 plans have summaries. Plan 262-52's exclusive local-seal v3 PASS root remains exact under `single_operator_local_seal_v1`; independent custody remains false. The original Plan 262-47 is archived at SHA-256 `5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e` because sealed A6/B6 lacks the promised real CLI route. Its authorization is expired/unusable, its eight v10/v11 live destinations and canonical terminal remain absent, and fresh charges/acceptance remain 0/0. Corrective Plans 262-53..57 now precede rewired Plan 262-48; ADMIT-03 and every downstream authority remain false.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -237,7 +237,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-13T03:03:48.373Z
-Stopped at: Completed 262-52-PLAN.md
+Last session: 2026-08-14
+Stopped at: Replanned Phase 262 after pre-execution source-completeness failure
 Resume file: None
-Next command: Execute Plan 262-47 Task 1, then stop at its exact fresh authorization-literal checkpoint before any live route work.
+Next command: Execute Plan 262-53; no live route work is authorized.

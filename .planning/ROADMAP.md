@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 40/42 plans executed
+**Plans:** 40/46 plans executed
 
-**Current verdict:** LOCAL SEAL V3 PASS / `gaps_found` — 40 of 42 active plans have summaries. Plan 262-52 independently resolved all four historical findings and froze the exclusive v3 PASS root `sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b`. Revised SEAL-01 is proven only under `single_operator_local_seal_v1`; independent custody remains false. Plan 262-47 still owns the separately authorized literal 540/540 reproduction, ADMIT-03 remains blocked, Plan 262-48 remains gated, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized.
+**Current verdict:** SOURCE INCOMPLETE BEFORE EXECUTION / `gaps_found` — 40 of 46 active plans have summaries. Plan 262-52's exclusive local-seal v3 PASS root `sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b` remains exact under `single_operator_local_seal_v1`, with independent custody false. Inspection proved that sealed A6/B6 lacks the real Plan-262-47 live route surface. The exact original Plans 262-47/48 are archived, authorization-v6 is expired/unusable, every v10/v11 live destination and the canonical Plan-262-47 terminal remain absent, ADMIT-03 remains blocked, and the corrective Plans 262-53..57 precede rewired Plan 262-48. Phase 262 remains incomplete and Phases 263–270 remain unauthorized.
 
-<!-- phase-262-successor-status: {"proof_status":"local_seal_v3_pass_admit_pending","route_terminal":"calibration_stopped","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"external_custody_system":"absent_confirmed_not_required","gaps_found":true,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","finding_codes":[],"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-47","total_plans":42,"completed_plans":40,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-47","262-48"],"incomplete":["262-47","262-48"],"archived_failed_review_plan":"archived/262-46-HISTORICAL.md","archived_failed_review_plan_sha256":"ebe4a0a03768ed47984058d5ba1166c861d4d70e6bf95ac17799ab36bae87f41","archived_failed_review_v2":"archived/262-50-HISTORICAL.md","archived_failed_review_v2_sha256":"e7ebdabdd057c541b09ab2337cd5f9fc505212f2b965a70aa042f8d0dcda81c8","archived_checkpoint":"archived/262-40-HISTORICAL.md","archived_sentinel":"archived/262-43-HISTORICAL.md","archived_sentinel_sha256":"aad6ed06fc7e1fc0a0643d9ece8a9e85611d836212516c3284541a153c581239","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"source_incomplete_pre_execution","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","independent_custody_claimed":false,"route_started":false,"plan_262_47_terminal_present":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-53","total_plans":46,"completed_plans":40,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-55","262-56","262-57","262-48"],"incomplete":["262-53","262-54","262-55","262-56","262-57","262-48"],"archived_source_incomplete_plan":"archived/262-47-HISTORICAL.md","archived_source_incomplete_plan_sha256":"5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e","archived_original_activation_plan":"archived/262-48-HISTORICAL.md","archived_original_activation_plan_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 Plans:
 **Wave 1**
@@ -239,13 +239,34 @@ Plans:
 
 - [x] 262-52-PLAN.md — Run a fresh source-separated v3 review and grant revised SEAL-01 only on exact zero findings.
 
-**Wave 41** *(blocked on Wave 40 completion and fresh exact operator authority)*
+**Archived sealed-but-source-incomplete route and original activation plan** *(byte-preserved outside active `*-PLAN.md` discovery)*
 
-- [ ] 262-47-PLAN.md — Prepare, authorize, seal, and consume exactly one fresh unchanged-policy ADMIT-03 successor route with permanent no-retry terminalization.
+- `262-47-PLAN.md` -> `archived/262-47-HISTORICAL.md` — SHA-256 `5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e`; A6/B6 custody remains historical, authorization-v6 is expired/unusable, all v10/v11 live destinations and the canonical Plan-262-47 terminal remain absent, and no summary or ADMIT-03 credit exists.
+- Original `262-48-PLAN.md` -> `archived/262-48-HISTORICAL.md` — SHA-256 `8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1`; preserved before the active two-latch plan was rewired to Plan 262-57.
 
-**Wave 42** *(blocked on Wave 41 completion)*
+**Wave 41** *(blocked on Wave 40 completion; disposition/tracking only)*
 
-- [ ] 262-48-PLAN.md — Join literal ADMIT-03 and revised SEAL-01 as two noncompensating latches, refresh validation/verification, and grant at most Phase 263 planning authority.
+- [ ] 262-53-PLAN.md — Record the truthful pre-execution source-incomplete disposition, prove archived bytes and live-destination absence, expire Plan-262-47 authority without fabricating its terminal, and synchronize corrective tracking.
+
+**Wave 42** *(blocked on Wave 41 completion; offline source only)*
+
+- [ ] 262-54-PLAN.md — TDD the complete additive route-7/v11/v12 writers, checkers, direct CLI dispatch, marker ordering, injected disposable-fixture reachability, and all terminal branches with zero canonical/live writes.
+
+**Wave 43** *(blocked on Wave 42 completion; independent review only)*
+
+- [ ] 262-55-PLAN.md — Independently prove exact A7 source completeness, full symbol/command/path/branch reachability, and zero live writes; any finding archives the review plan and requires another corrective plan.
+
+**Wave 44** *(blocked on exact zero-finding Wave 43 completion)*
+
+- [ ] 262-56-PLAN.md — Render and checkpoint the exact fresh operator literal, then create exactly one two-artifact direct-child B7 with no live work.
+
+**Wave 45** *(blocked on Wave 44 completion and immediate main-only ownership check)*
+
+- [ ] 262-57-PLAN.md — Consume B7 once from the main orchestrator through the exact 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 route and seal one permanent no-retry terminal.
+
+**Wave 46** *(blocked on Wave 45 completion)*
+
+- [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, refresh validation/verification, and grant at most Phase 263 planning authority.
 
 **Dormant activation contract** *(not an executable wave and absent from phase-plan-index)*
 

@@ -1,0 +1,140 @@
+---
+phase: 262-foundation-admission-measurement-custody-and-containment-con
+plan: "48"
+type: execute
+wave: 42
+depends_on: [262-47]
+files_modified:
+  - scripts/evaluate-v1-38-foundation-activation.ts
+  - scripts/evaluate-v1-38-foundation-activation.test.ts
+  - .planning/artifacts/v1.38-foundation-activation-root.json
+  - .planning/REQUIREMENTS.md
+  - .planning/ROADMAP.md
+  - .planning/STATE.md
+  - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md
+  - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md
+autonomous: true
+requirements: [ADMIT-03, MEAS-10, SEAL-01]
+must_haves:
+  truths:
+    - "Foundation activation is the exact conjunction of a literal ADMIT-03 pass and a zero-finding revised SEAL-01 local-seal proof, plus the frozen policy, containment, predecessor, semantic, runtime, history, and privacy roots."
+    - "Neither policy readiness, local-seal readiness, an ADMIT-03 terminal without pass, historical custody, nor any compensating condition can satisfy the other latch."
+    - "If either latch is not pass, the plan records a deterministic non-authorizing verification result and stops without creating an activation root or completing Phase 262."
+    - "A passing join authorizes Phase 263 candidate-factory planning only; formation remains unavailable until the Phase 266 current-rules league is frozen, and public/product/production authority remains false."
+    - "Requirement, ROADMAP, STATE, validation, and verification status updates reflect only machine-checked evidence and preserve all historical failures, charges, terminals, and assurance limitations."
+  artifacts:
+    - path: .planning/artifacts/v1.38-foundation-activation-root.json
+      provides: "Exact two-latch foundation activation identity, created only on full pass"
+    - path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md
+      provides: "Goal-backward Phase 262 verdict with literal requirement evidence"
+    - path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md
+      provides: "Nyquist requirement-to-test coverage for the revised path"
+  key_links:
+    - from: .planning/artifacts/v1.38-current-matrix-reproduction-v11.json
+      to: .planning/artifacts/v1.38-foundation-activation-root.json
+      via: "Exact terminal-verified satisfiesAdmit03 true latch"
+      pattern: "satisfiesAdmit03"
+    - from: .planning/artifacts/v1.38-local-seal-independent-verification-v3.json
+      to: .planning/artifacts/v1.38-foundation-activation-root.json
+      via: "Exact satisfiesRevisedSeal01 true latch with independentCustodyClaimed false"
+      pattern: "satisfiesRevisedSeal01"
+    - from: .planning/artifacts/v1.38-foundation-activation-root.json
+      to: .planning/ROADMAP.md
+      via: "Phase 263 planning authority only, with formation and production denials"
+      pattern: "phase263PlanningAuthorized"
+---
+
+<objective>
+Join the two independent Phase 262 latches exactly and close the phase only if both the literal matrix reproduction and revised local-seal proof pass.
+
+Purpose: Prevent policy, process mechanics, or partial empirical evidence from being promoted separately into downstream authority.
+Output: Deterministic activation generator/checker/tests, conditional activation root, refreshed validation/verification, and exact planning status.
+</objective>
+
+<execution_context>
+@/Users/roryquinlan/.codex/gsd-core/workflows/execute-plan.md
+@/Users/roryquinlan/.codex/gsd-core/templates/summary.md
+</execution_context>
+
+<context>
+@AGENTS.md
+@.planning/REQUIREMENTS.md
+@.planning/ROADMAP.md
+@.planning/STATE.md
+@.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-CONTEXT.md
+@.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-39-SUMMARY.md
+@.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-52-SUMMARY.md
+@.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-47-SUMMARY.md
+@.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/dormant/262-41-ACTIVATION-CONTRACT.md
+@scripts/lib/v1-38-policy-authority.ts
+</context>
+
+<tasks>
+
+<task type="auto" tdd="true">
+  <name>Task 1: Implement the exact two-latch activation join</name>
+  <files>scripts/evaluate-v1-38-foundation-activation.ts, scripts/evaluate-v1-38-foundation-activation.test.ts, .planning/artifacts/v1.38-foundation-activation-root.json</files>
+  <behavior>
+    - Exact ADMIT-03 pass plus exact revised SEAL-01 pass plus all frozen roots yields one deterministic activation root.
+    - Missing, stopped, failed, stale, extra, mismatched, contaminated, dirty, or non-reproducible input yields no activation artifact and a stable blocked reason.
+    - Flipping either latch, replacing the local assurance class, claiming independent custody, substituting policy readiness, or changing any root fails before rendering.
+    - The passing projection enables only phase263PlanningAuthorized and candidateFactoryPlanningAuthorized; formationMaterializationAuthorized, holdoutOpenAuthorized, publicAuthorized, and productionAuthorized remain false.
+    - Re-render/check is byte-identical and mutation-complete, and an existing conflicting activation destination fails closed.
+  </behavior>
+  <action>Write exact pass and exhaustive one-input-at-a-time mutation tests first. Implement a distinct activation schema/domain based on the dormant Plan 262-41 contract but never execute or rewrite that historical file. Bind the exact v1.37 admission, selected semantic/runtime tuple, pre-search policy root, containment root, revised local-seal protocol and independent-verification roots, protected-history/supersession roots, and Plan-262-47 terminal plus reproduction root. Refuse output unless terminal says literal ADMIT-03 pass and verifier says revised SEAL-01 pass with `single_operator_local_seal_v1` and no independent-custody claim. Write/check atomically and exclusively from import.meta.url root with bounded public-safe stdout. Preserve D-01 through D-22 and D-19R/D-20R.</action>
+  <verify><automated>pnpm exec vitest run scripts/evaluate-v1-38-foundation-activation.test.ts --maxWorkers=1 &amp;&amp; pnpm exec tsx scripts/evaluate-v1-38-foundation-activation.ts --check &amp;&amp; pnpm exec tsx scripts/check-v1-38-dependency-revision-boundaries.ts --check</automated></verify>
+  <done>Exactly one capability-specific activation root exists only when both latches and every frozen identity pass; otherwise the destination remains absent.</done>
+</task>
+
+<task type="auto">
+  <name>Task 2: Refresh requirement, Nyquist, verification, and roadmap truth</name>
+  <files>.planning/REQUIREMENTS.md, .planning/ROADMAP.md, .planning/STATE.md, .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md, .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md</files>
+  <action>Run the complete focused Phase 262 test/checker/typecheck suite from a clean checkout and evaluate the literal artifacts. If both latches and activation check pass, mark ADMIT-03, MEAS-10, and revised SEAL-01 complete; set verification passed, Phase 262 complete, and next action to discuss/plan Phase 263. Record the exact reduced assurance in every verdict and keep formation unavailable until Phase 266 freeze plus all public/product/production authority false. If either latch fails or is absent, leave all unmet checkboxes and Phase 262 incomplete, write gaps_found with the exact noncompensating blocker, leave the activation artifact absent, and stop. Refresh 262-VALIDATION.md to map every revised requirement and threat to automated tests; do not reuse the stale pre-revision validation verdict. Preserve old attempts, charges, terminals, terminal pause, archived plans, and replay-tooling defect as separately attributable history.</action>
+  <verify><automated>pnpm exec vitest run scripts/evaluate-v1-38-foundation-activation.test.ts scripts/verify-v1-38-local-seal.test.ts scripts/evaluate-v1-38-local-seal.test.ts scripts/evaluate-v1-38-successor-route.test.ts --maxWorkers=1 &amp;&amp; pnpm exec tsx scripts/evaluate-v1-38-foundation-activation.ts --check &amp;&amp; pnpm exec tsx scripts/check-v1-38-dependency-revision-boundaries.ts --check &amp;&amp; pnpm turbo typecheck --concurrency=1 &amp;&amp; node /Users/roryquinlan/.codex/gsd-core/bin/gsd-tools.cjs query phase-plan-index 262 &amp;&amp; git diff --check</automated></verify>
+  <done>Planning and proof carriers match the exact two-latch result, with no false closure and no formation or production authority.</done>
+</task>
+
+</tasks>
+
+<source_coverage_audit>
+SOURCE | ID | Feature/Requirement | Plan | Status | Notes
+GOAL | — | Exact foundation activation before candidate search | 262-48 | COVERED | Two noncompensating latches.
+REQ | ADMIT-03 | Literal fresh matrix pass | 262-47/48 | COVERED | Terminal checked again in join.
+REQ | MEAS-10 | Frozen local-seal/profile protocol | 262-44..46/48 | COVERED | Status updated only on proof.
+REQ | SEAL-01 | Revised single-operator local seal | 262-45/46/48 | COVERED | Exact verifier root required.
+RESEARCH | Final two-latch join and status refresh | 262-48 | COVERED | Dormant contract used as pattern only.
+CONTEXT | D-01..D-22, D-19R/D-20R | Exact, private, noncompensating activation | 262-48 | COVERED | Formation remains separate.
+</source_coverage_audit>
+
+<threat_model>
+## Trust Boundaries
+| Boundary | Description |
+|---|---|
+| matrix terminal -> activation | Empirical pass must be literal, fresh, complete, and canonical. |
+| local-seal verification -> activation | Only revised assurance proof is accepted, without overclaim. |
+| activation -> roadmap | Capability is limited to Phase 263 planning; later authorities stay false. |
+## STRIDE Threat Register
+| Threat ID | Category | Component | Severity | Disposition | Mitigation Plan |
+|---|---|---|---|---|---|
+| T-262-48-01 | Spoofing | latch evidence | critical | mitigate | Exact schemas, roots, source commits, terminal/verifier checks. |
+| T-262-48-02 | Tampering | activation join | critical | mitigate | Domain-separated canonical root and exhaustive mutations. |
+| T-262-48-03 | Repudiation | status/history | high | mitigate | Preserve all protected historical roots and record literal verdict. |
+| T-262-48-04 | Information Disclosure | activation/status output | high | mitigate | Bounded roots/status only; no local/private/runtime details. |
+| T-262-48-05 | Elevation of Privilege | downstream capabilities | critical | mitigate | Exact positive planning fields and explicit formation/public/production denials. |
+| T-262-48-SC | Tampering | package installs | low | accept | No package installation occurs. |
+</threat_model>
+
+<verification>
+- The two-latch suite rejects each missing, false, stale, mismatched, contaminated, or overclaimed input.
+- Complete local-seal, successor-route, dependency-boundary, typecheck, and activation gates pass.
+- Requirement and planning status equal the literal artifacts; formation/public/production remain denied.
+</verification>
+
+<success_criteria>
+- Phase 262 completes only on exact ADMIT-03 plus revised SEAL-01 pass.
+- A failed latch remains a durable gaps_found result and cannot be compensated.
+- A passing activation grants only Phase 263/candidate-factory planning authority.
+- All historical evidence and the reduced assurance boundary remain explicit.
+</success_criteria>
+
+<output>Create `262-48-SUMMARY.md` only after status carriers match the exact join verdict. If the join is blocked, record the gap and stop without a summary or activation artifact.</output>
