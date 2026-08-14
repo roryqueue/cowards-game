@@ -5041,6 +5041,14 @@ export const V138_PLAN_262_47_AUTHORIZATION_SCHEMA =
   "v1.38-plan-262-47-authorization-v6" as const
 export const V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA =
   "v1.38-successor-source-seal-v6" as const
+export const V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_SCHEMA =
+  "v1.38-plan-262-47-pre-execution-source-failure-v1" as const
+export const V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH =
+  ".planning/artifacts/v1.38-plan-262-47-pre-execution-source-failure-v1.json" as const
+const V138_PLAN_262_47_SOURCE_A6 =
+  "600c7770867e6090147914dc090780f5b63930ec" as const
+const V138_PLAN_262_47_SOURCE_B6 =
+  "e2166736c2a1a3f1decbb1d6b3722f87945a47ea" as const
 export const V138_PLAN_262_47_CANONICAL_PATHS = Object.freeze({
   authorization:
     ".planning/artifacts/v1.38-plan-262-47-authorization-v6.json",
@@ -5426,6 +5434,200 @@ export const checkV138SuccessorSealCommitV6 = (repoRoot: string,
   return Object.freeze({ ...body, custodyRoot: identityRoot(
     "containmentPolicy", body.schemaVersion, body) })
 }
+
+const plan26247CommittedV6 = (repoRoot: string) => {
+  const sourceA6 = inspectV138SourceIdentityA6(repoRoot,
+    V138_PLAN_262_47_SOURCE_A6)
+  const [sourceB6Commit, sourceB6Tree, sourceB6Parent] = gitText(repoRoot,
+    ["show", "-s", "--format=%H%n%T%n%P", V138_PLAN_262_47_SOURCE_B6])
+    .split("\n")
+  const sourceB6ChangedPaths = Object.freeze(sorted(gitText(repoRoot,
+    ["diff-tree", "--no-commit-id", "--name-only", "-r", "--no-renames",
+      V138_PLAN_262_47_SOURCE_B6]).split("\n").filter(Boolean).map(normalize)))
+  const expectedChangedPaths = sorted([
+    V138_PLAN_262_47_CANONICAL_PATHS.authorization,
+    V138_PLAN_262_47_CANONICAL_PATHS.seal,
+  ])
+  if (sourceB6Commit !== V138_PLAN_262_47_SOURCE_B6 ||
+    !/^[0-9a-f]{40}$/u.test(sourceB6Tree ?? "") ||
+    sourceB6Parent !== V138_PLAN_262_47_SOURCE_A6 ||
+    canonical(sourceB6ChangedPaths) !== canonical(expectedChangedPaths)) {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_CUSTODY_INVALID")
+  }
+  const sourceB6Blobs = Object.freeze(expectedChangedPaths.map((repoPath) =>
+    blobRecord(repoRoot, V138_PLAN_262_47_SOURCE_B6, repoPath)))
+  const authorizationBytes = readCommitFile(repoRoot,
+    V138_PLAN_262_47_SOURCE_B6,
+    V138_PLAN_262_47_CANONICAL_PATHS.authorization)
+  const sealBytes = readCommitFile(repoRoot, V138_PLAN_262_47_SOURCE_B6,
+    V138_PLAN_262_47_CANONICAL_PATHS.seal)
+  const workingAuthorization = regularFile(path.resolve(repoRoot,
+    V138_PLAN_262_47_CANONICAL_PATHS.authorization), "required")!
+  const workingSeal = regularFile(path.resolve(repoRoot,
+    V138_PLAN_262_47_CANONICAL_PATHS.seal), "required")!
+  if (!authorizationBytes.equals(workingAuthorization) ||
+    !sealBytes.equals(workingSeal)) {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_SEALED_BYTES_INVALID")
+  }
+  let authorization: unknown
+  let seal: unknown
+  try {
+    authorization = JSON.parse(authorizationBytes.toString("utf8"))
+    seal = JSON.parse(sealBytes.toString("utf8"))
+  } catch {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_SEALED_BYTES_INVALID")
+  }
+  if (!isRecord(authorization) || !isRecord(seal) ||
+    authorization.schemaVersion !== V138_PLAN_262_47_AUTHORIZATION_SCHEMA ||
+    seal.schemaVersion !== V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA ||
+    authorization.reviewedSourceCommit !== V138_PLAN_262_47_SOURCE_A6 ||
+    seal.sealedSourceCommit !== V138_PLAN_262_47_SOURCE_A6 ||
+    seal.sealedSourceParent !== sourceA6.reviewedSourceParents[0] ||
+    authorization.authorizationRoot !== seal.authorizationRoot ||
+    typeof authorization.authorizationRoot !== "string" ||
+    typeof seal.sealRoot !== "string") {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_SEALED_BYTES_INVALID")
+  }
+  const { authorizationRoot, ...authorizationBody } = authorization
+  const { sealRoot, ...sealBody } = seal
+  if (authorizationRoot !== identityRoot("evidenceBundle",
+    V138_PLAN_262_47_AUTHORIZATION_SCHEMA, authorizationBody) ||
+    sealRoot !== identityRoot("containmentPolicy",
+      V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA, sealBody)) {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_SEALED_ROOT_INVALID")
+  }
+  return Object.freeze({ sourceA6, sourceB6Commit, sourceB6Tree:
+    sourceB6Tree!, sourceB6Parent: sourceB6Parent!, sourceB6ChangedPaths,
+  sourceB6Blobs, authorizationBytes, sealBytes, authorization, seal })
+}
+
+const buildV138Plan26247PreExecutionSourceFailure = (repoRoot: string) => {
+  for (const repoPath of V138_PLAN_262_47_FRESH_DESTINATIONS) {
+    regularFile(path.resolve(repoRoot, repoPath), "absent")
+  }
+  const committed = plan26247CommittedV6(repoRoot)
+  const authorization = committed.authorization
+  const seal = committed.seal
+  if (!isRecord(authorization) || !isRecord(seal) ||
+    !isRecord(authorization.localSeal) ||
+    !isRecord(authorization.protectedHistory) ||
+    !isRecord(authorization.selectedRouteClosure) ||
+    !Array.isArray(authorization.cumulativeChargedPublicAttemptIds) ||
+    authorization.cumulativeChargedPublicAttemptIds.length !== 40 ||
+    new Set(authorization.cumulativeChargedPublicAttemptIds).size !== 40 ||
+    authorization.cumulativeChargedPublicAttemptIds.some(
+      (value) => typeof value !== "string")) {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_HISTORY_INVALID")
+  }
+  const predecessorSealBytes = readCommitFile(repoRoot,
+    V138_PLAN_262_47_SOURCE_A6, V138_PLAN_262_29_CANONICAL_PATHS.seal)
+  const predecessorSeal = JSON.parse(predecessorSealBytes.toString("utf8")) as unknown
+  if (!isRecord(predecessorSeal) || !isRecord(predecessorSeal.formationAbsence) ||
+    !isRecord(predecessorSeal.replacementMetricContract) ||
+    typeof predecessorSeal.sealRoot !== "string" ||
+    typeof predecessorSeal.formationAbsence.scannedRoot !== "string" ||
+    typeof predecessorSeal.replacementMetricContract.contractRoot !== "string") {
+    fail("V138_PLAN_262_47_PRE_EXECUTION_PREDECESSOR_INVALID")
+  }
+  const sourceReviewBytes = readCommitFile(repoRoot,
+    V138_PLAN_262_47_SOURCE_A6,
+    V138_PLAN_262_47_CANONICAL_PATHS.sourceReview)
+  const review = derivePlan26247SourceReview(repoRoot,
+    V138_PLAN_262_47_SOURCE_A6)
+  const sourceCustody = Object.freeze({
+    sourceA6Tree: committed.sourceA6.reviewedSourceTree,
+    sourceA6Parents: committed.sourceA6.reviewedSourceParents,
+    sourceA6Blobs: committed.sourceA6.reviewedSourceBlobs,
+    sourceB6Tree: committed.sourceB6Tree,
+    sourceB6Parent: committed.sourceB6Parent,
+    sourceB6ChangedPaths: committed.sourceB6ChangedPaths,
+    sourceB6Blobs: committed.sourceB6Blobs,
+  })
+  const sourceReview = Object.freeze({ path: review.path,
+    sha256: sha256(sourceReviewBytes), historicalVerdict: "PASS_zero_findings" as const,
+    historicalBytesPreserved: true as const,
+    establishesCliSourceCompleteness: false as const })
+  const protectedRoots = Object.freeze({
+    selectedRouteClosureRoot: authorization.selectedRouteClosureRoot as Sha256,
+    gameplayRuntimePrivacyClosureRoot:
+      authorization.selectedRouteClosureRoot as Sha256,
+    protectedHistoryRoot: authorization.protectedHistoryRoot as Sha256,
+    frozenPolicyRoot: authorization.frozenPolicyRoot as Sha256,
+    preSearchPolicyRoot: authorization.preSearchPolicyRoot as Sha256,
+    localSealProtocolRoot: authorization.localSeal.localSealProtocolRoot as Sha256,
+    localSealIndependentVerificationRoot:
+      authorization.localSeal.independentVerificationRoot as Sha256,
+    predecessorSealV5Root: predecessorSeal.sealRoot as Sha256,
+    predecessorSealV5BytesSha256: sha256(predecessorSealBytes),
+    formationAbsenceRoot: predecessorSeal.formationAbsence.scannedRoot as Sha256,
+    replacementMetricContractRoot:
+      predecessorSeal.replacementMetricContract.contractRoot as Sha256,
+  })
+  const body = {
+    schemaVersion: V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_SCHEMA,
+    reason: "sealed_source_incomplete" as const,
+    sourceA6: V138_PLAN_262_47_SOURCE_A6,
+    sourceB6: V138_PLAN_262_47_SOURCE_B6,
+    sourceCustody,
+    authorizationRoot: authorization.authorizationRoot as Sha256,
+    sealRoot: seal.sealRoot as Sha256,
+    authorizationBytesSha256: sha256(committed.authorizationBytes),
+    sealBytesSha256: sha256(committed.sealBytes),
+    sourceReview,
+    protectedRoots,
+    historicalChargedPublicAttemptIds: Object.freeze([
+      ...authorization.cumulativeChargedPublicAttemptIds as string[],
+    ]),
+    historicalChargedAttemptCount: 40 as const,
+    freshAttemptLedgerRoot: identityRoot("evidenceBundle",
+      "v1.38-plan-262-47-fresh-attempt-ledger-v1", { attempts: [] }),
+    freshAcceptedCellLedgerRoot: identityRoot("evidenceBundle",
+      "v1.38-plan-262-47-fresh-accepted-cell-ledger-v1", { cells: [] }),
+    absentDestinations: V138_PLAN_262_47_FRESH_DESTINATIONS,
+    routeStarted: false as const,
+    isRouteTerminal: false as const,
+    chargedAttemptCount: 0 as const,
+    acceptedCellCount: 0 as const,
+    requiredAcceptedCellCount: 540 as const,
+    authorityExpired: true as const,
+    noRetry: true as const,
+    satisfiesAdmit03: false as const,
+    seal01Status: "passed_reduced_assurance" as const,
+    assuranceClass: "single_operator_local_seal_v1" as const,
+    independentCustodyClaimed: false as const,
+    candidateSearchAuthorized: false as const,
+    phase263Authorized: false as const,
+    formationMaterializationAuthorized: false as const,
+    holdoutOpeningAuthorized: false as const,
+    publicAuthorized: false as const,
+    activationAuthorized: false as const,
+    productionAuthorized: false as const,
+  }
+  return Object.freeze({ ...body, dispositionRoot: identityRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const buildV138Plan26247PreExecutionSourceFailureV1 =
+  (repoRoot: string) => buildV138Plan26247PreExecutionSourceFailure(repoRoot)
+
+export const checkV138Plan26247PreExecutionSourceFailureV1 =
+  (repoRoot: string, value: unknown) => {
+    const expected = buildV138Plan26247PreExecutionSourceFailure(repoRoot)
+    if (canonical(value) !== canonical(expected)) {
+      fail("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_INVALID")
+    }
+    return expected
+  }
+
+export const writeV138Plan26247PreExecutionSourceFailureV1 =
+  (repoRoot: string, targetPath: string) => {
+    const target = canonicalPath(repoRoot, targetPath,
+      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH)
+    regularFile(target, "absent")
+    const value = buildV138Plan26247PreExecutionSourceFailure(repoRoot)
+    writeV138CanonicalExclusiveV2(repoRoot, target, value)
+    return value
+  }
 
 const V138_REVIEWED_SOURCE_A2 = "6db9f79e38340b303d73d6e379c13f667b5eadc9"
 const V138_REVIEWED_SOURCE_B2 = "b00af0406b97aa5f0538209d1f31a6e36659e570"
@@ -6329,7 +6531,31 @@ const runCli = async (): Promise<void> => {
     "../..",
   )
   const args = process.argv.slice(2)
-  if (args[0] === "--render-plan-262-47-authorization-v6") {
+  if (args[0] === "--write-plan-262-47-pre-execution-source-failure-v1") {
+    if (args.length !== 1) {
+      fail("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_CLI_INVALID")
+    }
+    const value = writeV138Plan26247PreExecutionSourceFailureV1(repoRoot,
+      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH)
+    process.stdout.write(`${canonical({ dispositionRoot: value.dispositionRoot,
+      reason: value.reason, routeStarted: value.routeStarted,
+      chargedAttemptCount: value.chargedAttemptCount,
+      acceptedCellCount: value.acceptedCellCount })}`)
+  } else if (args[0] === "--check-plan-262-47-pre-execution-source-failure-v1") {
+    if (args.length !== 1) {
+      fail("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_CLI_INVALID")
+    }
+    const value = JSON.parse(regularFile(path.resolve(repoRoot,
+      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH), "required")!
+      .toString("utf8"))
+    const checked = checkV138Plan26247PreExecutionSourceFailureV1(repoRoot,
+      value)
+    process.stdout.write(`${canonical({ dispositionRoot:
+      checked.dispositionRoot, reason: checked.reason,
+    routeStarted: checked.routeStarted,
+    chargedAttemptCount: checked.chargedAttemptCount,
+    acceptedCellCount: checked.acceptedCellCount })}`)
+  } else if (args[0] === "--render-plan-262-47-authorization-v6") {
     if (args.length !== 3 || args[1] !== "--reviewed-source") {
       fail("V138_PLAN_262_47_AUTHORIZATION_RENDER_CLI_INVALID")
     }

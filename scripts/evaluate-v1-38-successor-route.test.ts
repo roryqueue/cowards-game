@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
@@ -10,7 +10,6 @@ import {
   V138_PLAN_262_47_CANONICAL_PATHS,
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA,
-  buildV138Plan26247AuthorizationV6,
   buildV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
@@ -27,6 +26,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 describe("v1.38 Plan 262-47 fresh successor route", () => {
   it("records the sealed source-incomplete branch without inventing route history", () => {
+    const artifactPath = path.resolve(repoRoot,
+      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH)
+    const before = readFileSync(artifactPath)
     const disposition = buildV138Plan26247PreExecutionSourceFailureV1(repoRoot)
     expect(disposition).toMatchObject({
       schemaVersion: V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_SCHEMA,
@@ -60,8 +62,7 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
     expect(disposition.sourceCustody.sourceB6Blobs).toHaveLength(2)
     expect(checkV138Plan26247PreExecutionSourceFailureV1(repoRoot,
       disposition)).toEqual(disposition)
-    expect(existsSync(path.resolve(repoRoot,
-      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH))).toBe(false)
+    expect(readFileSync(artifactPath)).toEqual(before)
     expect(JSON.stringify(disposition)).not.toMatch(
       /StrategyMemory|SoldierMemory|objectivePayload|rawDiagnostic|stack|DATABASE_URL/u,
     )
@@ -119,9 +120,9 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
     expect(V138_PLAN_262_47_FRESH_DESTINATIONS.every((repoPath) =>
       !existsSync(path.resolve(repoRoot, repoPath)))).toBe(true)
     expect(existsSync(path.resolve(repoRoot,
-      V138_PLAN_262_47_CANONICAL_PATHS.authorization))).toBe(false)
+      V138_PLAN_262_47_CANONICAL_PATHS.authorization))).toBe(true)
     expect(existsSync(path.resolve(repoRoot,
-      V138_PLAN_262_47_CANONICAL_PATHS.seal))).toBe(false)
+      V138_PLAN_262_47_CANONICAL_PATHS.seal))).toBe(true)
     expect(checkV138Plan26247RouteContract(
       V138_PLAN_262_47_ROUTE_CONTRACT)).toBe(V138_PLAN_262_47_ROUTE_CONTRACT)
     expect(() => checkV138Plan26247RouteContract({
@@ -144,9 +145,7 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
   })
 
   it("renders without persisting or invoking any route writer", () => {
-    const commit = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: repoRoot, encoding: "utf8",
-    }).trim()
+    const commit = "600c7770867e6090147914dc090780f5b63930ec"
     const literal = v138Plan26247AuthorizationLiteral(repoRoot, commit)
     expect(literal).toContain(`reviewed source commit ${commit}`)
     expect(literal).toContain("route ordinal 6")
@@ -161,23 +160,18 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
   }, 30_000)
 
   it("rejects old authority and identity mutations after root recomputation", () => {
-    const commit = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: repoRoot, encoding: "utf8",
-    }).trim()
-    const literal = Buffer.from(v138Plan26247AuthorizationLiteral(repoRoot,
-      commit), "utf8")
-    const authority = buildV138Plan26247AuthorizationV6(repoRoot, commit,
-      literal)
-    expect(checkV138Plan26247AuthorizationV6(repoRoot, authority, literal))
-      .toEqual(authority)
+    const authority = JSON.parse(readFileSync(path.resolve(repoRoot,
+      V138_PLAN_262_47_CANONICAL_PATHS.authorization), "utf8"))
+    expect(() => checkV138Plan26247AuthorizationV6(repoRoot, authority))
+      .toThrow("V138_PLAN_262_47_REVIEWED_SOURCE_BLOB_INVALID")
     expect(() => checkV138Plan26247AuthorizationV6(repoRoot, {
       ...authority,
       schemaVersion: "v1.38-plan-262-29-authorization-v5",
-    }, literal)).toThrow("V138_PLAN_262_47_AUTHORIZATION_SCHEMA_INVALID")
+    })).toThrow("V138_PLAN_262_47_AUTHORIZATION_SCHEMA_INVALID")
     expect(() => checkV138Plan26247AuthorizationV6(repoRoot, {
       ...authority,
       reviewedSourceTree: "0".repeat(40),
-    }, literal)).toThrow("V138_PLAN_262_47_AUTHORIZATION_INVALID")
+    })).toThrow("V138_PLAN_262_47_AUTHORIZATION_INVALID")
   })
 
   it("accepts only admitted 8/4 calibration followed by exact clean 540 cells", () => {
