@@ -1961,33 +1961,38 @@ export interface V138CanonicalParentChain {
 const inspectNoFollowDirectory = (
   directoryPath: string,
 ): V138CanonicalParentChain["directories"][number] => {
-  const linked = lstatSync(directoryPath)
-  if (!linked.isDirectory() || linked.isSymbolicLink()) {
-    fail("V138_CANONICAL_PARENT_CHAIN_INVALID")
-  }
-  const descriptor = openSync(
-    directoryPath,
-    constants.O_RDONLY |
-      (constants.O_DIRECTORY ?? 0) |
-      (constants.O_NOFOLLOW ?? 0),
-  )
   try {
-    const opened = fstatSync(descriptor)
-    if (
-      !opened.isDirectory() ||
-      opened.dev !== linked.dev ||
-      opened.ino !== linked.ino
-    ) {
-      fail("V138_CANONICAL_PARENT_CHAIN_IDENTITY_INVALID")
+    const linked = lstatSync(directoryPath)
+    if (!linked.isDirectory() || linked.isSymbolicLink()) {
+      fail("V138_CANONICAL_PARENT_CHAIN_INVALID")
     }
-    return Object.freeze({
-      path: directoryPath,
-      device: opened.dev,
-      inode: opened.ino,
-      mode: opened.mode,
-    })
-  } finally {
-    closeSync(descriptor)
+    const descriptor = openSync(
+      directoryPath,
+      constants.O_RDONLY |
+        (constants.O_DIRECTORY ?? 0) |
+        (constants.O_NOFOLLOW ?? 0),
+    )
+    try {
+      const opened = fstatSync(descriptor)
+      if (
+        !opened.isDirectory() ||
+        opened.dev !== linked.dev ||
+        opened.ino !== linked.ino
+      ) {
+        fail("V138_CANONICAL_PARENT_CHAIN_IDENTITY_INVALID")
+      }
+      return Object.freeze({
+        path: directoryPath,
+        device: opened.dev,
+        inode: opened.ino,
+        mode: opened.mode,
+      })
+    } finally {
+      closeSync(descriptor)
+    }
+  } catch (error) {
+    if (error instanceof TypeError) throw error
+    fail("V138_CANONICAL_PARENT_CHAIN_INVALID")
   }
 }
 
@@ -2079,6 +2084,19 @@ const regularFile = (
       fail("V138_PLAN_262_15_ARTIFACT_REQUIRED")
     }
     return undefined
+  }
+}
+
+export const readV138RepositoryFileNoFollow = (
+  repoRoot: string,
+  target: string,
+  expectation: "required" | "absent" | "optional",
+): Buffer | undefined => {
+  const parentChain = validateV138CanonicalParentChain(repoRoot, target)
+  try {
+    return regularFile(parentChain.target, expectation)
+  } finally {
+    checkV138CanonicalParentChain(parentChain)
   }
 }
 
@@ -5407,7 +5425,8 @@ export const checkV138SuccessorSealCommitV6 = (repoRoot: string,
     requireAbsentAtCommit(repoRoot, sourceA6, repoPath,
       "V138_SUCCESSOR_SEAL_V6_EXISTED_AT_A6")
     const committed = readCommitFile(repoRoot, sourceB6, repoPath)
-    const working = regularFile(path.resolve(repoRoot, repoPath), "required")!
+    const working = readV138RepositoryFileNoFollow(repoRoot,
+      path.resolve(repoRoot, repoPath), "required")!
     if (!committed.equals(working)) {
       fail("V138_SUCCESSOR_SEAL_B6_WORKTREE_DRIFT")
     }
@@ -5422,7 +5441,8 @@ export const checkV138SuccessorSealCommitV6 = (repoRoot: string,
   }
   if (!allowLiveArtifacts) {
     for (const repoPath of V138_PLAN_262_47_FRESH_DESTINATIONS) {
-      regularFile(path.resolve(repoRoot, repoPath), "absent")
+      readV138RepositoryFileNoFollow(repoRoot,
+        path.resolve(repoRoot, repoPath), "absent")
     }
   }
   const body = { schemaVersion: "v1.38-source-b6-custody-v1" as const,
@@ -5461,10 +5481,12 @@ const plan26247CommittedV6 = (repoRoot: string) => {
     V138_PLAN_262_47_CANONICAL_PATHS.authorization)
   const sealBytes = readCommitFile(repoRoot, V138_PLAN_262_47_SOURCE_B6,
     V138_PLAN_262_47_CANONICAL_PATHS.seal)
-  const workingAuthorization = regularFile(path.resolve(repoRoot,
-    V138_PLAN_262_47_CANONICAL_PATHS.authorization), "required")!
-  const workingSeal = regularFile(path.resolve(repoRoot,
-    V138_PLAN_262_47_CANONICAL_PATHS.seal), "required")!
+  const workingAuthorization = readV138RepositoryFileNoFollow(repoRoot,
+    path.resolve(repoRoot, V138_PLAN_262_47_CANONICAL_PATHS.authorization),
+    "required")!
+  const workingSeal = readV138RepositoryFileNoFollow(repoRoot,
+    path.resolve(repoRoot, V138_PLAN_262_47_CANONICAL_PATHS.seal),
+    "required")!
   if (!authorizationBytes.equals(workingAuthorization) ||
     !sealBytes.equals(workingSeal)) {
     fail("V138_PLAN_262_47_PRE_EXECUTION_SEALED_BYTES_INVALID")
@@ -5503,7 +5525,8 @@ const plan26247CommittedV6 = (repoRoot: string) => {
 
 const buildV138Plan26247PreExecutionSourceFailure = (repoRoot: string) => {
   for (const repoPath of V138_PLAN_262_47_FRESH_DESTINATIONS) {
-    regularFile(path.resolve(repoRoot, repoPath), "absent")
+    readV138RepositoryFileNoFollow(repoRoot,
+      path.resolve(repoRoot, repoPath), "absent")
   }
   const committed = plan26247CommittedV6(repoRoot)
   const authorization = committed.authorization

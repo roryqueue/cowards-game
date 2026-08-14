@@ -2,13 +2,6 @@
 import { createHash } from "node:crypto"
 import { execFileSync, spawnSync } from "node:child_process"
 import {
-  closeSync,
-  constants,
-  existsSync,
-  fstatSync,
-  lstatSync,
-  openSync,
-  readFileSync,
   readdirSync,
   writeFileSync,
 } from "node:fs"
@@ -21,7 +14,10 @@ import { hashCanonicalIdentity } from "../packages/spec/src/canonical-identity-d
 import type { JsonValue } from "../packages/spec/src/types.js"
 import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
+  checkV138CanonicalParentChain,
   checkV138Plan26247PreExecutionSourceFailureV1,
+  readV138RepositoryFileNoFollow,
+  validateV138CanonicalParentChain,
 } from "./lib/v1-38-successor-source-seal.js"
 
 type Sha256 = `sha256:${string}`
@@ -60,40 +56,11 @@ const identityRoot = (schemaVersion: string, value: unknown): Sha256 =>
     canonicalBytes(value),
   ])}`
 
-const readRegularFileNoFollow = (target: string): Buffer | undefined => {
-  try {
-    const stat = lstatSync(target)
-    if (!stat.isFile() || stat.isSymbolicLink()) return undefined
-    const descriptor = openSync(
-      target,
-      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
-    )
-    try {
-      const opened = fstatSync(descriptor)
-      if (
-        !opened.isFile() ||
-        opened.dev !== stat.dev ||
-        opened.ino !== stat.ino ||
-        opened.size > 16 * 1024 * 1024
-      ) return undefined
-      return readFileSync(descriptor)
-    } finally {
-      closeSync(descriptor)
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
-    return undefined
-  }
-}
+const repositoryFile = (repoRoot: string, target: string): Buffer =>
+  readV138RepositoryFileNoFollow(repoRoot, target, "required")!
 
-const pathAbsentNoFollow = (target: string): boolean => {
-  try {
-    lstatSync(target)
-    return false
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "ENOENT"
-  }
-}
+const repositoryFilePresent = (repoRoot: string, target: string): boolean =>
+  readV138RepositoryFileNoFollow(repoRoot, target, "optional") !== undefined
 
 export const V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY = Object.freeze({
   tooling_dependency: "frozen_replay_commit_unreachable",
@@ -386,7 +353,8 @@ const correctiveRequirementDisposition = Object.freeze({
 const correctiveRequirementDispositionFindings = (repoRoot: string):
   readonly V138DependencyRevisionFinding[] => {
   const repoPath = ".planning/REQUIREMENTS.md"
-  const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
+  const source = repositoryFile(repoRoot, path.join(repoRoot, repoPath))
+    .toString("utf8")
   try {
     checkV138ExactMachineStatus(source, "phase-262-requirement-disposition",
       correctiveRequirementDisposition)
@@ -447,8 +415,8 @@ const correctiveLifecycleStatus = (post53: boolean) => Object.freeze({
 
 const correctiveLifecycleCarrierFindings = (repoRoot: string):
   readonly V138DependencyRevisionFinding[] => {
-  const post53 = existsSync(path.join(repoRoot, phaseDirectory,
-    "262-53-SUMMARY.md"))
+  const post53 = repositoryFilePresent(repoRoot, path.join(repoRoot,
+    phaseDirectory, "262-53-SUMMARY.md"))
   const common = correctiveLifecycleStatus(post53)
   const expectedByPath = {
     ".planning/ROADMAP.md": common,
@@ -460,7 +428,8 @@ const correctiveLifecycleCarrierFindings = (repoRoot: string):
     }),
   } as const
   return Object.entries(expectedByPath).flatMap(([repoPath, expected]) => {
-    const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
+    const source = repositoryFile(repoRoot, path.join(repoRoot, repoPath))
+      .toString("utf8")
     try {
       checkV138ExactMachineStatus(source, "phase-262-successor-status", expected)
       return []
@@ -482,13 +451,14 @@ export const analyzeV138ProtectedHistory = (
   const findings: V138DependencyRevisionFinding[] = []
   for (const entry of entries) {
     const target = path.join(repoRoot, entry.path)
-    if (!existsSync(target)) findings.push({
+    const bytes = readV138RepositoryFileNoFollow(repoRoot, target, "optional")
+    if (bytes === undefined) findings.push({
       code: "PROTECTED_HISTORY_MISSING",
       path: entry.path,
       line: 1,
       detail: "Protected historical evidence is missing.",
     })
-    else if (sha256(readFileSync(target)) !== entry.sha256) findings.push({
+    else if (sha256(bytes) !== entry.sha256) findings.push({
       code: "PROTECTED_HISTORY_DRIFT",
       path: entry.path,
       line: 1,
@@ -673,7 +643,7 @@ const frozenRouteCapableSourceSha256 = Object.freeze({
   "scripts/lib/v1-38-current-matrix-reproduction.ts":
     "sha256:23353f5f94d97f1bf2786831f961549e19dec4518cfeb0839cf2c5a67c729f05" as Sha256,
   "scripts/lib/v1-38-successor-source-seal.ts":
-    "sha256:466095498d211d2a37f933de3f4c8df3a3a04651701596e746581249faccd863" as Sha256,
+    "sha256:f91eb5173a7731b0c4425fdc56b4c697a48022ed3d6f5b44cbb78325cd7cf5ce" as Sha256,
 } as const)
 
 export const analyzeV138PolicySourcesWithFrozenRouteAllowlist = (
@@ -755,7 +725,8 @@ const changedPolicySources = (repoRoot: string): Readonly<Record<string, string>
     if (!repoPath.endsWith(".ts") || repoPath.endsWith(".test.ts") ||
       repoPath === "scripts/check-v1-38-dependency-revision-boundaries.ts") continue
     const target = path.join(repoRoot, repoPath)
-    if (existsSync(target)) sources[repoPath] = readFileSync(target, "utf8")
+    const bytes = readV138RepositoryFileNoFollow(repoRoot, target, "optional")
+    if (bytes !== undefined) sources[repoPath] = bytes.toString("utf8")
   }
   return sources
 }
@@ -769,7 +740,7 @@ const changedPaths = (repoRoot: string): readonly string[] => [...new Set([
 const correctiveDispositionCanonical = (repoRoot: string): boolean => {
   const target = path.join(repoRoot, plan26247DispositionPath)
   try {
-    const bytes = readRegularFileNoFollow(target)
+    const bytes = readV138RepositoryFileNoFollow(repoRoot, target, "required")
     if (bytes === undefined) return false
     const value = JSON.parse(bytes.toString("utf8")) as unknown
     const expected = checkV138Plan26247PreExecutionSourceFailureV1(
@@ -783,7 +754,8 @@ const correctiveDispositionCanonical = (repoRoot: string): boolean => {
     return (
       bytes.equals(expectedBytes) &&
       V138_PLAN_262_47_FRESH_DESTINATIONS.every((repoPath) =>
-        pathAbsentNoFollow(path.join(repoRoot, repoPath)),
+        readV138RepositoryFileNoFollow(repoRoot,
+          path.join(repoRoot, repoPath), "absent") === undefined,
       )
     )
   } catch { return false }
@@ -792,9 +764,16 @@ const correctiveDispositionCanonical = (repoRoot: string): boolean => {
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
   const findings: V138DependencyRevisionFinding[] = []
   const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41", "262-43", "262-47"])
-  const directPlans = readdirSync(path.join(repoRoot, phaseDirectory))
-    .filter((name) => /^262-\d+-PLAN\.md$/u.test(name))
-    .map((name) => name.slice(0, 6))
+  const phaseChain = validateV138CanonicalParentChain(repoRoot,
+    path.join(repoRoot, phaseDirectory, ".v138-directory-probe"))
+  let directPlans: string[]
+  try {
+    directPlans = readdirSync(phaseChain.parent)
+      .filter((name) => /^262-\d+-PLAN\.md$/u.test(name))
+      .map((name) => name.slice(0, 6))
+  } finally {
+    checkV138CanonicalParentChain(phaseChain)
+  }
   if (directPlans.some((planId) => forbidden.has(planId))) findings.push({
     code: "PLAN_DISCOVERY_DRIFT",
     path: phaseDirectory,
@@ -843,18 +822,24 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
       "38": ["262-49"], "39": ["262-51"], "40": ["262-52"], "41": ["262-53"], "42": ["262-54"],
       "43": ["262-55"], "44": ["262-56"], "45": ["262-57"], "46": ["262-48"],
     })
-    const summary = (planId: string): boolean =>
-      existsSync(path.join(repoRoot, phaseDirectory, `${planId}-SUMMARY.md`))
+    const summary = (planId: string): boolean => repositoryFilePresent(repoRoot,
+      path.join(repoRoot, phaseDirectory, `${planId}-SUMMARY.md`))
     const artifactPath = path.join(repoRoot, ".planning/artifacts/v1.38-local-seal-independent-verification-v2.json")
     const reviewPath = path.join(repoRoot, phaseDirectory, "262-50-REVIEW.md")
-    const failArtifactCanonical = isCanonicalPlan50Artifact(artifactPath, "fail")
-    const failReviewCanonical = failArtifactCanonical && isCanonicalPlan50Review(reviewPath, artifactPath, "fail")
+    const failArtifactCanonical = isCanonicalPlan50Artifact(repoRoot,
+      artifactPath, "fail")
+    const failReviewCanonical = failArtifactCanonical && isCanonicalPlan50Review(
+      repoRoot, reviewPath, artifactPath, "fail")
     const v3ArtifactPath = path.join(repoRoot, ".planning/artifacts/v1.38-local-seal-independent-verification-v3.json")
     const v3ReviewPath = path.join(repoRoot, phaseDirectory, "262-52-REVIEW.md")
-    const v3PassArtifactCanonical = isCanonicalPlan52Artifact(v3ArtifactPath, "pass")
-    const v3FailArtifactCanonical = isCanonicalPlan52Artifact(v3ArtifactPath, "fail")
-    const v3PassReviewCanonical = v3PassArtifactCanonical && isCanonicalPlan52Review(v3ReviewPath, v3ArtifactPath, "pass")
-    const v3FailReviewCanonical = v3FailArtifactCanonical && isCanonicalPlan52Review(v3ReviewPath, v3ArtifactPath, "fail")
+    const v3PassArtifactCanonical = isCanonicalPlan52Artifact(repoRoot,
+      v3ArtifactPath, "pass")
+    const v3FailArtifactCanonical = isCanonicalPlan52Artifact(repoRoot,
+      v3ArtifactPath, "fail")
+    const v3PassReviewCanonical = v3PassArtifactCanonical &&
+      isCanonicalPlan52Review(repoRoot, v3ReviewPath, v3ArtifactPath, "pass")
+    const v3FailReviewCanonical = v3FailArtifactCanonical &&
+      isCanonicalPlan52Review(repoRoot, v3ReviewPath, v3ArtifactPath, "fail")
     const v3Verdict = v3PassArtifactCanonical ? "pass" as const : v3FailArtifactCanonical ? "fail" as const : "absent" as const
     const post53 = summary("262-53")
     const expectedSummaryCount = post53 ? 41 : 40
@@ -868,8 +853,11 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
       v3Verdict === "pass" && v3PassArtifactCanonical && v3PassReviewCanonical &&
       summary("262-51") && summary("262-52") && !summary("262-47") &&
       correctiveDispositionCanonical(repoRoot) &&
-      correctiveArchiveEntries.every((entry) => existsSync(path.join(repoRoot,
-        entry.path)) && sha256(readFileSync(path.join(repoRoot, entry.path))) === entry.sha256)
+      correctiveArchiveEntries.every((entry) => {
+        const bytes = readV138RepositoryFileNoFollow(repoRoot,
+          path.join(repoRoot, entry.path), "optional")
+        return bytes !== undefined && sha256(bytes) === entry.sha256
+      })
     if (!lifecycleExact) findings.push({
       code: "PLAN_DISCOVERY_DRIFT",
       path: phaseDirectory,
@@ -894,10 +882,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 type V138PhasePlanIndexLifecycle =
   | "pre_51" | "post_51_pre_52" | "plan_52_pass" | "plan_52_fail" | "post_47" | "post_48"
 
-const isCanonicalPlan50Artifact = (target: string, expected: "pass" | "fail"): boolean => {
-  if (!existsSync(target)) return false
+const isCanonicalPlan50Artifact = (repoRoot: string, target: string,
+  expected: "pass" | "fail"): boolean => {
   try {
-    const bytes = readFileSync(target, "utf8")
+    const bytes = repositoryFile(repoRoot, target).toString("utf8")
     const value = JSON.parse(bytes) as unknown
     if (!isRecord(value) || bytes !== `${JSON.stringify(value)}\n` ||
       value.schemaVersion !== "v1.38-local-seal-independent-verification-v2" ||
@@ -913,20 +901,21 @@ const isCanonicalPlan50Artifact = (target: string, expected: "pass" | "fail"): b
   } catch { return false }
 }
 
-const isCanonicalPlan50Review = (reviewTarget: string, artifactTarget: string, expected: "pass" | "fail"): boolean => {
-  if (!existsSync(reviewTarget) || !existsSync(artifactTarget)) return false
+const isCanonicalPlan50Review = (repoRoot: string, reviewTarget: string,
+  artifactTarget: string, expected: "pass" | "fail"): boolean => {
   try {
-    const artifact = JSON.parse(readFileSync(artifactTarget, "utf8")) as { verificationRoot?: unknown }
-    const review = readFileSync(reviewTarget, "utf8")
+    const artifact = JSON.parse(repositoryFile(repoRoot, artifactTarget)
+      .toString("utf8")) as { verificationRoot?: unknown }
+    const review = repositoryFile(repoRoot, reviewTarget).toString("utf8")
     return typeof artifact.verificationRoot === "string" && review.includes(artifact.verificationRoot) &&
       (expected === "pass" ? /\bPASS\b/u.test(review) : /\bFAIL\b/u.test(review))
   } catch { return false }
 }
 
-const isCanonicalPlan52Artifact = (target: string, expected: "pass" | "fail"): boolean => {
-  if (!existsSync(target)) return false
+const isCanonicalPlan52Artifact = (repoRoot: string, target: string,
+  expected: "pass" | "fail"): boolean => {
   try {
-    const bytes = readFileSync(target, "utf8")
+    const bytes = repositoryFile(repoRoot, target).toString("utf8")
     const value = JSON.parse(bytes) as unknown
     if (!isRecord(value) || bytes !== `${JSON.stringify(value)}\n` ||
       value.schemaVersion !== "v1.38-local-seal-independent-verification-v3" ||
@@ -944,8 +933,9 @@ const isCanonicalPlan52Artifact = (target: string, expected: "pass" | "fail"): b
   } catch { return false }
 }
 
-const isCanonicalPlan52Review = (reviewTarget: string, artifactTarget: string, expected: "pass" | "fail"): boolean =>
-  isCanonicalPlan50Review(reviewTarget, artifactTarget, expected)
+const isCanonicalPlan52Review = (repoRoot: string, reviewTarget: string,
+  artifactTarget: string, expected: "pass" | "fail"): boolean =>
+  isCanonicalPlan50Review(repoRoot, reviewTarget, artifactTarget, expected)
 
 export const evaluateV138PhasePlanIndexTransition = (
   input: Readonly<{
@@ -1032,14 +1022,18 @@ export const checkV138DependencyRevisionBoundaries = (
       [".planning/research/competitive-strategy-factory-and-adversarial-league.md"],
       [".planning/seeds/SEED-002-competitive-strategy-factory-and-adversarial-league.md"],
       [".planning/STATE.md"],
-    ].map(([repoPath]) => [repoPath, readFileSync(path.join(repoRoot, repoPath), "utf8")]))),
+    ].map(([repoPath]) => [repoPath, repositoryFile(repoRoot,
+      path.join(repoRoot, repoPath)).toString("utf8")]))),
     ...correctiveRequirementDispositionFindings(repoRoot),
     ...correctiveLifecycleCarrierFindings(repoRoot),
     ...planDiscoveryFindings(repoRoot),
   ]
   const expectedManifest = renderV138PlanSupersessionManifest()
   const manifestTarget = path.join(repoRoot, manifestPath)
-  if (!existsSync(manifestTarget) || readFileSync(manifestTarget, "utf8") !== expectedManifest) findings.push({
+  const manifestBytes = readV138RepositoryFileNoFollow(repoRoot,
+    manifestTarget, "optional")
+  if (manifestBytes === undefined || manifestBytes.toString("utf8") !==
+    expectedManifest) findings.push({
     code: "MANIFEST_DRIFT",
     path: manifestPath,
     line: 1,
@@ -1050,7 +1044,8 @@ export const checkV138DependencyRevisionBoundaries = (
     ".planning/artifacts/v1.38-local-seal-public-reference.json",
     ".planning/artifacts/v1.38-foundation-activation-root.json",
     ".planning/artifacts/v1.38-current-matrix-reproduction-v10.json",
-  ]) if (existsSync(path.join(repoRoot, forbiddenPath))) findings.push({
+  ]) if (repositoryFilePresent(repoRoot,
+    path.join(repoRoot, forbiddenPath))) findings.push({
     code: "AUTHORITY_ARTIFACT_PRESENT",
     path: forbiddenPath,
     line: 1,
@@ -1060,7 +1055,8 @@ export const checkV138DependencyRevisionBoundaries = (
     "packages/replay/src/historical-v1-4.test.ts",
     "packages/replay/src/fixtures/historical-v1-4-chronicle-manifest.json",
   ]) {
-    const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
+    const source = repositoryFile(repoRoot, path.join(repoRoot, repoPath))
+      .toString("utf8")
     if (!source.includes(V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY.frozenCommit)) findings.push({
       code: "TOOLING_DEPENDENCY_DRIFT",
       path: repoPath,

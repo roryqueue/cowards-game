@@ -1,6 +1,15 @@
 import { execFileSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
 import { Buffer } from "node:buffer"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
@@ -20,6 +29,7 @@ import {
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
   inspectV138SourceIdentityA6,
+  readV138RepositoryFileNoFollow,
   v138Plan26247AuthorizationLiteral,
   writeV138Plan26247PreExecutionSourceFailureV1,
 } from "./lib/v1-38-successor-source-seal.js"
@@ -191,6 +201,57 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
       artifactPath)).toThrow()
     expect(readFileSync(artifactPath)).toEqual(before)
   }, 120_000)
+
+  it("rejects symlinked evidence ancestors and leafs with exact reasons", () => {
+    const fixtureRoot = mkdtempSync(path.join(tmpdir(),
+      "v138-repository-path-containment-"))
+    const outsideRoot = mkdtempSync(path.join(tmpdir(),
+      "v138-repository-path-outside-"))
+    const expectAncestorRejected = (
+      ancestor: string,
+      target: string,
+      expectation: "required" | "absent",
+    ) => {
+      const repository = path.join(fixtureRoot, ancestor.replaceAll("/", "-"))
+      mkdirSync(repository)
+      const components = ancestor.split("/")
+      const symlinkName = components.pop()!
+      const realParent = path.join(repository, ...components)
+      mkdirSync(realParent, { recursive: true })
+      const outside = path.join(outsideRoot, ancestor.replaceAll("/", "-"))
+      mkdirSync(outside, { recursive: true })
+      symlinkSync(outside, path.join(realParent, symlinkName), "dir")
+      expect(() => readV138RepositoryFileNoFollow(repository,
+        path.join(repository, target), expectation))
+        .toThrow("V138_CANONICAL_PARENT_CHAIN_INVALID")
+    }
+    try {
+      expectAncestorRejected(".planning",
+        ".planning/artifacts/evidence.json", "absent")
+      expectAncestorRejected(".planning/artifacts",
+        ".planning/artifacts/evidence.json", "absent")
+      expectAncestorRejected(".planning/phases",
+        ".planning/phases/262-foundation/evidence.md", "absent")
+      expectAncestorRejected(".planning/phases/262-foundation",
+        ".planning/phases/262-foundation/evidence.md", "absent")
+      expectAncestorRejected("scripts", "scripts/lib/source.ts", "required")
+      expectAncestorRejected("scripts/lib", "scripts/lib/source.ts", "required")
+
+      const leafRepository = path.join(fixtureRoot, "leaf")
+      const leafOutside = path.join(outsideRoot, "leaf-evidence.json")
+      mkdirSync(path.join(leafRepository, ".planning", "artifacts"),
+        { recursive: true })
+      writeFileSync(leafOutside, "{}\n")
+      symlinkSync(leafOutside, path.join(leafRepository, ".planning",
+        "artifacts", "evidence.json"), "file")
+      expect(() => readV138RepositoryFileNoFollow(leafRepository,
+        path.join(leafRepository, ".planning", "artifacts", "evidence.json"),
+        "required")).toThrow("V138_PLAN_262_15_ARTIFACT_TYPE_INVALID")
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true })
+      rmSync(outsideRoot, { recursive: true, force: true })
+    }
+  })
 
   it("rejects stale, duplicate, and contradictory structured status blocks", () => {
     const marker = "phase-262-test-status"
