@@ -4,11 +4,15 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
+  V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH,
+  V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_SCHEMA,
   V138_PLAN_262_47_AUTHORIZATION_SCHEMA,
   V138_PLAN_262_47_CANONICAL_PATHS,
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA,
   buildV138Plan26247AuthorizationV6,
+  buildV138Plan26247PreExecutionSourceFailureV1,
+  checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
   inspectV138SourceIdentityA6,
   v138Plan26247AuthorizationLiteral,
@@ -22,6 +26,77 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
 describe("v1.38 Plan 262-47 fresh successor route", () => {
+  it("records the sealed source-incomplete branch without inventing route history", () => {
+    const disposition = buildV138Plan26247PreExecutionSourceFailureV1(repoRoot)
+    expect(disposition).toMatchObject({
+      schemaVersion: V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_SCHEMA,
+      reason: "sealed_source_incomplete",
+      sourceA6: "600c7770867e6090147914dc090780f5b63930ec",
+      sourceB6: "e2166736c2a1a3f1decbb1d6b3722f87945a47ea",
+      routeStarted: false,
+      isRouteTerminal: false,
+      chargedAttemptCount: 0,
+      acceptedCellCount: 0,
+      authorityExpired: true,
+      noRetry: true,
+      satisfiesAdmit03: false,
+      candidateSearchAuthorized: false,
+      phase263Authorized: false,
+      formationMaterializationAuthorized: false,
+      holdoutOpeningAuthorized: false,
+      publicAuthorized: false,
+      activationAuthorized: false,
+      productionAuthorized: false,
+    })
+    expect(disposition.absentDestinations)
+      .toEqual(V138_PLAN_262_47_FRESH_DESTINATIONS)
+    expect(disposition.historicalChargedPublicAttemptIds).toHaveLength(40)
+    expect(disposition.sourceReview.establishesCliSourceCompleteness).toBe(false)
+    expect(disposition.sourceReview.historicalBytesPreserved).toBe(true)
+    expect(disposition.sourceCustody.sourceB6ChangedPaths).toEqual([
+      V138_PLAN_262_47_CANONICAL_PATHS.authorization,
+      V138_PLAN_262_47_CANONICAL_PATHS.seal,
+    ])
+    expect(disposition.sourceCustody.sourceB6Blobs).toHaveLength(2)
+    expect(checkV138Plan26247PreExecutionSourceFailureV1(repoRoot,
+      disposition)).toEqual(disposition)
+    expect(existsSync(path.resolve(repoRoot,
+      V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_PATH))).toBe(false)
+    expect(JSON.stringify(disposition)).not.toMatch(
+      /StrategyMemory|SoldierMemory|objectivePayload|rawDiagnostic|stack|DATABASE_URL/u,
+    )
+  }, 120_000)
+
+  it("fails closed when any disposition identity, absence, count, or authority changes", () => {
+    const disposition = buildV138Plan26247PreExecutionSourceFailureV1(repoRoot)
+    const mutations = [
+      { ...disposition, reason: "route_failed" },
+      { ...disposition, sourceA6: "0".repeat(40) },
+      { ...disposition, sourceB6: "0".repeat(40) },
+      { ...disposition, authorizationRoot: `sha256:${"0".repeat(64)}` },
+      { ...disposition, sealRoot: `sha256:${"0".repeat(64)}` },
+      { ...disposition, absentDestinations: disposition.absentDestinations.slice(1) },
+      { ...disposition, chargedAttemptCount: 1 },
+      { ...disposition, acceptedCellCount: 1 },
+      { ...disposition, routeStarted: true },
+      { ...disposition, isRouteTerminal: true },
+      { ...disposition, authorityExpired: false },
+      { ...disposition, noRetry: false },
+      { ...disposition, satisfiesAdmit03: true },
+      { ...disposition, candidateSearchAuthorized: true },
+      { ...disposition, phase263Authorized: true },
+      { ...disposition, formationMaterializationAuthorized: true },
+      { ...disposition, holdoutOpeningAuthorized: true },
+      { ...disposition, publicAuthorized: true },
+      { ...disposition, activationAuthorized: true },
+      { ...disposition, productionAuthorized: true },
+    ]
+    for (const mutation of mutations) {
+      expect(() => checkV138Plan26247PreExecutionSourceFailureV1(repoRoot,
+        mutation)).toThrow("V138_PLAN_262_47_PRE_EXECUTION_SOURCE_FAILURE_INVALID")
+    }
+  }, 120_000)
+
   it("freezes isolated v6/v10/v11 schemas and exclusive destinations", () => {
     expect(V138_PLAN_262_47_AUTHORIZATION_SCHEMA)
       .toBe("v1.38-plan-262-47-authorization-v6")
