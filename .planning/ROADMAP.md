@@ -50,7 +50,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 41/46 plans executed
+**Plans:** 42/46 plans executed
 
 **Current verdict:** SOURCE INCOMPLETE BEFORE EXECUTION / `gaps_found` — 41 of 46 active plans have summaries. Plan 262-53 sealed the exact A6/B6 failure as a non-terminal 0/0 disposition while Plan 262-52's exclusive local-seal v3 PASS root `sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b` remains exact under `single_operator_local_seal_v1`, with independent custody false. The exact original Plans 262-47/48 remain archived, authorization-v6 is expired/unusable, every v10/v11 live destination and the canonical Plan-262-47 terminal remain absent, ADMIT-03 remains blocked, and corrective Plans 262-54..57 precede rewired Plan 262-48. Phase 262 remains incomplete and Phases 263–270 remain unauthorized. Next action: 262-54.
 
@@ -250,7 +250,7 @@ Plans:
 
 **Wave 42** *(blocked on Wave 41 completion; offline source only)*
 
-- [ ] 262-54-PLAN.md — TDD the complete additive route-7/v11/v12 writers, checkers, direct CLI dispatch, marker ordering, injected disposable-fixture reachability, and all terminal branches with zero canonical/live writes.
+- [x] 262-54-PLAN.md — TDD the complete additive route-7/v11/v12 writers, checkers, direct CLI dispatch, marker ordering, injected disposable-fixture reachability, and all terminal branches with zero canonical/live writes.
 
 **Wave 43** *(blocked on Wave 42 completion; independent review only)*
 
@@ -407,7 +407,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 40/42 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 42/46 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
