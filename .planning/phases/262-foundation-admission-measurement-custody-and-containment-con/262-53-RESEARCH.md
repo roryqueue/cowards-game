@@ -431,20 +431,20 @@ Vitest documents `--no-file-parallelism`, `maxWorkers`, and bounded `testTimeout
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | The recommended successor uses route ordinal 7 with v11/v12 receipt generations and Plan 262-57 terminal names. [ASSUMED] | Plan split | Names are discretionary; planner may choose different fresh names if all exclusivity and lineage requirements remain exact. |
+| A1 | The successor uses route ordinal 7 with v11/v12 receipt generations and Plan 262-57 terminal names. [RESOLVED] | Plan split | Selected by the corrective plan chain; execution must retain these exclusive names. |
 | A2 | The pre-execution disposition reason is named `sealed_source_incomplete`. [ASSUMED] | Failure disposition | Naming is discretionary; semantics must remain non-terminal, 0/0, expired, and non-authorizing. |
 
-## Open Questions
+## Resolved Questions
 
-1. **Should active 262-48 retain its number after archival?**
+1. **RESOLVED — active 262-48 retains its number after archival.**
    - What we know: the user explicitly requested rewiring 262-48, and its current bytes must be preserved. [VERIFIED: task request]
    - What's unclear: whether the planner prefers an active rewritten 262-48 or a new activation successor number.
-   - Recommendation: archive current bytes as `archived/262-48-HISTORICAL.md`, then retain active `262-48-PLAN.md` as the rewired two-latch join to honor the requested name. [ASSUMED]
+   - Resolution: archive the original bytes as `archived/262-48-HISTORICAL.md`, then retain active `262-48-PLAN.md` as the rewired two-latch join. This is the selected corrective ownership and is no longer open. [RESOLVED]
 
-2. **Exact fresh schema/version names**
+2. **RESOLVED — use route 7 with v11/v12 receipt names.**
    - What we know: v10/v11 and authorization/seal v6 are already bound by the unusable branch. [VERIFIED: authorization-v6]
    - What's unclear: naming is explicitly agent discretion.
-   - Recommendation: route ordinal 7, authorization/seal v7, context/preflight/calibration v11, reproduction v12, and Plan-262-57 markers/terminal. [ASSUMED]
+   - Resolution: use route ordinal 7, authorization/seal v7, context/preflight/calibration v11, reproduction v12, and Plan-262-57 markers/terminal. These names are selected for the corrective chain and are no longer discretionary during execution. [RESOLVED]
 
 ## Environment Availability
 
