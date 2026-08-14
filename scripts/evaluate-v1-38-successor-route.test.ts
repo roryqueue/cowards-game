@@ -48,6 +48,8 @@ import {
   checkV138Plan26257RouteContract,
   checkV138Plan26247RouteContract,
   checkV138Plan26247SyntheticRoute,
+  deriveV138CalibrationAttemptMappings,
+  enumerateV138CurrentMatrix,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import {
   V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256,
@@ -520,5 +522,22 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
     expect(() => checkV138Plan26257PreStartObstructionV1({ ...disposition,
       routeStarted: true })).toThrow(
         "MATRIX_PLAN_262_57_PRE_START_OBSTRUCTION_INVALID")
+  })
+
+  it("models the post-start fresh-destination failure as a closed terminal", () => {
+    expect(V138_PLAN_262_57_ROUTE_CONTRACT.terminalDispositions)
+      .toContain("fresh_destination_failed")
+    expect(new Set(V138_PLAN_262_57_ROUTE_CONTRACT.terminalDispositions).size)
+      .toBe(V138_PLAN_262_57_ROUTE_CONTRACT.terminalDispositions.length)
+  })
+
+  it("charges route-7 calibration attempts only in the v11 namespace", () => {
+    const charged = deriveV138CalibrationAttemptMappings(
+      enumerateV138CurrentMatrix(repoRoot), "v11")
+      .map(({ executionAttemptId }) => executionAttemptId)
+    expect(charged).toHaveLength(8)
+    expect(charged.every((attemptId) =>
+      attemptId.startsWith("calibration:v11:"))).toBe(true)
+    expect(charged.some((attemptId) => attemptId.includes(":v9:"))).toBe(false)
   })
 })

@@ -119,6 +119,7 @@ import {
   deriveV138ProtectedHistoryV7,
   inspectV138SuccessorSealCommitV7Anchor,
   inspectV138ProtectedHistoryFailureSealCommitV7Anchor,
+  readV138RepositoryFileNoFollow,
   inspectV138SuccessorSealCommitV5Anchor,
   inspectV138ProtectedHistoryFailureSealCommitV5Anchor,
   deriveV138ToolIdentityRoot,
@@ -138,6 +139,7 @@ import {
   V138_PLAN_262_56_CANONICAL_PATHS,
   V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
+  V138_PLAN_262_57_FRESH_DESTINATIONS,
   V138_PLAN_262_24_AUTHORIZATION_SCHEMA,
   V138_SUCCESSOR_SOURCE_SEAL_V4_SCHEMA,
   V138_PLAN_262_29_AUTHORIZATION_SCHEMA,
@@ -18877,7 +18879,7 @@ const checkV138Route7AdapterKeyInventory = (
 export const V138_PLAN_262_57_DISPOSITIONS = Object.freeze([
   "tool_identity_failed", "protected_history_failed",
   "formation_absence_failed", "pattern_c_ownership_failed",
-  "consumed_stage_interrupted",
+  "fresh_destination_failed", "consumed_stage_interrupted",
   "preflight_unavailable", "preflight_refused", "calibration_stopped",
   "reproduction_stopped", "reproduction_passed",
 ] as const)
@@ -18993,7 +18995,10 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
   sourceA7: string, sourceB7: string) => {
   assertV138Plan26257AuthorityOpen(repoRoot)
   for (const repoPath of V138_PLAN_262_57_ROUTE_DESTINATIONS) {
-    if (existsSync(path.resolve(repoRoot, repoPath))) {
+    try {
+      readV138RepositoryFileNoFollow(repoRoot,
+        path.resolve(repoRoot, repoPath), "absent")
+    } catch {
       throw new TypeError("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
     }
   }
@@ -19008,7 +19013,24 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
     terminalAgentRegistry })
   const start = checkV138Plan26257RouteStartV1(
     buildV138Plan26257RouteStartV1({ context }), route)
+  const readiness = checkV138Plan26257PreExecutionReadinessV1(repoRoot,
+    sourceA7, sourceB7)
+  checkV138Plan26257PrerequisiteRoots({
+    authorizationRoot: route.authorization.authorizationRoot,
+    sealRoot: route.seal.sealRoot,
+  }, {
+    authorizationRoot: readiness.authorizationRoot,
+    sealRoot: readiness.sealRoot,
+  })
   assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7, route)
+  for (const repoPath of V138_PLAN_262_57_FRESH_DESTINATIONS) {
+    try {
+      readV138RepositoryFileNoFollow(repoRoot,
+        path.resolve(repoRoot, repoPath), "absent")
+    } catch {
+      throw new TypeError("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+    }
+  }
   writeV138Plan26219Immutable(target, chain, start)
   return start
 }
@@ -19038,16 +19060,11 @@ const plan26257Path = (repoRoot: string, supplied: string,
 const readPlan26257 = (repoRoot: string, key: keyof typeof PLAN_262_57_PATHS,
   required = true): unknown => {
   const target = path.resolve(repoRoot, PLAN_262_57_PATHS[key])
-  if (!existsSync(target)) {
-    if (required) throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_REQUIRED`)
-    return undefined
-  }
-  const stat = lstatSync(target)
-  if (!stat.isFile() || stat.isSymbolicLink()) {
-    throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_INVALID`)
-  }
   try {
-    const value = JSON.parse(readFileSync(target, "utf8")) as unknown
+    const bytes = readV138RepositoryFileNoFollow(repoRoot, target,
+      required ? "required" : "optional")
+    if (bytes === undefined) return undefined
+    const value = JSON.parse(bytes.toString("utf8")) as unknown
     if (key === "context" && value !== null && typeof value === "object" &&
       !Array.isArray(value) && (value as { schemaVersion?: unknown })
         .schemaVersion === "v1.38-plan-262-57-route-start-v1") {
@@ -19323,8 +19340,17 @@ export const checkV138Plan26257ConsumptionMarker = (repoRoot: string,
 }
 
 const assertV138Plan26257AuthorityOpen = (repoRoot: string) => {
-  if (existsSync(path.resolve(repoRoot, PLAN_262_57_PATHS.terminal))) {
-    throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_EXPIRED")
+  for (const repoPath of [PLAN_262_57_PATHS.terminal,
+    V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH]) {
+    try {
+      const occupied = readV138RepositoryFileNoFollow(repoRoot,
+        path.resolve(repoRoot, repoPath), "optional")
+      if (occupied !== undefined) {
+        throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_EXPIRED")
+      }
+    } catch {
+      throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_EXPIRED")
+    }
   }
 }
 
@@ -19568,7 +19594,7 @@ export const writeV138ParallelCalibrationV11Receipt = async (repoRoot: string,
   checkV138Plan26257ConsumptionMarker(repoRoot, "preflight", context,
     context.receiptRoot, ["preflight:v11:0"])
   const inventory = enumerateV138CurrentMatrix(repoRoot)
-  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v9")
+  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v11")
     .map(({ executionAttemptId }) => executionAttemptId)
   writeV138Plan26257Marker(repoRoot, "calibration", context,
     preflight.receiptRoot, calibrationIds)
@@ -19791,7 +19817,7 @@ export const writeV138AuthoritativeMatrixV12Receipt = async (repoRoot: string,
     typeof calibration.supervisionRoot !== "string") {
     throw new TypeError("MATRIX_REPRODUCTION_V10_CALIBRATION_NOT_ADMITTED")
   }
-  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v9")
+  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v11")
     .map(({ executionAttemptId }) => executionAttemptId)
   const reproductionIds = planV138MatrixShards(inventory).shards.flatMap(
     ({ attemptIds }) => attemptIds.map((id) => `reproduction:v11:${id}`))
@@ -19983,7 +20009,7 @@ const plan26257Needs = (disposition: V138Plan26257Disposition,
   const pre = ["tool_identity_failed", "protected_history_failed",
     "formation_absence_failed", "pattern_c_ownership_failed"]
     .includes(disposition)
-  return { context: !pre, preflight: !pre,
+  return { context: true, preflight: !pre,
     calibration: ["calibration_stopped", "reproduction_stopped",
       "reproduction_passed"].includes(disposition),
     reproduction: ["reproduction_stopped", "reproduction_passed"]
@@ -19992,7 +20018,10 @@ const plan26257Needs = (disposition: V138Plan26257Disposition,
 
 const plan26257MarkerNeeds = (disposition: V138Plan26257Disposition,
   needs: ReturnType<typeof plan26257Needs>,
-  interruptedStage?: V138Plan26257InterruptionProof["stage"]) => disposition ===
+  interruptedStage?: V138Plan26257InterruptionProof["stage"]) =>
+  V138_PLAN_262_57_PRE_OBSERVATION.has(disposition as never) ? {
+    preflight: true, calibration: false, reproduction: false,
+  } : disposition ===
   "consumed_stage_interrupted" ? { preflight: true,
     calibration: interruptedStage === "calibration" ||
       interruptedStage === "reproduction",
@@ -20123,15 +20152,10 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
     inspectV138ProtectedHistoryFailureSealCommitV7Anchor({ repoRoot, sourceA7,
       sourceB7 }) : inspectV138SuccessorSealCommitV7Anchor({ repoRoot,
       sourceA7, sourceB7 })) : undefined
-  const route = anchor === undefined ? checkV138Plan26256AuthorityRoute({
+  const route = checkV138Plan26256AuthorityRoute({
     repoRoot, sourceA7, sourceB7,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
-    sealValue: readPlan26257(repoRoot, "seal") }) : {
-      custody: { sourceA7: anchor.sourceA7, sourceB7: anchor.sourceB7,
-        custodyRoot: anchor.anchorRoot },
-      authorization: anchor.authorization,
-      seal: anchor.seal,
-    }
+    sealValue: readPlan26257(repoRoot, "seal") })
   const preObservationProof = !preObservation ? undefined :
     deriveV138Plan26257PreObservationProof({ repoRoot, sourceA7, anchor: anchor!,
       disposition: disposition as V138Plan26257PreObservationProof["disposition"],
@@ -20157,14 +20181,6 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
       throw new TypeError("MATRIX_PLAN_262_30_INTERRUPTION_INVALID")
     }
   }
-  if (preObservation) {
-    for (const key of ["context", "preflight", "calibration", "reproduction",
-      "preflightMarker", "calibrationMarker", "reproductionMarker"] as const) {
-      if (existsSync(path.resolve(repoRoot, PLAN_262_57_PATHS[key]))) {
-        throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_EVIDENCE_INVALID")
-      }
-    }
-  }
   for (const [key, required] of [["context", needs.context],
     ["preflight", needs.preflight], ["calibration", needs.calibration],
     ["reproduction", needs.reproduction],
@@ -20172,17 +20188,30 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
     ["calibrationMarker", markerNeeds.calibration],
     ["reproductionMarker", markerNeeds.reproduction]] as const) {
     const obstructed = obstructionProof?.path === PLAN_262_57_PATHS[key]
-    if (!required && !obstructed &&
-      existsSync(path.resolve(repoRoot, PLAN_262_57_PATHS[key]))) {
-      throw new TypeError(`MATRIX_PLAN_262_30_${key.toUpperCase()}_MUST_BE_ABSENT`)
+    if (!required && !obstructed) {
+      try {
+        const occupied = readV138RepositoryFileNoFollow(repoRoot,
+          path.resolve(repoRoot, PLAN_262_57_PATHS[key]), "optional")
+        if (occupied !== undefined) {
+          throw new TypeError(
+            `MATRIX_PLAN_262_30_${key.toUpperCase()}_MUST_BE_ABSENT`)
+        }
+      } catch {
+        throw new TypeError(
+          `MATRIX_PLAN_262_30_${key.toUpperCase()}_MUST_BE_ABSENT`)
+      }
     }
   }
   const value = (key: "context" | "preflight" | "calibration" |
     "reproduction") => obstructionProof?.path === PLAN_262_57_PATHS[key] ?
     undefined : readPlan26257(repoRoot, key, needs[key])
-  const contextValue = preObservation ? undefined : value("context")
-  const context = contextValue === undefined ? undefined :
-    checkV138ExecutionContextV11Receipt(contextValue, route)
+  const contextValue = value("context")
+  const routeStart = contextValue === undefined ? undefined :
+    checkV138Plan26257RouteStartV1(JSON.parse(
+      readV138RepositoryFileNoFollow(repoRoot,
+        path.resolve(repoRoot, PLAN_262_57_PATHS.context), "required")!
+        .toString("utf8")), route)
+  const context = routeStart?.context as Record<string, unknown> | undefined
   const preflightValue = preObservation ? undefined : value("preflight")
   const preflight = preflightValue === undefined || context === undefined ?
     undefined : checkV138HostHeadroomPreflightV11Receipt(preflightValue, context)
@@ -20196,7 +20225,7 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
     preflight === undefined || calibration === undefined ? undefined :
     checkV138AuthoritativeMatrixV12Receipt(reproductionValue, { inventory,
       context, preflight, calibration })
-  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v9")
+  const calibrationIds = deriveV138CalibrationAttemptMappings(inventory, "v11")
     .map(({ executionAttemptId }) => executionAttemptId)
   const reproductionIds = planV138MatrixShards(inventory).shards.flatMap(
     ({ attemptIds }) => attemptIds.map((id) => `reproduction:v11:${id}`))
@@ -20545,11 +20574,10 @@ const inspectV138Plan26257PreStartDestination = (repoRoot: string,
 
 export const checkV138Plan26257PreExecutionReadinessV1 = (repoRoot: string,
   sourceA7: string, sourceB7: string) => {
-  if (existsSync(path.resolve(repoRoot,
-    V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH)) ||
+  if (inspectV138Plan26257PreStartDestination(repoRoot,
+      V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH) !== undefined ||
     V138_PLAN_262_57_ROUTE_DESTINATIONS.some((repoPath) =>
-      inspectV138Plan26257PreStartDestination(repoRoot, repoPath) !==
-        undefined)) {
+      inspectV138Plan26257PreStartDestination(repoRoot, repoPath) !== undefined)) {
     throw new TypeError("MATRIX_PLAN_262_57_PRE_EXECUTION_NOT_READY")
   }
   const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,

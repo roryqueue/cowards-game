@@ -1,9 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync,
+  unlinkSync, writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { expect, it } from "vitest"
+import { encodeCanonicalJson } from "@cowards/spec"
 import {
   V138_PLAN_262_57_ROUTE_CONTRACT,
   V138_RECEIPT_DIRECT_COMMANDS,
@@ -14,6 +16,9 @@ import {
   checkV138Route7SourceCompleteness,
   dispatchV138CurrentMatrixDirectEntry,
   runReceiptCli,
+  writeV138Plan26257PreStartObstructionV1,
+  writeV138Plan26257TerminalV1,
+  checkV138Plan26257TerminalBranch,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
@@ -22,12 +27,28 @@ import {
   V138_PLAN_262_57_FRESH_DESTINATIONS,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+  buildV138Plan26255ReviewDocument,
+  checkV138SuccessorSealCommitV7,
   v138Plan26256AuthorizationLiteral,
   writeV138Plan26256AuthorizationV7,
   writeV138SuccessorSourceSealV7,
 } from "./lib/v1-38-successor-source-seal.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const SOURCE_PATHS = Object.freeze([
+  "scripts/evaluate-v1-38-successor-route.test.ts",
+  "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+  "scripts/lib/v1-38-current-matrix-reproduction.ts",
+  "scripts/lib/v1-38-successor-source-seal.ts",
+] as const)
+
+const canonicalBytes = (value: unknown): Buffer => {
+  const encoded = encodeCanonicalJson(value as never, {
+    context: "canonical-manifest",
+  })
+  if (encoded.ok === false) throw new TypeError("TEST_CANONICAL_JSON_INVALID")
+  return Buffer.from(`${Buffer.from(encoded.bytes).toString("utf8")}\n`, "utf8")
+}
 
 const ROUTE_7_COMMANDS = Object.freeze([
   "--calibrate-parallel-v11-receipt",
@@ -213,40 +234,96 @@ it("reaches real route-start and preflight writers only in a disposable Git fixt
       fixtureRoot])
     git("config", "user.name", "Plan 262-54 Fixture")
     git("config", "user.email", "plan-262-54-fixture@example.invalid")
-    const patchBytes = execFileSync("git", ["diff", "--binary"], {
-      cwd: repoRoot })
-    execFileSync("git", ["apply", "--binary", "-"], { cwd: fixtureRoot,
-      input: patchBytes })
-    git("add", "scripts/evaluate-v1-38-successor-route.test.ts",
-      "scripts/evaluate-v1-38-successor-source-complete.test.ts",
-      "scripts/lib/v1-38-current-matrix-reproduction.ts",
-      "scripts/lib/v1-38-successor-source-seal.ts")
-    git("commit", "-m", "fixture: freeze source A7\n\n" +
-      "Plan-262-54-Author-Run: codex-execute-262-54-20260814T224244Z")
+    const clonedHead = git("rev-parse", "HEAD")
+    const patchBytes = execFileSync("git", ["diff", "--binary", clonedHead,
+      "--", ...SOURCE_PATHS], { cwd: repoRoot })
+    if (patchBytes.byteLength > 0) {
+      execFileSync("git", ["apply", "--binary", "-"], { cwd: fixtureRoot,
+        input: patchBytes })
+      git("add", ...SOURCE_PATHS)
+      git("commit", "-m", "fixture: freeze source A7\n\n" +
+        "Plan-262-54-Author-Run: codex-reviewfix-262-54-20260814T231633Z")
+    }
     const sourceA7 = git("rev-parse", "HEAD")
-    const review = { a7: sourceA7, findingCount: 0,
-      sourceCompletenessPassed: true, reviewRoot: `sha256:${"5".repeat(64)}` }
+    const review = buildV138Plan26255ReviewDocument(fixtureRoot, sourceA7,
+      "codex-reviewer-262-55-fixture")
+    writeFileSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview),
+    canonicalBytes(review))
+    git("add", V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview)
+    git("commit", "-m", "fixture: independent source review")
+    git("branch", "fixture-review-262-55")
+    git("checkout", "--detach", sourceA7)
+    expect(() => v138Plan26256AuthorizationLiteral(fixtureRoot, sourceA7,
+      { ...review, reviewRoot: `sha256:${"5".repeat(64)}` }))
+      .toThrow("V138_PLAN_262_55_REVIEW_INVALID")
     const literal = Buffer.from(v138Plan26256AuthorizationLiteral(fixtureRoot,
       sourceA7, review), "utf8")
     const authorization = writeV138Plan26256AuthorizationV7(fixtureRoot,
       V138_PLAN_262_56_CANONICAL_PATHS.authorization, sourceA7, review, literal)
-    writeV138SuccessorSourceSealV7(fixtureRoot,
+    const seal = writeV138SuccessorSourceSealV7(fixtureRoot,
       V138_PLAN_262_56_CANONICAL_PATHS.seal, authorization)
     git("add", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
       V138_PLAN_262_56_CANONICAL_PATHS.seal)
     git("commit", "-m", "fixture: seal source B7")
     const sourceB7 = git("rev-parse", "HEAD")
+    expect(() => checkV138SuccessorSealCommitV7({ repoRoot: fixtureRoot,
+      sourceA7, sourceB7, authorizationValue: { ...authorization,
+        noRetry: false }, sealValue: seal })).toThrow(
+      "V138_SUCCESSOR_SEAL_B7_COMMITTED_BYTES_INVALID")
+    const authorizationPath = path.resolve(fixtureRoot,
+      V138_PLAN_262_56_CANONICAL_PATHS.authorization)
+    const authorizationBytes = readFileSync(authorizationPath)
+    writeFileSync(authorizationPath, Buffer.concat([authorizationBytes,
+      Buffer.from("\n")]))
+    expect(() => checkV138SuccessorSealCommitV7({ repoRoot: fixtureRoot,
+      sourceA7, sourceB7, authorizationValue: authorization,
+      sealValue: seal })).toThrow("V138_SUCCESSOR_SEAL_B7_WORKTREE_DRIFT")
+    writeFileSync(authorizationPath, authorizationBytes)
     const routeStart = V138_PLAN_262_57_ROUTE_DESTINATIONS[0]!
-    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+    const routeStartArgv = ["node", "route",
       "--write-plan-262-57-route-start-v1", routeStart,
-      "--mode", "gsd-pattern-c-inline-main", "--cwd", repoRoot,
+      "--mode", "gsd-pattern-c-inline-main", "--cwd",
+      "/Users/roryquinlan/runtime/cowards-game",
       "--terminal-agent-registry-json", JSON.stringify({ schemaVersion:
         "v1.38-plan-262-57-terminal-agent-registry-v1",
         activeExecutorCount: 0, agents: [] }), "--authorization",
       V138_PLAN_262_56_CANONICAL_PATHS.authorization, "--seal",
       V138_PLAN_262_56_CANONICAL_PATHS.seal, "--source-a7", sourceA7,
-      "--source-b7", sourceB7], writeOutput: () => undefined })
+      "--source-b7", sourceB7]
+    const sealedSourcePath = path.resolve(fixtureRoot, SOURCE_PATHS[0])
+    const sealedSourceBytes = readFileSync(sealedSourcePath)
+    writeFileSync(sealedSourcePath, Buffer.concat([sealedSourceBytes,
+      Buffer.from("\n// drift\n")]))
+    await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
+      writeOutput: () => undefined })).rejects.toThrow(
+      "V138_SUCCESSOR_SEAL_A7_WORKTREE_DRIFT")
+    writeFileSync(sealedSourcePath, sealedSourceBytes)
+    const danglingPath = path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!)
+    symlinkSync("missing-route-7-target", danglingPath)
+    await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
+      writeOutput: () => undefined })).rejects.toThrow(
+      "MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+    unlinkSync(danglingPath)
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
+      writeOutput: () => undefined })
     expect(existsSync(path.resolve(fixtureRoot, routeStart))).toBe(true)
+    const terminalPath = V138_PLAN_262_57_ROUTE_DESTINATIONS[4]!
+    const patternCObservation = { mode: "delegated-worker",
+      cwd: "/tmp/not-canonical", terminalAgentRegistry: { schemaVersion:
+        "v1.38-plan-262-57-terminal-agent-registry-v1",
+      activeExecutorCount: 1, agents: ["worker"] } }
+    writeV138Plan26257TerminalV1(fixtureRoot, terminalPath,
+      "pattern_c_ownership_failed", sourceA7, sourceB7, patternCObservation)
+    expect(checkV138Plan26257TerminalBranch(fixtureRoot, sourceA7, sourceB7,
+      patternCObservation)).toMatchObject({
+      disposition: "pattern_c_ownership_failed",
+      artifactRoots: { context: expect.any(String), preflight: null },
+      consumptionMarkerRoots: { preflight: expect.any(String),
+        calibration: null, reproduction: null },
+    })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
     await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
       "--write-headroom-preflight-v11-receipt",
       V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!, "--route-start", routeStart,
@@ -261,6 +338,18 @@ it("reaches real route-start and preflight writers only in a disposable Git fixt
       V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!), "utf8")))
       .toMatchObject({ disposition: "preflight_unavailable",
         chargedIdentityId: "preflight:v11:0" })
+    unlinkSync(path.resolve(fixtureRoot, routeStart))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!))
+    symlinkSync("missing-route-7-target", danglingPath)
+    writeV138Plan26257PreStartObstructionV1(fixtureRoot,
+      ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json",
+      V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+      V138_PLAN_262_56_CANONICAL_PATHS.seal, sourceA7, sourceB7)
+    unlinkSync(danglingPath)
+    await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
+      writeOutput: () => undefined })).rejects.toThrow(
+      "MATRIX_PLAN_262_30_AUTHORITY_EXPIRED")
   } finally {
     expect(V138_PLAN_262_57_FRESH_DESTINATIONS.map((repoPath) =>
       existsSync(path.resolve(repoRoot, repoPath)))).toEqual(before)

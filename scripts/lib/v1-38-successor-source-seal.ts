@@ -5682,9 +5682,22 @@ export const V138_PLAN_262_57_FRESH_DESTINATIONS = Object.freeze([
   V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
 ] as const)
 
+export const V138_PLAN_262_54_SOURCE_BASE7 =
+  "04960b164ba0ace2ca052d636a2fa1fbc8f6a6af" as const
+export const V138_PLAN_262_54_SOURCE_PATHS = Object.freeze([
+  "scripts/evaluate-v1-38-successor-route.test.ts",
+  "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+  "scripts/lib/v1-38-current-matrix-reproduction.ts",
+  "scripts/lib/v1-38-successor-source-seal.ts",
+] as const)
+export const V138_PLAN_262_55_REVIEW_SCHEMA =
+  "v1.38-plan-262-55-source-completeness-review-v1" as const
+
 const V138_PLAN_262_56_AUTHORIZATION_KEYS = Object.freeze([
   "schemaVersion", "routeOrdinal", "operator", "reviewedSourceCommit",
   "reviewedSourceTree", "reviewedSourceParents", "reviewedSourceBlobs",
+  "sourceBase7", "sourceA7", "sourceRangeCommits", "sourceRange",
+  "aggregateChangedPaths", "implementationAuthorRun",
   "sourceCompletenessReview", "selectedRouteClosure",
   "selectedRouteClosureRoot", "toolIdentity", "formationAbsence",
   "protectedHistory", "protectedHistoryRoot",
@@ -5700,25 +5713,168 @@ const V138_PLAN_262_56_AUTHORIZATION_KEYS = Object.freeze([
 ] as const)
 
 export const inspectV138SourceIdentityA7 = (repoRoot: string,
-  sourceInput: string) => inspectV138SourceIdentityA6(repoRoot, sourceInput)
+  sourceInput: string) => {
+  const sourceBase7 = fullCommit(repoRoot, V138_PLAN_262_54_SOURCE_BASE7)
+  const reviewedSourceCommit = fullCommit(repoRoot, sourceInput)
+  try {
+    gitText(repoRoot, ["merge-base", "--is-ancestor", sourceBase7,
+      reviewedSourceCommit])
+  } catch { fail("V138_PLAN_262_54_SOURCE_RANGE_INVALID") }
+  const commits = gitText(repoRoot, ["rev-list", "--reverse",
+    `${sourceBase7}..${reviewedSourceCommit}`]).split("\n").filter(Boolean)
+  if (commits.length === 0 || commits.at(-1) !== reviewedSourceCommit) {
+    fail("V138_PLAN_262_54_SOURCE_RANGE_INVALID")
+  }
+  const lineage: Array<Readonly<{ commit: string; tree: string;
+    parents: readonly string[]; changedPaths: readonly string[];
+    authorRun: string }>> = []
+  const aggregate = new Set<string>()
+  let expectedParent = sourceBase7
+  let expectedAuthorRun: string | undefined
+  for (const commit of commits) {
+    const [oid, tree, parentsText = ""] = gitText(repoRoot, ["show", "-s",
+      "--format=%H%n%T%n%P", commit]).split("\n")
+    const parents = parentsText.split(" ").filter(Boolean)
+    const changedPaths = sorted(gitText(repoRoot, ["diff-tree",
+      "--no-commit-id", "--name-only", "-r", "--no-renames", commit])
+      .split("\n").filter(Boolean).map(normalize))
+    const authorRuns = gitText(repoRoot, ["show", "-s",
+      "--format=%(trailers:key=Plan-262-54-Author-Run,valueonly)", commit])
+      .split("\n").map((entry) => entry.trim()).filter(Boolean)
+    if (oid !== commit || !/^[0-9a-f]{40}$/u.test(tree!) ||
+      parents.length !== 1 || parents[0] !== expectedParent ||
+      changedPaths.length === 0 || changedPaths.some((repoPath) =>
+        !V138_PLAN_262_54_SOURCE_PATHS.includes(repoPath as never)) ||
+      authorRuns.length !== 1) {
+      fail("V138_PLAN_262_54_SOURCE_RANGE_INVALID")
+    }
+    expectedAuthorRun ??= authorRuns[0]
+    if (authorRuns[0] !== expectedAuthorRun) {
+      fail("V138_PLAN_262_54_AUTHOR_RUN_INVALID")
+    }
+    changedPaths.forEach((repoPath) => aggregate.add(repoPath))
+    lineage.push(Object.freeze({ commit, tree: tree!,
+      parents: Object.freeze(parents), changedPaths: Object.freeze(changedPaths),
+      authorRun: authorRuns[0]! }))
+    expectedParent = commit
+  }
+  if (canonical(sorted(aggregate)) !==
+    canonical(sorted(V138_PLAN_262_54_SOURCE_PATHS))) {
+    fail("V138_PLAN_262_54_SOURCE_PATHS_INVALID")
+  }
+  const final = lineage.at(-1)!
+  const reviewedSourceBlobs = Object.freeze(V138_PLAN_262_54_SOURCE_PATHS.map(
+    (repoPath) => blobRecord(repoRoot, reviewedSourceCommit, repoPath)))
+  return Object.freeze({ sourceBase7, sourceA7: reviewedSourceCommit,
+    reviewedSourceCommit, reviewedSourceTree: final.tree,
+    reviewedSourceParents: final.parents, reviewedSourceBlobs,
+    sourceRangeCommits: Object.freeze(commits),
+    sourceRange: Object.freeze(lineage),
+    aggregateChangedPaths: Object.freeze(sorted(aggregate)),
+    implementationAuthorRun: expectedAuthorRun! })
+}
 
-const checkV138Plan26255ReviewProjection = (value: unknown) => {
-  if (!isRecord(value) || typeof value.a7 !== "string" ||
-    !/^[0-9a-f]{40}$/u.test(value.a7) || value.findingCount !== 0 ||
-    value.sourceCompletenessPassed !== true ||
-    typeof value.reviewRoot !== "string" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(value.reviewRoot)) {
+const V138_PLAN_262_55_REVIEW_KEYS = Object.freeze([
+  "schemaVersion", "plan", "a7", "a7Tree", "a7Parent", "sourceBase7",
+  "sourceRangeCommits", "sourcePaths", "implementationAuthorRun",
+  "reviewerAgentRun", "reviewerSeparated", "findingCount",
+  "sourceCompletenessPassed", "reviewRoot",
+] as const)
+
+export const buildV138Plan26255ReviewDocument = (repoRoot: string,
+  sourceA7: string, reviewerAgentRun: string) => {
+  const source = inspectV138SourceIdentityA7(repoRoot, sourceA7)
+  if (reviewerAgentRun.length === 0 ||
+    reviewerAgentRun === source.implementationAuthorRun) {
+    fail("V138_PLAN_262_55_REVIEWER_SEPARATION_INVALID")
+  }
+  const body = { schemaVersion: V138_PLAN_262_55_REVIEW_SCHEMA,
+    plan: "262-55" as const, a7: source.sourceA7,
+    a7Tree: source.reviewedSourceTree,
+    a7Parent: source.reviewedSourceParents[0]!,
+    sourceBase7: source.sourceBase7,
+    sourceRangeCommits: source.sourceRangeCommits,
+    sourcePaths: V138_PLAN_262_54_SOURCE_PATHS,
+    implementationAuthorRun: source.implementationAuthorRun,
+    reviewerAgentRun, reviewerSeparated: true as const,
+    findingCount: 0 as const, sourceCompletenessPassed: true as const }
+  return Object.freeze({ ...body, reviewRoot: identityRoot("evidenceBundle",
+    V138_PLAN_262_55_REVIEW_SCHEMA, body) })
+}
+
+const checkV138Plan26255ReviewDocument = (value: unknown,
+  source: ReturnType<typeof inspectV138SourceIdentityA7>) => {
+  if (!isRecord(value) || !exactKeys(value, V138_PLAN_262_55_REVIEW_KEYS)) {
     fail("V138_PLAN_262_55_REVIEW_INVALID")
   }
-  return value
+  const { reviewRoot, ...body } = value
+  if (value.schemaVersion !== V138_PLAN_262_55_REVIEW_SCHEMA ||
+    value.plan !== "262-55" || value.a7 !== source.sourceA7 ||
+    value.a7Tree !== source.reviewedSourceTree ||
+    value.a7Parent !== source.reviewedSourceParents[0] ||
+    value.sourceBase7 !== source.sourceBase7 ||
+    canonical(value.sourceRangeCommits) !==
+      canonical(source.sourceRangeCommits) ||
+    canonical(value.sourcePaths) !==
+      canonical(V138_PLAN_262_54_SOURCE_PATHS) ||
+    value.implementationAuthorRun !== source.implementationAuthorRun ||
+    typeof value.reviewerAgentRun !== "string" ||
+    value.reviewerAgentRun.length === 0 ||
+    value.reviewerAgentRun === source.implementationAuthorRun ||
+    value.reviewerSeparated !== true || value.findingCount !== 0 ||
+    value.sourceCompletenessPassed !== true || reviewRoot !== identityRoot(
+      "evidenceBundle", V138_PLAN_262_55_REVIEW_SCHEMA, body)) {
+    fail("V138_PLAN_262_55_REVIEW_INVALID")
+  }
+  return Object.freeze(value)
+}
+
+const v138Plan26255ReviewCache = new Map<string, any>()
+const deriveV138Plan26255Review = (repoRoot: string, sourceA7: string) => {
+  const cacheKey = `${repoRoot}\0${sourceA7}`
+  const cached = v138Plan26255ReviewCache.get(cacheKey)
+  if (cached !== undefined) return cached
+  const source = inspectV138SourceIdentityA7(repoRoot, sourceA7)
+  const candidates = gitText(repoRoot, ["log", "--all", "--format=%H", "--",
+    V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview]).split("\n")
+    .filter(Boolean).flatMap((reviewCommit) => {
+      if (reviewCommit === source.sourceA7) return []
+      try {
+        gitText(repoRoot, ["merge-base", "--is-ancestor", source.sourceA7,
+          reviewCommit])
+        const bytes = readCommitFile(repoRoot, reviewCommit,
+          V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview)
+        const document = checkV138Plan26255ReviewDocument(
+          JSON.parse(bytes.toString("utf8")), source)
+        if (!bytes.equals(Buffer.from(canonical(document), "utf8"))) return []
+        return [{ reviewCommit, bytes, document }]
+      } catch { return [] }
+    })
+  if (candidates.length !== 1) fail("V138_PLAN_262_55_REVIEW_CUSTODY_INVALID")
+  const candidate = candidates[0]!
+  const parents = gitText(repoRoot, ["show", "-s", "--format=%P",
+    candidate.reviewCommit]).split(" ").filter(Boolean)
+  const result = Object.freeze({ path:
+    V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview,
+    reviewCommit: candidate.reviewCommit,
+    reviewTree: gitText(repoRoot, ["rev-parse",
+      `${candidate.reviewCommit}^{tree}`]),
+    reviewParents: Object.freeze(parents),
+    blobOid: gitText(repoRoot, ["rev-parse",
+      `${candidate.reviewCommit}:${V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview}`]),
+    sha256: sha256(candidate.bytes), reviewRoot:
+      candidate.document.reviewRoot, reviewerAgentRun:
+      candidate.document.reviewerAgentRun, document: candidate.document })
+  v138Plan26255ReviewCache.set(cacheKey, result)
+  return result
 }
 
 export const v138Plan26256AuthorizationLiteral = (repoRoot: string,
   sourceA7: string, reviewValue: unknown): string => {
   const source = inspectV138SourceIdentityA7(repoRoot, sourceA7)
-  const review = checkV138Plan26255ReviewProjection(reviewValue)
-  if (review.a7 !== source.reviewedSourceCommit) {
-    fail("V138_PLAN_262_56_REVIEW_SOURCE_INVALID")
+  const review = deriveV138Plan26255Review(repoRoot, source.sourceA7)
+  if (canonical(reviewValue) !== canonical(review.document)) {
+    fail("V138_PLAN_262_55_REVIEW_INVALID")
   }
   const history = deriveV138ProtectedHistoryV6(repoRoot,
     source.reviewedSourceCommit)
@@ -5745,12 +5901,12 @@ export const buildV138Plan26256AuthorizationV7 = (input: {
   readonly literalBytes: Uint8Array
 }) => {
   const source = inspectV138SourceIdentityA7(input.repoRoot, input.sourceA7)
-  const review = checkV138Plan26255ReviewProjection(input.review)
-  if (review.a7 !== source.reviewedSourceCommit) {
-    fail("V138_PLAN_262_56_REVIEW_SOURCE_INVALID")
+  const review = deriveV138Plan26255Review(input.repoRoot, source.sourceA7)
+  if (canonical(input.review) !== canonical(review.document)) {
+    fail("V138_PLAN_262_55_REVIEW_INVALID")
   }
   if (!Buffer.from(v138Plan26256AuthorizationLiteral(input.repoRoot,
-    source.reviewedSourceCommit, review), "utf8").equals(
+    source.reviewedSourceCommit, review.document), "utf8").equals(
       Buffer.from(input.literalBytes))) {
     fail("V138_PLAN_262_56_AUTHORIZATION_LITERAL_INVALID")
   }
@@ -5763,15 +5919,12 @@ export const buildV138Plan26256AuthorizationV7 = (input: {
   const formationAbsence = Object.freeze({ scannedRoot:
     deriveV138FormationAbsenceRoot(input.repoRoot,
       source.reviewedSourceCommit) })
-  const reviewBody = { a7: review.a7, findingCount: review.findingCount,
-    sourceCompletenessPassed: review.sourceCompletenessPassed,
-    reviewRoot: review.reviewRoot }
   const body = {
     schemaVersion: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
     routeOrdinal: 7 as const,
     operator: V138_PLAN_262_15_OPERATOR,
     ...source,
-    sourceCompletenessReview: Object.freeze(reviewBody),
+    sourceCompletenessReview: review,
     selectedRouteClosure,
     selectedRouteClosureRoot: selectedRouteClosure.closureRoot,
     toolIdentity,
@@ -5803,39 +5956,33 @@ export const buildV138Plan26256AuthorizationV7 = (input: {
     "evidenceBundle", body.schemaVersion, body) })
 }
 
+const v138Plan26256AuthorizationCache = new Map<string, any>()
+
 export const checkV138Plan26256AuthorizationV7 = (repoRoot: string,
   value: unknown) => {
   if (!isRecord(value) || !exactKeys(value, V138_PLAN_262_56_AUTHORIZATION_KEYS)) {
     fail("V138_PLAN_262_56_AUTHORIZATION_SCHEMA_INVALID")
   }
   const candidate = value as Record<string, unknown>
-  const { authorizationRoot, ...body } = candidate
-  if (candidate.schemaVersion !== V138_PLAN_262_56_AUTHORIZATION_SCHEMA ||
-    candidate.routeOrdinal !== 7 || candidate.operator !==
-      V138_PLAN_262_15_OPERATOR || candidate.sealCount !== 1 ||
-    candidate.routeStartCount !== 1 || candidate.preflightCount !== 1 ||
-    candidate.calibrationAllocationCount !== 1 ||
-    candidate.calibrationAttemptCount !== 8 ||
-    candidate.calibrationShardCount !== 4 ||
-    candidate.reproductionMaximumCount !== 1 ||
-    candidate.reproductionCellCount !== 540 ||
-    candidate.resourceSampleMilliseconds !== 200 ||
-    candidate.requiredHostHeadroomBasisPoints !== 2500 ||
-    candidate.singleUse !== true || candidate.noRetry !== true ||
-    candidate.noPriorAuthorizationReusable !== true ||
-    candidate.satisfiesAdmit03 !== false ||
-    canonical(candidate.canonicalDestinations) !==
-      canonical(V138_PLAN_262_57_ROUTE_DESTINATIONS) ||
-    !Array.isArray(candidate.cumulativeChargedPublicAttemptIds) ||
-    candidate.cumulativeChargedPublicAttemptIds.length !== 40 ||
-    new Set(candidate.cumulativeChargedPublicAttemptIds).size !== 40 ||
-    authorizationRoot !== identityRoot("evidenceBundle",
-      V138_PLAN_262_56_AUTHORIZATION_SCHEMA, body)) {
+  if (typeof candidate.reviewedSourceCommit !== "string") {
     fail("V138_PLAN_262_56_AUTHORIZATION_INVALID")
   }
-  inspectV138SourceIdentityA7(repoRoot,
-    String(candidate.reviewedSourceCommit))
-  return Object.freeze(candidate)
+  const review = deriveV138Plan26255Review(repoRoot,
+    candidate.reviewedSourceCommit)
+  const cacheKey = `${repoRoot}\0${candidate.reviewedSourceCommit}`
+  let expected = v138Plan26256AuthorizationCache.get(cacheKey)
+  if (expected === undefined) {
+    const expectedLiteral = Buffer.from(v138Plan26256AuthorizationLiteral(
+      repoRoot, candidate.reviewedSourceCommit, review.document), "utf8")
+    expected = buildV138Plan26256AuthorizationV7({ repoRoot,
+      sourceA7: candidate.reviewedSourceCommit, review: review.document,
+      literalBytes: expectedLiteral })
+    v138Plan26256AuthorizationCache.set(cacheKey, expected)
+  }
+  if (canonical(candidate) !== canonical(expected)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_INVALID")
+  }
+  return expected
 }
 
 export const buildV138SuccessorSourceSealV7 = (repoRoot: string,
@@ -5878,7 +6025,19 @@ export const checkV138SealedWorktreeAtA7 = (repoRoot: string,
   if (!isRecord(sealValue) || typeof sealValue.sealedSourceCommit !== "string") {
     fail("V138_SUCCESSOR_SEAL_V7_INVALID")
   }
-  return inspectV138SourceIdentityA7(repoRoot, sealValue.sealedSourceCommit)
+  const source = inspectV138SourceIdentityA7(repoRoot,
+    sealValue.sealedSourceCommit)
+  for (const record of source.reviewedSourceBlobs) {
+    const committed = readCommitFile(repoRoot, source.sourceA7, record.path)
+    const working = readV138RepositoryFileNoFollow(repoRoot,
+      path.resolve(repoRoot, record.path), "required")!
+    if (!working.equals(committed) || sha256(committed) !== record.sha256 ||
+      gitText(repoRoot, ["rev-parse", `${source.sourceA7}:${record.path}`]) !==
+        record.blobOid) {
+      fail("V138_SUCCESSOR_SEAL_A7_WORKTREE_DRIFT")
+    }
+  }
+  return source
 }
 
 export const writeV138Plan26256AuthorizationV7 = (repoRoot: string,
@@ -5924,14 +6083,37 @@ export const checkV138SuccessorSealCommitV7 = (input: {
     canonical(changedPaths) !== canonical(expectedPaths)) {
     fail("V138_SUCCESSOR_SEAL_B7_CUSTODY_INVALID")
   }
+  for (const repoPath of expectedPaths) {
+    requireAbsentAtCommit(input.repoRoot, sourceA7, repoPath,
+      "V138_SUCCESSOR_SEAL_V7_EXISTED_AT_A7")
+  }
+  const authorizationBytes = readCommitFile(input.repoRoot, sourceB7,
+    V138_PLAN_262_56_CANONICAL_PATHS.authorization)
+  const sealBytes = readCommitFile(input.repoRoot, sourceB7,
+    V138_PLAN_262_56_CANONICAL_PATHS.seal)
   const authorization = checkV138Plan26256AuthorizationV7(input.repoRoot,
-    input.authorizationValue)
-  const seal = checkV138SuccessorSourceSealV7(input.repoRoot, input.sealValue,
-    authorization)
+    JSON.parse(authorizationBytes.toString("utf8")))
+  const seal = checkV138SuccessorSourceSealV7(input.repoRoot,
+    JSON.parse(sealBytes.toString("utf8")), authorization)
+  if (!authorizationBytes.equals(Buffer.from(canonical(authorization), "utf8")) ||
+    !sealBytes.equals(Buffer.from(canonical(seal), "utf8")) ||
+    canonical(input.authorizationValue) !== canonical(authorization) ||
+    canonical(input.sealValue) !== canonical(seal)) {
+    fail("V138_SUCCESSOR_SEAL_B7_COMMITTED_BYTES_INVALID")
+  }
+  for (const repoPath of expectedPaths) {
+    const committed = readCommitFile(input.repoRoot, sourceB7, repoPath)
+    const working = readV138RepositoryFileNoFollow(input.repoRoot,
+      path.resolve(input.repoRoot, repoPath), "required")!
+    if (!working.equals(committed)) {
+      fail("V138_SUCCESSOR_SEAL_B7_WORKTREE_DRIFT")
+    }
+  }
   if (authorization.reviewedSourceCommit !== sourceA7 ||
     seal.sealedSourceCommit !== sourceA7) {
     fail("V138_SUCCESSOR_SEAL_B7_SOURCE_INVALID")
   }
+  checkV138SealedWorktreeAtA7(input.repoRoot, seal)
   if (input.allowPlan26257Artifacts !== true) {
     for (const repoPath of V138_PLAN_262_57_FRESH_DESTINATIONS) {
       readV138RepositoryFileNoFollow(input.repoRoot,
