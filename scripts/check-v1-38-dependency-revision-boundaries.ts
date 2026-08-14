@@ -2,7 +2,12 @@
 import { createHash } from "node:crypto"
 import { execFileSync, spawnSync } from "node:child_process"
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
   readFileSync,
   readdirSync,
   writeFileSync,
@@ -14,6 +19,10 @@ import ts from "typescript"
 import { encodeCanonicalJson } from "../packages/spec/src/canonical-json-encode.js"
 import { hashCanonicalIdentity } from "../packages/spec/src/canonical-identity-domains.js"
 import type { JsonValue } from "../packages/spec/src/types.js"
+import {
+  V138_PLAN_262_47_FRESH_DESTINATIONS,
+  checkV138Plan26247PreExecutionSourceFailureV1,
+} from "./lib/v1-38-successor-source-seal.js"
 
 type Sha256 = `sha256:${string}`
 
@@ -50,6 +59,41 @@ const identityRoot = (schemaVersion: string, value: unknown): Sha256 =>
     Buffer.from(schemaVersion, "utf8"),
     canonicalBytes(value),
   ])}`
+
+const readRegularFileNoFollow = (target: string): Buffer | undefined => {
+  try {
+    const stat = lstatSync(target)
+    if (!stat.isFile() || stat.isSymbolicLink()) return undefined
+    const descriptor = openSync(
+      target,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+    )
+    try {
+      const opened = fstatSync(descriptor)
+      if (
+        !opened.isFile() ||
+        opened.dev !== stat.dev ||
+        opened.ino !== stat.ino ||
+        opened.size > 16 * 1024 * 1024
+      ) return undefined
+      return readFileSync(descriptor)
+    } finally {
+      closeSync(descriptor)
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
+    return undefined
+  }
+}
+
+const pathAbsentNoFollow = (target: string): boolean => {
+  try {
+    lstatSync(target)
+    return false
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT"
+  }
+}
 
 export const V138_DEPENDENCY_REVISION_TOOLING_DEPENDENCY = Object.freeze({
   tooling_dependency: "frozen_replay_commit_unreachable",
@@ -595,45 +639,24 @@ const changedPaths = (repoRoot: string): readonly string[] => [...new Set([
 
 const correctiveDispositionCanonical = (repoRoot: string): boolean => {
   const target = path.join(repoRoot, plan26247DispositionPath)
-  if (!existsSync(target)) return false
   try {
-    const bytes = readFileSync(target, "utf8")
-    const value = JSON.parse(bytes) as unknown
-    if (!isRecord(value) || bytes !== `${JSON.stringify(value)}\n`) return false
-    const expectedDestinations = [
-      ".planning/artifacts/v1.38-current-matrix-execution-context-v10.json",
-      ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v10.json",
-      ".planning/artifacts/v1.38-current-matrix-calibration-v10.json",
-      ".planning/artifacts/v1.38-current-matrix-reproduction-v11.json",
-      ".planning/artifacts/v1.38-plan-262-47-terminal-v1.json",
-      ".planning/artifacts/v1.38-plan-262-47-preflight-consumption-v1.json",
-      ".planning/artifacts/v1.38-plan-262-47-calibration-consumption-v1.json",
-      ".planning/artifacts/v1.38-plan-262-47-reproduction-consumption-v1.json",
-    ]
-    const exact = value.schemaVersion ===
-        "v1.38-plan-262-47-pre-execution-source-failure-v1" &&
-      value.reason === "sealed_source_incomplete" &&
-      value.sourceA6 === "600c7770867e6090147914dc090780f5b63930ec" &&
-      value.sourceB6 === "e2166736c2a1a3f1decbb1d6b3722f87945a47ea" &&
-      value.routeStarted === false && value.isRouteTerminal === false &&
-      value.chargedAttemptCount === 0 && value.acceptedCellCount === 0 &&
-      value.requiredAcceptedCellCount === 540 && value.authorityExpired === true &&
-      value.noRetry === true && value.satisfiesAdmit03 === false &&
-      value.seal01Status === "passed_reduced_assurance" &&
-      value.assuranceClass === "single_operator_local_seal_v1" &&
-      value.independentCustodyClaimed === false &&
-      value.candidateSearchAuthorized === false && value.phase263Authorized === false &&
-      value.formationMaterializationAuthorized === false &&
-      value.holdoutOpeningAuthorized === false && value.publicAuthorized === false &&
-      value.activationAuthorized === false && value.productionAuthorized === false &&
-      value.historicalChargedAttemptCount === 40 &&
-      Array.isArray(value.historicalChargedPublicAttemptIds) &&
-      value.historicalChargedPublicAttemptIds.length === 40 &&
-      JSON.stringify(value.absentDestinations) === JSON.stringify(expectedDestinations) &&
-      typeof value.dispositionRoot === "string" &&
-      /^sha256:[0-9a-f]{64}$/u.test(value.dispositionRoot)
-    return exact && expectedDestinations.every((repoPath) =>
-      !existsSync(path.join(repoRoot, repoPath)))
+    const bytes = readRegularFileNoFollow(target)
+    if (bytes === undefined) return false
+    const value = JSON.parse(bytes.toString("utf8")) as unknown
+    const expected = checkV138Plan26247PreExecutionSourceFailureV1(
+      repoRoot,
+      value,
+    )
+    const expectedBytes = Buffer.concat([
+      Buffer.from(canonicalBytes(expected)),
+      Buffer.from("\n", "utf8"),
+    ])
+    return (
+      bytes.equals(expectedBytes) &&
+      V138_PLAN_262_47_FRESH_DESTINATIONS.every((repoPath) =>
+        pathAbsentNoFollow(path.join(repoRoot, repoPath)),
+      )
+    )
   } catch { return false }
 }
 
