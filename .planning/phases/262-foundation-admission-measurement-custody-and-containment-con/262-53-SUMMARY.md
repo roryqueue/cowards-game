@@ -119,17 +119,25 @@ status: complete
 - **Verification:** Serialized successor-route suite passed 7/7.
 - **Committed in:** `bc0f9514`
 
-**2. [Rule 3 - Blocking] Scoped the dependency-policy AST scan away from historical route implementation files**
+**2. [Rule 3 - Blocking] Replaced the broad historical scan with a mandatory frozen route-capable inventory**
 - **Found during:** Task 2
 - **Issue:** The baseline-wide scan reclassified already-authorized historical route/source modules and emitted more than one hundred unrelated findings, blocking the corrective monitor.
-- **Fix:** Excluded the route implementation modules from the dependency-policy source scan; their exact bytes, roots, custody, privacy projection, and forbidden live destinations are checked by the new disposition path instead.
+- **Fix:** Replaced incidental Git discovery with a mandatory two-module frozen inventory. Each required route-capable module must exist as a repository-contained regular non-symlink path, match its frozen hash, and pass AST policy analysis; deletion, rename, ancestor symlink, inventory omission, or hash drift fails closed.
 - **Files modified:** `scripts/check-v1-38-dependency-revision-boundaries.ts`
 - **Verification:** Boundary checker passed with matrix admission blocked and downstream authority denied.
-- **Committed in:** `2ae50dd2`
+- **Committed in:** `0f566c20`, `3a59777b`, and `7a50d4df`
+
+**3. [Code review] Strengthened canonical custody and lifecycle parsing**
+- **Found during:** Post-plan code review
+- **Issue:** The first review found shallow disposition trust, incomplete mutation coverage, and unscoped lifecycle substring checks.
+- **Fix:** Recomputed canonical disposition custody and roots, added full immutable-surface mutations, and parsed exact structured lifecycle keys with duplicate rejection.
+- **Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/evaluate-v1-38-successor-route.test.ts`, `scripts/check-v1-38-dependency-revision-boundaries.ts`
+- **Verification:** Serialized successor-route suite passed 12/12; deep review V4 returned zero findings.
+- **Committed in:** `f6b8046d`, `4be76dab`, and `50e88159`
 
 ---
 
-**Total deviations:** 2 auto-fixed (1 bug, 1 blocking issue)
+**Total deviations:** 3 auto-fixed (1 bug, 1 blocking issue, 1 post-plan review hardening cycle)
 **Impact on plan:** Both changes were required to make the planned historical checks reflect the already-sealed branch without widening authority or execution scope.
 
 ## Issues Encountered
