@@ -333,52 +333,145 @@ export const analyzeV138LocalSealCarriers = (
       detail: `Active carrier is missing required local-seal contract pattern ${pattern.source}.`,
     })))
 
+export const checkV138ExactMachineStatus = (
+  source: string,
+  marker: string,
+  expected: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> => {
+  const markerPrefix = `<!-- ${marker}:`
+  if (source.split(markerPrefix).length !== 2) {
+    throw new TypeError("V138_MACHINE_STATUS_MARKER_COUNT_INVALID")
+  }
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")
+  const matches = [...source.matchAll(new RegExp(
+    `^<!-- ${escapedMarker}: (\\{.*\\}) -->$`,
+    "gmu",
+  ))]
+  if (matches.length !== 1 || matches[0]?.[1] === undefined) {
+    throw new TypeError("V138_MACHINE_STATUS_MARKER_INVALID")
+  }
+  const json = matches[0][1]
+  const keyTokens = [...json.matchAll(/"((?:\\.|[^"\\])*)"\s*:/gu)]
+    .map((match) => JSON.parse(`"${match[1]}"`) as string)
+  const value = JSON.parse(json) as unknown
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    keyTokens.length !== new Set(keyTokens).size ||
+    keyTokens.length !== Object.keys(value).length ||
+    Buffer.from(canonicalBytes(value)).compare(Buffer.from(canonicalBytes(expected))) !== 0
+  ) throw new TypeError("V138_MACHINE_STATUS_VALUE_INVALID")
+  return value as Readonly<Record<string, unknown>>
+}
+
+const correctiveRequirementDisposition = Object.freeze({
+  proof_status: "source_incomplete_pre_execution",
+  admit_03: "blocked",
+  seal_01: "passed_reduced_assurance",
+  assurance_class: "single_operator_local_seal_v1",
+  phase_262: "incomplete",
+  route_started: false,
+  fresh_charged: 0,
+  fresh_accepted: 0,
+  candidate_search_authorized: false,
+  phase263_authorized: false,
+  formation_materialization_authorized: false,
+  holdout_opening_authorized: false,
+  public_authorized: false,
+  activation_authorized: false,
+  production_authorized: false,
+})
+
 const correctiveRequirementDispositionFindings = (repoRoot: string):
   readonly V138DependencyRevisionFinding[] => {
   const repoPath = ".planning/REQUIREMENTS.md"
   const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
-  const required = [
-    '"proof_status":"source_incomplete_pre_execution"',
-    '"admit_03":"blocked"',
-    '"seal_01":"passed_reduced_assurance"',
-    '"assurance_class":"single_operator_local_seal_v1"',
-    '"phase_262":"incomplete"',
-    '"route_started":false',
-    '"fresh_charged":0',
-    '"fresh_accepted":0',
-    '"candidate_search_authorized":false',
-    '"phase263_authorized":false',
-    '"formation_materialization_authorized":false',
-    '"holdout_opening_authorized":false',
-    '"public_authorized":false',
-    '"activation_authorized":false',
-    '"production_authorized":false',
-  ]
-  return required.filter((token) => !source.includes(token)).map((token) => ({
-    code: "LOCAL_SEAL_CONTRACT_DRIFT" as const,
-    path: repoPath,
-    line: 1,
-    detail: `Corrective requirement disposition is missing ${token}.`,
-  }))
+  try {
+    checkV138ExactMachineStatus(source, "phase-262-requirement-disposition",
+      correctiveRequirementDisposition)
+    return []
+  } catch {
+    return [{
+      code: "LOCAL_SEAL_CONTRACT_DRIFT" as const,
+      path: repoPath,
+      line: 1,
+      detail: "Corrective requirement disposition block is missing, duplicated, or not exact.",
+    }]
+  }
 }
+
+const correctiveLifecycleStatus = (post53: boolean) => Object.freeze({
+  proof_status: "source_incomplete_pre_execution",
+  admit_03: "blocked",
+  seal_01: "passed_reduced_assurance",
+  assurance_class: "single_operator_local_seal_v1",
+  independent_custody_claimed: false,
+  route_started: false,
+  plan_262_47_terminal_present: false,
+  fresh_charged: 0,
+  fresh_accepted: 0,
+  required_accepted: 540,
+  authority_expired: true,
+  no_retry: true,
+  policy_status: "ready_non_authorizing",
+  pre_search_policy_root:
+    "sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382",
+  independent_verification_root:
+    "sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b",
+  candidate_search_authorized: false,
+  phase263_authorized: false,
+  formation_materialization_authorized: false,
+  holdout_opening_authorized: false,
+  public_authorized: false,
+  foundation_activation_root_present: false,
+  production_authorized: false,
+  next_action: post53 ? "262-54" : "262-53",
+  total_plans: 46,
+  completed_plans: post53 ? 41 : 40,
+  active_successors: Object.freeze([
+    "262-44", "262-45", "262-49", "262-51", "262-52", "262-53",
+    "262-54", "262-55", "262-56", "262-57", "262-48",
+  ]),
+  incomplete: Object.freeze(post53
+    ? ["262-54", "262-55", "262-56", "262-57", "262-48"]
+    : ["262-53", "262-54", "262-55", "262-56", "262-57", "262-48"]),
+  archived_source_incomplete_plan: "archived/262-47-HISTORICAL.md",
+  archived_source_incomplete_plan_sha256:
+    "5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e",
+  archived_original_activation_plan: "archived/262-48-HISTORICAL.md",
+  archived_original_activation_plan_sha256:
+    "8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1",
+  dormant_contract: "dormant/262-41-ACTIVATION-CONTRACT.md",
+})
 
 const correctiveLifecycleCarrierFindings = (repoRoot: string):
   readonly V138DependencyRevisionFinding[] => {
   const post53 = existsSync(path.join(repoRoot, phaseDirectory,
     "262-53-SUMMARY.md"))
-  const expected = post53
-    ? ['"next_action":"262-54"', '"completed_plans":41',
-      '"incomplete":["262-54","262-55","262-56","262-57","262-48"]']
-    : ['"next_action":"262-53"', '"completed_plans":40',
-      '"incomplete":["262-53","262-54","262-55","262-56","262-57","262-48"]']
-  return [".planning/ROADMAP.md", ".planning/STATE.md"].flatMap((repoPath) => {
+  const common = correctiveLifecycleStatus(post53)
+  const expectedByPath = {
+    ".planning/ROADMAP.md": common,
+    ".planning/STATE.md": Object.freeze({
+      ...common,
+      local_seal_mechanics: "independently_verified_zero_findings_v3",
+      local_seal_protocol_root:
+        "sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a",
+    }),
+  } as const
+  return Object.entries(expectedByPath).flatMap(([repoPath, expected]) => {
     const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
-    return expected.filter((token) => !source.includes(token)).map((token) => ({
-      code: "PLAN_DISCOVERY_DRIFT" as const,
-      path: repoPath,
-      line: 1,
-      detail: `Corrective lifecycle carrier is missing ${token}.`,
-    }))
+    try {
+      checkV138ExactMachineStatus(source, "phase-262-successor-status", expected)
+      return []
+    } catch {
+      return [{
+        code: "PLAN_DISCOVERY_DRIFT" as const,
+        path: repoPath,
+        line: 1,
+        detail: "Corrective lifecycle status block is missing, duplicated, or not exact.",
+      }]
+    }
   })
 }
 

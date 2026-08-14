@@ -28,6 +28,10 @@ import {
   checkV138Plan26247RouteContract,
   checkV138Plan26247SyntheticRoute,
 } from "./lib/v1-38-current-matrix-reproduction.js"
+import {
+  analyzeV138PolicySourcesWithFrozenRouteAllowlist,
+  checkV138ExactMachineStatus,
+} from "./check-v1-38-dependency-revision-boundaries.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -187,6 +191,47 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
       artifactPath)).toThrow()
     expect(readFileSync(artifactPath)).toEqual(before)
   }, 120_000)
+
+  it("rejects stale, duplicate, and contradictory structured status blocks", () => {
+    const marker = "phase-262-test-status"
+    const expected = { next_action: "262-54", completed_plans: 41 }
+    const exact = `stale prose says 262-53 and 40\n<!-- ${marker}: ${JSON.stringify(
+      expected)} -->\n`
+    expect(checkV138ExactMachineStatus(exact, marker, expected)).toEqual(expected)
+    expect(() => checkV138ExactMachineStatus(
+      `${exact}<!-- ${marker}: ${JSON.stringify(expected)} -->\n`, marker,
+      expected)).toThrow("V138_MACHINE_STATUS_MARKER_COUNT_INVALID")
+    expect(() => checkV138ExactMachineStatus(
+      `<!-- ${marker}: {"next_action":"262-53","next_action":"262-54","completed_plans":41} -->\n`,
+      marker, expected)).toThrow("V138_MACHINE_STATUS_VALUE_INVALID")
+    expect(() => checkV138ExactMachineStatus(
+      `unscoped ${JSON.stringify(expected)}\n<!-- ${marker}: {"next_action":"262-53","completed_plans":40} -->\n`,
+      marker, expected)).toThrow("V138_MACHINE_STATUS_VALUE_INVALID")
+  })
+
+  it("denies drift and scans future authority or live work in both route-capable modules", () => {
+    for (const repoPath of [
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts",
+    ]) {
+      const source = readFileSync(path.resolve(repoRoot, repoPath), "utf8")
+      expect(analyzeV138PolicySourcesWithFrozenRouteAllowlist({
+        [repoPath]: source,
+      })).toEqual([])
+      const findings = analyzeV138PolicySourcesWithFrozenRouteAllowlist({
+        [repoPath]: `${source}\nexport const writeFutureAuthorityRoute = () => {
+          executeV138ParallelMatrix()
+        }\n`,
+      })
+      expect(findings.map((finding) => finding.code)).toEqual(
+        expect.arrayContaining([
+          "ROUTE_CAPABLE_SOURCE_DRIFT",
+          "AUTHORITY_WRITER",
+          "LIVE_WORK_COMMAND",
+        ]),
+      )
+    }
+  })
 
   it("freezes isolated v6/v10/v11 schemas and exclusive destinations", () => {
     expect(V138_PLAN_262_47_AUTHORIZATION_SCHEMA)
