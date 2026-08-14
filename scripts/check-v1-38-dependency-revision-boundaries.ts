@@ -25,6 +25,14 @@ const phaseDirectory =
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const planBaselineCommit = "9de96e4a615d634d05fef655433d5b96b5970264" as const
 const manifestPath = ".planning/artifacts/v1.38-phase-262-plan-supersession.json"
+const plan26247DispositionPath =
+  ".planning/artifacts/v1.38-plan-262-47-pre-execution-source-failure-v1.json"
+const correctiveArchiveEntries = Object.freeze([
+  { path: `${phaseDirectory}/archived/262-47-HISTORICAL.md`,
+    sha256: "sha256:5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e" as Sha256 },
+  { path: `${phaseDirectory}/archived/262-48-HISTORICAL.md`,
+    sha256: "sha256:8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1" as Sha256 },
+] as const)
 
 const sha256 = (value: string | Uint8Array): Sha256 =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -280,6 +288,35 @@ export const analyzeV138LocalSealCarriers = (
       detail: `Active carrier is missing required local-seal contract pattern ${pattern.source}.`,
     })))
 
+const correctiveRequirementDispositionFindings = (repoRoot: string):
+  readonly V138DependencyRevisionFinding[] => {
+  const repoPath = ".planning/REQUIREMENTS.md"
+  const source = readFileSync(path.join(repoRoot, repoPath), "utf8")
+  const required = [
+    '"proof_status":"source_incomplete_pre_execution"',
+    '"admit_03":"blocked"',
+    '"seal_01":"passed_reduced_assurance"',
+    '"assurance_class":"single_operator_local_seal_v1"',
+    '"phase_262":"incomplete"',
+    '"route_started":false',
+    '"fresh_charged":0',
+    '"fresh_accepted":0',
+    '"candidate_search_authorized":false',
+    '"phase263_authorized":false',
+    '"formation_materialization_authorized":false',
+    '"holdout_opening_authorized":false',
+    '"public_authorized":false',
+    '"activation_authorized":false',
+    '"production_authorized":false',
+  ]
+  return required.filter((token) => !source.includes(token)).map((token) => ({
+    code: "LOCAL_SEAL_CONTRACT_DRIFT" as const,
+    path: repoPath,
+    line: 1,
+    detail: `Corrective requirement disposition is missing ${token}.`,
+  }))
+}
+
 export const analyzeV138ProtectedHistory = (
   repoRoot: string,
   entries: readonly Readonly<{ path: string; sha256: Sha256 }>[],
@@ -520,7 +557,10 @@ const changedPolicySources = (repoRoot: string): Readonly<Record<string, string>
   const names = new Set(changedPaths(repoRoot).filter((repoPath) => repoPath.startsWith("scripts/")))
   const sources: Record<string, string> = {}
   for (const repoPath of [...names].sort()) {
-    if (!repoPath.endsWith(".ts") || repoPath.endsWith(".test.ts") || repoPath === "scripts/check-v1-38-dependency-revision-boundaries.ts") continue
+    if (!repoPath.endsWith(".ts") || repoPath.endsWith(".test.ts") ||
+      repoPath === "scripts/check-v1-38-dependency-revision-boundaries.ts" ||
+      repoPath === "scripts/lib/v1-38-current-matrix-reproduction.ts" ||
+      repoPath === "scripts/lib/v1-38-successor-source-seal.ts") continue
     const target = path.join(repoRoot, repoPath)
     if (existsSync(target)) sources[repoPath] = readFileSync(target, "utf8")
   }
@@ -533,9 +573,53 @@ const changedPaths = (repoRoot: string): readonly string[] => [...new Set([
     ...git(repoRoot, ["ls-files", "--others", "--exclude-standard"]).split("\n"),
   ].filter(Boolean))].sort()
 
+const correctiveDispositionCanonical = (repoRoot: string): boolean => {
+  const target = path.join(repoRoot, plan26247DispositionPath)
+  if (!existsSync(target)) return false
+  try {
+    const bytes = readFileSync(target, "utf8")
+    const value = JSON.parse(bytes) as unknown
+    if (!isRecord(value) || bytes !== `${JSON.stringify(value)}\n`) return false
+    const expectedDestinations = [
+      ".planning/artifacts/v1.38-current-matrix-execution-context-v10.json",
+      ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v10.json",
+      ".planning/artifacts/v1.38-current-matrix-calibration-v10.json",
+      ".planning/artifacts/v1.38-current-matrix-reproduction-v11.json",
+      ".planning/artifacts/v1.38-plan-262-47-terminal-v1.json",
+      ".planning/artifacts/v1.38-plan-262-47-preflight-consumption-v1.json",
+      ".planning/artifacts/v1.38-plan-262-47-calibration-consumption-v1.json",
+      ".planning/artifacts/v1.38-plan-262-47-reproduction-consumption-v1.json",
+    ]
+    const exact = value.schemaVersion ===
+        "v1.38-plan-262-47-pre-execution-source-failure-v1" &&
+      value.reason === "sealed_source_incomplete" &&
+      value.sourceA6 === "600c7770867e6090147914dc090780f5b63930ec" &&
+      value.sourceB6 === "e2166736c2a1a3f1decbb1d6b3722f87945a47ea" &&
+      value.routeStarted === false && value.isRouteTerminal === false &&
+      value.chargedAttemptCount === 0 && value.acceptedCellCount === 0 &&
+      value.requiredAcceptedCellCount === 540 && value.authorityExpired === true &&
+      value.noRetry === true && value.satisfiesAdmit03 === false &&
+      value.seal01Status === "passed_reduced_assurance" &&
+      value.assuranceClass === "single_operator_local_seal_v1" &&
+      value.independentCustodyClaimed === false &&
+      value.candidateSearchAuthorized === false && value.phase263Authorized === false &&
+      value.formationMaterializationAuthorized === false &&
+      value.holdoutOpeningAuthorized === false && value.publicAuthorized === false &&
+      value.activationAuthorized === false && value.productionAuthorized === false &&
+      value.historicalChargedAttemptCount === 40 &&
+      Array.isArray(value.historicalChargedPublicAttemptIds) &&
+      value.historicalChargedPublicAttemptIds.length === 40 &&
+      JSON.stringify(value.absentDestinations) === JSON.stringify(expectedDestinations) &&
+      typeof value.dispositionRoot === "string" &&
+      /^sha256:[0-9a-f]{64}$/u.test(value.dispositionRoot)
+    return exact && expectedDestinations.every((repoPath) =>
+      !existsSync(path.join(repoRoot, repoPath)))
+  } catch { return false }
+}
+
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
   const findings: V138DependencyRevisionFinding[] = []
-  const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41", "262-43"])
+  const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41", "262-43", "262-47"])
   const directPlans = readdirSync(path.join(repoRoot, phaseDirectory))
     .filter((name) => /^262-\d+-PLAN\.md$/u.test(name))
     .map((name) => name.slice(0, 6))
@@ -576,13 +660,16 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
       "262-15", "262-16", "262-17", "262-18", "262-19", "262-20", "262-21", "262-22", "262-23",
       "262-24", "262-25", "262-26", "262-27", "262-28", "262-29", "262-30", "262-31", "262-32",
       "262-33", "262-34", "262-35", "262-36", "262-37", "262-38", "262-39", "262-42", "262-44",
-      "262-45", "262-47", "262-48", "262-49", "262-51", "262-52",
+      "262-45", "262-48", "262-49", "262-51", "262-52", "262-53", "262-54", "262-55", "262-56",
+      "262-57",
     ]
     const waves = isRecord(parsed.waves) ? parsed.waves : {}
     const activeWavesExact = JSON.stringify({
       "38": waves["38"], "39": waves["39"], "40": waves["40"], "41": waves["41"], "42": waves["42"],
+      "43": waves["43"], "44": waves["44"], "45": waves["45"], "46": waves["46"],
     }) === JSON.stringify({
-      "38": ["262-49"], "39": ["262-51"], "40": ["262-52"], "41": ["262-47"], "42": ["262-48"],
+      "38": ["262-49"], "39": ["262-51"], "40": ["262-52"], "41": ["262-53"], "42": ["262-54"],
+      "43": ["262-55"], "44": ["262-56"], "45": ["262-57"], "46": ["262-48"],
     })
     const summary = (planId: string): boolean =>
       existsSync(path.join(repoRoot, phaseDirectory, `${planId}-SUMMARY.md`))
@@ -597,51 +684,31 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
     const v3PassReviewCanonical = v3PassArtifactCanonical && isCanonicalPlan52Review(v3ReviewPath, v3ArtifactPath, "pass")
     const v3FailReviewCanonical = v3FailArtifactCanonical && isCanonicalPlan52Review(v3ReviewPath, v3ArtifactPath, "fail")
     const v3Verdict = v3PassArtifactCanonical ? "pass" as const : v3FailArtifactCanonical ? "fail" as const : "absent" as const
-    let lifecycle: V138PhasePlanIndexLifecycle
-    if (summary("262-48")) lifecycle = "post_48"
-    else if (summary("262-47")) lifecycle = "post_47"
-    else if (summary("262-52")) lifecycle = "plan_52_pass"
-    else if (v3FailArtifactCanonical && v3FailReviewCanonical) lifecycle = "plan_52_fail"
-    else if (summary("262-51")) lifecycle = "post_51_pre_52"
-    else lifecycle = "pre_51"
-    let expected: Readonly<{ planCount: 42; summaryCount: number; incomplete: readonly string[] }>
-    try {
-      expected = evaluateV138PhasePlanIndexTransition({
-        lifecycle,
-        planCount: plans.length,
-        summaryCount: actualSummaryCount,
-        incomplete: actualIncomplete.filter((value): value is string => typeof value === "string"),
-        v2FailArtifactCanonical: failArtifactCanonical,
-        v2FailReviewCanonical: failReviewCanonical,
-        summary26250Present: summary("262-50"),
-        v3Verdict,
-        v3ArtifactCanonical: v3PassArtifactCanonical || v3FailArtifactCanonical,
-        v3ReviewCanonical: v3PassReviewCanonical || v3FailReviewCanonical,
-        summary26251Present: summary("262-51"),
-        summary26252Present: summary("262-52"),
-      })
-      if ((lifecycle === "plan_52_pass" || lifecycle === "post_47" || lifecycle === "post_48") &&
-        (!v3PassArtifactCanonical || !v3PassReviewCanonical || !summary("262-52"))) {
-        throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
-      }
-      if (lifecycle === "post_47" && !summary("262-52")) throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
-      if (lifecycle === "post_48" && (!summary("262-47") || !summary("262-52"))) {
-        throw new TypeError("V138_PHASE_PLAN_INDEX_TRANSITION_INVALID")
-      }
-    } catch {
-      findings.push({
-        code: "PLAN_DISCOVERY_DRIFT",
-        path: phaseDirectory,
-        line: 1,
-        detail: "Phase 262 plan index does not match any declared lifecycle state.",
-      })
-      return findings
-    }
+    const post53 = summary("262-53")
+    const expectedSummaryCount = post53 ? 41 : 40
+    const expectedIncomplete = post53
+      ? ["262-48", "262-54", "262-55", "262-56", "262-57"]
+      : ["262-48", "262-53", "262-54", "262-55", "262-56", "262-57"]
+    const lifecycleExact = plans.length === 46 &&
+      actualSummaryCount === expectedSummaryCount &&
+      JSON.stringify(actualIncomplete) === JSON.stringify(expectedIncomplete) &&
+      failArtifactCanonical && failReviewCanonical && !summary("262-50") &&
+      v3Verdict === "pass" && v3PassArtifactCanonical && v3PassReviewCanonical &&
+      summary("262-51") && summary("262-52") && !summary("262-47") &&
+      correctiveDispositionCanonical(repoRoot) &&
+      correctiveArchiveEntries.every((entry) => existsSync(path.join(repoRoot,
+        entry.path)) && sha256(readFileSync(path.join(repoRoot, entry.path))) === entry.sha256)
+    if (!lifecycleExact) findings.push({
+      code: "PLAN_DISCOVERY_DRIFT",
+      path: phaseDirectory,
+      line: 1,
+      detail: "Phase 262 corrective index, disposition, or archive evidence does not match the declared pre/post-262-53 lifecycle.",
+    })
     if (JSON.stringify(planIds) !== JSON.stringify(expectedPlanIds) || !activeWavesExact) findings.push({
       code: "PLAN_DISCOVERY_DRIFT",
       path: phaseDirectory,
       line: 1,
-      detail: `phase-plan-index 262 must preserve the exact declared plan inventory and waves; expected ${expected.planCount}/${expected.summaryCount} with incomplete ${JSON.stringify(expected.incomplete)}.`,
+      detail: `phase-plan-index 262 must preserve the exact corrective 46-plan inventory and waves; expected 46/${expectedSummaryCount} with incomplete ${JSON.stringify(expectedIncomplete)}.`,
     })
   } catch {
     findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1, detail: "phase-plan-index 262 returned invalid JSON." })
@@ -794,6 +861,7 @@ export const checkV138DependencyRevisionBoundaries = (
       [".planning/seeds/SEED-002-competitive-strategy-factory-and-adversarial-league.md"],
       [".planning/STATE.md"],
     ].map(([repoPath]) => [repoPath, readFileSync(path.join(repoRoot, repoPath), "utf8")]))),
+    ...correctiveRequirementDispositionFindings(repoRoot),
     ...planDiscoveryFindings(repoRoot),
   ]
   const expectedManifest = renderV138PlanSupersessionManifest()

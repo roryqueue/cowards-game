@@ -181,6 +181,8 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 Roadmap creation assigns every v1.38 requirement to exactly one phase.
 
+<!-- phase-262-requirement-disposition: {"proof_status":"source_incomplete_pre_execution","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","phase_262":"incomplete","route_started":false,"fresh_charged":0,"fresh_accepted":0,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"activation_authorized":false,"production_authorized":false} -->
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ADMIT-01 | Phase 262 | Complete |
