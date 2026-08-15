@@ -18141,7 +18141,7 @@ export const checkV138AuthoritativeMatrixV10Receipt = (value: unknown,
   const calibrationV8 = route5CalibrationAsV8(evidence.inventory, calibration,
     context, preflight)
   const v9Body = replaceVersionStrings({
-    schemaVersion: "v1.38-current-matrix-reproduction-v9",
+    schemaVersion: "v1.38-current-matrix-reproduction-v10",
     executionContextRoot: contextV8.receiptRoot,
     preflightRoot: preflightV8.receiptRoot,
     calibrationRoot: calibrationV8.receiptRoot, status: receipt.status,
@@ -18163,7 +18163,7 @@ export const checkV138AuthoritativeMatrixV10Receipt = (value: unknown,
     Record<string, unknown>
   checkV138Route5AdapterKeyInventory("reproductionV9", v9Body)
   v9Body.attemptLedgerRoot = v138SuccessorRoot("evidenceBundle",
-    "v1.38-current-matrix-reproduction-v9-attempt-ledger-v1",
+    "v1.38-current-matrix-reproduction-v10-attempt-ledger-v1",
     { calibrationRoot: calibrationV8.receiptRoot,
       planRoot: v9Body.planRoot, attempts: v9Body.attempts })
   checkV138AuthoritativeMatrixV9Receipt({ ...v9Body,
