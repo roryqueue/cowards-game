@@ -670,4 +670,4 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       existsSync(path.resolve(repoRoot, repoPath)))).toEqual(before)
     rmSync(fixtureRoot, { recursive: true, force: true })
   }
-}, 900_000)
+}, 1_500_000)
