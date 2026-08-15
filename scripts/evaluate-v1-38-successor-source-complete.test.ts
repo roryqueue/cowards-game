@@ -26,10 +26,13 @@ import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_PLAN_262_30_FRESH_DESTINATIONS,
   V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+  V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
   V138_PLAN_262_56_CANONICAL_PATHS,
   V138_PLAN_262_57_FRESH_DESTINATIONS,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+  V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+  V138_PLAN_262_56_OBSOLETE_V7_PATHS,
   V138_PLAN_262_54_SOURCE_BASE7,
   V138_PLAN_262_54_SOURCE_PATHS,
   buildV138Plan26255ReviewDocument,
@@ -205,8 +208,8 @@ it("keeps a closed route-7 command, handler, destination, and disposition manife
   expect(checkV138Route7SourceCompleteness()).toBe(V138_ROUTE_7_SOURCE_MANIFEST)
   expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({
     routeOrdinal: 7,
-    authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
-    sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+    authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+    sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
     executionContextSchema: "v1.38-current-matrix-execution-context-v11",
     preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
     calibrationSchema: "v1.38-current-matrix-calibration-v11",
@@ -218,6 +221,12 @@ it("keeps a closed route-7 command, handler, destination, and disposition manife
     reproductionCellCount: 540,
     noRetry: true,
   })
+  expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
+    .toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+  expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
+    .toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
+  expect(V138_PLAN_262_56_OBSOLETE_V7_PATHS.every((repoPath) =>
+    !existsSync(path.resolve(repoRoot, repoPath)))).toBe(true)
   expect(V138_ROUTE_7_SOURCE_MANIFEST.map(({ command }) => command).sort())
     .toEqual([...ROUTE_7_COMMANDS].sort())
   expect(V138_ROUTE_7_SOURCE_MANIFEST.map(({ destination }) => destination))
@@ -339,7 +348,8 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     for (const blob of custody.reviewedSourceBlobs) {
       expect(git("rev-parse", `${sourceA7}:${blob.path}`)).toBe(blob.blobOid)
       expect(readFileSync(path.resolve(fixtureRoot, blob.path))).toEqual(
-        readFileSync(path.resolve(repoRoot, blob.path)))
+        execFileSync("git", ["show", `${sourceA7}:${blob.path}`], {
+          cwd: repoRoot }))
     }
     writeFileSync(path.resolve(fixtureRoot, "A7-DOCS-DESCENDANT.md"),
       "planning-only descendant\n")

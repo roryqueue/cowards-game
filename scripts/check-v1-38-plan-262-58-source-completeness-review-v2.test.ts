@@ -1,5 +1,17 @@
 import { createHash } from "node:crypto"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import { encodeCanonicalJson } from "@cowards/spec"
+import {
+  V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+  V138_PLAN_262_56_V8_CANONICAL_PATHS,
+  V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+  buildV138Plan26256AuthorizationV8,
+  buildV138SuccessorSourceSealV8,
+  checkV138Plan26256AuthorizationV8,
+  checkV138SuccessorSourceSealV8,
+} from "./lib/v1-38-successor-source-seal.js"
 
 type FindingCode =
   | "CR01_EXECUTION_TRANSCRIPT_INVALID"
@@ -16,9 +28,11 @@ type Candidate = Record<string, any>
 
 const canonical = (value: unknown): string => JSON.stringify(value,
   (_key, item) => item !== null && typeof item === "object" &&
-    !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort()) : item)
+    !Array.isArray(item) ? Object.fromEntries(Object.entries(item)
+      .sort(([a], [b]) => a.localeCompare(b))) : item)
 const root = (value: unknown) => `sha256:${createHash("sha256")
   .update(canonical(value)).digest("hex")}`
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
 const commands = [
   "--check-plan-262-57-pre-execution-readiness-v1",
@@ -145,6 +159,98 @@ describe("Plan 262-58 reviewer-v2 semantic contract", () => {
       expect(() => evaluateV138Plan26258Lifecycle({ ...input,
         incomplete: [...input.incomplete, "262-55"] })).toThrow(
           "V138_PLAN_262_58_LIFECYCLE_INVALID")
+    }
+  })
+
+  it("derives the immutable nine-finding non-authorizing v1 disposition", async () => {
+    const { buildV138ReviewV1InvalidDisposition,
+      checkV138ReviewV1InvalidDisposition } = await loadContract()
+    const disposition = buildV138ReviewV1InvalidDisposition(repoRoot)
+    expect(disposition).toMatchObject({ disposition:
+      "review_v1_invalid_disproved_non_authorizing", findingCount: 9,
+      reviewV1PassDisproved: true, sourceCompletenessPassedDisproved: true,
+      eligibleAuthorizationInput: false, historicalEvidencePreserved: true,
+      exactA7: "5f39aba7833030d537c4c2767c369d24c982ed83",
+      authority: { admit03: "blocked", acceptedCells: 0, requiredCells: 540,
+        routeStarted: false, candidateSearchAuthorized: false,
+        phase263Authorized: false, productionAuthorized: false } })
+    expect(disposition.findings.map((item: Candidate) => item.id)).toEqual([
+      "CR-01", "CR-02", "CR-03", "CR-04", "CR-05", "CR-06", "CR-07",
+      "CR-08", "WR-01"])
+    expect(checkV138ReviewV1InvalidDisposition(repoRoot, disposition))
+      .toEqual(disposition)
+    expect(() => checkV138ReviewV1InvalidDisposition(repoRoot, {
+      ...disposition, eligibleAuthorizationInput: true,
+    })).toThrow("V138_REVIEW_V1_INVALID_DISPOSITION_INVALID")
+  })
+
+  it("binds synthetic authorization-v8 and seal-v8 to detached review-v2/A8 custody", () => {
+    const reviewV2Document = { schemaVersion:
+      "v1.38-plan-262-59-source-completeness-review-v2",
+      sourceBase8: "1".repeat(40), sourceA8: "2".repeat(40),
+      findingCount: 0, sourceCompletenessPassed: true,
+      independentPersonClaimed: false, reviewerSeparated: false,
+      reviewRoot: `sha256:${"8".repeat(64)}` }
+    const encodedReview = encodeCanonicalJson(reviewV2Document as never,
+      { context: "canonical-manifest" })
+    if (!encodedReview.ok) throw new TypeError("TEST_REVIEW_CANONICAL_INVALID")
+    const reviewBytes = `${Buffer.from(encodedReview.bytes).toString("utf8")}\n`
+    const reviewBytesSha256 = `sha256:${createHash("sha256")
+      .update(reviewBytes).digest("hex")}` as const
+    const reviewV2Input = { absolutePath:
+      "/private/tmp/cowards-plan-262-56-review-v2-input.owned/review-v2.json",
+      outsideRepository: true as const, readOnly: true as const,
+      ownerMatchesEffectiveUid: true as const, regularFile: true as const,
+      symlinkFree: true as const, linkCount: 1 as const,
+      inputCommit: "3".repeat(40), inputBlob: "4".repeat(40),
+      byteLength: Buffer.byteLength(reviewBytes), bytesSha256: reviewBytesSha256,
+      reviewV2Root: reviewV2Document.reviewRoot,
+      preBytesSha256: reviewBytesSha256, postBytesSha256: reviewBytesSha256,
+      preNoFollowIdentity: "dev:1:ino:2", postNoFollowIdentity: "dev:1:ino:2",
+      reviewV2Document }
+    const authorization = buildV138Plan26256AuthorizationV8({ repoRoot,
+      sourceBase8: "1".repeat(40), sourceA8: "2".repeat(40),
+      sourceA8Tree: "5".repeat(40), sourceA8Parent: "1".repeat(40),
+      sourceA8Paths: sourcePaths,
+      sourceA8Blobs: sourcePaths.map((repoPath, index) => ({ path: repoPath,
+        blobOid: String(index + 1).repeat(40).slice(0, 40),
+        sha256: `sha256:${String(index + 1).repeat(64).slice(0, 64)}` as const })),
+      protectedA7: "5f39aba7833030d537c4c2767c369d24c982ed83",
+      protectedHistoryRoot: `sha256:${"6".repeat(64)}`,
+      reviewV1InvalidDispositionSha256: `sha256:${"7".repeat(64)}`,
+      reviewV2Input })
+    expect(authorization).toMatchObject({ schemaVersion:
+      V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA, routeOrdinal: 7,
+      executionVersions: { context: 11, preflight: 11, calibration: 11,
+        reproduction: 12 }, identityClaims: { independentPersonClaimed: false,
+        reviewerSeparated: false, independentCustodyClaimed: false },
+      futureCustodyPaths: [V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.seal] })
+    expect(checkV138Plan26256AuthorizationV8(repoRoot, authorization))
+      .toEqual(authorization)
+    const seal = buildV138SuccessorSourceSealV8({ repoRoot, authorization,
+      sourceB8: "9".repeat(40), sourceB8Parent: authorization.sourceA8,
+      sourceB8Tree: "a".repeat(40), changedPaths: authorization.futureCustodyPaths })
+    expect(seal).toMatchObject({ schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+      routeOrdinal: 7, sourceB8Parent: authorization.sourceA8 })
+    expect(checkV138SuccessorSourceSealV8({ repoRoot, authorization, seal }))
+      .toEqual(seal)
+    for (const mutate of [
+      (value: Candidate) => { value.reviewV2Input.reviewV2Document.findingCount = 1 },
+      (value: Candidate) => { value.reviewV2Input.reviewV2Root = `sha256:${"0".repeat(64)}` },
+      (value: Candidate) => { value.reviewV2Input.absolutePath = "review-v2.json" },
+      (value: Candidate) => { value.reviewV2Input.linkCount = 2 },
+      (value: Candidate) => { value.identityClaims.reviewerSeparated = true },
+      (value: Candidate) => { value.sourceA8Parent = "0".repeat(40) },
+      (value: Candidate) => { value.futureCustodyPaths[0] =
+        ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json" },
+    ]) {
+      const mutation = structuredClone(authorization)
+      mutate(mutation)
+      const { authorizationRoot: _discarded, ...body } = mutation
+      mutation.authorizationRoot = root(body)
+      expect(() => checkV138Plan26256AuthorizationV8(repoRoot, mutation))
+        .toThrow()
     }
   })
 })

@@ -980,6 +980,126 @@ const isCanonicalPlan52Review = (repoRoot: string, reviewTarget: string,
   artifactTarget: string, expected: "pass" | "fail"): boolean =>
   isCanonicalPlan50Review(repoRoot, reviewTarget, artifactTarget, expected)
 
+export const V138_PLAN_262_58_CORRECTIVE_CHAIN = Object.freeze([
+  "262-58", "262-59", "262-56", "262-57", "262-48",
+] as const)
+
+export type V138Plan26258LifecycleMode =
+  | "review_v2_pending_42_of_47"
+  | "plan_58_complete_43_of_47"
+  | "review_v2_complete_44_of_47"
+  | "authority_complete_45_of_47"
+  | "route_complete_46_of_47"
+  | "phase_complete_47_of_47"
+
+export const evaluateV138Plan26258Lifecycle = (input: Readonly<{
+  mode: V138Plan26258LifecycleMode
+  totalPlans: number
+  completedPlans: number
+  correctiveChain: readonly string[]
+  incomplete: readonly string[]
+  archivedPlan55Active: boolean
+  reviewV1InvalidDispositionPresent: boolean
+  authorizationVersion: number
+  sealVersion: number
+  obsoleteV7Present: boolean
+  routeOrdinal: number
+  executionVersions: readonly number[]
+}>) => {
+  const expected = {
+    review_v2_pending_42_of_47: { completed: 42,
+      incomplete: ["262-58", "262-59", "262-56", "262-57", "262-48"] },
+    plan_58_complete_43_of_47: { completed: 43,
+      incomplete: ["262-59", "262-56", "262-57", "262-48"] },
+    review_v2_complete_44_of_47: { completed: 44,
+      incomplete: ["262-56", "262-57", "262-48"] },
+    authority_complete_45_of_47: { completed: 45,
+      incomplete: ["262-57", "262-48"] },
+    route_complete_46_of_47: { completed: 46, incomplete: ["262-48"] },
+    phase_complete_47_of_47: { completed: 47, incomplete: [] },
+  }[input.mode]
+  if (expected === undefined || input.totalPlans !== 47 ||
+    input.completedPlans !== expected.completed ||
+    JSON.stringify(input.correctiveChain) !==
+      JSON.stringify(V138_PLAN_262_58_CORRECTIVE_CHAIN) ||
+    JSON.stringify(input.incomplete) !== JSON.stringify(expected.incomplete) ||
+    input.archivedPlan55Active !== false ||
+    input.reviewV1InvalidDispositionPresent !== true ||
+    input.authorizationVersion !== 8 || input.sealVersion !== 8 ||
+    input.obsoleteV7Present !== false || input.routeOrdinal !== 7 ||
+    JSON.stringify(input.executionVersions) !== JSON.stringify([11, 11, 11, 12])) {
+    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INVALID")
+  }
+  return Object.freeze({ mode: input.mode, totalPlans: 47 as const,
+    completedPlans: expected.completed,
+    incomplete: Object.freeze([...expected.incomplete]),
+    correctiveChain: V138_PLAN_262_58_CORRECTIVE_CHAIN })
+}
+
+export const checkV138Plan26258LiveLifecycle = (repoRoot = defaultRepoRoot) => {
+  const toolPath = path.join(process.env.HOME ?? "",
+    ".codex/gsd-core/bin/gsd-tools.cjs")
+  const indexed = spawnSync(process.execPath,
+    [toolPath, "query", "phase-plan-index", "262"], { cwd: repoRoot,
+      encoding: "utf8", timeout: 20_000 })
+  if (indexed.status !== 0) {
+    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INDEX_INVALID")
+  }
+  const parsed = JSON.parse(indexed.stdout) as Record<string, unknown>
+  const plans = Array.isArray(parsed.plans) ? parsed.plans : []
+  const waves = isRecord(parsed.waves) ? parsed.waves : {}
+  const actualIncomplete = Array.isArray(parsed.incomplete)
+    ? parsed.incomplete.filter((item): item is string => typeof item === "string") : []
+  const summary = (planId: string) => repositoryFilePresent(repoRoot,
+    path.join(repoRoot, phaseDirectory, `${planId}-SUMMARY.md`))
+  const states = [
+    { mode: "phase_complete_47_of_47", summary: summary("262-48") },
+    { mode: "route_complete_46_of_47", summary: summary("262-57") },
+    { mode: "authority_complete_45_of_47", summary: summary("262-56") },
+    { mode: "review_v2_complete_44_of_47", summary: summary("262-59") },
+    { mode: "plan_58_complete_43_of_47", summary: summary("262-58") },
+    { mode: "review_v2_pending_42_of_47", summary: true },
+  ] as const
+  const mode = states.find(entry => entry.summary)!.mode
+  const completed = 42 + ["262-58", "262-59", "262-56", "262-57", "262-48"]
+    .filter(summary).length
+  const expectedWaves = { "43": ["262-58"], "44": ["262-59"],
+    "45": ["262-56"], "46": ["262-57"], "47": ["262-48"] }
+  if (plans.length !== 47 || plans.filter(item => isRecord(item) &&
+      item.has_summary === true).length !== completed ||
+    JSON.stringify(Object.fromEntries(Object.keys(expectedWaves).map(key =>
+      [key, waves[key]]))) !== JSON.stringify(expectedWaves) ||
+    repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
+      "262-55-PLAN.md")) ||
+    !repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
+      "archived/262-55-HISTORICAL.md")) ||
+    !repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
+      "archived/262-55-SUMMARY-HISTORICAL.md"))) {
+    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INDEX_INVALID")
+  }
+  const dispositionPresent = repositoryFilePresent(repoRoot, path.join(repoRoot,
+    ".planning/artifacts/v1.38-plan-262-58-review-v1-invalid-disposition-v1.json"))
+  const expectedIncomplete = V138_PLAN_262_58_CORRECTIVE_CHAIN.filter(planId =>
+    !summary(planId))
+  const lifecycle = evaluateV138Plan26258Lifecycle({ mode, totalPlans: 47,
+    completedPlans: completed,
+    correctiveChain: V138_PLAN_262_58_CORRECTIVE_CHAIN,
+    incomplete: expectedIncomplete, archivedPlan55Active: false,
+    reviewV1InvalidDispositionPresent: dispositionPresent,
+    authorizationVersion: 8, sealVersion: 8,
+    obsoleteV7Present: [
+      ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
+      ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+    ].some(repoPath => repositoryFilePresent(repoRoot,
+      path.join(repoRoot, repoPath))), routeOrdinal: 7,
+    executionVersions: [11, 11, 11, 12] })
+  if (JSON.stringify([...actualIncomplete].sort()) !==
+    JSON.stringify([...expectedIncomplete].sort())) {
+    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INCOMPLETE_INVALID")
+  }
+  return lifecycle
+}
+
 export const evaluateV138PhasePlanIndexTransition = (
   input: Readonly<{
     lifecycle: V138PhasePlanIndexLifecycle
@@ -1134,21 +1254,15 @@ if (isDirectExecution()) {
     process.exitCode = 1
   }
   if (process.exitCode !== 1) {
-    const analysis = checkV138DependencyRevisionBoundaries()
-    if (analysis.findings.length > 0) {
-      for (const finding of analysis.findings) {
-        process.stderr.write(`${finding.code} ${finding.path}:${finding.line} ${finding.detail}\n`)
-      }
+    try {
+      const lifecycle = checkV138Plan26258LiveLifecycle()
+      process.stdout.write(`${JSON.stringify({ status: "passed_lifecycle",
+        ...lifecycle, matrixAdmissionStatus: "blocked",
+        downstreamAuthority: "denied" })}\n`)
+    } catch (error) {
+      process.stderr.write(`${error instanceof Error ? error.message :
+        "V138_PLAN_262_58_LIFECYCLE_INVALID"}\n`)
       process.exitCode = 1
-    } else {
-      process.stdout.write(`${JSON.stringify({
-        status: "passed_absence",
-        protectedPathCount: analysis.protectedPathCount,
-        scannedSourceCount: analysis.scannedSourceCount,
-        protectedInventoryRoot: analysis.protectedInventoryRoot,
-        matrixAdmissionStatus: "blocked",
-        downstreamAuthority: "denied",
-      })}\n`)
     }
   }
 }

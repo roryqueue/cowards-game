@@ -28,11 +28,14 @@ import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA,
   V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+  V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
   V138_PLAN_262_55_REVIEWER_PROTOCOL,
   V138_PLAN_262_57_FRESH_DESTINATIONS,
   V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+  V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+  V138_PLAN_262_56_OBSOLETE_V7_PATHS,
   buildV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
@@ -491,14 +494,14 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
 })
 
 describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
-  it("keeps v7 authority, v11/v12 execution, and fresh destinations exclusive", () => {
+  it("keeps v8 authority, v11/v12 execution, and fresh destinations exclusive", () => {
     expect(V138_PLAN_262_55_REVIEWER_PROTOCOL)
       .toBe("single_operator_procedural_source_review_v1")
     expect(checkV138Plan26257RouteContract()).toBe(
       V138_PLAN_262_57_ROUTE_CONTRACT)
     expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({ routeOrdinal: 7,
-      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
-      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
       executionContextSchema: "v1.38-current-matrix-execution-context-v11",
       preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
       calibrationSchema: "v1.38-current-matrix-calibration-v11",
@@ -512,6 +515,14 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
       .toBe(V138_PLAN_262_57_FRESH_DESTINATIONS.length)
     expect(V138_PLAN_262_57_ROUTE_CONTRACT.canonicalDestinations)
       .toEqual(V138_PLAN_262_57_ROUTE_DESTINATIONS)
+    expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
+      .toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+    expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
+      .toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
+    expect(V138_PLAN_262_56_OBSOLETE_V7_PATHS).toEqual([
+      ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
+      ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+    ])
   })
 
   it("represents initial obstruction outside the terminal path", () => {

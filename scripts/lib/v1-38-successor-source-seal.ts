@@ -9,6 +9,7 @@ import {
   linkSync,
   openSync,
   readFileSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs"
@@ -5656,15 +5657,253 @@ export const writeV138Plan26247PreExecutionSourceFailureV1 =
 // the two authorization artifacts.  These contracts deliberately contain no
 // ambient "latest" lookup and no live operation.
 export const V138_PLAN_262_56_AUTHORIZATION_SCHEMA =
-  "v1.38-plan-262-56-authorization-v7" as const
+  "v1.38-plan-262-56-authorization-v8" as const
 export const V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA =
-  "v1.38-successor-source-seal-v7" as const
+  "v1.38-successor-source-seal-v8" as const
+export const V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA =
+  "v1.38-plan-262-56-authorization-v8" as const
+export const V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA =
+  "v1.38-successor-source-seal-v8" as const
+export const V138_PLAN_262_56_V8_CANONICAL_PATHS = Object.freeze({
+  authorization:
+    ".planning/artifacts/v1.38-plan-262-56-authorization-v8.json",
+  seal: ".planning/artifacts/v1.38-successor-source-seal-v8.json",
+  sourceCompletenessReview:
+    ".planning/artifacts/v1.38-plan-262-59-source-completeness-review-v2.json",
+} as const)
+export const V138_PLAN_262_56_OBSOLETE_V7_PATHS = Object.freeze([
+  ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
+  ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+] as const)
+
+const V138_PLAN_262_56_V8_AUTHORIZATION_KEYS = Object.freeze([
+  "schemaVersion", "routeOrdinal", "executionVersions", "sourceBase8",
+  "sourceA8", "sourceA8Paths", "sourceA8Tree", "sourceA8Parent",
+  "sourceA8Blobs", "protectedA7", "protectedHistoryRoot",
+  "reviewV1InvalidDispositionSha256", "reviewV2Input", "identityClaims",
+  "canonicalDestinations", "futureCustodyPaths", "obsoleteV7PathsAbsent",
+  "singleUse", "noRetry", "satisfiesAdmit03", "downstreamAuthority",
+  "authorizationRoot",
+] as const)
+
+const V138_PLAN_262_56_V8_REVIEW_INPUT_KEYS = Object.freeze([
+  "absolutePath", "outsideRepository", "readOnly", "ownerMatchesEffectiveUid",
+  "regularFile", "symlinkFree", "linkCount", "inputCommit", "inputBlob",
+  "byteLength", "bytesSha256", "reviewV2Root", "preBytesSha256",
+  "postBytesSha256", "preNoFollowIdentity", "postNoFollowIdentity",
+  "reviewV2Document",
+] as const)
+
+export interface V138Plan26256ReviewV2Input {
+  readonly absolutePath: string
+  readonly outsideRepository: true
+  readonly readOnly: true
+  readonly ownerMatchesEffectiveUid: true
+  readonly regularFile: true
+  readonly symlinkFree: true
+  readonly linkCount: 1
+  readonly inputCommit: string
+  readonly inputBlob: string
+  readonly byteLength: number
+  readonly bytesSha256: Sha256
+  readonly reviewV2Root: Sha256
+  readonly preBytesSha256: Sha256
+  readonly postBytesSha256: Sha256
+  readonly preNoFollowIdentity: string
+  readonly postNoFollowIdentity: string
+  readonly reviewV2Document: Readonly<Record<string, unknown>>
+}
+
+const checkV138Plan26256ReviewV2Input = (repoRoot: string,
+  value: unknown): Readonly<V138Plan26256ReviewV2Input> => {
+  if (!isRecord(value) || !exactKeys(value,
+    V138_PLAN_262_56_V8_REVIEW_INPUT_KEYS)) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_METADATA_INVALID")
+  }
+  const physicalRoot = realpathSync(repoRoot)
+  if (!path.isAbsolute(value.absolutePath as string) ||
+    !(value.absolutePath as string).startsWith("/private/tmp/") ||
+    path.resolve(value.absolutePath as string).startsWith(`${physicalRoot}${path.sep}`) ||
+    value.outsideRepository !== true || value.readOnly !== true ||
+    value.ownerMatchesEffectiveUid !== true || value.regularFile !== true ||
+    value.symlinkFree !== true || value.linkCount !== 1 ||
+    typeof value.inputCommit !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(value.inputCommit) ||
+    typeof value.inputBlob !== "string" || !/^[0-9a-f]{40}$/u.test(value.inputBlob) ||
+    typeof value.byteLength !== "number" || !Number.isSafeInteger(value.byteLength) ||
+    value.byteLength <= 0 || typeof value.bytesSha256 !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/u.test(value.bytesSha256) ||
+    typeof value.reviewV2Root !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/u.test(value.reviewV2Root) ||
+    value.preBytesSha256 !== value.bytesSha256 ||
+    value.postBytesSha256 !== value.bytesSha256 ||
+    typeof value.preNoFollowIdentity !== "string" ||
+    value.preNoFollowIdentity !== value.postNoFollowIdentity) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_DOCUMENT_INVALID")
+  }
+  if (!isRecord(value.reviewV2Document) ||
+    value.reviewV2Document.reviewRoot !== value.reviewV2Root ||
+    value.reviewV2Document.findingCount !== 0 ||
+    value.reviewV2Document.sourceCompletenessPassed !== true ||
+    value.reviewV2Document.independentPersonClaimed !== false ||
+    value.reviewV2Document.reviewerSeparated !== false) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_INVALID")
+  }
+  if (sha256(Buffer.from(canonical(value.reviewV2Document), "utf8")) !==
+      value.bytesSha256) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_BYTES_INVALID")
+  if (Buffer.byteLength(canonical(value.reviewV2Document)) !== value.byteLength) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_LENGTH_INVALID")
+  }
+  return Object.freeze(value as unknown as V138Plan26256ReviewV2Input)
+}
+
+export const buildV138Plan26256AuthorizationV8 = (input: {
+  readonly repoRoot: string
+  readonly sourceBase8: string
+  readonly sourceA8: string
+  readonly sourceA8Tree: string
+  readonly sourceA8Parent: string
+  readonly sourceA8Paths: readonly string[]
+  readonly sourceA8Blobs: readonly Readonly<{ path: string; blobOid: string;
+    sha256: Sha256 }>[]
+  readonly protectedA7: string
+  readonly protectedHistoryRoot: Sha256
+  readonly reviewV1InvalidDispositionSha256: Sha256
+  readonly reviewV2Input: V138Plan26256ReviewV2Input
+}) => {
+  const reviewV2Input = checkV138Plan26256ReviewV2Input(input.repoRoot,
+    input.reviewV2Input)
+  const sourcePaths = Object.freeze([
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
+    "scripts/lib/v1-38-successor-source-seal.ts",
+    "scripts/evaluate-v1-38-successor-route.test.ts",
+    "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+    "scripts/check-v1-38-dependency-revision-boundaries.ts",
+  ] as const)
+  if (!/^[0-9a-f]{40}$/u.test(input.sourceBase8) ||
+    !/^[0-9a-f]{40}$/u.test(input.sourceA8) ||
+    !/^[0-9a-f]{40}$/u.test(input.sourceA8Tree) ||
+    input.sourceA8Parent !== input.sourceBase8 ||
+    canonical(input.sourceA8Paths) !== canonical(sourcePaths) ||
+    input.sourceA8Blobs.length !== sourcePaths.length ||
+    canonical(input.sourceA8Blobs.map(({ path: repoPath }) => repoPath)) !==
+      canonical(sourcePaths) || input.sourceA8Blobs.some(record =>
+        !/^[0-9a-f]{40}$/u.test(record.blobOid) ||
+        !/^sha256:[0-9a-f]{64}$/u.test(record.sha256)) ||
+    input.protectedA7 !== "5f39aba7833030d537c4c2767c369d24c982ed83" ||
+    !/^sha256:[0-9a-f]{64}$/u.test(input.protectedHistoryRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(input.reviewV1InvalidDispositionSha256)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V8_CUSTODY_INVALID")
+  }
+  const body = {
+    schemaVersion: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+    routeOrdinal: 7 as const,
+    executionVersions: Object.freeze({ context: 11 as const, preflight: 11 as const,
+      calibration: 11 as const, reproduction: 12 as const }),
+    sourceBase8: input.sourceBase8, sourceA8: input.sourceA8,
+    sourceA8Paths: sourcePaths, sourceA8Tree: input.sourceA8Tree,
+    sourceA8Parent: input.sourceA8Parent,
+    sourceA8Blobs: Object.freeze(input.sourceA8Blobs),
+    protectedA7: input.protectedA7,
+    protectedHistoryRoot: input.protectedHistoryRoot,
+    reviewV1InvalidDispositionSha256: input.reviewV1InvalidDispositionSha256,
+    reviewV2Input,
+    identityClaims: Object.freeze({ independentPersonClaimed: false as const,
+      reviewerSeparated: false as const, externalIdentityClaimed: false as const,
+      cryptographicReviewerIdentityClaimed: false as const,
+      independentCustodyClaimed: false as const }),
+    canonicalDestinations: V138_PLAN_262_57_ROUTE_DESTINATIONS,
+    futureCustodyPaths: Object.freeze([
+      V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
+      V138_PLAN_262_56_V8_CANONICAL_PATHS.seal,
+    ]),
+    obsoleteV7PathsAbsent: true as const,
+    singleUse: true as const, noRetry: true as const,
+    satisfiesAdmit03: false as const,
+    downstreamAuthority: Object.freeze({ candidateSearch: false,
+      phase263: false, formation: false, holdoutOpen: false,
+      public: false, production: false }),
+  }
+  return Object.freeze({ ...body, authorizationRoot: identityRoot(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const checkV138Plan26256AuthorizationV8 = (repoRoot: string,
+  value: unknown) => {
+  if (!isRecord(value) || !exactKeys(value,
+    V138_PLAN_262_56_V8_AUTHORIZATION_KEYS)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA_INVALID")
+  }
+  const candidate = value as Record<string, any>
+  const expected = buildV138Plan26256AuthorizationV8({ repoRoot,
+    sourceBase8: candidate.sourceBase8, sourceA8: candidate.sourceA8,
+    sourceA8Tree: candidate.sourceA8Tree, sourceA8Parent: candidate.sourceA8Parent,
+    sourceA8Paths: candidate.sourceA8Paths, sourceA8Blobs: candidate.sourceA8Blobs,
+    protectedA7: candidate.protectedA7,
+    protectedHistoryRoot: candidate.protectedHistoryRoot,
+    reviewV1InvalidDispositionSha256: candidate.reviewV1InvalidDispositionSha256,
+    reviewV2Input: candidate.reviewV2Input })
+  if (canonical(value) !== canonical(expected)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V8_INVALID")
+  }
+  return expected
+}
+
+export const buildV138SuccessorSourceSealV8 = (input: {
+  readonly repoRoot: string
+  readonly authorization: unknown
+  readonly sourceB8: string
+  readonly sourceB8Parent: string
+  readonly sourceB8Tree: string
+  readonly changedPaths: readonly string[]
+}) => {
+  const authorization = checkV138Plan26256AuthorizationV8(input.repoRoot,
+    input.authorization)
+  const exactPaths = [V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
+    V138_PLAN_262_56_V8_CANONICAL_PATHS.seal].sort()
+  if (!/^[0-9a-f]{40}$/u.test(input.sourceB8) ||
+    !/^[0-9a-f]{40}$/u.test(input.sourceB8Tree) ||
+    input.sourceB8Parent !== authorization.sourceA8 ||
+    canonical([...input.changedPaths].sort()) !== canonical(exactPaths)) {
+    fail("V138_SUCCESSOR_SOURCE_SEAL_V8_CUSTODY_INVALID")
+  }
+  const body = { schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+    sourceA8: authorization.sourceA8, sourceB8: input.sourceB8,
+    sourceB8Parent: input.sourceB8Parent, sourceB8Tree: input.sourceB8Tree,
+    changedPaths: Object.freeze(exactPaths),
+    authorizationRoot: authorization.authorizationRoot,
+    reviewV2Root: authorization.reviewV2Input.reviewV2Root,
+    futureCustodyPaths: authorization.futureCustodyPaths,
+    identityClaims: authorization.identityClaims,
+    routeOrdinal: 7 as const, executionVersions: authorization.executionVersions,
+    singleUse: true as const, noRetry: true as const }
+  return Object.freeze({ ...body, sealRoot: identityRoot("evidenceBundle",
+    body.schemaVersion, body) })
+}
+
+export const checkV138SuccessorSourceSealV8 = (input: {
+  readonly repoRoot: string
+  readonly authorization: unknown
+  readonly seal: unknown
+}) => {
+  if (!isRecord(input.seal)) fail("V138_SUCCESSOR_SOURCE_SEAL_V8_INVALID")
+  const candidate = input.seal as Record<string, any>
+  const expected = buildV138SuccessorSourceSealV8({ repoRoot: input.repoRoot,
+    authorization: input.authorization, sourceB8: candidate.sourceB8,
+    sourceB8Parent: candidate.sourceB8Parent, sourceB8Tree: candidate.sourceB8Tree,
+    changedPaths: candidate.changedPaths })
+  if (canonical(input.seal) !== canonical(expected)) {
+    fail("V138_SUCCESSOR_SOURCE_SEAL_V8_INVALID")
+  }
+  return expected
+}
 export const V138_PLAN_262_56_CANONICAL_PATHS = Object.freeze({
   authorization:
-    ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
-  seal: ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+    ".planning/artifacts/v1.38-plan-262-56-authorization-v8.json",
+  seal: ".planning/artifacts/v1.38-successor-source-seal-v8.json",
   sourceCompletenessReview:
-    ".planning/artifacts/v1.38-plan-262-55-source-completeness-review-v1.json",
+    ".planning/artifacts/v1.38-plan-262-59-source-completeness-review-v2.json",
 })
 export const V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH =
   ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json" as const
