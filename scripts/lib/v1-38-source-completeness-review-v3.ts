@@ -37,6 +37,48 @@ const record = (value: unknown, keys: readonly string[], code: string) => {
 const unique = (values: readonly unknown[]) =>
   values.every((value, index) => values.indexOf(value) === index)
 
+export const V138_REVIEW_V3_SOURCE_PATHS = Object.freeze([
+  "scripts/check-v1-38-dependency-revision-boundaries.ts",
+  "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
+  "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+  "scripts/evaluate-v1-38-successor-route.test.ts",
+  "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+  "scripts/lib/v1-38-current-matrix-reproduction.ts",
+  "scripts/lib/v1-38-source-completeness-review-v3.ts",
+  "scripts/lib/v1-38-successor-source-seal.ts",
+] as const)
+
+export const V138_REVIEW_V3_COMMANDS = Object.freeze([
+  "--calibrate-parallel-v11-receipt",
+  "--check-plan-262-57-pre-execution-readiness-v1",
+  "--check-plan-262-57-pre-start-obstruction-v1",
+  "--check-plan-262-57-terminal-v1",
+  "--resolve-plan-262-57-pre-start-v1",
+  "--write-authoritative-v12-receipt",
+  "--write-execution-context-v11-receipt",
+  "--write-headroom-preflight-v11-receipt",
+  "--write-plan-262-57-route-start-v1",
+  "--write-plan-262-57-terminal-v1",
+] as const)
+
+const V138_REVIEW_V3_HANDLER_BY_COMMAND = Object.freeze({
+  "--check-plan-262-57-pre-execution-readiness-v1":
+    "checkV138Plan26257PreExecutionReadinessV1",
+  "--resolve-plan-262-57-pre-start-v1":
+    "writeV138Plan26257PreStartObstructionV1",
+  "--check-plan-262-57-pre-start-obstruction-v1":
+    "checkV138Plan26257PreStartObstructionBranch",
+  "--write-execution-context-v11-receipt":
+    "writeV138ExecutionContextV11Receipt",
+  "--write-plan-262-57-route-start-v1": "writeV138Plan26257RouteStartV1",
+  "--write-headroom-preflight-v11-receipt":
+    "writeV138HostHeadroomPreflightV11Receipt",
+  "--calibrate-parallel-v11-receipt": "writeV138ParallelCalibrationV11Receipt",
+  "--write-authoritative-v12-receipt": "writeV138AuthoritativeMatrixV12Receipt",
+  "--write-plan-262-57-terminal-v1": "writeV138Plan26257TerminalV1",
+  "--check-plan-262-57-terminal-v1": "checkV138Plan26257TerminalBranch",
+} as const)
+
 export const V138_REVIEW_V3_SCHEMA =
   "v1.38-plan-262-62-source-completeness-review-v3" as const
 export const V138_REVIEW_V3_CANONICAL_PATH =
@@ -73,7 +115,9 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
     !fullOid(document.sourceA9) || document.sourceBase9 === document.sourceA9 ||
     !fullOid(source.tree) || !fullOid(source.parent) ||
     source.authorRun !== "codex-plan-262-60-a9-v1" || !Array.isArray(source.paths) ||
-    source.paths.length !== 8 || !unique(source.paths) ||
+    canonicalBytes([...source.paths].sort()).toString("utf8") !==
+      canonicalBytes([...V138_REVIEW_V3_SOURCE_PATHS].sort()).toString("utf8") ||
+    !unique(source.paths) ||
     !source.paths.every((entry) => boundedString(entry)) ||
     !Array.isArray(source.blobs) || source.blobs.length !== 8) {
     fail("V138_REVIEW_V3_SOURCE_INVALID")
@@ -85,6 +129,11 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
         blob.byteLength !== 0 : !fullOid(blob.blobOid) || !digest(blob.sha256) ||
           !boundedInt(blob.byteLength, 1, 16 * 1024 * 1024))) fail("V138_REVIEW_V3_SOURCE_INVALID")
   }
+  const blobPaths = source.blobs.map((item) => (item as Record<string, unknown>).path)
+  if (!unique(blobPaths) || canonicalBytes([...blobPaths].sort()).toString("utf8") !==
+    canonicalBytes([...V138_REVIEW_V3_SOURCE_PATHS].sort()).toString("utf8")) {
+    fail("V138_REVIEW_V3_SOURCE_INVALID")
+  }
   if (!Array.isArray(document.commands) || document.commands.length !== 10 ||
     !Array.isArray(document.handlerObservations) || document.handlerObservations.length !== 10) {
     fail("V138_REVIEW_V3_COMMANDS_INVALID")
@@ -94,6 +143,7 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
     if (!boundedString(command.command, 160) || !Array.isArray(command.argv) ||
       command.argv.length < 2 || command.argv.length > 32 ||
       !command.argv.every((entry) => boundedString(entry, 1024)) || command.exitStatus !== 0 ||
+      !command.argv.includes(command.command) ||
       !digest(command.stdoutSha256) || !digest(command.stderrSha256)) fail("V138_REVIEW_V3_COMMANDS_INVALID")
   }
   for (const item of document.handlerObservations) {
@@ -101,6 +151,27 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
     if (![observation.command, observation.handler, observation.prerequisites,
       observation.destination, observation.effectClass, observation.disposition]
       .every((entry) => boundedString(entry, 1024))) fail("V138_REVIEW_V3_HANDLERS_INVALID")
+  }
+  const commandNames = document.commands.map((item) =>
+    (item as Record<string, unknown>).command)
+  const observationCommands = document.handlerObservations.map((item) =>
+    (item as Record<string, unknown>).command)
+  const observationHandlers = document.handlerObservations.map((item) =>
+    (item as Record<string, unknown>).handler)
+  const expectedCommands = [...V138_REVIEW_V3_COMMANDS].sort()
+  if (!unique(commandNames) || !unique(observationCommands) ||
+    !unique(observationHandlers) ||
+    canonicalBytes([...commandNames].sort()).toString("utf8") !==
+      canonicalBytes(expectedCommands).toString("utf8") ||
+    canonicalBytes([...observationCommands].sort()).toString("utf8") !==
+      canonicalBytes(expectedCommands).toString("utf8")) {
+    fail("V138_REVIEW_V3_COMMANDS_INVALID")
+  }
+  for (const item of document.handlerObservations) {
+    const observation = item as Record<string, unknown>
+    if (V138_REVIEW_V3_HANDLER_BY_COMMAND[
+      observation.command as keyof typeof V138_REVIEW_V3_HANDLER_BY_COMMAND
+    ] !== observation.handler) fail("V138_REVIEW_V3_HANDLERS_INVALID")
   }
   const protectedHistory = record(document.protectedHistory,
     ["root", "protectedA8", "protectedRoots"], "V138_REVIEW_V3_HISTORY_INVALID")
@@ -117,6 +188,8 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
     if (!boundedString(prior.path) || !fullOid(prior.commit) || !fullOid(prior.blobOid) ||
       !digest(prior.sha256) || !boundedInt(prior.byteLength, 1, 1024 * 1024)) fail("V138_REVIEW_V3_HISTORY_INVALID")
   }
+  if (!unique(document.priorAuthorizationBytes.map((item) =>
+    (item as Record<string, unknown>).path))) fail("V138_REVIEW_V3_HISTORY_INVALID")
   if (!Array.isArray(document.snapshots) || document.snapshots.length !== 2 ||
     !Array.isArray(document.orderedEvents) || document.orderedEvents.length === 0 ||
     document.orderedEvents.length > 512) fail("V138_REVIEW_V3_OBSERVATIONS_INVALID")
@@ -125,6 +198,8 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
     if (!boundedString(snapshot.name, 64) || !digest(snapshot.inventoryRoot) ||
       !boundedInt(snapshot.pathCount, 0, 4096)) fail("V138_REVIEW_V3_OBSERVATIONS_INVALID")
   }
+  if (!unique(document.snapshots.map((item) =>
+    (item as Record<string, unknown>).name))) fail("V138_REVIEW_V3_OBSERVATIONS_INVALID")
   document.orderedEvents.forEach((item, index) => {
     const event = record(item, EVENT_KEYS, "V138_REVIEW_V3_OBSERVATIONS_INVALID")
     if (event.ordinal !== index || !boundedString(event.event, 128) ||
