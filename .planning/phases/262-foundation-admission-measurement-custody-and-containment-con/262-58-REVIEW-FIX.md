@@ -1,98 +1,106 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
 plan: "58"
-fixed_at: 2026-08-15T05:40:00Z
-review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW.md
-iteration: 1
-findings_in_scope: 9
-fixed: 9
+fixed_at: 2026-08-15T06:31:00Z
+review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW-V2.md
+iteration: 2
+findings_in_scope: 10
+fixed: 10
 skipped: 0
 status: all_fixed
-source_base_8: 9fb6b12f190ff5a79e423efafbfaae01c1037b5d
-source_a_8: ba567987e7a64239b93ebc40ad9d280231172a44
-source_a_8_tree: c5abb22112fec8c3a47f3b3260dd3b4d5c7f4ec3
+source_base_8: 5fa635ccebfcef6ff00cd05876401cec4688e64f
+source_a_8: 2b05b6529f7213790e09e767e2710cb8f43c5b76
+source_a_8_tree: 92603fc9e9b79a8755651f289ab09bccab0e12a4
+source_a_8_carrier_commit: 30add7517b5a32442a281008e67ba16f743d0d0b
 ---
 
-# Phase 262 Plan 58: Code Review Fix Report
+# Phase 262 Plan 58: Code Review V2 Fix Report
 
-**Fixed at:** 2026-08-15T05:40:00Z  
-**Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW.md`  
-**Iteration:** 1
+**Fixed at:** 2026-08-15T06:31:00Z
+**Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW-V2.md`
+**Iteration:** 2
 
 **Summary:**
 
-- Findings in scope: 9
-- Fixed: 9
+- Findings in scope: 10
+- Fixed: 10
 - Skipped: 0
-- Source commit: `ba567987e7a64239b93ebc40ad9d280231172a44`
-- Commit status: fixed; security/custody logic requires human verification
+- Source commit: `2b05b6529f7213790e09e767e2710cb8f43c5b76`
+- Commit status: fixed; custody/security logic requires human verification
 
 ## Fixed Issues
 
-### CR-01: Reviewer-v2 derives actual execution evidence
+### CR-01: Execute reviewed production dispatch
 
-**Files modified:** `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts`, `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** The reviewer owns an exact-A8 disposable clone, imports the production manifest, reaches every actual direct-dispatch branch through the production dispatcher, records handlers, prerequisites, destinations, effects, dispositions, output digests, snapshots, ordered events, and verifies cleanup by final `lstat` absence.
+**Files modified:** reviewer and reviewer test
+**Commit:** `2b05b652`
+**Applied fix:** The reviewer imports the manifest, dispatcher, and receipt CLI from the detached exact-A8 clone and records observed output/errors and ordered events through injected production seams.
 
-### CR-02: Reachability, history, snapshots, and confinement are derived
+### CR-02: Freeze protected history
 
-**Files modified:** `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts`, `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** Exact-key schemas now bind production manifest/dispatch inventory, exact 40 charged IDs, six committed authorization byte records, protected roots and committed inputs, closed before/after inventories, no-follow paths, and false identity claims.
+**Files modified:** reviewer and successor seal
+**Commit:** `2b05b652`
+**Applied fix:** Exact 40 charge IDs, six authorization paths/blob OIDs/SHA-256 values, protected roots, and authoritative inputs are immutable constants verified against Git objects and worktree bytes.
 
-### CR-03: Generation, publication, and immutable checking are separate
+### CR-03: Bind A8 to immutable carrier
 
-**Files modified:** `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** Owned generation no longer accepts candidate proof. Exclusive publication uses absent targets, while immutable checking derives the unique introducing commit, sole parent, exact two paths/blobs, canonical bytes, and zero later modifications.
+**Files modified:** reviewer, successor seal, summary
+**Commit:** `2b05b652`; carrier docs commit recorded above
+**Applied fix:** A8 is read only from the unique post-A8 one-path summary carrier and verified for exact base, parent, tree, trailer, modes, six blobs, SHA-256 values, first-parent reachability, and unchanged bytes.
 
-### CR-04: A8 is the maximal exact Plan-58 author run
+### CR-04: Reject fabricated review-v2 and identity claims
 
-**Files modified:** `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts`, `scripts/lib/v1-38-successor-source-seal.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** Custody is derived from the first-parent exact-six-path run carrying one consistent `Plan262-58-Author-Run` trailer. The sole predecessor, tree, paths, six blobs, and planning-only descendants are read from Git; no caller commit selector remains.
+**Files modified:** reviewer, successor seal, reviewer test
+**Commit:** `2b05b652`
+**Applied fix:** Side-effect-free exact nested-key/root validators reject fabricated sections and all five identity claims, including `externalIdentityClaimed`; authorization accepts canonical reviewer-produced bytes with committed publication custody.
 
-### CR-05: Authorization-v8 opens the actual detached review input
+### CR-05: Use route-7 v8 consumers
 
-**Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** Authorization-v8 walks every ancestor no-follow, opens the exact detached absolute file with `O_NOFOLLOW`, checks owner/mode/link/regular-file identity before and after reading, validates canonical bytes/schema/root, proves the unique committed review blob, and independently derives A8 and protected history.
+**Files modified:** successor seal and both route/source consumer tests
+**Commit:** `2b05b652`
+**Applied fix:** The active route-7 consumer contract names authorization-v8, seal-v8, and A8/B8 custody while preserving ordinal 7 and v11/v12 execution schemas. Historical v7 constants remain isolated and v7 future writers fail closed.
 
-### CR-06: Seal-v8 checks actual two-path B8 Git custody
+### CR-06: Replace dynamic HEAD allowlist
 
-**Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** The seal checker resolves real B8, its sole A8 parent, exact authorization/seal paths, prior absence, tree/blobs, committed/supplied/working byte equality, and later-history immutability. A disposable real Git B8 test proves the contract.
+**Files modified:** dependency checker and route test
+**Commit:** `2b05b652`
+**Applied fix:** Frozen route-capable sources use exact blob OIDs/SHA-256 values from the immutable A8 carrier or fixed protected objects; drift is reported and AST-scanned.
 
-### CR-07: v7 remains historical and every future v7 write/CLI fails closed
+### CR-07: Validate exact 47-plan lifecycle
 
-**Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/evaluate-v1-38-successor-route.test.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** Historical v7 schema constants were restored, v7 writers throw explicit obsolete errors, v7 CLI commands fail before dispatch, and distinct v8 render/write/check commands use only v8 paths and review-v2/A8 custody.
+**Files modified:** dependency checker
+**Commit:** `2b05b652`
+**Applied fix:** The full ordered inventory, dependencies, waves, summary count, archives, and incomplete set are checked after the live lifecycle gate; the former early-return bypass is removed from execution.
 
-### CR-08: Dependency `--check` runs both complete analyses
+### CR-08: Harden two-path review publication
 
-**Files modified:** `scripts/check-v1-38-dependency-revision-boundaries.ts`, `scripts/evaluate-v1-38-successor-route.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** The CLI now runs the full boundary analyzer and live lifecycle checker and fails on either result. The active committed-source inventory, 47-plan lifecycle, schema versions, route ordinal, and execution versions are derived from Git, the live index, source, and artifacts. Final result: zero findings.
+**Files modified:** reviewer
+**Commit:** `2b05b652`
+**Applied fix:** Publication requires current first-parent/A8 ancestry, unique exact two-path custody, immutable later history, no-follow ancestors, private staging, exclusive hard-link publication, and rollback on partial failure.
 
-### WR-01: Synthetic tautologies were replaced with owned fixtures
+### CR-09: Bind B8 to the canonical current chain
 
-**Files modified:** `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts`, `scripts/evaluate-v1-38-successor-route.test.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`  
-**Commit:** `ba567987`  
-**Applied fix:** Tests now cover exact A8 custody, every production dispatch entry, six lifecycle stages and field mutations, explicit v7 denial, a real detached immutable review, and a real two-path B8 commit.
+**Files modified:** successor seal and reviewer test
+**Commit:** `2b05b652`
+**Applied fix:** B8 is derived as the unique exact two-path descendant after A8 on the current first-parent chain, rejects competing/off-branch commits, verifies exact committed/worktree/supplied bytes, and rejects later modification.
+
+### WR-01: Restore reachable adversarial proof
+
+**Files modified:** reviewer test, route test, source-complete test
+**Commit:** `2b05b652`
+**Applied fix:** The unreachable legacy return was removed; the serialized 28-test suite now exercises exact-A8 dispatch, immutable reviewer-produced input, B8 Git custody, route v8, allowlist drift, lifecycle mutations, and v7 denial.
 
 ## Verification
 
-- Combined focused suite: 3 files, 28 tests passed.
-- Dependency analyzer plus lifecycle CLI: `findingCount: 0`, `plan_58_complete_43_of_47`.
+- Serialized focused suite: 3 files, 28/28 passed.
+- Exact A8 detached/source check: passed with six `100644` blobs.
+- Full dependency analyzer plus lifecycle: zero findings, `plan_58_complete_43_of_47`.
 - Workspace typecheck: 27/27 Turbo tasks successful.
-- Canonical review-v2, report, authorization-v8, seal-v8, obsolete v7, route-start, live, and terminal destinations remain absent.
-- `git diff --check`: passed.
+- Canonical review-v2/report, authorization-v8, seal-v8, obsolete-v7, B8/live/terminal destinations: absent.
+- `git diff --check 5fa635cc..2b05b652`: passed.
 
 ---
 
-_Fixed: 2026-08-15T05:40:00Z_  
-_Fixer: the agent (gsd-code-fixer)_  
-_Iteration: 1_
+_Fixed: 2026-08-15T06:31:00Z_
+_Fixer: the agent (gsd-code-fixer)_
+_Iteration: 2_
