@@ -386,16 +386,24 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       protected_history_failed: `sha256:${"b".repeat(64)}` as const,
       formation_absence_failed: `sha256:${"c".repeat(64)}` as const,
     }
-    for (const disposition of ["tool_identity_failed",
+    const preObservationDispositions = ["tool_identity_failed",
       "protected_history_failed", "formation_absence_failed",
-      "pattern_c_ownership_failed"] as const) {
+      "pattern_c_ownership_failed"] as const
+    const selectedDisposition = process.env.V138_TEST_DISPOSITION
+    for (const disposition of preObservationDispositions.filter((candidate) =>
+      selectedDisposition === undefined || candidate === selectedDisposition)) {
       const dependencies = { repoRoot: fixtureRoot,
         patternCObservation: disposition === "pattern_c_ownership_failed" ?
           patternCObservation : undefined,
         observedRootOverrides, writeOutput: () => undefined }
-      await runReceiptCli({ ...dependencies, argv: ["node", "route",
-        "--write-plan-262-57-terminal-v1", terminalPath,
-        ...terminalBaseFlags, "--disposition", disposition] })
+      try {
+        await runReceiptCli({ ...dependencies, argv: ["node", "route",
+          "--write-plan-262-57-terminal-v1", terminalPath,
+          ...terminalBaseFlags, "--disposition", disposition] })
+      } catch (error) {
+        throw new TypeError(`${disposition}:${error instanceof Error ?
+          error.message : "UNKNOWN"}`)
+      }
       await runReceiptCli({ ...dependencies, argv: ["node", "route",
         "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
         "--terminal", terminalPath] })
