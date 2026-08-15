@@ -1,62 +1,57 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-15T01:25:00Z
-review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-54-CODE-REVIEW-V2.md
-iteration: 2
-findings_in_scope: 5
-fixed: 5
+fixed_at: 2026-08-15T02:18:00Z
+review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-54-CODE-REVIEW-V3.md
+iteration: 3
+findings_in_scope: 4
+fixed: 4
 skipped: 0
 status: all_fixed
 ---
 
-# Phase 262 Plan 54: Code Review Fix Report V2
+# Phase 262 Plan 54: Code Review Fix Report V3
 
-**Fixed at:** 2026-08-15T01:25:00Z
-**Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-54-CODE-REVIEW-V2.md`
-**Iteration:** 2
+**Fixed at:** 2026-08-15T02:18:00Z
+**Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-54-CODE-REVIEW-V3.md`
+**Iteration:** 3
 
 **Summary:**
 
-- Findings in scope: 5
-- Fixed: 5
+- Findings in scope: 4
+- Fixed: 4
 - Skipped: 0
-- sourceBase7: `7c6e23f9e3c856198560093152df61f8ab614222`
-- Final source-only A7: `dee17ae4f34c48da6ae053e6dafd6b8d1bc8690a`
+- sourceBase7: `be2a7164dbf332f2295114ddaf563ee11013bf5a`
+- Final source-only A7: `5f39aba7833030d537c4c2767c369d24c982ed83`
 
 ## Fixed Issues
 
-### CR-01: The clean-clone fixture fails from the repository's normal post-A7 state
+### CR-01: Reviewer separation remains self-asserted Git metadata
 
-**Files modified:** `scripts/evaluate-v1-38-successor-source-complete.test.ts`, `scripts/lib/v1-38-successor-source-seal.ts`
-**Commits:** `c188b3ee`, `608d6a0e`, `dee17ae4`
-**Applied fix:** The fixture resolves A7 only from the summary-recorded identity or an explicit immutable 40-hex input, detaches that exact commit, and verifies sourceBase7, the complete linear range, A7 tree, immediate parent, and all four blob OIDs/bytes. A synthetic planning-only descendant proves ambient `HEAD` is never reused as A7.
+**Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`, `scripts/evaluate-v1-38-successor-route.test.ts`
+**Commit:** `a2c33b1f`
+**Applied fix:** Replaced name/email/trailer authentication with `single_operator_procedural_source_review_v1`. The review is a direct post-A7 one-path commit whose bytes, blob, tree, parent, and separation root are derived independently. It explicitly claims neither an independent person nor cryptographic reviewer identity. Authorization accepts only the canonical zero-finding procedural evidence. Tests reject recomputed false identity claims and fabricated roots.
+**Status:** fixed; requires human verification of the reduced-assurance review policy.
 
-### CR-02: Plan-262-55 reviewer separation remains caller-asserted and unauthenticated
+### CR-02: Real protected-history failure terminal is unreachable
 
 **Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`
-**Commit:** `c188b3ee`
-**Applied fix:** Removed the caller-selected reviewer string from the review document. Review custody now requires a direct-child, one-path commit, exact canonical blob, an author email in `plan-262-55.review.cowards.invalid`, one `Plan-262-55-Reviewer-Run` trailer, and Git author/run separation from every implementation commit. A self-asserted wrong-domain commit is rejected before authorization.
+**Commit:** `a2c33b1f`
+**Applied fix:** Added an immutable committed-B7 protected-history anchor validator that checks self-roots and all unaffected fields without invoking the failing live derivation. The observed v7 history derivation bypasses the cache. A fresh-clone test creates actual protected historical destination drift, records `protected_history_failed`, rejects proof tampering, and preserves terminal branch priority without an override.
+**Status:** fixed; requires human verification of the immutable-anchor comparison.
 
-### CR-03: Three pre-observation failure terminals reject the drift they are supposed to record
-
-**Files modified:** `scripts/lib/v1-38-successor-source-seal.ts`, `scripts/lib/v1-38-current-matrix-reproduction.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`
-**Commits:** `c188b3ee`, `0ad3a040`, `7d781605`
-**Applied fix:** Added exact `toolIdentity`, `protectedHistory`, and `formationAbsence` exception types. Each validates committed B7 bytes, self-roots, source/review custody, and every unaffected authorization/seal field while omitting only the named observation-dependent field and its exact derived joins. Terminal evidence validates the frozen route-start and embedded preflight charge, accepts injected observed roots only as observations, and rejects proof tampering.
-**Status:** fixed; requires human verification of the narrowly scoped immutable-anchor state model.
-
-### CR-04: Route-start freshness is not atomic across the seven destinations
+### CR-03: Route reservation retains a final cross-destination race
 
 **Files modified:** `scripts/lib/v1-38-current-matrix-reproduction.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`
-**Commit:** `c188b3ee`
-**Applied fix:** Route start exclusively acquires a pinned no-follow reservation directory, rechecks every destination while holding it, writes the canonical reservation claim, then publishes route start. Every later writer and terminal checker joins the exact reservation root. Racing/dangling paths fail before start, failed acquisition is cleaned up, and a competing start gets one winner and one fail-closed result without overwrite.
-**Status:** fixed; requires human verification of the filesystem reservation assumptions.
+**Commits:** `a2c33b1f`, `0578538b`, `51ecc03a`, `5f39aba7`
+**Applied fix:** Route start now acquires the exclusive reservation before authority, freshness, custody, and readiness work, then publishes a claim binding source, authorization, seal, context, and reservation roots before the final no-follow scan. Every legitimate downstream writer validates the claim. A coordinated second writer deterministically loses; a post-reservation collision is detected before route-start effects; terminal authority expiry keeps priority after completion.
+**Status:** fixed; requires human verification of the honest-owner filesystem assumption.
 
-### WR-01: The claimed full valid CLI/terminal reachability proof is still absent
+### CR-04: Scheduler promises can bypass shard and total deadlines
 
-**Files modified:** `scripts/evaluate-v1-38-successor-source-complete.test.ts`, `scripts/lib/v1-38-current-matrix-reproduction.ts`, `scripts/evaluate-v1-38-successor-route.test.ts`
-**Commits:** `9929c987`, `7d781605`, `fb730c1f`, `1ad9529e`, `61174e24`, `4f25163b`, `dee17ae4`
-**Applied fix:** The disposable Git proof invokes all ten registered direct commands with valid arguments and covers all eleven dispositions, terminal checks, collision/interruption paths, and no-retry consumption. Injected headroom, shard, and matrix dependencies carry counters; production RSS, child, provider, and canonical-workspace writers remain unreachable. The expanded paths also fixed route-7-specific adapter inventories, registry translation, v10 reproduction translation, and embedded preflight interruption lookup that direct calls had not reached.
-**Status:** fixed; requires human verification of the complete CLI state matrix.
+**Files modified:** `scripts/lib/v1-38-current-matrix-reproduction.ts`, `scripts/evaluate-v1-38-successor-source-complete.test.ts`
+**Commits:** `a2c33b1f`, `d620e830`
+**Applied fix:** Added fixed shard, total-run, and cleanup-grace deadlines; per-shard AbortControllers; synthetic charged failure terminals for non-settling runners; bounded cleanup detachment; and explicit timer-handle cleanup. Tests cover a runner that never resolves with and without the shared observer and complete within injected sub-second bounds.
+**Status:** fixed; requires human verification of supervisor cleanup semantics.
 
 ## Skipped Issues
 
@@ -64,16 +59,16 @@ None.
 
 ## Verification
 
-- Serialized focused route/source/protocol suite with exact final A7: **PASS**, 3 files, 31 tests, 382.61 seconds.
-- Exact-A7 clean clone plus planning-only descendant regression: **PASS**.
-- Valid CLI calibration/reproduction proof with injected dependencies: **PASS**; selected full path completed in 289.43 seconds.
-- Full four-pre-observation-branch run: all four fast tests passed and the long fixture completed its synchronous work in 1,286.13 seconds; the prior 900-second test timer fired afterward. The committed budget is now 1,500 seconds.
+- Exact-A7 fresh-clone real protected-history failure path: **PASS**, 511.84 seconds.
+- Never-settling runner with and without shared observer: **PASS**, 2/2.
+- Focused route contract: **PASS**, 16/16.
 - Workspace typecheck: **PASS**, 27/27 tasks.
 - `git diff --check`: **PASS**.
+- Source range: **PASS**, five linear commits, one consistent trailer, exact four-path aggregate.
 - Canonical authorization, seal, reservation, route-start, preflight, calibration, reproduction, consumption, obstruction, and terminal destinations: **absent**.
 
 ---
 
-_Fixed: 2026-08-15T01:25:00Z_
+_Fixed: 2026-08-15T02:18:00Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 2_
+_Iteration: 3_

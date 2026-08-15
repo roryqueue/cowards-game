@@ -66,30 +66,32 @@ status: complete
 
 ## Corrective Source Commit
 
-1. **V2 code-review remediation: close exact-A7, provenance, reservation, terminal, and CLI gaps** - `dee17ae4f34c48da6ae053e6dafd6b8d1bc8690a`
+1. **V3 code-review remediation: procedural review, real history failure, reservation-first start, and bounded scheduler** - `5f39aba7833030d537c4c2767c369d24c982ed83`
 
 The complete corrected source range carries one implementation-author trailer:
 
-`Plan-262-54-Author-Run: codex-reviewfix-262-54-v2-20260814`
+`Plan-262-54-Author-Run: codex-reviewfix-262-54-v3-20260815`
 
 Historical note: the original source-only A7 was
 `e0bce44383c1e9be904f863d5407468e4543d746`; its summary descendant was
 `04960b164ba0ace2ca052d636a2fa1fbc8f6a6af`. The first review-fix A7 was
 `4aba9db6158943ff90a8b09441ad65072f5eb7e0`, followed by planning-only
-summary descendant `7c6e23f9e3c856198560093152df61f8ab614222`. All four identities remain
+summary descendant `7c6e23f9e3c856198560093152df61f8ab614222`. The V2 A7 was
+`dee17ae4f34c48da6ae053e6dafd6b8d1bc8690a`, followed by its docs-only
+descendant `be2a7164dbf332f2295114ddaf563ee11013bf5a`. All six identities remain
 historical evidence and none is accepted as the current corrected A7.
 
 ## Source Custody
 
-- **sourceBase7:** `7c6e23f9e3c856198560093152df61f8ab614222`
-- **sourceBase7 tree:** `623cb0567d27b30372cb05347ee7308d4e89a27f`
-- **sourceBase7 sole parent:** `4aba9db6158943ff90a8b09441ad65072f5eb7e0`
-- **A7:** `dee17ae4f34c48da6ae053e6dafd6b8d1bc8690a`
-- **A7 tree:** `af646e5056ad31267682eeb430e61496ad6d6ca1`
-- **A7 sole parent:** `4f25163bc007330385d14f073d70eb3eeb600daa`
-- **Implementation-author identity:** `codex-reviewfix-262-54-v2-20260814`
+- **sourceBase7:** `be2a7164dbf332f2295114ddaf563ee11013bf5a`
+- **sourceBase7 tree:** `5b1d085e540e767e81f348c724fd1c799e943203`
+- **sourceBase7 sole parent:** `dee17ae4f34c48da6ae053e6dafd6b8d1bc8690a`
+- **A7:** `5f39aba7833030d537c4c2767c369d24c982ed83`
+- **A7 tree:** `4ce457cd3afebcffafc6d12ea15d9245655d0e24`
+- **A7 sole parent:** `d620e83021c7bf39592c4cf5cda62132a17529dd`
+- **Implementation-author identity:** `codex-reviewfix-262-54-v3-20260815`
 
-The complete corrected `sourceBase7..A7` range is exactly thirteen linear
+The complete corrected `sourceBase7..A7` range is exactly five linear
 source/test commits. Every commit has one sole parent, the same single
 implementation-author trailer, and only paths from the exact four-path
 aggregate below. The range has no merge and no planning/artifact/live path.
@@ -103,10 +105,10 @@ Aggregate changed paths, exactly:
 
 Final A7 blob OIDs:
 
-- `scripts/evaluate-v1-38-successor-route.test.ts`: `f6f2dbedb831a71630a5d1b05a772dfcc6c48f5c`
-- `scripts/evaluate-v1-38-successor-source-complete.test.ts`: `254839efae3785beacdaaf0c69ef8543b4fedf18`
-- `scripts/lib/v1-38-current-matrix-reproduction.ts`: `3d239123e4c05de3ddfaaa8a972a1b633d5b1698`
-- `scripts/lib/v1-38-successor-source-seal.ts`: `e3c7e6bc303a643bf249b876845cba59698a55c6`
+- `scripts/evaluate-v1-38-successor-route.test.ts`: `5b0229930ee2f6eb785e1d7dc3550ea044bc8f6d`
+- `scripts/evaluate-v1-38-successor-source-complete.test.ts`: `a540dcdee5b597389c7638b1562673676aa5104b`
+- `scripts/lib/v1-38-current-matrix-reproduction.ts`: `4b4fe9201f529e4dee5529e7982fa75c1c31b08a`
+- `scripts/lib/v1-38-successor-source-seal.ts`: `f46e321f60520db6a5ab0aeed47a2b446ddacec8`
 
 A7 contains no planning, canonical artifact, authority, seal, receipt, reproduction, obstruction, or terminal path. This summary was created only after A7 was frozen; the summary commit is a distinct descendant and is not A7.
 
@@ -116,6 +118,12 @@ Canonical route-7 destinations were absent after A7, including route-start-v1, p
 
 ## Verification
 
+- Exact-A7 disposable-clone protected-history failure path: **PASS**, real
+  historical destination drift, terminal tamper rejection, and authority
+  priority, 511.84 seconds.
+- Never-settling shard supervision with and without a shared observer:
+  **PASS**, 2/2 cases, bounded under one second at injected deadlines.
+- Focused route contract: **PASS**, 16/16 tests.
 - Serialized focused/full route/source/protocol suites: **PASS**, 3 files and 31 tests.
 - Workspace typecheck: **PASS**, 27/27 tasks.
 - `git diff --check`: **PASS**.
@@ -124,8 +132,8 @@ Canonical route-7 destinations were absent after A7, including route-start-v1, p
   every registered route-7 CLI parser, writer, checker, disposition, and
   consumption/no-retry path runs only with injected observers/runners, and
   canonical workspace snapshots remain unchanged.
-- Adversarial fixture proof: **PASS** for fabricated review roots, reviewer
-  non-separation, B7 supplied/committed/working byte mismatch, A7 worktree
+- Adversarial fixture proof: **PASS** for fabricated review roots, false
+  independent-person/cryptographic claims, B7 supplied/committed/working byte mismatch, A7 worktree
   drift, dangling and racing destination symlinks, exclusive reservation
   competition, all four post-start pre-observation terminals, narrow exception
   tampering, every closed terminal disposition, and permanent pre-start
@@ -175,13 +183,27 @@ Canonical route-7 destinations were absent after A7, including route-start-v1, p
 
 ### Code-review remediation
 
+- V3 replaces reviewer identity assertions with
+  `single_operator_procedural_source_review_v1`: a direct post-A7 one-path
+  review commit, independently derived bytes/tree/root, explicit
+  `independentPersonClaimed: false`, and no cryptographic identity claim.
+- The protected-history exception validates immutable committed B7 fields
+  without re-running the failing observation, while the terminal observation
+  always bypasses the history cache and records actual drift.
+- Route start acquires its exclusive reservation before readiness work; the
+  claim binds source, authorization, seal, context, and reservation roots.
+  A second legitimate writer loses deterministically and terminal authority
+  expiry retains branch priority.
+- Scheduler supervision races every shard and the whole batch against fixed
+  deadlines, aborts active controllers, applies a bounded cleanup grace,
+  emits failed cleanup/charged-attempt evidence, and clears timer handles.
+
 - V2 binds the clean fixture to the summary-recorded or explicit immutable A7,
   validates its tree, parent, complete range, and four blobs, and proves a
   planning-only descendant cannot be mistaken for A7.
-- Plan-262-55 review authority now derives from a direct-child, one-path Git
-  commit whose author email is in the exact
-  `plan-262-55.review.cowards.invalid` domain and whose unique
-  `Plan-262-55-Reviewer-Run` trailer differs from implementation custody.
+- V2 historically used Git author/trailer assertions for review separation;
+  V3 supersedes that model with objective procedural custody and does not use
+  name, email, or a reviewer trailer as authorization input.
 - Route start now owns a durable exclusive route reservation before the final
   all-destination no-follow check; all downstream writers validate that exact
   reservation root and competing writers fail closed without overwrite.
@@ -221,16 +243,16 @@ None.
 
 ## Next Phase Readiness
 
-Plan 262-55 can independently review corrected exact A7
-`dee17ae4f34c48da6ae053e6dafd6b8d1bc8690a`. No authorization-v7/seal-v7,
+Plan 262-55 can procedurally review corrected exact A7
+`5f39aba7833030d537c4c2767c369d24c982ed83`. No authorization-v7/seal-v7,
 review artifact, or route-7 canonical execution artifact exists, so Plan 262-56
-remains the first authority-producing gate after a separately committed,
-independently authenticated Plan-262-55 review.
+remains the first authority-producing gate after a separately committed
+Plan-262-55 procedural review.
 
 ## Self-Check: PASSED
 
 - All four A7 source/test blobs exist at the recorded OIDs.
-- All thirteen corrected source/test commits carry the same required nonempty implementation-author trailer.
+- All five corrected source/test commits carry the same required nonempty implementation-author trailer.
 - The complete range changes exactly the four declared paths.
 - All canonical route-7 destinations are absent.
 - A7 predates and excludes this summary.
