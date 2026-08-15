@@ -1333,14 +1333,29 @@ export const checkV138DependencyRevisionBoundaries = (
   const a9Commits = git(repoRoot, ["log", "--first-parent", "--format=%H", "HEAD",
     "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-v1"])
     .trim().split("\n").filter(Boolean)
-  const a9 = a9Commits[0]
-  const a9SourceValid = a9 !== undefined && git(repoRoot, ["show", "-s",
-    "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", a9]).trim() ===
-      "codex-plan-262-60-a9-v1" && JSON.stringify(git(repoRoot, ["diff-tree",
-        "--no-commit-id", "--name-only", "-r", "--no-renames", a9]).trim()
-        .split("\n").filter(Boolean).sort()) === JSON.stringify(sourceBoundary) &&
-      git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--", ...sourceBoundary])
-        .trim() === ""
+  const orderedRun = [...a9Commits].reverse()
+  const a9 = orderedRun.at(-1)
+  const aggregate = new Set<string>()
+  let expectedParent = orderedRun.length === 0 ? "" : git(repoRoot, ["show", "-s",
+    "--format=%P", orderedRun[0]!]).trim()
+  const runValid = orderedRun.length > 0 && orderedRun.every(commit => {
+    const parents = git(repoRoot, ["show", "-s", "--format=%P", commit]).trim()
+      .split(" ").filter(Boolean)
+    const changed = git(repoRoot, ["diff-tree", "--no-commit-id", "--name-only",
+      "-r", "--no-renames", commit]).trim().split("\n").filter(Boolean).sort()
+    const valid = parents.length === 1 && parents[0] === expectedParent &&
+      changed.length > 0 && changed.every(repoPath => sourceBoundary.includes(repoPath)) &&
+      git(repoRoot, ["show", "-s",
+        "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit]).trim() ===
+        "codex-plan-262-60-a9-v1"
+    changed.forEach(repoPath => aggregate.add(repoPath))
+    expectedParent = commit
+    return valid
+  })
+  const a9SourceValid = runValid && a9 !== undefined &&
+    JSON.stringify([...aggregate].sort()) === JSON.stringify(sourceBoundary) &&
+    git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--", ...sourceBoundary])
+      .trim() === ""
   const policyFindings = analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources)
     .filter((finding) => !(a9SourceValid && sourceBoundary.includes(finding.path)))
     .filter((finding) => !policySourceCollection.findings.some((collectionFinding) =>
