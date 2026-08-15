@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "v1.38-plan-262-60-review-v2-invalid-disposition-v1",
+  "status": "invalid_non_authorizing_immutable_history",
+  "a8": {
+    "sourceBase8": "5fa635ccebfcef6ff00cd05876401cec4688e64f",
+    "sourceA8": "2b05b6529f7213790e09e767e2710cb8f43c5b76",
+    "sourceA8Tree": "92603fc9e9b79a8755651f289ab09bccab0e12a4",
+    "custodyCarrierCommit": "30add7517b5a32442a281008e67ba16f743d0d0b",
+    "reviewFixCommit": "b620ed201287ba11464270d7b646d6ea5748f838"
+  },
+  "archives": [
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-58-HISTORICAL.md", "blobOid": "485e14eeca8e10b8248f564fc8f9c84cae6af343", "sha256": "sha256:2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3" },
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-58-SUMMARY-HISTORICAL.md", "blobOid": "8f00896491b952e9de7d7c588ab57f8134c05ba4", "sha256": "sha256:03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6" },
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-59-HISTORICAL.md", "blobOid": "d3d80a6e4c73113ef7aea60c17fe70d97c97f627", "sha256": "sha256:0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f" }
+  ],
+  "reviewHistory": [
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW.md", "blobOid": "58e2e67b349ca3b8f3d39caebc22461fcd2822d4", "sha256": "sha256:2d39c88b0314a80398fdd697f6ed38692422d00bbbcfc9fdf94d90b01e6d4942" },
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW-V2.md", "blobOid": "36b1bbc92eaf4b2ee087217f6b10dca56bfe8c8b", "sha256": "sha256:86d12c4f3fbe71700b0763a84d2aa149c059e7b44be3ca5ce9cb840c14266240" },
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-CODE-REVIEW-V3.md", "blobOid": "f0401faf0d79cfcbfb13e72046687506bf70c5ad", "sha256": "sha256:7ffbb1c4f77b8de3db3026a5e8ac10fe24f2e82362b6e450c1a0128dac8f7063" },
+    { "path": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-REVIEW-FIX.md", "blobOid": "f6d577eea3147efe74ee1ef66cc117934806e436", "sha256": "sha256:37e00bf49e927059b9fd719f5d5a7cd87ae810088454fa2b5e203e252026a654" }
+  ],
+  "findings": [
+    "CR-01:error-only-cli-probes-promoted-as-reachability",
+    "CR-02:a8-and-carrier-not-frozen",
+    "CR-03:committed-post-a8-source-drift-hidden-by-worktree",
+    "CR-04:canonically-rooted-semantic-forgery-accepted",
+    "CR-05:production-route-remained-v7",
+    "WR-01:mutation-suite-did-not-cover-claimed-blockers"
+  ],
+  "reviewerV2EligibleForAuthority": false,
+  "admit03": "blocked",
+  "freshAccepted": 0,
+  "requiredAccepted": 540,
+  "nextAction": "262-61",
+  "authority": {
+    "candidateSearchAuthorized": false,
+    "phase263Authorized": false,
+    "formationMaterializationAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "publicAuthorized": false,
+    "productionAuthorized": false
+  },
+  "dispositionRoot": "sha256:e238fc3f90118ae3b0b9b247f9539778e451e0af93650b783391ad02774ac7ba"
+}
