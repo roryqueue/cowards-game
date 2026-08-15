@@ -18879,10 +18879,29 @@ export const checkV138Plan26230TerminalBranch = (repoRoot: string,
       preObservationProof), disposition)
 }
 
+const V138_ROUTE7_ADAPTER_KEY_INVENTORIES = Object.freeze({
+  contextV9Adapter: V138_ROUTE5_ADAPTER_KEY_INVENTORIES.contextV8.map((key) =>
+    key.replace(/A4/gu, "A5").replace(/B4/gu, "B5")),
+  preflightV9Adapter: V138_ROUTE5_ADAPTER_KEY_INVENTORIES.preflightV8.map(
+    (key) => key.replace(/A4/gu, "A5").replace(/B4/gu, "B5")),
+  calibrationV9Adapter: V138_ROUTE5_ADAPTER_KEY_INVENTORIES.calibrationV8
+    .map((key) => key.replace(/A4/gu, "A5").replace(/B4/gu, "B5")),
+  reproductionV9: V138_ROUTE5_ADAPTER_KEY_INVENTORIES.reproductionV9.map(
+    (key) => key.replace(/A4/gu, "A5").replace(/B4/gu, "B5")),
+  markerV9: V138_ROUTE5_ADAPTER_KEY_INVENTORIES.markerV9.map((key) =>
+    key.replace(/A5/gu, "A7").replace(/B5/gu, "B7")),
+})
+
 const checkV138Route7AdapterKeyInventory = (
-  kind: keyof typeof V138_ROUTE5_ADAPTER_KEY_INVENTORIES,
+  kind: keyof typeof V138_ROUTE7_ADAPTER_KEY_INVENTORIES,
   value: Readonly<Record<string, unknown>>,
-) => checkV138Route5AdapterKeyInventory(kind, value)
+) => {
+  if (canonical(Object.keys(value)) !== canonical(
+    V138_ROUTE7_ADAPTER_KEY_INVENTORIES[kind])) {
+    throw new TypeError("MATRIX_ROUTE7_ADAPTER_KEY_INVENTORY_INVALID")
+  }
+  return true
+}
 
 export const V138_PLAN_262_57_DISPOSITIONS = Object.freeze([
   "tool_identity_failed", "protected_history_failed",
