@@ -19127,6 +19127,7 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
   try {
     mkdirSync(reservationDirectory, { mode: 0o700 })
   } catch {
+    assertV138Plan26257AuthorityOpen(repoRoot)
     throw new TypeError("MATRIX_PLAN_262_57_ROUTE_ALREADY_RESERVED")
   }
   let started = false
