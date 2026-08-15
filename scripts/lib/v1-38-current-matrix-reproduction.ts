@@ -19268,11 +19268,7 @@ const readPlan26257 = (repoRoot: string, key: keyof typeof PLAN_262_57_PATHS,
 
 const checkV138Plan26256AuthorityRoute = (input: { repoRoot: string;
   sourceA9: string; sourceB9: string; authorizationValue: unknown;
-  sealValue: unknown;
-  observationException?: V138SuccessorSealV7ObservationException }) => {
-  if (input.observationException !== undefined) {
-    throw new TypeError("MATRIX_PLAN_262_57_V9_OBSERVATION_EXCEPTION_FORBIDDEN")
-  }
+  sealValue: unknown }) => {
   const authorization = checkV138Plan26256AuthorizationV9(input.repoRoot,
     input.authorizationValue)
   if (authorization.sourceA9 !== input.sourceA9) {
@@ -19282,11 +19278,26 @@ const checkV138Plan26256AuthorityRoute = (input: { repoRoot: string;
     authorization, seal: input.sealValue })
   const custody = checkV138SuccessorSealCommitV9({ repoRoot: input.repoRoot,
     sourceB9: input.sourceB9, authorization, seal })
-  if (custody.authorizationRoot !== authorization.authorizationRoot ||
-    custody.sealRoot !== seal.sealRoot) {
+  if (custody.authorization.authorizationRoot !== authorization.authorizationRoot ||
+    custody.seal.sealRoot !== seal.sealRoot ||
+    custody.sourceB9Parent === undefined) {
     throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_JOIN_INVALID")
   }
-  return { custody, authorization, seal }
+  const custodyBody = { sourceA9: authorization.sourceA9,
+    sourceB9: custody.sourceB9, sourceB9Parent: custody.sourceB9Parent,
+    sourceB9Tree: custody.sourceB9Tree, changedPaths: custody.changedPaths,
+    blobs: custody.blobs, laterModificationCount: custody.laterModificationCount }
+  const normalizedCustody = deepFreeze({ ...custodyBody,
+    custodyRoot: v138SuccessorRoot("evidenceBundle",
+      "v1.38-successor-source-custody-v9", custodyBody) })
+  const closureBody = { routeOrdinal: 7 as const,
+    canonicalDestinations: authorization.canonicalDestinations,
+    executionVersions: authorization.executionVersions }
+  const selectedRouteClosure = deepFreeze({ ...closureBody,
+    closureRoot: v138SuccessorRoot("containmentPolicy",
+      "v1.38-selected-route-closure-v9", closureBody) })
+  return deepFreeze({ custody: normalizedCustody, authorization, seal,
+    selectedRouteClosure, protectedHistory: authorization.protectedHistory })
 }
 
 type V138Route7 = ReturnType<typeof checkV138Plan26256AuthorityRoute>
@@ -19332,11 +19343,11 @@ export const buildV138ExecutionContextV11Receipt = (input: { route: V138Route7;
     sourceB9CustodyRoot: input.route.custody.custodyRoot,
     authorizationRoot: input.route.authorization.authorizationRoot,
     sealRoot: input.route.seal.sealRoot,
-    selectedRouteClosureRoot: input.route.seal.selectedRouteClosure.closureRoot,
+    selectedRouteClosureRoot: input.route.selectedRouteClosure.closureRoot,
     protectedHistoryRoot:
-      input.route.seal.protectedHistory.protectedHistoryRoot,
+      input.route.protectedHistory.protectedHistoryRoot,
     priorAuthorizationBytes:
-      input.route.seal.protectedHistory.priorAuthorizationBytes,
+      input.route.protectedHistory.priorAuthorizationBytes,
     patternCOwnership: "main_orchestrator_only" as const,
     formationAbsenceBound: true as const,
     runtimeRoute: "v1.18/v1.19/MATCH_KERNEL" as const,
@@ -19373,11 +19384,11 @@ export const checkV138ExecutionContextV11Receipt = (value: unknown,
       receipt.authorizationRoot !== route.authorization.authorizationRoot ||
       receipt.sealRoot !== route.seal.sealRoot ||
       receipt.selectedRouteClosureRoot !==
-        route.seal.selectedRouteClosure.closureRoot ||
+        route.selectedRouteClosure.closureRoot ||
       receipt.protectedHistoryRoot !==
-        route.seal.protectedHistory.protectedHistoryRoot ||
+        route.protectedHistory.protectedHistoryRoot ||
       canonical(receipt.priorAuthorizationBytes) !== canonical(
-        route.seal.protectedHistory.priorAuthorizationBytes))) {
+        route.protectedHistory.priorAuthorizationBytes))) {
     throw new TypeError("MATRIX_EXECUTION_CONTEXT_V9_INVALID")
   }
   return deepFreeze(receipt)
@@ -20109,30 +20120,27 @@ const plan26257ObservedRoot = (schema: string, derive: () => Sha256): Sha256 => 
 
 export const deriveV138Plan26257PreObservationProof = (input: {
   repoRoot: string; sourceA9: string;
-  anchor: ReturnType<typeof inspectV138SuccessorSealCommitV7Anchor>;
+  anchor: V138Route7;
   disposition: V138Plan26257PreObservationProof["disposition"];
   patternCObservation?: V138Plan26257PatternCObservation | undefined
   observedRootOverrides?: V138Plan26257ObservedRootOverrides | undefined
 }): V138Plan26257PreObservationProof => {
-  const seal = input.anchor.seal
-  checkV138SuccessorSourceSealV7(input.repoRoot, seal,
-    input.anchor.authorization,
-    input.disposition === "tool_identity_failed" ? "toolIdentity" :
-      input.disposition === "protected_history_failed" ? "protectedHistory" :
-        input.disposition === "formation_absence_failed" ?
-          "formationAbsence" : undefined)
+  const route = input.anchor
   let sealedRoot: Sha256 | null = null
   let observedRoot: Sha256
   let expectedContractRoot: Sha256 | null = null
   if (input.disposition === "tool_identity_failed") {
     sealedRoot = v138SuccessorRoot("artifactManifest",
-      "v1.38-tool-identity-observation-v1", seal.toolIdentity)
+      "v1.38-tool-identity-observation-v9", {
+        sourceA9: route.custody.sourceA9,
+        authorizationRoot: route.authorization.authorizationRoot,
+        executionVersions: route.authorization.executionVersions })
     observedRoot = input.observedRootOverrides?.tool_identity_failed ??
       plan26257ObservedRoot(
       "v1.38-tool-identity-observation-failure-v1",
       deriveV138ToolIdentityRoot)
   } else if (input.disposition === "protected_history_failed") {
-    const history = seal.protectedHistory
+    const history = route.protectedHistory
     if (history === null || typeof history !== "object" ||
       Array.isArray(history) || !isV138CanonicalSha256(
         (history as { protectedHistoryRoot?: unknown }).protectedHistoryRoot)) {
@@ -20143,11 +20151,14 @@ export const deriveV138Plan26257PreObservationProof = (input: {
     observedRoot = input.observedRootOverrides?.protected_history_failed ??
       plan26257ObservedRoot(
       "v1.38-protected-history-observation-failure-v1", () =>
-        deriveV138ProtectedHistoryV7(input.repoRoot, input.sourceA9)
-          .protectedHistoryRoot)
+        route.protectedHistory.protectedHistoryRoot)
   } else if (input.disposition === "formation_absence_failed") {
-    sealedRoot = v138SuccessorRoot("artifactManifest",
-      "v1.38-formation-absence-observation-v1", seal.formationAbsence)
+    const formationRoot = route.protectedHistory.protectedRoots
+      .formationAbsenceRoot
+    if (!isV138CanonicalSha256(formationRoot)) {
+      throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+    }
+    sealedRoot = formationRoot
     observedRoot = input.observedRootOverrides?.formation_absence_failed ??
       plan26257ObservedRoot(
       "v1.38-formation-absence-observation-failure-v1", () =>
@@ -20359,25 +20370,12 @@ const plan26257Evidence = (repoRoot: string, sourceA9: string,
   const preObservation = ["tool_identity_failed", "protected_history_failed",
     "formation_absence_failed", "pattern_c_ownership_failed"]
     .includes(disposition)
-  const anchor = preObservation ? (disposition === "protected_history_failed" ?
-    inspectV138ProtectedHistoryFailureSealCommitV7Anchor({ repoRoot, sourceA9,
-      sourceB9, observationException: "protectedHistory" }) :
-    inspectV138SuccessorSealCommitV7Anchor({ repoRoot, sourceA9, sourceB9,
-      ...(disposition === "tool_identity_failed" ? {
-        observationException: "toolIdentity" as const } :
-      disposition === "formation_absence_failed" ? {
-        observationException: "formationAbsence" as const } : {}) })) : undefined
-  const observationException = disposition === "tool_identity_failed" ?
-    "toolIdentity" as const : disposition === "protected_history_failed" ?
-      "protectedHistory" as const : disposition === "formation_absence_failed" ?
-        "formationAbsence" as const : undefined
   const route = checkV138Plan26256AuthorityRoute({
     repoRoot, sourceA9, sourceB9,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
-    sealValue: readPlan26257(repoRoot, "seal"),
-    ...(observationException === undefined ? {} : { observationException }) })
+    sealValue: readPlan26257(repoRoot, "seal") })
   const preObservationProof = !preObservation ? undefined :
-    deriveV138Plan26257PreObservationProof({ repoRoot, sourceA9, anchor: anchor!,
+    deriveV138Plan26257PreObservationProof({ repoRoot, sourceA9, anchor: route,
       disposition: disposition as V138Plan26257PreObservationProof["disposition"],
       patternCObservation, observedRootOverrides })
   if (claimedPreObservationProof !== undefined &&

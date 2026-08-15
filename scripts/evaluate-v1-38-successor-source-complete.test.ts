@@ -257,12 +257,13 @@ it("keeps a closed v8 route-7 command, handler, destination, and disposition man
 it("builds one atomic route start containing context:v11 and preflight consumption", () => {
   const root = `sha256:${"1".repeat(64)}`
   const route = {
-    custody: { sourceA7: "a".repeat(40), sourceB7: "b".repeat(40),
+    custody: { sourceA9: "a".repeat(40), sourceB9: "b".repeat(40),
       custodyRoot: root },
     authorization: { authorizationRoot: root },
-    seal: { sealRoot: root, selectedRouteClosure: { closureRoot: root },
-      protectedHistory: { protectedHistoryRoot: root,
-        priorAuthorizationBytes: [] } },
+    seal: { sealRoot: root },
+    selectedRouteClosure: { closureRoot: root },
+    protectedHistory: { protectedHistoryRoot: root,
+      priorAuthorizationBytes: [] },
   }
   const context = buildV138ExecutionContextV11Receipt({ route: route as never,
     mode: "gsd-pattern-c-inline-main",
