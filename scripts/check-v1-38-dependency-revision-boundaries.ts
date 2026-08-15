@@ -682,8 +682,7 @@ const loadFrozenRouteSources = () => {
       "649b50c98ea0ffeed6c8bd0e6cb2858601087237", sha256:
       "sha256:1d3bf3ecb99f1f5a52ef4e54d52ae2d358b9825d3b7028d787dd3542600678da" },
   }
-  for (const repoPath of ["scripts/lib/v1-38-successor-source-seal.ts",
-    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts"]) {
+  for (const repoPath of ["scripts/lib/v1-38-successor-source-seal.ts"]) {
     const blob = blobs.find(item => frozenRecord(item) && item.path === repoPath)
     if (!frozenRecord(blob) || typeof blob.blobOid !== "string" ||
       typeof blob.sha256 !== "string") throw new TypeError("V138_FROZEN_A8_CARRIER_INVALID")
@@ -694,7 +693,6 @@ const loadFrozenRouteSources = () => {
     "scripts/lib/v1-38-current-matrix-reproduction.ts",
     "scripts/lib/v1-38-successor-source-seal.ts",
     "scripts/check-v1-38-plan-262-55-source-completeness-review.ts",
-    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
   ].map(repoPath => [repoPath, records[repoPath]!]))
   for (const [repoPath, record] of Object.entries(orderedRecords)) {
     const objectBytes = execFileSync("git", ["cat-file", "blob", record.blobOid],
@@ -707,6 +705,20 @@ const loadFrozenRouteSources = () => {
 }
 
 export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS = loadFrozenRouteSources()
+export const V138_HISTORICAL_REVIEWER_V2_SOURCE_OBJECT = Object.freeze({
+  path: "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+  blobOid: "b257f7a1d4931c4d44584e63c9e69ab62b115292",
+  sha256: "sha256:52040127b905f5081ab8205fcceaaee5f26d04b0f301be5be0fc6dbb51836907",
+} as const)
+{
+  const historicalBytes = execFileSync("git", ["cat-file", "blob",
+    V138_HISTORICAL_REVIEWER_V2_SOURCE_OBJECT.blobOid], {
+    cwd: defaultRepoRoot, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 })
+  if (sha256(historicalBytes) !==
+    V138_HISTORICAL_REVIEWER_V2_SOURCE_OBJECT.sha256) {
+    throw new TypeError("V138_HISTORICAL_REVIEWER_V2_CUSTODY_INVALID")
+  }
+}
 export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256 = Object.freeze(
   Object.fromEntries(Object.entries(V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS)
     .map(([repoPath, record]) => [repoPath, record.sha256])) as
@@ -822,14 +834,6 @@ export const collectV138ChangedPolicySources = (
     const target = path.join(repoRoot, repoPath)
     const required = Object.hasOwn(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256,
       repoPath)
-    if (repoPath ===
-      "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts" &&
-      !repositoryFilePresent(repoRoot, target)) {
-      const record = V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS[repoPath]!
-      sources[repoPath] = execFileSync("git", ["cat-file", "blob", record.blobOid],
-        { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
-      continue
-    }
     try {
       const bytes = readV138RepositoryFileNoFollow(repoRoot, target,
         required ? "required" : "optional")
@@ -1330,8 +1334,10 @@ export const checkV138DependencyRevisionBoundaries = (
     "scripts/evaluate-v1-38-successor-source-complete.test.ts",
     "scripts/check-v1-38-dependency-revision-boundaries.ts",
   ].sort()
+  const activeSourceBoundary = sourceBoundary.filter(repoPath =>
+    !repoPath.includes("source-completeness-review-v2"))
   const a9Commits = git(repoRoot, ["log", "--first-parent", "--format=%H", "HEAD",
-    "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-v1"])
+    "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1"])
     .trim().split("\n").filter(Boolean)
   const orderedRun = [...a9Commits].reverse()
   const a9 = orderedRun.at(-1)
@@ -1347,17 +1353,74 @@ export const checkV138DependencyRevisionBoundaries = (
       changed.length > 0 && changed.every(repoPath => sourceBoundary.includes(repoPath)) &&
       git(repoRoot, ["show", "-s",
         "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit]).trim() ===
-        "codex-plan-262-60-a9-v1"
+        "codex-plan-262-60-a9-review-fix-v1"
     changed.forEach(repoPath => aggregate.add(repoPath))
     expectedParent = commit
     return valid
   })
+  const deletedPathsAbsentAtA9 = a9 !== undefined && sourceBoundary
+    .filter(repoPath => !activeSourceBoundary.includes(repoPath))
+    .every(repoPath => {
+      const absentFromWorktree = !repositoryFilePresent(repoRoot,
+        path.join(repoRoot, repoPath))
+      const absentFromA9 = git(repoRoot,
+        ["ls-tree", "--name-only", a9, "--", repoPath]).trim() === ""
+      return absentFromWorktree && absentFromA9
+    })
   const a9SourceValid = runValid && a9 !== undefined &&
-    JSON.stringify([...aggregate].sort()) === JSON.stringify(sourceBoundary) &&
+    JSON.stringify([...aggregate].sort()) === JSON.stringify(activeSourceBoundary) &&
+    deletedPathsAbsentAtA9 &&
     git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--", ...sourceBoundary])
       .trim() === ""
+  const summaryPath = `${phaseDirectory}/262-60-SUMMARY.md`
+  const summaryText = repositoryFile(repoRoot,
+    path.join(repoRoot, summaryPath)).toString("utf8")
+  const summaryA9 = /- \*\*sourceA9:\*\* `([0-9a-f]{40})`/u.exec(summaryText)?.[1]
+  const summaryTree = /- \*\*sourceA9 tree:\*\* `([0-9a-f]{40})`/u
+    .exec(summaryText)?.[1]
+  const summaryParent = /- \*\*sourceA9 sole parent:\*\* `([0-9a-f]{40})`/u
+    .exec(summaryText)?.[1]
+  const summaryBindings = new Map<string, { blobOid: string; sha256: string }>()
+  const bindingPattern = /^\| `([^`]+)` \| `100644` \| `([0-9a-f]{40})` \| `(sha256:[0-9a-f]{64})` \| [0-9]+ \|$/gmu
+  for (const match of summaryText.matchAll(bindingPattern)) {
+    summaryBindings.set(match[1]!, { blobOid: match[2]!, sha256: match[3]! })
+  }
+  const a9CarrierBindingsValid = a9SourceValid && summaryA9 === a9 &&
+    summaryTree === git(repoRoot, ["rev-parse", `${a9}^{tree}`]).trim() &&
+    summaryParent === git(repoRoot, ["show", "-s", "--format=%P", a9]).trim() &&
+    [...summaryBindings].every(([repoPath, binding]) => {
+      if (!sourceBoundary.includes(repoPath)) return false
+      const committed = execFileSync("git", ["show", `${a9}:${repoPath}`], {
+        cwd: repoRoot, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 })
+      return git(repoRoot, ["rev-parse", `${a9}:${repoPath}`]).trim() ===
+        binding.blobOid && sha256(committed) === binding.sha256 &&
+        repositoryFile(repoRoot, path.join(repoRoot, repoPath)).equals(committed)
+    })
+  const sourceBase9 = orderedRun.length === 0 ? undefined : git(repoRoot,
+    ["show", "-s", "--format=%P", orderedRun[0]!]).trim()
+  const changedLineRanges = new Map<string, readonly [number, number][]>()
+  if (a9CarrierBindingsValid && sourceBase9 !== undefined) {
+    for (const repoPath of activeSourceBoundary) {
+      const diff = git(repoRoot, ["diff", "--unified=0", sourceBase9, a9!, "--",
+        repoPath])
+      changedLineRanges.set(repoPath, [...diff.matchAll(
+        /^@@ -(?:[0-9]+)(?:,[0-9]+)? \+([0-9]+)(?:,([0-9]+))? @@/gmu)]
+        .map(match => [Number(match[1]), Number(match[2] ?? "1")] as const)
+        .filter(([, count]) => count > 0)
+        .map(([start, count]) => [start, start + count - 1] as const))
+    }
+  }
   const policyFindings = analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources)
-    .filter((finding) => !(a9SourceValid && sourceBoundary.includes(finding.path)))
+    .filter((finding) => !(finding.code === "ROUTE_CAPABLE_SOURCE_DRIFT" &&
+      a9CarrierBindingsValid && summaryBindings.has(finding.path)))
+    .filter((finding) => {
+      if (!a9CarrierBindingsValid || finding.code === "ROUTE_CAPABLE_SOURCE_DRIFT") {
+        return true
+      }
+      const ranges = changedLineRanges.get(finding.path)
+      return ranges === undefined || ranges.some(([start, end]) =>
+        finding.line >= start && finding.line <= end)
+    })
     .filter((finding) => !policySourceCollection.findings.some((collectionFinding) =>
       collectionFinding.code === finding.code &&
       collectionFinding.path === finding.path))
