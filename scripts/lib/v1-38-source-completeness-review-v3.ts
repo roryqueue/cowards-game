@@ -114,7 +114,8 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
   if (document.schemaVersion !== V138_REVIEW_V3_SCHEMA || !fullOid(document.sourceBase9) ||
     !fullOid(document.sourceA9) || document.sourceBase9 === document.sourceA9 ||
     !fullOid(source.tree) || !fullOid(source.parent) ||
-    source.authorRun !== "codex-plan-262-60-a9-v1" || !Array.isArray(source.paths) ||
+    source.authorRun !== "codex-plan-262-60-a9-review-fix-v1" ||
+    !Array.isArray(source.paths) ||
     canonicalBytes([...source.paths].sort()).toString("utf8") !==
       canonicalBytes([...V138_REVIEW_V3_SOURCE_PATHS].sort()).toString("utf8") ||
     !unique(source.paths) ||
@@ -230,6 +231,30 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
   if (!digest(reviewV3Root) || reviewV3Root !== rootOf(V138_REVIEW_V3_SCHEMA, body))
     fail("V138_REVIEW_V3_ROOT_INVALID")
   return Object.freeze(document)
+}
+
+export const checkV138ReviewV3ClaimsAgainstObservations = (input: Readonly<{
+  document: unknown
+  sourceCustody: unknown
+  publication: unknown
+  protectedHistory: unknown
+  priorAuthorizationBytes: unknown
+  snapshots: unknown
+  orderedEvents: unknown
+}>) => {
+  const document = validateV138ReviewV3Document(input.document)
+  for (const [claimed, observed, code] of [
+    [document.sourceCustody, input.sourceCustody, "V138_REVIEW_V3_SOURCE_OBSERVATION_INVALID"],
+    [document.publication, input.publication, "V138_REVIEW_V3_PUBLICATION_OBSERVATION_INVALID"],
+    [document.protectedHistory, input.protectedHistory, "V138_REVIEW_V3_HISTORY_OBSERVATION_INVALID"],
+    [document.priorAuthorizationBytes, input.priorAuthorizationBytes,
+      "V138_REVIEW_V3_HISTORY_OBSERVATION_INVALID"],
+    [document.snapshots, input.snapshots, "V138_REVIEW_V3_SNAPSHOT_OBSERVATION_INVALID"],
+    [document.orderedEvents, input.orderedEvents, "V138_REVIEW_V3_EVENT_OBSERVATION_INVALID"],
+  ] as const) {
+    if (!canonicalBytes(claimed).equals(canonicalBytes(observed))) fail(code)
+  }
+  return document
 }
 
 export const readAndValidateV138DetachedReviewV3 = (input: Readonly<{

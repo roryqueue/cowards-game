@@ -33,6 +33,7 @@ import {
   V138_DARWIN_HEADROOM_THRESHOLD_BASIS_POINTS,
 } from "./v1-38-darwin-headroom.js"
 import {
+  checkV138ReviewV3ClaimsAgainstObservations,
   validateV138ReviewV3Document,
 } from "./v1-38-source-completeness-review-v3.js"
 
@@ -5842,6 +5843,9 @@ export const V138_PLAN_262_60_SOURCE_PATHS = Object.freeze([
   "scripts/evaluate-v1-38-successor-source-complete.test.ts",
   "scripts/check-v1-38-dependency-revision-boundaries.ts",
 ] as const)
+export const V138_PLAN_262_60_REVIEW_FIX_CHANGED_PATHS = Object.freeze(
+  V138_PLAN_262_60_SOURCE_PATHS.filter(repoPath =>
+    !repoPath.includes("source-completeness-review-v2")))
 
 export const inspectV138SourceA9Custody = (repoRoot: string,
   document: Record<string, any>) => {
@@ -5860,14 +5864,15 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
       "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
     if (parents.length !== 1 || parents[0] !== expectedParent || changed.length === 0 ||
       changed.some(repoPath => !V138_PLAN_262_60_SOURCE_PATHS.includes(repoPath as never)) ||
-      trailer !== "codex-plan-262-60-a9-v1") {
+      trailer !== "codex-plan-262-60-a9-review-fix-v1") {
       fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
     }
     changed.forEach(repoPath => aggregate.add(repoPath))
     expectedParent = commit
   }
   if (commits.length === 0 || commits.at(-1) !== sourceA9 ||
-    canonical(sorted(aggregate)) !== canonical(sorted(V138_PLAN_262_60_SOURCE_PATHS))) {
+    canonical(sorted(aggregate)) !== canonical(sorted(
+      V138_PLAN_262_60_REVIEW_FIX_CHANGED_PATHS))) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
   }
   const sourceA9Blobs = Object.freeze(V138_PLAN_262_60_SOURCE_PATHS.map(repoPath => {
@@ -5959,7 +5964,10 @@ export const inspectV138ProtectedHistoryV9 = (repoRoot: string,
             sourceA9, repoPath).equals(bytes)) {
           fail("V138_PLAN_262_56_AUTHORIZATION_V9_PROTECTED_HISTORY_INVALID")
         }
-        return { path: repoPath, blobOid, sha256: digest }
+        return { path: repoPath,
+          commit: gitText(repoRoot, ["log", "-1", "--format=%H", sourceA9,
+            "--", repoPath]),
+          blobOid, sha256: digest, byteLength: bytes.byteLength }
       })),
     protectedRoots: V138_PLAN_262_47_FAILURE_FROZEN.protectedRoots,
     sourceFailureCommit: V138_PLAN_262_47_FAILURE_FROZEN.commit,
@@ -6027,6 +6035,47 @@ export const buildV138Plan26256AuthorizationV9 = (input: {
   if (canonical(source.sourceA9Paths) !== canonical(sourcePaths)) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
   }
+  const document = reviewV3Input.reviewV3Document as Record<string, any>
+  const publication = { commit: reviewV3Input.inputCommit,
+    parent: source.sourceA9,
+    tree: gitText(input.repoRoot, ["rev-parse", `${reviewV3Input.inputCommit}^{tree}`]),
+    reviewBlob: reviewV3Input.inputBlob,
+    reportBlob: gitText(input.repoRoot, ["rev-parse",
+      `${reviewV3Input.inputCommit}:.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md`]),
+    changedPaths: [V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview,
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md"],
+    laterChangesAbsent: true }
+  const sourceCustody = { tree: source.sourceA9Tree, parent: source.sourceA9Parent,
+    authorRun: "codex-plan-262-60-a9-review-fix-v1", paths: source.sourceA9Paths,
+    blobs: source.sourceA9Blobs }
+  const sourceBaseBlobs = sourcePaths.map(repoPath => {
+    const entry = gitText(input.repoRoot, ["ls-tree", source.sourceBase9, "--",
+      repoPath])
+    if (entry === "") return { path: repoPath, mode: "deleted", blobOid: null,
+      sha256: null, byteLength: 0 }
+    const bytes = readCommitFile(input.repoRoot, source.sourceBase9, repoPath)
+    return { path: repoPath, mode: entry.split(/\s+/u)[0],
+      blobOid: gitText(input.repoRoot, ["rev-parse",
+        `${source.sourceBase9}:${repoPath}`]), sha256: sha256(bytes),
+      byteLength: bytes.byteLength }
+  })
+  const snapshots = [{ name: "before",
+    inventoryRoot: identityRoot("artifactManifest",
+      "v1.38-review-v3-source-snapshot-v1", sourceBaseBlobs),
+    pathCount: sourceBaseBlobs.length }, { name: "after",
+    inventoryRoot: identityRoot("artifactManifest",
+      "v1.38-review-v3-source-snapshot-v1", source.sourceA9Blobs),
+    pathCount: source.sourceA9Blobs.length }]
+  const observations = document.handlerObservations as readonly Record<string, any>[]
+  const orderedEvents = observations.map((observation, ordinal) => ({ ordinal,
+    event: observation.handler, path: observation.destination,
+    result: observation.disposition }))
+  checkV138ReviewV3ClaimsAgainstObservations({ document, sourceCustody,
+    publication, protectedHistory: { root: protectedHistory.protectedHistoryRoot,
+      protectedA8: source.sourceA9,
+      protectedRoots: protectedHistory.protectedRoots },
+    priorAuthorizationBytes: protectedHistory.priorAuthorizationBytes,
+    snapshots, orderedEvents })
   const body = {
     schemaVersion: V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA,
     routeOrdinal: 7 as const,
