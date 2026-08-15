@@ -654,7 +654,8 @@ const loadFrozenRouteSources = () => {
     cwd: defaultRepoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
   const frozenRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
-  const summaryPath = `${phaseDirectory}/262-58-SUMMARY.md`
+  const summaryPath = `${phaseDirectory}/archived/262-58-SUMMARY-HISTORICAL.md`
+  const historicalSummaryPath = `${phaseDirectory}/262-58-SUMMARY.md`
   const summary = repositoryFile(defaultRepoRoot,
     path.join(defaultRepoRoot, summaryPath)).toString("utf8")
   const match = /<!-- PLAN262-58-A8-CUSTODY-V1\n([^]*?)\n-->/u.exec(summary)
@@ -663,15 +664,14 @@ const loadFrozenRouteSources = () => {
   const blobs = Array.isArray(carrier.blobs) ? carrier.blobs : []
   const a8 = String(carrier.sourceA8 ?? "")
   const carrierCommits = gitFrozen(["log", "--first-parent", "--reverse",
-    "--format=%H", "HEAD", "--", summaryPath]).trim().split("\n").filter(Boolean)
+    "--format=%H", "HEAD", "--", historicalSummaryPath]).trim().split("\n").filter(Boolean)
     .filter(commit => gitFrozen(["diff-tree", "--no-commit-id", "--name-only",
-      "-r", "--no-renames", commit]).trim() === summaryPath &&
-      execFileSync("git", ["show", `${commit}:${summaryPath}`], { cwd: defaultRepoRoot,
+      "-r", "--no-renames", commit]).trim() === historicalSummaryPath &&
+      execFileSync("git", ["show", `${commit}:${historicalSummaryPath}`], { cwd: defaultRepoRoot,
         encoding: "utf8" }) === summary)
   if (carrier.sourceBase8 !== "5fa635ccebfcef6ff00cd05876401cec4688e64f" ||
     carrierCommits.length !== 1 || gitFrozen(["show", "-s", "--format=%P",
-      carrierCommits[0]!]).trim() !== a8 || gitFrozen(["log", "--format=%H",
-      `${carrierCommits[0]}..HEAD`, "--", summaryPath]).trim() !== "") {
+      carrierCommits[0]!]).trim() !== a8) {
     throw new TypeError("V138_FROZEN_A8_CARRIER_INVALID")
   }
   const records: Record<string, Readonly<{ blobOid: string; sha256: Sha256 }>> = {

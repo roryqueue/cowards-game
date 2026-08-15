@@ -62,8 +62,14 @@ import {
   checkV138ExactMachineStatus,
   collectV138ChangedPolicySources,
 } from "./check-v1-38-dependency-revision-boundaries.js"
+import { validateV138ReviewV3Document } from
+  "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+
+it("REDs the strict review-v3 validator before A9 implementation", () => {
+  validateV138ReviewV3Document({})
+})
 
 const sha256Zero = `sha256:${"0".repeat(64)}`
 const mutableClone = (value: unknown): Record<string, any> =>
