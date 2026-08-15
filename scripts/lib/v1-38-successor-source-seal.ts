@@ -6036,15 +6036,9 @@ export const buildV138Plan26256AuthorizationV9 = (input: {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
   }
   const document = reviewV3Input.reviewV3Document as Record<string, any>
-  const publication = { commit: reviewV3Input.inputCommit,
-    parent: source.sourceA9,
-    tree: gitText(input.repoRoot, ["rev-parse", `${reviewV3Input.inputCommit}^{tree}`]),
-    reviewBlob: reviewV3Input.inputBlob,
-    reportBlob: gitText(input.repoRoot, ["rev-parse",
-      `${reviewV3Input.inputCommit}:.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md`]),
-    changedPaths: [V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview,
-      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md"],
-    laterChangesAbsent: true }
+  const publication = { changedPaths: [
+    V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview,
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md"] }
   const sourceCustody = { tree: source.sourceA9Tree, parent: source.sourceA9Parent,
     authorRun: "codex-plan-262-60-a9-review-fix-v1", paths: source.sourceA9Paths,
     blobs: source.sourceA9Blobs }

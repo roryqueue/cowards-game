@@ -113,11 +113,10 @@ const reviewV3Fixture = () => {
       { name: "after", inventoryRoot: digest, pathCount: 0 }],
     orderedEvents: [{ ordinal: 0, event: "validated", path: "detached-review",
       result: "pass" }], cleanup: { complete: true, residualPaths: [] },
-    publication: { commit: otherOid, parent: otherOid, tree: oid,
-      reviewBlob: oid, reportBlob: oid, changedPaths: [
+    publication: { changedPaths: [
         ".planning/artifacts/v1.38-plan-262-62-source-completeness-review-v3.json",
         ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md",
-      ], laterChangesAbsent: true },
+      ] },
     verdict: { findingCount: 0, sourceCompletenessPassed: true,
       authorizesExecution: false },
     identityClaims: { independentPersonClaimed: false, reviewerSeparated: false,

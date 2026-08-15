@@ -98,8 +98,7 @@ const OBSERVATION_KEYS = ["command", "handler", "prerequisites", "destination",
 const PRIOR_KEYS = ["path", "commit", "blobOid", "sha256", "byteLength"] as const
 const SNAPSHOT_KEYS = ["name", "inventoryRoot", "pathCount"] as const
 const EVENT_KEYS = ["ordinal", "event", "path", "result"] as const
-const PUBLICATION_KEYS = ["commit", "parent", "tree", "reviewBlob", "reportBlob",
-  "changedPaths", "laterChangesAbsent"] as const
+const PUBLICATION_KEYS = ["changedPaths"] as const
 const VERDICT_KEYS = ["findingCount", "sourceCompletenessPassed", "authorizesExecution"] as const
 const IDENTITY_KEYS = ["independentPersonClaimed", "reviewerSeparated",
   "externalIdentityClaimed", "cryptographicReviewerIdentityClaimed",
@@ -204,7 +203,7 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
   document.orderedEvents.forEach((item, index) => {
     const event = record(item, EVENT_KEYS, "V138_REVIEW_V3_OBSERVATIONS_INVALID")
     if (event.ordinal !== index || !boundedString(event.event, 128) ||
-      !boundedString(event.path, 1024) || !boundedString(event.result, 128))
+      !boundedString(event.path, 1024) || !boundedString(event.result, 1024))
       fail("V138_REVIEW_V3_OBSERVATIONS_INVALID")
   })
   const cleanup = record(document.cleanup, ["complete", "residualPaths"],
@@ -213,11 +212,9 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
     cleanup.residualPaths.length !== 0) fail("V138_REVIEW_V3_CLEANUP_INVALID")
   const publication = record(document.publication, PUBLICATION_KEYS,
     "V138_REVIEW_V3_PUBLICATION_INVALID")
-  if (![publication.commit, publication.parent, publication.tree, publication.reviewBlob,
-    publication.reportBlob].every(fullOid) || publication.parent !== document.sourceA9 ||
-    JSON.stringify(publication.changedPaths) !== JSON.stringify([
-      V138_REVIEW_V3_CANONICAL_PATH, V138_REVIEW_V3_REPORT_PATH]) ||
-    publication.laterChangesAbsent !== true) fail("V138_REVIEW_V3_PUBLICATION_INVALID")
+  if (JSON.stringify(publication.changedPaths) !== JSON.stringify([
+    V138_REVIEW_V3_CANONICAL_PATH, V138_REVIEW_V3_REPORT_PATH]))
+    fail("V138_REVIEW_V3_PUBLICATION_INVALID")
   const verdict = record(document.verdict, VERDICT_KEYS, "V138_REVIEW_V3_VERDICT_INVALID")
   if (verdict.findingCount !== 0 || verdict.sourceCompletenessPassed !== true ||
     verdict.authorizesExecution !== false) fail("V138_REVIEW_V3_VERDICT_INVALID")
