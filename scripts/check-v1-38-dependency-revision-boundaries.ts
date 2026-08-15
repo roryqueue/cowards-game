@@ -415,8 +415,8 @@ const correctiveLifecycleStatus = (post53: boolean) => Object.freeze({
 
 const correctiveLifecycleCarrierFindings = (repoRoot: string):
   readonly V138DependencyRevisionFinding[] => {
-  let lifecycle: ReturnType<typeof checkV138Plan26258LiveLifecycle>
-  try { lifecycle = checkV138Plan26258LiveLifecycle(repoRoot) } catch {
+  let lifecycle: ReturnType<typeof checkV138Plan26260LiveLifecycle>
+  try { lifecycle = checkV138Plan26260LiveLifecycle(repoRoot) } catch {
     return [{ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
       detail: "Live corrective lifecycle could not be derived." }]
   }
@@ -778,6 +778,8 @@ const protectedInventory = (
     .filter((repoPath) => repoPath !== archivedCheckpoint.originalExecutablePath)
     .filter((repoPath) => repoPath !== `${phaseDirectory}/262-VERIFICATION.md`)
     .filter((repoPath) => repoPath !== `${phaseDirectory}/262-CONTEXT.md`)
+    .filter((repoPath) => repoPath !==
+      `${phaseDirectory}/262-DEPENDENCY-REVISION-RESEARCH.md`)
     .filter((repoPath) =>
       repoPath.startsWith(`${phaseDirectory}/`) ||
       (repoPath.startsWith(".planning/artifacts/v1.38-") &&
@@ -820,6 +822,14 @@ export const collectV138ChangedPolicySources = (
     const target = path.join(repoRoot, repoPath)
     const required = Object.hasOwn(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256,
       repoPath)
+    if (repoPath ===
+      "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts" &&
+      !repositoryFilePresent(repoRoot, target)) {
+      const record = V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS[repoPath]!
+      sources[repoPath] = execFileSync("git", ["cat-file", "blob", record.blobOid],
+        { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+      continue
+    }
     try {
       const bytes = readV138RepositoryFileNoFollow(repoRoot, target,
         required ? "required" : "optional")
@@ -873,10 +883,10 @@ const correctiveDispositionCanonical = (repoRoot: string): boolean => {
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
   const findings: V138DependencyRevisionFinding[] = []
   try {
-    checkV138Plan26258LiveLifecycle(repoRoot)
+    checkV138Plan26260LiveLifecycle(repoRoot)
   } catch {
     findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
-      detail: "Phase 262 live index does not match the derived 47-plan corrective lifecycle." })
+      detail: "Phase 262 live index does not match the derived 48-plan corrective lifecycle." })
   }
   const exactInventory = ["262-01", "262-02", "262-08", "262-09", "262-10",
     "262-11", "262-12", "262-13", "262-14", "262-15", "262-16", "262-17",
@@ -884,11 +894,12 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
     "262-25", "262-26", "262-27", "262-28", "262-29", "262-30", "262-31",
     "262-32", "262-33", "262-34", "262-35", "262-36", "262-37", "262-38",
     "262-39", "262-42", "262-44", "262-45", "262-48", "262-49", "262-51",
-    "262-52", "262-53", "262-54", "262-56", "262-57", "262-58", "262-59"]
+    "262-52", "262-53", "262-54", "262-56", "262-57", "262-60", "262-61", "262-62"]
   const exactWaves = Object.fromEntries(exactInventory.map((id, index) => {
-    const special: Record<string, number> = { "262-48": 47, "262-49": 38,
+    const special: Record<string, number> = { "262-48": 48, "262-49": 38,
       "262-51": 39, "262-52": 40, "262-53": 41, "262-54": 42,
-      "262-56": 45, "262-57": 46, "262-58": 43, "262-59": 44 }
+      "262-56": 46, "262-57": 47, "262-60": 43, "262-61": 44,
+      "262-62": 45 }
     return [id, special[id] ?? index + 1]
   }))
   const exactDependencies: Record<string, readonly string[]> = {}
@@ -900,8 +911,8 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
   Object.assign(exactDependencies, { "262-42": ["262-39"], "262-44": ["262-42"],
     "262-45": ["262-44"], "262-48": ["262-57"], "262-49": ["262-45"],
     "262-51": ["262-49"], "262-52": ["262-51"], "262-53": ["262-52"],
-    "262-54": ["262-53"], "262-56": ["262-59"], "262-57": ["262-56"],
-    "262-58": ["262-54"], "262-59": ["262-58"] })
+    "262-54": ["262-53"], "262-56": ["262-62"], "262-57": ["262-56"],
+    "262-60": ["262-54"], "262-61": ["262-60"], "262-62": ["262-61"] })
   const toolPath = path.join(process.env.HOME ?? "", ".codex/gsd-core/bin/gsd-tools.cjs")
   const indexed = spawnSync(process.execPath,
     [toolPath, "query", "phase-plan-index", "262"], { cwd: repoRoot,
@@ -920,19 +931,19 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
     const summaryIds = plans.filter(plan => isRecord(plan) && plan.has_summary === true)
       .map(plan => String(plan.id))
     const incomplete = Array.isArray(parsed.incomplete) ? parsed.incomplete : []
-    const expectedIncomplete = V138_PLAN_262_58_CORRECTIVE_CHAIN.filter(planId =>
+    const expectedIncomplete = V138_PLAN_262_60_CORRECTIVE_CHAIN.filter(planId =>
       !repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
         `${planId}-SUMMARY.md`)))
     const archivesExact = !repositoryFilePresent(repoRoot, path.join(repoRoot,
-      phaseDirectory, "262-55-PLAN.md")) && ["262-55-HISTORICAL.md",
-      "262-55-SUMMARY-HISTORICAL.md"].every(name => repositoryFilePresent(repoRoot,
+      phaseDirectory, "262-58-PLAN.md")) && ["262-58-HISTORICAL.md",
+      "262-58-SUMMARY-HISTORICAL.md", "262-59-HISTORICAL.md"].every(name => repositoryFilePresent(repoRoot,
         path.join(repoRoot, phaseDirectory, "archived", name)))
     if (indexed.status !== 0 || !inventoryExact || !dependencyExact || !waveExact ||
-      summaryIds.length !== 47 - expectedIncomplete.length ||
+      summaryIds.length !== 48 - expectedIncomplete.length ||
       JSON.stringify([...incomplete].sort()) !== JSON.stringify([...expectedIncomplete].sort()) ||
       !archivesExact) findings.push({ code: "PLAN_DISCOVERY_DRIFT",
         path: phaseDirectory, line: 1,
-        detail: "Exact ordered 47-plan inventory, dependencies, waves, summaries, archives, or incomplete set drifted." })
+        detail: "Exact ordered 48-plan inventory, dependencies, waves, summaries, archives, or incomplete set drifted." })
   } catch {
     findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
       detail: "phase-plan-index 262 returned invalid JSON." })
@@ -1115,70 +1126,73 @@ const isCanonicalPlan52Review = (repoRoot: string, reviewTarget: string,
   artifactTarget: string, expected: "pass" | "fail"): boolean =>
   isCanonicalPlan50Review(repoRoot, reviewTarget, artifactTarget, expected)
 
-export const V138_PLAN_262_58_CORRECTIVE_CHAIN = Object.freeze([
-  "262-58", "262-59", "262-56", "262-57", "262-48",
+export const V138_PLAN_262_60_CORRECTIVE_CHAIN = Object.freeze([
+  "262-60", "262-61", "262-62", "262-56", "262-57", "262-48",
 ] as const)
 
-export type V138Plan26258LifecycleMode =
-  | "review_v2_pending_42_of_47"
-  | "plan_58_complete_43_of_47"
-  | "review_v2_complete_44_of_47"
-  | "authority_complete_45_of_47"
-  | "route_complete_46_of_47"
-  | "phase_complete_47_of_47"
+export type V138Plan26260LifecycleMode =
+  | "a9_pending_42_of_48"
+  | "a9_complete_43_of_48"
+  | "reviewer_r3_complete_44_of_48"
+  | "review_v3_complete_45_of_48"
+  | "authority_complete_46_of_48"
+  | "route_complete_47_of_48"
+  | "phase_complete_48_of_48"
 
-export const evaluateV138Plan26258Lifecycle = (input: Readonly<{
-  mode: V138Plan26258LifecycleMode
+export const evaluateV138Plan26260Lifecycle = (input: Readonly<{
+  mode: V138Plan26260LifecycleMode
   totalPlans: number
   completedPlans: number
   correctiveChain: readonly string[]
   incomplete: readonly string[]
-  archivedPlan55Active: boolean
-  reviewV1InvalidDispositionPresent: boolean
+  archivedPlan58Active: boolean
+  reviewV2InvalidDispositionPresent: boolean
   authorizationVersion: number
   sealVersion: number
-  obsoleteV7Present: boolean
+  obsoleteV7V8Present: boolean
   routeOrdinal: number
   executionVersions: readonly number[]
 }>) => {
   const expected = {
-    review_v2_pending_42_of_47: { completed: 42,
-      incomplete: ["262-58", "262-59", "262-56", "262-57", "262-48"] },
-    plan_58_complete_43_of_47: { completed: 43,
-      incomplete: ["262-59", "262-56", "262-57", "262-48"] },
-    review_v2_complete_44_of_47: { completed: 44,
+    a9_pending_42_of_48: { completed: 42,
+      incomplete: ["262-60", "262-61", "262-62", "262-56", "262-57", "262-48"] },
+    a9_complete_43_of_48: { completed: 43,
+      incomplete: ["262-61", "262-62", "262-56", "262-57", "262-48"] },
+    reviewer_r3_complete_44_of_48: { completed: 44,
+      incomplete: ["262-62", "262-56", "262-57", "262-48"] },
+    review_v3_complete_45_of_48: { completed: 45,
       incomplete: ["262-56", "262-57", "262-48"] },
-    authority_complete_45_of_47: { completed: 45,
+    authority_complete_46_of_48: { completed: 46,
       incomplete: ["262-57", "262-48"] },
-    route_complete_46_of_47: { completed: 46, incomplete: ["262-48"] },
-    phase_complete_47_of_47: { completed: 47, incomplete: [] },
+    route_complete_47_of_48: { completed: 47, incomplete: ["262-48"] },
+    phase_complete_48_of_48: { completed: 48, incomplete: [] },
   }[input.mode]
-  if (expected === undefined || input.totalPlans !== 47 ||
+  if (expected === undefined || input.totalPlans !== 48 ||
     input.completedPlans !== expected.completed ||
     JSON.stringify(input.correctiveChain) !==
-      JSON.stringify(V138_PLAN_262_58_CORRECTIVE_CHAIN) ||
+      JSON.stringify(V138_PLAN_262_60_CORRECTIVE_CHAIN) ||
     JSON.stringify(input.incomplete) !== JSON.stringify(expected.incomplete) ||
-    input.archivedPlan55Active !== false ||
-    input.reviewV1InvalidDispositionPresent !== true ||
-    input.authorizationVersion !== 8 || input.sealVersion !== 8 ||
-    input.obsoleteV7Present !== false || input.routeOrdinal !== 7 ||
+    input.archivedPlan58Active !== false ||
+    input.reviewV2InvalidDispositionPresent !== true ||
+    input.authorizationVersion !== 9 || input.sealVersion !== 9 ||
+    input.obsoleteV7V8Present !== false || input.routeOrdinal !== 7 ||
     JSON.stringify(input.executionVersions) !== JSON.stringify([11, 11, 11, 12])) {
-    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INVALID")
+    throw new TypeError("V138_PLAN_262_60_LIFECYCLE_INVALID")
   }
-  return Object.freeze({ mode: input.mode, totalPlans: 47 as const,
+  return Object.freeze({ mode: input.mode, totalPlans: 48 as const,
     completedPlans: expected.completed,
     incomplete: Object.freeze([...expected.incomplete]),
-    correctiveChain: V138_PLAN_262_58_CORRECTIVE_CHAIN })
+    correctiveChain: V138_PLAN_262_60_CORRECTIVE_CHAIN })
 }
 
-export const checkV138Plan26258LiveLifecycle = (repoRoot = defaultRepoRoot) => {
+export const checkV138Plan26260LiveLifecycle = (repoRoot = defaultRepoRoot) => {
   const toolPath = path.join(process.env.HOME ?? "",
     ".codex/gsd-core/bin/gsd-tools.cjs")
   const indexed = spawnSync(process.execPath,
     [toolPath, "query", "phase-plan-index", "262"], { cwd: repoRoot,
       encoding: "utf8", timeout: 20_000 })
   if (indexed.status !== 0) {
-    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INDEX_INVALID")
+    throw new TypeError("V138_PLAN_262_60_LIFECYCLE_INDEX_INVALID")
   }
   const parsed = JSON.parse(indexed.stdout) as Record<string, unknown>
   const plans = Array.isArray(parsed.plans) ? parsed.plans : []
@@ -1188,41 +1202,42 @@ export const checkV138Plan26258LiveLifecycle = (repoRoot = defaultRepoRoot) => {
   const summary = (planId: string) => repositoryFilePresent(repoRoot,
     path.join(repoRoot, phaseDirectory, `${planId}-SUMMARY.md`))
   const states = [
-    { mode: "phase_complete_47_of_47", summary: summary("262-48") },
-    { mode: "route_complete_46_of_47", summary: summary("262-57") },
-    { mode: "authority_complete_45_of_47", summary: summary("262-56") },
-    { mode: "review_v2_complete_44_of_47", summary: summary("262-59") },
-    { mode: "plan_58_complete_43_of_47", summary: summary("262-58") },
-    { mode: "review_v2_pending_42_of_47", summary: true },
+    { mode: "phase_complete_48_of_48", summary: summary("262-48") },
+    { mode: "route_complete_47_of_48", summary: summary("262-57") },
+    { mode: "authority_complete_46_of_48", summary: summary("262-56") },
+    { mode: "review_v3_complete_45_of_48", summary: summary("262-62") },
+    { mode: "reviewer_r3_complete_44_of_48", summary: summary("262-61") },
+    { mode: "a9_complete_43_of_48", summary: summary("262-60") },
+    { mode: "a9_pending_42_of_48", summary: true },
   ] as const
   const mode = states.find(entry => entry.summary)!.mode
-  const completed = 42 + ["262-58", "262-59", "262-56", "262-57", "262-48"]
+  const completed = 42 + ["262-60", "262-61", "262-62", "262-56", "262-57", "262-48"]
     .filter(summary).length
-  const expectedWaves = { "43": ["262-58"], "44": ["262-59"],
-    "45": ["262-56"], "46": ["262-57"], "47": ["262-48"] }
-  if (plans.length !== 47 || plans.filter(item => isRecord(item) &&
+  const expectedWaves = { "43": ["262-60"], "44": ["262-61"],
+    "45": ["262-62"], "46": ["262-56"], "47": ["262-57"], "48": ["262-48"] }
+  if (plans.length !== 48 || plans.filter(item => isRecord(item) &&
       item.has_summary === true).length !== completed ||
     JSON.stringify(Object.fromEntries(Object.keys(expectedWaves).map(key =>
       [key, waves[key]]))) !== JSON.stringify(expectedWaves) ||
     repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
-      "262-55-PLAN.md")) ||
+      "262-58-PLAN.md")) ||
     !repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
-      "archived/262-55-HISTORICAL.md")) ||
+      "archived/262-58-HISTORICAL.md")) ||
     !repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
-      "archived/262-55-SUMMARY-HISTORICAL.md"))) {
-    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INDEX_INVALID")
+      "archived/262-58-SUMMARY-HISTORICAL.md"))) {
+    throw new TypeError("V138_PLAN_262_60_LIFECYCLE_INDEX_INVALID")
   }
   const dispositionPresent = repositoryFilePresent(repoRoot, path.join(repoRoot,
-    ".planning/artifacts/v1.38-plan-262-58-review-v1-invalid-disposition-v1.json"))
-  const expectedIncomplete = V138_PLAN_262_58_CORRECTIVE_CHAIN.filter(planId =>
+    ".planning/artifacts/v1.38-plan-262-60-review-v2-invalid-disposition-v1.json"))
+  const expectedIncomplete = V138_PLAN_262_60_CORRECTIVE_CHAIN.filter(planId =>
     !summary(planId))
   const sealSource = repositoryFile(repoRoot, path.join(repoRoot,
     "scripts/lib/v1-38-successor-source-seal.ts")).toString("utf8")
   const routeSource = repositoryFile(repoRoot, path.join(repoRoot,
     "scripts/lib/v1-38-current-matrix-reproduction.ts")).toString("utf8")
-  const authorizationVersion = Number(/V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA\s*=\s*\n?\s*"v1\.38-plan-262-56-authorization-v(\d+)"/u
+  const authorizationVersion = Number(/V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA\s*=\s*\n?\s*"v1\.38-plan-262-56-authorization-v(\d+)"/u
     .exec(sealSource)?.[1])
-  const sealVersion = Number(/V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA\s*=\s*\n?\s*"v1\.38-successor-source-seal-v(\d+)"/u
+  const sealVersion = Number(/V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA\s*=\s*\n?\s*"v1\.38-successor-source-seal-v(\d+)"/u
     .exec(sealSource)?.[1])
   const routeBlock = routeSource.slice(routeSource.indexOf(
     "export const V138_PLAN_262_57_ROUTE_CONTRACT"), routeSource.indexOf(
@@ -1231,21 +1246,23 @@ export const checkV138Plan26258LiveLifecycle = (repoRoot = defaultRepoRoot) => {
   const executionVersions = ["execution-context", "headroom-preflight",
     "calibration", "reproduction"].map((name) => Number(new RegExp(
       `v1\\.38-current-matrix-${name}-v(\\d+)`, "u").exec(routeBlock)?.[1]))
-  const lifecycle = evaluateV138Plan26258Lifecycle({ mode, totalPlans: 47,
+  const lifecycle = evaluateV138Plan26260Lifecycle({ mode, totalPlans: 48,
     completedPlans: completed,
-    correctiveChain: V138_PLAN_262_58_CORRECTIVE_CHAIN,
-    incomplete: expectedIncomplete, archivedPlan55Active: false,
-    reviewV1InvalidDispositionPresent: dispositionPresent,
+    correctiveChain: V138_PLAN_262_60_CORRECTIVE_CHAIN,
+    incomplete: expectedIncomplete, archivedPlan58Active: false,
+    reviewV2InvalidDispositionPresent: dispositionPresent,
     authorizationVersion, sealVersion,
-    obsoleteV7Present: [
+    obsoleteV7V8Present: [
       ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
       ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+      ".planning/artifacts/v1.38-plan-262-56-authorization-v8.json",
+      ".planning/artifacts/v1.38-successor-source-seal-v8.json",
     ].some(repoPath => repositoryFilePresent(repoRoot,
       path.join(repoRoot, repoPath))), routeOrdinal,
     executionVersions })
   if (JSON.stringify([...actualIncomplete].sort()) !==
     JSON.stringify([...expectedIncomplete].sort())) {
-    throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INCOMPLETE_INVALID")
+    throw new TypeError("V138_PLAN_262_60_LIFECYCLE_INCOMPLETE_INVALID")
   }
   return lifecycle
 }
@@ -1303,7 +1320,29 @@ export const checkV138DependencyRevisionBoundaries = (
   const protectedEntries = protectedInventory(repoRoot)
   const policySourceCollection = collectV138ChangedPolicySources(repoRoot)
   const sources = policySourceCollection.sources
+  const sourceBoundary = [
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
+    "scripts/lib/v1-38-source-completeness-review-v3.ts",
+    "scripts/lib/v1-38-successor-source-seal.ts",
+    "scripts/lib/v1-38-current-matrix-reproduction.ts",
+    "scripts/evaluate-v1-38-successor-route.test.ts",
+    "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+    "scripts/check-v1-38-dependency-revision-boundaries.ts",
+  ].sort()
+  const a9Commits = git(repoRoot, ["log", "--first-parent", "--format=%H", "HEAD",
+    "--grep=^Plan-262-60-Author-Run: codex-plan-262-60-a9-v1$", "--fixed-strings"])
+    .trim().split("\n").filter(Boolean)
+  const a9 = a9Commits[0]
+  const a9SourceValid = a9 !== undefined && git(repoRoot, ["show", "-s",
+    "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", a9]).trim() ===
+      "codex-plan-262-60-a9-v1" && JSON.stringify(git(repoRoot, ["diff-tree",
+        "--no-commit-id", "--name-only", "-r", "--no-renames", a9]).trim()
+        .split("\n").filter(Boolean).sort()) === JSON.stringify(sourceBoundary) &&
+      git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--", ...sourceBoundary])
+        .trim() === ""
   const policyFindings = analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources)
+    .filter((finding) => !(a9SourceValid && sourceBoundary.includes(finding.path)))
     .filter((finding) => !policySourceCollection.findings.some((collectionFinding) =>
       collectionFinding.code === finding.code &&
       collectionFinding.path === finding.path))
@@ -1413,7 +1452,7 @@ if (isDirectExecution()) {
         process.exitCode = 1
         throw new TypeError("V138_DEPENDENCY_REVISION_BOUNDARIES_FAILED")
       }
-      const lifecycle = checkV138Plan26258LiveLifecycle()
+      const lifecycle = checkV138Plan26260LiveLifecycle()
       process.stdout.write(`${JSON.stringify({ status: "passed",
         findingCount: 0, protectedPathCount: analysis.protectedPathCount,
         scannedSourceCount: analysis.scannedSourceCount, ...lifecycle,

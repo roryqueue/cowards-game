@@ -28,15 +28,15 @@ import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA,
   V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
-  V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+  V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA,
   V138_PLAN_262_55_REVIEWER_PROTOCOL,
   V138_PLAN_262_57_FRESH_DESTINATIONS,
   V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
-  V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
-  V138_PLAN_262_56_OBSOLETE_V7_PATHS,
-  V138_PLAN_262_57_ROUTE_CONTRACT_V8,
+  V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA,
+  V138_PLAN_262_56_OBSOLETE_V7_V8_PATHS,
+  V138_PLAN_262_57_ROUTE_CONTRACT_V9,
   buildV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
@@ -62,13 +62,65 @@ import {
   checkV138ExactMachineStatus,
   collectV138ChangedPolicySources,
 } from "./check-v1-38-dependency-revision-boundaries.js"
-import { validateV138ReviewV3Document } from
+import { computeV138ReviewV3Root, validateV138ReviewV3Document } from
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
-it("REDs the strict review-v3 validator before A9 implementation", () => {
-  validateV138ReviewV3Document({})
+const reviewV3Fixture = () => {
+  const oid = "a".repeat(40)
+  const otherOid = "b".repeat(40)
+  const digest = `sha256:${"1".repeat(64)}`
+  const paths = Array.from({ length: 8 }, (_, index) => `scripts/source-${index}.ts`)
+  const body: Record<string, any> = {
+    schemaVersion: "v1.38-plan-262-62-source-completeness-review-v3",
+    sourceBase9: oid, sourceA9: otherOid,
+    sourceCustody: { tree: oid, parent: oid,
+      authorRun: "codex-plan-262-60-a9-v1", paths,
+      blobs: paths.map((item) => ({ path: item, mode: "100644",
+        blobOid: oid, sha256: digest, byteLength: 1 })) },
+    commands: Array.from({ length: 10 }, (_, index) => ({ command: `command-${index}`,
+      argv: ["node", `command-${index}`], exitStatus: 0,
+      stdoutSha256: digest, stderrSha256: digest })),
+    handlerObservations: Array.from({ length: 10 }, (_, index) => ({
+      command: `command-${index}`, handler: `handler-${index}`,
+      prerequisites: "authorization-v9/seal-v9", destination: `destination-${index}`,
+      effectClass: "injected", disposition: "observed" })),
+    protectedHistory: { root: digest, protectedA8: otherOid,
+      protectedRoots: Object.fromEntries(Array.from({ length: 8 }, (_, index) =>
+        [`root-${index}`, digest])) },
+    chargeIds: [5, 6, 7, 8, 9].flatMap((version) =>
+      Array.from({ length: 8 }, (_, index) => `calibration:v${version}:${index}`)),
+    priorAuthorizationBytes: Array.from({ length: 6 }, (_, index) => ({
+      path: `authorization-${index}.json`, commit: oid, blobOid: oid,
+      sha256: digest, byteLength: 1 })),
+    snapshots: [{ name: "before", inventoryRoot: digest, pathCount: 0 },
+      { name: "after", inventoryRoot: digest, pathCount: 0 }],
+    orderedEvents: [{ ordinal: 0, event: "validated", path: "detached-review",
+      result: "pass" }], cleanup: { complete: true, residualPaths: [] },
+    publication: { commit: otherOid, parent: otherOid, tree: oid,
+      reviewBlob: oid, reportBlob: oid, changedPaths: [
+        ".planning/artifacts/v1.38-plan-262-62-source-completeness-review-v3.json",
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md",
+      ], laterChangesAbsent: true },
+    verdict: { findingCount: 0, sourceCompletenessPassed: true,
+      authorizesExecution: false },
+    identityClaims: { independentPersonClaimed: false, reviewerSeparated: false,
+      externalIdentityClaimed: false, cryptographicReviewerIdentityClaimed: false,
+      independentCustodyClaimed: false, proceduralContext: "fresh procedure" },
+  }
+  return { ...body, reviewV3Root: computeV138ReviewV3Root(body) }
+}
+
+it("strictly validates review-v3 nested structure and recomputed roots", () => {
+  const value = reviewV3Fixture()
+  expect(validateV138ReviewV3Document(value)).toEqual(value)
+  const forged = structuredClone(value)
+  forged.commands[0].exitStatus = 64
+  const { reviewV3Root: _discarded, ...body } = forged
+  forged.reviewV3Root = computeV138ReviewV3Root(body)
+  expect(() => validateV138ReviewV3Document(forged))
+    .toThrow("V138_REVIEW_V3_COMMANDS_INVALID")
 })
 
 const sha256Zero = `sha256:${"0".repeat(64)}`
@@ -505,9 +557,9 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
       .toBe("single_operator_procedural_source_review_v1")
     expect(checkV138Plan26257RouteContract()).toBe(
       V138_PLAN_262_57_ROUTE_CONTRACT)
-    expect(V138_PLAN_262_57_ROUTE_CONTRACT_V8).toMatchObject({ routeOrdinal: 7,
-      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
-      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+    expect(V138_PLAN_262_57_ROUTE_CONTRACT_V9).toMatchObject({ routeOrdinal: 7,
+      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA,
+      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA,
       executionContextSchema: "v1.38-current-matrix-execution-context-v11",
       preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
       calibrationSchema: "v1.38-current-matrix-calibration-v11",
@@ -526,10 +578,10 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
     expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
       .toBe("v1.38-successor-source-seal-v7")
     expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
-      .not.toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+      .not.toBe(V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA)
     expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
-      .not.toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
-    expect(V138_PLAN_262_56_OBSOLETE_V7_PATHS).toEqual([
+      .not.toBe(V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA)
+    expect(V138_PLAN_262_56_OBSOLETE_V7_V8_PATHS).toEqual([
       ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
       ".planning/artifacts/v1.38-successor-source-seal-v7.json",
     ])

@@ -119,6 +119,9 @@ import {
   checkV138SuccessorSealCommitV7,
   checkV138SuccessorSourceSealV7,
   checkV138SealedWorktreeAtA7,
+  checkV138Plan26256AuthorizationV9,
+  checkV138SuccessorSealCommitV9,
+  checkV138SuccessorSourceSealV9,
   deriveV138ProtectedHistoryV7,
   inspectV138SuccessorSealCommitV7Anchor,
   inspectV138ProtectedHistoryFailureSealCommitV7Anchor,
@@ -140,6 +143,8 @@ import {
   V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
   V138_PLAN_262_56_CANONICAL_PATHS,
+  V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA,
+  V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA,
   V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
   V138_PLAN_262_57_FRESH_DESTINATIONS,
@@ -15367,22 +15372,22 @@ export const runReceiptCli = async (
       }
       flags.set(flag, value)
     }
-    const expected = new Set(["--authorization", "--seal", "--source-a7",
-      "--source-b7"])
+    const expected = new Set(["--authorization", "--seal", "--source-a9",
+      "--source-b9"])
     if (write && (target === undefined || target === "") ||
       flags.size !== expected.size ||
       [...flags.keys()].some((flag) => !expected.has(flag))) {
       throw new TypeError("MATRIX_PLAN_262_57_PRE_START_CLI_ARGUMENTS_INVALID")
     }
-    const sourceA7 = flags.get("--source-a7")!
-    const sourceB7 = flags.get("--source-b7")!
+    const sourceA9 = flags.get("--source-a9")!
+    const sourceB9 = flags.get("--source-b9")!
     const result = write ? writeV138Plan26257PreStartObstructionV1(repoRoot,
       target!, flags.get("--authorization")!, flags.get("--seal")!,
-      sourceA7, sourceB7) : command ===
+      sourceA9, sourceB9) : command ===
         "--check-plan-262-57-pre-start-obstruction-v1" ?
-          checkV138Plan26257PreStartObstructionBranch(repoRoot, sourceA7,
-            sourceB7) : checkV138Plan26257PreExecutionReadinessV1(repoRoot,
-            sourceA7, sourceB7)
+          checkV138Plan26257PreStartObstructionBranch(repoRoot, sourceA9,
+            sourceB9) : checkV138Plan26257PreExecutionReadinessV1(repoRoot,
+            sourceA9, sourceB9)
     output(`${canonical(result)}\n`)
     return
   }
@@ -15397,7 +15402,7 @@ export const runReceiptCli = async (
       if (argv.length !== 18 || argv[4] !== "--mode" ||
         argv[6] !== "--cwd" || argv[8] !== "--terminal-agent-registry-json" ||
         argv[10] !== "--authorization" || argv[12] !== "--seal" ||
-        argv[14] !== "--source-a7" || argv[16] !== "--source-b7") {
+        argv[14] !== "--source-a9" || argv[16] !== "--source-b9") {
         throw new TypeError("MATRIX_PLAN_262_57_ROUTE_START_CLI_ARGUMENTS_INVALID")
       }
       result = writeV138Plan26257RouteStartV1(repoRoot, argv[3]!, argv[5]!,
@@ -15406,7 +15411,7 @@ export const runReceiptCli = async (
     } else if (command === "--write-headroom-preflight-v11-receipt") {
       if (argv.length !== 14 || argv[4] !== "--route-start" ||
         argv[6] !== "--authorization" || argv[8] !== "--seal" ||
-        argv[10] !== "--source-a7" || argv[12] !== "--source-b7") {
+        argv[10] !== "--source-a9" || argv[12] !== "--source-b9") {
         throw new TypeError("MATRIX_PREFLIGHT_V11_CLI_ARGUMENTS_INVALID")
       }
       result = await writeV138HostHeadroomPreflightV11Receipt(repoRoot,
@@ -15414,8 +15419,8 @@ export const runReceiptCli = async (
         dependencies.observeHeadroom)
     } else if (command === "--calibrate-parallel-v11-receipt") {
       if (argv.length !== 12 || argv[4] !== "--preflight" ||
-        argv[6] !== "--route-start" || argv[8] !== "--source-a7" ||
-        argv[10] !== "--source-b7") {
+        argv[6] !== "--route-start" || argv[8] !== "--source-a9" ||
+        argv[10] !== "--source-b9") {
         throw new TypeError("MATRIX_CALIBRATION_V11_CLI_ARGUMENTS_INVALID")
       }
       result = await writeV138ParallelCalibrationV11Receipt(repoRoot,
@@ -15423,8 +15428,8 @@ export const runReceiptCli = async (
         dependencies.calibrate)
     } else {
       if (argv.length !== 12 || argv[4] !== "--calibration" ||
-        argv[6] !== "--route-start" || argv[8] !== "--source-a7" ||
-        argv[10] !== "--source-b7") {
+        argv[6] !== "--route-start" || argv[8] !== "--source-a9" ||
+        argv[10] !== "--source-b9") {
         throw new TypeError("MATRIX_REPRODUCTION_V12_CLI_ARGUMENTS_INVALID")
       }
       result = await writeV138AuthoritativeMatrixV12Receipt(repoRoot,
@@ -15451,10 +15456,10 @@ export const runReceiptCli = async (
     }
     const expected = new Set(write ? ["--authorization", "--seal",
       "--route-start", "--preflight", "--calibration", "--reproduction",
-      "--source-a7", "--source-b7", "--disposition"] :
+      "--source-a9", "--source-b9", "--disposition"] :
       ["--authorization", "--seal", "--route-start", "--preflight",
-        "--calibration", "--reproduction", "--terminal", "--source-a7",
-        "--source-b7"])
+        "--calibration", "--reproduction", "--terminal", "--source-a9",
+        "--source-b9"])
     if (write && (target === undefined || target === "") ||
       flags.size !== expected.size ||
       [...flags.keys()].some((flag) => !expected.has(flag))) {
@@ -15468,18 +15473,18 @@ export const runReceiptCli = async (
         plan26257Path(repoRoot, flags.get(flag) ?? "", key)
       }
     }
-    const sourceA7 = flags.get("--source-a7")
-    const sourceB7 = flags.get("--source-b7")
+    const sourceA9 = flags.get("--source-a9")
+    const sourceB9 = flags.get("--source-b9")
     const disposition = flags.get("--disposition")
-    if (sourceA7 === undefined || sourceB7 === undefined || write &&
+    if (sourceA9 === undefined || sourceB9 === undefined || write &&
       (disposition === undefined || !V138_PLAN_262_57_DISPOSITIONS.includes(
         disposition as never))) {
       throw new TypeError("MATRIX_PLAN_262_57_CLI_ARGUMENTS_INVALID")
     }
     const terminal = write ? writeV138Plan26257TerminalV1(repoRoot, target!,
-      disposition as V138Plan26257Disposition, sourceA7, sourceB7,
+      disposition as V138Plan26257Disposition, sourceA9, sourceB9,
       dependencies.patternCObservation, dependencies.observedRootOverrides) :
-      checkV138Plan26257TerminalBranch(repoRoot, sourceA7, sourceB7,
+      checkV138Plan26257TerminalBranch(repoRoot, sourceA9, sourceB9,
         dependencies.patternCObservation, dependencies.observedRootOverrides)
     output(`${canonical({ disposition: terminal.disposition,
       terminalRoot: terminal.terminalRoot })}\n`)
@@ -18997,10 +19002,10 @@ export const V138_PLAN_262_57_DISPOSITIONS = Object.freeze([
 ] as const)
 
 export const V138_PLAN_262_57_ROUTE_CONTRACT = Object.freeze({
-  schemaVersion: "v1.38-plan-262-57-route-contract-v1" as const,
+  schemaVersion: "v1.38-plan-262-57-route-contract-v3" as const,
   routeOrdinal: 7 as const,
-  authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
-  sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+  authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA,
+  sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA,
   executionContextSchema:
     "v1.38-current-matrix-execution-context-v11" as const,
   preflightSchema:
@@ -19035,7 +19040,7 @@ export const buildV138Plan26257RouteStartV1 = (input: {
   const context = checkV138ExecutionContextV11Receipt(input.context)
   const reservationBody = { schemaVersion:
     "v1.38-plan-262-57-route-reservation-v1" as const,
-    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    sourceA9: context.sourceA9, sourceB9: context.sourceB9,
     authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
     executionContextRoot: context.receiptRoot }
   const reservationRoot = v138SuccessorRoot("containmentPolicy",
@@ -19043,8 +19048,8 @@ export const buildV138Plan26257RouteStartV1 = (input: {
   const preflightConsumptionBody = {
     schemaVersion: "v1.38-plan-262-57-consumption-v1" as const,
     stage: "preflight" as const,
-    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
-    sourceB7CustodyRoot: context.sourceB7CustodyRoot,
+    sourceA9: context.sourceA9, sourceB9: context.sourceB9,
+    sourceB9CustodyRoot: context.sourceB9CustodyRoot,
     authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
     executionContextRoot: context.receiptRoot,
     predecessorRoot: context.receiptRoot,
@@ -19077,8 +19082,8 @@ export const checkV138Plan26257RouteStartV1 = (value: unknown,
     "noRetry", "routeStartRoot"], "MATRIX_PLAN_262_57_ROUTE_START_INVALID")
   const context = checkV138ExecutionContextV11Receipt(start.context, route)
   const consumption = exactRecord(start.preflightConsumption,
-    ["schemaVersion", "stage", "sourceA7", "sourceB7",
-      "sourceB7CustodyRoot", "authorizationRoot", "sealRoot",
+    ["schemaVersion", "stage", "sourceA9", "sourceB9",
+      "sourceB9CustodyRoot", "authorizationRoot", "sealRoot",
       "executionContextRoot", "predecessorRoot", "chargedAttemptCount",
       "chargedAttemptRoot", "noRetry", "markerRoot"],
     "MATRIX_PLAN_262_57_ROUTE_START_INVALID")
@@ -19087,9 +19092,9 @@ export const checkV138Plan26257RouteStartV1 = (value: unknown,
   if (start.schemaVersion !== "v1.38-plan-262-57-route-start-v1" ||
     start.routeOrdinal !== 7 || start.executionContextRoot !==
       context.receiptRoot || consumption.stage !== "preflight" ||
-    consumption.sourceA7 !== context.sourceA7 ||
-    consumption.sourceB7 !== context.sourceB7 ||
-    consumption.sourceB7CustodyRoot !== context.sourceB7CustodyRoot ||
+    consumption.sourceA9 !== context.sourceA9 ||
+    consumption.sourceB9 !== context.sourceB9 ||
+    consumption.sourceB9CustodyRoot !== context.sourceB9CustodyRoot ||
     consumption.authorizationRoot !== context.authorizationRoot ||
     consumption.sealRoot !== context.sealRoot ||
     consumption.executionContextRoot !== context.receiptRoot ||
@@ -19104,7 +19109,7 @@ export const checkV138Plan26257RouteStartV1 = (value: unknown,
     start.reservationRoot !== v138SuccessorRoot("containmentPolicy",
       "v1.38-plan-262-57-route-reservation-v1", {
         schemaVersion: "v1.38-plan-262-57-route-reservation-v1",
-        sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+        sourceA9: context.sourceA9, sourceB9: context.sourceB9,
         authorizationRoot: context.authorizationRoot,
         sealRoot: context.sealRoot,
         executionContextRoot: context.receiptRoot }) ||
@@ -19119,7 +19124,7 @@ export const checkV138Plan26257RouteStartV1 = (value: unknown,
 export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
   targetPath: string, mode: string, cwd: string,
   terminalAgentRegistry: unknown, authorizationPath: string, sealPath: string,
-  sourceA7: string, sourceB7: string,
+  sourceA9: string, sourceB9: string,
   afterReservation?: (() => void)) => {
   const reservationDirectory = path.resolve(repoRoot,
     ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1")
@@ -19145,24 +19150,24 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
     const chain = validateV138CanonicalParentChain(repoRoot, target)
     plan26257Path(repoRoot, authorizationPath, "authorization")
     plan26257Path(repoRoot, sealPath, "seal")
-    const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-      sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+    const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+      sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
       sealValue: readPlan26257(repoRoot, "seal") })
     const context = buildV138ExecutionContextV11Receipt({ route, mode, cwd,
       terminalAgentRegistry })
     const start = checkV138Plan26257RouteStartV1(
       buildV138Plan26257RouteStartV1({ context }), route)
     const readiness = checkV138Plan26257PreExecutionReadinessV1(repoRoot,
-      sourceA7, sourceB7)
+      sourceA9, sourceB9)
     checkV138Plan26257PrerequisiteRoots({
       authorizationRoot: route.authorization.authorizationRoot,
       sealRoot: route.seal.sealRoot,
     }, { authorizationRoot: readiness.authorizationRoot,
       sealRoot: readiness.sealRoot })
-    assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7, route)
+    assertV138Plan26257PublicationRoute(repoRoot, sourceA9, sourceB9, route)
     const reservation = { schemaVersion:
       "v1.38-plan-262-57-route-reservation-v1" as const,
-      sourceA7, sourceB7,
+      sourceA9, sourceB9,
       authorizationRoot: route.authorization.authorizationRoot,
       sealRoot: route.seal.sealRoot,
       executionContextRoot: context.receiptRoot,
@@ -19208,12 +19213,12 @@ const checkV138Plan26257Reservation = (repoRoot: string,
     ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1/claim.json")
   const bytes = readV138RepositoryFileNoFollow(repoRoot, target, "required")!
   const claim = exactRecord(JSON.parse(bytes.toString("utf8")),
-    ["schemaVersion", "sourceA7", "sourceB7", "authorizationRoot", "sealRoot",
+    ["schemaVersion", "sourceA9", "sourceB9", "authorizationRoot", "sealRoot",
       "executionContextRoot", "reservationRoot"],
     "MATRIX_PLAN_262_57_RESERVATION_INVALID")
   const context = checkV138ExecutionContextV11Receipt(start.context)
   if (claim.schemaVersion !== "v1.38-plan-262-57-route-reservation-v1" ||
-    claim.sourceA7 !== context.sourceA7 || claim.sourceB7 !== context.sourceB7 ||
+    claim.sourceA9 !== context.sourceA9 || claim.sourceB9 !== context.sourceB9 ||
     claim.authorizationRoot !== context.authorizationRoot ||
     claim.sealRoot !== context.sealRoot ||
     claim.executionContextRoot !== context.receiptRoot ||
@@ -19262,23 +19267,21 @@ const readPlan26257 = (repoRoot: string, key: keyof typeof PLAN_262_57_PATHS,
 }
 
 const checkV138Plan26256AuthorityRoute = (input: { repoRoot: string;
-  sourceA7: string; sourceB7: string; authorizationValue: unknown;
+  sourceA9: string; sourceB9: string; authorizationValue: unknown;
   sealValue: unknown;
   observationException?: V138SuccessorSealV7ObservationException }) => {
-  const custody = checkV138SuccessorSealCommitV7({ repoRoot: input.repoRoot,
-    sourceA7: input.sourceA7, sourceB7: input.sourceB7,
-    authorizationValue: input.authorizationValue,
-    sealValue: input.sealValue,
-    allowPlan26257Artifacts: true,
-    ...(input.observationException === undefined ? {} : {
-      observationException: input.observationException }) })
-  const authorization = input.observationException === undefined ?
-    checkV138Plan26256AuthorizationV7(input.repoRoot,
-      input.authorizationValue) : checkV138Plan26256AuthorizationV7Except(
-        input.repoRoot, input.authorizationValue, input.observationException)
-  const seal = checkV138SuccessorSourceSealV7(input.repoRoot, input.sealValue,
-    authorization, input.observationException)
-  checkV138SealedWorktreeAtA7(input.repoRoot, seal)
+  if (input.observationException !== undefined) {
+    throw new TypeError("MATRIX_PLAN_262_57_V9_OBSERVATION_EXCEPTION_FORBIDDEN")
+  }
+  const authorization = checkV138Plan26256AuthorizationV9(input.repoRoot,
+    input.authorizationValue)
+  if (authorization.sourceA9 !== input.sourceA9) {
+    throw new TypeError("MATRIX_PLAN_262_57_V9_SOURCE_JOIN_INVALID")
+  }
+  const seal = checkV138SuccessorSourceSealV9({ repoRoot: input.repoRoot,
+    authorization, seal: input.sealValue })
+  const custody = checkV138SuccessorSealCommitV9({ repoRoot: input.repoRoot,
+    sourceB9: input.sourceB9, authorization, seal })
   if (custody.authorizationRoot !== authorization.authorizationRoot ||
     custody.sealRoot !== seal.sealRoot) {
     throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_JOIN_INVALID")
@@ -19323,10 +19326,10 @@ export const buildV138ExecutionContextV11Receipt = (input: { route: V138Route7;
     "v1.38-current-matrix-execution-context-v11" as const,
     mode: ownership.mode, cwd: ownership.cwd,
     terminalAgentRegistry: ownership.terminalAgentRegistry,
-    sourceA7: input.route.custody.sourceA7,
-    sourceB7: input.route.custody.sourceB7,
-    sourceB7Custody: input.route.custody,
-    sourceB7CustodyRoot: input.route.custody.custodyRoot,
+    sourceA9: input.route.custody.sourceA9,
+    sourceB9: input.route.custody.sourceB9,
+    sourceB9Custody: input.route.custody,
+    sourceB9CustodyRoot: input.route.custody.custodyRoot,
     authorizationRoot: input.route.authorization.authorizationRoot,
     sealRoot: input.route.seal.sealRoot,
     selectedRouteClosureRoot: input.route.seal.selectedRouteClosure.closureRoot,
@@ -19346,8 +19349,8 @@ export const buildV138ExecutionContextV11Receipt = (input: { route: V138Route7;
 export const checkV138ExecutionContextV11Receipt = (value: unknown,
   route?: V138Route7) => {
   const receipt = exactRecord(value, ["schemaVersion", "mode", "cwd",
-    "terminalAgentRegistry", "sourceA7", "sourceB7", "sourceB7Custody",
-    "sourceB7CustodyRoot", "authorizationRoot", "sealRoot",
+    "terminalAgentRegistry", "sourceA9", "sourceB9", "sourceB9Custody",
+    "sourceB9CustodyRoot", "authorizationRoot", "sealRoot",
     "selectedRouteClosureRoot", "protectedHistoryRoot",
     "priorAuthorizationBytes", "patternCOwnership", "formationAbsenceBound",
     "runtimeRoute", "resourceSampleMilliseconds", "acceptedCellCount",
@@ -19364,9 +19367,9 @@ export const checkV138ExecutionContextV11Receipt = (value: unknown,
     receipt.acceptedCellCount !== 0 || receipt.noRetry !== true ||
     receiptRoot !== v138SuccessorRoot("evidenceBundle",
       String(receipt.schemaVersion), body) || route !== undefined && (
-      receipt.sourceA7 !== route.custody.sourceA7 ||
-      receipt.sourceB7 !== route.custody.sourceB7 ||
-      canonical(receipt.sourceB7Custody) !== canonical(route.custody) ||
+      receipt.sourceA9 !== route.custody.sourceA9 ||
+      receipt.sourceB9 !== route.custody.sourceB9 ||
+      canonical(receipt.sourceB9Custody) !== canonical(route.custody) ||
       receipt.authorizationRoot !== route.authorization.authorizationRoot ||
       receipt.sealRoot !== route.seal.sealRoot ||
       receipt.selectedRouteClosureRoot !==
@@ -19394,7 +19397,7 @@ export const buildV138HostHeadroomPreflightV11Receipt = (input: {
   } : null
   const body = { schemaVersion:
     "v1.38-current-matrix-headroom-preflight-v11" as const,
-    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    sourceA9: context.sourceA9, sourceB9: context.sourceB9,
     executionContextRoot: context.receiptRoot,
     authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
     chargedIdentityId: "preflight:v11:0" as const,
@@ -19412,7 +19415,7 @@ export const buildV138HostHeadroomPreflightV11Receipt = (input: {
 export const checkV138HostHeadroomPreflightV11Receipt = (value: unknown,
   contextValue: Record<string, unknown>) => {
   const context = checkV138ExecutionContextV11Receipt(contextValue)
-  const receipt = exactRecord(value, ["schemaVersion", "sourceA7", "sourceB7",
+  const receipt = exactRecord(value, ["schemaVersion", "sourceA9", "sourceB9",
     "executionContextRoot", "authorizationRoot", "sealRoot",
     "chargedIdentityId", "metricId", "providerId", "parserId",
     "requiredHostHeadroomBasisPoints", "observation", "disposition",
@@ -19428,8 +19431,8 @@ export const checkV138HostHeadroomPreflightV11Receipt = (value: unknown,
   const { receiptRoot, ...body } = receipt
   if (receipt.schemaVersion !==
     "v1.38-current-matrix-headroom-preflight-v11" ||
-    receipt.sourceA7 !== context.sourceA7 ||
-    receipt.sourceB7 !== context.sourceB7 ||
+    receipt.sourceA9 !== context.sourceA9 ||
+    receipt.sourceB9 !== context.sourceB9 ||
     receipt.executionContextRoot !== context.receiptRoot ||
     receipt.authorizationRoot !== context.authorizationRoot ||
     receipt.sealRoot !== context.sealRoot ||
@@ -19479,8 +19482,8 @@ const writeV138Plan26257Marker = (repoRoot: string, stage: "preflight" |
   const target = plan26257Path(repoRoot, PLAN_262_57_PATHS[key], key)
   const chain = validateV138CanonicalParentChain(repoRoot, target)
   const body = { schemaVersion: "v1.38-plan-262-57-consumption-v1" as const,
-    stage, sourceA7: context.sourceA7, sourceB7: context.sourceB7,
-    sourceB7CustodyRoot: context.sourceB7CustodyRoot,
+    stage, sourceA9: context.sourceA9, sourceB9: context.sourceB9,
+    sourceB9CustodyRoot: context.sourceB9CustodyRoot,
     authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
     executionContextRoot: context.receiptRoot, predecessorRoot,
     chargedAttemptCount: chargedAttemptIds.length,
@@ -19505,16 +19508,16 @@ export const checkV138Plan26257ConsumptionMarker = (repoRoot: string,
     checkV138Plan26257RouteStartV1(JSON.parse(readFileSync(path.resolve(
       repoRoot, PLAN_262_57_PATHS.context), "utf8"))).preflightConsumption :
     readPlan26257(repoRoot, key)
-  const marker = exactRecord(value, ["schemaVersion", "stage", "sourceA7",
-    "sourceB7", "sourceB7CustodyRoot", "authorizationRoot", "sealRoot",
+  const marker = exactRecord(value, ["schemaVersion", "stage", "sourceA9",
+    "sourceB9", "sourceB9CustodyRoot", "authorizationRoot", "sealRoot",
     "executionContextRoot", "predecessorRoot", "chargedAttemptCount",
     "chargedAttemptRoot", "noRetry", "markerRoot"],
   "MATRIX_PLAN_262_30_CONSUMPTION_MARKER_INVALID")
   const { markerRoot, ...body } = marker
   if (marker.schemaVersion !== "v1.38-plan-262-57-consumption-v1" ||
-    marker.stage !== stage || marker.sourceA7 !== checkedContext.sourceA7 ||
-    marker.sourceB7 !== checkedContext.sourceB7 ||
-    marker.sourceB7CustodyRoot !== checkedContext.sourceB7CustodyRoot ||
+    marker.stage !== stage || marker.sourceA9 !== checkedContext.sourceA9 ||
+    marker.sourceB9 !== checkedContext.sourceB9 ||
+    marker.sourceB9CustodyRoot !== checkedContext.sourceB9CustodyRoot ||
     marker.authorizationRoot !== checkedContext.authorizationRoot ||
     marker.sealRoot !== checkedContext.sealRoot ||
     marker.executionContextRoot !== checkedContext.receiptRoot ||
@@ -19545,10 +19548,10 @@ const assertV138Plan26257AuthorityOpen = (repoRoot: string) => {
 }
 
 const assertV138Plan26257PublicationRoute = (repoRoot: string,
-  sourceA7: string, sourceB7: string, expectedRoute: V138Route7): V138Route7 => {
+  sourceA9: string, sourceB9: string, expectedRoute: V138Route7): V138Route7 => {
   assertV138Plan26257AuthorityOpen(repoRoot)
-  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   if (canonical(currentRoute) !== canonical(expectedRoute)) {
     throw new TypeError("MATRIX_PLAN_262_30_AUTHORITY_CHANGED")
@@ -19571,15 +19574,15 @@ export const checkV138Plan26257PrerequisiteRoots = (
 export const writeV138ExecutionContextV11Receipt = (repoRoot: string,
   targetPath: string, mode: string, cwd: string,
   terminalAgentRegistry: unknown, authorizationPath: string, sealPath: string,
-  sourceA7: string, sourceB7: string) => {
+  sourceA9: string, sourceB9: string) => {
   return writeV138Plan26257RouteStartV1(repoRoot, targetPath, mode, cwd,
-    terminalAgentRegistry, authorizationPath, sealPath, sourceA7, sourceB7)
+    terminalAgentRegistry, authorizationPath, sealPath, sourceA9, sourceB9)
 }
 
 export const writeV138HostHeadroomPreflightV11Receipt = async (
   repoRoot: string, targetPath: string, contextPath: string,
-  authorizationPath: string, sealPath: string, sourceA7: string,
-  sourceB7: string, observe: () => Promise<V138DarwinHeadroomResult> = () =>
+  authorizationPath: string, sealPath: string, sourceA9: string,
+  sourceB9: string, observe: () => Promise<V138DarwinHeadroomResult> = () =>
     observeDarwinHeadroomOwned(executeOwnedMemoryPressureQ)) => {
   assertV138Plan26257AuthorityOpen(repoRoot)
   const target = plan26257Path(repoRoot, targetPath, "preflight")
@@ -19587,7 +19590,7 @@ export const writeV138HostHeadroomPreflightV11Receipt = async (
   plan26257Path(repoRoot, contextPath, "context")
   plan26257Path(repoRoot, authorizationPath, "authorization")
   plan26257Path(repoRoot, sealPath, "seal")
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9, sourceB9,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const context = checkV138ExecutionContextV11Receipt(
@@ -19600,8 +19603,8 @@ export const writeV138HostHeadroomPreflightV11Receipt = async (
     result = { ok: false, reason: "resource_measurement_unavailable" }
   }
   assertV138Plan26257AuthorityOpen(repoRoot)
-  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const currentContext = checkV138ExecutionContextV11Receipt(
     readPlan26257(repoRoot, "context"), currentRoute)
@@ -19612,15 +19615,15 @@ export const writeV138HostHeadroomPreflightV11Receipt = async (
   const receipt = checkV138HostHeadroomPreflightV11Receipt(
     buildV138HostHeadroomPreflightV11Receipt({ result,
       context: currentContext }), currentContext)
-  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7,
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA9, sourceB9,
     currentRoute)
   writeV138Plan26219Immutable(target, chain, receipt)
   return receipt
 }
 
 export const checkV138Plan26257PreflightV11 = (repoRoot: string,
-  sourceA7: string, sourceB7: string) => {
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+  sourceA9: string, sourceB9: string) => {
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9, sourceB9,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const context = checkV138ExecutionContextV11Receipt(
@@ -19642,9 +19645,9 @@ const route7ContextAsV9 = (value: Record<string, unknown>) => {
     mode: context.mode, cwd: context.cwd,
     terminalAgentRegistry: { ...(context.terminalAgentRegistry as object),
       schemaVersion: "v1.38-plan-262-30-terminal-agent-registry-v1" },
-    sourceA5: context.sourceA7, sourceB5: context.sourceB7,
-    sourceB5Custody: context.sourceB7Custody,
-    sourceB5CustodyRoot: context.sourceB7CustodyRoot,
+    sourceA5: context.sourceA9, sourceB5: context.sourceB9,
+    sourceB5Custody: context.sourceB9Custody,
+    sourceB5CustodyRoot: context.sourceB9CustodyRoot,
     authorizationRoot: context.authorizationRoot, sealRoot: context.sealRoot,
     selectedRouteClosureRoot: context.selectedRouteClosureRoot,
     protectedHistoryRoot: context.protectedHistoryRoot,
@@ -19666,7 +19669,7 @@ const route7PreflightAsV9 = (value: Record<string, unknown>,
   const contextV9Adapter = route7ContextAsV9(contextV9)
   const body = replaceVersionStrings({
     schemaVersion: "v1.38-current-matrix-headroom-preflight-v9" as const,
-    sourceA5: preflight.sourceA7, sourceB5: preflight.sourceB7,
+    sourceA5: preflight.sourceA9, sourceB5: preflight.sourceB9,
     executionContextRoot: contextV9Adapter.receiptRoot,
     authorizationRoot: preflight.authorizationRoot,
     sealRoot: preflight.sealRoot,
@@ -19708,7 +19711,7 @@ export const buildV138ParallelCalibrationV11Receipt = (input: {
     callbackFailureAfterConsumption: input.callbackFailureAfterConsumption })
   const body = replaceVersionStrings({ ...v8,
     schemaVersion: "v1.38-current-matrix-calibration-v11",
-    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    sourceA9: context.sourceA9, sourceB9: context.sourceB9,
     executionContextRoot: context.receiptRoot,
     preflightRoot: preflight.receiptRoot }, ":v9:", ":v11:") as
     Record<string, unknown>
@@ -19728,11 +19731,11 @@ export const checkV138ParallelCalibrationV11Receipt = (inventory:
     "calibrationShardCount", "observationMode", "childLaunchCount",
     "terminalOutcomeCount", "acceptedCellCount", "completeCleanup",
     "publicStopReason", "supervisionRoot", "attempts", "runtimeRoute",
-    "privacyProjection", "noRetry", "sourceA7", "sourceB7", "receiptRoot"],
+    "privacyProjection", "noRetry", "sourceA9", "sourceB9", "receiptRoot"],
   "MATRIX_CALIBRATION_V9_INVALID")
   const { receiptRoot, ...body } = receipt
   if (receipt.schemaVersion !== "v1.38-current-matrix-calibration-v11" ||
-    receipt.sourceA7 !== context.sourceA7 || receipt.sourceB7 !== context.sourceB7 ||
+    receipt.sourceA9 !== context.sourceA9 || receipt.sourceB9 !== context.sourceB9 ||
     receipt.executionContextRoot !== context.receiptRoot ||
     receipt.preflightRoot !== preflight.receiptRoot ||
     receiptRoot !== v138SuccessorRoot("evidenceBundle",
@@ -19769,14 +19772,14 @@ export const checkV138ParallelCalibrationV11Receipt = (inventory:
 
 export const writeV138ParallelCalibrationV11Receipt = async (repoRoot: string,
   targetPath: string, preflightPath: string, contextPath: string,
-  sourceA7: string, sourceB7: string,
+  sourceA9: string, sourceB9: string,
   run: typeof calibrateV138ParallelMatrix = calibrateV138ParallelMatrix) => {
   assertV138Plan26257AuthorityOpen(repoRoot)
   const target = plan26257Path(repoRoot, targetPath, "calibration")
   const chain = validateV138CanonicalParentChain(repoRoot, target)
   plan26257Path(repoRoot, preflightPath, "preflight")
   plan26257Path(repoRoot, contextPath, "context")
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9, sourceB9,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const context = checkV138ExecutionContextV11Receipt(
@@ -19816,8 +19819,8 @@ export const writeV138ParallelCalibrationV11Receipt = async (repoRoot: string,
     } catch { callbackFailureAfterConsumption = true }
   }
   assertV138Plan26257AuthorityOpen(repoRoot)
-  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const currentContext = checkV138ExecutionContextV11Receipt(
     readPlan26257(repoRoot, "context"), currentRoute)
@@ -19834,7 +19837,7 @@ export const writeV138ParallelCalibrationV11Receipt = async (repoRoot: string,
     buildV138ParallelCalibrationV11Receipt({ inventory, context: currentContext,
       preflight: currentPreflight, calibration,
       callbackFailureAfterConsumption }), currentContext, currentPreflight)
-  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7,
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA9, sourceB9,
     currentRoute)
   writeV138Plan26219Immutable(target, chain, receipt)
   return receipt
@@ -19900,7 +19903,7 @@ export const buildV138AuthoritativeMatrixV12Receipt = (input: {
     callbackFailureAfterConsumption: input.callbackFailureAfterConsumption })
   const body = replaceVersionStrings({ ...v9,
     schemaVersion: "v1.38-current-matrix-reproduction-v12",
-    sourceA7: context.sourceA7, sourceB7: context.sourceB7,
+    sourceA9: context.sourceA9, sourceB9: context.sourceB9,
     executionContextRoot: context.receiptRoot,
     preflightRoot: preflight.receiptRoot,
     calibrationRoot: calibration.receiptRoot }, ":v9:", ":v11:") as
@@ -19934,11 +19937,11 @@ export const checkV138AuthoritativeMatrixV12Receipt = (value: unknown,
     "terminalOutcomeCount", "acceptedCellCount", "completeCleanup",
     "publicStopReason", "planRoot", "attempts", "attemptLedgerRoot",
     "runtimeRoute", "privacyProjection", "partialAcceptedEvidenceReusable",
-    "noRetry", "sourceA7", "sourceB7", "receiptRoot"],
+    "noRetry", "sourceA9", "sourceB9", "receiptRoot"],
   "MATRIX_REPRODUCTION_V10_INVALID")
   const { receiptRoot, ...body } = receipt
   if (receipt.schemaVersion !== "v1.38-current-matrix-reproduction-v12" ||
-    receipt.sourceA7 !== context.sourceA7 || receipt.sourceB7 !== context.sourceB7 ||
+    receipt.sourceA9 !== context.sourceA9 || receipt.sourceB9 !== context.sourceB9 ||
     receipt.executionContextRoot !== context.receiptRoot ||
     receipt.preflightRoot !== preflight.receiptRoot ||
     receipt.calibrationRoot !== calibration.receiptRoot ||
@@ -19989,14 +19992,14 @@ export const checkV138AuthoritativeMatrixV12Receipt = (value: unknown,
 
 export const writeV138AuthoritativeMatrixV12Receipt = async (repoRoot: string,
   targetPath: string, calibrationPath: string, contextPath: string,
-  sourceA7: string, sourceB7: string,
+  sourceA9: string, sourceB9: string,
   run: typeof executeV138ParallelMatrix = executeV138ParallelMatrix) => {
   assertV138Plan26257AuthorityOpen(repoRoot)
   const target = plan26257Path(repoRoot, targetPath, "reproduction")
   const chain = validateV138CanonicalParentChain(repoRoot, target)
   plan26257Path(repoRoot, calibrationPath, "calibration")
   plan26257Path(repoRoot, contextPath, "context")
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7, sourceB7,
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9, sourceB9,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const context = checkV138ExecutionContextV11Receipt(
@@ -20031,8 +20034,8 @@ export const writeV138AuthoritativeMatrixV12Receipt = async (repoRoot: string,
       executeOwnedMemoryPressureQ), repoRoot, executionIdentityVersion: "v9" })
   } catch { callbackFailureAfterConsumption = true }
   assertV138Plan26257AuthorityOpen(repoRoot)
-  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const currentRoute = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const currentContext = checkV138ExecutionContextV11Receipt(
     readPlan26257(repoRoot, "context"), currentRoute)
@@ -20056,7 +20059,7 @@ export const writeV138AuthoritativeMatrixV12Receipt = async (repoRoot: string,
       preflight: currentPreflight, calibration: currentCalibration, execution,
       callbackFailureAfterConsumption }), { inventory, context: currentContext,
       preflight: currentPreflight, calibration: currentCalibration })
-  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7,
+  assertV138Plan26257PublicationRoute(repoRoot, sourceA9, sourceB9,
     currentRoute)
   writeV138Plan26219Immutable(target, chain, receipt)
   return receipt
@@ -20105,7 +20108,7 @@ const plan26257ObservedRoot = (schema: string, derive: () => Sha256): Sha256 => 
 }
 
 export const deriveV138Plan26257PreObservationProof = (input: {
-  repoRoot: string; sourceA7: string;
+  repoRoot: string; sourceA9: string;
   anchor: ReturnType<typeof inspectV138SuccessorSealCommitV7Anchor>;
   disposition: V138Plan26257PreObservationProof["disposition"];
   patternCObservation?: V138Plan26257PatternCObservation | undefined
@@ -20140,7 +20143,7 @@ export const deriveV138Plan26257PreObservationProof = (input: {
     observedRoot = input.observedRootOverrides?.protected_history_failed ??
       plan26257ObservedRoot(
       "v1.38-protected-history-observation-failure-v1", () =>
-        deriveV138ProtectedHistoryV7(input.repoRoot, input.sourceA7)
+        deriveV138ProtectedHistoryV7(input.repoRoot, input.sourceA9)
           .protectedHistoryRoot)
   } else if (input.disposition === "formation_absence_failed") {
     sealedRoot = v138SuccessorRoot("artifactManifest",
@@ -20148,7 +20151,7 @@ export const deriveV138Plan26257PreObservationProof = (input: {
     observedRoot = input.observedRootOverrides?.formation_absence_failed ??
       plan26257ObservedRoot(
       "v1.38-formation-absence-observation-failure-v1", () =>
-        deriveV138FormationAbsenceRoot(input.repoRoot, input.sourceA7))
+        deriveV138FormationAbsenceRoot(input.repoRoot, input.sourceA9))
   } else {
     if (input.patternCObservation === undefined) {
       throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_REQUIRED")
@@ -20345,8 +20348,8 @@ export const deriveV138Plan26257InterruptionProof = (repoRoot: string):
     completeCleanup: false as const })
 }
 
-const plan26257Evidence = (repoRoot: string, sourceA7: string,
-  sourceB7: string, dispositionValue: V138Plan26257Disposition,
+const plan26257Evidence = (repoRoot: string, sourceA9: string,
+  sourceB9: string, dispositionValue: V138Plan26257Disposition,
   obstructionProof?: V138Plan26257ObstructionProof,
   interruptionProof?: V138Plan26257InterruptionProof,
   patternCObservation?: V138Plan26257PatternCObservation,
@@ -20357,9 +20360,9 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
     "formation_absence_failed", "pattern_c_ownership_failed"]
     .includes(disposition)
   const anchor = preObservation ? (disposition === "protected_history_failed" ?
-    inspectV138ProtectedHistoryFailureSealCommitV7Anchor({ repoRoot, sourceA7,
-      sourceB7, observationException: "protectedHistory" }) :
-    inspectV138SuccessorSealCommitV7Anchor({ repoRoot, sourceA7, sourceB7,
+    inspectV138ProtectedHistoryFailureSealCommitV7Anchor({ repoRoot, sourceA9,
+      sourceB9, observationException: "protectedHistory" }) :
+    inspectV138SuccessorSealCommitV7Anchor({ repoRoot, sourceA9, sourceB9,
       ...(disposition === "tool_identity_failed" ? {
         observationException: "toolIdentity" as const } :
       disposition === "formation_absence_failed" ? {
@@ -20369,12 +20372,12 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
       "protectedHistory" as const : disposition === "formation_absence_failed" ?
         "formationAbsence" as const : undefined
   const route = checkV138Plan26256AuthorityRoute({
-    repoRoot, sourceA7, sourceB7,
+    repoRoot, sourceA9, sourceB9,
     authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal"),
     ...(observationException === undefined ? {} : { observationException }) })
   const preObservationProof = !preObservation ? undefined :
-    deriveV138Plan26257PreObservationProof({ repoRoot, sourceA7, anchor: anchor!,
+    deriveV138Plan26257PreObservationProof({ repoRoot, sourceA9, anchor: anchor!,
       disposition: disposition as V138Plan26257PreObservationProof["disposition"],
       patternCObservation, observedRootOverrides })
   if (claimedPreObservationProof !== undefined &&
@@ -20432,9 +20435,9 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
     checkV138Plan26257Reservation(repoRoot, routeStart)
     if (preObservation) {
       const frozenContext = routeStart.context as Record<string, unknown>
-      if (frozenContext.sourceA7 !== route.custody.sourceA7 ||
-        frozenContext.sourceB7 !== route.custody.sourceB7 ||
-        frozenContext.sourceB7CustodyRoot !== route.custody.custodyRoot ||
+      if (frozenContext.sourceA9 !== route.custody.sourceA9 ||
+        frozenContext.sourceB9 !== route.custody.sourceB9 ||
+        frozenContext.sourceB9CustodyRoot !== route.custody.custodyRoot ||
         frozenContext.authorizationRoot !== route.authorization.authorizationRoot ||
         frozenContext.sealRoot !== route.seal.sealRoot) {
         throw new TypeError("MATRIX_PLAN_262_57_FROZEN_ROUTE_START_INVALID")
@@ -20483,7 +20486,7 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
 }
 
 export const buildV138Plan26257TerminalV1 = (input: {
-  disposition: V138Plan26257Disposition; sourceA7: string; sourceB7: string;
+  disposition: V138Plan26257Disposition; sourceA9: string; sourceB9: string;
   authorizationRoot: unknown; sealRoot: unknown;
   context?: Record<string, unknown>; preflight?: Record<string, unknown>;
   calibration?: Record<string, unknown>; reproduction?: Record<string, unknown>;
@@ -20528,8 +20531,8 @@ export const buildV138Plan26257TerminalV1 = (input: {
   const reproductionCharged = input.reproduction?.chargedAttemptCount ??
     (input.interruptionProof?.stage === "reproduction" ? 540 : 0)
   const body = { schemaVersion: "v1.38-plan-262-57-terminal-v1" as const,
-    disposition, sourceA7: input.sourceA7,
-    sourceB7: input.sourceB7, authorizationRoot: input.authorizationRoot,
+    disposition, sourceA9: input.sourceA9,
+    sourceB9: input.sourceB9, authorizationRoot: input.authorizationRoot,
     sealRoot: input.sealRoot,
     artifactRoots: { context: input.context?.receiptRoot ?? null,
       preflight: input.preflight?.receiptRoot ?? null,
@@ -20557,7 +20560,7 @@ export const checkV138Plan26257TerminalV1 = (value: unknown,
   evidence: ReturnType<typeof plan26257Evidence>, disposition:
   V138Plan26257Disposition) => {
   const terminal = exactRecord(value, ["schemaVersion", "disposition",
-    "sourceA7", "sourceB7", "authorizationRoot", "sealRoot", "artifactRoots",
+    "sourceA9", "sourceB9", "authorizationRoot", "sealRoot", "artifactRoots",
     "consumptionMarkerRoots", "obstructionProof", "interruptionProof",
     "preObservationProof",
     "chargedCalibrationAttemptCount",
@@ -20566,8 +20569,8 @@ export const checkV138Plan26257TerminalV1 = (value: unknown,
     "terminalRoot"], "MATRIX_PLAN_262_30_TERMINAL_INVALID")
   checkV138Plan26257Disposition(disposition)
   const expected = buildV138Plan26257TerminalV1({ disposition,
-    sourceA7: evidence.route.custody.sourceA7,
-    sourceB7: evidence.route.custody.sourceB7,
+    sourceA9: evidence.route.custody.sourceA9,
+    sourceB9: evidence.route.custody.sourceB9,
     authorizationRoot: evidence.route.authorization.authorizationRoot,
     sealRoot: evidence.route.seal.sealRoot, context: evidence.context,
     preflight: evidence.preflight, calibration: evidence.calibration,
@@ -20660,7 +20663,7 @@ export const checkV138Plan26257TerminalV1 = (value: unknown,
 
 export const writeV138Plan26257TerminalV1 = (repoRoot: string,
   targetPath: string, disposition: V138Plan26257Disposition,
-  sourceA7: string, sourceB7: string,
+  sourceA9: string, sourceB9: string,
   patternCObservation?: V138Plan26257PatternCObservation,
   observedRootOverrides?: V138Plan26257ObservedRootOverrides) => {
   checkV138Plan26257Disposition(disposition)
@@ -20674,7 +20677,7 @@ export const writeV138Plan26257TerminalV1 = (repoRoot: string,
   let interruptionEvidence: ReturnType<typeof plan26257Evidence> | undefined
   if (interruptionProof !== undefined) {
     try {
-      interruptionEvidence = plan26257Evidence(repoRoot, sourceA7, sourceB7,
+      interruptionEvidence = plan26257Evidence(repoRoot, sourceA9, sourceB9,
         "consumed_stage_interrupted", undefined, interruptionProof)
       effectiveDisposition = "consumed_stage_interrupted"
     } catch (error) {
@@ -20686,12 +20689,12 @@ export const writeV138Plan26257TerminalV1 = (repoRoot: string,
   }
   const obstructionProof = effectiveDisposition === "fresh_destination_failed" ?
     deriveV138Plan26257Obstruction(repoRoot) : undefined
-  const evidence = interruptionEvidence ?? plan26257Evidence(repoRoot, sourceA7,
-    sourceB7, effectiveDisposition, obstructionProof, interruptionProof,
+  const evidence = interruptionEvidence ?? plan26257Evidence(repoRoot, sourceA9,
+    sourceB9, effectiveDisposition, obstructionProof, interruptionProof,
     patternCObservation, observedRootOverrides)
   const terminal = checkV138Plan26257TerminalV1(
     buildV138Plan26257TerminalV1({ disposition: effectiveDisposition,
-      sourceA7, sourceB7,
+      sourceA9, sourceB9,
       authorizationRoot: evidence.route.authorization.authorizationRoot,
       sealRoot: evidence.route.seal.sealRoot, context: evidence.context,
       preflight: evidence.preflight, calibration: evidence.calibration,
@@ -20705,11 +20708,11 @@ export const writeV138Plan26257TerminalV1 = (repoRoot: string,
 }
 
 export const checkV138Plan26257TerminalBranch = (repoRoot: string,
-  sourceA7: string, sourceB7: string,
+  sourceA9: string, sourceB9: string,
   patternCObservation?: V138Plan26257PatternCObservation,
   observedRootOverrides?: V138Plan26257ObservedRootOverrides) => {
   const terminal = exactRecord(readPlan26257(repoRoot, "terminal"),
-    ["schemaVersion", "disposition", "sourceA7", "sourceB7",
+    ["schemaVersion", "disposition", "sourceA9", "sourceB9",
       "authorizationRoot", "sealRoot", "artifactRoots",
       "consumptionMarkerRoots", "obstructionProof", "interruptionProof",
       "preObservationProof",
@@ -20730,7 +20733,7 @@ export const checkV138Plan26257TerminalBranch = (repoRoot: string,
   const preObservationProof = terminal.preObservationProof === null ? undefined :
     terminal.preObservationProof as V138Plan26257PreObservationProof
   return checkV138Plan26257TerminalV1(terminal,
-    plan26257Evidence(repoRoot, sourceA7, sourceB7, disposition,
+    plan26257Evidence(repoRoot, sourceA9, sourceB9, disposition,
       obstructionProof, interruptionProof, patternCObservation,
       observedRootOverrides, preObservationProof), disposition)
 }
@@ -20805,19 +20808,19 @@ const inspectV138Plan26257PreStartDestination = (repoRoot: string,
 }
 
 export const checkV138Plan26257PreExecutionReadinessV1 = (repoRoot: string,
-  sourceA7: string, sourceB7: string) => {
+  sourceA9: string, sourceB9: string) => {
   if (inspectV138Plan26257PreStartDestination(repoRoot,
       V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH) !== undefined ||
     V138_PLAN_262_57_ROUTE_DESTINATIONS.some((repoPath) =>
       inspectV138Plan26257PreStartDestination(repoRoot, repoPath) !== undefined)) {
     throw new TypeError("MATRIX_PLAN_262_57_PRE_EXECUTION_NOT_READY")
   }
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   return deepFreeze({ schemaVersion:
     "v1.38-plan-262-57-pre-execution-readiness-v1" as const,
-    sourceA7, sourceB7,
+    sourceA9, sourceB9,
     authorizationRoot: route.authorization.authorizationRoot,
     sealRoot: route.seal.sealRoot,
     absentDestinations: V138_PLAN_262_57_ROUTE_DESTINATIONS,
@@ -20827,7 +20830,7 @@ export const checkV138Plan26257PreExecutionReadinessV1 = (repoRoot: string,
 
 export const writeV138Plan26257PreStartObstructionV1 = (repoRoot: string,
   targetPath: string, authorizationPath: string, sealPath: string,
-  sourceA7: string, sourceB7: string) => {
+  sourceA9: string, sourceB9: string) => {
   const target = path.resolve(repoRoot, targetPath)
   if (target !== path.resolve(repoRoot,
     V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH)) {
@@ -20836,8 +20839,8 @@ export const writeV138Plan26257PreStartObstructionV1 = (repoRoot: string,
   const chain = validateV138CanonicalParentChain(repoRoot, target)
   plan26257Path(repoRoot, authorizationPath, "authorization")
   plan26257Path(repoRoot, sealPath, "seal")
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const obstructions = V138_PLAN_262_57_ROUTE_DESTINATIONS.flatMap(
     (repoPath) => {
@@ -20856,13 +20859,13 @@ export const writeV138Plan26257PreStartObstructionV1 = (repoRoot: string,
 }
 
 export const checkV138Plan26257PreStartObstructionBranch = (repoRoot: string,
-  sourceA7: string, sourceB7: string) => {
+  sourceA9: string, sourceB9: string) => {
   const target = path.resolve(repoRoot,
     V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH)
   const value = JSON.parse(readFileSync(target, "utf8")) as unknown
   const disposition = checkV138Plan26257PreStartObstructionV1(value)
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA9,
+    sourceB9, authorizationValue: readPlan26257(repoRoot, "authorization"),
     sealValue: readPlan26257(repoRoot, "seal") })
   const current = inspectV138Plan26257PreStartDestination(repoRoot,
     disposition.obstruction.path)
@@ -20879,12 +20882,12 @@ export const V138_ROUTE_7_SOURCE_MANIFEST = Object.freeze([
   { command: "--check-plan-262-57-pre-execution-readiness-v1",
     handler: "checkV138Plan26257PreExecutionReadinessV1",
     destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
-    prerequisite: "authorization-v7/seal-v7/all-route-destinations-absent",
+    prerequisite: "authorization-v9/seal-v9/all-route-destinations-absent",
     sideEffect: "none", terminalDisposition: null },
   { command: "--resolve-plan-262-57-pre-start-v1",
     handler: "writeV138Plan26257PreStartObstructionV1",
     destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
-    prerequisite: "authorization-v7/seal-v7/exactly-one-obstruction",
+    prerequisite: "authorization-v9/seal-v9/exactly-one-obstruction",
     sideEffect: "fixture-write-only", terminalDisposition: null },
   { command: "--check-plan-262-57-pre-start-obstruction-v1",
     handler: "checkV138Plan26257PreStartObstructionBranch",
@@ -20894,12 +20897,12 @@ export const V138_ROUTE_7_SOURCE_MANIFEST = Object.freeze([
   { command: "--write-execution-context-v11-receipt",
     handler: "writeV138ExecutionContextV11Receipt",
     destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
-    prerequisite: "authorization-v7/seal-v7/fresh-route",
+    prerequisite: "authorization-v9/seal-v9/fresh-route",
     sideEffect: "fixture-write-only", terminalDisposition: null },
   { command: "--write-plan-262-57-route-start-v1",
     handler: "writeV138Plan26257RouteStartV1",
     destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
-    prerequisite: "authorization-v7/seal-v7/fresh-route",
+    prerequisite: "authorization-v9/seal-v9/fresh-route",
     sideEffect: "fixture-write-only", terminalDisposition: null },
   { command: "--write-headroom-preflight-v11-receipt",
     handler: "writeV138HostHeadroomPreflightV11Receipt",
