@@ -32,14 +32,14 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
 Plan: 42 of 47 trustworthy summaries — Plans 262-58 and 262-59 are corrective review gates; Plan 262-58 is next
-Status: Plan-262-55 review-v1 is invalid/disproved; exact A7 awaits reviewer-v2; revised SEAL-01 remains passed under reduced assurance and ADMIT-03 remains blocked
+Status: Plan-262-55 review-v1 is invalid/disproved; A7 is protected predecessor history, and Plan 262-58 must freeze exact source-only A8 after reviewer-v2 plus v2-aware authority/seal TDD before Plan 262-59 review; revised SEAL-01 remains passed under reduced assurance and ADMIT-03 remains blocked
 Last activity: 2026-08-15 — Archived disproved Plan-262-55 plan/summary and rewired authorization behind review-v2
 
 Progress: [████████░░] 81%
 
 ## Performance Metrics
 
-**Current milestone:** 42 of 47 active Phase 262 plans have trustworthy summaries. Deep review disproved the Plan-262-55 v1 zero-finding verdict with eight blockers and one warning; historical root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433` remains immutable but non-authorizing. Exact A7 awaits a new checker and fresh review-v2. Independent person, reviewer separation, cryptographic reviewer identity, and independent custody are unclaimed. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: Plan 262-58.
+**Current milestone:** 42 of 47 active Phase 262 plans have trustworthy summaries. Deep review disproved the Plan-262-55 v1 zero-finding verdict with eight blockers and one warning; historical root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433` remains immutable but non-authorizing. Exact A7 is protected predecessor history. Plan 262-58 must TDD reviewer-v2 and review-v2-aware authorization-v8/seal-v8 source/tests, then freeze new sourceBase8 and exact source-only A8; Plan 262-59 reviews A8 and synthetic authorization behavior without circular self-review. Independent person, reviewer separation, cryptographic reviewer identity, and independent custody are unclaimed. Obsolete nonexistent v7 future authority/seal paths remain absent; route ordinal stays 7 with v11/v12 execution semantics. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: Plan 262-58.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -190,9 +190,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Grant revised SEAL-01 only under single_operator_local_seal_v1 after all four historical findings pass together from the exact clean source. — Zero findings are necessary and independent custody remains explicitly excluded.
 - [Phase 262]: Keep independent custody false, ADMIT-03 blocked, and every downstream authority false despite the mechanics pass. — The local-seal review cannot substitute for the separately authorized literal 540/540 reproduction.
 - [Phase 262]: Initial route-7 destination obstruction remains a non-terminal pre-start disposition; terminal branches require a durable atomic route-start. — This prevents terminal evidence from existing before route execution begins.
-- [Phase 262]: A7 remains limited to the four declared source/test paths, but the Plan-262-55 review-v1 zero-finding verdict is disproved by eight blockers and one warning. — Preserve its artifact/report/checker/test plus archived plan/summary as immutable failed history with no completion or authority credit.
-- [Phase 262]: Build reviewer-v2 in Plan 262-58, then use a fresh Plan-262-59 procedural context to review both verifier code and exact A7. — independentPersonClaimed and reviewerSeparated remain false; procedural context is not an identity claim.
-- [Phase 262]: Permit Plan 262-56 eligibility only from the immutable checker-recomputed exact zero-finding Plan-262-59 review-v2 root; v1 bytes are prohibited as detached-A7 review input and no review creates B7, route start, or downstream authority.
+- [Phase 262]: A7 remains protected predecessor history, and the Plan-262-55 review-v1 zero-finding verdict is disproved by eight blockers and one warning. — Preserve its artifact/report/checker/test plus archived plan/summary as immutable failed history with no completion or authority credit.
+- [Phase 262]: Build reviewer-v2 and the review-v2-aware authorization-v8/seal-v8 implementation/tests in Plan 262-58, then freeze sourceBase8/exact source-only A8 and use a fresh Plan-262-59 procedural context to review verifier code, synthetic authorization rendering/checking, and A8. — independentPersonClaimed, reviewerSeparated, cryptographic reviewer identity, and independent custody remain false; procedural context is not an identity claim and canonical outputs cannot self-review.
+- [Phase 262]: Permit Plan 262-56 eligibility only from immutable checker-recomputed exact zero-finding Plan-262-59 review-v2 bytes/root over A8; v1 bytes are prohibited as detached-A8 review input and no review creates authorization-v8, seal-v8, B8, route start, or downstream authority. Obsolete v7 future paths remain absent while route ordinal stays 7 and v11/v12 execution versions remain unchanged.
 
 ### Pending Todos
 
@@ -247,4 +247,4 @@ None.
 Last session: 2026-08-15T03:20:00.000Z
 Stopped at: Planned corrective review-v1-invalid disposition and fresh reviewer-v2 gates
 Resume file: None
-Next command: Execute Plan 262-58 offline corrective checker/disposition work; no canonical v2 PASS, authority, or live route work is authorized.
+Next command: Execute Plan 262-58 offline corrective disposition, reviewer-v2, v2-aware authority/seal TDD, and source-only A8 freeze; no canonical v2 PASS, v8 authority artifact, obsolete v7 path, or live route work is authorized.

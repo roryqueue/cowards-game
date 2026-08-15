@@ -52,7 +52,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 42/47 active plans have trustworthy summaries; 5 plans remain
 
-**Current verdict:** REVIEW-V1 INVALID / CORRECTIVE REVIEW-V2 REQUIRED / `gaps_found` — Post-execution deep code review found eight blocker defects and one warning in the Plan-262-55 checker/test, disproving the canonical v1 zero-finding verdict at historical root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433`. The v1 artifact, report, checker, test, archived plan, and archived summary remain immutable failed/disproved evidence and are ineligible for authorization. Exact A7 remains `5f39aba7833030d537c4c2767c369d24c982ed83`; it has not yet passed review-v2. No authorization-v7, seal-v7, B7, route start, live destination, or downstream authority exists; ADMIT-03 remains blocked. Phase 262 remains incomplete and Phases 263–270 remain unauthorized. Next action: 262-58.
+**Current verdict:** REVIEW-V1 INVALID / CORRECTIVE REVIEW-V2 REQUIRED / `gaps_found` — Post-execution deep code review found eight blocker defects and one warning in the Plan-262-55 checker/test, disproving the canonical v1 zero-finding verdict at historical root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433`. The v1 artifact, report, checker, test, archived plan, and archived summary remain immutable failed/disproved evidence and are ineligible for authorization. Exact A7 `5f39aba7833030d537c4c2767c369d24c982ed83` remains protected predecessor history. Plan 262-58 must first TDD reviewer-v2 and the review-v2-aware authority/seal implementation, then freeze new sourceBase8 and exact source-only A8; neither exists yet. Plan 262-59 reviews that exact A8 without circular self-review. No authorization-v8, seal-v8, B8, route start, live destination, or downstream authority exists; obsolete nonexistent v7 future paths remain absent and unclaimed. Route ordinal remains 7 with execution context/preflight/calibration v11 and reproduction v12. ADMIT-03 remains blocked. Phase 262 remains incomplete and Phases 263–270 remain unauthorized. Next action: 262-58.
 
 <!-- phase-262-successor-status: {"proof_status":"review_v1_invalid_corrective_review_required","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v2_pending","source_review_status":"review_v1_disproved","invalid_source_review_v1_root":"sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433","source_review_v2_root":null,"source_a7":"5f39aba7833030d537c4c2767c369d24c982ed83","independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"plan_262_47_terminal_present":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-58","total_plans":47,"completed_plans":42,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-58","262-59","262-56","262-57","262-48"],"incomplete":["262-58","262-59","262-56","262-57","262-48"],"archived_invalid_review_plan":"archived/262-55-HISTORICAL.md","archived_invalid_review_plan_sha256":"20084e32b072e697523b843cbf7d664672518e9db380bbf6cfca6a38b06b9940","archived_invalid_review_summary":"archived/262-55-SUMMARY-HISTORICAL.md","archived_invalid_review_summary_sha256":"a25bb91378a70cf0df517ff033a63322f6b1d2285fb1f212db2593373f8b5ee0","archived_source_incomplete_plan":"archived/262-47-HISTORICAL.md","archived_source_incomplete_plan_sha256":"5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e","archived_original_activation_plan":"archived/262-48-HISTORICAL.md","archived_original_activation_plan_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
@@ -259,23 +259,23 @@ Plans:
 
 **Wave 43** *(blocked on Wave 42 completion; corrective offline checker/disposition only)*
 
-- [ ] 262-58-PLAN.md — Publish an immutable review-v1-invalid disposition and TDD reviewer-v2 across all nine findings without publishing canonical v2 PASS evidence or authority.
+- [ ] 262-58-PLAN.md — Publish the review-v1-invalid disposition, TDD reviewer-v2 plus review-v2-aware authorization-v8/seal-v8 source/tests, and freeze exact source-only A8 without canonical review-v2 or authority artifacts.
 
 **Wave 44** *(blocked on Wave 43 completion; fresh procedural review only)*
 
-- [ ] 262-59-PLAN.md — Independently review reviewer-v2 and exact A7, run the real full fixture, and exclusively publish immutable review-v2 only on objective zero findings.
+- [ ] 262-59-PLAN.md — Independently review reviewer-v2, synthetic authorization-v8 behavior, and exact A8; publish immutable review-v2 only on objective zero findings, otherwise byte-preserve/archive/remove/index the failed active plan.
 
 **Wave 45** *(blocked on immutable zero-finding Wave 44 completion)*
 
-- [ ] 262-56-PLAN.md — Consume only immutable review-v2 bytes, render and checkpoint the exact fresh operator literal, then create exactly one two-artifact direct-child B7 with no live work.
+- [ ] 262-56-PLAN.md — Consume only immutable A8 review-v2 bytes, render and checkpoint the exact fresh authorization-v8 literal, then create exactly one two-artifact direct-child B8 at the v8 paths with no live work.
 
 **Wave 46** *(blocked on Wave 45 completion and immediate main-only ownership check)*
 
-- [ ] 262-57-PLAN.md — Consume B7 once from the main orchestrator through the exact 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 route and seal one permanent no-retry terminal.
+- [ ] 262-57-PLAN.md — Consume A8/B8 once from the main orchestrator through unchanged route ordinal 7 and exact v11/v12 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 semantics, then seal one permanent no-retry terminal.
 
 **Wave 47** *(blocked on Wave 46 completion)*
 
-- [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, refresh validation/verification, and grant at most Phase 263 planning authority.
+- [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, derive successful 47/47 from the live phase-plan index, refresh validation/verification, and grant at most Phase 263 planning authority.
 
 **Dormant activation contract** *(not an executable wave and absent from phase-plan-index)*
 
