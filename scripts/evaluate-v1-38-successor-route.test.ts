@@ -41,6 +41,8 @@ import {
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
   inspectV138SourceIdentityA6,
+  inspectV138SourceA9Custody,
+  inspectV138ProtectedHistoryV9,
   readV138RepositoryFileNoFollow,
   v138Plan26247AuthorizationLiteral,
   writeV138Plan26247PreExecutionSourceFailureV1,
@@ -58,11 +60,15 @@ import {
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import {
   V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256,
+  V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS,
+  V138_HISTORICAL_REVIEWER_V2_SOURCE_OBJECT,
   analyzeV138PolicySourcesWithFrozenRouteAllowlist,
   checkV138ExactMachineStatus,
   collectV138ChangedPolicySources,
 } from "./check-v1-38-dependency-revision-boundaries.js"
-import { computeV138ReviewV3Root, validateV138ReviewV3Document } from
+import { V138_REVIEW_V3_COMMANDS, V138_REVIEW_V3_SOURCE_PATHS,
+  checkV138ReviewV3ClaimsAgainstObservations,
+  computeV138ReviewV3Root, validateV138ReviewV3Document } from
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -71,19 +77,28 @@ const reviewV3Fixture = () => {
   const oid = "a".repeat(40)
   const otherOid = "b".repeat(40)
   const digest = `sha256:${"1".repeat(64)}`
-  const paths = Array.from({ length: 8 }, (_, index) => `scripts/source-${index}.ts`)
+  const paths = [...V138_REVIEW_V3_SOURCE_PATHS]
+  const handlers = ["writeV138ParallelCalibrationV11Receipt",
+    "checkV138Plan26257PreExecutionReadinessV1",
+    "checkV138Plan26257PreStartObstructionBranch",
+    "checkV138Plan26257TerminalBranch",
+    "writeV138Plan26257PreStartObstructionV1",
+    "writeV138AuthoritativeMatrixV12Receipt",
+    "writeV138ExecutionContextV11Receipt",
+    "writeV138HostHeadroomPreflightV11Receipt",
+    "writeV138Plan26257RouteStartV1", "writeV138Plan26257TerminalV1"]
   const body: Record<string, any> = {
     schemaVersion: "v1.38-plan-262-62-source-completeness-review-v3",
     sourceBase9: oid, sourceA9: otherOid,
     sourceCustody: { tree: oid, parent: oid,
-      authorRun: "codex-plan-262-60-a9-v1", paths,
+      authorRun: "codex-plan-262-60-a9-review-fix-v1", paths,
       blobs: paths.map((item) => ({ path: item, mode: "100644",
         blobOid: oid, sha256: digest, byteLength: 1 })) },
-    commands: Array.from({ length: 10 }, (_, index) => ({ command: `command-${index}`,
-      argv: ["node", `command-${index}`], exitStatus: 0,
+    commands: V138_REVIEW_V3_COMMANDS.map((command) => ({ command,
+      argv: ["node", command], exitStatus: 0,
       stdoutSha256: digest, stderrSha256: digest })),
-    handlerObservations: Array.from({ length: 10 }, (_, index) => ({
-      command: `command-${index}`, handler: `handler-${index}`,
+    handlerObservations: V138_REVIEW_V3_COMMANDS.map((command, index) => ({
+      command, handler: handlers[index],
       prerequisites: "authorization-v9/seal-v9", destination: `destination-${index}`,
       effectClass: "injected", disposition: "observed" })),
     protectedHistory: { root: digest, protectedA8: otherOid,
@@ -121,6 +136,71 @@ it("strictly validates review-v3 nested structure and recomputed roots", () => {
   forged.reviewV3Root = computeV138ReviewV3Root(body)
   expect(() => validateV138ReviewV3Document(forged))
     .toThrow("V138_REVIEW_V3_COMMANDS_INVALID")
+
+  for (const mutate of [
+    (candidate: Record<string, any>) => { candidate.sourceCustody.blobs[1] =
+      structuredClone(candidate.sourceCustody.blobs[0]) },
+    (candidate: Record<string, any>) => { candidate.commands[1] =
+      structuredClone(candidate.commands[0]) },
+    (candidate: Record<string, any>) => { candidate.handlerObservations[1] =
+      structuredClone(candidate.handlerObservations[0]) },
+    (candidate: Record<string, any>) => { candidate.handlerObservations[0].command =
+      candidate.commands[1].command },
+  ]) {
+    const candidate = structuredClone(value)
+    mutate(candidate)
+    const { reviewV3Root: _oldRoot, ...candidateBody } = candidate
+    candidate.reviewV3Root = computeV138ReviewV3Root(candidateBody)
+    expect(() => validateV138ReviewV3Document(candidate)).toThrow()
+  }
+})
+
+it("rejects review-v3 claims that differ from independently supplied observations", () => {
+  const value = reviewV3Fixture()
+  const observations = {
+    document: value, sourceCustody: value.sourceCustody,
+    publication: value.publication, protectedHistory: value.protectedHistory,
+    priorAuthorizationBytes: value.priorAuthorizationBytes,
+    snapshots: value.snapshots, orderedEvents: value.orderedEvents,
+  }
+  expect(checkV138ReviewV3ClaimsAgainstObservations(observations)).toEqual(value)
+  expect(() => checkV138ReviewV3ClaimsAgainstObservations({ ...observations,
+    protectedHistory: { ...value.protectedHistory,
+      root: `sha256:${"9".repeat(64)}` } }))
+    .toThrow("V138_REVIEW_V3_HISTORY_OBSERVATION_INVALID")
+})
+
+it("derives the corrected A9 sole parent and rejects mutable protected history", () => {
+  const run = execFileSync("git", ["log", "--first-parent", "--reverse",
+    "--format=%H", "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1"],
+  { cwd: repoRoot, encoding: "utf8" }).trim().split("\n").filter(Boolean)
+  expect(run.length).toBeGreaterThan(0)
+  const sourceA9 = run.at(-1)!
+  const sourceBase9 = execFileSync("git", ["show", "-s", "--format=%P", run[0]!],
+    { cwd: repoRoot, encoding: "utf8" }).trim()
+  const custody = inspectV138SourceA9Custody(repoRoot,
+    { sourceBase9, sourceA9 })
+  expect(custody.sourceA9Parent).toBe(execFileSync("git",
+    ["show", "-s", "--format=%P", sourceA9], { cwd: repoRoot,
+      encoding: "utf8" }).trim())
+  expect(inspectV138ProtectedHistoryV9(repoRoot, sourceA9))
+    .toMatchObject({ sourceFailureCommit:
+      "bc0f95141d475d1d56ecf9d8ce67880f29385ea1",
+    sourceFailureBlobOid: "f5efc47d0e65cebee250431cded02c3fa41906c0" })
+
+  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-protected-history-v9-"))
+  execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
+  try {
+    const failurePath = path.join(fixtureRoot,
+      ".planning/artifacts/v1.38-plan-262-47-pre-execution-source-failure-v1.json")
+    const failure = JSON.parse(readFileSync(failurePath, "utf8"))
+    failure.protectedRoots.formationAbsenceRoot = `sha256:${"9".repeat(64)}`
+    writeFileSync(failurePath, `${JSON.stringify(failure)}\n`)
+    expect(() => inspectV138ProtectedHistoryV9(fixtureRoot, sourceA9))
+      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_PROTECTED_HISTORY_INVALID")
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  }
 })
 
 const sha256Zero = `sha256:${"0".repeat(64)}`
@@ -352,7 +432,8 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
     const frozenSources = Object.fromEntries(
       Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256).map((repoPath) => [
         repoPath,
-        execFileSync("git", ["show", `HEAD:${repoPath}`], {
+        execFileSync("git", ["cat-file", "blob",
+          V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS[repoPath]!.blobOid], {
           cwd: repoRoot, encoding: "utf8" }),
       ]),
     )
@@ -382,8 +463,10 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
       "scripts/lib/v1-38-current-matrix-reproduction.ts",
       "scripts/lib/v1-38-successor-source-seal.ts",
       "scripts/check-v1-38-plan-262-55-source-completeness-review.ts",
-      "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
     ])
+    expect(execFileSync("git", ["cat-file", "blob",
+      V138_HISTORICAL_REVIEWER_V2_SOURCE_OBJECT.blobOid], { cwd: repoRoot }))
+      .toHaveLength(34_992)
 
     const canonicalCollection = collectV138ChangedPolicySources(repoRoot)
     expect(canonicalCollection.findings).toEqual([])
@@ -584,6 +667,8 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
     expect(V138_PLAN_262_56_OBSOLETE_V7_V8_PATHS).toEqual([
       ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
       ".planning/artifacts/v1.38-successor-source-seal-v7.json",
+      ".planning/artifacts/v1.38-plan-262-56-authorization-v8.json",
+      ".planning/artifacts/v1.38-successor-source-seal-v8.json",
     ])
   })
 
