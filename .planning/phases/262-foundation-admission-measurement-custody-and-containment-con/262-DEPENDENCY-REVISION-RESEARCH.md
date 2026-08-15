@@ -485,6 +485,21 @@ Security enforcement is enabled because `.planning/config.json` does not disable
    - What is known: no current authority exists and route 5 cannot be retried. [VERIFIED: `262-33-VERDICT.md`]
    - Resolution: no new ADMIT-03 route was requested, so this revision creates no such plan, authority, writer, or execution path. The activation contract is retained only as `dormant/262-41-ACTIVATION-CONTRACT.md`, outside `*-PLAN.md` discovery; activation remains dormant until a future separately planned literal ADMIT-03 pass exists.
 
+## 2026-08-15 A9 / Reviewer-v3 Structural Replan Update
+
+The third deep Plan-262-58 code review establishes a changed planning fact: reviewer-v2 is embedded in the A8 source it purports to validate and still derives essential source identity from a later carrier, so another fresh procedural invocation of that same checker cannot repair the structural circularity. A8, its checker/test, every v1/v2 review artifact/report/fix, and all Git objects remain required historical evidence, but none may authorize a successor. [VERIFIED: `262-58-CODE-REVIEW-V3.md`; archived `262-58-HISTORICAL.md`; archived `262-58-SUMMARY-HISTORICAL.md`]
+
+The corrective dependency graph is therefore:
+
+1. **Plan 262-60 — production-only A9:** delete the active reviewer-v2 checker/test, add one strict shared side-effect-free review-v3 document/root and detached-file/publication-lineage validator, wire the actual production route to authorization-v9/seal-v9/A9/B9 at unchanged route ordinal 7 and v11/v12, repair the full 48-plan analyzer, freeze exact source-only A9, and publish only an A8/reviewer-v2 invalid disposition. A9 source cannot pin its own future commit and creates no reviewer-v3 checker or canonical review/authority/live output.
+2. **Plan 262-61 — reviewer tool R3 outside A9:** after the unique A9 summary carrier exists, independently author reviewer-v3 and repository-backed mutations. The checker may pin exact A9/carrier because both predate it. It owns real full-argv/handler execution in an exact-A9 disposable clone, protected histories, exact forty charge IDs, six prior authorization bytes, snapshots/events/cleanup, exact 48-plan lifecycle, synthetic publication/B9 custody, and no-follow paths. Final R3 requires post-execution deep GSD code-review convergence to zero findings plus an exact REVIEW-FIX root before its summary exists.
+3. **Plan 262-62 — fresh procedural review/publication:** a fresh main-orchestrator context verifies the zero-finding Plan-262-61 review/fix/R3/summary chain, re-derives exact A9, runs exact reviewed R3 in a disposable exact-A9 clone, and publishes the canonical review-v3 JSON/report only as a unique exact two-path current-first-parent commit on objective zero findings. Every failure archive is byte-preserved; any finding creates no summary or authority.
+4. **Plans 262-56 -> 262-57 -> 262-48:** consume only review-v3 through the non-auto-bypassable complete authorization-v9 literal, create exact direct-child B9, retain route ordinal 7 and v11/v12 execution semantics, then derive truthful pre-summary 47/48 and post-summary 48/48 closure.
+
+This separation is mandatory, not a preference: production source, reviewer-tool source, and the procedural canonical verdict have distinct temporal and Git boundaries. Identity fields remain false or unknown; procedural separation is not independent-person, external-identity, cryptographic-reviewer, or independent-custody evidence. [VERIFIED: D-01, D-02, D-04, D-07, D-09; Plan-262-58 V3 findings]
+
+The active count is derived as 48 plans: prior 47 minus archived active Plans 262-58 and 262-59 plus new Plans 262-60, 262-61, and 262-62. Trustworthy summaries return to 42 because archived Plan-262-58 summary is not completion credit. The complete active future chain is `262-60 -> 262-61 -> 262-62 -> 262-56 -> 262-57 -> 262-48`; final closure is 48/48 only after the strict Plan-262-48 summary-before-carrier commit order. [VERIFIED: live `phase-plan-index 262`; ROADMAP/STATE update]
+
 ## Sources
 
 ### Primary (HIGH confidence)
@@ -510,11 +525,11 @@ Security enforcement is enabled because `.planning/config.json` does not disable
 
 **Confidence breakdown:**
 
-- Dependency revision: HIGH — derived directly from requirement wording, current plans, and immutable verdicts.
+- Dependency revision: HIGH — derived directly from requirement wording, current plans, immutable verdicts, and the Plan-262-58 V3 structural review findings.
 - Requirement completion boundary: HIGH — exact requirement and context text distinguish policy freeze from execution admission.
 - Plan disposition: HIGH — existing plan dependencies and claims are directly inspected.
 - Frozen replay attribution: HIGH — exact source constants, manifest, Git object reachability, tag containment, and blob equality were checked read-only.
 - Operational custody timing: LOW/unknown — no real control-plane evidence exists in the repository; it remains an explicit open question.
 
-**Research date:** 2026-08-12
+**Research date:** 2026-08-15 (A9/reviewer-v3 structural update; original dependency research 2026-08-12)
 **Valid until:** Until Phase 262 planning artifacts, requirement text, or immutable stopped-route evidence changes; re-read all three before planning replacements.

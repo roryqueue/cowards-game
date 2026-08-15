@@ -50,13 +50,13 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 43/47 plans executed
+**Plans:** 42/48 trustworthy summaries
 
-**Current verdict:** REVIEW-V1 INVALID / A8 FROZEN / REVIEW-V2 PENDING / `gaps_found` — The immutable non-authorizing disposition binds all eight blocker findings and WR-01 at historical review root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433`; Plan 262-55 grants no completion or authority credit. Exact A7 `5f39aba7833030d537c4c2767c369d24c982ed83` remains protected predecessor history. Plan 262-58 TDD-closed reviewer-v2, review-v2-aware authorization-v8/seal-v8 source contracts, and the six lifecycle states, then froze sourceBase8 `a4c8c8108cc3acf639407fd5fc77a98326e3595d` and exact six-path source-only A8 `da8b33942edbc0900ebeba616e459a2a0d2f92ae`. Only Plan 262-59 may review A8. No canonical review-v2, authorization-v8, seal-v8, B8, route start, live destination, or downstream authority exists; obsolete v7 future paths remain absent. Route ordinal remains 7 with v11/v12 execution versions. ADMIT-03 remains blocked at 0/540, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: 262-59.
+**Current verdict:** REVIEW-V1 INVALID / A8-REVIEWER-V2 INVALID / A9 REPLAN READY / `gaps_found` — Plan 262-58 and its summary are archived byte-for-byte after the third deep review proved the embedded reviewer-v2 structurally self-referential and left five blockers plus one warning. The unexecuted Plan 262-59 is also archived byte-for-byte. Exact A8 and every v1/v2 artifact, report, code-review, review-fix, source object, and invalid disposition remain immutable non-authorizing history. The active corrective chain is now 262-60 -> 262-61 -> 262-62 -> 262-56 -> 262-57 -> 262-48: production-only A9, separately authored and code-reviewed R3, fresh procedural review-v3, human-literal authorization-v9/direct-child B9, unchanged route ordinal 7 with v11/v12 execution, and strict summary-before-carrier 48/48 closure. No canonical review-v3, authorization-v9, seal-v9, B9, route start, live destination, or downstream authority exists. ADMIT-03 remains blocked at 0/540, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: 262-60.
 
-<!-- phase-262-plan-58-status: {"proof_status":"review_v1_invalid_a8_frozen_review_v2_pending","review_v1_disposition":"review_v1_invalid_disproved_non_authorizing","source_base_8":"a4c8c8108cc3acf639407fd5fc77a98326e3595d","source_a8":"da8b33942edbc0900ebeba616e459a2a0d2f92ae","review_v2_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-59"} -->
+<!-- phase-262-plan-60-status: {"proof_status":"a8_reviewer_v2_invalid_a9_replan_ready","review_v1_disposition":"review_v1_invalid_disproved_non_authorizing","review_v2_disposition":"structurally_self_referential_non_authorizing","source_a8_historical":true,"source_a9":null,"review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-60"} -->
 
-<!-- phase-262-successor-status: {"proof_status":"review_v1_invalid_corrective_review_required","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v2_pending","source_review_status":"review_v1_disproved","invalid_source_review_v1_root":"sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433","source_review_v2_root":null,"source_a7":"5f39aba7833030d537c4c2767c369d24c982ed83","independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"plan_262_47_terminal_present":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-58","total_plans":47,"completed_plans":42,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-58","262-59","262-56","262-57","262-48"],"incomplete":["262-58","262-59","262-56","262-57","262-48"],"archived_invalid_review_plan":"archived/262-55-HISTORICAL.md","archived_invalid_review_plan_sha256":"20084e32b072e697523b843cbf7d664672518e9db380bbf6cfca6a38b06b9940","archived_invalid_review_summary":"archived/262-55-SUMMARY-HISTORICAL.md","archived_invalid_review_summary_sha256":"a25bb91378a70cf0df517ff033a63322f6b1d2285fb1f212db2593373f8b5ee0","archived_source_incomplete_plan":"archived/262-47-HISTORICAL.md","archived_source_incomplete_plan_sha256":"5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e","archived_original_activation_plan":"archived/262-48-HISTORICAL.md","archived_original_activation_plan_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"a8_reviewer_v2_invalid_a9_replan_ready","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v3_not_authored","source_review_status":"v1_v2_disproved","source_review_v3_root":null,"independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"262-60","total_plans":48,"trustworthy_summaries":42,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-60","262-61","262-62","262-56","262-57","262-48"],"incomplete":["262-60","262-61","262-62","262-56","262-57","262-48"],"archived_plan_58":"archived/262-58-HISTORICAL.md","archived_plan_58_sha256":"2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3","archived_summary_58":"archived/262-58-SUMMARY-HISTORICAL.md","archived_summary_58_sha256":"03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6","archived_plan_59":"archived/262-59-HISTORICAL.md","archived_plan_59_sha256":"0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 Plans:
 **Wave 1**
@@ -259,25 +259,35 @@ Plans:
 - `262-55-PLAN.md` -> `archived/262-55-HISTORICAL.md` — SHA-256 `20084e32b072e697523b843cbf7d664672518e9db380bbf6cfca6a38b06b9940`; its canonical v1 artifact/report/checker/test remain immutable failed/disproved evidence after the deep review found eight blockers and one warning.
 - `262-55-SUMMARY.md` -> `archived/262-55-SUMMARY-HISTORICAL.md` — SHA-256 `a25bb91378a70cf0df517ff033a63322f6b1d2285fb1f212db2593373f8b5ee0`; historical execution claims are retained but are not trusted completion or authorization evidence.
 
-**Wave 43** *(blocked on Wave 42 completion; corrective offline checker/disposition only)*
+**Invalid A8/reviewer-v2 planning history** *(byte-preserved outside active `*-PLAN.md` discovery; no successful-completion or authority credit)*
 
-- [x] 262-58-PLAN.md — Publish the review-v1-invalid disposition, TDD reviewer-v2 plus review-v2-aware authorization-v8/seal-v8 source/tests, and freeze exact source-only A8 without canonical review-v2 or authority artifacts.
+- `262-58-PLAN.md` -> `archived/262-58-HISTORICAL.md` — SHA-256 `2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3`; A8, reviewer-v2 source history, all review reports/fixes, and the invalid-disposition artifact remain immutable failed history.
+- `262-58-SUMMARY.md` -> `archived/262-58-SUMMARY-HISTORICAL.md` — SHA-256 `03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6`; its completion/custody claims are retained but are not trustworthy summary credit.
+- `262-59-PLAN.md` -> `archived/262-59-HISTORICAL.md` — SHA-256 `0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f`; the plan was never executed and is superseded by the non-self-referential review-v3 sequence.
 
-**Wave 44** *(blocked on Wave 43 completion; fresh procedural review only)*
+**Wave 44** *(blocked on Wave 42 completion; production-only corrective source and disposition)*
 
-- [ ] 262-59-PLAN.md — Independently review reviewer-v2, synthetic authorization-v8 behavior, and exact A8; publish immutable review-v2 only on objective zero findings, otherwise byte-preserve/archive/remove/index the failed active plan.
+- [ ] 262-60-PLAN.md — Delete the active embedded reviewer-v2, TDD strict shared review-v3 validation plus real authorization-v9/seal-v9/A9/B9 production routing and the exact 48-plan dependency lifecycle, freeze source-only A9, and disposition A8 without live work.
 
-**Wave 45** *(blocked on immutable zero-finding Wave 44 completion)*
+**Wave 45** *(blocked on exact A9 and its later custody carrier)*
 
-- [ ] 262-56-PLAN.md — Consume only immutable A8 review-v2 bytes, render and checkpoint the exact fresh authorization-v8 literal, then create exactly one two-artifact direct-child B8 at the v8 paths with no live work.
+- [ ] 262-61-PLAN.md — Author reviewer-v3 outside A9, pin exact A9/carrier, prove full disposable command/history/lifecycle/publication/B9/path semantics, converge post-execution deep code review to zero findings, and freeze exact R3 without canonical review publication.
 
-**Wave 46** *(blocked on Wave 45 completion and immediate main-only ownership check)*
+**Wave 46** *(blocked on zero-finding Plan-262-61 code-review/REVIEW-FIX/R3/summary custody)*
 
-- [ ] 262-57-PLAN.md — Consume A8/B8 once from the main orchestrator through unchanged route ordinal 7 and exact v11/v12 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 semantics, then seal one permanent no-retry terminal.
+- [ ] 262-62-PLAN.md — Run a fresh main-orchestrator procedural exact-A9 review with exact reviewed R3 and publish the canonical exclusive two-path review-v3 only on objective zero findings; any finding archives exact bytes with no summary or authority.
 
-**Wave 47** *(blocked on Wave 46 completion)*
+**Wave 47** *(blocked on immutable zero-finding Wave 46 completion)*
 
-- [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, derive successful 47/47 from the live phase-plan index, refresh validation/verification, and grant at most Phase 263 planning authority.
+- [ ] 262-56-PLAN.md — Consume only immutable exact-A9 review-v3 bytes, render and checkpoint the complete fresh authorization-v9 literal, then create exactly one two-artifact direct-child B9 at the v9 paths with no live work.
+
+**Wave 48** *(blocked on Wave 47 completion and immediate main-only ownership check)*
+
+- [ ] 262-57-PLAN.md — Consume A9/B9 once from the main orchestrator through unchanged route ordinal 7 and exact v11/v12 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 semantics, then seal one permanent no-retry terminal.
+
+**Wave 49** *(blocked on Wave 48 completion)*
+
+- [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, derive truthful pre-summary 47/48 then post-summary 48/48 from the live phase-plan index, refresh validation/verification, and grant at most Phase 263 planning authority.
 
 **Dormant activation contract** *(not an executable wave and absent from phase-plan-index)*
 
@@ -418,7 +428,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 43/47 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 42/48 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
