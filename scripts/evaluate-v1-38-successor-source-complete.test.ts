@@ -427,7 +427,7 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     symlinkSync("missing-route-7-target", danglingPath)
     await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
       writeOutput: () => undefined })).rejects.toThrow(
-      "MATRIX_PLAN_262_57_ROUTE_ALREADY_RESERVED")
+      "MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
     unlinkSync(danglingPath)
     let competingWriterRejected = false
     expect(() => writeV138Plan26257RouteStartV1(fixtureRoot, routeStart,
@@ -458,7 +458,7 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     expect(existsSync(path.resolve(fixtureRoot, routeStart))).toBe(true)
     await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
       writeOutput: () => undefined })).rejects.toThrow(
-      "MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+      "MATRIX_PLAN_262_57_ROUTE_ALREADY_RESERVED")
     await expect(runReceiptCli({ repoRoot: fixtureRoot,
       argv: [...routeStartArgv.slice(0, 2),
         "--write-execution-context-v11-receipt", ...routeStartArgv.slice(3)],
