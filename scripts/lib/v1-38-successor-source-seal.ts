@@ -5843,7 +5843,8 @@ export const V138_PLAN_262_60_SOURCE_PATHS = Object.freeze([
   "scripts/check-v1-38-dependency-revision-boundaries.ts",
 ] as const)
 
-const deriveV138SourceA9 = (repoRoot: string, document: Record<string, any>) => {
+export const inspectV138SourceA9Custody = (repoRoot: string,
+  document: Record<string, any>) => {
   const sourceBase9 = fullCommit(repoRoot, String(document.sourceBase9))
   const sourceA9 = fullCommit(repoRoot, String(document.sourceA9))
   const commits = gitText(repoRoot, ["rev-list", "--first-parent", "--reverse",
@@ -5880,17 +5881,43 @@ const deriveV138SourceA9 = (repoRoot: string, document: Record<string, any>) => 
   }))
   return Object.freeze({ sourceBase9, sourceA9,
     sourceA9Tree: gitText(repoRoot, ["rev-parse", `${sourceA9}^{tree}`]),
-    sourceA9Parent: sourceBase9, sourceA9Paths: V138_PLAN_262_60_SOURCE_PATHS,
+    sourceA9Parent: expectedParent === sourceA9 && commits.length > 1 ?
+      commits.at(-2)! : sourceBase9,
+    sourceA9Paths: V138_PLAN_262_60_SOURCE_PATHS,
     sourceA9Blobs })
 }
 
-const deriveV138ProtectedHistoryV9 = (repoRoot: string, sourceA9: string) => {
-  const failurePath =
-    ".planning/artifacts/v1.38-plan-262-47-pre-execution-source-failure-v1.json"
+const V138_PLAN_262_47_FAILURE_FROZEN = Object.freeze({
+  path: ".planning/artifacts/v1.38-plan-262-47-pre-execution-source-failure-v1.json",
+  commit: "bc0f95141d475d1d56ecf9d8ce67880f29385ea1",
+  blobOid: "f5efc47d0e65cebee250431cded02c3fa41906c0",
+  sha256: "sha256:dffa9bf3915895506958aef5bb45d350f70eb7a3c190078e217384c16f3e4a8a",
+  byteLength: 5792,
+  protectedRoots: Object.freeze({
+    formationAbsenceRoot: "sha256:b0ab7d57681b89313fc7bc2406adf1f2aad70e1a7aa431f17c4c8d5850c297a7",
+    frozenPolicyRoot: "sha256:2118c59a35298d0ce1d67753b3d000858cccf1c244afae56b07c0e43c194c818",
+    gameplayRuntimePrivacyClosureRoot: "sha256:c1e0a6b89a4f0f4eb7f89b7631a7cb25bc55cadf2e010b9b4cde924afe70bcdd",
+    localSealIndependentVerificationRoot: "sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b",
+    localSealProtocolRoot: "sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a",
+    preSearchPolicyRoot: "sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382",
+    predecessorSealV5BytesSha256: "sha256:0f9a5af1164e7daffc3a3603c01a3376cc4939fab9e668e97f7b7a9b326f0345",
+    predecessorSealV5Root: "sha256:2db3689e8071466ff6bcf7898dd038740f8ac8f982fab50efe27f262198dd55e",
+    protectedHistoryRoot: "sha256:1e1faa95b73c834a94e77be824a994c6105a78f04aeb0e76a396522692a3ea10",
+    replacementMetricContractRoot: "sha256:1250d82cdd114b9dfd6dd0778b5023ae3ccb7f9f71b5d2f8c46bf3b6bf7bad57",
+    selectedRouteClosureRoot: "sha256:c1e0a6b89a4f0f4eb7f89b7631a7cb25bc55cadf2e010b9b4cde924afe70bcdd",
+  }),
+} as const)
+
+export const inspectV138ProtectedHistoryV9 = (repoRoot: string,
+  sourceA9: string) => {
+  const failurePath = V138_PLAN_262_47_FAILURE_FROZEN.path
   const dispositionPath =
     ".planning/artifacts/v1.38-plan-262-60-review-v2-invalid-disposition-v1.json"
   const failureBytes = readV138RepositoryFileNoFollow(repoRoot,
     path.resolve(repoRoot, failurePath), "required")!
+  const frozenFailureBytes = readCommitFile(repoRoot,
+    V138_PLAN_262_47_FAILURE_FROZEN.commit, failurePath)
+  const sourceFailureBytes = readCommitFile(repoRoot, sourceA9, failurePath)
   const failure = JSON.parse(failureBytes.toString("utf8")) as Record<string, any>
   const authorizationPaths = gitText(repoRoot, ["ls-files", ".planning/artifacts"])
     .split("\n").filter(repoPath => /authorization-v[1-6]\.json$/u.test(repoPath)).sort()
@@ -5908,7 +5935,16 @@ const deriveV138ProtectedHistoryV9 = (repoRoot: string, sourceA9: string) => {
     failure.sourceA6 !== "600c7770867e6090147914dc090780f5b63930ec" ||
     failure.sourceB6 !== "e2166736c2a1a3f1decbb1d6b3722f87945a47ea" ||
     canonical(authorizationPaths) !== canonical(frozenAuthorizations.map(item => item[0])) ||
-    !isRecord(failure.protectedRoots)) {
+    !isRecord(failure.protectedRoots) ||
+    gitText(repoRoot, ["rev-parse",
+      `${V138_PLAN_262_47_FAILURE_FROZEN.commit}:${failurePath}`]) !==
+      V138_PLAN_262_47_FAILURE_FROZEN.blobOid ||
+    failureBytes.byteLength !== V138_PLAN_262_47_FAILURE_FROZEN.byteLength ||
+    sha256(failureBytes) !== V138_PLAN_262_47_FAILURE_FROZEN.sha256 ||
+    !failureBytes.equals(frozenFailureBytes) ||
+    !sourceFailureBytes.equals(frozenFailureBytes) ||
+    canonical(failure.protectedRoots) !== canonical(
+      V138_PLAN_262_47_FAILURE_FROZEN.protectedRoots)) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_PROTECTED_HISTORY_INVALID")
   }
   const body = { protectedA7: "5f39aba7833030d537c4c2767c369d24c982ed83",
@@ -5925,7 +5961,9 @@ const deriveV138ProtectedHistoryV9 = (repoRoot: string, sourceA9: string) => {
         }
         return { path: repoPath, blobOid, sha256: digest }
       })),
-    protectedRoots: Object.freeze(failure.protectedRoots),
+    protectedRoots: V138_PLAN_262_47_FAILURE_FROZEN.protectedRoots,
+    sourceFailureCommit: V138_PLAN_262_47_FAILURE_FROZEN.commit,
+    sourceFailureBlobOid: V138_PLAN_262_47_FAILURE_FROZEN.blobOid,
     sourceFailureSha256: sha256(failureBytes),
     reviewV1InvalidDispositionSha256: sha256(readV138RepositoryFileNoFollow(repoRoot,
       path.resolve(repoRoot, dispositionPath), "required")!) }
@@ -5981,9 +6019,9 @@ export const buildV138Plan26256AuthorizationV9 = (input: {
 }) => {
   const reviewV3Input = inspectV138Plan26256ReviewV3Input(input.repoRoot,
     input.reviewV3AbsolutePath)
-  const source = deriveV138SourceA9(input.repoRoot,
+  const source = inspectV138SourceA9Custody(input.repoRoot,
     reviewV3Input.reviewV3Document as Record<string, any>)
-  const protectedHistory = deriveV138ProtectedHistoryV9(input.repoRoot,
+  const protectedHistory = inspectV138ProtectedHistoryV9(input.repoRoot,
     source.sourceA9)
   const sourcePaths = V138_PLAN_262_60_SOURCE_PATHS
   if (canonical(source.sourceA9Paths) !== canonical(sourcePaths)) {
