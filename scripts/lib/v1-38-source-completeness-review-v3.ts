@@ -71,7 +71,7 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
   const source = record(document.sourceCustody, SOURCE_KEYS, "V138_REVIEW_V3_SOURCE_INVALID")
   if (document.schemaVersion !== V138_REVIEW_V3_SCHEMA || !fullOid(document.sourceBase9) ||
     !fullOid(document.sourceA9) || document.sourceBase9 === document.sourceA9 ||
-    !fullOid(source.tree) || source.parent !== document.sourceBase9 ||
+    !fullOid(source.tree) || !fullOid(source.parent) ||
     source.authorRun !== "codex-plan-262-60-a9-v1" || !Array.isArray(source.paths) ||
     source.paths.length !== 8 || !unique(source.paths) ||
     !source.paths.every((entry) => boundedString(entry)) ||

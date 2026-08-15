@@ -1331,7 +1331,7 @@ export const checkV138DependencyRevisionBoundaries = (
     "scripts/check-v1-38-dependency-revision-boundaries.ts",
   ].sort()
   const a9Commits = git(repoRoot, ["log", "--first-parent", "--format=%H", "HEAD",
-    "--grep=^Plan-262-60-Author-Run: codex-plan-262-60-a9-v1$", "--fixed-strings"])
+    "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-v1"])
     .trim().split("\n").filter(Boolean)
   const a9 = a9Commits[0]
   const a9SourceValid = a9 !== undefined && git(repoRoot, ["show", "-s",

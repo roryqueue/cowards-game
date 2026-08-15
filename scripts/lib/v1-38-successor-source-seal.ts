@@ -5846,15 +5846,27 @@ export const V138_PLAN_262_60_SOURCE_PATHS = Object.freeze([
 const deriveV138SourceA9 = (repoRoot: string, document: Record<string, any>) => {
   const sourceBase9 = fullCommit(repoRoot, String(document.sourceBase9))
   const sourceA9 = fullCommit(repoRoot, String(document.sourceA9))
-  const parents = gitText(repoRoot, ["show", "-s", "--format=%P", sourceA9])
-    .split(" ").filter(Boolean)
-  const changed = sorted(gitText(repoRoot, ["diff", "--name-only", "--no-renames",
-    sourceBase9, sourceA9]).split("\n").filter(Boolean))
-  const trailer = gitText(repoRoot, ["log", "-1",
-    "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", sourceA9])
-  if (parents.length !== 1 || parents[0] !== sourceBase9 ||
-    canonical(changed) !== canonical(sorted(V138_PLAN_262_60_SOURCE_PATHS)) ||
-    trailer !== "codex-plan-262-60-a9-v1") {
+  const commits = gitText(repoRoot, ["rev-list", "--first-parent", "--reverse",
+    `${sourceBase9}..${sourceA9}`]).split("\n").filter(Boolean)
+  const aggregate = new Set<string>()
+  let expectedParent = sourceBase9
+  for (const commit of commits) {
+    const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
+      .split(" ").filter(Boolean)
+    const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+      "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+    const trailer = gitText(repoRoot, ["log", "-1",
+      "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
+    if (parents.length !== 1 || parents[0] !== expectedParent || changed.length === 0 ||
+      changed.some(repoPath => !V138_PLAN_262_60_SOURCE_PATHS.includes(repoPath as never)) ||
+      trailer !== "codex-plan-262-60-a9-v1") {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
+    }
+    changed.forEach(repoPath => aggregate.add(repoPath))
+    expectedParent = commit
+  }
+  if (commits.length === 0 || commits.at(-1) !== sourceA9 ||
+    canonical(sorted(aggregate)) !== canonical(sorted(V138_PLAN_262_60_SOURCE_PATHS))) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
   }
   const sourceA9Blobs = Object.freeze(V138_PLAN_262_60_SOURCE_PATHS.map(repoPath => {
