@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planned
-stopped_at: Completed Plan 262-55 exact-A7 source-completeness review
-last_updated: "2026-08-15T02:55:49.919Z"
-last_activity: 2026-08-14
-last_activity_desc: Froze the exact-A7 zero-finding procedural source review with no authority
+stopped_at: Planned corrective review-v1-invalid disposition and reviewer-v2 gates after Plan 262-55 was disproved
+last_updated: "2026-08-15T03:20:00.000Z"
+last_activity: 2026-08-15
+last_activity_desc: Archived disproved Plan 262-55 plan/summary and planned review-v2 correction without authority
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 46
-  completed_plans: 43
+  total_plans: 47
+  completed_plans: 42
   percent: 0
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"source_complete_reviewed_pre_authority","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"single_operator_procedural_source_review_v1","source_review_status":"passed_zero_findings","source_review_root":"sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433","source_a7":"5f39aba7833030d537c4c2767c369d24c982ed83","independent_person_claimed":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"plan_262_47_terminal_present":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-56","total_plans":46,"completed_plans":43,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-55","262-56","262-57","262-48"],"incomplete":["262-56","262-57","262-48"],"archived_source_incomplete_plan":"archived/262-47-HISTORICAL.md","archived_source_incomplete_plan_sha256":"5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e","archived_original_activation_plan":"archived/262-48-HISTORICAL.md","archived_original_activation_plan_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"review_v1_invalid_corrective_review_required","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v2_pending","source_review_status":"review_v1_disproved","invalid_source_review_v1_root":"sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433","source_review_v2_root":null,"source_a7":"5f39aba7833030d537c4c2767c369d24c982ed83","independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"plan_262_47_terminal_present":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-58","total_plans":47,"completed_plans":42,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-58","262-59","262-56","262-57","262-48"],"incomplete":["262-58","262-59","262-56","262-57","262-48"],"archived_invalid_review_plan":"archived/262-55-HISTORICAL.md","archived_invalid_review_plan_sha256":"20084e32b072e697523b843cbf7d664672518e9db380bbf6cfca6a38b06b9940","archived_invalid_review_summary":"archived/262-55-SUMMARY-HISTORICAL.md","archived_invalid_review_summary_sha256":"a25bb91378a70cf0df517ff033a63322f6b1d2285fb1f212db2593373f8b5ee0","archived_source_incomplete_plan":"archived/262-47-HISTORICAL.md","archived_source_incomplete_plan_sha256":"5044f497cf1d289954dc72c2b443dd4283821c52cabdda945c0e56dfffcb5a1e","archived_original_activation_plan":"archived/262-48-HISTORICAL.md","archived_original_activation_plan_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 43 of 46 — Plan 262-55 complete; Plan 262-56 is next
-Status: Exact A7 passed zero-finding procedural source review; revised SEAL-01 remains passed under reduced assurance and ADMIT-03 remains blocked
-Last activity: 2026-08-15 — Froze exact A7 under a zero-finding procedural review with no authority
+Plan: 42 of 47 trustworthy summaries — Plans 262-58 and 262-59 are corrective review gates; Plan 262-58 is next
+Status: Plan-262-55 review-v1 is invalid/disproved; exact A7 awaits reviewer-v2; revised SEAL-01 remains passed under reduced assurance and ADMIT-03 remains blocked
+Last activity: 2026-08-15 — Archived disproved Plan-262-55 plan/summary and rewired authorization behind review-v2
 
-Progress: [█████████░] 89%
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
-**Current milestone:** 43 of 46 active Phase 262 plans have summaries. Plan 262-55 independently binds exact A7, all ten route-7 commands, eleven terminal dispositions, forty protected charges, protected roots, and zero canonical/live writes under review root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433`. The assurance remains `single_operator_procedural_source_review_v1`: independent person, cryptographic reviewer identity, and independent custody are all explicitly unclaimed. ADMIT-03 remains blocked and every downstream authority remains false. Next action: Plan 262-56.
+**Current milestone:** 42 of 47 active Phase 262 plans have trustworthy summaries. Deep review disproved the Plan-262-55 v1 zero-finding verdict with eight blockers and one warning; historical root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433` remains immutable but non-authorizing. Exact A7 awaits a new checker and fresh review-v2. Independent person, reviewer separation, cryptographic reviewer identity, and independent custody are unclaimed. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: Plan 262-58.
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -190,9 +190,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Grant revised SEAL-01 only under single_operator_local_seal_v1 after all four historical findings pass together from the exact clean source. — Zero findings are necessary and independent custody remains explicitly excluded.
 - [Phase 262]: Keep independent custody false, ADMIT-03 blocked, and every downstream authority false despite the mechanics pass. — The local-seal review cannot substitute for the separately authorized literal 540/540 reproduction.
 - [Phase 262]: Initial route-7 destination obstruction remains a non-terminal pre-start disposition; terminal branches require a durable atomic route-start. — This prevents terminal evidence from existing before route execution begins.
-- [Phase 262]: A7 is limited to the four declared source/test paths and is handed to Plan 262-55 before any canonical authority is created. — This preserves exact source custody and reviewer separation.
-- [Phase 262]: Treat Plan 262-55 as `single_operator_procedural_source_review_v1`; independent person, external identity, cryptographic reviewer identity, and independent custody remain explicitly unclaimed.
-- [Phase 262]: Permit Plan 262-56 eligibility only from the checker-recomputed exact zero-finding A7 review root; Plan 262-55 creates no B7, route start, or downstream authority.
+- [Phase 262]: A7 remains limited to the four declared source/test paths, but the Plan-262-55 review-v1 zero-finding verdict is disproved by eight blockers and one warning. — Preserve its artifact/report/checker/test plus archived plan/summary as immutable failed history with no completion or authority credit.
+- [Phase 262]: Build reviewer-v2 in Plan 262-58, then use a fresh Plan-262-59 procedural context to review both verifier code and exact A7. — independentPersonClaimed and reviewerSeparated remain false; procedural context is not an identity claim.
+- [Phase 262]: Permit Plan 262-56 eligibility only from the immutable checker-recomputed exact zero-finding Plan-262-59 review-v2 root; v1 bytes are prohibited as detached-A7 review input and no review creates B7, route start, or downstream authority.
 
 ### Pending Todos
 
@@ -244,7 +244,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-15T02:55:49.906Z
-Stopped at: Completed Plan 262-55 exact-A7 source-completeness review
+Last session: 2026-08-15T03:20:00.000Z
+Stopped at: Planned corrective review-v1-invalid disposition and fresh reviewer-v2 gates
 Resume file: None
-Next command: Execute Plan 262-56 checkpointed authority rendering; no live route work is authorized.
+Next command: Execute Plan 262-58 offline corrective checker/disposition work; no canonical v2 PASS, authority, or live route work is authorized.
