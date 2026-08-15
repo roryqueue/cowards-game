@@ -33,6 +33,7 @@ import {
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
   V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
   V138_PLAN_262_56_OBSOLETE_V7_PATHS,
+  V138_PLAN_262_57_ROUTE_CONTRACT_V8,
   V138_PLAN_262_54_SOURCE_BASE7,
   V138_PLAN_262_54_SOURCE_PATHS,
   buildV138Plan26255ReviewDocument,
@@ -204,12 +205,12 @@ it("PLAN_262_54_RED: route-7 production capability manifest is complete", async 
     expect(missing).toEqual([])
 })
 
-it("keeps a closed route-7 command, handler, destination, and disposition manifest", async () => {
+it("keeps a closed v8 route-7 command, handler, destination, and disposition manifest", async () => {
   expect(checkV138Route7SourceCompleteness()).toBe(V138_ROUTE_7_SOURCE_MANIFEST)
-  expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({
+  expect(V138_PLAN_262_57_ROUTE_CONTRACT_V8).toMatchObject({
     routeOrdinal: 7,
-    authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
-    sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+    authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+    sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
     executionContextSchema: "v1.38-current-matrix-execution-context-v11",
     preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
     calibrationSchema: "v1.38-current-matrix-calibration-v11",
@@ -398,7 +399,7 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     expect(() => { seal = writeV138SuccessorSourceSealV7(fixtureRoot,
       V138_PLAN_262_56_CANONICAL_PATHS.seal, authorization) })
       .toThrow("V138_SUCCESSOR_SOURCE_SEAL_V7_OBSOLETE")
-    return
+    if (process.env.V138_RUN_OBSOLETE_V7_FIXTURE === "1") {
     git("add", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
       V138_PLAN_262_56_CANONICAL_PATHS.seal)
     git("commit", "-m", "fixture: seal source B7")
@@ -757,6 +758,7 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
       writeOutput: () => undefined })).rejects.toThrow(
       "MATRIX_PLAN_262_30_AUTHORITY_EXPIRED")
+    }
   } finally {
     expect(V138_PLAN_262_57_FRESH_DESTINATIONS.map((repoPath) =>
       existsSync(path.resolve(repoRoot, repoPath)))).toEqual(before)

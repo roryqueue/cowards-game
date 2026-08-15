@@ -31,6 +31,7 @@ import {
   V138_PLAN_262_58_SOURCE_PATHS,
   canonicalV138ReviewV2,
   captureV138ReviewV2Execution,
+  deriveV138ReviewV2,
   inspectV138SourceIdentityA8,
   sha256V138ReviewV2,
 } from "./check-v1-38-plan-262-58-source-completeness-review-v2.js"
@@ -49,12 +50,12 @@ const writeCanonical = (target: string, value: unknown) => {
 describe("Plan 262-58 reviewer-v2 corrective contract", () => {
   it("derives exact sourceBase8/A8 and exact six committed blobs", () => {
     const custody = inspectV138SourceIdentityA8(repoRoot)
-    expect(custody.sourceBase8).toBe("9fb6b12f190ff5a79e423efafbfaae01c1037b5d")
+    expect(custody.sourceBase8).toBe("5fa635ccebfcef6ff00cd05876401cec4688e64f")
     expect(custody.a8Parents).toEqual([custody.sourceBase8])
     expect(custody.aggregateChangedPaths).toEqual([...V138_PLAN_262_58_SOURCE_PATHS].sort())
     expect(custody.blobs).toHaveLength(6)
     expect(custody.run.every(item => item.authorRun ===
-      "codex-reviewfix-262-58-v2-20260815")).toBe(true)
+      "codex-reviewfix-262-58-v3-20260815")).toBe(true)
     expect(custody.planningDescendants.every(item => item.paths.every(
       repoPath => repoPath.startsWith(".planning/")))).toBe(true)
   })
@@ -132,29 +133,21 @@ describe("Plan 262-58 reviewer-v2 corrective contract", () => {
       .toThrow("V138_SUCCESSOR_SOURCE_SEAL_V7_OBSOLETE")
   })
 
-  it("opens a real detached immutable review and checks a real two-path B8", () => {
+  it("opens a real reviewer-produced detached immutable review and checks canonical B8", async () => {
     const fixture = mkdtempSync(path.join(os.tmpdir(), "cowards-plan-262-58-b8-"))
     const detachedDir = mkdtempSync(path.join(os.tmpdir(), "cowards-review-v2-input-"))
     const reviewBranch = `test-review-${path.basename(fixture)}`
     try {
       git(repoRoot, ["worktree", "add", "--detach", fixture, "HEAD"])
       const custody = inspectV138SourceIdentityA8(fixture)
-      git(fixture, ["checkout", "-b", reviewBranch, custody.a8])
-      const reviewBody = { schemaVersion:
-        "v1.38-plan-262-59-source-completeness-review-v2",
-        sourceBase8: custody.sourceBase8, sourceA8: custody.a8, custody: {},
-        reachability: {}, transcript: {}, protectedHistory: {}, snapshots: {},
-        identityClaims: { independentPersonClaimed: false, reviewerSeparated: false,
-          externalIdentityClaimed: false, cryptographicReviewerIdentityClaimed: false,
-          independentCustodyClaimed: false, proceduralContext: "owned-fixture" },
-        findings: [], findingCount: 0, sourceCompletenessPassed: true }
-      const review = { ...reviewBody, reviewRoot: sha256V138ReviewV2(
-        canonicalV138ReviewV2(reviewBody)) }
+      const carrierHead = git(fixture, ["rev-parse", "HEAD"])
+      git(fixture, ["checkout", "-b", reviewBranch, carrierHead])
+      const review = await deriveV138ReviewV2(fixture)
       const reviewTarget = path.resolve(fixture,
         V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview)
       const reportTarget = path.resolve(fixture,
         ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-59-REVIEW.md")
-      writeCanonical(reviewTarget, review)
+      writeFileSync(reviewTarget, `${canonicalV138ReviewV2(review)}\n`)
       writeFileSync(reportTarget, "# owned review fixture\n")
       git(fixture, ["add", V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview,
         ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-59-REVIEW.md"])
@@ -165,7 +158,6 @@ describe("Plan 262-58 reviewer-v2 corrective contract", () => {
       copyFileSync(reviewTarget, detachedReviewLogical)
       chmodSync(detachedReviewLogical, 0o444)
       const detachedReview = realpathSync(detachedReviewLogical)
-      git(fixture, ["checkout", "--detach", custody.a8])
       const authorization = buildV138Plan26256AuthorizationV8({ repoRoot: fixture,
         reviewV2AbsolutePath: detachedReview })
       expect(checkV138Plan26256AuthorizationV8(fixture, authorization))
@@ -184,7 +176,7 @@ describe("Plan 262-58 reviewer-v2 corrective contract", () => {
       const sourceB8 = git(fixture, ["rev-parse", "HEAD"])
       const checked = checkV138SuccessorSealCommitV8({ repoRoot: fixture,
         sourceB8, authorization, seal })
-      expect(checked).toMatchObject({ sourceB8, sourceB8Parent: custody.a8,
+      expect(checked).toMatchObject({ sourceB8,
         changedPaths: [V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
           V138_PLAN_262_56_V8_CANONICAL_PATHS.seal].sort(),
         laterModificationCount: 0 })

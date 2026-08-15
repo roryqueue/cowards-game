@@ -36,6 +36,7 @@ import {
   V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
   V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
   V138_PLAN_262_56_OBSOLETE_V7_PATHS,
+  V138_PLAN_262_57_ROUTE_CONTRACT_V8,
   buildV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
@@ -498,9 +499,9 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
       .toBe("single_operator_procedural_source_review_v1")
     expect(checkV138Plan26257RouteContract()).toBe(
       V138_PLAN_262_57_ROUTE_CONTRACT)
-    expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({ routeOrdinal: 7,
-      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
-      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
+    expect(V138_PLAN_262_57_ROUTE_CONTRACT_V8).toMatchObject({ routeOrdinal: 7,
+      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
       executionContextSchema: "v1.38-current-matrix-execution-context-v11",
       preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
       calibrationSchema: "v1.38-current-matrix-calibration-v11",

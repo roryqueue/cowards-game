@@ -649,18 +649,67 @@ export const analyzeV138DependencyRevisionSources = (
   return findings.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line || a.code.localeCompare(b.code))
 }
 
-const committedSourceSha256 = (repoPath: string): Sha256 => sha256(execFileSync(
-  "git", ["show", `HEAD:${repoPath}`], { cwd: defaultRepoRoot,
-    encoding: "buffer", maxBuffer: 64 * 1024 * 1024 }))
-
-/** Active route/review source is admitted only as byte-identical committed source. */
-export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256 = Object.freeze(
-  Object.fromEntries([
+const loadFrozenRouteSources = () => {
+  const gitFrozen = (args: readonly string[]) => execFileSync("git", [...args], {
+    cwd: defaultRepoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+  const frozenRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === "object" && !Array.isArray(value)
+  const summaryPath = `${phaseDirectory}/262-58-SUMMARY.md`
+  const summary = repositoryFile(defaultRepoRoot,
+    path.join(defaultRepoRoot, summaryPath)).toString("utf8")
+  const match = /<!-- PLAN262-58-A8-CUSTODY-V1\n([^]*?)\n-->/u.exec(summary)
+  if (match === null) throw new TypeError("V138_FROZEN_A8_CARRIER_INVALID")
+  const carrier = JSON.parse(match[1]!) as Record<string, unknown>
+  const blobs = Array.isArray(carrier.blobs) ? carrier.blobs : []
+  const a8 = String(carrier.sourceA8 ?? "")
+  const carrierCommits = gitFrozen(["log", "--first-parent", "--reverse",
+    "--format=%H", "HEAD", "--", summaryPath]).trim().split("\n").filter(Boolean)
+    .filter(commit => gitFrozen(["diff-tree", "--no-commit-id", "--name-only",
+      "-r", "--no-renames", commit]).trim() === summaryPath &&
+      execFileSync("git", ["show", `${commit}:${summaryPath}`], { cwd: defaultRepoRoot,
+        encoding: "utf8" }) === summary)
+  if (carrier.sourceBase8 !== "5fa635ccebfcef6ff00cd05876401cec4688e64f" ||
+    carrierCommits.length !== 1 || gitFrozen(["show", "-s", "--format=%P",
+      carrierCommits[0]!]).trim() !== a8 || gitFrozen(["log", "--format=%H",
+      `${carrierCommits[0]}..HEAD`, "--", summaryPath]).trim() !== "") {
+    throw new TypeError("V138_FROZEN_A8_CARRIER_INVALID")
+  }
+  const records: Record<string, Readonly<{ blobOid: string; sha256: Sha256 }>> = {
+    "scripts/lib/v1-38-current-matrix-reproduction.ts": { blobOid:
+      "4b4fe9201f529e4dee5529e7982fa75c1c31b08a", sha256:
+      "sha256:507a5ad25a536b5930b9edd102ba460ec0f7dc4664e5c4496b1745bb7b5f2db5" },
+    "scripts/check-v1-38-plan-262-55-source-completeness-review.ts": { blobOid:
+      "649b50c98ea0ffeed6c8bd0e6cb2858601087237", sha256:
+      "sha256:1d3bf3ecb99f1f5a52ef4e54d52ae2d358b9825d3b7028d787dd3542600678da" },
+  }
+  for (const repoPath of ["scripts/lib/v1-38-successor-source-seal.ts",
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts"]) {
+    const blob = blobs.find(item => frozenRecord(item) && item.path === repoPath)
+    if (!frozenRecord(blob) || typeof blob.blobOid !== "string" ||
+      typeof blob.sha256 !== "string") throw new TypeError("V138_FROZEN_A8_CARRIER_INVALID")
+    records[repoPath] = { blobOid: blob.blobOid,
+      sha256: blob.sha256 as Sha256 }
+  }
+  const orderedRecords = Object.fromEntries([
     "scripts/lib/v1-38-current-matrix-reproduction.ts",
     "scripts/lib/v1-38-successor-source-seal.ts",
     "scripts/check-v1-38-plan-262-55-source-completeness-review.ts",
     "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
-  ].map(repoPath => [repoPath, committedSourceSha256(repoPath)])) as
+  ].map(repoPath => [repoPath, records[repoPath]!]))
+  for (const [repoPath, record] of Object.entries(orderedRecords)) {
+    const objectBytes = execFileSync("git", ["cat-file", "blob", record.blobOid],
+      { cwd: defaultRepoRoot, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 })
+    if (sha256(objectBytes) !== record.sha256) {
+      throw new TypeError("V138_FROZEN_ROUTE_SOURCE_OBJECT_INVALID")
+    }
+  }
+  return Object.freeze(orderedRecords)
+}
+
+export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS = loadFrozenRouteSources()
+export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256 = Object.freeze(
+  Object.fromEntries(Object.entries(V138_FROZEN_ROUTE_CAPABLE_SOURCE_OBJECTS)
+    .map(([repoPath, record]) => [repoPath, record.sha256])) as
     Readonly<Record<string, Sha256>>)
 
 export const analyzeV138PolicySourcesWithFrozenRouteAllowlist = (
@@ -822,15 +871,74 @@ const correctiveDispositionCanonical = (repoRoot: string): boolean => {
 }
 
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
+  const findings: V138DependencyRevisionFinding[] = []
   try {
     checkV138Plan26258LiveLifecycle(repoRoot)
-    return []
   } catch {
-    return [{ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
-      detail: "Phase 262 live index does not match the derived 47-plan corrective lifecycle." }]
+    findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
+      detail: "Phase 262 live index does not match the derived 47-plan corrective lifecycle." })
   }
-  /* Historical transition implementation retained below for read-only archaeology. */
-  const findings: V138DependencyRevisionFinding[] = []
+  const exactInventory = ["262-01", "262-02", "262-08", "262-09", "262-10",
+    "262-11", "262-12", "262-13", "262-14", "262-15", "262-16", "262-17",
+    "262-18", "262-19", "262-20", "262-21", "262-22", "262-23", "262-24",
+    "262-25", "262-26", "262-27", "262-28", "262-29", "262-30", "262-31",
+    "262-32", "262-33", "262-34", "262-35", "262-36", "262-37", "262-38",
+    "262-39", "262-42", "262-44", "262-45", "262-48", "262-49", "262-51",
+    "262-52", "262-53", "262-54", "262-56", "262-57", "262-58", "262-59"]
+  const exactWaves = Object.fromEntries(exactInventory.map((id, index) => {
+    const special: Record<string, number> = { "262-48": 47, "262-49": 38,
+      "262-51": 39, "262-52": 40, "262-53": 41, "262-54": 42,
+      "262-56": 45, "262-57": 46, "262-58": 43, "262-59": 44 }
+    return [id, special[id] ?? index + 1]
+  }))
+  const exactDependencies: Record<string, readonly string[]> = {}
+  for (let index = 1; index < 34; index += 1) {
+    exactDependencies[exactInventory[index]!] = [exactInventory[index - 1]!]
+  }
+  exactDependencies["262-01"] = []
+  exactDependencies["262-39"] = ["262-35", "262-36", "262-37", "262-38"]
+  Object.assign(exactDependencies, { "262-42": ["262-39"], "262-44": ["262-42"],
+    "262-45": ["262-44"], "262-48": ["262-57"], "262-49": ["262-45"],
+    "262-51": ["262-49"], "262-52": ["262-51"], "262-53": ["262-52"],
+    "262-54": ["262-53"], "262-56": ["262-59"], "262-57": ["262-56"],
+    "262-58": ["262-54"], "262-59": ["262-58"] })
+  const toolPath = path.join(process.env.HOME ?? "", ".codex/gsd-core/bin/gsd-tools.cjs")
+  const indexed = spawnSync(process.execPath,
+    [toolPath, "query", "phase-plan-index", "262"], { cwd: repoRoot,
+      encoding: "utf8", timeout: 20_000 })
+  try {
+    const parsed = JSON.parse(indexed.stdout) as Record<string, unknown>
+    const plans = Array.isArray(parsed.plans) ? parsed.plans : []
+    const observedIds = plans.map(plan => isRecord(plan) ? plan.id : undefined)
+    const inventoryExact = JSON.stringify(observedIds) === JSON.stringify(exactInventory)
+    const dependencyExact = plans.every(plan => isRecord(plan) &&
+      typeof plan.id === "string" && plan.wave === exactWaves[plan.id] &&
+      JSON.stringify(plan.depends_on) === JSON.stringify(exactDependencies[plan.id]))
+    const waves = isRecord(parsed.waves) ? parsed.waves : {}
+    const waveExact = exactInventory.every(id =>
+      JSON.stringify(waves[String(exactWaves[id])]) === JSON.stringify([id]))
+    const summaryIds = plans.filter(plan => isRecord(plan) && plan.has_summary === true)
+      .map(plan => String(plan.id))
+    const incomplete = Array.isArray(parsed.incomplete) ? parsed.incomplete : []
+    const expectedIncomplete = V138_PLAN_262_58_CORRECTIVE_CHAIN.filter(planId =>
+      !repositoryFilePresent(repoRoot, path.join(repoRoot, phaseDirectory,
+        `${planId}-SUMMARY.md`)))
+    const archivesExact = !repositoryFilePresent(repoRoot, path.join(repoRoot,
+      phaseDirectory, "262-55-PLAN.md")) && ["262-55-HISTORICAL.md",
+      "262-55-SUMMARY-HISTORICAL.md"].every(name => repositoryFilePresent(repoRoot,
+        path.join(repoRoot, phaseDirectory, "archived", name)))
+    if (indexed.status !== 0 || !inventoryExact || !dependencyExact || !waveExact ||
+      summaryIds.length !== 47 - expectedIncomplete.length ||
+      JSON.stringify([...incomplete].sort()) !== JSON.stringify([...expectedIncomplete].sort()) ||
+      !archivesExact) findings.push({ code: "PLAN_DISCOVERY_DRIFT",
+        path: phaseDirectory, line: 1,
+        detail: "Exact ordered 47-plan inventory, dependencies, waves, summaries, archives, or incomplete set drifted." })
+  } catch {
+    findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
+      detail: "phase-plan-index 262 returned invalid JSON." })
+  }
+  return findings
+  /* Historical transition implementation retained below for read-only archaeology.
   const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41", "262-43", "262-47"])
   const phaseChain = validateV138CanonicalParentChain(repoRoot,
     path.join(repoRoot, phaseDirectory, ".v138-directory-probe"))
@@ -942,6 +1050,8 @@ const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisio
     findings.push({ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1, detail: "phase-plan-index 262 returned invalid JSON." })
   }
   return findings
+  }
+  */
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
