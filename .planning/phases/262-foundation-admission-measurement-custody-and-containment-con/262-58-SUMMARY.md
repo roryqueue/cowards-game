@@ -34,6 +34,7 @@ key-decisions:
   - "Fix independentPersonClaimed, reviewerSeparated, cryptographic identity, and independent custody claims to false."
   - "Reject the reviewed da8b3394 boundary, freeze sourceBase8 9fb6b12f190ff5a79e423efafbfaae01c1037b5d and corrected exact six-path A8 ba567987e7a64239b93ebc40ad9d280231172a44."
   - "Keep ADMIT-03 blocked at 0/540 and route next action exclusively to Plan 262-59."
+  - "Freeze corrected sourceBase8 5fa635ccebfcef6ff00cd05876401cec4688e64f and A8 2b05b6529f7213790e09e767e2710cb8f43c5b76 through this one-path immutable custody carrier."
 patterns-established:
   - "Semantic mutations recompute their enclosing root and assert a typed finding."
   - "Future authorization consumes one absolute detached immutable review-v2 input and exact A8 custody."
@@ -153,6 +154,37 @@ Plan 262-59 is the only next action. It may review exact A8 and publish canonica
 
 - Historical commits `a4c8c810`, `da8b3394`, and `b463968c` remain reachable; corrected A8 `ba567987` is reachable and contains exactly the declared six paths.
 - The live dependency checker derives `plan_58_complete_43_of_47` with incomplete set `262-59, 262-56, 262-57, 262-48`.
+
+## Corrected A8 Custody Carrier
+
+The deep-review-v2 remediation freezes the exact six-path source boundary below. This summary is the sole post-A8 planning-only carrier; reviewers must verify every mode, blob OID, SHA-256, byte length, parent, tree, trailer, first-parent reachability, and unchanged worktree byte directly against Git.
+
+<!-- PLAN262-58-A8-CUSTODY-V1
+{
+  "schemaVersion": "v1.38-plan-262-58-a8-custody-v1",
+  "sourceBase8": "5fa635ccebfcef6ff00cd05876401cec4688e64f",
+  "sourceA8": "2b05b6529f7213790e09e767e2710cb8f43c5b76",
+  "sourceA8Tree": "92603fc9e9b79a8755651f289ab09bccab0e12a4",
+  "sourceA8Parent": "5fa635ccebfcef6ff00cd05876401cec4688e64f",
+  "authorRun": "codex-reviewfix-262-58-v3-20260815",
+  "paths": [
+    "scripts/check-v1-38-dependency-revision-boundaries.ts",
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+    "scripts/evaluate-v1-38-successor-route.test.ts",
+    "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+    "scripts/lib/v1-38-successor-source-seal.ts"
+  ],
+  "blobs": [
+    {"path":"scripts/check-v1-38-dependency-revision-boundaries.ts","mode":"100644","blobOid":"4bf7babc2f63769ee3ef57ff2be9addab3b18fcb","sha256":"sha256:294f7bb1a7dcae9677bab7829373bc80160ec718d6c39263685f676bd87452d7","byteLength":68581},
+    {"path":"scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts","mode":"100644","blobOid":"bd380a22c5833f0c4a8b1829da655121538c8913","sha256":"sha256:f73633b12c71028a196a185f8d3a6084c4e4f0b23e72f472b07b41fd0993d41a","byteLength":10285},
+    {"path":"scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts","mode":"100644","blobOid":"b257f7a1d4931c4d44584e63c9e69ab62b115292","sha256":"sha256:52040127b905f5081ab8205fcceaaee5f26d04b0f301be5be0fc6dbb51836907","byteLength":34992},
+    {"path":"scripts/evaluate-v1-38-successor-route.test.ts","mode":"100644","blobOid":"df3dd241a477aef0e0c37428f02af3ba9d5b51f9","sha256":"sha256:caa1879454189a5f646957fe838e5736db2a4ad5186e17c95185a77c4968291b","byteLength":26449},
+    {"path":"scripts/evaluate-v1-38-successor-source-complete.test.ts","mode":"100644","blobOid":"1e016ff2c734a8dfda18d00f021babd762fc5216","sha256":"sha256:404382707e2a290e0527f56caafb561a70bbfa717228e7d75e4cc2fd75c9ea57","byteLength":38726},
+    {"path":"scripts/lib/v1-38-successor-source-seal.ts","mode":"100644","blobOid":"97c12621cb1be8c08131f252d97b64a1522414ac","sha256":"sha256:0b1c0947e3a2306fd32dd4c1d88bbd05d9d5d3589343ba2af2f4555b89c002ae","byteLength":347842}
+  ]
+}
+-->
 
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
