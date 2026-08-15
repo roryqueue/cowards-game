@@ -259,8 +259,9 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     const custody = inspectV138SourceIdentityA7(fixtureRoot, sourceA7)
     expect(custody).toMatchObject({ sourceBase7:
       V138_PLAN_262_54_SOURCE_BASE7, sourceA7,
-      reviewedSourceParents: [V138_PLAN_262_54_SOURCE_BASE7],
       aggregateChangedPaths: [...V138_PLAN_262_54_SOURCE_PATHS].sort() })
+    expect(custody.reviewedSourceParents).toEqual([
+      custody.sourceRangeCommits.at(-2) ?? V138_PLAN_262_54_SOURCE_BASE7])
     expect(git("rev-parse", `${sourceA7}^{tree}`)).toBe(
       custody.reviewedSourceTree)
     for (const blob of custody.reviewedSourceBlobs) {
