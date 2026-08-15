@@ -11,13 +11,15 @@ import {
   V138_RECEIPT_DIRECT_COMMANDS,
   V138_ROUTE_7_SOURCE_MANIFEST,
   buildV138ExecutionContextV11Receipt,
+  calibrateV138ParallelMatrix,
   buildV138Plan26257RouteStartV1,
   checkV138Plan26257RouteStartV1,
   checkV138Route7SourceCompleteness,
   dispatchV138CurrentMatrixDirectEntry,
+  executeV138ParallelMatrix,
   runReceiptCli,
-  writeV138Plan26257PreStartObstructionV1,
   writeV138Plan26257RouteStartV1,
+  type V138ParallelShardRunner,
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
@@ -69,6 +71,35 @@ const canonicalBytes = (value: unknown): Buffer => {
   if (encoded.ok === false) throw new TypeError("TEST_CANONICAL_JSON_INVALID")
   return Buffer.from(`${Buffer.from(encoded.bytes).toString("utf8")}\n`, "utf8")
 }
+
+const admittedHeadroom = async () => ({ ok: true as const, observation: {
+  metricId: "darwin-memorystatus-effective-available-basis-points-v1" as const,
+  providerId: "apple-memory-pressure-q-v1" as const,
+  parserId: "apple-memory-pressure-q-c-locale-parser-v1" as const,
+  stdoutByteLength: 100,
+  stdoutSha256:
+    "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" as const,
+  totalBytes: 4096, pageCount: 1, pageSizeBytes: 4096, percentage: 25,
+  observedBasisPoints: 2500, disposition: "preflight_admitted" as const,
+} })
+
+const injectedSuccessfulRunner = (): V138ParallelShardRunner => ({ async run(
+  shard, control) {
+  control.onLaunch({ event: "child_launched", shardId: shard.shardId,
+    laneId: shard.laneId, executionAttemptIds: shard.attempts.map(
+      ({ executionAttemptId }: { executionAttemptId: string }) =>
+        executionAttemptId) })
+  control.onResourceSample({ childId: `child:${shard.shardId}`,
+    childRssKilobytes: 100, hostTotalMemoryKilobytes: 10_000,
+    hostFreeMemoryKilobytes: 5_000 })
+  return { shardId: shard.shardId, laneId: shard.laneId,
+    classification: "success" as const, elapsedMilliseconds: 100,
+    maxRssKilobytes: 100, cleanup: { gracefulTerminationSent: false,
+      forceTerminationSent: false, exitAwaited: true, orphanProcessIds: [] },
+    outcomes: shard.attempts.map(({ executionAttemptId }:
+      { executionAttemptId: string }) => ({ attemptId: executionAttemptId,
+      classification: "success" as const, outcome: "draw" as const })) }
+} })
 
 const ROUTE_7_COMMANDS = Object.freeze([
   "--calibrate-parallel-v11-receipt",
@@ -249,6 +280,8 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
   const before = V138_PLAN_262_57_FRESH_DESTINATIONS.map((repoPath) =>
     existsSync(path.resolve(repoRoot, repoPath)))
   let observations = 0
+  let calibrations = 0
+  let reproductions = 0
   try {
     execFileSync("git", ["clone", "--shared", "--quiet", repoRoot,
       fixtureRoot])
@@ -346,6 +379,12 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       writeOutput: () => undefined })).rejects.toThrow(
       "V138_SUCCESSOR_SEAL_A7_WORKTREE_DRIFT")
     writeFileSync(sealedSourcePath, sealedSourceBytes)
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-pre-execution-readiness-v1",
+      "--authorization", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+      "--seal", V138_PLAN_262_56_CANONICAL_PATHS.seal,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    writeOutput: () => undefined })
     const danglingPath = path.resolve(fixtureRoot,
       V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!)
     symlinkSync("missing-route-7-target", danglingPath)
@@ -369,6 +408,11 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
       writeOutput: () => undefined })).rejects.toThrow(
       "MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+    await expect(runReceiptCli({ repoRoot: fixtureRoot,
+      argv: [...routeStartArgv.slice(0, 2),
+        "--write-execution-context-v11-receipt", ...routeStartArgv.slice(3)],
+      writeOutput: () => undefined })).rejects.toThrow(
+      "MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
     const terminalPath = V138_PLAN_262_57_ROUTE_DESTINATIONS[4]!
     const patternCObservation = { mode: "delegated-worker",
       cwd: "/tmp/not-canonical", terminalAgentRegistry: { schemaVersion:
@@ -382,10 +426,21 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       "--reproduction", V138_PLAN_262_57_ROUTE_DESTINATIONS[3]!,
       "--source-a7", sourceA7, "--source-b7", sourceB7]
     const observedRootOverrides = {
-      tool_identity_failed: `sha256:${"a".repeat(64)}` as const,
-      protected_history_failed: `sha256:${"b".repeat(64)}` as const,
-      formation_absence_failed: `sha256:${"c".repeat(64)}` as const,
+      tool_identity_failed:
+        "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" as const,
+      protected_history_failed:
+        "sha256:123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0" as const,
+      formation_absence_failed:
+        "sha256:23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01" as const,
     }
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-plan-262-57-terminal-v1", terminalPath,
+      ...terminalBaseFlags, "--disposition", "consumed_stage_interrupted"],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+      "--terminal", terminalPath], writeOutput: () => undefined })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
     const preObservationDispositions = ["tool_identity_failed",
       "protected_history_failed", "formation_absence_failed",
       "pattern_c_ownership_failed"] as const
@@ -414,7 +469,8 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
         consumptionMarkerRoots: { preflight: expect.any(String),
           calibration: null, reproduction: null } })
       if (disposition === "tool_identity_failed") {
-        terminal.preObservationProof.observedRoot = `sha256:${"d".repeat(64)}`
+        terminal.preObservationProof.observedRoot =
+          "sha256:3456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012"
         writeFileSync(path.resolve(fixtureRoot, terminalPath),
           canonicalBytes(terminal))
         await expect(runReceiptCli({ ...dependencies, argv: ["node", "route",
@@ -439,14 +495,172 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!), "utf8")))
       .toMatchObject({ disposition: "preflight_unavailable",
         chargedIdentityId: "preflight:v11:0" })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-plan-262-57-terminal-v1", terminalPath,
+      ...terminalBaseFlags, "--disposition", "preflight_unavailable"],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+      "--terminal", terminalPath], writeOutput: () => undefined })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--calibrate-parallel-v11-receipt",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!, "--preflight",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!, "--route-start", routeStart,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    calibrate: async (input) => { calibrations += 1
+      return calibrateV138ParallelMatrix({ ...input,
+        runner: injectedSuccessfulRunner(),
+        sharedHeadroomObserver: admittedHeadroom }) },
+    writeOutput: () => undefined })
+    expect(calibrations).toBe(0)
+    await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-authoritative-v12-receipt",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[3]!, "--calibration",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!, "--route-start", routeStart,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    executeMatrix: async (input) => { reproductions += 1
+      return executeV138ParallelMatrix({ ...input,
+        runner: injectedSuccessfulRunner(),
+        sharedHeadroomObserver: admittedHeadroom }) },
+    writeOutput: () => undefined })).rejects.toThrow(
+      "MATRIX_REPRODUCTION_V10_CALIBRATION_NOT_ADMITTED")
+    expect(reproductions).toBe(0)
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[5]!))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!))
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-headroom-preflight-v11-receipt",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!, "--route-start", routeStart,
+      "--authorization", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+      "--seal", V138_PLAN_262_56_CANONICAL_PATHS.seal,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    observeHeadroom: async () => ({ ok: true, observation: {
+      ...(await admittedHeadroom()).observation, percentage: 24,
+      observedBasisPoints: 2400,
+      disposition: "preflight_refused" as const } }),
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-plan-262-57-terminal-v1", terminalPath,
+      ...terminalBaseFlags, "--disposition", "preflight_refused"],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+      "--terminal", terminalPath], writeOutput: () => undefined })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!))
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-headroom-preflight-v11-receipt",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!, "--route-start", routeStart,
+      "--authorization", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+      "--seal", V138_PLAN_262_56_CANONICAL_PATHS.seal,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    observeHeadroom: admittedHeadroom, writeOutput: () => undefined })
+    const calibrationPath = path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!)
+    symlinkSync("racing-calibration-target", calibrationPath)
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-plan-262-57-terminal-v1", terminalPath,
+      ...terminalBaseFlags, "--disposition", "fresh_destination_failed"],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+      "--terminal", terminalPath], writeOutput: () => undefined })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
+    unlinkSync(calibrationPath)
+    const calibrationArgv = ["node", "route",
+      "--calibrate-parallel-v11-receipt",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!, "--preflight",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!, "--route-start", routeStart,
+      "--source-a7", sourceA7, "--source-b7", sourceB7]
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: calibrationArgv,
+      calibrate: async () => { calibrations += 1
+        throw new TypeError("INJECTED_CALIBRATION_STOP") },
+      writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-plan-262-57-terminal-v1", terminalPath,
+      ...terminalBaseFlags, "--disposition", "calibration_stopped"],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+      "--terminal", terminalPath], writeOutput: () => undefined })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
+    unlinkSync(calibrationPath)
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[5]!))
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: calibrationArgv,
+      calibrate: async (input) => { calibrations += 1
+        return calibrateV138ParallelMatrix({ ...input,
+          runner: injectedSuccessfulRunner(),
+          sharedHeadroomObserver: admittedHeadroom }) },
+      writeOutput: () => undefined })
+    const reproductionArgv = ["node", "route",
+      "--write-authoritative-v12-receipt",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[3]!, "--calibration",
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[2]!, "--route-start", routeStart,
+      "--source-a7", sourceA7, "--source-b7", sourceB7]
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: reproductionArgv,
+      executeMatrix: async () => { reproductions += 1
+        throw new TypeError("INJECTED_REPRODUCTION_STOP") },
+      writeOutput: () => undefined })
+    for (const disposition of ["reproduction_stopped"] as const) {
+      await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+        "--write-plan-262-57-terminal-v1", terminalPath,
+        ...terminalBaseFlags, "--disposition", disposition],
+      writeOutput: () => undefined })
+      await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+        "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+        "--terminal", terminalPath], writeOutput: () => undefined })
+      unlinkSync(path.resolve(fixtureRoot, terminalPath))
+    }
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[3]!))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[6]!))
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: reproductionArgv,
+      executeMatrix: async (input) => { reproductions += 1
+        return executeV138ParallelMatrix({ ...input,
+          runner: injectedSuccessfulRunner(),
+          sharedHeadroomObserver: admittedHeadroom }) },
+      writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--write-plan-262-57-terminal-v1", terminalPath,
+      ...terminalBaseFlags, "--disposition", "reproduction_passed"],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+      "--terminal", terminalPath], writeOutput: () => undefined })
+    expect({ observations, calibrations, reproductions }).toEqual({
+      observations: 1, calibrations: 2, reproductions: 2 })
+    unlinkSync(path.resolve(fixtureRoot, terminalPath))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[3]!))
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[6]!))
     unlinkSync(path.resolve(fixtureRoot, routeStart))
     unlinkSync(path.resolve(fixtureRoot,
       V138_PLAN_262_57_ROUTE_DESTINATIONS[1]!))
+    unlinkSync(calibrationPath)
+    unlinkSync(path.resolve(fixtureRoot,
+      V138_PLAN_262_57_ROUTE_DESTINATIONS[5]!))
     symlinkSync("missing-route-7-target", danglingPath)
-    writeV138Plan26257PreStartObstructionV1(fixtureRoot,
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--resolve-plan-262-57-pre-start-v1",
       ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json",
-      V138_PLAN_262_56_CANONICAL_PATHS.authorization,
-      V138_PLAN_262_56_CANONICAL_PATHS.seal, sourceA7, sourceB7)
+      "--authorization", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+      "--seal", V138_PLAN_262_56_CANONICAL_PATHS.seal,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    writeOutput: () => undefined })
+    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
+      "--check-plan-262-57-pre-start-obstruction-v1",
+      "--authorization", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+      "--seal", V138_PLAN_262_56_CANONICAL_PATHS.seal,
+      "--source-a7", sourceA7, "--source-b7", sourceB7],
+    writeOutput: () => undefined })
     unlinkSync(danglingPath)
     await expect(runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
       writeOutput: () => undefined })).rejects.toThrow(
