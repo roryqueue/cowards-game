@@ -52,7 +52,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 42/48 trustworthy summaries
 
-**Current verdict:** REVIEW-V1 INVALID / A8-REVIEWER-V2 INVALID / A9 REPLAN READY / `gaps_found` — Plan 262-58 and its summary are archived byte-for-byte after the third deep review proved the embedded reviewer-v2 structurally self-referential and left five blockers plus one warning. The unexecuted Plan 262-59 is also archived byte-for-byte. Exact A8 and every v1/v2 artifact, report, code-review, review-fix, source object, and invalid disposition remain immutable non-authorizing history. The active corrective chain is now 262-60 -> 262-61 -> 262-62 -> 262-56 -> 262-57 -> 262-48: production-only A9, separately authored and code-reviewed R3, fresh procedural review-v3, human-literal authorization-v9/direct-child B9, unchanged route ordinal 7 with v11/v12 execution, and strict summary-before-carrier 48/48 closure. No canonical review-v3, authorization-v9, seal-v9, B9, route start, live destination, or downstream authority exists. ADMIT-03 remains blocked at 0/540, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: 262-60.
+**Current verdict:** REVIEW-V1 INVALID / A8-REVIEWER-V2 INVALID / A9 REPLAN READY / `gaps_found` — Plan 262-58 and its summary are archived byte-for-byte after the third deep review proved the embedded reviewer-v2 structurally self-referential and left five blockers plus one warning. The unexecuted Plan 262-59 is also archived byte-for-byte. Exact A8 and every v1/v2 artifact, report, code-review, review-fix, source object, and invalid disposition remain immutable non-authorizing history. The active corrective chain is now 262-60 -> 262-61 -> 262-62 -> 262-56 -> 262-57 -> 262-48 at exact Waves 43, 44, 45, 46, 47, and 48: production-only A9 whose summary never claims its own carrier, separately authored and code-reviewed R3 that independently derives the unique immutable A9-summary carrier, fresh non-auto-bypassable main-orchestrator-only procedural review-v3, human-literal authorization-v9/direct-child B9, unchanged route ordinal 7 with v11/v12 execution, and strict summary-before-carrier 48/48 closure. No canonical review-v3, authorization-v9, seal-v9, B9, route start, live destination, or downstream authority exists. ADMIT-03 remains blocked at 0/540, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: 262-60.
 
 <!-- phase-262-plan-60-status: {"proof_status":"a8_reviewer_v2_invalid_a9_replan_ready","review_v1_disposition":"review_v1_invalid_disproved_non_authorizing","review_v2_disposition":"structurally_self_referential_non_authorizing","source_a8_historical":true,"source_a9":null,"review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-60"} -->
 
@@ -265,27 +265,27 @@ Plans:
 - `262-58-SUMMARY.md` -> `archived/262-58-SUMMARY-HISTORICAL.md` — SHA-256 `03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6`; its completion/custody claims are retained but are not trustworthy summary credit.
 - `262-59-PLAN.md` -> `archived/262-59-HISTORICAL.md` — SHA-256 `0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f`; the plan was never executed and is superseded by the non-self-referential review-v3 sequence.
 
-**Wave 44** *(blocked on Wave 42 completion; production-only corrective source and disposition)*
+**Wave 43** *(blocked on Wave 42 completion; production-only corrective source and disposition)*
 
-- [ ] 262-60-PLAN.md — Delete the active embedded reviewer-v2, TDD strict shared review-v3 validation plus real authorization-v9/seal-v9/A9/B9 production routing and the exact 48-plan dependency lifecycle, freeze source-only A9, and disposition A8 without live work.
+- [ ] 262-60-PLAN.md — Delete the active embedded reviewer-v2, TDD strict shared review-v3 validation plus real authorization-v9/seal-v9/A9/B9 production routing and the exact 48-plan dependency lifecycle, freeze source-only A9, record only sourceBase9/A9/tree/parent/path/blob/trailer custody without self-claiming the summary carrier, and disposition A8 without live work.
 
-**Wave 45** *(blocked on exact A9 and its later custody carrier)*
+**Wave 44** *(blocked on exact A9 and its later custody carrier)*
 
-- [ ] 262-61-PLAN.md — Author reviewer-v3 outside A9, pin exact A9/carrier, prove full disposable command/history/lifecycle/publication/B9/path semantics, converge post-execution deep code review to zero findings, and freeze exact R3 without canonical review publication.
+- [ ] 262-61-PLAN.md — Independently derive the unique after-A9 planning-only current-lineage summary carrier commit/blob with no later rewrite, author reviewer-v3 outside A9, prove full disposable command/history/lifecycle/publication/B9/path semantics, converge post-execution deep code review to zero findings, and freeze exact R3 without canonical review publication.
 
-**Wave 46** *(blocked on zero-finding Plan-262-61 code-review/REVIEW-FIX/R3/summary custody)*
+**Wave 45** *(blocked on zero-finding Plan-262-61 code-review/REVIEW-FIX/R3/summary custody)*
 
-- [ ] 262-62-PLAN.md — Run a fresh main-orchestrator procedural exact-A9 review with exact reviewed R3 and publish the canonical exclusive two-path review-v3 only on objective zero findings; any finding archives exact bytes with no summary or authority.
+- [ ] 262-62-PLAN.md — Through a non-auto-bypassable exact-root readiness checkpoint, run a fresh clean-main review directly in the main orchestrator with no active agents/helpers or gsd-executor delegation, then publish the canonical exclusive two-path review-v3 only on objective zero findings; any finding archives exact bytes with no summary or authority.
 
-**Wave 47** *(blocked on immutable zero-finding Wave 46 completion)*
+**Wave 46** *(blocked on immutable zero-finding Wave 45 completion)*
 
 - [ ] 262-56-PLAN.md — Consume only immutable exact-A9 review-v3 bytes, render and checkpoint the complete fresh authorization-v9 literal, then create exactly one two-artifact direct-child B9 at the v9 paths with no live work.
 
-**Wave 48** *(blocked on Wave 47 completion and immediate main-only ownership check)*
+**Wave 47** *(blocked on Wave 46 completion and immediate main-only ownership check)*
 
 - [ ] 262-57-PLAN.md — Consume A9/B9 once from the main orchestrator through unchanged route ordinal 7 and exact v11/v12 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 semantics, then seal one permanent no-retry terminal.
 
-**Wave 49** *(blocked on Wave 48 completion)*
+**Wave 48** *(blocked on Wave 47 completion)*
 
 - [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, derive truthful pre-summary 47/48 then post-summary 48/48 from the live phase-plan index, refresh validation/verification, and grant at most Phase 263 planning authority.
 

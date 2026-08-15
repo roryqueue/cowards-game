@@ -204,6 +204,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Separate the successor into production-only A9 (262-60), independently authored and post-execution-code-reviewed reviewer-tool R3 outside A9 (262-61), and fresh main-orchestrator procedural canonical review-v3 (262-62). A9 source does not pin its own commit; later carriers may pin immutable predecessor identities.
 - [Phase 262]: Rewire the active future chain to 262-60 -> 262-61 -> 262-62 -> 262-56 -> 262-57 -> 262-48, with authorization-v9/seal-v9/A9/B9, unchanged route ordinal 7 and v11/v12 execution, 48 active plans, 42 trustworthy summaries initially, and final 47/48 before-summary then 48/48 after-summary lifecycle truth.
 - [Phase 262]: Plan 262-62 cannot run without the latest zero-finding 262-61-CODE-REVIEW.md/Vn, exact REVIEW-FIX root, exact final R3 custody, and the later 262-61 summary carrier; any finding archives exact bytes and grants no summary or authority.
+- [Phase 262]: Fix the active successor waves exactly at 262-60=43, 262-61=44, 262-62=45, 262-56=46, 262-57=47, and 262-48=48, with lifecycle fixtures deriving 42/48 through 48/48 from that graph.
+- [Phase 262]: Plan 262-60 records only sourceBase9/A9/tree/parent/path/blob/trailer custody and never its own summary-carrier commit/blob; Plan 262-61 independently derives the unique carrier commit/blob from Git and proves it is after A9, planning-only, on the current first-parent lineage, and never later rewritten.
+- [Phase 262]: Plan 262-62 is non-autonomous and main-orchestrator-only. A non-auto-bypassable readiness checkpoint must prove clean dependency-complete main, zero active agents/helpers/executors, exact final R3, latest zero-finding code-review root, and exact REVIEW-FIX root; review execution cannot be delegated to a gsd-executor subagent, and the exact phrase acknowledges context ownership without granting new authority.
 
 ### Pending Todos
 
