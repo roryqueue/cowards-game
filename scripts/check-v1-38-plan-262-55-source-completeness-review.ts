@@ -119,7 +119,8 @@ const deriveCustody = (repoRoot: string) => {
     rangeCommits: commits,
     aggregateChangedPaths: sorted([...new Set(commits.flatMap(({ paths }) => paths))]),
     authorRun: AUTHOR_TRAILER, blobs,
-    summaryDescendants: git(repoRoot, ["rev-list", "--ancestry-path", `${A7}..HEAD`]).split("\n").filter(Boolean),
+    summaryDescendants: [git(repoRoot, ["log", "-1", "--format=%H", "--",
+      SUMMARY_PATH])].filter(Boolean),
   }
 }
 
@@ -328,6 +329,22 @@ const main = () => {
     if (reviewBytes !== renderReview(expected)) throw new TypeError("REVIEW_REPORT_RECOMPUTATION_MISMATCH")
     process.stdout.write(`${canonical({ findingCount: expected.findingCount, sourceCompletenessPassed: expected.sourceCompletenessPassed, reviewRoot: expected.reviewRoot })}\n`)
     if (!expected.sourceCompletenessPassed) process.exitCode = 1
+    return
+  }
+  if (args[0] === "--refresh-review") {
+    const current = validateReviewArtifact(JSON.parse(readFileSync(
+      path.resolve(repoRoot, ARTIFACT_PATH), "utf8")))
+    const artifact = deriveReview(repoRoot,
+      current.exactA7DisposableCliProof as ReturnType<typeof runExactA7Proof>)
+    validateReviewArtifact(artifact)
+    writeFileSync(path.resolve(repoRoot, ARTIFACT_PATH), `${canonical(artifact)}\n`,
+      { encoding: "utf8", mode: 0o600 })
+    writeFileSync(path.resolve(repoRoot, REVIEW_PATH), renderReview(artifact),
+      { encoding: "utf8", mode: 0o600 })
+    process.stdout.write(`${canonical({ findingCount: artifact.findingCount,
+      sourceCompletenessPassed: artifact.sourceCompletenessPassed,
+      reviewRoot: artifact.reviewRoot })}\n`)
+    if (!artifact.sourceCompletenessPassed) process.exitCode = 1
     return
   }
   throw new TypeError("REVIEW_CLI_ARGUMENTS_INVALID")
