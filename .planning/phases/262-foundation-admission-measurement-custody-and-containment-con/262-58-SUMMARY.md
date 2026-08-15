@@ -32,7 +32,7 @@ key-files:
 key-decisions:
   - "Preserve review-v1 byte-for-byte as disproved, non-authorizing history rather than rewriting it."
   - "Fix independentPersonClaimed, reviewerSeparated, cryptographic identity, and independent custody claims to false."
-  - "Freeze sourceBase8 a4c8c8108cc3acf639407fd5fc77a98326e3595d and exact six-path A8 da8b33942edbc0900ebeba616e459a2a0d2f92ae."
+  - "Reject the reviewed da8b3394 boundary, freeze sourceBase8 9fb6b12f190ff5a79e423efafbfaae01c1037b5d and corrected exact six-path A8 ba567987e7a64239b93ebc40ad9d280231172a44."
   - "Keep ADMIT-03 blocked at 0/540 and route next action exclusively to Plan 262-59."
 patterns-established:
   - "Semantic mutations recompute their enclosing root and assert a typed finding."
@@ -92,7 +92,7 @@ status: complete
 
 - Added reviewer-v2 validation for CR-01 through CR-08 and WR-01 with recomputed-root semantic attacks, closed transcript/snapshot evidence, exact source custody, publication custody, and path confinement.
 - Added synthetic authorization-v8/seal-v8 contracts binding one detached immutable review-v2 input, exact sourceBase8/A8 custody, protected A7/history, v8-only future paths, false identity claims, route ordinal 7, and v11/v12 execution versions.
-- Froze sourceBase8 `a4c8c8108cc3acf639407fd5fc77a98326e3595d` and exact six-path source-only A8 `da8b33942edbc0900ebeba616e459a2a0d2f92ae`.
+- The deep review rejected the earlier `a4c8c810…` / `da8b3394…` boundary. The corrective pass froze sourceBase8 `9fb6b12f190ff5a79e423efafbfaae01c1037b5d` and exact six-path source-only A8 `ba567987e7a64239b93ebc40ad9d280231172a44` (tree `c5abb22112fec8c3a47f3b3260dd3b4d5c7f4ec3`).
 - Published disposition root `sha256:45a53d32fb98e04ab84d44000523886cbfcff8edcd88b1c5fd92946fcc8192d4`, preserving review-v1 as invalid/disproved historical evidence with no authority credit.
 - Kept canonical review-v2, authorization-v8, seal-v8, B8, obsolete v7, route-start, live, and terminal destinations absent; ADMIT-03 remains blocked at 0/540.
 
@@ -101,6 +101,7 @@ status: complete
 1. **Task 1: RED reviewer-v2 and review-v2-aware authority/seal contracts** — `a4c8c810`
 2. **Task 2: GREEN reviewer-v2 and authorization-v8/seal-v8 source contracts, then freeze A8** — `da8b3394`
 3. **Task 3: Publish the immutable review-v1-invalid disposition and synchronize blocked tracking** — `b463968c`
+4. **Deep-review correction: close CR-01 through CR-08 and WR-01, then refreeze exact A8** — `ba567987`
 
 ## Files Created/Modified
 
@@ -126,14 +127,15 @@ None - plan scope and publication boundaries were preserved.
 
 ## Issues Encountered
 
-- The initial full RED command entered the pre-existing exact-A7 fixture before reaching the new test and was interrupted after extended execution. The focused new test then produced only `[RED:A8_REVIEW_V2_AUTHORIZATION_CONTRACT]`; the final full serialized three-file suite later passed 27/27.
+- The initial implementation passed a synthetic self-attestation and was rejected by the deep review. The corrective suite now owns exact Git fixtures, reaches every production direct-dispatch branch, opens a real detached immutable review input, and checks a real two-path B8 fixture; the final serialized three-file suite passed 28/28.
 - The exact-A7 fixture initially compared historical A7 blobs to intentionally newer worktree bytes. It was corrected to compare the detached fixture against `git show A7:path`, preserving historical custody while allowing the planned A8 source evolution.
 
 ## TDD Gate Compliance
 
 - RED: `a4c8c810` contains the controlled failing contract and named marker.
-- GREEN: `da8b3394` follows RED and freezes the six-path implementation/test boundary.
-- Final serialized verification: 27/27 tests passed in 1248.87 seconds; workspace typecheck, lifecycle check, path checks, and destination absences passed.
+- REJECTED GREEN: `da8b3394` is retained as reviewed history but is not the current A8.
+- CORRECTED GREEN: `ba567987` is the sole-parent exact six-path implementation/test boundary over `9fb6b12f`.
+- Final serialized verification: 28/28 tests passed; the full dependency analyzer plus lifecycle CLI reported zero findings; workspace typecheck completed 27/27 tasks; path checks and every forbidden destination absence passed.
 
 ## Known Stubs
 
@@ -149,7 +151,7 @@ Plan 262-59 is the only next action. It may review exact A8 and publish canonica
 
 ## Self-Check: PASSED
 
-- Created files exist, and task commits `a4c8c810`, `da8b3394`, and `b463968c` are reachable.
+- Historical commits `a4c8c810`, `da8b3394`, and `b463968c` remain reachable; corrected A8 `ba567987` is reachable and contains exactly the declared six paths.
 - The live dependency checker derives `plan_58_complete_43_of_47` with incomplete set `262-59, 262-56, 262-57, 262-48`.
 
 ---
