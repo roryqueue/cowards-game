@@ -271,11 +271,11 @@ Plans:
 
 **Wave 44** *(blocked on exact A9 and its later custody carrier)*
 
-- [ ] 262-61-PLAN.md — Independently derive the unique after-A9 planning-only current-lineage summary carrier commit/blob with no later rewrite, author reviewer-v3 outside A9, prove full disposable command/history/lifecycle/publication/B9/path semantics, converge post-execution deep code review to zero findings, and freeze exact R3 without canonical review publication.
+- [ ] 262-61-PLAN.md — Independently derive the unique after-A9 planning-only current-lineage summary carrier commit/blob with no later rewrite, author reviewer-v3 outside A9 with a dedicated no-clone/no-candidate `--check-main-readiness` mode, prove full disposable command/history/lifecycle/publication/B9/path semantics, converge post-execution deep code review to zero findings, freeze exact R3, then create the eligible summary carrier without making it its own prerequisite.
 
 **Wave 45** *(blocked on zero-finding Plan-262-61 code-review/REVIEW-FIX/R3/summary custody)*
 
-- [ ] 262-62-PLAN.md — Through a non-auto-bypassable exact-root readiness checkpoint, run a fresh clean-main review directly in the main orchestrator with no active agents/helpers or gsd-executor delegation, then publish the canonical exclusive two-path review-v3 only on objective zero findings; any finding archives exact bytes with no summary or authority.
+- [ ] 262-62-PLAN.md — Through a non-auto-bypassable `--check-main-readiness`-only exact-root checkpoint that creates no clone/temp/candidate bytes, then after exact phrase revalidation run all tests and review derivation in Task 2 directly in the main orchestrator with no agent delegation; publish the canonical exclusive two-path review-v3 only on objective zero findings.
 
 **Wave 46** *(blocked on immutable zero-finding Wave 45 completion)*
 
