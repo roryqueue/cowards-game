@@ -87,25 +87,33 @@ status: complete
 2. **Task 2: GREEN production A9 and remove reviewer-v2** - `8c3cab21`, `f3fb21d6`, `c10aa9bd`
 3. **Task 3: Publish immutable A8/reviewer-v2 disposition** - `f31b758a`
 
+### Post-review correction run
+
+- `caa014a3` — normalize the real v9 route custody and pre-observation anchors
+- `82d8de09` — derive the real A9 parent and freeze protected-history bytes
+- `0577eff6`, `1be4462a` — enforce exact review-v3 inventories and observation joins
+- `5ea8284b` — separate deleted reviewer-v2 historical custody from active analysis
+- `ea31c46f`, `70ce6d61` — cover corrected v9 contracts and full valid argv routing
+
 ## Exact A9 Custody
 
-- **sourceBase9:** `c8057dd1a4338b00a05771f88edb03a32128164c`
-- **sourceA9:** `c10aa9bd1462c8191305608715252eca12bc3751`
-- **sourceA9 tree:** `dfcbcd4e0a9624cfd5011838bc89c8c658996632`
-- **sourceA9 sole parent:** `f3fb21d6b0bdda0cdcba8cdbde79cf48439e90d4`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-v1`
-- **run commits:** `af0520618b5f236b5d0b7afbb9f0bcebbad9e951`, `8c3cab21d7da0d59101480e17a973e0317646622`, `f3fb21d6b0bdda0cdcba8cdbde79cf48439e90d4`, `c10aa9bd1462c8191305608715252eca12bc3751`
+- **sourceBase9:** `81644e27132ce853afc43731c89c3bbf4941b7d0`
+- **sourceA9:** `70ce6d61a7275bfb23fe9094207c5c5dc92a0043`
+- **sourceA9 tree:** `553a2303b272f3ce3dd729975898a27e5ba2adaa`
+- **sourceA9 sole parent:** `ea31c46fbe8bc6020a87c7096c6a1f585ff23dd8`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1`
+- **run commits:** `caa014a32e6abd5db9eb31dd24459e6fa66fa672`, `82d8de096842b223afdc1c7238622eae70e9f6d5`, `0577eff62684abda1dd9701b1f86fc3282eec43a`, `5ea8284bbed85cd9fdbeb783656a43521d86198e`, `1be4462a0719bb0b055471d3ddbacfb5b5bc2af6`, `ea31c46fbe8bc6020a87c7096c6a1f585ff23dd8`, `70ce6d61a7275bfb23fe9094207c5c5dc92a0043`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `06b2a5de233c7444cb29a10c46c1709c746a3996` | `sha256:181f2032366b56a2ef0e08ffacc5bc899b8154f2ada97797400c8196c8be659a` | 71618 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `f43dbd87ea0660dbaf538415656c5ddce818c3fd` | `sha256:526f64998bee40ee1d089c22302e29ae83f7d3592c2ff7aeb9034d2a9cbb2521` | 74999 |
 | `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts` | deleted | — | — | 0 |
 | `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts` | deleted | — | — | 0 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `69ae77d2cf7d7c430db8a1dce11f964f35fbc428` | `sha256:4553491c347af31bb06353a85997672e4d8b4acca9971c1d6abb44b9e22dc10b` | 29670 |
-| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `a70c0d6c776a724352dfd71ccdac9f66cdb85f1d` | `sha256:491d1f8b0e3d40cad7a122333b65f945294c431960d108a60d3d51ba6f6aa27c` | 38737 |
-| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `187ac078bc34c0c5b8a62140ccdfddfa54d0ebf1` | `sha256:f4849eab3b88a4a72e8b0e100a790a61d71f271023174d051ca10738c33320fc` | 850384 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `753c48fd512c8f1758750a59e666fd90855d5766` | `sha256:8f3db16265a5a882134f07fb5c257982a253a32a95850556bb955f482e932c16` | 14522 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `424c856ab44973033a8f7961caaf26fcc024a508` | `sha256:a71686875ec3e72aaae995d9c32434adee44698b09e81c3307fd5842b7c975b3` | 342607 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `dfbc54ffd842ce200066aef521a40d16cec13410` | `sha256:6e0c23f6d33d9418baab9477c4d54949d9a1314cafac28c3670b7df9680bcb8e` | 33757 |
+| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `8ae40fa92e3c0b5ca8b06d19e0ddaa2ed5fd98dd` | `sha256:f901a576d0fb80fd8f625013d7740426fbdad84be1913b1edc38ae20b76af4f7` | 22368 |
+| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `9f742270d324d1eeb08ad3c0145cee96116f0fde` | `sha256:b2db4e7cd41db9a434995f2ae1224ee1f6cca9b29c5f99054261047c8e71c381` | 850084 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `480c13108d6f0e483fdafae28d159b63730f9caf` | `sha256:5b26cbadfcdd781394719cd68df6cafb4d62668c50ab734f992d0186ddb23109` | 19143 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `c198008a809a7c5891c31685230c37dc3e973264` | `sha256:f03b78606e4ac6d626035fe8fc69c983a5a684edb439b6b6fb0ceb549a2add1f` | 347546 |
 
 This custody record intentionally does not name, predict, or reserve this summary's carrier commit or blob. Plan 262-61 must derive that identity independently from Git.
 
