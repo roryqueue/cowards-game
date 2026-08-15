@@ -5145,11 +5145,11 @@ const plan26247Closure = (repoRoot: string, sourceCommit: string) => {
 }
 
 export const deriveV138ProtectedHistoryV6 = (repoRoot: string,
-  sourceInput: string) => {
+  sourceInput: string, useCache = true) => {
   const source = inspectV138SourceIdentityA6(repoRoot, sourceInput)
   const cacheKey = `${repoRoot}\0${source.reviewedSourceCommit}`
   const cached = v138Plan26247HistoryCache.get(cacheKey)
-  if (cached !== undefined) return cached
+  if (useCache && cached !== undefined) return cached
   for (const repoPath of [V138_PLAN_262_30_FRESH_DESTINATIONS[3],
     V138_PLAN_262_30_FRESH_DESTINATIONS[7]]) {
     requireAbsentAtCommit(repoRoot, source.reviewedSourceCommit, repoPath,
@@ -5202,7 +5202,7 @@ export const deriveV138ProtectedHistoryV6 = (repoRoot: string,
   }
   const value = Object.freeze({ ...body, protectedHistoryRoot: identityRoot(
     "evidenceBundle", body.schemaVersion, body) })
-  v138Plan26247HistoryCache.set(cacheKey, value)
+  if (useCache) v138Plan26247HistoryCache.set(cacheKey, value)
   return value
 }
 
@@ -5683,7 +5683,7 @@ export const V138_PLAN_262_57_FRESH_DESTINATIONS = Object.freeze([
 ] as const)
 
 export const V138_PLAN_262_54_SOURCE_BASE7 =
-  "7c6e23f9e3c856198560093152df61f8ab614222" as const
+  "be2a7164dbf332f2295114ddaf563ee11013bf5a" as const
 export const V138_PLAN_262_54_SOURCE_PATHS = Object.freeze([
   "scripts/evaluate-v1-38-successor-route.test.ts",
   "scripts/evaluate-v1-38-successor-source-complete.test.ts",
@@ -5777,14 +5777,13 @@ export const inspectV138SourceIdentityA7 = (repoRoot: string,
 const V138_PLAN_262_55_REVIEW_KEYS = Object.freeze([
   "schemaVersion", "plan", "a7", "a7Tree", "a7Parent", "sourceBase7",
   "sourceRangeCommits", "sourcePaths", "implementationAuthorRun",
-  "reviewerProtocol", "reviewerIdentityDomain", "findingCount",
+  "reviewProtocol", "independentPersonClaimed",
+  "cryptographicReviewerIdentityClaimed", "findingCount",
   "sourceCompletenessPassed", "reviewRoot",
 ] as const)
 
-export const V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN =
-  "plan-262-55.review.cowards.invalid" as const
 export const V138_PLAN_262_55_REVIEWER_PROTOCOL =
-  "git-commit-authorship-and-reviewer-run-trailer-v1" as const
+  "single_operator_procedural_source_review_v1" as const
 
 export const buildV138Plan26255ReviewDocument = (repoRoot: string,
   sourceA7: string) => {
@@ -5797,8 +5796,9 @@ export const buildV138Plan26255ReviewDocument = (repoRoot: string,
     sourceRangeCommits: source.sourceRangeCommits,
     sourcePaths: V138_PLAN_262_54_SOURCE_PATHS,
     implementationAuthorRun: source.implementationAuthorRun,
-    reviewerProtocol: V138_PLAN_262_55_REVIEWER_PROTOCOL,
-    reviewerIdentityDomain: V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN,
+    reviewProtocol: V138_PLAN_262_55_REVIEWER_PROTOCOL,
+    independentPersonClaimed: false as const,
+    cryptographicReviewerIdentityClaimed: false as const,
     findingCount: 0 as const, sourceCompletenessPassed: true as const }
   return Object.freeze({ ...body, reviewRoot: identityRoot("evidenceBundle",
     V138_PLAN_262_55_REVIEW_SCHEMA, body) })
@@ -5820,8 +5820,9 @@ const checkV138Plan26255ReviewDocument = (value: unknown,
     canonical(value.sourcePaths) !==
       canonical(V138_PLAN_262_54_SOURCE_PATHS) ||
     value.implementationAuthorRun !== source.implementationAuthorRun ||
-    value.reviewerProtocol !== V138_PLAN_262_55_REVIEWER_PROTOCOL ||
-    value.reviewerIdentityDomain !== V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN ||
+    value.reviewProtocol !== V138_PLAN_262_55_REVIEWER_PROTOCOL ||
+    value.independentPersonClaimed !== false ||
+    value.cryptographicReviewerIdentityClaimed !== false ||
     value.findingCount !== 0 ||
     value.sourceCompletenessPassed !== true || reviewRoot !== identityRoot(
       "evidenceBundle", V138_PLAN_262_55_REVIEW_SCHEMA, body)) {
@@ -5858,39 +5859,33 @@ const deriveV138Plan26255Review = (repoRoot: string, sourceA7: string) => {
   const changedPaths = sorted(gitText(repoRoot, ["diff-tree",
     "--no-commit-id", "--name-only", "-r", "--no-renames",
     candidate.reviewCommit]).split("\n").filter(Boolean).map(normalize))
-  const [reviewerName = "", reviewerEmail = ""] = gitText(repoRoot,
-    ["show", "-s", "--format=%an%n%ae", candidate.reviewCommit]).split("\n")
-  const reviewerRuns = gitText(repoRoot, ["show", "-s",
-    "--format=%(trailers:key=Plan-262-55-Reviewer-Run,valueonly)",
-    candidate.reviewCommit]).split("\n").map((entry) => entry.trim())
-    .filter(Boolean)
-  const implementationAuthors = new Set(source.sourceRangeCommits.map(
-    (commit) => gitText(repoRoot, ["show", "-s", "--format=%an%x00%ae",
-      commit])))
-  const reviewerIdentity = `${reviewerName}\0${reviewerEmail}`
   if (parents.length !== 1 || parents[0] !== source.sourceA7 ||
     canonical(changedPaths) !== canonical([
-      V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview]) ||
-    reviewerRuns.length !== 1 || reviewerRuns[0] ===
-      source.implementationAuthorRun || implementationAuthors.has(
-        reviewerIdentity) || !reviewerEmail.endsWith(
-          `@${V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN}`)) {
+      V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview])) {
     fail("V138_PLAN_262_55_REVIEWER_SEPARATION_INVALID")
   }
+  const reviewTree = gitText(repoRoot, ["rev-parse",
+    `${candidate.reviewCommit}^{tree}`])
+  const blobOid = gitText(repoRoot, ["rev-parse",
+    `${candidate.reviewCommit}:${V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview}`])
+  const proceduralSeparationRoot = identityRoot("containmentPolicy",
+    V138_PLAN_262_55_REVIEWER_PROTOCOL, { sourceA7: source.sourceA7,
+      reviewCommit: candidate.reviewCommit, reviewTree, reviewParents: parents,
+      changedPaths, blobOid, reviewSha256: sha256(candidate.bytes),
+      independentPersonClaimed: false,
+      cryptographicReviewerIdentityClaimed: false })
   const result = Object.freeze({ path:
     V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview,
     reviewCommit: candidate.reviewCommit,
-    reviewTree: gitText(repoRoot, ["rev-parse",
-      `${candidate.reviewCommit}^{tree}`]),
+    reviewTree,
     reviewParents: Object.freeze(parents),
-    blobOid: gitText(repoRoot, ["rev-parse",
-      `${candidate.reviewCommit}:${V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview}`]),
+    blobOid,
     sha256: sha256(candidate.bytes), reviewRoot:
-      candidate.document.reviewRoot, reviewerIdentity: Object.freeze({
-        name: reviewerName, email: reviewerEmail,
-        domain: V138_PLAN_262_55_REVIEWER_IDENTITY_DOMAIN,
-        reviewerRun: reviewerRuns[0]!, protocol:
-          V138_PLAN_262_55_REVIEWER_PROTOCOL }), document: candidate.document })
+      candidate.document.reviewRoot, reviewProtocol:
+      V138_PLAN_262_55_REVIEWER_PROTOCOL, proceduralSeparationRoot,
+    independentPersonClaimed: false as const,
+    cryptographicReviewerIdentityClaimed: false as const,
+    document: candidate.document })
   v138Plan26255ReviewCache.set(cacheKey, result)
   return result
 }
@@ -6028,6 +6023,51 @@ export const checkV138Plan26256AuthorizationV7Except = (repoRoot: string,
   }
   const review = deriveV138Plan26255Review(repoRoot,
     candidate.reviewedSourceCommit)
+  if (except === "protectedHistory") {
+    const source = inspectV138SourceIdentityA7(repoRoot,
+      candidate.reviewedSourceCommit)
+    const history = candidate.protectedHistory
+    const closure = plan26247Closure(repoRoot, source.reviewedSourceCommit)
+    const stableCandidate = Object.fromEntries(Object.entries(candidate)
+      .filter(([key]) => !["authorizationRoot", "protectedHistory",
+        "protectedHistoryRoot", "cumulativeChargedPublicAttemptIds",
+        "priorAuthorizationBytes", "literalSha256"].includes(key)))
+    const stableExpected = {
+      schemaVersion: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+      routeOrdinal: 7, operator: V138_PLAN_262_15_OPERATOR, ...source,
+      sourceCompletenessReview: review, selectedRouteClosure: closure,
+      selectedRouteClosureRoot: closure.closureRoot,
+      toolIdentity: Object.freeze({ toolIdentityRoot:
+        deriveV138ToolIdentityRoot() }),
+      formationAbsence: Object.freeze({ scannedRoot:
+        deriveV138FormationAbsenceRoot(repoRoot,
+          source.reviewedSourceCommit) }),
+      preSearchPolicyRoot:
+        "sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382",
+      canonicalDestinations: V138_PLAN_262_57_ROUTE_DESTINATIONS,
+      frozenPolicyRoot: frozenPolicyRootV2(), sealCount: 1,
+      routeStartCount: 1, preflightCount: 1,
+      calibrationAllocationCount: 1, calibrationAttemptCount: 8,
+      calibrationShardCount: 4, reproductionMaximumCount: 1,
+      reproductionCellCount: 540, resourceSampleMilliseconds: 200,
+      requiredHostHeadroomBasisPoints: 2500, singleUse: true,
+      noRetry: true, noPriorAuthorizationReusable: true,
+      satisfiesAdmit03: false, downstreamAuthority: Object.freeze({
+        candidateSearch: false, phase263: false, formation: false,
+        holdoutOpen: false, public: false, production: false }),
+    }
+    if (!isRecord(history) || history.protectedHistoryRoot !==
+        candidate.protectedHistoryRoot || canonical(
+          history.cumulativeChargedPublicAttemptIds) !== canonical(
+          candidate.cumulativeChargedPublicAttemptIds) || canonical(
+          history.priorAuthorizationBytes) !== canonical(
+          candidate.priorAuthorizationBytes) || canonical(
+          candidate.sourceCompletenessReview) !== canonical(review) ||
+      canonical(stableCandidate) !== canonical(stableExpected)) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_INVALID")
+    }
+    return Object.freeze(candidate)
+  }
   const literal = Buffer.from(v138Plan26256AuthorizationLiteral(repoRoot,
     candidate.reviewedSourceCommit, review.document), "utf8")
   const expected = buildV138Plan26256AuthorizationV7({ repoRoot,
@@ -6212,7 +6252,7 @@ export const checkV138SuccessorSealCommitV7 = (input: {
 }
 
 export const deriveV138ProtectedHistoryV7 = (repoRoot: string,
-  sourceA7: string) => deriveV138ProtectedHistoryV6(repoRoot, sourceA7)
+  sourceA7: string) => deriveV138ProtectedHistoryV6(repoRoot, sourceA7, false)
 
 const inspectV138SuccessorSealCommitV7AnchorInternal = (input: {
   readonly repoRoot: string

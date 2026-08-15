@@ -1369,6 +1369,12 @@ export interface V138ParallelClock {
   monotonicMilliseconds(): number
 }
 
+export interface V138ParallelDeadlinePolicy {
+  readonly maxShardMilliseconds: number
+  readonly maxTotalRunMilliseconds: number
+  readonly cleanupGraceMilliseconds: number
+}
+
 const defaultParallelClock: V138ParallelClock = Object.freeze({
   monotonicMilliseconds: () => Number(process.hrtime.bigint()) / 1_000_000,
 })
@@ -1437,6 +1443,17 @@ const runnerExceptionTerminal = (
   })),
 })
 
+const timeoutTerminal = (
+  shard: Readonly<V138ParallelShardAssignment>, elapsedMilliseconds: number,
+): Readonly<V138ParallelShardTerminal> => ({
+  ...runnerExceptionTerminal(shard), elapsedMilliseconds,
+  cleanup: { gracefulTerminationSent: true, forceTerminationSent: true,
+    exitAwaited: false, orphanProcessIds: [] },
+  outcomes: shard.attempts.map(({ executionAttemptId }) => ({
+    attemptId: executionAttemptId, classification: "system_failure",
+    code: "RESOURCE_POLICY_SHARD_TIMEOUT", retryable: false })),
+})
+
 const parentStopReason = (
   signal: AbortSignal,
 ): "PARENT_EXCEPTION" | "PARENT_INTERRUPT" =>
@@ -1450,8 +1467,23 @@ const runV138SupervisedAssignments = async (input: {
   clock: V138ParallelClock
   parentSignal?: AbortSignal | undefined
   sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
+  deadlinePolicy?: Readonly<V138ParallelDeadlinePolicy> | undefined
 }): Promise<Readonly<V138SupervisedAssignmentsResult>> => {
+  const deadlinePolicy = input.deadlinePolicy ?? {
+    maxShardMilliseconds: V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds,
+    maxTotalRunMilliseconds:
+      V138_PARALLEL_RESOURCE_POLICY.maxTotalRunMilliseconds,
+    cleanupGraceMilliseconds:
+      V138_PARALLEL_RESOURCE_POLICY.gracefulTerminationMilliseconds +
+      V138_PARALLEL_RESOURCE_POLICY.forcedTerminationMilliseconds }
+  if ([deadlinePolicy.maxShardMilliseconds,
+    deadlinePolicy.maxTotalRunMilliseconds,
+    deadlinePolicy.cleanupGraceMilliseconds].some((value) =>
+      !Number.isSafeInteger(value) || value < 1)) {
+    throw new TypeError("MATRIX_PARALLEL_DEADLINE_POLICY_INVALID")
+  }
   const controllers = new Map<string, AbortController>()
+  const timeoutHandles = new Map<string, ReturnType<typeof setTimeout>>()
   const active = new Map<
     string,
     Promise<{
@@ -1490,7 +1522,7 @@ const runV138SupervisedAssignments = async (input: {
   const checkTotalTime = (): void => {
     const elapsed =
       input.clock.monotonicMilliseconds() - startedMilliseconds
-    if (elapsed > V138_PARALLEL_RESOURCE_POLICY.maxTotalRunMilliseconds) {
+    if (elapsed > deadlinePolicy.maxTotalRunMilliseconds) {
       stop("RESOURCE_POLICY_TOTAL_TIMEOUT")
     }
   }
@@ -1643,7 +1675,7 @@ const runV138SupervisedAssignments = async (input: {
           stop("RESOURCE_POLICY_HOST_HEADROOM")
         }
       }
-      const promise = Promise.resolve()
+      const runnerPromise = Promise.resolve()
         .then(() =>
           input.runner.run(shard, {
             signal: controller.signal,
@@ -1663,6 +1695,24 @@ const runV138SupervisedAssignments = async (input: {
             runnerException: true,
           }),
         )
+      const timeoutPromise = new Promise<{
+        shardId: string; terminal: Readonly<V138ParallelShardTerminal>;
+        runnerException: boolean }>((resolve) => {
+        const handle = setTimeout(() => {
+          controller.abort("RESOURCE_POLICY_SHARD_TIMEOUT")
+          resolve({ shardId: shard.shardId,
+            terminal: timeoutTerminal(shard,
+              deadlinePolicy.maxShardMilliseconds + 1),
+            runnerException: false })
+        }, deadlinePolicy.maxShardMilliseconds)
+        timeoutHandles.set(shard.shardId, handle)
+      })
+      const promise = Promise.race([runnerPromise, timeoutPromise]).finally(
+        () => {
+          const handle = timeoutHandles.get(shard.shardId)
+          if (handle !== undefined) clearTimeout(handle)
+          timeoutHandles.delete(shard.shardId)
+        })
       active.set(shard.shardId, promise)
     }
   }
@@ -1676,11 +1726,33 @@ const runV138SupervisedAssignments = async (input: {
         ? []
         : [delayMilliseconds(
             V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds,
-          ).then(() => undefined)]),
+          ).then(() => "observe" as const)]),
+      delayMilliseconds(Math.max(1,
+        deadlinePolicy.maxTotalRunMilliseconds -
+        (input.clock.monotonicMilliseconds() - startedMilliseconds)))
+        .then(() => "total" as const),
+      ...(stopReason === null ? [] : [delayMilliseconds(
+        deadlinePolicy.cleanupGraceMilliseconds).then(
+          () => "cleanup" as const)]),
     ])
-    if (completed === undefined) {
+    if (completed === "observe") {
       await observeSharedHeadroom()
       continue
+    }
+    if (completed === "total") stop("RESOURCE_POLICY_TOTAL_TIMEOUT")
+    if (completed === "total" || completed === "cleanup") {
+      for (const [shardId] of active) {
+        const assignment = input.assignments.find((entry) =>
+          entry.shardId === shardId)!
+        terminals.push(timeoutTerminal(assignment,
+          Math.ceil(Math.max(1, input.clock.monotonicMilliseconds() -
+            startedMilliseconds))))
+        const handle = timeoutHandles.get(shardId)
+        if (handle !== undefined) clearTimeout(handle)
+      }
+      active.clear(); timeoutHandles.clear(); controllers.clear()
+      activeChildRss.clear(); childIdsByShard.clear()
+      break
     }
     active.delete(completed.shardId)
     controllers.delete(completed.shardId)
@@ -1693,7 +1765,7 @@ const runV138SupervisedAssignments = async (input: {
       stop("SHARD_RUNNER_EXCEPTION")
     } else if (
       completed.terminal.elapsedMilliseconds >
-      V138_PARALLEL_RESOURCE_POLICY.maxShardMilliseconds
+      deadlinePolicy.maxShardMilliseconds
     ) {
       stop("RESOURCE_POLICY_SHARD_TIMEOUT")
     } else if (
@@ -1868,6 +1940,7 @@ export const calibrateV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
+  deadlinePolicy?: Readonly<V138ParallelDeadlinePolicy> | undefined
   repoRoot?: string | undefined
   executionIdentityVersion?:
     | "v1"
@@ -1988,6 +2061,7 @@ export const calibrateV138ParallelMatrix = async (input: {
     clock: input.clock ?? defaultParallelClock,
     parentSignal: input.parentSignal,
     sharedHeadroomObserver: input.sharedHeadroomObserver,
+    deadlinePolicy: input.deadlinePolicy,
   })
   const childMax = assignments.map((assignment) => {
     const sampled = supervised.childMaxRssKilobytes[assignment.ordinal]
@@ -2101,6 +2175,7 @@ export const executeV138ParallelMatrix = async (input: {
   clock?: V138ParallelClock | undefined
   parentSignal?: AbortSignal | undefined
   sharedHeadroomObserver?: V138SharedDarwinHeadroomObserver | undefined
+  deadlinePolicy?: Readonly<V138ParallelDeadlinePolicy> | undefined
   repoRoot?: string | undefined
   executionIdentityVersion?: "canonical" | "v3" | "v4" | "v5" | "v6" | "v7" | "v8" | "v9" | undefined
 }): Promise<V138ParallelMatrixExecutionResult> => {
@@ -2162,6 +2237,7 @@ export const executeV138ParallelMatrix = async (input: {
     clock: input.clock ?? defaultParallelClock,
     parentSignal: input.parentSignal,
     sharedHeadroomObserver: input.sharedHeadroomObserver,
+    deadlinePolicy: input.deadlinePolicy,
   })
   const canonicalTerminalIds = supervised.terminals.map((terminal) => ({
     ...terminal,
@@ -19036,36 +19112,6 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
   terminalAgentRegistry: unknown, authorizationPath: string, sealPath: string,
   sourceA7: string, sourceB7: string,
   afterReservation?: (() => void)) => {
-  assertV138Plan26257AuthorityOpen(repoRoot)
-  for (const repoPath of V138_PLAN_262_57_ROUTE_DESTINATIONS) {
-    try {
-      readV138RepositoryFileNoFollow(repoRoot,
-        path.resolve(repoRoot, repoPath), "absent")
-    } catch {
-      throw new TypeError("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
-    }
-  }
-  const target = plan26257Path(repoRoot, targetPath, "context")
-  const chain = validateV138CanonicalParentChain(repoRoot, target)
-  plan26257Path(repoRoot, authorizationPath, "authorization")
-  plan26257Path(repoRoot, sealPath, "seal")
-  const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
-    sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
-    sealValue: readPlan26257(repoRoot, "seal") })
-  const context = buildV138ExecutionContextV11Receipt({ route, mode, cwd,
-    terminalAgentRegistry })
-  const start = checkV138Plan26257RouteStartV1(
-    buildV138Plan26257RouteStartV1({ context }), route)
-  const readiness = checkV138Plan26257PreExecutionReadinessV1(repoRoot,
-    sourceA7, sourceB7)
-  checkV138Plan26257PrerequisiteRoots({
-    authorizationRoot: route.authorization.authorizationRoot,
-    sealRoot: route.seal.sealRoot,
-  }, {
-    authorizationRoot: readiness.authorizationRoot,
-    sealRoot: readiness.sealRoot,
-  })
-  assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7, route)
   const reservationDirectory = path.resolve(repoRoot,
     ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1")
   const reservationPath = path.join(reservationDirectory, "claim.json")
@@ -19076,8 +19122,8 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
   }
   let started = false
   try {
-    afterReservation?.()
-    for (const repoPath of V138_PLAN_262_57_FRESH_DESTINATIONS) {
+    assertV138Plan26257AuthorityOpen(repoRoot)
+    for (const repoPath of V138_PLAN_262_57_ROUTE_DESTINATIONS) {
       try {
         readV138RepositoryFileNoFollow(repoRoot,
           path.resolve(repoRoot, repoPath), "absent")
@@ -19085,6 +19131,25 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
         throw new TypeError("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
       }
     }
+    const target = plan26257Path(repoRoot, targetPath, "context")
+    const chain = validateV138CanonicalParentChain(repoRoot, target)
+    plan26257Path(repoRoot, authorizationPath, "authorization")
+    plan26257Path(repoRoot, sealPath, "seal")
+    const route = checkV138Plan26256AuthorityRoute({ repoRoot, sourceA7,
+      sourceB7, authorizationValue: readPlan26257(repoRoot, "authorization"),
+      sealValue: readPlan26257(repoRoot, "seal") })
+    const context = buildV138ExecutionContextV11Receipt({ route, mode, cwd,
+      terminalAgentRegistry })
+    const start = checkV138Plan26257RouteStartV1(
+      buildV138Plan26257RouteStartV1({ context }), route)
+    const readiness = checkV138Plan26257PreExecutionReadinessV1(repoRoot,
+      sourceA7, sourceB7)
+    checkV138Plan26257PrerequisiteRoots({
+      authorizationRoot: route.authorization.authorizationRoot,
+      sealRoot: route.seal.sealRoot,
+    }, { authorizationRoot: readiness.authorizationRoot,
+      sealRoot: readiness.sealRoot })
+    assertV138Plan26257PublicationRoute(repoRoot, sourceA7, sourceB7, route)
     const reservation = { schemaVersion:
       "v1.38-plan-262-57-route-reservation-v1" as const,
       sourceA7, sourceB7,
@@ -19094,6 +19159,15 @@ export const writeV138Plan26257RouteStartV1 = (repoRoot: string,
       reservationRoot: start.reservationRoot }
     writeFileSync(reservationPath, `${canonical(reservation)}\n`, {
       encoding: "utf8", flag: "wx", mode: 0o600 })
+    afterReservation?.()
+    for (const repoPath of V138_PLAN_262_57_FRESH_DESTINATIONS) {
+      try {
+        readV138RepositoryFileNoFollow(repoRoot,
+          path.resolve(repoRoot, repoPath), "absent")
+      } catch {
+        throw new TypeError("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+      }
+    }
     writeV138Plan26219Immutable(target, chain, start)
     started = true
     return start

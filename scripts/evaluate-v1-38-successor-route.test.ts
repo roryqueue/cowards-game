@@ -28,6 +28,7 @@ import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   V138_SUCCESSOR_SOURCE_SEAL_V6_SCHEMA,
   V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+  V138_PLAN_262_55_REVIEWER_PROTOCOL,
   V138_PLAN_262_57_FRESH_DESTINATIONS,
   V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
   V138_PLAN_262_57_ROUTE_DESTINATIONS,
@@ -491,6 +492,8 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
 
 describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
   it("keeps v7 authority, v11/v12 execution, and fresh destinations exclusive", () => {
+    expect(V138_PLAN_262_55_REVIEWER_PROTOCOL)
+      .toBe("single_operator_procedural_source_review_v1")
     expect(checkV138Plan26257RouteContract()).toBe(
       V138_PLAN_262_57_ROUTE_CONTRACT)
     expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({ routeOrdinal: 7,

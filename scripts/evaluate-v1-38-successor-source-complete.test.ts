@@ -2,10 +2,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync,
   unlinkSync, writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
+import { performance } from "node:perf_hooks"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { expect, it } from "vitest"
-import { encodeCanonicalJson } from "@cowards/spec"
+import { encodeCanonicalJson, hashCanonicalIdentity } from "@cowards/spec"
 import {
   V138_PLAN_262_57_ROUTE_CONTRACT,
   V138_RECEIPT_DIRECT_COMMANDS,
@@ -23,6 +24,7 @@ import {
 } from "./lib/v1-38-current-matrix-reproduction.js"
 import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
+  V138_PLAN_262_30_FRESH_DESTINATIONS,
   V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
   V138_PLAN_262_56_CANONICAL_PATHS,
   V138_PLAN_262_57_FRESH_DESTINATIONS,
@@ -72,6 +74,17 @@ const canonicalBytes = (value: unknown): Buffer => {
   return Buffer.from(`${Buffer.from(encoded.bytes).toString("utf8")}\n`, "utf8")
 }
 
+const recomputeReviewRoot = (value: Record<string, unknown>) => {
+  const { reviewRoot: _discarded, ...body } = value
+  const encoded = encodeCanonicalJson(body as never, {
+    context: "canonical-manifest",
+  })
+  if (!encoded.ok) throw new TypeError("TEST_CANONICAL_JSON_INVALID")
+  return `sha256:${hashCanonicalIdentity("evidenceBundle", [
+    Buffer.from(String(body.schemaVersion), "utf8"), encoded.bytes,
+  ])}`
+}
+
 const admittedHeadroom = async () => ({ ok: true as const, observation: {
   metricId: "darwin-memorystatus-effective-available-basis-points-v1" as const,
   providerId: "apple-memory-pressure-q-v1" as const,
@@ -82,6 +95,32 @@ const admittedHeadroom = async () => ({ ok: true as const, observation: {
   totalBytes: 4096, pageCount: 1, pageSizeBytes: 4096, percentage: 25,
   observedBasisPoints: 2500, disposition: "preflight_admitted" as const,
 } })
+
+it.each([false, true])(
+  "bounds a never-settling shard runner (shared observer: %s)",
+  async (withObserver) => {
+    const inventory = await import(
+      "./lib/v1-38-current-matrix-reproduction.js"
+    ).then(({ enumerateV138CurrentMatrix }) =>
+      enumerateV138CurrentMatrix(repoRoot))
+    const neverSettles: V138ParallelShardRunner = { run: async () =>
+      await new Promise<never>(() => undefined) }
+    const started = performance.now()
+    const receipt = await calibrateV138ParallelMatrix({ inventory,
+      hardwareIdentity: { operatingSystem: "test", architecture: "test",
+        nodeVersion: process.version, cpuIdentity: "test" },
+      runner: neverSettles,
+      ...(withObserver ? { sharedHeadroomObserver: admittedHeadroom } : {}),
+      deadlinePolicy: { maxShardMilliseconds: 20,
+        maxTotalRunMilliseconds: 80, cleanupGraceMilliseconds: 10 } })
+    expect(performance.now() - started).toBeLessThan(1_000)
+    expect(receipt).toMatchObject({ status: "stopped_process_failure",
+      reason: "RESOURCE_POLICY_SHARD_TIMEOUT", acceptedCellsPublished: 0,
+      partialAcceptedEvidenceReusable: false })
+    expect(receipt.terminals.every(({ cleanup }) =>
+      cleanup.exitAwaited === false)).toBe(true)
+  },
+)
 
 const injectedSuccessfulRunner = (): V138ParallelShardRunner => ({ async run(
   shard, control) {
@@ -312,26 +351,24 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     expect(inspectV138SourceIdentityA7(fixtureRoot, sourceA7).sourceA7)
       .toBe(sourceA7)
     const review = buildV138Plan26255ReviewDocument(fixtureRoot, sourceA7)
+    const falseIdentityClaim = { ...review, independentPersonClaimed: true,
+      cryptographicReviewerIdentityClaimed: true } as Record<string, unknown>
+    falseIdentityClaim.reviewRoot = recomputeReviewRoot(falseIdentityClaim)
     writeFileSync(path.resolve(fixtureRoot,
       V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview),
-    canonicalBytes(review))
+    canonicalBytes(falseIdentityClaim))
     git("add", V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview)
-    git("commit", "-m", "fixture: fabricated self-asserted review\n\n" +
-      "Plan-262-55-Reviewer-Run: caller-supplied-fabrication")
+    git("commit", "-m", "fixture: reject false independent-person claim")
     git("branch", "fabricated-review")
     expect(() => v138Plan26256AuthorizationLiteral(fixtureRoot, sourceA7,
-      review)).toThrow("V138_PLAN_262_55_REVIEWER_SEPARATION_INVALID")
+      falseIdentityClaim)).toThrow("V138_PLAN_262_55_REVIEW_CUSTODY_INVALID")
     git("checkout", "--detach", sourceA7)
     git("branch", "-D", "fabricated-review")
     writeFileSync(path.resolve(fixtureRoot,
       V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview),
     canonicalBytes(review))
     git("add", V138_PLAN_262_56_CANONICAL_PATHS.sourceCompletenessReview)
-    git("config", "user.name", "Plan 262-55 Independent Reviewer")
-    git("config", "user.email",
-      "fixture@plan-262-55.review.cowards.invalid")
-    git("commit", "-m", "fixture: independent source review\n\n" +
-      "Plan-262-55-Reviewer-Run: codex-reviewer-262-55-fixture")
+    git("commit", "-m", "fixture: procedural post-A7 source review")
     git("branch", "fixture-review-262-55")
     git("checkout", "--detach", sourceA7)
     expect(() => v138Plan26256AuthorizationLiteral(fixtureRoot, sourceA7,
@@ -392,6 +429,7 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       writeOutput: () => undefined })).rejects.toThrow(
       "MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
     unlinkSync(danglingPath)
+    let competingWriterRejected = false
     expect(() => writeV138Plan26257RouteStartV1(fixtureRoot, routeStart,
       "gsd-pattern-c-inline-main",
       "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
@@ -399,8 +437,21 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
         activeExecutorCount: 0, agents: [] },
       V138_PLAN_262_56_CANONICAL_PATHS.authorization,
       V138_PLAN_262_56_CANONICAL_PATHS.seal, sourceA7, sourceB7, () => {
+        try {
+          writeV138Plan26257RouteStartV1(fixtureRoot, routeStart,
+            "gsd-pattern-c-inline-main",
+            "/Users/roryquinlan/runtime/cowards-game", { schemaVersion:
+              "v1.38-plan-262-57-terminal-agent-registry-v1",
+              activeExecutorCount: 0, agents: [] },
+            V138_PLAN_262_56_CANONICAL_PATHS.authorization,
+            V138_PLAN_262_56_CANONICAL_PATHS.seal, sourceA7, sourceB7)
+        } catch (error) {
+          competingWriterRejected = error instanceof Error && error.message ===
+            "MATRIX_PLAN_262_57_ROUTE_ALREADY_RESERVED"
+        }
         symlinkSync("racing-dangling-target", danglingPath)
       })).toThrow("MATRIX_PLAN_262_57_DESTINATION_NOT_FRESH")
+    expect(competingWriterRejected).toBe(true)
     unlinkSync(danglingPath)
     await runReceiptCli({ repoRoot: fixtureRoot, argv: routeStartArgv,
       writeOutput: () => undefined })
@@ -447,10 +498,19 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
     const selectedDisposition = process.env.V138_TEST_DISPOSITION
     for (const disposition of preObservationDispositions.filter((candidate) =>
       selectedDisposition === undefined || candidate === selectedDisposition)) {
+      const protectedDriftPath = path.resolve(fixtureRoot,
+        V138_PLAN_262_30_FRESH_DESTINATIONS[3]!)
+      if (disposition === "protected_history_failed") {
+        writeFileSync(protectedDriftPath, "actual protected-history drift\n")
+      }
       const dependencies = { repoRoot: fixtureRoot,
         patternCObservation: disposition === "pattern_c_ownership_failed" ?
           patternCObservation : undefined,
-        observedRootOverrides, writeOutput: () => undefined }
+        observedRootOverrides: disposition === "protected_history_failed" ?
+          { tool_identity_failed: observedRootOverrides.tool_identity_failed,
+            formation_absence_failed:
+              observedRootOverrides.formation_absence_failed } :
+          observedRootOverrides, writeOutput: () => undefined }
       try {
         await runReceiptCli({ ...dependencies, argv: ["node", "route",
           "--write-plan-262-57-terminal-v1", terminalPath,
@@ -478,6 +538,19 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
           "--terminal", terminalPath] })).rejects.toThrow(
           "MATRIX_PLAN_262_30_TERMINAL_INVALID")
         writeFileSync(path.resolve(fixtureRoot, terminalPath), terminalBytes)
+      }
+      if (disposition === "protected_history_failed") {
+        const tampered = JSON.parse(terminalBytes.toString("utf8"))
+        tampered.preObservationProof.observedRoot =
+          `sha256:${"8".repeat(64)}`
+        writeFileSync(path.resolve(fixtureRoot, terminalPath),
+          canonicalBytes(tampered))
+        await expect(runReceiptCli({ ...dependencies, argv: ["node", "route",
+          "--check-plan-262-57-terminal-v1", ...terminalBaseFlags,
+          "--terminal", terminalPath] })).rejects.toThrow(
+          "MATRIX_PLAN_262_30_TERMINAL_INVALID")
+        writeFileSync(path.resolve(fixtureRoot, terminalPath), terminalBytes)
+        unlinkSync(protectedDriftPath)
       }
       unlinkSync(path.resolve(fixtureRoot, terminalPath))
     }
