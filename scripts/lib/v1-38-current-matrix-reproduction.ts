@@ -17828,7 +17828,7 @@ const route5ContextAsV8 = (value: Record<string, unknown>) => {
     "v1.38-current-matrix-execution-context-v8" as const,
     mode: context.mode, cwd: context.cwd,
     terminalAgentRegistry: { ...(context.terminalAgentRegistry as object),
-      schemaVersion: "v1.38-plan-262-25-terminal-agent-registry-v1" },
+      schemaVersion: "v1.38-plan-262-30-terminal-agent-registry-v1" },
     sourceA4: context.sourceA5, sourceB4: context.sourceB5,
     sourceB4Custody: context.sourceB5Custody,
     sourceB4CustodyRoot: context.sourceB5CustodyRoot,
