@@ -20218,9 +20218,15 @@ export const deriveV138Plan26257InterruptionProof = (repoRoot: string):
   if (stages.slice(activeIndex + 1).some(({ publicPath, markerPath }) =>
     present(publicPath) || present(markerPath))) return undefined
   let marker: unknown
-  try { marker = readPlan26257(repoRoot,
-    `${active.stage}Marker` as "preflightMarker" | "calibrationMarker" |
-      "reproductionMarker") } catch { return undefined }
+  try {
+    marker = active.stage === "preflight" ?
+      checkV138Plan26257RouteStartV1(JSON.parse(
+        readV138RepositoryFileNoFollow(repoRoot,
+          path.resolve(repoRoot, PLAN_262_57_PATHS.context), "required")!
+          .toString("utf8"))).preflightConsumption :
+      readPlan26257(repoRoot, `${active.stage}Marker` as
+        "calibrationMarker" | "reproductionMarker")
+  } catch { return undefined }
   if (marker === null || typeof marker !== "object" || Array.isArray(marker) ||
     !isV138CanonicalSha256((marker as { markerRoot?: unknown }).markerRoot)) {
     return undefined
