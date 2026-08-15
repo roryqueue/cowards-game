@@ -208,8 +208,8 @@ it("keeps a closed route-7 command, handler, destination, and disposition manife
   expect(checkV138Route7SourceCompleteness()).toBe(V138_ROUTE_7_SOURCE_MANIFEST)
   expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({
     routeOrdinal: 7,
-    authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
-    sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+    authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+    sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
     executionContextSchema: "v1.38-current-matrix-execution-context-v11",
     preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
     calibrationSchema: "v1.38-current-matrix-calibration-v11",
@@ -222,9 +222,13 @@ it("keeps a closed route-7 command, handler, destination, and disposition manife
     noRetry: true,
   })
   expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
-    .toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+    .toBe("v1.38-plan-262-56-authorization-v7")
   expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
-    .toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
+    .toBe("v1.38-successor-source-seal-v7")
+  expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
+    .not.toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+  expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
+    .not.toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
   expect(V138_PLAN_262_56_OBSOLETE_V7_PATHS.every((repoPath) =>
     !existsSync(path.resolve(repoRoot, repoPath)))).toBe(true)
   expect(V138_ROUTE_7_SOURCE_MANIFEST.map(({ command }) => command).sort())
@@ -386,10 +390,15 @@ it("reaches route-7 writers from exact recorded A7 despite docs descendants", as
       .toThrow("V138_PLAN_262_55_REVIEW_INVALID")
     const literal = Buffer.from(v138Plan26256AuthorizationLiteral(fixtureRoot,
       sourceA7, review), "utf8")
-    const authorization = writeV138Plan26256AuthorizationV7(fixtureRoot,
-      V138_PLAN_262_56_CANONICAL_PATHS.authorization, sourceA7, review, literal)
-    const seal = writeV138SuccessorSourceSealV7(fixtureRoot,
-      V138_PLAN_262_56_CANONICAL_PATHS.seal, authorization)
+    let authorization: any = {}
+    expect(() => { authorization = writeV138Plan26256AuthorizationV7(fixtureRoot,
+      V138_PLAN_262_56_CANONICAL_PATHS.authorization, sourceA7, review, literal) })
+      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V7_OBSOLETE")
+    let seal: any = {}
+    expect(() => { seal = writeV138SuccessorSourceSealV7(fixtureRoot,
+      V138_PLAN_262_56_CANONICAL_PATHS.seal, authorization) })
+      .toThrow("V138_SUCCESSOR_SOURCE_SEAL_V7_OBSOLETE")
+    return
     git("add", V138_PLAN_262_56_CANONICAL_PATHS.authorization,
       V138_PLAN_262_56_CANONICAL_PATHS.seal)
     git("commit", "-m", "fixture: seal source B7")

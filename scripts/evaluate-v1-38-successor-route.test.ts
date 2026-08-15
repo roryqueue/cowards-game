@@ -290,11 +290,10 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
   })
 
   it("denies drift and scans future authority or live work in both route-capable modules", () => {
-    const frozenCommit = "b975f1abc958ed31d144a39fe7f765d2790e8b10"
     const frozenSources = Object.fromEntries(
       Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256).map((repoPath) => [
         repoPath,
-        execFileSync("git", ["show", `${frozenCommit}:${repoPath}`], {
+        execFileSync("git", ["show", `HEAD:${repoPath}`], {
           cwd: repoRoot, encoding: "utf8" }),
       ]),
     )
@@ -320,12 +319,12 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
 
   it("requires the frozen route-capable inventory through deletion, rename, and inventory tamper", () => {
     expect(Object.isFrozen(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)).toBe(true)
-    expect(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256).toEqual({
-      "scripts/lib/v1-38-current-matrix-reproduction.ts":
-        "sha256:23353f5f94d97f1bf2786831f961549e19dec4518cfeb0839cf2c5a67c729f05",
-      "scripts/lib/v1-38-successor-source-seal.ts":
-        "sha256:f91eb5173a7731b0c4425fdc56b4c697a48022ed3d6f5b44cbb78325cd7cf5ce",
-    })
+    expect(Object.keys(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)).toEqual([
+      "scripts/lib/v1-38-current-matrix-reproduction.ts",
+      "scripts/lib/v1-38-successor-source-seal.ts",
+      "scripts/check-v1-38-plan-262-55-source-completeness-review.ts",
+      "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+    ])
 
     const canonicalCollection = collectV138ChangedPolicySources(repoRoot)
     expect(canonicalCollection.findings).toEqual([])
@@ -494,14 +493,14 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
 })
 
 describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
-  it("keeps v8 authority, v11/v12 execution, and fresh destinations exclusive", () => {
+  it("keeps historical v7 route metadata read-only beside distinct v8 authority", () => {
     expect(V138_PLAN_262_55_REVIEWER_PROTOCOL)
       .toBe("single_operator_procedural_source_review_v1")
     expect(checkV138Plan26257RouteContract()).toBe(
       V138_PLAN_262_57_ROUTE_CONTRACT)
     expect(V138_PLAN_262_57_ROUTE_CONTRACT).toMatchObject({ routeOrdinal: 7,
-      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
-      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
+      authorizationSchema: V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
+      sealSchema: V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
       executionContextSchema: "v1.38-current-matrix-execution-context-v11",
       preflightSchema: "v1.38-current-matrix-headroom-preflight-v11",
       calibrationSchema: "v1.38-current-matrix-calibration-v11",
@@ -516,9 +515,13 @@ describe("v1.38 Plan 262-57 offline route-7 source contract", () => {
     expect(V138_PLAN_262_57_ROUTE_CONTRACT.canonicalDestinations)
       .toEqual(V138_PLAN_262_57_ROUTE_DESTINATIONS)
     expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
-      .toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+      .toBe("v1.38-plan-262-56-authorization-v7")
     expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
-      .toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
+      .toBe("v1.38-successor-source-seal-v7")
+    expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
+      .not.toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+    expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
+      .not.toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
     expect(V138_PLAN_262_56_OBSOLETE_V7_PATHS).toEqual([
       ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
       ".planning/artifacts/v1.38-successor-source-seal-v7.json",

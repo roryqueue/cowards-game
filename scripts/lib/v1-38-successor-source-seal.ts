@@ -9,6 +9,7 @@ import {
   linkSync,
   openSync,
   readFileSync,
+  readSync,
   realpathSync,
   unlinkSync,
   writeFileSync,
@@ -5657,9 +5658,9 @@ export const writeV138Plan26247PreExecutionSourceFailureV1 =
 // the two authorization artifacts.  These contracts deliberately contain no
 // ambient "latest" lookup and no live operation.
 export const V138_PLAN_262_56_AUTHORIZATION_SCHEMA =
-  "v1.38-plan-262-56-authorization-v8" as const
+  "v1.38-plan-262-56-authorization-v7" as const
 export const V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA =
-  "v1.38-successor-source-seal-v8" as const
+  "v1.38-successor-source-seal-v7" as const
 export const V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA =
   "v1.38-plan-262-56-authorization-v8" as const
 export const V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA =
@@ -5679,8 +5680,8 @@ export const V138_PLAN_262_56_OBSOLETE_V7_PATHS = Object.freeze([
 const V138_PLAN_262_56_V8_AUTHORIZATION_KEYS = Object.freeze([
   "schemaVersion", "routeOrdinal", "executionVersions", "sourceBase8",
   "sourceA8", "sourceA8Paths", "sourceA8Tree", "sourceA8Parent",
-  "sourceA8Blobs", "protectedA7", "protectedHistoryRoot",
-  "reviewV1InvalidDispositionSha256", "reviewV2Input", "identityClaims",
+  "sourceA8Blobs", "protectedA7", "protectedHistory",
+  "reviewV2Input", "identityClaims",
   "canonicalDestinations", "futureCustodyPaths", "obsoleteV7PathsAbsent",
   "singleUse", "noRetry", "satisfiesAdmit03", "downstreamAuthority",
   "authorizationRoot",
@@ -5721,58 +5722,218 @@ const checkV138Plan26256ReviewV2Input = (repoRoot: string,
     fail("V138_PLAN_262_56_REVIEW_V2_INPUT_METADATA_INVALID")
   }
   const physicalRoot = realpathSync(repoRoot)
-  if (!path.isAbsolute(value.absolutePath as string) ||
-    !(value.absolutePath as string).startsWith("/private/tmp/") ||
-    path.resolve(value.absolutePath as string).startsWith(`${physicalRoot}${path.sep}`) ||
-    value.outsideRepository !== true || value.readOnly !== true ||
-    value.ownerMatchesEffectiveUid !== true || value.regularFile !== true ||
-    value.symlinkFree !== true || value.linkCount !== 1 ||
-    typeof value.inputCommit !== "string" ||
-    !/^[0-9a-f]{40}$/u.test(value.inputCommit) ||
-    typeof value.inputBlob !== "string" || !/^[0-9a-f]{40}$/u.test(value.inputBlob) ||
-    typeof value.byteLength !== "number" || !Number.isSafeInteger(value.byteLength) ||
-    value.byteLength <= 0 || typeof value.bytesSha256 !== "string" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(value.bytesSha256) ||
-    typeof value.reviewV2Root !== "string" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(value.reviewV2Root) ||
-    value.preBytesSha256 !== value.bytesSha256 ||
-    value.postBytesSha256 !== value.bytesSha256 ||
-    typeof value.preNoFollowIdentity !== "string" ||
-    value.preNoFollowIdentity !== value.postNoFollowIdentity) {
+  const absolutePath = path.resolve(String(value.absolutePath))
+  if (!path.isAbsolute(String(value.absolutePath)) || absolutePath === physicalRoot ||
+    absolutePath.startsWith(`${physicalRoot}${path.sep}`) ||
+    path.basename(absolutePath) !== path.basename(
+      V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview)) {
     fail("V138_PLAN_262_56_REVIEW_V2_INPUT_DOCUMENT_INVALID")
   }
-  if (!isRecord(value.reviewV2Document) ||
-    value.reviewV2Document.reviewRoot !== value.reviewV2Root ||
-    value.reviewV2Document.findingCount !== 0 ||
-    value.reviewV2Document.sourceCompletenessPassed !== true ||
-    value.reviewV2Document.independentPersonClaimed !== false ||
-    value.reviewV2Document.reviewerSeparated !== false) {
+  let cursor = path.parse(absolutePath).root
+  for (const segment of absolutePath.slice(cursor.length).split(path.sep)) {
+    if (segment.length === 0) continue
+    cursor = path.join(cursor, segment)
+    const metadata = lstatSync(cursor)
+    if (metadata.isSymbolicLink()) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_METADATA_INVALID")
+  }
+  const descriptor = openSync(absolutePath, constants.O_RDONLY | constants.O_NOFOLLOW)
+  let bytes: Buffer
+  let pre
+  let post
+  try {
+    pre = fstatSync(descriptor)
+    bytes = Buffer.alloc(pre.size)
+    let offset = 0
+    while (offset < bytes.length) offset += readSync(descriptor, bytes, offset,
+      bytes.length - offset, offset)
+    post = fstatSync(descriptor)
+  } finally { closeSync(descriptor) }
+  const identity = (stat: typeof pre) =>
+    `dev:${stat.dev}:ino:${stat.ino}:size:${stat.size}:mtimeNs:${stat.mtimeNs}`
+  if (!pre.isFile() || !post.isFile() || pre.nlink !== 1 || post.nlink !== 1 ||
+    pre.uid !== process.geteuid?.() || (pre.mode & 0o222) !== 0 ||
+    identity(pre) !== identity(post)) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_METADATA_INVALID")
+  let document: unknown
+  try { document = JSON.parse(bytes.toString("utf8")) } catch {
     fail("V138_PLAN_262_56_REVIEW_V2_INPUT_INVALID")
   }
-  if (sha256(Buffer.from(canonical(value.reviewV2Document), "utf8")) !==
-      value.bytesSha256) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_BYTES_INVALID")
-  if (Buffer.byteLength(canonical(value.reviewV2Document)) !== value.byteLength) {
-    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_LENGTH_INVALID")
+  const reviewKeys = ["schemaVersion", "sourceBase8", "sourceA8", "custody",
+    "reachability", "transcript", "protectedHistory", "snapshots", "identityClaims",
+    "findings", "findingCount", "sourceCompletenessPassed", "reviewRoot"]
+  if (!isRecord(document) || !exactKeys(document, reviewKeys) ||
+    document.schemaVersion !== "v1.38-plan-262-59-source-completeness-review-v2" ||
+    !isRecord(document.identityClaims) ||
+    document.identityClaims.independentPersonClaimed !== false ||
+    document.identityClaims.reviewerSeparated !== false ||
+    document.identityClaims.cryptographicReviewerIdentityClaimed !== false ||
+    document.identityClaims.independentCustodyClaimed !== false ||
+    document.findingCount !== 0 || document.sourceCompletenessPassed !== true ||
+    !Array.isArray(document.findings) || document.findings.length !== 0 ||
+    typeof document.reviewRoot !== "string") {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_INVALID")
   }
-  return Object.freeze(value as unknown as V138Plan26256ReviewV2Input)
+  const { reviewRoot, ...reviewBody } = document
+  if (reviewRoot !== sha256(canonicalBytes(reviewBody)) ||
+    !bytes.equals(Buffer.from(canonical(document), "utf8"))) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_BYTES_INVALID")
+  }
+  const canonicalReviewPath = V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview
+  const commits = gitText(repoRoot, ["log", "--all", "--format=%H", "--",
+    canonicalReviewPath]).split("\n").filter(Boolean)
+  if (commits.length !== 1) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_GIT_INVALID")
+  const inputCommit = commits[0]!
+  const inputBlob = gitText(repoRoot, ["rev-parse", `${inputCommit}:${canonicalReviewPath}`])
+  const committed = readCommitFile(repoRoot, inputCommit, canonicalReviewPath)
+  if (!committed.equals(bytes)) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_GIT_INVALID")
+  const derived = Object.freeze({ absolutePath, outsideRepository: true as const,
+    readOnly: true as const, ownerMatchesEffectiveUid: true as const,
+    regularFile: true as const, symlinkFree: true as const, linkCount: 1 as const,
+    inputCommit, inputBlob, byteLength: bytes.byteLength, bytesSha256: sha256(bytes),
+    reviewV2Root: reviewRoot as Sha256, preBytesSha256: sha256(bytes),
+    postBytesSha256: sha256(bytes), preNoFollowIdentity: identity(pre),
+    postNoFollowIdentity: identity(post), reviewV2Document: document })
+  if (canonical(value) !== canonical(derived)) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_METADATA_INVALID")
+  }
+  return derived
+}
+
+const V138_PLAN_262_58_PLAN_PATH =
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-58-PLAN.md"
+const V138_PLAN_262_58_SOURCE_PATHS = Object.freeze([
+  "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+  "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
+  "scripts/lib/v1-38-successor-source-seal.ts",
+  "scripts/evaluate-v1-38-successor-route.test.ts",
+  "scripts/evaluate-v1-38-successor-source-complete.test.ts",
+  "scripts/check-v1-38-dependency-revision-boundaries.ts",
+] as const)
+
+const deriveV138SourceA8 = (repoRoot: string) => {
+  const firstParent = gitText(repoRoot, ["log", "--first-parent", "--reverse",
+    "--format=%H", "--grep=Plan262-58-Author-Run:", "HEAD"])
+    .split("\n").filter(Boolean)
+  const sourcePaths = sorted(V138_PLAN_262_58_SOURCE_PATHS)
+  const start = firstParent.findIndex(commit => {
+    const paths = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+      "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+    const trailer = gitText(repoRoot, ["log", "-1",
+      "--format=%(trailers:key=Plan262-58-Author-Run,valueonly)", commit])
+    return canonical(paths) === canonical(sourcePaths) && trailer.length > 0
+  })
+  if (start !== 0 || firstParent.length === 0) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V8_CUSTODY_INVALID")
+  }
+  const sourceBase8 = gitText(repoRoot, ["show", "-s", "--format=%P",
+    firstParent[start]!]).split(" ").filter(Boolean)[0] ?? ""
+  const descendants = firstParent.slice(start)
+  let a8: string | undefined
+  for (const commit of descendants) {
+    const paths = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+      "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+    if (canonical(paths) !== canonical(sorted(V138_PLAN_262_58_SOURCE_PATHS))) break
+    const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
+      .split(" ").filter(Boolean)
+    const trailer = gitText(repoRoot, ["log", "-1",
+      "--format=%(trailers:key=Plan262-58-Author-Run,valueonly)", commit])
+    if (parents.length !== 1 || parents[0] !== (a8 ?? sourceBase8) || !trailer) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V8_CUSTODY_INVALID")
+    }
+    a8 = commit
+  }
+  if (a8 === undefined) fail("V138_PLAN_262_56_AUTHORIZATION_V8_CUSTODY_INVALID")
+  return Object.freeze({ sourceBase8, sourceA8: a8,
+    sourceA8Tree: gitText(repoRoot, ["rev-parse", `${a8}^{tree}`]),
+    sourceA8Parent: sourceBase8, sourceA8Paths: V138_PLAN_262_58_SOURCE_PATHS,
+    sourceA8Blobs: Object.freeze(V138_PLAN_262_58_SOURCE_PATHS.map(repoPath => {
+      const bytes = readCommitFile(repoRoot, a8!, repoPath)
+      return Object.freeze({ path: repoPath,
+        blobOid: gitText(repoRoot, ["rev-parse", `${a8}:${repoPath}`]),
+        sha256: sha256(bytes) })
+    })) })
+}
+
+const deriveV138ProtectedHistoryV8 = (repoRoot: string) => {
+  const failurePath =
+    ".planning/artifacts/v1.38-plan-262-47-pre-execution-source-failure-v1.json"
+  const dispositionPath =
+    ".planning/artifacts/v1.38-plan-262-58-review-v1-invalid-disposition-v1.json"
+  const failureBytes = readV138RepositoryFileNoFollow(repoRoot,
+    path.resolve(repoRoot, failurePath), "required")!
+  const failure = JSON.parse(failureBytes.toString("utf8")) as Record<string, any>
+  const authorizationPaths = gitText(repoRoot, ["ls-files", ".planning/artifacts"])
+    .split("\n").filter(repoPath => /authorization-v[1-6]\.json$/u.test(repoPath)).sort()
+  if (!Array.isArray(failure.historicalChargedPublicAttemptIds) ||
+    failure.historicalChargedPublicAttemptIds.length !== 40 ||
+    new Set(failure.historicalChargedPublicAttemptIds).size !== 40 ||
+    authorizationPaths.length !== 6 || !isRecord(failure.protectedRoots)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V8_PROTECTED_HISTORY_INVALID")
+  }
+  const body = { protectedA7: "5f39aba7833030d537c4c2767c369d24c982ed83",
+    sourceA6: failure.sourceA6, sourceB6: failure.sourceB6,
+    exactChargeIds: Object.freeze([...failure.historicalChargedPublicAttemptIds]),
+    priorAuthorizationBytes: Object.freeze(authorizationPaths.map(repoPath => ({
+      path: repoPath, blobOid: gitText(repoRoot, ["rev-parse", `HEAD:${repoPath}`]),
+      sha256: sha256(readV138RepositoryFileNoFollow(repoRoot,
+        path.resolve(repoRoot, repoPath), "required")!) }))),
+    protectedRoots: Object.freeze(failure.protectedRoots),
+    sourceFailureSha256: sha256(failureBytes),
+    reviewV1InvalidDispositionSha256: sha256(readV138RepositoryFileNoFollow(repoRoot,
+      path.resolve(repoRoot, dispositionPath), "required")!) }
+  return Object.freeze({ ...body, protectedHistoryRoot: identityRoot(
+    "evidenceBundle", "v1.38-plan-262-56-protected-history-v8", body) })
+}
+
+export const inspectV138Plan26256ReviewV2Input = (repoRoot: string,
+  absolutePath: string) => {
+  const placeholder = { absolutePath, outsideRepository: true, readOnly: true,
+    ownerMatchesEffectiveUid: true, regularFile: true, symlinkFree: true,
+    linkCount: 1, inputCommit: "0".repeat(40), inputBlob: "0".repeat(40),
+    byteLength: 1, bytesSha256: `sha256:${"0".repeat(64)}`,
+    reviewV2Root: `sha256:${"0".repeat(64)}`, preBytesSha256: `sha256:${"0".repeat(64)}`,
+    postBytesSha256: `sha256:${"0".repeat(64)}`, preNoFollowIdentity: "pending",
+    postNoFollowIdentity: "pending", reviewV2Document: {} }
+  try { return checkV138Plan26256ReviewV2Input(repoRoot, placeholder) } catch (error) {
+    if (!(error instanceof TypeError) || error.message !==
+      "V138_PLAN_262_56_REVIEW_V2_INPUT_METADATA_INVALID") throw error
+  }
+  /* Derive once without trusting caller metadata, then validate that exact result. */
+  const physicalRoot = realpathSync(repoRoot)
+  const resolved = path.resolve(absolutePath)
+  if (!path.isAbsolute(absolutePath) || resolved.startsWith(`${physicalRoot}${path.sep}`)) {
+    fail("V138_PLAN_262_56_REVIEW_V2_INPUT_DOCUMENT_INVALID")
+  }
+  const descriptor = openSync(resolved, constants.O_RDONLY | constants.O_NOFOLLOW)
+  const pre = fstatSync(descriptor)
+  const bytes = readFileSync(descriptor)
+  const post = fstatSync(descriptor)
+  closeSync(descriptor)
+  const document = JSON.parse(bytes.toString("utf8")) as Record<string, any>
+  const commits = gitText(repoRoot, ["log", "--all", "--format=%H", "--",
+    V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview]).split("\n").filter(Boolean)
+  if (commits.length !== 1) fail("V138_PLAN_262_56_REVIEW_V2_INPUT_GIT_INVALID")
+  const identity = (stat: typeof pre) =>
+    `dev:${stat.dev}:ino:${stat.ino}:size:${stat.size}:mtimeNs:${stat.mtimeNs}`
+  const derived = { absolutePath: resolved, outsideRepository: true as const,
+    readOnly: true as const, ownerMatchesEffectiveUid: true as const,
+    regularFile: true as const, symlinkFree: true as const, linkCount: 1 as const,
+    inputCommit: commits[0]!, inputBlob: gitText(repoRoot, ["rev-parse",
+      `${commits[0]}:${V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview}`]),
+    byteLength: bytes.byteLength, bytesSha256: sha256(bytes),
+    reviewV2Root: document.reviewRoot as Sha256, preBytesSha256: sha256(bytes),
+    postBytesSha256: sha256(bytes), preNoFollowIdentity: identity(pre),
+    postNoFollowIdentity: identity(post), reviewV2Document: document }
+  return checkV138Plan26256ReviewV2Input(repoRoot, derived)
 }
 
 export const buildV138Plan26256AuthorizationV8 = (input: {
   readonly repoRoot: string
-  readonly sourceBase8: string
-  readonly sourceA8: string
-  readonly sourceA8Tree: string
-  readonly sourceA8Parent: string
-  readonly sourceA8Paths: readonly string[]
-  readonly sourceA8Blobs: readonly Readonly<{ path: string; blobOid: string;
-    sha256: Sha256 }>[]
-  readonly protectedA7: string
-  readonly protectedHistoryRoot: Sha256
-  readonly reviewV1InvalidDispositionSha256: Sha256
-  readonly reviewV2Input: V138Plan26256ReviewV2Input
+  readonly reviewV2AbsolutePath: string
 }) => {
-  const reviewV2Input = checkV138Plan26256ReviewV2Input(input.repoRoot,
-    input.reviewV2Input)
+  const reviewV2Input = inspectV138Plan26256ReviewV2Input(input.repoRoot,
+    input.reviewV2AbsolutePath)
+  const source = deriveV138SourceA8(input.repoRoot)
+  const protectedHistory = deriveV138ProtectedHistoryV8(input.repoRoot)
   const sourcePaths = Object.freeze([
     "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
     "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
@@ -5781,19 +5942,7 @@ export const buildV138Plan26256AuthorizationV8 = (input: {
     "scripts/evaluate-v1-38-successor-source-complete.test.ts",
     "scripts/check-v1-38-dependency-revision-boundaries.ts",
   ] as const)
-  if (!/^[0-9a-f]{40}$/u.test(input.sourceBase8) ||
-    !/^[0-9a-f]{40}$/u.test(input.sourceA8) ||
-    !/^[0-9a-f]{40}$/u.test(input.sourceA8Tree) ||
-    input.sourceA8Parent !== input.sourceBase8 ||
-    canonical(input.sourceA8Paths) !== canonical(sourcePaths) ||
-    input.sourceA8Blobs.length !== sourcePaths.length ||
-    canonical(input.sourceA8Blobs.map(({ path: repoPath }) => repoPath)) !==
-      canonical(sourcePaths) || input.sourceA8Blobs.some(record =>
-        !/^[0-9a-f]{40}$/u.test(record.blobOid) ||
-        !/^sha256:[0-9a-f]{64}$/u.test(record.sha256)) ||
-    input.protectedA7 !== "5f39aba7833030d537c4c2767c369d24c982ed83" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(input.protectedHistoryRoot) ||
-    !/^sha256:[0-9a-f]{64}$/u.test(input.reviewV1InvalidDispositionSha256)) {
+  if (canonical(source.sourceA8Paths) !== canonical(sourcePaths)) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V8_CUSTODY_INVALID")
   }
   const body = {
@@ -5801,13 +5950,12 @@ export const buildV138Plan26256AuthorizationV8 = (input: {
     routeOrdinal: 7 as const,
     executionVersions: Object.freeze({ context: 11 as const, preflight: 11 as const,
       calibration: 11 as const, reproduction: 12 as const }),
-    sourceBase8: input.sourceBase8, sourceA8: input.sourceA8,
-    sourceA8Paths: sourcePaths, sourceA8Tree: input.sourceA8Tree,
-    sourceA8Parent: input.sourceA8Parent,
-    sourceA8Blobs: Object.freeze(input.sourceA8Blobs),
-    protectedA7: input.protectedA7,
-    protectedHistoryRoot: input.protectedHistoryRoot,
-    reviewV1InvalidDispositionSha256: input.reviewV1InvalidDispositionSha256,
+    sourceBase8: source.sourceBase8, sourceA8: source.sourceA8,
+    sourceA8Paths: sourcePaths, sourceA8Tree: source.sourceA8Tree,
+    sourceA8Parent: source.sourceA8Parent,
+    sourceA8Blobs: source.sourceA8Blobs,
+    protectedA7: protectedHistory.protectedA7,
+    protectedHistory,
     reviewV2Input,
     identityClaims: Object.freeze({ independentPersonClaimed: false as const,
       reviewerSeparated: false as const, externalIdentityClaimed: false as const,
@@ -5837,13 +5985,7 @@ export const checkV138Plan26256AuthorizationV8 = (repoRoot: string,
   }
   const candidate = value as Record<string, any>
   const expected = buildV138Plan26256AuthorizationV8({ repoRoot,
-    sourceBase8: candidate.sourceBase8, sourceA8: candidate.sourceA8,
-    sourceA8Tree: candidate.sourceA8Tree, sourceA8Parent: candidate.sourceA8Parent,
-    sourceA8Paths: candidate.sourceA8Paths, sourceA8Blobs: candidate.sourceA8Blobs,
-    protectedA7: candidate.protectedA7,
-    protectedHistoryRoot: candidate.protectedHistoryRoot,
-    reviewV1InvalidDispositionSha256: candidate.reviewV1InvalidDispositionSha256,
-    reviewV2Input: candidate.reviewV2Input })
+    reviewV2AbsolutePath: String(candidate.reviewV2Input?.absolutePath) })
   if (canonical(value) !== canonical(expected)) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V8_INVALID")
   }
@@ -5853,25 +5995,13 @@ export const checkV138Plan26256AuthorizationV8 = (repoRoot: string,
 export const buildV138SuccessorSourceSealV8 = (input: {
   readonly repoRoot: string
   readonly authorization: unknown
-  readonly sourceB8: string
-  readonly sourceB8Parent: string
-  readonly sourceB8Tree: string
-  readonly changedPaths: readonly string[]
 }) => {
   const authorization = checkV138Plan26256AuthorizationV8(input.repoRoot,
     input.authorization)
   const exactPaths = [V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
     V138_PLAN_262_56_V8_CANONICAL_PATHS.seal].sort()
-  if (!/^[0-9a-f]{40}$/u.test(input.sourceB8) ||
-    !/^[0-9a-f]{40}$/u.test(input.sourceB8Tree) ||
-    input.sourceB8Parent !== authorization.sourceA8 ||
-    canonical([...input.changedPaths].sort()) !== canonical(exactPaths)) {
-    fail("V138_SUCCESSOR_SOURCE_SEAL_V8_CUSTODY_INVALID")
-  }
   const body = { schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
-    sourceA8: authorization.sourceA8, sourceB8: input.sourceB8,
-    sourceB8Parent: input.sourceB8Parent, sourceB8Tree: input.sourceB8Tree,
-    changedPaths: Object.freeze(exactPaths),
+    sourceA8: authorization.sourceA8, changedPaths: Object.freeze(exactPaths),
     authorizationRoot: authorization.authorizationRoot,
     reviewV2Root: authorization.reviewV2Input.reviewV2Root,
     futureCustodyPaths: authorization.futureCustodyPaths,
@@ -5888,15 +6018,80 @@ export const checkV138SuccessorSourceSealV8 = (input: {
   readonly seal: unknown
 }) => {
   if (!isRecord(input.seal)) fail("V138_SUCCESSOR_SOURCE_SEAL_V8_INVALID")
-  const candidate = input.seal as Record<string, any>
   const expected = buildV138SuccessorSourceSealV8({ repoRoot: input.repoRoot,
-    authorization: input.authorization, sourceB8: candidate.sourceB8,
-    sourceB8Parent: candidate.sourceB8Parent, sourceB8Tree: candidate.sourceB8Tree,
-    changedPaths: candidate.changedPaths })
+    authorization: input.authorization })
   if (canonical(input.seal) !== canonical(expected)) {
     fail("V138_SUCCESSOR_SOURCE_SEAL_V8_INVALID")
   }
   return expected
+}
+
+export const checkV138SuccessorSealCommitV8 = (input: {
+  readonly repoRoot: string
+  readonly sourceB8: string
+  readonly authorization: unknown
+  readonly seal: unknown
+  readonly suppliedAuthorizationBytes?: Uint8Array
+  readonly suppliedSealBytes?: Uint8Array
+}) => {
+  const authorization = checkV138Plan26256AuthorizationV8(input.repoRoot,
+    input.authorization)
+  const seal = checkV138SuccessorSourceSealV8({ repoRoot: input.repoRoot,
+    authorization, seal: input.seal })
+  const sourceB8 = fullCommit(input.repoRoot, input.sourceB8)
+  const parents = gitText(input.repoRoot, ["show", "-s", "--format=%P", sourceB8])
+    .split(" ").filter(Boolean)
+  const exactPaths = sorted([V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
+    V138_PLAN_262_56_V8_CANONICAL_PATHS.seal])
+  const changedPaths = sorted(gitText(input.repoRoot, ["diff-tree", "--no-commit-id",
+    "--name-only", "-r", "--no-renames", sourceB8]).split("\n").filter(Boolean))
+  if (parents.length !== 1 || parents[0] !== authorization.sourceA8 ||
+    canonical(changedPaths) !== canonical(exactPaths)) {
+    fail("V138_SUCCESSOR_SOURCE_SEAL_V8_CUSTODY_INVALID")
+  }
+  const blobs = exactPaths.map(repoPath => {
+    if (gitText(input.repoRoot, ["ls-tree", "--name-only", authorization.sourceA8,
+      "--", repoPath])) fail("V138_SUCCESSOR_SOURCE_SEAL_V8_NOT_EXCLUSIVE")
+    const committed = readCommitFile(input.repoRoot, sourceB8, repoPath)
+    const working = readV138RepositoryFileNoFollow(input.repoRoot,
+      path.resolve(input.repoRoot, repoPath), "required")!
+    const supplied = repoPath === exactPaths[0] ? input.suppliedAuthorizationBytes :
+      input.suppliedSealBytes
+    if (!committed.equals(working) || (supplied !== undefined &&
+      !committed.equals(Buffer.from(supplied)))) fail("V138_SUCCESSOR_SOURCE_SEAL_V8_BYTES_INVALID")
+    return Object.freeze({ path: repoPath,
+      blobOid: gitText(input.repoRoot, ["rev-parse", `${sourceB8}:${repoPath}`]),
+      sha256: sha256(committed) })
+  })
+  const later = gitText(input.repoRoot, ["log", "--format=%H", `${sourceB8}..HEAD`,
+    "--", ...exactPaths]).split("\n").filter(Boolean)
+  if (later.length !== 0) fail("V138_SUCCESSOR_SOURCE_SEAL_V8_MODIFIED")
+  return Object.freeze({ authorization, seal, sourceB8, sourceB8Parent: parents[0]!,
+    sourceB8Tree: gitText(input.repoRoot, ["rev-parse", `${sourceB8}^{tree}`]),
+    changedPaths: Object.freeze(changedPaths), blobs: Object.freeze(blobs),
+    laterModificationCount: 0 as const })
+}
+
+export const writeV138Plan26256AuthorizationV8 = (repoRoot: string,
+  targetPath: string, reviewV2AbsolutePath: string) => {
+  const target = canonicalPath(repoRoot, targetPath,
+    V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization)
+  regularFile(target, "absent")
+  const value = buildV138Plan26256AuthorizationV8({ repoRoot,
+    reviewV2AbsolutePath })
+  writeV138CanonicalExclusiveV2(repoRoot, target, value)
+  return value
+}
+
+export const writeV138SuccessorSourceSealV8 = (repoRoot: string,
+  targetPath: string, authorizationValue: unknown) => {
+  const target = canonicalPath(repoRoot, targetPath,
+    V138_PLAN_262_56_V8_CANONICAL_PATHS.seal)
+  regularFile(target, "absent")
+  const value = buildV138SuccessorSourceSealV8({ repoRoot,
+    authorization: authorizationValue })
+  writeV138CanonicalExclusiveV2(repoRoot, target, value)
+  return value
 }
 export const V138_PLAN_262_56_CANONICAL_PATHS = Object.freeze({
   authorization:
@@ -6395,23 +6590,14 @@ export const checkV138SealedWorktreeAtA7 = (repoRoot: string,
 export const writeV138Plan26256AuthorizationV7 = (repoRoot: string,
   targetPath: string, sourceA7: string, review: unknown,
   literalBytes: Uint8Array) => {
-  const target = canonicalPath(repoRoot, targetPath,
-    V138_PLAN_262_56_CANONICAL_PATHS.authorization)
-  regularFile(target, "absent")
-  const value = buildV138Plan26256AuthorizationV7({ repoRoot, sourceA7,
-    review, literalBytes })
-  writeV138CanonicalExclusiveV2(repoRoot, target, value)
-  return value
+  void repoRoot; void targetPath; void sourceA7; void review; void literalBytes
+  fail("V138_PLAN_262_56_AUTHORIZATION_V7_OBSOLETE")
 }
 
 export const writeV138SuccessorSourceSealV7 = (repoRoot: string,
   targetPath: string, authorizationValue: unknown) => {
-  const target = canonicalPath(repoRoot, targetPath,
-    V138_PLAN_262_56_CANONICAL_PATHS.seal)
-  regularFile(target, "absent")
-  const value = buildV138SuccessorSourceSealV7(repoRoot, authorizationValue)
-  writeV138CanonicalExclusiveV2(repoRoot, target, value)
-  return value
+  void repoRoot; void targetPath; void authorizationValue
+  fail("V138_SUCCESSOR_SOURCE_SEAL_V7_OBSOLETE")
 }
 
 export const checkV138SuccessorSealCommitV7 = (input: {
@@ -7438,7 +7624,45 @@ const runCli = async (): Promise<void> => {
     "../..",
   )
   const args = process.argv.slice(2)
-  if (args[0] === "--render-plan-262-56-authorization-v7") {
+  if (args[0]?.endsWith("-v7") || args[0]?.includes("authorization-v7") ||
+    args[0]?.includes("source-seal-v7")) {
+    fail("V138_PLAN_262_56_V7_CLI_OBSOLETE")
+  } else if (args[0] === "--render-plan-262-56-authorization-v8") {
+    if (args.length !== 3 || args[1] !== "--review-input-absolute" ||
+      !path.isAbsolute(args[2]!)) fail("V138_PLAN_262_56_AUTHORIZATION_V8_CLI_INVALID")
+    const value = buildV138Plan26256AuthorizationV8({ repoRoot,
+      reviewV2AbsolutePath: args[2]! })
+    process.stdout.write(canonical(value))
+  } else if (args[0] === "--write-plan-262-56-authorization-v8") {
+    if (args.length !== 4 || args[2] !== "--review-input-absolute" ||
+      !path.isAbsolute(args[3]!)) fail("V138_PLAN_262_56_AUTHORIZATION_V8_CLI_INVALID")
+    writeV138Plan26256AuthorizationV8(repoRoot, args[1]!, args[3]!)
+  } else if (args[0] === "--write-successor-source-seal-v8") {
+    if (args.length !== 4 || args[2] !== "--authorization") {
+      fail("V138_SUCCESSOR_SOURCE_SEAL_V8_CLI_INVALID")
+    }
+    const authorization = JSON.parse(readV138RepositoryFileNoFollow(repoRoot,
+      canonicalPath(repoRoot, args[3]!,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization), "required")!
+      .toString("utf8"))
+    writeV138SuccessorSourceSealV8(repoRoot, args[1]!, authorization)
+  } else if (args[0] === "--check-plan-262-56-authorization-v8") {
+    if (args.length !== 7 || args[1] !== "--authorization" ||
+      args[3] !== "--seal" || args[5] !== "--source-b8") {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V8_CLI_INVALID")
+    }
+    const authorizationBytes = readV138RepositoryFileNoFollow(repoRoot,
+      canonicalPath(repoRoot, args[2]!,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization), "required")!
+    const sealBytes = readV138RepositoryFileNoFollow(repoRoot,
+      canonicalPath(repoRoot, args[4]!,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.seal), "required")!
+    const custody = checkV138SuccessorSealCommitV8({ repoRoot,
+      sourceB8: args[6]!, authorization: JSON.parse(authorizationBytes.toString("utf8")),
+      seal: JSON.parse(sealBytes.toString("utf8")), suppliedAuthorizationBytes:
+      authorizationBytes, suppliedSealBytes: sealBytes })
+    process.stdout.write(canonical(custody))
+  } else if (args[0] === "--render-plan-262-56-authorization-v7") {
     if (args.length !== 3 || !["--source-a7-from-review",
       "--review-input-absolute"].includes(args[1]!)) {
       fail("V138_PLAN_262_56_AUTHORIZATION_RENDER_CLI_INVALID")

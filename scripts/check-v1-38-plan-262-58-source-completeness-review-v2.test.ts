@@ -1,145 +1,90 @@
 import { createHash } from "node:crypto"
+import { execFileSync } from "node:child_process"
+import { chmodSync, copyFileSync, mkdtempSync, mkdirSync, realpathSync, rmSync,
+  writeFileSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { encodeCanonicalJson } from "@cowards/spec"
 import {
+  V138_PLAN_262_56_AUTHORIZATION_SCHEMA,
   V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA,
+  V138_PLAN_262_56_OBSOLETE_V7_PATHS,
   V138_PLAN_262_56_V8_CANONICAL_PATHS,
+  V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA,
   V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
   buildV138Plan26256AuthorizationV8,
   buildV138SuccessorSourceSealV8,
   checkV138Plan26256AuthorizationV8,
-  checkV138SuccessorSourceSealV8,
+  checkV138SuccessorSealCommitV8,
+  writeV138Plan26256AuthorizationV7,
+  writeV138SuccessorSourceSealV7,
 } from "./lib/v1-38-successor-source-seal.js"
+import {
+  V138_PLAN_262_57_DISPOSITIONS,
+  V138_ROUTE_7_SOURCE_MANIFEST,
+  checkV138Route7SourceCompleteness,
+  dispatchV138CurrentMatrixDirectEntry,
+} from "./lib/v1-38-current-matrix-reproduction.js"
+import {
+  V138_PLAN_262_58_SOURCE_PATHS,
+  canonicalV138ReviewV2,
+  captureV138ReviewV2Execution,
+  inspectV138SourceIdentityA8,
+  sha256V138ReviewV2,
+} from "./check-v1-38-plan-262-58-source-completeness-review-v2.js"
+import { evaluateV138Plan26258Lifecycle } from
+  "./check-v1-38-dependency-revision-boundaries.js"
 
-type FindingCode =
-  | "CR01_EXECUTION_TRANSCRIPT_INVALID"
-  | "CR02_REACHABILITY_INVENTORY_INVALID"
-  | "CR03_SOURCE_CUSTODY_INVALID"
-  | "CR04_PROTECTED_HISTORY_INVALID"
-  | "CR05_STATE_PRESERVATION_INVALID"
-  | "CR06_PUBLICATION_CUSTODY_INVALID"
-  | "CR07_IDENTITY_CLAIM_INVALID"
-  | "CR08_PATH_CONFINEMENT_INVALID"
-  | "WR01_SEMANTIC_ROOT_RECOMPUTED"
-
-type Candidate = Record<string, any>
-
-const canonical = (value: unknown): string => JSON.stringify(value,
-  (_key, item) => item !== null && typeof item === "object" &&
-    !Array.isArray(item) ? Object.fromEntries(Object.entries(item)
-      .sort(([a], [b]) => a.localeCompare(b))) : item)
-const root = (value: unknown) => `sha256:${createHash("sha256")
-  .update(canonical(value)).digest("hex")}`
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-
-const commands = [
-  "--check-plan-262-57-pre-execution-readiness-v1",
-  "--resolve-plan-262-57-pre-start-v1",
-  "--check-plan-262-57-pre-start-obstruction-v1",
-  "--write-execution-context-v11-receipt",
-  "--write-plan-262-57-route-start-v1",
-  "--write-headroom-preflight-v11-receipt",
-  "--calibrate-parallel-v11-receipt",
-  "--write-authoritative-v12-receipt",
-  "--write-plan-262-57-terminal-v1",
-  "--check-plan-262-57-terminal-v1",
-] as const
-
-const sourcePaths = [
-  "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
-  "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
-  "scripts/lib/v1-38-successor-source-seal.ts",
-  "scripts/evaluate-v1-38-successor-route.test.ts",
-  "scripts/evaluate-v1-38-successor-source-complete.test.ts",
-  "scripts/check-v1-38-dependency-revision-boundaries.ts",
-] as const
-
-const makeCandidate = (): Candidate => {
-  const body = {
-    schemaVersion: "v1.38-plan-262-58-source-completeness-review-v2-candidate",
-    custody: { sourceBase8: "1".repeat(40), a8: "2".repeat(40),
-      parents: ["1".repeat(40)], paths: [...sourcePaths], maximal: true,
-      planningDescendantsOnly: true },
-    transcript: { fixtureRoot: "/private/tmp/cowards-a8-fixture.owned",
-      fixtureRemoved: true, repositoryRootCanonical: true,
-      records: commands.map((command, index) => ({ command, argv: [command],
-        reachedHandler: `handler-${index}`, prerequisite: `pre-${index}`,
-        destination: `destination-${index}`, effectClass: index % 2 ? "fixture-write" : "none",
-        disposition: "success", exitStatus: 0,
-        outputDigest: `sha256:${String(index).padStart(64, "0")}` })),
-      eventLedger: ["lstat:before", "open:nofollow", "dispatch", "cleanup", "lstat:absent"],
-      beforeRoot: `sha256:${"3".repeat(64)}`,
-      afterRoot: `sha256:${"3".repeat(64)}`,
-      canonicalWrites: [] },
-    reachability: { commands: [...commands], exports: commands.map((_v, i) => `handler-${i}`),
-      manifestCommands: [...commands], dispatchCommands: [...commands],
-      routeOrdinal: 7, executionVersions: ["v11", "v11", "v11", "v12"] },
-    protectedHistory: { a7: "5f39aba7833030d537c4c2767c369d24c982ed83",
-      exactChargeIds: Array.from({ length: 40 }, (_, index) => `charge:${index}`),
-      priorAuthorizationBytes: Array.from({ length: 6 }, (_, index) =>
-        ({ path: `authorization-${index}`, sha256: `sha256:${String(index + 1).repeat(64).slice(0, 64)}` })),
-      roots: { policy: `sha256:${"4".repeat(64)}`, runtime: `sha256:${"5".repeat(64)}` } },
-    snapshots: { inventoryComplete: true, transientWritesObserved: true,
-      beforeRoot: `sha256:${"6".repeat(64)}`, afterRoot: `sha256:${"6".repeat(64)}` },
-    publication: { mode: "exclusive-create", introducingCommitCount: 1,
-      changedPaths: ["review-v2.json", "262-59-REVIEW.md"], immutableBlobs: true,
-      laterModificationCount: 0 },
-    identity: { independentPersonClaimed: false, reviewerSeparated: false,
-      externalIdentityClaimed: false, cryptographicReviewerIdentityClaimed: false,
-      independentCustodyClaimed: false,
-      proceduralContext: "fresh_plan_262_59_procedural_context" },
-    confinement: { repositoryRootCanonical: true, canonicalRelativePathsOnly: true,
-      extraCliArguments: false, symlinkAncestor: false, symlinkLeaf: false,
-      hardLinkAlias: false, pathEscape: false },
-  }
-  return { ...body, candidateRoot: root(body) }
+const git = (cwd: string, args: readonly string[]) => execFileSync("git", [...args],
+  { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).trim()
+const writeCanonical = (target: string, value: unknown) => {
+  const encoded = encodeCanonicalJson(value as never, { context: "canonical-manifest" })
+  if (!encoded.ok) throw new TypeError("TEST_CANONICAL_INVALID")
+  writeFileSync(target, Buffer.concat([Buffer.from(encoded.bytes), Buffer.from("\n")]))
 }
 
-const recompute = (candidate: Candidate) => {
-  const { candidateRoot: _old, ...body } = candidate
-  return { ...body, candidateRoot: root(body) }
-}
-
-const loadContract = async () => {
-  try {
-    return await import("./check-v1-38-plan-262-58-source-completeness-review-v2.js")
-  } catch {
-    throw new TypeError("[RED:A8_REVIEW_V2_AUTHORIZATION_CONTRACT]")
-  }
-}
-
-describe("Plan 262-58 reviewer-v2 semantic contract", () => {
-  it("[RED:A8_REVIEW_V2_AUTHORIZATION_CONTRACT] closes CR-01..CR-08 and WR-01", async () => {
-    const contract = await loadContract()
-    const positive = makeCandidate()
-    expect(contract.validateReviewV2Candidate(positive)).toEqual(positive)
-
-    const attacks: ReadonlyArray<readonly [FindingCode, (value: Candidate) => void]> = [
-      ["CR01_EXECUTION_TRANSCRIPT_INVALID", value => { value.transcript.records[0].exitStatus = -1 }],
-      ["CR02_REACHABILITY_INVENTORY_INVALID", value => { value.reachability.dispatchCommands.pop() }],
-      ["CR03_SOURCE_CUSTODY_INVALID", value => { value.custody.parents = ["9".repeat(40)] }],
-      ["CR04_PROTECTED_HISTORY_INVALID", value => { value.protectedHistory.exactChargeIds[0] = "forged" }],
-      ["CR05_STATE_PRESERVATION_INVALID", value => { value.snapshots.afterRoot = `sha256:${"7".repeat(64)}` }],
-      ["CR06_PUBLICATION_CUSTODY_INVALID", value => { value.publication.mode = "refresh" }],
-      ["CR07_IDENTITY_CLAIM_INVALID", value => { value.identity.reviewerSeparated = true }],
-      ["CR08_PATH_CONFINEMENT_INVALID", value => { value.confinement.symlinkAncestor = true }],
-      ["WR01_SEMANTIC_ROOT_RECOMPUTED", value => { value.transcript.records[0].command = "--decoy" }],
-    ]
-    for (const [code, mutate] of attacks) {
-      const mutation = structuredClone(positive)
-      mutate(mutation)
-      const rerooted = recompute(mutation)
-      expect(() => contract.validateReviewV2Candidate(rerooted), code).toThrow(code)
-      expect(rerooted.candidateRoot).toBe(root(Object.fromEntries(
-        Object.entries(rerooted).filter(([key]) => key !== "candidateRoot"))))
-    }
+describe("Plan 262-58 reviewer-v2 corrective contract", () => {
+  it("derives exact sourceBase8/A8 and exact six committed blobs", () => {
+    const custody = inspectV138SourceIdentityA8(repoRoot)
+    expect(custody.sourceBase8).toBe("9fb6b12f190ff5a79e423efafbfaae01c1037b5d")
+    expect(custody.a8Parents).toEqual([custody.sourceBase8])
+    expect(custody.aggregateChangedPaths).toEqual([...V138_PLAN_262_58_SOURCE_PATHS].sort())
+    expect(custody.blobs).toHaveLength(6)
+    expect(custody.run.every(item => item.authorRun ===
+      "codex-reviewfix-262-58-v2-20260815")).toBe(true)
+    expect(custody.planningDescendants.every(item => item.paths.every(
+      repoPath => repoPath.startsWith(".planning/")))).toBe(true)
   })
 
-  it("derives all six lifecycle states and rejects chain/incomplete drift", async () => {
-    const { evaluateV138Plan26258Lifecycle } = await import(
-      "./check-v1-38-dependency-revision-boundaries.js")
+  it("reaches every actual production direct-dispatch branch from the manifest", async () => {
+    expect(checkV138Route7SourceCompleteness()).toBe(V138_ROUTE_7_SOURCE_MANIFEST)
+    const reached: string[] = []
+    for (const entry of V138_ROUTE_7_SOURCE_MANIFEST) {
+      const result = await dispatchV138CurrentMatrixDirectEntry(entry.command, {
+        runShard: () => { throw new TypeError("DECOY_SHARD") },
+        runReceipt: () => { reached.push(entry.handler); return entry.handler },
+      })
+      expect(result).toBe(entry.handler)
+    }
+    expect(reached).toEqual(V138_ROUTE_7_SOURCE_MANIFEST.map(item => item.handler))
+    expect(new Set(reached).size).toBe(reached.length)
+    expect(V138_ROUTE_7_SOURCE_MANIFEST.map(item => item.terminalDisposition)
+      .filter(Boolean).join("|")).toContain("reproduction_passed")
+    expect(new Set(V138_PLAN_262_57_DISPOSITIONS).size)
+      .toBe(V138_PLAN_262_57_DISPOSITIONS.length)
+    const captured = await captureV138ReviewV2Execution(repoRoot)
+    expect(captured.records.map(item => item.reachedHandler)).toEqual(reached)
+    expect(captured.events.map(item => item.operation)).toEqual(
+      expect.arrayContaining(["lstat", "dispatch", "write", "open", "cleanup"]))
+    expect(captured.events.at(-1)).toMatchObject({ operation: "lstat",
+      disposition: "ENOENT" })
+    expect(captured.before.root).toBe(captured.after.root)
+  })
+
+  it("derives all six lifecycle states and rejects every observed-field drift", () => {
     const cases = [
       ["review_v2_pending_42_of_47", 42, ["262-58", "262-59", "262-56", "262-57", "262-48"]],
       ["plan_58_complete_43_of_47", 43, ["262-59", "262-56", "262-57", "262-48"]],
@@ -148,109 +93,107 @@ describe("Plan 262-58 reviewer-v2 semantic contract", () => {
       ["route_complete_46_of_47", 46, ["262-48"]],
       ["phase_complete_47_of_47", 47, []],
     ] as const
-    for (const [mode, completed, incomplete] of cases) {
-      const input = { mode, totalPlans: 47, completedPlans: completed,
+    for (const [mode, completedPlans, incomplete] of cases) {
+      const input = { mode, totalPlans: 47, completedPlans,
         correctiveChain: ["262-58", "262-59", "262-56", "262-57", "262-48"],
         incomplete: [...incomplete], archivedPlan55Active: false,
         reviewV1InvalidDispositionPresent: true, authorizationVersion: 8,
         sealVersion: 8, obsoleteV7Present: false, routeOrdinal: 7,
         executionVersions: [11, 11, 11, 12] }
-      expect(evaluateV138Plan26258Lifecycle(input)).toMatchObject({ mode, completedPlans: completed })
-      expect(() => evaluateV138Plan26258Lifecycle({ ...input,
-        incomplete: [...input.incomplete, "262-55"] })).toThrow(
-          "V138_PLAN_262_58_LIFECYCLE_INVALID")
+      expect(evaluateV138Plan26258Lifecycle(input)).toMatchObject({ mode, completedPlans })
+      for (const mutation of [
+        { ...input, totalPlans: 48 }, { ...input, completedPlans: completedPlans - 1 },
+        { ...input, correctiveChain: [...input.correctiveChain, "262-55"] },
+        { ...input, incomplete: [...input.incomplete, "262-55"] },
+        { ...input, archivedPlan55Active: true },
+        { ...input, reviewV1InvalidDispositionPresent: false },
+        { ...input, authorizationVersion: 7 }, { ...input, sealVersion: 7 },
+        { ...input, obsoleteV7Present: true }, { ...input, routeOrdinal: 6 },
+        { ...input, executionVersions: [11, 11, 11, 11] },
+      ]) expect(() => evaluateV138Plan26258Lifecycle(mutation as never))
+        .toThrow("V138_PLAN_262_58_LIFECYCLE_INVALID")
     }
   })
 
-  it("derives the immutable nine-finding non-authorizing v1 disposition", async () => {
-    const { buildV138ReviewV1InvalidDisposition,
-      checkV138ReviewV1InvalidDisposition } = await loadContract()
-    const disposition = buildV138ReviewV1InvalidDisposition(repoRoot)
-    expect(disposition).toMatchObject({ disposition:
-      "review_v1_invalid_disproved_non_authorizing", findingCount: 9,
-      reviewV1PassDisproved: true, sourceCompletenessPassedDisproved: true,
-      eligibleAuthorizationInput: false, historicalEvidencePreserved: true,
-      exactA7: "5f39aba7833030d537c4c2767c369d24c982ed83",
-      authority: { admit03: "blocked", acceptedCells: 0, requiredCells: 540,
-        routeStarted: false, candidateSearchAuthorized: false,
-        phase263Authorized: false, productionAuthorized: false } })
-    expect(disposition.findings.map((item: Candidate) => item.id)).toEqual([
-      "CR-01", "CR-02", "CR-03", "CR-04", "CR-05", "CR-06", "CR-07",
-      "CR-08", "WR-01"])
-    expect(checkV138ReviewV1InvalidDisposition(repoRoot, disposition))
-      .toEqual(disposition)
-    expect(() => checkV138ReviewV1InvalidDisposition(repoRoot, {
-      ...disposition, eligibleAuthorizationInput: true,
-    })).toThrow("V138_REVIEW_V1_INVALID_DISPOSITION_INVALID")
+  it("denies all v7 future writers and keeps historical constants distinct", () => {
+    expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
+      .toBe("v1.38-plan-262-56-authorization-v7")
+    expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
+      .toBe("v1.38-successor-source-seal-v7")
+    expect(V138_PLAN_262_56_AUTHORIZATION_SCHEMA)
+      .not.toBe(V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA)
+    expect(V138_SUCCESSOR_SOURCE_SEAL_V7_SCHEMA)
+      .not.toBe(V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA)
+    expect(() => writeV138Plan26256AuthorizationV7(repoRoot,
+      V138_PLAN_262_56_OBSOLETE_V7_PATHS[0], "0".repeat(40), {}, new Uint8Array()))
+      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V7_OBSOLETE")
+    expect(() => writeV138SuccessorSourceSealV7(repoRoot,
+      V138_PLAN_262_56_OBSOLETE_V7_PATHS[1], {}))
+      .toThrow("V138_SUCCESSOR_SOURCE_SEAL_V7_OBSOLETE")
   })
 
-  it("binds synthetic authorization-v8 and seal-v8 to detached review-v2/A8 custody", () => {
-    const reviewV2Document = { schemaVersion:
-      "v1.38-plan-262-59-source-completeness-review-v2",
-      sourceBase8: "1".repeat(40), sourceA8: "2".repeat(40),
-      findingCount: 0, sourceCompletenessPassed: true,
-      independentPersonClaimed: false, reviewerSeparated: false,
-      reviewRoot: `sha256:${"8".repeat(64)}` }
-    const encodedReview = encodeCanonicalJson(reviewV2Document as never,
-      { context: "canonical-manifest" })
-    if (!encodedReview.ok) throw new TypeError("TEST_REVIEW_CANONICAL_INVALID")
-    const reviewBytes = `${Buffer.from(encodedReview.bytes).toString("utf8")}\n`
-    const reviewBytesSha256 = `sha256:${createHash("sha256")
-      .update(reviewBytes).digest("hex")}` as const
-    const reviewV2Input = { absolutePath:
-      "/private/tmp/cowards-plan-262-56-review-v2-input.owned/review-v2.json",
-      outsideRepository: true as const, readOnly: true as const,
-      ownerMatchesEffectiveUid: true as const, regularFile: true as const,
-      symlinkFree: true as const, linkCount: 1 as const,
-      inputCommit: "3".repeat(40), inputBlob: "4".repeat(40),
-      byteLength: Buffer.byteLength(reviewBytes), bytesSha256: reviewBytesSha256,
-      reviewV2Root: reviewV2Document.reviewRoot,
-      preBytesSha256: reviewBytesSha256, postBytesSha256: reviewBytesSha256,
-      preNoFollowIdentity: "dev:1:ino:2", postNoFollowIdentity: "dev:1:ino:2",
-      reviewV2Document }
-    const authorization = buildV138Plan26256AuthorizationV8({ repoRoot,
-      sourceBase8: "1".repeat(40), sourceA8: "2".repeat(40),
-      sourceA8Tree: "5".repeat(40), sourceA8Parent: "1".repeat(40),
-      sourceA8Paths: sourcePaths,
-      sourceA8Blobs: sourcePaths.map((repoPath, index) => ({ path: repoPath,
-        blobOid: String(index + 1).repeat(40).slice(0, 40),
-        sha256: `sha256:${String(index + 1).repeat(64).slice(0, 64)}` as const })),
-      protectedA7: "5f39aba7833030d537c4c2767c369d24c982ed83",
-      protectedHistoryRoot: `sha256:${"6".repeat(64)}`,
-      reviewV1InvalidDispositionSha256: `sha256:${"7".repeat(64)}`,
-      reviewV2Input })
-    expect(authorization).toMatchObject({ schemaVersion:
-      V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA, routeOrdinal: 7,
-      executionVersions: { context: 11, preflight: 11, calibration: 11,
-        reproduction: 12 }, identityClaims: { independentPersonClaimed: false,
-        reviewerSeparated: false, independentCustodyClaimed: false },
-      futureCustodyPaths: [V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
-        V138_PLAN_262_56_V8_CANONICAL_PATHS.seal] })
-    expect(checkV138Plan26256AuthorizationV8(repoRoot, authorization))
-      .toEqual(authorization)
-    const seal = buildV138SuccessorSourceSealV8({ repoRoot, authorization,
-      sourceB8: "9".repeat(40), sourceB8Parent: authorization.sourceA8,
-      sourceB8Tree: "a".repeat(40), changedPaths: authorization.futureCustodyPaths })
-    expect(seal).toMatchObject({ schemaVersion: V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA,
-      routeOrdinal: 7, sourceB8Parent: authorization.sourceA8 })
-    expect(checkV138SuccessorSourceSealV8({ repoRoot, authorization, seal }))
-      .toEqual(seal)
-    for (const mutate of [
-      (value: Candidate) => { value.reviewV2Input.reviewV2Document.findingCount = 1 },
-      (value: Candidate) => { value.reviewV2Input.reviewV2Root = `sha256:${"0".repeat(64)}` },
-      (value: Candidate) => { value.reviewV2Input.absolutePath = "review-v2.json" },
-      (value: Candidate) => { value.reviewV2Input.linkCount = 2 },
-      (value: Candidate) => { value.identityClaims.reviewerSeparated = true },
-      (value: Candidate) => { value.sourceA8Parent = "0".repeat(40) },
-      (value: Candidate) => { value.futureCustodyPaths[0] =
-        ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json" },
-    ]) {
-      const mutation = structuredClone(authorization)
-      mutate(mutation)
-      const { authorizationRoot: _discarded, ...body } = mutation
-      mutation.authorizationRoot = root(body)
-      expect(() => checkV138Plan26256AuthorizationV8(repoRoot, mutation))
-        .toThrow()
+  it("opens a real detached immutable review and checks a real two-path B8", () => {
+    const fixture = mkdtempSync(path.join(os.tmpdir(), "cowards-plan-262-58-b8-"))
+    const detachedDir = mkdtempSync(path.join(os.tmpdir(), "cowards-review-v2-input-"))
+    const reviewBranch = `test-review-${path.basename(fixture)}`
+    try {
+      git(repoRoot, ["worktree", "add", "--detach", fixture, "HEAD"])
+      const custody = inspectV138SourceIdentityA8(fixture)
+      git(fixture, ["checkout", "-b", reviewBranch, custody.a8])
+      const reviewBody = { schemaVersion:
+        "v1.38-plan-262-59-source-completeness-review-v2",
+        sourceBase8: custody.sourceBase8, sourceA8: custody.a8, custody: {},
+        reachability: {}, transcript: {}, protectedHistory: {}, snapshots: {},
+        identityClaims: { independentPersonClaimed: false, reviewerSeparated: false,
+          externalIdentityClaimed: false, cryptographicReviewerIdentityClaimed: false,
+          independentCustodyClaimed: false, proceduralContext: "owned-fixture" },
+        findings: [], findingCount: 0, sourceCompletenessPassed: true }
+      const review = { ...reviewBody, reviewRoot: sha256V138ReviewV2(
+        canonicalV138ReviewV2(reviewBody)) }
+      const reviewTarget = path.resolve(fixture,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview)
+      const reportTarget = path.resolve(fixture,
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-59-REVIEW.md")
+      writeCanonical(reviewTarget, review)
+      writeFileSync(reportTarget, "# owned review fixture\n")
+      git(fixture, ["add", V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview,
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-59-REVIEW.md"])
+      git(fixture, ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "-m", "test: publish review fixture"])
+      const detachedReviewLogical = path.resolve(detachedDir,
+        path.basename(V138_PLAN_262_56_V8_CANONICAL_PATHS.sourceCompletenessReview))
+      copyFileSync(reviewTarget, detachedReviewLogical)
+      chmodSync(detachedReviewLogical, 0o444)
+      const detachedReview = realpathSync(detachedReviewLogical)
+      git(fixture, ["checkout", "--detach", custody.a8])
+      const authorization = buildV138Plan26256AuthorizationV8({ repoRoot: fixture,
+        reviewV2AbsolutePath: detachedReview })
+      expect(checkV138Plan26256AuthorizationV8(fixture, authorization))
+        .toEqual(authorization)
+      const seal = buildV138SuccessorSourceSealV8({ repoRoot: fixture, authorization })
+      const authorizationPath = path.resolve(fixture,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization)
+      const sealPath = path.resolve(fixture, V138_PLAN_262_56_V8_CANONICAL_PATHS.seal)
+      mkdirSync(path.dirname(authorizationPath), { recursive: true })
+      writeCanonical(authorizationPath, authorization)
+      writeCanonical(sealPath, seal)
+      git(fixture, ["add", V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
+        V138_PLAN_262_56_V8_CANONICAL_PATHS.seal])
+      git(fixture, ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "-m", "test: exact two-path B8"])
+      const sourceB8 = git(fixture, ["rev-parse", "HEAD"])
+      const checked = checkV138SuccessorSealCommitV8({ repoRoot: fixture,
+        sourceB8, authorization, seal })
+      expect(checked).toMatchObject({ sourceB8, sourceB8Parent: custody.a8,
+        changedPaths: [V138_PLAN_262_56_V8_CANONICAL_PATHS.authorization,
+          V138_PLAN_262_56_V8_CANONICAL_PATHS.seal].sort(),
+        laterModificationCount: 0 })
+      expect(checked.blobs).toHaveLength(2)
+    } finally {
+      try { git(repoRoot, ["worktree", "remove", fixture, "--force"]) } catch { /* fixture setup failed */ }
+      try { git(repoRoot, ["branch", "-D", reviewBranch]) } catch { /* branch was not created */ }
+      rmSync(detachedDir, { recursive: true, force: true })
+      rmSync(fixture, { recursive: true, force: true })
     }
-  })
+  }, 120_000)
 })

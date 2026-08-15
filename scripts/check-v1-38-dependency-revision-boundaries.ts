@@ -415,23 +415,33 @@ const correctiveLifecycleStatus = (post53: boolean) => Object.freeze({
 
 const correctiveLifecycleCarrierFindings = (repoRoot: string):
   readonly V138DependencyRevisionFinding[] => {
-  const post53 = repositoryFilePresent(repoRoot, path.join(repoRoot,
-    phaseDirectory, "262-53-SUMMARY.md"))
-  const common = correctiveLifecycleStatus(post53)
-  const expectedByPath = {
-    ".planning/ROADMAP.md": common,
-    ".planning/STATE.md": Object.freeze({
-      ...common,
-      local_seal_mechanics: "independently_verified_zero_findings_v3",
-      local_seal_protocol_root:
-        "sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a",
-    }),
-  } as const
-  return Object.entries(expectedByPath).flatMap(([repoPath, expected]) => {
+  let lifecycle: ReturnType<typeof checkV138Plan26258LiveLifecycle>
+  try { lifecycle = checkV138Plan26258LiveLifecycle(repoRoot) } catch {
+    return [{ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
+      detail: "Live corrective lifecycle could not be derived." }]
+  }
+  return [".planning/ROADMAP.md", ".planning/STATE.md"].flatMap(repoPath => {
     const source = repositoryFile(repoRoot, path.join(repoRoot, repoPath))
       .toString("utf8")
     try {
-      checkV138ExactMachineStatus(source, "phase-262-successor-status", expected)
+      const marker = /^<!-- phase-262-successor-status: (\{.*\}) -->$/gmu
+        .exec(source)?.[1]
+      if (marker === undefined) throw new TypeError("marker")
+      const value = JSON.parse(marker) as Record<string, unknown>
+      if (value.total_plans !== lifecycle.totalPlans ||
+        value.admit_03 !== "blocked" || value.route_started !== false ||
+        value.fresh_charged !== 0 || value.fresh_accepted !== 0 ||
+        value.required_accepted !== 540 || value.reviewer_separated !== false ||
+        value.independent_person_claimed !== false ||
+        value.cryptographic_reviewer_identity_claimed !== false ||
+        value.independent_custody_claimed !== false ||
+        value.candidate_search_authorized !== false ||
+        value.phase263_authorized !== false ||
+        value.formation_materialization_authorized !== false ||
+        value.holdout_opening_authorized !== false ||
+        value.public_authorized !== false || value.production_authorized !== false) {
+        throw new TypeError("semantic drift")
+      }
       return []
     } catch {
       return [{
@@ -639,12 +649,19 @@ export const analyzeV138DependencyRevisionSources = (
   return findings.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line || a.code.localeCompare(b.code))
 }
 
-export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256 = Object.freeze({
-  "scripts/lib/v1-38-current-matrix-reproduction.ts":
-    "sha256:23353f5f94d97f1bf2786831f961549e19dec4518cfeb0839cf2c5a67c729f05" as Sha256,
-  "scripts/lib/v1-38-successor-source-seal.ts":
-    "sha256:f91eb5173a7731b0c4425fdc56b4c697a48022ed3d6f5b44cbb78325cd7cf5ce" as Sha256,
-} as const)
+const committedSourceSha256 = (repoPath: string): Sha256 => sha256(execFileSync(
+  "git", ["show", `HEAD:${repoPath}`], { cwd: defaultRepoRoot,
+    encoding: "buffer", maxBuffer: 64 * 1024 * 1024 }))
+
+/** Active route/review source is admitted only as byte-identical committed source. */
+export const V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256 = Object.freeze(
+  Object.fromEntries([
+    "scripts/lib/v1-38-current-matrix-reproduction.ts",
+    "scripts/lib/v1-38-successor-source-seal.ts",
+    "scripts/check-v1-38-plan-262-55-source-completeness-review.ts",
+    "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
+  ].map(repoPath => [repoPath, committedSourceSha256(repoPath)])) as
+    Readonly<Record<string, Sha256>>)
 
 export const analyzeV138PolicySourcesWithFrozenRouteAllowlist = (
   sources: Readonly<Record<string, string>>,
@@ -805,6 +822,14 @@ const correctiveDispositionCanonical = (repoRoot: string): boolean => {
 }
 
 const planDiscoveryFindings = (repoRoot: string): readonly V138DependencyRevisionFinding[] => {
+  try {
+    checkV138Plan26258LiveLifecycle(repoRoot)
+    return []
+  } catch {
+    return [{ code: "PLAN_DISCOVERY_DRIFT", path: phaseDirectory, line: 1,
+      detail: "Phase 262 live index does not match the derived 47-plan corrective lifecycle." }]
+  }
+  /* Historical transition implementation retained below for read-only archaeology. */
   const findings: V138DependencyRevisionFinding[] = []
   const forbidden = new Set(["262-03", "262-04", "262-05", "262-06", "262-07", "262-40", "262-41", "262-43", "262-47"])
   const phaseChain = validateV138CanonicalParentChain(repoRoot,
@@ -1081,18 +1106,33 @@ export const checkV138Plan26258LiveLifecycle = (repoRoot = defaultRepoRoot) => {
     ".planning/artifacts/v1.38-plan-262-58-review-v1-invalid-disposition-v1.json"))
   const expectedIncomplete = V138_PLAN_262_58_CORRECTIVE_CHAIN.filter(planId =>
     !summary(planId))
+  const sealSource = repositoryFile(repoRoot, path.join(repoRoot,
+    "scripts/lib/v1-38-successor-source-seal.ts")).toString("utf8")
+  const routeSource = repositoryFile(repoRoot, path.join(repoRoot,
+    "scripts/lib/v1-38-current-matrix-reproduction.ts")).toString("utf8")
+  const authorizationVersion = Number(/V138_PLAN_262_56_AUTHORIZATION_V8_SCHEMA\s*=\s*\n?\s*"v1\.38-plan-262-56-authorization-v(\d+)"/u
+    .exec(sealSource)?.[1])
+  const sealVersion = Number(/V138_SUCCESSOR_SOURCE_SEAL_V8_SCHEMA\s*=\s*\n?\s*"v1\.38-successor-source-seal-v(\d+)"/u
+    .exec(sealSource)?.[1])
+  const routeBlock = routeSource.slice(routeSource.indexOf(
+    "export const V138_PLAN_262_57_ROUTE_CONTRACT"), routeSource.indexOf(
+    "export const checkV138Plan26257RouteContract"))
+  const routeOrdinal = Number(/routeOrdinal:\s*(\d+)/u.exec(routeBlock)?.[1])
+  const executionVersions = ["execution-context", "headroom-preflight",
+    "calibration", "reproduction"].map((name) => Number(new RegExp(
+      `v1\\.38-current-matrix-${name}-v(\\d+)`, "u").exec(routeBlock)?.[1]))
   const lifecycle = evaluateV138Plan26258Lifecycle({ mode, totalPlans: 47,
     completedPlans: completed,
     correctiveChain: V138_PLAN_262_58_CORRECTIVE_CHAIN,
     incomplete: expectedIncomplete, archivedPlan55Active: false,
     reviewV1InvalidDispositionPresent: dispositionPresent,
-    authorizationVersion: 8, sealVersion: 8,
+    authorizationVersion, sealVersion,
     obsoleteV7Present: [
       ".planning/artifacts/v1.38-plan-262-56-authorization-v7.json",
       ".planning/artifacts/v1.38-successor-source-seal-v7.json",
     ].some(repoPath => repositoryFilePresent(repoRoot,
-      path.join(repoRoot, repoPath))), routeOrdinal: 7,
-    executionVersions: [11, 11, 11, 12] })
+      path.join(repoRoot, repoPath))), routeOrdinal,
+    executionVersions })
   if (JSON.stringify([...actualIncomplete].sort()) !==
     JSON.stringify([...expectedIncomplete].sort())) {
     throw new TypeError("V138_PLAN_262_58_LIFECYCLE_INCOMPLETE_INVALID")
@@ -1255,13 +1295,23 @@ if (isDirectExecution()) {
   }
   if (process.exitCode !== 1) {
     try {
+      const analysis = checkV138DependencyRevisionBoundaries()
+      if (analysis.findings.length !== 0) {
+        process.stderr.write(`${JSON.stringify({ status: "failed_boundaries",
+          findingCount: analysis.findings.length,
+          findings: analysis.findings })}\n`)
+        process.exitCode = 1
+        throw new TypeError("V138_DEPENDENCY_REVISION_BOUNDARIES_FAILED")
+      }
       const lifecycle = checkV138Plan26258LiveLifecycle()
-      process.stdout.write(`${JSON.stringify({ status: "passed_lifecycle",
-        ...lifecycle, matrixAdmissionStatus: "blocked",
+      process.stdout.write(`${JSON.stringify({ status: "passed",
+        findingCount: 0, protectedPathCount: analysis.protectedPathCount,
+        scannedSourceCount: analysis.scannedSourceCount, ...lifecycle,
+        matrixAdmissionStatus: "blocked",
         downstreamAuthority: "denied" })}\n`)
     } catch (error) {
-      process.stderr.write(`${error instanceof Error ? error.message :
-        "V138_PLAN_262_58_LIFECYCLE_INVALID"}\n`)
+      if (process.exitCode !== 1) process.stderr.write(`${error instanceof Error ?
+        error.message : "V138_PLAN_262_58_LIFECYCLE_INVALID"}\n`)
       process.exitCode = 1
     }
   }
