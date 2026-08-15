@@ -50,7 +50,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 42/47 active plans have trustworthy summaries; 5 plans remain
+**Plans:** 43/47 plans executed
 
 **Current verdict:** REVIEW-V1 INVALID / A8 FROZEN / REVIEW-V2 PENDING / `gaps_found` — The immutable non-authorizing disposition binds all eight blocker findings and WR-01 at historical review root `sha256:856f39f2f613678e057ec799499a285152b08420e0a518263c29253112f42433`; Plan 262-55 grants no completion or authority credit. Exact A7 `5f39aba7833030d537c4c2767c369d24c982ed83` remains protected predecessor history. Plan 262-58 TDD-closed reviewer-v2, review-v2-aware authorization-v8/seal-v8 source contracts, and the six lifecycle states, then froze sourceBase8 `a4c8c8108cc3acf639407fd5fc77a98326e3595d` and exact six-path source-only A8 `da8b33942edbc0900ebeba616e459a2a0d2f92ae`. Only Plan 262-59 may review A8. No canonical review-v2, authorization-v8, seal-v8, B8, route start, live destination, or downstream authority exists; obsolete v7 future paths remain absent. Route ordinal remains 7 with v11/v12 execution versions. ADMIT-03 remains blocked at 0/540, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: 262-59.
 
@@ -261,7 +261,7 @@ Plans:
 
 **Wave 43** *(blocked on Wave 42 completion; corrective offline checker/disposition only)*
 
-- [ ] 262-58-PLAN.md — Publish the review-v1-invalid disposition, TDD reviewer-v2 plus review-v2-aware authorization-v8/seal-v8 source/tests, and freeze exact source-only A8 without canonical review-v2 or authority artifacts.
+- [x] 262-58-PLAN.md — Publish the review-v1-invalid disposition, TDD reviewer-v2 plus review-v2-aware authorization-v8/seal-v8 source/tests, and freeze exact source-only A8 without canonical review-v2 or authority artifacts.
 
 **Wave 44** *(blocked on Wave 43 completion; fresh procedural review only)*
 
@@ -418,7 +418,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 43/46 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 43/47 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
