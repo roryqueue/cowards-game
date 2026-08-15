@@ -1720,6 +1720,18 @@ const runV138SupervisedAssignments = async (input: {
   launchAvailable()
   await observeSharedHeadroom()
   while (active.size > 0) {
+    let totalDeadlineHandle: ReturnType<typeof setTimeout> | undefined
+    let cleanupDeadlineHandle: ReturnType<typeof setTimeout> | undefined
+    const totalDeadline = new Promise<"total">((resolve) => {
+      totalDeadlineHandle = setTimeout(() => resolve("total"), Math.max(1,
+        deadlinePolicy.maxTotalRunMilliseconds -
+        (input.clock.monotonicMilliseconds() - startedMilliseconds)))
+    })
+    const cleanupDeadline = stopReason === null ? undefined :
+      new Promise<"cleanup">((resolve) => {
+        cleanupDeadlineHandle = setTimeout(() => resolve("cleanup"),
+          deadlinePolicy.cleanupGraceMilliseconds)
+      })
     const completed = await Promise.race([
       ...active.values(),
       ...(input.sharedHeadroomObserver === undefined
@@ -1727,14 +1739,11 @@ const runV138SupervisedAssignments = async (input: {
         : [delayMilliseconds(
             V138_PARALLEL_RESOURCE_POLICY.resourceSampleMilliseconds,
           ).then(() => "observe" as const)]),
-      delayMilliseconds(Math.max(1,
-        deadlinePolicy.maxTotalRunMilliseconds -
-        (input.clock.monotonicMilliseconds() - startedMilliseconds)))
-        .then(() => "total" as const),
-      ...(stopReason === null ? [] : [delayMilliseconds(
-        deadlinePolicy.cleanupGraceMilliseconds).then(
-          () => "cleanup" as const)]),
+      totalDeadline,
+      ...(cleanupDeadline === undefined ? [] : [cleanupDeadline]),
     ])
+    if (totalDeadlineHandle !== undefined) clearTimeout(totalDeadlineHandle)
+    if (cleanupDeadlineHandle !== undefined) clearTimeout(cleanupDeadlineHandle)
     if (completed === "observe") {
       await observeSharedHeadroom()
       continue
