@@ -20318,9 +20318,19 @@ const plan26257Evidence = (repoRoot: string, sourceA7: string,
     checkV138Plan26257RouteStartV1(JSON.parse(
       readV138RepositoryFileNoFollow(repoRoot,
         path.resolve(repoRoot, PLAN_262_57_PATHS.context), "required")!
-        .toString("utf8")), route)
+        .toString("utf8")), preObservation ? undefined : route)
   if (routeStart !== undefined) {
     checkV138Plan26257Reservation(repoRoot, routeStart)
+    if (preObservation) {
+      const frozenContext = routeStart.context as Record<string, unknown>
+      if (frozenContext.sourceA7 !== route.custody.sourceA7 ||
+        frozenContext.sourceB7 !== route.custody.sourceB7 ||
+        frozenContext.sourceB7CustodyRoot !== route.custody.custodyRoot ||
+        frozenContext.authorizationRoot !== route.authorization.authorizationRoot ||
+        frozenContext.sealRoot !== route.seal.sealRoot) {
+        throw new TypeError("MATRIX_PLAN_262_57_FROZEN_ROUTE_START_INVALID")
+      }
+    }
   }
   const context = routeStart?.context as Record<string, unknown> | undefined
   const preflightValue = preObservation ? undefined : value("preflight")
