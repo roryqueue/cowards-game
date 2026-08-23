@@ -102,24 +102,31 @@ status: complete
   disposable synthetic-B9 execution proof, immutable expected tool identity
   observed through provider seams, first-parent deletion lineage, and explicit
   native-helper disposal
+- `c5a08bd5` — preserve unrelated host signal listeners, remove only
+  helper-owned callbacks, prove cleanup remains idempotent, and authenticate
+  the current four-path V4 layer only after the prior V3 six-path ancestry
 
 ## Exact A9 Custody
 
-- **sourceBase9:** `2296a5812f1bcad45fe32165534668eeb79caf46`
-- **sourceA9:** `32eef5c147dc34b1a75c936ed7a0148f8e5d748e`
-- **sourceA9 tree:** `5fc509d3454b32b658a5369c88f88b837499c57f`
-- **sourceA9 sole parent:** `5dc66c4dbc696cd8ec60d79ddb3f4dde2c3932a1`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v3`
-- **run commits:** `136aa20bcd7ee84aee8a11b0f19a706bacfae238`, `6972f62d085a87fbc1106e0327c92b0212b12ece`, `5dc66c4dbc696cd8ec60d79ddb3f4dde2c3932a1`, `32eef5c147dc34b1a75c936ed7a0148f8e5d748e`
+- **sourceBase9:** `7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0`
+- **sourceA9:** `c5a08bd50eec0f8c937b42bd07fd9009e7b88c17`
+- **sourceA9 tree:** `8111357bd84bb0bd0275cbc5301805c2f1d6ff2f`
+- **sourceA9 sole parent:** `7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v4`
+- **run commits:** `c5a08bd50eec0f8c937b42bd07fd9009e7b88c17`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `5fb5253de771f6a01fe5dcae85cf67f5c4c0d68f` | `sha256:d81bf09f84b2a4102cf30f25b8ccbcf4e0bec8415ce0f449f76d50f1d1c33ee0` | 77572 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `66c4e2a4b6a50ef6c74072d325012b2eb0b97061` | `sha256:b302dbd70fabbe8c31b2134d0f8f6e4530b4661291f00fe3b5032cb0da5f2031` | 38861 |
-| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `c6eee9e67372c7141be9011be3a1b4f187723e57` | `sha256:0712aabf90d0fe08ac3d36174533df30ce78ceaec99a273473e925214bb1fe07` | 23111 |
-| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `00ca2c76839705209a58c0dfcfa8b7b5c34676e3` | `sha256:041239abca9ac6c276b055c26949e2d8a2c17582e95a87eea0e9a9f64145166f` | 847157 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `27d6b1d5b6aad703f700130b22c960fe9bf72076` | `sha256:dd2db7b86057fae2160bfb4a5d50783772158b0a92df8686daedfc70db22caa1` | 31739 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `484bc24e722e49949fd9238d7bf79c1020e1eddd` | `sha256:aa5a4aa43c88b9daf6b0739338ee7bc0ca2bc57ca779e89a5146f4f622eda24c` | 347677 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `f8008d91089924f21fd537189d8378c6c9ea3777` | `sha256:e3ecec5aa62d6b9139c838426666491cf8d8cebef8eaaf4b885e9766f2bacf35` | 78384 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `ac92981efc13d94d7f3c3bfdcc10cfc154677749` | `sha256:d309d90fd33e9c0bbd422c5e6fbe0e1578550735da9bdd8391d8739aca2708ce` | 40599 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `cdd98083cb5ccefc45481891d123b95a0fefff1d` | `sha256:2de2d5f08989afcb095fae559098d9c17a3d102b1e474a155d4d45549fd57fb2` | 32086 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `f5b2a5a18308af87932e861c8730505fe9f34bfa` | `sha256:1d0a5fe81e701d288423e78dea612d7fd9fab4f4733766e75e42a47d670e28a5` | 349861 |
+
+The current four-path V4 layer is accepted only after production and analyzer
+re-authenticate the prior V3 layer: sourceBase9
+`2296a5812f1bcad45fe32165534668eeb79caf46`, sourceA9
+`32eef5c147dc34b1a75c936ed7a0148f8e5d748e`, exact six-path aggregate, and
+trailer `codex-plan-262-60-a9-review-fix-v3`.
 
 ### Historical reviewer-v2 deletion custody
 
