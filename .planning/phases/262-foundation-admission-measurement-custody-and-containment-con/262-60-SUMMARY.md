@@ -108,31 +108,33 @@ status: complete
 - `5bf78391` — authenticate the full V3-to-V4-to-V5 correction chain, require
   exact planning-only gap carriers, and prove protected source blobs cannot be
   changed between otherwise-valid correction layers
+- `704eed00` — pin the immutable V3/V4/V5 commit, tree, parent, path, blob, and
+  exact documentation-carrier identities; reject copied trailers, correction
+  copies, carrier substitutions, and every manifest-field mutation
 
 ## Exact A9 Custody
 
-- **sourceBase9:** `bff3a3caa90d8bd6e629c8d40599e953ed1a020d`
-- **sourceA9:** `5bf7839123f9a52b9e16edbc6ce70206c5a4bd54`
-- **sourceA9 tree:** `e3a87ea873058bd19d3a2415560af986f76c786a`
-- **sourceA9 sole parent:** `bff3a3caa90d8bd6e629c8d40599e953ed1a020d`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v5`
-- **run commits:** `5bf7839123f9a52b9e16edbc6ce70206c5a4bd54`
+- **sourceBase9:** `b1352f7e3c5558ff8056f870471f1e1ed6f48fd1`
+- **sourceA9:** `704eed00eb51098e3b363380c1e1033df0e7c207`
+- **sourceA9 tree:** `5de5911b2b483d4dd225e9492a0731e2a54e685b`
+- **sourceA9 sole parent:** `b1352f7e3c5558ff8056f870471f1e1ed6f48fd1`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v6`
+- **run commits:** `704eed00eb51098e3b363380c1e1033df0e7c207`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `8e15c5ca9c5b11f95eda16aab1aa45f395328406` | `sha256:acb4af7286b41a9a56d1681b567abcf8fc7393ff2704fffd90d8f86cc92e17e5` | 79068 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `e4f126f5188e0785fe5ad18a7d15c51681409165` | `sha256:b3b12536aa4df68fca3cf117f49c2991d9b4d620b13ab2683aab5fcd6a136fa4` | 43981 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `5da8e0b6a4da3aa6ec473aecfd25dbc25e1cb35c` | `sha256:24e9c2ea1ab1f0cc9df397fd8d90cd4579bd2f5561b126c92edce3965fc30f4e` | 32086 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `6222c0983499d5ceb269692f5a5b82da1026ea0f` | `sha256:bf69c4fb0957863eda2de1183ff967e14ff62e922c5e3e9a26a30add3318b3b9` | 352604 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `41849a9c5b0e104ff3e49d838c18e5a5a91acdce` | `sha256:5f95e8dc70eb6adb7b9f7e929aadce1f6ff54c1a6b54ba2e3a2882231ae11904` | 79306 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `edb6e652e632044e21c4f555f303ac194573c44e` | `sha256:110647c196324716e6ba965565fc0ff89fd810c89c08bbb6468c5c22a6340c80` | 45235 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `d23d59fed14eb7941b4619938b3651614cab2c9a` | `sha256:6a6fb878afebaba17f59fed17c432150ced1f39c557948d6170e83d678684ec7` | 32086 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `9590d80cf00441be0e86baafedd8d49db961da7f` | `sha256:5b3b713313aba8aed0d85286294df97a24bd8cd254b5463f316134358bdc18ca` | 360184 |
 
-The current V5 layer is accepted only after production and analyzer
-re-authenticate both immutable predecessors: V3
-`2296a5812f1bcad45fe32165534668eeb79caf46..32eef5c147dc34b1a75c936ed7a0148f8e5d748e`
-over six paths and V4
-`7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0..c5a08bd50eec0f8c937b42bd07fd9009e7b88c17`
-over four paths. Each inter-layer gap is exactly one planning carrier changing
-only this summary and REVIEW-FIX, and all six protected source blobs are equal
-at each predecessor tip and successor base.
+The current V6 layer is accepted only after production and analyzer validate a
+committed immutable manifest for every V3, V4, and V5 source base, ordered
+commit OID, tip, tree, sole parent, trailer, per-commit and aggregate path set,
+and final mode/blob/SHA/length tuple. All three documentation carriers are
+separately pinned by exact commit, tree, sole parent, two-path inventory, and
+both blob identities. A copied trailer, inserted or cherry-picked correction,
+or substituted carrier cannot become an authenticated predecessor.
 
 ### Historical reviewer-v2 deletion custody
 
