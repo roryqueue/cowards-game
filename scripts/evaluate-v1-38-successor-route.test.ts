@@ -17,7 +17,7 @@ import { Buffer } from "node:buffer"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterAll, describe, expect, it } from "vitest"
 import {
   encodeCanonicalJson,
   hashCanonicalIdentity,
@@ -80,7 +80,7 @@ import { activeV138DetachedOpenatHelperDirectory,
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-afterEach(() => disposeV138DetachedOpenatHelper())
+afterAll(() => disposeV138DetachedOpenatHelper())
 const canonicalReviewBytes = (value: unknown) => {
   const encoded = encodeCanonicalJson(value as JsonValue,
     { context: "canonical-manifest" })

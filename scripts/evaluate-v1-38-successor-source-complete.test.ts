@@ -6,7 +6,7 @@ import { tmpdir } from "node:os"
 import { performance } from "node:perf_hooks"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { expect, it } from "vitest"
+import { afterAll, expect, it } from "vitest"
 import { encodeCanonicalJson, hashCanonicalIdentity } from "@cowards/spec"
 import {
   V138_PLAN_262_57_ROUTE_CONTRACT,
@@ -46,6 +46,7 @@ import {
   checkV138SuccessorSealCommitV7,
   buildV138Plan26256AuthorizationV9,
   buildV138SuccessorSourceSealV9,
+  disposeV138DetachedOpenatHelper,
   inspectV138ProtectedHistoryV9,
   inspectV138SourceA9Custody,
   v138Plan26256AuthorizationLiteral,
@@ -57,6 +58,7 @@ import { buildV138ReviewV3CommandArgv, computeV138ReviewV3Root,
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+afterAll(() => disposeV138DetachedOpenatHelper())
 const SOURCE_PATHS = Object.freeze([
   "scripts/evaluate-v1-38-successor-route.test.ts",
   "scripts/evaluate-v1-38-successor-source-complete.test.ts",
