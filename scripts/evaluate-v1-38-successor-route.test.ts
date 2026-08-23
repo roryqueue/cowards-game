@@ -357,6 +357,74 @@ it("rejects an unrelated correction lineage before accepting deletion custody", 
   }
 })
 
+it("rejects source and non-planning mutations in layered custody gaps", () => {
+  const revision = (run: string) => execFileSync("git", ["log", "--first-parent",
+    "--format=%H", "--grep", `Plan-262-60-Author-Run: ${run}`, "-1"],
+  { cwd: repoRoot, encoding: "utf8" }).trim()
+  const priorTip = revision("codex-plan-262-60-a9-review-fix-v4")
+  const correction = revision(V138_PLAN_262_60_CORRECTION_RUN)
+  expect(priorTip).toMatch(/^[0-9a-f]{40}$/u)
+  expect(correction).toMatch(/^[0-9a-f]{40}$/u)
+  for (const repoPath of ["scripts/lib/v1-38-current-matrix-reproduction.ts",
+    "package.json"] as const) {
+    const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-gap-attack-"))
+    const git = (...args: string[]) => execFileSync("git", args,
+      { cwd: fixtureRoot, encoding: "utf8" }).trim()
+    execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
+    try {
+      git("config", "user.name", "Layer gap attack fixture")
+      git("config", "user.email", "layer-gap-attack@example.invalid")
+      git("checkout", "--detach", priorTip)
+      const target = path.join(fixtureRoot, repoPath)
+      writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
+      git("add", repoPath)
+      git("commit", "-m", "test: unauthorized inter-layer mutation")
+      const sourceBase9 = git("rev-parse", "HEAD")
+      git("cherry-pick", correction)
+      const sourceA9 = git("rev-parse", "HEAD")
+      expect(() => inspectV138SourceA9Custody(fixtureRoot,
+        { sourceBase9, sourceA9 }))
+        .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true })
+    }
+  }
+})
+
+it("accepts an exact planning-only carrier between correction layers", () => {
+  const revision = (run: string) => execFileSync("git", ["log", "--first-parent",
+    "--format=%H", "--grep", `Plan-262-60-Author-Run: ${run}`, "-1"],
+  { cwd: repoRoot, encoding: "utf8" }).trim()
+  const priorTip = revision("codex-plan-262-60-a9-review-fix-v4")
+  const correction = revision(V138_PLAN_262_60_CORRECTION_RUN)
+  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-gap-docs-"))
+  const git = (...args: string[]) => execFileSync("git", args,
+    { cwd: fixtureRoot, encoding: "utf8" }).trim()
+  execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
+  try {
+    git("config", "user.name", "Layer gap docs fixture")
+    git("config", "user.email", "layer-gap-docs@example.invalid")
+    git("checkout", "--detach", priorTip)
+    const gapPaths = [
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
+    ]
+    for (const repoPath of gapPaths) {
+      const target = path.join(fixtureRoot, repoPath)
+      writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
+    }
+    git("add", ...gapPaths)
+    git("commit", "-m", "docs: exact planning carrier")
+    const sourceBase9 = git("rev-parse", "HEAD")
+    git("cherry-pick", correction)
+    const sourceA9 = git("rev-parse", "HEAD")
+    expect(inspectV138SourceA9Custody(fixtureRoot,
+      { sourceBase9, sourceA9 }).layerGaps.at(-1)).toMatchObject({ paths: gapPaths })
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  }
+})
+
 const sha256Zero = `sha256:${"0".repeat(64)}`
 const mutableClone = (value: unknown): Record<string, any> =>
   JSON.parse(JSON.stringify(value)) as Record<string, any>

@@ -5793,11 +5793,21 @@ export const V138_PLAN_262_60_V3_SOURCE_PATHS = Object.freeze([
   "scripts/evaluate-v1-38-successor-source-complete.test.ts",
   "scripts/check-v1-38-dependency-revision-boundaries.ts",
 ] as const)
+export const V138_PLAN_262_60_V4_SOURCE_PATHS = Object.freeze([
+  "scripts/check-v1-38-dependency-revision-boundaries.ts",
+  "scripts/lib/v1-38-source-completeness-review-v3.ts",
+  "scripts/lib/v1-38-successor-source-seal.ts",
+  "scripts/evaluate-v1-38-successor-route.test.ts",
+] as const)
 export const V138_PLAN_262_60_SOURCE_PATHS = Object.freeze([
   "scripts/check-v1-38-dependency-revision-boundaries.ts",
   "scripts/lib/v1-38-source-completeness-review-v3.ts",
   "scripts/lib/v1-38-successor-source-seal.ts",
   "scripts/evaluate-v1-38-successor-route.test.ts",
+] as const)
+const V138_PLAN_262_60_GAP_PATHS = Object.freeze([
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
 ] as const)
 export const V138_PLAN_262_60_DELETION_PATHS = Object.freeze([
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
@@ -5836,39 +5846,84 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
       V138_PLAN_262_60_SOURCE_PATHS))) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
   }
-  const priorRun = "codex-plan-262-60-a9-review-fix-v3" as const
-  const priorCommits = gitText(repoRoot, ["log", "--first-parent", "--reverse",
-    "--format=%H", sourceBase9,
-    `--grep=Plan-262-60-Author-Run: ${priorRun}`])
-    .split("\n").filter(Boolean)
-  const priorAggregate = new Set<string>()
-  const priorSourceA9 = priorCommits.at(-1)
-  const priorSourceBase9 = priorCommits.length === 0 ? undefined : gitText(repoRoot,
-    ["show", "-s", "--format=%P", priorCommits[0]!])
-  let priorExpectedParent = priorSourceBase9
-  for (const commit of priorCommits) {
-    const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
-      .split(" ").filter(Boolean)
-    const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
-      "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
-    const trailer = gitText(repoRoot, ["log", "-1",
-      "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
-    if (parents.length !== 1 || parents[0] !== priorExpectedParent ||
-      changed.length === 0 || changed.some(repoPath =>
-        !V138_PLAN_262_60_V3_SOURCE_PATHS.includes(repoPath as never)) ||
-      trailer !== priorRun) {
+  const inspectPriorLayer = (authorRun: string, paths: readonly string[]) => {
+    const layerCommits = gitText(repoRoot, ["log", "--first-parent", "--reverse",
+      "--format=%H", sourceBase9,
+      `--grep=Plan-262-60-Author-Run: ${authorRun}`])
+      .split("\n").filter(Boolean)
+    const layerBase = layerCommits.length === 0 ? undefined : gitText(repoRoot,
+      ["show", "-s", "--format=%P", layerCommits[0]!])
+    const layerTip = layerCommits.at(-1)
+    const layerAggregate = new Set<string>()
+    let layerParent = layerBase
+    for (const commit of layerCommits) {
+      const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
+        .split(" ").filter(Boolean)
+      const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+        "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+      const trailer = gitText(repoRoot, ["log", "-1",
+        "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
+      if (parents.length !== 1 || parents[0] !== layerParent ||
+        changed.length === 0 || changed.some(repoPath => !paths.includes(repoPath)) ||
+        trailer !== authorRun) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+      }
+      changed.forEach(repoPath => layerAggregate.add(repoPath))
+      layerParent = commit
+    }
+    if (layerBase === undefined || layerTip === undefined ||
+      canonical(sorted(layerAggregate)) !== canonical(sorted(paths))) {
       fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
     }
-    changed.forEach(repoPath => priorAggregate.add(repoPath))
-    priorExpectedParent = commit
+    return Object.freeze({ authorRun, sourceBase9: layerBase, sourceA9: layerTip,
+      paths: Object.freeze([...paths]), commits: Object.freeze(layerCommits) })
   }
-  if (priorSourceA9 === undefined || priorSourceBase9 === undefined ||
-    canonical(sorted(priorAggregate)) !== canonical(sorted(
-      V138_PLAN_262_60_V3_SOURCE_PATHS)) ||
-    gitStatus(repoRoot, ["merge-base", "--is-ancestor", priorSourceA9,
-      sourceBase9]) !== 0) {
-    fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+  const priorCorrectionLayers = Object.freeze([
+    inspectPriorLayer("codex-plan-262-60-a9-review-fix-v3",
+      V138_PLAN_262_60_V3_SOURCE_PATHS),
+    inspectPriorLayer("codex-plan-262-60-a9-review-fix-v4",
+      V138_PLAN_262_60_V4_SOURCE_PATHS),
+  ])
+  const protectedLayerPaths = sorted(priorCorrectionLayers.flatMap(layer =>
+    [...layer.paths]).concat([...V138_PLAN_262_60_SOURCE_PATHS]))
+  const inspectGap = (priorTip: string, nextBase: string) => {
+    const gapCommits = gitText(repoRoot, ["rev-list", "--first-parent", "--reverse",
+      `${priorTip}..${nextBase}`]).split("\n").filter(Boolean)
+    const gapAggregate = new Set<string>()
+    let gapParent = priorTip
+    for (const commit of gapCommits) {
+      const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
+        .split(" ").filter(Boolean)
+      const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+        "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+      if (parents.length !== 1 || parents[0] !== gapParent || changed.length === 0 ||
+        changed.some(repoPath => !V138_PLAN_262_60_GAP_PATHS.includes(
+          repoPath as never))) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+      }
+      changed.forEach(repoPath => gapAggregate.add(repoPath))
+      gapParent = commit
+    }
+    if (gapParent !== nextBase || gapCommits.length > 0 &&
+      canonical(sorted(gapAggregate)) !== canonical(sorted(
+        V138_PLAN_262_60_GAP_PATHS))) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+    }
+    for (const repoPath of protectedLayerPaths) {
+      if (gitText(repoRoot, ["ls-tree", priorTip, "--", repoPath]) !==
+        gitText(repoRoot, ["ls-tree", nextBase, "--", repoPath])) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+      }
+    }
+    return Object.freeze({ priorTip, nextBase, commits: Object.freeze(gapCommits),
+      paths: Object.freeze(sorted(gapAggregate)), protectedPathCount:
+        protectedLayerPaths.length })
   }
+  const layerGaps = Object.freeze([
+    inspectGap(priorCorrectionLayers[0]!.sourceA9,
+      priorCorrectionLayers[1]!.sourceBase9),
+    inspectGap(priorCorrectionLayers[1]!.sourceA9, sourceBase9),
+  ])
   const sourceA9Blobs = Object.freeze(V138_PLAN_262_60_SOURCE_PATHS.map(repoPath => {
     const entry = gitText(repoRoot, ["ls-tree", sourceA9, "--", repoPath])
     if (entry === "") return Object.freeze({ path: repoPath, mode: "deleted" as const,
@@ -5912,9 +5967,8 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
         priorByteLength: priorBytes.byteLength })
     }))
   return Object.freeze({ sourceBase9, sourceA9,
-    priorCorrectionLayer: Object.freeze({ authorRun: priorRun,
-      sourceBase9: priorSourceBase9, sourceA9: priorSourceA9,
-      paths: V138_PLAN_262_60_V3_SOURCE_PATHS }),
+    priorCorrectionLayer: priorCorrectionLayers[0]!, priorCorrectionLayers,
+    layerGaps,
     sourceA9Tree: gitText(repoRoot, ["rev-parse", `${sourceA9}^{tree}`]),
     sourceA9Parent: expectedParent === sourceA9 && commits.length > 1 ?
       commits.at(-2)! : sourceBase9,

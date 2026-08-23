@@ -1420,7 +1420,17 @@ export const checkV138DependencyRevisionBoundaries = (
         custody.priorCorrectionLayer.authorRun ===
           "codex-plan-262-60-a9-review-fix-v3" &&
         JSON.stringify([...custody.priorCorrectionLayer.paths].sort()) ===
-          JSON.stringify(priorCorrectedSourceBoundary)
+          JSON.stringify(priorCorrectedSourceBoundary) &&
+        custody.priorCorrectionLayers.length === 2 &&
+        custody.priorCorrectionLayers[1]?.authorRun ===
+          "codex-plan-262-60-a9-review-fix-v4" &&
+        JSON.stringify([...custody.priorCorrectionLayers[1].paths].sort()) ===
+          JSON.stringify(correctedSourceBoundary) && custody.layerGaps.length === 2 &&
+        custody.layerGaps.every(gap => JSON.stringify([...gap.paths].sort()) ===
+          JSON.stringify([
+            ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
+            ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
+          ]))
       if (productionCustodyValid) {
         authenticatedPriorSourceA9 = custody.priorCorrectionLayer.sourceA9
       }

@@ -51,7 +51,7 @@ export const V138_REVIEW_V3_DELETION_PATHS = Object.freeze([
 
 /** One identity for the current Plan-262-60 corrective source run. */
 export const V138_PLAN_262_60_CORRECTION_RUN =
-  "codex-plan-262-60-a9-review-fix-v4" as const
+  "codex-plan-262-60-a9-review-fix-v5" as const
 
 export const V138_REVIEW_V3_COMMANDS = Object.freeze([
   "--calibrate-parallel-v11-receipt",
