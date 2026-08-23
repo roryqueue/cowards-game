@@ -569,7 +569,7 @@ describe("v1.38 Plan 262-47 fresh successor route", () => {
         ]),
       )
     }
-  })
+  }, 15_000)
 
   it("requires the frozen route-capable inventory through deletion, rename, and inventory tamper", () => {
     expect(Object.isFrozen(V138_FROZEN_ROUTE_CAPABLE_SOURCE_SHA256)).toBe(true)

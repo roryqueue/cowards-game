@@ -46,7 +46,6 @@ import {
   checkV138SuccessorSealCommitV7,
   buildV138Plan26256AuthorizationV9,
   buildV138SuccessorSourceSealV9,
-  disposeV138DetachedOpenatHelper,
   inspectV138ProtectedHistoryV9,
   inspectV138SourceA9Custody,
   v138Plan26256AuthorizationLiteral,
@@ -54,6 +53,7 @@ import {
   writeV138SuccessorSourceSealV7,
 } from "./lib/v1-38-successor-source-seal.js"
 import { buildV138ReviewV3CommandArgv, computeV138ReviewV3Root,
+  disposeV138DetachedOpenatHelper,
   V138_PLAN_262_60_CORRECTION_RUN, V138_REVIEW_V3_ROUTE_MANIFEST } from
   "./lib/v1-38-source-completeness-review-v3.js"
 

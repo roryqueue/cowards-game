@@ -131,7 +131,6 @@ import {
   deriveV138ToolIdentityRoot,
   deriveV138FormationAbsenceRoot,
   deriveV138ProtectedHistoryV5,
-  disposeV138DetachedOpenatHelper,
   registerV138Plan26222AuthoritativeBranchChecker,
   validateV138CanonicalParentChain,
   V138_PLAN_262_18_CANONICAL_PATHS,
@@ -162,7 +161,7 @@ import {
   type V138SuccessorSourceSeal,
   type V138SuccessorSealV7ObservationException,
 } from "./v1-38-successor-source-seal.js"
-import { V138_REVIEW_V3_ROUTE_MANIFEST } from
+import { disposeV138DetachedOpenatHelper, V138_REVIEW_V3_ROUTE_MANIFEST } from
   "./v1-38-source-completeness-review-v3.js"
 
 const FIXTURE_PURPOSE = "regression_throughput_only" as const
