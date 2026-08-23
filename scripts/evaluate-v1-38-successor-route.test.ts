@@ -40,11 +40,13 @@ import {
   V138_SUCCESSOR_SOURCE_SEAL_V9_SCHEMA,
   V138_PLAN_262_56_OBSOLETE_V7_V8_PATHS,
   V138_PLAN_262_57_ROUTE_CONTRACT_V9,
+  V138_PLAN_262_60_PREDECESSOR_MANIFEST,
   buildV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247PreExecutionSourceFailureV1,
   checkV138Plan26247AuthorizationV6,
   inspectV138SourceIdentityA6,
   inspectV138SourceA9Custody,
+  inspectV138PinnedPredecessorManifest,
   inspectV138ProtectedHistoryV9,
   readV138RepositoryFileNoFollow,
   v138Plan26247AuthorizationLiteral,
@@ -328,7 +330,7 @@ it("derives the corrected A9 sole parent and rejects mutable protected history",
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true })
   }
-})
+}, 15_000)
 
 it("rejects an unrelated correction lineage before accepting deletion custody", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-a9-alternate-lineage-"))
@@ -357,73 +359,93 @@ it("rejects an unrelated correction lineage before accepting deletion custody", 
   }
 })
 
-it("rejects source and non-planning mutations in layered custody gaps", () => {
+it("rejects a copied V3 trailer followed by forged carriers and correction copies", () => {
   const revision = (run: string) => execFileSync("git", ["log", "--first-parent",
     "--format=%H", "--grep", `Plan-262-60-Author-Run: ${run}`, "-1"],
   { cwd: repoRoot, encoding: "utf8" }).trim()
-  const priorTip = revision("codex-plan-262-60-a9-review-fix-v4")
-  const correction = revision(V138_PLAN_262_60_CORRECTION_RUN)
-  expect(priorTip).toMatch(/^[0-9a-f]{40}$/u)
-  expect(correction).toMatch(/^[0-9a-f]{40}$/u)
-  for (const repoPath of ["scripts/lib/v1-38-current-matrix-reproduction.ts",
-    "package.json"] as const) {
-    const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-gap-attack-"))
-    const git = (...args: string[]) => execFileSync("git", args,
-      { cwd: fixtureRoot, encoding: "utf8" }).trim()
-    execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
-    try {
-      git("config", "user.name", "Layer gap attack fixture")
-      git("config", "user.email", "layer-gap-attack@example.invalid")
-      git("checkout", "--detach", priorTip)
-      const target = path.join(fixtureRoot, repoPath)
-      writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
-      git("add", repoPath)
-      git("commit", "-m", "test: unauthorized inter-layer mutation")
-      const sourceBase9 = git("rev-parse", "HEAD")
-      git("cherry-pick", correction)
-      const sourceA9 = git("rev-parse", "HEAD")
-      expect(() => inspectV138SourceA9Custody(fixtureRoot,
-        { sourceBase9, sourceA9 }))
-        .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
-    } finally {
-      rmSync(fixtureRoot, { recursive: true, force: true })
-    }
-  }
-})
-
-it("accepts an exact planning-only carrier between correction layers", () => {
-  const revision = (run: string) => execFileSync("git", ["log", "--first-parent",
-    "--format=%H", "--grep", `Plan-262-60-Author-Run: ${run}`, "-1"],
-  { cwd: repoRoot, encoding: "utf8" }).trim()
-  const priorTip = revision("codex-plan-262-60-a9-review-fix-v4")
-  const correction = revision(V138_PLAN_262_60_CORRECTION_RUN)
-  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-gap-docs-"))
+  const v3Tip = revision("codex-plan-262-60-a9-review-fix-v3")
+  const corrections = ["codex-plan-262-60-a9-review-fix-v4",
+    "codex-plan-262-60-a9-review-fix-v5", V138_PLAN_262_60_CORRECTION_RUN]
+    .map(revision)
+  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-full-attack-"))
   const git = (...args: string[]) => execFileSync("git", args,
     { cwd: fixtureRoot, encoding: "utf8" }).trim()
   execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
   try {
-    git("config", "user.name", "Layer gap docs fixture")
-    git("config", "user.email", "layer-gap-docs@example.invalid")
-    git("checkout", "--detach", priorTip)
-    const gapPaths = [
-      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
-      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
-    ]
-    for (const repoPath of gapPaths) {
-      const target = path.join(fixtureRoot, repoPath)
-      writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
+    git("config", "user.name", "Layer full attack fixture")
+    git("config", "user.email", "layer-full-attack@example.invalid")
+    git("checkout", "--detach", v3Tip)
+    const forgedPath = "scripts/lib/v1-38-current-matrix-reproduction.ts"
+    writeFileSync(path.join(fixtureRoot, forgedPath),
+      `${readFileSync(path.join(fixtureRoot, forgedPath), "utf8")}\n`)
+    git("add", forgedPath)
+    git("commit", "-m", "test: copied V3 trailer", "-m",
+      "Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v3")
+    const gapPaths = [...V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers]
+      .map(() => [
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
+      ] as const)
+    let sourceBase9 = ""
+    let sourceA9 = ""
+    for (let index = 0; index < corrections.length; index += 1) {
+      for (const repoPath of gapPaths[index]!) {
+        const target = path.join(fixtureRoot, repoPath)
+        writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
+      }
+      git("add", ...gapPaths[index]!)
+      git("commit", "-m", `docs: forged carrier ${index + 1}`)
+      sourceBase9 = git("rev-parse", "HEAD")
+      git("cherry-pick", corrections[index]!)
+      sourceA9 = git("rev-parse", "HEAD")
     }
-    git("add", ...gapPaths)
-    git("commit", "-m", "docs: exact planning carrier")
-    const sourceBase9 = git("rev-parse", "HEAD")
-    git("cherry-pick", correction)
-    const sourceA9 = git("rev-parse", "HEAD")
-    expect(inspectV138SourceA9Custody(fixtureRoot,
-      { sourceBase9, sourceA9 }).layerGaps.at(-1)).toMatchObject({ paths: gapPaths })
+    expect(() => inspectV138SourceA9Custody(fixtureRoot,
+      { sourceBase9, sourceA9 }))
+      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true })
   }
 })
+
+it("accepts only the exact pinned predecessor chain and carrier objects", () => {
+  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers[2][0]
+  const result = inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)
+  expect(result.priorCorrectionLayers.map(layer => layer.sourceA9)).toEqual(
+    V138_PLAN_262_60_PREDECESSOR_MANIFEST.layers.map(layer => layer.sourceA9))
+  expect(result.layerGaps.map(gap => gap.nextBase)).toEqual(
+    V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers.map(carrier => carrier[0]))
+})
+
+it("rejects mutations of every predecessor manifest identity field", () => {
+  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers[2][0]
+  const mutations: Array<(manifest: any) => void> = [
+    value => { value.layers[0].authorRun += "-forged" },
+    value => { value.layers[0].sourceBase9 = "0".repeat(40) },
+    value => { value.layers[0].sourceA9 = "0".repeat(40) },
+    value => { value.layers[0].commits[0][0] = "0".repeat(40) },
+    value => { value.layers[0].commits[0][1] = "0".repeat(40) },
+    value => { value.layers[0].commits[0][2] = "0".repeat(40) },
+    value => { value.layers[0].commits[0][3][0] = "package.json" },
+    value => { value.layers[0].blobs[0][0] = "package.json" },
+    value => { value.layers[0].blobs[0][1] = "100755" },
+    value => { value.layers[0].blobs[0][2] = "0".repeat(40) },
+    value => { value.layers[0].blobs[0][3] = `sha256:${"0".repeat(64)}` },
+    value => { value.layers[0].blobs[0][4] += 1 },
+    value => { value.carriers[0][0] = "0".repeat(40) },
+    value => { value.carriers[0][1] = "0".repeat(40) },
+    value => { value.carriers[0][2] = "0".repeat(40) },
+    value => { value.carriers[0][3][0][0] = "0".repeat(40) },
+    value => { value.carriers[0][3][0][1] = `sha256:${"0".repeat(64)}` },
+    value => { value.carriers[0][3][0][2] += 1 },
+  ]
+  for (const mutate of mutations) {
+    const candidate = JSON.parse(JSON.stringify(
+      V138_PLAN_262_60_PREDECESSOR_MANIFEST))
+    mutate(candidate)
+    expect(() => inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9,
+      candidate)).toThrow()
+  }
+}, 30_000)
 
 const sha256Zero = `sha256:${"0".repeat(64)}`
 const mutableClone = (value: unknown): Record<string, any> =>

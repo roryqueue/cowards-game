@@ -5809,6 +5809,35 @@ const V138_PLAN_262_60_GAP_PATHS = Object.freeze([
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
 ] as const)
+export const V138_PLAN_262_60_PREDECESSOR_MANIFEST = Object.freeze({
+  layers: Object.freeze([
+    { authorRun: "codex-plan-262-60-a9-review-fix-v3", sourceBase9: "2296a5812f1bcad45fe32165534668eeb79caf46", sourceA9: "32eef5c147dc34b1a75c936ed7a0148f8e5d748e",
+      commits: [
+        ["136aa20bcd7ee84aee8a11b0f19a706bacfae238", "2296a5812f1bcad45fe32165534668eeb79caf46", "7d4bc14021190305cc3a58278f4f3b96fa48a6ce", V138_PLAN_262_60_V3_SOURCE_PATHS],
+        ["6972f62d085a87fbc1106e0327c92b0212b12ece", "136aa20bcd7ee84aee8a11b0f19a706bacfae238", "f6ad605c8d4ccd3f3dfc119f37fe718f2c706676", ["scripts/evaluate-v1-38-successor-route.test.ts", "scripts/evaluate-v1-38-successor-source-complete.test.ts"]],
+        ["5dc66c4dbc696cd8ec60d79ddb3f4dde2c3932a1", "6972f62d085a87fbc1106e0327c92b0212b12ece", "0e0a3afd57d76002762450b8f9e2f5a4e8e96120", ["scripts/evaluate-v1-38-successor-route.test.ts", "scripts/evaluate-v1-38-successor-source-complete.test.ts", "scripts/lib/v1-38-current-matrix-reproduction.ts"]],
+        ["32eef5c147dc34b1a75c936ed7a0148f8e5d748e", "5dc66c4dbc696cd8ec60d79ddb3f4dde2c3932a1", "5fc509d3454b32b658a5369c88f88b837499c57f", ["scripts/lib/v1-38-current-matrix-reproduction.ts", "scripts/lib/v1-38-source-completeness-review-v3.ts", "scripts/lib/v1-38-successor-source-seal.ts"]],
+      ], blobs: [
+        ["scripts/check-v1-38-dependency-revision-boundaries.ts","100644","5fb5253de771f6a01fe5dcae85cf67f5c4c0d68f","sha256:d81bf09f84b2a4102cf30f25b8ccbcf4e0bec8415ce0f449f76d50f1d1c33ee0",77572],
+        ["scripts/evaluate-v1-38-successor-route.test.ts","100644","66c4e2a4b6a50ef6c74072d325012b2eb0b97061","sha256:b302dbd70fabbe8c31b2134d0f8f6e4530b4661291f00fe3b5032cb0da5f2031",38861],
+        ["scripts/evaluate-v1-38-successor-source-complete.test.ts","100644","c6eee9e67372c7141be9011be3a1b4f187723e57","sha256:0712aabf90d0fe08ac3d36174533df30ce78ceaec99a273473e925214bb1fe07",23111],
+        ["scripts/lib/v1-38-current-matrix-reproduction.ts","100644","00ca2c76839705209a58c0dfcfa8b7b5c34676e3","sha256:041239abca9ac6c276b055c26949e2d8a2c17582e95a87eea0e9a9f64145166f",847157],
+        ["scripts/lib/v1-38-source-completeness-review-v3.ts","100644","27d6b1d5b6aad703f700130b22c960fe9bf72076","sha256:dd2db7b86057fae2160bfb4a5d50783772158b0a92df8686daedfc70db22caa1",31739],
+        ["scripts/lib/v1-38-successor-source-seal.ts","100644","484bc24e722e49949fd9238d7bf79c1020e1eddd","sha256:aa5a4aa43c88b9daf6b0739338ee7bc0ca2bc57ca779e89a5146f4f622eda24c",347677],
+      ] },
+    { authorRun: "codex-plan-262-60-a9-review-fix-v4", sourceBase9: "7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0", sourceA9: "c5a08bd50eec0f8c937b42bd07fd9009e7b88c17",
+      commits: [["c5a08bd50eec0f8c937b42bd07fd9009e7b88c17","7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0","8111357bd84bb0bd0275cbc5301805c2f1d6ff2f",V138_PLAN_262_60_V4_SOURCE_PATHS]],
+      blobs: [["scripts/check-v1-38-dependency-revision-boundaries.ts","100644","f8008d91089924f21fd537189d8378c6c9ea3777","sha256:e3ecec5aa62d6b9139c838426666491cf8d8cebef8eaaf4b885e9766f2bacf35",78384],["scripts/evaluate-v1-38-successor-route.test.ts","100644","ac92981efc13d94d7f3c3bfdcc10cfc154677749","sha256:d309d90fd33e9c0bbd422c5e6fbe0e1578550735da9bdd8391d8739aca2708ce",40599],["scripts/lib/v1-38-source-completeness-review-v3.ts","100644","cdd98083cb5ccefc45481891d123b95a0fefff1d","sha256:2de2d5f08989afcb095fae559098d9c17a3d102b1e474a155d4d45549fd57fb2",32086],["scripts/lib/v1-38-successor-source-seal.ts","100644","f5b2a5a18308af87932e861c8730505fe9f34bfa","sha256:1d0a5fe81e701d288423e78dea612d7fd9fab4f4733766e75e42a47d670e28a5",349861]] },
+    { authorRun: "codex-plan-262-60-a9-review-fix-v5", sourceBase9: "bff3a3caa90d8bd6e629c8d40599e953ed1a020d", sourceA9: "5bf7839123f9a52b9e16edbc6ce70206c5a4bd54",
+      commits: [["5bf7839123f9a52b9e16edbc6ce70206c5a4bd54","bff3a3caa90d8bd6e629c8d40599e953ed1a020d","e3a87ea873058bd19d3a2415560af986f76c786a",V138_PLAN_262_60_V4_SOURCE_PATHS]],
+      blobs: [["scripts/check-v1-38-dependency-revision-boundaries.ts","100644","8e15c5ca9c5b11f95eda16aab1aa45f395328406","sha256:acb4af7286b41a9a56d1681b567abcf8fc7393ff2704fffd90d8f86cc92e17e5",79068],["scripts/evaluate-v1-38-successor-route.test.ts","100644","e4f126f5188e0785fe5ad18a7d15c51681409165","sha256:b3b12536aa4df68fca3cf117f49c2991d9b4d620b13ab2683aab5fcd6a136fa4",43981],["scripts/lib/v1-38-source-completeness-review-v3.ts","100644","5da8e0b6a4da3aa6ec473aecfd25dbc25e1cb35c","sha256:24e9c2ea1ab1f0cc9df397fd8d90cd4579bd2f5561b126c92edce3965fc30f4e",32086],["scripts/lib/v1-38-successor-source-seal.ts","100644","6222c0983499d5ceb269692f5a5b82da1026ea0f","sha256:bf69c4fb0957863eda2de1183ff967e14ff62e922c5e3e9a26a30add3318b3b9",352604]] },
+  ]),
+  carriers: Object.freeze([
+    ["7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0","32eef5c147dc34b1a75c936ed7a0148f8e5d748e","7e33720ec47db57d082fe0831405bbf14185c3a2",[["87e5ab27f45b709c9f614aac3c6d48b48a597578","sha256:19d4c0913a0055a6ee8e2faed788663207a863708e6269d69b8890d5318f59f9",6692],["c2cae20db14294b93fc2b0956dd7b7974d66e380","sha256:eaf02cb90a81d399521f8f73cbd7766c8121cdeda8d7e5865a6c4276d256ce7b",11355]]],
+    ["bff3a3caa90d8bd6e629c8d40599e953ed1a020d","c5a08bd50eec0f8c937b42bd07fd9009e7b88c17","3967d0f29d2efd67b831a7b3df72e23b889ccbb7",[["844d7c826a96d80fe5be724ffe9ba22a63db4de4","sha256:e8895ee8da513d0989dca26ab8f458fabf3bc9ae1d142e695b5d7fb696d48363",3513],["5287f3dcee175622bf0365f55f531128c58c0b5a","sha256:a2a6e4fd2b6ae81cca47195a2738bde77e7ec5e87a00a778e33b852558ccd6f8",11347]]],
+    ["b1352f7e3c5558ff8056f870471f1e1ed6f48fd1","5bf7839123f9a52b9e16edbc6ce70206c5a4bd54","da0f169f3025651552b63ccdadec7cf406fcec1d",[["851b53870acdd22b81e234c9666c9707ce73cbf3","sha256:c749c16ba339903d6367779797d40959f2a106f2d14fb3b5d13c643b5b537f16",3604],["f4902d3cedf8826ff7b617c5465ccfb59d680efc","sha256:ded2a5ec98c28059edf09aedf04dca31cc4903c6b21d4f2cd2134f831e6fe344",11769]]],
+  ]),
+})
 export const V138_PLAN_262_60_DELETION_PATHS = Object.freeze([
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
@@ -5817,6 +5846,104 @@ export const V138_PLAN_262_60_REVIEW_FIX_CHANGED_PATHS =
   V138_PLAN_262_60_SOURCE_PATHS
 const V138_PLAN_262_60_DELETION_COMMIT =
   "8c3cab21d7da0d59101480e17a973e0317646622" as const
+
+export const inspectV138PinnedPredecessorManifest = (repoRoot: string,
+  sourceBase9Value: string, manifest: typeof V138_PLAN_262_60_PREDECESSOR_MANIFEST =
+    V138_PLAN_262_60_PREDECESSOR_MANIFEST) => {
+  const sourceBase9 = fullCommit(repoRoot, sourceBase9Value)
+  const inspectLayer = (layer: (typeof manifest.layers)[number]) => {
+    const layerBase = fullCommit(repoRoot, layer.sourceBase9)
+    const layerTip = fullCommit(repoRoot, layer.sourceA9)
+    const expectedCommits = layer.commits.map(tuple => tuple[0])
+    const actualCommits = gitText(repoRoot, ["rev-list", "--first-parent",
+      "--reverse", `${layerBase}..${layerTip}`]).split("\n").filter(Boolean)
+    const trailerCommits = gitText(repoRoot, ["log", "--first-parent",
+      "--reverse", "--format=%H", sourceBase9,
+      `--grep=Plan-262-60-Author-Run: ${layer.authorRun}`])
+      .split("\n").filter(Boolean)
+    const aggregate = new Set<string>()
+    if (canonical(actualCommits) !== canonical(expectedCommits) ||
+      canonical(trailerCommits) !== canonical(expectedCommits)) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+    }
+    for (const [commit, parent, tree, paths] of layer.commits) {
+      const actualParents = gitText(repoRoot, ["show", "-s", "--format=%P",
+        commit]).split(" ").filter(Boolean)
+      const actualTree = gitText(repoRoot, ["rev-parse", `${commit}^{tree}`])
+      const actualPaths = sorted(gitText(repoRoot, ["diff-tree",
+        "--no-commit-id", "--name-only", "-r", "--no-renames", commit])
+        .split("\n").filter(Boolean))
+      const trailer = gitText(repoRoot, ["log", "-1",
+        "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
+      if (actualParents.length !== 1 || actualParents[0] !== parent ||
+        actualTree !== tree || canonical(actualPaths) !== canonical(sorted(paths)) ||
+        trailer !== layer.authorRun) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+      }
+      actualPaths.forEach(repoPath => aggregate.add(repoPath))
+    }
+    const expectedPaths = sorted(layer.blobs.map(blob => blob[0]))
+    if (canonical(sorted(aggregate)) !== canonical(expectedPaths)) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+    }
+    for (const [repoPath, mode, blobOid, digest, byteLength] of layer.blobs) {
+      const entry = gitText(repoRoot, ["ls-tree", layerTip, "--", repoPath])
+      const bytes = readCommitFile(repoRoot, layerTip, repoPath)
+      if (entry.split(/\s+/u)[0] !== mode ||
+        gitText(repoRoot, ["rev-parse", `${layerTip}:${repoPath}`]) !== blobOid ||
+        sha256(bytes) !== digest || bytes.byteLength !== byteLength) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+      }
+    }
+    return Object.freeze({ authorRun: layer.authorRun, sourceBase9: layerBase,
+      sourceA9: layerTip, paths: Object.freeze(expectedPaths),
+      commits: Object.freeze(actualCommits) })
+  }
+  const priorCorrectionLayers = Object.freeze(manifest.layers.map(inspectLayer))
+  const protectedLayerPaths = sorted(priorCorrectionLayers.flatMap(layer =>
+    [...layer.paths]).concat([...V138_PLAN_262_60_SOURCE_PATHS]))
+  const layerGaps = Object.freeze(manifest.carriers.map((carrier, index) => {
+    const [commit, parent, tree, blobs] = carrier
+    const priorTip = priorCorrectionLayers[index]!.sourceA9
+    const nextBase = index + 1 < priorCorrectionLayers.length ?
+      priorCorrectionLayers[index + 1]!.sourceBase9 : sourceBase9
+    const gapCommits = gitText(repoRoot, ["rev-list", "--first-parent",
+      "--reverse", `${priorTip}..${nextBase}`]).split("\n").filter(Boolean)
+    const actualParents = gitText(repoRoot, ["show", "-s", "--format=%P",
+      commit]).split(" ").filter(Boolean)
+    const actualTree = gitText(repoRoot, ["rev-parse", `${commit}^{tree}`])
+    const actualPaths = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+      "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+    if (commit !== nextBase || parent !== priorTip || actualParents.length !== 1 ||
+      actualParents[0] !== parent || actualTree !== tree ||
+      canonical(gapCommits) !== canonical([commit]) ||
+      canonical(actualPaths) !== canonical(sorted(V138_PLAN_262_60_GAP_PATHS))) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+    }
+    for (let blobIndex = 0; blobIndex < V138_PLAN_262_60_GAP_PATHS.length;
+      blobIndex += 1) {
+      const repoPath = V138_PLAN_262_60_GAP_PATHS[blobIndex]!
+      const [blobOid, digest, byteLength] = blobs[blobIndex]!
+      const entry = gitText(repoRoot, ["ls-tree", commit, "--", repoPath])
+      const bytes = readCommitFile(repoRoot, commit, repoPath)
+      if (entry.split(/\s+/u)[0] !== "100644" ||
+        gitText(repoRoot, ["rev-parse", `${commit}:${repoPath}`]) !== blobOid ||
+        sha256(bytes) !== digest || bytes.byteLength !== byteLength) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+      }
+    }
+    for (const repoPath of protectedLayerPaths) {
+      if (gitText(repoRoot, ["ls-tree", priorTip, "--", repoPath]) !==
+        gitText(repoRoot, ["ls-tree", commit, "--", repoPath])) {
+        fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
+      }
+    }
+    return Object.freeze({ priorTip, nextBase, commits: Object.freeze([commit]),
+      paths: Object.freeze(actualPaths), protectedPathCount:
+        protectedLayerPaths.length })
+  }))
+  return Object.freeze({ priorCorrectionLayers, layerGaps })
+}
 
 export const inspectV138SourceA9Custody = (repoRoot: string,
   document: Record<string, any>) => {
@@ -5846,84 +5973,8 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
       V138_PLAN_262_60_SOURCE_PATHS))) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
   }
-  const inspectPriorLayer = (authorRun: string, paths: readonly string[]) => {
-    const layerCommits = gitText(repoRoot, ["log", "--first-parent", "--reverse",
-      "--format=%H", sourceBase9,
-      `--grep=Plan-262-60-Author-Run: ${authorRun}`])
-      .split("\n").filter(Boolean)
-    const layerBase = layerCommits.length === 0 ? undefined : gitText(repoRoot,
-      ["show", "-s", "--format=%P", layerCommits[0]!])
-    const layerTip = layerCommits.at(-1)
-    const layerAggregate = new Set<string>()
-    let layerParent = layerBase
-    for (const commit of layerCommits) {
-      const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
-        .split(" ").filter(Boolean)
-      const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
-        "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
-      const trailer = gitText(repoRoot, ["log", "-1",
-        "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
-      if (parents.length !== 1 || parents[0] !== layerParent ||
-        changed.length === 0 || changed.some(repoPath => !paths.includes(repoPath)) ||
-        trailer !== authorRun) {
-        fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
-      }
-      changed.forEach(repoPath => layerAggregate.add(repoPath))
-      layerParent = commit
-    }
-    if (layerBase === undefined || layerTip === undefined ||
-      canonical(sorted(layerAggregate)) !== canonical(sorted(paths))) {
-      fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
-    }
-    return Object.freeze({ authorRun, sourceBase9: layerBase, sourceA9: layerTip,
-      paths: Object.freeze([...paths]), commits: Object.freeze(layerCommits) })
-  }
-  const priorCorrectionLayers = Object.freeze([
-    inspectPriorLayer("codex-plan-262-60-a9-review-fix-v3",
-      V138_PLAN_262_60_V3_SOURCE_PATHS),
-    inspectPriorLayer("codex-plan-262-60-a9-review-fix-v4",
-      V138_PLAN_262_60_V4_SOURCE_PATHS),
-  ])
-  const protectedLayerPaths = sorted(priorCorrectionLayers.flatMap(layer =>
-    [...layer.paths]).concat([...V138_PLAN_262_60_SOURCE_PATHS]))
-  const inspectGap = (priorTip: string, nextBase: string) => {
-    const gapCommits = gitText(repoRoot, ["rev-list", "--first-parent", "--reverse",
-      `${priorTip}..${nextBase}`]).split("\n").filter(Boolean)
-    const gapAggregate = new Set<string>()
-    let gapParent = priorTip
-    for (const commit of gapCommits) {
-      const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
-        .split(" ").filter(Boolean)
-      const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
-        "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
-      if (parents.length !== 1 || parents[0] !== gapParent || changed.length === 0 ||
-        changed.some(repoPath => !V138_PLAN_262_60_GAP_PATHS.includes(
-          repoPath as never))) {
-        fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
-      }
-      changed.forEach(repoPath => gapAggregate.add(repoPath))
-      gapParent = commit
-    }
-    if (gapParent !== nextBase || gapCommits.length > 0 &&
-      canonical(sorted(gapAggregate)) !== canonical(sorted(
-        V138_PLAN_262_60_GAP_PATHS))) {
-      fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
-    }
-    for (const repoPath of protectedLayerPaths) {
-      if (gitText(repoRoot, ["ls-tree", priorTip, "--", repoPath]) !==
-        gitText(repoRoot, ["ls-tree", nextBase, "--", repoPath])) {
-        fail("V138_PLAN_262_56_AUTHORIZATION_V9_LAYER_GAP_INVALID")
-      }
-    }
-    return Object.freeze({ priorTip, nextBase, commits: Object.freeze(gapCommits),
-      paths: Object.freeze(sorted(gapAggregate)), protectedPathCount:
-        protectedLayerPaths.length })
-  }
-  const layerGaps = Object.freeze([
-    inspectGap(priorCorrectionLayers[0]!.sourceA9,
-      priorCorrectionLayers[1]!.sourceBase9),
-    inspectGap(priorCorrectionLayers[1]!.sourceA9, sourceBase9),
-  ])
+  const { priorCorrectionLayers, layerGaps } =
+    inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)
   const sourceA9Blobs = Object.freeze(V138_PLAN_262_60_SOURCE_PATHS.map(repoPath => {
     const entry = gitText(repoRoot, ["ls-tree", sourceA9, "--", repoPath])
     if (entry === "") return Object.freeze({ path: repoPath, mode: "deleted" as const,
