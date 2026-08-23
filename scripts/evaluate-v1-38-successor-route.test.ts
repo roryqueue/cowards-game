@@ -47,6 +47,7 @@ import {
   inspectV138SourceIdentityA6,
   inspectV138SourceA9Custody,
   inspectV138PinnedPredecessorManifest,
+  inspectV138PrivatePredecessorManifestFreezeForTest,
   inspectV138ProtectedHistoryV9,
   readV138RepositoryFileNoFollow,
   v138Plan26247AuthorizationLiteral,
@@ -366,7 +367,8 @@ it("rejects a copied V3 trailer followed by forged carriers and correction copie
   const v3Tip = revision("codex-plan-262-60-a9-review-fix-v3")
   const corrections = ["codex-plan-262-60-a9-review-fix-v4",
     "codex-plan-262-60-a9-review-fix-v5",
-    "codex-plan-262-60-a9-review-fix-v6", V138_PLAN_262_60_CORRECTION_RUN]
+    "codex-plan-262-60-a9-review-fix-v6",
+    "codex-plan-262-60-a9-review-fix-v7", V138_PLAN_262_60_CORRECTION_RUN]
     .map(revision)
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-full-attack-"))
   const git = (...args: string[]) => execFileSync("git", args,
@@ -473,6 +475,20 @@ it("deep-freezes every exported manifest category without exposing production", 
     () => { projection.carriers[0][3][0][0] = "0".repeat(40) },
   ]
   for (const attempt of attempts) expect(attempt).toThrow(TypeError)
+  expect(inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)).toEqual(before)
+}, 15_000)
+
+it("recurses through pre-frozen containers in the private production anchor", () => {
+  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers.at(-1)![0]
+  const before = inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)
+  const privateFreeze = inspectV138PrivatePredecessorManifestFreezeForTest()
+  expect(Object.isFrozen(privateFreeze)).toBe(true)
+  expect(privateFreeze).toEqual({
+    root: true, layers: true, layerRecords: true, commitArrays: true,
+    commitTuples: true, pathArrays: true, blobArrays: true, blobTuples: true,
+    carriers: true, carrierTuples: true, carrierBlobArrays: true,
+    carrierBlobTuples: true,
+  })
   expect(inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)).toEqual(before)
 }, 15_000)
 

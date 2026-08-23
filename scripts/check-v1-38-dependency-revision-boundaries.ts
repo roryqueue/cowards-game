@@ -1421,7 +1421,7 @@ export const checkV138DependencyRevisionBoundaries = (
           "codex-plan-262-60-a9-review-fix-v3" &&
         JSON.stringify([...custody.priorCorrectionLayer.paths].sort()) ===
           JSON.stringify(priorCorrectedSourceBoundary) &&
-        custody.priorCorrectionLayers.length === 4 &&
+        custody.priorCorrectionLayers.length === 5 &&
         custody.priorCorrectionLayers[1]?.authorRun ===
           "codex-plan-262-60-a9-review-fix-v4" &&
         JSON.stringify([...custody.priorCorrectionLayers[1].paths].sort()) ===
@@ -1433,7 +1433,11 @@ export const checkV138DependencyRevisionBoundaries = (
         custody.priorCorrectionLayers[3]?.authorRun ===
           "codex-plan-262-60-a9-review-fix-v6" &&
         JSON.stringify([...custody.priorCorrectionLayers[3].paths].sort()) ===
-          JSON.stringify(correctedSourceBoundary) && custody.layerGaps.length === 4 &&
+          JSON.stringify(correctedSourceBoundary) &&
+        custody.priorCorrectionLayers[4]?.authorRun ===
+          "codex-plan-262-60-a9-review-fix-v7" &&
+        JSON.stringify([...custody.priorCorrectionLayers[4].paths].sort()) ===
+          JSON.stringify(correctedSourceBoundary) && custody.layerGaps.length === 5 &&
         custody.layerGaps.every(gap => JSON.stringify([...gap.paths].sort()) ===
           JSON.stringify([
             ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
