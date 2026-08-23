@@ -16,9 +16,12 @@ import {
   V138_PLAN_262_47_FRESH_DESTINATIONS,
   checkV138CanonicalParentChain,
   checkV138Plan26247PreExecutionSourceFailureV1,
+  inspectV138SourceA9Custody,
   readV138RepositoryFileNoFollow,
   validateV138CanonicalParentChain,
 } from "./lib/v1-38-successor-source-seal.js"
+import { V138_PLAN_262_60_CORRECTION_RUN } from
+  "./lib/v1-38-source-completeness-review-v3.js"
 
 type Sha256 = `sha256:${string}`
 
@@ -1351,10 +1354,12 @@ export const checkV138DependencyRevisionBoundaries = (
     },
   } as const
   const a9Commits = git(repoRoot, ["log", "--first-parent", "--format=%H", "HEAD",
-    "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v2"])
+    `--grep=Plan-262-60-Author-Run: ${V138_PLAN_262_60_CORRECTION_RUN}`])
     .trim().split("\n").filter(Boolean)
   const orderedRun = [...a9Commits].reverse()
   const a9 = orderedRun.at(-1)
+  const sourceBase9 = orderedRun.length === 0 ? undefined : git(repoRoot,
+    ["show", "-s", "--format=%P", orderedRun[0]!]).trim()
   const aggregate = new Set<string>()
   let expectedParent = orderedRun.length === 0 ? "" : git(repoRoot, ["show", "-s",
     "--format=%P", orderedRun[0]!]).trim()
@@ -1367,12 +1372,15 @@ export const checkV138DependencyRevisionBoundaries = (
       changed.length > 0 && changed.every(repoPath => correctedSourceBoundary.includes(repoPath)) &&
       git(repoRoot, ["show", "-s",
         "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit]).trim() ===
-        "codex-plan-262-60-a9-review-fix-v2"
+        V138_PLAN_262_60_CORRECTION_RUN
     changed.forEach(repoPath => aggregate.add(repoPath))
     expectedParent = commit
     return valid
   })
-  const deletionHistoryValid = a9 !== undefined &&
+  const deletionFirstParentCount = a9 === undefined ? 0 : git(repoRoot,
+    ["rev-list", "--first-parent", a9]).trim().split("\n")
+    .filter(commit => commit === historicalDeletion.commit).length
+  const deletionHistoryValid = a9 !== undefined && sourceBase9 !== undefined &&
     git(repoRoot, ["show", "-s", "--format=%P", historicalDeletion.commit]).trim() ===
       historicalDeletion.parent &&
     git(repoRoot, ["rev-parse", `${historicalDeletion.commit}^{tree}`]).trim() ===
@@ -1380,6 +1388,10 @@ export const checkV138DependencyRevisionBoundaries = (
     git(repoRoot, ["show", "-s",
       "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)",
       historicalDeletion.commit]).trim() === historicalDeletion.authorRun &&
+    spawnSync("git", ["merge-base", "--is-ancestor", historicalDeletion.commit,
+      sourceBase9], { cwd: repoRoot }).status === 0 &&
+    spawnSync("git", ["merge-base", "--is-ancestor", historicalDeletion.commit,
+      a9], { cwd: repoRoot }).status === 0 && deletionFirstParentCount === 1 &&
     deletedSourceBoundary.every(repoPath =>
       git(repoRoot, ["diff-tree", "--no-commit-id", "--name-status", "-r",
         "--no-renames", historicalDeletion.commit, "--", repoPath]).trim() ===
@@ -1389,7 +1401,18 @@ export const checkV138DependencyRevisionBoundaries = (
           repoPath as keyof typeof historicalDeletion.priorBlobs] &&
       git(repoRoot, ["ls-tree", "--name-only", a9, "--", repoPath]).trim() === "" &&
       !repositoryFilePresent(repoRoot, path.join(repoRoot, repoPath)))
-  const a9SourceValid = runValid && a9 !== undefined &&
+  let productionCustodyValid = false
+  if (a9 !== undefined && sourceBase9 !== undefined) {
+    try {
+      const custody = inspectV138SourceA9Custody(repoRoot,
+        { sourceBase9, sourceA9: a9 })
+      productionCustodyValid = custody.sourceBase9 === sourceBase9 &&
+        custody.sourceA9 === a9 &&
+        JSON.stringify([...custody.sourceA9Paths].sort()) ===
+          JSON.stringify(correctedSourceBoundary)
+    } catch { productionCustodyValid = false }
+  }
+  const a9SourceValid = runValid && productionCustodyValid && a9 !== undefined &&
     JSON.stringify([...aggregate].sort()) === JSON.stringify(correctedSourceBoundary) &&
     deletionHistoryValid &&
     git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--",
@@ -1420,8 +1443,6 @@ export const checkV138DependencyRevisionBoundaries = (
         repositoryFile(repoRoot, path.join(repoRoot, repoPath)).equals(committed)
     }) && JSON.stringify([...summaryBindings.keys()].sort()) ===
       JSON.stringify(correctedSourceBoundary)
-  const sourceBase9 = orderedRun.length === 0 ? undefined : git(repoRoot,
-    ["show", "-s", "--format=%P", orderedRun[0]!]).trim()
   const changedLineRanges = new Map<string, readonly [number, number][]>()
   if (a9CarrierBindingsValid && sourceBase9 !== undefined) {
     for (const repoPath of correctedSourceBoundary) {

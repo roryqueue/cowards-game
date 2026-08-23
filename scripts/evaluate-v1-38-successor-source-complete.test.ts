@@ -53,7 +53,7 @@ import {
   writeV138SuccessorSourceSealV7,
 } from "./lib/v1-38-successor-source-seal.js"
 import { buildV138ReviewV3CommandArgv, computeV138ReviewV3Root,
-  V138_REVIEW_V3_COMMANDS } from
+  V138_PLAN_262_60_CORRECTION_RUN, V138_REVIEW_V3_ROUTE_MANIFEST } from
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -349,7 +349,7 @@ it("reaches the real v9 authority checker and route-start handler through full a
     git("config", "user.name", "Plan 262-60 V9 Fixture")
     git("config", "user.email", "plan-262-60-v9@example.invalid")
     const run = git("log", "--first-parent", "--reverse", "--format=%H",
-      "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1")
+      `--grep=Plan-262-60-Author-Run: ${V138_PLAN_262_60_CORRECTION_RUN}`)
       .split("\n").filter(Boolean)
     const sourceA9 = run.at(-1)!
     const sourceBase9 = git("show", "-s", "--format=%P", run[0]!)
@@ -376,31 +376,15 @@ it("reaches the real v9 authority checker and route-start handler through full a
         Buffer.from("v1.38-review-v3-source-snapshot-v1", "utf8"),
         encoded.bytes])}`
     }
-    const manifestByCommand = new Map(V138_ROUTE_7_SOURCE_MANIFEST.map(item =>
-      [item.command, item] as const))
-    const output = Buffer.from("captured command output\n")
-    const empty = Buffer.alloc(0)
-    const commands = V138_REVIEW_V3_COMMANDS.map(command => ({ command,
-      argv: buildV138ReviewV3CommandArgv(command, sourceA9, sourceBase9),
-      exitStatus: 0, stdoutBase64: output.toString("base64"),
-      stderrBase64: empty.toString("base64"),
-      stdoutSha256: `sha256:${createHash("sha256").update(output).digest("hex")}`,
-      stderrSha256: `sha256:${createHash("sha256").update(empty).digest("hex")}` }))
-    const handlerObservations = V138_REVIEW_V3_COMMANDS.map(command => {
-      const item = manifestByCommand.get(command)!
-      return { command, handler: item.handler, prerequisites: item.prerequisite,
-        destination: item.destination, effectClass: item.sideEffect,
-        disposition: item.terminalDisposition ?? "none" }
-    })
     const body: Record<string, any> = {
       schemaVersion: "v1.38-plan-262-62-source-completeness-review-v3",
       sourceBase9, sourceA9,
       sourceCustody: { tree: custody.sourceA9Tree,
         parent: custody.sourceA9Parent,
-        authorRun: "codex-plan-262-60-a9-review-fix-v1",
+        authorRun: V138_PLAN_262_60_CORRECTION_RUN,
         paths: custody.sourceA9Paths, blobs: custody.sourceA9Blobs,
         deletionHistory: custody.deletionHistory },
-      commands, handlerObservations,
+      routeManifest: V138_REVIEW_V3_ROUTE_MANIFEST,
       protectedHistory: { root: history.protectedHistoryRoot,
         protectedA8: sourceA9, protectedRoots: history.protectedRoots },
       chargeIds: [5, 6, 7, 8, 9].flatMap(version =>
@@ -410,9 +394,9 @@ it("reaches the real v9 authority checker and route-start handler through full a
         pathCount: sourceBaseBlobs.length },
       { name: "after", inventoryRoot: snapshotRoot(custody.sourceA9Blobs),
         pathCount: custody.sourceA9Blobs.length }],
-      orderedEvents: handlerObservations.map((observation, ordinal) => ({ ordinal,
-        event: observation.handler, path: observation.destination,
-        result: observation.disposition })),
+      orderedEvents: V138_REVIEW_V3_ROUTE_MANIFEST.map((observation, ordinal) => ({
+        ordinal, event: observation.handler, path: observation.destination,
+        result: observation.terminalDisposition ?? "none" })),
       cleanup: { complete: true, residualPaths: [] },
       publication: { changedPaths: [
         V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview,
@@ -439,9 +423,7 @@ it("reaches the real v9 authority checker and route-start handler through full a
       path.basename(V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview))
     writeFileSync(detachedReview, canonicalBytes(review)); chmodSync(detachedReview, 0o444)
     const authorization = buildV138Plan26256AuthorizationV9({ repoRoot: fixtureRoot,
-      reviewV3AbsolutePath: detachedReview,
-      reviewObservations: { commands, handlerObservations,
-        orderedEvents: body.orderedEvents } })
+      reviewV3AbsolutePath: detachedReview })
     const seal = buildV138SuccessorSourceSealV9({ repoRoot: fixtureRoot,
       authorization })
     writeFileSync(path.join(fixtureRoot,
@@ -458,23 +440,30 @@ it("reaches the real v9 authority checker and route-start handler through full a
       sourceA9, anchor, disposition: "tool_identity_failed" }))
       .toThrow("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
     const mismatchedToolRoot = `sha256:${"9".repeat(64)}` as const
+    let observedToolIdentityRoot = mismatchedToolRoot
     expect(deriveV138Plan26257PreObservationProof({ repoRoot: fixtureRoot,
       sourceA9, anchor, disposition: "tool_identity_failed",
-      observedRootOverrides: { tool_identity_failed: mismatchedToolRoot } }))
+      observationProviders: { toolIdentity: () => observedToolIdentityRoot } }))
       .toMatchObject({ disposition: "tool_identity_failed",
         sealedRoot: authorization.toolIdentity.expectedRoot,
         observedRoot: mismatchedToolRoot })
+    const captured: Buffer[] = []
+    const commands = ["--check-plan-262-57-pre-execution-readiness-v1",
+      "--write-plan-262-57-route-start-v1"] as const
+    for (const command of commands) {
+      const argv = buildV138ReviewV3CommandArgv(command, sourceA9, sourceB9)
+      expect(argv[argv.indexOf("--source-b9") + 1]).toBe(sourceB9)
+      expect(sourceB9).not.toBe(sourceBase9)
+      let output = ""
+      await runReceiptCli({ repoRoot: fixtureRoot, argv,
+        writeOutput: value => { output += value } })
+      captured.push(Buffer.from(output, "utf8"))
+    }
+    expect(captured.every(bytes => bytes.byteLength > 0)).toBe(true)
+    expect(new Set(captured.map(bytes => bytes.toString("hex"))).size).toBe(2)
+    expect(new Set(captured.map(bytes => createHash("sha256").update(bytes)
+      .digest("hex"))).size).toBe(2)
     const target = V138_PLAN_262_57_ROUTE_DESTINATIONS[0]!
-    await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
-      "--write-plan-262-57-route-start-v1", target,
-      "--mode", "gsd-pattern-c-inline-main", "--cwd",
-      "/Users/roryquinlan/runtime/cowards-game", "--terminal-agent-registry-json",
-      JSON.stringify({ schemaVersion:
-        "v1.38-plan-262-57-terminal-agent-registry-v1",
-      activeExecutorCount: 0, agents: [] }), "--authorization",
-      V138_PLAN_262_56_V9_CANONICAL_PATHS.authorization, "--seal",
-      V138_PLAN_262_56_V9_CANONICAL_PATHS.seal, "--source-a9", sourceA9,
-      "--source-b9", sourceB9], writeOutput: () => undefined })
     expect(JSON.parse(readFileSync(path.join(fixtureRoot, target), "utf8")))
       .toMatchObject({ routeOrdinal: 7, routeStarted: true,
         context: { sourceA9, sourceB9,

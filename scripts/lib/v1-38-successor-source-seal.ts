@@ -34,7 +34,10 @@ import {
 } from "./v1-38-darwin-headroom.js"
 import {
   checkV138ReviewV3ClaimsAgainstObservations,
+  disposeV138DetachedOpenatHelper,
   readV138DetachedFileOpenat,
+  V138_PLAN_262_60_CORRECTION_RUN,
+  V138_REVIEW_V3_ROUTE_MANIFEST,
   validateV138ReviewV3Document,
 } from "./v1-38-source-completeness-review-v3.js"
 
@@ -5710,7 +5713,7 @@ const V138_PLAN_262_56_V9_AUTHORIZATION_KEYS = Object.freeze([
   "schemaVersion", "routeOrdinal", "executionVersions", "sourceBase9",
   "sourceA9", "sourceA9Paths", "sourceA9Tree", "sourceA9Parent",
   "sourceA9Blobs", "sourceDeletionHistory", "protectedA7", "protectedHistory",
-  "reviewV3Input", "reviewObservations", "toolIdentity", "identityClaims",
+  "reviewV3Input", "toolIdentity", "identityClaims",
   "canonicalDestinations", "futureCustodyPaths", "obsoleteV7PathsAbsent",
   "singleUse", "noRetry", "satisfiesAdmit03", "downstreamAuthority",
   "authorizationRoot",
@@ -5816,7 +5819,7 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
       "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
     if (parents.length !== 1 || parents[0] !== expectedParent || changed.length === 0 ||
       changed.some(repoPath => !V138_PLAN_262_60_SOURCE_PATHS.includes(repoPath as never)) ||
-      trailer !== "codex-plan-262-60-a9-review-fix-v1") {
+      trailer !== V138_PLAN_262_60_CORRECTION_RUN) {
       fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
     }
     changed.forEach(repoPath => aggregate.add(repoPath))
@@ -5842,8 +5845,14 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
   const deletionTree = gitText(repoRoot, ["rev-parse", `${deletionCommit}^{tree}`])
   const deletionTrailer = gitText(repoRoot, ["log", "-1",
     "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", deletionCommit])
+  const deletionFirstParentCount = gitText(repoRoot, ["rev-list", "--first-parent",
+    sourceA9]).split("\n").filter(commit => commit === deletionCommit).length
   if (deletionParents.length !== 1 || deletionTrailer !==
-      "codex-plan-262-60-a9-v1") {
+      "codex-plan-262-60-a9-v1" ||
+    gitStatus(repoRoot, ["merge-base", "--is-ancestor", deletionCommit,
+      sourceBase9]) !== 0 ||
+    gitStatus(repoRoot, ["merge-base", "--is-ancestor", deletionCommit,
+      sourceA9]) !== 0 || deletionFirstParentCount !== 1) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_DELETION_HISTORY_INVALID")
   }
   const deletionHistory = Object.freeze(V138_PLAN_262_60_DELETION_PATHS.map(
@@ -6011,11 +6020,7 @@ export const inspectV138Plan26256ReviewV3Input = (repoRoot: string,
 export const buildV138Plan26256AuthorizationV9 = (input: {
   readonly repoRoot: string
   readonly reviewV3AbsolutePath: string
-  readonly reviewObservations: Readonly<{
-    commands: unknown
-    handlerObservations: unknown
-    orderedEvents: unknown
-  }>
+  readonly expectedToolIdentityRoot?: Sha256
 }) => {
   const reviewV3Input = inspectV138Plan26256ReviewV3Input(input.repoRoot,
     input.reviewV3AbsolutePath)
@@ -6032,7 +6037,7 @@ export const buildV138Plan26256AuthorizationV9 = (input: {
     V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview,
     ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md"] }
   const sourceCustody = { tree: source.sourceA9Tree, parent: source.sourceA9Parent,
-    authorRun: "codex-plan-262-60-a9-review-fix-v1", paths: source.sourceA9Paths,
+    authorRun: V138_PLAN_262_60_CORRECTION_RUN, paths: source.sourceA9Paths,
     blobs: source.sourceA9Blobs, deletionHistory: source.deletionHistory }
   const sourceBaseBlobs = sourcePaths.map(repoPath => {
     const entry = gitText(input.repoRoot, ["ls-tree", source.sourceBase9, "--",
@@ -6053,14 +6058,13 @@ export const buildV138Plan26256AuthorizationV9 = (input: {
       "v1.38-review-v3-source-snapshot-v1", source.sourceA9Blobs),
     pathCount: source.sourceA9Blobs.length }]
   checkV138ReviewV3ClaimsAgainstObservations({ document,
-    commands: input.reviewObservations.commands,
-    handlerObservations: input.reviewObservations.handlerObservations,
+    routeManifest: V138_REVIEW_V3_ROUTE_MANIFEST,
     sourceCustody,
     publication, protectedHistory: { root: protectedHistory.protectedHistoryRoot,
       protectedA8: source.sourceA9,
       protectedRoots: protectedHistory.protectedRoots },
     priorAuthorizationBytes: protectedHistory.priorAuthorizationBytes,
-    snapshots, orderedEvents: input.reviewObservations.orderedEvents })
+    snapshots })
   const body = {
     schemaVersion: V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA,
     routeOrdinal: 7 as const,
@@ -6074,12 +6078,8 @@ export const buildV138Plan26256AuthorizationV9 = (input: {
     protectedA7: protectedHistory.protectedA7,
     protectedHistory,
     reviewV3Input,
-    reviewObservations: Object.freeze({
-      commands: input.reviewObservations.commands,
-      handlerObservations: input.reviewObservations.handlerObservations,
-      orderedEvents: input.reviewObservations.orderedEvents,
-    }),
-    toolIdentity: Object.freeze({ expectedRoot: deriveV138ToolIdentityRoot() }),
+    toolIdentity: Object.freeze({ expectedRoot:
+      input.expectedToolIdentityRoot ?? deriveV138ToolIdentityRoot() }),
     identityClaims: Object.freeze({ independentPersonClaimed: false as const,
       reviewerSeparated: false as const, externalIdentityClaimed: false as const,
       cryptographicReviewerIdentityClaimed: false as const,
@@ -6107,9 +6107,12 @@ export const checkV138Plan26256AuthorizationV9 = (repoRoot: string,
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_SCHEMA_INVALID")
   }
   const candidate = value as Record<string, any>
+  if (!isSha256(candidate.toolIdentity?.expectedRoot)) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V9_INVALID")
+  }
   const expected = buildV138Plan26256AuthorizationV9({ repoRoot,
     reviewV3AbsolutePath: String(candidate.reviewV3Input?.absolutePath),
-    reviewObservations: candidate.reviewObservations })
+    expectedToolIdentityRoot: candidate.toolIdentity.expectedRoot })
   if (canonical(value) !== canonical(expected)) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_INVALID")
   }
@@ -6223,14 +6226,12 @@ export const checkV138SuccessorSealCommitV9 = (input: {
 }
 
 export const writeV138Plan26256AuthorizationV9 = (repoRoot: string,
-  targetPath: string, reviewV3AbsolutePath: string,
-  reviewObservations: Readonly<{ commands: unknown; handlerObservations: unknown;
-    orderedEvents: unknown }>) => {
+  targetPath: string, reviewV3AbsolutePath: string) => {
   const target = canonicalPath(repoRoot, targetPath,
     V138_PLAN_262_56_V9_CANONICAL_PATHS.authorization)
   regularFile(target, "absent")
   const value = buildV138Plan26256AuthorizationV9({ repoRoot,
-    reviewV3AbsolutePath, reviewObservations })
+    reviewV3AbsolutePath })
   writeV138CanonicalExclusiveV2(repoRoot, target, value)
   return value
 }
@@ -7771,35 +7772,19 @@ const runCli = async (): Promise<void> => {
     "../..",
   )
   const args = process.argv.slice(2)
-  const observationsAt = (absolutePath: string) => {
-    const snapshot = readV138DetachedFileOpenat(absolutePath)
-    let value: unknown
-    try { value = JSON.parse(snapshot.bytes.toString("utf8")) } catch {
-      fail("V138_PLAN_262_56_AUTHORIZATION_V9_OBSERVATIONS_INVALID")
-    }
-    if (!isRecord(value) || !exactKeys(value,
-      ["commands", "handlerObservations", "orderedEvents"])) {
-      fail("V138_PLAN_262_56_AUTHORIZATION_V9_OBSERVATIONS_INVALID")
-    }
-    return value as { commands: unknown; handlerObservations: unknown;
-      orderedEvents: unknown }
-  }
   if (/-v(?:7|8)$/u.test(args[0] ?? "") ||
     /authorization-v(?:7|8)|source-seal-v(?:7|8)/u.test(args[0] ?? "")) {
     fail("V138_PLAN_262_56_V7_V8_CLI_OBSOLETE")
   } else if (args[0] === "--render-plan-262-56-authorization-v9") {
-    if (args.length !== 5 || args[1] !== "--review-input-absolute" ||
-      !path.isAbsolute(args[2]!) || args[3] !== "--observations-input-absolute" ||
-      !path.isAbsolute(args[4]!)) fail("V138_PLAN_262_56_AUTHORIZATION_V9_CLI_INVALID")
+    if (args.length !== 3 || args[1] !== "--review-input-absolute" ||
+      !path.isAbsolute(args[2]!)) fail("V138_PLAN_262_56_AUTHORIZATION_V9_CLI_INVALID")
     const value = buildV138Plan26256AuthorizationV9({ repoRoot,
-      reviewV3AbsolutePath: args[2]!, reviewObservations: observationsAt(args[4]!) })
+      reviewV3AbsolutePath: args[2]! })
     process.stdout.write(canonical(value))
   } else if (args[0] === "--write-plan-262-56-authorization-v9") {
-    if (args.length !== 6 || args[2] !== "--review-input-absolute" ||
-      !path.isAbsolute(args[3]!) || args[4] !== "--observations-input-absolute" ||
-      !path.isAbsolute(args[5]!)) fail("V138_PLAN_262_56_AUTHORIZATION_V9_CLI_INVALID")
-    writeV138Plan26256AuthorizationV9(repoRoot, args[1]!, args[3]!,
-      observationsAt(args[5]!))
+    if (args.length !== 4 || args[2] !== "--review-input-absolute" ||
+      !path.isAbsolute(args[3]!)) fail("V138_PLAN_262_56_AUTHORIZATION_V9_CLI_INVALID")
+    writeV138Plan26256AuthorizationV9(repoRoot, args[1]!, args[3]!)
   } else if (args[0] === "--write-successor-source-seal-v9") {
     if (args.length !== 4 || args[2] !== "--authorization") {
       fail("V138_SUCCESSOR_SOURCE_SEAL_V9_CLI_INVALID")
@@ -8538,4 +8523,8 @@ const runCli = async (): Promise<void> => {
   }
 }
 
-void runCli()
+try {
+  await runCli()
+} finally {
+  disposeV138DetachedOpenatHelper()
+}

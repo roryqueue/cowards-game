@@ -1,10 +1,10 @@
 import { execFileSync, spawn } from "node:child_process"
-import { createHash } from "node:crypto"
 import {
   chmodSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   realpathSync,
   readFileSync,
   renameSync,
@@ -17,7 +17,7 @@ import { Buffer } from "node:buffer"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import {
   encodeCanonicalJson,
   hashCanonicalIdentity,
@@ -53,7 +53,6 @@ import {
 import {
   V138_PLAN_262_47_ROUTE_CONTRACT,
   V138_PLAN_262_57_ROUTE_CONTRACT,
-  V138_ROUTE_7_SOURCE_MANIFEST,
   buildV138Plan26257PreStartObstructionV1,
   checkV138Plan26257PreStartObstructionV1,
   checkV138Plan26257RouteContract,
@@ -70,8 +69,10 @@ import {
   checkV138ExactMachineStatus,
   collectV138ChangedPolicySources,
 } from "./check-v1-38-dependency-revision-boundaries.js"
-import { buildV138ReviewV3CommandArgv, V138_REVIEW_V3_COMMANDS,
-  V138_REVIEW_V3_DELETION_PATHS, V138_REVIEW_V3_SOURCE_PATHS,
+import { activeV138DetachedOpenatHelperDirectory,
+  disposeV138DetachedOpenatHelper, V138_PLAN_262_60_CORRECTION_RUN,
+  V138_REVIEW_V3_DELETION_PATHS, V138_REVIEW_V3_ROUTE_MANIFEST,
+  V138_REVIEW_V3_SOURCE_PATHS,
   checkV138ReviewV3ClaimsAgainstObservations,
   computeV138ReviewV3Root, readAndValidateV138DetachedReviewV3,
   readV138DetachedFileOpenat,
@@ -79,6 +80,7 @@ import { buildV138ReviewV3CommandArgv, V138_REVIEW_V3_COMMANDS,
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+afterEach(() => disposeV138DetachedOpenatHelper())
 const canonicalReviewBytes = (value: unknown) => {
   const encoded = encodeCanonicalJson(value as JsonValue,
     { context: "canonical-manifest" })
@@ -91,32 +93,18 @@ const reviewV3Fixture = (): Record<string, any> => {
   const otherOid = "b".repeat(40)
   const digest = `sha256:${"1".repeat(64)}`
   const paths = [...V138_REVIEW_V3_SOURCE_PATHS]
-  const manifest = new Map(V138_ROUTE_7_SOURCE_MANIFEST.map(item =>
-    [item.command, item] as const))
-  const output = Buffer.from("captured command output\n")
-  const empty = Buffer.alloc(0)
   const body: Record<string, any> = {
     schemaVersion: "v1.38-plan-262-62-source-completeness-review-v3",
     sourceBase9: oid, sourceA9: otherOid,
     sourceCustody: { tree: oid, parent: oid,
-      authorRun: "codex-plan-262-60-a9-review-fix-v1", paths,
+      authorRun: V138_PLAN_262_60_CORRECTION_RUN, paths,
       blobs: paths.map((item) => ({ path: item, mode: "100644",
         blobOid: oid, sha256: digest, byteLength: 1 })),
       deletionHistory: V138_REVIEW_V3_DELETION_PATHS.map(item => ({ path: item,
         deletionCommit: oid, deletionParent: otherOid, deletionTree: oid,
         authorRun: "codex-plan-262-60-a9-v1", priorBlobOid: otherOid,
         priorSha256: digest, priorByteLength: 1 })) },
-    commands: V138_REVIEW_V3_COMMANDS.map((command) => ({ command,
-      argv: buildV138ReviewV3CommandArgv(command, otherOid, oid), exitStatus: 0,
-      stdoutBase64: output.toString("base64"), stderrBase64: empty.toString("base64"),
-      stdoutSha256: `sha256:${createHash("sha256").update(output).digest("hex")}`,
-      stderrSha256: `sha256:${createHash("sha256").update(empty).digest("hex")}` })),
-    handlerObservations: V138_REVIEW_V3_COMMANDS.map((command) => {
-      const item = manifest.get(command)!
-      return { command, handler: item.handler, prerequisites: item.prerequisite,
-        destination: item.destination, effectClass: item.sideEffect,
-        disposition: item.terminalDisposition ?? "none" }
-    }),
+    routeManifest: V138_REVIEW_V3_ROUTE_MANIFEST,
     protectedHistory: { root: digest, protectedA8: otherOid,
       protectedRoots: Object.fromEntries(Array.from({ length: 8 }, (_, index) =>
         [`root-${index}`, digest])) },
@@ -146,21 +134,17 @@ it("strictly validates review-v3 nested structure and recomputed roots", () => {
   const value = reviewV3Fixture()
   expect(validateV138ReviewV3Document(value)).toEqual(value)
   const forged = structuredClone(value)
-  forged.commands[0].exitStatus = 64
+  forged.routeManifest[0].handler = "fabricated"
   const { reviewV3Root: _discarded, ...body } = forged
   forged.reviewV3Root = computeV138ReviewV3Root(body)
   expect(() => validateV138ReviewV3Document(forged))
-    .toThrow("V138_REVIEW_V3_COMMANDS_INVALID")
+    .toThrow("V138_REVIEW_V3_ROUTE_MANIFEST_INVALID")
 
   for (const mutate of [
     (candidate: Record<string, any>) => { candidate.sourceCustody.blobs[1] =
       structuredClone(candidate.sourceCustody.blobs[0]) },
-    (candidate: Record<string, any>) => { candidate.commands[1] =
-      structuredClone(candidate.commands[0]) },
-    (candidate: Record<string, any>) => { candidate.handlerObservations[1] =
-      structuredClone(candidate.handlerObservations[0]) },
-    (candidate: Record<string, any>) => { candidate.handlerObservations[0].command =
-      candidate.commands[1].command },
+    (candidate: Record<string, any>) => { candidate.routeManifest[1] =
+      structuredClone(candidate.routeManifest[0]) },
   ]) {
     const candidate = structuredClone(value)
     mutate(candidate)
@@ -173,12 +157,11 @@ it("strictly validates review-v3 nested structure and recomputed roots", () => {
 it("rejects review-v3 claims that differ from independently supplied observations", () => {
   const value = reviewV3Fixture()
   const observations = {
-    document: value, commands: value.commands,
-    handlerObservations: value.handlerObservations,
+    document: value, routeManifest: V138_REVIEW_V3_ROUTE_MANIFEST,
     sourceCustody: value.sourceCustody,
     publication: value.publication, protectedHistory: value.protectedHistory,
     priorAuthorizationBytes: value.priorAuthorizationBytes,
-    snapshots: value.snapshots, orderedEvents: value.orderedEvents,
+    snapshots: value.snapshots,
   }
   expect(checkV138ReviewV3ClaimsAgainstObservations(observations)).toEqual(value)
   expect(() => checkV138ReviewV3ClaimsAgainstObservations({ ...observations,
@@ -188,22 +171,13 @@ it("rejects review-v3 claims that differ from independently supplied observation
 
   for (const mutate of [
     (candidate: Record<string, any>) => {
-      const bytes = Buffer.from("different captured output\n")
-      candidate.commands[0].stdoutBase64 = bytes.toString("base64")
-      candidate.commands[0].stdoutSha256 =
-        `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+      candidate.routeManifest[0].prerequisite = "fabricated"
     },
     (candidate: Record<string, any>) => {
-      candidate.handlerObservations[0].prerequisites = "fabricated"
+      candidate.routeManifest[0].destination = "fabricated"
     },
     (candidate: Record<string, any>) => {
-      candidate.handlerObservations[0].destination = "fabricated"
-    },
-    (candidate: Record<string, any>) => {
-      candidate.handlerObservations[0].effectClass = "fabricated"
-    },
-    (candidate: Record<string, any>) => {
-      candidate.handlerObservations[0].disposition = "fabricated"
+      candidate.routeManifest[0].sideEffect = "fabricated"
     },
   ]) {
     const candidate = structuredClone(value)
@@ -249,6 +223,7 @@ it("aborts when a pinned detached review leaf is truncated", () => {
     "v1.38-plan-262-62-source-completeness-review-v3.json")
   const review = reviewV3Fixture()
   writeFileSync(target, canonicalReviewBytes(review)); chmodSync(target, 0o444)
+  expect(readV138DetachedFileOpenat(target).bytes.length).toBeGreaterThan(0)
   const child = spawn(process.execPath, ["-e",
     "const fs=require('node:fs');setTimeout(()=>{fs.chmodSync(process.argv[1],0o644);fs.truncateSync(process.argv[1],0);fs.chmodSync(process.argv[1],0o444);},40)",
     target], { stdio: "ignore" })
@@ -264,9 +239,27 @@ it("aborts when a pinned detached review leaf is truncated", () => {
   }
 })
 
+it("disposes native openat helpers and leaves no compile-failure temp paths", () => {
+  disposeV138DetachedOpenatHelper()
+  const helperPaths = () => readdirSync(tmpdir())
+    .filter(entry => entry.startsWith("v138-openat-")).sort()
+  const before = helperPaths()
+  const originalCompiler = process.env.CC
+  process.env.CC = path.join(tmpdir(), "missing-v138-compiler")
+  try {
+    expect(() => readV138DetachedFileOpenat(fileURLToPath(import.meta.url))).toThrow()
+  } finally {
+    if (originalCompiler === undefined) delete process.env.CC
+    else process.env.CC = originalCompiler
+    disposeV138DetachedOpenatHelper()
+  }
+  expect(activeV138DetachedOpenatHelperDirectory()).toBeNull()
+  expect(helperPaths()).toEqual(before)
+})
+
 it("derives the corrected A9 sole parent and rejects mutable protected history", () => {
   const run = execFileSync("git", ["log", "--first-parent", "--reverse",
-    "--format=%H", "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1"],
+    "--format=%H", `--grep=Plan-262-60-Author-Run: ${V138_PLAN_262_60_CORRECTION_RUN}`],
   { cwd: repoRoot, encoding: "utf8" }).trim().split("\n").filter(Boolean)
   expect(run.length).toBeGreaterThan(0)
   const sourceA9 = run.at(-1)!
@@ -292,6 +285,33 @@ it("derives the corrected A9 sole parent and rejects mutable protected history",
     writeFileSync(failurePath, `${JSON.stringify(failure)}\n`)
     expect(() => inspectV138ProtectedHistoryV9(fixtureRoot, sourceA9))
       .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_PROTECTED_HISTORY_INVALID")
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  }
+})
+
+it("rejects a reachable deletion object outside the source first-parent lineage", () => {
+  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-a9-alternate-lineage-"))
+  execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
+  const git = (...args: string[]) => execFileSync("git", args,
+    { cwd: fixtureRoot, encoding: "utf8" }).trim()
+  try {
+    git("config", "user.name", "Alternate lineage fixture")
+    git("config", "user.email", "alternate-lineage@example.invalid")
+    git("checkout", "--orphan", "alternate-custody")
+    git("add", "-A")
+    git("commit", "-m", "test: unrelated custody base")
+    const sourceBase9 = git("rev-parse", "HEAD")
+    for (const repoPath of V138_REVIEW_V3_SOURCE_PATHS) {
+      const target = path.join(fixtureRoot, repoPath)
+      writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
+    }
+    git("add", ...V138_REVIEW_V3_SOURCE_PATHS)
+    git("commit", "-m", `test: unrelated correction\n\nPlan-262-60-Author-Run: ${V138_PLAN_262_60_CORRECTION_RUN}`)
+    const sourceA9 = git("rev-parse", "HEAD")
+    expect(() => inspectV138SourceA9Custody(fixtureRoot,
+      { sourceBase9, sourceA9 }))
+      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_DELETION_HISTORY_INVALID")
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true })
   }

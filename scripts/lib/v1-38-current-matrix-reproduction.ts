@@ -131,6 +131,7 @@ import {
   deriveV138ToolIdentityRoot,
   deriveV138FormationAbsenceRoot,
   deriveV138ProtectedHistoryV5,
+  disposeV138DetachedOpenatHelper,
   registerV138Plan26222AuthoritativeBranchChecker,
   validateV138CanonicalParentChain,
   V138_PLAN_262_18_CANONICAL_PATHS,
@@ -15342,7 +15343,7 @@ export interface V138ReceiptCliDependencies {
   readonly calibrate?: typeof calibrateV138ParallelMatrix
   readonly executeMatrix?: typeof executeV138ParallelMatrix
   readonly patternCObservation?: V138Plan26257PatternCObservation
-  readonly observedRootOverrides?: V138Plan26257ObservedRootOverrides
+  readonly observationProviders?: V138Plan26257ObservationProviders
   readonly writeOutput?: (value: string) => void
 }
 
@@ -15485,9 +15486,9 @@ export const runReceiptCli = async (
     }
     const terminal = write ? writeV138Plan26257TerminalV1(repoRoot, target!,
       disposition as V138Plan26257Disposition, sourceA9, sourceB9,
-      dependencies.patternCObservation, dependencies.observedRootOverrides) :
+      dependencies.patternCObservation, dependencies.observationProviders) :
       checkV138Plan26257TerminalBranch(repoRoot, sourceA9, sourceB9,
-        dependencies.patternCObservation, dependencies.observedRootOverrides)
+        dependencies.patternCObservation, dependencies.observationProviders)
     output(`${canonical({ disposition: terminal.disposition,
       terminalRoot: terminal.terminalRoot })}\n`)
     return
@@ -20095,9 +20096,11 @@ export type V138Plan26257InterruptionProof = Readonly<{
 export type V138Plan26257PatternCObservation = Readonly<{
   mode: unknown; cwd: unknown; terminalAgentRegistry: unknown
 }>
-export type V138Plan26257ObservedRootOverrides = Readonly<Partial<Record<
-  "tool_identity_failed" | "protected_history_failed" |
-  "formation_absence_failed", Sha256>>>
+export type V138Plan26257ObservationProviders = Readonly<{
+  toolIdentity?: () => Sha256
+  protectedHistory?: () => Sha256
+  formationAbsence?: () => Sha256
+}>
 export type V138Plan26257PreObservationProof = Readonly<{
   schemaVersion: "v1.38-plan-262-57-pre-observation-proof-v1"
   disposition: "tool_identity_failed" | "protected_history_failed" |
@@ -20125,7 +20128,7 @@ export const deriveV138Plan26257PreObservationProof = (input: {
   anchor: V138Route7;
   disposition: V138Plan26257PreObservationProof["disposition"];
   patternCObservation?: V138Plan26257PatternCObservation | undefined
-  observedRootOverrides?: V138Plan26257ObservedRootOverrides | undefined
+  observationProviders?: V138Plan26257ObservationProviders | undefined
 }): V138Plan26257PreObservationProof => {
   const route = input.anchor
   let sealedRoot: Sha256 | null = null
@@ -20137,10 +20140,9 @@ export const deriveV138Plan26257PreObservationProof = (input: {
       route.seal.toolIdentity.expectedRoot !== sealedRoot) {
       throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
     }
-    observedRoot = input.observedRootOverrides?.tool_identity_failed ??
-      plan26257ObservedRoot(
+    observedRoot = plan26257ObservedRoot(
       "v1.38-tool-identity-observation-failure-v1",
-      deriveV138ToolIdentityRoot)
+      input.observationProviders?.toolIdentity ?? deriveV138ToolIdentityRoot)
   } else if (input.disposition === "protected_history_failed") {
     const history = route.protectedHistory
     if (history === null || typeof history !== "object" ||
@@ -20150,10 +20152,10 @@ export const deriveV138Plan26257PreObservationProof = (input: {
     }
     sealedRoot = (history as { protectedHistoryRoot: Sha256 })
       .protectedHistoryRoot
-    observedRoot = input.observedRootOverrides?.protected_history_failed ??
-      plan26257ObservedRoot(
+    observedRoot = plan26257ObservedRoot(
       "v1.38-protected-history-observation-failure-v1", () =>
-        route.protectedHistory.protectedHistoryRoot)
+        input.observationProviders?.protectedHistory?.() ??
+          route.protectedHistory.protectedHistoryRoot)
   } else if (input.disposition === "formation_absence_failed") {
     const formationRoot = route.protectedHistory.protectedRoots
       .formationAbsenceRoot
@@ -20161,10 +20163,10 @@ export const deriveV138Plan26257PreObservationProof = (input: {
       throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
     }
     sealedRoot = formationRoot
-    observedRoot = input.observedRootOverrides?.formation_absence_failed ??
-      plan26257ObservedRoot(
+    observedRoot = plan26257ObservedRoot(
       "v1.38-formation-absence-observation-failure-v1", () =>
-        deriveV138FormationAbsenceRoot(input.repoRoot, input.sourceA9))
+        input.observationProviders?.formationAbsence?.() ??
+          deriveV138FormationAbsenceRoot(input.repoRoot, input.sourceA9))
   } else {
     if (input.patternCObservation === undefined) {
       throw new TypeError("MATRIX_PLAN_262_30_PATTERN_C_OBSERVATION_REQUIRED")
@@ -20366,7 +20368,7 @@ const plan26257Evidence = (repoRoot: string, sourceA9: string,
   obstructionProof?: V138Plan26257ObstructionProof,
   interruptionProof?: V138Plan26257InterruptionProof,
   patternCObservation?: V138Plan26257PatternCObservation,
-  observedRootOverrides?: V138Plan26257ObservedRootOverrides,
+  observationProviders?: V138Plan26257ObservationProviders,
   claimedPreObservationProof?: V138Plan26257PreObservationProof) => {
   const disposition = checkV138Plan26257Disposition(dispositionValue)
   const preObservation = ["tool_identity_failed", "protected_history_failed",
@@ -20379,7 +20381,7 @@ const plan26257Evidence = (repoRoot: string, sourceA9: string,
   const preObservationProof = !preObservation ? undefined :
     deriveV138Plan26257PreObservationProof({ repoRoot, sourceA9, anchor: route,
       disposition: disposition as V138Plan26257PreObservationProof["disposition"],
-      patternCObservation, observedRootOverrides })
+      patternCObservation, observationProviders })
   if (claimedPreObservationProof !== undefined &&
     canonical(claimedPreObservationProof) !== canonical(preObservationProof)) {
     throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
@@ -20665,7 +20667,7 @@ export const writeV138Plan26257TerminalV1 = (repoRoot: string,
   targetPath: string, disposition: V138Plan26257Disposition,
   sourceA9: string, sourceB9: string,
   patternCObservation?: V138Plan26257PatternCObservation,
-  observedRootOverrides?: V138Plan26257ObservedRootOverrides) => {
+  observationProviders?: V138Plan26257ObservationProviders) => {
   checkV138Plan26257Disposition(disposition)
   assertV138Plan26257AuthorityOpen(repoRoot)
   const target = plan26257Path(repoRoot, targetPath, "terminal")
@@ -20691,7 +20693,7 @@ export const writeV138Plan26257TerminalV1 = (repoRoot: string,
     deriveV138Plan26257Obstruction(repoRoot) : undefined
   const evidence = interruptionEvidence ?? plan26257Evidence(repoRoot, sourceA9,
     sourceB9, effectiveDisposition, obstructionProof, interruptionProof,
-    patternCObservation, observedRootOverrides)
+    patternCObservation, observationProviders)
   const terminal = checkV138Plan26257TerminalV1(
     buildV138Plan26257TerminalV1({ disposition: effectiveDisposition,
       sourceA9, sourceB9,
@@ -20710,7 +20712,7 @@ export const writeV138Plan26257TerminalV1 = (repoRoot: string,
 export const checkV138Plan26257TerminalBranch = (repoRoot: string,
   sourceA9: string, sourceB9: string,
   patternCObservation?: V138Plan26257PatternCObservation,
-  observedRootOverrides?: V138Plan26257ObservedRootOverrides) => {
+  observationProviders?: V138Plan26257ObservationProviders) => {
   const terminal = exactRecord(readPlan26257(repoRoot, "terminal"),
     ["schemaVersion", "disposition", "sourceA9", "sourceB9",
       "authorizationRoot", "sealRoot", "artifactRoots",
@@ -20735,7 +20737,7 @@ export const checkV138Plan26257TerminalBranch = (repoRoot: string,
   return checkV138Plan26257TerminalV1(terminal,
     plan26257Evidence(repoRoot, sourceA9, sourceB9, disposition,
       obstructionProof, interruptionProof, patternCObservation,
-      observedRootOverrides, preObservationProof), disposition)
+      observationProviders, preObservationProof), disposition)
 }
 
 export const buildV138Plan26257PreStartObstructionV1 = (input: {
@@ -20965,8 +20967,12 @@ export const checkV138Plan26247SyntheticRoute = (input: {
 
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await dispatchV138CurrentMatrixDirectEntry(process.argv[2], {
-    runShard: async () => runShardCli(),
-    runReceipt: runReceiptCli,
-  })
+  try {
+    await dispatchV138CurrentMatrixDirectEntry(process.argv[2], {
+      runShard: async () => runShardCli(),
+      runReceipt: runReceiptCli,
+    })
+  } finally {
+    disposeV138DetachedOpenatHelper()
+  }
 }

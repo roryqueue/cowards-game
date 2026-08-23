@@ -51,6 +51,10 @@ export const V138_REVIEW_V3_DELETION_PATHS = Object.freeze([
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
 ] as const)
 
+/** One identity for the current Plan-262-60 corrective source run. */
+export const V138_PLAN_262_60_CORRECTION_RUN =
+  "codex-plan-262-60-a9-review-fix-v3" as const
+
 export const V138_REVIEW_V3_COMMANDS = Object.freeze([
   "--calibrate-parallel-v11-receipt",
   "--check-plan-262-57-pre-execution-readiness-v1",
@@ -64,24 +68,6 @@ export const V138_REVIEW_V3_COMMANDS = Object.freeze([
   "--write-plan-262-57-terminal-v1",
 ] as const)
 
-const V138_REVIEW_V3_HANDLER_BY_COMMAND = Object.freeze({
-  "--check-plan-262-57-pre-execution-readiness-v1":
-    "checkV138Plan26257PreExecutionReadinessV1",
-  "--resolve-plan-262-57-pre-start-v1":
-    "writeV138Plan26257PreStartObstructionV1",
-  "--check-plan-262-57-pre-start-obstruction-v1":
-    "checkV138Plan26257PreStartObstructionBranch",
-  "--write-execution-context-v11-receipt":
-    "writeV138ExecutionContextV11Receipt",
-  "--write-plan-262-57-route-start-v1": "writeV138Plan26257RouteStartV1",
-  "--write-headroom-preflight-v11-receipt":
-    "writeV138HostHeadroomPreflightV11Receipt",
-  "--calibrate-parallel-v11-receipt": "writeV138ParallelCalibrationV11Receipt",
-  "--write-authoritative-v12-receipt": "writeV138AuthoritativeMatrixV12Receipt",
-  "--write-plan-262-57-terminal-v1": "writeV138Plan26257TerminalV1",
-  "--check-plan-262-57-terminal-v1": "checkV138Plan26257TerminalBranch",
-} as const)
-
 export const V138_REVIEW_V3_SCHEMA =
   "v1.38-plan-262-62-source-completeness-review-v3" as const
 export const V138_REVIEW_V3_CANONICAL_PATH =
@@ -90,7 +76,7 @@ export const V138_REVIEW_V3_REPORT_PATH =
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md" as const
 
 const DOCUMENT_KEYS = ["schemaVersion", "sourceBase9", "sourceA9", "sourceCustody",
-  "commands", "handlerObservations", "protectedHistory", "chargeIds",
+  "routeManifest", "protectedHistory", "chargeIds",
   "priorAuthorizationBytes", "snapshots", "orderedEvents", "cleanup",
   "publication", "verdict", "identityClaims", "reviewV3Root"] as const
 const SOURCE_KEYS = ["tree", "parent", "authorRun", "paths", "blobs",
@@ -99,10 +85,6 @@ const BLOB_KEYS = ["path", "mode", "blobOid", "sha256", "byteLength"] as const
 const DELETION_KEYS = ["path", "deletionCommit", "deletionParent",
   "deletionTree", "authorRun", "priorBlobOid", "priorSha256",
   "priorByteLength"] as const
-const COMMAND_KEYS = ["command", "argv", "exitStatus", "stdoutBase64",
-  "stderrBase64", "stdoutSha256", "stderrSha256"] as const
-const OBSERVATION_KEYS = ["command", "handler", "prerequisites", "destination",
-  "effectClass", "disposition"] as const
 const PRIOR_KEYS = ["path", "commit", "blobOid", "sha256", "byteLength"] as const
 const SNAPSHOT_KEYS = ["name", "inventoryRoot", "pathCount"] as const
 const EVENT_KEYS = ["ordinal", "event", "path", "result"] as const
@@ -194,7 +176,8 @@ export const buildV138ReviewV3CommandArgv = (command: string,
     ["node", "route", command, ROUTE_START_PATH, "--mode",
       "gsd-pattern-c-inline-main", "--cwd", "/Users/roryquinlan/runtime/cowards-game",
       "--terminal-agent-registry-json", JSON.stringify({ schemaVersion:
-        "v1.38-plan-262-57-terminal-agent-registry-v1", activeExecutors: [] }),
+        "v1.38-plan-262-57-terminal-agent-registry-v1",
+        activeExecutorCount: 0, agents: [] }),
       ...source])
   if (command === "--write-headroom-preflight-v11-receipt") return Object.freeze(
     ["node", "route", command, PREFLIGHT_PATH, "--route-start", ROUTE_START_PATH,
@@ -217,25 +200,6 @@ export const buildV138ReviewV3CommandArgv = (command: string,
     TERMINAL_PATH, "--source-a9", sourceA9, "--source-b9", sourceB9])
 }
 
-const exactBase64 = (value: unknown, maxBytes = 16 * 1024 * 1024) => {
-  if (typeof value !== "string" || value.length > Math.ceil(maxBytes / 3) * 4)
-    return undefined
-  const bytes = Buffer.from(value, "base64")
-  return bytes.toString("base64") === value ? bytes : undefined
-}
-
-const exactCommandArgv = (command: string, argv: readonly unknown[]) => {
-  if (!argv.every(entry => boundedString(entry, 4096))) return false
-  const sourceAIndex = argv.indexOf("--source-a9")
-  const sourceBIndex = argv.indexOf("--source-b9")
-  const sourceA9 = argv[sourceAIndex + 1]
-  const sourceB9 = argv[sourceBIndex + 1]
-  if (!fullOid(sourceA9) || !fullOid(sourceB9)) return false
-  const expected = buildV138ReviewV3CommandArgv(command,
-    String(sourceA9), String(sourceB9))
-  return canonicalBytes(argv).equals(canonicalBytes(expected))
-}
-
 /** Strict pure validation only: this function never derives findings or performs I/O. */
 export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Document => {
   const document = record(value, DOCUMENT_KEYS, "V138_REVIEW_V3_DOCUMENT_INVALID")
@@ -243,7 +207,7 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
   if (document.schemaVersion !== V138_REVIEW_V3_SCHEMA || !fullOid(document.sourceBase9) ||
     !fullOid(document.sourceA9) || document.sourceBase9 === document.sourceA9 ||
     !fullOid(source.tree) || !fullOid(source.parent) ||
-    source.authorRun !== "codex-plan-262-60-a9-review-fix-v1" ||
+    source.authorRun !== V138_PLAN_262_60_CORRECTION_RUN ||
     !Array.isArray(source.paths) ||
     canonicalBytes([...source.paths].sort()).toString("utf8") !==
       canonicalBytes([...V138_REVIEW_V3_SOURCE_PATHS].sort()).toString("utf8") ||
@@ -283,54 +247,10 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
   if (!unique(deletionPaths) || canonicalBytes([...deletionPaths].sort())
     .toString("utf8") !== canonicalBytes([...V138_REVIEW_V3_DELETION_PATHS].sort())
     .toString("utf8")) fail("V138_REVIEW_V3_DELETION_HISTORY_INVALID")
-  if (!Array.isArray(document.commands) || document.commands.length !== 10 ||
-    !Array.isArray(document.handlerObservations) || document.handlerObservations.length !== 10) {
-    fail("V138_REVIEW_V3_COMMANDS_INVALID")
-  }
-  for (const item of document.commands) {
-    const command = record(item, COMMAND_KEYS, "V138_REVIEW_V3_COMMANDS_INVALID")
-    const stdout = exactBase64(command.stdoutBase64)
-    const stderr = exactBase64(command.stderrBase64)
-    if (!boundedString(command.command, 160) || !Array.isArray(command.argv) ||
-      command.exitStatus !== 0 || !exactCommandArgv(String(command.command),
-        command.argv) || stdout === undefined || stderr === undefined ||
-      command.stdoutSha256 !== sha256(stdout) ||
-      command.stderrSha256 !== sha256(stderr)) fail("V138_REVIEW_V3_COMMANDS_INVALID")
-  }
-  for (const item of document.handlerObservations) {
-    const observation = record(item, OBSERVATION_KEYS, "V138_REVIEW_V3_HANDLERS_INVALID")
-    if (![observation.command, observation.handler, observation.prerequisites,
-      observation.destination, observation.effectClass, observation.disposition]
-      .every((entry) => boundedString(entry, 1024))) fail("V138_REVIEW_V3_HANDLERS_INVALID")
-  }
-  const commandNames = document.commands.map((item) =>
-    (item as Record<string, unknown>).command)
-  const observationCommands = document.handlerObservations.map((item) =>
-    (item as Record<string, unknown>).command)
-  const observationHandlers = document.handlerObservations.map((item) =>
-    (item as Record<string, unknown>).handler)
-  const expectedCommands = [...V138_REVIEW_V3_COMMANDS].sort()
-  if (!unique(commandNames) || !unique(observationCommands) ||
-    !unique(observationHandlers) ||
-    canonicalBytes([...commandNames].sort()).toString("utf8") !==
-      canonicalBytes(expectedCommands).toString("utf8") ||
-    canonicalBytes([...observationCommands].sort()).toString("utf8") !==
-      canonicalBytes(expectedCommands).toString("utf8")) {
-    fail("V138_REVIEW_V3_COMMANDS_INVALID")
-  }
-  for (const item of document.handlerObservations) {
-    const observation = item as Record<string, unknown>
-    const manifest = V138_REVIEW_V3_ROUTE_MANIFEST.find(entry =>
-      entry.command === observation.command)
-    if (V138_REVIEW_V3_HANDLER_BY_COMMAND[
-      observation.command as keyof typeof V138_REVIEW_V3_HANDLER_BY_COMMAND
-    ] !== observation.handler || manifest === undefined ||
-      observation.handler !== manifest.handler ||
-      observation.prerequisites !== manifest.prerequisite ||
-      observation.destination !== manifest.destination ||
-      observation.effectClass !== manifest.sideEffect ||
-      observation.disposition !== (manifest.terminalDisposition ?? "none"))
-      fail("V138_REVIEW_V3_HANDLERS_INVALID")
+  if (!Array.isArray(document.routeManifest) ||
+    !canonicalBytes(document.routeManifest).equals(
+      canonicalBytes(V138_REVIEW_V3_ROUTE_MANIFEST))) {
+    fail("V138_REVIEW_V3_ROUTE_MANIFEST_INVALID")
   }
   const protectedHistory = record(document.protectedHistory,
     ["root", "protectedA8", "protectedRoots"], "V138_REVIEW_V3_HISTORY_INVALID")
@@ -391,27 +311,23 @@ export const validateV138ReviewV3Document = (value: unknown): V138ReviewV3Docume
 
 export const checkV138ReviewV3ClaimsAgainstObservations = (input: Readonly<{
   document: unknown
-  commands: unknown
-  handlerObservations: unknown
+  routeManifest: unknown
   sourceCustody: unknown
   publication: unknown
   protectedHistory: unknown
   priorAuthorizationBytes: unknown
   snapshots: unknown
-  orderedEvents: unknown
 }>) => {
   const document = validateV138ReviewV3Document(input.document)
   for (const [claimed, observed, code] of [
-    [document.commands, input.commands, "V138_REVIEW_V3_COMMAND_OBSERVATION_INVALID"],
-    [document.handlerObservations, input.handlerObservations,
-      "V138_REVIEW_V3_HANDLER_OBSERVATION_INVALID"],
+    [document.routeManifest, input.routeManifest,
+      "V138_REVIEW_V3_ROUTE_MANIFEST_OBSERVATION_INVALID"],
     [document.sourceCustody, input.sourceCustody, "V138_REVIEW_V3_SOURCE_OBSERVATION_INVALID"],
     [document.publication, input.publication, "V138_REVIEW_V3_PUBLICATION_OBSERVATION_INVALID"],
     [document.protectedHistory, input.protectedHistory, "V138_REVIEW_V3_HISTORY_OBSERVATION_INVALID"],
     [document.priorAuthorizationBytes, input.priorAuthorizationBytes,
       "V138_REVIEW_V3_HISTORY_OBSERVATION_INVALID"],
     [document.snapshots, input.snapshots, "V138_REVIEW_V3_SNAPSHOT_OBSERVATION_INVALID"],
-    [document.orderedEvents, input.orderedEvents, "V138_REVIEW_V3_EVENT_OBSERVATION_INVALID"],
   ] as const) {
     if (!canonicalBytes(claimed).equals(canonicalBytes(observed))) fail(code)
   }
@@ -565,16 +481,49 @@ int main(int argc, char **argv) {
 `
 
 let detachedOpenatHelper: string | undefined
+let detachedOpenatDirectory: string | undefined
+let detachedHooksInstalled = false
+
+export const disposeV138DetachedOpenatHelper = () => {
+  const directory = detachedOpenatDirectory
+  detachedOpenatHelper = undefined
+  detachedOpenatDirectory = undefined
+  if (directory !== undefined) {
+    try { rmSync(directory, { recursive: true, force: true }) } catch {}
+  }
+}
+
+export const activeV138DetachedOpenatHelperDirectory = () =>
+  detachedOpenatDirectory ?? null
+
+const installDetachedHelperFallbacks = () => {
+  if (detachedHooksInstalled) return
+  detachedHooksInstalled = true
+  process.once("exit", disposeV138DetachedOpenatHelper)
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      disposeV138DetachedOpenatHelper()
+      process.removeAllListeners(signal)
+      process.kill(process.pid, signal)
+    })
+  }
+}
+
 const detachedHelper = () => {
   if (detachedOpenatHelper !== undefined) return detachedOpenatHelper
   const directory = mkdtempSync(path.join(tmpdir(), "v138-openat-"))
   const target = path.join(directory, "read-detached")
-  execFileSync(process.env.CC ?? "cc", ["-x", "c", "-std=c11", "-O2",
-    "-o", target, "-"], { input: DETACHED_OPENAT_SOURCE, maxBuffer: 1024 * 1024 })
-  process.once("exit", () => {
+  try {
+    execFileSync(process.env.CC ?? "cc", ["-x", "c", "-std=c11", "-O2",
+      "-o", target, "-"], { input: DETACHED_OPENAT_SOURCE,
+      maxBuffer: 1024 * 1024 })
+  } catch (error) {
     try { rmSync(directory, { recursive: true, force: true }) } catch {}
-  })
+    throw error
+  }
+  detachedOpenatDirectory = directory
   detachedOpenatHelper = target
+  installDetachedHelperFallbacks()
   return target
 }
 
