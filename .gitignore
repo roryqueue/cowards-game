@@ -10,3 +10,7 @@ playwright-report
 .env.local
 postgres-data
 redis-data
+
+# GSD transient agent tracking (runtime-owned, never milestone evidence)
+.planning/agent-history.json
+.planning/current-agent-id.txt
