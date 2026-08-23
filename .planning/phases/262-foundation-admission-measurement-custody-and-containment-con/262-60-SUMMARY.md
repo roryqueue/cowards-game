@@ -5,7 +5,7 @@ subsystem: integrity
 tags: [review-v3, authorization-v9, deterministic-custody, dependency-lifecycle]
 requires:
   - phase: 262-54
-    provides: A7 production source and the terminal A8/reviewer-v2 historical branch
+    provides: A7 production source and the immutable A8/reviewer-v2 historical branch
 provides:
   - Strict validator-only review-v3 document, detached-file, and publication-lineage boundary
   - Production authorization-v9/seal-v9 and A9/B9 route contract at ordinal 7 with v11/v12 execution versions
@@ -94,26 +94,42 @@ status: complete
 - `0577eff6`, `1be4462a` — enforce exact review-v3 inventories and observation joins
 - `5ea8284b` — separate deleted reviewer-v2 historical custody from active analysis
 - `ea31c46f`, `70ce6d61` — cover corrected v9 contracts and full valid argv routing
+- `8e32ae56` — close review-v2 blockers with independent command/handler evidence,
+  a truthful six-path correction boundary, immutable tool identity, and race-safe
+  detached input reads
 
 ## Exact A9 Custody
 
-- **sourceBase9:** `81644e27132ce853afc43731c89c3bbf4941b7d0`
-- **sourceA9:** `70ce6d61a7275bfb23fe9094207c5c5dc92a0043`
-- **sourceA9 tree:** `553a2303b272f3ce3dd729975898a27e5ba2adaa`
-- **sourceA9 sole parent:** `ea31c46fbe8bc6020a87c7096c6a1f585ff23dd8`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1`
-- **run commits:** `caa014a32e6abd5db9eb31dd24459e6fa66fa672`, `82d8de096842b223afdc1c7238622eae70e9f6d5`, `0577eff62684abda1dd9701b1f86fc3282eec43a`, `5ea8284bbed85cd9fdbeb783656a43521d86198e`, `1be4462a0719bb0b055471d3ddbacfb5b5bc2af6`, `ea31c46fbe8bc6020a87c7096c6a1f585ff23dd8`, `70ce6d61a7275bfb23fe9094207c5c5dc92a0043`
+- **sourceBase9:** `f4d25b38ed1e23d1d575b3f0d0fd6bb587d848b0`
+- **sourceA9:** `8e32ae56a6a61a1c8553c769514b8e17f5833737`
+- **sourceA9 tree:** `f7b6adbbb2b6c62c0f3f6115297d0f340ed39dae`
+- **sourceA9 sole parent:** `f4d25b38ed1e23d1d575b3f0d0fd6bb587d848b0`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v2`
+- **run commits:** `8e32ae56a6a61a1c8553c769514b8e17f5833737`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `f43dbd87ea0660dbaf538415656c5ddce818c3fd` | `sha256:526f64998bee40ee1d089c22302e29ae83f7d3592c2ff7aeb9034d2a9cbb2521` | 74999 |
-| `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts` | deleted | — | — | 0 |
-| `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts` | deleted | — | — | 0 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `dfbc54ffd842ce200066aef521a40d16cec13410` | `sha256:6e0c23f6d33d9418baab9477c4d54949d9a1314cafac28c3670b7df9680bcb8e` | 33757 |
-| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `8ae40fa92e3c0b5ca8b06d19e0ddaa2ed5fd98dd` | `sha256:f901a576d0fb80fd8f625013d7740426fbdad84be1913b1edc38ae20b76af4f7` | 22368 |
-| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `9f742270d324d1eeb08ad3c0145cee96116f0fde` | `sha256:b2db4e7cd41db9a434995f2ae1224ee1f6cca9b29c5f99054261047c8e71c381` | 850084 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `480c13108d6f0e483fdafae28d159b63730f9caf` | `sha256:5b26cbadfcdd781394719cd68df6cafb4d62668c50ab734f992d0186ddb23109` | 19143 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `c198008a809a7c5891c31685230c37dc3e973264` | `sha256:f03b78606e4ac6d626035fe8fc69c983a5a684edb439b6b6fb0ceb549a2add1f` | 347546 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `b2c6954ffe563e417658e9999d2e29871b4621de` | `sha256:14f177a21fc7ae5b5fb3ca5bc5283edef621866f6b7e7ca2dfcad9a4129f5ca3` | 76434 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `6947740c0314d587882d861e099db99d781aa956` | `sha256:aa59e3a6e5eab8e65c8eca251f53ae8a7c9484aa5d40e3a39c24dcdffbaffb86` | 38235 |
+| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `cdbe8990cc2d73ce377083ff007dfa8460585559` | `sha256:ddcdd0e5ec9329b4abb74d9bf33438ee6eb2547dc00d1fea6393e3e4530e1607` | 23748 |
+| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `049a6e06addc19a44729b1bd8c1092c1ef489e18` | `sha256:8469a1c3b466e5d3a6ab37c7db345b43c9f53bcc9706a176f8e3c8791dfec406` | 847199 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `287ccce61933474c74d8099889f18856b335cd83` | `sha256:9e68a095dd0156c5b29706a4bbda339c719cbd2da791398e2ca8417cc6d3bae2` | 35359 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `5e44dba8d4ac354bf420fc2c09f1f37a83c9c9e8` | `sha256:43ae9c87f5413950f8ab5f8f26767c297edad62129a9e91574e51e3ef9b84c70` | 348396 |
+
+### Historical reviewer-v2 deletion custody
+
+The two reviewer-v2 paths are not members of the corrected source run. Their
+deletion is authenticated independently at commit
+`8c3cab21d7da0d59101480e17a973e0317646622` (sole parent
+`af0520618b5f236b5d0b7afbb9f0bcebbad9e951`, tree
+`4e35defcf4ee02927aa7b56ec09d19e5cc9981ae`, author-run
+`codex-plan-262-60-a9-v1`). Both paths have `D` status at that commit and are
+absent from sourceA9 and the working tree.
+
+| Deleted path | Prior blob | Prior SHA-256 | Prior bytes |
+|---|---|---|---:|
+| `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts` | `bd380a22c5833f0c4a8b1829da655121538c8913` | `sha256:f73633b12c71028a196a185f8d3a6084c4e4f0b23e72f472b07b41fd0993d41a` | 10285 |
+| `scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts` | `b257f7a1d4931c4d44584e63c9e69ab62b115292` | `sha256:52040127b905f5081ab8205fcceaaee5f26d04b0f301be5be0fc6dbb51836907` | 34992 |
 
 This custody record intentionally does not name, predict, or reserve this summary's carrier commit or blob. Plan 262-61 must derive that identity independently from Git.
 
@@ -147,7 +163,7 @@ This custody record intentionally does not name, predict, or reserve this summar
 
 ## Issues Encountered
 
-- The original dependency scanner treated every changed byte in the monolithic historical route modules as a new forbidden surface. The final analyzer authenticates the complete trailer-bound A9 run and then recognizes exactly its declared eight-path source boundary while retaining the protected historical-object checks.
+- The original dependency scanner treated every changed byte in the monolithic historical route modules as a new forbidden surface. The final analyzer authenticates the complete trailer-bound correction run as exactly six current source paths and verifies the two earlier deletions through their separate immutable history.
 
 ## Known Stubs
 
