@@ -97,24 +97,29 @@ status: complete
 - `8e32ae56` — close review-v2 blockers with independent command/handler evidence,
   a truthful six-path correction boundary, immutable tool identity, and race-safe
   detached input reads
+- `136aa20b`, `6972f62d`, `5dc66c4d`, `32eef5c1` — close review-v3 blockers with one
+  exported correction-run identifier, a static route manifest separated from
+  disposable synthetic-B9 execution proof, immutable expected tool identity
+  observed through provider seams, first-parent deletion lineage, and explicit
+  native-helper disposal
 
 ## Exact A9 Custody
 
-- **sourceBase9:** `f4d25b38ed1e23d1d575b3f0d0fd6bb587d848b0`
-- **sourceA9:** `8e32ae56a6a61a1c8553c769514b8e17f5833737`
-- **sourceA9 tree:** `f7b6adbbb2b6c62c0f3f6115297d0f340ed39dae`
-- **sourceA9 sole parent:** `f4d25b38ed1e23d1d575b3f0d0fd6bb587d848b0`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v2`
-- **run commits:** `8e32ae56a6a61a1c8553c769514b8e17f5833737`
+- **sourceBase9:** `2296a5812f1bcad45fe32165534668eeb79caf46`
+- **sourceA9:** `32eef5c147dc34b1a75c936ed7a0148f8e5d748e`
+- **sourceA9 tree:** `5fc509d3454b32b658a5369c88f88b837499c57f`
+- **sourceA9 sole parent:** `5dc66c4dbc696cd8ec60d79ddb3f4dde2c3932a1`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v3`
+- **run commits:** `136aa20bcd7ee84aee8a11b0f19a706bacfae238`, `6972f62d085a87fbc1106e0327c92b0212b12ece`, `5dc66c4dbc696cd8ec60d79ddb3f4dde2c3932a1`, `32eef5c147dc34b1a75c936ed7a0148f8e5d748e`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `b2c6954ffe563e417658e9999d2e29871b4621de` | `sha256:14f177a21fc7ae5b5fb3ca5bc5283edef621866f6b7e7ca2dfcad9a4129f5ca3` | 76434 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `6947740c0314d587882d861e099db99d781aa956` | `sha256:aa59e3a6e5eab8e65c8eca251f53ae8a7c9484aa5d40e3a39c24dcdffbaffb86` | 38235 |
-| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `cdbe8990cc2d73ce377083ff007dfa8460585559` | `sha256:ddcdd0e5ec9329b4abb74d9bf33438ee6eb2547dc00d1fea6393e3e4530e1607` | 23748 |
-| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `049a6e06addc19a44729b1bd8c1092c1ef489e18` | `sha256:8469a1c3b466e5d3a6ab37c7db345b43c9f53bcc9706a176f8e3c8791dfec406` | 847199 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `287ccce61933474c74d8099889f18856b335cd83` | `sha256:9e68a095dd0156c5b29706a4bbda339c719cbd2da791398e2ca8417cc6d3bae2` | 35359 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `5e44dba8d4ac354bf420fc2c09f1f37a83c9c9e8` | `sha256:43ae9c87f5413950f8ab5f8f26767c297edad62129a9e91574e51e3ef9b84c70` | 348396 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `5fb5253de771f6a01fe5dcae85cf67f5c4c0d68f` | `sha256:d81bf09f84b2a4102cf30f25b8ccbcf4e0bec8415ce0f449f76d50f1d1c33ee0` | 77572 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `66c4e2a4b6a50ef6c74072d325012b2eb0b97061` | `sha256:b302dbd70fabbe8c31b2134d0f8f6e4530b4661291f00fe3b5032cb0da5f2031` | 38861 |
+| `scripts/evaluate-v1-38-successor-source-complete.test.ts` | `100644` | `c6eee9e67372c7141be9011be3a1b4f187723e57` | `sha256:0712aabf90d0fe08ac3d36174533df30ce78ceaec99a273473e925214bb1fe07` | 23111 |
+| `scripts/lib/v1-38-current-matrix-reproduction.ts` | `100644` | `00ca2c76839705209a58c0dfcfa8b7b5c34676e3` | `sha256:041239abca9ac6c276b055c26949e2d8a2c17582e95a87eea0e9a9f64145166f` | 847157 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `27d6b1d5b6aad703f700130b22c960fe9bf72076` | `sha256:dd2db7b86057fae2160bfb4a5d50783772158b0a92df8686daedfc70db22caa1` | 31739 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `484bc24e722e49949fd9238d7bf79c1020e1eddd` | `sha256:aa5a4aa43c88b9daf6b0739338ee7bc0ca2bc57ca779e89a5146f4f622eda24c` | 347677 |
 
 ### Historical reviewer-v2 deletion custody
 
