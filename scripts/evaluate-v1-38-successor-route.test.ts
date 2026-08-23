@@ -365,7 +365,8 @@ it("rejects a copied V3 trailer followed by forged carriers and correction copie
   { cwd: repoRoot, encoding: "utf8" }).trim()
   const v3Tip = revision("codex-plan-262-60-a9-review-fix-v3")
   const corrections = ["codex-plan-262-60-a9-review-fix-v4",
-    "codex-plan-262-60-a9-review-fix-v5", V138_PLAN_262_60_CORRECTION_RUN]
+    "codex-plan-262-60-a9-review-fix-v5",
+    "codex-plan-262-60-a9-review-fix-v6", V138_PLAN_262_60_CORRECTION_RUN]
     .map(revision)
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-layer-full-attack-"))
   const git = (...args: string[]) => execFileSync("git", args,
@@ -408,7 +409,7 @@ it("rejects a copied V3 trailer followed by forged carriers and correction copie
 })
 
 it("accepts only the exact pinned predecessor chain and carrier objects", () => {
-  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers[2][0]
+  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers.at(-1)![0]
   const result = inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)
   expect(result.priorCorrectionLayers.map(layer => layer.sourceA9)).toEqual(
     V138_PLAN_262_60_PREDECESSOR_MANIFEST.layers.map(layer => layer.sourceA9))
@@ -417,7 +418,7 @@ it("accepts only the exact pinned predecessor chain and carrier objects", () => 
 })
 
 it("rejects mutations of every predecessor manifest identity field", () => {
-  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers[2][0]
+  const sourceBase9 = V138_PLAN_262_60_PREDECESSOR_MANIFEST.carriers.at(-1)![0]
   const mutations: Array<(manifest: any) => void> = [
     value => { value.layers[0].authorRun += "-forged" },
     value => { value.layers[0].sourceBase9 = "0".repeat(40) },
@@ -446,6 +447,34 @@ it("rejects mutations of every predecessor manifest identity field", () => {
       candidate)).toThrow()
   }
 }, 30_000)
+
+it("deep-freezes every exported manifest category without exposing production", () => {
+  const projection: any = V138_PLAN_262_60_PREDECESSOR_MANIFEST
+  const sourceBase9 = projection.carriers.at(-1)[0]
+  const before = inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)
+  const assertDeepFrozen = (value: unknown): void => {
+    if (value === null || typeof value !== "object") return
+    expect(Object.isFrozen(value)).toBe(true)
+    for (const nested of Object.values(value)) assertDeepFrozen(nested)
+  }
+  assertDeepFrozen(projection)
+  const attempts = [
+    () => { projection.layers = [] },
+    () => { projection.layers.push({}) },
+    () => { projection.layers[0].authorRun = "forged" },
+    () => { projection.layers[0].commits.push([]) },
+    () => { projection.layers[0].commits[0][0] = "0".repeat(40) },
+    () => { projection.layers[0].commits[0][3].push("package.json") },
+    () => { projection.layers[0].blobs.push([]) },
+    () => { projection.layers[0].blobs[0][0] = "package.json" },
+    () => { projection.carriers.push([]) },
+    () => { projection.carriers[0][0] = "0".repeat(40) },
+    () => { projection.carriers[0][3].push([]) },
+    () => { projection.carriers[0][3][0][0] = "0".repeat(40) },
+  ]
+  for (const attempt of attempts) expect(attempt).toThrow(TypeError)
+  expect(inspectV138PinnedPredecessorManifest(repoRoot, sourceBase9)).toEqual(before)
+}, 15_000)
 
 const sha256Zero = `sha256:${"0".repeat(64)}`
 const mutableClone = (value: unknown): Record<string, any> =>

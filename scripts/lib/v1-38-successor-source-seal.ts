@@ -5809,7 +5809,16 @@ const V138_PLAN_262_60_GAP_PATHS = Object.freeze([
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-REVIEW-FIX.md",
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-60-SUMMARY.md",
 ] as const)
-export const V138_PLAN_262_60_PREDECESSOR_MANIFEST = Object.freeze({
+const deepFreezeV138Manifest = <T>(value: T): T => {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      deepFreezeV138Manifest(nested)
+    }
+    Object.freeze(value)
+  }
+  return value
+}
+const V138_PLAN_262_60_PRIVATE_PREDECESSOR_MANIFEST = deepFreezeV138Manifest({
   layers: Object.freeze([
     { authorRun: "codex-plan-262-60-a9-review-fix-v3", sourceBase9: "2296a5812f1bcad45fe32165534668eeb79caf46", sourceA9: "32eef5c147dc34b1a75c936ed7a0148f8e5d748e",
       commits: [
@@ -5831,13 +5840,20 @@ export const V138_PLAN_262_60_PREDECESSOR_MANIFEST = Object.freeze({
     { authorRun: "codex-plan-262-60-a9-review-fix-v5", sourceBase9: "bff3a3caa90d8bd6e629c8d40599e953ed1a020d", sourceA9: "5bf7839123f9a52b9e16edbc6ce70206c5a4bd54",
       commits: [["5bf7839123f9a52b9e16edbc6ce70206c5a4bd54","bff3a3caa90d8bd6e629c8d40599e953ed1a020d","e3a87ea873058bd19d3a2415560af986f76c786a",V138_PLAN_262_60_V4_SOURCE_PATHS]],
       blobs: [["scripts/check-v1-38-dependency-revision-boundaries.ts","100644","8e15c5ca9c5b11f95eda16aab1aa45f395328406","sha256:acb4af7286b41a9a56d1681b567abcf8fc7393ff2704fffd90d8f86cc92e17e5",79068],["scripts/evaluate-v1-38-successor-route.test.ts","100644","e4f126f5188e0785fe5ad18a7d15c51681409165","sha256:b3b12536aa4df68fca3cf117f49c2991d9b4d620b13ab2683aab5fcd6a136fa4",43981],["scripts/lib/v1-38-source-completeness-review-v3.ts","100644","5da8e0b6a4da3aa6ec473aecfd25dbc25e1cb35c","sha256:24e9c2ea1ab1f0cc9df397fd8d90cd4579bd2f5561b126c92edce3965fc30f4e",32086],["scripts/lib/v1-38-successor-source-seal.ts","100644","6222c0983499d5ceb269692f5a5b82da1026ea0f","sha256:bf69c4fb0957863eda2de1183ff967e14ff62e922c5e3e9a26a30add3318b3b9",352604]] },
+    { authorRun: "codex-plan-262-60-a9-review-fix-v6", sourceBase9: "b1352f7e3c5558ff8056f870471f1e1ed6f48fd1", sourceA9: "704eed00eb51098e3b363380c1e1033df0e7c207",
+      commits: [["704eed00eb51098e3b363380c1e1033df0e7c207","b1352f7e3c5558ff8056f870471f1e1ed6f48fd1","5de5911b2b483d4dd225e9492a0731e2a54e685b",V138_PLAN_262_60_V4_SOURCE_PATHS]],
+      blobs: [["scripts/check-v1-38-dependency-revision-boundaries.ts","100644","41849a9c5b0e104ff3e49d838c18e5a5a91acdce","sha256:5f95e8dc70eb6adb7b9f7e929aadce1f6ff54c1a6b54ba2e3a2882231ae11904",79306],["scripts/evaluate-v1-38-successor-route.test.ts","100644","edb6e652e632044e21c4f555f303ac194573c44e","sha256:110647c196324716e6ba965565fc0ff89fd810c89c08bbb6468c5c22a6340c80",45235],["scripts/lib/v1-38-source-completeness-review-v3.ts","100644","d23d59fed14eb7941b4619938b3651614cab2c9a","sha256:6a6fb878afebaba17f59fed17c432150ced1f39c557948d6170e83d678684ec7",32086],["scripts/lib/v1-38-successor-source-seal.ts","100644","9590d80cf00441be0e86baafedd8d49db961da7f","sha256:5b3b713313aba8aed0d85286294df97a24bd8cd254b5463f316134358bdc18ca",360184]] },
   ]),
   carriers: Object.freeze([
     ["7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0","32eef5c147dc34b1a75c936ed7a0148f8e5d748e","7e33720ec47db57d082fe0831405bbf14185c3a2",[["87e5ab27f45b709c9f614aac3c6d48b48a597578","sha256:19d4c0913a0055a6ee8e2faed788663207a863708e6269d69b8890d5318f59f9",6692],["c2cae20db14294b93fc2b0956dd7b7974d66e380","sha256:eaf02cb90a81d399521f8f73cbd7766c8121cdeda8d7e5865a6c4276d256ce7b",11355]]],
     ["bff3a3caa90d8bd6e629c8d40599e953ed1a020d","c5a08bd50eec0f8c937b42bd07fd9009e7b88c17","3967d0f29d2efd67b831a7b3df72e23b889ccbb7",[["844d7c826a96d80fe5be724ffe9ba22a63db4de4","sha256:e8895ee8da513d0989dca26ab8f458fabf3bc9ae1d142e695b5d7fb696d48363",3513],["5287f3dcee175622bf0365f55f531128c58c0b5a","sha256:a2a6e4fd2b6ae81cca47195a2738bde77e7ec5e87a00a778e33b852558ccd6f8",11347]]],
     ["b1352f7e3c5558ff8056f870471f1e1ed6f48fd1","5bf7839123f9a52b9e16edbc6ce70206c5a4bd54","da0f169f3025651552b63ccdadec7cf406fcec1d",[["851b53870acdd22b81e234c9666c9707ce73cbf3","sha256:c749c16ba339903d6367779797d40959f2a106f2d14fb3b5d13c643b5b537f16",3604],["f4902d3cedf8826ff7b617c5465ccfb59d680efc","sha256:ded2a5ec98c28059edf09aedf04dca31cc4903c6b21d4f2cd2134f831e6fe344",11769]]],
+    ["f42afce01835f69b087d187062778d77a87360aa","704eed00eb51098e3b363380c1e1033df0e7c207","4df3798f29b90f64a368676c227486d117a4c69b",[["18f146cafd5bc1c0426bb534032f674c581f0647","sha256:bd2ab0f30722bb3ac81e3813af1c49567f8c4fed58fe02ae7517c5f88dc8f6f6",3637],["a35ded200ffdb06c7bfbb247f47ac34e44450a24","sha256:b32280ac79e1b28c3ece96abde72d5734a91df0c661f86e6a5e8de16552d29c7",12017]]],
   ]),
 })
+export const V138_PLAN_262_60_PREDECESSOR_MANIFEST = deepFreezeV138Manifest(
+  JSON.parse(JSON.stringify(V138_PLAN_262_60_PRIVATE_PREDECESSOR_MANIFEST)) as
+    typeof V138_PLAN_262_60_PRIVATE_PREDECESSOR_MANIFEST)
 export const V138_PLAN_262_60_DELETION_PATHS = Object.freeze([
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
@@ -5848,8 +5864,10 @@ const V138_PLAN_262_60_DELETION_COMMIT =
   "8c3cab21d7da0d59101480e17a973e0317646622" as const
 
 export const inspectV138PinnedPredecessorManifest = (repoRoot: string,
-  sourceBase9Value: string, manifest: typeof V138_PLAN_262_60_PREDECESSOR_MANIFEST =
-    V138_PLAN_262_60_PREDECESSOR_MANIFEST) => {
+  sourceBase9Value: string, suppliedManifest?:
+    typeof V138_PLAN_262_60_PREDECESSOR_MANIFEST) => {
+  const manifest = suppliedManifest ??
+    V138_PLAN_262_60_PRIVATE_PREDECESSOR_MANIFEST
   const sourceBase9 = fullCommit(repoRoot, sourceBase9Value)
   const inspectLayer = (layer: (typeof manifest.layers)[number]) => {
     const layerBase = fullCommit(repoRoot, layer.sourceBase9)
