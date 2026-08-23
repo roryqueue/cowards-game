@@ -8523,8 +8523,4 @@ const runCli = async (): Promise<void> => {
   }
 }
 
-try {
-  await runCli()
-} finally {
-  disposeV138DetachedOpenatHelper()
-}
+void runCli().finally(disposeV138DetachedOpenatHelper)

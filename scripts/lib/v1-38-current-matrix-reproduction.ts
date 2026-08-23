@@ -161,7 +161,7 @@ import {
   type V138SuccessorSourceSeal,
   type V138SuccessorSealV7ObservationException,
 } from "./v1-38-successor-source-seal.js"
-import { disposeV138DetachedOpenatHelper, V138_REVIEW_V3_ROUTE_MANIFEST } from
+import { V138_REVIEW_V3_ROUTE_MANIFEST } from
   "./v1-38-source-completeness-review-v3.js"
 
 const FIXTURE_PURPOSE = "regression_throughput_only" as const
@@ -20966,12 +20966,8 @@ export const checkV138Plan26247SyntheticRoute = (input: {
 
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  try {
-    await dispatchV138CurrentMatrixDirectEntry(process.argv[2], {
-      runShard: async () => runShardCli(),
-      runReceipt: runReceiptCli,
-    })
-  } finally {
-    disposeV138DetachedOpenatHelper()
-  }
+  await dispatchV138CurrentMatrixDirectEntry(process.argv[2], {
+    runShard: async () => runShardCli(),
+    runReceipt: runReceiptCli,
+  })
 }
