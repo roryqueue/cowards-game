@@ -111,30 +111,33 @@ status: complete
 - `704eed00` — pin the immutable V3/V4/V5 commit, tree, parent, path, blob, and
   exact documentation-carrier identities; reject copied trailers, correction
   copies, carrier substitutions, and every manifest-field mutation
+- `c60146dc` — move predecessor custody to a private recursively frozen anchor,
+  export only a separately cloned/frozen projection, and pin exact V6 source
+  plus its `f42afce0` documentation carrier before validating V7
 
 ## Exact A9 Custody
 
-- **sourceBase9:** `b1352f7e3c5558ff8056f870471f1e1ed6f48fd1`
-- **sourceA9:** `704eed00eb51098e3b363380c1e1033df0e7c207`
-- **sourceA9 tree:** `5de5911b2b483d4dd225e9492a0731e2a54e685b`
-- **sourceA9 sole parent:** `b1352f7e3c5558ff8056f870471f1e1ed6f48fd1`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v6`
-- **run commits:** `704eed00eb51098e3b363380c1e1033df0e7c207`
+- **sourceBase9:** `f42afce01835f69b087d187062778d77a87360aa`
+- **sourceA9:** `c60146dcf6278151997bce914b11174faab9a045`
+- **sourceA9 tree:** `aaeaa8d6216480c65cd44f1820edae0a5073743d`
+- **sourceA9 sole parent:** `f42afce01835f69b087d187062778d77a87360aa`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v7`
+- **run commits:** `c60146dcf6278151997bce914b11174faab9a045`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `41849a9c5b0e104ff3e49d838c18e5a5a91acdce` | `sha256:5f95e8dc70eb6adb7b9f7e929aadce1f6ff54c1a6b54ba2e3a2882231ae11904` | 79306 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `edb6e652e632044e21c4f555f303ac194573c44e` | `sha256:110647c196324716e6ba965565fc0ff89fd810c89c08bbb6468c5c22a6340c80` | 45235 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `d23d59fed14eb7941b4619938b3651614cab2c9a` | `sha256:6a6fb878afebaba17f59fed17c432150ced1f39c557948d6170e83d678684ec7` | 32086 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `9590d80cf00441be0e86baafedd8d49db961da7f` | `sha256:5b3b713313aba8aed0d85286294df97a24bd8cd254b5463f316134358bdc18ca` | 360184 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `4912a81a745982d35b971a6cbee30091aeec5c69` | `sha256:5947345ad94101741f9719f6175fab38fc14713144f79582c09e38c517432efb` | 79544 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `05f4680bd525ae2924b80bc3688c63dd1039333b` | `sha256:fa37daea26021df262affbd9956ad0f20c7e751034598ef861d16c7d5b8cacce` | 46688 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `76f4fa121714f94430b4b6ead5642014ff2e6544` | `sha256:76d2d1886a28d182862ad3bae1fed1036b014a108a1cfcdb862a750340af91d8` | 32086 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `9da3510d7c5d9d41dfe4a11059d9d60d78bd06dc` | `sha256:99f25cf1a16c642ec4c8ecae33d6a8a2fb0ebf1d3e2669e0e309284c3ef980e9` | 362257 |
 
-The current V6 layer is accepted only after production and analyzer validate a
-committed immutable manifest for every V3, V4, and V5 source base, ordered
+The current V7 layer is accepted only after production and analyzer validate a
+private recursively frozen manifest for every V3, V4, V5, and V6 source base, ordered
 commit OID, tip, tree, sole parent, trailer, per-commit and aggregate path set,
-and final mode/blob/SHA/length tuple. All three documentation carriers are
+and final mode/blob/SHA/length tuple. All four documentation carriers are
 separately pinned by exact commit, tree, sole parent, two-path inventory, and
-both blob identities. A copied trailer, inserted or cherry-picked correction,
-or substituted carrier cannot become an authenticated predecessor.
+both blob identities. External consumers receive only a separately deep-cloned
+and recursively frozen projection; they cannot mutate production custody.
 
 ### Historical reviewer-v2 deletion custody
 
