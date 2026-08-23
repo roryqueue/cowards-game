@@ -40,8 +40,6 @@ const unique = (values: readonly unknown[]) =>
 export const V138_REVIEW_V3_SOURCE_PATHS = Object.freeze([
   "scripts/check-v1-38-dependency-revision-boundaries.ts",
   "scripts/evaluate-v1-38-successor-route.test.ts",
-  "scripts/evaluate-v1-38-successor-source-complete.test.ts",
-  "scripts/lib/v1-38-current-matrix-reproduction.ts",
   "scripts/lib/v1-38-source-completeness-review-v3.ts",
   "scripts/lib/v1-38-successor-source-seal.ts",
 ] as const)
@@ -53,7 +51,7 @@ export const V138_REVIEW_V3_DELETION_PATHS = Object.freeze([
 
 /** One identity for the current Plan-262-60 corrective source run. */
 export const V138_PLAN_262_60_CORRECTION_RUN =
-  "codex-plan-262-60-a9-review-fix-v3" as const
+  "codex-plan-262-60-a9-review-fix-v4" as const
 
 export const V138_REVIEW_V3_COMMANDS = Object.freeze([
   "--calibrate-parallel-v11-receipt",
@@ -483,11 +481,23 @@ int main(int argc, char **argv) {
 let detachedOpenatHelper: string | undefined
 let detachedOpenatDirectory: string | undefined
 let detachedHooksInstalled = false
+const detachedSignalHandlers = new Map<NodeJS.Signals, () => void>()
 
-export const disposeV138DetachedOpenatHelper = () => {
+const uninstallDetachedHelperFallbacks = () => {
+  process.off("exit", disposeV138DetachedOpenatHelper)
+  process.off("beforeExit", disposeV138DetachedOpenatHelper)
+  for (const [signal, handler] of detachedSignalHandlers) {
+    process.off(signal, handler)
+  }
+  detachedSignalHandlers.clear()
+  detachedHooksInstalled = false
+}
+
+export function disposeV138DetachedOpenatHelper() {
   const directory = detachedOpenatDirectory
   detachedOpenatHelper = undefined
   detachedOpenatDirectory = undefined
+  uninstallDetachedHelperFallbacks()
   if (directory !== undefined) {
     try { rmSync(directory, { recursive: true, force: true }) } catch {}
   }
@@ -498,15 +508,16 @@ export const activeV138DetachedOpenatHelperDirectory = () =>
 
 const installDetachedHelperFallbacks = () => {
   if (detachedHooksInstalled) return
-    detachedHooksInstalled = true
-    process.once("exit", disposeV138DetachedOpenatHelper)
-    process.once("beforeExit", disposeV138DetachedOpenatHelper)
+  detachedHooksInstalled = true
+  process.once("exit", disposeV138DetachedOpenatHelper)
+  process.once("beforeExit", disposeV138DetachedOpenatHelper)
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => {
+    const handler = () => {
       disposeV138DetachedOpenatHelper()
-      process.removeAllListeners(signal)
       process.kill(process.pid, signal)
-    })
+    }
+    detachedSignalHandlers.set(signal, handler)
+    process.once(signal, handler)
   }
 }
 

@@ -5785,13 +5785,19 @@ const checkV138Plan26256ReviewV3Input = (repoRoot: string,
   return Object.freeze(candidate as unknown as V138Plan26256ReviewV3Input)
 }
 
-export const V138_PLAN_262_60_SOURCE_PATHS = Object.freeze([
+export const V138_PLAN_262_60_V3_SOURCE_PATHS = Object.freeze([
   "scripts/lib/v1-38-source-completeness-review-v3.ts",
   "scripts/lib/v1-38-successor-source-seal.ts",
   "scripts/lib/v1-38-current-matrix-reproduction.ts",
   "scripts/evaluate-v1-38-successor-route.test.ts",
   "scripts/evaluate-v1-38-successor-source-complete.test.ts",
   "scripts/check-v1-38-dependency-revision-boundaries.ts",
+] as const)
+export const V138_PLAN_262_60_SOURCE_PATHS = Object.freeze([
+  "scripts/check-v1-38-dependency-revision-boundaries.ts",
+  "scripts/lib/v1-38-source-completeness-review-v3.ts",
+  "scripts/lib/v1-38-successor-source-seal.ts",
+  "scripts/evaluate-v1-38-successor-route.test.ts",
 ] as const)
 export const V138_PLAN_262_60_DELETION_PATHS = Object.freeze([
   "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
@@ -5829,6 +5835,39 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
     canonical(sorted(aggregate)) !== canonical(sorted(
       V138_PLAN_262_60_SOURCE_PATHS))) {
     fail("V138_PLAN_262_56_AUTHORIZATION_V9_CUSTODY_INVALID")
+  }
+  const priorRun = "codex-plan-262-60-a9-review-fix-v3" as const
+  const priorCommits = gitText(repoRoot, ["log", "--first-parent", "--reverse",
+    "--format=%H", sourceBase9,
+    `--grep=Plan-262-60-Author-Run: ${priorRun}`])
+    .split("\n").filter(Boolean)
+  const priorAggregate = new Set<string>()
+  const priorSourceA9 = priorCommits.at(-1)
+  const priorSourceBase9 = priorCommits.length === 0 ? undefined : gitText(repoRoot,
+    ["show", "-s", "--format=%P", priorCommits[0]!])
+  let priorExpectedParent = priorSourceBase9
+  for (const commit of priorCommits) {
+    const parents = gitText(repoRoot, ["show", "-s", "--format=%P", commit])
+      .split(" ").filter(Boolean)
+    const changed = sorted(gitText(repoRoot, ["diff-tree", "--no-commit-id",
+      "--name-only", "-r", "--no-renames", commit]).split("\n").filter(Boolean))
+    const trailer = gitText(repoRoot, ["log", "-1",
+      "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit])
+    if (parents.length !== 1 || parents[0] !== priorExpectedParent ||
+      changed.length === 0 || changed.some(repoPath =>
+        !V138_PLAN_262_60_V3_SOURCE_PATHS.includes(repoPath as never)) ||
+      trailer !== priorRun) {
+      fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
+    }
+    changed.forEach(repoPath => priorAggregate.add(repoPath))
+    priorExpectedParent = commit
+  }
+  if (priorSourceA9 === undefined || priorSourceBase9 === undefined ||
+    canonical(sorted(priorAggregate)) !== canonical(sorted(
+      V138_PLAN_262_60_V3_SOURCE_PATHS)) ||
+    gitStatus(repoRoot, ["merge-base", "--is-ancestor", priorSourceA9,
+      sourceBase9]) !== 0) {
+    fail("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
   }
   const sourceA9Blobs = Object.freeze(V138_PLAN_262_60_SOURCE_PATHS.map(repoPath => {
     const entry = gitText(repoRoot, ["ls-tree", sourceA9, "--", repoPath])
@@ -5873,6 +5912,9 @@ export const inspectV138SourceA9Custody = (repoRoot: string,
         priorByteLength: priorBytes.byteLength })
     }))
   return Object.freeze({ sourceBase9, sourceA9,
+    priorCorrectionLayer: Object.freeze({ authorRun: priorRun,
+      sourceBase9: priorSourceBase9, sourceA9: priorSourceA9,
+      paths: V138_PLAN_262_60_V3_SOURCE_PATHS }),
     sourceA9Tree: gitText(repoRoot, ["rev-parse", `${sourceA9}^{tree}`]),
     sourceA9Parent: expectedParent === sourceA9 && commits.length > 1 ?
       commits.at(-2)! : sourceBase9,

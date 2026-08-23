@@ -1337,10 +1337,16 @@ export const checkV138DependencyRevisionBoundaries = (
     "scripts/evaluate-v1-38-successor-source-complete.test.ts",
     "scripts/check-v1-38-dependency-revision-boundaries.ts",
   ].sort()
-  const correctedSourceBoundary = implementationBoundary.filter(repoPath =>
+  const priorCorrectedSourceBoundary = implementationBoundary.filter(repoPath =>
     !repoPath.includes("source-completeness-review-v2"))
+  const correctedSourceBoundary = [
+    "scripts/check-v1-38-dependency-revision-boundaries.ts",
+    "scripts/evaluate-v1-38-successor-route.test.ts",
+    "scripts/lib/v1-38-source-completeness-review-v3.ts",
+    "scripts/lib/v1-38-successor-source-seal.ts",
+  ].sort()
   const deletedSourceBoundary = implementationBoundary.filter(repoPath =>
-    !correctedSourceBoundary.includes(repoPath))
+    !priorCorrectedSourceBoundary.includes(repoPath))
   const historicalDeletion = {
     commit: "8c3cab21d7da0d59101480e17a973e0317646622",
     parent: "af0520618b5f236b5d0b7afbb9f0bcebbad9e951",
@@ -1402,6 +1408,7 @@ export const checkV138DependencyRevisionBoundaries = (
       git(repoRoot, ["ls-tree", "--name-only", a9, "--", repoPath]).trim() === "" &&
       !repositoryFilePresent(repoRoot, path.join(repoRoot, repoPath)))
   let productionCustodyValid = false
+  let authenticatedPriorSourceA9: string | undefined
   if (a9 !== undefined && sourceBase9 !== undefined) {
     try {
       const custody = inspectV138SourceA9Custody(repoRoot,
@@ -1409,7 +1416,14 @@ export const checkV138DependencyRevisionBoundaries = (
       productionCustodyValid = custody.sourceBase9 === sourceBase9 &&
         custody.sourceA9 === a9 &&
         JSON.stringify([...custody.sourceA9Paths].sort()) ===
-          JSON.stringify(correctedSourceBoundary)
+          JSON.stringify(correctedSourceBoundary) &&
+        custody.priorCorrectionLayer.authorRun ===
+          "codex-plan-262-60-a9-review-fix-v3" &&
+        JSON.stringify([...custody.priorCorrectionLayer.paths].sort()) ===
+          JSON.stringify(priorCorrectedSourceBoundary)
+      if (productionCustodyValid) {
+        authenticatedPriorSourceA9 = custody.priorCorrectionLayer.sourceA9
+      }
     } catch { productionCustodyValid = false }
   }
   const a9SourceValid = runValid && productionCustodyValid && a9 !== undefined &&
@@ -1444,9 +1458,10 @@ export const checkV138DependencyRevisionBoundaries = (
     }) && JSON.stringify([...summaryBindings.keys()].sort()) ===
       JSON.stringify(correctedSourceBoundary)
   const changedLineRanges = new Map<string, readonly [number, number][]>()
-  if (a9CarrierBindingsValid && sourceBase9 !== undefined) {
-    for (const repoPath of correctedSourceBoundary) {
-      const diff = git(repoRoot, ["diff", "--unified=0", sourceBase9, a9!, "--",
+  if (a9CarrierBindingsValid && authenticatedPriorSourceA9 !== undefined) {
+    for (const repoPath of priorCorrectedSourceBoundary) {
+      const diff = git(repoRoot, ["diff", "--unified=0",
+        authenticatedPriorSourceA9, "HEAD", "--",
         repoPath])
       changedLineRanges.set(repoPath, [...diff.matchAll(
         /^@@ -(?:[0-9]+)(?:,[0-9]+)? \+([0-9]+)(?:,([0-9]+))? @@/gmu)]
@@ -1457,14 +1472,15 @@ export const checkV138DependencyRevisionBoundaries = (
   }
   const policyFindings = analyzeV138PolicySourcesWithFrozenRouteAllowlist(sources)
     .filter((finding) => !(finding.code === "ROUTE_CAPABLE_SOURCE_DRIFT" &&
-      a9CarrierBindingsValid && summaryBindings.has(finding.path)))
+      a9CarrierBindingsValid && priorCorrectedSourceBoundary.includes(finding.path)))
     .filter((finding) => {
       if (!a9CarrierBindingsValid || finding.code === "ROUTE_CAPABLE_SOURCE_DRIFT") {
         return true
       }
       const ranges = changedLineRanges.get(finding.path)
-      return ranges === undefined || ranges.some(([start, end]) =>
-        finding.line >= start && finding.line <= end)
+      return ranges === undefined ?
+        !priorCorrectedSourceBoundary.includes(finding.path) :
+        ranges.some(([start, end]) => finding.line >= start && finding.line <= end)
     })
     .filter((finding) => !policySourceCollection.findings.some((collectionFinding) =>
       collectionFinding.code === finding.code &&

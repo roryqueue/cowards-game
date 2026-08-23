@@ -17,7 +17,7 @@ import { Buffer } from "node:buffer"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { afterAll, describe, expect, it } from "vitest"
+import { afterAll, describe, expect, it, vi } from "vitest"
 import {
   encodeCanonicalJson,
   hashCanonicalIdentity,
@@ -257,6 +257,46 @@ it("disposes native openat helpers and leaves no compile-failure temp paths", ()
   expect(helperPaths()).toEqual(before)
 })
 
+it("removes only helper-owned signal listeners and keeps disposal idempotent", () => {
+  disposeV138DetachedOpenatHelper()
+  const fixtureRoot = realpathSync(mkdtempSync(
+    path.join(tmpdir(), "v138-signal-cleanup-")))
+  const fixturePath = path.join(fixtureRoot, "detached-input")
+  writeFileSync(fixturePath, "signal cleanup fixture\n")
+  chmodSync(fixturePath, 0o444)
+  const signal = "SIGTERM" as const
+  let unrelatedCalls = 0
+  const unrelated = () => { unrelatedCalls += 1 }
+  process.on(signal, unrelated)
+  const hostListeners = process.listeners(signal)
+  const kill = vi.spyOn(process, "kill").mockImplementation((() => true) as
+    typeof process.kill)
+  try {
+    expect(readV138DetachedFileOpenat(fixturePath).bytes)
+      .not.toHaveLength(0)
+    const directory = activeV138DetachedOpenatHelperDirectory()
+    expect(directory).not.toBeNull()
+    expect(process.listeners(signal)).toContain(unrelated)
+    expect(process.listeners(signal)).toHaveLength(hostListeners.length + 1)
+    process.emit(signal, signal)
+    expect(unrelatedCalls).toBe(1)
+    expect(process.listeners(signal)).toContain(unrelated)
+    expect(process.listeners(signal)).toEqual(hostListeners)
+    expect(activeV138DetachedOpenatHelperDirectory()).toBeNull()
+    expect(directory === null || existsSync(directory)).toBe(false)
+    expect(kill).toHaveBeenCalledWith(process.pid, signal)
+    disposeV138DetachedOpenatHelper()
+    disposeV138DetachedOpenatHelper()
+    expect(process.listeners(signal)).toContain(unrelated)
+  } finally {
+    kill.mockRestore()
+    process.off(signal, unrelated)
+    disposeV138DetachedOpenatHelper()
+    try { chmodSync(fixturePath, 0o644) } catch {}
+    rmSync(fixtureRoot, { recursive: true, force: true })
+  }
+})
+
 it("derives the corrected A9 sole parent and rejects mutable protected history", () => {
   const run = execFileSync("git", ["log", "--first-parent", "--reverse",
     "--format=%H", `--grep=Plan-262-60-Author-Run: ${V138_PLAN_262_60_CORRECTION_RUN}`],
@@ -290,7 +330,7 @@ it("derives the corrected A9 sole parent and rejects mutable protected history",
   }
 })
 
-it("rejects a reachable deletion object outside the source first-parent lineage", () => {
+it("rejects an unrelated correction lineage before accepting deletion custody", () => {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "v138-a9-alternate-lineage-"))
   execFileSync("git", ["clone", "--shared", "--quiet", repoRoot, fixtureRoot])
   const git = (...args: string[]) => execFileSync("git", args,
@@ -311,7 +351,7 @@ it("rejects a reachable deletion object outside the source first-parent lineage"
     const sourceA9 = git("rev-parse", "HEAD")
     expect(() => inspectV138SourceA9Custody(fixtureRoot,
       { sourceBase9, sourceA9 }))
-      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_DELETION_HISTORY_INVALID")
+      .toThrow("V138_PLAN_262_56_AUTHORIZATION_V9_PRIOR_CUSTODY_INVALID")
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true })
   }
