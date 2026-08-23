@@ -105,28 +105,34 @@ status: complete
 - `c5a08bd5` — preserve unrelated host signal listeners, remove only
   helper-owned callbacks, prove cleanup remains idempotent, and authenticate
   the current four-path V4 layer only after the prior V3 six-path ancestry
+- `5bf78391` — authenticate the full V3-to-V4-to-V5 correction chain, require
+  exact planning-only gap carriers, and prove protected source blobs cannot be
+  changed between otherwise-valid correction layers
 
 ## Exact A9 Custody
 
-- **sourceBase9:** `7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0`
-- **sourceA9:** `c5a08bd50eec0f8c937b42bd07fd9009e7b88c17`
-- **sourceA9 tree:** `8111357bd84bb0bd0275cbc5301805c2f1d6ff2f`
-- **sourceA9 sole parent:** `7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0`
-- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v4`
-- **run commits:** `c5a08bd50eec0f8c937b42bd07fd9009e7b88c17`
+- **sourceBase9:** `bff3a3caa90d8bd6e629c8d40599e953ed1a020d`
+- **sourceA9:** `5bf7839123f9a52b9e16edbc6ce70206c5a4bd54`
+- **sourceA9 tree:** `e3a87ea873058bd19d3a2415560af986f76c786a`
+- **sourceA9 sole parent:** `bff3a3caa90d8bd6e629c8d40599e953ed1a020d`
+- **author-run trailer:** `Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v5`
+- **run commits:** `5bf7839123f9a52b9e16edbc6ce70206c5a4bd54`
 
 | Path | Mode | Blob | SHA-256 | Bytes |
 |---|---:|---|---|---:|
-| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `f8008d91089924f21fd537189d8378c6c9ea3777` | `sha256:e3ecec5aa62d6b9139c838426666491cf8d8cebef8eaaf4b885e9766f2bacf35` | 78384 |
-| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `ac92981efc13d94d7f3c3bfdcc10cfc154677749` | `sha256:d309d90fd33e9c0bbd422c5e6fbe0e1578550735da9bdd8391d8739aca2708ce` | 40599 |
-| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `cdd98083cb5ccefc45481891d123b95a0fefff1d` | `sha256:2de2d5f08989afcb095fae559098d9c17a3d102b1e474a155d4d45549fd57fb2` | 32086 |
-| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `f5b2a5a18308af87932e861c8730505fe9f34bfa` | `sha256:1d0a5fe81e701d288423e78dea612d7fd9fab4f4733766e75e42a47d670e28a5` | 349861 |
+| `scripts/check-v1-38-dependency-revision-boundaries.ts` | `100644` | `8e15c5ca9c5b11f95eda16aab1aa45f395328406` | `sha256:acb4af7286b41a9a56d1681b567abcf8fc7393ff2704fffd90d8f86cc92e17e5` | 79068 |
+| `scripts/evaluate-v1-38-successor-route.test.ts` | `100644` | `e4f126f5188e0785fe5ad18a7d15c51681409165` | `sha256:b3b12536aa4df68fca3cf117f49c2991d9b4d620b13ab2683aab5fcd6a136fa4` | 43981 |
+| `scripts/lib/v1-38-source-completeness-review-v3.ts` | `100644` | `5da8e0b6a4da3aa6ec473aecfd25dbc25e1cb35c` | `sha256:24e9c2ea1ab1f0cc9df397fd8d90cd4579bd2f5561b126c92edce3965fc30f4e` | 32086 |
+| `scripts/lib/v1-38-successor-source-seal.ts` | `100644` | `6222c0983499d5ceb269692f5a5b82da1026ea0f` | `sha256:bf69c4fb0957863eda2de1183ff967e14ff62e922c5e3e9a26a30add3318b3b9` | 352604 |
 
-The current four-path V4 layer is accepted only after production and analyzer
-re-authenticate the prior V3 layer: sourceBase9
-`2296a5812f1bcad45fe32165534668eeb79caf46`, sourceA9
-`32eef5c147dc34b1a75c936ed7a0148f8e5d748e`, exact six-path aggregate, and
-trailer `codex-plan-262-60-a9-review-fix-v3`.
+The current V5 layer is accepted only after production and analyzer
+re-authenticate both immutable predecessors: V3
+`2296a5812f1bcad45fe32165534668eeb79caf46..32eef5c147dc34b1a75c936ed7a0148f8e5d748e`
+over six paths and V4
+`7ce7e1e9ae90f2ecb2204f9f1681e86ebaba64c0..c5a08bd50eec0f8c937b42bd07fd9009e7b88c17`
+over four paths. Each inter-layer gap is exactly one planning carrier changing
+only this summary and REVIEW-FIX, and all six protected source blobs are equal
+at each predecessor tip and successor base.
 
 ### Historical reviewer-v2 deletion custody
 
