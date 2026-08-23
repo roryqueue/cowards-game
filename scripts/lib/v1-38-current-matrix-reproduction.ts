@@ -161,6 +161,8 @@ import {
   type V138SuccessorSourceSeal,
   type V138SuccessorSealV7ObservationException,
 } from "./v1-38-successor-source-seal.js"
+import { V138_REVIEW_V3_ROUTE_MANIFEST } from
+  "./v1-38-source-completeness-review-v3.js"
 
 const FIXTURE_PURPOSE = "regression_throughput_only" as const
 const HISTORICAL_MATRIX_SOURCE =
@@ -19266,7 +19268,7 @@ const readPlan26257 = (repoRoot: string, key: keyof typeof PLAN_262_57_PATHS,
   }
 }
 
-const checkV138Plan26256AuthorityRoute = (input: { repoRoot: string;
+export const checkV138Plan26256AuthorityRoute = (input: { repoRoot: string;
   sourceA9: string; sourceB9: string; authorizationValue: unknown;
   sealValue: unknown }) => {
   const authorization = checkV138Plan26256AuthorizationV9(input.repoRoot,
@@ -20130,11 +20132,11 @@ export const deriveV138Plan26257PreObservationProof = (input: {
   let observedRoot: Sha256
   let expectedContractRoot: Sha256 | null = null
   if (input.disposition === "tool_identity_failed") {
-    sealedRoot = v138SuccessorRoot("artifactManifest",
-      "v1.38-tool-identity-observation-v9", {
-        sourceA9: route.custody.sourceA9,
-        authorizationRoot: route.authorization.authorizationRoot,
-        executionVersions: route.authorization.executionVersions })
+    sealedRoot = route.authorization.toolIdentity.expectedRoot
+    if (!isV138CanonicalSha256(sealedRoot) ||
+      route.seal.toolIdentity.expectedRoot !== sealedRoot) {
+      throw new TypeError("MATRIX_PLAN_262_30_PRE_OBSERVATION_PROOF_INVALID")
+    }
     observedRoot = input.observedRootOverrides?.tool_identity_failed ??
       plan26257ObservedRoot(
       "v1.38-tool-identity-observation-failure-v1",
@@ -20876,59 +20878,7 @@ export const checkV138Plan26257PreStartObstructionBranch = (repoRoot: string,
   return disposition
 }
 
-export const V138_ROUTE_7_SOURCE_MANIFEST = Object.freeze([
-  { command: "--check-plan-262-57-pre-execution-readiness-v1",
-    handler: "checkV138Plan26257PreExecutionReadinessV1",
-    destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
-    prerequisite: "authorization-v9/seal-v9/all-route-destinations-absent",
-    sideEffect: "none", terminalDisposition: null },
-  { command: "--resolve-plan-262-57-pre-start-v1",
-    handler: "writeV138Plan26257PreStartObstructionV1",
-    destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
-    prerequisite: "authorization-v9/seal-v9/exactly-one-obstruction",
-    sideEffect: "fixture-write-only", terminalDisposition: null },
-  { command: "--check-plan-262-57-pre-start-obstruction-v1",
-    handler: "checkV138Plan26257PreStartObstructionBranch",
-    destination: V138_PLAN_262_57_PRE_START_OBSTRUCTION_PATH,
-    prerequisite: "pre-start-disposition-present", sideEffect: "none",
-    terminalDisposition: null },
-  { command: "--write-execution-context-v11-receipt",
-    handler: "writeV138ExecutionContextV11Receipt",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
-    prerequisite: "authorization-v9/seal-v9/fresh-route",
-    sideEffect: "fixture-write-only", terminalDisposition: null },
-  { command: "--write-plan-262-57-route-start-v1",
-    handler: "writeV138Plan26257RouteStartV1",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[0],
-    prerequisite: "authorization-v9/seal-v9/fresh-route",
-    sideEffect: "fixture-write-only", terminalDisposition: null },
-  { command: "--write-headroom-preflight-v11-receipt",
-    handler: "writeV138HostHeadroomPreflightV11Receipt",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[1],
-    prerequisite: "atomic-route-start", sideEffect: "injected-headroom",
-    terminalDisposition: "preflight_unavailable|preflight_refused" },
-  { command: "--calibrate-parallel-v11-receipt",
-    handler: "writeV138ParallelCalibrationV11Receipt",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[2],
-    prerequisite: "preflight_admitted", sideEffect: "injected-child-runner",
-    terminalDisposition: "calibration_stopped" },
-  { command: "--write-authoritative-v12-receipt",
-    handler: "writeV138AuthoritativeMatrixV12Receipt",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[3],
-    prerequisite: "calibration-admitted-8/8/4",
-    sideEffect: "injected-child-runner",
-    terminalDisposition: "reproduction_stopped|reproduction_passed" },
-  { command: "--write-plan-262-57-terminal-v1",
-    handler: "writeV138Plan26257TerminalV1",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[4],
-    prerequisite: "route-started", sideEffect: "fixture-write-only",
-    terminalDisposition: V138_PLAN_262_57_DISPOSITIONS.join("|") },
-  { command: "--check-plan-262-57-terminal-v1",
-    handler: "checkV138Plan26257TerminalBranch",
-    destination: V138_PLAN_262_57_ROUTE_DESTINATIONS[4],
-    prerequisite: "terminal-present", sideEffect: "none",
-    terminalDisposition: V138_PLAN_262_57_DISPOSITIONS.join("|") },
-] as const)
+export const V138_ROUTE_7_SOURCE_MANIFEST = V138_REVIEW_V3_ROUTE_MANIFEST
 
 export const checkV138Route7SourceCompleteness = (value: unknown =
   V138_ROUTE_7_SOURCE_MANIFEST) => {

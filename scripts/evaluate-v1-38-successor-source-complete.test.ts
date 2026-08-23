@@ -16,8 +16,10 @@ import {
   calibrateV138ParallelMatrix,
   buildV138Plan26257RouteStartV1,
   checkV138Plan26257RouteStartV1,
+  checkV138Plan26256AuthorityRoute,
   checkV138Route7SourceCompleteness,
   dispatchV138CurrentMatrixDirectEntry,
+  deriveV138Plan26257PreObservationProof,
   executeV138ParallelMatrix,
   runReceiptCli,
   writeV138Plan26257RouteStartV1,
@@ -50,7 +52,8 @@ import {
   writeV138Plan26256AuthorizationV7,
   writeV138SuccessorSourceSealV7,
 } from "./lib/v1-38-successor-source-seal.js"
-import { computeV138ReviewV3Root, V138_REVIEW_V3_COMMANDS } from
+import { buildV138ReviewV3CommandArgv, computeV138ReviewV3Root,
+  V138_REVIEW_V3_COMMANDS } from
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -375,10 +378,14 @@ it("reaches the real v9 authority checker and route-start handler through full a
     }
     const manifestByCommand = new Map(V138_ROUTE_7_SOURCE_MANIFEST.map(item =>
       [item.command, item] as const))
-    const digest = `sha256:${"1".repeat(64)}`
+    const output = Buffer.from("captured command output\n")
+    const empty = Buffer.alloc(0)
     const commands = V138_REVIEW_V3_COMMANDS.map(command => ({ command,
-      argv: ["node", command], exitStatus: 0, stdoutSha256: digest,
-      stderrSha256: digest }))
+      argv: buildV138ReviewV3CommandArgv(command, sourceA9, sourceBase9),
+      exitStatus: 0, stdoutBase64: output.toString("base64"),
+      stderrBase64: empty.toString("base64"),
+      stdoutSha256: `sha256:${createHash("sha256").update(output).digest("hex")}`,
+      stderrSha256: `sha256:${createHash("sha256").update(empty).digest("hex")}` }))
     const handlerObservations = V138_REVIEW_V3_COMMANDS.map(command => {
       const item = manifestByCommand.get(command)!
       return { command, handler: item.handler, prerequisites: item.prerequisite,
@@ -391,7 +398,8 @@ it("reaches the real v9 authority checker and route-start handler through full a
       sourceCustody: { tree: custody.sourceA9Tree,
         parent: custody.sourceA9Parent,
         authorRun: "codex-plan-262-60-a9-review-fix-v1",
-        paths: custody.sourceA9Paths, blobs: custody.sourceA9Blobs },
+        paths: custody.sourceA9Paths, blobs: custody.sourceA9Blobs,
+        deletionHistory: custody.deletionHistory },
       commands, handlerObservations,
       protectedHistory: { root: history.protectedHistoryRoot,
         protectedA8: sourceA9, protectedRoots: history.protectedRoots },
@@ -431,7 +439,9 @@ it("reaches the real v9 authority checker and route-start handler through full a
       path.basename(V138_PLAN_262_56_V9_CANONICAL_PATHS.sourceCompletenessReview))
     writeFileSync(detachedReview, canonicalBytes(review)); chmodSync(detachedReview, 0o444)
     const authorization = buildV138Plan26256AuthorizationV9({ repoRoot: fixtureRoot,
-      reviewV3AbsolutePath: detachedReview })
+      reviewV3AbsolutePath: detachedReview,
+      reviewObservations: { commands, handlerObservations,
+        orderedEvents: body.orderedEvents } })
     const seal = buildV138SuccessorSourceSealV9({ repoRoot: fixtureRoot,
       authorization })
     writeFileSync(path.join(fixtureRoot,
@@ -442,6 +452,18 @@ it("reaches the real v9 authority checker and route-start handler through full a
       V138_PLAN_262_56_V9_CANONICAL_PATHS.seal)
     git("commit", "-m", "test: publish fixture authorization v9")
     const sourceB9 = git("rev-parse", "HEAD")
+    const anchor = checkV138Plan26256AuthorityRoute({ repoRoot: fixtureRoot,
+      sourceA9, sourceB9, authorizationValue: authorization, sealValue: seal })
+    expect(() => deriveV138Plan26257PreObservationProof({ repoRoot: fixtureRoot,
+      sourceA9, anchor, disposition: "tool_identity_failed" }))
+      .toThrow("MATRIX_PLAN_262_30_PRE_OBSERVATION_CHECK_SUCCEEDED")
+    const mismatchedToolRoot = `sha256:${"9".repeat(64)}` as const
+    expect(deriveV138Plan26257PreObservationProof({ repoRoot: fixtureRoot,
+      sourceA9, anchor, disposition: "tool_identity_failed",
+      observedRootOverrides: { tool_identity_failed: mismatchedToolRoot } }))
+      .toMatchObject({ disposition: "tool_identity_failed",
+        sealedRoot: authorization.toolIdentity.expectedRoot,
+        observedRoot: mismatchedToolRoot })
     const target = V138_PLAN_262_57_ROUTE_DESTINATIONS[0]!
     await runReceiptCli({ repoRoot: fixtureRoot, argv: ["node", "route",
       "--write-plan-262-57-route-start-v1", target,

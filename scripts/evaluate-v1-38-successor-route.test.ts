@@ -1,8 +1,11 @@
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
+import { createHash } from "node:crypto"
 import {
+  chmodSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
+  realpathSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -50,6 +53,7 @@ import {
 import {
   V138_PLAN_262_47_ROUTE_CONTRACT,
   V138_PLAN_262_57_ROUTE_CONTRACT,
+  V138_ROUTE_7_SOURCE_MANIFEST,
   buildV138Plan26257PreStartObstructionV1,
   checkV138Plan26257PreStartObstructionV1,
   checkV138Plan26257RouteContract,
@@ -66,41 +70,53 @@ import {
   checkV138ExactMachineStatus,
   collectV138ChangedPolicySources,
 } from "./check-v1-38-dependency-revision-boundaries.js"
-import { V138_REVIEW_V3_COMMANDS, V138_REVIEW_V3_SOURCE_PATHS,
+import { buildV138ReviewV3CommandArgv, V138_REVIEW_V3_COMMANDS,
+  V138_REVIEW_V3_DELETION_PATHS, V138_REVIEW_V3_SOURCE_PATHS,
   checkV138ReviewV3ClaimsAgainstObservations,
-  computeV138ReviewV3Root, validateV138ReviewV3Document } from
+  computeV138ReviewV3Root, readAndValidateV138DetachedReviewV3,
+  readV138DetachedFileOpenat,
+  validateV138ReviewV3Document } from
   "./lib/v1-38-source-completeness-review-v3.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const canonicalReviewBytes = (value: unknown) => {
+  const encoded = encodeCanonicalJson(value as JsonValue,
+    { context: "canonical-manifest" })
+  if (!encoded.ok) throw new TypeError("TEST_CANONICAL_INVALID")
+  return Buffer.concat([Buffer.from(encoded.bytes), Buffer.from("\n")])
+}
 
-const reviewV3Fixture = () => {
+const reviewV3Fixture = (): Record<string, any> => {
   const oid = "a".repeat(40)
   const otherOid = "b".repeat(40)
   const digest = `sha256:${"1".repeat(64)}`
   const paths = [...V138_REVIEW_V3_SOURCE_PATHS]
-  const handlers = ["writeV138ParallelCalibrationV11Receipt",
-    "checkV138Plan26257PreExecutionReadinessV1",
-    "checkV138Plan26257PreStartObstructionBranch",
-    "checkV138Plan26257TerminalBranch",
-    "writeV138Plan26257PreStartObstructionV1",
-    "writeV138AuthoritativeMatrixV12Receipt",
-    "writeV138ExecutionContextV11Receipt",
-    "writeV138HostHeadroomPreflightV11Receipt",
-    "writeV138Plan26257RouteStartV1", "writeV138Plan26257TerminalV1"]
+  const manifest = new Map(V138_ROUTE_7_SOURCE_MANIFEST.map(item =>
+    [item.command, item] as const))
+  const output = Buffer.from("captured command output\n")
+  const empty = Buffer.alloc(0)
   const body: Record<string, any> = {
     schemaVersion: "v1.38-plan-262-62-source-completeness-review-v3",
     sourceBase9: oid, sourceA9: otherOid,
     sourceCustody: { tree: oid, parent: oid,
       authorRun: "codex-plan-262-60-a9-review-fix-v1", paths,
       blobs: paths.map((item) => ({ path: item, mode: "100644",
-        blobOid: oid, sha256: digest, byteLength: 1 })) },
+        blobOid: oid, sha256: digest, byteLength: 1 })),
+      deletionHistory: V138_REVIEW_V3_DELETION_PATHS.map(item => ({ path: item,
+        deletionCommit: oid, deletionParent: otherOid, deletionTree: oid,
+        authorRun: "codex-plan-262-60-a9-v1", priorBlobOid: otherOid,
+        priorSha256: digest, priorByteLength: 1 })) },
     commands: V138_REVIEW_V3_COMMANDS.map((command) => ({ command,
-      argv: ["node", command], exitStatus: 0,
-      stdoutSha256: digest, stderrSha256: digest })),
-    handlerObservations: V138_REVIEW_V3_COMMANDS.map((command, index) => ({
-      command, handler: handlers[index],
-      prerequisites: "authorization-v9/seal-v9", destination: `destination-${index}`,
-      effectClass: "injected", disposition: "observed" })),
+      argv: buildV138ReviewV3CommandArgv(command, otherOid, oid), exitStatus: 0,
+      stdoutBase64: output.toString("base64"), stderrBase64: empty.toString("base64"),
+      stdoutSha256: `sha256:${createHash("sha256").update(output).digest("hex")}`,
+      stderrSha256: `sha256:${createHash("sha256").update(empty).digest("hex")}` })),
+    handlerObservations: V138_REVIEW_V3_COMMANDS.map((command) => {
+      const item = manifest.get(command)!
+      return { command, handler: item.handler, prerequisites: item.prerequisite,
+        destination: item.destination, effectClass: item.sideEffect,
+        disposition: item.terminalDisposition ?? "none" }
+    }),
     protectedHistory: { root: digest, protectedA8: otherOid,
       protectedRoots: Object.fromEntries(Array.from({ length: 8 }, (_, index) =>
         [`root-${index}`, digest])) },
@@ -157,7 +173,9 @@ it("strictly validates review-v3 nested structure and recomputed roots", () => {
 it("rejects review-v3 claims that differ from independently supplied observations", () => {
   const value = reviewV3Fixture()
   const observations = {
-    document: value, sourceCustody: value.sourceCustody,
+    document: value, commands: value.commands,
+    handlerObservations: value.handlerObservations,
+    sourceCustody: value.sourceCustody,
     publication: value.publication, protectedHistory: value.protectedHistory,
     priorAuthorizationBytes: value.priorAuthorizationBytes,
     snapshots: value.snapshots, orderedEvents: value.orderedEvents,
@@ -167,6 +185,83 @@ it("rejects review-v3 claims that differ from independently supplied observation
     protectedHistory: { ...value.protectedHistory,
       root: `sha256:${"9".repeat(64)}` } }))
     .toThrow("V138_REVIEW_V3_HISTORY_OBSERVATION_INVALID")
+
+  for (const mutate of [
+    (candidate: Record<string, any>) => {
+      const bytes = Buffer.from("different captured output\n")
+      candidate.commands[0].stdoutBase64 = bytes.toString("base64")
+      candidate.commands[0].stdoutSha256 =
+        `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+    },
+    (candidate: Record<string, any>) => {
+      candidate.handlerObservations[0].prerequisites = "fabricated"
+    },
+    (candidate: Record<string, any>) => {
+      candidate.handlerObservations[0].destination = "fabricated"
+    },
+    (candidate: Record<string, any>) => {
+      candidate.handlerObservations[0].effectClass = "fabricated"
+    },
+    (candidate: Record<string, any>) => {
+      candidate.handlerObservations[0].disposition = "fabricated"
+    },
+  ]) {
+    const candidate = structuredClone(value)
+    mutate(candidate)
+    const { reviewV3Root: _old, ...body } = candidate
+    candidate.reviewV3Root = computeV138ReviewV3Root(body)
+    expect(() => checkV138ReviewV3ClaimsAgainstObservations({ ...observations,
+      document: candidate })).toThrow()
+  }
+})
+
+it("rejects detached review ancestor swaps through pinned openat custody", () => {
+  const temporaryRoot = mkdtempSync(path.join(tmpdir(), "v138-openat-swap-"))
+  const fixtureRoot = realpathSync(temporaryRoot)
+  const original = path.join(fixtureRoot, "ancestor")
+  const alternate = path.join(fixtureRoot, "alternate")
+  const held = path.join(fixtureRoot, "ancestor-held")
+  const basename =
+    "v1.38-plan-262-62-source-completeness-review-v3.json"
+  mkdirSync(original); mkdirSync(alternate)
+  const review = reviewV3Fixture()
+  const target = path.join(original, basename)
+  writeFileSync(target, canonicalReviewBytes(review)); chmodSync(target, 0o444)
+  writeFileSync(path.join(alternate, basename), canonicalReviewBytes(review))
+  expect(readV138DetachedFileOpenat(target).bytes.length).toBeGreaterThan(0)
+  const child = spawn(process.execPath, ["-e",
+    "const fs=require('node:fs');setTimeout(()=>{fs.renameSync(process.argv[1],process.argv[2]);fs.symlinkSync(process.argv[3],process.argv[1]);},40)",
+    original, held, alternate], { stdio: "ignore" })
+  try {
+    expect(() => readAndValidateV138DetachedReviewV3({ repoRoot,
+      absolutePath: target, expectedSourceA9: String(review.sourceA9),
+      testDelayMilliseconds: 250 }))
+      .toThrow("V138_REVIEW_V3_DETACHED_ANCESTOR_MUTATED")
+  } finally {
+    child.kill(); rmSync(temporaryRoot, { recursive: true, force: true })
+  }
+})
+
+it("aborts when a pinned detached review leaf is truncated", () => {
+  const temporaryRoot = mkdtempSync(path.join(tmpdir(), "v138-openat-truncate-"))
+  const fixtureRoot = realpathSync(temporaryRoot)
+  const target = path.join(fixtureRoot,
+    "v1.38-plan-262-62-source-completeness-review-v3.json")
+  const review = reviewV3Fixture()
+  writeFileSync(target, canonicalReviewBytes(review)); chmodSync(target, 0o444)
+  const child = spawn(process.execPath, ["-e",
+    "const fs=require('node:fs');setTimeout(()=>{fs.chmodSync(process.argv[1],0o644);fs.truncateSync(process.argv[1],0);fs.chmodSync(process.argv[1],0o444);},40)",
+    target], { stdio: "ignore" })
+  try {
+    expect(() => readAndValidateV138DetachedReviewV3({ repoRoot,
+      absolutePath: target, expectedSourceA9: String(review.sourceA9),
+      testDelayMilliseconds: 250 }))
+      .toThrow("V138_REVIEW_V3_DETACHED_TRUNCATED")
+  } finally {
+    child.kill()
+    try { chmodSync(target, 0o644) } catch {}
+    rmSync(temporaryRoot, { recursive: true, force: true })
+  }
 })
 
 it("derives the corrected A9 sole parent and rejects mutable protected history", () => {

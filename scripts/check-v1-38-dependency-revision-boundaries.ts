@@ -1324,7 +1324,7 @@ export const checkV138DependencyRevisionBoundaries = (
   const protectedEntries = protectedInventory(repoRoot)
   const policySourceCollection = collectV138ChangedPolicySources(repoRoot)
   const sources = policySourceCollection.sources
-  const sourceBoundary = [
+  const implementationBoundary = [
     "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts",
     "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts",
     "scripts/lib/v1-38-source-completeness-review-v3.ts",
@@ -1334,10 +1334,24 @@ export const checkV138DependencyRevisionBoundaries = (
     "scripts/evaluate-v1-38-successor-source-complete.test.ts",
     "scripts/check-v1-38-dependency-revision-boundaries.ts",
   ].sort()
-  const activeSourceBoundary = sourceBoundary.filter(repoPath =>
+  const correctedSourceBoundary = implementationBoundary.filter(repoPath =>
     !repoPath.includes("source-completeness-review-v2"))
+  const deletedSourceBoundary = implementationBoundary.filter(repoPath =>
+    !correctedSourceBoundary.includes(repoPath))
+  const historicalDeletion = {
+    commit: "8c3cab21d7da0d59101480e17a973e0317646622",
+    parent: "af0520618b5f236b5d0b7afbb9f0bcebbad9e951",
+    tree: "4e35defcf4ee02927aa7b56ec09d19e5cc9981ae",
+    authorRun: "codex-plan-262-60-a9-v1",
+    priorBlobs: {
+      "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.test.ts":
+        "bd380a22c5833f0c4a8b1829da655121538c8913",
+      "scripts/check-v1-38-plan-262-58-source-completeness-review-v2.ts":
+        "b257f7a1d4931c4d44584e63c9e69ab62b115292",
+    },
+  } as const
   const a9Commits = git(repoRoot, ["log", "--first-parent", "--format=%H", "HEAD",
-    "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v1"])
+    "--grep=Plan-262-60-Author-Run: codex-plan-262-60-a9-review-fix-v2"])
     .trim().split("\n").filter(Boolean)
   const orderedRun = [...a9Commits].reverse()
   const a9 = orderedRun.at(-1)
@@ -1350,27 +1364,36 @@ export const checkV138DependencyRevisionBoundaries = (
     const changed = git(repoRoot, ["diff-tree", "--no-commit-id", "--name-only",
       "-r", "--no-renames", commit]).trim().split("\n").filter(Boolean).sort()
     const valid = parents.length === 1 && parents[0] === expectedParent &&
-      changed.length > 0 && changed.every(repoPath => sourceBoundary.includes(repoPath)) &&
+      changed.length > 0 && changed.every(repoPath => correctedSourceBoundary.includes(repoPath)) &&
       git(repoRoot, ["show", "-s",
         "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)", commit]).trim() ===
-        "codex-plan-262-60-a9-review-fix-v1"
+        "codex-plan-262-60-a9-review-fix-v2"
     changed.forEach(repoPath => aggregate.add(repoPath))
     expectedParent = commit
     return valid
   })
-  const deletedPathsAbsentAtA9 = a9 !== undefined && sourceBoundary
-    .filter(repoPath => !activeSourceBoundary.includes(repoPath))
-    .every(repoPath => {
-      const absentFromWorktree = !repositoryFilePresent(repoRoot,
-        path.join(repoRoot, repoPath))
-      const absentFromA9 = git(repoRoot,
-        ["ls-tree", "--name-only", a9, "--", repoPath]).trim() === ""
-      return absentFromWorktree && absentFromA9
-    })
+  const deletionHistoryValid = a9 !== undefined &&
+    git(repoRoot, ["show", "-s", "--format=%P", historicalDeletion.commit]).trim() ===
+      historicalDeletion.parent &&
+    git(repoRoot, ["rev-parse", `${historicalDeletion.commit}^{tree}`]).trim() ===
+      historicalDeletion.tree &&
+    git(repoRoot, ["show", "-s",
+      "--format=%(trailers:key=Plan-262-60-Author-Run,valueonly)",
+      historicalDeletion.commit]).trim() === historicalDeletion.authorRun &&
+    deletedSourceBoundary.every(repoPath =>
+      git(repoRoot, ["diff-tree", "--no-commit-id", "--name-status", "-r",
+        "--no-renames", historicalDeletion.commit, "--", repoPath]).trim() ===
+          `D\t${repoPath}` &&
+      git(repoRoot, ["rev-parse", `${historicalDeletion.parent}:${repoPath}`]).trim() ===
+        historicalDeletion.priorBlobs[
+          repoPath as keyof typeof historicalDeletion.priorBlobs] &&
+      git(repoRoot, ["ls-tree", "--name-only", a9, "--", repoPath]).trim() === "" &&
+      !repositoryFilePresent(repoRoot, path.join(repoRoot, repoPath)))
   const a9SourceValid = runValid && a9 !== undefined &&
-    JSON.stringify([...aggregate].sort()) === JSON.stringify(activeSourceBoundary) &&
-    deletedPathsAbsentAtA9 &&
-    git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--", ...sourceBoundary])
+    JSON.stringify([...aggregate].sort()) === JSON.stringify(correctedSourceBoundary) &&
+    deletionHistoryValid &&
+    git(repoRoot, ["log", "--format=%H", `${a9}..HEAD`, "--",
+      ...correctedSourceBoundary])
       .trim() === ""
   const summaryPath = `${phaseDirectory}/262-60-SUMMARY.md`
   const summaryText = repositoryFile(repoRoot,
@@ -1389,18 +1412,19 @@ export const checkV138DependencyRevisionBoundaries = (
     summaryTree === git(repoRoot, ["rev-parse", `${a9}^{tree}`]).trim() &&
     summaryParent === git(repoRoot, ["show", "-s", "--format=%P", a9]).trim() &&
     [...summaryBindings].every(([repoPath, binding]) => {
-      if (!sourceBoundary.includes(repoPath)) return false
+      if (!correctedSourceBoundary.includes(repoPath)) return false
       const committed = execFileSync("git", ["show", `${a9}:${repoPath}`], {
         cwd: repoRoot, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 })
       return git(repoRoot, ["rev-parse", `${a9}:${repoPath}`]).trim() ===
         binding.blobOid && sha256(committed) === binding.sha256 &&
         repositoryFile(repoRoot, path.join(repoRoot, repoPath)).equals(committed)
-    })
+    }) && JSON.stringify([...summaryBindings.keys()].sort()) ===
+      JSON.stringify(correctedSourceBoundary)
   const sourceBase9 = orderedRun.length === 0 ? undefined : git(repoRoot,
     ["show", "-s", "--format=%P", orderedRun[0]!]).trim()
   const changedLineRanges = new Map<string, readonly [number, number][]>()
   if (a9CarrierBindingsValid && sourceBase9 !== undefined) {
-    for (const repoPath of activeSourceBoundary) {
+    for (const repoPath of correctedSourceBoundary) {
       const diff = git(repoRoot, ["diff", "--unified=0", sourceBase9, a9!, "--",
         repoPath])
       changedLineRanges.set(repoPath, [...diff.matchAll(
