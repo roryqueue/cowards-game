@@ -109,6 +109,21 @@ const firstExactDifference = (left: unknown, right: unknown,
   }
   return null
 }
+const testIdentityRoot = (domain: "evidenceBundle" | "artifactManifest",
+  schemaVersion: string, value: unknown) => `sha256:${hashCanonicalIdentity(domain, [
+    Buffer.from(schemaVersion, "utf8"),
+    Buffer.from(canonicalV138ReviewerV3(value), "utf8"),
+  ])}`
+const rerootPairAudit = (value: any) => {
+  const audit = structuredClone(value)
+  for (const run of audit.runs) {
+    const body = { ...run }; delete body.runAuditRoot
+    run.runAuditRoot = testIdentityRoot("evidenceBundle", body.schemaVersion, body)
+  }
+  const body = { ...audit }; delete body.pairAuditRoot
+  audit.pairAuditRoot = testIdentityRoot("evidenceBundle", body.schemaVersion, body)
+  return audit
+}
 
 afterEach(() => {
   while (disposable.length > 0) rmSync(disposable.pop()!, { recursive: true, force: true })
@@ -377,15 +392,20 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         ["pairAudit", "cleanupComplete"],
         ["pairAudit", "runs", 0, "executionSourceB9"],
         ["pairAudit", "runs", 0, "runAuditRoot"],
+        ["pairAudit", "runs", 0, "cleanup", "parentRoot"],
         ["pairAudit", "runs", 0, "detachedInput", "identityRoot"],
         ["pairAudit", "runs", 0, "routeClones", 0, "identityRoot"],
         ["pairAudit", "runs", 0, "obstructionInputs", 0, "identityRoot"],
         ["pairAudit", "runs", 0, "projectionLedger", 0, "physical"],
         ["pairAudit", "runs", 0, "routeIdentityAudits", 0,
           "physicalRouteIdentityRoot"],
+        ["pairAudit", "runs", 0, "routeEvidence", 0, "eventEvidenceRoot"],
+        ["pairAudit", "runs", 0, "routeEvidence", 0, "commandEvents", 0,
+          "resultRoot"],
         ["pairAudit", "logicalProjectionManifest", 0, "logical"],
       ] as const
-      const expectedWrapper = { completeRouteCustody: leftCustody }
+      const expectedWrapper = { completeRouteCustody: leftCustody,
+        custody: { completeRouteCustody: leftCustody } }
       for (const mutationPath of exactMutationPaths) {
         const candidate = structuredClone(expectedWrapper) as Record<string, any>
         let cursor: any = candidate.completeRouteCustody
@@ -397,6 +417,72 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         if (mutationPath[0] === "pairAudit") assertion.toThrow()
         else assertion.toThrow("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
       }
+
+      const independentlyRerooted = structuredClone(pairAudit) as any
+      independentlyRerooted.runs[0].detachedInput.pathRoot =
+        `sha256:${"e".repeat(64)}`
+      const independentlyValid = rerootPairAudit(independentlyRerooted)
+      expect(independentlyValid.pairAuditRoot).not.toBe(pairAudit.pairAuditRoot)
+      expect(validateV138Plan26261PairAudit(independentlyValid)).toBe(true)
+      const substituted = structuredClone(expectedWrapper) as any
+      substituted.completeRouteCustody.pairAudit = independentlyValid
+      substituted.custody.completeRouteCustody.pairAudit = independentlyValid
+      expect(() => validatePlan26262ReportManifest(substituted, expectedWrapper))
+        .toThrow("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+
+      for (const omit of ["top", "nested"] as const) {
+        const candidate = structuredClone(expectedWrapper) as any
+        if (omit === "top") delete candidate.completeRouteCustody.pairAudit
+        else delete candidate.custody.completeRouteCustody.pairAudit
+        expect(() => validatePlan26262ReportManifest(candidate, expectedWrapper))
+          .toThrow("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+      }
+      const nestedMismatch = structuredClone(expectedWrapper) as any
+      nestedMismatch.custody.completeRouteCustody.pairAudit = independentlyValid
+      expect(() => validatePlan26262ReportManifest(nestedMismatch, expectedWrapper))
+        .toThrow("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+
+      const swapped = structuredClone(pairAudit) as any
+      swapped.runs.reverse()
+      const rerootedSwap = rerootPairAudit(swapped)
+      expect(() => validateV138Plan26261PairAudit(rerootedSwap)).toThrow()
+      const extraPrivate = structuredClone(pairAudit) as any
+      extraPrivate.runs[0].secretPayload = "/var/folders/private-custody"
+      expect(() => validateV138Plan26261PairAudit(rerootPairAudit(extraPrivate)))
+        .toThrow()
+      for (const mutateCleanup of [
+        (candidate: any) => { delete candidate.runs[0].cleanup.parentRoot },
+        (candidate: any) => { candidate.runs[0].cleanup.extraRoot =
+          `sha256:${"f".repeat(64)}` },
+        (candidate: any) => { candidate.runs[1].cleanup.parentRoot =
+          candidate.runs[0].cleanup.parentRoot },
+      ]) {
+        const candidate = structuredClone(pairAudit) as any
+        mutateCleanup(candidate)
+        expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
+          .toThrow()
+      }
+      for (const mutateSemantic of [
+        (candidate: any) => { candidate.runs[0].projectionLedger.splice(0, 1) },
+        (candidate: any) => { candidate.runs[0].projectionLedger.push(
+          structuredClone(candidate.runs[0].projectionLedger[0])) },
+        (candidate: any) => { candidate.runs[0].projectionLedger[0].label =
+          "route-output:--check-plan-262-57-terminal-v1" },
+        (candidate: any) => { candidate.runs[0].routeEvidence[0].unexpected = true },
+      ]) {
+        const candidate = structuredClone(pairAudit) as any
+        mutateSemantic(candidate)
+        expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
+          .toThrow()
+      }
+      const crossCommandEvent = structuredClone(pairAudit) as any
+      const eventEvidence = crossCommandEvent.runs[0].routeEvidence[0]
+      eventEvidence.commandEvents[0].location =
+        crossCommandEvent.runs[0].routeEvidence[3].destination
+      eventEvidence.eventEvidenceRoot = testIdentityRoot("evidenceBundle",
+        "v1.38-plan-262-61-route-event-evidence-v1", eventEvidence.commandEvents)
+      expect(() => validateV138Plan26261PairAudit(
+        rerootPairAudit(crossCommandEvent))).toThrow()
     }, 1_200_000)
 
   it("rejects shared physical inputs and failed independent validation", () => {
@@ -424,37 +510,6 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const left = route("left")
     const right = route("right")
     expect(validateV138Plan26261FreshRoutePairIsolation(left, right)).toBe(true)
-    const pairAudit = buildV138Plan26261PairAudit(left, right)
-    expect(validateV138Plan26261PairAudit(pairAudit)).toBe(true)
-    expect(pairAudit).toMatchObject({ cleanupComplete: true,
-      hostPathsExposed: false, privateRuntimeDataExposed: false,
-      pairAuditRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-      runs: [{ label: "left", executionSourceB9:
-        left.physicalIsolation.executionSourceB9 }, { label: "right",
-        executionSourceB9: right.physicalIsolation.executionSourceB9 }] })
-    for (const mutateAudit of [
-      (candidate: any) => { candidate.runs[0].executionSourceB9 = "0".repeat(40) },
-      (candidate: any) => { candidate.runs[0].detachedInput.independentlyValidated = false },
-      (candidate: any) => { candidate.runs[1].detachedInput.pathRoot =
-        candidate.runs[0].detachedInput.pathRoot },
-      (candidate: any) => { candidate.runs[1].routeClones[0].identityRoot =
-        candidate.runs[0].routeClones[0].identityRoot },
-      (candidate: any) => { candidate.runs[1].obstructionInputs[0].pathRoot =
-        candidate.runs[0].obstructionInputs[0].pathRoot },
-      (candidate: any) => { candidate.runs[0].projectionLedger[0].label += ":changed" },
-      (candidate: any) => { candidate.runs[0].projectionLedger[0].physical =
-        candidate.runs[1].projectionLedger[0].physical },
-      (candidate: any) => { candidate.runs[0].routeIdentityAudits[0]
-        .physicalRouteIdentityRoot = `sha256:${"0".repeat(64)}` },
-      (candidate: any) => { candidate.runs[0].cleanup.complete = false },
-      (candidate: any) => { candidate.logicalProjectionManifest[0].logical = "changed" },
-      (candidate: any) => { candidate.hostPathsExposed = true },
-      (candidate: any) => { candidate.pairAuditRoot = `sha256:${"0".repeat(64)}` },
-    ]) {
-      const candidate = structuredClone(pairAudit)
-      mutateAudit(candidate)
-      expect(() => validateV138Plan26261PairAudit(candidate)).toThrow()
-    }
     for (const mutate of [
       (candidate: any) => { candidate.physicalIsolation.detachedInput.pathRoot =
         left.physicalIsolation.detachedInput.pathRoot },
@@ -1121,10 +1176,11 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   })
 
   it("binds the exact physical and logical identity tuple for all ten routes", () => {
-    const identities = { sourceA9: SOURCE_A9,
+    const expected = { sourceA9: SOURCE_A9,
       logicalSourceB9: "a".repeat(40), physicalSourceB9: "b".repeat(40),
       authorizationRoot: `sha256:${"c".repeat(64)}`,
       sealRoot: `sha256:${"d".repeat(64)}` }
+    const logical = { ...expected, physicalSourceB9: expected.logicalSourceB9 }
     const handlers: Record<string, string> = {
       "--check-plan-262-57-pre-execution-readiness-v1":
         "checkV138Plan26257PreExecutionReadinessV1",
@@ -1142,6 +1198,19 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       "--check-plan-262-57-terminal-v1": "checkV138Plan26257TerminalBranch",
     }
     for (const entry of V138_REVIEW_V3_ROUTE_MANIFEST) {
+      const argv = buildV138ReviewV3CommandArgv(entry.command, SOURCE_A9,
+        expected.physicalSourceB9)
+      const argvValue = (flag: string) => argv[argv.indexOf(flag) + 1]
+      const emittedIdentityRecord = JSON.parse(canonicalV138ReviewerV3({
+        authorizationRoot: expected.authorizationRoot,
+        sealRoot: expected.sealRoot,
+        logicalSourceB9: expected.logicalSourceB9,
+      })) as Record<string, string>
+      const observed = { sourceA9: argvValue("--source-a9")!,
+        logicalSourceB9: emittedIdentityRecord.logicalSourceB9!,
+        physicalSourceB9: argvValue("--source-b9")!,
+        authorizationRoot: emittedIdentityRecord.authorizationRoot!,
+        sealRoot: emittedIdentityRecord.sealRoot! }
       const base = { command: entry.command, handler: handlers[entry.command]!,
         manifestHandler: entry.handler,
         handlerSourceRoot: `sha256:${"1".repeat(64)}`,
@@ -1149,12 +1218,12 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         resultCode: "bounded-result",
         physicalOutputRoot: `sha256:${"3".repeat(64)}`,
         logicalOutputRoot: `sha256:${"4".repeat(64)}`,
-        expected: identities, observed: identities, logical: identities }
+        expected, observed, logical }
       expect(verifyV138Plan26261RouteIdentity(base).logicalRouteIdentityRoot)
         .toMatch(/^sha256:[0-9a-f]{64}$/u)
-      for (const key of Object.keys(identities) as Array<keyof typeof identities>)
+      for (const key of Object.keys(expected) as Array<keyof typeof expected>)
         expect(() => verifyV138Plan26261RouteIdentity({ ...base,
-          observed: { ...identities, [key]: key.includes("Root") ?
+          observed: { ...observed, [key]: key.includes("Root") ?
             `sha256:${"e".repeat(64)}` : "e".repeat(40) } }))
           .toThrow("V138_PLAN_262_61_ROUTE_IDENTITY_INVALID")
     }
