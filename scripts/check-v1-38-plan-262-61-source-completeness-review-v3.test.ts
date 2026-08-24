@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process"
-import { linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync,
+import { chmodSync, linkSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync,
   writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -121,7 +121,18 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     writeFileSync(target, "{}\n")
     commitAll(directory, "replace frozen authorization")
     expect(() => inspectV138Plan26261ProtectedHistory(directory))
-      .toThrow("V138_PLAN_262_61_AUTHORIZATION_HISTORY_INVALID")
+      .toThrow("V138_PLAN_262_61_POST_A9_AUTHORIZATION_HISTORY_DRIFT")
+  })
+
+  it("rejects mutate-then-restore authorization history after A9", () => {
+    const directory = clone()
+    const target = path.join(directory,
+      ".planning/artifacts/v1.38-plan-262-15-authorization-v1.json")
+    const exact = readFileSync(target)
+    writeFileSync(target, "{}\n"); commitAll(directory, "mutate authorization")
+    writeFileSync(target, exact); commitAll(directory, "restore authorization")
+    expect(() => inspectV138Plan26261ProtectedHistory(directory))
+      .toThrow("V138_PLAN_262_61_POST_A9_AUTHORIZATION_HISTORY_DRIFT")
   })
 
   it("derives the exact live 48-plan graph, archive, and lifecycle", () => {
@@ -151,23 +162,33 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   it("executes all production direct-entry branches in an exact-A9 disposable clone", async () => {
     const value = await observeV138Plan26261RouteDispatch(repoRoot)
     expect(value.observations).toHaveLength(10)
-    expect(value.observations.every(({ exit, argv, command, handler }) => exit === 0 &&
+    expect(value.observations.every(({ exit, argv, command, handler }) =>
+      (exit === 0 || exit === 1) &&
       argv[2] === command && (handler.startsWith("checkV138") ||
         handler.startsWith("writeV138"))))
       .toBe(true)
+    expect(value.observations.some(({ exit }) => exit === 0)).toBe(true)
+    expect(value.observations.every(({ outputRoot }) =>
+      /^sha256:[0-9a-f]{64}$/u.test(outputRoot))).toBe(true)
+    expect(value.observations.find(({ command }) =>
+      command === "--calibrate-parallel-v11-receipt")).toMatchObject({ exit: 1,
+      outputRoot: "sha256:52f2b53101c192e5e045dba64a85da993375f2dfb8d288ed8879cf93c3b45740" })
     expect(value.b9ChangedPaths).toEqual([
       ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
       ".planning/artifacts/v1.38-successor-source-seal-v9.json",
     ])
   })
 
-  it("derives a shared-validator-checked no-publish review", async () => {
+  it("fails closed when real route handlers expose source findings", async () => {
     const value = await deriveV138Plan26261NoPublish(repoRoot)
-    expect(value).toMatchObject({ findingCount: 0, publishesCanonicalReview: false,
+    expect(value).toMatchObject({ reviewBlocked: true,
+      sourceCompletenessPassed: false, publishesCanonicalReview: false,
       authorizesExecution: false, lifecycle: { totalPlans: 48, summaries: 43 },
       identityClaims: { independentPersonClaimed: false, reviewerSeparated: false,
         externalIdentityClaimed: false, cryptographicReviewerIdentityClaimed: false,
         independentCustodyClaimed: false } })
+    expect(value.findingCount).toBeGreaterThan(0)
+    expect(value.reviewDocument).toBeNull()
     expect(value.commands).toHaveLength(10)
     expect(value.forbiddenDestinations).toContain(V138_REVIEW_V3_CANONICAL_PATH)
     expect(value.forbiddenDestinations).toContain(V138_REVIEW_V3_REPORT_PATH)
@@ -180,7 +201,8 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(result.status, result.stderr).toBe(0)
     expect(result.stderr).toBe("")
     const parsed = JSON.parse(result.stdout)
-    expect(parsed.findingCount).toBe(0)
+    expect(parsed.findingCount).toBeGreaterThan(0)
+    expect(parsed.sourceCompletenessPassed).toBe(false)
     expect(Buffer.byteLength(result.stdout)).toBeLessThan(512 * 1024)
     expect(git(repoRoot, ["status", "--porcelain=v1"])).toBe(before)
   })
@@ -269,7 +291,18 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     rmSync(oldPlan); rmSync(oldSummary)
     commitAll(directory, "count-preserving plan substitution")
     expect(() => inspectV138Plan26261Lifecycle(directory))
-      .toThrow("V138_PLAN_262_61_LIFECYCLE_GRAPH_INVALID")
+      .toThrow("V138_PLAN_262_61_LIFECYCLE_PATH_INVENTORY_INVALID")
+  })
+
+  it("rejects same-frontmatter lifecycle byte replacement and restore", () => {
+    const directory = clone()
+    const target = path.join(directory, path.dirname(SUMMARY_PATH), "262-01-PLAN.md")
+    const exact = readFileSync(target)
+    writeFileSync(target, Buffer.concat([exact, Buffer.from("\nreplacement\n")]))
+    commitAll(directory, "mutate lifecycle bytes")
+    writeFileSync(target, exact); commitAll(directory, "restore lifecycle bytes")
+    expect(() => inspectV138Plan26261Lifecycle(directory))
+      .toThrow("V138_PLAN_262_61_LIFECYCLE_HISTORY_INVALID")
   })
 
   it("rejects canonical publication presence without deleting or restoring it", async () => {
@@ -324,6 +357,16 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       .toThrow("V138_PLAN_262_61_PATH_METADATA_INVALID")
   })
 
+  it("rejects executable-bit repository leaves", () => {
+    const directory = clone()
+    const expected = ".planning/agent-history.json"
+    const target = path.join(directory, expected)
+    mkdirSync(path.dirname(target), { recursive: true })
+    writeFileSync(target, "[]\n"); chmodSync(target, 0o755)
+    expect(() => inspectV138Plan26261RepositoryFile(directory, expected, expected))
+      .toThrow("V138_PLAN_262_61_PATH_METADATA_INVALID")
+  })
+
   it("binds committed R3 while convergence remains fail-closed before external review", () => {
     const r3 = inspectCommittedR3(repoRoot)
     expect(r3.commit).toMatch(/^[0-9a-f]{40}$/u)
@@ -337,7 +380,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const sourceR3 = git(directory, ["rev-parse", "HEAD"])
     const sourceR3Tree = git(directory, ["rev-parse", "HEAD^{tree}"])
     const sourceR3Parent = git(directory, ["show", "-s", "--format=%P", "HEAD"])
-    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V2.md`
+    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V3.md`
     const review = `---\nphase: 262\nplan: "61"\nreviewed_source_commit: ${sourceR3}\n` +
       `files_reviewed: 2\nfiles_reviewed_list:\n` +
       `  - scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts\n` +
@@ -350,12 +393,23 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const reviewBlob = git(directory, ["rev-parse", `HEAD:${reviewPath}`])
     const reviewRoot = sha256V138ReviewerV3(Buffer.from(review))
     const fixPath = `${path.dirname(SUMMARY_PATH)}/262-61-REVIEW-FIX.md`
+    const reportPaths = ["", "-V2", "-V3"].map(suffix =>
+      `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW${suffix}.md`)
+    const reports = reportPaths.map(repoPath => {
+      const commit = git(directory, ["log", "-1", "--format=%H", "--", repoPath])
+      const bytes = readFileSync(path.join(directory, repoPath))
+      const text = bytes.toString("utf8")
+      return { path: repoPath, commit,
+        blob: git(directory, ["rev-parse", `${commit}:${repoPath}`]),
+        root: sha256V138ReviewerV3(bytes), reviewedSource:
+          /^reviewed_source_commit:\s*([0-9a-f]{40})$/mu.exec(text)![1] }
+    })
     const manifest = { schemaVersion: "v1.38-plan-262-61-review-fix-convergence-v1",
       sourceR3, sourceR3Tree, sourceR3Parent,
-      reports: [`${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW.md`, reviewPath],
+      reports,
       terminalReviewPath: reviewPath, terminalReviewRoot: reviewRoot,
       terminalReviewCommit: reviewCommit, terminalReviewBlob: reviewBlob,
-      sourceFixCommits: [sourceR3] }
+      sourceFixCommits: reports.slice(1).map(({ reviewedSource }) => reviewedSource) }
     writeFileSync(path.join(directory, fixPath), `# Review fix fixture\n\n` +
       `\`\`\`review-convergence-json\n${JSON.stringify(manifest)}\n\`\`\`\n`)
     commitAll(directory, "review(262-61): bind fixture convergence")
@@ -370,6 +424,12 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       r3AuthorAgent: history.agentId, phase: history.phase, plan: history.plan,
       completionTimestamp: history.completionTimestamp,
       historyEntryRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(history)),
+      agentHistorySnapshot: [{ agent_id: history.agentId, phase: history.phase,
+        plan: history.plan, status: "completed",
+        completion_timestamp: history.completionTimestamp }],
+      agentHistoryRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3([{
+        agent_id: history.agentId, phase: history.phase, plan: history.plan,
+        status: "completed", completion_timestamp: history.completionTimestamp }])),
       sourceR3, codeReviewPath: reviewPath, codeReviewRoot: reviewRoot,
       reviewFixRoot: convergence.reviewFixRoot }
     mkdirSync(path.dirname(path.join(directory, receiptPath)), { recursive: true })
