@@ -747,7 +747,7 @@ type RouteObservation = Readonly<{ command: string; handler: string;
   effectPolicyRoot: string; routeIdentityRoot: string;
   beforeRoot: string; afterRoot: string;
   beforePathCount: number; afterPathCount: number; eventPaths: readonly string[];
-  changedPaths: readonly string[] }>
+  changedLocations: readonly string[] }>
 
 const completeRouteInventoryPaths = (rootPath: string,
   additionalPaths: readonly string[] = []) => [...new Set([
@@ -824,6 +824,37 @@ export const inventoryChangedPaths = (before: readonly Record<string, unknown>[]
   return [...new Set([...left.keys(), ...right.keys()])].sort().filter(repoPath =>
     canonicalV138ReviewerV3(left.get(repoPath) ?? null) !==
       canonicalV138ReviewerV3(right.get(repoPath) ?? null))
+}
+
+/**
+ * Project a physical inventory delta into the only path-shaped data permitted in
+ * emitted custody evidence.  The physical list never leaves the observation:
+ * every location is verified against the specific disposable repository root,
+ * canonicalized, and rejected when it could name an outside or private target.
+ */
+export const projectV138Plan26261ChangedLocations = (rootPath: string,
+  physicalChangedPaths: readonly unknown[]) => {
+  const physical = physicalRepoRoot(rootPath)
+  if (!Array.isArray(physicalChangedPaths) || physicalChangedPaths.length > 128)
+    fail("V138_PLAN_262_61_CHANGED_LOCATION_INVALID")
+  const locations = physicalChangedPaths.map((value) => {
+    if (typeof value !== "string" || value.length === 0 || value.length > 512 ||
+      path.isAbsolute(value) || value.includes("\\") ||
+      value.split("/").some(part => part === "" || part === "." || part === "..") ||
+      /(?:^|\/)(?:\.git|private|secret|secrets|strategyMemory|soldierMemory|objectivePayload|rawDiagnostics)(?:\/|$)/iu.test(value))
+      fail("V138_PLAN_262_61_CHANGED_LOCATION_INVALID")
+    const absolute = path.resolve(physical, value)
+    const relative = path.relative(physical, absolute).split(path.sep).join("/")
+    if (relative !== value || relative === "" || relative === ".." ||
+      relative.startsWith("../") || path.isAbsolute(relative))
+      fail("V138_PLAN_262_61_CHANGED_LOCATION_INVALID")
+    return relative
+  })
+  const canonical = [...new Set(locations)].sort()
+  if (canonicalV138ReviewerV3(physicalChangedPaths) !==
+    canonicalV138ReviewerV3(canonical))
+    fail("V138_PLAN_262_61_CHANGED_LOCATION_INVALID")
+  return Object.freeze(canonical)
 }
 
 type FsPathState = Readonly<{ type: "absent" | "file" | "directory" |
@@ -2167,7 +2198,9 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         beforeGit.refsRoot !== afterGit.refsRoot ||
         beforeGit.indexRoot !== afterGit.indexRoot)
         fail("V138_PLAN_262_61_ROUTE_GIT_STATE_INVALID")
-      const changedPaths = inventoryChangedPaths(closedBefore, after)
+      const physicalChangedPaths = inventoryChangedPaths(closedBefore, after)
+      const changedLocations = projectV138Plan26261ChangedLocations(cloneRoot,
+        physicalChangedPaths)
       const logicalBefore = projectRouteLogicalIdentity(closedBefore,
         logicalReplacements)
       const logicalAfter = projectRouteLogicalIdentity(after, logicalReplacements)
@@ -2194,8 +2227,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         afterRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
           { inventory: logicalAfter, statusRoot: afterGit.statusRoot })),
         beforePathCount: closedBefore.length, afterPathCount: after.length,
-        eventPaths: Object.freeze(eventPaths),
-        changedPaths: Object.freeze(changedPaths) }))
+        eventPaths: Object.freeze(eventPaths), changedLocations }))
       for (const [operationIndex, operation] of effects.policy.operations.entries()) {
         const physicalOperation = fsOperations[operationIndex] ??
           fail("V138_PLAN_262_61_PAIR_AUDIT_EVENT_INVALID")
@@ -2219,7 +2251,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         physicalResult: physicalOperationPreimage })
       }
       const executionResult = canonicalV138ReviewerV3({ exit,
-        resultCode, observedDisposition, sourceFinding, changedPaths,
+        resultCode, observedDisposition, sourceFinding, changedLocations,
         handlerSourceRoot, dispatcherSourceRoot,
         physicalOutputText: output, logicalOutputText: logicalOutput,
         physicalOutputRoot, logicalOutputRoot,
@@ -2253,9 +2285,9 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       "v1.38-plan-262-61-post-execution-synthetic-publication-v1",
     sourceA9: SOURCE_A9, semanticEvidenceEligible: false,
     observations: observations.map(({ command, handler, exit, resultCode,
-      observedDisposition, callTraceRoot, beforeRoot, afterRoot, changedPaths }) =>
+      observedDisposition, callTraceRoot, beforeRoot, afterRoot, changedLocations }) =>
       ({ command, handler, exit, resultCode, observedDisposition, callTraceRoot,
-        beforeRoot, afterRoot, changedPaths })), orderedEvents: events }
+        beforeRoot, afterRoot, changedLocations })), orderedEvents: events }
     const logicalPostEvidence = { ...postEvidence, orderedEvents: logicalPostEvents }
     const postReviewBytes = canonicalBytes(postEvidence)
     const logicalPostReviewBytes = canonicalBytes(logicalPostEvidence)
@@ -2272,7 +2304,8 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
     const postExecutionPublication = Object.freeze({ semanticEvidenceEligible: false,
       commit: postCommit, parent: git(postRoot, ["show", "-s", "--format=%P",
         postCommit]), tree: git(postRoot, ["rev-parse", `${postCommit}^{tree}`]),
-      changedPaths: Object.freeze(changedPaths(postRoot, postCommit)),
+      changedLocations: projectV138Plan26261ChangedLocations(postRoot,
+        changedPaths(postRoot, postCommit)),
       reviewBlob: git(postRoot, ["rev-parse",
         `${postCommit}:${V138_REVIEW_V3_CANONICAL_PATH}`]),
       reviewRoot: sha256V138ReviewerV3(postReviewBytes),
@@ -2285,7 +2318,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       "v1.38-plan-262-61-logical-post-execution-publication-v1",
     identityKind: "logical_synthetic_publication",
     semanticEvidenceEligible: false,
-    changedPaths: Object.freeze([V138_REVIEW_V3_CANONICAL_PATH,
+    changedLocations: Object.freeze([V138_REVIEW_V3_CANONICAL_PATH,
       V138_REVIEW_V3_REPORT_PATH]),
     reviewBlobRoot: identityRootV138ReviewerV3("artifactManifest",
       "v1.38-plan-262-61-logical-review-blob-v1", {
@@ -2303,7 +2336,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
     const logicalPublicationTreeRoot = identityRootV138ReviewerV3(
       "artifactManifest",
         "v1.38-plan-262-61-logical-publication-tree-v1", {
-          changedPaths: logicalPublicationBody.changedPaths,
+          changedLocations: logicalPublicationBody.changedLocations,
           reviewBlobRoot: logicalPublicationBody.reviewBlobRoot,
           reportBlobRoot: logicalPublicationBody.reportBlobRoot })
     const logicalPostExecutionPublication = Object.freeze({
@@ -2502,10 +2535,10 @@ export const deriveV138Plan26261NoPublish = async (rootPath = repoRoot) => {
     findingCount: routeFindings.length, sourceCompletenessPassed: false,
     findings: Object.freeze(routeFindings.map(({ command, handler, destination,
       exit, sourceFinding, outputRoot, resultCode, observedDisposition, callTraceRoot,
-      beforeRoot, afterRoot, changedPaths }: RouteObservation) =>
+      beforeRoot, afterRoot, changedLocations }: RouteObservation) =>
       Object.freeze({ command, handler, destination, exit, sourceFinding, outputRoot,
         resultCode, observedDisposition, callTraceRoot, beforeRoot, afterRoot,
-        changedPaths }))),
+        changedLocations }))),
     syntheticB9: { sourceB9: routeExecution.sourceB9,
       changedPaths: routeExecution.b9ChangedPaths },
     forbiddenDestinations: FORBIDDEN_DESTINATIONS,
@@ -2869,7 +2902,7 @@ const pairAuditRun = (label: "left" | "right", route: any) => {
       fail("V138_PLAN_262_61_PAIR_AUDIT_EVENT_INVALID")
     return Object.freeze({ ordinal, command, handler: event.handler,
       event: event.event, location: event.path,
-      changed: observation.changedPaths.includes(event.path),
+      changed: observation.changedLocations.includes(event.path),
       physicalResultPreimage: String(event.physicalResult),
       physicalResultRoot: sha256V138ReviewerV3(String(event.physicalResult)),
       resultPreimage: String(event.result),
@@ -3001,10 +3034,10 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
       run.logicalCustody.detachedLinkCount !== 1)
       fail("V138_PLAN_262_61_PAIR_AUDIT_INVALID")
     const physicalPublicationKeys = ["semanticEvidenceEligible", "commit", "parent",
-      "tree", "changedPaths", "reviewBlob", "reviewRoot", "reviewByteLength",
+      "tree", "changedLocations", "reviewBlob", "reviewRoot", "reviewByteLength",
       "reportBlob", "reportRoot", "reportByteLength", "evidenceRoot"]
     const logicalPublicationKeys = ["schemaVersion", "identityKind",
-      "semanticEvidenceEligible", "changedPaths", "reviewBlobRoot",
+      "semanticEvidenceEligible", "changedLocations", "reviewBlobRoot",
       "reportBlobRoot", "semanticRoot", "treeRoot", "publicationIdentityRoot"]
     if (!pairAuditRecord(run.physicalPublicationEvidence,
       physicalPublicationKeys) ||
@@ -3021,7 +3054,13 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
         8 * 1024 * 1024) ||
       !pairAuditInt(run.physicalPublicationEvidence.reportByteLength, 1,
         8 * 1024 * 1024) ||
-      canonicalV138ReviewerV3(run.physicalPublicationEvidence.changedPaths) !==
+      !Array.isArray(run.physicalPublicationEvidence.changedLocations) ||
+      run.physicalPublicationEvidence.changedLocations.some(
+        (location: unknown) => !pairAuditRepositoryLocation(location)) ||
+      canonicalV138ReviewerV3(run.physicalPublicationEvidence.changedLocations) !==
+        canonicalV138ReviewerV3([...new Set(
+          run.physicalPublicationEvidence.changedLocations)].sort()) ||
+      canonicalV138ReviewerV3(run.physicalPublicationEvidence.changedLocations) !==
         canonicalV138ReviewerV3([V138_REVIEW_V3_CANONICAL_PATH,
           V138_REVIEW_V3_REPORT_PATH]) ||
       run.physicalPublicationEvidence.evidenceRoot !==
@@ -3036,7 +3075,13 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
       run.logicalPublicationEvidence.identityKind !==
         "logical_synthetic_publication" ||
       run.logicalPublicationEvidence.semanticEvidenceEligible !== false ||
-      canonicalV138ReviewerV3(run.logicalPublicationEvidence.changedPaths) !==
+      !Array.isArray(run.logicalPublicationEvidence.changedLocations) ||
+      run.logicalPublicationEvidence.changedLocations.some(
+        (location: unknown) => !pairAuditRepositoryLocation(location)) ||
+      canonicalV138ReviewerV3(run.logicalPublicationEvidence.changedLocations) !==
+        canonicalV138ReviewerV3([...new Set(
+          run.logicalPublicationEvidence.changedLocations)].sort()) ||
+      canonicalV138ReviewerV3(run.logicalPublicationEvidence.changedLocations) !==
         canonicalV138ReviewerV3([V138_REVIEW_V3_CANONICAL_PATH,
           V138_REVIEW_V3_REPORT_PATH]) ||
       !root(run.logicalPublicationEvidence.reviewBlobRoot) ||
@@ -3044,7 +3089,7 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
       !root(run.logicalPublicationEvidence.semanticRoot) ||
       run.logicalPublicationEvidence.treeRoot !== identityRootV138ReviewerV3(
         "artifactManifest", "v1.38-plan-262-61-logical-publication-tree-v1", {
-          changedPaths: run.logicalPublicationEvidence.changedPaths,
+          changedLocations: run.logicalPublicationEvidence.changedLocations,
           reviewBlobRoot: run.logicalPublicationEvidence.reviewBlobRoot,
           reportBlobRoot: run.logicalPublicationEvidence.reportBlobRoot }) ||
       run.logicalPublicationEvidence.publicationIdentityRoot !==
@@ -3549,12 +3594,12 @@ export const deterministicRouteCustody = (route: any, pairAudit?: any) => {
       routeIdentityRoot: value.routeIdentityRoot,
       beforeRoot: value.beforeRoot, afterRoot: value.afterRoot,
       beforePathCount: value.beforePathCount, afterPathCount: value.afterPathCount,
-      eventPaths: value.eventPaths, changedPaths: value.changedPaths })
+      eventPaths: value.eventPaths, changedLocations: value.changedLocations })
   })
   const publication = (value: any) => Object.freeze({
     semanticEvidenceEligible: value.semanticEvidenceEligible,
     commit: value.commit, parent: value.parent, tree: value.tree,
-    changedPaths: value.changedPaths, reviewBlob: value.reviewBlob,
+    changedLocations: value.changedLocations, reviewBlob: value.reviewBlob,
     reviewRoot: value.reviewRoot, reviewByteLength: value.reviewByteLength,
     reportBlob: value.reportBlob, reportRoot: value.reportRoot,
     reportByteLength: value.reportByteLength })

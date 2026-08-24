@@ -40,6 +40,7 @@ import {
   inspectV138Plan26261SummaryConvergence,
   installRouteFsObserver,
   inventoryChangedPaths,
+  projectV138Plan26261ChangedLocations,
   selectCompletedAgentHistory,
   sha256V138ReviewerV3,
   snapshotReadiness,
@@ -343,7 +344,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(value.syntheticPrerequisitePublication.semanticEvidenceEligible).toBe(false)
     expect(value.postExecutionPublication).toMatchObject({
       semanticEvidenceEligible: false,
-      changedPaths: [V138_REVIEW_V3_CANONICAL_PATH, V138_REVIEW_V3_REPORT_PATH] })
+      changedLocations: [V138_REVIEW_V3_CANONICAL_PATH, V138_REVIEW_V3_REPORT_PATH] })
     expect(value.logicalPostExecutionPublication).toMatchObject({
       identityKind: "logical_synthetic_publication",
       semanticEvidenceEligible: false,
@@ -553,6 +554,14 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         (candidate: any) => { delete candidate.runs[0].physicalPublicationEvidence },
         (candidate: any) => { candidate.runs[1].physicalPublicationEvidence =
           structuredClone(candidate.runs[0].physicalPublicationEvidence) },
+        (candidate: any) => { candidate.runs[0].physicalPublicationEvidence
+          .changedLocations = ["../outside-repository"] },
+        (candidate: any) => { candidate.runs[0].logicalPublicationEvidence
+          .changedLocations = ["/private/tmp/outside-repository"] },
+        (candidate: any) => { candidate.runs[0].physicalPublicationEvidence
+          .changedLocations.reverse() },
+        (candidate: any) => { candidate.runs[0].physicalPublicationEvidence
+          .changedPaths = [V138_REVIEW_V3_CANONICAL_PATH] },
       ]) {
         const candidate = structuredClone(pairAudit) as any
         mutatePublication(candidate)
@@ -1347,6 +1356,23 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(inventoryChangedPaths(before, [...before].reverse())).toEqual([])
     expect(inventoryChangedPaths(before, [{ path: "a", sha256: "one", ctimeMs: 2 },
       { path: "c", sha256: "three", ctimeMs: 1 }])).toEqual(["a", "b", "c"])
+  })
+
+  it("projects changed locations only from sorted repository-confined physical paths", () => {
+    expect(projectV138Plan26261ChangedLocations(repoRoot, [
+      ".planning/artifacts/example.json",
+      "scripts/example.ts",
+    ])).toEqual([".planning/artifacts/example.json", "scripts/example.ts"])
+    for (const paths of [
+      ["scripts/example.ts", ".planning/artifacts/example.json"],
+      ["scripts/example.ts", "scripts/example.ts"],
+      ["../outside-repository"],
+      ["/private/tmp/outside-repository"],
+      [".planning/private/example.json"],
+      [".git/config"],
+      ["scripts\\outside.ts"],
+    ]) expect(() => projectV138Plan26261ChangedLocations(repoRoot, paths))
+      .toThrow("V138_PLAN_262_61_CHANGED_LOCATION_INVALID")
   })
 
   it("attributes fd writes and records completed and failed filesystem outcomes", () => {
