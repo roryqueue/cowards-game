@@ -21,6 +21,7 @@ import {
   SUMMARY_SHA256,
   canonicalV138ReviewerV3,
   auditLogicalRouteOutput,
+  buildV138Plan26261PairAudit,
   assembleExpectedPlan26262Review,
   assertV138Plan26261CandidateCleanliness,
   assertV138Plan26261SummaryPublicationState,
@@ -49,6 +50,8 @@ import {
   validateV138Plan26261RouteEffects,
   validateV138Plan26261RouteResult,
   validateV138Plan26261FreshRoutePairIsolation,
+  validateV138Plan26261PairAudit,
+  verifyV138Plan26261RouteIdentity,
   verifyAndProjectV138Plan26261DerivedRouteRoot,
   verifyAndProjectV138Plan26261PersistedRouteFile,
   observeV138Plan26261RouteDispatch,
@@ -259,8 +262,14 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   it("produces byte-identical semantic evidence in two independent fresh derivations",
     async () => {
       const { left, right } = await observeV138Plan26261RouteDispatchPair(repoRoot)
-      const leftCustody = deterministicRouteCustody(left) as Record<string, any>
-      const rightCustody = deterministicRouteCustody(right) as Record<string, any>
+      const pairAudit = buildV138Plan26261PairAudit(left, right)
+      const leftCustody = deterministicRouteCustody(left, pairAudit) as
+        Record<string, any>
+      const rightCustody = deterministicRouteCustody(right, pairAudit) as
+        Record<string, any>
+      expect(validateV138Plan26261PairAudit(leftCustody.pairAudit)).toBe(true)
+      expect(leftCustody.pairAudit.pairAuditRoot)
+        .toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(left.physicalIsolation.detachedInput).toMatchObject({
         independentlyValidated: true, regularFile: true, linkCount: 1, mode: 0o444 })
       expect(right.physicalIsolation.detachedInput).toMatchObject({
@@ -363,6 +372,18 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         ["logicalInputCustody", "byteLength"],
         ["logicalInputCustody", "inputCommit"],
         ["logicalInputCustody", "inputBlob"],
+        ["pairAudit", "pairAuditRoot"],
+        ["pairAudit", "logicalProjectionRoot"],
+        ["pairAudit", "cleanupComplete"],
+        ["pairAudit", "runs", 0, "executionSourceB9"],
+        ["pairAudit", "runs", 0, "runAuditRoot"],
+        ["pairAudit", "runs", 0, "detachedInput", "identityRoot"],
+        ["pairAudit", "runs", 0, "routeClones", 0, "identityRoot"],
+        ["pairAudit", "runs", 0, "obstructionInputs", 0, "identityRoot"],
+        ["pairAudit", "runs", 0, "projectionLedger", 0, "physical"],
+        ["pairAudit", "runs", 0, "routeIdentityAudits", 0,
+          "physicalRouteIdentityRoot"],
+        ["pairAudit", "logicalProjectionManifest", 0, "logical"],
       ] as const
       const expectedWrapper = { completeRouteCustody: leftCustody }
       for (const mutationPath of exactMutationPaths) {
@@ -371,8 +392,10 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         for (const part of mutationPath.slice(0, -1)) cursor = cursor[part]
         const key = mutationPath.at(-1)!
         cursor[key] = typeof cursor[key] === "number" ? cursor[key] + 1 : "0".repeat(40)
-        expect(() => validatePlan26262ReportManifest(candidate, expectedWrapper))
-          .toThrow("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
+        const assertion = expect(() => validatePlan26262ReportManifest(candidate,
+          expectedWrapper))
+        if (mutationPath[0] === "pairAudit") assertion.toThrow()
+        else assertion.toThrow("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
       }
     }, 1_200_000)
 
@@ -380,7 +403,8 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const route = (suffix: string) => ({ sourceB9: "logical-b9",
       b9Custody: { identityKind: "logical_synthetic_b9" },
       cleanup: { complete: true, residualPaths: [] }, physicalIsolation: {
-        identityKind: "physical_execution_b9", executionSourceB9: `physical-${suffix}`,
+        identityKind: "physical_execution_b9", executionSourceB9:
+          (suffix === "left" ? "a" : "b").repeat(40),
         detachedInput: {
         pathRoot: `path-${suffix}`, identityRoot: `inode-${suffix}`,
         independentlyValidated: true }, routeClones: [{ group: "obstruction",
@@ -393,10 +417,44 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
               pathRoot: `obstruction-path-${suffix}`,
               identityRoot: `obstruction-inode-${suffix}`,
               bytesSha256: "fixture-root", byteLength: 3, mode: 0o644,
-              independentlyValidated: true }] } })
+              independentlyValidated: true }], routeIdentityAudits:
+          V138_REVIEW_V3_ROUTE_MANIFEST.map(({ command }, ordinal) => ({ command,
+            physicalRouteIdentityRoot: `sha256:${String(ordinal).padStart(64,
+              suffix === "left" ? "1" : "2")}` })) } })
     const left = route("left")
     const right = route("right")
     expect(validateV138Plan26261FreshRoutePairIsolation(left, right)).toBe(true)
+    const pairAudit = buildV138Plan26261PairAudit(left, right)
+    expect(validateV138Plan26261PairAudit(pairAudit)).toBe(true)
+    expect(pairAudit).toMatchObject({ cleanupComplete: true,
+      hostPathsExposed: false, privateRuntimeDataExposed: false,
+      pairAuditRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      runs: [{ label: "left", executionSourceB9:
+        left.physicalIsolation.executionSourceB9 }, { label: "right",
+        executionSourceB9: right.physicalIsolation.executionSourceB9 }] })
+    for (const mutateAudit of [
+      (candidate: any) => { candidate.runs[0].executionSourceB9 = "0".repeat(40) },
+      (candidate: any) => { candidate.runs[0].detachedInput.independentlyValidated = false },
+      (candidate: any) => { candidate.runs[1].detachedInput.pathRoot =
+        candidate.runs[0].detachedInput.pathRoot },
+      (candidate: any) => { candidate.runs[1].routeClones[0].identityRoot =
+        candidate.runs[0].routeClones[0].identityRoot },
+      (candidate: any) => { candidate.runs[1].obstructionInputs[0].pathRoot =
+        candidate.runs[0].obstructionInputs[0].pathRoot },
+      (candidate: any) => { candidate.runs[0].projectionLedger[0].label += ":changed" },
+      (candidate: any) => { candidate.runs[0].projectionLedger[0].physical =
+        candidate.runs[1].projectionLedger[0].physical },
+      (candidate: any) => { candidate.runs[0].routeIdentityAudits[0]
+        .physicalRouteIdentityRoot = `sha256:${"0".repeat(64)}` },
+      (candidate: any) => { candidate.runs[0].cleanup.complete = false },
+      (candidate: any) => { candidate.logicalProjectionManifest[0].logical = "changed" },
+      (candidate: any) => { candidate.hostPathsExposed = true },
+      (candidate: any) => { candidate.pairAuditRoot = `sha256:${"0".repeat(64)}` },
+    ]) {
+      const candidate = structuredClone(pairAudit)
+      mutateAudit(candidate)
+      expect(() => validateV138Plan26261PairAudit(candidate)).toThrow()
+    }
     for (const mutate of [
       (candidate: any) => { candidate.physicalIsolation.detachedInput.pathRoot =
         left.physicalIsolation.detachedInput.pathRoot },
@@ -1060,6 +1118,85 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       .toThrow("V138_PLAN_262_61_ROUTE_DISPOSITION_INVALID")
     expect(() => validateV138Plan26261RouteResult(route, 1, "COMPATIBLE_INVALID"))
       .toThrow("V138_PLAN_262_61_ROUTE_RESULT_INVALID")
+  })
+
+  it("binds the exact physical and logical identity tuple for all ten routes", () => {
+    const identities = { sourceA9: SOURCE_A9,
+      logicalSourceB9: "a".repeat(40), physicalSourceB9: "b".repeat(40),
+      authorizationRoot: `sha256:${"c".repeat(64)}`,
+      sealRoot: `sha256:${"d".repeat(64)}` }
+    const handlers: Record<string, string> = {
+      "--check-plan-262-57-pre-execution-readiness-v1":
+        "checkV138Plan26257PreExecutionReadinessV1",
+      "--resolve-plan-262-57-pre-start-v1":
+        "writeV138Plan26257PreStartObstructionV1",
+      "--check-plan-262-57-pre-start-obstruction-v1":
+        "checkV138Plan26257PreStartObstructionBranch",
+      "--write-execution-context-v11-receipt": "writeV138Plan26257RouteStartV1",
+      "--write-plan-262-57-route-start-v1": "writeV138Plan26257RouteStartV1",
+      "--write-headroom-preflight-v11-receipt":
+        "writeV138HostHeadroomPreflightV11Receipt",
+      "--calibrate-parallel-v11-receipt": "writeV138ParallelCalibrationV11Receipt",
+      "--write-authoritative-v12-receipt": "writeV138AuthoritativeMatrixV12Receipt",
+      "--write-plan-262-57-terminal-v1": "writeV138Plan26257TerminalV1",
+      "--check-plan-262-57-terminal-v1": "checkV138Plan26257TerminalBranch",
+    }
+    for (const entry of V138_REVIEW_V3_ROUTE_MANIFEST) {
+      const base = { command: entry.command, handler: handlers[entry.command]!,
+        manifestHandler: entry.handler,
+        handlerSourceRoot: `sha256:${"1".repeat(64)}`,
+        dispatcherSourceRoot: `sha256:${"2".repeat(64)}`,
+        resultCode: "bounded-result",
+        physicalOutputRoot: `sha256:${"3".repeat(64)}`,
+        logicalOutputRoot: `sha256:${"4".repeat(64)}`,
+        expected: identities, observed: identities, logical: identities }
+      expect(verifyV138Plan26261RouteIdentity(base).logicalRouteIdentityRoot)
+        .toMatch(/^sha256:[0-9a-f]{64}$/u)
+      for (const key of Object.keys(identities) as Array<keyof typeof identities>)
+        expect(() => verifyV138Plan26261RouteIdentity({ ...base,
+          observed: { ...identities, [key]: key.includes("Root") ?
+            `sha256:${"e".repeat(64)}` : "e".repeat(40) } }))
+          .toThrow("V138_PLAN_262_61_ROUTE_IDENTITY_INVALID")
+    }
+  })
+
+  it("rejects well-formed physical identity substitutions in read-only output", () => {
+    const expected = { sourceA9: SOURCE_A9, logicalSourceB9: "a".repeat(40),
+      physicalSourceB9: "b".repeat(40),
+      authorizationRoot: `sha256:${"c".repeat(64)}`,
+      sealRoot: `sha256:${"d".repeat(64)}` }
+    const readiness = V138_REVIEW_V3_ROUTE_MANIFEST.find(({ command }) =>
+      command === "--check-plan-262-57-pre-execution-readiness-v1")!
+    const readinessRecord = { schemaVersion:
+      "v1.38-plan-262-57-pre-execution-readiness-v1", sourceA9: SOURCE_A9,
+    sourceB9: expected.physicalSourceB9,
+    authorizationRoot: expected.authorizationRoot, sealRoot: expected.sealRoot,
+    absentDestinations: [], routeStarted: false, chargedAttemptCount: 0,
+    acceptedCellCount: 0 }
+    expect(validateV138Plan26261RouteResult(readiness, 0,
+      `${JSON.stringify(readinessRecord)}\n`, expected)).toBeTruthy()
+    for (const mutation of [{ sourceB9: "e".repeat(40) },
+      { authorizationRoot: `sha256:${"e".repeat(64)}` },
+      { sealRoot: `sha256:${"e".repeat(64)}` }])
+      expect(() => validateV138Plan26261RouteResult(readiness, 0,
+        `${JSON.stringify({ ...readinessRecord, ...mutation })}\n`, expected))
+        .toThrow("V138_PLAN_262_61_ROUTE_OUTPUT_SCHEMA_INVALID")
+    const obstruction = V138_REVIEW_V3_ROUTE_MANIFEST.find(({ command }) =>
+      command === "--check-plan-262-57-pre-start-obstruction-v1")!
+    const obstructionRecord = { schemaVersion:
+      "v1.38-plan-262-57-pre-start-obstruction-v1",
+    obstruction: { path: obstruction.destination, type: "file",
+      metadataRoot: `sha256:${"f".repeat(64)}` },
+    authorizationRoot: expected.authorizationRoot, sealRoot: expected.sealRoot,
+    routeStarted: false, isRouteTerminal: false, chargedAttemptCount: 0,
+    acceptedCellCount: 0, authorityExpired: true, noRetry: true,
+    satisfiesAdmit03: false, downstreamAuthority: {},
+    dispositionRoot: `sha256:${"1".repeat(64)}` }
+    for (const mutation of [{ authorizationRoot: `sha256:${"e".repeat(64)}` },
+      { sealRoot: `sha256:${"e".repeat(64)}` }])
+      expect(() => validateV138Plan26261RouteResult(obstruction, 0,
+        `${JSON.stringify({ ...obstructionRecord, ...mutation })}\n`, expected))
+        .toThrow("V138_PLAN_262_61_ROUTE_OUTPUT_SCHEMA_INVALID")
   })
 
   it("passes an exact hypothetical review and rejects recomputed evidence mutations", () => {

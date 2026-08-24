@@ -744,7 +744,7 @@ type RouteObservation = Readonly<{ command: string; handler: string;
   resultCode: string; observedDisposition: string | null;
   outputByteLength: number; handlerSourceRoot: string; dispatcherSourceRoot: string;
   functionRangeRoot: string; callCount: number; callTraceRoot: string;
-  effectPolicyRoot: string;
+  effectPolicyRoot: string; routeIdentityRoot: string;
   beforeRoot: string; afterRoot: string;
   beforePathCount: number; afterPathCount: number; eventPaths: readonly string[];
   changedPaths: readonly string[] }>
@@ -1287,9 +1287,46 @@ const closeBeforeInventoryOverObservedUnion = (
     String(left.path).localeCompare(String(right.path))))
 }
 
+type ExpectedRouteIdentities = Readonly<{ sourceA9: string;
+  logicalSourceB9: string; physicalSourceB9: string;
+  authorizationRoot: string; sealRoot: string }>
+
+export const verifyV138Plan26261RouteIdentity = (input: Readonly<{
+  command: string; handler: string; manifestHandler: string;
+  handlerSourceRoot: string; dispatcherSourceRoot: string;
+  resultCode: string; physicalOutputRoot: string; logicalOutputRoot: string;
+  expected: ExpectedRouteIdentities; observed: ExpectedRouteIdentities;
+  logical: ExpectedRouteIdentities }>) => {
+  if (canonicalV138ReviewerV3(input.observed) !==
+      canonicalV138ReviewerV3(input.expected) ||
+    !V138_REVIEW_V3_ROUTE_MANIFEST.some(entry => entry.command === input.command &&
+      entry.handler === input.manifestHandler) ||
+    ACTUAL_HANDLER_BY_COMMAND[input.command as
+      keyof typeof ACTUAL_HANDLER_BY_COMMAND] !== input.handler ||
+    !root(input.handlerSourceRoot) || !root(input.dispatcherSourceRoot) ||
+    !root(input.physicalOutputRoot) || !root(input.logicalOutputRoot) ||
+    input.resultCode.length === 0)
+    fail("V138_PLAN_262_61_ROUTE_IDENTITY_INVALID")
+  const body = { schemaVersion: "v1.38-plan-262-61-physical-route-identity-v1",
+    command: input.command, handler: input.handler,
+    manifestHandler: input.manifestHandler,
+    handlerSourceRoot: input.handlerSourceRoot,
+    dispatcherSourceRoot: input.dispatcherSourceRoot,
+    resultCode: input.resultCode, physicalOutputRoot: input.physicalOutputRoot,
+    logicalOutputRoot: input.logicalOutputRoot, identities: input.expected }
+  const physicalRouteIdentityRoot = identityRootV138ReviewerV3(
+    "evidenceBundle", body.schemaVersion, body)
+  const logicalBody = { ...body,
+    schemaVersion: "v1.38-plan-262-61-logical-route-identity-v1",
+    physicalOutputRoot: input.logicalOutputRoot, identities: input.logical }
+  const logicalRouteIdentityRoot = identityRootV138ReviewerV3(
+    "evidenceBundle", logicalBody.schemaVersion, logicalBody)
+  return Object.freeze({ physicalRouteIdentityRoot, logicalRouteIdentityRoot })
+}
+
 export const validateV138Plan26261RouteResult = (entry: Readonly<{
   command: string; terminalDisposition: string | null }>, exit: number,
-  output: string) => {
+  output: string, expected?: ExpectedRouteIdentities) => {
   if (exit !== 0) {
     if (output.length === 0 || output.length > 256 || /[\n\0]/u.test(output))
       fail("V138_PLAN_262_61_ROUTE_OUTPUT_INVALID")
@@ -1349,6 +1386,9 @@ export const validateV138Plan26261RouteResult = (entry: Readonly<{
       parsed.schemaVersion !== "v1.38-plan-262-57-pre-execution-readiness-v1" ||
       parsed.sourceA9 !== SOURCE_A9 || !fullOid(parsed.sourceB9) ||
       !root(parsed.authorizationRoot) || !root(parsed.sealRoot) ||
+      expected !== undefined && (parsed.sourceB9 !== expected.physicalSourceB9 ||
+        parsed.authorizationRoot !== expected.authorizationRoot ||
+        parsed.sealRoot !== expected.sealRoot) ||
       !Array.isArray(parsed.absentDestinations) || parsed.routeStarted !== false ||
       parsed.chargedAttemptCount !== 0 || parsed.acceptedCellCount !== 0))
     fail("V138_PLAN_262_61_ROUTE_OUTPUT_SCHEMA_INVALID")
@@ -1364,6 +1404,8 @@ export const validateV138Plan26261RouteResult = (entry: Readonly<{
       parsed.authorityExpired !== true || parsed.noRetry !== true ||
       parsed.satisfiesAdmit03 !== false || !root(parsed.authorizationRoot) ||
       !root(parsed.sealRoot) || !root(parsed.dispositionRoot) ||
+      expected !== undefined && (parsed.authorizationRoot !==
+        expected.authorizationRoot || parsed.sealRoot !== expected.sealRoot) ||
       parsed.obstruction === null || typeof parsed.obstruction !== "object" ||
       Array.isArray(parsed.obstruction) || !exactKeys(parsed.obstruction as
         Record<string, unknown>, ["path", "type", "metadataRoot"])))
@@ -1660,6 +1702,8 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       sha256V138ReviewerV3(canonicalBytes(physicalSeal)),
       sha256V138ReviewerV3(canonicalBytes(seal)))
     const observations: RouteObservation[] = []
+    const physicalRouteIdentityAudits: Array<Readonly<{ command: string;
+      physicalRouteIdentityRoot: string }>> = []
     const successfulRunner = { async run(shard: any, control: any) {
       control.onLaunch({ event: "child_launched", shardId: shard.shardId,
         laneId: shard.laneId, executionAttemptIds: shard.attempts.map(
@@ -1805,8 +1849,13 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         fail("V138_PLAN_262_61_ROUTE_HANDLER_INVALID")
       const handlerSource = Function.prototype.toString.call(handler)
       const handlerSourceRoot = sha256V138ReviewerV3(handlerSource)
+      const expectedRouteIdentities = Object.freeze({ sourceA9: SOURCE_A9,
+        logicalSourceB9: sourceB9, physicalSourceB9: executionSourceB9,
+        authorizationRoot: physicalAuthorization.authorizationRoot,
+        sealRoot: physicalSeal.sealRoot })
       const { resultCode, observedDisposition } =
-        validateV138Plan26261RouteResult(entry, exit, output)
+        validateV138Plan26261RouteResult(entry, exit, output,
+          expectedRouteIdentities)
       const allowedLogicalDerivedRoots = new Set<string>()
       const parsedOutput = output.startsWith("{") ?
         JSON.parse(output) as Record<string, any> : null
@@ -1878,6 +1927,17 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       const logicalOutputRoot = sha256V138ReviewerV3(logicalOutput)
       bindProjection(`route-output:${entry.command}`, physicalOutputRoot,
         logicalOutputRoot)
+      const routeIdentity = verifyV138Plan26261RouteIdentity({
+        command: entry.command, handler: actualHandlerName,
+        manifestHandler: entry.handler, handlerSourceRoot, dispatcherSourceRoot,
+        resultCode, physicalOutputRoot, logicalOutputRoot,
+        expected: expectedRouteIdentities, observed: expectedRouteIdentities,
+        logical: { sourceA9: SOURCE_A9, logicalSourceB9: sourceB9,
+          physicalSourceB9: sourceB9,
+          authorizationRoot: authorization.authorizationRoot,
+          sealRoot: seal.sealRoot } })
+      physicalRouteIdentityAudits.push(Object.freeze({ command: entry.command,
+        physicalRouteIdentityRoot: routeIdentity.physicalRouteIdentityRoot }))
       if (derivedRoot !== null && entry.sideEffect !== "none") {
         const destinationBytes = readFileSync(path.resolve(cloneRoot,
           entry.destination))
@@ -2059,6 +2119,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         functionRangeRoot, callCount,
         callTraceRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(trace)),
         effectPolicyRoot: effects.effectPolicyRoot,
+        routeIdentityRoot: routeIdentity.logicalRouteIdentityRoot,
         beforeRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
           { inventory: logicalBefore, statusRoot: beforeGit.statusRoot })),
         afterRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
@@ -2145,6 +2206,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         routeClones: Object.freeze([...physicalCloneInputs.entries()].map(
           ([group, proof]) => Object.freeze({ group, ...proof })).sort((left, right) =>
           left.group.localeCompare(right.group))),
+        routeIdentityAudits: Object.freeze(physicalRouteIdentityAudits),
         physicalToLogicalProjection: Object.freeze(sortedProjection
           .map((entry, ordinal) => Object.freeze({ ordinal, ...entry }))) }),
       logicalInputCustody,
@@ -2470,12 +2532,121 @@ export const validatePlan26262ReviewAgainstExpected = (candidate: any,
   return true
 }
 
-export const deterministicRouteCustody = (route: any) => {
+const pairAuditRun = (label: "left" | "right", route: any) => {
+  const physical = route.physicalIsolation
+  const body = { schemaVersion: "v1.38-plan-262-61-physical-run-audit-v1",
+    label, identityKind: physical.identityKind,
+    executionSourceB9: physical.executionSourceB9,
+    detachedInput: physical.detachedInput,
+    obstructionInputs: physical.obstructionInputs,
+    routeClones: physical.routeClones,
+    routeIdentityAudits: physical.routeIdentityAudits,
+    projectionLedger: physical.physicalToLogicalProjection,
+    cleanup: route.cleanup }
+  return Object.freeze({ ...body, runAuditRoot: identityRootV138ReviewerV3(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const buildV138Plan26261PairAudit = (left: any, right: any) => {
+  validateV138Plan26261FreshRoutePairIsolation(left, right)
+  const runs = Object.freeze([pairAuditRun("left", left),
+    pairAuditRun("right", right)])
+  const logicalProjectionManifest = Object.freeze(left.physicalIsolation
+    .physicalToLogicalProjection.map(({ ordinal, label, logical, projected,
+      independentlyValidated }: any) => Object.freeze({ ordinal, label, logical,
+      projected, independentlyValidated })))
+  const logicalProjectionRoot = identityRootV138ReviewerV3("artifactManifest",
+    "v1.38-plan-262-61-logical-projection-manifest-v1",
+    logicalProjectionManifest)
+  const body = { schemaVersion: "v1.38-plan-262-61-two-fresh-pair-audit-v1",
+    runs, logicalProjectionManifest, logicalProjectionRoot,
+    detachedInputsDistinct: true, cloneCustodyDistinct: true,
+    obstructionCustodyDistinct: true, cleanupComplete: true,
+    hostPathsExposed: false, privateRuntimeDataExposed: false }
+  return Object.freeze({ ...body, pairAuditRoot: identityRootV138ReviewerV3(
+    "evidenceBundle", body.schemaVersion, body) })
+}
+
+export const validateV138Plan26261PairAudit = (audit: any) => {
+  if (audit?.schemaVersion !== "v1.38-plan-262-61-two-fresh-pair-audit-v1" ||
+    !Array.isArray(audit.runs) || audit.runs.length !== 2 ||
+    audit.runs[0]?.label !== "left" || audit.runs[1]?.label !== "right" ||
+    audit.detachedInputsDistinct !== true || audit.cloneCustodyDistinct !== true ||
+    audit.obstructionCustodyDistinct !== true || audit.cleanupComplete !== true ||
+    audit.hostPathsExposed !== false || audit.privateRuntimeDataExposed !== false)
+    fail("V138_PLAN_262_61_PAIR_AUDIT_INVALID")
+  for (const run of audit.runs) {
+    const { runAuditRoot, ...body } = run
+    if (run.identityKind !== "physical_execution_b9" ||
+      !fullOid(run.executionSourceB9) ||
+      run.detachedInput?.independentlyValidated !== true ||
+      run.cleanup?.complete !== true || run.cleanup?.residualPaths?.length !== 0 ||
+      !Array.isArray(run.routeClones) || run.routeClones.length === 0 ||
+      run.routeClones.some((entry: any) => entry.independentlyValidated !== true) ||
+      !Array.isArray(run.routeIdentityAudits) ||
+      canonicalV138ReviewerV3(run.routeIdentityAudits.map(
+        ({ command }: any) => command)) !== canonicalV138ReviewerV3(
+          V138_REVIEW_V3_ROUTE_MANIFEST.map(({ command }) => command)) ||
+      run.routeIdentityAudits.some((entry: any) =>
+        !root(entry.physicalRouteIdentityRoot)) ||
+      !Array.isArray(run.projectionLedger) ||
+      canonicalV138ReviewerV3(run.projectionLedger.map(({ label }: any) => label)) !==
+        canonicalV138ReviewerV3(V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS) ||
+      run.projectionLedger.some((entry: any, ordinal: number) =>
+        entry.ordinal !== ordinal || entry.independentlyValidated !== true ||
+        entry.projected !== (entry.physical !== entry.logical)) ||
+      runAuditRoot !== identityRootV138ReviewerV3("evidenceBundle",
+        String(body.schemaVersion), body))
+      fail("V138_PLAN_262_61_PAIR_AUDIT_INVALID")
+  }
+  if (audit.runs[0].detachedInput.pathRoot === audit.runs[1].detachedInput.pathRoot ||
+    audit.runs[0].detachedInput.identityRoot ===
+      audit.runs[1].detachedInput.identityRoot)
+    fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
+  const leftClones = audit.runs[0].routeClones
+  const rightClones = audit.runs[1].routeClones
+  if (leftClones.length !== rightClones.length || leftClones.some(
+    (entry: any, index: number) => entry.group !== rightClones[index]?.group ||
+      entry.pathRoot === rightClones[index]?.pathRoot ||
+      entry.identityRoot === rightClones[index]?.identityRoot) ||
+    audit.runs[0].obstructionInputs.length !== 1 ||
+    audit.runs[1].obstructionInputs.length !== 1 ||
+    audit.runs[0].obstructionInputs[0].pathRoot ===
+      audit.runs[1].obstructionInputs[0].pathRoot ||
+    audit.runs[0].obstructionInputs[0].identityRoot ===
+      audit.runs[1].obstructionInputs[0].identityRoot)
+    fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
+  const expectedLogical = audit.runs[0].projectionLedger.map(
+    ({ ordinal, label, logical, projected, independentlyValidated }: any) =>
+      ({ ordinal, label, logical, projected, independentlyValidated }))
+  if (canonicalV138ReviewerV3(expectedLogical) !==
+      canonicalV138ReviewerV3(audit.logicalProjectionManifest) ||
+    canonicalV138ReviewerV3(expectedLogical) !== canonicalV138ReviewerV3(
+      audit.runs[1].projectionLedger.map(
+        ({ ordinal, label, logical, projected, independentlyValidated }: any) =>
+          ({ ordinal, label, logical, projected, independentlyValidated }))) ||
+    audit.logicalProjectionRoot !== identityRootV138ReviewerV3("artifactManifest",
+      "v1.38-plan-262-61-logical-projection-manifest-v1",
+      audit.logicalProjectionManifest))
+    fail("V138_PLAN_262_61_PAIR_AUDIT_PROJECTION_INVALID")
+  const { pairAuditRoot, ...body } = audit
+  if (pairAuditRoot !== identityRootV138ReviewerV3("evidenceBundle",
+    String(body.schemaVersion), body))
+    fail("V138_PLAN_262_61_PAIR_AUDIT_ROOT_INVALID")
+  const serialized = canonicalV138ReviewerV3(audit)
+  if (/\/(?:private|tmp|Users)\//u.test(serialized) ||
+    /StrategyMemory|SoldierMemory|objectivePayload|rawDiagnostics/iu.test(serialized))
+    fail("V138_PLAN_262_61_PAIR_AUDIT_PRIVACY_INVALID")
+  return true
+}
+
+export const deterministicRouteCustody = (route: any, pairAudit?: any) => {
   const observations = route.observations.map((value: RouteObservation) => {
     if (!root(value.outputRoot) || value.outputByteLength <= 0 ||
       value.outputByteLength > (value.exit === 0 ? 4096 : 256) ||
       !root(value.callTraceRoot) || !root(value.functionRangeRoot) ||
-      value.callCount !== 1 || !root(value.effectPolicyRoot))
+      value.callCount !== 1 || !root(value.effectPolicyRoot) ||
+      !root(value.routeIdentityRoot))
       fail("V138_PLAN_262_61_ROUTE_PROOF_BOUNDS_INVALID")
     return Object.freeze({ command: value.command, handler: value.handler,
       manifestHandler: value.manifestHandler, aliasAudit: value.aliasAudit,
@@ -2487,6 +2658,7 @@ export const deterministicRouteCustody = (route: any) => {
       dispatcherSourceRoot: value.dispatcherSourceRoot,
       functionRangeRoot: value.functionRangeRoot, callCount: value.callCount,
       callTraceRoot: value.callTraceRoot, effectPolicyRoot: value.effectPolicyRoot,
+      routeIdentityRoot: value.routeIdentityRoot,
       beforeRoot: value.beforeRoot, afterRoot: value.afterRoot,
       beforePathCount: value.beforePathCount, afterPathCount: value.afterPathCount,
       eventPaths: value.eventPaths, changedPaths: value.changedPaths })
@@ -2499,7 +2671,7 @@ export const deterministicRouteCustody = (route: any) => {
     reportBlob: value.reportBlob, reportRoot: value.reportRoot,
     reportByteLength: value.reportByteLength })
   return Object.freeze({ schemaVersion:
-    "v1.38-plan-262-61-complete-route-custody-v2",
+    "v1.38-plan-262-61-complete-route-custody-v3",
   b9: Object.freeze({ ...route.b9Custody }),
   observations: Object.freeze(observations),
   events: route.events, snapshots: route.snapshots,
@@ -2507,7 +2679,8 @@ export const deterministicRouteCustody = (route: any) => {
     residualPaths: route.cleanup.residualPaths },
   logicalInputCustody: route.logicalInputCustody,
   prerequisitePublication: publication(route.syntheticPrerequisitePublication),
-  postExecutionPublication: publication(route.postExecutionPublication) })
+  postExecutionPublication: publication(route.postExecutionPublication),
+  ...(pairAudit === undefined ? {} : { pairAudit }) })
 }
 
 export const normalizedPlan26262ReportContentRoot = (bytes: Buffer | string) => {
@@ -2522,7 +2695,25 @@ export const normalizedPlan26262ReportContentRoot = (bytes: Buffer | string) => 
 
 export const validatePlan26262ReportManifest = (candidate: unknown,
   expected: unknown) => {
-  if (canonicalV138ReviewerV3(candidate) !== canonicalV138ReviewerV3(expected))
+  const left = structuredClone(candidate) as any
+  const right = structuredClone(expected) as any
+  const candidatePair = left?.completeRouteCustody?.pairAudit
+  if (candidatePair !== undefined) {
+    validateV138Plan26261PairAudit(candidatePair)
+    if (left?.custody?.completeRouteCustody?.pairAudit !== undefined &&
+      canonicalV138ReviewerV3(candidatePair) !== canonicalV138ReviewerV3(
+        left.custody.completeRouteCustody.pairAudit))
+      fail("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+    delete left.completeRouteCustody.pairAudit
+    if (left?.custody?.completeRouteCustody?.pairAudit !== undefined)
+      delete left.custody.completeRouteCustody.pairAudit
+    if (right?.completeRouteCustody?.pairAudit !== undefined)
+      delete right.completeRouteCustody.pairAudit
+    if (right?.custody?.completeRouteCustody?.pairAudit !== undefined)
+      delete right.custody.completeRouteCustody.pairAudit
+  } else if (right?.completeRouteCustody?.pairAudit !== undefined)
+    fail("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+  if (canonicalV138ReviewerV3(left) !== canonicalV138ReviewerV3(right))
     fail("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
   return true
 }
@@ -2564,7 +2755,9 @@ export const deriveExpectedPlan26262ReviewFresh = async (rootPath: string) => {
       canonicalV138ReviewerV3(deterministicRouteCustody(routeRepeat)))
     fail("V138_PLAN_262_62_REVIEW_NONDETERMINISTIC")
   const reviewerConvergence = inspectReviewerConvergence(rootPath)
-  const completeRouteCustody = deterministicRouteCustody(route)
+  const pairAudit = buildV138Plan26261PairAudit(route, routeRepeat)
+  validateV138Plan26261PairAudit(pairAudit)
+  const completeRouteCustody = deterministicRouteCustody(route, pairAudit)
   const custody = Object.freeze({ schemaVersion:
     "v1.38-plan-262-62-review-v3-custody-wrapper-v2",
   source: { sourceBase9: SOURCE_BASE9, sourceA9: SOURCE_A9 },
