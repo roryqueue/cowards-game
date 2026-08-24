@@ -3661,8 +3661,13 @@ export const validatePlan26262ReportManifest = (candidate: unknown,
     if (expectedCopies.some(value => value === undefined) ||
       candidateCopies.some(value => value === undefined))
       fail("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
-    for (const audit of [...expectedCopies, ...candidateCopies])
-      validateV138Plan26261PairAudit(audit)
+    for (const audit of [...expectedCopies, ...candidateCopies]) {
+      try {
+        validateV138Plan26261PairAudit(audit)
+      } catch {
+        fail("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+      }
+    }
     const immutablePairBytes = canonicalV138ReviewerV3(expectedCopies[0])
     if ([...expectedCopies, ...candidateCopies].some(audit =>
       canonicalV138ReviewerV3(audit) !== immutablePairBytes))

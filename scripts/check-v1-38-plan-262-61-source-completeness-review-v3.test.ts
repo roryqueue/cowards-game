@@ -1508,6 +1508,14 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     }
   })
 
+  it("maps nested pair-audit validation failures to the report boundary", () => {
+    const invalidPairAudit = { schemaVersion: "invalid-pair-audit" }
+    const report = { completeRouteCustody: { pairAudit: invalidPairAudit },
+      custody: { completeRouteCustody: { pairAudit: invalidPairAudit } } }
+    expect(() => validatePlan26262ReportManifest(report, report))
+      .toThrow("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+  })
+
   it.each([
     ["missing", { schemaVersion: "v1" }],
     ["extra", { schemaVersion: "v1", authority: false, extra: true }],
