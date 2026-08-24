@@ -1,4 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
+// Plan-262-61 reviewer custody source; immutable successor carries the reviewer-tool trailer.
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { chmodSync, closeSync, constants as fsConstants, existsSync, fstatSync, lstatSync,
