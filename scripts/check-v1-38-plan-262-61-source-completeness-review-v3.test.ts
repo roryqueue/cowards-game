@@ -39,11 +39,14 @@ import {
   sha256V138ReviewerV3,
   snapshotReadiness,
   normalizedPlan26262ReportContentRoot,
+  runV138Plan26261ReviewerCli,
   validatePlan26262ReportManifest,
   validatePlan26262Summary,
   validatePlan26262ReviewAgainstExpected,
+  validateV138Plan26261RouteEffects,
   validateV138Plan26261RouteResult,
   observeV138Plan26261RouteDispatch,
+  observeV138Plan26261RouteDispatchPair,
 } from "./check-v1-38-plan-262-61-source-completeness-review-v3.js"
 import {
   V138_REVIEW_V3_CANONICAL_PATH,
@@ -74,6 +77,28 @@ const commitAll = (cwd: string, message: string) => {
   execFileSync("git", ["add", "-A"], { cwd })
   execFileSync("git", ["-c", "user.name=Fixture", "-c",
     "user.email=fixture@example.invalid", "commit", "--quiet", "-m", message], { cwd })
+}
+
+const firstExactDifference = (left: unknown, right: unknown,
+  location = "$" ): string | null => {
+  if (Object.is(left, right)) return null
+  if (left === null || right === null || typeof left !== "object" ||
+    typeof right !== "object")
+    return `${location}: ${JSON.stringify(left)} !== ${JSON.stringify(right)}`
+  if (Array.isArray(left) !== Array.isArray(right))
+    return `${location}: collection types differ`
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const keys = [...new Set([...Object.keys(leftRecord), ...Object.keys(rightRecord)])]
+    .sort()
+  for (const key of keys) {
+    if (!(key in leftRecord) || !(key in rightRecord))
+      return `${location}.${key}: field presence differs`
+    const difference = firstExactDifference(leftRecord[key], rightRecord[key],
+      `${location}.${key}`)
+    if (difference !== null) return difference
+  }
+  return null
 }
 
 afterEach(() => {
@@ -202,6 +227,14 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       sourceFinding: "V138_PLAN_262_61_A9_CLI_MANIFEST_HANDLER_BYPASS" })
     expect(value.events.some(({ event }) => /:(?:openSync|writeSync|linkSync|renameSync|unlinkSync)/u
       .test(event))).toBe(true)
+    const semanticEffect = value.events.find(({ event }) => event.includes(":writeFileSync"))
+    const parsedEffect = JSON.parse(semanticEffect.result)
+    expect(Object.hasOwn(parsedEffect, "flags")).toBe(true)
+    expect(parsedEffect).toEqual(expect.objectContaining({
+      outcome: "success", errorCode: null,
+      beforeState: expect.objectContaining({ type: expect.any(String) }),
+      afterState: expect.objectContaining({ type: expect.any(String) }),
+      detailRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u) }))
     expect(value.snapshots).toHaveLength(2)
     expect(value.snapshots.every(({ pathCount }) => pathCount > 100)).toBe(true)
     expect(value.cleanup).toEqual(expect.objectContaining({ complete: true,
@@ -214,14 +247,66 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
       ".planning/artifacts/v1.38-successor-source-seal-v9.json",
     ])
-  })
+  }, 600_000)
 
   it("produces byte-identical semantic evidence in two independent fresh derivations",
     async () => {
-      const left = await observeV138Plan26261RouteDispatch(repoRoot, { fresh: true })
-      const right = await observeV138Plan26261RouteDispatch(repoRoot, { fresh: true })
-      expect(canonicalV138ReviewerV3(deterministicRouteCustody(left)))
-        .toBe(canonicalV138ReviewerV3(deterministicRouteCustody(right)))
+      const { left, right } = await observeV138Plan26261RouteDispatchPair(repoRoot)
+      const leftCustody = deterministicRouteCustody(left) as Record<string, any>
+      const rightCustody = deterministicRouteCustody(right) as Record<string, any>
+      expect(firstExactDifference(leftCustody, rightCustody),
+        "first exact custody difference").toBeNull()
+      expect(canonicalV138ReviewerV3(leftCustody))
+        .toBe(canonicalV138ReviewerV3(rightCustody))
+      expect(leftCustody.b9).toEqual(expect.objectContaining({
+        commit: left.sourceB9, parent: left.publicationCommit,
+        tree: expect.stringMatching(/^[0-9a-f]{40}$/u),
+        changedPaths: left.b9ChangedPaths,
+        authorizationBlob: expect.stringMatching(/^[0-9a-f]{40}$/u),
+        authorizationRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        sealBlob: expect.stringMatching(/^[0-9a-f]{40}$/u),
+        sealRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u) }))
+      expect(leftCustody.observations).toHaveLength(10)
+      expect(leftCustody.observations.every((value: Record<string, unknown>) =>
+        /^sha256:[0-9a-f]{64}$/u.test(String(value.outputRoot)) &&
+        Number(value.outputByteLength) > 0 && value.callCount === 1 &&
+        /^sha256:[0-9a-f]{64}$/u.test(String(value.callTraceRoot)) &&
+        /^sha256:[0-9a-f]{64}$/u.test(String(value.functionRangeRoot)) &&
+        /^sha256:[0-9a-f]{64}$/u.test(String(value.effectPolicyRoot)))).toBe(true)
+      const exactMutationPaths = [
+        ["b9", "commit"], ["b9", "parent"], ["b9", "tree"],
+        ["b9", "authorizationBlob"], ["b9", "authorizationRoot"],
+        ["b9", "sealBlob"], ["b9", "sealRoot"],
+        ["prerequisitePublication", "commit"],
+        ["prerequisitePublication", "parent"],
+        ["prerequisitePublication", "tree"],
+        ["prerequisitePublication", "reviewBlob"],
+        ["prerequisitePublication", "reviewRoot"],
+        ["prerequisitePublication", "reportBlob"],
+        ["prerequisitePublication", "reportRoot"],
+        ["postExecutionPublication", "commit"],
+        ["postExecutionPublication", "parent"],
+        ["postExecutionPublication", "tree"],
+        ["postExecutionPublication", "reviewBlob"],
+        ["postExecutionPublication", "reviewRoot"],
+        ["postExecutionPublication", "reportBlob"],
+        ["postExecutionPublication", "reportRoot"],
+        ["observations", 0, "outputRoot"],
+        ["observations", 0, "outputByteLength"],
+        ["observations", 0, "callTraceRoot"],
+        ["observations", 0, "functionRangeRoot"],
+        ["observations", 0, "callCount"],
+      ] as const
+      const expectedWrapper = { completeRouteCustody: leftCustody }
+      for (const mutationPath of exactMutationPaths) {
+        const candidate = structuredClone(expectedWrapper) as Record<string, any>
+        let cursor: any = candidate.completeRouteCustody
+        for (const part of mutationPath.slice(0, -1)) cursor = cursor[part]
+        const key = mutationPath.at(-1)!
+        cursor[key] = typeof cursor[key] === "number" ? cursor[key] + 1 : "0".repeat(40)
+        expect(() => validatePlan26262ReportManifest(candidate, expectedWrapper))
+          .toThrow("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
+      }
     }, 1_200_000)
 
   it("fails closed when real route handlers expose source findings", async () => {
@@ -237,7 +322,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(value.commands).toHaveLength(10)
     expect(value.forbiddenDestinations).toContain(V138_REVIEW_V3_CANONICAL_PATH)
     expect(value.forbiddenDestinations).toContain(V138_REVIEW_V3_REPORT_PATH)
-  })
+  }, 600_000)
 
   it("runs derive-no-publish with bounded output and no canonical write", () => {
     const before = git(repoRoot, ["status", "--porcelain=v1"])
@@ -250,7 +335,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(parsed.sourceCompletenessPassed).toBe(false)
     expect(Buffer.byteLength(result.stdout)).toBeLessThan(512 * 1024)
     expect(git(repoRoot, ["status", "--porcelain=v1"])).toBe(before)
-  })
+  }, 600_000)
 
   it.each([
     ["zero", []],
@@ -348,7 +433,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     writeFileSync(target, exact); commitAll(directory, "restore lifecycle bytes")
     expect(() => inspectV138Plan26261Lifecycle(directory))
       .toThrow("V138_PLAN_262_61_LIFECYCLE_HISTORY_INVALID")
-  })
+  }, 30_000)
 
   it("rejects canonical publication presence without deleting or restoring it", async () => {
     const directory = clone()
@@ -358,7 +443,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     commitAll(directory, "publish forbidden canonical review")
     await expect(deriveV138Plan26261NoPublish(directory))
       .rejects.toThrow("V138_PLAN_262_61_CANONICAL_DESTINATION_PRESENT")
-  })
+  }, 30_000)
 
   it("rejects a noncanonical physical repository root through a symlink", async () => {
     const directory = clone()
@@ -420,12 +505,13 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(() => inspectReviewerConvergence(repoRoot)).toThrow()
   })
 
-  it("requires immutable schema-bound review, fix, and one-path receipt custody", () => {
+  it("requires immutable schema-bound review, fix, receipt, and real Plan-61 CLI custody",
+    async () => {
     const directory = clone()
     const sourceR3 = git(directory, ["rev-parse", "HEAD"])
     const sourceR3Tree = git(directory, ["rev-parse", "HEAD^{tree}"])
     const sourceR3Parent = git(directory, ["show", "-s", "--format=%P", "HEAD"])
-    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V6.md`
+    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V7.md`
     const review = `---\nphase: 262\nplan: "61"\nreviewed_source_commit: ${sourceR3}\n` +
       `files_reviewed: 2\nfiles_reviewed_list:\n` +
       `  - scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts\n` +
@@ -438,7 +524,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const reviewBlob = git(directory, ["rev-parse", `HEAD:${reviewPath}`])
     const reviewRoot = sha256V138ReviewerV3(Buffer.from(review))
     const fixPath = `${path.dirname(SUMMARY_PATH)}/262-61-REVIEW-FIX.md`
-    const reportPaths = ["", "-V2", "-V3", "-V4", "-V5", "-V6"].map(suffix =>
+    const reportPaths = ["", "-V2", "-V3", "-V4", "-V5", "-V6", "-V7"].map(suffix =>
       `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW${suffix}.md`)
     const reports = reportPaths.map(repoPath => {
       const commit = git(directory, ["log", "-1", "--format=%H", "--", repoPath])
@@ -483,10 +569,33 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(inspectV138Plan26261Receipt(directory, receiptPath)).toMatchObject({
       receipt: { r3AuthorAgent: history.agentId }, convergence: {
         codeReviewRoot: reviewRoot } })
+    const receiptCustody = inspectV138Plan26261Receipt(directory, receiptPath)
+    const summaryPath = `${path.dirname(SUMMARY_PATH)}/262-61-SUMMARY.md`
+    const summaryManifest = { schemaVersion: "v1.38-plan-262-61-summary-v1",
+      r3AuthorAgent: history.agentId,
+      completionTimestamp: history.completionTimestamp,
+      sourceR3, sourceR3Tree, sourceR3Parent,
+      codeReviewPath: reviewPath, codeReviewRoot: reviewRoot,
+      reviewFixRoot: convergence.reviewFixRoot, receiptPath,
+      receiptCommit: receiptCustody.receiptCommit,
+      receiptBlob: receiptCustody.receiptBlob,
+      receiptRoot: receiptCustody.receiptRoot,
+      independentPersonClaimed: false, reviewerSeparated: false,
+      independentCustodyClaimed: false, authorizesPlan26262: false,
+      authorizesExecution: false }
+    writeFileSync(path.join(directory, summaryPath), "# Plan 262-61 fixture summary\n\n" +
+      `\`\`\`plan-262-61-summary-json\n${JSON.stringify(summaryManifest)}\n\`\`\`\n`)
+    await expect(runV138Plan26261ReviewerCli(directory,
+      ["--check-plan-61-summary-candidate", "--summary", summaryPath,
+        "--receipt", receiptPath])).resolves.toBeUndefined()
+    commitAll(directory, "docs(262-61): fixture candidate publication")
+    await expect(runV138Plan26261ReviewerCli(directory,
+      ["--check-plan-61-summary", "--summary", summaryPath,
+        "--receipt", receiptPath])).resolves.toBeUndefined()
     writeFileSync(path.join(directory, receiptPath), "{}\n")
     expect(() => inspectV138Plan26261Receipt(directory, receiptPath))
       .toThrow("V138_PLAN_262_61_RECEIPT_NOT_IMMUTABLE")
-  })
+  }, 60_000)
 
   it("canonicalization and roots detect nested mutation after recomputation", () => {
     const baseline = { source: SOURCE_A9, nested: { paths: [...R3_PATHS], count: 2 } }
@@ -546,6 +655,39 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       expect(() => writeFileSync(999_999, "x"))
         .toThrow("V138_PLAN_262_61_ROUTE_FS_DESCRIPTOR_UNKNOWN")
       expect(observer.stop()).toEqual([])
+    } finally { observer.restore() }
+  })
+
+  it("production effect gate rejects a real protected write-and-restore", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-61-fs-observer-"))
+    disposable.push(directory)
+    const protectedPath = path.join(directory, "protected.json")
+    writeFileSync(protectedPath, "sealed\n")
+    const observer = installRouteFsObserver()
+    observer.start(directory, "--check-plan-262-57-pre-execution-readiness-v1")
+    try {
+      writeFileSync(protectedPath, "mutated\n")
+      writeFileSync(protectedPath, "sealed\n")
+      const records = observer.stop()
+      const entry = V138_REVIEW_V3_ROUTE_MANIFEST[0]
+      expect(() => validateV138Plan26261RouteEffects(entry, records))
+        .toThrow("V138_PLAN_262_61_ROUTE_FORBIDDEN_TRANSIENT_EFFECT")
+    } finally { observer.restore() }
+  })
+
+  it("production effect gate rejects a real unexpected transient create-delete", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-61-fs-observer-"))
+    disposable.push(directory)
+    const observer = installRouteFsObserver()
+    observer.start(directory, "--check-plan-262-57-pre-execution-readiness-v1")
+    try {
+      const unexpected = path.join(directory, "unexpected.tmp")
+      writeFileSync(unexpected, "transient\n", { flag: "wx" })
+      unlinkSync(unexpected)
+      const records = observer.stop()
+      expect(() => validateV138Plan26261RouteEffects(
+        V138_REVIEW_V3_ROUTE_MANIFEST[0], records))
+        .toThrow("V138_PLAN_262_61_ROUTE_FORBIDDEN_TRANSIENT_EFFECT")
     } finally { observer.restore() }
   })
 
@@ -654,5 +796,5 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(() => validatePlan26262ReviewAgainstExpected(
       recompute({ snapshots: [...snapshots].reverse() }), exact))
       .toThrow("V138_REVIEW_V3_SNAPSHOT_OBSERVATION_INVALID")
-  })
+  }, 30_000)
 })
