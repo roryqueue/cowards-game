@@ -2799,19 +2799,31 @@ const pairAuditSensitive = (value: unknown, key = ""): boolean => {
 
 const PAIR_AUDIT_ASSURANCE = "single_operator_local_observation_v1" as const
 
-const localObservationCommitment = (input: Readonly<Record<string, unknown>>) => {
-  const { pathComponentRoot: _rawPathRoot,
-    inodeDeviceComponentRoot: _rawIdentityRoot, ...safe } = input
+export const localObservationCommitment = (input: Readonly<Record<string, unknown>>) => {
+  const { pathComponentRoot: observedPathRoot,
+    inodeDeviceComponentRoot: observedFilesystemIdentityRoot,
+    locationCommitment: retainedLocationCommitment,
+    filesystemIdentityCommitment: retainedFilesystemIdentityCommitment,
+    ...safe } = input
+  const locationCommitment = retainedLocationCommitment ?? identityRootV138ReviewerV3(
+    "artifactManifest", "v1.38-plan-262-61-local-observed-location-v1",
+    { observedPathRoot })
+  const filesystemIdentityCommitment = retainedFilesystemIdentityCommitment ??
+    identityRootV138ReviewerV3("artifactManifest",
+      "v1.38-plan-262-61-local-observed-filesystem-identity-v1",
+      { observedFilesystemIdentityRoot })
   const componentBody = { assurance: safe.assurance, run: safe.run,
     kind: safe.kind, group: safe.group, ordinal: safe.ordinal,
     contentRoot: safe.contentRoot, mode: safe.mode, byteLength: safe.byteLength,
-    linkCount: safe.linkCount, executionCommit: safe.executionCommit }
+    linkCount: safe.linkCount, executionCommit: safe.executionCommit,
+    locationCommitment, filesystemIdentityCommitment }
   const pathComponentRoot = identityRootV138ReviewerV3("artifactManifest",
     "v1.38-plan-262-61-hashed-local-path-component-v1", componentBody)
   const inodeDeviceComponentRoot = identityRootV138ReviewerV3("artifactManifest",
     "v1.38-plan-262-61-hashed-local-inode-device-component-v1",
     { ...componentBody, pathComponentRoot })
-  const body = { ...safe, pathComponentRoot, inodeDeviceComponentRoot }
+  const body = { ...safe, locationCommitment, filesystemIdentityCommitment,
+    pathComponentRoot, inodeDeviceComponentRoot }
   return Object.freeze({ ...body, commitmentRoot: identityRootV138ReviewerV3(
     "evidenceBundle", "v1.38-plan-262-61-local-observation-commitment-v1", body) })
 }
@@ -3143,8 +3155,9 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
     const commitmentKeys = ["assurance", "run", "authorizationRoot", "sealRoot",
       "executionCommit", "executionBlobRoot", "handlerValidationResult",
       "handlerValidationRoot", "kind", "group", "ordinal", "contentRoot", "mode",
-      "byteLength", "linkCount", "pathComponentRoot", "inodeDeviceComponentRoot",
-      "commitmentRoot"]
+      "byteLength", "linkCount", "locationCommitment",
+      "filesystemIdentityCommitment", "pathComponentRoot",
+      "inodeDeviceComponentRoot", "commitmentRoot"]
     const expectedHandlerValidationRoot = identityRootV138ReviewerV3(
       "evidenceBundle", "v1.38-plan-262-61-handler-validation-v1",
       run.routeIdentityAudits.map(({ command, physicalRouteIdentityRoot,
@@ -3170,6 +3183,7 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
         !pairAuditInt(entry.mode, 0, 0o777) ||
         !pairAuditInt(entry.byteLength, 0, 8 * 1024 * 1024) ||
         !pairAuditInt(entry.linkCount, 1, 1_000_000) ||
+        !root(entry.locationCommitment) || !root(entry.filesystemIdentityCommitment) ||
         !root(entry.pathComponentRoot) || !root(entry.inodeDeviceComponentRoot) ||
         entry.authorizationRoot !== projections.get("authorization-root")?.physical ||
         entry.sealRoot !== projections.get("seal-root")?.physical ||
@@ -3521,10 +3535,10 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
     }
   }
   if (audit.runs[0].executionSourceB9 === audit.runs[1].executionSourceB9 ||
-    audit.runs[0].physicalCommitments[0].pathComponentRoot ===
-      audit.runs[1].physicalCommitments[0].pathComponentRoot ||
-    audit.runs[0].physicalCommitments[0].inodeDeviceComponentRoot ===
-      audit.runs[1].physicalCommitments[0].inodeDeviceComponentRoot)
+    audit.runs[0].physicalCommitments[0].locationCommitment ===
+      audit.runs[1].physicalCommitments[0].locationCommitment ||
+    audit.runs[0].physicalCommitments[0].filesystemIdentityCommitment ===
+      audit.runs[1].physicalCommitments[0].filesystemIdentityCommitment)
     fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
   if (canonicalV138ReviewerV3(audit.runs[0].logicalPublicationEvidence) !==
       canonicalV138ReviewerV3(audit.runs[1].logicalPublicationEvidence) ||
@@ -3536,13 +3550,13 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
   const rightClones = audit.runs[1].physicalCommitments.slice(1, 5)
   if (leftClones.length !== rightClones.length || leftClones.some(
     (entry: any, index: number) => entry.group !== rightClones[index]?.group ||
-      entry.pathComponentRoot === rightClones[index]?.pathComponentRoot ||
-      entry.inodeDeviceComponentRoot ===
-        rightClones[index]?.inodeDeviceComponentRoot) ||
-    audit.runs[0].physicalCommitments[5].pathComponentRoot ===
-      audit.runs[1].physicalCommitments[5].pathComponentRoot ||
-    audit.runs[0].physicalCommitments[5].inodeDeviceComponentRoot ===
-      audit.runs[1].physicalCommitments[5].inodeDeviceComponentRoot)
+      entry.locationCommitment === rightClones[index]?.locationCommitment ||
+      entry.filesystemIdentityCommitment ===
+        rightClones[index]?.filesystemIdentityCommitment) ||
+    audit.runs[0].physicalCommitments[5].locationCommitment ===
+      audit.runs[1].physicalCommitments[5].locationCommitment ||
+    audit.runs[0].physicalCommitments[5].filesystemIdentityCommitment ===
+      audit.runs[1].physicalCommitments[5].filesystemIdentityCommitment)
     fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
   const expectedLogical = audit.runs[0].projectionLedger.map(
     ({ ordinal, label, logical, projected, independentlyValidated }: any) =>

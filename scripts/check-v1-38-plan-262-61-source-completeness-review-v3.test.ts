@@ -59,6 +59,7 @@ import {
   verifyV138Plan26261PhysicalLogicalEventPreimages,
   physicalEventDetailRootV138Plan26261,
   logicalEventDetailRootV138Plan26261,
+  localObservationCommitment,
   verifyV138Plan26261RouteIdentity,
   verifyAndProjectV138Plan26261DerivedRouteRoot,
   verifyAndProjectV138Plan26261PersistedRouteFile,
@@ -486,6 +487,9 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         ["pairAudit", "cleanupComplete"],
         ["pairAudit", "runs", 0, "executionSourceB9"],
         ["pairAudit", "runs", 0, "runAuditRoot"],
+        ["pairAudit", "runs", 0, "physicalCommitments", 0, "locationCommitment"],
+        ["pairAudit", "runs", 0, "physicalCommitments", 0,
+          "filesystemIdentityCommitment"],
         ["pairAudit", "runs", 0, "physicalCommitments", 6, "pathComponentRoot"],
         ["pairAudit", "runs", 0, "physicalCommitments", 0,
           "inodeDeviceComponentRoot"],
@@ -523,14 +527,26 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       expect(() => validateV138Plan26261PairAudit(independentlyInvalid)).toThrow(
         "V138_PLAN_262_61_PAIR_AUDIT_COMMITMENT_INVALID")
       for (const commitmentIndex of [0, 1, 2, 3, 4, 5, 6]) {
-        for (const component of ["pathComponentRoot",
-          "inodeDeviceComponentRoot"] as const) {
+        for (const component of ["locationCommitment", "filesystemIdentityCommitment",
+          "pathComponentRoot", "inodeDeviceComponentRoot"] as const) {
           const candidate = structuredClone(pairAudit) as any
           candidate.runs[0].physicalCommitments[commitmentIndex][component] =
             `sha256:${String(commitmentIndex + 1).repeat(64).slice(0, 64)}`
           expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
             .toThrow("V138_PLAN_262_61_PAIR_AUDIT_COMMITMENT_INVALID")
         }
+      }
+      for (const commitmentIndex of [0, 1, 2, 3, 4, 5, 6]) {
+        const candidate = structuredClone(pairAudit) as any
+        const source = candidate.runs[0].physicalCommitments[commitmentIndex]
+        const target = candidate.runs[1].physicalCommitments[commitmentIndex]
+        target.locationCommitment = source.locationCommitment
+        target.filesystemIdentityCommitment = source.filesystemIdentityCommitment
+        const { commitmentRoot: _discarded, ...targetBody } = target
+        candidate.runs[1].physicalCommitments[commitmentIndex] =
+          localObservationCommitment(targetBody)
+        expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
+          .toThrow("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
       }
       for (const mutateClaim of [
         (candidate: any) => { candidate.assurance = "independent_custody_v1" },
@@ -1514,6 +1530,33 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       custody: { completeRouteCustody: { pairAudit: invalidPairAudit } } }
     expect(() => validatePlan26262ReportManifest(report, report))
       .toThrow("V138_PLAN_262_62_REVIEW_REPORT_PAIR_AUDIT_INVALID")
+  })
+
+  it("commits observed local location and filesystem identity without retaining either", () => {
+    const base = { assurance: "single_operator_local_observation_v1", run: "left",
+      authorizationRoot: `sha256:${"a".repeat(64)}`,
+      sealRoot: `sha256:${"b".repeat(64)}`,
+      executionCommit: "c".repeat(40), executionBlobRoot: `sha256:${"d".repeat(64)}`,
+      handlerValidationResult: "handler_success",
+      handlerValidationRoot: `sha256:${"e".repeat(64)}`,
+      kind: "detached", group: "input", ordinal: 0,
+      contentRoot: `sha256:${"f".repeat(64)}`, mode: 0o644,
+      byteLength: 1, linkCount: 1,
+      pathComponentRoot: `sha256:${"1".repeat(64)}`,
+      inodeDeviceComponentRoot: `sha256:${"2".repeat(64)}` }
+    const first = localObservationCommitment(base)
+    const moved = localObservationCommitment({ ...base,
+      pathComponentRoot: `sha256:${"3".repeat(64)}` })
+    const reidentified = localObservationCommitment({ ...base,
+      inodeDeviceComponentRoot: `sha256:${"4".repeat(64)}` })
+    expect(first).not.toHaveProperty("observedPathRoot")
+    expect(first).not.toHaveProperty("observedFilesystemIdentityRoot")
+    expect(first.locationCommitment).not.toBe(moved.locationCommitment)
+    expect(first.filesystemIdentityCommitment).not.toBe(
+      reidentified.filesystemIdentityCommitment)
+    expect(first.pathComponentRoot).not.toBe(moved.pathComponentRoot)
+    expect(first.inodeDeviceComponentRoot).not.toBe(
+      reidentified.inodeDeviceComponentRoot)
   })
 
   it.each([
