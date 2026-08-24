@@ -18,6 +18,7 @@ import {
   SUMMARY_PATH,
   SUMMARY_SHA256,
   canonicalV138ReviewerV3,
+  assertV138Plan26261NoCrashLeak,
   deriveV138Plan26261NoPublish,
   inspectCommittedR3,
   inspectReviewerConvergence,
@@ -28,8 +29,11 @@ import {
   inspectV138Plan26261RepositoryFile,
   inspectV138Plan26261Receipt,
   inspectV138Plan26261SummaryConvergence,
+  inventoryChangedPaths,
   selectCompletedAgentHistory,
   sha256V138ReviewerV3,
+  snapshotReadiness,
+  validatePlan26262Summary,
   observeV138Plan26261RouteDispatch,
 } from "./check-v1-38-plan-262-61-source-completeness-review-v3.js"
 import {
@@ -136,13 +140,14 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   })
 
   it("derives the exact live 48-plan graph, archive, and lifecycle", () => {
-    expect(inspectV138Plan26261Lifecycle(repoRoot)).toMatchObject({ totalPlans: 48,
+    const lifecycle = inspectV138Plan26261Lifecycle(repoRoot)
+    expect(lifecycle).toMatchObject({ totalPlans: 48,
       summaries: 43, incomplete: ["262-48", "262-56", "262-57", "262-61", "262-62"] })
-    expect(inspectV138Plan26261Lifecycle(repoRoot).graph).toHaveLength(48)
-    expect(inspectV138Plan26261Lifecycle(repoRoot).archive)
+    expect(lifecycle.graph).toHaveLength(48)
+    expect(lifecycle.archive)
       .toEqual(["03", "04", "05", "06", "07", "40", "43", "46", "47", "48",
         "50", "55", "58", "59"])
-  })
+  }, 30_000)
 
   it("builds full unique argv for every real route command and terminal branch", () => {
     expect(V138_REVIEW_V3_ROUTE_MANIFEST.map(({ command }) => command).sort())
@@ -172,7 +177,18 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       /^sha256:[0-9a-f]{64}$/u.test(outputRoot))).toBe(true)
     expect(value.observations.find(({ command }) =>
       command === "--calibrate-parallel-v11-receipt")).toMatchObject({ exit: 1,
+      resultCode: "MATRIX_ROUTE7_ADAPTER_KEY_INVENTORY_INVALID",
+      observedDisposition: "calibration_source_defect",
       outputRoot: "sha256:52f2b53101c192e5e045dba64a85da993375f2dfb8d288ed8879cf93c3b45740" })
+    expect(value.observations.every(({ callCount, callTraceRoot, functionRangeRoot }) =>
+      callCount > 0 && /^sha256:[0-9a-f]{64}$/u.test(callTraceRoot) &&
+      /^sha256:[0-9a-f]{64}$/u.test(functionRangeRoot))).toBe(true)
+    expect(value.cleanup).toEqual(expect.objectContaining({ complete: true,
+      residualPaths: [] }))
+    expect(value.syntheticPrerequisitePublication.semanticEvidenceEligible).toBe(false)
+    expect(value.postExecutionPublication).toMatchObject({
+      semanticEvidenceEligible: false,
+      changedPaths: [V138_REVIEW_V3_CANONICAL_PATH, V138_REVIEW_V3_REPORT_PATH] })
     expect(value.b9ChangedPaths).toEqual([
       ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
       ".planning/artifacts/v1.38-successor-source-seal-v9.json",
@@ -380,7 +396,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const sourceR3 = git(directory, ["rev-parse", "HEAD"])
     const sourceR3Tree = git(directory, ["rev-parse", "HEAD^{tree}"])
     const sourceR3Parent = git(directory, ["show", "-s", "--format=%P", "HEAD"])
-    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V3.md`
+    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V4.md`
     const review = `---\nphase: 262\nplan: "61"\nreviewed_source_commit: ${sourceR3}\n` +
       `files_reviewed: 2\nfiles_reviewed_list:\n` +
       `  - scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts\n` +
@@ -393,7 +409,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const reviewBlob = git(directory, ["rev-parse", `HEAD:${reviewPath}`])
     const reviewRoot = sha256V138ReviewerV3(Buffer.from(review))
     const fixPath = `${path.dirname(SUMMARY_PATH)}/262-61-REVIEW-FIX.md`
-    const reportPaths = ["", "-V2", "-V3"].map(suffix =>
+    const reportPaths = ["", "-V2", "-V3", "-V4"].map(suffix =>
       `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW${suffix}.md`)
     const reports = reportPaths.map(repoPath => {
       const commit = git(directory, ["log", "-1", "--format=%H", "--", repoPath])
@@ -449,5 +465,36 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(canonicalV138ReviewerV3(baseline)).not.toBe(canonicalV138ReviewerV3(mutation))
     expect(sha256V138ReviewerV3(canonicalV138ReviewerV3(baseline)))
       .not.toBe(sha256V138ReviewerV3(canonicalV138ReviewerV3(mutation)))
+  })
+
+  it("fails readiness on an ordinary Plan-61 crash-leak directory", () => {
+    const leaked = mkdtempSync(path.join(os.tmpdir(), "plan-262-61-exact-a9-"))
+    disposable.push(leaked)
+    const readiness = snapshotReadiness(repoRoot)
+    expect(readiness.tempInventory.map(({ name }) => name))
+      .toContain(path.basename(leaked))
+    expect(() => assertV138Plan26261NoCrashLeak(readiness))
+      .toThrow("V138_PLAN_262_61_MAIN_TEMP_LEAK")
+  })
+
+  it("detects added, deleted, reordered, and transient-restored inventory rows", () => {
+    const before = [{ path: "a", sha256: "one", ctimeMs: 1 },
+      { path: "b", sha256: "two", ctimeMs: 1 }]
+    expect(inventoryChangedPaths(before, [...before].reverse())).toEqual([])
+    expect(inventoryChangedPaths(before, [{ path: "a", sha256: "one", ctimeMs: 2 },
+      { path: "c", sha256: "three", ctimeMs: 1 }])).toEqual(["a", "b", "c"])
+  })
+
+  it.each([
+    ["missing", { schemaVersion: "v1" }],
+    ["extra", { schemaVersion: "v1", authority: false, extra: true }],
+    ["nested mismatch", { schemaVersion: "v1", authority: true }],
+    ["event reorder", { schemaVersion: "v1", events: [2, 1] }],
+    ["timestamp substitution", { schemaVersion: "v1", completedAt: "later" }],
+  ])("rejects %s Plan-62 summary mutation", (_name, candidate) => {
+    const expected = { schemaVersion: "v1", authority: false,
+      events: [1, 2], completedAt: "exact" }
+    expect(() => validatePlan26262Summary(candidate, expected))
+      .toThrow("V138_PLAN_262_62_SUMMARY_BINDING_INVALID")
   })
 })

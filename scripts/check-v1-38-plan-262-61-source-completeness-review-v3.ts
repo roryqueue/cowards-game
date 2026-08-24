@@ -7,6 +7,7 @@ import { chmodSync, closeSync, constants as fsConstants, existsSync, fstatSync, 
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { Session } from "node:inspector"
 import { encodeCanonicalJson, hashCanonicalIdentity } from "@cowards/spec"
 import {
   V138_REVIEW_V3_CANONICAL_PATH,
@@ -207,7 +208,7 @@ const readRepositoryFile = (rootPath: string, repoPath: string,
       before.nlink !== 1 || before.uid !== process.geteuid?.() ||
       before.dev !== leaf.dev || before.ino !== leaf.ino ||
       (before.mode & 0o777) !== expectedMode || (leaf.mode & 0o777) !== expectedMode ||
-      before.size > 16 * 1024 * 1024)
+      before.size > 256 * 1024 * 1024)
       fail("V138_PLAN_262_61_PATH_METADATA_INVALID")
     const bytes = Buffer.alloc(before.size)
     let offset = 0
@@ -558,6 +559,10 @@ const latestReview = (rootPath: string, sourceR3: ReturnType<typeof inspectCommi
 }
 
 export const inspectCommittedR3 = (rootPath = repoRoot) => {
+  if (git(rootPath, ["status", "--porcelain=v1", "--untracked-files=all", "--",
+    ...R3_PATHS]) !== "")
+    fail("V138_PLAN_262_61_R3_PHYSICAL_CUSTODY_INVALID")
+  requireCleanRepository(rootPath)
   const candidates = lines(git(rootPath, ["log", "--first-parent", "--format=%H", "HEAD",
     "--", ...R3_PATHS]))
   const commit = candidates.find((candidate) =>
@@ -568,8 +573,11 @@ export const inspectCommittedR3 = (rootPath = repoRoot) => {
     ...R3_PATHS]))
   if (later.length !== 0) fail("V138_PLAN_262_61_R3_LATER_REWRITE")
   for (const repoPath of R3_PATHS) {
-    if (!gitBytes(rootPath, ["show", `${commit}:${repoPath}`]).equals(
-      readFileSync(path.resolve(rootPath, repoPath)))) fail("V138_PLAN_262_61_R3_BYTE_DRIFT")
+    const current = readRepositoryFile(rootPath, repoPath, repoPath)
+    const treeRow = git(rootPath, ["ls-tree", commit, "--", repoPath]).split(/\s+/u)
+    if (treeRow[0] !== "100644" || current.mode !== 0o644 ||
+      !gitBytes(rootPath, ["show", `${commit}:${repoPath}`]).equals(current.bytes))
+      fail("V138_PLAN_262_61_R3_PHYSICAL_CUSTODY_INVALID")
   }
   const trailer = git(rootPath, ["log", "-1",
     "--format=%(trailers:key=Plan-262-61-Reviewer-Tool,valueonly)", commit])
@@ -608,7 +616,22 @@ export const inspectReviewerConvergence = (rootPath = repoRoot) => {
     reviewFixBlob: immutableFix.blob })
 }
 
-const snapshotReadiness = (rootPath: string) => {
+const OWNED_TEMP_PREFIX = /^(?:plan-262-61-exact-a9-|plan-262-61-review-v3-|plan-262-62-review-|v138-plan-262-62-)/u
+const ACTUAL_HANDLER_BY_COMMAND = Object.freeze({
+  "--check-plan-262-57-pre-execution-readiness-v1":
+    "checkV138Plan26257PreExecutionReadinessV1",
+  "--resolve-plan-262-57-pre-start-v1": "writeV138Plan26257PreStartObstructionV1",
+  "--check-plan-262-57-pre-start-obstruction-v1":
+    "checkV138Plan26257PreStartObstructionBranch",
+  "--write-execution-context-v11-receipt": "writeV138Plan26257RouteStartV1",
+  "--write-plan-262-57-route-start-v1": "writeV138Plan26257RouteStartV1",
+  "--write-headroom-preflight-v11-receipt": "writeV138HostHeadroomPreflightV11Receipt",
+  "--calibrate-parallel-v11-receipt": "writeV138ParallelCalibrationV11Receipt",
+  "--write-authoritative-v12-receipt": "writeV138AuthoritativeMatrixV12Receipt",
+  "--write-plan-262-57-terminal-v1": "writeV138Plan26257TerminalV1",
+  "--check-plan-262-57-terminal-v1": "checkV138Plan26257TerminalBranch",
+} as const)
+export const snapshotReadiness = (rootPath: string) => {
   const status = git(rootPath, ["status", "--porcelain=v1"])
   const destinations = [...FORBIDDEN_DESTINATIONS, PLAN_61_RECEIPT].map((repoPath) => {
     const absolute = path.resolve(rootPath, repoPath)
@@ -619,7 +642,13 @@ const snapshotReadiness = (rootPath: string) => {
     } catch { return { path: repoPath, type: "absent" } }
   })
   const tempInventory = readdirSync(os.tmpdir()).filter(name =>
-    /^(?:plan-262-62-review-|v138-plan-262-62-)/u.test(name)).sort()
+    OWNED_TEMP_PREFIX.test(name)).sort().map(name => {
+      const absolute = path.join(os.tmpdir(), name)
+      const stat = lstatSync(absolute)
+      return { name, type: stat.isSymbolicLink() ? "symlink" :
+        stat.isDirectory() ? "directory" : stat.isFile() ? "file" : "other",
+      mode: stat.mode & 0o777, dev: String(stat.dev), ino: String(stat.ino) }
+    })
   const cloneInventory = lines(git(rootPath, ["worktree", "list", "--porcelain"]))
     .filter(line => line.startsWith("worktree ")).map(line => line.slice(9))
     .filter(worktree => /plan-262-62|v138-plan-262-62/u.test(worktree) &&
@@ -631,29 +660,96 @@ const snapshotReadiness = (rootPath: string) => {
     root: sha256V138ReviewerV3(canonicalV138ReviewerV3(snapshot as unknown as Json)) })
 }
 
+export const assertV138Plan26261NoCrashLeak = (snapshot: ReturnType<
+  typeof snapshotReadiness>) => {
+  if (snapshot.tempInventory.length !== 0 || snapshot.cloneInventory.length !== 0 ||
+    snapshot.activeDisposableRoots.length !== 0)
+    fail("V138_PLAN_262_61_MAIN_TEMP_LEAK")
+}
+
 type RouteObservation = Readonly<{ command: string; handler: string;
+  manifestHandler: string;
   destination: string; argv: readonly string[]; exit: number; outputRoot: string;
-  terminalDisposition: string | null; beforeRoot: string; afterRoot: string;
+  resultCode: string; observedDisposition: string | null;
+  outputByteLength: number; handlerSourceRoot: string; dispatcherSourceRoot: string;
+  functionRangeRoot: string; callCount: number; callTraceRoot: string;
+  beforeRoot: string; afterRoot: string;
   changedPaths: readonly string[] }>
 
-const routeInventory = (rootPath: string) => {
-  const paths = [...FORBIDDEN_DESTINATIONS,
+const completeRouteInventoryPaths = (rootPath: string) => [...new Set([
+  ...lines(git(rootPath, ["ls-files"])).filter(repoPath =>
+    repoPath.startsWith(".planning/artifacts/") || isLifecyclePath(repoPath) ||
+    V138_REVIEW_V3_SOURCE_PATHS.includes(repoPath as never) ||
+    R3_PATHS.includes(repoPath as never)),
+  ...lines(git(rootPath, ["status", "--porcelain=v1", "--untracked-files=all"]))
+    .map(row => row.slice(3)).filter(Boolean),
+  ...FORBIDDEN_DESTINATIONS,
     ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json",
     ".planning/artifacts/v1.38-plan-262-57-preflight-consumption-v1.json",
     ".planning/artifacts/v1.38-plan-262-57-calibration-consumption-v1.json",
     ".planning/artifacts/v1.38-plan-262-57-reproduction-consumption-v1.json",
     ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1/claim.json",
-  ].sort()
+  ])].sort()
+
+const inspectorPost = <T>(session: Session, method: string,
+  params?: Record<string, unknown>) => new Promise<T>((resolve, reject) =>
+  session.post(method, params ?? {}, (error, result) => error ? reject(error) :
+    resolve(result as T)))
+
+const routeInventory = (rootPath: string) => {
+  const physical = physicalRepoRoot(rootPath)
+  const paths = completeRouteInventoryPaths(rootPath)
   return Object.freeze(paths.map(repoPath => {
-    const absolute = path.resolve(rootPath, repoPath)
+    const absolute = path.resolve(physical, repoPath)
     if (!existsSync(absolute)) return { path: repoPath, type: "absent" }
     const stat = lstatSync(absolute)
     if (!stat.isFile() || stat.isSymbolicLink()) return { path: repoPath,
       type: stat.isSymbolicLink() ? "symlink" : "other" }
-    const bytes = readFileSync(absolute)
+    if (realpathSync(path.dirname(absolute)) !== path.dirname(absolute))
+      fail("V138_PLAN_262_61_PATH_CONFINEMENT_INVALID")
+    let descriptor = -1
+    let bytes: Buffer
+    try {
+      descriptor = openSync(absolute, fsConstants.O_RDONLY |
+        (fsConstants.O_NOFOLLOW ?? 0))
+      const before = fstatSync(descriptor)
+      if (!before.isFile() || before.dev !== stat.dev || before.ino !== stat.ino ||
+        before.size > 256 * 1024 * 1024)
+        fail("V138_PLAN_262_61_PATH_METADATA_INVALID")
+      bytes = Buffer.alloc(before.size)
+      let offset = 0
+      while (offset < bytes.length) offset += readSync(descriptor, bytes, offset,
+        bytes.length - offset, offset)
+      const after = fstatSync(descriptor)
+      if (before.dev !== after.dev || before.ino !== after.ino ||
+        before.size !== after.size || before.mtimeMs !== after.mtimeMs ||
+        before.ctimeMs !== after.ctimeMs)
+        fail("V138_PLAN_262_61_PATH_IDENTITY_CHANGED")
+    } finally { if (descriptor >= 0) closeSync(descriptor) }
     return { path: repoPath, type: "file", mode: stat.mode & 0o777,
-      byteLength: bytes.byteLength, sha256: sha256V138ReviewerV3(bytes) }
+      uid: stat.uid, gid: stat.gid, nlink: stat.nlink,
+      dev: String(stat.dev), ino: String(stat.ino), ctimeMs: stat.ctimeMs,
+      mtimeMs: stat.mtimeMs, byteLength: bytes.byteLength,
+      sha256: sha256V138ReviewerV3(bytes) }
   }))
+}
+
+const routeGitState = (rootPath: string) => Object.freeze({
+  head: git(rootPath, ["rev-parse", "HEAD"]),
+  tree: git(rootPath, ["rev-parse", "HEAD^{tree}"]),
+  refsRoot: sha256V138ReviewerV3(git(rootPath, ["show-ref"])),
+  indexRoot: sha256V138ReviewerV3(gitBytes(rootPath, ["ls-files", "-s", "-z"])),
+  statusRoot: sha256V138ReviewerV3(gitBytes(rootPath,
+    ["status", "--porcelain=v1", "-z", "--untracked-files=all"])),
+})
+
+export const inventoryChangedPaths = (before: readonly Record<string, unknown>[],
+  after: readonly Record<string, unknown>[]) => {
+  const left = new Map(before.map(row => [String(row.path), row]))
+  const right = new Map(after.map(row => [String(row.path), row]))
+  return [...new Set([...left.keys(), ...right.keys()])].sort().filter(repoPath =>
+    canonicalV138ReviewerV3(left.get(repoPath) ?? null) !==
+      canonicalV138ReviewerV3(right.get(repoPath) ?? null))
 }
 
 /**
@@ -667,7 +763,8 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
   if (cachedRouteObservation?.rootPath === physicalRoot)
     return cachedRouteObservation.value
   routeExecutionHookCount += 1
-  const parent = mkdtempSync(path.join(os.tmpdir(), "plan-262-61-exact-a9-"))
+  const parent = realpathSync(mkdtempSync(path.join(os.tmpdir(),
+    "plan-262-61-exact-a9-")))
   activeDisposableRoots.add(parent)
   const gitConfigEnvironment = ["GIT_CONFIG_COUNT", "GIT_CONFIG_KEY_0",
     "GIT_CONFIG_VALUE_0"].map(key => [key, process.env[key]] as const)
@@ -676,6 +773,10 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
   process.env.GIT_CONFIG_VALUE_0 = "false"
   const templateRoot = path.join(parent, "sealed-template")
   const events: Array<{ ordinal: number; event: string; path: string; result: string }> = []
+  const cleanupObservation = { complete: false, residualPaths: [parent],
+    parentRoot: sha256V138ReviewerV3(parent) }
+  const routeCoverageSession = new Session()
+  let routeCoverageActive = false
   try {
     execFileSync("git", ["clone", "--quiet", "--no-hardlinks", rootPath, templateRoot],
       { maxBuffer: 64 * 1024 * 1024 })
@@ -683,6 +784,13 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
     if (git(templateRoot, ["rev-parse", "HEAD"]) !== SOURCE_A9 ||
       git(templateRoot, ["status", "--porcelain=v1"]) !== "")
       fail("V138_PLAN_262_61_EXACT_A9_CLONE_INVALID")
+    routeCoverageSession.connect()
+    await inspectorPost(routeCoverageSession, "Runtime.enable")
+    await inspectorPost(routeCoverageSession, "Debugger.enable")
+    await inspectorPost(routeCoverageSession, "Profiler.enable")
+    await inspectorPost(routeCoverageSession, "Profiler.startPreciseCoverage",
+      { callCount: true, detailed: true })
+    routeCoverageActive = true
     const sealModule = await import("./lib/" +
       "v1-38-successor-source-seal.js") as Record<string, any>
     const routeModule = await import("./lib/" +
@@ -695,6 +803,10 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
     if ([inspectSource, inspectHistory, buildAuthorization, buildSeal, runReceipt]
       .some(value => typeof value !== "function"))
       fail("V138_PLAN_262_61_ROUTE_HANDLER_INVALID")
+    const dispatcherSource = Function.prototype.toString.call(runReceipt)
+    const dispatcherSourceRoot = sha256V138ReviewerV3(dispatcherSource)
+    const routeModuleBlob = git(templateRoot, ["rev-parse",
+      `${SOURCE_A9}:scripts/lib/v1-38-current-matrix-reproduction.ts`])
     const custody = inspectSource(templateRoot,
       { sourceBase9: SOURCE_BASE9, sourceA9: SOURCE_A9 })
     const history = inspectHistory(templateRoot, SOURCE_A9)
@@ -762,6 +874,17 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
       "user.email=plan-262-61@example.invalid", "commit", "--quiet", "-m",
       "test: synthetic disposable review publication"], { cwd: templateRoot })
     const publicationCommit = git(templateRoot, ["rev-parse", "HEAD"])
+    const prerequisitePublication = Object.freeze({ semanticEvidenceEligible: false,
+      commit: publicationCommit,
+      parent: git(templateRoot, ["show", "-s", "--format=%P", publicationCommit]),
+      tree: git(templateRoot, ["rev-parse", `${publicationCommit}^{tree}`]),
+      changedPaths: Object.freeze(changedPaths(templateRoot, publicationCommit)),
+      reviewBlob: git(templateRoot, ["rev-parse",
+        `${publicationCommit}:${V138_REVIEW_V3_CANONICAL_PATH}`]),
+      reviewRoot: sha256V138ReviewerV3(canonicalBytes(review)),
+      reportBlob: git(templateRoot, ["rev-parse",
+        `${publicationCommit}:${V138_REVIEW_V3_REPORT_PATH}`]),
+      reportRoot: sha256V138ReviewerV3(Buffer.from("# Disposable Plan 262-62 review\n")) })
     const detachedReview = path.join(realpathSync(parent),
       path.basename(V138_REVIEW_V3_CANONICAL_PATH))
     writeFileSync(detachedReview, canonicalBytes(review)); chmodSync(detachedReview, 0o444)
@@ -844,38 +967,160 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
       }
       const argv = buildV138ReviewV3CommandArgv(entry.command, SOURCE_A9, sourceB9)
       const before = routeInventory(cloneRoot)
+      const beforeGit = routeGitState(cloneRoot)
+      const actualHandlerName = ACTUAL_HANDLER_BY_COMMAND[entry.command as
+        keyof typeof ACTUAL_HANDLER_BY_COMMAND]
+      const handler = routeModule[actualHandlerName]
+      if (typeof handler !== "function" || (handler as Function).name !== actualHandlerName ||
+        !dispatcherSource.includes(entry.command) ||
+        !dispatcherSource.includes(actualHandlerName))
+        fail("V138_PLAN_262_61_ROUTE_HANDLER_INVALID")
+      const traceKey = `__v138Plan26261Handler${ordinal}`
+      ;(globalThis as Record<string, unknown>)[traceKey] = handler
+      const remote = await inspectorPost<any>(routeCoverageSession,
+        "Runtime.evaluate", { expression: `globalThis[${JSON.stringify(traceKey)}]` })
+      const objectId = remote?.result?.objectId
+      if (typeof objectId !== "string")
+        fail("V138_PLAN_262_61_ROUTE_HANDLER_INVALID")
+      const breakpoint = await inspectorPost<any>(routeCoverageSession,
+        "Debugger.setBreakpointOnFunctionCall", { objectId })
+      const callFrames: Array<{ functionName: string; scriptId: string;
+        location: unknown }> = []
+      const onPaused = (message: any) => {
+        const frame = message?.params?.callFrames?.[0]
+        if (frame !== undefined) callFrames.push({ functionName: frame.functionName,
+          scriptId: frame.location?.scriptId, location: frame.location })
+        routeCoverageSession.post("Debugger.resume")
+      }
+      routeCoverageSession.on("Debugger.paused", onPaused)
       let output = ""; let exit = 0
+      let coverage: any
       try {
         await runReceipt({ repoRoot: cloneRoot, argv, ...dependencies,
           writeOutput: (value: string) => { output += value } })
       } catch (error) {
         exit = 1
         output = error instanceof Error ? error.message : String(error)
+      } finally {
+        coverage = await inspectorPost<any>(routeCoverageSession,
+          "Profiler.takePreciseCoverage")
+        routeCoverageSession.off("Debugger.paused", onPaused)
+        await inspectorPost(routeCoverageSession, "Debugger.removeBreakpoint",
+          { breakpointId: breakpoint.breakpointId })
+        delete (globalThis as Record<string, unknown>)[traceKey]
       }
-      const handler = routeModule[entry.handler]
-      if (typeof handler !== "function" || (handler as Function).name !== entry.handler)
+      const coveredFunctions = (coverage?.result ?? []).flatMap((script: any) =>
+        (script.functions ?? []).filter((fn: any) =>
+          fn.functionName === actualHandlerName && fn.ranges?.some(
+            (range: any) => Number(range.count) > 0)).map((fn: any) => ({
+              urlRoot: sha256V138ReviewerV3(String(script.url)),
+              functionName: fn.functionName, ranges: fn.ranges })))
+      if (callFrames.length !== 1 || callFrames[0]!.functionName !== actualHandlerName)
         fail("V138_PLAN_262_61_ROUTE_HANDLER_INVALID")
+      const handlerSourceRoot = sha256V138ReviewerV3(
+        Function.prototype.toString.call(handler))
+      let observedDisposition: string | null = null
+      let resultCode = "success"
+      if (exit === 0) {
+        try {
+          const parsed = JSON.parse(output) as { disposition?: unknown }
+          if (typeof parsed.disposition === "string")
+            observedDisposition = parsed.disposition
+        } catch { fail("V138_PLAN_262_61_ROUTE_OUTPUT_INVALID") }
+      } else {
+        if (output.length === 0 || output.length > 256 || /[\n\0]/u.test(output))
+          fail("V138_PLAN_262_61_ROUTE_OUTPUT_INVALID")
+        resultCode = output
+        if (entry.command === "--calibrate-parallel-v11-receipt" &&
+          output !== "MATRIX_ROUTE7_ADAPTER_KEY_INVENTORY_INVALID")
+          fail("V138_PLAN_262_61_CALIBRATION_RESULT_INVALID")
+        observedDisposition = output === "MATRIX_ROUTE7_ADAPTER_KEY_INVENTORY_INVALID" ?
+          "calibration_source_defect" : null
+      }
       const after = routeInventory(cloneRoot)
-      const changedPaths = after.filter((row, index) =>
-        canonicalV138ReviewerV3(row) !== canonicalV138ReviewerV3(before[index]))
-        .map(({ path: repoPath }) => repoPath)
-      observations.push(Object.freeze({ command: entry.command, handler: entry.handler,
+      const afterGit = routeGitState(cloneRoot)
+      if (beforeGit.head !== afterGit.head || beforeGit.tree !== afterGit.tree ||
+        beforeGit.refsRoot !== afterGit.refsRoot ||
+        beforeGit.indexRoot !== afterGit.indexRoot)
+        fail("V138_PLAN_262_61_ROUTE_GIT_STATE_INVALID")
+      const changedPaths = inventoryChangedPaths(before, after)
+      const trace = { command: entry.command, argv,
+        argvRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(argv)),
+        routeModuleBlob, dispatcherSourceRoot, handlerSourceRoot,
+        functionRangeRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
+          { callFrames, preciseCoverage: coveredFunctions })),
+        callCount: callFrames.length, exit,
+        resultCode, observedDisposition, outputRoot: sha256V138ReviewerV3(output) }
+      observations.push(Object.freeze({ command: entry.command,
+        handler: actualHandlerName, manifestHandler: entry.handler,
         destination: entry.destination, argv, exit,
         outputRoot: sha256V138ReviewerV3(output),
-        terminalDisposition: entry.terminalDisposition,
-        beforeRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(before)),
-        afterRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(after)),
+        resultCode, observedDisposition, outputByteLength: Buffer.byteLength(output),
+        handlerSourceRoot, dispatcherSourceRoot,
+        functionRangeRoot: trace.functionRangeRoot, callCount: trace.callCount,
+        callTraceRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(trace)),
+        beforeRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
+          { inventory: before, git: beforeGit })),
+        afterRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
+          { inventory: after, git: afterGit })),
         changedPaths: Object.freeze(changedPaths) }))
-      events.push({ ordinal: events.length, event: `execute:${entry.handler}`,
-        path: entry.destination, result: `exit:${exit}` })
+      events.push({ ordinal: events.length, event: `execute:${actualHandlerName}`,
+        path: entry.destination, result: canonicalV138ReviewerV3({ exit,
+          resultCode, observedDisposition, outputRoot: sha256V138ReviewerV3(output),
+          changedPaths, callTraceRoot: sha256V138ReviewerV3(
+            canonicalV138ReviewerV3(trace)) }) })
     }
+    const postRoot = path.join(parent, "post-execution-publication")
+    execFileSync("git", ["clone", "--quiet", "--no-hardlinks", templateRoot,
+      postRoot], { maxBuffer: 64 * 1024 * 1024 })
+    git(postRoot, ["checkout", "--quiet", "--detach", SOURCE_A9])
+    const postEvidence = { schemaVersion:
+      "v1.38-plan-262-61-post-execution-synthetic-publication-v1",
+    sourceA9: SOURCE_A9, semanticEvidenceEligible: false,
+    observations: observations.map(({ command, handler, exit, resultCode,
+      observedDisposition, callTraceRoot, beforeRoot, afterRoot, changedPaths }) =>
+      ({ command, handler, exit, resultCode, observedDisposition, callTraceRoot,
+        beforeRoot, afterRoot, changedPaths })), orderedEvents: events }
+    const postReviewBytes = canonicalBytes(postEvidence)
+    const postReportBytes = Buffer.from("# Post-execution synthetic publication\n\n" +
+      "Not eligible as semantic or canonical review evidence.\n")
+    writeFileSync(path.join(postRoot, V138_REVIEW_V3_CANONICAL_PATH), postReviewBytes,
+      { flag: "wx" })
+    writeFileSync(path.join(postRoot, V138_REVIEW_V3_REPORT_PATH), postReportBytes,
+      { flag: "wx" })
+    execFileSync("git", ["add", "--", V138_REVIEW_V3_CANONICAL_PATH,
+      V138_REVIEW_V3_REPORT_PATH], { cwd: postRoot })
+    execFileSync("git", ["-c", "user.name=Plan 262-61 Fixture", "-c",
+      "user.email=plan-262-61@example.invalid", "commit", "--quiet", "-m",
+      "test: post-execution synthetic publication"], { cwd: postRoot })
+    const postCommit = git(postRoot, ["rev-parse", "HEAD"])
+    const postExecutionPublication = Object.freeze({ semanticEvidenceEligible: false,
+      commit: postCommit, parent: git(postRoot, ["show", "-s", "--format=%P",
+        postCommit]), tree: git(postRoot, ["rev-parse", `${postCommit}^{tree}`]),
+      changedPaths: Object.freeze(changedPaths(postRoot, postCommit)),
+      reviewBlob: git(postRoot, ["rev-parse",
+        `${postCommit}:${V138_REVIEW_V3_CANONICAL_PATH}`]),
+      reviewRoot: sha256V138ReviewerV3(postReviewBytes),
+      reportBlob: git(postRoot, ["rev-parse",
+        `${postCommit}:${V138_REVIEW_V3_REPORT_PATH}`]),
+      reportRoot: sha256V138ReviewerV3(postReportBytes) })
     const value = Object.freeze({ sourceB9, publicationCommit,
       cloneHead: git(templateRoot, ["rev-parse", "HEAD"]),
       observations: Object.freeze(observations), events: Object.freeze(events),
+      cleanup: cleanupObservation,
+      syntheticPrerequisitePublication: prerequisitePublication,
+      postExecutionPublication,
       b9ChangedPaths: Object.freeze(syntheticPaths) })
     cachedRouteObservation = { rootPath: physicalRoot, value }
     return value
   } finally {
+    if (routeCoverageActive) {
+      await inspectorPost(routeCoverageSession, "Profiler.stopPreciseCoverage")
+      await inspectorPost(routeCoverageSession, "Profiler.disable")
+      await inspectorPost(routeCoverageSession, "Debugger.disable")
+      await inspectorPost(routeCoverageSession, "Runtime.disable")
+      routeCoverageSession.disconnect()
+    }
     rmSync(parent, { recursive: true, force: true })
     activeDisposableRoots.delete(parent)
     for (const [key, value] of gitConfigEnvironment) {
@@ -883,6 +1128,8 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot) => 
       else process.env[key] = value
     }
     if (existsSync(parent)) fail("V138_PLAN_262_61_DISPOSABLE_CLEANUP_INVALID")
+    cleanupObservation.complete = true
+    cleanupObservation.residualPaths = []
   }
 }
 
@@ -895,10 +1142,10 @@ export const deriveV138Plan26261NoPublish = async (rootPath = repoRoot) => {
   const convergence = inspectV138Plan26261SummaryConvergence(rootPath)
   const protectedHistory = inspectV138Plan26261ProtectedHistory(rootPath)
   const lifecycle = inspectV138Plan26261Lifecycle(rootPath)
-  const routeExecution = await observeV138Plan26261RouteDispatch(rootPath)
   const present = FORBIDDEN_DESTINATIONS.filter((repoPath) =>
     existsSync(path.resolve(rootPath, repoPath)))
   if (present.length !== 0) fail("V138_PLAN_262_61_CANONICAL_DESTINATION_PRESENT")
+  const routeExecution = await observeV138Plan26261RouteDispatch(rootPath)
   const sealModule = await import("./lib/" + "v1-38-successor-source-seal.js") as
     Record<string, unknown>
   const inspectSource = sealModule["inspectV138SourceA9Custody"] as
@@ -927,9 +1174,11 @@ export const deriveV138Plan26261NoPublish = async (rootPath = repoRoot) => {
     reviewDocument: null, reviewBlocked: true,
     findingCount: routeFindings.length, sourceCompletenessPassed: false,
     findings: Object.freeze(routeFindings.map(({ command, handler, destination,
-      exit, outputRoot, beforeRoot, afterRoot, changedPaths }: RouteObservation) =>
+      exit, outputRoot, resultCode, observedDisposition, callTraceRoot,
+      beforeRoot, afterRoot, changedPaths }: RouteObservation) =>
       Object.freeze({ command, handler, destination, exit, outputRoot,
-        beforeRoot, afterRoot, changedPaths }))),
+        resultCode, observedDisposition, callTraceRoot, beforeRoot, afterRoot,
+        changedPaths }))),
     syntheticB9: { sourceB9: routeExecution.sourceB9,
       changedPaths: routeExecution.b9ChangedPaths },
     forbiddenDestinations: FORBIDDEN_DESTINATIONS,
@@ -1031,25 +1280,50 @@ export const deriveV138Plan26262AgentSeparation = (rootPath: string,
   if (reviewer.agentId === receipt.r3AuthorAgent)
     fail("V138_PLAN_262_62_AGENT_SEPARATION_INVALID")
   return Object.freeze({ r3AuthorAgent: String(receipt.r3AuthorAgent),
+    r3CompletionTimestamp: String(receipt.completionTimestamp),
+    r3HistoryEntryRoot: String(receipt.historyEntryRoot),
     reviewAgent: reviewer.agentId, reviewCompletionTimestamp:
-      reviewer.completionTimestamp, agentHistoryRoot: agentHistoryRoot(history) })
+      reviewer.completionTimestamp, reviewerHistoryEntryRoot: receiptEntryRoot(reviewer),
+    agentHistoryRoot: agentHistoryRoot(history) })
 }
 
-const inspectPlan26262Review = (rootPath: string, reviewPath: string,
+export const validatePlan26262Summary = (manifest: unknown, expected: unknown) => {
+  if (canonicalV138ReviewerV3(manifest) !== canonicalV138ReviewerV3(expected))
+    fail("V138_PLAN_262_62_SUMMARY_BINDING_INVALID")
+}
+
+export const inspectPlan26262Review = async (rootPath: string, reviewPath: string,
   reportPath: string, committed: boolean) => {
   if (reviewPath !== PLAN_62_REVIEW || reportPath !== PLAN_62_REPORT)
     fail("V138_PLAN_262_61_PATH_CONFINEMENT_INVALID")
   const reviewRead = readRepositoryFile(rootPath, reviewPath, reviewPath)
-  readRepositoryFile(rootPath, reportPath, reportPath)
+  const reportRead = readRepositoryFile(rootPath, reportPath, reportPath)
   let document: Record<string, any>
   try { document = JSON.parse(reviewRead.bytes.toString("utf8")) } catch {
     fail("V138_PLAN_262_62_REVIEW_SCHEMA_INVALID")
   }
   validateV138ReviewV3Document(document)
+  // This observation is derived from the independently authenticated production
+  // dispatch. Candidate bytes cannot select, replace, or suppress its result.
+  const observed = await observeV138Plan26261RouteDispatch(rootPath)
+  const findings = observed.observations.filter(
+    ({ exit }: RouteObservation) => exit !== 0)
+  if (findings.length !== 0)
+    fail("V138_PLAN_262_62_REVIEW_OBSERVATION_FINDINGS")
+  const expectedEvents = observed.events
+  if (canonicalV138ReviewerV3(document.orderedEvents) !==
+      canonicalV138ReviewerV3(expectedEvents) ||
+    document.cleanup?.complete !== observed.cleanup.complete ||
+    canonicalV138ReviewerV3(document.cleanup?.residualPaths) !==
+      canonicalV138ReviewerV3(observed.cleanup.residualPaths) ||
+    canonicalV138ReviewerV3(document.publication?.changedPaths) !==
+      canonicalV138ReviewerV3([reviewPath, reportPath].sort()))
+    fail("V138_PLAN_262_62_REVIEW_OBSERVATION_BINDING_INVALID")
   if (document.verdict?.findingCount !== 0 ||
     document.verdict?.sourceCompletenessPassed !== true ||
     document.verdict?.authorizesExecution !== false)
     fail("V138_PLAN_262_62_REVIEW_FINDINGS_INVALID")
+  let immutable: Record<string, unknown> = {}
   if (committed) {
     const review = committedCurrentFile(rootPath, reviewPath,
       "V138_PLAN_262_62_REVIEW_COMMIT_INVALID")
@@ -1059,8 +1333,32 @@ const inspectPlan26262Review = (rootPath: string, reviewPath: string,
       canonicalV138ReviewerV3(changedPaths(rootPath, review.commit)) !==
         canonicalV138ReviewerV3([reviewPath, reportPath].sort()))
       fail("V138_PLAN_262_62_REVIEW_COMMIT_INVALID")
+    const parent = lines(git(rootPath, ["show", "-s", "--format=%P", review.commit]))
+    if (parent.length !== 1 || !lines(git(rootPath,
+      ["rev-list", "--first-parent", review.commit])).includes(SOURCE_A9))
+      fail("V138_PLAN_262_62_REVIEW_COMMIT_INVALID")
+    const reportBinding = /```plan-262-62-review-v3-report-json\n([^\n]+)\n```/u
+      .exec(reportRead.bytes.toString("utf8"))
+    let reportManifest: Record<string, unknown>
+    try { reportManifest = JSON.parse(reportBinding?.[1] ?? "") as
+      Record<string, unknown> } catch {
+      fail("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
+    }
+    const expectedReport = { schemaVersion:
+      "v1.38-plan-262-62-review-v3-report-binding-v1",
+    reviewPath, reviewRoot: review.root, reviewV3Root: document.reviewV3Root,
+    sourceA9: SOURCE_A9, findingCount: 0, sourceCompletenessPassed: true,
+    identityClaims: document.identityClaims, authorizesExecution: false }
+    if (canonicalV138ReviewerV3(reportManifest) !==
+      canonicalV138ReviewerV3(expectedReport))
+      fail("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
+    immutable = { commit: review.commit, parent: parent[0],
+      tree: git(rootPath, ["rev-parse", `${review.commit}^{tree}`]),
+      reviewBlob: review.blob, reportBlob: report.blob,
+      reportRoot: report.root }
   }
-  return Object.freeze({ document, reviewRoot: sha256V138ReviewerV3(reviewRead.bytes) })
+  return Object.freeze({ document, reviewRoot: sha256V138ReviewerV3(reviewRead.bytes),
+    ...immutable })
 }
 
 const main = async () => {
@@ -1115,7 +1413,7 @@ const main = async () => {
   if (argv[0] === "--check-review-v3") {
     requireExactArgv(argv, ["--check-review-v3", "--review", PLAN_62_REVIEW,
       "--report", PLAN_62_REPORT])
-    inspectPlan26262Review(repoRoot, PLAN_62_REVIEW, PLAN_62_REPORT, true)
+    await inspectPlan26262Review(repoRoot, PLAN_62_REVIEW, PLAN_62_REPORT, true)
     process.stdout.write("plan-262-62-review-v3-valid\n")
     return
   }
@@ -1126,7 +1424,8 @@ const main = async () => {
       "--report", PLAN_62_REPORT])
     const separation = deriveV138Plan26262AgentSeparation(repoRoot, PLAN_61_RECEIPT,
       ".planning/agent-history.json")
-    const review = inspectPlan26262Review(repoRoot, PLAN_62_REVIEW,
+    const receipt = inspectV138Plan26261Receipt(repoRoot, PLAN_61_RECEIPT)
+    const review = await inspectPlan26262Review(repoRoot, PLAN_62_REVIEW,
       PLAN_62_REPORT, true)
     const summaryRead = readRepositoryFile(repoRoot, PLAN_62_SUMMARY, PLAN_62_SUMMARY)
     const match = /```plan-262-62-summary-json\n([^\n]+)\n```/u.exec(
@@ -1135,11 +1434,33 @@ const main = async () => {
     try { manifest = JSON.parse(match?.[1] ?? "") as Record<string, unknown> } catch {
       fail("V138_PLAN_262_62_SUMMARY_SCHEMA_INVALID")
     }
-    if (manifest.r3AuthorAgent !== separation.r3AuthorAgent ||
-      manifest.reviewAgent !== separation.reviewAgent ||
-      manifest.reviewRoot !== review.reviewRoot ||
-      manifest.authorizesExecution !== false)
-      fail("V138_PLAN_262_62_SUMMARY_BINDING_INVALID")
+    const expected = { schemaVersion: "v1.38-plan-262-62-summary-v2",
+      authors: { r3: { agentId: separation.r3AuthorAgent,
+        completionTimestamp: separation.r3CompletionTimestamp,
+        historyEntryRoot: separation.r3HistoryEntryRoot },
+      reviewer: { agentId: separation.reviewAgent,
+        completionTimestamp: separation.reviewCompletionTimestamp,
+        historyEntryRoot: separation.reviewerHistoryEntryRoot,
+        historyRoot: separation.agentHistoryRoot } },
+      sourceR3: receipt.convergence.sourceR3,
+      authorReceipt: { path: PLAN_61_RECEIPT, commit: receipt.receiptCommit,
+        blob: receipt.receiptBlob, root: receipt.receiptRoot,
+        historyRoot: receipt.receipt.agentHistoryRoot },
+      convergence: { codeReviewPath: receipt.convergence.codeReviewPath,
+        codeReviewRoot: receipt.convergence.codeReviewRoot,
+        reviewFixRoot: receipt.convergence.reviewFixRoot },
+      reviewPublication: { reviewPath: PLAN_62_REVIEW, reportPath: PLAN_62_REPORT,
+        commit: review.commit, parent: review.parent, tree: review.tree,
+        reviewBlob: review.reviewBlob, reviewRoot: review.reviewRoot,
+        reviewV3Root: review.document.reviewV3Root, reportBlob: review.reportBlob,
+        reportRoot: review.reportRoot },
+      identityClaims: { independentPersonClaimed: false, reviewerSeparated: false,
+        externalIdentityClaimed: false, cryptographicReviewerIdentityClaimed: false,
+        independentCustodyClaimed: false },
+      eligibility: { plan26256: true, admit03: false },
+      downstreamAuthority: { execution: false, candidate: false, formation: false,
+        holdoutOpening: false, public: false, production: false, live: false } }
+    validatePlan26262Summary(manifest, expected)
     if (argv[0] === "--check-summary") {
       const immutable = committedCurrentFile(repoRoot, PLAN_62_SUMMARY,
         "V138_PLAN_262_62_SUMMARY_COMMIT_INVALID")
@@ -1152,10 +1473,9 @@ const main = async () => {
   }
   if (argv.length === 1 && argv[0] === "--check-main-readiness") {
     const before = snapshotReadiness(repoRoot)
+    assertV138Plan26261NoCrashLeak(before)
     if (before.status !== "" || before.destinations.some(({ path: repoPath, type }) =>
       repoPath !== PLAN_61_RECEIPT && type !== "absent") ||
-      before.tempInventory.length !== 0 || before.cloneInventory.length !== 0 ||
-      before.activeDisposableRoots.length !== 0 ||
       before.hooks.routeExecutionHookCount !== 0 ||
       before.hooks.candidateDerivationHookCount !== 0)
       fail("V138_PLAN_262_61_MAIN_NOT_READY")
