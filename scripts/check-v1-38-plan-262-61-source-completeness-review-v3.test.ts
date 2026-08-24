@@ -18,6 +18,7 @@ import {
   SUMMARY_PATH,
   SUMMARY_SHA256,
   canonicalV138ReviewerV3,
+  assembleExpectedPlan26262Review,
   assertV138Plan26261NoCrashLeak,
   deriveV138Plan26261NoPublish,
   inspectCommittedR3,
@@ -34,6 +35,8 @@ import {
   sha256V138ReviewerV3,
   snapshotReadiness,
   validatePlan26262Summary,
+  validatePlan26262ReviewAgainstExpected,
+  validateV138Plan26261RouteResult,
   observeV138Plan26261RouteDispatch,
 } from "./check-v1-38-plan-262-61-source-completeness-review-v3.js"
 import {
@@ -43,7 +46,9 @@ import {
   V138_REVIEW_V3_ROUTE_MANIFEST,
   V138_REVIEW_V3_SOURCE_PATHS,
   buildV138ReviewV3CommandArgv,
+  computeV138ReviewV3Root,
 } from "./lib/v1-38-source-completeness-review-v3.js"
+import { inspectV138SourceA9Custody } from "./lib/v1-38-successor-source-seal.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const checkerPath = path.join(repoRoot,
@@ -183,6 +188,18 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(value.observations.every(({ callCount, callTraceRoot, functionRangeRoot }) =>
       callCount > 0 && /^sha256:[0-9a-f]{64}$/u.test(callTraceRoot) &&
       /^sha256:[0-9a-f]{64}$/u.test(functionRangeRoot))).toBe(true)
+    const alias = value.observations.find(({ command }) =>
+      command === "--write-execution-context-v11-receipt")
+    expect(alias).toMatchObject({ handler: "writeV138Plan26257RouteStartV1",
+      manifestHandler: "writeV138ExecutionContextV11Receipt",
+      aliasAudit: { manifestHandler: "writeV138ExecutionContextV11Receipt",
+        delegatedHandler: "writeV138Plan26257RouteStartV1",
+        callFrames: ["writeV138ExecutionContextV11Receipt",
+          "writeV138Plan26257RouteStartV1"] } })
+    expect(value.events.some(({ event }) => /:(?:openSync|writeSync|linkSync|renameSync|unlinkSync)/u
+      .test(event))).toBe(true)
+    expect(value.snapshots).toHaveLength(2)
+    expect(value.snapshots.every(({ pathCount }) => pathCount > 100)).toBe(true)
     expect(value.cleanup).toEqual(expect.objectContaining({ complete: true,
       residualPaths: [] }))
     expect(value.syntheticPrerequisitePublication.semanticEvidenceEligible).toBe(false)
@@ -396,7 +413,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const sourceR3 = git(directory, ["rev-parse", "HEAD"])
     const sourceR3Tree = git(directory, ["rev-parse", "HEAD^{tree}"])
     const sourceR3Parent = git(directory, ["show", "-s", "--format=%P", "HEAD"])
-    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V4.md`
+    const reviewPath = `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW-V5.md`
     const review = `---\nphase: 262\nplan: "61"\nreviewed_source_commit: ${sourceR3}\n` +
       `files_reviewed: 2\nfiles_reviewed_list:\n` +
       `  - scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts\n` +
@@ -409,7 +426,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const reviewBlob = git(directory, ["rev-parse", `HEAD:${reviewPath}`])
     const reviewRoot = sha256V138ReviewerV3(Buffer.from(review))
     const fixPath = `${path.dirname(SUMMARY_PATH)}/262-61-REVIEW-FIX.md`
-    const reportPaths = ["", "-V2", "-V3", "-V4"].map(suffix =>
+    const reportPaths = ["", "-V2", "-V3", "-V4", "-V5"].map(suffix =>
       `${path.dirname(SUMMARY_PATH)}/262-61-CODE-REVIEW${suffix}.md`)
     const reports = reportPaths.map(repoPath => {
       const commit = git(directory, ["log", "-1", "--format=%H", "--", repoPath])
@@ -496,5 +513,60 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       events: [1, 2], completedAt: "exact" }
     expect(() => validatePlan26262Summary(candidate, expected))
       .toThrow("V138_PLAN_262_62_SUMMARY_BINDING_INVALID")
+  })
+
+  it("enforces bounded canonical per-command route results", () => {
+    const route = V138_REVIEW_V3_ROUTE_MANIFEST.find(({ command }) =>
+      command === "--write-plan-262-57-route-start-v1")!
+    const valid = `${canonicalV138ReviewerV3({ disposition: null,
+      receiptRoot: `sha256:${"a".repeat(64)}`,
+      schemaVersion: "v1.38-plan-262-57-route-start-v1" })}\n`
+    expect(validateV138Plan26261RouteResult(route, 0, valid)).toMatchObject({
+      resultCode: "success_no_disposition" })
+    expect(() => validateV138Plan26261RouteResult(route, 0, "x".repeat(4097)))
+      .toThrow("V138_PLAN_262_61_ROUTE_OUTPUT_BOUNDS_INVALID")
+    expect(() => validateV138Plan26261RouteResult(route, 0,
+      `${canonicalV138ReviewerV3({ disposition: "wrong",
+        receiptRoot: `sha256:${"a".repeat(64)}`,
+        schemaVersion: "v1.38-plan-262-57-route-start-v1" })}\n`))
+      .toThrow("V138_PLAN_262_61_ROUTE_DISPOSITION_INVALID")
+    expect(() => validateV138Plan26261RouteResult(route, 1, "COMPATIBLE_INVALID"))
+      .toThrow("V138_PLAN_262_61_ROUTE_RESULT_INVALID")
+  })
+
+  it("passes an exact hypothetical review and rejects recomputed evidence mutations", () => {
+    const shared = inspectV138SourceA9Custody(repoRoot,
+      { sourceBase9: SOURCE_BASE9, sourceA9: SOURCE_A9 })
+    const history = inspectV138Plan26261ProtectedHistory(repoRoot)
+    const sourceCustody = { tree: shared.sourceA9Tree, parent: shared.sourceA9Parent,
+      authorRun: "codex-plan-262-60-a9-review-fix-v8", paths: shared.sourceA9Paths,
+      blobs: shared.sourceA9Blobs, deletionHistory: shared.deletionHistory }
+    const protectedHistory = { root: history.protectedHistoryRoot,
+      protectedA8: SOURCE_A9, protectedRoots: history.protectedRoots }
+    const snapshots = [{ name: "before", inventoryRoot: `sha256:${"1".repeat(64)}`,
+      pathCount: 1 }, { name: "after", inventoryRoot: `sha256:${"2".repeat(64)}`,
+      pathCount: 2 }]
+    const orderedEvents = [{ ordinal: 0, event: "hypothetical:validated",
+      path: ".planning/artifacts/example", result: `sha256:${"3".repeat(64)}` }]
+    const exact = assembleExpectedPlan26262Review({ sourceCustody, protectedHistory,
+      chargeIds: history.chargeIds, priorAuthorizationBytes: history.authorizations,
+      snapshots, orderedEvents }) as Record<string, any>
+    expect(validatePlan26262ReviewAgainstExpected(exact, exact)).toBe(true)
+    const recompute = (mutation: Record<string, unknown>) => {
+      const body = { ...exact, ...mutation }; delete body.reviewV3Root
+      return { ...body, reviewV3Root: computeV138ReviewV3Root(body) }
+    }
+    expect(() => validatePlan26262ReviewAgainstExpected(
+      recompute({ sourceBase9: "f".repeat(40) }), exact))
+      .toThrow("V138_PLAN_262_62_REVIEW_SOURCE_BINDING_INVALID")
+    expect(() => validatePlan26262ReviewAgainstExpected(
+      recompute({ chargeIds: [...history.chargeIds].reverse() }), exact))
+      .toThrow("V138_REVIEW_V3_HISTORY_INVALID")
+    expect(() => validatePlan26262ReviewAgainstExpected(
+      recompute({ orderedEvents: [{ ...orderedEvents[0], event: "fabricated" }] }), exact))
+      .toThrow("V138_PLAN_262_62_REVIEW_EVENT_BINDING_INVALID")
+    expect(() => validatePlan26262ReviewAgainstExpected(
+      recompute({ snapshots: [...snapshots].reverse() }), exact))
+      .toThrow("V138_REVIEW_V3_SNAPSHOT_OBSERVATION_INVALID")
   })
 })
