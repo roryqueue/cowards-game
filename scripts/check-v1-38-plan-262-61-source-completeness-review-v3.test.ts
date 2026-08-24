@@ -548,6 +548,16 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
           .toThrow("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
       }
+      const crossRoleReuse = structuredClone(pairAudit) as any
+      const detached = crossRoleReuse.runs[0].physicalCommitments[0]
+      const clone = crossRoleReuse.runs[1].physicalCommitments[1]
+      clone.locationCommitment = detached.locationCommitment
+      clone.filesystemIdentityCommitment = detached.filesystemIdentityCommitment
+      const { commitmentRoot: _discarded, ...cloneBody } = clone
+      crossRoleReuse.runs[1].physicalCommitments[1] =
+        localObservationCommitment(cloneBody)
+      expect(() => validateV138Plan26261PairAudit(rerootPairAudit(crossRoleReuse)))
+        .toThrow("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
       for (const mutateClaim of [
         (candidate: any) => { candidate.assurance = "independent_custody_v1" },
         (candidate: any) => { candidate.independentCustody = true },

@@ -3534,11 +3534,12 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
         fail("V138_PLAN_262_61_PAIR_AUDIT_PROJECTION_INVALID")
     }
   }
+  const leftPhysicalCommitments = audit.runs[0].physicalCommitments
+  const rightPhysicalCommitments = audit.runs[1].physicalCommitments
   if (audit.runs[0].executionSourceB9 === audit.runs[1].executionSourceB9 ||
-    audit.runs[0].physicalCommitments[0].locationCommitment ===
-      audit.runs[1].physicalCommitments[0].locationCommitment ||
-    audit.runs[0].physicalCommitments[0].filesystemIdentityCommitment ===
-      audit.runs[1].physicalCommitments[0].filesystemIdentityCommitment)
+    leftPhysicalCommitments.some((left: any) => rightPhysicalCommitments.some(
+      (right: any) => left.locationCommitment === right.locationCommitment ||
+        left.filesystemIdentityCommitment === right.filesystemIdentityCommitment)))
     fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
   if (canonicalV138ReviewerV3(audit.runs[0].logicalPublicationEvidence) !==
       canonicalV138ReviewerV3(audit.runs[1].logicalPublicationEvidence) ||
@@ -3546,17 +3547,10 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
       audit.runs[0].physicalPublicationEvidence[key] ===
         audit.runs[1].physicalPublicationEvidence[key]))
     fail("V138_PLAN_262_61_PAIR_AUDIT_PUBLICATION_REUSE_INVALID")
-  const leftClones = audit.runs[0].physicalCommitments.slice(1, 5)
-  const rightClones = audit.runs[1].physicalCommitments.slice(1, 5)
+  const leftClones = leftPhysicalCommitments.slice(1, 5)
+  const rightClones = rightPhysicalCommitments.slice(1, 5)
   if (leftClones.length !== rightClones.length || leftClones.some(
-    (entry: any, index: number) => entry.group !== rightClones[index]?.group ||
-      entry.locationCommitment === rightClones[index]?.locationCommitment ||
-      entry.filesystemIdentityCommitment ===
-        rightClones[index]?.filesystemIdentityCommitment) ||
-    audit.runs[0].physicalCommitments[5].locationCommitment ===
-      audit.runs[1].physicalCommitments[5].locationCommitment ||
-    audit.runs[0].physicalCommitments[5].filesystemIdentityCommitment ===
-      audit.runs[1].physicalCommitments[5].filesystemIdentityCommitment)
+    (entry: any, index: number) => entry.group !== rightClones[index]?.group))
     fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
   const expectedLogical = audit.runs[0].projectionLedger.map(
     ({ ordinal, label, logical, projected, independentlyValidated }: any) =>
