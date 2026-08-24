@@ -1042,6 +1042,37 @@ const projectRouteLogicalIdentity = <T>(value: T,
   return value
 }
 
+export const projectV138Plan26261LogicalExecutionResult = (physical: any,
+  replacements: ReadonlyMap<string, string>) => {
+  const { physicalOutputText: _physicalOutputText,
+    physicalOutputRoot: _physicalOutputRoot, projectionTuples,
+    derivedRootEvidence, ...shared } = physical
+  const projectedShared = projectRouteLogicalIdentity(shared, replacements)
+  return Object.freeze({ ...projectedShared,
+    projectionTuples: Object.freeze(projectionTuples.map((tuple: any) =>
+      Object.freeze({ label: tuple.label,
+        logical: projectRouteLogicalIdentity(tuple.logical, replacements) }))),
+    derivedRootEvidence: derivedRootEvidence === null ? null : Object.freeze({
+      domain: derivedRootEvidence.domain,
+      rootField: derivedRootEvidence.rootField,
+      logicalSchemaVersion: derivedRootEvidence.logicalSchemaVersion,
+      logicalRecord: projectRouteLogicalIdentity(
+        derivedRootEvidence.logicalStructure, replacements),
+      logicalRoot: projectRouteLogicalIdentity(
+        derivedRootEvidence.logicalRoot, replacements),
+    }),
+  })
+}
+
+export const verifyV138Plan26261LogicalExecutionResult = (physical: any,
+  logical: any, replacements: ReadonlyMap<string, string>) => {
+  if (canonicalV138ReviewerV3(
+    projectV138Plan26261LogicalExecutionResult(physical, replacements)) !==
+      canonicalV138ReviewerV3(logical))
+    fail("V138_PLAN_262_61_LOGICAL_EXECUTION_PROJECTION_INVALID")
+  return true
+}
+
 export const auditLogicalRouteOutput = (entry: Readonly<{ command: string }>,
   output: string, allowedDerivedRoots: ReadonlySet<string>) => {
   if (!output.startsWith("{")) return true
@@ -2204,7 +2235,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
           logicalStructure: derivedRoot.logicalStructure,
           logicalRoot: derivedRoot.logicalRoot } })
       const logicalExecutionResult = canonicalV138ReviewerV3(
-        projectRouteLogicalIdentity(JSON.parse(executionResult),
+        projectV138Plan26261LogicalExecutionResult(JSON.parse(executionResult),
           logicalReplacements))
       events.push({ ordinal: events.length, command: entry.command,
         handler: actualHandlerName, event: `execute:${actualHandlerName}`,
@@ -3053,9 +3084,9 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
     const invalidEventProjection = run.eventLedger.find((event: any) => {
       if (event.event === `execute:${event.handler}`) {
         try {
-          return canonicalV138ReviewerV3(projectRouteLogicalIdentity(
-            JSON.parse(event.physicalResultPreimage), eventProjectionReplacements)) !==
-              event.resultPreimage
+          return !verifyV138Plan26261LogicalExecutionResult(
+            JSON.parse(event.physicalResultPreimage),
+            JSON.parse(event.resultPreimage), eventProjectionReplacements)
         } catch { return true }
       }
       try {

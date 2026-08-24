@@ -53,6 +53,8 @@ import {
   validateV138Plan26261FreshRoutePairIsolation,
   validateV138Plan26261PairAudit,
   validateV138Plan26261SemanticEventPair,
+  projectV138Plan26261LogicalExecutionResult,
+  verifyV138Plan26261LogicalExecutionResult,
   verifyV138Plan26261PhysicalLogicalEventPreimages,
   physicalEventDetailRootV138Plan26261,
   logicalEventDetailRootV138Plan26261,
@@ -854,6 +856,41 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       .toThrow("V138_PLAN_262_61_SEMANTIC_EVENT_LOGICAL_MISMATCH")
   })
 
+  it("rejects physical derived evidence injected into logical execute events", () => {
+    const physicalRoot = `sha256:${"a".repeat(64)}`
+    const logicalRoot = `sha256:${"b".repeat(64)}`
+    const physical = { exit: 0, resultCode: "success_no_disposition",
+      logicalOutputText: "ok\n", logicalOutputRoot: logicalRoot,
+      physicalOutputText: "physical\n", physicalOutputRoot: physicalRoot,
+      projectionTuples: [{ label: "route-derived-root:--fixture:receiptRoot",
+        physical: physicalRoot, logical: logicalRoot }],
+      derivedRootEvidence: { domain: "evidenceBundle", rootField: "receiptRoot",
+        physicalRecord: { receiptRoot: physicalRoot, childRoot: physicalRoot },
+        physicalRoot, logicalSchemaVersion: "logical-v1",
+        logicalStructure: { receiptRoot: logicalRoot }, logicalRoot } }
+    const replacements = new Map([[physicalRoot, logicalRoot]])
+    const logical = projectV138Plan26261LogicalExecutionResult(
+      physical, replacements) as any
+    expect(Object.keys(logical.derivedRootEvidence).sort()).toEqual([
+      "domain", "logicalRecord", "logicalRoot", "logicalSchemaVersion",
+      "rootField",
+    ])
+    expect(verifyV138Plan26261LogicalExecutionResult(
+      physical, logical, replacements)).toBe(true)
+    for (const mutate of [
+      (candidate: any) => { candidate.derivedRootEvidence.physicalRecord = {} },
+      (candidate: any) => { candidate.derivedRootEvidence.physicalRoot = physicalRoot },
+      (candidate: any) => { candidate.derivedRootEvidence.childRoot = physicalRoot },
+      (candidate: any) => { candidate.derivedRootEvidence.unexpected = true },
+    ]) {
+      const candidate = structuredClone(logical)
+      mutate(candidate)
+      expect(() => verifyV138Plan26261LogicalExecutionResult(
+        physical, candidate, replacements)).toThrow(
+          "V138_PLAN_262_61_LOGICAL_EXECUTION_PROJECTION_INVALID")
+    }
+  })
+
   it("replays every real-route physical and logical event class", async () => {
     const route = await observeV138Plan26261RouteDispatch(repoRoot)
     const operationEvents = route.events.filter(({ event }: any) =>
@@ -878,8 +915,11 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         physicalRoot: projection.physical, logicalRoot: projection.logical })
       expect(physical.projectionTuples).toContainEqual({ label: projection.label,
         physical: projection.physical, logical: projection.logical })
-      expect(logical.derivedRootEvidence).toMatchObject({
-        physicalRoot: projection.logical, logicalRoot: projection.logical })
+      expect(Object.keys(logical.derivedRootEvidence).sort()).toEqual([
+        "domain", "logicalRecord", "logicalRoot", "logicalSchemaVersion",
+        "rootField",
+      ])
+      expect(logical.derivedRootEvidence.logicalRoot).toBe(projection.logical)
     }
   }, 1_200_000)
 
