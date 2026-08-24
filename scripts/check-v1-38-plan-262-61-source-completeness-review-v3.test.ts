@@ -5,8 +5,10 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
+import { hashCanonicalIdentity } from "@cowards/spec"
 import {
   PLAN_60_CONVERGENCE,
+  V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS,
   PLAN_60_REVIEW_FIX_SHA256,
   PLAN_60_V9_SHA256,
   R3_PATHS,
@@ -18,6 +20,7 @@ import {
   SUMMARY_PATH,
   SUMMARY_SHA256,
   canonicalV138ReviewerV3,
+  auditLogicalRouteOutput,
   assembleExpectedPlan26262Review,
   assertV138Plan26261CandidateCleanliness,
   assertV138Plan26261SummaryPublicationState,
@@ -45,6 +48,9 @@ import {
   validatePlan26262ReviewAgainstExpected,
   validateV138Plan26261RouteEffects,
   validateV138Plan26261RouteResult,
+  validateV138Plan26261FreshRoutePairIsolation,
+  verifyAndProjectV138Plan26261DerivedRouteRoot,
+  verifyAndProjectV138Plan26261PersistedRouteFile,
   observeV138Plan26261RouteDispatch,
   observeV138Plan26261RouteDispatchPair,
 } from "./check-v1-38-plan-262-61-source-completeness-review-v3.js"
@@ -231,6 +237,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     const parsedEffect = JSON.parse(semanticEffect.result)
     expect(Object.hasOwn(parsedEffect, "flags")).toBe(true)
     expect(parsedEffect).toEqual(expect.objectContaining({
+      sideEffect: expect.any(String),
       outcome: "success", errorCode: null,
       beforeState: expect.objectContaining({ type: expect.any(String) }),
       afterState: expect.objectContaining({ type: expect.any(String) }),
@@ -254,6 +261,61 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       const { left, right } = await observeV138Plan26261RouteDispatchPair(repoRoot)
       const leftCustody = deterministicRouteCustody(left) as Record<string, any>
       const rightCustody = deterministicRouteCustody(right) as Record<string, any>
+      expect(left.physicalIsolation.detachedInput).toMatchObject({
+        independentlyValidated: true, regularFile: true, linkCount: 1, mode: 0o444 })
+      expect(right.physicalIsolation.detachedInput).toMatchObject({
+        independentlyValidated: true, regularFile: true, linkCount: 1, mode: 0o444 })
+      expect(left.physicalIsolation.detachedInput.pathRoot)
+        .not.toBe(right.physicalIsolation.detachedInput.pathRoot)
+      expect(left.physicalIsolation.detachedInput.identityRoot)
+        .not.toBe(right.physicalIsolation.detachedInput.identityRoot)
+      expect(left.b9Custody.identityKind).toBe("logical_synthetic_b9")
+      expect(right.b9Custody.identityKind).toBe("logical_synthetic_b9")
+      expect(left.physicalIsolation.identityKind).toBe("physical_execution_b9")
+      expect(right.physicalIsolation.identityKind).toBe("physical_execution_b9")
+      expect(left.physicalIsolation.executionSourceB9).not.toBe(left.sourceB9)
+      expect(right.physicalIsolation.executionSourceB9).not.toBe(right.sourceB9)
+      expect(left.physicalIsolation.physicalToLogicalProjection.map(
+        ({ label }: any) => label)).toEqual(
+        V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS)
+      expect(left.physicalIsolation.physicalToLogicalProjection.map(
+        ({ logical }: any) => logical)).toEqual(
+        right.physicalIsolation.physicalToLogicalProjection.map(
+          ({ logical }: any) => logical))
+      for (const [index, projection] of left.physicalIsolation
+        .physicalToLogicalProjection.entries()) {
+        const repeated = right.physicalIsolation.physicalToLogicalProjection[index]
+        expect(projection).toMatchObject({ ordinal: index,
+          label: V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS[index],
+          physical: expect.any(String), logical: expect.any(String),
+          projected: expect.any(Boolean), independentlyValidated: true })
+        expect(projection.projected).toBe(projection.physical !== projection.logical)
+        if (projection.projected)
+          expect(projection.physical).not.toBe(repeated.physical)
+        else expect(projection.physical).toBe(repeated.physical)
+      }
+      expect(left.physicalIsolation.routeClones.map(({ group }: any) => group))
+        .toEqual(right.physicalIsolation.routeClones.map(({ group }: any) => group))
+      for (const [index, leftClone] of left.physicalIsolation.routeClones.entries()) {
+        const rightClone = right.physicalIsolation.routeClones[index]
+        expect(leftClone).toMatchObject({ independentlyValidated: true,
+          sourceB9: left.physicalIsolation.executionSourceB9,
+          logicalSourceB9: left.sourceB9 })
+        expect(rightClone).toMatchObject({ independentlyValidated: true,
+          sourceB9: right.physicalIsolation.executionSourceB9,
+          logicalSourceB9: right.sourceB9 })
+        expect(leftClone.pathRoot).not.toBe(rightClone.pathRoot)
+        expect(leftClone.identityRoot).not.toBe(rightClone.identityRoot)
+      }
+      expect(left.physicalIsolation.obstructionInputs).toHaveLength(1)
+      expect(right.physicalIsolation.obstructionInputs).toHaveLength(1)
+      expect(left.physicalIsolation.obstructionInputs[0]).toMatchObject({
+        independentlyValidated: true, byteLength: 3, mode: 0o644 })
+      expect(left.physicalIsolation.obstructionInputs[0].pathRoot)
+        .not.toBe(right.physicalIsolation.obstructionInputs[0].pathRoot)
+      expect(left.physicalIsolation.obstructionInputs[0].identityRoot)
+        .not.toBe(right.physicalIsolation.obstructionInputs[0].identityRoot)
+      expect(left.logicalInputCustody).toEqual(right.logicalInputCustody)
       expect(firstExactDifference(leftCustody, rightCustody),
         "first exact custody difference").toBeNull()
       expect(canonicalV138ReviewerV3(leftCustody))
@@ -296,6 +358,11 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         ["observations", 0, "callTraceRoot"],
         ["observations", 0, "functionRangeRoot"],
         ["observations", 0, "callCount"],
+        ["logicalInputCustody", "canonicalPath"],
+        ["logicalInputCustody", "bytesSha256"],
+        ["logicalInputCustody", "byteLength"],
+        ["logicalInputCustody", "inputCommit"],
+        ["logicalInputCustody", "inputBlob"],
       ] as const
       const expectedWrapper = { completeRouteCustody: leftCustody }
       for (const mutationPath of exactMutationPaths) {
@@ -308,6 +375,213 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
           .toThrow("V138_PLAN_262_62_REVIEW_REPORT_BINDING_INVALID")
       }
     }, 1_200_000)
+
+  it("rejects shared physical inputs and failed independent validation", () => {
+    const route = (suffix: string) => ({ sourceB9: "logical-b9",
+      b9Custody: { identityKind: "logical_synthetic_b9" },
+      cleanup: { complete: true, residualPaths: [] }, physicalIsolation: {
+        identityKind: "physical_execution_b9", executionSourceB9: `physical-${suffix}`,
+        detachedInput: {
+        pathRoot: `path-${suffix}`, identityRoot: `inode-${suffix}`,
+        independentlyValidated: true }, routeClones: [{ group: "obstruction",
+        pathRoot: `clone-path-${suffix}`, identityRoot: `clone-inode-${suffix}`,
+        independentlyValidated: true }], physicalToLogicalProjection:
+          V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS.map((label, ordinal) => ({
+            ordinal, label, physical: `physical-root-${suffix}-${ordinal}`,
+            logical: `logical-root-${ordinal}`, projected: true,
+            independentlyValidated: true })), obstructionInputs: [{
+              pathRoot: `obstruction-path-${suffix}`,
+              identityRoot: `obstruction-inode-${suffix}`,
+              bytesSha256: "fixture-root", byteLength: 3, mode: 0o644,
+              independentlyValidated: true }] } })
+    const left = route("left")
+    const right = route("right")
+    expect(validateV138Plan26261FreshRoutePairIsolation(left, right)).toBe(true)
+    for (const mutate of [
+      (candidate: any) => { candidate.physicalIsolation.detachedInput.pathRoot =
+        left.physicalIsolation.detachedInput.pathRoot },
+      (candidate: any) => { candidate.physicalIsolation.detachedInput.identityRoot =
+        left.physicalIsolation.detachedInput.identityRoot },
+      (candidate: any) => { candidate.physicalIsolation.routeClones[0].pathRoot =
+        left.physicalIsolation.routeClones[0].pathRoot },
+      (candidate: any) => { candidate.physicalIsolation.routeClones[0].identityRoot =
+        left.physicalIsolation.routeClones[0].identityRoot },
+      (candidate: any) => { candidate.physicalIsolation.detachedInput
+        .independentlyValidated = false },
+      (candidate: any) => { candidate.physicalIsolation.routeClones[0]
+        .independentlyValidated = false },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection[0]
+        .physical = left.physicalIsolation.physicalToLogicalProjection[0].physical },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection[0]
+        .logical = "different-logical-root" },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection[0]
+        .ordinal = 1 },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection
+        .splice(0, 1) },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection
+        .push(structuredClone(candidate.physicalIsolation.physicalToLogicalProjection[0])) },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection
+        .reverse() },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection[0]
+        .label = "route-output:relabelled" },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection[0]
+        .projected = false },
+      (candidate: any) => { candidate.physicalIsolation.physicalToLogicalProjection[0]
+        .independentlyValidated = false },
+      (candidate: any) => { candidate.physicalIsolation.obstructionInputs[0]
+        .pathRoot = left.physicalIsolation.obstructionInputs[0].pathRoot },
+      (candidate: any) => { candidate.physicalIsolation.obstructionInputs[0]
+        .identityRoot = left.physicalIsolation.obstructionInputs[0].identityRoot },
+      (candidate: any) => { candidate.physicalIsolation.obstructionInputs[0]
+        .independentlyValidated = false },
+      (candidate: any) => { candidate.physicalIsolation.obstructionInputs = [] },
+      (candidate: any) => { const index = candidate.physicalIsolation
+        .physicalToLogicalProjection.findIndex(({ label }: any) =>
+          label.startsWith("route-obstruction-metadata:")); candidate.physicalIsolation
+          .physicalToLogicalProjection.splice(index, 1) },
+      (candidate: any) => { const entry = candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-obstruction-metadata:")); entry.physical = left
+          .physicalIsolation.physicalToLogicalProjection.find(({ label }: any) =>
+            label === entry.label).physical },
+      (candidate: any) => { const entry = candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-obstruction-metadata:")); entry.label += ":changed" },
+      (candidate: any) => { const index = candidate.physicalIsolation
+        .physicalToLogicalProjection.findIndex(({ label }: any) =>
+          label.startsWith("route-derived-root:")); candidate.physicalIsolation
+          .physicalToLogicalProjection.splice(index, 1) },
+      (candidate: any) => { const entry = structuredClone(candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-derived-root:"))); candidate.physicalIsolation
+          .physicalToLogicalProjection.push(entry) },
+      (candidate: any) => { const entry = candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-derived-root:")); entry.label += ":changed" },
+      (candidate: any) => { const entry = candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-derived-root:")); entry.physical = left
+          .physicalIsolation.physicalToLogicalProjection.find(({ label }: any) =>
+            label === entry.label).physical },
+      (candidate: any) => { const index = candidate.physicalIsolation
+        .physicalToLogicalProjection.findIndex(({ label }: any) =>
+          label.startsWith("route-persisted-receipt:")); candidate.physicalIsolation
+          .physicalToLogicalProjection.splice(index, 1) },
+      (candidate: any) => { const entry = structuredClone(candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-persisted-receipt:"))); candidate.physicalIsolation
+          .physicalToLogicalProjection.push(entry) },
+      (candidate: any) => { const entry = candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-persisted-receipt:")); entry.label += ":changed" },
+      (candidate: any) => { const index = candidate.physicalIsolation
+        .physicalToLogicalProjection.findIndex(({ label }: any) =>
+          label.startsWith("route-reservation-claim:")); candidate.physicalIsolation
+          .physicalToLogicalProjection.splice(index, 1) },
+      (candidate: any) => { const entry = structuredClone(candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-reservation-claim:"))); candidate.physicalIsolation
+          .physicalToLogicalProjection.push(entry) },
+      (candidate: any) => { const entry = candidate.physicalIsolation
+        .physicalToLogicalProjection.find(({ label }: any) =>
+          label.startsWith("route-reservation-claim:")); entry.physical = left
+          .physicalIsolation.physicalToLogicalProjection.find(({ label }: any) =>
+            label === entry.label).physical },
+      (candidate: any) => { candidate.physicalIsolation.identityKind = "logical" },
+      (candidate: any) => { candidate.b9Custody.identityKind = "physical" },
+      (candidate: any) => { candidate.cleanup.complete = false },
+      (candidate: any) => { candidate.cleanup.residualPaths = ["residual"] },
+    ]) {
+      const candidate = structuredClone(right)
+      mutate(candidate)
+      expect(() => validateV138Plan26261FreshRoutePairIsolation(left, candidate))
+        .toThrow("V138_PLAN_262_61_FRESH_DERIVATION_ISOLATION_INVALID")
+    }
+  })
+
+  it("recursively rejects unprojected host volatility in logical route output", () => {
+    const entry = { command: "--check-plan-262-57-pre-start-obstruction-v1" }
+    const logicalRoot = `sha256:${"a".repeat(64)}`
+    expect(auditLogicalRouteOutput(entry, `${JSON.stringify({ obstruction: {
+      path: ".planning/artifacts/fixture.json", type: "file",
+      metadataRoot: logicalRoot } })}\n`, new Set([logicalRoot]))).toBe(entry.command)
+    for (const value of [
+      { obstruction: { path: "/private/tmp/shared", type: "file",
+        metadataRoot: logicalRoot } },
+      { obstruction: { path: ".planning/artifacts/fixture.json", type: "file",
+        metadataRoot: `sha256:${"b".repeat(64)}` } },
+      { nested: { inode: 42 } }, { nested: { ctimeMs: 1 } },
+      { nested: { absolutePath: "/private/tmp/input" } },
+      { receiptRoot: `sha256:${"c".repeat(64)}` },
+    ]) expect(() => auditLogicalRouteOutput(entry,
+      `${JSON.stringify(value)}\n`, new Set([logicalRoot])))
+      .toThrow("V138_PLAN_262_61_LOGICAL_OUTPUT_VOLATILITY_INVALID")
+  })
+
+  it("recomputes physical and logical derived roots before projection", () => {
+    const physicalBody = { schemaVersion: "physical-v1", value: 1 }
+    const physicalRoot = `sha256:${hashCanonicalIdentity("evidenceBundle", [
+      Buffer.from("physical-v1"),
+      Buffer.from(canonicalV138ReviewerV3(physicalBody)),
+    ])}`
+    const physicalRecord = { ...physicalBody, receiptRoot: physicalRoot }
+    const logicalStructure = { command: "fixture", logicalValue: 1 }
+    const projected = verifyAndProjectV138Plan26261DerivedRouteRoot({
+      domain: "evidenceBundle", rootField: "receiptRoot", physicalRecord,
+      physicalOutputRoot: physicalRoot, logicalSchemaVersion: "logical-v1",
+      logicalStructure })
+    expect(projected).toMatchObject({ physicalRoot, physicalRootVerified: true,
+      logicalRootRecomputed: true })
+    expect(() => verifyAndProjectV138Plan26261DerivedRouteRoot({
+      domain: "evidenceBundle", rootField: "receiptRoot", physicalRecord,
+      physicalOutputRoot: `sha256:${"0".repeat(64)}`,
+      logicalSchemaVersion: "logical-v1", logicalStructure }))
+      .toThrow("V138_PLAN_262_61_DERIVED_ROUTE_PHYSICAL_ROOT_INVALID")
+    expect(() => verifyAndProjectV138Plan26261DerivedRouteRoot({
+      domain: "evidenceBundle", rootField: "receiptRoot", physicalRecord,
+      physicalOutputRoot: physicalRoot, logicalSchemaVersion: "logical-v1",
+      logicalStructure, expectedLogicalRoot: `sha256:${"0".repeat(64)}` }))
+      .toThrow("V138_PLAN_262_61_DERIVED_ROUTE_LOGICAL_ROOT_INVALID")
+  })
+
+  it("verifies exact persisted bytes and metadata before logical projection", () => {
+    const destination = ".planning/artifacts/fixture.json"
+    const receiptRoot = `sha256:${"a".repeat(64)}`
+    const physicalRecord = { schemaVersion: "physical-v1", receiptRoot, value: 1 }
+    const bytes = Buffer.from(`${canonicalV138ReviewerV3(physicalRecord)}\n`)
+    const base = { destination, expectedDestination: destination,
+      physicalBytes: bytes, physicalSha256: sha256V138ReviewerV3(bytes),
+      physicalByteLength: bytes.byteLength, physicalMode: 0o600,
+      expectedKeys: ["receiptRoot", "schemaVersion", "value"],
+      embeddedRoots: { receiptRoot },
+      logicalRecord: { schemaVersion: "logical-v1", value: 1 } }
+    expect(verifyAndProjectV138Plan26261PersistedRouteFile(base)).toMatchObject({
+      physicalSha256: sha256V138ReviewerV3(bytes),
+      logicalSha256: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      physicalFileVerified: true })
+    const mutations: Array<[Record<string, unknown>, string]> = [
+      [{ physicalBytes: Buffer.from("not-json") }, "PERSISTED_FILE_PARSE_INVALID"],
+      [{ physicalBytes: Buffer.from(
+        `{"value":1,"schemaVersion":"physical-v1","receiptRoot":"${receiptRoot}"}\n`) },
+      "PERSISTED_FILE_SCHEMA_INVALID"],
+      [{ expectedKeys: ["schemaVersion", "receiptRoot"] },
+      "PERSISTED_FILE_SCHEMA_INVALID"],
+      [{ embeddedRoots: { receiptRoot: `sha256:${"b".repeat(64)}` } },
+      "PERSISTED_FILE_EMBEDDED_ROOT_INVALID"],
+      [{ physicalSha256: `sha256:${"b".repeat(64)}` },
+      "PERSISTED_FILE_METADATA_INVALID"],
+      [{ physicalByteLength: bytes.byteLength + 1 },
+      "PERSISTED_FILE_METADATA_INVALID"],
+      [{ physicalMode: 0o644 }, "PERSISTED_FILE_METADATA_INVALID"],
+      [{ destination: ".planning/artifacts/other.json" },
+      "PERSISTED_FILE_SCHEMA_INVALID"],
+      [{ expectedLogicalSha256: `sha256:${"b".repeat(64)}` },
+      "PERSISTED_FILE_LOGICAL_ROOT_INVALID"],
+    ]
+    for (const [mutation, code] of mutations)
+      expect(() => verifyAndProjectV138Plan26261PersistedRouteFile({
+        ...base, ...mutation })).toThrow(code)
+  })
 
   it("fails closed when real route handlers expose source findings", async () => {
     const value = await deriveV138Plan26261NoPublish(repoRoot)
@@ -689,6 +963,32 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         V138_REVIEW_V3_ROUTE_MANIFEST[0], records))
         .toThrow("V138_PLAN_262_61_ROUTE_FORBIDDEN_TRANSIENT_EFFECT")
     } finally { observer.restore() }
+  })
+
+  it.each(V138_REVIEW_V3_ROUTE_MANIFEST.filter(({ sideEffect }) =>
+    sideEffect !== "none"))(
+    "production effect gate rejects an empty successful ledger for $command",
+    (entry) => {
+      expect(() => validateV138Plan26261RouteEffects(entry, [],
+        { exit: 0, resultCode: "success_no_disposition" }))
+        .toThrow("V138_PLAN_262_61_ROUTE_EFFECT_POLICY_INVALID")
+    })
+
+  it("production effect gate binds the exact manifest side-effect class", () => {
+    const entry = { ...V138_REVIEW_V3_ROUTE_MANIFEST[3], sideEffect: "none" }
+    expect(() => validateV138Plan26261RouteEffects(entry, [],
+      { exit: 0, resultCode: "success_no_disposition" }))
+      .toThrow("V138_PLAN_262_61_ROUTE_SIDE_EFFECT_CLASS_INVALID")
+  })
+
+  it("production effect gate permits only the exact read-only terminal failure", () => {
+    const entry = V138_REVIEW_V3_ROUTE_MANIFEST[9]
+    expect(validateV138Plan26261RouteEffects(entry, [], { exit: 1,
+      resultCode: "MATRIX_PLAN_262_30_TERMINAL_INVALID" }).policy)
+      .toMatchObject({ sideEffect: "none", expectedDestinationChange: "unchanged" })
+    expect(() => validateV138Plan26261RouteEffects(entry, [], { exit: 1,
+      resultCode: "MATRIX_PLAN_262_30_CALIBRATION_INVALID" }))
+      .toThrow("V138_PLAN_262_61_ROUTE_EFFECT_RESULT_INVALID")
   })
 
   it.each([

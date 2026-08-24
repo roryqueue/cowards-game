@@ -148,6 +148,12 @@ export const canonicalV138ReviewerV3 = (value: unknown) =>
   JSON.stringify(canonicalize(value as Json))
 export const sha256V138ReviewerV3 = (value: Buffer | string) =>
   `sha256:${createHash("sha256").update(value).digest("hex")}` as const
+const identityRootV138ReviewerV3 = (domain: "evidenceBundle" |
+  "canonicalJsonProfile" | "artifactManifest" | "containmentPolicy",
+  schemaVersion: string, value: unknown) => `sha256:${hashCanonicalIdentity(domain, [
+    Buffer.from(schemaVersion, "utf8"),
+    Buffer.from(canonicalV138ReviewerV3(value), "utf8"),
+  ])}` as const
 const git = (root: string, args: readonly string[]) => execFileSync("git", [...args], {
   cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
 }).trim()
@@ -164,6 +170,16 @@ const commitSynthetic = (rootPath: string, message: string) => execFileSync("git
     GIT_COMMITTER_EMAIL: "plan-262-61@example.invalid",
     GIT_AUTHOR_DATE: "2000-01-01T00:00:00Z",
     GIT_COMMITTER_DATE: "2000-01-01T00:00:00Z" } })
+const commitSyntheticTree = (rootPath: string, tree: string, parent: string,
+  message: string) => execFileSync("git", ["commit-tree", tree, "-p", parent,
+    "-m", message], { cwd: rootPath, encoding: "utf8", env: { ...process.env,
+      GIT_AUTHOR_NAME: "Plan 262-61 Fixture",
+      GIT_AUTHOR_EMAIL: "plan-262-61@example.invalid",
+      GIT_COMMITTER_NAME: "Plan 262-61 Fixture",
+      GIT_COMMITTER_EMAIL: "plan-262-61@example.invalid",
+      GIT_AUTHOR_DATE: "2000-01-01T00:00:00Z",
+      GIT_COMMITTER_DATE: "2000-01-01T00:00:00Z",
+    } }).trim()
 const lines = (value: string) => value.split("\n").filter(Boolean)
 const fullOid = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{40}$/u.test(value)
@@ -813,12 +829,36 @@ export const inventoryChangedPaths = (before: readonly Record<string, unknown>[]
 type FsPathState = Readonly<{ type: "absent" | "file" | "directory" |
   "symlink" | "other"; mode?: number; byteLength?: number; sha256?: string }>
 type FsOperation = Readonly<{ ordinal: number; command: string; operation: string;
-  path: string; outcome: "success" | "error"; errorCode: string | null;
+  path: string; sideEffect: string; outcome: "success" | "error";
+  errorCode: string | null;
   flags: string | null; beforeState: FsPathState; afterState: FsPathState;
   detailRoot: string }>
 
 const normalizeRouteObservedPath = (repoPath: string) => repoPath.replace(
   /([/.][^/]+)\.[0-9]+\.[0-9a-f]{16,}\.tmp$/u, "$1.<pid-random>.tmp")
+
+const fsOperationSideEffect = (method: string, index: number,
+  beforeState: FsPathState, afterState: FsPathState) => {
+  if (method === "mkdirSync") return "directory-create"
+  if (method === "openSync") return "temporary-file-create"
+  if (method === "writeSync" || method === "writeFileSync" ||
+    method === "appendFileSync" || method === "truncateSync")
+    return "content-write"
+  if (method === "fsyncSync") return "durability-sync"
+  if (method === "closeSync") return "descriptor-close"
+  if (method === "linkSync") return index === 0 ?
+    "publication-source-link" : "publication-destination-link"
+  if (method === "unlinkSync" || method === "rmSync" || method === "rmdirSync")
+    return "cleanup-delete"
+  if (method === "renameSync") return index === 0 ?
+    "publication-source-rename" : "publication-destination-rename"
+  if (method === "copyFileSync") return index === 0 ?
+    "copy-source-read" : "copy-destination-write"
+  if (method === "symlinkSync") return index === 0 ?
+    "symlink-source-reference" : "symlink-destination-create"
+  if (method === "chmodSync" || method === "chownSync") return "metadata-write"
+  return beforeState.type === afterState.type ? "state-observation" : "state-change"
+}
 
 export const installRouteFsObserver = () => {
   const require = createRequire(import.meta.url)
@@ -912,11 +952,13 @@ export const installRouteFsObserver = () => {
         const errorCode = typeof (error as NodeJS.ErrnoException).code === "string" ?
           (error as NodeJS.ErrnoException).code! : "UNKNOWN"
         const detail = { method, index, flags: operationFlags,
+          sideEffect: fsOperationSideEffect(method, index, beforeState, afterState),
           outcome: "error", errorCode, beforeState, afterState }
         active!.records.push(Object.freeze({ ordinal: active!.records.length,
           command: active!.command, operation: observed.length === 2 ?
             `${method}:${index === 0 ? "from" : "to"}` : method,
-          path: repoPath, outcome: "error", errorCode, flags: operationFlags,
+          path: repoPath, sideEffect: detail.sideEffect,
+          outcome: "error", errorCode, flags: operationFlags,
           beforeState, afterState,
           detailRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(detail)) }))
       }
@@ -929,11 +971,13 @@ export const installRouteFsObserver = () => {
     for (const { index, repoPath, physicalRepoPath, beforeState } of observed) {
       const afterState = state(active!.root, physicalRepoPath)
       const detail = { method, index, flags: operationFlags,
+        sideEffect: fsOperationSideEffect(method, index, beforeState, afterState),
         outcome: "success", errorCode: null, beforeState, afterState }
       active!.records.push(Object.freeze({ ordinal: active!.records.length,
         command: active!.command, operation: observed.length === 2 ?
           `${method}:${index === 0 ? "from" : "to"}` : method,
-        path: repoPath, outcome: "success", errorCode: null,
+        path: repoPath, sideEffect: detail.sideEffect,
+        outcome: "success", errorCode: null,
         flags: operationFlags,
         beforeState, afterState,
         detailRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(detail)) }))
@@ -976,6 +1020,146 @@ const emptySha256 = sha256V138ReviewerV3(Buffer.alloc(0))
 const operationIdentity = (operation: FsOperation) =>
   `${operation.operation}:${operation.path}`
 
+const projectRouteLogicalIdentity = <T>(value: T,
+  replacements: ReadonlyMap<string, string>): T => {
+  if (typeof value === "string") {
+    let projected = value
+    for (const [physical, logical] of replacements)
+      projected = projected.replaceAll(physical, logical)
+    return projected as T
+  }
+  if (Array.isArray(value)) return value.map(item =>
+    projectRouteLogicalIdentity(item, replacements)) as T
+  if (value !== null && typeof value === "object") return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) =>
+      [key, projectRouteLogicalIdentity(item, replacements)])) as T
+  return value
+}
+
+export const auditLogicalRouteOutput = (entry: Readonly<{ command: string }>,
+  output: string, allowedDerivedRoots: ReadonlySet<string>) => {
+  if (!output.startsWith("{")) return true
+  let value: unknown
+  try { value = JSON.parse(output) } catch {
+    fail("V138_PLAN_262_61_LOGICAL_OUTPUT_AUDIT_INVALID")
+  }
+  const visit = (item: unknown, key = "") => {
+    if (/(?:inode|ctime|device|absolutePath|noFollowIdentity)/iu.test(key))
+      fail("V138_PLAN_262_61_LOGICAL_OUTPUT_VOLATILITY_INVALID")
+    if (["metadataRoot", "dispositionRoot", "receiptRoot", "terminalRoot"]
+      .includes(key) && (typeof item !== "string" ||
+      !allowedDerivedRoots.has(item)))
+      fail("V138_PLAN_262_61_LOGICAL_OUTPUT_VOLATILITY_INVALID")
+    if (typeof item === "string" && path.isAbsolute(item))
+      fail("V138_PLAN_262_61_LOGICAL_OUTPUT_VOLATILITY_INVALID")
+    if (Array.isArray(item)) item.forEach(value => visit(value, key))
+    else if (item !== null && typeof item === "object")
+      Object.entries(item as Record<string, unknown>).forEach(([childKey, child]) =>
+        visit(child, childKey))
+  }
+  visit(value)
+  return entry.command
+}
+
+export const verifyAndProjectV138Plan26261DerivedRouteRoot = (input: Readonly<{
+  domain: "evidenceBundle" | "canonicalJsonProfile" | "artifactManifest" |
+    "containmentPolicy"; rootField: string; physicalRecord: Record<string, unknown>;
+  physicalOutputRoot: string; logicalSchemaVersion: string;
+  logicalStructure: Record<string, unknown>; expectedLogicalRoot?: string }>) => {
+  const { [input.rootField]: physicalRecordRoot, ...physicalBody } =
+    input.physicalRecord
+  const schemaVersion = String(input.physicalRecord.schemaVersion)
+  const recomputedPhysicalRoot = identityRootV138ReviewerV3(input.domain,
+    schemaVersion, physicalBody)
+  if (!root(input.physicalOutputRoot) || physicalRecordRoot !==
+      input.physicalOutputRoot || recomputedPhysicalRoot !== input.physicalOutputRoot)
+    fail("V138_PLAN_262_61_DERIVED_ROUTE_PHYSICAL_ROOT_INVALID")
+  const logicalRoot = identityRootV138ReviewerV3("evidenceBundle",
+    input.logicalSchemaVersion, input.logicalStructure)
+  if (input.expectedLogicalRoot !== undefined &&
+    input.expectedLogicalRoot !== logicalRoot)
+    fail("V138_PLAN_262_61_DERIVED_ROUTE_LOGICAL_ROOT_INVALID")
+  return Object.freeze({ physicalRoot: input.physicalOutputRoot, logicalRoot,
+    physicalRootVerified: true as const, logicalRootRecomputed: true as const })
+}
+
+export const verifyAndProjectV138Plan26261PersistedRouteFile = (input: Readonly<{
+  destination: string; expectedDestination: string; physicalBytes: Buffer;
+  physicalSha256: string; physicalByteLength: number; physicalMode: number;
+  expectedKeys: readonly string[]; embeddedRoots: Readonly<Record<string, string>>;
+  logicalRecord: Record<string, unknown>; expectedLogicalSha256?: string }>) => {
+  let physicalRecord: Record<string, any>
+  try { physicalRecord = JSON.parse(input.physicalBytes.toString("utf8")) } catch {
+    fail("V138_PLAN_262_61_PERSISTED_FILE_PARSE_INVALID")
+  }
+  if (input.destination !== input.expectedDestination ||
+    canonicalV138ReviewerV3(Object.keys(physicalRecord)) !==
+      canonicalV138ReviewerV3([...input.expectedKeys]) ||
+    !input.physicalBytes.equals(Buffer.from(
+      `${JSON.stringify(physicalRecord)}\n`)))
+    fail("V138_PLAN_262_61_PERSISTED_FILE_SCHEMA_INVALID")
+  if (sha256V138ReviewerV3(input.physicalBytes) !== input.physicalSha256 ||
+    input.physicalBytes.byteLength !== input.physicalByteLength ||
+    input.physicalMode !== 0o600)
+    fail("V138_PLAN_262_61_PERSISTED_FILE_METADATA_INVALID")
+  const atPath = (value: Record<string, any>, dotted: string) => dotted.split(".")
+    .reduce<any>((cursor, key) => cursor?.[key], value)
+  for (const [dotted, expected] of Object.entries(input.embeddedRoots))
+    if (atPath(physicalRecord, dotted) !== expected)
+      fail("V138_PLAN_262_61_PERSISTED_FILE_EMBEDDED_ROOT_INVALID")
+  const logicalBytes = Buffer.from(`${JSON.stringify(input.logicalRecord)}\n`)
+  const logicalSha256 = sha256V138ReviewerV3(logicalBytes)
+  if (input.expectedLogicalSha256 !== undefined &&
+    input.expectedLogicalSha256 !== logicalSha256)
+    fail("V138_PLAN_262_61_PERSISTED_FILE_LOGICAL_ROOT_INVALID")
+  return Object.freeze({ physicalRecord, logicalBytes,
+    physicalSha256: input.physicalSha256, logicalSha256,
+    physicalFileVerified: true as const })
+}
+
+const EXACT_ROUTE_EFFECT_CLASS = Object.freeze({
+  "--check-plan-262-57-pre-execution-readiness-v1": "none",
+  "--resolve-plan-262-57-pre-start-v1": "fixture-write-only",
+  "--check-plan-262-57-pre-start-obstruction-v1": "none",
+  "--write-execution-context-v11-receipt": "fixture-write-only",
+  "--write-plan-262-57-route-start-v1": "fixture-write-only",
+  "--write-headroom-preflight-v11-receipt": "injected-headroom",
+  "--calibrate-parallel-v11-receipt": "injected-child-runner",
+  "--write-authoritative-v12-receipt": "injected-child-runner",
+  "--write-plan-262-57-terminal-v1": "fixture-write-only",
+  "--check-plan-262-57-terminal-v1": "none",
+} as const)
+
+const EXACT_PRE_WRITE_FAILURES = Object.freeze({
+  "--calibrate-parallel-v11-receipt":
+    Object.freeze(["MATRIX_ROUTE7_ADAPTER_KEY_INVENTORY_INVALID"]),
+  "--write-authoritative-v12-receipt":
+    Object.freeze(["MATRIX_PLAN_262_30_CALIBRATION_INVALID"]),
+  "--write-plan-262-57-terminal-v1":
+    Object.freeze(["MATRIX_PLAN_262_30_CALIBRATION_INVALID"]),
+  "--check-plan-262-57-terminal-v1":
+    Object.freeze(["MATRIX_PLAN_262_30_TERMINAL_INVALID"]),
+} as const)
+
+export const V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS = Object.freeze([
+  "authorization-bytes-root", "authorization-root", "execution-b9",
+  "seal-bytes-root", "seal-root",
+  "route-obstruction-metadata:--resolve-plan-262-57-pre-start-v1",
+  "route-obstruction-metadata:--check-plan-262-57-pre-start-obstruction-v1",
+  "route-derived-root:--resolve-plan-262-57-pre-start-v1:dispositionRoot",
+  "route-derived-root:--check-plan-262-57-pre-start-obstruction-v1:dispositionRoot",
+  "route-derived-root:--write-execution-context-v11-receipt:receiptRoot",
+  "route-derived-root:--write-plan-262-57-route-start-v1:receiptRoot",
+  "route-derived-root:--write-headroom-preflight-v11-receipt:receiptRoot",
+  "route-reservation-claim:--write-execution-context-v11-receipt",
+  "route-reservation-claim:--write-plan-262-57-route-start-v1",
+  "route-persisted-receipt:--resolve-plan-262-57-pre-start-v1",
+  "route-persisted-receipt:--write-execution-context-v11-receipt",
+  "route-persisted-receipt:--write-plan-262-57-route-start-v1",
+  "route-persisted-receipt:--write-headroom-preflight-v11-receipt",
+  ...V138_REVIEW_V3_ROUTE_MANIFEST.map(({ command }) => `route-output:${command}`),
+].sort())
+
 /**
  * Production effect gate for one authenticated CLI route. The policy is closed:
  * it permits no path merely because the path was restored before the endpoint
@@ -985,7 +1169,14 @@ const operationIdentity = (operation: FsOperation) =>
  */
 export const validateV138Plan26261RouteEffects = (entry: Readonly<{
   command: string; destination: string; sideEffect: string }>,
-  operations: readonly FsOperation[]) => {
+  operations: readonly FsOperation[], routeResult: Readonly<{
+    exit: number; resultCode: string }> = { exit: 0,
+      resultCode: "success_no_disposition" }, logicalReplacements:
+      ReadonlyMap<string, string> = new Map()) => {
+  const expectedClass = EXACT_ROUTE_EFFECT_CLASS[
+    entry.command as keyof typeof EXACT_ROUTE_EFFECT_CLASS]
+  if (expectedClass === undefined || entry.sideEffect !== expectedClass)
+    fail("V138_PLAN_262_61_ROUTE_SIDE_EFFECT_CLASS_INVALID")
   const directory = path.posix.dirname(entry.destination)
   const basename = path.posix.basename(entry.destination)
   const temporary = `${directory}/.${basename}.<pid-random>.tmp`
@@ -1003,15 +1194,36 @@ export const validateV138Plan26261RouteEffects = (entry: Readonly<{
     `unlinkSync:${temporary}`, `fsyncSync:${directory}`,
     `closeSync:${directory}`,
   ]
+  const publicationEffects = [
+    "temporary-file-create", "content-write", "content-write",
+    "durability-sync", "descriptor-close", "publication-source-link",
+    "publication-destination-link", "durability-sync", "descriptor-close",
+    "cleanup-delete", "durability-sync", "descriptor-close",
+  ]
+  const reservationEffects = reservationPrefix.length === 0 ? [] :
+    ["directory-create", "content-write"]
   const identities = operations.map(operationIdentity)
   const allowedPaths = new Set([entry.destination, temporary, directory,
     ...(reservationPrefix.length === 0 ? [] :
       [ROUTE_RESERVATION_DIRECTORY, ROUTE_RESERVATION_CLAIM])])
   if (operations.some(operation => !allowedPaths.has(operation.path)))
     fail("V138_PLAN_262_61_ROUTE_FORBIDDEN_TRANSIENT_EFFECT")
-  const permitted = operations.length === 0 ? [] : [...reservationPrefix, ...publication]
+  const readOnly = expectedClass === "none"
+  const allowedPreWriteFailures = EXACT_PRE_WRITE_FAILURES[
+    entry.command as keyof typeof EXACT_PRE_WRITE_FAILURES] ?? []
+  const preWriteFailure = routeResult.exit !== 0 &&
+    allowedPreWriteFailures.includes(routeResult.resultCode as never)
+  if (routeResult.exit !== 0 && !preWriteFailure)
+    fail("V138_PLAN_262_61_ROUTE_EFFECT_RESULT_INVALID")
+  const permitted = readOnly || preWriteFailure ? [] :
+    [...reservationPrefix, ...publication]
+  const permittedEffects = readOnly || preWriteFailure ? [] :
+    [...reservationEffects, ...publicationEffects]
   if (canonicalV138ReviewerV3(identities) !== canonicalV138ReviewerV3(permitted))
     fail("V138_PLAN_262_61_ROUTE_EFFECT_POLICY_INVALID")
+  if (canonicalV138ReviewerV3(operations.map(operation => operation.sideEffect)) !==
+      canonicalV138ReviewerV3(permittedEffects))
+    fail("V138_PLAN_262_61_ROUTE_SIDE_EFFECT_POLICY_INVALID")
   if (operations.some(operation => operation.command !== entry.command ||
     operation.outcome !== "success" || operation.errorCode !== null))
     fail("V138_PLAN_262_61_ROUTE_EFFECT_OUTCOME_INVALID")
@@ -1044,11 +1256,21 @@ export const validateV138Plan26261RouteEffects = (entry: Readonly<{
     reservation.afterState.byteLength === undefined ||
     reservation.afterState.byteLength <= 0))
     fail("V138_PLAN_262_61_ROUTE_EFFECT_CONTENT_INVALID")
+  const logicalOperations = operations.map(operation => {
+    const projected = projectRouteLogicalIdentity(operation, logicalReplacements)
+    const { detailRoot: _physicalDetailRoot, ...detail } = projected
+    return Object.freeze({ ...detail, detailRoot: sha256V138ReviewerV3(
+      canonicalV138ReviewerV3(detail)) })
+  })
   const policy = Object.freeze({ command: entry.command,
-    destination: entry.destination, identities: Object.freeze(identities),
-    operations: Object.freeze(operations.map(operation => Object.freeze({
+    destination: entry.destination, sideEffect: entry.sideEffect,
+    routeResult, expectedDestinationChange: readOnly || preWriteFailure ?
+      "unchanged" : "absent-to-durable-file",
+    identities: Object.freeze(identities),
+    operations: Object.freeze(logicalOperations.map(operation => Object.freeze({
       ordinal: operation.ordinal, operation: operation.operation,
-      path: operation.path, flags: operation.flags, outcome: operation.outcome,
+      path: operation.path, sideEffect: operation.sideEffect,
+      flags: operation.flags, outcome: operation.outcome,
       errorCode: operation.errorCode, beforeState: operation.beforeState,
       afterState: operation.afterState, detailRoot: operation.detailRoot }))) })
   return Object.freeze({ policy,
@@ -1177,8 +1399,7 @@ export const validateV138Plan26261RouteResult = (entry: Readonly<{
  * it never writes a canonical route destination.
  */
 export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
-  options: Readonly<{ fresh?: boolean; detachedReviewPath?: string;
-    obstructionCloneRoot?: string }> = {}) => {
+  options: Readonly<{ fresh?: boolean }> = {}) => {
   const physicalRoot = realpathSync(rootPath)
   if (options.fresh !== true && cachedRouteObservation?.rootPath === physicalRoot)
     return cachedRouteObservation.value
@@ -1302,7 +1523,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         `${publicationCommit}:${V138_REVIEW_V3_REPORT_PATH}`]),
       reportRoot: sha256V138ReviewerV3(Buffer.from("# Disposable Plan 262-62 review\n")),
       reportByteLength: Buffer.byteLength("# Disposable Plan 262-62 review\n") })
-    const detachedReview = options.detachedReviewPath ?? path.join(realpathSync(parent),
+    const detachedReview = path.join(realpathSync(parent), "detached-input",
       path.basename(V138_REVIEW_V3_CANONICAL_PATH))
     const detachedBytes = canonicalBytes(review)
     if (existsSync(detachedReview)) {
@@ -1313,9 +1534,60 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       mkdirSync(path.dirname(detachedReview), { recursive: true })
       writeFileSync(detachedReview, detachedBytes, { flag: "wx", mode: 0o444 })
     }
-    const authorization = buildAuthorization({ repoRoot: templateRoot,
+    const physicalAuthorization = buildAuthorization({ repoRoot: templateRoot,
       reviewV3AbsolutePath: detachedReview })
-    const seal = buildSeal({ repoRoot: templateRoot, authorization })
+    const physicalSeal = buildSeal({ repoRoot: templateRoot,
+      authorization: physicalAuthorization })
+    const detachedStat = lstatSync(detachedReview)
+    const physicalInput = Object.freeze({
+      pathRoot: sha256V138ReviewerV3(detachedReview),
+      identityRoot: sha256V138ReviewerV3(String(
+        physicalAuthorization.reviewV3Input.preNoFollowIdentity)),
+      authorizationRoot: physicalAuthorization.authorizationRoot,
+      sealRoot: physicalSeal.sealRoot,
+      regularFile: detachedStat.isFile() && !detachedStat.isSymbolicLink(),
+      linkCount: detachedStat.nlink,
+      mode: detachedStat.mode & 0o777,
+      bytesSha256: sha256V138ReviewerV3(detachedBytes),
+      byteLength: detachedBytes.byteLength,
+      independentlyValidated: true as const,
+    })
+    if (!physicalInput.regularFile || physicalInput.linkCount !== 1 ||
+      physicalInput.mode !== 0o444 ||
+      physicalAuthorization.reviewV3Input.preNoFollowIdentity !==
+        physicalAuthorization.reviewV3Input.postNoFollowIdentity)
+      fail("V138_PLAN_262_61_DETACHED_REVIEW_IDENTITY_INVALID")
+    const { authorizationRoot: _physicalAuthorizationRoot,
+      ...physicalAuthorizationBody } = physicalAuthorization
+    const logicalReviewInput = Object.freeze({
+      ...physicalAuthorization.reviewV3Input,
+      absolutePath: `/logical-custody/${path.basename(V138_REVIEW_V3_CANONICAL_PATH)}`,
+      preNoFollowIdentity: `logical:file:${physicalInput.bytesSha256}:` +
+        `${physicalInput.byteLength}:mode-0444:nlink-1`,
+      postNoFollowIdentity: `logical:file:${physicalInput.bytesSha256}:` +
+        `${physicalInput.byteLength}:mode-0444:nlink-1`,
+    })
+    const authorizationBody = Object.freeze({ ...physicalAuthorizationBody,
+      reviewV3Input: logicalReviewInput })
+    const authorization = Object.freeze({ ...authorizationBody,
+      authorizationRoot: identityRootV138ReviewerV3("evidenceBundle",
+        String(authorizationBody.schemaVersion), authorizationBody) })
+    const { sealRoot: _physicalSealRoot, ...physicalSealBody } = physicalSeal
+    const sealBody = Object.freeze({ ...physicalSealBody,
+      authorizationRoot: authorization.authorizationRoot })
+    const seal = Object.freeze({ ...sealBody,
+      sealRoot: identityRootV138ReviewerV3("evidenceBundle",
+        String(sealBody.schemaVersion), sealBody) })
+    const logicalInputCustody = Object.freeze({
+      schemaVersion: "v1.38-plan-262-61-logical-detached-input-custody-v1",
+      canonicalPath: logicalReviewInput.absolutePath,
+      regularFile: true, symlinkFree: true, linkCount: 1, mode: 0o444,
+      bytesSha256: physicalInput.bytesSha256,
+      byteLength: physicalInput.byteLength,
+      reviewV3Root: logicalReviewInput.reviewV3Root,
+      inputCommit: logicalReviewInput.inputCommit,
+      inputBlob: logicalReviewInput.inputBlob,
+    })
     const syntheticPaths = [
       ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
       ".planning/artifacts/v1.38-successor-source-seal-v9.json",
@@ -1334,7 +1606,8 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         canonicalV138ReviewerV3(syntheticPaths) ||
       git(templateRoot, ["show", "-s", "--format=%P", sourceB9]) !== publicationCommit)
       fail("V138_PLAN_262_61_SYNTHETIC_B9_CUSTODY_INVALID")
-    const b9Custody = Object.freeze({ commit: sourceB9,
+    const b9Custody = Object.freeze({ identityKind: "logical_synthetic_b9",
+      commit: sourceB9,
       parent: publicationCommit,
       tree: git(templateRoot, ["rev-parse", `${sourceB9}^{tree}`]),
       changedPaths: Object.freeze(syntheticPaths),
@@ -1345,6 +1618,47 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       sealBlob: git(templateRoot, ["rev-parse", `${sourceB9}:${syntheticPaths[1]}`]),
       sealRoot: sha256V138ReviewerV3(canonicalBytes(seal)),
       sealByteLength: canonicalBytes(seal).byteLength })
+    writeFileSync(path.join(templateRoot, syntheticPaths[0]!),
+      canonicalBytes(physicalAuthorization))
+    writeFileSync(path.join(templateRoot, syntheticPaths[1]!),
+      canonicalBytes(physicalSeal))
+    execFileSync("git", ["add", "--", ...syntheticPaths], { cwd: templateRoot })
+    const executionTree = git(templateRoot, ["write-tree"])
+    const executionSourceB9 = commitSyntheticTree(templateRoot, executionTree,
+      publicationCommit, "test: independently validated physical B9 input")
+    git(templateRoot, ["checkout", "--quiet", "--detach", executionSourceB9])
+    if (executionSourceB9 === sourceB9 ||
+      git(templateRoot, ["show", "-s", "--format=%P", executionSourceB9]) !==
+        publicationCommit ||
+      canonicalV138ReviewerV3(changedPaths(templateRoot, executionSourceB9)) !==
+        canonicalV138ReviewerV3(syntheticPaths))
+      fail("V138_PLAN_262_61_PHYSICAL_EXECUTION_B9_INVALID")
+    const logicalReplacements = new Map<string, string>()
+    const physicalToLogicalProjection: Array<Readonly<{ label: string;
+      physical: string; logical: string; projected: boolean;
+      independentlyValidated: true }>> = []
+    const bindProjection = (label: string, physical: string, logical: string) => {
+      if (physicalToLogicalProjection.some(entry => entry.label === label))
+        fail("V138_PLAN_262_61_LOGICAL_PROJECTION_DUPLICATE")
+      const present = logicalReplacements.get(physical)
+      if (physical !== logical && present !== undefined && present !== logical)
+        fail(`V138_PLAN_262_61_LOGICAL_PROJECTION_CONFLICT:${label}:` +
+          `${physicalToLogicalProjection.find(entry => entry.physical === physical)?.label ??
+            "unlabelled"}`)
+      if (physical !== logical) logicalReplacements.set(physical, logical)
+      physicalToLogicalProjection.push(Object.freeze({ label, physical, logical,
+        projected: physical !== logical, independentlyValidated: true as const }))
+    }
+    bindProjection("execution-b9", executionSourceB9, sourceB9)
+    bindProjection("authorization-root", physicalAuthorization.authorizationRoot,
+      authorization.authorizationRoot)
+    bindProjection("seal-root", physicalSeal.sealRoot, seal.sealRoot)
+    bindProjection("authorization-bytes-root",
+      sha256V138ReviewerV3(canonicalBytes(physicalAuthorization)),
+      sha256V138ReviewerV3(canonicalBytes(authorization)))
+    bindProjection("seal-bytes-root",
+      sha256V138ReviewerV3(canonicalBytes(physicalSeal)),
+      sha256V138ReviewerV3(canonicalBytes(seal)))
     const observations: RouteObservation[] = []
     const successfulRunner = { async run(shard: any, control: any) {
       control.onLaunch({ event: "child_launched", shardId: shard.shardId,
@@ -1377,24 +1691,33 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         runner: successfulRunner, sharedHeadroomObserver: admittedHeadroom }),
       observationProviders: { toolIdentity: () => `sha256:${"9".repeat(64)}` } }
     const routeClones = new Map<string, string>()
+    const physicalObstructionInputs: Array<Readonly<{ pathRoot: string;
+      identityRoot: string; bytesSha256: string; byteLength: number; mode: number;
+      independentlyValidated: true }>> = []
+    const physicalCloneInputs = new Map<string, Readonly<{
+      pathRoot: string; identityRoot: string; sourceB9: string;
+      logicalSourceB9: string;
+      independentlyValidated: true }>>()
     const cloneFor = (group: string) => {
       const present = routeClones.get(group)
       if (present !== undefined) return present
-      const sharedObstructionClone = group === "obstruction" &&
-        options.obstructionCloneRoot !== undefined
-      const cloneRoot = sharedObstructionClone ? options.obstructionCloneRoot! :
-        path.join(parent, `route-${group}`)
-      if (!existsSync(cloneRoot)) {
-        execFileSync("git", ["clone", "--quiet", "--no-hardlinks", templateRoot,
-          cloneRoot], { maxBuffer: 64 * 1024 * 1024 })
-        git(cloneRoot, ["checkout", "--quiet", "--detach", sourceB9])
-      } else {
-        if (!sharedObstructionClone || git(cloneRoot, ["rev-parse", "HEAD"]) !== sourceB9)
-          fail("V138_PLAN_262_61_SHARED_OBSTRUCTION_CLONE_INVALID")
-        const generated = path.join(cloneRoot,
-          ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json")
-        if (existsSync(generated)) unlinkSync(generated)
-      }
+      const cloneRoot = path.join(parent, `route-${group}`)
+      if (existsSync(cloneRoot))
+        fail("V138_PLAN_262_61_ROUTE_CLONE_NOT_FRESH")
+      execFileSync("git", ["clone", "--quiet", "--no-hardlinks", templateRoot,
+        cloneRoot], { maxBuffer: 64 * 1024 * 1024 })
+      git(cloneRoot, ["checkout", "--quiet", "--detach", executionSourceB9])
+      const cloneStat = lstatSync(cloneRoot)
+      if (!cloneStat.isDirectory() || cloneStat.isSymbolicLink() ||
+        git(cloneRoot, ["rev-parse", "HEAD"]) !== executionSourceB9 ||
+        git(cloneRoot, ["status", "--porcelain=v1"]) !== "")
+        fail("V138_PLAN_262_61_ROUTE_CLONE_NOT_FRESH")
+      physicalCloneInputs.set(group, Object.freeze({
+        pathRoot: sha256V138ReviewerV3(cloneRoot),
+        identityRoot: sha256V138ReviewerV3(
+          `dev:${cloneStat.dev}:ino:${cloneStat.ino}`),
+        sourceB9: executionSourceB9, logicalSourceB9: sourceB9,
+        independentlyValidated: true as const }))
       routeClones.set(group, cloneRoot)
       return cloneRoot
     }
@@ -1413,8 +1736,24 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
           const fixedFixtureTime = new Date("2000-01-01T00:00:00Z")
           utimesSync(obstruction, fixedFixtureTime, fixedFixtureTime)
         }
+        const obstructionStat = lstatSync(obstruction)
+        const obstructionBytes = readFileSync(obstruction)
+        if (!obstructionStat.isFile() || obstructionStat.isSymbolicLink() ||
+          obstructionStat.nlink !== 1 || (obstructionStat.mode & 0o777) !== 0o644 ||
+          !obstructionBytes.equals(Buffer.from("{}\n")))
+          fail("V138_PLAN_262_61_OBSTRUCTION_INPUT_INVALID")
+        physicalObstructionInputs.push(Object.freeze({
+          pathRoot: sha256V138ReviewerV3(obstruction),
+          identityRoot: sha256V138ReviewerV3(
+            `dev:${obstructionStat.dev}:ino:${obstructionStat.ino}:` +
+            `ctime:${obstructionStat.ctimeMs}`),
+          bytesSha256: sha256V138ReviewerV3(obstructionBytes),
+          byteLength: obstructionBytes.byteLength,
+          mode: obstructionStat.mode & 0o777,
+          independentlyValidated: true as const }))
       }
-      const argv = buildV138ReviewV3CommandArgv(entry.command, SOURCE_A9, sourceB9)
+      const actualArgv = buildV138ReviewV3CommandArgv(entry.command, SOURCE_A9,
+        executionSourceB9)
       const aliasAudit: Record<string, unknown> | null = null
       const before = routeInventory(cloneRoot)
       const beforeGit = routeGitState(cloneRoot)
@@ -1450,7 +1789,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       let fsOperations: readonly FsOperation[] = []
       fsObserver!.start(cloneRoot, entry.command)
       try {
-        await runReceipt({ repoRoot: cloneRoot, argv, ...dependencies,
+        await runReceipt({ repoRoot: cloneRoot, argv: actualArgv, ...dependencies,
           writeOutput: (value: string) => { output += value } })
       } catch (error) {
         exit = 1
@@ -1468,7 +1807,228 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       const handlerSourceRoot = sha256V138ReviewerV3(handlerSource)
       const { resultCode, observedDisposition } =
         validateV138Plan26261RouteResult(entry, exit, output)
-      const effects = validateV138Plan26261RouteEffects(entry, fsOperations)
+      const allowedLogicalDerivedRoots = new Set<string>()
+      const parsedOutput = output.startsWith("{") ?
+        JSON.parse(output) as Record<string, any> : null
+      if (entry.command === "--resolve-plan-262-57-pre-start-v1" ||
+        entry.command === "--check-plan-262-57-pre-start-obstruction-v1") {
+        const physicalMetadataRoot = String(parsedOutput!.obstruction?.metadataRoot)
+        const obstructionPath = String(parsedOutput!.obstruction?.path)
+        const obstructionStat = lstatSync(path.resolve(cloneRoot, obstructionPath))
+        const recomputedMetadataRoot = identityRootV138ReviewerV3("artifactManifest",
+          "v1.38-plan-262-57-pre-start-obstruction-metadata-v1", {
+            type: parsedOutput!.obstruction.type, mode: obstructionStat.mode,
+            size: obstructionStat.size,
+            modifiedMilliseconds: Math.trunc(obstructionStat.mtimeMs) })
+        if (!root(physicalMetadataRoot) ||
+          recomputedMetadataRoot !== physicalMetadataRoot)
+          fail("V138_PLAN_262_61_OBSTRUCTION_INPUT_INVALID")
+        bindProjection(`route-obstruction-metadata:${entry.command}`,
+          physicalMetadataRoot, physicalMetadataRoot)
+        allowedLogicalDerivedRoots.add(physicalMetadataRoot)
+      }
+      const derivedRoot = (() => {
+        if (parsedOutput === null || exit !== 0) return null
+        let rootField: string; let outputField: string
+        let domain: "evidenceBundle" | "canonicalJsonProfile"
+        let physicalRecord: Record<string, unknown>
+        if (entry.command === "--resolve-plan-262-57-pre-start-v1" ||
+          entry.command === "--check-plan-262-57-pre-start-obstruction-v1") {
+          rootField = "dispositionRoot"; outputField = "dispositionRoot"
+          domain = "evidenceBundle"; physicalRecord = parsedOutput
+        } else if (entry.command === "--write-execution-context-v11-receipt" ||
+          entry.command === "--write-plan-262-57-route-start-v1") {
+          rootField = "routeStartRoot"; outputField = "receiptRoot"
+          domain = "evidenceBundle"
+          physicalRecord = JSON.parse(readFileSync(path.resolve(cloneRoot,
+            entry.destination), "utf8")) as Record<string, unknown>
+        } else if (entry.command === "--write-headroom-preflight-v11-receipt") {
+          rootField = "receiptRoot"; outputField = "receiptRoot"
+          domain = "canonicalJsonProfile"
+          physicalRecord = JSON.parse(readFileSync(path.resolve(cloneRoot,
+            entry.destination), "utf8")) as Record<string, unknown>
+        } else return null
+        const logicalStructure = {
+          schemaVersion: "v1.38-plan-262-61-logical-derived-route-root-v1",
+          destination: entry.destination,
+          outputSchemaVersion: parsedOutput.schemaVersion,
+          disposition: parsedOutput.disposition ?? null,
+          sourceA9: SOURCE_A9, sourceB9,
+          authorizationRoot: authorization.authorizationRoot,
+          sealRoot: seal.sealRoot,
+          ...(parsedOutput.obstruction === undefined ? {} : { obstruction: {
+            path: parsedOutput.obstruction.path, type: parsedOutput.obstruction.type,
+            metadataRoot: parsedOutput.obstruction.metadataRoot } }),
+        }
+        const verified = verifyAndProjectV138Plan26261DerivedRouteRoot({ domain,
+          rootField, physicalRecord,
+          physicalOutputRoot: String(parsedOutput[outputField]),
+          logicalSchemaVersion:
+            "v1.38-plan-262-61-logical-derived-route-root-v1",
+          logicalStructure })
+        bindProjection(`route-derived-root:${entry.command}:${outputField}`,
+          verified.physicalRoot, verified.logicalRoot)
+        allowedLogicalDerivedRoots.add(verified.logicalRoot)
+        return Object.freeze({ ...verified, physicalRecord, rootField,
+          outputField, domain })
+      })()
+      const logicalOutput = projectRouteLogicalIdentity(output, logicalReplacements)
+      auditLogicalRouteOutput(entry, logicalOutput, allowedLogicalDerivedRoots)
+      const physicalOutputRoot = sha256V138ReviewerV3(output)
+      const logicalOutputRoot = sha256V138ReviewerV3(logicalOutput)
+      bindProjection(`route-output:${entry.command}`, physicalOutputRoot,
+        logicalOutputRoot)
+      if (derivedRoot !== null && entry.sideEffect !== "none") {
+        const destinationBytes = readFileSync(path.resolve(cloneRoot,
+          entry.destination))
+        const destinationStat = lstatSync(path.resolve(cloneRoot,
+          entry.destination))
+        const destinationOperation = fsOperations.find(operation =>
+          operation.path === entry.destination &&
+          operation.operation === "linkSync:to")
+        if (destinationOperation?.afterState.type !== "file" ||
+          destinationOperation.afterState.sha256 !==
+            sha256V138ReviewerV3(destinationBytes) ||
+          destinationOperation.afterState.byteLength !== destinationBytes.byteLength)
+          fail("V138_PLAN_262_61_PERSISTED_FILE_EVENT_REFERENCE_INVALID")
+        if (entry.command === "--resolve-plan-262-57-pre-start-v1")
+          routeModule["checkV138Plan26257PreStartObstructionV1"](
+            derivedRoot.physicalRecord)
+        else if (entry.command === "--write-execution-context-v11-receipt" ||
+          entry.command === "--write-plan-262-57-route-start-v1")
+          routeModule["checkV138Plan26257RouteStartV1"](
+            derivedRoot.physicalRecord)
+        else if (entry.command === "--write-headroom-preflight-v11-receipt") {
+          const routeStart = JSON.parse(readFileSync(path.resolve(cloneRoot,
+            V138_REVIEW_V3_ROUTE_MANIFEST.find(candidate => candidate.command ===
+              "--write-plan-262-57-route-start-v1")!.destination), "utf8"))
+          routeModule["checkV138HostHeadroomPreflightV11Receipt"](
+            derivedRoot.physicalRecord, routeStart.context)
+        }
+        const logicalPersistedRecord = physicalOutputRoot ===
+          sha256V138ReviewerV3(destinationBytes) ?
+          JSON.parse(logicalOutput) as Record<string, unknown> : {
+          schemaVersion: "v1.38-plan-262-61-logical-persisted-route-file-v1",
+          destination: entry.destination,
+          physicalSchemaVersion: derivedRoot.physicalRecord.schemaVersion,
+          logicalDerivedRoot: derivedRoot.logicalRoot,
+          disposition: parsedOutput!.disposition ?? null,
+          sourceA9: SOURCE_A9, sourceB9,
+          authorizationRoot: authorization.authorizationRoot,
+          sealRoot: seal.sealRoot,
+        }
+        const expectedPersistedKeys = entry.command ===
+          "--resolve-plan-262-57-pre-start-v1" ? ["schemaVersion", "obstruction",
+            "authorizationRoot", "sealRoot", "routeStarted", "isRouteTerminal",
+            "chargedAttemptCount", "acceptedCellCount", "authorityExpired", "noRetry",
+            "satisfiesAdmit03", "downstreamAuthority", "dispositionRoot"] :
+          entry.command === "--write-headroom-preflight-v11-receipt" ?
+            ["schemaVersion", "sourceA9", "sourceB9", "executionContextRoot",
+              "authorizationRoot", "sealRoot", "chargedIdentityId", "metricId",
+              "providerId", "parserId", "requiredHostHeadroomBasisPoints",
+              "observation", "disposition", "acceptedCellCount", "noRetry",
+              "receiptRoot"] :
+            ["schemaVersion", "routeOrdinal", "context", "executionContextRoot",
+              "preflightConsumption", "preflightConsumptionRoot", "reservationRoot",
+              "routeStarted", "acceptedCellCount", "noRetry", "routeStartRoot"]
+        const persisted = verifyAndProjectV138Plan26261PersistedRouteFile({
+          destination: entry.destination, expectedDestination: entry.destination,
+          physicalBytes: destinationBytes,
+          physicalSha256: destinationOperation.afterState.sha256,
+          physicalByteLength: destinationOperation.afterState.byteLength!,
+          physicalMode: destinationStat.mode & 0o777,
+          expectedKeys: expectedPersistedKeys,
+          embeddedRoots: {
+            [derivedRoot.rootField]: derivedRoot.physicalRoot,
+            ...(derivedRoot.physicalRecord.sourceB9 === undefined ? {} :
+              { sourceB9: executionSourceB9 }),
+            ...(derivedRoot.physicalRecord.authorizationRoot === undefined ? {} :
+              { authorizationRoot: physicalAuthorization.authorizationRoot }),
+            ...(derivedRoot.physicalRecord.sealRoot === undefined ? {} :
+              { sealRoot: physicalSeal.sealRoot }),
+          }, logicalRecord: logicalPersistedRecord,
+        })
+        bindProjection(`route-persisted-receipt:${entry.command}`,
+          persisted.physicalSha256, persisted.logicalSha256)
+
+        if (entry.command === "--write-execution-context-v11-receipt" ||
+          entry.command === "--write-plan-262-57-route-start-v1") {
+          const claimBytes = readFileSync(path.resolve(cloneRoot,
+            ROUTE_RESERVATION_CLAIM))
+          const claimStat = lstatSync(path.resolve(cloneRoot,
+            ROUTE_RESERVATION_CLAIM))
+          const claimOperation = fsOperations.find(operation =>
+            operation.path === ROUTE_RESERVATION_CLAIM &&
+            operation.operation === "writeFileSync")
+          if (claimOperation?.afterState.type !== "file" ||
+            claimOperation.afterState.sha256 !== sha256V138ReviewerV3(claimBytes) ||
+            claimOperation.afterState.byteLength !== claimBytes.byteLength)
+            fail("V138_PLAN_262_61_PERSISTED_FILE_EVENT_REFERENCE_INVALID")
+          const physicalClaim = JSON.parse(claimBytes.toString("utf8")) as
+            Record<string, unknown>
+          const physicalContext = (derivedRoot.physicalRecord.context ?? {}) as
+            Record<string, unknown>
+          const reservationBody = {
+            schemaVersion: "v1.38-plan-262-57-route-reservation-v1",
+            sourceA9: SOURCE_A9, sourceB9: executionSourceB9,
+            authorizationRoot: physicalAuthorization.authorizationRoot,
+            sealRoot: physicalSeal.sealRoot,
+            executionContextRoot: physicalContext.receiptRoot,
+          }
+          const physicalReservationRoot = identityRootV138ReviewerV3(
+            "containmentPolicy", String(reservationBody.schemaVersion),
+            reservationBody)
+          if (physicalClaim.reservationRoot !== physicalReservationRoot ||
+            derivedRoot.physicalRecord.reservationRoot !== physicalReservationRoot)
+            fail("V138_PLAN_262_61_RESERVATION_ROOT_INVALID")
+          const logicalClaimBody = {
+            schemaVersion: "v1.38-plan-262-57-route-reservation-v1",
+            sourceA9: SOURCE_A9, sourceB9,
+            authorizationRoot: authorization.authorizationRoot,
+            sealRoot: seal.sealRoot,
+            executionContextRoot: identityRootV138ReviewerV3("evidenceBundle",
+              "v1.38-plan-262-61-logical-execution-context-root-v1", {
+                destination: entry.destination, sourceA9: SOURCE_A9, sourceB9,
+                authorizationRoot: authorization.authorizationRoot,
+                sealRoot: seal.sealRoot,
+              }),
+          }
+          const logicalClaim = { ...logicalClaimBody,
+            reservationRoot: identityRootV138ReviewerV3("containmentPolicy",
+              logicalClaimBody.schemaVersion, logicalClaimBody) }
+          const claim = verifyAndProjectV138Plan26261PersistedRouteFile({
+            destination: ROUTE_RESERVATION_CLAIM,
+            expectedDestination: ROUTE_RESERVATION_CLAIM,
+            physicalBytes: claimBytes,
+            physicalSha256: claimOperation.afterState.sha256,
+            physicalByteLength: claimOperation.afterState.byteLength!,
+            physicalMode: claimStat.mode & 0o777,
+            expectedKeys: ["schemaVersion", "sourceA9", "sourceB9",
+              "authorizationRoot", "sealRoot", "executionContextRoot",
+              "reservationRoot"],
+            embeddedRoots: {
+              sourceB9: executionSourceB9,
+              authorizationRoot: physicalAuthorization.authorizationRoot,
+              sealRoot: physicalSeal.sealRoot,
+              executionContextRoot: String(physicalContext.receiptRoot),
+              reservationRoot: physicalReservationRoot,
+            }, logicalRecord: logicalClaim,
+          })
+          bindProjection(`route-reservation-claim:${entry.command}`,
+            claim.physicalSha256, claim.logicalSha256)
+        }
+      }
+      for (const operation of fsOperations) {
+        const writtenSha = operation.afterState.type === "file" &&
+          ["content-write", "publication-destination-link", "durability-sync",
+            "descriptor-close", "publication-source-link"].includes(
+              operation.sideEffect) ? operation.afterState.sha256 : undefined
+        if (writtenSha !== undefined && writtenSha !== emptySha256 &&
+          !logicalReplacements.has(writtenSha))
+          fail("V138_PLAN_262_61_PERSISTED_FILE_PROJECTION_MISSING")
+      }
+      const effects = validateV138Plan26261RouteEffects(entry, fsOperations,
+        { exit, resultCode }, logicalReplacements)
       const eventPaths = [...new Set(fsOperations.map(({ path: repoPath }) =>
         repoPath))].sort()
       const closedBefore = closeBeforeInventoryOverObservedUnion(before, fsOperations)
@@ -1479,6 +2039,9 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         beforeGit.indexRoot !== afterGit.indexRoot)
         fail("V138_PLAN_262_61_ROUTE_GIT_STATE_INVALID")
       const changedPaths = inventoryChangedPaths(closedBefore, after)
+      const logicalBefore = projectRouteLogicalIdentity(closedBefore,
+        logicalReplacements)
+      const logicalAfter = projectRouteLogicalIdentity(after, logicalReplacements)
       const functionRangeRoot = sha256V138ReviewerV3(canonicalV138ReviewerV3({
         functionName: actualHandlerName, handlerSourceRoot,
         startByteOffset: 0, endByteOffset: Buffer.byteLength(handlerSource) }))
@@ -1487,25 +2050,28 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       observations.push(Object.freeze({ command: entry.command,
         handler: actualHandlerName, manifestHandler: entry.handler, aliasAudit,
         sourceFinding,
-        destination: entry.destination, argv, exit,
-        outputRoot: sha256V138ReviewerV3(output),
-        resultCode, observedDisposition, outputByteLength: Buffer.byteLength(output),
+        destination: entry.destination,
+        argv: projectRouteLogicalIdentity(actualArgv, logicalReplacements), exit,
+        outputRoot: logicalOutputRoot,
+        resultCode: projectRouteLogicalIdentity(resultCode, logicalReplacements),
+        observedDisposition, outputByteLength: Buffer.byteLength(logicalOutput),
         handlerSourceRoot, dispatcherSourceRoot,
         functionRangeRoot, callCount,
         callTraceRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(trace)),
         effectPolicyRoot: effects.effectPolicyRoot,
         beforeRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
-          { inventory: closedBefore, statusRoot: beforeGit.statusRoot })),
+          { inventory: logicalBefore, statusRoot: beforeGit.statusRoot })),
         afterRoot: sha256V138ReviewerV3(canonicalV138ReviewerV3(
-          { inventory: after, statusRoot: afterGit.statusRoot })),
+          { inventory: logicalAfter, statusRoot: afterGit.statusRoot })),
         beforePathCount: closedBefore.length, afterPathCount: after.length,
         eventPaths: Object.freeze(eventPaths),
         changedPaths: Object.freeze(changedPaths) }))
-      for (const operation of fsOperations) events.push({ ordinal: events.length,
+      for (const operation of effects.policy.operations) events.push({ ordinal: events.length,
         event: `${operation.command}:${operation.operation}`, path: operation.path,
         result: canonicalV138ReviewerV3({
           command: operation.command, operation: operation.operation,
-          path: operation.path, flags: operation.flags,
+          path: operation.path, sideEffect: operation.sideEffect,
+          flags: operation.flags,
           outcome: operation.outcome, errorCode: operation.errorCode,
           beforeState: operation.beforeState, afterState: operation.afterState,
           detailRoot: operation.detailRoot }) })
@@ -1560,6 +2126,11 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       observedPathUnion })),
     pathCount: new Set([...completeRouteInventoryPaths(templateRoot),
       ...observedPathUnion]).size }])
+    const sortedProjection = [...physicalToLogicalProjection].sort((left, right) =>
+      left.label.localeCompare(right.label))
+    if (canonicalV138ReviewerV3(sortedProjection.map(({ label }) => label)) !==
+      canonicalV138ReviewerV3(V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS))
+      fail("V138_PLAN_262_61_LOGICAL_PROJECTION_INCOMPLETE")
     const value = Object.freeze({ sourceB9, publicationCommit,
       cloneHead: git(templateRoot, ["rev-parse", "HEAD"]),
       observations: Object.freeze(observations), events: Object.freeze(events),
@@ -1567,6 +2138,16 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       cleanup: cleanupObservation,
       syntheticPrerequisitePublication: prerequisitePublication,
       postExecutionPublication,
+      physicalIsolation: Object.freeze({
+        identityKind: "physical_execution_b9",
+        detachedInput: physicalInput, executionSourceB9,
+        obstructionInputs: Object.freeze(physicalObstructionInputs),
+        routeClones: Object.freeze([...physicalCloneInputs.entries()].map(
+          ([group, proof]) => Object.freeze({ group, ...proof })).sort((left, right) =>
+          left.group.localeCompare(right.group))),
+        physicalToLogicalProjection: Object.freeze(sortedProjection
+          .map((entry, ordinal) => Object.freeze({ ordinal, ...entry }))) }),
+      logicalInputCustody,
       b9Custody,
       b9ChangedPaths: Object.freeze(syntheticPaths) })
     if (options.fresh !== true) cachedRouteObservation = { rootPath: physicalRoot, value }
@@ -1590,24 +2171,97 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
   }
 }
 
-export const observeV138Plan26261RouteDispatchPair = async (rootPath = repoRoot) => {
-  const sharedRoot = realpathSync(mkdtempSync(path.join(os.tmpdir(),
-    "plan-262-61-exact-a9-pair-")))
-  activeDisposableRoots.add(sharedRoot)
-  const detachedReviewPath = path.join(sharedRoot,
-    path.basename(V138_REVIEW_V3_CANONICAL_PATH))
-  const obstructionCloneRoot = path.join(sharedRoot, "obstruction-route-clone")
-  try {
-    const left = await observeV138Plan26261RouteDispatch(rootPath,
-      { fresh: true, detachedReviewPath, obstructionCloneRoot })
-    const right = await observeV138Plan26261RouteDispatch(rootPath,
-      { fresh: true, detachedReviewPath, obstructionCloneRoot })
-    return Object.freeze({ left, right })
-  } finally {
-    rmSync(sharedRoot, { recursive: true, force: true })
-    activeDisposableRoots.delete(sharedRoot)
-    if (existsSync(sharedRoot)) fail("V138_PLAN_262_61_DISPOSABLE_CLEANUP_INVALID")
+export const validateV138Plan26261FreshRoutePairIsolation = (left: any,
+  right: any) => {
+  const leftCloneProofs = left.physicalIsolation.routeClones as readonly any[]
+  const rightCloneProofs = right.physicalIsolation.routeClones as readonly any[]
+  const leftProjection = left.physicalIsolation.physicalToLogicalProjection as
+    readonly any[]
+  const rightProjection = right.physicalIsolation.physicalToLogicalProjection as
+    readonly any[]
+  const leftObstructions = left.physicalIsolation.obstructionInputs as readonly any[]
+  const rightObstructions = right.physicalIsolation.obstructionInputs as readonly any[]
+  let issue: string | null = null
+  if (!left.cleanup.complete || !right.cleanup.complete ||
+    left.cleanup.residualPaths.length !== 0 || right.cleanup.residualPaths.length !== 0)
+    issue = "cleanup"
+  else if (left.physicalIsolation.detachedInput.independentlyValidated !== true ||
+    right.physicalIsolation.detachedInput.independentlyValidated !== true)
+    issue = "detached-validation"
+  else if (left.physicalIsolation.detachedInput.pathRoot ===
+    right.physicalIsolation.detachedInput.pathRoot) issue = "detached-path-reuse"
+  else if (left.physicalIsolation.detachedInput.identityRoot ===
+    right.physicalIsolation.detachedInput.identityRoot) issue = "detached-inode-reuse"
+  else if (left.physicalIsolation.identityKind !== "physical_execution_b9" ||
+    right.physicalIsolation.identityKind !== "physical_execution_b9" ||
+    left.b9Custody.identityKind !== "logical_synthetic_b9" ||
+    right.b9Custody.identityKind !== "logical_synthetic_b9") issue = "identity-kind"
+  else if (left.physicalIsolation.executionSourceB9 === left.sourceB9 ||
+    right.physicalIsolation.executionSourceB9 === right.sourceB9)
+    issue = "physical-logical-b9-alias"
+  else if (leftCloneProofs.length === 0 ||
+    leftCloneProofs.length !== rightCloneProofs.length) issue = "clone-count"
+  else {
+    const cloneIssue = leftCloneProofs.findIndex((leftProof, index) =>
+      leftProof.independentlyValidated !== true ||
+      rightCloneProofs[index]?.independentlyValidated !== true ||
+      leftProof.group !== rightCloneProofs[index]?.group ||
+      leftProof.pathRoot === rightCloneProofs[index]?.pathRoot ||
+      leftProof.identityRoot === rightCloneProofs[index]?.identityRoot)
+    if (cloneIssue !== -1) issue = `clone-${cloneIssue}`
   }
+  if (issue === null && (leftObstructions.length !== 1 ||
+    rightObstructions.length !== 1)) issue = "obstruction-count"
+  if (issue === null && (leftObstructions[0]!.independentlyValidated !== true ||
+    rightObstructions[0]!.independentlyValidated !== true ||
+    leftObstructions[0]!.pathRoot === rightObstructions[0]!.pathRoot ||
+    leftObstructions[0]!.identityRoot === rightObstructions[0]!.identityRoot ||
+    leftObstructions[0]!.bytesSha256 !== rightObstructions[0]!.bytesSha256 ||
+    leftObstructions[0]!.byteLength !== rightObstructions[0]!.byteLength ||
+    leftObstructions[0]!.mode !== rightObstructions[0]!.mode))
+    issue = "obstruction-physical-custody"
+  if (issue === null && (leftProjection.length === 0 ||
+    leftProjection.length !== rightProjection.length)) issue = "projection-count"
+  if (issue === null && (canonicalV138ReviewerV3(leftProjection.map(
+    ({ label }) => label)) !== canonicalV138ReviewerV3(
+      V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS) ||
+    canonicalV138ReviewerV3(rightProjection.map(({ label }) => label)) !==
+      canonicalV138ReviewerV3(V138_PLAN_262_61_PHYSICAL_PROJECTION_LABELS)))
+    issue = "projection-labels"
+  if (issue === null) {
+    const projectionIssues: string[] = []
+    leftProjection.forEach((entry, index) => {
+      const repeated = rightProjection[index]
+      const label = String(entry.label)
+      if (entry.ordinal !== index || repeated?.ordinal !== index)
+        projectionIssues.push(`${label}:ordinal`)
+      if (entry.label !== repeated?.label) projectionIssues.push(`${label}:label`)
+      if (entry.independentlyValidated !== true ||
+        repeated?.independentlyValidated !== true)
+        projectionIssues.push(`${label}:validation`)
+      if (entry.projected !== (entry.physical !== entry.logical) ||
+        repeated?.projected !== (repeated?.physical !== repeated?.logical) ||
+        entry.projected !== repeated?.projected)
+        projectionIssues.push(`${label}:projection-state`)
+      if (entry.projected && entry.physical === repeated?.physical ||
+        !entry.projected && entry.physical !== repeated?.physical)
+        projectionIssues.push(`${label}:physical`)
+      if (entry.logical !== repeated?.logical)
+        projectionIssues.push(`${label}:logical`)
+    })
+    if (projectionIssues.length !== 0)
+      issue = `projection[${projectionIssues.slice(0, 8).join(",")}]`
+  }
+  if (issue !== null)
+    fail(`V138_PLAN_262_61_FRESH_DERIVATION_ISOLATION_INVALID:${issue}`)
+  return true
+}
+
+export const observeV138Plan26261RouteDispatchPair = async (rootPath = repoRoot) => {
+  const left = await observeV138Plan26261RouteDispatch(rootPath, { fresh: true })
+  const right = await observeV138Plan26261RouteDispatch(rootPath, { fresh: true })
+  validateV138Plan26261FreshRoutePairIsolation(left, right)
+  return Object.freeze({ left, right })
 }
 
 export const deriveV138Plan26261NoPublish = async (rootPath = repoRoot) => {
@@ -1851,6 +2505,7 @@ export const deterministicRouteCustody = (route: any) => {
   events: route.events, snapshots: route.snapshots,
   cleanup: { complete: route.cleanup.complete,
     residualPaths: route.cleanup.residualPaths },
+  logicalInputCustody: route.logicalInputCustody,
   prerequisitePublication: publication(route.syntheticPrerequisitePublication),
   postExecutionPublication: publication(route.postExecutionPublication) })
 }
