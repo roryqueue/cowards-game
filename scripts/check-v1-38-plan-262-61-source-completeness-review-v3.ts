@@ -3110,7 +3110,7 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
         const executeEvent = run.eventLedger.find((event: any) =>
           event.command === command && event.event === `execute:${event.handler}`)
         let result: any
-        try { result = JSON.parse(executeEvent?.resultPreimage ?? "") } catch {
+        try { result = JSON.parse(executeEvent?.physicalResultPreimage ?? "") } catch {
           return true
         }
         const tuple = result.projectionTuples?.find((candidate: any) =>

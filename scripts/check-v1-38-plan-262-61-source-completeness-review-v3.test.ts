@@ -864,6 +864,23 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       "closeSync", "fsyncSync", "linkSync:from", "linkSync:to", "mkdirSync",
       "openSync", "unlinkSync", "writeFileSync", "writeSync",
     ])
+    const derivedProjections = route.physicalIsolation.physicalToLogicalProjection
+      .filter(({ label }: any) => label.startsWith("route-derived-root:"))
+    expect(derivedProjections).toHaveLength(5)
+    for (const projection of derivedProjections) {
+      const [, command] = projection.label.match(
+        /^route-derived-root:(--[^:]+):[^:]+$/u) ?? []
+      const event = route.events.find((candidate: any) =>
+        candidate.command === command && candidate.event.startsWith("execute:"))
+      const physical = JSON.parse(event.physicalResult)
+      const logical = JSON.parse(event.result)
+      expect(physical.derivedRootEvidence).toMatchObject({
+        physicalRoot: projection.physical, logicalRoot: projection.logical })
+      expect(physical.projectionTuples).toContainEqual({ label: projection.label,
+        physical: projection.physical, logical: projection.logical })
+      expect(logical.derivedRootEvidence).toMatchObject({
+        physicalRoot: projection.logical, logicalRoot: projection.logical })
+    }
   }, 1_200_000)
 
   it("recomputes physical and logical derived roots before projection", () => {
