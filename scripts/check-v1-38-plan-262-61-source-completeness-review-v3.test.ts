@@ -116,6 +116,24 @@ const firstExactDifference = (left: unknown, right: unknown,
   }
   return null
 }
+const boundedLeafDifferences = (left: unknown, right: unknown, limit = 32) => {
+  const differences: string[] = []
+  const visit = (leftValue: unknown, rightValue: unknown, location: string) => {
+    if (differences.length >= limit || Object.is(leftValue, rightValue)) return
+    if (leftValue === null || rightValue === null || typeof leftValue !== "object" ||
+      typeof rightValue !== "object") { differences.push(location); return }
+    const leftRecord = leftValue as Record<string, unknown>
+    const rightRecord = rightValue as Record<string, unknown>
+    for (const key of [...new Set([...Object.keys(leftRecord),
+      ...Object.keys(rightRecord)])].sort()) {
+      if (differences.length >= limit) break
+      if (!(key in leftRecord) || !(key in rightRecord)) differences.push(`${location}.${key}`)
+      else visit(leftRecord[key], rightRecord[key], `${location}.${key}`)
+    }
+  }
+  visit(left, right, "$")
+  return differences
+}
 const testIdentityRoot = (domain: "evidenceBundle" | "artifactManifest",
   schemaVersion: string, value: unknown) => `sha256:${hashCanonicalIdentity(domain, [
     Buffer.from(schemaVersion, "utf8"),
@@ -326,6 +344,14 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     expect(value.postExecutionPublication).toMatchObject({
       semanticEvidenceEligible: false,
       changedPaths: [V138_REVIEW_V3_CANONICAL_PATH, V138_REVIEW_V3_REPORT_PATH] })
+    expect(value.logicalPostExecutionPublication).toMatchObject({
+      identityKind: "logical_synthetic_publication",
+      semanticEvidenceEligible: false,
+      publicationIdentityRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      treeRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      reviewBlobRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      reportBlobRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      semanticRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u) })
     expect(value.b9ChangedPaths).toEqual([
       ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
       ".planning/artifacts/v1.38-successor-source-seal-v9.json",
@@ -400,6 +426,15 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       expect(left.logicalInputCustody).toEqual(right.logicalInputCustody)
       expect(validateV138Plan26261SemanticEventPair(left.events, right.events))
         .toBe(true)
+      const logicalPublicationDifferences = boundedLeafDifferences(
+        leftCustody.logicalPostExecutionPublication,
+        rightCustody.logicalPostExecutionPublication)
+      expect(logicalPublicationDifferences,
+        `logical publication leaf differences (max 32): ${logicalPublicationDifferences.join(",")}`)
+        .toEqual([])
+      expect(boundedLeafDifferences(left.postExecutionPublication,
+        right.postExecutionPublication)).toEqual(expect.arrayContaining([
+          "$.commit", "$.tree", "$.reviewBlob", "$.reviewRoot" ]))
       expect(firstExactDifference(leftCustody, rightCustody),
         "first exact custody difference").toBeNull()
       expect(canonicalV138ReviewerV3(leftCustody))
@@ -430,13 +465,11 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
         ["prerequisitePublication", "reviewRoot"],
         ["prerequisitePublication", "reportBlob"],
         ["prerequisitePublication", "reportRoot"],
-        ["postExecutionPublication", "commit"],
-        ["postExecutionPublication", "parent"],
-        ["postExecutionPublication", "tree"],
-        ["postExecutionPublication", "reviewBlob"],
-        ["postExecutionPublication", "reviewRoot"],
-        ["postExecutionPublication", "reportBlob"],
-        ["postExecutionPublication", "reportRoot"],
+        ["logicalPostExecutionPublication", "publicationIdentityRoot"],
+        ["logicalPostExecutionPublication", "treeRoot"],
+        ["logicalPostExecutionPublication", "reviewBlobRoot"],
+        ["logicalPostExecutionPublication", "reportBlobRoot"],
+        ["logicalPostExecutionPublication", "semanticRoot"],
         ["observations", 0, "outputRoot"],
         ["observations", 0, "outputByteLength"],
         ["observations", 0, "callTraceRoot"],
@@ -509,6 +542,20 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
       ]) {
         const candidate = structuredClone(pairAudit) as any
         mutateClaim(candidate)
+        expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
+          .toThrow()
+      }
+      for (const mutatePublication of [
+        (candidate: any) => { candidate.runs[0].logicalPublicationEvidence.commit =
+          candidate.runs[0].physicalPublicationEvidence.commit },
+        (candidate: any) => { candidate.runs[0].logicalPublicationEvidence.semanticRoot =
+          `sha256:${"d".repeat(64)}` },
+        (candidate: any) => { delete candidate.runs[0].physicalPublicationEvidence },
+        (candidate: any) => { candidate.runs[1].physicalPublicationEvidence =
+          structuredClone(candidate.runs[0].physicalPublicationEvidence) },
+      ]) {
+        const candidate = structuredClone(pairAudit) as any
+        mutatePublication(candidate)
         expect(() => validateV138Plan26261PairAudit(rerootPairAudit(candidate)))
           .toThrow()
       }

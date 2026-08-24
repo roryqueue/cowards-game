@@ -2246,6 +2246,9 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
     execFileSync("git", ["clone", "--quiet", "--no-hardlinks", templateRoot,
       postRoot], { maxBuffer: 64 * 1024 * 1024 })
     git(postRoot, ["checkout", "--quiet", "--detach", SOURCE_A9])
+    const logicalPostEvents = Object.freeze(events.map(
+      ({ physicalResult: _physicalResult, ...logicalEvent }) =>
+        Object.freeze(logicalEvent)))
     const postEvidence = { schemaVersion:
       "v1.38-plan-262-61-post-execution-synthetic-publication-v1",
     sourceA9: SOURCE_A9, semanticEvidenceEligible: false,
@@ -2253,7 +2256,9 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       observedDisposition, callTraceRoot, beforeRoot, afterRoot, changedPaths }) =>
       ({ command, handler, exit, resultCode, observedDisposition, callTraceRoot,
         beforeRoot, afterRoot, changedPaths })), orderedEvents: events }
+    const logicalPostEvidence = { ...postEvidence, orderedEvents: logicalPostEvents }
     const postReviewBytes = canonicalBytes(postEvidence)
+    const logicalPostReviewBytes = canonicalBytes(logicalPostEvidence)
     const postReportBytes = Buffer.from("# Post-execution synthetic publication\n\n" +
       "Not eligible as semantic or canonical review evidence.\n")
     writeFileSync(path.join(postRoot, V138_REVIEW_V3_CANONICAL_PATH), postReviewBytes,
@@ -2276,6 +2281,37 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
         `${postCommit}:${V138_REVIEW_V3_REPORT_PATH}`]),
       reportRoot: sha256V138ReviewerV3(postReportBytes),
       reportByteLength: postReportBytes.byteLength })
+    const logicalPublicationBody = Object.freeze({ schemaVersion:
+      "v1.38-plan-262-61-logical-post-execution-publication-v1",
+    identityKind: "logical_synthetic_publication",
+    semanticEvidenceEligible: false,
+    changedPaths: Object.freeze([V138_REVIEW_V3_CANONICAL_PATH,
+      V138_REVIEW_V3_REPORT_PATH]),
+    reviewBlobRoot: identityRootV138ReviewerV3("artifactManifest",
+      "v1.38-plan-262-61-logical-review-blob-v1", {
+        path: V138_REVIEW_V3_CANONICAL_PATH,
+        bytesRoot: sha256V138ReviewerV3(logicalPostReviewBytes),
+        byteLength: logicalPostReviewBytes.byteLength }),
+    reportBlobRoot: identityRootV138ReviewerV3("artifactManifest",
+      "v1.38-plan-262-61-logical-report-blob-v1", {
+        path: V138_REVIEW_V3_REPORT_PATH,
+        bytesRoot: sha256V138ReviewerV3(postReportBytes),
+        byteLength: postReportBytes.byteLength }),
+    semanticRoot: identityRootV138ReviewerV3("evidenceBundle",
+      "v1.38-plan-262-61-logical-post-execution-semantics-v1",
+      logicalPostEvidence) })
+    const logicalPublicationTreeRoot = identityRootV138ReviewerV3(
+      "artifactManifest",
+        "v1.38-plan-262-61-logical-publication-tree-v1", {
+          changedPaths: logicalPublicationBody.changedPaths,
+          reviewBlobRoot: logicalPublicationBody.reviewBlobRoot,
+          reportBlobRoot: logicalPublicationBody.reportBlobRoot })
+    const logicalPostExecutionPublication = Object.freeze({
+      ...logicalPublicationBody,
+      treeRoot: logicalPublicationTreeRoot,
+      publicationIdentityRoot: identityRootV138ReviewerV3("evidenceBundle",
+        "v1.38-plan-262-61-logical-publication-identity-v1",
+        { ...logicalPublicationBody, treeRoot: logicalPublicationTreeRoot }) })
     const observedPathUnion = [...new Set(observations.flatMap(observation =>
       observation.eventPaths))].sort()
     const snapshots = Object.freeze([{ name: "before", inventoryRoot:
@@ -2300,6 +2336,7 @@ export const observeV138Plan26261RouteDispatch = async (rootPath = repoRoot,
       cleanup: cleanupObservation,
       syntheticPrerequisitePublication: prerequisitePublication,
       postExecutionPublication,
+      logicalPostExecutionPublication,
       physicalIsolation: Object.freeze({
         identityKind: "physical_execution_b9",
         detachedInput: physicalInput, executionSourceB9,
@@ -2772,6 +2809,15 @@ const pairAuditRun = (label: "left" | "right", route: any) => {
     detachedByteLength: route.logicalInputCustody.byteLength,
     detachedMode: route.logicalInputCustody.mode,
     detachedLinkCount: route.logicalInputCustody.linkCount })
+  const physicalPublicationBody = Object.freeze({
+    ...route.postExecutionPublication })
+  const physicalPublicationEvidence = Object.freeze({
+    ...physicalPublicationBody,
+    evidenceRoot: identityRootV138ReviewerV3("evidenceBundle",
+      "v1.38-plan-262-61-physical-publication-evidence-v1",
+      physicalPublicationBody) })
+  const logicalPublicationEvidence = Object.freeze({
+    ...route.logicalPostExecutionPublication })
   const handlerValidationRoot = identityRootV138ReviewerV3("evidenceBundle",
     "v1.38-plan-262-61-handler-validation-v1", physical.routeIdentityAudits.map(
       ({ command, physicalRouteIdentityRoot, logicalRouteIdentityRoot }: any) =>
@@ -2885,6 +2931,7 @@ const pairAuditRun = (label: "left" | "right", route: any) => {
     independentCustody: false, rawPhysicalPreimageRetained: false,
     executionSourceB9: physical.executionSourceB9,
     logicalCustody,
+    physicalPublicationEvidence, logicalPublicationEvidence,
     physicalCommitments,
     routeIdentityAudits: physical.routeIdentityAudits,
     routeEvidence, eventLedger,
@@ -2931,7 +2978,8 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
   for (const run of audit.runs) {
     if (!pairAuditRecord(run, ["schemaVersion", "label", "identityKind",
       "assurance", "independentCustody", "rawPhysicalPreimageRetained",
-      "executionSourceB9", "logicalCustody", "physicalCommitments",
+      "executionSourceB9", "logicalCustody", "physicalPublicationEvidence",
+      "logicalPublicationEvidence", "physicalCommitments",
       "routeIdentityAudits", "routeEvidence", "eventLedger", "projectionLedger",
       "projectionEvidenceLedger", "cleanup", "runAuditRoot"]) ||
       run.schemaVersion !== "v1.38-plan-262-61-physical-run-audit-v2" ||
@@ -2952,6 +3000,61 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
       run.logicalCustody.detachedMode !== 0o444 ||
       run.logicalCustody.detachedLinkCount !== 1)
       fail("V138_PLAN_262_61_PAIR_AUDIT_INVALID")
+    const physicalPublicationKeys = ["semanticEvidenceEligible", "commit", "parent",
+      "tree", "changedPaths", "reviewBlob", "reviewRoot", "reviewByteLength",
+      "reportBlob", "reportRoot", "reportByteLength", "evidenceRoot"]
+    const logicalPublicationKeys = ["schemaVersion", "identityKind",
+      "semanticEvidenceEligible", "changedPaths", "reviewBlobRoot",
+      "reportBlobRoot", "semanticRoot", "treeRoot", "publicationIdentityRoot"]
+    if (!pairAuditRecord(run.physicalPublicationEvidence,
+      physicalPublicationKeys) ||
+      !pairAuditRecord(run.logicalPublicationEvidence, logicalPublicationKeys) ||
+      run.physicalPublicationEvidence.semanticEvidenceEligible !== false ||
+      !fullOid(run.physicalPublicationEvidence.commit) ||
+      !fullOid(run.physicalPublicationEvidence.parent) ||
+      !fullOid(run.physicalPublicationEvidence.tree) ||
+      !fullOid(run.physicalPublicationEvidence.reviewBlob) ||
+      !fullOid(run.physicalPublicationEvidence.reportBlob) ||
+      !root(run.physicalPublicationEvidence.reviewRoot) ||
+      !root(run.physicalPublicationEvidence.reportRoot) ||
+      !pairAuditInt(run.physicalPublicationEvidence.reviewByteLength, 1,
+        8 * 1024 * 1024) ||
+      !pairAuditInt(run.physicalPublicationEvidence.reportByteLength, 1,
+        8 * 1024 * 1024) ||
+      canonicalV138ReviewerV3(run.physicalPublicationEvidence.changedPaths) !==
+        canonicalV138ReviewerV3([V138_REVIEW_V3_CANONICAL_PATH,
+          V138_REVIEW_V3_REPORT_PATH]) ||
+      run.physicalPublicationEvidence.evidenceRoot !==
+        identityRootV138ReviewerV3("evidenceBundle",
+          "v1.38-plan-262-61-physical-publication-evidence-v1", (() => {
+            const { evidenceRoot: _root, ...body } =
+              run.physicalPublicationEvidence
+            return body
+          })()) ||
+      run.logicalPublicationEvidence.schemaVersion !==
+        "v1.38-plan-262-61-logical-post-execution-publication-v1" ||
+      run.logicalPublicationEvidence.identityKind !==
+        "logical_synthetic_publication" ||
+      run.logicalPublicationEvidence.semanticEvidenceEligible !== false ||
+      canonicalV138ReviewerV3(run.logicalPublicationEvidence.changedPaths) !==
+        canonicalV138ReviewerV3([V138_REVIEW_V3_CANONICAL_PATH,
+          V138_REVIEW_V3_REPORT_PATH]) ||
+      !root(run.logicalPublicationEvidence.reviewBlobRoot) ||
+      !root(run.logicalPublicationEvidence.reportBlobRoot) ||
+      !root(run.logicalPublicationEvidence.semanticRoot) ||
+      run.logicalPublicationEvidence.treeRoot !== identityRootV138ReviewerV3(
+        "artifactManifest", "v1.38-plan-262-61-logical-publication-tree-v1", {
+          changedPaths: run.logicalPublicationEvidence.changedPaths,
+          reviewBlobRoot: run.logicalPublicationEvidence.reviewBlobRoot,
+          reportBlobRoot: run.logicalPublicationEvidence.reportBlobRoot }) ||
+      run.logicalPublicationEvidence.publicationIdentityRoot !==
+        identityRootV138ReviewerV3("evidenceBundle",
+          "v1.38-plan-262-61-logical-publication-identity-v1", (() => {
+            const { publicationIdentityRoot: _identity, ...body } =
+              run.logicalPublicationEvidence
+            return body
+          })()))
+      fail("V138_PLAN_262_61_PAIR_AUDIT_PUBLICATION_INVALID")
     const { runAuditRoot, ...body } = run
     if (run.identityKind !== "physical_execution_b9" ||
       !fullOid(run.executionSourceB9) ||
@@ -3378,6 +3481,12 @@ export const validateV138Plan26261PairAudit = (audit: any) => {
     audit.runs[0].physicalCommitments[0].inodeDeviceComponentRoot ===
       audit.runs[1].physicalCommitments[0].inodeDeviceComponentRoot)
     fail("V138_PLAN_262_61_PAIR_AUDIT_REUSE_INVALID")
+  if (canonicalV138ReviewerV3(audit.runs[0].logicalPublicationEvidence) !==
+      canonicalV138ReviewerV3(audit.runs[1].logicalPublicationEvidence) ||
+    ["commit", "tree", "reviewBlob", "reviewRoot"].some(key =>
+      audit.runs[0].physicalPublicationEvidence[key] ===
+        audit.runs[1].physicalPublicationEvidence[key]))
+    fail("V138_PLAN_262_61_PAIR_AUDIT_PUBLICATION_REUSE_INVALID")
   const leftClones = audit.runs[0].physicalCommitments.slice(1, 5)
   const rightClones = audit.runs[1].physicalCommitments.slice(1, 5)
   if (leftClones.length !== rightClones.length || leftClones.some(
@@ -3460,7 +3569,8 @@ export const deterministicRouteCustody = (route: any, pairAudit?: any) => {
     residualPaths: route.cleanup.residualPaths },
   logicalInputCustody: route.logicalInputCustody,
   prerequisitePublication: publication(route.syntheticPrerequisitePublication),
-  postExecutionPublication: publication(route.postExecutionPublication),
+  logicalPostExecutionPublication: Object.freeze({
+    ...route.logicalPostExecutionPublication }),
   ...(pairAudit === undefined ? {} : { pairAudit }) })
 }
 
