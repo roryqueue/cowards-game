@@ -248,24 +248,22 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     commitAll(directory, "test: successor after bounded source carrier")
     expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, sealed,
       git(directory, ["rev-parse", "HEAD"]))).toBe(true)
-    writeFileSync(path.join(directory, "unexpected-carrier.txt"), "forged\n")
-    commitAll(directory, "test: unexpected carrier")
-    expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, previous,
-      git(directory, ["rev-parse", "HEAD"]))).toBe(false)
-
-    const multiple = clone()
-    const multiplePrevious = git(multiple, ["rev-parse", "HEAD"])
-    writeFileSync(path.join(multiple, fixPath),
-      `${readFileSync(path.join(multiple, fixPath), "utf8")}\n`)
-    writeFileSync(path.join(multiple, "unexpected-carrier.txt"), "forged\n")
-    commitAll(multiple, "test: multiple carrier paths")
-    writeFileSync(path.join(multiple,
-      "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"),
-      `${readFileSync(path.join(multiple,
-        "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"), "utf8")}\n`)
-    commitAll(multiple, "test: successor source")
-    expect(reviewSuccessorHasOnlyConvergenceCarriers(multiple, multiplePrevious,
-      git(multiple, ["rev-parse", "HEAD"]))).toBe(false)
+    for (const carrierPath of ["unexpected-carrier.txt",
+      ".planning/artifacts/v1.38-plan-262-62-review-v3.json"]) {
+      const invalid = clone()
+      const invalidPrevious = git(invalid, ["rev-parse", "HEAD"])
+      const carrier = path.join(invalid, carrierPath)
+      mkdirSync(path.dirname(carrier), { recursive: true })
+      writeFileSync(carrier, "forged\n")
+      commitAll(invalid, "test: forbidden carrier")
+      for (const sourcePath of R3_PATHS) {
+        const target = path.join(invalid, sourcePath)
+        writeFileSync(target, `${readFileSync(target, "utf8")}\n`)
+      }
+      commitAll(invalid, "test: successor source")
+      expect(reviewSuccessorHasOnlyConvergenceCarriers(invalid, invalidPrevious,
+        git(invalid, ["rev-parse", "HEAD"]))).toBe(false)
+    }
   }, 30_000)
 
   it("pins exact final A9 as one four-path V8 layer", () => {
