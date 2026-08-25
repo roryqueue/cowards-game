@@ -14,6 +14,7 @@ import {
   PLAN_60_REVIEW_FIX_SHA256,
   PLAN_60_V9_SHA256,
   R3_PATHS,
+  R3_REVIEWER_TOOL,
   SOURCE_A9,
   SOURCE_A9_TREE,
   SOURCE_BASE9,
@@ -47,6 +48,8 @@ import {
   snapshotReadiness,
   normalizedPlan26262ReportContentRoot,
   runV138Plan26261ReviewerCli,
+  reviewSuccessorHasOnlyConvergenceCarriers,
+  validateR3ReviewerToolTrailer,
   validatePlan26262ReportManifest,
   validatePlan26262Summary,
   validatePlan26262ReviewAgainstExpected,
@@ -209,6 +212,46 @@ afterEach(() => {
 })
 
 describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
+  it("requires exactly the sealed reviewer-tool trailer", () => {
+    expect(validateR3ReviewerToolTrailer(R3_REVIEWER_TOOL)).toBe(true)
+    for (const trailer of ["", "attacker-controlled", `${R3_REVIEWER_TOOL}\nother`])
+      expect(() => validateR3ReviewerToolTrailer(trailer))
+        .toThrow("V138_PLAN_262_61_R3_TRAILER_INVALID")
+  })
+
+  it("admits only a one-path first-parent convergence carrier", () => {
+    const directory = clone()
+    const previous = git(directory, ["rev-parse", "HEAD"])
+    const fixPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-61-REVIEW-FIX.md"
+    writeFileSync(path.join(directory, fixPath), `${readFileSync(path.join(directory, fixPath), "utf8")}\n`)
+    commitAll(directory, "docs: sealed convergence carrier")
+    writeFileSync(path.join(directory,
+      "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"),
+      `${readFileSync(path.join(directory,
+        "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"), "utf8")}\n`)
+    commitAll(directory, "test: successor source")
+    const sealed = git(directory, ["rev-parse", "HEAD"])
+    expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, previous, sealed)).toBe(true)
+    writeFileSync(path.join(directory, "unexpected-carrier.txt"), "forged\n")
+    commitAll(directory, "test: unexpected carrier")
+    expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, previous,
+      git(directory, ["rev-parse", "HEAD"]))).toBe(false)
+
+    const multiple = clone()
+    const multiplePrevious = git(multiple, ["rev-parse", "HEAD"])
+    writeFileSync(path.join(multiple, fixPath),
+      `${readFileSync(path.join(multiple, fixPath), "utf8")}\n`)
+    writeFileSync(path.join(multiple, "unexpected-carrier.txt"), "forged\n")
+    commitAll(multiple, "test: multiple carrier paths")
+    writeFileSync(path.join(multiple,
+      "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"),
+      `${readFileSync(path.join(multiple,
+        "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"), "utf8")}\n`)
+    commitAll(multiple, "test: successor source")
+    expect(reviewSuccessorHasOnlyConvergenceCarriers(multiple, multiplePrevious,
+      git(multiple, ["rev-parse", "HEAD"]))).toBe(false)
+  }, 30_000)
+
   it("pins exact final A9 as one four-path V8 layer", () => {
     const custody = inspectV138Plan26261A9Custody(repoRoot)
     expect(custody).toMatchObject({ sourceBase9: SOURCE_BASE9, sourceA9: SOURCE_A9,

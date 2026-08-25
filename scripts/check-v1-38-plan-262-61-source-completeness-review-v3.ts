@@ -579,7 +579,12 @@ const yamlScalar = (text: string, key: string) =>
   new RegExp(`^${key}:\\s*["']?([^"'\\n]+)["']?\\s*$`, "mu").exec(text)?.[1]?.trim()
 const recordsParentCommit = (rootPath: string, repoPath: string) =>
   git(rootPath, ["log", "-1", "--format=%H", "--", repoPath])
-const reviewSuccessorHasOnlyConvergenceCarriers = (rootPath: string,
+export const R3_REVIEWER_TOOL = "codex-gsd-code-reviewer-v3" as const
+export const validateR3ReviewerToolTrailer = (trailer: string) => {
+  if (trailer !== R3_REVIEWER_TOOL) fail("V138_PLAN_262_61_R3_TRAILER_INVALID")
+  return true
+}
+export const reviewSuccessorHasOnlyConvergenceCarriers = (rootPath: string,
   previousReviewCommit: string, reviewedSource: string) => {
   const commits = lines(git(rootPath, ["rev-list", "--first-parent",
     `${previousReviewCommit}..${reviewedSource}`]))
@@ -659,7 +664,7 @@ export const inspectCommittedR3 = (rootPath = repoRoot) => {
   }
   const trailer = git(rootPath, ["log", "-1",
     "--format=%(trailers:key=Plan-262-61-Reviewer-Tool,valueonly)", commit])
-  if (trailer.length === 0) fail("V138_PLAN_262_61_R3_TRAILER_INVALID")
+  validateR3ReviewerToolTrailer(trailer)
   return Object.freeze({ commit, tree: git(rootPath, ["rev-parse", `${commit}^{tree}`]),
     parent: lines(git(rootPath, ["show", "-s", "--format=%P", commit]))[0], trailer,
     blobs: Object.freeze(R3_PATHS.map((repoPath) => blobRow(rootPath, commit, repoPath))) })
