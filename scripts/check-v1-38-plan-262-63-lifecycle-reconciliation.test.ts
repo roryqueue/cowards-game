@@ -21,9 +21,9 @@ const clone = () => {
 afterEach(() => { while (disposable.length) rmSync(disposable.pop()!, { recursive: true, force: true }) })
 
 describe("Plan 262-63 lifecycle reconciliation", () => {
-  it("accepts only the named pending successor state", () => {
-    expect(inspectV138Plan26263Lifecycle(root)).toMatchObject({ state: "plan_262_63_pending",
-      activePlans: 48, summaries: 44, archive: { sha256: V138_262_62_ARCHIVE_SHA256 } })
+  it("accepts the committed lifecycle-summary state", () => {
+    expect(inspectV138Plan26263Lifecycle(root)).toMatchObject({ state: "plan_262_63_summary_committed",
+      activePlans: 48, summaries: 45, archive: { sha256: V138_262_62_ARCHIVE_SHA256 } })
   })
 
   it("rejects archive mutation and Plan-262-62 revival", () => {
