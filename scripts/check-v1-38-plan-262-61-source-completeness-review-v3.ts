@@ -579,6 +579,15 @@ const yamlScalar = (text: string, key: string) =>
   new RegExp(`^${key}:\\s*["']?([^"'\\n]+)["']?\\s*$`, "mu").exec(text)?.[1]?.trim()
 const recordsParentCommit = (rootPath: string, repoPath: string) =>
   git(rootPath, ["log", "-1", "--format=%H", "--", repoPath])
+const reviewSuccessorHasOnlyConvergenceCarriers = (rootPath: string,
+  previousReviewCommit: string, reviewedSource: string) => {
+  const commits = lines(git(rootPath, ["rev-list", "--first-parent",
+    `${previousReviewCommit}..${reviewedSource}`]))
+  return commits.length > 0 && lines(git(rootPath, ["rev-list", "--first-parent",
+    reviewedSource])).includes(previousReviewCommit) && commits.slice(1).every(commit =>
+      canonicalV138ReviewerV3(
+      changedPaths(rootPath, commit)) === canonicalV138ReviewerV3([PLAN_61_REVIEW_FIX]))
+}
 
 const latestReview = (rootPath: string, sourceR3: ReturnType<typeof inspectCommittedR3>) => {
   const tracked = lines(git(rootPath, ["ls-files", `${REVIEW_DIRECTORY}/262-61-CODE-REVIEW*.md`]))
@@ -608,9 +617,9 @@ const latestReview = (rootPath: string, sourceR3: ReturnType<typeof inspectCommi
       changedPaths(rootPath, immutable.commit).length !== 1 ||
       changedPaths(rootPath, immutable.commit)[0] !== repoPath ||
       lines(git(rootPath, ["show", "-s", "--format=%P", immutable.commit]))[0] !==
-        reviewedSource || index > 0 && lines(git(rootPath,
-          ["show", "-s", "--format=%P", reviewedSource]))[0] !==
-            recordsParentCommit(rootPath, reports[index - 1]!.repoPath))
+        reviewedSource || index > 0 && !reviewSuccessorHasOnlyConvergenceCarriers(
+          rootPath, recordsParentCommit(rootPath, reports[index - 1]!.repoPath),
+          reviewedSource))
       fail("V138_PLAN_262_61_CODE_REVIEW_HISTORY_INVALID")
     if (index === reports.length - 1 &&
       (yamlScalar(text, "status") !== "clean" ||

@@ -1,4 +1,4 @@
-// Plan-262-61 reviewer custody source regression suite.
+// Plan-262-61 reviewer custody source regression suite; convergence carriers are sealed.
 import { execFileSync, spawnSync } from "node:child_process"
 import { chmodSync, closeSync, fsyncSync, linkSync, mkdtempSync, mkdirSync, openSync,
   readFileSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync,
