@@ -232,6 +232,22 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
     commitAll(directory, "test: successor source")
     const sealed = git(directory, ["rev-parse", "HEAD"])
     expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, previous, sealed)).toBe(true)
+    writeFileSync(path.join(directory,
+      "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.test.ts"),
+      `${readFileSync(path.join(directory,
+        "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.test.ts"), "utf8")}\n`)
+    writeFileSync(path.join(directory,
+      "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"),
+      `${readFileSync(path.join(directory,
+        "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"), "utf8")}\n`)
+    commitAll(directory, "test: bounded source carrier")
+    writeFileSync(path.join(directory,
+      "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"),
+      `${readFileSync(path.join(directory,
+        "scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts"), "utf8")}\n`)
+    commitAll(directory, "test: successor after bounded source carrier")
+    expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, sealed,
+      git(directory, ["rev-parse", "HEAD"]))).toBe(true)
     writeFileSync(path.join(directory, "unexpected-carrier.txt"), "forged\n")
     commitAll(directory, "test: unexpected carrier")
     expect(reviewSuccessorHasOnlyConvergenceCarriers(directory, previous,

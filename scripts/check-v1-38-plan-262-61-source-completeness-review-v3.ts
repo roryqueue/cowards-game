@@ -589,9 +589,11 @@ export const reviewSuccessorHasOnlyConvergenceCarriers = (rootPath: string,
   const commits = lines(git(rootPath, ["rev-list", "--first-parent",
     `${previousReviewCommit}..${reviewedSource}`]))
   return commits.length > 0 && lines(git(rootPath, ["rev-list", "--first-parent",
-    reviewedSource])).includes(previousReviewCommit) && commits.slice(1).every(commit =>
-      canonicalV138ReviewerV3(
-      changedPaths(rootPath, commit)) === canonicalV138ReviewerV3([PLAN_61_REVIEW_FIX]))
+    reviewedSource])).includes(previousReviewCommit) && commits.slice(1).every(commit => {
+      const paths = canonicalV138ReviewerV3(changedPaths(rootPath, commit))
+      return paths === canonicalV138ReviewerV3([PLAN_61_REVIEW_FIX]) ||
+        paths === canonicalV138ReviewerV3([...R3_PATHS].sort())
+    })
 }
 
 const latestReview = (rootPath: string, sourceR3: ReturnType<typeof inspectCommittedR3>) => {
