@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planned
-stopped_at: Plan 262-60 production A9 frozen; Plan 262-61 reviewer R3 is next
-last_updated: "2026-08-15T07:53:10.605Z"
-last_activity: 2026-08-15
-last_activity_desc: Froze production-only A9, deleted active reviewer-v2, dispositioned A8, and derived exact 43/48 lifecycle
+stopped_at: Plan 262-62 archived pre-review after its mandatory full R3 suite rejected the stale 43-summary lifecycle baseline
+last_updated: "2026-08-25T15:06:02Z"
+last_activity: 2026-08-25
+last_activity_desc: Archived Plan 262-62 byte-for-byte before review publication; a fresh Phase 262 plan is required
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 48
-  completed_plans: 43
+  total_plans: 47
+  completed_plans: 44
   percent: 90
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"a9_production_source_frozen_reviewer_r3_next","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v3_not_authored","source_review_status":"v1_v2_disproved","source_review_v3_root":null,"independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-61","total_plans":48,"trustworthy_summaries":43,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-60","262-61","262-62","262-56","262-57","262-48"],"incomplete":["262-61","262-62","262-56","262-57","262-48"],"archived_plan_58":"archived/262-58-HISTORICAL.md","archived_plan_58_sha256":"2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3","archived_summary_58":"archived/262-58-SUMMARY-HISTORICAL.md","archived_summary_58_sha256":"03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6","archived_plan_59":"archived/262-59-HISTORICAL.md","archived_plan_59_sha256":"0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-successor-status: {"proof_status":"plan_262_62_archived_pre_review_lifecycle_inconsistency","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v3_pre_review_failed_archived","source_review_status":"r3_converged","source_review_v3_root":null,"independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"fresh-plan-phase-262","total_plans":47,"trustworthy_summaries":44,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-60","262-61","262-56","262-57","262-48"],"incomplete":["262-56","262-57","262-48"],"archived_plan_58":"archived/262-58-HISTORICAL.md","archived_plan_58_sha256":"2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3","archived_summary_58":"archived/262-58-SUMMARY-HISTORICAL.md","archived_summary_58_sha256":"03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6","archived_plan_59":"archived/262-59-HISTORICAL.md","archived_plan_59_sha256":"0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f","archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
 
 ## Project Reference
 
@@ -31,17 +31,17 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 43 of 48 trustworthy summaries — exact production A9 is frozen; Plan 262-61 reviewer R3 is next
-Status: A9 production source is frozen and A8/reviewer-v2 remains immutable non-authorizing history; ADMIT-03 remains blocked
-Last activity: 2026-08-15 — Froze exact sourceBase9/A9, deleted active reviewer-v2, published its invalid disposition, and passed the 43/48 analyzer
+Plan: 44 trustworthy summaries — Plan 262-62 archived before review publication; a fresh Phase 262 plan is required
+Status: R3 is converged, but its mandatory full suite rejected the stale 43-summary lifecycle baseline; ADMIT-03 remains blocked and no authority was created
+Last activity: 2026-08-25 — Archived the exact active Plan 262-62 bytes after the pre-review lifecycle failure
 
 Progress: [█████████░] 90%
 
 ## Performance Metrics
 
-**Current milestone:** 43 of 48 active Phase 262 plans have trustworthy summaries. Plan-262-55 review-v1 and Plan-262-58 embedded reviewer-v2 are immutable invalid/disproved history and cannot authorize Plan 262-56. Plans 262-58 and 262-59 are archived at exact recorded hashes; A8 and every v1/v2 artifact, report, fix, source object, charge, and terminal fact remain protected. Plans 262-60 through 262-62 separate production-only A9, independently authored and post-execution-code-reviewed R3, and the fresh procedural canonical review-v3. Plans 262-56/57 then use authorization-v9/seal-v9/A9/B9 with route ordinal 7 and unchanged v11/v12 semantics; Plan 262-48 closes only through truthful 47/48 before summary and 48/48 afterward. Independent person, reviewer separation, cryptographic reviewer identity, and independent custody remain false/unknown. Canonical review-v3, authorization-v9, seal-v9, B9, route start, live, and terminal evidence remain absent. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: Plan 262-61.
+**Current milestone:** 44 Phase 262 plans have trustworthy summaries. Plan-262-62 is now immutable archived pre-review failure history at SHA-256 `438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a`: its mandatory R3 suite rejected the stale 43-summary lifecycle baseline before any review-v3 derivation or publication. It creates no review, authorization-v9, seal-v9, B9, route, live, or downstream authority. A distinct fresh Phase 262 plan must repair and independently re-review the lifecycle contract without altering the archived bytes. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: fresh Plan 262 planning.
 
-<!-- phase-262-plan-60-status: {"proof_status":"a9_production_source_frozen_reviewer_r3_next","source_a8_historical":true,"source_a9":"c10aa9bd1462c8191305608715252eca12bc3751","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"262-61"} -->
+<!-- phase-262-plan-60-status: {"proof_status":"plan_262_62_archived_pre_review_lifecycle_inconsistency","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"fresh-plan-phase-262"} -->
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -264,7 +264,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-15T07:52:55.628Z
-Stopped at: A8/reviewer-v2 invalid planning history archived; Plan 262-60 production-only A9 source is next
+Last session: 2026-08-25T15:06:02Z
+Stopped at: Plan 262-62 archived before review publication after its full R3 suite rejected the stale 43-summary lifecycle baseline
 Resume file: None
-Next command: Execute Plan 262-60 offline only; no reviewer-v3 publication, authorization-v9, seal-v9, B9, route start, or live work is authorized.
+Next command: Run a fresh `$gsd-plan-phase 262` to create a distinct successor; do not restore, retry, or rewrite archived Plan 262-62. No reviewer-v3 publication, authorization-v9, seal-v9, B9, route start, or live work is authorized.
