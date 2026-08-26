@@ -109,14 +109,32 @@ const assertImportBoundary = (root: string): void => {
     const source = ts.createSourceFile(repoPath, text, ts.ScriptTarget.Latest, true,
       repoPath.endsWith("x") ? ts.ScriptKind.TSX : repoPath.endsWith(".js") || repoPath.endsWith(".mjs") || repoPath.endsWith(".cjs") ? ts.ScriptKind.JS : ts.ScriptKind.TS)
     const bindings = new Map<string, string>()
+    const moduleLoaderBindings = new Set(["require"])
+    const createRequireBindings = new Set(["createRequire"])
     const collectBindings = (node: ts.Node): void => {
+      if (ts.isImportSpecifier(node) && (node.propertyName?.text ?? node.name.text) === "createRequire")
+        createRequireBindings.add(node.name.text)
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
         const value = evaluateStaticString(node.initializer, bindings)
         if (value !== undefined) bindings.set(node.name.text, value)
+        if (ts.isIdentifier(node.initializer) && moduleLoaderBindings.has(node.initializer.text)) moduleLoaderBindings.add(node.name.text)
+        if (ts.isCallExpression(node.initializer) &&
+          (ts.isIdentifier(node.initializer.expression) && createRequireBindings.has(node.initializer.expression.text) ||
+           ts.isPropertyAccessExpression(node.initializer.expression) && node.initializer.expression.name.text === "createRequire"))
+          moduleLoaderBindings.add(node.name.text)
       }
       ts.forEachChild(node, collectBindings)
     }
     collectBindings(source)
+    const isModuleLoader = (call: ts.CallExpression): boolean =>
+      call.expression.kind === ts.SyntaxKind.ImportKeyword ||
+      ts.isIdentifier(call.expression) && moduleLoaderBindings.has(call.expression.text) ||
+      ts.isPropertyAccessExpression(call.expression) && call.expression.name.text === "require" ||
+      ts.isElementAccessExpression(call.expression) && !!call.expression.argumentExpression &&
+        ts.isStringLiteralLike(call.expression.argumentExpression) && call.expression.argumentExpression.text === "require" ||
+      ts.isCallExpression(call.expression) &&
+        (ts.isIdentifier(call.expression.expression) && createRequireBindings.has(call.expression.expression.text) ||
+         ts.isPropertyAccessExpression(call.expression.expression) && call.expression.expression.name.text === "createRequire")
     const visit = (node: ts.Node): void => {
       let specifier: string | undefined
       let nonLiteralModuleLoad = false
@@ -124,7 +142,7 @@ const assertImportBoundary = (root: string): void => {
         specifier = node.moduleSpecifier.text
       else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression && ts.isStringLiteralLike(node.moduleReference.expression))
         specifier = node.moduleReference.expression.text
-      else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1) {
+      else if (ts.isCallExpression(node) && isModuleLoader(node) && node.arguments.length >= 1) {
         specifier = evaluateStaticString(node.arguments[0]!, bindings)
         nonLiteralModuleLoad = !ts.isStringLiteralLike(node.arguments[0]!) && !ts.isNoSubstitutionTemplateLiteral(node.arguments[0]!)
       }

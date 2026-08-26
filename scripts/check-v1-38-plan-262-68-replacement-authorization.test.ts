@@ -78,6 +78,10 @@ describe("Plan 262-68 replacement authorization representation", () => {
     ['let p = "./safe.js"; p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void import(p)\n', "scripts/runtime-import-plan-262-68-reassign.js"],
     ['const p = "./safe.js"; { const p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void import(p) }\n', "scripts/runtime-import-plan-262-68-shadow.js"],
     ['const suffix = "authorization"; void import(`./lib/v1-38-plan-262-68-replacement-${suffix}.js`)\n', "scripts/runtime-import-plan-262-68-template.mjs"],
+    ['const p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void import(p, {})\n', "scripts/runtime-import-plan-262-68-options.mjs"],
+    ['const p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void module.require(p)\n', "scripts/runtime-import-plan-262-68-member.cjs"],
+    ['const p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void module["require"](p)\n', "scripts/runtime-import-plan-262-68-element.cjs"],
+    ['import { createRequire as makeRequire } from "node:module"; const load = makeRequire(import.meta.url); const p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void load(p)\n', "scripts/runtime-import-plan-262-68-create-require.mjs"],
     ['export { createV138Plan26268ReplacementAuthorization } from "./lib/v1-38-plan-262-68-replacement-authorization.js"\n', "scripts/runtime-import-plan-262-68.cjs"],
   ])("rejects alternate module consumption", (source, repoPath) => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
