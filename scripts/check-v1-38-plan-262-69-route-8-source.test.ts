@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto"
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
 import {
+  dispatchV138Route8Cli,
   V138_ROUTE_8_COMMANDS,
   V138_ROUTE_8_DESTINATIONS,
   V138_ROUTE_8_PATHS,
@@ -166,11 +167,11 @@ const lifecycleNumbers = [
   51, 52, 53, 54, 60, 61, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
 ]
 const lifecycleArgs = () => ({
-  phaseDir: ".planning/phases/262-test",
+  phaseDir: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con",
   requirements: ".planning/REQUIREMENTS.md",
   roadmap: ".planning/ROADMAP.md",
   state: ".planning/STATE.md",
-  validation: ".planning/phases/262-test/262-VALIDATION.md",
+  validation: ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md",
   disposition: V138_ROUTE_8_PATHS.disposition,
   activationRoot: "auto",
 })
@@ -207,9 +208,9 @@ const validationBytes = (branch: "obstruction" | "terminal", unavailable = false
   const rows = ids.map(id => `| ${id} | ${id === "ADMIT-03" && branch === "obstruction" ?
     "PARTIAL / BLOCKED" : "COVERED"} | evidence |`).join("\n")
   return `---\nstatus: ${branch === "obstruction" ? "partial" : "passed"}\nlast_audited: 2026-08-26\n---\n\n` +
-    `Local-seal v3\n${rows}\n\n${branch === "obstruction" ?
-      "Coverage is 15 covered and 1 partial-blocked\ncannot authorize Phase 263 or any downstream/live capability\n| ADMIT-03 | BLOCKER | missing route |" :
-      "Coverage is 16 covered and 0 gaps\nPhase 263 planning authorized\ndownstream authority remains denied"}\n` +
+    `Local-seal v3\n\n## Requirement Coverage\n${rows}\n\n${branch === "obstruction" ?
+      "Coverage is 15 covered and 1 partial-blocked.\nThis result cannot authorize Phase 263 or any downstream/live capability.\n| ADMIT-03 | BLOCKER | missing route |" :
+      "Coverage is 16 covered and 0 gaps.\nPhase 263 planning authorized.\nDownstream authority remains denied."}\n\n## Evidence\nExact.\n` +
     (unavailable ? "verification_carrier_unavailable: true\n" : "")
 }
 const writeTerminalChain = (root: string): void => {
@@ -252,21 +253,39 @@ const writeTerminalChain = (root: string): void => {
     calibrationRoot: calibration.receiptRoot,
     reproductionConsumptionRoot: reproductionConsumption.markerRoot,
     reproductionRoot: reproduction.receiptRoot })
-  for (const [repoPath, value] of [
+  const artifacts = [
     [V138_ROUTE_8_PATHS.routeStart, routeStart], [V138_ROUTE_8_PATHS.preflight, preflight],
     [V138_ROUTE_8_PATHS.calibrationConsumption, calibrationConsumption],
     [V138_ROUTE_8_PATHS.calibration, calibration],
     [V138_ROUTE_8_PATHS.reproductionConsumption, reproductionConsumption],
     [V138_ROUTE_8_PATHS.reproduction, reproduction], [V138_ROUTE_8_PATHS.terminal, terminal],
-  ] as const) writeFileSync(path.join(root, repoPath), stable(value))
+  ] as const
+  for (const [repoPath, value] of artifacts.slice(0, 4)) writeFileSync(path.join(root, repoPath), stable(value))
+  commitAll(root, "fixture: producer preflight and calibration")
+  for (const [repoPath, value] of artifacts.slice(4)) writeFileSync(path.join(root, repoPath), stable(value))
   const derived = deriveV138Route8Activation({ branch: "terminal",
     terminal: { disposition: "reproduction_passed", freshCharged: 540,
       freshAccepted: 540, satisfiesAdmit03: true }, localSealPassed: true })
   writeFileSync(path.join(root, V138_ROUTE_8_PATHS.disposition), stable(derived.disposition))
   writeFileSync(path.join(root, V138_ROUTE_8_PATHS.activation), stable(derived.activation))
+  commitAll(root, "fixture: producer reproduction and terminal")
+  const paths = artifacts.map(([repoPath]) => repoPath)
+  const identities = paths.map(repoPath => { const bytes = readFileSync(path.join(root, repoPath)); return {
+    path: repoPath, blob: git(root, ["rev-parse", `HEAD:${repoPath}`]),
+    introducingCommit: git(root, ["log", "-1", "--format=%H", "--", repoPath]),
+    sha256: sha(bytes), bytes: bytes.length } })
+  const producerPath = "scripts/lib/v1-38-route-8-source.ts"
+  const body = { schemaVersion: "v1.38-plan-262-72-execution-provenance-v1",
+    producerPath, producerBlob: git(root, ["rev-parse", `HEAD:${producerPath}`]),
+    authorizedPlan72Commit: git(root, ["log", "-1", "--format=%H", "--",
+      `${lifecycleArgs().phaseDir}/262-72-PLAN.md`]), artifactIdentities: identities,
+    executionRoot: sha(`v138-route8-execution-artifacts-v1\0${stable(identities)}`) }
+  writeFileSync(path.join(root, ".planning/artifacts/v1.38-plan-262-72-execution-provenance-v1.json"),
+    stable({ ...body, manifestRoot: sha(`v138-route8-execution-provenance-v1\0${stable(body)}`) }))
+  commitAll(root, "fixture: producer execution manifest")
 }
 const lifecycleFixture = (branch: "obstruction" | "terminal" = "obstruction",
-  unavailable = false): string => {
+  unavailable = false, validatorSameCommit = false): string => {
   const root = temporary()
   const args = lifecycleArgs()
   git(root, ["init", "-q"]); git(root, ["config", "user.email", "test@example.invalid"])
@@ -275,16 +294,22 @@ const lifecycleFixture = (branch: "obstruction" | "terminal" = "obstruction",
   for (const number of lifecycleNumbers) {
     const prefix = `262-${String(number).padStart(2, "0")}`
     writeFileSync(path.join(root, args.phaseDir, `${prefix}-PLAN.md`), `# Plan ${number}\n`)
-    if (number !== 74) writeFileSync(path.join(root, args.phaseDir, `${prefix}-SUMMARY.md`), `# Summary ${number}\n`)
+    if (![72, 73, 74].includes(number)) writeFileSync(path.join(root, args.phaseDir, `${prefix}-SUMMARY.md`), `# Summary ${number}\n`)
   }
   writeFileSync(path.join(root, args.requirements), "- [ ] **ADMIT-03**: route proof\n")
   writeFileSync(path.join(root, args.roadmap), `- [ ] **Phase 262: Contract**\n**Plans:** 55/56 plans executed\n` +
-    `| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 55/56 | In Progress|\n` +
+    `| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 55/56 | In Progress|  |\n` +
     `<!-- phase-262-verification-sentinel-status: ${JSON.stringify(carrier())} -->\n`)
-  writeFileSync(path.join(root, args.state), `---\ncurrent_phase: 262\ncompleted_phases: 0\ncompleted_plans: 55\npercent: 98\n---\n` +
+  writeFileSync(path.join(root, args.state), `---\ncurrent_phase: 262\ncurrent_phase_name: foundation-admission-measurement-custody-and-containment-con\n` +
+    `status: Plan 262-73 closed with blocked obstruction disposition\nstopped_at: Completed 262-73-PLAN.md\nprogress:\n` +
+    `  completed_phases: 0\n  completed_plans: 55\n  percent: 98\n---\n` +
     `<!-- phase-262-verification-sentinel-status: ${JSON.stringify(carrier())} -->\n`)
+  mkdirSync(path.join(root, "scripts/lib"), { recursive: true })
+  writeFileSync(path.join(root, "scripts/lib/v1-38-route-8-source.ts"),
+    readFileSync(path.join(sourceRoot, "scripts/lib/v1-38-route-8-source.ts")))
   writeFileSync(path.join(root, ".planning/artifacts/v1.38-local-seal-independent-verification-v3.json"),
     readFileSync(path.join(sourceRoot, ".planning/artifacts/v1.38-local-seal-independent-verification-v3.json")))
+  commitAll(root, "fixture: authorized Plan 72 source")
   if (branch === "obstruction") {
     writeFileSync(path.join(root, V138_ROUTE_8_PATHS.obstruction), JSON.stringify({
       schemaVersion: "v1.38-plan-262-72-pre-start-obstruction-v1", status: "blocked",
@@ -294,8 +319,12 @@ const lifecycleFixture = (branch: "obstruction" | "terminal" = "obstruction",
     const derived = deriveV138Route8Activation({ branch: "pre_start_obstruction",
       terminal: null, localSealPassed: true })
     writeFileSync(path.join(root, args.disposition), JSON.stringify(derived.disposition) + "\n")
+    commitAll(root, "fixture: producer obstruction")
   } else writeTerminalChain(root)
-  commitAll(root, "fixture: topology anchor")
+  writeFileSync(path.join(root, args.phaseDir, "262-72-SUMMARY.md"), "# Summary 72\n")
+  commitAll(root, "fixture: Plan 72 summary")
+  writeFileSync(path.join(root, args.phaseDir, "262-73-SUMMARY.md"), "# Summary 73\n")
+  if (!validatorSameCommit) commitAll(root, "fixture: topology anchor")
   writeFileSync(path.join(root, args.validation), validationBytes(branch, unavailable))
   commitAll(root, "fixture: post plan 73 validation")
   return root
@@ -304,6 +333,16 @@ const sentinelArgs = (args: ReturnType<typeof lifecycleArgs>, binder: string) =>
   binder, phaseDir: args.phaseDir, requirements: args.requirements, roadmap: args.roadmap,
   state: args.state, validation: args.validation, verification: `${args.phaseDir}/262-VERIFICATION.md`,
 })
+const lifecycleCliOptions = (args: ReturnType<typeof lifecycleArgs>) => [
+  "--phase-dir", args.phaseDir, "--requirements", args.requirements, "--roadmap", args.roadmap,
+  "--state", args.state, "--validation", args.validation, "--disposition", args.disposition,
+  "--activation-root", args.activationRoot,
+]
+const subprocessCli = (root: string, argv: string[]) => spawnSync("pnpm", ["exec", "tsx", "-e",
+  `import { dispatchV138Route8Cli } from ${JSON.stringify(pathToFileURL(path.join(sourceRoot,
+    "scripts/check-v1-38-plan-262-69-route-8-source.ts")).href)}; process.stdout.write(dispatchV138Route8Cli(process.env.FIXTURE_ROOT, JSON.parse(process.env.FIXTURE_ARGV)))`],
+{ cwd: sourceRoot, encoding: "utf8", env: { ...process.env, FIXTURE_ROOT: root,
+  FIXTURE_ARGV: JSON.stringify(argv) } })
 
 describe("route-8 Plan 74 lifecycle boundaries", () => {
   const api = V138_PLAN_262_74_TEST_ONLY
@@ -401,7 +440,7 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     const terminalPath = path.join(short, V138_ROUTE_8_PATHS.terminal)
     const terminal = JSON.parse(readFileSync(terminalPath, "utf8"))
     writeFileSync(terminalPath, JSON.stringify({ ...terminal, freshAccepted: 539 }) + "\n")
-    expect(() => api.normalize(short, args)).toThrow("V138_ROUTE8_TERMINAL_INVALID")
+    expect(() => api.normalize(short, args)).toThrow("V138_ROUTE8_EXECUTION_PROVENANCE_DIRTY")
   })
 
   it("rejects absolute and symlinked phase paths before mutation", () => {
@@ -432,9 +471,25 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     expect(existsSync(path.join(root, ".planning/.v138-plan26274-transaction-v1"))).toBe(false)
   })
 
+  it("rejects repository-authored journals without a trusted git-dir intent", () => {
+    const root = lifecycleFixture(); const args = lifecycleArgs()
+    const directory = path.join(root, ".planning/.v138-plan26274-transaction-v1")
+    mkdirSync(directory)
+    const body = { schemaVersion: "v1.38-plan-262-74-transaction-v1", purpose: "gaps",
+      nonce: "a".repeat(64), testOnly: true, startHead: git(root, ["rev-parse", "HEAD"]),
+      changes: [{ path: args.requirements, before: null, after: null }], commit: null }
+    writeFileSync(path.join(directory, "journal.json"), stable({ ...body,
+      journalRoot: sha(`v138-route8-transaction-v1\0${stable(body)}`) }))
+    expect(() => api.recover(root)).toThrow("V138_ROUTE8_TRANSACTION_INVALID")
+    expect(readFileSync(path.join(root, args.requirements), "utf8")).toContain("ADMIT-03")
+  })
+
   it("completes, commits, and idempotently resumes authenticated PASS", () => {
     const root = lifecycleFixture("terminal")
     const args = lifecycleArgs()
+    const trackedBlocked = `${args.phaseDir}/262-74-BLOCKED.md`
+    writeFileSync(path.join(root, trackedBlocked), "tracked stale fallback\n")
+    commitAll(root, "fixture: tracked blocked fallback")
     api.normalize(root, args)
     const binderPath = ".planning/artifacts/plan-74-binder.json"
     const binder = api.bind(root, { ...args, output: binderPath })
@@ -447,15 +502,20 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     expect(git(root, ["rev-parse", "HEAD"])).toBe(head)
     expect(readFileSync(path.join(root, args.requirements), "utf8")).toContain("- [x] **ADMIT-03**:")
     expect(readFileSync(path.join(root, args.roadmap), "utf8")).toContain("56/56")
+    expect(readFileSync(path.join(root, args.state), "utf8")).toContain("  completed_plans: 56")
+    expect(readFileSync(path.join(root, args.state), "utf8")).toContain("  completed_phases: 1")
+    expect(readFileSync(path.join(root, args.state), "utf8")).toContain("  percent: 100")
+    expect(() => git(root, ["cat-file", "-e", `HEAD:${trackedBlocked}`])).toThrow()
     expect(existsSync(path.join(root, args.phaseDir, "262-74-SUMMARY.md"))).toBe(true)
     expect(existsSync(path.join(root, ".planning/artifacts/v1.38-plan-262-74-closeout-v1.json"))).toBe(true)
     expect(api.checkResult(root, { ...driver, summary: `${args.phaseDir}/262-74-SUMMARY.md`,
       blocked: `${args.phaseDir}/262-74-BLOCKED.md` })).toBe("passed")
-  })
+  }, 20_000)
 
   it("rejects alternate production paths and unknown positive carrier authority", () => {
     const root = lifecycleFixture(); const args = lifecycleArgs()
-    expect(() => normalizeV138PostValidation(root, args)).toThrow("V138_ROUTE8_CANONICAL_PATH_REQUIRED")
+    expect(() => normalizeV138PostValidation(root, { ...args, phaseDir: `${args.phaseDir}-alternate` }))
+      .toThrow("V138_ROUTE8_CANONICAL_PATH_REQUIRED")
     for (const carrierFile of [args.roadmap, args.state]) {
       const text = readFileSync(path.join(root, carrierFile), "utf8")
       writeFileSync(path.join(root, carrierFile), text.replace("\"total_plans\":56",
@@ -472,5 +532,73 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     writeFileSync(path.join(stale, args.validation), validationBytes("terminal"))
     commitAll(stale, "fixture: contradictory validator result")
     expect(() => api.normalize(stale, args)).toThrow("V138_ROUTE8_VALIDATOR_SEMANTICS_INVALID")
+
+    const sameCommit = lifecycleFixture("obstruction", false, true)
+    expect(() => api.normalize(sameCommit, args)).toThrow("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+
+    const duplicate = lifecycleFixture()
+    writeFileSync(path.join(duplicate, args.validation), validationBytes("obstruction")
+      .replace("| ADMIT-04 | COVERED | evidence |", "| ADMIT-04 | COVERED | evidence |\n| ADMIT-04 | BLOCKED | contradiction |"))
+    commitAll(duplicate, "fixture: duplicate validator row")
+    expect(() => api.normalize(duplicate, args)).toThrow("V138_ROUTE8_VALIDATOR_SCHEMA_INVALID")
+  })
+
+  it("authenticates and migrates the exact previous normalization generation", () => {
+    const root = lifecycleFixture(); const args = lifecycleArgs()
+    const roadmap = readFileSync(path.join(root, args.roadmap))
+    const state = readFileSync(path.join(root, args.state))
+    const disposition = readFileSync(path.join(root, args.disposition))
+    const requirements = readFileSync(path.join(root, args.requirements))
+    const legacy = { schemaVersion: "v1.38-plan-262-74-normalized-validation-v1", totalPlans: 56,
+      trustworthySummaries: 55, soleIncomplete: "262-74", branch: "obstruction", activationRoot: null,
+      dispositionSha256: sha(disposition), requirementsSha256: sha(requirements), roadmapSha256: sha(roadmap),
+      stateSha256: sha(state), admit03: "blocked", seal01: "passed_reduced_assurance",
+      phase263PlanningAuthorized: false, downstreamAuthorityDenied: true }
+    const validationPath = path.join(root, args.validation)
+    writeFileSync(validationPath, `${readFileSync(validationPath, "utf8").trimEnd()}\n\n` +
+      `<!-- phase-262-route8-post-validation: ${JSON.stringify(legacy)} -->\n`)
+    expect(api.normalize(root, args).branch).toBe("obstruction")
+    expect(api.checkNormalized(root, args).validator.sourceCommit).toMatch(/^[0-9a-f]{40}$/u)
+  })
+
+  it("executes exact production CLI argument contracts in subprocesses", () => {
+    const root = lifecycleFixture(); const args = lifecycleArgs()
+    const binder = V138_ROUTE_8_PATHS.binder
+    const verification = `${args.phaseDir}/262-VERIFICATION.md`
+    const exact = [
+      ["--normalize-post-validation", ...lifecycleCliOptions(args)],
+      ["--check-normalized-post-validation", ...lifecycleCliOptions(args)],
+      ["--bind-post-validation", ...lifecycleCliOptions(args), "--output", binder],
+      ["--check-post-validation-binder", ...lifecycleCliOptions(args), "--binder", binder],
+      ["--run-plan-262-74-sentinel", "--binder", binder, "--phase-dir", args.phaseDir,
+        "--requirements", args.requirements, "--roadmap", args.roadmap, "--state", args.state,
+        "--validation", args.validation, "--verification", verification],
+      ["--check-plan-262-74-result", "--binder", binder, "--verification", verification,
+        "--summary", `${args.phaseDir}/262-74-SUMMARY.md`, "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`],
+    ]
+    for (const argv of exact) {
+      const result = subprocessCli(root, argv)
+      expect(result.status, `${argv[0]}: ${result.stderr}`).toBe(0)
+    }
+    const duplicate = subprocessCli(root, ["--check-plan-262-74-result", "--binder", binder,
+      "--binder", binder, "--verification", verification, "--summary", `${args.phaseDir}/262-74-SUMMARY.md`,
+      "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`])
+    expect(duplicate.status).not.toBe(0)
+    const unknown = subprocessCli(root, ["--check-plan-262-74-result", "--binder", binder,
+      "--verification", verification, "--summary", `${args.phaseDir}/262-74-SUMMARY.md`,
+      "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`, "--temp", "x"])
+    expect(unknown.status).not.toBe(0)
+  }, 30_000)
+
+  it("rejects dirty and post-summary execution evidence", () => {
+    const args = lifecycleArgs()
+    const dirty = lifecycleFixture("terminal")
+    writeFileSync(path.join(dirty, V138_ROUTE_8_PATHS.reproduction), "{}\n")
+    expect(() => api.normalize(dirty, args)).toThrow("V138_ROUTE8_EXECUTION_PROVENANCE_DIRTY")
+    const rewritten = lifecycleFixture("terminal")
+    const terminalPath = path.join(rewritten, V138_ROUTE_8_PATHS.terminal)
+    writeFileSync(terminalPath, `${readFileSync(terminalPath, "utf8")} `)
+    commitAll(rewritten, "fixture: rewrite after Plan 72 summary")
+    expect(() => api.normalize(rewritten, args)).toThrow("V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
   })
 })
