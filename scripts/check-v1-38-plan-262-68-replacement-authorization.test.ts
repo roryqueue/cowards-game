@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { appendFileSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -41,6 +41,15 @@ describe("Plan 262-68 replacement authorization representation", () => {
     const hostile = { ...expected, executable: true, toJSON: () => expected }
     expect(() => checkV138Plan26268ReplacementAuthorization(root, hostile as unknown as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
   })
+  it.each([
+    ["mutable clone", () => structuredClone(createV138Plan26268ReplacementAuthorization())],
+    ["accessor", () => Object.freeze(Object.defineProperty({ ...createV138Plan26268ReplacementAuthorization() }, "executable", { get: () => false, enumerable: true }))],
+    ["symbol", () => Object.freeze({ ...createV138Plan26268ReplacementAuthorization(), [Symbol("authority")]: true })],
+    ["custom prototype", () => Object.freeze(Object.assign(Object.create({ authority: true }), createV138Plan26268ReplacementAuthorization()))],
+    ["proxy", () => new Proxy(createV138Plan26268ReplacementAuthorization(), {})],
+  ])("rejects a %s representation", (_name, build) => {
+    expect(() => checkV138Plan26268ReplacementAuthorization(root, build() as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
+  })
   it("rejects historical checkpoint tampering", () => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
     execFileSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory])
@@ -54,5 +63,23 @@ describe("Plan 262-68 replacement authorization representation", () => {
     writeFileSync(importer, 'import "./lib/v1-38-plan-262-68-replacement-authorization.js"\n')
     execFileSync("git", ["add", "scripts/runtime-import-plan-262-68.ts"], { cwd: directory })
     expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_IMPORT_BOUNDARY_INVALID")
+  }, 30000)
+  it.each([
+    ['import "./lib/v1-38-plan-262-68-replacement-authorization"\n', "scripts/runtime-import-plan-262-68.js"],
+    ['const stem = "./lib/v1-38-plan-262-68"; void import(stem + "-replacement-authorization.js")\n', "scripts/runtime-import-plan-262-68.mjs"],
+    ['export { createV138Plan26268ReplacementAuthorization } from "./lib/v1-38-plan-262-68-replacement-authorization.js"\n', "scripts/runtime-import-plan-262-68.cjs"],
+  ])("rejects alternate module consumption", (source, repoPath) => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
+    execFileSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory])
+    writeFileSync(path.join(directory, repoPath), source)
+    execFileSync("git", ["add", repoPath], { cwd: directory })
+    expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_IMPORT_BOUNDARY_INVALID")
+  }, 30000)
+  it("rejects a hidden route-reservation claim", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
+    execFileSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory])
+    const reservation = path.join(directory, ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1")
+    mkdirSync(reservation, { recursive: true }); writeFileSync(path.join(reservation, "claim.json"), "{}\n")
+    expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
   }, 30000)
 })

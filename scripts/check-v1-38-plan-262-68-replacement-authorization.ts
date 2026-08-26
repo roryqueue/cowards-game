@@ -4,6 +4,8 @@ import { execFileSync } from "node:child_process"
 import { lstatSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { types as utilTypes } from "node:util"
+import ts from "typescript"
 import { createV138Plan26268ReplacementAuthorization, PLAN_262_67_CHECKPOINT_ROOT } from "./lib/v1-38-plan-262-68-replacement-authorization.js"
 import { renderV138Plan26267ReplacementContract } from "./render-v1-38-plan-262-67-replacement-contract.js"
 
@@ -15,6 +17,8 @@ const forbidden = [
   ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
   ".planning/artifacts/v1.38-successor-source-seal-v9.json",
   ".planning/artifacts/v1.38-plan-262-57-route-start-v1.json",
+  ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1",
+  ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1/claim.json",
   ".planning/artifacts/v1.38-current-matrix-execution-context-v11.json",
   ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v11.json",
   ".planning/artifacts/v1.38-current-matrix-calibration-v11.json",
@@ -39,7 +43,8 @@ const assertExactData = (actual: unknown, expected: unknown): void => {
     if (!Object.is(actual, expected)) throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
     return
   }
-  if (typeof actual !== "object" || actual === null || Object.getPrototypeOf(actual) !== Object.prototype)
+  if (typeof actual !== "object" || actual === null || utilTypes.isProxy(actual) ||
+    Object.getPrototypeOf(actual) !== Object.prototype || !Object.isFrozen(actual))
     throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
   const actualKeys = Reflect.ownKeys(actual); const expectedKeys = Reflect.ownKeys(expected)
   if (actualKeys.some(key => typeof key !== "string") || JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys))
@@ -47,8 +52,49 @@ const assertExactData = (actual: unknown, expected: unknown): void => {
   const descriptors = Object.getOwnPropertyDescriptors(actual)
   for (const key of expectedKeys as string[]) {
     const descriptor = descriptors[key]
-    if (!descriptor || !("value" in descriptor)) throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
+    if (!descriptor || !("value" in descriptor) || descriptor.writable || descriptor.configurable || !descriptor.enumerable)
+      throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
     assertExactData(descriptor.value, (expected as Record<string, unknown>)[key])
+  }
+}
+
+const moduleExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"])
+const targetModule = "scripts/lib/v1-38-plan-262-68-replacement-authorization.ts"
+const permittedModules = new Set([
+  targetModule,
+  "scripts/check-v1-38-plan-262-68-replacement-authorization.ts",
+  "scripts/check-v1-38-plan-262-68-replacement-authorization.test.ts",
+])
+const resolveLocalModule = (importer: string, specifier: string): string | undefined => {
+  if (!specifier.startsWith(".")) return undefined
+  const raw = path.posix.normalize(path.posix.join(path.posix.dirname(importer), specifier))
+  const withoutRuntimeExtension = raw.replace(/\.(?:[cm]?js)$/u, "")
+  for (const candidate of [raw, withoutRuntimeExtension, `${raw}.ts`, `${raw}.tsx`, `${withoutRuntimeExtension}.ts`, `${withoutRuntimeExtension}.tsx`])
+    if (candidate === targetModule) return candidate
+  return undefined
+}
+const assertImportBoundary = (root: string): void => {
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
+    .split("\0").filter(repoPath => moduleExtensions.has(path.extname(repoPath)))
+  for (const repoPath of tracked) {
+    const text = readFileSync(path.resolve(root, repoPath), "utf8")
+    if (text.includes("v1-38-plan-262-68") && text.includes("replacement-authorization") && !permittedModules.has(repoPath))
+      throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
+    const source = ts.createSourceFile(repoPath, text, ts.ScriptTarget.Latest, true,
+      repoPath.endsWith("x") ? ts.ScriptKind.TSX : repoPath.endsWith(".js") || repoPath.endsWith(".mjs") || repoPath.endsWith(".cjs") ? ts.ScriptKind.JS : ts.ScriptKind.TS)
+    const visit = (node: ts.Node): void => {
+      let specifier: string | undefined
+      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier))
+        specifier = node.moduleSpecifier.text
+      else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression && ts.isStringLiteralLike(node.moduleReference.expression))
+        specifier = node.moduleReference.expression.text
+      else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0]!))
+        specifier = node.arguments[0]!.text
+      if (specifier && resolveLocalModule(repoPath, specifier) === targetModule && !permittedModules.has(repoPath))
+        throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
   }
 }
 
@@ -64,9 +110,7 @@ export const checkV138Plan26268ReplacementAuthorization = (root: string, candida
   if (candidate.checkpointRoot !== PLAN_262_67_CHECKPOINT_ROOT || renderedRoot !== PLAN_262_67_CHECKPOINT_ROOT)
     throw new TypeError("V138_262_68_CHECKPOINT_ROOT_INVALID")
   if (forbidden.some(repoPath => present(root, repoPath))) throw new TypeError("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
-  const importers = execFileSync("git", ["grep", "-l", "v1-38-plan-262-68-replacement-authorization.js", "--", "*.ts"], { cwd: root, encoding: "utf8" }).trim().split("\n").filter(Boolean).sort()
-  const allowedImporters = ["scripts/check-v1-38-plan-262-68-replacement-authorization.test.ts", "scripts/check-v1-38-plan-262-68-replacement-authorization.ts"].sort()
-  if (JSON.stringify(importers) !== JSON.stringify(allowedImporters)) throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
+  assertImportBoundary(root)
   return Object.freeze({ status: "passed", authority: "denied" as const, checkpointRoot: candidate.checkpointRoot })
 }
 
