@@ -88,6 +88,10 @@ describe("route-8 closed source", () => {
     expect(checkV138Plan26272Transition({ repoRoot: root })).toBe("stopped_terminal")
     expect(checkV138Plan26272Disposition({ repoRoot: root })).toBe("terminal")
     unlink(path.join(root, ".planning/artifacts/v1.38-plan-262-72-terminal-v1.json"))
+    writeFileSync(artifact(root, "v1.38-current-matrix-headroom-preflight-v13.json"),
+      JSON.stringify({ schemaVersion: "v1.38-current-matrix-headroom-preflight-v13",
+        samplingMilliseconds: 200, minimumEffectiveAvailableBasisPoints: 2500,
+        status: "admitted" }) + "\n")
     rewriteCalibration(root, "admitted")
     expect(checkV138Plan26272Transition({ repoRoot: root })).toBe("admitted_pending_reproduction")
     expect(() => checkV138Plan26272Disposition({ repoRoot: root }))
