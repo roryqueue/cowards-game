@@ -765,7 +765,7 @@ const recoverTransaction = (root: string, options: InstallOptions = {}): void =>
         fsyncDirectory(path.dirname(file))
       } else durableReplace(file, after)
       installed += 1
-      if (options.crashAfterInstall === installed) process.kill(process.pid, "SIGKILL")
+      if (options.crashAfterInstall === installed) process.exit(137)
       if (options.faultAfterInstall === installed) fail("V138_ROUTE8_TEST_INSTALL_FAILURE")
     }
   }
@@ -773,15 +773,20 @@ const recoverTransaction = (root: string, options: InstallOptions = {}): void =>
     if (options.crashBeforeCommit) process.kill(process.pid, "SIGKILL")
     const dirty = gitText(root, ["status", "--porcelain=v1", "--", ...journal.commit.files])
     if (dirty !== "") {
+      const stageable = journal.commit.files.filter(file => {
+        if (safe(actual(root, file)) === "regular") return true
+        try { execFileSync("git", ["ls-files", "--error-unmatch", "--", file], { cwd: root, stdio: "ignore" }); return true }
+        catch { return false }
+      })
       if (options.testOnlyToken === TEST_ONLY) {
-        execFileSync("git", ["add", "--", ...journal.commit.files], { cwd: root, stdio: "ignore" })
+        execFileSync("git", ["add", "--", ...stageable], { cwd: root, stdio: "ignore" })
         execFileSync("git", ["commit", "-m", journal.commit.message], { cwd: root, stdio: "ignore" })
       } else {
         const candidates = [path.join(root, ".codex/gsd-core/bin/gsd-tools.cjs"),
           "/Users/roryquinlan/.codex/gsd-core/bin/gsd-tools.cjs"]
         const tool = candidates.find(candidate => safe(candidate) === "regular") ?? fail("V138_ROUTE8_GSD_TOOLS_MISSING")
         execFileSync(process.execPath, [tool, "query", "commit", journal.commit.message, "--files",
-          ...journal.commit.files], { cwd: root, stdio: "ignore" })
+          ...stageable], { cwd: root, stdio: "ignore" })
       }
     }
     for (const change of journal.changes) {
@@ -822,21 +827,21 @@ const installTransaction = (root: string, purpose: TransactionJournal["purpose"]
   writeFileSync(intentPath, stable({ ...intentBody,
     intentRoot: digest(`v138-route8-transaction-intent-v1\0${stable(intentBody)}`) }), { flag: "wx", mode: 0o600 })
   fsyncDirectory(path.dirname(intentPath))
-  if (options.crashAfterSetup === 1) process.kill(process.pid, "SIGKILL")
+  if (options.crashAfterSetup === 1) process.exit(137)
   const directory = transactionDirPath(root)
   const prepare = transactionPreparePath(root, nonce)
   mkdirSync(prepare, { mode: 0o700 })
   fsyncDirectory(path.dirname(prepare))
-  if (options.crashAfterSetup === 2) process.kill(process.pid, "SIGKILL")
+  if (options.crashAfterSetup === 2) process.exit(137)
   const journalPath = path.join(prepare, "journal.json")
   const descriptor = openSync(journalPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0), 0o600)
   try { writeFileSync(descriptor, stable(journal)); fsyncSync(descriptor) } finally { closeSync(descriptor) }
-  if (options.crashAfterSetup === 3) process.kill(process.pid, "SIGKILL")
+  if (options.crashAfterSetup === 3) process.exit(137)
   fsyncDirectory(prepare)
-  if (options.crashAfterSetup === 4) process.kill(process.pid, "SIGKILL")
+  if (options.crashAfterSetup === 4) process.exit(137)
   renameSync(prepare, directory)
   fsyncDirectory(path.dirname(directory))
-  if (options.crashAfterSetup === 5) process.kill(process.pid, "SIGKILL")
+  if (options.crashAfterSetup === 5) process.exit(137)
   recoverTransaction(root, options)
 }
 const snapshot = (root: string, args: LifecycleArgs, mode: TestMode = {}) => {
