@@ -5,16 +5,22 @@ import { lstatSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { createV138Plan26268ReplacementAuthorization, PLAN_262_67_CHECKPOINT_ROOT } from "./lib/v1-38-plan-262-68-replacement-authorization.js"
+import { renderV138Plan26267ReplacementContract } from "./render-v1-38-plan-262-67-replacement-contract.js"
 
 const forbidden = [
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-PLAN.md",
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-SUMMARY.md",
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md",
   ".planning/artifacts/v1.38-plan-262-62-source-completeness-review-v3.json",
   ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
   ".planning/artifacts/v1.38-successor-source-seal-v9.json",
   ".planning/artifacts/v1.38-plan-262-57-route-start-v1.json",
+  ".planning/artifacts/v1.38-current-matrix-execution-context-v11.json",
   ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v11.json",
   ".planning/artifacts/v1.38-current-matrix-calibration-v11.json",
   ".planning/artifacts/v1.38-current-matrix-reproduction-v12.json",
   ".planning/artifacts/v1.38-plan-262-57-calibration-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-57-preflight-consumption-v1.json",
   ".planning/artifacts/v1.38-plan-262-57-reproduction-consumption-v1.json",
   ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json",
   ".planning/artifacts/v1.38-plan-262-57-terminal-v1.json",
@@ -28,6 +34,23 @@ const historical = [
   [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-65-CODE-REVIEW.md", "73d47ff23cf2b5a2e3c268180621e0c83aedba8e4cb2dbc3c3cc8ca0d346ce16"],
 ] as const
 const present = (root: string, repoPath: string) => { try { lstatSync(path.resolve(root, repoPath)); return true } catch (error: unknown) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error } }
+const assertExactData = (actual: unknown, expected: unknown): void => {
+  if (typeof expected !== "object" || expected === null) {
+    if (!Object.is(actual, expected)) throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
+    return
+  }
+  if (typeof actual !== "object" || actual === null || Object.getPrototypeOf(actual) !== Object.prototype)
+    throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
+  const actualKeys = Reflect.ownKeys(actual); const expectedKeys = Reflect.ownKeys(expected)
+  if (actualKeys.some(key => typeof key !== "string") || JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys))
+    throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
+  const descriptors = Object.getOwnPropertyDescriptors(actual)
+  for (const key of expectedKeys as string[]) {
+    const descriptor = descriptors[key]
+    if (!descriptor || !("value" in descriptor)) throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
+    assertExactData(descriptor.value, (expected as Record<string, unknown>)[key])
+  }
+}
 
 export const checkV138Plan26268ReplacementAuthorization = (root: string, candidate = createV138Plan26268ReplacementAuthorization()) => {
   const repositoryRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: root, encoding: "utf8" }).trim()
@@ -36,10 +59,14 @@ export const checkV138Plan26268ReplacementAuthorization = (root: string, candida
     const actual = createHash("sha256").update(readFileSync(path.resolve(root, repoPath))).digest("hex")
     if (actual !== expected) throw new TypeError("V138_262_68_HISTORICAL_INPUT_INVALID")
   }
-  if (JSON.stringify(candidate) !== JSON.stringify(createV138Plan26268ReplacementAuthorization()) ||
-    candidate.checkpointRoot !== PLAN_262_67_CHECKPOINT_ROOT)
-    throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
+  assertExactData(candidate, createV138Plan26268ReplacementAuthorization())
+  const renderedRoot = `sha256:${createHash("sha256").update(JSON.stringify(renderV138Plan26267ReplacementContract())).digest("hex")}`
+  if (candidate.checkpointRoot !== PLAN_262_67_CHECKPOINT_ROOT || renderedRoot !== PLAN_262_67_CHECKPOINT_ROOT)
+    throw new TypeError("V138_262_68_CHECKPOINT_ROOT_INVALID")
   if (forbidden.some(repoPath => present(root, repoPath))) throw new TypeError("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
+  const importers = execFileSync("git", ["grep", "-l", "v1-38-plan-262-68-replacement-authorization.js", "--", "*.ts"], { cwd: root, encoding: "utf8" }).trim().split("\n").filter(Boolean).sort()
+  const allowedImporters = ["scripts/check-v1-38-plan-262-68-replacement-authorization.test.ts", "scripts/check-v1-38-plan-262-68-replacement-authorization.ts"].sort()
+  if (JSON.stringify(importers) !== JSON.stringify(allowedImporters)) throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
   return Object.freeze({ status: "passed", authority: "denied" as const, checkpointRoot: candidate.checkpointRoot })
 }
 
