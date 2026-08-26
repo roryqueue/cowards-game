@@ -73,7 +73,21 @@ const resolveLocalModule = (importer: string, specifier: string): string | undef
     if (candidate === targetModule) return candidate
   return undefined
 }
+const evaluateStaticString = (expression: ts.Expression, bindings: ReadonlyMap<string, string>): string | undefined => {
+  if (ts.isStringLiteralLike(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) return expression.text
+  if (ts.isIdentifier(expression)) return bindings.get(expression.text)
+  if (ts.isParenthesizedExpression(expression)) return evaluateStaticString(expression.expression, bindings)
+  if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const left = evaluateStaticString(expression.left, bindings); const right = evaluateStaticString(expression.right, bindings)
+    return left === undefined || right === undefined ? undefined : left + right
+  }
+  return undefined
+}
 const assertImportBoundary = (root: string): void => {
+  const configPath = ts.findConfigFile(root, ts.sys.fileExists)
+  const compilerOptions = configPath
+    ? ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, path.dirname(configPath)).options
+    : { moduleResolution: ts.ModuleResolutionKind.NodeNext, module: ts.ModuleKind.NodeNext, allowJs: true }
   const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
     .split("\0").filter(repoPath => moduleExtensions.has(path.extname(repoPath)))
   for (const repoPath of tracked) {
@@ -82,16 +96,29 @@ const assertImportBoundary = (root: string): void => {
       throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
     const source = ts.createSourceFile(repoPath, text, ts.ScriptTarget.Latest, true,
       repoPath.endsWith("x") ? ts.ScriptKind.TSX : repoPath.endsWith(".js") || repoPath.endsWith(".mjs") || repoPath.endsWith(".cjs") ? ts.ScriptKind.JS : ts.ScriptKind.TS)
+    const bindings = new Map<string, string>()
+    const collectBindings = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+        const value = evaluateStaticString(node.initializer, bindings)
+        if (value !== undefined) bindings.set(node.name.text, value)
+      }
+      ts.forEachChild(node, collectBindings)
+    }
+    collectBindings(source)
     const visit = (node: ts.Node): void => {
       let specifier: string | undefined
       if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier))
         specifier = node.moduleSpecifier.text
       else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression && ts.isStringLiteralLike(node.moduleReference.expression))
         specifier = node.moduleReference.expression.text
-      else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0]!))
-        specifier = node.arguments[0]!.text
-      if (specifier && resolveLocalModule(repoPath, specifier) === targetModule && !permittedModules.has(repoPath))
-        throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
+      else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1)
+        specifier = evaluateStaticString(node.arguments[0]!, bindings)
+      if (specifier && !permittedModules.has(repoPath)) {
+        const resolved = ts.resolveModuleName(specifier, path.resolve(root, repoPath), compilerOptions, ts.sys).resolvedModule?.resolvedFileName
+        const resolvedRepoPath = resolved && path.relative(root, resolved).split(path.sep).join("/")
+        if (resolveLocalModule(repoPath, specifier) === targetModule || resolvedRepoPath === targetModule)
+          throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
+      }
       ts.forEachChild(node, visit)
     }
     visit(source)

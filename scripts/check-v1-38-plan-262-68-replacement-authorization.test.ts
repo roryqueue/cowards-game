@@ -9,6 +9,13 @@ import { createV138Plan26268ReplacementAuthorization } from "./lib/v1-38-plan-26
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const copies: string[] = []
+const deepFreeze = <T>(value: T): T => {
+  if (typeof value === "object" && value !== null) {
+    for (const nested of Object.values(value)) deepFreeze(nested)
+    Object.freeze(value)
+  }
+  return value
+}
 afterEach(() => { while (copies.length) rmSync(copies.pop()!, { recursive: true, force: true }) })
 describe("Plan 262-68 replacement authorization representation", () => {
   it("passes only as non-executable denied authority", () => expect(checkV138Plan26268ReplacementAuthorization(root)).toMatchObject({ status: "passed", authority: "denied" }))
@@ -19,7 +26,7 @@ describe("Plan 262-68 replacement authorization representation", () => {
     { reviewDisposition: "authorizing" },
     { executable: undefined },
   ])("rejects authority or identity drift", mutation => {
-    const candidate = { ...createV138Plan26268ReplacementAuthorization(), ...mutation }
+    const candidate = deepFreeze({ ...createV138Plan26268ReplacementAuthorization(), ...mutation })
     expect(() => checkV138Plan26268ReplacementAuthorization(root, candidate as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
   })
   it.each([
@@ -27,7 +34,7 @@ describe("Plan 262-68 replacement authorization representation", () => {
     { frozenBounds: { ...createV138Plan26268ReplacementAuthorization().frozenBounds, minimumEffectiveAvailableBasisPoints: 2499 } },
     { canonicalAuthorizationWritten: true }, { canonicalSealWritten: true },
   ])("rejects nested policy or canonical-output drift", mutation => {
-    const candidate = { ...createV138Plan26268ReplacementAuthorization(), ...mutation }
+    const candidate = deepFreeze({ ...createV138Plan26268ReplacementAuthorization(), ...mutation })
     expect(() => checkV138Plan26268ReplacementAuthorization(root, candidate as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
   })
   it("rejects a dangling retired-route destination", () => {
@@ -38,7 +45,7 @@ describe("Plan 262-68 replacement authorization representation", () => {
   }, 30000)
   it("rejects a hostile toJSON projection", () => {
     const expected = createV138Plan26268ReplacementAuthorization()
-    const hostile = { ...expected, executable: true, toJSON: () => expected }
+    const hostile = Object.freeze({ ...expected, executable: true, toJSON: () => expected })
     expect(() => checkV138Plan26268ReplacementAuthorization(root, hostile as unknown as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
   })
   it.each([
@@ -67,6 +74,7 @@ describe("Plan 262-68 replacement authorization representation", () => {
   it.each([
     ['import "./lib/v1-38-plan-262-68-replacement-authorization"\n', "scripts/runtime-import-plan-262-68.js"],
     ['const stem = "./lib/v1-38-plan-262-68"; void import(stem + "-replacement-authorization.js")\n', "scripts/runtime-import-plan-262-68.mjs"],
+    ['const p = "./lib/v1-38-plan-" + "262-68"; void import(p + "-replacement-" + "authorization.js")\n', "scripts/runtime-import-plan-262-68-split.js"],
     ['export { createV138Plan26268ReplacementAuthorization } from "./lib/v1-38-plan-262-68-replacement-authorization.js"\n', "scripts/runtime-import-plan-262-68.cjs"],
   ])("rejects alternate module consumption", (source, repoPath) => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
@@ -81,5 +89,13 @@ describe("Plan 262-68 replacement authorization representation", () => {
     const reservation = path.join(directory, ".planning/artifacts/.v1.38-plan-262-57-route-reservation-v1")
     mkdirSync(reservation, { recursive: true }); writeFileSync(path.join(reservation, "claim.json"), "{}\n")
     expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
+  }, 30000)
+  it("rejects a configured path-alias import", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
+    execFileSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory])
+    writeFileSync(path.join(directory, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@plan26268": ["scripts/lib/v1-38-plan-262-68-replacement-authorization.ts"] } } }))
+    writeFileSync(path.join(directory, "scripts/runtime-import-plan-262-68-alias.ts"), 'import "@plan26268"\n')
+    execFileSync("git", ["add", "tsconfig.json", "scripts/runtime-import-plan-262-68-alias.ts"], { cwd: directory })
+    expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_IMPORT_BOUNDARY_INVALID")
   }, 30000)
 })
