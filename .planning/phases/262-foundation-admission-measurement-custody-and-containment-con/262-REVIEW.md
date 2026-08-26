@@ -1,105 +1,84 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-reviewed: 2026-08-26T06:30:19Z
+reviewed: 2026-08-26T07:02:32Z
 depth: standard
 files_reviewed: 2
 files_reviewed_list:
   - scripts/check-v1-38-plan-262-69-route-8-source.ts
   - scripts/check-v1-38-plan-262-69-route-8-source.test.ts
 findings:
-  critical: 7
-  warning: 2
+  critical: 5
+  warning: 1
   info: 0
-  total: 9
+  total: 6
 status: issues_found
 ---
 
 # Phase 262: Code Review Report
 
-**Reviewed:** 2026-08-26T06:30:19Z
+**Reviewed:** 2026-08-26T07:02:32Z
 **Depth:** standard
 **Files Reviewed:** 2
 **Status:** issues_found
 
 ## Summary
 
-The iteration-2 fix materially improves the sentinel, but it is not shippable. Prior CR-02, CR-03, CR-05, CR-06, and WR-02 are closed: the canonical local-seal v3 artifact is checked and bound; the 56/55 topology carries content and Git identities; production lifecycle paths are pinned and test injection is separated; normalized carriers are allowlisted; and VERIFICATION/BLOCKED is now mutually exclusive on the normal gaps path.
+The post-fix sentinel is still not runnable or safe to close on main HEAD `5ec30cf0`. The exact production normalization command fails in a clean disposable clone with `V138_ROUTE8_TOPOLOGY_REWRITTEN`: commit `7634f56d` changed `262-74-PLAN.md` after the Plan-73 summary commit that the checker treats as the latest permissible topology anchor. If that blocker is removed, the committed validator still parses as zero requirement rows because the parser rejects the canonical blank line after `## Requirement Coverage`.
 
-Prior CR-01, CR-04, CR-07, CR-08, and WR-01 remain unresolved in narrower forms. A complete-looking v13/v14 chain is still self-attested rather than producer-authenticated; validator provenance permits a same-commit validator and ambiguous duplicate rows; durable recovery accepts an attacker-authored journal; and the PASS closeout can report success while leaving real progress counters and a tracked BLOCKED carrier incorrect. Two new integration blockers also exist: the current already-normalized repository state is not migratable by the new normalizer, and Plan 74's exact result-check command cannot satisfy the CLI's required arguments.
+Prior CR-04 (checked STATE progress replacements), CR-05 (committed BLOCKED deletion/final XOR), CR-07 (four-option result CLI), and WR-02 (exact CLI option sets) are fixed in the reviewed code. Prior CR-01 remains unresolved because the new manifest proves only locally authored Git ordering and public hashes, not execution-producer authenticity. Prior CR-02's strict-descendant and duplicate-row checks are present, but the canonical validator schema is rejected. Prior CR-03's journal schema/inventory/intent checks are present, but a crash between transaction-directory creation and journal durability permanently wedges recovery. Prior CR-06's legacy migrator exists but is unreachable on current HEAD because topology and validator checks fail first. Prior WR-01 remains: production subprocesses run only against simplified fixtures that omit the canonical defects.
 
-Verification performed: the focused Vitest suite passed 17/17; `pnpm exec tsc --noEmit --pretty false` passed; `git diff --check` passed. The two reviewed files have no uncommitted diff. Pre-existing ROADMAP, STATE, and VALIDATION changes were preserved.
+Verification performed: 21 focused tests passed in bounded groups (17 plus the final 4); `pnpm exec tsc --noEmit --pretty false` passed; `git diff --check` passed. The production help and unknown/duplicate option surface behaved correctly. The exact canonical normalization command was run only in a disposable clean clone and failed as described. No source, test, ROADMAP, STATE, VALIDATION, binder, or result carrier was changed in the live checkout.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: Full-chain PASS evidence remains synthetically forgeable
+### CR-01: The execution-provenance manifest still permits a synthetic 540/540 PASS
 
 **Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:349-429`
-**Issue:** `checkedTerminalChain` verifies exact schemas, counters, cross-roots, and unkeyed content hashes, but never authenticates the Git blob/introducing commit or an execution-producer identity for route start, preflight, consumptions, calibration, reproduction, and terminal. Anyone able to write the canonical JSON files can calculate every accepted root from public data and manufacture a 540/540 PASS. The test does exactly that with its local `rooted` helper and hard-coded claims (`scripts/check-v1-38-plan-262-69-route-8-source.test.ts:215-266`), so the 17-test suite proves structural consistency, not real v13/v14 execution provenance.
-**Fix:** Bind every execution artifact to committed, unique introducing commits descended from the authorized Plan-72 execution commit, require clean working bytes equal those Git blobs, and authenticate a producer-issued execution/root manifest that a generic JSON writer cannot mint. Add mutations for uncommitted, rewritten, wrong-introducer, and same-commit synthetic chains.
+**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:355-399`
+**Issue:** The new check proves that self-rooted JSON artifacts were committed across at least two commits before a locally generated manifest and Plan-72 summary. It does not authenticate a runtime producer, command receipt, signature, or independently fixed producer blob. `producerBlob` is simply read from the attacker-selected manifest commit, and authorization/seal are not included in the clean artifact identity inventory. A generic writer can still create the seven claimed artifacts, commit them in two commits, calculate the public manifest root, and satisfy the lineage. The test fixture continues to synthesize the whole chain and manifest locally rather than invoke a v13/v14 producer (`scripts/check-v1-38-plan-262-69-route-8-source.test.ts:215-285`).
+**Fix:** Bind the manifest to a pre-authorized exact producer blob/root established before Plan 72 and to producer-issued execution receipts that cannot be recreated by this checker fixture. Include authorization and seal Git identities, the actual execution command/runtime identity, and immutable charged-attempt roots. Add a test showing that a generic two-commit JSON construction is rejected.
 
-### CR-02: Validator provenance is not strictly post-Plan-73 and accepts ambiguous requirement rows
-
-**Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:283-321`
-**Issue:** `merge-base --is-ancestor plan73Commit sourceCommit` accepts equality, so validation committed in the same commit as the Plan-73 summary is labeled post-Plan-73. Requirement parsing also silently keeps only the first row for each ID and checks `statuses.size === 16`; duplicate contradictory rows are ignored. Substring checks such as `Phase 263 planning authorized` also accept negated or contradictory surrounding prose. Consequently the provenance root can authenticate a report that was not produced after Plan 73 or that contains conflicting status claims.
-**Fix:** Require `sourceCommit !== plan73Commit` and strict descendant ancestry. Parse an exact validator schema/frontmatter with exactly 16 unique rows and no duplicates, then reject contradictory authority/gap tokens instead of using free-text substring presence.
-
-### CR-03: Recovery trusts a forgeable journal that can overwrite or delete arbitrary repository files
+### CR-02: Main HEAD is rejected by its own topology anchor
 
 **Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:557-614`
-**Issue:** Startup always recovers any existing `.planning/.v138-plan26274-transaction-v1/journal.json`. `parseJournal` checks only a public SHA-256 over attacker-controlled JSON; it does not enforce exact keys, allowed purpose, unique paths, canonical path sets, or a transaction identifier prepared by this process. A crafted repository journal can therefore make the next normalize/sentinel invocation overwrite or delete arbitrary in-repository files and, for a crafted commit block, ask the GSD commit helper to commit attacker-selected paths.
-**Fix:** Validate an exact journal schema and purpose-specific canonical path inventory, reject duplicates and unexpected commit files/messages, and bind recovery to a separately persisted transaction intent created by the sentinel. Add adversarial stale-journal tests for arbitrary targets, duplicate paths, malformed purposes, and forged commit inventories.
+**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:253-274`
+**Issue:** `topology` requires the latest commit for every canonical plan and summary to be an ancestor of the latest Plan-73 summary commit. The fix's own commit `7634f56d` modifies canonical `262-74-PLAN.md` after Plan-73 summary commit `4b7ff1ea`. Therefore the exact production `--normalize-post-validation` command on a clean clone of HEAD fails with `V138_ROUTE8_TOPOLOGY_REWRITTEN` before migration, normalization, binding, or sentinel execution can begin.
+**Fix:** Define a post-fix reviewed topology anchor/manifest that explicitly authenticates the amended Plan-74 and protocol bytes, or stop treating Plan 73 as the latest allowable commit for a sentinel plan that must legitimately receive reviewed command corrections. Add a clean-HEAD subprocess test, not a newly fabricated fixture history.
 
-### CR-04: PASS closeout does not update the real STATE progress counters
-
-**Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:830-835`
-**Issue:** The replacements require unindented lines such as `^completed_plans: 55$`, but canonical `STATE.md` stores these fields indented under `progress:` (`  completed_plans: 55`, `  completed_phases: 0`, `  percent: 98`). Unlike `replaceExactlyOnce`, these replacements do not verify that they matched. The driver can therefore commit a closeout receipt and return `passed` while canonical progress remains 55 plans, zero completed phases, and 98 percent. The test hides the defect by constructing a non-canonical unindented fixture at `scripts/check-v1-38-plan-262-69-route-8-source.test.ts:284-285` and never asserting the state counters.
-**Fix:** Parse and update STATE structurally, or use exact indentation-aware replacements with one-match assertions for every required field. Verify all phase name/status/stopped-at and progress fields against the canonical phase-complete contract, and test with byte-real canonical carrier fixtures.
-
-### CR-05: PASS does not durably enforce VERIFICATION/BLOCKED XOR
+### CR-03: The validator parser rejects the canonical Markdown table
 
 **Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:836-855,862-884`
-**Issue:** PASS schedules `262-74-BLOCKED.md` for deletion, but `preparePassCloseout` excludes every null/deletion change from the commit file list. Recovery also skips HEAD verification for null changes, and `checkCommittedCloseout` neither checks the blocked path nor includes it in Git cleanliness checks. If a tracked fallback exists, PASS deletes it only in the working tree, commits the remaining closeout, and subsequently returns idempotent `passed`; the tracked blocked carrier can reappear on checkout or remain as an unnoticed deletion.
-**Fix:** Include deletions in the commit inventory, verify `HEAD:<blocked>` is absent after commit, include BLOCKED in closeout cleanliness/idempotence checks, and test PASS starting from a tracked fallback artifact plus crash recovery at each deletion/commit boundary.
+**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:297-304`
+**Issue:** The coverage regex requires a table row immediately after `## Requirement Coverage\n`. Canonical `262-VALIDATION.md` has the normal blank line before its table, so the exact regex yields `coverageBytes: 0` and `rows: 0`; the checker then throws `V138_ROUTE8_VALIDATOR_SCHEMA_INVALID`. The fixture generator deliberately emits no blank line at `scripts/check-v1-38-plan-262-69-route-8-source.test.ts:211`, masking the production failure.
+**Fix:** Parse Markdown structurally or allow the canonical blank line and require the exact header/separator plus exactly 16 data rows. Test against the committed canonical validation bytes for both obstruction and terminal schemas.
 
-### CR-06: The current repository's valid prior normalization cannot be upgraded
-
-**Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:666-683`
-**Issue:** The working repository already contains the earlier normalized ROADMAP/STATE carriers and an older `phase-262-route8-post-validation` marker in VALIDATION. The new normalizer accepts validation only when bytes equal the committed raw validator source or the newly rendered full normalization. The current authenticated older normalization is neither, so the protocol's required canonical `--normalize-post-validation` invocation fails with `V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID` before it can install the fixed schema. No migration/recovery path exists.
-**Fix:** Define and authenticate the previous normalized schema, then permit a one-way atomic migration from that exact state to the new schema; alternatively provide a checked recovery command that reconstructs committed validator bytes without requiring manual carrier edits. Add a fixture made from the current ROADMAP/STATE/VALIDATION bytes.
-
-### CR-07: Plan 74's exact result-check command cannot invoke the production CLI
+### CR-04: A crash before journal creation permanently wedges transaction recovery
 
 **Classification:** BLOCKER
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:995-996`
-**Issue:** The production `--check-plan-262-74-result` branch requires `--phase-dir`, `--requirements`, `--roadmap`, `--state`, and `--validation` in addition to binder/result paths. The exact automated command in `262-74-PLAN.md:126` supplies only binder, verification, summary, and blocked, so it deterministically fails with `V138_ROUTE8_ARGUMENTS_INVALID`. The test-only API bypasses CLI parsing and therefore does not cover the published production command.
-**Fix:** Either derive the five canonical lifecycle paths internally for this production command or update and execute the authoritative Plan-74 command with all required canonical arguments. Add subprocess tests for every exact protocol/plan CLI command rather than calling only exported test helpers.
+**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:663-677,754-767`
+**Issue:** Installation durably writes the Git-dir intent, creates and fsyncs the repository transaction directory, and only then creates `journal.json`. A crash or power loss after `mkdirSync`/directory fsync but before the journal is durably present leaves both the directory and intent. On restart, `recoverTransaction` sees the directory and unconditionally reads the missing journal, producing `V138_ROUTE8_TRANSACTION_INVALID`; it cannot determine that no canonical change was installed or clean up/retry. Existing recovery tests inject faults only after artifact installation, not at transaction setup boundaries.
+**Fix:** Make the prepared journal durable before publishing the transaction directory (for example, build a private temporary directory and atomically rename it), or recognize an authenticated intent plus missing journal as a pre-install state that can be safely removed. Add abrupt child-process termination tests after intent write, directory creation, journal write, and each fsync boundary.
+
+### CR-05: PASS installs completion carriers before verification and summary
+
+**Classification:** BLOCKER
+**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:1003-1010`
+**Issue:** `baseChanges` orders REQUIREMENTS, ROADMAP, and STATE before VALIDATION, VERIFICATION, and `262-74-SUMMARY.md`; recovery installs changes in array order. This directly violates the Plan-74 contract requiring authenticated verification first, summary second, and only then progress/phase completion. A crash after the early installs can expose ADMIT-03 complete, Phase 263 current/authorized, and 56/56 progress while verification and the Plan-74 summary are still absent. A recovery journal does not make those intermediate carrier states invisible to ordinary readers.
+**Fix:** Install verification first, then summary, then requirements/progress/completion carriers, and make readers fail closed while an authenticated transaction is pending. Prefer an atomically replaced generation pointer if cross-file visibility must be atomic. Add crash-observation tests after every PASS install boundary that assert no summary means no completed progress.
 
 ## Warnings
 
-### WR-01: PASS and recovery tests use simplified carriers and bypass production dispatch
+### WR-01: Exact subprocess tests do not use exact repository carrier bytes or history
 
 **Classification:** WARNING
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.test.ts:268-305,424-475`
-**Issue:** The lifecycle fixture uses placeholder plan/summary contents, a flat STATE frontmatter unlike the canonical nested progress map, synthetic execution artifacts, alternate test paths, and direct test-only functions. It never runs the exact published subprocess commands, never starts PASS from a tracked BLOCKED file, and never tests migration from the repository's existing normalized schema. This is why CR-04 through CR-07 pass unnoticed.
-**Fix:** Add byte-real carrier fixtures and subprocess-level production CLI tests, plus tracked-deletion, old-schema migration, strict post-Plan73, and crash-recovery matrices.
-
-### WR-02: CLI parsing silently accepts duplicate and unknown options
-
-**Classification:** WARNING
-**File:** `scripts/check-v1-38-plan-262-69-route-8-source.ts:968-996`
-**Issue:** `parse` overwrites duplicate keys in a `Map`, and each command ignores any extra recognized-looking pairs. The supposedly exact production surface therefore accepts duplicate canonical arguments and undocumented options such as caller-selected temp/status flags even though Plan 74 says those inputs must not be accepted.
-**Fix:** Define an exact option set per command, reject unknown and duplicate keys, and add CLI tests for every forbidden extra argument.
+**File:** `scripts/check-v1-38-plan-262-69-route-8-source.test.ts:203-345,564-591`
+**Issue:** The exact CLI argument test is subprocess-level, but its repository is still a handcrafted fixture: validation omits canonical Markdown spacing, execution evidence is synthetically authored, and Plan 74 is never changed after the Plan-73 anchor. Thus it proves argument dispatch while missing both production command blockers and the remaining synthetic-provenance flaw.
+**Fix:** Add a disposable clone test at the reviewed HEAD with only branch-specific evidence substitutions, and assert the full documented normalization/check/bind/check/sentinel/result sequence. Keep smaller fixtures for mutation isolation, but do not treat them as production-path proof.
 
 ---
 
-_Reviewed: 2026-08-26T06:30:19Z_
+_Reviewed: 2026-08-26T07:02:32Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
