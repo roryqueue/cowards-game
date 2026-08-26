@@ -75,7 +75,7 @@ const phaseBase = ".planning/phases/262-foundation-admission-measurement-custody
 const localSealPath = ".planning/artifacts/v1.38-local-seal-independent-verification-v3.json"
 const executionProvenancePath = ".planning/artifacts/v1.38-plan-262-72-execution-provenance-v1.json"
 const reviewedPlan74Identity = Object.freeze({
-  commit: "7634f56da9d775949648609a33d62f0e669b0a8a",
+  commit: "7634f56dcc9529cd56ed487257d4d30cce7b50a1",
   blob: "7e4e5ae4d9d9d57659b575b28fc33939099e94a3",
   protocolBlob: "8049d3a8b40b7b3585c4a4dfa3554e27fc9b342b",
 })
