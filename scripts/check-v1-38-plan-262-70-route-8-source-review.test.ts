@@ -67,7 +67,7 @@ describe("Plan 262-70 independent Route-8 source review", () => {
       ["authority", value => { value.authority.phase263Authorized = true }],
     ]
     for (const [name, mutate] of mutations) {
-      const candidate = cloneValue(review)
+      const candidate: any = cloneValue(review)
       mutate(candidate)
       candidate.reviewRoot = reviewer.computeV138Plan26270ReviewRoot(candidate)
       expect(() => reviewer.validateV138Plan26270Review(candidate, review), name)
@@ -98,7 +98,7 @@ describe("Plan 262-70 independent Route-8 source review", () => {
     expect(report).toContain("PASS — exact zero findings")
     expect(report).toContain("non-authorizing")
     expect(reviewer.validateV138Plan26270ReviewPair(review, report, review)).toBe(true)
-    const bad = cloneValue(review)
+    const bad: any = cloneValue(review)
     bad.findings = [{ code: "INJECTED", detail: "synthetic" }]
     bad.findingCount = 1
     bad.sourceReviewPassed = false
