@@ -1,10 +1,15 @@
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import { checkV138Plan26268ReplacementAuthorization } from "./check-v1-38-plan-262-68-replacement-authorization.js"
 import { createV138Plan26268ReplacementAuthorization } from "./lib/v1-38-plan-262-68-replacement-authorization.js"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const copies: string[] = []
+afterEach(() => { while (copies.length) rmSync(copies.pop()!, { recursive: true, force: true }) })
 describe("Plan 262-68 replacement authorization representation", () => {
   it("passes only as non-executable denied authority", () => expect(checkV138Plan26268ReplacementAuthorization(root)).toMatchObject({ status: "passed", authority: "denied" }))
   it.each([
@@ -25,4 +30,10 @@ describe("Plan 262-68 replacement authorization representation", () => {
     const candidate = { ...createV138Plan26268ReplacementAuthorization(), ...mutation }
     expect(() => checkV138Plan26268ReplacementAuthorization(root, candidate as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
   })
+  it("rejects a dangling retired-route destination", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
+    execFileSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory])
+    symlinkSync("/missing", path.join(directory, ".planning/artifacts/v1.38-plan-262-57-route-start-v1.json"))
+    expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
+  }, 30000)
 })
