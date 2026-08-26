@@ -1,5 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { createHash } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 import { execFileSync } from "node:child_process"
 import {
   chmodSync,
@@ -73,6 +73,7 @@ const writeExclusive = (file: string, bytes: string): void => {
 
 const phaseBase = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const localSealPath = ".planning/artifacts/v1.38-local-seal-independent-verification-v3.json"
+const executionProvenancePath = ".planning/artifacts/v1.38-plan-262-72-execution-provenance-v1.json"
 const immutable = new Map<string, string>([
   [`${phaseBase}/archived/262-48-ROUTE-V9-HISTORICAL.md`, "d531e64db2be1d804248f390c1cda215f3d237cdc58d40498e057bf2dc5c32f0"],
   [`${phaseBase}/archived/262-48-HISTORICAL.md`, "8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1"],
@@ -154,6 +155,7 @@ interface NormalizedMarker {
   activationSha256: Sha256 | null
   dispositionRoot: Sha256
   terminalRoot: Sha256 | null
+  executionProvenanceRoot: Sha256 | null
   dispositionSha256: Sha256
   localSealPath: typeof localSealPath
   localSealSha256: Sha256
@@ -191,7 +193,9 @@ const canonicalCloseout = ".planning/artifacts/v1.38-plan-262-74-closeout-v1.jso
 const TEST_ONLY = Symbol("V138_PLAN_262_74_TEST_ONLY")
 interface TestMode { testOnlyToken?: symbol }
 const requireCanonical = (args: LifecycleArgs, mode: TestMode = {}): void => {
-  if (mode.testOnlyToken !== TEST_ONLY && stable(args) !== stable(canonicalLifecycleArgs)) {
+  const lifecycle = { phaseDir: args.phaseDir, requirements: args.requirements, roadmap: args.roadmap,
+    state: args.state, validation: args.validation, disposition: args.disposition, activationRoot: args.activationRoot }
+  if (mode.testOnlyToken !== TEST_ONLY && stable(lifecycle) !== stable(canonicalLifecycleArgs)) {
     fail("V138_ROUTE8_CANONICAL_PATH_REQUIRED")
   }
 }
@@ -289,13 +293,14 @@ const checkedValidator = (root: string, args: LifecycleArgs,
   if (!/^[0-9a-f]{40}$/u.test(sourceCommit) || !/^[0-9a-f]{40}$/u.test(sourceBlob)) {
     fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
   }
-  try { execFileSync("git", ["merge-base", "--is-ancestor", plan73Commit, sourceCommit], { cwd: root, stdio: "ignore" }) }
-  catch { return fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID") }
+  strictAncestor(root, plan73Commit, sourceCommit, "V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
   const sourceBytes = gitBytes(root, ["show", `HEAD:${relative}`]).toString("utf8")
-  const rows = [...sourceBytes.matchAll(/^\| (ADMIT-0[1-4]|MEAS-(?:0[1-9]|10)|SEAL-01|DECI-02) \| ([^|]+) \|/gmu)]
-  const statuses = new Map<string, string>()
-  for (const match of rows) if (!statuses.has(match[1]!)) statuses.set(match[1]!, match[2]!.trim())
-  if (statuses.size !== 16 || !sourceBytes.includes("last_audited: 2026-08-26") ||
+  const coverage = /^## Requirement Coverage\n((?:\|.*\n)+)/mu.exec(sourceBytes)?.[1] ?? ""
+  const rows = [...coverage.matchAll(/^\| (ADMIT-0[1-4]|MEAS-(?:0[1-9]|10)|SEAL-01|DECI-02) \| ([^|]+) \|/gmu)]
+  const statuses = new Map(rows.map(match => [match[1]!, match[2]!.trim()]))
+  if (rows.length !== 16 || statuses.size !== 16 ||
+      [...sourceBytes.matchAll(/^status:\s*(partial|passed)$/gmu)].length !== 1 ||
+      !sourceBytes.includes("last_audited: 2026-08-26") ||
       !sourceBytes.includes("Local-seal v3")) fail("V138_ROUTE8_VALIDATOR_SCHEMA_INVALID")
   const obstruction = branch === "obstruction"
   const admit = statuses.get("ADMIT-03") ?? ""
@@ -303,11 +308,12 @@ const checkedValidator = (root: string, args: LifecycleArgs,
     .every(([, status]) => status.startsWith("COVERED"))
   const semantic = obstruction ? /^status:\s*partial$/mu.test(sourceBytes) &&
     admit.includes("PARTIAL") && admit.includes("BLOCKED") && otherCovered &&
-    sourceBytes.includes("Coverage is 15 covered and 1 partial-blocked") &&
-    sourceBytes.includes("cannot authorize Phase 263 or any downstream/live capability") &&
+    /^Coverage is 15 covered and 1 partial-blocked\./mu.test(sourceBytes) &&
+    /^.*cannot authorize Phase 263 or any downstream\/live capability\.$/mu.test(sourceBytes) &&
     sourceBytes.includes("| ADMIT-03 | BLOCKER |") : /^status:\s*passed$/mu.test(sourceBytes) &&
-    admit.startsWith("COVERED") && otherCovered && sourceBytes.includes("Coverage is 16 covered and 0 gaps") &&
-    sourceBytes.includes("Phase 263 planning authorized") && sourceBytes.includes("downstream authority remains denied")
+    admit.startsWith("COVERED") && otherCovered && /^Coverage is 16 covered and 0 gaps\.$/mu.test(sourceBytes) &&
+    /^Phase 263 planning authorized\.$/mu.test(sourceBytes) && /^Downstream authority remains denied\.$/mu.test(sourceBytes) &&
+    !/(?:cannot|not) authorize Phase 263|Phase 263 (?:is )?denied/iu.test(sourceBytes)
   if (!semantic) fail("V138_ROUTE8_VALIDATOR_SEMANTICS_INVALID")
   const body = { schemaVersion: "v1.38-plan-262-post-plan73-validator-v1" as const,
     sourceCommit, sourceBlob, sourceSha256: digest(sourceBytes), plan73Commit,
@@ -346,7 +352,54 @@ const checkedLocalSeal = (root: string) => {
     localSealProtocolRoot: artifactValue.localSealProtocolRoot as Sha256,
     assuranceClass: "single_operator_local_seal_v1" as const })
 }
+interface ExecutionIdentity { path: string; blob: string; introducingCommit: string; sha256: Sha256; bytes: number }
+const strictAncestor = (root: string, ancestor: string, descendant: string, code: string): void => {
+  if (ancestor === descendant) fail(code)
+  try { execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: root, stdio: "ignore" }) }
+  catch { fail(code) }
+}
+const checkedExecutionProvenance = (root: string) => {
+  const artifactPaths = [V138_ROUTE_8_PATHS.routeStart, V138_ROUTE_8_PATHS.preflight,
+    V138_ROUTE_8_PATHS.calibrationConsumption, V138_ROUTE_8_PATHS.calibration,
+    V138_ROUTE_8_PATHS.reproductionConsumption, V138_ROUTE_8_PATHS.reproduction,
+    V138_ROUTE_8_PATHS.terminal]
+  if (gitText(root, ["status", "--porcelain=v1", "--", ...artifactPaths, executionProvenancePath]) !== "") {
+    fail("V138_ROUTE8_EXECUTION_PROVENANCE_DIRTY")
+  }
+  const plan72Plan = `${phaseBase}/262-72-PLAN.md`
+  const plan72Summary = `${phaseBase}/262-72-SUMMARY.md`
+  const authorizedPlan72Commit = gitText(root, ["log", "-1", "--format=%H", "--", plan72Plan])
+  const summaryCommit = gitText(root, ["log", "-1", "--format=%H", "--", plan72Summary])
+  const manifestCommit = gitText(root, ["log", "-1", "--format=%H", "--", executionProvenancePath])
+  strictAncestor(root, authorizedPlan72Commit, manifestCommit, "V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+  strictAncestor(root, manifestCommit, summaryCommit, "V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+  const identities: ExecutionIdentity[] = artifactPaths.map(repoPath => {
+    const introducingCommit = gitText(root, ["log", "-1", "--format=%H", "--", repoPath])
+    strictAncestor(root, authorizedPlan72Commit, introducingCommit, "V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+    if (introducingCommit !== manifestCommit) {
+      try { execFileSync("git", ["merge-base", "--is-ancestor", introducingCommit, manifestCommit],
+        { cwd: root, stdio: "ignore" }) } catch { fail("V138_ROUTE8_EXECUTION_PROVENANCE_INVALID") }
+    } else fail("V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+    const bytes = readFileSync(actual(root, repoPath))
+    return { path: repoPath, blob: gitText(root, ["rev-parse", `HEAD:${repoPath}`]), introducingCommit,
+      sha256: digest(bytes), bytes: bytes.length }
+  })
+  if (new Set(identities.map(identity => identity.introducingCommit)).size < 2) {
+    fail("V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+  }
+  const producerPath = "scripts/lib/v1-38-route-8-source.ts"
+  const body = { schemaVersion: "v1.38-plan-262-72-execution-provenance-v1" as const,
+    producerPath, producerBlob: gitText(root, ["rev-parse", `${manifestCommit}:${producerPath}`]),
+    authorizedPlan72Commit, artifactIdentities: identities,
+    executionRoot: digest(`v138-route8-execution-artifacts-v1\0${stable(identities)}`) }
+  const expected = { ...body,
+    manifestRoot: digest(`v138-route8-execution-provenance-v1\0${stable(body)}`) }
+  if (stable(readJson(actual(root, executionProvenancePath), "V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")) !==
+      stable(expected)) fail("V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+  return Object.freeze({ executionProvenanceRoot: expected.manifestRoot })
+}
 const checkedTerminalChain = (root: string) => {
+  const provenance = checkedExecutionProvenance(root)
   const authorization = readJson(actual(root, V138_ROUTE_8_PATHS.authorization), "V138_ROUTE8_AUTHORIZATION_INVALID")
   const seal = readJson(actual(root, V138_ROUTE_8_PATHS.seal), "V138_ROUTE8_SEAL_INVALID")
   checkV138Route8AuthoritySeal(authorization, seal)
@@ -426,23 +479,29 @@ const checkedTerminalChain = (root: string) => {
       terminal.reproductionConsumptionRoot !== reproductionConsumption.markerRoot ||
       terminal.reproductionRoot !== reproduction.receiptRoot) fail("V138_ROUTE8_TERMINAL_INVALID")
   return Object.freeze({ terminal: { disposition: "reproduction_passed", freshCharged: 540,
-    freshAccepted: 540, satisfiesAdmit03: true }, terminalRoot: terminal.terminalRoot as Sha256 })
+    freshAccepted: 540, satisfiesAdmit03: true }, terminalRoot: terminal.terminalRoot as Sha256,
+    executionProvenanceRoot: provenance.executionProvenanceRoot })
 }
 const checkedDisposition = (root: string, args: LifecycleArgs) => {
   if (args.activationRoot !== "auto" || actual(root, args.disposition) !== actual(root, V138_ROUTE_8_PATHS.disposition)) {
     fail("V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
   }
   const checkedBranch = checkV138Plan26272Disposition({ repoRoot: root })
+  if (checkedBranch === "obstruction" && safe(actual(root, executionProvenancePath)) !== "missing") {
+    fail("V138_ROUTE8_EXECUTION_PROVENANCE_INVALID")
+  }
   const localSeal = checkedLocalSeal(root)
   const dispositionBytes = readText(actual(root, args.disposition), "V138_ROUTE8_DISPOSITION_INVALID")
   let disposition: Record<string, unknown>
   try { disposition = JSON.parse(dispositionBytes) as Record<string, unknown> } catch { return fail("V138_ROUTE8_DISPOSITION_INVALID") }
   let terminal: { disposition: string; freshCharged: number; freshAccepted: number; satisfiesAdmit03: boolean } | null = null
   let terminalRoot: Sha256 | null = null
+  let executionProvenanceRoot: Sha256 | null = null
   if (checkedBranch === "terminal") {
     const chain = checkedTerminalChain(root)
     terminal = chain.terminal
     terminalRoot = chain.terminalRoot
+    executionProvenanceRoot = chain.executionProvenanceRoot
   }
   const derived = deriveV138Route8Activation({
     branch: checkedBranch === "obstruction" ? "pre_start_obstruction" : "terminal",
@@ -460,7 +519,7 @@ const checkedDisposition = (root: string, args: LifecycleArgs) => {
     ...localSeal,
     activationRoot: derived.activation === null ? null : V138_ROUTE_8_PATHS.activation,
     activationSha256: derived.activation === null ? null : digest(readText(activationPath, "V138_ROUTE8_ACTIVATION_SELECTION_INVALID")),
-    terminalRoot,
+    terminalRoot, executionProvenanceRoot,
     freshCharged: (terminal?.freshCharged ?? 0) as 0 | 540,
     freshAccepted: (terminal?.freshAccepted ?? 0) as 0 | 540 })
 }
@@ -537,11 +596,16 @@ interface InstallOptions extends TestMode { faultAfterInstall?: number; crashAft
 interface TransactionJournal {
   schemaVersion: "v1.38-plan-262-74-transaction-v1"
   purpose: "normalization" | "gaps" | "pass-closeout"
+  nonce: string
+  testOnly: boolean
+  startHead: string
   changes: readonly { path: string; before: string | null; after: string | null }[]
   commit: { message: string; files: readonly string[] } | null
   journalRoot: Sha256
 }
 const transactionDirPath = (root: string): string => actual(root, ".planning/.v138-plan26274-transaction-v1")
+const transactionIntentPath = (root: string): string => path.resolve(root,
+  gitText(root, ["rev-parse", "--git-path", "v138-plan26274-transaction-intent-v1.json"]))
 const fsyncDirectory = (directory: string): void => {
   const descriptor = openSync(directory, constants.O_RDONLY)
   try { fsyncSync(descriptor) } finally { closeSync(descriptor) }
@@ -555,18 +619,71 @@ const durableReplace = (file: string, bytes: string): void => {
   fsyncDirectory(path.dirname(file))
 }
 const parseJournal = (bytes: string): TransactionJournal => {
-  let value: TransactionJournal
-  try { value = JSON.parse(bytes) as TransactionJournal } catch { return fail("V138_ROUTE8_TRANSACTION_INVALID") }
+  let parsed: unknown
+  try { parsed = JSON.parse(bytes) } catch { return fail("V138_ROUTE8_TRANSACTION_INVALID") }
+  const value = exactRecord(parsed, ["schemaVersion", "purpose", "nonce", "testOnly", "startHead", "changes", "commit", "journalRoot"],
+    "V138_ROUTE8_TRANSACTION_INVALID") as unknown as TransactionJournal
   const { journalRoot, ...body } = value
-  if (value.schemaVersion !== "v1.38-plan-262-74-transaction-v1" || !Array.isArray(value.changes) ||
+  if (value.schemaVersion !== "v1.38-plan-262-74-transaction-v1" ||
+      !["normalization", "gaps", "pass-closeout"].includes(value.purpose) ||
+      !/^[0-9a-f]{64}$/u.test(value.nonce) || typeof value.testOnly !== "boolean" ||
+      !/^[0-9a-f]{40}$/u.test(value.startHead) || !Array.isArray(value.changes) ||
       journalRoot !== digest(`v138-route8-transaction-v1\0${stable(body)}`)) fail("V138_ROUTE8_TRANSACTION_INVALID")
+  const paths = new Set<string>()
+  for (const change of value.changes) {
+    exactRecord(change, ["path", "before", "after"], "V138_ROUTE8_TRANSACTION_INVALID")
+    if (typeof change.path !== "string" || paths.has(change.path) ||
+        ![change.before, change.after].every(item => item === null || typeof item === "string")) {
+      fail("V138_ROUTE8_TRANSACTION_INVALID")
+    }
+    paths.add(change.path)
+  }
+  if (value.commit !== null) exactRecord(value.commit, ["message", "files"], "V138_ROUTE8_TRANSACTION_INVALID")
   return value
+}
+const validateJournalInventory = (journal: TransactionJournal): void => {
+  const paths = journal.changes.map(change => change.path).sort()
+  if (journal.testOnly) {
+    if (journal.commit !== null && (journal.commit.message !== "docs(262-74): complete authenticated verification sentinel" ||
+        stable([...journal.commit.files].sort()) !== stable(paths))) fail("V138_ROUTE8_TRANSACTION_INVALID")
+    return
+  }
+  const expected = journal.purpose === "normalization" ?
+    [canonicalLifecycleArgs.roadmap, canonicalLifecycleArgs.state, canonicalLifecycleArgs.validation] :
+    journal.purpose === "gaps" ? [canonicalVerification, canonicalBlocked] :
+    [canonicalLifecycleArgs.requirements, canonicalLifecycleArgs.roadmap, canonicalLifecycleArgs.state,
+      canonicalLifecycleArgs.validation, canonicalVerification, canonicalSummary, canonicalBlocked,
+      V138_ROUTE_8_PATHS.binder, canonicalCloseout]
+  if (stable(paths) !== stable([...expected].sort())) fail("V138_ROUTE8_TRANSACTION_INVALID")
+  if (journal.purpose === "pass-closeout") {
+    if (journal.commit === null || journal.commit.message !== "docs(262-74): complete authenticated verification sentinel" ||
+        stable([...journal.commit.files].sort()) !== stable([...expected].sort())) fail("V138_ROUTE8_TRANSACTION_INVALID")
+  } else if (journal.commit !== null) fail("V138_ROUTE8_TRANSACTION_INVALID")
 }
 const recoverTransaction = (root: string, options: InstallOptions = {}): void => {
   const directory = transactionDirPath(root)
-  if (safe(directory) === "missing") return
+  const intentPath = transactionIntentPath(root)
+  if (safe(directory) === "missing") {
+    if (safe(intentPath) === "regular") rmSync(intentPath)
+    return
+  }
   if (!lstatSync(directory).isDirectory() || lstatSync(directory).isSymbolicLink()) fail("V138_ROUTE8_TRANSACTION_INVALID")
   const journal = parseJournal(readText(path.join(directory, "journal.json"), "V138_ROUTE8_TRANSACTION_INVALID"))
+  const intent = exactRecord(readJson(intentPath, "V138_ROUTE8_TRANSACTION_INVALID"),
+    ["schemaVersion", "nonce", "journalRoot", "intentRoot"], "V138_ROUTE8_TRANSACTION_INVALID")
+  const { intentRoot, ...intentBody } = intent
+  if (intent.schemaVersion !== "v1.38-plan-262-74-transaction-intent-v1" || intent.nonce !== journal.nonce ||
+      intent.journalRoot !== journal.journalRoot ||
+      intentRoot !== digest(`v138-route8-transaction-intent-v1\0${stable(intentBody)}`)) fail("V138_ROUTE8_TRANSACTION_INVALID")
+  validateJournalInventory(journal)
+  if (journal.testOnly !== (options.testOnlyToken === TEST_ONLY)) fail("V138_ROUTE8_TRANSACTION_INVALID")
+  const currentHead = gitText(root, ["rev-parse", "HEAD"])
+  if (currentHead !== journal.startHead) {
+    if (journal.commit === null || gitText(root, ["rev-parse", "HEAD^"]) !== journal.startHead ||
+        gitText(root, ["show", "-s", "--format=%s", "HEAD"]) !== journal.commit.message) {
+      fail("V138_ROUTE8_TRANSACTION_CONFLICT")
+    }
+  }
   let installed = 0
   for (const change of journal.changes) {
     const file = actual(root, change.path)
@@ -603,7 +720,11 @@ const recoverTransaction = (root: string, options: InstallOptions = {}): void =>
       }
     }
     for (const change of journal.changes) {
-      if (change.after === null) continue
+      if (change.after === null) {
+        try { execFileSync("git", ["cat-file", "-e", `HEAD:${change.path}`], { cwd: root, stdio: "ignore" }) }
+        catch { continue }
+        fail("V138_ROUTE8_CLOSEOUT_COMMIT_INVALID")
+      }
       const committed = gitBytes(root, ["show", `HEAD:${change.path}`])
       if (!committed.equals(Buffer.from(change.after, "base64"))) fail("V138_ROUTE8_CLOSEOUT_COMMIT_INVALID")
     }
@@ -611,19 +732,31 @@ const recoverTransaction = (root: string, options: InstallOptions = {}): void =>
   }
   rmSync(directory, { recursive: true })
   fsyncDirectory(path.dirname(directory))
+  rmSync(intentPath)
+  fsyncDirectory(path.dirname(intentPath))
 }
 const installTransaction = (root: string, purpose: TransactionJournal["purpose"],
   changes: readonly Replacement[], options: InstallOptions = {},
   commit: TransactionJournal["commit"] = null): void => {
-  recoverTransaction(root)
+  recoverTransaction(root, options)
   const seen = new Set(changes.map(change => change.file))
   if (seen.size !== changes.length) fail("V138_ROUTE8_TRANSACTION_INVALID")
-  const body = { schemaVersion: "v1.38-plan-262-74-transaction-v1" as const, purpose,
+  const nonce = randomBytes(32).toString("hex")
+  const body = { schemaVersion: "v1.38-plan-262-74-transaction-v1" as const, purpose, nonce,
+    testOnly: options.testOnlyToken === TEST_ONLY,
+    startHead: gitText(root, ["rev-parse", "HEAD"]),
     changes: changes.map(change => ({ path: path.relative(path.resolve(root), change.file),
       before: safe(change.file) === "regular" ? Buffer.from(readFileSync(change.file)).toString("base64") : null,
       after: change.bytes === null ? null : Buffer.from(change.bytes).toString("base64") })), commit }
   const journal: TransactionJournal = { ...body,
     journalRoot: digest(`v138-route8-transaction-v1\0${stable(body)}`) }
+  validateJournalInventory(journal)
+  const intentBody = { schemaVersion: "v1.38-plan-262-74-transaction-intent-v1", nonce,
+    journalRoot: journal.journalRoot }
+  const intentPath = transactionIntentPath(root)
+  writeFileSync(intentPath, stable({ ...intentBody,
+    intentRoot: digest(`v138-route8-transaction-intent-v1\0${stable(intentBody)}`) }), { flag: "wx", mode: 0o600 })
+  fsyncDirectory(path.dirname(intentPath))
   const directory = transactionDirPath(root)
   mkdirSync(directory, { mode: 0o700 })
   fsyncDirectory(path.dirname(directory))
@@ -649,7 +782,7 @@ const snapshot = (root: string, args: LifecycleArgs) => {
     branch: disposition.branch, activationRoot: disposition.activationRoot,
     activationSha256: disposition.activationSha256,
     dispositionRoot: disposition.disposition.dispositionRoot as Sha256,
-    terminalRoot: disposition.terminalRoot,
+    terminalRoot: disposition.terminalRoot, executionProvenanceRoot: disposition.executionProvenanceRoot,
     dispositionSha256: digest(disposition.dispositionBytes), requirementsSha256: digest(requirementsBytes),
     localSealPath, localSealSha256: disposition.localSealSha256,
     localSealVerificationRoot: disposition.localSealVerificationRoot,
@@ -663,6 +796,30 @@ const snapshot = (root: string, args: LifecycleArgs) => {
     downstreamAuthorityDenied: true }
   return { marker, roadmapPath, roadmapBytes, statePath, stateBytes, validator }
 }
+const authenticatedLegacyNormalization = (root: string, args: LifecycleArgs,
+  prepared: ReturnType<typeof snapshot>, validation: string): boolean => {
+  const matches = [...validation.matchAll(new RegExp(`<!-- ${normalizedTag}: (\\{[^\\n]+\\}) -->`, "g"))]
+  if (matches.length !== 1 || validation.includes(validatorTag)) return false
+  let marker: Record<string, unknown>
+  try { marker = exactRecord(JSON.parse(matches[0]![1]!), ["schemaVersion", "totalPlans",
+    "trustworthySummaries", "soleIncomplete", "branch", "activationRoot", "dispositionSha256",
+    "requirementsSha256", "roadmapSha256", "stateSha256", "admit03", "seal01",
+    "phase263PlanningAuthorized", "downstreamAuthorityDenied"], "V138_ROUTE8_LEGACY_NORMALIZATION_INVALID") }
+  catch { return false }
+  const base = (text: string): string => text.replace(/^.*phase-262-successor-status.*\n?/gmu, "")
+    .replace(new RegExp(`^.*${normalizedTag}.*\\n?`, "gmu"), "").trimEnd()
+  const correlated = marker.schemaVersion === "v1.38-plan-262-74-normalized-validation-v1" &&
+    marker.totalPlans === 56 && marker.trustworthySummaries === 55 && marker.soleIncomplete === "262-74" &&
+    marker.branch === prepared.marker.branch && marker.activationRoot === prepared.marker.activationRoot &&
+    marker.dispositionSha256 === prepared.marker.dispositionSha256 &&
+    marker.requirementsSha256 === prepared.marker.requirementsSha256 &&
+    marker.roadmapSha256 === digest(readText(actual(root, args.roadmap), "V138_ROUTE8_LEGACY_NORMALIZATION_INVALID")) &&
+    marker.stateSha256 === digest(readText(actual(root, args.state), "V138_ROUTE8_LEGACY_NORMALIZATION_INVALID")) &&
+    marker.admit03 === prepared.marker.admit03 && marker.seal01 === "passed_reduced_assurance" &&
+    marker.phase263PlanningAuthorized === prepared.marker.phase263PlanningAuthorized &&
+    marker.downstreamAuthorityDenied === true && base(validation) === base(prepared.validator.sourceBytes)
+  return correlated
+}
 export const normalizeV138PostValidation = (root: string, args: LifecycleArgs,
   options: InstallOptions = {}): NormalizedMarker => {
   requireCanonical(args, options)
@@ -673,7 +830,8 @@ export const normalizeV138PostValidation = (root: string, args: LifecycleArgs,
   const normalizedValidation = `${prepared.validator.sourceBytes.replace(/^.*phase-262-successor-status.*\n?/gmu, "")
     .replace(new RegExp(`^.*(?:${normalizedTag}|${validatorTag}).*\\n?`, "gmu"), "").trimEnd()}\n\n` +
     `${validatorLine}\n${markerLine(prepared.marker)}\n`
-  if (validation !== prepared.validator.sourceBytes && validation !== normalizedValidation) {
+  if (validation !== prepared.validator.sourceBytes && validation !== normalizedValidation &&
+      !authenticatedLegacyNormalization(root, args, prepared, validation)) {
     fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
   }
   installTransaction(root, "normalization", [
@@ -748,7 +906,7 @@ export const verifyV138Plan26274Input = (value: unknown): VerifierReport => {
   const input = exactRecord(value, ["schemaVersion", "totalPlans", "trustworthySummaries",
     "soleIncomplete", "planIdentitySha256", "summaryIdentitySha256", "topologyManifestRoot",
     "topologyAnchorCommit", "topologyEntries", "branch", "activationRoot",
-    "activationSha256", "dispositionRoot", "terminalRoot", "dispositionSha256", "localSealPath",
+    "activationSha256", "dispositionRoot", "terminalRoot", "executionProvenanceRoot", "dispositionSha256", "localSealPath",
     "localSealSha256", "localSealVerificationRoot", "localSealProtocolRoot", "assuranceClass", "validator", "requirementsSha256",
     "roadmapSha256", "stateSha256", "freshCharged", "freshAccepted", "admit03", "seal01",
     "phase263PlanningAuthorized", "downstreamAuthorityDenied", "validationSha256", "binderRoot"],
@@ -762,9 +920,10 @@ export const verifyV138Plan26274Input = (value: unknown): VerifierReport => {
   }
   const correlation = terminal ? input.activationRoot === V138_ROUTE_8_PATHS.activation &&
     typeof input.activationSha256 === "string" && input.freshCharged === 540 && input.freshAccepted === 540 &&
-    input.admit03 === "passed" && input.phase263PlanningAuthorized === true :
+    typeof input.executionProvenanceRoot === "string" && input.admit03 === "passed" && input.phase263PlanningAuthorized === true :
     input.activationRoot === null && input.activationSha256 === null && input.freshCharged === 0 &&
-    input.freshAccepted === 0 && input.admit03 === "blocked" && input.phase263PlanningAuthorized === false
+    input.freshAccepted === 0 && input.executionProvenanceRoot === null && input.admit03 === "blocked" &&
+    input.phase263PlanningAuthorized === false
   if (input.schemaVersion !== "v1.38-plan-262-74-verifier-input-v1" || input.totalPlans !== 56 ||
       input.trustworthySummaries !== 55 || input.soleIncomplete !== "262-74" || !correlation ||
       input.seal01 !== "passed_reduced_assurance" || input.assuranceClass !== "single_operator_local_seal_v1" ||
@@ -824,14 +983,23 @@ const preparePassCloseout = (root: string, args: DriverArgs, binder: Binder,
   let roadmap = completeCarrier(readText(roadmapPath, "V138_ROUTE8_ROADMAP_INVALID"), report)
   roadmap = replaceExactlyOnce(roadmap, /^- \[ \] \*\*Phase 262:/gmu,
     "- [x] **Phase 262:", "V138_ROUTE8_CLOSEOUT_PRECONDITION_INVALID")
-    .replace("**Plans:** 55/56 plans executed", "**Plans:** 56/56 plans executed")
-    .replace("| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 55/56 | In Progress|",
-      "| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 56/56 | Complete|")
+  roadmap = replaceExactlyOnce(roadmap, /^\*\*Plans:\*\* 55\/56 plans executed$/gmu,
+    "**Plans:** 56/56 plans executed", "V138_ROUTE8_CLOSEOUT_PRECONDITION_INVALID")
+  roadmap = replaceExactlyOnce(roadmap,
+    /^\| 262\. Foundation Admission, Measurement, Custody, and Containment Contract \| 55\/56 \| In Progress\|  \|$/gmu,
+    "| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 56/56 | Complete|  |",
+    "V138_ROUTE8_CLOSEOUT_PRECONDITION_INVALID")
   let state = completeCarrier(readText(statePath, "V138_ROUTE8_STATE_INVALID"), report)
-  state = state.replace(/^current_phase: 262$/mu, "current_phase: 263")
-    .replace(/^completed_phases: 0$/mu, "completed_phases: 1")
-    .replace(/^completed_plans: 55$/mu, "completed_plans: 56")
-    .replace(/^percent: 98$/mu, "percent: 100")
+  for (const [pattern, replacement] of [
+    [/^current_phase: 262$/gmu, "current_phase: 263"],
+    [/^current_phase_name: foundation-admission-measurement-custody-and-containment-con$/gmu,
+      "current_phase_name: legal-planner-and-deterministic-runner-feasibility"],
+    [/^status: .*$/gmu, "status: Phase 262 complete; ready to plan Phase 263"],
+    [/^stopped_at: Completed 262-73-PLAN\.md$/gmu, "stopped_at: Completed 262-74-PLAN.md"],
+    [/^  completed_phases: 0$/gmu, "  completed_phases: 1"],
+    [/^  completed_plans: 55$/gmu, "  completed_plans: 56"],
+    [/^  percent: 98$/gmu, "  percent: 100"],
+  ] as const) state = replaceExactlyOnce(state, pattern, replacement, "V138_ROUTE8_CLOSEOUT_PRECONDITION_INVALID")
   const summary = renderSummary(report)
   const baseChanges: Replacement[] = [
     { file: requirementsPath, bytes: requirements }, { file: roadmapPath, bytes: roadmap },
@@ -849,8 +1017,7 @@ const preparePassCloseout = (root: string, args: DriverArgs, binder: Binder,
   const receipt = stable({ ...receiptBody,
     closeoutRoot: digest(`v138-route8-plan26274-closeout-v1\0${stable(receiptBody)}`) })
   baseChanges.push({ file: actual(root, canonicalCloseout), bytes: receipt })
-  const files = baseChanges.filter(change => change.bytes !== null)
-    .map(change => path.relative(path.resolve(root), change.file))
+  const files = baseChanges.map(change => path.relative(path.resolve(root), change.file))
   return { changes: baseChanges,
     commit: { message: "docs(262-74): complete authenticated verification sentinel", files } }
 }
@@ -879,8 +1046,9 @@ const checkCommittedCloseout = (root: string, args: DriverArgs): "passed" | null
     fail("V138_ROUTE8_CLOSEOUT_INVALID")
   }
   const files = [args.binder, args.requirements, args.roadmap, args.state, args.validation,
-    args.verification, path.relative(path.resolve(root), summaryPath), canonicalCloseout]
-  if (gitText(root, ["status", "--porcelain=v1", "--", ...files]) !== "") fail("V138_ROUTE8_CLOSEOUT_INVALID")
+    args.verification, path.relative(path.resolve(root), summaryPath), canonicalBlocked, canonicalCloseout]
+  if (safe(actual(root, canonicalBlocked)) !== "missing" ||
+      gitText(root, ["status", "--porcelain=v1", "--", ...files]) !== "") fail("V138_ROUTE8_CLOSEOUT_INVALID")
   return "passed"
 }
 export const checkV138Plan26274Result = (root: string, args: SentinelResultArgs,
@@ -965,12 +1133,14 @@ export const V138_PLAN_262_74_TEST_ONLY = Object.freeze({
     recoverTransaction(root, { ...options, testOnlyToken: TEST_ONLY }),
 })
 
-const parse = (values: readonly string[]): Map<string, string> => {
+const parse = (values: readonly string[], allowed: readonly string[]): Map<string, string> => {
   const map = new Map<string, string>()
   for (let i = 0; i < values.length; i += 2) {
-    if (!values[i]?.startsWith("--") || values[i + 1] === undefined || values[i + 1]?.startsWith("--")) fail("V138_ROUTE8_ARGUMENTS_INVALID")
+    if (!values[i]?.startsWith("--") || values[i + 1] === undefined || values[i + 1]?.startsWith("--") ||
+        !allowed.includes(values[i]!) || map.has(values[i]!)) fail("V138_ROUTE8_ARGUMENTS_INVALID")
     map.set(values[i]!, values[i + 1]!)
   }
+  if (map.size !== allowed.length) fail("V138_ROUTE8_ARGUMENTS_INVALID")
   return map
 }
 const required = (args: Map<string, string>, key: string): string => args.get(key) ?? fail("V138_ROUTE8_ARGUMENTS_INVALID")
@@ -981,20 +1151,44 @@ const lifecycleArgs = (args: Map<string, string>): LifecycleArgs => ({
   activationRoot: required(args, "--activation-root"),
 })
 const help = (): string => `Usage: check-v1-38-plan-262-69-route-8-source.ts COMMAND [options]\n\nCommands:\n${V138_ROUTE_8_COMMANDS.map(command => `  ${command}`).join("\n")}\n`
-const main = (): void => {
-  const root = resolveRoot()
-  const argv = process.argv.slice(2)
-  if (argv.length === 1 && argv[0] === "--help") { process.stdout.write(help()); return }
-  if (argv.length === 1 && argv[0] === "--check") { process.stdout.write(`${JSON.stringify(checkV138Plan26269Route8Source(root))}\n`); return }
+const lifecycleOptions = ["--phase-dir", "--requirements", "--roadmap", "--state", "--validation",
+  "--disposition", "--activation-root"]
+export const dispatchV138Route8Cli = (root: string, argv: readonly string[]): string => {
+  if (argv.length === 1 && argv[0] === "--help") return help()
+  if (argv.length === 1 && argv[0] === "--check") return `${JSON.stringify(checkV138Plan26269Route8Source(root))}\n`
   const command = argv[0]
-  const args = parse(argv.slice(1))
-  if (command === "--normalize-post-validation") { process.stdout.write(`${JSON.stringify(normalizeV138PostValidation(root, lifecycleArgs(args)))}\n`); return }
-  if (command === "--check-normalized-post-validation") { process.stdout.write(`${JSON.stringify(checkV138NormalizedPostValidation(root, lifecycleArgs(args)))}\n`); return }
-  if (command === "--bind-post-validation") { process.stdout.write(`${JSON.stringify(bindV138PostValidation(root, { ...lifecycleArgs(args), output: required(args, "--output") }))}\n`); return }
-  if (command === "--check-post-validation-binder") { process.stdout.write(`${JSON.stringify(checkV138PostValidationBinder(root, { ...lifecycleArgs(args), binder: required(args, "--binder") }))}\n`); return }
-  if (command === "--run-plan-262-74-sentinel") { process.stdout.write(`${JSON.stringify({ status: runV138Plan26274Sentinel(root, { binder: required(args, "--binder"), phaseDir: required(args, "--phase-dir"), requirements: required(args, "--requirements"), roadmap: required(args, "--roadmap"), state: required(args, "--state"), validation: required(args, "--validation"), verification: required(args, "--verification") }) })}\n`); return }
-  if (command === "--check-plan-262-74-result") { process.stdout.write(`${JSON.stringify({ status: checkV138Plan26274Result(root, { binder: required(args, "--binder"), phaseDir: required(args, "--phase-dir"), requirements: required(args, "--requirements"), roadmap: required(args, "--roadmap"), state: required(args, "--state"), validation: required(args, "--validation"), verification: required(args, "--verification"), summary: required(args, "--summary"), blocked: required(args, "--blocked") }) })}\n`); return }
-  fail("V138_ROUTE8_ARGUMENTS_INVALID")
+  if (command === "--normalize-post-validation" || command === "--check-normalized-post-validation") {
+    const args = parse(argv.slice(1), lifecycleOptions)
+    const result = command === "--normalize-post-validation" ? normalizeV138PostValidation(root, lifecycleArgs(args)) :
+      checkV138NormalizedPostValidation(root, lifecycleArgs(args))
+    return `${JSON.stringify(result)}\n`
+  }
+  if (command === "--bind-post-validation" || command === "--check-post-validation-binder") {
+    const extra = command === "--bind-post-validation" ? "--output" : "--binder"
+    const args = parse(argv.slice(1), [...lifecycleOptions, extra])
+    const result = command === "--bind-post-validation" ? bindV138PostValidation(root,
+      { ...lifecycleArgs(args), output: required(args, extra) }) : checkV138PostValidationBinder(root,
+      { ...lifecycleArgs(args), binder: required(args, extra) })
+    return `${JSON.stringify(result)}\n`
+  }
+  if (command === "--run-plan-262-74-sentinel") {
+    const allowed = ["--binder", "--phase-dir", "--requirements", "--roadmap", "--state", "--validation", "--verification"]
+    const args = parse(argv.slice(1), allowed)
+    return `${JSON.stringify({ status: runV138Plan26274Sentinel(root, { binder: required(args, "--binder"),
+      phaseDir: required(args, "--phase-dir"), requirements: required(args, "--requirements"),
+      roadmap: required(args, "--roadmap"), state: required(args, "--state"),
+      validation: required(args, "--validation"), verification: required(args, "--verification") }) })}\n`
+  }
+  if (command === "--check-plan-262-74-result") {
+    const args = parse(argv.slice(1), ["--binder", "--verification", "--summary", "--blocked"])
+    return `${JSON.stringify({ status: checkV138Plan26274Result(root, { binder: required(args, "--binder"),
+      ...canonicalLifecycleArgs, verification: required(args, "--verification"),
+      summary: required(args, "--summary"), blocked: required(args, "--blocked") }) })}\n`
+  }
+  return fail("V138_ROUTE8_ARGUMENTS_INVALID")
+}
+const main = (): void => {
+  process.stdout.write(dispatchV138Route8Cli(resolveRoot(), process.argv.slice(2)))
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
