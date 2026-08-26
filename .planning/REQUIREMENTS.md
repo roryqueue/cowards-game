@@ -12,7 +12,7 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 - [x] **ADMIT-01**: Maintainers can begin authoritative v1.38 Strategy evaluation only when the v1.37 audit, archive commit, annotated tag, and independent post-tag checker all resolve and pass.
 - [x] **ADMIT-02**: Every v1.38 research root resolves and records the exact selected rules, engine, runtime ABI, Chronicle, arena-catalog, Set-policy, canonical-JSON, provider, runtime, and conformance identities instead of trusting copied labels.
-- [x] **ADMIT-03**: Researchers can reproduce the persisted current-rules audit matrix before candidate search and can use Starter and Advanced Strategies only as smoke, regression, and throughput fixtures rather than balance evidence.
+- [ ] **ADMIT-03**: Researchers can reproduce the persisted current-rules audit matrix before candidate search and can use Starter and Advanced Strategies only as smoke, regression, and throughput fixtures rather than balance evidence.
 - [x] **ADMIT-04**: A missing, stale, incompatible, or semantically drifting predecessor authority stops authoritative v1.38 work and returns the defect to the integrity foundation without repairing, normalizing, or changing canonical behavior inside this milestone.
 
 ### Measurement, Claims, Budgets, and Custody Contract
@@ -187,7 +187,7 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 |-------------|-------|--------|
 | ADMIT-01 | Phase 262 | Complete |
 | ADMIT-02 | Phase 262 | Complete |
-| ADMIT-03 | Phase 262 | Complete |
+| ADMIT-03 | Phase 262 | Blocked (0/540; partial infrastructure evidence only) |
 | ADMIT-04 | Phase 262 | Complete |
 | MEAS-01 | Phase 262 | Complete |
 | MEAS-02 | Phase 262 | Complete |

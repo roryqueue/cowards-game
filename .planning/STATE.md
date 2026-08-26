@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planning
-stopped_at: Plan 262-63 lifecycle-only reconciliation and independent source review are complete; a new dependency-revision/reviewer chain is being researched
-last_updated: "2026-08-25T17:05:00Z"
+stopped_at: Root orchestrator must dispatch Plan 262-69 first under the explicit Route-8 execution protocol; bulk execute-phase is prohibited
+last_updated: "2026-08-26T03:10:56Z"
 last_activity: 2026-08-25
-last_activity_desc: Completed the independent source review and researched a fresh non-authorizing reviewer/replacement chain
+last_activity_desc: Finalized the explicit Route-8 binder/sentinel-driver topology with a non-consuming obstruction branch
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 48
-  completed_plans: 45
-  percent: 94
+  total_plans: 56
+  completed_plans: 50
+  percent: 89
 ---
 
 # State: Coward's Game
 
-<!-- phase-262-successor-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v3_pre_review_failed_archived","source_review_status":"r3_converged","source_review_v3_root":null,"independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"local_seal_mechanics":"independently_verified_zero_findings_v3","local_seal_protocol_root":"sha256:bd4cd1af650f026fd45045d45069eaad0ccd7154140899e314780bb0ec38541a","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","foundation_activation_root_present":false,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"next_action":"code-review-262-63","total_plans":48,"trustworthy_summaries":45,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-60","262-61","262-63","262-56","262-57","262-48"],"incomplete":["262-56","262-57","262-48"],"archived_plan_58":"archived/262-58-HISTORICAL.md","archived_plan_58_sha256":"2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3","archived_summary_58":"archived/262-58-SUMMARY-HISTORICAL.md","archived_summary_58_sha256":"03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6","archived_plan_59":"archived/262-59-HISTORICAL.md","archived_plan_59_sha256":"0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f","archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-verification-sentinel-status: {"proof_status":"route_8_explicit_driver_planned_pre_execution","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"root-dispatch-262-69-via-execute-plan","execution_protocol":"262-ROUTE8-EXECUTION-PROTOCOL.md","bulk_execute_phase_prohibited":true,"post_plan_73_sequence":["top-level-gsd-validate-phase-262","normalize-and-check-validation","run-post-validation-binder","run-plan-262-74-sentinel-driver"],"total_plans":56,"trustworthy_summaries":50,"active_successors":["262-69","262-70","262-71","262-72","262-73","262-74"],"incomplete":["262-69","262-70","262-71","262-72","262-73","262-74"],"plan_72_disposition":"terminal_xor_pre_start_obstruction","sentinel_plan":"262-74","sentinel_summary_policy":"pass_only_after_verification","archived_plan_48_route_v9":"archived/262-48-ROUTE-V9-HISTORICAL.md","archived_plan_48_route_v9_sha256":"d531e64db2be1d804248f390c1cda215f3d237cdc58d40498e057bf2dc5c32f0","archived_plan_48_original":"archived/262-48-HISTORICAL.md","archived_plan_48_original_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1"} -->
 
 ## Project Reference
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 45 trustworthy summaries — Plan 262-63 lifecycle-only reconciliation and source review are committed after the immutable Plan 262-62 archive
-Status: Plan 262-56 cannot consume its permanently absent Plan-262-62 inputs; research is defining a fresh, non-authorizing reviewer and replacement-contract chain while ADMIT-03 remains blocked
-Last activity: 2026-08-25 — Recorded the successor authority-replacement research after source-review convergence
+Plan: 50 trustworthy summaries — Plans 262-69 through 262-74 are the only incomplete active successors
+Status: Exact 56-plan topology authenticated; root orchestrator dispatches Plan 262-69 first while ADMIT-03 remains blocked
+Last activity: 2026-08-25 — Finalized explicit plan-by-plan dispatch, post-validation binder, and separate Plan-74 sentinel driver
 
-Progress: [█████████░] 94%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
-**Current milestone:** 45 Phase 262 plans have trustworthy summaries. Plan-262-62 is immutable archived pre-review failure history at SHA-256 `438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a`: its mandatory R3 suite rejected the stale 43-summary lifecycle baseline before any review-v3 derivation or publication. Plan-262-63's separate finite-state lifecycle boundary and source review are complete; it did not modify A9/R3/archived bytes, publish review evidence, enable Plan 262-56, or create authorization-v9, seal-v9, B9, route, candidate, formation, holdout, public, production, or live authority. Research establishes that Plan 262-56 must be replaced, never revived, because its named Plan-262-62 inputs remain absent. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: plan a fresh non-authorizing reviewer/replacement chain.
+**Current milestone:** 50 Phase 262 plans have trustworthy summaries. Plans 262-64 through 262-68 completed the non-authorizing replacement-authority lineage. The rewired active Plan 262-48 was moved byte-for-byte to `archived/262-48-ROUTE-V9-HISTORICAL.md` at SHA-256 `d531e64db2be1d804248f390c1cda215f3d237cdc58d40498e057bf2dc5c32f0` before execution discovery; the older archived variant remains unchanged at SHA-256 `8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1`. The active incomplete topology is exactly Plans 262-69 through 262-74. The root orchestrator dispatches Plans 69-73 sequentially with ordinary execute-plan summaries, stops, runs top-level Phase-262 validation and the executable binder, then invokes the single Plan-74 sentinel driver. Unfiltered Phase-262 execute-phase is prohibited. Plan 72 ends with exact terminal XOR bounded non-consuming obstruction; obstruction and every gaps result keep Plan 74 unsummarized, Phase 262 incomplete, and Phase 263 denied. ADMIT-03 remains blocked at 0/540 and every downstream authority remains false. Next action: root orchestrator dispatches Plan 262-69 per `262-ROUTE8-EXECUTION-PROTOCOL.md`.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 

@@ -1,8 +1,8 @@
 # Phase 262: Foundation Admission, Measurement, Custody, and Containment Contract - Pattern Map
 
-**Mapped:** 2026-08-12 (dependency-revision refresh)
-**Files analyzed:** 43 plan-file assignments across the original foundation map and active dependency-revision Plans 262-34..40 (38 unique paths)
-**Analogs found:** 43 / 43 assignments
+**Mapped:** 2026-08-25 (Route-8 explicit-driver refresh)
+**Files analyzed:** Original foundation/dependency-revision assignments plus every definitive Route-8 source, reviewer, adapter, obstruction, binder, and sentinel assignment
+**Analogs found:** All active Route-8 assignments have an explicit analog and applicability rule
 
 ## Scope Guard
 
@@ -35,6 +35,37 @@ Do not create or make reachable any `formation/`, `profiles/`, `candidates/`, `p
 | `.planning/artifacts/v1.38-custody-public-reference.json` | public-safe reference | file-I/O | `V137PublicRestrictedEvidenceRef` in `scripts/lib/v1-37-restricted-evidence-store.ts` | role-match |
 | `.planning/artifacts/v1.38-pre-formation-containment.json` | immutable receipt | batch + file-I/O | v1.37 integrity-boundary analysis output | role-match |
 | `.planning/artifacts/v1.38-foundation-contract-root.json` | aggregate root | transform + file-I/O | `.planning/artifacts/v1.37-strategy-evaluation-foundation.json` | role-match |
+
+### Definitive Route-8 and verification-sentinel files (Plans 262-69..74)
+
+| New/Modified File | Role | Data Flow | Closest Analog | Applicability |
+|---|---|---|---|---|
+| `scripts/lib/v1-38-route-8-source.ts` | closed Route-8 authority/execution/activation model | pure transform + exclusive canonical publication | reviewed A/B successor state machines in `scripts/lib/v1-38-successor-source-seal.ts` plus supervised matrix primitives in `scripts/lib/v1-38-current-matrix-reproduction.ts` | Reuse canonical kernel/runtime primitives; Task 1 uses a three-state transition checker, while Task 2 alone requires final terminal XOR bounded obstruction. |
+| `scripts/check-v1-38-plan-262-69-route-8-source.ts` | topology/source checker, validation normalizer, post-validation binder, and single sentinel driver | Git/object validation + canonical transform + controlled file-I/O | `scripts/check-v1-38-dependency-revision-boundaries.ts` plus strict lifecycle closeout checkers from Plans 53/63 | Authenticate only the 56-plan topology; replace stale generic validation deterministically; reject superseded markers; own temp lifecycle internally; never accept caller shell state or optional-root choice. |
+| `scripts/check-v1-38-plan-262-69-route-8-source.test.ts` | adversarial source/binder/driver suite | mutation + disposable repository fixtures | `scripts/evaluate-v1-38-foundation-contract-successor-routes.test.ts` and lifecycle mutation suites from Plan 63 | Mutate every topology, branch, provenance, verifier-report, temp-lifecycle, and PASS-only-summary latch independently. |
+| `scripts/check-v1-38-plan-262-70-route-8-source-review.ts` | source-separated Route-8 reviewer | detached Git observation + synthetic execution + canonical review publication | `scripts/check-v1-38-plan-262-60-source-review-v3.ts` reviewer boundary | Re-derive behavior without trusting Plan-69 conclusions; zero findings alone publishes the non-authorizing pair. |
+| `scripts/check-v1-38-plan-262-70-route-8-source-review.test.ts` | reviewer adversarial suite | mutation + detached disposable clone | Plan-60/61 review-convergence tests | Reach source, adapter, obstruction, binder, and sentinel interfaces; incomplete observation is a finding. |
+| `.planning/artifacts/v1.38-plan-262-71-authorization-v10.json` | single-use Route-8 authority | canonical transform + exclusive publication | authorization-v5/v9 artifacts checked by successor-source-seal | Bind reviewed Plan-69/70 source only; grants one Route-8 eligibility and no execution/downstream result. |
+| `.planning/artifacts/v1.38-successor-source-seal-v10.json` | direct-child B10 source/authority seal | Git custody + exclusive publication | successor-source-seal-v5/v9 | Exact direct child of authorization-v10; binds obstruction XOR route inventory without executing either. |
+| `.planning/artifacts/v1.38-plan-262-72-pre-start-obstruction-v1.json` | bounded non-consuming disposition | exclusive canonical publication | prior route readiness/obstruction receipts, corrected to preserve no consumption | Exists only when start is obstructed; requires no route start, no terminal, zero charges, no authority consumption, and Phase-263 denial. |
+| `.planning/artifacts/v1.38-plan-262-72-route-start-v1.json` | atomic consumed-route carrier | exclusive no-replace publication | prior Pattern-C route-start/context carriers | Mutually exclusive with obstruction; embeds context and preflight charge identity before observation. |
+| `.planning/artifacts/v1.38-current-matrix-headroom-preflight-v13.json` | resource admission receipt | supervised measurement + canonical publication | v7-v12 headroom preflights | Exists only after route start; fixed 200 ms and inclusive 2500bp gate. |
+| `.planning/artifacts/v1.38-plan-262-72-calibration-consumption-v1.json` | pre-child calibration charge | exclusive publication | prior durable attempt ledgers | Charges exactly 8 identities over 4 shards before child work. |
+| `.planning/artifacts/v1.38-current-matrix-calibration-v13.json` | calibration evidence | supervised batch + canonical publication | v7-v12 calibration receipts | Must join the consumption receipt; admission alone can unlock reproduction. |
+| `.planning/artifacts/v1.38-plan-262-72-reproduction-consumption-v1.json` | pre-child 540-cell charge | exclusive publication | accepted/charged ledger separation in matrix reproduction | Exists only after admitted calibration and before reproduction children. |
+| `.planning/artifacts/v1.38-current-matrix-reproduction-v14.json` | conditional matrix evidence | supervised batch + canonical publication | earlier reproduction receipts | Exact 540/540 is necessary for ADMIT-03; every incomplete/error branch stays non-pass. |
+| `.planning/artifacts/v1.38-plan-262-72-terminal-v1.json` | consumed-route terminal | exclusive canonical publication | prior Pattern-C terminal receipts | Mutually exclusive with the obstruction artifact and reachable only after atomic route start. |
+| `.planning/artifacts/v1.38-plan-262-73-foundation-activation-disposition-v1.json` | terminal-XOR-obstruction activation join | canonical transform + exclusive publication | dormant exact two-latch activation contract | Obstruction always maps to blocked/no-root; only literal terminal 540/540 plus revised SEAL-01 can select the optional root. |
+| `.planning/artifacts/v1.38-foundation-activation-root-route8.json` | optional two-latch activation root | canonical join + exclusive publication | dormant exact two-latch activation contract | Exists only for checked terminal 540/540 plus SEAL-01; authorizes Phase-263 planning only after verifier closeout. |
+| `.planning/artifacts/v1.38-plan-262-74-post-validation-binder-v1.json` | executable post-validation provenance binder | canonical transform + Git/carrier/index validation | Plan-63 lifecycle carrier reconciliation | Created only after top-level validation; binds 56 plans, 55 summaries, exact branch/root, ADMIT-03/SEAL-01, and all denials. |
+| `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md` | normalized branch-bound Nyquist carrier | generic validation -> deterministic canonical replacement | Plan-63 lifecycle reconciliation | Normalizer removes stale successor markers and binds exact 56/55 branch provenance before binder use. |
+| `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md` | exact passed-or-gaps verifier report | binder -> verifier -> canonical install | prior goal-backward Phase-262 reports | Exact report bytes control the sentinel; gaps never create Plan-74 summary. |
+| `.planning/REQUIREMENTS.md` | authoritative requirement disposition carrier | verifier/lifecycle synchronization | existing requirement traceability table | ADMIT-03 changes only from literal fresh 540/540; SEAL-01 retains reduced-assurance wording. |
+| `.planning/ROADMAP.md` | authoritative plan/topology carrier | plan-progress/phase completion | Plan-63 lifecycle reconciliation | Exactly 56 plans and the explicit-driver marker; no superseded successor marker or bulk dispatch. |
+| `.planning/STATE.md` | authoritative next-action carrier | root-orchestrator lifecycle state | Plan-63 lifecycle reconciliation | Mirrors exact 56/55 branch and explicit dispatch; obstruction keeps Phase 263 denied. |
+| `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-ROUTE8-EXECUTION-PROTOCOL.md` | root-orchestrator dispatch contract | planning-time control flow | execute-plan wave ordering plus Plan-74 lifecycle latch | Prohibits unfiltered execute-phase; dispatches 69..73 sequentially, validates, binds, then runs the sentinel driver. |
+| `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-74-BLOCKED.md` | conditional bounded gaps carrier | verifier-derived safe projection | prior bounded blocked verification reports | Never substitutes for PASS and never permits Plan-74 summary/progress/phase completion. |
+| `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-74-SUMMARY.md` | PASS-only lifecycle latch | verifier -> summary -> progress -> phase completion | standard GSD summary, with stricter provenance precondition | Absent for obstruction/gaps; created only after the exact refreshed verifier report is checked as passed. |
 
 ### Active dependency-revision files (Plans 262-34..40)
 

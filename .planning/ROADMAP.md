@@ -50,13 +50,13 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 45 trustworthy summaries; Plan 262-63 and its independent source review completed the lifecycle-only replacement after the immutable Plan 262-62 pre-review archive. Fresh successor-chain research is complete.
+**Plans:** 50 trustworthy summaries and six active successor plans (262-69 through 262-74). The retired route-7 authority/execution/join plans and both 262-48 variants are outside active `*-PLAN.md` discovery.
 
-**Current verdict:** REVIEW-V1 INVALID / A8-REVIEWER-V2 INVALID / A9 SOURCE FROZEN / R3 CONVERGED / PLAN-262-62 ARCHIVED PRE-REVIEW / PLAN-262-63 LIFECYCLE RECONCILIATION SOURCE-REVIEWED / `gaps_found` — Plan 262-62's required full independent R3 suite stopped before review derivation because the lifecycle checker still pinned a 43-summary baseline while the valid Plan 262-61 summary made the live graph 44 summaries. The active plan remains byte-preserved only at `archived/262-62-HISTORICAL.md` with SHA-256 `438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a`; no review-v3 document/report, authorization-v9, seal-v9, B9, route start, live destination, or downstream authority was created. Plan 262-63 added only a versioned lifecycle checker and status boundary; its independent source review fixed all findings without reviving Plan 262-62, altering A9/R3, making Plan 262-56 eligible, or creating authority. Successor research establishes that Plan 262-56 must be replaced by a fresh reviewer/authority-contract lineage. ADMIT-03 remains blocked at 0/540, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: plan that fresh non-authorizing successor chain.
+**Current verdict:** ROUTE-8 SUCCESSOR PLANNED / EXPLICIT VERIFICATION SENTINEL LATCHED / `gaps_found` — Plans 262-64 through 262-68 completed the non-authorizing replacement-authority lineage. The previously active rewired Plan 262-48 is byte-preserved only at `archived/262-48-ROUTE-V9-HISTORICAL.md` with SHA-256 `d531e64db2be1d804248f390c1cda215f3d237cdc58d40498e057bf2dc5c32f0`; the older `archived/262-48-HISTORICAL.md` remains byte-identical at SHA-256 `8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1`. Active discovery contains exactly successor Plans 262-69 through 262-74 after completed Plan 262-68. The root orchestrator must dispatch Plans 69, 70, 71, 72, and 73 sequentially through gsd-executor/execute-plan semantics, stop before Plan 74, run top-level `$gsd-validate-phase 262`, run/check the executable post-validation binder, and then invoke the single Plan-74 sentinel driver separately. Unfiltered `$gsd-execute-phase 262` is prohibited for this topology. Plan 74 is intentionally unsummarized until the driver authenticates a passed verifier report; gaps or the Plan-72 obstruction branch create no summary, no progress completion, and no `phase.complete`, and keep Phase 263 denied. No route-8 authority, route start, live destination, activation root, or downstream authority exists yet. ADMIT-03 remains blocked at 0/540, SEAL-01 retains its reduced-assurance pass, Phase 262 remains incomplete, and Phases 263–270 remain unauthorized. Next action: root orchestrator dispatches Plan 262-69 through gsd-executor/execute-plan semantics per `262-ROUTE8-EXECUTION-PROTOCOL.md`.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","review_v1_disposition":"review_v1_invalid_disproved_non_authorizing","review_v2_disposition":"structurally_self_referential_non_authorizing","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
-<!-- phase-262-successor-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","review_protocol":"review_v3_pre_review_failed_archived","source_review_status":"r3_converged","source_review_v3_root":null,"independent_person_claimed":false,"reviewer_separated":false,"cryptographic_reviewer_identity_claimed":false,"independent_custody_claimed":false,"route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"authority_expired":true,"no_retry":true,"policy_status":"ready_non_authorizing","pre_search_policy_root":"sha256:6ad9134977310215ce6e98171d3586c9ae1853313f912ff6e9af95966607e382","independent_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"code-review-262-63","total_plans":48,"trustworthy_summaries":45,"active_successors":["262-44","262-45","262-49","262-51","262-52","262-53","262-54","262-60","262-61","262-63","262-56","262-57","262-48"],"incomplete":["262-56","262-57","262-48"],"archived_plan_58":"archived/262-58-HISTORICAL.md","archived_plan_58_sha256":"2717127b4db1fec47fa99e8b4f0ecc6bcea0a9afa8a093bc0f4308ee619f65a3","archived_summary_58":"archived/262-58-SUMMARY-HISTORICAL.md","archived_summary_58_sha256":"03bbe469f5577d8e8b94df8e3962215a29082e02d5059a1171c87d69dc8342a6","archived_plan_59":"archived/262-59-HISTORICAL.md","archived_plan_59_sha256":"0ae9ed1bf186a085e2a109181682ca4828c41b9662c52e8aac248fd07f61953f","archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","dormant_contract":"dormant/262-41-ACTIVATION-CONTRACT.md"} -->
+<!-- phase-262-verification-sentinel-status: {"proof_status":"route_8_explicit_driver_planned_pre_execution","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"foundation_activation_root_present":false,"production_authorized":false,"next_action":"root-dispatch-262-69-via-execute-plan","execution_protocol":"262-ROUTE8-EXECUTION-PROTOCOL.md","bulk_execute_phase_prohibited":true,"post_plan_73_sequence":["top-level-gsd-validate-phase-262","normalize-and-check-validation","run-post-validation-binder","run-plan-262-74-sentinel-driver"],"total_plans":56,"trustworthy_summaries":50,"active_successors":["262-69","262-70","262-71","262-72","262-73","262-74"],"incomplete":["262-69","262-70","262-71","262-72","262-73","262-74"],"plan_72_disposition":"terminal_xor_pre_start_obstruction","sentinel_plan":"262-74","sentinel_summary_policy":"pass_only_after_verification","archived_plan_48_route_v9":"archived/262-48-ROUTE-V9-HISTORICAL.md","archived_plan_48_route_v9_sha256":"d531e64db2be1d804248f390c1cda215f3d237cdc58d40498e057bf2dc5c32f0","archived_plan_48_original":"archived/262-48-HISTORICAL.md","archived_plan_48_original_sha256":"8ac51a38c5b73d901dde595ed315bf497a42ce243513e056e3a67b22c37dd3d1"} -->
 
 Plans:
 **Wave 1**
@@ -281,17 +281,43 @@ Plans:
 
 - [x] 262-63-PLAN.md — Added a separate, finite-state lifecycle reconciliation boundary for the archived Plan-262-62 / valid Plan-262-61-summary state. It did not modify A9/R3 or old v3/v9 contracts, publish review evidence, or enable authority; independent source review is next.
 
-**Wave 46** *(blocked on a separately planned, independently reviewed successor to the Plan-262-63 lifecycle boundary; Plan 262-63 itself confers no authority eligibility)*
+**Retired route-7 and join planning history** *(byte-preserved outside active `*-PLAN.md` discovery; no authority or completion credit)*
 
-- [ ] 262-56-PLAN.md — Consume only immutable exact-A9 review-v3 bytes, render and checkpoint the complete fresh authorization-v9 literal, then create exactly one two-artifact direct-child B9 at the v9 paths with no live work.
+- `262-56-PLAN.md` -> `archived/262-56-HISTORICAL.md` — SHA-256 `18f7cb76e397958918eca1c9ae8abb758b17a34a0b44f1201969b35e603a64cb`; its permanently absent Plan-262-62 inputs make it non-executable.
+- `262-57-PLAN.md` -> `archived/262-57-HISTORICAL.md` — SHA-256 `d17e7df7f22a2457739a123203e358d30d9b7da5631eb2dfdb2d9cf2d310fe1e`; its route-7 live contract remains historical and unstarted.
+- Rewired `262-48-PLAN.md` -> `archived/262-48-ROUTE-V9-HISTORICAL.md` — SHA-256 `d531e64db2be1d804248f390c1cda215f3d237cdc58d40498e057bf2dc5c32f0`; planning-time cutover removed the active path before execution discovery. The older `archived/262-48-HISTORICAL.md` remains unchanged.
 
-**Wave 47** *(blocked on Wave 46 completion and immediate main-only ownership check)*
+**Waves 46–50** *(completed non-authorizing replacement chain)*
 
-- [ ] 262-57-PLAN.md — Consume A9/B9 once from the main orchestrator through unchanged route ordinal 7 and exact v11/v12 200 ms / 2,500-bp / 8-attempt / 4-shard / conditional-540 semantics, then seal one permanent no-retry terminal.
+- [x] 262-64-PLAN.md — Archive the unexecutable route-7 plans and introduce a fresh non-authorizing reviewer-source successor.
+- [x] 262-65-PLAN.md — Implement the isolated R4-style reviewer source boundary.
+- [x] 262-66-PLAN.md — Independently review the R4 source without creating authority.
+- [x] 262-67-PLAN.md — Render the replacement authority contract and obtain the operator checkpoint without consumption.
+- [x] 262-68-PLAN.md — Implement and independently review the standing non-executable authorization representation.
 
-**Wave 48** *(blocked on Wave 47 completion)*
+**Wave 51** *(blocked on completed Plan 262-68; planning cutover already complete)*
 
-- [ ] 262-48-PLAN.md — Join only literal Plan-262-57 ADMIT-03 pass with the existing local-seal v3 pass, derive truthful pre-summary 47/48 then post-summary 48/48 from the live phase-plan index, refresh validation/verification, and grant at most Phase 263 planning authority.
+- [ ] 262-69-PLAN.md — Verify the planning-time 262-48 archive/removal topology and implement the source-only route-8 contract.
+
+**Wave 52** *(blocked on Wave 51 completion)*
+
+- [ ] 262-70-PLAN.md — Independently review route-8 source and publish only an immutable non-authorizing zero-finding pair.
+
+**Wave 53** *(blocked on Wave 52 completion)*
+
+- [ ] 262-71-PLAN.md — Publish exactly authorization-v10 and direct-child B10 under the standing operator authorization, without live work.
+
+**Wave 54** *(blocked on Wave 53 completion)*
+
+- [ ] 262-72-PLAN.md — Produce exactly one durable disposition: bounded non-consuming pre-start obstruction, or one consumed route with exact v13/v14 evidence and one terminal.
+
+**Wave 55** *(blocked on Wave 54 completion)*
+
+- [ ] 262-73-PLAN.md — Accept exact terminal XOR obstruction; join only literal terminal 540/540 with the local-seal pass, while obstruction remains blocked and denies Phase 263.
+
+**Wave 56** *(blocked on Wave 55 completion; separately dispatched after explicit validation refresh)*
+
+- [ ] 262-74-PLAN.md — After top-level validation and the executable binder, run the single explicit sentinel driver; summarize and complete only on exact PASS, otherwise remain intentionally unsummarized and incomplete.
 
 **Dormant activation contract** *(not an executable wave and absent from phase-plan-index)*
 
