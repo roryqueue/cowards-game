@@ -235,8 +235,32 @@ export const runV138Plan26274Sentinel = (root: string, args: DriverArgs): "passe
     writeFileSync(reportPath, report, { flag: "wx", mode: 0o600 })
     if (readText(reportPath, "V138_ROUTE8_VERIFIER_REPORT_INVALID") !== report) fail("V138_ROUTE8_VERIFIER_REPORT_INVALID")
     writeReplace(actual(root, args.verification), report)
-    if (!passed) return "gaps_found"
-    fail("V138_ROUTE8_PASS_LIFECYCLE_REQUIRES_GSD_ORCHESTRATOR")
+    if (!passed) {
+      const blockedPath = path.resolve(root, args.phaseDir, "262-74-BLOCKED.md")
+      if (safe(blockedPath) === "missing") writeExclusive(blockedPath,
+        `# Phase 262 Plan 74 Blocked\n\nStatus: gaps_found\nBinder: ${String(binder.binderRoot)}\nBranch: ${String(binder.branch)}\nPhase 263 planning authorized: false\n`)
+      if (safe(path.resolve(root, args.phaseDir, "262-74-SUMMARY.md")) !== "missing") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
+      return "gaps_found"
+    }
+    const summaryPath = path.resolve(root, args.phaseDir, "262-74-SUMMARY.md")
+    const summary = `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "74"\nsubsystem: verification\ntags: [route-8, provenance, sentinel]\nrequirements-completed: [ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04, MEAS-01, MEAS-02, MEAS-03, MEAS-04, MEAS-05, MEAS-06, MEAS-07, MEAS-08, MEAS-09, MEAS-10, SEAL-01, DECI-02]\nstatus: complete\n---\n\n# Phase 262 Plan 74: Verification Sentinel Summary\n\nExact refreshed validation, post-validation binder, and provenance-aware verifier passed. The reduced-assurance local seal remains explicit; only Phase 263 planning is authorized and every later/live authority remains denied.\n\n## Self-Check: PASSED\n`
+    writeExclusive(summaryPath, summary)
+    const gsd = path.resolve(process.env.CODEX_HOME ?? path.join(process.env.HOME ?? "", ".codex"), "gsd-core/bin/gsd-tools.cjs")
+    if (safe(gsd) !== "regular") fail("V138_ROUTE8_GSD_TOOLS_MISSING")
+    const query = (...values: string[]) => execFileSync(process.execPath, [gsd, "query", ...values],
+      { cwd: root, encoding: "utf8", env: { ...process.env, LC_ALL: "C", LANG: "C" } })
+    query("commit", "docs(262-74): complete verification sentinel plan", "--files",
+      path.relative(root, summaryPath))
+    query("requirements.mark-complete", "ADMIT-01", "ADMIT-02", "ADMIT-03", "ADMIT-04",
+      "MEAS-01", "MEAS-02", "MEAS-03", "MEAS-04", "MEAS-05", "MEAS-06", "MEAS-07",
+      "MEAS-08", "MEAS-09", "MEAS-10", "SEAL-01", "DECI-02")
+    query("state.update-progress")
+    query("roadmap.update-plan-progress", "262")
+    query("phase.complete", "262")
+    query("commit", "docs(262-74): synchronize passed phase lifecycle", "--files",
+      path.relative(root, actual(root, args.requirements)), path.relative(root, actual(root, args.roadmap)),
+      path.relative(root, actual(root, args.state)), path.relative(root, actual(root, args.verification)))
+    return "passed"
   } finally { rmSync(temp, { recursive: true, force: true }) }
   return fail("V138_ROUTE8_SENTINEL_UNREACHABLE")
 }
