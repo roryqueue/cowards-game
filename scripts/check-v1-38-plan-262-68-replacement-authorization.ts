@@ -5,11 +5,25 @@ import { lstatSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { types as utilTypes } from "node:util"
-import ts from "typescript"
-import { createV138Plan26268ReplacementAuthorization, PLAN_262_67_CHECKPOINT_ROOT } from "./lib/v1-38-plan-262-68-replacement-authorization.js"
 import { renderV138Plan26267ReplacementContract } from "./render-v1-38-plan-262-67-replacement-contract.js"
 
+const PLAN_262_67_CHECKPOINT_ROOT = "sha256:f1bc58ff9a4f107c293f1bfba9e7d44d5eda92aac78fbe93f7596889d04f404a" as const
+const createDeniedRepresentation = () => Object.freeze({
+  schemaVersion: "v1.38-plan-262-68-replacement-authorization-v10-source-only",
+  checkpointRoot: PLAN_262_67_CHECKPOINT_ROOT,
+  reviewDisposition: "r4_source_only_review_passed_non_authorizing",
+  executable: false,
+  consumable: false,
+  admit03: Object.freeze({ status: "blocked", freshAccepted: 0, requiredAccepted: 540 }),
+  frozenBounds: Object.freeze({ headroomSamplingMs: 200, minimumEffectiveAvailableBasisPoints: 2500,
+    calibrationAttempts: 8, calibrationShards: 4, conditionalReproductionCells: 540,
+    formationMaterialization: false }),
+  canonicalAuthorizationWritten: false,
+  canonicalSealWritten: false,
+  routeStarted: false,
+})
 const forbidden = [
+  "scripts/lib/v1-38-plan-262-68-replacement-authorization.ts",
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-PLAN.md",
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-SUMMARY.md",
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-62-REVIEW.md",
@@ -58,121 +72,18 @@ const assertExactData = (actual: unknown, expected: unknown): void => {
   }
 }
 
-const moduleExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"])
-const targetModule = "scripts/lib/v1-38-plan-262-68-replacement-authorization.ts"
-const permittedModules = new Set([
-  targetModule,
-  "scripts/check-v1-38-plan-262-68-replacement-authorization.ts",
-  "scripts/check-v1-38-plan-262-68-replacement-authorization.test.ts",
-])
-const pinnedNonLiteralModuleLoaders = new Map<string, string>([
-  ["packages/runtime-js/src/adapter-contract.test.ts", "a2496bc5f616efee5c17f5ab2fe7648f7c246260aea8af5d88fedf699c93952f"],
-  ["packages/spec/src/runtime-abi-v1-17.test.ts", "47714c260b1119e6e74309339aa42bbf5002fff01caf021f0bd3aaad213b6248"],
-  ["scripts/calibrate-v1-37-runtime-abi.test.ts", "53cce8aaeeb896f7b8178519cb51a25d9a7cc987318714b27f0b42c41ddc6044"],
-  ["scripts/calibrate-v1-37-runtime-abi.ts", "a8db20ec28f7cf9b1c67fb8b718b2343d16f16f2e49e2ba09c97bc2fa013460c"],
-  ["scripts/check-v1-38-plan-262-61-source-completeness-review-v3.ts", "cd736dbf3b496ac929a864178b9974fa4cf762ff26f89073bef3812fc102b8c5"],
-  ["scripts/generate-canonical-json-v1-1-corpus.test.ts", "ec4839cc5148c6fbaa1391377b225f5ebd2dbbd500ecce7f8df6f9d10fe28349"],
-])
-const resolveLocalModule = (importer: string, specifier: string): string | undefined => {
-  if (!specifier.startsWith(".")) return undefined
-  const raw = path.posix.normalize(path.posix.join(path.posix.dirname(importer), specifier))
-  const withoutRuntimeExtension = raw.replace(/\.(?:[cm]?js)$/u, "")
-  for (const candidate of [raw, withoutRuntimeExtension, `${raw}.ts`, `${raw}.tsx`, `${withoutRuntimeExtension}.ts`, `${withoutRuntimeExtension}.tsx`])
-    if (candidate === targetModule) return candidate
-  return undefined
-}
-const evaluateStaticString = (expression: ts.Expression, bindings: ReadonlyMap<string, string>): string | undefined => {
-  if (ts.isStringLiteralLike(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) return expression.text
-  if (ts.isIdentifier(expression)) return bindings.get(expression.text)
-  if (ts.isParenthesizedExpression(expression)) return evaluateStaticString(expression.expression, bindings)
-  if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-    const left = evaluateStaticString(expression.left, bindings); const right = evaluateStaticString(expression.right, bindings)
-    return left === undefined || right === undefined ? undefined : left + right
-  }
-  return undefined
-}
-const assertImportBoundary = (root: string): void => {
-  const compilerOptionsByConfig = new Map<string, ts.CompilerOptions>()
-  const compilerOptionsFor = (repoPath: string): ts.CompilerOptions => {
-    const configPath = ts.findConfigFile(path.dirname(path.resolve(root, repoPath)), ts.sys.fileExists)
-    if (!configPath) return { moduleResolution: ts.ModuleResolutionKind.NodeNext, module: ts.ModuleKind.NodeNext, allowJs: true }
-    const cached = compilerOptionsByConfig.get(configPath); if (cached) return cached
-    const options = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, path.dirname(configPath)).options
-    compilerOptionsByConfig.set(configPath, options); return options
-  }
-  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
-    .split("\0").filter(repoPath => moduleExtensions.has(path.extname(repoPath)))
-  for (const repoPath of tracked) {
-    const text = readFileSync(path.resolve(root, repoPath), "utf8")
-    if (text.includes("v1-38-plan-262-68") && text.includes("replacement-authorization") && !permittedModules.has(repoPath))
-      throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
-    const source = ts.createSourceFile(repoPath, text, ts.ScriptTarget.Latest, true,
-      repoPath.endsWith("x") ? ts.ScriptKind.TSX : repoPath.endsWith(".js") || repoPath.endsWith(".mjs") || repoPath.endsWith(".cjs") ? ts.ScriptKind.JS : ts.ScriptKind.TS)
-    const bindings = new Map<string, string>()
-    const moduleLoaderBindings = new Set(["require"])
-    const createRequireBindings = new Set(["createRequire"])
-    const collectBindings = (node: ts.Node): void => {
-      if (ts.isImportSpecifier(node) && (node.propertyName?.text ?? node.name.text) === "createRequire")
-        createRequireBindings.add(node.name.text)
-      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-        const value = evaluateStaticString(node.initializer, bindings)
-        if (value !== undefined) bindings.set(node.name.text, value)
-        if (ts.isIdentifier(node.initializer) && moduleLoaderBindings.has(node.initializer.text)) moduleLoaderBindings.add(node.name.text)
-        if (ts.isCallExpression(node.initializer) &&
-          (ts.isIdentifier(node.initializer.expression) && createRequireBindings.has(node.initializer.expression.text) ||
-           ts.isPropertyAccessExpression(node.initializer.expression) && node.initializer.expression.name.text === "createRequire"))
-          moduleLoaderBindings.add(node.name.text)
-      }
-      ts.forEachChild(node, collectBindings)
-    }
-    collectBindings(source)
-    const isModuleLoader = (call: ts.CallExpression): boolean =>
-      call.expression.kind === ts.SyntaxKind.ImportKeyword ||
-      ts.isIdentifier(call.expression) && moduleLoaderBindings.has(call.expression.text) ||
-      ts.isPropertyAccessExpression(call.expression) && call.expression.name.text === "require" ||
-      ts.isElementAccessExpression(call.expression) && !!call.expression.argumentExpression &&
-        ts.isStringLiteralLike(call.expression.argumentExpression) && call.expression.argumentExpression.text === "require" ||
-      ts.isCallExpression(call.expression) &&
-        (ts.isIdentifier(call.expression.expression) && createRequireBindings.has(call.expression.expression.text) ||
-         ts.isPropertyAccessExpression(call.expression.expression) && call.expression.expression.name.text === "createRequire")
-    const visit = (node: ts.Node): void => {
-      let specifier: string | undefined
-      let nonLiteralModuleLoad = false
-      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier))
-        specifier = node.moduleSpecifier.text
-      else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression && ts.isStringLiteralLike(node.moduleReference.expression))
-        specifier = node.moduleReference.expression.text
-      else if (ts.isCallExpression(node) && isModuleLoader(node) && node.arguments.length >= 1) {
-        specifier = evaluateStaticString(node.arguments[0]!, bindings)
-        nonLiteralModuleLoad = !ts.isStringLiteralLike(node.arguments[0]!) && !ts.isNoSubstitutionTemplateLiteral(node.arguments[0]!)
-      }
-      if (nonLiteralModuleLoad && pinnedNonLiteralModuleLoaders.get(repoPath) !== createHash("sha256").update(text).digest("hex"))
-        throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
-      if (specifier && !permittedModules.has(repoPath)) {
-        const resolved = ts.resolveModuleName(specifier, path.resolve(root, repoPath), compilerOptionsFor(repoPath), ts.sys).resolvedModule?.resolvedFileName
-        const resolvedRepoPath = resolved && path.relative(root, resolved).split(path.sep).join("/")
-        if (resolveLocalModule(repoPath, specifier) === targetModule || resolvedRepoPath === targetModule)
-          throw new TypeError("V138_262_68_IMPORT_BOUNDARY_INVALID")
-      }
-      ts.forEachChild(node, visit)
-    }
-    visit(source)
-  }
-}
-
-export const checkV138Plan26268ReplacementAuthorization = (root: string, candidate = createV138Plan26268ReplacementAuthorization()) => {
+export const checkV138Plan26268ReplacementAuthorization = (root: string, candidate = createDeniedRepresentation()) => {
   const repositoryRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: root, encoding: "utf8" }).trim()
   if (realpathSync(repositoryRoot) !== realpathSync(root)) throw new TypeError("V138_262_68_REPOSITORY_ROOT_INVALID")
   for (const [repoPath, expected] of historical) {
     const actual = createHash("sha256").update(readFileSync(path.resolve(root, repoPath))).digest("hex")
     if (actual !== expected) throw new TypeError("V138_262_68_HISTORICAL_INPUT_INVALID")
   }
-  assertExactData(candidate, createV138Plan26268ReplacementAuthorization())
+  assertExactData(candidate, createDeniedRepresentation())
   const renderedRoot = `sha256:${createHash("sha256").update(JSON.stringify(renderV138Plan26267ReplacementContract())).digest("hex")}`
   if (candidate.checkpointRoot !== PLAN_262_67_CHECKPOINT_ROOT || renderedRoot !== PLAN_262_67_CHECKPOINT_ROOT)
     throw new TypeError("V138_262_68_CHECKPOINT_ROOT_INVALID")
   if (forbidden.some(repoPath => present(root, repoPath))) throw new TypeError("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
-  assertImportBoundary(root)
   return Object.freeze({ status: "passed", authority: "denied" as const, checkpointRoot: candidate.checkpointRoot })
 }
 
