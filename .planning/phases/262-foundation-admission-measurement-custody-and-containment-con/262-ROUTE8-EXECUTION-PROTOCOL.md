@@ -25,6 +25,10 @@ Unfiltered `$gsd-execute-phase 262` is prohibited for this sentinel topology. It
 11. Check the binder with the matching `--check-post-validation-binder` command and the same explicit paths. The binder must authenticate the normalized authoritative 56-plan topology, exactly 55 summaries, the terminal XOR obstruction branch, branch-selected optional activation root, corrected ADMIT-03 status, reduced-assurance SEAL-01 status, and every downstream denial.
 12. Dispatch Plan 74 separately by invoking the single sentinel driver implemented by Plan 69, not ordinary execute-plan:
     `pnpm exec tsx scripts/check-v1-38-plan-262-69-route-8-source.ts --run-plan-262-74-sentinel --binder .planning/artifacts/v1.38-plan-262-74-post-validation-binder-v1.json --phase-dir .planning/phases/262-foundation-admission-measurement-custody-and-containment-con --requirements .planning/REQUIREMENTS.md --roadmap .planning/ROADMAP.md --state .planning/STATE.md --validation .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md --verification .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md`
+13. Check the result with exactly:
+    `pnpm exec tsx scripts/check-v1-38-plan-262-69-route-8-source.ts --check-plan-262-74-result --binder .planning/artifacts/v1.38-plan-262-74-post-validation-binder-v1.json --verification .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md --summary .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-74-SUMMARY.md --blocked .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-74-BLOCKED.md`
+
+Terminal PASS additionally requires the committed producer-issued `.planning/artifacts/v1.38-plan-262-72-execution-provenance-v1.json`. Its clean artifact blobs and introducing commits must form the strict Plan-72 authorization → multi-commit execution → manifest → Plan-72 summary lineage. Obstruction remains 0/0 and requires the execution manifest and every terminal destination absent.
 
 ## Sentinel Driver Contract
 
