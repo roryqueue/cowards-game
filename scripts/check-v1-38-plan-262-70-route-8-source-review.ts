@@ -123,7 +123,7 @@ const exactPolicyLines = (bytes: string, ids: readonly string[], domain: string)
   return Object.freeze({ id, root: rootForLine(domain, id, matches[0]!) })
 })
 
-const sourceCustody = (root: string) => {
+export const inspectV138Plan26270SourceCustody = (root: string) => {
   const actualRoot = realpathSync(git(root, ["rev-parse", "--show-toplevel"]))
   if (actualRoot !== realpathSync(root)) fail("V138_PLAN_262_70_REPOSITORY_ROOT_INVALID")
   const commits = lines(git(root, ["log", "--reverse", "--format=%H", "--",
@@ -152,9 +152,22 @@ const sourceCustody = (root: string) => {
       byteLength: bytes.length })
   })
   const rangeCommits = lines(git(root, ["rev-list", "--reverse", `${base}..${commit}`, "--first-parent"]))
-  if (rangeCommits.length === 0 || rangeCommits.some(item => !commits.includes(item)))
+  const sourceTouchingCommits = rangeCommits.filter(item =>
+    changedPaths(root, item).some(repoPath =>
+      (V138_PLAN_262_70_SOURCE_PATHS as readonly string[]).includes(repoPath)))
+  if (rangeCommits.length === 0 || canonical(sourceTouchingCommits) !== canonical(commits))
     fail("V138_PLAN_262_70_SOURCE_RUN_INVALID")
-  return deepFreeze({ base, commit, tree, parent: parentList[0]!, commits: rangeCommits,
+  for (const item of sourceTouchingCommits) {
+    const parents = git(root, ["show", "-s", "--format=%P", item]).split(/\s+/u).filter(Boolean)
+    if (parents.length !== 1) fail("V138_PLAN_262_70_SOURCE_RUN_INVALID")
+    const statuses = lines(git(root, ["diff-tree", "--no-commit-id", "--name-status", "-r", "-M", item]))
+    if (statuses.some(line => {
+      const [status, ...paths] = line.split(/\s+/u)
+      return /^[RC]/u.test(status ?? "") && paths.some(repoPath =>
+        (V138_PLAN_262_70_SOURCE_PATHS as readonly string[]).includes(repoPath))
+    })) fail("V138_PLAN_262_70_SOURCE_RUN_INVALID")
+  }
+  return deepFreeze({ base, commit, tree, parent: parentList[0]!, commits: sourceTouchingCommits,
     paths: [...V138_PLAN_262_70_SOURCE_PATHS], blobs })
 }
 
@@ -196,7 +209,7 @@ const inspectStaticSurface = (root: string) => {
     "total_plans\":56".replace("\\\"", "\""),
     "normalizeV138PostValidation", "checkV138NormalizedPostValidation",
     "bindV138PostValidation", "checkV138PostValidationBinder",
-    "runV138Plan26274Sentinel", "checkV138Plan26274Result", "requested !== \"auto\"",
+    "runV138Plan26274Sentinel", "checkV138Plan26274Result", "args.activationRoot !== \"auto\"",
     "262-74-SUMMARY.md", "262-74-BLOCKED.md", "finally { rmSync(temp"],
   "V138_PLAN_262_70_LIFECYCLE_SOURCE_INCOMPLETE")
   requireTokens(test, ["pre_start_obstruction", "stopped_terminal",
@@ -229,21 +242,46 @@ const runDetached = (root: string, sourceCommit: string) => {
   let checkerStdout = ""
   let noPublishStdout = ""
   try {
+    const executionCommit = git(root, ["rev-parse", "HEAD"])
+    try { execFileSync("git", ["merge-base", "--is-ancestor", sourceCommit, executionCommit],
+      { cwd: root, stdio: "ignore" }) } catch { fail("V138_PLAN_262_70_DETACHED_CHECK_INVALID") }
+    for (const repoPath of V138_PLAN_262_70_SOURCE_PATHS) {
+      if (git(root, ["rev-parse", `${sourceCommit}:${repoPath}`]) !==
+          git(root, ["rev-parse", `${executionCommit}:${repoPath}`])) {
+        fail("V138_PLAN_262_70_DETACHED_CHECK_INVALID")
+      }
+    }
     execFileSync("git", ["clone", "--shared", "--no-checkout", root, clone],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
-    execFileSync("git", ["checkout", "--detach", sourceCommit],
+    execFileSync("git", ["checkout", "--detach", executionCommit],
       { cwd: clone, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
     const physicalClone = realpathSync(clone)
+    const destinations = V138_ROUTE_8_DESTINATIONS.filter(item =>
+      item !== V138_PLAN_262_70_REVIEW_PATH)
+    const destinationSnapshot = () => destinations.map(repoPath => {
+      const file = path.resolve(physicalClone, repoPath)
+      return { path: repoPath, type: safeType(file),
+        root: safeType(file) === "regular" ? sha256(readFileSync(file)) : null }
+    })
+    const destinationsBefore = destinationSnapshot()
     const tsx = path.resolve(root, "node_modules/.bin/tsx")
-    checkerStdout = execFileSync(tsx,
-      [path.join(physicalClone, "scripts/check-v1-38-plan-262-69-route-8-source.ts"), "--check"],
+    const checker = path.join(physicalClone, "scripts/check-v1-38-plan-262-69-route-8-source.ts")
+    const closedBinder = path.resolve(physicalClone,
+      ".planning/artifacts/v1.38-plan-262-74-post-validation-binder-v1.json")
+    const checkerArgs = existsSync(closedBinder) ? [checker, "--check-plan-262-74-result",
+        "--binder", ".planning/artifacts/v1.38-plan-262-74-post-validation-binder-v1.json",
+        "--verification", `${PHASE_DIR}/262-VERIFICATION.md`,
+        "--summary", `${PHASE_DIR}/262-74-SUMMARY.md`,
+        "--blocked", `${PHASE_DIR}/262-74-BLOCKED.md`] : [checker, "--check"]
+    checkerStdout = execFileSync(tsx, checkerArgs,
       { cwd: physicalClone, encoding: "utf8", env: { ...process.env, LC_ALL: "C", LANG: "C" } }).trim()
     const check = JSON.parse(checkerStdout) as Record<string, unknown>
-    if (check.status !== "passed" || check.sourceOnly !== true || check.authority !== false)
+    if (!((check.status === "passed" && check.sourceOnly === true && check.authority === false) ||
+        check.status === "gaps_found"))
       fail("V138_PLAN_262_70_DETACHED_CHECK_INVALID")
     const reviewFile = path.resolve(physicalClone, V138_PLAN_262_70_REVIEW_PATH)
-    writeFileSync(reviewFile, canonical({ reviewRoot: `sha256:${"7".repeat(64)}` }),
-      { flag: "wx", mode: 0o600 })
+    if (!existsSync(reviewFile)) writeFileSync(reviewFile,
+      canonical({ reviewRoot: `sha256:${"7".repeat(64)}` }), { flag: "wx", mode: 0o600 })
     noPublishStdout = execFileSync(tsx,
       [path.join(physicalClone, "scripts/lib/v1-38-route-8-source.ts"),
         "--derive-authority-seal-no-publish"],
@@ -252,10 +290,9 @@ const runDetached = (root: string, sourceCommit: string) => {
     if (noPublish.authority !== "route_eligible_not_started" ||
       typeof noPublish.authorizationRoot !== "string" || typeof noPublish.sealRoot !== "string")
       fail("V138_PLAN_262_70_DETACHED_NO_PUBLISH_INVALID")
-    for (const destination of V138_ROUTE_8_DESTINATIONS.filter(item =>
-      item !== V138_PLAN_262_70_REVIEW_PATH))
-      if (existsSync(path.resolve(physicalClone, destination)))
-        fail("V138_PLAN_262_70_DETACHED_CANONICAL_WRITE")
+    if (canonical(destinationSnapshot()) !== canonical(destinationsBefore)) {
+      fail("V138_PLAN_262_70_DETACHED_CANONICAL_WRITE")
+    }
     return deepFreeze({ sourceCommit, checkerOutputRoot: sha256(`${checkerStdout}\n`),
       noPublishOutputRoot: sha256(`${noPublishStdout}\n`), cleanupComplete: true,
       cleanupPath: ".review-owned-disposable-removed", canonicalWrites: 0,
@@ -275,7 +312,7 @@ const observation = (id: typeof OBSERVATION_IDS[number], details: unknown) =>
   Object.freeze({ id, passed: true, detailRoot: sha256(`${id}\0${canonical(details)}`) })
 
 const reviewBody = (root: string) => {
-  const custody = sourceCustody(root)
+  const custody = inspectV138Plan26270SourceCustody(root)
   const staticSurface = inspectStaticSurface(root)
   const detachedExecution = runDetached(root, custody.commit)
   const requirements = exactPolicyLines(read(root, ".planning/REQUIREMENTS.md"),

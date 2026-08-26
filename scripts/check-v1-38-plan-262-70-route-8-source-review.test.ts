@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -17,6 +18,34 @@ const loadReviewer = async () => {
 }
 
 const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+const git = (root: string, args: string[]) => execFileSync("git", args,
+  { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim()
+const custodyFixture = () => {
+  const root = mkdtempSync(path.join(tmpdir(), "v138-plan26270-custody-")); roots.push(root)
+  git(root, ["init", "-q"]); git(root, ["config", "user.email", "test@example.invalid"])
+  git(root, ["config", "user.name", "Route 8 Review Test"])
+  writeFileSync(path.join(root, "README.md"), "base\n"); git(root, ["add", "README.md"])
+  git(root, ["commit", "-q", "-m", "fixture: base"])
+  const branch = git(root, ["branch", "--show-current"])
+  const sourcePaths = [
+    "scripts/check-v1-38-plan-262-69-route-8-source.test.ts",
+    "scripts/check-v1-38-plan-262-69-route-8-source.ts",
+    "scripts/lib/v1-38-route-8-source.ts",
+  ]
+  const sourceCommits: string[] = []
+  for (const [index, repoPath] of sourcePaths.entries()) {
+    mkdirSync(path.dirname(path.join(root, repoPath)), { recursive: true })
+    writeFileSync(path.join(root, repoPath), `source ${index}\n`)
+    git(root, ["add", repoPath]); git(root, ["commit", "-q", "-m", `fixture: source ${index}`])
+    sourceCommits.push(git(root, ["rev-parse", "HEAD"]))
+    if (index < sourcePaths.length - 1) {
+      writeFileSync(path.join(root, `unrelated-${index}.md`), `unrelated ${index}\n`)
+      git(root, ["add", `unrelated-${index}.md`])
+      git(root, ["commit", "-q", "-m", `fixture: unrelated ${index}`])
+    }
+  }
+  return { root, branch, sourcePaths, sourceCommits }
+}
 
 describe("Plan 262-70 independent Route-8 source review", () => {
   it("derives exact Git custody and a zero-finding no-publish disposition", async () => {
@@ -46,6 +75,33 @@ describe("Plan 262-70 independent Route-8 source review", () => {
     expect(after).toEqual(before)
   }, 180_000)
 
+  it("authenticates the ordered source-touching subsequence across unrelated commits", async () => {
+    const reviewer = await loadReviewer()
+    const fixture = custodyFixture()
+    const custody = reviewer.inspectV138Plan26270SourceCustody(fixture.root)
+    expect(custody.commits).toEqual(fixture.sourceCommits)
+    expect(custody.paths).toEqual(fixture.sourcePaths)
+    expect(git(fixture.root, ["rev-list", "--count", `${custody.base}..${custody.commit}`]))
+      .toBe("5")
+  })
+
+  it("rejects ambiguous source lineage", async () => {
+    const reviewer = await loadReviewer()
+    const ambiguous = custodyFixture()
+    git(ambiguous.root, ["checkout", "-q", "-b", "side", ambiguous.sourceCommits[1]!])
+    writeFileSync(path.join(ambiguous.root, ambiguous.sourcePaths[0]!), "side rewrite\n")
+    git(ambiguous.root, ["add", ambiguous.sourcePaths[0]!])
+    git(ambiguous.root, ["commit", "-q", "-m", "fixture: side source"])
+    git(ambiguous.root, ["checkout", "-q", ambiguous.branch])
+    writeFileSync(path.join(ambiguous.root, "main-only.md"), "main\n")
+    git(ambiguous.root, ["add", "main-only.md"]); git(ambiguous.root, ["commit", "-q", "-m", "fixture: main"])
+    expect(() => git(ambiguous.root, ["merge", "--no-ff", "-m", "fixture: ambiguous merge", "side"]))
+      .not.toThrow()
+    expect(() => reviewer.inspectV138Plan26270SourceCustody(ambiguous.root))
+      .toThrow("V138_PLAN_262_70_SOURCE_RUN_INVALID")
+
+  })
+
   it("detects every frozen contract and authority mutation after roots are recomputed", async () => {
     const reviewer = await loadReviewer()
     const review = await reviewer.deriveV138Plan26270NoPublish(process.cwd())
@@ -65,6 +121,10 @@ describe("Plan 262-70 independent Route-8 source review", () => {
       ["requirement", value => { value.requirementRoots[0].root = `sha256:${"1".repeat(64)}` }],
       ["decision", value => { value.decisionRoots[0].root = `sha256:${"2".repeat(64)}` }],
       ["authority", value => { value.authority.phase263Authorized = true }],
+      ["source commit omission", value => { value.reviewedSource.commits.splice(1, 1) }],
+      ["source commit reorder", value => { value.reviewedSource.commits.reverse() }],
+      ["extra source commit", value => { value.reviewedSource.commits.push("0".repeat(40)) }],
+      ["source path rewrite", value => { value.reviewedSource.paths[0] = "scripts/rewritten.ts" }],
     ]
     for (const [name, mutate] of mutations) {
       const candidate: any = cloneValue(review)
