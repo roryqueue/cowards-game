@@ -77,9 +77,9 @@ describe("Plan 262-68 replacement authorization representation", () => {
     appendFileSync(path.join(directory, ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-67-CHECKPOINT.md"), "\ntampered\n")
     expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_HISTORICAL_INPUT_INVALID")
   }, 30000)
-  it("rejects resurrection of the removed importable representation module", () => {
+  it.each(["ts", "js", "mjs", "cjs", "tsx", "jsx", "mts", "cts", "node", "map"])("rejects resurrection of the removed importable representation module as .%s", extension => {
     const directory = cloneWithoutRepresentationModule()
-    writeFileSync(path.join(directory, "scripts/lib/v1-38-plan-262-68-replacement-authorization.ts"), "export const executable = true\n")
+    writeFileSync(path.join(directory, `scripts/lib/v1-38-plan-262-68-replacement-authorization.${extension}`), "export const executable = true\n")
     expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
   }, 30000)
   it("rejects a hidden route-reservation claim", () => {
