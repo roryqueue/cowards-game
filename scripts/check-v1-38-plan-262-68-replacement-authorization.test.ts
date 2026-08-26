@@ -75,6 +75,9 @@ describe("Plan 262-68 replacement authorization representation", () => {
     ['import "./lib/v1-38-plan-262-68-replacement-authorization"\n', "scripts/runtime-import-plan-262-68.js"],
     ['const stem = "./lib/v1-38-plan-262-68"; void import(stem + "-replacement-authorization.js")\n', "scripts/runtime-import-plan-262-68.mjs"],
     ['const p = "./lib/v1-38-plan-" + "262-68"; void import(p + "-replacement-" + "authorization.js")\n', "scripts/runtime-import-plan-262-68-split.js"],
+    ['let p = "./safe.js"; p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void import(p)\n', "scripts/runtime-import-plan-262-68-reassign.js"],
+    ['const p = "./safe.js"; { const p = "./lib/v1-38-plan-" + "262-68-replacement-" + "authorization.js"; void import(p) }\n', "scripts/runtime-import-plan-262-68-shadow.js"],
+    ['const suffix = "authorization"; void import(`./lib/v1-38-plan-262-68-replacement-${suffix}.js`)\n', "scripts/runtime-import-plan-262-68-template.mjs"],
     ['export { createV138Plan26268ReplacementAuthorization } from "./lib/v1-38-plan-262-68-replacement-authorization.js"\n', "scripts/runtime-import-plan-262-68.cjs"],
   ])("rejects alternate module consumption", (source, repoPath) => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
@@ -96,6 +99,15 @@ describe("Plan 262-68 replacement authorization representation", () => {
     writeFileSync(path.join(directory, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@plan26268": ["scripts/lib/v1-38-plan-262-68-replacement-authorization.ts"] } } }))
     writeFileSync(path.join(directory, "scripts/runtime-import-plan-262-68-alias.ts"), 'import "@plan26268"\n')
     execFileSync("git", ["add", "tsconfig.json", "scripts/runtime-import-plan-262-68-alias.ts"], { cwd: directory })
+    expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_IMPORT_BOUNDARY_INVALID")
+  }, 30000)
+  it("rejects an alias from the importing project's nearer tsconfig", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "plan-262-68-")); copies.push(directory)
+    execFileSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory])
+    const packageDirectory = path.join(directory, "scripts/plan-262-68-alias-package"); mkdirSync(packageDirectory)
+    writeFileSync(path.join(packageDirectory, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: "..", paths: { "@local-authority": ["lib/v1-38-plan-262-68-replacement-authorization.ts"] } } }))
+    writeFileSync(path.join(packageDirectory, "consumer.ts"), 'import "@local-authority"\n')
+    execFileSync("git", ["add", "scripts/plan-262-68-alias-package"], { cwd: directory })
     expect(() => checkV138Plan26268ReplacementAuthorization(directory)).toThrow("V138_262_68_IMPORT_BOUNDARY_INVALID")
   }, 30000)
 })
