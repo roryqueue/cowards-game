@@ -10,7 +10,18 @@ describe("Plan 262-68 replacement authorization representation", () => {
   it.each([
     { executable: true }, { consumable: true }, { routeStarted: true },
     { checkpointRoot: "sha256:forged" },
+    { schemaVersion: "v1.38-authorizing" },
+    { reviewDisposition: "authorizing" },
+    { executable: undefined },
   ])("rejects authority or identity drift", mutation => {
+    const candidate = { ...createV138Plan26268ReplacementAuthorization(), ...mutation }
+    expect(() => checkV138Plan26268ReplacementAuthorization(root, candidate as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
+  })
+  it.each([
+    { admit03: { status: "passed", freshAccepted: 540, requiredAccepted: 540 } },
+    { frozenBounds: { ...createV138Plan26268ReplacementAuthorization().frozenBounds, minimumEffectiveAvailableBasisPoints: 2499 } },
+    { canonicalAuthorizationWritten: true }, { canonicalSealWritten: true },
+  ])("rejects nested policy or canonical-output drift", mutation => {
     const candidate = { ...createV138Plan26268ReplacementAuthorization(), ...mutation }
     expect(() => checkV138Plan26268ReplacementAuthorization(root, candidate as ReturnType<typeof createV138Plan26268ReplacementAuthorization>)).toThrow("V138_262_68_REPRESENTATION_INVALID")
   })

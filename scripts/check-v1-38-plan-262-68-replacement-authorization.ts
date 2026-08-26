@@ -1,5 +1,7 @@
 #!/usr/bin/env -S pnpm exec tsx
-import { lstatSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { execFileSync } from "node:child_process"
+import { lstatSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { createV138Plan26268ReplacementAuthorization, PLAN_262_67_CHECKPOINT_ROOT } from "./lib/v1-38-plan-262-68-replacement-authorization.js"
@@ -9,17 +11,33 @@ const forbidden = [
   ".planning/artifacts/v1.38-plan-262-56-authorization-v9.json",
   ".planning/artifacts/v1.38-successor-source-seal-v9.json",
   ".planning/artifacts/v1.38-plan-262-57-route-start-v1.json",
+  ".planning/artifacts/v1.38-current-matrix-headroom-preflight-v11.json",
+  ".planning/artifacts/v1.38-current-matrix-calibration-v11.json",
   ".planning/artifacts/v1.38-current-matrix-reproduction-v12.json",
+  ".planning/artifacts/v1.38-plan-262-57-calibration-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-57-reproduction-consumption-v1.json",
+  ".planning/artifacts/v1.38-plan-262-57-pre-start-obstruction-v1.json",
+  ".planning/artifacts/v1.38-plan-262-57-terminal-v1.json",
+] as const
+const historical = [
+  ["scripts/render-v1-38-plan-262-67-replacement-contract.ts", "b0fbf478e47bda9adf0d0f980b5d6e7f9ef31d2205fa14f057ed164b9eebd3ef"],
+  [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-67-CHECKPOINT.md", "38482b69f4e21f01963897922e4702ca31468cb58379ac75476ff66c03a06185"],
+  [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-66-REVIEW.md", "24b0e22ba8dc82e059a0418930d6ccfdf22ca8fe7b5175913899cb72c911e1dd"],
+  [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-62-HISTORICAL.md", "438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a"],
+  ["scripts/check-v1-38-plan-262-65-r4-source.ts", "f39cfa18c6782b5e0385480ffe5016934830de18572e5b0f711006f8165f1ca9"],
+  [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-65-CODE-REVIEW.md", "73d47ff23cf2b5a2e3c268180621e0c83aedba8e4cb2dbc3c3cc8ca0d346ce16"],
 ] as const
 const present = (root: string, repoPath: string) => { try { lstatSync(path.resolve(root, repoPath)); return true } catch (error: unknown) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error } }
 
 export const checkV138Plan26268ReplacementAuthorization = (root: string, candidate = createV138Plan26268ReplacementAuthorization()) => {
-  if (candidate.checkpointRoot !== PLAN_262_67_CHECKPOINT_ROOT || candidate.executable || candidate.consumable ||
-    candidate.admit03.status !== "blocked" || candidate.admit03.freshAccepted !== 0 || candidate.admit03.requiredAccepted !== 540 ||
-    candidate.frozenBounds.headroomSamplingMs !== 200 || candidate.frozenBounds.minimumEffectiveAvailableBasisPoints !== 2500 ||
-    candidate.frozenBounds.calibrationAttempts !== 8 || candidate.frozenBounds.calibrationShards !== 4 ||
-    candidate.frozenBounds.conditionalReproductionCells !== 540 || candidate.frozenBounds.formationMaterialization ||
-    candidate.canonicalAuthorizationWritten || candidate.canonicalSealWritten || candidate.routeStarted)
+  const repositoryRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: root, encoding: "utf8" }).trim()
+  if (realpathSync(repositoryRoot) !== realpathSync(root)) throw new TypeError("V138_262_68_REPOSITORY_ROOT_INVALID")
+  for (const [repoPath, expected] of historical) {
+    const actual = createHash("sha256").update(readFileSync(path.resolve(root, repoPath))).digest("hex")
+    if (actual !== expected) throw new TypeError("V138_262_68_HISTORICAL_INPUT_INVALID")
+  }
+  if (JSON.stringify(candidate) !== JSON.stringify(createV138Plan26268ReplacementAuthorization()) ||
+    candidate.checkpointRoot !== PLAN_262_67_CHECKPOINT_ROOT)
     throw new TypeError("V138_262_68_REPRESENTATION_INVALID")
   if (forbidden.some(repoPath => present(root, repoPath))) throw new TypeError("V138_262_68_FORBIDDEN_DESTINATION_PRESENT")
   return Object.freeze({ status: "passed", authority: "denied" as const, checkpointRoot: candidate.checkpointRoot })
