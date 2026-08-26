@@ -35,6 +35,13 @@ const temporary = (): string => {
   mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
   return root
 }
+const canonicalClone = (): string => {
+  const parent = mkdtempSync(path.join(tmpdir(), "v138-route8-canonical-"))
+  roots.push(parent)
+  const root = path.join(parent, "repo")
+  execFileSync("git", ["clone", "--quiet", "--no-hardlinks", sourceRoot, root], { stdio: "ignore" })
+  return root
+}
 
 const digest = (digit: string) => `sha256:${digit.repeat(64)}` as const
 const oid = (digit: string) => digit.repeat(40)
@@ -206,9 +213,10 @@ const validationBytes = (branch: "obstruction" | "terminal", unavailable = false
     "MEAS-03", "MEAS-04", "MEAS-05", "MEAS-06", "MEAS-07", "MEAS-08", "MEAS-09",
     "MEAS-10", "SEAL-01", "DECI-02"]
   const rows = ids.map(id => `| ${id} | ${id === "ADMIT-03" && branch === "obstruction" ?
-    "PARTIAL / BLOCKED" : "COVERED"} | evidence |`).join("\n")
+    "PARTIAL / BLOCKED" : "COVERED"} | evidence | command |`).join("\n")
   return `---\nstatus: ${branch === "obstruction" ? "partial" : "passed"}\nlast_audited: 2026-08-26\n---\n\n` +
-    `Local-seal v3\n\n## Requirement Coverage\n${rows}\n\n${branch === "obstruction" ?
+    `Local-seal v3\n\n## Requirement Coverage\n\n| Requirement | Status | Behavioral evidence | Automated command |\n` +
+    `|---|---|---|---|\n${rows}\n\n${branch === "obstruction" ?
       "Coverage is 15 covered and 1 partial-blocked.\nThis result cannot authorize Phase 263 or any downstream/live capability.\n| ADMIT-03 | BLOCKER | missing route |" :
       "Coverage is 16 covered and 0 gaps.\nPhase 263 planning authorized.\nDownstream authority remains denied."}\n\n## Evidence\nExact.\n` +
     (unavailable ? "verification_carrier_unavailable: true\n" : "")
@@ -343,6 +351,10 @@ const subprocessCli = (root: string, argv: string[]) => spawnSync("pnpm", ["exec
     "scripts/check-v1-38-plan-262-69-route-8-source.ts")).href)}; process.stdout.write(dispatchV138Route8Cli(process.env.FIXTURE_ROOT, JSON.parse(process.env.FIXTURE_ARGV)))`],
 { cwd: sourceRoot, encoding: "utf8", env: { ...process.env, FIXTURE_ROOT: root,
   FIXTURE_ARGV: JSON.stringify(argv) } })
+const crashApi = (root: string, expression: string) => spawnSync("pnpm", ["exec", "tsx", "-e",
+  `import { V138_PLAN_262_74_TEST_ONLY as api } from ${JSON.stringify(pathToFileURL(path.join(sourceRoot,
+    "scripts/check-v1-38-plan-262-69-route-8-source.ts")).href)}; ${expression}`],
+{ cwd: sourceRoot, encoding: "utf8", env: { ...process.env, FIXTURE_ROOT: root } })
 
 describe("route-8 Plan 74 lifecycle boundaries", () => {
   const api = V138_PLAN_262_74_TEST_ONLY
@@ -471,6 +483,15 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     expect(existsSync(path.join(root, ".planning/.v138-plan26274-transaction-v1"))).toBe(false)
   })
 
+  it.each([1, 2, 3, 4, 5])("recovers after abrupt termination at transaction setup boundary %i", step => {
+    const root = lifecycleFixture(); const args = lifecycleArgs()
+    const result = crashApi(root,
+      `api.normalize(process.env.FIXTURE_ROOT, ${JSON.stringify(args)}, { crashAfterSetup: ${step} })`)
+    expect(result.status).not.toBe(0)
+    api.recover(root)
+    expect(api.normalize(root, args).branch).toBe("obstruction")
+  })
+
   it("rejects repository-authored journals without a trusted git-dir intent", () => {
     const root = lifecycleFixture(); const args = lifecycleArgs()
     const directory = path.join(root, ".planning/.v138-plan26274-transaction-v1")
@@ -512,6 +533,30 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
       blocked: `${args.phaseDir}/262-74-BLOCKED.md` })).toBe("passed")
   }, 20_000)
 
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])(
+    "keeps completion fail-closed after PASS install boundary %i", boundary => {
+      const root = lifecycleFixture("terminal"); const args = lifecycleArgs()
+      api.normalize(root, args)
+      const binderPath = ".planning/artifacts/plan-74-binder.json"
+      api.bind(root, { ...args, output: binderPath })
+      const driver = sentinelArgs(args, binderPath)
+      const result = crashApi(root,
+        `api.run(process.env.FIXTURE_ROOT, ${JSON.stringify(driver)}, { crashAfterInstall: ${boundary} })`)
+      expect(result.status).not.toBe(0)
+      expect(() => api.checkResult(root, { ...driver, summary: `${args.phaseDir}/262-74-SUMMARY.md`,
+        blocked: `${args.phaseDir}/262-74-BLOCKED.md` })).toThrow("V138_ROUTE8_TRANSACTION_PENDING")
+      const summaryVisible = existsSync(path.join(root, args.phaseDir, "262-74-SUMMARY.md"))
+      if (!summaryVisible) {
+        expect(readFileSync(path.join(root, args.requirements), "utf8")).toContain("- [ ] **ADMIT-03**:")
+        expect(readFileSync(path.join(root, args.roadmap), "utf8")).toContain("55/56")
+        expect(readFileSync(path.join(root, args.state), "utf8")).toContain("  completed_plans: 55")
+      }
+      api.recover(root)
+      expect(api.checkResult(root, { ...driver, summary: `${args.phaseDir}/262-74-SUMMARY.md`,
+        blocked: `${args.phaseDir}/262-74-BLOCKED.md` })).toBe("passed")
+    }, 20_000,
+  )
+
   it("rejects alternate production paths and unknown positive carrier authority", () => {
     const root = lifecycleFixture(); const args = lifecycleArgs()
     expect(() => normalizeV138PostValidation(root, { ...args, phaseDir: `${args.phaseDir}-alternate` }))
@@ -538,9 +583,15 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
 
     const duplicate = lifecycleFixture()
     writeFileSync(path.join(duplicate, args.validation), validationBytes("obstruction")
-      .replace("| ADMIT-04 | COVERED | evidence |", "| ADMIT-04 | COVERED | evidence |\n| ADMIT-04 | BLOCKED | contradiction |"))
+      .replace("| ADMIT-04 | COVERED | evidence | command |", "| ADMIT-04 | COVERED | evidence | command |\n| ADMIT-04 | BLOCKED | contradiction | command |"))
     commitAll(duplicate, "fixture: duplicate validator row")
     expect(() => api.normalize(duplicate, args)).toThrow("V138_ROUTE8_VALIDATOR_SCHEMA_INVALID")
+  })
+
+  it("rejects a locally synthesized terminal chain without a pre-Plan-72 producer anchor", () => {
+    const root = lifecycleFixture("terminal")
+    expect(() => api.checkProductionExecutionProvenance(root))
+      .toThrow("V138_ROUTE8_EXECUTION_PRODUCER_ANCHOR_UNAVAILABLE")
   })
 
   it("authenticates and migrates the exact previous normalization generation", () => {
@@ -588,6 +639,30 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
       "--verification", verification, "--summary", `${args.phaseDir}/262-74-SUMMARY.md`,
       "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`, "--temp", "x"])
     expect(unknown.status).not.toBe(0)
+  }, 30_000)
+
+  it("runs the exact obstruction sequence against canonical committed carriers and history", () => {
+    const root = canonicalClone(); const args = lifecycleArgs()
+    const binder = V138_ROUTE_8_PATHS.binder
+    const verification = `${args.phaseDir}/262-VERIFICATION.md`
+    const exact = [
+      ["--normalize-post-validation", ...lifecycleCliOptions(args)],
+      ["--check-normalized-post-validation", ...lifecycleCliOptions(args)],
+      ["--bind-post-validation", ...lifecycleCliOptions(args), "--output", binder],
+      ["--check-post-validation-binder", ...lifecycleCliOptions(args), "--binder", binder],
+      ["--run-plan-262-74-sentinel", "--binder", binder, "--phase-dir", args.phaseDir,
+        "--requirements", args.requirements, "--roadmap", args.roadmap, "--state", args.state,
+        "--validation", args.validation, "--verification", verification],
+      ["--check-plan-262-74-result", "--binder", binder, "--verification", verification,
+        "--summary", `${args.phaseDir}/262-74-SUMMARY.md`, "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`],
+    ]
+    for (const argv of exact) {
+      const result = subprocessCli(root, argv)
+      expect(result.status, `${argv[0]}: ${result.stderr}`).toBe(0)
+    }
+    expect(readFileSync(path.join(root, args.roadmap), "utf8")).toContain('"fresh_charged":0')
+    expect(readFileSync(path.join(root, args.state), "utf8")).toContain('"fresh_accepted":0')
+    expect(existsSync(path.join(root, args.phaseDir, "262-74-SUMMARY.md"))).toBe(false)
   }, 30_000)
 
   it("rejects dirty and post-summary execution evidence", () => {
