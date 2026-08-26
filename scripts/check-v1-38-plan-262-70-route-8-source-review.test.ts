@@ -168,6 +168,51 @@ describe("Plan 262-70 independent Route-8 source review", () => {
       .toThrow("V138_PLAN_262_70_REVIEW_FINDINGS")
   }, 180_000)
 
+  it("accepts only the immutable historical v1 review pair under frozen v1 semantics", async () => {
+    const reviewer = await loadReviewer()
+    const reviewBytes = readFileSync(reviewer.V138_PLAN_262_70_REVIEW_PATH, "utf8")
+    const reportBytes = readFileSync(reviewer.V138_PLAN_262_70_REPORT_PATH, "utf8")
+    const historical = JSON.parse(reviewBytes)
+    const checked = JSON.parse(execFileSync(path.resolve("node_modules/.bin/tsx"), [
+      "scripts/check-v1-38-plan-262-70-route-8-source-review.ts", "--check-review",
+      "--review", reviewer.V138_PLAN_262_70_REVIEW_PATH,
+      "--report", reviewer.V138_PLAN_262_70_REPORT_PATH,
+    ], { cwd: process.cwd(), encoding: "utf8" }))
+    expect(checked).toEqual({ status: "passed", findingCount: 0,
+      reviewRoot: historical.reviewRoot, authorizesExecution: false })
+    expect(reviewer.validateV138Plan26270HistoricalReviewPair(reviewBytes, reportBytes,
+      historical, reportBytes)).toBe(true)
+
+    const mutations: Array<[string, boolean, (value: any) => void]> = [
+      ["review root", false, value => { value.reviewRoot = `sha256:${"0".repeat(64)}` }],
+      ["source commit", true, value => { value.reviewedSource.commit = "0".repeat(40) }],
+      ["source blob", true, value => { value.reviewedSource.blobs[0].blob = "0".repeat(40) }],
+      ["source path", true, value => { value.reviewedSource.paths[0] = "scripts/rewritten.ts" }],
+      ["source ordering", true, value => { value.reviewedSource.commits.reverse() }],
+      ["detached result", true, value => {
+        value.detachedExecution.checkerOutputRoot = `sha256:${"1".repeat(64)}`
+      }],
+    ]
+    for (const [name, recomputeRoot, mutate] of mutations) {
+      const candidate = cloneValue(historical)
+      mutate(candidate)
+      if (recomputeRoot) candidate.reviewRoot = reviewer.computeV138Plan26270ReviewRoot(candidate)
+      expect(() => reviewer.validateV138Plan26270HistoricalReviewPair(
+        `${JSON.stringify(candidate)}\n`, reportBytes, historical, reportBytes), name)
+        .toThrow("V138_PLAN_262_70_REVIEW_MISMATCH")
+    }
+    expect(() => reviewer.validateV138Plan26270HistoricalReviewPair(
+      ` ${reviewBytes}`, reportBytes, historical, reportBytes), "review bytes")
+      .toThrow("V138_PLAN_262_70_REVIEW_MISMATCH")
+    expect(() => reviewer.validateV138Plan26270HistoricalReviewPair(
+      reviewBytes, `${reportBytes}\n`, historical, reportBytes), "report bytes")
+      .toThrow("V138_PLAN_262_70_REVIEW_MISMATCH")
+    expect(() => reviewer.validateV138Plan26270HistoricalReviewPair(reviewBytes,
+      reportBytes.replace(historical.reviewRoot, `sha256:${"2".repeat(64)}`),
+      historical, reportBytes), "report root")
+      .toThrow("V138_PLAN_262_70_REVIEW_MISMATCH")
+  }, 180_000)
+
   it("rejects changed source bytes and leaves no disposable clone", async () => {
     const reviewer = await loadReviewer()
     const root = mkdtempSync(path.join(tmpdir(), "v138-plan26270-source-"))

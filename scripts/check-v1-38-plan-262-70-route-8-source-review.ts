@@ -12,6 +12,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -75,6 +76,14 @@ const OBSERVATION_IDS = Object.freeze([
   "obstruction-gaps-phase263-denial", "malformed-input-denial",
   "canonical-kernel-runtime-delegation",
 ] as const)
+const HISTORICAL_REVIEW_V1 = Object.freeze({
+  schemaVersion: "v1.38-plan-262-70-route-8-source-review-v1",
+  reviewProtocol: "fresh-route8-source-review-v1",
+  publicationCommit: "05b10d6343eb0883db3b99bd5689220166c80169",
+  checkerBlob: "196dec44681bb75dd08f1d57716acaa1a5be29bc",
+  reviewSha256: "sha256:c9e5a2691b5aac2780551252ac83f71933d96795af886ac9a9d33d4d305e7361",
+  reportSha256: "sha256:7e47ecb45908706caecace66f8e31ec49f5376b2276c02e3abd8a5386fe0bdda",
+})
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const fail = (code: string): never => { throw new TypeError(code) }
@@ -396,6 +405,60 @@ export const validateV138Plan26270ReviewPair = (candidate: any, report: string,
   return true
 }
 
+export const validateV138Plan26270HistoricalReviewPair = (reviewBytes: string,
+  reportBytes: string, expectedReview: any, expectedReport: string): true => {
+  let candidate: any
+  try { candidate = JSON.parse(reviewBytes) } catch {
+    fail("V138_PLAN_262_70_REVIEW_SCHEMA_INVALID")
+  }
+  if (reviewBytes !== canonical(candidate) ||
+    sha256(reviewBytes) !== HISTORICAL_REVIEW_V1.reviewSha256 ||
+    sha256(reportBytes) !== HISTORICAL_REVIEW_V1.reportSha256 ||
+    candidate?.schemaVersion !== HISTORICAL_REVIEW_V1.schemaVersion ||
+    candidate?.reviewProtocol !== HISTORICAL_REVIEW_V1.reviewProtocol ||
+    candidate?.reviewRoot !== computeV138Plan26270ReviewRoot(candidate) ||
+    canonical(candidate) !== canonical(expectedReview)) {
+    fail("V138_PLAN_262_70_REVIEW_MISMATCH")
+  }
+  if (reportBytes !== expectedReport) fail("V138_PLAN_262_70_REPORT_MISMATCH")
+  return true
+}
+
+const deriveHistoricalV1Review = (root: string) => {
+  const publication = HISTORICAL_REVIEW_V1.publicationCommit
+  try { execFileSync("git", ["merge-base", "--is-ancestor", publication, "HEAD"],
+    { cwd: root, stdio: "ignore" }) } catch {
+    fail("V138_PLAN_262_70_HISTORICAL_LINEAGE_INVALID")
+  }
+  const checkerTuple = git(root, ["ls-tree", publication, "--",
+    "scripts/check-v1-38-plan-262-70-route-8-source-review.ts"]).split(/\s+/u)
+  if (checkerTuple[0] !== "100644" || checkerTuple[2] !== HISTORICAL_REVIEW_V1.checkerBlob)
+    fail("V138_PLAN_262_70_HISTORICAL_LINEAGE_INVALID")
+  const owner = mkdtempSync(path.join(realpathSync(tmpdir()), "v138-plan26270-history-v1-"))
+  chmodSync(owner, 0o700)
+  const clone = path.join(owner, "repo")
+  try {
+    execFileSync("git", ["clone", "--shared", "--no-checkout", root, clone],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
+    execFileSync("git", ["checkout", "--detach", publication],
+      { cwd: clone, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
+    symlinkSync(path.resolve(root, "node_modules"), path.resolve(clone, "node_modules"), "dir")
+    const script = `import("./scripts/check-v1-38-plan-262-70-route-8-source-review.ts")` +
+      `.then(async m => { const review = await m.deriveV138Plan26270NoPublish(process.cwd());` +
+      ` process.stdout.write(JSON.stringify({ review, report:` +
+      ` m.renderV138Plan26270ReviewReport(review) }) + "\\n") })`
+    const stdout = execFileSync(path.resolve(root, "node_modules/.bin/tsx"), ["-e", script],
+      { cwd: clone, encoding: "utf8", env: { ...process.env, LC_ALL: "C", LANG: "C" } })
+    const derived = JSON.parse(stdout) as { review: unknown; report: string }
+    return deepFreeze(derived)
+  } catch (error) {
+    if (error instanceof TypeError && error.message.startsWith("V138_PLAN_262_70_")) throw error
+    fail("V138_PLAN_262_70_HISTORICAL_DERIVATION_INVALID")
+  } finally {
+    rmSync(owner, { recursive: true, force: true })
+  }
+}
+
 const exclusiveWrite = (file: string, bytes: string): void => {
   if (safeType(file) !== "absent") fail("V138_PLAN_262_70_DESTINATION_PRESENT")
   const descriptor = openSync(file,
@@ -439,14 +502,22 @@ const inspectCommittedPair = (root: string): void => {
 const checkReview = async (root: string, reviewPath: string, reportPath: string) => {
   if (reviewPath !== V138_PLAN_262_70_REVIEW_PATH || reportPath !== V138_PLAN_262_70_REPORT_PATH)
     fail("V138_PLAN_262_70_PATH_INVALID")
-  const expected = await deriveV138Plan26270NoPublish(root)
-  let candidate: unknown
-  try { candidate = JSON.parse(read(root, reviewPath)) } catch {
+  const reviewBytes = read(root, reviewPath)
+  const reportBytes = read(root, reportPath)
+  let candidate: any
+  try { candidate = JSON.parse(reviewBytes) } catch {
     fail("V138_PLAN_262_70_REVIEW_SCHEMA_INVALID")
   }
-  validateV138Plan26270ReviewPair(candidate, read(root, reportPath), expected)
+  const expected = await deriveV138Plan26270NoPublish(root)
+  if (canonical(candidate) === canonical(expected)) {
+    validateV138Plan26270ReviewPair(candidate, reportBytes, expected)
+  } else {
+    const historical = deriveHistoricalV1Review(root)
+    validateV138Plan26270HistoricalReviewPair(reviewBytes, reportBytes,
+      historical.review, historical.report)
+  }
   inspectCommittedPair(root)
-  return expected
+  return candidate
 }
 
 const exactArgv = (actual: readonly string[], expected: readonly string[]): void => {
