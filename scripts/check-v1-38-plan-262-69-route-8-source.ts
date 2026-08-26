@@ -5,7 +5,9 @@ import {
   chmodSync,
   lstatSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -68,8 +70,29 @@ const immutable = new Map<string, string>([
 ])
 const resolveRoot = (): string => path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const ensureWithin = (root: string, file: string): string => {
-  const resolved = path.resolve(root, file)
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) fail("V138_ROUTE8_PATH_OUTSIDE_REPOSITORY")
+  if (!file || path.isAbsolute(file)) fail("V138_ROUTE8_PATH_OUTSIDE_REPOSITORY")
+  const rootPath = path.resolve(root)
+  if (lstatSync(rootPath).isSymbolicLink()) fail("V138_ROUTE8_PATH_UNSAFE")
+  const rootReal = realpathSync(rootPath)
+  const resolved = path.resolve(rootPath, file)
+  const relative = path.relative(rootPath, resolved)
+  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    fail("V138_ROUTE8_PATH_OUTSIDE_REPOSITORY")
+  }
+  let cursor = rootPath
+  for (const segment of relative.split(path.sep)) {
+    cursor = path.join(cursor, segment)
+    try {
+      if (lstatSync(cursor).isSymbolicLink()) fail("V138_ROUTE8_PATH_UNSAFE")
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") break
+      throw error
+    }
+  }
+  let parent = path.dirname(resolved)
+  while (safe(parent) === "missing") parent = path.dirname(parent)
+  const parentReal = realpathSync(parent)
+  if (parentReal !== rootReal && !parentReal.startsWith(`${rootReal}${path.sep}`)) fail("V138_ROUTE8_PATH_OUTSIDE_REPOSITORY")
   return resolved
 }
 
