@@ -1,85 +1,98 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-26T05:45:11Z
+fixed_at: 2026-08-26T06:22:32Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 1
-findings_in_scope: 8
-fixed: 8
+iteration: 2
+findings_in_scope: 10
+fixed: 10
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-26T05:45:11Z
+**Fixed at:** 2026-08-26T06:22:32Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
 
-- Findings in scope: 8
-- Fixed: 8
+- Findings in scope: 10
+- Fixed: 10
 - Skipped: 0
 
 ## Fixed Issues
 
-### CR-01: Sentinel trusts arbitrary binder JSON and never runs the required provenance-aware verifier
+### CR-01: PASS reconstruction accepts a fabricated terminal without execution or reproduction evidence
 
 **Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** a812ba1a
-**Applied fix:** The driver now reconstructs canonical lifecycle arguments, invokes the full binder checker, renders an exact verifier input, and delegates status production to a separately schema-checked verifier before any canonical write.
+**Commit:** b1947245
+**Applied fix:** Added exact, content-addressed validation of authorization, seal, route-start, preflight, both consumption markers, calibration, reproduction, terminal roots, counters, defect families, and one-shot/no-retry correlations. Fixed; requires human verification of lifecycle semantics.
 
-### CR-02: Contradictory obstruction/PASS dispositions can complete Phase 262 without 540/540 evidence
-
-**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** a812ba1a
-**Applied fix:** Exact source-derived disposition and activation objects are reconstructed and compared byte-semantically, including branch XOR, disposition root, terminal 540/540 counts, ADMIT-03, reduced-assurance seal, activation correlation, Phase-263 authorization, and every downstream denial. Fixed; requires human verification of lifecycle semantics.
-
-### CR-03: The advertised exact 56-plan/55-summary topology is never enumerated
+### CR-02: Reduced-assurance SEAL-01 is assumed instead of authenticated
 
 **Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** a812ba1a
-**Applied fix:** The checker enumerates no-follow regular plan and summary entries, compares them with the canonical 56-plan identity list, proves the sole missing summary is 262-74, and binds domain-separated plan and summary identity digests. Fixed; requires human verification of the canonical identity index.
+**Commit:** b1947245
+**Applied fix:** The canonical local-seal-v3 artifact is now verified with the authoritative checker and its exact byte hash, verification root, protocol root, assurance class, and custody denial are bound into normalization and the binder.
 
-### CR-04: Caller-controlled output paths can escape the repository
-
-**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** 9fcee456, a812ba1a
-**Applied fix:** All caller and phase-derived paths reject absolute values, lexical escapes, symlinked components, and realpath escapes through the nearest existing parent before reads or writes.
-
-### CR-05: Failed normalization can leave roadmap/state falsely claiming normalized provenance
+### CR-03: The 55 supposedly trustworthy summaries are authenticated only by filename
 
 **Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** a812ba1a
-**Applied fix:** Normalization now prevalidates topology, disposition, activation, requirements, both carriers, and validation before staging any write, then installs all rendered bytes through a rollback-capable multi-file transaction with temporary cleanup. Fixed; requires human verification of crash-boundary assumptions.
+**Commit:** b1947245
+**Applied fix:** Each canonical plan and summary now binds path, kind, committed blob, originating commit, content hash, and byte length under a manifest root; dirty or post-anchor rewritten topology is rejected.
 
-### CR-06: A stale blocked sentinel is accepted as current evidence
-
-**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** a812ba1a
-**Applied fix:** The obstruction artifact is now stable, content-addressed JSON bound to the checked binder and verifier report roots. Reruns replace stale bytes transactionally, and the result checker requires the exact current artifact.
-
-### CR-07: PASS closeout is non-idempotent and can strand a committed false lifecycle state
+### CR-04: Normalization turns arbitrary or stale validation text into authoritative provenance
 
 **Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
-**Commit:** a812ba1a
-**Applied fix:** The unsafe multi-query/multi-commit closeout was removed. Authenticated PASS now fails closed before report, summary, requirement, roadmap, state, progress, completion, or commit mutation and requires a separate orchestrator-owned atomic closeout. The current obstruction path remains deterministic and idempotent. Fixed; requires human verification of the fail-closed lifecycle policy.
+**Commit:** b1947245
+**Applied fix:** Normalization now requires a committed post-Plan-73 validator source and cross-checks its audit date, 16 requirement rows, branch status, coverage count, gaps, ADMIT-03, SEAL-01, Phase-263 decision, and downstream denial before issuing provenance. Fixed; requires human verification of validator prose-to-schema semantics.
 
-### WR-01: The only lifecycle test proves the happy obstruction path, not the regression contract
+### CR-05: In-repository alternate paths bypass the canonical lifecycle carriers
+
+**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
+**Commit:** b1947245
+**Applied fix:** Production entry points and CLI require exact canonical lifecycle/output paths. Dependency injection is isolated behind an exported test-only capability that production dispatch cannot obtain.
+
+### CR-06: Carrier normalization preserves unknown authority claims while asserting all downstream authority is denied
+
+**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
+**Commit:** b1947245
+**Applied fix:** Carriers are reconstructed from an allowlisted schema, unknown fields are rejected, every named downstream capability is explicitly false, and the aggregate denial is derived from those values.
+
+### CR-07: The multi-file lifecycle transition is rollback-capable but not atomic across process failure
+
+**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
+**Commit:** b1947245
+**Applied fix:** Multi-file transitions use a fsynced content-addressed journal with before/after generations and deterministic startup recovery, including commit resumption and conflict detection. Fixed; requires human verification of platform durability assumptions.
+
+### CR-08: Every valid PASS is deliberately rejected, so Plan 74 can never complete
+
+**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`
+**Commit:** b1947245
+**Applied fix:** Authenticated PASS now prepares and durably commits verification, summary, requirements, roadmap, state, binder, and a content-addressed closeout receipt as one resumable transition; completed closeout is byte-checked and idempotent. Fixed; requires human verification of closeout lifecycle semantics.
+
+### WR-01: Adversarial coverage still proves the vulnerable synthetic PASS contract
 
 **Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.test.ts`
-**Commit:** 4467c4b0
-**Applied fix:** Added exact-topology fixtures plus adversarial and fault-injection coverage for forged binders, tampered result artifacts, missing/extra/symlink identities, contradictory and denial-mutated dispositions, 539/540 rejection, activation mismatch, absolute and symlink paths, normalization rollback, temporary cleanup, stale blocked replacement, idempotent obstruction reruns, and PASS no-write behavior.
+**Commit:** 68a32a82
+**Applied fix:** Replaced the synthetic PASS fixture with a committed full-chain fixture and added coverage for topology bytes, validator contradictions, canonical paths, unknown authority, local seal/full-chain binding, durable journal recovery, and successful idempotent PASS closeout.
+
+### WR-02: The blocked fallback is always created even when canonical verification was installed successfully
+
+**Files modified:** `scripts/check-v1-38-plan-262-69-route-8-source.ts`, `scripts/check-v1-38-plan-262-69-route-8-source.test.ts`
+**Commit:** b1947245, 68a32a82
+**Applied fix:** Canonical VERIFICATION is the sole normal gaps carrier. BLOCKED is emitted only for an explicit unavailable-verification condition, and result checking enforces the XOR.
 
 ## Verification
 
-- `pnpm exec vitest run scripts/check-v1-38-plan-262-69-route-8-source.test.ts --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1` — 14/14 passed.
+- `pnpm exec vitest run scripts/check-v1-38-plan-262-69-route-8-source.test.ts --reporter=dot` — 17/17 passed.
 - `pnpm exec tsc --noEmit --pretty false` — passed.
 - `git diff --check` — passed.
-- No canonical binder, sentinel, authority, live, or Plan-74 output command was run.
+- No canonical binder, sentinel, authority, live, closeout, or Plan-74 output command was run against the working repository.
 
 ---
 
-_Fixed: 2026-08-26T05:45:11Z_
+_Fixed: 2026-08-26T06:22:32Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
+
