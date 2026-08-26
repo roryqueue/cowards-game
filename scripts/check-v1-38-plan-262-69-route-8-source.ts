@@ -177,7 +177,7 @@ export const checkV138NormalizedPostValidation = (root: string, args: LifecycleA
   return current
 }
 
-interface Binder extends NormalizedMarker {
+interface Binder extends Omit<NormalizedMarker, "schemaVersion"> {
   schemaVersion: "v1.38-plan-262-74-post-validation-binder-v1"
   validationSha256: Sha256
   binderRoot: Sha256
@@ -238,6 +238,7 @@ export const runV138Plan26274Sentinel = (root: string, args: DriverArgs): "passe
     if (!passed) return "gaps_found"
     fail("V138_ROUTE8_PASS_LIFECYCLE_REQUIRES_GSD_ORCHESTRATOR")
   } finally { rmSync(temp, { recursive: true, force: true }) }
+  return fail("V138_ROUTE8_SENTINEL_UNREACHABLE")
 }
 
 const parse = (values: readonly string[]): Map<string, string> => {
