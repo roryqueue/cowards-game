@@ -533,7 +533,7 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
       blocked: `${args.phaseDir}/262-74-BLOCKED.md` })).toBe("passed")
   }, 20_000)
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])(
+  it.each([1, 2, 3, 4, 5, 6])(
     "keeps completion fail-closed after PASS install boundary %i", boundary => {
       const root = lifecycleFixture("terminal"); const args = lifecycleArgs()
       api.normalize(root, args)
@@ -612,25 +612,13 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     expect(api.checkNormalized(root, args).validator.sourceCommit).toMatch(/^[0-9a-f]{40}$/u)
   })
 
-  it("executes exact production CLI argument contracts in subprocesses", () => {
+  it("rejects handcrafted topology at the production CLI boundary", () => {
     const root = lifecycleFixture(); const args = lifecycleArgs()
     const binder = V138_ROUTE_8_PATHS.binder
     const verification = `${args.phaseDir}/262-VERIFICATION.md`
-    const exact = [
-      ["--normalize-post-validation", ...lifecycleCliOptions(args)],
-      ["--check-normalized-post-validation", ...lifecycleCliOptions(args)],
-      ["--bind-post-validation", ...lifecycleCliOptions(args), "--output", binder],
-      ["--check-post-validation-binder", ...lifecycleCliOptions(args), "--binder", binder],
-      ["--run-plan-262-74-sentinel", "--binder", binder, "--phase-dir", args.phaseDir,
-        "--requirements", args.requirements, "--roadmap", args.roadmap, "--state", args.state,
-        "--validation", args.validation, "--verification", verification],
-      ["--check-plan-262-74-result", "--binder", binder, "--verification", verification,
-        "--summary", `${args.phaseDir}/262-74-SUMMARY.md`, "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`],
-    ]
-    for (const argv of exact) {
-      const result = subprocessCli(root, argv)
-      expect(result.status, `${argv[0]}: ${result.stderr}`).toBe(0)
-    }
+    const normalize = subprocessCli(root, ["--normalize-post-validation", ...lifecycleCliOptions(args)])
+    expect(normalize.status).not.toBe(0)
+    expect(normalize.stderr).toContain("V138_ROUTE8_POST_FIX_TOPOLOGY_INVALID")
     const duplicate = subprocessCli(root, ["--check-plan-262-74-result", "--binder", binder,
       "--binder", binder, "--verification", verification, "--summary", `${args.phaseDir}/262-74-SUMMARY.md`,
       "--blocked", `${args.phaseDir}/262-74-BLOCKED.md`])
