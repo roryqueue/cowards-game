@@ -612,6 +612,52 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     expect(api.checkNormalized(root, args).validator.sourceCommit).toMatch(/^[0-9a-f]{40}$/u)
   })
 
+  it("keeps committed normalized validator provenance anchored to the immutable raw source", () => {
+    const root = lifecycleFixture(); const args = lifecycleArgs()
+    const marker = api.normalize(root, args)
+    const binderPath = ".planning/artifacts/plan-74-binder.json"
+    const binder = api.bind(root, { ...args, output: binderPath })
+    const driver = sentinelArgs(args, binderPath)
+    expect(api.run(root, driver)).toBe("gaps_found")
+    const validationPath = path.join(root, args.validation)
+    const normalizedBytes = readFileSync(validationPath, "utf8")
+    commitAll(root, "fixture: commit normalized obstruction closeout")
+
+    expect(api.checkNormalized(root, args)).toEqual(marker)
+    expect(api.checkBinder(root, { ...args, binder: binderPath })).toEqual(binder)
+    expect(api.checkResult(root, { ...driver, summary: `${args.phaseDir}/262-74-SUMMARY.md`,
+      blocked: `${args.phaseDir}/262-74-BLOCKED.md` })).toBe("gaps_found")
+    expect(api.normalize(root, args).validator.sourceCommit).toBe(marker.validator.sourceCommit)
+    expect(readFileSync(validationPath, "utf8")).toBe(normalizedBytes)
+    expect(git(root, ["status", "--porcelain=v1"])).toBe("")
+  })
+
+  it.each(["duplicate", "laundered"])("rejects %s committed validator provenance markers", mutation => {
+    const root = lifecycleFixture(); const args = lifecycleArgs()
+    api.normalize(root, args)
+    const validationPath = path.join(root, args.validation)
+    let bytes = readFileSync(validationPath, "utf8")
+    const validatorMatch = /<!-- phase-262-route8-validator-provenance: (\{[^\n]+\}) -->/u.exec(bytes)!
+    if (mutation === "duplicate") {
+      bytes = `${bytes.trimEnd()}\n${validatorMatch[0]}\n`
+    } else {
+      const forged = JSON.parse(validatorMatch[1]!) as Record<string, unknown>
+      forged.sourceBlob = "0".repeat(40)
+      const { validatorRoot: _oldRoot, ...body } = forged
+      forged.validatorRoot = sha(`v138-route8-post-plan73-validator-v1\0${stable(body)}`)
+      const normalizedMatch = /<!-- phase-262-route8-post-validation: (\{[^\n]+\}) -->/u.exec(bytes)!
+      const normalized = JSON.parse(normalizedMatch[1]!) as Record<string, unknown>
+      normalized.validator = forged
+      bytes = bytes.replace(validatorMatch[0],
+        `<!-- phase-262-route8-validator-provenance: ${JSON.stringify(forged)} -->`)
+        .replace(normalizedMatch[0],
+          `<!-- phase-262-route8-post-validation: ${JSON.stringify(normalized)} -->`)
+    }
+    writeFileSync(validationPath, bytes)
+    commitAll(root, `fixture: ${mutation} committed provenance`)
+    expect(() => api.checkNormalized(root, args)).toThrow("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+  })
+
   it("rejects handcrafted topology at the production CLI boundary", () => {
     const root = lifecycleFixture(); const args = lifecycleArgs()
     const binder = V138_ROUTE_8_PATHS.binder
@@ -636,7 +682,8 @@ describe("route-8 Plan 74 lifecycle boundaries", () => {
     const exact = [
       ["--normalize-post-validation", ...lifecycleCliOptions(args)],
       ["--check-normalized-post-validation", ...lifecycleCliOptions(args)],
-      ["--bind-post-validation", ...lifecycleCliOptions(args), "--output", binder],
+      ...(existsSync(path.join(root, binder)) ? [] :
+        [["--bind-post-validation", ...lifecycleCliOptions(args), "--output", binder]]),
       ["--check-post-validation-binder", ...lifecycleCliOptions(args), "--binder", binder],
       ["--run-plan-262-74-sentinel", "--binder", binder, "--phase-dir", args.phaseDir,
         "--requirements", args.requirements, "--roadmap", args.roadmap, "--state", args.state,

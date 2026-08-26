@@ -304,13 +304,58 @@ const checkedValidator = (root: string, args: LifecycleArgs,
   branch: "obstruction" | "terminal", plan73Commit: string) => {
   const validationPath = actual(root, args.validation)
   const relative = path.relative(path.resolve(root), validationPath)
-  const sourceCommit = gitText(root, ["log", "-1", "--format=%H", "--", relative])
-  const sourceBlob = gitText(root, ["rev-parse", `HEAD:${relative}`])
+  const latestCommit = gitText(root, ["log", "-1", "--format=%H", "--", relative])
+  const committedBytes = gitBytes(root, ["show", `HEAD:${relative}`]).toString("utf8")
+  const committedMarkers = [...committedBytes.matchAll(
+    new RegExp(`<!-- ${validatorTag}: (\\{[^\\n]+\\}) -->`, "g"),
+  )]
+  let claimedProvenance: Record<string, unknown> | null = null
+  let sourceCommit: string
+  let sourceBlob: string
+  let sourceBytes: string
+  if (committedMarkers.length === 0) {
+    sourceCommit = latestCommit
+    sourceBlob = gitText(root, ["rev-parse", `HEAD:${relative}`])
+    sourceBytes = committedBytes
+  } else {
+    if (committedMarkers.length !== 1) fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    try {
+      claimedProvenance = exactRecord(JSON.parse(committedMarkers[0]![1]!), [
+        "schemaVersion", "sourceCommit", "sourceBlob", "sourceSha256", "plan73Commit", "status",
+        "coveredRequirements", "gapCodes", "admit03", "seal01", "phase263PlanningAuthorized",
+        "downstreamAuthorityDenied", "verificationCarrierAvailable", "validatorRoot",
+      ], "V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    } catch { return fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID") }
+    const normalizedMatches = [...committedBytes.matchAll(
+      new RegExp(`<!-- ${normalizedTag}: (\\{[^\\n]+\\}) -->`, "g"),
+    )]
+    if (normalizedMatches.length !== 1) fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    let normalized: NormalizedMarker
+    try { normalized = JSON.parse(normalizedMatches[0]![1]!) as NormalizedMarker }
+    catch { return fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID") }
+    if (stable(normalized.validator) !== stable(claimedProvenance)) {
+      fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    }
+    sourceCommit = claimedProvenance.sourceCommit as string
+    sourceBlob = claimedProvenance.sourceBlob as string
+    if (!/^[0-9a-f]{40}$/u.test(latestCommit) || latestCommit === sourceCommit) {
+      fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    }
+    strictAncestor(root, sourceCommit, latestCommit, "V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    let immutableBlob: string
+    try { immutableBlob = gitText(root, ["rev-parse", `${sourceCommit}:${relative}`]) }
+    catch { return fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID") }
+    if (immutableBlob !== sourceBlob) fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    sourceBytes = gitBytes(root, ["show", `${sourceCommit}:${relative}`]).toString("utf8")
+    if (sourceBytes.includes(validatorTag) || sourceBytes.includes(normalizedTag) ||
+        claimedProvenance.sourceSha256 !== digest(sourceBytes)) {
+      fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+    }
+  }
   if (!/^[0-9a-f]{40}$/u.test(sourceCommit) || !/^[0-9a-f]{40}$/u.test(sourceBlob)) {
     fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
   }
   strictAncestor(root, plan73Commit, sourceCommit, "V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
-  const sourceBytes = gitBytes(root, ["show", `HEAD:${relative}`]).toString("utf8")
   const section = /^## Requirement Coverage\n\n((?:\|[^\n]*\n){18})\n/mu.exec(sourceBytes)?.[1] ?? ""
   const lines = section.trimEnd().split("\n")
   if (lines[0] !== "| Requirement | Status | Behavioral evidence | Automated command |" ||
@@ -347,6 +392,9 @@ const checkedValidator = (root: string, args: LifecycleArgs,
     verificationCarrierAvailable: !sourceBytes.includes("verification_carrier_unavailable: true") }
   const provenance: ValidatorProvenance = { ...body,
     validatorRoot: digest(`v138-route8-post-plan73-validator-v1\0${stable(body)}`) }
+  if (claimedProvenance !== null && stable(claimedProvenance) !== stable(provenance)) {
+    fail("V138_ROUTE8_VALIDATOR_PROVENANCE_INVALID")
+  }
   return Object.freeze({ provenance, sourceBytes })
 }
 const rootedArtifact = (root: string, repoPath: string, keys: readonly string[],
