@@ -21,6 +21,7 @@ import {
   V138_ROUTE_8_DESTINATIONS,
   V138_ROUTE_8_PATHS,
   checkV138Plan26272Disposition,
+  deriveV138Route8Activation,
 } from "./lib/v1-38-route-8-source.js"
 import { checkV138Plan26268ReplacementAuthorization } from
   "./check-v1-38-plan-262-68-replacement-authorization.js"
@@ -132,12 +133,18 @@ interface NormalizedMarker {
   totalPlans: 56
   trustworthySummaries: 55
   soleIncomplete: "262-74"
+  planIdentitySha256: Sha256
+  summaryIdentitySha256: Sha256
   branch: "obstruction" | "terminal"
   activationRoot: string | null
+  activationSha256: Sha256 | null
+  dispositionRoot: Sha256
   dispositionSha256: Sha256
   requirementsSha256: Sha256
   roadmapSha256: Sha256
   stateSha256: Sha256
+  freshCharged: 0 | 540
+  freshAccepted: 0 | 540
   admit03: "passed" | "blocked"
   seal01: "passed_reduced_assurance"
   phase263PlanningAuthorized: boolean
@@ -152,51 +159,180 @@ const extractMarker = (text: string): NormalizedMarker => {
 }
 interface LifecycleArgs { phaseDir: string; requirements: string; roadmap: string; state: string; validation: string; disposition: string; activationRoot: string }
 const actual = (root: string, value: string): string => ensureWithin(root, value)
-const resolveActivation = (root: string, disposition: Record<string, unknown>, requested: string): string | null => {
-  if (requested !== "auto") fail("V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
-  const active = disposition.status === "passed"
-  const selected = path.resolve(root, V138_ROUTE_8_PATHS.activation)
-  if (active ? safe(selected) !== "regular" : safe(selected) !== "missing") fail("V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
-  return active ? V138_ROUTE_8_PATHS.activation : null
+const phaseFile = (root: string, phaseDir: string, name: string): string =>
+  actual(root, path.join(phaseDir, name))
+const exactRecord = (value: unknown, keys: readonly string[], code: string): Record<string, unknown> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value) ||
+      stable(Object.keys(value as Record<string, unknown>).sort()) !== stable([...keys].sort())) fail(code)
+  return value as Record<string, unknown>
 }
-const buildMarker = (root: string, args: LifecycleArgs): NormalizedMarker => {
+const canonicalPlanNumbers = Object.freeze([
+  1, 2, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+  25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 42, 44, 45, 49,
+  51, 52, 53, 54, 60, 61, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
+])
+const identityName = (number: number, kind: "PLAN" | "SUMMARY"): string =>
+  `262-${String(number).padStart(2, "0")}-${kind}.md`
+const topology = (root: string, phaseDir: string) => {
+  const directory = actual(root, phaseDir)
+  if (safe(directory) !== "unsafe" || !lstatSync(directory).isDirectory()) fail("V138_ROUTE8_SUMMARY_INDEX_INVALID")
+  const entries = readdirSync(directory, { withFileTypes: true })
+  const plans = entries.filter(entry => /^262-\d+-PLAN\.md$/u.test(entry.name))
+  const summaries = entries.filter(entry => /^262-\d+-SUMMARY\.md$/u.test(entry.name))
+  if ([...plans, ...summaries].some(entry => !entry.isFile() || entry.isSymbolicLink())) fail("V138_ROUTE8_SUMMARY_INDEX_INVALID")
+  const planNames = plans.map(entry => entry.name).sort()
+  const summaryNames = summaries.map(entry => entry.name).sort()
+  const expectedPlans = canonicalPlanNumbers.map(number => identityName(number, "PLAN")).sort()
+  const expectedSummaries = canonicalPlanNumbers.filter(number => number !== 74)
+    .map(number => identityName(number, "SUMMARY")).sort()
+  if (stable(planNames) !== stable(expectedPlans) || stable(summaryNames) !== stable(expectedSummaries)) {
+    fail("V138_ROUTE8_SUMMARY_INDEX_INVALID")
+  }
+  return Object.freeze({
+    planIdentitySha256: digest(`v138-route8-plan-identities\0${stable(planNames)}`),
+    summaryIdentitySha256: digest(`v138-route8-summary-identities\0${stable(summaryNames)}`),
+  })
+}
+const checkedDisposition = (root: string, args: LifecycleArgs) => {
+  if (args.activationRoot !== "auto" || actual(root, args.disposition) !== actual(root, V138_ROUTE_8_PATHS.disposition)) {
+    fail("V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
+  }
+  const checkedBranch = checkV138Plan26272Disposition({ repoRoot: root })
   const dispositionBytes = readText(actual(root, args.disposition), "V138_ROUTE8_DISPOSITION_INVALID")
-  const disposition = JSON.parse(dispositionBytes) as Record<string, unknown>
-  const branch = disposition.branch === "pre_start_obstruction" ? "obstruction" : "terminal"
-  if (!["passed", "blocked"].includes(String(disposition.status)) || disposition.seal01 !== "passed_reduced_assurance") fail("V138_ROUTE8_DISPOSITION_INVALID")
-  const activationRoot = resolveActivation(root, disposition, args.activationRoot)
-  return { schemaVersion: "v1.38-plan-262-74-normalized-validation-v1", totalPlans: 56,
-    trustworthySummaries: 55, soleIncomplete: "262-74", branch, activationRoot,
-    dispositionSha256: digest(dispositionBytes),
-    requirementsSha256: digest(readText(actual(root, args.requirements), "V138_ROUTE8_REQUIREMENTS_INVALID")),
-    roadmapSha256: digest(readText(actual(root, args.roadmap), "V138_ROUTE8_ROADMAP_INVALID")),
-    stateSha256: digest(readText(actual(root, args.state), "V138_ROUTE8_STATE_INVALID")),
-    admit03: disposition.admit03 === "passed" ? "passed" : "blocked",
-    seal01: "passed_reduced_assurance",
-    phase263PlanningAuthorized: disposition.phase263PlanningAuthorized === true,
-    downstreamAuthorityDenied: true }
+  let disposition: Record<string, unknown>
+  try { disposition = JSON.parse(dispositionBytes) as Record<string, unknown> } catch { return fail("V138_ROUTE8_DISPOSITION_INVALID") }
+  let terminal: { disposition: string; freshCharged: number; freshAccepted: number; satisfiesAdmit03: boolean } | null = null
+  if (checkedBranch === "terminal") {
+    const value = exactRecord(readJson(actual(root, V138_ROUTE_8_PATHS.terminal), "V138_ROUTE8_TERMINAL_INVALID"),
+      ["schemaVersion", "disposition", "routeOrdinal", "freshCharged", "freshAccepted", "satisfiesAdmit03"], "V138_ROUTE8_TERMINAL_INVALID")
+    if (value.schemaVersion !== "v1.38-plan-262-72-terminal-v1" || value.routeOrdinal !== 8 ||
+        value.disposition !== "reproduction_passed" || value.freshCharged !== 540 ||
+        value.freshAccepted !== 540 || value.satisfiesAdmit03 !== true) fail("V138_ROUTE8_TERMINAL_INVALID")
+    terminal = { disposition: "reproduction_passed", freshCharged: 540,
+      freshAccepted: 540, satisfiesAdmit03: true }
+  }
+  const derived = deriveV138Route8Activation({
+    branch: checkedBranch === "obstruction" ? "pre_start_obstruction" : "terminal",
+    terminal, localSealPassed: true,
+  })
+  if (stable(disposition) !== stable(derived.disposition)) fail("V138_ROUTE8_DISPOSITION_INVALID")
+  const activationPath = actual(root, V138_ROUTE_8_PATHS.activation)
+  if (derived.activation === null) {
+    if (safe(activationPath) !== "missing") fail("V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
+  } else {
+    const activation = readJson(activationPath, "V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
+    if (stable(activation) !== stable(derived.activation)) fail("V138_ROUTE8_ACTIVATION_SELECTION_INVALID")
+  }
+  return Object.freeze({ branch: checkedBranch, disposition, dispositionBytes,
+    activationRoot: derived.activation === null ? null : V138_ROUTE_8_PATHS.activation,
+    activationSha256: derived.activation === null ? null : digest(readText(activationPath, "V138_ROUTE8_ACTIVATION_SELECTION_INVALID")),
+    freshCharged: (terminal?.freshCharged ?? 0) as 0 | 540,
+    freshAccepted: (terminal?.freshAccepted ?? 0) as 0 | 540 })
 }
-export const normalizeV138PostValidation = (root: string, args: LifecycleArgs): NormalizedMarker => {
-  for (const number of [69, 70, 71, 72, 73]) if (safe(path.resolve(root, args.phaseDir, `262-${number}-SUMMARY.md`)) !== "regular") fail("V138_ROUTE8_SUMMARY_INDEX_INVALID")
-  if (safe(path.resolve(root, args.phaseDir, "262-74-SUMMARY.md")) !== "missing") fail("V138_ROUTE8_SUMMARY_INDEX_INVALID")
-  const marker = buildMarker(root, args)
+const sentinelTag = "phase-262-verification-sentinel-status"
+const carrierPattern = new RegExp(`<!-- ${sentinelTag}: (\\{[^\\n]+\\}) -->`, "g")
+const renderCarrier = (text: string, disposition: ReturnType<typeof checkedDisposition>): string => {
+  const matches = [...text.matchAll(carrierPattern)]
+  if (matches.length !== 1 || text.includes("phase-262-successor-status")) fail("V138_ROUTE8_CARRIER_INVALID")
+  let current: Record<string, unknown>
+  try { current = JSON.parse(matches[0]![1]!) as Record<string, unknown> } catch { return fail("V138_ROUTE8_CARRIER_INVALID") }
+  const six = ["262-69", "262-70", "262-71", "262-72", "262-73", "262-74"]
+  const active = stable(current.active_successors) === stable(six) || stable(current.active_successors) === stable(["262-74"])
+  if (current.total_plans !== 56 || ![50, 55].includes(Number(current.trustworthy_summaries)) || !active ||
+      current.bulk_execute_phase_prohibited !== true || current.sentinel_plan !== "262-74" ||
+      current.sentinel_summary_policy !== "pass_only_after_verification" ||
+      current.candidate_search_authorized !== false || current.formation_materialization_authorized !== false ||
+      current.holdout_opening_authorized !== false || current.public_authorized !== false ||
+      current.production_authorized !== false) fail("V138_ROUTE8_CARRIER_INVALID")
+  const obstruction = disposition.branch === "obstruction"
+  const normalized = { ...current, proof_status: "route_8_post_validation_normalized",
+    admit_03: obstruction ? "blocked" : "passed", seal_01: "passed_reduced_assurance",
+    route_started: !obstruction, fresh_charged: disposition.freshCharged,
+    fresh_accepted: disposition.freshAccepted, candidate_search_authorized: false,
+    phase263_authorized: !obstruction, formation_materialization_authorized: false,
+    holdout_opening_authorized: false, public_authorized: false,
+    foundation_activation_root_present: !obstruction, production_authorized: false,
+    next_action: "run-post-validation-binder", trustworthy_summaries: 55,
+    active_successors: ["262-74"], incomplete: ["262-74"],
+    plan_72_disposition: obstruction ? "pre_start_obstruction" : "terminal",
+    plan_73_disposition: obstruction ? "blocked" : "passed" }
+  return text.replace(carrierPattern, `<!-- ${sentinelTag}: ${JSON.stringify(normalized)} -->`)
+}
+interface Replacement { file: string; bytes: string }
+interface InstallOptions { faultAfterInstall?: number }
+const installTransaction = (changes: readonly Replacement[], options: InstallOptions = {}): void => {
+  const seen = new Set(changes.map(change => change.file))
+  if (seen.size !== changes.length) fail("V138_ROUTE8_TRANSACTION_INVALID")
+  const originals = changes.map(change => ({ file: change.file,
+    bytes: safe(change.file) === "regular" ? readFileSync(change.file, "utf8") : null }))
+  const temporaries = changes.map((change, index) => `${change.file}.tmp-${process.pid}-${index}`)
+  try {
+    for (let index = 0; index < changes.length; index += 1) {
+      if (safe(temporaries[index]!) !== "missing") fail("V138_ROUTE8_TEMP_PRESENT")
+      writeFileSync(temporaries[index]!, changes[index]!.bytes, { flag: "wx", mode: 0o600 })
+    }
+    let installed = 0
+    for (let index = 0; index < changes.length; index += 1) {
+      renameSync(temporaries[index]!, changes[index]!.file)
+      installed += 1
+      if (options.faultAfterInstall === installed) fail("V138_ROUTE8_TEST_INSTALL_FAILURE")
+    }
+  } catch (error) {
+    for (const original of originals) {
+      if (original.bytes === null) {
+        if (safe(original.file) === "regular") rmSync(original.file)
+      } else if (safe(original.file) === "regular" && readFileSync(original.file, "utf8") !== original.bytes) {
+        writeReplace(original.file, original.bytes)
+      }
+    }
+    throw error
+  } finally {
+    for (const temporary of temporaries) if (safe(temporary) !== "missing") rmSync(temporary)
+  }
+}
+const snapshot = (root: string, args: LifecycleArgs) => {
+  const identities = topology(root, args.phaseDir)
+  const disposition = checkedDisposition(root, args)
+  const requirementsBytes = readText(actual(root, args.requirements), "V138_ROUTE8_REQUIREMENTS_INVALID")
+  const roadmapPath = actual(root, args.roadmap)
+  const statePath = actual(root, args.state)
+  const roadmapBytes = renderCarrier(readText(roadmapPath, "V138_ROUTE8_ROADMAP_INVALID"), disposition)
+  const stateBytes = renderCarrier(readText(statePath, "V138_ROUTE8_STATE_INVALID"), disposition)
+  const marker: NormalizedMarker = { schemaVersion: "v1.38-plan-262-74-normalized-validation-v1",
+    totalPlans: 56, trustworthySummaries: 55, soleIncomplete: "262-74", ...identities,
+    branch: disposition.branch, activationRoot: disposition.activationRoot,
+    activationSha256: disposition.activationSha256,
+    dispositionRoot: disposition.disposition.dispositionRoot as Sha256,
+    dispositionSha256: digest(disposition.dispositionBytes), requirementsSha256: digest(requirementsBytes),
+    roadmapSha256: digest(roadmapBytes), stateSha256: digest(stateBytes),
+    freshCharged: disposition.freshCharged, freshAccepted: disposition.freshAccepted,
+    admit03: disposition.branch === "obstruction" ? "blocked" : "passed",
+    seal01: "passed_reduced_assurance", phase263PlanningAuthorized: disposition.branch === "terminal",
+    downstreamAuthorityDenied: true }
+  return { marker, roadmapPath, roadmapBytes, statePath, stateBytes }
+}
+export const normalizeV138PostValidation = (root: string, args: LifecycleArgs,
+  options: InstallOptions = {}): NormalizedMarker => {
+  const prepared = snapshot(root, args)
   const validationPath = actual(root, args.validation)
-  let text = readText(validationPath, "V138_ROUTE8_VALIDATION_INVALID")
-  text = text.replace(/^.*phase-262-successor-status.*\n?/gmu, "")
-    .replace(new RegExp(`^.*${normalizedTag}.*\\n?`, "gmu"), "")
-  writeReplace(validationPath, `${text.trimEnd()}\n\n${markerLine(marker)}\n`)
-  return marker
+  const validation = readText(validationPath, "V138_ROUTE8_VALIDATION_INVALID")
+  const normalizedValidation = `${validation.replace(/^.*phase-262-successor-status.*\n?/gmu, "")
+    .replace(new RegExp(`^.*${normalizedTag}.*\\n?`, "gmu"), "").trimEnd()}\n\n${markerLine(prepared.marker)}\n`
+  installTransaction([
+    { file: prepared.roadmapPath, bytes: prepared.roadmapBytes },
+    { file: prepared.statePath, bytes: prepared.stateBytes },
+    { file: validationPath, bytes: normalizedValidation },
+  ], options)
+  return prepared.marker
 }
 export const checkV138NormalizedPostValidation = (root: string, args: LifecycleArgs): NormalizedMarker => {
+  const prepared = snapshot(root, args)
+  if (readText(prepared.roadmapPath, "V138_ROUTE8_CARRIER_INVALID") !== prepared.roadmapBytes ||
+      readText(prepared.statePath, "V138_ROUTE8_CARRIER_INVALID") !== prepared.stateBytes) fail("V138_ROUTE8_CARRIER_INVALID")
   const validation = readText(actual(root, args.validation), "V138_ROUTE8_VALIDATION_INVALID")
   if (validation.includes("phase-262-successor-status")) fail("V138_ROUTE8_VALIDATION_STALE")
   const current = extractMarker(validation)
-  const expected = buildMarker(root, args)
-  if (stable(current) !== stable(expected)) fail("V138_ROUTE8_VALIDATION_PROVENANCE_INVALID")
-  for (const carrier of [args.roadmap, args.state]) {
-    const text = readText(actual(root, carrier), "V138_ROUTE8_CARRIER_INVALID")
-    if (!text.includes('"total_plans":56') || !text.includes('"active_successors":["262-69","262-70","262-71","262-72","262-73","262-74"]')) fail("V138_ROUTE8_CARRIER_INVALID")
-  }
+  if (stable(current) !== stable(prepared.marker)) fail("V138_ROUTE8_VALIDATION_PROVENANCE_INVALID")
   return current
 }
 
@@ -223,67 +359,102 @@ export const checkV138PostValidationBinder = (root: string, args: LifecycleArgs 
   return expected
 }
 
-interface SentinelResultArgs { binder: string; verification: string; summary: string; blocked: string }
+interface VerifierInput extends Omit<Binder, "schemaVersion"> {
+  schemaVersion: "v1.38-plan-262-74-verifier-input-v1"
+}
+interface VerifierReport {
+  schemaVersion: "v1.38-plan-262-74-verifier-report-v1"
+  status: "passed" | "gaps_found"
+  binderRoot: Sha256
+  branch: "obstruction" | "terminal"
+  gaps: readonly string[]
+  humanItems: readonly []
+  reportRoot: Sha256
+}
+const verifierInput = (binder: Binder): VerifierInput => ({ ...binder,
+  schemaVersion: "v1.38-plan-262-74-verifier-input-v1" })
+export const verifyV138Plan26274Input = (value: unknown): VerifierReport => {
+  const input = exactRecord(value, ["schemaVersion", "totalPlans", "trustworthySummaries",
+    "soleIncomplete", "planIdentitySha256", "summaryIdentitySha256", "branch", "activationRoot",
+    "activationSha256", "dispositionRoot", "dispositionSha256", "requirementsSha256",
+    "roadmapSha256", "stateSha256", "freshCharged", "freshAccepted", "admit03", "seal01",
+    "phase263PlanningAuthorized", "downstreamAuthorityDenied", "validationSha256", "binderRoot"],
+  "V138_ROUTE8_VERIFIER_INPUT_INVALID") as unknown as VerifierInput
+  const terminal = input.branch === "terminal"
+  const correlation = terminal ? input.activationRoot === V138_ROUTE_8_PATHS.activation &&
+    typeof input.activationSha256 === "string" && input.freshCharged === 540 && input.freshAccepted === 540 &&
+    input.admit03 === "passed" && input.phase263PlanningAuthorized === true :
+    input.activationRoot === null && input.activationSha256 === null && input.freshCharged === 0 &&
+    input.freshAccepted === 0 && input.admit03 === "blocked" && input.phase263PlanningAuthorized === false
+  if (input.schemaVersion !== "v1.38-plan-262-74-verifier-input-v1" || input.totalPlans !== 56 ||
+      input.trustworthySummaries !== 55 || input.soleIncomplete !== "262-74" || !correlation ||
+      input.seal01 !== "passed_reduced_assurance" || input.downstreamAuthorityDenied !== true) {
+    fail("V138_ROUTE8_VERIFIER_INPUT_INVALID")
+  }
+  const body = { schemaVersion: "v1.38-plan-262-74-verifier-report-v1" as const,
+    status: terminal ? "passed" as const : "gaps_found" as const, binderRoot: input.binderRoot,
+    branch: input.branch, gaps: terminal ? [] : ["ADMIT-03"], humanItems: [] as const }
+  return { ...body, reportRoot: digest(`v138-route8-verifier-report\0${stable(body)}`) }
+}
+const renderReport = (report: VerifierReport): string => `---\nstatus: ${report.status}\n` +
+  `schema: ${report.schemaVersion}\nreport_root: ${report.reportRoot}\n---\n\n# Phase 262 Verification\n\n` +
+  `Binder: ${report.binderRoot}\nBranch: ${report.branch}\nGaps: ${report.gaps.join(",") || "none"}\n` +
+  `Human items: ${report.humanItems.length}\n`
+const renderBlocked = (report: VerifierReport): string => stable({
+  schemaVersion: "v1.38-plan-262-74-blocked-v1", status: "gaps_found",
+  binderRoot: report.binderRoot, reportRoot: report.reportRoot, branch: report.branch,
+  reason: "ADMIT-03", phase263PlanningAuthorized: false,
+})
+const renderSummary = (report: VerifierReport): string =>
+  `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "74"\n` +
+  `subsystem: verification\ntags: [route-8, provenance, sentinel]\nstatus: complete\n---\n\n` +
+  `# Phase 262 Plan 74: Verification Sentinel Summary\n\nBinder ${report.binderRoot} and verifier ` +
+  `report ${report.reportRoot} passed.\n\n## Self-Check: PASSED\n`
+interface DriverArgs { binder: string; phaseDir: string; requirements: string; roadmap: string; state: string; validation: string; verification: string }
+interface SentinelResultArgs extends DriverArgs { summary: string; blocked: string }
+const lifecycleFromDriver = (args: DriverArgs): LifecycleArgs => ({ phaseDir: args.phaseDir,
+  requirements: args.requirements, roadmap: args.roadmap, state: args.state,
+  validation: args.validation, disposition: V138_ROUTE_8_PATHS.disposition, activationRoot: "auto" })
 export const checkV138Plan26274Result = (root: string, args: SentinelResultArgs): "passed" | "gaps_found" => {
-  const binder = readJson(actual(root, args.binder), "V138_ROUTE8_BINDER_INVALID")
-  const verification = readText(actual(root, args.verification), "V138_ROUTE8_VERIFICATION_INVALID")
-  const passed = /status:\s*passed/u.test(verification) && binder.admit03 === "passed" && binder.phase263PlanningAuthorized === true
-  if (passed) {
-    if (safe(actual(root, args.summary)) !== "regular" || safe(actual(root, args.blocked)) !== "missing") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
+  const binder = checkV138PostValidationBinder(root, { ...lifecycleFromDriver(args), binder: args.binder })
+  const report = verifyV138Plan26274Input(verifierInput(binder))
+  if (readText(actual(root, args.verification), "V138_ROUTE8_VERIFICATION_INVALID") !== renderReport(report)) {
+    fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
+  }
+  if (report.status === "passed") {
+    if (readText(actual(root, args.summary), "V138_ROUTE8_SENTINEL_RESULT_INVALID") !== renderSummary(report) ||
+        safe(actual(root, args.blocked)) !== "missing") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
     return "passed"
   }
-  if (!/status:\s*gaps_found/u.test(verification) || safe(actual(root, args.summary)) !== "missing") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
-  const blockedStatus = safe(actual(root, args.blocked))
-  if (blockedStatus !== "missing" && blockedStatus !== "regular") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
+  if (safe(actual(root, args.summary)) !== "missing" ||
+      readText(actual(root, args.blocked), "V138_ROUTE8_SENTINEL_RESULT_INVALID") !== renderBlocked(report)) {
+    fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
+  }
   return "gaps_found"
 }
 
-interface DriverArgs { binder: string; phaseDir: string; requirements: string; roadmap: string; state: string; validation: string; verification: string }
-export const runV138Plan26274Sentinel = (root: string, args: DriverArgs): "passed" | "gaps_found" => {
+export const runV138Plan26274Sentinel = (root: string, args: DriverArgs,
+  options: InstallOptions = {}): "passed" | "gaps_found" => {
   const temp = mkdtempSync(path.join(tmpdir(), "v138-route8-sentinel-"))
   chmodSync(temp, 0o700)
   try {
-    const binder = readJson(actual(root, args.binder), "V138_ROUTE8_BINDER_INVALID")
-    const input = { schemaVersion: "v1.38-plan-262-74-verifier-input-v1", binderRoot: binder.binderRoot,
-      validationSha256: binder.validationSha256, branch: binder.branch,
-      admit03: binder.admit03, seal01: binder.seal01,
-      phase263PlanningAuthorized: binder.phase263PlanningAuthorized,
-      downstreamAuthorityDenied: binder.downstreamAuthorityDenied }
+    const binder = checkV138PostValidationBinder(root, { ...lifecycleFromDriver(args), binder: args.binder })
+    const input = verifierInput(binder)
     const inputPath = path.join(temp, "verifier-input.json")
     writeFileSync(inputPath, stable(input), { flag: "wx", mode: 0o600 })
     if (readText(inputPath, "V138_ROUTE8_VERIFIER_INPUT_INVALID") !== stable(input)) fail("V138_ROUTE8_VERIFIER_INPUT_INVALID")
-    const passed = binder.admit03 === "passed" && binder.seal01 === "passed_reduced_assurance" && binder.phase263PlanningAuthorized === true && binder.downstreamAuthorityDenied === true
-    const report = `---\nstatus: ${passed ? "passed" : "gaps_found"}\n---\n\n# Phase 262 Verification\n\nBinder: ${String(binder.binderRoot)}\nBranch: ${String(binder.branch)}\nADMIT-03: ${String(binder.admit03)}\nSEAL-01: ${String(binder.seal01)}\nPhase 263 planning authorized: ${String(binder.phase263PlanningAuthorized)}\n`
+    const report = verifyV138Plan26274Input(JSON.parse(readText(inputPath, "V138_ROUTE8_VERIFIER_INPUT_INVALID")))
+    const reportBytes = renderReport(report)
     const reportPath = path.join(temp, "verification.md")
-    writeFileSync(reportPath, report, { flag: "wx", mode: 0o600 })
-    if (readText(reportPath, "V138_ROUTE8_VERIFIER_REPORT_INVALID") !== report) fail("V138_ROUTE8_VERIFIER_REPORT_INVALID")
-    writeReplace(actual(root, args.verification), report)
-    if (!passed) {
-      const blockedPath = path.resolve(root, args.phaseDir, "262-74-BLOCKED.md")
-      if (safe(blockedPath) === "missing") writeExclusive(blockedPath,
-        `# Phase 262 Plan 74 Blocked\n\nStatus: gaps_found\nBinder: ${String(binder.binderRoot)}\nBranch: ${String(binder.branch)}\nPhase 263 planning authorized: false\n`)
-      if (safe(path.resolve(root, args.phaseDir, "262-74-SUMMARY.md")) !== "missing") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
-      return "gaps_found"
-    }
-    const summaryPath = path.resolve(root, args.phaseDir, "262-74-SUMMARY.md")
-    const summary = `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "74"\nsubsystem: verification\ntags: [route-8, provenance, sentinel]\nrequirements-completed: [ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04, MEAS-01, MEAS-02, MEAS-03, MEAS-04, MEAS-05, MEAS-06, MEAS-07, MEAS-08, MEAS-09, MEAS-10, SEAL-01, DECI-02]\nstatus: complete\n---\n\n# Phase 262 Plan 74: Verification Sentinel Summary\n\nExact refreshed validation, post-validation binder, and provenance-aware verifier passed. The reduced-assurance local seal remains explicit; only Phase 263 planning is authorized and every later/live authority remains denied.\n\n## Self-Check: PASSED\n`
-    writeExclusive(summaryPath, summary)
-    const gsd = path.resolve(process.env.CODEX_HOME ?? path.join(process.env.HOME ?? "", ".codex"), "gsd-core/bin/gsd-tools.cjs")
-    if (safe(gsd) !== "regular") fail("V138_ROUTE8_GSD_TOOLS_MISSING")
-    const query = (...values: string[]) => execFileSync(process.execPath, [gsd, "query", ...values],
-      { cwd: root, encoding: "utf8", env: { ...process.env, LC_ALL: "C", LANG: "C" } })
-    query("commit", "docs(262-74): complete verification sentinel plan", "--files",
-      path.relative(root, summaryPath))
-    query("requirements.mark-complete", "ADMIT-01", "ADMIT-02", "ADMIT-03", "ADMIT-04",
-      "MEAS-01", "MEAS-02", "MEAS-03", "MEAS-04", "MEAS-05", "MEAS-06", "MEAS-07",
-      "MEAS-08", "MEAS-09", "MEAS-10", "SEAL-01", "DECI-02")
-    query("state.update-progress")
-    query("roadmap.update-plan-progress", "262")
-    query("phase.complete", "262")
-    query("commit", "docs(262-74): synchronize passed phase lifecycle", "--files",
-      path.relative(root, actual(root, args.requirements)), path.relative(root, actual(root, args.roadmap)),
-      path.relative(root, actual(root, args.state)), path.relative(root, actual(root, args.verification)))
-    return "passed"
+    writeFileSync(reportPath, reportBytes, { flag: "wx", mode: 0o600 })
+    if (readText(reportPath, "V138_ROUTE8_VERIFIER_REPORT_INVALID") !== reportBytes) fail("V138_ROUTE8_VERIFIER_REPORT_INVALID")
+    const summaryPath = phaseFile(root, args.phaseDir, "262-74-SUMMARY.md")
+    if (safe(summaryPath) !== "missing") fail("V138_ROUTE8_SENTINEL_RESULT_INVALID")
+    if (report.status === "passed") fail("V138_ROUTE8_PASS_CLOSEOUT_REQUIRES_ORCHESTRATOR")
+    const blockedPath = phaseFile(root, args.phaseDir, "262-74-BLOCKED.md")
+    installTransaction([{ file: actual(root, args.verification), bytes: reportBytes },
+      { file: blockedPath, bytes: renderBlocked(report) }], options)
+    return "gaps_found"
   } finally { rmSync(temp, { recursive: true, force: true }) }
   return fail("V138_ROUTE8_SENTINEL_UNREACHABLE")
 }
@@ -316,7 +487,7 @@ const main = (): void => {
   if (command === "--bind-post-validation") { process.stdout.write(`${JSON.stringify(bindV138PostValidation(root, { ...lifecycleArgs(args), output: required(args, "--output") }))}\n`); return }
   if (command === "--check-post-validation-binder") { process.stdout.write(`${JSON.stringify(checkV138PostValidationBinder(root, { ...lifecycleArgs(args), binder: required(args, "--binder") }))}\n`); return }
   if (command === "--run-plan-262-74-sentinel") { process.stdout.write(`${JSON.stringify({ status: runV138Plan26274Sentinel(root, { binder: required(args, "--binder"), phaseDir: required(args, "--phase-dir"), requirements: required(args, "--requirements"), roadmap: required(args, "--roadmap"), state: required(args, "--state"), validation: required(args, "--validation"), verification: required(args, "--verification") }) })}\n`); return }
-  if (command === "--check-plan-262-74-result") { process.stdout.write(`${JSON.stringify({ status: checkV138Plan26274Result(root, { binder: required(args, "--binder"), verification: required(args, "--verification"), summary: required(args, "--summary"), blocked: required(args, "--blocked") }) })}\n`); return }
+  if (command === "--check-plan-262-74-result") { process.stdout.write(`${JSON.stringify({ status: checkV138Plan26274Result(root, { binder: required(args, "--binder"), phaseDir: required(args, "--phase-dir"), requirements: required(args, "--requirements"), roadmap: required(args, "--roadmap"), state: required(args, "--state"), validation: required(args, "--validation"), verification: required(args, "--verification"), summary: required(args, "--summary"), blocked: required(args, "--blocked") }) })}\n`); return }
   fail("V138_ROUTE8_ARGUMENTS_INVALID")
 }
 
