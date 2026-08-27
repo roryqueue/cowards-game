@@ -99,6 +99,8 @@ export const V138_BOUNDED_RETRY_PRODUCTION_MODES = Object.freeze([
   "--derive-seal-envelope-no-publish",
   "--publish-sealed-inactive-envelope",
   "--check-sealed-inactive-envelope",
+  "--check-live-transition",
+  "--check-terminal-envelope",
   "--run-bounded-live-envelope",
 ] as const)
 
@@ -616,6 +618,84 @@ export const publishV138RetryTerminalResult = (
   fsyncParent(target)
 }
 
+export interface V138RetryPublicationHooks {
+  readonly afterReproductionWrite?: () => void
+  readonly afterReproductionParentFsync?: () => void
+  readonly afterTerminalWrite?: () => void
+  readonly afterTerminalParentFsync?: () => void
+}
+
+const validateSuccessArtifact = (
+  result: Readonly<V138BoundedRetryControllerResult>,
+  artifact: any,
+): void => {
+  const terminal = result.records.findLast(
+    (record) => record.kind === "finish_reproduction",
+  )
+  if (
+    result.state.disposition !== "succeeded" ||
+    terminal?.kind !== "finish_reproduction" ||
+    terminal.status !== "passed_exact" ||
+    terminal.reproductionRoot === undefined ||
+    artifact?.receiptRoot !== terminal.reproductionRoot ||
+    artifact?.status !== "passed_exact" ||
+    artifact?.acceptedCellCount !== 540 ||
+    artifact?.completeCleanup !== true
+  )
+    fail("V138_RETRY_REPRODUCTION_ARTIFACT_INVALID")
+}
+
+export const publishV138RetryOutcome = (args: {
+  terminalTarget: string
+  reproductionTarget: string
+  result: Readonly<V138BoundedRetryControllerResult>
+  hooks?: V138RetryPublicationHooks
+}): void => {
+  const { result, hooks = {} } = args
+  if (result.state.disposition === "active")
+    fail("V138_RETRY_TERMINAL_STATE_REQUIRED")
+  if (result.state.disposition === "succeeded") {
+    const reproductionStatus = safeStatus(args.reproductionTarget)
+    if (reproductionStatus === "missing") {
+      validateSuccessArtifact(result, result.reproductionArtifact)
+      exclusiveWrite(
+        args.reproductionTarget,
+        canonical(result.reproductionArtifact),
+      )
+      hooks.afterReproductionWrite?.()
+      fsyncParent(args.reproductionTarget)
+      hooks.afterReproductionParentFsync?.()
+    } else if (reproductionStatus === "regular") {
+      const artifact = JSON.parse(readFileSync(args.reproductionTarget, "utf8"))
+      validateSuccessArtifact(result, artifact)
+      if (
+        result.reproductionArtifact !== undefined &&
+        canonical(artifact) !== canonical(result.reproductionArtifact)
+      )
+        fail("V138_RETRY_REPRODUCTION_ARTIFACT_INVALID")
+    } else fail("V138_RETRY_DESTINATION_UNSAFE")
+  } else if (safeStatus(args.reproductionTarget) !== "missing") {
+    fail("V138_RETRY_REPRODUCTION_ARTIFACT_INVALID")
+  }
+
+  const terminalStatus = safeStatus(args.terminalTarget)
+  if (terminalStatus === "missing") {
+    exclusiveWrite(
+      args.terminalTarget,
+      canonical(v138RetryTerminalResult(result)),
+    )
+    hooks.afterTerminalWrite?.()
+    fsyncParent(args.terminalTarget)
+    hooks.afterTerminalParentFsync?.()
+  } else if (
+    terminalStatus !== "regular" ||
+    readFileSync(args.terminalTarget, "utf8") !==
+      canonical(v138RetryTerminalResult(result))
+  ) {
+    fail("V138_RETRY_DUPLICATE_INVOCATION_INVALID")
+  }
+}
+
 const fsyncParent = (target: string): void => {
   const descriptor = openSync(path.dirname(target), constants.O_RDONLY)
   try {
@@ -955,6 +1035,16 @@ const PAIR_FLAGS = Object.freeze({
   "--seal": V138_BOUNDED_RETRY_PATHS.seal,
   "--envelope": V138_BOUNDED_RETRY_PATHS.envelope,
 })
+const LIVE_TRANSITION_CHECK_FLAGS = Object.freeze({
+  "--envelope": V138_BOUNDED_RETRY_PATHS.envelope,
+  "--journal": V138_BOUNDED_RETRY_PATHS.journal,
+  "--terminal": V138_BOUNDED_RETRY_PATHS.terminal,
+  "--private-dir": V138_BOUNDED_RETRY_PATHS.privateDir,
+})
+const TERMINAL_CHECK_FLAGS = Object.freeze({
+  ...LIVE_TRANSITION_CHECK_FLAGS,
+  "--reproduction": V138_BOUNDED_RETRY_PATHS.reproduction,
+})
 
 const executeMemoryPressure = (): Promise<MemoryPressureQCommandResult> =>
   new Promise((resolve) => {
@@ -1187,6 +1277,73 @@ const journalAppender = (
   }
 }
 
+export const checkV138PublishedRetryOutcome = (
+  repoRoot: string,
+): Readonly<{
+  disposition: V138DerivedRetryState["disposition"]
+  journalRoot: V138RetrySha256
+  stateRoot: V138RetrySha256
+  completeCleanup: boolean
+  reproductionPresent: boolean
+  downstreamAuthority: "denied"
+}> => {
+  const { envelope } = checkPublishedPair(repoRoot)
+  const records = readJournal(repoRoot)
+  const state = deriveV138RetryState(envelope, records)
+  if (state.disposition === "active") fail("V138_RETRY_TERMINAL_STATE_REQUIRED")
+  const privateTarget = path.resolve(
+    repoRoot,
+    V138_BOUNDED_RETRY_PATHS.privateDir,
+  )
+  if (
+    safeStatus(privateTarget) !== "directory" ||
+    (statSync(privateTarget).mode & 0o777) !== 0o700
+  )
+    fail("V138_RETRY_PRIVATE_DIR_UNSAFE")
+  for (const record of records) {
+    const receiptPath = path.join(
+      privateTarget,
+      `journal-record-${String(record.ordinal).padStart(4, "0")}.json`,
+    )
+    if (
+      safeStatus(receiptPath) !== "regular" ||
+      (statSync(receiptPath).mode & 0o777) !== 0o600 ||
+      readFileSync(receiptPath, "utf8") !== canonical(record)
+    )
+      fail("V138_RETRY_PRIVATE_RECEIPT_INVALID")
+  }
+  const terminal = readJsonNoFollow(repoRoot, V138_BOUNDED_RETRY_PATHS.terminal)
+  if (
+    canonical(terminal) !==
+    canonical(v138RetryTerminalResult({ records, state }))
+  )
+    fail("V138_RETRY_TERMINAL_INVALID")
+  const reproductionStatus = safeStatus(
+    path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
+  )
+  if (
+    (state.disposition === "succeeded") !==
+    (reproductionStatus === "regular")
+  )
+    fail("V138_RETRY_REPRODUCTION_ARTIFACT_INVALID")
+  if (reproductionStatus === "regular") {
+    validateSuccessArtifact(
+      { records, state },
+      readJsonNoFollow(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
+    )
+  } else if (reproductionStatus !== "missing") {
+    fail("V138_RETRY_REPRODUCTION_ARTIFACT_INVALID")
+  }
+  return Object.freeze({
+    disposition: state.disposition,
+    journalRoot: state.journalRoot,
+    stateRoot: state.stateRoot,
+    completeCleanup: state.completeCleanup,
+    reproductionPresent: reproductionStatus === "regular",
+    downstreamAuthority: "denied" as const,
+  })
+}
+
 const runProductionLive = async (repoRoot: string): Promise<void> => {
   const { envelope } = checkPublishedPair(repoRoot)
   for (const repoPath of [
@@ -1260,15 +1417,22 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
     ) {
       fail("V138_RETRY_PRIVATE_DIR_UNSAFE")
     }
-    for (const repoPath of [
-      V138_BOUNDED_RETRY_PATHS.terminal,
-      V138_BOUNDED_RETRY_PATHS.reproduction,
-    ]) {
-      if (safeStatus(path.resolve(repoRoot, repoPath)) !== "missing") {
-        fail("V138_RETRY_DESTINATION_PRESENT")
-      }
-    }
     const existing = readJournal(repoRoot)
+    const existingState = deriveV138RetryState(envelope, existing)
+    const reproductionTarget = path.resolve(
+      repoRoot,
+      V138_BOUNDED_RETRY_PATHS.reproduction,
+    )
+    if (safeStatus(reproductionTarget) === "regular") {
+      publishV138RetryOutcome({
+        terminalTarget,
+        reproductionTarget,
+        result: { records: existing, state: existingState },
+      })
+      return
+    }
+    if (safeStatus(reproductionTarget) !== "missing")
+      fail("V138_RETRY_DESTINATION_UNSAFE")
     const appendJournal = journalAppender(repoRoot)
     const append = (record: V138RetryJournalRecord): void => {
       appendJournal(record)
@@ -1287,16 +1451,11 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
       records: existing,
       effects: createV138ProductionControllerEffects(repoRoot, append),
     })
-    publishV138RetryTerminalResult(
-      path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.terminal),
+    publishV138RetryOutcome({
+      terminalTarget,
+      reproductionTarget,
       result,
-    )
-    if (result.state.disposition === "succeeded") {
-      exclusiveWrite(
-        path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
-        canonical(result.reproductionArtifact),
-      )
-    }
+    })
   } finally {
     unlinkSync(lock)
     fsyncParent(lock)
@@ -1307,6 +1466,7 @@ export interface V138BoundedRetryCliDependencies {
   readonly repoRoot: string
   readonly deriveArtifacts: () => Readonly<V138DerivedSealEnvelope>
   readonly runLive: () => Promise<void>
+  readonly checkOutcome: () => ReturnType<typeof checkV138PublishedRetryOutcome>
 }
 
 export const executeV138BoundedRetryCli = async (
@@ -1320,6 +1480,8 @@ export const executeV138BoundedRetryCli = async (
     injected?.deriveArtifacts ??
     (() => deriveV138SealedInactiveEnvelope(repoRoot))
   const runLive = injected?.runLive ?? (() => runProductionLive(repoRoot))
+  const checkOutcome =
+    injected?.checkOutcome ?? (() => checkV138PublishedRetryOutcome(repoRoot))
   const command = argv[0]
   const rest = argv.slice(1)
   if (command === "--check-source-only" && rest.length === 0) {
@@ -1388,6 +1550,18 @@ export const executeV138BoundedRetryCli = async (
   if (command === "--run-bounded-live-envelope") {
     exactArgs(rest, LIVE_FLAGS)
     await runLive()
+    return
+  }
+  if (command === "--check-live-transition") {
+    exactArgs(rest, LIVE_TRANSITION_CHECK_FLAGS)
+    const checked = checkOutcome()
+    process.stdout.write(`${JSON.stringify(checked)}\n`)
+    return
+  }
+  if (command === "--check-terminal-envelope") {
+    exactArgs(rest, TERMINAL_CHECK_FLAGS)
+    const checked = checkOutcome()
+    process.stdout.write(`${JSON.stringify(checked)}\n`)
     return
   }
   fail("V138_RETRY_ARGUMENTS_INVALID")

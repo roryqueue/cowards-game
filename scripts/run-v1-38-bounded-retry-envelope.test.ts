@@ -22,6 +22,7 @@ import {
   V138_BOUNDED_RETRY_PATHS,
   V138_BOUNDED_RETRY_LIVE_FLAGS,
   executeV138BoundedRetryCli,
+  publishV138RetryOutcome,
   publishV138RetryTerminalResult,
   runV138BoundedRetryController,
   type V138BoundedRetryControllerEffects,
@@ -898,7 +899,7 @@ describe("bounded retry controller and CLI containment", () => {
     }
   })
 
-  it("strictly parses four production modes and never defaults into live work", async () => {
+  it("strictly parses production and read-only modes and never defaults into live work", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "v138-retry-cli-"))
     temporaryRoots.push(root)
     mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
@@ -918,6 +919,14 @@ describe("bounded retry controller and CLI containment", () => {
         liveInvocations += 1
         throw new Error("LIVE")
       },
+      checkOutcome: () => ({
+        disposition: "exhausted" as const,
+        journalRoot: SHA_A,
+        stateRoot: SHA_B,
+        completeCleanup: true,
+        reproductionPresent: false,
+        downstreamAuthority: "denied" as const,
+      }),
     }
     await executeV138BoundedRetryCli(
       ["--derive-seal-envelope-no-publish"],
@@ -952,6 +961,36 @@ describe("bounded retry controller and CLI containment", () => {
       ["--check-sealed-inactive-envelope", ...pairFlags],
       injected,
     )
+    await executeV138BoundedRetryCli(
+      [
+        "--check-live-transition",
+        "--envelope",
+        V138_BOUNDED_RETRY_PATHS.envelope,
+        "--journal",
+        V138_BOUNDED_RETRY_PATHS.journal,
+        "--terminal",
+        V138_BOUNDED_RETRY_PATHS.terminal,
+        "--private-dir",
+        V138_BOUNDED_RETRY_PATHS.privateDir,
+      ],
+      injected,
+    )
+    await executeV138BoundedRetryCli(
+      [
+        "--check-terminal-envelope",
+        "--envelope",
+        V138_BOUNDED_RETRY_PATHS.envelope,
+        "--journal",
+        V138_BOUNDED_RETRY_PATHS.journal,
+        "--terminal",
+        V138_BOUNDED_RETRY_PATHS.terminal,
+        "--reproduction",
+        V138_BOUNDED_RETRY_PATHS.reproduction,
+        "--private-dir",
+        V138_BOUNDED_RETRY_PATHS.privateDir,
+      ],
+      injected,
+    )
     expect(liveInvocations).toBe(0)
     await expect(executeV138BoundedRetryCli([], injected)).rejects.toThrow(
       "V138_RETRY_ARGUMENTS_INVALID",
@@ -975,6 +1014,60 @@ describe("bounded retry controller and CLI containment", () => {
       protectedSourceReviewSummary:
         ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-77-SUMMARY.md",
     })
+  })
+
+  it("recovers every success publication crash boundary without rerunning reproduction", async () => {
+    const artifact = {
+      schemaVersion: "v1.38-current-matrix-reproduction-v15",
+      status: "passed_exact",
+      acceptedCellCount: 540,
+      completeCleanup: true,
+      receiptRoot: SHA_A,
+    }
+    const result = await runV138BoundedRetryController({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: makeEffects([2_500], ["admitted"], {
+        status: "passed_exact",
+        acceptedCells: 540,
+        completeCleanup: true,
+        reproductionRoot: SHA_A,
+        artifact,
+      }),
+    })
+    for (const hook of [
+      "afterReproductionWrite",
+      "afterReproductionParentFsync",
+      "afterTerminalWrite",
+      "afterTerminalParentFsync",
+    ] as const) {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-success-publish-"))
+      temporaryRoots.push(root)
+      const terminalTarget = path.join(root, "terminal.json")
+      const reproductionTarget = path.join(root, "reproduction.json")
+      expect(() =>
+        publishV138RetryOutcome({
+          terminalTarget,
+          reproductionTarget,
+          result,
+          hooks: {
+            [hook]: () => {
+              throw new Error(`CRASH:${hook}`)
+            },
+          },
+        }),
+      ).toThrow(`CRASH:${hook}`)
+
+      publishV138RetryOutcome({ terminalTarget, reproductionTarget, result })
+      expect(JSON.parse(readFileSync(reproductionTarget, "utf8"))).toEqual(
+        artifact,
+      )
+      expect(JSON.parse(readFileSync(terminalTarget, "utf8"))).toMatchObject({
+        disposition: "succeeded",
+        completeCleanup: true,
+      })
+    }
   })
 
   it("retains the exact Plan-77 blocked pair and summary only as protected history", () => {
