@@ -245,8 +245,6 @@ export const runV138BoundedRetryController = async (
     return true
   }
 
-  if (deadlineGuard()) return finish()
-
   // A prior invocation may have died only after its durable reservation.
   // Reconciliation charges the work and fails closed; it never relaunches the
   // same identity or asserts cleanup that the journal cannot prove.
@@ -257,7 +255,6 @@ export const runV138BoundedRetryController = async (
       ),
   )
   if (pendingReproduction !== undefined) {
-    if (deadlineGuard()) return finish()
     append({
       kind: "finish_reproduction",
       routeIdentity: pendingReproduction.routeIdentity,
@@ -274,7 +271,6 @@ export const runV138BoundedRetryController = async (
         ),
     )
     if (pendingCalibration !== undefined) {
-      if (deadlineGuard()) return finish()
       append({
         kind: "finish_calibration",
         routeIdentity: pendingCalibration.routeIdentity,

@@ -16,6 +16,7 @@ import {
   appendV138RetryJournalRecord,
   createV138InactiveRetryEnvelope,
   deriveV138RetryState,
+  encodeV138RetryCanonicalJson,
   type V138RetryJournalRecord,
 } from "./lib/v1-38-bounded-retry-envelope.js"
 import {
@@ -580,6 +581,92 @@ describe("bounded retry controller and CLI containment", () => {
     ).toHaveLength(1)
     expect(restarted.state.nextPreflightIdentity).toBeNull()
     expect(restarted.state.nextRouteIdentity).toBeNull()
+  })
+
+  it.each(["calibration", "reproduction"] as const)(
+    "terminalizes pending %s cleanup as unknown before expiry",
+    async (pendingKind) => {
+      const firstObservation = 1_000
+      const deadline =
+        firstObservation +
+        V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+      let records: readonly V138RetryJournalRecord[] = []
+      records = append(records, firstObservation - 1, {
+        kind: "reserve_preflight",
+        identity: "preflight:v1:0",
+        owner: "synthetic-owner",
+      })
+      records = append(records, firstObservation, {
+        kind: "observe_preflight",
+        identity: "preflight:v1:0",
+        owner: "synthetic-owner",
+        effectiveAvailableBasisPoints: 2_500,
+      })
+      records = append(records, firstObservation + 1, {
+        kind: "reserve_route",
+        identity: "route:v1:0",
+        owner: "synthetic-owner",
+        preflightIdentity: "preflight:v1:0",
+      })
+      records = append(records, firstObservation + 2, {
+        kind: "reserve_calibration",
+        routeIdentity: "route:v1:0",
+        owner: "synthetic-owner",
+        identities: V138_BOUNDED_RETRY_IDENTITIES.calibrations.slice(0, 8),
+      })
+      if (pendingKind === "reproduction") {
+        records = append(records, firstObservation + 3, {
+          kind: "finish_calibration",
+          routeIdentity: "route:v1:0",
+          owner: "synthetic-owner",
+          status: "admitted",
+          completeCleanup: true,
+        })
+        records = append(records, firstObservation + 4, {
+          kind: "reserve_reproduction",
+          routeIdentity: "route:v1:0",
+          owner: "synthetic-owner",
+          identities: V138_BOUNDED_RETRY_IDENTITIES.reproduction,
+        })
+      }
+
+      const durable: V138RetryJournalRecord[] = []
+      const result = await runV138BoundedRetryController({
+        envelope: envelope(),
+        owner: "restart-owner",
+        records,
+        effects: {
+          ...makeEffects([], []),
+          monotonicMilliseconds: () => deadline,
+          appendDurableRecord: (record) => durable.push(record),
+        },
+      })
+
+      expect(durable.map(({ kind }) => kind)).toEqual([
+        pendingKind === "calibration"
+          ? "finish_calibration"
+          : "finish_reproduction",
+      ])
+      expect(result.state).toMatchObject({
+        disposition: "terminal_failure",
+        completeCleanup: false,
+        terminalReason: null,
+      })
+    },
+  )
+
+  it("binds cleanup truth into the derived state root", () => {
+    const completedState = deriveV138RetryState(envelope(), [])
+    expect(completedState.completeCleanup).toBe(true)
+    const { stateRoot, ...body } = completedState
+    const hashBody = (value: unknown) =>
+      `sha256:${createHash("sha256")
+        .update(
+          `v138-retry-derived-state-v1\0${encodeV138RetryCanonicalJson(value)}`,
+        )
+        .digest("hex")}`
+    expect(hashBody(body)).toBe(stateRoot)
+    expect(hashBody({ ...body, completeCleanup: false })).not.toBe(stateRoot)
   })
 
   it("terminalizes when a required wait reaches the deadline and rejects a stale concurrent append", async () => {

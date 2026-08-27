@@ -363,11 +363,24 @@ const applyEvent = (
     state.timeWindowExpiryTerminal = event
     return
   }
+  const isCleanupUnknownReconciliation =
+    (event.kind === "finish_calibration" &&
+      event.status === "system_failure" &&
+      event.completeCleanup === false &&
+      state.calibrationReservations.has(event.routeIdentity) &&
+      !state.calibrationTerminals.has(event.routeIdentity)) ||
+    (event.kind === "finish_reproduction" &&
+      event.status === "system_failure" &&
+      event.acceptedCells === 0 &&
+      event.completeCleanup === false &&
+      state.reproductionReserved &&
+      state.reproductionTerminal === null)
   if (
     state.firstObservationMilliseconds !== null &&
     atMilliseconds >=
       state.firstObservationMilliseconds +
-        V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+        V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds &&
+    !isCleanupUnknownReconciliation
   ) {
     fail("V138_RETRY_ENVELOPE_EXPIRED")
   }
@@ -612,6 +625,13 @@ export const deriveV138RetryState = (
   const state = replay(records, envelope.envelopeRoot)
   const disposition = terminalDisposition(state)
   const terminal = disposition !== "active"
+  const completeCleanup =
+    state.calibrationReservations.size === state.calibrationTerminals.size &&
+    [...state.calibrationTerminals.values()].every(
+      (terminal) => terminal.completeCleanup,
+    ) &&
+    (!state.reproductionReserved ||
+      state.reproductionTerminal?.completeCleanup === true)
   const body = {
     schemaVersion: "v1.38-bounded-retry-derived-state-v1" as const,
     journalRoot: records.at(-1)?.recordRoot ?? GENESIS_ROOT,
@@ -636,16 +656,12 @@ export const deriveV138RetryState = (
       envelope.protectedHistoricalIdentities.length,
     firstObservationMilliseconds: state.firstObservationMilliseconds,
     terminalReason: state.timeWindowExpiryTerminal?.reason ?? null,
+    completeCleanup,
     disposition,
     downstreamAuthority: false as const,
   }
-  const completeCleanup =
-    [...state.calibrationTerminals.values()].every(
-      (terminal) => terminal.completeCleanup,
-    ) && state.reproductionTerminal?.completeCleanup !== false
   return deepFreeze({
     ...body,
-    completeCleanup,
     stateRoot: sha256(`v138-retry-derived-state-v1\0${canonical(body)}`),
   })
 }
