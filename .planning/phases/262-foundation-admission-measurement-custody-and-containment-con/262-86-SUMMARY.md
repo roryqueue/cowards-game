@@ -124,7 +124,18 @@ Task 1 intentionally has no process-only commit: an intervening commit would hav
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Corrected the generic progress updater's zero-percent output**
+
+- **Found during:** Plan metadata closeout
+- **Issue:** `state.update-progress` correctly discovered 67/70 summaries but wrote `percent: 0` because this long-lived custom STATE format lacks the generic current-plan parser fields.
+- **Fix:** Preserved the tool-derived 67/70 count, restored the mathematically correct 96 percent, and added the Plan-86 additive closeout carrier without changing any evidence or requirement state.
+- **Files modified:** `.planning/STATE.md`
+- **Verification:** STATE and ROADMAP both report 67/70; ADMIT-03 remains blocked and the sealed-envelope checker still passes.
+- **Committed in:** final documentation correction
+
+**Total deviations:** 1 auto-fixed bug. **Impact:** Tracking metadata is truthful; direct-child B2 and all canonical evidence bytes are unchanged.
 
 ## Issues Encountered
 
