@@ -21,6 +21,7 @@ import {
   V138_BOUNDED_RETRY_PATHS,
   V138_BOUNDED_RETRY_LIVE_FLAGS,
   executeV138BoundedRetryCli,
+  publishV138RetryTerminalResult,
   runV138BoundedRetryController,
   type V138BoundedRetryControllerEffects,
 } from "./run-v1-38-bounded-retry-envelope.js"
@@ -446,6 +447,243 @@ describe("bounded retry controller and CLI containment", () => {
       appendDurableRecord: () => undefined,
     }
   }
+
+  const activeAt = (firstObservationMilliseconds: number) => {
+    let records: readonly V138RetryJournalRecord[] = []
+    records = append(records, firstObservationMilliseconds - 1, {
+      kind: "reserve_preflight",
+      identity: "preflight:v1:0",
+      owner: "synthetic-owner",
+    })
+    records = append(records, firstObservationMilliseconds, {
+      kind: "observe_preflight",
+      identity: "preflight:v1:0",
+      owner: "synthetic-owner",
+      effectiveAvailableBasisPoints: 2_499,
+    })
+    return records
+  }
+
+  it("durably terminalizes inclusive expiry before return or any later work", async () => {
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+    const durableKinds: string[] = []
+    let observations = 0
+    let work = 0
+    const result = await runV138BoundedRetryController({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: activeAt(firstObservation),
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => deadline,
+        observePreflight: async () => {
+          observations += 1
+          return { available: true, effectiveAvailableBasisPoints: 2_500 }
+        },
+        runCalibration: async () => {
+          work += 1
+          return { status: "admitted", completeCleanup: true }
+        },
+        runReproduction: async () => {
+          work += 1
+          return {
+            status: "passed_exact",
+            acceptedCells: 540,
+            completeCleanup: true,
+          }
+        },
+        appendDurableRecord: (record) => {
+          durableKinds.push(record.kind)
+        },
+      },
+    })
+    expect(durableKinds).toEqual(["time_window_expired"])
+    expect(observations).toBe(0)
+    expect(work).toBe(0)
+    expect(result.records.at(-1)).toMatchObject({
+      kind: "time_window_expired",
+      reason: "time_window_expired",
+      atMilliseconds: deadline,
+    })
+    expect(result.state).toMatchObject({
+      disposition: "exhausted",
+      terminalReason: "time_window_expired",
+      remainingPreflightObservations: 0,
+      remainingRouteStarts: 0,
+      downstreamAuthority: false,
+    })
+  })
+
+  it("recovers expiry append crashes without duplicate terminal or identity reuse", async () => {
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+    const prior = activeAt(firstObservation)
+    const beforeDurable = makeEffects([], [])
+    await expect(
+      runV138BoundedRetryController({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: prior,
+        effects: {
+          ...beforeDurable,
+          monotonicMilliseconds: () => deadline,
+          appendDurableRecord: () => {
+            throw new Error("CRASH_BEFORE_DURABLE")
+          },
+        },
+      }),
+    ).rejects.toThrow("CRASH_BEFORE_DURABLE")
+    expect(deriveV138RetryState(envelope(), prior).disposition).toBe("active")
+
+    let durable = prior
+    await expect(
+      runV138BoundedRetryController({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: prior,
+        effects: {
+          ...makeEffects([], []),
+          monotonicMilliseconds: () => deadline,
+          appendDurableRecord: (record) => {
+            durable = [...durable, record]
+            throw new Error("CRASH_AFTER_DURABLE")
+          },
+        },
+      }),
+    ).rejects.toThrow("CRASH_AFTER_DURABLE")
+    expect(deriveV138RetryState(envelope(), durable)).toMatchObject({
+      disposition: "exhausted",
+      terminalReason: "time_window_expired",
+    })
+
+    let restartAppends = 0
+    const restarted = await runV138BoundedRetryController({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: durable,
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => deadline + 1,
+        appendDurableRecord: () => {
+          restartAppends += 1
+        },
+      },
+    })
+    expect(restartAppends).toBe(0)
+    expect(
+      restarted.records.filter(({ kind }) => kind === "time_window_expired"),
+    ).toHaveLength(1)
+    expect(restarted.state.nextPreflightIdentity).toBeNull()
+    expect(restarted.state.nextRouteIdentity).toBeNull()
+  })
+
+  it("terminalizes when a required wait reaches the deadline and rejects a stale concurrent append", async () => {
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+    let records = activeAt(firstObservation)
+    records = append(records, deadline - 2, {
+      kind: "reserve_preflight",
+      identity: "preflight:v1:1",
+      owner: "synthetic-owner",
+    })
+    records = append(records, deadline - 1, {
+      kind: "observe_preflight",
+      identity: "preflight:v1:1",
+      owner: "synthetic-owner",
+      effectiveAvailableBasisPoints: 0,
+    })
+    let now = deadline - 1
+    let observations = 0
+    const durable: V138RetryJournalRecord[] = [...records]
+    const result = await runV138BoundedRetryController({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records,
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => now,
+        waitUntil: async (target) => {
+          now = target
+        },
+        observePreflight: async () => {
+          observations += 1
+          return { available: true, effectiveAvailableBasisPoints: 2_500 }
+        },
+        appendDurableRecord: (record) => {
+          if (record.previousRoot !== durable.at(-1)?.recordRoot) {
+            throw new Error("STALE_ROOT")
+          }
+          durable.push(record)
+        },
+      },
+    })
+    expect(observations).toBe(0)
+    expect(result.state.terminalReason).toBe("time_window_expired")
+    await expect(
+      runV138BoundedRetryController({
+        envelope: envelope(),
+        owner: "other-owner",
+        records,
+        effects: {
+          ...makeEffects([], []),
+          monotonicMilliseconds: () => now,
+          appendDurableRecord: (record) => {
+            if (record.previousRoot !== durable.at(-1)?.recordRoot) {
+              throw new Error("STALE_ROOT")
+            }
+          },
+        },
+      }),
+    ).rejects.toThrow("STALE_ROOT")
+    expect(
+      durable.filter(({ kind }) => kind === "time_window_expired"),
+    ).toHaveLength(1)
+  })
+
+  it("exclusive-writes one bounded immutable terminal result from exhausted journal state", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-expiry-terminal-"))
+    temporaryRoots.push(root)
+    const target = path.join(root, "terminal.json")
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+    const result = await runV138BoundedRetryController({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: activeAt(firstObservation),
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => deadline,
+        appendDurableRecord: () => undefined,
+      },
+    })
+    publishV138RetryTerminalResult(target, result)
+    const terminal = JSON.parse(readFileSync(target, "utf8"))
+    expect(terminal).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-retry-terminal-v1",
+      terminalReason: "time_window_expired",
+      journalRoot: result.state.journalRoot,
+      stateRoot: result.state.stateRoot,
+      disposition: "exhausted",
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+      productionAuthorized: false,
+    })
+    expect(terminal.counters).toEqual({
+      preflightObservationsConsumed: 1,
+      routeStartsConsumed: 0,
+      calibrationIdentitiesCharged: 0,
+      reproductionIdentitiesCharged: 0,
+      acceptedCells: 0,
+    })
+    expect(() => publishV138RetryTerminalResult(target, result)).toThrow(
+      "V138_RETRY_DESTINATION_PRESENT",
+    )
+  })
 
   it("reserves before fake work, spaces refusal/failure retries, and closes on one exact reproduction", async () => {
     const launches: string[] = []
