@@ -1,8 +1,8 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-reviewed: 2026-08-27T22:12:07Z
+reviewed: 2026-08-27T22:42:53Z
 depth: deep
-files_reviewed: 9
+files_reviewed: 19
 files_reviewed_list:
   - scripts/lib/v1-38-bounded-retry-envelope-v2.ts
   - scripts/run-v1-38-bounded-retry-envelope-v2.ts
@@ -13,89 +13,102 @@ files_reviewed_list:
   - scripts/check-v1-38-plan-262-88-bounded-retry-admission-v2.test.ts
   - scripts/check-v1-38-plan-262-89-lifecycle-v2.ts
   - scripts/check-v1-38-plan-262-89-lifecycle-v2.test.ts
+  - scripts/lib/v1-38-bounded-retry-integrity-successor-v1.ts
+  - scripts/lib/v1-38-bounded-retry-integrity-successor-v1.test.ts
+  - scripts/lib/v1-38-durable-publication-successor-v1.ts
+  - scripts/lib/v1-38-durable-publication-successor-v1.test.ts
+  - scripts/lib/v1-38-restartable-lifecycle-successor-v1.ts
+  - scripts/lib/v1-38-restartable-lifecycle-successor-v1.test.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v1.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v1.test.ts
+  - .planning/artifacts/v1.38-phase-262-review-fix-correction-v1.json
+  - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW-FIX.md
 findings:
-  critical: 5
+  critical: 6
   warning: 0
   info: 0
-  total: 5
+  total: 6
 status: issues_found
 ---
 
 # Phase 262: Code Review Report
 
-**Reviewed:** 2026-08-27T22:12:07Z
+**Reviewed:** 2026-08-27T22:42:53Z
 **Depth:** deep
-**Files Reviewed:** 9
+**Files Reviewed:** 19
 **Status:** issues_found
-
-## Summary
-
-The committed v2 empirical evidence is internally consistent with the observed clean exhaustion at fresh `0/540`, and all 117 existing focused tests pass. However, the implementation does not meet its claimed crash-safety and single-publication contracts. Two controller recovery gaps can leave a live envelope terminally unpublishable or misclassify known cleanup as uncertain. Three publication/lifecycle paths can strand partial state or overwrite a concurrently created canonical destination.
-
-These defects do not convert the real `0/540` result into accepted evidence and do not authorize Phase 263. Because the reviewed v2 source and evidence are already sealed history, remediation must preserve those bytes and use an additive successor/correction route rather than rewriting the committed journal, terminal, review, seal, envelope, disposition, or lifecycle artifacts.
 
 ## Narrative Findings (AI reviewer)
 
+## Summary
+
+The additive remediation preserves the committed empirical truth: the envelope remains exhausted at fresh `0/540`, reproduction-v16 is absent in the current checkout, and no downstream authority exists. All 18 protected v2 files currently match their recorded SHA-256 values. The serialized focused and historical suite passes 150/150 tests, TypeScript typechecking passes, and the correction checker passes.
+
+Those green checks do not close the review. The five historical defects were implemented as disconnected library primitives, not as a composed successor execution path. The new integrity journal can be forged into a reproduction-exact disposition, pair and lifecycle publication retain race windows, path/symlink containment is incomplete, and the correction checker does not authenticate important negative facts or its mutable review reference. The correction therefore must remain non-authorizing.
+
 ## Critical Issues
 
-### CR-01: An admitted preflight can be stranded across a crash, leaving an active envelope with no capacity
+### CR-01: The claimed fixes are not reachable from any successor execution path
 
-**File:** `scripts/run-v1-38-bounded-retry-envelope-v2.ts:300-317,377-380`
+**Files:** `scripts/lib/v1-38-bounded-retry-integrity-successor-v1.ts:156-320`; `scripts/lib/v1-38-durable-publication-successor-v1.ts:158-289`; `scripts/lib/v1-38-restartable-lifecycle-successor-v1.ts:91-209`; `scripts/check-v1-38-phase-262-review-fix-correction-v1.ts:126-140`
 
-**Issue:** Recovery only recognizes a preflight reservation with no observation. It does not recognize an already observed, threshold-admitted preflight that has no matching `reserve_route`. A crash at the durable journal boundary after `observe_preflight` and before `reserve_route` therefore loses the only route admission associated with that observation. If the remaining observations are refused, replay does not call the envelope exhausted because not every observation is below 2,500, while `nextPreflightIdentity` is `null`; the loop breaks and returns `disposition: active`. Production then cannot publish the required terminal. I reproduced this with one durable `2500` observation followed by eleven `2499` observations: the result was active with zero remaining observations and zero route starts.
+**Issue:** Repository-wide call-chain analysis finds no non-test consumer for `recoverV138AdmittedObservationWithoutRoute`, `completeV138SuccessorEffect`, `durablyPublishV138Pair`, or `applyV138RestartableLifecycleTransaction`. The only non-test call to `publishV138NoReplaceUnderLockf` is inside the equally uncalled lifecycle primitive. The immutable v2 controller and checkers still execute their original defective paths. Nevertheless the correction declares all five findings implemented. This proves isolated helpers, not closure of CR-01 through CR-05 in an executable, reviewed source route.
 
-The real SIGKILL matrix does not cover this boundary: the generic `journal_fsync` hook kills on the first record fsync, so it proves reservation recovery but not each semantically distinct journal transition.
+**Fix:** Add a single successor controller/checker route that composes these primitives at every original call site, binds its exact source and tests into a fresh non-authorizing review contract, and proves crash/restart behavior end to end. Keep the current v2 bytes immutable and keep all authority false until that composed route receives an independent zero-finding review.
 
-**Fix:** Add recovery for an admitted observation that lacks a route reservation. Either durably reserve the next route for that same preflight and then fail closed/continue under the frozen rules, or append a distinct integrity terminal that charges the observation and closes the envelope. Add SIGKILL tests after every journal event, especially admitted observation, route reservation, admitted calibration, and each terminal event. If sealed v2 source is immutable, implement this in an additive successor source version and explicitly supersede the zero-finding source review.
+### CR-02: Hash-valid successor records can forge a reproduction-exact terminal
 
-### CR-02: Deadline checks discard completed effect results and create an unreconcilable terminal journal
+**File:** `scripts/lib/v1-38-bounded-retry-integrity-successor-v1.ts:101-117,126-203`
 
-**File:** `scripts/run-v1-38-bounded-retry-envelope-v2.ts:434-456,468-490`
+**Issue:** `authenticateSuccessorRecords` validates only ordinal/hash linkage. It does not enforce one start, one matching finish, one derived decision, matching effect kind/identity/owner, legal status per effect kind, or decision equality with `decisionFor`. `recoverV138SuccessorEffectDecision` then accepts the first supplied decision without recomputing it. A hash-valid journal containing a calibration start/finish followed by a mismatched `reproduction_exact_terminal` was accepted as `disposition: reproduction_exact` with `acceptedCells: 0`. Separately, the public completion API accepts a reproduction result with status `admitted`, 540 cells, and cleanup true as `effect_recorded`, showing that effect-kind status constraints are absent.
 
-**Issue:** After `runCalibration` or `runReproduction` returns, the controller calls `deadlineGuard()` before durably appending the corresponding finish record. If the effect crosses the inclusive four-hour boundary, the guard appends `time_window_expired` and returns. The journal is now terminal while the calibration or reproduction reservation remains unfinished. Derived state reports `completeCleanup: false` even when the completed effect proved cleanup, and a restart cannot reconcile the reservation because replay rejects every record after a terminal (`V138_RETRY_ENVELOPE_TERMINAL`). I reproduced a complete-cleanup calibration that crossed the deadline: the journal ended with `reserve_calibration,time_window_expired`, derived an exhausted/cleanup-false state, and restart failed.
+**Fix:** Replace generic event unions with effect-specific schemas and replay a strict state machine. Require exact identity/owner/kind continuity, exactly one start and finish, legal status/cell combinations, no record after a terminal, and a decision byte-for-byte equal to the decision derived from the authenticated finish and frozen deadline. Downstream success must additionally require reproduction kind, `passed_exact`, exact 540, and cleanup true.
 
-This turns a clean deadline exhaustion into an assurance defect and loses the already observed effect/cleanup result. The same ordering can discard an exact reproduction result.
+### CR-03: Two pair transactions can publish a mixed canonical pair
 
-**Fix:** Once an effect has started, always append its finish record first, preserving its observed status and cleanup, then apply the deadline as the next terminal decision if the envelope is still active. Define precedence explicitly for an exact reproduction completed at/after the deadline; the frozen contract must decide whether that is expiry or success, but the effect terminal and cleanup facts must remain durable. Add boundary tests for preflight, calibration, and reproduction effects that advance monotonic time to exactly and beyond the deadline, plus restart checks.
+**File:** `scripts/lib/v1-38-durable-publication-successor-v1.ts:187-289`
 
-### CR-03: Review and seal/envelope pair publication can be stranded half-written
+**Issue:** Pair publication has no kernel lock or common commit primitive. Both targets are checked before staging, then linked independently. Two conflicting transactions with reversed member order can both pass the initial absence checks; one links target A while the other links target B, after which both fail authentication and leave a mixed pair that belongs to neither intent. Per-member no-replace prevents overwrite but does not make the pair atomic or recoverable to one authoritative intent.
 
-**Files:** `scripts/check-v1-38-plan-262-85-bounded-retry-source-review-v2.ts:664-690`; `scripts/run-v1-38-bounded-retry-envelope-v2.ts:909-930`
+**Fix:** Hold one deterministic kernel lock covering the sorted canonical target set and intent from precheck through both publications and parent fsyncs. Bind target ordering and transaction identity to the lock, reject every conflicting intent before publishing either member, and add a synchronized reversed-order two-process race test that proves either one complete pair or no new canonical member.
 
-**Issue:** Both canonical pairs are published as two independent exclusive creates. The review pair does not fsync either file or its parent and attempts an unlink rollback only for an ordinary second-write exception; a crash can leave just the JSON. The seal/envelope pair fsyncs individual files but has no recovery path if the process dies after the seal is durable and before the envelope is created. A rerun rejects the already present first member instead of authenticating it and completing the exact missing member. For the separately committed direct-child seal, that partial state can consume the only authorized seal attempt without producing a checkable envelope.
+### CR-04: Lifecycle step replacement remains race-prone and can run after a premature commit marker
 
-**Fix:** Use a durable pair transaction: precompute both exact byte strings, create/fsync staged files, record/fsync transaction intent, publish with no-replace semantics, fsync the parent, and make restart authenticate any existing member byte-for-byte before completing only the missing member. Never unlink a possibly durable canonical member as rollback. Add crash probes after each file and parent fsync for both pairs.
+**File:** `scripts/lib/v1-38-restartable-lifecycle-successor-v1.ts:151-204`
 
-### CR-04: The lifecycle publisher's rename can overwrite a concurrently created canonical artifact
+**Issue:** The supplied `lockPath` protects only final lifecycle-status publication. Mutable steps are rechecked and then installed with `renameSync`, which replaces an existing pathname. A cooperating second invocation or non-cooperating writer can change a target after line 178 and before line 181 and have its bytes silently overwritten. In addition, an already present exact lifecycle status is accepted even when steps remain in their before state; the function then mutates them while the canonical commit marker already claims completion. These states violate the transaction's advertised commit-point semantics.
 
-**File:** `scripts/check-v1-38-plan-262-89-lifecycle-v2.ts:466-491`
+**Fix:** Acquire the lifecycle kernel lock before intent/state validation and hold it through every step, status publication, and parent fsync. Use a compare-and-swap/no-clobber protocol appropriate for existing mutable targets, and reject an existing lifecycle status unless every postcondition already holds. Add synchronized races at each step and a fixture with exact status plus incomplete steps.
 
-**Issue:** `atomicPublish` checks that the target is absent, writes a PID-named temporary file, then uses `renameSync(temporary, target)`. POSIX rename replaces an existing destination. A second process can create readiness-v2 or lifecycle-status-v2 after the absence check and before the rename; this process will silently overwrite it, violating the additive immutable publication and fail-closed destination contract. There is no lock around this path.
+### CR-05: Publication and integrity checks do not enforce workspace or symlink containment
 
-**Fix:** Publish with a no-replace primitive or an exclusive final-component create. If temporary-file durability is required, acquire a kernel lock for the destination transaction, recheck the final component under that lock, and fail on any existing byte rather than replacing it. Add a synchronized race test that creates the final destination between staging and publication and asserts conflict without mutation.
+**Files:** `scripts/lib/v1-38-durable-publication-successor-v1.ts:39-55,112-126,187-210`; `scripts/lib/v1-38-restartable-lifecycle-successor-v1.ts:107-120`; `scripts/check-v1-38-phase-262-review-fix-correction-v1.ts:59-69`
 
-### CR-05: Pass-side lifecycle mutation is not crash-atomic or restart-safe
+**Issue:** Publication APIs accept arbitrary absolute-resolved paths and do not bind them to a canonical workspace/artifact root. `assertSafeParent` checks only the immediate parent; an intermediate directory symlink is followed. Lifecycle mutation performs no parent-chain safety check at all. The correction checker uses `existsSync`/`readFileSync`, so a protected regular file replaced by a symlink to identical external bytes authenticates successfully. This was reproduced: all 18 protected entries passed and `status: integrity_non_pass` was derived with the first protected source represented by a symlink.
 
-**File:** `scripts/check-v1-38-plan-262-89-lifecycle-v2.ts:821-860`
+**Fix:** Require an explicit trusted root, resolve it with `realpath`, reject absolute/escaping inputs, walk every path component with no-follow semantics, and verify the final entry is a regular file with the expected device/inode policy. Open and hash through no-follow descriptors rather than path-based TOCTOU pairs. Add intermediate-directory and final-file symlink tests for every publisher, lifecycle step, and protected-file authenticator.
 
-**Issue:** On an exact pass, the driver runs four independent mutating GSD commands (requirements, roadmap, state, phase completion) and only afterward publishes lifecycle-status-v2. Any command failure or process death can leave a prefix of those project files mutated with no lifecycle status. A retry begins from the first command again with no durable step journal; `state.record-session` can duplicate history, and later commands may observe already-partial completion. The tests cover only all-success ordering and the non-pass zero-mutation branch, not failure after each pass-side step.
+### CR-06: The correction checker asserts negative evidence and review identity without authenticating them
 
-**Fix:** Make the pass transition transactional and restartable. Prefer deriving all target bytes first and committing them with one durable transaction; otherwise write a hash-chained lifecycle-step journal with before/after hashes, make each operation idempotent, verify its exact postcondition before advancing, and recover from every prefix. Publish lifecycle-status-v2 only after all exact postconditions hold. Add injected failures after each of the four commands and prove deterministic convergence without duplicate state history.
+**File:** `scripts/check-v1-38-phase-262-review-fix-correction-v1.ts:59-69,111-176`
 
-## Post-Summary Readiness Command Assessment
+**Issue:** `reproductionV16Present: false` and every authority denial are emitted as constants after authenticating a fixed positive-file list. The checker never proves that reproduction-v16, retry/activation, candidate, or Phase-263 authority destinations are absent. A fixture containing a rogue `.planning/artifacts/v1.38-current-matrix-reproduction-v16.json` with 540 accepted cells still passed `checkV138Phase262ReviewFixCorrection`. The artifact also claims an exact SHA for mutable `262-REVIEW.md`, but `authenticateFiles` never reads that path; replacing the required aggregate review leaves the correction checker green while its stated path/SHA is false.
 
-The observed failure of `--check-post-summary-driver-ready` after `262-89-SUMMARY.md` exists is **not an additional defect**. Plan 262-89 explicitly defines that command as the pre-summary Stage-1 check, and its implementation intentionally re-derives the 69-summary topology. Stage 2 uses the separate `authenticateCommittedReadiness()` path through `--apply-post-summary`, which authenticates the committed pre-summary readiness without pretending the topology is still pre-summary. The command name is broad, but the fail-closed post-summary rejection matches the written two-stage contract.
+**Fix:** Define and authenticate a complete forbidden-destination manifest with no-follow absence checks, or derive every denial from an independently replayed authoritative journal/disposition plus explicit absence proofs. Bind the triggering review to an immutable artifact or commit-qualified blob and authenticate it; represent the mutable aggregate re-review separately. Add tests for each forbidden destination and for review replacement/mutation.
 
 ## Verification Performed
 
-- Existing focused suites: **4/4 files passed, 117/117 tests passed**.
-- Independent admitted-observation crash reconstruction: reproduced `active` with zero remaining observations and no terminalizable route.
-- Independent calibration deadline-crossing reconstruction: reproduced `exhausted` with an unfinished calibration, false cleanup, and restart rejection.
-- Traced source/review/seal lineage, lockf ownership, journal/private-receipt fsync ordering, exact 2,500-basis-point gate, 3/12/8x4/540 accounting, reproduction privacy projection, Plan-88 independent replay, Route-10 conditionality, and the Plan-89 summary latch.
-- Current protected outcome remains non-pass/exhausted, fresh `0/540`, reproduction-v16 absent, correction-v3 absent, Route-10 absent, and downstream authority denied.
+- Serialized focused and historical suites: **8/8 files passed, 150/150 tests passed**.
+- `pnpm exec tsc --noEmit --pretty false`: passed.
+- Correction checker: passed against the current checkout.
+- Protected-byte manifest: all **18/18** recorded v2 files currently match.
+- Independent semantic-journal reproduction: a hash-valid calibration journal plus mismatched exact-reproduction decision returned `reproduction_exact` with zero accepted cells.
+- Independent symlink reproduction: an exact-byte protected-file symlink passed correction derivation.
+- Independent forbidden-destination reproduction: a rogue reproduction-v16 artifact remained undetected by the correction checker.
+- Repository call graph: the successor remediation exports have no composed non-test caller.
 
 ---
 
-_Reviewed: 2026-08-27T22:12:07Z_
+_Reviewed: 2026-08-27T22:42:53Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
