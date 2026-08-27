@@ -178,22 +178,40 @@ export const deriveV138HistoricalLiveReceiptManifest = (root: string): any => {
 }
 
 export const checkV138HistoricalLiveReceiptManifest = (root: string): any => {
+  requireAncestor(root, HISTORICAL.receiptManifestCommit)
   const bytes = readRegular(
     root,
     V138_HISTORICAL_LIVE_RECEIPT_MANIFEST_PATH,
   ).toString("utf8")
   const candidate = JSON.parse(bytes)
   const expected = deriveV138HistoricalLiveReceiptManifest(root)
+  const publicationCommits = git(root, [
+    "log",
+    "--format=%H",
+    "--all",
+    "--",
+    V138_HISTORICAL_LIVE_RECEIPT_MANIFEST_PATH,
+  ])
+    .split("\n")
+    .filter(Boolean)
   if (
     bytes !== canonical(candidate) ||
     candidate.manifestRoot !==
       computeV138HistoricalLiveReceiptManifestRoot(candidate) ||
     canonical(candidate) !== canonical(expected) ||
+    publicationCommits.length !== 1 ||
+    publicationCommits[0] !== HISTORICAL.receiptManifestCommit ||
     !gitBytes(
       root,
       HISTORICAL.receiptManifestCommit,
       V138_HISTORICAL_LIVE_RECEIPT_MANIFEST_PATH,
-    ).equals(Buffer.from(bytes))
+    ).equals(Buffer.from(bytes)) ||
+    git(root, [
+      "status",
+      "--porcelain",
+      "--",
+      V138_HISTORICAL_LIVE_RECEIPT_MANIFEST_PATH,
+    ]) !== ""
   )
     fail("V138_AUDIT_CORRECTION_MANIFEST_INVALID")
   return candidate
