@@ -4,22 +4,25 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: Plan 262-73 closed with blocked obstruction disposition; top-level Phase-262 validation is next while Plan 262-74 remains unsummarized and Phase 263 denied
-stopped_at: Completed 262-73-PLAN.md
-last_updated: "2026-08-26T05:12:56.637Z"
-last_activity: 2026-08-26
-last_activity_desc: Published blocked Route-8 foundation activation disposition with no activation root
+status: Plan 262-75 topology cutover tasks complete; normal summary commit and exact 62-plan/56-summary gate precede Plan 262-76
+stopped_at: Completing 262-75-PLAN.md
+last_updated: "2026-08-27T12:08:18Z"
+last_activity: 2026-08-27
+last_activity_desc: Archived the unsummarized Route-8 sentinel and installed bounded-retry routing without live work
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 56
+  total_plans: 62
   completed_plans: 55
   percent: 98
 ---
 
 # State: Coward's Game
 
+<!-- Historical Route-8 carrier below is retained as evidence only; it is not active dispatch authority. -->
 <!-- phase-262-verification-sentinel-status: {"schema_version":"v1.38-plan-262-74-lifecycle-carrier-v1","proof_status":"route_8_post_validation_normalized","branch":"obstruction","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"phase263_authorized":false,"candidate_search_authorized":false,"phase264_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"product_authorized":false,"activation_authorized":false,"production_authorized":false,"gameplay_change_authorized":false,"foundation_activation_root_present":false,"next_action":"run-post-validation-binder","bulk_execute_phase_prohibited":true,"total_plans":56,"trustworthy_summaries":55,"active_successors":["262-74"],"incomplete":["262-74"],"plan_72_disposition":"pre_start_obstruction","plan_73_disposition":"blocked","sentinel_plan":"262-74","sentinel_summary_policy":"pass_only_after_verification","topology_manifest_root":"sha256:beb9e773cb1edadce7d271addada8badc94457acf31ee5b0ffe8550b3c35fedf","disposition_root":"sha256:5559770dd570ff63482aa30e6882fe22cb9b7a98d3b001d5c7bbc72f16ea079a","local_seal_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","validator_root":"sha256:5b0189a6150b06a8707efc39130b5546cf0340a94de95d4afb61f04e01a15145","downstream_authority_denied":true} -->
+
+<!-- phase-262-bounded-retry-topology-status: {"schema_version":"v1.38-plan-262-75-topology-v1","proof_status":"bounded_retry_cutover_pending_summary","route_8_disposition":"pre_start_obstruction","route_8_consumed":false,"route_8_fresh_charged":0,"route_8_fresh_accepted":0,"admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","phase_262":"incomplete","phase263_authorized":false,"candidate_search_authorized":false,"phase264_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"product_authorized":false,"activation_authorized":false,"production_authorized":false,"gameplay_change_authorized":false,"foundation_activation_root_present":false,"archived_plan_74":"archived/262-74-HISTORICAL.md","archived_plan_74_sha256":"9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d","plan_74_summary_present":false,"pre_summary_active_plans":62,"pre_summary_summaries":55,"post_summary_active_plans":62,"post_summary_summaries":56,"active_successors":["262-75","262-76","262-77","262-78","262-79","262-80","262-81"],"waves":{"262-75":57,"262-76":58,"262-77":59,"262-78":60,"262-79":61,"262-80":62,"262-81":63},"live_owner":"262-79","disposition_owner":"262-80","lifecycle_owner":"262-81","next_action":"commit-262-75-summary-then-check-topology","unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
 
 ## Project Reference
 
@@ -31,15 +34,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 55 trustworthy summaries — Plan 262-74 is the only incomplete active successor
-Status: Plan 262-73 closed with blocked obstruction disposition; top-level Phase-262 validation is next while Plan 262-74 remains unsummarized and Phase 263 denied
-Last activity: 2026-08-26 — Published blocked Route-8 foundation activation disposition with no activation root
+Plan: 55 trustworthy summaries before Plan-75 closeout — 62 active plans with Plans 75-81 as the bounded successor chain
+Status: Plan 262-75 topology cutover tasks complete; normal summary commit and exact 62-plan/56-summary gate precede Plan 262-76
+Last activity: 2026-08-27 — Archived the unsummarized Route-8 sentinel and installed bounded-retry routing without live work
 
 Progress: [██████████] 98%
 
 ## Performance Metrics
 
-**Current milestone:** 55 Phase 262 plans have trustworthy summaries. Plans 262-69 through 262-73 completed sequentially under the explicit Route-8 protocol. Plan 72 selected the bounded non-consuming pre-start obstruction, and Plan 73 published only the checked blocked activation disposition while keeping the optional activation root absent. Plan 262-74 is the sole incomplete sentinel. Phase 262 remains incomplete, ADMIT-03 remains blocked at 0/540, Phase 263 remains denied, and every downstream authority remains false. Next action: top-level Phase-262 validation per `262-ROUTE8-EXECUTION-PROTOCOL.md`.
+**Current milestone:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery is 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` routes Plans 75-81 sequentially at waves 57-63 and prohibits unfiltered phase execution. Plan 79 alone owns live work, Plan 80 independently dispositions/conditionally activates without phase completion, and Plan 81 alone owns lifecycle closeout. Phase 262 remains incomplete, ADMIT-03 remains blocked at fresh 0/540, Phase 263 remains denied, and every downstream authority remains false. Next action: commit the normal Plan-262-75 summary, pass the exact topology gate, then dispatch Plan 262-76 only.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
@@ -228,6 +231,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Take the non-consuming Route-8 obstruction branch because the reviewed source has no v13/v14 execution producer; preserve zero charges and deny Phase 263.
 - [Phase 262]: Map the checked Plan-262-72 pre-start obstruction only to a blocked activation disposition; it cannot consume authority, claim a terminal, or create the optional activation root. — The no-follow XOR selector authenticated obstruction while the optional terminal and activation root remained absent.
 - [Phase 262]: Keep ADMIT-03 blocked and Phase 263 plus candidate, formation, holdout, public, product, production, and gameplay authority false despite the reduced-assurance local-seal pass. — The two latches are noncompensating and literal fresh 540/540 evidence is absent.
+- [Phase 262]: Archive Plan 262-74 byte-for-byte at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; preserve its unsummarized `gaps_found`, zero-consumption, and no-authority meaning outside active plan accounting.
+- [Phase 262]: Supersede Route-8 dispatch with the bounded-retry protocol: Plans 262-75 through 262-81 run sequentially at waves 57-63 only after committed predecessor summaries and exact topology checks; unfiltered phase execution is prohibited.
+- [Phase 262]: Assign exclusive lifecycle roles: Plan 262-79 alone owns the live envelope, Plan 262-80 independently dispositions and conditionally activates without completing the phase, and Plan 262-81 alone may refresh lifecycle and call `phase.complete` after its normal summary is committed.
 
 ### Pending Todos
 
