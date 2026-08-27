@@ -10,7 +10,7 @@ import {
 } from "./check-v1-38-plan-262-80-bounded-retry-admission.js"
 
 const repoRoot = process.cwd()
-const clone = <T>(value: T): T => structuredClone(value)
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("Plan 262-80 independent bounded-retry admission", () => {
   it("derives the committed exhausted branch without publishing", () => {
@@ -48,41 +48,84 @@ describe("Plan 262-80 independent bounded-retry admission", () => {
   })
 
   it.each([
-    ["count coincidence", (evidence: any) => {
-      evidence.terminal.counters.acceptedCells = 540
-      evidence.terminal.freshAccepted = 540
-    }, "TERMINAL_COUNTERS_INVALID"],
-    ["duplicate journal record", (evidence: any) => {
-      evidence.journal.push(clone(evidence.journal.at(-1)))
-    }, "JOURNAL_CHAIN_INVALID"],
-    ["stale seal root", (evidence: any) => {
-      evidence.seal.sealRoot = `sha256:${"0".repeat(64)}`
-    }, "SEAL_ROOT_INVALID"],
-    ["partial reproduction", (evidence: any) => {
-      evidence.reproduction = { acceptedCells: 539, results: Array(539).fill({}) }
-    }, "REPRODUCTION_EVIDENCE_INVALID"],
-    ["over-bounds policy", (evidence: any) => {
-      evidence.envelope.policy.maximumRouteStarts = 4
-    }, "FROZEN_POLICY_INVALID"],
-    ["missing durable expiry terminal", (evidence: any) => {
-      evidence.terminal.terminalReason = "time_window_expired"
-    }, "EXPIRY_TERMINAL_INVALID"],
-    ["duplicated expiry terminal", (evidence: any) => {
-      evidence.journal.push({
-        ...clone(evidence.journal.at(-1)),
-        kind: "time_window_expired",
-        reason: "time_window_expired",
-      })
-    }, "JOURNAL_CHAIN_INVALID"],
-    ["historical rewrite", (evidence: any) => {
-      evidence.custody.plan74ArchiveSha256 = `sha256:${"f".repeat(64)}`
-    }, "PROTECTED_HISTORY_INVALID"],
-    ["unsafe projection", (evidence: any) => {
-      evidence.unsafeProjectionKeys.push("strategySource")
-    }, "PRIVACY_PROJECTION_INVALID"],
-    ["authority escalation", (evidence: any) => {
-      evidence.terminal.productionAuthorized = true
-    }, "AUTHORITY_ESCALATION"],
+    [
+      "count coincidence",
+      (evidence: any) => {
+        evidence.terminal.counters.acceptedCells = 540
+        evidence.terminal.freshAccepted = 540
+      },
+      "TERMINAL_COUNTERS_INVALID",
+    ],
+    [
+      "duplicate journal record",
+      (evidence: any) => {
+        evidence.journal.push(clone(evidence.journal.at(-1)))
+      },
+      "JOURNAL_CHAIN_INVALID",
+    ],
+    [
+      "stale seal root",
+      (evidence: any) => {
+        evidence.seal.sealRoot = `sha256:${"0".repeat(64)}`
+      },
+      "SEAL_ROOT_INVALID",
+    ],
+    [
+      "partial reproduction",
+      (evidence: any) => {
+        evidence.reproduction = {
+          acceptedCells: 539,
+          results: Array(539).fill({}),
+        }
+      },
+      "REPRODUCTION_EVIDENCE_INVALID",
+    ],
+    [
+      "over-bounds policy",
+      (evidence: any) => {
+        evidence.envelope.policy.maximumRouteStarts = 4
+      },
+      "FROZEN_POLICY_INVALID",
+    ],
+    [
+      "missing durable expiry terminal",
+      (evidence: any) => {
+        evidence.terminal.terminalReason = "time_window_expired"
+      },
+      "EXPIRY_TERMINAL_INVALID",
+    ],
+    [
+      "duplicated expiry terminal",
+      (evidence: any) => {
+        evidence.journal.push({
+          ...clone(evidence.journal.at(-1)),
+          kind: "time_window_expired",
+          reason: "time_window_expired",
+        })
+      },
+      "JOURNAL_CHAIN_INVALID",
+    ],
+    [
+      "historical rewrite",
+      (evidence: any) => {
+        evidence.custody.plan74ArchiveSha256 = `sha256:${"f".repeat(64)}`
+      },
+      "PROTECTED_HISTORY_INVALID",
+    ],
+    [
+      "unsafe projection",
+      (evidence: any) => {
+        evidence.unsafeProjectionKeys.push("strategySource")
+      },
+      "PRIVACY_PROJECTION_INVALID",
+    ],
+    [
+      "authority escalation",
+      (evidence: any) => {
+        evidence.terminal.productionAuthorized = true
+      },
+      "AUTHORITY_ESCALATION",
+    ],
   ])("rejects %s", (_name, mutate, reason) => {
     const evidence = clone(loadV138Plan26280Evidence(repoRoot))
     mutate(evidence)
@@ -97,7 +140,9 @@ describe("Plan 262-80 independent bounded-retry admission", () => {
     expect(() => computeV138Plan26280ActivationRoot(disposition)).toThrow(
       "V138_PLAN_262_80_ACTIVATION_NOT_AUTHORIZED",
     )
-    expect(validateV138Plan26280Disposition(disposition, disposition)).toBe(true)
+    expect(validateV138Plan26280Disposition(disposition, disposition)).toBe(
+      true,
+    )
 
     const forged = clone(disposition) as any
     forged.status = "pass"
