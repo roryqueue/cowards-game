@@ -8,7 +8,7 @@ const loadReviewer = async () =>
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("Plan 262-83 independent bounded-retry source re-review", () => {
-  it("derives exact corrected custody, durable expiry, and protected history with zero findings", async () => {
+  it("re-reviews exact historical bytes and exposes the previously missed semantic findings", async () => {
     const reviewer = await loadReviewer()
     const before = reviewer.snapshotV138Plan26283ProtectedDestinations(
       process.cwd(),
@@ -19,9 +19,14 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
     )
 
     expect(after).toEqual(before)
-    expect(review.status).toBe("zero_findings")
-    expect(review.findingCount).toBe(0)
-    expect(review.sourceReviewPassed).toBe(true)
+    expect(review.status).toBe("blocked")
+    expect(review.findingCount).toBe(3)
+    expect(review.sourceReviewPassed).toBe(false)
+    expect(review.findings.map((item: { code: string }) => item.code)).toEqual([
+      "CLEANUP_TRUTH_NOT_DERIVED",
+      "POST_RUN_CLI_MODES_MISSING",
+      "SUCCESS_PUBLICATION_NOT_CRASH_RECOVERABLE",
+    ])
     expect(review.reviewedSource).toMatchObject({
       commit: "e844279f62192c41175fb3e7a08910493c6f24ab",
       tree: "360a10e6767cd3e9c899b0b07ea54a5bf7faac65",
@@ -53,7 +58,7 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
       reviewedPlan76Only: true,
     })
     expect(review.authority).toMatchObject({
-      plan26278Eligible: true,
+      plan26278Eligible: false,
       authorizationCreated: false,
       liveInvoked: false,
       freshCharged: 0,
@@ -207,7 +212,7 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
         value.authority.productionAuthorized = true
       },
       (value: any) => {
-        value.authority.plan26278Eligible = false
+        value.authority.plan26278Eligible = true
       },
       (value: any) => {
         value.protectedHistory.finding = "NONE"
@@ -243,9 +248,9 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
       ),
     )
     expect(output).toMatchObject({
-      status: "zero_findings",
-      findingCount: 0,
-      plan26278Eligible: true,
+      status: "blocked",
+      findingCount: 3,
+      plan26278Eligible: false,
       authorizesExecution: false,
       liveInvoked: false,
     })

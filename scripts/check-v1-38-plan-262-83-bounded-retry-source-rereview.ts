@@ -22,7 +22,13 @@ import { fileURLToPath } from "node:url"
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 type Sha256 = `sha256:${string}`
-type Source = Readonly<{ model: string; controller: string; tests: string }>
+type Source = Readonly<{
+  model: string
+  controller: string
+  tests: string
+  lifecycle?: string
+  admission?: string
+}>
 
 const PHASE_DIR =
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
@@ -261,7 +267,63 @@ export const inspectV138Plan26283SourceMutation = (
     /Math\.random|Date\.now|node:vm|new Function|process\.env\[[^\]]+\]/u
   if (forbidden.test(source.model) || forbidden.test(source.controller))
     findings.push("FORBIDDEN_CAPABILITY_PRESENT")
-  return findings.sort()
+  const cleanupProjection = source.controller.match(
+    /const v138RetryTerminalResult[\s\S]*?completeCleanup:\s*result\.state\.completeCleanup[\s\S]*?\n\}/u,
+  )
+  if (
+    !source.model.includes("readonly completeCleanup: boolean") ||
+    !source.model.includes("terminal.completeCleanup") ||
+    cleanupProjection === null
+  )
+    findings.push("CLEANUP_TRUTH_NOT_DERIVED")
+  const publicationStart = source.controller.indexOf(
+    "export const publishV138RetryOutcome",
+  )
+  const publicationEnd = source.controller.indexOf(
+    "export interface V138SuccessorSourceSealV11",
+    publicationStart,
+  )
+  const publication =
+    publicationStart >= 0 && publicationEnd > publicationStart
+      ? source.controller.slice(publicationStart, publicationEnd)
+      : undefined
+  if (
+    publication === undefined ||
+    publication.indexOf("args.reproductionTarget") < 0 ||
+    publication.indexOf("args.terminalTarget") < 0 ||
+    publication.indexOf("args.reproductionTarget") >
+      publication.indexOf("args.terminalTarget") ||
+    !publication.includes('reproductionStatus === "regular"') ||
+    !source.tests.includes("recovers every success publication crash boundary")
+  )
+    findings.push("SUCCESS_PUBLICATION_NOT_CRASH_RECOVERABLE")
+  const modes = source.controller.match(
+    /V138_BOUNDED_RETRY_PRODUCTION_MODES\s*=\s*Object\.freeze\(\[[\s\S]*?\]\s+as const\)/u,
+  )?.[0]
+  if (
+    modes === undefined ||
+    !modes.includes('"--check-live-transition"') ||
+    !modes.includes('"--check-terminal-envelope"') ||
+    !source.controller.includes("checkV138PublishedRetryOutcome")
+  )
+    findings.push("POST_RUN_CLI_MODES_MISSING")
+  if (
+    source.lifecycle !== undefined &&
+    (source.lifecycle.includes(
+      "validateV138Plan26280Disposition(disposition, disposition)",
+    ) ||
+      !source.lifecycle.includes("checkV138Plan26280Disposition") ||
+      !source.lifecycle.includes(
+        'disposition?.terminalDisposition === "succeeded"',
+      ))
+  )
+    findings.push("LIFECYCLE_ADMISSION_CIRCULAR")
+  if (
+    source.admission !== undefined &&
+    !source.admission.includes("deriveV138Plan26280NoPublish(root)")
+  )
+    findings.push("ADMISSION_DERIVATION_MISSING")
+  return [...new Set(findings)].sort()
 }
 
 const inspectCustody = (root: string) => {
@@ -476,6 +538,10 @@ const OBSERVATIONS = Object.freeze([
   "protected-plan77-history",
   "privacy-and-authority-denial",
   "canonical-destinations-untouched",
+  "cleanup-truth-derived",
+  "success-publication-crash-recovery",
+  "post-run-cli-modes",
+  "lifecycle-admission-non-circularity",
 ])
 export const deriveV138Plan26283NoPublish = (root: string) => {
   const before = snapshotV138Plan26283ProtectedDestinations(root)
@@ -493,6 +559,14 @@ export const deriveV138Plan26283NoPublish = (root: string) => {
       "show",
       `${reviewedSource.commit}:${V138_PLAN_262_83_SOURCE_PATHS[2]}`,
     ]),
+    lifecycle: readRegular(
+      root,
+      "scripts/check-v1-38-plan-262-81-lifecycle.ts",
+    ).toString("utf8"),
+    admission: readRegular(
+      root,
+      "scripts/check-v1-38-plan-262-80-bounded-retry-admission.ts",
+    ).toString("utf8"),
   }
   const mutationFindings = inspectV138Plan26283SourceMutation(source)
   const exercise = detachedExercise(root)
@@ -519,7 +593,20 @@ export const deriveV138Plan26283NoPublish = (root: string) => {
     observations: OBSERVATIONS.map((id) =>
       Object.freeze({
         id,
-        passed: true,
+        passed:
+          mutationFindings.length === 0 ||
+          !(
+            (id === "cleanup-truth-derived" &&
+              mutationFindings.includes("CLEANUP_TRUTH_NOT_DERIVED")) ||
+            (id === "success-publication-crash-recovery" &&
+              mutationFindings.includes(
+                "SUCCESS_PUBLICATION_NOT_CRASH_RECOVERABLE",
+              )) ||
+            (id === "post-run-cli-modes" &&
+              mutationFindings.includes("POST_RUN_CLI_MODES_MISSING")) ||
+            (id === "lifecycle-admission-non-circularity" &&
+              mutationFindings.includes("LIFECYCLE_ADMISSION_CIRCULAR"))
+          ),
         detailRoot: sha256(
           `${id}\0${canonical({ reviewedSource, exercise, protectedHistory })}`,
         ),
