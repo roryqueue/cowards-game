@@ -594,6 +594,7 @@ export interface V138DerivedRetryState {
   readonly protectedHistoricalIdentityCount: number
   readonly firstObservationMilliseconds: number | null
   readonly terminalReason: "time_window_expired" | null
+  readonly completeCleanup: boolean
   readonly disposition:
     | "active"
     | "succeeded"
@@ -638,8 +639,13 @@ export const deriveV138RetryState = (
     disposition,
     downstreamAuthority: false as const,
   }
+  const completeCleanup =
+    [...state.calibrationTerminals.values()].every(
+      (terminal) => terminal.completeCleanup,
+    ) && state.reproductionTerminal?.completeCleanup !== false
   return deepFreeze({
     ...body,
+    completeCleanup,
     stateRoot: sha256(`v138-retry-derived-state-v1\0${canonical(body)}`),
   })
 }

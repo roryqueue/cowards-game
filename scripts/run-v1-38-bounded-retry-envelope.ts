@@ -602,7 +602,7 @@ const v138RetryTerminalResult = (
       acceptedCells: result.state.acceptedCells,
     }),
     freshAccepted: result.state.acceptedCells,
-    completeCleanup: true as const,
+    completeCleanup: result.state.completeCleanup,
     downstreamAuthority: "denied" as const,
     productionAuthorized: false as const,
   })

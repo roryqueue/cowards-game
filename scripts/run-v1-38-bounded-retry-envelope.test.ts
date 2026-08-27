@@ -686,6 +686,49 @@ describe("bounded retry controller and CLI containment", () => {
     )
   })
 
+  it("publishes cleanup truth from authenticated calibration and reproduction terminals", async () => {
+    const cases = [
+      {
+        effects: {
+          ...makeEffects([2_500], []),
+          runCalibration: async () => ({
+            status: "system_failure" as const,
+            completeCleanup: false,
+          }),
+        },
+      },
+      {
+        effects: makeEffects([2_500], ["admitted"], {
+          status: "system_failure" as const,
+          acceptedCells: 0,
+          completeCleanup: false,
+        }),
+      },
+    ]
+
+    for (const [index, testCase] of cases.entries()) {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-cleanup-terminal-"))
+      temporaryRoots.push(root)
+      const result = await runV138BoundedRetryController({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: [],
+        effects: testCase.effects,
+      })
+      const target = path.join(root, `terminal-${index}.json`)
+      publishV138RetryTerminalResult(target, result)
+
+      expect(result.state).toMatchObject({
+        disposition: "terminal_failure",
+        completeCleanup: false,
+      })
+      expect(JSON.parse(readFileSync(target, "utf8"))).toMatchObject({
+        disposition: "terminal_failure",
+        completeCleanup: false,
+      })
+    }
+  })
+
   it("reserves before fake work, spaces refusal/failure retries, and closes on one exact reproduction", async () => {
     const launches: string[] = []
     const effects = makeEffects(
