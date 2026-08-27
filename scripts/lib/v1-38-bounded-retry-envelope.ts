@@ -233,6 +233,11 @@ type FinishReproduction = Readonly<{
   completeCleanup: boolean
   reproductionRoot?: V138RetrySha256
 }>
+type TimeWindowExpired = Readonly<{
+  kind: "time_window_expired"
+  owner: string
+  reason: "time_window_expired"
+}>
 
 export type V138RetryJournalEvent =
   | ReservePreflight
@@ -242,6 +247,7 @@ export type V138RetryJournalEvent =
   | FinishCalibration
   | ReserveReproduction
   | FinishReproduction
+  | TimeWindowExpired
 
 export type V138RetryJournalRecord = Readonly<
   V138RetryJournalEvent & {
@@ -269,6 +275,7 @@ type ReplayState = {
   reproductionRoute: V138RetryRouteIdentity | null
   reproductionReserved: boolean
   reproductionTerminal: FinishReproduction | null
+  timeWindowExpiryTerminal: TimeWindowExpired | null
   firstObservationMilliseconds: number | null
   lastRefusalMilliseconds: number | null
   lastProcessValidCalibrationFailureMilliseconds: number | null
@@ -285,6 +292,7 @@ const emptyReplay = (): ReplayState => ({
   reproductionRoute: null,
   reproductionReserved: false,
   reproductionTerminal: null,
+  timeWindowExpiryTerminal: null,
   firstObservationMilliseconds: null,
   lastRefusalMilliseconds: null,
   lastProcessValidCalibrationFailureMilliseconds: null,
@@ -300,6 +308,7 @@ const assertOwner = (owner: unknown): asserts owner is string => {
 const terminalDisposition = (
   state: ReplayState,
 ): "active" | "succeeded" | "terminal_failure" | "exhausted" => {
+  if (state.timeWindowExpiryTerminal !== null) return "exhausted"
   if (state.reproductionTerminal !== null) {
     return state.reproductionTerminal.status === "passed_exact" &&
       state.reproductionTerminal.acceptedCells === 540 &&
@@ -340,15 +349,28 @@ const applyEvent = (
   if (terminalDisposition(state) !== "active") {
     fail("V138_RETRY_ENVELOPE_TERMINAL")
   }
+  assertOwner(event.owner)
+  if (event.kind === "time_window_expired") {
+    if (
+      event.reason !== "time_window_expired" ||
+      state.firstObservationMilliseconds === null ||
+      atMilliseconds <
+        state.firstObservationMilliseconds +
+          V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+    ) {
+      fail("V138_RETRY_TIME_WINDOW_ACTIVE")
+    }
+    state.timeWindowExpiryTerminal = event
+    return
+  }
   if (
     state.firstObservationMilliseconds !== null &&
-    atMilliseconds >
+    atMilliseconds >=
       state.firstObservationMilliseconds +
         V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
   ) {
     fail("V138_RETRY_ENVELOPE_EXPIRED")
   }
-  assertOwner(event.owner)
   if (event.kind === "reserve_preflight") {
     const next = preflights[state.preflightReservations.size]
     if (event.identity !== next) {
@@ -571,6 +593,7 @@ export interface V138DerivedRetryState {
   readonly nextRouteIdentity: V138RetryRouteIdentity | null
   readonly protectedHistoricalIdentityCount: number
   readonly firstObservationMilliseconds: number | null
+  readonly terminalReason: "time_window_expired" | null
   readonly disposition:
     | "active"
     | "succeeded"
@@ -587,6 +610,7 @@ export const deriveV138RetryState = (
   const envelope = checkV138InactiveRetryEnvelope(envelopeValue)
   const state = replay(records, envelope.envelopeRoot)
   const disposition = terminalDisposition(state)
+  const terminal = disposition !== "active"
   const body = {
     schemaVersion: "v1.38-bounded-retry-derived-state-v1" as const,
     journalRoot: records.at(-1)?.recordRoot ?? GENESIS_ROOT,
@@ -597,13 +621,20 @@ export const deriveV138RetryState = (
     ].reduce((count, identities) => count + identities.length, 0),
     reproductionIdentitiesCharged: state.reproductionReserved ? 540 : 0,
     acceptedCells: disposition === "succeeded" ? 540 : 0,
-    remainingPreflightObservations: 12 - state.preflightReservations.size,
-    remainingRouteStarts: 3 - state.routeReservations.size,
-    nextPreflightIdentity: preflights[state.preflightReservations.size] ?? null,
-    nextRouteIdentity: routes[state.routeReservations.size] ?? null,
+    remainingPreflightObservations: terminal
+      ? 0
+      : 12 - state.preflightReservations.size,
+    remainingRouteStarts: terminal ? 0 : 3 - state.routeReservations.size,
+    nextPreflightIdentity: terminal
+      ? null
+      : (preflights[state.preflightReservations.size] ?? null),
+    nextRouteIdentity: terminal
+      ? null
+      : (routes[state.routeReservations.size] ?? null),
     protectedHistoricalIdentityCount:
       envelope.protectedHistoricalIdentities.length,
     firstObservationMilliseconds: state.firstObservationMilliseconds,
+    terminalReason: state.timeWindowExpiryTerminal?.reason ?? null,
     disposition,
     downstreamAuthority: false as const,
   }
