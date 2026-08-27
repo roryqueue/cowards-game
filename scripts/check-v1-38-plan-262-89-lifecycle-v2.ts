@@ -616,6 +616,63 @@ export const checkV138Plan26289Readiness = (
   return candidate
 }
 
+const authenticateCommittedReadiness = (
+  root: string,
+): V138Plan26289Readiness => {
+  const target = path.join(root, V138_PLAN_262_89_PATHS.readiness)
+  const candidate = readJson(target) as V138Plan26289Readiness
+  if (
+    candidate.schemaVersion !==
+      "v1.38-plan-262-89-lifecycle-driver-readiness-v2" ||
+    candidate.readinessRoot !== readinessRoot(candidate) ||
+    candidate.activePlans !== 70 ||
+    candidate.preSummarySummaries !== 69 ||
+    candidate.postSummaryDriverInvoked !== false ||
+    candidate.lifecycleMutationPerformed !== false ||
+    candidate.syntheticPassVerified !== true ||
+    candidate.syntheticNonPassVerified !== true ||
+    candidate.syntheticCorrectionVerified !== true ||
+    candidate.syntheticMissingActivationVerified !== true ||
+    candidate.checkerSha256 !==
+      sha256(readRegular(path.join(root, V138_PLAN_262_89_PATHS.checker))) ||
+    candidate.testSha256 !==
+      sha256(readRegular(path.join(root, V138_PLAN_262_89_PATHS.tests))) ||
+    candidate.validationSha256 !==
+      sha256(readRegular(path.join(root, V138_PLAN_262_89_PATHS.validation))) ||
+    candidate.verificationSha256 !==
+      sha256(
+        readRegular(path.join(root, V138_PLAN_262_89_PATHS.verification)),
+      ) ||
+    candidate.predecessorSha256 !== EXPECTED_PREDECESSOR_SHA ||
+    candidate.predecessorStatusRoot !== EXPECTED_PREDECESSOR_ROOT
+  )
+    fail("V138_PLAN_262_89_COMMITTED_READINESS_INVALID")
+  const evidence = authenticateRealEvidence(root)
+  const branch = evaluateV138Plan26289Branch(evidence)
+  if (
+    candidate.dispositionRoot !== evidence.disposition.dispositionRoot ||
+    candidate.correctionStatus !== evidence.correctionStatus ||
+    candidate.correctionRoot !==
+      (evidence.correction?.correctionRoot ?? null) ||
+    candidate.activationStatus !== evidence.activationStatus ||
+    candidate.verificationStatus !== branch.status
+  )
+    fail("V138_PLAN_262_89_COMMITTED_READINESS_BRANCH_INVALID")
+  const relative = path.relative(root, target)
+  const dirty = execFileSync("git", ["status", "--porcelain", "--", relative], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim()
+  const commit = execFileSync(
+    "git",
+    ["log", "-1", "--format=%H", "--", relative],
+    { cwd: root, encoding: "utf8" },
+  ).trim()
+  if (dirty || !/^[0-9a-f]{40}$/u.test(commit))
+    fail("V138_PLAN_262_89_READINESS_NOT_COMMITTED")
+  return candidate
+}
+
 export interface V138Plan26289LifecycleCommand {
   step: "requirements" | "roadmap" | "state" | "phase_complete"
   argv: string[]
@@ -894,7 +951,7 @@ const main = (): void => {
     return
   }
   if (mode === "--apply-post-summary") {
-    checkV138Plan26289Readiness(repoRoot)
+    authenticateCommittedReadiness(repoRoot)
     const result = runV138Plan26289PostSummaryLifecycle(
       commonPostSummaryArgs(repoRoot),
     )
