@@ -16,7 +16,9 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
+  checkV138Plan26280Disposition,
   computeV138Plan26280ActivationRoot,
+  V138_PLAN_262_80_PATHS,
   validateV138Plan26280Disposition,
 } from "./check-v1-38-plan-262-80-bounded-retry-admission.js"
 
@@ -198,7 +200,7 @@ export const evaluateV138Plan26281Verification = ({
     disposition?.schemaVersion ===
       "v1.38-plan-262-80-admission-disposition-v1" &&
     disposition?.status === "pass" &&
-    ["complete", "succeeded"].includes(disposition?.terminalDisposition) &&
+    disposition?.terminalDisposition === "succeeded" &&
     disposition?.counters?.freshAccepted === 540 &&
     disposition?.counters?.requiredAccepted === 540 &&
     disposition?.integrityPassed === true &&
@@ -284,6 +286,37 @@ export const renderV138Plan26281Verification = (
   return `---\nstatus: ${result.status}\nschema: v1.38-plan-262-81-verification-v1\nreport_root: ${reportRoot}\n---\n\n# Phase 262 Verification\n\nActive plans: ${topology.activePlanCount}\nTrustworthy summaries: ${topology.summaryCount}\nArchived Plan 74: ${topology.archiveSha256}\nPlan-74 summary present: false\nPlan-80 disposition: ${disposition.status}\nAdmission disposition root: ${disposition.dispositionRoot}\nTerminal: ${disposition.terminalDisposition}\nFresh accepted: ${disposition.counters?.freshAccepted ?? 0}/${disposition.counters?.requiredAccepted ?? 540}\nRoute-9 activation root: ${disposition.status === "pass" ? "authenticated" : "absent"}\nGaps: ${result.gaps.length === 0 ? "none" : result.gaps.join(", ")}\nHuman items: 0\nPhase 263 authorized: false\nDownstream authority denied: true\n`
 }
 
+const authenticateCanonicalAdmission = (
+  dispositionPath: string,
+  activationPath: string,
+): { disposition: any; activationRoot: any | null } => {
+  const expectedDispositionPath = path.resolve(
+    repoRoot,
+    V138_PLAN_262_80_PATHS.disposition,
+  )
+  const expectedActivationPath = path.resolve(
+    repoRoot,
+    V138_PLAN_262_80_PATHS.activationRoot,
+  )
+  if (
+    path.resolve(dispositionPath) !== expectedDispositionPath ||
+    path.resolve(activationPath) !== expectedActivationPath
+  )
+    fail("V138_PLAN_262_81_ADMISSION_PATH_INVALID")
+  const checked = checkV138Plan26280Disposition(
+    repoRoot,
+    V138_PLAN_262_80_PATHS.disposition,
+    V138_PLAN_262_80_PATHS.activationRoot,
+  )
+  return {
+    disposition: checked.disposition,
+    activationRoot:
+      safeType(expectedActivationPath) === "regular"
+        ? readJson(expectedActivationPath)
+        : null,
+  }
+}
+
 export const refreshV138Plan26281PreSummaryProof = (args: {
   phaseDir: string
   dispositionPath: string
@@ -293,8 +326,10 @@ export const refreshV138Plan26281PreSummaryProof = (args: {
   requirementsPath: string
 }): any => {
   const topology = inspectV138Plan26281Topology(args.phaseDir, "pre_summary")
-  const disposition = readJson(args.dispositionPath)
-  validateV138Plan26280Disposition(disposition, disposition)
+  const { disposition } = authenticateCanonicalAdmission(
+    args.dispositionPath,
+    args.activationPath,
+  )
   const activationType = safeType(args.activationPath)
   let activationRoot: any | null = null
   if (disposition.status === "pass") {
@@ -338,12 +373,10 @@ const checkPreSummary = (args: {
   requirementsPath: string
 }): any => {
   const topology = inspectV138Plan26281Topology(args.phaseDir, "pre_summary")
-  const disposition = readJson(args.dispositionPath)
-  validateV138Plan26280Disposition(disposition, disposition)
-  const activationRoot =
-    safeType(args.activationPath) === "regular"
-      ? readJson(args.activationPath)
-      : null
+  const { disposition, activationRoot } = authenticateCanonicalAdmission(
+    args.dispositionPath,
+    args.activationPath,
+  )
   if (disposition.status === "pass") {
     if (
       activationRoot === null ||
@@ -383,6 +416,10 @@ export interface V138Plan26281PostSummaryOptions {
   runCommand?: (command: V138Plan26281LifecycleCommand) => void
   requireCommittedSummary?: boolean
   gitRoot?: string
+  authenticateAdmission?: () => {
+    disposition: any
+    activationRoot: any | null
+  }
 }
 
 const verificationStatus = (text: string): "passed" | "gaps_found" => {
@@ -438,12 +475,53 @@ export const runV138Plan26281PostSummaryLifecycle = (
   if (options.requireCommittedSummary !== false)
     requireCommittedSummary(options.gitRoot ?? repoRoot, args.summaryPath)
 
-  const disposition = readJson(args.dispositionPath)
-  validateV138Plan26280Disposition(disposition, disposition)
+  const candidateDisposition = readJson(args.dispositionPath)
+  if (
+    options.authenticateAdmission !== undefined &&
+    options.runCommand === undefined
+  )
+    fail("V138_PLAN_262_81_TEST_AUTHENTICATOR_FORBIDDEN")
+  const authenticated =
+    options.authenticateAdmission?.() ??
+    (() => {
+      const trustedRoot = options.gitRoot ?? repoRoot
+      const expectedDispositionPath = path.resolve(
+        trustedRoot,
+        V138_PLAN_262_80_PATHS.disposition,
+      )
+      const expectedActivationPath = path.resolve(
+        trustedRoot,
+        V138_PLAN_262_80_PATHS.activationRoot,
+      )
+      if (
+        path.resolve(args.dispositionPath) !== expectedDispositionPath ||
+        path.resolve(args.activationPath) !== expectedActivationPath
+      )
+        fail("V138_PLAN_262_81_ADMISSION_PATH_INVALID")
+      const checked = checkV138Plan26280Disposition(
+        trustedRoot,
+        V138_PLAN_262_80_PATHS.disposition,
+        V138_PLAN_262_80_PATHS.activationRoot,
+      )
+      return {
+        disposition: checked.disposition,
+        activationRoot:
+          safeType(expectedActivationPath) === "regular"
+            ? readJson(expectedActivationPath)
+            : null,
+      }
+    })()
+  validateV138Plan26280Disposition(
+    candidateDisposition,
+    authenticated.disposition,
+  )
+  const disposition = authenticated.disposition
   const activationRoot =
     safeType(args.activationPath) === "regular"
       ? readJson(args.activationPath)
       : null
+  if (canonical(activationRoot) !== canonical(authenticated.activationRoot))
+    fail("V138_PLAN_262_81_ACTIVATION_INVALID")
   if (disposition.status === "pass") {
     if (
       activationRoot === null ||

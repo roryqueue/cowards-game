@@ -235,7 +235,7 @@ describe("Plan 262-81 branch verification", () => {
   const exactPassDisposition = {
     schemaVersion: "v1.38-plan-262-80-admission-disposition-v1",
     status: "pass",
-    terminalDisposition: "complete",
+    terminalDisposition: "succeeded",
     counters: { freshAccepted: 540, requiredAccepted: 540 },
     integrityPassed: true,
     privacySafe: true,
@@ -284,6 +284,10 @@ describe("Plan 262-81 separately invokable post-summary driver", () => {
     const result = runV138Plan26281PostSummaryLifecycle(files, {
       requireCommittedSummary: false,
       runCommand: (command) => calls.push(command.step),
+      authenticateAdmission: () => ({
+        disposition: JSON.parse(readFileSync(files.dispositionPath, "utf8")),
+        activationRoot: JSON.parse(readFileSync(files.activationPath, "utf8")),
+      }),
     })
 
     expect(result).toMatchObject({ status: "passed", mutated: true })
@@ -293,6 +297,30 @@ describe("Plan 262-81 separately invokable post-summary driver", () => {
       "state",
       "phase_complete",
     ])
+  })
+
+  it("rejects a self-rehashed forged PASS before any lifecycle command", () => {
+    const files = writePostSummaryFixture("pass")
+    const forged = JSON.parse(readFileSync(files.dispositionPath, "utf8"))
+    const trusted = { ...forged, status: "non_pass" }
+    trusted.authority = {
+      ...trusted.authority,
+      foundationActivationAuthorized: false,
+    }
+    trusted.dispositionRoot = computeV138Plan26280DispositionRoot(trusted)
+    const calls: string[] = []
+
+    expect(() =>
+      runV138Plan26281PostSummaryLifecycle(files, {
+        requireCommittedSummary: false,
+        runCommand: (command) => calls.push(command.step),
+        authenticateAdmission: () => ({
+          disposition: trusted,
+          activationRoot: null,
+        }),
+      }),
+    ).toThrow("V138_PLAN_262_80_DISPOSITION_INVALID")
+    expect(calls).toEqual([])
   })
 
   it("performs zero completion mutation for NON-PASS", () => {
@@ -306,6 +334,10 @@ describe("Plan 262-81 separately invokable post-summary driver", () => {
     const result = runV138Plan26281PostSummaryLifecycle(files, {
       requireCommittedSummary: false,
       runCommand: (command) => calls.push(command.step),
+      authenticateAdmission: () => ({
+        disposition: JSON.parse(readFileSync(files.dispositionPath, "utf8")),
+        activationRoot: null,
+      }),
     })
     const after = [
       files.requirementsPath,
