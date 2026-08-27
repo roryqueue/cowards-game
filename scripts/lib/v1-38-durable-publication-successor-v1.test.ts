@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import {
   existsSync,
   mkdirSync,
@@ -12,6 +12,7 @@ import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   durablyPublishV138Pair,
+  publishV138NoReplaceUnderLockf,
   V138_DURABLE_PUBLICATION_SUCCESSOR_CLI,
 } from "./v1-38-durable-publication-successor-v1.js"
 
@@ -110,4 +111,95 @@ describe("CR-03 durable recoverable pair publication", () => {
     expect(readFileSync(input.members[0].target, "utf8")).toBe("foreign-bytes\n")
     expect(existsSync(input.members[1].target)).toBe(false)
   })
+})
+
+const waitFor = async (predicate: () => boolean): Promise<void> => {
+  const deadline = Date.now() + 10_000
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error("wait_timeout")
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+}
+
+describe("CR-04 kernel-locked no-replace lifecycle publication", () => {
+  it("publishes under lockf and rejects a second publication without mutation", () => {
+    const input = fixture()
+    const target = path.join(input.root, "lifecycle.json")
+    const lockPath = path.join(input.root, ".lifecycle.lock")
+    publishV138NoReplaceUnderLockf({
+      transactionId: "lifecycle-v3",
+      lockPath,
+      target,
+      bytes: "first\n",
+    })
+    expect(readFileSync(target, "utf8")).toBe("first\n")
+    expect(() =>
+      publishV138NoReplaceUnderLockf({
+        transactionId: "lifecycle-v3-second",
+        lockPath,
+        target,
+        bytes: "second\n",
+      }),
+    ).toThrow()
+    expect(readFileSync(target, "utf8")).toBe("first\n")
+  })
+
+  it("rechecks under the kernel lock and cannot overwrite a synchronized racer", async () => {
+    const input = fixture()
+    const target = path.join(input.root, "readiness.json")
+    const lockPath = path.join(input.root, ".readiness.lock")
+    const readyPath = path.join(input.root, ".ready")
+    const continuePath = path.join(input.root, ".continue")
+    const payload = Buffer.from(
+      JSON.stringify({
+        transactionId: "readiness-v3-race",
+        lockPath,
+        target,
+        bytes: "ours\n",
+        readyPath,
+        continuePath,
+      }),
+    ).toString("base64")
+    const child = spawn(
+      process.execPath,
+      [
+        "--import",
+        "tsx",
+        V138_DURABLE_PUBLICATION_SUCCESSOR_CLI,
+        "--publish-no-replace",
+        payload,
+      ],
+      { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"] },
+    )
+    await waitFor(() => existsSync(readyPath))
+
+    const contender = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        "tsx",
+        V138_DURABLE_PUBLICATION_SUCCESSOR_CLI,
+        "--publish-no-replace",
+        Buffer.from(
+          JSON.stringify({
+            transactionId: "readiness-v3-contender",
+            lockPath,
+            target,
+            bytes: "contender\n",
+          }),
+        ).toString("base64"),
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    )
+    expect(contender.status).not.toBe(0)
+    expect(existsSync(target)).toBe(false)
+
+    writeFileSync(target, "racer\n", { mode: 0o600 })
+    writeFileSync(continuePath, "continue\n", { mode: 0o600 })
+    const exitCode = await new Promise<number | null>((resolve) =>
+      child.once("exit", resolve),
+    )
+    expect(exitCode).not.toBe(0)
+    expect(readFileSync(target, "utf8")).toBe("racer\n")
+  }, 30_000)
 })

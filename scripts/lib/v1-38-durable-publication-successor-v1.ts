@@ -1,8 +1,10 @@
 import { Buffer } from "node:buffer"
+import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import {
   closeSync,
   constants,
+  existsSync,
   fsyncSync,
   linkSync,
   lstatSync,
@@ -97,6 +99,84 @@ export type V138DurablePairBoundary =
   | `member:${0 | 1}:parent_fsync`
 
 export const V138_DURABLE_PUBLICATION_SUCCESSOR_CLI = fileURLToPath(import.meta.url)
+
+export interface V138NoReplacePublicationInput {
+  readonly transactionId: string
+  readonly lockPath: string
+  readonly target: string
+  readonly bytes: string
+  readonly readyPath?: string
+  readonly continuePath?: string
+}
+
+const publishNoReplaceWorker = (input: V138NoReplacePublicationInput): void => {
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/u.test(input.transactionId)) {
+    fail("V138_NO_REPLACE_TRANSACTION_ID_INVALID")
+  }
+  const target = path.resolve(input.target)
+  const stage = `${target}.stage-${input.transactionId}`
+  assertSafeParent(target)
+  assertSafeParent(path.resolve(input.lockPath))
+  if (safeType(stage) === "absent") writeExclusiveDurable(stage, input.bytes)
+  else authenticateExact(stage, input.bytes, "V138_NO_REPLACE_STAGE_MISMATCH")
+
+  if (input.readyPath !== undefined) {
+    const ready = path.resolve(input.readyPath)
+    assertSafeParent(ready)
+    writeExclusiveDurable(ready, "ready\n")
+    fsyncParent(ready)
+  }
+  if (input.continuePath !== undefined) {
+    const continuation = path.resolve(input.continuePath)
+    assertSafeParent(continuation)
+    const waitBuffer = new Int32Array(new SharedArrayBuffer(4))
+    const deadline = Date.now() + 10_000
+    while (!existsSync(continuation)) {
+      if (Date.now() >= deadline) fail("V138_NO_REPLACE_SYNCHRONIZATION_TIMEOUT")
+      Atomics.wait(waitBuffer, 0, 0, 10)
+    }
+  }
+
+  // This is the mandatory recheck while /usr/bin/lockf owns lockPath. The
+  // hard-link is itself no-replace, so a non-cooperating racer between the
+  // check and link still receives EEXIST and cannot be overwritten.
+  if (safeType(target) !== "absent") fail("V138_NO_REPLACE_DESTINATION_CONFLICT")
+  try {
+    linkSync(stage, target)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      fail("V138_NO_REPLACE_DESTINATION_CONFLICT")
+    }
+    throw error
+  }
+  authenticateExact(target, input.bytes, "V138_NO_REPLACE_PUBLICATION_MISMATCH")
+  fsyncParent(target)
+  if (safeType(stage) === "regular") unlinkSync(stage)
+  fsyncParent(stage)
+}
+
+export const publishV138NoReplaceUnderLockf = (
+  input: V138NoReplacePublicationInput,
+): Readonly<{ status: "published" }> => {
+  const lockPath = path.resolve(input.lockPath)
+  assertSafeParent(lockPath)
+  execFileSync(
+    "/usr/bin/lockf",
+    [
+      "-t",
+      "0",
+      lockPath,
+      process.execPath,
+      "--import",
+      "tsx",
+      V138_DURABLE_PUBLICATION_SUCCESSOR_CLI,
+      "--no-replace-worker",
+      Buffer.from(JSON.stringify(input)).toString("base64"),
+    ],
+    { stdio: "pipe" },
+  )
+  return Object.freeze({ status: "published" as const })
+}
 
 /**
  * Durable two-member transaction for immutable canonical evidence. Existing
@@ -229,4 +309,18 @@ if (process.argv[2] === "--pair-crash-probe") {
     },
   })
   fail("V138_DURABLE_PUBLICATION_CRASH_BOUNDARY_NOT_FOUND")
+}
+
+if (
+  process.argv[2] === "--publish-no-replace" ||
+  process.argv[2] === "--no-replace-worker"
+) {
+  const command = process.argv[2]
+  const payload = process.argv[3]
+  if (payload === undefined) fail("V138_NO_REPLACE_SOURCE_ONLY")
+  const input = JSON.parse(
+    Buffer.from(payload, "base64").toString("utf8"),
+  ) as V138NoReplacePublicationInput
+  if (command === "--publish-no-replace") publishV138NoReplaceUnderLockf(input)
+  else publishNoReplaceWorker(input)
 }
