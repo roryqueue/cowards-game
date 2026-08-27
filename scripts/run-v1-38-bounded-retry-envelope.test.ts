@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -8,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { createHash } from "node:crypto"
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
@@ -1277,6 +1278,54 @@ describe("bounded retry controller and CLI containment", () => {
     },
     30_000,
   )
+
+  it("admits exactly one synchronized successor and preserves the winner's OS lock", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-lock-race-"))
+    temporaryRoots.push(root)
+    const lock = path.join(root, "owner.lock")
+    const resultPath = path.join(root, "results.txt")
+    const moduleUrl = pathToFileURL(
+      path.resolve("scripts/run-v1-38-bounded-retry-envelope.ts"),
+    ).href
+    const startAt = Date.now() + 1_000
+    const childPath = path.join(root, "lock-contender.mts")
+    writeFileSync(
+      childPath,
+      `
+        import { appendFileSync } from "node:fs";
+        import { acquireV138RetryOwnerLease } from ${JSON.stringify(moduleUrl)};
+        const [id, lock, resultPath, start] = process.argv.slice(2);
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(start) - Date.now())));
+        try {
+          const ownership = await acquireV138RetryOwnerLease(lock);
+          appendFileSync(resultPath, id + ":acquired\\n");
+          await new Promise((resolve) => setTimeout(resolve, 750));
+          await ownership.release();
+        } catch {
+          appendFileSync(resultPath, id + ":rejected\\n");
+        }
+      `,
+    )
+    const run = (id: string) =>
+      new Promise<number | null>((resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          ["--import", "tsx", childPath, id, lock, resultPath, String(startAt)],
+          { cwd: process.cwd(), stdio: "ignore" },
+        )
+        child.once("error", reject)
+        child.once("exit", resolve)
+      })
+    expect(await Promise.all([run("left"), run("right")])).toEqual([0, 0])
+    const outcomes = readFileSync(resultPath, "utf8").trim().split("\n")
+    expect(outcomes.filter((item) => item.endsWith(":acquired"))).toHaveLength(
+      1,
+    )
+    expect(outcomes.filter((item) => item.endsWith(":rejected"))).toHaveLength(
+      1,
+    )
+    expect(existsSync(lock)).toBe(false)
+  }, 20_000)
 
   it("retains the exact Plan-77 blocked pair and summary only as protected history", () => {
     const expected = new Map([

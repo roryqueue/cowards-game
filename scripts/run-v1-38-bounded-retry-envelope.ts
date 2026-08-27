@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer"
-import { execFile, execFileSync } from "node:child_process"
+import { execFile, execFileSync, spawn } from "node:child_process"
 import { createHash } from "node:crypto"
 import {
   closeSync,
@@ -10,7 +10,6 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  renameSync,
   readFileSync,
   statSync,
   unlinkSync,
@@ -1301,98 +1300,55 @@ type V138RetryCrashBoundary =
   | "terminal_write"
   | "terminal_fsync"
 
-interface V138RetryOwnerLease {
-  readonly schemaVersion: "v1.38-bounded-retry-owner-lease-v2"
-  readonly owner: "repository_operator"
-  readonly pid: number
-  readonly generation: number
-  readonly leaseRoot: V138RetrySha256
-}
-
-const ownerLease = (pid: number, generation: number): V138RetryOwnerLease => {
-  const body = {
-    schemaVersion: "v1.38-bounded-retry-owner-lease-v2" as const,
-    owner: "repository_operator" as const,
-    pid,
-    generation,
-  }
-  return Object.freeze({
-    ...body,
-    leaseRoot: sha256(`v138-bounded-retry-owner-lease-v2\0${canonical(body)}`),
-  })
-}
-
-const parseOwnerLease = (bytes: string): V138RetryOwnerLease => {
-  let value: any
-  try {
-    value = JSON.parse(bytes)
-  } catch {
-    return fail("V138_RETRY_OWNER_LEASE_INVALID")
-  }
-  const expected = ownerLease(value?.pid, value?.generation)
-  if (
-    !Number.isSafeInteger(value?.pid) ||
-    value.pid <= 0 ||
-    !Number.isSafeInteger(value?.generation) ||
-    value.generation < 1 ||
-    canonical(value) !== canonical(expected)
-  )
-    fail("V138_RETRY_OWNER_LEASE_INVALID")
-  return value as V138RetryOwnerLease
-}
-
-const processIsAlive = (pid: number): boolean => {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ESRCH"
-  }
-}
-
-export const acquireV138RetryOwnerLease = (
+export const acquireV138RetryOwnerLease = async (
   lock: string,
-): Readonly<{ lease: V138RetryOwnerLease; release: () => void }> => {
-  let generation = 1
-  for (;;) {
-    const lease = ownerLease(process.pid, generation)
-    try {
-      exclusiveWrite(lock, canonical(lease))
-      fsyncParent(lock)
-      return Object.freeze({
-        lease,
-        release: () => {
-          if (
-            safeStatus(lock) !== "regular" ||
-            readFileSync(lock, "utf8") !== canonical(lease)
-          )
-            fail("V138_RETRY_OWNER_LEASE_LOST")
-          unlinkSync(lock)
-          fsyncParent(lock)
-        },
-      })
-    } catch (error) {
-      if (
-        !(error instanceof Error) ||
-        error.message !== "V138_RETRY_DESTINATION_PRESENT"
+): Promise<Readonly<{ release: () => Promise<void> }>> => {
+  const status = safeStatus(lock)
+  if (status === "missing") {
+    exclusiveWrite(lock, "")
+    fsyncParent(lock)
+  } else if (status !== "regular") fail("V138_RETRY_OWNER_LOCK_UNSAFE")
+  const child = spawn(
+    "/usr/bin/lockf",
+    ["-t", "0", lock, "/bin/sh", "-c", 'printf "acquired\\n"; cat >/dev/null'],
+    { stdio: ["pipe", "pipe", "pipe"] },
+  )
+  await new Promise<void>((resolve, reject) => {
+    let stdout = ""
+    let stderr = ""
+    let settled = false
+    const finish = (error?: Error) => {
+      if (settled) return
+      settled = true
+      if (error) reject(error)
+      else resolve()
+    }
+    child.stdout.setEncoding("utf8")
+    child.stderr.setEncoding("utf8")
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk
+      if (stdout.includes("acquired\n")) finish()
+    })
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk
+    })
+    child.once("error", (error) => finish(error))
+    child.once("exit", () =>
+      finish(new TypeError(`V138_RETRY_OWNER_LOCK_ACTIVE:${stderr.trim()}`)),
+    )
+  })
+  let released = false
+  return Object.freeze({
+    release: async () => {
+      if (released) fail("V138_RETRY_OWNER_LOCK_RELEASE_INVALID")
+      released = true
+      child.stdin.end()
+      const code = await new Promise<number | null>((resolve) =>
+        child.once("exit", resolve),
       )
-        throw error
-    }
-    if (safeStatus(lock) !== "regular") fail("V138_RETRY_OWNER_LEASE_INVALID")
-    const staleBytes = readFileSync(lock, "utf8")
-    const stale = parseOwnerLease(staleBytes)
-    if (processIsAlive(stale.pid)) fail("V138_RETRY_OWNER_LEASE_ACTIVE")
-    generation = stale.generation + 1
-    const quarantine = `${lock}.stale-${stale.generation}-${process.pid}`
-    try {
-      renameSync(lock, quarantine)
-      fsyncParent(lock)
-      unlinkSync(quarantine)
-      fsyncParent(lock)
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
-    }
-  }
+      if (code !== 0) fail("V138_RETRY_OWNER_LOCK_RELEASE_INVALID")
+    },
+  })
 }
 
 export const reconcileV138RetryPrivateReceipts = (
@@ -1561,7 +1517,7 @@ export const runV138ProductionLive = async (
     fail("V138_RETRY_DESTINATION_UNSAFE")
   }
   if (terminalStatus === "regular") {
-    const ownership = acquireV138RetryOwnerLease(lock)
+    const ownership = await acquireV138RetryOwnerLease(lock)
     try {
       const terminal = readJsonNoFollow(
         repoRoot,
@@ -1584,11 +1540,11 @@ export const runV138ProductionLive = async (
         fail("V138_RETRY_DUPLICATE_INVOCATION_INVALID")
       }
     } finally {
-      ownership.release()
+      await ownership.release()
     }
     return
   }
-  const ownership = acquireV138RetryOwnerLease(lock)
+  const ownership = await acquireV138RetryOwnerLease(lock)
   try {
     options.crashBoundary?.("lock_acquired")
     const privateTarget = path.resolve(
@@ -1657,7 +1613,7 @@ export const runV138ProductionLive = async (
       },
     })
   } finally {
-    ownership.release()
+    await ownership.release()
   }
 }
 
