@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
+  symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -10,6 +11,12 @@ import {
   deriveV138RetryState,
   type V138RetryJournalRecord,
 } from "./lib/v1-38-bounded-retry-envelope.js"
+import {
+  V138_BOUNDED_RETRY_PATHS,
+  executeV138BoundedRetryCli,
+  runV138BoundedRetryController,
+  type V138BoundedRetryControllerEffects,
+} from "./run-v1-38-bounded-retry-envelope.js"
 
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
@@ -152,5 +159,172 @@ describe("retry-envelope:v1 finite state and cumulative journal", () => {
     const root = mkdtempSync(path.join(tmpdir(), "v138-retry-"))
     temporaryRoots.push(root)
     expect(root.startsWith(tmpdir())).toBe(true)
+  })
+})
+
+describe("bounded retry controller and CLI containment", () => {
+  const makeEffects = (observations: number[], calibrations:
+    Array<"admitted" | "system_failure">,
+  reproductionResult = { status: "passed_exact" as const, acceptedCells: 540,
+    completeCleanup: true }): V138BoundedRetryControllerEffects => {
+    let now = 0
+    return {
+      monotonicMilliseconds: () => now,
+      waitUntil: async (target) => { now = target },
+      observePreflight: async () => ({
+        available: true,
+        effectiveAvailableBasisPoints: observations.shift() ?? 2_500,
+      }),
+      runCalibration: async () => ({ status: calibrations.shift() ??
+        "system_failure", completeCleanup: true }),
+      runReproduction: async () => reproductionResult,
+      appendDurableRecord: () => undefined,
+    }
+  }
+
+  it("reserves before fake work, spaces refusal/failure retries, and closes on one exact reproduction", async () => {
+    const launches: string[] = []
+    const effects = makeEffects([2_499, 2_500, 2_500],
+      ["system_failure", "admitted"])
+    const wrapped: V138BoundedRetryControllerEffects = {
+      ...effects,
+      runCalibration: async (input) => {
+        launches.push(`calibration:${input.routeIdentity}`)
+        return effects.runCalibration(input)
+      },
+      runReproduction: async (input) => {
+        launches.push(`reproduction:${input.identities.length}`)
+        return effects.runReproduction(input)
+      },
+    }
+    const result = await runV138BoundedRetryController({
+      envelope: envelope(), owner: "synthetic-owner", records: [],
+      effects: wrapped,
+    })
+    expect(result.state).toMatchObject({ disposition: "succeeded",
+      preflightObservationsConsumed: 3, routeStartsConsumed: 2,
+      calibrationIdentitiesCharged: 16,
+      reproductionIdentitiesCharged: 540, acceptedCells: 540 })
+    expect(launches).toEqual([
+      "calibration:route:v1:0", "calibration:route:v1:1",
+      "reproduction:540",
+    ])
+    const firstLaunchIndex = result.records.findIndex(({ kind }) =>
+      kind === "finish_calibration")
+    expect(result.records.slice(0, firstLaunchIndex).some(({ kind }) =>
+      kind === "reserve_calibration")).toBe(true)
+  })
+
+  it("charges crash-after-reservation and restart reconciliation without reuse", async () => {
+    let durable: readonly V138RetryJournalRecord[] = []
+    const crashing = makeEffects([2_500], ["admitted"])
+    const firstEffects: V138BoundedRetryControllerEffects = {
+      ...crashing,
+      appendDurableRecord: (record) => {
+        durable = [...durable, record]
+        if (record.kind === "reserve_calibration") throw new Error("CRASH")
+      },
+    }
+    await expect(runV138BoundedRetryController({ envelope: envelope(),
+      owner: "synthetic-owner", records: durable, effects: firstEffects }))
+      .rejects.toThrow("CRASH")
+    expect(durable.filter(({ kind }) => kind === "reserve_calibration"))
+      .toHaveLength(1)
+
+    const restarted = await runV138BoundedRetryController({
+      envelope: envelope(), owner: "synthetic-owner", records: durable,
+      effects: makeEffects([], []),
+    })
+    expect(restarted.state).toMatchObject({ disposition: "terminal_failure",
+      calibrationIdentitiesCharged: 8, routeStartsConsumed: 1 })
+    expect(restarted.records.filter(({ kind }) =>
+      kind === "reserve_calibration")).toHaveLength(1)
+  })
+
+  it("makes non-540, reproduction failure, and cleanup uncertainty terminal", async () => {
+    for (const result of [
+      { status: "system_failure" as const, acceptedCells: 539,
+        completeCleanup: true },
+      { status: "system_failure" as const, acceptedCells: 0,
+        completeCleanup: false },
+    ]) {
+      const outcome = await runV138BoundedRetryController({
+        envelope: envelope(), owner: "synthetic-owner", records: [],
+        effects: makeEffects([2_500], ["admitted"], result),
+      })
+      expect(outcome.state.disposition).toBe("terminal_failure")
+      expect(outcome.state.acceptedCells).toBe(0)
+    }
+  })
+
+  it("strictly parses four production modes and never defaults into live work", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-retry-cli-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+    let liveInvocations = 0
+    const derived = { seal: { schemaVersion:
+      "v1.38-successor-source-seal-v11", sealRoot: SHA_A,
+      productionAuthorized: false }, envelope: envelope() }
+    const injected = {
+      repoRoot: root,
+      deriveArtifacts: () => derived,
+      runLive: async () => { liveInvocations += 1; throw new Error("LIVE") },
+    }
+    await executeV138BoundedRetryCli(["--derive-seal-envelope-no-publish"],
+      injected)
+    expect(existsSync(path.join(root, V138_BOUNDED_RETRY_PATHS.seal))).toBe(false)
+    expect(existsSync(path.join(root, V138_BOUNDED_RETRY_PATHS.envelope))).toBe(false)
+
+    const pairFlags = ["--seal", V138_BOUNDED_RETRY_PATHS.seal,
+      "--envelope", V138_BOUNDED_RETRY_PATHS.envelope]
+    await executeV138BoundedRetryCli([
+      "--publish-sealed-inactive-envelope", ...pairFlags,
+    ], injected)
+    expect(JSON.parse(readFileSync(path.join(root,
+      V138_BOUNDED_RETRY_PATHS.envelope), "utf8")).status)
+      .toBe("sealed_inactive")
+    await executeV138BoundedRetryCli([
+      "--check-sealed-inactive-envelope", ...pairFlags,
+    ], injected)
+    expect(liveInvocations).toBe(0)
+    await expect(executeV138BoundedRetryCli([], injected))
+      .rejects.toThrow("V138_RETRY_ARGUMENTS_INVALID")
+    await expect(executeV138BoundedRetryCli([
+      "--derive-seal-envelope-no-publish", "--unknown",
+    ], injected)).rejects.toThrow("V138_RETRY_ARGUMENTS_INVALID")
+  })
+
+  it("fails closed for unsafe or partially occupied publication destinations", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-retry-paths-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+    const seal = path.join(root, V138_BOUNDED_RETRY_PATHS.seal)
+    symlinkSync("missing", seal)
+    const pairFlags = ["--seal", V138_BOUNDED_RETRY_PATHS.seal,
+      "--envelope", V138_BOUNDED_RETRY_PATHS.envelope]
+    await expect(executeV138BoundedRetryCli([
+      "--publish-sealed-inactive-envelope", ...pairFlags,
+    ], { repoRoot: root, deriveArtifacts: () => ({ seal: {
+      schemaVersion: "v1.38-successor-source-seal-v11", sealRoot: SHA_A,
+      productionAuthorized: false }, envelope: envelope() }),
+      runLive: async () => { throw new Error("LIVE") } }))
+      .rejects.toThrow("V138_RETRY_DESTINATION_UNSAFE")
+  })
+
+  it("source-only mode proves the real live handler and canonical destinations remain untouched", async () => {
+    const before = Object.fromEntries(Object.values(V138_BOUNDED_RETRY_PATHS)
+      .filter((value) => value.includes("retry-") ||
+        value.endsWith("reproduction-v15.json"))
+      .map((value) => [value, existsSync(value)]))
+    let liveInvocations = 0
+    await executeV138BoundedRetryCli(["--check-source-only"], {
+      repoRoot: process.cwd(), deriveArtifacts: () => { throw new Error() },
+      runLive: async () => { liveInvocations += 1; throw new Error("LIVE") },
+    })
+    const after = Object.fromEntries(Object.keys(before)
+      .map((value) => [value, existsSync(value)]))
+    expect(liveInvocations).toBe(0)
+    expect(after).toEqual(before)
+    expect(Object.values(after).every((present) => !present)).toBe(true)
   })
 })
