@@ -1,7 +1,9 @@
 # Phase 262 Plan 84: Additional Bounded Retry Envelope - Research
 
-**Researched:** 2026-08-27  
-**Domain:** Additive, crash-safe, correction-aware empirical admission retry  
+**Researched:** 2026-08-27
+
+**Domain:** Additive, crash-safe, correction-aware empirical admission retry
+
 **Confidence:** HIGH for repository facts and prescribed design; no external packages or services are introduced
 
 <user_constraints>
@@ -360,31 +362,38 @@ No UI phase is necessary because the work is private CLI/evidence infrastructure
 ## Common Pitfalls
 
 ### Pitfall 1: Historical source mutation
-**What goes wrong:** A v2 refactor edits v1 source files and invalidates correction-v2 source-blob custody. [VERIFIED: correction v2]  
+**What goes wrong:** A v2 refactor edits v1 source files and invalidates correction-v2 source-blob custody. [VERIFIED: correction v2]
+
 **Avoidance:** New files and new destinations only; v1 files are read-only protected history. [PRESCRIPTIVE]
 
 ### Pitfall 2: Self-review or obsolete-review reuse
-**What goes wrong:** Source derives its own verdict, or Plan-83's historical zero findings are treated as current eligibility despite the strengthened blocked correction. [VERIFIED: correction v2]  
+**What goes wrong:** Source derives its own verdict, or Plan-83's historical zero findings are treated as current eligibility despite the strengthened blocked correction. [VERIFIED: correction v2]
+
 **Avoidance:** Fresh Plan-85 reviewer over committed v2 bytes; incomplete observation is a finding. [PRESCRIPTIVE]
 
 ### Pitfall 3: Direct-child ambiguity
-**What goes wrong:** The seal is made a child of the authorization commit before review, or the decision join is omitted from a later reviewed-source seal. [VERIFIED: Git/current pattern]  
+**What goes wrong:** The seal is made a child of the authorization commit before review, or the decision join is omitted from a later reviewed-source seal. [VERIFIED: Git/current pattern]
+
 **Avoidance:** Record both joins: 9e7087b3 -> 453a33a1 and reviewed-source head A2 -> seal commit B2. [PRESCRIPTIVE]
 
 ### Pitfall 4: Lock ownership regression
-**What goes wrong:** An application removes or reclaims another process's lock. [VERIFIED: prior CR-02]  
+**What goes wrong:** An application removes or reclaims another process's lock. [VERIFIED: prior CR-02]
+
 **Avoidance:** `lockf`, synchronized contenders, and real SIGKILL tests at each durable boundary. [PRESCRIPTIVE]
 
 ### Pitfall 5: False absence
-**What goes wrong:** A symlink, directory, or escaped parent path is treated as absent. [VERIFIED: prior CR-04 covered final component]  
+**What goes wrong:** A symlink, directory, or escaped parent path is treated as absent. [VERIFIED: prior CR-04 covered final component]
+
 **Avoidance:** Ancestor containment plus exact final-component no-follow status for every pass-only and forbidden destination. [PRESCRIPTIVE]
 
 ### Pitfall 6: Cleanup reclassified as retryable
-**What goes wrong:** Pending/unknown child cleanup is called a process-valid failure and another route starts. [VERIFIED: prior CR-01]  
+**What goes wrong:** Pending/unknown child cleanup is called a process-valid failure and another route starts. [VERIFIED: prior CR-01]
+
 **Avoidance:** Only authenticated `completeCleanup:true` system failure enters the 15-minute retry branch; uncertainty is terminal. [PRESCRIPTIVE]
 
 ### Pitfall 7: Lifecycle count theater
-**What goes wrong:** Matching plan/summary counts are mistaken for admission. [VERIFIED: Plan 81]  
+**What goes wrong:** Matching plan/summary counts are mistaken for admission. [VERIFIED: Plan 81]
+
 **Avoidance:** Require exact independent pass disposition and Route-10 activation in addition to filesystem-derived topology. [PRESCRIPTIVE]
 
 ## Code Examples
@@ -548,7 +557,8 @@ None. This is repository-specific evidence protocol research; external web resul
 - Pitfalls: HIGH — each major pitfall corresponds to a prior concrete review finding or locked decision. [VERIFIED: reports/CONTEXT]
 - Live empirical outcome: UNKNOWN by design — research performs no live work and does not predict admission. [VERIFIED: task boundary]
 
-**Research date:** 2026-08-27  
+**Research date:** 2026-08-27
+
 **Valid until:** the first change to source base, authorization, protected v1 history/correction, frozen policy, runtime/kernel predicate, or local-seal verification root.
 
 ## Research Recommendation
