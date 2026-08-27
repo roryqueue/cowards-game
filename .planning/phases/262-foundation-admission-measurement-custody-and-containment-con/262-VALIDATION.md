@@ -10,71 +10,105 @@ last_audited: 2026-08-27
 
 # Phase 262 — Validation Strategy
 
-> Plan 262-81 refresh at the exact pre-summary lifecycle boundary: 64 active plans / 63 trustworthy summaries. Archived Plan 74 is historical, byte-authenticated, excluded from active discovery, and intentionally unsummarized.
+> Post-summary audit at 64 active plans / 64 summaries. Archived Plan 74 remains byte-authenticated, excluded from active discovery, intentionally unsummarized, and absent from active paths.
 
 ## Test Infrastructure
 
 | Item | Value |
 |---|---|
 | Framework | Vitest 4.1.6 and TypeScript/tsx integration checkers |
-| Lifecycle runner | `pnpm exec vitest run scripts/check-v1-38-plan-262-81-lifecycle.test.ts --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1` |
+| Focused runner | `pnpm exec vitest run <files> --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1` |
 | Accounting | Filesystem-derived identities; archived directories excluded; no copied plan counts |
+| Auditor constraint | Implementation and immutable live evidence were read-only; implementation failures are escalated rather than repaired here. |
 
-## Requirement Coverage
+## Requirement-to-Task Coverage
 
-| Requirement | Status | Behavioral evidence |
-|---|---|---|
-| ADMIT-01 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| ADMIT-02 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| ADMIT-03 | PARTIAL — BLOCKED | Plan-80 non_pass/exhausted; fresh 0/540. |
-| ADMIT-04 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-01 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-02 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-03 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-04 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-05 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-06 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-07 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-08 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-09 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| MEAS-10 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| SEAL-01 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
-| DECI-02 | COVERED | Existing focused contract suites plus the Plan-81 exact lifecycle join. |
+| Requirements | Primary plans | Current status | Behavioral evidence |
+|---|---|---|---|
+| ADMIT-01, ADMIT-02 | 262-01, 262-23, 262-28..34, 262-60..68, 262-81 | COVERED | Historical admission, exact identity joins, Git/blob custody, and lifecycle conjunction remain exercised by the focused correction/disposition chain. |
+| ADMIT-03 | 262-02, 262-08..33, 262-53..83 | ESCALATED — BLOCKED | The empirical result is exhausted at fresh 0/540 with reproduction-v15 and Route-9 activation absent. The protected-input drift test also fails 3/3. |
+| ADMIT-04 | 262-01, 262-15..34, 262-53..83 | ESCALATED — BLOCKER | `enumerateV138CurrentMatrix` accepts a dirty protected compatibility fixture after a prior pass instead of throwing `MATRIX_ADMISSION_INVALID`. |
+| MEAS-01..MEAS-10 | 262-35..39, 262-44..52, 262-60, 262-75..83 | PARTIAL — ESCALATED | Component and bounded-retry behavior is covered, but the aggregate pre-search policy generator rejects the current committed supersession artifact because it pins an obsolete manifest root. |
+| SEAL-01 | 262-44, 262-45, 262-49, 262-52, 262-53, 262-60, 262-63..68, 262-75, 262-78..81 | COVERED WITH REDUCED ASSURANCE | The checked chain preserves `single_operator_local_seal_v1`, claims no independent custody, and grants no opening or downstream authority. |
+| DECI-02 | 262-37, 262-39, 262-49, 262-51, 262-52, 262-60, 262-63..65 | PARTIAL — ESCALATED | Classifier fixtures remain historical component evidence; their current aggregate pre-search root cannot regenerate until the supersession-root join is repaired and revalidated. |
 
-Coverage is 15 covered and 1 partial-blocked. ADMIT-03 is noncompensating: topology equality cannot replace exact fresh 540/540 admission and the Route-9 activation root.
+## Behavioral Runs
 
-## Lifecycle Topology
+### Green: bounded retry, correction, disposition, and lifecycle
 
-| Check | Result |
-|---|---|
-| Active plans | 64 |
-| Trustworthy summaries before Plan-81 summary | 63 |
-| Sole missing summary | 262-81 |
-| Required successor plans | 262-75 through 262-83, including corrective Plans 262-82 and 262-83 |
-| Archived Plan 74 | sha256:9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d |
-| Active Plan 74 / Plan-74 summary | absent / absent |
+Command:
+
+```bash
+pnpm exec vitest run scripts/run-v1-38-bounded-retry-envelope.test.ts scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.test.ts scripts/check-v1-38-plan-262-post-run-audit-correction.test.ts scripts/check-v1-38-plan-262-80-bounded-retry-admission.test.ts scripts/check-v1-38-plan-262-81-lifecycle.test.ts --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1
+```
+
+Result: **5 files passed, 78/78 tests passed**. The suite proves finite bounds, durable reservations, crash recovery, OS-lock ownership, correction tamper rejection, effective Plan-83 blockage, Plan-80 non-pass, and zero lifecycle mutation.
+
+Canonical read-only checks also passed:
+
+- Correction v2: `verified_integrity_non_pass`, root `sha256:0d132bf4b59fd0203dba5fa49763bb2ec7568e1b84881f1908f114cd680ba026`.
+- Effective Plan-83 review: `blocked`, 13 findings, source review false, execution false.
+- Plan-80 disposition: `non_pass` / `exhausted`, activation absent.
+- Terminal: `exhausted`, cleanup complete, reproduction absent, downstream denied.
+- Plan-81 post-summary: `gaps_found`, 64/64, `lifecycleMutated:false`.
+
+## Escalated Behavioral Gaps
+
+### BLOCKER V262-NYQ-01 — protected matrix input drift is accepted
+
+Requirement: ADMIT-03, ADMIT-04.
+
+Command, executed three times total (once in the broad suite and twice isolated):
+
+```bash
+pnpm exec vitest run scripts/evaluate-v1-38-foundation-contract.test.ts -t 'matrix admission rechecks protected inputs after a prior pass' --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1
+```
+
+Expected: after appending to `packages/engine/src/compatibility-fixtures.test.ts` in a detached checkout, `enumerateV138CurrentMatrix(checkout)` throws `MATRIX_ADMISSION_INVALID`.
+
+Actual: enumeration succeeds; Vitest reports `expected [Function] to throw an error` at `scripts/evaluate-v1-38-foundation-contract.test.ts:2871` on all 3/3 attempts.
+
+Implementation boundary: `scripts/lib/v1-38-current-matrix-reproduction.ts` rechecks only the historical foundation admission, while `scripts/lib/v1-38-foundation-admission.ts` does not include the compatibility fixture in its live protected-source set. This is an implementation bug and was not changed by the auditor.
+
+### BLOCKER V262-NYQ-02 — aggregate pre-search root is pinned to obsolete supersession
+
+Requirement: MEAS-01..MEAS-10, DECI-02.
+
+Command, executed three times total (once in the broad suite and twice isolated):
+
+```bash
+pnpm exec vitest run scripts/evaluate-v1-38-pre-search-policy.test.ts -t 'joins the exact policy components' --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1
+```
+
+Expected: the generator authenticates the current committed `v1.38-phase-262-plan-supersession-v1` artifact and regenerates the non-authorizing pre-search policy root.
+
+Actual: `V138_PRE_SEARCH_POLICY_SUPERSESSION_INVALID` on all 3/3 attempts. The generator pins supersession root `sha256:5a98bda88cbd2316faa0279d6a22e1f0c1cee3439a3e5f997ea31f217832c8a6`, while the current committed artifact records `sha256:d13f48fe05dc8968de15b973948fdcb2abd5dc2670372afb257c6b1020545c57`.
+
+This is an implementation/lineage integration bug and was not changed by the auditor.
 
 ## Current Admission Evidence
 
 | Field | Result |
 |---|---|
+| Active plans / summaries | 64 / 64 |
+| Archived Plan 74 | `sha256:9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d` |
+| Plan-74 active path / summary | absent / absent |
 | Plan-80 status | non_pass |
 | Terminal | exhausted |
 | Fresh accepted | 0/540 |
-| Route-9 activation root | absent by branch contract |
-| Privacy / historical integrity conclusion | true / true (superseded) |
-| Additive post-run audit correction v2 | sha256:0d132bf4b59fd0203dba5fa49763bb2ec7568e1b84881f1908f114cd680ba026 |
-| Effective integrity | false — strengthened historical re-review is blocked |
+| Reproduction-v15 | absent |
+| Route-9 activation root | absent |
+| Effective integrity | false |
 | Downstream authority | denied |
 
 ## Validation Audit 2026-08-27
 
 | Metric | Count |
 |---|---:|
-| Active plans | 64 |
-| Pre-summary trustworthy summaries | 63 |
-| Requirements with automated evidence | 16 |
-| Unmet requirements | 1 |
+| Focused behavioral tests passed | 78 |
+| Canonical read-only checks passed | 5 |
+| Escalated implementation blockers | 2 |
+| Debug iterations per blocker | 3/3 |
 | Fresh accepted | 0/540 |
 
-The immutable empirical result remains exhausted at 0/540. The additive correction authenticates the exact historical source, seal, envelope, journal, terminal, and 15 private receipts while superseding the earlier clean-integrity conclusion; it does not assert that mutable current source equals the historical sealed bytes. No activation or lifecycle completion carrier is created. Phase 263 and all formation, holdout-opening, public, product, production, counted-play, and gameplay-change authority remain denied.
+The immutable empirical result remains exhausted at 0/540, and the additive correction remains an effective integrity non-pass. This validation created no reproduction, activation, lifecycle mutation, formation material, holdout opening, public/product/production exposure, counted play, or gameplay-change authority. Phase 262 is not Nyquist-compliant and Phase 263 remains denied.
