@@ -28,7 +28,7 @@ key-decisions:
 patterns-established:
   - "A corrected source review derives commit, tree, sole parent, path modes, blobs, and summary ancestry directly from Git before detached exercise."
   - "Incomplete expiry, durability, idempotence, concurrency, no-reuse, policy, privacy, history, or authority observation becomes a named finding."
-requirements-completed: [ADMIT-03, ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10]
+requirements-completed: []
 coverage:
   - id: D1
     description: Exact corrected Git custody and durable inclusive expiry were independently re-reviewed with zero findings.
