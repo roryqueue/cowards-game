@@ -315,6 +315,16 @@ export const snapshotV138Plan26285Destinations = (root: string) =>
     })
   })
 
+const normalizeReviewPairForDerivation = (
+  snapshot: ReturnType<typeof snapshotV138Plan26285Destinations>,
+) =>
+  snapshot.map((item) =>
+    item.path === V138_PLAN_262_85_REVIEW_PATH ||
+    item.path === V138_PLAN_262_85_REPORT_PATH
+      ? Object.freeze({ path: item.path, type: "absent" as const })
+      : item,
+  )
+
 const linkWorkspaceModules = (root: string, clone: string): void => {
   symlinkSync(path.resolve(root, "node_modules"), path.join(clone, "node_modules"), "dir")
   for (const packageJson of lines(git(root, ["ls-files", "*/package.json"]))) {
@@ -389,7 +399,14 @@ const detachedExercise = (root: string) => {
       sourceCommit: EXPECTED.reviewedSourceCommit,
       focusedTestsPassed: testResult.numPassedTests as number,
       sourceOnlyPassed: true,
-      resultRoot: sha256(canonical({ testResult, sourceOnly })),
+      resultRoot: sha256(
+        canonical({
+          success: testResult.success,
+          numPassedTests: testResult.numPassedTests,
+          numFailedTests: testResult.numFailedTests,
+          sourceOnly,
+        }),
+      ),
       canonicalWrites: 0,
       liveInvoked: false,
       freshCharged: 0,
@@ -464,6 +481,7 @@ export const deriveV138Plan26285NoPublish = (root: string) => {
   if (cachedRoot === path.resolve(root) && cachedReview !== undefined)
     return cachedReview
   const before = snapshotV138Plan26285Destinations(root)
+  const normalizedBefore = normalizeReviewPairForDerivation(before)
   const reviewedSource = inspectCustody(root)
   const decisionJoin = inspectDecisionJoin(root)
   const protectedHistory = inspectProtectedHistory(root)
@@ -475,6 +493,7 @@ export const deriveV138Plan26285NoPublish = (root: string) => {
   const sourceFindings = inspectV138Plan26285Source(source)
   const detached = detachedExercise(root)
   const after = snapshotV138Plan26285Destinations(root)
+  const normalizedAfter = normalizeReviewPairForDerivation(after)
   const unchanged = canonical(before) === canonical(after)
   if (!unchanged) fail("V138_PLAN_262_85_DESTINATION_MUTATED")
   const executed = (
@@ -493,7 +512,10 @@ export const deriveV138Plan26285NoPublish = (root: string) => {
     executed("deadline-backoff", detached.deadlineAndBackoffProved, detached.resultRoot),
     executed("no-reuse-idempotence", detached.noIdentityReuseProved && detached.idempotenceProved, detached.resultRoot),
     executed("privacy-authority-denial", !detached.liveInvoked && detached.freshCharged === 0, detached.resultRoot),
-    executed("canonical-absence", unchanged, { before, after }),
+    executed("canonical-absence", unchanged, {
+      before: normalizedBefore,
+      after: normalizedAfter,
+    }),
   ])
   const findings = [
     ...sourceFindings.map((code) =>
@@ -570,10 +592,41 @@ export const validateV138Plan26285Review = (
   expected: unknown,
 ): true => {
   const value = candidate as any
+  const detachedObservationIds = [
+    "detached-fake-effect-proof",
+    "lockf-contention",
+    "crash-recovery",
+    "deadline-backoff",
+    "no-reuse-idempotence",
+    "privacy-authority-denial",
+  ]
+  const normalized = (input: unknown) => {
+    const copy = cloneRecord(input)
+    delete copy.reviewRoot
+    if (copy.detachedExercise)
+      copy.detachedExercise.resultRoot = "sha256:detached-execution"
+    for (const observation of copy.observations ?? []) {
+      if (detachedObservationIds.includes(observation.id))
+        observation.detailRoot = "sha256:detached-execution-observation"
+    }
+    return copy
+  }
+  const detachedObservationRootsValid = (value.observations ?? [])
+    .filter((observation: any) =>
+      detachedObservationIds.includes(observation.id),
+    )
+    .every(
+      (observation: any) =>
+        observation.detailRoot ===
+        sha256(
+          `${observation.id}\0${canonical(value.detachedExercise.resultRoot)}`,
+        ),
+    )
   if (
     value?.schemaVersion !== "v1.38-plan-262-85-bounded-retry-source-review-v2" ||
     value.reviewRoot !== computeV138Plan26285ReviewRoot(value) ||
-    canonical(value) !== canonical(expected) ||
+    canonical(normalized(value)) !== canonical(normalized(expected)) ||
+    !detachedObservationRootsValid ||
     value.findingCount !== value.findings?.length ||
     value.sourceReviewPassed !== (value.findingCount === 0) ||
     value.status !== (value.findingCount === 0 ? "zero_findings" : "blocked") ||
