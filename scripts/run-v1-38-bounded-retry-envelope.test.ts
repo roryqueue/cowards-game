@@ -201,6 +201,80 @@ describe("retry-envelope:v1 finite state and cumulative journal", () => {
     ).toThrow("V138_RETRY_ENVELOPE_EXPIRED")
   })
 
+  it("records inclusive time-window expiry once as an immutable exhausted journal fact", () => {
+    let records: readonly V138RetryJournalRecord[] = []
+    records = append(records, 1_000, {
+      kind: "reserve_preflight",
+      identity: "preflight:v1:0",
+      owner: "owner-a",
+    })
+    records = append(records, 2_000, {
+      kind: "observe_preflight",
+      identity: "preflight:v1:0",
+      owner: "owner-a",
+      effectiveAvailableBasisPoints: 2_499,
+    })
+    const deadline =
+      2_000 + V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+
+    expect(() =>
+      append(records, deadline - 1, {
+        kind: "time_window_expired",
+        owner: "owner-a",
+        reason: "time_window_expired",
+      }),
+    ).toThrow("V138_RETRY_TIME_WINDOW_ACTIVE")
+    expect(() =>
+      append(records, deadline, {
+        kind: "reserve_preflight",
+        identity: "preflight:v1:1",
+        owner: "owner-a",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_EXPIRED")
+
+    const exactBoundary = append(records, deadline, {
+      kind: "time_window_expired",
+      owner: "owner-a",
+      reason: "time_window_expired",
+    })
+    expect(exactBoundary.at(-1)).toMatchObject({
+      kind: "time_window_expired",
+      reason: "time_window_expired",
+      previousRoot: records.at(-1)?.recordRoot,
+    })
+    expect(deriveV138RetryState(envelope(), exactBoundary)).toMatchObject({
+      disposition: "exhausted",
+      terminalReason: "time_window_expired",
+      remainingPreflightObservations: 0,
+      remainingRouteStarts: 0,
+      nextPreflightIdentity: null,
+      nextRouteIdentity: null,
+    })
+    expect(() =>
+      append(exactBoundary, deadline + 1, {
+        kind: "time_window_expired",
+        owner: "owner-a",
+        reason: "time_window_expired",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_TERMINAL")
+    expect(() =>
+      append(exactBoundary, deadline + 1, {
+        kind: "reserve_preflight",
+        identity: "preflight:v1:1",
+        owner: "owner-b",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_TERMINAL")
+
+    const postBoundary = append(records, deadline + 1, {
+      kind: "time_window_expired",
+      owner: "owner-a",
+      reason: "time_window_expired",
+    })
+    expect(deriveV138RetryState(envelope(), postBoundary).stateRoot).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
+    )
+  })
+
   it("closes on first exact success and makes every non-540 reproduction terminal", () => {
     const makeReproduction = (acceptedCells: number) => {
       let records: readonly V138RetryJournalRecord[] = []
