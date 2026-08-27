@@ -16,6 +16,11 @@ import {
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import {
+  checkV138PostRunAuditCorrection,
+  V138_POST_RUN_AUDIT_CORRECTION_PATH,
+} from "./check-v1-38-plan-262-post-run-audit-correction.js"
+
 type Sha256 = `sha256:${string}`
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 
@@ -45,6 +50,7 @@ export const V138_PLAN_262_80_PATHS = Object.freeze({
     ".planning/artifacts/v1.38-plan-262-80-admission-disposition-v1.json",
   activationRoot:
     ".planning/artifacts/v1.38-foundation-activation-root-route9.json",
+  auditCorrection: V138_POST_RUN_AUDIT_CORRECTION_PATH,
 })
 
 const SOURCE_PATHS = Object.freeze([
@@ -974,25 +980,56 @@ export const evaluateV138Plan26280Evidence = (evidence: any): any => {
   })
 }
 
-export const deriveV138Plan26280NoPublish = (root: string): any =>
-  evaluateV138Plan26280Evidence(loadV138Plan26280Evidence(root))
+export const deriveV138Plan26280NoPublish = (root: string): any => {
+  if (
+    safeType(path.resolve(root, V138_POST_RUN_AUDIT_CORRECTION_PATH)) ===
+    "regular"
+  ) {
+    const correction = checkV138PostRunAuditCorrection(root)
+    const historical = readJson(root, V138_PLAN_262_80_PATHS.disposition)
+    validateV138Plan26280Disposition(historical, historical)
+    if (
+      correction.historical.oldPlan80DispositionRoot !==
+        historical.dispositionRoot ||
+      correction.historical.oldPlan80Sha256 !==
+        sha256(readRegular(root, V138_PLAN_262_80_PATHS.disposition))
+    )
+      fail("V138_PLAN_262_80_AUDIT_CORRECTION_INVALID")
+    return Object.freeze({
+      ...historical,
+      auditCorrectionRoot: correction.correctionRoot,
+      effectiveIntegrityPassed: false,
+    })
+  }
+  return evaluateV138Plan26280Evidence(loadV138Plan26280Evidence(root))
+}
 
-export const computeV138Plan26280DispositionRoot = (candidate: any): Sha256 =>
-  rootWithout(
+export const computeV138Plan26280DispositionRoot = (candidate: any): Sha256 => {
+  const historical = clone(candidate)
+  delete historical.auditCorrectionRoot
+  delete historical.effectiveIntegrityPassed
+  return rootWithout(
     "v138-plan26280-admission-disposition-v1",
-    candidate,
+    historical,
     "dispositionRoot",
   )
+}
 
 export const validateV138Plan26280Disposition = (
   candidate: any,
   expected: any,
 ): true => {
+  const candidateHistorical = clone(candidate)
+  delete candidateHistorical.auditCorrectionRoot
+  delete candidateHistorical.effectiveIntegrityPassed
+  const expectedHistorical = clone(expected)
+  delete expectedHistorical.auditCorrectionRoot
+  delete expectedHistorical.effectiveIntegrityPassed
   if (
     candidate?.schemaVersion !== "v1.38-plan-262-80-admission-disposition-v1" ||
     candidate.dispositionRoot !==
       computeV138Plan26280DispositionRoot(candidate) ||
-    canonical(candidate) !== canonical(expected) ||
+    canonical(candidateHistorical) !== canonical(expectedHistorical) ||
     candidate.counters?.requiredAccepted !== 540 ||
     candidate.assuranceClass !== "single_operator_local_seal_v1" ||
     candidate.independentCustodyClaimed !== false ||
@@ -1159,8 +1196,21 @@ export const checkV138Plan26280Disposition = (
   )
     fail("V138_PLAN_262_80_PATH_INVALID")
   const candidate = readJson(root, dispositionPath)
-  const expected = deriveV138Plan26280NoPublish(root)
-  validateV138Plan26280Disposition(candidate, expected)
+  const correction = checkV138PostRunAuditCorrection(root)
+  validateV138Plan26280Disposition(candidate, candidate)
+  if (
+    correction.historical.oldPlan80DispositionRoot !==
+      candidate.dispositionRoot ||
+    correction.historical.oldPlan80Sha256 !==
+      sha256(readRegular(root, dispositionPath)) ||
+    correction.empiricalOutcome.terminalDisposition !==
+      candidate.terminalDisposition ||
+    correction.empiricalOutcome.freshAccepted !==
+      candidate.counters?.freshAccepted ||
+    correction.effectiveAssurance.integrityPassed !== false ||
+    correction.effectiveAssurance.supersedesHistoricalCleanConclusion !== true
+  )
+    fail("V138_PLAN_262_80_AUDIT_CORRECTION_INVALID")
   const activationType = safeType(path.resolve(root, activationPath))
   const publicationPaths = [dispositionPath]
   if (candidate.status === "pass") {
@@ -1177,7 +1227,11 @@ export const checkV138Plan26280Disposition = (
     fail("V138_PLAN_262_80_NONPASS_ACTIVATION_PRESENT")
   }
   return {
-    disposition: candidate,
+    disposition: Object.freeze({
+      ...candidate,
+      auditCorrectionRoot: correction.correctionRoot,
+      effectiveIntegrityPassed: false,
+    }),
     publicationCommit: checkPublicationLineage(root, publicationPaths),
   }
 }

@@ -266,6 +266,25 @@ describe("Plan 262-81 branch verification", () => {
     ).toBe("passed")
   })
 
+  it("fails the Plan-80/81 join when an additive audit correction downgrades integrity", () => {
+    const corrected = {
+      ...exactPassDisposition,
+      effectiveIntegrityPassed: false,
+      auditCorrectionRoot: `sha256:${"c".repeat(64)}`,
+    }
+    const result = evaluateV138Plan26281Verification({
+      disposition: corrected,
+      activationRoot: {
+        schemaVersion: "v1.38-foundation-activation-root-route9-v1",
+      },
+      requirementsComplete: true,
+    })
+    expect(result).toEqual({
+      status: "gaps_found",
+      gaps: ["POST_RUN_INTEGRITY_CORRECTION"],
+    })
+  })
+
   it("keeps count coincidence non-compensating for missing pass evidence", () => {
     const result = evaluateV138Plan26281Verification({
       disposition: { ...exactPassDisposition, status: "non_pass" },

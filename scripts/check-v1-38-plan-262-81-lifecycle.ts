@@ -196,6 +196,8 @@ export const evaluateV138Plan26281Verification = ({
   activationRoot: any | null
   requirementsComplete: boolean
 }): { status: "passed" | "gaps_found"; gaps: string[] } => {
+  const effectiveIntegrityPassed =
+    disposition?.effectiveIntegrityPassed ?? disposition?.integrityPassed
   const exactPass =
     disposition?.schemaVersion ===
       "v1.38-plan-262-80-admission-disposition-v1" &&
@@ -203,7 +205,7 @@ export const evaluateV138Plan26281Verification = ({
     disposition?.terminalDisposition === "succeeded" &&
     disposition?.counters?.freshAccepted === 540 &&
     disposition?.counters?.requiredAccepted === 540 &&
-    disposition?.integrityPassed === true &&
+    effectiveIntegrityPassed === true &&
     disposition?.privacySafe === true &&
     disposition?.assuranceClass === "single_operator_local_seal_v1" &&
     disposition?.authority?.foundationActivationAuthorized === true &&
@@ -222,6 +224,8 @@ export const evaluateV138Plan26281Verification = ({
   if (activationRoot === null) gaps.push("ROUTE9_ACTIVATION_ROOT_ABSENT")
   if (!requirementsComplete) gaps.push("REQUIREMENT_ROOTS_INCOMPLETE")
   if (disposition?.privacySafe !== true) gaps.push("PRIVACY_INVALID")
+  if (effectiveIntegrityPassed !== true)
+    gaps.push("POST_RUN_INTEGRITY_CORRECTION")
   if (!authorityDenied(disposition)) gaps.push("PROHIBITION_INVALID")
   return { status: "gaps_found", gaps: [...new Set(gaps)] }
 }
@@ -272,6 +276,9 @@ export const renderV138Plan26281Verification = (
     archivedPlan74Sha256: topology.archiveSha256,
     plan74SummaryPresent: false,
     dispositionRoot: disposition.dispositionRoot,
+    auditCorrectionRoot: disposition.auditCorrectionRoot ?? null,
+    effectiveIntegrityPassed:
+      disposition.effectiveIntegrityPassed ?? disposition.integrityPassed,
     dispositionStatus: disposition.status,
     terminalDisposition: disposition.terminalDisposition,
     freshAccepted: disposition.counters?.freshAccepted ?? 0,

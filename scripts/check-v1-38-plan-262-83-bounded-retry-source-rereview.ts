@@ -37,6 +37,8 @@ export const V138_PLAN_262_83_CHECKER_PATH =
 export const V138_PLAN_262_83_REVIEW_PATH =
   ".planning/artifacts/v1.38-plan-262-83-bounded-retry-source-rereview-v1.json"
 export const V138_PLAN_262_83_REPORT_PATH = `${PHASE_DIR}/262-83-REVIEW.md`
+const POST_RUN_CORRECTION_PATH =
+  ".planning/artifacts/v1.38-plan-262-post-run-audit-correction-v1.json"
 export const V138_PLAN_262_83_SOURCE_PATHS = Object.freeze([
   "scripts/lib/v1-38-bounded-retry-envelope.ts",
   "scripts/run-v1-38-bounded-retry-envelope.ts",
@@ -840,7 +842,35 @@ const check = (root: string, reviewPath: string, reportPath: string) => {
     report !== renderV138Plan26283ReviewReport(candidate)
   )
     fail("V138_PLAN_262_83_PAIR_MISMATCH")
-  validateV138Plan26283Review(candidate, expected)
+  let effective = candidate
+  if (safeType(path.resolve(root, POST_RUN_CORRECTION_PATH)) === "regular") {
+    const correction = JSON.parse(
+      readRegular(root, POST_RUN_CORRECTION_PATH).toString("utf8"),
+    ) as any
+    const correctionBody = cloneRecord(correction)
+    delete correctionBody.correctionRoot
+    if (
+      correction.correctionRoot !==
+        sha256(
+          `v138-plan262-post-run-audit-correction-v1\0${canonical(
+            correctionBody,
+          )}`,
+        ) ||
+      correction.historical?.oldPlan83ReviewRoot !== candidate.reviewRoot ||
+      correction.strengthenedReReview?.reviewRoot !== expected.reviewRoot ||
+      correction.strengthenedReReview?.status !== "blocked" ||
+      correction.effectiveAssurance?.integrityPassed !== false
+    )
+      fail("V138_PLAN_262_83_AUDIT_CORRECTION_INVALID")
+    validateV138Plan26283Review(candidate, candidate)
+    effective = Object.freeze({
+      ...candidate,
+      effectiveStatus: "blocked",
+      effectiveFindingCount: expected.findingCount,
+      effectiveSourceReviewPassed: false,
+      auditCorrectionRoot: correction.correctionRoot,
+    })
+  } else validateV138Plan26283Review(candidate, expected)
   const commits = lines(
     git(root, ["log", "--format=%H", "--all", "--", reviewPath, reportPath]),
   )
@@ -863,7 +893,7 @@ const check = (root: string, reviewPath: string, reportPath: string) => {
       ).length !== 0
     )
       fail("V138_PLAN_262_83_PUBLICATION_REWRITE_INVALID")
-  return { candidate, publicationCommit: commit }
+  return { candidate: effective, publicationCommit: commit }
 }
 
 const repoRoot = path.resolve(
@@ -915,12 +945,18 @@ const main = (): void => {
     const { candidate, publicationCommit } = check(repoRoot, argv[2]!, argv[4]!)
     process.stdout.write(
       canonical({
-        status: candidate.findingCount === 0 ? "passed" : "blocked_verified",
-        findingCount: candidate.findingCount,
-        sourceReviewPassed: candidate.sourceReviewPassed,
+        status:
+          candidate.effectiveStatus ??
+          (candidate.findingCount === 0 ? "passed" : "blocked_verified"),
+        findingCount: candidate.effectiveFindingCount ?? candidate.findingCount,
+        sourceReviewPassed:
+          candidate.effectiveSourceReviewPassed ?? candidate.sourceReviewPassed,
         reviewRoot: candidate.reviewRoot,
         publicationCommit,
-        plan26278Eligible: candidate.authority.plan26278Eligible,
+        plan26278Eligible:
+          candidate.effectiveStatus === "blocked"
+            ? false
+            : candidate.authority.plan26278Eligible,
         authorizesExecution: false,
         liveInvoked: false,
       }),

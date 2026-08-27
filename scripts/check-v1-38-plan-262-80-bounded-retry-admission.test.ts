@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   computeV138Plan26280ActivationRoot,
   computeV138Plan26280DispositionRoot,
+  checkV138Plan26280Disposition,
   deriveV138Plan26280NoPublish,
   evaluateV138Plan26280Evidence,
   loadV138Plan26280Evidence,
@@ -19,6 +20,8 @@ describe("Plan 262-80 independent bounded-retry admission", () => {
     const after = loadV138Plan26280Evidence(repoRoot).destinations
 
     expect(disposition.status).toBe("non_pass")
+    expect(disposition.effectiveIntegrityPassed).toBe(false)
+    expect(disposition.auditCorrectionRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
     expect(disposition.terminalDisposition).toBe("exhausted")
     expect(disposition.counters).toEqual({
       preflightObservationsConsumed: 3,
@@ -46,6 +49,23 @@ describe("Plan 262-80 independent bounded-retry admission", () => {
     expect(["absent", "regular"]).toContain(after.disposition)
     expect(after.activationRoot).toBe("absent")
   })
+
+  it("authenticates the historical disposition through the additive correction", () => {
+    const checked = checkV138Plan26280Disposition(
+      repoRoot,
+      ".planning/artifacts/v1.38-plan-262-80-admission-disposition-v1.json",
+      ".planning/artifacts/v1.38-foundation-activation-root-route9.json",
+    )
+    expect(checked.disposition).toMatchObject({
+      status: "non_pass",
+      terminalDisposition: "exhausted",
+      effectiveIntegrityPassed: false,
+      counters: { freshAccepted: 0, requiredAccepted: 540 },
+    })
+    expect(checked.disposition.auditCorrectionRoot).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
+    )
+  }, 15_000)
 
   it.each([
     [

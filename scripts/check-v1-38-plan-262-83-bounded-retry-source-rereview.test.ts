@@ -308,4 +308,32 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
       reviewer.snapshotV138Plan26283ProtectedDestinations(process.cwd()),
     ).toEqual(before)
   }, 15_000)
+
+  it("authenticates the immutable historical review through the additive correction", async () => {
+    const reviewer = await loadReviewer()
+    const output = JSON.parse(
+      execFileSync(
+        "pnpm",
+        [
+          "exec",
+          "tsx",
+          reviewer.V138_PLAN_262_83_CHECKER_PATH,
+          "--check-review",
+          "--review",
+          reviewer.V138_PLAN_262_83_REVIEW_PATH,
+          "--report",
+          reviewer.V138_PLAN_262_83_REPORT_PATH,
+        ],
+        { encoding: "utf8" },
+      ),
+    )
+    expect(output).toMatchObject({
+      status: "blocked",
+      findingCount: 13,
+      sourceReviewPassed: false,
+      plan26278Eligible: false,
+      authorizesExecution: false,
+      liveInvoked: false,
+    })
+  }, 15_000)
 })

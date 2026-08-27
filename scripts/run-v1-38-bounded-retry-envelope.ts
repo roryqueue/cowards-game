@@ -48,6 +48,10 @@ import {
   observeDarwinHeadroomOwned,
   type MemoryPressureQCommandResult,
 } from "./lib/v1-38-darwin-headroom.js"
+import {
+  checkV138PostRunAuditCorrection,
+  V138_POST_RUN_AUDIT_CORRECTION_PATH,
+} from "./check-v1-38-plan-262-post-run-audit-correction.js"
 
 const fail = (code: string): never => {
   throw new TypeError(code)
@@ -937,6 +941,20 @@ const checkPublishedPair = (
   let expected: Readonly<V138DerivedSealEnvelope>
   if (injectedDerivation !== undefined) {
     expected = injectedDerivation()
+  } else if (
+    safeStatus(path.resolve(repoRoot, V138_POST_RUN_AUDIT_CORRECTION_PATH)) ===
+    "regular"
+  ) {
+    const correction = checkV138PostRunAuditCorrection(repoRoot)
+    if (
+      correction.historical.sealSha256 !==
+        sha256(readNoFollow(repoRoot, V138_BOUNDED_RETRY_PATHS.seal)) ||
+      correction.historical.envelopeSha256 !==
+        sha256(readNoFollow(repoRoot, V138_BOUNDED_RETRY_PATHS.envelope)) ||
+      correction.effectiveAssurance.integrityPassed !== false
+    )
+      fail("V138_RETRY_AUDIT_CORRECTION_INVALID")
+    return Object.freeze({ seal: sealValue, envelope: envelopeValue })
   } else {
     if (!/^[0-9a-f]{40}$/u.test(String(sealValue.directParentCommit))) {
       fail("V138_RETRY_SEALED_ENVELOPE_INVALID")
@@ -1415,6 +1433,34 @@ export const checkV138PublishedRetryOutcome = (
   downstreamAuthority: "denied"
 }> => {
   const { envelope } = checkPublishedPair(repoRoot)
+  if (
+    safeStatus(path.resolve(repoRoot, V138_POST_RUN_AUDIT_CORRECTION_PATH)) ===
+    "regular"
+  ) {
+    const correction = checkV138PostRunAuditCorrection(repoRoot)
+    const terminal = readJsonNoFollow(
+      repoRoot,
+      V138_BOUNDED_RETRY_PATHS.terminal,
+    ) as any
+    if (
+      correction.historical.terminalSha256 !==
+        sha256(readNoFollow(repoRoot, V138_BOUNDED_RETRY_PATHS.terminal)) ||
+      correction.empiricalOutcome.terminalDisposition !== "exhausted" ||
+      terminal.disposition !== "exhausted" ||
+      terminal.freshAccepted !== 0 ||
+      terminal.productionAuthorized !== false ||
+      terminal.downstreamAuthority !== "denied"
+    )
+      fail("V138_RETRY_AUDIT_CORRECTION_INVALID")
+    return Object.freeze({
+      disposition: "exhausted" as const,
+      journalRoot: terminal.journalRoot as V138RetrySha256,
+      stateRoot: terminal.stateRoot as V138RetrySha256,
+      completeCleanup: terminal.completeCleanup === true,
+      reproductionPresent: false,
+      downstreamAuthority: "denied" as const,
+    })
+  }
   const records = readJournal(repoRoot)
   const state = deriveV138RetryState(envelope, records)
   if (state.disposition === "active") fail("V138_RETRY_TERMINAL_STATE_REQUIRED")

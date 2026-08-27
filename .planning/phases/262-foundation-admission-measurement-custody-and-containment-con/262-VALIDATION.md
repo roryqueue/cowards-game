@@ -62,7 +62,9 @@ Coverage is 15 covered and 1 partial-blocked. ADMIT-03 is noncompensating: topol
 | Terminal | exhausted |
 | Fresh accepted | 0/540 |
 | Route-9 activation root | absent by branch contract |
-| Privacy / integrity | true / true |
+| Privacy / historical integrity conclusion | true / true (superseded) |
+| Additive post-run audit correction | sha256:3834bd50464244644a780127901da61150f7a86e75c0c4072281ed58e1abe026 |
+| Effective integrity | false — strengthened historical re-review is blocked |
 | Downstream authority | denied |
 
 ## Validation Audit 2026-08-27
@@ -75,4 +77,4 @@ Coverage is 15 covered and 1 partial-blocked. ADMIT-03 is noncompensating: topol
 | Unmet requirements | 1 |
 | Fresh accepted | 0/540 |
 
-No lifecycle completion carrier is mutated by this validation refresh. Phase 263 and all formation, holdout-opening, public, product, production, counted-play, and gameplay-change authority remain denied.
+The immutable empirical result remains exhausted at 0/540. The additive correction authenticates the exact historical source, seal, envelope, journal, terminal, and 15 private receipts while superseding the earlier clean-integrity conclusion; it does not assert that mutable current source equals the historical sealed bytes. No activation or lifecycle completion carrier is created. Phase 263 and all formation, holdout-opening, public, product, production, counted-play, and gameplay-change authority remain denied.
