@@ -5,10 +5,13 @@ import {
   readFileSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs"
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   V138_BOUNDED_RETRY_IDENTITIES,
@@ -23,6 +26,7 @@ import {
   V138_BOUNDED_RETRY_PATHS,
   V138_BOUNDED_RETRY_LIVE_FLAGS,
   executeV138BoundedRetryCli,
+  runV138ProductionLive,
   publishV138RetryOutcome,
   publishV138RetryTerminalResult,
   runV138BoundedRetryController,
@@ -1156,6 +1160,123 @@ describe("bounded retry controller and CLI containment", () => {
       })
     }
   })
+
+  it.each([
+    "lock_acquired",
+    "journal_fsync",
+    "receipt_fsync",
+    "reproduction_write",
+    "reproduction_fsync",
+    "terminal_write",
+    "terminal_fsync",
+  ] as const)(
+    "recovers a real subprocess kill at %s without identity reuse",
+    async (stage) => {
+      const root = mkdtempSync(path.join(tmpdir(), `v138-process-${stage}-`))
+      temporaryRoots.push(root)
+      mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+      const moduleUrl = pathToFileURL(
+        path.resolve("scripts/run-v1-38-bounded-retry-envelope.ts"),
+      ).href
+      const childSource = `
+        import { runV138ProductionLive } from ${JSON.stringify(moduleUrl)};
+        const envelope = ${JSON.stringify(envelope())};
+        const SHA_A = ${JSON.stringify(SHA_A)};
+        const root = ${JSON.stringify(root)};
+        const stage = ${JSON.stringify(stage)};
+        let now = 0;
+        const effects = (append) => ({
+          monotonicMilliseconds: () => now,
+          waitUntil: async (target) => { now = target; },
+          observePreflight: async () => ({ available: true, effectiveAvailableBasisPoints: 2500 }),
+          runCalibration: async () => ({ status: "admitted", completeCleanup: true }),
+          runReproduction: async () => ({ status: "passed_exact", acceptedCells: 540, completeCleanup: true, reproductionRoot: SHA_A, artifact: { schemaVersion: "v1.38-current-matrix-reproduction-v15", status: "passed_exact", acceptedCellCount: 540, completeCleanup: true, receiptRoot: SHA_A } }),
+          appendDurableRecord: append,
+        });
+        await runV138ProductionLive(root, { checkPair: () => ({ seal: {}, envelope }), validateInputs: false, createEffects: effects, crashBoundary: (seen) => { if (seen === stage) process.kill(process.pid, "SIGKILL"); } });
+      `
+      const childPath = path.join(root, "crash-child.mts")
+      writeFileSync(childPath, childSource)
+      const killed = spawnSync(
+        process.execPath,
+        ["--import", "tsx", childPath],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          timeout: 20_000,
+        },
+      )
+      expect(
+        killed.signal === "SIGKILL" || killed.status === 137,
+        `${killed.stderr}\n${killed.stdout}`,
+      ).toBe(true)
+
+      let reproductionLaunches = 0
+      let now = 0
+      await runV138ProductionLive(root, {
+        checkPair: () => ({ seal: {} as never, envelope: envelope() }),
+        validateInputs: false,
+        createEffects: (appendDurableRecord) => ({
+          monotonicMilliseconds: () => now,
+          waitUntil: async (target) => {
+            now = target
+          },
+          observePreflight: async () => ({
+            available: true,
+            effectiveAvailableBasisPoints: 2_500,
+          }),
+          runCalibration: async () => ({
+            status: "admitted",
+            completeCleanup: true,
+          }),
+          runReproduction: async () => {
+            reproductionLaunches += 1
+            return {
+              status: "passed_exact",
+              acceptedCells: 540,
+              completeCleanup: true,
+              reproductionRoot: SHA_A,
+              artifact: {
+                schemaVersion: "v1.38-current-matrix-reproduction-v15",
+                status: "passed_exact",
+                acceptedCellCount: 540,
+                completeCleanup: true,
+                receiptRoot: SHA_A,
+              },
+            }
+          },
+          appendDurableRecord,
+        }),
+      })
+
+      const journalPath = path.join(root, V138_BOUNDED_RETRY_PATHS.journal)
+      const records = existsSync(journalPath)
+        ? readFileSync(journalPath, "utf8")
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line) as V138RetryJournalRecord)
+        : []
+      const identities = records
+        .filter(({ kind }) => kind.startsWith("reserve_"))
+        .map(
+          (record) =>
+            `${record.kind}:${
+              "identity" in record ? record.identity : record.routeIdentity
+            }`,
+        )
+      expect(new Set(identities).size).toBe(identities.length)
+      expect(
+        existsSync(path.join(root, `${V138_BOUNDED_RETRY_PATHS.journal}.lock`)),
+      ).toBe(false)
+      expect(
+        existsSync(path.join(root, V138_BOUNDED_RETRY_PATHS.terminal)),
+      ).toBe(true)
+      if (stage.startsWith("reproduction_") || stage.startsWith("terminal_"))
+        expect(reproductionLaunches).toBe(0)
+    },
+    30_000,
+  )
 
   it("retains the exact Plan-77 blocked pair and summary only as protected history", () => {
     const expected = new Map([

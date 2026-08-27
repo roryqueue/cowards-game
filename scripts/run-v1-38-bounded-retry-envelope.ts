@@ -10,6 +10,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
+  renameSync,
   readFileSync,
   statSync,
   unlinkSync,
@@ -1273,6 +1274,136 @@ const journalAppender = (
   }
 }
 
+type V138RetryCrashBoundary =
+  | "lock_acquired"
+  | "journal_fsync"
+  | "receipt_fsync"
+  | "reproduction_write"
+  | "reproduction_fsync"
+  | "terminal_write"
+  | "terminal_fsync"
+
+interface V138RetryOwnerLease {
+  readonly schemaVersion: "v1.38-bounded-retry-owner-lease-v2"
+  readonly owner: "repository_operator"
+  readonly pid: number
+  readonly generation: number
+  readonly leaseRoot: V138RetrySha256
+}
+
+const ownerLease = (pid: number, generation: number): V138RetryOwnerLease => {
+  const body = {
+    schemaVersion: "v1.38-bounded-retry-owner-lease-v2" as const,
+    owner: "repository_operator" as const,
+    pid,
+    generation,
+  }
+  return Object.freeze({
+    ...body,
+    leaseRoot: sha256(`v138-bounded-retry-owner-lease-v2\0${canonical(body)}`),
+  })
+}
+
+const parseOwnerLease = (bytes: string): V138RetryOwnerLease => {
+  let value: any
+  try {
+    value = JSON.parse(bytes)
+  } catch {
+    return fail("V138_RETRY_OWNER_LEASE_INVALID")
+  }
+  const expected = ownerLease(value?.pid, value?.generation)
+  if (
+    !Number.isSafeInteger(value?.pid) ||
+    value.pid <= 0 ||
+    !Number.isSafeInteger(value?.generation) ||
+    value.generation < 1 ||
+    canonical(value) !== canonical(expected)
+  )
+    fail("V138_RETRY_OWNER_LEASE_INVALID")
+  return value as V138RetryOwnerLease
+}
+
+const processIsAlive = (pid: number): boolean => {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ESRCH"
+  }
+}
+
+export const acquireV138RetryOwnerLease = (
+  lock: string,
+): Readonly<{ lease: V138RetryOwnerLease; release: () => void }> => {
+  let generation = 1
+  for (;;) {
+    const lease = ownerLease(process.pid, generation)
+    try {
+      exclusiveWrite(lock, canonical(lease))
+      fsyncParent(lock)
+      return Object.freeze({
+        lease,
+        release: () => {
+          if (
+            safeStatus(lock) !== "regular" ||
+            readFileSync(lock, "utf8") !== canonical(lease)
+          )
+            fail("V138_RETRY_OWNER_LEASE_LOST")
+          unlinkSync(lock)
+          fsyncParent(lock)
+        },
+      })
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        error.message !== "V138_RETRY_DESTINATION_PRESENT"
+      )
+        throw error
+    }
+    if (safeStatus(lock) !== "regular") fail("V138_RETRY_OWNER_LEASE_INVALID")
+    const staleBytes = readFileSync(lock, "utf8")
+    const stale = parseOwnerLease(staleBytes)
+    if (processIsAlive(stale.pid)) fail("V138_RETRY_OWNER_LEASE_ACTIVE")
+    generation = stale.generation + 1
+    const quarantine = `${lock}.stale-${stale.generation}-${process.pid}`
+    try {
+      renameSync(lock, quarantine)
+      fsyncParent(lock)
+      unlinkSync(quarantine)
+      fsyncParent(lock)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+    }
+  }
+}
+
+export const reconcileV138RetryPrivateReceipts = (
+  privateTarget: string,
+  records: readonly V138RetryJournalRecord[],
+): number => {
+  let restored = 0
+  for (const record of records) {
+    const receipt = path.join(
+      privateTarget,
+      `journal-record-${String(record.ordinal).padStart(4, "0")}.json`,
+    )
+    const expected = canonical(record)
+    const status = safeStatus(receipt)
+    if (status === "missing") {
+      exclusiveWrite(receipt, expected)
+      fsyncParent(receipt)
+      restored += 1
+    } else if (
+      status !== "regular" ||
+      (statSync(receipt).mode & 0o777) !== 0o600 ||
+      readFileSync(receipt, "utf8") !== expected
+    ) {
+      fail("V138_RETRY_PRIVATE_RECEIPT_INVALID")
+    }
+  }
+  return restored
+}
+
 export const checkV138PublishedRetryOutcome = (
   repoRoot: string,
 ): Readonly<{
@@ -1340,67 +1471,80 @@ export const checkV138PublishedRetryOutcome = (
   })
 }
 
-const runProductionLive = async (repoRoot: string): Promise<void> => {
-  const { envelope } = checkPublishedPair(repoRoot)
-  for (const repoPath of [
-    V138_BOUNDED_RETRY_PATHS.sourceSummary,
-    V138_BOUNDED_RETRY_PATHS.sourceController,
-    V138_BOUNDED_RETRY_PATHS.sourceModel,
-    V138_BOUNDED_RETRY_PATHS.sourceTests,
-    V138_BOUNDED_RETRY_PATHS.sourceReview,
-    V138_BOUNDED_RETRY_PATHS.sourceReviewReport,
-    V138_BOUNDED_RETRY_PATHS.protectedSourceReview,
-    V138_BOUNDED_RETRY_PATHS.protectedSourceReviewReport,
-    V138_BOUNDED_RETRY_PATHS.protectedSourceReviewSummary,
-    V138_BOUNDED_RETRY_PATHS.seal,
-    V138_BOUNDED_RETRY_PATHS.envelope,
-    V138_BOUNDED_RETRY_PATHS.localSeal,
-    V138_BOUNDED_RETRY_PATHS.historyBinder,
-  ])
-    readNoFollow(repoRoot, repoPath)
+export interface V138RetryProductionOptions {
+  readonly checkPair?: () => Readonly<V138DerivedSealEnvelope>
+  readonly createEffects?: (
+    append: (record: V138RetryJournalRecord) => void,
+  ) => V138BoundedRetryControllerEffects
+  readonly crashBoundary?: (stage: V138RetryCrashBoundary) => void
+  readonly validateInputs?: boolean
+}
+
+export const runV138ProductionLive = async (
+  repoRoot: string,
+  options: V138RetryProductionOptions = {},
+): Promise<void> => {
+  const { envelope } = options.checkPair?.() ?? checkPublishedPair(repoRoot)
+  if (options.validateInputs !== false)
+    for (const repoPath of [
+      V138_BOUNDED_RETRY_PATHS.sourceSummary,
+      V138_BOUNDED_RETRY_PATHS.sourceController,
+      V138_BOUNDED_RETRY_PATHS.sourceModel,
+      V138_BOUNDED_RETRY_PATHS.sourceTests,
+      V138_BOUNDED_RETRY_PATHS.sourceReview,
+      V138_BOUNDED_RETRY_PATHS.sourceReviewReport,
+      V138_BOUNDED_RETRY_PATHS.protectedSourceReview,
+      V138_BOUNDED_RETRY_PATHS.protectedSourceReviewReport,
+      V138_BOUNDED_RETRY_PATHS.protectedSourceReviewSummary,
+      V138_BOUNDED_RETRY_PATHS.seal,
+      V138_BOUNDED_RETRY_PATHS.envelope,
+      V138_BOUNDED_RETRY_PATHS.localSeal,
+      V138_BOUNDED_RETRY_PATHS.historyBinder,
+    ])
+      readNoFollow(repoRoot, repoPath)
   const terminalTarget = path.resolve(
     repoRoot,
     V138_BOUNDED_RETRY_PATHS.terminal,
+  )
+  const lock = path.resolve(
+    repoRoot,
+    `${V138_BOUNDED_RETRY_PATHS.journal}.lock`,
   )
   const terminalStatus = safeStatus(terminalTarget)
   if (terminalStatus === "unsafe" || terminalStatus === "directory") {
     fail("V138_RETRY_DESTINATION_UNSAFE")
   }
   if (terminalStatus === "regular") {
-    const terminal = readJsonNoFollow(
-      repoRoot,
-      V138_BOUNDED_RETRY_PATHS.terminal,
-    ) as Record<string, unknown>
-    const records = readJournal(repoRoot)
-    const state = deriveV138RetryState(envelope, records)
-    const expectedTerminal = v138RetryTerminalResult({ records, state })
-    const reproductionStatus = safeStatus(
-      path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
-    )
-    if (
-      canonical(terminal) !== canonical(expectedTerminal) ||
-      state.disposition === "active" ||
-      (state.disposition === "succeeded") !==
-        (reproductionStatus === "regular") ||
-      reproductionStatus === "unsafe" ||
-      reproductionStatus === "directory"
-    ) {
-      fail("V138_RETRY_DUPLICATE_INVOCATION_INVALID")
+    const ownership = acquireV138RetryOwnerLease(lock)
+    try {
+      const terminal = readJsonNoFollow(
+        repoRoot,
+        V138_BOUNDED_RETRY_PATHS.terminal,
+      ) as Record<string, unknown>
+      const records = readJournal(repoRoot)
+      const state = deriveV138RetryState(envelope, records)
+      const expectedTerminal = v138RetryTerminalResult({ records, state })
+      const reproductionStatus = safeStatus(
+        path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
+      )
+      if (
+        canonical(terminal) !== canonical(expectedTerminal) ||
+        state.disposition === "active" ||
+        (state.disposition === "succeeded") !==
+          (reproductionStatus === "regular") ||
+        reproductionStatus === "unsafe" ||
+        reproductionStatus === "directory"
+      ) {
+        fail("V138_RETRY_DUPLICATE_INVOCATION_INVALID")
+      }
+    } finally {
+      ownership.release()
     }
     return
   }
-  const lock = path.resolve(
-    repoRoot,
-    `${V138_BOUNDED_RETRY_PATHS.journal}.lock`,
-  )
-  exclusiveWrite(
-    lock,
-    canonical({
-      schemaVersion: "v1.38-bounded-retry-owner-lock-v1",
-      owner: "repository_operator",
-    }),
-  )
+  const ownership = acquireV138RetryOwnerLease(lock)
   try {
+    options.crashBoundary?.("lock_acquired")
     const privateTarget = path.resolve(
       repoRoot,
       V138_BOUNDED_RETRY_PATHS.privateDir,
@@ -1414,6 +1558,7 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
       fail("V138_RETRY_PRIVATE_DIR_UNSAFE")
     }
     const existing = readJournal(repoRoot)
+    reconcileV138RetryPrivateReceipts(privateTarget, existing)
     const existingState = deriveV138RetryState(envelope, existing)
     const reproductionTarget = path.resolve(
       repoRoot,
@@ -1432,6 +1577,7 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
     const appendJournal = journalAppender(repoRoot)
     const append = (record: V138RetryJournalRecord): void => {
       appendJournal(record)
+      options.crashBoundary?.("journal_fsync")
       exclusiveWrite(
         path.join(
           privateTarget,
@@ -1440,21 +1586,32 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
         canonical(record),
       )
       fsyncParent(privateTarget)
+      options.crashBoundary?.("receipt_fsync")
     }
     const result = await runV138BoundedRetryController({
       envelope,
       owner: "repository_operator",
       records: existing,
-      effects: createV138ProductionControllerEffects(repoRoot, append),
+      effects:
+        options.createEffects?.(append) ??
+        createV138ProductionControllerEffects(repoRoot, append),
     })
     publishV138RetryOutcome({
       terminalTarget,
       reproductionTarget,
       result,
+      hooks: {
+        afterReproductionWrite: () =>
+          options.crashBoundary?.("reproduction_write"),
+        afterReproductionParentFsync: () =>
+          options.crashBoundary?.("reproduction_fsync"),
+        afterTerminalWrite: () => options.crashBoundary?.("terminal_write"),
+        afterTerminalParentFsync: () =>
+          options.crashBoundary?.("terminal_fsync"),
+      },
     })
   } finally {
-    unlinkSync(lock)
-    fsyncParent(lock)
+    ownership.release()
   }
 }
 
@@ -1475,7 +1632,7 @@ export const executeV138BoundedRetryCli = async (
   const deriveArtifacts =
     injected?.deriveArtifacts ??
     (() => deriveV138SealedInactiveEnvelope(repoRoot))
-  const runLive = injected?.runLive ?? (() => runProductionLive(repoRoot))
+  const runLive = injected?.runLive ?? (() => runV138ProductionLive(repoRoot))
   const checkOutcome =
     injected?.checkOutcome ?? (() => checkV138PublishedRetryOutcome(repoRoot))
   const command = argv[0]
