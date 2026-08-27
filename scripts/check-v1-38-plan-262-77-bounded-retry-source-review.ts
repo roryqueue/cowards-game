@@ -1,6 +1,6 @@
 #!/usr/bin/env -S pnpm exec tsx
 import { execFileSync } from "node:child_process"
-import { Buffer } from "node:buffer"
+import type { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
 import {
   chmodSync,
@@ -103,7 +103,10 @@ const OBSERVATION_IDS = Object.freeze([
   "canonical-destinations-untouched",
 ] as const)
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
 const fail = (code: string): never => {
   throw new TypeError(code)
 }
@@ -151,7 +154,10 @@ const safeType = (
 const readRegular = (root: string, repoPath: string): Buffer => {
   const target = path.resolve(root, repoPath)
   const physicalRoot = realpathSync(root)
-  if (target !== physicalRoot && !target.startsWith(`${physicalRoot}${path.sep}`))
+  if (
+    target !== physicalRoot &&
+    !target.startsWith(`${physicalRoot}${path.sep}`)
+  )
     fail("V138_PLAN_262_77_PATH_ESCAPE")
   if (safeType(target) !== "regular") fail("V138_PLAN_262_77_INPUT_INVALID")
   return readFileSync(target)
@@ -159,16 +165,14 @@ const readRegular = (root: string, repoPath: string): Buffer => {
 
 const changedPaths = (root: string, commit: string): string[] =>
   lines(
-    git(root, [
-      "diff-tree",
-      "--no-commit-id",
-      "--name-only",
-      "-r",
-      commit,
-    ]),
+    git(root, ["diff-tree", "--no-commit-id", "--name-only", "-r", commit]),
   ).sort()
 
-const requireAncestor = (root: string, ancestor: string, descendant: string) => {
+const requireAncestor = (
+  root: string,
+  ancestor: string,
+  descendant: string,
+) => {
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], {
       cwd: root,
@@ -181,11 +185,17 @@ const requireAncestor = (root: string, ancestor: string, descendant: string) => 
 
 export const inspectV138Plan26277SourceCustody = (root: string) => {
   const physicalRoot = realpathSync(root)
-  if (realpathSync(git(root, ["rev-parse", "--show-toplevel"])) !== physicalRoot)
+  if (
+    realpathSync(git(root, ["rev-parse", "--show-toplevel"])) !== physicalRoot
+  )
     fail("V138_PLAN_262_77_REPOSITORY_ROOT_INVALID")
   if (
-    git(root, ["status", "--porcelain", "--", ...V138_PLAN_262_77_SOURCE_PATHS]) !==
-    ""
+    git(root, [
+      "status",
+      "--porcelain",
+      "--",
+      ...V138_PLAN_262_77_SOURCE_PATHS,
+    ]) !== ""
   )
     fail("V138_PLAN_262_77_SOURCE_DIRTY")
 
@@ -231,7 +241,8 @@ export const inspectV138Plan26277SourceCustody = (root: string) => {
       cwd: root,
     })
     const working = readRegular(root, repoPath)
-    if (!committed.equals(working)) fail("V138_PLAN_262_77_SOURCE_WORKTREE_DRIFT")
+    if (!committed.equals(working))
+      fail("V138_PLAN_262_77_SOURCE_WORKTREE_DRIFT")
     return Object.freeze({
       path: repoPath,
       mode,
@@ -241,14 +252,27 @@ export const inspectV138Plan26277SourceCustody = (root: string) => {
     })
   })
 
-  const summaryCommit = git(root, ["rev-list", "-1", "HEAD", "--", PLAN_76_SUMMARY])
+  const summaryCommit = git(root, [
+    "rev-list",
+    "-1",
+    "HEAD",
+    "--",
+    PLAN_76_SUMMARY,
+  ])
   if (!/^[0-9a-f]{40}$/u.test(summaryCommit))
     fail("V138_PLAN_262_77_PLAN_76_SUMMARY_INVALID")
   requireAncestor(root, commit, summaryCommit)
   requireAncestor(root, summaryCommit, "HEAD")
   if (
-    lines(git(root, ["log", "--format=%H", `${commit}..HEAD`, "--", ...V138_PLAN_262_77_SOURCE_PATHS]))
-      .length !== 0
+    lines(
+      git(root, [
+        "log",
+        "--format=%H",
+        `${commit}..HEAD`,
+        "--",
+        ...V138_PLAN_262_77_SOURCE_PATHS,
+      ]),
+    ).length !== 0
   )
     fail("V138_PLAN_262_77_SOURCE_REWRITE_INVALID")
 
@@ -264,28 +288,66 @@ export const inspectV138Plan26277SourceCustody = (root: string) => {
 
 const MUTATION_RULES = Object.freeze([
   ["MAX_ROUTE_STARTS_MUTATED", "model", "maximumRouteStarts: 3"],
-  ["MAX_PREFLIGHT_OBSERVATIONS_MUTATED", "model", "maximumPreflightObservations: 12"],
-  ["ENVELOPE_LIFETIME_MUTATED", "model", "envelopeLifetimeMilliseconds: 4 * 60 * 60 * 1_000"],
-  ["REFUSAL_SPACING_MUTATED", "model", "refusalSpacingMilliseconds: 5 * 60 * 1_000"],
-  ["CALIBRATION_BACKOFF_MUTATED", "model", "calibrationFailureBackoffMilliseconds: 15 * 60 * 1_000"],
+  [
+    "MAX_PREFLIGHT_OBSERVATIONS_MUTATED",
+    "model",
+    "maximumPreflightObservations: 12",
+  ],
+  [
+    "ENVELOPE_LIFETIME_MUTATED",
+    "model",
+    "envelopeLifetimeMilliseconds: 4 * 60 * 60 * 1_000",
+  ],
+  [
+    "REFUSAL_SPACING_MUTATED",
+    "model",
+    "refusalSpacingMilliseconds: 5 * 60 * 1_000",
+  ],
+  [
+    "CALIBRATION_BACKOFF_MUTATED",
+    "model",
+    "calibrationFailureBackoffMilliseconds: 15 * 60 * 1_000",
+  ],
   ["SAMPLING_CADENCE_MUTATED", "model", "samplingMilliseconds: 200"],
-  ["ADMISSION_THRESHOLD_MUTATED", "model", "minimumEffectiveAvailableBasisPoints: 2_500"],
+  [
+    "ADMISSION_THRESHOLD_MUTATED",
+    "model",
+    "minimumEffectiveAvailableBasisPoints: 2_500",
+  ],
   ["REPRODUCTION_CELL_COUNT_MUTATED", "model", "reproductionCellCount: 540"],
   ["RUNTIME_AUTHORITY_MUTATED", "model", 'rulesAuthority: "MATCH_KERNEL"'],
   ["DOWNSTREAM_AUTHORITY_MUTATED", "model", "candidateSearchAuthorized: false"],
   ["PRIVACY_BOUNDARY_MUTATED", "controller", "strategySourceIncluded: false"],
-  ["RESERVATION_HANDLER_MUTATED", "controller", "input.effects.appendDurableRecord(record)"],
-  ["WAIT_HANDLER_MUTATED", "controller", "await input.effects.waitUntil(target)"],
-  ["CALIBRATION_HANDLER_MUTATED", "controller", "const receipt = await calibrateV138ParallelMatrix({"],
-  ["REPRODUCTION_HANDLER_MUTATED", "controller", "const result = await executeV138ParallelMatrix({"],
+  [
+    "RESERVATION_HANDLER_MUTATED",
+    "controller",
+    "input.effects.appendDurableRecord(record)",
+  ],
+  [
+    "WAIT_HANDLER_MUTATED",
+    "controller",
+    "await input.effects.waitUntil(target)",
+  ],
+  [
+    "CALIBRATION_HANDLER_MUTATED",
+    "controller",
+    "const receipt = await calibrateV138ParallelMatrix({",
+  ],
+  [
+    "REPRODUCTION_HANDLER_MUTATED",
+    "controller",
+    "const result = await executeV138ParallelMatrix({",
+  ],
 ] as const)
 
-export const inspectV138Plan26277SourceMutation = (input: Readonly<{
-  model: string
-  controller: string
-}>): string[] => {
-  const findings = MUTATION_RULES.filter(([, source, token]) =>
-    !input[source].includes(token),
+export const inspectV138Plan26277SourceMutation = (
+  input: Readonly<{
+    model: string
+    controller: string
+  }>,
+): string[] => {
+  const findings = MUTATION_RULES.filter(
+    ([, source, token]) => !input[source].includes(token),
   ).map(([code]) => code)
   if (
     /\bMath\.random\b|\bDate\.now\b|from\s+["']node:vm["']|\bnew\s+Function\s*\(/u.test(
@@ -316,7 +378,9 @@ process.stdout.write(JSON.stringify({ success:success.state, waits:successFx.wai
 `
 
 const runDetachedExercise = (root: string, sourceCommit: string) => {
-  const owner = mkdtempSync(path.join(realpathSync(tmpdir()), "v138-plan26277-review-"))
+  const owner = mkdtempSync(
+    path.join(realpathSync(tmpdir()), "v138-plan26277-review-"),
+  )
   chmodSync(owner, 0o700)
   const clone = path.join(owner, "repo")
   try {
@@ -330,12 +394,21 @@ const runDetachedExercise = (root: string, sourceCommit: string) => {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     })
-    symlinkSync(path.resolve(root, "node_modules"), path.join(clone, "node_modules"), "dir")
-    for (const packageJson of lines(git(root, ["ls-files", "*/package.json"]))) {
+    symlinkSync(
+      path.resolve(root, "node_modules"),
+      path.join(clone, "node_modules"),
+      "dir",
+    )
+    for (const packageJson of lines(
+      git(root, ["ls-files", "*/package.json"]),
+    )) {
       const packageDir = path.dirname(packageJson)
       const sourceModules = path.resolve(root, packageDir, "node_modules")
       const cloneModules = path.resolve(clone, packageDir, "node_modules")
-      if (safeType(sourceModules) === "directory" && safeType(cloneModules) === "absent")
+      if (
+        safeType(sourceModules) === "directory" &&
+        safeType(cloneModules) === "absent"
+      )
         symlinkSync(sourceModules, cloneModules, "dir")
     }
     if ((statSync(owner).mode & 0o777) !== 0o700)
@@ -414,12 +487,17 @@ export const snapshotV138Plan26277ForbiddenDestinations = (root: string) =>
   })
 
 const inspectProtectedBoundaries = (root: string) => {
-  const archives = Object.entries(EXPECTED_ARCHIVES).map(([repoPath, expected]) => {
-    const actual = sha256(readRegular(root, repoPath))
-    if (actual !== expected) fail("V138_PLAN_262_77_PROTECTED_HISTORY_INVALID")
-    return Object.freeze({ path: repoPath, sha256: actual })
-  })
-  const localSeal = JSON.parse(readRegular(root, LOCAL_SEAL_REVIEW).toString("utf8"))
+  const archives = Object.entries(EXPECTED_ARCHIVES).map(
+    ([repoPath, expected]) => {
+      const actual = sha256(readRegular(root, repoPath))
+      if (actual !== expected)
+        fail("V138_PLAN_262_77_PROTECTED_HISTORY_INVALID")
+      return Object.freeze({ path: repoPath, sha256: actual })
+    },
+  )
+  const localSeal = JSON.parse(
+    readRegular(root, LOCAL_SEAL_REVIEW).toString("utf8"),
+  )
   if (
     localSeal.assuranceClass !== "single_operator_local_seal_v1" ||
     localSeal.satisfiesRevisedSeal01 !== true ||
@@ -442,7 +520,9 @@ const inspectProtectedBoundaries = (root: string) => {
     localSealVerificationRoot: localSeal.verificationRoot as string,
     protectedHistoryRoot: history.binderRoot as string,
     plan62Revived: false as const,
-    plan74SummaryPresent: safeType(path.resolve(root, `${PHASE_DIR}/262-74-SUMMARY.md`)) !== "absent",
+    plan74SummaryPresent:
+      safeType(path.resolve(root, `${PHASE_DIR}/262-74-SUMMARY.md`)) !==
+      "absent",
     freshCharged: 0 as const,
     freshAccepted: 0 as const,
   })
@@ -455,7 +535,11 @@ const observation = (id: (typeof OBSERVATION_IDS)[number], details: unknown) =>
     detailRoot: sha256(`${id}\0${canonical(details)}`),
   })
 
-const finding = (code: string, severity: Finding["severity"], summary: string): Finding =>
+const finding = (
+  code: string,
+  severity: Finding["severity"],
+  summary: string,
+): Finding =>
   Object.freeze({
     code,
     severity,
@@ -468,10 +552,19 @@ export const deriveV138Plan26277NoPublish = (root: string) => {
   if (before.some((item) => item.type !== "absent"))
     fail("V138_PLAN_262_77_FORBIDDEN_DESTINATION_PRESENT")
   const custody = inspectV138Plan26277SourceCustody(root)
-  const model = readRegular(root, V138_PLAN_262_77_SOURCE_PATHS[0]).toString("utf8")
-  const controller = readRegular(root, V138_PLAN_262_77_SOURCE_PATHS[1]).toString("utf8")
-  const sourceMutations = inspectV138Plan26277SourceMutation({ model, controller })
-  if (sourceMutations.length !== 0) fail("V138_PLAN_262_77_SOURCE_SURFACE_INVALID")
+  const model = readRegular(root, V138_PLAN_262_77_SOURCE_PATHS[0]).toString(
+    "utf8",
+  )
+  const controller = readRegular(
+    root,
+    V138_PLAN_262_77_SOURCE_PATHS[1],
+  ).toString("utf8")
+  const sourceMutations = inspectV138Plan26277SourceMutation({
+    model,
+    controller,
+  })
+  if (sourceMutations.length !== 0)
+    fail("V138_PLAN_262_77_SOURCE_SURFACE_INVALID")
   const detachedExercise = runDetachedExercise(root, custody.commit)
   const protectedBoundaries = inspectProtectedBoundaries(root)
   if (protectedBoundaries.plan74SummaryPresent)
@@ -521,11 +614,14 @@ export const deriveV138Plan26277NoPublish = (root: string) => {
       rulesAuthority: "MATCH_KERNEL",
     },
   }
-  const observations = OBSERVATION_IDS.map((id) => observation(id, observationDetails))
+  const observations = OBSERVATION_IDS.map((id) =>
+    observation(id, observationDetails),
+  )
   const body = {
     schemaVersion: "v1.38-plan-262-77-bounded-retry-source-review-v1" as const,
     reviewProtocol: "fresh-bounded-retry-source-review-v1" as const,
-    status: findings.length === 0 ? ("zero_findings" as const) : ("blocked" as const),
+    status:
+      findings.length === 0 ? ("zero_findings" as const) : ("blocked" as const),
     reviewedSource: custody,
     detachedExercise,
     protectedBoundaries,
@@ -579,11 +675,13 @@ export const validateV138Plan26277Review = (
   const value = candidate as any
   const reference = expected as any
   if (
-    value?.schemaVersion !== "v1.38-plan-262-77-bounded-retry-source-review-v1" ||
+    value?.schemaVersion !==
+      "v1.38-plan-262-77-bounded-retry-source-review-v1" ||
     value?.reviewRoot !== computeV138Plan26277ReviewRoot(value) ||
     canonical(value) !== canonical(reference) ||
     !Array.isArray(value.observations) ||
-    canonical(value.observations.map((item: any) => item.id)) !== canonical([...OBSERVATION_IDS]) ||
+    canonical(value.observations.map((item: any) => item.id)) !==
+      canonical([...OBSERVATION_IDS]) ||
     value.observations.some((item: any) => item.passed !== true) ||
     !Array.isArray(value.findings) ||
     value.findingCount !== value.findings.length ||
@@ -608,15 +706,17 @@ export const validateV138Plan26277Review = (
 }
 
 export const renderV138Plan26277ReviewReport = (review: any): string => {
-  const verdict = review.findingCount === 0 ? "PASS — exact zero findings" : "BLOCKED"
-  const findingRows = review.findings.length === 0
-    ? "None."
-    : review.findings
-        .map(
-          (item: Finding) =>
-            `- **${item.code}** (${item.severity}): ${item.summary} Evidence root: \`${item.detailRoot}\`.`,
-        )
-        .join("\n")
+  const verdict =
+    review.findingCount === 0 ? "PASS — exact zero findings" : "BLOCKED"
+  const findingRows =
+    review.findings.length === 0
+      ? "None."
+      : review.findings
+          .map(
+            (item: Finding) =>
+              `- **${item.code}** (${item.severity}): ${item.summary} Evidence root: \`${item.detailRoot}\`.`,
+          )
+          .join("\n")
   return `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "77"\nreview_protocol: ${review.reviewProtocol}\nreviewed_source_commit: ${review.reviewedSource.commit}\nfinding_count: ${review.findingCount}\nsource_review_passed: ${review.sourceReviewPassed}\nstatus: ${review.status}\nreview_root: ${review.reviewRoot}\n---\n\n# Phase 262 Plan 77: Bounded-Retry Source Review\n\n## Verdict\n\n**${verdict}.** This independent technical review is non-authorizing. ${review.authority.plan26278Eligible ? "Exact zero findings make only Plan 262-78 eligible." : "Plan 262-78 is not eligible."}\n\n## Exact Git Custody\n\n- Source commit: \`${review.reviewedSource.commit}\`\n- Source tree: \`${review.reviewedSource.tree}\`\n- Sole parent: \`${review.reviewedSource.parent}\`\n- Plan-76 summary commit: \`${review.reviewedSource.plan76SummaryCommit}\`\n- Exact paths: ${review.reviewedSource.paths.map((item: string) => `\`${item}\``).join(", ")}\n- All modes are \`100644\`; all working bytes equal the recorded Git blobs; no later rewrite exists.\n\n## Independent Exercises\n\nThe reviewer used an owner-only \`0700\` detached clone, fake effects, and no live handler. It exercised the exact 3-route, 12-observation, four-hour, five-minute, fifteen-minute, 8-attempt/4-shard, 200 ms, inclusive 2,500-basis-point, one-540-cell, first-success, reservation-crash, concurrency, runtime/kernel, privacy, and authority boundaries. The disposable clone was removed and canonical writes remained zero.\n\n## Findings\n\n${findingRows}\n\n## Preserved Boundaries\n\n- Archived Plans 62 and 74 remain byte-identical; Plan 74 remains unsummarized.\n- Prior charges remain protected and fresh accounting remains 0 charged / 0 accepted.\n- The assurance class remains \`single_operator_local_seal_v1\`; no independent custody, separate permissioning, or malicious-operator resistance is claimed.\n- No seal, inactive envelope, journal, terminal, reproduction, activation root, formation material, live observation, local-secret access, or downstream authority was created.\n- ADMIT-03 remains blocked at 0/540; Phase 263, candidate search, formation, holdout opening, public, product, production, counted play, and gameplay change remain unauthorized.\n\n## Review Root\n\n\`${review.reviewRoot}\`\n`
 }
 
@@ -632,10 +732,14 @@ export const validateV138Plan26277ReviewPair = (
 }
 
 const exclusiveWrite = (target: string, bytes: string): void => {
-  if (safeType(target) !== "absent") fail("V138_PLAN_262_77_DESTINATION_PRESENT")
+  if (safeType(target) !== "absent")
+    fail("V138_PLAN_262_77_DESTINATION_PRESENT")
   const descriptor = openSync(
     target,
-    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
+    constants.O_WRONLY |
+      constants.O_CREAT |
+      constants.O_EXCL |
+      (constants.O_NOFOLLOW ?? 0),
     0o600,
   )
   try {
@@ -675,16 +779,25 @@ const inspectCommittedPair = (root: string): string => {
   const commit = commits[0]!
   if (
     canonical(changedPaths(root, commit)) !==
-    canonical([V138_PLAN_262_77_REVIEW_PATH, V138_PLAN_262_77_REPORT_PATH].sort())
+    canonical(
+      [V138_PLAN_262_77_REVIEW_PATH, V138_PLAN_262_77_REPORT_PATH].sort(),
+    )
   )
     fail("V138_PLAN_262_77_PUBLICATION_LINEAGE_INVALID")
   requireAncestor(root, EXPECTED_SOURCE.commit, commit)
   requireAncestor(root, commit, "HEAD")
-  for (const repoPath of [V138_PLAN_262_77_REVIEW_PATH, V138_PLAN_262_77_REPORT_PATH]) {
-    const committed = execFileSync("git", ["show", `${commit}:${repoPath}`], { cwd: root })
+  for (const repoPath of [
+    V138_PLAN_262_77_REVIEW_PATH,
+    V138_PLAN_262_77_REPORT_PATH,
+  ]) {
+    const committed = execFileSync("git", ["show", `${commit}:${repoPath}`], {
+      cwd: root,
+    })
     if (
       !committed.equals(readRegular(root, repoPath)) ||
-      lines(git(root, ["log", "--format=%H", `${commit}..HEAD`, "--", repoPath])).length !== 0
+      lines(
+        git(root, ["log", "--format=%H", `${commit}..HEAD`, "--", repoPath]),
+      ).length !== 0
     )
       fail("V138_PLAN_262_77_PUBLICATION_REWRITE_INVALID")
   }
@@ -706,14 +819,19 @@ const checkReview = (root: string, reviewPath: string, reportPath: string) => {
     return fail("V138_PLAN_262_77_REVIEW_SCHEMA_INVALID")
   }
   const expected = deriveV138Plan26277NoPublish(root)
-  if (reviewBytes !== canonical(candidate)) fail("V138_PLAN_262_77_REVIEW_BYTES_INVALID")
+  if (reviewBytes !== canonical(candidate))
+    fail("V138_PLAN_262_77_REVIEW_BYTES_INVALID")
   validateV138Plan26277ReviewPair(candidate, reportBytes, expected)
   const publicationCommit = inspectCommittedPair(root)
   return { candidate: candidate as any, publicationCommit }
 }
 
-const exactArgv = (actual: readonly string[], expected: readonly string[]): void => {
-  if (canonical(actual) !== canonical(expected)) fail("V138_PLAN_262_77_ARGUMENTS_INVALID")
+const exactArgv = (
+  actual: readonly string[],
+  expected: readonly string[],
+): void => {
+  if (canonical(actual) !== canonical(expected))
+    fail("V138_PLAN_262_77_ARGUMENTS_INVALID")
 }
 
 const main = (): void => {
@@ -756,7 +874,11 @@ const main = (): void => {
       "--report",
       V138_PLAN_262_77_REPORT_PATH,
     ])
-    const { candidate, publicationCommit } = checkReview(repoRoot, argv[2]!, argv[4]!)
+    const { candidate, publicationCommit } = checkReview(
+      repoRoot,
+      argv[2]!,
+      argv[4]!,
+    )
     process.stdout.write(
       canonical({
         status: candidate.findingCount === 0 ? "passed" : "blocked_verified",
@@ -774,11 +896,16 @@ const main = (): void => {
   fail("V138_PLAN_262_77_ARGUMENTS_INVALID")
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   try {
     main()
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+    process.stderr.write(
+      `${error instanceof Error ? error.message : String(error)}\n`,
+    )
     process.exitCode = 1
   }
 }

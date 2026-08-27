@@ -5,16 +5,13 @@ import { describe, expect, it } from "vitest"
 
 const loadReviewer = async () => {
   try {
-    return await import(
-      "./check-v1-38-plan-262-77-bounded-retry-source-review.js"
-    )
+    return await import("./check-v1-38-plan-262-77-bounded-retry-source-review.js")
   } catch {
     throw new Error("[RED:PLAN_262_77_BOUNDED_RETRY_SOURCE_REVIEW]")
   }
 }
 
-const cloneValue = <T>(value: T): T =>
-  JSON.parse(JSON.stringify(value)) as T
+const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("Plan 262-77 bounded-retry source review", () => {
   it("derives exact committed custody and an honest non-authorizing blocked disposition", async () => {
@@ -43,8 +40,9 @@ describe("Plan 262-77 bounded-retry source review", () => {
       reviewer.V138_PLAN_262_77_SOURCE_PATHS,
     )
     expect(review.reviewedSource.blobs).toHaveLength(3)
-    expect(review.observations.every((item: { passed: boolean }) => item.passed))
-      .toBe(true)
+    expect(
+      review.observations.every((item: { passed: boolean }) => item.passed),
+    ).toBe(true)
     expect(review.findings.map((item: { code: string }) => item.code)).toEqual([
       "TIME_WINDOW_EXPIRY_NOT_TERMINALIZED",
     ])
@@ -123,32 +121,118 @@ describe("Plan 262-77 bounded-retry source review", () => {
       "utf8",
     )
     const mutations: Array<[string, string, string]> = [
-      ["MAX_ROUTE_STARTS_MUTATED", model, model.replace("maximumRouteStarts: 3", "maximumRouteStarts: 4")],
-      ["MAX_PREFLIGHT_OBSERVATIONS_MUTATED", model, model.replace("maximumPreflightObservations: 12", "maximumPreflightObservations: 13")],
-      ["ENVELOPE_LIFETIME_MUTATED", model, model.replace("4 * 60 * 60 * 1_000", "5 * 60 * 60 * 1_000")],
-      ["REFUSAL_SPACING_MUTATED", model, model.replace("5 * 60 * 1_000", "4 * 60 * 1_000")],
-      ["CALIBRATION_BACKOFF_MUTATED", model, model.replace("15 * 60 * 1_000", "14 * 60 * 1_000")],
-      ["SAMPLING_CADENCE_MUTATED", model, model.replace("samplingMilliseconds: 200", "samplingMilliseconds: 201")],
-      ["ADMISSION_THRESHOLD_MUTATED", model, model.replace("minimumEffectiveAvailableBasisPoints: 2_500", "minimumEffectiveAvailableBasisPoints: 2_499")],
-      ["REPRODUCTION_CELL_COUNT_MUTATED", model, model.replace("reproductionCellCount: 540", "reproductionCellCount: 539")],
-      ["RUNTIME_AUTHORITY_MUTATED", model, model.replace('rulesAuthority: "MATCH_KERNEL"', 'rulesAuthority: "COPIED_RULES"')],
-      ["PRIVACY_BOUNDARY_MUTATED", controller, controller.replace("strategySourceIncluded: false", "strategySourceIncluded: true")],
-      ["DOWNSTREAM_AUTHORITY_MUTATED", model, model.replace("candidateSearchAuthorized: false", "candidateSearchAuthorized: true")],
-      ["RESERVATION_HANDLER_MUTATED", controller, controller.replace("appendDurableRecord(record)", "void record")],
-      ["WAIT_HANDLER_MUTATED", controller, controller.replace("await input.effects.waitUntil(target)", "void target")],
-      ["CALIBRATION_HANDLER_MUTATED", controller, controller.replace("calibrateV138ParallelMatrix({", "Promise.resolve({")],
-      ["REPRODUCTION_HANDLER_MUTATED", controller, controller.replace("executeV138ParallelMatrix({", "Promise.resolve({")],
+      [
+        "MAX_ROUTE_STARTS_MUTATED",
+        model,
+        model.replace("maximumRouteStarts: 3", "maximumRouteStarts: 4"),
+      ],
+      [
+        "MAX_PREFLIGHT_OBSERVATIONS_MUTATED",
+        model,
+        model.replace(
+          "maximumPreflightObservations: 12",
+          "maximumPreflightObservations: 13",
+        ),
+      ],
+      [
+        "ENVELOPE_LIFETIME_MUTATED",
+        model,
+        model.replace("4 * 60 * 60 * 1_000", "5 * 60 * 60 * 1_000"),
+      ],
+      [
+        "REFUSAL_SPACING_MUTATED",
+        model,
+        model.replace("5 * 60 * 1_000", "4 * 60 * 1_000"),
+      ],
+      [
+        "CALIBRATION_BACKOFF_MUTATED",
+        model,
+        model.replace("15 * 60 * 1_000", "14 * 60 * 1_000"),
+      ],
+      [
+        "SAMPLING_CADENCE_MUTATED",
+        model,
+        model.replace("samplingMilliseconds: 200", "samplingMilliseconds: 201"),
+      ],
+      [
+        "ADMISSION_THRESHOLD_MUTATED",
+        model,
+        model.replace(
+          "minimumEffectiveAvailableBasisPoints: 2_500",
+          "minimumEffectiveAvailableBasisPoints: 2_499",
+        ),
+      ],
+      [
+        "REPRODUCTION_CELL_COUNT_MUTATED",
+        model,
+        model.replace(
+          "reproductionCellCount: 540",
+          "reproductionCellCount: 539",
+        ),
+      ],
+      [
+        "RUNTIME_AUTHORITY_MUTATED",
+        model,
+        model.replace(
+          'rulesAuthority: "MATCH_KERNEL"',
+          'rulesAuthority: "COPIED_RULES"',
+        ),
+      ],
+      [
+        "PRIVACY_BOUNDARY_MUTATED",
+        controller,
+        controller.replace(
+          "strategySourceIncluded: false",
+          "strategySourceIncluded: true",
+        ),
+      ],
+      [
+        "DOWNSTREAM_AUTHORITY_MUTATED",
+        model,
+        model.replace(
+          "candidateSearchAuthorized: false",
+          "candidateSearchAuthorized: true",
+        ),
+      ],
+      [
+        "RESERVATION_HANDLER_MUTATED",
+        controller,
+        controller.replace("appendDurableRecord(record)", "void record"),
+      ],
+      [
+        "WAIT_HANDLER_MUTATED",
+        controller,
+        controller.replace(
+          "await input.effects.waitUntil(target)",
+          "void target",
+        ),
+      ],
+      [
+        "CALIBRATION_HANDLER_MUTATED",
+        controller,
+        controller.replace(
+          "calibrateV138ParallelMatrix({",
+          "Promise.resolve({",
+        ),
+      ],
+      [
+        "REPRODUCTION_HANDLER_MUTATED",
+        controller,
+        controller.replace("executeV138ParallelMatrix({", "Promise.resolve({"),
+      ],
     ]
     for (const [code, original, mutated] of mutations) {
       expect(mutated, code).not.toBe(original)
       expect(
         reviewer.inspectV138Plan26277SourceMutation({
-          model: code.includes("HANDLER") || code.includes("PRIVACY")
-            ? model
-            : mutated,
-          controller: code.includes("HANDLER") || code.includes("PRIVACY")
-            ? mutated
-            : controller,
+          model:
+            code.includes("HANDLER") || code.includes("PRIVACY")
+              ? model
+              : mutated,
+          controller:
+            code.includes("HANDLER") || code.includes("PRIVACY")
+              ? mutated
+              : controller,
         }),
         code,
       ).toContain(code)
@@ -168,12 +252,43 @@ describe("Plan 262-77 bounded-retry source review", () => {
     ).toBe(true)
 
     const mutations: Array<[string, (value: any) => void]> = [
-      ["source blob", (value) => { value.reviewedSource.blobs[0].blob = "0".repeat(40) }],
-      ["finding omission", (value) => { value.findings = []; value.findingCount = 0 }],
-      ["observation omission", (value) => { value.observations.pop() }],
-      ["eligibility", (value) => { value.authority.plan26278Eligible = true }],
-      ["live claim", (value) => { value.authority.liveInvoked = true }],
-      ["custody claim", (value) => { value.identityClaims.independentCustodyClaimed = true }],
+      [
+        "source blob",
+        (value) => {
+          value.reviewedSource.blobs[0].blob = "0".repeat(40)
+        },
+      ],
+      [
+        "finding omission",
+        (value) => {
+          value.findings = []
+          value.findingCount = 0
+        },
+      ],
+      [
+        "observation omission",
+        (value) => {
+          value.observations.pop()
+        },
+      ],
+      [
+        "eligibility",
+        (value) => {
+          value.authority.plan26278Eligible = true
+        },
+      ],
+      [
+        "live claim",
+        (value) => {
+          value.authority.liveInvoked = true
+        },
+      ],
+      [
+        "custody claim",
+        (value) => {
+          value.identityClaims.independentCustodyClaimed = true
+        },
+      ],
     ]
     for (const [name, mutate] of mutations) {
       const candidate: any = cloneValue(review)
