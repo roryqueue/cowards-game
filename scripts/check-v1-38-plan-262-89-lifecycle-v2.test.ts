@@ -47,7 +47,25 @@ const createTopology = (summaryPresent: boolean): string => {
   writeFileSync(path.join(root, "archived/262-74-HISTORICAL.md"), archiveBytes)
   const ids = [
     ...Array.from({ length: 73 }, (_, index) => index + 1).filter(
-      (id) => id !== 3 && id !== 4 && id !== 5 && id !== 6 && id !== 7 && id !== 40 && id !== 43 && id !== 46 && id !== 47 && id !== 48 && id !== 50 && id !== 55 && id !== 56 && id !== 57 && id !== 58 && id !== 59 && id !== 62 && id !== 74,
+      (id) =>
+        id !== 3 &&
+        id !== 4 &&
+        id !== 5 &&
+        id !== 6 &&
+        id !== 7 &&
+        id !== 40 &&
+        id !== 43 &&
+        id !== 46 &&
+        id !== 47 &&
+        id !== 48 &&
+        id !== 50 &&
+        id !== 55 &&
+        id !== 56 &&
+        id !== 57 &&
+        id !== 58 &&
+        id !== 59 &&
+        id !== 62 &&
+        id !== 74,
     ),
     75,
     76,
@@ -68,7 +86,10 @@ const createTopology = (summaryPresent: boolean): string => {
   const unique = [...new Set(ids)].sort((a, b) => a - b).slice(-70)
   expect(unique).toHaveLength(70)
   for (const id of unique) {
-    writeFileSync(path.join(root, `262-${String(id).padStart(2, "0")}-PLAN.md`), "plan\n")
+    writeFileSync(
+      path.join(root, `262-${String(id).padStart(2, "0")}-PLAN.md`),
+      "plan\n",
+    )
     if (id !== 89 || summaryPresent)
       writeFileSync(
         path.join(root, `262-${String(id).padStart(2, "0")}-SUMMARY.md`),
@@ -108,16 +129,30 @@ const passDisposition = (): any => {
       requiredAccepted: 540,
     },
     evidence: {
+      receiptManifestRoot: `sha256:${"0".repeat(64)}`,
+      sourceRoot: `sha256:${"3".repeat(64)}`,
+      sourceReviewRoot: `sha256:${"4".repeat(64)}`,
       sealRoot: `sha256:${"1".repeat(64)}`,
+      envelopeRoot: `sha256:${"5".repeat(64)}`,
+      protectedHistoryRoot: `sha256:${"6".repeat(64)}`,
+      localSealVerificationRoot: `sha256:${"7".repeat(64)}`,
+      journalRoot: `sha256:${"8".repeat(64)}`,
+      stateRoot: `sha256:${"9".repeat(64)}`,
       reproductionRoot: `sha256:${"2".repeat(64)}`,
     },
     correctionRequired: false,
     correctionRoot: null,
     integrityPassed: true,
     privacySafe: true,
+    assuranceStatus: "clean",
+    assuranceDefects: [],
     assuranceClass: "single_operator_local_seal_v1",
     independentCustodyClaimed: false,
-    authority: { ...deniedAuthority, foundationActivationAuthorized: true },
+    authority: {
+      ...deniedAuthority,
+      foundationActivationAuthorized: true,
+      phase263PlanningAuthorized: true,
+    },
     reasonCodes: [],
   }
   value.dispositionRoot = computeV138Plan26288DispositionRoot(value)
@@ -132,7 +167,10 @@ const realNonPass = (): any =>
     ),
   )
 
-const fixture = (disposition: any, options: { correction?: any; activation?: any } = {}) => {
+const fixture = (
+  disposition: any,
+  options: { correction?: any; activation?: any } = {},
+) => {
   const phaseDir = createTopology(true)
   const files = {
     phaseDir,
@@ -160,11 +198,18 @@ const fixture = (disposition: any, options: { correction?: any; activation?: any
   writeFileSync(files.requirementsPath, "- [ ] **ADMIT-03**: blocked\n")
   writeFileSync(files.roadmapPath, "phase 262 incomplete; phase 263 denied\n")
   writeFileSync(files.statePath, "phase 262 incomplete; phase 263 denied\n")
-  if (disposition.status === "pass") writeFileSync(files.reproductionPath, "{}\n")
+  if (disposition.status === "pass")
+    writeFileSync(files.reproductionPath, "{}\n")
   if (options.correction)
-    writeFileSync(files.correctionPath, `${JSON.stringify(options.correction)}\n`)
+    writeFileSync(
+      files.correctionPath,
+      `${JSON.stringify(options.correction)}\n`,
+    )
   if (options.activation)
-    writeFileSync(files.activationPath, `${JSON.stringify(options.activation)}\n`)
+    writeFileSync(
+      files.activationPath,
+      `${JSON.stringify(options.activation)}\n`,
+    )
   return files
 }
 
@@ -174,12 +219,16 @@ afterEach(() => {
 
 describe("Plan 262-89 topology and branch selection", () => {
   it("requires exactly 70 plans and the Plan-89-only pre-summary latch", () => {
-    expect(inspectV138Plan26289Topology(createTopology(false), "pre_summary")).toMatchObject({
+    expect(
+      inspectV138Plan26289Topology(createTopology(false), "pre_summary"),
+    ).toMatchObject({
       activePlanCount: 70,
       summaryCount: 69,
       missingSummaryIds: [89],
     })
-    expect(inspectV138Plan26289Topology(createTopology(true), "post_summary")).toMatchObject({
+    expect(
+      inspectV138Plan26289Topology(createTopology(true), "post_summary"),
+    ).toMatchObject({
       activePlanCount: 70,
       summaryCount: 70,
       missingSummaryIds: [],
@@ -205,24 +254,45 @@ describe("Plan 262-89 topology and branch selection", () => {
 
   it.each([
     ["exhaustion", { disposition: realNonPass() }],
-    ["integrity", { disposition: { ...realNonPass(), integrityPassed: false } }],
-    ["contamination", { disposition: { ...realNonPass(), terminalDisposition: "terminal_failure", reasonCodes: ["CONTAMINATION"] } }],
-    ["reproducibility", { disposition: passDisposition(), reproductionStatus: "absent" }],
-    ["missing activation", { disposition: passDisposition(), activationStatus: "absent" }],
-  ])("keeps %s gaps_found and non-mutation-capable", (_name, overrides: any) => {
-    const result = evaluateV138Plan26289Branch({
-      disposition: overrides.disposition,
-      correction: null,
-      correctionStatus: "absent",
-      activation: null,
-      activationStatus: overrides.activationStatus ?? "absent",
-      reproductionStatus: overrides.reproductionStatus ?? "absent",
-      sealAuthenticated: true,
-      predecessorAuthenticated: true,
-    })
-    expect(result.status).toBe("gaps_found")
-    expect(result.mutationCapable).toBe(false)
-  })
+    [
+      "integrity",
+      { disposition: { ...realNonPass(), integrityPassed: false } },
+    ],
+    [
+      "contamination",
+      {
+        disposition: {
+          ...realNonPass(),
+          terminalDisposition: "terminal_failure",
+          reasonCodes: ["CONTAMINATION"],
+        },
+      },
+    ],
+    [
+      "reproducibility",
+      { disposition: passDisposition(), reproductionStatus: "absent" },
+    ],
+    [
+      "missing activation",
+      { disposition: passDisposition(), activationStatus: "absent" },
+    ],
+  ])(
+    "keeps %s gaps_found and non-mutation-capable",
+    (_name, overrides: any) => {
+      const result = evaluateV138Plan26289Branch({
+        disposition: overrides.disposition,
+        correction: null,
+        correctionStatus: "absent",
+        activation: null,
+        activationStatus: overrides.activationStatus ?? "absent",
+        reproductionStatus: overrides.reproductionStatus ?? "absent",
+        sealAuthenticated: true,
+        predecessorAuthenticated: true,
+      })
+      expect(result.status).toBe("gaps_found")
+      expect(result.mutationCapable).toBe(false)
+    },
+  )
 
   it("treats an authenticated correction as additive non-pass history", () => {
     const result = evaluateV138Plan26289Branch({
@@ -276,17 +346,28 @@ describe("Plan 262-89 root-only post-summary driver", () => {
         predecessorAuthenticated: true,
       }),
     })
-    expect(calls).toEqual(["requirements", "roadmap", "state", "phase_complete"])
+    expect(calls).toEqual([
+      "requirements",
+      "roadmap",
+      "state",
+      "phase_complete",
+    ])
     expect(result).toMatchObject({ status: "passed", completionMutated: true })
     const lifecycle = JSON.parse(readFileSync(files.lifecyclePath, "utf8"))
     expect(lifecycle.previousStatusRoot).toBe(predecessor.statusRoot)
-    expect(lifecycle.statusRoot).toBe(computeV138Plan26289LifecycleStatusRoot(lifecycle))
+    expect(lifecycle.statusRoot).toBe(
+      computeV138Plan26289LifecycleStatusRoot(lifecycle),
+    )
   })
 
   it("publishes truthful gaps_found with zero completion or Phase-263 mutation", () => {
     const disposition = realNonPass()
     const files = fixture(disposition)
-    const before = [files.requirementsPath, files.roadmapPath, files.statePath].map((file) => readFileSync(file, "utf8"))
+    const before = [
+      files.requirementsPath,
+      files.roadmapPath,
+      files.statePath,
+    ].map((file) => readFileSync(file, "utf8"))
     const calls: string[] = []
     const result = runV138Plan26289PostSummaryLifecycle(files, {
       requireCommittedSummary: false,
@@ -303,8 +384,15 @@ describe("Plan 262-89 root-only post-summary driver", () => {
         predecessorAuthenticated: true,
       }),
     })
-    const after = [files.requirementsPath, files.roadmapPath, files.statePath].map((file) => readFileSync(file, "utf8"))
-    expect(result).toMatchObject({ status: "gaps_found", completionMutated: false })
+    const after = [
+      files.requirementsPath,
+      files.roadmapPath,
+      files.statePath,
+    ].map((file) => readFileSync(file, "utf8"))
+    expect(result).toMatchObject({
+      status: "gaps_found",
+      completionMutated: false,
+    })
     expect(calls).toEqual([])
     expect(after).toEqual(before)
   })
