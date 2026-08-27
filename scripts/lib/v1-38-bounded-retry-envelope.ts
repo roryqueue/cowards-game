@@ -14,9 +14,11 @@ const canonical = (value: unknown): string => {
   const normalize = (item: unknown): unknown => {
     if (Array.isArray(item)) return item.map(normalize)
     if (item !== null && typeof item === "object") {
-      return Object.fromEntries(Object.entries(item as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, normalize(child)]))
+      return Object.fromEntries(
+        Object.entries(item as Record<string, unknown>)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, child]) => [key, normalize(child)]),
+      )
     }
     return item
   }
@@ -33,7 +35,9 @@ const deepFreeze = <T>(value: T): Readonly<T> => {
   return value as Readonly<T>
 }
 
-const fail = (code: string): never => { throw new TypeError(code) }
+const fail = (code: string): never => {
+  throw new TypeError(code)
+}
 const isSha256 = (value: unknown): value is V138RetrySha256 =>
   typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
 
@@ -64,16 +68,25 @@ export const V138_BOUNDED_RETRY_POLICY = deepFreeze({
   gameplayChangeAuthorized: false as const,
 })
 
-const routes = Array.from({ length: 3 }, (_, ordinal) =>
-  `route:v1:${ordinal}` as V138RetryRouteIdentity)
-const preflights = Array.from({ length: 12 }, (_, ordinal) =>
-  `preflight:v1:${ordinal}` as V138RetryPreflightIdentity)
+const routes = Array.from(
+  { length: 3 },
+  (_, ordinal) => `route:v1:${ordinal}` as V138RetryRouteIdentity,
+)
+const preflights = Array.from(
+  { length: 12 },
+  (_, ordinal) => `preflight:v1:${ordinal}` as V138RetryPreflightIdentity,
+)
 const calibrations = routes.flatMap((_, routeOrdinal) =>
-  Array.from({ length: 8 }, (_, attemptOrdinal) =>
-    `calibration:v1:${routeOrdinal}:${attemptOrdinal}` as
-      V138RetryCalibrationIdentity))
-const reproduction = Array.from({ length: 540 }, (_, ordinal) =>
-  `reproduction:v1:${ordinal}` as V138RetryReproductionIdentity)
+  Array.from(
+    { length: 8 },
+    (_, attemptOrdinal) =>
+      `calibration:v1:${routeOrdinal}:${attemptOrdinal}` as V138RetryCalibrationIdentity,
+  ),
+)
+const reproduction = Array.from(
+  { length: 540 },
+  (_, ordinal) => `reproduction:v1:${ordinal}` as V138RetryReproductionIdentity,
+)
 
 export const V138_BOUNDED_RETRY_IDENTITIES = deepFreeze({
   routes,
@@ -101,24 +114,35 @@ export interface V138InactiveRetryEnvelope {
   readonly envelopeRoot: V138RetrySha256
 }
 
-export const createV138InactiveRetryEnvelope = (input: Readonly<{
-  sourceRoot: V138RetrySha256
-  reviewRoot: V138RetrySha256
-  sealRoot: V138RetrySha256
-  protectedHistoryRoot: V138RetrySha256
-  protectedHistoricalIdentities: readonly string[]
-}>): Readonly<V138InactiveRetryEnvelope> => {
-  if (![input.sourceRoot, input.reviewRoot, input.sealRoot,
-    input.protectedHistoryRoot].every(isSha256) ||
+export const createV138InactiveRetryEnvelope = (
+  input: Readonly<{
+    sourceRoot: V138RetrySha256
+    reviewRoot: V138RetrySha256
+    sealRoot: V138RetrySha256
+    protectedHistoryRoot: V138RetrySha256
+    protectedHistoricalIdentities: readonly string[]
+  }>,
+): Readonly<V138InactiveRetryEnvelope> => {
+  if (
+    ![
+      input.sourceRoot,
+      input.reviewRoot,
+      input.sealRoot,
+      input.protectedHistoryRoot,
+    ].every(isSha256) ||
     !Array.isArray(input.protectedHistoricalIdentities) ||
     new Set(input.protectedHistoricalIdentities).size !==
       input.protectedHistoricalIdentities.length ||
-    input.protectedHistoricalIdentities.some((identity) =>
-      typeof identity !== "string" || identity.length === 0 ||
-      routes.includes(identity as V138RetryRouteIdentity) ||
-      preflights.includes(identity as V138RetryPreflightIdentity) ||
-      calibrations.includes(identity as V138RetryCalibrationIdentity) ||
-      reproduction.includes(identity as V138RetryReproductionIdentity))) {
+    input.protectedHistoricalIdentities.some(
+      (identity) =>
+        typeof identity !== "string" ||
+        identity.length === 0 ||
+        routes.includes(identity as V138RetryRouteIdentity) ||
+        preflights.includes(identity as V138RetryPreflightIdentity) ||
+        calibrations.includes(identity as V138RetryCalibrationIdentity) ||
+        reproduction.includes(identity as V138RetryReproductionIdentity),
+    )
+  ) {
     return fail("V138_RETRY_ENVELOPE_INPUT_INVALID")
   }
   const body = {
@@ -138,8 +162,10 @@ export const createV138InactiveRetryEnvelope = (input: Readonly<{
       acceptedCells: 0 as const,
     },
   }
-  return deepFreeze({ ...body,
-    envelopeRoot: sha256(`v138-retry-envelope-v1\0${canonical(body)}`) })
+  return deepFreeze({
+    ...body,
+    envelopeRoot: sha256(`v138-retry-envelope-v1\0${canonical(body)}`),
+  })
 }
 
 export const checkV138InactiveRetryEnvelope = (
@@ -161,39 +187,72 @@ export const checkV138InactiveRetryEnvelope = (
   }
 }
 
-type ReservePreflight = Readonly<{ kind: "reserve_preflight";
-  identity: V138RetryPreflightIdentity; owner: string }>
-type ObservePreflight = Readonly<{ kind: "observe_preflight";
-  identity: V138RetryPreflightIdentity; owner: string;
-  effectiveAvailableBasisPoints: number }>
-type ReserveRoute = Readonly<{ kind: "reserve_route";
-  identity: V138RetryRouteIdentity; owner: string;
-  preflightIdentity: V138RetryPreflightIdentity }>
-type ReserveCalibration = Readonly<{ kind: "reserve_calibration";
-  routeIdentity: V138RetryRouteIdentity; owner: string;
-  identities: readonly V138RetryCalibrationIdentity[] }>
-type FinishCalibration = Readonly<{ kind: "finish_calibration";
-  routeIdentity: V138RetryRouteIdentity; owner: string;
-  status: "admitted" | "system_failure"; completeCleanup: boolean }>
-type ReserveReproduction = Readonly<{ kind: "reserve_reproduction";
-  routeIdentity: V138RetryRouteIdentity; owner: string;
-  identities: readonly V138RetryReproductionIdentity[] }>
-type FinishReproduction = Readonly<{ kind: "finish_reproduction";
-  routeIdentity: V138RetryRouteIdentity; owner: string;
-  status: "passed_exact" | "system_failure"; acceptedCells: number;
-  completeCleanup: boolean }>
-
-export type V138RetryJournalEvent = ReservePreflight | ObservePreflight |
-  ReserveRoute | ReserveCalibration | FinishCalibration |
-  ReserveReproduction | FinishReproduction
-
-export type V138RetryJournalRecord = Readonly<V138RetryJournalEvent & {
-  schemaVersion: "v1.38-bounded-retry-journal-record-v1"
-  ordinal: number
-  atMilliseconds: number
-  previousRoot: V138RetrySha256
-  recordRoot: V138RetrySha256
+type ReservePreflight = Readonly<{
+  kind: "reserve_preflight"
+  identity: V138RetryPreflightIdentity
+  owner: string
 }>
+type ObservePreflight = Readonly<{
+  kind: "observe_preflight"
+  identity: V138RetryPreflightIdentity
+  owner: string
+  effectiveAvailableBasisPoints: number
+}>
+type ReserveRoute = Readonly<{
+  kind: "reserve_route"
+  identity: V138RetryRouteIdentity
+  owner: string
+  preflightIdentity: V138RetryPreflightIdentity
+}>
+type ReserveCalibration = Readonly<{
+  kind: "reserve_calibration"
+  routeIdentity: V138RetryRouteIdentity
+  owner: string
+  identities: readonly V138RetryCalibrationIdentity[]
+}>
+type FinishCalibration = Readonly<{
+  kind: "finish_calibration"
+  routeIdentity: V138RetryRouteIdentity
+  owner: string
+  status: "admitted" | "system_failure"
+  completeCleanup: boolean
+  supervisionRoot?: V138RetrySha256
+}>
+type ReserveReproduction = Readonly<{
+  kind: "reserve_reproduction"
+  routeIdentity: V138RetryRouteIdentity
+  owner: string
+  identities: readonly V138RetryReproductionIdentity[]
+}>
+type FinishReproduction = Readonly<{
+  kind: "finish_reproduction"
+  routeIdentity: V138RetryRouteIdentity
+  owner: string
+  status: "passed_exact" | "system_failure"
+  acceptedCells: number
+  completeCleanup: boolean
+  reproductionRoot?: V138RetrySha256
+}>
+
+export type V138RetryJournalEvent =
+  | ReservePreflight
+  | ObservePreflight
+  | ReserveRoute
+  | ReserveCalibration
+  | FinishCalibration
+  | ReserveReproduction
+  | FinishReproduction
+
+export type V138RetryJournalRecord = Readonly<
+  V138RetryJournalEvent & {
+    schemaVersion: "v1.38-bounded-retry-journal-record-v1"
+    ordinal: number
+    atMilliseconds: number
+    envelopeRoot: V138RetrySha256
+    previousRoot: V138RetrySha256
+    recordRoot: V138RetrySha256
+  }
+>
 
 const GENESIS_ROOT = sha256("v138-bounded-retry-journal-genesis-v1")
 
@@ -202,8 +261,10 @@ type ReplayState = {
   preflightObservations: Map<V138RetryPreflightIdentity, number>
   routeReservations: Map<V138RetryRouteIdentity, string>
   routePreflights: Map<V138RetryRouteIdentity, V138RetryPreflightIdentity>
-  calibrationReservations: Map<V138RetryRouteIdentity,
-    readonly V138RetryCalibrationIdentity[]>
+  calibrationReservations: Map<
+    V138RetryRouteIdentity,
+    readonly V138RetryCalibrationIdentity[]
+  >
   calibrationTerminals: Map<V138RetryRouteIdentity, FinishCalibration>
   reproductionRoute: V138RetryRouteIdentity | null
   reproductionReserved: boolean
@@ -215,11 +276,16 @@ type ReplayState = {
 }
 
 const emptyReplay = (): ReplayState => ({
-  preflightReservations: new Map(), preflightObservations: new Map(),
-  routeReservations: new Map(), routePreflights: new Map(),
-  calibrationReservations: new Map(), calibrationTerminals: new Map(),
-  reproductionRoute: null, reproductionReserved: false,
-  reproductionTerminal: null, firstObservationMilliseconds: null,
+  preflightReservations: new Map(),
+  preflightObservations: new Map(),
+  routeReservations: new Map(),
+  routePreflights: new Map(),
+  calibrationReservations: new Map(),
+  calibrationTerminals: new Map(),
+  reproductionRoute: null,
+  reproductionReserved: false,
+  reproductionTerminal: null,
+  firstObservationMilliseconds: null,
   lastRefusalMilliseconds: null,
   lastProcessValidCalibrationFailureMilliseconds: null,
   integrityFailure: false,
@@ -231,34 +297,55 @@ const assertOwner = (owner: unknown): asserts owner is string => {
   }
 }
 
-const terminalDisposition = (state: ReplayState):
-  "active" | "succeeded" | "terminal_failure" | "exhausted" => {
+const terminalDisposition = (
+  state: ReplayState,
+): "active" | "succeeded" | "terminal_failure" | "exhausted" => {
   if (state.reproductionTerminal !== null) {
     return state.reproductionTerminal.status === "passed_exact" &&
       state.reproductionTerminal.acceptedCells === 540 &&
-      state.reproductionTerminal.completeCleanup ? "succeeded" :
-      "terminal_failure"
+      state.reproductionTerminal.completeCleanup
+      ? "succeeded"
+      : "terminal_failure"
   }
   if (state.integrityFailure) return "terminal_failure"
-  if (state.routeReservations.size === 3 &&
+  if (
+    state.preflightObservations.size === 12 &&
+    state.preflightReservations.size === 12 &&
+    [...state.preflightObservations.values()].every(
+      (basisPoints) => basisPoints < 2_500,
+    )
+  )
+    return "exhausted"
+  if (
+    state.routeReservations.size === 3 &&
     [...state.routeReservations.keys()].every((identity) =>
-      state.calibrationTerminals.has(identity)) &&
-    [...state.calibrationTerminals.values()].every(({ status }) =>
-      status === "system_failure")) return "exhausted"
+      state.calibrationTerminals.has(identity),
+    ) &&
+    [...state.calibrationTerminals.values()].every(
+      ({ status }) => status === "system_failure",
+    )
+  )
+    return "exhausted"
   return "active"
 }
 
-const applyEvent = (state: ReplayState, event: V138RetryJournalEvent,
-  atMilliseconds: number): void => {
+const applyEvent = (
+  state: ReplayState,
+  event: V138RetryJournalEvent,
+  atMilliseconds: number,
+): void => {
   if (!Number.isSafeInteger(atMilliseconds) || atMilliseconds < 0) {
     fail("V138_RETRY_TIME_INVALID")
   }
   if (terminalDisposition(state) !== "active") {
     fail("V138_RETRY_ENVELOPE_TERMINAL")
   }
-  if (state.firstObservationMilliseconds !== null &&
-    atMilliseconds > state.firstObservationMilliseconds +
-      V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds) {
+  if (
+    state.firstObservationMilliseconds !== null &&
+    atMilliseconds >
+      state.firstObservationMilliseconds +
+        V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+  ) {
     fail("V138_RETRY_ENVELOPE_EXPIRED")
   }
   assertOwner(event.owner)
@@ -270,32 +357,44 @@ const applyEvent = (state: ReplayState, event: V138RetryJournalEvent,
       }
       fail("V138_RETRY_IDENTITY_INVALID")
     }
-    if (state.lastRefusalMilliseconds !== null && atMilliseconds <
-      state.lastRefusalMilliseconds +
-        V138_BOUNDED_RETRY_POLICY.refusalSpacingMilliseconds) {
+    if (
+      state.lastRefusalMilliseconds !== null &&
+      atMilliseconds <
+        state.lastRefusalMilliseconds +
+          V138_BOUNDED_RETRY_POLICY.refusalSpacingMilliseconds
+    ) {
       fail("V138_RETRY_REFUSAL_SPACING_REQUIRED")
     }
-    if (state.lastProcessValidCalibrationFailureMilliseconds !== null &&
-      atMilliseconds < state.lastProcessValidCalibrationFailureMilliseconds +
-        V138_BOUNDED_RETRY_POLICY.calibrationFailureBackoffMilliseconds) {
+    if (
+      state.lastProcessValidCalibrationFailureMilliseconds !== null &&
+      atMilliseconds <
+        state.lastProcessValidCalibrationFailureMilliseconds +
+          V138_BOUNDED_RETRY_POLICY.calibrationFailureBackoffMilliseconds
+    ) {
       fail("V138_RETRY_CALIBRATION_BACKOFF_REQUIRED")
     }
     state.preflightReservations.set(event.identity, event.owner)
     return
   }
   if (event.kind === "observe_preflight") {
-    if (state.preflightReservations.get(event.identity) !== event.owner ||
+    if (
+      state.preflightReservations.get(event.identity) !== event.owner ||
       state.preflightObservations.has(event.identity) ||
       !Number.isSafeInteger(event.effectiveAvailableBasisPoints) ||
       event.effectiveAvailableBasisPoints < 0 ||
-      event.effectiveAvailableBasisPoints > 10_000) {
+      event.effectiveAvailableBasisPoints > 10_000
+    ) {
       fail("V138_RETRY_PREFLIGHT_OBSERVATION_INVALID")
     }
-    state.preflightObservations.set(event.identity,
-      event.effectiveAvailableBasisPoints)
+    state.preflightObservations.set(
+      event.identity,
+      event.effectiveAvailableBasisPoints,
+    )
     state.firstObservationMilliseconds ??= atMilliseconds
-    if (event.effectiveAvailableBasisPoints <
-      V138_BOUNDED_RETRY_POLICY.minimumEffectiveAvailableBasisPoints) {
+    if (
+      event.effectiveAvailableBasisPoints <
+      V138_BOUNDED_RETRY_POLICY.minimumEffectiveAvailableBasisPoints
+    ) {
       state.lastRefusalMilliseconds = atMilliseconds
     }
     return
@@ -308,10 +407,13 @@ const applyEvent = (state: ReplayState, event: V138RetryJournalEvent,
       }
       fail("V138_RETRY_IDENTITY_INVALID")
     }
-    if (state.preflightReservations.get(event.preflightIdentity) !==
-        event.owner || (state.preflightObservations.get(
-          event.preflightIdentity) ?? -1) < 2_500 ||
-      [...state.routePreflights.values()].includes(event.preflightIdentity)) {
+    if (
+      state.preflightReservations.get(event.preflightIdentity) !==
+        event.owner ||
+      (state.preflightObservations.get(event.preflightIdentity) ?? -1) <
+        2_500 ||
+      [...state.routePreflights.values()].includes(event.preflightIdentity)
+    ) {
       fail("V138_RETRY_ROUTE_ADMISSION_INVALID")
     }
     state.routeReservations.set(event.identity, event.owner)
@@ -322,18 +424,26 @@ const applyEvent = (state: ReplayState, event: V138RetryJournalEvent,
     const owner = state.routeReservations.get(event.routeIdentity)
     const routeOrdinal = routes.indexOf(event.routeIdentity)
     const expected = calibrations.slice(routeOrdinal * 8, routeOrdinal * 8 + 8)
-    if (owner !== event.owner || routeOrdinal < 0 ||
+    if (
+      owner !== event.owner ||
+      routeOrdinal < 0 ||
       state.calibrationReservations.has(event.routeIdentity) ||
-      canonical(event.identities) !== canonical(expected)) {
+      canonical(event.identities) !== canonical(expected)
+    ) {
       fail("V138_RETRY_CALIBRATION_RESERVATION_INVALID")
     }
-    state.calibrationReservations.set(event.routeIdentity, [...event.identities])
+    state.calibrationReservations.set(event.routeIdentity, [
+      ...event.identities,
+    ])
     return
   }
   if (event.kind === "finish_calibration") {
-    if (state.routeReservations.get(event.routeIdentity) !== event.owner ||
+    if (
+      state.routeReservations.get(event.routeIdentity) !== event.owner ||
       !state.calibrationReservations.has(event.routeIdentity) ||
-      state.calibrationTerminals.has(event.routeIdentity)) {
+      state.calibrationTerminals.has(event.routeIdentity) ||
+      (event.supervisionRoot !== undefined && !isSha256(event.supervisionRoot))
+    ) {
       fail("V138_RETRY_CALIBRATION_TERMINAL_INVALID")
     }
     if (event.status === "admitted" && !event.completeCleanup) {
@@ -348,30 +458,41 @@ const applyEvent = (state: ReplayState, event: V138RetryJournalEvent,
   }
   if (event.kind === "reserve_reproduction") {
     const terminal = state.calibrationTerminals.get(event.routeIdentity)
-    if (state.routeReservations.get(event.routeIdentity) !== event.owner ||
-      terminal?.status !== "admitted" || !terminal.completeCleanup ||
+    if (
+      state.routeReservations.get(event.routeIdentity) !== event.owner ||
+      terminal?.status !== "admitted" ||
+      !terminal.completeCleanup ||
       state.reproductionReserved ||
-      canonical(event.identities) !== canonical(reproduction)) {
+      canonical(event.identities) !== canonical(reproduction)
+    ) {
       fail("V138_RETRY_REPRODUCTION_RESERVATION_INVALID")
     }
     state.reproductionReserved = true
     state.reproductionRoute = event.routeIdentity
     return
   }
-  if (!state.reproductionReserved ||
+  if (
+    !state.reproductionReserved ||
     state.reproductionRoute !== event.routeIdentity ||
     state.routeReservations.get(event.routeIdentity) !== event.owner ||
     state.reproductionTerminal !== null ||
-    !Number.isSafeInteger(event.acceptedCells) || event.acceptedCells < 0 ||
+    !Number.isSafeInteger(event.acceptedCells) ||
+    event.acceptedCells < 0 ||
     event.acceptedCells > 540 ||
+    (event.reproductionRoot !== undefined &&
+      !isSha256(event.reproductionRoot)) ||
     (event.status === "passed_exact" &&
-      (event.acceptedCells !== 540 || !event.completeCleanup))) {
+      (event.acceptedCells !== 540 || !event.completeCleanup))
+  ) {
     fail("V138_RETRY_REPRODUCTION_TERMINAL_INVALID")
   }
   state.reproductionTerminal = event
 }
 
-const replay = (records: readonly V138RetryJournalRecord[]): ReplayState => {
+const replay = (
+  records: readonly V138RetryJournalRecord[],
+  expectedEnvelopeRoot?: V138RetrySha256,
+): ReplayState => {
   if (!Array.isArray(records)) fail("V138_RETRY_JOURNAL_CHAIN_INVALID")
   const state = emptyReplay()
   let previousRoot = GENESIS_ROOT
@@ -379,16 +500,29 @@ const replay = (records: readonly V138RetryJournalRecord[]): ReplayState => {
   for (let ordinal = 0; ordinal < records.length; ordinal += 1) {
     const record = records[ordinal]!
     const { recordRoot, ...body } = record
-    if (record.schemaVersion !== "v1.38-bounded-retry-journal-record-v1" ||
-      record.ordinal !== ordinal || record.previousRoot !== previousRoot ||
-      record.atMilliseconds < previousTime || !isSha256(recordRoot) ||
-      recordRoot !== sha256(`v138-retry-journal-record-v1\0${canonical(body)}`)) {
+    if (
+      record.schemaVersion !== "v1.38-bounded-retry-journal-record-v1" ||
+      record.ordinal !== ordinal ||
+      record.previousRoot !== previousRoot ||
+      !isSha256(record.envelopeRoot) ||
+      (expectedEnvelopeRoot !== undefined &&
+        record.envelopeRoot !== expectedEnvelopeRoot) ||
+      (ordinal > 0 && record.envelopeRoot !== records[0]!.envelopeRoot) ||
+      record.atMilliseconds < previousTime ||
+      !isSha256(recordRoot) ||
+      recordRoot !== sha256(`v138-retry-journal-record-v1\0${canonical(body)}`)
+    ) {
       fail("V138_RETRY_JOURNAL_CHAIN_INVALID")
     }
     try {
-      const { schemaVersion: _schema, ordinal: _ordinal,
-        atMilliseconds, previousRoot: _previous, recordRoot: _root,
-        ...event } = record
+      const {
+        schemaVersion: _schema,
+        ordinal: _ordinal,
+        atMilliseconds,
+        previousRoot: _previous,
+        recordRoot: _root,
+        ...event
+      } = record
       applyEvent(state, event as V138RetryJournalEvent, atMilliseconds)
     } catch {
       fail("V138_RETRY_JOURNAL_CHAIN_INVALID")
@@ -403,19 +537,23 @@ export const appendV138RetryJournalRecord = (
   records: readonly V138RetryJournalRecord[],
   event: V138RetryJournalEvent,
   atMilliseconds: number,
+  envelopeRoot: V138RetrySha256,
 ): readonly V138RetryJournalRecord[] => {
-  const state = replay(records)
+  if (!isSha256(envelopeRoot)) fail("V138_RETRY_ENVELOPE_INVALID")
+  const state = replay(records, envelopeRoot)
   applyEvent(state, event, atMilliseconds)
   const body = {
     schemaVersion: "v1.38-bounded-retry-journal-record-v1" as const,
     ordinal: records.length,
     atMilliseconds,
+    envelopeRoot,
     previousRoot: records.at(-1)?.recordRoot ?? GENESIS_ROOT,
     ...event,
   }
-  const record = deepFreeze({ ...body,
-    recordRoot: sha256(`v138-retry-journal-record-v1\0${canonical(body)}`) }) as
-      V138RetryJournalRecord
+  const record = deepFreeze({
+    ...body,
+    recordRoot: sha256(`v138-retry-journal-record-v1\0${canonical(body)}`),
+  }) as V138RetryJournalRecord
   return Object.freeze([...records, record])
 }
 
@@ -433,8 +571,11 @@ export interface V138DerivedRetryState {
   readonly nextRouteIdentity: V138RetryRouteIdentity | null
   readonly protectedHistoricalIdentityCount: number
   readonly firstObservationMilliseconds: number | null
-  readonly disposition: "active" | "succeeded" | "terminal_failure" |
-    "exhausted"
+  readonly disposition:
+    | "active"
+    | "succeeded"
+    | "terminal_failure"
+    | "exhausted"
   readonly downstreamAuthority: false
   readonly stateRoot: V138RetrySha256
 }
@@ -444,19 +585,19 @@ export const deriveV138RetryState = (
   records: readonly V138RetryJournalRecord[],
 ): Readonly<V138DerivedRetryState> => {
   const envelope = checkV138InactiveRetryEnvelope(envelopeValue)
-  const state = replay(records)
+  const state = replay(records, envelope.envelopeRoot)
   const disposition = terminalDisposition(state)
   const body = {
     schemaVersion: "v1.38-bounded-retry-derived-state-v1" as const,
     journalRoot: records.at(-1)?.recordRoot ?? GENESIS_ROOT,
     preflightObservationsConsumed: state.preflightReservations.size,
     routeStartsConsumed: state.routeReservations.size,
-    calibrationIdentitiesCharged: [...state.calibrationReservations.values()]
-      .reduce((count, identities) => count + identities.length, 0),
+    calibrationIdentitiesCharged: [
+      ...state.calibrationReservations.values(),
+    ].reduce((count, identities) => count + identities.length, 0),
     reproductionIdentitiesCharged: state.reproductionReserved ? 540 : 0,
     acceptedCells: disposition === "succeeded" ? 540 : 0,
-    remainingPreflightObservations:
-      12 - state.preflightReservations.size,
+    remainingPreflightObservations: 12 - state.preflightReservations.size,
     remainingRouteStarts: 3 - state.routeReservations.size,
     nextPreflightIdentity: preflights[state.preflightReservations.size] ?? null,
     nextRouteIdentity: routes[state.routeReservations.size] ?? null,
@@ -466,8 +607,10 @@ export const deriveV138RetryState = (
     disposition,
     downstreamAuthority: false as const,
   }
-  return deepFreeze({ ...body,
-    stateRoot: sha256(`v138-retry-derived-state-v1\0${canonical(body)}`) })
+  return deepFreeze({
+    ...body,
+    stateRoot: sha256(`v138-retry-derived-state-v1\0${canonical(body)}`),
+  })
 }
 
 export const encodeV138RetryCanonicalJson = (value: unknown): string =>
