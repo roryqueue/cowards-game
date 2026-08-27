@@ -232,13 +232,17 @@ describe("Plan 262-88 independent bounded-retry v2 adjudication", () => {
       computeV138Plan26288ManifestRoot(result.manifest),
     )
     expect(result.manifest.generations).toHaveLength(2)
-    expect(result.manifest.generations.map((item: any) => item.receiptCount)).toEqual([
-      15,
-      15,
-    ])
-    expect(JSON.stringify(result.manifest)).not.toMatch(
-      /strategySource|strategyMemory|soldierMemory|objectivePayload|rawDiagnostics|commitmentSecret/u,
-    )
+    expect(
+      result.manifest.generations.map((item: any) => item.receiptCount),
+    ).toEqual([15, 15])
+    expect(
+      result.manifest.generations.every((generation: any) =>
+        generation.receipts.every((receipt: any) => !("bytes" in receipt)),
+      ),
+    ).toBe(true)
+    expect(
+      Object.values(result.manifest.privacyProjection).every((value) => !value),
+    ).toBe(true)
     expect(after).toEqual(before)
   }, 30_000)
 
@@ -353,17 +357,23 @@ describe("Plan 262-88 independent bounded-retry v2 adjudication", () => {
       },
       "REPRODUCTION_BRANCH_MISMATCH",
     ],
-  ])("rejects %s", (_name, mutate, reason) => {
-    const evidence = clone(loadV138Plan26288Evidence(repoRoot))
-    mutate(evidence)
-    const result = evaluateV138Plan26288Evidence(evidence)
-    expect(result.disposition.status).toBe("non_pass")
-    expect(result.disposition.assuranceDefects).toContain(reason)
-    expect(result.disposition.correctionRequired).toBe(true)
-    expect(
-      Object.values(result.disposition.authority).every((value) => value === false),
-    ).toBe(true)
-  }, 30_000)
+  ])(
+    "rejects %s",
+    (_name, mutate, reason) => {
+      const evidence = clone(loadV138Plan26288Evidence(repoRoot))
+      mutate(evidence)
+      const result = evaluateV138Plan26288Evidence(evidence)
+      expect(result.disposition.status).toBe("non_pass")
+      expect(result.disposition.assuranceDefects).toContain(reason)
+      expect(result.disposition.correctionRequired).toBe(true)
+      expect(
+        Object.values(result.disposition.authority).every(
+          (value) => value === false,
+        ),
+      ).toBe(true)
+    },
+    30_000,
+  )
 
   it("requires exact 540/540, a clean seal/review, and clean evidence for pass", () => {
     const evidence = syntheticPassEvidence()
@@ -397,9 +407,9 @@ describe("Plan 262-88 independent bounded-retry v2 adjudication", () => {
     evidence.privateReceipts[0].mode = 0o644
     const defective = evaluateV138Plan26288Evidence(evidence)
     expect(defective.disposition.status).toBe("non_pass")
-    expect(() => computeV138Plan26288ActivationRoot(defective.disposition)).toThrow(
-      "V138_PLAN_262_88_ACTIVATION_NOT_AUTHORIZED",
-    )
+    expect(() =>
+      computeV138Plan26288ActivationRoot(defective.disposition),
+    ).toThrow("V138_PLAN_262_88_ACTIVATION_NOT_AUTHORIZED")
   }, 30_000)
 
   it("verifies committed publications without exposing private receipt bytes", () => {
