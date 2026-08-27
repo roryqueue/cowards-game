@@ -4,17 +4,17 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: Plan 262-78 sealed the corrected zero-finding source lineage into one inactive finite envelope; Plan 262-79 is the sole eligible live owner and all downstream authority remains denied
-stopped_at: Completed 262-78-PLAN.md; dispatch Plan 262-79 only
-last_updated: "2026-08-27T14:06:36.206Z"
+status: Plan 262-79 exhausted the finite live envelope after three clean calibration system failures; fresh accepted remains 0/540 and no downstream authority exists
+stopped_at: Completed 262-79-PLAN.md exhausted; no Plan 262-80 authority inferred
+last_updated: "2026-08-27T14:49:01.061Z"
 last_activity: 2026-08-27
-last_activity_desc: Published and checked the direct-child v11 source seal and inactive bounded-retry envelope with zero consumption
+last_activity_desc: Closed the one-shot live envelope exhausted at fresh 0/540 with all downstream authority denied
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 64
-  completed_plans: 61
-  percent: 95
+  completed_plans: 62
+  percent: 0
 ---
 
 # State: Coward's Game
@@ -40,6 +40,8 @@ progress:
 
 <!-- phase-262-plan-78-closeout-status: {"schema_version":"v1.38-plan-262-78-closeout-v1","proof_status":"bounded_retry_sealed_inactive","active_plans":64,"trustworthy_summaries":61,"pair_commit":"4841357d7aa89b7996f9ce299256f1d8d56a6290","direct_parent_commit":"ac9f1deb4da71f8a3a297073185c88ff1557151b","decision_commit":"931eaa6e151dc55ccdd4b2b88f8a5d352ffc45b0","corrected_source_commit":"e844279f62192c41175fb3e7a08910493c6f24ab","review_root":"sha256:9518cfcff11ba64029ff74f6e56e0c0448f82b5d0d63500dedf793f7ce85595c","seal_root":"sha256:d5dc18c14d004f3bff8459974229b9af49b2e2a83732ead116cf84450fb46e63","envelope_root":"sha256:229c1c3e33ee055448b4b8ac7dc2bb53efd84774416d51d984044b2a7f35f153","assurance_class":"single_operator_local_seal_v1","status":"sealed_inactive","live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"journal_present":false,"terminal_present":false,"reproduction_v15_present":false,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"foundation_activation_root_present":false,"next_action":"dispatch-262-79-only","unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
 
+<!-- phase-262-plan-79-closeout-status: {"schema_version":"v1.38-plan-262-79-closeout-v1","proof_status":"bounded_retry_exhausted","active_plans":64,"trustworthy_summaries":62,"live_commit":"b4be9f5f5207c7eb87c6cd0e8f79863d4877cf3b","envelope_root":"sha256:229c1c3e33ee055448b4b8ac7dc2bb53efd84774416d51d984044b2a7f35f153","journal_root":"sha256:1cd8fd41f97a7c4938cb53719e31b49cc937fbfdcdcd26a51688e6894d09d8ad","state_root":"sha256:3b1fbf71ebf7d95a128d0000ebb92050b2c9dfd790415570cb93169cc1f520f5","disposition":"exhausted","preflight_observations":3,"route_starts":3,"calibration_charged":24,"reproduction_charged":0,"fresh_accepted":0,"required_accepted":540,"complete_cleanup":true,"reproduction_v15_present":false,"post_run_cli_checkers_present":false,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"foundation_activation_root_present":false,"next_action":"stop-no-plan-80-authority","unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
+
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-07-27)
@@ -50,11 +52,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 61 trustworthy summaries across 64 active plans — Plan 262-79 is the sole next action
-Status: The direct-child v11 seal and finite retry envelope are checked, sealed inactive, and unconsumed
-Last activity: 2026-08-27 — Published the exact two-artifact Plan-78 pair with zero live work and all downstream authority denied
+Plan: 62 trustworthy summaries across 64 active plans — Plan 262-79 is terminally exhausted
+Status: The finite retry envelope consumed all three routes and 24 calibration identities with complete cleanup but no admitted calibration or reproduction
+Last activity: 2026-08-27 — Closed the one-shot live envelope exhausted at fresh 0/540 with all downstream authority denied
 
-Progress: [██████████] 95%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -70,9 +72,11 @@ Progress: [██████████] 95%
 
 **Plan-78 closeout:** Commit `4841357d7aa89b7996f9ce299256f1d8d56a6290` introduced exactly the v11 source seal and inactive retry envelope as the direct child of `ac9f1deb4da71f8a3a297073185c88ff1557151b`. Seal root `sha256:d5dc18c14d004f3bff8459974229b9af49b2e2a83732ead116cf84450fb46e63` and envelope root `sha256:229c1c3e33ee055448b4b8ac7dc2bb53efd84774416d51d984044b2a7f35f153` bind the corrected zero-finding lineage, local-seal verification, protected history, and finite policy. The envelope remains `sealed_inactive`; fresh accounting is 0/540, no journal/terminal/reproduction exists, ADMIT-03 remains blocked, and all downstream authority remains denied.
 
+**Plan-79 closeout:** The sole production invocation observed 7,500/7,600/7,500 basis points, consumed all three route starts, charged exactly 24 calibration identities, and recorded three process-valid system failures with complete cleanup after both required 900,004ms backoffs. The immutable terminal is `exhausted` under journal root `sha256:1cd8fd41f97a7c4938cb53719e31b49cc937fbfdcd26a51688e6894d09d8ad`; reproduction was never reserved, reproduction-v15 is absent, and fresh accepted remains 0/540. The sealed source lacks the two planned post-run CLI checker modes, which is documented without source mutation. ADMIT-03 remains blocked, Phase 262 remains incomplete, and no Plan 80 or downstream authority is inferred.
+
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 64 plans/61 trustworthy summaries, with Plans 262-75 through 262-78 and corrective Plans 262-82 through 262-83 complete. The sole next action is Plan 262-79 as the exclusive live-envelope owner, followed by `262-80 -> 262-81` at waves 68-69. Plan 80 independently dispositions and conditionally activates without phase completion, and Plan 81 alone owns lifecycle closeout. Phase 262 remains incomplete, ADMIT-03 remains blocked at fresh 0/540, Phase 263 remains denied, and every downstream authority remains false.
+**Current topology:** Active discovery is 64 plans/62 trustworthy summaries. Plans 262-75 through 262-79 and corrective Plans 262-82 through 262-83 are complete; Plan 262-79 is terminally exhausted and cannot be resumed or retried. Plan 262-80 and Plan 262-81 remain unexecuted, and this non-pass result grants neither automatic dispatch nor downstream authority. Phase 262 remains incomplete, ADMIT-03 remains blocked at fresh 0/540, Phase 263 remains denied, and every downstream authority remains false.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
@@ -333,6 +337,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-27T14:06:36.190Z
-Stopped at: Completed 262-78-PLAN.md; dispatch Plan 262-79 only
+Last session: 2026-08-27T14:46:44.000Z
+Stopped at: Completed 262-79-PLAN.md exhausted; no Plan 262-80 authority inferred
 Resume file: None
