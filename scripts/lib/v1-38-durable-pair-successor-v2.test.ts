@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -40,4 +40,19 @@ describe("CR-03 common-lock durable pair", () => {
       (value[0] === "B-review\n" && value[1] === "B-report\n"),
     )
   }, 30_000)
+
+  it.each(["intermediate", "final"])("rejects %s publisher symlinks", async (kind) => {
+    const root = fixture(); const external = mkdtempSync(path.join(tmpdir(), "v138-pair-external-")); roots.push(external)
+    writeFileSync(path.join(external, "review.json"), "external\n")
+    if (kind === "intermediate") symlinkSync(external, path.join(root, "linked"))
+    else symlinkSync(path.join(external, "review.json"), path.join(root, "artifacts", "linked.json"))
+    const target = kind === "intermediate" ? "linked/review.json" : "artifacts/linked.json"
+    expect(await run({
+      trustedRoot: root,
+      transactionId: `symlink-${kind}`,
+      intentPath: "pair.intent",
+      members: [{ target, bytes: "ours\n" }, { target: "reviews/review.md", bytes: "report\n" }],
+    })).not.toBe(0)
+    expect(readFileSync(path.join(external, "review.json"), "utf8")).toBe("external\n")
+  })
 })

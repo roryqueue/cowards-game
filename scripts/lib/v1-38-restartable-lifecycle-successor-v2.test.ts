@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { spawn } from "node:child_process"
-import { linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -43,5 +43,14 @@ describe("CR-04 locked restartable lifecycle CAS", () => {
     const inodeAlias = path.join(input.root, "status-alias")
     linkSync(path.join(input.root, input.lifecycle.target), inodeAlias)
     expect(readFileSync(inodeAlias, "utf8")).toBe(input.lifecycle.bytes)
+  })
+
+  it.each(["intermediate", "final"])("rejects %s lifecycle symlinks", (kind) => {
+    const input = fixture(); const external = mkdtempSync(path.join(tmpdir(), "v138-lifecycle-external-")); roots.push(external); writeFileSync(path.join(external, "step.md"), "requirements:before\n")
+    if (kind === "intermediate") symlinkSync(external, path.join(input.root, "linked"))
+    else symlinkSync(path.join(external, "step.md"), path.join(input.root, "planning", "linked.md"))
+    input.steps[0] = { ...input.steps[0]!, target: kind === "intermediate" ? "linked/step.md" : "planning/linked.md" }
+    expect(() => applyV138RestartableLifecycleTransactionV2(input)).toThrow()
+    expect(readFileSync(path.join(external, "step.md"), "utf8")).toBe("requirements:before\n")
   })
 })

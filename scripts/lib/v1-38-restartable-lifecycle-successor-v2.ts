@@ -10,12 +10,16 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
-  realpathSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  readV138RegularNoFollow,
+  resolveV138RelativeNoFollow,
+  trustedRootV138,
+} from "./v1-38-secure-workspace-path-v2.js"
 
 const fail = (code: string): never => { throw new TypeError(code) }
 const sha256 = (bytes: string | Buffer): `sha256:${string}` => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -28,24 +32,6 @@ export interface V138LifecycleStepV2 {
   readonly afterBytes: string
 }
 
-const resolveContained = (rootInput: string, relative: string, allowAbsent: boolean): string => {
-  const root = realpathSync(rootInput)
-  if (path.isAbsolute(relative) || relative === "" || relative.split(/[\\/]/u).some((part) => part === "" || part === "." || part === "..")) fail("V138_LIFECYCLE_V2_PATH_INVALID")
-  const parts = relative.split(/[\\/]/u)
-  let cursor = root
-  for (const [index, part] of parts.entries()) {
-    cursor = path.join(cursor, part)
-    try {
-      const status = lstatSync(cursor)
-      if (status.isSymbolicLink()) fail("V138_LIFECYCLE_V2_SYMLINK_FORBIDDEN")
-      if (index < parts.length - 1 && !status.isDirectory()) fail("V138_LIFECYCLE_V2_PARENT_INVALID")
-      if (index === parts.length - 1 && !status.isFile()) fail("V138_LIFECYCLE_V2_TARGET_INVALID")
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT" || index < parts.length - 1 || !allowAbsent) throw error
-    }
-  }
-  return cursor
-}
 const type = (target: string): "absent" | "regular" => {
   try {
     const status = lstatSync(target)
@@ -55,10 +41,6 @@ const type = (target: string): "absent" | "regular" => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return "absent"
     throw error
   }
-}
-const readNoFollow = (target: string): Buffer => {
-  const descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
-  try { return readFileSync(descriptor) } finally { closeSync(descriptor) }
 }
 const writeExclusive = (target: string, bytes: string): void => {
   const descriptor = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0), 0o600)
@@ -77,14 +59,14 @@ const lifecycleWorker = (input: {
   lifecycle: Readonly<{ target: string; bytes: string }>
 }): void => {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/u.test(input.transactionId) || input.steps.length === 0) fail("V138_LIFECYCLE_V2_TRANSACTION_INVALID")
-  const root = realpathSync(input.trustedRoot)
-  const intent = resolveContained(root, input.intentPath, true)
-  const lifecycle = resolveContained(root, input.lifecycle.target, true)
+  const root = trustedRootV138(input.trustedRoot)
+  const intent = resolveV138RelativeNoFollow(root, input.intentPath, "absent-or-regular")
+  const lifecycle = resolveV138RelativeNoFollow(root, input.lifecycle.target, "absent-or-regular")
   const staging = path.join(root, ".v138-lifecycle-staging")
   mkdirSync(staging, { recursive: true, mode: 0o700 })
   const steps = input.steps.map((step, index) => ({
     ...step,
-    target: resolveContained(root, step.target, true),
+    target: resolveV138RelativeNoFollow(root, step.target, "absent-or-regular"),
     afterSha256: sha256(step.afterBytes),
     stage: path.join(staging, `${input.transactionId}-${index}.after`),
     backup: path.join(staging, `${input.transactionId}-${index}.before`),
@@ -99,15 +81,16 @@ const lifecycleWorker = (input: {
 
   // The kernel lock is held before this first intent/state read and remains
   // held through every CAS, status publication, and parent fsync.
-  if (type(intent) === "regular" && !readNoFollow(intent).equals(Buffer.from(intentBytes))) fail("V138_LIFECYCLE_V2_INTENT_CONFLICT")
+  const readSecure = (target: string) => readV138RegularNoFollow(root, path.relative(root, target))
+  if (type(intent) === "regular" && !readSecure(intent).equals(Buffer.from(intentBytes))) fail("V138_LIFECYCLE_V2_INTENT_CONFLICT")
   const lifecyclePresent = type(lifecycle) === "regular"
-  if (lifecyclePresent && !readNoFollow(lifecycle).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_CONFLICT")
+  if (lifecyclePresent && !readSecure(lifecycle).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_CONFLICT")
   const states = steps.map((step) => {
     if (type(step.target) === "absent") {
-      if (type(step.backup) === "regular" && sha256(readNoFollow(step.backup)) === step.beforeSha256) return "interrupted"
+      if (type(step.backup) === "regular" && sha256(readSecure(step.backup)) === step.beforeSha256) return "interrupted"
       fail("V138_LIFECYCLE_V2_STEP_ABSENT")
     }
-    const digest = sha256(readNoFollow(step.target))
+    const digest = sha256(readSecure(step.target))
     if (digest === step.beforeSha256) return "before"
     if (digest === step.afterSha256) return "after"
     fail("V138_LIFECYCLE_V2_STEP_STATE_INVALID")
@@ -118,10 +101,10 @@ const lifecycleWorker = (input: {
   for (const [index, step] of steps.entries()) {
     if (states[index] === "after") continue
     if (type(step.stage) === "absent") writeExclusive(step.stage, step.afterBytes)
-    else if (!readNoFollow(step.stage).equals(Buffer.from(step.afterBytes))) fail("V138_LIFECYCLE_V2_STAGE_CONFLICT")
+    else if (!readSecure(step.stage).equals(Buffer.from(step.afterBytes))) fail("V138_LIFECYCLE_V2_STAGE_CONFLICT")
     if (type(step.target) === "regular") {
       if (type(step.backup) === "absent") linkSync(step.target, step.backup)
-      if (sha256(readNoFollow(step.backup)) !== step.beforeSha256 || sha256(readNoFollow(step.target)) !== step.beforeSha256) fail("V138_LIFECYCLE_V2_CAS_PRECONDITION")
+      if (sha256(readSecure(step.backup)) !== step.beforeSha256 || sha256(readSecure(step.target)) !== step.beforeSha256) fail("V138_LIFECYCLE_V2_CAS_PRECONDITION")
       const beforeTarget = lstatSync(step.target)
       const beforeBackup = lstatSync(step.backup)
       if (beforeTarget.dev !== beforeBackup.dev || beforeTarget.ino !== beforeBackup.ino) fail("V138_LIFECYCLE_V2_CAS_INODE_MISMATCH")
@@ -130,16 +113,16 @@ const lifecycleWorker = (input: {
     try { linkSync(step.stage, step.target) } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
     }
-    if (sha256(readNoFollow(step.target)) !== step.afterSha256) fail("V138_LIFECYCLE_V2_CAS_CONFLICT")
+    if (sha256(readSecure(step.target)) !== step.afterSha256) fail("V138_LIFECYCLE_V2_CAS_CONFLICT")
     fsyncParent(step.target)
   }
-  for (const step of steps) if (sha256(readNoFollow(step.target)) !== step.afterSha256) fail("V138_LIFECYCLE_V2_POSTCONDITION")
+  for (const step of steps) if (sha256(readSecure(step.target)) !== step.afterSha256) fail("V138_LIFECYCLE_V2_POSTCONDITION")
   if (type(lifecycle) === "absent") {
     const statusStage = path.join(staging, `${input.transactionId}.status`)
     if (type(statusStage) === "absent") writeExclusive(statusStage, input.lifecycle.bytes)
     try { linkSync(statusStage, lifecycle) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error }
   }
-  if (!readNoFollow(lifecycle).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_POSTCONDITION")
+  if (!readSecure(lifecycle).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_POSTCONDITION")
   fsyncParent(lifecycle)
   if (type(intent) === "regular") unlinkSync(intent)
   fsyncParent(intent)
@@ -152,7 +135,7 @@ export const applyV138RestartableLifecycleTransactionV2 = (input: {
   steps: readonly V138LifecycleStepV2[]
   lifecycle: Readonly<{ target: string; bytes: string }>
 }): Readonly<{ status: "complete"; stepsApplied: number }> => {
-  const root = realpathSync(input.trustedRoot)
+  const root = trustedRootV138(input.trustedRoot)
   const key = sha256([...input.steps.map(({ target }) => target), input.lifecycle.target].sort().join("\0")).slice(7)
   const lockDirectory = path.join(root, ".v138-lifecycle-locks")
   mkdirSync(lockDirectory, { recursive: true, mode: 0o700 })
