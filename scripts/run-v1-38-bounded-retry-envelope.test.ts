@@ -126,7 +126,7 @@ describe("retry-envelope:v1 finite state and cumulative journal", () => {
   it("requires fifteen-minute backoff after process-valid calibration failure and exhausts at three starts", () => {
     let records: readonly V138RetryJournalRecord[] = []
     for (let route = 0; route < 3; route += 1) {
-      const base = route * 15 * 60_000
+      const base = route * (15 * 60_000 + 10)
       records = append(records, base, { kind: "reserve_preflight", identity: `preflight:v1:${route}` as never, owner: "owner-a" })
       records = append(records, base + 1, { kind: "observe_preflight", identity: `preflight:v1:${route}` as never, owner: "owner-a", effectiveAvailableBasisPoints: 2_500 })
       records = append(records, base + 2, { kind: "reserve_route", identity: `route:v1:${route}` as never, owner: "owner-a", preflightIdentity: `preflight:v1:${route}` as never })
