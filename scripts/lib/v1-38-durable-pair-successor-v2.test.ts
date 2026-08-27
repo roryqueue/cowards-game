@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -13,7 +13,8 @@ const fixture = () => {
   return root
 }
 const run = (input: unknown) => new Promise<number | null>((resolve) => {
-  const child = spawn(process.execPath, ["--import", "tsx", V138_DURABLE_PAIR_V2_CLI, "--synthetic-pair", Buffer.from(JSON.stringify(input)).toString("base64")], { cwd: process.cwd(), stdio: "ignore" })
+  const expression = `import(${JSON.stringify(V138_DURABLE_PAIR_V2_CLI)}).then(m=>m.durablyPublishV138PairV2(JSON.parse(Buffer.from(process.argv[1],"base64").toString("utf8"))))`
+  const child = spawn(process.execPath, ["--import", "tsx", "--eval", expression, Buffer.from(JSON.stringify(input)).toString("base64")], { cwd: process.cwd(), stdio: "ignore" })
   child.once("exit", resolve)
 })
 
@@ -28,10 +29,9 @@ describe("CR-03 common-lock durable pair", () => {
       { target: "reviews/review.md", bytes: "B-report\n" },
       { target: "artifacts/review.json", bytes: "B-review\n" },
     ] as const
-    const base = { trustedRoot: root, intentPath: "pair.intent" }
     const results = await Promise.all([
-      run({ ...base, transactionId: "intent-a", members: membersA }),
-      run({ ...base, transactionId: "intent-b", members: membersB }),
+      run({ trustedRoot: root, intentPath: "intent-a.json", transactionId: "intent-a", members: membersA }),
+      run({ trustedRoot: root, intentPath: "intent-b.json", transactionId: "intent-b", members: membersB }),
     ])
     expect(results.filter((status) => status === 0)).toHaveLength(1)
     const pair = [readFileSync(path.join(root, "artifacts/review.json"), "utf8"), readFileSync(path.join(root, "reviews/review.md"), "utf8")]
@@ -40,6 +40,16 @@ describe("CR-03 common-lock durable pair", () => {
       (value[0] === "B-review\n" && value[1] === "B-report\n"),
     )
   }, 30_000)
+
+  it.each(["artifacts/review.json", "artifacts\\review.json", "artifacts//review.json"])("rejects intent/member and path aliases: %s", async (intentPath) => {
+    const root = fixture()
+    expect(await run({
+      trustedRoot: root,
+      transactionId: "alias",
+      intentPath,
+      members: [{ target: "artifacts/review.json", bytes: "review\n" }, { target: "reviews/review.md", bytes: "report\n" }],
+    })).not.toBe(0)
+  })
 
   it.each(["intermediate", "final"])("rejects %s publisher symlinks", async (kind) => {
     const root = fixture(); const external = mkdtempSync(path.join(tmpdir(), "v138-pair-external-")); roots.push(external)
@@ -54,5 +64,18 @@ describe("CR-03 common-lock durable pair", () => {
       members: [{ target, bytes: "ours\n" }, { target: "reviews/review.md", bytes: "report\n" }],
     })).not.toBe(0)
     expect(readFileSync(path.join(external, "review.json"), "utf8")).toBe("external\n")
+  })
+
+  it("rejects hostile internal directories before creating any external bytes", async () => {
+    const root = fixture(); const external = mkdtempSync(path.join(tmpdir(), "v138-pair-internal-external-")); roots.push(external)
+    symlinkSync(external, path.join(root, ".v138-pair-staging"))
+    expect(await run({
+      trustedRoot: root,
+      transactionId: "internal-symlink",
+      intentPath: "pair.intent",
+      members: [{ target: "artifacts/review.json", bytes: "review\n" }, { target: "reviews/review.md", bytes: "report\n" }],
+    })).not.toBe(0)
+    expect(readdirSync(external)).toEqual([])
+    expect(() => readFileSync(path.join(root, "pair.intent"))).toThrow()
   })
 })

@@ -1,5 +1,4 @@
 import { Buffer } from "node:buffer"
-import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import {
   closeSync,
@@ -7,7 +6,6 @@ import {
   fsyncSync,
   linkSync,
   lstatSync,
-  mkdirSync,
   openSync,
   readFileSync,
   unlinkSync,
@@ -17,12 +15,25 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   readV138RegularNoFollow,
+  ensureV138TrustedDirectories,
+  normalizeV138Relative,
   resolveV138RelativeNoFollow,
   trustedRootV138,
+  withV138ExclusiveDirectoryLock,
 } from "./v1-38-secure-workspace-path-v2.js"
 
 const fail = (code: string): never => { throw new TypeError(code) }
 const sha256 = (bytes: string | Buffer): `sha256:${string}` => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+const canonical = (value: unknown): string => {
+  const normalize = (item: unknown): unknown => {
+    if (Array.isArray(item)) return item.map(normalize)
+    if (item !== null && typeof item === "object") {
+      return Object.fromEntries(Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, normalize(child)]))
+    }
+    return item
+  }
+  return `${JSON.stringify(normalize(value))}\n`
+}
 export const V138_RESTARTABLE_LIFECYCLE_V2_CLI = fileURLToPath(import.meta.url)
 
 export interface V138LifecycleStepV2 {
@@ -60,43 +71,88 @@ const lifecycleWorker = (input: {
 }): void => {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/u.test(input.transactionId) || input.steps.length === 0) fail("V138_LIFECYCLE_V2_TRANSACTION_INVALID")
   const root = trustedRootV138(input.trustedRoot)
-  const intent = resolveV138RelativeNoFollow(root, input.intentPath, "absent-or-regular")
-  const lifecycle = resolveV138RelativeNoFollow(root, input.lifecycle.target, "absent-or-regular")
-  const staging = path.join(root, ".v138-lifecycle-staging")
-  mkdirSync(staging, { recursive: true, mode: 0o700 })
-  const steps = input.steps.map((step, index) => ({
+  const intentRelative = normalizeV138Relative(input.intentPath)
+  const lifecycleRelative = normalizeV138Relative(input.lifecycle.target)
+  const normalizedSteps = input.steps.map((step) => ({ ...step, target: normalizeV138Relative(step.target) }))
+  const allTargets = [...normalizedSteps.map(({ target }) => target), lifecycleRelative]
+  if (new Set(allTargets).size !== allTargets.length || allTargets.includes(intentRelative)) fail("V138_LIFECYCLE_V2_TARGET_DUPLICATE")
+  const intent = resolveV138RelativeNoFollow(root, intentRelative, "absent-or-regular")
+  const lifecycle = resolveV138RelativeNoFollow(root, lifecycleRelative, "absent-or-regular")
+  const [, staging] = ensureV138TrustedDirectories(root, [".v138-lifecycle-locks", ".v138-lifecycle-staging"])
+  const descriptor = {
+    schemaVersion: "v1.38-restartable-lifecycle-intent-descriptor-v2" as const,
+    trustedRoot: root,
+    transactionId: input.transactionId,
+    intentPath: intentRelative,
+    steps: normalizedSteps.map(({ id, target, beforeSha256, afterBytes }) => ({ id, target, beforeSha256, afterSha256: sha256(afterBytes) })),
+    lifecycle: { target: lifecycleRelative, bytesSha256: sha256(input.lifecycle.bytes), bytes: input.lifecycle.bytes },
+  }
+  const namespace = sha256(`v138-lifecycle-v2\0${canonical(descriptor)}`).slice(7)
+  const steps = normalizedSteps.map((step, index) => ({
     ...step,
     target: resolveV138RelativeNoFollow(root, step.target, "absent-or-regular"),
     afterSha256: sha256(step.afterBytes),
-    stage: path.join(staging, `${input.transactionId}-${index}.after`),
-    backup: path.join(staging, `${input.transactionId}-${index}.before`),
+    stage: path.join(staging!, `${namespace}-${index}.after`),
+    backup: path.join(staging!, `${namespace}-${index}.before`),
   }))
-  if (new Set([...steps.map(({ target }) => target), lifecycle]).size !== steps.length + 1) fail("V138_LIFECYCLE_V2_TARGET_DUPLICATE")
-  const intentBytes = `${JSON.stringify({
-    schemaVersion: "v1.38-restartable-lifecycle-intent-v2",
-    transactionId: input.transactionId,
-    steps: steps.map(({ id, target, beforeSha256, afterSha256 }) => ({ id, target: path.relative(root, target), beforeSha256, afterSha256 })),
-    lifecycle: { target: path.relative(root, lifecycle), sha256: sha256(input.lifecycle.bytes) },
-  })}\n`
+  const statusStage = path.join(staging!, `${namespace}.status`)
 
   // The kernel lock is held before this first intent/state read and remains
   // held through every CAS, status publication, and parent fsync.
   const readSecure = (target: string) => readV138RegularNoFollow(root, path.relative(root, target))
-  if (type(intent) === "regular" && !readSecure(intent).equals(Buffer.from(intentBytes))) fail("V138_LIFECYCLE_V2_INTENT_CONFLICT")
+  const intentDocument = type(intent) === "regular" ? JSON.parse(readSecure(intent).toString("utf8")) as {
+    schemaVersion: string
+    namespace: string
+    descriptor: typeof descriptor
+    bindings: readonly { target: string; beforeSha256: `sha256:${string}`; device: string; inode: string }[]
+  } : null
+  if (intentDocument !== null && (
+    intentDocument.schemaVersion !== "v1.38-restartable-lifecycle-intent-v2" ||
+    intentDocument.namespace !== namespace ||
+    canonical(intentDocument.descriptor) !== canonical(descriptor)
+  )) fail("V138_LIFECYCLE_V2_INTENT_CONFLICT")
   const lifecyclePresent = type(lifecycle) === "regular"
   if (lifecyclePresent && !readSecure(lifecycle).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_CONFLICT")
-  const states = steps.map((step) => {
+  const states = steps.map((step, index) => {
+    const binding = intentDocument?.bindings[index]
     if (type(step.target) === "absent") {
-      if (type(step.backup) === "regular" && sha256(readSecure(step.backup)) === step.beforeSha256) return "interrupted"
+      if (binding !== undefined && binding.target === normalizedSteps[index]!.target && binding.beforeSha256 === step.beforeSha256 && type(step.backup) === "regular") {
+        const backup = lstatSync(step.backup)
+        if (sha256(readSecure(step.backup)) === step.beforeSha256 && String(backup.dev) === binding.device && String(backup.ino) === binding.inode) return "interrupted"
+      }
       fail("V138_LIFECYCLE_V2_STEP_ABSENT")
     }
     const digest = sha256(readSecure(step.target))
-    if (digest === step.beforeSha256) return "before"
+    if (digest === step.beforeSha256) {
+      if (binding !== undefined) {
+        const status = lstatSync(step.target)
+        if (binding.target !== normalizedSteps[index]!.target || binding.beforeSha256 !== step.beforeSha256 || String(status.dev) !== binding.device || String(status.ino) !== binding.inode) fail("V138_LIFECYCLE_V2_BINDING_CONFLICT")
+      }
+      return "before"
+    }
     if (digest === step.afterSha256) return "after"
     fail("V138_LIFECYCLE_V2_STEP_STATE_INVALID")
   })
   if (lifecyclePresent && states.some((state) => state !== "after")) fail("V138_LIFECYCLE_V2_PREMATURE_STATUS")
-  if (!lifecyclePresent && type(intent) === "absent") { writeExclusive(intent, intentBytes); fsyncParent(intent) }
+  if (!lifecyclePresent && intentDocument === null && states.some((state) => state !== "before")) fail("V138_LIFECYCLE_V2_INTENT_REQUIRED")
+  const bindings = intentDocument?.bindings ?? steps.map((step, index) => {
+    const status = lstatSync(step.target)
+    return { target: normalizedSteps[index]!.target, beforeSha256: step.beforeSha256, device: String(status.dev), inode: String(status.ino) }
+  })
+  if (bindings.length !== steps.length) fail("V138_LIFECYCLE_V2_BINDING_CONFLICT")
+  const intentBytes = canonical({ schemaVersion: "v1.38-restartable-lifecycle-intent-v2", namespace, descriptor, bindings })
+  if (intentDocument === null && !lifecyclePresent) { writeExclusive(intent, intentBytes); fsyncParent(intent) }
+  else if (intentDocument !== null && !readSecure(intent).equals(Buffer.from(intentBytes))) fail("V138_LIFECYCLE_V2_INTENT_CONFLICT")
+
+  for (const [index, step] of steps.entries()) {
+    if (type(step.stage) === "regular" && !readSecure(step.stage).equals(Buffer.from(step.afterBytes))) fail("V138_LIFECYCLE_V2_STAGE_CONFLICT")
+    if (type(step.backup) === "regular") {
+      const binding = bindings[index]!
+      const backup = lstatSync(step.backup)
+      if (sha256(readSecure(step.backup)) !== step.beforeSha256 || String(backup.dev) !== binding.device || String(backup.ino) !== binding.inode) fail("V138_LIFECYCLE_V2_BACKUP_CONFLICT")
+    }
+  }
+  if (type(statusStage) === "regular" && !readSecure(statusStage).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_STAGE_CONFLICT")
 
   for (const [index, step] of steps.entries()) {
     if (states[index] === "after") continue
@@ -107,7 +163,8 @@ const lifecycleWorker = (input: {
       if (sha256(readSecure(step.backup)) !== step.beforeSha256 || sha256(readSecure(step.target)) !== step.beforeSha256) fail("V138_LIFECYCLE_V2_CAS_PRECONDITION")
       const beforeTarget = lstatSync(step.target)
       const beforeBackup = lstatSync(step.backup)
-      if (beforeTarget.dev !== beforeBackup.dev || beforeTarget.ino !== beforeBackup.ino) fail("V138_LIFECYCLE_V2_CAS_INODE_MISMATCH")
+      const binding = bindings[index]!
+      if (beforeTarget.dev !== beforeBackup.dev || beforeTarget.ino !== beforeBackup.ino || String(beforeTarget.dev) !== binding.device || String(beforeTarget.ino) !== binding.inode) fail("V138_LIFECYCLE_V2_CAS_INODE_MISMATCH")
       unlinkSync(step.target)
     }
     try { linkSync(step.stage, step.target) } catch (error) {
@@ -118,14 +175,12 @@ const lifecycleWorker = (input: {
   }
   for (const step of steps) if (sha256(readSecure(step.target)) !== step.afterSha256) fail("V138_LIFECYCLE_V2_POSTCONDITION")
   if (type(lifecycle) === "absent") {
-    const statusStage = path.join(staging, `${input.transactionId}.status`)
     if (type(statusStage) === "absent") writeExclusive(statusStage, input.lifecycle.bytes)
+    else if (!readSecure(statusStage).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_STAGE_CONFLICT")
     try { linkSync(statusStage, lifecycle) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error }
   }
   if (!readSecure(lifecycle).equals(Buffer.from(input.lifecycle.bytes))) fail("V138_LIFECYCLE_V2_STATUS_POSTCONDITION")
   fsyncParent(lifecycle)
-  if (type(intent) === "regular") unlinkSync(intent)
-  fsyncParent(intent)
 }
 
 export const applyV138RestartableLifecycleTransactionV2 = (input: {
@@ -136,17 +191,21 @@ export const applyV138RestartableLifecycleTransactionV2 = (input: {
   lifecycle: Readonly<{ target: string; bytes: string }>
 }): Readonly<{ status: "complete"; stepsApplied: number }> => {
   const root = trustedRootV138(input.trustedRoot)
-  const key = sha256([...input.steps.map(({ target }) => target), input.lifecycle.target].sort().join("\0")).slice(7)
-  const lockDirectory = path.join(root, ".v138-lifecycle-locks")
-  mkdirSync(lockDirectory, { recursive: true, mode: 0o700 })
-  execFileSync("/usr/bin/lockf", ["-t", "10", path.join(lockDirectory, `${key}.lock`), process.execPath, "--import", "tsx", V138_RESTARTABLE_LIFECYCLE_V2_CLI, "--lifecycle-worker", Buffer.from(JSON.stringify(input)).toString("base64")], { stdio: "pipe" })
-  return Object.freeze({ status: "complete", stepsApplied: input.steps.length })
+  const intent = normalizeV138Relative(input.intentPath)
+  const stepTargets = input.steps.map(({ target }) => normalizeV138Relative(target))
+  const lifecycleTarget = normalizeV138Relative(input.lifecycle.target)
+  const allTargets = [...stepTargets, lifecycleTarget]
+  if (new Set(allTargets).size !== allTargets.length || allTargets.includes(intent)) fail("V138_LIFECYCLE_V2_TARGET_DUPLICATE")
+  resolveV138RelativeNoFollow(root, intent, "absent-or-regular")
+  for (const target of allTargets) resolveV138RelativeNoFollow(root, target, "absent-or-regular")
+  ensureV138TrustedDirectories(root, [".v138-lifecycle-locks", ".v138-lifecycle-staging"])
+  const key = sha256([...allTargets].sort().join("\0")).slice(7)
+  return withV138ExclusiveDirectoryLock(root, ".v138-lifecycle-locks", `${key}.lock`, () => {
+    lifecycleWorker({ ...input, trustedRoot: root })
+    return Object.freeze({ status: "complete" as const, stepsApplied: input.steps.length })
+  })
 }
 
 if (process.argv[1] === V138_RESTARTABLE_LIFECYCLE_V2_CLI) {
-  const payload = process.argv[3]
-  if ((process.argv[2] !== "--lifecycle-worker" && process.argv[2] !== "--synthetic-lifecycle") || payload === undefined) fail("V138_LIFECYCLE_V2_SOURCE_ONLY")
-  const input = JSON.parse(Buffer.from(payload, "base64").toString("utf8"))
-  if (process.argv[2] === "--lifecycle-worker") lifecycleWorker(input)
-  else applyV138RestartableLifecycleTransactionV2(input)
+  fail("V138_LIFECYCLE_V2_LIBRARY_ONLY")
 }
