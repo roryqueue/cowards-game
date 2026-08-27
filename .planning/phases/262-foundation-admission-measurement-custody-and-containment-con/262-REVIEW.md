@@ -1,6 +1,6 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-reviewed: 2026-08-27T16:22:57Z
+reviewed: 2026-08-27T16:51:06Z
 depth: deep
 files_reviewed: 11
 files_reviewed_list:
@@ -16,97 +16,73 @@ files_reviewed_list:
   - scripts/check-v1-38-plan-262-81-lifecycle.ts
   - scripts/check-v1-38-plan-262-81-lifecycle.test.ts
 findings:
-  critical: 4
+  critical: 0
   warning: 0
   info: 0
-  total: 4
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 262: Code Review Report
 
-**Reviewed:** 2026-08-27T16:22:57Z
+**Reviewed:** 2026-08-27T16:51:06Z
 **Depth:** deep
 **Files Reviewed:** 11
-**Status:** issues_found
+**Status:** clean
 
 ## Summary
 
-The five submitted fix commits close the original cleanup-root and semantic-review defects, add real SIGKILL coverage, and preserve the historical exhausted `0/540` result. They do not produce a shippable custody chain. The committed post-run correction fails its own canonical checker in the clean checkout, stale-owner takeover has a race that can remove a newly acquired live lock, the correction is not anchored to immutable historical blobs or its own publication lineage, and the corrected read-only outcome path reports reproduction absence without inspecting that path.
+All reviewed files meet quality standards. No issues found.
 
-The focused suite exposed the immediate integration failure: the six-suite command stopped in Plan 80 with `V138_AUDIT_CORRECTION_INVALID`. Fresh derivation computes private-receipt root `sha256:266e2ec2...43e121`, while the committed correction records `sha256:e79542e6...1ef9a`, changing the correction root from `sha256:3834bd50...be026` to `sha256:b0f59df7...07b43b`. The canonical correction check, Plan-80 check, and terminal read-only check all fail. The remaining five suites pass 64/64, TypeScript and `git diff --check` pass, and the Plan-83 check truthfully returns blocked with 13 findings. No live evidence or source file was modified by this review.
+The iteration-3 commits resolve all four findings from the preceding deep review. Correction v2 is deterministic over exact Git-authenticated historical blobs and a uniquely published 15-receipt manifest; both the manifest and correction require clean, byte-identical working artifacts and unique publication lineage. The production owner now uses a kernel-held `lockf` lock, with synchronized competing subprocesses and real SIGKILL recovery proving that only one owner executes and process death releases ownership. The corrected exhausted read path requires the reproduction path to be exactly absent and rejects a regular file, symlink, or directory.
+
+The additive correction preserves the historical empirical outcome while truthfully superseding the earlier assurance conclusion: exhausted, fresh accepted `0/540`, effective integrity false, and every activation/downstream authority false. No live evidence was changed and no retry, reproduction, activation, or lifecycle mutation occurred during review.
 
 ## Narrative Findings (AI reviewer)
 
-## Critical Issues
-
-### CR-01: The committed correction is invalid against the evidence it is supposed to authenticate
-
-**Classification:** BLOCKER
-
-**File:** `scripts/check-v1-38-plan-262-post-run-audit-correction.ts:131-172,219-247`; `scripts/check-v1-38-plan-262-post-run-audit-correction.test.ts:11-53`
-
-**Issue:** `checkV138PostRunAuditCorrection()` recomputes the correction from the current private-receipt directory and requires byte equality with the committed artifact. In the submitted clean checkout those values already differ: the artifact records private-receipt root `sha256:e79542e6...1ef9a`, while derivation returns `sha256:266e2ec2...43e121`. Consequently `--check-correction`, Plan 80's canonical checker, and the terminal-envelope checker all fail with `V138_AUDIT_CORRECTION_INVALID`. The correction test misses this because it validates a freshly derived object against itself rather than calling the checker on the published artifact.
-
-**Fix:** Determine and preserve the intended immutable receipt set, regenerate the additive correction only from authenticated historical inputs, and add an integration test that calls `checkV138PostRunAuditCorrection(process.cwd())` against the committed artifact. The same test must transitively run the canonical Plan-80 and terminal read-only checks.
-
-### CR-02: Stale-lock takeover can delete a newly acquired live owner's lock
-
-**Classification:** BLOCKER
-
-**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:1353-1395`; `scripts/run-v1-38-bounded-retry-envelope.test.ts:1159-1245`
-
-**Issue:** After reading a dead lease, takeover blindly renames whichever file is currently at the lock path. With two contenders, both can read the same stale lease; contender A can rename it and acquire a new live lease, then contender B can execute `renameSync(lock, quarantine)` against A's new lease and unlink it. B can then acquire the path while A is still executing. The SIGKILL tests exercise one successor only and cannot detect this compare-and-swap race. This permits simultaneous production owners and identity reuse.
-
-**Fix:** Use an OS advisory lock whose ownership ends with the process, or implement an atomic compare-and-takeover protocol that proves the renamed inode/bytes are the exact stale lease observed before removal. Add a synchronized two-successor test proving exactly one contender acquires and that the winner's lock cannot be removed by the loser.
-
-### CR-03: The additive correction does not prove immutable historical custody or its own publication lineage
-
-**Classification:** BLOCKER
-
-**File:** `scripts/check-v1-38-plan-262-post-run-audit-correction.ts:119-176,240-248`
-
-**Issue:** The checker verifies only that named historical commits are ancestors. For the seal, envelope, journal, terminal, private receipts, old Plan-83 artifact, and old Plan-80 disposition it hashes current filesystem bytes and then derives the expected correction from those same mutable bytes. It never compares tracked evidence with `git show <historical-commit>:<path>`, never authenticates private receipts to a durable historical carrier, and never proves that the correction artifact has one immutable introducing commit with no later rewrite. Thus the asserted `historicalBytesMutated: false` is not established. Republishing or rewriting evidence and its correction can become self-consistent; the current private-root drift in CR-01 demonstrates the practical fragility.
-
-**Fix:** Bind each tracked historical artifact to the exact blob at its declared commit, put private-receipt hashes in a committed historical manifest, and require a unique correction publication commit whose blob equals the working-tree artifact with no later path rewrite. Reject any current-byte mismatch instead of deriving a new expected history from it.
-
-### CR-04: The corrected read-only path falsely asserts that reproduction is absent
-
-**Classification:** BLOCKER
-
-**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:1425-1462`
-
-**Issue:** When a correction exists, `checkV138PublishedRetryOutcome()` returns `reproductionPresent: false` unconditionally. It never checks the canonical reproduction path. An unexpected regular file, symlink, or directory at that path is therefore reported absent, breaking the fail-closed terminal contract and allowing unauthorized reproduction material to coexist with a claimed exhausted/no-reproduction outcome.
-
-**Fix:** Inspect the canonical reproduction path in the correction branch and require it to be exactly absent for the exhausted result. Fail for every other filesystem type. Add tests for regular-file, symlink, and directory injection at that path.
+No Critical, Warning, or Info findings remain.
 
 ## Prior Finding Closure Audit
 
-| Prior finding | Status | Evidence |
+| Prior finding | Status | Closure evidence |
 |---|---|---|
-| Cleanup pending work and root binding | **CLOSED** | Pending reservations are reconciled before expiry and `completeCleanup` is included in the hashed body; focused tests cover both pending kinds and root mutation. |
-| Additive correction / trust consistency | **OPEN** | A correction exists, but its committed root is already invalid and its custody proof is circular over current bytes. |
-| Stale lock and journal/receipt recovery | **OPEN** | Receipt reconciliation and SIGKILL recovery were added, but concurrent stale takeover is not atomic. |
-| Plan-83 token attestation | **CLOSED AS SCOPED** | Observation results now come from explicit executions, incomplete families fail closed, and the historical review correctly returns blocked with 13 findings. |
+| CR-01 committed correction invalid | **CLOSED** | The committed v2 correction derives from the immutable receipt manifest and passes its canonical checker. Its integration test invokes the real Plan-80 and terminal readers. |
+| CR-02 stale-lock takeover race | **CLOSED** | `lockf` owns the lock in the kernel; synchronized contenders prove exactly one acquisition, and all seven real SIGKILL boundaries converge without identity reuse. |
+| CR-03 historical custody/publication lineage | **CLOSED** | Seal, envelope, journal, terminal, receipts, Plan-83, and Plan-80 bytes are checked against their declared Git commits. Manifest and correction each have one publication commit whose blob equals the clean working artifact. |
+| CR-04 unchecked reproduction absence | **CLOSED** | The corrected outcome path calls the exact-absence guard before returning and tests reject regular-file, symlink, and directory injection. |
 
 ## Verification
 
-- `pnpm exec vitest run` over all six changed test files: **failed**, 1 Plan-80 failure (`V138_AUDIT_CORRECTION_INVALID`) after the first test.
-- The other five changed suites run separately: **64/64 passed**.
-- `pnpm exec tsx scripts/check-v1-38-plan-262-post-run-audit-correction.ts --check-correction`: **failed** with `V138_AUDIT_CORRECTION_INVALID`.
-- Canonical Plan-80 disposition check: **failed** with `V138_AUDIT_CORRECTION_INVALID`.
-- Canonical terminal-envelope check: **failed** with `V138_AUDIT_CORRECTION_INVALID`.
-- Canonical Plan-83 review check: **passed as blocked**, 13 findings, no execution authority.
+- Six focused suites, serialized: **6/6 files passed, 84/84 tests passed**.
+- Canonical correction-v2 check: **passed**, root `sha256:0d132bf4b59fd0203dba5fa49763bb2ec7568e1b84881f1908f114cd680ba026`, effective integrity non-pass, `0/540`, downstream denied.
+- Canonical Plan-83 check: **passed as blocked**, 13 findings, source review false, execution and Plan-262-78 eligibility false.
+- Canonical Plan-80 check: **passed**, non-pass/exhausted branch, activation absent, downstream authority false.
+- Canonical terminal-envelope check: **passed**, exhausted, cleanup complete, reproduction absent, downstream denied.
+- Canonical Plan-81 post-summary check: **passed**, `gaps_found`, 64 plans/64 summaries, `lifecycleMutated: false`.
 - `pnpm exec tsc --noEmit --pretty false`: **passed**.
 - `git diff --check`: **passed**.
 
-## Current Bounded-Retry Verdict
+## Evidence Preservation and Authority
 
-**ISSUES FOUND.** Preserve the historical journal, terminal, private receipts, absent reproduction-v15, absent Route-9 activation, and empirical `0/540`. Do not retry or grant Phase-263/downstream authority. The custody correction and owner-lock protocol must be repaired before this machinery can be trusted.
+Before and after verification, the protected hashes remained:
+
+- Journal: `14e66af5c9fc985ef01cbc83efae35ea2a1ae20f1c9b10de0cd2e732dd667a14`
+- Terminal: `b79dc330212880f8e6b9d41bee701b380fbc92f2e82682159343e54ae8748ac3`
+- Seal: `0091b634e49a94863f6cbb12b9e06f181b729eb32dc9e97ba73dda0bb6359e6b`
+- Envelope: `3683a02dc8c075d7e175c591967dfc5d470de56bb2c0ffe916fb09c13bb4d9f4`
+- Plan-80 disposition: `7c44d03acee04f441e0c4132f6c611b9d84925540a81d954ba51104aaec938bb`
+- Plan-83 historical review: `60796555ad508a079b212c081307ea103fd9f82a92fdcfff117c7093e3b32baa`
+- Aggregate current private-receipt file/hash listing: `39fafb497cf6534c75d66fa22e1eb5344a1b622ba6a57a04dab219dcb170c0fe`
+
+The reproduction-v15 artifact and Route-9 activation root remain absent. The v2 correction records effective integrity false and denies Phase 263, candidate search, formation materialization, holdout opening, public, product, production, counted-play, and gameplay-change authority.
+
+## Final Verdict
+
+**CLEAN.** The reviewed correction and containment implementation now represents the immutable exhausted `0/540` outcome consistently and fail-closed. This verdict does not authorize a retry, Route-9 activation, Phase 263, or any downstream use.
 
 ---
 
-_Reviewed: 2026-08-27T16:22:57Z_
+_Reviewed: 2026-08-27T16:51:06Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
 
