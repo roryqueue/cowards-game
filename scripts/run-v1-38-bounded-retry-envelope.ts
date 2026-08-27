@@ -58,14 +58,30 @@ const canonical = encodeV138RetryCanonicalJson
 const PHASE_DIR =
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 
+const PLAN_262_77_PROTECTED_HISTORY = Object.freeze({
+  reviewBytes:
+    "sha256:76d0c0eef92fca733078d56f786ab2bb2c462ba87c243951793d504078ed54f8" as V138RetrySha256,
+  reportBytes:
+    "sha256:82de726955d2162dac32b227744efd66f851e7b736f9acaa421d3d514de234b2" as V138RetrySha256,
+  summaryBytes:
+    "sha256:e84302fa5c820a4c3e904ebb24b8da3dd37211be643920b19b8ca84d537f36a7" as V138RetrySha256,
+  reviewRoot:
+    "sha256:1d58e184fd6283e3d62c7de0c4dc51cad4f8e5447bb70b2fa48d13588aade8f3" as V138RetrySha256,
+  finding: "TIME_WINDOW_EXPIRY_NOT_TERMINALIZED" as const,
+})
+
 export const V138_BOUNDED_RETRY_PATHS = Object.freeze({
-  sourceSummary: `${PHASE_DIR}/262-76-SUMMARY.md`,
+  sourceSummary: `${PHASE_DIR}/262-82-SUMMARY.md`,
   sourceController: "scripts/run-v1-38-bounded-retry-envelope.ts",
   sourceModel: "scripts/lib/v1-38-bounded-retry-envelope.ts",
   sourceTests: "scripts/run-v1-38-bounded-retry-envelope.test.ts",
   sourceReview:
+    ".planning/artifacts/v1.38-plan-262-83-bounded-retry-source-rereview-v1.json",
+  sourceReviewReport: `${PHASE_DIR}/262-83-REVIEW.md`,
+  protectedSourceReview:
     ".planning/artifacts/v1.38-plan-262-77-bounded-retry-source-review-v1.json",
-  sourceReviewReport: `${PHASE_DIR}/262-77-REVIEW.md`,
+  protectedSourceReviewReport: `${PHASE_DIR}/262-77-REVIEW.md`,
+  protectedSourceReviewSummary: `${PHASE_DIR}/262-77-SUMMARY.md`,
   seal: ".planning/artifacts/v1.38-successor-source-seal-v11.json",
   envelope: ".planning/artifacts/v1.38-plan-262-78-retry-envelope-v1.json",
   localSeal:
@@ -201,6 +217,33 @@ export const runV138BoundedRetryController = async (
     input.effects.appendDurableRecord(record)
     records = next
   }
+  const finish = (): Readonly<V138BoundedRetryControllerResult> =>
+    Object.freeze({
+      records: Object.freeze([...records]),
+      state: deriveV138RetryState(envelope, records),
+      ...(reproductionArtifact === undefined ? {} : { reproductionArtifact }),
+    })
+  const deadlineGuard = (): boolean => {
+    const state = deriveV138RetryState(envelope, records)
+    if (state.disposition !== "active") return true
+    if (state.firstObservationMilliseconds === null) return false
+    const now = input.effects.monotonicMilliseconds()
+    if (
+      now <
+      state.firstObservationMilliseconds +
+        V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds
+    ) {
+      return false
+    }
+    append({
+      kind: "time_window_expired",
+      owner: input.owner,
+      reason: "time_window_expired",
+    })
+    return true
+  }
+
+  if (deadlineGuard()) return finish()
 
   // A prior invocation may have died only after its durable reservation.
   // Reconciliation charges the work and fails closed; it never relaunches the
@@ -212,6 +255,7 @@ export const runV138BoundedRetryController = async (
       ),
   )
   if (pendingReproduction !== undefined) {
+    if (deadlineGuard()) return finish()
     append({
       kind: "finish_reproduction",
       routeIdentity: pendingReproduction.routeIdentity,
@@ -228,6 +272,7 @@ export const runV138BoundedRetryController = async (
         ),
     )
     if (pendingCalibration !== undefined) {
+      if (deadlineGuard()) return finish()
       append({
         kind: "finish_calibration",
         routeIdentity: pendingCalibration.routeIdentity,
@@ -250,12 +295,14 @@ export const runV138BoundedRetryController = async (
           routeOrdinal * 8,
           routeOrdinal * 8 + 8,
         )
+        if (deadlineGuard()) return finish()
         append({
           kind: "reserve_calibration",
           routeIdentity: pendingRoute.identity,
           owner: pendingRoute.owner,
           identities,
         })
+        if (deadlineGuard()) return finish()
         append({
           kind: "finish_calibration",
           routeIdentity: pendingRoute.identity,
@@ -274,6 +321,7 @@ export const runV138BoundedRetryController = async (
             )
           : undefined
       if (pendingPreflight !== undefined) {
+        if (deadlineGuard()) return finish()
         append({
           kind: "observe_preflight",
           identity: pendingPreflight.identity,
@@ -283,6 +331,8 @@ export const runV138BoundedRetryController = async (
       }
     }
   }
+
+  if (deadlineGuard()) return finish()
 
   const admittedAwaitingReproduction = recordFor(
     records,
@@ -300,12 +350,14 @@ export const runV138BoundedRetryController = async (
     admittedAwaitingReproduction !== undefined
   ) {
     const routeIdentity = admittedAwaitingReproduction.routeIdentity
+    if (deadlineGuard()) return finish()
     append({
       kind: "reserve_reproduction",
       routeIdentity,
       owner: admittedAwaitingReproduction.owner,
       identities: V138_BOUNDED_RETRY_IDENTITIES.reproduction,
     })
+    if (deadlineGuard()) return finish()
     let reproduction: Awaited<
       ReturnType<V138BoundedRetryControllerEffects["runReproduction"]>
     >
@@ -322,6 +374,7 @@ export const runV138BoundedRetryController = async (
       }
     }
     reproductionArtifact = reproduction.artifact
+    if (deadlineGuard()) return finish()
     append({
       kind: "finish_reproduction",
       routeIdentity,
@@ -336,24 +389,28 @@ export const runV138BoundedRetryController = async (
   }
 
   while (deriveV138RetryState(envelope, records).disposition === "active") {
+    if (deadlineGuard()) return finish()
     const state = deriveV138RetryState(envelope, records)
     if (state.nextPreflightIdentity === null) break
     const target = waitTarget(records)
     if (input.effects.monotonicMilliseconds() < target) {
       await input.effects.waitUntil(target)
     }
+    if (deadlineGuard()) return finish()
     const preflightIdentity = state.nextPreflightIdentity
     append({
       kind: "reserve_preflight",
       identity: preflightIdentity,
       owner: input.owner,
     })
+    if (deadlineGuard()) return finish()
     let observation: PreflightResult
     try {
       observation = await input.effects.observePreflight()
     } catch {
       observation = { available: false }
     }
+    if (deadlineGuard()) return finish()
     const basisPoints = observation.available
       ? observation.effectiveAvailableBasisPoints
       : 0
@@ -368,6 +425,7 @@ export const runV138BoundedRetryController = async (
     const admittedState = deriveV138RetryState(envelope, records)
     const routeIdentity = admittedState.nextRouteIdentity
     if (routeIdentity === null) break
+    if (deadlineGuard()) return finish()
     append({
       kind: "reserve_route",
       identity: routeIdentity,
@@ -387,6 +445,7 @@ export const runV138BoundedRetryController = async (
       owner: input.owner,
       identities: calibrationIdentities,
     })
+    if (deadlineGuard()) return finish()
     let calibration: Awaited<
       ReturnType<V138BoundedRetryControllerEffects["runCalibration"]>
     >
@@ -398,6 +457,7 @@ export const runV138BoundedRetryController = async (
     } catch {
       calibration = { status: "system_failure", completeCleanup: false }
     }
+    if (deadlineGuard()) return finish()
     append({
       kind: "finish_calibration",
       routeIdentity,
@@ -412,12 +472,14 @@ export const runV138BoundedRetryController = async (
       continue
     }
 
+    if (deadlineGuard()) return finish()
     append({
       kind: "reserve_reproduction",
       routeIdentity,
       owner: input.owner,
       identities: V138_BOUNDED_RETRY_IDENTITIES.reproduction,
     })
+    if (deadlineGuard()) return finish()
     let reproduction: Awaited<
       ReturnType<V138BoundedRetryControllerEffects["runReproduction"]>
     >
@@ -434,6 +496,7 @@ export const runV138BoundedRetryController = async (
       }
     }
     reproductionArtifact = reproduction.artifact
+    if (deadlineGuard()) return finish()
     append({
       kind: "finish_reproduction",
       routeIdentity,
@@ -446,11 +509,7 @@ export const runV138BoundedRetryController = async (
         : { reproductionRoot: reproduction.reproductionRoot }),
     })
   }
-  return Object.freeze({
-    records: Object.freeze([...records]),
-    state: deriveV138RetryState(envelope, records),
-    ...(reproductionArtifact === undefined ? {} : { reproductionArtifact }),
-  })
+  return finish()
 }
 
 const safeStatus = (
@@ -523,6 +582,40 @@ const exclusiveWrite = (target: string, bytes: string, mode = 0o600): void => {
   }
 }
 
+const v138RetryTerminalResult = (
+  result: Readonly<V138BoundedRetryControllerResult>,
+) => {
+  if (result.state.disposition === "active") {
+    fail("V138_RETRY_TERMINAL_STATE_REQUIRED")
+  }
+  return Object.freeze({
+    schemaVersion: "v1.38-current-matrix-retry-terminal-v1" as const,
+    terminalReason: result.state.terminalReason,
+    journalRoot: result.state.journalRoot,
+    stateRoot: result.state.stateRoot,
+    disposition: result.state.disposition,
+    counters: Object.freeze({
+      preflightObservationsConsumed: result.state.preflightObservationsConsumed,
+      routeStartsConsumed: result.state.routeStartsConsumed,
+      calibrationIdentitiesCharged: result.state.calibrationIdentitiesCharged,
+      reproductionIdentitiesCharged: result.state.reproductionIdentitiesCharged,
+      acceptedCells: result.state.acceptedCells,
+    }),
+    freshAccepted: result.state.acceptedCells,
+    completeCleanup: true as const,
+    downstreamAuthority: "denied" as const,
+    productionAuthorized: false as const,
+  })
+}
+
+export const publishV138RetryTerminalResult = (
+  target: string,
+  result: Readonly<V138BoundedRetryControllerResult>,
+): void => {
+  exclusiveWrite(target, canonical(v138RetryTerminalResult(result)))
+  fsyncParent(target)
+}
+
 const fsyncParent = (target: string): void => {
   const descriptor = openSync(path.dirname(target), constants.O_RDONLY)
   try {
@@ -575,6 +668,9 @@ export const deriveV138SealedInactiveEnvelope = (
     ...sourcePaths,
     V138_BOUNDED_RETRY_PATHS.sourceReview,
     V138_BOUNDED_RETRY_PATHS.sourceReviewReport,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReview,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReviewReport,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReviewSummary,
     V138_BOUNDED_RETRY_PATHS.localSeal,
     V138_BOUNDED_RETRY_PATHS.historyBinder,
   ]
@@ -599,6 +695,40 @@ export const deriveV138SealedInactiveEnvelope = (
     repoPath,
     sha256: sha256(readNoFollow(repoRoot, repoPath)),
   }))
+  const protectedReviewBytes = readNoFollow(
+    repoRoot,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReview,
+  )
+  const protectedReview = JSON.parse(
+    protectedReviewBytes.toString("utf8"),
+  ) as Record<string, unknown>
+  const protectedFindings = protectedReview.findings as
+    | readonly Record<string, unknown>[]
+    | undefined
+  if (
+    sha256(protectedReviewBytes) !==
+      PLAN_262_77_PROTECTED_HISTORY.reviewBytes ||
+    sha256(
+      readNoFollow(
+        repoRoot,
+        V138_BOUNDED_RETRY_PATHS.protectedSourceReviewReport,
+      ),
+    ) !== PLAN_262_77_PROTECTED_HISTORY.reportBytes ||
+    sha256(
+      readNoFollow(
+        repoRoot,
+        V138_BOUNDED_RETRY_PATHS.protectedSourceReviewSummary,
+      ),
+    ) !== PLAN_262_77_PROTECTED_HISTORY.summaryBytes ||
+    protectedReview.reviewRoot !== PLAN_262_77_PROTECTED_HISTORY.reviewRoot ||
+    protectedReview.status !== "blocked" ||
+    protectedReview.sourceReviewPassed !== false ||
+    protectedReview.findingCount !== 1 ||
+    protectedFindings?.length !== 1 ||
+    protectedFindings[0]?.code !== PLAN_262_77_PROTECTED_HISTORY.finding
+  ) {
+    fail("V138_RETRY_PROTECTED_PLAN_77_HISTORY_INVALID")
+  }
   const reviewBytes = readNoFollow(
     repoRoot,
     V138_BOUNDED_RETRY_PATHS.sourceReview,
@@ -1066,6 +1196,9 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
     V138_BOUNDED_RETRY_PATHS.sourceTests,
     V138_BOUNDED_RETRY_PATHS.sourceReview,
     V138_BOUNDED_RETRY_PATHS.sourceReviewReport,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReview,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReviewReport,
+    V138_BOUNDED_RETRY_PATHS.protectedSourceReviewSummary,
     V138_BOUNDED_RETRY_PATHS.seal,
     V138_BOUNDED_RETRY_PATHS.envelope,
     V138_BOUNDED_RETRY_PATHS.localSeal,
@@ -1085,15 +1218,14 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
       repoRoot,
       V138_BOUNDED_RETRY_PATHS.terminal,
     ) as Record<string, unknown>
-    const state = deriveV138RetryState(envelope, readJournal(repoRoot))
+    const records = readJournal(repoRoot)
+    const state = deriveV138RetryState(envelope, records)
+    const expectedTerminal = v138RetryTerminalResult({ records, state })
     const reproductionStatus = safeStatus(
       path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
     )
     if (
-      terminal.schemaVersion !== "v1.38-current-matrix-retry-terminal-v1" ||
-      terminal.downstreamAuthority !== "denied" ||
-      terminal.productionAuthorized !== false ||
-      canonical(terminal.state) !== canonical(state) ||
+      canonical(terminal) !== canonical(expectedTerminal) ||
       state.disposition === "active" ||
       (state.disposition === "succeeded") !==
         (reproductionStatus === "regular") ||
@@ -1155,16 +1287,9 @@ const runProductionLive = async (repoRoot: string): Promise<void> => {
       records: existing,
       effects: createV138ProductionControllerEffects(repoRoot, append),
     })
-    const terminal = {
-      schemaVersion: "v1.38-current-matrix-retry-terminal-v1",
-      state: result.state,
-      completeCleanup: result.state.disposition !== "active",
-      downstreamAuthority: "denied",
-      productionAuthorized: false,
-    }
-    exclusiveWrite(
+    publishV138RetryTerminalResult(
       path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.terminal),
-      canonical(terminal),
+      result,
     )
     if (result.state.disposition === "succeeded") {
       exclusiveWrite(

@@ -6,6 +6,7 @@ import {
   rmSync,
   symlinkSync,
 } from "node:fs"
+import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -918,6 +919,53 @@ describe("bounded retry controller and CLI containment", () => {
         injected,
       ),
     ).rejects.toThrow("V138_RETRY_ARGUMENTS_INVALID")
+    expect(V138_BOUNDED_RETRY_PATHS).toMatchObject({
+      sourceSummary: `${".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"}/262-82-SUMMARY.md`,
+      sourceReview:
+        ".planning/artifacts/v1.38-plan-262-83-bounded-retry-source-rereview-v1.json",
+      sourceReviewReport:
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-83-REVIEW.md",
+      protectedSourceReview:
+        ".planning/artifacts/v1.38-plan-262-77-bounded-retry-source-review-v1.json",
+      protectedSourceReviewReport:
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-77-REVIEW.md",
+      protectedSourceReviewSummary:
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-77-SUMMARY.md",
+    })
+  })
+
+  it("retains the exact Plan-77 blocked pair and summary only as protected history", () => {
+    const expected = new Map([
+      [
+        V138_BOUNDED_RETRY_PATHS.protectedSourceReview,
+        "76d0c0eef92fca733078d56f786ab2bb2c462ba87c243951793d504078ed54f8",
+      ],
+      [
+        V138_BOUNDED_RETRY_PATHS.protectedSourceReviewReport,
+        "82de726955d2162dac32b227744efd66f851e7b736f9acaa421d3d514de234b2",
+      ],
+      [
+        V138_BOUNDED_RETRY_PATHS.protectedSourceReviewSummary,
+        "e84302fa5c820a4c3e904ebb24b8da3dd37211be643920b19b8ca84d537f36a7",
+      ],
+    ])
+    for (const [repoPath, expectedHash] of expected) {
+      expect(
+        createHash("sha256").update(readFileSync(repoPath)).digest("hex"),
+        repoPath,
+      ).toBe(expectedHash)
+    }
+    const review = JSON.parse(
+      readFileSync(V138_BOUNDED_RETRY_PATHS.protectedSourceReview, "utf8"),
+    )
+    expect(review).toMatchObject({
+      status: "blocked",
+      sourceReviewPassed: false,
+      findingCount: 1,
+      reviewRoot:
+        "sha256:1d58e184fd6283e3d62c7de0c4dc51cad4f8e5447bb70b2fa48d13588aade8f3",
+      findings: [{ code: "TIME_WINDOW_EXPIRY_NOT_TERMINALIZED" }],
+    })
   })
 
   it("reaches the live production entry only through exact flags and injected fake effects", async () => {
