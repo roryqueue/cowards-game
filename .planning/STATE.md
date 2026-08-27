@@ -4,17 +4,17 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: Plan 262-77 complete with one critical blocked source-review finding; Plan 262-78 is not eligible
-stopped_at: Completed 262-77-PLAN.md with blocked source review; Plan 262-78 is not eligible
+status: Plans 262-75 through 262-77 complete; Plan 262-82 is the sole next action and Plan 262-78 remains ineligible pending a clean Plan-83 re-review
+stopped_at: Planned corrective chain 262-82 -> 262-83 -> 262-78 -> 262-79 -> 262-80 -> 262-81; dispatch Plan 262-82 only
 last_updated: "2026-08-27T13:00:02.500Z"
 last_activity: 2026-08-27
-last_activity_desc: Independently reviewed the bounded-retry producer and blocked on missing four-hour terminalization
+last_activity_desc: Planned corrective source work and fresh independent re-review while preserving the blocked Plan-77 evidence
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 62
+  total_plans: 64
   completed_plans: 58
-  percent: 94
+  percent: 91
 ---
 
 # State: Coward's Game
@@ -31,6 +31,9 @@ progress:
 
 <!-- phase-262-plan-77-closeout-status: {"schema_version":"v1.38-plan-262-77-closeout-v1","proof_status":"bounded_retry_source_review_blocked","active_plans":62,"trustworthy_summaries":58,"review_root":"sha256:1d58e184fd6283e3d62c7de0c4dc51cad4f8e5447bb70b2fa48d13588aade8f3","finding_count":1,"finding":"TIME_WINDOW_EXPIRY_NOT_TERMINALIZED","source_review_passed":false,"plan_262_78_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"seal_present":false,"envelope_present":false,"journal_present":false,"terminal_present":false,"reproduction_v15_present":false,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"foundation_activation_root_present":false,"next_action":"plan-corrective-source-work-and-fresh-independent-review","unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
 
+<!-- This carrier supersedes earlier topology and next-action carriers only. The Plan-77 blocked verdict and all earlier evidence remain immutable history. -->
+<!-- phase-262-current-corrective-topology-status: {"schema_version":"v1.38-plan-262-82-topology-v1","proof_status":"corrective_source_work_planned","active_plans":64,"trustworthy_summaries":58,"completed_successors":["262-75","262-76","262-77"],"successor_graph":["262-77","262-82","262-83","262-78","262-79","262-80","262-81"],"waves":{"262-82":64,"262-83":65,"262-78":66,"262-79":67,"262-80":68,"262-81":69},"next_action":"dispatch-262-82-only","plan_262_78_eligible":false,"plan_262_78_eligibility_condition":"262-83-zero-findings","admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"phase_262":"incomplete","phase263_authorized":false,"candidate_search_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"product_authorized":false,"activation_authorized":false,"production_authorized":false,"gameplay_change_authorized":false,"unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
+
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-07-27)
@@ -41,11 +44,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 58 trustworthy summaries — Plan 262-77 review is blocked and Plan 262-78 is ineligible
-Status: Plan 262-77 complete with one critical blocked source-review finding; Plan 262-78 is not eligible
-Last activity: 2026-08-27 — Independently reviewed the bounded-retry producer and blocked on missing four-hour terminalization
+Plan: 58 trustworthy summaries across 64 active plans — Plan 262-82 is the sole next action
+Status: Plans 262-75 through 262-77 are complete; Plan 262-78 remains ineligible until Plan 262-83 records exact zero findings
+Last activity: 2026-08-27 — Planned corrective source work and fresh independent re-review while preserving the blocked Plan-77 evidence
 
-Progress: [█████████░] 94%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -55,7 +58,9 @@ Progress: [█████████░] 94%
 
 **Plan-77 closeout:** Independent Git custody and detached fake-process review produced root `sha256:1d58e184fd6283e3d62c7de0c4dc51cad4f8e5447bb70b2fa48d13588aade8f3` with one critical `TIME_WINDOW_EXPIRY_NOT_TERMINALIZED` finding. Plan 262-78 is not eligible. No live handler ran; fresh charges and accepted cells remain 0/540, and the seal/envelope/journal/terminal/reproduction/activation destinations remain absent.
 
-**Current milestone:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery is 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` routes Plans 75-81 sequentially at waves 57-63 and prohibits unfiltered phase execution. Plan 79 alone owns live work, Plan 80 independently dispositions/conditionally activates without phase completion, and Plan 81 alone owns lifecycle closeout. Phase 262 remains incomplete, ADMIT-03 remains blocked at fresh 0/540, Phase 263 remains denied, and every downstream authority remains false. Next action: commit the normal Plan-262-75 summary, pass the exact topology gate, then dispatch Plan 262-76 only.
+**Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
+
+**Current topology:** Active discovery is 64 plans/58 trustworthy summaries, with Plans 262-75 through 262-77 complete. The sole next action is Plan 262-82, followed by `262-83 -> 262-78 -> 262-79 -> 262-80 -> 262-81` at waves 65-69. Plan 262-78 remains ineligible until Plan 262-83 records exact zero findings over the corrected committed source. Plan 79 alone owns live work, Plan 80 independently dispositions and conditionally activates without phase completion, and Plan 81 alone owns lifecycle closeout. Phase 262 remains incomplete, ADMIT-03 remains blocked at fresh 0/540, Phase 263 remains denied, and every downstream authority remains false.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
@@ -307,5 +312,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-08-27T13:01:00.000Z
-Stopped at: Completed 262-77-PLAN.md with blocked source review; Plan 262-78 is not eligible
+Stopped at: Planned corrective chain with Plan 262-82 as the sole next action; Plan 262-78 remains ineligible pending a clean Plan-83 re-review
 Resume file: None
