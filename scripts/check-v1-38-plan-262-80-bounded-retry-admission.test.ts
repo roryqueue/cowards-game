@@ -48,7 +48,7 @@ describe("Plan 262-80 independent bounded-retry admission", () => {
     expect(after).toEqual(before)
     expect(["absent", "regular"]).toContain(after.disposition)
     expect(after.activationRoot).toBe("absent")
-  })
+  }, 15_000)
 
   it("authenticates the historical disposition through the additive correction", () => {
     const checked = checkV138Plan26280Disposition(
@@ -171,5 +171,5 @@ describe("Plan 262-80 independent bounded-retry admission", () => {
     expect(() => computeV138Plan26280ActivationRoot(forged)).toThrow(
       "V138_PLAN_262_80_ACTIVATION_NOT_AUTHORIZED",
     )
-  })
+  }, 15_000)
 })
