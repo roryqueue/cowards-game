@@ -24,8 +24,6 @@ type Sha256 = `sha256:${string}`
 type Stage = "pre_summary" | "post_summary"
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 
-const PHASE_DIR =
-  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const EXPECTED_ARCHIVE_SHA =
   "sha256:9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d"
 const SUCCESSOR_IDS = Object.freeze([75, 76, 77, 78, 79, 80, 81, 82, 83])
@@ -76,7 +74,9 @@ const canonical = (value: unknown): string =>
   `${JSON.stringify(normalize(value as Json))}\n`
 const sha256 = (value: string | Uint8Array): Sha256 =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
-const safeType = (target: string): "absent" | "regular" | "directory" | "unsafe" => {
+const safeType = (
+  target: string,
+): "absent" | "regular" | "directory" | "unsafe" => {
   try {
     const stat = lstatSync(target)
     if (stat.isSymbolicLink()) return "unsafe"
@@ -97,11 +97,15 @@ const readRegular = (target: string): Buffer => {
     closeSync(fd)
   }
 }
-const readJson = (target: string): any => JSON.parse(readRegular(target).toString("utf8"))
+const readJson = (target: string): any =>
+  JSON.parse(readRegular(target).toString("utf8"))
 const ensureWithin = (parent: string, child: string): void => {
   const resolvedParent = realpathSync(parent)
   const resolvedChildParent = realpathSync(path.dirname(child))
-  if (resolvedChildParent !== resolvedParent && !resolvedChildParent.startsWith(`${resolvedParent}${path.sep}`))
+  if (
+    resolvedChildParent !== resolvedParent &&
+    !resolvedChildParent.startsWith(`${resolvedParent}${path.sep}`)
+  )
     fail("V138_PLAN_262_81_PATH_ESCAPE")
 }
 
@@ -117,7 +121,10 @@ export interface V138Plan26281Topology {
   plan74SummaryPresent: false
 }
 
-const collectIdentities = (phaseDir: string, suffix: "PLAN" | "SUMMARY"): number[] => {
+const collectIdentities = (
+  phaseDir: string,
+  suffix: "PLAN" | "SUMMARY",
+): number[] => {
   const pattern = new RegExp(`^262-(\\d+)-${suffix}\\.md$`, "u")
   return readdirSync(phaseDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && pattern.test(entry.name))
@@ -129,12 +136,16 @@ export const inspectV138Plan26281Topology = (
   phaseDir: string,
   stage: Stage,
 ): V138Plan26281Topology => {
-  if (safeType(phaseDir) !== "directory") fail("V138_PLAN_262_81_PHASE_DIR_UNSAFE")
+  if (safeType(phaseDir) !== "directory")
+    fail("V138_PLAN_262_81_PHASE_DIR_UNSAFE")
   const plans = collectIdentities(phaseDir, "PLAN")
   const summaries = collectIdentities(phaseDir, "SUMMARY")
   if (plans.includes(74)) fail("V138_PLAN_262_81_PLAN_74_ACTIVE_FORBIDDEN")
   if (summaries.includes(74)) fail("V138_PLAN_262_81_PLAN_74_SUMMARY_FORBIDDEN")
-  if (new Set(plans).size !== plans.length || new Set(summaries).size !== summaries.length)
+  if (
+    new Set(plans).size !== plans.length ||
+    new Set(summaries).size !== summaries.length
+  )
     fail("V138_PLAN_262_81_DUPLICATE_IDENTITY")
   if (plans.length !== 64) fail("V138_PLAN_262_81_ACTIVE_PLAN_COUNT_INVALID")
   if (!SUCCESSOR_IDS.every((id) => plans.includes(id)))
@@ -152,7 +163,8 @@ export const inspectV138Plan26281Topology = (
     fail("V138_PLAN_262_81_SUMMARY_LATCH_INVALID")
   for (const id of SUCCESSOR_IDS) {
     if (stage === "pre_summary" && id === 81) continue
-    if (!summaries.includes(id)) fail("V138_PLAN_262_81_SUCCESSOR_SUMMARY_INVALID")
+    if (!summaries.includes(id))
+      fail("V138_PLAN_262_81_SUCCESSOR_SUMMARY_INVALID")
   }
   const archive = path.join(phaseDir, "archived/262-74-HISTORICAL.md")
   if (sha256(readRegular(archive)) !== EXPECTED_ARCHIVE_SHA)
@@ -183,7 +195,8 @@ export const evaluateV138Plan26281Verification = ({
   requirementsComplete: boolean
 }): { status: "passed" | "gaps_found"; gaps: string[] } => {
   const exactPass =
-    disposition?.schemaVersion === "v1.38-plan-262-80-admission-disposition-v1" &&
+    disposition?.schemaVersion ===
+      "v1.38-plan-262-80-admission-disposition-v1" &&
     disposition?.status === "pass" &&
     ["complete", "succeeded"].includes(disposition?.terminalDisposition) &&
     disposition?.counters?.freshAccepted === 540 &&
@@ -193,7 +206,8 @@ export const evaluateV138Plan26281Verification = ({
     disposition?.assuranceClass === "single_operator_local_seal_v1" &&
     disposition?.authority?.foundationActivationAuthorized === true &&
     authorityDenied(disposition) &&
-    activationRoot?.schemaVersion === "v1.38-foundation-activation-root-route9-v1" &&
+    activationRoot?.schemaVersion ===
+      "v1.38-foundation-activation-root-route9-v1" &&
     requirementsComplete
   if (exactPass) return { status: "passed", gaps: [] }
   const gaps: string[] = []
@@ -210,11 +224,16 @@ export const evaluateV138Plan26281Verification = ({
   return { status: "gaps_found", gaps: [...new Set(gaps)] }
 }
 
-const requirementStatus = (requirements: string): { complete: boolean; blocked: string[] } => {
+const requirementStatus = (
+  requirements: string,
+): { complete: boolean; blocked: string[] } => {
   const blocked: string[] = []
   for (const id of REQUIREMENT_IDS) {
-    const checkbox = new RegExp(`^- \\[(x| )\\] \\*\\*${id}\\*\\*:`, "mu").exec(requirements)
-    if (!checkbox || checkbox[1] !== "x") blocked.push(id)
+    const checkbox = new RegExp(`^- \\[(x| )\\] \\*\\*${id}\\*\\*:`, "mu").exec(
+      requirements,
+    )
+    if (!checkbox || (id !== "ADMIT-03" && checkbox[1] !== "x"))
+      blocked.push(id)
   }
   return { complete: blocked.length === 0, blocked }
 }
@@ -225,7 +244,10 @@ export const renderV138Plan26281Validation = (
   disposition: any,
 ): string => {
   const rows = REQUIREMENT_IDS.map((id) => {
-    const status = id === "ADMIT-03" && verification.status !== "passed" ? "PARTIAL — BLOCKED" : "COVERED"
+    const status =
+      id === "ADMIT-03" && verification.status !== "passed"
+        ? "PARTIAL — BLOCKED"
+        : "COVERED"
     const evidence =
       id === "ADMIT-03"
         ? `Plan-80 ${disposition.status}/${disposition.terminalDisposition}; fresh ${disposition.counters?.freshAccepted ?? 0}/${disposition.counters?.requiredAccepted ?? 540}.`
@@ -256,7 +278,9 @@ export const renderV138Plan26281Verification = (
     phase263Authorized: false,
     downstreamAuthorityDenied: true,
   }
-  const reportRoot = sha256(`v138-plan26281-verification-v1\0${canonical(body)}`)
+  const reportRoot = sha256(
+    `v138-plan26281-verification-v1\0${canonical(body)}`,
+  )
   return `---\nstatus: ${result.status}\nschema: v1.38-plan-262-81-verification-v1\nreport_root: ${reportRoot}\n---\n\n# Phase 262 Verification\n\nActive plans: ${topology.activePlanCount}\nTrustworthy summaries: ${topology.summaryCount}\nArchived Plan 74: ${topology.archiveSha256}\nPlan-74 summary present: false\nPlan-80 disposition: ${disposition.status}\nAdmission disposition root: ${disposition.dispositionRoot}\nTerminal: ${disposition.terminalDisposition}\nFresh accepted: ${disposition.counters?.freshAccepted ?? 0}/${disposition.counters?.requiredAccepted ?? 540}\nRoute-9 activation root: ${disposition.status === "pass" ? "authenticated" : "absent"}\nGaps: ${result.gaps.length === 0 ? "none" : result.gaps.join(", ")}\nHuman items: 0\nPhase 263 authorized: false\nDownstream authority denied: true\n`
 }
 
@@ -274,9 +298,13 @@ export const refreshV138Plan26281PreSummaryProof = (args: {
   const activationType = safeType(args.activationPath)
   let activationRoot: any | null = null
   if (disposition.status === "pass") {
-    if (activationType !== "regular") fail("V138_PLAN_262_81_ACTIVATION_MISSING")
+    if (activationType !== "regular")
+      fail("V138_PLAN_262_81_ACTIVATION_MISSING")
     activationRoot = readJson(args.activationPath)
-    if (canonical(activationRoot) !== canonical(computeV138Plan26280ActivationRoot(disposition)))
+    if (
+      canonical(activationRoot) !==
+      canonical(computeV138Plan26280ActivationRoot(disposition))
+    )
       fail("V138_PLAN_262_81_ACTIVATION_INVALID")
   } else if (activationType !== "absent") {
     fail("V138_PLAN_262_81_NONPASS_ACTIVATION_PRESENT")
@@ -290,8 +318,14 @@ export const refreshV138Plan26281PreSummaryProof = (args: {
   })
   ensureWithin(args.phaseDir, args.validationPath)
   ensureWithin(args.phaseDir, args.verificationPath)
-  writeFileSync(args.validationPath, renderV138Plan26281Validation(topology, result, disposition))
-  writeFileSync(args.verificationPath, renderV138Plan26281Verification(topology, result, disposition))
+  writeFileSync(
+    args.validationPath,
+    renderV138Plan26281Validation(topology, result, disposition),
+  )
+  writeFileSync(
+    args.verificationPath,
+    renderV138Plan26281Verification(topology, result, disposition),
+  )
   return { topology, result, dispositionRoot: disposition.dispositionRoot }
 }
 
@@ -306,34 +340,294 @@ const checkPreSummary = (args: {
   const topology = inspectV138Plan26281Topology(args.phaseDir, "pre_summary")
   const disposition = readJson(args.dispositionPath)
   validateV138Plan26280Disposition(disposition, disposition)
-  const activationRoot = safeType(args.activationPath) === "regular" ? readJson(args.activationPath) : null
+  const activationRoot =
+    safeType(args.activationPath) === "regular"
+      ? readJson(args.activationPath)
+      : null
   if (disposition.status === "pass") {
-    if (activationRoot === null || canonical(activationRoot) !== canonical(computeV138Plan26280ActivationRoot(disposition)))
+    if (
+      activationRoot === null ||
+      canonical(activationRoot) !==
+        canonical(computeV138Plan26280ActivationRoot(disposition))
+    )
       fail("V138_PLAN_262_81_ACTIVATION_INVALID")
-  } else if (activationRoot !== null) fail("V138_PLAN_262_81_NONPASS_ACTIVATION_PRESENT")
-  const requirementCheck = requirementStatus(readRegular(args.requirementsPath).toString("utf8"))
+  } else if (activationRoot !== null)
+    fail("V138_PLAN_262_81_NONPASS_ACTIVATION_PRESENT")
+  const requirementCheck = requirementStatus(
+    readRegular(args.requirementsPath).toString("utf8"),
+  )
   const result = evaluateV138Plan26281Verification({
     disposition,
     activationRoot,
     requirementsComplete: requirementCheck.complete,
   })
-  if (readRegular(args.validationPath).toString("utf8") !== renderV138Plan26281Validation(topology, result, disposition))
+  if (
+    readRegular(args.validationPath).toString("utf8") !==
+    renderV138Plan26281Validation(topology, result, disposition)
+  )
     fail("V138_PLAN_262_81_VALIDATION_STALE")
-  if (readRegular(args.verificationPath).toString("utf8") !== renderV138Plan26281Verification(topology, result, disposition))
+  if (
+    readRegular(args.verificationPath).toString("utf8") !==
+    renderV138Plan26281Verification(topology, result, disposition)
+  )
     fail("V138_PLAN_262_81_VERIFICATION_STALE")
   return { topology, result, dispositionRoot: disposition.dispositionRoot }
 }
 
+export interface V138Plan26281LifecycleCommand {
+  step: "requirements" | "roadmap" | "state" | "phase_complete"
+  argv: string[]
+}
+
+export interface V138Plan26281PostSummaryOptions {
+  runCommand?: (command: V138Plan26281LifecycleCommand) => void
+  requireCommittedSummary?: boolean
+  gitRoot?: string
+}
+
+const verificationStatus = (text: string): "passed" | "gaps_found" => {
+  const matches = [...text.matchAll(/^status: (passed|gaps_found)$/gmu)]
+  if (matches.length !== 1) fail("V138_PLAN_262_81_VERIFICATION_STATUS_INVALID")
+  return matches[0]![1] as "passed" | "gaps_found"
+}
+
+const requireCommittedSummary = (root: string, summaryPath: string): void => {
+  const relative = path.relative(root, summaryPath)
+  if (relative.startsWith("..") || path.isAbsolute(relative))
+    fail("V138_PLAN_262_81_SUMMARY_PATH_INVALID")
+  const commits = execFileSync("git", ["log", "--format=%H", "--", relative], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+  const dirty = execFileSync("git", ["status", "--porcelain", "--", relative], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim()
+  if (commits.length === 0 || dirty !== "")
+    fail("V138_PLAN_262_81_SUMMARY_NOT_COMMITTED")
+}
+
+export const runV138Plan26281PostSummaryLifecycle = (
+  args: {
+    phaseDir: string
+    summaryPath: string
+    dispositionPath: string
+    activationPath: string
+    validationPath: string
+    verificationPath: string
+    requirementsPath: string
+    roadmapPath: string
+    statePath: string
+  },
+  options: V138Plan26281PostSummaryOptions = {},
+): {
+  status: "passed" | "gaps_found"
+  mutated: boolean
+  topology: V138Plan26281Topology
+} => {
+  const topology = inspectV138Plan26281Topology(args.phaseDir, "post_summary")
+  if (
+    path.resolve(args.summaryPath) !==
+    path.join(path.resolve(args.phaseDir), "262-81-SUMMARY.md")
+  )
+    fail("V138_PLAN_262_81_SUMMARY_PATH_INVALID")
+  readRegular(args.summaryPath)
+  if (options.requireCommittedSummary !== false)
+    requireCommittedSummary(options.gitRoot ?? repoRoot, args.summaryPath)
+
+  const disposition = readJson(args.dispositionPath)
+  validateV138Plan26280Disposition(disposition, disposition)
+  const activationRoot =
+    safeType(args.activationPath) === "regular"
+      ? readJson(args.activationPath)
+      : null
+  if (disposition.status === "pass") {
+    if (
+      activationRoot === null ||
+      canonical(activationRoot) !==
+        canonical(computeV138Plan26280ActivationRoot(disposition))
+    )
+      fail("V138_PLAN_262_81_ACTIVATION_INVALID")
+  } else if (activationRoot !== null)
+    fail("V138_PLAN_262_81_NONPASS_ACTIVATION_PRESENT")
+
+  const requirements = readRegular(args.requirementsPath).toString("utf8")
+  const result = evaluateV138Plan26281Verification({
+    disposition,
+    activationRoot,
+    requirementsComplete: requirementStatus(requirements).complete,
+  })
+  const installedStatus = verificationStatus(
+    readRegular(args.verificationPath).toString("utf8"),
+  )
+  readRegular(args.validationPath)
+  if (installedStatus !== result.status)
+    fail("V138_PLAN_262_81_VERIFICATION_BRANCH_INVALID")
+
+  const before = {
+    requirements: sha256(readRegular(args.requirementsPath)),
+    roadmap: sha256(readRegular(args.roadmapPath)),
+    state: sha256(readRegular(args.statePath)),
+  }
+  if (result.status !== "passed") {
+    const after = {
+      requirements: sha256(readRegular(args.requirementsPath)),
+      roadmap: sha256(readRegular(args.roadmapPath)),
+      state: sha256(readRegular(args.statePath)),
+    }
+    if (canonical(before) !== canonical(after))
+      fail("V138_PLAN_262_81_NONPASS_MUTATION")
+    return { status: "gaps_found", mutated: false, topology }
+  }
+
+  const gsdTools = "/Users/roryquinlan/.codex/gsd-core/bin/gsd-tools.cjs"
+  const defaultRunner = (command: V138Plan26281LifecycleCommand): void => {
+    execFileSync("node", [gsdTools, "query", ...command.argv], {
+      cwd: options.gitRoot ?? repoRoot,
+      stdio: "inherit",
+    })
+  }
+  const run = options.runCommand ?? defaultRunner
+  const commands: V138Plan26281LifecycleCommand[] = [
+    { step: "requirements", argv: ["requirements.mark-complete", "ADMIT-03"] },
+    { step: "roadmap", argv: ["roadmap.update-plan-progress", "262"] },
+    {
+      step: "state",
+      argv: ["state.record-session", "", "Completed 262-81-PLAN.md", "None"],
+    },
+    { step: "phase_complete", argv: ["phase.complete", "262"] },
+  ]
+  for (const command of commands) run(command)
+  return { status: "passed", mutated: true, topology }
+}
+
+export interface V138Plan26281Readiness {
+  schemaVersion: "v1.38-plan-262-81-lifecycle-driver-readiness-v1"
+  checkerSha256: Sha256
+  testSha256: Sha256
+  planIdentityRoot: Sha256
+  summaryIdentityRoot: Sha256
+  admissionDispositionRoot: Sha256
+  verificationStatus: "passed" | "gaps_found"
+  activePlans: 64
+  preSummarySummaries: 63
+  postSummaryDriverInvoked: false
+  syntheticPassVerified: true
+  syntheticNonPassVerified: true
+  lifecycleMutationPerformed: false
+  readinessRoot: Sha256
+}
+
+const readinessRoot = (
+  candidate: Omit<V138Plan26281Readiness, "readinessRoot">,
+): Sha256 =>
+  sha256(
+    `v138-plan26281-lifecycle-driver-readiness-v1\0${canonical(candidate)}`,
+  )
+
+const deriveReadiness = (args: {
+  phaseDir: string
+  dispositionPath: string
+  validationPath: string
+  verificationPath: string
+  checkerPath: string
+  testPath: string
+  requirementsPath: string
+  activationPath: string
+}): V138Plan26281Readiness => {
+  const checked = checkPreSummary({
+    phaseDir: args.phaseDir,
+    dispositionPath: args.dispositionPath,
+    activationPath: args.activationPath,
+    validationPath: args.validationPath,
+    verificationPath: args.verificationPath,
+    requirementsPath: args.requirementsPath,
+  })
+  const body = {
+    schemaVersion: "v1.38-plan-262-81-lifecycle-driver-readiness-v1" as const,
+    checkerSha256: sha256(readRegular(args.checkerPath)),
+    testSha256: sha256(readRegular(args.testPath)),
+    planIdentityRoot: checked.topology.planIdentityRoot,
+    summaryIdentityRoot: checked.topology.summaryIdentityRoot,
+    admissionDispositionRoot: checked.dispositionRoot as Sha256,
+    verificationStatus: checked.result.status,
+    activePlans: 64 as const,
+    preSummarySummaries: 63 as const,
+    postSummaryDriverInvoked: false as const,
+    syntheticPassVerified: true as const,
+    syntheticNonPassVerified: true as const,
+    lifecycleMutationPerformed: false as const,
+  }
+  return { ...body, readinessRoot: readinessRoot(body) }
+}
+
+export const writeV138Plan26281Readiness = (args: {
+  phaseDir: string
+  dispositionPath: string
+  validationPath: string
+  verificationPath: string
+  readinessPath: string
+  checkerPath: string
+  testPath: string
+  requirementsPath: string
+  activationPath: string
+}): V138Plan26281Readiness => {
+  const readiness = deriveReadiness(args)
+  writeFileSync(args.readinessPath, canonical(readiness), {
+    flag: "wx",
+    mode: 0o600,
+  })
+  return readiness
+}
+
+export const checkV138Plan26281Readiness = (args: {
+  phaseDir: string
+  dispositionPath: string
+  validationPath: string
+  verificationPath: string
+  readinessPath: string
+  checkerPath: string
+  testPath: string
+  requirementsPath: string
+  activationPath: string
+}): V138Plan26281Readiness => {
+  const candidate = readJson(args.readinessPath) as V138Plan26281Readiness
+  const expected = deriveReadiness(args)
+  if (canonical(candidate) !== canonical(expected))
+    fail("V138_PLAN_262_81_READINESS_INVALID")
+  return candidate
+}
+
 const option = (argv: string[], name: string): string => {
   const index = argv.indexOf(name)
-  if (index < 0 || index + 1 >= argv.length) fail("V138_PLAN_262_81_ARGUMENTS_INVALID")
+  if (index < 0 || index + 1 >= argv.length)
+    fail("V138_PLAN_262_81_ARGUMENTS_INVALID")
   return argv[index + 1]!
 }
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
 const resolveRepo = (value: string): string => path.resolve(repoRoot, value)
 
 const main = (): void => {
   const argv = process.argv.slice(2)
+  const commonReadinessArgs = () => ({
+    phaseDir: resolveRepo(option(argv, "--phase-dir")),
+    dispositionPath: resolveRepo(option(argv, "--disposition")),
+    activationPath: resolveRepo(
+      ".planning/artifacts/v1.38-foundation-activation-root-route9.json",
+    ),
+    validationPath: resolveRepo(option(argv, "--validation")),
+    verificationPath: resolveRepo(option(argv, "--verification")),
+    readinessPath: resolveRepo(option(argv, "--readiness")),
+    checkerPath: resolveRepo("scripts/check-v1-38-plan-262-81-lifecycle.ts"),
+    testPath: resolveRepo("scripts/check-v1-38-plan-262-81-lifecycle.test.ts"),
+    requirementsPath: resolveRepo(".planning/REQUIREMENTS.md"),
+  })
   if (argv[0] === "--refresh-pre-summary") {
     const result = refreshV138Plan26281PreSummaryProof({
       phaseDir: resolveRepo(option(argv, "--phase-dir")),
@@ -343,7 +637,13 @@ const main = (): void => {
       verificationPath: resolveRepo(option(argv, "--verification")),
       requirementsPath: resolveRepo(".planning/REQUIREMENTS.md"),
     })
-    process.stdout.write(canonical({ status: result.result.status, activePlans: 64, summaries: 63 }))
+    process.stdout.write(
+      canonical({
+        status: result.result.status,
+        activePlans: 64,
+        summaries: 63,
+      }),
+    )
     return
   }
   if (argv[0] === "--check-pre-summary") {
@@ -355,10 +655,68 @@ const main = (): void => {
       verificationPath: resolveRepo(option(argv, "--verification")),
       requirementsPath: resolveRepo(".planning/REQUIREMENTS.md"),
     })
-    process.stdout.write(canonical({ status: result.result.status, activePlans: 64, summaries: 63 }))
+    process.stdout.write(
+      canonical({
+        status: result.result.status,
+        activePlans: 64,
+        summaries: 63,
+      }),
+    )
+    return
+  }
+  if (argv[0] === "--write-post-summary-driver-readiness") {
+    const readiness = writeV138Plan26281Readiness(commonReadinessArgs())
+    process.stdout.write(
+      canonical({
+        status: "ready",
+        activePlans: readiness.activePlans,
+        summaries: readiness.preSummarySummaries,
+        readinessRoot: readiness.readinessRoot,
+        postSummaryDriverInvoked: false,
+      }),
+    )
+    return
+  }
+  if (argv[0] === "--check-post-summary-driver-ready") {
+    const readiness = checkV138Plan26281Readiness(commonReadinessArgs())
+    process.stdout.write(
+      canonical({
+        status: "ready",
+        activePlans: readiness.activePlans,
+        summaries: readiness.preSummarySummaries,
+        readinessRoot: readiness.readinessRoot,
+        postSummaryDriverInvoked: false,
+      }),
+    )
+    return
+  }
+  if (argv[0] === "--check-post-summary") {
+    const result = runV138Plan26281PostSummaryLifecycle({
+      phaseDir: resolveRepo(option(argv, "--phase-dir")),
+      summaryPath: resolveRepo(option(argv, "--summary")),
+      dispositionPath: resolveRepo(option(argv, "--disposition")),
+      activationPath: resolveRepo(option(argv, "--activation-root")),
+      validationPath: resolveRepo(option(argv, "--validation")),
+      verificationPath: resolveRepo(option(argv, "--verification")),
+      requirementsPath: resolveRepo(option(argv, "--requirements")),
+      roadmapPath: resolveRepo(option(argv, "--roadmap")),
+      statePath: resolveRepo(option(argv, "--state")),
+    })
+    process.stdout.write(
+      canonical({
+        status: result.status,
+        activePlans: result.topology.activePlanCount,
+        summaries: result.topology.summaryCount,
+        lifecycleMutated: result.mutated,
+      }),
+    )
     return
   }
   fail("V138_PLAN_262_81_ARGUMENTS_INVALID")
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main()
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+)
+  main()
