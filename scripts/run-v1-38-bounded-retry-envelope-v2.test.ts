@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -27,6 +28,16 @@ import {
   V138_BOUNDED_RETRY_V2_PATHS,
   type V138RetryV2JournalRecord,
 } from "./lib/v1-38-bounded-retry-envelope-v2.js"
+import {
+  V138_BOUNDED_RETRY_V2_LIVE_FLAGS,
+  V138_BOUNDED_RETRY_V2_PATHS as CONTROLLER_PATHS,
+  acquireV138RetryV2OwnerLease,
+  executeV138BoundedRetryV2Cli,
+  publishV138RetryV2Outcome,
+  runV138BoundedRetryV2Controller,
+  runV138V2ProductionLive,
+  type V138BoundedRetryV2ControllerEffects,
+} from "./run-v1-38-bounded-retry-envelope-v2.js"
 
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
@@ -635,5 +646,314 @@ describe("retry-envelope:v2 finite state and cumulative journal", () => {
     const root = mkdtempSync(path.join(tmpdir(), "v138-retry-"))
     temporaryRoots.push(root)
     expect(root.startsWith(tmpdir())).toBe(true)
+  })
+})
+
+describe("bounded retry v2 controller and crash-safe custody", () => {
+  const fakeEffects = (input: {
+    observations: number[]
+    calibrations: Array<"admitted" | "system_failure">
+    reproduction?: {
+      status: "passed_exact" | "system_failure"
+      acceptedCells: number
+      completeCleanup: boolean
+    }
+    start?: number
+  }) => {
+    let now = input.start ?? 1_000
+    const durable: V138RetryV2JournalRecord[] = []
+    let reproductionRuns = 0
+    const effects: V138BoundedRetryV2ControllerEffects = {
+      monotonicMilliseconds: () => now,
+      waitUntil: async (target) => {
+        now = target
+      },
+      observePreflight: async () => ({
+        available: true,
+        effectiveAvailableBasisPoints: input.observations.shift() ?? 0,
+      }),
+      runCalibration: async () => ({
+        status: input.calibrations.shift() ?? "system_failure",
+        completeCleanup: true,
+        supervisionRoot: SHA_A,
+      }),
+      runReproduction: async () => {
+        reproductionRuns += 1
+        const result = input.reproduction ?? {
+          status: "passed_exact" as const,
+          acceptedCells: 540,
+          completeCleanup: true,
+        }
+        const artifact = {
+          schemaVersion: "v1.38-current-matrix-reproduction-v16",
+          status: result.status,
+          acceptedCellCount: result.acceptedCells,
+          uniqueExpectedCellCount: result.acceptedCells,
+          completeCleanup: result.completeCleanup,
+          receiptRoot: SHA_B,
+          downstreamAuthority: "denied",
+        }
+        return { ...result, reproductionRoot: SHA_B, artifact }
+      },
+      appendDurableRecord: (record) => {
+        durable.push(record)
+      },
+    }
+    return { effects, durable, reproductionRuns: () => reproductionRuns }
+  }
+
+  it("keeps refused, admitted, failed-calibration, exact-540, and partial branches finite", async () => {
+    const refused = fakeEffects({
+      observations: Array.from({ length: 12 }, () => 2_499),
+      calibrations: [],
+    })
+    const refusedResult = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records: [],
+      effects: refused.effects,
+    })
+    expect(refusedResult.state).toMatchObject({
+      disposition: "exhausted",
+      preflightObservationsConsumed: 12,
+      routeStartsConsumed: 0,
+      acceptedCells: 0,
+    })
+
+    const failed = fakeEffects({
+      observations: [2_500, 2_500, 2_500],
+      calibrations: ["system_failure", "system_failure", "system_failure"],
+    })
+    const failedResult = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records: [],
+      effects: failed.effects,
+    })
+    expect(failedResult.state).toMatchObject({
+      disposition: "exhausted",
+      routeStartsConsumed: 3,
+      calibrationIdentitiesCharged: 24,
+      acceptedCells: 0,
+    })
+
+    const passed = fakeEffects({ observations: [2_500], calibrations: ["admitted"] })
+    const passedResult = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records: [],
+      effects: passed.effects,
+    })
+    expect(passedResult.state).toMatchObject({
+      disposition: "succeeded",
+      reproductionIdentitiesCharged: 540,
+      acceptedCells: 540,
+      downstreamAuthority: false,
+    })
+    expect(passed.reproductionRuns()).toBe(1)
+
+    const partial = fakeEffects({
+      observations: [2_500],
+      calibrations: ["admitted"],
+      reproduction: {
+        status: "system_failure",
+        acceptedCells: 539,
+        completeCleanup: true,
+      },
+    })
+    const partialResult = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records: [],
+      effects: partial.effects,
+    })
+    expect(partialResult.state).toMatchObject({
+      disposition: "terminal_failure",
+      reproductionIdentitiesCharged: 540,
+      acceptedCells: 0,
+    })
+  })
+
+  it("makes cleanup uncertainty terminal and never reuses a reserved identity on restart", async () => {
+    let records: readonly V138RetryV2JournalRecord[] = []
+    records = append(records, 1_000, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner",
+    })
+    const restarted = fakeEffects({ observations: [2_500], calibrations: ["admitted"] })
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records,
+      effects: restarted.effects,
+    })
+    expect(result.records.filter(({ identity }) => identity === "preflight:v2:0")).toHaveLength(2)
+    expect(result.records[1]).toMatchObject({
+      kind: "observe_preflight",
+      identity: "preflight:v2:0",
+      effectiveAvailableBasisPoints: 0,
+    })
+    expect(result.state.nextPreflightIdentity).toBe("preflight:v2:1")
+
+    let cleanupRecords: readonly V138RetryV2JournalRecord[] = []
+    cleanupRecords = append(cleanupRecords, 1_000, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner",
+    })
+    cleanupRecords = append(cleanupRecords, 1_001, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner",
+      effectiveAvailableBasisPoints: 2_500,
+    })
+    cleanupRecords = append(cleanupRecords, 1_002, {
+      kind: "reserve_route",
+      identity: "route:v2:0",
+      preflightIdentity: "preflight:v2:0",
+      owner: "owner",
+    })
+    cleanupRecords = append(cleanupRecords, 1_003, {
+      kind: "reserve_calibration",
+      routeIdentity: "route:v2:0",
+      owner: "owner",
+      identities: V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.slice(0, 8),
+    })
+    const cleanup = fakeEffects({ observations: [], calibrations: [] })
+    const cleanupResult = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records: cleanupRecords,
+      effects: cleanup.effects,
+    })
+    expect(cleanupResult.state).toMatchObject({
+      disposition: "terminal_failure",
+      completeCleanup: false,
+      remainingRouteStarts: 0,
+    })
+  })
+
+  it("publishes reproduction before terminal and recovers each publication boundary idempotently", async () => {
+    const passed = fakeEffects({ observations: [2_500], calibrations: ["admitted"] })
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "owner",
+      records: [],
+      effects: passed.effects,
+    })
+    for (const boundary of [
+      "afterReproductionWrite",
+      "afterReproductionParentFsync",
+      "afterTerminalWrite",
+      "afterTerminalParentFsync",
+    ] as const) {
+      const root = mkdtempSync(path.join(tmpdir(), `v138-v2-${boundary}-`))
+      temporaryRoots.push(root)
+      const reproductionTarget = path.join(root, "reproduction.json")
+      const terminalTarget = path.join(root, "terminal.json")
+      expect(() =>
+        publishV138RetryV2Outcome({
+          reproductionTarget,
+          terminalTarget,
+          result,
+          hooks: { [boundary]: () => { throw new Error("crash") } },
+        }),
+      ).toThrow("crash")
+      publishV138RetryV2Outcome({ reproductionTarget, terminalTarget, result })
+      expect(JSON.parse(readFileSync(reproductionTarget, "utf8"))).toMatchObject({
+        acceptedCellCount: 540,
+        downstreamAuthority: "denied",
+      })
+      expect(JSON.parse(readFileSync(terminalTarget, "utf8"))).toMatchObject({
+        disposition: "succeeded",
+        productionAuthorized: false,
+        downstreamAuthority: "denied",
+      })
+      expect(passed.reproductionRuns()).toBe(1)
+    }
+  })
+
+  it("admits exactly one lock owner and kernel death releases ownership", async () => {
+    if (process.platform !== "darwin") return
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v2-lock-"))
+    temporaryRoots.push(root)
+    const lock = path.join(root, "owner.lock")
+    const owner = await acquireV138RetryV2OwnerLease(lock)
+    await expect(acquireV138RetryV2OwnerLease(lock)).rejects.toThrow(
+      "V138_RETRY_OWNER_LOCK_ACTIVE",
+    )
+    process.kill(owner.pid, "SIGKILL")
+    await owner.waitForExit()
+    const restarted = await acquireV138RetryV2OwnerLease(lock)
+    await restarted.release()
+  })
+
+  it("strictly selects source-only mode and reports every downstream authority false", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v2-cli-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning", "artifacts"), { recursive: true })
+    let liveInvoked = false
+    const writes: string[] = []
+    const originalWrite = process.stdout.write
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+      writes.push(String(chunk))
+      return true
+    }) as typeof process.stdout.write
+    try {
+      await executeV138BoundedRetryV2Cli(["--check-source-only"], {
+        repoRoot: root,
+        runLive: async () => {
+          liveInvoked = true
+        },
+      })
+      await expect(
+        executeV138BoundedRetryV2Cli(["--run-bounded-live-envelope"], {
+          repoRoot: root,
+          runLive: async () => {
+            liveInvoked = true
+          },
+        }),
+      ).rejects.toThrow("V138_RETRY_ARGUMENTS_INVALID")
+    } finally {
+      process.stdout.write = originalWrite
+    }
+    expect(liveInvoked).toBe(false)
+    expect(JSON.parse(writes.join(""))).toMatchObject({
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      phase263Authorized: false,
+      candidateSearchAuthorized: false,
+      formationMaterializationAuthorized: false,
+      holdoutOpeningAuthorized: false,
+      publicAuthorized: false,
+      productAuthorized: false,
+      productionAuthorized: false,
+      gameplayChangeAuthorized: false,
+    })
+    expect(Object.keys(V138_BOUNDED_RETRY_V2_LIVE_FLAGS)).toHaveLength(18)
+    for (const destination of Object.values(CONTROLLER_PATHS).filter((value) =>
+      value.includes("journal-v2") || value.includes("terminal-v2") ||
+      value.includes("private-v2") || value.includes("reproduction-v16"),
+    )) expect(existsSync(path.resolve(root, destination))).toBe(false)
+  })
+
+  it("production entry uses injected fake effects and leaves runtime invocation outside the controller", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v2-production-fake-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning", "artifacts"), { recursive: true })
+    const fake = fakeEffects({ observations: Array.from({ length: 12 }, () => 2_499), calibrations: [] })
+    await runV138V2ProductionLive(root, {
+      validateInputs: false,
+      checkPair: () => ({ seal: {} as never, envelope: envelope() }),
+      createEffects: (appendDurableRecord) => ({
+        ...fake.effects,
+        appendDurableRecord,
+      }),
+    })
+    expect(existsSync(path.resolve(root, CONTROLLER_PATHS.terminal))).toBe(true)
+    expect(existsSync(path.resolve(root, CONTROLLER_PATHS.reproduction))).toBe(false)
+    expect(fake.reproductionRuns()).toBe(0)
   })
 })
