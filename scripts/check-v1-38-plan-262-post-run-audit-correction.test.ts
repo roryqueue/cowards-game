@@ -1,16 +1,40 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  checkV138Plan26280Disposition,
+  V138_PLAN_262_80_PATHS,
+} from "./check-v1-38-plan-262-80-bounded-retry-admission.js"
+import {
   checkV138HistoricalLiveReceiptManifest,
   computeV138PostRunAuditCorrectionRoot,
   deriveV138HistoricalLiveReceiptManifest,
   deriveV138PostRunAuditCorrection,
   validateV138PostRunAuditCorrection,
 } from "./check-v1-38-plan-262-post-run-audit-correction.js"
+import { checkV138PublishedRetryOutcome } from "./run-v1-38-bounded-retry-envelope.js"
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("Phase 262 additive post-run audit correction", () => {
+  it("routes the published Plan 80 and terminal readers through the canonical correction", () => {
+    const disposition = checkV138Plan26280Disposition(
+      process.cwd(),
+      V138_PLAN_262_80_PATHS.disposition,
+      V138_PLAN_262_80_PATHS.activationRoot,
+    )
+    const outcome = checkV138PublishedRetryOutcome(process.cwd())
+    expect(disposition.disposition).toMatchObject({
+      status: "non_pass",
+      terminalDisposition: "exhausted",
+      effectiveIntegrityPassed: false,
+    })
+    expect(outcome).toMatchObject({
+      disposition: "exhausted",
+      reproductionPresent: false,
+      downstreamAuthority: "denied",
+    })
+  }, 60_000)
+
   it("derives the intended private receipt set from exact historical Git blobs", () => {
     const manifest = deriveV138HistoricalLiveReceiptManifest(process.cwd())
     expect(manifest).toMatchObject({

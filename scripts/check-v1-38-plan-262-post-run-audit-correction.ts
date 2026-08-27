@@ -36,6 +36,7 @@ const HISTORICAL = Object.freeze({
   sourceCommit: "e844279f62192c41175fb3e7a08910493c6f24ab",
   sealCommit: "4841357d7aa89b7996f9ce299256f1d8d56a6290",
   liveCommit: "b4be9f5f5207c7eb87c6cd0e8f79863d4877cf3b",
+  receiptManifestCommit: "fb1fdf8190714f08d2350eed88ee7e98077fadfc",
   plan83Commit: "f69bd27f1e5b8bb2b751230e9290d2956e06f454",
   plan80Commit: "a0b323784a96b19748867936dd06d18079db0ebb",
   oldPlan83Root:
@@ -187,7 +188,12 @@ export const checkV138HistoricalLiveReceiptManifest = (root: string): any => {
     bytes !== canonical(candidate) ||
     candidate.manifestRoot !==
       computeV138HistoricalLiveReceiptManifestRoot(candidate) ||
-    canonical(candidate) !== canonical(expected)
+    canonical(candidate) !== canonical(expected) ||
+    !gitBytes(
+      root,
+      HISTORICAL.receiptManifestCommit,
+      V138_HISTORICAL_LIVE_RECEIPT_MANIFEST_PATH,
+    ).equals(Buffer.from(bytes))
   )
     fail("V138_AUDIT_CORRECTION_MANIFEST_INVALID")
   return candidate
@@ -278,6 +284,7 @@ export const deriveV138PostRunAuditCorrection = (root: string): any => {
       privateReceiptCount: manifest.receiptCount,
       privateReceiptRoot: manifest.privateReceiptRoot,
       receiptManifestPath: V138_HISTORICAL_LIVE_RECEIPT_MANIFEST_PATH,
+      receiptManifestCommit: HISTORICAL.receiptManifestCommit,
       receiptManifestRoot: manifest.manifestRoot,
       oldPlan83ReviewRoot: oldPlan83.reviewRoot,
       oldPlan83Commit: HISTORICAL.plan83Commit,

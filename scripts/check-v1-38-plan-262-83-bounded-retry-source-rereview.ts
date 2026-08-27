@@ -38,7 +38,7 @@ export const V138_PLAN_262_83_REVIEW_PATH =
   ".planning/artifacts/v1.38-plan-262-83-bounded-retry-source-rereview-v1.json"
 export const V138_PLAN_262_83_REPORT_PATH = `${PHASE_DIR}/262-83-REVIEW.md`
 const POST_RUN_CORRECTION_PATH =
-  ".planning/artifacts/v1.38-plan-262-post-run-audit-correction-v1.json"
+  ".planning/artifacts/v1.38-plan-262-post-run-audit-correction-v2.json"
 export const V138_PLAN_262_83_SOURCE_PATHS = Object.freeze([
   "scripts/lib/v1-38-bounded-retry-envelope.ts",
   "scripts/run-v1-38-bounded-retry-envelope.ts",
@@ -852,7 +852,7 @@ const check = (root: string, reviewPath: string, reportPath: string) => {
     if (
       correction.correctionRoot !==
         sha256(
-          `v138-plan262-post-run-audit-correction-v1\0${canonical(
+          `v138-plan262-post-run-audit-correction-v2\0${canonical(
             correctionBody,
           )}`,
         ) ||
