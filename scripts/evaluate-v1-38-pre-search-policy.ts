@@ -14,6 +14,7 @@ import {
   V138_PREDECESSOR_AUTHORITY,
   evaluateV138DownstreamAuthority,
 } from "./lib/v1-38-policy-authority.js"
+import { buildV138PlanSupersessionManifest } from "./check-v1-38-dependency-revision-boundaries.js"
 
 type Sha256 = `sha256:${string}`
 type RecordValue = Record<string, unknown>
@@ -239,7 +240,6 @@ const validateSourceBindings = (value: unknown): V138PreSearchPolicySourceBindin
     bindings.generatorCheckerPath !== generatorCheckerPath || bindings.testPath !== testPath ||
     bindings.authorityPath !== authorityPath || bindings.supersessionPath !== supersessionPath ||
     bindings.selectedPredecessorAdmissionRoot !== V138_PREDECESSOR_AUTHORITY.admissionRoot ||
-    bindings.supersessionManifestRoot !== "sha256:5a98bda88cbd2316faa0279d6a22e1f0c1cee3439a3e5f997ea31f217832c8a6" ||
     bindings.replayTestPath !== replayTestPath || bindings.replayManifestPath !== replayManifestPath ||
     bindings.frozenReplayCommit !== frozenReplayCommit ||
     [bindings.generatorCheckerSha256, bindings.testSha256, bindings.authoritySha256,
@@ -249,6 +249,16 @@ const validateSourceBindings = (value: unknown): V138PreSearchPolicySourceBindin
     throw new TypeError("V138_PRE_SEARCH_POLICY_SOURCE_BINDINGS_INVALID")
   }
   return bindings as unknown as V138PreSearchPolicySourceBindings
+}
+
+export const validateV138PreSearchSupersession = (input: unknown): Sha256 => {
+  const value = asRecord(input, "V138_PRE_SEARCH_POLICY_SUPERSESSION_INVALID")
+  const expected = buildV138PlanSupersessionManifest()
+  if (value.schemaVersion !== expected.schemaVersion ||
+    Buffer.from(canonicalBytes(value)).compare(Buffer.from(canonicalBytes(expected))) !== 0) {
+    throw new TypeError("V138_PRE_SEARCH_POLICY_SUPERSESSION_INVALID")
+  }
+  return expected.manifestRoot
 }
 
 export interface V138PreSearchPolicyBuildInput {
@@ -382,10 +392,7 @@ export const generateV138PreSearchPolicyRoot = (repoRoot = defaultRepoRoot): V13
     })
   })
   const supersession = readJsonBytes(repoRoot, supersessionPath)
-  if (supersession.value.schemaVersion !== "v1.38-phase-262-plan-supersession-v1" ||
-    supersession.value.manifestRoot !== "sha256:5a98bda88cbd2316faa0279d6a22e1f0c1cee3439a3e5f997ea31f217832c8a6") {
-    throw new TypeError("V138_PRE_SEARCH_POLICY_SUPERSESSION_INVALID")
-  }
+  const supersessionManifestRoot = validateV138PreSearchSupersession(supersession.value)
   const tooling = asRecord(supersession.value.toolingDependency, "V138_PRE_SEARCH_POLICY_TOOLING_INVALID")
   const replayTestBytes = readFileSync(path.join(repoRoot, replayTestPath))
   const replayManifestBytes = readFileSync(path.join(repoRoot, replayManifestPath))
@@ -415,7 +422,7 @@ export const generateV138PreSearchPolicyRoot = (repoRoot = defaultRepoRoot): V13
       selectedPredecessorAdmissionRoot: V138_PREDECESSOR_AUTHORITY.admissionRoot,
       supersessionPath,
       supersessionArtifactSha256: sha256(supersession.bytes),
-      supersessionManifestRoot: supersession.value.manifestRoot as Sha256,
+      supersessionManifestRoot,
       replayTestPath,
       replayTestSha256: sha256(replayTestBytes),
       replayManifestPath,

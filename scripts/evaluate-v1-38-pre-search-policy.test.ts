@@ -6,8 +6,10 @@ import {
   buildV138PreSearchPolicyRoot,
   generateV138PreSearchPolicyRoot,
   renderV138PreSearchPolicyRoot,
+  validateV138PreSearchSupersession,
   validateV138PreSearchPolicyRoot,
 } from "./evaluate-v1-38-pre-search-policy.js"
+import { buildV138PlanSupersessionManifest } from "./check-v1-38-dependency-revision-boundaries.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const clone = <T>(value: T): T => globalThis.structuredClone(value)
@@ -68,7 +70,7 @@ describe("Phase 262 pre-search policy root", () => {
       authorityPath: "scripts/lib/v1-38-policy-authority.ts",
       supersessionPath: ".planning/artifacts/v1.38-phase-262-plan-supersession.json",
       selectedPredecessorAdmissionRoot: "sha256:eb881964ed2cf8b8cf2d24c35a2d8eb6a744917f2659bef8fd41b6f3c7ab491c",
-      supersessionManifestRoot: "sha256:5a98bda88cbd2316faa0279d6a22e1f0c1cee3439a3e5f997ea31f217832c8a6",
+      supersessionManifestRoot: buildV138PlanSupersessionManifest().manifestRoot,
       replayTestPath: "packages/replay/src/historical-v1-4.test.ts",
       replayManifestPath: "packages/replay/src/fixtures/historical-v1-4-chronicle-manifest.json",
       frozenReplayCommit: "4fab0afc058232f37ba11506b5d04a1d59b2f4e0",
@@ -81,6 +83,17 @@ describe("Phase 262 pre-search policy root", () => {
       "replayTestSha256",
       "replayManifestSha256",
     ] as const) expect(result.sourceBindings[key]).toMatch(/^sha256:[0-9a-f]{64}$/u)
+  })
+
+  it("authenticates the current canonical supersession without pinning a stale manifest root", () => {
+    const current = buildV138PlanSupersessionManifest()
+    expect(validateV138PreSearchSupersession(current)).toBe(current.manifestRoot)
+
+    const forged = clone(current) as unknown as Record<string, unknown>
+    forged.manifestRoot = `sha256:${"0".repeat(64)}`
+    expect(() => validateV138PreSearchSupersession(forged)).toThrow(
+      "V138_PRE_SEARCH_POLICY_SUPERSESSION_INVALID",
+    )
   })
 
   it("rejects every missing, extra, or flipped denial before a root can validate", () => {
