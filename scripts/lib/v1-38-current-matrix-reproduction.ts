@@ -42,6 +42,7 @@ import {
   reduceV138CurrentMatrixChildProtocolV2Observation,
 } from "./v1-38-current-matrix-child-protocol.js"
 import {
+  assertV138FoundationLiveSourceCustody,
   type V138FoundationAdmissionPassed,
 } from "./v1-38-foundation-admission.js"
 import {
@@ -340,8 +341,11 @@ export const checkV138HistoricalFoundationAdmission = (
 
 const verifiedFoundationAdmission = (
   repoRoot: string,
-): V138FoundationAdmissionPassed =>
-  checkV138HistoricalFoundationAdmission(path.resolve(repoRoot))
+): V138FoundationAdmissionPassed => {
+  const root = path.resolve(repoRoot)
+  assertV138FoundationLiveSourceCustody(root)
+  return checkV138HistoricalFoundationAdmission(root)
+}
 
 // BEGIN V1.38 HISTORICAL EXPECTATION DERIVATION SOURCE
 const onlyMatch = (source: string, pattern: RegExp): RegExpMatchArray => {

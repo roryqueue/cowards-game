@@ -55,7 +55,7 @@ const ADMISSION_PRODUCING_COMMIT =
  * only as a committed Git object and cannot silently run dirty/substituted
  * bytes while reusing the historical sealed receipt.
  */
-export const V138_FOUNDATION_LIVE_SOURCE_PATHS = [
+const SOURCE_PATHS = [
   "scripts/check-v1-37-audit-reproduction.ts",
   "scripts/check-v1-37-release-tag.ts",
   "scripts/lib/v1-38-foundation-admission.ts",
@@ -64,7 +64,17 @@ export const V138_FOUNDATION_LIVE_SOURCE_PATHS = [
   FOUNDATION_PATH,
   CORRECTION_PATH,
 ] as const
-const SOURCE_PATHS = V138_FOUNDATION_LIVE_SOURCE_PATHS
+
+/**
+ * Operational custody is deliberately broader than the immutable historical
+ * admission binding above. The compatibility fixtures are executable inputs
+ * to current-matrix admission, so dirty bytes there must fail closed without
+ * rewriting the already-persisted v1.38 foundation receipt.
+ */
+export const V138_FOUNDATION_LIVE_SOURCE_PATHS = [
+  ...SOURCE_PATHS,
+  "packages/engine/src/compatibility-fixtures.test.ts",
+] as const
 
 type Sha256 = `sha256:${string}`
 
@@ -672,7 +682,7 @@ const gitBlobBytes = (
     maxBuffer: 2 * 1024 * 1024,
   })
 
-const assertLiveSourcesMatchProducingGitObject = (
+export const assertV138FoundationLiveSourceCustody = (
   repoRoot: string,
 ): void => {
   const producingCommit = git(repoRoot, [
@@ -955,7 +965,7 @@ export const resolveV138FoundationAdmissionInput = (
   repoRoot: string,
 ): V138FoundationAdmissionInput => {
   const root = path.resolve(repoRoot)
-  assertLiveSourcesMatchProducingGitObject(root)
+  assertV138FoundationLiveSourceCustody(root)
   const correctionLineage = parseCorrectionAuthority(root)
   const release = releaseInput(root, correctionLineage)
   const foundationBytes = gitBlob(
