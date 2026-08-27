@@ -1,102 +1,114 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-27T22:34:44Z
+fixed_at: 2026-08-27T23:07:03Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 1
-findings_in_scope: 5
-fixed: 5
+iteration: 2
+findings_in_scope: 6
+fixed: 6
 skipped: 0
 status: all_fixed
-correction_root: sha256:2a7e25a324ee1e28e4f7da543634afd29dca87dac12e860fea3c0e6b01650029
+correction_root: sha256:468054b638d95bc39f0a2f0459f9514a295cfd318748d18d78c039a2f239f526
 ---
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-27T22:34:44Z
+**Fixed at:** 2026-08-27T23:07:03Z
 
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
 
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
 
-- Findings in scope: 5
-- Fixed: 5
+- Findings in scope: 6
+- Fixed: 6
 - Skipped: 0
-- Historical and current empirical outcome: exhausted, fresh `0/540`, reproduction-v16 absent
-- Authority after remediation: none; independent re-review remains required
+- Historical result preserved: bounded retry exhausted at fresh `0/540`
+- Authority after remediation: none; an independent zero-finding review remains required
+- Immutable v2 baseline: 18/18 protected files byte-exact
 
-The reviewed v2 source and every sealed evidence byte remain immutable. All remediation is additive and source-only. The correction artifact at `.planning/artifacts/v1.38-phase-262-review-fix-correction-v1.json` supersedes the historical Plan 262-85 zero-finding verdict only for future authority; it does not rewrite that review, reinterpret the real non-pass, authorize another envelope, or advance Phase 263.
+All repairs are additive source/proof work. No live retry, reproduction, activation, candidate search, Phase 263, formation, holdout, public, product, production, counted-play, gameplay-change, archive, or tag authority was created.
 
 ## Fixed Issues
 
-### CR-01: Recover admitted preflight across the observation-to-route crash boundary
+### CR-01: Compose the successor repairs through one executable source-only route
 
 **Status:** fixed: requires human verification
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-integrity-successor-v1.ts`, `scripts/lib/v1-38-bounded-retry-integrity-successor-v1.test.ts`
+**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`
 
-**Commit:** `0f49e7dddc3601d086d5325fd841d12828d00ba7`
+**Commit:** `7fd895d782e859e62588a6bde5365321e1dcc373`
 
-**Applied fix:** Added an additive recovery transition that never re-observes headroom: an admitted observation is either durably charged to its exact preflight and the next route, or closed by the inclusive deadline. Real SIGKILL probes now stop after each semantically distinct reserve, observe, route, calibration, reproduction, and terminal transition and prove restart-valid hash-linked state.
+**Applied fix:** Added one successor controller that wires admitted-observation recovery, semantic completion/replay, canonical pair publication, and restartable lifecycle application at named call sites. Its CLI admits only `--source-check` and `--synthetic-check`; live, production, retry, reproduction, and activation modes fail closed.
 
-### CR-02: Persist effect completion before applying the deadline
-
-**Status:** fixed: requires human verification
-
-**Files modified:** `scripts/lib/v1-38-bounded-retry-integrity-successor-v1.ts`, `scripts/lib/v1-38-bounded-retry-integrity-successor-v1.test.ts`
-
-**Commit:** `b8083697cb06361dcb9e0d63c3a6d98cbe6a181c`
-
-**Applied fix:** Added a hash-chained successor effect journal that durably records effect start, observed finish/result/cleanup, and only then records the deadline decision. Preflight and calibration completion at and beyond the deadline preserve their facts before expiry. A clean exact `540/540` reproduction has explicit effect-terminal precedence even when completion reaches or crosses the deadline. Restart after a crash immediately after the finish fsync converges idempotently.
-
-### CR-03: Make review and seal/envelope pair publication recoverable
+### CR-02: Enforce strict effect-specific semantic replay
 
 **Status:** fixed: requires human verification
 
-**Files modified:** `scripts/lib/v1-38-durable-publication-successor-v1.ts`, `scripts/lib/v1-38-durable-publication-successor-v1.test.ts`
+**Files modified:** `scripts/lib/v1-38-successor-effect-state-machine-v2.ts`, `scripts/lib/v1-38-successor-effect-state-machine-v2.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`
 
-**Commit:** `aed26e9fd38778d0542287de6a65cd56ea26769e`
+**Commit:** `f4b6d7de3f550384d78da8113b09f9a42d5f88d3`
 
-**Applied fix:** Added a durable two-member transaction with exact precomputed bytes, per-member staged file fsync, durable intent and parent fsync, atomic hard-link no-replace publication, byte-authenticated recovery, and post-publication parent fsync. Existing exact canonical members are completed around; conflicting members fail closed and are never unlinked or replaced. Real SIGKILL probes cover both stage fsyncs, intent file/parent fsyncs, and both member publication/parent fsync boundaries.
+**Applied fix:** Added a strict three-record state machine with one start, one matching effect-specific finish, and one byte-recomputed decision. Identity, owner, kind, timing, legal status/cell/cleanup tuples, hash linkage, record count, and terminality are authenticated. Only reproduction `passed_exact` with 540 cells and complete cleanup yields exact success. Forgery, mutation, and post-terminal tests fail closed.
 
-### CR-04: Prevent lifecycle publication from overwriting a concurrent canonical artifact
-
-**Status:** fixed: requires human verification
-
-**Files modified:** `scripts/lib/v1-38-durable-publication-successor-v1.ts`, `scripts/lib/v1-38-durable-publication-successor-v1.test.ts`
-
-**Commit:** `7dfae25aaf4e6e6536e6286e590e48cf575fba56`
-
-**Applied fix:** Added `/usr/bin/lockf -t 0` ownership, staged-file durability, a destination recheck while the kernel lock is held, and hard-link no-replace publication. A synchronized non-cooperating racer created the target after staging; publication failed without changing the racer's bytes. A second lock contender was also refused while the first publisher held the lock.
-
-### CR-05: Make pass-side lifecycle mutation transactional and restartable
+### CR-03: Serialize pair publication under one deterministic common lock
 
 **Status:** fixed: requires human verification
 
-**Files modified:** `scripts/lib/v1-38-restartable-lifecycle-successor-v1.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v1.test.ts`
+**Files modified:** `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`
 
-**Commit:** `2c7cf54a09426d3f72956aecaae690a37513005d`
+**Commit:** `ea6416418349cc99cc7886959f68eaa3a42a43b5`
 
-**Applied fix:** Replaced command replay in the successor path with one durable prederived intent containing exact before/after hashes and exact target bytes. Each requirements, roadmap, state, and phase-complete postcondition is idempotently recognized after restart; the immutable lifecycle status is published no-replace only after all four postconditions hold. Injected failures after each step and after lifecycle publication converge deterministically, with the state-history entry present exactly once.
+**Applied fix:** Derived one kernel lock from the intent path plus sorted canonical targets, authenticated the durable intent before staging or publishing either member, and held the lock through both no-replace links and parent fsyncs. A synchronized reversed-order two-process conflict produces exactly one complete pair and no mixed pair.
+
+### CR-04: Hold the lifecycle lock through validation, CAS, status, and fsync
+
+**Status:** fixed: requires human verification
+
+**Files modified:** `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`
+
+**Commit:** `2cd7c421aa6e088e032c4f2413225e4902427db3`
+
+**Applied fix:** Acquired the deterministic lifecycle kernel lock before the first intent/state read and retained it through every hard-link compare-and-swap, final status publication, and parent fsync. Existing status bytes are accepted only when every postcondition already holds. Two-process races cover each of four steps, and a premature exact status fixture is rejected without mutation.
+
+### CR-05: Enforce trusted-root, relative-only, no-follow filesystem access
+
+**Status:** fixed: requires human verification
+
+**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v2.ts`, `scripts/lib/v1-38-secure-workspace-path-v2.test.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`
+
+**Commit:** `3ec565aba6b8135cfcea81870f41da2bd81de0aa`
+
+**Applied fix:** Added a realpath-resolved trusted root, relative-only path parser, all-component `lstat` walk, explicit no-follow absence proof, final `O_NOFOLLOW` descriptor reads, and device/inode identity verification. Publisher, lifecycle, and manifest authenticator tests reject both intermediate-directory and final-file symlinks while preserving external bytes.
+
+### CR-06: Authenticate complete negative evidence and the immutable triggering review
+
+**Status:** fixed: requires human verification
+
+**Files modified:** `scripts/check-v1-38-phase-262-review-fix-correction-v2.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v2.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v2.json`
+
+**Commit:** `8ae8cba0dfee4c04ed951a478187aed982c445e5`
+
+**Applied fix:** Added no-follow absence authentication for 14 explicit forbidden destinations spanning retry envelope/journal/terminal, reproduction-v16, Route-10 activation, candidate/Phase 263, formation, holdout, public/product/production, counted play, gameplay change, archive, and tag. The triggering review is authenticated as commit-qualified blob `c1d9ab6d75d406b83bf1b255be17b25a3d252ca3:8e5002c20443ab287e1a93af723ab505c88c4e3a`; the replaceable aggregate review is modeled separately. Every forbidden path and review mutation has a fail-closed test.
 
 ## Additive Integrity Correction
 
-**Files:** `scripts/check-v1-38-phase-262-review-fix-correction-v1.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v1.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v1.json`
+**Artifact:** `.planning/artifacts/v1.38-phase-262-review-fix-correction-v2.json`
 
-**Commit:** `f1fb202e`
+**Correction root:** `sha256:468054b638d95bc39f0a2f0459f9514a295cfd318748d18d78c039a2f239f526`
 
-**Correction root:** `sha256:2a7e25a324ee1e28e4f7da543634afd29dca87dac12e860fea3c0e6b01650029`
-
-The checker authenticates all protected v2 source, review, seal, envelope, journal, terminal, disposition, readiness, and lifecycle bytes; authenticates the additive remediation sources; preserves exhausted fresh `0/540`; and asserts every retry, reproduction, candidate, Phase 263, formation, holdout, public, product, production, counted-play, gameplay, archive, and tag authority false.
+Correction v2 supersedes correction v1 only for future authority decisions. It preserves the exhausted `0/540` result, binds the exact successor source/test manifest, records all 14 authority denials as false, and requires a fresh independent zero-finding review.
 
 ## Verification
 
-- Serialized focused and historical suite: 8 files passed, 150/150 tests passed (117 historical plus 33 additive successor/correction tests).
+- Serialized historical plus successor suite: 14 files passed, 200/200 tests passed.
 - `pnpm exec tsc --noEmit --pretty false`: passed.
-- `pnpm exec tsx scripts/check-v1-38-phase-262-review-fix-correction-v1.ts --check`: passed.
+- Correction v1 checker: passed.
+- Correction v2 checker: passed.
+- Canonical Plan 262-88 artifact check: verified non-pass, exhausted, assurance clean, no correction or activation present.
+- Canonical Plan 262-89 final check: `gaps_found`, no lifecycle mutation.
+- Immutable protected v2 manifest: 18/18 files matched.
 - `git diff --check`: passed.
-- Immutable SHA-256 manifest: all 18 hash-bound v2 source/evidence/readiness/lifecycle files matched their pre-fix bytes exactly.
 
 ## Skipped Issues
 
@@ -104,8 +116,8 @@ None.
 
 ---
 
-_Fixed: 2026-08-27T22:34:44Z_
+_Fixed: 2026-08-27T23:07:03Z_
 
 _Fixer: the agent (gsd-code-fixer)_
 
-_Iteration: 1_
+_Iteration: 2_
