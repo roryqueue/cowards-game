@@ -1,0 +1,1674 @@
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
+import { createHash } from "node:crypto"
+import { spawn, spawnSync } from "node:child_process"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { pathToFileURL } from "node:url"
+import { afterEach, describe, expect, it } from "vitest"
+import {
+  V138_BOUNDED_RETRY_V2_IDENTITIES,
+  V138_BOUNDED_RETRY_V2_POLICY,
+  V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY,
+  appendV138RetryV2JournalRecord,
+  checkV138ProtectedHistoryV2,
+  createV138InactiveRetryV2Envelope,
+  deriveV138RetryV2State,
+  encodeV138RetryV2CanonicalJson,
+  type V138RetryV2JournalRecord,
+} from "./lib/v1-38-bounded-retry-envelope-v2.js"
+import {
+  V138_BOUNDED_RETRY_V2_PATHS,
+  V138_BOUNDED_RETRY_V2_LIVE_FLAGS,
+  executeV138BoundedRetryV2Cli,
+  runV138V2ProductionLive,
+  publishV138RetryV2Outcome,
+  publishV138RetryV2TerminalResult,
+  requireV138RetryV2DestinationAbsent,
+  requireV138RetryV2ReproductionAbsent,
+  runV138BoundedRetryV2Controller,
+  type V138BoundedRetryV2ControllerEffects,
+} from "./run-v1-38-bounded-retry-envelope-v2.js"
+
+const SHA_A = `sha256:${"a".repeat(64)}` as const
+const SHA_B = `sha256:${"b".repeat(64)}` as const
+const temporaryRoots: string[] = []
+
+afterEach(() => {
+  while (temporaryRoots.length > 0) {
+    rmSync(temporaryRoots.pop()!, { recursive: true, force: true })
+  }
+})
+
+const envelope = () =>
+  createV138InactiveRetryV2Envelope({
+    sourceRoot: SHA_A,
+    reviewRoot: SHA_B,
+    sealRoot: SHA_A,
+    protectedHistoryRoot: SHA_B,
+    protectedHistoricalIdentities: [
+      "preflight:v5:0",
+      "calibration:v9:attempt:0",
+      "reproduction:v12:cell:0",
+      "route:v8",
+    ],
+  })
+
+const append = (
+  records: readonly V138RetryV2JournalRecord[],
+  atMilliseconds: number,
+  event: Parameters<typeof appendV138RetryV2JournalRecord>[1],
+) =>
+  appendV138RetryV2JournalRecord(
+    records,
+    event,
+    atMilliseconds,
+    envelope().envelopeRoot,
+  )
+
+describe("correction-aware protected history", () => {
+  it("binds the exact separate source-base and authorization joins plus all v1 charges", () => {
+    expect(V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY).toMatchObject({
+      schemaVersion: "v1.38-bounded-retry-protected-history-v2",
+      sourceBase: {
+        commit: "9e7087b34f0bd6fa12d8b265f09d4c656eb044b0",
+        tree: "98e633df3870c944adaa9c5dc553a6df367da354",
+      },
+      authorization: {
+        commit: "453a33a10c247fb9c75e969ed4ab63646b16b488",
+        tree: "32626e7f24b7262e461cb1e12c3efb691dbb5739",
+        soleParent: "9e7087b34f0bd6fa12d8b265f09d4c656eb044b0",
+      },
+      correction: {
+        root: "sha256:0d132bf4b59fd0203dba5fa49763bb2ec7568e1b84881f1908f114cd680ba026",
+        status: "integrity_non_pass",
+        integrityPassed: false,
+        historicalBytesMutated: false,
+      },
+      historical: {
+        envelopeRoot: "sha256:229c1c3e33ee055448b4b8ac7dc2bb53efd84774416d51d984044b2a7f35f153",
+        journalSha256: "sha256:14e66af5c9fc985ef01cbc83efae35ea2a1ae20f1c9b10de0cd2e732dd667a14",
+        terminalSha256: "sha256:b79dc330212880f8e6b9d41bee701b380fbc92f2e82682159343e54ae8748ac3",
+        receiptManifestRoot: "sha256:cbafd7aaedef7b8f8c9d596a79c914482df40300fc0142e912db2754fe39a4b7",
+        sealRoot: "sha256:d5dc18c14d004f3bff8459974229b9af49b2e2a83732ead116cf84450fb46e63",
+        dispositionRoot: "sha256:5fe2dbf967971c6d69d619e91e8d838f5e6495ded3cc23889cf98f0b42dcccdf",
+        lifecycleRoot: "sha256:3b13e8656208643f4ce339bdab2f29bf56e38b00938afd49cfbc88164595a8b0",
+        routeStartsCharged: 3,
+        preflightObservationsCharged: 3,
+        calibrationIdentitiesCharged: 24,
+        reproductionIdentitiesCharged: 0,
+        freshAccepted: 0,
+      },
+    })
+    expect(V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY.protectedIdentities).toEqual(
+      expect.arrayContaining([
+        "retry-envelope:v1",
+        "route:v1:0",
+        "route:v1:2",
+        "preflight:v1:0",
+        "preflight:v1:2",
+        "calibration:v1:0:0",
+        "calibration:v1:2:7",
+      ]),
+    )
+    expect(checkV138ProtectedHistoryV2(V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY)).toBe(
+      V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY,
+    )
+  })
+
+  it.each([
+    ["source base commit", ["sourceBase", "commit"], "0".repeat(40)],
+    ["source base tree", ["sourceBase", "tree"], "0".repeat(40)],
+    ["authorization commit", ["authorization", "commit"], "0".repeat(40)],
+    ["authorization tree", ["authorization", "tree"], "0".repeat(40)],
+    ["authorization sole parent", ["authorization", "soleParent"], "0".repeat(40)],
+    ["correction root", ["correction", "root"], `sha256:${"0".repeat(64)}`],
+    ["correction status", ["correction", "status"], "pass"],
+    ["correction integrity", ["correction", "integrityPassed"], true],
+    ["historical byte custody", ["correction", "historicalBytesMutated"], true],
+    ["envelope root", ["historical", "envelopeRoot"], `sha256:${"0".repeat(64)}`],
+    ["journal digest", ["historical", "journalSha256"], `sha256:${"0".repeat(64)}`],
+    ["terminal digest", ["historical", "terminalSha256"], `sha256:${"0".repeat(64)}`],
+    ["receipt manifest", ["historical", "receiptManifestRoot"], `sha256:${"0".repeat(64)}`],
+    ["seal root", ["historical", "sealRoot"], `sha256:${"0".repeat(64)}`],
+    ["disposition root", ["historical", "dispositionRoot"], `sha256:${"0".repeat(64)}`],
+    ["lifecycle root", ["historical", "lifecycleRoot"], `sha256:${"0".repeat(64)}`],
+    ["route charges", ["historical", "routeStartsCharged"], 2],
+    ["preflight charges", ["historical", "preflightObservationsCharged"], 2],
+    ["calibration charges", ["historical", "calibrationIdentitiesCharged"], 23],
+    ["reproduction charges", ["historical", "reproductionIdentitiesCharged"], 1],
+    ["accepted history", ["historical", "freshAccepted"], 1],
+  ] as const)("fails closed on %s mutation", (_label, keys, replacement) => {
+    const mutated = structuredClone(V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY) as Record<
+      string,
+      unknown
+    >
+    const parent = mutated[keys[0]] as Record<string, unknown>
+    parent[keys[1]] = replacement
+    expect(() => checkV138ProtectedHistoryV2(mutated)).toThrow(
+      "V138_RETRY_V2_PROTECTED_HISTORY_INVALID",
+    )
+  })
+
+  it("fails closed when a charged historical identity is removed, duplicated, or relabeled v2", () => {
+    for (const identities of [
+      V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY.protectedIdentities.slice(1),
+      [
+        ...V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY.protectedIdentities,
+        V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY.protectedIdentities[0]!,
+      ],
+      V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY.protectedIdentities.map((value, index) =>
+        index === 0 ? "retry-envelope:v2" : value,
+      ),
+    ]) {
+      expect(() =>
+        checkV138ProtectedHistoryV2({
+          ...V138_BOUNDED_RETRY_V2_PROTECTED_HISTORY,
+          protectedIdentities: identities,
+        }),
+      ).toThrow("V138_RETRY_V2_PROTECTED_HISTORY_INVALID")
+    }
+  })
+})
+
+describe("ancestor-contained no-follow absence", () => {
+  it("accepts only a contained missing final component", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v2-contained-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, "safe", "parent"), { recursive: true })
+    expect(
+      requireV138RetryV2DestinationAbsent(root, "safe/parent/missing.json"),
+    ).toBe(true)
+  })
+
+  it.each(["parent-symlink", "dangling-leaf", "preexisting", "traversal"] as const)(
+    "fails closed for %s",
+    (kind) => {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-v2-unsafe-"))
+      temporaryRoots.push(root)
+      const outside = mkdtempSync(path.join(tmpdir(), "v138-v2-outside-"))
+      temporaryRoots.push(outside)
+      let target = "safe/parent/evidence.json"
+      mkdirSync(path.join(root, "safe"), { recursive: true })
+      if (kind === "parent-symlink") {
+        symlinkSync(outside, path.join(root, "safe", "parent"))
+      } else {
+        mkdirSync(path.join(root, "safe", "parent"))
+      }
+      if (kind === "dangling-leaf") {
+        symlinkSync(path.join(outside, "absent.json"), path.join(root, target))
+      }
+      if (kind === "preexisting") writeFileSync(path.join(root, target), "{}\n")
+      if (kind === "traversal") target = "../escaped.json"
+      expect(() => requireV138RetryV2DestinationAbsent(root, target)).toThrow(
+        "V138_RETRY_V2_DESTINATION_UNSAFE",
+      )
+    },
+  )
+})
+
+describe("published correction reproduction absence", () => {
+  it("accepts only a missing reproduction path", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-correction-absence-"))
+    temporaryRoots.push(root)
+    expect(requireV138RetryV2ReproductionAbsent(root)).toBe(true)
+  })
+
+  it.each(["regular", "symlink", "directory"] as const)(
+    "rejects a %s reproduction path",
+    (kind) => {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-correction-inject-"))
+      temporaryRoots.push(root)
+      const target = path.resolve(root, V138_BOUNDED_RETRY_V2_PATHS.reproduction)
+      mkdirSync(path.dirname(target), { recursive: true })
+      if (kind === "regular") writeFileSync(target, "{}\n")
+      if (kind === "directory") mkdirSync(target)
+      if (kind === "symlink") {
+        const linkTarget = path.join(root, "injected-reproduction.json")
+        writeFileSync(linkTarget, "{}\n")
+        symlinkSync(linkTarget, target)
+      }
+      expect(() => requireV138RetryV2ReproductionAbsent(root)).toThrow(
+        "V138_RETRY_REPRODUCTION_ARTIFACT_INVALID",
+      )
+    },
+  )
+})
+
+describe("retry-envelope:v2 finite state and cumulative journal", () => {
+  it("freezes the exact identities and policy bounds", () => {
+    expect(V138_BOUNDED_RETRY_V2_IDENTITIES.routes).toEqual([
+      "route:v2:0",
+      "route:v2:1",
+      "route:v2:2",
+    ])
+    expect(V138_BOUNDED_RETRY_V2_IDENTITIES.preflights).toHaveLength(12)
+    expect(V138_BOUNDED_RETRY_V2_IDENTITIES.preflights.at(-1)).toBe(
+      "preflight:v2:11",
+    )
+    expect(V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations).toHaveLength(24)
+    expect(
+      V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.filter((id) =>
+        id.startsWith("calibration:v2:2:"),
+      ),
+    ).toHaveLength(8)
+    expect(V138_BOUNDED_RETRY_V2_IDENTITIES.reproduction).toHaveLength(540)
+    expect(V138_BOUNDED_RETRY_V2_IDENTITIES.reproduction.at(-1)).toBe(
+      "reproduction:v2:539",
+    )
+    expect(V138_BOUNDED_RETRY_V2_POLICY).toMatchObject({
+      maximumRouteStarts: 3,
+      maximumPreflightObservations: 12,
+      envelopeLifetimeMilliseconds: 4 * 60 * 60 * 1_000,
+      refusalSpacingMilliseconds: 5 * 60 * 1_000,
+      calibrationFailureBackoffMilliseconds: 15 * 60 * 1_000,
+      calibrationAttemptsPerRoute: 8,
+      calibrationShardCount: 4,
+      samplingMilliseconds: 200,
+      minimumEffectiveAvailableBasisPoints: 2_500,
+      reproductionCellCount: 540,
+      maximumReproductionRuns: 1,
+    })
+  })
+
+  it("derives counters only from a previous-root-linked journal and charges reservations across crashes", () => {
+    let records: readonly V138RetryV2JournalRecord[] = []
+    records = append(records, 1_000, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner-a",
+    })
+    records = append(records, 1_001, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner-a",
+      effectiveAvailableBasisPoints: 2_499,
+    })
+    records = append(records, 301_001, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:1",
+      owner: "owner-a",
+    })
+    records = append(records, 301_002, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:1",
+      owner: "owner-a",
+      effectiveAvailableBasisPoints: 2_500,
+    })
+    records = append(records, 301_003, {
+      kind: "reserve_route",
+      identity: "route:v2:0",
+      owner: "owner-a",
+      preflightIdentity: "preflight:v2:1",
+    })
+    records = append(records, 301_004, {
+      kind: "reserve_calibration",
+      routeIdentity: "route:v2:0",
+      owner: "owner-a",
+      identities: V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.slice(0, 8),
+    })
+
+    const state = deriveV138RetryV2State(envelope(), records)
+    expect(state).toMatchObject({
+      preflightObservationsConsumed: 2,
+      routeStartsConsumed: 1,
+      calibrationIdentitiesCharged: 8,
+      reproductionIdentitiesCharged: 0,
+      acceptedCells: 0,
+      disposition: "active",
+    })
+    expect(state.nextPreflightIdentity).toBe("preflight:v2:2")
+    expect(state.nextRouteIdentity).toBe("route:v2:1")
+    expect(state.protectedHistoricalIdentityCount).toBe(4)
+  })
+
+  it("fails closed for duplicate or concurrent ownership, stale roots, mutation, over-bound time and early waits", () => {
+    let records: readonly V138RetryV2JournalRecord[] = []
+    records = append(records, 10, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner-a",
+    })
+    expect(() =>
+      append(records, 11, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:0",
+        owner: "owner-b",
+      }),
+    ).toThrow("V138_RETRY_IDENTITY_ALREADY_CHARGED")
+    records = append(records, 12, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner-a",
+      effectiveAvailableBasisPoints: 2_499,
+    })
+    expect(() =>
+      append(records, 12 + 5 * 60_000 - 1, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:1",
+        owner: "owner-a",
+      }),
+    ).toThrow("V138_RETRY_REFUSAL_SPACING_REQUIRED")
+
+    const mutated = records.map((record, index) =>
+      index === 0 ? { ...record, owner: "mutated" } : record,
+    )
+    expect(() => deriveV138RetryV2State(envelope(), mutated)).toThrow(
+      "V138_RETRY_JOURNAL_CHAIN_INVALID",
+    )
+    const changedEnvelope = createV138InactiveRetryV2Envelope({
+      sourceRoot: SHA_B,
+      reviewRoot: SHA_B,
+      sealRoot: SHA_A,
+      protectedHistoryRoot: SHA_B,
+      protectedHistoricalIdentities: ["historical:changed"],
+    })
+    expect(() => deriveV138RetryV2State(changedEnvelope, records)).toThrow(
+      "V138_RETRY_JOURNAL_CHAIN_INVALID",
+    )
+    expect(() =>
+      append(records, 12 + 4 * 60 * 60_000 + 1, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:1",
+        owner: "owner-a",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_EXPIRED")
+  })
+
+  it("records inclusive time-window expiry once as an immutable exhausted journal fact", () => {
+    let records: readonly V138RetryV2JournalRecord[] = []
+    records = append(records, 1_000, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner-a",
+    })
+    records = append(records, 2_000, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:0",
+      owner: "owner-a",
+      effectiveAvailableBasisPoints: 2_499,
+    })
+    const deadline =
+      2_000 + V138_BOUNDED_RETRY_V2_POLICY.envelopeLifetimeMilliseconds
+
+    expect(() =>
+      append(records, deadline - 1, {
+        kind: "time_window_expired",
+        owner: "owner-a",
+        reason: "time_window_expired",
+      }),
+    ).toThrow("V138_RETRY_TIME_WINDOW_ACTIVE")
+    expect(() =>
+      append(records, deadline, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:1",
+        owner: "owner-a",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_EXPIRED")
+
+    const exactBoundary = append(records, deadline, {
+      kind: "time_window_expired",
+      owner: "owner-a",
+      reason: "time_window_expired",
+    })
+    expect(exactBoundary.at(-1)).toMatchObject({
+      kind: "time_window_expired",
+      reason: "time_window_expired",
+      previousRoot: records.at(-1)?.recordRoot,
+    })
+    expect(deriveV138RetryV2State(envelope(), exactBoundary)).toMatchObject({
+      disposition: "exhausted",
+      terminalReason: "time_window_expired",
+      remainingPreflightObservations: 0,
+      remainingRouteStarts: 0,
+      nextPreflightIdentity: null,
+      nextRouteIdentity: null,
+    })
+    expect(() =>
+      append(exactBoundary, deadline + 1, {
+        kind: "time_window_expired",
+        owner: "owner-a",
+        reason: "time_window_expired",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_TERMINAL")
+    expect(() =>
+      append(exactBoundary, deadline + 1, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:1",
+        owner: "owner-b",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_TERMINAL")
+
+    const postBoundary = append(records, deadline + 1, {
+      kind: "time_window_expired",
+      owner: "owner-a",
+      reason: "time_window_expired",
+    })
+    expect(deriveV138RetryV2State(envelope(), postBoundary).stateRoot).toMatch(
+      /^sha256:[0-9a-f]{64}$/u,
+    )
+  })
+
+  it("closes on first exact success and makes every non-540 reproduction terminal", () => {
+    const makeReproduction = (acceptedCells: number) => {
+      let records: readonly V138RetryV2JournalRecord[] = []
+      records = append(records, 0, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:0",
+        owner: "owner-a",
+      })
+      records = append(records, 1, {
+        kind: "observe_preflight",
+        identity: "preflight:v2:0",
+        owner: "owner-a",
+        effectiveAvailableBasisPoints: 2_500,
+      })
+      records = append(records, 2, {
+        kind: "reserve_route",
+        identity: "route:v2:0",
+        owner: "owner-a",
+        preflightIdentity: "preflight:v2:0",
+      })
+      records = append(records, 3, {
+        kind: "reserve_calibration",
+        routeIdentity: "route:v2:0",
+        owner: "owner-a",
+        identities: V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.slice(0, 8),
+      })
+      records = append(records, 4, {
+        kind: "finish_calibration",
+        routeIdentity: "route:v2:0",
+        owner: "owner-a",
+        status: "admitted",
+        completeCleanup: true,
+      })
+      records = append(records, 5, {
+        kind: "reserve_reproduction",
+        routeIdentity: "route:v2:0",
+        owner: "owner-a",
+        identities: V138_BOUNDED_RETRY_V2_IDENTITIES.reproduction,
+      })
+      records = append(records, 6, {
+        kind: "finish_reproduction",
+        routeIdentity: "route:v2:0",
+        owner: "owner-a",
+        acceptedCells,
+        completeCleanup: true,
+        status: acceptedCells === 540 ? "passed_exact" : "system_failure",
+      })
+      return records
+    }
+
+    expect(
+      deriveV138RetryV2State(envelope(), makeReproduction(540)).disposition,
+    ).toBe("succeeded")
+    expect(
+      deriveV138RetryV2State(envelope(), makeReproduction(539)),
+    ).toMatchObject({
+      disposition: "terminal_failure",
+      acceptedCells: 0,
+      reproductionIdentitiesCharged: 540,
+    })
+    expect(() =>
+      append(makeReproduction(540), 7, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:1",
+        owner: "owner-a",
+      }),
+    ).toThrow("V138_RETRY_ENVELOPE_TERMINAL")
+  })
+
+  it("requires fifteen-minute backoff after process-valid calibration failure and exhausts at three starts", () => {
+    let records: readonly V138RetryV2JournalRecord[] = []
+    for (let route = 0; route < 3; route += 1) {
+      const base = route * (15 * 60_000 + 10)
+      records = append(records, base, {
+        kind: "reserve_preflight",
+        identity: `preflight:v2:${route}` as never,
+        owner: "owner-a",
+      })
+      records = append(records, base + 1, {
+        kind: "observe_preflight",
+        identity: `preflight:v2:${route}` as never,
+        owner: "owner-a",
+        effectiveAvailableBasisPoints: 2_500,
+      })
+      records = append(records, base + 2, {
+        kind: "reserve_route",
+        identity: `route:v2:${route}` as never,
+        owner: "owner-a",
+        preflightIdentity: `preflight:v2:${route}` as never,
+      })
+      const calibration = V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.slice(
+        route * 8,
+        route * 8 + 8,
+      )
+      records = append(records, base + 3, {
+        kind: "reserve_calibration",
+        routeIdentity: `route:v2:${route}` as never,
+        owner: "owner-a",
+        identities: calibration,
+      })
+      records = append(records, base + 4, {
+        kind: "finish_calibration",
+        routeIdentity: `route:v2:${route}` as never,
+        owner: "owner-a",
+        status: "system_failure",
+        completeCleanup: true,
+      })
+      if (route === 0) {
+        expect(() =>
+          append(records, base + 4 + 15 * 60_000 - 1, {
+            kind: "reserve_preflight",
+            identity: "preflight:v2:1",
+            owner: "owner-a",
+          }),
+        ).toThrow("V138_RETRY_CALIBRATION_BACKOFF_REQUIRED")
+      }
+    }
+    expect(deriveV138RetryV2State(envelope(), records).disposition).toBe(
+      "exhausted",
+    )
+  })
+
+  it("never treats protected D-24R history as successor capacity", () => {
+    const state = deriveV138RetryV2State(envelope(), [])
+    expect(state.remainingRouteStarts).toBe(3)
+    expect(state.remainingPreflightObservations).toBe(12)
+    expect(state.protectedHistoricalIdentityCount).toBe(4)
+    expect(() =>
+      append([], 0, {
+        kind: "reserve_preflight",
+        identity: "preflight:v5:0" as never,
+        owner: "owner-a",
+      }),
+    ).toThrow("V138_RETRY_IDENTITY_INVALID")
+  })
+
+  it("uses only temporary paths in synthetic fixtures", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-retry-"))
+    temporaryRoots.push(root)
+    expect(root.startsWith(tmpdir())).toBe(true)
+  })
+})
+
+describe("bounded retry controller and CLI containment", () => {
+  const makeEffects = (
+    observations: number[],
+    calibrations: Array<"admitted" | "system_failure">,
+    reproductionResult = {
+      status: "passed_exact" as const,
+      acceptedCells: 540,
+      completeCleanup: true,
+    },
+  ): V138BoundedRetryV2ControllerEffects => {
+    let now = 0
+    return {
+      monotonicMilliseconds: () => now,
+      waitUntil: async (target) => {
+        now = target
+      },
+      observePreflight: async () => ({
+        available: true,
+        effectiveAvailableBasisPoints: observations.shift() ?? 2_500,
+      }),
+      runCalibration: async () => ({
+        status: calibrations.shift() ?? "system_failure",
+        completeCleanup: true,
+      }),
+      runReproduction: async () => reproductionResult,
+      appendDurableRecord: () => undefined,
+    }
+  }
+
+  const activeAt = (firstObservationMilliseconds: number) => {
+    let records: readonly V138RetryV2JournalRecord[] = []
+    records = append(records, firstObservationMilliseconds - 1, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:0",
+      owner: "synthetic-owner",
+    })
+    records = append(records, firstObservationMilliseconds, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:0",
+      owner: "synthetic-owner",
+      effectiveAvailableBasisPoints: 2_499,
+    })
+    return records
+  }
+
+  it("durably terminalizes inclusive expiry before return or any later work", async () => {
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_V2_POLICY.envelopeLifetimeMilliseconds
+    const durableKinds: string[] = []
+    let observations = 0
+    let work = 0
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: activeAt(firstObservation),
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => deadline,
+        observePreflight: async () => {
+          observations += 1
+          return { available: true, effectiveAvailableBasisPoints: 2_500 }
+        },
+        runCalibration: async () => {
+          work += 1
+          return { status: "admitted", completeCleanup: true }
+        },
+        runReproduction: async () => {
+          work += 1
+          return {
+            status: "passed_exact",
+            acceptedCells: 540,
+            completeCleanup: true,
+          }
+        },
+        appendDurableRecord: (record) => {
+          durableKinds.push(record.kind)
+        },
+      },
+    })
+    expect(durableKinds).toEqual(["time_window_expired"])
+    expect(observations).toBe(0)
+    expect(work).toBe(0)
+    expect(result.records.at(-1)).toMatchObject({
+      kind: "time_window_expired",
+      reason: "time_window_expired",
+      atMilliseconds: deadline,
+    })
+    expect(result.state).toMatchObject({
+      disposition: "exhausted",
+      terminalReason: "time_window_expired",
+      remainingPreflightObservations: 0,
+      remainingRouteStarts: 0,
+      downstreamAuthority: false,
+    })
+  })
+
+  it("recovers expiry append crashes without duplicate terminal or identity reuse", async () => {
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_V2_POLICY.envelopeLifetimeMilliseconds
+    const prior = activeAt(firstObservation)
+    const beforeDurable = makeEffects([], [])
+    await expect(
+      runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: prior,
+        effects: {
+          ...beforeDurable,
+          monotonicMilliseconds: () => deadline,
+          appendDurableRecord: () => {
+            throw new Error("CRASH_BEFORE_DURABLE")
+          },
+        },
+      }),
+    ).rejects.toThrow("CRASH_BEFORE_DURABLE")
+    expect(deriveV138RetryV2State(envelope(), prior).disposition).toBe("active")
+
+    let durable = prior
+    await expect(
+      runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: prior,
+        effects: {
+          ...makeEffects([], []),
+          monotonicMilliseconds: () => deadline,
+          appendDurableRecord: (record) => {
+            durable = [...durable, record]
+            throw new Error("CRASH_AFTER_DURABLE")
+          },
+        },
+      }),
+    ).rejects.toThrow("CRASH_AFTER_DURABLE")
+    expect(deriveV138RetryV2State(envelope(), durable)).toMatchObject({
+      disposition: "exhausted",
+      terminalReason: "time_window_expired",
+    })
+
+    let restartAppends = 0
+    const restarted = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: durable,
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => deadline + 1,
+        appendDurableRecord: () => {
+          restartAppends += 1
+        },
+      },
+    })
+    expect(restartAppends).toBe(0)
+    expect(
+      restarted.records.filter(({ kind }) => kind === "time_window_expired"),
+    ).toHaveLength(1)
+    expect(restarted.state.nextPreflightIdentity).toBeNull()
+    expect(restarted.state.nextRouteIdentity).toBeNull()
+  })
+
+  it.each(["calibration", "reproduction"] as const)(
+    "terminalizes pending %s cleanup as unknown before expiry",
+    async (pendingKind) => {
+      const firstObservation = 1_000
+      const deadline =
+        firstObservation +
+        V138_BOUNDED_RETRY_V2_POLICY.envelopeLifetimeMilliseconds
+      let records: readonly V138RetryV2JournalRecord[] = []
+      records = append(records, firstObservation - 1, {
+        kind: "reserve_preflight",
+        identity: "preflight:v2:0",
+        owner: "synthetic-owner",
+      })
+      records = append(records, firstObservation, {
+        kind: "observe_preflight",
+        identity: "preflight:v2:0",
+        owner: "synthetic-owner",
+        effectiveAvailableBasisPoints: 2_500,
+      })
+      records = append(records, firstObservation + 1, {
+        kind: "reserve_route",
+        identity: "route:v2:0",
+        owner: "synthetic-owner",
+        preflightIdentity: "preflight:v2:0",
+      })
+      records = append(records, firstObservation + 2, {
+        kind: "reserve_calibration",
+        routeIdentity: "route:v2:0",
+        owner: "synthetic-owner",
+        identities: V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.slice(0, 8),
+      })
+      if (pendingKind === "reproduction") {
+        records = append(records, firstObservation + 3, {
+          kind: "finish_calibration",
+          routeIdentity: "route:v2:0",
+          owner: "synthetic-owner",
+          status: "admitted",
+          completeCleanup: true,
+        })
+        records = append(records, firstObservation + 4, {
+          kind: "reserve_reproduction",
+          routeIdentity: "route:v2:0",
+          owner: "synthetic-owner",
+          identities: V138_BOUNDED_RETRY_V2_IDENTITIES.reproduction,
+        })
+      }
+
+      const durable: V138RetryV2JournalRecord[] = []
+      const result = await runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "restart-owner",
+        records,
+        effects: {
+          ...makeEffects([], []),
+          monotonicMilliseconds: () => deadline,
+          appendDurableRecord: (record) => durable.push(record),
+        },
+      })
+
+      expect(durable.map(({ kind }) => kind)).toEqual([
+        pendingKind === "calibration"
+          ? "finish_calibration"
+          : "finish_reproduction",
+      ])
+      expect(result.state).toMatchObject({
+        disposition: "terminal_failure",
+        completeCleanup: false,
+        terminalReason: null,
+      })
+    },
+  )
+
+  it("binds cleanup truth into the derived state root", () => {
+    const completedState = deriveV138RetryV2State(envelope(), [])
+    expect(completedState.completeCleanup).toBe(true)
+    const { stateRoot, ...body } = completedState
+    const hashBody = (value: unknown) =>
+      `sha256:${createHash("sha256")
+        .update(
+          `v138-retry-derived-state-v1\0${encodeV138RetryV2CanonicalJson(value)}`,
+        )
+        .digest("hex")}`
+    expect(hashBody(body)).toBe(stateRoot)
+    expect(hashBody({ ...body, completeCleanup: false })).not.toBe(stateRoot)
+  })
+
+  it("terminalizes when a required wait reaches the deadline and rejects a stale concurrent append", async () => {
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_V2_POLICY.envelopeLifetimeMilliseconds
+    let records = activeAt(firstObservation)
+    records = append(records, deadline - 2, {
+      kind: "reserve_preflight",
+      identity: "preflight:v2:1",
+      owner: "synthetic-owner",
+    })
+    records = append(records, deadline - 1, {
+      kind: "observe_preflight",
+      identity: "preflight:v2:1",
+      owner: "synthetic-owner",
+      effectiveAvailableBasisPoints: 0,
+    })
+    let now = deadline - 1
+    let observations = 0
+    const durable: V138RetryV2JournalRecord[] = [...records]
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records,
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => now,
+        waitUntil: async (target) => {
+          now = target
+        },
+        observePreflight: async () => {
+          observations += 1
+          return { available: true, effectiveAvailableBasisPoints: 2_500 }
+        },
+        appendDurableRecord: (record) => {
+          if (record.previousRoot !== durable.at(-1)?.recordRoot) {
+            throw new Error("STALE_ROOT")
+          }
+          durable.push(record)
+        },
+      },
+    })
+    expect(observations).toBe(0)
+    expect(result.state.terminalReason).toBe("time_window_expired")
+    await expect(
+      runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "other-owner",
+        records,
+        effects: {
+          ...makeEffects([], []),
+          monotonicMilliseconds: () => now,
+          appendDurableRecord: (record) => {
+            if (record.previousRoot !== durable.at(-1)?.recordRoot) {
+              throw new Error("STALE_ROOT")
+            }
+          },
+        },
+      }),
+    ).rejects.toThrow("STALE_ROOT")
+    expect(
+      durable.filter(({ kind }) => kind === "time_window_expired"),
+    ).toHaveLength(1)
+  })
+
+  it("exclusive-writes one bounded immutable terminal result from exhausted journal state", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-expiry-terminal-"))
+    temporaryRoots.push(root)
+    const target = path.join(root, "terminal.json")
+    const firstObservation = 1_000
+    const deadline =
+      firstObservation + V138_BOUNDED_RETRY_V2_POLICY.envelopeLifetimeMilliseconds
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: activeAt(firstObservation),
+      effects: {
+        ...makeEffects([], []),
+        monotonicMilliseconds: () => deadline,
+        appendDurableRecord: () => undefined,
+      },
+    })
+    publishV138RetryV2TerminalResult(target, result)
+    const terminal = JSON.parse(readFileSync(target, "utf8"))
+    expect(terminal).toMatchObject({
+      schemaVersion: "v1.38-current-matrix-retry-terminal-v1",
+      terminalReason: "time_window_expired",
+      journalRoot: result.state.journalRoot,
+      stateRoot: result.state.stateRoot,
+      disposition: "exhausted",
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+      productionAuthorized: false,
+    })
+    expect(terminal.counters).toEqual({
+      preflightObservationsConsumed: 1,
+      routeStartsConsumed: 0,
+      calibrationIdentitiesCharged: 0,
+      reproductionIdentitiesCharged: 0,
+      acceptedCells: 0,
+    })
+    expect(() => publishV138RetryV2TerminalResult(target, result)).toThrow(
+      "V138_RETRY_DESTINATION_PRESENT",
+    )
+  })
+
+  it("publishes cleanup truth from authenticated calibration and reproduction terminals", async () => {
+    const cases = [
+      {
+        effects: {
+          ...makeEffects([2_500], []),
+          runCalibration: async () => ({
+            status: "system_failure" as const,
+            completeCleanup: false,
+          }),
+        },
+      },
+      {
+        effects: makeEffects([2_500], ["admitted"], {
+          status: "system_failure" as const,
+          acceptedCells: 0,
+          completeCleanup: false,
+        }),
+      },
+    ]
+
+    for (const [index, testCase] of cases.entries()) {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-cleanup-terminal-"))
+      temporaryRoots.push(root)
+      const result = await runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: [],
+        effects: testCase.effects,
+      })
+      const target = path.join(root, `terminal-${index}.json`)
+      publishV138RetryV2TerminalResult(target, result)
+
+      expect(result.state).toMatchObject({
+        disposition: "terminal_failure",
+        completeCleanup: false,
+      })
+      expect(JSON.parse(readFileSync(target, "utf8"))).toMatchObject({
+        disposition: "terminal_failure",
+        completeCleanup: false,
+      })
+    }
+  })
+
+  it("reserves before fake work, spaces refusal/failure retries, and closes on one exact reproduction", async () => {
+    const launches: string[] = []
+    const effects = makeEffects(
+      [2_499, 2_500, 2_500],
+      ["system_failure", "admitted"],
+    )
+    const wrapped: V138BoundedRetryV2ControllerEffects = {
+      ...effects,
+      runCalibration: async (input) => {
+        launches.push(`calibration:${input.routeIdentity}`)
+        return effects.runCalibration(input)
+      },
+      runReproduction: async (input) => {
+        launches.push(`reproduction:${input.identities.length}`)
+        return effects.runReproduction(input)
+      },
+    }
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: wrapped,
+    })
+    expect(result.state).toMatchObject({
+      disposition: "succeeded",
+      preflightObservationsConsumed: 3,
+      routeStartsConsumed: 2,
+      calibrationIdentitiesCharged: 16,
+      reproductionIdentitiesCharged: 540,
+      acceptedCells: 540,
+    })
+    expect(launches).toEqual([
+      "calibration:route:v2:0",
+      "calibration:route:v2:1",
+      "reproduction:540",
+    ])
+    const firstLaunchIndex = result.records.findIndex(
+      ({ kind }) => kind === "finish_calibration",
+    )
+    expect(
+      result.records
+        .slice(0, firstLaunchIndex)
+        .some(({ kind }) => kind === "reserve_calibration"),
+    ).toBe(true)
+  })
+
+  it("charges crash-after-reservation and restart reconciliation without reuse", async () => {
+    let durable: readonly V138RetryV2JournalRecord[] = []
+    const crashing = makeEffects([2_500], ["admitted"])
+    const firstEffects: V138BoundedRetryV2ControllerEffects = {
+      ...crashing,
+      appendDurableRecord: (record) => {
+        durable = [...durable, record]
+        if (record.kind === "reserve_calibration") throw new Error("CRASH")
+      },
+    }
+    await expect(
+      runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: durable,
+        effects: firstEffects,
+      }),
+    ).rejects.toThrow("CRASH")
+    expect(
+      durable.filter(({ kind }) => kind === "reserve_calibration"),
+    ).toHaveLength(1)
+
+    const restarted = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: durable,
+      effects: makeEffects([], []),
+    })
+    expect(restarted.state).toMatchObject({
+      disposition: "terminal_failure",
+      calibrationIdentitiesCharged: 8,
+      routeStartsConsumed: 1,
+    })
+    expect(
+      restarted.records.filter(({ kind }) => kind === "reserve_calibration"),
+    ).toHaveLength(1)
+  })
+
+  it.each([
+    ["reserve_preflight", "exhausted", 1, 0],
+    ["reserve_route", "terminal_failure", 1, 1],
+    ["reserve_reproduction", "terminal_failure", 1, 1],
+    ["finish_calibration", "succeeded", 1, 1],
+    ["finish_reproduction", "succeeded", 1, 1],
+  ] as const)(
+    "reconciles a durable %s crash without identity reuse",
+    async (crashKind, disposition, preflightZeroCount, routeCount) => {
+      let durable: readonly V138RetryV2JournalRecord[] = []
+      const first = makeEffects([2_500], ["admitted"])
+      const crashing: V138BoundedRetryV2ControllerEffects = {
+        ...first,
+        appendDurableRecord: (record) => {
+          durable = [...durable, record]
+          if (record.kind === crashKind) throw new Error(`CRASH:${crashKind}`)
+        },
+      }
+      await expect(
+        runV138BoundedRetryV2Controller({
+          envelope: envelope(),
+          owner: "synthetic-owner",
+          records: [],
+          effects: crashing,
+        }),
+      ).rejects.toThrow(`CRASH:${crashKind}`)
+      const restartEffects = makeEffects(
+        Array.from({ length: 12 }, () => 0),
+        ["admitted"],
+      )
+      const restarted = await runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: durable,
+        effects: restartEffects,
+      })
+      expect(restarted.state.disposition).toBe(disposition)
+      expect(
+        restarted.records.filter(
+          ({ kind }) =>
+            kind === "reserve_preflight" && kind === "reserve_preflight",
+        ).length,
+      ).toBeGreaterThanOrEqual(preflightZeroCount)
+      expect(restarted.state.routeStartsConsumed).toBeGreaterThanOrEqual(
+        routeCount,
+      )
+      expect(
+        new Set(
+          restarted.records
+            .filter(({ kind }) => kind === "reserve_preflight")
+            .map((record) =>
+              record.kind === "reserve_preflight" ? record.identity : "",
+            ),
+        ).size,
+      ).toBe(
+        restarted.records.filter(({ kind }) => kind === "reserve_preflight")
+          .length,
+      )
+    },
+  )
+
+  it("makes non-540, reproduction failure, and cleanup uncertainty terminal", async () => {
+    for (const result of [
+      {
+        status: "system_failure" as const,
+        acceptedCells: 539,
+        completeCleanup: true,
+      },
+      {
+        status: "system_failure" as const,
+        acceptedCells: 0,
+        completeCleanup: false,
+      },
+    ]) {
+      const outcome = await runV138BoundedRetryV2Controller({
+        envelope: envelope(),
+        owner: "synthetic-owner",
+        records: [],
+        effects: makeEffects([2_500], ["admitted"], result),
+      })
+      expect(outcome.state.disposition).toBe("terminal_failure")
+      expect(outcome.state.acceptedCells).toBe(0)
+    }
+  })
+
+  it("strictly parses production and read-only modes and never defaults into live work", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-retry-cli-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+    let liveInvocations = 0
+    const derived = {
+      seal: {
+        schemaVersion: "v1.38-successor-source-seal-v11",
+        sealRoot: SHA_A,
+        productionAuthorized: false,
+      },
+      envelope: envelope(),
+    }
+    const injected = {
+      repoRoot: root,
+      deriveArtifacts: () => derived,
+      runLive: async () => {
+        liveInvocations += 1
+        throw new Error("LIVE")
+      },
+      checkOutcome: () => ({
+        disposition: "exhausted" as const,
+        journalRoot: SHA_A,
+        stateRoot: SHA_B,
+        completeCleanup: true,
+        reproductionPresent: false,
+        downstreamAuthority: "denied" as const,
+      }),
+    }
+    await executeV138BoundedRetryV2Cli(
+      ["--derive-seal-envelope-no-publish"],
+      injected,
+    )
+    expect(existsSync(path.join(root, V138_BOUNDED_RETRY_V2_PATHS.seal))).toBe(
+      false,
+    )
+    expect(existsSync(path.join(root, V138_BOUNDED_RETRY_V2_PATHS.envelope))).toBe(
+      false,
+    )
+
+    const pairFlags = [
+      "--seal",
+      V138_BOUNDED_RETRY_V2_PATHS.seal,
+      "--envelope",
+      V138_BOUNDED_RETRY_V2_PATHS.envelope,
+    ]
+    await executeV138BoundedRetryV2Cli(
+      ["--publish-sealed-inactive-envelope", ...pairFlags],
+      injected,
+    )
+    expect(
+      JSON.parse(
+        readFileSync(
+          path.join(root, V138_BOUNDED_RETRY_V2_PATHS.envelope),
+          "utf8",
+        ),
+      ).status,
+    ).toBe("sealed_inactive")
+    await executeV138BoundedRetryV2Cli(
+      ["--check-sealed-inactive-envelope", ...pairFlags],
+      injected,
+    )
+    await executeV138BoundedRetryV2Cli(
+      [
+        "--check-live-transition",
+        "--envelope",
+        V138_BOUNDED_RETRY_V2_PATHS.envelope,
+        "--journal",
+        V138_BOUNDED_RETRY_V2_PATHS.journal,
+        "--terminal",
+        V138_BOUNDED_RETRY_V2_PATHS.terminal,
+        "--private-dir",
+        V138_BOUNDED_RETRY_V2_PATHS.privateDir,
+      ],
+      injected,
+    )
+    await executeV138BoundedRetryV2Cli(
+      [
+        "--check-terminal-envelope",
+        "--envelope",
+        V138_BOUNDED_RETRY_V2_PATHS.envelope,
+        "--journal",
+        V138_BOUNDED_RETRY_V2_PATHS.journal,
+        "--terminal",
+        V138_BOUNDED_RETRY_V2_PATHS.terminal,
+        "--reproduction",
+        V138_BOUNDED_RETRY_V2_PATHS.reproduction,
+        "--private-dir",
+        V138_BOUNDED_RETRY_V2_PATHS.privateDir,
+      ],
+      injected,
+    )
+    expect(liveInvocations).toBe(0)
+    await expect(executeV138BoundedRetryV2Cli([], injected)).rejects.toThrow(
+      "V138_RETRY_ARGUMENTS_INVALID",
+    )
+    await expect(
+      executeV138BoundedRetryV2Cli(
+        ["--derive-seal-envelope-no-publish", "--unknown"],
+        injected,
+      ),
+    ).rejects.toThrow("V138_RETRY_ARGUMENTS_INVALID")
+    expect(V138_BOUNDED_RETRY_V2_PATHS).toMatchObject({
+      sourceSummary: `${".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"}/262-82-SUMMARY.md`,
+      sourceReview:
+        ".planning/artifacts/v1.38-plan-262-83-bounded-retry-source-rereview-v1.json",
+      sourceReviewReport:
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-83-REVIEW.md",
+      protectedSourceReview:
+        ".planning/artifacts/v1.38-plan-262-77-bounded-retry-source-review-v1.json",
+      protectedSourceReviewReport:
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-77-REVIEW.md",
+      protectedSourceReviewSummary:
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-77-SUMMARY.md",
+    })
+  })
+
+  it("recovers every success publication crash boundary without rerunning reproduction", async () => {
+    const artifact = {
+      schemaVersion: "v1.38-current-matrix-reproduction-v15",
+      status: "passed_exact",
+      acceptedCellCount: 540,
+      completeCleanup: true,
+      receiptRoot: SHA_A,
+    }
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: makeEffects([2_500], ["admitted"], {
+        status: "passed_exact",
+        acceptedCells: 540,
+        completeCleanup: true,
+        reproductionRoot: SHA_A,
+        artifact,
+      }),
+    })
+    for (const hook of [
+      "afterReproductionWrite",
+      "afterReproductionParentFsync",
+      "afterTerminalWrite",
+      "afterTerminalParentFsync",
+    ] as const) {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-success-publish-"))
+      temporaryRoots.push(root)
+      const terminalTarget = path.join(root, "terminal.json")
+      const reproductionTarget = path.join(root, "reproduction.json")
+      expect(() =>
+        publishV138RetryV2Outcome({
+          terminalTarget,
+          reproductionTarget,
+          result,
+          hooks: {
+            [hook]: () => {
+              throw new Error(`CRASH:${hook}`)
+            },
+          },
+        }),
+      ).toThrow(`CRASH:${hook}`)
+
+      publishV138RetryV2Outcome({ terminalTarget, reproductionTarget, result })
+      expect(JSON.parse(readFileSync(reproductionTarget, "utf8"))).toEqual(
+        artifact,
+      )
+      expect(JSON.parse(readFileSync(terminalTarget, "utf8"))).toMatchObject({
+        disposition: "succeeded",
+        completeCleanup: true,
+      })
+    }
+  })
+
+  it.each([
+    "lock_acquired",
+    "journal_fsync",
+    "receipt_fsync",
+    "reproduction_write",
+    "reproduction_fsync",
+    "terminal_write",
+    "terminal_fsync",
+  ] as const)(
+    "recovers a real subprocess kill at %s without identity reuse",
+    async (stage) => {
+      const root = mkdtempSync(path.join(tmpdir(), `v138-process-${stage}-`))
+      temporaryRoots.push(root)
+      mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+      const moduleUrl = pathToFileURL(
+        path.resolve("scripts/run-v1-38-bounded-retry-envelope-v2.ts"),
+      ).href
+      const childSource = `
+        import { runV138V2ProductionLive } from ${JSON.stringify(moduleUrl)};
+        const envelope = ${JSON.stringify(envelope())};
+        const SHA_A = ${JSON.stringify(SHA_A)};
+        const root = ${JSON.stringify(root)};
+        const stage = ${JSON.stringify(stage)};
+        let now = 0;
+        const effects = (append) => ({
+          monotonicMilliseconds: () => now,
+          waitUntil: async (target) => { now = target; },
+          observePreflight: async () => ({ available: true, effectiveAvailableBasisPoints: 2500 }),
+          runCalibration: async () => ({ status: "admitted", completeCleanup: true }),
+          runReproduction: async () => ({ status: "passed_exact", acceptedCells: 540, completeCleanup: true, reproductionRoot: SHA_A, artifact: { schemaVersion: "v1.38-current-matrix-reproduction-v15", status: "passed_exact", acceptedCellCount: 540, completeCleanup: true, receiptRoot: SHA_A } }),
+          appendDurableRecord: append,
+        });
+        await runV138V2ProductionLive(root, { checkPair: () => ({ seal: {}, envelope }), validateInputs: false, createEffects: effects, crashBoundary: (seen) => { if (seen === stage) process.kill(process.pid, "SIGKILL"); } });
+      `
+      const childPath = path.join(root, "crash-child.mts")
+      writeFileSync(childPath, childSource)
+      const killed = spawnSync(
+        process.execPath,
+        ["--import", "tsx", childPath],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          timeout: 20_000,
+        },
+      )
+      expect(
+        killed.signal === "SIGKILL" || killed.status === 137,
+        `${killed.stderr}\n${killed.stdout}`,
+      ).toBe(true)
+
+      let reproductionLaunches = 0
+      let now = 0
+      await runV138V2ProductionLive(root, {
+        checkPair: () => ({ seal: {} as never, envelope: envelope() }),
+        validateInputs: false,
+        createEffects: (appendDurableRecord) => ({
+          monotonicMilliseconds: () => now,
+          waitUntil: async (target) => {
+            now = target
+          },
+          observePreflight: async () => ({
+            available: true,
+            effectiveAvailableBasisPoints: 2_500,
+          }),
+          runCalibration: async () => ({
+            status: "admitted",
+            completeCleanup: true,
+          }),
+          runReproduction: async () => {
+            reproductionLaunches += 1
+            return {
+              status: "passed_exact",
+              acceptedCells: 540,
+              completeCleanup: true,
+              reproductionRoot: SHA_A,
+              artifact: {
+                schemaVersion: "v1.38-current-matrix-reproduction-v15",
+                status: "passed_exact",
+                acceptedCellCount: 540,
+                completeCleanup: true,
+                receiptRoot: SHA_A,
+              },
+            }
+          },
+          appendDurableRecord,
+        }),
+      })
+
+      const journalPath = path.join(root, V138_BOUNDED_RETRY_V2_PATHS.journal)
+      const records = existsSync(journalPath)
+        ? readFileSync(journalPath, "utf8")
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line) as V138RetryV2JournalRecord)
+        : []
+      const identities = records
+        .filter(({ kind }) => kind.startsWith("reserve_"))
+        .map(
+          (record) =>
+            `${record.kind}:${
+              "identity" in record ? record.identity : record.routeIdentity
+            }`,
+        )
+      expect(new Set(identities).size).toBe(identities.length)
+      expect(
+        existsSync(path.join(root, `${V138_BOUNDED_RETRY_V2_PATHS.journal}.lock`)),
+      ).toBe(false)
+      expect(
+        existsSync(path.join(root, V138_BOUNDED_RETRY_V2_PATHS.terminal)),
+      ).toBe(true)
+      if (stage.startsWith("reproduction_") || stage.startsWith("terminal_"))
+        expect(reproductionLaunches).toBe(0)
+    },
+    30_000,
+  )
+
+  it("admits exactly one synchronized successor and preserves the winner's OS lock", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-lock-race-"))
+    temporaryRoots.push(root)
+    const lock = path.join(root, "owner.lock")
+    const resultPath = path.join(root, "results.txt")
+    const moduleUrl = pathToFileURL(
+      path.resolve("scripts/run-v1-38-bounded-retry-envelope-v2.ts"),
+    ).href
+    const startAt = Date.now() + 1_000
+    const childPath = path.join(root, "lock-contender.mts")
+    writeFileSync(
+      childPath,
+      `
+        import { appendFileSync } from "node:fs";
+        import { acquireV138RetryOwnerLease } from ${JSON.stringify(moduleUrl)};
+        const [id, lock, resultPath, start] = process.argv.slice(2);
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(start) - Date.now())));
+        try {
+          const ownership = await acquireV138RetryOwnerLease(lock);
+          appendFileSync(resultPath, id + ":acquired\\n");
+          await new Promise((resolve) => setTimeout(resolve, 750));
+          await ownership.release();
+        } catch {
+          appendFileSync(resultPath, id + ":rejected\\n");
+        }
+      `,
+    )
+    const run = (id: string) =>
+      new Promise<number | null>((resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          ["--import", "tsx", childPath, id, lock, resultPath, String(startAt)],
+          { cwd: process.cwd(), stdio: "ignore" },
+        )
+        child.once("error", reject)
+        child.once("exit", resolve)
+      })
+    expect(await Promise.all([run("left"), run("right")])).toEqual([0, 0])
+    const outcomes = readFileSync(resultPath, "utf8").trim().split("\n")
+    expect(outcomes.filter((item) => item.endsWith(":acquired"))).toHaveLength(
+      1,
+    )
+    expect(outcomes.filter((item) => item.endsWith(":rejected"))).toHaveLength(
+      1,
+    )
+    expect(existsSync(lock)).toBe(false)
+  }, 20_000)
+
+  it("retains the exact Plan-77 blocked pair and summary only as protected history", () => {
+    const expected = new Map([
+      [
+        V138_BOUNDED_RETRY_V2_PATHS.protectedSourceReview,
+        "76d0c0eef92fca733078d56f786ab2bb2c462ba87c243951793d504078ed54f8",
+      ],
+      [
+        V138_BOUNDED_RETRY_V2_PATHS.protectedSourceReviewReport,
+        "82de726955d2162dac32b227744efd66f851e7b736f9acaa421d3d514de234b2",
+      ],
+      [
+        V138_BOUNDED_RETRY_V2_PATHS.protectedSourceReviewSummary,
+        "e84302fa5c820a4c3e904ebb24b8da3dd37211be643920b19b8ca84d537f36a7",
+      ],
+    ])
+    for (const [repoPath, expectedHash] of expected) {
+      expect(
+        createHash("sha256").update(readFileSync(repoPath)).digest("hex"),
+        repoPath,
+      ).toBe(expectedHash)
+    }
+    const review = JSON.parse(
+      readFileSync(V138_BOUNDED_RETRY_V2_PATHS.protectedSourceReview, "utf8"),
+    )
+    expect(review).toMatchObject({
+      status: "blocked",
+      sourceReviewPassed: false,
+      findingCount: 1,
+      reviewRoot:
+        "sha256:1d58e184fd6283e3d62c7de0c4dc51cad4f8e5447bb70b2fa48d13588aade8f3",
+      findings: [{ code: "TIME_WINDOW_EXPIRY_NOT_TERMINALIZED" }],
+    })
+  })
+
+  it("reaches the live production entry only through exact flags and injected fake effects", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-retry-live-fake-"))
+    temporaryRoots.push(root)
+    let liveInvocations = 0
+    let syntheticState = ""
+    const flags = Object.entries(V138_BOUNDED_RETRY_V2_LIVE_FLAGS).flatMap(
+      ([key, value]) => [key, value],
+    )
+    await executeV138BoundedRetryV2Cli(
+      ["--run-bounded-live-envelope", ...flags],
+      {
+        repoRoot: root,
+        runLive: async () => {
+          liveInvocations += 1
+          const result = await runV138BoundedRetryV2Controller({
+            envelope: envelope(),
+            owner: "synthetic-owner",
+            records: [],
+            effects: makeEffects([2_500], ["admitted"]),
+          })
+          syntheticState = result.state.disposition
+        },
+      },
+    )
+    expect(liveInvocations).toBe(1)
+    expect(syntheticState).toBe("succeeded")
+    expect(existsSync(path.join(root, V138_BOUNDED_RETRY_V2_PATHS.journal))).toBe(
+      false,
+    )
+    await expect(
+      executeV138BoundedRetryV2Cli(
+        [
+          "--run-bounded-live-envelope",
+          ...flags,
+          "--journal",
+          V138_BOUNDED_RETRY_V2_PATHS.journal,
+        ],
+        {
+          repoRoot: root,
+          runLive: async () => {
+            liveInvocations += 1
+          },
+        },
+      ),
+    ).rejects.toThrow("V138_RETRY_ARGUMENTS_INVALID")
+    expect(liveInvocations).toBe(1)
+  })
+
+  it("keeps journal and terminal projections free of private runtime fields", async () => {
+    const result = await runV138BoundedRetryV2Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: makeEffects([2_500], ["admitted"]),
+    })
+    const projection = JSON.stringify({
+      records: result.records,
+      state: result.state,
+    })
+    for (const forbidden of [
+      "StrategyMemory",
+      "SoldierMemory",
+      "objectivePayload",
+      "strategySource",
+      "rawDiagnostic",
+      "/Users/",
+    ]) {
+      expect(projection).not.toContain(forbidden)
+    }
+  })
+
+  it("fails closed for unsafe or partially occupied publication destinations", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-retry-paths-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+    const seal = path.join(root, V138_BOUNDED_RETRY_V2_PATHS.seal)
+    symlinkSync("missing", seal)
+    const pairFlags = [
+      "--seal",
+      V138_BOUNDED_RETRY_V2_PATHS.seal,
+      "--envelope",
+      V138_BOUNDED_RETRY_V2_PATHS.envelope,
+    ]
+    await expect(
+      executeV138BoundedRetryV2Cli(
+        ["--publish-sealed-inactive-envelope", ...pairFlags],
+        {
+          repoRoot: root,
+          deriveArtifacts: () => ({
+            seal: {
+              schemaVersion: "v1.38-successor-source-seal-v11",
+              sealRoot: SHA_A,
+              productionAuthorized: false,
+            },
+            envelope: envelope(),
+          }),
+          runLive: async () => {
+            throw new Error("LIVE")
+          },
+        },
+      ),
+    ).rejects.toThrow("V138_RETRY_DESTINATION_UNSAFE")
+  })
+
+  it("source-only mode proves the real live handler and canonical destinations remain untouched", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-source-only-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
+    const before = Object.fromEntries(
+      [
+        V138_BOUNDED_RETRY_V2_PATHS.journal,
+        V138_BOUNDED_RETRY_V2_PATHS.terminal,
+        V138_BOUNDED_RETRY_V2_PATHS.privateDir,
+        V138_BOUNDED_RETRY_V2_PATHS.reproduction,
+      ].map((value) => [value, existsSync(path.join(root, value))]),
+    )
+    let liveInvocations = 0
+    await executeV138BoundedRetryV2Cli(["--check-source-only"], {
+      repoRoot: root,
+      deriveArtifacts: () => {
+        throw new Error()
+      },
+      runLive: async () => {
+        liveInvocations += 1
+        throw new Error("LIVE")
+      },
+    })
+    const after = Object.fromEntries(
+      Object.keys(before).map((value) => [
+        value,
+        existsSync(path.join(root, value)),
+      ]),
+    )
+    expect(liveInvocations).toBe(0)
+    expect(after).toEqual(before)
+    expect(after).toEqual(before)
+  })
+})
