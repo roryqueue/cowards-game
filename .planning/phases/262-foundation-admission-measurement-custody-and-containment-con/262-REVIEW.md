@@ -1,6 +1,6 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-reviewed: 2026-08-27T15:22:13Z
+reviewed: 2026-08-27T15:44:42Z
 depth: deep
 files_reviewed: 11
 files_reviewed_list:
@@ -17,82 +17,109 @@ files_reviewed_list:
   - scripts/check-v1-38-plan-262-81-lifecycle.test.ts
 findings:
   critical: 4
-  warning: 2
+  warning: 0
   info: 0
-  total: 6
+  total: 4
 status: issues_found
 ---
 
 # Phase 262: Code Review Report
 
-**Reviewed:** 2026-08-27T15:22:13Z
+**Reviewed:** 2026-08-27T15:44:42Z
 **Depth:** deep
 **Files Reviewed:** 11
-**Current bounded-retry status:** issues_found
+**Status:** issues_found
 
 ## Summary
 
-The bounded-retry successor is not clean. Deep tracing of the journal model, production controller, Plan-77/83 review gates, Plan-80 admission join, and Plan-81 lifecycle driver found four critical evidence-integrity/correctness defects and two warnings. The immutable live result itself is not a defect: the recorded three admitted preflights, three clean calibration system failures, 24 charged calibration identities, exhausted terminal, absent reproduction, and fresh `0/540` are an honest process-valid empirical non-pass. The defects affect alternate failure/success branches, independent-review credibility, lifecycle escalation safety, and the ability to rerun the scoped regression suites after the legitimate live artifacts exist.
+The five fix commits do not produce a clean bounded-retry successor. Four blocker-tier defects remain. Cleanup truth is still incorrect for expiry with pending work and is omitted from the derived-state root; production crash recovery remains unable to recover a stale owner lock or a journal/private-receipt split; the corrected Plan-83 review is still primarily token-presence attestation; and the post-run correction has made the canonical seal, Plan-80 disposition, read-only outcome checks, and real Plan-81 lifecycle join mutually inconsistent.
 
-Focused verification also exposed current-state test failures. The Plan-83 suite stops at `V138_PLAN_262_83_FORBIDDEN_DESTINATION_PRESENT`; the combined controller/Plan-80/Plan-81 run completed 44 tests before the controller suite stopped at `V138_RETRY_LIVE_DESTINATION_PRESENT`; and the Plan-77 suite stops at `V138_PLAN_262_77_FORBIDDEN_DESTINATION_PRESENT`. These failures arise because the tests require canonical live destinations to remain absent even after Plans 78-81 legitimately created them.
+The immutable live bytes were not changed by this review. Before and after all checks, the journal SHA-256 remained `14e66af5...67a14`, the terminal remained `b79dc330...8ac3`, all 15 private-receipt hashes were identical, and the Plan-80 disposition remained the recorded exhausted `0/540` non-pass. Those bytes remain honest raw historical evidence of what occurred. However, the corrected reviewer now rejects the historical zero-finding premise that authorized the seal, so the seal/envelope and old Plan-80 disposition cannot currently be authenticated as a valid assurance chain. This is a post-run audit correction to the trust conclusion, not a mutation of the empirical result. The repository does not yet represent that correction with a canonical additive audit/disposition artifact.
+
+Focused verification confirmed the regression:
+
+- Both real read-only controller modes fail with `V138_RETRY_SOURCE_CUSTODY_INVALID`.
+- Plan 83's canonical `--check-review` fails with `V138_PLAN_262_83_REVIEW_MISMATCH`; its fresh derivation instead reports three historical findings.
+- Plan 80's canonical `--check-disposition` fails with `V138_PLAN_262_80_DISPOSITION_INVALID`; fresh derivation adds `GIT_CUSTODY_INVALID` and `SEAL_ROOT_INVALID` and changes the disposition root from `sha256:5fe2...cccdf` to `sha256:0257...f96df`.
+- The real Plan-81 post-summary command fails before it can prove the required non-pass/no-mutation result because canonical Plan-80 authentication fails.
+- The serialized five-suite run stopped with one Plan-80 failure after 38 passing tests. The Plan-81 suite separately passed 8/8, TypeScript passed, and `git diff --check` passed.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: Terminal publication forges `completeCleanup: true`
+### CR-01: Cleanup truth remains forgeable and reports pending work as clean
 
-**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:585-608`
-**Issue:** `v138RetryTerminalResult` never derives cleanup from the journal. It hardcodes `completeCleanup: true` at line 605 for every non-active disposition. A thrown calibration/reproduction or restart reconciliation records `completeCleanup: false` and correctly produces `terminal_failure`, but `publishV138RetryTerminalResult` then emits a terminal claiming complete cleanup. This is false evidence and contradicts the fail-closed cleanup contract. Plan 80 happens to recompute cleanup independently for the current 0/540 branch, but the producer artifact itself remains incorrect and duplicate invocation authenticates the same forged projection.
+**Classification:** BLOCKER
 
-**Fix:** Add a journal-derived `completeCleanup` field to `V138DerivedRetryState` (or derive it directly from authenticated terminal records), use that value in `v138RetryTerminalResult`, and test terminal publication after both calibration and reproduction results with `completeCleanup: false`.
+**File:** `scripts/lib/v1-38-bounded-retry-envelope.ts:582-650`; `scripts/run-v1-38-bounded-retry-envelope.ts:228-268`
 
-### CR-02: Plan 81 can promote a self-consistent forged PASS into lifecycle mutation
+**Issue:** The CR-01 fix added `completeCleanup`, but computes it only from completed calibration/reproduction terminals. Empty terminal collections pass `.every()`, and an absent reproduction terminal passes `state.reproductionTerminal?.completeCleanup !== false`. On restart after the deadline, `deadlineGuard()` appends `time_window_expired` before pending-reservation reconciliation. A journal containing `reserve_calibration` (or `reserve_reproduction`) with no finish record therefore becomes `exhausted` with `completeCleanup: true`, even though cleanup is unproved. A focused reproduction produced exactly that state with one charged route/eight charged calibration identities and no terminal cleanup record.
 
-**File:** `scripts/check-v1-38-plan-262-81-lifecycle.ts:287-318,340-363,441-503`
-**Issue:** Every lifecycle entry point calls `validateV138Plan26280Disposition(disposition, disposition)`. Passing the candidate as its own expected value checks only internal hashing/shape, not equality to a fresh Plan-80 derivation or the immutable publication lineage. A caller can construct a synthetic `status: "pass"` disposition with invented evidence roots, recompute its `dispositionRoot`, derive the matching activation object, and reach the four mutating GSD commands. The scoped tests explicitly construct exactly such a synthetic PASS at `scripts/check-v1-38-plan-262-81-lifecycle.test.ts:96-126` and expect lifecycle mutation at lines 281-295. `evaluateV138Plan26281Verification` further accepts either `"complete"` or `"succeeded"` and checks only the activation schema at lines 197-211, widening the forgery surface.
+The new field is also added only after `body` is constructed, while `stateRoot` hashes `body`. Consequently, `completeCleanup` is not authenticated by `stateRoot`; two projected states with different cleanup truth share the same derived-state root. This leaves the original evidence-integrity defect only partially fixed.
 
-**Fix:** Before any PASS evaluation or mutation, call the Plan-80 canonical checker/deriver against fixed repository paths, require the unique committed disposition publication and no rewrite, compare the candidate to the freshly derived evidence, and authenticate the entire activation root. Accept only canonical `terminalDisposition: "succeeded"`. Replace the synthetic-PASS lifecycle test with a fixture whose journal, terminal, reproduction, Git custody, disposition publication, and activation root all satisfy the independent Plan-80 join; add a self-rehashed forged-PASS rejection test.
+**Fix:** Treat every reserved-but-unterminated calibration/reproduction as incomplete cleanup. Reconcile pending work before expiry terminalization or encode an explicit cleanup-unknown terminal before expiry. Include `completeCleanup` inside the exact object hashed into `stateRoot`, and add boundary tests for expiry with each pending reservation plus a test proving cleanup mutation changes the root.
 
-### CR-03: Successful reproduction publication is not crash-recoverable
+### CR-02: The audit correction invalidates the canonical trust chain without a canonical correction disposition
 
-**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:1216-1237,1290-1299`
-**Issue:** On success, the controller publishes the terminal first and the reproduction artifact second. A crash or exclusive-write failure between lines 1290 and 1295 leaves a durable terminal claiming `succeeded` with no reproduction. The next invocation enters the existing-terminal branch, detects the missing reproduction, and throws `V138_RETRY_DUPLICATE_INVOCATION_INVALID`; it has no recovery path to publish the already computed artifact. This permanently wedges the only permitted reproduction and loses the success artifact after all 540 identities have been consumed.
+**Classification:** BLOCKER
 
-**Fix:** Make success publication recoverable and ordered so success is never asserted before its evidence is durable. Persist/fsync an authenticated success artifact or staged receipt first, then publish the terminal last; on restart, authenticate and complete either partial state without rerunning reproduction. Add injected crashes before/after each reproduction and terminal write/fsync and prove convergence to exactly one immutable pair.
+**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:929-987`; `scripts/check-v1-38-plan-262-80-bounded-retry-admission.ts:205-332,744-848,1151-1182`; `scripts/check-v1-38-plan-262-81-lifecycle.ts:289-317,478-518`
 
-### CR-04: The Plan-83 “independent” zero-finding review is token-presence self-attestation
+**Issue:** The corrected Plan-83 reviewer truthfully rejects the historical Plan-83 source/review, but the rest of the chain still requires that historical zero-finding review and also requires the current source bytes to equal the sealed parent with no later rewrite. The fix commits necessarily changed those source files. As a result, `checkPublishedPair()` cannot authenticate the historical seal, Plan 80 derives `SEAL_ROOT_INVALID` plus `GIT_CUSTODY_INVALID`, the committed Plan-80 disposition no longer equals fresh derivation, and Plan 81 cannot authenticate its canonical admission input.
 
-**File:** `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.ts:144-264,505-588`
-**Issue:** Except for the expiry harness, the purported semantic mutation review counts literal source tokens. It does not execute the mutated implementations or prove that the tokens control behavior. The derivation then marks every observation `passed: true` unconditionally at lines 543-550 and maps only missing-token findings. This permitted a zero-finding review even though the same reviewed controller contains CR-01 and CR-03, and it did not detect the missing post-run modes in WR-01. Because that zero-finding root was the prerequisite for the seal and live envelope, this is an evidence-review integrity failure, not merely weak test style.
+This means the newly added read-only modes are present but unusable against the only real published run. It also means the old Plan-80 disposition and Plan-81 validation/verification continue to claim integrity passed even though the current independent derivation rejects their seal/review premise. Raw journal/terminal/private evidence remains immutable and still proves an exhausted empirical `0/540`; the assurance conclusion does not.
 
-**Fix:** Replace token counting with behaviorally independent tests executed against exact committed bytes. Apply semantic mutations to isolated source copies (or inject effects at each boundary) and require each mutation to change an independently computed outcome. Add explicit observations for cleanup truth, success publication crash recovery, exact CLI mode availability, and lifecycle/admission non-circularity. Derive each `passed` value from the corresponding observed result and make incomplete observations findings.
+**Fix:** Publish an additive, immutable post-run audit-correction artifact that binds the historical seal/envelope/live bytes, the old Plan-83 review root, the new rejected historical re-review result, and the resulting downgraded/non-pass trust status. Update Plan 80 and Plan 81 to consume that correction without requiring current source to equal historical sealed bytes, while still authenticating both historical blobs and every later correction commit. Make the read-only modes validate the sealed historical commit from Git plus the additive audit chain, not the mutable working tree. Refresh validation/verification to state that empirical `0/540` is preserved but the earlier integrity-pass conclusion is superseded.
 
-## Warnings
+### CR-03: Production crash recovery is still blocked by the owner lock and split durable writes
 
-### WR-01: Planned post-run authentication CLI modes do not exist
+**Classification:** BLOCKER
 
-**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:98-103,1388-1393`
-**Issue:** Plan 262-79 requires `--check-live-transition` and `--check-terminal-envelope`, but the strict CLI exposes only the four pre-existing modes and rejects both planned post-run commands as `V138_RETRY_ARGUMENTS_INVALID`. The deviation is truthfully recorded in `262-79-SUMMARY.md`, and Plan 80 later supplies an independent admission checker, so this did not invalidate the honest exhausted result. It nevertheless leaves the sealed controller without its planned non-mutating operational verification interface and forced an ad hoc exported-model check immediately after live execution.
+**File:** `scripts/run-v1-38-bounded-retry-envelope.ts:1254-1277,1396-1462`
 
-**Fix:** In a fresh versioned source/review/seal lineage, add exact read-only post-run modes that authenticate the journal, private receipts, terminal, conditional reproduction, cleanup, roots, and authority denial without performing live work. Alternatively, formally replace the Plan-79 commands with the Plan-80 checker in the protocol before execution rather than deviating at run time.
+**Issue:** The CR-03 tests call `publishV138RetryOutcome()` directly and simulate exceptions after writes, but the real production path first exclusive-creates `<journal>.lock` and removes it only in `finally`. A process or host crash skips `finally`; the next invocation fails immediately because the lock destination is present. There is no authenticated stale-lock takeover or restart protocol, so the reproduction-first recovery path is unreachable after a real crash.
 
-### WR-02: Review/controller tests are permanently coupled to the pre-publication filesystem state
+The journal record and its private receipt are also two separate durable operations: the public journal is appended/fsynced first, then the private receipt is exclusive-created/fsynced. A crash between them leaves an authenticated journal with a missing required receipt, and no recovery path recreates that receipt. The current crash-boundary tests cover neither production lock recovery nor the journal/receipt split.
 
-**File:** `scripts/check-v1-38-plan-262-77-bounded-retry-source-review.test.ts:16-23`; `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.test.ts:10-17`; `scripts/run-v1-38-bounded-retry-envelope.test.ts:1075-1100`
-**Issue:** These tests run derivation/source-only checks against `process.cwd()` and require every later canonical destination to be absent. Once the authorized seal, journal, terminal, and private receipts exist, the suites fail before exercising their assertions. This makes the historical review and current controller regression suites non-rerunnable in the repository state they helped create and masks later regressions behind expected lifecycle state.
+**Fix:** Make the production ownership record recoverable with an authenticated lease/generation and compare-and-takeover protocol, or use an OS lock whose ownership disappears on process death. Make each journal/receipt transition recoverable: persist a single canonical record once and derive/link the second view, or add a restart reconciler that authenticates the journal record and exclusive-creates the exact missing private receipt before further work. Exercise real subprocess termination/power-loss-equivalent boundaries around lock creation, journal fsync, receipt write/fsync, reproduction write/fsync, terminal write/fsync, and prove convergence without rerunning an identity.
 
-**Fix:** Run pre-publication absence assertions in owned temporary fixtures or detached checkouts of the exact pre-publication commits. Add separate post-publication tests that authenticate the present canonical artifacts without mutation. Keep historical Plan-77 expectations pinned to its commit while allowing the current repository to advance.
+### CR-04: Plan 83 remains token-presence self-attestation and misses current semantic defects
+
+**Classification:** BLOCKER
+
+**File:** `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.ts:150-326,532-652`; `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.test.ts:73-204`
+
+**Issue:** The CR-04 fix added four more source-string checks and maps findings to observation booleans, but it did not replace token counting with behavioral independent verification. `inspectV138Plan26283SourceMutation()` still accepts implementations based on literal strings, regex matches, relative token order, and the presence of a named test. Its mutation suite only replaces those strings and asserts the corresponding string checker fires. The detached harness still exercises only the historical expiry behavior.
+
+This reviewer returns no findings for the current source despite CR-01's executable pending-cleanup failure, the broken real post-run modes/Plan-80 join, and CR-03's unrecoverable production lock. Most observation rows also remain `passed: true` for unrelated mutation findings because only four IDs are explicitly correlated. Thus the old three defects are now detected, but the underlying review-integrity failure remains.
+
+**Fix:** Execute each reviewed semantic family against exact committed bytes with independent expected outcomes. Add real behavioral cases for pending cleanup, cleanup-root binding, current post-run authentication, canonical Plan-80/81 joins, stale production-lock recovery, and journal/private-receipt crash boundaries. Derive every observation's pass value from its own result and make any incomplete/unexecuted observation a finding. Token/AST checks may supplement, but must not determine the zero-finding verdict.
+
+## Prior Finding Closure Audit
+
+| Prior finding | Current status | Evidence |
+|---|---|---|
+| CR-01 cleanup derivation | **OPEN** | Pending reservations can expire as clean; cleanup is outside `stateRoot`. |
+| CR-02 forged lifecycle PASS | **CLOSED AS SCOPED** | Production entry now calls canonical Plan-80 authentication and exact activation comparison; the real join is fail-closed, though currently blocked by CR-02 above. |
+| CR-03 success publication recovery | **OPEN** | Reproduction-first ordering improved, but actual process crash leaves an unrecoverable lock and journal/receipt splits. |
+| CR-04 semantic source review | **OPEN** | Historical issues are detected through added text predicates, not independent semantic execution. |
+| WR-01 post-run modes | **OPEN** | Exact modes exist, but both fail on the canonical published run with source-custody mismatch. |
+| WR-02 rerunnable tests | **CLOSED AS SCOPED** | Plan-77/83/controller tests run after publication without deleting or mutating live artifacts. |
 
 ## Current Bounded-Retry Verdict
 
-**ISSUES FOUND.** Preserve the actual exhausted `0/540` result as valid empirical evidence, but do not treat the bounded-retry source/review/lifecycle chain as clean. CR-01 through CR-04 require a fresh additive correction and independent re-review before this machinery can safely support any future successful admission or lifecycle escalation. ADMIT-03 remains blocked; the absent reproduction-v15 and Route-9 activation root are correct for the current non-pass.
+**ISSUES FOUND.** Do not mutate or retry the exhausted evidence. Preserve the journal, terminal, private receipts, absent reproduction-v15, absent Route-9 activation, and recorded empirical `0/540`. ADMIT-03 and Phase 263 remain blocked. Before this machinery is used again, publish a new additive audit lineage that truthfully supersedes the historical zero-finding assurance claim, repair cleanup and crash recovery, and make all canonical read-only/admission/lifecycle checks agree.
 
 ## Prior Review History (preserved)
 
+### 2026-08-27 initial bounded-retry successor review
+
+The first deep review at commit `ad71dbbf` reported six findings: forged cleanup truth, self-consistent forged lifecycle PASS acceptance, non-recoverable success publication ordering, token-presence Plan-83 review, missing post-run modes, and tests coupled to pre-publication filesystem state. Fixes were recorded in `d5c967cd`, `566a52b2`, `bb3691b0`, `4b838155`, and `fae54bba`, with the fix report committed in `3370bf14`. This fresh review is the closure audit of those changes; the table above records which findings actually remain closed.
+
 ### 2026-08-26 Route-8 cumulative review
 
-The prior standard review covered only:
+The earlier Route-8 review covered only:
 
 - `scripts/check-v1-38-plan-262-69-route-8-source.ts`
 - `scripts/check-v1-38-plan-262-69-route-8-source.test.ts`
@@ -101,18 +128,12 @@ The prior standard review covered only:
 
 **Historical status:** `clean` (0 critical, 0 warning, 0 info).
 
-The four cumulatively scoped files were reviewed adversarially on integrated main HEAD `aec0d8533c9e4c2eebfd1c3b79449caf0755ff3f`, including F-07 through F-09 and committed closeout `26394182`. All previously reported issues CR-01 through CR-05 and WR-01 remained resolved: production execution provenance failed closed without the unavailable producer anchor; topology pinned the exact reviewed Plan-74 commit and blobs; the validator enforced the canonical blank line and exact requirement table; transaction preparation and recovery covered all five setup boundaries; PASS publication was fail-closed across all six state-changing install boundaries with STATE last; and the test suite exercised the exact clean-history canonical sequence.
-
-F-07 was resolved. When committed validation contained normalization markers, the checker required exactly one validator-provenance marker and one normalized marker, required both copies of validator provenance to match, resolved the claimed raw source commit and blob from Git, required the raw commit to be a strict descendant of Plan 73 and strict ancestor of the normalized commit, rejected raw bytes already containing either marker, verified raw SHA-256, reparsed raw schema/semantics, and recomputed complete provenance. The three F-07 selectors passed (`3 passed, 34 skipped`); the canonical selector passed (`1 passed, 36 skipped`) and confirmed obstruction-only `0/540`, no Plan-74 summary, and no production PASS. Production normalized-post-validation, binder, and Plan-74 checks passed without worktree mutation; TypeScript and `git diff --check` passed.
-
-F-08 was resolved. Source custody compared the exact ordered source-touching Git commits with the first-parent source-touching subsequence. Omission, reordering, extra source commits, rewrites, source-affecting merge ambiguity, and rename/copy ambiguity were rejected. Detached proof required HEAD ancestry and unchanged reviewed blobs, snapshotted every Route-8 destination other than the review input, and required identical type/content roots afterward. Plan-70 passed all seven bounded cases; the coupled Plan-69 suite passed all 37 cases; TypeScript and `git diff --check` passed.
-
-F-09 was resolved. Historical compatibility was limited to immutable publication commit `05b10d6343eb0883db3b99bd5689220166c80169`, checker blob `196dec44681bb75dd08f1d57716acaa1a5be29bc`, review SHA-256 `c9e5a2691b5aac2780551252ac83f71933d96795af886ac9a9d33d4d305e7361`, report SHA-256 `7e47ecb45908706caecace66f8e31ec49f5376b2276c02e3abd8a5386fe0bdda`, and review root `sha256:4021f98031e71e6f7ba84635dd09b4bc89b1d4d3d9fe4893620f5ad179885c04`. The checker required that publication commit to remain an ancestor, executed the original checker from its detached commit, and byte-compared the canonical review/report pair. Current derivations continued to use the strict F-08 validator; historical compatibility was not a generic fallback.
-
-The exact historical `--check-review` command passed with zero findings and `authorizesExecution:false`. Plan-70 passed all eight bounded cases; coupled canonical obstruction and F-07 selectors passed; TypeScript and `git diff --check` passed. The historical verdict applies only to those four earlier Route-8 files and is not reinterpreted as a verdict on the bounded-retry successor reviewed here.
+That historical verdict applied only to those four Route-8 files at integrated main HEAD `aec0d8533c9e4c2eebfd1c3b79449caf0755ff3f`. It resolved F-07 through F-09, including normalized/raw source provenance, first-parent source custody, detached non-mutation proof, and exact historical compatibility pinned to publication commit `05b10d6343eb0883db3b99bd5689220166c80169`. It is not reinterpreted as a verdict on the bounded-retry successor reviewed here.
 
 ---
 
-_Reviewed: 2026-08-27T15:22:13Z_
+_Reviewed: 2026-08-27T15:44:42Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
+
+## REVIEW COMPLETE
