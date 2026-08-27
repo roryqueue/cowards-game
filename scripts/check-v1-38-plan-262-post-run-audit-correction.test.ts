@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  checkV138HistoricalLiveReceiptManifest,
   computeV138PostRunAuditCorrectionRoot,
+  deriveV138HistoricalLiveReceiptManifest,
   deriveV138PostRunAuditCorrection,
   validateV138PostRunAuditCorrection,
 } from "./check-v1-38-plan-262-post-run-audit-correction.js"
@@ -9,6 +11,30 @@ import {
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 describe("Phase 262 additive post-run audit correction", () => {
+  it("derives the intended private receipt set from exact historical Git blobs", () => {
+    const manifest = deriveV138HistoricalLiveReceiptManifest(process.cwd())
+    expect(manifest).toMatchObject({
+      liveCommit: "b4be9f5f5207c7eb87c6cd0e8f79863d4877cf3b",
+      receiptCount: 15,
+      empiricalOutcome: {
+        terminalDisposition: "exhausted",
+        freshAccepted: 0,
+        requiredAccepted: 540,
+      },
+    })
+    expect(manifest.receipts).toHaveLength(15)
+    expect(
+      manifest.receipts.every(
+        (receipt: any) =>
+          /^[0-9a-f]{40}$/u.test(receipt.gitBlob) &&
+          /^sha256:[0-9a-f]{64}$/u.test(receipt.sha256),
+      ),
+    ).toBe(true)
+    expect(checkV138HistoricalLiveReceiptManifest(process.cwd())).toEqual(
+      manifest,
+    )
+  })
+
   it("binds immutable historical bytes, rejected re-review, fixes, and downgraded trust", () => {
     const correction = deriveV138PostRunAuditCorrection(process.cwd())
     expect(correction).toMatchObject({
@@ -44,6 +70,7 @@ describe("Phase 262 additive post-run audit correction", () => {
       "63ddaf79dbff53357dbdded35d0e5ef85df84a7a",
       "91cffe9227c7a5ace81cb4b9414c6304987828ab",
       "087bab44d369131e49610fa64b675bc987686b09",
+      "5f30280cab4167898841f097e0adefe247c59221",
     ])
     expect(Object.values(correction.authority).every((value) => !value)).toBe(
       true,
