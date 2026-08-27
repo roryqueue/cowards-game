@@ -30,3 +30,13 @@ The user requested strong recommendations for every phase in one batch and asked
 ## Deferred Ideas
 
 - Later phase capabilities and separately attributable rules experiments remain assigned to their roadmap phases; none was folded into Phase 262.
+
+## Contract revision: bounded standing retry authority
+
+**Date:** 2026-08-27
+
+The user authorized a new retry route and revision of the no-retry admission contract, after separately directing the milestone to continue autonomously without repeated literal checkpoints.
+
+The accepted interpretation is additive: prior routes, charges, terminals, and authorization bytes remain immutable history; a fresh successor may use a finite, precommitted retry envelope under standing operator authority. Research and planning must freeze the envelope before live work. The literal 540/540 admission condition and every frozen runtime, resource, semantic, privacy, gameplay, and formation-absence boundary remain unchanged.
+
+This decision does not revive Plan 262-62 or Plan 262-74, claim external or independent custody, authorize Phase 263, or permit candidate, formation, holdout-opening, public, production, activation, or counted-play work before successful admission.
