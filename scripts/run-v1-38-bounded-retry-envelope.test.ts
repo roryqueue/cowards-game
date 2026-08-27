@@ -30,6 +30,7 @@ import {
   runV138ProductionLive,
   publishV138RetryOutcome,
   publishV138RetryTerminalResult,
+  requireV138RetryReproductionAbsent,
   runV138BoundedRetryController,
   type V138BoundedRetryControllerEffects,
 } from "./run-v1-38-bounded-retry-envelope.js"
@@ -69,6 +70,34 @@ const append = (
     atMilliseconds,
     envelope().envelopeRoot,
   )
+
+describe("published correction reproduction absence", () => {
+  it("accepts only a missing reproduction path", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-correction-absence-"))
+    temporaryRoots.push(root)
+    expect(requireV138RetryReproductionAbsent(root)).toBe(true)
+  })
+
+  it.each(["regular", "symlink", "directory"] as const)(
+    "rejects a %s reproduction path",
+    (kind) => {
+      const root = mkdtempSync(path.join(tmpdir(), "v138-correction-inject-"))
+      temporaryRoots.push(root)
+      const target = path.resolve(root, V138_BOUNDED_RETRY_PATHS.reproduction)
+      mkdirSync(path.dirname(target), { recursive: true })
+      if (kind === "regular") writeFileSync(target, "{}\n")
+      if (kind === "directory") mkdirSync(target)
+      if (kind === "symlink") {
+        const linkTarget = path.join(root, "injected-reproduction.json")
+        writeFileSync(linkTarget, "{}\n")
+        symlinkSync(linkTarget, target)
+      }
+      expect(() => requireV138RetryReproductionAbsent(root)).toThrow(
+        "V138_RETRY_REPRODUCTION_ARTIFACT_INVALID",
+      )
+    },
+  )
+})
 
 describe("retry-envelope:v1 finite state and cumulative journal", () => {
   it("freezes the exact identities and policy bounds", () => {

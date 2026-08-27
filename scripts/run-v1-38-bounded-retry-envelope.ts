@@ -1393,6 +1393,7 @@ export const checkV138PublishedRetryOutcome = (
     safeStatus(path.resolve(repoRoot, V138_POST_RUN_AUDIT_CORRECTION_PATH)) ===
     "regular"
   ) {
+    requireV138RetryReproductionAbsent(repoRoot)
     const correction = checkV138PostRunAuditCorrection(repoRoot)
     const terminal = readJsonNoFollow(
       repoRoot,
@@ -1471,6 +1472,16 @@ export const checkV138PublishedRetryOutcome = (
     reproductionPresent: reproductionStatus === "regular",
     downstreamAuthority: "denied" as const,
   })
+}
+
+export const requireV138RetryReproductionAbsent = (repoRoot: string): true => {
+  if (
+    safeStatus(
+      path.resolve(repoRoot, V138_BOUNDED_RETRY_PATHS.reproduction),
+    ) !== "missing"
+  )
+    fail("V138_RETRY_REPRODUCTION_ARTIFACT_INVALID")
+  return true
 }
 
 export interface V138RetryProductionOptions {
