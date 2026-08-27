@@ -9,9 +9,10 @@ import {
   writeFileSync,
 } from "node:fs"
 import { createHash } from "node:crypto"
-import { spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   V138_BOUNDED_RETRY_V2_IDENTITIES,
@@ -29,7 +30,6 @@ import {
   type V138RetryV2JournalRecord,
 } from "./lib/v1-38-bounded-retry-envelope-v2.js"
 import {
-  V138_BOUNDED_RETRY_V2_LIVE_FLAGS,
   V138_BOUNDED_RETRY_V2_PATHS as CONTROLLER_PATHS,
   acquireV138RetryV2OwnerLease,
   executeV138BoundedRetryV2Cli,
@@ -794,7 +794,13 @@ describe("bounded retry v2 controller and crash-safe custody", () => {
       identity: "preflight:v2:0",
       effectiveAvailableBasisPoints: 0,
     })
-    expect(result.state.nextPreflightIdentity).toBe("preflight:v2:1")
+    expect(result.state.nextPreflightIdentity).toBeNull()
+    const reservations = result.records.filter(
+      (record) => record.kind === "reserve_preflight",
+    )
+    expect(new Set(reservations.map(({ identity }) => identity)).size).toBe(
+      reservations.length,
+    )
 
     let cleanupRecords: readonly V138RetryV2JournalRecord[] = []
     cleanupRecords = append(cleanupRecords, 1_000, {
@@ -820,7 +826,7 @@ describe("bounded retry v2 controller and crash-safe custody", () => {
       owner: "owner",
       identities: V138_BOUNDED_RETRY_V2_IDENTITIES.calibrations.slice(0, 8),
     })
-    const cleanup = fakeEffects({ observations: [], calibrations: [] })
+    const cleanup = fakeEffects({ observations: [], calibrations: [], start: 1_004 })
     const cleanupResult = await runV138BoundedRetryV2Controller({
       envelope: envelope(),
       owner: "owner",
@@ -889,6 +895,195 @@ describe("bounded retry v2 controller and crash-safe custody", () => {
     await restarted.release()
   })
 
+  it.each([
+    "lock_acquired",
+    "journal_fsync",
+    "receipt_fsync",
+    "reproduction_write",
+    "reproduction_fsync",
+    "terminal_write",
+    "terminal_fsync",
+  ] as const)(
+    "recovers a real SIGKILL at %s with one chain and no reserved identity reuse",
+    async (stage) => {
+      if (process.platform !== "darwin") return
+      const root = mkdtempSync(path.join(tmpdir(), `v138-v2-process-${stage}-`))
+      temporaryRoots.push(root)
+      mkdirSync(path.join(root, ".planning", "artifacts"), { recursive: true })
+      const moduleUrl = pathToFileURL(
+        path.resolve("scripts/run-v1-38-bounded-retry-envelope-v2.ts"),
+      ).href
+      const childPath = path.join(root, "crash-child.mts")
+      writeFileSync(
+        childPath,
+        `
+          import { runV138V2ProductionLive } from ${JSON.stringify(moduleUrl)};
+          const envelope = ${JSON.stringify(envelope())};
+          const SHA_B = ${JSON.stringify(SHA_B)};
+          const root = ${JSON.stringify(root)};
+          const stage = ${JSON.stringify(stage)};
+          let now = 1_000;
+          await runV138V2ProductionLive(root, {
+            checkPair: () => ({ seal: {}, envelope }),
+            validateInputs: false,
+            createEffects: (appendDurableRecord) => ({
+              monotonicMilliseconds: () => now,
+              waitUntil: async (target) => { now = target; },
+              observePreflight: async () => ({ available: true, effectiveAvailableBasisPoints: 2_500 }),
+              runCalibration: async () => ({ status: "admitted", completeCleanup: true }),
+              runReproduction: async () => ({
+                status: "passed_exact",
+                acceptedCells: 540,
+                completeCleanup: true,
+                reproductionRoot: SHA_B,
+                artifact: {
+                  schemaVersion: "v1.38-current-matrix-reproduction-v16",
+                  status: "passed_exact",
+                  acceptedCellCount: 540,
+                  uniqueExpectedCellCount: 540,
+                  completeCleanup: true,
+                  receiptRoot: SHA_B,
+                  downstreamAuthority: "denied"
+                }
+              }),
+              appendDurableRecord
+            }),
+            crashBoundary: (seen) => {
+              if (seen === stage) process.kill(process.pid, "SIGKILL");
+            }
+          });
+        `,
+      )
+      const killed = spawnSync(
+        process.execPath,
+        ["--import", "tsx", childPath],
+        { cwd: process.cwd(), encoding: "utf8", timeout: 25_000 },
+      )
+      expect(
+        killed.signal === "SIGKILL" || killed.status === 137,
+        `${killed.stderr}\n${killed.stdout}`,
+      ).toBe(true)
+
+      let now = 1_000
+      let reproductionLaunches = 0
+      await runV138V2ProductionLive(root, {
+        checkPair: () => ({ seal: {} as never, envelope: envelope() }),
+        validateInputs: false,
+        createEffects: (appendDurableRecord) => ({
+          monotonicMilliseconds: () => now,
+          waitUntil: async (target) => {
+            now = target
+          },
+          observePreflight: async () => ({
+            available: true,
+            effectiveAvailableBasisPoints: 2_500,
+          }),
+          runCalibration: async () => ({
+            status: "admitted",
+            completeCleanup: true,
+          }),
+          runReproduction: async () => {
+            reproductionLaunches += 1
+            return {
+              status: "passed_exact",
+              acceptedCells: 540,
+              completeCleanup: true,
+              reproductionRoot: SHA_B,
+              artifact: {
+                schemaVersion: "v1.38-current-matrix-reproduction-v16",
+                status: "passed_exact",
+                acceptedCellCount: 540,
+                uniqueExpectedCellCount: 540,
+                completeCleanup: true,
+                receiptRoot: SHA_B,
+                downstreamAuthority: "denied",
+              },
+            }
+          },
+          appendDurableRecord,
+        }),
+      })
+      const journalPath = path.resolve(root, CONTROLLER_PATHS.journal)
+      const records = readFileSync(journalPath, "utf8")
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as V138RetryV2JournalRecord)
+      const reservations = records
+        .filter(({ kind }) => kind.startsWith("reserve_"))
+        .flatMap((record) =>
+          "identities" in record
+            ? record.identities.map((identity) => `${record.kind}:${identity}`)
+            : "identity" in record
+              ? [`${record.kind}:${record.identity}`]
+              : [`${record.kind}:${record.routeIdentity}`],
+        )
+      expect(new Set(reservations).size).toBe(reservations.length)
+      expect(existsSync(path.resolve(root, CONTROLLER_PATHS.terminal))).toBe(true)
+      if (stage.startsWith("reproduction_") || stage.startsWith("terminal_")) {
+        expect(reproductionLaunches).toBe(0)
+      }
+    },
+    60_000,
+  )
+
+  it("synchronizes two contenders so exactly one owns the kernel lock", async () => {
+    if (process.platform !== "darwin") return
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v2-lock-race-"))
+    temporaryRoots.push(root)
+    const lock = path.join(root, "owner.lock")
+    const resultPath = path.join(root, "results.txt")
+    const moduleUrl = pathToFileURL(
+      path.resolve("scripts/run-v1-38-bounded-retry-envelope-v2.ts"),
+    ).href
+    const childPath = path.join(root, "contender.mts")
+    writeFileSync(
+      childPath,
+      `
+        import { appendFileSync } from "node:fs";
+        import { acquireV138RetryV2OwnerLease } from ${JSON.stringify(moduleUrl)};
+        const [id, lock, resultPath] = process.argv.slice(2);
+        process.stdout.write("ready\\n");
+        await new Promise((resolve) => process.stdin.once("data", resolve));
+        try {
+          const owner = await acquireV138RetryV2OwnerLease(lock);
+          appendFileSync(resultPath, id + ":acquired\\n");
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          await owner.release();
+        } catch {
+          appendFileSync(resultPath, id + ":rejected\\n");
+        }
+      `,
+    )
+    const children = ["left", "right"].map((id) =>
+      spawn(process.execPath, ["--import", "tsx", childPath, id, lock, resultPath], {
+        cwd: process.cwd(),
+        stdio: ["pipe", "pipe", "pipe"],
+      }),
+    )
+    await Promise.all(
+      children.map(
+        (child) =>
+          new Promise<void>((resolve, reject) => {
+            child.once("error", reject)
+            child.stdout.once("data", () => resolve())
+          }),
+      ),
+    )
+    children.forEach((child) => child.stdin.end("go\n"))
+    expect(
+      await Promise.all(
+        children.map(
+          (child) =>
+            new Promise<number | null>((resolve) => child.once("exit", resolve)),
+        ),
+      ),
+    ).toEqual([0, 0])
+    const outcomes = readFileSync(resultPath, "utf8").trim().split("\n")
+    expect(outcomes.filter((value) => value.endsWith(":acquired"))).toHaveLength(1)
+    expect(outcomes.filter((value) => value.endsWith(":rejected"))).toHaveLength(1)
+  }, 30_000)
+
   it("strictly selects source-only mode and reports every downstream authority false", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "v138-v2-cli-"))
     temporaryRoots.push(root)
@@ -908,7 +1103,11 @@ describe("bounded retry v2 controller and crash-safe custody", () => {
         },
       })
       await expect(
-        executeV138BoundedRetryV2Cli(["--run-bounded-live-envelope"], {
+        executeV138BoundedRetryV2Cli([
+          "--run-bounded-live-envelope",
+          "--journal",
+          CONTROLLER_PATHS.journal,
+        ], {
           repoRoot: root,
           runLive: async () => {
             liveInvoked = true
@@ -932,7 +1131,15 @@ describe("bounded retry v2 controller and crash-safe custody", () => {
       productionAuthorized: false,
       gameplayChangeAuthorized: false,
     })
-    expect(Object.keys(V138_BOUNDED_RETRY_V2_LIVE_FLAGS)).toHaveLength(18)
+    expect(CONTROLLER_PATHS).toMatchObject({
+      sourceController: "scripts/run-v1-38-bounded-retry-envelope-v2.ts",
+      sourceModel: "scripts/lib/v1-38-bounded-retry-envelope-v2.ts",
+      journal: ".planning/artifacts/v1.38-current-matrix-retry-journal-v2.jsonl",
+      terminal: ".planning/artifacts/v1.38-current-matrix-retry-terminal-v2.json",
+      privateDir: ".planning/artifacts/v1.38-current-matrix-retry-private-v2",
+      reproduction: ".planning/artifacts/v1.38-current-matrix-reproduction-v16.json",
+    })
+    expect(Object.isFrozen(CONTROLLER_PATHS)).toBe(true)
     for (const destination of Object.values(CONTROLLER_PATHS).filter((value) =>
       value.includes("journal-v2") || value.includes("terminal-v2") ||
       value.includes("private-v2") || value.includes("reproduction-v16"),
