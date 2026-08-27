@@ -13,8 +13,11 @@ import {
   type V138RetryV2JournalRecord,
 } from "./v1-38-bounded-retry-envelope-v2.js"
 import {
+  completeV138SuccessorEffect,
+  recoverV138SuccessorEffectDecision,
   recoverV138AdmittedObservationWithoutRoute,
   V138_RETRY_INTEGRITY_SUCCESSOR_CLI,
+  type V138SuccessorIntegrityRecord,
 } from "./v1-38-bounded-retry-integrity-successor-v1.js"
 
 const SHA_A = `sha256:${"a".repeat(64)}` as const
@@ -183,4 +186,131 @@ describe("CR-01 additive admitted-observation recovery", () => {
       }
     }
   }, 60_000)
+})
+
+describe("CR-02 finish-before-deadline successor ordering", () => {
+  const effect = async (
+    kind: "preflight" | "calibration" | "reproduction",
+    completion: number,
+    result: {
+      status: "observed" | "admitted" | "system_failure" | "passed_exact"
+      acceptedCells?: number
+      completeCleanup: boolean
+    },
+  ) => {
+    let now = 1
+    const durable: V138SuccessorIntegrityRecord[] = []
+    const completed = await completeV138SuccessorEffect({
+      records: [],
+      effectKind: kind,
+      effectIdentity: `${kind}:fixture`,
+      owner: "owner-a",
+      deadlineMilliseconds: 100,
+      monotonicMilliseconds: () => now,
+      runEffect: async () => {
+        now = completion
+        return result
+      },
+      appendDurableRecord: (record) => durable.push(record),
+    })
+    return { completed, durable }
+  }
+
+  it.each([
+    ["preflight", 100],
+    ["preflight", 101],
+    ["calibration", 100],
+    ["calibration", 101],
+  ] as const)(
+    "persists %s cleanup/result before applying deadline at %i",
+    async (kind, completion) => {
+      const { completed, durable } = await effect(kind, completion, {
+        status: kind === "preflight" ? "observed" : "admitted",
+        completeCleanup: true,
+      })
+      expect(durable.map(({ event }) => event.kind)).toEqual([
+        "effect_started",
+        "effect_finished",
+        "deadline_expired",
+      ])
+      expect(durable[1]?.event).toMatchObject({
+        kind: "effect_finished",
+        completeCleanup: true,
+        completedAtMilliseconds: completion,
+      })
+      expect(completed.disposition).toBe("deadline_expired")
+    },
+  )
+
+  it.each([100, 101])(
+    "gives a completed exact 540 reproduction explicit precedence at %i",
+    async (completion) => {
+      const { completed, durable } = await effect("reproduction", completion, {
+        status: "passed_exact",
+        acceptedCells: 540,
+        completeCleanup: true,
+      })
+      expect(durable.map(({ event }) => event.kind)).toEqual([
+        "effect_started",
+        "effect_finished",
+        "reproduction_exact_terminal",
+      ])
+      expect(completed.disposition).toBe("reproduction_exact")
+      expect(completed.acceptedCells).toBe(540)
+    },
+  )
+
+  it.each([
+    ["calibration", "admitted", 0],
+    ["reproduction", "passed_exact", 540],
+  ] as const)(
+    "recovers after a crash immediately after the durable %s finish",
+    async (kind, status, acceptedCells) => {
+      let now = 101
+      const durable: V138SuccessorIntegrityRecord[] = []
+      await expect(
+        completeV138SuccessorEffect({
+          records: [],
+          effectKind: kind,
+          effectIdentity: `${kind}:crash`,
+          owner: "owner-a",
+          deadlineMilliseconds: 100,
+          monotonicMilliseconds: () => now,
+          runEffect: async () => ({
+            status,
+            acceptedCells,
+            completeCleanup: true,
+          }),
+          appendDurableRecord: (record) => {
+            durable.push(record)
+            if (record.event.kind === "effect_finished") {
+              throw new Error("injected_crash_after_finish_fsync")
+            }
+          },
+        }),
+      ).rejects.toThrow("injected_crash_after_finish_fsync")
+      expect(durable.at(-1)?.event.kind).toBe("effect_finished")
+
+      const resumed: V138SuccessorIntegrityRecord[] = []
+      const recovered = recoverV138SuccessorEffectDecision({
+        records: durable,
+        deadlineMilliseconds: 100,
+        appendDurableRecord: (record) => resumed.push(record),
+      })
+      expect(resumed).toHaveLength(1)
+      expect(recovered.disposition).toBe(
+        kind === "reproduction" ? "reproduction_exact" : "deadline_expired",
+      )
+      expect(
+        recoverV138SuccessorEffectDecision({
+          records: recovered.records,
+          deadlineMilliseconds: 100,
+          appendDurableRecord: () => {
+            throw new Error("must be idempotent")
+          },
+        }).records,
+      ).toEqual(recovered.records)
+      now += 1
+    },
+  )
 })
