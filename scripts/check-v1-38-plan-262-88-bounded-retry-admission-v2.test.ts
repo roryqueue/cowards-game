@@ -255,6 +255,13 @@ describe("Plan 262-88 independent bounded-retry v2 adjudication", () => {
       "JOURNAL_CHAIN_INVALID",
     ],
     [
+      "noncanonical journal encoding",
+      (evidence: any) => {
+        evidence.journalCanonical = false
+      },
+      "JOURNAL_NONCANONICAL",
+    ],
+    [
       "identity aliasing",
       (evidence: any) => {
         evidence.journal[3].identities[0] = "calibration:v1:0:0"
@@ -311,6 +318,13 @@ describe("Plan 262-88 independent bounded-retry v2 adjudication", () => {
       "source rewrite",
       (evidence: any) => {
         evidence.custody.sourceUnrewritten = false
+      },
+      "GIT_CUSTODY_INVALID",
+    ],
+    [
+      "reviewed Git blob mismatch",
+      (evidence: any) => {
+        evidence.custody.reviewedBlobsExact = false
       },
       "GIT_CUSTODY_INVALID",
     ],

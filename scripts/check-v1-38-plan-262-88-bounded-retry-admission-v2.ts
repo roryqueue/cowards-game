@@ -328,7 +328,11 @@ const scanUnsafeKeys = (value: unknown): string[] => {
   return [...found].sort()
 }
 
-const inspectGitCustody = (root: string, receiptNames: string[]) => {
+const inspectGitCustody = (
+  root: string,
+  receiptNames: string[],
+  review: any,
+) => {
   const reviewed = gitMetadata(root, EXPECTED.reviewedSource)
   const closure = gitMetadata(root, EXPECTED.closure)
   const pair = gitMetadata(root, EXPECTED.pairCommit)
@@ -365,6 +369,28 @@ const inspectGitCustody = (root: string, receiptNames: string[]) => {
         readRegular(root, repoPath),
       ),
     ),
+    reviewedBlobsExact:
+      review?.reviewedSource?.blobs?.length === 3 &&
+      review.reviewedSource.blobs.every((entry: any) => {
+        const bytes = gitBytes(root, EXPECTED.reviewedSource, entry.path)
+        const treeEntry = git(root, [
+          "ls-tree",
+          EXPECTED.reviewedSource,
+          "--",
+          entry.path,
+        ]).split(/\s+/u)
+        return (
+          [
+            V138_PLAN_262_88_PATHS.sourceController,
+            V138_PLAN_262_88_PATHS.sourceModel,
+            V138_PLAN_262_88_PATHS.sourceTests,
+          ].includes(entry.path) &&
+          treeEntry[0] === entry.mode &&
+          treeEntry[2] === entry.blob &&
+          entry.byteLength === bytes.byteLength &&
+          entry.sha256 === sha256(bytes)
+        )
+      }),
     sourceUnrewritten: SOURCE_PATHS.every((repoPath) =>
       pathUnrewritten(root, EXPECTED.reviewedSource, repoPath),
     ),
@@ -505,6 +531,8 @@ export const loadV138Plan26288Evidence = (root: string): any => {
         "utf8",
       ),
     },
+    journalCanonical:
+      journalBytes === journal.map((record) => canonical(record)).join(""),
     canonicalEvidence: [
       V138_PLAN_262_88_PATHS.review,
       V138_PLAN_262_88_PATHS.correctionV2,
@@ -517,7 +545,7 @@ export const loadV138Plan26288Evidence = (root: string): any => {
       return bytes === canonical(JSON.parse(bytes))
     }),
     unsafeProjectionKeys: scanUnsafeKeys({ journal, terminal, reproduction }),
-    custody: inspectGitCustody(root, privateNames),
+    custody: inspectGitCustody(root, privateNames, review),
     destinationStatus,
   }
 }
@@ -1161,6 +1189,7 @@ export const evaluateV138Plan26288Evidence = (evidence: any): any => {
     if (!assuranceDefects.includes(code)) assuranceDefects.push(code)
   }
   if (!evidence.canonicalEvidence) addDefect("CANONICAL_EVIDENCE_INVALID")
+  if (!evidence.journalCanonical) addDefect("JOURNAL_NONCANONICAL")
   if (!reviewRootValid(evidence.review)) addDefect("SOURCE_REVIEW_INVALID")
   if (
     evidence.localSeal?.schemaVersion !==
@@ -1204,6 +1233,7 @@ export const evaluateV138Plan26288Evidence = (evidence: any): any => {
   if (
     !evidence.custody?.sourceReviewedCommitExact ||
     !evidence.custody?.sourceCurrentMatchesReviewed ||
+    !evidence.custody?.reviewedBlobsExact ||
     !evidence.custody?.sourceUnrewritten ||
     !evidence.custody?.reviewClosureExact ||
     !evidence.custody?.reviewUnrewritten ||
