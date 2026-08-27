@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync,
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { V138_DURABLE_PAIR_V2_CLI } from "./v1-38-durable-pair-successor-v2.js"
+import { deriveV138PairLockKeyV2, V138_DURABLE_PAIR_V2_CLI } from "./v1-38-durable-pair-successor-v2.js"
 
 const roots: string[] = []
 afterEach(() => { while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true }) })
@@ -19,6 +19,11 @@ const run = (input: unknown) => new Promise<number | null>((resolve) => {
 })
 
 describe("CR-03 common-lock durable pair", () => {
+  it("selects one mutex solely from normalized sorted canonical targets", () => {
+    const forward = [{ target: "artifacts/review.json", bytes: "A" }, { target: "reviews/review.md", bytes: "B" }] as const
+    const reverse = [{ target: "reviews/review.md", bytes: "different" }, { target: "artifacts/review.json", bytes: "intent-independent" }] as const
+    expect(deriveV138PairLockKeyV2(forward)).toBe(deriveV138PairLockKeyV2(reverse))
+  })
   it("serializes reversed-order conflicting processes to one complete pair", async () => {
     const root = fixture()
     const membersA = [

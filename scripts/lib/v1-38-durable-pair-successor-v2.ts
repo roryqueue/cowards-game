@@ -28,6 +28,14 @@ const sha256 = (bytes: string | Buffer): `sha256:${string}` => `sha256:${createH
 export interface V138DurablePairV2Member { readonly target: string; readonly bytes: string }
 export const V138_DURABLE_PAIR_V2_CLI = fileURLToPath(import.meta.url)
 
+export const deriveV138PairLockKeyV2 = (
+  members: readonly [V138DurablePairV2Member, V138DurablePairV2Member],
+): string => {
+  const sortedTargets = members.map(({ target }) => normalizeV138Relative(target)).sort()
+  if (sortedTargets[0] === sortedTargets[1]) fail("V138_PAIR_V2_DUPLICATE_TARGET")
+  return sha256(sortedTargets.join("\0")).slice(7)
+}
+
 const type = (target: string): "absent" | "regular" => {
   try {
     const status = lstatSync(target)
@@ -110,11 +118,9 @@ export const durablyPublishV138PairV2 = (input: {
   members: readonly [V138DurablePairV2Member, V138DurablePairV2Member]
 }): Readonly<{ status: "complete"; memberCount: 2 }> => {
   const root = trustedRootV138(input.trustedRoot)
-  const sortedTargets = input.members.map(({ target }) => normalizeV138Relative(target)).sort()
-  if (sortedTargets[0] === sortedTargets[1]) fail("V138_PAIR_V2_DUPLICATE_TARGET")
+  const lockKey = deriveV138PairLockKeyV2(input.members)
   normalizeV138Relative(input.intentPath)
   ensureV138TrustedDirectories(root, [".v138-pair-locks", ".v138-pair-staging"])
-  const lockKey = sha256(sortedTargets.join("\0")).slice(7)
   return withV138ExclusiveDirectoryLock(root, ".v138-pair-locks", `${lockKey}.lock`, () => {
     pairWorker({ ...input, trustedRoot: root })
     return Object.freeze({ status: "complete" as const, memberCount: 2 as const })
