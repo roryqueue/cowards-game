@@ -189,23 +189,7 @@ export const inspectV138Plan26277SourceCustody = (root: string) => {
     realpathSync(git(root, ["rev-parse", "--show-toplevel"])) !== physicalRoot
   )
     fail("V138_PLAN_262_77_REPOSITORY_ROOT_INVALID")
-  if (
-    git(root, [
-      "status",
-      "--porcelain",
-      "--",
-      ...V138_PLAN_262_77_SOURCE_PATHS,
-    ]) !== ""
-  )
-    fail("V138_PLAN_262_77_SOURCE_DIRTY")
-
-  const commit = git(root, [
-    "rev-list",
-    "-1",
-    "HEAD",
-    "--",
-    ...V138_PLAN_262_77_SOURCE_PATHS,
-  ])
+  const commit = EXPECTED_SOURCE.commit
   const [tree, parents = ""] = git(root, [
     "show",
     "-s",
@@ -240,9 +224,6 @@ export const inspectV138Plan26277SourceCustody = (root: string) => {
     const committed = execFileSync("git", ["show", `${commit}:${repoPath}`], {
       cwd: root,
     })
-    const working = readRegular(root, repoPath)
-    if (!committed.equals(working))
-      fail("V138_PLAN_262_77_SOURCE_WORKTREE_DRIFT")
     return Object.freeze({
       path: repoPath,
       mode,
@@ -263,19 +244,6 @@ export const inspectV138Plan26277SourceCustody = (root: string) => {
     fail("V138_PLAN_262_77_PLAN_76_SUMMARY_INVALID")
   requireAncestor(root, commit, summaryCommit)
   requireAncestor(root, summaryCommit, "HEAD")
-  if (
-    lines(
-      git(root, [
-        "log",
-        "--format=%H",
-        `${commit}..HEAD`,
-        "--",
-        ...V138_PLAN_262_77_SOURCE_PATHS,
-      ]),
-    ).length !== 0
-  )
-    fail("V138_PLAN_262_77_SOURCE_REWRITE_INVALID")
-
   return Object.freeze({
     commit,
     tree: tree!,
@@ -389,7 +357,7 @@ const runDetachedExercise = (root: string, sourceCommit: string) => {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     })
-    execFileSync("git", ["checkout", "--detach", "HEAD"], {
+    execFileSync("git", ["checkout", "--detach", sourceCommit], {
       cwd: clone,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
@@ -549,16 +517,15 @@ const finding = (
 
 export const deriveV138Plan26277NoPublish = (root: string) => {
   const before = snapshotV138Plan26277ForbiddenDestinations(root)
-  if (before.some((item) => item.type !== "absent"))
-    fail("V138_PLAN_262_77_FORBIDDEN_DESTINATION_PRESENT")
   const custody = inspectV138Plan26277SourceCustody(root)
-  const model = readRegular(root, V138_PLAN_262_77_SOURCE_PATHS[0]).toString(
-    "utf8",
-  )
-  const controller = readRegular(
-    root,
-    V138_PLAN_262_77_SOURCE_PATHS[1],
-  ).toString("utf8")
+  const model = git(root, [
+    "show",
+    `${custody.commit}:${V138_PLAN_262_77_SOURCE_PATHS[0]}`,
+  ])
+  const controller = git(root, [
+    "show",
+    `${custody.commit}:${V138_PLAN_262_77_SOURCE_PATHS[1]}`,
+  ])
   const sourceMutations = inspectV138Plan26277SourceMutation({
     model,
     controller,

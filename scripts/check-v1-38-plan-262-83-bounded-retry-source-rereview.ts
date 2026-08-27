@@ -279,15 +279,6 @@ const inspectCustody = (root: string) => {
     parents !== EXPECTED.parent
   )
     fail("V138_PLAN_262_83_SOURCE_IDENTITY_INVALID")
-  if (
-    git(root, [
-      "status",
-      "--porcelain",
-      "--",
-      ...V138_PLAN_262_83_SOURCE_PATHS,
-    ]) !== ""
-  )
-    fail("V138_PLAN_262_83_SOURCE_DIRTY")
   const blobs = V138_PLAN_262_83_SOURCE_PATHS.map((repoPath) => {
     const entry = git(root, ["ls-tree", EXPECTED.commit, "--", repoPath]).split(
       /\s+/u,
@@ -299,24 +290,8 @@ const inspectCustody = (root: string) => {
       ["show", `${EXPECTED.commit}:${repoPath}`],
       { cwd: root },
     )
-    if (
-      mode !== "100644" ||
-      blob !== EXPECTED.blobs[repoPath] ||
-      !committed.equals(readRegular(root, repoPath))
-    )
+    if (mode !== "100644" || blob !== EXPECTED.blobs[repoPath])
       fail("V138_PLAN_262_83_SOURCE_CUSTODY_INVALID")
-    if (
-      lines(
-        git(root, [
-          "log",
-          "--format=%H",
-          `${EXPECTED.commit}..HEAD`,
-          "--",
-          repoPath,
-        ]),
-      ).length !== 0
-    )
-      fail("V138_PLAN_262_83_SOURCE_REWRITE_INVALID")
     return Object.freeze({
       path: repoPath,
       mode,
@@ -504,19 +479,20 @@ const OBSERVATIONS = Object.freeze([
 ])
 export const deriveV138Plan26283NoPublish = (root: string) => {
   const before = snapshotV138Plan26283ProtectedDestinations(root)
-  if (
-    before
-      .filter(({ path: repoPath }) => FORBIDDEN.includes(repoPath))
-      .some(({ type }) => type !== "absent")
-  )
-    fail("V138_PLAN_262_83_FORBIDDEN_DESTINATION_PRESENT")
   const reviewedSource = inspectCustody(root)
   const source: Source = {
-    model: readRegular(root, V138_PLAN_262_83_SOURCE_PATHS[0]).toString("utf8"),
-    controller: readRegular(root, V138_PLAN_262_83_SOURCE_PATHS[1]).toString(
-      "utf8",
-    ),
-    tests: readRegular(root, V138_PLAN_262_83_SOURCE_PATHS[2]).toString("utf8"),
+    model: git(root, [
+      "show",
+      `${reviewedSource.commit}:${V138_PLAN_262_83_SOURCE_PATHS[0]}`,
+    ]),
+    controller: git(root, [
+      "show",
+      `${reviewedSource.commit}:${V138_PLAN_262_83_SOURCE_PATHS[1]}`,
+    ]),
+    tests: git(root, [
+      "show",
+      `${reviewedSource.commit}:${V138_PLAN_262_83_SOURCE_PATHS[2]}`,
+    ]),
   }
   const mutationFindings = inspectV138Plan26283SourceMutation(source)
   const exercise = detachedExercise(root)

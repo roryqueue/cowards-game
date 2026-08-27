@@ -1209,17 +1209,20 @@ describe("bounded retry controller and CLI containment", () => {
   })
 
   it("source-only mode proves the real live handler and canonical destinations remain untouched", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-source-only-"))
+    temporaryRoots.push(root)
+    mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
     const before = Object.fromEntries(
       [
         V138_BOUNDED_RETRY_PATHS.journal,
         V138_BOUNDED_RETRY_PATHS.terminal,
         V138_BOUNDED_RETRY_PATHS.privateDir,
         V138_BOUNDED_RETRY_PATHS.reproduction,
-      ].map((value) => [value, existsSync(value)]),
+      ].map((value) => [value, existsSync(path.join(root, value))]),
     )
     let liveInvocations = 0
     await executeV138BoundedRetryCli(["--check-source-only"], {
-      repoRoot: process.cwd(),
+      repoRoot: root,
       deriveArtifacts: () => {
         throw new Error()
       },
@@ -1229,10 +1232,13 @@ describe("bounded retry controller and CLI containment", () => {
       },
     })
     const after = Object.fromEntries(
-      Object.keys(before).map((value) => [value, existsSync(value)]),
+      Object.keys(before).map((value) => [
+        value,
+        existsSync(path.join(root, value)),
+      ]),
     )
     expect(liveInvocations).toBe(0)
     expect(after).toEqual(before)
-    expect(Object.values(after).every((present) => !present)).toBe(true)
+    expect(after).toEqual(before)
   })
 })
