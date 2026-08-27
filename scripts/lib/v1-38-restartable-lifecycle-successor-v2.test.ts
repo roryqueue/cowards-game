@@ -4,7 +4,7 @@ import { linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, sy
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { applyV138RestartableLifecycleTransactionV2, V138_RESTARTABLE_LIFECYCLE_V2_CLI } from "./v1-38-restartable-lifecycle-successor-v2.js"
+import { applyV138RestartableLifecycleTransactionV2, deriveV138LifecycleNamespaceV2, V138_RESTARTABLE_LIFECYCLE_V2_CLI } from "./v1-38-restartable-lifecycle-successor-v2.js"
 
 const roots: string[] = []
 afterEach(() => { while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true }) })
@@ -58,6 +58,7 @@ describe("CR-04 locked restartable lifecycle CAS", () => {
       steps: [{ id: "other", target: "planning/other.md", beforeSha256: sha256(before), afterBytes: after }],
       lifecycle: { target: "other-lifecycle.json", bytes: '{"status":"other"}\n' },
     }
+    expect(deriveV138LifecycleNamespaceV2(left)).not.toBe(deriveV138LifecycleNamespaceV2(right))
     expect(await Promise.all([run(left), run(right)])).toEqual([0, 0])
     expect(readFileSync(path.join(rightRoot, "planning/requirements.md"), "utf8")).toBe("requirements:after\n")
     expect(readFileSync(path.join(rightRoot, "planning/other.md"), "utf8")).toBe(after)

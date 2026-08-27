@@ -43,6 +43,26 @@ export interface V138LifecycleStepV2 {
   readonly afterBytes: string
 }
 
+export interface V138LifecycleTransactionV2 {
+  readonly trustedRoot: string
+  readonly transactionId: string
+  readonly intentPath: string
+  readonly steps: readonly V138LifecycleStepV2[]
+  readonly lifecycle: Readonly<{ target: string; bytes: string }>
+}
+
+const normalizedLifecycleDescriptor = (input: V138LifecycleTransactionV2) => ({
+  schemaVersion: "v1.38-restartable-lifecycle-intent-descriptor-v2" as const,
+  trustedRoot: trustedRootV138(input.trustedRoot),
+  transactionId: input.transactionId,
+  intentPath: normalizeV138Relative(input.intentPath),
+  steps: input.steps.map(({ id, target, beforeSha256, afterBytes }) => ({ id, target: normalizeV138Relative(target), beforeSha256, afterSha256: sha256(afterBytes) })),
+  lifecycle: { target: normalizeV138Relative(input.lifecycle.target), bytesSha256: sha256(input.lifecycle.bytes), bytes: input.lifecycle.bytes },
+})
+
+export const deriveV138LifecycleNamespaceV2 = (input: V138LifecycleTransactionV2): string =>
+  sha256(`v138-lifecycle-v2\0${canonical(normalizedLifecycleDescriptor(input))}`).slice(7)
+
 const type = (target: string): "absent" | "regular" => {
   try {
     const status = lstatSync(target)
@@ -62,13 +82,7 @@ const fsyncParent = (target: string): void => {
   try { fsyncSync(descriptor) } finally { closeSync(descriptor) }
 }
 
-const lifecycleWorker = (input: {
-  trustedRoot: string
-  transactionId: string
-  intentPath: string
-  steps: readonly V138LifecycleStepV2[]
-  lifecycle: Readonly<{ target: string; bytes: string }>
-}): void => {
+const lifecycleWorker = (input: V138LifecycleTransactionV2): void => {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/u.test(input.transactionId) || input.steps.length === 0) fail("V138_LIFECYCLE_V2_TRANSACTION_INVALID")
   const root = trustedRootV138(input.trustedRoot)
   const intentRelative = normalizeV138Relative(input.intentPath)
@@ -79,15 +93,8 @@ const lifecycleWorker = (input: {
   const intent = resolveV138RelativeNoFollow(root, intentRelative, "absent-or-regular")
   const lifecycle = resolveV138RelativeNoFollow(root, lifecycleRelative, "absent-or-regular")
   const [, staging] = ensureV138TrustedDirectories(root, [".v138-lifecycle-locks", ".v138-lifecycle-staging"])
-  const descriptor = {
-    schemaVersion: "v1.38-restartable-lifecycle-intent-descriptor-v2" as const,
-    trustedRoot: root,
-    transactionId: input.transactionId,
-    intentPath: intentRelative,
-    steps: normalizedSteps.map(({ id, target, beforeSha256, afterBytes }) => ({ id, target, beforeSha256, afterSha256: sha256(afterBytes) })),
-    lifecycle: { target: lifecycleRelative, bytesSha256: sha256(input.lifecycle.bytes), bytes: input.lifecycle.bytes },
-  }
-  const namespace = sha256(`v138-lifecycle-v2\0${canonical(descriptor)}`).slice(7)
+  const descriptor = normalizedLifecycleDescriptor({ ...input, trustedRoot: root })
+  const namespace = deriveV138LifecycleNamespaceV2({ ...input, trustedRoot: root })
   const steps = normalizedSteps.map((step, index) => ({
     ...step,
     target: resolveV138RelativeNoFollow(root, step.target, "absent-or-regular"),
@@ -183,13 +190,7 @@ const lifecycleWorker = (input: {
   fsyncParent(lifecycle)
 }
 
-export const applyV138RestartableLifecycleTransactionV2 = (input: {
-  trustedRoot: string
-  transactionId: string
-  intentPath: string
-  steps: readonly V138LifecycleStepV2[]
-  lifecycle: Readonly<{ target: string; bytes: string }>
-}): Readonly<{ status: "complete"; stepsApplied: number }> => {
+export const applyV138RestartableLifecycleTransactionV2 = (input: V138LifecycleTransactionV2): Readonly<{ status: "complete"; stepsApplied: number }> => {
   const root = trustedRootV138(input.trustedRoot)
   const intent = normalizeV138Relative(input.intentPath)
   const stepTargets = input.steps.map(({ target }) => normalizeV138Relative(target))
