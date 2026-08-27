@@ -40,3 +40,13 @@ The user authorized a new retry route and revision of the no-retry admission con
 The accepted interpretation is additive: prior routes, charges, terminals, and authorization bytes remain immutable history; a fresh successor may use a finite, precommitted retry envelope under standing operator authority. Research and planning must freeze the envelope before live work. The literal 540/540 admission condition and every frozen runtime, resource, semantic, privacy, gameplay, and formation-absence boundary remain unchanged.
 
 This decision does not revive Plan 262-62 or Plan 262-74, claim external or independent custody, authorize Phase 263, or permit candidate, formation, holdout-opening, public, production, activation, or counted-play work before successful admission.
+
+## Contract revision: one additional bounded envelope
+
+**Date:** 2026-08-27
+
+After the first finite envelope completed its reviewed, validated, and audited non-pass lifecycle at fresh `0/540`, the user explicitly authorized one additional envelope under the existing frozen bounds.
+
+The accepted interpretation is exact and finite: a fresh versioned envelope may use up to three new route starts, twelve new preflight observations, three eight-attempt/four-shard calibration allocations, and at most one conditional 540-cell reproduction within four hours. It preserves the 200 ms sampler, inclusive 2,500-basis-point gate, backoffs, canonical runtime/kernel, privacy, gameplay, and formation-absence rules. It cannot reuse or modify any prior identity or artifact and does not authorize a third envelope.
+
+No additional literal checkpoint is required inside this envelope. A fresh independent 540/540 pass remains the only path to activation and Phase 263; every non-pass branch remains publishable process evidence with downstream authority denied.
