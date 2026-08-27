@@ -373,14 +373,17 @@ const inspectCustody = (root: string) => {
 }
 
 const HARNESS = String.raw`
-import { appendV138RetryJournalRecord, createV138InactiveRetryEnvelope, deriveV138RetryState, V138_BOUNDED_RETRY_IDENTITIES, V138_BOUNDED_RETRY_POLICY } from "./scripts/lib/v1-38-bounded-retry-envelope.ts";
+import { createHash } from "node:crypto";
+import { appendV138RetryJournalRecord, createV138InactiveRetryEnvelope, deriveV138RetryState, encodeV138RetryCanonicalJson, V138_BOUNDED_RETRY_IDENTITIES, V138_BOUNDED_RETRY_POLICY } from "./scripts/lib/v1-38-bounded-retry-envelope.ts";
 import { runV138BoundedRetryController } from "./scripts/run-v1-38-bounded-retry-envelope.ts";
 const A="sha256:"+"a".repeat(64), B="sha256:"+"b".repeat(64); const envelope=createV138InactiveRetryEnvelope({sourceRoot:A,reviewRoot:B,sealRoot:A,protectedHistoryRoot:B,protectedHistoricalIdentities:["route:v8:pre_start_obstruction"]});
 const base=appendV138RetryJournalRecord(appendV138RetryJournalRecord([], {kind:"reserve_preflight",identity:"preflight:v1:0",owner:"owner"},0,envelope.envelopeRoot),{kind:"observe_preflight",identity:"preflight:v1:0",owner:"owner",effectiveAvailableBasisPoints:0},0,envelope.envelopeRoot); const deadline=V138_BOUNDED_RETRY_POLICY.envelopeLifetimeMilliseconds;
 const run=async(now, records=base, crash="none")=>{const durable=[];let work=0;try{const result=await runV138BoundedRetryController({envelope,owner:"owner",records,effects:{monotonicMilliseconds:()=>now,waitUntil:async()=>{work++},observePreflight:async()=>{work++;return{available:true,effectiveAvailableBasisPoints:2500}},runCalibration:async()=>{work++;return{status:"admitted",completeCleanup:true}},runReproduction:async()=>{work++;return{status:"passed_exact",acceptedCells:540,completeCleanup:true}},appendDurableRecord:r=>{if(crash==="before")throw new Error("before");durable.push(r);if(crash==="after")throw new Error("after")}}});return{result,durable,work,error:null}}catch(e){return{result:null,durable,work,error:String(e.message)}}};
 const exact=await run(deadline), post=await run(deadline+1), before=await run(deadline,base,"before"), after=await run(deadline,base,"after"); const restartBefore=await run(deadline,before.durable.length?before.durable:base); const persistedAfter=[...base,...after.durable]; const restartAfter=await run(deadline+1,persistedAfter); const duplicate=restartAfter.durable.filter(r=>r.kind==="time_window_expired").length;
 let staleRejected=false; const left=appendV138RetryJournalRecord(base,{kind:"time_window_expired",owner:"left",reason:"time_window_expired"},deadline,envelope.envelopeRoot); const right=appendV138RetryJournalRecord(base,{kind:"time_window_expired",owner:"right",reason:"time_window_expired"},deadline,envelope.envelopeRoot); try{deriveV138RetryState(envelope,[...left,...right.slice(base.length)])}catch{staleRejected=true}
-process.stdout.write(JSON.stringify({exact:{state:exact.result.state,records:exact.result.records,durable:exact.durable,work:exact.work},post:{state:post.result.state,records:post.result.records,durable:post.durable,work:post.work},crash:{before:before.error,after:after.error,restartBefore:restartBefore.result.state,restartAfter:restartAfter.result.state,duplicate},staleRejected,identityCounts:{routes:V138_BOUNDED_RETRY_IDENTITIES.routes.length,preflights:V138_BOUNDED_RETRY_IDENTITIES.preflights.length,calibrations:V138_BOUNDED_RETRY_IDENTITIES.calibrations.length,reproduction:V138_BOUNDED_RETRY_IDENTITIES.reproduction.length}})+"\n");
+let pending=[]; pending=appendV138RetryJournalRecord(pending,{kind:"reserve_preflight",identity:"preflight:v1:0",owner:"owner"},0,envelope.envelopeRoot); pending=appendV138RetryJournalRecord(pending,{kind:"observe_preflight",identity:"preflight:v1:0",owner:"owner",effectiveAvailableBasisPoints:2500},0,envelope.envelopeRoot); pending=appendV138RetryJournalRecord(pending,{kind:"reserve_route",identity:"route:v1:0",owner:"owner",preflightIdentity:"preflight:v1:0"},1,envelope.envelopeRoot); pending=appendV138RetryJournalRecord(pending,{kind:"reserve_calibration",routeIdentity:"route:v1:0",owner:"owner",identities:V138_BOUNDED_RETRY_IDENTITIES.calibrations.slice(0,8)},2,envelope.envelopeRoot); const pendingResult=await run(deadline,pending); const pendingCleanupPassed=pendingResult.result.state.completeCleanup===false&&pendingResult.result.state.disposition==="terminal_failure";
+const emptyState=deriveV138RetryState(envelope,[]); const {stateRoot,...stateBody}=emptyState; const rootWithCleanup="sha256:"+createHash("sha256").update("v138-retry-derived-state-v1\0"+encodeV138RetryCanonicalJson(stateBody)).digest("hex"); const cleanupRootBound=rootWithCleanup===stateRoot;
+process.stdout.write(JSON.stringify({exact:{state:exact.result.state,records:exact.result.records,durable:exact.durable,work:exact.work},post:{state:post.result.state,records:post.result.records,durable:post.durable,work:post.work},crash:{before:before.error,after:after.error,restartBefore:restartBefore.result.state,restartAfter:restartAfter.result.state,duplicate},staleRejected,pendingCleanupPassed,cleanupRootBound,identityCounts:{routes:V138_BOUNDED_RETRY_IDENTITIES.routes.length,preflights:V138_BOUNDED_RETRY_IDENTITIES.preflights.length,calibrations:V138_BOUNDED_RETRY_IDENTITIES.calibrations.length,reproduction:V138_BOUNDED_RETRY_IDENTITIES.reproduction.length}})+"\n");
 `
 
 export const snapshotV138Plan26283ProtectedDestinations = (root: string) =>
@@ -492,6 +495,8 @@ const detachedExercise = (root: string) => {
       noIdentityReuse:
         result.crash.restartBefore.remainingPreflightObservations === 0 &&
         result.crash.restartAfter.remainingRouteStarts === 0,
+      pendingCleanupPassed: result.pendingCleanupPassed === true,
+      cleanupRootBound: result.cleanupRootBound === true,
     })
   } finally {
     rmSync(owner, { recursive: true, force: true })
@@ -542,7 +547,53 @@ const OBSERVATIONS = Object.freeze([
   "success-publication-crash-recovery",
   "post-run-cli-modes",
   "lifecycle-admission-non-circularity",
+  "pending-cleanup-terminalization",
+  "cleanup-root-binding",
+  "post-run-audit-correction",
+  "plan80-correction-join",
+  "plan81-correction-join",
+  "owner-lease-recovery",
+  "journal-receipt-recovery",
 ])
+
+export interface V138Plan26283BehavioralExecution {
+  readonly id: (typeof OBSERVATIONS)[number]
+  readonly executed: boolean
+  readonly passed: boolean
+  readonly detail: unknown
+}
+
+export const evaluateV138Plan26283BehavioralObservations = (
+  executions: readonly V138Plan26283BehavioralExecution[],
+) => {
+  const byId = new Map(executions.map((item) => [item.id, item]))
+  const observations = OBSERVATIONS.map((id) => {
+    const execution = byId.get(id)
+    const executed = execution?.executed === true
+    const passed = executed && execution?.passed === true
+    return Object.freeze({
+      id,
+      executed,
+      passed,
+      detailRoot: sha256(`${id}\0${canonical(execution?.detail ?? null)}`),
+    })
+  })
+  const findings = observations
+    .filter(({ passed }) => !passed)
+    .map(({ id, executed, detailRoot }) =>
+      Object.freeze({
+        code: `BEHAVIOR_${id.toUpperCase().replaceAll("-", "_")}_${
+          executed ? "FAILED" : "INCOMPLETE"
+        }`,
+        severity: "critical",
+        summary: executed
+          ? `The ${id} behavioral observation failed.`
+          : `The ${id} behavioral observation was not executed.`,
+        detailRoot,
+      }),
+    )
+  return Object.freeze({ observations, findings })
+}
 export const deriveV138Plan26283NoPublish = (root: string) => {
   const before = snapshotV138Plan26283ProtectedDestinations(root)
   const reviewedSource = inspectCustody(root)
@@ -574,15 +625,71 @@ export const deriveV138Plan26283NoPublish = (root: string) => {
   const after = snapshotV138Plan26283ProtectedDestinations(root)
   if (canonical(before) !== canonical(after))
     fail("V138_PLAN_262_83_DESTINATION_MUTATED")
-  const findings = mutationFindings.map((code) =>
-    Object.freeze({
-      code,
-      severity: "critical",
-      summary:
-        "A required corrected-source or inherited boundary was not observed exactly.",
-      detailRoot: sha256(`${code}\n`),
+  const executed = (
+    id: (typeof OBSERVATIONS)[number],
+    passed: boolean,
+    detail: unknown,
+  ) => ({
+    id,
+    executed: true,
+    passed,
+    detail,
+  })
+  const behavioral = evaluateV138Plan26283BehavioralObservations([
+    executed("git-corrected-source-custody", true, reviewedSource),
+    executed(
+      "durable-inclusive-expiry",
+      exercise.expiry.workAfterDeadline === 0,
+      exercise.expiry,
+    ),
+    executed(
+      "expiry-crash-restart-idempotence",
+      exercise.crashBeforeDurableRecovered &&
+        exercise.crashAfterDurableRecovered,
+      exercise,
+    ),
+    executed(
+      "stale-concurrency-no-reuse",
+      exercise.staleConcurrentOwnerRejected && exercise.noIdentityReuse,
+      exercise,
+    ),
+    executed("frozen-policy-and-runtime", true, exercise.outputRoot),
+    executed(
+      "protected-plan77-history",
+      protectedHistory.status === "blocked",
+      protectedHistory,
+    ),
+    executed("privacy-and-authority-denial", true, {
+      liveInvoked: exercise.liveInvoked,
     }),
-  )
+    executed(
+      "canonical-destinations-untouched",
+      canonical(before) === canonical(after),
+      { before, after },
+    ),
+    executed(
+      "pending-cleanup-terminalization",
+      exercise.pendingCleanupPassed,
+      exercise.outputRoot,
+    ),
+    executed(
+      "cleanup-root-binding",
+      exercise.cleanupRootBound,
+      exercise.outputRoot,
+    ),
+  ])
+  const findings = [
+    ...mutationFindings.map((code) =>
+      Object.freeze({
+        code,
+        severity: "critical",
+        summary:
+          "A supplemental source-structure or inherited boundary check failed.",
+        detailRoot: sha256(`${code}\n`),
+      }),
+    ),
+    ...behavioral.findings,
+  ]
   const body = {
     schemaVersion: "v1.38-plan-262-83-bounded-retry-source-rereview-v1",
     reviewProtocol: "fresh-corrected-bounded-retry-source-rereview-v1",
@@ -590,28 +697,7 @@ export const deriveV138Plan26283NoPublish = (root: string) => {
     reviewedSource,
     detachedExercise: exercise,
     protectedHistory,
-    observations: OBSERVATIONS.map((id) =>
-      Object.freeze({
-        id,
-        passed:
-          mutationFindings.length === 0 ||
-          !(
-            (id === "cleanup-truth-derived" &&
-              mutationFindings.includes("CLEANUP_TRUTH_NOT_DERIVED")) ||
-            (id === "success-publication-crash-recovery" &&
-              mutationFindings.includes(
-                "SUCCESS_PUBLICATION_NOT_CRASH_RECOVERABLE",
-              )) ||
-            (id === "post-run-cli-modes" &&
-              mutationFindings.includes("POST_RUN_CLI_MODES_MISSING")) ||
-            (id === "lifecycle-admission-non-circularity" &&
-              mutationFindings.includes("LIFECYCLE_ADMISSION_CIRCULAR"))
-          ),
-        detailRoot: sha256(
-          `${id}\0${canonical({ reviewedSource, exercise, protectedHistory })}`,
-        ),
-      }),
-    ),
+    observations: behavioral.observations,
     findings,
     findingCount: findings.length,
     sourceReviewPassed: findings.length === 0,

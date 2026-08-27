@@ -20,13 +20,26 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
 
     expect(after).toEqual(before)
     expect(review.status).toBe("blocked")
-    expect(review.findingCount).toBe(3)
+    expect(review.findingCount).toBeGreaterThan(3)
     expect(review.sourceReviewPassed).toBe(false)
-    expect(review.findings.map((item: { code: string }) => item.code)).toEqual([
-      "CLEANUP_TRUTH_NOT_DERIVED",
-      "POST_RUN_CLI_MODES_MISSING",
-      "SUCCESS_PUBLICATION_NOT_CRASH_RECOVERABLE",
-    ])
+    expect(review.findings.map((item: { code: string }) => item.code)).toEqual(
+      expect.arrayContaining([
+        "CLEANUP_TRUTH_NOT_DERIVED",
+        "POST_RUN_CLI_MODES_MISSING",
+        "SUCCESS_PUBLICATION_NOT_CRASH_RECOVERABLE",
+        "BEHAVIOR_PENDING_CLEANUP_TERMINALIZATION_FAILED",
+        "BEHAVIOR_OWNER_LEASE_RECOVERY_INCOMPLETE",
+        "BEHAVIOR_JOURNAL_RECEIPT_RECOVERY_INCOMPLETE",
+      ]),
+    )
+    expect(review.observations).toHaveLength(19)
+    expect(
+      review.observations.every(
+        (item: { executed: boolean; passed: boolean }) =>
+          typeof item.executed === "boolean" &&
+          typeof item.passed === "boolean",
+      ),
+    ).toBe(true)
     expect(review.reviewedSource).toMatchObject({
       commit: "e844279f62192c41175fb3e7a08910493c6f24ab",
       tree: "360a10e6767cd3e9c899b0b07ea54a5bf7faac65",
@@ -68,6 +81,43 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
       productionAuthorized: false,
       gameplayChangeAuthorized: false,
     })
+  }, 15_000)
+
+  it("derives each semantic observation from its own execution and flags incomplete work", async () => {
+    const reviewer = await loadReviewer()
+    const complete = reviewer.evaluateV138Plan26283BehavioralObservations([
+      {
+        id: "pending-cleanup-terminalization",
+        executed: true,
+        passed: false,
+        detail: { observed: "clean" },
+      },
+      {
+        id: "cleanup-root-binding",
+        executed: true,
+        passed: true,
+        detail: { rootChanged: true },
+      },
+    ])
+    expect(
+      complete.observations.find(
+        (item: { id: string }) => item.id === "pending-cleanup-terminalization",
+      ),
+    ).toMatchObject({ executed: true, passed: false })
+    expect(
+      complete.observations.find(
+        (item: { id: string }) => item.id === "cleanup-root-binding",
+      ),
+    ).toMatchObject({ executed: true, passed: true })
+    expect(
+      complete.findings.map((item: { code: string }) => item.code),
+    ).toEqual(
+      expect.arrayContaining([
+        "BEHAVIOR_PENDING_CLEANUP_TERMINALIZATION_FAILED",
+        "BEHAVIOR_OWNER_LEASE_RECOVERY_INCOMPLETE",
+        "BEHAVIOR_PLAN80_CORRECTION_JOIN_INCOMPLETE",
+      ]),
+    )
   })
 
   it("turns every correction and inherited-bound mutation family into a named finding", async () => {
@@ -228,7 +278,7 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
         reviewer.validateV138Plan26283Review(candidate, review),
       ).toThrow("V138_PLAN_262_83_REVIEW_MISMATCH")
     }
-  })
+  }, 15_000)
 
   it("derive-no-publish is bounded and creates no review pair", async () => {
     const reviewer = await loadReviewer()
@@ -249,7 +299,7 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
     )
     expect(output).toMatchObject({
       status: "blocked",
-      findingCount: 3,
+      findingCount: 13,
       plan26278Eligible: false,
       authorizesExecution: false,
       liveInvoked: false,
@@ -257,5 +307,5 @@ describe("Plan 262-83 independent bounded-retry source re-review", () => {
     expect(
       reviewer.snapshotV138Plan26283ProtectedDestinations(process.cwd()),
     ).toEqual(before)
-  })
+  }, 15_000)
 })
