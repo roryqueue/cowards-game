@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import {
-  completeV138SuccessorEffect,
-  recoverV138AdmittedObservationWithoutRoute,
-  recoverV138SuccessorEffectDecision,
-} from "./v1-38-bounded-retry-integrity-successor-v1.js"
+import { recoverV138AdmittedObservationWithoutRoute } from "./v1-38-bounded-retry-integrity-successor-v1.js"
 import { durablyPublishV138Pair } from "./v1-38-durable-publication-successor-v1.js"
 import { applyV138RestartableLifecycleTransaction } from "./v1-38-restartable-lifecycle-successor-v1.js"
+import {
+  completeV138EffectV2,
+  recoverV138EffectDecisionV2,
+} from "./v1-38-successor-effect-state-machine-v2.js"
 
 const fail = (code: string): never => {
   throw new TypeError(code)
@@ -29,8 +29,8 @@ export const V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS = Object.freeze([
  */
 export const V138_SUCCESSOR_CONTROLLER_V2 = Object.freeze({
   recoverAdmittedObservation: recoverV138AdmittedObservationWithoutRoute,
-  completeSemanticEffect: completeV138SuccessorEffect,
-  recoverSemanticDecision: recoverV138SuccessorEffectDecision,
+  completeSemanticEffect: completeV138EffectV2,
+  recoverSemanticDecision: recoverV138EffectDecisionV2,
   publishCanonicalPair: durablyPublishV138Pair,
   applyLifecycleTransaction: applyV138RestartableLifecycleTransaction,
 })
@@ -39,8 +39,8 @@ export const checkV138SuccessorControllerV2Source = (sourcePath: string): true =
   const source = readFileSync(sourcePath, "utf8")
   for (const symbol of [
     "recoverV138AdmittedObservationWithoutRoute",
-    "completeV138SuccessorEffect",
-    "recoverV138SuccessorEffectDecision",
+    "completeV138EffectV2",
+    "recoverV138EffectDecisionV2",
     "durablyPublishV138Pair",
     "applyV138RestartableLifecycleTransaction",
   ]) {
