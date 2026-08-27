@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { recoverV138AdmittedObservationWithoutRoute } from "./v1-38-bounded-retry-integrity-successor-v1.js"
 import { durablyPublishV138PairV2 } from "./v1-38-durable-pair-successor-v2.js"
-import { applyV138RestartableLifecycleTransaction } from "./v1-38-restartable-lifecycle-successor-v1.js"
+import { applyV138RestartableLifecycleTransactionV2 } from "./v1-38-restartable-lifecycle-successor-v2.js"
 import {
   completeV138EffectV2,
   recoverV138EffectDecisionV2,
@@ -32,7 +32,7 @@ export const V138_SUCCESSOR_CONTROLLER_V2 = Object.freeze({
   completeSemanticEffect: completeV138EffectV2,
   recoverSemanticDecision: recoverV138EffectDecisionV2,
   publishCanonicalPair: durablyPublishV138PairV2,
-  applyLifecycleTransaction: applyV138RestartableLifecycleTransaction,
+  applyLifecycleTransaction: applyV138RestartableLifecycleTransactionV2,
 })
 
 export const checkV138SuccessorControllerV2Source = (sourcePath: string): true => {
@@ -42,7 +42,7 @@ export const checkV138SuccessorControllerV2Source = (sourcePath: string): true =
     "completeV138EffectV2",
     "recoverV138EffectDecisionV2",
     "durablyPublishV138PairV2",
-    "applyV138RestartableLifecycleTransaction",
+    "applyV138RestartableLifecycleTransactionV2",
   ]) {
     if (!source.includes(symbol)) fail("V138_SUCCESSOR_CONTROLLER_ROUTE_INCOMPLETE")
   }
