@@ -181,7 +181,7 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 Roadmap creation assigns every v1.38 requirement to exactly one phase.
 
-<!-- phase-262-requirement-disposition: {"proof_status":"source_incomplete_pre_execution","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","phase_262":"incomplete","route_started":false,"fresh_charged":0,"fresh_accepted":0,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"activation_authorized":false,"production_authorized":false} -->
+<!-- phase-262-requirement-disposition: {"schema_version":"v1.38-phase-262-current-lifecycle-status-v1","artifact":".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v1.json","proof_status":"bounded_retry_exhausted_effective_integrity_non_pass","active_plans":64,"summaries":64,"plans_80_81_completed":true,"admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","phase_262":"incomplete","route_starts":3,"calibration_charged":24,"fresh_accepted":0,"required_accepted":540,"reproduction_v15_present":false,"route9_activation_present":false,"plan81_verification":"gaps_found","lifecycle_mutated":false,"phase263_through_270_authorized":false,"candidate_search_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"activation_authorized":false,"production_authorized":false} -->
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|

@@ -4,20 +4,25 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: Plan 262-79 exhausted the finite live envelope after three clean calibration system failures; fresh accepted remains 0/540 and no downstream authority exists
-stopped_at: Completed 262-79-PLAN.md exhausted; no Plan 262-80 authority inferred
-last_updated: "2026-08-27T14:49:01.061Z"
+status: Phase 262 has 64 plans/64 summaries; bounded retry is exhausted at fresh 0/540 and effective integrity is non-pass, so every downstream phase remains denied
+stopped_at: Completed Plan 262-81 gaps_found with no lifecycle mutation; Phase 262 incomplete
+last_updated: "2026-08-27T17:49:38.000Z"
 last_activity: 2026-08-27
-last_activity_desc: Closed the one-shot live envelope exhausted at fresh 0/540 with all downstream authority denied
+last_activity_desc: Reconciled the 64/64 lifecycle and additive integrity correction without changing historical evidence or authority
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 64
-  completed_plans: 62
+  completed_plans: 64
   percent: 0
 ---
 
 # State: Coward's Game
+
+<!-- Current additive carrier; all earlier route/topology carriers below are immutable history only. -->
+<!-- phase-262-current-lifecycle-status: {"schema_version":"v1.38-phase-262-current-lifecycle-status-v1","artifact":".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v1.json","active_plans":64,"summaries":64,"plans_80_81_completed":true,"route_starts":3,"calibration_charged":24,"fresh_accepted":0,"required_accepted":540,"terminal":"exhausted","effective_integrity":"integrity_non_pass","reproduction_v15_present":false,"route9_activation_present":false,"plan81_verification":"gaps_found","lifecycle_mutated":false,"phase_262":"incomplete","phases_263_270_authorized":false} -->
+
+The canonical current journal root is `sha256:1cd8fd41f97a7c4938cb53719e31b49cc937fbfdcdcd26a51688e6894d09d8ad`. Immutable `262-79-SUMMARY.md` already carries that value; the malformed 62-hex copy in a historical closeout carrier below is a documentation typo retained only for byte-preserving history and has no current authority.
 
 <!-- Historical Route-8 carrier below is retained as evidence only; it is not active dispatch authority. -->
 <!-- phase-262-verification-sentinel-status: {"schema_version":"v1.38-plan-262-74-lifecycle-carrier-v1","proof_status":"route_8_post_validation_normalized","branch":"obstruction","admit_03":"blocked","seal_01":"passed_reduced_assurance","assurance_class":"single_operator_local_seal_v1","route_started":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"phase263_authorized":false,"candidate_search_authorized":false,"phase264_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"product_authorized":false,"activation_authorized":false,"production_authorized":false,"gameplay_change_authorized":false,"foundation_activation_root_present":false,"next_action":"run-post-validation-binder","bulk_execute_phase_prohibited":true,"total_plans":56,"trustworthy_summaries":55,"active_successors":["262-74"],"incomplete":["262-74"],"plan_72_disposition":"pre_start_obstruction","plan_73_disposition":"blocked","sentinel_plan":"262-74","sentinel_summary_policy":"pass_only_after_verification","topology_manifest_root":"sha256:beb9e773cb1edadce7d271addada8badc94457acf31ee5b0ffe8550b3c35fedf","disposition_root":"sha256:5559770dd570ff63482aa30e6882fe22cb9b7a98d3b001d5c7bbc72f16ea079a","local_seal_verification_root":"sha256:4385ac8270b649f0876c7846cfc75bdc3682b8526d3ab517736ff27f01ab4b3b","validator_root":"sha256:5b0189a6150b06a8707efc39130b5546cf0340a94de95d4afb61f04e01a15145","downstream_authority_denied":true} -->
@@ -51,12 +56,12 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 ## Current Position
 
-Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — PLANNED
-Plan: 62 trustworthy summaries across 64 active plans — Plan 262-79 is terminally exhausted
-Status: The finite retry envelope consumed all three routes and 24 calibration identities with complete cleanup but no admitted calibration or reproduction
-Last activity: 2026-08-27 — Closed the one-shot live envelope exhausted at fresh 0/540 with all downstream authority denied
+Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — BLOCKED / INCOMPLETE
+Plan: 64 summaries across 64 active plans — Plans 262-80 and 262-81 are complete
+Status: The finite retry is exhausted at fresh 0/540 and effective integrity is non-pass; Plan 262-81 is `gaps_found` with no lifecycle mutation
+Last activity: 2026-08-27 — Reconciled current lifecycle truth and kept Phases 263-270 denied
 
-Progress: [██████████] 97%
+Progress: [██████████] 100% of Phase-262 plan paperwork; phase goal not achieved
 
 ## Performance Metrics
 
@@ -76,7 +81,7 @@ Progress: [██████████] 97%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 64 plans/62 trustworthy summaries. Plans 262-75 through 262-79 and corrective Plans 262-82 through 262-83 are complete; Plan 262-79 is terminally exhausted and cannot be resumed or retried. Plan 262-80 and Plan 262-81 remain unexecuted, and this non-pass result grants neither automatic dispatch nor downstream authority. Phase 262 remains incomplete, ADMIT-03 remains blocked at fresh 0/540, Phase 263 remains denied, and every downstream authority remains false.
+**Current topology:** Active discovery is 64 plans/64 summaries, including completed Plans 262-80 and 262-81. The retry consumed 3/3 routes and 24 calibration identities, ended exhausted at fresh 0/540, and never reserved reproduction-v15. The additive correction makes effective integrity a non-pass. Route-9 activation is absent; Plan 262-81 records `gaps_found` with zero lifecycle mutation; Phase 262 remains incomplete; Phases 263-270 and every downstream authority remain false.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
@@ -337,6 +342,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-08-27T14:46:44.000Z
-Stopped at: Completed 262-79-PLAN.md exhausted; no Plan 262-80 authority inferred
+Last session: 2026-08-27T17:49:38.000Z
+Stopped at: Completed Plan 262-81 gaps_found with no lifecycle mutation; Phase 262 incomplete
 Resume file: None
