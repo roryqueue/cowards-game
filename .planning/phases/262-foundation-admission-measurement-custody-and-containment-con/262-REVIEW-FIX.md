@@ -1,8 +1,8 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-27T16:14:32Z
+fixed_at: 2026-08-27T16:42:34Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 2
+iteration: 3
 findings_in_scope: 4
 fixed: 4
 skipped: 0
@@ -11,49 +11,48 @@ status: all_fixed
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-27T16:14:32Z
+**Fixed at:** 2026-08-27T16:42:34Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-**Iteration:** 2
+**Iteration:** 3
 
 **Summary:**
 
 - Findings in scope: 4
 - Fixed: 4
 - Skipped: 0
-- Historical seal/envelope/live evidence mutated: no
+- Historical journal, terminal, private receipts, and v1 correction mutated: no
 - Empirical outcome: exhausted, 0/540 preserved
-- Effective integrity: non-pass; the earlier clean-integrity conclusion is superseded
-- Activation/downstream authority created: no
+- Activation and downstream authority created: no
 
 ## Fixed Issues
 
-### CR-01: Cleanup truth remains forgeable and reports pending work as clean
+### CR-01: The committed correction is invalid against the evidence it is supposed to authenticate
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-envelope.ts`, `scripts/run-v1-38-bounded-retry-envelope.ts`, `scripts/run-v1-38-bounded-retry-envelope.test.ts`
-**Commit:** 63ddaf79
-**Applied fix:** Reserved-but-unterminated calibration and reproduction work is terminalized as cleanup-unknown before expiry can report a clean result. `completeCleanup` is part of the exact derived-state body hashed by `stateRoot`. Boundary tests cover both pending reservation types and independently recompute the cleanup-bound state root.
-**Verification:** Controller non-subprocess suite passed 31/31; TypeScript and diff checks passed. Fixed; requires human verification of cleanup terminalization semantics.
+**Files modified:** `scripts/check-v1-38-plan-262-post-run-audit-correction.ts`, `scripts/check-v1-38-plan-262-post-run-audit-correction.test.ts`, `scripts/check-v1-38-plan-262-80-bounded-retry-admission.test.ts`, `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.ts`, `.planning/artifacts/v1.38-plan-262-post-run-audit-correction-v2.json`, `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md`, `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md`
+**Commits:** 0c9203c1, af036354, documentation commit below
+**Applied fix:** Preserved the invalid v1 artifact as historical evidence and published a deterministic v2 correction over the intended immutable receipt manifest. The canonical test now reads the committed correction and transitively exercises Plan 80 and the terminal outcome reader. The correction remains an integrity non-pass and creates no authority.
+**Verification:** Published correction suite passed 7/7; Plan-80 suite passed 13/13; canonical correction, Plan-80, Plan-83, and terminal-envelope checks passed. Fixed; requires human verification of the additive trust-supersession interpretation.
 
-### CR-02: The audit correction invalidates the canonical trust chain without a canonical correction disposition
-
-**Files modified:** `scripts/check-v1-38-plan-262-post-run-audit-correction.ts`, `scripts/check-v1-38-plan-262-post-run-audit-correction.test.ts`, `.planning/artifacts/v1.38-plan-262-post-run-audit-correction-v1.json`, `scripts/run-v1-38-bounded-retry-envelope.ts`, `scripts/check-v1-38-plan-262-80-bounded-retry-admission.ts`, `scripts/check-v1-38-plan-262-80-bounded-retry-admission.test.ts`, `scripts/check-v1-38-plan-262-81-lifecycle.ts`, `scripts/check-v1-38-plan-262-81-lifecycle.test.ts`, `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.ts`, `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.test.ts`, `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md`, `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md`
-**Commit:** 3cb792d0
-**Applied fix:** Published additive correction root `sha256:3834bd50464244644a780127901da61150f7a86e75c0c4072281ed58e1abe026`. It binds exact historical Git source blobs, seal/envelope bytes, journal/terminal/private-receipt bytes, the old Plan-83 and Plan-80 roots, the strengthened blocked historical re-review, and commits `63ddaf79`, `91cffe92`, and `087bab44`. Read-only controller modes and Plan-80/81/83 checkers authenticate the historical bytes through this additive chain without requiring mutable current source to equal the sealed source. The old exhausted 0/540 disposition remains historical evidence, while effective integrity is false and no activation is allowed.
-**Verification:** Correction tests passed 5/5 in serialized split runs; Plan-80 passed 13/13; Plan-81 passed 9/9; Plan-83 passed 6/6. Canonical correction, Plan-80 disposition, both controller read-only modes, and the real Plan-81 post-summary non-pass/no-mutation join passed. Fixed; requires human verification of the trust-supersession interpretation.
-
-### CR-03: Production crash recovery is still blocked by the owner lock and split durable writes
+### CR-02: Stale-lock takeover can delete a newly acquired live owner's lock
 
 **Files modified:** `scripts/run-v1-38-bounded-retry-envelope.ts`, `scripts/run-v1-38-bounded-retry-envelope.test.ts`
-**Commit:** 91cffe92
-**Applied fix:** Replaced the unrecoverable owner marker with an authenticated PID/generation lease, active-owner rejection, and stale compare-and-takeover recovery. Restart now authenticates the journal and exclusively recreates any exact missing private receipt before further work. Real subprocess SIGKILL tests cover lock acquisition, journal fsync, receipt fsync, reproduction write/fsync, and terminal write/fsync; restarts converge without reusing an identity or rerunning a persisted reproduction.
-**Verification:** Seven real subprocess crash boundaries passed in focused groups; 31 remaining controller tests passed; TypeScript and diff checks passed. Fixed; requires human verification of lease/takeover semantics.
+**Commit:** 5f30280c
+**Applied fix:** Replaced application-level stale-file takeover with the operating system's `lockf` advisory ownership. Process death releases ownership without a rename/unlink race. A synchronized two-successor subprocess proof establishes that exactly one contender acquires while the loser cannot remove the winner's lock; the existing SIGKILL recovery proof remains covered.
+**Verification:** Full controller suite passed 43/43, including synchronized-successor and real SIGKILL cases; TypeScript and diff checks passed. Fixed; requires human verification of the macOS `lockf` deployment assumption.
 
-### CR-04: Plan 83 remains token-presence self-attestation and misses current semantic defects
+### CR-03: The additive correction does not prove immutable historical custody or its own publication lineage
 
-**Files modified:** `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.ts`, `scripts/check-v1-38-plan-262-83-bounded-retry-source-rereview.test.ts`
-**Commit:** 087bab44
-**Applied fix:** Added 19 independently accounted semantic observations. Every row records `executed` and derives `passed` only from its own result; failed and incomplete families become named critical findings. Exact historical execution now covers pending cleanup and cleanup-root behavior, while post-run correction, Plan-80/81 joins, owner recovery, and journal/receipt recovery are explicit behavioral families. Token checks remain supplemental. The strengthened historical verdict is blocked with 13 findings and is bound by the additive correction.
-**Verification:** Plan-83 suite passed 6/6; the canonical immutable historical review now authenticates through the correction as effectively blocked with 13 findings and no Plan-78 eligibility.
+**Files modified:** `scripts/check-v1-38-plan-262-post-run-audit-correction.ts`, `scripts/check-v1-38-plan-262-post-run-audit-correction.test.ts`, `.planning/artifacts/v1.38-plan-262-historical-live-receipt-manifest-v1.json`
+**Commits:** fb1fdf81, 36b5eba9
+**Applied fix:** Added a committed manifest for the exact 15-receipt set at live commit `b4be9f5f`. Every receipt, journal, terminal, seal, envelope, Plan-83 review, and Plan-80 disposition is now authenticated from its declared `git show <commit>:<path>` blob, and current historical bytes must match. The v2 correction checker requires exactly one publication commit whose blob equals the clean working artifact.
+**Verification:** Manifest and correction derivation tests passed; post-publication correction suite passed 7/7; canonical correction check passed. Fixed; requires human verification of historical custody assumptions.
+
+### CR-04: The corrected read-only path falsely asserts that reproduction is absent
+
+**Files modified:** `scripts/run-v1-38-bounded-retry-envelope.ts`, `scripts/run-v1-38-bounded-retry-envelope.test.ts`
+**Commit:** 5bdc6934
+**Applied fix:** The corrected exhausted read path now requires the canonical reproduction path to be absent before returning `reproductionPresent: false`. It fails closed for a regular file, symlink, directory, or any other non-missing filesystem type.
+**Verification:** Absence and regular-file/symlink/directory injection tests passed 4/4; the full controller suite passed 43/43; canonical terminal-envelope check passed.
 
 ## Skipped Issues
 
@@ -61,20 +60,19 @@ None.
 
 ## Final Verification
 
-- Controller: 31/31 non-subprocess tests passed; seven real SIGKILL boundary cases passed in focused serialized groups.
-- Plan-77: 6/6 passed.
-- Plan-83: 6/6 passed.
-- Plan-80: 13/13 passed.
-- Plan-81: 9/9 passed.
-- Additive correction: 5/5 passed in split serialized runs.
+- Controller suite: 43/43 passed.
+- Additive correction suite: 7/7 passed.
+- Plan-80 suite: 13/13 passed.
+- Plan-81 and Plan-83 suites passed in the focused four-suite run; Plan-83 canonical result remains blocked with 13 findings and no authority.
+- Canonical correction, Plan-80 disposition, Plan-83 review, and terminal-envelope read-only checks passed.
 - `pnpm exec tsc --noEmit` passed.
 - Focused Prettier and `git diff --check` passed.
-- Canonical read-only checks passed; no live envelope, activation publication, lifecycle completion mutation, or downstream authority was invoked.
+- No live calibration, reproduction, activation, lifecycle mutation, or downstream authority was invoked.
 
 ---
 
-_Fixed: 2026-08-27T16:14:32Z_
+_Fixed: 2026-08-27T16:42:34Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 2_
+_Iteration: 3_
 
 ## FIXES COMPLETE

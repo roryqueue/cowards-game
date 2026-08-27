@@ -63,7 +63,7 @@ Coverage is 15 covered and 1 partial-blocked. ADMIT-03 is noncompensating: topol
 | Fresh accepted | 0/540 |
 | Route-9 activation root | absent by branch contract |
 | Privacy / historical integrity conclusion | true / true (superseded) |
-| Additive post-run audit correction | sha256:3834bd50464244644a780127901da61150f7a86e75c0c4072281ed58e1abe026 |
+| Additive post-run audit correction v2 | sha256:0d132bf4b59fd0203dba5fa49763bb2ec7568e1b84881f1908f114cd680ba026 |
 | Effective integrity | false — strengthened historical re-review is blocked |
 | Downstream authority | denied |
 
