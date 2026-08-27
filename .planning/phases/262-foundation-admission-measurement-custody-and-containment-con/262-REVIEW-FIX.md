@@ -1,123 +1,76 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-27T23:07:03Z
+fixed_at: 2026-08-27T23:43:52Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 2
-findings_in_scope: 6
-fixed: 6
+iteration: 3
+findings_in_scope: 5
+fixed: 5
 skipped: 0
 status: all_fixed
-correction_root: sha256:468054b638d95bc39f0a2f0459f9514a295cfd318748d18d78c039a2f239f526
 ---
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-27T23:07:03Z
-
+**Fixed at:** 2026-08-27T23:43:52Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-
-**Iteration:** 2
+**Iteration:** 3
 
 **Summary:**
-
-- Findings in scope: 6
-- Fixed: 6
+- Findings in scope: 5
+- Fixed: 5
 - Skipped: 0
-- Historical result preserved: bounded retry exhausted at fresh `0/540`
-- Authority after remediation: none; an independent zero-finding review remains required
-- Immutable v2 baseline: 18/18 protected files byte-exact
 
-All repairs are additive source/proof work. No live retry, reproduction, activation, candidate search, Phase 263, formation, holdout, public, product, production, counted-play, gameplay-change, archive, or tag authority was created.
+All five fixes alter transaction, recovery, containment, or integrity logic and therefore remain subject to the required independent source re-review. Correction-v3 grants no authority.
 
 ## Fixed Issues
 
-### CR-01: Compose the successor repairs through one executable source-only route
-
-**Status:** fixed: requires human verification
+### CR-01: The source-only controller is disconnected while constituent command surfaces remain write-capable
 
 **Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`
+**Commit:** 16eef5502562f6993a04a8c4b9fbc587aebef2af
+**Applied fix:** Replaced the disconnected export table with one composed, contained synthetic protocol that invokes all five successor operations. Pair and lifecycle worker/synthetic CLI modes are absent; their modules are library-only, the controller CLI exposes only source and contained synthetic checks, and denial tests prove removed modes do not write.
+**Status:** fixed; requires independent verification
 
-**Commit:** `7fd895d782e859e62588a6bde5365321e1dcc373`
+### CR-02: Canonical pair transactions can select different mutexes for the same targets
 
-**Applied fix:** Added one successor controller that wires admitted-observation recovery, semantic completion/replay, canonical pair publication, and restartable lifecycle application at named call sites. Its CLI admits only `--source-check` and `--synthetic-check`; live, production, retry, reproduction, and activation modes fail closed.
+**Files modified:** `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`
+**Commit:** e10a4b997de66e78ecc15149c5070cf6848e1c4a
+**Applied fix:** The pair mutex is derived only from normalized sorted trusted-root-relative targets. Intent identity is authenticated under that mutex, aliases are rejected, and reversed-order races with different intent paths and transaction IDs can publish only one complete pair.
+**Status:** fixed; requires independent verification
 
-### CR-02: Enforce strict effect-specific semantic replay
+### CR-03: Lifecycle temporary names cross target-set mutexes and can install a premature status marker
 
-**Status:** fixed: requires human verification
+**Files modified:** `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`
+**Commit:** c0f74141536207d3fe62cf1a53006090931fc764
+**Applied fix:** Lifecycle stage, backup, and status namespaces now digest the full normalized intent, including trusted root, targets, before/after digests, lifecycle bytes, intent path, and transaction ID. Durable intent records bind before-file device/inode identity; every existing intent, stage, backup, and status byte is authenticated before reuse. Same-ID disjoint and overlapping races are covered.
+**Status:** fixed; requires independent verification
 
-**Files modified:** `scripts/lib/v1-38-successor-effect-state-machine-v2.ts`, `scripts/lib/v1-38-successor-effect-state-machine-v2.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`
+### CR-04: Lifecycle containment rejection can occur after writes escape through the staging path
 
-**Commit:** `f4b6d7de3f550384d78da8113b09f9a42d5f88d3`
+**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`
+**Commit:** 7e5283aef671c4e9f97b855084b5a77fd0a77f4c
+**Applied fix:** Added two-pass authentication of all internal directories before any creation, normalized no-follow path handling, and authenticated exclusive directory locks. Pair/lifecycle staging and lock paths now fail before mutation when an intermediate or final component is hostile; regression tests assert external directories remain empty.
+**Status:** fixed; requires independent verification
 
-**Applied fix:** Added a strict three-record state machine with one start, one matching effect-specific finish, and one byte-recomputed decision. Identity, owner, kind, timing, legal status/cell/cleanup tuples, hash linkage, record count, and terminality are authenticated. Only reproduction `passed_exact` with 540 cells and complete cleanup yields exact success. Forgery, mutation, and post-terminal tests fail closed.
+### CR-05: Correction-v2 does not re-authenticate correction-v1's protected entries
 
-### CR-03: Serialize pair publication under one deterministic common lock
-
-**Status:** fixed: requires human verification
-
-**Files modified:** `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`
-
-**Commit:** `ea6416418349cc99cc7886959f68eaa3a42a43b5`
-
-**Applied fix:** Derived one kernel lock from the intent path plus sorted canonical targets, authenticated the durable intent before staging or publishing either member, and held the lock through both no-replace links and parent fsyncs. A synchronized reversed-order two-process conflict produces exactly one complete pair and no mixed pair.
-
-### CR-04: Hold the lifecycle lock through validation, CAS, status, and fsync
-
-**Status:** fixed: requires human verification
-
-**Files modified:** `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`
-
-**Commit:** `2cd7c421aa6e088e032c4f2413225e4902427db3`
-
-**Applied fix:** Acquired the deterministic lifecycle kernel lock before the first intent/state read and retained it through every hard-link compare-and-swap, final status publication, and parent fsync. Existing status bytes are accepted only when every postcondition already holds. Two-process races cover each of four steps, and a premature exact status fixture is rejected without mutation.
-
-### CR-05: Enforce trusted-root, relative-only, no-follow filesystem access
-
-**Status:** fixed: requires human verification
-
-**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v2.ts`, `scripts/lib/v1-38-secure-workspace-path-v2.test.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`
-
-**Commit:** `3ec565aba6b8135cfcea81870f41da2bd81de0aa`
-
-**Applied fix:** Added a realpath-resolved trusted root, relative-only path parser, all-component `lstat` walk, explicit no-follow absence proof, final `O_NOFOLLOW` descriptor reads, and device/inode identity verification. Publisher, lifecycle, and manifest authenticator tests reject both intermediate-directory and final-file symlinks while preserving external bytes.
-
-### CR-06: Authenticate complete negative evidence and the immutable triggering review
-
-**Status:** fixed: requires human verification
-
-**Files modified:** `scripts/check-v1-38-phase-262-review-fix-correction-v2.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v2.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v2.json`
-
-**Commit:** `8ae8cba0dfee4c04ed951a478187aed982c445e5`
-
-**Applied fix:** Added no-follow absence authentication for 14 explicit forbidden destinations spanning retry envelope/journal/terminal, reproduction-v16, Route-10 activation, candidate/Phase 263, formation, holdout, public/product/production, counted play, gameplay change, archive, and tag. The triggering review is authenticated as commit-qualified blob `c1d9ab6d75d406b83bf1b255be17b25a3d252ca3:8e5002c20443ab287e1a93af723ab505c88c4e3a`; the replaceable aggregate review is modeled separately. Every forbidden path and review mutation has a fail-closed test.
-
-## Additive Integrity Correction
-
-**Artifact:** `.planning/artifacts/v1.38-phase-262-review-fix-correction-v2.json`
-
-**Correction root:** `sha256:468054b638d95bc39f0a2f0459f9514a295cfd318748d18d78c039a2f239f526`
-
-Correction v2 supersedes correction v1 only for future authority decisions. It preserves the exhausted `0/540` result, binds the exact successor source/test manifest, records all 14 authority denials as false, and requires a fresh independent zero-finding review.
+**Files modified:** `scripts/check-v1-38-phase-262-review-fix-correction-v3.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v3.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v3.json`
+**Commit:** 7b56ecdcf6f88a63f79c9e7c46a6c290bb6dabe4
+**Applied fix:** Published additive correction-v3, independently authenticating all correction-v1 protected and remediation entries, both prior correction artifacts and roots, and every correction-v2 successor path through the current remediation manifest using no-follow readers. It binds the immutable iteration-3 review blob separately from the mutable aggregate, checks the complete forbidden manifest, preserves exhausted 0/540, and sets every authority false. Correction root: `sha256:f13ccf99c2b5c27b25f298d500b5409d7f6cc590fdacda1998cffd34b2bbd55a`.
+**Status:** fixed; requires independent verification
 
 ## Verification
 
-- Serialized historical plus successor suite: 14 files passed, 200/200 tests passed.
-- `pnpm exec tsc --noEmit --pretty false`: passed.
-- Correction v1 checker: passed.
-- Correction v2 checker: passed.
-- Canonical Plan 262-88 artifact check: verified non-pass, exhausted, assurance clean, no correction or activation present.
-- Canonical Plan 262-89 final check: `gaps_found`, no lifecycle mutation.
-- Immutable protected v2 manifest: 18/18 files matched.
-- `git diff --check`: passed.
-
-## Skipped Issues
-
-None.
+- Current serialized suite: 14 files, 222 tests passed with one worker and no file parallelism.
+- Immutable correction-v2 publication checkout (`8ae8cba0`): 17/17 tests passed and canonical checker passed.
+- TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
+- Correction-v1 and correction-v3 current canonical checkers passed; correction-v2 canonical checker passed at its immutable publication commit.
+- Plan 262-88: verified `non_pass`, `exhausted`, clean assurance, no correction/activation publication.
+- Plan 262-89: verified `gaps_found`, `completionMutated: false`.
+- Correction-v3 SHA-256: `sha256:6a585d62405388947ba65b0036fd5bef716bbfe7320390367af5eee86d9390f1`.
 
 ---
 
-_Fixed: 2026-08-27T23:07:03Z_
-
+_Fixed: 2026-08-27T23:43:52Z_
 _Fixer: the agent (gsd-code-fixer)_
-
-_Iteration: 2_
+_Iteration: 3_
