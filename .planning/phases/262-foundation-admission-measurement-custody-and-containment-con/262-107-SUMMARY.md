@@ -169,6 +169,38 @@ None.
 - Plan 262-109 remains denied until Plan 108 publishes a literal-zero nonrecursive review trio.
 - Plan 262-110 and all live, empirical, lifecycle, Phase-263, formation, holdout, public/product/production, counted-play, gameplay-change, archive, and tag authority remain denied.
 
+## Post-Review Corrections — 2026-08-28
+
+The blocked `262-107-REVIEW.md` identified three defects after the original plan completed. Each was reproduced with a failing regression commit and then fixed atomically:
+
+1. `F-262-107-01`: RED `f9063575`; fixed by `0128e4af`. Production exports now close over the real disk authenticators and real producer. The producer-incapable synthetic validator accepts custody values only and supersedes the original generic injected-dependency seam described earlier in this summary.
+2. `F-262-107-02`: RED `89e3f822`; fixed by `f8a2ce6c`. The adapter now authenticates explicit protected lineage and B3 raw bytes/modes for Plans 90/91/96/97/98/99/100/101/102/103/104/105, rejects successor rewrites, and rejects dirty working bytes for every protected branch.
+3. `F-262-107-03`: RED `b94d4805`; fixed by `a964be04`. Post-effect history and execution-closure authentication now runs after every producer outcome without masking the primary producer error.
+
+### Corrected Committed Source Closure
+
+This closure supersedes the original `ce9bd365` closure for any future review. It is evidence only and creates no review, supplement, or execution authority.
+
+| Identity | Exact value |
+|---|---|
+| Corrected source commit | `a964be04a8a0628d4969d2b38b02a31a51120a83` |
+| Source tree | `20772dc04f7ca2b767cc4cc3ac090b54c149e239` |
+| Source parent | `b94d48050289707190cfcecffda567fd710c7801` |
+| Checkout byte manifest root | `sha256:2ff279c18082455b6a20eb4a81551abbbccdf735ccf81d6af526dc6df7dbc91b` |
+| Installed closure root | `sha256:72760c27bb3a70f57fcebe45abae59f6d592310ef32f4bc23e442fe8b25ec31b` |
+| Native sources root | `sha256:de43db7fa3d47de7dd1b5ffb148ae9cecceab044bdb61f704051e2930f4f5523` |
+| Corrected full execution closure root | `sha256:33de433c8a2ff60fbf53e8a0b525bec4c3f7c8d295cfd89b079cec017246c33f` |
+
+### Post-Review Verification
+
+- Focused live-v8 suite: `14/14` passed.
+- TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
+- V7 exact sealed-inactive checker: passed with zero charged and accepted counters and downstream authority denied.
+- Corrected committed execution-closure derivation: passed for `a964be04a8a0628d4969d2b38b02a31a51120a83`.
+- `git diff --check`: passed.
+- No live mode was invoked and no live or canonical artifact was changed or created.
+- The historical blocked review remains authoritative until a fresh independent review evaluates the corrected closure; Plan 108 remains ineligible from this fix record alone.
+
 ## Self-Check: PASSED
 
 - Both committed source/test files and this summary exist.
