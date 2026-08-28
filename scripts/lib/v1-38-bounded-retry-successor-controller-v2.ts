@@ -56,12 +56,16 @@ const trustedIdentity = (rootInput: string) => {
  * `/usr/bin/lockf` owns one global advisory lock from native precheck through
  * native postconditions; the kernel releases it on every process exit.
  */
-const invokeNative = (rootInput: string, input: string): Promise<NativeResult> => {
+const invokeNative = (rootInput: string, input: string, targetLocks: readonly string[]): Promise<NativeResult> => {
   const identity = trustedIdentity(rootInput)
-  const lockPath = path.join(identity.path, ".v138-successor-publication.lock")
+  const normalizedLocks = [...new Set(targetLocks)].sort()
+  if (normalizedLocks.length === 0) fail("V138_SUCCESSOR_LOCK_SET_EMPTY")
+  const lockPaths = normalizedLocks.map((target) => path.join(identity.path, `.v138-successor-${sha256V138Secure(target).slice(7)}.lock`))
+  const command: string[] = []
+  for (const lockPath of lockPaths) command.push("/usr/bin/lockf", "-t", "0", lockPath)
+  command.push(nativeExecutable(), identity.path, identity.device, identity.inode)
   const child = spawn(
-    "/usr/bin/lockf",
-    ["-t", "0", lockPath, nativeExecutable(), identity.path, identity.device, identity.inode],
+    command.shift()!, command,
     { cwd: identity.path, stdio: ["pipe", "ignore", "pipe"] },
   )
   child.stdin.end(input)
@@ -105,7 +109,10 @@ const overlapRaceEvidence = async (root: string, iterations: number): Promise<nu
       transactionId: `overlap-right-${index}`, intentPath: `overlap-right-${index}.intent`,
       members: [{ target: `shared/shared-${index}.json`, bytes: `shared-right-${index}\n` }, { target: `right/right-${index}.json`, bytes: `right-${index}\n` }],
     }
-    const results = await Promise.all([invokeNative(root, pairInput(root, left)), invokeNative(root, pairInput(root, right))])
+    const results = await Promise.all([
+      invokeNative(root, pairInput(root, left), left.members.map(({ target }) => target)),
+      invokeNative(root, pairInput(root, right), right.members.map(({ target }) => target)),
+    ])
     if (results.filter(({ code }) => code === 0).length !== 1) fail("V138_SUCCESSOR_OVERLAP_RACE_RESULT_INVALID")
     const shared = readFileSync(path.join(root, `shared/shared-${index}.json`), "utf8")
     const leftExists = existsSync(path.join(root, `left/left-${index}.json`))
@@ -115,6 +122,26 @@ const overlapRaceEvidence = async (root: string, iterations: number): Promise<nu
     } else if (shared === `shared-right-${index}\n`) {
       if (!rightExists || leftExists) fail("V138_SUCCESSOR_OVERLAP_PARTIAL_LOSER")
     } else fail("V138_SUCCESSOR_OVERLAP_SHARED_INVALID")
+  }
+  return iterations
+}
+
+const disjointRaceEvidence = async (root: string, iterations: number): Promise<number> => {
+  for (let index = 0; index < iterations; index++) {
+    const left: V138DurablePairV2Input = {
+      transactionId: "same-id", intentPath: `disjoint-left-${index}.intent`,
+      members: [{ target: `left/disjoint-a-${index}.json`, bytes: "same-a\n" }, { target: `left/disjoint-b-${index}.json`, bytes: "same-b\n" }],
+    }
+    const right: V138DurablePairV2Input = {
+      transactionId: "same-id", intentPath: `disjoint-right-${index}.intent`,
+      members: [{ target: `right/disjoint-a-${index}.json`, bytes: "same-a\n" }, { target: `right/disjoint-b-${index}.json`, bytes: "same-b\n" }],
+    }
+    const results = await Promise.all([
+      invokeNative(root, pairInput(root, left), left.members.map(({ target }) => target)),
+      invokeNative(root, pairInput(root, right), right.members.map(({ target }) => target)),
+    ])
+    if (results.some(({ code }) => code !== 0)) fail("V138_SUCCESSOR_DISJOINT_RACE_FAILED")
+    for (const member of [...left.members, ...right.members]) if (readFileSync(path.join(root, member.target), "utf8") !== member.bytes) fail("V138_SUCCESSOR_DISJOINT_POSTCONDITION_FAILED")
   }
   return iterations
 }
@@ -137,7 +164,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       transactionId: "synthetic-pair", intentPath: "synthetic-pair.intent",
       members: [{ target: "artifacts/synthetic-review.json", bytes: '{"authority":false}\n' }, { target: "reviews/synthetic-review.md", bytes: "# Synthetic non-authorizing review\n" }],
     }
-    await requireComplete(invokeNative(root, pairInput(root, pair)))
+    await requireComplete(invokeNative(root, pairInput(root, pair), pair.members.map(({ target }) => target)))
     const before = "status: before\n"
     writeFileSync(path.join(root, "planning/status.md"), before)
     const lifecycle: V138LifecycleTransactionV2 = {
@@ -145,9 +172,10 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       steps: [{ id: "status", target: "planning/status.md", beforeSha256: sha256V138Secure(before), afterBytes: "status: synthetic-complete\n" }],
       lifecycle: { target: "synthetic-lifecycle.json", bytes: '{"authority":false,"status":"synthetic_complete"}\n' },
     }
-    await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle)))
+    await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle), [...lifecycle.steps.map(({ target }) => target), lifecycle.lifecycle.target]))
 
     const overlapRaces = await overlapRaceEvidence(root, 50)
+    const disjointRaces = await disjointRaceEvidence(root, 100)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS,
       acceptedCells: 0,
@@ -155,6 +183,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       pairMembers: [readFileSync(path.join(root, "artifacts/synthetic-review.json"), "utf8"), readFileSync(path.join(root, "reviews/synthetic-review.md"), "utf8")],
       lifecycle: readFileSync(path.join(root, "planning/status.md"), "utf8"),
       overlapRaces,
+      disjointRaces,
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
   } finally { rmSync(root, { recursive: true, force: true }) }
