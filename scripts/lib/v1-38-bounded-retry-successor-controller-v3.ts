@@ -90,21 +90,42 @@ const invokeNative = (rootInput: string, input: string, targetLocks: readonly st
   const normalizedLocks = [...new Set([...targetLocks, intentLock])].sort()
   if (normalizedLocks.length === 0) fail("V138_SUCCESSOR_LOCK_SET_EMPTY")
   const oneShot = compileOneShotNative(input, normalizedLocks, identity.path)
-  const child = spawn(
-    oneShot.executable, [],
-    { cwd: identity.path, stdio: ["pipe", "ignore", "pipe", oneShot.capabilityDescriptor, oneShot.rootDescriptor, "pipe"], env: barrierTag === undefined ? process.env : { ...process.env, V138_NATIVE_TEST_BARRIER: barrierTag } },
-  )
-  closeSync(oneShot.capabilityDescriptor)
-  closeSync(oneShot.rootDescriptor)
   let removed = false
   const removePrivateHelper = () => {
     if (!removed) { removed = true; rmSync(oneShot.directory, { recursive: true, force: true }) }
   }
-  child.stdio[5]?.once("data", removePrivateHelper)
-  child.stdin.end(input)
-  let stderr = ""
-  child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk })
-  return new Promise((resolve) => child.once("exit", (code) => { removePrivateHelper(); resolve(Object.freeze({ code, stderr, privateExecutable: oneShot.executable })) }))
+  return new Promise((resolve) => {
+    let settled = false, stderr = ""
+    const settle = (code: number | null, detail?: unknown) => {
+      if (settled) return
+      settled = true
+      if (detail !== undefined) stderr += `${detail instanceof Error ? detail.message : String(detail)}\n`
+      removePrivateHelper()
+      resolve(Object.freeze({ code, stderr, privateExecutable: oneShot.executable }))
+    }
+    let child: ReturnType<typeof spawn> | undefined
+    try {
+      const executable = barrierTag === "force-spawn-failure" ? path.join(oneShot.directory, "missing-helper") : oneShot.executable
+      child = spawn(executable, [], {
+        cwd: identity.path,
+        stdio: ["pipe", "ignore", "pipe", oneShot.capabilityDescriptor, oneShot.rootDescriptor, "pipe"],
+        env: barrierTag === undefined || barrierTag === "force-spawn-failure" ? process.env : { ...process.env, V138_NATIVE_TEST_BARRIER: barrierTag },
+      })
+      child.once("error", (error) => settle(null, error))
+      child.once("exit", (code) => settle(code))
+      child.once("close", (code) => settle(code))
+      child.stderr?.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk })
+      child.stdin?.once("error", (error) => { child?.kill(); settle(null, error) })
+      child.stdio[5]?.once("data", removePrivateHelper)
+      child.stdin?.end(input)
+    } catch (error) {
+      child?.kill()
+      settle(null, error)
+    } finally {
+      closeSync(oneShot.capabilityDescriptor)
+      closeSync(oneShot.rootDescriptor)
+    }
+  })
 }
 
 const waitFor = async (predicate: () => boolean): Promise<void> => {
@@ -406,6 +427,16 @@ const rootLockNamespaceEvidence = async (root: string): Promise<number> => {
   }
 }
 
+const spawnFailureCleanupEvidence = async (root: string): Promise<number> => {
+  const pair: V138DurablePairV2Input = {
+    transactionId: "spawn-failure", intentPath: "spawn-failure.intent",
+    members: [{ target: "left/spawn-failure.json", bytes: "left\n" }, { target: "right/spawn-failure.json", bytes: "right\n" }],
+  }
+  const result = await invokeNative(root, pairInput(root, pair), pair.members.map(({ target }) => target), "force-spawn-failure")
+  if (result.code !== null || existsSync(result.privateExecutable) || pair.members.some(({ target }) => existsSync(path.join(root, target)))) fail("V138_SUCCESSOR_SPAWN_FAILURE_CLEANUP_FAILED")
+  return 1
+}
+
 const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string, unknown>>> => {
   const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v3-"))
   try {
@@ -443,6 +474,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
     const directHelperBypassAttempts = await directHelperBypassEvidence(root)
     const directoryReplacementProtections = await directoryReplacementEvidence(root)
     const rootLockNamespaceProtections = await rootLockNamespaceEvidence(root)
+    const spawnFailureCleanups = await spawnFailureCleanupEvidence(root)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V3_OPERATIONS,
       acceptedCells: 0,
@@ -459,6 +491,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       directHelperBypassAttempts,
       directoryReplacementProtections,
       rootLockNamespaceProtections,
+      spawnFailureCleanups,
       lifecycleStagingResidue: readdirSync(path.join(root, ".v138-lifecycle-staging")),
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
