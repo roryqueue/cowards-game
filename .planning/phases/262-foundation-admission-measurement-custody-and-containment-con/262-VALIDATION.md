@@ -2,41 +2,106 @@
 phase: 262
 slug: foundation-admission-measurement-custody-and-containment-con
 status: partial
-nyquist_compliant: false
+nyquist_compliant: true
+coverage_state: complete
+empirical_state: blocked
 wave_0_complete: true
 created: 2026-07-28
-last_audited: 2026-08-27
+last_audited: 2026-08-28
 ---
 
 # Phase 262 — Validation Strategy
 
-> Plan 262-89 v2 pre-summary validation authenticates 70 active plans / 69 committed summaries and independently joins disposition-v2, correction-v3 state, reproduction-v16 state, seal-v12, Route-10 state, and exact lifecycle-status-v1 predecessor custody.
+## Disposition
 
-## Exact Commands
+Phase 262 is **Nyquist-compliant but empirically incomplete**. Automated behavioral coverage exists for every active Phase 262 requirement and task family, including the exact pass-only ADMIT-03 boundary. That coverage must not be confused with satisfaction: the independently reconstructed bounded retry ended `exhausted` at fresh `0/540`, reproduction-v16 is absent, ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phase 263 remains denied.
 
-- `pnpm exec vitest run scripts/check-v1-38-plan-262-89-lifecycle-v2.test.ts --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --bail=1`
-- `pnpm exec tsx scripts/check-v1-38-plan-262-88-bounded-retry-admission-v2.ts --check-artifacts`
-- `pnpm exec tsx scripts/check-v1-38-plan-262-89-lifecycle-v2.ts --check-pre-summary`
+The current additive correction is `v1.38-phase-262-review-fix-correction-v10` at correction root `sha256:79f0ba7b9352992c5ad51a102bfd93f21bde93f5a01ff2438a25fef0919b22d3`. It preserves the explicit assurance boundary `single_operator_local_seal_v1_no_hostile_same_uid`; it does not claim hostile-same-UID resistance, independent custody, or pathname-launch replacement resistance.
 
-## Observed v2 Evidence
+## Test Infrastructure
 
-| Check | Result |
-|---|---|
-| Disposition | non_pass / exhausted |
-| Fresh accepted | 0/540 |
-| Assurance | clean; correction-v3 absent |
-| Reproduction-v16 | absent |
-| Route-10 activation | absent |
-| Predecessor status root | sha256:3b13e8656208643f4ce339bdab2f29bf56e38b00938afd49cfbc88164595a8b0 |
-| Lifecycle branch | gaps_found |
-| Completion mutation before summary | forbidden / absent |
+| Layer | Framework / mechanism | Canonical command pattern |
+|---|---|---|
+| TypeScript behavioral tests | Vitest 4.1.6, fork pool, one worker | `pnpm exec vitest run <files> --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=900000 --hookTimeout=900000 --bail=1` |
+| Source and artifact checks | `tsx` closed-schema CLIs | `pnpm exec tsx <checker> --check` |
+| Native boundary checks | clang C11 warnings-as-errors | `clang -std=c11 -Wall -Wextra -Werror <source> -o <private-output>` |
+| Repository topology | Git object, blob, history, and clean-tree checks | Plan-local exact commands; no mutable prose is accepted as authority |
+
+## Complete Active Plan and Task Map
+
+All 70 active plans and all 70 committed summaries were read and cross-referenced. Their 160 explicit tasks contain 208 automated verification blocks. Plans 262-67 and 262-68 use a historical human checkpoint plus downstream byte/root tamper tests; the checkpoint is not treated as live authorization, and its machine-verifiable denial semantics remain covered.
+
+| Active plans | Plans | Tasks | Verify blocks | Coverage |
+|---|---:|---:|---:|---|
+| 01, 02, 08–31 | 26 | 65 | 91 | covered — foundation admission, historical matrix, runtime/resource/accounting, stopped-route and immutable-history behavior |
+| 32–39, 42, 44, 45, 49, 51–54 | 16 | 37 | 44 | covered — dependency revision, measurement, classifiers, containment, local seal, terminal/defer and non-authorization behavior |
+| 60, 61, 63–73 | 13 | 28 | 31 | covered — replacement/reviewer chains, exact topology, route-8 source/review/obstruction and lifecycle denial |
+| 75–89 | 15 | 30 | 42 | covered — bounded retry v1/v2, corrected source review, seal/envelope, live terminal, independent disposition and lifecycle-v2 |
+| **Total** | **70** | **160** | **208** | **covered** |
 
 ## Requirement Coverage
 
-ADMIT-03 remains PARTIAL — BLOCKED at fresh 0/540. ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10, and SEAL-01 retain their independently verified evidence. No current-rules empirical failure, assurance defect, missing activation, or topology coincidence can compensate for exact fresh 540/540.
+| Requirement | Nyquist coverage | Empirical / lifecycle result |
+|---|---|---|
+| ADMIT-01 | COVERED | satisfied; exact v1.37 audit/archive/tag/post-tag join retained |
+| ADMIT-02 | COVERED | satisfied; selected semantic/runtime/research identities retained |
+| ADMIT-03 | COVERED | **BLOCKED / UNSATISFIED**; fresh accepted `0/540`, reproduction-v16 absent |
+| ADMIT-04 | COVERED | satisfied; stale, mismatched, contaminated, or drifting authority fails closed |
+| MEAS-01…MEAS-10 | COVERED | satisfied; frozen estimand, budgets, accounting, report semantics, and local-seal contract retained |
+| SEAL-01 | COVERED | satisfied only at `single_operator_local_seal_v1_no_hostile_same_uid`; no stronger custody or concurrency claim |
+| DECI-02 | COVERED | satisfied; profile-neutral classifiers and formation-absence boundary retained |
 
-## Adversarial Branches
+## Current Evidence and Denials
 
-Synthetic tests prove exact pass, clean empirical exhaustion, correction-present, integrity failure, contamination, reproducibility failure, missing activation, unsafe optional paths, non-pass activation injection, and predecessor/topology substitution. Only exact clean pass is completion-mutation-capable.
+| Check | Observed result |
+|---|---|
+| Active topology | 70 plans / 70 summaries |
+| Bounded retry disposition | `non_pass` / `exhausted` |
+| Fresh accepted | `0/540` |
+| Calibration accounting | 24 charged identities, 3 route starts, 3 preflight observations |
+| Reproduction-v16 | absent |
+| Route-10 / foundation activation | absent |
+| Phase 262 | incomplete; `gaps_found` |
+| Phase 263 planning/execution | denied |
+| Candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, tag authority | all false |
 
-No Plan-74 summary exists or is implied. No requirement, roadmap, state, phase-completion, Phase-263, candidate, formation, holdout, public, product, production, counted-play, gameplay, archive, or tag projection is mutated by this pre-summary validation.
+## Exact Verification Commands and Results
+
+| Command | Result |
+|---|---|
+| `pnpm exec tsx scripts/check-v1-38-phase-262-review-fix-correction-v10.ts --check` | green; `review_fix_correction_v10_valid=true` |
+| `pnpm exec vitest run scripts/lib/v1-38-private-native-bootstrap-v2.test.ts scripts/lib/v1-38-secure-workspace-path-v6.test.ts scripts/run-v1-38-phase-262-historical-correction-checkouts-v4.test.ts scripts/check-v1-38-phase-262-review-fix-correction-v10.test.ts --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=900000 --hookTimeout=900000 --bail=1` | green; 4 files, 62/62 tests |
+| `clang -std=c11 -Wall -Wextra -Werror scripts/native/v1-38-successor-transaction-helper-v6.c -o /tmp/v138-successor-validation-v6` | green |
+| `clang -std=c11 -Wall -Wextra -Werror scripts/native/v1-38-secure-manifest-reader-v6.c -o /tmp/v138-reader-validation-v6` | green |
+| `pnpm exec vitest run scripts/check-v1-38-plan-262-61-source-completeness-review-v3.test.ts -t 'lifecycle' --pool=forks --maxWorkers=1 --no-file-parallelism --testTimeout=180000 --hookTimeout=180000 --bail=1` | green; 4 repaired lifecycle tests passed, 72 unrelated tests skipped |
+
+The clean deep code review at `262-REVIEW.md` records 0 critical, 0 warning, and 0 informational findings across correction-v10, historical-v5, controller-v6, secure reader-v6, their tests, both native helpers, and package entry points.
+
+## Nyquist Gap Repair
+
+One real validation gap was found. The Plan 262-61 historical lifecycle suite invoked its frozen 48-plan reviewer against the current 70-plan repository. That made the positive case fail and could let later mutation cases pass for the wrong pre-existing reason. The test now creates a disposable clone at exact lifecycle baseline commit `3a63735a603e85a605ce8ce2e82f1dbb0a78873d` before testing the 48-plan graph and its mutation denials. No implementation or protected evidence changed.
+
+The first broad post-repair invocation of all 76 Plan 262-61 reviewer tests remained healthy and continued producing short-lived Git children but did not terminate within the 15-minute validation threshold; it was stopped with exit 130 and no failure output. The gap-specific four-test lifecycle run then completed green in 39.52 seconds. The broad run is not represented as passing.
+
+## Manual-Only
+
+None for Nyquist coverage. ADMIT-03 is not manual-only: its behavior and pass-only gate are automated, but its required empirical outcome did not occur. Re-running or extending the exhausted envelope would be new authority and is outside this validation audit.
+
+## Validation Audit 2026-08-28
+
+| Metric | Count |
+|---|---:|
+| Active plans read | 70 |
+| Active summaries read | 70 |
+| Explicit tasks mapped | 160 |
+| Automated verify blocks mapped | 208 |
+| Requirement IDs covered | 16/16 |
+| Gaps found | 1 |
+| Resolved | 1 |
+| Escalated | 0 |
+
+## Sign-Off
+
+- `nyquist_compliant: true` means the active Phase 262 contract has executable behavioral coverage.
+- It does **not** complete ADMIT-03, Phase 262, or the milestone.
+- It grants no retry, reproduction, activation, candidate, formation, holdout, public, product, production, counted-play, gameplay-change, Phase 263, archive, or tag authority.
