@@ -4,17 +4,17 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: Phase 262 has 78 plans/74 summaries; Plan 97 independently found zero defects over corrected Plan-96 source, making only Plan 92 eligible while fresh accepted remains 0/540 and downstream authority remains denied
-stopped_at: Completed 262-97-PLAN.md; Plan 262-92 eligible as sole next action
-last_updated: "2026-08-28T14:57:08.166Z"
+status: executing
+stopped_at: Completed 262-98-PLAN.md; Plan 262-99 is sole next action
+last_updated: "2026-08-28T15:38:47.987Z"
 last_activity: 2026-08-28
-last_activity_desc: Completed Plan 262-97 fresh corrected-source re-review with zero findings and Plan-92-only eligibility
+last_activity_desc: Plan 262-98 portable reviewed-closure and full local before/after custody correction
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 78
-  completed_plans: 74
-  percent: 95
+  total_plans: 80
+  completed_plans: 75
+  percent: 0
 ---
 
 # State: Coward's Game
@@ -63,11 +63,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 74 summaries across 78 active plans — Plan 262-97 complete; Plan 262-92 is the sole next action
-Status: Plan 97 is `zero_findings` over exact corrected Plan-96 source; ADMIT-03 remains blocked at fresh 0/540 and all downstream authority remains denied
-Last activity: 2026-08-28 — Completed fresh independent corrected-source re-review and canonical pair validation
+Plan: 75 summaries across 80 active plans — Plan 262-98 source correction is complete; Plan 262-99 is the sole next action
+Status: Phase 262 remains in progress at 75/80 summaries; Plan 99 is the sole next action, fresh accepted remains 0/540, and downstream authority remains denied
+Last activity: 2026-08-28 — Plan 262-98 portable reviewed-closure and full local before/after custody correction
 
-Progress: [██████████] 95% of active Phase-262 plans summarized (74/78); phase goal not achieved because ADMIT-03 remains blocked
+Progress: [█████████░] 94% of active Phase-262 plans summarized (75/80); phase goal not achieved because ADMIT-03 remains blocked
 
 ## Performance Metrics
 
@@ -159,6 +159,7 @@ Progress: [██████████] 95% of active Phase-262 plans summari
 | Phase 262 P87 | 35 min | 2 tasks | 18 files |
 | Phase 262 P96 | 24min | 2 tasks | 6 files |
 | Phase 262 P97 | 36min | 2 tasks | 5 files |
+| Phase 262 P98 | 11min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -317,6 +318,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Exact zero findings make only Plan 262-86 eligible; authorizesExecution remains false.
 - [Phase 262]: Independent-person, external-identity, and independent-custody claims remain false.
 - [Phase 262]: Treat Plan 262-88 as a clean empirical non-pass: zero assurance defects create no correction-v3, while fresh 0/540 creates no Route-10 activation; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
+- [Phase 262]: Use v1.38-reviewed-execution-closure-v2 only for portable cross-checkout invariants — gitObjectRoot remains full-local only and installedClosureRoot aliases neither root domain.
+- [Phase 262]: Require a fresh literal-zero Plan-99 pair before Plan-92 eligibility — Plan-97 remains truthful immutable history and fresh accepted remains 0/540.
 
 ### Pending Todos
 
@@ -378,6 +381,6 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T14:55:57Z
-Stopped at: Completed 262-97-PLAN.md; Plan 262-92 eligible as sole next action
+Last session: 2026-08-28T15:37:42.515Z
+Stopped at: Completed 262-98-PLAN.md; Plan 262-99 is sole next action
 Resume file: None
