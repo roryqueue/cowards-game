@@ -156,7 +156,7 @@ None.
 
 None - no dependency, secret, external service, or manual action was required.
 
-## Verification
+## Test Results
 
 - Exact named regression: 2/2 passed for the old Plan-97 failure and new Plan-99 synthetic success.
 - Full focused suite: 117/117 passed.
