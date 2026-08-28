@@ -21,6 +21,7 @@ import {
   readV138RegularNoFollow,
   sha256V138Secure,
   V138_SECURE_MANIFEST_READER_V5_SOURCE,
+  V138_SECURE_BATCH_PROTOCOL_V5,
   readV138WorkspaceBatch,
   withV138SecureWorkspaceSession,
 } from "./v1-38-secure-workspace-path-v5.js"
@@ -160,6 +161,10 @@ describe("CR-05 trusted-root no-follow paths", () => {
       "replace-reader-executable",
     )
     expect(batch.bytes["safe/file"]!.toString()).toBe("bytes\n")
+    expect(batch.protocol).toBe(V138_SECURE_BATCH_PROTOCOL_V5)
+    expect(batch.snapshotGuarantee).toBe(
+      "required_leaf_descriptors_and_parent_generation_bound",
+    )
     expect(
       readdirSync(tmpdir()).filter(
         (entry) =>

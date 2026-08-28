@@ -19,6 +19,8 @@ const fail = (code: string): never => {
 }
 export const sha256V138Secure = (bytes: string | Buffer): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+export const V138_SECURE_BATCH_PROTOCOL_V5 =
+  "retained-required-leaves-parent-generation-absence-revalidation-v2"
 
 export const V138_SECURE_MANIFEST_READER_V5_SOURCE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -184,6 +186,8 @@ export type V138SecureWorkspaceSession = Readonly<{
 }>
 
 export type V138SecureWorkspaceBatch = Readonly<{
+  protocol: typeof V138_SECURE_BATCH_PROTOCOL_V5
+  snapshotGuarantee: "required_leaf_descriptors_and_parent_generation_bound"
   identity: Readonly<{ device: string; inode: string }>
   ancestorIdentities: Readonly<Record<string, Readonly<{ device: string; inode: string }>>>
   bytes: Readonly<Record<string, Buffer>>
@@ -231,7 +235,14 @@ export const readV138WorkspaceBatch = (
     }
     if (identity === undefined || normalizedReads.some((item) => bytes[item] === undefined))
       fail("V138_SECURE_BATCH_OUTPUT_INCOMPLETE")
-    return Object.freeze({ identity, ancestorIdentities: Object.freeze(ancestors), bytes: Object.freeze(bytes) })
+    return Object.freeze({
+      protocol: V138_SECURE_BATCH_PROTOCOL_V5,
+      snapshotGuarantee:
+        "required_leaf_descriptors_and_parent_generation_bound" as const,
+      identity,
+      ancestorIdentities: Object.freeze(ancestors),
+      bytes: Object.freeze(bytes),
+    })
   } finally {
     closeSync(descriptor)
   }
