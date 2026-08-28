@@ -1,8 +1,8 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-28T03:18:26Z
+fixed_at: 2026-08-28T04:25:19Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 8
+iteration: 9
 findings_in_scope: 7
 fixed: 7
 skipped: 0
@@ -11,79 +11,75 @@ status: all_fixed
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-28T03:18:26Z
+**Fixed at:** 2026-08-28T04:25:19Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-**Iteration:** 8
+**Iteration:** 9
 
 **Summary:**
+
 - Findings in scope: 7
 - Fixed: 7
 - Skipped: 0
 
 ## Fixed Issues
 
-### CR-01: The privileged native helper inherits dynamic-loader injection variables
+### CR-01: Darwin pathname execution remains owner-replaceable
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v5.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v5.test.ts`, `scripts/native/v1-38-successor-transaction-helper-v5.c`
-**Commit:** dd799410
-**Applied fix:** Added an additive v5 route. The capability child receives only fixed `PATH`, `LANG`, `LC_ALL`, its private `TMPDIR`, and an optional validated test barrier. Native startup rejects DYLD, LD, Node loader, and parent-sentinel leakage before reading capability descriptors. The native helper compiles with `-Werror`. **Status:** fixed; security logic requires independent re-review.
+**Files modified:** `scripts/bootstrap-v1-38-bounded-retry-successor-v2.sh`, `scripts/lib/v1-38-bounded-retry-successor-controller-v6.ts`, `scripts/lib/v1-38-bounded-retry-successor-native-helper-v6.c`, and focused tests
+**Commit:** bfd50db2
+**Applied fix:** Encoded the truthful `single_operator_local_seal_v1` assurance boundary, explicitly excluding hostile same-UID concurrency and pathname-replacement resistance while retaining pre/post identity and content authentication. Darwin does not expose an acceptable descriptor-execution primitive for this protocol, so the correction removes the overclaim instead of simulating stronger custody.
 
-### CR-02: The cached manifest reader can be replaced after its only authentication
+### CR-02: Retained leaf reads do not authenticate the exact generation returned
 
-**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v5.ts`, `scripts/lib/v1-38-secure-workspace-path-v5.test.ts`, `scripts/native/v1-38-secure-manifest-reader-v5.c`
-**Commit:** 39f08e1c
-**Applied fix:** Replaced the reusable pathname cache with one private reader per batch. Each child uses a strict environment, emits an authenticated one-shot handshake, launches only after exact output digest verification and `uchg` substitution refusal, and is removed immediately after completion. Replacement and zero-residue tests pass. **Status:** fixed; concurrency/security logic requires independent re-review.
+**Files modified:** `scripts/lib/v1-38-workspace-reader-v6.ts` and focused tests
+**Commit:** a6ce38f4
+**Applied fix:** Buffered exactly the pre-read size, rejected early EOF and trailing growth, hashed before output, and revalidated full post-read identity and metadata plus parent and absence witnesses before emitting any bytes.
 
-### CR-03: Compiler before/after checks do not bind the executable that performed compilation
+### CR-03: Historical dependency evidence omits the installed transitive runner closure
 
-**Files modified:** `scripts/lib/v1-38-private-native-bootstrap-v1.ts`, `scripts/lib/v1-38-private-native-bootstrap-v1.test.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v5.ts`, `scripts/lib/v1-38-secure-workspace-path-v5.ts`
-**Commit:** bcfe5a55
-**Applied fix:** Copies reviewed clang bytes from a retained descriptor, verifies the Apple source CDHash, deterministically ad-hoc signs and authenticates the private copy, marks compiler/source/output paths user-immutable, reproduces the native output, and verifies the exact output digest again at launch. A transient substitution attempt is refused. Focused bootstrap test passed 1/1. **Status:** fixed; Darwin bootstrap logic requires independent re-review.
+**Files modified:** historical checkout derivation/checker/test sources and `.planning/artifacts/v1.38-phase-262-historical-correction-checkouts-v4.json`
+**Commits:** f270a52e, 05470f4a
+**Applied fix:** Performed twin integrity-verified offline installs, traversed the complete installed runtime, optional, native, and installed-peer closure from Vitest, manifested exact package bytes, and bound pre/post runner-entry and closure roots. A mutation test now proves installed runner drift is rejected before execution.
 
-### CR-04: Pair publication returns success after ignored fsync and cleanup failures
+### CR-04: Git checkout derivation remains exposed to ambient configuration
 
-**Files modified:** `scripts/native/v1-38-successor-transaction-helper-v5.c`, `scripts/lib/v1-38-bounded-retry-successor-controller-v5.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v5.test.ts`
-**Commit:** 1fb377f0
-**Applied fix:** Every canonical-parent fsync, both stage unlinks, intent unlink, staging fsync, and intent-parent fsync now fail closed. Seven distinct durability fault boundaries retain enough authenticated canonical/transaction state for an idempotent rerun, which verifies both canonical members and zero intent/stage residue. Native compilation and source checks pass. **Status:** fixed; durability logic requires independent re-review.
+**Files modified:** historical checkout derivation/checker/test sources
+**Commit:** a86e1869
+**Applied fix:** Isolated system/global Git configuration, disabled replacement objects, hooks, and fsmonitor, rejected relevant local config and replacement refs, and verified raw commit/tree identities plus a clean checkout before dependency installation. Malicious caller config, hooks, and replace refs are covered by regression tests.
 
-### CR-05: Historical provenance trusts unpinned command implementations
+### CR-05: Pathname lock ownership can be replaced while held
 
-**Files modified:** `scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.ts`, `scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.test.ts`, `.planning/artifacts/v1.38-phase-262-historical-correction-checkouts-v3.json`, `package.json`
-**Commit:** c7b200a0
-**Applied fix:** The additive v3 runner invokes exact authenticated Git and signed Node paths, hashes exact pnpm/corepack scripts, validates `pnpm@11.1.2`, uses a strict environment, and binds the committed lockfile SHA, Vitest package integrity, installed version, and runner SHA. A PATH-prepended wrapper is rejected before checkout. Both detached historical suites and the persisted v3 artifact check passed. **Status:** fixed; provenance logic requires independent re-review.
+**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-native-helper-v6.c`, controller v6 sources, and focused tests
+**Commit:** 3136c631
+**Applied fix:** Added a retained-root BSD `flock` held for the complete child lifetime and revalidated every pathname lock against its retained descriptor after acquisition. Tests cover root rename and lock-name unlink/recreate races.
 
-### WR-01: The retained-ancestor batch is not a leaf snapshot
+### WR-01: Reader test barriers collide with evidence-root absence checks
 
-**Files modified:** `scripts/native/v1-38-secure-manifest-reader-v5.c`, `scripts/lib/v1-38-secure-workspace-path-v5.ts`, `scripts/lib/v1-38-secure-workspace-path-v5.test.ts`
-**Commit:** 8a061393
-**Applied fix:** Every required regular leaf is pre-opened and retained before evidence reads. Absence decisions are repeated around parent device/inode/generation/mtime/ctime checks and again before successful exit, so concurrent subtree/leaf path changes invalidate the whole child result. The exported protocol accurately names the required-leaf and parent-generation guarantee. Focused secure-reader suite passed 10/10. **Status:** fixed; snapshot logic requires independent re-review.
+**Files modified:** workspace reader v6 tests
+**Commit:** 6e641c73
+**Applied fix:** Moved test barrier controls to a private bootstrap directory outside the evidence root and added an explicit successful control case.
 
-### WR-02: Abrupt termination leaves authenticated-reader bootstrap residue indefinitely
+### WR-02: Manifest authentication is split across sequential reader invocations
 
-**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v5.test.ts`
-**Commit:** 8c135b67
-**Applied fix:** The CR-02 one-shot design removes the cache and exit-only cleanup lifetime. Additional source and repeated-batch tests prove no reusable `readerExecutable`/exit handler exists and each completed batch removes its private bootstrap. **Status:** fixed.
+**Files modified:** workspace reader v6 API and consumers
+**Commit:** cee69b35
+**Applied fix:** Authenticated every manifest entry in one retained-reader batch so a manifest no longer spans independent root observations.
 
-## Additive Integrity Chain
+## Correction Chain
 
-**Files:** `scripts/check-v1-38-phase-262-review-fix-correction-v8.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v8.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v8.json`
-**Commit:** 3ab5edda
-**Correction root:** `sha256:5cf09dc260ccf55637295b6a68d1bcd9a3070ce3a8f6f4b83076cc15cdff4c1e`
-
-Correction-v8 authenticates all new source, tests, the v3 history artifact, package target, prior correction-v7, Plan 262-88 disposition, and current lifecycle status. It preserves all thirteen false authority fields, all fourteen forbidden destinations, exhausted fresh 0/540, and reproduction-v16 absence. It grants no live, retry, candidate, formation, holdout, public, product, production, counted, gameplay, archive, tag, or downstream authority.
+Commit `3fadfb32` records additive correction-v9 evidence without mutating protected v2-v8 or Plan 88/89 evidence. The correction preserves all authority bits as false, all forbidden destinations as absent, admission at 0/540, and reproduction-v16 as absent.
 
 ## Verification
 
-- Private bootstrap focused test: 1/1 passed.
-- Secure reader/bootstrap focused suite: 11/11 passed; final secure-reader suite: 10/10 passed; no-cache test: 1/1 passed.
-- Historical toolchain tests: 2/2 passed; correction-v2 and correction-v3 detached suites replayed successfully; v3 persisted provenance check passed.
-- Correction-v8: canonical 1/1, authority mutation 13/13, forbidden destination 14/14 passed when serialized; CLI check passed.
-- Both v5 native sources compile with `clang -std=c11 -Wall -Wextra -Werror`; controller source-only check passes.
-- Full controller synthetic: 1 file and 9/9 tests passed serially on `main` in 348.54 seconds after commit `7cc2c4b7` raised the stale per-test harness limit from 240 to 900 seconds; the protocol itself was unchanged.
-- Diff from review base `6b9d475b` is additive except the package target; protected v2-v7 and Plan 262-88/89 evidence bytes have no diff.
+- Successor controller v6: 10/10 tests passed in 358.55 seconds.
+- Bootstrap v2, workspace reader v6, and historical v4 aggregate: 21/21 tests passed in 43.07 seconds.
+- Correction-v9: 43/43 tests passed in 45.76 seconds.
+- Canonical historical-v4 and correction-v9 package checkers passed.
+- Native reader/helper v6 sources passed Clang with `-Wall -Wextra -Werror`.
+- `package.json` parsed successfully.
 
 ---
 
-_Fixed: 2026-08-28T03:18:26Z_
+_Fixed: 2026-08-28T04:25:19Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 8_
+_Iteration: 9_
