@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.1.2",
   "scripts": {
-    "v1.38:phase262:historical-corrections": "pnpm exec tsx scripts/run-v1-38-phase-262-historical-correction-checkouts.ts --check",
+    "v1.38:phase262:historical-corrections": "pnpm exec tsx scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.ts --check",
     "dev": "turbo dev --filter='./apps/*' --filter='./packages/*'",
     "dev:full": "pnpm services:up && pnpm preflight -- --skip-web && turbo dev --filter='./apps/*' --filter='./packages/*'",
     "dev:local": "scripts/dev-local-postgres.sh",
