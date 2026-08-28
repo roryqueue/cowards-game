@@ -5,22 +5,22 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-100 is the sole next action; Plans 262-101 and 262-92 through 262-95 are dependency-blocked
-last_updated: "2026-08-28T16:48:44.000Z"
+stopped_at: Plan 262-101 is the sole next action; Plans 262-92 through 262-95 remain dependency-blocked
+last_updated: "2026-08-28T17:12:23.848Z"
 last_activity: 2026-08-28
-last_activity_desc: Planned additive raw Git-byte custody correction and fresh v5 review after Plan 262-99 blocked with one final-consumer finding
+last_activity_desc: completed exact raw Git-object byte custody correction; Plan 262-101 v5 review is the sole next action
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 82
-  completed_plans: 76
+  completed_plans: 77
   percent: 0
 ---
 
 # State: Coward's Game
 
-<!-- Current additive planning carrier; no future commit, blob, review, finding, result, or test-count value is asserted. -->
-<!-- phase-262-plan-100-101-topology-status: {"schema_version":"v1.38-plan-262-100-101-topology-v1","proof_status":"raw_git_byte_custody_correction_planned","active_plans":82,"trustworthy_summaries":76,"completed_plans":["262-98","262-99"],"plan_99_status":"blocked_final_consumer_custody","plan_99_finding_count":1,"plan_99_finding":"GIT_SHOW_BYTES_TRIMMED","plan_99_provisional_pair_valid":false,"plan_262_92_eligible":false,"successor_graph":["262-99","262-100","262-101","262-92","262-93","262-94","262-95"],"waves":{"262-100":82,"262-101":83,"262-92":84,"262-93":85,"262-94":86,"262-95":87},"next_action":"dispatch-262-100-only","fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
+<!-- Current source closeout carrier; no future Plan-101 review, finding, result, or downstream value is asserted. -->
+<!-- phase-262-plan-100-closeout-status: {"schema_version":"v1.38-plan-262-100-closeout-v1","proof_status":"raw_git_object_byte_custody_correction_complete","active_plans":82,"trustworthy_summaries":77,"source_commit":"a879bfc6cab49abf2e12a5b882a06b7e9fb446cb","source_tree":"e6b89de1c699d35b0e5068e0c064b7badd53ad00","source_parent":"71dc34c79a27ba57e67f8a2a2b7471dedade7a09","focused_tests_passed":140,"plan_98_99_history_preserved":true,"plan_101_review_present":false,"plan_262_92_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-262-101-only","downstream_authority_denied":true} -->
 <!-- Plan-99 closeout and all earlier route/topology carriers below are immutable history only. -->
 <!-- phase-262-plan-99-closeout-status: {"schema_version":"v1.38-plan-262-99-closeout-v1","proof_status":"blocked_final_consumer_custody","reviewed_source_commit":"702bfa5216e3b0e15b4816ce28c98dbcdee38517","finding_count":1,"finding":"GIT_SHOW_BYTES_TRIMMED","finding_root":"sha256:05a090e72cb43224683b190bca9b27ac81fed4cbef2792a9cb39d8d78e233b77","blocked_review_root":"sha256:332855378479e0bceee3f82a4e5445039d476345ab4d1d9b019d5c435a57664b","portable_reviewed_closure_root":"sha256:86e5f3c265017188e94b543931d372676b85b35b952a074fd40e5a4d230f16ed","provisional_pair_commit":"19a6eb53a2ad2c0188009d095103c42718aa3214","provisional_pair_valid":false,"provisional_pair_reinterpreted":false,"plan_262_92_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"next_action":"plan-additive-source-correction-and-fresh-review","downstream_authority_denied":true} -->
 <!-- phase-262-plan-97-closeout-status: {"schema_version":"v1.38-plan-262-97-closeout-v1","proof_status":"retry_v3_corrected_source_rereview_zero_findings","active_plans":78,"trustworthy_summaries":74,"reviewed_source_commit":"1c1f42b7fcd72d19ded89cca3ddd522090475b29","finding_count":0,"finding_root":"sha256:638909ad31b44fc81e01b6f081b2b1c97ad4091413e4c285c83e61d6fbbc152a","review_root":"sha256:2765f8c028a7c0e089b401898d80f12fa425e993f13255423abb052f22adee90","source_review_passed":true,"plan_262_92_eligible":true,"authorizes_execution":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"next_action":"dispatch-262-92-only","downstream_authority_denied":true} -->
@@ -66,13 +66,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 76 summaries across 82 active plans — Plans 262-98/99 are complete; Plan 262-99 is blocked as authority with one finding, and Plan 262-100 is the sole next action
-Status: Phase 262 remains in progress at 76/82 summaries; Plan 262-101 and Plans 262-92 through 262-95 remain dependency-denied, fresh accepted remains 0/540, and downstream authority remains denied
-Last activity: 2026-08-28 — planned additive raw Git-byte custody correction and branch-valid fresh v5 review after the Plan-99 final-consumer finding
+Plan: 77 summaries across 82 active plans — Plan 262-100 is complete; Plan 262-101 is the sole next action
+Status: Phase 262 remains in progress at 77/82 summaries; Plans 262-92 through 262-95 remain dependency-denied, fresh accepted remains 0/540, and downstream authority remains denied
+Last activity: 2026-08-28 — completed exact raw Git-object byte custody correction without review, seal, envelope, live, or downstream publication
 
-Progress: [█████████░] 93% of active Phase-262 plans summarized (76/82); phase goal not achieved because ADMIT-03 remains blocked
+Progress: [█████████░] 94% of active Phase-262 plans summarized (77/82); phase goal not achieved because ADMIT-03 remains blocked
 
 ## Performance Metrics
+
+**Plan-100 closeout (13 min, 2 tasks, 4 files):** Source commit `a879bfc6cab49abf2e12a5b882a06b7e9fb446cb` preserves exact Git blob bytes through isolated `ls-tree -z`, raw `cat-file blob`, no-follow working reads, regular executable-mode projection, and `Buffer.equals`; 140 focused tests, typecheck, source-only, protected-history, and destination-absence checks passed. Plan-101 v5 review is the sole next action. Fresh accounting remains 0/540 and all downstream authority remains denied.
 
 **Plan-75 closeout:** The normal summary now exists, exact active discovery is 62 plans/56 summaries, the pinned archive and summary-absence checks pass, and the sole next action is sequential typed dispatch of Plan 262-76.
 
@@ -90,7 +92,7 @@ Progress: [█████████░] 93% of active Phase-262 plans summari
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 82 plans/76 summaries. Plans 262-98 and 262-99 are complete, but Plan 262-99's one `GIT_SHOW_BYTES_TRIMMED` finding invalidates its provisional zero pair as current authority and leaves Plan 262-92 ineligible. The only executable chain is 262-100 -> 262-101 -> 262-92 -> 262-93 -> 262-94 -> 262-95 at Waves 82-87. Plan 262-100 is the sole next action; every successor is dependency-denied. Fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
+**Current topology:** Active discovery is 82 plans/77 summaries. Plan 262-100 completed the additive raw Git-object byte custody correction without publishing a review. The remaining executable chain is 262-101 -> 262-92 -> 262-93 -> 262-94 -> 262-95 at Waves 83-87. Plan 262-101 is the sole next action; Plans 262-92 through 262-95 remain dependency-denied. Fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -328,15 +330,17 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Execute the recovery chain only as 262-100 -> 262-101 -> 262-92 -> 262-93 -> 262-94 -> 262-95 at Waves 82 through 87; Plan 262-100 is the sole next action and every successor remains dependency-denied.
 - [Phase 262]: Pin Plan-101 schemaVersion `v1.38-plan-262-101-git-object-byte-custody-rereview-v5`, protocol `git-object-byte-custody-v1`, and distinct portable/result/review/finding hash domains; use an owner-only isolated clone rather than a linked worktree for pre-publication candidate commits.
 - [Phase 262]: Plan-101 zero findings require actual-consumer success; a nonzero branch requires a checker-valid blocked pair, Plan-92 ineligible, fresh 0/0, expected consumer rejection, destination absence, and stop.
+- [Phase 262]: Preserve committed payloads through one NUL-terminated regular blob entry, raw `cat-file blob`, no-follow working reads, executable projection, and final `Buffer.equals`; the trimmed helper remains metadata-only.
+- [Phase 262]: Only the future Plan-101 v5 pair is current review input; Plan-98/99 remain immutable invalid history and Plan-92 remains ineligible until literal-zero consumer success.
 
 ### Pending Todos
 
-- Execute Plan 262-100 only. Do not dispatch Plan 262-101 or Plans 262-92 through 262-95 until each exact predecessor has completed and its summary/branch gate permits the next plan.
+- Execute Plan 262-101 only. Do not dispatch Plans 262-92 through 262-95 until the exact Plan-101 branch gate permits the next plan.
 
 ### Current Blocker/Concerns
 
 - ADMIT-03 is the sole substantive blocker: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
-- Plan 262-99 is complete but invalid/blocked as current authority after one `GIT_SHOW_BYTES_TRIMMED` finding; its provisional zero pair cannot authorize Plan 262-92. Plan 262-100 is the sole next action, and Plans 262-101 plus 262-92 through 262-95 remain dependency-denied.
+- Plan 262-99 remains invalid/blocked history after `GIT_SHOW_BYTES_TRIMMED`; Plan 262-100 corrected the consumer without review publication. Plan 262-101 is the sole next action, and Plans 262-92 through 262-95 remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
 - Revised SEAL-01 is satisfied only at `single_operator_local_seal_v1_no_hostile_same_uid`; no independent-custody, hostile-same-UID, malicious-owner, or pathname-launch replacement resistance is claimed.
 - Formation, holdout, public/product/production, counted-play, gameplay-change, archive, and tag authority remain false.
@@ -390,10 +394,10 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T16:48:44.000Z
-Stopped at: Plan 262-100 is the sole next action; all successors remain dependency-blocked
+Last session: 2026-08-28T17:12:23.830Z
+Stopped at: Plan 262-101 is the sole next action; Plans 262-92 through 262-95 remain dependency-blocked
 Resume file: None
 
 ### Blockers
 
-- Plan 262-99 final consumer probe failed `V138_RETRY_SOURCE_CUSTODY_INVALID` because Git-show text bytes are trimmed. Plan 262-100 must complete the additive raw-byte correction, then Plan 262-101 must produce a branch-valid fresh review; Plans 262-92 through 262-95 remain blocked.
+- Plan 262-100 corrected the Plan-99 `GIT_SHOW_BYTES_TRIMMED` source defect without creating a verdict. Plan 262-101 must now produce a branch-valid fresh v5 review; Plans 262-92 through 262-95 remain blocked.
