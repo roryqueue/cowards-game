@@ -1,10 +1,12 @@
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -41,6 +43,35 @@ describe("CR-05 historical correction toolchain provenance", () => {
         `${root}${path.delimiter}${process.env.PATH ?? ""}`,
       ),
     ).toThrow()
+  })
+
+  it("rejects a mutated pnpm implementation bundle with the pinned entry unchanged", () => {
+    const tools = resolveV138HistoricalToolchainV4()
+    const fixture = mkdtempSync(path.join(tmpdir(), "v138-pnpm-dist-mutation-"))
+    roots.push(fixture)
+    const copiedPackage = path.join(fixture, "pnpm")
+    const fakeBin = path.join(fixture, "bin")
+    cpSync(tools.pnpmPackageRoot, copiedPackage, { recursive: true })
+    mkdirSync(fakeBin)
+    symlinkSync(tools.node, path.join(fakeBin, "node"))
+    symlinkSync(tools.corepack, path.join(fakeBin, "corepack"))
+    symlinkSync(path.join(copiedPackage, "bin/pnpm.mjs"), path.join(fakeBin, "pnpm"))
+    writeFileSync(
+      path.join(copiedPackage, "dist/pnpm.mjs"),
+      `${readFileSync(path.join(copiedPackage, "dist/pnpm.mjs"), "utf8")}\n// mutation\n`,
+    )
+    expect(() => resolveV138HistoricalToolchainV4(fakeBin)).toThrow(
+      "V138_HISTORICAL_PNPM_EXECUTION_CLOSURE_MISMATCH",
+    )
+  })
+
+  it("does not launch historical child derivations through ambient tsx", () => {
+    const source = readFileSync(
+      "scripts/run-v1-38-phase-262-historical-correction-checkouts-v4.ts",
+      "utf8",
+    )
+    expect(source).not.toContain('["--import", "tsx"')
+    expect(source).toContain("same-process-reviewed-runner-no-ambient-tsx-child-v5")
   })
 
   it("rejects a mutated Vitest dist entry before execution and ignores hostile global hooks/config", () => {

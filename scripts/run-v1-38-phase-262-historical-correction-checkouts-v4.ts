@@ -31,6 +31,9 @@ const EXPECTED = Object.freeze({
   nodeSha256: "sha256:2a249a6a7015b0555c3448a77d226c1f3c8f62bd133d89044a2e1518cd16c4b3" as Sha,
   nodeCdHash: "6290ace7a5e6f41ee3a5d14767658e06e3095699bb9f02c520e6c769a5130491",
   pnpmSha256: "sha256:ff3224d46b47fbb24a7e9fe15fededef7e00892d07d4e376b6762d4899906bfd" as Sha,
+  pnpmDistSha256: "sha256:2eeeccff036b087a8794a5f0d68b359be183b0cf5ea0e0cea60803a1ef659f55" as Sha,
+  pnpmClosureRoot: "sha256:2e95e5f54d085039ae1c859e8b5ed11ec4daffd42466cb329fd7c91fb46d4d02" as Sha,
+  pnpmClosureFiles: 448,
   corepackSha256: "sha256:3655bc798f300951f2070fee411b337d626b0c3ae80c2d24c46ccac4595d4bf9" as Sha,
   runnerSha256: "sha256:39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6" as Sha,
   lockfileSha256: "sha256:55cfd0166e4954863a84a77d50968269c14a22a2a788278ad5dead963fff0df3" as Sha,
@@ -111,11 +114,43 @@ const assertCodeSignature = (file: string, cdHash: string, label: string): void 
   })
 }
 
+const executablePackageClosureManifest = (packageRoot: string) => {
+  const records: string[] = []
+  const walk = (absolute: string, relative: string): void => {
+    const status = lstatSync(absolute)
+    if (status.isSymbolicLink()) {
+      records.push(`l\0${relative}\0${readlinkSync(absolute)}`)
+      return
+    }
+    if (status.isDirectory()) {
+      for (const child of readdirSync(absolute).sort())
+        walk(path.join(absolute, child), relative === "." ? child : path.posix.join(relative, child))
+      return
+    }
+    if (!status.isFile()) fail("V138_HISTORICAL_TOOLCHAIN_FILE_TYPE_INVALID")
+    records.push(`f\0${relative}\0${status.mode & 0o111}\0${sha(readFileSync(absolute))}`)
+  }
+  walk(packageRoot, ".")
+  records.sort()
+  return Object.freeze({ files: records.length, root: sha(records.join("\n")) })
+}
+
+const assertPnpmClosure = (pnpmPackageRoot: string): void => {
+  const closure = executablePackageClosureManifest(pnpmPackageRoot)
+  if (
+    closure.root !== EXPECTED.pnpmClosureRoot ||
+    closure.files !== EXPECTED.pnpmClosureFiles ||
+    sha(readFileSync(path.join(pnpmPackageRoot, "dist/pnpm.mjs"))) !== EXPECTED.pnpmDistSha256
+  )
+    fail("V138_HISTORICAL_PNPM_EXECUTION_CLOSURE_MISMATCH")
+}
+
 export const resolveV138HistoricalToolchainV4 = (
   environmentPath = process.env.PATH ?? "",
 ) => {
   const pnpmShim = executableOnPath("pnpm", environmentPath)
   const pnpm = realpathSync(pnpmShim)
+  const pnpmPackageRoot = realpathSync(path.resolve(path.dirname(pnpm), ".."))
   const toolBin = path.dirname(pnpmShim)
   const node = realpathSync(path.join(toolBin, "node"))
   const corepack = realpathSync(path.join(toolBin, "corepack"))
@@ -127,12 +162,14 @@ export const resolveV138HistoricalToolchainV4 = (
     fail("V138_HISTORICAL_PNPM_IDENTITY_MISMATCH")
   if (sha(readFileSync(corepack)) !== EXPECTED.corepackSha256)
     fail("V138_HISTORICAL_COREPACK_IDENTITY_MISMATCH")
+  assertPnpmClosure(pnpmPackageRoot)
   assertCodeSignature(GIT, EXPECTED.gitCdHash, "GIT")
   assertCodeSignature(node, EXPECTED.nodeCdHash, "NODE")
   const pnpmVersion = execFileSync(node, [pnpm, "--version"], {
     encoding: "utf8",
     env: cleanEnvironment(toolBin, tmpdir()),
   }).trim()
+  assertPnpmClosure(pnpmPackageRoot)
   const pnpmStore = realpathSync(
     execFileSync(node, [pnpm, "store", "path"], {
       encoding: "utf8",
@@ -144,6 +181,7 @@ export const resolveV138HistoricalToolchainV4 = (
       },
     }).trim(),
   )
+  assertPnpmClosure(pnpmPackageRoot)
   if (`pnpm@${pnpmVersion}` !== EXPECTED.packageManager)
     fail("V138_HISTORICAL_PACKAGE_MANAGER_VERSION_MISMATCH")
   return Object.freeze({
@@ -155,6 +193,10 @@ export const resolveV138HistoricalToolchainV4 = (
     nodeCdHash: EXPECTED.nodeCdHash,
     pnpm,
     pnpmSha256: EXPECTED.pnpmSha256,
+    pnpmDistSha256: EXPECTED.pnpmDistSha256,
+    pnpmPackageRoot,
+    pnpmClosureRoot: EXPECTED.pnpmClosureRoot,
+    pnpmClosureFiles: EXPECTED.pnpmClosureFiles,
     corepack,
     corepackSha256: EXPECTED.corepackSha256,
     pnpmVersion,
@@ -285,26 +327,11 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
 ) => {
   const tools = resolveV138HistoricalToolchainV4()
   if (options.onlyGeneration === undefined && !options.mutateInstalledRunner) {
-    const script = fileURLToPath(import.meta.url)
     return Object.freeze(
       cases.flatMap(({ generation }) =>
-        JSON.parse(
-          execFileSync(
-            tools.node,
-            ["--import", "tsx", script, "--derive-case", generation],
-            {
-              cwd: root,
-              encoding: "utf8",
-              env: {
-                PATH: `/usr/bin:/bin:${tools.toolBin}`,
-                LANG: "C",
-                LC_ALL: "C",
-                CI: "1",
-                COREPACK_ENABLE_PROJECT_SPEC: "0",
-              },
-            },
-          ),
-        ),
+        runV138Phase262HistoricalCorrectionCheckoutsV4({
+          onlyGeneration: generation,
+        }),
       ),
     )
   }
@@ -350,12 +377,15 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         !lockfile.includes(`resolution: {integrity: ${EXPECTED.vitestIntegrity}}`)
       )
         fail("V138_HISTORICAL_COMMITTED_DEPENDENCY_IDENTITY_MISMATCH")
-      for (const destination of [checkout, reference])
+      for (const destination of [checkout, reference]) {
+        assertPnpmClosure(tools.pnpmPackageRoot)
         execFileSync(
           tools.node,
           [tools.pnpm, "--store-dir", tools.pnpmStore, "install", "--frozen-lockfile", "--offline", "--ignore-scripts", "--verify-store-integrity=true"],
           { cwd: destination, env: environment, stdio: "pipe" },
         )
+        assertPnpmClosure(tools.pnpmPackageRoot)
+      }
       const runner = realpathSync(path.join(checkout, "node_modules/vitest/vitest.mjs"))
       const referenceClosure = installedClosureManifest(reference)
       if (options.mutateInstalledRunner)
@@ -408,6 +438,9 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         nodeCdHash: tools.nodeCdHash,
         pnpmPath: tools.pnpm,
         pnpmSha256: tools.pnpmSha256,
+        pnpmDistSha256: tools.pnpmDistSha256,
+        pnpmClosureRoot: tools.pnpmClosureRoot,
+        pnpmClosureFiles: tools.pnpmClosureFiles,
         corepackPath: tools.corepack,
         corepackSha256: tools.corepackSha256,
         lockfileSha256: EXPECTED.lockfileSha256,
@@ -418,16 +451,17 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         installedClosureFiles: closure.files,
         installedClosureSymlinks: closure.symlinks,
         installedClosurePackages: closure.packages,
-        entryLaunchBinding: "pre-post-entry-and-complete-installed-closure-v4",
+        entryLaunchBinding: "same-process-reviewed-runner-no-ambient-tsx-child-v5",
         executionAssurance: "single_operator_local_seal_v1_no_hostile_same_uid",
         gitIsolation: V138_HISTORICAL_GIT_ISOLATION_V4,
         dependencyRoot: sha([
           tree, testBlob, lockfileBlob, packageBlob, EXPECTED.packageManager,
           tools.gitSha256, tools.gitCdHash, tools.nodeSha256, tools.nodeCdHash,
-          tools.pnpmSha256, tools.corepackSha256, EXPECTED.lockfileSha256,
+          tools.pnpmSha256, tools.pnpmDistSha256, tools.pnpmClosureRoot,
+          String(tools.pnpmClosureFiles), tools.corepackSha256, EXPECTED.lockfileSha256,
           EXPECTED.vitestIntegrity, EXPECTED.runnerSha256, closure.root,
         ].join("\0")),
-        dependencyIsolation: "exact-signed-toolchain-lockfile-store-integrity-v4",
+        dependencyIsolation: "exact-pnpm-distribution-signed-toolchain-lockfile-store-integrity-v5",
         status: "passed",
       }))
     } finally {
