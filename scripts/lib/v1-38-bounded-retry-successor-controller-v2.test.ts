@@ -32,6 +32,7 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     expect(output.lifecycle).toBe("status: synthetic-complete\n")
     expect(output.overlapRaces).toBe(50)
     expect(output.disjointRaces).toBe(100)
+    expect(output.crashRecoveries).toBe(10)
   }, 30_000)
 
   it.each(["--source-check", "--synthetic-check"])("allows the non-live %s CLI mode", (mode) => {

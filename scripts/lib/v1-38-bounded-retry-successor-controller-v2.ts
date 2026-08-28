@@ -146,6 +146,43 @@ const disjointRaceEvidence = async (root: string, iterations: number): Promise<n
   return iterations
 }
 
+const crashRecoveryEvidence = async (root: string): Promise<number> => {
+  let recovered = 0
+  for (let boundary = 1; boundary <= 5; boundary++) {
+    const pair: V138DurablePairV2Input = {
+      transactionId: `crash-pair-${boundary}`, intentPath: `crash-pair-${boundary}.intent`,
+      members: [{ target: `left/crash-pair-${boundary}.json`, bytes: `pair-left-${boundary}\n` }, { target: `right/crash-pair-${boundary}.json`, bytes: `pair-right-${boundary}\n` }],
+    }
+    const locks = pair.members.map(({ target }) => target)
+    const interrupted = await invokeNative(root, pairInput(root, pair, boundary), locks)
+    if (interrupted.code === 0) fail("V138_SUCCESSOR_PAIR_CRASH_NOT_INJECTED")
+    await requireComplete(invokeNative(root, pairInput(root, pair), locks))
+    for (const member of pair.members) if (readFileSync(path.join(root, member.target), "utf8") !== member.bytes) fail("V138_SUCCESSOR_PAIR_RECOVERY_FAILED")
+    recovered++
+  }
+  for (let boundary = 1; boundary <= 5; boundary++) {
+    const beforeA = `crash-a-${boundary}:before\n`, beforeB = `crash-b-${boundary}:before\n`
+    writeFileSync(path.join(root, `planning/crash-a-${boundary}.md`), beforeA)
+    writeFileSync(path.join(root, `planning/crash-b-${boundary}.md`), beforeB)
+    const lifecycle: V138LifecycleTransactionV2 = {
+      transactionId: `crash-life-${boundary}`, intentPath: `crash-life-${boundary}.intent`,
+      steps: [
+        { id: "a", target: `planning/crash-a-${boundary}.md`, beforeSha256: sha256V138Secure(beforeA), afterBytes: `crash-a-${boundary}:after\n` },
+        { id: "b", target: `planning/crash-b-${boundary}.md`, beforeSha256: sha256V138Secure(beforeB), afterBytes: `crash-b-${boundary}:after\n` },
+      ],
+      lifecycle: { target: `crash-life-${boundary}.json`, bytes: `{"boundary":${boundary},"authority":false}\n` },
+    }
+    const locks = [...lifecycle.steps.map(({ target }) => target), lifecycle.lifecycle.target]
+    const interrupted = await invokeNative(root, lifecycleInput(root, lifecycle, boundary), locks)
+    if (interrupted.code === 0) fail("V138_SUCCESSOR_LIFECYCLE_CRASH_NOT_INJECTED")
+    await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle), locks))
+    for (const step of lifecycle.steps) if (readFileSync(path.join(root, step.target), "utf8") !== step.afterBytes) fail("V138_SUCCESSOR_LIFECYCLE_RECOVERY_FAILED")
+    if (readFileSync(path.join(root, lifecycle.lifecycle.target), "utf8") !== lifecycle.lifecycle.bytes) fail("V138_SUCCESSOR_LIFECYCLE_STATUS_RECOVERY_FAILED")
+    recovered++
+  }
+  return recovered
+}
+
 const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string, unknown>>> => {
   const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v2-"))
   try {
@@ -176,6 +213,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
 
     const overlapRaces = await overlapRaceEvidence(root, 50)
     const disjointRaces = await disjointRaceEvidence(root, 100)
+    const crashRecoveries = await crashRecoveryEvidence(root)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS,
       acceptedCells: 0,
@@ -184,6 +222,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       lifecycle: readFileSync(path.join(root, "planning/status.md"), "utf8"),
       overlapRaces,
       disjointRaces,
+      crashRecoveries,
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
   } finally { rmSync(root, { recursive: true, force: true }) }
