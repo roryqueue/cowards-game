@@ -50,9 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 83/87 plans executed
+**Plans:** 83/91 plans executed
 
-**Current verdict:** PLAN-93 PRE-START INTEGRITY STOP / ENVELOPE UNCONSUMED / FRESH 0/540 / DOWNSTREAM DENIED — 83 of 87 active plans have summaries. The sole Plan-93 command chain was invoked exactly once: the v7 committed-pair checker authenticated B3 `8080ff66`, seal-v13, and retry-envelope:v3, then the live controller failed closed with `V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID` before the live effect boundary because its reviewed-closure gate still consumes the immutable blocked Plan-101 v5 review rather than the later Plan-103 trio. No route, observation, calibration, reproduction, journal, private receipt, terminal, or authority artifact was created. The envelope remains byte-identical and `sealed_inactive` at zero consumption. Plan 262-93 is incomplete; Plans 262-94, 262-95, and 262-106 remain dependency-denied pending separately planned corrective work and a new explicit execution decision. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 plus all downstream authority remain denied.
+**Current verdict:** PLAN-93 IMMUTABLE PRE-START INTEGRITY STOP / MINIMAL RECOVERY PLANNED / ENVELOPE UNCONSUMED / FRESH 0/540 / DOWNSTREAM DENIED — 83 of 91 active plans have summaries. Plan 93 remains incomplete historical evidence: its sole command chain stopped before the live effect boundary, created no route/observation/charge/live artifact, and left B3 `8080ff66`, seal-v13, and retry-envelope:v3 byte-identical and `sealed_inactive` at zero consumption. Standing explicit operator authority now covers the separately planned reviewed successor owner without changing or retrying Plan 93. The sequential recovery is Plans 107–110, revised Plans 94–95, then Plan 106 at Waves 93–99. It adds one executable-custody supplement only; no third envelope, new capacity, or counter reset is authorized. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 plus all downstream authority remain denied until the exact later evidence gates pass.
+
+<!-- phase-262-live-custody-recovery-topology-v1: {"schema_version":"v1.38-plan-262-live-custody-recovery-topology-v1","active_plans":91,"trustworthy_summaries":83,"immutable_prestart_stop":"262-93","active_chain":["262-107","262-108","262-109","262-110","262-94","262-95","262-106"],"waves":{"262-107":93,"262-108":94,"262-109":95,"262-110":96,"262-94":97,"262-95":98,"262-106":99},"execution_authority":"standing_explicit_operator_authorization","supplement_count":1,"creates_third_envelope":false,"creates_capacity":false,"resets_counters":false,"seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-107-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 
 <!-- phase-262-plan-93-prestart-stop-status: {"schema_version":"v1.38-plan-262-93-prestart-stop-v1","proof_status":"pre_start_integrity_stop","attempts":1,"pair_commit_b3":"8080ff66a0880db25db227d23e7e7a0884a79b56","seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","stop_code":"V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID","live_effect_boundary_crossed":false,"route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_accepted":0,"required_accepted":540,"journal_present":false,"terminal_present":false,"reproduction_v17_present":false,"plan_262_93_complete":false,"successors_authorized":false,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"plan-additive-live-controller-custody-correction-before-any-new-execution-decision","downstream_authority_denied":true} -->
 
@@ -193,17 +195,33 @@ Plans:
 
 - [ ] 262-93-PLAN.md — Consume the sole finite retry-envelope:v3 and publish crash-safe live terminal evidence.
 
-**Wave 90** *(blocked on committed Plan-93 summary)*
+**Wave 93** *(recovery entry from committed Plan-92 pair; authenticates immutable Plan-93 stop without treating it as a completed dependency)*
 
-- [ ] 262-94-PLAN.md — Independently adjudicate v3 and own the exact-pass-only reproduction-v17/Route-11 boundary.
+- [ ] 262-107-PLAN.md — Add and test the closed live-v8 adapter without canonical artifacts or effects.
 
-**Wave 91** *(blocked on committed Plan-94 summary)*
+**Wave 94** *(blocked on committed Plan-107 summary)*
+
+- [ ] 262-108-PLAN.md — Independently review exact executable bytes with a non-recursive payload/REVIEW/carrier and disposable no-effect modes.
+
+**Wave 95** *(blocked on committed literal-zero Plan-108 review)*
+
+- [ ] 262-109-PLAN.md — Publish/check exactly one executable-custody supplement over the unchanged pair and zero counters.
+
+**Wave 96** *(blocked on committed Plan-109 supplement; covered by standing explicit execution authority)*
+
+- [ ] 262-110-PLAN.md — Own the sole reviewed live invocation and the existing v3 journal/private/terminal destinations.
+
+**Wave 97** *(blocked on committed Plan-110 terminal summary)*
+
+- [ ] 262-94-PLAN.md — Independently adjudicate the successor custody chain and own the exact-pass-only reproduction-v17/Route-11 boundary.
+
+**Wave 98** *(blocked on committed revised Plan-94 summary)*
 
 - [ ] 262-95-PLAN.md — Refresh validation/verification, publish readiness-v3, and commit the Stage-1 summary latch without lifecycle mutation.
 
-**Wave 92** *(blocked on committed Plan-95 summary and readiness)*
+**Wave 99** *(blocked on committed revised Plan-95 summary and readiness)*
 
-- [x] 262-106-PLAN.md — Authenticate the committed Stage-1 latch, apply/check the exact pass-versus-gaps lifecycle projection, and commit branch-honest closeout.
+- [ ] 262-106-PLAN.md — Authenticate the committed Stage-1 latch, apply/check the exact pass-versus-gaps lifecycle projection, and commit branch-honest closeout.
 
 **Wave 1**
 
