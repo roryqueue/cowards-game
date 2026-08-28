@@ -314,7 +314,7 @@ describe("CR-05 trusted-root no-follow paths", () => {
       .toEqual(readV138WorkspaceBatch(root, ["safe/file"]).bytes["safe/file"])
   })
 
-  it("retains one root inode across a root-path replacement and checks absence there", () => {
+  it("retains one root inode across a root-path replacement for read, absence, and authentication", () => {
     const root = fixture(),
       moved = `${root}-authenticated`,
       replacement = `${root}-replacement`
@@ -332,6 +332,19 @@ describe("CR-05 trusted-root no-follow paths", () => {
         )
         expect(session.read("safe/file").toString()).toBe("bytes\n")
         expect(session.assertAbsent("safe/absent")).toBe(true)
+        expect(
+          session.authenticate([
+            { path: "safe/file", sha256: sha256V138Secure("bytes\n") },
+          ]),
+        ).toBe(true)
+        expect(() =>
+          session.authenticate([
+            {
+              path: "safe/file",
+              sha256: sha256V138Secure("replacement\n"),
+            },
+          ]),
+        ).toThrow("V138_SECURE_MANIFEST_MISMATCH")
         expect(session.identity).toEqual(identity)
         renameSync(root, replacement)
         renameSync(moved, root)

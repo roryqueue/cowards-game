@@ -207,6 +207,69 @@ export type V138SecureWorkspaceBatch = Readonly<{
   bytes: Readonly<Record<string, Buffer>>
 }>
 
+const readV138WorkspaceBatchFromDescriptor = (
+  descriptor: number,
+  expectedIdentity: Readonly<{ device: string; inode: string }>,
+  reads: readonly string[],
+  absent: readonly string[] = [],
+  testBarrier?: string,
+): V138SecureWorkspaceBatch => {
+  const status = fstatSync(descriptor)
+  if (
+    !status.isDirectory() ||
+    String(status.dev) !== expectedIdentity.device ||
+    String(status.ino) !== expectedIdentity.inode
+  )
+    fail("V138_SECURE_ROOT_IDENTITY_CHANGED")
+  const normalizedReads = [...new Set(reads.map(normalizeV138Relative))].sort()
+  const normalizedAbsent = [...new Set(absent.map(normalizeV138Relative))].sort()
+  if (normalizedReads.some((item) => normalizedAbsent.includes(item)))
+    fail("V138_SECURE_BATCH_CONFLICT")
+  const input = [
+    ...normalizedReads.map((item) => `R\t${item}\n`),
+    ...normalizedAbsent.map((item) => `A\t${item}\n`),
+  ].join("")
+  // spawnSync duplicates this retained descriptor into child fd 3. No pathname
+  // is reopened between session creation and the one-batch read.
+  const result = runOneShotReader(descriptor, input, testBarrier)
+  if (result.status !== 0) {
+    const detail = result.stderr.trim()
+    if (detail.includes("V138_READER_PARENT_INVALID") || detail.includes("V138_READER_FILE_INVALID"))
+      fail("V138_SECURE_SYMLINK_FORBIDDEN")
+    if (detail.includes("V138_READER_EXPECTED_ABSENT")) fail("V138_SECURE_EXPECTED_ABSENT")
+    fail(`V138_SECURE_DESCRIPTOR_BATCH_FAILED:${detail}`)
+  }
+  const ancestors: Record<string, Readonly<{ device: string; inode: string }>> = {}
+  const bytes: Record<string, Buffer> = {}
+  let identity: Readonly<{ device: string; inode: string }> | undefined
+  const lines = result.stdout.trimEnd().split("\n")
+  if (lines.shift() !== "H\tone-shot-v6")
+    fail("V138_SECURE_READER_HANDSHAKE_INVALID")
+  for (const line of lines) {
+    const [kind, encoded, device, inode] = line.split("\t")
+    if (kind === "I") identity = Object.freeze({ device: encoded!, inode: device! })
+    else if (kind === "D") ancestors[Buffer.from(encoded!, "hex").toString()] = Object.freeze({ device: device!, inode: inode! })
+    else if (kind === "R") bytes[Buffer.from(encoded!, "hex").toString()] = Buffer.from(device!, "hex")
+    else if (kind !== "A") fail("V138_SECURE_BATCH_OUTPUT_INVALID")
+  }
+  if (
+    identity === undefined ||
+    identity.device !== expectedIdentity.device ||
+    identity.inode !== expectedIdentity.inode ||
+    normalizedReads.some((item) => bytes[item] === undefined)
+  )
+    fail("V138_SECURE_BATCH_OUTPUT_INCOMPLETE")
+  return Object.freeze({
+    protocol: V138_SECURE_BATCH_PROTOCOL_V6,
+    barrierControl: "external-private-bootstrap-directory" as const,
+    snapshotGuarantee:
+      "required_leaf_exact_generation_and_parent_generation_bound" as const,
+    identity,
+    ancestorIdentities: Object.freeze(ancestors),
+    bytes: Object.freeze(bytes),
+  })
+}
+
 export const readV138WorkspaceBatch = (
   rootInput: string,
   reads: readonly string[],
@@ -218,46 +281,13 @@ export const readV138WorkspaceBatch = (
   try {
     const status = fstatSync(descriptor)
     if (!status.isDirectory()) fail("V138_SECURE_ROOT_INVALID")
-    const normalizedReads = [...new Set(reads.map(normalizeV138Relative))].sort()
-    const normalizedAbsent = [...new Set(absent.map(normalizeV138Relative))].sort()
-    if (normalizedReads.some((item) => normalizedAbsent.includes(item)))
-      fail("V138_SECURE_BATCH_CONFLICT")
-    const input = [
-      ...normalizedReads.map((item) => `R\t${item}\n`),
-      ...normalizedAbsent.map((item) => `A\t${item}\n`),
-    ].join("")
-    const result = runOneShotReader(descriptor, input, testBarrier)
-    if (result.status !== 0) {
-      const detail = result.stderr.trim()
-      if (detail.includes("V138_READER_PARENT_INVALID") || detail.includes("V138_READER_FILE_INVALID"))
-        fail("V138_SECURE_SYMLINK_FORBIDDEN")
-      if (detail.includes("V138_READER_EXPECTED_ABSENT")) fail("V138_SECURE_EXPECTED_ABSENT")
-      fail(`V138_SECURE_DESCRIPTOR_BATCH_FAILED:${detail}`)
-    }
-    const ancestors: Record<string, Readonly<{ device: string; inode: string }>> = {}
-    const bytes: Record<string, Buffer> = {}
-    let identity: Readonly<{ device: string; inode: string }> | undefined
-    const lines = result.stdout.trimEnd().split("\n")
-    if (lines.shift() !== "H\tone-shot-v6")
-      fail("V138_SECURE_READER_HANDSHAKE_INVALID")
-    for (const line of lines) {
-      const [kind, encoded, device, inode] = line.split("\t")
-      if (kind === "I") identity = Object.freeze({ device: encoded!, inode: device! })
-      else if (kind === "D") ancestors[Buffer.from(encoded!, "hex").toString()] = Object.freeze({ device: device!, inode: inode! })
-      else if (kind === "R") bytes[Buffer.from(encoded!, "hex").toString()] = Buffer.from(device!, "hex")
-      else if (kind !== "A") fail("V138_SECURE_BATCH_OUTPUT_INVALID")
-    }
-    if (identity === undefined || normalizedReads.some((item) => bytes[item] === undefined))
-      fail("V138_SECURE_BATCH_OUTPUT_INCOMPLETE")
-    return Object.freeze({
-      protocol: V138_SECURE_BATCH_PROTOCOL_V6,
-      barrierControl: "external-private-bootstrap-directory" as const,
-      snapshotGuarantee:
-        "required_leaf_exact_generation_and_parent_generation_bound" as const,
-      identity,
-      ancestorIdentities: Object.freeze(ancestors),
-      bytes: Object.freeze(bytes),
-    })
+    return readV138WorkspaceBatchFromDescriptor(
+      descriptor,
+      Object.freeze({ device: String(status.dev), inode: String(status.ino) }),
+      reads,
+      absent,
+      testBarrier,
+    )
   } finally {
     closeSync(descriptor)
   }
@@ -279,6 +309,10 @@ export const withV138SecureWorkspaceSession = <T>(
     closeSync(descriptor)
     fail("V138_SECURE_ROOT_INVALID")
   }
+  const identity = Object.freeze({
+    device: String(status.dev),
+    inode: String(status.ino),
+  })
   const invoke = (kind: "read" | "absent", relative: string): Buffer => {
     const normalized = normalizeV138Relative(relative)
     const result = runOneShotReader(
@@ -305,10 +339,7 @@ export const withV138SecureWorkspaceSession = <T>(
     return Buffer.from(line.split("\t")[2]!, "hex")
   }
   const session: V138SecureWorkspaceSession = Object.freeze({
-    identity: Object.freeze({
-      device: String(status.dev),
-      inode: String(status.ino),
-    }),
+    identity,
     ancestorIdentities: Object.freeze({}),
     read: (relative) => invoke("read", relative),
     assertAbsent: (relative) => {
@@ -316,8 +347,9 @@ export const withV138SecureWorkspaceSession = <T>(
       return true
     },
     authenticate: (entries) => {
-      const snapshot = readV138WorkspaceBatch(
-        trusted,
+      const snapshot = readV138WorkspaceBatchFromDescriptor(
+        descriptor,
+        identity,
         entries.map(({ path: entryPath }) => entryPath),
       )
       for (const entry of entries)
