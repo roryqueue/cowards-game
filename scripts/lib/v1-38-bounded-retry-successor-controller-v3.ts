@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 import { spawn, spawnSync } from "node:child_process"
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, closeSync, constants, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -9,16 +9,16 @@ import { appendV138RetryV2JournalRecord, createV138InactiveRetryV2Envelope, type
 import { deriveV138PairIntentV2, type V138DurablePairV2Input } from "./v1-38-durable-pair-successor-v2.js"
 import { deriveV138LifecycleIntentV2, type V138LifecycleTransactionV2 } from "./v1-38-restartable-lifecycle-successor-v2.js"
 import { completeV138EffectV2, recoverV138EffectDecisionV2, type V138EffectRecordV2 } from "./v1-38-successor-effect-state-machine-v2.js"
-import { sha256V138Secure, trustedRootV138 } from "./v1-38-secure-workspace-path-v2.js"
+import { sha256V138Secure, trustedRootV138 } from "./v1-38-secure-workspace-path-v3.js"
 
 const fail = (code: string): never => { throw new TypeError(code) }
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url))
-const nativeSource = path.resolve(sourceDirectory, "../native/v1-38-successor-transaction-helper-v2.c")
+const nativeSource = path.resolve(sourceDirectory, "../native/v1-38-successor-transaction-helper-v3.c")
 
-export const V138_SUCCESSOR_CONTROLLER_V2_CLI = fileURLToPath(import.meta.url)
-export const V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS = Object.freeze([
+export const V138_SUCCESSOR_CONTROLLER_V3_CLI = fileURLToPath(import.meta.url)
+export const V138_SUCCESSOR_CONTROLLER_V3_OPERATIONS = Object.freeze([
   "recover_admitted_observation",
   "complete_semantic_effect",
   "recover_semantic_decision",
@@ -26,21 +26,48 @@ export const V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS = Object.freeze([
   "apply_lifecycle_transaction",
 ] as const)
 
-type NativeResult = Readonly<{ code: number | null; stderr: string }>
-const nativeExecutable = (): string => {
-  const sourceBytes = readFileSync(nativeSource)
-  const identity = createHash("sha256").update(sourceBytes).digest("hex")
-  const executable = path.join(tmpdir(), `cowards-v138-successor-native-${identity}`)
-  if (!existsSync(executable)) {
-    const output = `${executable}.${process.pid}.tmp`
-    const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", nativeSource, "-o", output], { encoding: "utf8" })
-    if (compilation.status !== 0) fail(`V138_SUCCESSOR_NATIVE_COMPILE_FAILED:${compilation.stderr}`)
-    spawnSync("/bin/chmod", ["0700", output])
-    const install = spawnSync("/bin/mv", ["-n", output, executable], { encoding: "utf8" })
-    if (install.status !== 0 && !existsSync(executable)) fail("V138_SUCCESSOR_NATIVE_INSTALL_FAILED")
-    if (existsSync(output)) rmSync(output, { force: true })
+type NativeResult = Readonly<{ code: number | null; stderr: string; privateExecutable: string }>
+const sha256Hex = (bytes: string | Buffer): string => createHash("sha256").update(bytes).digest("hex")
+
+/**
+ * A helper exists only for one native child.  Its random controller token is
+ * compiled into those exact bytes, while the matching capability is inherited
+ * on fd 3 and the already-open trusted root on fd 4.  Nothing reusable is
+ * installed in a predictable cache.
+ */
+const compileOneShotNative = (input: string, normalizedLocks: readonly string[], root: string) => {
+  const directory = mkdtempSync(path.join(tmpdir(), "cowards-v138-successor-native-"))
+  chmodSync(directory, 0o700)
+  const executable = path.join(directory, "one-shot-helper")
+  const capabilityPath = path.join(directory, "controller.capability")
+  const token = randomBytes(32).toString("hex")
+  const nonce = randomBytes(32).toString("hex")
+  const sourceBefore = readFileSync(nativeSource)
+  const compilerBefore = readFileSync("/usr/bin/clang")
+  const compilation = spawnSync("/usr/bin/clang", [
+    "-std=c11", "-Wall", "-Wextra", "-Werror",
+    `-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`, nativeSource, "-o", executable,
+  ], { encoding: "utf8" })
+  if (compilation.status !== 0) { rmSync(directory, { recursive: true, force: true }); fail(`V138_SUCCESSOR_NATIVE_COMPILE_FAILED:${compilation.stderr}`) }
+  if (sha256Hex(readFileSync(nativeSource)) !== sha256Hex(sourceBefore) || sha256Hex(readFileSync("/usr/bin/clang")) !== sha256Hex(compilerBefore)) {
+    rmSync(directory, { recursive: true, force: true }); fail("V138_SUCCESSOR_NATIVE_TOOLCHAIN_CHANGED")
   }
-  return executable
+  chmodSync(executable, 0o700)
+  const executableBefore = readFileSync(executable)
+  const executableStatus = statSync(executable)
+  if (!executableStatus.isFile() || executableStatus.uid !== process.getuid?.() || (executableStatus.mode & 0o777) !== 0o700) {
+    rmSync(directory, { recursive: true, force: true }); fail("V138_SUCCESSOR_NATIVE_OUTPUT_UNTRUSTED")
+  }
+  const rootStatus = lstatSync(root)
+  const capability = [
+    "V138CAP2", token, nonce, sha256Hex(input), sha256Hex(normalizedLocks.map((item) => `${item}\n`).join("")),
+    String(rootStatus.dev), String(rootStatus.ino), sha256Hex(sourceBefore), sha256Hex(compilerBefore), sha256Hex(executableBefore),
+  ].join("\t") + "\n"
+  writeFileSync(capabilityPath, capability, { mode: 0o600, flag: "wx" })
+  const capabilityDescriptor = openSync(capabilityPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
+  const rootDescriptor = openSync(root, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0))
+  if (sha256Hex(readFileSync(executable)) !== sha256Hex(executableBefore)) fail("V138_SUCCESSOR_NATIVE_OUTPUT_CHANGED")
+  return Object.freeze({ directory, executable, capabilityDescriptor, rootDescriptor, nonce })
 }
 
 const hex = (value: string): string => Buffer.from(value).toString("hex")
@@ -61,17 +88,25 @@ const invokeNative = (rootInput: string, input: string, targetLocks: readonly st
   const normalizedLocks = [...new Set(targetLocks)].sort()
   if (normalizedLocks.length === 0) fail("V138_SUCCESSOR_LOCK_SET_EMPTY")
   const lockPaths = normalizedLocks.map((target) => path.join(identity.path, `.v138-successor-${sha256V138Secure(target).slice(7)}.lock`))
+  const oneShot = compileOneShotNative(input, normalizedLocks, identity.path)
   const command: string[] = []
   for (const lockPath of lockPaths) command.push("/usr/bin/lockf", "-t", "0", lockPath)
-  command.push(nativeExecutable(), identity.path, identity.device, identity.inode)
+  command.push(oneShot.executable)
   const child = spawn(
     command.shift()!, command,
-    { cwd: identity.path, stdio: ["pipe", "ignore", "pipe"], env: barrierTag === undefined ? process.env : { ...process.env, V138_NATIVE_TEST_BARRIER: barrierTag } },
+    { cwd: identity.path, stdio: ["pipe", "ignore", "pipe", oneShot.capabilityDescriptor, oneShot.rootDescriptor, "pipe"], env: barrierTag === undefined ? process.env : { ...process.env, V138_NATIVE_TEST_BARRIER: barrierTag } },
   )
+  closeSync(oneShot.capabilityDescriptor)
+  closeSync(oneShot.rootDescriptor)
+  let removed = false
+  const removePrivateHelper = () => {
+    if (!removed) { removed = true; rmSync(oneShot.directory, { recursive: true, force: true }) }
+  }
+  child.stdio[5]?.once("data", removePrivateHelper)
   child.stdin.end(input)
   let stderr = ""
   child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk })
-  return new Promise((resolve) => child.once("exit", (code) => resolve(Object.freeze({ code, stderr }))))
+  return new Promise((resolve) => child.once("exit", (code) => { removePrivateHelper(); resolve(Object.freeze({ code, stderr, privateExecutable: oneShot.executable })) }))
 }
 
 const waitFor = async (predicate: () => boolean): Promise<void> => {
@@ -186,9 +221,52 @@ const crashRecoveryEvidence = async (root: string): Promise<number> => {
     await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle), locks))
     for (const step of lifecycle.steps) if (readFileSync(path.join(root, step.target), "utf8") !== step.afterBytes) fail("V138_SUCCESSOR_LIFECYCLE_RECOVERY_FAILED")
     if (readFileSync(path.join(root, lifecycle.lifecycle.target), "utf8") !== lifecycle.lifecycle.bytes) fail("V138_SUCCESSOR_LIFECYCLE_STATUS_RECOVERY_FAILED")
+    if (existsSync(path.join(root, lifecycle.intentPath))) fail("V138_SUCCESSOR_LIFECYCLE_INTENT_RETAINED")
+    if (readdirSync(path.join(root, ".v138-lifecycle-staging")).some((entry) => entry.startsWith(deriveV138LifecycleIntentV2(trustedIdentity(root), lifecycle).namespace))) fail("V138_SUCCESSOR_LIFECYCLE_STAGE_RETAINED")
     recovered++
   }
   return recovered
+}
+
+const writeWindowRecoveryEvidence = async (root: string): Promise<Readonly<{ recoveries: number; partialDeterministicFilesAccepted: 0; abandonedTemps: 0 }>> => {
+  let recovered = 0
+  for (const boundary of [100, 101]) {
+    const pair: V138DurablePairV2Input = {
+      transactionId: `write-window-${boundary}`, intentPath: `write-window-${boundary}.intent`,
+      members: [{ target: `left/write-window-${boundary}.json`, bytes: `left-${boundary}\n` }, { target: `right/write-window-${boundary}.json`, bytes: `right-${boundary}\n` }],
+    }
+    const locks = pair.members.map(({ target }) => target)
+    const interrupted = await invokeNative(root, pairInput(root, pair, boundary), locks)
+    if (interrupted.code === 0 || existsSync(path.join(root, pair.intentPath))) fail("V138_SUCCESSOR_PARTIAL_DETERMINISTIC_FILE_ACCEPTED")
+    await requireComplete(invokeNative(root, pairInput(root, pair), locks))
+    if (existsSync(path.join(root, pair.intentPath))) fail("V138_SUCCESSOR_WRITE_WINDOW_INTENT_RETAINED")
+    const derived = deriveV138PairIntentV2(trustedIdentity(root), pair)
+    const abandoned = readdirSync(root).filter((entry) => entry.startsWith(`.v138-u-${derived.namespace}-`))
+    if (abandoned.length !== 0) fail("V138_SUCCESSOR_ABANDONED_TEMP_RETAINED")
+    recovered++
+  }
+  return Object.freeze({ recoveries: recovered, partialDeterministicFilesAccepted: 0, abandonedTemps: 0 })
+}
+
+const directHelperBypassEvidence = async (root: string): Promise<number> => {
+  const pair: V138DurablePairV2Input = {
+    transactionId: "one-shot-location", intentPath: "one-shot-location.intent",
+    members: [{ target: "left/one-shot-location.json", bytes: "left\n" }, { target: "right/one-shot-location.json", bytes: "right\n" }],
+  }
+  const result = await invokeNative(root, pairInput(root, pair), pair.members.map(({ target }) => target))
+  if (result.code !== 0 || existsSync(result.privateExecutable)) fail("V138_SUCCESSOR_ONE_SHOT_REMOVAL_FAILED")
+  const before = pair.members.map(({ target }) => readFileSync(path.join(root, target), "utf8"))
+  const replay = spawnSync(result.privateExecutable, [root, "0", "0"], { encoding: "utf8", input: pairInput(root, pair) })
+  if (replay.status === 0 || pair.members.some(({ target }, index) => readFileSync(path.join(root, target), "utf8") !== before[index])) fail("V138_SUCCESSOR_DIRECT_HELPER_BYPASS")
+  const ordinaryDirectory = mkdtempSync(path.join(tmpdir(), "v138-ordinary-helper-"))
+  try {
+    const ordinary = path.join(ordinaryDirectory, "helper")
+    const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", nativeSource, "-o", ordinary], { encoding: "utf8" })
+    if (compilation.status !== 0) fail("V138_SUCCESSOR_ORDINARY_HELPER_COMPILE_FAILED")
+    const direct = spawnSync(ordinary, [root, "0", "0"], { encoding: "utf8", input: pairInput(root, pair) })
+    if (direct.status === 0 || pair.members.some(({ target }, index) => readFileSync(path.join(root, target), "utf8") !== before[index])) fail("V138_SUCCESSOR_ORDINARY_ARGV_CAPABILITY_ACCEPTED")
+  } finally { rmSync(ordinaryDirectory, { recursive: true, force: true }) }
+  return 2
 }
 
 const directoryReplacementEvidence = async (root: string): Promise<number> => {
@@ -238,7 +316,7 @@ const directoryReplacementEvidence = async (root: string): Promise<number> => {
 }
 
 const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string, unknown>>> => {
-  const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v2-"))
+  const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v3-"))
   try {
     for (const relative of ["artifacts", "reviews", "planning", "left", "right", "shared"]) mkdirSync(path.join(root, relative), { mode: 0o700 })
     const envelope = createV138InactiveRetryV2Envelope({ sourceRoot: SHA_A, reviewRoot: SHA_B, sealRoot: SHA_A, protectedHistoryRoot: SHA_B, protectedHistoricalIdentities: ["retry-envelope:v1"] })
@@ -264,13 +342,16 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       lifecycle: { target: "synthetic-lifecycle.json", bytes: '{"authority":false,"status":"synthetic_complete"}\n' },
     }
     await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle), [...lifecycle.steps.map(({ target }) => target), lifecycle.lifecycle.target]))
+    if (existsSync(path.join(root, lifecycle.intentPath)) || readdirSync(path.join(root, ".v138-lifecycle-staging")).length !== 0) fail("V138_SUCCESSOR_LIFECYCLE_CLEANUP_FAILED")
 
     const overlapRaces = await overlapRaceEvidence(root, 50)
     const disjointRaces = await disjointRaceEvidence(root, 100)
     const crashRecoveries = await crashRecoveryEvidence(root)
+    const writeWindowEvidence = await writeWindowRecoveryEvidence(root)
+    const directHelperBypassAttempts = await directHelperBypassEvidence(root)
     const directoryReplacementProtections = await directoryReplacementEvidence(root)
     return Object.freeze({
-      operations: V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS,
+      operations: V138_SUCCESSOR_CONTROLLER_V3_OPERATIONS,
       acceptedCells: 0,
       workspaceWrites: false,
       pairMembers: [readFileSync(path.join(root, "artifacts/synthetic-review.json"), "utf8"), readFileSync(path.join(root, "reviews/synthetic-review.md"), "utf8")],
@@ -278,13 +359,18 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       overlapRaces,
       disjointRaces,
       crashRecoveries,
+      writeWindowRecoveries: writeWindowEvidence.recoveries,
+      partialDeterministicFilesAccepted: writeWindowEvidence.partialDeterministicFilesAccepted,
+      abandonedUncommittedTemps: writeWindowEvidence.abandonedTemps,
+      directHelperBypassAttempts,
       directoryReplacementProtections,
+      lifecycleStagingResidue: readdirSync(path.join(root, ".v138-lifecycle-staging")),
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
   } finally { rmSync(root, { recursive: true, force: true }) }
 }
 
-export const checkV138SuccessorControllerV2Source = (sourcePath: string): true => {
+export const checkV138SuccessorControllerV3Source = (sourcePath: string): true => {
   const source = readFileSync(sourcePath, "utf8")
   for (const required of ["/usr/bin/lockf", '"-t", "0"', "invokeNative", "openat", "fstatat", "linkat", "unlinkat"]) {
     if (!(source + readFileSync(nativeSource, "utf8")).includes(required)) fail("V138_SUCCESSOR_CONTROLLER_ROUTE_INCOMPLETE")
@@ -299,12 +385,12 @@ export const checkV138SuccessorControllerV2Source = (sourcePath: string): true =
   return true
 }
 
-if (process.argv[1] === V138_SUCCESSOR_CONTROLLER_V2_CLI) {
+if (process.argv[1] === V138_SUCCESSOR_CONTROLLER_V3_CLI) {
   if (process.argv[2] === "--source-check") {
-    checkV138SuccessorControllerV2Source(V138_SUCCESSOR_CONTROLLER_V2_CLI)
+    checkV138SuccessorControllerV3Source(V138_SUCCESSOR_CONTROLLER_V3_CLI)
     process.stdout.write("successor_controller_source_only=true\n")
   } else if (process.argv[2] === "--synthetic-check") {
-    checkV138SuccessorControllerV2Source(V138_SUCCESSOR_CONTROLLER_V2_CLI)
+    checkV138SuccessorControllerV3Source(V138_SUCCESSOR_CONTROLLER_V3_CLI)
     const result = await runSyntheticSuccessorProtocolV2()
     process.stdout.write(`${JSON.stringify({ sourceOnly: true, liveSideEffects: false, ...result })}\n`)
   } else fail("V138_SUCCESSOR_CONTROLLER_SOURCE_ONLY")

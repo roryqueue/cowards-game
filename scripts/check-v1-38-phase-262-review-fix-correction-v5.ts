@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
-import { assertV138AbsentNoFollow, authenticateV138ManifestNoFollow, readV138RegularNoFollow, sha256V138Secure, trustedRootV138 } from "./lib/v1-38-secure-workspace-path-v2.js"
+import { assertV138AbsentNoFollow, authenticateV138ManifestNoFollow, readV138RegularNoFollow, sha256V138Secure, trustedRootV138 } from "./lib/v1-38-secure-workspace-path-v3.js"
 
 type Sha = `sha256:${string}`
 type Entry = Readonly<{ path: string; sha256: Sha }>
@@ -51,11 +51,11 @@ export const V138_PHASE_262_CORRECTION_V5_EVIDENCE = freeze({
     { path: "scripts/run-v1-38-bounded-retry-envelope-v2.test.ts", sha256: "sha256:bd88d0ae4a234922a41613f0c346f4772a421705b929caf1d5cad629ca00a222" },
   ] as readonly Entry[],
   remediation: [
-    { path: "scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts", sha256: "sha256:9734b541a89512aa15cde738795486825137c142f1e48ff79666c3cf616d463a" },
-    { path: "scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts", sha256: "sha256:299abc430ffa698e758f394683eabdb5c31b648b96b62155ea8ef5dd2b540ad6" },
-    { path: "scripts/native/v1-38-successor-transaction-helper-v2.c", sha256: "sha256:77723e9e45876c79dd471e210a1771958259bec0b459a23d6a06c93abe5f74e1" },
-    { path: "scripts/lib/v1-38-secure-workspace-path-v2.ts", sha256: "sha256:64c02fa2f7b1561b86d59c5b13b2e9cbddb9cd8f85361a9725c3655a64e4504f" },
-    { path: "scripts/lib/v1-38-secure-workspace-path-v2.test.ts", sha256: "sha256:22dac4f95d299b9ffa80463a745922ad3390d80fdea52c79d086add14327f09e" },
+    { path: "scripts/lib/v1-38-bounded-retry-successor-controller-v3.ts", sha256: "sha256:fa3092e6f6b62202228ea205849eddd46ca7018cdb6ecd32a445c2cb6c5af27d" },
+    { path: "scripts/lib/v1-38-bounded-retry-successor-controller-v3.test.ts", sha256: "sha256:5d0403811271734ce602555696d78f110e7a8ccd7135bd80a24b5df253386198" },
+    { path: "scripts/native/v1-38-successor-transaction-helper-v3.c", sha256: "sha256:77723e9e45876c79dd471e210a1771958259bec0b459a23d6a06c93abe5f74e1" },
+    { path: "scripts/lib/v1-38-secure-workspace-path-v3.ts", sha256: "sha256:64c02fa2f7b1561b86d59c5b13b2e9cbddb9cd8f85361a9725c3655a64e4504f" },
+    { path: "scripts/lib/v1-38-secure-workspace-path-v3.test.ts", sha256: "sha256:6bd9d3d4ed4035099871b6ff396457beb1614cc10fdcdfc476e8b1c2b3cb634a" },
     { path: "scripts/native/v1-38-secure-manifest-reader-v3.c", sha256: "sha256:69c352fac98695ae2e7ea36dd670e8c31f58a9753e577e7af49c3daa2d517706" },
   ] as readonly Entry[],
 })

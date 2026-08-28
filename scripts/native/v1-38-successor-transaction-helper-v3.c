@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,13 @@
 
 #define MAX_LINE 1048576
 #define MAX_PARTS 16
+
+#ifndef V138_CONTROLLER_TOKEN_HEX
+#define V138_CONTROLLER_TOKEN_HEX ""
+#endif
+
+static char capability_nonce[65];
+static char capability_lock_hash[65];
 
 __attribute__((noreturn)) static void die(const char *code) {
   fprintf(stderr, "%s\n", code);
@@ -31,6 +39,44 @@ static int safe_atom(const char *value) {
     if (*cursor == '\t' || *cursor == '\n' || *cursor == '\r') return 0;
   }
   return 1;
+}
+
+static int exact_hex(const char *value, size_t length) {
+  if (!value || strlen(value) != length) return 0;
+  for (size_t index = 0; index < length; index++) {
+    if (!((value[index] >= '0' && value[index] <= '9') || (value[index] >= 'a' && value[index] <= 'f'))) return 0;
+  }
+  return 1;
+}
+
+static void sha256_bytes(const unsigned char *bytes, size_t length, char output[65]) {
+  unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+  CC_SHA256(bytes, (CC_LONG)length, digest);
+  for (int index = 0; index < CC_SHA256_DIGEST_LENGTH; index++) sprintf(output + index * 2, "%02x", digest[index]);
+  output[64] = '\0';
+}
+
+static void require_lock_projection(char **targets, int count) {
+  for (int left = 0; left < count; left++) {
+    if (!safe_atom(targets[left])) die("V138_NATIVE_LOCK_TARGET_INVALID");
+    for (int right = left + 1; right < count; right++) {
+      if (strcmp(targets[left], targets[right]) > 0) { char *swap = targets[left]; targets[left] = targets[right]; targets[right] = swap; }
+    }
+  }
+  size_t length = 0;
+  for (int index = 0; index < count; index++) {
+    if (index > 0 && strcmp(targets[index - 1], targets[index]) == 0) die("V138_NATIVE_LOCK_TARGET_DUPLICATE");
+    length += strlen(targets[index]) + 1;
+  }
+  unsigned char *projection = malloc(length + 1);
+  if (!projection) die("V138_NATIVE_OOM");
+  size_t offset = 0;
+  for (int index = 0; index < count; index++) {
+    size_t target_length = strlen(targets[index]);
+    memcpy(projection + offset, targets[index], target_length); offset += target_length; projection[offset++] = '\n';
+  }
+  char digest[65]; sha256_bytes(projection, offset, digest); free(projection);
+  if (strcmp(digest, capability_lock_hash) != 0) die("V138_NATIVE_CAPABILITY_LOCK_MISMATCH");
 }
 
 static unsigned char nybble(char value) {
@@ -152,17 +198,52 @@ static int bytes_equal(RelativeFile file, const unsigned char *expected, size_t 
   return equal;
 }
 
-static void write_exclusive(RelativeFile file, const unsigned char *bytes, size_t length) {
-  int descriptor = openat(file.parent, file.name, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
-  if (descriptor < 0) die("V138_NATIVE_EXCLUSIVE_WRITE_FAILED");
+static void cleanup_uncommitted(int directory, const char *namespace, const char *label) {
+  char prefix[180];
+  snprintf(prefix, sizeof(prefix), ".v138-u-%s-", namespace);
+  int scan = dup_cloexec(directory);
+  DIR *entries = fdopendir(scan);
+  if (!entries) die("V138_NATIVE_UNCOMMITTED_SCAN_FAILED");
+  struct dirent *entry;
+  while ((entry = readdir(entries)) != NULL) {
+    if (strncmp(entry->d_name, prefix, strlen(prefix)) != 0 || !strstr(entry->d_name, label)) continue;
+    struct stat status;
+    if (fstatat(directory, entry->d_name, &status, AT_SYMLINK_NOFOLLOW) != 0 || !S_ISREG(status.st_mode) ||
+        status.st_uid != getuid() || (status.st_mode & 0777) != 0600 || status.st_nlink < 1 || status.st_nlink > 2) {
+      closedir(entries); die("V138_NATIVE_UNCOMMITTED_UNAUTHENTICATED");
+    }
+    if (unlinkat(directory, entry->d_name, 0) != 0) { closedir(entries); die("V138_NATIVE_UNCOMMITTED_CLEANUP_FAILED"); }
+  }
+  closedir(entries);
+  if (fsync(directory) != 0) die("V138_NATIVE_FSYNC_FAILED");
+}
+
+/*
+ * Canonical names become visible only after the complete bytes are durable.
+ * A process death can leave only a nonce-bound, owner-only, single-link
+ * uncommitted file; the next invocation authenticates and removes it.
+ */
+static void write_committed(RelativeFile file, const unsigned char *bytes, size_t length, const char *namespace, const char *label, int crash_boundary) {
+  cleanup_uncommitted(file.parent, namespace, label);
+  char temporary[256];
+  snprintf(temporary, sizeof(temporary), ".v138-u-%s-%s-%s", namespace, capability_nonce, label);
+  int descriptor = openat(file.parent, temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+  if (descriptor < 0) die("V138_NATIVE_UNCOMMITTED_WRITE_FAILED");
   size_t offset = 0;
   while (offset < length) {
-    ssize_t count = write(descriptor, bytes + offset, length - offset);
+    size_t requested = length - offset;
+    if (crash_boundary == 100 && offset == 0 && requested > 1) requested = requested / 2;
+    ssize_t count = write(descriptor, bytes + offset, requested);
     if (count <= 0) die("V138_NATIVE_WRITE_FAILED");
     offset += (size_t)count;
+    if (crash_boundary == 100) _exit(97);
   }
+  if (crash_boundary == 101) _exit(97);
   if (fsync(descriptor) != 0) die("V138_NATIVE_FSYNC_FAILED");
   close(descriptor);
+  if (linkat(file.parent, temporary, file.parent, file.name, 0) != 0 && errno != EEXIST) die("V138_NATIVE_COMMIT_LINK_FAILED");
+  if (unlinkat(file.parent, temporary, 0) != 0) die("V138_NATIVE_UNCOMMITTED_CLEANUP_FAILED");
+  if (fsync(file.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
 }
 
 static void sha256_file(RelativeFile file, char output[65]) {
@@ -201,6 +282,9 @@ static void barrier_if_requested(int root) {
 static void pair_transaction(int root, char **parts, int count) {
   if (count != 11) die("V138_NATIVE_PAIR_INPUT_INVALID");
   const char *intent_relative = parts[2], *namespace = parts[3];
+  if (!exact_hex(namespace, 64)) die("V138_NATIVE_NAMESPACE_INVALID");
+  char *lock_targets[2] = { parts[4], parts[6] };
+  require_lock_projection(lock_targets, 2);
   int crash_boundary = atoi(parts[10]);
   RelativeFile intent = open_parent(root, intent_relative);
   RelativeFile targets[2] = { open_parent(root, parts[4]), open_parent(root, parts[6]) };
@@ -217,8 +301,7 @@ static void pair_transaction(int root, char **parts, int count) {
   if (regular_state(intent)) {
     if (!bytes_equal(intent, intent_bytes, intent_length)) die("V138_PAIR_V2_INTENT_CONFLICT");
   } else {
-    write_exclusive(intent, intent_bytes, intent_length);
-    fsync(intent.parent);
+    write_committed(intent, intent_bytes, intent_length, namespace, "pair-intent", crash_boundary);
   }
   crash_if(crash_boundary, 1);
 
@@ -228,7 +311,10 @@ static void pair_transaction(int root, char **parts, int count) {
     RelativeFile stage = { .parent = staging }; strcpy(stage.name, stages[index]);
     if (regular_state(stage)) {
       if (!bytes_equal(stage, bytes[index], bytes_length[index])) die("V138_PAIR_V2_STAGE_CONFLICT");
-    } else write_exclusive(stage, bytes[index], bytes_length[index]);
+    } else {
+      char label[32]; snprintf(label, sizeof(label), "pair-stage-%d", index);
+      write_committed(stage, bytes[index], bytes_length[index], namespace, label, crash_boundary);
+    }
     crash_if(crash_boundary, 2 + index);
   }
   for (int index = 0; index < 2; index++) {
@@ -248,6 +334,7 @@ static void pair_transaction(int root, char **parts, int count) {
 
 typedef struct {
   RelativeFile target;
+  char target_name[4096];
   char expected_before[65];
   unsigned char *after;
   size_t after_length;
@@ -260,6 +347,7 @@ typedef struct {
 static void lifecycle_transaction(int root, char **header, int header_count, FILE *stream) {
   if (header_count != 10) die("V138_NATIVE_LIFECYCLE_INPUT_INVALID");
   const char *intent_relative = header[2], *namespace = header[3], *lifecycle_relative = header[4];
+  if (!exact_hex(namespace, 64)) die("V138_NATIVE_NAMESPACE_INVALID");
   size_t lifecycle_length = 0, intent_length = 0;
   unsigned char *lifecycle_bytes = decode_hex(header[5], &lifecycle_length);
   int step_count = atoi(header[6]);
@@ -279,6 +367,8 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
     int count = split_tabs(line, parts, MAX_PARTS);
     if (count != 4 || strlen(parts[2]) != 64) die("V138_NATIVE_LIFECYCLE_STEP_INVALID");
     steps[index].target = open_parent(root, parts[1]);
+    if (strlen(parts[1]) >= sizeof(steps[index].target_name)) die("V138_NATIVE_RELATIVE_INVALID");
+    strcpy(steps[index].target_name, parts[1]);
     strcpy(steps[index].expected_before, parts[2]);
     steps[index].after = decode_hex(parts[3], &steps[index].after_length);
     unsigned char digest[CC_SHA256_DIGEST_LENGTH];
@@ -289,6 +379,12 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
     snprintf(steps[index].backup, sizeof(steps[index].backup), "%s-%d.before", namespace, index);
   }
   free(line);
+  char **lock_targets = calloc((size_t)step_count + 1, sizeof(char *));
+  if (!lock_targets) die("V138_NATIVE_OOM");
+  for (int index = 0; index < step_count; index++) lock_targets[index] = steps[index].target_name;
+  lock_targets[step_count] = (char *)lifecycle_relative;
+  require_lock_projection(lock_targets, step_count + 1);
+  free(lock_targets);
 
   barrier_if_requested(root);
 
@@ -308,9 +404,10 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
   if (regular_state(intent)) {
     if (!bytes_equal(intent, intent_bytes, intent_length)) die("V138_LIFECYCLE_V2_INTENT_CONFLICT");
   } else {
-    if (lifecycle_present) die("V138_LIFECYCLE_V2_INTENT_REQUIRED");
-    for (int index = 0; index < step_count; index++) if (steps[index].state != 0) die("V138_LIFECYCLE_V2_INTENT_REQUIRED");
-    write_exclusive(intent, intent_bytes, intent_length); fsync(intent.parent);
+    if (!lifecycle_present) {
+      for (int index = 0; index < step_count; index++) if (steps[index].state != 0) die("V138_LIFECYCLE_V2_INTENT_REQUIRED");
+      write_committed(intent, intent_bytes, intent_length, namespace, "life-intent", crash_boundary);
+    }
   }
   crash_if(crash_boundary, 1);
 
@@ -320,7 +417,10 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
     strcpy(stage.name, steps[index].stage); strcpy(backup.name, steps[index].backup);
     if (regular_state(stage)) {
       if (!bytes_equal(stage, steps[index].after, steps[index].after_length)) die("V138_LIFECYCLE_V2_STAGE_CONFLICT");
-    } else write_exclusive(stage, steps[index].after, steps[index].after_length);
+    } else {
+      char label[32]; snprintf(label, sizeof(label), "life-after-%d", index);
+      write_committed(stage, steps[index].after, steps[index].after_length, namespace, label, crash_boundary);
+    }
     if (steps[index].state == 0) {
       if (!regular_state(backup) && linkat(steps[index].target.parent, steps[index].target.name, staging, backup.name, 0) != 0) die("V138_NATIVE_BACKUP_LINK_FAILED");
       char digest[65]; sha256_file(backup, digest);
@@ -337,30 +437,93 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
   RelativeFile status_stage = { .parent = staging }; strcpy(status_stage.name, status_name);
   if (regular_state(status_stage)) {
     if (!bytes_equal(status_stage, lifecycle_bytes, lifecycle_length)) die("V138_LIFECYCLE_V2_STATUS_STAGE_CONFLICT");
-  } else write_exclusive(status_stage, lifecycle_bytes, lifecycle_length);
+  } else write_committed(status_stage, lifecycle_bytes, lifecycle_length, namespace, "life-status", crash_boundary);
   crash_if(crash_boundary, 2 + step_count);
   if (!regular_state(lifecycle) && linkat(staging, status_name, lifecycle.parent, lifecycle.name, 0) != 0 && errno != EEXIST) die("V138_NATIVE_LINK_FAILED");
   if (!bytes_equal(lifecycle, lifecycle_bytes, lifecycle_length)) die("V138_LIFECYCLE_V2_STATUS_POSTCONDITION");
   fsync(lifecycle.parent);
   crash_if(crash_boundary, 3 + step_count);
+  /* Canonical status and every target are durable; recovery material is now private residue. */
+  for (int index = 0; index < step_count; index++) {
+    RelativeFile stage = { .parent = staging }, backup = { .parent = staging };
+    strcpy(stage.name, steps[index].stage); strcpy(backup.name, steps[index].backup);
+    if (regular_state(stage)) {
+      if (!bytes_equal(stage, steps[index].after, steps[index].after_length)) die("V138_LIFECYCLE_V2_STAGE_CONFLICT");
+      if (unlinkat(staging, stage.name, 0) != 0) die("V138_NATIVE_CLEANUP_FAILED");
+    }
+    if (regular_state(backup)) {
+      char digest[65]; sha256_file(backup, digest);
+      if (strcmp(digest, steps[index].expected_before) != 0) die("V138_LIFECYCLE_V2_BACKUP_CONFLICT");
+      if (unlinkat(staging, backup.name, 0) != 0) die("V138_NATIVE_CLEANUP_FAILED");
+    }
+  }
+  if (regular_state(status_stage)) {
+    if (!bytes_equal(status_stage, lifecycle_bytes, lifecycle_length)) die("V138_LIFECYCLE_V2_STATUS_STAGE_CONFLICT");
+    if (unlinkat(staging, status_stage.name, 0) != 0) die("V138_NATIVE_CLEANUP_FAILED");
+  }
+  if (regular_state(intent)) {
+    if (!bytes_equal(intent, intent_bytes, intent_length)) die("V138_LIFECYCLE_V2_INTENT_CONFLICT");
+    if (unlinkat(intent.parent, intent.name, 0) != 0) die("V138_NATIVE_CLEANUP_FAILED");
+  }
+  if (fsync(staging) != 0 || fsync(intent.parent) != 0 || fsync(lifecycle.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
   for (int index = 0; index < step_count; index++) { close_file(steps[index].target); free(steps[index].after); }
   free(steps); free(intent_bytes); free(lifecycle_bytes); close_file(intent); close_file(lifecycle); close(staging);
 }
 
 int main(int argc, char **argv) {
-  if (argc != 4) die("V138_NATIVE_ARGUMENTS_INVALID");
-  int root = open(argv[1], O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-  if (root < 0) die("V138_NATIVE_ROOT_OPEN_FAILED");
+  (void)argv;
+  if (argc != 1 || strlen(V138_CONTROLLER_TOKEN_HEX) != 64) die("V138_NATIVE_ARGUMENTS_INVALID");
+  int capability_descriptor = dup_cloexec(3);
+  FILE *capability_stream = fdopen(capability_descriptor, "r");
+  if (!capability_stream) die("V138_NATIVE_CAPABILITY_MISSING");
+  char capability_line[1024];
+  if (!fgets(capability_line, sizeof(capability_line), capability_stream)) die("V138_NATIVE_CAPABILITY_MISSING");
+  fclose(capability_stream);
+  char *capability_parts[MAX_PARTS];
+  int capability_count = split_tabs(capability_line, capability_parts, MAX_PARTS);
+  if (capability_count != 10 || strcmp(capability_parts[0], "V138CAP2") != 0 ||
+      strcmp(capability_parts[1], V138_CONTROLLER_TOKEN_HEX) != 0 || !exact_hex(capability_parts[2], 64) ||
+      !exact_hex(capability_parts[3], 64) || !exact_hex(capability_parts[4], 64) ||
+      !exact_hex(capability_parts[7], 64) || !exact_hex(capability_parts[8], 64) || !exact_hex(capability_parts[9], 64)) {
+    die("V138_NATIVE_CAPABILITY_INVALID");
+  }
+  strcpy(capability_nonce, capability_parts[2]);
+  strcpy(capability_lock_hash, capability_parts[4]);
+  int root = dup_cloexec(4);
   struct stat status;
   if (fstat(root, &status) != 0 || !S_ISDIR(status.st_mode)) die("V138_NATIVE_ROOT_INVALID");
-  if ((unsigned long long)status.st_dev != strtoull(argv[2], NULL, 10) || (unsigned long long)status.st_ino != strtoull(argv[3], NULL, 10)) die("V138_NATIVE_ROOT_IDENTITY_MISMATCH");
+  if ((unsigned long long)status.st_dev != strtoull(capability_parts[5], NULL, 10) ||
+      (unsigned long long)status.st_ino != strtoull(capability_parts[6], NULL, 10)) die("V138_NATIVE_ROOT_IDENTITY_MISMATCH");
+
+  size_t capacity = MAX_LINE, input_length = 0;
+  unsigned char *input = malloc(capacity);
+  if (!input) die("V138_NATIVE_OOM");
+  for (;;) {
+    if (input_length == capacity) {
+      if (capacity >= MAX_LINE * 256) die("V138_NATIVE_INPUT_OVERFLOW");
+      capacity *= 2;
+      unsigned char *grown = realloc(input, capacity);
+      if (!grown) die("V138_NATIVE_OOM");
+      input = grown;
+    }
+    size_t count = fread(input + input_length, 1, capacity - input_length, stdin);
+    input_length += count;
+    if (count == 0) { if (ferror(stdin)) die("V138_NATIVE_INPUT_READ_FAILED"); break; }
+  }
+  char input_hash[65]; sha256_bytes(input, input_length, input_hash);
+  if (strcmp(input_hash, capability_parts[3]) != 0) die("V138_NATIVE_CAPABILITY_INTENT_MISMATCH");
+  FILE *stream = tmpfile();
+  if (!stream || fwrite(input, 1, input_length, stream) != input_length || fflush(stream) != 0 || fseek(stream, 0, SEEK_SET) != 0) die("V138_NATIVE_INPUT_STAGE_FAILED");
+  free(input);
+  if (write(5, "1", 1) != 1) die("V138_NATIVE_CONTROLLER_HANDSHAKE_FAILED");
+  close(5);
   char *line = malloc(MAX_LINE);
-  if (!line || !fgets(line, MAX_LINE, stdin)) die("V138_NATIVE_INPUT_MISSING");
+  if (!line || !fgets(line, MAX_LINE, stream)) die("V138_NATIVE_INPUT_MISSING");
   char *parts[MAX_PARTS];
   int count = split_tabs(line, parts, MAX_PARTS);
   if (strcmp(parts[0], "PAIR") == 0) pair_transaction(root, parts, count);
-  else if (strcmp(parts[0], "LIFE") == 0) lifecycle_transaction(root, parts, count, stdin);
+  else if (strcmp(parts[0], "LIFE") == 0) lifecycle_transaction(root, parts, count, stream);
   else die("V138_NATIVE_OPERATION_INVALID");
-  free(line); close(root);
+  free(line); fclose(stream); close(root);
   return 0;
 }
