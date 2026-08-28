@@ -50,9 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 80/84 plans executed
+**Plans:** 80/86 plans executed
 
-**Current verdict:** NON-RECURSIVE REVIEW ZERO FINDINGS / PLAN-92-ONLY ELIGIBLE / FRESH 0/540 / DOWNSTREAM DENIED — 80 of 84 active plans have summaries. Plan 262-101 remains immutable blocked v5 history. Plan 262-103 independently authenticated exact Plan-102 source and published one actual-consumer-tested literal-zero candidate/REVIEW/carrier trio at unique commit `2f4fd225ca32b0ac67c2fd09f3036cbbe208725c`. Revised Plan 262-92 is the sole eligible next action; Plans 262-93 through 262-95 remain dependency-denied. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 plus all downstream authority remain denied.
+**Current verdict:** PAIR-LINEAGE CORRECTION PLANNED / PLAN-104 SOLE NEXT ACTION / FRESH 0/540 / DOWNSTREAM DENIED — 80 of 86 active plans have summaries. Plans 262-102/103 and their literal-zero trio remain immutable truthful history, but research found that the v6 consumer conflates the historical trio publication with later `HEAD` and lacks the native publish/check modes required by Plan 92. Plans 262-104/105 additively repair and independently review that join without canonical publication. Revised Plan 262-92 and Plans 262-93 through 262-95 remain dependency-denied. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 plus all downstream authority remain denied.
+
+<!-- phase-262-pair-lineage-correction-topology-v1: {"schema_version":"v1.38-plan-262-pair-lineage-correction-topology-v1","active_plans":86,"trustworthy_summaries":80,"preserved_plans":["262-102","262-103"],"active_chain":["262-104","262-105","262-92","262-93","262-94","262-95"],"waves":{"262-104":86,"262-105":87,"262-92":88,"262-93":89,"262-94":90,"262-95":91},"next_action":"dispatch-262-104-only","plan_262_92_eligible":false,"eligibility_condition":"committed-262-105-literal-zero-four-mode-review","canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 
 <!-- phase-262-plan-103-closeout-status: {"schema_version":"v1.38-plan-262-103-closeout-v1","proof_status":"nonrecursive_rereview_zero_findings","active_plans":84,"trustworthy_summaries":80,"reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","finding_count":0,"finding_root":"sha256:88fd05a5b1258c35513bacfb2c1f5aee1c9a29c22302bca2a480eb430a549e21","candidate_payload_root":"sha256:1626099ec6c008aba729c363722d725c0eaf4c52b211674455f000b845e1d84f","review_root":"sha256:b2f259552d172d8635deb51dd9bc805e29669d1691b75d843aa3170a159f7710","carrier_root":"sha256:50358471bed92ca437fcb4ffb7aa81d4473dd8fb73aebd8db66b91754ab20984","actual_consumer_status":"passed","plan_262_92_eligible":true,"authorizes_execution":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-revised-262-92-only","downstream_authority_denied":true} -->
 
@@ -159,19 +161,27 @@ Plans:
 
 - [x] 262-103-PLAN.md — Independently review Plan-102 source and publish one actual-consumer-tested literal-zero-or-blocked v6/v1 review trio.
 
-**Wave 86** *(blocked on a committed literal-zero Plan-103 carrier with consumer success)*
+**Wave 86** *(sole next action; additive source/synthetic only)*
 
-- [ ] 262-92-PLAN.md — Publish the exact direct-child seal-v13 and inactive retry-envelope:v3 pair.
+- [ ] 262-104-PLAN.md — Resolve the unique exact Plan-103 trio publication and add the four native v7 derive/publish/check modes in disposable tests only.
 
-**Wave 87** *(blocked on committed Plan-92 summary)*
+**Wave 87** *(blocked on committed Plan-104 summary; independent review only)*
+
+- [ ] 262-105-PLAN.md — Independently authenticate Plan-104 raw source and exercise every actual v7 mode in disposable repositories; only literal zero may unlock Plan 92.
+
+**Wave 88** *(blocked on committed literal-zero Plan-105 review)*
+
+- [ ] 262-92-PLAN.md — Publish and check the exact Plan-105-closure direct-child seal-v13 and inactive retry-envelope:v3 pair.
+
+**Wave 89** *(blocked on committed Plan-92 summary)*
 
 - [ ] 262-93-PLAN.md — Consume the sole finite retry-envelope:v3 and publish crash-safe live terminal evidence.
 
-**Wave 88** *(blocked on committed Plan-93 summary)*
+**Wave 90** *(blocked on committed Plan-93 summary)*
 
 - [ ] 262-94-PLAN.md — Independently adjudicate v3 and own the exact-pass-only reproduction-v17/Route-11 boundary.
 
-**Wave 89** *(blocked on committed Plan-94 summary)*
+**Wave 91** *(blocked on committed Plan-94 summary)*
 
 - [ ] 262-95-PLAN.md — Refresh validation/verification and apply the two-stage committed-summary lifecycle latch.
 
