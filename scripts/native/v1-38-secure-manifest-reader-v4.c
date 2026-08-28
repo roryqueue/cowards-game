@@ -136,8 +136,6 @@ int main(void) {
   for (size_t i = 0; i < request_count; i++) {
     char name[MAX_PATH]; (void)parent_for(requests[i].path, name);
   }
-  barrier(root);
-
   printf("I\t%llu\t%llu\n", (unsigned long long)root_status.st_dev, (unsigned long long)root_status.st_ino);
   for (size_t i = 0; i < dir_count; i++) {
     printf("D\t"); hex_bytes((const unsigned char *)dirs[i].path, strlen(dirs[i].path));
@@ -151,21 +149,22 @@ int main(void) {
       if (fstatat(dirs[parent].fd, name, &status, AT_SYMLINK_NOFOLLOW) == 0) die("V138_READER_EXPECTED_ABSENT");
       if (errno != ENOENT) die("V138_READER_ABSENCE_CHECK_FAILED");
       printf("-\n");
-      continue;
+    } else {
+      int file = openat(dirs[parent].fd, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+      if (file < 0) die("V138_READER_FILE_INVALID");
+      struct stat status;
+      if (fstat(file, &status) != 0 || !S_ISREG(status.st_mode) || status.st_size < 0 || status.st_size > 64 * 1024 * 1024)
+        die("V138_READER_FILE_INVALID");
+      unsigned char buffer[65536];
+      for (;;) {
+        ssize_t count = read(file, buffer, sizeof(buffer));
+        if (count < 0) die("V138_READER_READ_FAILED");
+        if (count == 0) break;
+        hex_bytes(buffer, (size_t)count);
+      }
+      close(file); printf("\n");
     }
-    int file = openat(dirs[parent].fd, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
-    if (file < 0) die("V138_READER_FILE_INVALID");
-    struct stat status;
-    if (fstat(file, &status) != 0 || !S_ISREG(status.st_mode) || status.st_size < 0 || status.st_size > 64 * 1024 * 1024)
-      die("V138_READER_FILE_INVALID");
-    unsigned char buffer[65536];
-    for (;;) {
-      ssize_t count = read(file, buffer, sizeof(buffer));
-      if (count < 0) die("V138_READER_READ_FAILED");
-      if (count == 0) break;
-      hex_bytes(buffer, (size_t)count);
-    }
-    close(file); printf("\n");
+    if (i == 0) barrier(root);
   }
   for (size_t i = 0; i < dir_count; i++) close(dirs[i].fd);
   return 0;

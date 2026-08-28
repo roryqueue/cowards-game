@@ -79,7 +79,7 @@ describe("CR-05 trusted-root no-follow paths", () => {
     },
   )
 
-  it("holds the authenticated parent descriptor across synchronized path replacement", async () => {
+  it("holds every ancestor descriptor when a subtree is replaced after entry one", async () => {
     const root = fixture()
     const external = mkdtempSync(path.join(tmpdir(), "v138-reader-external-"))
     roots.push(external)
