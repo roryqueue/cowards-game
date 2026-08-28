@@ -285,11 +285,26 @@ describe("Plan 262-111 future review and post-effect contract", () => {
       reproductionPresent: false,
       adjudicationOrDownstreamPresent: false,
       outcome: {
+        disposition: "exhausted",
         completeCleanup: true,
         reproductionPresent: false,
         downstreamAuthority: "denied",
       },
     })).toEqual({ status: "bounded_terminal", downstreamAuthority: "denied" })
+    expect(checkV138LiveV9PostRunOutputCustodyForReview({
+      journalPresent: true,
+      privateDirectoryPresent: true,
+      terminalPresent: true,
+      lockPresent: false,
+      reproductionPresent: true,
+      adjudicationOrDownstreamPresent: false,
+      outcome: {
+        disposition: "succeeded",
+        completeCleanup: true,
+        reproductionPresent: true,
+        downstreamAuthority: "denied",
+      },
+    })).toEqual({ status: "bounded_success", downstreamAuthority: "denied" })
     for (const mutation of [
       { journalPresent: true },
       { privateDirectoryPresent: true },
@@ -302,8 +317,33 @@ describe("Plan 262-111 future review and post-effect contract", () => {
         privateDirectoryPresent: true,
         terminalPresent: true,
         outcome: {
+          disposition: "exhausted",
           completeCleanup: false,
           reproductionPresent: false,
+          downstreamAuthority: "denied",
+        },
+      },
+      {
+        journalPresent: true,
+        privateDirectoryPresent: true,
+        terminalPresent: true,
+        reproductionPresent: true,
+        outcome: {
+          disposition: "exhausted",
+          completeCleanup: true,
+          reproductionPresent: false,
+          downstreamAuthority: "denied",
+        },
+      },
+      {
+        journalPresent: true,
+        privateDirectoryPresent: true,
+        terminalPresent: true,
+        reproductionPresent: false,
+        outcome: {
+          disposition: "succeeded",
+          completeCleanup: true,
+          reproductionPresent: true,
           downstreamAuthority: "denied",
         },
       },
