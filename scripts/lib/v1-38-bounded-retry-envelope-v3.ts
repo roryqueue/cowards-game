@@ -147,6 +147,16 @@ const protectedHistoryBody = {
     terminalDisposition: "exhausted" as const,
     outcomeReinterpreted: false as const,
   }),
+  blockedSourceReview: Object.freeze({
+    status: "blocked" as const,
+    reviewedSourceCommit: "32f53bb743db799810dff820b8b7eb309b6a6629" as const,
+    findingRoot:
+      "sha256:99ceec74a141e228b2e027c6f0b5d85ddfed8d917ad74e7a493e6d8257f8701a" as V138RetrySha256,
+    reviewRoot:
+      "sha256:08938c5eb520b041e2b74ac07b7906d14e52197e3788ec97ff6f29350bbdf80d" as V138RetrySha256,
+    historicalResultReinterpreted: false as const,
+    currentSourceReviewEligible: false as const,
+  }),
   protectedFiles: Object.freeze([
     [
       ".planning/artifacts/v1.38-phase-262-review-fix-correction-v10.json",
@@ -199,6 +209,26 @@ const protectedHistoryBody = {
     [
       "scripts/native/v1-38-secure-manifest-reader-v6.c",
       "sha256:fe1915ef41b134c1a1bae5e1e3df2c26a9ae47a2258b917bd1f1469917abffc1",
+    ],
+    [
+      ".planning/artifacts/v1.38-plan-262-91-bounded-retry-source-review-v3.json",
+      "sha256:c4dbbfa56bf903b2cb302c7a86acb87359da3f2ac696dbc2ca783376604a5232",
+      "eff3f1fea4719131f7ced617df7b0a1d4c89d4d2",
+    ],
+    [
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-91-REVIEW.md",
+      "sha256:fb82e3be073f896a1514ddfc4d16fc84a478342f8375ab6002e7598d72275272",
+      "73596b860c06c6a477960fe8936053b1006e1edd",
+    ],
+    [
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-91-SUMMARY.md",
+      "sha256:1db0d52a482f3ce954c03da3b59d22549ca6a913290b2d03ce87c80cb045cbf0",
+      "2070f4dd0444c28623c4fbc0270b70a654ea92a1",
+    ],
+    [
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-90-SUMMARY.md",
+      "sha256:4daded12537692e2e180ee9ccd34b8de54b425398d9a68b9923fcfa8b27988b7",
+      "ff882bbadc057c0e0786d9251fb942095155db72",
     ],
   ] as const),
   sourceBase: {
