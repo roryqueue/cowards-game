@@ -16,6 +16,7 @@ import {
   V138_LIVE_V8_MODES,
   V138_LIVE_V8_PATHS,
   V138_LIVE_V8_PROTECTED_BRANCHES,
+  authenticateV138LiveV8ProtectedBranchForReview,
   authenticateV138LiveV8ProtectedHistory,
   checkV138LiveV8SyntheticCustodyForReview,
   computeV138LiveV8ReviewCarrierRoot,
@@ -377,7 +378,10 @@ describe("Plan 262-107 reviewed live-v8 adapter", () => {
         const repoPath = branch.paths[0]!
         const target = path.join(clone, repoPath)
         writeFileSync(target, Buffer.concat([readFileSync(target), Buffer.from("dirty\n")]))
-        expect(() => authenticateV138LiveV8ProtectedHistory(clone), `Plan ${branch.plan}`).toThrow(
+        expect(
+          () => authenticateV138LiveV8ProtectedBranchForReview(clone, branch.plan),
+          `Plan ${branch.plan}`,
+        ).toThrow(
           "V138_LIVE_V8_PROTECTED_CURRENT_BYTES_INVALID",
         )
         execFileSync("/usr/bin/git", ["checkout", "--", repoPath], { cwd: clone })

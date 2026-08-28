@@ -350,39 +350,131 @@ const authenticateSupplementFromDisk = (repoRoot: string): V138LiveV8Supplement 
   return readJsonRegular(repoRoot, V138_LIVE_V8_PATHS.supplement) as V138LiveV8Supplement
 }
 
-const PROTECTED_SUCCESSOR_PATHS = Object.freeze([
-  "scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts",
-  "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
-  "scripts/run-v1-38-bounded-retry-envelope-v3.test.ts",
-  "scripts/check-v1-38-plan-262-101-bounded-retry-source-rereview-v5.ts",
-  "scripts/check-v1-38-plan-262-101-bounded-retry-source-rereview-v5.test.ts",
-  ".planning/artifacts/v1.38-plan-262-101-bounded-retry-source-rereview-v5.json",
-  `${PHASE_DIR}/262-101-REVIEW.md`,
-  "scripts/lib/v1-38-plan-262-103-nonrecursive-review-contract-v1.ts",
-  "scripts/run-v1-38-bounded-retry-envelope-v3-review-v6.ts",
-  "scripts/run-v1-38-bounded-retry-envelope-v3-review-v6.test.ts",
-  "scripts/check-v1-38-plan-262-103-bounded-retry-source-rereview-v6.ts",
-  "scripts/check-v1-38-plan-262-103-bounded-retry-source-rereview-v6.test.ts",
-  ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-payload-v6.json",
-  ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-carrier-v1.json",
-  `${PHASE_DIR}/262-103-REVIEW.md`,
-  "scripts/run-v1-38-bounded-retry-envelope-v3-review-v7.ts",
-  "scripts/run-v1-38-bounded-retry-envelope-v3-review-v7.test.ts",
-  "scripts/check-v1-38-plan-262-105-pair-publication-source-review-v1.ts",
-  "scripts/check-v1-38-plan-262-105-pair-publication-source-review-v1.test.ts",
-  ".planning/artifacts/v1.38-plan-262-105-pair-publication-source-review-v1.json",
-  `${PHASE_DIR}/262-105-REVIEW.md`,
+export const V138_LIVE_V8_PROTECTED_BRANCHES = Object.freeze([
+  { plan: 90, lineageCommit: "32f53bb743db799810dff820b8b7eb309b6a6629", paths: [
+    `${PHASE_DIR}/262-90-SUMMARY.md`, "scripts/lib/v1-38-bounded-retry-envelope-v3.ts",
+    "scripts/run-v1-38-bounded-retry-envelope-v3.ts", "scripts/run-v1-38-bounded-retry-envelope-v3.test.ts",
+  ] },
+  { plan: 91, lineageCommit: "d64f048c12440978f449a5e2e655c33f55adc4ce", paths: [
+    `${PHASE_DIR}/262-91-SUMMARY.md`, `${PHASE_DIR}/262-91-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-91-bounded-retry-source-review-v3.json",
+    "scripts/check-v1-38-plan-262-91-bounded-retry-source-review-v3.ts",
+    "scripts/check-v1-38-plan-262-91-bounded-retry-source-review-v3.test.ts",
+  ] },
+  { plan: 96, lineageCommit: "82ed28eee2377fd31680a20fdf0a6c6ebba9c1a8", paths: [
+    `${PHASE_DIR}/262-96-SUMMARY.md`, "scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts",
+    "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
+  ] },
+  { plan: 97, lineageCommit: "24d759a9c95499d56d483ff23c1e9bfbe0356f30", paths: [
+    `${PHASE_DIR}/262-97-SUMMARY.md`, `${PHASE_DIR}/262-97-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-97-bounded-retry-source-rereview-v3.json",
+    "scripts/check-v1-38-plan-262-97-bounded-retry-source-rereview-v3.ts",
+    "scripts/check-v1-38-plan-262-97-bounded-retry-source-rereview-v3.test.ts",
+  ] },
+  { plan: 98, lineageCommit: "c3ed45c7a4ec54f456ae21d04095ab898df870db", paths: [
+    `${PHASE_DIR}/262-98-SUMMARY.md`,
+  ] },
+  { plan: 99, lineageCommit: "497ba238e789d6f32252bde291ced9438b05a190", paths: [
+    `${PHASE_DIR}/262-99-SUMMARY.md`, `${PHASE_DIR}/262-99-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
+    "scripts/check-v1-38-plan-262-99-bounded-retry-source-rereview-v4.ts",
+    "scripts/check-v1-38-plan-262-99-bounded-retry-source-rereview-v4.test.ts",
+  ] },
+  { plan: 100, lineageCommit: "1e071bdb087e7360ee27e6558f6e717180d4d4a9", paths: [
+    `${PHASE_DIR}/262-100-SUMMARY.md`,
+  ] },
+  { plan: 101, lineageCommit: "72e62d480a38f7c853a9010fd2918a0396118e07", paths: [
+    `${PHASE_DIR}/262-101-SUMMARY.md`, `${PHASE_DIR}/262-101-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-101-bounded-retry-source-rereview-v5.json",
+    "scripts/check-v1-38-plan-262-101-bounded-retry-source-rereview-v5.ts",
+    "scripts/check-v1-38-plan-262-101-bounded-retry-source-rereview-v5.test.ts",
+  ] },
+  { plan: 102, lineageCommit: "66fa1358daf8005fab4b1b90b2831ccb60d1ca3e", paths: [
+    `${PHASE_DIR}/262-102-SUMMARY.md`, "scripts/lib/v1-38-plan-262-103-nonrecursive-review-contract-v1.ts",
+    "scripts/run-v1-38-bounded-retry-envelope-v3-review-v6.ts",
+    "scripts/run-v1-38-bounded-retry-envelope-v3-review-v6.test.ts",
+  ] },
+  { plan: 103, lineageCommit: "658e3149a25a2af8f0511f5845936f23fe574fc5", paths: [
+    `${PHASE_DIR}/262-103-SUMMARY.md`, `${PHASE_DIR}/262-103-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-payload-v6.json",
+    ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-carrier-v1.json",
+    "scripts/check-v1-38-plan-262-103-bounded-retry-source-rereview-v6.ts",
+    "scripts/check-v1-38-plan-262-103-bounded-retry-source-rereview-v6.test.ts",
+  ] },
+  { plan: 104, lineageCommit: "126a72e52d6c83e15cacf31a5ef46753c0fcce37", paths: [
+    `${PHASE_DIR}/262-104-SUMMARY.md`, "scripts/run-v1-38-bounded-retry-envelope-v3-review-v7.ts",
+    "scripts/run-v1-38-bounded-retry-envelope-v3-review-v7.test.ts",
+  ] },
+  { plan: 105, lineageCommit: "250c152d3b2c8d7c1e7808985b61626bc3290883", paths: [
+    `${PHASE_DIR}/262-105-SUMMARY.md`, `${PHASE_DIR}/262-105-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-105-pair-publication-source-review-v1.json",
+    "scripts/check-v1-38-plan-262-105-pair-publication-source-review-v1.ts",
+    "scripts/check-v1-38-plan-262-105-pair-publication-source-review-v1.test.ts",
+  ] },
 ] as const)
 
+export const authenticateV138LiveV8ProtectedHistory = (
+  repoRoot: string,
+): Readonly<{
+  branchCount: 12
+  protectedHistoryRoot: typeof PROTECTED_HISTORY_ROOT
+  expandedManifestRoot: Sha
+}> => {
+  const records: string[] = []
+  for (const branch of V138_LIVE_V8_PROTECTED_BRANCHES) {
+    records.push(...authenticateProtectedBranch(repoRoot, branch))
+  }
+  return Object.freeze({
+    branchCount: 12,
+    protectedHistoryRoot: PROTECTED_HISTORY_ROOT,
+    expandedManifestRoot: sha256(`v138-live-v8-expanded-protected-history-v1\0${records.sort().join("\n")}`),
+  })
+}
+
+const authenticateProtectedBranch = (
+  repoRoot: string,
+  branch: (typeof V138_LIVE_V8_PROTECTED_BRANCHES)[number],
+): readonly string[] => {
+  try {
+    runV138RetryV3IsolatedGit(repoRoot, [
+      "merge-base", "--is-ancestor", branch.lineageCommit, PAIR_COMMIT,
+    ])
+  } catch {
+    fail(`V138_LIVE_V8_PROTECTED_LINEAGE_INVALID:${branch.plan}`)
+  }
+  const records: string[] = []
+  for (const repoPath of branch.paths) {
+    const entry = runV138RetryV3IsolatedGit(repoRoot, ["ls-tree", PAIR_COMMIT, "--", repoPath])
+    const match = /^(100644|100755) blob ([0-9a-f]{40})\t(.+)$/u.exec(entry)
+    if (match === null || match[3] !== repoPath)
+      fail(`V138_LIVE_V8_PROTECTED_COMMITTED_ENTRY_INVALID:${branch.plan}:${repoPath}`)
+    const [, mode, blob] = match
+    records.push(`${branch.plan}\0${branch.lineageCommit}\0${mode}\0${repoPath}\0${blob}`)
+    const current = path.join(repoRoot, ...repoPath.split("/"))
+    const status = lstatSync(current)
+    if (!status.isFile() || status.isSymbolicLink() || (mode === "100755") !== ((status.mode & 0o111) !== 0))
+      fail(`V138_LIVE_V8_PROTECTED_CURRENT_MODE_INVALID:${repoPath}`)
+    const expectedBytes = runV138RetryV3IsolatedGitBytes(repoRoot, ["cat-file", "blob", `${PAIR_COMMIT}:${repoPath}`])
+    if (!readFileSync(current).equals(expectedBytes))
+      fail(`V138_LIVE_V8_PROTECTED_CURRENT_BYTES_INVALID:${repoPath}`)
+    const later = runV138RetryV3IsolatedGit(repoRoot, ["log", "--format=%H", `${PAIR_COMMIT}..HEAD`, "--", repoPath])
+    if (later !== "") fail(`V138_LIVE_V8_PROTECTED_SUCCESSOR_HISTORY_REWRITTEN:${repoPath}`)
+  }
+  return records
+}
+
+export const authenticateV138LiveV8ProtectedBranchForReview = (
+  repoRoot: string,
+  plan: (typeof V138_LIVE_V8_PROTECTED_BRANCHES)[number]["plan"],
+): true => {
+  const branch = V138_LIVE_V8_PROTECTED_BRANCHES.find((candidate) => candidate.plan === plan)
+  if (branch === undefined) fail("V138_LIVE_V8_PROTECTED_PLAN_INVALID")
+  authenticateProtectedBranch(repoRoot, branch)
+  return true
+}
+
 const assertProtectedHistoryUnchangedFromDisk = (repoRoot: string): void => {
-  const later = runV138RetryV3IsolatedGit(repoRoot, [
-    "log",
-    "--format=%H",
-    `${PAIR_COMMIT}..HEAD`,
-    "--",
-    ...PROTECTED_SUCCESSOR_PATHS,
-  ])
-  if (later !== "") fail("V138_LIVE_V8_PROTECTED_SUCCESSOR_HISTORY_REWRITTEN")
+  authenticateV138LiveV8ProtectedHistory(repoRoot)
 }
 
 const forbiddenLiveDestinations = Object.freeze([
