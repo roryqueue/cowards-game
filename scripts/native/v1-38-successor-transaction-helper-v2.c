@@ -177,6 +177,27 @@ static void sha256_file(RelativeFile file, char output[65]) {
 
 static void close_file(RelativeFile file) { close(file.parent); }
 
+static void barrier_if_requested(int root) {
+  const char *tag = getenv("V138_NATIVE_TEST_BARRIER");
+  if (!tag || !*tag) return;
+  if (!safe_atom(tag) || strlen(tag) > 64) die("V138_NATIVE_BARRIER_INVALID");
+  char ready[96], proceed[96];
+  snprintf(ready, sizeof(ready), ".v138-test-ready-%s", tag);
+  snprintf(proceed, sizeof(proceed), ".v138-test-continue-%s", tag);
+  int descriptor = openat(root, ready, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+  if (descriptor < 0) die("V138_NATIVE_BARRIER_READY_FAILED");
+  close(descriptor); fsync(root);
+  struct stat status;
+  int observed = 0;
+  for (int attempt = 0; attempt < 5000; attempt++) {
+    if (fstatat(root, proceed, &status, AT_SYMLINK_NOFOLLOW) == 0) { observed = 1; break; }
+    if (errno != ENOENT) die("V138_NATIVE_BARRIER_STAT_FAILED");
+    usleep(1000);
+  }
+  if (!observed) die("V138_NATIVE_BARRIER_TIMEOUT");
+  unlinkat(root, ready, 0); unlinkat(root, proceed, 0); fsync(root);
+}
+
 static void pair_transaction(int root, char **parts, int count) {
   if (count != 11) die("V138_NATIVE_PAIR_INPUT_INVALID");
   const char *intent_relative = parts[2], *namespace = parts[3];
@@ -192,6 +213,7 @@ static void pair_transaction(int root, char **parts, int count) {
 
   /* Every canonical precondition is inspected before any transaction byte is written. */
   for (int index = 0; index < 2; index++) if (regular_state(targets[index]) && !bytes_equal(targets[index], bytes[index], bytes_length[index])) die("V138_PAIR_V2_CANONICAL_CONFLICT");
+  barrier_if_requested(root);
   if (regular_state(intent)) {
     if (!bytes_equal(intent, intent_bytes, intent_length)) die("V138_PAIR_V2_INTENT_CONFLICT");
   } else {
@@ -267,6 +289,8 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
     snprintf(steps[index].backup, sizeof(steps[index].backup), "%s-%d.before", namespace, index);
   }
   free(line);
+
+  barrier_if_requested(root);
 
   int lifecycle_present = regular_state(lifecycle);
   if (lifecycle_present && !bytes_equal(lifecycle, lifecycle_bytes, lifecycle_length)) die("V138_LIFECYCLE_V2_STATUS_CONFLICT");

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { spawn, spawnSync } from "node:child_process"
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -56,7 +56,7 @@ const trustedIdentity = (rootInput: string) => {
  * `/usr/bin/lockf` owns one global advisory lock from native precheck through
  * native postconditions; the kernel releases it on every process exit.
  */
-const invokeNative = (rootInput: string, input: string, targetLocks: readonly string[]): Promise<NativeResult> => {
+const invokeNative = (rootInput: string, input: string, targetLocks: readonly string[], barrierTag?: string): Promise<NativeResult> => {
   const identity = trustedIdentity(rootInput)
   const normalizedLocks = [...new Set(targetLocks)].sort()
   if (normalizedLocks.length === 0) fail("V138_SUCCESSOR_LOCK_SET_EMPTY")
@@ -66,12 +66,20 @@ const invokeNative = (rootInput: string, input: string, targetLocks: readonly st
   command.push(nativeExecutable(), identity.path, identity.device, identity.inode)
   const child = spawn(
     command.shift()!, command,
-    { cwd: identity.path, stdio: ["pipe", "ignore", "pipe"] },
+    { cwd: identity.path, stdio: ["pipe", "ignore", "pipe"], env: barrierTag === undefined ? process.env : { ...process.env, V138_NATIVE_TEST_BARRIER: barrierTag } },
   )
   child.stdin.end(input)
   let stderr = ""
   child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk })
   return new Promise((resolve) => child.once("exit", (code) => resolve(Object.freeze({ code, stderr }))))
+}
+
+const waitFor = async (predicate: () => boolean): Promise<void> => {
+  for (let attempt = 0; attempt < 5_000; attempt++) {
+    if (predicate()) return
+    await new Promise((resolve) => setTimeout(resolve, 1))
+  }
+  fail("V138_SUCCESSOR_TEST_BARRIER_TIMEOUT")
 }
 
 const pairInput = (root: string, input: V138DurablePairV2Input, crashBoundary = 0): string => {
@@ -183,6 +191,52 @@ const crashRecoveryEvidence = async (root: string): Promise<number> => {
   return recovered
 }
 
+const directoryReplacementEvidence = async (root: string): Promise<number> => {
+  let protectedOperations = 0
+  const pairExternal = mkdtempSync(path.join(tmpdir(), "v138-pair-replacement-external-"))
+  const lifecycleExternal = mkdtempSync(path.join(tmpdir(), "v138-life-replacement-external-"))
+  try {
+    mkdirSync(path.join(root, "replace-pair"))
+    const pair: V138DurablePairV2Input = {
+      transactionId: "replace-pair", intentPath: "replace-pair.intent",
+      members: [{ target: "replace-pair/a.json", bytes: "a\n" }, { target: "replace-pair/b.json", bytes: "b\n" }],
+    }
+    const pairTag = "pair"
+    const pairRun = invokeNative(root, pairInput(root, pair), pair.members.map(({ target }) => target), pairTag)
+    await waitFor(() => existsSync(path.join(root, `.v138-test-ready-${pairTag}`)))
+    renameSync(path.join(root, "replace-pair"), path.join(root, "replace-pair-authenticated"))
+    symlinkSync(pairExternal, path.join(root, "replace-pair"))
+    writeFileSync(path.join(root, `.v138-test-continue-${pairTag}`), "continue\n")
+    await requireComplete(pairRun)
+    if (readdirSync(pairExternal).length !== 0) fail("V138_SUCCESSOR_PAIR_REPLACEMENT_ESCAPE")
+    if (readFileSync(path.join(root, "replace-pair-authenticated/a.json"), "utf8") !== "a\n") fail("V138_SUCCESSOR_PAIR_DIRFD_POSTCONDITION")
+    protectedOperations++
+
+    mkdirSync(path.join(root, "replace-life"))
+    const before = "before\n"
+    writeFileSync(path.join(root, "replace-life/status.md"), before)
+    const lifecycle: V138LifecycleTransactionV2 = {
+      transactionId: "replace-life", intentPath: "replace-life.intent",
+      steps: [{ id: "status", target: "replace-life/status.md", beforeSha256: sha256V138Secure(before), afterBytes: "after\n" }],
+      lifecycle: { target: "replace-life/lifecycle.json", bytes: '{"authority":false}\n' },
+    }
+    const lifeTag = "life"
+    const lifeRun = invokeNative(root, lifecycleInput(root, lifecycle), [...lifecycle.steps.map(({ target }) => target), lifecycle.lifecycle.target], lifeTag)
+    await waitFor(() => existsSync(path.join(root, `.v138-test-ready-${lifeTag}`)))
+    renameSync(path.join(root, "replace-life"), path.join(root, "replace-life-authenticated"))
+    symlinkSync(lifecycleExternal, path.join(root, "replace-life"))
+    writeFileSync(path.join(root, `.v138-test-continue-${lifeTag}`), "continue\n")
+    await requireComplete(lifeRun)
+    if (readdirSync(lifecycleExternal).length !== 0) fail("V138_SUCCESSOR_LIFECYCLE_REPLACEMENT_ESCAPE")
+    if (readFileSync(path.join(root, "replace-life-authenticated/status.md"), "utf8") !== "after\n") fail("V138_SUCCESSOR_LIFECYCLE_DIRFD_POSTCONDITION")
+    protectedOperations++
+    return protectedOperations
+  } finally {
+    rmSync(pairExternal, { recursive: true, force: true })
+    rmSync(lifecycleExternal, { recursive: true, force: true })
+  }
+}
+
 const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string, unknown>>> => {
   const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v2-"))
   try {
@@ -214,6 +268,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
     const overlapRaces = await overlapRaceEvidence(root, 50)
     const disjointRaces = await disjointRaceEvidence(root, 100)
     const crashRecoveries = await crashRecoveryEvidence(root)
+    const directoryReplacementProtections = await directoryReplacementEvidence(root)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS,
       acceptedCells: 0,
@@ -223,6 +278,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       overlapRaces,
       disjointRaces,
       crashRecoveries,
+      directoryReplacementProtections,
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
   } finally { rmSync(root, { recursive: true, force: true }) }
