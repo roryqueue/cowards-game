@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto"
-import { execFileSync, spawn } from "node:child_process"
+import { execFileSync, spawn, spawnSync } from "node:child_process"
 import {
   closeSync,
   constants,
@@ -356,12 +356,12 @@ const rootIdentity = (rootInput: string) => {
   return Object.freeze({ path: root, device: String(status.dev), inode: String(status.ino) })
 }
 
-const invokeTransactionNative = async (
+const invokeTransactionNative = (
   rootInput: string,
   input: string,
   locks: readonly string[],
   crashBoundary?: string,
-): Promise<void> => {
+): void => {
   const root = rootIdentity(rootInput)
   const normalizedLocks = [...new Set(locks)].sort()
   const token = randomBytes(32).toString("hex")
@@ -394,32 +394,29 @@ const invokeTransactionNative = async (
     rootDescriptor = openSync(root.path, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0))
     if (shaHex(readFileSync(built.executable)) !== built.executableSha256)
       fail("V138_RETRY_V3_NATIVE_LAUNCH_DIGEST_MISMATCH")
-    await new Promise<void>((resolve, reject) => {
-      const child = spawn(
-        crashBoundary === "force-spawn-failure"
-          ? path.join(built.directory, "missing-helper")
-          : built.executable,
-        [],
-        {
-          cwd: root.path,
-          stdio: ["pipe", "ignore", "pipe", capabilityDescriptor!, rootDescriptor!, "pipe"],
-          env: {
-            PATH: "/usr/bin:/bin",
-            LANG: "C",
-            LC_ALL: "C",
-            TMPDIR: built.directory,
-            ...(crashBoundary === undefined ? {} : { V138_NATIVE_TEST_BARRIER: crashBoundary }),
-          },
+    const result = spawnSync(
+      crashBoundary === "force-spawn-failure"
+        ? path.join(built.directory, "missing-helper")
+        : built.executable,
+      [],
+      {
+        cwd: root.path,
+        input,
+        encoding: "utf8",
+        stdio: ["pipe", "ignore", "pipe", capabilityDescriptor, rootDescriptor, "pipe"],
+        env: {
+          PATH: "/usr/bin:/bin",
+          LANG: "C",
+          LC_ALL: "C",
+          TMPDIR: built.directory,
+          ...(crashBoundary === undefined ? {} : { V138_NATIVE_TEST_BARRIER: crashBoundary }),
         },
+      },
+    )
+    if (result.status !== 0)
+      fail(
+        `V138_RETRY_V3_NATIVE_FAILED:${result.status}:${result.error?.message ?? ""}:${result.stderr ?? ""}`,
       )
-      let stderr = ""
-      child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk })
-      child.once("error", reject)
-      child.once("exit", (code) =>
-        code === 0 ? resolve() : reject(new TypeError(`V138_RETRY_V3_NATIVE_FAILED:${code}:${stderr.trim()}`)),
-      )
-      child.stdin.end(input)
-    })
   } finally {
     if (capabilityDescriptor !== undefined) closeSync(capabilityDescriptor)
     if (rootDescriptor !== undefined) closeSync(rootDescriptor)
@@ -427,11 +424,11 @@ const invokeTransactionNative = async (
   }
 }
 
-export const publishV138RetryV3NativePair = async (
+export const publishV138RetryV3NativePair = (
   rootInput: string,
   input: V138DurablePairV2Input,
   crashBoundary = 0,
-): Promise<void> => {
+): void => {
   const identity = rootIdentity(rootInput)
   const derived = deriveV138PairIntentV2(identity, input)
   const nativeInput = [
@@ -447,18 +444,18 @@ export const publishV138RetryV3NativePair = async (
     "pair-v2",
     String(crashBoundary),
   ].join("\t") + "\n"
-  await invokeTransactionNative(
+  invokeTransactionNative(
     identity.path,
     nativeInput,
     [input.intentPath, ...input.members.map(({ target }) => target)],
   )
 }
 
-export const applyV138RetryV3NativeLifecycle = async (
+export const applyV138RetryV3NativeLifecycle = (
   rootInput: string,
   input: V138LifecycleTransactionV2,
   crashBoundary = 0,
-): Promise<void> => {
+): void => {
   const identity = rootIdentity(rootInput)
   const derived = deriveV138LifecycleIntentV2(identity, input)
   const nativeInput = [
@@ -478,7 +475,7 @@ export const applyV138RetryV3NativeLifecycle = async (
       [step.id, step.target, step.beforeSha256.slice(7), hex(step.afterBytes)].join("\t"),
     ),
   ].join("\n") + "\n"
-  await invokeTransactionNative(identity.path, nativeInput, [
+  invokeTransactionNative(identity.path, nativeInput, [
     derived.intentPath,
     derived.lifecycle.target,
     ...derived.steps.map(({ target }) => target),

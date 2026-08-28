@@ -448,7 +448,7 @@ describe("synthetic-only hardened v3 controller", () => {
         { target: "authority/envelope.json", bytes: "envelope\n" },
       ],
     } as const
-    await expect(publishV138RetryV3NativePair(root, pair, 1)).rejects.toThrow(
+    expect(() => publishV138RetryV3NativePair(root, pair, 1)).toThrow(
       "V138_RETRY_V3_NATIVE_FAILED",
     )
     await publishV138RetryV3NativePair(root, pair)
@@ -473,9 +473,9 @@ describe("synthetic-only hardened v3 controller", () => {
         bytes: "terminal\n",
       },
     } as const
-    await expect(
+    expect(() =>
       applyV138RetryV3NativeLifecycle(root, lifecycle, 1),
-    ).rejects.toThrow("V138_RETRY_V3_NATIVE_FAILED")
+    ).toThrow("V138_RETRY_V3_NATIVE_FAILED")
     await applyV138RetryV3NativeLifecycle(root, lifecycle)
     expect(
       readFileSync(path.join(root, "authority/journal.jsonl"), "utf8"),
@@ -598,6 +598,10 @@ describe("synthetic-only hardened v3 controller", () => {
         forbiddenCalls += 1
         throw new Error("must not check live outcome")
       },
+      authenticateClosure: () =>
+        ({ executionClosureRoot: SHA_A }) as ReturnType<
+          typeof authenticateV138RetryV3ExecutionClosure
+        >,
     })
     expect(forbiddenCalls).toBe(0)
   })
