@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto"
+import { existsSync, lstatSync, readFileSync } from "node:fs"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
   V138_LIVE_V8_MODES,
+  V138_LIVE_V8_PATHS,
   authenticateV138ReviewedLiveV8Ready,
+  computeV138LiveV8ReviewCarrierRoot,
   computeV138LiveV8ReviewPayloadRoot,
   computeV138LiveV8SupplementRoot,
   executeV138LiveV8Cli,
@@ -24,7 +29,42 @@ const SOURCE_TREE = "2".repeat(40)
 const SOURCE_PARENT = "3".repeat(40)
 const EXECUTION_ROOT = `sha256:${"4".repeat(64)}` as const
 const REVIEW_ROOT = `sha256:${"5".repeat(64)}` as const
-const CARRIER_ROOT = `sha256:${"6".repeat(64)}` as const
+const repoRoot = path.resolve(import.meta.dirname, "..")
+const sha256 = (value: Uint8Array): string =>
+  createHash("sha256").update(value).digest("hex")
+const canonicalPaths = [
+  ".planning/artifacts/v1.38-successor-source-seal-v13.json",
+  ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json",
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-93-PRESTART-INTEGRITY-STOP.md",
+  "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
+  ".planning/artifacts/v1.38-plan-262-105-pair-publication-source-review-v1.json",
+] as const
+const liveDestinations = [
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
+  ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
+  ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json",
+  ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
+] as const
+const canonicalSnapshot = () =>
+  Object.fromEntries(
+    canonicalPaths.map((repoPath) => [
+      repoPath,
+      sha256(readFileSync(path.join(repoRoot, repoPath))),
+    ]),
+  )
+const pathState = (repoPath: string): string => {
+  const absolute = path.join(repoRoot, repoPath)
+  if (!existsSync(absolute)) return "absent"
+  const status = lstatSync(absolute)
+  return status.isFile() ? `file:${sha256(readFileSync(absolute))}` : "non-file-present"
+}
+const effectSnapshot = () =>
+  Object.fromEntries(
+    [V138_LIVE_V8_PATHS.supplement, ...liveDestinations].map((repoPath) => [
+      repoPath,
+      pathState(repoPath),
+    ]),
+  )
 
 const reviewBundle = (): V138LiveV8ReviewBundle => {
   const body = {
@@ -48,6 +88,19 @@ const reviewBundle = (): V138LiveV8ReviewBundle => {
     ...body,
     payloadRoot: computeV138LiveV8ReviewPayloadRoot(body),
   }
+  const carrierBody = {
+    schemaVersion: "v1.38-plan-262-108-live-controller-custody-review-carrier-v1" as const,
+    payloadRoot: payload.payloadRoot,
+    reviewRoot: REVIEW_ROOT,
+    payloadMode: "100644" as const,
+    reviewMode: "100644" as const,
+    carrierMode: "100644" as const,
+    payloadSha256: `sha256:${"7".repeat(64)}` as const,
+    reviewSha256: `sha256:${"8".repeat(64)}` as const,
+    findingCount: 0 as const,
+    authorizesExecution: false as const,
+    downstreamAuthority: "denied" as const,
+  }
   return {
     payload,
     review: {
@@ -58,16 +111,8 @@ const reviewBundle = (): V138LiveV8ReviewBundle => {
       reviewRoot: REVIEW_ROOT,
     },
     carrier: {
-      schemaVersion: "v1.38-plan-262-108-live-controller-custody-review-carrier-v1",
-      payloadRoot: payload.payloadRoot,
-      reviewRoot: REVIEW_ROOT,
-      payloadMode: "100644",
-      reviewMode: "100644",
-      carrierMode: "100644",
-      carrierRoot: CARRIER_ROOT,
-      findingCount: 0,
-      authorizesExecution: false,
-      downstreamAuthority: "denied",
+      ...carrierBody,
+      carrierRoot: computeV138LiveV8ReviewCarrierRoot(carrierBody),
     },
   }
 }
@@ -251,6 +296,38 @@ describe("Plan 262-107 reviewed live-v8 adapter", () => {
     expect(calls).toEqual({ pair: 1, producer: 1, closure: 2 })
   })
 
+  it("runs every replacement gate in order before the synthetic producer", async () => {
+    const { deps } = dependencies()
+    const order: string[] = []
+    for (const name of [
+      "authenticatePlan93Stop",
+      "checkPair",
+      "authenticateReviewBundle",
+      "authenticateSupplement",
+      "assertProtectedHistoryUnchanged",
+      "assertDestinationsAbsent",
+      "authenticateExecutionClosure",
+      "runProducer",
+    ] as const) {
+      const prior = deps[name] as (...args: any[]) => any
+      ;(deps[name] as (...args: any[]) => any) = (...args: any[]) => {
+        order.push(name)
+        return prior(...args)
+      }
+    }
+    await runV138ReviewedBoundedLiveEnvelope("/synthetic", deps)
+    expect(order.slice(0, 8)).toEqual([
+      "authenticatePlan93Stop",
+      "checkPair",
+      "authenticateReviewBundle",
+      "authenticateSupplement",
+      "assertProtectedHistoryUnchanged",
+      "assertDestinationsAbsent",
+      "authenticateExecutionClosure",
+      "runProducer",
+    ])
+  })
+
   it.each([
     ["pair", (deps: V138LiveV8Dependencies) => (deps.checkPair = () => ({ pairCommit: "0".repeat(40) }) as never)],
     ["stop", (deps: V138LiveV8Dependencies) => {
@@ -312,5 +389,65 @@ describe("Plan 262-107 reviewed live-v8 adapter", () => {
       downstreamAuthority: "denied",
     })
     expect(calls.producer).toBe(0)
+  })
+
+  it("keeps source-only and synthetic modes byte-neutral for canonical custody", async () => {
+    const before = canonicalSnapshot()
+    const effectsBefore = effectSnapshot()
+    const { deps } = dependencies()
+    const output: string[] = []
+    await executeV138LiveV8Cli(["--check-reviewed-live-ready"], {
+      repoRoot,
+      dependencies: deps,
+      writeOutput: (value) => output.push(value),
+    })
+    await executeV138LiveV8Cli(["--run-reviewed-bounded-live-envelope"], {
+      repoRoot,
+      dependencies: deps,
+      writeOutput: (value) => output.push(value),
+    })
+    await executeV138LiveV8Cli(["--check-post-run-custody"], {
+      repoRoot,
+      dependencies: deps,
+      writeOutput: (value) => output.push(value),
+    })
+    expect(canonicalSnapshot()).toEqual(before)
+    expect(effectSnapshot()).toEqual(effectsBefore)
+  })
+
+  it("fails the real readiness path before effects while review and supplement are absent", async () => {
+    if (
+      existsSync(path.join(repoRoot, V138_LIVE_V8_PATHS.plan108Payload)) ||
+      existsSync(path.join(repoRoot, V138_LIVE_V8_PATHS.supplement))
+    )
+      return
+    const before = canonicalSnapshot()
+    const effectsBefore = effectSnapshot()
+    let producerCalls = 0
+    await expect(
+      executeV138LiveV8Cli(["--check-reviewed-live-ready"], {
+        repoRoot,
+        dependencies: {
+          runProducer: async () => {
+            producerCalls += 1
+          },
+        },
+        writeOutput: () => undefined,
+      }),
+    ).rejects.toThrow()
+    expect(producerCalls).toBe(0)
+    expect(canonicalSnapshot()).toEqual(before)
+    expect(effectSnapshot()).toEqual(effectsBefore)
+  }, 180_000)
+
+  it("contains no source-only filesystem mutation primitive", () => {
+    const source = readFileSync(
+      path.join(repoRoot, V138_LIVE_V8_PATHS.sourceAdapter),
+      "utf8",
+    )
+    expect(source).not.toMatch(/\b(?:writeFile|appendFile|mkdir|rm|unlink|rename|chmod|chown)Sync\b/u)
+    expect(source).toContain("validateInputs: false")
+    expect(source).toContain("checkPair: () =>")
+    expect(source).toContain("V138_LIVE_V8_POST_RUN_CUSTODY_CHANGED")
   })
 })

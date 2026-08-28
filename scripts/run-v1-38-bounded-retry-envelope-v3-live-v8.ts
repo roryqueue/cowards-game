@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { lstatSync, readFileSync, readlinkSync } from "node:fs"
+import { lstatSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
@@ -141,8 +141,8 @@ export type V138LiveV8ReviewBundle = Readonly<{
     payloadMode: "100644"
     reviewMode: "100644"
     carrierMode: "100644"
-    payloadSha256?: Sha
-    reviewSha256?: Sha
+    payloadSha256: Sha
+    reviewSha256: Sha
     carrierRoot: Sha
     findingCount: 0
     authorizesExecution: false
@@ -200,12 +200,26 @@ export const computeV138LiveV8ReviewPayloadRoot = (
   body: V138LiveV8ReviewPayloadBody,
 ): Sha => sha256(`v138-plan-262-108-live-controller-review-payload-v8\0${canonical(body)}`)
 
+export const computeV138LiveV8ReviewCarrierRoot = (
+  body: Omit<V138LiveV8ReviewBundle["carrier"], "carrierRoot">,
+): Sha => sha256(`v138-plan-262-108-live-controller-review-carrier-v1\0${canonical(body)}`)
+
 export const computeV138LiveV8SupplementRoot = (
   body: V138LiveV8SupplementBody,
 ): Sha => sha256(`v138-successor-executable-custody-supplement-v1\0${canonical(body)}`)
 
-const exactKeys = (value: Record<string, unknown>, expected: readonly string[], code: string) => {
-  if (canonical(Object.keys(value).sort()) !== canonical([...expected].sort())) fail(code)
+const assertExactKeys = (
+  value: unknown,
+  expected: readonly string[],
+  code: string,
+): void => {
+  if (
+    value === null ||
+    Array.isArray(value) ||
+    typeof value !== "object" ||
+    canonical(Object.keys(value).sort()) !== canonical([...expected].sort())
+  )
+    fail(code)
 }
 
 const readRegularNoFollow = (repoRoot: string, repoPath: string): Buffer => {
@@ -484,7 +498,23 @@ const assertPair = (
 }
 
 const assertReviewBundle = (bundle: V138LiveV8ReviewBundle): void => {
+  assertExactKeys(bundle, ["payload", "review", "carrier"], "V138_LIVE_V8_REVIEW_KEYS_INVALID")
+  assertExactKeys(bundle.payload, [
+    "schemaVersion", "reviewedSourceCommit", "reviewedSourceTree", "reviewedSourceParent",
+    "checkoutPaths", "executionClosureRoot", "findingCount", "reviewStatus",
+    "actualModesPassed", "syntheticProducerCalls", "liveInvoked", "freshCharged",
+    "freshAccepted", "authorizesExecution", "downstreamAuthority", "payloadRoot",
+  ], "V138_LIVE_V8_REVIEW_PAYLOAD_KEYS_INVALID")
+  assertExactKeys(bundle.review, [
+    "schemaVersion", "payloadRoot", "findingCount", "verdict", "reviewRoot",
+  ], "V138_LIVE_V8_REVIEW_DOCUMENT_KEYS_INVALID")
+  assertExactKeys(bundle.carrier, [
+    "schemaVersion", "payloadRoot", "reviewRoot", "payloadMode", "reviewMode",
+    "carrierMode", "payloadSha256", "reviewSha256", "carrierRoot", "findingCount",
+    "authorizesExecution", "downstreamAuthority",
+  ], "V138_LIVE_V8_REVIEW_CARRIER_KEYS_INVALID")
   const { payloadRoot, ...body } = bundle.payload
+  const { carrierRoot, ...carrierBody } = bundle.carrier
   if (
     computeV138LiveV8ReviewPayloadRoot(body) !== payloadRoot ||
     bundle.payload.schemaVersion !==
@@ -511,6 +541,7 @@ const assertReviewBundle = (bundle: V138LiveV8ReviewBundle): void => {
     bundle.carrier.payloadMode !== "100644" ||
     bundle.carrier.reviewMode !== "100644" ||
     bundle.carrier.carrierMode !== "100644" ||
+    computeV138LiveV8ReviewCarrierRoot(carrierBody) !== carrierRoot ||
     bundle.carrier.findingCount !== 0 ||
     bundle.carrier.authorizesExecution !== false ||
     bundle.carrier.downstreamAuthority !== "denied"
@@ -523,6 +554,31 @@ const assertSupplement = (
   stop: V138LiveV8Plan93Stop,
   review: V138LiveV8ReviewBundle,
 ): void => {
+  assertExactKeys(value, [
+    "schemaVersion", "pairCommit", "sealRoot", "envelopeRoot", "envelopeStatus",
+    "counters", "assuranceClass", "protectedHistoryRoot", "plan93", "plan107",
+    "plan108", "supersessionScope", "createsEnvelope", "createsCapacity",
+    "resetsCounters", "authorizesExecution", "candidateSearchAuthorized",
+    "formationAuthorized", "holdoutAuthorized", "publicAuthorized", "productAuthorized",
+    "productionAuthorized", "countedPlayAuthorized", "gameplayChangeAuthorized",
+    "archiveAuthorized", "tagAuthorized", "phase263Authorized", "downstreamAuthority",
+    "supplementRoot",
+  ], "V138_LIVE_V8_SUPPLEMENT_KEYS_INVALID")
+  assertExactKeys(value.counters, [
+    "routeStartsConsumed", "preflightObservationsConsumed", "calibrationIdentitiesCharged",
+    "reproductionIdentitiesCharged", "acceptedCells",
+  ], "V138_LIVE_V8_SUPPLEMENT_COUNTER_KEYS_INVALID")
+  assertExactKeys(value.plan93, [
+    "attempt", "status", "stopCode", "liveEffectBoundaryCrossed", "envelopeConsumed",
+    "routeStarts", "preflightObservations", "calibrationCharged", "reproductionCharged",
+    "freshAccepted", "terminalPresent", "complete",
+  ], "V138_LIVE_V8_SUPPLEMENT_STOP_KEYS_INVALID")
+  assertExactKeys(value.plan107, [
+    "sourceCommit", "sourceTree", "sourceParent", "checkoutPaths", "executionClosureRoot",
+  ], "V138_LIVE_V8_SUPPLEMENT_SOURCE_KEYS_INVALID")
+  assertExactKeys(value.plan108, [
+    "payloadRoot", "reviewRoot", "carrierRoot", "findingCount", "verdict",
+  ], "V138_LIVE_V8_SUPPLEMENT_REVIEW_KEYS_INVALID")
   const { supplementRoot, ...body } = value
   if (
     computeV138LiveV8SupplementRoot(body) !== supplementRoot ||
