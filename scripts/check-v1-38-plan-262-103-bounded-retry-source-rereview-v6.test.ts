@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
@@ -125,10 +125,6 @@ describe("Plan 262-103 independent non-recursive source review", () => {
   }, 180_000)
 
   it("validates one unique canonical three-path publication", () => {
-    if (!existsSync(path.resolve(repoRoot, V138_PLAN_262_103_CANDIDATE_PATH))) {
-      expect(() => checkV138Plan262103PublishedReview(repoRoot)).toThrow()
-      return
-    }
     const checked = checkV138Plan262103PublishedReview(repoRoot)
     expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/u)
     expect(checked.candidate.findingCount).toBe(0)
