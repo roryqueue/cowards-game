@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
@@ -14,7 +14,7 @@ import {
   inspectV138Plan262108IndependentProtectedHistory,
   publishV138Plan262108CorrectedReview,
   runV138Plan262108AdversarialMatrix,
-} from "./check-v1-38-plan-262-108-live-controller-custody-v8.js"
+} from "./check-v1-38-plan-262-108-live-controller-custody-v9.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const cloneRepo = (): { owner: string; root: string } => {
@@ -23,6 +23,7 @@ const cloneRepo = (): { owner: string; root: string } => {
   execFileSync("/usr/bin/git", ["clone", "--quiet", "--no-local", repoRoot, root], {
     env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", HOME: owner },
   })
+  symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
   return { owner, root }
 }
 const commit = (root: string, paths: readonly string[], message: string): string => {
@@ -38,7 +39,7 @@ const commit = (root: string, paths: readonly string[], message: string): string
 describe("Plan 262-108 code-review corrections", () => {
   it("owns critical roots and the complete protected-history contract independently", () => {
     const source = readFileSync(
-      path.join(repoRoot, "scripts/check-v1-38-plan-262-108-live-controller-custody-v8.ts"),
+      path.join(repoRoot, "scripts/check-v1-38-plan-262-108-live-controller-custody-v9.ts"),
       "utf8",
     )
     for (const forbidden of [
@@ -92,7 +93,10 @@ describe("Plan 262-108 code-review corrections", () => {
         expect(() => authenticateV138Plan262108CorrectedTrioCustody(root, publication), repoPath).toThrow()
         chmodSync(target, 0o644)
       }
-      writeFileSync(path.join(root, V138_PLAN_262_108_CORRECTED_PATHS.review), result.reviewBytes)
+      writeFileSync(
+        path.join(root, V138_PLAN_262_108_CORRECTED_PATHS.review),
+        Buffer.concat([result.reviewBytes, Buffer.from("successor rewrite\n")]),
+      )
       commit(root, [V138_PLAN_262_108_CORRECTED_PATHS.review], "rewrite corrected review")
       expect(() => authenticateV138Plan262108CorrectedTrioCustody(root, publication)).toThrow()
     } finally {
