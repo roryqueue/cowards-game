@@ -197,7 +197,7 @@ describe("Plan 262-101 raw Git object byte-custody re-review v5", () => {
     }
   }, 180_000)
 
-  it("rejects pair/history/root/authority mutation and keeps canonical pair absent pre-publication", () => {
+  it("rejects pair, history, root, and authority mutation", () => {
     const review = deriveV138Plan262101ReviewNoPublish(repoRoot)
     for (const mutate of [
       (value: any) => (value.extra = false),
@@ -214,6 +214,27 @@ describe("Plan 262-101 raw Git object byte-custody re-review v5", () => {
       mutate(changed)
       expect(() => validateV138Plan262101Review(changed, review)).toThrow()
     }
-    expect(() => checkV138Plan262101PublishedReview(repoRoot)).toThrow()
+  }, 180_000)
+
+  it("publishes the exact consumer-tested blocked pair as one canonical carrier", () => {
+    const checked = checkV138Plan262101PublishedReview(repoRoot)
+    expect(checked.candidate).toMatchObject({
+      status: "blocked",
+      findingCount: 1,
+      sourceReviewPassed: false,
+      execution: {
+        actualConsumerStatus: "rejected_expected",
+        canonicalWrites: 0,
+        freshCharged: 0,
+        freshAccepted: 0,
+      },
+      authority: { plan26292Eligible: false },
+    })
+    expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/u)
+    expect(
+      readFileSync(path.resolve(repoRoot, V138_PLAN_262_101_REVIEW_PATH)),
+    ).toEqual(
+      readFileSync(path.resolve(repoRoot, V138_PLAN_262_101_REVIEW_PATH)),
+    )
   }, 180_000)
 })
