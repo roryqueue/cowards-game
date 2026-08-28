@@ -7,7 +7,6 @@ import {
   constants,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   openSync,
   readFileSync,
   realpathSync,
@@ -298,8 +297,9 @@ const consumerProcessClosure = (clone: string, owner: string, tsxCli: string, ex
 
 const exercise = (root: string, findings: readonly any[] = []) => {
   const previous = process.umask(0o077)
-  const owner = mkdtempSync(path.join(tmpdir(), "v138-plan262103-review-"))
-  chmodSync(owner, 0o700)
+  const owner = path.join(tmpdir(), "cowards-v138-plan262103-review-v6")
+  if (safeType(owner) !== "absent") fail("V138_PLAN_262_103_OWNER_PRESENT")
+  mkdirSync(owner, { mode: 0o700 })
   const clone = path.join(owner, "repo")
   const refsBefore = git(root, ["for-each-ref", "--format=%(refname)%00%(objectname)"])
   try {
