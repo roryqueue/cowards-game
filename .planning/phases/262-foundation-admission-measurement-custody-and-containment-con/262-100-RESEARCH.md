@@ -261,7 +261,7 @@ The actual implementation must retain the existing executable digest check and `
 
 ### Pattern 3: Pre-publication actual-consumer review
 
-**What:** Plan 101 derives candidate v5 JSON and Markdown deterministically, creates an owner-only disposable detached checkout at the exact Plan-100 source lineage, commits those exact candidate bytes only in that disposable checkout, and invokes the production `--derive-seal-envelope-no-publish` path. It verifies no seal/envelope/live/downstream destination appears, cleanup completes, portable fields equal the fresh local closure fields, and the complete local root is identical before and after. Only then may the byte-identical candidate pair be published canonically. [PRESCRIPTIVE]
+**What:** Plan 101 derives candidate v5 JSON and Markdown deterministically, sets `umask 077`, creates a `0700` temporary directory, runs `git clone --no-local --no-checkout` into that directory so candidate commits and objects never enter the canonical repository object store or refs, detaches the isolated clone at the exact Plan-100 source-completion commit, disables hooks and signing, writes and commits only the exact candidate JSON/REVIEW bytes with fixed non-secret author/committer identity and timestamps, and invokes the production `--derive-seal-envelope-no-publish` path inside that isolated clone. It verifies no seal/envelope/live/downstream destination appears, cleanup completes, portable fields equal the fresh local closure fields, and the complete local root is identical before and after. The clone directory is removed on every exit path and canonical refs plus destinations are rechecked unchanged. Only then may the byte-identical candidate pair be published canonically. [PRESCRIPTIVE]
 
 **When to use:** before writing the Plan-101 canonical review pair. Run the consumer again against the committed canonical pair before summary closeout as a confirmation, but the disposable committed run is the publication gate. [PRESCRIPTIVE]
 
@@ -393,17 +393,20 @@ Each fixture must be committed in a synthetic repository, read through the produ
 |---|---|---|---|
 | — | None. All factual claims were verified from the repository/toolchain or cited official documentation; prescriptive recommendations are labeled. | — | — |
 
-## Open Questions
+## Open Questions — RESOLVED
 
-1. **Disposable review commit mechanism**
-   - What we know: Plan 99 already uses an owner-only detached checkout and exact committed-byte observations. [VERIFIED: Plan-99 checker/summary]
-   - What's unclear: whether Plan 101 should use a detached worktree commit or a fully isolated temporary clone/object store. [VERIFIED: implementation not yet planned]
-   - Recommendation: use the existing Plan-99 owner-only detached-checkout pattern unless it cannot commit exact candidate review paths without contaminating canonical refs; in either case require cleanup and destination absence. [PRESCRIPTIVE]
+No implementation choice remains open for Plans 100/101. The planner pins the following literals and mechanism; Plan 100's strict consumer and Plan 101's producer/checker must use them byte-for-byte:
 
-2. **Exact Plan-101 protocol names**
-   - What we know: new versioned destinations are mandatory and the current sequence naturally advances v4 to v5. [VERIFIED: D-01 and prior naming]
-   - What's unclear: final planner-selected schema/protocol constants. [VERIFIED: not yet implemented]
-   - Recommendation: use `v1.38-plan-262-101-bounded-retry-source-rereview-v5` and `fresh-independent-plan-100-byte-preserving-rereview-v5`, updating the producer's strict consumer schema in Plan 100. [PRESCRIPTIVE]
+| Contract member | Exact literal |
+|---|---|
+| `schemaVersion` | `v1.38-plan-262-101-git-object-byte-custody-rereview-v5` |
+| `protocol` | `git-object-byte-custody-v1` |
+| portable reviewed-closure hash domain | `v1.38:plan-262-101:git-object-byte-custody:portable:v5` |
+| canonical result-root hash domain | `v1.38:plan-262-101:git-object-byte-custody:root:v5` |
+| Markdown review-root hash domain | `v1.38:plan-262-101:git-object-byte-custody:review:v5` |
+| ordered finding-root hash domain | `v1.38:plan-262-101:git-object-byte-custody:finding:v5` |
+
+**Resolved disposable commit mechanism:** set `umask 077`; create a `0700` temporary directory; run `git clone --no-local --no-checkout` from the canonical repository into it; detach at the exact Plan-100 source-completion commit; use the already authenticated Git executable and isolated environment; disable hooks and commit signing; write and commit only the byte-identical candidate JSON/REVIEW paths with fixed non-secret author/committer identity and timestamps; run the actual no-publish consumer inside the clone; then remove the clone on success or failure and prove canonical refs plus every canonical/live/downstream destination are unchanged or absent. A linked worktree is forbidden because its candidate objects would share the canonical object store. No future commit hash, blob hash, review root, finding root, result root, or test count is predeclared; execution derives all such values from actual bytes. [PRESCRIPTIVE]
 
 ## Environment Availability
 

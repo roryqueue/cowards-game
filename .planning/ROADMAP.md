@@ -50,9 +50,12 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 76/80 plans executed
+**Plans:** 76/82 plans executed
 
-**Current verdict:** SOURCE RE-REVIEW PENDING / FRESH 0/540 / DOWNSTREAM DENIED — 73 of 78 plans have summaries. Plan 262-91 remains an exact immutable 11-finding blocked review; Plan 262-96 additively corrected execution custody and passed 87/87 focused tests without live/canonical writes. Only Plan 262-97 may independently re-review the corrected bytes. Plans 262-92 through 262-95 remain ineligible, ADMIT-03 remains blocked, and Phases 263-270 remain denied.
+**Current verdict:** RAW GIT-BYTE SOURCE CORRECTION PENDING / FRESH 0/540 / DOWNSTREAM DENIED — 76 of 82 active plans have summaries. Plans 262-98 and 262-99 are complete, but Plan 262-99 closed blocked with one `GIT_SHOW_BYTES_TRIMMED` finding: its provisional zero pair is invalid/non-authorizing and Plan 262-92 is ineligible. Plans 262-100 and 262-101 are planned at Waves 82–83, followed only on a fresh literal-zero consumer-success review by Plans 262-92 through 262-95 at Waves 84–87. Plan 262-100 is the sole next action; Plan 262-101 and every downstream plan remain denied until their exact predecessors complete. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 planning/execution plus all candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, and tag authority remain denied.
+
+<!-- Current additive planning carrier; no future commit, blob, review, finding, result, or test-count value is asserted. -->
+<!-- phase-262-plan-100-101-topology-status: {"schema_version":"v1.38-plan-262-100-101-topology-v1","proof_status":"raw_git_byte_custody_correction_planned","active_plans":82,"trustworthy_summaries":76,"completed_plans":["262-98","262-99"],"plan_99_status":"blocked_final_consumer_custody","plan_99_finding_count":1,"plan_99_finding":"GIT_SHOW_BYTES_TRIMMED","plan_99_provisional_pair_valid":false,"plan_262_92_eligible":false,"successor_graph":["262-99","262-100","262-101","262-92","262-93","262-94","262-95"],"waves":{"262-100":82,"262-101":83,"262-92":84,"262-93":85,"262-94":86,"262-95":87},"next_action":"dispatch-262-100-only","fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 
 <!-- Historical v1 carrier retained byte-for-byte as earlier planning history. The current carrier is lifecycle-v2. -->
 <!-- phase-262-current-lifecycle-status: {"schema_version":"v1.38-phase-262-current-lifecycle-status-v1","artifact":".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v1.json","active_plans":64,"summaries":64,"plans_80_81_completed":true,"route_starts":3,"calibration_charged":24,"fresh_accepted":0,"required_accepted":540,"terminal":"exhausted","effective_integrity":"integrity_non_pass","reproduction_v15_present":false,"route9_activation_present":false,"plan81_verification":"gaps_found","lifecycle_mutated":false,"phase_262":"incomplete","phases_263_270_authorized":false} -->
@@ -68,7 +71,7 @@ The current carrier also resolves the audit's Plan-79 journal-root documentation
 
 <!-- phase-262-plan-79-closeout-status: {"schema_version":"v1.38-plan-262-79-closeout-v1","proof_status":"bounded_retry_exhausted","active_plans":64,"trustworthy_summaries":62,"live_commit":"b4be9f5f5207c7eb87c6cd0e8f79863d4877cf3b","envelope_root":"sha256:229c1c3e33ee055448b4b8ac7dc2bb53efd84774416d51d984044b2a7f35f153","journal_root":"sha256:1cd8fd41f97a7c4938cb53719e31b49cc937fbfdcd26a51688e6894d09d8ad","state_root":"sha256:3b1fbf71ebf7d95a128d0000ebb92050b2c9dfd790415570cb93169cc1f520f5","disposition":"exhausted","preflight_observations":3,"route_starts":3,"calibration_charged":24,"reproduction_charged":0,"fresh_accepted":0,"required_accepted":540,"complete_cleanup":true,"reproduction_v15_present":false,"post_run_cli_checkers_present":false,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"foundation_activation_root_present":false,"next_action":"stop-no-plan-80-authority","unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
 
-**Current topology (superseding earlier dispatch text):** Active discovery is 70 plans/70 summaries. Plans 262-84 through 262-89 are complete. Lifecycle-v2 status root `sha256:e762aa430aadcd1986d04c79dc9d102641e9a177f099ee066bcb9464c09f94a6` records `gaps_found` without lifecycle mutation. Correction-v10 root `sha256:79f0ba7b9352992c5ad51a102bfd93f21bde93f5a01ff2438a25fef0919b22d3` preserves the clean non-pass at fresh 0/540. Reproduction-v16 and Route-10 activation remain absent; there is no eligible next plan or downstream authority under the current contract.
+**Historical lifecycle-v2 topology:** Active discovery was 70 plans/70 summaries when Plans 262-84 through 262-89 completed. Lifecycle-v2 status root `sha256:e762aa430aadcd1986d04c79dc9d102641e9a177f099ee066bcb9464c09f94a6` recorded `gaps_found` without lifecycle mutation, and correction-v10 root `sha256:79f0ba7b9352992c5ad51a102bfd93f21bde93f5a01ff2438a25fef0919b22d3` preserved the clean non-pass at fresh 0/540. This paragraph is retained as historical evidence only and is superseded for current dispatch by the Plan-100/101 topology carrier above.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","review_v1_disposition":"review_v1_invalid_disproved_non_authorizing","review_v2_disposition":"structurally_self_referential_non_authorizing","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
@@ -88,24 +91,59 @@ The current carrier also resolves the audit's Plan-79 journal-root documentation
 
 Plans:
 
-- [x] 262-98-PLAN.md
-- [x] 262-99-PLAN.md
+**Wave 70** *(complete)*
+- [x] 262-84-PLAN.md — Implement additive bounded-retry v2 source and exhaustive synthetic proof only.
 
-- [x] 262-90-PLAN.md
-- [x] 262-91-PLAN.md
-- [ ] 262-92-PLAN.md
-- [ ] 262-93-PLAN.md
-- [ ] 262-94-PLAN.md
-- [ ] 262-95-PLAN.md
-- [x] 262-96-PLAN.md
-- [x] 262-97-PLAN.md
+**Wave 71** *(complete)*
+- [x] 262-85-PLAN.md — Independently review the committed v2 source without execution authority.
 
-- [x] 262-84-PLAN.md
-- [x] 262-85-PLAN.md
-- [x] 262-86-PLAN.md
-- [x] 262-87-PLAN.md
-- [x] 262-88-PLAN.md
-- [x] 262-89-PLAN.md
+**Wave 72** *(complete)*
+- [x] 262-86-PLAN.md — Publish the direct-child v12 source seal and inactive v2 envelope.
+
+**Wave 73** *(complete)*
+- [x] 262-87-PLAN.md — Execute the sole v2 envelope and publish crash-safe terminal evidence.
+
+**Wave 74** *(complete)*
+- [x] 262-88-PLAN.md — Independently adjudicate the v2 envelope and keep Route-10 absent on non-pass.
+
+**Wave 75** *(complete)*
+- [x] 262-89-PLAN.md — Close the v2 lifecycle truthfully as `gaps_found` without lifecycle mutation.
+
+**Wave 76** *(complete)*
+- [x] 262-90-PLAN.md — Implement wholly additive retry-envelope:v3 source and synthetic proof.
+
+**Wave 77** *(complete, blocked review result)*
+- [x] 262-91-PLAN.md — Independently review Plan-90 source and preserve its exact blocked findings without execution authority.
+
+**Wave 78** *(complete)*
+- [x] 262-96-PLAN.md — Additively correct every direct Plan-91 source defect without live or canonical publication.
+
+**Wave 79** *(complete)*
+- [x] 262-97-PLAN.md — Freshly re-review corrected Plan-96 source while preserving Plan-90/91 blocked history.
+
+**Wave 80** *(complete)*
+- [x] 262-98-PLAN.md — Correct the reviewed execution-closure compatibility contract without live authority.
+
+**Wave 81** *(complete, blocked with one final-consumer custody finding)*
+- [x] 262-99-PLAN.md — Preserve the provisional pair as invalid history after `GIT_SHOW_BYTES_TRIMMED`; Plan 262-92 remains ineligible.
+
+**Wave 82** *(sole next action; source/synthetic only)*
+- [ ] 262-100-PLAN.md — Replace trimmed text custody with exact raw Git blob-byte and regular-mode custody; publish no review or evidence.
+
+**Wave 83** *(blocked on committed Plan-100 summary)*
+- [ ] 262-101-PLAN.md — Independently publish a fresh branch-valid v5 review; only zero findings plus actual-consumer success may unlock Plan 262-92.
+
+**Wave 84** *(blocked on a committed literal-zero Plan-101 pair with consumer success)*
+- [ ] 262-92-PLAN.md — Publish the exact direct-child seal-v13 and inactive retry-envelope:v3 pair.
+
+**Wave 85** *(blocked on committed Plan-92 summary)*
+- [ ] 262-93-PLAN.md — Consume the sole finite retry-envelope:v3 and publish crash-safe live terminal evidence.
+
+**Wave 86** *(blocked on committed Plan-93 summary)*
+- [ ] 262-94-PLAN.md — Independently adjudicate v3 and own the exact-pass-only reproduction-v17/Route-11 boundary.
+
+**Wave 87** *(blocked on committed Plan-94 summary)*
+- [ ] 262-95-PLAN.md — Refresh validation/verification and apply the two-stage committed-summary lifecycle latch.
 
 **Wave 1**
 
@@ -542,7 +580,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 76/80 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 76/82 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
