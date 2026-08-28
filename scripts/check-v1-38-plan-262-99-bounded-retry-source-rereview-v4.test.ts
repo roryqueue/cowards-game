@@ -186,9 +186,9 @@ describe("Plan 262-99 independent source review", () => {
     expect(first.reviewedExecutionClosure.reviewedExecutionClosureRoot).not.toBe(
       first.reviewedExecutionClosure.installedClosureRoot,
     )
-    expect(first.execution.detachedExecutionClosureRoot).not.toBe(
-      first.reviewedExecutionClosure.reviewedExecutionClosureRoot,
-    )
+    expect(first.execution).not.toHaveProperty("executionClosureRoot")
+    expect(first.execution).not.toHaveProperty("detachedExecutionClosureRoot")
+    expect(first.execution).not.toHaveProperty("observations")
     expect(snapshotV138Plan26299Destinations(repoRoot)).toEqual(before)
   }, 180_000)
 
@@ -240,6 +240,13 @@ describe("Plan 262-99 independent source review", () => {
     for (const mutate of [
       (value: any) => (value.extra = false),
       (value: any) => (value.authority.extra = false),
+      (value: any) => (value.identityClaims.extra = false),
+      (value: any) => (value.correctedSource.extra = false),
+      (value: any) => (value.protectedHistory.extra = false),
+      (value: any) => (value.protectedHistory.plan96.extra = false),
+      (value: any) => (value.protectedHistory.plan97.extra = false),
+      (value: any) => (value.failedAttempt.extra = false),
+      (value: any) => (value.execution.extra = false),
       (value: any) =>
         (value.reviewedExecutionClosure.extraPortableMember = sha("extra")),
     ]) {

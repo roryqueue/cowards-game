@@ -166,6 +166,12 @@ const lines = (value: string): string[] =>
   value.trim() === "" ? [] : value.trim().split("\n")
 const cloneRecord = (value: unknown): Record<string, any> =>
   JSON.parse(JSON.stringify(value)) as Record<string, any>
+const exactKeys = (value: unknown, expected: readonly string[]): boolean =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  canonical(Object.keys(value as Record<string, unknown>).sort()) ===
+    canonical([...expected].sort())
 
 const isolatedGitEnvironment = (home: string): NodeJS.ProcessEnv => ({
   PATH: "/usr/bin:/bin",
@@ -650,7 +656,7 @@ export const deriveV138Plan26299ReviewNoPublish = (
       ? []
       : inspectV138Plan26299Source(overrides.source).map(sourceFinding)
     const observationFindings = evaluateV138Plan26299Observations({
-      observations: overrides.observations ?? base.execution.observations,
+      observations: overrides.observations ?? runV138Plan26299DetachedExercise(root).observations,
     })
     const findings = [...sourceFindings, ...observationFindings]
       .sort((left, right) => left.code.localeCompare(right.code))
@@ -698,8 +704,6 @@ export const deriveV138Plan26299ReviewNoPublish = (
     freshAccepted: 0 as const,
     localSecretAccessed: false as const,
     identityConsumed: false as const,
-    detachedExecutionClosureRoot: detached.detachedExecutionClosureRoot,
-    observations: detached.observations,
   })
   const body = {
     schemaVersion: "v1.38-plan-262-99-bounded-retry-source-rereview-v4" as const,
@@ -742,7 +746,76 @@ export const validateV138Plan26299Review = (
   const falseAuthorityExceptions = new Set([
     "plan26292Eligible", "freshCharged", "freshAccepted",
   ])
+  const topKeys = [
+    "schemaVersion", "reviewProtocol", "status", "correctedSource",
+    "protectedHistory", "failedAttempt", "execution",
+    "reviewedExecutionClosure", "findings", "findingCount", "findingRoot",
+    "sourceReviewPassed", "identityClaims", "authority", "reviewRoot",
+  ]
+  const authorityKeys = [
+    "plan26292Eligible", "authorizesExecution", "authorizationCreated",
+    "sealV13Created", "retryEnvelopeV3Created", "journalV3Created",
+    "receiptsV3Created", "terminalV3Created", "reproductionV17Created",
+    "dispositionV3Created", "correctionV11Created", "route11ActivationCreated",
+    "readinessV3Created", "lifecycleV3Created", "liveInvoked",
+    "localSecretAccessed", "lifecycleMutated", "freshCharged",
+    "freshAccepted", "phase263PlanningAuthorized",
+    "phase263ExecutionAuthorized", "candidateSearchAuthorized",
+    "formationMaterializationAuthorized", "holdoutOpeningAuthorized",
+    "publicAuthorized", "productAuthorized", "activationAuthorized",
+    "productionAuthorized", "countedPlayAuthorized",
+    "gameplayChangeAuthorized", "archiveAuthorized", "tagAuthorized",
+  ]
+  const identityKeys = [
+    "independentPersonClaimed", "externalIdentityClaimed",
+    "cryptographicReviewerIdentityClaimed", "independentCustodyClaimed",
+    "separatePermissioningClaimed", "maliciousOperatorResistanceClaimed",
+    "hostileSameUidResistanceClaimed",
+    "pathnameLaunchReplacementResistanceClaimed",
+  ]
+  const portableKeys = [
+    "schemaVersion", "sourceCommit", "sourceTree", "sourceParent",
+    "checkoutByteManifestRoot", "installedClosureRoot", "gitExecutable",
+    "gitExecutableSha256", "gitIsolationRoot", "nodeSha256",
+    "pnpmDistributionSha256", "nativeSourcesRoot",
+    "pathnameLaunchReplacementResistanceClaimed",
+    "reviewedExecutionClosureRoot",
+  ]
+  const executionKeys = [
+    "focusedTestsPassed", "sourceOnlyPassed", "checkoutBytesMatchedBefore",
+    "checkoutBytesMatchedAfter", "cleanupComplete", "canonicalWrites",
+    "liveInvoked", "freshCharged", "freshAccepted", "localSecretAccessed",
+    "identityConsumed",
+  ]
+  const correctedKeys = [
+    "commit", "tree", "parent", "noLaterRewrite", "summaryTrustedAsVerdict",
+    "files",
+  ]
+  const protectedKeys = [
+    "historicalResultReinterpreted", "plan96", "plan97",
+  ]
+  const plan96Keys = [
+    "sourceCommit", "sourceTree", "sourceParent", "summarySha256",
+  ]
+  const plan97Keys = [
+    "schemaVersion", "reviewRoot", "findingRoot", "findingCount",
+    "sourceReviewPassed", "artifactSha256", "reviewSha256", "summarySha256",
+  ]
+  const failedAttemptKeys = [
+    "plan", "stopCode", "status", "canonicalWrites", "freshCharged",
+    "freshAccepted", "localSecretAccessed", "identityConsumed",
+  ]
   if (
+    !exactKeys(value, topKeys) ||
+    !exactKeys(value?.authority, authorityKeys) ||
+    !exactKeys(value?.identityClaims, identityKeys) ||
+    !exactKeys(value?.execution, executionKeys) ||
+    !exactKeys(value?.correctedSource, correctedKeys) ||
+    !exactKeys(value?.protectedHistory, protectedKeys) ||
+    !exactKeys(value?.protectedHistory?.plan96, plan96Keys) ||
+    !exactKeys(value?.protectedHistory?.plan97, plan97Keys) ||
+    !exactKeys(value?.failedAttempt, failedAttemptKeys) ||
+    !exactKeys(portable, portableKeys) ||
     value?.schemaVersion !== "v1.38-plan-262-99-bounded-retry-source-rereview-v4" ||
     value.reviewProtocol !== "fresh-independent-plan-98-portable-closure-rereview-v4" ||
     canonical(value) !== canonical(expected) ||
@@ -753,6 +826,16 @@ export const validateV138Plan26299Review = (
     value.sourceReviewPassed !== (value.findingCount === 0) ||
     value.authority?.plan26292Eligible !== (value.findingCount === 0) ||
     value.correctedSource?.commit !== PLAN_98_SOURCE_COMMIT ||
+    !Array.isArray(value.correctedSource?.files) ||
+    value.correctedSource.files.length !== 2 ||
+    value.correctedSource.files.some((item: unknown, index: number) =>
+      !exactKeys(item, ["path", "mode", "blob", "byteLength", "sha256"]) ||
+      (item as any).path !== V138_PLAN_262_99_SOURCE_PATHS[index] ||
+      (item as any).mode !== "100644" ||
+      !/^[0-9a-f]{40}$/u.test(String((item as any).blob)) ||
+      !Number.isSafeInteger((item as any).byteLength) ||
+      !/^sha256:[0-9a-f]{64}$/u.test(String((item as any).sha256)),
+    ) ||
     value.protectedHistory?.historicalResultReinterpreted !== false ||
     value.protectedHistory?.plan97?.reviewRoot !== PLAN_97.reviewRoot ||
     value.failedAttempt?.status !== "integrity_stop" ||
@@ -765,7 +848,6 @@ export const validateV138Plan26299Review = (
     Object.prototype.hasOwnProperty.call(portable, "gitObjectRoot") ||
     portable.reviewedExecutionClosureRoot !== computeV138Plan26299PortableRoot(portableBody as V138Plan26299PortableClosure) ||
     portable.reviewedExecutionClosureRoot === portable.installedClosureRoot ||
-    portable.reviewedExecutionClosureRoot === value.execution?.detachedExecutionClosureRoot ||
     Object.entries(value.authority).some(([key, item]) =>
       !falseAuthorityExceptions.has(key) && item !== false) ||
     value.authority.freshCharged !== 0 ||
@@ -817,8 +899,7 @@ An owner-only \`0700\` detached checkout ran ${review.execution.focusedTestsPass
 - Schema: \`${review.reviewedExecutionClosure.schemaVersion}\`
 - Portable root: \`${review.reviewedExecutionClosure.reviewedExecutionClosureRoot}\`
 - Installed closure member: \`${review.reviewedExecutionClosure.installedClosureRoot}\`
-- Detached full local root: \`${review.execution.detachedExecutionClosureRoot}\`
-- \`gitObjectRoot\` is excluded from the portable tuple and retained only in the detached full local root.
+- \`gitObjectRoot\` and the detached full local root are excluded from the published portable tuple.
 - The portable, installed, and full roots are distinct hash domains.
 
 ## Findings
