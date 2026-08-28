@@ -479,15 +479,25 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
       write_committed(stage, steps[index].after, steps[index].after_length, namespace, label, crash_boundary);
     }
     if (steps[index].state == 0) {
-      if (!regular_state(backup) && linkat(steps[index].target.parent, steps[index].target.name, staging, backup.name, 0) != 0) die("V138_NATIVE_BACKUP_LINK_FAILED");
+      if (!regular_state(backup)) {
+        if (linkat(steps[index].target.parent, steps[index].target.name, staging, backup.name, 0) != 0) die("V138_NATIVE_BACKUP_LINK_FAILED");
+        crash_if(crash_boundary, 200);
+      }
       char digest[65]; sha256_file(backup, digest);
       if (strcmp(digest, steps[index].expected_before) != 0) die("V138_LIFECYCLE_V2_BACKUP_CONFLICT");
+      if (fsync(staging) != 0) die("V138_NATIVE_FSYNC_FAILED");
+      crash_if(crash_boundary, 201);
       if (unlinkat(steps[index].target.parent, steps[index].target.name, 0) != 0) die("V138_NATIVE_UNLINK_FAILED");
+      crash_if(crash_boundary, 202);
+      if (fsync(steps[index].target.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
+      crash_if(crash_boundary, 203);
     }
     if (linkat(staging, stage.name, steps[index].target.parent, steps[index].target.name, 0) != 0 && errno != EEXIST) die("V138_NATIVE_LINK_FAILED");
+    crash_if(crash_boundary, 204);
     char installed[65]; sha256_file(steps[index].target, installed);
     if (strcmp(installed, steps[index].after_digest) != 0) die("V138_LIFECYCLE_V2_CAS_CONFLICT");
-    fsync(steps[index].target.parent);
+    if (fsync(steps[index].target.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
+    crash_if(crash_boundary, 205);
     crash_if(crash_boundary, 2 + index);
   }
   char status_name[96]; snprintf(status_name, sizeof(status_name), "%s.status", namespace);

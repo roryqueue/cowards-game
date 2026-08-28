@@ -271,6 +271,26 @@ const crashRecoveryEvidence = async (root: string): Promise<number> => {
     if (readdirSync(path.join(root, ".v138-lifecycle-staging")).some((entry) => entry.startsWith(deriveV138LifecycleIntentV2(trustedIdentity(root), lifecycle).namespace))) fail("V138_SUCCESSOR_LIFECYCLE_STAGE_RETAINED")
     recovered++
   }
+  for (const boundary of [200, 201, 202, 203, 204, 205]) {
+    const before = `durable-boundary-${boundary}:before\n`
+    const target = `planning/durable-boundary-${boundary}.md`
+    writeFileSync(path.join(root, target), before)
+    const lifecycle: V138LifecycleTransactionV2 = {
+      transactionId: `durable-boundary-${boundary}`, intentPath: `durable-boundary-${boundary}.intent`,
+      steps: [{ id: "only", target, beforeSha256: sha256V138Secure(before), afterBytes: `durable-boundary-${boundary}:after\n` }],
+      lifecycle: { target: `durable-boundary-${boundary}.json`, bytes: `{"authority":false,"boundary":${boundary}}\n` },
+    }
+    const locks = [target, lifecycle.lifecycle.target]
+    const interrupted = await invokeNative(root, lifecycleInput(root, lifecycle, boundary), locks)
+    if (interrupted.code === 0) fail("V138_SUCCESSOR_DURABLE_BOUNDARY_NOT_INJECTED")
+    const canonicalPresent = existsSync(path.join(root, target))
+    const namespace = deriveV138LifecycleIntentV2(trustedIdentity(root), lifecycle).namespace
+    const backupPresent = existsSync(path.join(root, ".v138-lifecycle-staging", `${namespace}-0.before`))
+    if (!canonicalPresent && !backupPresent) fail("V138_SUCCESSOR_DURABLE_BEFORE_IMAGE_LOST")
+    await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle), locks))
+    if (readFileSync(path.join(root, target), "utf8") !== lifecycle.steps[0]!.afterBytes) fail("V138_SUCCESSOR_DURABLE_BOUNDARY_RECOVERY_FAILED")
+    recovered++
+  }
   return recovered
 }
 
