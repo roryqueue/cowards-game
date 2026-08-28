@@ -16,6 +16,8 @@ const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url))
 const nativeSource = path.resolve(sourceDirectory, "../native/v1-38-successor-transaction-helper-v3.c")
+const EXPECTED_NATIVE_SOURCE_SHA256 = "7664fe6f95b984164b60d24b4558107b700cfc348786a6a0d3897eeb3eb5124c"
+const EXPECTED_CLANG_SHA256 = "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818"
 
 export const V138_SUCCESSOR_CONTROLLER_V3_CLI = fileURLToPath(import.meta.url)
 export const V138_SUCCESSOR_CONTROLLER_V3_OPERATIONS = Object.freeze([
@@ -39,15 +41,20 @@ const compileOneShotNative = (input: string, normalizedLocks: readonly string[],
   const directory = mkdtempSync(path.join(tmpdir(), "cowards-v138-successor-native-"))
   chmodSync(directory, 0o700)
   const executable = path.join(directory, "one-shot-helper")
+  const capturedSourcePath = path.join(directory, "captured-native.c")
   const capabilityPath = path.join(directory, "controller.capability")
   const token = randomBytes(32).toString("hex")
   const nonce = randomBytes(32).toString("hex")
   const sourceBefore = readFileSync(nativeSource)
   const compilerBefore = readFileSync("/usr/bin/clang")
+  if (sha256Hex(sourceBefore) !== EXPECTED_NATIVE_SOURCE_SHA256 || sha256Hex(compilerBefore) !== EXPECTED_CLANG_SHA256) {
+    rmSync(directory, { recursive: true, force: true }); fail("V138_SUCCESSOR_NATIVE_REVIEWED_IDENTITY_MISMATCH")
+  }
+  writeFileSync(capturedSourcePath, sourceBefore, { mode: 0o600, flag: "wx" })
   const compilation = spawnSync("/usr/bin/clang", [
     "-std=c11", "-Wall", "-Wextra", "-Werror",
-    `-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`, nativeSource, "-o", executable,
-  ], { encoding: "utf8" })
+    `-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`, capturedSourcePath, "-o", executable,
+  ], { encoding: "utf8", env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", TMPDIR: directory } })
   if (compilation.status !== 0) { rmSync(directory, { recursive: true, force: true }); fail(`V138_SUCCESSOR_NATIVE_COMPILE_FAILED:${compilation.stderr}`) }
   if (sha256Hex(readFileSync(nativeSource)) !== sha256Hex(sourceBefore) || sha256Hex(readFileSync("/usr/bin/clang")) !== sha256Hex(compilerBefore)) {
     rmSync(directory, { recursive: true, force: true }); fail("V138_SUCCESSOR_NATIVE_TOOLCHAIN_CHANGED")
@@ -348,7 +355,10 @@ const directHelperBypassEvidence = async (root: string): Promise<number> => {
   const ordinaryDirectory = mkdtempSync(path.join(tmpdir(), "v138-ordinary-helper-"))
   try {
     const ordinary = path.join(ordinaryDirectory, "helper")
-    const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", nativeSource, "-o", ordinary], { encoding: "utf8" })
+    const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", nativeSource, "-o", ordinary], {
+      encoding: "utf8",
+      env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", TMPDIR: ordinaryDirectory },
+    })
     if (compilation.status !== 0) fail("V138_SUCCESSOR_ORDINARY_HELPER_COMPILE_FAILED")
     const direct = spawnSync(ordinary, [root, "0", "0"], { encoding: "utf8", input: pairInput(root, pair) })
     if (direct.status === 0 || pair.members.some(({ target }, index) => readFileSync(path.join(root, target), "utf8") !== before[index])) fail("V138_SUCCESSOR_ORDINARY_ARGV_CAPABILITY_ACCEPTED")

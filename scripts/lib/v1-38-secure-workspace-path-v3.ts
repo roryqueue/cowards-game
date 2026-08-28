@@ -4,8 +4,10 @@ import {
   chmodSync,
   lstatSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
+  writeFileSync,
 } from "node:fs"
 import path from "node:path"
 import { tmpdir } from "node:os"
@@ -16,13 +18,25 @@ export const sha256V138Secure = (bytes: string | Buffer): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
 export const V138_SECURE_MANIFEST_READER_V3_SOURCE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../native/v1-38-secure-manifest-reader-v3.c")
+const EXPECTED_READER_SOURCE_SHA256 = "69c352fac98695ae2e7ea36dd670e8c31f58a9753e577e7af49c3daa2d517706"
+const EXPECTED_CLANG_SHA256 = "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818"
 let readerExecutable: string | undefined
 const secureReaderExecutable = (): string => {
   if (readerExecutable !== undefined) return readerExecutable
   const directory = mkdtempSync(path.join(tmpdir(), "v138-secure-reader-"))
   chmodSync(directory, 0o700)
   const executable = path.join(directory, "reader")
-  const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", V138_SECURE_MANIFEST_READER_V3_SOURCE, "-o", executable], { encoding: "utf8" })
+  const capturedSource = path.join(directory, "captured-reader.c")
+  const sourceBytes = readFileSync(V138_SECURE_MANIFEST_READER_V3_SOURCE)
+  const compilerBytes = readFileSync("/usr/bin/clang")
+  if (sha256V138Secure(sourceBytes).slice(7) !== EXPECTED_READER_SOURCE_SHA256 || sha256V138Secure(compilerBytes).slice(7) !== EXPECTED_CLANG_SHA256) {
+    rmSync(directory, { recursive: true, force: true }); fail("V138_SECURE_READER_REVIEWED_IDENTITY_MISMATCH")
+  }
+  writeFileSync(capturedSource, sourceBytes, { mode: 0o600, flag: "wx" })
+  const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", capturedSource, "-o", executable], {
+    encoding: "utf8",
+    env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", TMPDIR: directory },
+  })
   if (compilation.status !== 0) { rmSync(directory, { recursive: true, force: true }); fail(`V138_SECURE_READER_COMPILE_FAILED:${compilation.stderr}`) }
   chmodSync(executable, 0o700)
   const status = lstatSync(executable)
