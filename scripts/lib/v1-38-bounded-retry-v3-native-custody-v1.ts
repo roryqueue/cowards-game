@@ -105,20 +105,38 @@ export const runV138RetryV3IsolatedGit = (
   args: readonly string[],
   _ambientEnvironment: NodeJS.ProcessEnv = process.env,
 ): string => {
+  const result = runV138RetryV3IsolatedGitOutput(repoRoot, args, "utf8")
+  return result.trim()
+}
+
+const runV138RetryV3IsolatedGitOutput = (
+  repoRoot: string,
+  args: readonly string[],
+  encoding: "utf8" | "buffer",
+): string | Buffer => {
   if (realpathSync(GIT) !== GIT || shaHex(readFileSync(GIT)) !== EXPECTED_GIT_SHA256)
     fail("V138_RETRY_V3_GIT_EXECUTABLE_MISMATCH")
   const isolation = mkdtempSync(path.join(tmpdir(), "v138-retry-v3-git-"))
   try {
-    const result = execFileSync(GIT, hardenedGitArgs(args), {
+    return execFileSync(GIT, hardenedGitArgs(args), {
       cwd: repoRoot,
-      encoding: "utf8",
+      encoding,
       env: cleanEnvironment(isolation),
       maxBuffer: 64 * 1024 * 1024,
     })
-    return result.trim()
   } finally {
     rmSync(isolation, { recursive: true, force: true })
   }
+}
+
+export const runV138RetryV3IsolatedGitBytes = (
+  repoRoot: string,
+  args: readonly string[],
+  _ambientEnvironment: NodeJS.ProcessEnv = process.env,
+): Buffer => {
+  const result = runV138RetryV3IsolatedGitOutput(repoRoot, args, "buffer")
+  if (!Buffer.isBuffer(result)) fail("V138_RETRY_V3_GIT_BYTES_INVALID")
+  return result
 }
 
 const assertRepositoryConfigurationSafe = (repoRoot: string): void => {

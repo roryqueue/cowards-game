@@ -63,6 +63,7 @@ import {
   authenticateV138RetryV3ExecutionClosure,
   publishV138RetryV3NativePair,
   runV138RetryV3IsolatedGit,
+  runV138RetryV3IsolatedGitBytes,
   type V138RetryV3ExecutionClosure,
 } from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
 
@@ -911,7 +912,10 @@ const containedRepoTarget = (repoRoot: string, repoPath: string): string => {
   return target
 }
 
-const readNoFollow = (repoRoot: string, repoPath: string): Buffer => {
+const readNoFollowWithMode = (
+  repoRoot: string,
+  repoPath: string,
+): Readonly<{ bytes: Buffer; mode: number }> => {
   const target = containedRepoTarget(repoRoot, repoPath)
   if (safeStatus(target) !== "regular") fail("V138_RETRY_INPUT_UNSAFE")
   const before = lstatSync(target)
@@ -927,9 +931,92 @@ const readNoFollow = (repoRoot: string, repoPath: string): Buffer => {
       opened.ino !== before.ino
     )
       fail("V138_RETRY_INPUT_UNSAFE")
-    return readFileSync(descriptor)
+    return Object.freeze({ bytes: readFileSync(descriptor), mode: opened.mode })
   } finally {
     closeSync(descriptor)
+  }
+}
+
+const readNoFollow = (repoRoot: string, repoPath: string): Buffer =>
+  readNoFollowWithMode(repoRoot, repoPath).bytes
+
+export const parseV138RetryV3RegularBlobTreeEntry = (
+  bytes: Buffer,
+  repoPath: string,
+): Readonly<{ mode: "100644" | "100755"; oid: string }> => {
+  if (
+    path.isAbsolute(repoPath) ||
+    repoPath.includes("\0") ||
+    repoPath.split("/").some((part) => !part || part === "." || part === "..")
+  )
+    fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  const terminator = bytes.indexOf(0)
+  if (terminator !== bytes.length - 1 || terminator < 0)
+    fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  const record = bytes.subarray(0, terminator)
+  const separator = record.indexOf(0x09)
+  if (separator <= 0 || record.indexOf(0x09, separator + 1) !== -1)
+    fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  const metadataBytes = record.subarray(0, separator)
+  if ([...metadataBytes].some((value) => value > 0x7f))
+    fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  const metadata = metadataBytes.toString("ascii")
+  const match = /^(100644|100755) blob ([0-9a-f]{40})$/u.exec(metadata)
+  if (
+    match === null ||
+    !record.subarray(separator + 1).equals(Buffer.from(repoPath))
+  )
+    fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  return Object.freeze({
+    mode: match[1] as "100644" | "100755",
+    oid: match[2]!,
+  })
+}
+
+export const authenticateV138CommittedRegularFile = (
+  repoRoot: string,
+  sourceCommit: string,
+  repoPath: string,
+): Readonly<{
+  mode: "100644" | "100755"
+  oid: string
+  bytes: Buffer
+  byteLength: number
+}> => {
+  if (!/^[0-9a-f]{40}$/u.test(sourceCommit))
+    fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  try {
+    const entry = parseV138RetryV3RegularBlobTreeEntry(
+      runV138RetryV3IsolatedGitBytes(repoRoot, [
+        "ls-tree",
+        "-z",
+        sourceCommit,
+        "--",
+        repoPath,
+      ]),
+      repoPath,
+    )
+    const committed = runV138RetryV3IsolatedGitBytes(repoRoot, [
+      "cat-file",
+      "blob",
+      entry.oid,
+    ])
+    const working = readNoFollowWithMode(repoRoot, repoPath)
+    const workingMode = (working.mode & 0o111) === 0 ? "100644" : "100755"
+    if (entry.mode !== workingMode || !committed.equals(working.bytes))
+      fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+    return Object.freeze({
+      ...entry,
+      bytes: committed,
+      byteLength: committed.length,
+    })
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "V138_RETRY_SOURCE_CUSTODY_INVALID"
+    )
+      throw error
+    return fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
   }
 }
 
@@ -1210,16 +1297,7 @@ export const deriveV138V3SealedInactiveEnvelope = (
     fail("V138_RETRY_SOURCE_DIRTY")
   }
   for (const repoPath of custodyPaths) {
-    const working = readNoFollow(repoRoot, repoPath)
-    let committed: Buffer
-    try {
-      committed = Buffer.from(
-        git(repoRoot, ["show", `${directParentCommit}:${repoPath}`]),
-      )
-    } catch {
-      return fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
-    }
-    if (!working.equals(committed)) fail("V138_RETRY_SOURCE_CUSTODY_INVALID")
+    authenticateV138CommittedRegularFile(repoRoot, directParentCommit, repoPath)
   }
   const reviewBytes = readNoFollow(repoRoot, V138_BOUNDED_RETRY_V3_PATHS.sourceReview)
   const review = JSON.parse(reviewBytes.toString("utf8")) as Record<string, unknown>
