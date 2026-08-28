@@ -36,12 +36,14 @@ import {
   V138_BOUNDED_RETRY_V3_PRODUCTION_MODES,
   acquireV138RetryV3OwnerLease,
   authenticateV138CommittedRegularFile,
-  computeV138Plan26299ReviewRoot,
-  computeV138ReviewedExecutionClosureRoot,
+  computeV138Plan262101FindingRoot,
+  computeV138Plan262101PortableRoot,
+  computeV138Plan262101ResultRoot,
+  computeV138Plan262101ReviewRoot,
   executeV138BoundedRetryV3Cli,
   parseV138RetryV3RegularBlobTreeEntry,
   runV138BoundedRetryV3Controller,
-  validateV138Plan26299ReviewedExecutionClosure,
+  validateV138Plan262101ReviewedExecutionClosure,
   type V138BoundedRetryV3ControllerEffects,
 } from "./run-v1-38-bounded-retry-envelope-v3.js"
 import {
@@ -101,12 +103,13 @@ const portableClosure = () => ({
   pathnameLaunchReplacementResistanceClaimed: false as const,
 })
 
-const plan26299Review = () => {
+const plan262101Review = () => {
   const reviewedExecutionClosure = portableClosure()
+  const reviewReportBytes = Buffer.from("# Plan 262-101 v5 Review\n")
   const body = {
-    schemaVersion: "v1.38-plan-262-99-bounded-retry-source-rereview-v4",
-    reviewProtocol:
-      "fresh-independent-plan-98-portable-closure-rereview-v4",
+    schemaVersion:
+      "v1.38-plan-262-101-git-object-byte-custody-rereview-v5",
+    protocol: "git-object-byte-custody-v1",
     status: "zero_findings",
     correctedSource: {
       commit: reviewedExecutionClosure.sourceCommit,
@@ -115,6 +118,13 @@ const plan26299Review = () => {
       noLaterRewrite: true,
       summaryTrustedAsVerdict: false,
       files: [
+        {
+          path: "scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts",
+          mode: "100644",
+          blob: "a".repeat(40),
+          byteLength: 1,
+          sha256: `sha256:${"a".repeat(64)}`,
+        },
         {
           path: "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
           mode: "100644",
@@ -132,46 +142,47 @@ const plan26299Review = () => {
       ],
     },
     protectedHistory: {
-      historicalResultReinterpreted: false,
-      plan96: {
-        sourceCommit: "1c1f42b7fcd72d19ded89cca3ddd522090475b29",
-        sourceTree: "37d10e3dfee8501e59e686802ffe684167585c94",
-        sourceParent: "aae9f5dab231f83a0238cf5448f5e1e1d8ad4f28",
+      provisionalPairReinterpreted: false,
+      plan98: {
+        sourceCommit: "702bfa5216e3b0e15b4816ce28c98dbcdee38517",
+        sourceTree: "4a4ea89f5392c250d32a39abde0bcf9b98aa079f",
+        sourceParent: "266c977a657c04c32a54b2293d01cf6fab1edf10",
         summarySha256:
-          "sha256:a3b2f63c542c69f565ca8a56d0bc8ee7e45971c52ff3ee6556e1d4f93d3132d5",
+          "sha256:0d42f4833cce41f80e66d2343b4427e2b8149942c070a211338ffc0cc04dfe99",
       },
-      plan97: {
-        schemaVersion:
-          "v1.38-plan-262-97-bounded-retry-source-rereview-v3",
-        reviewRoot:
-          "sha256:2765f8c028a7c0e089b401898d80f12fa425e993f13255423abb052f22adee90",
-        findingRoot:
-          "sha256:638909ad31b44fc81e01b6f081b2b1c97ad4091413e4c285c83e61d6fbbc152a",
-        findingCount: 0,
-        sourceReviewPassed: true,
+      plan99: {
+        provisionalPairCommit: "19a6eb53a2ad2c0188009d095103c42718aa3214",
         artifactSha256:
-          "sha256:08fd056f3056bb45daf6e82a04eab72bd4ca73bda812512cad8b04960ce2b2e9",
+          "sha256:b52599fcbcf53f3eac8e435f87ad85d6d8cc4512dcfa18fe029d5670127aaa34",
         reviewSha256:
-          "sha256:1a7737aaa37ff886ba90e37a73d9643b5e0fdea321a6cb859e475f906562bfe7",
+          "sha256:f0fe8877f1b33132b101aaa4e475d06fc462e0ce19af22785e0049daff338b34",
         summarySha256:
-          "sha256:fa9dca2adbb113f0c30925ae8548aac935888066e2d9d2df73de793c1b5e5cc1",
+          "sha256:0ab477151ea5a272987c7f83567c172ab540ec9c979b84501f1bc7cb45fbd294",
+        provisionalFindingCount: 0,
+        provisionalFindingRoot:
+          "sha256:f42b8afbcf35570b2c5be6bee0e7b06548deb19b4f533260bf16c56d0c7a4b9c",
+        provisionalReviewRoot:
+          "sha256:9d5a3f650a34e3074c49ceb61072ba361932af20a5a1bf7b8fb61e197d345f4a",
+        blockedFindingCode: "GIT_SHOW_BYTES_TRIMMED",
+        blockedFindingRoot:
+          "sha256:05a090e72cb43224683b190bca9b27ac81fed4cbef2792a9cb39d8d78e233b77",
+        blockedReviewRoot:
+          "sha256:332855378479e0bceee3f82a4e5445039d476345ab4d1d9b019d5c435a57664b",
+        plan26292Eligible: false,
+        freshCharged: 0,
+        freshAccepted: 0,
       },
-    },
-    failedAttempt: {
-      plan: "262-92",
-      stopCode: "V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID",
-      status: "integrity_stop",
-      canonicalWrites: 0,
-      freshCharged: 0,
-      freshAccepted: 0,
-      localSecretAccessed: false,
-      identityConsumed: false,
     },
     execution: {
       focusedTestsPassed: 0,
       sourceOnlyPassed: true,
       checkoutBytesMatchedBefore: true,
       checkoutBytesMatchedAfter: true,
+      executionClosureMatchedBeforeAfter: true,
+      actualConsumerStatus: "passed",
+      actualConsumerCandidateJsonSha256: `sha256:${"d".repeat(64)}`,
+      actualConsumerCandidateReviewSha256: `sha256:${"e".repeat(64)}`,
+      destinationsUnchanged: true,
       cleanupComplete: true,
       canonicalWrites: 0,
       liveInvoked: false,
@@ -183,13 +194,11 @@ const plan26299Review = () => {
     reviewedExecutionClosure: {
       ...reviewedExecutionClosure,
       reviewedExecutionClosureRoot:
-        computeV138ReviewedExecutionClosureRoot(reviewedExecutionClosure),
+        computeV138Plan262101PortableRoot(reviewedExecutionClosure),
     },
     findings: [],
     findingCount: 0,
-    findingRoot: `sha256:${createHash("sha256")
-      .update(`v138-plan26299-findings\0${encodeV138RetryV3CanonicalJson([])}`)
-      .digest("hex")}`,
+    findingRoot: computeV138Plan262101FindingRoot([]),
     sourceReviewPassed: true,
     identityClaims: {
       independentPersonClaimed: false,
@@ -235,8 +244,12 @@ const plan26299Review = () => {
       archiveAuthorized: false,
       tagAuthorized: false,
     },
+    reviewRoot: computeV138Plan262101ReviewRoot(reviewReportBytes),
   }
-  return { ...body, reviewRoot: computeV138Plan26299ReviewRoot(body) }
+  return {
+    review: { ...body, resultRoot: computeV138Plan262101ResultRoot(body) },
+    reviewReportBytes,
+  }
 }
 
 afterEach(() => {
@@ -684,20 +697,21 @@ describe("bounded retry envelope v3 contract", () => {
 })
 
 describe("synthetic-only hardened v3 controller", () => {
-  it("preserves the failed Plan-92 Plan-97 shape mismatch as zero-consumption history", () => {
+  it("rejects the immutable Plan-99 provisional v4 pair as current authority", () => {
     const historical = JSON.parse(
       readFileSync(
         path.join(
           process.cwd(),
-          ".planning/artifacts/v1.38-plan-262-97-bounded-retry-source-rereview-v3.json",
+          ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
         ),
         "utf8",
       ),
     )
     expect(() =>
-      validateV138Plan26299ReviewedExecutionClosure(
+      validateV138Plan262101ReviewedExecutionClosure(
         historical,
         portableClosure() as never,
+        Buffer.from("# historical v4\n"),
       ),
     ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
     expect(historical.authority).toMatchObject({
@@ -722,8 +736,8 @@ describe("synthetic-only hardened v3 controller", () => {
     ]) expect(requireV138RetryV3DestinationAbsent(process.cwd(), destination)).toBe(true)
   })
 
-  it("accepts only the exact Plan-99 portable reviewed-closure schema and domain", () => {
-    const review = plan26299Review()
+  it("accepts only the exact Plan-101 v5 review and portable domain", () => {
+    const { review, reviewReportBytes } = plan262101Review()
     const current = {
       ...portableClosure(),
       schemaVersion: "v1.38-retry-v3-execution-closure-v1",
@@ -731,15 +745,94 @@ describe("synthetic-only hardened v3 controller", () => {
       executionClosureRoot: `sha256:${"f".repeat(64)}`,
     } as const
     expect(
-      validateV138Plan26299ReviewedExecutionClosure(review, current),
+      validateV138Plan262101ReviewedExecutionClosure(
+        review,
+        current,
+        reviewReportBytes,
+      ),
     ).toBe(current)
     expect(review.reviewedExecutionClosure.reviewedExecutionClosureRoot).not.toBe(
       review.reviewedExecutionClosure.installedClosureRoot,
     )
     expect(review.reviewedExecutionClosure).not.toHaveProperty("gitObjectRoot")
     expect(CONTROLLER_PATHS.sourceReview).toBe(
-      ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
+      ".planning/artifacts/v1.38-plan-262-101-bounded-retry-source-rereview-v5.json",
     )
+    expect(CONTROLLER_PATHS.sourceReviewReport).toContain("262-101-REVIEW.md")
+    expect(review.protectedHistory).toMatchObject({
+      provisionalPairReinterpreted: false,
+      plan99: {
+        blockedFindingCode: "GIT_SHOW_BYTES_TRIMMED",
+        plan26292Eligible: false,
+        freshCharged: 0,
+        freshAccepted: 0,
+      },
+    })
+  })
+
+  it("keeps Plan-98/99 bytes immutable and all four v5 root domains distinct", () => {
+    const { review, reviewReportBytes } = plan262101Review()
+    const digest = (repoPath: string) =>
+      `sha256:${createHash("sha256")
+        .update(readFileSync(path.join(process.cwd(), repoPath)))
+        .digest("hex")}`
+    expect(
+      digest(
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-98-SUMMARY.md",
+      ),
+    ).toBe(review.protectedHistory.plan98.summarySha256)
+    expect(
+      digest(
+        ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
+      ),
+    ).toBe(review.protectedHistory.plan99.artifactSha256)
+    expect(
+      digest(
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-99-REVIEW.md",
+      ),
+    ).toBe(review.protectedHistory.plan99.reviewSha256)
+    expect(
+      digest(
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-99-SUMMARY.md",
+      ),
+    ).toBe(review.protectedHistory.plan99.summarySha256)
+    expect(
+      new Set([
+        review.reviewedExecutionClosure.reviewedExecutionClosureRoot,
+        review.resultRoot,
+        review.reviewRoot,
+        review.findingRoot,
+      ]).size,
+    ).toBe(4)
+    expect(computeV138Plan262101ReviewRoot(reviewReportBytes)).toBe(
+      review.reviewRoot,
+    )
+  })
+
+  it("rejects review-report or result-root drift independently", () => {
+    const candidate = plan262101Review()
+    const current = {
+      ...portableClosure(),
+      schemaVersion: "v1.38-retry-v3-execution-closure-v1",
+      gitObjectRoot: `sha256:${"e".repeat(64)}`,
+      executionClosureRoot: `sha256:${"f".repeat(64)}`,
+    } as const
+    expect(() =>
+      validateV138Plan262101ReviewedExecutionClosure(
+        candidate.review,
+        current,
+        Buffer.from("# different review bytes\n"),
+      ),
+    ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+    const wrongRoot = structuredClone(candidate.review) as any
+    wrongRoot.resultRoot = wrongRoot.reviewRoot
+    expect(() =>
+      validateV138Plan262101ReviewedExecutionClosure(
+        wrongRoot,
+        current,
+        candidate.reviewReportBytes,
+      ),
+    ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
   })
 
   it.each([
@@ -769,10 +862,18 @@ describe("synthetic-only hardened v3 controller", () => {
       review.authority.phase263PlanningAuthorized = true
     }],
     ["historical reinterpretation", (review: any) => {
-      review.protectedHistory.historicalResultReinterpreted = true
+      review.protectedHistory.provisionalPairReinterpreted = true
+    }],
+    ["failed actual consumer", (review: any) => {
+      review.execution.actualConsumerStatus = "failed"
+    }],
+    ["full root published", (review: any) => {
+      review.reviewedExecutionClosure.executionClosureRoot =
+        `sha256:${"f".repeat(64)}`
     }],
   ])("rejects %s before closure consumption", (_name, mutate) => {
-    const review = structuredClone(plan26299Review()) as any
+    const candidate = plan262101Review()
+    const review = structuredClone(candidate.review) as any
     mutate(review)
     const current = {
       ...portableClosure(),
@@ -781,7 +882,11 @@ describe("synthetic-only hardened v3 controller", () => {
       executionClosureRoot: `sha256:${"f".repeat(64)}`,
     } as const
     expect(() =>
-      validateV138Plan26299ReviewedExecutionClosure(review, current),
+      validateV138Plan262101ReviewedExecutionClosure(
+        review,
+        current,
+        candidate.reviewReportBytes,
+      ),
     ).toThrow()
   })
 
@@ -799,7 +904,7 @@ describe("synthetic-only hardened v3 controller", () => {
     "nativeSourcesRoot",
     "pathnameLaunchReplacementResistanceClaimed",
   ] as const)("rejects independent portable member drift in %s", (field) => {
-    const review = plan26299Review()
+    const { review, reviewReportBytes } = plan262101Review()
     const current: any = {
       ...portableClosure(),
       schemaVersion: "v1.38-retry-v3-execution-closure-v1",
@@ -815,12 +920,16 @@ describe("synthetic-only hardened v3 controller", () => {
             ? "0".repeat(40)
             : `sha256:${"0".repeat(64)}`
     expect(() =>
-      validateV138Plan26299ReviewedExecutionClosure(review, current),
+      validateV138Plan262101ReviewedExecutionClosure(
+        review,
+        current,
+        reviewReportBytes,
+      ),
     ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_MISMATCH")
   })
 
   it("excludes local Git object identity from portability but preserves distinct full roots", () => {
-    const review = plan26299Review()
+    const { review, reviewReportBytes } = plan262101Review()
     const first = {
       ...portableClosure(),
       schemaVersion: "v1.38-retry-v3-execution-closure-v1",
@@ -832,8 +941,20 @@ describe("synthetic-only hardened v3 controller", () => {
       gitObjectRoot: `sha256:${"0".repeat(64)}`,
       executionClosureRoot: `sha256:${"1".repeat(64)}`,
     } as const
-    expect(validateV138Plan26299ReviewedExecutionClosure(review, first)).toBe(first)
-    expect(validateV138Plan26299ReviewedExecutionClosure(review, second)).toBe(second)
+    expect(
+      validateV138Plan262101ReviewedExecutionClosure(
+        review,
+        first,
+        reviewReportBytes,
+      ),
+    ).toBe(first)
+    expect(
+      validateV138Plan262101ReviewedExecutionClosure(
+        review,
+        second,
+        reviewReportBytes,
+      ),
+    ).toBe(second)
     expect(first.executionClosureRoot).not.toBe(second.executionClosureRoot)
     expect(review.reviewedExecutionClosure.reviewedExecutionClosureRoot).not.toBe(
       first.executionClosureRoot,
@@ -894,7 +1015,7 @@ describe("synthetic-only hardened v3 controller", () => {
     )
     expect(CONTROLLER_PATHS).toMatchObject({
       sourceSummary: expect.stringContaining("262-98-SUMMARY.md"),
-      sourceReview: expect.stringContaining("262-99"),
+      sourceReview: expect.stringContaining("262-101"),
       seal: ".planning/artifacts/v1.38-successor-source-seal-v13.json",
       envelope:
         ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json",
