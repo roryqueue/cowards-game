@@ -15,6 +15,7 @@ import {
   V138_BOUNDED_RETRY_V3_PATHS,
   V138_BOUNDED_RETRY_V3_POLICY,
   V138_BOUNDED_RETRY_V3_PROTECTED_HISTORY,
+  checkV138InactiveRetryV3Envelope,
   createV138InactiveRetryV3Envelope,
   encodeV138RetryV3CanonicalJson,
   requireV138RetryV3DestinationAbsent,
@@ -23,6 +24,7 @@ import {
 } from "./lib/v1-38-bounded-retry-envelope-v3.js"
 import {
   authenticateV138RetryV3ExecutionClosure,
+  publishV138RetryV3NativePair,
   runV138RetryV3IsolatedGit,
 } from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
 import {
@@ -517,7 +519,7 @@ export const deriveV138Plan262104SealEnvelopeNoPublish = (
   }
 }
 
-const requirePolicyAndAbsence = (repoRoot: string): void => {
+const requirePolicyAndAbsence = (repoRoot: string, includePair = false): void => {
   if (
     V138_BOUNDED_RETRY_V3_POLICY.maximumRouteStarts !== 3 ||
     V138_BOUNDED_RETRY_V3_POLICY.maximumPreflightObservations !== 12 ||
@@ -537,12 +539,14 @@ const requirePolicyAndAbsence = (repoRoot: string): void => {
     V138_BOUNDED_RETRY_V3_IDENTITIES.reproduction.length !== 540
   )
     fail("V138_PLAN_262_104_FROZEN_V3_CONTRACT_INVALID")
-  const absent = [
-    V138_BOUNDED_RETRY_V3_PATHS.seal,
-    V138_BOUNDED_RETRY_V3_PATHS.envelope,
-    PAIR_INTENT,
-    ...downstreamDestinations,
-  ]
+  const absent = includePair
+    ? [PAIR_INTENT, ...downstreamDestinations]
+    : [
+        V138_BOUNDED_RETRY_V3_PATHS.seal,
+        V138_BOUNDED_RETRY_V3_PATHS.envelope,
+        PAIR_INTENT,
+        ...downstreamDestinations,
+      ]
   for (const target of absent)
     try {
       requireV138RetryV3DestinationAbsent(repoRoot, target)
@@ -551,9 +555,132 @@ const requirePolicyAndAbsence = (repoRoot: string): void => {
     }
 }
 
+export const publishV138Plan262104SealedInactivePair = (
+  repoRoot: string,
+  publish: typeof publishV138RetryV3NativePair = publishV138RetryV3NativePair,
+): V138Plan262104Artifacts => {
+  requirePolicyAndAbsence(repoRoot)
+  const directParentCommit = git(repoRoot, ["rev-parse", "HEAD"])
+  const artifacts = deriveArtifacts(repoRoot, directParentCommit)
+  if (git(repoRoot, ["rev-parse", "HEAD"]) !== directParentCommit)
+    fail("V138_PLAN_262_104_PARENT_DRIFT")
+  publish(repoRoot, {
+    transactionId: "v3-seal-envelope-v7",
+    intentPath: PAIR_INTENT,
+    members: [
+      {
+        target: V138_BOUNDED_RETRY_V3_PATHS.seal,
+        bytes: canonical(artifacts.seal),
+      },
+      {
+        target: V138_BOUNDED_RETRY_V3_PATHS.envelope,
+        bytes: canonical(artifacts.envelope),
+      },
+    ],
+  })
+  requirePolicyAndAbsence(repoRoot, true)
+  return artifacts
+}
+
+export const checkV138Plan262104CommittedInactivePair = (
+  repoRoot: string,
+): V138Plan262104Artifacts & Readonly<{ pairCommit: string }> => {
+  requirePolicyAndAbsence(repoRoot, true)
+  if (
+    git(repoRoot, [
+      "status",
+      "--porcelain",
+      "--",
+      V138_BOUNDED_RETRY_V3_PATHS.seal,
+      V138_BOUNDED_RETRY_V3_PATHS.envelope,
+    ]) !== ""
+  )
+    fail("V138_PLAN_262_104_PAIR_DIRTY")
+  const sealBytes = readNoFollow(repoRoot, V138_BOUNDED_RETRY_V3_PATHS.seal)
+  const envelopeBytes = readNoFollow(repoRoot, V138_BOUNDED_RETRY_V3_PATHS.envelope)
+  const seal = JSON.parse(sealBytes.toString("utf8")) as V138Plan262104Seal
+  const envelope = checkV138InactiveRetryV3Envelope(
+    JSON.parse(envelopeBytes.toString("utf8")),
+  )
+  if (
+    !sealBytes.equals(Buffer.from(canonical(seal))) ||
+    !envelopeBytes.equals(Buffer.from(canonical(envelope))) ||
+    !/^[0-9a-f]{40}$/u.test(seal.directParentCommit)
+  )
+    fail("V138_PLAN_262_104_PAIR_BYTES_INVALID")
+  const sealCommit = git(repoRoot, [
+    "rev-list",
+    "-1",
+    "HEAD",
+    "--",
+    V138_BOUNDED_RETRY_V3_PATHS.seal,
+  ])
+  const envelopeCommit = git(repoRoot, [
+    "rev-list",
+    "-1",
+    "HEAD",
+    "--",
+    V138_BOUNDED_RETRY_V3_PATHS.envelope,
+  ])
+  if (
+    !/^[0-9a-f]{40}$/u.test(sealCommit) ||
+    sealCommit !== envelopeCommit
+  )
+    fail("V138_PLAN_262_104_PAIR_COMMIT_INVALID")
+  const pairCommit = sealCommit
+  const parents = git(repoRoot, ["show", "-s", "--format=%P", pairCommit])
+  if (parents !== seal.directParentCommit)
+    fail("V138_PLAN_262_104_PAIR_PARENT_INVALID")
+  requireAncestor(repoRoot, pairCommit, git(repoRoot, ["rev-parse", "HEAD"]))
+  const expectedBlobs = {
+    [V138_BOUNDED_RETRY_V3_PATHS.seal]: gitBlob(sealBytes),
+    [V138_BOUNDED_RETRY_V3_PATHS.envelope]: gitBlob(envelopeBytes),
+  }
+  const entries = rawDiff(repoRoot, pairCommit)
+  if (
+    entries.length !== 2 ||
+    !entries.every(
+      (entry) =>
+        Object.hasOwn(expectedBlobs, entry.repoPath) &&
+        entry.oldMode === "000000" &&
+        entry.newMode === "100644" &&
+        entry.oldBlob === "0".repeat(40) &&
+        entry.newBlob ===
+          expectedBlobs[entry.repoPath as keyof typeof expectedBlobs] &&
+        entry.status === "A",
+    )
+  )
+    fail("V138_PLAN_262_104_PAIR_DIFF_INVALID")
+  const later = git(repoRoot, [
+    "log",
+    "--format=%H",
+    `${pairCommit}..HEAD`,
+    "--",
+    V138_BOUNDED_RETRY_V3_PATHS.seal,
+    V138_BOUNDED_RETRY_V3_PATHS.envelope,
+  ])
+  if (later !== "") fail("V138_PLAN_262_104_PAIR_REWRITTEN")
+  const expected = deriveArtifacts(repoRoot, seal.directParentCommit)
+  if (
+    canonical(seal) !== canonical(expected.seal) ||
+    canonical(envelope) !== canonical(expected.envelope) ||
+    envelope.sealRoot !== seal.sealRoot ||
+    envelope.sourceRoot !== seal.sourceRoot ||
+    envelope.reviewRoot !== seal.reviewRoot ||
+    seal.sourceCommit !== seal.directParentCommit ||
+    seal.reviewCommit !== expected.publicationCommit ||
+    seal.productionAuthorized !== false ||
+    seal.downstreamAuthority !== "denied" ||
+    Object.values(envelope.counters).some((value) => value !== 0)
+  )
+    fail("V138_PLAN_262_104_PAIR_CLOSURE_INVALID")
+  return Object.freeze({ ...expected, pairCommit })
+}
+
 export interface V138Plan262104CliDependencies {
   readonly repoRoot: string
   readonly writeOutput: (value: string) => void
+  readonly publishPair: () => V138Plan262104Artifacts
 }
 
 export const executeV138Plan262104Cli = async (
@@ -581,7 +708,18 @@ export const executeV138Plan262104Cli = async (
     if (result.kind === "integrity_stop") fail(result.reason)
     return
   }
-  fail("V138_PLAN_262_104_ARGUMENTS_INVALID")
+  if (command === "--publish-sealed-inactive-envelope") {
+    const result =
+      injected?.publishPair?.() ?? publishV138Plan262104SealedInactivePair(repoRoot)
+    writeOutput(
+      `${JSON.stringify({ status: "sealed_inactive_published", directParentCommit: result.directParentCommit, sealRoot: result.seal.sealRoot, envelopeRoot: result.envelope.envelopeRoot, liveInvoked: false, freshCharged: 0, freshAccepted: 0, downstreamAuthority: "denied" })}\n`,
+    )
+    return
+  }
+  const checked = checkV138Plan262104CommittedInactivePair(repoRoot)
+  writeOutput(
+    `${JSON.stringify({ status: "sealed_inactive_committed", pairCommit: checked.pairCommit, directParentCommit: checked.directParentCommit, sealRoot: checked.seal.sealRoot, envelopeRoot: checked.envelope.envelopeRoot, liveInvoked: false, freshCharged: 0, freshAccepted: 0, plan26293Eligible: true, downstreamAuthority: "denied" })}\n`,
+  )
 }
 
 if (

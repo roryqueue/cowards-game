@@ -101,6 +101,16 @@ describe("Plan 262-104 v7 exclusive inactive pair", () => {
       directParentCommit: parent,
       envelope: { status: "sealed_inactive", counters: { acceptedCells: 0 } },
     })
+    writeFileSync(path.join(clone, V138_BOUNDED_RETRY_V3_PATHS.seal), "dirty\n")
+    expect(() => checkV138Plan262104CommittedInactivePair(clone)).toThrow(
+      "V138_PLAN_262_104_PAIR_DIRTY",
+    )
+    git(clone, ["checkout", "--", V138_BOUNDED_RETRY_V3_PATHS.seal])
+    writeFileSync(path.join(clone, V138_BOUNDED_RETRY_V3_PATHS.journal), "live\n")
+    expect(() => checkV138Plan262104CommittedInactivePair(clone)).toThrow(
+      "V138_PLAN_262_104_DESTINATION_PRESENT",
+    )
+    rmSync(path.join(clone, V138_BOUNDED_RETRY_V3_PATHS.journal))
     expect(() => publishV138Plan262104SealedInactivePair(clone)).toThrow(
       "V138_PLAN_262_104_DESTINATION_PRESENT",
     )
@@ -129,6 +139,19 @@ describe("Plan 262-104 v7 exclusive inactive pair", () => {
     commitPair(clone, "synthetic-extra.txt")
     expect(() => checkV138Plan262104CommittedInactivePair(clone)).toThrow(
       "V138_PLAN_262_104_PAIR_DIFF_INVALID",
+    )
+  }, 180_000)
+
+  it("rejects a pair commit whose sole parent is not captured R", () => {
+    if (process.platform !== "darwin") return
+    const clone = disposableClone()
+    publishV138Plan262104SealedInactivePair(clone)
+    writeFileSync(path.join(clone, "synthetic-intermediate.txt"), "middle\n")
+    git(clone, ["add", "--", "synthetic-intermediate.txt"])
+    git(clone, ["commit", "-m", "synthetic intermediate"])
+    commitPair(clone)
+    expect(() => checkV138Plan262104CommittedInactivePair(clone)).toThrow(
+      "V138_PLAN_262_104_PAIR_PARENT_INVALID",
     )
   }, 180_000)
 })
@@ -187,6 +210,22 @@ describe("Plan 262-104 v7 historical trio resolution", () => {
     })
     expect(() => resolveV138Plan262103TrioPublication(clone)).toThrow(
       "V138_PLAN_262_104_TRIO_REWRITTEN",
+    )
+  })
+
+  it("rejects a second exact trio introduction as ambiguous", () => {
+    const clone = disposableClone()
+    const trio = [
+      ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-payload-v6.json",
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-103-REVIEW.md",
+      ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-carrier-v1.json",
+    ]
+    git(clone, ["rm", "--", ...trio])
+    git(clone, ["commit", "-m", "synthetic trio removal"])
+    git(clone, ["checkout", EXPECTED_PUBLICATION, "--", ...trio])
+    git(clone, ["commit", "-m", "synthetic second trio introduction", "--", ...trio])
+    expect(() => resolveV138Plan262103TrioPublication(clone)).toThrow(
+      "V138_PLAN_262_104_TRIO_PUBLICATION_NOT_UNIQUE",
     )
   })
 
