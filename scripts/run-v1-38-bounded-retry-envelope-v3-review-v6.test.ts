@@ -10,6 +10,7 @@ import {
   V138_PLAN_262_103_CARRIER_PATH,
   V138_PLAN_262_103_CARRIER_SCHEMA,
   V138_PLAN_262_103_REPORT_PATH,
+  V138_PLAN_262_102_SOURCE_PATHS,
   computeV138Plan262103CandidatePayloadRoot,
   computeV138Plan262103CarrierRoot,
   validateV138Plan262103Candidate,
@@ -36,21 +37,21 @@ const candidateFixture = () => ({
     summaryTrustedAsVerdict: false,
     files: [
       {
-        path: "scripts/a.ts",
+        path: V138_PLAN_262_102_SOURCE_PATHS[0],
         mode: "100644",
         blob: "d".repeat(40),
         byteLength: 3,
         sha256: `sha256:${"1".repeat(64)}`,
       },
       {
-        path: "scripts/b.ts",
+        path: V138_PLAN_262_102_SOURCE_PATHS[1],
         mode: "100644",
         blob: "e".repeat(40),
         byteLength: 4,
         sha256: `sha256:${"2".repeat(64)}`,
       },
       {
-        path: "scripts/b.test.ts",
+        path: V138_PLAN_262_102_SOURCE_PATHS[2],
         mode: "100644",
         blob: "f".repeat(40),
         byteLength: 5,
@@ -63,14 +64,18 @@ const candidateFixture = () => ({
       sourceCommit: "a879bfc6cab49abf2e12a5b882a06b7e9fb446cb",
       sourceTree: "e6b89de1c699d35b0e5068e0c064b7badd53ad00",
       sourceParent: "71dc34c79a27ba57e67f8a2a2b7471dedade7a09",
-      summarySha256: `sha256:${"4".repeat(64)}`,
+      summarySha256:
+        "sha256:858b082ca74c8a77b380fc16d658b17cb8a30de823894161bd541feeb6bb0c2c",
       noLaterRewrite: true,
     },
     plan101: {
       pairCommit: "8c4e74180e36f22e3a44520d2cda145b3aa30671",
-      candidateSha256: `sha256:${"5".repeat(64)}`,
-      reviewSha256: `sha256:${"6".repeat(64)}`,
-      summarySha256: `sha256:${"7".repeat(64)}`,
+      candidateSha256:
+        "sha256:891776dee9f6e2b3f87a99d8199512bfa4207f9fe03ab63fd29d04ac1c142ee3",
+      reviewSha256:
+        "sha256:14e750b89dc8bb30c080bd8fcc9a25fc7fe0d841367b3149c78b517a0d8f7f27",
+      summarySha256:
+        "sha256:f1a4b96e3c2122e20dffd9fbab2b64ec976315e6655da51433bfb960cdb1f350",
       findingCode: "CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE",
       findingCount: 1,
       findingRoot:
