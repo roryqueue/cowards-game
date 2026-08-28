@@ -147,6 +147,60 @@ const protectedHistoryBody = {
     terminalDisposition: "exhausted" as const,
     outcomeReinterpreted: false as const,
   }),
+  protectedFiles: Object.freeze([
+    [
+      ".planning/artifacts/v1.38-phase-262-review-fix-correction-v10.json",
+      "sha256:a5bfe2a99194dc656c86fa05d84d66c87dfc2935875976ad27fe60754f20148d",
+    ],
+    [
+      ".planning/artifacts/v1.38-plan-262-historical-live-receipt-manifest-v2.json",
+      "sha256:160e4e270cf96a979cd9a83cf97c57f2590076c0abe0bdb712830045d7cab47e",
+    ],
+    [
+      ".planning/artifacts/v1.38-plan-262-86-retry-envelope-v2.json",
+      "sha256:5a2543b4ee3b8786188fa9a35977ee7dd163c175ceda4406ec74f8494da35dcf",
+    ],
+    [
+      ".planning/artifacts/v1.38-current-matrix-retry-journal-v2.jsonl",
+      "sha256:ac7f8eb0b0193b469b31c28c33838bb46f36d6061d6e8577f05ccf71f9283546",
+    ],
+    [
+      ".planning/artifacts/v1.38-current-matrix-retry-terminal-v2.json",
+      "sha256:88a99098d3484c8a78526b27f49ad2c2db3f8d36c6e21256482a8f703bb075ea",
+    ],
+    [
+      ".planning/artifacts/v1.38-successor-source-seal-v12.json",
+      "sha256:c9b3c23f87f68249c34ffc76eda06a5785c180f6d65a21ff68bd90fba3087052",
+    ],
+    [
+      ".planning/artifacts/v1.38-plan-262-88-admission-disposition-v2.json",
+      "sha256:471a8a2014064d40d9156f904e1c738222f3e3330581771fd03e3ffb68373452",
+    ],
+    [
+      ".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v2.json",
+      "sha256:83383114809c8df28bcad56d3b04ba7ba0ccebfbf4229b5900d272af4e1506a6",
+    ],
+    [
+      "scripts/lib/v1-38-bounded-retry-successor-controller-v6.ts",
+      "sha256:158528d7d9ce785a4fb88d72371077a05d7bf2814a0488b8ff8b66a066b4c183",
+    ],
+    [
+      "scripts/lib/v1-38-secure-workspace-path-v6.ts",
+      "sha256:f8a2959c2db6a9a80147f6d1ece13d30d9fec457d90354e711be0a49319e5f49",
+    ],
+    [
+      "scripts/lib/v1-38-private-native-bootstrap-v2.ts",
+      "sha256:165bdefcc02fd9448b3f5d778888617f90d16e7e0801bc091726574ecfcfae78",
+    ],
+    [
+      "scripts/native/v1-38-successor-transaction-helper-v6.c",
+      "sha256:643d5c7a2bc1e92671c73705965d6f3451946faa60be48b34b044962020d261a",
+    ],
+    [
+      "scripts/native/v1-38-secure-manifest-reader-v6.c",
+      "sha256:fe1915ef41b134c1a1bae5e1e3df2c26a9ae47a2258b917bd1f1469917abffc1",
+    ],
+  ] as const),
   sourceBase: {
     commit: "9e7087b34f0bd6fa12d8b265f09d4c656eb044b0",
     tree: "98e633df3870c944adaa9c5dc553a6df367da354",

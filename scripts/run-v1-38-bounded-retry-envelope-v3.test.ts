@@ -21,6 +21,7 @@ import {
   V138_BOUNDED_RETRY_V3_CUSTODY,
   V138_BOUNDED_RETRY_V3_PATHS as CONTROLLER_PATHS,
   V138_BOUNDED_RETRY_V3_PRODUCTION_MODES,
+  acquireV138RetryV3OwnerLease,
   executeV138BoundedRetryV3Cli,
   runV138BoundedRetryV3Controller,
   type V138BoundedRetryV3ControllerEffects,
@@ -290,10 +291,11 @@ describe("synthetic-only hardened v3 controller", () => {
 
   const effects = (input: {
     preflight: readonly number[]
+    start?: number
     calibration?: V138BoundedRetryV3ControllerEffects["runCalibration"]
     reproduction?: V138BoundedRetryV3ControllerEffects["runReproduction"]
   }): V138BoundedRetryV3ControllerEffects => {
-    let now = 0
+    let now = input.start ?? 0
     let observation = 0
     return {
       monotonicMilliseconds: () => now++,
@@ -402,5 +404,55 @@ describe("synthetic-only hardened v3 controller", () => {
       },
     })
     expect(forbiddenCalls).toBe(0)
+  })
+
+  it("reconciles a durable reservation after crash without rerunning its identity", async () => {
+    let records: readonly V138RetryV3JournalRecord[] = []
+    records = append(records, 1_000, {
+      kind: "reserve_preflight",
+      identity: "preflight:v3:0",
+      owner: "crashed-owner",
+    })
+    const synthetic = effects({ preflight: [2_500], start: 1_001 })
+    const result = await runV138BoundedRetryV3Controller({
+      envelope: envelope(),
+      owner: "recovery-owner",
+      records,
+      effects: {
+        ...synthetic,
+        observePreflight: async () => {
+          return { available: true, effectiveAvailableBasisPoints: 2_500 }
+        },
+      },
+    })
+    expect(result.records[1]).toMatchObject({
+      kind: "observe_preflight",
+      identity: "preflight:v3:0",
+      effectiveAvailableBasisPoints: 0,
+    })
+    expect(
+      new Set(
+        result.records
+          .filter(({ kind }) => kind === "reserve_preflight")
+          .map(({ identity }) => identity),
+      ).size,
+    ).toBe(
+      result.records.filter(({ kind }) => kind === "reserve_preflight").length,
+    )
+  })
+
+  it("admits one kernel lock owner and releases ownership after owner death", async () => {
+    if (process.platform !== "darwin") return
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v3-lock-"))
+    roots.push(root)
+    const lock = path.join(root, "owner.lock")
+    const owner = await acquireV138RetryV3OwnerLease(lock)
+    await expect(acquireV138RetryV3OwnerLease(lock)).rejects.toThrow(
+      "V138_RETRY_OWNER_LOCK_ACTIVE",
+    )
+    process.kill(owner.pid, "SIGKILL")
+    await owner.waitForExit()
+    const restarted = await acquireV138RetryV3OwnerLease(lock)
+    await restarted.release()
   })
 })
