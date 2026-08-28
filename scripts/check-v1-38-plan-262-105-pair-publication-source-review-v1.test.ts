@@ -12,12 +12,31 @@ import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import {
   V138_PLAN_262_105_ACTUAL_MODES,
+  checkV138Plan262105PublishedReview,
+  checkV138Plan262105ReviewModeBranch,
+  deriveV138Plan262105ReviewNoPublish,
   inspectV138Plan262104SourceIndependent,
   inspectV138Plan262103TrioIndependent,
+  renderV138Plan262105Review,
+  resultPreimageV138Plan262105Independent,
+  validateV138Plan262105Result,
 } from "./check-v1-38-plan-262-105-pair-publication-source-review-v1.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const temporaryRoots: string[] = []
+const canonicalIndependent = (value: unknown): string => {
+  const normalize = (item: unknown): unknown => {
+    if (Array.isArray(item)) return item.map(normalize)
+    if (item !== null && typeof item === "object")
+      return Object.fromEntries(
+        Object.entries(item as Record<string, unknown>)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, child]) => [key, normalize(child)]),
+      )
+    return item
+  }
+  return `${JSON.stringify(normalize(value))}\n`
+}
 
 const git = (root: string, args: readonly string[]): string =>
   execFileSync(
@@ -144,5 +163,98 @@ describe("Plan 262-105 independent source custody", () => {
     expect(() => inspectV138Plan262103TrioIndependent(clone2)).toThrow(
       "V138_PLAN_262_105_TRIO_PUBLICATION_NOT_UNIQUE",
     )
+  })
+})
+
+describe("Plan 262-105 actual four-mode review", () => {
+  it("runs all actual v7 modes in one disposable later-summary topology", () => {
+    const beforeHead = git(repoRoot, ["rev-parse", "HEAD"])
+    const beforeRefs = git(repoRoot, ["for-each-ref", "--format=%(refname)%00%(objectname)"])
+    const reviewed = deriveV138Plan262105ReviewNoPublish(repoRoot)
+    expect(reviewed.result).toMatchObject({
+      schemaVersion: "v1.38-plan-262-105-pair-publication-source-review-v1",
+      protocol: "git-object-pair-publication-source-review-v1",
+      status: "zero_findings",
+      findingCount: 0,
+      findings: [],
+      source: {
+        commit: "58669ae69376375f171aa56fd57b331355703e9a",
+        tree: "cca6ff090cc82c70f28109fbbedf3c2f61fa073b",
+        parent: "d86abb40eb8bbc68860925072b1c9cd4fe42dfb4",
+      },
+      lineage: {
+        reviewedSourceCommit: "332aae093ef6e26c95a18f21cfd253ccc829ce48",
+        publicationCommit: "2f4fd225ca32b0ac67c2fd09f3036cbbe208725c",
+      },
+      execution: {
+        ownerOnly: true,
+        noLocalClone: true,
+        laterSummaryTopology: true,
+        cleanupComplete: true,
+        canonicalRefsUnchanged: true,
+        canonicalObjectsUnchanged: true,
+        canonicalDestinationsUnchanged: true,
+        modes: {
+          "--check-source-only": { status: "passed" },
+          "--derive-seal-envelope-no-publish": { status: "passed" },
+          "--publish-sealed-inactive-envelope": { status: "passed" },
+          "--check-sealed-inactive-envelope": { status: "passed" },
+        },
+      },
+      authority: {
+        plan26292Eligible: true,
+        authorizesExecution: false,
+        liveInvoked: false,
+        freshCharged: 0,
+        freshAccepted: 0,
+        phase263PlanningAuthorized: false,
+      },
+    })
+    expect(reviewed.result.reviewRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(reviewed.result.resultRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(reviewed.reportBytes.toString("utf8")).toBe(
+      renderV138Plan262105Review(reviewed.result),
+    )
+    expect(git(repoRoot, ["rev-parse", "HEAD"])).toBe(beforeHead)
+    expect(git(repoRoot, ["for-each-ref", "--format=%(refname)%00%(objectname)"])).toBe(beforeRefs)
+  }, 180_000)
+
+  it("uses the exact one-field result-root preimage and deterministic REVIEW bytes", () => {
+    const reviewed = deriveV138Plan262105ReviewNoPublish(repoRoot)
+    const body = { ...reviewed.result } as Record<string, unknown>
+    delete body.resultRoot
+    expect(resultPreimageV138Plan262105Independent(reviewed.result)).toEqual(
+      Buffer.concat([
+        Buffer.from("v1.38:plan-262-105:pair-publication-source-review:result:v1"),
+        Buffer.from([0]),
+        Buffer.from(canonicalIndependent(body)),
+      ]),
+    )
+    expect(validateV138Plan262105Result(reviewed.result, reviewed.reportBytes)).toBe(true)
+  }, 180_000)
+
+  it("blocks every non-literal-zero mode or authority branch", () => {
+    const reviewed = deriveV138Plan262105ReviewNoPublish(repoRoot)
+    const badMode = structuredClone(reviewed.result)
+    badMode.execution.modes["--publish-sealed-inactive-envelope"].status = "rejected_expected"
+    expect(() => validateV138Plan262105Result(badMode, reviewed.reportBytes)).toThrow(
+      "V138_PLAN_262_105_RESULT_INVALID",
+    )
+    const badAuthority = structuredClone(reviewed.result)
+    badAuthority.authority.productionAuthorized = true
+    expect(() => validateV138Plan262105Result(badAuthority, reviewed.reportBytes)).toThrow(
+      "V138_PLAN_262_105_RESULT_INVALID",
+    )
+    const badCleanup = structuredClone(reviewed.result)
+    badCleanup.execution.cleanupComplete = false
+    expect(() => validateV138Plan262105Result(badCleanup, reviewed.reportBytes)).toThrow(
+      "V138_PLAN_262_105_RESULT_INVALID",
+    )
+  }, 180_000)
+
+  it("checks the canonical published pair and literal-zero mode branch", () => {
+    const checked = checkV138Plan262105PublishedReview(repoRoot)
+    expect(checked.result.status).toBe("zero_findings")
+    expect(checkV138Plan262105ReviewModeBranch(repoRoot).result.authority.plan26292Eligible).toBe(true)
   })
 })
