@@ -2,10 +2,12 @@ import {
   createHash,
 } from "node:crypto"
 import {
+  chmodSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -33,9 +35,11 @@ import {
   V138_BOUNDED_RETRY_V3_PATHS as CONTROLLER_PATHS,
   V138_BOUNDED_RETRY_V3_PRODUCTION_MODES,
   acquireV138RetryV3OwnerLease,
+  authenticateV138CommittedRegularFile,
   computeV138Plan26299ReviewRoot,
   computeV138ReviewedExecutionClosureRoot,
   executeV138BoundedRetryV3Cli,
+  parseV138RetryV3RegularBlobTreeEntry,
   runV138BoundedRetryV3Controller,
   validateV138Plan26299ReviewedExecutionClosure,
   type V138BoundedRetryV3ControllerEffects,
@@ -46,11 +50,40 @@ import {
   authenticateV138RetryV3ExecutionClosure,
   publishV138RetryV3NativePair,
   runV138RetryV3IsolatedGit,
+  runV138RetryV3IsolatedGitBytes,
 } from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
 
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
 const roots: string[] = []
+
+const createGitFixture = (): string => {
+  const root = mkdtempSync(path.join(tmpdir(), "v138-raw-git-custody-"))
+  roots.push(root)
+  runV138RetryV3IsolatedGit(root, ["init", "--quiet"])
+  runV138RetryV3IsolatedGit(root, ["config", "user.name", "Plan 262 Test"])
+  runV138RetryV3IsolatedGit(root, [
+    "config",
+    "user.email",
+    "plan-262-test@example.invalid",
+  ])
+  return root
+}
+
+const commitFixtureFile = (
+  root: string,
+  repoPath: string,
+  bytes: Buffer,
+  mode: 0o644 | 0o755 = 0o644,
+): string => {
+  const target = path.join(root, ...repoPath.split("/"))
+  mkdirSync(path.dirname(target), { recursive: true })
+  writeFileSync(target, bytes)
+  chmodSync(target, mode)
+  runV138RetryV3IsolatedGit(root, ["add", "--", repoPath])
+  runV138RetryV3IsolatedGit(root, ["commit", "--quiet", "-m", repoPath])
+  return runV138RetryV3IsolatedGit(root, ["rev-parse", "HEAD"])
+}
 
 const portableClosure = () => ({
   schemaVersion: "v1.38-reviewed-execution-closure-v2" as const,
@@ -336,6 +369,127 @@ describe("bounded retry envelope v3 contract", () => {
       installedClosureRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
       pathnameLaunchReplacementResistanceClaimed: false,
     })
+  })
+
+  it.each([
+    ["final newline", Buffer.from("alpha\n")],
+    ["no final newline", Buffer.from("alpha")],
+    ["empty", Buffer.alloc(0)],
+    ["CRLF", Buffer.from("alpha\r\nbeta\r\n")],
+    ["invalid UTF-8", Buffer.from([0xff, 0xfe, 0x80, 0xc0])],
+    ["embedded NUL", Buffer.from([0x61, 0x00, 0x62, 0x00])],
+  ])("preserves exact %s Git blob bytes", (_name, bytes) => {
+    const root = createGitFixture()
+    const commit = commitFixtureFile(root, "fixture.bin", bytes)
+    const authenticated = authenticateV138CommittedRegularFile(
+      root,
+      commit,
+      "fixture.bin",
+    )
+    expect(authenticated.bytes.equals(bytes)).toBe(true)
+    expect(authenticated.byteLength).toBe(bytes.length)
+    expect(authenticated.mode).toBe("100644")
+    expect(
+      runV138RetryV3IsolatedGitBytes(root, [
+        "cat-file",
+        "blob",
+        authenticated.oid,
+      ]).equals(bytes),
+    ).toBe(true)
+  })
+
+  it.each([
+    [0o644, "100644"],
+    [0o755, "100755"],
+  ] as const)("authenticates working mode %o as Git mode %s", (mode, gitMode) => {
+    const root = createGitFixture()
+    const commit = commitFixtureFile(root, "mode.sh", Buffer.from("exit 0\n"), mode)
+    expect(
+      authenticateV138CommittedRegularFile(root, commit, "mode.sh"),
+    ).toMatchObject({ mode: gitMode })
+  })
+
+  it("rejects missing, symlink, tree, byte drift, and mode drift from synthetic repositories", () => {
+    const root = createGitFixture()
+    const commit = commitFixtureFile(root, "regular.bin", Buffer.from("exact\n"))
+    expect(() =>
+      authenticateV138CommittedRegularFile(root, commit, "missing.bin"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
+
+    symlinkSync("regular.bin", path.join(root, "link.bin"))
+    runV138RetryV3IsolatedGit(root, ["add", "--", "link.bin"])
+    runV138RetryV3IsolatedGit(root, ["commit", "--quiet", "-m", "symlink"])
+    const symlinkCommit = runV138RetryV3IsolatedGit(root, ["rev-parse", "HEAD"])
+    expect(() =>
+      authenticateV138CommittedRegularFile(root, symlinkCommit, "link.bin"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
+
+    commitFixtureFile(root, "tree/child.bin", Buffer.from("child\n"))
+    const treeCommit = runV138RetryV3IsolatedGit(root, ["rev-parse", "HEAD"])
+    expect(() =>
+      authenticateV138CommittedRegularFile(root, treeCommit, "tree"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
+
+    writeFileSync(path.join(root, "regular.bin"), Buffer.from("drift\n"))
+    expect(() =>
+      authenticateV138CommittedRegularFile(root, commit, "regular.bin"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
+    writeFileSync(path.join(root, "regular.bin"), Buffer.from("exact\n"))
+    chmodSync(path.join(root, "regular.bin"), 0o755)
+    expect(() =>
+      authenticateV138CommittedRegularFile(root, commit, "regular.bin"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  })
+
+  it("rejects a synthetic gitlink before reading a working payload", () => {
+    const root = createGitFixture()
+    const base = commitFixtureFile(root, "base.bin", Buffer.from("base\n"))
+    runV138RetryV3IsolatedGit(root, [
+      "update-index",
+      "--add",
+      "--cacheinfo",
+      `160000,${base},gitlink`,
+    ])
+    const tree = runV138RetryV3IsolatedGit(root, ["write-tree"])
+    const gitlinkCommit = runV138RetryV3IsolatedGit(root, [
+      "commit-tree",
+      tree,
+      "-p",
+      base,
+      "-m",
+      "gitlink",
+    ])
+    expect(() =>
+      authenticateV138CommittedRegularFile(root, gitlinkCommit, "gitlink"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
+  })
+
+  it.each([
+    ["missing NUL", Buffer.from(`100644 blob ${"a".repeat(40)}\tfile.bin`)],
+    [
+      "duplicate records",
+      Buffer.from(
+        `100644 blob ${"a".repeat(40)}\tfile.bin\0` +
+          `100644 blob ${"a".repeat(40)}\tfile.bin\0`,
+      ),
+    ],
+    ["malformed metadata", Buffer.from(`100644  blob ${"a".repeat(40)}\tfile.bin\0`)],
+    ["wrong path", Buffer.from(`100644 blob ${"a".repeat(40)}\tother.bin\0`)],
+    ["wrong OID", Buffer.from("100644 blob not-an-oid\tfile.bin\0")],
+    ["symlink mode", Buffer.from(`120000 blob ${"a".repeat(40)}\tfile.bin\0`)],
+    ["gitlink mode", Buffer.from(`160000 commit ${"a".repeat(40)}\tfile.bin\0`)],
+    ["tree type", Buffer.from(`040000 tree ${"a".repeat(40)}\tfile.bin\0`)],
+    [
+      "unexpected leading record",
+      Buffer.concat([
+        Buffer.from([0]),
+        Buffer.from(`100644 blob ${"a".repeat(40)}\tfile.bin\0`),
+      ]),
+    ],
+  ])("rejects %s ls-tree metadata", (_name, record) => {
+    expect(() =>
+      parseV138RetryV3RegularBlobTreeEntry(record, "file.bin"),
+    ).toThrow("V138_RETRY_SOURCE_CUSTODY_INVALID")
   })
 
   it("uses native retained-root custody for pair publication and owner contention", async () => {
