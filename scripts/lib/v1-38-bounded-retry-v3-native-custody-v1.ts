@@ -302,11 +302,26 @@ export const authenticateV138RetryV3ExecutionClosure = (
 ): V138RetryV3ExecutionClosure => {
   const repoRoot = realpathSync(repoRootInput)
   assertRepositoryConfigurationSafe(repoRoot)
-  const sourceCommit = runV138RetryV3IsolatedGit(repoRoot, ["rev-parse", "HEAD"])
-  if (sourceCommit !== expected.sourceCommit)
-    fail("V138_RETRY_V3_SOURCE_COMMIT_MISMATCH")
-  const sourceTree = runV138RetryV3IsolatedGit(repoRoot, ["rev-parse", "HEAD^{tree}"])
-  const sourceParent = runV138RetryV3IsolatedGit(repoRoot, ["rev-parse", "HEAD^"])
+  const head = runV138RetryV3IsolatedGit(repoRoot, ["rev-parse", "HEAD"])
+  try {
+    runV138RetryV3IsolatedGit(repoRoot, [
+      "merge-base",
+      "--is-ancestor",
+      expected.sourceCommit,
+      head,
+    ])
+  } catch {
+    fail("V138_RETRY_V3_SOURCE_COMMIT_NOT_ANCESTOR")
+  }
+  const sourceCommit = expected.sourceCommit
+  const sourceTree = runV138RetryV3IsolatedGit(repoRoot, [
+    "rev-parse",
+    `${sourceCommit}^{tree}`,
+  ])
+  const sourceParent = runV138RetryV3IsolatedGit(repoRoot, [
+    "rev-parse",
+    `${sourceCommit}^`,
+  ])
   const commonDir = realpathSync(
     path.resolve(repoRoot, runV138RetryV3IsolatedGit(repoRoot, ["rev-parse", "--git-common-dir"])),
   )
