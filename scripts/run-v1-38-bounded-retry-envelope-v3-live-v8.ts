@@ -4,7 +4,6 @@ import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
   V138_BOUNDED_RETRY_V3_PATHS,
-  type V138RetryV3ProductionOptions,
   runV138V3ProductionLive,
 } from "./run-v1-38-bounded-retry-envelope-v3.js"
 import {
@@ -413,32 +412,6 @@ const assertDestinationsAbsentFromDisk = (repoRoot: string): void => {
   }
 }
 
-export interface V138LiveV8Dependencies {
-  checkPair: (repoRoot: string) => V138Plan262104Artifacts & Readonly<{ pairCommit: string }>
-  authenticatePlan93Stop: (repoRoot: string) => V138LiveV8Plan93Stop
-  authenticateReviewBundle: (repoRoot: string) => V138LiveV8ReviewBundle
-  authenticateSupplement: (repoRoot: string) => V138LiveV8Supplement
-  authenticateExecutionClosure: typeof authenticateV138RetryV3ExecutionClosure
-  assertProtectedHistoryUnchanged: (repoRoot: string) => void
-  assertDestinationsAbsent: (repoRoot: string) => void
-  runProducer: (repoRoot: string, options: V138RetryV3ProductionOptions) => Promise<void>
-}
-
-const defaultDependencies = (): V138LiveV8Dependencies => ({
-  checkPair: checkV138Plan262104CommittedInactivePair,
-  authenticatePlan93Stop: authenticatePlan93StopFromDisk,
-  authenticateReviewBundle: authenticateReviewBundleFromDisk,
-  authenticateSupplement: authenticateSupplementFromDisk,
-  authenticateExecutionClosure: authenticateV138RetryV3ExecutionClosure,
-  assertProtectedHistoryUnchanged: assertProtectedHistoryUnchangedFromDisk,
-  assertDestinationsAbsent: assertDestinationsAbsentFromDisk,
-  runProducer: runV138V3ProductionLive,
-})
-
-const mergeDependencies = (
-  injected?: Partial<V138LiveV8Dependencies>,
-): V138LiveV8Dependencies => ({ ...defaultDependencies(), ...injected })
-
 const assertPlan93 = (value: V138LiveV8Plan93Stop): void => {
   if (
     canonical(value) !==
@@ -635,42 +608,43 @@ export type V138LiveV8Ready = Readonly<{
   downstreamAuthority: "denied"
 }>
 
-const authenticateReady = (
-  repoRoot: string,
-  injected: Partial<V138LiveV8Dependencies> | undefined,
-  requireDestinationsAbsent: boolean,
+type V138LiveV8ClosureIdentity = Readonly<
+  Pick<
+    V138RetryV3ExecutionClosure,
+    "sourceCommit" | "sourceTree" | "sourceParent" | "executionClosureRoot"
+  >
+>
+
+export type V138LiveV8SyntheticCustody = Readonly<{
+  stop: V138LiveV8Plan93Stop
+  pair: V138Plan262104Artifacts & Readonly<{ pairCommit: string }>
+  review: V138LiveV8ReviewBundle
+  supplement: V138LiveV8Supplement
+  closure: V138LiveV8ClosureIdentity
+}>
+
+const checkCustodyValues = (
+  input: V138LiveV8SyntheticCustody,
 ): V138LiveV8Ready => {
-  const deps = mergeDependencies(injected)
-  const stop = deps.authenticatePlan93Stop(repoRoot)
-  assertPlan93(stop)
-  const pair = deps.checkPair(repoRoot)
-  assertPair(pair)
-  const review = deps.authenticateReviewBundle(repoRoot)
-  assertReviewBundle(review)
-  const supplement = deps.authenticateSupplement(repoRoot)
-  assertSupplement(supplement, stop, review)
-  deps.assertProtectedHistoryUnchanged(repoRoot)
-  if (requireDestinationsAbsent) deps.assertDestinationsAbsent(repoRoot)
-  const closure = deps.authenticateExecutionClosure(repoRoot, {
-    sourceCommit: supplement.plan107.sourceCommit,
-    checkoutPaths: V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
-    executionClosureRoot: supplement.plan107.executionClosureRoot,
-  })
+  assertPlan93(input.stop)
+  assertPair(input.pair)
+  assertReviewBundle(input.review)
+  assertSupplement(input.supplement, input.stop, input.review)
   if (
-    closure.sourceCommit !== supplement.plan107.sourceCommit ||
-    closure.sourceTree !== supplement.plan107.sourceTree ||
-    closure.sourceParent !== supplement.plan107.sourceParent ||
-    closure.executionClosureRoot !== supplement.plan107.executionClosureRoot
+    input.closure.sourceCommit !== input.supplement.plan107.sourceCommit ||
+    input.closure.sourceTree !== input.supplement.plan107.sourceTree ||
+    input.closure.sourceParent !== input.supplement.plan107.sourceParent ||
+    input.closure.executionClosureRoot !== input.supplement.plan107.executionClosureRoot
   )
     fail("V138_LIVE_V8_EXECUTION_CLOSURE_INVALID")
   return Object.freeze({
     pairCommit: PAIR_COMMIT,
     sealRoot: SEAL_ROOT,
     envelopeRoot: ENVELOPE_ROOT,
-    supplementRoot: supplement.supplementRoot,
-    sourceCommit: closure.sourceCommit,
-    executionClosureRoot: closure.executionClosureRoot,
-    pair,
+    supplementRoot: input.supplement.supplementRoot,
+    sourceCommit: input.closure.sourceCommit,
+    executionClosureRoot: input.closure.executionClosureRoot,
+    pair: input.pair,
     freshCharged: 0,
     freshAccepted: 0,
     liveInvoked: false,
@@ -678,23 +652,49 @@ const authenticateReady = (
   })
 }
 
+export const checkV138LiveV8SyntheticCustodyForReview = (
+  input: V138LiveV8SyntheticCustody,
+): V138LiveV8Ready & Readonly<{ producerWouldInvoke: true }> =>
+  Object.freeze({ ...checkCustodyValues(input), producerWouldInvoke: true })
+
+const authenticateReady = (
+  repoRoot: string,
+  requireDestinationsAbsent: boolean,
+): V138LiveV8Ready => {
+  const stop = authenticatePlan93StopFromDisk(repoRoot)
+  const pair = checkV138Plan262104CommittedInactivePair(repoRoot)
+  const review = authenticateReviewBundleFromDisk(repoRoot)
+  const supplement = authenticateSupplementFromDisk(repoRoot)
+  assertProtectedHistoryUnchangedFromDisk(repoRoot)
+  if (requireDestinationsAbsent) assertDestinationsAbsentFromDisk(repoRoot)
+  const closure = authenticateV138RetryV3ExecutionClosure(repoRoot, {
+    sourceCommit: supplement.plan107.sourceCommit,
+    checkoutPaths: V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
+    executionClosureRoot: supplement.plan107.executionClosureRoot,
+  })
+  return checkCustodyValues({
+    stop,
+    pair,
+    review,
+    supplement,
+    closure,
+  })
+}
+
 export const authenticateV138ReviewedLiveV8Ready = (
   repoRoot: string,
-  injected?: Partial<V138LiveV8Dependencies>,
-): V138LiveV8Ready => authenticateReady(repoRoot, injected, true)
+): V138LiveV8Ready => authenticateReady(repoRoot, true)
 
 export const runV138ReviewedBoundedLiveEnvelope = async (
   repoRoot: string,
-  injected?: Partial<V138LiveV8Dependencies>,
 ): Promise<void> => {
-  const deps = mergeDependencies(injected)
-  const ready = authenticateReady(repoRoot, deps, true)
-  await deps.runProducer(repoRoot, {
+  const ready = authenticateReady(repoRoot, true)
+  await runV138V3ProductionLive(repoRoot, {
     validateInputs: false,
     checkPair: () => ({ seal: ready.pair.seal, envelope: ready.pair.envelope }),
   })
-  deps.assertProtectedHistoryUnchanged(repoRoot)
-  const after = deps.authenticateExecutionClosure(repoRoot, {
+  assertProtectedHistoryUnchangedFromDisk(repoRoot)
+  const after = authenticateV138RetryV3ExecutionClosure(repoRoot, {
     sourceCommit: ready.sourceCommit,
     checkoutPaths: V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
     executionClosureRoot: ready.executionClosureRoot,
@@ -705,7 +705,6 @@ export const runV138ReviewedBoundedLiveEnvelope = async (
 
 export interface V138LiveV8CliDependencies {
   repoRoot: string
-  dependencies: Partial<V138LiveV8Dependencies>
   writeOutput: (value: string) => void
 }
 
@@ -720,13 +719,12 @@ export const executeV138LiveV8Cli = async (
     fail("V138_LIVE_V8_ARGUMENTS_INVALID")
   const command = argv[0]
   if (command === "--run-reviewed-bounded-live-envelope") {
-    await runV138ReviewedBoundedLiveEnvelope(repoRoot, injected?.dependencies)
+    await runV138ReviewedBoundedLiveEnvelope(repoRoot)
     writeOutput(`${JSON.stringify({ status: "reviewed_bounded_live_complete" })}\n`)
     return
   }
   const ready = authenticateReady(
     repoRoot,
-    injected?.dependencies,
     command === "--check-reviewed-live-ready",
   )
   writeOutput(
