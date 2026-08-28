@@ -73,6 +73,7 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     expect(output.writeWindowRecoveries).toBe(2)
     expect(output.partialDeterministicFilesAccepted).toBe(0)
     expect(output.abandonedUncommittedTemps).toBe(0)
+    expect(output.durabilityFaultRecoveries).toBe(7)
     expect(output.directHelperBypassAttempts).toBe(2)
     expect(output.directoryReplacementProtections).toBe(2)
     expect(output.rootLockNamespaceProtections).toBe(1)

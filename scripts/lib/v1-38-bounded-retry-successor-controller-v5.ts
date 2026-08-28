@@ -55,7 +55,7 @@ const nativeSource = path.resolve(
   sourceDirectory,
   "../native/v1-38-successor-transaction-helper-v5.c",
 )
-const EXPECTED_NATIVE_SOURCE_SHA256 = "f7837f28f70a7fdb523b2f75ad1cab5d36b56f3bd517118353e89f2b4720750b"
+const EXPECTED_NATIVE_SOURCE_SHA256 = "67dfb100b5a9cbd4e357aa81365ceeffc3f267fef9cdb538a6c27c36f9ed8933"
 
 export const V138_SUCCESSOR_CONTROLLER_V5_CLI = fileURLToPath(import.meta.url)
 export const V138_SUCCESSOR_CONTROLLER_V5_OPERATIONS = Object.freeze([
@@ -713,6 +713,57 @@ const writeWindowRecoveryEvidence = async (
   })
 }
 
+const pairDurabilityFaultRecoveryEvidence = async (
+  root: string,
+): Promise<number> => {
+  let recovered = 0
+  for (const boundary of [300, 301, 302, 303, 304, 305, 306]) {
+    const pair: V138DurablePairV2Input = {
+      transactionId: `durability-fault-${boundary}`,
+      intentPath: `durability-fault-${boundary}.intent`,
+      members: [
+        {
+          target: `left/durability-fault-${boundary}.json`,
+          bytes: `left-${boundary}\n`,
+        },
+        {
+          target: `right/durability-fault-${boundary}.json`,
+          bytes: `right-${boundary}\n`,
+        },
+      ],
+    }
+    const locks = pair.members.map(({ target }) => target)
+    const failed = await invokeNative(
+      root,
+      pairInput(root, pair, boundary),
+      locks,
+    )
+    if (failed.code === 0)
+      fail("V138_SUCCESSOR_DURABILITY_FAULT_NOT_INJECTED")
+    await requireComplete(invokeNative(root, pairInput(root, pair), locks))
+    if (
+      existsSync(path.join(root, pair.intentPath)) ||
+      pair.members.some(
+        ({ target, bytes }) =>
+          readFileSync(path.join(root, target), "utf8") !== bytes,
+      )
+    )
+      fail("V138_SUCCESSOR_DURABILITY_FAULT_RECOVERY_FAILED")
+    const namespace = deriveV138PairIntentV2(
+      trustedIdentity(root),
+      pair,
+    ).namespace
+    if (
+      readdirSync(path.join(root, ".v138-pair-staging")).some((entry) =>
+        entry.startsWith(namespace),
+      )
+    )
+      fail("V138_SUCCESSOR_DURABILITY_FAULT_RESIDUE")
+    recovered++
+  }
+  return recovered
+}
+
 const directHelperBypassEvidence = async (root: string): Promise<number> => {
   const pair: V138DurablePairV2Input = {
     transactionId: "one-shot-location",
@@ -1122,6 +1173,8 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
     const sharedIntentConflicts = await sharedIntentConflictEvidence(root)
     const crashRecoveries = await crashRecoveryEvidence(root)
     const writeWindowEvidence = await writeWindowRecoveryEvidence(root)
+    const durabilityFaultRecoveries =
+      await pairDurabilityFaultRecoveryEvidence(root)
     const directHelperBypassAttempts = await directHelperBypassEvidence(root)
     const directoryReplacementProtections =
       await directoryReplacementEvidence(root)
@@ -1148,6 +1201,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
       partialDeterministicFilesAccepted:
         writeWindowEvidence.partialDeterministicFilesAccepted,
       abandonedUncommittedTemps: writeWindowEvidence.abandonedTemps,
+      durabilityFaultRecoveries,
       directHelperBypassAttempts,
       directoryReplacementProtections,
       rootLockNamespaceProtections,

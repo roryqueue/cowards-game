@@ -53,6 +53,10 @@ static void crash_if(int boundary, int wanted) {
   if (boundary == wanted) _exit(97);
 }
 
+static void fault_if(int boundary, int wanted, const char *code) {
+  if (boundary == wanted) die(code);
+}
+
 static int safe_atom(const char *value) {
   if (!value || !*value || strstr(value, "..") || strchr(value, '\\') || value[0] == '/') return 0;
   for (const char *cursor = value; *cursor; cursor++) {
@@ -393,12 +397,23 @@ static void pair_transaction(int root, char **parts, int count) {
       if (linkat(staging, stages[index], targets[index].parent, targets[index].name, 0) != 0 && errno != EEXIST) die("V138_NATIVE_LINK_FAILED");
     }
     if (!regular_state(targets[index]) || !bytes_equal(targets[index], bytes[index], bytes_length[index])) die("V138_PAIR_V2_CANONICAL_CONFLICT");
-    fsync(targets[index].parent);
+    fault_if(crash_boundary, 300 + index, "V138_NATIVE_FAULT_CANONICAL_PARENT_FSYNC");
+    if (fsync(targets[index].parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
     crash_if(crash_boundary, 4 + index);
   }
-  for (int index = 0; index < 2; index++) if (regular_state_at(staging, stages[index])) unlinkat(staging, stages[index], 0);
-  if (regular_state(intent)) unlinkat(intent.parent, intent.name, 0);
-  fsync(staging); fsync(intent.parent);
+  for (int index = 0; index < 2; index++) {
+    if (!regular_state_at(staging, stages[index])) continue;
+    fault_if(crash_boundary, 302 + index, "V138_NATIVE_FAULT_STAGE_UNLINK");
+    if (unlinkat(staging, stages[index], 0) != 0) die("V138_NATIVE_CLEANUP_FAILED");
+  }
+  fault_if(crash_boundary, 305, "V138_NATIVE_FAULT_STAGING_FSYNC");
+  if (fsync(staging) != 0) die("V138_NATIVE_FSYNC_FAILED");
+  if (regular_state(intent)) {
+    fault_if(crash_boundary, 304, "V138_NATIVE_FAULT_INTENT_UNLINK");
+    if (unlinkat(intent.parent, intent.name, 0) != 0) die("V138_NATIVE_CLEANUP_FAILED");
+  }
+  fault_if(crash_boundary, 306, "V138_NATIVE_FAULT_INTENT_PARENT_FSYNC");
+  if (fsync(intent.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
   for (int index = 0; index < 2; index++) { free(bytes[index]); close_file(targets[index]); }
   free(intent_bytes); close_file(intent); close(staging); release_descriptor_locks(held);
 }
@@ -523,7 +538,7 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
   crash_if(crash_boundary, 2 + step_count);
   if (!regular_state(lifecycle) && linkat(staging, status_name, lifecycle.parent, lifecycle.name, 0) != 0 && errno != EEXIST) die("V138_NATIVE_LINK_FAILED");
   if (!bytes_equal(lifecycle, lifecycle_bytes, lifecycle_length)) die("V138_LIFECYCLE_V2_STATUS_POSTCONDITION");
-  fsync(lifecycle.parent);
+  if (fsync(lifecycle.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
   crash_if(crash_boundary, 3 + step_count);
   /* Canonical status and every target are durable; recovery material is now private residue. */
   for (int index = 0; index < step_count; index++) {
