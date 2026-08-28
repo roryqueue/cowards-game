@@ -3,6 +3,7 @@ import { existsSync, lstatSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import ts from "typescript"
+import { runV138V3ProductionLive } from "./run-v1-38-bounded-retry-envelope-v3.js"
 import {
   authenticateV138RetryV3ExecutionClosure,
   runV138RetryV3IsolatedGit,
@@ -646,6 +647,275 @@ export const checkV138LiveV9CorrectedPlan108ValuesForReview = (
   })
 }
 
+const shaPattern = /^sha256:[0-9a-f]{64}$/u
+type ReviewedLiveV9Closure = Readonly<{
+  sourceCommit: string
+  sourceTree: string
+  sourceParent: string
+  checkoutPaths: readonly string[]
+  rawByteManifestRoot: Sha
+  recursiveDependencyRoot: Sha
+  recursiveDependencyCount: number
+  installedClosureRoot: Sha
+  nodeSha256: Sha
+  pnpmDistributionSha256: Sha
+  nativeSourcesRoot: Sha
+  portableClosureRoot: Sha
+  executionClosureRoot: Sha
+  pathnameLaunchReplacementResistanceClaimed: false
+}>
+
+type CorrectedAdmission = Readonly<{
+  correctedPublicationCommit: string
+  correctedPayloadRoot: Sha
+  correctedReviewRoot: Sha
+  correctedCarrierRoot: Sha
+  correctedPayload: Record<string, any>
+  correctedReviewBytes: Buffer
+  correctedCarrier: Record<string, any>
+  correctedSource: ReturnType<typeof inspectPlan107Source>
+  pair: Readonly<{ seal: Record<string, any>; envelope: Record<string, any> }>
+  pairCommit: string
+  envelopeStatus: string
+  liveInvoked: false
+  freshCharged: 0
+  freshAccepted: 0
+  downstreamAuthority: "denied"
+}>
+
+const assertReviewedClosure = (closure: ReviewedLiveV9Closure): void => {
+  assertExactKeys(closure, [
+    "sourceCommit", "sourceTree", "sourceParent", "checkoutPaths",
+    "rawByteManifestRoot", "recursiveDependencyRoot", "recursiveDependencyCount",
+    "installedClosureRoot", "nodeSha256", "pnpmDistributionSha256",
+    "nativeSourcesRoot", "portableClosureRoot", "executionClosureRoot",
+    "pathnameLaunchReplacementResistanceClaimed",
+  ], "V138_LIVE_V9_REVIEWED_CLOSURE_KEYS_INVALID")
+  if (
+    !/^[0-9a-f]{40}$/u.test(closure.sourceCommit) ||
+    !/^[0-9a-f]{40}$/u.test(closure.sourceTree) ||
+    !/^[0-9a-f]{40}$/u.test(closure.sourceParent) ||
+    canonical(closure.checkoutPaths) !== canonical(V138_LIVE_V9_EXECUTED_SOURCE_PATHS) ||
+    closure.recursiveDependencyCount < V138_LIVE_V9_EXECUTED_SOURCE_PATHS.length ||
+    closure.pathnameLaunchReplacementResistanceClaimed !== false ||
+    [
+      closure.rawByteManifestRoot, closure.recursiveDependencyRoot,
+      closure.installedClosureRoot, closure.nodeSha256,
+      closure.pnpmDistributionSha256, closure.nativeSourcesRoot,
+      closure.portableClosureRoot, closure.executionClosureRoot,
+    ].some((root) => !shaPattern.test(root)) ||
+    closure.portableClosureRoot === closure.executionClosureRoot
+  ) fail("V138_LIVE_V9_REVIEWED_CLOSURE_INVALID")
+}
+
+const computePlan112FindingRoot = (): Sha =>
+  sha256(`v138-plan-262-112-live-v9-findings-v1\0${canonical([])}`)
+export const computeV138LiveV9Plan112PayloadRoot = (
+  body: Record<string, unknown>,
+): Sha => sha256(`v138-plan-262-112-live-v9-custody-review-payload-v1\0${canonical(body)}`)
+const computePlan112ReviewRoot = (payloadRoot: Sha): Sha =>
+  sha256(`v138-plan-262-112-live-v9-custody-review-v1\0${canonical({
+    payloadRoot,
+    findingRoot: computePlan112FindingRoot(),
+    findingCount: 0,
+    plan109Eligible: true,
+    authorizesExecution: false,
+    downstreamAuthority: "denied",
+  })}`)
+export const computeV138LiveV9Plan112CarrierRoot = (
+  body: Record<string, unknown>,
+): Sha => sha256(`v138-plan-262-112-live-v9-custody-review-carrier-v1\0${canonical(body)}`)
+export const computeV138LiveV9SupplementV2Root = (
+  body: Record<string, unknown>,
+): Sha => sha256(`v138-successor-source-seal-v13-executable-custody-supplement-v2\0${canonical(body)}`)
+
+const renderPlan112Review = (
+  closure: ReviewedLiveV9Closure,
+  payloadRoot: Sha,
+  reviewRoot: Sha,
+): Buffer => Buffer.from(`---
+phase: 262-foundation-admission-measurement-custody-and-containment-con
+plan: "112"
+review_type: independent_live_v9_executable_custody_v1
+status: zero_findings
+finding_count: 0
+review_root: ${reviewRoot}
+reviewed: 2026-08-28
+---
+
+# Phase 262 Plan 112 Independent Live-v9 Executable-Custody Review
+
+## Verdict
+
+**ZERO FINDINGS.** Finding codes: none.
+
+- Source commit: \`${closure.sourceCommit}\`
+- Recursive dependency root/count: \`${closure.recursiveDependencyRoot}\` / ${closure.recursiveDependencyCount}
+- Portable/full roots: \`${closure.portableClosureRoot}\` / \`${closure.executionClosureRoot}\`
+- Payload root: \`${payloadRoot}\`
+- Finding root: \`${computePlan112FindingRoot()}\`
+- Review root: \`${reviewRoot}\`
+- Actual modes: 6/6
+- Producer-incapable observations: 1
+- Live invoked: false
+- Fresh charged/accepted: 0/0
+
+Plan 109 supplement-v2 publication eligibility: true. This review authorizes no execution, envelope, capacity, counter reset, live effect, candidate, formation, holdout, public, product, production, counted play, gameplay change, archive, tag, or Phase 263 action. Downstream authority remains denied.
+`)
+
+export const deriveV138LiveV9ProspectiveContractsForReview = (input: {
+  corrected: CorrectedAdmission
+  reviewedClosure: ReviewedLiveV9Closure
+  plan112PublicationCommit: string
+}) => {
+  const { corrected, reviewedClosure: closure } = input
+  assertReviewedClosure(closure)
+  if (
+    !/^[0-9a-f]{40}$/u.test(input.plan112PublicationCommit) ||
+    corrected.correctedPublicationCommit !== V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT ||
+    corrected.pairCommit !== PAIR_COMMIT || corrected.envelopeStatus !== "sealed_inactive" ||
+    corrected.liveInvoked !== false || corrected.freshCharged !== 0 ||
+    corrected.freshAccepted !== 0 || corrected.downstreamAuthority !== "denied"
+  ) fail("V138_LIVE_V9_CORRECTED_ADMISSION_INVALID")
+  checkV138LiveV9CorrectedPlan108ValuesForReview({
+    source: corrected.correctedSource,
+    payload: corrected.correctedPayload,
+    reviewBytes: corrected.correctedReviewBytes,
+    carrier: corrected.correctedCarrier,
+  })
+  const payloadBody = {
+    schemaVersion: "v1.38-plan-262-112-live-v9-custody-review-payload-v1",
+    reviewedSourceCommit: closure.sourceCommit,
+    reviewedSourceTree: closure.sourceTree,
+    reviewedSourceParent: closure.sourceParent,
+    checkoutPaths: closure.checkoutPaths,
+    rawByteManifestRoot: closure.rawByteManifestRoot,
+    recursiveDependencyRoot: closure.recursiveDependencyRoot,
+    recursiveDependencyCount: closure.recursiveDependencyCount,
+    installedClosureRoot: closure.installedClosureRoot,
+    nodeSha256: closure.nodeSha256,
+    pnpmDistributionSha256: closure.pnpmDistributionSha256,
+    nativeSourcesRoot: closure.nativeSourcesRoot,
+    portableClosureRoot: closure.portableClosureRoot,
+    fullExecutionClosureRoot: closure.executionClosureRoot,
+    pathnameLaunchReplacementResistanceClaimed: false,
+    correctedPublicationCommit: V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT,
+    correctedPayloadRoot: corrected.correctedPayloadRoot,
+    correctedReviewRoot: corrected.correctedReviewRoot,
+    correctedCarrierRoot: corrected.correctedCarrierRoot,
+    pairCommit: PAIR_COMMIT,
+    sourceSealRoot: SEAL_ROOT,
+    retryEnvelopeRoot: ENVELOPE_ROOT,
+    protectedHistoryRoot: PROTECTED_HISTORY_ROOT,
+    plan93StopCommit: PLAN_93_STOP_COMMIT,
+    plan93StopSha256: PLAN_93_STOP_SHA256,
+    findingCount: 0,
+    findingRoot: computePlan112FindingRoot(),
+    findingCodes: [],
+    reviewStatus: "zero_findings",
+    actualModesPassed: 6,
+    producerIncapableObservations: 1,
+    liveInvoked: false,
+    freshCharged: 0,
+    freshAccepted: 0,
+    plan109Eligible: true,
+    authorizesExecution: false,
+    downstreamAuthority: "denied",
+  }
+  const payload = Object.freeze({
+    ...payloadBody,
+    payloadRoot: computeV138LiveV9Plan112PayloadRoot(payloadBody),
+  })
+  const reviewRoot = computePlan112ReviewRoot(payload.payloadRoot)
+  const reviewBytes = renderPlan112Review(closure, payload.payloadRoot, reviewRoot)
+  const carrierBody = {
+    schemaVersion: "v1.38-plan-262-112-live-v9-custody-review-carrier-v1",
+    payloadPath: V138_LIVE_V9_PATHS.plan112Payload,
+    reviewPath: V138_LIVE_V9_PATHS.plan112Review,
+    payloadMode: "100644",
+    reviewMode: "100644",
+    carrierMode: "100644",
+    payloadRoot: payload.payloadRoot,
+    reviewRoot,
+    payloadSha256: sha256(Buffer.from(canonical(payload))),
+    reviewSha256: sha256(reviewBytes),
+    findingCount: 0,
+    findingRoot: computePlan112FindingRoot(),
+    plan109Eligible: true,
+    authorizesExecution: false,
+    downstreamAuthority: "denied",
+  }
+  const carrier = Object.freeze({
+    ...carrierBody,
+    carrierRoot: computeV138LiveV9Plan112CarrierRoot(carrierBody),
+  })
+  const supplementBody = {
+    schemaVersion: "v1.38-successor-source-seal-v13-executable-custody-supplement-v2",
+    pairCommit: PAIR_COMMIT,
+    sourceSealRoot: SEAL_ROOT,
+    retryEnvelopeRoot: ENVELOPE_ROOT,
+    protectedHistoryRoot: PROTECTED_HISTORY_ROOT,
+    plan93StopCommit: PLAN_93_STOP_COMMIT,
+    plan93StopSha256: PLAN_93_STOP_SHA256,
+    correctedPublicationCommit: V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT,
+    correctedPayloadRoot: corrected.correctedPayloadRoot,
+    correctedReviewRoot: corrected.correctedReviewRoot,
+    correctedCarrierRoot: corrected.correctedCarrierRoot,
+    reviewedSourceCommit: closure.sourceCommit,
+    reviewedExecutionClosureRoot: closure.executionClosureRoot,
+    plan112PayloadRoot: payload.payloadRoot,
+    plan112ReviewRoot: reviewRoot,
+    plan112CarrierRoot: carrier.carrierRoot,
+    plan112PublicationCommit: input.plan112PublicationCommit,
+    findingCount: 0,
+    findingRoot: computePlan112FindingRoot(),
+    liveInvoked: false,
+    freshCharged: 0,
+    freshAccepted: 0,
+    authorizesEnvelope: false,
+    authorizesCapacity: false,
+    authorizesCounterReset: false,
+    authorizesExecution: false,
+    downstreamAuthority: "denied",
+  }
+  const supplement = Object.freeze({
+    ...supplementBody,
+    supplementRoot: computeV138LiveV9SupplementV2Root(supplementBody),
+  })
+  return Object.freeze({
+    plan112: Object.freeze({ payload, reviewBytes, carrier, reviewRoot }),
+    supplement,
+  })
+}
+
+export const checkV138LiveV9ProspectiveCustodyForReview = (input: {
+  corrected: CorrectedAdmission
+  reviewedClosure: ReviewedLiveV9Closure
+  plan112PublicationCommit: string
+  plan112: Readonly<{ payload: Record<string, any>; reviewBytes: Buffer; carrier: Record<string, any>; reviewRoot: Sha }>
+  supplement: Record<string, any>
+}) => {
+  const expected = deriveV138LiveV9ProspectiveContractsForReview(input)
+  if (
+    canonical(input.plan112.payload) !== canonical(expected.plan112.payload) ||
+    !input.plan112.reviewBytes.equals(expected.plan112.reviewBytes) ||
+    canonical(input.plan112.carrier) !== canonical(expected.plan112.carrier) ||
+    input.plan112.reviewRoot !== expected.plan112.reviewRoot ||
+    canonical(input.supplement) !== canonical(expected.supplement)
+  ) fail("V138_LIVE_V9_PROSPECTIVE_CUSTODY_INVALID")
+  return Object.freeze({
+    producerWouldInvoke: true as const,
+    liveInvoked: false as const,
+    freshCharged: 0 as const,
+    freshAccepted: 0 as const,
+    downstreamAuthority: "denied" as const,
+    reviewedClosure: input.reviewedClosure,
+    pair: input.corrected.pair,
+    plan112: expected.plan112,
+    supplement: expected.supplement,
+  })
+}
+
 const authenticateCorrectedPublication = (root: string) => {
   const head = runV138RetryV3IsolatedGit(root, ["rev-parse", "HEAD"])
   requireAncestor(root, V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT, head)
@@ -693,9 +963,8 @@ const authenticateCorrectedPublication = (root: string) => {
   })
 }
 
-const FORBIDDEN_DESTINATIONS = Object.freeze([
+const ALWAYS_FORBIDDEN_DESTINATIONS = Object.freeze([
   V138_LIVE_V9_PATHS.supplementV1,
-  V138_LIVE_V9_PATHS.supplementV2,
   ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
   ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl.lock",
   ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
@@ -707,19 +976,28 @@ const FORBIDDEN_DESTINATIONS = Object.freeze([
   ".planning/artifacts/v1.38-bounded-retry-v3-readiness.json",
   ".planning/artifacts/v1.38-bounded-retry-v3-lifecycle.json",
 ])
-const assertForbiddenDestinationsAbsent = (root: string): void => {
-  for (const repoPath of FORBIDDEN_DESTINATIONS)
+const assertForbiddenDestinationsAbsent = (
+  root: string,
+  options: Readonly<{ forbidSupplementV2: boolean }>,
+): void => {
+  const forbidden = options.forbidSupplementV2
+    ? [...ALWAYS_FORBIDDEN_DESTINATIONS, V138_LIVE_V9_PATHS.supplementV2]
+    : ALWAYS_FORBIDDEN_DESTINATIONS
+  for (const repoPath of forbidden)
     if (existsSync(repoTarget(root, repoPath)))
       fail(`V138_LIVE_V9_FORBIDDEN_DESTINATION_PRESENT:${repoPath}`)
 }
 
-export const authenticateV138LiveV9SourceOnly = (rootInput: string) => {
+const authenticateV138LiveV9Base = (
+  rootInput: string,
+  forbidSupplementV2: boolean,
+) => {
   const root = path.resolve(rootInput)
   authenticatePlan93Stop(root)
   const pair = authenticatePair(root)
   const protectedHistory = inspectProtectedHistory(root)
   const corrected = authenticateCorrectedPublication(root)
-  assertForbiddenDestinationsAbsent(root)
+  assertForbiddenDestinationsAbsent(root, { forbidSupplementV2 })
   return Object.freeze({
     correctedPublicationCommit: V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT,
     correctedPayloadRoot: corrected.payloadRoot,
@@ -746,11 +1024,161 @@ export const authenticateV138LiveV9SourceOnly = (rootInput: string) => {
   })
 }
 
+export const authenticateV138LiveV9SourceOnly = (rootInput: string) =>
+  authenticateV138LiveV9Base(rootInput, true)
+
+const exactPublication = (
+  root: string,
+  commit: string,
+  repoPaths: readonly string[],
+): ReadonlyArray<ReturnType<typeof committedRecord>> => {
+  const changed = runV138RetryV3IsolatedGit(root, [
+    "diff-tree", "--no-commit-id", "--name-only", "-r", commit,
+  ]).split("\n").filter(Boolean).sort()
+  if (canonical(changed) !== canonical([...repoPaths].sort()))
+    fail("V138_LIVE_V9_PUBLICATION_SCOPE_INVALID")
+  const records = repoPaths.map((repoPath) => committedRecord(root, commit, repoPath))
+  if (records.some(({ mode }) => mode !== "100644"))
+    fail("V138_LIVE_V9_PUBLICATION_MODE_INVALID")
+  assertNoSuccessorRewrite(root, commit, repoPaths)
+  return records
+}
+
+const closureFromPlan112Payload = (payload: Record<string, any>): ReviewedLiveV9Closure =>
+  Object.freeze({
+    sourceCommit: payload.reviewedSourceCommit,
+    sourceTree: payload.reviewedSourceTree,
+    sourceParent: payload.reviewedSourceParent,
+    checkoutPaths: payload.checkoutPaths,
+    rawByteManifestRoot: payload.rawByteManifestRoot,
+    recursiveDependencyRoot: payload.recursiveDependencyRoot,
+    recursiveDependencyCount: payload.recursiveDependencyCount,
+    installedClosureRoot: payload.installedClosureRoot,
+    nodeSha256: payload.nodeSha256,
+    pnpmDistributionSha256: payload.pnpmDistributionSha256,
+    nativeSourcesRoot: payload.nativeSourcesRoot,
+    portableClosureRoot: payload.portableClosureRoot,
+    executionClosureRoot: payload.fullExecutionClosureRoot,
+    pathnameLaunchReplacementResistanceClaimed:
+      payload.pathnameLaunchReplacementResistanceClaimed,
+  })
+
+const locateSingleAddCommit = (root: string, repoPath: string): string => {
+  const commits = runV138RetryV3IsolatedGit(root, [
+    "log", "--diff-filter=A", "--format=%H", "--", repoPath,
+  ]).split("\n").filter(Boolean)
+  if (commits.length !== 1 || !/^[0-9a-f]{40}$/u.test(commits[0]!))
+    fail(`V138_LIVE_V9_ADD_COMMIT_INVALID:${repoPath}`)
+  return commits[0]!
+}
+
+const authenticateV138LiveV9FutureCustody = (
+  rootInput: string,
+  requirePublishedSupplement: boolean,
+) => {
+  const root = path.resolve(rootInput)
+  const corrected = authenticateV138LiveV9Base(root, !requirePublishedSupplement)
+  const plan112Paths = [
+    V138_LIVE_V9_PATHS.plan112Payload,
+    V138_LIVE_V9_PATHS.plan112Review,
+    V138_LIVE_V9_PATHS.plan112Carrier,
+  ] as const
+  if (!plan112Paths.every((repoPath) => existsSync(repoTarget(root, repoPath))))
+    fail("V138_LIVE_V9_PLAN_112_PUBLICATION_REQUIRED")
+
+  let supplement: Record<string, any> | undefined
+  let plan112PublicationCommit: string
+  if (requirePublishedSupplement) {
+    const supplementBytes = workingBytes(root, V138_LIVE_V9_PATHS.supplementV2)
+    supplement = JSON.parse(supplementBytes.toString("utf8")) as Record<string, any>
+    plan112PublicationCommit = supplement.plan112PublicationCommit
+  } else {
+    const plan112Add = locateSingleAddCommit(root, V138_LIVE_V9_PATHS.plan112Payload)
+    plan112PublicationCommit = plan112Add
+  }
+  if (!/^[0-9a-f]{40}$/u.test(plan112PublicationCommit))
+    fail("V138_LIVE_V9_PLAN_112_COMMIT_INVALID")
+  const plan112Records = exactPublication(root, plan112PublicationCommit, plan112Paths)
+  const payload = JSON.parse(plan112Records[0]!.bytes.toString("utf8")) as Record<string, any>
+  const carrier = JSON.parse(plan112Records[2]!.bytes.toString("utf8")) as Record<string, any>
+  const closure = closureFromPlan112Payload(payload)
+  assertReviewedClosure(closure)
+  const actualClosure = authenticateV138RetryV3ExecutionClosure(root, {
+    sourceCommit: closure.sourceCommit,
+    checkoutPaths: V138_LIVE_V9_EXECUTED_SOURCE_PATHS,
+    executionClosureRoot: closure.executionClosureRoot,
+  })
+  if (
+    actualClosure.sourceTree !== closure.sourceTree ||
+    actualClosure.sourceParent !== closure.sourceParent ||
+    actualClosure.installedClosureRoot !== closure.installedClosureRoot ||
+    actualClosure.nodeSha256 !== closure.nodeSha256 ||
+    actualClosure.pnpmDistributionSha256 !== closure.pnpmDistributionSha256 ||
+    actualClosure.nativeSourcesRoot !== closure.nativeSourcesRoot
+  ) fail("V138_LIVE_V9_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  const prospective = deriveV138LiveV9ProspectiveContractsForReview({
+    corrected,
+    reviewedClosure: closure,
+    plan112PublicationCommit,
+  })
+  const plan112 = Object.freeze({
+    payload,
+    reviewBytes: plan112Records[1]!.bytes,
+    carrier,
+    reviewRoot: carrier.reviewRoot as Sha,
+  })
+  if (!requirePublishedSupplement) supplement = prospective.supplement
+  else {
+    const supplementCommit = locateSingleAddCommit(root, V138_LIVE_V9_PATHS.supplementV2)
+    const [record] = exactPublication(root, supplementCommit, [V138_LIVE_V9_PATHS.supplementV2])
+    if (!record!.bytes.equals(Buffer.from(canonical(supplement))))
+      fail("V138_LIVE_V9_SUPPLEMENT_CANONICAL_INVALID")
+  }
+  if (supplement === undefined) fail("V138_LIVE_V9_SUPPLEMENT_REQUIRED")
+  return checkV138LiveV9ProspectiveCustodyForReview({
+    corrected,
+    reviewedClosure: closure,
+    plan112PublicationCommit,
+    plan112,
+    supplement,
+  })
+}
+
+export const settleV138LiveV9ProducerOutcomeForReview = (
+  producerError: unknown | undefined,
+  postCustodyError: unknown | undefined,
+): void => {
+  if (producerError !== undefined && postCustodyError !== undefined)
+    throw new AggregateError(
+      [producerError, postCustodyError],
+      "V138_LIVE_V9_PRODUCER_AND_POST_CUSTODY_FAILED",
+      { cause: producerError },
+    )
+  if (producerError !== undefined) throw producerError
+  if (postCustodyError !== undefined) throw postCustodyError
+}
+
 export const runV138ReviewedBoundedLiveEnvelopeV9 = async (
   repoRoot: string,
 ): Promise<void> => {
-  authenticateV138LiveV9SourceOnly(repoRoot)
-  fail("V138_LIVE_V9_PLAN_112_AND_SUPPLEMENT_REQUIRED")
+  const ready = authenticateV138LiveV9FutureCustody(repoRoot, true)
+  let producerError: unknown | undefined
+  let postCustodyError: unknown | undefined
+  try {
+    await runV138V3ProductionLive(repoRoot, {
+      validateInputs: false,
+      checkPair: () => ({ seal: ready.pair.seal, envelope: ready.pair.envelope }),
+    })
+  } catch (error) {
+    producerError = error
+  } finally {
+    try {
+      authenticateV138LiveV9FutureCustody(repoRoot, true)
+    } catch (error) {
+      postCustodyError = error
+    }
+  }
+  settleV138LiveV9ProducerOutcomeForReview(producerError, postCustodyError)
 }
 
 export interface V138LiveV9CliDependencies {
@@ -766,8 +1194,31 @@ export const executeV138LiveV9Cli = (
   const repoRoot =
     injected?.repoRoot ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
   const writeOutput = injected?.writeOutput ?? ((value: string) => process.stdout.write(value))
-  if (args[0] !== "--check-source-only")
-    fail("V138_LIVE_V9_FUTURE_CUSTODY_REQUIRED")
+  if (args[0] === "--check-prospective-custody") {
+    const result = authenticateV138LiveV9FutureCustody(repoRoot, false)
+    writeOutput(`${JSON.stringify({
+      status: "prospective_custody_checked",
+      supplementRoot: result.supplement.supplementRoot,
+      producerWouldInvoke: true,
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })}\n`)
+    return
+  }
+  if (args[0] === "--check-post-run-custody") {
+    const result = authenticateV138LiveV9FutureCustody(repoRoot, true)
+    writeOutput(`${JSON.stringify({
+      status: "post_run_custody_checked",
+      supplementRoot: result.supplement.supplementRoot,
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })}\n`)
+    return
+  }
   const result = authenticateV138LiveV9SourceOnly(repoRoot)
   writeOutput(
     `${JSON.stringify({

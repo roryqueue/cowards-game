@@ -178,6 +178,7 @@ describe("Plan 262-111 future review and post-effect contract", () => {
     const prospective = deriveV138LiveV9ProspectiveContractsForReview({
       corrected,
       reviewedClosure,
+      plan112PublicationCommit: "d".repeat(40),
     })
     expect(prospective.plan112.payload).toMatchObject({
       schemaVersion: "v1.38-plan-262-112-live-v9-custody-review-payload-v1",
@@ -203,6 +204,7 @@ describe("Plan 262-111 future review and post-effect contract", () => {
       checkV138LiveV9ProspectiveCustodyForReview({
         corrected,
         reviewedClosure,
+        plan112PublicationCommit: "d".repeat(40),
         plan112: prospective.plan112,
         supplement: prospective.supplement,
       }),
@@ -214,7 +216,11 @@ describe("Plan 262-111 future review and post-effect contract", () => {
 
   it("rejects future review and supplement mutations plus historical compatibility substitutions", () => {
     const corrected = authenticateV138LiveV9SourceOnly(repoRoot)
-    const prospective = deriveV138LiveV9ProspectiveContractsForReview({ corrected, reviewedClosure })
+    const prospective = deriveV138LiveV9ProspectiveContractsForReview({
+      corrected,
+      reviewedClosure,
+      plan112PublicationCommit: "d".repeat(40),
+    })
     for (const mutation of [
       { plan112: { ...prospective.plan112, payload: { ...prospective.plan112.payload, findingCount: 1 } } },
       { plan112: { ...prospective.plan112, carrier: { ...prospective.plan112.carrier, payloadMode: "100755" } } },
@@ -227,6 +233,7 @@ describe("Plan 262-111 future review and post-effect contract", () => {
         checkV138LiveV9ProspectiveCustodyForReview({
           corrected,
           reviewedClosure,
+          plan112PublicationCommit: "d".repeat(40),
           plan112: mutation.plan112 ?? prospective.plan112,
           supplement: mutation.supplement ?? prospective.supplement,
         }),
