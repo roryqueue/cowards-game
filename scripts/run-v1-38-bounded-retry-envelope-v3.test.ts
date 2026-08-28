@@ -1,4 +1,10 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -26,6 +32,12 @@ import {
   runV138BoundedRetryV3Controller,
   type V138BoundedRetryV3ControllerEffects,
 } from "./run-v1-38-bounded-retry-envelope-v3.js"
+import {
+  acquireV138RetryV3NativeOwnerLease,
+  authenticateV138RetryV3ExecutionClosure,
+  publishV138RetryV3NativePair,
+  runV138RetryV3IsolatedGit,
+} from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
 
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
@@ -93,6 +105,102 @@ describe("bounded retry envelope v3 contract", () => {
       lifecycleV2Root:
         "sha256:e762aa430aadcd1986d04c79dc9d102641e9a177f099ee066bcb9464c09f94a6",
     })
+  })
+
+  it("protects the exact blocked Plan-90/91 history without treating it as current authority", () => {
+    expect(V138_BOUNDED_RETRY_V3_PROTECTED_HISTORY).toMatchObject({
+      blockedSourceReview: {
+        status: "blocked",
+        reviewedSourceCommit: "32f53bb743db799810dff820b8b7eb309b6a6629",
+        findingRoot:
+          "sha256:99ceec74a141e228b2e027c6f0b5d85ddfed8d917ad74e7a493e6d8257f8701a",
+        reviewRoot:
+          "sha256:08938c5eb520b041e2b74ac07b7906d14e52197e3788ec97ff6f29350bbdf80d",
+        historicalResultReinterpreted: false,
+        currentSourceReviewEligible: false,
+      },
+    })
+    expect(V138_BOUNDED_RETRY_V3_PROTECTED_HISTORY.protectedFiles).toEqual(
+      expect.arrayContaining([
+        [
+          ".planning/artifacts/v1.38-plan-262-91-bounded-retry-source-review-v3.json",
+          "sha256:c4dbbfa56bf903b2cb302c7a86acb87359da3f2ac696dbc2ca783376604a5232",
+          "eff3f1fea4719131f7ced617df7b0a1d4c89d4d2",
+        ],
+        [
+          ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-91-REVIEW.md",
+          "sha256:fb82e3be073f896a1514ddfc4d16fc84a478342f8375ab6002e7598d72275272",
+          "73596b860c06c6a477960fe8936053b1006e1edd",
+        ],
+        [
+          ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-91-SUMMARY.md",
+          "sha256:1db0d52a482f3ce954c03da3b59d22549ca6a913290b2d03ce87c80cb045cbf0",
+          "2070f4dd0444c28623c4fbc0270b70a654ea92a1",
+        ],
+        [
+          ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-90-SUMMARY.md",
+          "sha256:4daded12537692e2e180ee9ccd34b8de54b425398d9a68b9923fcfa8b27988b7",
+          "ff882bbadc057c0e0786d9251fb942095155db72",
+        ],
+      ]),
+    )
+  })
+
+  it("derives Git and installed execution custody through an isolated exact executable", () => {
+    const hostile = mkdtempSync(path.join(tmpdir(), "v138-hostile-git-"))
+    roots.push(hostile)
+    writeFileSync(path.join(hostile, "git"), "#!/bin/sh\nexit 91\n", {
+      mode: 0o700,
+    })
+    expect(
+      runV138RetryV3IsolatedGit(process.cwd(), ["rev-parse", "HEAD"], {
+        PATH: hostile,
+        GIT_CONFIG_GLOBAL: path.join(hostile, "hostile-gitconfig"),
+      }),
+    ).toMatch(/^[0-9a-f]{40}$/u)
+    const closure = authenticateV138RetryV3ExecutionClosure(process.cwd(), {
+      sourceCommit: runV138RetryV3IsolatedGit(process.cwd(), [
+        "rev-parse",
+        "HEAD",
+      ]),
+      checkoutPaths: ["package.json", "pnpm-lock.yaml"],
+    })
+    expect(closure).toMatchObject({
+      gitExecutable: "/usr/bin/git",
+      sourceCommit: expect.stringMatching(/^[0-9a-f]{40}$/u),
+      sourceTree: expect.stringMatching(/^[0-9a-f]{40}$/u),
+      checkoutByteManifestRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      installedClosureRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+      pathnameLaunchReplacementResistanceClaimed: false,
+    })
+  })
+
+  it("uses native retained-root custody for pair publication and owner contention", async () => {
+    if (process.platform !== "darwin") return
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v3-native-custody-"))
+    roots.push(root)
+    mkdirSync(path.join(root, "pair"))
+    await publishV138RetryV3NativePair(root, {
+      transactionId: "task-1-native-pair",
+      intentPath: "task-1-native-pair.intent",
+      members: [
+        { target: "pair/left.json", bytes: "left\n" },
+        { target: "pair/right.json", bytes: "right\n" },
+      ],
+    })
+    expect(readFileSync(path.join(root, "pair/left.json"), "utf8")).toBe(
+      "left\n",
+    )
+    expect(readFileSync(path.join(root, "pair/right.json"), "utf8")).toBe(
+      "right\n",
+    )
+    const owner = await acquireV138RetryV3NativeOwnerLease(root)
+    await expect(acquireV138RetryV3NativeOwnerLease(root)).rejects.toThrow(
+      "V138_RETRY_OWNER_LOCK_ACTIVE",
+    )
+    await owner.release()
+    const restarted = await acquireV138RetryV3NativeOwnerLease(root)
+    await restarted.release()
   })
 
   it.each([
