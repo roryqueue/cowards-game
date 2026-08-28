@@ -228,7 +228,7 @@ const crashRecoveryEvidence = async (root: string): Promise<number> => {
   return recovered
 }
 
-const writeWindowRecoveryEvidence = async (root: string): Promise<number> => {
+const writeWindowRecoveryEvidence = async (root: string): Promise<Readonly<{ recoveries: number; partialDeterministicFilesAccepted: 0; abandonedTemps: 0 }>> => {
   let recovered = 0
   for (const boundary of [100, 101]) {
     const pair: V138DurablePairV2Input = {
@@ -245,7 +245,7 @@ const writeWindowRecoveryEvidence = async (root: string): Promise<number> => {
     if (abandoned.length !== 0) fail("V138_SUCCESSOR_ABANDONED_TEMP_RETAINED")
     recovered++
   }
-  return recovered
+  return Object.freeze({ recoveries: recovered, partialDeterministicFilesAccepted: 0, abandonedTemps: 0 })
 }
 
 const directHelperBypassEvidence = async (root: string): Promise<number> => {
@@ -347,7 +347,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
     const overlapRaces = await overlapRaceEvidence(root, 50)
     const disjointRaces = await disjointRaceEvidence(root, 100)
     const crashRecoveries = await crashRecoveryEvidence(root)
-    const writeWindowRecoveries = await writeWindowRecoveryEvidence(root)
+    const writeWindowEvidence = await writeWindowRecoveryEvidence(root)
     const directHelperBypassAttempts = await directHelperBypassEvidence(root)
     const directoryReplacementProtections = await directoryReplacementEvidence(root)
     return Object.freeze({
@@ -359,7 +359,9 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       overlapRaces,
       disjointRaces,
       crashRecoveries,
-      writeWindowRecoveries,
+      writeWindowRecoveries: writeWindowEvidence.recoveries,
+      partialDeterministicFilesAccepted: writeWindowEvidence.partialDeterministicFilesAccepted,
+      abandonedUncommittedTemps: writeWindowEvidence.abandonedTemps,
       directHelperBypassAttempts,
       directoryReplacementProtections,
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),

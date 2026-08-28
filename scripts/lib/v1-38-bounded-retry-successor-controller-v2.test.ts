@@ -34,6 +34,8 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     expect(output.disjointRaces).toBe(100)
     expect(output.crashRecoveries).toBe(10)
     expect(output.writeWindowRecoveries).toBe(2)
+    expect(output.partialDeterministicFilesAccepted).toBe(0)
+    expect(output.abandonedUncommittedTemps).toBe(0)
     expect(output.directHelperBypassAttempts).toBe(2)
     expect(output.directoryReplacementProtections).toBe(2)
   }, 240_000)
