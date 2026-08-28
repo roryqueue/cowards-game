@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
+  readFileSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -171,6 +172,20 @@ describe("CR-05 trusted-root no-follow paths", () => {
           entry.startsWith("v138-secure-reader-v5-") && !before.has(entry),
       ),
     ).toEqual([])
+  })
+
+  it("has no reusable reader cache or exit-only cleanup path", () => {
+    const source = readFileSync(
+      path.resolve(
+        path.dirname(V138_SECURE_MANIFEST_READER_V5_SOURCE),
+        "../lib/v1-38-secure-workspace-path-v5.ts",
+      ),
+      "utf8",
+    )
+    expect(source).not.toMatch(/let\s+readerExecutable|process\.once\(["']exit/u)
+    const root = fixture()
+    expect(readV138WorkspaceBatch(root, ["safe/file"]).bytes["safe/file"])
+      .toEqual(readV138WorkspaceBatch(root, ["safe/file"]).bytes["safe/file"])
   })
 
   it("retains one root inode across a root-path replacement and checks absence there", () => {
