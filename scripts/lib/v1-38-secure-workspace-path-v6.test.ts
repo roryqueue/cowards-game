@@ -268,6 +268,12 @@ describe("CR-05 trusted-root no-follow paths", () => {
     )
     expect(batch.bytes["safe/file"]!.toString()).toBe("bytes\n")
     expect(batch.protocol).toBe(V138_SECURE_BATCH_PROTOCOL_V6)
+    expect(batch.barrierControl).toBe(
+      "external-private-bootstrap-directory",
+    )
+    expect(
+      readdirSync(root).some((entry) => entry.startsWith(".v138-reader-")),
+    ).toBe(false)
     expect(batch.snapshotGuarantee).toBe(
       "required_leaf_exact_generation_and_parent_generation_bound",
     )

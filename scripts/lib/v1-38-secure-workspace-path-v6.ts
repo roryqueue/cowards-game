@@ -200,6 +200,7 @@ export type V138SecureWorkspaceSession = Readonly<{
 
 export type V138SecureWorkspaceBatch = Readonly<{
   protocol: typeof V138_SECURE_BATCH_PROTOCOL_V6
+  barrierControl: "external-private-bootstrap-directory"
   snapshotGuarantee: "required_leaf_exact_generation_and_parent_generation_bound"
   identity: Readonly<{ device: string; inode: string }>
   ancestorIdentities: Readonly<Record<string, Readonly<{ device: string; inode: string }>>>
@@ -250,6 +251,7 @@ export const readV138WorkspaceBatch = (
       fail("V138_SECURE_BATCH_OUTPUT_INCOMPLETE")
     return Object.freeze({
       protocol: V138_SECURE_BATCH_PROTOCOL_V6,
+      barrierControl: "external-private-bootstrap-directory" as const,
       snapshotGuarantee:
         "required_leaf_exact_generation_and_parent_generation_bound" as const,
       identity,
