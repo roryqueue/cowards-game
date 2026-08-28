@@ -17,9 +17,11 @@
 #define MAX_PATH 4096
 
 typedef struct { char kind; char path[MAX_PATH]; } request_t;
-typedef struct { char path[MAX_PATH]; int fd; dev_t dev; ino_t ino; } dir_t;
+typedef struct { char path[MAX_PATH]; int fd; struct stat identity; } dir_t;
+typedef struct { int fd; struct stat identity; } leaf_t;
 static request_t requests[MAX_REQUESTS];
 static dir_t dirs[MAX_DIRS];
+static leaf_t leaves[MAX_REQUESTS];
 static size_t request_count = 0, dir_count = 0;
 
 __attribute__((noreturn)) static void die(const char *code) {
@@ -72,7 +74,7 @@ static int retain_dir(const char *relative) {
   struct stat status;
   if (fstat(child, &status) != 0 || !S_ISDIR(status.st_mode)) die("V138_READER_PARENT_INVALID");
   dir_t *slot = &dirs[dir_count++];
-  strcpy(slot->path, relative); slot->fd = child; slot->dev = status.st_dev; slot->ino = status.st_ino;
+  strcpy(slot->path, relative); slot->fd = child; slot->identity = status;
   return (int)(dir_count - 1);
 }
 
@@ -112,13 +114,56 @@ static void barrier(int root) {
   die("V138_READER_BARRIER_TIMEOUT");
 }
 
+static void require_sanitized_environment(void) {
+  const char *path = getenv("PATH"), *lang = getenv("LANG"), *locale = getenv("LC_ALL"), *temporary = getenv("TMPDIR");
+  if (!path || strcmp(path, "/usr/bin:/bin") != 0 || !lang || strcmp(lang, "C") != 0 ||
+      !locale || strcmp(locale, "C") != 0 || !temporary || !*temporary)
+    die("V138_READER_ENVIRONMENT_INVALID");
+  const char *forbidden[] = {
+    "DYLD_INSERT_LIBRARIES", "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH",
+    "DYLD_FALLBACK_LIBRARY_PATH", "DYLD_FALLBACK_FRAMEWORK_PATH",
+    "LD_PRELOAD", "LD_LIBRARY_PATH", "NODE_OPTIONS"
+  };
+  for (size_t index = 0; index < sizeof(forbidden) / sizeof(forbidden[0]); index++)
+    if (getenv(forbidden[index]) != NULL) die("V138_READER_LOADER_ENVIRONMENT_FORBIDDEN");
+}
+
+static int same_generation(const struct stat *left, const struct stat *right) {
+  return left->st_dev == right->st_dev && left->st_ino == right->st_ino &&
+    left->st_gen == right->st_gen &&
+    left->st_mtimespec.tv_sec == right->st_mtimespec.tv_sec &&
+    left->st_mtimespec.tv_nsec == right->st_mtimespec.tv_nsec &&
+    left->st_ctimespec.tv_sec == right->st_ctimespec.tv_sec &&
+    left->st_ctimespec.tv_nsec == right->st_ctimespec.tv_nsec;
+}
+
+static void require_directory_generations(void) {
+  for (size_t index = 0; index < dir_count; index++) {
+    struct stat current;
+    if (fstat(dirs[index].fd, &current) != 0 || !same_generation(&dirs[index].identity, &current))
+      die("V138_READER_BATCH_GENERATION_CHANGED");
+  }
+}
+
+static void require_absences(void) {
+  for (size_t index = 0; index < request_count; index++) {
+    if (requests[index].kind != 'A') continue;
+    char name[MAX_PATH]; int parent = parent_for(requests[index].path, name);
+    struct stat status;
+    if (fstatat(dirs[parent].fd, name, &status, AT_SYMLINK_NOFOLLOW) == 0)
+      die("V138_READER_EXPECTED_ABSENT");
+    if (errno != ENOENT) die("V138_READER_ABSENCE_CHECK_FAILED");
+  }
+}
+
 int main(void) {
+  require_sanitized_environment();
   setvbuf(stdout, NULL, _IONBF, 0);
   int root = fcntl(3, F_DUPFD_CLOEXEC, 4);
   if (root < 0) die("V138_READER_ROOT_INVALID");
   struct stat root_status;
   if (fstat(root, &root_status) != 0 || !S_ISDIR(root_status.st_mode)) die("V138_READER_ROOT_INVALID");
-  strcpy(dirs[0].path, ""); dirs[0].fd = root; dirs[0].dev = root_status.st_dev; dirs[0].ino = root_status.st_ino; dir_count = 1;
+  strcpy(dirs[0].path, ""); dirs[0].fd = root; dirs[0].identity = root_status; dir_count = 1;
 
   char line[MAX_PATH + 8];
   while (fgets(line, sizeof(line), stdin)) {
@@ -131,41 +176,53 @@ int main(void) {
   }
   if (request_count == 0) die("V138_READER_ARGUMENT_INVALID");
 
-  /* First retain every ancestor. No evidence byte or absence decision is made
-     until the full ancestor graph is descriptor-bound. */
+  /* Retain every ancestor and every required regular leaf before reading any
+     evidence bytes. Absence decisions are bound to before/after parent
+     generation, identity, mtime, and ctime checks. */
   for (size_t i = 0; i < request_count; i++) {
     char name[MAX_PATH]; (void)parent_for(requests[i].path, name);
   }
+  for (size_t i = 0; i < request_count; i++) {
+    leaves[i].fd = -1;
+    if (requests[i].kind != 'R') continue;
+    char name[MAX_PATH]; int parent = parent_for(requests[i].path, name);
+    leaves[i].fd = openat(dirs[parent].fd, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (leaves[i].fd < 0 || fstat(leaves[i].fd, &leaves[i].identity) != 0 ||
+        !S_ISREG(leaves[i].identity.st_mode) || leaves[i].identity.st_size < 0 ||
+        leaves[i].identity.st_size > 64 * 1024 * 1024)
+      die("V138_READER_FILE_INVALID");
+  }
+  for (size_t i = 0; i < dir_count; i++)
+    if (fstat(dirs[i].fd, &dirs[i].identity) != 0) die("V138_READER_PARENT_INVALID");
+  require_absences();
+  barrier(root);
+  require_directory_generations();
+  require_absences();
+
+  printf("H\tone-shot-v5\n");
   printf("I\t%llu\t%llu\n", (unsigned long long)root_status.st_dev, (unsigned long long)root_status.st_ino);
   for (size_t i = 0; i < dir_count; i++) {
     printf("D\t"); hex_bytes((const unsigned char *)dirs[i].path, strlen(dirs[i].path));
-    printf("\t%llu\t%llu\n", (unsigned long long)dirs[i].dev, (unsigned long long)dirs[i].ino);
+    printf("\t%llu\t%llu\n", (unsigned long long)dirs[i].identity.st_dev, (unsigned long long)dirs[i].identity.st_ino);
   }
   for (size_t i = 0; i < request_count; i++) {
-    char name[MAX_PATH]; int parent = parent_for(requests[i].path, name);
     printf("%c\t", requests[i].kind); hex_bytes((const unsigned char *)requests[i].path, strlen(requests[i].path)); printf("\t");
     if (requests[i].kind == 'A') {
-      struct stat status;
-      if (fstatat(dirs[parent].fd, name, &status, AT_SYMLINK_NOFOLLOW) == 0) die("V138_READER_EXPECTED_ABSENT");
-      if (errno != ENOENT) die("V138_READER_ABSENCE_CHECK_FAILED");
       printf("-\n");
     } else {
-      int file = openat(dirs[parent].fd, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
-      if (file < 0) die("V138_READER_FILE_INVALID");
-      struct stat status;
-      if (fstat(file, &status) != 0 || !S_ISREG(status.st_mode) || status.st_size < 0 || status.st_size > 64 * 1024 * 1024)
-        die("V138_READER_FILE_INVALID");
       unsigned char buffer[65536];
       for (;;) {
-        ssize_t count = read(file, buffer, sizeof(buffer));
+        ssize_t count = read(leaves[i].fd, buffer, sizeof(buffer));
         if (count < 0) die("V138_READER_READ_FAILED");
         if (count == 0) break;
         hex_bytes(buffer, (size_t)count);
       }
-      close(file); printf("\n");
+      printf("\n");
     }
-    if (i == 0) barrier(root);
   }
+  require_directory_generations();
+  require_absences();
+  for (size_t i = 0; i < request_count; i++) if (leaves[i].fd >= 0) close(leaves[i].fd);
   for (size_t i = 0; i < dir_count; i++) close(dirs[i].fd);
   return 0;
 }

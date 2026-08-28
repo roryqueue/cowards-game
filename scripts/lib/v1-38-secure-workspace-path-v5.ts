@@ -1,22 +1,18 @@
 import { createHash } from "node:crypto"
-import { execFileSync, spawnSync } from "node:child_process"
+import { spawnSync } from "node:child_process"
 import {
-  chmodSync,
   closeSync,
   constants,
   fstatSync,
   lstatSync,
-  mkdirSync,
-  mkdtempSync,
   openSync,
   readFileSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
-import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
+import { compileV138PrivateNative } from "./v1-38-private-native-bootstrap-v1.js"
 
 const fail = (code: string): never => {
   throw new TypeError(code)
@@ -28,74 +24,55 @@ export const V138_SECURE_MANIFEST_READER_V5_SOURCE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../native/v1-38-secure-manifest-reader-v5.c",
 )
-const EXPECTED_READER_SOURCE_SHA256 =
-  "984a7f864f4a15527768ec27e019f6e8527c0767e50660505fef1b76331370c6"
-const EXPECTED_CLANG_SHA256 =
-  "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818"
-const EXPECTED_CLANG_CDHASH =
-  "1197f9fac4289a81d8e786b033bf8237672cabbc63da85b759bf2ef85ac232ad"
-const assertReviewedClang = (): void => {
-  const result = spawnSync("/usr/bin/codesign", ["-dv", "--verbose=4", "/usr/bin/clang"], {
-    encoding: "utf8",
+const EXPECTED_READER_SOURCE_SHA256 = "edb022fb7013a09cd87ab9b1fb1c8652e7feb2e6cbbdfcb293b0b735b710038a"
+
+const runOneShotReader = (
+  descriptor: number,
+  input: string,
+  testBarrier?: string,
+) => {
+  const built = compileV138PrivateNative({
+    source: V138_SECURE_MANIFEST_READER_V5_SOURCE,
+    expectedSourceSha256: EXPECTED_READER_SOURCE_SHA256,
+    prefix: "v138-secure-reader-v5-",
   })
-  const detail = `${result.stdout}${result.stderr}`
-  if (result.status !== 0 || !detail.includes(`CandidateCDHashFull sha256=${EXPECTED_CLANG_CDHASH}`) || !detail.includes("Authority=Apple Root CA") || !detail.includes("Platform identifier="))
-    fail("V138_SECURE_READER_PLATFORM_COMPILER_IDENTITY_MISMATCH")
-  execFileSync("/usr/bin/codesign", ["--verify", "--strict", "/usr/bin/clang"], { stdio: "pipe" })
-}
-let readerExecutable: string | undefined
-const secureReaderExecutable = (): string => {
-  if (readerExecutable !== undefined) return readerExecutable
-  const directory = mkdtempSync(path.join(tmpdir(), "v138-secure-reader-"))
-  let retained = false
   try {
-    chmodSync(directory, 0o700)
-    const primaryDirectory = path.join(directory, "primary")
-    const reproductionDirectory = path.join(directory, "reproduction")
-    mkdirSync(primaryDirectory, { mode: 0o700 })
-    mkdirSync(reproductionDirectory, { mode: 0o700 })
-    const executable = path.join(primaryDirectory, "reader")
-    const reproduced = path.join(reproductionDirectory, "reader")
-    const capturedSource = path.join(directory, "captured-reader.c")
-    const sourceBytes = readFileSync(V138_SECURE_MANIFEST_READER_V5_SOURCE)
-    const compilerBytes = readFileSync("/usr/bin/clang")
-    if (
-      sha256V138Secure(sourceBytes).slice(7) !== EXPECTED_READER_SOURCE_SHA256 ||
-      sha256V138Secure(compilerBytes).slice(7) !== EXPECTED_CLANG_SHA256
-    )
-      fail("V138_SECURE_READER_REVIEWED_IDENTITY_MISMATCH")
-    writeFileSync(capturedSource, sourceBytes, { mode: 0o400, flag: "wx" })
-    assertReviewedClang()
-    for (const output of [executable, reproduced] as const) {
-      const compilation = spawnSync(
-        "/usr/bin/clang",
-        ["-std=c11", "-Wall", "-Wextra", "-Werror", capturedSource, "-o", output],
-        {
-          encoding: "utf8",
-          env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", TMPDIR: directory },
-        },
+    if (testBarrier === "replace-reader-executable") {
+      let refused = false
+      try {
+        writeFileSync(built.executable, "replacement", { flag: "w" })
+      } catch {
+        refused = true
+      }
+      if (
+        !refused ||
+        sha256V138Secure(readFileSync(built.executable)).slice(7) !==
+          built.executableSha256
       )
-      if (compilation.status !== 0)
-        fail(`V138_SECURE_READER_COMPILE_FAILED:${compilation.stderr}`)
+        fail("V138_SECURE_READER_SUBSTITUTION_ACCEPTED")
     }
-    assertReviewedClang()
-    if (sha256V138Secure(readFileSync("/usr/bin/clang")).slice(7) !== EXPECTED_CLANG_SHA256)
-      fail("V138_SECURE_READER_PLATFORM_COMPILER_CHANGED")
-    const executableBytes = readFileSync(executable)
-    if (sha256V138Secure(executableBytes) !== sha256V138Secure(readFileSync(reproduced)))
-      fail("V138_SECURE_READER_REPRODUCIBLE_OUTPUT_MISMATCH")
-    chmodSync(executable, 0o500)
-    const status = lstatSync(executable)
-    if (!status.isFile() || status.uid !== process.getuid?.() || (status.mode & 0o777) !== 0o500)
-      fail("V138_SECURE_READER_OUTPUT_INVALID")
-    if (sha256V138Secure(readFileSync(executable)) !== sha256V138Secure(executableBytes))
-      fail("V138_SECURE_READER_OUTPUT_CHANGED")
-    readerExecutable = executable
-    retained = true
-    process.once("exit", () => rmSync(directory, { recursive: true, force: true }))
-    return executable
+    if (
+      sha256V138Secure(readFileSync(built.executable)).slice(7) !==
+      built.executableSha256
+    )
+      fail("V138_SECURE_READER_LAUNCH_DIGEST_MISMATCH")
+    return spawnSync(built.executable, [], {
+      input,
+      encoding: "utf8",
+      maxBuffer: 256 * 1024 * 1024,
+      stdio: ["pipe", "pipe", "pipe", descriptor],
+      env: {
+        PATH: "/usr/bin:/bin",
+        LANG: "C",
+        LC_ALL: "C",
+        TMPDIR: built.directory,
+        ...(testBarrier === undefined || testBarrier === "replace-reader-executable"
+          ? {}
+          : { V138_READER_TEST_BARRIER: testBarrier }),
+      },
+    })
   } finally {
-    if (!retained) rmSync(directory, { recursive: true, force: true })
+    built.cleanup()
   }
 }
 
@@ -231,16 +208,7 @@ export const readV138WorkspaceBatch = (
       ...normalizedReads.map((item) => `R\t${item}\n`),
       ...normalizedAbsent.map((item) => `A\t${item}\n`),
     ].join("")
-    const result = spawnSync(secureReaderExecutable(), [], {
-      input,
-      encoding: "utf8",
-      maxBuffer: 256 * 1024 * 1024,
-      stdio: ["pipe", "pipe", "pipe", descriptor],
-      env: {
-        PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C",
-        ...(testBarrier === undefined ? {} : { V138_READER_TEST_BARRIER: testBarrier }),
-      },
-    })
+    const result = runOneShotReader(descriptor, input, testBarrier)
     if (result.status !== 0) {
       const detail = result.stderr.trim()
       if (detail.includes("V138_READER_PARENT_INVALID") || detail.includes("V138_READER_FILE_INVALID"))
@@ -251,7 +219,10 @@ export const readV138WorkspaceBatch = (
     const ancestors: Record<string, Readonly<{ device: string; inode: string }>> = {}
     const bytes: Record<string, Buffer> = {}
     let identity: Readonly<{ device: string; inode: string }> | undefined
-    for (const line of result.stdout.trimEnd().split("\n")) {
+    const lines = result.stdout.trimEnd().split("\n")
+    if (lines.shift() !== "H\tone-shot-v5")
+      fail("V138_SECURE_READER_HANDSHAKE_INVALID")
+    for (const line of lines) {
       const [kind, encoded, device, inode] = line.split("\t")
       if (kind === "I") identity = Object.freeze({ device: encoded!, inode: device! })
       else if (kind === "D") ancestors[Buffer.from(encoded!, "hex").toString()] = Object.freeze({ device: device!, inode: inode! })
@@ -284,13 +255,10 @@ export const withV138SecureWorkspaceSession = <T>(
   }
   const invoke = (kind: "read" | "absent", relative: string): Buffer => {
     const normalized = normalizeV138Relative(relative)
-    const result = spawnSync(secureReaderExecutable(), [], {
-      input: `${kind === "read" ? "R" : "A"}\t${normalized}\n`,
-      encoding: "utf8",
-      maxBuffer: 256 * 1024 * 1024,
-      stdio: ["pipe", "pipe", "pipe", descriptor],
-      env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" },
-    })
+    const result = runOneShotReader(
+      descriptor,
+      `${kind === "read" ? "R" : "A"}\t${normalized}\n`,
+    )
     if (result.status !== 0) {
       const detail = result.stderr.trim()
       if (
@@ -303,6 +271,8 @@ export const withV138SecureWorkspaceSession = <T>(
       fail(`V138_SECURE_DESCRIPTOR_${kind.toUpperCase()}_FAILED:${detail}`)
     }
     if (kind === "absent") return Buffer.alloc(0)
+    if (!result.stdout.startsWith("H\tone-shot-v5\n"))
+      fail("V138_SECURE_READER_HANDSHAKE_INVALID")
     const encoded = Buffer.from(normalized).toString("hex")
     const line = result.stdout.split("\n").find((item) => item.startsWith(`R\t${encoded}\t`))
     if (line === undefined) fail("V138_SECURE_BATCH_OUTPUT_INCOMPLETE")

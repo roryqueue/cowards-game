@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
+  readdirSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -20,6 +21,7 @@ import {
   readV138RegularNoFollow,
   sha256V138Secure,
   V138_SECURE_MANIFEST_READER_V5_SOURCE,
+  readV138WorkspaceBatch,
   withV138SecureWorkspaceSession,
 } from "./v1-38-secure-workspace-path-v5.js"
 
@@ -79,7 +81,7 @@ describe("CR-05 trusted-root no-follow paths", () => {
     },
   )
 
-  it("holds every ancestor descriptor when a subtree is replaced after entry one", async () => {
+  it("fails the leaf snapshot when a retained subtree path changes", async () => {
     const root = fixture()
     const external = mkdtempSync(path.join(tmpdir(), "v138-reader-external-"))
     roots.push(external)
@@ -106,7 +108,13 @@ describe("CR-05 trusted-root no-follow paths", () => {
         (constants.O_NOFOLLOW ?? 0),
     )
     const child = spawn(reader, [], {
-      env: { ...process.env, V138_READER_TEST_BARRIER: tag },
+      env: {
+        PATH: "/usr/bin:/bin",
+        LANG: "C",
+        LC_ALL: "C",
+        TMPDIR: build,
+        V138_READER_TEST_BARRIER: tag,
+      },
       stdio: ["pipe", "pipe", "pipe", rootDescriptor],
     })
     child.stdin.end("R\tsafe/file\nA\tsafe/absent\n")
@@ -133,15 +141,32 @@ describe("CR-05 trusted-root no-follow paths", () => {
     const code = await new Promise<number | null>((resolve) =>
       child.once("exit", resolve),
     )
-    expect(code).toBe(0)
-    expect(stderr).toBe("")
-    expect(stdout).toContain(
-      `R\t${Buffer.from("safe/file").toString("hex")}\t${Buffer.from("bytes\n").toString("hex")}\n`,
-    )
-    expect(stdout).toContain(
-      `A\t${Buffer.from("safe/absent").toString("hex")}\t-\n`,
-    )
+    expect(code).not.toBe(0)
+    expect(stderr).toContain("V138_READER_BATCH_GENERATION_CHANGED")
+    expect(stdout).not.toContain(`R\t${Buffer.from("safe/file").toString("hex")}\t`)
   }, 30_000)
+
+  it("uses one immutable reader per batch and removes all bootstrap residue", () => {
+    const root = fixture()
+    const before = new Set(
+      readdirSync(tmpdir()).filter((entry) =>
+        entry.startsWith("v138-secure-reader-v5-"),
+      ),
+    )
+    const batch = readV138WorkspaceBatch(
+      root,
+      ["safe/file"],
+      ["safe/absent"],
+      "replace-reader-executable",
+    )
+    expect(batch.bytes["safe/file"]!.toString()).toBe("bytes\n")
+    expect(
+      readdirSync(tmpdir()).filter(
+        (entry) =>
+          entry.startsWith("v138-secure-reader-v5-") && !before.has(entry),
+      ),
+    ).toEqual([])
+  })
 
   it("retains one root inode across a root-path replacement and checks absence there", () => {
     const root = fixture(),
