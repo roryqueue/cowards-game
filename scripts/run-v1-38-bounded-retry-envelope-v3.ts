@@ -87,8 +87,8 @@ export const V138_BOUNDED_RETRY_V3_PATHS = Object.freeze({
     "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
   sourceTests: "scripts/run-v1-38-bounded-retry-envelope-v3.test.ts",
   sourceReview:
-    ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
-  sourceReviewReport: `${PHASE_DIR}/262-99-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-101-bounded-retry-source-rereview-v5.json",
+  sourceReviewReport: `${PHASE_DIR}/262-101-REVIEW.md`,
   protectedHistoryCorrection:
     ".planning/artifacts/v1.38-phase-262-review-fix-correction-v10.json",
   historicalReceiptManifest:
@@ -236,28 +236,49 @@ const isSha256 = (value: unknown): value is V138RetrySha256 =>
 const isCommit = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{40}$/u.test(value)
 
-export const computeV138ReviewedExecutionClosureRoot = (
+export const V138_PLAN_262_101_REVIEW_DOMAINS = Object.freeze({
+  portable: "v1.38:plan-262-101:git-object-byte-custody:portable:v5",
+  result: "v1.38:plan-262-101:git-object-byte-custody:root:v5",
+  review: "v1.38:plan-262-101:git-object-byte-custody:review:v5",
+  finding: "v1.38:plan-262-101:git-object-byte-custody:finding:v5",
+} as const)
+
+export const computeV138Plan262101PortableRoot = (
   body: V138ReviewedExecutionClosureV2,
 ): V138RetrySha256 =>
-  sha256(`v138-reviewed-execution-closure-v2\0${canonical(body)}`)
+  sha256(`${V138_PLAN_262_101_REVIEW_DOMAINS.portable}\0${canonical(body)}`)
 
-export const computeV138Plan26299ReviewRoot = (
+export const computeV138Plan262101FindingRoot = (
+  findings: readonly unknown[],
+): V138RetrySha256 =>
+  sha256(`${V138_PLAN_262_101_REVIEW_DOMAINS.finding}\0${canonical(findings)}`)
+
+export const computeV138Plan262101ReviewRoot = (
+  reviewBytes: Uint8Array,
+): V138RetrySha256 =>
+  sha256(
+    Buffer.concat([
+      Buffer.from(`${V138_PLAN_262_101_REVIEW_DOMAINS.review}\0`),
+      Buffer.from(reviewBytes),
+    ]),
+  )
+
+export const computeV138Plan262101ResultRoot = (
   candidate: unknown,
 ): V138RetrySha256 => {
   if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate))
-    fail("V138_RETRY_V3_PLAN_262_99_REVIEW_INVALID")
+    fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
   const body = JSON.parse(JSON.stringify(candidate)) as Record<string, unknown>
-  delete body.reviewRoot
-  return sha256(`v138-plan26299-source-rereview-v4\0${canonical(body)}`)
+  delete body.resultRoot
+  return sha256(`${V138_PLAN_262_101_REVIEW_DOMAINS.result}\0${canonical(body)}`)
 }
 
-const PLAN_262_99_TOP_LEVEL_KEYS = Object.freeze([
+const PLAN_262_101_TOP_LEVEL_KEYS = Object.freeze([
   "schemaVersion",
-  "reviewProtocol",
+  "protocol",
   "status",
   "correctedSource",
   "protectedHistory",
-  "failedAttempt",
   "execution",
   "reviewedExecutionClosure",
   "findings",
@@ -267,9 +288,10 @@ const PLAN_262_99_TOP_LEVEL_KEYS = Object.freeze([
   "identityClaims",
   "authority",
   "reviewRoot",
+  "resultRoot",
 ] as const)
 
-const PLAN_262_99_AUTHORITY_KEYS = Object.freeze([
+const PLAN_262_101_AUTHORITY_KEYS = Object.freeze([
   "plan26292Eligible",
   "authorizesExecution",
   "authorizationCreated",
@@ -304,7 +326,7 @@ const PLAN_262_99_AUTHORITY_KEYS = Object.freeze([
   "tagAuthorized",
 ] as const)
 
-const PLAN_262_99_IDENTITY_KEYS = Object.freeze([
+const PLAN_262_101_IDENTITY_KEYS = Object.freeze([
   "independentPersonClaimed",
   "externalIdentityClaimed",
   "cryptographicReviewerIdentityClaimed",
@@ -315,27 +337,39 @@ const PLAN_262_99_IDENTITY_KEYS = Object.freeze([
   "pathnameLaunchReplacementResistanceClaimed",
 ] as const)
 
-const validatePlan26299Envelope = (candidate: unknown): any => {
-  if (!exactKeys(candidate, PLAN_262_99_TOP_LEVEL_KEYS))
+const validatePlan262101Envelope = (
+  candidate: unknown,
+  reviewReportBytes: Buffer,
+): any => {
+  if (!exactKeys(candidate, PLAN_262_101_TOP_LEVEL_KEYS))
     fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
   const review = candidate as any
-  if (review.schemaVersion !== "v1.38-plan-262-99-bounded-retry-source-rereview-v4")
+  if (
+    review.schemaVersion !==
+      "v1.38-plan-262-101-git-object-byte-custody-rereview-v5" ||
+    review.protocol !== "git-object-byte-custody-v1"
+  )
     fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
   const corrected = review.correctedSource
   const protectedHistory = review.protectedHistory
-  const plan96 = protectedHistory?.plan96
-  const plan97 = protectedHistory?.plan97
-  const failedAttempt = review.failedAttempt
+  const plan98 = protectedHistory?.plan98
+  const plan99 = protectedHistory?.plan99
   const execution = review.execution
   if (
-    review.reviewProtocol !== "fresh-independent-plan-98-portable-closure-rereview-v4" ||
     review.status !== "zero_findings" ||
     review.findingCount !== 0 ||
     !Array.isArray(review.findings) ||
     review.findings.length !== 0 ||
-    review.findingRoot !== sha256(`v138-plan26299-findings\0${canonical([])}`) ||
+    review.findingRoot !== computeV138Plan262101FindingRoot([]) ||
     review.sourceReviewPassed !== true ||
-    review.reviewRoot !== computeV138Plan26299ReviewRoot(review) ||
+    review.reviewRoot !== computeV138Plan262101ReviewRoot(reviewReportBytes) ||
+    review.resultRoot !== computeV138Plan262101ResultRoot(review) ||
+    new Set([
+      review.reviewedExecutionClosure?.reviewedExecutionClosureRoot,
+      review.resultRoot,
+      review.reviewRoot,
+      review.findingRoot,
+    ]).size !== 4 ||
     !exactKeys(corrected, ["commit", "tree", "parent", "noLaterRewrite", "summaryTrustedAsVerdict", "files"]) ||
     !isCommit(corrected.commit) ||
     !isCommit(corrected.tree) ||
@@ -343,51 +377,69 @@ const validatePlan26299Envelope = (candidate: unknown): any => {
     corrected.noLaterRewrite !== true ||
     corrected.summaryTrustedAsVerdict !== false ||
     !Array.isArray(corrected.files) ||
-    corrected.files.length !== 2 ||
+    corrected.files.length !== 3 ||
     canonical(corrected.files.map((item: any) => item.path).sort()) !== canonical([
+      V138_BOUNDED_RETRY_V3_PATHS.sourceNativeCustody,
       V138_BOUNDED_RETRY_V3_PATHS.sourceController,
       V138_BOUNDED_RETRY_V3_PATHS.sourceTests,
     ].sort()) ||
     corrected.files.some((item: unknown) =>
       !exactKeys(item, ["path", "mode", "blob", "byteLength", "sha256"]) ||
-      ![V138_BOUNDED_RETRY_V3_PATHS.sourceController, V138_BOUNDED_RETRY_V3_PATHS.sourceTests].includes((item as any).path) ||
-      (item as any).mode !== "100644" ||
+      ![
+        V138_BOUNDED_RETRY_V3_PATHS.sourceNativeCustody,
+        V138_BOUNDED_RETRY_V3_PATHS.sourceController,
+        V138_BOUNDED_RETRY_V3_PATHS.sourceTests,
+      ].includes((item as any).path) ||
+      !["100644", "100755"].includes((item as any).mode) ||
       !isCommit((item as any).blob) ||
       !Number.isSafeInteger((item as any).byteLength) ||
       (item as any).byteLength <= 0 ||
       !isSha256((item as any).sha256)
     ) ||
-    !exactKeys(protectedHistory, ["historicalResultReinterpreted", "plan96", "plan97"]) ||
-    protectedHistory.historicalResultReinterpreted !== false ||
-    !exactKeys(plan96, ["sourceCommit", "sourceTree", "sourceParent", "summarySha256"]) ||
-    plan96.sourceCommit !== "1c1f42b7fcd72d19ded89cca3ddd522090475b29" ||
-    plan96.sourceTree !== "37d10e3dfee8501e59e686802ffe684167585c94" ||
-    plan96.sourceParent !== "aae9f5dab231f83a0238cf5448f5e1e1d8ad4f28" ||
-    plan96.summarySha256 !== "sha256:a3b2f63c542c69f565ca8a56d0bc8ee7e45971c52ff3ee6556e1d4f93d3132d5" ||
-    !exactKeys(plan97, ["schemaVersion", "reviewRoot", "findingRoot", "findingCount", "sourceReviewPassed", "artifactSha256", "reviewSha256", "summarySha256"]) ||
-    plan97.schemaVersion !== "v1.38-plan-262-97-bounded-retry-source-rereview-v3" ||
-    plan97.reviewRoot !== "sha256:2765f8c028a7c0e089b401898d80f12fa425e993f13255423abb052f22adee90" ||
-    plan97.findingRoot !== "sha256:638909ad31b44fc81e01b6f081b2b1c97ad4091413e4c285c83e61d6fbbc152a" ||
-    plan97.findingCount !== 0 ||
-    plan97.sourceReviewPassed !== true ||
-    plan97.artifactSha256 !== "sha256:08fd056f3056bb45daf6e82a04eab72bd4ca73bda812512cad8b04960ce2b2e9" ||
-    plan97.reviewSha256 !== "sha256:1a7737aaa37ff886ba90e37a73d9643b5e0fdea321a6cb859e475f906562bfe7" ||
-    plan97.summarySha256 !== "sha256:fa9dca2adbb113f0c30925ae8548aac935888066e2d9d2df73de793c1b5e5cc1" ||
-    !exactKeys(failedAttempt, ["plan", "stopCode", "status", "canonicalWrites", "freshCharged", "freshAccepted", "localSecretAccessed", "identityConsumed"]) ||
-    failedAttempt.plan !== "262-92" ||
-    failedAttempt.stopCode !== "V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID" ||
-    failedAttempt.status !== "integrity_stop" ||
-    failedAttempt.canonicalWrites !== 0 ||
-    failedAttempt.freshCharged !== 0 ||
-    failedAttempt.freshAccepted !== 0 ||
-    failedAttempt.localSecretAccessed !== false ||
-    failedAttempt.identityConsumed !== false ||
-    !exactKeys(execution, ["focusedTestsPassed", "sourceOnlyPassed", "checkoutBytesMatchedBefore", "checkoutBytesMatchedAfter", "cleanupComplete", "canonicalWrites", "liveInvoked", "freshCharged", "freshAccepted", "localSecretAccessed", "identityConsumed"]) ||
+    !exactKeys(protectedHistory, ["provisionalPairReinterpreted", "plan98", "plan99"]) ||
+    protectedHistory.provisionalPairReinterpreted !== false ||
+    !exactKeys(plan98, ["sourceCommit", "sourceTree", "sourceParent", "summarySha256"]) ||
+    plan98.sourceCommit !== "702bfa5216e3b0e15b4816ce28c98dbcdee38517" ||
+    plan98.sourceTree !== "4a4ea89f5392c250d32a39abde0bcf9b98aa079f" ||
+    plan98.sourceParent !== "266c977a657c04c32a54b2293d01cf6fab1edf10" ||
+    plan98.summarySha256 !== "sha256:0d42f4833cce41f80e66d2343b4427e2b8149942c070a211338ffc0cc04dfe99" ||
+    !exactKeys(plan99, [
+      "provisionalPairCommit", "artifactSha256", "reviewSha256", "summarySha256",
+      "provisionalFindingCount", "provisionalFindingRoot", "provisionalReviewRoot",
+      "blockedFindingCode", "blockedFindingRoot", "blockedReviewRoot",
+      "plan26292Eligible", "freshCharged", "freshAccepted",
+    ]) ||
+    plan99.provisionalPairCommit !== "19a6eb53a2ad2c0188009d095103c42718aa3214" ||
+    plan99.artifactSha256 !== "sha256:b52599fcbcf53f3eac8e435f87ad85d6d8cc4512dcfa18fe029d5670127aaa34" ||
+    plan99.reviewSha256 !== "sha256:f0fe8877f1b33132b101aaa4e475d06fc462e0ce19af22785e0049daff338b34" ||
+    plan99.summarySha256 !== "sha256:0ab477151ea5a272987c7f83567c172ab540ec9c979b84501f1bc7cb45fbd294" ||
+    plan99.provisionalFindingCount !== 0 ||
+    plan99.provisionalFindingRoot !== "sha256:f42b8afbcf35570b2c5be6bee0e7b06548deb19b4f533260bf16c56d0c7a4b9c" ||
+    plan99.provisionalReviewRoot !== "sha256:9d5a3f650a34e3074c49ceb61072ba361932af20a5a1bf7b8fb61e197d345f4a" ||
+    plan99.blockedFindingCode !== "GIT_SHOW_BYTES_TRIMMED" ||
+    plan99.blockedFindingRoot !== "sha256:05a090e72cb43224683b190bca9b27ac81fed4cbef2792a9cb39d8d78e233b77" ||
+    plan99.blockedReviewRoot !== "sha256:332855378479e0bceee3f82a4e5445039d476345ab4d1d9b019d5c435a57664b" ||
+    plan99.plan26292Eligible !== false ||
+    plan99.freshCharged !== 0 ||
+    plan99.freshAccepted !== 0 ||
+    !exactKeys(execution, [
+      "focusedTestsPassed", "sourceOnlyPassed", "checkoutBytesMatchedBefore",
+      "checkoutBytesMatchedAfter", "executionClosureMatchedBeforeAfter",
+      "actualConsumerStatus", "actualConsumerCandidateJsonSha256",
+      "actualConsumerCandidateReviewSha256", "destinationsUnchanged",
+      "cleanupComplete", "canonicalWrites", "liveInvoked", "freshCharged",
+      "freshAccepted", "localSecretAccessed", "identityConsumed",
+    ]) ||
     !Number.isSafeInteger(execution.focusedTestsPassed) ||
     execution.focusedTestsPassed < 0 ||
     execution.sourceOnlyPassed !== true ||
     execution.checkoutBytesMatchedBefore !== true ||
     execution.checkoutBytesMatchedAfter !== true ||
+    execution.executionClosureMatchedBeforeAfter !== true ||
+    execution.actualConsumerStatus !== "passed" ||
+    !isSha256(execution.actualConsumerCandidateJsonSha256) ||
+    !isSha256(execution.actualConsumerCandidateReviewSha256) ||
+    execution.destinationsUnchanged !== true ||
     execution.cleanupComplete !== true ||
     execution.canonicalWrites !== 0 ||
     execution.liveInvoked !== false ||
@@ -395,24 +447,25 @@ const validatePlan26299Envelope = (candidate: unknown): any => {
     execution.freshAccepted !== 0 ||
     execution.localSecretAccessed !== false ||
     execution.identityConsumed !== false ||
-    !exactKeys(review.identityClaims, PLAN_262_99_IDENTITY_KEYS) ||
+    !exactKeys(review.identityClaims, PLAN_262_101_IDENTITY_KEYS) ||
     Object.values(review.identityClaims).some((value) => value !== false) ||
-    !exactKeys(review.authority, PLAN_262_99_AUTHORITY_KEYS) ||
+    !exactKeys(review.authority, PLAN_262_101_AUTHORITY_KEYS) ||
     review.authority.plan26292Eligible !== true ||
     review.authority.freshCharged !== 0 ||
     review.authority.freshAccepted !== 0 ||
     Object.entries(review.authority).some(([key, value]) =>
       !["plan26292Eligible", "freshCharged", "freshAccepted"].includes(key) && value !== false
     )
-  ) fail("V138_RETRY_V3_PLAN_262_99_REVIEW_INVALID")
+  ) fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
   return review
 }
 
-export const validateV138Plan26299ReviewedExecutionClosure = (
+export const validateV138Plan262101ReviewedExecutionClosure = (
   candidate: unknown,
   current: V138RetryV3ExecutionClosure,
+  reviewReportBytes: Buffer,
 ): V138RetryV3ExecutionClosure => {
-  const review = validatePlan26299Envelope(candidate)
+  const review = validatePlan262101Envelope(candidate, reviewReportBytes)
   const portable = review.reviewedExecutionClosure
   if (!exactKeys(portable, [...V138_REVIEWED_EXECUTION_CLOSURE_KEYS, "reviewedExecutionClosureRoot"]))
     fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
@@ -429,7 +482,7 @@ export const validateV138Plan26299ReviewedExecutionClosure = (
     [body.checkoutByteManifestRoot, body.installedClosureRoot, body.gitExecutableSha256,
       body.gitIsolationRoot, body.nodeSha256, body.pnpmDistributionSha256,
       body.nativeSourcesRoot].some((value) => !isSha256(value)) ||
-    portable.reviewedExecutionClosureRoot !== computeV138ReviewedExecutionClosureRoot(body) ||
+    portable.reviewedExecutionClosureRoot !== computeV138Plan262101PortableRoot(body) ||
     portable.reviewedExecutionClosureRoot === portable.installedClosureRoot ||
     portable.reviewedExecutionClosureRoot === current.executionClosureRoot ||
     review.correctedSource.commit !== body.sourceCommit ||
@@ -466,14 +519,48 @@ const authenticateReviewedExecutionClosure = (
     typeof review !== "object" ||
     Array.isArray(review) ||
     (review as any).schemaVersion !==
-      "v1.38-plan-262-99-bounded-retry-source-rereview-v4" ||
+      "v1.38-plan-262-101-git-object-byte-custody-rereview-v5" ||
     !isCommit((review as any).reviewedExecutionClosure?.sourceCommit)
   ) fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
   const current = authenticateV138RetryV3ExecutionClosure(repoRoot, {
     sourceCommit: (review as any).reviewedExecutionClosure.sourceCommit,
     checkoutPaths: V138_RETRY_V3_EXECUTED_SOURCE_PATHS,
   })
-  return validateV138Plan26299ReviewedExecutionClosure(review, current)
+  const validated = validateV138Plan262101ReviewedExecutionClosure(
+    review,
+    current,
+    readNoFollow(repoRoot, V138_BOUNDED_RETRY_V3_PATHS.sourceReviewReport),
+  )
+  for (const expected of (review as any).correctedSource.files) {
+    const actual = authenticateV138CommittedRegularFile(
+      repoRoot,
+      (review as any).correctedSource.commit,
+      expected.path,
+    )
+    if (
+      actual.mode !== expected.mode ||
+      actual.oid !== expected.blob ||
+      actual.byteLength !== expected.byteLength ||
+      sha256(actual.bytes) !== expected.sha256
+    )
+      fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  }
+  const protectedHistory = (review as any).protectedHistory
+  for (const [repoPath, expected] of [
+    [
+      `${PHASE_DIR}/262-98-SUMMARY.md`,
+      protectedHistory.plan98.summarySha256,
+    ],
+    [
+      ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
+      protectedHistory.plan99.artifactSha256,
+    ],
+    [`${PHASE_DIR}/262-99-REVIEW.md`, protectedHistory.plan99.reviewSha256],
+    [`${PHASE_DIR}/262-99-SUMMARY.md`, protectedHistory.plan99.summarySha256],
+  ] as const)
+    if (sha256(readNoFollow(repoRoot, repoPath)) !== expected)
+      fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  return validated
 }
 
 type PreflightResult =
