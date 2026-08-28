@@ -2,8 +2,12 @@ import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
   chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
   lstatSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -18,7 +22,7 @@ export const sha256V138Secure = (bytes: string | Buffer): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 
 export const V138_SECURE_MANIFEST_READER_V3_SOURCE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../native/v1-38-secure-manifest-reader-v3.c")
-const EXPECTED_READER_SOURCE_SHA256 = "69c352fac98695ae2e7ea36dd670e8c31f58a9753e577e7af49c3daa2d517706"
+const EXPECTED_READER_SOURCE_SHA256 = "ffe3cb82853a071b30150ba5d3232183197b334f0016f827fb50b93b93a8452e"
 const EXPECTED_CLANG_SHA256 = "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818"
 let readerExecutable: string | undefined
 const secureReaderExecutable = (): string => {
@@ -99,28 +103,59 @@ export const resolveV138RelativeNoFollow = (
 }
 
 export const readV138RegularNoFollow = (root: string, relative: string): Buffer => {
-  const trusted = trustedRootV138(root)
-  const normalized = normalizeV138Relative(relative)
-  const result = spawnSync(secureReaderExecutable(), [trusted, normalized], { encoding: null, maxBuffer: 64 * 1024 * 1024 })
-  if (result.status !== 0) {
-    const detail = result.stderr.toString().trim()
-    if (detail.includes("V138_READER_PARENT_INVALID") || detail.includes("V138_READER_FILE_INVALID")) fail("V138_SECURE_SYMLINK_FORBIDDEN")
-    fail(`V138_SECURE_DESCRIPTOR_READ_FAILED:${detail}`)
-  }
-  return result.stdout
+  return withV138SecureWorkspaceSession(root, (session) => session.read(relative))
 }
 
 export const assertV138AbsentNoFollow = (root: string, relative: string): true => {
-  resolveV138RelativeNoFollow(root, relative, "absent")
-  return true
+  return withV138SecureWorkspaceSession(root, (session) => session.assertAbsent(relative))
 }
 
 export const authenticateV138ManifestNoFollow = (
   root: string,
   entries: readonly Readonly<{ path: string; sha256: `sha256:${string}` }>[],
 ): true => {
-  for (const entry of entries) {
-    if (sha256V138Secure(readV138RegularNoFollow(root, entry.path)) !== entry.sha256) fail("V138_SECURE_MANIFEST_MISMATCH")
+  return withV138SecureWorkspaceSession(root, (session) => session.authenticate(entries))
+}
+
+export type V138SecureWorkspaceSession = Readonly<{
+  identity: Readonly<{ device: string; inode: string }>
+  read: (relative: string) => Buffer
+  assertAbsent: (relative: string) => true
+  authenticate: (entries: readonly Readonly<{ path: string; sha256: `sha256:${string}` }>[]) => true
+}>
+
+export const withV138SecureWorkspaceSession = <T>(
+  rootInput: string,
+  operation: (session: V138SecureWorkspaceSession) => T,
+): T => {
+  const trusted = trustedRootV138(rootInput)
+  const descriptor = openSync(trusted, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0))
+  const status = fstatSync(descriptor)
+  if (!status.isDirectory()) { closeSync(descriptor); fail("V138_SECURE_ROOT_INVALID") }
+  const invoke = (kind: "read" | "absent", relative: string): Buffer => {
+    const normalized = normalizeV138Relative(relative)
+    const result = spawnSync(secureReaderExecutable(), [kind, normalized], {
+      encoding: null,
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe", descriptor],
+      env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" },
+    })
+    if (result.status !== 0) {
+      const detail = result.stderr.toString().trim()
+      if (detail.includes("V138_READER_PARENT_INVALID") || detail.includes("V138_READER_FILE_INVALID")) fail("V138_SECURE_SYMLINK_FORBIDDEN")
+      if (detail.includes("V138_READER_EXPECTED_ABSENT")) fail("V138_SECURE_EXPECTED_ABSENT")
+      fail(`V138_SECURE_DESCRIPTOR_${kind.toUpperCase()}_FAILED:${detail}`)
+    }
+    return result.stdout
   }
-  return true
+  const session: V138SecureWorkspaceSession = Object.freeze({
+    identity: Object.freeze({ device: String(status.dev), inode: String(status.ino) }),
+    read: (relative) => invoke("read", relative),
+    assertAbsent: (relative) => { invoke("absent", relative); return true },
+    authenticate: (entries) => {
+      for (const entry of entries) if (sha256V138Secure(invoke("read", entry.path)) !== entry.sha256) fail("V138_SECURE_MANIFEST_MISMATCH")
+      return true
+    },
+  })
+  try { return operation(session) } finally { closeSync(descriptor) }
 }

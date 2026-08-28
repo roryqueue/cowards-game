@@ -46,8 +46,8 @@ static void barrier(int root) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 3 || !safe_relative(argv[2])) die("V138_READER_ARGUMENT_INVALID");
-  int root = open(argv[1], O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+  if (argc != 3 || (strcmp(argv[1], "read") != 0 && strcmp(argv[1], "absent") != 0) || !safe_relative(argv[2])) die("V138_READER_ARGUMENT_INVALID");
+  int root = fcntl(3, F_DUPFD_CLOEXEC, 4);
   if (root < 0) die("V138_READER_ROOT_INVALID");
   struct stat root_status;
   if (fstat(root, &root_status) != 0 || !S_ISDIR(root_status.st_mode)) die("V138_READER_ROOT_INVALID");
@@ -64,6 +64,13 @@ int main(int argc, char **argv) {
     close(parent); parent = child; part = next;
   }
   barrier(root);
+  if (strcmp(argv[1], "absent") == 0) {
+    struct stat absent_status;
+    if (fstatat(parent, part, &absent_status, AT_SYMLINK_NOFOLLOW) == 0) die("V138_READER_EXPECTED_ABSENT");
+    if (errno != ENOENT) die("V138_READER_ABSENCE_CHECK_FAILED");
+    close(parent); close(root);
+    return 0;
+  }
   int file = openat(parent, part, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
   if (file < 0) die("V138_READER_FILE_INVALID");
   struct stat status;

@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { closeSync, constants, existsSync, mkdirSync, mkdtempSync, openSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -9,6 +9,7 @@ import {
   readV138RegularNoFollow,
   sha256V138Secure,
   V138_SECURE_MANIFEST_READER_V3_SOURCE,
+  withV138SecureWorkspaceSession,
 } from "./v1-38-secure-workspace-path-v3.js"
 
 const roots: string[] = []
@@ -41,7 +42,9 @@ describe("CR-05 trusted-root no-follow paths", () => {
     const reader = path.join(build, "reader")
     expect(spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", V138_SECURE_MANIFEST_READER_V3_SOURCE, "-o", reader]).status).toBe(0)
     const tag = "replacement"
-    const child = spawn(reader, [root, "safe/file"], { env: { ...process.env, V138_READER_TEST_BARRIER: tag }, stdio: ["ignore", "pipe", "pipe"] })
+    const rootDescriptor = openSync(root, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0))
+    const child = spawn(reader, ["read", "safe/file"], { env: { ...process.env, V138_READER_TEST_BARRIER: tag }, stdio: ["ignore", "pipe", "pipe", rootDescriptor] })
+    closeSync(rootDescriptor)
     for (let attempt = 0; attempt < 10_000 && !existsSync(path.join(root, `.v138-reader-ready-${tag}`)); attempt++) await new Promise((resolve) => setTimeout(resolve, 1))
     expect(existsSync(path.join(root, `.v138-reader-ready-${tag}`))).toBe(true)
     renameSync(path.join(root, "safe"), path.join(root, "safe-authenticated"))
@@ -53,4 +56,23 @@ describe("CR-05 trusted-root no-follow paths", () => {
     const code = await new Promise<number | null>((resolve) => child.once("exit", resolve))
     expect({ code, stderr, stdout }).toEqual({ code: 0, stderr: "", stdout: "bytes\n" })
   }, 30_000)
+
+  it("retains one root inode across a root-path replacement and checks absence there", () => {
+    const root = fixture(), moved = `${root}-authenticated`, replacement = `${root}-replacement`
+    roots.push(moved, replacement)
+    expect(withV138SecureWorkspaceSession(root, (session) => {
+      const identity = session.identity
+      renameSync(root, moved)
+      mkdirSync(root)
+      mkdirSync(path.join(root, "safe"))
+      writeFileSync(path.join(root, "safe", "file"), "replacement\n")
+      writeFileSync(path.join(root, "safe", "absent"), "present-only-in-replacement\n")
+      expect(session.read("safe/file").toString()).toBe("bytes\n")
+      expect(session.assertAbsent("safe/absent")).toBe(true)
+      expect(session.identity).toEqual(identity)
+      renameSync(root, replacement)
+      renameSync(moved, root)
+      return true
+    })).toBe(true)
+  })
 })
