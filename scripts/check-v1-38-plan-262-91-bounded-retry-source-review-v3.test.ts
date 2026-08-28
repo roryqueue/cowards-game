@@ -117,6 +117,13 @@ describe("Plan 262-91 bounded-retry v3 committed-source review", () => {
         "CURRENT_INSTALLED_CLOSURE_NOT_AUTHENTICATED",
       ]),
     )
+    expect(
+      baseline.filter((code: string) =>
+        reviewer.V138_PLAN_262_91_MUTATIONS.some(
+          ([mutation]: readonly [string]) => mutation === code,
+        ),
+      ),
+    ).toEqual([])
     for (const [code, file, token, replacement] of reviewer.V138_PLAN_262_91_MUTATIONS) {
       const root = mkdtempSync(path.join(tmpdir(), "v138-plan26291-mutation-"))
       roots.push(root)

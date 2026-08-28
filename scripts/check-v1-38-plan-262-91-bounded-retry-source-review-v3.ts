@@ -222,7 +222,7 @@ export const V138_PLAN_262_91_MUTATIONS = Object.freeze([
   ["REFUSAL_BOUNDARY_WEAKENED", "controller", "if (basisPoints < 2_500) continue", "if (basisPoints <= 2_500) continue"],
   ["CALIBRATION_RESERVATION_ORDER_REMOVED", "controller", 'kind: "reserve_calibration",\n      routeIdentity,\n      owner: input.owner,\n      identities: calibrationIdentities,', 'kind: "finish_calibration",\n      routeIdentity,\n      owner: input.owner,\n      identities: calibrationIdentities,'],
   ["CRASH_RECONCILIATION_REMOVED", "controller", "A prior invocation may have died only after its durable reservation.", "Crash reconciliation omitted."],
-  ["CLEANUP_UNCERTAINTY_WEAKENED", "controller", "completeCleanup: false,", "completeCleanup: true,"],
+  ["CLEANUP_UNCERTAINTY_WEAKENED", "controller", 'kind: "finish_reproduction",\n      routeIdentity: pendingReproduction.routeIdentity,\n      owner: pendingReproduction.owner,\n      status: "system_failure",\n      acceptedCells: 0,\n      completeCleanup: false,', 'kind: "finish_reproduction",\n      routeIdentity: pendingReproduction.routeIdentity,\n      owner: pendingReproduction.owner,\n      status: "system_failure",\n      acceptedCells: 0,\n      completeCleanup: true,'],
   ["NOFOLLOW_APPEND_REMOVED", "controller", "constants.O_WRONLY | constants.O_APPEND | (constants.O_NOFOLLOW ?? 0)", "constants.O_WRONLY | constants.O_APPEND"],
   ["ROOT_LOCK_REMOVED", "controller", '["-t", "0", lock, "/bin/sh", "-c", \'printf "acquired\\\\n"; cat >/dev/null\']', '["-t", "0", lock, "/bin/true"]'],
   ["PRIVATE_MODE_CHANGED", "controller", "mkdirSync(privateTarget, { mode: 0o700 })", "mkdirSync(privateTarget, { mode: 0o755 })"],
