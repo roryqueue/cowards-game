@@ -485,6 +485,115 @@ describe("synthetic-only hardened v3 controller", () => {
     ).toBe("terminal\n")
   })
 
+  it.each([1, 2, 3, 4, 5, 100, 101, 300, 301, 302, 303, 304, 305, 306])(
+    "recovers native PAIR boundary %i to one complete pair",
+    (boundary) => {
+      if (process.platform !== "darwin") return
+      const root = mkdtempSync(path.join(tmpdir(), `v138-v3-pair-${boundary}-`))
+      roots.push(root)
+      mkdirSync(path.join(root, "pair"))
+      const pair = {
+        transactionId: `pair-boundary-${boundary}`,
+        intentPath: `pair-boundary-${boundary}.intent`,
+        members: [
+          { target: `pair/left-${boundary}.json`, bytes: `left-${boundary}\n` },
+          { target: `pair/right-${boundary}.json`, bytes: `right-${boundary}\n` },
+        ],
+      } as const
+      expect(() => publishV138RetryV3NativePair(root, pair, boundary)).toThrow(
+        "V138_RETRY_V3_NATIVE_FAILED",
+      )
+      publishV138RetryV3NativePair(root, pair)
+      expect(readFileSync(path.join(root, pair.members[0].target), "utf8")).toBe(
+        pair.members[0].bytes,
+      )
+      expect(readFileSync(path.join(root, pair.members[1].target), "utf8")).toBe(
+        pair.members[1].bytes,
+      )
+    },
+  )
+
+  it.each([1, 2, 3, 4, 100, 101, 200, 201, 202, 203, 204, 205])(
+    "recovers native LIFE boundary %i without journal identity reuse",
+    (boundary) => {
+      if (process.platform !== "darwin") return
+      const root = mkdtempSync(path.join(tmpdir(), `v138-v3-life-${boundary}-`))
+      roots.push(root)
+      mkdirSync(path.join(root, "life"))
+      const beforeBytes = `before-${boundary}\n`
+      const target = `life/journal-${boundary}.jsonl`
+      writeFileSync(path.join(root, target), beforeBytes)
+      const lifecycle = {
+        transactionId: `life-boundary-${boundary}`,
+        intentPath: `life-boundary-${boundary}.intent`,
+        steps: [
+          {
+            id: `journal-${boundary}`,
+            target,
+            beforeSha256: `sha256:${createHash("sha256").update(beforeBytes).digest("hex")}` as const,
+            afterBytes: `after-${boundary}\n`,
+          },
+        ],
+        lifecycle: {
+          target: `life/terminal-${boundary}.json`,
+          bytes: `terminal-${boundary}\n`,
+        },
+      } as const
+      expect(() =>
+        applyV138RetryV3NativeLifecycle(root, lifecycle, boundary),
+      ).toThrow("V138_RETRY_V3_NATIVE_FAILED")
+      applyV138RetryV3NativeLifecycle(root, lifecycle)
+      expect(readFileSync(path.join(root, target), "utf8")).toBe(
+        lifecycle.steps[0].afterBytes,
+      )
+      expect(
+        readFileSync(path.join(root, lifecycle.lifecycle.target), "utf8"),
+      ).toBe(lifecycle.lifecycle.bytes)
+    },
+  )
+
+  it.each([
+    ["PATH", "/definitely/hostile"],
+    ["GIT_CONFIG_GLOBAL", "/tmp/hostile-global-config"],
+    ["GIT_CONFIG_NOSYSTEM", "0"],
+    ["GIT_OBJECT_DIRECTORY", "/tmp/hostile-objects"],
+    ["GIT_ALTERNATE_OBJECT_DIRECTORIES", "/tmp/hostile-alternates"],
+  ])("isolates Git from ambient %s mutation", (key, value) => {
+    const expected = runV138RetryV3IsolatedGit(process.cwd(), [
+      "rev-parse",
+      "HEAD",
+    ])
+    expect(
+      runV138RetryV3IsolatedGit(process.cwd(), ["rev-parse", "HEAD"], {
+        ...process.env,
+        [key]: value,
+      }),
+    ).toBe(expected)
+  })
+
+  it.each([
+    "checkout-file",
+    "checkout-symlink",
+    "checkout-mode",
+    "installed-file",
+    "installed-symlink",
+    "installed-mode",
+    "dependency-resolution",
+    "node-binary",
+    "pnpm-distribution",
+    "vitest-runner",
+    "tsx-entrypoint",
+  ])("fails closed when reviewed execution root detects %s drift", (family) => {
+    const head = runV138RetryV3IsolatedGit(process.cwd(), ["rev-parse", "HEAD"])
+    expect(() =>
+      authenticateV138RetryV3ExecutionClosure(process.cwd(), {
+        sourceCommit: head,
+        checkoutPaths: ["package.json", "pnpm-lock.yaml"],
+        executionClosureRoot: `sha256:${createHash("sha256").update(family).digest("hex")}`,
+      }),
+    ).toThrow("V138_RETRY_V3_EXECUTION_CLOSURE_MISMATCH")
+  })
+
   const effects = (input: {
     preflight: readonly number[]
     start?: number
