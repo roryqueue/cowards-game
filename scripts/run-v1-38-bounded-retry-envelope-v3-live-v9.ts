@@ -971,7 +971,6 @@ const authenticateCorrectedPublication = (root: string) => {
 
 const POST_RUN_FORBIDDEN_DESTINATIONS = Object.freeze([
   V138_LIVE_V9_PATHS.supplementV1,
-  V138_BOUNDED_RETRY_V3_PATHS.reproduction,
   V138_BOUNDED_RETRY_V3_PATHS.receiptManifest,
   V138_BOUNDED_RETRY_V3_PATHS.disposition,
   V138_BOUNDED_RETRY_V3_PATHS.correction,
@@ -984,6 +983,7 @@ const PRODUCER_OWNED_DESTINATIONS = Object.freeze([
   `${V138_BOUNDED_RETRY_V3_PATHS.journal}.lock`,
   V138_BOUNDED_RETRY_V3_PATHS.privateDir,
   V138_BOUNDED_RETRY_V3_PATHS.terminal,
+  V138_BOUNDED_RETRY_V3_PATHS.reproduction,
 ])
 const pathPresentNoFollow = (root: string, repoPath: string): boolean => {
   try {
@@ -1003,6 +1003,7 @@ type PostRunOutputCustody = Readonly<{
   reproductionPresent: boolean
   adjudicationOrDownstreamPresent: boolean
   outcome?: Readonly<{
+    disposition: "active" | "succeeded" | "terminal_failure" | "exhausted"
     completeCleanup: boolean
     reproductionPresent: boolean
     downstreamAuthority: string
@@ -1013,8 +1014,7 @@ export const checkV138LiveV9PostRunOutputCustodyForReview = (
   input: PostRunOutputCustody,
 ) => {
   if (
-    input.lockPresent || input.reproductionPresent ||
-    input.adjudicationOrDownstreamPresent
+    input.lockPresent || input.adjudicationOrDownstreamPresent
   ) fail("V138_LIVE_V9_POST_RUN_FORBIDDEN_EFFECT")
   const effectCount = [
     input.journalPresent,
@@ -1022,17 +1022,24 @@ export const checkV138LiveV9PostRunOutputCustodyForReview = (
     input.terminalPresent,
   ].filter(Boolean).length
   if (effectCount === 0) {
-    if (input.outcome !== undefined)
+    if (input.outcome !== undefined || input.reproductionPresent)
       fail("V138_LIVE_V9_POST_RUN_OUTCOME_WITHOUT_EFFECTS")
     return Object.freeze({ status: "no_effects" as const, downstreamAuthority: "denied" as const })
   }
   if (
     effectCount !== 3 || input.outcome === undefined ||
     input.outcome.completeCleanup !== true ||
-    input.outcome.reproductionPresent !== false ||
-    input.outcome.downstreamAuthority !== "denied"
+    input.outcome.disposition === "active" ||
+    input.outcome.downstreamAuthority !== "denied" ||
+    input.reproductionPresent !== input.outcome.reproductionPresent ||
+    (input.outcome.disposition === "succeeded") !== input.outcome.reproductionPresent
   ) fail("V138_LIVE_V9_POST_RUN_BOUNDED_OUTCOME_INVALID")
-  return Object.freeze({ status: "bounded_terminal" as const, downstreamAuthority: "denied" as const })
+  return Object.freeze({
+    status: input.outcome.disposition === "succeeded"
+      ? "bounded_success" as const
+      : "bounded_terminal" as const,
+    downstreamAuthority: "denied" as const,
+  })
 }
 
 const assertPostRunOutputCustody = (root: string): void => {

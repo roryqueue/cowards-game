@@ -327,6 +327,17 @@ describe("Plan 262-111 future review and post-effect contract", () => {
         journalPresent: true,
         privateDirectoryPresent: true,
         terminalPresent: true,
+        outcome: {
+          disposition: "active",
+          completeCleanup: true,
+          reproductionPresent: false,
+          downstreamAuthority: "denied",
+        },
+      },
+      {
+        journalPresent: true,
+        privateDirectoryPresent: true,
+        terminalPresent: true,
         reproductionPresent: true,
         outcome: {
           disposition: "exhausted",
