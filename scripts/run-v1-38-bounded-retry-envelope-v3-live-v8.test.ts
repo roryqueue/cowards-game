@@ -1,11 +1,22 @@
 import { createHash } from "node:crypto"
-import { existsSync, lstatSync, readFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
   V138_LIVE_V8_MODES,
   V138_LIVE_V8_PATHS,
+  V138_LIVE_V8_PROTECTED_BRANCHES,
+  authenticateV138LiveV8ProtectedHistory,
   checkV138LiveV8SyntheticCustodyForReview,
   computeV138LiveV8ReviewCarrierRoot,
   computeV138LiveV8ReviewPayloadRoot,
@@ -345,4 +356,34 @@ describe("Plan 262-107 reviewed live-v8 adapter", () => {
       /await runV138V3ProductionLive\(repoRoot,\s*\{[\s\S]*validateInputs:\s*false/u,
     )
   })
+
+  it("rejects dirty working bytes across every named protected branch", () => {
+    expect(V138_LIVE_V8_PROTECTED_BRANCHES.map((branch) => branch.plan)).toEqual([
+      90, 91, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105,
+    ])
+    const owner = mkdtempSync(path.join(tmpdir(), "v138-plan-262-107-protected-"))
+    const clone = path.join(owner, "repo")
+    try {
+      execFileSync(
+        "/usr/bin/git",
+        ["-c", "core.hooksPath=/dev/null", "clone", "--quiet", "--no-local", repoRoot, clone],
+        { env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", HOME: owner } },
+      )
+      expect(authenticateV138LiveV8ProtectedHistory(clone)).toMatchObject({
+        branchCount: 12,
+        protectedHistoryRoot: PROTECTED_HISTORY_ROOT,
+      })
+      for (const branch of V138_LIVE_V8_PROTECTED_BRANCHES) {
+        const repoPath = branch.paths[0]!
+        const target = path.join(clone, repoPath)
+        writeFileSync(target, Buffer.concat([readFileSync(target), Buffer.from("dirty\n")]))
+        expect(() => authenticateV138LiveV8ProtectedHistory(clone), `Plan ${branch.plan}`).toThrow(
+          "V138_LIVE_V8_PROTECTED_CURRENT_BYTES_INVALID",
+        )
+        execFileSync("/usr/bin/git", ["checkout", "--", repoPath], { cwd: clone })
+      }
+    } finally {
+      rmSync(owner, { recursive: true, force: true })
+    }
+  }, 180_000)
 })
