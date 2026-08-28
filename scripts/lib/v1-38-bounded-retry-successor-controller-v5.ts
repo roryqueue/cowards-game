@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto"
-import { execFileSync, spawn, spawnSync } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import {
   chmodSync,
   closeSync,
@@ -43,6 +43,7 @@ import {
   sha256V138Secure,
   trustedRootV138,
 } from "./v1-38-secure-workspace-path-v5.js"
+import { compileV138PrivateNative } from "./v1-38-private-native-bootstrap-v1.js"
 
 const fail = (code: string): never => {
   throw new TypeError(code)
@@ -55,17 +56,6 @@ const nativeSource = path.resolve(
   "../native/v1-38-successor-transaction-helper-v5.c",
 )
 const EXPECTED_NATIVE_SOURCE_SHA256 = "f7837f28f70a7fdb523b2f75ad1cab5d36b56f3bd517118353e89f2b4720750b"
-const EXPECTED_CLANG_SHA256 =
-  "179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818"
-const EXPECTED_CLANG_CDHASH =
-  "1197f9fac4289a81d8e786b033bf8237672cabbc63da85b759bf2ef85ac232ad"
-const assertReviewedClang = (): void => {
-  const result = spawnSync("/usr/bin/codesign", ["-dv", "--verbose=4", "/usr/bin/clang"], { encoding: "utf8" })
-  const detail = `${result.stdout}${result.stderr}`
-  if (result.status !== 0 || !detail.includes(`CandidateCDHashFull sha256=${EXPECTED_CLANG_CDHASH}`) || !detail.includes("Authority=Apple Root CA") || !detail.includes("Platform identifier="))
-    fail("V138_SUCCESSOR_NATIVE_PLATFORM_COMPILER_IDENTITY_MISMATCH")
-  execFileSync("/usr/bin/codesign", ["--verify", "--strict", "/usr/bin/clang"], { stdio: "pipe" })
-}
 
 export const V138_SUCCESSOR_CONTROLLER_V5_CLI = fileURLToPath(import.meta.url)
 export const V138_SUCCESSOR_CONTROLLER_V5_OPERATIONS = Object.freeze([
@@ -96,58 +86,39 @@ const compileOneShotNative = (
   root: string,
   failureBoundary?: string,
 ) => {
-  const directory = mkdtempSync(
-    path.join(tmpdir(), "cowards-v138-successor-native-"),
-  )
   let capabilityDescriptor: number | undefined
   let rootDescriptor: number | undefined
+  let cleanupNative: (() => void) | undefined
   let transferred = false
   try {
-    chmodSync(directory, 0o700)
     if (failureBoundary === "force-bootstrap-failure-directory") fail("V138_TEST_BOOTSTRAP_FAILURE")
-    const primaryDirectory = path.join(directory, "primary")
-    const reproductionDirectory = path.join(directory, "reproduction")
-    mkdirSync(primaryDirectory, { mode: 0o700 })
-    mkdirSync(reproductionDirectory, { mode: 0o700 })
-    const executable = path.join(primaryDirectory, "one-shot-helper")
-    const reproduced = path.join(reproductionDirectory, "one-shot-helper")
-    const capturedSourcePath = path.join(directory, "captured-native.c")
-    const capabilityPath = path.join(directory, "controller.capability")
     const token = randomBytes(32).toString("hex")
     const nonce = randomBytes(32).toString("hex")
     const sourceBefore = readFileSync(nativeSource)
-    const compilerBefore = readFileSync("/usr/bin/clang")
-    if (sha256Hex(sourceBefore) !== EXPECTED_NATIVE_SOURCE_SHA256 || sha256Hex(compilerBefore) !== EXPECTED_CLANG_SHA256)
+    if (sha256Hex(sourceBefore) !== EXPECTED_NATIVE_SOURCE_SHA256)
       fail("V138_SUCCESSOR_NATIVE_REVIEWED_IDENTITY_MISMATCH")
-    writeFileSync(capturedSourcePath, sourceBefore, { mode: 0o400, flag: "wx" })
     if (failureBoundary === "force-bootstrap-failure-source") fail("V138_TEST_BOOTSTRAP_FAILURE")
-    assertReviewedClang()
-    for (const output of [executable, reproduced] as const) {
-      const compilation = spawnSync(
-        "/usr/bin/clang",
-        ["-std=c11", "-Wall", "-Wextra", "-Werror", `-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`, capturedSourcePath, "-o", output],
-        { encoding: "utf8", env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", TMPDIR: directory } },
-      )
-      if (compilation.status !== 0)
-        fail(`V138_SUCCESSOR_NATIVE_COMPILE_FAILED:${compilation.stderr}`)
-    }
-    assertReviewedClang()
-    if (sha256Hex(readFileSync("/usr/bin/clang")) !== EXPECTED_CLANG_SHA256)
-      fail("V138_SUCCESSOR_NATIVE_PLATFORM_COMPILER_CHANGED")
+    const built = compileV138PrivateNative({
+      source: nativeSource,
+      expectedSourceSha256: EXPECTED_NATIVE_SOURCE_SHA256,
+      prefix: "cowards-v138-successor-native-",
+      defines: [`-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`],
+      testSubstitution: failureBoundary === "force-compiler-substitution",
+    })
+    cleanupNative = built.cleanup
+    const executable = built.executable
     const executableBefore = readFileSync(executable)
-    if (sha256Hex(executableBefore) !== sha256Hex(readFileSync(reproduced)))
-      fail("V138_SUCCESSOR_NATIVE_REPRODUCIBLE_OUTPUT_MISMATCH")
     if (failureBoundary === "force-bootstrap-failure-output") fail("V138_TEST_BOOTSTRAP_FAILURE")
-    chmodSync(executable, 0o500)
     const executableStatus = statSync(executable)
     if (!executableStatus.isFile() || executableStatus.uid !== process.getuid?.() || (executableStatus.mode & 0o777) !== 0o500)
       fail("V138_SUCCESSOR_NATIVE_OUTPUT_UNTRUSTED")
+    const capabilityPath = path.join(built.directory, "controller.capability")
     const rootStatus = lstatSync(root)
     const capability = [
       "V138CAP2", token, nonce, sha256Hex(input),
       sha256Hex(normalizedLocks.map((item) => `${item}\n`).join("")),
       String(rootStatus.dev), String(rootStatus.ino), sha256Hex(sourceBefore),
-      sha256Hex(compilerBefore), sha256Hex(executableBefore),
+      built.compilerSha256, sha256Hex(executableBefore),
     ].join("\t") + "\n"
     writeFileSync(capabilityPath, capability, { mode: 0o600, flag: "wx" })
     if (failureBoundary === "force-bootstrap-failure-capability") fail("V138_TEST_BOOTSTRAP_FAILURE")
@@ -158,12 +129,12 @@ const compileOneShotNative = (
     if (sha256Hex(readFileSync(executable)) !== sha256Hex(executableBefore))
       fail("V138_SUCCESSOR_NATIVE_OUTPUT_CHANGED")
     transferred = true
-    return Object.freeze({ directory, executable, capabilityDescriptor, rootDescriptor, nonce })
+    return Object.freeze({ directory: built.directory, executable, executableSha256: built.executableSha256, cleanup: built.cleanup, capabilityDescriptor, rootDescriptor, nonce })
   } finally {
     if (!transferred) {
       if (capabilityDescriptor !== undefined) closeSync(capabilityDescriptor)
       if (rootDescriptor !== undefined) closeSync(rootDescriptor)
-      rmSync(directory, { recursive: true, force: true })
+      cleanupNative?.()
     }
   }
 }
@@ -202,7 +173,7 @@ const invokeNative = (
   const removePrivateHelper = () => {
     if (!removed) {
       removed = true
-      rmSync(oneShot.directory, { recursive: true, force: true })
+      oneShot.cleanup()
     }
   }
   return new Promise((resolve) => {
@@ -224,6 +195,11 @@ const invokeNative = (
         barrierTag === "force-spawn-failure"
           ? path.join(oneShot.directory, "missing-helper")
           : oneShot.executable
+      if (
+        executable === oneShot.executable &&
+        sha256Hex(readFileSync(executable)) !== oneShot.executableSha256
+      )
+        fail("V138_SUCCESSOR_NATIVE_LAUNCH_DIGEST_MISMATCH")
       child = spawn(executable, [], {
         cwd: identity.path,
         stdio: [
