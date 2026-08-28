@@ -1,97 +1,70 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-28T02:02:46Z
+fixed_at: 2026-08-28T02:38:50Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 6
-findings_in_scope: 8
-fixed: 8
+iteration: 7
+findings_in_scope: 5
+fixed: 5
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-28T02:02:46Z
+**Fixed at:** 2026-08-28T02:38:50Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-**Iteration:** 6
+**Iteration:** 7
 
 **Summary:**
-
-- Findings in scope: 8
-- Fixed: 8
+- Findings in scope: 5
+- Fixed: 5
 - Skipped: 0
-
-The fixes remain source-only and additive in assurance. All protected v2 paths, Plan-262-88 evidence, and the empirical exhausted 0/540 outcome remain unchanged. Correction-v6 is an `integrity_non_pass`, grants no authority, performs no live execution, and records root `sha256:91c52d50082fbf306bd6d2566d6bbf5651ee0a3f4a6ae86a8de10a1303b09c51`.
 
 ## Fixed Issues
 
-### CR-01: Intent paths omitted from transaction lock graph
+### CR-01: Native trust bootstrap still permits a compiler replace/restore substitution
 
-**Files modified:** controller-v3, its test, and transaction-helper-v3
-**Commit:** `3559776b`
-**Applied fix:** Intent paths join the sorted capability-bound lock projection. The intent inode lock durably authenticates the first intent digest, and every no-replace `EEXIST` result authenticates existing canonical bytes. Pair and lifecycle shared-intent races require exactly one winner and zero loser publication.
-**Status:** fixed; requires independent verification
+**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v4.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v4.test.ts`, `scripts/native/v1-38-successor-transaction-helper-v4.c`, `scripts/lib/v1-38-secure-workspace-path-v4.ts`, `scripts/lib/v1-38-secure-workspace-path-v4.test.ts`, `scripts/native/v1-38-secure-manifest-reader-v4.c`
+**Commit:** 17732f49
+**Applied fix:** Added an additive v4 route that verifies the exact Apple platform code-signature/CDHash and byte digest of clang before and after compilation, binds every compiler input, compiles twice to identical output basenames, requires exact byte-for-byte reproduced executables, authenticates owner/mode/output bytes before spawn, and retains the existing one-shot capability/root-descriptor protocol. The controller and secure-reader focused suites pass. This security-sensitive bootstrap logic requires independent reviewer verification.
 
-### CR-02: Lifecycle before-image durability ordering
+### CR-02: One root descriptor does not prevent cross-call intermediate-subtree splicing
 
-**Files modified:** controller-v3, its test, and transaction-helper-v3
-**Commits:** `1d7b476d`, `87aafd2d`
-**Applied fix:** The staging directory is fsynced after the authenticated backup link and before canonical unlink. Canonical parent durability is ordered through unlink and replacement. Six new crash boundaries prove recovery at every destructive boundary.
-**Status:** fixed; requires independent verification
+**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v4.ts`, `scripts/lib/v1-38-secure-workspace-path-v4.test.ts`, `scripts/native/v1-38-secure-manifest-reader-v4.c`
+**Commit:** 8b72d463
+**Applied fix:** Replaced per-entry reader children with one batch reader that pre-opens and retains every ancestor descriptor, binds device/inode identity for the whole session, and performs every read and forbidden-absence decision in that same child. A synchronized test swaps the intermediate subtree after entry one and proves entry two remains on the retained snapshot. This concurrency/security logic requires independent reviewer verification.
 
-### CR-03: Mutable native trust bootstrap
+### CR-03: Correction-v6 supersedes the predecessor while dropping frozen no-retry denials
 
-**Files modified:** controller-v3, secure-workspace-path-v3, and normalized remediation sources
-**Commits:** `9b520cce`, `5b7c620d`
-**Applied fix:** Both native helpers compare captured source and clang to reviewed digests, exclusively write exact captured bytes inside a private 0700 directory, compile only that private input, and use a minimal allowlisted environment. Poisoned inherited compiler paths no longer affect either build.
-**Status:** fixed; requires independent verification
+**Files modified:** `scripts/check-v1-38-phase-262-review-fix-correction-v7.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v7.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v7.json`
+**Commit:** 4916a325
+**Applied fix:** Added correction-v7 as explicitly additive with no predecessor-authority supersession, carried forward the exact thirteen-field false authority schema including `foundationActivationAuthorized`, retained all fourteen retry/Route-10/candidate/formation/holdout/public/counting/gameplay/archive/tag forbidden destinations, and derives them in one retained-ancestor read/absence batch. The 37-test suite mutates every authority bit and materializes every forbidden destination. Correction root: `sha256:fdd9a566bd53c661bf595dcda3c2146421ed909e3b315fa04c9aff475f4ec81c`. This authority-contract logic requires independent reviewer verification.
 
-### CR-04: Multi-root manifest splice and pathname absence checks
+### WR-01: Pre-spawn bootstrap failures leak private directories and descriptors
 
-**Files modified:** secure-workspace-path-v3, its test, and secure-manifest-reader-v3
-**Commit:** `488a5f18`
-**Applied fix:** One secure session holds one root descriptor and performs every read and absence check by descriptor-relative traversal. Root replacement cannot splice a replacement tree into the manifest.
-**Status:** fixed; requires independent verification
+**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v4.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v4.test.ts`
+**Commit:** b10a75d4
+**Applied fix:** Added one outer ownership scope around every pre-spawn bootstrap operation, closes each descriptor and removes the private directory on every throw until ownership transfers, and injects six failures spanning directory, source, output, capability write/open, and root-open boundaries. The full 9-test controller race/recovery suite passed in 196.9 seconds with exact zero-residue assertions.
 
-### CR-05: Plan-262-89 lifecycle evidence omitted
+### WR-02: Detached historical results do not record the toolchain/dependency provenance that executed them
 
-**Files modified:** correction-v6 checker, tests, and canonical artifact
-**Commit:** `22ba7ac3`
-**Applied fix:** Correction-v6 authenticates Plan-89 summary, readiness, checker, tests, and lifecycle; recomputes both roots; and enforces Phase 262 incomplete, `gaps_found`, fresh 0/540, reproduction absent, and every authority false.
-**Status:** fixed; requires independent verification
-
-### CR-06: Pathname lock namespace divergence
-
-**Files modified:** controller-v3, its test, and transaction-helper-v3
-**Commit:** `2e790b4e`
-**Applied fix:** The native helper opens sorted lock inodes relative to root fd 4 and retains them through all preconditions and postconditions. A root rename/replacement test proves same-inode serialization.
-**Status:** fixed; requires independent verification
-
-### WR-01: Spawn failure hang and helper leak
-
-**Files modified:** controller-v3 and its test
-**Commit:** `0992ff7b`
-**Applied fix:** Error, exit, close, stderr, and stdin-error paths settle exactly once and always close descriptors and remove the private helper. Forced spawn failure returns without hanging or publication.
-**Status:** fixed
-
-### WR-02: Historical correction suites unenforced
-
-**Files modified:** `package.json` and historical-checkout runner
-**Commit:** `d8e7e872`
-**Applied fix:** `pnpm v1.38:phase262:historical-corrections` creates detached immutable checkouts at each pinned commit, fails if a suite is missing, runs both suites, reports results, and removes each checkout.
-**Status:** fixed
+**Files modified:** `scripts/run-v1-38-phase-262-historical-correction-checkouts.ts`, `.planning/artifacts/v1.38-phase-262-historical-correction-checkouts-v2.json`, `package.json`
+**Commit:** b9ff1d72
+**Applied fix:** Each historical checkout now installs its own frozen-lockfile dependency graph offline, executes the installed Vitest source through the pinned Node binary, and persists/verifies commit tree, test blob, lockfile blob/hash, package blob/manager, pnpm version, Node path/version/hash, Vitest logical path/hash, isolation class, and dependency root. The canonical package target re-ran and verified correction-v2 (17/17) and correction-v3 (27/27).
 
 ## Verification
 
-- Combined active regression: 3 files and 45/45 tests passed.
-- Controller evidence: 50 overlap races, 100 disjoint races, 13 shared-intent conflicts, 16 crash recoveries, zero partial canonical files, zero retained lifecycle staging, 0 accepted cells, and no live effects.
-- Correction-v6 and secure reader: 2 files and 36/36 tests passed; canonical root `sha256:91c52d50082fbf306bd6d2566d6bbf5651ee0a3f4a6ae86a8de10a1303b09c51` passed.
-- Immutable historical target: correction-v2 passed 17/17 at `8ae8cba0`; correction-v3 passed 27/27 at `7b56ecdc`.
-- Both native sources pass clang `-Wall -Wextra -Werror`; Turbo typecheck passed 27/27 tasks; Prettier and `git diff --check` passed.
-- No protected v2 path, Plan-262-88 evidence, live receipt, outcome, or authority artifact was mutated or reinterpreted.
+- Native v4 reader and transaction helper compile cleanly under `clang -std=c11 -Wall -Wextra -Werror`.
+- Secure workspace v4: 9/9 tests passed.
+- Controller v4: 9/9 tests passed, including 50 overlapping races, 100 disjoint races, crash recovery, bypass, replacement, spawn, and bootstrap cleanup evidence.
+- Correction-v7 plus secure workspace: 37/37 tests passed; CLI canonical check passed.
+- Historical detached checkouts: 17/17 and 27/27 passed from isolated frozen-lockfile installs; persisted provenance check passed.
+- `git diff --check` passed.
+- Protected v2 sources, Plan-262-88/89 evidence, terminal, journal, and lifecycle artifacts have zero diff from review base `6bfa0bf4`.
+- No live execution, retry, reproduction, candidate, formation, holdout, public, production, archive, or tag authority was created.
 
 ---
 
-_Fixed: 2026-08-28T02:02:46Z_
+_Fixed: 2026-08-28T02:38:50Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 6_
+_Iteration: 7_
