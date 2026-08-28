@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   resolveV138HistoricalToolchainV4,
   runV138Phase262HistoricalCorrectionCheckoutsV4,
+  V138_HISTORICAL_GIT_ISOLATION_V4,
 } from "./run-v1-38-phase-262-historical-correction-checkouts-v4.js"
 
 const roots: string[] = []
@@ -76,6 +77,16 @@ describe("CR-05 historical correction toolchain provenance", () => {
       expect(source).toContain('GIT_CONFIG_GLOBAL: "/dev/null"')
       expect(source).toContain('GIT_NO_REPLACE_OBJECTS: "1"')
       expect(source).toContain('"core.hooksPath=/dev/null"')
+      expect(V138_HISTORICAL_GIT_ISOLATION_V4).toEqual({
+        systemConfigDisabled: true,
+        globalConfigDisabled: true,
+        isolatedHome: true,
+        hooksDisabledPerCommand: true,
+        replacementObjectsDisabled: true,
+        replacementRefsRejected: true,
+        rawCommitAndTreeVerified: true,
+        checkoutCleanBeforeInstall: true,
+      })
     } finally {
       if (previousHome === undefined) delete process.env.HOME
       else process.env.HOME = previousHome

@@ -37,6 +37,16 @@ const EXPECTED = Object.freeze({
   vitestIntegrity: "sha512-6lvjbS3p9b4CrdCmguzbh2/4uoXhGE2q71R4OX5sqF9R1bo9Xd6fGrMAfvp5wnCzlBnFVdCOp6onuTQVbo8iUQ==",
   packageManager: "pnpm@11.1.2",
 })
+export const V138_HISTORICAL_GIT_ISOLATION_V4 = Object.freeze({
+  systemConfigDisabled: true,
+  globalConfigDisabled: true,
+  isolatedHome: true,
+  hooksDisabledPerCommand: true,
+  replacementObjectsDisabled: true,
+  replacementRefsRejected: true,
+  rawCommitAndTreeVerified: true,
+  checkoutCleanBeforeInstall: true,
+})
 const cases = Object.freeze([
   Object.freeze({
     generation: "correction-v2",
@@ -381,7 +391,7 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         installedClosurePackages: closure.packages,
         entryLaunchBinding: "pre-post-entry-and-complete-installed-closure-v4",
         executionAssurance: "single_operator_local_seal_v1_no_hostile_same_uid",
-        gitIsolation: "no-system-global-config-no-hooks-no-replacements-raw-tree-v4",
+        gitIsolation: V138_HISTORICAL_GIT_ISOLATION_V4,
         dependencyRoot: sha([
           tree, testBlob, lockfileBlob, packageBlob, EXPECTED.packageManager,
           tools.gitSha256, tools.gitCdHash, tools.nodeSha256, tools.nodeCdHash,
