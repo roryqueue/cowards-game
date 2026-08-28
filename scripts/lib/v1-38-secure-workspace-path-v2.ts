@@ -1,18 +1,36 @@
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import {
-  closeSync,
-  constants,
-  fstatSync,
+  chmodSync,
   lstatSync,
-  openSync,
-  readFileSync,
+  mkdtempSync,
   realpathSync,
+  rmSync,
 } from "node:fs"
 import path from "node:path"
+import { tmpdir } from "node:os"
+import { fileURLToPath } from "node:url"
 
 const fail = (code: string): never => { throw new TypeError(code) }
 export const sha256V138Secure = (bytes: string | Buffer): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+
+export const V138_SECURE_MANIFEST_READER_V3_SOURCE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../native/v1-38-secure-manifest-reader-v3.c")
+let readerExecutable: string | undefined
+const secureReaderExecutable = (): string => {
+  if (readerExecutable !== undefined) return readerExecutable
+  const directory = mkdtempSync(path.join(tmpdir(), "v138-secure-reader-"))
+  chmodSync(directory, 0o700)
+  const executable = path.join(directory, "reader")
+  const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", V138_SECURE_MANIFEST_READER_V3_SOURCE, "-o", executable], { encoding: "utf8" })
+  if (compilation.status !== 0) { rmSync(directory, { recursive: true, force: true }); fail(`V138_SECURE_READER_COMPILE_FAILED:${compilation.stderr}`) }
+  chmodSync(executable, 0o700)
+  const status = lstatSync(executable)
+  if (!status.isFile() || status.uid !== process.getuid?.() || (status.mode & 0o777) !== 0o700) fail("V138_SECURE_READER_OUTPUT_INVALID")
+  readerExecutable = executable
+  process.once("exit", () => rmSync(directory, { recursive: true, force: true }))
+  return executable
+}
 
 export const trustedRootV138 = (rootInput: string): string => {
   const root = realpathSync(rootInput)
@@ -67,14 +85,15 @@ export const resolveV138RelativeNoFollow = (
 }
 
 export const readV138RegularNoFollow = (root: string, relative: string): Buffer => {
-  const target = resolveV138RelativeNoFollow(root, relative, "regular")
-  const before = lstatSync(target)
-  const descriptor = openSync(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
-  try {
-    const opened = fstatSync(descriptor)
-    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino) fail("V138_SECURE_OPEN_IDENTITY_MISMATCH")
-    return readFileSync(descriptor)
-  } finally { closeSync(descriptor) }
+  const trusted = trustedRootV138(root)
+  const normalized = normalizeV138Relative(relative)
+  const result = spawnSync(secureReaderExecutable(), [trusted, normalized], { encoding: null, maxBuffer: 64 * 1024 * 1024 })
+  if (result.status !== 0) {
+    const detail = result.stderr.toString().trim()
+    if (detail.includes("V138_READER_PARENT_INVALID") || detail.includes("V138_READER_FILE_INVALID")) fail("V138_SECURE_SYMLINK_FORBIDDEN")
+    fail(`V138_SECURE_DESCRIPTOR_READ_FAILED:${detail}`)
+  }
+  return result.stdout
 }
 
 export const assertV138AbsentNoFollow = (root: string, relative: string): true => {
