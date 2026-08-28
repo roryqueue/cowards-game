@@ -154,7 +154,9 @@ const plan26299Review = () => {
     },
     findings: [],
     findingCount: 0,
-    findingRoot: `sha256:${"d".repeat(64)}`,
+    findingRoot: `sha256:${createHash("sha256")
+      .update(`v138-plan26299-findings\0${encodeV138RetryV3CanonicalJson([])}`)
+      .digest("hex")}`,
     sourceReviewPassed: true,
     identityClaims: {
       independentPersonClaimed: false,
@@ -545,12 +547,12 @@ describe("synthetic-only hardened v3 controller", () => {
       ),
     ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
     expect(historical.authority).toMatchObject({
-      canonicalWrites: undefined,
       freshCharged: 0,
       freshAccepted: 0,
       liveInvoked: false,
       localSecretAccessed: false,
     })
+    expect(historical.authority).not.toHaveProperty("canonicalWrites")
     for (const destination of [
       CONTROLLER_PATHS.seal,
       CONTROLLER_PATHS.envelope,
@@ -651,8 +653,8 @@ describe("synthetic-only hardened v3 controller", () => {
       "--check-source-only",
     )
     expect(CONTROLLER_PATHS).toMatchObject({
-      sourceSummary: expect.stringContaining("262-96-SUMMARY.md"),
-      sourceReview: expect.stringContaining("262-97"),
+      sourceSummary: expect.stringContaining("262-98-SUMMARY.md"),
+      sourceReview: expect.stringContaining("262-99"),
       seal: ".planning/artifacts/v1.38-successor-source-seal-v13.json",
       envelope:
         ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json",

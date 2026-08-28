@@ -77,7 +77,7 @@ const PHASE_DIR =
   ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 
 export const V138_BOUNDED_RETRY_V3_PATHS = Object.freeze({
-  sourceSummary: `${PHASE_DIR}/262-96-SUMMARY.md`,
+  sourceSummary: `${PHASE_DIR}/262-98-SUMMARY.md`,
   sourceController: "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
   sourceModel: "scripts/lib/v1-38-bounded-retry-envelope-v3.ts",
   sourceNativeCustody:
@@ -86,8 +86,8 @@ export const V138_BOUNDED_RETRY_V3_PATHS = Object.freeze({
     "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
   sourceTests: "scripts/run-v1-38-bounded-retry-envelope-v3.test.ts",
   sourceReview:
-    ".planning/artifacts/v1.38-plan-262-97-bounded-retry-source-rereview-v3.json",
-  sourceReviewReport: `${PHASE_DIR}/262-97-REVIEW.md`,
+    ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
+  sourceReviewReport: `${PHASE_DIR}/262-99-REVIEW.md`,
   protectedHistoryCorrection:
     ".planning/artifacts/v1.38-phase-262-review-fix-correction-v10.json",
   historicalReceiptManifest:
@@ -188,6 +188,261 @@ const V138_RETRY_V3_EXECUTED_SOURCE_PATHS = Object.freeze([
   V138_BOUNDED_RETRY_V3_PATHS.sourceTests,
 ])
 
+type V138ReviewedExecutionClosureV2 = Readonly<{
+  schemaVersion: "v1.38-reviewed-execution-closure-v2"
+  sourceCommit: string
+  sourceTree: string
+  sourceParent: string
+  checkoutByteManifestRoot: V138RetrySha256
+  installedClosureRoot: V138RetrySha256
+  gitExecutable: "/usr/bin/git"
+  gitExecutableSha256: V138RetrySha256
+  gitIsolationRoot: V138RetrySha256
+  nodeSha256: V138RetrySha256
+  pnpmDistributionSha256: V138RetrySha256
+  nativeSourcesRoot: V138RetrySha256
+  pathnameLaunchReplacementResistanceClaimed: false
+}>
+
+const V138_REVIEWED_EXECUTION_CLOSURE_KEYS = Object.freeze([
+  "schemaVersion",
+  "sourceCommit",
+  "sourceTree",
+  "sourceParent",
+  "checkoutByteManifestRoot",
+  "installedClosureRoot",
+  "gitExecutable",
+  "gitExecutableSha256",
+  "gitIsolationRoot",
+  "nodeSha256",
+  "pnpmDistributionSha256",
+  "nativeSourcesRoot",
+  "pathnameLaunchReplacementResistanceClaimed",
+] as const)
+
+const exactKeys = (
+  value: unknown,
+  expected: readonly string[],
+): value is Record<string, unknown> =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  canonical(Object.keys(value as Record<string, unknown>).sort()) ===
+    canonical([...expected].sort())
+
+const isSha256 = (value: unknown): value is V138RetrySha256 =>
+  typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
+const isCommit = (value: unknown): value is string =>
+  typeof value === "string" && /^[0-9a-f]{40}$/u.test(value)
+
+export const computeV138ReviewedExecutionClosureRoot = (
+  body: V138ReviewedExecutionClosureV2,
+): V138RetrySha256 =>
+  sha256(`v138-reviewed-execution-closure-v2\0${canonical(body)}`)
+
+export const computeV138Plan26299ReviewRoot = (
+  candidate: unknown,
+): V138RetrySha256 => {
+  if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate))
+    fail("V138_RETRY_V3_PLAN_262_99_REVIEW_INVALID")
+  const body = JSON.parse(JSON.stringify(candidate)) as Record<string, unknown>
+  delete body.reviewRoot
+  return sha256(`v138-plan26299-source-rereview-v4\0${canonical(body)}`)
+}
+
+const PLAN_262_99_TOP_LEVEL_KEYS = Object.freeze([
+  "schemaVersion",
+  "reviewProtocol",
+  "status",
+  "correctedSource",
+  "protectedHistory",
+  "failedAttempt",
+  "execution",
+  "reviewedExecutionClosure",
+  "findings",
+  "findingCount",
+  "findingRoot",
+  "sourceReviewPassed",
+  "identityClaims",
+  "authority",
+  "reviewRoot",
+] as const)
+
+const PLAN_262_99_AUTHORITY_KEYS = Object.freeze([
+  "plan26292Eligible",
+  "authorizesExecution",
+  "authorizationCreated",
+  "sealV13Created",
+  "retryEnvelopeV3Created",
+  "journalV3Created",
+  "receiptsV3Created",
+  "terminalV3Created",
+  "reproductionV17Created",
+  "dispositionV3Created",
+  "correctionV11Created",
+  "route11ActivationCreated",
+  "readinessV3Created",
+  "lifecycleV3Created",
+  "liveInvoked",
+  "localSecretAccessed",
+  "lifecycleMutated",
+  "freshCharged",
+  "freshAccepted",
+  "phase263PlanningAuthorized",
+  "phase263ExecutionAuthorized",
+  "candidateSearchAuthorized",
+  "formationMaterializationAuthorized",
+  "holdoutOpeningAuthorized",
+  "publicAuthorized",
+  "productAuthorized",
+  "activationAuthorized",
+  "productionAuthorized",
+  "countedPlayAuthorized",
+  "gameplayChangeAuthorized",
+  "archiveAuthorized",
+  "tagAuthorized",
+] as const)
+
+const PLAN_262_99_IDENTITY_KEYS = Object.freeze([
+  "independentPersonClaimed",
+  "externalIdentityClaimed",
+  "cryptographicReviewerIdentityClaimed",
+  "independentCustodyClaimed",
+  "separatePermissioningClaimed",
+  "maliciousOperatorResistanceClaimed",
+  "hostileSameUidResistanceClaimed",
+  "pathnameLaunchReplacementResistanceClaimed",
+] as const)
+
+const validatePlan26299Envelope = (candidate: unknown): any => {
+  if (!exactKeys(candidate, PLAN_262_99_TOP_LEVEL_KEYS))
+    fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  const review = candidate as any
+  if (review.schemaVersion !== "v1.38-plan-262-99-bounded-retry-source-rereview-v4")
+    fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  const corrected = review.correctedSource
+  const protectedHistory = review.protectedHistory
+  const plan96 = protectedHistory?.plan96
+  const plan97 = protectedHistory?.plan97
+  const failedAttempt = review.failedAttempt
+  const execution = review.execution
+  if (
+    review.reviewProtocol !== "fresh-independent-plan-98-portable-closure-rereview-v4" ||
+    review.status !== "zero_findings" ||
+    review.findingCount !== 0 ||
+    !Array.isArray(review.findings) ||
+    review.findings.length !== 0 ||
+    review.findingRoot !== sha256(`v138-plan26299-findings\0${canonical([])}`) ||
+    review.sourceReviewPassed !== true ||
+    review.reviewRoot !== computeV138Plan26299ReviewRoot(review) ||
+    !exactKeys(corrected, ["commit", "tree", "parent", "noLaterRewrite", "summaryTrustedAsVerdict", "files"]) ||
+    !isCommit(corrected.commit) ||
+    !isCommit(corrected.tree) ||
+    !isCommit(corrected.parent) ||
+    corrected.noLaterRewrite !== true ||
+    corrected.summaryTrustedAsVerdict !== false ||
+    !Array.isArray(corrected.files) ||
+    corrected.files.length !== 2 ||
+    canonical(corrected.files.map((item: any) => item.path).sort()) !== canonical([
+      V138_BOUNDED_RETRY_V3_PATHS.sourceController,
+      V138_BOUNDED_RETRY_V3_PATHS.sourceTests,
+    ].sort()) ||
+    corrected.files.some((item: unknown) =>
+      !exactKeys(item, ["path", "mode", "blob", "byteLength", "sha256"]) ||
+      ![V138_BOUNDED_RETRY_V3_PATHS.sourceController, V138_BOUNDED_RETRY_V3_PATHS.sourceTests].includes((item as any).path) ||
+      (item as any).mode !== "100644" ||
+      !isCommit((item as any).blob) ||
+      !Number.isSafeInteger((item as any).byteLength) ||
+      (item as any).byteLength <= 0 ||
+      !isSha256((item as any).sha256)
+    ) ||
+    !exactKeys(protectedHistory, ["historicalResultReinterpreted", "plan96", "plan97"]) ||
+    protectedHistory.historicalResultReinterpreted !== false ||
+    !exactKeys(plan96, ["sourceCommit", "sourceTree", "sourceParent", "summarySha256"]) ||
+    plan96.sourceCommit !== "1c1f42b7fcd72d19ded89cca3ddd522090475b29" ||
+    plan96.sourceTree !== "37d10e3dfee8501e59e686802ffe684167585c94" ||
+    plan96.sourceParent !== "aae9f5dab231f83a0238cf5448f5e1e1d8ad4f28" ||
+    plan96.summarySha256 !== "sha256:a3b2f63c542c69f565ca8a56d0bc8ee7e45971c52ff3ee6556e1d4f93d3132d5" ||
+    !exactKeys(plan97, ["schemaVersion", "reviewRoot", "findingRoot", "findingCount", "sourceReviewPassed", "artifactSha256", "reviewSha256", "summarySha256"]) ||
+    plan97.schemaVersion !== "v1.38-plan-262-97-bounded-retry-source-rereview-v3" ||
+    plan97.reviewRoot !== "sha256:2765f8c028a7c0e089b401898d80f12fa425e993f13255423abb052f22adee90" ||
+    plan97.findingRoot !== "sha256:638909ad31b44fc81e01b6f081b2b1c97ad4091413e4c285c83e61d6fbbc152a" ||
+    plan97.findingCount !== 0 ||
+    plan97.sourceReviewPassed !== true ||
+    plan97.artifactSha256 !== "sha256:08fd056f3056bb45daf6e82a04eab72bd4ca73bda812512cad8b04960ce2b2e9" ||
+    plan97.reviewSha256 !== "sha256:1a7737aaa37ff886ba90e37a73d9643b5e0fdea321a6cb859e475f906562bfe7" ||
+    plan97.summarySha256 !== "sha256:fa9dca2adbb113f0c30925ae8548aac935888066e2d9d2df73de793c1b5e5cc1" ||
+    !exactKeys(failedAttempt, ["plan", "stopCode", "status", "canonicalWrites", "freshCharged", "freshAccepted", "localSecretAccessed", "identityConsumed"]) ||
+    failedAttempt.plan !== "262-92" ||
+    failedAttempt.stopCode !== "V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID" ||
+    failedAttempt.status !== "integrity_stop" ||
+    failedAttempt.canonicalWrites !== 0 ||
+    failedAttempt.freshCharged !== 0 ||
+    failedAttempt.freshAccepted !== 0 ||
+    failedAttempt.localSecretAccessed !== false ||
+    failedAttempt.identityConsumed !== false ||
+    !exactKeys(execution, ["focusedTestsPassed", "sourceOnlyPassed", "checkoutBytesMatchedBefore", "checkoutBytesMatchedAfter", "cleanupComplete", "canonicalWrites", "liveInvoked", "freshCharged", "freshAccepted", "localSecretAccessed", "identityConsumed"]) ||
+    !Number.isSafeInteger(execution.focusedTestsPassed) ||
+    execution.focusedTestsPassed < 0 ||
+    execution.sourceOnlyPassed !== true ||
+    execution.checkoutBytesMatchedBefore !== true ||
+    execution.checkoutBytesMatchedAfter !== true ||
+    execution.cleanupComplete !== true ||
+    execution.canonicalWrites !== 0 ||
+    execution.liveInvoked !== false ||
+    execution.freshCharged !== 0 ||
+    execution.freshAccepted !== 0 ||
+    execution.localSecretAccessed !== false ||
+    execution.identityConsumed !== false ||
+    !exactKeys(review.identityClaims, PLAN_262_99_IDENTITY_KEYS) ||
+    Object.values(review.identityClaims).some((value) => value !== false) ||
+    !exactKeys(review.authority, PLAN_262_99_AUTHORITY_KEYS) ||
+    review.authority.plan26292Eligible !== true ||
+    review.authority.freshCharged !== 0 ||
+    review.authority.freshAccepted !== 0 ||
+    Object.entries(review.authority).some(([key, value]) =>
+      !["plan26292Eligible", "freshCharged", "freshAccepted"].includes(key) && value !== false
+    )
+  ) fail("V138_RETRY_V3_PLAN_262_99_REVIEW_INVALID")
+  return review
+}
+
+export const validateV138Plan26299ReviewedExecutionClosure = (
+  candidate: unknown,
+  current: V138RetryV3ExecutionClosure,
+): V138RetryV3ExecutionClosure => {
+  const review = validatePlan26299Envelope(candidate)
+  const portable = review.reviewedExecutionClosure
+  if (!exactKeys(portable, [...V138_REVIEWED_EXECUTION_CLOSURE_KEYS, "reviewedExecutionClosureRoot"]))
+    fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  const body = Object.fromEntries(
+    V138_REVIEWED_EXECUTION_CLOSURE_KEYS.map((key) => [key, portable[key]]),
+  ) as V138ReviewedExecutionClosureV2
+  if (
+    body.schemaVersion !== "v1.38-reviewed-execution-closure-v2" ||
+    !isCommit(body.sourceCommit) ||
+    !isCommit(body.sourceTree) ||
+    !isCommit(body.sourceParent) ||
+    body.gitExecutable !== "/usr/bin/git" ||
+    body.pathnameLaunchReplacementResistanceClaimed !== false ||
+    [body.checkoutByteManifestRoot, body.installedClosureRoot, body.gitExecutableSha256,
+      body.gitIsolationRoot, body.nodeSha256, body.pnpmDistributionSha256,
+      body.nativeSourcesRoot].some((value) => !isSha256(value)) ||
+    portable.reviewedExecutionClosureRoot !== computeV138ReviewedExecutionClosureRoot(body) ||
+    portable.reviewedExecutionClosureRoot === portable.installedClosureRoot ||
+    portable.reviewedExecutionClosureRoot === current.executionClosureRoot ||
+    review.correctedSource.commit !== body.sourceCommit ||
+    review.correctedSource.tree !== body.sourceTree ||
+    review.correctedSource.parent !== body.sourceParent
+  ) fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  for (const key of V138_REVIEWED_EXECUTION_CLOSURE_KEYS) {
+    if (key === "schemaVersion") continue
+    if (current[key] !== body[key])
+      fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_MISMATCH")
+  }
+  return current
+}
+
 const authenticateCurrentExecutionClosure = (
   repoRoot: string,
   expectedRoot?: V138RetrySha256,
@@ -204,23 +459,20 @@ const authenticateReviewedExecutionClosure = (
   const review = readJsonNoFollow(
     repoRoot,
     V138_BOUNDED_RETRY_V3_PATHS.sourceReview,
-  ) as Record<string, any>
-  const sourceCommit =
-    review.correctedSource?.commit ?? review.reviewedSource?.commit
-  const executionClosureRoot =
-    review.executionClosure?.executionClosureRoot ?? review.executionClosureRoot
-  if (
-    typeof sourceCommit !== "string" ||
-    !/^[0-9a-f]{40}$/u.test(sourceCommit) ||
-    typeof executionClosureRoot !== "string" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(executionClosureRoot)
   )
-    fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
-  return authenticateV138RetryV3ExecutionClosure(repoRoot, {
-    sourceCommit,
+  if (
+    review === null ||
+    typeof review !== "object" ||
+    Array.isArray(review) ||
+    (review as any).schemaVersion !==
+      "v1.38-plan-262-99-bounded-retry-source-rereview-v4" ||
+    !isCommit((review as any).reviewedExecutionClosure?.sourceCommit)
+  ) fail("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+  const current = authenticateV138RetryV3ExecutionClosure(repoRoot, {
+    sourceCommit: (review as any).reviewedExecutionClosure.sourceCommit,
     checkoutPaths: V138_RETRY_V3_EXECUTED_SOURCE_PATHS,
-    executionClosureRoot,
   })
+  return validateV138Plan26299ReviewedExecutionClosure(review, current)
 }
 
 type PreflightResult =
