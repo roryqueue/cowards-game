@@ -450,4 +450,23 @@ describe("Plan 262-107 reviewed live-v8 adapter", () => {
     expect(source).toContain("checkPair: () =>")
     expect(source).toContain("V138_LIVE_V8_POST_RUN_CUSTODY_CHANGED")
   })
+
+  it("does not export a substitutable production custody or effect seam", () => {
+    const source = readFileSync(
+      path.join(repoRoot, V138_LIVE_V8_PATHS.sourceAdapter),
+      "utf8",
+    )
+    expect(source).not.toContain("export interface V138LiveV8Dependencies")
+    expect(source).not.toMatch(
+      /authenticateV138ReviewedLiveV8Ready[\s\S]{0,240}Partial<V138LiveV8Dependencies>/u,
+    )
+    expect(source).not.toMatch(
+      /runV138ReviewedBoundedLiveEnvelope[\s\S]{0,240}Partial<V138LiveV8Dependencies>/u,
+    )
+    expect(source).not.toMatch(/dependencies:\s*Partial<V138LiveV8Dependencies>/u)
+    expect(source).toContain("checkV138LiveV8SyntheticCustodyForReview")
+    expect(source).toMatch(
+      /await runV138V3ProductionLive\(repoRoot,\s*\{[\s\S]*validateInputs:\s*false/u,
+    )
+  })
 })
