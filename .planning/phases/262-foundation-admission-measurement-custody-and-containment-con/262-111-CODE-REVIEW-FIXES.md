@@ -6,7 +6,7 @@ source_review: 262-111-REVIEW.md
 status: resolved
 finding_count: 2
 resolved_count: 2
-corrected_source_commit: a0e318401f977c9f909b1ed93e4d416ad3f7cf3e
+corrected_source_commit: 84dad7aa21af0fee62240fc0e10f04a4545541e8
 reviewed: 2026-08-28
 ---
 
@@ -21,15 +21,15 @@ reviewed: 2026-08-28
 | Finding | Resolution | Regression proof |
 |---|---|---|
 | `F-262-111-01` | Added exact `--check-reviewed-live-ready` and `--run-reviewed-bounded-live-envelope` selectors. Readiness performs the full published Plan-112/supplement-v2 pre-effect gate. Production awaits the closed single-argument `runV138ReviewedBoundedLiveEnvelopeV9(repoRoot)` once. No producer/gate injection or generic run selector exists. | Mode inventory and dispatch-source assertions pin all five selectors, the exact closed call, function arity one, and absence of a `runLive` replacement seam. |
-| `F-262-111-02` | Split pre-effect and post-run destination policy. Pre-effect still requires all journal/lock/private/terminal/reproduction/adjudication/downstream paths absent. Post-run permits only either no effects or a complete historical-producer journal/private/terminal outcome authenticated by `checkV138PublishedRetryV3Outcome`; it still rejects the lock, reproduction-v17, receipt manifest, disposition, correction, activation, readiness, lifecycle, and every downstream authority. The full source/corrected/pair/Plan-93/protected-history/Plan-112/supplement/closure gate still runs after producer success or failure. | Materialized post-run tests accept only no-effects and exact complete cleanup, and reject every partial-output, lock, reproduction, downstream, and incomplete-cleanup mutation. Existing lone/dual error tests remain green. |
+| `F-262-111-02` | Split pre-effect and post-run destination policy. Pre-effect requires journal/lock/private/terminal/reproduction/adjudication/downstream paths absent. Post-run accepts no effects, a complete authenticated non-pass with reproduction absent, or a complete authenticated `succeeded` outcome with reproduction-v17 present. Reproduction path presence must exactly equal the historical outcome flag, and that flag is true if and only if disposition is `succeeded`. Lock, receipt manifest, disposition, correction, activation, readiness, lifecycle, and every downstream authority remain forbidden. | Materialized post-run tests accept both exact terminal branches and reject partial output, active state, incomplete cleanup, stale lock, downstream output, reproduction without a tuple, and presence/outcome mismatch in both directions. Existing lone/dual error tests remain green. |
 
 ## Corrected Committed Closure
 
-- Source commit: `a0e318401f977c9f909b1ed93e4d416ad3f7cf3e`
-- Source tree: `467bb8887f6e97ca5cba9e5bdc455b521a004799`
-- Source parent: `4078ba4a6a45c935451064ff176d8965becddbae`
-- Checkout byte-manifest root: `sha256:59ba5085477d77f8d40e150a3ffa0832b4ede651ba59b103fc610c3f49748b2c`
-- Full execution closure root: `sha256:21d253a1090f3c524d7ca9c077731b0ab53235912855e03b9dbd7998d4b1ab8a`
+- Source commit: `84dad7aa21af0fee62240fc0e10f04a4545541e8`
+- Source tree: `8a128562ea5ed78de6516d32f0f8f740bbb09989`
+- Source parent: `53228ff33584994b4602d6fcbcd6c38759612b7a`
+- Checkout byte-manifest root: `sha256:fd0c8d075f6af0edb9609148fda9928585b9286229a7c56f60e10e5dfd6ad469`
+- Full execution closure root: `sha256:f437eba0d03633a1bd5c6193047ad2bb6fcc98241c5b01a537fee6053c3cc2f9`
 
 The installed and native/toolchain roots are unchanged. Pathname-launch replacement resistance remains explicitly unclaimed.
 
@@ -37,6 +37,9 @@ The installed and native/toolchain roots are unchanged. Pathname-launch replacem
 
 - RED `4078ba4a` reproduced both review blockers.
 - GREEN `a0e31840` implemented the exact CLI and boundary split.
+- Re-review `e907f72d` confirmed the CLI fix and isolated the residual successful-reproduction branch.
+- RED `53228ff3` reproduced rejection of the exact authenticated success tuple and both mismatch directions.
+- GREEN `84dad7aa` admitted only the matched `succeeded`/reproduction tuple while retaining all pre-effect and non-pass constraints.
 - Focused live-v9 suite: `9/9` passed.
 - Pair-v7 committed inactive check: passed.
 - Corrected Plan-108 committed review check: passed at `2639ff3b42e2a238919a3104c9fa8c785c69b93d`.

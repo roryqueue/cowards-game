@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Resolved 262-111 code-review findings; fresh re-review required
-last_updated: "2026-08-28T23:38:27.186Z"
+stopped_at: Resolved Plan-111 residual success-tuple finding; fresh re-review required
+last_updated: "2026-08-28T23:57:16.889Z"
 last_activity: 2026-08-28
-last_activity_desc: resolved both Plan-111 critical review findings without live invocation; fresh re-review is next
+last_activity_desc: fixed Plan-111 exact authenticated reproduction success without live invocation; fresh re-review is next
 progress:
   total_phases: 9
   completed_phases: 0
@@ -80,9 +80,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 86 summaries across 93 active plans — Plan 262-111 review fixes are committed; fresh independent re-review is required before Plan 262-112
-Status: Phase 262 remains in progress; Plan-111 review findings are fixed but Plan 112 remains ineligible pending fresh zero-finding re-review
-Last activity: 2026-08-28 — resolved both Plan-111 critical review findings without live invocation; fresh re-review is next
+Plan: 86 summaries across 93 active plans — Plan 262-111 residual fix is committed; fresh independent re-review is required before Plan 262-112
+Status: Phase 262 remains in progress; exact Plan-111 success tuple is fixed but Plan 112 remains ineligible pending fresh zero-finding re-review
+Last activity: 2026-08-28 — fixed Plan-111 exact authenticated reproduction success without live invocation; fresh re-review is next
 
 Progress: [██████████] 95%
 
@@ -378,6 +378,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Preserve producer failure as cause and expose simultaneous producer and post-custody failures together with AggregateError. — Post-effect verification must not erase either failure.
 - [Phase 262]: Supersede the Plan-111 no-production-CLI decision: expose exactly Plan-110 readiness and sole live selectors, with no generic or injectable bypass. — The reviewed executable closure itself must own the pre-effect and one-call dispatch path.
 - [Phase 262]: Plan-111/112 pre-effect custody requires reproduction-v17 absent; post-run accepts it only as the exact producer-owned 540-success tuple atomically paired with terminal and carrying exhaustive false authority. — Plan 94 independently validates that evidence and alone may publish pass disposition plus Route-11.
+- [Phase 262]: Supersede Plan-111 post-run reproduction denial: reproduction-v17 is permitted only when its path presence matches the historical outcome flag and that flag is true exactly for an authenticated succeeded disposition. — The unchanged producer atomically owns exact 540-cell success evidence; pre-effect and every non-pass branch still require reproduction absent.
 
 ### Pending Todos
 
@@ -441,8 +442,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T23:38:19.895Z
-Stopped at: Resolved 262-111 code-review findings; fresh re-review required
+Last session: 2026-08-28T23:57:16.211Z
+Stopped at: Resolved Plan-111 residual success-tuple finding; fresh re-review required
 Resume file: None
 
 ### Blockers

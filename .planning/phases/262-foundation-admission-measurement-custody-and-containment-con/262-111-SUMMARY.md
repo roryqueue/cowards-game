@@ -79,13 +79,13 @@ status: complete
 
 | Identity | Exact value |
 |---|---|
-| Source commit | `a0e318401f977c9f909b1ed93e4d416ad3f7cf3e` |
-| Source tree | `467bb8887f6e97ca5cba9e5bdc455b521a004799` |
-| Source parent | `4078ba4a6a45c935451064ff176d8965becddbae` |
-| Checkout byte-manifest root | `sha256:59ba5085477d77f8d40e150a3ffa0832b4ede651ba59b103fc610c3f49748b2c` |
+| Source commit | `84dad7aa21af0fee62240fc0e10f04a4545541e8` |
+| Source tree | `8a128562ea5ed78de6516d32f0f8f740bbb09989` |
+| Source parent | `53228ff33584994b4602d6fcbcd6c38759612b7a` |
+| Checkout byte-manifest root | `sha256:fd0c8d075f6af0edb9609148fda9928585b9286229a7c56f60e10e5dfd6ad469` |
 | Installed closure root | `sha256:72760c27bb3a70f57fcebe45abae59f6d592310ef32f4bc23e442fe8b25ec31b` |
 | Native sources root | `sha256:de43db7fa3d47de7dd1b5ffb148ae9cecceab044bdb61f704051e2930f4f5523` |
-| Full execution closure root | `sha256:21d253a1090f3c524d7ca9c077731b0ab53235912855e03b9dbd7998d4b1ab8a` |
+| Full execution closure root | `sha256:f437eba0d03633a1bd5c6193047ad2bb6fcc98241c5b01a537fee6053c3cc2f9` |
 
 The reviewed checkout is exactly the model, native custody helper, native owner-lock source, historical v3 producer, and live-v9 adapter. Live-v8 remains immutable history and is not an invoked owner. Pathname-launch replacement resistance remains explicitly unclaimed.
 
@@ -104,6 +104,8 @@ The reviewed checkout is exactly the model, native custody helper, native owner-
 4. **Task 2 GREEN: Close future contracts and post-effect checks** — `c5d914e3` (`feat`)
 5. **Code-review RED: Reproduce reviewed flow blockers** — `4078ba4a` (`test`)
 6. **Code-review GREEN: Close CLI and post-effect flow** — `a0e31840` (`fix`)
+7. **Residual RED: Specify matched reproduction success** — `53228ff3` (`test`)
+8. **Residual GREEN: Admit exact authenticated success** — `84dad7aa` (`fix`)
 
 ## Decisions Made
 
@@ -141,7 +143,7 @@ Plan 262-112 can independently review the exact committed live-v9 closure and pu
 ## Self-Check: PASSED
 
 - Live-v9 source, tests, and summary exist.
-- All six TDD task and review-fix commits exist in Git history.
+- All eight TDD task and review-fix commits exist in Git history.
 - Exact committed closure identity was rederived after the GREEN commit.
 - Required tests and serial custody/type/whitespace checks passed.
 - No supplement or live/downstream artifact was created.
@@ -150,9 +152,9 @@ Plan 262-112 can independently review the exact committed live-v9 closure and pu
 
 Independent review `262-111-REVIEW.md` blocked the original source with two critical flow findings. TDD RED `4078ba4a` reproduced both; GREEN `a0e31840` added the exact Plan-110 readiness and sole production selectors and split pre-effect absence from post-run bounded-output custody.
 
-The pre-effect gate still forbids every live destination. The post-run gate now admits only no effects or an exact complete journal/private/terminal outcome from the unchanged historical producer; it rejects the live lock, reproduction-v17, receipt manifest, disposition, correction, activation, readiness, lifecycle, partial outputs, incomplete cleanup, and all downstream authority. Producer and custody failures retain their original lone/aggregate semantics. Verification passed `9/9` focused tests plus pair-v7, corrected Plan-108, source-only, TypeScript, and whitespace checks without invoking the production selector.
+The pre-effect gate still forbids every live destination. The post-run gate admits no effects, exact complete non-pass with reproduction absent, or exact authenticated success with producer-owned reproduction-v17 present. Reproduction path presence must equal the historical checker flag, and that flag must be true exactly for `succeeded`; active/partial tuples, both mismatch directions, stale lock, receipt manifest, disposition, correction, activation, readiness, lifecycle, incomplete cleanup, and all downstream authority fail closed. Producer and custody failures retain their original lone/aggregate semantics. Verification passed `9/9` focused tests plus pair-v7, corrected Plan-108, source-only, TypeScript, and whitespace checks without invoking the production selector.
 
-The corrected committed source closure is `a0e318401f977c9f909b1ed93e4d416ad3f7cf3e` with full execution root `sha256:21d253a1090f3c524d7ca9c077731b0ab53235912855e03b9dbd7998d4b1ab8a`. See `262-111-CODE-REVIEW-FIXES.md` for finding-by-finding evidence. A fresh independent re-review is required before Plan 112 eligibility.
+The corrected committed source closure is `84dad7aa21af0fee62240fc0e10f04a4545541e8` with full execution root `sha256:f437eba0d03633a1bd5c6193047ad2bb6fcc98241c5b01a537fee6053c3cc2f9`. See `262-111-CODE-REVIEW-FIXES.md` for finding-by-finding evidence. A fresh independent re-review is required before Plan 112 eligibility.
 
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
