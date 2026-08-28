@@ -1,6 +1,7 @@
 #define _DARWIN_C_SOURCE 1
 #include <CommonCrypto/CommonDigest.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -131,6 +132,10 @@ static HeldLocks acquire_descriptor_locks(int root, char **targets, int count,
         status.st_uid != getuid() || (status.st_mode & 0777) != 0600) die("V138_NATIVE_LOCK_UNTRUSTED");
     struct flock lock = { .l_type = F_WRLCK, .l_whence = SEEK_SET, .l_start = 0, .l_len = 0 };
     if (fcntl(descriptor, F_SETLK, &lock) != 0) die("V138_NATIVE_LOCK_BUSY");
+    struct stat named;
+    if (fstatat(root, name, &named, AT_SYMLINK_NOFOLLOW) != 0 ||
+        named.st_dev != status.st_dev || named.st_ino != status.st_ino)
+      die("V138_NATIVE_LOCK_ENTRY_REPLACED");
     held.descriptors[index] = descriptor;
     if (strcmp(targets[index], intent_target) == 0) {
       char existing[66] = {0};
@@ -592,6 +597,14 @@ int main(int argc, char **argv) {
   if (fstat(root, &status) != 0 || !S_ISDIR(status.st_mode)) die("V138_NATIVE_ROOT_INVALID");
   if ((unsigned long long)status.st_dev != strtoull(capability_parts[5], NULL, 10) ||
       (unsigned long long)status.st_ino != strtoull(capability_parts[6], NULL, 10)) die("V138_NATIVE_ROOT_IDENTITY_MISMATCH");
+  /* A BSD flock on the retained root inode is the non-replaceable coordinator.
+     Every helper must acquire it before consulting pathname lock entries, so
+     unlink/recreate of a held entry cannot split cooperating controllers. */
+  const char *nonblocking_root_lock = getenv("V138_NATIVE_ROOT_LOCK_NONBLOCK");
+  if (nonblocking_root_lock && strcmp(nonblocking_root_lock, "1") != 0)
+    die("V138_NATIVE_ROOT_LOCK_MODE_INVALID");
+  if (flock(root, LOCK_EX | (nonblocking_root_lock ? LOCK_NB : 0)) != 0)
+    die("V138_NATIVE_ROOT_LOCK_BUSY");
 
   size_t capacity = MAX_LINE, input_length = 0;
   unsigned char *input = malloc(capacity);

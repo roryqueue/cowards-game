@@ -84,6 +84,7 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     expect(output.directHelperBypassAttempts).toBe(2)
     expect(output.directoryReplacementProtections).toBe(2)
     expect(output.rootLockNamespaceProtections).toBe(1)
+    expect(output.lockEntryReplacementProtections).toBe(1)
     expect(output.spawnFailureCleanups).toBe(1)
     expect(output.bootstrapFailureCleanups).toBe(6)
     expect(output.lifecycleStagingResidue).toEqual([])
@@ -102,6 +103,17 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     },
     30_000,
   )
+
+  it("serializes on the retained root inode when a held lock name is replaced", () => {
+    const result = run("--root-lock-check")
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      sourceOnly: true,
+      liveSideEffects: false,
+      rootLockNamespaceProtections: 1,
+      lockEntryReplacementProtections: 1,
+    })
+  }, 60_000)
 
   it.each([
     "--live",

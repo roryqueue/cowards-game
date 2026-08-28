@@ -58,7 +58,7 @@ const nativeSource = path.resolve(
   sourceDirectory,
   "../native/v1-38-successor-transaction-helper-v6.c",
 )
-const EXPECTED_NATIVE_SOURCE_SHA256 = "67dfb100b5a9cbd4e357aa81365ceeffc3f267fef9cdb538a6c27c36f9ed8933"
+const EXPECTED_NATIVE_SOURCE_SHA256 = "643d5c7a2bc1e92671c73705965d6f3451946faa60be48b34b044962020d261a"
 
 export const V138_SUCCESSOR_CONTROLLER_V6_CLI = fileURLToPath(import.meta.url)
 export const V138_SUCCESSOR_CONTROLLER_V6_OPERATIONS = Object.freeze([
@@ -221,7 +221,9 @@ const invokeNative = (
           LANG: "C",
           LC_ALL: "C",
           TMPDIR: oneShot.directory,
-          ...(barrierTag === undefined || barrierTag === "force-spawn-failure"
+          ...(barrierTag === "force-root-lock-nonblock"
+            ? { V138_NATIVE_ROOT_LOCK_NONBLOCK: "1" }
+            : barrierTag === undefined || barrierTag === "force-spawn-failure"
             ? {}
             : { V138_NATIVE_TEST_BARRIER: barrierTag }),
         },
@@ -973,6 +975,7 @@ const rootLockNamespaceEvidence = async (root: string): Promise<number> => {
       moved,
       pairInput(moved, pair),
       pair.members.map(({ target }) => target),
+      "force-root-lock-nonblock",
     )
     if (
       contender.code === 0 ||
@@ -991,6 +994,47 @@ const rootLockNamespaceEvidence = async (root: string): Promise<number> => {
     rmSync(root, { recursive: true, force: true })
     renameSync(moved, root)
   }
+}
+
+const lockEntryReplacementEvidence = async (root: string): Promise<number> => {
+  const pair: V138DurablePairV2Input = {
+    transactionId: "lock-entry-replacement",
+    intentPath: "lock-entry-replacement.intent",
+    members: [
+      { target: "left/lock-entry.json", bytes: "left-entry\n" },
+      { target: "right/lock-entry.json", bytes: "right-entry\n" },
+    ],
+  }
+  const tag = "lock-entry"
+  const first = invokeNative(
+    root,
+    pairInput(root, pair),
+    pair.members.map(({ target }) => target),
+    tag,
+  )
+  await waitFor(() => existsSync(path.join(root, `.v138-test-ready-${tag}`)))
+  const heldNames = readdirSync(root).filter(
+    (entry) =>
+      entry.startsWith(".v138-successor-") && entry.endsWith(".lock"),
+  )
+  if (heldNames.length < 3) fail("V138_SUCCESSOR_LOCK_ENTRY_FIXTURE_MISSING")
+  const replaced = path.join(root, heldNames[0]!)
+  rmSync(replaced)
+  writeFileSync(replaced, "", { flag: "wx", mode: 0o600 })
+  const contender = await invokeNative(
+    root,
+    pairInput(root, pair),
+    pair.members.map(({ target }) => target),
+    "force-root-lock-nonblock",
+  )
+  if (
+    contender.code === 0 ||
+    !contender.stderr.includes("V138_NATIVE_ROOT_LOCK_BUSY")
+  )
+    fail("V138_SUCCESSOR_LOCK_ENTRY_REPLACEMENT_SPLIT")
+  writeFileSync(path.join(root, `.v138-test-continue-${tag}`), "continue\n")
+  await requireComplete(first)
+  return 1
 }
 
 const spawnFailureCleanupEvidence = async (root: string): Promise<number> => {
@@ -1185,6 +1229,8 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
     const directoryReplacementProtections =
       await directoryReplacementEvidence(root)
     const rootLockNamespaceProtections = await rootLockNamespaceEvidence(root)
+    const lockEntryReplacementProtections =
+      await lockEntryReplacementEvidence(root)
     const spawnFailureCleanups = await spawnFailureCleanupEvidence(root)
     const bootstrapFailureCleanups = await bootstrapFailureCleanupEvidence(root)
     return Object.freeze({
@@ -1212,6 +1258,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
       directHelperBypassAttempts,
       directoryReplacementProtections,
       rootLockNamespaceProtections,
+      lockEntryReplacementProtections,
       spawnFailureCleanups,
       bootstrapFailureCleanups,
       lifecycleStagingResidue: readdirSync(
@@ -1220,6 +1267,21 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
       internalDirectories: readdirSync(root)
         .filter((entry) => entry.startsWith(".v138-"))
         .sort(),
+    })
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+const runSyntheticRootLockGuardV6 = async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "v138-root-lock-v6-"))
+  try {
+    for (const relative of ["left", "right"])
+      mkdirSync(path.join(root, relative), { recursive: true })
+    return Object.freeze({
+      rootLockNamespaceProtections: await rootLockNamespaceEvidence(root),
+      lockEntryReplacementProtections:
+        await lockEntryReplacementEvidence(root),
     })
   } finally {
     rmSync(root, { recursive: true, force: true })
@@ -1281,6 +1343,11 @@ if (process.argv[1] === V138_SUCCESSOR_CONTROLLER_V6_CLI) {
     const result = await runSyntheticSuccessorProtocolV2()
     process.stdout.write(
       `${JSON.stringify({ sourceOnly: true, liveSideEffects: false, ...result })}\n`,
+    )
+  } else if (process.argv[2] === "--root-lock-check") {
+    checkV138SuccessorControllerV4Source(V138_SUCCESSOR_CONTROLLER_V6_CLI)
+    process.stdout.write(
+      `${JSON.stringify({ sourceOnly: true, liveSideEffects: false, ...(await runSyntheticRootLockGuardV6()) })}\n`,
     )
   } else fail("V138_SUCCESSOR_CONTROLLER_SOURCE_ONLY")
 }
