@@ -1,85 +1,61 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-28T04:25:19Z
+fixed_at: 2026-08-28T04:50:30Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 9
-findings_in_scope: 7
-fixed: 7
+iteration: 10
+findings_in_scope: 3
+fixed: 3
 skipped: 0
 status: all_fixed
 ---
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-28T04:25:19Z
+**Fixed at:** 2026-08-28T04:50:30Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-**Iteration:** 9
+**Iteration:** 10
 
 **Summary:**
 
-- Findings in scope: 7
-- Fixed: 7
+- Findings in scope: 3
+- Fixed: 3
 - Skipped: 0
 
 ## Fixed Issues
 
-### CR-01: Darwin pathname execution remains owner-replaceable
+### CR-01: Session manifest authentication escapes the session's retained root inode
 
-**Files modified:** `scripts/bootstrap-v1-38-bounded-retry-successor-v2.sh`, `scripts/lib/v1-38-bounded-retry-successor-controller-v6.ts`, `scripts/lib/v1-38-bounded-retry-successor-native-helper-v6.c`, and focused tests
-**Commit:** bfd50db2
-**Applied fix:** Encoded the truthful `single_operator_local_seal_v1` assurance boundary, explicitly excluding hostile same-UID concurrency and pathname-replacement resistance while retaining pre/post identity and content authentication. Darwin does not expose an acceptable descriptor-execution primitive for this protocol, so the correction removes the overclaim instead of simulating stronger custody.
+**Files modified:** `scripts/lib/v1-38-secure-workspace-path-v6.ts`, `scripts/lib/v1-38-secure-workspace-path-v6.test.ts`
+**Commit:** 8206aff1
+**Applied fix:** Refactored one-batch authentication onto the session's retained root descriptor and captured device/inode identity. The child receives a duplicated inherited descriptor, never reopens the root pathname, and the regression test proves a renamed original root remains readable/authentic while replacement-path bytes cannot authenticate.
 
-### CR-02: Retained leaf reads do not authenticate the exact generation returned
+### CR-02: Historical-v4 omits executable pnpm and tsx code from its claimed toolchain closure
 
-**Files modified:** `scripts/lib/v1-38-workspace-reader-v6.ts` and focused tests
-**Commit:** a6ce38f4
-**Applied fix:** Buffered exactly the pre-read size, rejected early EOF and trailing growth, hashed before output, and revalidated full post-read identity and metadata plus parent and absence witnesses before emitting any bytes.
+**Files modified:** `scripts/run-v1-38-phase-262-historical-correction-checkouts-v4.ts`, its focused test, `package.json`, additive historical-v5/correction-v10 sources, tests, and artifacts
+**Commits:** 3d97d5da, 87aac909
+**Applied fix:** Authenticated all 448 files in the installed pnpm distribution, including `dist/pnpm.mjs`, before and after every pnpm invocation and bound that closure into each dependency root. Removed the ambient `node --import tsx` child bootstrap by deriving both historical cases in the already reviewed process. Mutation tests reject a changed pnpm implementation with the pinned entry unchanged. Additive correction-v10 binds the new provenance and preserves 0/540 with every authority false.
 
-### CR-03: Historical dependency evidence omits the installed transitive runner closure
+### WR-01: Raw tree checks do not bind the bytes actually executed from the worktree
 
-**Files modified:** historical checkout derivation/checker/test sources and `.planning/artifacts/v1.38-phase-262-historical-correction-checkouts-v4.json`
-**Commits:** f270a52e, 05470f4a
-**Applied fix:** Performed twin integrity-verified offline installs, traversed the complete installed runtime, optional, native, and installed-peer closure from Vitest, manifested exact package bytes, and bound pre/post runner-entry and closure roots. A mutation test now proves installed runner drift is rejected before execution.
-
-### CR-04: Git checkout derivation remains exposed to ambient configuration
-
-**Files modified:** historical checkout derivation/checker/test sources
-**Commit:** a86e1869
-**Applied fix:** Isolated system/global Git configuration, disabled replacement objects, hooks, and fsmonitor, rejected relevant local config and replacement refs, and verified raw commit/tree identities plus a clean checkout before dependency installation. Malicious caller config, hooks, and replace refs are covered by regression tests.
-
-### CR-05: Pathname lock ownership can be replaced while held
-
-**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-native-helper-v6.c`, controller v6 sources, and focused tests
-**Commit:** 3136c631
-**Applied fix:** Added a retained-root BSD `flock` held for the complete child lifetime and revalidated every pathname lock against its retained descriptor after acquisition. Tests cover root rename and lock-name unlink/recreate races.
-
-### WR-01: Reader test barriers collide with evidence-root absence checks
-
-**Files modified:** workspace reader v6 tests
-**Commit:** 6e641c73
-**Applied fix:** Moved test barrier controls to a private bootstrap directory outside the evidence root and added an explicit successful control case.
-
-### WR-02: Manifest authentication is split across sequential reader invocations
-
-**Files modified:** workspace reader v6 API and consumers
-**Commit:** cee69b35
-**Applied fix:** Authenticated every manifest entry in one retained-reader batch so a manifest no longer spans independent root observations.
+**Files modified:** `scripts/run-v1-38-phase-262-historical-correction-checkouts-v4.ts`, its focused test, and additive historical-v5 evidence
+**Commit:** 33a70ed2
+**Applied fix:** Neutralized checkout conversion settings, rejected checkout-affecting local config and tracked `.gitattributes`, and compared each executed regular file or symlink to its authenticated Git blob identity with mode checks. The exact executed-byte manifest root is persisted and included in each dependency root. Tests reject both CRLF-transformed bytes and attribute-controlled checkouts.
 
 ## Correction Chain
 
-Commit `3fadfb32` records additive correction-v9 evidence without mutating protected v2-v8 or Plan 88/89 evidence. The correction preserves all authority bits as false, all forbidden destinations as absent, admission at 0/540, and reproduction-v16 as absent.
+Commit `87aac909` records additive correction-v10 and historical-v5 evidence without changing protected v2-v9 or Plan 262-88/89 evidence. Correction root `sha256:79f0ba7b9352992c5ad51a102bfd93f21bde93f5a01ff2438a25fef0919b22d3` preserves the explicit `single_operator_local_seal_v1_no_hostile_same_uid` boundary, admission at fresh 0/540, reproduction-v16 absent, every authority bit false, and all fourteen forbidden destinations absent.
 
 ## Verification
 
-- Successor controller v6: 10/10 tests passed in 358.55 seconds.
-- Bootstrap v2, workspace reader v6, and historical v4 aggregate: 21/21 tests passed in 43.07 seconds.
-- Correction-v9: 43/43 tests passed in 45.76 seconds.
-- Canonical historical-v4 and correction-v9 package checkers passed.
-- Native reader/helper v6 sources passed Clang with `-Wall -Wextra -Werror`.
-- `package.json` parsed successfully.
+- Secure retained-root reader/session suite: 17/17 passed.
+- Historical provenance suite, including pnpm-dist mutation, ambient-tsx exclusion, CRLF/attribute rejection, and the full twin-checkout mutated-runner path: 6/6 passed.
+- Additive correction-v10 canonical, authority, forbidden-destination, and evidence-mutation suite: 38/38 passed.
+- Combined focused regression: 61/61 passed in 88.25 seconds.
+- Canonical historical-v5 and correction-v10 package checkers passed after independently deriving both real historical correction runs.
+- Real correction-v2 and correction-v3 offline checkout/install/Vitest derivations passed; their executed-byte manifests cover 4,101 and 4,104 files respectively.
 
 ---
 
-_Fixed: 2026-08-28T04:25:19Z_
+_Fixed: 2026-08-28T04:50:30Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 9_
+_Iteration: 10_
