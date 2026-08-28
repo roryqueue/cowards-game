@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { execFileSync } from "node:child_process"
 import { afterEach, describe, expect, it } from "vitest"
-import { checkV138Phase262ReviewFixCorrectionV5, deriveV138Phase262ReviewFixCorrectionV5, V138_PHASE_262_CORRECTION_V5_EVIDENCE, V138_PHASE_262_CORRECTION_V5_PATH, V138_PHASE_262_TRIGGER_REVIEW_V5 } from "./check-v1-38-phase-262-review-fix-correction-v5.js"
+import { checkV138Phase262ReviewFixCorrectionV5, deriveV138Phase262ReviewFixCorrectionV5, diagnoseV138Phase262MutableAggregateReview, V138_PHASE_262_CORRECTION_V5_EVIDENCE, V138_PHASE_262_CORRECTION_V5_PATH, V138_PHASE_262_TRIGGER_REVIEW_V5 } from "./check-v1-38-phase-262-review-fix-correction-v5.js"
 
 const roots: string[] = []
 afterEach(() => { while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true }) })
@@ -59,5 +59,21 @@ describe("CR-03 correction-v5 authenticates every evidence class", () => {
 
   it("rejects changed immutable trigger bytes", () => {
     expect(() => deriveV138Phase262ReviewFixCorrectionV5(process.cwd(), { triggeringReviewBytes: Buffer.concat([triggerBytes, Buffer.from("mutation\n")]) })).toThrow("V138_CORRECTION_V5_TRIGGER_REVIEW_MISMATCH")
+  })
+})
+
+describe("CR-04 mutable aggregate is diagnostic-only", () => {
+  it("keeps the committed correction valid when the aggregate review is replaced", () => {
+    const root = fixture(), aggregate = path.join(root, V138_PHASE_262_TRIGGER_REVIEW_V5.path)
+    mkdirSync(path.dirname(aggregate), { recursive: true }); cpSync(V138_PHASE_262_TRIGGER_REVIEW_V5.path, aggregate)
+    const before = diagnoseV138Phase262MutableAggregateReview(root)
+    writeFileSync(aggregate, "# Independent terminal rereview\n\nstatus: clean\n")
+    const after = diagnoseV138Phase262MutableAggregateReview(root)
+    expect(after).toMatchObject({ authoritative: false, path: V138_PHASE_262_TRIGGER_REVIEW_V5.path })
+    expect(after.observedSha256).not.toBe(before.observedSha256)
+    expect(checkV138Phase262ReviewFixCorrectionV5(root, options)).toBe(true)
+    const committed = JSON.parse(readFileSync(path.join(root, V138_PHASE_262_CORRECTION_V5_PATH), "utf8"))
+    expect(committed).not.toHaveProperty("mutableAggregateReview")
+    expect(committed.correctionRoot).toBe(baseline.correctionRoot)
   })
 })
