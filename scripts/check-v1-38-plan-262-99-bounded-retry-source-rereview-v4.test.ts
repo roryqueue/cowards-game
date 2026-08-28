@@ -73,7 +73,9 @@ describe("Plan 262-99 independent source review", () => {
 
   it("detects every declared Plan-98 source and test mutation", () => {
     const baseline = sourceAtHead()
-    expect(inspectV138Plan26299Source(baseline)).toEqual([])
+    expect(inspectV138Plan26299Source(baseline)).toEqual([
+      "GIT_SHOW_BYTES_TRIMMED",
+    ])
     expect(V138_PLAN_262_99_MUTATIONS.length).toBeGreaterThanOrEqual(28)
     for (const [code, repoPath, token, replacement] of
       V138_PLAN_262_99_MUTATIONS) {
@@ -168,10 +170,13 @@ describe("Plan 262-99 independent source review", () => {
     const first = deriveV138Plan26299ReviewNoPublish(repoRoot)
     const second = deriveV138Plan26299ReviewNoPublish(repoRoot)
     expect(second).toEqual(first)
-    expect(first.findingCount).toBe(0)
-    expect(first.status).toBe("zero_findings")
-    expect(first.sourceReviewPassed).toBe(true)
-    expect(first.authority.plan26292Eligible).toBe(true)
+    expect(first.findingCount).toBe(1)
+    expect(first.findings.map((item: { code: string }) => item.code)).toEqual([
+      "GIT_SHOW_BYTES_TRIMMED",
+    ])
+    expect(first.status).toBe("blocked")
+    expect(first.sourceReviewPassed).toBe(false)
+    expect(first.authority.plan26292Eligible).toBe(false)
     expect(first.failedAttempt).toEqual({
       plan: "262-92",
       stopCode: "V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID",
@@ -233,6 +238,18 @@ describe("Plan 262-99 independent source review", () => {
       mutate(changed)
       expect(() => validateV138Plan26299Review(changed, review)).toThrow()
     }
+  }, 180_000)
+
+  it("invalidates the committed provisional zero pair after the final consumer probe", () => {
+    const expected = deriveV138Plan26299ReviewNoPublish(repoRoot)
+    const provisional = JSON.parse(
+      readFileSync(path.resolve(repoRoot, V138_PLAN_262_99_REVIEW_PATH), "utf8"),
+    )
+    expect(provisional.findingCount).toBe(0)
+    expect(expected.findingCount).toBe(1)
+    expect(() => validateV138Plan26299Review(provisional, expected)).toThrow(
+      "V138_PLAN_262_99_REVIEW_MISMATCH",
+    )
   }, 180_000)
 
   it("rejects non-canonical pair schema members even when self-consistent", () => {

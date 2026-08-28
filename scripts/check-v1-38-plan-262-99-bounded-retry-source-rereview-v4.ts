@@ -250,6 +250,11 @@ export const inspectV138Plan26299Source = (source: Source): string[] => {
   ).join("\n")
   if (/Math\.random|Date\.now|node:vm|new Function/u.test(joined))
     findings.push("FORBIDDEN_NONDETERMINISM_PRESENT")
+  const controller = source[V138_PLAN_262_99_SOURCE_PATHS[0]] ?? ""
+  if (
+    controller.includes("committed = Buffer.from(") &&
+    controller.includes('git(repoRoot, ["show", `${directParentCommit}:${repoPath}`])')
+  ) findings.push("GIT_SHOW_BYTES_TRIMMED")
   return [...new Set(findings)].sort()
 }
 
