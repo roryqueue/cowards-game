@@ -128,6 +128,21 @@ Plan 262-109 is eligible only from this exact committed literal-zero trio. That 
 - Exact-byte rerender, focused tests, TypeScript, whitespace validation, and no-effect checks passed.
 - No canonical supplement or live evidence was created.
 
+## Post-Code-Review Corrections — 2026-08-28
+
+The independent code review blocked the original v8 trio with four findings. Those bytes remain immutable historical evidence. TDD RED `e692ead3` reproduced all four defects; GREEN `4537f3f6` added a fully independent v9 reviewer; `2639ff3b` introduced an additive v9 payload, `262-108-REVIEW-FIX.md`, and carrier v2; `285908ec` strengthened all seven CLI modes so disposable write/check performs a real committed publication and custody check.
+
+The corrected implementation now owns the twelve-branch protected-history contract, pair/seal/envelope validation, and every semantic root locally. It can render deterministic blocked trios, authenticates exact publication commit/blob/mode/current-byte/no-rewrite custody, and executes the complete adversarial matrix. Its only Plan-107 subject call is the producer-incapable synthetic no-effect adapter exercise.
+
+Corrected literal-zero roots:
+
+- Payload: `sha256:1e012ddcac45a9b201c8d12c58b14ac532302c87516f17aafa220a5899f3afc2`
+- Findings: `sha256:7b6a3ae54d5a7e31703e70a2c5ce6e54252aab64334216acfd20f48d0f39a47b`
+- Review: `sha256:d5678937bd87eb53c6df418a5c26fe2be4c3ae95f96d131fe9b086ae7c9316db`
+- Carrier: `sha256:1588f5abd35b8c21f33fefe3d492d44c52f69421ada43e63229df2115d1848e5`
+
+Plan 109 eligibility now attaches only to exact corrected publication `2639ff3b42e2a238919a3104c9fa8c785c69b93d`. No supplement or live/downstream authority was created. See `262-108-CODE-REVIEW-FIXES.md` for the finding-by-finding evidence.
+
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
 *Completed: 2026-08-28*
