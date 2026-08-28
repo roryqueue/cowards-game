@@ -777,22 +777,48 @@ export const authenticateV138ReviewedLiveV8Ready = (
   repoRoot: string,
 ): V138LiveV8Ready => authenticateReady(repoRoot, true)
 
+export const settleV138LiveV8ProducerOutcomeForReview = (
+  producerError: unknown | undefined,
+  postCustodyError: unknown | undefined,
+): void => {
+  if (producerError !== undefined && postCustodyError !== undefined)
+    throw new AggregateError(
+      [producerError, postCustodyError],
+      "V138_LIVE_V8_PRODUCER_AND_POST_CUSTODY_FAILED",
+      { cause: producerError },
+    )
+  if (producerError !== undefined) throw producerError
+  if (postCustodyError !== undefined) throw postCustodyError
+}
+
 export const runV138ReviewedBoundedLiveEnvelope = async (
   repoRoot: string,
 ): Promise<void> => {
   const ready = authenticateReady(repoRoot, true)
-  await runV138V3ProductionLive(repoRoot, {
-    validateInputs: false,
-    checkPair: () => ({ seal: ready.pair.seal, envelope: ready.pair.envelope }),
-  })
-  assertProtectedHistoryUnchangedFromDisk(repoRoot)
-  const after = authenticateV138RetryV3ExecutionClosure(repoRoot, {
-    sourceCommit: ready.sourceCommit,
-    checkoutPaths: V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
-    executionClosureRoot: ready.executionClosureRoot,
-  })
-  if (after.executionClosureRoot !== ready.executionClosureRoot)
-    fail("V138_LIVE_V8_POST_RUN_CUSTODY_CHANGED")
+  let producerError: unknown | undefined
+  let postCustodyError: unknown | undefined
+  try {
+    await runV138V3ProductionLive(repoRoot, {
+      validateInputs: false,
+      checkPair: () => ({ seal: ready.pair.seal, envelope: ready.pair.envelope }),
+    })
+  } catch (error) {
+    producerError = error
+  } finally {
+    try {
+      assertProtectedHistoryUnchangedFromDisk(repoRoot)
+      const after = authenticateV138RetryV3ExecutionClosure(repoRoot, {
+        sourceCommit: ready.sourceCommit,
+        checkoutPaths: V138_LIVE_V8_EXECUTED_SOURCE_PATHS,
+        executionClosureRoot: ready.executionClosureRoot,
+      })
+      if (after.executionClosureRoot !== ready.executionClosureRoot)
+        fail("V138_LIVE_V8_POST_RUN_CUSTODY_CHANGED")
+    } catch (error) {
+      postCustodyError = error
+    }
+  }
+  settleV138LiveV8ProducerOutcomeForReview(producerError, postCustodyError)
 }
 
 export interface V138LiveV8CliDependencies {
