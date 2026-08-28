@@ -1,25 +1,22 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-reviewed: 2026-08-28T02:45:25Z
+reviewed: 2026-08-28T03:39:23Z
 depth: deep
-files_reviewed: 16
+files_reviewed: 13
 files_reviewed_list:
-  - scripts/lib/v1-38-bounded-retry-successor-controller-v4.ts
-  - scripts/lib/v1-38-bounded-retry-successor-controller-v4.test.ts
-  - scripts/native/v1-38-successor-transaction-helper-v4.c
-  - scripts/lib/v1-38-secure-workspace-path-v4.ts
-  - scripts/lib/v1-38-secure-workspace-path-v4.test.ts
-  - scripts/native/v1-38-secure-manifest-reader-v4.c
-  - scripts/check-v1-38-phase-262-review-fix-correction-v7.ts
-  - scripts/check-v1-38-phase-262-review-fix-correction-v7.test.ts
-  - scripts/run-v1-38-phase-262-historical-correction-checkouts.ts
+  - scripts/lib/v1-38-private-native-bootstrap-v1.ts
+  - scripts/lib/v1-38-private-native-bootstrap-v1.test.ts
+  - scripts/lib/v1-38-bounded-retry-successor-controller-v5.ts
+  - scripts/lib/v1-38-bounded-retry-successor-controller-v5.test.ts
+  - scripts/native/v1-38-successor-transaction-helper-v5.c
+  - scripts/lib/v1-38-secure-workspace-path-v5.ts
+  - scripts/lib/v1-38-secure-workspace-path-v5.test.ts
+  - scripts/native/v1-38-secure-manifest-reader-v5.c
+  - scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.ts
+  - scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.test.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v8.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v8.test.ts
   - package.json
-  - scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts
-  - scripts/lib/v1-38-bounded-retry-successor-controller-v3.ts
-  - scripts/check-v1-38-phase-262-review-fix-correction-v5.ts
-  - scripts/check-v1-38-phase-262-review-fix-correction-v6.ts
-  - scripts/check-v1-38-plan-262-88-bounded-retry-admission-v2.ts
-  - scripts/check-v1-38-plan-262-89-lifecycle-v2.ts
 findings:
   critical: 5
   warning: 2
@@ -30,65 +27,67 @@ status: issues_found
 
 # Phase 262: Code Review Report
 
-**Reviewed:** 2026-08-28T02:45:25Z
+**Reviewed:** 2026-08-28T03:39:23Z
 **Depth:** deep
-**Files Reviewed:** 16
+**Files Reviewed:** 13
 **Status:** issues_found
+
+## Narrative Findings (AI reviewer)
 
 ## Summary
 
-The v4 remediation is not clean. Correction-v7 does correctly restore the complete thirteen-field false-authority surface, all fourteen forbidden destinations, additive/no-supersession semantics, and the frozen empirical result of 0/540 with reproduction-v16 absent. The protected v2 source and Plan 262-88/89 evidence paths inspected in this review have zero diff from review base `6bfa0bf4`, and every forbidden destination named by correction-v7 is absent.
+The iteration-8 remediation is not clean. Correction-v8 preserves the complete false-authority surface, all fourteen forbidden destinations, the empirical exhausted result of 0/540, and reproduction-v16 absence. Git comparison from the iteration-8 review base also confirms that protected v2-v7 source and the Plan 262-88/89 disposition/lifecycle evidence were not rewritten.
 
-Five independent integrity defects remain: the transaction helper inherits dynamic-loader environment variables while holding the root capability; the manifest reader is a reusable pathname executable that can be replaced after its one-time check; both compiler bootstraps still execute an unbound pathname between before/after checks; the native pair path reports success despite ignored durability/cleanup failures; and the historical runner trusts unresolved `git`/`pnpm` commands while describing their results as dependency provenance. Two additional robustness gaps concern non-atomic leaf evidence and orphaned cached-reader bootstraps.
+Five integrity defects remain. Private compiler/helper/reader launches are still pathname launches after a check that a same-UID peer can invalidate; the reader's advertised leaf snapshot accepts in-place leaf mutation; historical replay authenticates only Vitest's one-line entry module rather than the code it imports; historical Git execution permits unbound configuration, hooks, and replacement refs; and persistent lock names can be unlinked and recreated while the old descriptor remains locked. Two additional test/API defects conceal the reader race and expose a sequential manifest check as if it were one authenticated manifest.
 
 ## Critical Issues
 
-### CR-01: The privileged native helper inherits dynamic-loader injection variables
+### CR-01: Owner-clearable flags do not bind the checked compiler or helper image to launch
 
-**File:** `scripts/lib/v1-38-bounded-retry-successor-controller-v4.ts:228-241`
-**Issue:** The child receives `process.env` (or a copy with the test barrier) while inheriting the capability on fd 3 and the authenticated mutation root on fd 4. The helper is a freshly compiled non-platform executable, so variables such as `DYLD_INSERT_LIBRARIES`, `DYLD_LIBRARY_PATH`, and related loader settings can cause attacker-controlled initialization code to execute before `main`. That code receives the same capability descriptors and can mutate the trusted root without passing the token, intent, lock, or operation checks. The compiler and reader children already use allowlisted environments; the mutation helper does not.
-**Fix:** Construct an allowlisted environment such as `{ PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", TMPDIR: oneShot.directory }`, add only the validated test barrier when needed, and add a regression dylib/environment test proving loader variables are absent in the helper.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-private-native-bootstrap-v1.ts:162-170`
+**Issue:** The bootstrap verifies and copies `/usr/bin/clang`, then executes the private compiler by pathname at lines 192-205. The controller repeats the same pattern for the generated helper: it reads the pathname at `scripts/lib/v1-38-bounded-retry-successor-controller-v5.ts:129-132` and again at lines 198-203, then calls `spawn(executable)`. `uchg` is not an isolation boundary against the owner: this module's own cleanup clears it with `/usr/bin/chflags nouchg` at lines 48-56. A concurrent same-UID process can therefore clear the flag and replace either private pathname after its last digest check. A substituted compiler sees the compile-time token and can emit a substituted helper; a substituted helper is launched with the capability and trusted-root descriptors on fd 3/fd 4. The capability's compiler/output hashes do not prevent this because the native helper only syntax-checks those fields at `scripts/native/v1-38-successor-transaction-helper-v5.c:582-586` and never authenticates its loaded image.
+**Fix:** Retain descriptors for the authenticated private compiler and helper and execute those exact descriptors through a small reviewed native launcher using descriptor execution such as `fexecve`; keep the descriptors open until successful exec. Apply the same mechanism to the one-shot reader. If Darwin cannot support a descriptor-exec implementation acceptable to the project, explicitly narrow the contract to exclude hostile same-UID concurrency rather than claiming replacement resistance.
 
-### CR-02: The cached manifest reader can be replaced after its only authentication
+### CR-02: The required-leaf snapshot accepts in-place mutation and can return a truncated/new generation
 
-**File:** `scripts/lib/v1-38-secure-workspace-path-v4.ts:46-96`
-**Issue:** `secureReaderExecutable()` authenticates bytes once, stores only the pathname in `readerExecutable`, and reuses that pathname for every later batch at line 234. The random directory is mode 0700 but is owned by the same local operator account that owns the process; a concurrent same-uid process can discover the prefixed directory, rename or chmod/replace the cached file, and make subsequent correction checks execute arbitrary output-producing code. Because the malicious reader inherits the workspace descriptor on fd 3, it can fabricate reads and forbidden-absence responses. The last byte check at lines 91-92 protects only the initial return, not later invocations.
-**Fix:** Make the reader one-shot per batch and remove it after a child handshake, or execute a retained authenticated descriptor through a small fixed launcher. In either case bind the exact launched image to the reviewed digest at every invocation, sanitize its environment, and test replacement after the first successful batch.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/native/v1-38-secure-manifest-reader-v5.c:179-224`
+**Issue:** The reader preopens each leaf and records `leaves[i].identity`, but never compares a post-read `fstat` with that identity. `require_directory_generations()` checks only parent directories; modifying or truncating an existing leaf does not change its parent directory generation. A live diagnostic against this source preopened a 64 MiB leaf, truncated/replaced its contents in place while the child was running, and exited 0 with the new seven-byte value (`after!\n`) under the claimed `required_leaf_descriptors_and_parent_generation_bound` snapshot. The result can therefore authenticate a different or mixed leaf generation and let correction-v8 compute a false evidence manifest.
+**Fix:** Before any output, record each retained leaf's device, inode, generation, size, mtime, and ctime. Read an exact bounded byte count, reject early EOF/trailing growth, then post-`fstat` every leaf and require the complete identity/generation/size/time tuple to be unchanged. Prefer hashing while reading and emit output only after all leaf and parent postconditions pass. Add in-place truncate, overwrite, append, and same-inode mutation races.
 
-### CR-03: Compiler before/after checks do not bind the executable that performed compilation
+### CR-03: Historical replay authenticates the Vitest stub but not the code that executes
 
-**File:** `scripts/lib/v1-38-bounded-retry-successor-controller-v4.ts:119-140`
-**Issue:** The controller hashes and code-signature-checks `/usr/bin/clang` before compilation and hashes/checks the same pathname afterward, but both compilations execute that pathname later at lines 127-130. A replace/restore substitution during the compilation window can use the same deterministic substitute for both builds, satisfying the two-output equality check, then restore reviewed clang before the post-check. The capability's compiler/output hash fields do not close this gap: the C helper only verifies that fields 7-9 are syntactically hex (`scripts/native/v1-38-successor-transaction-helper-v4.c:574-581`) and never binds them to its loaded image. The identical pattern exists in the manifest-reader bootstrap at `scripts/lib/v1-38-secure-workspace-path-v4.ts:60-86`.
-**Fix:** Open/copy the reviewed compiler into a private immutable bootstrap location while its source descriptor is retained, verify the private copy and its code signature, execute that exact private image for both builds, and bind/verify the resulting executable digest at launch. A regression should substitute the compiler only during spawn and prove fail-closed behavior.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.ts:145-169`
+**Issue:** The runner pins the lockfile integrity string and hashes only `node_modules/vitest/vitest.mjs`. That file is just `import './dist/cli.js'`; neither `dist/cli.js` nor its imported Vitest/Vite/esbuild dependencies are authenticated before Node executes them. A modified installed package can retain the expected one-line entry file and version while changing the actual runner, so both detached suites can report arbitrary success and the persisted dependency root still uses the expected stub hash. The checked pathname can also be replaced after line 162 and before line 167.
+**Fix:** Verify the installed package/store content against the lockfile integrity with a complete file manifest, or execute from an immutable verified package archive/store snapshot. Bind every imported runner/dependency byte (including native helpers) into the dependency root and retain/descriptor-bind the exact entry image through launch. Add a test that preserves `vitest.mjs` and `package.json` but mutates `dist/cli.js`, and require rejection before test execution.
 
-### CR-04: Pair publication returns success after ignored fsync and cleanup failures
+### CR-04: Historical Git provenance permits local hooks, config, and replacement refs
 
-**File:** `scripts/native/v1-38-successor-transaction-helper-v4.c:376-388`
-**Issue:** The pair transaction ignores every `fsync` result for canonical parent directories (line 381), ignores `unlinkat` results while deleting stages and intent (lines 384-385), and ignores the final staging/intent-directory `fsync` results (line 386). An I/O error can therefore produce exit code 0 even though the canonical links were not durably committed or transaction residue was not durably removed. This contradicts the durable-pair postcondition and can turn a power loss into missing evidence after the controller has reported completion.
-**Fix:** Check every `fsync` and `unlinkat` return, fail with a specific code, and retain authenticated recovery state when cleanup cannot complete. Add fault-injection coverage for each canonical-parent, staging, intent-parent, and unlink failure boundary.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-phase-262-historical-correction-checkouts-v3.ts:124-173`
+**Issue:** Exact Git bytes and code signature do not determine Git behavior. The clean environment at lines 47-53 does not disable system/global/local configuration, hooks, or replacement objects. `git worktree add` can execute a configured `post-checkout` hook, and local/global config can redirect `core.hooksPath`; replacement refs can change what an otherwise exact object command sees. A same-operator repository can therefore mutate the checkout or dependency tree before the historical suites while the evidence records the expected Git executable identity.
+**Fix:** Invoke Git with `GIT_CONFIG_NOSYSTEM=1`, an isolated HOME/XDG config root, `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_NO_REPLACE_OBJECTS=1`, and command-level `-c core.hooksPath=/dev/null`; reject unexpected repository config relevant to object lookup/worktrees. Resolve commit/tree/blob identities from raw authenticated objects or a read-only clone and verify the complete checkout tree before installing dependencies.
 
-### CR-05: Historical “provenance” trusts unpinned command implementations
+### CR-05: Persistent lock pathnames can be replaced while the old descriptor remains locked
 
-**File:** `scripts/run-v1-38-phase-262-historical-correction-checkouts.ts:32-57`
-**Issue:** The runner invokes `git` and `pnpm` by PATH. It records only `pnpm --version`, not the resolved pnpm/corepack executable path or bytes, and it has no expected identity for the installed Vitest bytes. A PATH-prepended wrapper can report `11.1.2`, install a fabricated test runner offline, return selected Git identifiers, and make that runner report both historical suites passed. The artifact then records the attacker's observed hashes and `--check` regenerates the same self-consistent values. Hashing the current Node and observed Vitest file does not establish that the dependency installer or installed runner came from the committed lockfile.
-**Fix:** Resolve and hash/code-sign every executable before use (`git`, corepack/pnpm, Node), invoke exact authenticated paths with a sanitized environment, verify package-manager version against `packageManager`, and derive expected package/runner integrity from the committed lockfile/store metadata rather than accepting any observed runner hash. Persist those expected identities in the dependency root and add a PATH-wrapper rejection test.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/native/v1-38-successor-transaction-helper-v5.c:123-145`
+**Issue:** The helper locks a descriptor opened from a deterministic root-relative lock name, but never verifies that the root entry still names that inode. Advisory locks attach to the open file description, not the pathname. A same-UID peer can unlink the mode-0600 lock file after line 133 and create a new file at the same name; a second controller then locks the new inode and both mutate the same target concurrently. This defeats the claimed root lock namespace even though both helpers hold successful `F_SETLK` locks.
+**Fix:** Place locks in an authenticated owner-only directory and retain a directory-level guard that prevents lock-entry replacement, or re-`fstatat` every lock name after acquisition and before mutation and require it to match the held descriptor while holding a non-replaceable root coordination primitive. Add a race that unlinks/recreates a held lock and prove the contender fails closed.
 
 ## Warnings
 
-### WR-01: The retained-ancestor batch is not a leaf snapshot
+### WR-01: The reader barrier invalidates its own root generation and makes the replacement test a false positive
 
-**File:** `scripts/native/v1-38-secure-manifest-reader-v4.c:141-166`
-**Issue:** Every ancestor is retained before evidence work, which correctly prevents intermediate-subtree replacement. Leaf files and absence decisions are still opened or checked sequentially, however, so concurrent same-directory renames can splice different leaf generations or make forbidden files absent only for their individual checks. The resulting artifact calls this one batch, but consumers must not treat it as a simultaneous evidence snapshot.
-**Fix:** Pre-open and retain every required regular leaf descriptor before reading any bytes, capture final-entry identities, and use a shared lock/generation protocol for absence decisions; otherwise rename the protocol/claims to state explicitly that only ancestor identity is snapshot-bound.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/native/v1-38-secure-manifest-reader-v5.c:94-115`
+**Issue:** Directory identities are refreshed at lines 195-196, then `barrier()` creates and fsyncs a ready marker in the root at lines 103-105. The immediate generation check at line 199 must therefore observe the barrier's own root-directory ctime/mtime change. The test at `scripts/lib/v1-38-secure-workspace-path-v5.test.ts:122-147` accepts `V138_READER_BATCH_GENERATION_CHANGED`, so it passes even if the subtree replacement logic contributes nothing. This concealed CR-02 and does not prove the advertised replacement behavior.
+**Fix:** Put synchronization markers outside the authenticated root or create them before the snapshot identities are captured. Assert a replacement-specific identity mismatch, and add a no-replacement barrier control that must succeed.
 
-### WR-02: Abrupt termination leaves authenticated-reader bootstrap residue indefinitely
+### WR-02: The exported manifest authenticator reads entries in separate one-shot sessions
 
-**File:** `scripts/lib/v1-38-secure-workspace-path-v4.ts:93-98`
-**Issue:** The cached reader directory is removed only by a process `exit` listener. `SIGKILL`, host loss, or a crash before normal exit leaves the compiled executable, captured source, and reproduction output in `/tmp` with no next-start scavenging. Besides accumulating residue, this lengthens the window for CR-02 because the reusable executable can survive the process that created it.
-**Fix:** Prefer a one-shot reader removed after handshake. If caching remains, maintain an authenticated owner record and scavenge stale prefixed directories at startup after verifying ownership, modes, and that no live owner holds them.
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-secure-workspace-path-v5.ts:303-306`
+**Issue:** `authenticateV138ManifestNoFollow()` delegates to `session.authenticate()`, which invokes a new one-shot reader for every entry. A concurrent writer can splice mutually inconsistent generations between entries while the function returns true. Correction-v8 correctly uses `readV138WorkspaceBatch`, but the exported v5 API name still promises authentication of one manifest without its snapshot guarantee.
+**Fix:** Implement `authenticate` with a single `readV138WorkspaceBatch` call containing every entry and compare all hashes from that batch, or rename/deprecate the sequential API so callers cannot treat it as a coherent manifest snapshot.
 
 ---
 
-_Reviewed: 2026-08-28T02:45:25Z_
+_Reviewed: 2026-08-28T03:39:23Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
