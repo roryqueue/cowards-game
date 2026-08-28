@@ -5,21 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-101 published one blocked v5 pair; Plans 262-92 through 262-95 remain ineligible
-last_updated: "2026-08-28T17:45:22.024Z"
+stopped_at: Plan 262-102 is the sole next action; Plans 262-103 and 262-92 through 262-95 remain dependency-denied
+last_updated: "2026-08-28T18:06:11Z"
 last_activity: 2026-08-28
-last_activity_desc: completed Plan 262-101 blocked final-consumer review with one self-reference finding and no downstream authority
+last_activity_desc: planned additive non-recursive inner-v6/outer-v1 source correction, fresh review, and revised downstream custody chain
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 82
+  total_plans: 84
   completed_plans: 78
-  percent: 95
+  percent: 93
 ---
 
 # State: Coward's Game
 
-<!-- Current Plan-101 blocked closeout carrier; Plans 262-92 through 262-95 remain ineligible. -->
+<!-- Current planning topology preserves Plan-101 blocked history and routes only Plan 262-102 next. -->
 <!-- phase-262-plan-101-closeout-status: {"schema_version":"v1.38-plan-262-101-closeout-v1","proof_status":"blocked_candidate_json_hash_self_reference","active_plans":82,"trustworthy_summaries":78,"reviewed_source_commit":"a879bfc6cab49abf2e12a5b882a06b7e9fb446cb","pair_commit":"8c4e74180e36f22e3a44520d2cda145b3aa30671","finding_count":1,"finding":"CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE","finding_root":"sha256:4dfccd91907322bc560584de13570ef5f243ebdeb8a9ce117673befc3dce9953","review_root":"sha256:68c66d072b65a5d1dd30351b609a3bd6f1a327740da966ef2bc37cf92e2425b4","result_root":"sha256:72bc2402c9678c3a719587b8d3c5862fbd12dd0d6abd42b5758d6cf6ef708ddc","portable_reviewed_closure_root":"sha256:b919098d4431100e550b9afe84836c8d21ccf0752852f9574b30647e880b7256","actual_consumer_status":"rejected_expected","focused_tests_passed":140,"plan_98_99_history_preserved":true,"plan_262_92_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"plan-additive-protocol-correction-and-fresh-review","downstream_authority_denied":true} -->
 <!-- Plan-100 source correction and Plan-99 invalidation carriers below are immutable history only. -->
 <!-- phase-262-plan-100-closeout-status: {"schema_version":"v1.38-plan-262-100-closeout-v1","proof_status":"raw_git_object_byte_custody_correction_complete","active_plans":82,"trustworthy_summaries":77,"source_commit":"a879bfc6cab49abf2e12a5b882a06b7e9fb446cb","source_tree":"e6b89de1c699d35b0e5068e0c064b7badd53ad00","source_parent":"71dc34c79a27ba57e67f8a2a2b7471dedade7a09","focused_tests_passed":140,"plan_98_99_history_preserved":true,"plan_101_review_present":false,"plan_262_92_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-262-101-only","downstream_authority_denied":true} -->
@@ -68,11 +68,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 78 summaries across 82 active plans — Plan 262-101 completed blocked; Plans 262-92 through 262-95 remain ineligible
-Status: Phase 262 remains in progress at 77/82 summaries; Plans 262-92 through 262-95 remain dependency-denied, fresh accepted remains 0/540, and downstream authority remains denied
-Last activity: 2026-08-28 — completed exact raw Git-object byte custody correction without review, seal, envelope, live, or downstream publication
+Plan: 78 summaries across 84 active plans — Plan 262-102 is the sole next action; Plan 262-103 and Plans 262-92 through 262-95 remain dependency-denied
+Status: Phase 262 remains in progress at 78/84 summaries; fresh accepted remains 0/540 and downstream authority remains denied
+Last activity: 2026-08-28 — planned the additive non-recursive review correction and fresh consumer re-review without evidence or live publication
 
-Progress: [█████████░] 94% of active Phase-262 plans summarized (77/82); phase goal not achieved because ADMIT-03 remains blocked
+Progress: [█████████░] 93% of active Phase-262 plans summarized (78/84); phase goal not achieved because ADMIT-03 remains blocked
 
 ## Performance Metrics
 
@@ -94,7 +94,7 @@ Progress: [█████████░] 94% of active Phase-262 plans summari
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 82 plans/78 summaries. Plan 262-101 published one blocked v5 pair after the actual no-publish consumer rejected the exact committed candidate as expected. Finding `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` leaves Plan 262-92 ineligible and stops Plans 262-92 through 262-95. Fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
+**Current topology:** Active discovery is 84 plans/78 summaries. Plan 262-101 remains immutable blocked v5 history after finding `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE`. Plan 262-102 is the sole next action at Wave 84 and may add only the pinned non-recursive inner-v6/outer-v1 source/synthetic protocol. Plan 262-103 at Wave 85 must independently review exact Plan-102 source, commit the exact candidate/REVIEW/carrier trio in an owner-only isolated clone, and run the actual final consumer before literal-zero publication. Revised Plans 262-92 through 262-95 follow only at Waves 86-89; a blocked Plan-103 branch stops them. Fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -336,15 +336,20 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Preserve committed payloads through one NUL-terminated regular blob entry, raw `cat-file blob`, no-follow working reads, executable projection, and final `Buffer.equals`; the trimmed helper remains metadata-only.
 - [Phase 262]: Only the future Plan-101 v5 pair is current review input; Plan-98/99 remain immutable invalid history and Plan-92 remains ineligible until literal-zero consumer success.
 - [Phase 262]: Plan 262-101 publishes a blocked v5 pair because exact final candidate JSON self-hashing is cryptographically self-referential; Plan 92 remains ineligible. — The exact candidate bytes cannot contain their own whole-file SHA-256 without a cryptographic fixed point.
+- [Phase 262]: Correct the self-reference additively as Plan 262-102 source-only inner candidate v6 plus outer carrier v1, followed by fresh Plan 262-103 review; preserve every Plan-100/101 path and byte.
+- [Phase 262]: Pin candidate schema `v1.38-plan-262-103-git-object-byte-custody-rereview-payload-v6`, protocol `git-object-byte-custody-nonrecursive-v1`, and domain `v1.38:plan-262-103:git-object-byte-custody:candidate-payload:v6`; omit exactly candidatePayloadRoot from its canonical preimage and forbid own file SHA/blob/commit custody.
+- [Phase 262]: Pin carrier schema `v1.38-plan-262-103-git-object-byte-custody-rereview-carrier-v1`, protocol `git-object-byte-custody-external-carrier-v1`, and domain `v1.38:plan-262-103:git-object-byte-custody:carrier:v1`; omit exactly carrierRoot and forbid carrier own SHA/blob/commit custody.
+- [Phase 262]: Plan 262-103 must run the actual Plan-102 no-publish consumer against the exact disposable committed candidate/REVIEW/carrier trio before zero publication; literal zero makes only Plan 92 eligible, while any finding publishes a checker-valid blocked trio and stops.
+- [Phase 262]: Execute the revised chain only as 262-102 -> 262-103 -> 262-92 -> 262-93 -> 262-94 -> 262-95 at Waves 84 through 89; Plan 262-102 is the sole next action and every successor remains dependency-denied.
 
 ### Pending Todos
 
-- Do not dispatch Plans 262-92 through 262-95. Any continuation requires a separately planned additive protocol correction and another fresh review at new immutable destinations.
+- Dispatch Plan 262-102 only. Do not dispatch Plan 262-103 or Plans 262-92 through 262-95 until each exact predecessor summary and branch condition passes.
 
 ### Current Blocker/Concerns
 
 - ADMIT-03 is the sole substantive blocker: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
-- Plan 262-101 found `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` and published a checker-valid blocked v5 pair. Plan 262-92 remains ineligible, and Plans 262-92 through 262-95 remain stopped.
+- Plan 262-101 found `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` and published a checker-valid blocked v5 pair. Plan 262-92 remains ineligible until Plan 262-102 source and a fresh literal-zero actual-consumer-success Plan 262-103 carrier exist; any blocked Plan-103 branch stops the chain.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
 - Revised SEAL-01 is satisfied only at `single_operator_local_seal_v1_no_hostile_same_uid`; no independent-custody, hostile-same-UID, malicious-owner, or pathname-launch replacement resistance is claimed.
 - Formation, holdout, public/product/production, counted-play, gameplay-change, archive, and tag authority remain false.
@@ -398,10 +403,10 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T17:45:21.848Z
-Stopped at: Plan 262-101 published one blocked v5 pair; Plans 262-92 through 262-95 remain ineligible
+Last session: 2026-08-28T18:06:11Z
+Stopped at: Plan 262-102 is the sole next action; Plan 262-103 and Plans 262-92 through 262-95 remain dependency-denied
 Resume file: None
 
 ### Blockers
 
-- Plan 262-101 finding `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` blocks Plans 262-92 through 262-95; continuation requires a separately planned additive protocol correction and fresh review.
+- Plan 262-101 remains blocked history. Plan 262-102 must complete before Plan 262-103 can perform the fresh review; Plan 262-92 requires a literal-zero Plan-103 carrier with actual-consumer success.
