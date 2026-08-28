@@ -595,10 +595,10 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
 }
 
 export const V138_PHASE_262_HISTORICAL_CHECKOUTS_V4_PATH =
-  ".planning/artifacts/v1.38-phase-262-historical-correction-checkouts-v4.json"
+  ".planning/artifacts/v1.38-phase-262-historical-correction-checkouts-v5.json"
 export const deriveV138Phase262HistoricalCheckoutEvidenceV4 = () =>
   Object.freeze({
-    schemaVersion: "v1.38-phase-262-historical-correction-checkouts-v4",
+    schemaVersion: "v1.38-phase-262-historical-correction-checkouts-v5",
     results: runV138Phase262HistoricalCorrectionCheckoutsV4(),
   })
 export const checkV138Phase262HistoricalCheckoutEvidenceV4 = (): true => {
@@ -611,7 +611,7 @@ export const checkV138Phase262HistoricalCheckoutEvidenceV4 = (): true => {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv[2] === "--check") {
     checkV138Phase262HistoricalCheckoutEvidenceV4()
-    process.stdout.write("historical_correction_checkout_provenance_v4_valid=true\n")
+    process.stdout.write("historical_correction_checkout_provenance_v5_valid=true\n")
   } else if (process.argv[2] === "--derive")
     process.stdout.write(`${JSON.stringify(deriveV138Phase262HistoricalCheckoutEvidenceV4())}\n`)
   else if (
