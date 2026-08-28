@@ -1,8 +1,8 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-28T00:23:58Z
+fixed_at: 2026-08-28T01:15:00Z
 review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md
-iteration: 4
+iteration: 5
 findings_in_scope: 6
 fixed: 6
 skipped: 0
@@ -11,79 +11,72 @@ status: all_fixed
 
 # Phase 262: Code Review Fix Report
 
-**Fixed at:** 2026-08-28T00:23:58Z
+**Fixed at:** 2026-08-28T01:15:00Z
 **Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-REVIEW.md`
-**Iteration:** 4
+**Iteration:** 5
 
 **Summary:**
 - Findings in scope: 6
 - Fixed: 6
 - Skipped: 0
 
-All six fixes change transaction, containment, crash-recovery, or integrity logic. They require the planned independent iteration-4 source re-review before any later authority decision. Correction-v4 is additive, preserves the empirical 0/540 outcome, and grants no authority.
+All work is additive under v3 successor paths. The protected v2 tree, Plan-262-88 evidence, terminal, journal, and fresh 0/540 result remain unchanged. Correction-v5 root is `sha256:f55a78bed76ca40fbb817fac37c168bf12b684b0772e7dc4876f3f6666ae777a`; every authority remains false.
 
 ## Fixed Issues
 
-### CR-01: Exported mutation functions still bypass the composed controller
+### CR-01: Native helper mutation bypass
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.ts`, `scripts/lib/v1-38-durable-pair-successor-v2.test.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts`, `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts`, `scripts/lib/v1-38-secure-workspace-path-v2.ts`, `scripts/native/v1-38-successor-transaction-helper-v2.c`
-**Commit:** f9346c25f3c2398fdd54f472e08317d7cbb1fd93
-**Applied fix:** Removed every importable pair, lifecycle, directory-creation, and directory-lock mutation export. Pair and lifecycle modules now expose pure intent derivation only. The controller owns the sole private native invocation and exposes only non-writing constants/source checks plus two non-live CLI checks; its synthetic mode creates and removes its own temporary root. Export-inventory tests prove dynamic imports cannot obtain a write, publish, apply, invoke, worker, or run function.
+**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v3.ts`, its test, and `scripts/native/v1-38-successor-transaction-helper-v3.c`
+**Commits:** `2a47350b`, `cff04324`
+**Applied fix:** Fresh controller-compiled bytes live in a random owner-only 0700 directory and are source/compiler/output-hash, mode, and owner verified. Each child gets a random compile-time token, nonce-bound capability fd 3, and trusted-root fd 4. The helper authenticates full stdin intent and sorted locks, rejects ordinary argv/missing/wrong capabilities, and disappears after exec handshake. Direct invocation causes no mutation.
 **Status:** fixed; requires independent verification
 
-### CR-02: Overlapping pair transactions take different locks and leave a partial losing pair
+### CR-02: Partial deterministic transaction files
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`
-**Commit:** a1244815a0caec0f636442096eb2c5258bb4a0d4
-**Applied fix:** The controller acquires one kernel-owned `/usr/bin/lockf -t 0` advisory lock for each normalized canonical target in deterministic sorted order and holds the nested lock chain through native prechecks, publication, both postconditions, and cleanup. Fifty `{shared,left}` versus `{right,shared}` races each produced exactly one complete pair and no losing unique member.
+**Files modified:** controller-v3, its test, and transaction-helper-v3
+**Commits:** `3f9d5a2b`, `cff04324`
+**Applied fix:** Unique namespace-and-nonce uncommitted files are fully written and fsynced before no-replace canonical linking. Authenticated abandoned temps are cleaned durably. Mid-write and pre-fsync deaths recover with no accepted partial canonical file or retained temp.
 **Status:** fixed; requires independent verification
 
-### CR-03: Disjoint pair transactions collide in the shared stage namespace
+### CR-03: Unauthenticated correction evidence
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`
-**Commit:** fc6c39b5d1ac518388519ccb5ddd9b2c9a192248
-**Applied fix:** Stage names now derive from the complete normalized pair intent: trusted-root path/device/inode, intent path, transaction ID, both normalized targets, and both content digests. The durable intent authenticates the same descriptor. One hundred simultaneous disjoint same-ID/same-bytes races completed both pairs in every iteration.
+**Files modified:** correction-v5 checker/test/artifact and `vitest.config.ts`
+**Commits:** `97f882fe`, `cff04324`, `d3758fb9`
+**Applied fix:** Correction-v5 descriptor-authenticates disposition, terminal, journal, review, source, current remediation, v1 protected/remediation files, and prior corrections; immutable successor manifests are verified at their commits. It validates complete disposition/counter keysets, evidence joins, and all thirteen false authority bits. Mutations across each class fail before derivation.
 **Status:** fixed; requires independent verification
 
-### CR-04: A process exit leaves locks that permanently block crash recovery
+### CR-04: Mutable aggregate invalidates correction
 
-**Files modified:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`
-**Commit:** e949441acc77c7fcd4f806618151a4e9185876b2
-**Applied fix:** Removed directory pseudo-locks. Kernel advisory locks are released on process exit. Forced `_exit(97)` injection covers all five pair boundaries and all five two-step lifecycle boundaries (intent, each stage/member/step, status stage, and status publication); ten fresh processes recovered without deleting a lock, intent, stage, backup, or status byte.
+**Files modified:** correction-v5 checker/test/artifact
+**Commits:** `97f882fe`, `8a22811a`
+**Applied fix:** Only the immutable commit-qualified trigger is correction-rooted; terminal rereview remains null until separately authenticated. Mutable aggregate observation is diagnostic-only and absent from committed validation. Aggregate replacement leaves committed correction-v5 valid.
 **Status:** fixed; requires independent verification
 
-### CR-05: Internal directory authentication is not held through subsequent writes
+### CR-05: Intermediate-directory replacement gap
 
-**Files modified:** `scripts/native/v1-38-successor-transaction-helper-v2.c`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts`, `scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts`
-**Commit:** 41afe1605987d085ca793469bbc81ca587701b2f
-**Applied fix:** Added a committed dependency-free native helper compiled locally with clang. It opens and verifies the trusted root and every target parent using `openat`/`fstatat`, `O_NOFOLLOW`, and `AT_SYMLINK_NOFOLLOW`, retains those descriptors, and performs every pair/lifecycle mutation with descriptor-relative `openat`, `linkat`, and `unlinkat`. Synchronized post-open/pre-write directory replacement tests for pair and lifecycle leave both external replacement directories empty while completing through the held authenticated directory descriptors.
+**Files modified:** `scripts/native/v1-38-secure-manifest-reader-v3.c`, secure-workspace-path-v3 and its test
+**Commits:** `87982e9f`, `cff04324`
+**Applied fix:** The reader holds authenticated root/parent descriptors through the final no-follow regular-file open. Correction-v5 uses it for evidence. A synchronized replacement test reads the authenticated inode and ignores the external symlink target.
 **Status:** fixed; requires independent verification
 
-### CR-06: Correction-v3 trusts mutable checker exports for its immutable manifests
+### WR-01: Lifecycle recovery residue
 
-**Files modified:** `scripts/check-v1-38-phase-262-review-fix-correction-v4.ts`, `scripts/check-v1-38-phase-262-review-fix-correction-v4.test.ts`, `.planning/artifacts/v1.38-phase-262-review-fix-correction-v4.json`
-**Commit:** 1b1c66b45cfd49fc01cf48c75862a2121837b69e
-**Applied fix:** Published additive correction-v4 without importing any prior checker manifest. It authenticates exact correction-v1/v2/v3 artifact bytes and roots, binds literal count plus canonical path-and-digest roots for every v1 protected/remediation, v2/v3 successor, and forbidden manifest, compares every path and digest across prior artifacts, and deep-freezes every nested value. It binds the immutable iteration-4 review blob at `ca6aaaa8`, the complete current successor/native manifest, exhausted 0/540, absent reproduction-v16, and all authority false. Tests mutate nested prior paths/digests, successor bytes, forbidden paths, and review bytes; every mutation fails closed.
-**Correction artifact SHA-256:** `sha256:9f2fc7b1b3008e877ba7b39a05ac4c90a0cdd86afc57ad18a93fda1b7157f36c`
-**Correction root:** `sha256:279c37b8acd63c432921242d07276b33f1b8265b1a96cd610284f0785379b3b3`
+**Files modified:** controller-v3, its test, and transaction-helper-v3
+**Commits:** `a56d96b9`, `cff04324`
+**Applied fix:** After all canonical postconditions, lifecycle intent, before images, after stages, and status stage are descriptor-unlinked and directories fsynced. Initial and recovered-success paths are idempotent and leave an empty staging namespace.
 **Status:** fixed; requires independent verification
 
 ## Verification
 
-- Current serialized successor/correction/lifecycle suite: 13 files, 194 tests passed; correction-v1 separately passed 4/4.
-- Native helper: clang `-std=c11 -Wall -Wextra -Werror` passed.
-- TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
-- Current canonical correction-v1 and correction-v4 checkers passed.
-- Immutable correction-v2 publication checkout `8ae8cba0`: 17/17 tests and canonical checker passed.
-- Immutable correction-v3 publication checkout `7b56ecdc`: 27/27 tests and canonical checker passed.
-- Pair concurrency: 50/50 overlapping races left no partial loser; 100/100 disjoint same-ID/same-bytes races completed both transactions.
-- Crash recovery: 5/5 pair and 5/5 lifecycle forced-exit boundaries recovered without manual deletion.
-- Directory replacement: pair and lifecycle post-open/pre-write replacements left external directories empty.
-- Plan 262-88 remains immutable `non_pass` / `exhausted` at fresh 0/540 with no reproduction or activation. Its historical clean-assurance adjudication is superseded for future authority by correction-v4 and the required independent re-review.
-- Plan 262-89 lifecycle tests passed; the canonical lifecycle status remains Phase 262 `incomplete`, verification `gaps_found`, lifecycle mutation false, and every downstream authority false.
+- Current active review suite: 17/17 files and 266/266 tests passed. Immutable correction-v2/v3 checkout-only tests are excluded from ordinary current-tree discovery without changing protected bytes.
+- Correction-v5: 25/25 passed; canonical checker passed.
+- Plan-262-88: 20/20 passed with required runtime-only 0700/0600 receipt custody; exact clean non-pass root remains `sha256:03ba0268fca01ea40e08d323565bbfcfffefa8bf7ddfe9c95b58fa423c32dd7f`.
+- Plan-262-89 final checker: expected `gaps_found`, `completionMutated: false`, lifecycle root `sha256:e762aa430aadcd1986d04c79dc9d102641e9a177f099ee066bcb9464c09f94a6`.
+- Both native v3 helpers pass `clang -std=c11 -Wall -Wextra -Werror`; TypeScript no-emit passes.
+- Protected v2 paths match `24d6e902` byte-for-byte. No live execution or authority publication occurred.
 
 ---
 
-_Fixed: 2026-08-28T00:23:58Z_
+_Fixed: 2026-08-28T01:15:00Z_
 _Fixer: the agent (gsd-code-fixer)_
-_Iteration: 4_
+_Iteration: 5_
