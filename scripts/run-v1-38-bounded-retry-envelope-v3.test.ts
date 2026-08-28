@@ -33,8 +33,11 @@ import {
   V138_BOUNDED_RETRY_V3_PATHS as CONTROLLER_PATHS,
   V138_BOUNDED_RETRY_V3_PRODUCTION_MODES,
   acquireV138RetryV3OwnerLease,
+  computeV138Plan26299ReviewRoot,
+  computeV138ReviewedExecutionClosureRoot,
   executeV138BoundedRetryV3Cli,
   runV138BoundedRetryV3Controller,
+  validateV138Plan26299ReviewedExecutionClosure,
   type V138BoundedRetryV3ControllerEffects,
 } from "./run-v1-38-bounded-retry-envelope-v3.js"
 import {
@@ -48,6 +51,158 @@ import {
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
 const roots: string[] = []
+
+const portableClosure = () => ({
+  schemaVersion: "v1.38-reviewed-execution-closure-v2" as const,
+  sourceCommit: "1".repeat(40),
+  sourceTree: "2".repeat(40),
+  sourceParent: "3".repeat(40),
+  checkoutByteManifestRoot: `sha256:${"4".repeat(64)}` as const,
+  installedClosureRoot: `sha256:${"5".repeat(64)}` as const,
+  gitExecutable: "/usr/bin/git" as const,
+  gitExecutableSha256: `sha256:${"6".repeat(64)}` as const,
+  gitIsolationRoot: `sha256:${"7".repeat(64)}` as const,
+  nodeSha256: `sha256:${"8".repeat(64)}` as const,
+  pnpmDistributionSha256: `sha256:${"9".repeat(64)}` as const,
+  nativeSourcesRoot: `sha256:${"a".repeat(64)}` as const,
+  pathnameLaunchReplacementResistanceClaimed: false as const,
+})
+
+const plan26299Review = () => {
+  const reviewedExecutionClosure = portableClosure()
+  const body = {
+    schemaVersion: "v1.38-plan-262-99-bounded-retry-source-rereview-v4",
+    reviewProtocol:
+      "fresh-independent-plan-98-portable-closure-rereview-v4",
+    status: "zero_findings",
+    correctedSource: {
+      commit: reviewedExecutionClosure.sourceCommit,
+      tree: reviewedExecutionClosure.sourceTree,
+      parent: reviewedExecutionClosure.sourceParent,
+      noLaterRewrite: true,
+      summaryTrustedAsVerdict: false,
+      files: [
+        {
+          path: "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
+          mode: "100644",
+          blob: "b".repeat(40),
+          byteLength: 1,
+          sha256: `sha256:${"b".repeat(64)}`,
+        },
+        {
+          path: "scripts/run-v1-38-bounded-retry-envelope-v3.test.ts",
+          mode: "100644",
+          blob: "c".repeat(40),
+          byteLength: 1,
+          sha256: `sha256:${"c".repeat(64)}`,
+        },
+      ],
+    },
+    protectedHistory: {
+      historicalResultReinterpreted: false,
+      plan96: {
+        sourceCommit: "1c1f42b7fcd72d19ded89cca3ddd522090475b29",
+        sourceTree: "37d10e3dfee8501e59e686802ffe684167585c94",
+        sourceParent: "aae9f5dab231f83a0238cf5448f5e1e1d8ad4f28",
+        summarySha256:
+          "sha256:a3b2f63c542c69f565ca8a56d0bc8ee7e45971c52ff3ee6556e1d4f93d3132d5",
+      },
+      plan97: {
+        schemaVersion:
+          "v1.38-plan-262-97-bounded-retry-source-rereview-v3",
+        reviewRoot:
+          "sha256:2765f8c028a7c0e089b401898d80f12fa425e993f13255423abb052f22adee90",
+        findingRoot:
+          "sha256:638909ad31b44fc81e01b6f081b2b1c97ad4091413e4c285c83e61d6fbbc152a",
+        findingCount: 0,
+        sourceReviewPassed: true,
+        artifactSha256:
+          "sha256:08fd056f3056bb45daf6e82a04eab72bd4ca73bda812512cad8b04960ce2b2e9",
+        reviewSha256:
+          "sha256:1a7737aaa37ff886ba90e37a73d9643b5e0fdea321a6cb859e475f906562bfe7",
+        summarySha256:
+          "sha256:fa9dca2adbb113f0c30925ae8548aac935888066e2d9d2df73de793c1b5e5cc1",
+      },
+    },
+    failedAttempt: {
+      plan: "262-92",
+      stopCode: "V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID",
+      status: "integrity_stop",
+      canonicalWrites: 0,
+      freshCharged: 0,
+      freshAccepted: 0,
+      localSecretAccessed: false,
+      identityConsumed: false,
+    },
+    execution: {
+      focusedTestsPassed: 0,
+      sourceOnlyPassed: true,
+      checkoutBytesMatchedBefore: true,
+      checkoutBytesMatchedAfter: true,
+      cleanupComplete: true,
+      canonicalWrites: 0,
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      localSecretAccessed: false,
+      identityConsumed: false,
+    },
+    reviewedExecutionClosure: {
+      ...reviewedExecutionClosure,
+      reviewedExecutionClosureRoot:
+        computeV138ReviewedExecutionClosureRoot(reviewedExecutionClosure),
+    },
+    findings: [],
+    findingCount: 0,
+    findingRoot: `sha256:${"d".repeat(64)}`,
+    sourceReviewPassed: true,
+    identityClaims: {
+      independentPersonClaimed: false,
+      externalIdentityClaimed: false,
+      cryptographicReviewerIdentityClaimed: false,
+      independentCustodyClaimed: false,
+      separatePermissioningClaimed: false,
+      maliciousOperatorResistanceClaimed: false,
+      hostileSameUidResistanceClaimed: false,
+      pathnameLaunchReplacementResistanceClaimed: false,
+    },
+    authority: {
+      plan26292Eligible: true,
+      authorizesExecution: false,
+      authorizationCreated: false,
+      sealV13Created: false,
+      retryEnvelopeV3Created: false,
+      journalV3Created: false,
+      receiptsV3Created: false,
+      terminalV3Created: false,
+      reproductionV17Created: false,
+      dispositionV3Created: false,
+      correctionV11Created: false,
+      route11ActivationCreated: false,
+      readinessV3Created: false,
+      lifecycleV3Created: false,
+      liveInvoked: false,
+      localSecretAccessed: false,
+      lifecycleMutated: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      phase263PlanningAuthorized: false,
+      phase263ExecutionAuthorized: false,
+      candidateSearchAuthorized: false,
+      formationMaterializationAuthorized: false,
+      holdoutOpeningAuthorized: false,
+      publicAuthorized: false,
+      productAuthorized: false,
+      activationAuthorized: false,
+      productionAuthorized: false,
+      countedPlayAuthorized: false,
+      gameplayChangeAuthorized: false,
+      archiveAuthorized: false,
+      tagAuthorized: false,
+    },
+  }
+  return { ...body, reviewRoot: computeV138Plan26299ReviewRoot(body) }
+}
 
 afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true })
@@ -373,6 +528,107 @@ describe("bounded retry envelope v3 contract", () => {
 })
 
 describe("synthetic-only hardened v3 controller", () => {
+  it("preserves the failed Plan-92 Plan-97 shape mismatch as zero-consumption history", () => {
+    const historical = JSON.parse(
+      readFileSync(
+        path.join(
+          process.cwd(),
+          ".planning/artifacts/v1.38-plan-262-97-bounded-retry-source-rereview-v3.json",
+        ),
+        "utf8",
+      ),
+    )
+    expect(() =>
+      validateV138Plan26299ReviewedExecutionClosure(
+        historical,
+        portableClosure() as never,
+      ),
+    ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID")
+    expect(historical.authority).toMatchObject({
+      canonicalWrites: undefined,
+      freshCharged: 0,
+      freshAccepted: 0,
+      liveInvoked: false,
+      localSecretAccessed: false,
+    })
+    for (const destination of [
+      CONTROLLER_PATHS.seal,
+      CONTROLLER_PATHS.envelope,
+      CONTROLLER_PATHS.journal,
+      CONTROLLER_PATHS.terminal,
+      CONTROLLER_PATHS.reproduction,
+      CONTROLLER_PATHS.receiptManifest,
+      CONTROLLER_PATHS.disposition,
+      CONTROLLER_PATHS.correction,
+      CONTROLLER_PATHS.activation,
+      CONTROLLER_PATHS.readiness,
+      CONTROLLER_PATHS.lifecycle,
+    ]) expect(requireV138RetryV3DestinationAbsent(process.cwd(), destination)).toBe(true)
+  })
+
+  it("accepts only the exact Plan-99 portable reviewed-closure schema and domain", () => {
+    const review = plan26299Review()
+    const current = {
+      ...portableClosure(),
+      schemaVersion: "v1.38-retry-v3-execution-closure-v1",
+      gitObjectRoot: `sha256:${"e".repeat(64)}`,
+      executionClosureRoot: `sha256:${"f".repeat(64)}`,
+    } as const
+    expect(
+      validateV138Plan26299ReviewedExecutionClosure(review, current),
+    ).toBe(current)
+    expect(review.reviewedExecutionClosure.reviewedExecutionClosureRoot).not.toBe(
+      review.reviewedExecutionClosure.installedClosureRoot,
+    )
+    expect(review.reviewedExecutionClosure).not.toHaveProperty("gitObjectRoot")
+    expect(CONTROLLER_PATHS.sourceReview).toBe(
+      ".planning/artifacts/v1.38-plan-262-99-bounded-retry-source-rereview-v4.json",
+    )
+  })
+
+  it.each([
+    ["missing closure", (review: any) => delete review.reviewedExecutionClosure],
+    ["moved closure", (review: any) => {
+      review.executionClosure = review.reviewedExecutionClosure
+      delete review.reviewedExecutionClosure
+    }],
+    ["extra closure member", (review: any) => {
+      review.reviewedExecutionClosure.extra = false
+    }],
+    ["portable git object root", (review: any) => {
+      review.reviewedExecutionClosure.gitObjectRoot = `sha256:${"e".repeat(64)}`
+    }],
+    ["installed root alias", (review: any) => {
+      review.reviewedExecutionClosure.reviewedExecutionClosureRoot =
+        review.reviewedExecutionClosure.installedClosureRoot
+    }],
+    ["nonzero finding", (review: any) => {
+      review.findingCount = 1
+      review.findings = [{ code: "X" }]
+    }],
+    ["consumed capacity", (review: any) => {
+      review.authority.freshCharged = 1
+    }],
+    ["broader authority", (review: any) => {
+      review.authority.phase263PlanningAuthorized = true
+    }],
+    ["historical reinterpretation", (review: any) => {
+      review.protectedHistory.historicalResultReinterpreted = true
+    }],
+  ])("rejects %s before closure consumption", (_name, mutate) => {
+    const review = structuredClone(plan26299Review()) as any
+    mutate(review)
+    const current = {
+      ...portableClosure(),
+      schemaVersion: "v1.38-retry-v3-execution-closure-v1",
+      gitObjectRoot: `sha256:${"e".repeat(64)}`,
+      executionClosureRoot: `sha256:${"f".repeat(64)}`,
+    } as const
+    expect(() =>
+      validateV138Plan26299ReviewedExecutionClosure(review, current),
+    ).toThrow()
+  })
+
   it("binds native coherent custody before any future live effect", () => {
     expect(V138_BOUNDED_RETRY_V3_CUSTODY).toMatchObject({
       coherentRequiredLeafAndAbsenceBatch: true,
