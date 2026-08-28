@@ -87,7 +87,7 @@ coverage:
         status: pass
     human_judgment: false
 
-duration: 18min
+duration: 24min
 completed: 2026-08-28
 status: complete
 ---
@@ -98,9 +98,9 @@ status: complete
 
 ## Performance
 
-- **Duration:** 18 min
+- **Duration:** 24 min
 - **Started:** 2026-08-28T13:58:49Z
-- **Completed:** 2026-08-28T14:16:48Z
+- **Completed:** 2026-08-28T14:22:35Z
 - **Tasks:** 2
 - **Files modified:** 6
 
@@ -114,14 +114,14 @@ status: complete
 
 ## Corrected Source Custody
 
-- **Source-completion commit:** `97e96b051776f358f3bbb1678489da0c991f8a8e`
-- **Tree:** `95afc2131cf120e04a296b06b49b3963873eea76`
-- **Sole parent:** `afcde8e3fc7caf03bbe9ce540a33c47472bb77aa`
+- **Source-completion commit:** `1c1f42b7fcd72d19ded89cca3ddd522090475b29`
+- **Tree:** `37d10e3dfee8501e59e686802ffe684167585c94`
+- **Sole parent:** `aae9f5dab231f83a0238cf5448f5e1e1d8ad4f28`
 
 | Mode | Git blob | SHA-256 | Path |
 |---|---|---|---|
 | `100644` | `1278133e15675971c5d73d18db07a11856624756` | `f85eaf36f6f7cfe300bb55807bdf8ba45aada2f7b1782679c4a9897eda285400` | `scripts/lib/v1-38-bounded-retry-envelope-v3.ts` |
-| `100644` | `81e1ae1b3a097a2e76fbc33abfd55bd27903a6dd` | `6fa04feb5620a34dece5e2af42747d107013900e0b914377fdbb5fc8bdedb865` | `scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts` |
+| `100644` | `c2f92f72e085fc8354e72947ea0ba21130bdfda1` | `a62d136cf2679e49d9db5eb4a35ed63751212fabeff58281246fda3ec2fe8234` | `scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts` |
 | `100644` | `99da3517ccb8b919759663daf713b4f20337b8b1` | `fef25dc7eab2cb372e6cd7549adb8836ab466340bd8a18b5eb748de906aefcea` | `scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c` |
 | `100644` | `6b852100121c883e13b3ddbd24275bd05dc62b92` | `490012106b7fd5572b97dffbd8f73999ecf82682ed419ac1fc3f6ffef1248216` | `scripts/run-v1-38-bounded-retry-envelope-v3.ts` |
 | `100644` | `c0570389106a85fc918e2fa9be4fb8157cfe5b0e` | `4753a9b0f98c2ed50ba36123e32ef0c9269d5d66e216d1f84dd9739cad90d19c` | `scripts/run-v1-38-bounded-retry-envelope-v3.test.ts` |
@@ -144,10 +144,11 @@ Plan 91 remains `blocked` over reviewed source commit `32f53bb743db799810dff820b
 3. **Task 2 RED: authority-path and crash contract** — `e7e99b32`
 4. **Task 2 GREEN: controller-wide custody enforcement** — `afcde8e3`
 5. **Task 2 matrix completion:** exhaustive native crash and closure-drift cases — `97e96b05`
+6. **Rule 1 correctness fix:** preserve reviewed source binding across later summary/review commits — `1c1f42b7`
 
 ## Verification
 
-- Focused Vitest command passed **87/87** tests in **81.22 seconds** on the final committed source.
+- Focused Vitest command passed **87/87** tests in **81.03 seconds** on the final committed source.
 - `pnpm exec tsc --noEmit --pretty false` passed.
 - `pnpm exec tsx scripts/run-v1-38-bounded-retry-envelope-v3.ts --check-source-only` returned `status:passed`, `liveInvoked:false`, `freshCharged:0`, `freshAccepted:0`, and every downstream authority false.
 - `git diff --check` passed.
@@ -193,7 +194,7 @@ None - no package, secret, service, or manual action was required.
 
 ## Self-Check: PASSED
 
-- Commits `89669823`, `8fbc28d0`, `e7e99b32`, `afcde8e3`, and `97e96b05` exist.
+- Commits `89669823`, `8fbc28d0`, `e7e99b32`, `afcde8e3`, `97e96b05`, and `1c1f42b7` exist.
 - All five prescribed source/test files and this summary exist.
 - Source custody, protected history, 87 tests, TypeScript, source-only mode, diff hygiene, and exact forbidden-destination absence passed.
 

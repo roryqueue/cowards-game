@@ -86,7 +86,7 @@ Progress: [█████████░] 94% of active Phase-262 plans summari
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 78 plans/73 summaries. Plan 262-91 remains an exact immutable 11-finding blocked review over Plan-90 source. Plan 262-96 additively corrected execution custody under source-completion commit `97e96b051776f358f3bbb1678489da0c991f8a8e` and passed 87/87 focused tests without live/canonical writes. Only Plan 262-97 may independently re-review those corrected committed bytes; Plans 262-92 through 262-95 remain unexecuted and ineligible until a literal zero-finding Plan-97 pair exists. Fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
+**Current topology:** Active discovery is 78 plans/73 summaries. Plan 262-91 remains an exact immutable 11-finding blocked review over Plan-90 source. Plan 262-96 additively corrected execution custody under source-completion commit `1c1f42b7fcd72d19ded89cca3ddd522090475b29` and passed 87/87 focused tests without live/canonical writes. Only Plan 262-97 may independently re-review those corrected committed bytes; Plans 262-92 through 262-95 remain unexecuted and ineligible until a literal zero-finding Plan-97 pair exists. Fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -156,7 +156,7 @@ Progress: [█████████░] 94% of active Phase-262 plans summari
 | Phase 262 P85 | 16min | 2 tasks | 5 files |
 | Phase 262 P86 | 4min | 2 tasks | 3 files |
 | Phase 262 P87 | 35 min | 2 tasks | 18 files |
-| Phase 262 P96 | 18min | 2 tasks | 6 files |
+| Phase 262 P96 | 24min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
