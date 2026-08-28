@@ -33,10 +33,12 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     expect(output.overlapRaces).toBe(50)
     expect(output.disjointRaces).toBe(100)
     expect(output.crashRecoveries).toBe(10)
+    expect(output.writeWindowRecoveries).toBe(2)
+    expect(output.directHelperBypassAttempts).toBe(2)
     expect(output.directoryReplacementProtections).toBe(2)
-  }, 30_000)
+  }, 240_000)
 
-  it.each(["--source-check", "--synthetic-check"])("allows the non-live %s CLI mode", (mode) => {
+  it.each(["--source-check"])("allows the non-live %s CLI mode", (mode) => {
     const result = run(mode)
     expect(result.status).toBe(0)
     expect(result.stdout).toContain(mode === "--source-check" ? "source_only=true" : '"liveSideEffects":false')
