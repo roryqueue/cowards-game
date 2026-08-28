@@ -23,6 +23,7 @@ import {
   computeV138LiveV8ReviewPayloadRoot,
   computeV138LiveV8SupplementRoot,
   executeV138LiveV8Cli,
+  settleV138LiveV8ProducerOutcomeForReview,
   type V138LiveV8ReviewBundle,
   type V138LiveV8Supplement,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v8.js"
@@ -390,4 +391,27 @@ describe("Plan 262-107 reviewed live-v8 adapter", () => {
       rmSync(owner, { recursive: true, force: true })
     }
   }, 180_000)
+
+  it("preserves a producer rejection after a successful post-check", () => {
+    const producerError = new Error("producer rejected")
+    expect(() =>
+      settleV138LiveV8ProducerOutcomeForReview(producerError, undefined),
+    ).toThrow(producerError)
+  })
+
+  it("surfaces post-check drift without masking the producer rejection", () => {
+    const producerError = new Error("producer rejected")
+    const custodyError = new TypeError("V138_LIVE_V8_POST_RUN_CUSTODY_CHANGED")
+    try {
+      settleV138LiveV8ProducerOutcomeForReview(producerError, custodyError)
+      throw new Error("expected combined failure")
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).cause).toBe(producerError)
+      expect((error as AggregateError).errors).toEqual([producerError, custodyError])
+      expect((error as Error).message).toBe(
+        "V138_LIVE_V8_PRODUCER_AND_POST_CUSTODY_FAILED",
+      )
+    }
+  })
 })
