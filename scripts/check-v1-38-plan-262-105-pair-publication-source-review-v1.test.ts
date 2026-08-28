@@ -252,6 +252,19 @@ describe("Plan 262-105 actual four-mode review", () => {
     )
   }, 180_000)
 
+  it("short-circuits all actual modes after a prior source finding", () => {
+    const clone = disposableClone()
+    const sourcePath = path.join(clone, "scripts/run-v1-38-bounded-retry-envelope-v3-review-v7.ts")
+    writeFileSync(sourcePath, Buffer.concat([readFileSync(sourcePath), Buffer.from("\n")]))
+    const reviewed = deriveV138Plan262105ReviewNoPublish(clone)
+    expect(reviewed.result.status).toBe("blocked")
+    expect(reviewed.result.findingCount).toBe(1)
+    expect(reviewed.result.authority.plan26292Eligible).toBe(false)
+    expect(
+      Object.values(reviewed.result.execution.modes).map((mode: any) => mode.status),
+    ).toEqual(Array(4).fill("not_run_due_to_prior_finding"))
+  })
+
   it("checks the canonical published pair and literal-zero mode branch", () => {
     const checked = checkV138Plan262105PublishedReview(repoRoot)
     expect(checked.result.status).toBe("zero_findings")
