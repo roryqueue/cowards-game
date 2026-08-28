@@ -17,6 +17,14 @@ import {
   requireV138RetryV3ReproductionAbsent,
   type V138RetryV3JournalRecord,
 } from "./lib/v1-38-bounded-retry-envelope-v3.js"
+import {
+  V138_BOUNDED_RETRY_V3_CUSTODY,
+  V138_BOUNDED_RETRY_V3_PATHS as CONTROLLER_PATHS,
+  V138_BOUNDED_RETRY_V3_PRODUCTION_MODES,
+  executeV138BoundedRetryV3Cli,
+  runV138BoundedRetryV3Controller,
+  type V138BoundedRetryV3ControllerEffects,
+} from "./run-v1-38-bounded-retry-envelope-v3.js"
 
 const SHA_A = `sha256:${"a".repeat(64)}` as const
 const SHA_B = `sha256:${"b".repeat(64)}` as const
@@ -246,5 +254,153 @@ describe("bounded retry envelope v3 contract", () => {
     expect(() => requireV138RetryV3ReproductionAbsent(root)).toThrow(
       "V138_RETRY_REPRODUCTION_ARTIFACT_INVALID",
     )
+  })
+})
+
+describe("synthetic-only hardened v3 controller", () => {
+  it("binds native coherent custody before any future live effect", () => {
+    expect(V138_BOUNDED_RETRY_V3_CUSTODY).toMatchObject({
+      coherentRequiredLeafAndAbsenceBatch: true,
+      exactBoundedLeafReads: true,
+      postReadLeafGenerationCheck: true,
+      postReadParentGenerationCheck: true,
+      retainedRootInodeLock: true,
+      gitHooksDisabled: true,
+      gitReplacementObjectsDisabled: true,
+      installedRuntimeClosureAuthenticated: true,
+      executedCheckoutBytesBoundToGitBlobs: true,
+      nativePublication: true,
+      rulesAuthority: "MATCH_KERNEL",
+      liveInvoked: false,
+      downstreamAuthority: "denied",
+    })
+    expect(V138_BOUNDED_RETRY_V3_PRODUCTION_MODES).toContain(
+      "--check-source-only",
+    )
+    expect(CONTROLLER_PATHS).toMatchObject({
+      seal: ".planning/artifacts/v1.38-successor-source-seal-v13.json",
+      envelope:
+        ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json",
+      reproduction:
+        ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
+      activation:
+        ".planning/artifacts/v1.38-plan-262-route-11-activation-v1.json",
+    })
+  })
+
+  const effects = (input: {
+    preflight: readonly number[]
+    calibration?: V138BoundedRetryV3ControllerEffects["runCalibration"]
+    reproduction?: V138BoundedRetryV3ControllerEffects["runReproduction"]
+  }): V138BoundedRetryV3ControllerEffects => {
+    let now = 0
+    let observation = 0
+    return {
+      monotonicMilliseconds: () => now++,
+      waitUntil: async (target) => {
+        now = target
+      },
+      observePreflight: async () => ({
+        available: true,
+        effectiveAvailableBasisPoints: input.preflight[observation++] ?? 0,
+      }),
+      runCalibration:
+        input.calibration ??
+        (async () => ({ status: "system_failure", completeCleanup: true })),
+      runReproduction:
+        input.reproduction ??
+        (async () => ({
+          status: "system_failure",
+          acceptedCells: 0,
+          completeCleanup: true,
+        })),
+      appendDurableRecord: () => undefined,
+    }
+  }
+
+  it("exhausts twelve synthetic refusals with durable unique reservations", async () => {
+    const result = await runV138BoundedRetryV3Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: effects({ preflight: Array.from({ length: 12 }, () => 2_499) }),
+    })
+    expect(result.state).toMatchObject({
+      disposition: "exhausted",
+      preflightObservationsConsumed: 12,
+      routeStartsConsumed: 0,
+      acceptedCells: 0,
+      downstreamAuthority: false,
+    })
+    expect(new Set(result.records.map(({ recordRoot }) => recordRoot)).size).toBe(
+      result.records.length,
+    )
+  })
+
+  it("exhausts three admitted clean calibration failures after exact backoff", async () => {
+    const result = await runV138BoundedRetryV3Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: effects({ preflight: [2_500, 2_500, 2_500] }),
+    })
+    expect(result.state).toMatchObject({
+      disposition: "exhausted",
+      routeStartsConsumed: 3,
+      calibrationIdentitiesCharged: 24,
+      reproductionIdentitiesCharged: 0,
+      acceptedCells: 0,
+      completeCleanup: true,
+    })
+  })
+
+  it("accepts exactly one fresh 540-cell synthetic reproduction but grants no authority", async () => {
+    const root = `sha256:${"c".repeat(64)}` as const
+    const result = await runV138BoundedRetryV3Controller({
+      envelope: envelope(),
+      owner: "synthetic-owner",
+      records: [],
+      effects: effects({
+        preflight: [2_500],
+        calibration: async () => ({
+          status: "admitted",
+          completeCleanup: true,
+          supervisionRoot: root,
+        }),
+        reproduction: async () => ({
+          status: "passed_exact",
+          acceptedCells: 540,
+          completeCleanup: true,
+          reproductionRoot: root,
+          artifact: { synthetic: true },
+        }),
+      }),
+    })
+    expect(result.state).toMatchObject({
+      disposition: "succeeded",
+      reproductionIdentitiesCharged: 540,
+      acceptedCells: 540,
+      completeCleanup: true,
+      downstreamAuthority: false,
+    })
+  })
+
+  it("source-only CLI never derives, publishes, or invokes live work", async () => {
+    let forbiddenCalls = 0
+    await executeV138BoundedRetryV3Cli(["--check-source-only"], {
+      repoRoot: process.cwd(),
+      deriveArtifacts: () => {
+        forbiddenCalls += 1
+        throw new Error("must not derive")
+      },
+      runLive: async () => {
+        forbiddenCalls += 1
+      },
+      checkOutcome: () => {
+        forbiddenCalls += 1
+        throw new Error("must not check live outcome")
+      },
+    })
+    expect(forbiddenCalls).toBe(0)
   })
 })
