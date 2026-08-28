@@ -1,5 +1,8 @@
 import { Buffer } from "node:buffer"
 import { createHash } from "node:crypto"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   V138_PLAN_262_103_AUTHORITY_KEYS,
@@ -16,6 +19,11 @@ import {
   validateV138Plan262103Candidate,
   validateV138Plan262103Carrier,
 } from "./lib/v1-38-plan-262-103-nonrecursive-review-contract-v1.js"
+import {
+  V138_PLAN_262_103_FORBIDDEN_DESTINATIONS,
+  consumeV138Plan262103ReviewNoPublish,
+  executeV138Plan262103ConsumerCli,
+} from "./run-v1-38-bounded-retry-envelope-v3-review-v6.js"
 
 const sha256 = (value: Uint8Array | string): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -278,5 +286,129 @@ describe("Plan 262-103 non-recursive review contract", () => {
       expect(() => validateV138Plan262103Carrier(mutation)).toThrow(
         "V138_PLAN_262_103_CARRIER_INVALID",
       )
+  })
+})
+
+describe("Plan 262-103 actual final consumer", () => {
+  it("keeps source-only execution frozen, zero-consumption, and non-authorizing", async () => {
+    const writes: string[] = []
+    const output: string[] = []
+    await executeV138Plan262103ConsumerCli(["--check-source-only"], {
+      repoRoot: "/synthetic",
+      assertSourceOnly: () => undefined,
+      writeOutput: (value) => output.push(value),
+      writeEvidence: (target) => writes.push(target),
+    })
+    expect(writes).toEqual([])
+    expect(JSON.parse(output.join("").trim())).toMatchObject({
+      status: "passed",
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })
+  })
+
+  it("returns a typed ineligible stop for a valid blocked review", () => {
+    const candidate = candidateFixture()
+    candidate.status = "blocked" as "zero_findings"
+    candidate.findings = [
+      {
+        code: "SYNTHETIC_FINDING",
+        severity: "critical",
+        evidenceRoot: `sha256:${"a".repeat(64)}`,
+      },
+    ]
+    candidate.findingCount = 1
+    candidate.sourceReviewPassed = false
+    candidate.execution.actualConsumerStatus = "blocked_review"
+    candidate.authority.plan26292Eligible = false
+    candidate.candidatePayloadRoot =
+      computeV138Plan262103CandidatePayloadRoot(candidate)
+    const carrier = carrierFixture()
+    carrier.status = "blocked" as "zero_findings"
+    carrier.findings = candidate.findings
+    carrier.findingCount = 1
+    carrier.sourceReviewPassed = false
+    carrier.authority.plan26292Eligible = false
+    carrier.actualConsumer.status = "blocked_review"
+    carrier.candidate.candidatePayloadRoot = candidate.candidatePayloadRoot
+    carrier.carrierRoot = computeV138Plan262103CarrierRoot(carrier)
+
+    expect(
+      consumeV138Plan262103ReviewNoPublish({
+        candidate,
+        carrier,
+        reportBytes: Buffer.from("blocked review\n"),
+        authenticateCustody: () => undefined,
+        deriveFrozenArtifacts: () => {
+          throw new Error("derivation must not run")
+        },
+      }),
+    ).toEqual({
+      kind: "ineligible_review",
+      status: "blocked",
+      findingCount: 1,
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })
+  })
+
+  it("derives only in memory for a literal zero carrier", () => {
+    const candidate = candidateFixture()
+    candidate.candidatePayloadRoot =
+      computeV138Plan262103CandidatePayloadRoot(candidate)
+    const carrier = carrierFixture()
+    carrier.candidate.candidatePayloadRoot = candidate.candidatePayloadRoot
+    carrier.carrierRoot = computeV138Plan262103CarrierRoot(carrier)
+    const result = consumeV138Plan262103ReviewNoPublish({
+      candidate,
+      carrier,
+      reportBytes: Buffer.from("review\n"),
+      authenticateCustody: () => undefined,
+      deriveFrozenArtifacts: () => ({
+        sealRoot: `sha256:${"b".repeat(64)}`,
+        envelopeRoot: `sha256:${"c".repeat(64)}`,
+      }),
+    })
+    expect(result).toMatchObject({
+      kind: "eligible",
+      status: "sealed_inactive_not_published",
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })
+  })
+
+  it("lists every canonical review, seal, live, lifecycle, and downstream destination", () => {
+    expect(V138_PLAN_262_103_FORBIDDEN_DESTINATIONS).toContain(
+      V138_PLAN_262_103_CANDIDATE_PATH,
+    )
+    expect(V138_PLAN_262_103_FORBIDDEN_DESTINATIONS).toContain(
+      V138_PLAN_262_103_CARRIER_PATH,
+    )
+    expect(V138_PLAN_262_103_FORBIDDEN_DESTINATIONS).toContain(
+      ".planning/artifacts/v1.38-successor-source-seal-v13.json",
+    )
+    expect(V138_PLAN_262_103_FORBIDDEN_DESTINATIONS).toContain(
+      ".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v3.json",
+    )
+  })
+
+  it("does not create canonical files while validating synthetic inputs", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-plan-102-source-only-"))
+    try {
+      const sentinel = path.join(root, "sentinel")
+      writeFileSync(sentinel, "unchanged")
+      await executeV138Plan262103ConsumerCli(["--check-source-only"], {
+        repoRoot: root,
+        assertSourceOnly: () => undefined,
+        writeOutput: () => undefined,
+      })
+      expect(readFileSync(sentinel, "utf8")).toBe("unchanged")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
