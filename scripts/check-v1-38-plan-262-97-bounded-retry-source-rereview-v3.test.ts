@@ -7,7 +7,6 @@ import {
   V138_PLAN_262_97_REPORT_PATH,
   V138_PLAN_262_97_REVIEW_PATH,
   V138_PLAN_262_97_SOURCE_PATHS,
-  computeV138Plan26297ReviewRoot,
   deriveV138Plan26297NoPublish,
   evaluateV138Plan26297Observations,
   inspectV138Plan26297BlockedHistory,
@@ -34,7 +33,7 @@ describe("Plan 262-97 fresh corrected-source re-review", () => {
     expect(custody.blobs.every((entry) => entry.mode === "100644")).toBe(true)
     expect(custody.summaryCarrier).toMatchObject({
       path: expect.stringContaining("262-96-SUMMARY.md"),
-      commit: "aae9f5dab231f83a0238cf5448f5e1e1d8ad4f28",
+      commit: "82ed28eee2377fd31680a20fdf0a6c6ebba9c1a8",
     })
   })
 
@@ -130,18 +129,15 @@ describe("Plan 262-97 fresh corrected-source re-review", () => {
         freshAccepted: 0,
       },
     })
-    const blocked = clone(clean)
-    blocked.findings.push({
-      code: "TEST_FINDING",
-      severity: "critical",
-      evidenceRoot: "sha256:" + "0".repeat(64),
+    const observations = clone(clean.execution.observations)
+    observations[0]!.passed = false
+    const blocked = deriveV138Plan26297NoPublish(root, { observations })
+    expect(blocked).toMatchObject({
+      status: "blocked",
+      findingCount: 1,
+      sourceReviewPassed: false,
+      authority: { plan26292Eligible: false },
     })
-    blocked.findingCount = 1
-    blocked.status = "blocked"
-    blocked.sourceReviewPassed = false
-    blocked.authority.plan26292Eligible = false
-    blocked.findingRoot = "sha256:" + "1".repeat(64)
-    blocked.reviewRoot = computeV138Plan26297ReviewRoot(blocked)
     expect(validateV138Plan26297Review(blocked, blocked)).toBe(true)
     for (const [key, value] of Object.entries(clean.authority)) {
       if (key === "plan26292Eligible") continue
