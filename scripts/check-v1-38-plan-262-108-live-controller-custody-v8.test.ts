@@ -10,11 +10,17 @@ import {
   checkV138Plan262108PublishedReview,
   deriveV138Plan262108ReviewNoPublish,
   executeV138Plan262108Cli,
+  inspectV138Plan262108RawCustody,
   inspectV138Plan262108Source,
 } from "./check-v1-38-plan-262-108-live-controller-custody-v8.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const SOURCE_COMMIT = "a964be04a8a0628d4969d2b38b02a31a51120a83"
+let derivedReview:
+  | ReturnType<typeof deriveV138Plan262108ReviewNoPublish>
+  | undefined
+const deriveOnce = () =>
+  (derivedReview ??= deriveV138Plan262108ReviewNoPublish(repoRoot))
 
 describe("Plan 262-108 independent live-controller custody review", () => {
   it("exposes only the closed review and disposable supplement modes", () => {
@@ -45,7 +51,7 @@ describe("Plan 262-108 independent live-controller custody review", () => {
   }, 180_000)
 
   it("runs four actual disposable no-effect modes and derives literal zero", () => {
-    const review = deriveV138Plan262108ReviewNoPublish(repoRoot)
+    const review = deriveOnce()
     expect(review).toMatchObject({
       findingCount: 0,
       findingCodes: [],
@@ -71,7 +77,7 @@ describe("Plan 262-108 independent live-controller custody review", () => {
 
   it("derivation changes no canonical or live destination", () => {
     const before = assertV138Plan262108NoCanonicalEffects(repoRoot)
-    deriveV138Plan262108ReviewNoPublish(repoRoot)
+    deriveOnce()
     expect(assertV138Plan262108NoCanonicalEffects(repoRoot)).toEqual(before)
   }, 180_000)
 
@@ -84,11 +90,11 @@ describe("Plan 262-108 independent live-controller custody review", () => {
         ["-c", "core.hooksPath=/dev/null", "clone", "--quiet", "--no-local", repoRoot, clone],
         { env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", HOME: owner } },
       )
-      const clean = inspectV138Plan262108Source(clone)
+      const clean = inspectV138Plan262108RawCustody(clone)
       for (const repoPath of clean.checkoutPaths) {
         const target = path.join(clone, repoPath)
         writeFileSync(target, Buffer.concat([readFileSync(target), Buffer.from("dirty\n")]))
-        expect(() => inspectV138Plan262108Source(clone), repoPath).toThrow()
+        expect(() => inspectV138Plan262108RawCustody(clone), repoPath).toThrow()
         execFileSync("/usr/bin/git", ["checkout", "--", repoPath], { cwd: clone })
       }
     } finally {
