@@ -361,6 +361,31 @@ const directoryReplacementEvidence = async (root: string): Promise<number> => {
   }
 }
 
+const rootLockNamespaceEvidence = async (root: string): Promise<number> => {
+  const parent = path.dirname(root)
+  const moved = path.join(parent, `${path.basename(root)}-authenticated-root`)
+  const pair: V138DurablePairV2Input = {
+    transactionId: "root-lock-namespace", intentPath: "root-lock-namespace.intent",
+    members: [{ target: "left/root-lock.json", bytes: "left-root-lock\n" }, { target: "right/root-lock.json", bytes: "right-root-lock\n" }],
+  }
+  const tag = "root-lock"
+  const first = invokeNative(root, pairInput(root, pair), pair.members.map(({ target }) => target), tag)
+  await waitFor(() => existsSync(path.join(root, `.v138-test-ready-${tag}`)))
+  renameSync(root, moved)
+  mkdirSync(root, { mode: 0o700 })
+  try {
+    const contender = await invokeNative(moved, pairInput(moved, pair), pair.members.map(({ target }) => target))
+    if (contender.code === 0 || pair.members.some(({ target }) => existsSync(path.join(root, target)))) fail("V138_SUCCESSOR_ROOT_LOCK_NAMESPACE_SPLIT")
+    writeFileSync(path.join(moved, `.v138-test-continue-${tag}`), "continue\n")
+    await requireComplete(first)
+    for (const member of pair.members) if (readFileSync(path.join(moved, member.target), "utf8") !== member.bytes) fail("V138_SUCCESSOR_ROOT_LOCK_POSTCONDITION_FAILED")
+    return 1
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+    renameSync(moved, root)
+  }
+}
+
 const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string, unknown>>> => {
   const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v3-"))
   try {
@@ -397,6 +422,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
     const writeWindowEvidence = await writeWindowRecoveryEvidence(root)
     const directHelperBypassAttempts = await directHelperBypassEvidence(root)
     const directoryReplacementProtections = await directoryReplacementEvidence(root)
+    const rootLockNamespaceProtections = await rootLockNamespaceEvidence(root)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V3_OPERATIONS,
       acceptedCells: 0,
@@ -412,6 +438,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       abandonedUncommittedTemps: writeWindowEvidence.abandonedTemps,
       directHelperBypassAttempts,
       directoryReplacementProtections,
+      rootLockNamespaceProtections,
       lifecycleStagingResidue: readdirSync(path.join(root, ".v138-lifecycle-staging")),
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
