@@ -64,7 +64,7 @@
 - Preserve `retry-envelope:v1`, `retry-envelope:v2`, and all historical routes byte-immutably.
 - There is no candidate, Phase 263, formation, holdout, public, production, counted-play, gameplay, archive, or tag authority unless an independently verified literal fresh `540/540` pass is produced.
 - The next envelope destination is `.planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json`; its journal and terminal use the v3 namespace.
-- The clean starting commit is `dd7536c780a4d53199a949ef0cbd95d43414a4a0c`; research verified that this literal is the exact current `HEAD`.
+- The clean pre-research starting commit is `dd7536c780a4d53199a949ef0cbd95d43414a4a0`; the committed research carrier and current research `HEAD` are the distinct direct child `ae29b3220351b7e6b31adfa6d8462d0c8eb15f15`.
 
 ### the agent's Discretion
 - Exact schema, module, command, storage, and typed-reason names are left to research and planning within the locked evidence and privacy boundaries.
@@ -96,7 +96,7 @@
 
 ## Summary
 
-The authorized change is narrow: add one fresh, finite `retry-envelope:v3` branch after clean `HEAD` `dd7536c780a4d53199a949ef0cbd95d43414a4a0c`, while leaving the completed v1/v2 evidence, correction-v10, disposition-v2, lifecycle-v2, and every historical route byte-immutable. Correction-v10 currently records the v3 destinations as forbidden under the previously exhausted contract; the new user authorization supersedes only that admission denial for this one envelope. It does not reinterpret correction-v10's empirical `0/540`, reduced-assurance boundary, or downstream denials. [VERIFIED: Git; correction-v10; current authorization]
+The authorized change is narrow: add one fresh, finite `retry-envelope:v3` branch after clean pre-research baseline `dd7536c780a4d53199a949ef0cbd95d43414a4a0`, with the research committed separately at direct child `ae29b3220351b7e6b31adfa6d8462d0c8eb15f15`, while leaving the completed v1/v2 evidence, correction-v10, disposition-v2, lifecycle-v2, and every historical route byte-immutable. Correction-v10 currently records the v3 destinations as forbidden under the previously exhausted contract; the new user authorization supersedes only that admission denial for this one envelope. It does not reinterpret correction-v10's empirical `0/540`, reduced-assurance boundary, or downstream denials. [VERIFIED: Git; correction-v10; current authorization]
 
 Plan the work as six strictly ordered plans, **262-90 through 262-95**: source/synthetic proof, independent source review, direct-child seal plus inactive envelope, one live envelope, independent adjudication, then lifecycle closeout. Use a fresh namespace (`v3` identities, source-seal-v13, reproduction-v17, disposition-v3, lifecycle-v3, Route-11 activation) so no absent historical destination becomes ambiguously reused. [VERIFIED: Plans 84-89 and Route-9/Route-10 version progression; PRESCRIPTIVE]
 
@@ -195,7 +195,7 @@ No external package installation is planned, so the legitimacy gate is not appli
 
 ### Git lineage
 
-1. Baseline/authorization anchor `S0` is exact clean `dd7536c780a4d53199a949ef0cbd95d43414a4a0c`. [VERIFIED: Git]
+1. Baseline/authorization anchor `S0` is exact clean pre-research commit `dd7536c780a4d53199a949ef0cbd95d43414a4a0`; the research carrier is distinct commit `ae29b3220351b7e6b31adfa6d8462d0c8eb15f15`. [VERIFIED: Git]
 2. Plan 90 produces a future source-completion commit `S1` containing only additive v3 source/tests and its summary; record exact tree, sole parent chain from `S0`, modes, blobs, and working-byte equality. [PRESCRIPTIVE]
 3. Plan 91 independently reviews committed `S1`, then its committed review/report/summary closure becomes `R1`; `R1` is not source authority and not the seal. [VERIFIED: Plan 85 pattern; PRESCRIPTIVE]
 4. Plan 92 publishes exactly seal-v13 plus the Plan-90 envelope-v3 artifact in immediate-child commit `B3`, whose sole parent is `R1`; no intervening commit is allowed. [VERIFIED: Plan 86 direct-child pattern; PRESCRIPTIVE]
@@ -563,7 +563,7 @@ None require user input. Exact future commit/tree/root values cannot exist until
 - `.planning/artifacts/v1.38-plan-262-86-retry-envelope-v2.json`, terminal-v2, disposition-v2, lifecycle-v2, and correction-v10 — current roots, counters, policy, assurance, and denial state. [VERIFIED: committed artifacts]
 - v2 controller/checkers/tests — identity, journal, recovery, adjudication, and lifecycle behavior. [VERIFIED: committed source]
 - secure workspace/native reader v6, successor controller/helper v6, private native bootstrap, and correction-v10 checker — current integrity hardening analogs. [VERIFIED: committed source and correction artifacts]
-- Git `HEAD` `dd7536c780a4d53199a949ef0cbd95d43414a4a0c` — exact clean baseline. [VERIFIED: Git]
+- Git pre-research commit `dd7536c780a4d53199a949ef0cbd95d43414a4a0` — exact clean measured baseline; research commit/current research `HEAD` `ae29b3220351b7e6b31adfa6d8462d0c8eb15f15` is its distinct direct child. [VERIFIED: Git]
 
 ### Secondary (MEDIUM confidence)
 
