@@ -24,6 +24,11 @@
 static char capability_nonce[65];
 static char capability_lock_hash[65];
 
+typedef struct {
+  int *descriptors;
+  int count;
+} HeldLocks;
+
 __attribute__((noreturn)) static void die(const char *code) {
   fprintf(stderr, "%s\n", code);
   exit(2);
@@ -56,7 +61,7 @@ static void sha256_bytes(const unsigned char *bytes, size_t length, char output[
   output[64] = '\0';
 }
 
-static void require_lock_projection(char **targets, int count) {
+static void sort_and_require_lock_projection(char **targets, int count) {
   for (int left = 0; left < count; left++) {
     if (!safe_atom(targets[left])) die("V138_NATIVE_LOCK_TARGET_INVALID");
     for (int right = left + 1; right < count; right++) {
@@ -77,6 +82,54 @@ static void require_lock_projection(char **targets, int count) {
   }
   char digest[65]; sha256_bytes(projection, offset, digest); free(projection);
   if (strcmp(digest, capability_lock_hash) != 0) die("V138_NATIVE_CAPABILITY_LOCK_MISMATCH");
+}
+
+/*
+ * The mutation root is already an authenticated descriptor.  Lock files must
+ * therefore be opened relative to that descriptor too: reopening the root by
+ * pathname would let a concurrent root rename split locks from mutations.
+ * The intent lock also retains the first transaction's intent digest, making
+ * reuse of one intent path by incompatible transactions fail closed even
+ * after the ephemeral intent file has been cleaned up.
+ */
+static HeldLocks acquire_descriptor_locks(int root, char **targets, int count,
+                                          const char *intent_target,
+                                          const unsigned char *intent_bytes,
+                                          size_t intent_length) {
+  sort_and_require_lock_projection(targets, count);
+  HeldLocks held = { .descriptors = calloc((size_t)count, sizeof(int)), .count = count };
+  if (!held.descriptors) die("V138_NATIVE_OOM");
+  char intent_digest[65];
+  sha256_bytes(intent_bytes, intent_length, intent_digest);
+  for (int index = 0; index < count; index++) {
+    char target_digest[65], name[96];
+    sha256_bytes((const unsigned char *)targets[index], strlen(targets[index]), target_digest);
+    snprintf(name, sizeof(name), ".v138-successor-%s.lock", target_digest);
+    int descriptor = openat(root, name, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (descriptor < 0) die("V138_NATIVE_LOCK_OPEN_FAILED");
+    struct stat status;
+    if (fstat(descriptor, &status) != 0 || !S_ISREG(status.st_mode) ||
+        status.st_uid != getuid() || (status.st_mode & 0777) != 0600) die("V138_NATIVE_LOCK_UNTRUSTED");
+    struct flock lock = { .l_type = F_WRLCK, .l_whence = SEEK_SET, .l_start = 0, .l_len = 0 };
+    if (fcntl(descriptor, F_SETLK, &lock) != 0) die("V138_NATIVE_LOCK_BUSY");
+    held.descriptors[index] = descriptor;
+    if (strcmp(targets[index], intent_target) == 0) {
+      char existing[66] = {0};
+      ssize_t length = pread(descriptor, existing, 65, 0);
+      if (length < 0) die("V138_NATIVE_INTENT_LOCK_READ_FAILED");
+      if (length == 0) {
+        if (pwrite(descriptor, intent_digest, 64, 0) != 64 || fsync(descriptor) != 0) die("V138_NATIVE_INTENT_LOCK_WRITE_FAILED");
+      } else if (length != 64 || memcmp(existing, intent_digest, 64) != 0) {
+        die("V138_NATIVE_INTENT_LOCK_CONFLICT");
+      }
+    }
+  }
+  return held;
+}
+
+static void release_descriptor_locks(HeldLocks held) {
+  for (int index = 0; index < held.count; index++) close(held.descriptors[index]);
+  free(held.descriptors);
 }
 
 static unsigned char nybble(char value) {
@@ -241,7 +294,10 @@ static void write_committed(RelativeFile file, const unsigned char *bytes, size_
   if (crash_boundary == 101) _exit(97);
   if (fsync(descriptor) != 0) die("V138_NATIVE_FSYNC_FAILED");
   close(descriptor);
-  if (linkat(file.parent, temporary, file.parent, file.name, 0) != 0 && errno != EEXIST) die("V138_NATIVE_COMMIT_LINK_FAILED");
+  if (linkat(file.parent, temporary, file.parent, file.name, 0) != 0) {
+    if (errno != EEXIST) die("V138_NATIVE_COMMIT_LINK_FAILED");
+    if (!bytes_equal(file, bytes, length)) die("V138_NATIVE_COMMIT_EXISTING_CONFLICT");
+  }
   if (unlinkat(file.parent, temporary, 0) != 0) die("V138_NATIVE_UNCOMMITTED_CLEANUP_FAILED");
   if (fsync(file.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
 }
@@ -283,8 +339,7 @@ static void pair_transaction(int root, char **parts, int count) {
   if (count != 11) die("V138_NATIVE_PAIR_INPUT_INVALID");
   const char *intent_relative = parts[2], *namespace = parts[3];
   if (!exact_hex(namespace, 64)) die("V138_NATIVE_NAMESPACE_INVALID");
-  char *lock_targets[2] = { parts[4], parts[6] };
-  require_lock_projection(lock_targets, 2);
+  char *lock_targets[3] = { (char *)intent_relative, parts[4], parts[6] };
   int crash_boundary = atoi(parts[10]);
   RelativeFile intent = open_parent(root, intent_relative);
   RelativeFile targets[2] = { open_parent(root, parts[4]), open_parent(root, parts[6]) };
@@ -293,6 +348,7 @@ static void pair_transaction(int root, char **parts, int count) {
   unsigned char *bytes[2] = { decode_hex(parts[5], &bytes_length[0]), decode_hex(parts[7], &bytes_length[1]) };
   unsigned char *intent_bytes = decode_hex(parts[8], &intent_length);
   if (strcmp(parts[9], "pair-v2") != 0) die("V138_NATIVE_PAIR_SCHEMA_INVALID");
+  HeldLocks held = acquire_descriptor_locks(root, lock_targets, 3, intent_relative, intent_bytes, intent_length);
   int staging = open_internal_dir(root, ".v138-pair-staging");
 
   /* Every canonical precondition is inspected before any transaction byte is written. */
@@ -329,7 +385,7 @@ static void pair_transaction(int root, char **parts, int count) {
   if (regular_state(intent)) unlinkat(intent.parent, intent.name, 0);
   fsync(staging); fsync(intent.parent);
   for (int index = 0; index < 2; index++) { free(bytes[index]); close_file(targets[index]); }
-  free(intent_bytes); close_file(intent); close(staging);
+  free(intent_bytes); close_file(intent); close(staging); release_descriptor_locks(held);
 }
 
 typedef struct {
@@ -379,11 +435,12 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
     snprintf(steps[index].backup, sizeof(steps[index].backup), "%s-%d.before", namespace, index);
   }
   free(line);
-  char **lock_targets = calloc((size_t)step_count + 1, sizeof(char *));
+  char **lock_targets = calloc((size_t)step_count + 2, sizeof(char *));
   if (!lock_targets) die("V138_NATIVE_OOM");
   for (int index = 0; index < step_count; index++) lock_targets[index] = steps[index].target_name;
   lock_targets[step_count] = (char *)lifecycle_relative;
-  require_lock_projection(lock_targets, step_count + 1);
+  lock_targets[step_count + 1] = (char *)intent_relative;
+  HeldLocks held = acquire_descriptor_locks(root, lock_targets, step_count + 2, intent_relative, intent_bytes, intent_length);
   free(lock_targets);
 
   barrier_if_requested(root);
@@ -467,7 +524,7 @@ static void lifecycle_transaction(int root, char **header, int header_count, FIL
   }
   if (fsync(staging) != 0 || fsync(intent.parent) != 0 || fsync(lifecycle.parent) != 0) die("V138_NATIVE_FSYNC_FAILED");
   for (int index = 0; index < step_count; index++) { close_file(steps[index].target); free(steps[index].after); }
-  free(steps); free(intent_bytes); free(lifecycle_bytes); close_file(intent); close_file(lifecycle); close(staging);
+  free(steps); free(intent_bytes); free(lifecycle_bytes); close_file(intent); close_file(lifecycle); close(staging); release_descriptor_locks(held);
 }
 
 int main(int argc, char **argv) {

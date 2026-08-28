@@ -85,15 +85,13 @@ const trustedIdentity = (rootInput: string) => {
  */
 const invokeNative = (rootInput: string, input: string, targetLocks: readonly string[], barrierTag?: string): Promise<NativeResult> => {
   const identity = trustedIdentity(rootInput)
-  const normalizedLocks = [...new Set(targetLocks)].sort()
+  const intentLock = input.split("\t", 3)[2]
+  if (intentLock === undefined || intentLock.length === 0) fail("V138_SUCCESSOR_INTENT_LOCK_MISSING")
+  const normalizedLocks = [...new Set([...targetLocks, intentLock])].sort()
   if (normalizedLocks.length === 0) fail("V138_SUCCESSOR_LOCK_SET_EMPTY")
-  const lockPaths = normalizedLocks.map((target) => path.join(identity.path, `.v138-successor-${sha256V138Secure(target).slice(7)}.lock`))
   const oneShot = compileOneShotNative(input, normalizedLocks, identity.path)
-  const command: string[] = []
-  for (const lockPath of lockPaths) command.push("/usr/bin/lockf", "-t", "0", lockPath)
-  command.push(oneShot.executable)
   const child = spawn(
-    command.shift()!, command,
+    oneShot.executable, [],
     { cwd: identity.path, stdio: ["pipe", "ignore", "pipe", oneShot.capabilityDescriptor, oneShot.rootDescriptor, "pipe"], env: barrierTag === undefined ? process.env : { ...process.env, V138_NATIVE_TEST_BARRIER: barrierTag } },
   )
   closeSync(oneShot.capabilityDescriptor)
@@ -187,6 +185,54 @@ const disjointRaceEvidence = async (root: string, iterations: number): Promise<n
     for (const member of [...left.members, ...right.members]) if (readFileSync(path.join(root, member.target), "utf8") !== member.bytes) fail("V138_SUCCESSOR_DISJOINT_POSTCONDITION_FAILED")
   }
   return iterations
+}
+
+const sharedIntentConflictEvidence = async (root: string): Promise<number> => {
+  let conflicts = 0
+  for (let index = 0; index < 12; index++) {
+    const sharedIntent = `shared-intent-${index}.intent`
+    const left: V138DurablePairV2Input = {
+      transactionId: `shared-left-${index}`, intentPath: sharedIntent,
+      members: [{ target: `left/shared-a-${index}.json`, bytes: "left-a\n" }, { target: `left/shared-b-${index}.json`, bytes: "left-b\n" }],
+    }
+    const right: V138DurablePairV2Input = {
+      transactionId: `shared-right-${index}`, intentPath: sharedIntent,
+      members: [{ target: `right/shared-a-${index}.json`, bytes: "right-a\n" }, { target: `right/shared-b-${index}.json`, bytes: "right-b\n" }],
+    }
+    const outcomes = await Promise.all([
+      invokeNative(root, pairInput(root, left), left.members.map(({ target }) => target)),
+      invokeNative(root, pairInput(root, right), right.members.map(({ target }) => target)),
+    ])
+    if (outcomes.filter(({ code }) => code === 0).length !== 1) fail("V138_SUCCESSOR_SHARED_INTENT_PAIR_RESULT_INVALID")
+    const leftPublished = left.members.some(({ target }) => existsSync(path.join(root, target)))
+    const rightPublished = right.members.some(({ target }) => existsSync(path.join(root, target)))
+    if (leftPublished === rightPublished) fail("V138_SUCCESSOR_SHARED_INTENT_PAIR_LOSER_PUBLISHED")
+    conflicts++
+  }
+
+  const beforeLeft = "life-left-before\n", beforeRight = "life-right-before\n"
+  writeFileSync(path.join(root, "planning/shared-life-left.md"), beforeLeft)
+  writeFileSync(path.join(root, "planning/shared-life-right.md"), beforeRight)
+  const lifecycleIntent = "shared-lifecycle.intent"
+  const leftLife: V138LifecycleTransactionV2 = {
+    transactionId: "shared-life-left", intentPath: lifecycleIntent,
+    steps: [{ id: "left", target: "planning/shared-life-left.md", beforeSha256: sha256V138Secure(beforeLeft), afterBytes: "life-left-after\n" }],
+    lifecycle: { target: "shared-life-left.json", bytes: '{"authority":false,"winner":"left"}\n' },
+  }
+  const rightLife: V138LifecycleTransactionV2 = {
+    transactionId: "shared-life-right", intentPath: lifecycleIntent,
+    steps: [{ id: "right", target: "planning/shared-life-right.md", beforeSha256: sha256V138Secure(beforeRight), afterBytes: "life-right-after\n" }],
+    lifecycle: { target: "shared-life-right.json", bytes: '{"authority":false,"winner":"right"}\n' },
+  }
+  const outcomes = await Promise.all([
+    invokeNative(root, lifecycleInput(root, leftLife), [leftLife.steps[0]!.target, leftLife.lifecycle.target]),
+    invokeNative(root, lifecycleInput(root, rightLife), [rightLife.steps[0]!.target, rightLife.lifecycle.target]),
+  ])
+  if (outcomes.filter(({ code }) => code === 0).length !== 1) fail("V138_SUCCESSOR_SHARED_INTENT_LIFECYCLE_RESULT_INVALID")
+  const leftPublished = existsSync(path.join(root, leftLife.lifecycle.target))
+  const rightPublished = existsSync(path.join(root, rightLife.lifecycle.target))
+  if (leftPublished === rightPublished) fail("V138_SUCCESSOR_SHARED_INTENT_LIFECYCLE_LOSER_PUBLISHED")
+  return conflicts + 1
 }
 
 const crashRecoveryEvidence = async (root: string): Promise<number> => {
@@ -346,6 +392,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
 
     const overlapRaces = await overlapRaceEvidence(root, 50)
     const disjointRaces = await disjointRaceEvidence(root, 100)
+    const sharedIntentConflicts = await sharedIntentConflictEvidence(root)
     const crashRecoveries = await crashRecoveryEvidence(root)
     const writeWindowEvidence = await writeWindowRecoveryEvidence(root)
     const directHelperBypassAttempts = await directHelperBypassEvidence(root)
@@ -358,6 +405,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       lifecycle: readFileSync(path.join(root, "planning/status.md"), "utf8"),
       overlapRaces,
       disjointRaces,
+      sharedIntentConflicts,
       crashRecoveries,
       writeWindowRecoveries: writeWindowEvidence.recoveries,
       partialDeterministicFilesAccepted: writeWindowEvidence.partialDeterministicFilesAccepted,
@@ -372,7 +420,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
 
 export const checkV138SuccessorControllerV3Source = (sourcePath: string): true => {
   const source = readFileSync(sourcePath, "utf8")
-  for (const required of ["/usr/bin/lockf", '"-t", "0"', "invokeNative", "openat", "fstatat", "linkat", "unlinkat"]) {
+  for (const required of ["invokeNative", "F_SETLK", "openat", "fstatat", "linkat", "unlinkat"]) {
     if (!(source + readFileSync(nativeSource, "utf8")).includes(required)) fail("V138_SUCCESSOR_CONTROLLER_ROUTE_INCOMPLETE")
   }
   if (/export\s+(?:const|function)\s+(?:runV138Synthetic|invokeNative|durablyPublishV138Pair|applyV138RestartableLifecycle|withV138ExclusiveDirectoryLock)/u.test(source)) fail("V138_SUCCESSOR_CONTROLLER_MUTATION_EXPORT_FORBIDDEN")
