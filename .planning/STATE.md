@@ -5,21 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Ready to execute 262-104-PLAN.md
-last_updated: "2026-08-28"
+stopped_at: Completed 262-104-PLAN.md
+last_updated: "2026-08-28T19:44:26.686Z"
 last_activity: 2026-08-28
-last_activity_desc: planned additive v7 pair-lineage correction, independent actual-mode review, and separate Plan-106 post-summary lifecycle finalization
+last_activity_desc: completed additive Plan-104 historical trio resolution and disposable native inactive-pair proof; Plan 262-105 is sole next action
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 87
-  completed_plans: 80
+  completed_plans: 81
   percent: 0
 ---
 
 # State: Coward's Game
 
-<!-- Current planning topology preserves Plans 102/103 byte-for-byte, routes only Plan 262-104 next, and assigns post-summary lifecycle finalization exclusively to Plan 262-106. -->
+<!-- Plan 104 is complete without canonical publication. Plan 105 alone may independently review its exact source and four disposable actual modes. -->
+<!-- phase-262-plan-104-closeout-status: {"schema_version":"v1.38-plan-262-104-closeout-v1","proof_status":"historical_trio_resolution_and_disposable_native_pair_complete","active_plans":87,"trustworthy_summaries":81,"source_commit":"58669ae69376375f171aa56fd57b331355703e9a","source_tree":"cca6ff090cc82c70f28109fbbedf3c2f61fa073b","source_parent":"d86abb40eb8bbc68860925072b1c9cd4fe42dfb4","reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","trio_publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","candidate_blob":"2d3f995bcd4c0067e3d8c0c2a0120a36bfdc1745","review_blob":"680616684dcdc408829923bf9f062a075ddf32f2","carrier_blob":"89d1077b12672c4a066cbcba77568e228c0669de","focused_tests_passed":28,"plan_262_105_eligible":true,"plan_262_92_eligible":false,"canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-262-105-only","downstream_authority_denied":true} -->
+<!-- Historical pre-Plan-104 topology carrier retained below as immutable planning history. -->
 <!-- phase-262-pair-lineage-correction-topology-v2: {"schema_version":"v1.38-plan-262-pair-lineage-correction-topology-v2","active_plans":87,"trustworthy_summaries":80,"preserved_plans":["262-102","262-103"],"active_chain":["262-104","262-105","262-92","262-93","262-94","262-95","262-106"],"waves":{"262-104":86,"262-105":87,"262-92":88,"262-93":89,"262-94":90,"262-95":91,"262-106":92},"lifecycle_stage_1":"262-95-readiness-and-summary","lifecycle_stage_2":"262-106-root-finalization","next_action":"dispatch-262-104-only","plan_262_92_eligible":false,"eligibility_condition":"committed-262-105-literal-zero-four-mode-review","canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 <!-- phase-262-plan-103-closeout-status: {"schema_version":"v1.38-plan-262-103-closeout-v1","proof_status":"nonrecursive_rereview_zero_findings","active_plans":84,"trustworthy_summaries":80,"reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","finding_count":0,"finding_root":"sha256:88fd05a5b1258c35513bacfb2c1f5aee1c9a29c22302bca2a480eb430a549e21","candidate_payload_root":"sha256:1626099ec6c008aba729c363722d725c0eaf4c52b211674455f000b845e1d84f","review_root":"sha256:b2f259552d172d8635deb51dd9bc805e29669d1691b75d843aa3170a159f7710","carrier_root":"sha256:50358471bed92ca437fcb4ffb7aa81d4473dd8fb73aebd8db66b91754ab20984","portable_reviewed_closure_root":"sha256:29e19217c7cc93325716849967468c85e0e564ef1222823debdc80179d5788b4","actual_consumer_status":"passed","focused_tests_passed":17,"plan_100_101_history_preserved":true,"plan_262_92_eligible":true,"authorizes_execution":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-revised-262-92-only","downstream_authority_denied":true} -->
 <!-- phase-262-plan-101-closeout-status: {"schema_version":"v1.38-plan-262-101-closeout-v1","proof_status":"blocked_candidate_json_hash_self_reference","active_plans":82,"trustworthy_summaries":78,"reviewed_source_commit":"a879bfc6cab49abf2e12a5b882a06b7e9fb446cb","pair_commit":"8c4e74180e36f22e3a44520d2cda145b3aa30671","finding_count":1,"finding":"CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE","finding_root":"sha256:4dfccd91907322bc560584de13570ef5f243ebdeb8a9ce117673befc3dce9953","review_root":"sha256:68c66d072b65a5d1dd30351b609a3bd6f1a327740da966ef2bc37cf92e2425b4","result_root":"sha256:72bc2402c9678c3a719587b8d3c5862fbd12dd0d6abd42b5758d6cf6ef708ddc","portable_reviewed_closure_root":"sha256:b919098d4431100e550b9afe84836c8d21ccf0752852f9574b30647e880b7256","actual_consumer_status":"rejected_expected","focused_tests_passed":140,"plan_98_99_history_preserved":true,"plan_262_92_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"plan-additive-protocol-correction-and-fresh-review","downstream_authority_denied":true} -->
@@ -70,11 +72,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 80 summaries across 87 active plans — Plan 262-104 is the sole eligible next action; Plans 262-105, 262-92 through 262-95, and lifecycle finalizer 262-106 remain dependency-denied
-Status: Phase 262 remains in progress at 80/87 summaries; fresh accepted remains 0/540 and downstream authority remains denied
-Last activity: 2026-08-28 — planned the additive Plan-104/105 correction, revised 262-92 through 262-95 chain, and separate Plan-106 post-summary lifecycle finalizer
+Plan: 81 summaries across 87 active plans — Plan 262-105 is the sole eligible next action; Plans 262-92 through 262-95 and lifecycle finalizer 262-106 remain dependency-denied
+Status: Phase 262 remains in progress at 81/87 summaries; fresh accepted remains 0/540 and downstream authority remains denied
+Last activity: 2026-08-28 — completed additive Plan-104 historical trio resolution and disposable native inactive-pair proof without canonical publication
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -174,6 +176,7 @@ Progress: [█████████░] 92%
 | Phase 262 P99 | 34min | 2 tasks | 5 files |
 | Phase 262 P101 | 22min | 2 tasks | 5 files |
 | Phase 262 P102 | 13min | 2 tasks | 3 files |
+| Phase 262 P104 | 18min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -351,6 +354,9 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Candidate semantic identity excludes exactly candidatePayloadRoot; physical candidate custody belongs to the external carrier.
 - [Phase 262]: The external carrier excludes exactly carrierRoot and cannot claim its own file SHA, blob, or commit.
 - [Phase 262]: Blocked review is ineligible, malformed evidence is an integrity stop, and only literal zero may derive in-memory no-publish bytes.
+- [Phase 262]: Plan 104 resolves the Plan-103 physical publication from the exact historical three-path introduction instead of treating HEAD as publication. — Preserves valid later summary commits while authenticating exact blobs, modes, bytes, and ancestry.
+- [Phase 262]: Plan 104 authenticates the portable reviewed closure and complete current local closure separately. — Native source roots include checkout-specific paths and must not be equated across repositories.
+- [Phase 262]: Plan 104 delegates inactive pair publication once to the existing native transaction; only the committed checker exposes Plan-93 eligibility. — Prevents partial publication and authority from uncommitted filesystem state.
 
 ### Pending Todos
 
@@ -413,8 +419,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T18:46:12.106Z
-Stopped at: Ready to execute 262-104-PLAN.md
+Last session: 2026-08-28T19:44:26.671Z
+Stopped at: Completed 262-104-PLAN.md
 Resume file: None
 
 ### Blockers
