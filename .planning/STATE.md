@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-111-PLAN.md
-last_updated: "2026-08-28T23:24:05.826Z"
+stopped_at: Resolved 262-111 code-review findings; fresh re-review required
+last_updated: "2026-08-28T23:38:27.186Z"
 last_activity: 2026-08-28
-last_activity_desc: completed Plan 262-111 live-v9 custody adapter without live invocation; Plan 262-112 is next
+last_activity_desc: resolved both Plan-111 critical review findings without live invocation; fresh re-review is next
 progress:
   total_phases: 9
   completed_phases: 0
@@ -80,9 +80,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 86 summaries across 93 active plans — Plan 262-112 is the sole eligible next action; Plans 109/110/94/95/106 remain dependency-denied
-Status: Phase 262 remains in progress at 86/93 summaries; live-v9 is committed and source-checked, fresh accepted remains 0/540, and downstream authority remains denied
-Last activity: 2026-08-28 — completed Plan 262-111 live-v9 custody adapter without live invocation; Plan 262-112 is next
+Plan: 86 summaries across 93 active plans — Plan 262-111 review fixes are committed; fresh independent re-review is required before Plan 262-112
+Status: Phase 262 remains in progress; Plan-111 review findings are fixed but Plan 112 remains ineligible pending fresh zero-finding re-review
+Last activity: 2026-08-28 — resolved both Plan-111 critical review findings without live invocation; fresh re-review is next
 
 Progress: [██████████] 95%
 
@@ -376,6 +376,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Keep live-v9 additive and close its sole production export over the historical v3 producer; expose no production dependency injection or CLI production mode. — Preserves one effect owner and prevents test seams from reaching production.
 - [Phase 262]: Require supplement-v2 to bind the exact committed Plan-112 publication commit plus payload, REVIEW, and carrier roots. — Prevents root-only substitution for the committed three-path review.
 - [Phase 262]: Preserve producer failure as cause and expose simultaneous producer and post-custody failures together with AggregateError. — Post-effect verification must not erase either failure.
+- [Phase 262]: Supersede the Plan-111 no-production-CLI decision: expose exactly Plan-110 readiness and sole live selectors, with no generic or injectable bypass. — The reviewed executable closure itself must own the pre-effect and one-call dispatch path.
+- [Phase 262]: Plan-111 post-run custody permits only complete journal/private/terminal bounded outputs while forbidding lock, reproduction-v17, adjudication, lifecycle, and downstream artifacts. — Authenticate the producer's terminal evidence without converting legitimate bounded effects into an artificial custody failure.
 
 ### Pending Todos
 
@@ -439,8 +441,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T23:22:40.639Z
-Stopped at: Completed 262-111-PLAN.md
+Last session: 2026-08-28T23:38:19.895Z
+Stopped at: Resolved 262-111 code-review findings; fresh re-review required
 Resume file: None
 
 ### Blockers

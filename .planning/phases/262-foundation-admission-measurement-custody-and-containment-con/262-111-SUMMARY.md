@@ -24,10 +24,11 @@ key-files:
     - scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.ts
     - scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.test.ts
     - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-111-SUMMARY.md
+    - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-111-CODE-REVIEW-FIXES.md
   modified: []
 
 key-decisions:
-  - "Keep live-v9 additive and close its sole production export over the historical v3 producer; expose no production dependency injection or CLI production mode."
+  - "Keep live-v9 additive and close its sole production export over the historical v3 producer; expose only the exact Plan-110 readiness/production selectors with no generic or injectable production bypass."
   - "Require supplement-v2 to bind the exact committed Plan-112 publication commit as well as its payload, REVIEW, and carrier roots."
   - "Preserve producer failure as the cause and expose producer plus post-custody failures together with AggregateError."
 
@@ -72,19 +73,19 @@ status: complete
 
 - Independently rederived the exact corrected publication `2639ff3b42e2a238919a3104c9fa8c785c69b93d`, including payload, REVIEW, carrier, recursive Plan-107 source custody, pair B3, Plan-93 stop, twelve protected branches, literal-zero state, and denied downstream authority.
 - Defined future nonrecursive Plan-112 payload/REVIEW/carrier and supplement-v2 contracts without publishing any of them; the sole synthetic seam accepts materialized values and is structurally incapable of calling a producer.
-- Closed production over `runV138V3ProductionLive`, with no production CLI mode or replacement producer/gate dependency, and added a finally-equivalent post-check that preserves lone failures and aggregates simultaneous producer/custody failures.
+- Closed production over `runV138V3ProductionLive`, exposed only the exact Plan-110 readiness and production CLI selectors with no replacement producer/gate dependency, and added a finally-equivalent post-check that preserves lone failures and aggregates simultaneous producer/custody failures.
 
 ## Committed Live-v9 Execution Closure
 
 | Identity | Exact value |
 |---|---|
-| Source commit | `c5d914e3c7616a1cb0bcd0f62c3a585ec68c85b8` |
-| Source tree | `3dfa7bc30265bfa55b6c4f29a89db54bed0ac7d7` |
-| Source parent | `2457d1faa00f95a73bcf9908493d5f77733c3e6d` |
-| Checkout byte-manifest root | `sha256:c95991d5d658f9e962a280af3c4308c2a5dca8942bcae24cd35ec5e7edcfa70e` |
+| Source commit | `a0e318401f977c9f909b1ed93e4d416ad3f7cf3e` |
+| Source tree | `467bb8887f6e97ca5cba9e5bdc455b521a004799` |
+| Source parent | `4078ba4a6a45c935451064ff176d8965becddbae` |
+| Checkout byte-manifest root | `sha256:59ba5085477d77f8d40e150a3ffa0832b4ede651ba59b103fc610c3f49748b2c` |
 | Installed closure root | `sha256:72760c27bb3a70f57fcebe45abae59f6d592310ef32f4bc23e442fe8b25ec31b` |
 | Native sources root | `sha256:de43db7fa3d47de7dd1b5ffb148ae9cecceab044bdb61f704051e2930f4f5523` |
-| Full execution closure root | `sha256:4d6d2ae4c8724cdf0001d1001ed319690bdc32b77e82355ad44c5f404f78ed2b` |
+| Full execution closure root | `sha256:21d253a1090f3c524d7ca9c077731b0ab53235912855e03b9dbd7998d4b1ab8a` |
 
 The reviewed checkout is exactly the model, native custody helper, native owner-lock source, historical v3 producer, and live-v9 adapter. Live-v8 remains immutable history and is not an invoked owner. Pathname-launch replacement resistance remains explicitly unclaimed.
 
@@ -101,12 +102,14 @@ The reviewed checkout is exactly the model, native custody helper, native owner-
 2. **Task 1 GREEN: Implement exact corrected live-v9 gate** — `0e01e8fd` (`feat`)
 3. **Task 2 RED: Specify prospective custody and post-check safety** — `2457d1fa` (`test`)
 4. **Task 2 GREEN: Close future contracts and post-effect checks** — `c5d914e3` (`feat`)
+5. **Code-review RED: Reproduce reviewed flow blockers** — `4078ba4a` (`test`)
+6. **Code-review GREEN: Close CLI and post-effect flow** — `a0e31840` (`fix`)
 
 ## Decisions Made
 
 - Production remains a single-argument closed function. Internal producer options only bind the already authenticated pair and do not expose an external replacement seam.
 - The prospective supplement-v2 schema records the future Plan-112 publication commit, preventing a root-only trio from substituting for committed three-path custody.
-- CLI commands are limited to source-only, prospective-custody, and post-run-custody checks; Plan 111 exposes no production invocation mode.
+- CLI commands are limited to the three custody checks plus exact Plan-110 readiness and sole production selectors; no generic or injectable production mode exists.
 
 ## Deviations from Plan
 
@@ -138,10 +141,18 @@ Plan 262-112 can independently review the exact committed live-v9 closure and pu
 ## Self-Check: PASSED
 
 - Live-v9 source, tests, and summary exist.
-- All four TDD task commits exist in Git history.
+- All six TDD task and review-fix commits exist in Git history.
 - Exact committed closure identity was rederived after the GREEN commit.
 - Required tests and serial custody/type/whitespace checks passed.
 - No supplement or live/downstream artifact was created.
+
+## Post-Code-Review Corrections — 2026-08-28
+
+Independent review `262-111-REVIEW.md` blocked the original source with two critical flow findings. TDD RED `4078ba4a` reproduced both; GREEN `a0e31840` added the exact Plan-110 readiness and sole production selectors and split pre-effect absence from post-run bounded-output custody.
+
+The pre-effect gate still forbids every live destination. The post-run gate now admits only no effects or an exact complete journal/private/terminal outcome from the unchanged historical producer; it rejects the live lock, reproduction-v17, receipt manifest, disposition, correction, activation, readiness, lifecycle, partial outputs, incomplete cleanup, and all downstream authority. Producer and custody failures retain their original lone/aggregate semantics. Verification passed `9/9` focused tests plus pair-v7, corrected Plan-108, source-only, TypeScript, and whitespace checks without invoking the production selector.
+
+The corrected committed source closure is `a0e318401f977c9f909b1ed93e4d416ad3f7cf3e` with full execution root `sha256:21d253a1090f3c524d7ca9c077731b0ab53235912855e03b9dbd7998d4b1ab8a`. See `262-111-CODE-REVIEW-FIXES.md` for finding-by-finding evidence. A fresh independent re-review is required before Plan 112 eligibility.
 
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
