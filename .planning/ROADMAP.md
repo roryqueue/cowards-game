@@ -50,9 +50,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 70/70 plans executed
+**Plans:** 73/78 plans executed
 
-**Current verdict:** CLEAN EMPIRICAL NON-PASS / FRESH 0/540 / DOWNSTREAM DENIED — All 70 plans and summaries are complete. Plan 262-89 published lifecycle-v2 with `gaps_found` and no lifecycle mutation. Correction-v10 closes the latest code/integrity review under `single_operator_local_seal_v1_no_hostile_same_uid` without changing the terminal `exhausted` result. Exact 540/540 remains absent, so reproduction-v16 and Route-10 activation remain absent; ADMIT-03 is blocked and Phases 263-270 remain denied.
+**Current verdict:** SOURCE RE-REVIEW PENDING / FRESH 0/540 / DOWNSTREAM DENIED — 73 of 78 plans have summaries. Plan 262-91 remains an exact immutable 11-finding blocked review; Plan 262-96 additively corrected execution custody and passed 87/87 focused tests without live/canonical writes. Only Plan 262-97 may independently re-review the corrected bytes. Plans 262-92 through 262-95 remain ineligible, ADMIT-03 remains blocked, and Phases 263-270 remain denied.
 
 <!-- Historical v1 carrier retained byte-for-byte as earlier planning history. The current carrier is lifecycle-v2. -->
 <!-- phase-262-current-lifecycle-status: {"schema_version":"v1.38-phase-262-current-lifecycle-status-v1","artifact":".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v1.json","active_plans":64,"summaries":64,"plans_80_81_completed":true,"route_starts":3,"calibration_charged":24,"fresh_accepted":0,"required_accepted":540,"terminal":"exhausted","effective_integrity":"integrity_non_pass","reproduction_v15_present":false,"route9_activation_present":false,"plan81_verification":"gaps_found","lifecycle_mutated":false,"phase_262":"incomplete","phases_263_270_authorized":false} -->
@@ -87,6 +87,15 @@ The current carrier also resolves the audit's Plan-79 journal-root documentation
 **Plan-76 closeout:** Superseding the prior next-action sentence, the finite retry source/controller and 20 synthetic/fake-process tests are committed under `93ebaac43c13cf6e658769a11e9c2c10f5b35965`. Exact discovery is 62 plans/57 summaries. No live handler ran; fresh charges and accepted cells remain 0/540, canonical seal/envelope/journal/terminal/reproduction artifacts remain absent, and Plan 262-77 is the sole next action.
 
 Plans:
+
+- [x] 262-90-PLAN.md
+- [x] 262-91-PLAN.md
+- [ ] 262-92-PLAN.md
+- [ ] 262-93-PLAN.md
+- [ ] 262-94-PLAN.md
+- [ ] 262-95-PLAN.md
+- [x] 262-96-PLAN.md
+- [ ] 262-97-PLAN.md
 
 - [x] 262-84-PLAN.md
 - [x] 262-85-PLAN.md
@@ -530,7 +539,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 70/70 | Empirically incomplete (`gaps_found`) | - |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 73/78 | In Progress | - |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
