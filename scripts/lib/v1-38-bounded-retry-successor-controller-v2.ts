@@ -364,6 +364,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
       abandonedUncommittedTemps: writeWindowEvidence.abandonedTemps,
       directHelperBypassAttempts,
       directoryReplacementProtections,
+      lifecycleStagingResidue: readdirSync(path.join(root, ".v138-lifecycle-staging")),
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
   } finally { rmSync(root, { recursive: true, force: true }) }

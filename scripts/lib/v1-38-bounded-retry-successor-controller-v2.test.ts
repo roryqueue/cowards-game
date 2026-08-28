@@ -38,6 +38,7 @@ describe("CR-01 controller-owned successor mutation closure", () => {
     expect(output.abandonedUncommittedTemps).toBe(0)
     expect(output.directHelperBypassAttempts).toBe(2)
     expect(output.directoryReplacementProtections).toBe(2)
+    expect(output.lifecycleStagingResidue).toEqual([])
   }, 240_000)
 
   it.each(["--source-check"])("allows the non-live %s CLI mode", (mode) => {
