@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: executing
-stopped_at: Completed 262-92-PLAN.md
-last_updated: "2026-08-28T20:16:59.049Z"
+status: blocked
+stopped_at: Plan 262-93 pre-start integrity stop
+last_updated: "2026-08-28T20:23:32.000Z"
 last_activity: 2026-08-28
-last_activity_desc: committed canonical Plan-105-direct-child seal-v13 and sealed-inactive retry-envelope:v3 pair; Plan 262-93 alone is eligible
+last_activity_desc: sole Plan-93 invocation failed closed before live effects because the committed controller still requires the blocked Plan-101 v5 review closure
 progress:
   total_phases: 9
   completed_phases: 0
@@ -19,6 +19,9 @@ progress:
 
 # State: Coward's Game
 
+<!-- Plan 93 was invoked exactly once after the v7 pair check passed, but failed closed before the live effect boundary with V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID. No v3 identity was charged and no live artifact exists. Do not retry or dispatch a successor without separately planned corrective work and explicit execution authority. -->
+<!-- phase-262-plan-93-prestart-stop-status: {"schema_version":"v1.38-plan-262-93-prestart-stop-v1","proof_status":"pre_start_integrity_stop","attempts":1,"pair_commit_b3":"8080ff66a0880db25db227d23e7e7a0884a79b56","seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","stop_code":"V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID","live_effect_boundary_crossed":false,"route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"journal_present":false,"private_receipts_present":false,"terminal_present":false,"reproduction_v17_present":false,"disposition_v3_present":false,"correction_v11_present":false,"route_11_activation_present":false,"readiness_v3_present":false,"lifecycle_v3_present":false,"plan_262_93_complete":false,"successors_authorized":false,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"plan-additive-live-controller-custody-correction-before-any-new-execution-decision","downstream_authority_denied":true} -->
+<!-- Historical Plan-92 closeout carrier retained below as immutable planning history. -->
 <!-- Plan 92 committed the canonical inactive pair as the exact direct child of the Plan-105 closure. Plan 93 alone is eligible; no live or downstream authority exists. -->
 <!-- phase-262-plan-92-closeout-status: {"schema_version":"v1.38-plan-262-92-closeout-v1","proof_status":"canonical_sealed_inactive_pair_committed","active_plans":87,"trustworthy_summaries":83,"reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","trio_publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","plan_104_source_commit":"58669ae69376375f171aa56fd57b331355703e9a","direct_parent_r7":"250c152d3b2c8d7c1e7808985b61626bc3290883","pair_commit_b3":"8080ff66a0880db25db227d23e7e7a0884a79b56","pair_tree":"7efb4b43c484f7d516dd0d08d499db3215a88a44","seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","protected_history_root":"sha256:77e0e71f62ec4abd997f1df2c1fc9bf1db7b95247404f78b558a634cdc1ec57d","status":"sealed_inactive","route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"live_invoked":false,"journal_present":false,"terminal_present":false,"reproduction_v17_present":false,"disposition_v3_present":false,"correction_v11_present":false,"route_11_activation_present":false,"readiness_v3_present":false,"lifecycle_v3_present":false,"plan_262_93_eligible":true,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-262-93-only","downstream_authority_denied":true} -->
 <!-- Historical Plan-105 closeout carrier retained below as immutable planning history. -->
@@ -367,15 +370,17 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Plan 262-105 independently resolves Plan-104 source and Plan-103 trio custody from raw Git objects without importing producer verdict helpers.
 - [Phase 262]: Canonical pair commit 8080ff66 is the sole-parent direct child of Plan-105 closure 250c152d and introduces exactly seal-v13 plus retry-envelope:v3.
 - [Phase 262]: Keep retry-envelope:v3 sealed_inactive at fresh 0/0; Plan 262-93 alone is eligible and all live, lifecycle, Phase-263, and downstream authority remains denied.
+- [Phase 262]: Preserve the sole Plan-93 invocation as a pre-start integrity stop: v7 pair custody passed, but the committed live controller still consumed the blocked Plan-101 v5 review path and stopped with `V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID` before any live effect or charge.
 
 ### Pending Todos
 
-- Dispatch Plan 262-93 only. Continue strictly through 262-93 -> 262-94 -> 262-95 -> 262-106, and do not dispatch any successor until its exact predecessor summary and branch condition passes.
+- Do not retry Plan 262-93 or dispatch Plans 262-94/95/106. Plan a separately reviewed additive live-controller custody correction and obtain a new explicit execution decision before any further invocation.
 
 ### Current Blocker/Concerns
 
-- ADMIT-03 is the sole substantive blocker: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
-- Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plans 262-104/105 additively resolved the later-HEAD lineage defect, and Plan 262-92 committed the exact canonical inactive pair; Plan 262-93 alone is now eligible while Plans 262-94 through 262-106 remain dependency-denied.
+- Plan 262-93 is blocked before live effects: the v7 pair checker authenticates the Plan-103/104/105 chain, but the committed live controller's reviewed-closure gate still requires the immutable blocked Plan-101 v5 review and stops with `V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID`.
+- ADMIT-03 remains blocked: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
+- Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; Plans 262-94 through 262-106 remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
 - Revised SEAL-01 is satisfied only at `single_operator_local_seal_v1_no_hostile_same_uid`; no independent-custody, hostile-same-UID, malicious-owner, or pathname-launch replacement resistance is claimed.
 - Formation, holdout, public/product/production, counted-play, gameplay-change, archive, and tag authority remain false.
