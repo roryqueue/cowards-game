@@ -1,4 +1,7 @@
 import {
+  createHash,
+} from "node:crypto"
+import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -24,6 +27,8 @@ import {
   type V138RetryV3JournalRecord,
 } from "./lib/v1-38-bounded-retry-envelope-v3.js"
 import {
+  V138_RETRY_V3_CLOSED_DIRECT_DEFECTS,
+  V138_RETRY_V3_PASSED_OBSERVATIONS,
   V138_BOUNDED_RETRY_V3_CUSTODY,
   V138_BOUNDED_RETRY_V3_PATHS as CONTROLLER_PATHS,
   V138_BOUNDED_RETRY_V3_PRODUCTION_MODES,
@@ -33,6 +38,7 @@ import {
   type V138BoundedRetryV3ControllerEffects,
 } from "./run-v1-38-bounded-retry-envelope-v3.js"
 import {
+  applyV138RetryV3NativeLifecycle,
   acquireV138RetryV3NativeOwnerLease,
   authenticateV138RetryV3ExecutionClosure,
   publishV138RetryV3NativePair,
@@ -382,11 +388,15 @@ describe("synthetic-only hardened v3 controller", () => {
       rulesAuthority: "MATCH_KERNEL",
       liveInvoked: false,
       downstreamAuthority: "denied",
+      executionClosureEnforcedBeforeAndAfter: true,
+      nativePairLifecyclePublication: true,
     })
     expect(V138_BOUNDED_RETRY_V3_PRODUCTION_MODES).toContain(
       "--check-source-only",
     )
     expect(CONTROLLER_PATHS).toMatchObject({
+      sourceSummary: expect.stringContaining("262-96-SUMMARY.md"),
+      sourceReview: expect.stringContaining("262-97"),
       seal: ".planning/artifacts/v1.38-successor-source-seal-v13.json",
       envelope:
         ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json",
@@ -395,6 +405,84 @@ describe("synthetic-only hardened v3 controller", () => {
       activation:
         ".planning/artifacts/v1.38-plan-262-route-11-activation-v1.json",
     })
+    expect(V138_RETRY_V3_CLOSED_DIRECT_DEFECTS).toEqual([
+      "AMBIENT_GIT_EXECUTION",
+      "CURRENT_INSTALLED_CLOSURE_NOT_AUTHENTICATED",
+      "EXECUTED_CHECKOUT_BINDING_NOT_ENFORCED",
+      "NATIVE_PUBLICATION_NOT_ENFORCED",
+      "PATHNAME_LOCK_LAUNCH_UNAUTHENTICATED",
+      "ADVERSARIAL_SOURCE_TEST_MATRIX_INCOMPLETE",
+    ])
+    expect(V138_RETRY_V3_PASSED_OBSERVATIONS).toEqual([
+      "crash-cleanup",
+      "executed-checkout-bytes",
+      "git-isolation",
+      "installed-runtime-closure",
+      "native-publication",
+    ])
+  })
+
+  it("contains no ambient Git, pathname lockf, or Node authority publication path", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "scripts/run-v1-38-bounded-retry-envelope-v3.ts"),
+      "utf8",
+    )
+    expect(source).not.toContain('execFileSync("git"')
+    expect(source).not.toContain('"/usr/bin/lockf"')
+    expect(source).not.toMatch(/const publishPair\s*=.*exclusiveWrite/su)
+    expect(source).toContain("publishV138RetryV3NativePair")
+    expect(source).toContain("applyV138RetryV3NativeLifecycle")
+    expect(source).toContain("authenticateV138RetryV3ExecutionClosure")
+  })
+
+  it("recovers actual native pair and lifecycle crash boundaries without partial authority", async () => {
+    if (process.platform !== "darwin") return
+    const root = mkdtempSync(path.join(tmpdir(), "v138-v3-native-recovery-"))
+    roots.push(root)
+    mkdirSync(path.join(root, "authority"))
+    const pair = {
+      transactionId: "pair-crash-recovery",
+      intentPath: "pair-crash-recovery.intent",
+      members: [
+        { target: "authority/seal.json", bytes: "seal\n" },
+        { target: "authority/envelope.json", bytes: "envelope\n" },
+      ],
+    } as const
+    await expect(publishV138RetryV3NativePair(root, pair, 1)).rejects.toThrow(
+      "V138_RETRY_V3_NATIVE_FAILED",
+    )
+    await publishV138RetryV3NativePair(root, pair)
+    expect(readFileSync(path.join(root, "authority/seal.json"), "utf8")).toBe(
+      "seal\n",
+    )
+    writeFileSync(path.join(root, "authority/journal.jsonl"), "before\n")
+    const before = `sha256:${createHash("sha256").update("before\n").digest("hex")}` as const
+    const lifecycle = {
+      transactionId: "life-crash-recovery",
+      intentPath: "life-crash-recovery.intent",
+      steps: [
+        {
+          id: "journal",
+          target: "authority/journal.jsonl",
+          beforeSha256: before,
+          afterBytes: "after\n",
+        },
+      ],
+      lifecycle: {
+        target: "authority/terminal.json",
+        bytes: "terminal\n",
+      },
+    } as const
+    await expect(
+      applyV138RetryV3NativeLifecycle(root, lifecycle, 1),
+    ).rejects.toThrow("V138_RETRY_V3_NATIVE_FAILED")
+    await applyV138RetryV3NativeLifecycle(root, lifecycle)
+    expect(
+      readFileSync(path.join(root, "authority/journal.jsonl"), "utf8"),
+    ).toBe("after\n")
+    expect(
+      readFileSync(path.join(root, "authority/terminal.json"), "utf8"),
+    ).toBe("terminal\n")
   })
 
   const effects = (input: {
@@ -553,14 +641,13 @@ describe("synthetic-only hardened v3 controller", () => {
     if (process.platform !== "darwin") return
     const root = mkdtempSync(path.join(tmpdir(), "v138-v3-lock-"))
     roots.push(root)
-    const lock = path.join(root, "owner.lock")
-    const owner = await acquireV138RetryV3OwnerLease(lock)
-    await expect(acquireV138RetryV3OwnerLease(lock)).rejects.toThrow(
+    const owner = await acquireV138RetryV3OwnerLease(root)
+    await expect(acquireV138RetryV3OwnerLease(root)).rejects.toThrow(
       "V138_RETRY_OWNER_LOCK_ACTIVE",
     )
     process.kill(owner.pid, "SIGKILL")
     await owner.waitForExit()
-    const restarted = await acquireV138RetryV3OwnerLease(lock)
+    const restarted = await acquireV138RetryV3OwnerLease(root)
     await restarted.release()
   })
 })
