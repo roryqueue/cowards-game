@@ -1924,6 +1924,10 @@ export const runV138V3ProductionLive = async (
 export interface V138BoundedRetryV3CliDependencies {
   readonly repoRoot: string
   readonly deriveArtifacts: () => Readonly<V138DerivedV3SealEnvelope>
+  readonly publishArtifacts: (
+    artifacts: Readonly<V138DerivedV3SealEnvelope>,
+  ) => void
+  readonly checkPair: () => void
   readonly runLive: () => Promise<void>
   readonly checkOutcome: () => ReturnType<typeof checkV138PublishedRetryV3Outcome>
   readonly authenticateClosure: () => V138RetryV3ExecutionClosure
@@ -1939,12 +1943,36 @@ export const executeV138BoundedRetryV3Cli = async (
   const deriveArtifacts =
     injected?.deriveArtifacts ??
     (() => deriveV138V3SealedInactiveEnvelope(repoRoot))
+  const publishArtifacts =
+    injected?.publishArtifacts ??
+    ((artifacts: Readonly<V138DerivedV3SealEnvelope>) =>
+      publishPair(repoRoot, artifacts))
+  const checkPair =
+    injected?.checkPair ??
+    (() =>
+      checkPublishedPair(
+        repoRoot,
+        injected?.deriveArtifacts === undefined ? undefined : deriveArtifacts,
+      ))
   const runLive = injected?.runLive ?? (() => runV138V3ProductionLive(repoRoot))
   const checkOutcome =
     injected?.checkOutcome ?? (() => checkV138PublishedRetryV3Outcome(repoRoot))
   const authenticateClosure =
     injected?.authenticateClosure ??
     (() => authenticateCurrentExecutionClosure(repoRoot))
+  const authenticateAuthorityClosure =
+    injected?.authenticateClosure ??
+    (() => authenticateReviewedExecutionClosure(repoRoot))
+  const withUnchangedExecutionClosure = async <T>(
+    action: () => T | Promise<T>,
+  ): Promise<T> => {
+    const before = authenticateAuthorityClosure()
+    const result = await action()
+    const after = authenticateAuthorityClosure()
+    if (after.executionClosureRoot !== before.executionClosureRoot)
+      fail("V138_RETRY_V3_EXECUTION_CLOSURE_CHANGED")
+    return result
+  }
   const command = argv[0]
   const rest = argv.slice(1)
   if (command === "--check-source-only" && rest.length === 0) {
@@ -2009,7 +2037,7 @@ export const executeV138BoundedRetryV3Cli = async (
     return
   }
   if (command === "--derive-seal-envelope-no-publish" && rest.length === 0) {
-    const artifacts = deriveArtifacts()
+    const artifacts = await withUnchangedExecutionClosure(deriveArtifacts)
     process.stdout.write(
       `${JSON.stringify({
         sealRoot: artifacts.seal.sealRoot,
@@ -2024,43 +2052,44 @@ export const executeV138BoundedRetryV3Cli = async (
   }
   if (command === "--publish-sealed-inactive-envelope") {
     if (rest.length !== 0) fail("V138_RETRY_ARGUMENTS_INVALID")
-    publishPair(repoRoot, deriveArtifacts())
+    await withUnchangedExecutionClosure(() =>
+      publishArtifacts(deriveArtifacts()),
+    )
     return
   }
   if (command === "--check-sealed-inactive-envelope") {
     if (rest.length !== 0) fail("V138_RETRY_ARGUMENTS_INVALID")
-    checkPublishedPair(
-      repoRoot,
-      injected?.deriveArtifacts === undefined ? undefined : deriveArtifacts,
-    )
-    for (const repoPath of [
-      V138_BOUNDED_RETRY_V3_PATHS.journal,
-      V138_BOUNDED_RETRY_V3_PATHS.terminal,
-      V138_BOUNDED_RETRY_V3_PATHS.privateDir,
-      V138_BOUNDED_RETRY_V3_PATHS.reproduction,
-    ]) {
-      try {
-        requireV138RetryV3DestinationAbsent(repoRoot, repoPath)
-      } catch {
-        fail("V138_RETRY_LIVE_DESTINATION_PRESENT")
+    await withUnchangedExecutionClosure(() => {
+      checkPair()
+      for (const repoPath of [
+        V138_BOUNDED_RETRY_V3_PATHS.journal,
+        V138_BOUNDED_RETRY_V3_PATHS.terminal,
+        V138_BOUNDED_RETRY_V3_PATHS.privateDir,
+        V138_BOUNDED_RETRY_V3_PATHS.reproduction,
+      ]) {
+        try {
+          requireV138RetryV3DestinationAbsent(repoRoot, repoPath)
+        } catch {
+          fail("V138_RETRY_LIVE_DESTINATION_PRESENT")
+        }
       }
-    }
+    })
     return
   }
   if (command === "--run-bounded-live-envelope") {
     if (rest.length !== 0) fail("V138_RETRY_ARGUMENTS_INVALID")
-    await runLive()
+    await withUnchangedExecutionClosure(runLive)
     return
   }
   if (command === "--check-live-transition") {
     if (rest.length !== 0) fail("V138_RETRY_ARGUMENTS_INVALID")
-    const checked = checkOutcome()
+    const checked = await withUnchangedExecutionClosure(checkOutcome)
     process.stdout.write(`${JSON.stringify(checked)}\n`)
     return
   }
   if (command === "--check-terminal-envelope") {
     if (rest.length !== 0) fail("V138_RETRY_ARGUMENTS_INVALID")
-    const checked = checkOutcome()
+    const checked = await withUnchangedExecutionClosure(checkOutcome)
     process.stdout.write(`${JSON.stringify(checked)}\n`)
     return
   }
