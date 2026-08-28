@@ -19,6 +19,12 @@ export const V138_PLAN_262_103_CARRIER_PROTOCOL =
   "git-object-byte-custody-external-carrier-v1" as const
 export const V138_PLAN_262_103_CARRIER_DOMAIN =
   "v1.38:plan-262-103:git-object-byte-custody:carrier:v1" as const
+export const V138_PLAN_262_103_FINDING_DOMAIN =
+  "v1.38:plan-262-103:git-object-byte-custody:finding:v6" as const
+export const V138_PLAN_262_103_REVIEW_DOMAIN =
+  "v1.38:plan-262-103:git-object-byte-custody:review:v6" as const
+export const V138_PLAN_262_103_PORTABLE_CLOSURE_DOMAIN =
+  "v1.38:plan-262-103:git-object-byte-custody:portable:v6" as const
 
 export const V138_PLAN_262_103_CANDIDATE_PATH =
   ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-payload-v6.json" as const
@@ -266,6 +272,44 @@ export const computeV138Plan262103CarrierRoot = (
   carrier: unknown,
 ): V138Plan262103Sha256 => sha256(carrierV138Plan262103Preimage(carrier))
 
+export const computeV138Plan262103FindingRoot = (
+  findings: readonly unknown[],
+): V138Plan262103Sha256 =>
+  sha256(
+    Buffer.concat([
+      Buffer.from(V138_PLAN_262_103_FINDING_DOMAIN),
+      Buffer.from([0]),
+      Buffer.from(canonical(findings)),
+    ]),
+  )
+
+export const computeV138Plan262103ReviewRoot = (
+  reportBytes: Uint8Array,
+): V138Plan262103Sha256 =>
+  sha256(
+    Buffer.concat([
+      Buffer.from(V138_PLAN_262_103_REVIEW_DOMAIN),
+      Buffer.from([0]),
+      Buffer.from(reportBytes),
+    ]),
+  )
+
+export const computeV138Plan262103PortableClosureRoot = (
+  closure: unknown,
+): V138Plan262103Sha256 => {
+  if (!record(closure) || !Object.hasOwn(closure, "reviewedExecutionClosureRoot"))
+    fail("V138_PLAN_262_103_CANDIDATE_INVALID")
+  const body = { ...closure }
+  delete body.reviewedExecutionClosureRoot
+  return sha256(
+    Buffer.concat([
+      Buffer.from(V138_PLAN_262_103_PORTABLE_CLOSURE_DOMAIN),
+      Buffer.from([0]),
+      Buffer.from(canonical(body)),
+    ]),
+  )
+}
+
 const validateSource = (source: unknown): source is Record<string, any> =>
   exactKeys(source, SOURCE_KEYS) &&
   isOid(source.commit) &&
@@ -345,7 +389,9 @@ const validateClosure = (value: unknown, source: Record<string, any>): boolean =
   value.pathnameLaunchReplacementResistanceClaimed === false &&
   CLOSURE_KEYS.filter((key) => key.endsWith("Root") || key.endsWith("Sha256")).every(
     (key) => isSha256(value[key]),
-  )
+  ) &&
+  value.reviewedExecutionClosureRoot ===
+    computeV138Plan262103PortableClosureRoot(value)
 
 const validateExecution = (value: unknown): boolean =>
   exactKeys(value, EXECUTION_KEYS) &&
@@ -385,6 +431,7 @@ export const validateV138Plan262103Candidate = (
     candidate.findingCount !== candidate.findings.length ||
     (zero ? candidate.findingCount !== 0 : candidate.findingCount < 1) ||
     !isSha256(candidate.findingRoot) ||
+    candidate.findingRoot !== computeV138Plan262103FindingRoot(candidate.findings) ||
     candidate.sourceReviewPassed !== zero ||
     !exactKeys(candidate.identityClaims, IDENTITY_KEYS) ||
     Object.values(candidate.identityClaims).some((child) => child !== false) ||
@@ -453,4 +500,3 @@ export const validateV138Plan262103Carrier = (
     fail("V138_PLAN_262_103_CARRIER_INVALID")
   return carrier
 }
-

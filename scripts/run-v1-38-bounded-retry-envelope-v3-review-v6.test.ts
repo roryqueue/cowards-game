@@ -14,8 +14,12 @@ import {
   V138_PLAN_262_103_CARRIER_SCHEMA,
   V138_PLAN_262_103_REPORT_PATH,
   V138_PLAN_262_102_SOURCE_PATHS,
+  candidateV138Plan262103Preimage,
+  carrierV138Plan262103Preimage,
   computeV138Plan262103CandidatePayloadRoot,
   computeV138Plan262103CarrierRoot,
+  computeV138Plan262103FindingRoot,
+  computeV138Plan262103PortableClosureRoot,
   validateV138Plan262103Candidate,
   validateV138Plan262103Carrier,
 } from "./lib/v1-38-plan-262-103-nonrecursive-review-contract-v1.js"
@@ -33,7 +37,8 @@ const falseAuthority = () =>
     V138_PLAN_262_103_AUTHORITY_KEYS.map((key) => [key, false]),
   ) as Record<string, boolean | number>
 
-const candidateFixture = () => ({
+const candidateFixture = () => {
+  const candidate = {
   schemaVersion: V138_PLAN_262_103_CANDIDATE_SCHEMA,
   protocol: "git-object-byte-custody-nonrecursive-v1",
   status: "zero_findings",
@@ -154,7 +159,12 @@ const candidateFixture = () => ({
   },
   reviewRoot: `sha256:${"2".repeat(64)}`,
   candidatePayloadRoot: `sha256:${"0".repeat(64)}`,
-})
+  }
+  candidate.findingRoot = computeV138Plan262103FindingRoot(candidate.findings)
+  candidate.reviewedExecutionClosure.reviewedExecutionClosureRoot =
+    computeV138Plan262103PortableClosureRoot(candidate.reviewedExecutionClosure)
+  return candidate
+}
 
 const carrierFixture = () => {
   const candidate = candidateFixture()
@@ -212,20 +222,33 @@ describe("Plan 262-103 non-recursive review contract", () => {
     )
   })
 
-  it("hashes fixed canonical candidate bytes after excluding only candidatePayloadRoot", () => {
-    const candidate = candidateFixture()
-    const { candidatePayloadRoot: _excluded, ...body } = candidate
-    const canonical = JSON.stringify(body, Object.keys(body).sort())
-    // The production canonical encoder recursively orders nested keys. This fixed
-    // shallow fixture assertion separately proves domain/NUL placement.
-    const preimage = Buffer.concat([
-      Buffer.from(`${V138_PLAN_262_103_CANDIDATE_DOMAIN}\0`),
-      Buffer.from(canonical),
-    ])
-    expect(preimage.subarray(0, V138_PLAN_262_103_CANDIDATE_DOMAIN.length + 1))
-      .toEqual(Buffer.from(`${V138_PLAN_262_103_CANDIDATE_DOMAIN}\0`))
-    expect(computeV138Plan262103CandidatePayloadRoot(candidate)).not.toBe(
-      sha256(Buffer.from(JSON.stringify(candidate))),
+  it("matches independent fixed canonical preimage bytes and roots", () => {
+    const candidateGolden = {
+      nested: { b: "β", a: 'quote"' },
+      array: [1, "\n", { z: null, x: true }],
+      a: "é",
+      candidatePayloadRoot: `sha256:${"0".repeat(64)}`,
+    }
+    expect(candidateV138Plan262103Preimage(candidateGolden).toString("hex")).toBe(
+      "76312e33383a706c616e2d3236322d3130333a6769742d6f626a6563742d627974652d637573746f64793a63616e6469646174652d7061796c6f61643a7636007b2261223a22c3a9222c226172726179223a5b312c225c6e222c7b2278223a747275652c227a223a6e756c6c7d5d2c226e6573746564223a7b2261223a2271756f74655c22222c2262223a22ceb2227d7d0a",
+    )
+    expect(computeV138Plan262103CandidatePayloadRoot(candidateGolden)).toBe(
+      "sha256:3d1da9eeede3aa3fbcb31ae6dae5a80801d3c7ac7739c47780bd5295c4b53be4",
+    )
+
+    const carrierGolden = {
+      custody: { path: "r", mode: "100644", byteLength: 4 },
+      binaryReportSha256: `sha256:${"ab".repeat(32)}`,
+      carrierRoot: `sha256:${"0".repeat(64)}`,
+    }
+    expect(carrierV138Plan262103Preimage(carrierGolden).toString("hex")).toBe(
+      "76312e33383a706c616e2d3236322d3130333a6769742d6f626a6563742d627974652d637573746f64793a636172726965723a7631007b2262696e6172795265706f7274536861323536223a227368613235363a61626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c22637573746f6479223a7b22627974654c656e677468223a342c226d6f6465223a22313030363434222c2270617468223a2272227d7d0a",
+    )
+    expect(computeV138Plan262103CarrierRoot(carrierGolden)).toBe(
+      "sha256:c9ad4a1fcc004154d5f4e6df9173a128bf04ecfb0e1db09cfa01c4262e0b212d",
+    )
+    expect(computeV138Plan262103CandidatePayloadRoot(candidateFixture())).not.toBe(
+      sha256(Buffer.from(JSON.stringify(candidateFixture()))),
     )
   })
 
@@ -320,6 +343,7 @@ describe("Plan 262-103 actual final consumer", () => {
       },
     ]
     candidate.findingCount = 1
+    candidate.findingRoot = computeV138Plan262103FindingRoot(candidate.findings)
     candidate.sourceReviewPassed = false
     candidate.execution.actualConsumerStatus = "blocked_review"
     candidate.authority.plan26292Eligible = false
