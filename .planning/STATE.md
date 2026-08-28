@@ -5,21 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-104-PLAN.md
-last_updated: "2026-08-28T19:44:26.686Z"
+stopped_at: Completed 262-105-PLAN.md
+last_updated: "2026-08-28T20:08:02.115Z"
 last_activity: 2026-08-28
-last_activity_desc: completed additive Plan-104 historical trio resolution and disposable native inactive-pair proof; Plan 262-105 is sole next action
+last_activity_desc: completed Plan-105 literal-zero raw-byte and four-mode disposable review; revised Plan 262-92 is sole next action
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 87
-  completed_plans: 81
-  percent: 0
+  completed_plans: 82
+  percent: 94
 ---
 
 # State: Coward's Game
 
-<!-- Plan 104 is complete without canonical publication. Plan 105 alone may independently review its exact source and four disposable actual modes. -->
+<!-- Plan 105 is complete with literal zero findings. Revised Plan 92 alone is eligible to publish the canonical inactive pair; no live or downstream authority exists. -->
+<!-- phase-262-plan-105-closeout-status: {"schema_version":"v1.38-plan-262-105-closeout-v1","proof_status":"literal_zero_raw_byte_four_mode_review_complete","active_plans":87,"trustworthy_summaries":82,"source_commit":"58669ae69376375f171aa56fd57b331355703e9a","source_tree":"cca6ff090cc82c70f28109fbbedf3c2f61fa073b","source_parent":"d86abb40eb8bbc68860925072b1c9cd4fe42dfb4","reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","trio_publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","finding_count":0,"finding_root":"sha256:9d5d6a5ac685c47a31c878540c7fcdad0830f90ada58b405f98f0cf28e1f2a77","result_root":"sha256:16613a589caf1019ce69e856624ac4323f1989539d63a703b3b81ab58a9cc15d","review_root":"sha256:9ad4c0ef29e2d6d6aef4488e9b302cbafb44d97ba464c672ef61476344bc075a","actual_modes_passed":4,"focused_tests_passed":21,"cleanup_complete":true,"canonical_refs_unchanged":true,"canonical_objects_unchanged":true,"canonical_destinations_unchanged":true,"plan_262_92_eligible":true,"canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-revised-262-92-only","downstream_authority_denied":true} -->
+<!-- Historical Plan-104 closeout carrier retained below as immutable planning history. -->
 <!-- phase-262-plan-104-closeout-status: {"schema_version":"v1.38-plan-262-104-closeout-v1","proof_status":"historical_trio_resolution_and_disposable_native_pair_complete","active_plans":87,"trustworthy_summaries":81,"source_commit":"58669ae69376375f171aa56fd57b331355703e9a","source_tree":"cca6ff090cc82c70f28109fbbedf3c2f61fa073b","source_parent":"d86abb40eb8bbc68860925072b1c9cd4fe42dfb4","reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","trio_publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","candidate_blob":"2d3f995bcd4c0067e3d8c0c2a0120a36bfdc1745","review_blob":"680616684dcdc408829923bf9f062a075ddf32f2","carrier_blob":"89d1077b12672c4a066cbcba77568e228c0669de","focused_tests_passed":28,"plan_262_105_eligible":true,"plan_262_92_eligible":false,"canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-262-105-only","downstream_authority_denied":true} -->
 <!-- Historical pre-Plan-104 topology carrier retained below as immutable planning history. -->
 <!-- phase-262-pair-lineage-correction-topology-v2: {"schema_version":"v1.38-plan-262-pair-lineage-correction-topology-v2","active_plans":87,"trustworthy_summaries":80,"preserved_plans":["262-102","262-103"],"active_chain":["262-104","262-105","262-92","262-93","262-94","262-95","262-106"],"waves":{"262-104":86,"262-105":87,"262-92":88,"262-93":89,"262-94":90,"262-95":91,"262-106":92},"lifecycle_stage_1":"262-95-readiness-and-summary","lifecycle_stage_2":"262-106-root-finalization","next_action":"dispatch-262-104-only","plan_262_92_eligible":false,"eligibility_condition":"committed-262-105-literal-zero-four-mode-review","canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
@@ -177,6 +179,7 @@ Progress: [█████████░] 93%
 | Phase 262 P101 | 22min | 2 tasks | 5 files |
 | Phase 262 P102 | 13min | 2 tasks | 3 files |
 | Phase 262 P104 | 18min | 2 tasks | 2 files |
+| Phase 262 P105 | 19min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -357,15 +360,17 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Plan 104 resolves the Plan-103 physical publication from the exact historical three-path introduction instead of treating HEAD as publication. — Preserves valid later summary commits while authenticating exact blobs, modes, bytes, and ancestry.
 - [Phase 262]: Plan 104 authenticates the portable reviewed closure and complete current local closure separately. — Native source roots include checkout-specific paths and must not be equated across repositories.
 - [Phase 262]: Plan 104 delegates inactive pair publication once to the existing native transaction; only the committed checker exposes Plan-93 eligibility. — Prevents partial publication and authority from uncommitted filesystem state.
+- [Phase 262]: Plan 262-105 literal zero plus four passed disposable actual modes makes only revised Plan 262-92 eligible; all live and downstream authority remains false.
+- [Phase 262]: Plan 262-105 independently resolves Plan-104 source and Plan-103 trio custody from raw Git objects without importing producer verdict helpers.
 
 ### Pending Todos
 
-- Dispatch Plan 262-104 only. Continue strictly through 262-105 -> 262-92 -> 262-93 -> 262-94 -> 262-95 -> 262-106, and do not dispatch any successor until its exact predecessor summary and branch condition passes.
+- Dispatch revised Plan 262-92 only. Continue strictly through 262-92 -> 262-93 -> 262-94 -> 262-95 -> 262-106, and do not dispatch any successor until its exact predecessor summary and branch condition passes.
 
 ### Current Blocker/Concerns
 
 - ADMIT-03 is the sole substantive blocker: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
-- Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result is immutable historical topology. Plans 262-102/103 subsequently supplied the non-recursive literal-zero carrier, but current research found the later-HEAD pair-lineage consumer defect; Plan 262-92 now remains ineligible until Plan 262-104 source and a fresh literal-zero four-mode Plan 262-105 review are committed.
+- Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plans 262-104/105 additively resolved the later-HEAD lineage defect and committed a fresh literal-zero four-mode review, so revised Plan 262-92 alone is now eligible; Plans 262-93 through 262-106 remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
 - Revised SEAL-01 is satisfied only at `single_operator_local_seal_v1_no_hostile_same_uid`; no independent-custody, hostile-same-UID, malicious-owner, or pathname-launch replacement resistance is claimed.
 - Formation, holdout, public/product/production, counted-play, gameplay-change, archive, and tag authority remain false.
@@ -419,8 +424,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T19:44:26.671Z
-Stopped at: Completed 262-104-PLAN.md
+Last session: 2026-08-28T20:08:01.943Z
+Stopped at: Completed 262-105-PLAN.md
 Resume file: None
 
 ### Blockers
