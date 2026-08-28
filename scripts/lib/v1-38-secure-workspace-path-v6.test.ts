@@ -122,15 +122,30 @@ const runRetainedLeafRace = async (
 describe("CR-05 trusted-root no-follow paths", () => {
   it("authenticates regular bytes through an O_NOFOLLOW descriptor", () => {
     const root = fixture()
+    writeFileSync(path.join(root, "safe", "second"), "second\n")
     expect(
       authenticateV138ManifestNoFollow(root, [
         { path: "safe/file", sha256: sha256V138Secure("bytes\n") },
+        { path: "safe/second", sha256: sha256V138Secure("second\n") },
       ]),
     ).toBe(true)
     expect(readV138RegularNoFollow(root, "safe/file").toString()).toBe(
       "bytes\n",
     )
     expect(assertV138AbsentNoFollow(root, "safe/absent")).toBe(true)
+  })
+
+  it("authenticates every manifest entry in one v6 reader batch", () => {
+    const source = readFileSync(
+      path.resolve(
+        path.dirname(V138_SECURE_MANIFEST_READER_V6_SOURCE),
+        "../lib/v1-38-secure-workspace-path-v6.ts",
+      ),
+      "utf8",
+    )
+    const body = source.match(/authenticate: \(entries\) => \{([\s\S]*?)\n    \},/u)?.[1]
+    expect(body).toContain("readV138WorkspaceBatch")
+    expect(body).not.toContain('invoke("read"')
   })
 
   it.each(["intermediate", "final"])("rejects a %s symlink", (kind) => {
