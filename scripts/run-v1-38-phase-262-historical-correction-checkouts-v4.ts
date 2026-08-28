@@ -48,6 +48,9 @@ export const V138_HISTORICAL_GIT_ISOLATION_V4 = Object.freeze({
   replacementObjectsDisabled: true,
   replacementRefsRejected: true,
   rawCommitAndTreeVerified: true,
+  checkoutByteManifestVerified: true,
+  checkoutAttributesRejected: true,
+  checkoutTransformConfigNeutralized: true,
   checkoutCleanBeforeInstall: true,
 })
 const cases = Object.freeze([
@@ -80,6 +83,16 @@ const hardenedGitArgs = (args: readonly string[]) => [
   "core.hooksPath=/dev/null",
   "-c",
   "core.fsmonitor=false",
+  "-c",
+  "core.autocrlf=false",
+  "-c",
+  "core.eol=lf",
+  "-c",
+  "core.safecrlf=true",
+  "-c",
+  "core.attributesFile=/dev/null",
+  "-c",
+  "core.symlinks=true",
   "-c",
   "advice.detachedHead=false",
   ...args,
@@ -293,18 +306,108 @@ const assertRepositoryConfigurationSafe = (
   git: (args: readonly string[], cwd?: string) => string,
 ): void => {
   const configuration = git(["config", "--local", "--list"])
-  const forbidden = /(?:^|\n)(?:core\.(?:hookspath|worktree|gitdir|fsmonitor|sshcommand)|extensions\.objectformat|include\.|filter\.|url\..*\.insteadof|protocol\.|alias\.)=/iu
+  const forbidden = /(?:^|\n)(?:core\.(?:hookspath|worktree|gitdir|fsmonitor|sshcommand|autocrlf|eol|safecrlf|attributesfile|symlinks)|extensions\.objectformat|include\.|filter\.|url\..*\.insteadof|protocol\.|alias\.)=/iu
   if (forbidden.test(configuration))
     fail("V138_HISTORICAL_REPOSITORY_CONFIG_FORBIDDEN")
   if (git(["for-each-ref", "--format=%(refname)", "refs/replace"]) !== "")
     fail("V138_HISTORICAL_REPLACE_REF_FORBIDDEN")
 }
 
+export const assertV138HistoricalRepositoryConfigurationSafeV4 = (
+  repository: string,
+): true => {
+  const isolationRoot = mkdtempSync(path.join(tmpdir(), "v138-repository-config-v4-"))
+  const environment = cleanEnvironment("/usr/bin", isolationRoot)
+  const git = (args: readonly string[], cwd = repository) =>
+    execFileSync(GIT, hardenedGitArgs(args), {
+      cwd,
+      encoding: "utf8",
+      env: environment,
+    }).trim()
+  try {
+    assertRepositoryConfigurationSafe(git)
+    return true
+  } finally {
+    rmSync(isolationRoot, { recursive: true, force: true })
+  }
+}
+
+const checkoutByteManifest = (
+  repository: string,
+  checkout: string,
+  commit: string,
+  environment: NodeJS.ProcessEnv,
+) => {
+  const raw = execFileSync(GIT, hardenedGitArgs(["ls-tree", "-rz", "--full-tree", commit]), {
+    cwd: repository,
+    env: environment,
+  })
+  const records: string[] = []
+  let files = 0
+  let symlinks = 0
+  for (const encoded of raw.toString("utf8").split("\0")) {
+    if (encoded === "") continue
+    const separator = encoded.indexOf("\t")
+    const header = encoded.slice(0, separator).split(" ")
+    const relative = encoded.slice(separator + 1)
+    if (separator < 0 || header.length !== 3 || relative === "")
+      fail("V138_HISTORICAL_TREE_MANIFEST_INVALID")
+    const [mode, type, blob] = header
+    if (type !== "blob" || !["100644", "100755", "120000"].includes(mode!))
+      fail("V138_HISTORICAL_TREE_ENTRY_UNSUPPORTED")
+    if (path.posix.basename(relative) === ".gitattributes")
+      fail("V138_HISTORICAL_CHECKOUT_ATTRIBUTES_FORBIDDEN")
+    const absolute = path.join(checkout, ...relative.split("/"))
+    const status = lstatSync(absolute)
+    let executedBytes: Buffer
+    if (mode === "120000") {
+      if (!status.isSymbolicLink()) fail("V138_HISTORICAL_CHECKOUT_ENTRY_TYPE_MISMATCH")
+      executedBytes = Buffer.from(readlinkSync(absolute))
+      symlinks += 1
+    } else {
+      if (!status.isFile() || status.isSymbolicLink())
+        fail("V138_HISTORICAL_CHECKOUT_ENTRY_TYPE_MISMATCH")
+      if (((status.mode & 0o111) !== 0) !== (mode === "100755"))
+        fail("V138_HISTORICAL_CHECKOUT_MODE_MISMATCH")
+      executedBytes = readFileSync(absolute)
+      files += 1
+    }
+    const executedBlob = createHash("sha1")
+      .update(`blob ${executedBytes.length}\0`)
+      .update(executedBytes)
+      .digest("hex")
+    if (executedBlob !== blob)
+      fail("V138_HISTORICAL_CHECKOUT_BYTES_MISMATCH")
+    records.push(`${mode}\0${relative}\0${blob}\0${sha(executedBytes)}`)
+  }
+  records.sort()
+  return Object.freeze({ files, symlinks, root: sha(records.join("\n")) })
+}
+
+export const assertV138HistoricalCheckoutBytesV4 = (
+  repository: string,
+  checkout: string,
+  commit: string,
+) => {
+  const isolationRoot = mkdtempSync(path.join(tmpdir(), "v138-checkout-bytes-v4-"))
+  try {
+    return checkoutByteManifest(
+      repository,
+      checkout,
+      commit,
+      cleanEnvironment("/usr/bin", isolationRoot),
+    )
+  } finally {
+    rmSync(isolationRoot, { recursive: true, force: true })
+  }
+}
+
 const assertCheckoutMatchesRawTree = (
   git: (args: readonly string[], cwd?: string) => string,
   checkout: string,
   commit: string,
-): string => {
+  environment: NodeJS.ProcessEnv,
+) => {
   const objectType = git(["cat-file", "-t", commit])
   if (objectType !== "commit") fail("V138_HISTORICAL_COMMIT_OBJECT_INVALID")
   const tree = git(["rev-parse", `${commit}^{tree}`])
@@ -314,7 +417,7 @@ const assertCheckoutMatchesRawTree = (
     fail("V138_HISTORICAL_CHECKOUT_TREE_MISMATCH")
   if (git(["status", "--porcelain=v1", "--untracked-files=all"], checkout) !== "")
     fail("V138_HISTORICAL_CHECKOUT_DIRTY")
-  return tree
+  return Object.freeze({ tree, checkoutBytes: checkoutByteManifest(root, checkout, commit, environment) })
 }
 
 type HistoricalOptions = Readonly<{
@@ -364,8 +467,13 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         )
         added.push(destination)
       }
-      const tree = assertCheckoutMatchesRawTree(git, checkout, item.commit)
-      if (assertCheckoutMatchesRawTree(git, reference, item.commit) !== tree)
+      const checkoutIdentity = assertCheckoutMatchesRawTree(git, checkout, item.commit, environment)
+      const referenceIdentity = assertCheckoutMatchesRawTree(git, reference, item.commit, environment)
+      const tree = checkoutIdentity.tree
+      if (
+        referenceIdentity.tree !== tree ||
+        referenceIdentity.checkoutBytes.root !== checkoutIdentity.checkoutBytes.root
+      )
         fail("V138_HISTORICAL_REFERENCE_TREE_MISMATCH")
       const packageBytes = readFileSync(path.join(checkout, "package.json"))
       const packageJson = JSON.parse(packageBytes.toString("utf8"))
@@ -425,6 +533,9 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         commit: item.commit,
         test: item.test,
         tree,
+        checkoutByteManifestRoot: checkoutIdentity.checkoutBytes.root,
+        checkoutByteManifestFiles: checkoutIdentity.checkoutBytes.files,
+        checkoutByteManifestSymlinks: checkoutIdentity.checkoutBytes.symlinks,
         testBlob,
         lockfileBlob,
         packageBlob,
@@ -455,7 +566,10 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
         executionAssurance: "single_operator_local_seal_v1_no_hostile_same_uid",
         gitIsolation: V138_HISTORICAL_GIT_ISOLATION_V4,
         dependencyRoot: sha([
-          tree, testBlob, lockfileBlob, packageBlob, EXPECTED.packageManager,
+          tree, checkoutIdentity.checkoutBytes.root,
+          String(checkoutIdentity.checkoutBytes.files),
+          String(checkoutIdentity.checkoutBytes.symlinks),
+          testBlob, lockfileBlob, packageBlob, EXPECTED.packageManager,
           tools.gitSha256, tools.gitCdHash, tools.nodeSha256, tools.nodeCdHash,
           tools.pnpmSha256, tools.pnpmDistSha256, tools.pnpmClosureRoot,
           String(tools.pnpmClosureFiles), tools.corepackSha256, EXPECTED.lockfileSha256,

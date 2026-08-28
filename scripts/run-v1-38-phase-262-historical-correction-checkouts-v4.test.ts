@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import {
   chmodSync,
   cpSync,
@@ -13,6 +14,8 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import {
+  assertV138HistoricalCheckoutBytesV4,
+  assertV138HistoricalRepositoryConfigurationSafeV4,
   resolveV138HistoricalToolchainV4,
   runV138Phase262HistoricalCorrectionCheckoutsV4,
   V138_HISTORICAL_GIT_ISOLATION_V4,
@@ -74,6 +77,49 @@ describe("CR-05 historical correction toolchain provenance", () => {
     expect(source).toContain("same-process-reviewed-runner-no-ambient-tsx-child-v5")
   })
 
+  it("rejects CRLF-transformed executed bytes and tracked checkout attributes", () => {
+    const repository = mkdtempSync(path.join(tmpdir(), "v138-checkout-bytes-repo-"))
+    roots.push(repository)
+    const git = (args: string[]) =>
+      execFileSync("/usr/bin/git", args, {
+        cwd: repository,
+        env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" },
+        encoding: "utf8",
+      }).trim()
+    git(["init"])
+    git(["config", "user.name", "v138-test"])
+    git(["config", "user.email", "v138-test@example.invalid"])
+    writeFileSync(path.join(repository, "proof.txt"), "line-one\nline-two\n")
+    git(["add", "proof.txt"])
+    git(["commit", "-m", "raw-bytes"])
+    const rawCommit = git(["rev-parse", "HEAD"])
+    expect(
+      assertV138HistoricalCheckoutBytesV4(repository, repository, rawCommit)
+        .files,
+    ).toBe(1)
+    git(["config", "core.autocrlf", "true"])
+    expect(() =>
+      assertV138HistoricalRepositoryConfigurationSafeV4(repository),
+    ).toThrow("V138_HISTORICAL_REPOSITORY_CONFIG_FORBIDDEN")
+    git(["config", "--unset", "core.autocrlf"])
+    writeFileSync(path.join(repository, "proof.txt"), "line-one\r\nline-two\r\n")
+    expect(() =>
+      assertV138HistoricalCheckoutBytesV4(repository, repository, rawCommit),
+    ).toThrow("V138_HISTORICAL_CHECKOUT_BYTES_MISMATCH")
+
+    writeFileSync(path.join(repository, "proof.txt"), "line-one\nline-two\n")
+    writeFileSync(path.join(repository, ".gitattributes"), "*.txt text eol=crlf\n")
+    git(["add", ".gitattributes", "proof.txt"])
+    git(["commit", "-m", "checkout-transform"])
+    expect(() =>
+      assertV138HistoricalCheckoutBytesV4(
+        repository,
+        repository,
+        git(["rev-parse", "HEAD"]),
+      ),
+    ).toThrow("V138_HISTORICAL_CHECKOUT_ATTRIBUTES_FORBIDDEN")
+  })
+
   it("rejects a mutated Vitest dist entry before execution and ignores hostile global hooks/config", () => {
     const hostile = mkdtempSync(path.join(tmpdir(), "v138-hostile-git-config-"))
     roots.push(hostile)
@@ -116,6 +162,9 @@ describe("CR-05 historical correction toolchain provenance", () => {
         replacementObjectsDisabled: true,
         replacementRefsRejected: true,
         rawCommitAndTreeVerified: true,
+        checkoutByteManifestVerified: true,
+        checkoutAttributesRejected: true,
+        checkoutTransformConfigNeutralized: true,
         checkoutCleanBeforeInstall: true,
       })
     } finally {
