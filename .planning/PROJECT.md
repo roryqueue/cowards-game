@@ -4,8 +4,8 @@
 
 **Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
 **Release target:** v1.38 Competitive Strategy Factory and Adversarial League
-**Status:** v1.38 is paused at Phase 262. All 64 active plans have summaries, including completed Plans 262-80 and 262-81, but the bounded retry ended exhausted at fresh 0/540 and the additive post-run correction makes effective integrity a non-pass. Phase 263 through Phase 270 remain denied.
-**Last audit:** v1.37 traced 56/56 requirements with zero gaps, zero overrides, one transition authority, and zero unapproved semantic deltas. The immutable pre-tag audit retains 55 passed plus PROOF-08 `ready_pending`; the actual annotated tag/post-tag join closes the final requirement. Refreshed production-shaped proof covers four containment-attested non-counted lanes, 12 runs, 23 service scenarios, 17 rollback/history scenarios, Chronicle reconstruction/replay, Set fairness, persistence, privacy, and rollback.
+**Status:** v1.38 is paused at Phase 262. All 70 active plans have committed summaries and Plan 262-89 is complete, but lifecycle-v2 remains `gaps_found`: the independently adjudicated bounded retry ended `exhausted` at fresh 0/540, reproduction-v16 and Route-10 activation are absent, ADMIT-03 is blocked, and Phase 263 through Phase 270 remain denied.
+**Last audit:** The current v1.38 milestone audit traces 15/94 requirements satisfied, 0/9 phases complete, 8/9 integration edges connected, and 1/5 end-to-end flows intact. Phase 262 is Nyquist-compliant but empirically partial; correction-v10 closes the code/integrity review under the declared reduced-assurance local-seal boundary without reinterpreting the 0/540 result or granting archive/tag authority.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.
 
@@ -39,7 +39,7 @@ Players can design, run, replay, and understand deterministic autonomous doctrin
 
 **Milestone contract:** `.planning/milestone-proposals/v1.38-competitive-strategy-factory-and-adversarial-league/ACTIVATION-PROMPT.md`
 
-**Current lifecycle carrier:** `.planning/artifacts/v1.38-phase-262-current-lifecycle-status-v1.json` is the additive superseding status for current planning surfaces. It preserves the historical Plan-79 summary and both post-run correction artifacts byte-for-byte, binds the canonical journal root, records reproduction-v15 and Route-9 activation as absent, and grants no live, rules, candidate, formation, holdout, public, production, or downstream phase authority.
+**Current lifecycle carrier:** `.planning/artifacts/v1.38-phase-262-current-lifecycle-status-v2.json` records 70/70 summaries, Plan 262-89 verification `gaps_found`, Phase 262 incomplete, reproduction-v16 and Route-10 activation absent, and all downstream authority false. `.planning/artifacts/v1.38-phase-262-review-fix-correction-v10.json` is the additive current integrity carrier; it preserves protected history, authenticates the current evidence batch, retains the 0/540 empirical non-pass, and grants no retry, rules, candidate, formation, holdout, public, production, archive, tag, or downstream phase authority.
 
 ## Latest Shipped Milestone: v1.37 Rules Integrity and Strategy Evaluation Foundations
 
@@ -894,4 +894,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-27 after starting milestone v1.38 Competitive Strategy Factory and Adversarial League*
+*Last updated: 2026-08-28 after Phase 262 validation, verification, correction-v10, and milestone integration audit refresh*

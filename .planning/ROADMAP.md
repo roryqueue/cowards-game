@@ -50,12 +50,14 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 68/70 plans executed
+**Plans:** 70/70 plans executed
 
-**Current verdict:** CLEAN EMPIRICAL NON-PASS / FRESH 0/540 / DOWNSTREAM DENIED — Plan 262-88 independently authenticated exact Git custody, the frozen v2 envelope, every journal transition and charged identity, 15/15 owner-only receipts, cleanup, runtime/kernel binding, privacy, and protected v1 history. The result is terminal `exhausted` with zero assurance defects, so correction-v3 is absent; exact 540/540 is absent, so reproduction-v16 and Route-10 activation remain absent. Only lifecycle Plan 262-89 is eligible next. ADMIT-03 remains blocked and Phases 263-270 remain denied.
+**Current verdict:** CLEAN EMPIRICAL NON-PASS / FRESH 0/540 / DOWNSTREAM DENIED — All 70 plans and summaries are complete. Plan 262-89 published lifecycle-v2 with `gaps_found` and no lifecycle mutation. Correction-v10 closes the latest code/integrity review under `single_operator_local_seal_v1_no_hostile_same_uid` without changing the terminal `exhausted` result. Exact 540/540 remains absent, so reproduction-v16 and Route-10 activation remain absent; ADMIT-03 is blocked and Phases 263-270 remain denied.
 
-<!-- Current additive carrier; supersedes copied counts, next actions, and integrity conclusions below without mutating historical evidence. -->
+<!-- Historical v1 carrier retained byte-for-byte as earlier planning history. The current carrier is lifecycle-v2. -->
 <!-- phase-262-current-lifecycle-status: {"schema_version":"v1.38-phase-262-current-lifecycle-status-v1","artifact":".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v1.json","active_plans":64,"summaries":64,"plans_80_81_completed":true,"route_starts":3,"calibration_charged":24,"fresh_accepted":0,"required_accepted":540,"terminal":"exhausted","effective_integrity":"integrity_non_pass","reproduction_v15_present":false,"route9_activation_present":false,"plan81_verification":"gaps_found","lifecycle_mutated":false,"phase_262":"incomplete","phases_263_270_authorized":false} -->
+
+**Current additive carriers:** `.planning/artifacts/v1.38-phase-262-current-lifecycle-status-v2.json` records 70 plans/70 summaries, Plan 262-89 `gaps_found`, Phase 262 incomplete, and Phase-263 planning/execution false. `.planning/artifacts/v1.38-phase-262-review-fix-correction-v10.json` authenticates the current evidence batch, retains all thirteen authority fields false, and confirms all fourteen forbidden destinations absent.
 
 The current carrier also resolves the audit's Plan-79 journal-root documentation finding without rewriting history: immutable `262-79-SUMMARY.md` already contains canonical root `sha256:1cd8fd41f97a7c4938cb53719e31b49cc937fbfdcdcd26a51688e6894d09d8ad`; the malformed 62-hex copy below is retained only inside the historical closeout carrier and has no current authority.
 
@@ -66,7 +68,7 @@ The current carrier also resolves the audit's Plan-79 journal-root documentation
 
 <!-- phase-262-plan-79-closeout-status: {"schema_version":"v1.38-plan-262-79-closeout-v1","proof_status":"bounded_retry_exhausted","active_plans":64,"trustworthy_summaries":62,"live_commit":"b4be9f5f5207c7eb87c6cd0e8f79863d4877cf3b","envelope_root":"sha256:229c1c3e33ee055448b4b8ac7dc2bb53efd84774416d51d984044b2a7f35f153","journal_root":"sha256:1cd8fd41f97a7c4938cb53719e31b49cc937fbfdcd26a51688e6894d09d8ad","state_root":"sha256:3b1fbf71ebf7d95a128d0000ebb92050b2c9dfd790415570cb93169cc1f520f5","disposition":"exhausted","preflight_observations":3,"route_starts":3,"calibration_charged":24,"reproduction_charged":0,"fresh_accepted":0,"required_accepted":540,"complete_cleanup":true,"reproduction_v15_present":false,"post_run_cli_checkers_present":false,"admit_03":"blocked","phase_262":"incomplete","phase263_authorized":false,"foundation_activation_root_present":false,"next_action":"stop-no-plan-80-authority","unfiltered_execute_phase_prohibited":true,"downstream_authority_denied":true} -->
 
-**Current topology (superseding earlier dispatch text):** Active discovery is 70 plans/69 summaries. Plans 262-84 through 262-88 are complete. Receipt-manifest-v2 root `sha256:5863d906dcea7bf784a469df7dab8492a8383feb9bcdae7d6c9e9800c30d444a` and disposition-v2 root `sha256:03ba0268fca01ea40e08d323565bbfcfffefa8bf7ddfe9c95b58fa423c32dd7f` preserve a clean non-pass with fresh 0/540. Correction-v3, reproduction-v16, lifecycle-v2, and Route-10 activation remain absent. Plan 262-89 is the sole eligible lifecycle owner; ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain denied.
+**Current topology (superseding earlier dispatch text):** Active discovery is 70 plans/70 summaries. Plans 262-84 through 262-89 are complete. Lifecycle-v2 status root `sha256:e762aa430aadcd1986d04c79dc9d102641e9a177f099ee066bcb9464c09f94a6` records `gaps_found` without lifecycle mutation. Correction-v10 root `sha256:79f0ba7b9352992c5ad51a102bfd93f21bde93f5a01ff2438a25fef0919b22d3` preserves the clean non-pass at fresh 0/540. Reproduction-v16 and Route-10 activation remain absent; there is no eligible next plan or downstream authority under the current contract.
 
 <!-- phase-262-plan-60-status: {"proof_status":"plan_262_63_lifecycle_reconciliation_complete_source_review_next","review_v1_disposition":"review_v1_invalid_disproved_non_authorizing","review_v2_disposition":"structurally_self_referential_non_authorizing","source_a8_historical":true,"source_a9":"c112383a6e23196da0e9f2d4cd2fc72736a4952f","review_v3_root":null,"admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"candidate_search_authorized":false,"phase263_authorized":false,"formation_materialization_authorized":false,"holdout_opening_authorized":false,"public_authorized":false,"production_authorized":false,"archived_plan_62":"archived/262-62-HISTORICAL.md","archived_plan_62_sha256":"438e139b6710c482b668514091968ee3a31ea575f2d0d002ec0c11473fdbc07a","next_action":"code-review-262-63"} -->
 
@@ -91,7 +93,7 @@ Plans:
 - [x] 262-86-PLAN.md
 - [x] 262-87-PLAN.md
 - [x] 262-88-PLAN.md
-- [ ] 262-89-PLAN.md
+- [x] 262-89-PLAN.md
 
 **Wave 1**
 
@@ -528,15 +530,15 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 68/70 | In Progress|  |
-| 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Not started | - |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Not started | - |
-| 265. Serious Current-Rules League and Development Red Team | 0/TBD | Not started | - |
-| 266. Content-Addressed Current-League Freeze | 0/TBD | Not started | - |
-| 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Not started | - |
-| 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Not started | - |
-| 269. Sealed Evaluation, Causal Decision, and Current-Only Certification | 0/TBD | Not started | - |
-| 270. Independent Verification and Release Closure | 0/TBD | Not started | - |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 70/70 | Empirically incomplete (`gaps_found`) | - |
+| 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 269. Sealed Evaluation, Causal Decision, and Current-Only Certification | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 270. Independent Verification and Release Closure | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 
 ---
 *Roadmap created: 2026-07-27*
