@@ -4,11 +4,9 @@ import {
   constants,
   fstatSync,
   lstatSync,
-  mkdirSync,
   openSync,
   readFileSync,
   realpathSync,
-  rmdirSync,
 } from "node:fs"
 import path from "node:path"
 
@@ -35,82 +33,6 @@ const relativeParts = (relative: string): readonly string[] => {
 
 export const normalizeV138Relative = (relative: string): string =>
   relativeParts(relative).join("/")
-
-/**
- * Authenticate every requested internal directory before creating any of
- * them. This two-pass rule prevents a later hostile symlink from causing an
- * earlier lock/staging mutation.
- */
-export const ensureV138TrustedDirectories = (
-  rootInput: string,
-  relatives: readonly string[],
-): readonly string[] => {
-  const root = trustedRootV138(rootInput)
-  const normalized = relatives.map(normalizeV138Relative)
-  const missing: string[] = []
-  for (const relative of normalized) {
-    const target = path.join(root, ...relativeParts(relative))
-    try {
-      const status = lstatSync(target)
-      if (!status.isDirectory() || status.isSymbolicLink()) fail("V138_SECURE_INTERNAL_DIRECTORY_INVALID")
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
-      missing.push(relative)
-    }
-  }
-  for (const relative of missing) {
-    const parts = relativeParts(relative)
-    let cursor = root
-    for (const part of parts) {
-      cursor = path.join(cursor, part)
-      try {
-        mkdirSync(cursor, { mode: 0o700 })
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
-      }
-      const status = lstatSync(cursor)
-      if (!status.isDirectory() || status.isSymbolicLink()) fail("V138_SECURE_INTERNAL_DIRECTORY_INVALID")
-    }
-  }
-  return Object.freeze(normalized.map((relative) => path.join(root, ...relativeParts(relative))))
-}
-
-export const withV138ExclusiveDirectoryLock = <T>(
-  rootInput: string,
-  lockDirectoryRelative: string,
-  lockName: string,
-  operation: () => T,
-): T => {
-  const root = trustedRootV138(rootInput)
-  if (!/^[0-9a-f]{64}\.lock$/u.test(lockName)) fail("V138_SECURE_LOCK_NAME_INVALID")
-  const [lockDirectory] = ensureV138TrustedDirectories(root, [lockDirectoryRelative])
-  const lockPath = path.join(lockDirectory!, lockName)
-  const deadline = Date.now() + 10_000
-  for (;;) {
-    try {
-      mkdirSync(lockPath, { mode: 0o700 })
-      break
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
-      try {
-        const status = lstatSync(lockPath)
-        if (!status.isDirectory() || status.isSymbolicLink()) fail("V138_SECURE_LOCK_INVALID")
-      } catch (inspectionError) {
-        if ((inspectionError as NodeJS.ErrnoException).code === "ENOENT") continue
-        throw inspectionError
-      }
-      if (Date.now() >= deadline) fail("V138_SECURE_LOCK_TIMEOUT")
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10)
-    }
-  }
-  try {
-    const status = lstatSync(lockPath)
-    if (!status.isDirectory() || status.isSymbolicLink()) fail("V138_SECURE_LOCK_INVALID")
-    return operation()
-  } finally {
-    rmdirSync(lockPath)
-  }
-}
 
 export const resolveV138RelativeNoFollow = (
   rootInput: string,
