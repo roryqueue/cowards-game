@@ -277,12 +277,37 @@ const assertCheckoutMatchesRawTree = (
 
 type HistoricalOptions = Readonly<{
   mutateInstalledRunner?: boolean
+  onlyGeneration?: "correction-v2" | "correction-v3"
 }>
 
 export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
   options: HistoricalOptions = {},
 ) => {
   const tools = resolveV138HistoricalToolchainV4()
+  if (options.onlyGeneration === undefined && !options.mutateInstalledRunner) {
+    const script = fileURLToPath(import.meta.url)
+    return Object.freeze(
+      cases.flatMap(({ generation }) =>
+        JSON.parse(
+          execFileSync(
+            tools.node,
+            ["--import", "tsx", script, "--derive-case", generation],
+            {
+              cwd: root,
+              encoding: "utf8",
+              env: {
+                PATH: `/usr/bin:/bin:${tools.toolBin}`,
+                LANG: "C",
+                LC_ALL: "C",
+                CI: "1",
+                COREPACK_ENABLE_PROJECT_SPEC: "0",
+              },
+            },
+          ),
+        ),
+      ),
+    )
+  }
   const configRoot = mkdtempSync(path.join(tmpdir(), "v138-historical-config-v4-"))
   const environment = cleanEnvironment(tools.toolBin, configRoot)
   const git = (args: readonly string[], cwd = root) =>
@@ -294,7 +319,11 @@ export const runV138Phase262HistoricalCorrectionCheckoutsV4 = (
   const results: Readonly<Record<string, unknown>>[] = []
   try {
    assertRepositoryConfigurationSafe(git)
-   for (const item of cases) {
+   for (const item of cases.filter(
+     ({ generation }) =>
+       options.onlyGeneration === undefined ||
+       generation === options.onlyGeneration,
+   )) {
     const holder = mkdtempSync(path.join(tmpdir(), `v138-${item.generation}-v4-`))
     const checkout = path.join(holder, "checkout")
     const reference = path.join(holder, "reference")
@@ -437,5 +466,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.stdout.write("historical_correction_checkout_provenance_v4_valid=true\n")
   } else if (process.argv[2] === "--derive")
     process.stdout.write(`${JSON.stringify(deriveV138Phase262HistoricalCheckoutEvidenceV4())}\n`)
+  else if (
+    process.argv[2] === "--derive-case" &&
+    (process.argv[3] === "correction-v2" || process.argv[3] === "correction-v3")
+  )
+    process.stdout.write(
+      `${JSON.stringify(runV138Phase262HistoricalCorrectionCheckoutsV4({ onlyGeneration: process.argv[3] }))}\n`,
+    )
   else fail("V138_HISTORICAL_CHECKOUT_COMMAND_V3_INVALID")
 }
