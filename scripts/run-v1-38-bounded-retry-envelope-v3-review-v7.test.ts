@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -11,6 +11,7 @@ import {
 } from "./run-v1-38-bounded-retry-envelope-v3-review-v7.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
+const EXPECTED_PUBLICATION = "2f4fd225ca32b0ac67c2fd09f3036cbbe208725c"
 const temporaryRoots: string[] = []
 const git = (root: string, args: readonly string[]): string =>
   execFileSync("/usr/bin/git", ["-c", "core.hooksPath=/dev/null", ...args], {
@@ -90,8 +91,12 @@ describe("Plan 262-104 v7 historical trio resolution", () => {
     git(clone, ["config", "user.name", "Plan 262 Test"])
     git(clone, ["config", "user.email", "plan-262@example.invalid"])
     const candidate = ".planning/artifacts/v1.38-plan-262-103-bounded-retry-source-rereview-payload-v6.json"
-    execFileSync("/usr/bin/git", ["checkout", "HEAD^", "--", candidate], { cwd: clone })
+    const candidateTarget = path.join(clone, candidate)
+    writeFileSync(candidateTarget, Buffer.concat([readFileSync(candidateTarget), Buffer.from(" \n")]))
     git(clone, ["commit", "-m", "rewrite protected trio", "--", candidate])
+    execFileSync("/usr/bin/git", ["checkout", EXPECTED_PUBLICATION, "--", candidate], {
+      cwd: clone,
+    })
     expect(() => resolveV138Plan262103TrioPublication(clone)).toThrow(
       "V138_PLAN_262_104_TRIO_REWRITTEN",
     )
