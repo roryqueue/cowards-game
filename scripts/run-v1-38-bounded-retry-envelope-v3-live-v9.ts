@@ -3,7 +3,11 @@ import { existsSync, lstatSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import ts from "typescript"
-import { runV138V3ProductionLive } from "./run-v1-38-bounded-retry-envelope-v3.js"
+import {
+  V138_BOUNDED_RETRY_V3_PATHS,
+  checkV138PublishedRetryV3Outcome,
+  runV138V3ProductionLive,
+} from "./run-v1-38-bounded-retry-envelope-v3.js"
 import {
   authenticateV138RetryV3ExecutionClosure,
   runV138RetryV3IsolatedGit,
@@ -57,6 +61,8 @@ export const V138_LIVE_V9_MODES = Object.freeze([
   "--check-source-only",
   "--check-prospective-custody",
   "--check-post-run-custody",
+  "--check-reviewed-live-ready",
+  "--run-reviewed-bounded-live-envelope",
 ] as const)
 
 const PLAN_107_EXECUTED_PATHS = Object.freeze([
@@ -963,41 +969,120 @@ const authenticateCorrectedPublication = (root: string) => {
   })
 }
 
-const ALWAYS_FORBIDDEN_DESTINATIONS = Object.freeze([
+const POST_RUN_FORBIDDEN_DESTINATIONS = Object.freeze([
   V138_LIVE_V9_PATHS.supplementV1,
-  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
-  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl.lock",
-  ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
-  ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json",
-  ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
-  ".planning/artifacts/v1.38-bounded-retry-v3-disposition.json",
-  ".planning/artifacts/v1.38-bounded-retry-v3-correction.json",
-  ".planning/artifacts/v1.38-bounded-retry-v3-activation.json",
-  ".planning/artifacts/v1.38-bounded-retry-v3-readiness.json",
-  ".planning/artifacts/v1.38-bounded-retry-v3-lifecycle.json",
+  V138_BOUNDED_RETRY_V3_PATHS.reproduction,
+  V138_BOUNDED_RETRY_V3_PATHS.receiptManifest,
+  V138_BOUNDED_RETRY_V3_PATHS.disposition,
+  V138_BOUNDED_RETRY_V3_PATHS.correction,
+  V138_BOUNDED_RETRY_V3_PATHS.activation,
+  V138_BOUNDED_RETRY_V3_PATHS.readiness,
+  V138_BOUNDED_RETRY_V3_PATHS.lifecycle,
 ])
+const PRODUCER_OWNED_DESTINATIONS = Object.freeze([
+  V138_BOUNDED_RETRY_V3_PATHS.journal,
+  `${V138_BOUNDED_RETRY_V3_PATHS.journal}.lock`,
+  V138_BOUNDED_RETRY_V3_PATHS.privateDir,
+  V138_BOUNDED_RETRY_V3_PATHS.terminal,
+])
+const pathPresentNoFollow = (root: string, repoPath: string): boolean => {
+  try {
+    lstatSync(repoTarget(root, repoPath))
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false
+    throw error
+  }
+}
+
+type PostRunOutputCustody = Readonly<{
+  journalPresent: boolean
+  privateDirectoryPresent: boolean
+  terminalPresent: boolean
+  lockPresent: boolean
+  reproductionPresent: boolean
+  adjudicationOrDownstreamPresent: boolean
+  outcome?: Readonly<{
+    completeCleanup: boolean
+    reproductionPresent: boolean
+    downstreamAuthority: string
+  }>
+}>
+
+export const checkV138LiveV9PostRunOutputCustodyForReview = (
+  input: PostRunOutputCustody,
+) => {
+  if (
+    input.lockPresent || input.reproductionPresent ||
+    input.adjudicationOrDownstreamPresent
+  ) fail("V138_LIVE_V9_POST_RUN_FORBIDDEN_EFFECT")
+  const effectCount = [
+    input.journalPresent,
+    input.privateDirectoryPresent,
+    input.terminalPresent,
+  ].filter(Boolean).length
+  if (effectCount === 0) {
+    if (input.outcome !== undefined)
+      fail("V138_LIVE_V9_POST_RUN_OUTCOME_WITHOUT_EFFECTS")
+    return Object.freeze({ status: "no_effects" as const, downstreamAuthority: "denied" as const })
+  }
+  if (
+    effectCount !== 3 || input.outcome === undefined ||
+    input.outcome.completeCleanup !== true ||
+    input.outcome.reproductionPresent !== false ||
+    input.outcome.downstreamAuthority !== "denied"
+  ) fail("V138_LIVE_V9_POST_RUN_BOUNDED_OUTCOME_INVALID")
+  return Object.freeze({ status: "bounded_terminal" as const, downstreamAuthority: "denied" as const })
+}
+
+const assertPostRunOutputCustody = (root: string): void => {
+  const downstreamPresent = POST_RUN_FORBIDDEN_DESTINATIONS.some((repoPath) =>
+    pathPresentNoFollow(root, repoPath),
+  )
+  const journalPresent = pathPresentNoFollow(root, V138_BOUNDED_RETRY_V3_PATHS.journal)
+  const privateDirectoryPresent = pathPresentNoFollow(root, V138_BOUNDED_RETRY_V3_PATHS.privateDir)
+  const terminalPresent = pathPresentNoFollow(root, V138_BOUNDED_RETRY_V3_PATHS.terminal)
+  const anyBoundedOutput = journalPresent || privateDirectoryPresent || terminalPresent
+  const outcome = anyBoundedOutput
+    ? checkV138PublishedRetryV3Outcome(root)
+    : undefined
+  checkV138LiveV9PostRunOutputCustodyForReview({
+    journalPresent,
+    privateDirectoryPresent,
+    terminalPresent,
+    lockPresent: pathPresentNoFollow(root, `${V138_BOUNDED_RETRY_V3_PATHS.journal}.lock`),
+    reproductionPresent: pathPresentNoFollow(root, V138_BOUNDED_RETRY_V3_PATHS.reproduction),
+    adjudicationOrDownstreamPresent: downstreamPresent,
+    outcome,
+  })
+}
+
 const assertForbiddenDestinationsAbsent = (
   root: string,
-  options: Readonly<{ forbidSupplementV2: boolean }>,
+  options: Readonly<{ forbidSupplementV2: boolean; boundary: "pre" | "post" }>,
 ): void => {
-  const forbidden = options.forbidSupplementV2
-    ? [...ALWAYS_FORBIDDEN_DESTINATIONS, V138_LIVE_V9_PATHS.supplementV2]
-    : ALWAYS_FORBIDDEN_DESTINATIONS
+  const forbidden = [
+    ...POST_RUN_FORBIDDEN_DESTINATIONS,
+    ...(options.boundary === "pre" ? PRODUCER_OWNED_DESTINATIONS : []),
+    ...(options.forbidSupplementV2 ? [V138_LIVE_V9_PATHS.supplementV2] : []),
+  ]
   for (const repoPath of forbidden)
-    if (existsSync(repoTarget(root, repoPath)))
+    if (pathPresentNoFollow(root, repoPath))
       fail(`V138_LIVE_V9_FORBIDDEN_DESTINATION_PRESENT:${repoPath}`)
+  if (options.boundary === "post") assertPostRunOutputCustody(root)
 }
 
 const authenticateV138LiveV9Base = (
   rootInput: string,
   forbidSupplementV2: boolean,
+  boundary: "pre" | "post" = "pre",
 ) => {
   const root = path.resolve(rootInput)
   authenticatePlan93Stop(root)
   const pair = authenticatePair(root)
   const protectedHistory = inspectProtectedHistory(root)
   const corrected = authenticateCorrectedPublication(root)
-  assertForbiddenDestinationsAbsent(root, { forbidSupplementV2 })
+  assertForbiddenDestinationsAbsent(root, { forbidSupplementV2, boundary })
   return Object.freeze({
     correctedPublicationCommit: V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT,
     correctedPayloadRoot: corrected.payloadRoot,
@@ -1075,9 +1160,14 @@ const locateSingleAddCommit = (root: string, repoPath: string): string => {
 const authenticateV138LiveV9FutureCustody = (
   rootInput: string,
   requirePublishedSupplement: boolean,
+  boundary: "pre" | "post" = "pre",
 ) => {
   const root = path.resolve(rootInput)
-  const corrected = authenticateV138LiveV9Base(root, !requirePublishedSupplement)
+  const corrected = authenticateV138LiveV9Base(
+    root,
+    !requirePublishedSupplement,
+    boundary,
+  )
   const plan112Paths = [
     V138_LIVE_V9_PATHS.plan112Payload,
     V138_LIVE_V9_PATHS.plan112Review,
@@ -1173,7 +1263,7 @@ export const runV138ReviewedBoundedLiveEnvelopeV9 = async (
     producerError = error
   } finally {
     try {
-      authenticateV138LiveV9FutureCustody(repoRoot, true)
+      authenticateV138LiveV9FutureCustody(repoRoot, true, "post")
     } catch (error) {
       postCustodyError = error
     }
@@ -1185,15 +1275,33 @@ export interface V138LiveV9CliDependencies {
   repoRoot: string
   writeOutput: (value: string) => void
 }
-export const executeV138LiveV9Cli = (
+export const executeV138LiveV9Cli = async (
   args: readonly string[],
   injected?: Partial<V138LiveV9CliDependencies>,
-): void => {
+): Promise<void> => {
   if (args.length !== 1 || !V138_LIVE_V9_MODES.includes(args[0] as never))
     fail("V138_LIVE_V9_ARGUMENTS_INVALID")
   const repoRoot =
     injected?.repoRoot ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
   const writeOutput = injected?.writeOutput ?? ((value: string) => process.stdout.write(value))
+  if (args[0] === "--run-reviewed-bounded-live-envelope") {
+    await runV138ReviewedBoundedLiveEnvelopeV9(repoRoot)
+    writeOutput(`${JSON.stringify({ status: "reviewed_bounded_live_complete" })}\n`)
+    return
+  }
+  if (args[0] === "--check-reviewed-live-ready") {
+    const result = authenticateV138LiveV9FutureCustody(repoRoot, true, "pre")
+    writeOutput(`${JSON.stringify({
+      status: "reviewed_live_ready",
+      supplementRoot: result.supplement.supplementRoot,
+      producerWouldInvoke: true,
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })}\n`)
+    return
+  }
   if (args[0] === "--check-prospective-custody") {
     const result = authenticateV138LiveV9FutureCustody(repoRoot, false)
     writeOutput(`${JSON.stringify({
@@ -1208,7 +1316,7 @@ export const executeV138LiveV9Cli = (
     return
   }
   if (args[0] === "--check-post-run-custody") {
-    const result = authenticateV138LiveV9FutureCustody(repoRoot, true)
+    const result = authenticateV138LiveV9FutureCustody(repoRoot, true, "post")
     writeOutput(`${JSON.stringify({
       status: "post_run_custody_checked",
       supplementRoot: result.supplement.supplementRoot,
@@ -1241,10 +1349,8 @@ const isEntrypoint =
   process.argv[1] !== undefined &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 if (isEntrypoint) {
-  try {
-    executeV138LiveV9Cli(process.argv.slice(2))
-  } catch (error) {
+  executeV138LiveV9Cli(process.argv.slice(2)).catch((error: unknown) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
     process.exitCode = 1
-  }
+  })
 }
