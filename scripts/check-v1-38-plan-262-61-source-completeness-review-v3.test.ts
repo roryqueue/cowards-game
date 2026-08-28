@@ -95,6 +95,12 @@ const clone = () => {
     { maxBuffer: 64 * 1024 * 1024 })
   return realpathSync(directory)
 }
+const cloneLifecycleBaseline = () => {
+  const directory = clone()
+  execFileSync("git", ["checkout", "--quiet", "--detach",
+    "3a63735a603e85a605ce8ce2e82f1dbb0a78873d"], { cwd: directory })
+  return directory
+}
 const commitAll = (cwd: string, message: string) => {
   execFileSync("git", ["add", "-A"], { cwd })
   execFileSync("git", ["-c", "user.name=Fixture", "-c",
@@ -336,7 +342,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   })
 
   it("derives the exact live 48-plan graph, archive, and lifecycle", () => {
-    const lifecycle = inspectV138Plan26261Lifecycle(repoRoot)
+    const lifecycle = inspectV138Plan26261Lifecycle(cloneLifecycleBaseline())
     expect(lifecycle).toMatchObject({ totalPlans: 48,
       summaries: 43, incomplete: ["262-48", "262-56", "262-57", "262-61", "262-62"] })
     expect(lifecycle.graph).toHaveLength(48)
@@ -1220,7 +1226,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   })
 
   it("rejects a lifecycle with an extra active plan after committing its inventory", () => {
-    const directory = clone()
+    const directory = cloneLifecycleBaseline()
     const target = path.join(directory, `${path.dirname(SUMMARY_PATH)}/262-99-PLAN.md`)
     writeFileSync(target, "---\nphase: 262\nplan: 99\n---\n")
     commitAll(directory, "add invalid plan")
@@ -1229,7 +1235,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   })
 
   it("rejects count-preserving lifecycle substitution with a specific graph code", () => {
-    const directory = clone()
+    const directory = cloneLifecycleBaseline()
     const phase = path.dirname(SUMMARY_PATH)
     const oldPlan = path.join(directory, phase, "262-01-PLAN.md")
     const oldSummary = path.join(directory, phase, "262-01-SUMMARY.md")
@@ -1244,7 +1250,7 @@ describe("Plan 262-61 independent exact-A9 reviewer-v3", () => {
   })
 
   it("rejects same-frontmatter lifecycle byte replacement and restore", () => {
-    const directory = clone()
+    const directory = cloneLifecycleBaseline()
     const target = path.join(directory, path.dirname(SUMMARY_PATH), "262-01-PLAN.md")
     const exact = readFileSync(target)
     writeFileSync(target, Buffer.concat([exact, Buffer.from("\nreplacement\n")]))
