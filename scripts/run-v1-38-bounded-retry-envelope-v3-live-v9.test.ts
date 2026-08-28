@@ -11,7 +11,10 @@ import {
   checkV138LiveV9CorrectedPlan108ValuesForReview,
   computeV138LiveV9Plan108CarrierRoot,
   computeV138LiveV9Plan108PayloadRoot,
+  deriveV138LiveV9ProspectiveContractsForReview,
   runV138ReviewedBoundedLiveEnvelopeV9,
+  settleV138LiveV9ProducerOutcomeForReview,
+  checkV138LiveV9ProspectiveCustodyForReview,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v9.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -142,5 +145,111 @@ describe("Plan 262-111 live-v9 exact corrected-chain gate", () => {
     expect(V138_LIVE_V9_PROTECTED_BRANCHES.map(({ plan }) => plan)).toEqual([
       90, 91, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105,
     ])
+  })
+})
+
+describe("Plan 262-111 future review and post-effect contract", () => {
+  const sha = (character: string) => `sha256:${character.repeat(64)}` as const
+  const reviewedClosure = Object.freeze({
+    sourceCommit: "1".repeat(40),
+    sourceTree: "2".repeat(40),
+    sourceParent: "3".repeat(40),
+    checkoutPaths: [
+      "scripts/lib/v1-38-bounded-retry-envelope-v3.ts",
+      "scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts",
+      "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
+      "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
+      "scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.ts",
+    ],
+    rawByteManifestRoot: sha("4"),
+    recursiveDependencyRoot: sha("5"),
+    recursiveDependencyCount: 11,
+    installedClosureRoot: sha("6"),
+    nodeSha256: sha("7"),
+    pnpmDistributionSha256: sha("8"),
+    nativeSourcesRoot: sha("9"),
+    portableClosureRoot: sha("a"),
+    executionClosureRoot: sha("b"),
+    pathnameLaunchReplacementResistanceClaimed: false,
+  })
+
+  it("joins corrected v9, prospective Plan 112, and supplement-v2 through a producer-incapable seam", () => {
+    const corrected = authenticateV138LiveV9SourceOnly(repoRoot)
+    const prospective = deriveV138LiveV9ProspectiveContractsForReview({
+      corrected,
+      reviewedClosure,
+    })
+    expect(prospective.plan112.payload).toMatchObject({
+      schemaVersion: "v1.38-plan-262-112-live-v9-custody-review-payload-v1",
+      findingCount: 0,
+      findingCodes: [],
+      plan109Eligible: true,
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      downstreamAuthority: "denied",
+    })
+    expect(prospective.supplement).toMatchObject({
+      schemaVersion: "v1.38-successor-source-seal-v13-executable-custody-supplement-v2",
+      sourceSealRoot: "sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752",
+      retryEnvelopeRoot: "sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a",
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      authorizesExecution: false,
+      downstreamAuthority: "denied",
+    })
+    expect(
+      checkV138LiveV9ProspectiveCustodyForReview({
+        corrected,
+        reviewedClosure,
+        plan112: prospective.plan112,
+        supplement: prospective.supplement,
+      }),
+    ).toMatchObject({ producerWouldInvoke: true, liveInvoked: false })
+    expect(runV138ReviewedBoundedLiveEnvelopeV9.toString()).toContain(
+      "runV138V3ProductionLive",
+    )
+  }, 180_000)
+
+  it("rejects future review and supplement mutations plus historical compatibility substitutions", () => {
+    const corrected = authenticateV138LiveV9SourceOnly(repoRoot)
+    const prospective = deriveV138LiveV9ProspectiveContractsForReview({ corrected, reviewedClosure })
+    for (const mutation of [
+      { plan112: { ...prospective.plan112, payload: { ...prospective.plan112.payload, findingCount: 1 } } },
+      { plan112: { ...prospective.plan112, carrier: { ...prospective.plan112.carrier, payloadMode: "100755" } } },
+      { supplement: { ...prospective.supplement, schemaVersion: "v1.38-successor-source-seal-v13-executable-custody-supplement-v1" } },
+      { supplement: { ...prospective.supplement, correctedReviewRoot: sha("c") } },
+      { supplement: { ...prospective.supplement, authorizesExecution: true } },
+      { supplement: { ...prospective.supplement, freshAccepted: 1 } },
+    ]) {
+      expect(() =>
+        checkV138LiveV9ProspectiveCustodyForReview({
+          corrected,
+          reviewedClosure,
+          plan112: mutation.plan112 ?? prospective.plan112,
+          supplement: mutation.supplement ?? prospective.supplement,
+        }),
+      ).toThrow()
+    }
+  }, 180_000)
+
+  it("preserves producer failure and exposes simultaneous post-custody failure", () => {
+    const producer = new Error("producer failed")
+    const custody = new Error("custody failed")
+    expect(() => settleV138LiveV9ProducerOutcomeForReview(producer, undefined)).toThrow(
+      producer,
+    )
+    try {
+      settleV138LiveV9ProducerOutcomeForReview(producer, custody)
+      throw new Error("expected aggregate failure")
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).errors).toEqual([producer, custody])
+      expect((error as AggregateError & { cause: unknown }).cause).toBe(producer)
+    }
+    expect(() => settleV138LiveV9ProducerOutcomeForReview(undefined, custody)).toThrow(
+      custody,
+    )
   })
 })
