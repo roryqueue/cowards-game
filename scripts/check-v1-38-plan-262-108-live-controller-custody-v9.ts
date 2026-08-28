@@ -515,6 +515,7 @@ const exerciseActualModes = (root: string, source: SourceObservation) => {
       env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", HOME: owner },
     })
     symlinkSync(path.join(root, "node_modules"), path.join(clone, "node_modules"), "dir")
+    execFileSync("/usr/bin/git", ["checkout", "--quiet", "--detach", "4537f3f6"], { cwd: clone })
     const cloneSource = inspectV138Plan262108IndependentSource(clone)
     const pair = authenticateIndependentPair(clone)
     assertNoEffects(clone)
@@ -563,6 +564,7 @@ export const runV138Plan262108AdversarialMatrix = (root: string) => {
       env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", HOME: owner },
     })
     symlinkSync(path.join(root, "node_modules"), path.join(clone, "node_modules"), "dir")
+    execFileSync("/usr/bin/git", ["checkout", "--quiet", "--detach", "4537f3f6"], { cwd: clone })
     const clean = inspectV138Plan262108IndependentSource(clone)
     const nonEntry = recursiveManifest(clone).paths.find((repoPath) => !EXECUTED_SOURCE_PATHS.includes(repoPath as any))
     if (nonEntry === undefined) fail("V138_PLAN_262_108_V9_NON_ENTRY_MISSING")
@@ -610,12 +612,28 @@ export const runV138Plan262108AdversarialMatrix = (root: string) => {
       source: clean, observations: { actualModesPassed: 4, syntheticProducerCalls: 1, liveInvoked: false }, findings: [],
     })
     let cliModesPassed = 0
-    for (const mode of V138_PLAN_262_108_CORRECTED_MODES) {
+    for (const mode of V138_PLAN_262_108_CORRECTED_MODES.filter(
+      (candidate) => candidate !== "--write-review" && candidate !== "--check-review",
+    )) {
       let output = ""
       executeV138Plan262108CorrectedCli([mode], { repoRoot: clone, writeOutput: (value) => { output += value }, result: fixture })
       if (output.length === 0) fail(`V138_PLAN_262_108_V9_CLI_MODE_INVALID:${mode}`)
       cliModesPassed += 1
     }
+    let writeOutput = ""
+    executeV138Plan262108CorrectedCli(["--write-review"], {
+      repoRoot: clone, writeOutput: (value) => { writeOutput += value }, result: fixture,
+    })
+    if (writeOutput.length === 0) fail("V138_PLAN_262_108_V9_CLI_MODE_INVALID:--write-review")
+    execFileSync("/usr/bin/git", ["add", "--", ...Object.values(V138_PLAN_262_108_CORRECTED_PATHS)], { cwd: clone })
+    execFileSync("/usr/bin/git", ["-c", "user.name=Plan 108 CLI Matrix", "-c", "user.email=plan108-cli@example.invalid",
+      "commit", "--quiet", "-m", "test corrected CLI publication"], { cwd: clone })
+    let checkOutput = ""
+    executeV138Plan262108CorrectedCli(["--check-review"], {
+      repoRoot: clone, writeOutput: (value) => { checkOutput += value },
+    })
+    if (checkOutput.length === 0) fail("V138_PLAN_262_108_V9_CLI_MODE_INVALID:--check-review")
+    cliModesPassed += 2
     assertNoEffects(clone)
     return Object.freeze({
       completed: true as const, liveInvoked: false as const, effectCount: 0 as const,
@@ -732,6 +750,11 @@ export const executeV138Plan262108CorrectedCli = (
   const repoRoot = injected?.repoRoot ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
   const writeOutput = injected?.writeOutput ?? ((value: string) => process.stdout.write(value))
   const mode = args[0]!
+  if (injected?.result !== undefined && mode === "--write-review") {
+    writeCorrectedTrio(repoRoot, injected.result)
+    writeOutput(resultLine(injected.result, mode))
+    return
+  }
   if (injected?.result !== undefined) { writeOutput(resultLine(injected.result, mode)); return }
   if (mode === "--write-review") { writeOutput(resultLine(publishV138Plan262108CorrectedReview(repoRoot), mode)); return }
   if (mode === "--check-review") {

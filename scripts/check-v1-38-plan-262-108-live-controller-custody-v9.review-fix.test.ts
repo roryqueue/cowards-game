@@ -80,6 +80,7 @@ describe("Plan 262-108 code-review corrections", () => {
   it("binds publication commit, blobs, modes, working bytes, and no later rewrite", () => {
     const { owner, root } = cloneRepo()
     try {
+      execFileSync("/usr/bin/git", ["checkout", "--quiet", "--detach", "4537f3f6"], { cwd: root })
       const result = publishV138Plan262108CorrectedReview(root)
       const publication = commit(root, Object.values(V138_PLAN_262_108_CORRECTED_PATHS), "publish corrected review")
       expect(authenticateV138Plan262108CorrectedTrioCustody(root, publication).publicationCommit).toBe(publication)
@@ -105,6 +106,12 @@ describe("Plan 262-108 code-review corrections", () => {
   }, 300_000)
 
   it("executes the complete adversarial and seven-mode CLI matrix without effects", () => {
+    const correctedBefore = Object.fromEntries(
+      Object.values(V138_PLAN_262_108_CORRECTED_PATHS).map((repoPath) => [
+        repoPath,
+        existsSync(path.join(repoRoot, repoPath)) ? readFileSync(path.join(repoRoot, repoPath)) : null,
+      ]),
+    )
     const matrix = runV138Plan262108AdversarialMatrix(repoRoot)
     expect(matrix).toMatchObject({ completed: true, liveInvoked: false, effectCount: 0 })
     expect(matrix.boundaries).toEqual([
@@ -114,10 +121,8 @@ describe("Plan 262-108 code-review corrections", () => {
     ])
     expect(matrix.protectedPlans).toEqual(V138_PLAN_262_108_PROTECTED_BRANCHES.map(({ plan }) => plan))
     expect(matrix.cliModesPassed).toBe(7)
-    for (const repoPath of [
-      V138_PLAN_262_108_CORRECTED_PATHS.payload,
-      V138_PLAN_262_108_CORRECTED_PATHS.review,
-      V138_PLAN_262_108_CORRECTED_PATHS.carrier,
-    ]) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
+    for (const repoPath of Object.values(V138_PLAN_262_108_CORRECTED_PATHS))
+      expect(existsSync(path.join(repoRoot, repoPath)) ? readFileSync(path.join(repoRoot, repoPath)) : null)
+        .toEqual(correctedBefore[repoPath])
   }, 300_000)
 })
