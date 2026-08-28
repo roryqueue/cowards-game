@@ -476,17 +476,17 @@ The real schema must keep every remaining authority and identity claim explicitl
 |---|---|---|---|
 | — | None. All descriptive claims are derived from repository files or local tool probes; prescriptive design choices are labeled `[PRESCRIPTIVE]`. | — | — |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact Plan-96 source carrier commit and hashes**
    - What we know: Plan 96 must commit corrected source and its summary separately under normal execution. [VERIFIED: established plan workflow]
    - What's unclear: commit/tree/blob/root values do not exist until execution. [VERIFIED: current Git]
-   - Recommendation: Plan 97 derives them from Git; do not predeclare them in planning. [PRESCRIPTIVE]
+   - RESOLVED: Plan 97 derives them from Git; do not predeclare them in planning. [PRESCRIPTIVE]
 
 2. **Final corrected test count**
    - What we know: Plan 90 has 40 focused tests and Plan 91 proved the matrix incomplete. [VERIFIED: summaries/review]
    - What's unclear: the exact count after parameterized adversarial/crash cases. [VERIFIED: not yet implemented]
-   - Recommendation: plan named matrix coverage and require Plan 97 to report the observed count; do not freeze a guessed count. [PRESCRIPTIVE]
+   - RESOLVED: plan named matrix coverage and require Plan 97 to report the observed count; do not freeze a guessed count. [PRESCRIPTIVE]
 
 ## Environment Availability
 
