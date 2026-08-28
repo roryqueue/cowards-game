@@ -234,4 +234,21 @@ describe("Plan 262-99 independent source review", () => {
       expect(() => validateV138Plan26299Review(changed, review)).toThrow()
     }
   }, 180_000)
+
+  it("rejects non-canonical pair schema members even when self-consistent", () => {
+    const review = deriveV138Plan26299ReviewNoPublish(repoRoot)
+    for (const mutate of [
+      (value: any) => (value.extra = false),
+      (value: any) => (value.authority.extra = false),
+      (value: any) =>
+        (value.reviewedExecutionClosure.extraPortableMember = sha("extra")),
+    ]) {
+      const changed = structuredClone(review)
+      mutate(changed)
+      changed.reviewRoot = computeV138Plan26299ReviewRoot(changed)
+      expect(() => validateV138Plan26299Review(changed, changed)).toThrow(
+        "V138_PLAN_262_99_REVIEW_MISMATCH",
+      )
+    }
+  }, 180_000)
 })
