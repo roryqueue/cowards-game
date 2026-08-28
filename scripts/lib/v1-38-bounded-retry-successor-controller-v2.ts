@@ -95,6 +95,30 @@ const requireComplete = async (result: Promise<NativeResult>): Promise<void> => 
   if (completed.code !== 0) fail(`V138_SUCCESSOR_NATIVE_FAILED:${completed.code}:${completed.stderr.trim()}`)
 }
 
+const overlapRaceEvidence = async (root: string, iterations: number): Promise<number> => {
+  for (let index = 0; index < iterations; index++) {
+    const left: V138DurablePairV2Input = {
+      transactionId: `overlap-left-${index}`, intentPath: `overlap-left-${index}.intent`,
+      members: [{ target: `left/left-${index}.json`, bytes: `left-${index}\n` }, { target: `shared/shared-${index}.json`, bytes: `shared-left-${index}\n` }],
+    }
+    const right: V138DurablePairV2Input = {
+      transactionId: `overlap-right-${index}`, intentPath: `overlap-right-${index}.intent`,
+      members: [{ target: `shared/shared-${index}.json`, bytes: `shared-right-${index}\n` }, { target: `right/right-${index}.json`, bytes: `right-${index}\n` }],
+    }
+    const results = await Promise.all([invokeNative(root, pairInput(root, left)), invokeNative(root, pairInput(root, right))])
+    if (results.filter(({ code }) => code === 0).length !== 1) fail("V138_SUCCESSOR_OVERLAP_RACE_RESULT_INVALID")
+    const shared = readFileSync(path.join(root, `shared/shared-${index}.json`), "utf8")
+    const leftExists = existsSync(path.join(root, `left/left-${index}.json`))
+    const rightExists = existsSync(path.join(root, `right/right-${index}.json`))
+    if (shared === `shared-left-${index}\n`) {
+      if (!leftExists || rightExists) fail("V138_SUCCESSOR_OVERLAP_PARTIAL_LOSER")
+    } else if (shared === `shared-right-${index}\n`) {
+      if (!rightExists || leftExists) fail("V138_SUCCESSOR_OVERLAP_PARTIAL_LOSER")
+    } else fail("V138_SUCCESSOR_OVERLAP_SHARED_INVALID")
+  }
+  return iterations
+}
+
 const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string, unknown>>> => {
   const root = mkdtempSync(path.join(tmpdir(), "v138-successor-controller-v2-"))
   try {
@@ -123,12 +147,14 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<Readonly<Record<string
     }
     await requireComplete(invokeNative(root, lifecycleInput(root, lifecycle)))
 
+    const overlapRaces = await overlapRaceEvidence(root, 50)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V2_OPERATIONS,
       acceptedCells: 0,
       workspaceWrites: false,
       pairMembers: [readFileSync(path.join(root, "artifacts/synthetic-review.json"), "utf8"), readFileSync(path.join(root, "reviews/synthetic-review.md"), "utf8")],
       lifecycle: readFileSync(path.join(root, "planning/status.md"), "utf8"),
+      overlapRaces,
       internalDirectories: readdirSync(root).filter((entry) => entry.startsWith(".v138-")).sort(),
     })
   } finally { rmSync(root, { recursive: true, force: true }) }
