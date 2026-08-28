@@ -15,6 +15,8 @@ import {
   runV138ReviewedBoundedLiveEnvelopeV9,
   settleV138LiveV9ProducerOutcomeForReview,
   checkV138LiveV9ProspectiveCustodyForReview,
+  checkV138LiveV9PostRunOutputCustodyForReview,
+  executeV138LiveV9Cli,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v9.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -30,7 +32,7 @@ const cloneRepo = (): { owner: string; root: string } => {
 }
 
 describe("Plan 262-111 live-v9 exact corrected-chain gate", () => {
-  it("pins the only corrected publication and exposes no production CLI mode", () => {
+  it("pins the corrected publication and exposes only the exact Plan 110 selectors", () => {
     expect(V138_LIVE_V9_CORRECTED_PUBLICATION_COMMIT).toBe(
       "2639ff3b42e2a238919a3104c9fa8c785c69b93d",
     )
@@ -38,9 +40,15 @@ describe("Plan 262-111 live-v9 exact corrected-chain gate", () => {
       "--check-source-only",
       "--check-prospective-custody",
       "--check-post-run-custody",
+      "--check-reviewed-live-ready",
+      "--run-reviewed-bounded-live-envelope",
     ])
     expect(runV138ReviewedBoundedLiveEnvelopeV9.length).toBe(1)
     expect(runV138ReviewedBoundedLiveEnvelopeV9.toString()).not.toContain("injected")
+    expect(executeV138LiveV9Cli.toString()).toContain(
+      "runV138ReviewedBoundedLiveEnvelopeV9(repoRoot)",
+    )
+    expect(executeV138LiveV9Cli.toString()).not.toContain("runLive")
   })
 
   it("independently derives exact corrected semantics, pair, history, and zero state", () => {
@@ -258,5 +266,57 @@ describe("Plan 262-111 future review and post-effect contract", () => {
     expect(() => settleV138LiveV9ProducerOutcomeForReview(undefined, custody)).toThrow(
       custody,
     )
+  })
+
+  it("permits only a complete bounded terminal outcome after effects", () => {
+    expect(checkV138LiveV9PostRunOutputCustodyForReview({
+      journalPresent: false,
+      privateDirectoryPresent: false,
+      terminalPresent: false,
+      lockPresent: false,
+      reproductionPresent: false,
+      adjudicationOrDownstreamPresent: false,
+    })).toEqual({ status: "no_effects", downstreamAuthority: "denied" })
+    expect(checkV138LiveV9PostRunOutputCustodyForReview({
+      journalPresent: true,
+      privateDirectoryPresent: true,
+      terminalPresent: true,
+      lockPresent: false,
+      reproductionPresent: false,
+      adjudicationOrDownstreamPresent: false,
+      outcome: {
+        completeCleanup: true,
+        reproductionPresent: false,
+        downstreamAuthority: "denied",
+      },
+    })).toEqual({ status: "bounded_terminal", downstreamAuthority: "denied" })
+    for (const mutation of [
+      { journalPresent: true },
+      { privateDirectoryPresent: true },
+      { terminalPresent: true },
+      { lockPresent: true },
+      { reproductionPresent: true },
+      { adjudicationOrDownstreamPresent: true },
+      {
+        journalPresent: true,
+        privateDirectoryPresent: true,
+        terminalPresent: true,
+        outcome: {
+          completeCleanup: false,
+          reproductionPresent: false,
+          downstreamAuthority: "denied",
+        },
+      },
+    ]) {
+      expect(() => checkV138LiveV9PostRunOutputCustodyForReview({
+        journalPresent: false,
+        privateDirectoryPresent: false,
+        terminalPresent: false,
+        lockPresent: false,
+        reproductionPresent: false,
+        adjudicationOrDownstreamPresent: false,
+        ...mutation,
+      })).toThrow()
+    }
   })
 })
