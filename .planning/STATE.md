@@ -5,15 +5,15 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: planned
-stopped_at: Plan 262-107 ready for dispatch
-last_updated: "2026-08-28T21:00:00.000Z"
+stopped_at: Plan 262-111 ready for dispatch
+last_updated: "2026-08-28T22:00:00.000Z"
 last_activity: 2026-08-28
-last_activity_desc: planned the additive executable-custody recovery chain 262-107 through 262-110, revised 262-94/95/106, and preserved the immutable zero-consumption Plan-93 stop
+last_activity_desc: planned the additive live-v9 recovery gates 262-111/112 and rebound 262-109/110/94/95/106 while preserving all v8/v9 history and the zero-consumption Plan-93 stop
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 91
-  completed_plans: 83
+  total_plans: 93
+  completed_plans: 85
   percent: 91
 ---
 
@@ -21,7 +21,7 @@ progress:
 
 <!-- Plan 93 was invoked exactly once after the v7 pair check passed, but failed closed before the live effect boundary with V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID. No v3 identity was charged and no live artifact exists. Do not retry or dispatch a successor without separately planned corrective work and explicit execution authority. -->
 <!-- phase-262-plan-93-prestart-stop-status: {"schema_version":"v1.38-plan-262-93-prestart-stop-v1","proof_status":"pre_start_integrity_stop","attempts":1,"pair_commit_b3":"8080ff66a0880db25db227d23e7e7a0884a79b56","seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","stop_code":"V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID","live_effect_boundary_crossed":false,"route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"journal_present":false,"private_receipts_present":false,"terminal_present":false,"reproduction_v17_present":false,"disposition_v3_present":false,"correction_v11_present":false,"route_11_activation_present":false,"readiness_v3_present":false,"lifecycle_v3_present":false,"plan_262_93_complete":false,"successors_authorized":false,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"plan-additive-live-controller-custody-correction-before-any-new-execution-decision","downstream_authority_denied":true} -->
-<!-- phase-262-live-custody-recovery-topology-v1: {"schema_version":"v1.38-plan-262-live-custody-recovery-topology-v1","active_plans":91,"trustworthy_summaries":83,"immutable_prestart_stop":"262-93","active_chain":["262-107","262-108","262-109","262-110","262-94","262-95","262-106"],"waves":{"262-107":93,"262-108":94,"262-109":95,"262-110":96,"262-94":97,"262-95":98,"262-106":99},"execution_authority":"standing_explicit_operator_authorization","supplement_count":1,"creates_third_envelope":false,"creates_capacity":false,"resets_counters":false,"seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-107-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
+<!-- phase-262-live-v9-recovery-topology-v2: {"schema_version":"v1.38-plan-262-live-v9-recovery-topology-v2","active_plans":93,"trustworthy_summaries":85,"immutable_prestart_stop":"262-93","immutable_history":["262-107","262-108","live-v8","plan-108-v8-v9-reviews"],"active_chain":["262-111","262-112","262-109","262-110","262-94","262-95","262-106"],"waves":{"262-111":95,"262-112":96,"262-109":97,"262-110":98,"262-94":99,"262-95":100,"262-106":101},"execution_authority":"standing_explicit_operator_authorization","supplement_version":"v2","supplement_count":1,"creates_third_envelope":false,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-111-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 <!-- Historical Plan-92 closeout carrier retained below as immutable planning history. -->
 <!-- Plan 92 committed the canonical inactive pair as the exact direct child of the Plan-105 closure. Plan 93 alone is eligible; no live or downstream authority exists. -->
 <!-- phase-262-plan-92-closeout-status: {"schema_version":"v1.38-plan-262-92-closeout-v1","proof_status":"canonical_sealed_inactive_pair_committed","active_plans":87,"trustworthy_summaries":83,"reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","trio_publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","plan_104_source_commit":"58669ae69376375f171aa56fd57b331355703e9a","direct_parent_r7":"250c152d3b2c8d7c1e7808985b61626bc3290883","pair_commit_b3":"8080ff66a0880db25db227d23e7e7a0884a79b56","pair_tree":"7efb4b43c484f7d516dd0d08d499db3215a88a44","seal_root":"sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752","envelope_root":"sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a","protected_history_root":"sha256:77e0e71f62ec4abd997f1df2c1fc9bf1db7b95247404f78b558a634cdc1ec57d","status":"sealed_inactive","route_starts":0,"preflight_observations":0,"calibration_charged":0,"reproduction_charged":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"live_invoked":false,"journal_present":false,"terminal_present":false,"reproduction_v17_present":false,"disposition_v3_present":false,"correction_v11_present":false,"route_11_activation_present":false,"readiness_v3_present":false,"lifecycle_v3_present":false,"plan_262_93_eligible":true,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-262-93-only","downstream_authority_denied":true} -->
@@ -80,9 +80,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 83 summaries across 87 active plans — Plan 262-93 is the sole eligible next action; Plans 262-94/95 and lifecycle finalizer 262-106 remain dependency-denied
-Status: Phase 262 remains in progress at 83/87 summaries; the canonical v3 pair is sealed inactive, fresh accepted remains 0/540, and downstream authority remains denied
-Last activity: 2026-08-28 — committed exact R7-direct-child seal-v13 and retry-envelope:v3 pair with zero consumption
+Plan: 85 summaries across 93 active plans — Plan 262-111 is the sole eligible next action; Plans 112/109/110/94/95/106 remain dependency-denied
+Status: Phase 262 remains in progress at 85/93 summaries; corrected Plan-108 re-review is blocked, the canonical v3 pair is sealed inactive, fresh accepted remains 0/540, and downstream authority remains denied
+Last activity: 2026-08-28 — planned the minimal two-gate live-v9 custody recovery and rebound all unexecuted successors
 
 Progress: [██████████] 95%
 
@@ -108,7 +108,7 @@ Progress: [██████████] 95%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 91 plans/83 summaries. Plan 262-93 remains immutable incomplete pre-start-stop history and is not retried, completed, summarized, or counted as envelope consumption. Standing explicit operator authorization applies to the new reviewed successor owner. The active chain is 262-107 -> 262-108 -> 262-109 -> 262-110 -> revised 262-94 -> revised 262-95 -> 262-106 at Waves 93-99. Plan 107 is the sole eligible next action; every successor is dependency-denied. The chain permits one executable-custody supplement but no third envelope, capacity creation, or counter reset. Seal-v13/envelope-v3 remain exact and zero-consumption, fresh accepted remains 0/540, Phase 262 remains incomplete, and Phases 263-270 plus every downstream authority remain false.
+**Current topology:** Active discovery is 93 plans/85 summaries. Plan 262-93 remains immutable incomplete pre-start-stop history and is not retried, completed, summarized, or counted as consumption. Plans 107/108, live-v8, and both v8/v9 review branches remain immutable history; corrected Plan-108 re-review is blocked. The active chain is 262-111 -> 262-112 -> revised 262-109 -> revised 262-110 -> revised 262-94 -> revised 262-95 -> 262-106 at Waves 95-101. Plan 111 is the sole eligible action. One supplement-v2 may follow literal-zero Plan-112 review; standing authorization applies only to the live-v9 Plan-110 owner. No third envelope, capacity, reset, or new literal exists. The pair remains exact and zero-consumption, fresh accepted is 0/540, and all downstream authority remains false.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -375,11 +375,11 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 
 ### Pending Todos
 
-- Do not retry Plan 262-93 or dispatch Plans 262-94/95/106. Plan a separately reviewed additive live-controller custody correction and obtain a new explicit execution decision before any further invocation.
+- Do not retry Plan 262-93 or dispatch Plans 112/109/110/94/95/106 out of order. Dispatch only Plan 262-111; it is source/synthetic work and creates no effect or authority.
 
 ### Current Blocker/Concerns
 
-- Plan 262-93 is blocked before live effects: the v7 pair checker authenticates the Plan-103/104/105 chain, but the committed live controller's reviewed-closure gate still requires the immutable blocked Plan-101 v5 review and stops with `V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID`.
+- Plan 262-93 remains the immutable pre-effect stop. Corrected Plan-108 re-review additionally blocks the stale recovery because arbitrary self-consistent trios were accepted and corrected evidence was disconnected from live-v8; Plans 111/112 are the only planned correction gates.
 - ADMIT-03 remains blocked: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
 - Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; Plans 262-94 through 262-106 remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
@@ -435,8 +435,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T20:16:59.034Z
-Stopped at: Completed 262-92-PLAN.md
+Last session: 2026-08-28T22:00:00.000Z
+Stopped at: Planned additive live-v9 recovery; 262-111 ready for dispatch
 Resume file: None
 
 ### Blockers
