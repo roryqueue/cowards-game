@@ -631,6 +631,92 @@ describe("synthetic-only hardened v3 controller", () => {
     ).toThrow()
   })
 
+  it.each([
+    "sourceCommit",
+    "sourceTree",
+    "sourceParent",
+    "checkoutByteManifestRoot",
+    "installedClosureRoot",
+    "gitExecutable",
+    "gitExecutableSha256",
+    "gitIsolationRoot",
+    "nodeSha256",
+    "pnpmDistributionSha256",
+    "nativeSourcesRoot",
+    "pathnameLaunchReplacementResistanceClaimed",
+  ] as const)("rejects independent portable member drift in %s", (field) => {
+    const review = plan26299Review()
+    const current: any = {
+      ...portableClosure(),
+      schemaVersion: "v1.38-retry-v3-execution-closure-v1",
+      gitObjectRoot: `sha256:${"e".repeat(64)}`,
+      executionClosureRoot: `sha256:${"f".repeat(64)}`,
+    }
+    current[field] =
+      field === "gitExecutable"
+        ? "/tmp/git"
+        : field === "pathnameLaunchReplacementResistanceClaimed"
+          ? true
+          : field.startsWith("source")
+            ? "0".repeat(40)
+            : `sha256:${"0".repeat(64)}`
+    expect(() =>
+      validateV138Plan26299ReviewedExecutionClosure(review, current),
+    ).toThrow("V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_MISMATCH")
+  })
+
+  it("excludes local Git object identity from portability but preserves distinct full roots", () => {
+    const review = plan26299Review()
+    const first = {
+      ...portableClosure(),
+      schemaVersion: "v1.38-retry-v3-execution-closure-v1",
+      gitObjectRoot: `sha256:${"e".repeat(64)}`,
+      executionClosureRoot: `sha256:${"f".repeat(64)}`,
+    } as const
+    const second = {
+      ...first,
+      gitObjectRoot: `sha256:${"0".repeat(64)}`,
+      executionClosureRoot: `sha256:${"1".repeat(64)}`,
+    } as const
+    expect(validateV138Plan26299ReviewedExecutionClosure(review, first)).toBe(first)
+    expect(validateV138Plan26299ReviewedExecutionClosure(review, second)).toBe(second)
+    expect(first.executionClosureRoot).not.toBe(second.executionClosureRoot)
+    expect(review.reviewedExecutionClosure.reviewedExecutionClosureRoot).not.toBe(
+      first.executionClosureRoot,
+    )
+  })
+
+  it.each([
+    "--derive-seal-envelope-no-publish",
+    "--publish-sealed-inactive-envelope",
+    "--check-sealed-inactive-envelope",
+    "--run-bounded-live-envelope",
+    "--check-live-transition",
+    "--check-terminal-envelope",
+  ])("requires one unchanged full local root around %s", async (command) => {
+    let closureCall = 0
+    const closure = () =>
+      ({
+        executionClosureRoot: closureCall++ === 0 ? SHA_A : SHA_B,
+      }) as ReturnType<typeof authenticateV138RetryV3ExecutionClosure>
+    await expect(
+      executeV138BoundedRetryV3Cli([command], {
+        repoRoot: process.cwd(),
+        authenticateClosure: closure,
+        deriveArtifacts: () =>
+          ({
+            seal: { sealRoot: SHA_A },
+            envelope: { envelopeRoot: SHA_B },
+          }) as never,
+        publishArtifacts: () => undefined,
+        checkPair: () => undefined,
+        runLive: async () => undefined,
+        checkOutcome: () => ({ downstreamAuthority: "denied" }) as never,
+      }),
+    ).rejects.toThrow("V138_RETRY_V3_EXECUTION_CLOSURE_CHANGED")
+    expect(closureCall).toBe(2)
+  })
+
   it("binds native coherent custody before any future live effect", () => {
     expect(V138_BOUNDED_RETRY_V3_CUSTODY).toMatchObject({
       coherentRequiredLeafAndAbsenceBatch: true,
