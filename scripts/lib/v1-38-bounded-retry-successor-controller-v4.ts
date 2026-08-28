@@ -95,6 +95,7 @@ const compileOneShotNative = (
   input: string,
   normalizedLocks: readonly string[],
   root: string,
+  failureBoundary?: string,
 ) => {
   const directory = mkdtempSync(
     path.join(tmpdir(), "cowards-v138-successor-native-"),
@@ -104,6 +105,7 @@ const compileOneShotNative = (
   let transferred = false
   try {
     chmodSync(directory, 0o700)
+    if (failureBoundary === "force-bootstrap-failure-directory") fail("V138_TEST_BOOTSTRAP_FAILURE")
     const primaryDirectory = path.join(directory, "primary")
     const reproductionDirectory = path.join(directory, "reproduction")
     mkdirSync(primaryDirectory, { mode: 0o700 })
@@ -119,6 +121,7 @@ const compileOneShotNative = (
     if (sha256Hex(sourceBefore) !== EXPECTED_NATIVE_SOURCE_SHA256 || sha256Hex(compilerBefore) !== EXPECTED_CLANG_SHA256)
       fail("V138_SUCCESSOR_NATIVE_REVIEWED_IDENTITY_MISMATCH")
     writeFileSync(capturedSourcePath, sourceBefore, { mode: 0o400, flag: "wx" })
+    if (failureBoundary === "force-bootstrap-failure-source") fail("V138_TEST_BOOTSTRAP_FAILURE")
     assertReviewedClang()
     for (const output of [executable, reproduced] as const) {
       const compilation = spawnSync(
@@ -135,6 +138,7 @@ const compileOneShotNative = (
     const executableBefore = readFileSync(executable)
     if (sha256Hex(executableBefore) !== sha256Hex(readFileSync(reproduced)))
       fail("V138_SUCCESSOR_NATIVE_REPRODUCIBLE_OUTPUT_MISMATCH")
+    if (failureBoundary === "force-bootstrap-failure-output") fail("V138_TEST_BOOTSTRAP_FAILURE")
     chmodSync(executable, 0o500)
     const executableStatus = statSync(executable)
     if (!executableStatus.isFile() || executableStatus.uid !== process.getuid?.() || (executableStatus.mode & 0o777) !== 0o500)
@@ -147,8 +151,11 @@ const compileOneShotNative = (
       sha256Hex(compilerBefore), sha256Hex(executableBefore),
     ].join("\t") + "\n"
     writeFileSync(capabilityPath, capability, { mode: 0o600, flag: "wx" })
+    if (failureBoundary === "force-bootstrap-failure-capability") fail("V138_TEST_BOOTSTRAP_FAILURE")
     capabilityDescriptor = openSync(capabilityPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
+    if (failureBoundary === "force-bootstrap-failure-capability-open") fail("V138_TEST_BOOTSTRAP_FAILURE")
     rootDescriptor = openSync(root, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0))
+    if (failureBoundary === "force-bootstrap-failure-root-open") fail("V138_TEST_BOOTSTRAP_FAILURE")
     if (sha256Hex(readFileSync(executable)) !== sha256Hex(executableBefore))
       fail("V138_SUCCESSOR_NATIVE_OUTPUT_CHANGED")
     transferred = true
@@ -191,7 +198,7 @@ const invokeNative = (
     fail("V138_SUCCESSOR_INTENT_LOCK_MISSING")
   const normalizedLocks = [...new Set([...targetLocks, intentLock])].sort()
   if (normalizedLocks.length === 0) fail("V138_SUCCESSOR_LOCK_SET_EMPTY")
-  const oneShot = compileOneShotNative(input, normalizedLocks, identity.path)
+  const oneShot = compileOneShotNative(input, normalizedLocks, identity.path, barrierTag)
   let removed = false
   const removePrivateHelper = () => {
     if (!removed) {
@@ -973,6 +980,41 @@ const spawnFailureCleanupEvidence = async (root: string): Promise<number> => {
   return 1
 }
 
+const bootstrapFailureCleanupEvidence = async (root: string): Promise<number> => {
+  const boundaries = [
+    "force-bootstrap-failure-directory",
+    "force-bootstrap-failure-source",
+    "force-bootstrap-failure-output",
+    "force-bootstrap-failure-capability",
+    "force-bootstrap-failure-capability-open",
+    "force-bootstrap-failure-root-open",
+  ] as const
+  const residue = () =>
+    readdirSync(tmpdir()).filter((entry) =>
+      entry.startsWith("cowards-v138-successor-native-"),
+    ).sort()
+  const before = residue()
+  for (const [index, boundary] of boundaries.entries()) {
+    const pair: V138DurablePairV2Input = {
+      transactionId: `bootstrap-failure-${index}`,
+      intentPath: `bootstrap-failure-${index}.intent`,
+      members: [
+        { target: `left/bootstrap-${index}`, bytes: "left\n" },
+        { target: `right/bootstrap-${index}`, bytes: "right\n" },
+      ],
+    }
+    let rejected = false
+    try {
+      await invokeNative(root, pairInput(root, pair), pair.members.map(({ target }) => target), boundary)
+    } catch (error) {
+      rejected = String(error).includes("V138_TEST_BOOTSTRAP_FAILURE")
+    }
+    if (!rejected || JSON.stringify(residue()) !== JSON.stringify(before))
+      fail("V138_SUCCESSOR_BOOTSTRAP_FAILURE_CLEANUP_FAILED")
+  }
+  return boundaries.length
+}
+
 const runSyntheticSuccessorProtocolV2 = async (): Promise<
   Readonly<Record<string, unknown>>
 > => {
@@ -1105,6 +1147,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
       await directoryReplacementEvidence(root)
     const rootLockNamespaceProtections = await rootLockNamespaceEvidence(root)
     const spawnFailureCleanups = await spawnFailureCleanupEvidence(root)
+    const bootstrapFailureCleanups = await bootstrapFailureCleanupEvidence(root)
     return Object.freeze({
       operations: V138_SUCCESSOR_CONTROLLER_V4_OPERATIONS,
       acceptedCells: 0,
@@ -1129,6 +1172,7 @@ const runSyntheticSuccessorProtocolV2 = async (): Promise<
       directoryReplacementProtections,
       rootLockNamespaceProtections,
       spawnFailureCleanups,
+      bootstrapFailureCleanups,
       lifecycleStagingResidue: readdirSync(
         path.join(root, ".v138-lifecycle-staging"),
       ),
