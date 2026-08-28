@@ -1,8 +1,8 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-reviewed: 2026-08-27T23:55:00Z
+reviewed: 2026-08-28T00:35:09Z
 depth: deep
-files_reviewed: 31
+files_reviewed: 34
 files_reviewed_list:
   - scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts
   - scripts/lib/v1-38-bounded-retry-successor-controller-v2.test.ts
@@ -14,10 +14,15 @@ files_reviewed_list:
   - scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts
   - scripts/lib/v1-38-secure-workspace-path-v2.ts
   - scripts/lib/v1-38-secure-workspace-path-v2.test.ts
+  - scripts/native/v1-38-successor-transaction-helper-v2.c
+  - scripts/check-v1-38-phase-262-review-fix-correction-v1.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v1.test.ts
   - scripts/check-v1-38-phase-262-review-fix-correction-v2.ts
   - scripts/check-v1-38-phase-262-review-fix-correction-v2.test.ts
   - scripts/check-v1-38-phase-262-review-fix-correction-v3.ts
   - scripts/check-v1-38-phase-262-review-fix-correction-v3.test.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v4.ts
+  - scripts/check-v1-38-phase-262-review-fix-correction-v4.test.ts
   - scripts/lib/v1-38-bounded-retry-envelope-v2.ts
   - scripts/run-v1-38-bounded-retry-envelope-v2.ts
   - scripts/run-v1-38-bounded-retry-envelope-v2.test.ts
@@ -33,11 +38,9 @@ files_reviewed_list:
   - scripts/lib/v1-38-durable-publication-successor-v1.test.ts
   - scripts/lib/v1-38-restartable-lifecycle-successor-v1.ts
   - scripts/lib/v1-38-restartable-lifecycle-successor-v1.test.ts
-  - scripts/check-v1-38-phase-262-review-fix-correction-v1.ts
-  - scripts/check-v1-38-phase-262-review-fix-correction-v1.test.ts
 findings:
-  critical: 6
-  warning: 0
+  critical: 5
+  warning: 1
   info: 0
   total: 6
 status: issues_found
@@ -45,83 +48,87 @@ status: issues_found
 
 # Phase 262: Code Review Report
 
-**Reviewed:** 2026-08-27T23:55:00Z
+**Reviewed:** 2026-08-28T00:35:09Z
 **Depth:** deep
-**Files Reviewed:** 31
+**Files Reviewed:** 34
 **Status:** issues_found
 
 ## Narrative Findings (AI reviewer)
 
 ## Summary
 
-The iteration-3 implementation preserves the clean empirical non-pass: current tests pass 222/222, immutable correction-v2 tests pass 17/17, TypeScript passes, correction-v1 and correction-v3 checkers pass, Plan 262-88 remains `non_pass` with no activation, and Plan 262-89 remains `gaps_found` without completion mutation. Exact-target reversed pair races now share a lock, lifecycle temporary names include the full normalized intent, existing lifecycle intent/stage/backup/status bytes are authenticated, and static intermediate/final internal-directory symlinks are rejected before external writes.
+Iteration 4 correctly moves pair publication onto a sorted per-target kernel-lock graph, derives pair and lifecycle staging names from full normalized intent, retains authenticated target directory descriptors through native mutation, and recovers at the ten injected post-fsync process-exit boundaries. The focused current suite passes, immutable correction-v2/v3 publication checkouts pass, and clang/TypeScript checks pass.
 
-Six correctness defects remain. The composed controller is still bypassable through exported write functions. Whole-pair lock keys do not serialize overlapping pairs and can leave the losing transaction partially published. Disjoint pairs reuse stage names and interfere. Crash-stale directory locks make the advertised durable/restartable operations unrecoverable. Internal path identities are checked and then reused only as strings, leaving a replacement gap before writes. Finally, correction-v3 obtains its supposedly immutable manifests from unauthenticated mutable checker modules and validates correction-v2 lineage paths but not the prior digest values. These defects keep the correction non-authorizing.
+The implementation is not clean. The native helper is itself a direct mutation interface outside the controller. Its deterministic writes are not recoverable from a crash or I/O failure during a write. Successful lifecycle transactions retain the complete before-image and all stages indefinitely. Correction-v4 neither authenticates the protected evidence it projects nor survives the independent rereview it declares replaceable. Finally, correction evidence reads still use a pathname check/use sequence and do not receive the descriptor-held containment added to native writes.
 
 ## Critical Issues
 
-### CR-01: Exported mutation functions still bypass the composed controller
+### CR-01: The native helper is a directly executable mutation bypass
 
-**Files:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts:13-14,43-49`; `scripts/lib/v1-38-durable-pair-successor-v2.ts:114-128`; `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts:193-207`; `scripts/lib/v1-38-durable-pair-successor-v2.test.ts:15-18`; `scripts/lib/v1-38-restartable-lifecycle-successor-v2.test.ts:20-22`
+**Files:** `scripts/lib/v1-38-bounded-retry-successor-controller-v2.ts:30-43,59-75`; `scripts/native/v1-38-successor-transaction-helper-v2.c:201-247,260-365`
 
-**Issue:** Direct execution of the pair and lifecycle files now rejects every argument, and the controller CLI exposes only `--source-check` and `--synthetic-check`. That closes the old direct-file argument modes, but not the module surface. Both write functions remain public exports and the tests themselves invoke those exports with `node --eval import(...).then(...)`, supplying an arbitrary trusted root. A caller therefore does not need the controller, its temporary-root creation, or its two permitted CLI modes to reach pair or lifecycle writes. The controller is not the sole mutation owner and the claimed contained protocol can still be bypassed.
+**Issue:** Removing TypeScript mutation exports does not make the controller the sole mutation owner. The controller installs the helper at a predictable persistent path derived only from the public source hash, does not authenticate an existing executable, and the helper accepts caller-supplied root device/inode, intent bytes, namespace, targets, and payloads without a controller capability or a cryptographic join between those fields. Directly executing the cached helper against an arbitrary temporary root returned status 0 and published both caller-selected members. The direct helper also bypasses the controller's normalized lock graph and accepts namespace values that are not validated as fixed-width hex before use as descriptor-relative stage names.
 
-**Fix:** Move pair and lifecycle mutation into a controller-owned module closure and export only the two non-live controller commands. If separate modules are necessary, require a capability created inside the controller and unavailable from any exported symbol; tests must drive mutations through the controller rather than dynamically importing the constituents. Add an export/argument-surface inventory test proving no importable or directly executable route can write outside the controller-created temporary root.
+**Fix:** Do not expose a reusable unauthenticated helper executable. Build into a private controller-owned directory, authenticate the compiled bytes and ownership/mode, pass an unforgeable per-invocation capability over an inherited descriptor, and have the helper recompute and validate the complete intent and lock-set projection. Add a test that locates or invokes the helper directly and proves zero mutation for every input not launched through the controller capability.
 
-### CR-02: Overlapping pair transactions take different locks and leave a partial losing pair
+### CR-02: A crash or I/O failure during `write_exclusive` creates an unrecoverable partial transaction file
 
-**File:** `scripts/lib/v1-38-durable-pair-successor-v2.ts:31-36,94-108,120-125`
+**File:** `scripts/native/v1-38-successor-transaction-helper-v2.c:155-166,217-233,308-340`
 
-**Issue:** The lock is one hash of the complete sorted two-target set. Transactions for `{shared, left}` and `{shared, right}` therefore use different locks even though they mutate `shared`. Because members publish in sorted order, one transaction can link its unique member before discovering that the shared member contains the winner's bytes. In an independent 50-iteration race, all 50 runs ended with one process failing while both unique members existed and the shared member contained only the winner's bytes: the failed transaction was partially published. The exact-two-target reversed-order test cannot detect this overlap case.
+**Issue:** Intent and stage names are opened directly with `O_CREAT|O_EXCL`, then written and fsynced in place. If the process exits during the write loop, or a write/fsync fails, the deterministic name remains present with partial bytes. Recovery treats any present non-exact intent or stage as a conflict and can never replace it. The forced-exit tests inject only after each write has completed and been fsynced, so they do not exercise the failure window that makes the advertised restartable operation permanently fail.
 
-**Fix:** Acquire one lock per normalized canonical target in deterministic sorted order, or use a single common publication lock, and hold every acquired lock from precondition inspection through both postconditions and cleanup. Add `{shared,left}` versus `{right,shared}` process races with opposing sort orders and assert the losing transaction leaves neither of its members behind.
+**Fix:** Write and fsync through a separate uncommitted descriptor/name, publish the deterministic intent/stage name only after the bytes are complete, and define safe cleanup for abandoned uncommitted files. Add kill/fault injection inside the write loop and immediately before fsync; a fresh process must recover without manual deletion and without accepting truncated bytes.
 
-### CR-03: Disjoint pair transactions collide in the shared stage namespace
+### CR-03: Correction-v4 projects protected evidence without authenticating it
 
-**File:** `scripts/lib/v1-38-durable-pair-successor-v2.ts:94-109`
+**File:** `scripts/check-v1-38-phase-262-review-fix-correction-v4.ts:69-90,98-113`
 
-**Issue:** Stage names contain only caller-selected `transactionId`, member index, and content digest. Two disjoint target pairs with the same transaction id and bytes take different target-set locks but address the same stage files. Either transaction may unlink a shared stage before the other links it, causing an unrelated transaction failure. An independent 30-iteration race observed 5 failures. This is especially material under a single-use, no-retry envelope.
+**Issue:** Correction-v4 authenticates the three prior correction artifact files and validates roots of the manifest arrays embedded in them, but it never authenticates the files named by `v1Protected`, `v1Remediation`, `v2Successor`, or `v3Successor`. It then reads the Plan-262-88 disposition without an expected digest and checks only three fields. In an isolated fixture, changing `authority.phase263ExecutionAuthorized` from false to true was accepted and correction-v4 still emitted false authority. Thus the correction can attest an exhausted, non-authorizing history while the protected evidence it cites says execution is authorized.
 
-**Fix:** Derive a stage namespace from the full normalized pair intent: trusted root, intent path, transaction id, both normalized targets, and both digests. Authenticate that namespace in the durable intent and add simultaneous same-id/same-bytes disjoint-pair tests that require both transactions to complete on every run.
+**Fix:** Authenticate every fixed path-and-digest entry before deriving the correction, including the exact Plan-262-88 disposition, terminal, journal, review, and source lineage. Validate the complete disposition schema and every authority bit. Add one-field mutations for all protected artifacts and every denial; each must fail before a correction object is returned.
 
-### CR-04: A process exit leaves locks that permanently block crash recovery
+### CR-04: The required independent rereview necessarily invalidates correction-v4
 
-**Files:** `scripts/lib/v1-38-secure-workspace-path-v2.ts:78-112`; `scripts/lib/v1-38-durable-pair-successor-v2.ts:123-127`; `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts:202-207`
+**File:** `scripts/check-v1-38-phase-262-review-fix-correction-v4.ts:101-114,117-123`; `scripts/check-v1-38-phase-262-review-fix-correction-v4.test.ts:70-75`
 
-**Issue:** The exclusive lock is a directory removed only by the current process's `finally` block. A forced exit or power loss leaves the directory in place; later invocations merely wait ten seconds and throw `V138_SECURE_LOCK_TIMEOUT`. A direct stale-lock reproduction reached that timeout after 10,007 ms. Thus the durable pair cannot resume its intent and the restartable lifecycle cannot inspect or finish its staged state after the exact failure class those protocols are meant to survive. The source comment calling this a kernel lock is inaccurate; the directory is not released by the kernel when its owner exits.
+**Issue:** The correction correctly pins the immutable triggering review at commit `ca6aaaa8`, but it also incorporates the current mutable aggregate `262-REVIEW.md` digest into `body` and therefore into `correctionRoot`. The artifact is required to be checked by recomputing that body. Replacing `262-REVIEW.md` with the independent rereview changes the expected correction and makes the committed correction-v4 fail its own checker, despite the field claiming `replaceableByIndependentRereview: true`. The test mutates the aggregate and derives a new object, but never checks the committed artifact, masking the contradiction.
 
-**Fix:** Use an advisory lock whose ownership is released on process exit, or add a durable owner identity and a safe stale-owner reclamation protocol that survives PID reuse and reboot. Add forced-exit tests after intent, each member/step boundary, and status publication, then require a fresh process to recover without manual lock deletion.
+**Fix:** Keep mutable aggregate observations outside the correction-rooted body, or bind only the immutable commit-qualified trigger plus a separately authenticated terminal rereview artifact after it exists. Add an end-to-end test that replaces the aggregate review and requires the already committed correction-v4 checker to remain valid without rewriting correction history.
 
-### CR-05: Internal directory authentication is not held through subsequent writes
+### CR-05: Protected evidence reads retain an intermediate-directory replacement gap
 
-**Files:** `scripts/lib/v1-38-secure-workspace-path-v2.ts:44-75,78-111`; `scripts/lib/v1-38-durable-pair-successor-v2.ts:77,94-109`; `scripts/lib/v1-38-restartable-lifecycle-successor-v2.ts:95,102-105,154-190`
+**File:** `scripts/lib/v1-38-secure-workspace-path-v2.ts:34-76,78-92`
 
-**Issue:** Static hostile intermediate/final entries now fail before mutation, but `ensureV138TrustedDirectories` returns ordinary absolute path strings after `lstat`. Pair and lifecycle code later opens, links, unlinks, and removes through those strings without retaining a descriptor or rechecking directory device/inode identity. Another process can replace an authenticated internal directory between the check and use, redirecting the subsequent stage or lock operation. Lock cleanup has the same gap between the final `lstat` and `rmdir`. The implementation therefore does not provide the descriptor-held containment described by the remediation.
+**Issue:** `resolveV138RelativeNoFollow` checks each parent with `lstatSync`, returns an absolute string, and `readV138RegularNoFollow` later opens that string with `O_NOFOLLOW` only on the final component. An intermediate directory can be renamed and replaced with a symlink after validation but before open, redirecting the read to external bytes. The native mutation helper now holds parent descriptors, but correction-v4 and all manifest authentication continue through this pathname-based reader, so protected evidence does not have equivalent containment.
 
-**Fix:** Open and retain descriptors for the trusted root and each internal directory, verify their identities, and perform mutations relative to those held descriptors through a small helper that provides descriptor-relative operations. If the runtime cannot do that directly, isolate all mutations in a helper that can. Add synchronized directory-replacement tests at the post-check/pre-write boundary and require external directories to remain empty.
+**Fix:** Implement manifest reads by opening and retaining the trusted root and every parent directory descriptor with no-follow semantics, then open the final regular file relative to the held parent descriptor and verify its identity. Add a synchronized post-parent-open/pre-file-open directory-replacement test and require the checker to read only the authenticated directory inode.
 
-### CR-06: Correction-v3 trusts mutable checker exports for its immutable manifests
+## Warnings
 
-**Files:** `scripts/check-v1-38-phase-262-review-fix-correction-v3.ts:3-10,28,38-40,63-73`; `scripts/check-v1-38-phase-262-review-fix-correction-v1.ts:29-57`; `scripts/check-v1-38-phase-262-review-fix-correction-v2.ts:33-61`
+### WR-01: Successful lifecycle transactions retain before-images and all recovery stages indefinitely
 
-**Issue:** Correction-v3 does authenticate every entry currently returned by its imported arrays, but the arrays originate in the correction-v1 and correction-v2 checker source files. Those checker files are not themselves in any authenticated v3 manifest, and their nested arrays/objects are only shallow-frozen. Changing or mutating an imported list can omit a protected/remediation/forbidden entry or change a prior successor digest before v3 derives its expected result. The lineage join at lines 72-73 compares only ordered paths, not the `sha256` values recorded in correction-v2. Consequently v3 does not independently fix the immutable entry set and prior digest lineage it claims to reauthenticate.
+**File:** `scripts/native/v1-38-successor-transaction-helper-v2.c:317-347`
 
-**Fix:** Define the complete v1 protected/remediation manifest, v2 successor manifest, and forbidden manifest as literal deeply immutable data inside correction-v3 (or authenticate the exact v1/v2 checker source blobs before importing them). Compare every correction-v2 artifact entry's path and digest to the fixed prior manifest, not only its paths. Add tests that alter each imported manifest source, mutate nested entries before derivation, and change a correction-v2 prior digest while preserving paths; all must fail.
+**Issue:** After status publication succeeds, lifecycle code closes descriptors without unlinking the intent, each `.before` backup, each `.after` stage, or the status stage. A direct successful one-step transaction left all three staging files plus the intent. This retains superseded source bytes, grows storage for every unique intent, and makes the cleanup claim and privacy boundary weaker than the pair implementation, which does remove its stages and intent.
+
+**Fix:** After all canonical postconditions and directory fsyncs succeed, remove the intent, before-image backups, after stages, and status stage descriptor-relatively, fsync the affected directories, and verify the final staging namespace is empty. Add success and recovered-success cleanup assertions while preserving idempotent handling of an already published lifecycle status.
 
 ## Verification Performed
 
-- Current serialized suite: **14/14 files passed, 222/222 tests passed**.
-- Immutable correction-v2 publication checkout `8ae8cba0`: **17/17 tests passed** and canonical checker passed.
+- Current successor/correction/lifecycle suite: 13/13 files and 210/210 tests passed in serialized execution.
+- Correction-v1: 4/4 tests passed and canonical checker passed.
+- Immutable correction-v2 checkout `8ae8cba0`: 17/17 tests and canonical checker passed.
+- Immutable correction-v3 checkout `7b56ecdc`: 27/27 tests and canonical checker passed.
+- Native helper compiled with `/usr/bin/clang -std=c11 -Wall -Wextra -Werror`.
 - `pnpm exec tsc --noEmit --pretty false`: passed.
-- Correction-v1 and correction-v3 canonical checkers: passed.
-- Plan 262-88 canonical artifacts: `non_pass`, `exhausted`, clean assurance, no correction or activation.
-- Plan 262-89 final projection: `gaps_found`, `completionMutated: false`.
-- Process argument inventory: controller permits only `--source-check` and `--synthetic-check`; pair/lifecycle direct-file entry rejects all modes; correction-v1/v2/v3 permit only `--derive` and `--check`. Dynamic module imports remain the mutation bypass described in CR-01.
-- Independent adverse checks: overlapping pairs produced a partial loser in **50/50** races; disjoint same-id/same-bytes pairs failed in **5/30** races; a pre-existing lock produced `V138_SECURE_LOCK_TIMEOUT` after **10,007 ms**.
-- Runtime immutability check: all manifest containers reported frozen, while their protected, successor, and forbidden entry objects reported unfrozen.
+- Correction-v4 canonical checker passed before replacement of this aggregate review.
+- Plan-262-89 final checker returned `gaps_found`, `completionMutated: false`.
+- Direct adverse reproduction: the cached native helper published two arbitrary members without the controller.
+- Direct adverse reproduction: a successful lifecycle left its intent plus `.before`, `.after`, and status stage files.
+- Direct adverse reproduction: correction-v4 accepted a protected Plan-262-88 disposition with `phase263ExecutionAuthorized: true` and still emitted false authority.
 
 ---
 
-_Reviewed: 2026-08-27T23:55:00Z_
+_Reviewed: 2026-08-28T00:35:09Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
