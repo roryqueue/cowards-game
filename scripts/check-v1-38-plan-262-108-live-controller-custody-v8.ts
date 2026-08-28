@@ -651,6 +651,14 @@ const exerciseDisposableModes = (
     inspectV138Plan262108RawCustody(clone)
     const trio = buildTrio(source)
     const effectsBefore = assertV138Plan262108NoCanonicalEffects(clone)
+    for (const repoPath of [
+      V138_PLAN_262_108_PATHS.payload,
+      V138_PLAN_262_108_PATHS.review,
+      V138_PLAN_262_108_PATHS.carrier,
+    ]) {
+      const target = path.join(clone, ...repoPath.split("/"))
+      if (existsSync(target)) rmSync(target)
+    }
     writeDisposableTrioAndSupplement(clone, trio)
     const publishedChecks = [
       [V138_PLAN_262_108_PATHS.payload, Buffer.from(canonical(trio.payload))],
