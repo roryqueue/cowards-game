@@ -50,11 +50,11 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 80/86 plans executed
+**Plans:** 80/87 plans executed
 
-**Current verdict:** PAIR-LINEAGE CORRECTION PLANNED / PLAN-104 SOLE NEXT ACTION / FRESH 0/540 / DOWNSTREAM DENIED — 80 of 86 active plans have summaries. Plans 262-102/103 and their literal-zero trio remain immutable truthful history, but research found that the v6 consumer conflates the historical trio publication with later `HEAD` and lacks the native publish/check modes required by Plan 92. Plans 262-104/105 additively repair and independently review that join without canonical publication. Revised Plan 262-92 and Plans 262-93 through 262-95 remain dependency-denied. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 plus all downstream authority remain denied.
+**Current verdict:** PAIR-LINEAGE CORRECTION PLANNED / PLAN-104 SOLE NEXT ACTION / FRESH 0/540 / DOWNSTREAM DENIED — 80 of 87 active plans have summaries. Plans 262-102/103 and their literal-zero trio remain immutable truthful history, but research found that the v6 consumer conflates the historical trio publication with later `HEAD` and lacks the native publish/check modes required by Plan 92. Plans 262-104/105 additively repair and independently review that join without canonical publication. Revised Plans 262-92 through 262-95 remain dependency-denied, and Plan 262-106 separately owns post-Plan-95-summary lifecycle finalization. ADMIT-03 remains blocked, Phase 262 incomplete, and Phases 263–270 plus all downstream authority remain denied.
 
-<!-- phase-262-pair-lineage-correction-topology-v1: {"schema_version":"v1.38-plan-262-pair-lineage-correction-topology-v1","active_plans":86,"trustworthy_summaries":80,"preserved_plans":["262-102","262-103"],"active_chain":["262-104","262-105","262-92","262-93","262-94","262-95"],"waves":{"262-104":86,"262-105":87,"262-92":88,"262-93":89,"262-94":90,"262-95":91},"next_action":"dispatch-262-104-only","plan_262_92_eligible":false,"eligibility_condition":"committed-262-105-literal-zero-four-mode-review","canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
+<!-- phase-262-pair-lineage-correction-topology-v2: {"schema_version":"v1.38-plan-262-pair-lineage-correction-topology-v2","active_plans":87,"trustworthy_summaries":80,"preserved_plans":["262-102","262-103"],"active_chain":["262-104","262-105","262-92","262-93","262-94","262-95","262-106"],"waves":{"262-104":86,"262-105":87,"262-92":88,"262-93":89,"262-94":90,"262-95":91,"262-106":92},"lifecycle_stage_1":"262-95-readiness-and-summary","lifecycle_stage_2":"262-106-root-finalization","next_action":"dispatch-262-104-only","plan_262_92_eligible":false,"eligibility_condition":"committed-262-105-literal-zero-four-mode-review","canonical_seal_present":false,"canonical_envelope_present":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 
 <!-- phase-262-plan-103-closeout-status: {"schema_version":"v1.38-plan-262-103-closeout-v1","proof_status":"nonrecursive_rereview_zero_findings","active_plans":84,"trustworthy_summaries":80,"reviewed_source_commit":"332aae093ef6e26c95a18f21cfd253ccc829ce48","publication_commit":"2f4fd225ca32b0ac67c2fd09f3036cbbe208725c","finding_count":0,"finding_root":"sha256:88fd05a5b1258c35513bacfb2c1f5aee1c9a29c22302bca2a480eb430a549e21","candidate_payload_root":"sha256:1626099ec6c008aba729c363722d725c0eaf4c52b211674455f000b845e1d84f","review_root":"sha256:b2f259552d172d8635deb51dd9bc805e29669d1691b75d843aa3170a159f7710","carrier_root":"sha256:50358471bed92ca437fcb4ffb7aa81d4473dd8fb73aebd8db66b91754ab20984","actual_consumer_status":"passed","plan_262_92_eligible":true,"authorizes_execution":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"next_action":"dispatch-revised-262-92-only","downstream_authority_denied":true} -->
 
@@ -183,7 +183,11 @@ Plans:
 
 **Wave 91** *(blocked on committed Plan-94 summary)*
 
-- [ ] 262-95-PLAN.md — Refresh validation/verification and apply the two-stage committed-summary lifecycle latch.
+- [ ] 262-95-PLAN.md — Refresh validation/verification, publish readiness-v3, and commit the Stage-1 summary latch without lifecycle mutation.
+
+**Wave 92** *(blocked on committed Plan-95 summary and readiness)*
+
+- [ ] 262-106-PLAN.md — Authenticate the committed Stage-1 latch, apply/check the exact pass-versus-gaps lifecycle projection, and commit branch-honest closeout.
 
 **Wave 1**
 
@@ -620,7 +624,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 80/84 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 80/87 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |

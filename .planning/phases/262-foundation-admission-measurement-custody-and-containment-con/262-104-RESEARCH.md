@@ -384,9 +384,10 @@ publishV138RetryV3NativePair(repoRoot, {
 | 262-92 (revised) | 88 | 262-105 zero findings | Reauthenticate Plan-103 trio plus Plan-104/105 source/review, capture current direct parent, invoke exclusive publisher once, commit exact two-path pair, run checker. [VERIFIED: recommendation] | Inactive envelope only; Plan 93 eligibility if all checks pass. [VERIFIED: existing Plan 92 intent] |
 | 262-93 | 89 | revised 262-92 | Sole live bounded-envelope owner. [VERIFIED: current Plan 93] | No downstream authority until adjudication. [VERIFIED: current Plan 93] |
 | 262-94 | 90 | 262-93 | Independent v3 adjudication. [VERIFIED: current Plan 94] | Branch-dependent pass-only artifacts; no automatic Phase-263 authority. [VERIFIED: current Plan 94] |
-| 262-95 | 91 | 262-94 | Lifecycle/readiness/verification closure. [VERIFIED: current Plan 95] | Only exact verified 540/540 branch can advance. [VERIFIED: current Plan 95] |
+| 262-95 | 91 | 262-94 | Stage-1 validation/verification, readiness-v3, and committed summary latch without lifecycle mutation. [VERIFIED: revised Plan 95] | None; Plan 106 remains required. [VERIFIED: revised topology] |
+| 262-106 | 92 | 262-95 | Root-orchestrator post-summary apply/check and branch-honest lifecycle closeout. [VERIFIED: revised topology] | Only exact verified 540/540 may complete Phase 262 and expose Phase-263 planning eligibility; gaps performs zero project-lifecycle mutation. [VERIFIED: lifecycle contract] |
 
-The active topology becomes 86 plans after adding Plans 104 and 105. The trustworthy-summary count advances only as each new summary is committed; Plans 92–95 remain dependency-denied until their exact predecessor passes. [VERIFIED: current counts; recommendation is an inference]
+The active topology becomes 87 plans after adding Plans 104, 105, and the separate Stage-2 Plan 106. The trustworthy-summary count advances only as each new summary is committed; Plans 105, 92–95, and 106 remain dependency-denied until their exact predecessor passes. [VERIFIED: current counts; recommendation is an inference]
 
 ### Plan 104 Must-Haves
 
@@ -428,17 +429,13 @@ The active topology becomes 86 plans after adding Plans 104 and 105. The trustwo
 |---|-------|---------|---------------|
 | — | None. All material current-state claims were verified from Git, source, artifacts, plans, or official documentation; proposed designs are explicitly labeled as recommendations/inferences. | — | — |
 
-## Open Questions
+## Resolved Questions
 
-1. **Exact Plan-105 artifact schema/path names**
-   - What we know: a fresh independent source review is required before the dangerous modes can be used canonically. [VERIFIED: integrity pattern]
-   - What's unclear: CONTEXT.md leaves exact schema/module/command names to planning. [VERIFIED: CONTEXT.md]
-   - Recommendation: use a closed literal-zero-or-blocked review artifact plus deterministic REVIEW, without any self-file hash cycle. [VERIFIED: recommendation]
+1. **RESOLVED — Exact Plan-105 artifact schema/path names**
+   - Plan 105 uses schema `v1.38-plan-262-105-pair-publication-source-review-v1` at `.planning/artifacts/v1.38-plan-262-105-pair-publication-source-review-v1.json`, checker `scripts/check-v1-38-plan-262-105-pair-publication-source-review-v1.ts`, test `scripts/check-v1-38-plan-262-105-pair-publication-source-review-v1.test.ts`, and deterministic review `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-105-REVIEW.md`. The artifact is a closed literal-zero-or-blocked result with no own-file hash cycle; only literal zero plus all four disposable actual-mode observations makes Plan 262-92 eligible. [RESOLVED: Plans 104/105]
 
-2. **How much of the expanded Plan-92 seal body should be direct fields versus one content root**
-   - What we know: source, publication, review, protected history, local seal, runtime/kernel, and current direct-parent identities must all be cryptographically bound. [VERIFIED: current Plan 92]
-   - What's unclear: the current v6 derivation's seal body is smaller than Plan 92's prose contract. [VERIFIED: source/plan comparison]
-   - Recommendation: Plan 104 should define and test the complete v13 canonical body expected by revised Plan 92, while importing frozen policy data and avoiding copied mutable values. [VERIFIED: recommendation]
+2. **RESOLVED — Complete seal-v13 canonical body**
+   - Plan 104 must define and test schema `v1.38-successor-source-seal-v13` under domain `v138-successor-source-seal-v13`, hashing the domain, one NUL byte, and the canonical body with only `sealRoot` omitted from its own preimage. The body directly records status, assurance class, zero findings, paired envelope path/root, Plan-93-only eligibility, and exhaustive false live/downstream authority. Its structured custody members bind S0; reviewed Plan-102 source S; exact Plan-103 publication P, candidate/REVIEW/carrier blobs and modes, candidatePayloadRoot, carrierRoot, external physical custody, actual-consumer observation, and portable closure; Plan-104 source; Plan-105 result/REVIEW/four-mode closure; seal-parent R7 and pair commit B3; protected Plan-100/101, Plan-98/99, Plan-96/97, and Plan-90/91 history; correction-v10, disposition-v2, lifecycle-v2, protected-history, runtime, kernel, toolchain, installed, portable, and complete-local closure roots. Branch-critical identities, eligibility, counters, and denials remain explicit canonical fields; they are not collapsed behind one opaque content root. Frozen policy values are imported from authenticated predecessors rather than copied from mutable checkout prose. [RESOLVED: revised Plan 92 contract]
 
 ## Environment Availability
 
