@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process"
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   checkV138PathStableCustodyForReview,
   deriveV138PathStableCustody,
+  deriveV138PathStableInstalledManifestForReview,
   type V138PathStableCustody,
 } from "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
 import { authenticateV138RetryV3ExecutionClosure } from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
@@ -134,22 +135,59 @@ describe("Plan 262-113 path-stable custody", () => {
     expect(canonical.pathnameLaunchReplacementResistanceClaimed).toBe(false)
   }, 180_000)
 
-  it("rejects every reviewed and local custody mutation", () => {
-    const exact = deriveV138PathStableCustody(repoRoot, { sourceCommit, checkoutPaths: sourcePaths })
-    const mutations: Array<[string, V138PathStableCustody]> = [
-      ["relative path", { ...exact, checkoutPaths: ["scripts/forged.ts"] }],
-      ["mode", { ...exact, checkoutManifestRoot: `sha256:${"1".repeat(64)}` }],
-      ["blob", { ...exact, checkoutManifestRoot: `sha256:${"2".repeat(64)}` }],
-      ["bytes", { ...exact, checkoutManifestRoot: `sha256:${"3".repeat(64)}` }],
-      ["recursive import", { ...exact, recursiveDependencyRoot: `sha256:${"4".repeat(64)}` }],
-      ["installed input", { ...exact, installedClosureRoot: `sha256:${"5".repeat(64)}` }],
-      ["native source", { ...exact, pathStableNativeSourcesRoot: `sha256:${"6".repeat(64)}` }],
-      ["Git executable", { ...exact, gitExecutableSha256: `sha256:${"7".repeat(64)}` }],
-      ["hardened arguments", { ...exact, hardenedGitArgumentsRoot: `sha256:${"8".repeat(64)}` }],
-      ["local object identity", { ...exact, localExecutionClosureRoot: `sha256:${"9".repeat(64)}` }],
-    ]
-    for (const [name, candidate] of mutations)
-      expect(() => checkV138PathStableCustodyForReview(exact, candidate), name).toThrow()
+  it("re-derives custody after real path, mode, byte, history, native, and install mutations", () => {
+    withLinkedWorktree((root) => {
+      const derive = () => deriveV138PathStableCustody(root, { sourceCommit, checkoutPaths: sourcePaths })
+      const exact = derive()
+      expect(() => deriveV138PathStableCustody(root, {
+        sourceCommit, checkoutPaths: ["../outside.ts"],
+      })).toThrow("V138_PATH_STABLE_INPUT_INVALID")
+
+      const sourcePath = path.join(root, sourcePaths[0]!)
+      const sourceBytes = readFileSync(sourcePath)
+      chmodSync(sourcePath, 0o755)
+      expect(derive).toThrow(/CURRENT_ENTRY_INVALID/)
+      chmodSync(sourcePath, 0o644)
+      writeFileSync(sourcePath, Buffer.concat([sourceBytes, Buffer.from("\n// custody mutation\n")]))
+      expect(derive).toThrow(/CURRENT_ENTRY_INVALID/)
+      writeFileSync(sourcePath, sourceBytes)
+
+      const nativePath = path.join(root, "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c")
+      const nativeBytes = readFileSync(nativePath)
+      writeFileSync(nativePath, Buffer.concat([nativeBytes, Buffer.from("\n/* custody mutation */\n")]))
+      expect(derive).toThrow(/CURRENT_ENTRY_INVALID/)
+      writeFileSync(nativePath, nativeBytes)
+
+      writeFileSync(sourcePath, Buffer.concat([sourceBytes, Buffer.from("\n// committed rewrite\n")]))
+      execFileSync("/usr/bin/git", ["add", "--", sourcePaths[0]!], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture rewrite"], { cwd: root })
+      writeFileSync(sourcePath, sourceBytes)
+      execFileSync("/usr/bin/git", ["add", "--", sourcePaths[0]!], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture restore"], { cwd: root })
+      expect(derive).toThrow(/SUCCESSOR_REWRITE/)
+
+      for (const [name, candidate] of [
+        ["Git executable evidence", { ...exact, gitExecutableSha256: `sha256:${"7".repeat(64)}` }],
+        ["hardened argument evidence", { ...exact, hardenedGitArgumentsRoot: `sha256:${"8".repeat(64)}` }],
+        ["local object evidence", { ...exact, localExecutionClosureRoot: `sha256:${"9".repeat(64)}` }],
+      ] as Array<[string, V138PathStableCustody]>)
+        expect(() => checkV138PathStableCustodyForReview(exact, candidate), name).toThrow()
+    })
+
+    const installRoot = mkdtempSync(path.join(tmpdir(), "v138-installed-fixture-"))
+    try {
+      writeFileSync(path.join(installRoot, "package.json"), "{}\n")
+      for (const [name, version] of [["vitest", "1.0.0"], ["tsx", "2.0.0"]]) {
+        const packageRoot = path.join(installRoot, "node_modules", name)
+        mkdirSync(packageRoot, { recursive: true })
+        writeFileSync(path.join(packageRoot, "package.json"), `${JSON.stringify({ name, version })}\n`)
+        writeFileSync(path.join(packageRoot, "index.js"), `export const identity = ${JSON.stringify(name)}\n`)
+      }
+      const before = deriveV138PathStableInstalledManifestForReview(installRoot)
+      writeFileSync(path.join(installRoot, "node_modules/vitest/index.js"), "export const identity = 'mutated'\n")
+      const after = deriveV138PathStableInstalledManifestForReview(installRoot)
+      expect(after.root).not.toBe(before.root)
+    } finally { rmSync(installRoot, { recursive: true, force: true }) }
   }, 180_000)
 
   it("authenticates the immutable source chain without creating authority", () => {

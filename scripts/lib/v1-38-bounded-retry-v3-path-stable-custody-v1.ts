@@ -128,7 +128,7 @@ const recursiveManifest = (
   })
 }
 
-const pathStableInstalledManifest = (repoRoot: string) => {
+export const deriveV138PathStableInstalledManifestForReview = (repoRoot: string) => {
   const records: string[] = []
   const visited = new Set<string>()
   const queue: string[] = []
@@ -280,7 +280,7 @@ export const deriveV138PathStableCustody = (
   noRewrite(root, expected.sourceCommit, PATH_STABLE_NATIVE_SOURCES)
   const recursive = recursiveManifest(root, expected.sourceCommit, expected.checkoutPaths)
   const native = authenticateV138RetryV3ExecutionClosure(root, expected)
-  const installed = pathStableInstalledManifest(root)
+  const installed = deriveV138PathStableInstalledManifestForReview(root)
   const checkoutManifest = checkoutRecords
     .map(({ bytes: _bytes, ...record }) => record)
     .sort((a, b) => a.path.localeCompare(b.path))
