@@ -1,13 +1,18 @@
 import { createHash } from "node:crypto"
-import { existsSync, lstatSync, readFileSync } from "node:fs"
+import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
   V138_BOUNDED_RETRY_V3_PATHS,
   checkV138PublishedRetryV3Outcome,
   runV138V3ProductionLive,
+  type V138DerivedV3SealEnvelope,
+  type V138SuccessorSourceSealV13,
 } from "./run-v1-38-bounded-retry-envelope-v3.js"
-import { encodeV138RetryV3CanonicalJson } from "./lib/v1-38-bounded-retry-envelope-v3.js"
+import {
+  checkV138InactiveRetryV3Envelope,
+  encodeV138RetryV3CanonicalJson,
+} from "./lib/v1-38-bounded-retry-envelope-v3.js"
 import {
   runV138RetryV3IsolatedGit,
   runV138RetryV3IsolatedGitBytes,
@@ -139,6 +144,23 @@ const target = (root: string, repoPath: string): string => {
   if (!resolved.startsWith(`${path.resolve(root)}${path.sep}`)) fail("V138_LIVE_V10_PATH_INVALID")
   return resolved
 }
+const exactKeys = (value: Json, keys: readonly string[], code: string): void => {
+  if (canonical(Object.keys(value).sort()) !== canonical([...keys].sort())) fail(code)
+}
+const readRegularNoFollow = (root: string, repoPath: string, maximumBytes = 16 * 1024 * 1024): Buffer => {
+  const absolute = target(root, repoPath)
+  const before = lstatSync(absolute)
+  if (!before.isFile() || before.isSymbolicLink() || before.size > maximumBytes)
+    fail(`V138_LIVE_V10_FILE_UNSAFE:${repoPath}`)
+  const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try {
+    const opened = fstatSync(fd)
+    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino ||
+        opened.size !== before.size || opened.size > maximumBytes)
+      fail(`V138_LIVE_V10_FILE_CHANGED:${repoPath}`)
+    return readFileSync(fd)
+  } finally { closeSync(fd) }
+}
 const gitBytes = (root: string, commit: string, repoPath: string): Buffer =>
   runV138RetryV3IsolatedGitBytes(root, ["show", `${commit}:${repoPath}`])
 const jsonAt = (root: string, commit: string, repoPath: string): Json => {
@@ -165,7 +187,7 @@ const assertExactAddPublication = (
   for (const repoPath of repoPaths) {
     const entry = runV138RetryV3IsolatedGit(root, ["ls-tree", commit, "--", repoPath])
     if (!entry.startsWith("100644 blob ")) fail("V138_LIVE_V10_PUBLICATION_MODE_INVALID")
-    const current = readFileSync(target(root, repoPath))
+    const current = readRegularNoFollow(root, repoPath)
     if (!current.equals(gitBytes(root, commit, repoPath))) fail("V138_LIVE_V10_HISTORY_REWRITTEN")
   }
   if (runV138RetryV3IsolatedGit(root, [
@@ -219,10 +241,20 @@ const assertImmutableHistory = (root: string): void => {
   ) fail("V138_LIVE_V10_IMMUTABLE_HISTORY_INVALID")
 }
 
-const assertPairAndStop = (root: string): void => {
+const assertPairAndStop = (root: string): Readonly<V138DerivedV3SealEnvelope> => {
   assertExactAddPublication(root, PAIR_COMMIT, [V138_BOUNDED_RETRY_V3_PATHS.envelope, V138_BOUNDED_RETRY_V3_PATHS.seal])
   const seal = jsonAt(root, PAIR_COMMIT, V138_BOUNDED_RETRY_V3_PATHS.seal)
   const envelope = jsonAt(root, PAIR_COMMIT, V138_BOUNDED_RETRY_V3_PATHS.envelope)
+  exactKeys(seal, [
+    "assuranceClass", "directChild", "directParentCommit", "downstreamAuthority",
+    "localSealVerificationRoot", "productionAuthorized", "protectedHistoryRoot",
+    "researchCommit", "reviewCommit", "reviewRoot", "schemaVersion", "sealRoot",
+    "sourceBaseCommit", "sourceCommit", "sourceRoot", "sourceTree",
+  ], "V138_LIVE_V10_SEAL_KEYS_INVALID")
+  const { sealRoot: storedSealRoot, ...sealBody } = seal
+  if (sha256("v138-successor-source-seal-v13", sealBody) !== storedSealRoot)
+    fail("V138_LIVE_V10_SEAL_ROOT_INVALID")
+  const checkedEnvelope = checkV138InactiveRetryV3Envelope(envelope)
   assertAncestor(root, PLAN_93_STOP_COMMIT)
   const plan93Bytes = gitBytes(root, PLAN_93_STOP_COMMIT, V138_LIVE_V10_PATHS.plan93Stop)
   const plan93Text = plan93Bytes.toString("utf8")
@@ -254,6 +286,25 @@ const assertPairAndStop = (root: string): void => {
     bytesSha256(plan93Bytes) !== PLAN_93_STOP_SHA256 ||
     !/^sha256:[0-9a-f]{64}$/u.test(expandedProtectedHistoryRoot)
   ) fail("V138_LIVE_V10_PAIR_OR_STOP_INVALID")
+  const checkedSeal: Readonly<V138SuccessorSourceSealV13> = Object.freeze({
+    schemaVersion: seal.schemaVersion,
+    sourceBaseCommit: seal.sourceBaseCommit,
+    researchCommit: seal.researchCommit,
+    sourceCommit: seal.sourceCommit,
+    sourceTree: seal.sourceTree,
+    directParentCommit: seal.directParentCommit,
+    sourceRoot: seal.sourceRoot,
+    reviewRoot: seal.reviewRoot,
+    reviewCommit: seal.reviewCommit,
+    localSealVerificationRoot: seal.localSealVerificationRoot,
+    protectedHistoryRoot: seal.protectedHistoryRoot,
+    directChild: seal.directChild,
+    assuranceClass: seal.assuranceClass,
+    productionAuthorized: seal.productionAuthorized,
+    downstreamAuthority: seal.downstreamAuthority,
+    sealRoot: seal.sealRoot,
+  })
+  return Object.freeze({ seal: checkedSeal, envelope: checkedEnvelope })
 }
 
 const assertAbsent = (root: string, paths: readonly string[]): void => {
@@ -288,6 +339,7 @@ export type V138LiveV10SourceAdmission = Readonly<{
   custody: V138PathStableCustody
   reviewedClosureRoot: Sha
   localExecutionClosureRoot: Sha
+  pair: Readonly<V138DerivedV3SealEnvelope>
   liveInvoked: false
   downstreamAuthority: "denied"
 }>
@@ -295,7 +347,7 @@ export type V138LiveV10SourceAdmission = Readonly<{
 export const authenticateV138LiveV10SourceOnly = (rootInput: string): V138LiveV10SourceAdmission => {
   const root = path.resolve(rootInput)
   assertImmutableHistory(root)
-  assertPairAndStop(root)
+  const pair = assertPairAndStop(root)
   assertAbsent(root, [
     V138_LIVE_V10_PATHS.plan114Payload, V138_LIVE_V10_PATHS.plan114Review,
     V138_LIVE_V10_PATHS.plan114Carrier, V138_LIVE_V10_PATHS.supplementV1,
@@ -332,6 +384,7 @@ export const authenticateV138LiveV10SourceOnly = (rootInput: string): V138LiveV1
     custody,
     reviewedClosureRoot: custody.reviewedClosureRoot,
     localExecutionClosureRoot: custody.localExecutionClosureRoot,
+    pair,
     liveInvoked: false,
     downstreamAuthority: "denied",
   })
@@ -526,13 +579,16 @@ const authenticateFutureCustody = (
 const authenticateV138LiveV10SourceOnlyForFuture = (rootInput: string): V138LiveV10SourceAdmission => {
   const root = path.resolve(rootInput)
   assertImmutableHistory(root)
-  assertPairAndStop(root)
+  const pair = assertPairAndStop(root)
   assertAbsent(root, [V138_LIVE_V10_PATHS.supplementV1, V138_LIVE_V10_PATHS.supplementV2])
   const custody = deriveV138PathStableCustody(root, { sourceCommit: PLAN_111_SOURCE_COMMIT, checkoutPaths: PLAN_111_SOURCE_PATHS })
-  return Object.freeze({ ...authenticateV138LiveV10SourceOnlyShape(custody) })
+  return Object.freeze({ ...authenticateV138LiveV10SourceOnlyShape(custody, pair) })
 }
 
-const authenticateV138LiveV10SourceOnlyShape = (custody: V138PathStableCustody): V138LiveV10SourceAdmission => Object.freeze({
+const authenticateV138LiveV10SourceOnlyShape = (
+  custody: V138PathStableCustody,
+  pair: Readonly<V138DerivedV3SealEnvelope>,
+): V138LiveV10SourceAdmission => Object.freeze({
   correctedPublicationCommit: CORRECTED_PUBLICATION_COMMIT,
   correctedPayloadRoot: CORRECTED_ROOTS.payload, correctedReviewRoot: CORRECTED_ROOTS.review, correctedCarrierRoot: CORRECTED_ROOTS.carrier,
   plan111SourceCommit: PLAN_111_SOURCE_COMMIT,
@@ -543,6 +599,7 @@ const authenticateV138LiveV10SourceOnlyShape = (custody: V138PathStableCustody):
   envelopeRoot: ENVELOPE_ROOT, protectedHistoryRoot: PROTECTED_HISTORY_ROOT,
   envelopeStatus: "sealed_inactive", counters: ZERO_COUNTERS, custody,
   reviewedClosureRoot: custody.reviewedClosureRoot, localExecutionClosureRoot: custody.localExecutionClosureRoot,
+  pair,
   liveInvoked: false, downstreamAuthority: "denied",
 })
 
@@ -567,14 +624,12 @@ const assertPostRun = (root: string): void => {
 
 export const runV138ReviewedBoundedLiveEnvelopeV10 = async (repoRoot: string): Promise<void> => {
   const ready = authenticateFutureCustody(repoRoot, true)
-  const seal = JSON.parse(readFileSync(target(repoRoot, V138_BOUNDED_RETRY_V3_PATHS.seal), "utf8"))
-  const envelope = JSON.parse(readFileSync(target(repoRoot, V138_BOUNDED_RETRY_V3_PATHS.envelope), "utf8"))
   let producerError: unknown
   let postCustodyError: unknown
   try {
     await runV138V3ProductionLive(repoRoot, {
       validateInputs: false,
-      checkPair: () => ({ seal, envelope }) as any,
+      checkPair: () => ({ seal: ready.source.pair.seal, envelope: ready.source.pair.envelope }),
     })
   } catch (error) { producerError = error }
   finally {

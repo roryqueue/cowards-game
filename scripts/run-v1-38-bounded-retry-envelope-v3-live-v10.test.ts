@@ -321,6 +321,8 @@ describe("Plan 262-113 path-stable custody", () => {
     ])
     expect(runV138ReviewedBoundedLiveEnvelopeV10.length).toBe(1)
     expect(runV138ReviewedBoundedLiveEnvelopeV10.toString()).toContain("runV138V3ProductionLive")
+    expect(runV138ReviewedBoundedLiveEnvelopeV10.toString()).toContain("ready.source.pair.seal")
+    expect(runV138ReviewedBoundedLiveEnvelopeV10.toString()).not.toContain("as any")
     expect(runV138ReviewedBoundedLiveEnvelopeV10.toString()).not.toContain("injected")
     for (const repoPath of [
       V138_LIVE_V10_PATHS.plan114Payload,
