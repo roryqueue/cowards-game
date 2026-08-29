@@ -49,3 +49,9 @@ Supplement-v1/v2 and every journal, private, terminal, reproduction, adjudicatio
 - Reviewer, tests, payload, REVIEW, carrier, and summary exist.
 - Publication commit contains exactly the three intended evidence paths and passes raw committed authentication.
 - No supplement or live/downstream artifact exists.
+
+## Post-Review Correction (2026-08-28)
+
+The original v1 trio above is retained as immutable history, but its literal-zero verdict is superseded by the additive v2 executed review. The corrected reviewer launched all six declared live-v9 source-only/prospective/post-custody modes in a disposable detached worktree against the installed closure. Three materialized value modes passed, while the source-only, prospective-custody, and post-no-effect CLI modes all rejected the corrected payload semantics with `V138_LIVE_V9_CORRECTED_PAYLOAD_SEMANTICS_INVALID`.
+
+The corrected evidence is therefore deterministically **BLOCKED**, with finding codes `MODE_POST_NO_EFFECT_FAILED`, `MODE_PROSPECTIVE_CUSTODY_FAILED`, and `MODE_SOURCE_ONLY_FAILED`. Plan 262-109 is not eligible. Producer calls, live invocation, fresh charges, and accepted cells remain zero; every execution and downstream authority remains denied. See `262-112-REVIEW-FIX.md` and the v2 payload/carrier.
