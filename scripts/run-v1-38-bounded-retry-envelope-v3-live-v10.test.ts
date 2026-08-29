@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
@@ -178,6 +178,21 @@ describe("Plan 262-113 path-stable custody", () => {
     const linked = withLinkedWorktree(readSourceAdmissionInLinkedProcess)
     expect(linked.reviewedClosureRoot).toBe(exact.reviewedClosureRoot)
     expect(linked.localExecutionClosureRoot).not.toBe(exact.localExecutionClosureRoot)
+  }, 180_000)
+
+  it("rejects protected edit-and-restore history instead of trusting current bytes", () => {
+    withLinkedWorktree((root) => {
+      const repoPath = V138_LIVE_V10_PATHS.plan93Stop
+      const absolute = path.join(root, repoPath)
+      const original = readFileSync(absolute)
+      writeFileSync(absolute, Buffer.concat([original, Buffer.from("\ntransient rewrite\n")]))
+      execFileSync("/usr/bin/git", ["add", "--", repoPath], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "test rewrite"], { cwd: root })
+      writeFileSync(absolute, original)
+      execFileSync("/usr/bin/git", ["add", "--", repoPath], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "test restore"], { cwd: root })
+      expect(() => authenticateV138LiveV10SourceOnly(root)).toThrow(/SUCCESSOR_REWRITE|PLAN_93_CUSTODY/)
+    })
   }, 180_000)
 
   it("joins future Plan 114 custody to supplement-v3 and rejects mutations", () => {

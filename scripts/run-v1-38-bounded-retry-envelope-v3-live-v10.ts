@@ -17,6 +17,7 @@ import {
   type V138PathStableCustody,
 } from "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
 import {
+  V138_LIVE_V9_PROTECTED_BRANCHES,
   checkV138LiveV9PostRunOutputCustodyForReview,
   checkV138LiveV9ReproductionV17ForReview,
   computeV138LiveV9ReproductionV17ReceiptRoot,
@@ -167,6 +168,31 @@ const assertExactAddPublication = (
     const current = readFileSync(target(root, repoPath))
     if (!current.equals(gitBytes(root, commit, repoPath))) fail("V138_LIVE_V10_HISTORY_REWRITTEN")
   }
+  if (runV138RetryV3IsolatedGit(root, [
+    "log", "--format=%H", `${commit}..HEAD`, "--", ...repoPaths,
+  ]) !== "") fail("V138_LIVE_V10_SUCCESSOR_REWRITE")
+}
+
+const inspectProtectedHistory = (root: string): Sha => {
+  const records: string[] = []
+  const paths = new Set<string>()
+  for (const branch of V138_LIVE_V9_PROTECTED_BRANCHES) {
+    if (runV138RetryV3IsolatedGit(root, [
+      "merge-base", "--is-ancestor", branch.lineageCommit, PAIR_COMMIT,
+    ], true) !== "") fail("V138_LIVE_V10_PROTECTED_LINEAGE_INVALID")
+    for (const repoPath of branch.paths) {
+      const entry = runV138RetryV3IsolatedGit(root, ["ls-tree", PAIR_COMMIT, "--", repoPath])
+      const match = /^(100644|100755|120000) blob ([0-9a-f]{40})\t(.+)$/u.exec(entry)
+      if (match === null || match[3] !== repoPath)
+        fail("V138_LIVE_V10_PROTECTED_ENTRY_INVALID")
+      paths.add(repoPath)
+      records.push(`${branch.plan}\0${branch.lineageCommit}\0${match[1]}\0${repoPath}\0${match[2]}`)
+    }
+  }
+  if (runV138RetryV3IsolatedGit(root, [
+    "log", "--format=%H", `${PAIR_COMMIT}..HEAD`, "--", ...[...paths].sort(),
+  ]) !== "") fail("V138_LIVE_V10_PROTECTED_SUCCESSOR_REWRITE")
+  return sha256("v138-plan-262-108-independent-protected-history-v1", records.sort().join("\n"))
 }
 
 const assertImmutableHistory = (root: string): void => {
@@ -198,6 +224,23 @@ const assertPairAndStop = (root: string): void => {
   const seal = jsonAt(root, PAIR_COMMIT, V138_BOUNDED_RETRY_V3_PATHS.seal)
   const envelope = jsonAt(root, PAIR_COMMIT, V138_BOUNDED_RETRY_V3_PATHS.envelope)
   assertAncestor(root, PLAN_93_STOP_COMMIT)
+  const plan93Bytes = gitBytes(root, PLAN_93_STOP_COMMIT, V138_LIVE_V10_PATHS.plan93Stop)
+  const plan93Text = plan93Bytes.toString("utf8")
+  const currentPlan93 = readFileSync(target(root, V138_LIVE_V10_PATHS.plan93Stop))
+  if (
+    !currentPlan93.equals(plan93Bytes) ||
+    runV138RetryV3IsolatedGit(root, [
+      "log", "--format=%H", `${PLAN_93_STOP_COMMIT}..HEAD`, "--", V138_LIVE_V10_PATHS.plan93Stop,
+    ]) !== "" ||
+    [
+      "status: pre_start_integrity_stop",
+      "Live effect boundary crossed: `false`",
+      "Route starts: `0/3`",
+      "Fresh accepted: `0/540`",
+      "Plan 93 is not complete",
+    ].some((text) => !plan93Text.includes(text))
+  ) fail("V138_LIVE_V10_PLAN_93_CUSTODY_INVALID")
+  const expandedProtectedHistoryRoot = inspectProtectedHistory(root)
   if (
     seal.sealRoot !== SEAL_ROOT || seal.protectedHistoryRoot !== PROTECTED_HISTORY_ROOT ||
     seal.productionAuthorized !== false || seal.downstreamAuthority !== "denied" ||
@@ -208,7 +251,8 @@ const assertPairAndStop = (root: string): void => {
     envelope.policy.holdoutOpeningAuthorized !== false || envelope.policy.phase263PlanningAuthorized !== false ||
     envelope.policy.publicAuthorized !== false || envelope.policy.productAuthorized !== false ||
     envelope.policy.productionAuthorized !== false || envelope.policy.gameplayChangeAuthorized !== false ||
-    bytesSha256(gitBytes(root, PLAN_93_STOP_COMMIT, V138_LIVE_V10_PATHS.plan93Stop)) !== PLAN_93_STOP_SHA256
+    bytesSha256(plan93Bytes) !== PLAN_93_STOP_SHA256 ||
+    !/^sha256:[0-9a-f]{64}$/u.test(expandedProtectedHistoryRoot)
   ) fail("V138_LIVE_V10_PAIR_OR_STOP_INVALID")
 }
 
