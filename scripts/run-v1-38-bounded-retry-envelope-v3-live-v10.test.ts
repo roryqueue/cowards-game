@@ -211,6 +211,7 @@ describe("Plan 262-113 path-stable custody", () => {
       const exact = deriveV138LiveV10ProspectiveContractsForReview({
         repoRoot: root, source, reviewedSourceCommit, plan114PublicationCommit,
       })
+      expect(exact.reviewedClosure).toEqual(reviewedClosure)
       expect(checkV138LiveV10ProspectiveCustodyForReview({
         source, reviewedClosure, plan114PublicationCommit, ...exact,
       }).producerWouldInvoke).toBe(true)

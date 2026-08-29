@@ -511,12 +511,13 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
     checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
   })
   checkV138PathStableCustodyForReview(reviewedClosure, reviewedClosure)
-  return renderV138LiveV10ProspectiveContracts({
+  const contracts = renderV138LiveV10ProspectiveContracts({
     source: input.source,
     reviewedClosure,
     reviewedLocalExecutionClosureRoot: reviewedClosure.localExecutionClosureRoot,
     plan114PublicationCommit: input.plan114PublicationCommit,
   })
+  return Object.freeze({ reviewedClosure, ...contracts })
 }
 
 export const checkV138LiveV10ProspectiveCustodyForReview = (input: {
