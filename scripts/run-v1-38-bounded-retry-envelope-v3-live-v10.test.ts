@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
@@ -38,7 +38,10 @@ const workspaces = Object.freeze([
   "packages/runtime-wasm-wasi", "packages/service", "packages/spec", "packages/test-utils",
 ])
 
-const withLinkedWorktree = <T>(run: (root: string) => T): T => {
+const withLinkedWorktree = <T>(
+  run: (root: string) => T,
+  installation: "shared" | "separate" = "shared",
+): T => {
   const owner = mkdtempSync(path.join(tmpdir(), "v138-live-v10-test-"))
   const root = path.join(owner, "repo")
   let added = false
@@ -48,14 +51,20 @@ const withLinkedWorktree = <T>(run: (root: string) => T): T => {
       env: { PATH: "/usr/bin:/bin", HOME: owner, LANG: "C", LC_ALL: "C" },
     })
     added = true
-    symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
-    for (const workspace of workspaces) {
-      const source = path.join(repoRoot, workspace, "node_modules")
-      try {
-        mkdirSync(path.join(root, workspace), { recursive: true })
-        symlinkSync(source, path.join(root, workspace, "node_modules"), "dir")
-      } catch {
-        // Workspace has no installed node_modules projection.
+    if (installation === "separate") {
+      execFileSync("/bin/cp", [
+        "-cR", realpathSync(path.join(repoRoot, "node_modules")), path.join(root, "node_modules"),
+      ])
+    } else {
+      symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+      for (const workspace of workspaces) {
+        const source = path.join(repoRoot, workspace, "node_modules")
+        try {
+          mkdirSync(path.join(root, workspace), { recursive: true })
+          symlinkSync(source, path.join(root, workspace, "node_modules"), "dir")
+        } catch {
+          // Workspace has no installed node_modules projection.
+        }
       }
     }
     return run(root)
@@ -85,6 +94,14 @@ const readClosuresInLinkedProcess = (root: string) => JSON.parse(execFileSync(
   corrected: V138PathStableCustody
 }>
 
+const readCurrentClosuresInLinkedProcess = (root: string) => {
+  copyFileSync(
+    path.join(repoRoot, "scripts/lib/v1-38-bounded-retry-v3-path-stable-custody-v1.ts"),
+    path.join(root, "scripts/lib/v1-38-bounded-retry-v3-path-stable-custody-v1.ts"),
+  )
+  return readClosuresInLinkedProcess(root)
+}
+
 const readSourceAdmissionInLinkedProcess = (root: string) => {
   copyFileSync(
     path.join(repoRoot, V138_LIVE_V10_PATHS.source),
@@ -104,10 +121,12 @@ describe("Plan 262-113 path-stable custody", () => {
       checkoutPaths: sourcePaths,
     })
     const canonical = deriveV138PathStableCustody(repoRoot, { sourceCommit, checkoutPaths: sourcePaths })
-    const linked = withLinkedWorktree(readClosuresInLinkedProcess)
+    const linked = withLinkedWorktree(readCurrentClosuresInLinkedProcess, "separate")
 
     expect(linked.historical.nativeSourcesRoot).not.toBe(canonicalHistorical.nativeSourcesRoot)
+    expect(linked.historical.installedClosureRoot).not.toBe(canonicalHistorical.installedClosureRoot)
     expect(linked.historical.executionClosureRoot).not.toBe(canonicalHistorical.executionClosureRoot)
+    expect(linked.corrected.installedClosureRoot).toBe(canonical.installedClosureRoot)
     expect(linked.corrected.reviewedClosureRoot).toBe(canonical.reviewedClosureRoot)
     expect(linked.corrected.pathStableNativeSourcesRoot).toBe(canonical.pathStableNativeSourcesRoot)
     expect(linked.corrected.localExecutionClosureRoot).not.toBe(canonical.localExecutionClosureRoot)

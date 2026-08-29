@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
-import { lstatSync, readFileSync, readlinkSync, realpathSync } from "node:fs"
+import { createRequire } from "node:module"
+import { lstatSync, readFileSync, readdirSync, readlinkSync, realpathSync } from "node:fs"
 import path from "node:path"
 import ts from "typescript"
 import {
@@ -127,6 +128,102 @@ const recursiveManifest = (
   })
 }
 
+const pathStableInstalledManifest = (repoRoot: string) => {
+  const records: string[] = []
+  const visited = new Set<string>()
+  const queue: string[] = []
+  const requireFromRepo = createRequire(path.join(repoRoot, "package.json"))
+  for (const name of ["vitest", "tsx"])
+    queue.push(realpathSync(path.dirname(requireFromRepo.resolve(`${name}/package.json`))))
+  const walk = (packageRoot: string, absolute: string, relative: string): void => {
+    const status = lstatSync(absolute)
+    if (status.isSymbolicLink()) {
+      const rawTarget = readlinkSync(absolute)
+      if (path.isAbsolute(rawTarget)) fail("V138_PATH_STABLE_INSTALLED_ABSOLUTE_SYMLINK")
+      const resolvedTarget = path.resolve(path.dirname(absolute), rawTarget)
+      const relativeTarget = path.relative(packageRoot, resolvedTarget).split(path.sep).join("/")
+      if (relativeTarget === ".." || relativeTarget.startsWith("../"))
+        fail("V138_PATH_STABLE_INSTALLED_ESCAPING_SYMLINK")
+      records.push(`l\0${relative}\0${relativeTarget}`)
+      return
+    }
+    if (status.isDirectory()) {
+      records.push(`d\0${relative}\0${status.mode & 0o777}`)
+      for (const child of readdirSync(absolute).sort()) {
+        if (child !== "node_modules")
+          walk(packageRoot, path.join(absolute, child), `${relative}/${child}`)
+      }
+      return
+    }
+    if (!status.isFile()) fail("V138_PATH_STABLE_INSTALLED_ENTRY_INVALID")
+    records.push(`f\0${relative}\0${status.mode & 0o777}\0${sha(readFileSync(absolute))}`)
+  }
+  while (queue.length > 0) {
+    const packageRoot = queue.shift()!
+    if (visited.has(packageRoot)) continue
+    visited.add(packageRoot)
+    const packageJsonPath = path.join(packageRoot, "package.json")
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+      name: string
+      version: string
+      dependencies?: Record<string, string>
+      optionalDependencies?: Record<string, string>
+      peerDependencies?: Record<string, string>
+    }
+    if (typeof packageJson.name !== "string" || typeof packageJson.version !== "string")
+      fail("V138_PATH_STABLE_INSTALLED_PACKAGE_IDENTITY_INVALID")
+    const identity = `${packageJson.name}@${packageJson.version}`
+    walk(packageRoot, packageRoot, `package:${identity}`)
+    const resolver = createRequire(packageJsonPath)
+    for (const dependency of Object.keys({
+      ...packageJson.dependencies,
+      ...packageJson.optionalDependencies,
+      ...packageJson.peerDependencies,
+    }).sort()) {
+      try {
+        let resolved: string
+        try { resolved = resolver.resolve(`${dependency}/package.json`) }
+        catch { resolved = resolver.resolve(dependency) }
+        let dependencyRoot = path.dirname(resolved)
+        let dependencyPackage: { name?: string; version?: string } | undefined
+        while (dependencyRoot !== path.dirname(dependencyRoot)) {
+          try {
+            const candidate = JSON.parse(readFileSync(path.join(dependencyRoot, "package.json"), "utf8")) as {
+              name?: string
+              version?: string
+            }
+            if (candidate.name === dependency) { dependencyPackage = candidate; break }
+          } catch { /* continue toward the owning package root */ }
+          dependencyRoot = path.dirname(dependencyRoot)
+        }
+        if (dependencyPackage?.version === undefined)
+          fail(`V138_PATH_STABLE_DEPENDENCY_IDENTITY_INVALID:${dependency}`)
+        dependencyRoot = realpathSync(dependencyRoot)
+        records.push(`r\0${identity}\0${dependency}\0${dependencyPackage.name}@${dependencyPackage.version}`)
+        queue.push(dependencyRoot)
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith("V138_PATH_STABLE_")) throw error
+        if (packageJson.optionalDependencies?.[dependency] === undefined &&
+            packageJson.peerDependencies?.[dependency] === undefined)
+          fail(`V138_PATH_STABLE_DEPENDENCY_RESOLUTION_FAILED:${dependency}`)
+      }
+    }
+  }
+  const node = realpathSync(process.execPath)
+  const pnpm = realpathSync(path.join(path.dirname(node), "pnpm"))
+  const pnpmRoot = realpathSync(path.resolve(path.dirname(pnpm), ".."))
+  walk(node, node, "runtime:node")
+  walk(pnpm, pnpm, "runtime:pnpm-entrypoint")
+  walk(pnpmRoot, pnpmRoot, "runtime:pnpm-distribution")
+  records.sort()
+  return Object.freeze({
+    root: sha(`v138-path-stable-installed-manifest-v1\0${records.join("\n")}`),
+    nodeSha256: sha(readFileSync(node)),
+    pnpmDistributionSha256: sha(records.filter((record) =>
+      record.startsWith("f\0runtime:pnpm-distribution")).join("\n")),
+  })
+}
+
 export type V138PathStableCustody = Readonly<{
   schemaVersion: "v1.38-retry-v3-path-stable-custody-v1"
   gitExecutable: "/usr/bin/git"
@@ -145,16 +242,18 @@ export type V138PathStableCustody = Readonly<{
   pathStableNativeSourcesRoot: Sha
   pathnameLaunchReplacementResistanceClaimed: false
   reviewedClosureRoot: Sha
+  localInstalledClosureRoot: Sha
   localGitObjectRoot: Sha
   localNativeSourcesRoot: Sha
   localExecutionClosureRoot: Sha
 }>
 
 const reviewedBodyFrom = (value: Omit<V138PathStableCustody,
-  "reviewedClosureRoot" | "localGitObjectRoot" | "localNativeSourcesRoot" | "localExecutionClosureRoot"
+  "reviewedClosureRoot" | "localInstalledClosureRoot" | "localGitObjectRoot" |
+  "localNativeSourcesRoot" | "localExecutionClosureRoot"
 >): Record<string, unknown> => ({ ...value })
 const localBodyFrom = (value: Pick<V138PathStableCustody,
-  "reviewedClosureRoot" | "localGitObjectRoot" | "localNativeSourcesRoot"
+  "reviewedClosureRoot" | "localInstalledClosureRoot" | "localGitObjectRoot" | "localNativeSourcesRoot"
 >): Record<string, unknown> => ({ ...value })
 
 export const computeV138PathStableReviewedClosureRoot = (
@@ -181,6 +280,7 @@ export const deriveV138PathStableCustody = (
   noRewrite(root, expected.sourceCommit, PATH_STABLE_NATIVE_SOURCES)
   const recursive = recursiveManifest(root, expected.sourceCommit, expected.checkoutPaths)
   const native = authenticateV138RetryV3ExecutionClosure(root, expected)
+  const installed = pathStableInstalledManifest(root)
   const checkoutManifest = checkoutRecords
     .map(({ bytes: _bytes, ...record }) => record)
     .sort((a, b) => a.path.localeCompare(b.path))
@@ -199,15 +299,16 @@ export const deriveV138PathStableCustody = (
     checkoutManifestRoot: sha(`v138-path-stable-checkout-manifest-v1\0${canonical(checkoutManifest)}`),
     recursiveDependencyRoot: recursive.root,
     recursiveDependencyCount: recursive.count,
-    installedClosureRoot: native.installedClosureRoot,
-    nodeSha256: native.nodeSha256,
-    pnpmDistributionSha256: native.pnpmDistributionSha256,
+    installedClosureRoot: installed.root,
+    nodeSha256: installed.nodeSha256,
+    pnpmDistributionSha256: installed.pnpmDistributionSha256,
     pathStableNativeSourcesRoot: sha(`v138-path-stable-native-sources-v1\0${canonical(stableNativeManifest)}`),
     pathnameLaunchReplacementResistanceClaimed: false as const,
   }
   const reviewedClosureRoot = computeV138PathStableReviewedClosureRoot(reviewedBody)
   const localBody = {
     reviewedClosureRoot,
+    localInstalledClosureRoot: native.installedClosureRoot,
     localGitObjectRoot: native.gitObjectRoot,
     localNativeSourcesRoot: native.nativeSourcesRoot,
   }
@@ -226,6 +327,7 @@ export const checkV138PathStableCustodyForReview = (
   exactKeys(candidate as Record<string, unknown>, Object.keys(expected), "V138_PATH_STABLE_KEYS_INVALID")
   const {
     reviewedClosureRoot,
+    localInstalledClosureRoot,
     localGitObjectRoot,
     localNativeSourcesRoot,
     localExecutionClosureRoot,
@@ -234,7 +336,7 @@ export const checkV138PathStableCustodyForReview = (
   if (
     computeV138PathStableReviewedClosureRoot(reviewedBodyFrom(candidateReviewedBody)) !== reviewedClosureRoot ||
     computeV138PathStableLocalExecutionClosureRoot(localBodyFrom({
-      reviewedClosureRoot, localGitObjectRoot, localNativeSourcesRoot,
+      reviewedClosureRoot, localInstalledClosureRoot, localGitObjectRoot, localNativeSourcesRoot,
     })) !== localExecutionClosureRoot ||
     canonical(candidate) !== canonical(expected)
   ) fail("V138_PATH_STABLE_CUSTODY_INVALID")
