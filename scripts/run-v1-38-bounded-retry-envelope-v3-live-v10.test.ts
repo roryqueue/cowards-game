@@ -12,6 +12,7 @@ import { authenticateV138RetryV3ExecutionClosure } from "./lib/v1-38-bounded-ret
 import {
   V138_LIVE_V10_MODES,
   V138_LIVE_V10_PATHS,
+  V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
   authenticateV138LiveV10SourceOnly,
   checkV138LiveV10PostRunOutputCustodyForReview,
   checkV138LiveV10ProspectiveCustodyForReview,
@@ -163,12 +164,21 @@ describe("Plan 262-113 path-stable custody", () => {
   it("joins future Plan 114 custody to supplement-v3 and rejects mutations", () => {
     const source = authenticateV138LiveV10SourceOnly(repoRoot)
     const plan114PublicationCommit = "1".repeat(40)
+    const reviewedClosure = {
+      ...source.custody,
+      sourceCommit: "2".repeat(40),
+      checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
+      reviewedClosureRoot: `sha256:${"6".repeat(64)}` as const,
+      localExecutionClosureRoot: `sha256:${"7".repeat(64)}` as const,
+    }
     const exact = deriveV138LiveV10ProspectiveContractsForReview({
       source,
+      reviewedClosure,
       plan114PublicationCommit,
     })
     expect(checkV138LiveV10ProspectiveCustodyForReview({
       source,
+      reviewedClosure,
       plan114PublicationCommit,
       ...exact,
     }).producerWouldInvoke).toBe(true)
@@ -181,6 +191,7 @@ describe("Plan 262-113 path-stable custody", () => {
 
     expect(() => checkV138LiveV10ProspectiveCustodyForReview({
       source,
+      reviewedClosure,
       plan114PublicationCommit,
       plan114: {
         ...exact.plan114,
@@ -190,6 +201,7 @@ describe("Plan 262-113 path-stable custody", () => {
     })).toThrow("V138_LIVE_V10_PROSPECTIVE_CUSTODY_INVALID")
     expect(() => checkV138LiveV10ProspectiveCustodyForReview({
       source,
+      reviewedClosure,
       plan114PublicationCommit,
       plan114: exact.plan114,
       supplement: { ...exact.supplement, createsCapacity: true },

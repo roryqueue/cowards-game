@@ -117,6 +117,15 @@ const PLAN_111_SOURCE_PATHS = Object.freeze([
   "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
   "scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.ts",
 ] as const)
+export const V138_LIVE_V10_REVIEWED_SOURCE_PATHS = Object.freeze([
+  "scripts/lib/v1-38-bounded-retry-envelope-v3.ts",
+  "scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts",
+  "scripts/lib/v1-38-bounded-retry-v3-path-stable-custody-v1.ts",
+  "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
+  "scripts/run-v1-38-bounded-retry-envelope-v3.ts",
+  "scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.ts",
+  V138_LIVE_V10_PATHS.source,
+] as const)
 
 const fail = (code: string): never => { throw new TypeError(code) }
 const canonical = encodeV138RetryV3CanonicalJson
@@ -291,14 +300,22 @@ const supplementV3Root = (body: Json): Sha => sha256("v138-successor-source-seal
 
 export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
   source: V138LiveV10SourceAdmission
+  reviewedClosure: V138PathStableCustody
   plan114PublicationCommit: string
 }) => {
   if (!/^[0-9a-f]{40}$/u.test(input.plan114PublicationCommit)) fail("V138_LIVE_V10_PLAN_114_COMMIT_INVALID")
+  if (
+    !/^[0-9a-f]{40}$/u.test(input.reviewedClosure.sourceCommit) ||
+    canonical(input.reviewedClosure.checkoutPaths) !== canonical(V138_LIVE_V10_REVIEWED_SOURCE_PATHS) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(input.reviewedClosure.reviewedClosureRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(input.reviewedClosure.localExecutionClosureRoot) ||
+    input.reviewedClosure.pathnameLaunchReplacementResistanceClaimed !== false
+  ) fail("V138_LIVE_V10_REVIEWED_CLOSURE_INVALID")
   const payloadBody = {
     schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-payload-v1",
-    reviewedSourceCommit: input.source.plan111SourceCommit,
-    reviewedClosureRoot: input.source.reviewedClosureRoot,
-    localExecutionClosureRoot: input.source.localExecutionClosureRoot,
+    reviewedSourceCommit: input.reviewedClosure.sourceCommit,
+    reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
+    localExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
     correctedPublicationCommit: input.source.correctedPublicationCommit,
     correctedPayloadRoot: input.source.correctedPayloadRoot,
     correctedReviewRoot: input.source.correctedReviewRoot,
@@ -326,15 +343,15 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
   const payload = Object.freeze({ ...payloadBody, payloadRoot: plan114PayloadRoot(payloadBody) })
   const reviewBody = {
     payloadRoot: payload.payloadRoot,
-    reviewedClosureRoot: input.source.reviewedClosureRoot,
-    localExecutionClosureRoot: input.source.localExecutionClosureRoot,
+    reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
+    localExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
     findingCount: 0,
     actualModesPassed: 6,
     authorizesExecution: false,
     downstreamAuthority: "denied",
   }
   const reviewRoot = plan114ReviewRoot(reviewBody)
-  const reviewBytes = Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v1\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review\n\n**ZERO FINDINGS.** Six actual non-live modes passed. Reviewed closure: \`${input.source.reviewedClosureRoot}\`. Local execution closure: \`${input.source.localExecutionClosureRoot}\`. Live invoked: false. Downstream authority: denied.\n`)
+  const reviewBytes = Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v1\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review\n\n**ZERO FINDINGS.** Six actual non-live modes passed. Reviewed closure: \`${input.reviewedClosure.reviewedClosureRoot}\`. Local execution closure: \`${input.reviewedClosure.localExecutionClosureRoot}\`. Live invoked: false. Downstream authority: denied.\n`)
   const carrierBody = {
     schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-carrier-v1",
     payloadRoot: payload.payloadRoot,
@@ -356,9 +373,9 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
     plan114PayloadRoot: payload.payloadRoot,
     plan114ReviewRoot: reviewRoot,
     plan114CarrierRoot: carrier.carrierRoot,
-    reviewedSourceCommit: input.source.plan111SourceCommit,
-    reviewedClosureRoot: input.source.reviewedClosureRoot,
-    localExecutionClosureRoot: input.source.localExecutionClosureRoot,
+    reviewedSourceCommit: input.reviewedClosure.sourceCommit,
+    reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
+    localExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
     correctedPublicationCommit: input.source.correctedPublicationCommit,
     plan112V1PublicationCommit: input.source.plan112V1PublicationCommit,
     plan112V2PublicationCommit: input.source.plan112V2PublicationCommit,
@@ -386,6 +403,7 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
 
 export const checkV138LiveV10ProspectiveCustodyForReview = (input: {
   source: V138LiveV10SourceAdmission
+  reviewedClosure: V138PathStableCustody
   plan114PublicationCommit: string
   plan114: Readonly<{ payload: Json; reviewBytes: Buffer; carrier: Json; reviewRoot: Sha }>
   supplement: Json
@@ -439,7 +457,13 @@ const authenticateFutureCustody = (
     carrier: jsonAt(root, commit, paths[2]!),
     reviewRoot: jsonAt(root, commit, paths[2]!).reviewRoot as Sha,
   }
-  const exact = deriveV138LiveV10ProspectiveContractsForReview({ source, plan114PublicationCommit: commit })
+  const reviewedClosure = deriveV138PathStableCustody(root, {
+    sourceCommit: plan114.payload.reviewedSourceCommit,
+    checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
+  })
+  const exact = deriveV138LiveV10ProspectiveContractsForReview({
+    source, reviewedClosure, plan114PublicationCommit: commit,
+  })
   let supplement: Json = exact.supplement
   if (requireSupplement) {
     const supplementCommit = locateAddCommit(root, V138_LIVE_V10_PATHS.supplementV3)
@@ -451,7 +475,7 @@ const authenticateFutureCustody = (
   if (boundary === "pre") assertAbsent(root, [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
   else assertAbsent(root, DOWNSTREAM_OUTPUTS)
   return checkV138LiveV10ProspectiveCustodyForReview({
-    source, plan114PublicationCommit: commit, plan114, supplement,
+    source, reviewedClosure, plan114PublicationCommit: commit, plan114, supplement,
   })
 }
 
