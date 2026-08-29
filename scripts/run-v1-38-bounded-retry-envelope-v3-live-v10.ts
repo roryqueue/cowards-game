@@ -18,6 +18,7 @@ import {
   runV138RetryV3IsolatedGitBytes,
 } from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
 import {
+  checkV138PathStableCustodyForReview,
   deriveV138PathStableCustody,
   type V138PathStableCustody,
 } from "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
@@ -395,9 +396,10 @@ const plan114ReviewRoot = (body: Json): Sha => sha256("v138-plan-262-114-live-v1
 const plan114CarrierRoot = (body: Json): Sha => sha256("v138-plan-262-114-live-v10-custody-review-carrier-v1", body)
 const supplementV3Root = (body: Json): Sha => sha256("v138-successor-source-seal-v13-executable-custody-supplement-v3", body)
 
-export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
+const renderV138LiveV10ProspectiveContracts = (input: {
   source: V138LiveV10SourceAdmission
   reviewedClosure: V138PathStableCustody
+  reviewedLocalExecutionClosureRoot: Sha
   plan114PublicationCommit: string
 }) => {
   if (!/^[0-9a-f]{40}$/u.test(input.plan114PublicationCommit)) fail("V138_LIVE_V10_PLAN_114_COMMIT_INVALID")
@@ -405,14 +407,14 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
     !/^[0-9a-f]{40}$/u.test(input.reviewedClosure.sourceCommit) ||
     canonical(input.reviewedClosure.checkoutPaths) !== canonical(V138_LIVE_V10_REVIEWED_SOURCE_PATHS) ||
     !/^sha256:[0-9a-f]{64}$/u.test(input.reviewedClosure.reviewedClosureRoot) ||
-    !/^sha256:[0-9a-f]{64}$/u.test(input.reviewedClosure.localExecutionClosureRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(input.reviewedLocalExecutionClosureRoot) ||
     input.reviewedClosure.pathnameLaunchReplacementResistanceClaimed !== false
   ) fail("V138_LIVE_V10_REVIEWED_CLOSURE_INVALID")
   const payloadBody = {
     schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-payload-v1",
     reviewedSourceCommit: input.reviewedClosure.sourceCommit,
     reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
-    localExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
+    reviewedLocalExecutionClosureRoot: input.reviewedLocalExecutionClosureRoot,
     correctedPublicationCommit: input.source.correctedPublicationCommit,
     correctedPayloadRoot: input.source.correctedPayloadRoot,
     correctedReviewRoot: input.source.correctedReviewRoot,
@@ -441,14 +443,14 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
   const reviewBody = {
     payloadRoot: payload.payloadRoot,
     reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
-    localExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
+    reviewedLocalExecutionClosureRoot: input.reviewedLocalExecutionClosureRoot,
     findingCount: 0,
     actualModesPassed: 6,
     authorizesExecution: false,
     downstreamAuthority: "denied",
   }
   const reviewRoot = plan114ReviewRoot(reviewBody)
-  const reviewBytes = Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v1\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review\n\n**ZERO FINDINGS.** Six actual non-live modes passed. Reviewed closure: \`${input.reviewedClosure.reviewedClosureRoot}\`. Local execution closure: \`${input.reviewedClosure.localExecutionClosureRoot}\`. Live invoked: false. Downstream authority: denied.\n`)
+  const reviewBytes = Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v1\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review\n\n**ZERO FINDINGS.** Six actual non-live modes passed. Portable reviewed closure: \`${input.reviewedClosure.reviewedClosureRoot}\`. Linked-review local context: \`${input.reviewedLocalExecutionClosureRoot}\`. Live invoked: false. Downstream authority: denied.\n`)
   const carrierBody = {
     schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-carrier-v1",
     payloadRoot: payload.payloadRoot,
@@ -472,7 +474,7 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
     plan114CarrierRoot: carrier.carrierRoot,
     reviewedSourceCommit: input.reviewedClosure.sourceCommit,
     reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
-    localExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
+    reviewedLocalExecutionClosureRoot: input.reviewedLocalExecutionClosureRoot,
     correctedPublicationCommit: input.source.correctedPublicationCommit,
     plan112V1PublicationCommit: input.source.plan112V1PublicationCommit,
     plan112V2PublicationCommit: input.source.plan112V2PublicationCommit,
@@ -498,6 +500,25 @@ export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
   return Object.freeze({ plan114: Object.freeze({ payload, reviewBytes, carrier, reviewRoot }), supplement })
 }
 
+export const deriveV138LiveV10ProspectiveContractsForReview = (input: {
+  repoRoot: string
+  source: V138LiveV10SourceAdmission
+  reviewedSourceCommit: string
+  plan114PublicationCommit: string
+}) => {
+  const reviewedClosure = deriveV138PathStableCustody(input.repoRoot, {
+    sourceCommit: input.reviewedSourceCommit,
+    checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
+  })
+  checkV138PathStableCustodyForReview(reviewedClosure, reviewedClosure)
+  return renderV138LiveV10ProspectiveContracts({
+    source: input.source,
+    reviewedClosure,
+    reviewedLocalExecutionClosureRoot: reviewedClosure.localExecutionClosureRoot,
+    plan114PublicationCommit: input.plan114PublicationCommit,
+  })
+}
+
 export const checkV138LiveV10ProspectiveCustodyForReview = (input: {
   source: V138LiveV10SourceAdmission
   reviewedClosure: V138PathStableCustody
@@ -505,7 +526,16 @@ export const checkV138LiveV10ProspectiveCustodyForReview = (input: {
   plan114: Readonly<{ payload: Json; reviewBytes: Buffer; carrier: Json; reviewRoot: Sha }>
   supplement: Json
 }) => {
-  const exact = deriveV138LiveV10ProspectiveContractsForReview(input)
+  checkV138PathStableCustodyForReview(input.reviewedClosure, input.reviewedClosure)
+  const reviewedLocalExecutionClosureRoot = input.plan114.payload.reviewedLocalExecutionClosureRoot
+  if (!/^sha256:[0-9a-f]{64}$/u.test(reviewedLocalExecutionClosureRoot))
+    fail("V138_LIVE_V10_REVIEW_LOCAL_CONTEXT_INVALID")
+  const exact = renderV138LiveV10ProspectiveContracts({
+    source: input.source,
+    reviewedClosure: input.reviewedClosure,
+    reviewedLocalExecutionClosureRoot,
+    plan114PublicationCommit: input.plan114PublicationCommit,
+  })
   if (
     canonical(input.plan114.payload) !== canonical(exact.plan114.payload) ||
     !input.plan114.reviewBytes.equals(exact.plan114.reviewBytes) ||
@@ -558,8 +588,11 @@ const authenticateFutureCustody = (
     sourceCommit: plan114.payload.reviewedSourceCommit,
     checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
   })
-  const exact = deriveV138LiveV10ProspectiveContractsForReview({
-    source, reviewedClosure, plan114PublicationCommit: commit,
+  const exact = renderV138LiveV10ProspectiveContracts({
+    source,
+    reviewedClosure,
+    reviewedLocalExecutionClosureRoot: plan114.payload.reviewedLocalExecutionClosureRoot,
+    plan114PublicationCommit: commit,
   })
   let supplement: Json = exact.supplement
   if (requireSupplement) {
@@ -571,8 +604,12 @@ const authenticateFutureCustody = (
   }
   if (boundary === "pre") assertAbsent(root, [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
   else assertAbsent(root, DOWNSTREAM_OUTPUTS)
-  return checkV138LiveV10ProspectiveCustodyForReview({
+  const checked = checkV138LiveV10ProspectiveCustodyForReview({
     source, reviewedClosure, plan114PublicationCommit: commit, plan114, supplement,
+  })
+  return Object.freeze({
+    ...checked,
+    canonicalLocalExecutionClosureRoot: reviewedClosure.localExecutionClosureRoot,
   })
 }
 
@@ -672,7 +709,12 @@ export const runV138ReviewedBoundedLiveEnvelopeV10 = async (repoRoot: string): P
     })
   } catch (error) { producerError = error }
   finally {
-    try { authenticateFutureCustody(repoRoot, true, "post"); assertPostRun(repoRoot) }
+    try {
+      const after = authenticateFutureCustody(repoRoot, true, "post")
+      if (after.canonicalLocalExecutionClosureRoot !== ready.canonicalLocalExecutionClosureRoot)
+        fail("V138_LIVE_V10_CANONICAL_LOCAL_CLOSURE_CHANGED")
+      assertPostRun(repoRoot)
+    }
     catch (error) { postCustodyError = error }
   }
   void ready

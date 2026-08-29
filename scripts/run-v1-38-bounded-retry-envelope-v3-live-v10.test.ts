@@ -197,50 +197,47 @@ describe("Plan 262-113 path-stable custody", () => {
   }, 180_000)
 
   it("joins future Plan 114 custody to supplement-v3 and rejects mutations", () => {
-    const source = authenticateV138LiveV10SourceOnly(repoRoot)
-    const plan114PublicationCommit = "1".repeat(40)
-    const reviewedClosure = {
-      ...source.custody,
-      sourceCommit: "2".repeat(40),
-      checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
-      reviewedClosureRoot: `sha256:${"6".repeat(64)}` as const,
-      localExecutionClosureRoot: `sha256:${"7".repeat(64)}` as const,
-    }
-    const exact = deriveV138LiveV10ProspectiveContractsForReview({
-      source,
-      reviewedClosure,
-      plan114PublicationCommit,
-    })
-    expect(checkV138LiveV10ProspectiveCustodyForReview({
-      source,
-      reviewedClosure,
-      plan114PublicationCommit,
-      ...exact,
-    }).producerWouldInvoke).toBe(true)
-    expect(exact.plan114.payload.actualModesPassed).toBe(6)
-    expect(exact.plan114.payload.findingCount).toBe(0)
-    expect(exact.supplement.createsEnvelope).toBe(false)
-    expect(exact.supplement.createsCapacity).toBe(false)
-    expect(exact.supplement.resetsCounters).toBe(false)
-    expect(exact.supplement.authorizesExecution).toBe(false)
+    withLinkedWorktree((root) => {
+      copyFileSync(path.join(repoRoot, V138_LIVE_V10_PATHS.source), path.join(root, V138_LIVE_V10_PATHS.source))
+      execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V10_PATHS.source], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture reviewed source"], { cwd: root })
+      const reviewedSourceCommit = execFileSync("/usr/bin/git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim()
+      const source = authenticateV138LiveV10SourceOnly(root)
+      const plan114PublicationCommit = "1".repeat(40)
+      const reviewedClosure = deriveV138PathStableCustody(root, {
+        sourceCommit: reviewedSourceCommit,
+        checkoutPaths: V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
+      })
+      const exact = deriveV138LiveV10ProspectiveContractsForReview({
+        repoRoot: root, source, reviewedSourceCommit, plan114PublicationCommit,
+      })
+      expect(checkV138LiveV10ProspectiveCustodyForReview({
+        source, reviewedClosure, plan114PublicationCommit, ...exact,
+      }).producerWouldInvoke).toBe(true)
+      expect(exact.plan114.payload.actualModesPassed).toBe(6)
+      expect(exact.plan114.payload.findingCount).toBe(0)
+      expect(exact.plan114.payload.reviewedLocalExecutionClosureRoot)
+        .toBe(reviewedClosure.localExecutionClosureRoot)
+      expect(exact.plan114.payload).not.toHaveProperty("localExecutionClosureRoot")
+      expect(exact.supplement.createsEnvelope).toBe(false)
+      expect(exact.supplement.createsCapacity).toBe(false)
+      expect(exact.supplement.resetsCounters).toBe(false)
+      expect(exact.supplement.authorizesExecution).toBe(false)
 
-    expect(() => checkV138LiveV10ProspectiveCustodyForReview({
-      source,
-      reviewedClosure,
-      plan114PublicationCommit,
-      plan114: {
-        ...exact.plan114,
-        payload: { ...exact.plan114.payload, findingCount: 1 },
-      },
-      supplement: exact.supplement,
-    })).toThrow("V138_LIVE_V10_PROSPECTIVE_CUSTODY_INVALID")
-    expect(() => checkV138LiveV10ProspectiveCustodyForReview({
-      source,
-      reviewedClosure,
-      plan114PublicationCommit,
-      plan114: exact.plan114,
-      supplement: { ...exact.supplement, createsCapacity: true },
-    })).toThrow("V138_LIVE_V10_PROSPECTIVE_CUSTODY_INVALID")
+      expect(() => checkV138LiveV10ProspectiveCustodyForReview({
+        source, reviewedClosure, plan114PublicationCommit,
+        plan114: { ...exact.plan114, payload: { ...exact.plan114.payload, findingCount: 1 } },
+        supplement: exact.supplement,
+      })).toThrow("V138_LIVE_V10_PROSPECTIVE_CUSTODY_INVALID")
+      expect(() => checkV138LiveV10ProspectiveCustodyForReview({
+        source, reviewedClosure, plan114PublicationCommit,
+        plan114: exact.plan114,
+        supplement: { ...exact.supplement, createsCapacity: true },
+      })).toThrow("V138_LIVE_V10_PROSPECTIVE_CUSTODY_INVALID")
+      expect(() => deriveV138LiveV10ProspectiveContractsForReview({
+        repoRoot: root, source, reviewedSourceCommit: "2".repeat(40), plan114PublicationCommit,
+      })).toThrow()
+    })
   }, 180_000)
 
   it("preserves bounded post-run and exact reproduction-v17 semantics", () => {
