@@ -607,20 +607,59 @@ const pathPresent = (root: string, repoPath: string): boolean => {
   try { lstatSync(target(root, repoPath)); return true }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error }
 }
+const readCanonicalJsonNoFollow = (root: string, repoPath: string, maximumBytes: number): Json => {
+  try {
+    const bytes = readRegularNoFollow(root, repoPath, maximumBytes)
+    const value = JSON.parse(bytes.toString("utf8")) as Json
+    if (!bytes.equals(Buffer.from(canonical(value))))
+      fail(`V138_LIVE_V10_LIVE_FILE_NONCANONICAL:${repoPath}`)
+    return value
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("V138_LIVE_V10_")) throw error
+    fail(`V138_LIVE_V10_LIVE_FILE_INVALID:${repoPath}`)
+  }
+}
+const readCanonicalJournalNoFollow = (root: string): readonly Json[] => {
+  try {
+    const text = readRegularNoFollow(root, V138_BOUNDED_RETRY_V3_PATHS.journal).toString("utf8")
+    const lines = text.split("\n")
+    if (lines.pop() !== "" || lines.length === 0) fail("V138_LIVE_V10_JOURNAL_NONCANONICAL")
+    return Object.freeze(lines.map((line) => {
+      const value = JSON.parse(line) as Json
+      if (`${canonical(value).trimEnd()}\n` !== `${line}\n`)
+        fail("V138_LIVE_V10_JOURNAL_NONCANONICAL")
+      return Object.freeze(value)
+    }))
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("V138_LIVE_V10_")) throw error
+    fail("V138_LIVE_V10_JOURNAL_INVALID")
+  }
+}
 const assertPostRun = (root: string): void => {
   const journalPresent = pathPresent(root, V138_BOUNDED_RETRY_V3_PATHS.journal)
   const privateDirectoryPresent = pathPresent(root, V138_BOUNDED_RETRY_V3_PATHS.privateDir)
   const terminalPresent = pathPresent(root, V138_BOUNDED_RETRY_V3_PATHS.terminal)
   const outcome = journalPresent || privateDirectoryPresent || terminalPresent
     ? checkV138PublishedRetryV3Outcome(root) : undefined
-  checkV138LiveV10PostRunOutputCustodyForReview({
+  const checked = checkV138LiveV10PostRunOutputCustodyForReview({
     journalPresent, privateDirectoryPresent, terminalPresent,
     lockPresent: pathPresent(root, `${V138_BOUNDED_RETRY_V3_PATHS.journal}.lock`),
     reproductionPresent: pathPresent(root, V138_BOUNDED_RETRY_V3_PATHS.reproduction),
     adjudicationOrDownstreamPresent: DOWNSTREAM_OUTPUTS.some((repoPath) => pathPresent(root, repoPath)),
     outcome,
   })
+  if (checked.status === "bounded_success") {
+    const artifact = readCanonicalJsonNoFollow(
+      root, V138_BOUNDED_RETRY_V3_PATHS.reproduction, 1024 * 1024,
+    )
+    const journalRecords = readCanonicalJournalNoFollow(root)
+    checkV138LiveV10ReproductionV17ForReview({ artifact, journalRecords, outcome: outcome! })
+    const after = checkV138PublishedRetryV3Outcome(root)
+    if (canonical(after) !== canonical(outcome))
+      fail("V138_LIVE_V10_POST_RUN_OUTCOME_CHANGED")
+  }
 }
+export const assertV138LiveV10PostRunForReview = assertPostRun
 
 export const runV138ReviewedBoundedLiveEnvelopeV10 = async (repoRoot: string): Promise<void> => {
   const ready = authenticateFutureCustody(repoRoot, true)

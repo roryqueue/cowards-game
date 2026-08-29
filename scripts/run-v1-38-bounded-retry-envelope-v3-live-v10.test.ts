@@ -14,6 +14,7 @@ import {
   V138_LIVE_V10_PATHS,
   V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
   authenticateV138LiveV10SourceOnly,
+  assertV138LiveV10PostRunForReview,
   checkV138LiveV10PostRunOutputCustodyForReview,
   checkV138LiveV10ProspectiveCustodyForReview,
   checkV138LiveV10ReproductionV17ForReview,
@@ -243,6 +244,8 @@ describe("Plan 262-113 path-stable custody", () => {
   }, 180_000)
 
   it("preserves bounded post-run and exact reproduction-v17 semantics", () => {
+    expect(assertV138LiveV10PostRunForReview.toString())
+      .toContain("checkV138LiveV10ReproductionV17ForReview")
     expect(checkV138LiveV10PostRunOutputCustodyForReview({
       journalPresent: false,
       privateDirectoryPresent: false,
@@ -308,6 +311,20 @@ describe("Plan 262-113 path-stable custody", () => {
       .toMatchObject({ chargedAttemptCount: 540, acceptedCellCount: 540 })
     expect(() => checkV138LiveV10ReproductionV17ForReview({
       artifact: { ...artifact, acceptedCellCount: 539 }, journalRecords, outcome,
+    })).toThrow()
+    for (const mutated of [
+      { ...artifact, publicAuthorized: true },
+      { ...artifact, privacyProjection: { ...artifact.privacyProjection, strategySourceIncluded: true } },
+      { ...artifact, samplingMilliseconds: 201 },
+      { ...artifact, extraAuthority: false },
+    ]) expect(() => checkV138LiveV10ReproductionV17ForReview({
+      artifact: mutated, journalRecords, outcome,
+    })).toThrow()
+    expect(() => checkV138LiveV10ReproductionV17ForReview({
+      artifact,
+      journalRecords: journalRecords.map((record, index) => index === 1
+        ? { ...record, owner: "changed-owner" } : record),
+      outcome,
     })).toThrow()
   })
 
