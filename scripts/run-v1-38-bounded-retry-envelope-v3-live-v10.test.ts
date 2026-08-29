@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
@@ -67,6 +67,35 @@ const withLinkedWorktree = <T>(run: (root: string) => T): T => {
   }
 }
 
+const readClosuresInLinkedProcess = (root: string) => JSON.parse(execFileSync(
+  path.join(repoRoot, "node_modules/.bin/tsx"),
+  ["--eval", `
+    import { authenticateV138RetryV3ExecutionClosure } from "./scripts/lib/v1-38-bounded-retry-v3-native-custody-v1.ts";
+    import { deriveV138PathStableCustody } from "./scripts/lib/v1-38-bounded-retry-v3-path-stable-custody-v1.ts";
+    const sourceCommit = ${JSON.stringify(sourceCommit)};
+    const checkoutPaths = ${JSON.stringify(sourcePaths)};
+    const historical = authenticateV138RetryV3ExecutionClosure(process.cwd(), { sourceCommit, checkoutPaths });
+    const corrected = deriveV138PathStableCustody(process.cwd(), { sourceCommit, checkoutPaths });
+    process.stdout.write(JSON.stringify({ historical, corrected }));
+  `],
+  { cwd: root, encoding: "utf8", env: { ...process.env, HOME: path.dirname(root) } },
+)) as Readonly<{
+  historical: ReturnType<typeof authenticateV138RetryV3ExecutionClosure>
+  corrected: V138PathStableCustody
+}>
+
+const readSourceAdmissionInLinkedProcess = (root: string) => {
+  copyFileSync(
+    path.join(repoRoot, V138_LIVE_V10_PATHS.source),
+    path.join(root, V138_LIVE_V10_PATHS.source),
+  )
+  return JSON.parse(execFileSync(
+    path.join(repoRoot, "node_modules/.bin/tsx"),
+    [V138_LIVE_V10_PATHS.source, "--check-source-only"],
+    { cwd: root, encoding: "utf8", env: { ...process.env, HOME: path.dirname(root) } },
+  )) as Readonly<{ reviewedClosureRoot: string; localExecutionClosureRoot: string }>
+}
+
 describe("Plan 262-113 path-stable custody", () => {
   it("separates the historical path mismatch from a location-stable reviewed root", () => {
     const canonicalHistorical = authenticateV138RetryV3ExecutionClosure(repoRoot, {
@@ -74,13 +103,7 @@ describe("Plan 262-113 path-stable custody", () => {
       checkoutPaths: sourcePaths,
     })
     const canonical = deriveV138PathStableCustody(repoRoot, { sourceCommit, checkoutPaths: sourcePaths })
-    const linked = withLinkedWorktree((root) => ({
-      historical: authenticateV138RetryV3ExecutionClosure(root, {
-        sourceCommit,
-        checkoutPaths: sourcePaths,
-      }),
-      corrected: deriveV138PathStableCustody(root, { sourceCommit, checkoutPaths: sourcePaths }),
-    }))
+    const linked = withLinkedWorktree(readClosuresInLinkedProcess)
 
     expect(linked.historical.nativeSourcesRoot).not.toBe(canonicalHistorical.nativeSourcesRoot)
     expect(linked.historical.executionClosureRoot).not.toBe(canonicalHistorical.executionClosureRoot)
@@ -132,7 +155,7 @@ describe("Plan 262-113 path-stable custody", () => {
     expect(exact.liveInvoked).toBe(false)
     expect(exact.downstreamAuthority).toBe("denied")
 
-    const linked = withLinkedWorktree((root) => authenticateV138LiveV10SourceOnly(root))
+    const linked = withLinkedWorktree(readSourceAdmissionInLinkedProcess)
     expect(linked.reviewedClosureRoot).toBe(exact.reviewedClosureRoot)
     expect(linked.localExecutionClosureRoot).not.toBe(exact.localExecutionClosureRoot)
   }, 180_000)
@@ -214,11 +237,17 @@ describe("Plan 262-113 path-stable custody", () => {
       receiptRoot: computeV138LiveV10ReproductionV17ReceiptRoot(body),
     }
     const journalRecords = [
-      { kind: "finish_calibration", status: "admitted", calibrationRoot: body.admittedCalibrationRoot },
+      {
+        kind: "finish_calibration", status: "admitted",
+        supervisionRoot: body.admittedCalibrationRoot,
+        routeIdentity: "route-1", owner: "owner-1", completeCleanup: true,
+      },
       {
         kind: "finish_reproduction", status: "passed_exact",
-        calibrationRoot: body.admittedCalibrationRoot, executionRoot: body.executionRoot,
-        chargedAttemptCount: 540, acceptedCellCount: 540,
+        routeIdentity: "route-1", owner: "owner-1", executionRoot: body.executionRoot,
+        chargedAttemptCount: 540, acceptedCells: 540, completeCleanup: true,
+        reproductionRoot: artifact.receiptRoot,
+        recordRoot: `sha256:${"4".repeat(64)}`,
       },
     ]
     const outcome = {
