@@ -162,6 +162,15 @@ None - no external service configuration required.
 - Plan 262-109 remains ineligible; Plan-112 v2 remains the authoritative blocked live-v9 result until Plan-114 publishes a valid zero-finding trio.
 - Pair B3 remains `sealed_inactive` at exact zero. Fresh accepted evidence remains 0/540 and all downstream authority remains denied.
 
+## Additive Code Review Fix (2026-08-29)
+
+- Fixed all seven findings from `262-113-REVIEW.md` in atomic commits `a9c49039`, `d236f868`, `3a88b663`, `ada445f3`, `bf112e07`, `1779fdab`, and `b4810382`; fixture correction `0b0d261c` makes the committed-source review test repeatable.
+- The reviewed installed root is now path-stable across physically separate equivalent installs. Historical absolute installed and object/native custody remains local-only.
+- Plan-114 evidence binds the portable reviewed root and labels its linked-worktree local root as review context. The future canonical checkout derives and retains its own local execution root and compares it before and after the producer boundary.
+- live-v10 carries the exact frozen authenticated pair to the historical producer without rereading or `as any`, authenticates exact reproduction-v17 custody on bounded success, and independently enforces protected history plus Plan-93 stop semantics.
+- Final source-only result: reviewed closure `sha256:96b369ff8900f438d1d7600eb048cb8fb75c72ac340008dd78293691add8360a`; canonical-worktree local execution closure `sha256:31aa14ca51626f0c607f1021fc76d523f543c7cdcb30018b58384269d493ea94`.
+- No readiness, production, canonical supplement, or live selector was invoked. Pair/counters and downstream denial remain unchanged.
+
 ## Self-Check: PASSED
 
 - All three planned source/test files exist.
