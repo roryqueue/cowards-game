@@ -236,9 +236,10 @@ describe("Plan 262-113 path-stable custody", () => {
 
   it("joins future Plan 114 custody to supplement-v3 and rejects mutations", () => {
     withLinkedWorktree((root) => {
-      copyFileSync(path.join(repoRoot, V138_LIVE_V10_PATHS.source), path.join(root, V138_LIVE_V10_PATHS.source))
-      execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V10_PATHS.source], { cwd: root })
-      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture reviewed source"], { cwd: root })
+      execFileSync("/usr/bin/git", [
+        "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "--allow-empty", "-m", "fixture reviewed source",
+      ], { cwd: root })
       const reviewedSourceCommit = execFileSync("/usr/bin/git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim()
       const source = authenticateV138LiveV10SourceOnly(root)
       const plan114PublicationCommit = "1".repeat(40)
