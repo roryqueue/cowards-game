@@ -16,6 +16,8 @@ import {
   settleV138LiveV9ProducerOutcomeForReview,
   checkV138LiveV9ProspectiveCustodyForReview,
   checkV138LiveV9PostRunOutputCustodyForReview,
+  checkV138LiveV9ReproductionV17ForReview,
+  computeV138LiveV9ReproductionV17ReceiptRoot,
   executeV138LiveV9Cli,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v9.js"
 
@@ -369,5 +371,103 @@ describe("Plan 262-111 future review and post-effect contract", () => {
         ...mutation,
       })).toThrow()
     }
+  })
+
+  it("independently authenticates exact reproduction-v17 bytes and journal joins", () => {
+    const body = {
+      schemaVersion: "v1.38-current-matrix-reproduction-v17",
+      status: "passed_exact",
+      admittedCalibrationRoot: sha("d"),
+      chargedAttemptCount: 540,
+      acceptedCellCount: 540,
+      completeCleanup: true,
+      executionRoot: sha("e"),
+      runtimeRoute: "v1.18/v1.19/MATCH_KERNEL",
+      samplingMilliseconds: 200,
+      partialAcceptedEvidenceReusable: false,
+      privacyProjection: {
+        strategySourceIncluded: false,
+        strategyMemoryIncluded: false,
+        soldierMemoryIncluded: false,
+        objectivePayloadIncluded: false,
+        rawDiagnosticsIncluded: false,
+      },
+      phase263PlanningAuthorized: false,
+      candidateSearchAuthorized: false,
+      formationMaterializationAuthorized: false,
+      holdoutOpeningAuthorized: false,
+      publicAuthorized: false,
+      productAuthorized: false,
+      productionAuthorized: false,
+    }
+    const artifact = {
+      ...body,
+      receiptRoot: computeV138LiveV9ReproductionV17ReceiptRoot(body),
+    }
+    const journalRecords = [
+      {
+        kind: "finish_calibration",
+        routeIdentity: "route:v3:0",
+        owner: "owner-1",
+        status: "admitted",
+        completeCleanup: true,
+        supervisionRoot: body.admittedCalibrationRoot,
+      },
+      {
+        kind: "finish_reproduction",
+        routeIdentity: "route:v3:0",
+        owner: "owner-1",
+        status: "passed_exact",
+        acceptedCells: 540,
+        completeCleanup: true,
+        reproductionRoot: artifact.receiptRoot,
+      },
+    ]
+    const outcome = {
+      disposition: "succeeded" as const,
+      completeCleanup: true,
+      reproductionPresent: true,
+      downstreamAuthority: "denied" as const,
+    }
+    expect(checkV138LiveV9ReproductionV17ForReview({
+      artifact,
+      journalRecords,
+      outcome,
+    })).toMatchObject({
+      receiptRoot: artifact.receiptRoot,
+      acceptedCellCount: 540,
+      downstreamAuthority: "denied",
+    })
+    for (const candidate of [
+      { ...artifact, extraAuthority: false },
+      { ...artifact, publicAuthorized: true },
+      { ...artifact, privacyProjection: { ...artifact.privacyProjection, rawDiagnosticsIncluded: true } },
+      { ...artifact, samplingMilliseconds: 201 },
+      { ...artifact, acceptedCellCount: 539 },
+      { ...artifact, executionRoot: "not-a-sha" },
+      {
+        ...artifact,
+        publicAuthorized: true,
+        receiptRoot: computeV138LiveV9ReproductionV17ReceiptRoot({ ...body, publicAuthorized: true }),
+      },
+    ]) {
+      expect(() => checkV138LiveV9ReproductionV17ForReview({
+        artifact: candidate,
+        journalRecords,
+        outcome,
+      })).toThrow()
+    }
+    expect(() => checkV138LiveV9ReproductionV17ForReview({
+      artifact,
+      journalRecords: journalRecords.map((record, index) =>
+        index === 0 ? { ...record, supervisionRoot: sha("f") } : record),
+      outcome,
+    })).toThrow()
+    expect(() => checkV138LiveV9ReproductionV17ForReview({
+      artifact,
+      journalRecords: journalRecords.map((record, index) =>
+        index === 1 ? { ...record, reproductionRoot: sha("f") } : record),
+      outcome,
+    })).toThrow()
   })
 })
