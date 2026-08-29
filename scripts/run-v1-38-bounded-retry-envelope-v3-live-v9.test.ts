@@ -421,10 +421,13 @@ describe("Plan 262-111 future review and post-effect contract", () => {
         acceptedCells: 540,
         completeCleanup: true,
         reproductionRoot: artifact.receiptRoot,
+        recordRoot: sha("1"),
       },
     ]
     const outcome = {
       disposition: "succeeded" as const,
+      journalRoot: sha("1"),
+      stateRoot: sha("2"),
       completeCleanup: true,
       reproductionPresent: true,
       downstreamAuthority: "denied" as const,

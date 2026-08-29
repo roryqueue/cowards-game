@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto"
-import { existsSync, lstatSync, readFileSync } from "node:fs"
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+} from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import ts from "typescript"
@@ -1004,6 +1012,8 @@ type PostRunOutputCustody = Readonly<{
   adjudicationOrDownstreamPresent: boolean
   outcome?: Readonly<{
     disposition: "active" | "succeeded" | "terminal_failure" | "exhausted"
+    journalRoot?: Sha
+    stateRoot?: Sha
     completeCleanup: boolean
     reproductionPresent: boolean
     downstreamAuthority: string
@@ -1042,6 +1052,172 @@ export const checkV138LiveV9PostRunOutputCustodyForReview = (
   })
 }
 
+const REPRODUCTION_V17_KEYS = Object.freeze([
+  "schemaVersion", "status", "admittedCalibrationRoot", "chargedAttemptCount",
+  "acceptedCellCount", "completeCleanup", "executionRoot", "runtimeRoute",
+  "samplingMilliseconds", "partialAcceptedEvidenceReusable", "privacyProjection",
+  "phase263PlanningAuthorized", "candidateSearchAuthorized",
+  "formationMaterializationAuthorized", "holdoutOpeningAuthorized",
+  "publicAuthorized", "productAuthorized", "productionAuthorized", "receiptRoot",
+])
+const REPRODUCTION_V17_PRIVACY_KEYS = Object.freeze([
+  "strategySourceIncluded", "strategyMemoryIncluded", "soldierMemoryIncluded",
+  "objectivePayloadIncluded", "rawDiagnosticsIncluded",
+])
+const REPRODUCTION_V17_AUTHORITY_KEYS = Object.freeze([
+  "phase263PlanningAuthorized", "candidateSearchAuthorized",
+  "formationMaterializationAuthorized", "holdoutOpeningAuthorized",
+  "publicAuthorized", "productAuthorized", "productionAuthorized",
+])
+
+export const computeV138LiveV9ReproductionV17ReceiptRoot = (
+  body: Record<string, unknown>,
+): Sha => sha256(`v138-current-matrix-reproduction-v17\0${canonical(body)}`)
+
+export const checkV138LiveV9ReproductionV17ForReview = (input: {
+  artifact: Record<string, any>
+  journalRecords: readonly Record<string, any>[]
+  outcome: Readonly<{
+    disposition: "active" | "succeeded" | "terminal_failure" | "exhausted"
+    journalRoot: Sha
+    stateRoot: Sha
+    completeCleanup: boolean
+    reproductionPresent: boolean
+    downstreamAuthority: string
+  }>
+}) => {
+  const { artifact, journalRecords, outcome } = input
+  assertExactKeys(
+    artifact,
+    REPRODUCTION_V17_KEYS,
+    "V138_LIVE_V9_REPRODUCTION_KEYS_INVALID",
+  )
+  assertExactKeys(
+    artifact.privacyProjection,
+    REPRODUCTION_V17_PRIVACY_KEYS,
+    "V138_LIVE_V9_REPRODUCTION_PRIVACY_KEYS_INVALID",
+  )
+  const { receiptRoot, ...body } = artifact
+  if (
+    artifact.schemaVersion !== "v1.38-current-matrix-reproduction-v17" ||
+    artifact.status !== "passed_exact" ||
+    !shaPattern.test(artifact.admittedCalibrationRoot) ||
+    artifact.chargedAttemptCount !== 540 ||
+    artifact.acceptedCellCount !== 540 ||
+    artifact.completeCleanup !== true ||
+    !shaPattern.test(artifact.executionRoot) ||
+    artifact.runtimeRoute !== "v1.18/v1.19/MATCH_KERNEL" ||
+    artifact.samplingMilliseconds !== 200 ||
+    artifact.partialAcceptedEvidenceReusable !== false ||
+    REPRODUCTION_V17_PRIVACY_KEYS.some(
+      (key) => artifact.privacyProjection[key] !== false,
+    ) ||
+    REPRODUCTION_V17_AUTHORITY_KEYS.some((key) => artifact[key] !== false) ||
+    !shaPattern.test(receiptRoot) ||
+    computeV138LiveV9ReproductionV17ReceiptRoot(body) !== receiptRoot ||
+    outcome.disposition !== "succeeded" ||
+    !shaPattern.test(outcome.journalRoot) ||
+    !shaPattern.test(outcome.stateRoot) ||
+    outcome.completeCleanup !== true ||
+    outcome.reproductionPresent !== true ||
+    outcome.downstreamAuthority !== "denied"
+  ) fail("V138_LIVE_V9_REPRODUCTION_SEMANTICS_INVALID")
+
+  const admitted = journalRecords.filter(
+    (record) => record.kind === "finish_calibration" && record.status === "admitted",
+  )
+  const finished = journalRecords.filter(
+    (record) => record.kind === "finish_reproduction",
+  )
+  if (admitted.length !== 1 || finished.length !== 1)
+    fail("V138_LIVE_V9_REPRODUCTION_JOURNAL_JOIN_INVALID")
+  const calibration = admitted[0]!
+  const reproduction = finished[0]!
+  if (
+    calibration.completeCleanup !== true ||
+    calibration.supervisionRoot !== artifact.admittedCalibrationRoot ||
+    calibration.routeIdentity !== reproduction.routeIdentity ||
+    calibration.owner !== reproduction.owner ||
+    reproduction.status !== "passed_exact" ||
+    reproduction.acceptedCells !== 540 ||
+    reproduction.completeCleanup !== true ||
+    reproduction.reproductionRoot !== receiptRoot ||
+    journalRecords.at(-1)?.recordRoot !== outcome.journalRoot
+  ) fail("V138_LIVE_V9_REPRODUCTION_JOURNAL_JOIN_INVALID")
+  return Object.freeze({
+    receiptRoot: receiptRoot as Sha,
+    admittedCalibrationRoot: artifact.admittedCalibrationRoot as Sha,
+    executionRoot: artifact.executionRoot as Sha,
+    chargedAttemptCount: 540 as const,
+    acceptedCellCount: 540 as const,
+    completeCleanup: true as const,
+    downstreamAuthority: "denied" as const,
+  })
+}
+
+const readCanonicalJsonNoFollow = (
+  root: string,
+  repoPath: string,
+  maximumBytes: number,
+): Record<string, any> => {
+  const target = repoTarget(root, repoPath)
+  const before = lstatSync(target)
+  if (!before.isFile() || before.isSymbolicLink() || before.size > maximumBytes)
+    fail(`V138_LIVE_V9_LIVE_FILE_UNSAFE:${repoPath}`)
+  const fd = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try {
+    const opened = fstatSync(fd)
+    if (
+      !opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino ||
+      opened.size !== before.size || opened.size > maximumBytes
+    ) fail(`V138_LIVE_V9_LIVE_FILE_CHANGED:${repoPath}`)
+    const bytes = readFileSync(fd)
+    const value = JSON.parse(bytes.toString("utf8")) as Record<string, any>
+    if (!bytes.equals(Buffer.from(canonical(value))))
+      fail(`V138_LIVE_V9_LIVE_FILE_NONCANONICAL:${repoPath}`)
+    return value
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("V138_LIVE_V9_"))
+      throw error
+    fail(`V138_LIVE_V9_LIVE_FILE_INVALID:${repoPath}`)
+  } finally {
+    closeSync(fd)
+  }
+}
+
+const readCanonicalJournalNoFollow = (
+  root: string,
+): readonly Record<string, any>[] => {
+  const target = repoTarget(root, V138_BOUNDED_RETRY_V3_PATHS.journal)
+  const before = lstatSync(target)
+  if (!before.isFile() || before.isSymbolicLink() || before.size > 16 * 1024 * 1024)
+    fail("V138_LIVE_V9_JOURNAL_UNSAFE")
+  const fd = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try {
+    const opened = fstatSync(fd)
+    if (
+      !opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino ||
+      opened.size !== before.size || opened.size > 16 * 1024 * 1024
+    ) fail("V138_LIVE_V9_JOURNAL_CHANGED")
+    const text = readFileSync(fd, "utf8")
+    const lines = text.split("\n")
+    if (lines.pop() !== "" || lines.length === 0)
+      fail("V138_LIVE_V9_JOURNAL_NONCANONICAL")
+    return Object.freeze(lines.map((line) => {
+      const value = JSON.parse(line) as Record<string, any>
+      if (`${canonical(value).trimEnd()}\n` !== `${line}\n`)
+        fail("V138_LIVE_V9_JOURNAL_NONCANONICAL")
+      return Object.freeze(value)
+    }))
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("V138_LIVE_V9_"))
+      throw error
+    fail("V138_LIVE_V9_JOURNAL_INVALID")
+  } finally {
+    closeSync(fd)
+  }
+}
+
 const assertPostRunOutputCustody = (root: string): void => {
   const downstreamPresent = POST_RUN_FORBIDDEN_DESTINATIONS.some((repoPath) =>
     pathPresentNoFollow(root, repoPath),
@@ -1053,7 +1229,7 @@ const assertPostRunOutputCustody = (root: string): void => {
   const outcome = anyBoundedOutput
     ? checkV138PublishedRetryV3Outcome(root)
     : undefined
-  checkV138LiveV9PostRunOutputCustodyForReview({
+  const checked = checkV138LiveV9PostRunOutputCustodyForReview({
     journalPresent,
     privateDirectoryPresent,
     terminalPresent,
@@ -1062,6 +1238,18 @@ const assertPostRunOutputCustody = (root: string): void => {
     adjudicationOrDownstreamPresent: downstreamPresent,
     outcome,
   })
+  if (checked.status === "bounded_success") {
+    const artifact = readCanonicalJsonNoFollow(
+      root,
+      V138_BOUNDED_RETRY_V3_PATHS.reproduction,
+      1024 * 1024,
+    )
+    const journalRecords = readCanonicalJournalNoFollow(root)
+    checkV138LiveV9ReproductionV17ForReview({ artifact, journalRecords, outcome: outcome! })
+    const after = checkV138PublishedRetryV3Outcome(root)
+    if (canonical(after) !== canonical(outcome))
+      fail("V138_LIVE_V9_POST_RUN_OUTCOME_CHANGED")
+  }
 }
 
 const assertForbiddenDestinationsAbsent = (
