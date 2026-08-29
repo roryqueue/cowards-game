@@ -19,7 +19,12 @@ describe("Plan 262-112 corrected independent observation", () => {
       "post_success_value",
       "exact_reproduction_value",
     ])
-    expect(result.actualModesPassed).toBe(6)
+    expect(result.actualModesPassed).toBe(3)
+    expect(result.findings.map(({ code }) => code)).toEqual([
+      "MODE_POST_NO_EFFECT_FAILED",
+      "MODE_PROSPECTIVE_CUSTODY_FAILED",
+      "MODE_SOURCE_ONLY_FAILED",
+    ])
     expect(result.producerCalls).toBe(0)
     expect(result.liveInvoked).toBe(false)
     expect(result.freshCharged).toBe(0)
