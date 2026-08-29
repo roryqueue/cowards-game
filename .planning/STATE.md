@@ -5,19 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-112 corrected executable review is blocked at 3/6 modes; source correction and fresh review are next
+stopped_at: Plan 262-113 path-stable live-v10 source is ready for dispatch
 last_updated: "2026-08-29T01:00:00Z"
 last_activity: 2026-08-28
-last_activity_desc: superseded the invalid Plan-112 zero verdict with a corrected executable blocked v2 review; Plan 109 is ineligible
+last_activity_desc: planned additive path-stable live-v10 recovery through Plans 113/114 and revised supplement-v3 successors
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 93
+  total_plans: 95
   completed_plans: 87
   percent: 0
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-live-v10-recovery-topology-v3: {"schema_version":"v1.38-plan-262-live-v10-recovery-topology-v3","active_plans":95,"trustworthy_summaries":87,"immutable_history":["262-111","262-112-v1","262-112-v2-blocked","live-v9"],"active_chain":["262-113","262-114","262-109","262-110","262-94","262-95","262-106"],"waves":{"262-113":97,"262-114":98,"262-109":99,"262-110":100,"262-94":101,"262-95":102,"262-106":103},"supplement_version":"v3","live_owner":"live-v10","reproduction_owner":"existing-producer","route11_owner":"262-94","pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"next_action":"dispatch-262-113-only","admit_03":"blocked","downstream_authority_denied":true} -->
 
 <!-- Plan 93 was invoked exactly once after the v7 pair check passed, but failed closed before the live effect boundary with V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID. No v3 identity was charged and no live artifact exists. Do not retry or dispatch a successor without separately planned corrective work and explicit execution authority. -->
 <!-- phase-262-plan-112-corrected-review-status: {"schema_version":"v1.38-plan-262-112-corrected-review-status-v2","proof_status":"executed_review_blocked","publication_commit":"5b5ec601","supersedes_publication_commit":"29d4cf5c942d63fd767f658ec2506a5764ff19fa","finding_count":3,"finding_codes":["MODE_POST_NO_EFFECT_FAILED","MODE_PROSPECTIVE_CUSTODY_FAILED","MODE_SOURCE_ONLY_FAILED"],"actual_modes_passed":3,"payload_root":"sha256:558d329e537dc4673dcaf216ce68faf651dfbbf1ce19536d54cacc3d76b9e194","review_root":"sha256:8aca84cbb80b000dd5cdeb1735367dd7cc51eb858a0ce2960c4ac33e849dc0e9","carrier_root":"sha256:06417e5f8b44a28e88bd20e746fa2319235250d687190ab1fa7a49f485d3a355","plan_262_109_eligible":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"plan-live-v9-corrected-payload-semantics-source-fix-and-fresh-independent-review","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
@@ -84,9 +86,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 87 summaries across 93 active plans — Plan 262-112 corrected executable review is blocked with three semantic findings
-Status: Phase 262 remains in progress; Plan 109 is ineligible and all execution/downstream authority remains denied
-Last activity: 2026-08-28 — executed all six Plan-112 modes in disposal and published a truthful blocked v2 trio
+Plan: 87 summaries across 95 active plans — Plan 262-113 is the sole eligible next action
+Status: Phase 262 remains in progress; Plan-112 v2 is immutable blocked evidence and every successor after Plan 113 is dependency-denied
+Last activity: 2026-08-28 — planned path-stable live-v10 and independent Plan-114 review recovery
 
 Progress: [██████████] 95%
 
@@ -112,7 +114,7 @@ Progress: [██████████] 95%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 93 plans/87 summaries. The v1 Plan-112 trio at `29d4cf5c` is immutable superseded history. The corrected executable v2 review at `5b5ec601` passed 3/6 modes and is blocked by three corrected-payload semantic findings. Plan 109 is ineligible. Pre-effect reproduction-v17 and supplement-v2 remain absent; no third envelope, capacity, reset, literal, or downstream authority exists. The next work must correct the live-v9 payload semantics in source and obtain a fresh independent executable review before reconsidering Plan 109.
+**Current topology:** Active discovery is 95 plans/87 summaries. Plan-112 v1 and truthful blocked v2, live-v9, and every earlier branch are immutable history. The active chain is 113 -> 114 -> 109 -> 110 -> 94 -> 95 -> 106 at Waves 97-103; Plan 113 alone is eligible. Supplement-v1/v2 remain absent; supplement-v3 and live-v10 are future only. The pair is sealed inactive at zero and no capacity, reset, literal, live evidence, or downstream authority exists.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
