@@ -31,6 +31,7 @@ key-decisions:
   - "Keep live-v9 additive and close its sole production export over the historical v3 producer; expose only the exact Plan-110 readiness/production selectors with no generic or injectable production bypass."
   - "Require supplement-v2 to bind the exact committed Plan-112 publication commit as well as its payload, REVIEW, and carrier roots."
   - "Preserve producer failure as the cause and expose producer plus post-custody failures together with AggregateError."
+  - "Authenticate successful reproduction-v17 independently in live-v9 from bounded canonical bytes: exact schema and keys, recomputed domain-separated root, frozen policy, exact 540/cleanup, exhaustive false privacy and authority, and exact journal/outcome joins."
 
 requirements-completed: []
 requirements-supported: [ADMIT-03, ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10, SEAL-01]
@@ -49,6 +50,13 @@ coverage:
     verification:
       - kind: unit
         ref: scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.test.ts#Plan 262-111 future review and post-effect contract
+        status: pass
+    human_judgment: false
+  - id: D3
+    description: Independent exact reproduction-v17 byte authentication and journal/outcome joins
+    verification:
+      - kind: integration
+        ref: scripts/run-v1-38-bounded-retry-envelope-v3-live-v9.test.ts#independently authenticates exact reproduction-v17 bytes and journal joins
         status: pass
     human_judgment: false
 
@@ -79,13 +87,13 @@ status: complete
 
 | Identity | Exact value |
 |---|---|
-| Source commit | `84dad7aa21af0fee62240fc0e10f04a4545541e8` |
-| Source tree | `8a128562ea5ed78de6516d32f0f8f740bbb09989` |
-| Source parent | `53228ff33584994b4602d6fcbcd6c38759612b7a` |
-| Checkout byte-manifest root | `sha256:fd0c8d075f6af0edb9609148fda9928585b9286229a7c56f60e10e5dfd6ad469` |
+| Source commit | `a301a06df0e4a3c038cf630f3485f8fb3a879c42` |
+| Source tree | `5f039d596fddbb5dad3ff5efa6f0c598de373cb6` |
+| Source parent | `e70d7ac04560492056aa4829ce7a89159de9c4ee` |
+| Checkout byte-manifest root | `sha256:328ff1cb9c49a59314f4358166f27f3c0d9fc268081a09de175dd477101f632d` |
 | Installed closure root | `sha256:72760c27bb3a70f57fcebe45abae59f6d592310ef32f4bc23e442fe8b25ec31b` |
 | Native sources root | `sha256:de43db7fa3d47de7dd1b5ffb148ae9cecceab044bdb61f704051e2930f4f5523` |
-| Full execution closure root | `sha256:f437eba0d03633a1bd5c6193047ad2bb6fcc98241c5b01a537fee6053c3cc2f9` |
+| Full execution closure root | `sha256:14ff01fb063083db596828b769cf7ccb5d25492994e78d9625b362c58e4ecf4b` |
 
 The reviewed checkout is exactly the model, native custody helper, native owner-lock source, historical v3 producer, and live-v9 adapter. Live-v8 remains immutable history and is not an invoked owner. Pathname-launch replacement resistance remains explicitly unclaimed.
 
@@ -106,12 +114,15 @@ The reviewed checkout is exactly the model, native custody helper, native owner-
 6. **Code-review GREEN: Close CLI and post-effect flow** — `a0e31840` (`fix`)
 7. **Residual RED: Specify matched reproduction success** — `53228ff3` (`test`)
 8. **Residual GREEN: Admit exact authenticated success** — `84dad7aa` (`fix`)
+9. **Final-review RED: Specify exact reproduction-v17 authentication** — `e70d7ac0` (`test`)
+10. **Final-review GREEN: Authenticate exact reproduction-v17 bytes** — `a301a06d` (`fix`)
 
 ## Decisions Made
 
 - Production remains a single-argument closed function. Internal producer options only bind the already authenticated pair and do not expose an external replacement seam.
 - The prospective supplement-v2 schema records the future Plan-112 publication commit, preventing a root-only trio from substituting for committed three-path custody.
 - CLI commands are limited to the three custody checks plus exact Plan-110 readiness and sole production selectors; no generic or injectable production mode exists.
+- Successful reproduction-v17 is accepted only after live-v9 independently parses canonical bytes, rejects extra keys, recomputes the domain-separated receipt root, validates frozen policy and exact 540/cleanup, requires every privacy/authority flag false, and joins admitted calibration and reproduction records to the unchanged historical outcome.
 
 ## Deviations from Plan
 
@@ -125,7 +136,7 @@ None - plan executed exactly as written.
 ## Verification
 
 - Mandatory TDD RED gates failed for the absent live-v9 module and absent prospective contract exports.
-- Focused live-v9 suite: `8/8` passed, including corrected semantic mutation, dirty-byte/mode/rewrite, future-contract, compatibility-substitution, and dual-error cases.
+- Focused live-v9 suite: `10/10` passed, including corrected semantic mutation, dirty-byte/mode/rewrite, future-contract, compatibility-substitution, dual-error, exact reproduction schema, root-recomputation, privacy/authority, and journal/outcome join cases.
 - Corrected Plan-108 `--check-review`: zero findings at exact publication `2639ff3b42e2a238919a3104c9fa8c785c69b93d`.
 - Pair v7 `--check-sealed-inactive-envelope`: passed exact committed B3 seal/envelope.
 - Live-v9 `--check-source-only`: passed with live false and zero counters.
@@ -143,18 +154,18 @@ Plan 262-112 can independently review the exact committed live-v9 closure and pu
 ## Self-Check: PASSED
 
 - Live-v9 source, tests, and summary exist.
-- All eight TDD task and review-fix commits exist in Git history.
+- All ten TDD task and review-fix commits exist in Git history.
 - Exact committed closure identity was rederived after the GREEN commit.
 - Required tests and serial custody/type/whitespace checks passed.
-- No supplement or live/downstream artifact was created.
+- Supplement-v2, journal, private receipt, terminal, reproduction-v17, disposition-v3, and every live/downstream artifact remain absent.
 
 ## Post-Code-Review Corrections — 2026-08-28
 
 Independent review `262-111-REVIEW.md` blocked the original source with two critical flow findings. TDD RED `4078ba4a` reproduced both; GREEN `a0e31840` added the exact Plan-110 readiness and sole production selectors and split pre-effect absence from post-run bounded-output custody.
 
-The pre-effect gate still forbids every live destination. The post-run gate admits no effects, exact complete non-pass with reproduction absent, or exact authenticated success with producer-owned reproduction-v17 present. Reproduction path presence must equal the historical checker flag, and that flag must be true exactly for `succeeded`; active/partial tuples, both mismatch directions, stale lock, receipt manifest, disposition, correction, activation, readiness, lifecycle, incomplete cleanup, and all downstream authority fail closed. Producer and custody failures retain their original lone/aggregate semantics. Verification passed `9/9` focused tests plus pair-v7, corrected Plan-108, source-only, TypeScript, and whitespace checks without invoking the production selector.
+The pre-effect gate still forbids every live destination. The post-run gate admits no effects, exact complete non-pass with reproduction absent, or exact authenticated success with producer-owned reproduction-v17 present. Reproduction path presence must equal the historical checker flag, and that flag must be true exactly for `succeeded`; active/partial tuples, both mismatch directions, stale lock, receipt manifest, disposition, correction, activation, readiness, lifecycle, incomplete cleanup, and all downstream authority fail closed. Producer and custody failures retain their original lone/aggregate semantics. Final review `b2549996` then found that the success branch still trusted the producer's stored reproduction root. RED `e70d7ac0` pinned exact-schema and mutation failures; GREEN `a301a06d` added live-v9-owned bounded no-follow canonical reads, exact key/value validation, domain-separated receipt-root recomputation, and exact admitted calibration, reproduction, journal, and outcome joins. The protected producer remained unchanged. Verification now passes `10/10` focused tests plus pair-v7, corrected Plan-108, source-only, TypeScript, and whitespace checks without invoking the production selector.
 
-The corrected committed source closure is `84dad7aa21af0fee62240fc0e10f04a4545541e8` with full execution root `sha256:f437eba0d03633a1bd5c6193047ad2bb6fcc98241c5b01a537fee6053c3cc2f9`. See `262-111-CODE-REVIEW-FIXES.md` for finding-by-finding evidence. A fresh independent re-review is required before Plan 112 eligibility.
+The corrected committed source closure is `a301a06df0e4a3c038cf630f3485f8fb3a879c42` with full execution root `sha256:14ff01fb063083db596828b769cf7ccb5d25492994e78d9625b362c58e4ecf4b`. See `262-111-CODE-REVIEW-FIXES.md` for finding-by-finding evidence. A fresh independent re-review is required before Plan 112 eligibility.
 
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*

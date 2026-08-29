@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Resolved Plan-111 residual success-tuple finding; fresh re-review required
-last_updated: "2026-08-28T23:57:16.889Z"
+stopped_at: Resolved Plan-111 final reproduction-auth finding; fresh re-review required
+last_updated: "2026-08-29T00:12:51.284Z"
 last_activity: 2026-08-28
-last_activity_desc: fixed Plan-111 exact authenticated reproduction success without live invocation; fresh re-review is next
+last_activity_desc: resolved Plan-111 final exact reproduction-v17 authentication finding without live invocation; fresh re-review is next
 progress:
   total_phases: 9
   completed_phases: 0
@@ -80,9 +80,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 86 summaries across 93 active plans — Plan 262-111 residual fix is committed; fresh independent re-review is required before Plan 262-112
-Status: Phase 262 remains in progress; exact Plan-111 success tuple is fixed but Plan 112 remains ineligible pending fresh zero-finding re-review
-Last activity: 2026-08-28 — fixed Plan-111 exact authenticated reproduction success without live invocation; fresh re-review is next
+Plan: 86 summaries across 93 active plans — Plan 262-111 final reproduction-auth fix is committed; fresh independent re-review is required before Plan 262-112
+Status: Phase 262 remains in progress; Plan-111 independently authenticates exact reproduction-v17 bytes but Plan 112 remains ineligible pending fresh zero-finding re-review
+Last activity: 2026-08-28 — resolved Plan-111 final exact reproduction-v17 authentication finding without live invocation; fresh re-review is next
 
 Progress: [██████████] 95%
 
@@ -379,6 +379,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Supersede the Plan-111 no-production-CLI decision: expose exactly Plan-110 readiness and sole live selectors, with no generic or injectable bypass. — The reviewed executable closure itself must own the pre-effect and one-call dispatch path.
 - [Phase 262]: Plan-111/112 pre-effect custody requires reproduction-v17 absent; post-run accepts it only as the exact producer-owned 540-success tuple atomically paired with terminal and carrying exhaustive false authority. — Plan 94 independently validates that evidence and alone may publish pass disposition plus Route-11.
 - [Phase 262]: Supersede Plan-111 post-run reproduction denial: reproduction-v17 is permitted only when its path presence matches the historical outcome flag and that flag is true exactly for an authenticated succeeded disposition. — The unchanged producer atomically owns exact 540-cell success evidence; pre-effect and every non-pass branch still require reproduction absent.
+- [Phase 262]: Successful reproduction-v17 requires independent live-v9 authentication of bounded canonical bytes, exact schema and keys, recomputed domain-separated receiptRoot, frozen 200ms policy, exact 540/cleanup, all privacy and authority false, and exact admitted-calibration/reproduction/journal/outcome joins. — The producer's stored root or self-consistent tampering is not sufficient.
 
 ### Pending Todos
 
@@ -442,8 +443,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-28T23:57:16.211Z
-Stopped at: Resolved Plan-111 residual success-tuple finding; fresh re-review required
+Last session: 2026-08-29T00:12:40.235Z
+Stopped at: Resolved Plan-111 final reproduction-auth finding; fresh re-review required
 Resume file: None
 
 ### Blockers
