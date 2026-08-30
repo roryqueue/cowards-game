@@ -390,6 +390,12 @@ const localFileIdentity = (absolute: string) => {
     sha256: sha(readFileSync(real)),
   })
 }
+const portableFileIdentity = (absolute: string) => {
+  const real = realpathSync(absolute)
+  const status = lstatSync(real)
+  if (!status.isFile() || status.isSymbolicLink()) fail("V138_PLAN116_TOOLCHAIN_FILE_UNSAFE")
+  return Object.freeze({ mode: status.mode & 0o7777, sha256: sha(readFileSync(real)) })
+}
 const captureSubjectClosure = (rootInput: string) => {
   const root = path.resolve(rootInput)
   ancestor(root, SUBJECT_COMMIT)
@@ -679,7 +685,11 @@ export const executeV138Plan116DisposableModes = (repoRootInput: string) => {
     command("/usr/bin/git", ["add", "--", PATHS.supplement3], primary)
     command("/usr/bin/git", ["-c", "user.name=Plan 116 Disposable",
       "-c", "user.email=plan116@example.invalid", "commit", "--quiet", "-m",
-      "disposable supplement v3"], primary)
+      "disposable supplement v3"], primary, {
+      ...process.env,
+      GIT_AUTHOR_DATE: "2000-01-01T00:00:00Z",
+      GIT_COMMITTER_DATE: "2000-01-01T00:00:00Z",
+    })
     const publicationCommit = git(primary, ["rev-parse", "HEAD"])
     const scope = git(primary, ["diff-tree", "--no-commit-id", "--name-status", "-r", publicationCommit])
     if (scope !== `A\t${PATHS.supplement3}` ||
@@ -730,7 +740,13 @@ export const executeV138Plan116DisposableModes = (repoRootInput: string) => {
       findings: Object.freeze([] as V138Plan116Finding[]),
       observations: Object.freeze(observations),
       observationRoot: rooted("v138-plan-262-116-observations-v1", observations),
-      disposableExecutionClosureRoot: captureSubjectClosure(primary).localExecutionClosureRoot,
+      disposableExecutionClosureRoot: rooted("v138-plan-262-116-disposable-execution-closure-v2", {
+        reviewedClosureRoot: captureSubjectClosure(primary).reviewedClosureRoot,
+        node: portableFileIdentity(process.execPath),
+        tsx: portableFileIdentity(target(primary, "node_modules/.bin/tsx")),
+        git: portableFileIdentity("/usr/bin/git"),
+        clang: portableFileIdentity("/usr/bin/clang"),
+      }),
       downstreamAuthority: "denied" as const,
     })
   } finally {
@@ -941,6 +957,8 @@ const locatePublicationCommit = (root: string): string => {
 }
 export const authenticateV138Plan116PublishedReview = (repoRootInput: string) => {
   const root = path.resolve(repoRootInput)
+  authenticateHistoricalV1(root)
+  if (pathPresent(root, PATHS.transaction)) fail("V138_PLAN116_TRANSACTION_INCOMPLETE")
   if (!REVIEW_PATHS.every((repoPath) => pathPresent(root, repoPath)))
     fail("V138_PLAN116_PUBLICATION_PARTIAL_OR_ABSENT")
   const publicationCommit = locatePublicationCommit(root)
@@ -954,6 +972,14 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
   if (!Array.isArray(findings) || payload.findingCount !== findings.length ||
       canonical(payload.findingCodes) !== canonical(findings.map(({ code }) => code)))
     fail("V138_PLAN116_FINDINGS_INVALID")
+  if (findings.length === 0) {
+    const observedAgain = executeV138Plan116DisposableModes(root)
+    validateModeEvidence(observedAgain)
+    if (payload.observationRoot !== observedAgain.observationRoot ||
+        payload.disposableExecutionClosureRoot !== observedAgain.disposableExecutionClosureRoot ||
+        canonical(payload.observations) !== canonical(observedAgain.observations))
+      fail("V138_PLAN116_POST_AUTH_OBSERVATIONS_INVALID")
+  }
   const exact = renderContracts({
     closure,
     authentication: Object.freeze({
@@ -1000,17 +1026,82 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
   })
 }
 
-export const writeV138Plan116ReviewForReview = (repoRootInput: string): void => {
+const publicationFiles = (evidence: ReturnType<typeof renderContracts>) => [
+  Object.freeze({ path: PATHS.payload, bytes: Buffer.from(canonical(evidence.payload)) }),
+  Object.freeze({ path: PATHS.review, bytes: evidence.reviewBytes }),
+  Object.freeze({ path: PATHS.carrier, bytes: Buffer.from(canonical(evidence.carrier)) }),
+] as const
+const renderTransaction = (files: ReturnType<typeof publicationFiles>): Buffer => {
+  const records = files.map((file) => Object.freeze({
+    path: file.path, byteLength: file.bytes.length, sha256: sha(file.bytes),
+  }))
+  const body = Object.freeze({
+    schemaVersion: "v1.38-plan-262-116-review-publication-transaction-v1",
+    state: "pending",
+    files: records,
+  })
+  return Buffer.from(canonical({ ...body, transactionRoot: rooted(
+    "v138-plan-262-116-review-publication-transaction-v1", body,
+  ) }))
+}
+const recoverTransaction = (root: string, executable: string): void => {
+  if (!pathPresent(root, PATHS.transaction)) return
+  const markerBytes = readRegularNoFollow(root, PATHS.transaction)
+  let marker: Json
+  try { marker = JSON.parse(markerBytes.toString("utf8")) as Json }
+  catch { throw new V138Plan116ProcessIntegrityError("V138_PLAN116_TRANSACTION_MARKER_INVALID") }
+  const body = { schemaVersion: marker.schemaVersion, state: marker.state, files: marker.files }
+  if (!markerBytes.equals(Buffer.from(canonical(marker))) ||
+      marker.schemaVersion !== "v1.38-plan-262-116-review-publication-transaction-v1" ||
+      marker.state !== "pending" || !Array.isArray(marker.files) ||
+      canonical(marker.files.map((item: Json) => item.path)) !== canonical(REVIEW_PATHS) ||
+      marker.transactionRoot !== rooted("v138-plan-262-116-review-publication-transaction-v1", body))
+    throw new V138Plan116ProcessIntegrityError("V138_PLAN116_TRANSACTION_MARKER_INVALID")
+  for (const record of marker.files as Json[]) {
+    if (!Number.isInteger(record.byteLength) || record.byteLength < 0 || !validSha(record.sha256))
+      throw new V138Plan116ProcessIntegrityError("V138_PLAN116_TRANSACTION_MARKER_INVALID")
+    if (!pathPresent(root, record.path)) continue
+    const bytes = readRegularNoFollow(root, record.path)
+    if (bytes.length !== record.byteLength || sha(bytes) !== record.sha256)
+      throw new V138Plan116ProcessIntegrityError("V138_PLAN116_TRANSACTION_PARTIAL_INVALID")
+    nativeFileOperation(executable, root, "remove", record.path, bytes)
+  }
+  nativeFileOperation(executable, root, "remove", PATHS.transaction, markerBytes)
+}
+class V138Plan116SimulatedCrash extends Error {}
+const publishTransaction = (root: string, evidence: ReturnType<typeof renderContracts>): void =>
+  withNativeTransaction((executable) => {
+    recoverTransaction(root, executable)
+    assertAbsent(root, [...REVIEW_PATHS, PATHS.transaction])
+    const files = publicationFiles(evidence)
+    const markerBytes = renderTransaction(files)
+    nativeFileOperation(executable, root, "create", PATHS.transaction, markerBytes)
+    try {
+      for (const [index, file] of files.entries()) {
+        nativeFileOperation(executable, root, "create", file.path, file.bytes)
+        if (process.env.V138_PLAN116_TEST_CRASH_AFTER_FILE === String(index + 1))
+          throw new V138Plan116SimulatedCrash("V138_PLAN116_SIMULATED_CRASH")
+      }
+      nativeFileOperation(executable, root, "remove", PATHS.transaction, markerBytes)
+    } catch (error) {
+      if (error instanceof V138Plan116SimulatedCrash) throw error
+      recoverTransaction(root, executable)
+      throw error
+    }
+  })
+
+export const writeV138Plan116ReviewForReview = (repoRootInput: string,
+  modesOverride?: ModeResult): void => {
   const root = path.resolve(repoRootInput)
-  assertAbsent(root, [...REVIEW_PATHS, PATHS.supplement1, PATHS.supplement2, PATHS.supplement3,
-    ...EFFECT_PATHS])
+  authenticateHistoricalV1(root)
+  assertAbsent(root, [PATHS.supplement1, PATHS.supplement2, PATHS.supplement3, ...EFFECT_PATHS])
   const initial = observeV138Plan116FoundationForReview(root)
   let evidence: ReturnType<typeof renderContracts>
   if (initial.foundation === undefined) {
     evidence = renderV138Plan116EvidenceForReview(root, initial.findings, undefined, initial)
   } else {
     try {
-      const modes = executeV138Plan116DisposableModes(root)
+      const modes = modesOverride ?? executeV138Plan116DisposableModes(root)
       evidence = renderV138Plan116EvidenceForReview(root, modes.findings, modes)
     } catch (error) {
       evidence = renderV138Plan116EvidenceForReview(root, [
@@ -1018,21 +1109,7 @@ export const writeV138Plan116ReviewForReview = (repoRootInput: string): void => 
       ])
     }
   }
-  const written: string[] = []
-  try {
-    for (const [repoPath, bytes] of [
-      [PATHS.payload, Buffer.from(canonical(evidence.payload))],
-      [PATHS.review, evidence.reviewBytes],
-      [PATHS.carrier, Buffer.from(canonical(evidence.carrier))],
-    ] as const) {
-      writeFileSync(target(root, repoPath), bytes, { mode: 0o644, flag: "wx" })
-      chmodSync(target(root, repoPath), 0o644)
-      written.push(repoPath)
-    }
-  } catch (error) {
-    for (const repoPath of written) rmSync(target(root, repoPath), { force: true })
-    throw error
-  }
+  publishTransaction(root, evidence)
 }
 
 const execute = (args: readonly string[]): void => {

@@ -2,6 +2,7 @@ import {
   chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync,
   symlinkSync, writeFileSync,
 } from "node:fs"
+import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -14,16 +15,23 @@ import {
   observeV138Plan116FoundationForReview,
   probeV138Plan116GitObjectForReview,
   renderV138Plan116EvidenceForReview,
+  writeV138Plan116ReviewForReview,
   writeV138Plan116RetainedFileForReview,
 } from "./check-v1-38-plan-262-116-supplement-v3-adapter-v1.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const phase = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const reviewPaths = [
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v2.json",
+  `${phase}/262-116-REVIEW-v2.md`,
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v2.json",
+] as const
+const v1ReviewPaths = [
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v1.json",
   `${phase}/262-116-REVIEW.md`,
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1.json",
 ] as const
+const transactionPath = ".planning/.v138-plan116-review-v2-transaction.json"
 const adapterPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts"
 const adapterTestPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts"
 const nativePath = "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c"
@@ -36,6 +44,24 @@ const effectPaths = [
 ] as const
 let cachedModes: ReturnType<typeof executeV138Plan116DisposableModes> | undefined
 const actualModes = () => cachedModes ??= executeV138Plan116DisposableModes(repoRoot)
+const withReviewWorktree = <T>(run: (root: string) => T): T => {
+  const owner = mkdtempSync(path.join(tmpdir(), "v138-plan116-review-test-"))
+  const root = path.join(owner, "repo")
+  let added = false
+  try {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], { cwd: repoRoot })
+    added = true
+    symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    for (const repoPath of [
+      ".planning/artifacts/v1.38-successor-source-seal-v13.json",
+      ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json",
+    ]) chmodSync(path.join(root, repoPath), 0o600)
+    return run(root)
+  } finally {
+    if (added) execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot })
+    rmSync(owner, { recursive: true, force: true })
+  }
+}
 
 describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   it("pins exact committed three-file Plan-115 custody and source-separated closure", () => {
@@ -262,6 +288,29 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       rmSync(external, { recursive: true, force: true })
     }
   })
+
+  it("recovers an authenticated crash partial before one durable three-file activation", () => {
+    const modes = actualModes()
+    withReviewWorktree((root) => {
+      const previous = process.env.V138_PLAN116_TEST_CRASH_AFTER_FILE
+      try {
+        process.env.V138_PLAN116_TEST_CRASH_AFTER_FILE = "1"
+        expect(() => writeV138Plan116ReviewForReview(root, modes)).toThrow(/SIMULATED_CRASH/)
+        expect(existsSync(path.join(root, transactionPath))).toBe(true)
+        expect(reviewPaths.map((repoPath) => existsSync(path.join(root, repoPath))))
+          .toEqual([true, false, false])
+      } finally {
+        if (previous === undefined) delete process.env.V138_PLAN116_TEST_CRASH_AFTER_FILE
+        else process.env.V138_PLAN116_TEST_CRASH_AFTER_FILE = previous
+      }
+      writeV138Plan116ReviewForReview(root, modes)
+      expect(existsSync(path.join(root, transactionPath))).toBe(false)
+      expect(reviewPaths.every((repoPath) => existsSync(path.join(root, repoPath)))).toBe(true)
+      expect(v1ReviewPaths.every((repoPath) => existsSync(path.join(root, repoPath)))).toBe(true)
+      for (const repoPath of reviewPaths)
+        expect(lstatSync(path.join(root, repoPath)).mode & 0o7777).toBe(0o644)
+    })
+  }, 300_000)
 
   it("roots a semantic mutation without making the canonical trio or supplement", () => {
     const priorReviewBytes = new Map(reviewPaths.map((repoPath) => [repoPath,
