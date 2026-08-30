@@ -339,9 +339,21 @@ const captureSubjectClosure = (rootInput: string) => {
   noRewrite(root, SUBJECT_COMMIT, SUBJECT_ENTRIES.map(({ path: repoPath }) => repoPath))
   const recursive = deriveRecursiveClosure(root)
   const packageManifest = ["package.json", "pnpm-lock.yaml"].map((repoPath) => {
-    const record = committed(root, SUBJECT_COMMIT, repoPath, false)
+    const record = committed(root, SUBJECT_COMMIT, repoPath)
+    if (record.mode !== "100644") fail(`V138_PLAN116_DEPENDENCY_MODE_INVALID:${repoPath}`)
     return { path: repoPath, mode: record.mode, blob: record.blob, sha256: record.sha256 }
   })
+  for (const record of [...recursive.manifest, ...recursive.nativeManifest]) {
+    const current = committed(root, SUBJECT_COMMIT, record.path)
+    if (current.mode !== "100644" || current.blob !== record.blob)
+      fail(`V138_PLAN116_DEPENDENCY_MODE_INVALID:${record.path}`)
+  }
+  const completeClosurePaths = [...new Set([
+    ...recursive.manifest.map(({ path: repoPath }) => repoPath),
+    ...recursive.nativeManifest.map(({ path: repoPath }) => repoPath),
+    ...packageManifest.map(({ path: repoPath }) => repoPath),
+  ])]
+  noRewrite(root, SUBJECT_COMMIT, completeClosurePaths)
   const portable = Object.freeze({
     subjectCommit: SUBJECT_COMMIT,
     subjectTree: SUBJECT_TREE,
@@ -349,7 +361,10 @@ const captureSubjectClosure = (rootInput: string) => {
     subjectEntries: entries,
     recursiveDependencyRoot: recursive.recursiveDependencyRoot,
     recursiveDependencyCount: recursive.recursiveDependencyCount,
+    recursiveDependencyManifest: recursive.manifest,
     nativeInputRoot: recursive.nativeInputRoot,
+    nativeInputManifest: recursive.nativeManifest,
+    packageManifest: Object.freeze(packageManifest),
     packageManifestRoot: rooted("v138-plan-262-116-package-manifest-v1", packageManifest),
     nodeVersion: process.version,
     platform: process.platform,
@@ -502,7 +517,7 @@ export const observeV138Plan116FoundationForReview = (rootInput: string) => {
 
 const prepareWorktree = (repoRoot: string, owner: string, name: string): string => {
   const worktree = path.join(owner, name)
-  command("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", worktree, "HEAD"], repoRoot)
+  command("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", worktree, SUBJECT_COMMIT], repoRoot)
   symlinkSync(realpathSync(path.join(repoRoot, "node_modules")), path.join(worktree, "node_modules"), "dir")
   for (const repoPath of SECURE_PATHS) chmodSync(target(worktree, repoPath), 0o600)
   for (const repoPath of ORDINARY_PATHS) chmodSync(target(worktree, repoPath), 0o644)
@@ -585,7 +600,10 @@ export const executeV138Plan116DisposableModes = (repoRootInput: string) => {
     primary = prepareWorktree(repoRoot, owner, "primary")
     const source = runAdapter(primary, SOURCE_SELECTOR)
     if (source.status !== "source_only_checked") fail("MODE_DISPOSABLE_SOURCE_ONLY_FAILED")
-    observations.push(observation(MODE_NAMES[1], { status: source.status }))
+    observations.push(observation(MODE_NAMES[1], {
+      status: source.status,
+      subjectCommit: git(primary, ["rev-parse", "HEAD"]),
+    }))
     const written = runAdapter(primary, WRITE_SELECTOR)
     if (written.status !== "supplement_v3_written" ||
         canonical(JSON.parse(readFileSync(target(primary, PATHS.supplement3), "utf8"))) !==

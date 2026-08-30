@@ -58,6 +58,21 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     expect(foundation.reviewedClosureRoot).not.toBe(foundation.localExecutionClosureRoot)
   }, 180_000)
 
+  it("binds every current recursive dependency and rejects uncommitted drift", () => {
+    const recursivePath = "scripts/lib/v1-38-secure-workspace-path-v2.ts"
+    const absolute = path.join(repoRoot, recursivePath)
+    const original = readFileSync(absolute)
+    try {
+      writeFileSync(absolute, Buffer.concat([original, Buffer.from("\n")]))
+      const observed = observeV138Plan116FoundationForReview(repoRoot)
+      expect(observed.foundation).toBeUndefined()
+      expect(observed.authentication.failedBoundary).toBe("subject")
+      expect(observed.findings[0]?.detail).toContain(`CURRENT_BYTES_INVALID:${recursivePath}`)
+    } finally { writeFileSync(absolute, original) }
+    expect(captureV138Plan116FoundationForReview(repoRoot).recursiveDependencyManifest)
+      .toContainEqual(expect.objectContaining({ path: recursivePath, mode: "100644" }))
+  })
+
   it("executes every required real disposable selector, race, cache, and mutation mode", () => {
     const modes = actualModes()
     expect(modes.modeNames).toEqual([
@@ -83,6 +98,9 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     })
     expect(modes.observationRoot).toMatch(/^sha256:[0-9a-f]{64}$/)
     expect(modes.observations.every(({ status }) => status === "passed")).toBe(true)
+    expect(modes.observations[1]?.detail).toMatchObject({
+      subjectCommit: "bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48",
+    })
     expect(existsSync(path.join(repoRoot, supplementPath))).toBe(false)
     for (const repoPath of effectPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
   }, 300_000)
