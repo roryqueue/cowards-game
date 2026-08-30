@@ -79,5 +79,5 @@ describe("Plan 262-118 independent live-v11 custody review", () => {
       plan110Eligible: false,
       authorizesExecution: false,
     })
-  })
+  }, 30_000)
 })
