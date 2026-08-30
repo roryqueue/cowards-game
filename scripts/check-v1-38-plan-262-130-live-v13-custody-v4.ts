@@ -64,6 +64,10 @@ const MODES = Object.freeze([
   "--check-bounded-success-value",
   "--check-exact-reproduction-v17-value",
 ] as const)
+const LOCAL_NATIVE_PATHS = Object.freeze([
+  "scripts/native/v1-38-successor-transaction-helper-v6.c",
+  "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
+] as const)
 
 export const V138_PLAN130_B331_SCOPE = Object.freeze([
   `A\t${PHASE}/262-120-SUMMARY.md`,
@@ -113,6 +117,13 @@ export const assertV138Plan130StrictLaterHeadForReview = (
   return true
 }
 
+export const computeV138Plan130RootRelativeNativeCustodyForReview = (rootInput: string) => {
+  const root = path.resolve(rootInput)
+  const paths = LOCAL_NATIVE_PATHS.map((repoPath) => path.join(root, ...repoPath.split("/")))
+  const manifest = paths.map((absolute) => [absolute, sha(readFileSync(absolute))] as const)
+  return Object.freeze({ paths: Object.freeze(paths), root: sha(canonical(manifest)) })
+}
+
 export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
   const sourceFile = ts.createSourceFile("live-v13.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
   const producerModule = "./run-v1-38-bounded-retry-envelope-v3.js"
@@ -124,9 +135,13 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
     const named = statement.importClause?.namedBindings
     return named !== undefined && ts.isNamedImports(named) ? [...named.elements] : []
   })
+  const stringBindings = new Map<string, string>()
+  const rootAliases = new Set(["globalThis", "module", "Reflect"])
   const constantString = (node: ts.Expression): string | undefined => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text
+    if (ts.isIdentifier(node)) return stringBindings.get(node.text)
     if (ts.isParenthesizedExpression(node)) return constantString(node.expression)
+    if (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) return constantString(node.expression)
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
       const left = constantString(node.left)
       const right = constantString(node.right)
@@ -141,6 +156,15 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
       }
       return value
     }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === "join" && ts.isArrayLiteralExpression(node.expression.expression) &&
+        node.arguments.length <= 1) {
+      const delimiter = node.arguments[0] === undefined ? "," : constantString(node.arguments[0])
+      const parts = node.expression.expression.elements.map((element) =>
+        ts.isSpreadElement(element) ? undefined : constantString(element as ts.Expression))
+      if (delimiter !== undefined && parts.every((part): part is string => part !== undefined))
+        return parts.join(delimiter)
+    }
     return undefined
   }
   const forbidden = ["constructor", "eval", "Function", "AsyncFunction", "GeneratorFunction",
@@ -149,6 +173,34 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
   let producerReferences = 0
   let producerCalls = 0
   let ownerCalls = 0
+  const declarations: ts.VariableDeclaration[] = []
+  const collectDeclarations = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node)) declarations.push(node)
+    ts.forEachChild(node, collectDeclarations)
+  }
+  collectDeclarations(sourceFile)
+  for (let pass = 0; pass < declarations.length; pass += 1) {
+    let changed = false
+    for (const declaration of declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.initializer === undefined) continue
+      const value = constantString(declaration.initializer)
+      if (value !== undefined && stringBindings.get(declaration.name.text) !== value) {
+        stringBindings.set(declaration.name.text, value); changed = true
+      }
+      if (ts.isIdentifier(declaration.initializer) && rootAliases.has(declaration.initializer.text) &&
+          !rootAliases.has(declaration.name.text)) {
+        rootAliases.add(declaration.name.text); changed = true
+      }
+    }
+    if (!changed) break
+  }
+  const sensitiveComputedBase = (node: ts.Expression): boolean => {
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isTypeAssertionExpression(node))
+      return sensitiveComputedBase(node.expression)
+    if (ts.isIdentifier(node)) return rootAliases.has(node.text) || node.text === "process"
+    return ts.isPropertyAccessExpression(node) && node.expression.getText(sourceFile) === "process" &&
+      node.name.text === "mainModule"
+  }
   const visit = (node: ts.Node): void => {
     if (ts.isIdentifier(node) && ["eval", "Function", "AsyncFunction", "GeneratorFunction",
       "require", "createRequire", "getBuiltinModule"].includes(node.text)) dangerous += 1
@@ -159,13 +211,18 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
       dangerous += 1
     if (ts.isElementAccessExpression(node) && node.argumentExpression !== undefined) {
       const value = constantString(node.argumentExpression)
-      if (value !== undefined && forbidden.some((name) => value.includes(name))) dangerous += 1
+      if (sensitiveComputedBase(node.expression) ||
+          (value !== undefined && forbidden.some((name) => value.includes(name)))) dangerous += 1
     }
     if (ts.isBinaryExpression(node) || ts.isTemplateExpression(node)) {
       const value = constantString(node as ts.Expression)
       if (value !== undefined && forbidden.some((name) => value.includes(name))) dangerous += 1
     }
     if (ts.isIdentifier(node) && node.text === producerName) producerReferences += 1
+    if (ts.isVariableDeclaration(node) && !ts.isIdentifier(node.name) && node.initializer !== undefined &&
+        sensitiveComputedBase(node.initializer)) dangerous += 1
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.expression.getText(sourceFile) === "Reflect") dangerous += 1
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
         node.expression.text === producerName) producerCalls += 1
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
@@ -218,10 +275,19 @@ const authenticateCommittedReview = (root: string): void => {
 }
 
 const derive = (root: string): V138PathStableCustody => {
-  const custody = deriveV138PathStableCustody(root, {
+  const importedCustody = deriveV138PathStableCustody(root, {
     sourceCommit: SUBJECT_COMMIT,
     checkoutPaths: CHECKOUT_PATHS,
   })
+  const native = computeV138Plan130RootRelativeNativeCustodyForReview(root)
+  const localBody = {
+    reviewedClosureRoot: importedCustody.reviewedClosureRoot,
+    localInstalledClosureRoot: importedCustody.localInstalledClosureRoot,
+    localGitObjectRoot: importedCustody.localGitObjectRoot,
+    localNativeSourcesRoot: native.root,
+  }
+  const custody = Object.freeze({ ...importedCustody, ...localBody,
+    localExecutionClosureRoot: computeV138PathStableLocalExecutionClosureRoot(localBody) })
   checkV138PathStableCustodyForReview(custody, custody)
   return custody
 }
@@ -300,10 +366,7 @@ export const executeV138Plan130DisposableCustodyForReview = (rootInput: string) 
       git(root, ["worktree", "add", "--quiet", "--detach", linked, SUBJECT_COMMIT])
       added = true
       linkDependencies(root, linked)
-      const disposable = deriveV138PathStableCustody(linked, {
-        sourceCommit: SUBJECT_COMMIT,
-        checkoutPaths: CHECKOUT_PATHS,
-      })
+      const disposable = derive(linked)
       checkV138PathStableCustodyForReview(disposable, disposable)
       if (disposable.reviewedClosureRoot !== canonicalBefore.reviewedClosureRoot)
         fail(`V138_PLAN130_DISPOSABLE_PORTABLE_CUSTODY_INVALID:${mode}`)
@@ -321,6 +384,8 @@ export const executeV138Plan130DisposableCustodyForReview = (rootInput: string) 
         disposableLocalInstalledClosureRoot: disposable.localInstalledClosureRoot,
         disposableLocalGitObjectRoot: disposable.localGitObjectRoot,
         disposableLocalNativeSourcesRoot: disposable.localNativeSourcesRoot,
+        disposableLocalNativeSourcePaths:
+          computeV138Plan130RootRelativeNativeCustodyForReview(linked).paths,
         disposableLocalExecutionClosureRoot: localExecution })
       observations.push(Object.freeze({ ...body,
         observationRoot: rooted("v138-plan-262-130-mode-observation-v4", body) }))

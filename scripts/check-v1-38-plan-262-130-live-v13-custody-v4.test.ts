@@ -48,6 +48,10 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       expect(observation.disposableLocalInstalledClosureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(observation.disposableLocalGitObjectRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(observation.disposableLocalNativeSourcesRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(observation.disposableLocalNativeSourcesRoot)
+        .not.toBe(result.canonicalBefore.localNativeSourcesRoot)
+      expect(observation.disposableLocalNativeSourcePaths.every((entry) =>
+        entry.includes("/v138-plan130-mode-") && !entry.startsWith(`${ROOT}/`))).toBe(true)
       expect(observation.disposableLocalExecutionClosureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(observation.observationRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(observation.producerGuardCount).toBe(0)
