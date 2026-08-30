@@ -1,4 +1,4 @@
-import { lstatSync } from "node:fs"
+import { lstatSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
@@ -12,6 +12,16 @@ import {
 const repoRoot = path.resolve(import.meta.dirname, "..")
 
 describe("Plan 262-114 independent live-v10 custody review", () => {
+  it("owns source-separated custody without Plan-113 derivation or root helpers", () => {
+    const source = readFileSync(path.join(
+      repoRoot,
+      "scripts/check-v1-38-plan-262-114-live-v10-custody-v1.ts",
+    ), "utf8")
+    expect(source).not.toMatch(/import\s*\{[^}]*deriveV138PathStableCustody/)
+    expect(source).not.toMatch(/deriveV138PathStableCustody\s*\(/)
+    expect(source).not.toContain("computeV138PathStable")
+  })
+
   it("pins the final Plan-113 closure and executes all six real disposable modes", () => {
     expect(PLAN_114_REVIEWED_SOURCE_COMMIT).toBe(
       "ba1f8ddb4d701762d5d443f41edcbb691bb0eda5",

@@ -14,9 +14,9 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
-  deriveV138PathStableCustody,
-  type V138PathStableCustody,
-} from "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
+  deriveV138Plan114IndependentCustody,
+  type V138Plan114IndependentCustody,
+} from "./lib/v1-38-plan-262-114-independent-custody-v2.js"
 import {
   runV138RetryV3IsolatedGit,
   runV138RetryV3IsolatedGitBytes,
@@ -244,7 +244,7 @@ const inspectProtectedHistory = (root: string): Sha => {
 }
 
 const foundationCache = new Map<string, Readonly<{
-  closure: V138PathStableCustody
+  closure: V138Plan114IndependentCustody
   expandedProtectedHistoryRoot: Sha
 }>>()
 const authenticateFoundationUncached = (root: string) => {
@@ -255,7 +255,7 @@ const authenticateFoundationUncached = (root: string) => {
       git(root, ["rev-parse", `${PLAN_113_EVIDENCE_COMMIT}^`]) !== PLAN_114_REVIEWED_SOURCE_COMMIT ||
       git(root, ["rev-parse", `${PLAN_113_FINAL_REVIEW_COMMIT}^`]) !== PLAN_113_EVIDENCE_COMMIT)
     fail("V138_PLAN114_PLAN113_IDENTITY_INVALID")
-  const closure = deriveV138PathStableCustody(root, {
+  const closure = deriveV138Plan114IndependentCustody(root, {
     sourceCommit: PLAN_114_REVIEWED_SOURCE_COMMIT,
     checkoutPaths: SOURCE_PATHS,
   })
@@ -342,7 +342,7 @@ const carrierRoot = (body: Json): Sha => rooted("v138-plan-262-114-live-v10-cust
 const supplementRoot = (body: Json): Sha => rooted("v138-successor-source-seal-v13-executable-custody-supplement-v3", body)
 
 const renderContracts = (input: {
-  closure: V138PathStableCustody
+  closure: V138Plan114IndependentCustody
   linkedLocalExecutionClosureRoot: Sha
   findings: readonly V138Plan114Finding[]
   actualModesPassed: number
@@ -450,9 +450,10 @@ const renderContracts = (input: {
 const modeObservation = (mode: string, status: string, value: unknown) => Object.freeze({
   mode, status, root: rooted("v138-plan-262-114-mode-observation-v1", value),
 })
+const reviewedToolchainPath = (): string => `${path.dirname(process.execPath)}:/usr/bin:/bin`
 const run = (executable: string, args: readonly string[], cwd: string, isolatedHome: string): string =>
   execFileSync(executable, [...args], {
-    cwd, encoding: "utf8", env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: isolatedHome, LANG: "C", LC_ALL: "C" },
+    cwd, encoding: "utf8", env: { PATH: reviewedToolchainPath(), HOME: isolatedHome, LANG: "C", LC_ALL: "C" },
     stdio: ["ignore", "pipe", "pipe"],
   }).trim()
 const linkDependencies = (sourceRoot: string, linkedRoot: string): void => {
@@ -495,7 +496,7 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
     const parseCli = (mode: string, expectedStatus: string, code: string) => {
       const result = spawnSync(tsx, [PATHS.live, mode], {
         cwd: linked, encoding: "utf8",
-        env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: owner, LANG: "C", LC_ALL: "C" },
+        env: { PATH: reviewedToolchainPath(), HOME: owner, LANG: "C", LC_ALL: "C" },
         stdio: ["ignore", "pipe", "pipe"],
       })
       if (result.error !== undefined || result.status === null)
@@ -520,10 +521,10 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
     }
     parseCli("--check-source-only", "source_only_checked", "MODE_SOURCE_ONLY_FAILED")
     const linkedFoundation = authenticateFoundation(linked)
-    const closureRunner = path.join(linked, ".plan114-closure-runner.ts")
-    writeFileSync(closureRunner, `import { deriveV138PathStableCustody } from './scripts/lib/v1-38-bounded-retry-v3-path-stable-custody-v1.ts'; const value=deriveV138PathStableCustody(process.cwd(),{sourceCommit:${JSON.stringify(PLAN_114_REVIEWED_SOURCE_COMMIT)},checkoutPaths:${JSON.stringify(SOURCE_PATHS)}}); process.stdout.write(JSON.stringify(value));`, { mode: 0o600 })
-    const linkedClosure = JSON.parse(run(tsx, [closureRunner], linked, owner)) as V138PathStableCustody
-    rmSync(closureRunner, { force: true })
+    const linkedClosure = deriveV138Plan114IndependentCustody(linked, {
+      sourceCommit: PLAN_114_REVIEWED_SOURCE_COMMIT,
+      checkoutPaths: SOURCE_PATHS,
+    })
     if (linkedClosure.reviewedClosureRoot !== foundation.closure.reviewedClosureRoot ||
         linkedClosure.localExecutionClosureRoot === foundation.closure.localExecutionClosureRoot)
       fail("V138_PLAN114_LINKED_CLOSURE_INVALID")
