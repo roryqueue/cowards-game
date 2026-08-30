@@ -186,3 +186,9 @@ None.
 - Commits `383243e4` and `3366f1a0` close the two follow-up blockers: the real writer now transports classified foundation findings into deterministic blocked evidence, and a published v2 is authoritative with exact three-path fail-closed custody.
 - Tests mutate the actual foundation input and each actual v2 path. Classified defects authenticate as blocked; unclassified integrity produces no publication; partial, missing, symlinked, executable, and byte-drifted v2 never fall back to v1.
 - The v2 trio at `34bc94ec` is unchanged byte-for-byte. V1 is immutable history only, and no new publication, supplement, readiness, live, or downstream artifact was created.
+
+## Additive Final Semantic Blocker Closure (2026-08-30)
+
+- Commit `1314e24b` distinguishes a deterministic subject rejection of an independently valid value fixture from subprocess, import/evaluation, parse, shape, and fixture-integrity failures.
+- Real writer/auth testing proves subject rejection becomes stable mode-specific blocked evidence with Plan-109 eligibility false; process-integrity failures remain no-publication.
+- The authoritative v2 trio at `34bc94ec` remains unchanged and still authenticates with its original zero-finding 6/6 verdict. No new publication or effect artifact was created.

@@ -1,10 +1,10 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-30T01:37:40Z
-review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-FIX-REVIEW.md
-iteration: 2
-findings_in_scope: 2
-fixed: 2
+fixed_at: 2026-08-30T01:59:59Z
+review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-FINAL-REVIEW.md
+iteration: 3
+findings_in_scope: 1
+fixed: 1
 skipped: 0
 status: all_fixed
 ---
@@ -89,3 +89,23 @@ Both blockers in `262-114-REVIEW-FIX-REVIEW.md` are fixed. The published v2 payl
 _Fixed: 2026-08-30T01:37:40Z_
 _Fixer: the agent (gsd-code-fixer)_
 _Iteration: 2_
+
+## Additive Final-review Closure — Iteration 3
+
+### CR-01: Subject semantic rejection still aborts instead of producing blocked evidence
+
+**Files modified:** `scripts/check-v1-38-plan-262-114-live-v10-custody-v1.ts`, `scripts/check-v1-38-plan-262-114-live-v10-custody-v1.test.ts`
+**Commit:** `1314e24b`
+**Applied fix:** Value runners now emit a validated structured observation after successful module import: either a subject value or a deterministic subject rejection. Because each fixture is independently derived before subject execution, rejection becomes its mode-specific critical finding and blocked evidence. Import/evaluation, subprocess, JSON, shape, and independent-fixture failures remain process-integrity exceptions that publish nothing. Classified source drift executes in its disposable checkout while reviewed custody is derived separately from the pinned clean base.
+
+## Iteration 3 Verification
+
+- A committed real subject implementation rejected independently valid post-run fixtures. The real writer emitted stable `MODE_NON_PASS_FAILED` and `MODE_SUCCESS_FAILED` findings with eligibility false, and the exact output trio authenticated in a clean fixture.
+- The canonical v2 trio remains byte-for-byte identical to publication `34bc94ec`; read-only authentication still returns its original zero findings, 6/6 modes, and Plan-109-only eligibility.
+- TypeScript and `git diff --check` passed. No supplement, readiness, producer, live, or downstream output was created.
+
+---
+
+_Fixed: 2026-08-30T01:59:59Z_
+_Fixer: the agent (gsd-code-fixer)_
+_Iteration: 3_
