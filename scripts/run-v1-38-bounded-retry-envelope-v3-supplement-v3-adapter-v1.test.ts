@@ -21,6 +21,8 @@ const repoRoot = path.resolve(import.meta.dirname, "..")
 const supplementPath = ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json"
 const v2PayloadPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json"
 const effectPath = ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json"
+const finalReviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-FINAL-CLEAN-REVIEW.md"
+const pairPath = ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json"
 const git = (root: string, args: readonly string[]): string => execFileSync(
   "/usr/bin/git",
   ["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgSign=false", ...args],
@@ -143,8 +145,21 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
     withWorktree((root) => {
       writeV138SupplementV3ForReview(root)
       commitSupplement(root)
+      const canonicalBytes = readFileSync(path.join(root, supplementPath))
       writeFileSync(path.join(root, supplementPath), "{}\n")
       expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/CURRENT_BYTES_INVALID/)
+      rmSync(path.join(root, supplementPath))
+      symlinkSync("/definitely/missing/supplement-v3.json", path.join(root, supplementPath))
+      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/FILE_UNSAFE/)
+      rmSync(path.join(root, supplementPath))
+      writeFileSync(path.join(root, supplementPath), canonicalBytes)
+      writeFileSync(path.join(root, supplementPath), `${canonicalBytes.toString("utf8").trim()} \n`)
+      git(root, ["add", supplementPath])
+      git(root, ["commit", "-m", "test: rewrite supplement v3"])
+      writeFileSync(path.join(root, supplementPath), canonicalBytes)
+      git(root, ["add", supplementPath])
+      git(root, ["commit", "-m", "test: restore supplement v3 bytes"])
+      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/SUCCESSOR_REWRITE/)
     })
     withWorktree((root) => {
       writeV138SupplementV3ForReview(root)
@@ -171,6 +186,19 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       writeFileSync(path.join(root, effectPath), "{}\n")
       expect(() => writeV138SupplementV3ForReview(root)).toThrow(/FORBIDDEN_PRESENT/)
       expect(() => readFileSync(path.join(root, supplementPath))).toThrow()
+    })
+  }, 180_000)
+
+  it("rejects authoritative-v2, final-clean, and sealed-pair current-byte mutations", () => {
+    withWorktree((root) => {
+      for (const repoPath of [v2PayloadPath, finalReviewPath, pairPath]) {
+        const absolute = path.join(root, repoPath)
+        const original = readFileSync(absolute)
+        writeFileSync(absolute, Buffer.concat([original, Buffer.from("mutation\n")]))
+        expect(() => checkV138SupplementV3AdapterSourceOnly(root)).toThrow(/CURRENT_BYTES_INVALID/)
+        writeFileSync(absolute, original)
+      }
+      expect(checkV138SupplementV3AdapterSourceOnly(root).status).toBe("source_only_checked")
     })
   }, 180_000)
 })

@@ -1,5 +1,15 @@
 import { createHash } from "node:crypto"
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
+import {
+  closeSync,
+  constants,
+  fchmodSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
@@ -335,12 +345,87 @@ export const checkV138SupplementV3AdapterSourceOnly = (root: string) => {
   })
 }
 
+const supplementProjection = (status: "supplement_v3_written" | "supplement_v3_committed_checked") => ({
+  status,
+  supplementRoot: renderSupplement().supplementRoot,
+  plan109Eligible: true as const,
+  envelopeStatus: "sealed_inactive" as const,
+  counters: ZERO_COUNTERS,
+  createsEnvelope: false as const,
+  createsCapacity: false as const,
+  resetsCounters: false as const,
+  authorizesExecution: false as const,
+  liveInvoked: false as const,
+  freshCharged: 0 as const,
+  freshAccepted: 0 as const,
+  downstreamAuthority: "denied" as const,
+})
+
+const assertSafeWriteParents = (root: string): void => {
+  for (const repoPath of [".planning", ".planning/artifacts"]) {
+    const record = lstatSync(target(root, repoPath))
+    if (!record.isDirectory() || record.isSymbolicLink())
+      fail(`V138_SUPPLEMENT_ADAPTER_PARENT_UNSAFE:${repoPath}`)
+  }
+}
+
+export const writeV138SupplementV3ForReview = (rootInput: string) => {
+  const root = path.resolve(rootInput)
+  const checked = authenticateUpstream(root, false)
+  assertSafeWriteParents(root)
+  const absolute = target(root, PATHS.supplement3)
+  const canonicalBytes = canonical(checked.supplement)
+  let fd: number | undefined
+  let created = false
+  try {
+    fd = openSync(absolute, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
+    created = true
+    fchmodSync(fd, 0o644)
+    writeFileSync(fd, canonicalBytes)
+    closeSync(fd)
+    fd = undefined
+  } catch (error) {
+    if (fd !== undefined) closeSync(fd)
+    if (created) {
+      try { unlinkSync(absolute) } catch { /* path did not survive the failed exclusive write */ }
+    }
+    throw error
+  }
+  return Object.freeze({ ...supplementProjection("supplement_v3_written"), canonicalBytes })
+}
+
+export const checkV138CommittedSupplementV3ForReview = (rootInput: string) => {
+  const root = path.resolve(rootInput)
+  const checked = authenticateUpstream(root, true)
+  const additions = git(root, ["log", "--format=%H", "--diff-filter=A", "--", PATHS.supplement3])
+    .split("\n").filter(Boolean)
+  if (additions.length !== 1) fail("V138_SUPPLEMENT_ADAPTER_PUBLICATION_COMMIT_INVALID")
+  const publicationCommit = additions[0]!
+  exactPublication(root, publicationCommit, [PATHS.supplement3])
+  const publication = committed(root, publicationCommit, PATHS.supplement3)
+  const parsed = JSON.parse(publication.bytes.toString("utf8")) as Json
+  const expected = canonical(checked.supplement)
+  if (!publication.bytes.equals(Buffer.from(canonical(parsed))) ||
+      !publication.bytes.equals(Buffer.from(expected)))
+    fail("V138_SUPPLEMENT_ADAPTER_SUPPLEMENT_INVALID")
+  return Object.freeze({
+    ...supplementProjection("supplement_v3_committed_checked"),
+    publicationCommit,
+    publicationBlob: publication.blob,
+    publicationSha256: publication.sha256,
+  })
+}
+
 const execute = (args: readonly string[]): void => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
   if (args.length !== 1 || !V138_SUPPLEMENT_V3_ADAPTER_SELECTORS.includes(args[0] as never))
     fail("V138_SUPPLEMENT_ADAPTER_ARGUMENTS_INVALID")
-  if (args[0] !== "--check-source-only") fail("V138_SUPPLEMENT_ADAPTER_SELECTOR_NOT_IMPLEMENTED")
-  process.stdout.write(`${JSON.stringify(checkV138SupplementV3AdapterSourceOnly(root))}\n`)
+  const result = args[0] === "--check-source-only"
+    ? checkV138SupplementV3AdapterSourceOnly(root)
+    : args[0] === "--write-supplement-v3"
+      ? writeV138SupplementV3ForReview(root)
+      : checkV138CommittedSupplementV3ForReview(root)
+  process.stdout.write(`${JSON.stringify(result)}\n`)
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
