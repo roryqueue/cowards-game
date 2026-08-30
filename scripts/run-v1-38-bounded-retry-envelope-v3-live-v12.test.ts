@@ -431,6 +431,14 @@ describe("Plan 262-119 allowed live-v12 successor", () => {
           symlinkSync(path.join(repoRoot, packagePath, "node_modules"), destination, "dir")
       }
       const marker = path.join(path.dirname(root), "producer-called")
+      const reviewedTestPath = path.join(root, V138_LIVE_V12_PATHS.tests)
+      writeFileSync(
+        reviewedTestPath,
+        Buffer.concat([
+          readFileSync(reviewedTestPath),
+          Buffer.from("\n// Plan 262-119 disposable tripwire subject.\n"),
+        ]),
+      )
       const producerPath = path.join(root, "scripts/run-v1-38-bounded-retry-envelope-v3.ts")
       const producer = readFileSync(producerPath, "utf8")
       const instrumented = producer.replace(
