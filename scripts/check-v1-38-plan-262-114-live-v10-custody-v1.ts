@@ -69,6 +69,7 @@ export const PLAN_114_REVIEWED_SOURCE_COMMIT =
 const SOURCE_TREE = "0a35c771e145b9feee43d696dbb1b6ae10c42b9c"
 const SOURCE_PARENT = "e0215b7738ab44bdd4a8f536cc53ee71008989f9"
 const REVIEWED_CLOSURE_ROOT = "sha256:8929dd2d2d8c9c72c293a7b9e41e722ef274a1296160e877685ce0956969b852"
+const PLAN_114_CLEAN_EXECUTION_BASE = "37afce3445896a3f059ce06c22713f887da59b79"
 const PLAN_113_EVIDENCE_COMMIT = "675effe681fb1ba4d16ba399104c45df98230d12"
 const PLAN_113_FINAL_REVIEW_COMMIT = "28488fd43585f9f6fbfcd80dff2a388e4f754817"
 const CORRECTED_PUBLICATION_COMMIT = "2639ff3b42e2a238919a3104c9fa8c785c69b93d"
@@ -585,7 +586,9 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
   }
   const owner = mkdtempSync(path.join(tmpdir(), "v138-plan114-"))
   const linked = path.join(owner, "repo")
+  const custodyLinked = path.join(owner, "custody")
   let worktreeAdded = false
+  let custodyWorktreeAdded = false
   try {
     run("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", linked, disposableBase], repoRoot, owner)
     worktreeAdded = true
@@ -620,8 +623,21 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
       return value
     }
     parseCli("--check-source-only", "source_only_checked", "MODE_SOURCE_ONLY_FAILED")
-    const linkedFoundation = authenticateFoundation(linked)
-    const linkedClosure = deriveV138Plan114IndependentCustody(linked, {
+    const linkedObservation = observeV138Plan114FoundationForReview(linked)
+    for (const finding of linkedObservation.findings) {
+      if (!findings.some(({ code, detail }) => code === finding.code && detail === finding.detail))
+        findings.push(finding)
+    }
+    let custodyRoot = linked
+    if (linkedObservation.foundation === undefined) {
+      run("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", custodyLinked,
+        PLAN_114_CLEAN_EXECUTION_BASE], repoRoot, owner)
+      custodyWorktreeAdded = true
+      linkDependencies(repoRoot, custodyLinked)
+      custodyRoot = custodyLinked
+    }
+    const linkedFoundation = linkedObservation.foundation ?? authenticateFoundation(custodyRoot)
+    const linkedClosure = deriveV138Plan114IndependentCustody(custodyRoot, {
       sourceCommit: PLAN_114_REVIEWED_SOURCE_COMMIT,
       checkoutPaths: SOURCE_PATHS,
     })
@@ -657,18 +673,41 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
     parseCli("--check-post-run-custody", "post_run_custody_checked", "MODE_POST_NO_EFFECT_FAILED")
 
     const runnerPath = path.join(linked, ".plan114-mode-runner.ts")
-    const runValue = (expression: string): Json => {
+    type ValueObservation =
+      | Readonly<{ kind: "value"; value: Json }>
+      | Readonly<{ kind: "subject_rejection"; detail: string }>
+    const runValue = (expression: string): ValueObservation => {
       writeFileSync(runnerPath,
-        `import * as subject from './scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts'; const value=${expression}; process.stdout.write(JSON.stringify(value));`,
+        `import * as subject from './scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts'; try { const value=${expression}; process.stdout.write(JSON.stringify({kind:'value',value})); } catch (error) { const detail=error instanceof Error ? error.name+':'+error.message : String(error); process.stdout.write(JSON.stringify({kind:'subject_rejection',detail})); }`,
         { mode: 0o600 })
-      let value: Json
-      try { value = JSON.parse(run(tsx, [runnerPath], linked, owner)) as Json }
-      catch { fail("V138_PLAN114_VALUE_MODE_PROCESS_INTEGRITY") }
+      const result = spawnSync(tsx, [runnerPath], {
+        cwd: linked, encoding: "utf8",
+        env: { PATH: reviewedToolchainPath(), HOME: owner, LANG: "C", LC_ALL: "C" },
+        stdio: ["ignore", "pipe", "pipe"],
+      })
       rmSync(runnerPath, { force: true })
-      return value
+      if (result.error !== undefined || result.status !== 0)
+        fail("V138_PLAN114_VALUE_MODE_PROCESS_INTEGRITY:runner")
+      let observation: unknown
+      try { observation = JSON.parse(result.stdout.trim()) }
+      catch { fail("V138_PLAN114_VALUE_MODE_PROCESS_INTEGRITY:json") }
+      if (typeof observation !== "object" || observation === null)
+        fail("V138_PLAN114_VALUE_MODE_PROCESS_INTEGRITY:shape")
+      const candidate = observation as Record<string, unknown>
+      if (candidate.kind === "subject_rejection" && typeof candidate.detail === "string")
+        return Object.freeze({ kind: "subject_rejection", detail: candidate.detail })
+      if (candidate.kind === "value" && typeof candidate.value === "object" && candidate.value !== null)
+        return Object.freeze({ kind: "value", value: candidate.value as Json })
+      fail("V138_PLAN114_VALUE_MODE_PROCESS_INTEGRITY:shape")
     }
     const valueMode = (mode: string, expression: string, expected: Json, code: string) => {
-      const value = runValue(expression)
+      const result = runValue(expression)
+      if (result.kind === "subject_rejection") {
+        findings.push({ code, severity: "critical", detail: result.detail })
+        observations.push(modeObservation(mode, "failed", { subjectRejection: result.detail }))
+        return
+      }
+      const value = result.value
       if (canonical(value) !== canonical(expected))
         findings.push({ code, severity: "critical", detail: canonical(value).trim() })
       observations.push(modeObservation(mode, canonical(value) === canonical(expected) ? expected.status : "failed", value))
@@ -717,13 +756,9 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
         reproductionPresent: true, downstreamAuthority: "denied" },
     }
     const expectedReproduction = deriveV138Plan114IndependentReproductionSemantics(reproductionFixture)
-    const reproduction = runValue(
+    valueMode("exact_reproduction_value",
       `subject.checkV138LiveV10ReproductionV17ForReview(${JSON.stringify(reproductionFixture)})`,
-    )
-    if (canonical(reproduction) !== canonical(expectedReproduction))
-      findings.push({ code: "MODE_EXACT_REPRODUCTION_FAILED", severity: "critical", detail: canonical(reproduction).trim() })
-    observations.push(modeObservation("exact_reproduction_value",
-      canonical(reproduction) === canonical(expectedReproduction) ? "exact_reproduction" : "failed", reproduction))
+      expectedReproduction, "MODE_EXACT_REPRODUCTION_FAILED")
     const modeNames = ["source_only_cli", "prospective_custody_cli", "post_no_effect_cli",
       "post_non_pass_value", "post_success_value", "exact_reproduction_value"] as const
     const normalized = observations.map((item, index) => ({ ...item, mode: modeNames[index]! }))
@@ -752,6 +787,10 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
       reviewedCustody: linkedClosure,
     })
   } finally {
+    if (custodyWorktreeAdded) {
+      try { run("/usr/bin/git", ["worktree", "remove", "--force", custodyLinked], repoRoot, owner) }
+      catch { /* preserve the primary observation result */ }
+    }
     if (worktreeAdded) {
       try { run("/usr/bin/git", ["worktree", "remove", "--force", linked], repoRoot, owner) }
       catch { /* preserve the primary observation result */ }

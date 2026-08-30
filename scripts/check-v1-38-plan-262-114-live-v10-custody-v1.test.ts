@@ -213,6 +213,61 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
     }
   })
 
+  it("publishes and authenticates a mode finding for real deterministic subject rejection", () => {
+    withLinkedWorktreeAt("dfeb17bc", (root) => {
+      const subjectPath = path.join(root, "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts")
+      const original = readFileSync(subjectPath, "utf8")
+      const alias = `export const checkV138LiveV10PostRunOutputCustodyForReview =\n  checkV138LiveV9PostRunOutputCustodyForReview`
+      const rejecting = `export const checkV138LiveV10PostRunOutputCustodyForReview =\n  (..._args: Parameters<typeof checkV138LiveV9PostRunOutputCustodyForReview>) => {\n    throw new Error("deterministic fixture rejection")\n  }`
+      expect(original).toContain(alias)
+      writeFileSync(subjectPath, original.replace(alias, rejecting))
+      const historicalV1 = [
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v1.json",
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW.md",
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v1.json",
+      ]
+      for (const repoPath of historicalV1) rmSync(path.join(root, repoPath))
+      execFileSync("/usr/bin/git", ["add", "--", path.relative(root, subjectPath), ...historicalV1], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "--quiet", "-m", "fixture deterministic semantic rejection"], { cwd: root })
+
+      writeV138Plan114CorrectedReviewForReview(root)
+      const payloadPath = path.join(
+        root,
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
+      )
+      const reviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-v2.md"
+      const carrierPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json"
+      const payload = JSON.parse(readFileSync(payloadPath, "utf8")) as Record<string, any>
+      expect(payload.findingCodes).toContain("MODE_NON_PASS_FAILED")
+      expect(payload.findingCodes).toContain("MODE_SUCCESS_FAILED")
+      expect(payload.findings).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "MODE_NON_PASS_FAILED", detail: "Error:deterministic fixture rejection" }),
+        expect.objectContaining({ code: "MODE_SUCCESS_FAILED", detail: "Error:deterministic fixture rejection" }),
+      ]))
+      expect(payload).toMatchObject({ reviewStatus: "blocked", plan109Eligible: false })
+      expect(payload.actualModesPassed).toBeLessThan(6)
+
+      const rendered = new Map([
+        [path.relative(root, payloadPath), readFileSync(payloadPath)],
+        [reviewPath, readFileSync(path.join(root, reviewPath))],
+        [carrierPath, readFileSync(path.join(root, carrierPath))],
+      ])
+      withLinkedWorktreeAt("dfeb17bc", (authRoot) => {
+        for (const [repoPath, bytes] of rendered) writeFileSync(path.join(authRoot, repoPath), bytes)
+        execFileSync("/usr/bin/git", ["add", "--", ...rendered.keys()], { cwd: authRoot })
+        execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+          "commit", "--quiet", "-m", "fixture semantic rejection blocked v2"], { cwd: authRoot })
+        expect(authenticateV138Plan114PublishedReview(authRoot)).toMatchObject({
+          evidenceVersion: 2,
+          findingCount: payload.findingCount,
+          actualModesPassed: payload.actualModesPassed,
+          plan109Eligible: false,
+        })
+      })
+    })
+  }, 300_000)
+
   it("re-authenticates current custody after the observation window", () => {
     const repoPath = "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts"
     const absolute = path.join(repoRoot, repoPath)
