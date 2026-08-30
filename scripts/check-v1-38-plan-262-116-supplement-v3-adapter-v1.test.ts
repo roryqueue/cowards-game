@@ -22,6 +22,11 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const phase = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const reviewPaths = [
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v3.json",
+  `${phase}/262-116-REVIEW-v3.md`,
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v3.json",
+] as const
+const v2ReviewPaths = [
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v2.json",
   `${phase}/262-116-REVIEW-v2.md`,
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v2.json",
@@ -31,7 +36,7 @@ const v1ReviewPaths = [
   `${phase}/262-116-REVIEW.md`,
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1.json",
 ] as const
-const transactionPath = ".planning/.v138-plan116-review-v2-transaction.json"
+const transactionPath = ".planning/.v138-plan116-review-v3-transaction.json"
 const adapterPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts"
 const adapterTestPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts"
 const nativePath = "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c"
@@ -61,6 +66,12 @@ const withReviewWorktree = <T>(run: (root: string) => T): T => {
     if (added) execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot })
     rmSync(owner, { recursive: true, force: true })
   }
+}
+const commitReview = (root: string): void => {
+  execFileSync("/usr/bin/git", ["add", "--", ...reviewPaths], { cwd: root })
+  execFileSync("/usr/bin/git", ["-c", "user.name=Plan 116 Test",
+    "-c", "user.email=plan116@example.invalid", "commit", "--quiet", "-m", "review fixture"],
+  { cwd: root })
 }
 
 describe("Plan 262-116 independent supplement-v3 adapter review", () => {
@@ -238,8 +249,9 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     )).toThrow(/PROCESS_INTEGRITY/)
   })
 
-  it("authenticates only an exact committed trio and every no-effect sentinel", () => {
+  it("authenticates current zero evidence only after a fresh deterministic replay", () => {
     expect(reviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
+    expect(v2ReviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
     expect(v1ReviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
     const checked = authenticateV138Plan116PublishedReview(repoRoot)
     expect(checked).toMatchObject({
@@ -254,10 +266,45 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       freshAccepted: 0,
       downstreamAuthority: "denied",
       supersededV1Plan109Eligible: false,
+      reviewStatus: "zero_findings",
+      currentCustody: "clean_replayed",
       supersedesPublicationCommit: "e1e75fc6ef177a8213d903f1ec365d86f37cf62a",
     })
     expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/)
     for (const repoPath of effectPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
+  }, 300_000)
+
+  it("authenticates committed blocked evidence after its recorded drift is repaired", () => {
+    withReviewWorktree((root) => {
+      const target = path.join(root,
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json")
+      const mode = lstatSync(target).mode & 0o7777
+      chmodSync(target, 0o600)
+      writeV138Plan116ReviewForReview(root)
+      commitReview(root)
+      chmodSync(target, mode)
+      expect(authenticateV138Plan116PublishedReview(root)).toMatchObject({
+        reviewStatus: "blocked",
+        currentCustody: "repaired_clean",
+        findingCount: 1,
+        plan109Eligible: false,
+      })
+    })
+  }, 300_000)
+
+  it("fails closed while current custody drift persists beside blocked evidence", () => {
+    withReviewWorktree((root) => {
+      const target = path.join(root,
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json")
+      const mode = lstatSync(target).mode & 0o7777
+      try {
+        chmodSync(target, 0o600)
+        writeV138Plan116ReviewForReview(root)
+        commitReview(root)
+        expect(() => authenticateV138Plan116PublishedReview(root))
+          .toThrow(/V138_PLAN116_BLOCKED_CURRENT_DRIFT/)
+      } finally { chmodSync(target, mode) }
+    })
   }, 300_000)
 
   it("contains no import of subject acceptance decisions or live/readiness execution surface", () => {
