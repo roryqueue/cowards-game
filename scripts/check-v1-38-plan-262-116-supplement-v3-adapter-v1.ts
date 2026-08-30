@@ -1010,6 +1010,8 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
   assertAbsent(root, [PATHS.supplement1, PATHS.supplement2, PATHS.supplement3, ...EFFECT_PATHS])
   return Object.freeze({
     publicationCommit,
+    supersedesPublicationCommit: V1_PUBLICATION_COMMIT,
+    supersededV1Plan109Eligible: false as const,
     payloadRoot: payload.payloadRoot,
     reviewRoot: carrier.reviewRoot,
     carrierRoot: carrier.carrierRoot,

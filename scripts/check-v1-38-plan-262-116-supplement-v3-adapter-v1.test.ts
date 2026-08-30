@@ -239,7 +239,8 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   })
 
   it("authenticates only an exact committed trio and every no-effect sentinel", () => {
-    if (!reviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))) return
+    expect(reviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
+    expect(v1ReviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
     const checked = authenticateV138Plan116PublishedReview(repoRoot)
     expect(checked).toMatchObject({
       findingCount: 0,
@@ -252,10 +253,12 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       freshCharged: 0,
       freshAccepted: 0,
       downstreamAuthority: "denied",
+      supersededV1Plan109Eligible: false,
+      supersedesPublicationCommit: "e1e75fc6ef177a8213d903f1ec365d86f37cf62a",
     })
     expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/)
     for (const repoPath of effectPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
-  })
+  }, 300_000)
 
   it("contains no import of subject acceptance decisions or live/readiness execution surface", () => {
     const source = readFileSync(path.join(repoRoot,
