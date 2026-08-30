@@ -50,13 +50,14 @@ const effectPaths = [
 ] as const
 let cachedModes: ReturnType<typeof executeV138Plan116DisposableModes> | undefined
 const actualModes = () => cachedModes ??= executeV138Plan116DisposableModes(repoRoot)
-const withReviewWorktree = <T>(run: (root: string) => T): T => {
+const withReviewWorktree = <T>(run: (root: string) => T,
+  ref = prepublicationSourceCommit): T => {
   const owner = mkdtempSync(path.join(tmpdir(), "v138-plan116-review-test-"))
   const root = path.join(owner, "repo")
   let added = false
   try {
     execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root,
-      prepublicationSourceCommit], { cwd: repoRoot })
+      ref], { cwd: repoRoot })
     added = true
     symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
     for (const repoPath of [
@@ -274,6 +275,22 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     })
     expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/)
     for (const repoPath of effectPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
+  }, 300_000)
+
+  it("authenticates zero evidence after unrelated post-publication commits", () => {
+    withReviewWorktree((root) => {
+      const unrelated = ".planning/plan116-unrelated-post-publication.md"
+      writeFileSync(path.join(root, unrelated), "unrelated documentation\n")
+      execFileSync("/usr/bin/git", ["add", "--", unrelated], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=Plan 116 Test",
+        "-c", "user.email=plan116@example.invalid", "commit", "--quiet", "-m",
+        "unrelated post-publication documentation"], { cwd: root })
+      expect(authenticateV138Plan116PublishedReview(root)).toMatchObject({
+        reviewStatus: "zero_findings",
+        currentCustody: "clean_replayed",
+        plan109Eligible: true,
+      })
+    }, "HEAD")
   }, 300_000)
 
   it("authenticates committed blocked evidence after its recorded drift is repaired", () => {
