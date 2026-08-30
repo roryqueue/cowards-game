@@ -783,15 +783,18 @@ const locatePublicationCommit = (root: string, payloadPath: string): string => {
 
 export const authenticateV138Plan114PublishedReview = (repoRootInput: string) => {
   const root = path.resolve(repoRootInput)
-  const foundation = authenticateFoundation(root)
   const v2Paths = [PATHS.payloadV2, PATHS.reviewV2, PATHS.carrierV2] as const
   const v1Paths = [PATHS.payload, PATHS.review, PATHS.carrier] as const
-  const paths = v2Paths.every((repoPath) => pathPresent(root, repoPath)) ? v2Paths : v1Paths
-  const version = paths === v2Paths ? 2 as const : 1 as const
+  const v2Published = git(root, ["log", "--diff-filter=A", "--format=%H", "--", PATHS.payloadV2]) !== ""
+  if (v2Published && !v2Paths.every((repoPath) => pathPresent(root, repoPath)))
+    fail("V138_PLAN114_PUBLICATION_V2_PARTIAL")
+  const paths = v2Published ? v2Paths : v1Paths
+  const version = v2Published ? 2 as const : 1 as const
   if (!paths.every((repoPath) => pathPresent(root, repoPath)))
     fail("V138_PLAN114_PUBLICATION_ABSENT")
   const commit = locatePublicationCommit(root, paths[0])
   assertExactPublication(root, commit, paths)
+  const foundation = authenticateFoundation(root)
   const payload = jsonAt(root, commit, paths[0])
   const carrier = jsonAt(root, commit, paths[2])
   const reviewBytes = gitBytes(root, commit, paths[1])
@@ -819,7 +822,7 @@ export const authenticateV138Plan114PublishedReview = (repoRootInput: string) =>
     evidenceVersion: version,
     findingCount: findings.length,
     actualModesPassed: payload.actualModesPassed,
-    plan109Eligible: exact.plan109Eligible,
+    plan109Eligible: version === 2 && exact.plan109Eligible,
     liveInvoked: false,
     freshCharged: 0,
     freshAccepted: 0,

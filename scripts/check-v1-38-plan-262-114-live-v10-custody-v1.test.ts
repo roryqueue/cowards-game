@@ -221,25 +221,62 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
     }
   }, 180_000)
 
-  it("rejects a current publication symlink even when its target has exact committed bytes", () => {
-    const payloadPath = path.join(
-      repoRoot,
-      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v1.json",
-    )
-    const bytes = readFileSync(payloadPath)
+  it("rejects unsafe type, mode, and bytes at every authoritative v2 path", () => {
+    const paths = [
+      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-v2.md",
+      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json",
+    ]
     const owner = mkdtempSync(path.join(tmpdir(), "v138-plan114-current-link-"))
-    const external = path.join(owner, "payload.json")
-    writeFileSync(external, bytes)
     try {
-      rmSync(payloadPath)
-      symlinkSync(external, payloadPath)
-      expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
-        "V138_PLAN114_PUBLICATION_CURRENT_TYPE_MODE_INVALID",
-      )
+      for (const [index, repoPath] of paths.entries()) {
+        const absolute = path.join(repoRoot, repoPath)
+        const bytes = readFileSync(absolute)
+        const external = path.join(owner, `exact-${index}`)
+        writeFileSync(external, bytes)
+        try {
+          rmSync(absolute)
+          symlinkSync(external, absolute)
+          expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
+            "V138_PLAN114_PUBLICATION_CURRENT_TYPE_MODE_INVALID",
+          )
+          rmSync(absolute)
+          writeFileSync(absolute, bytes, { mode: 0o644 })
+          chmodSync(absolute, 0o755)
+          expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
+            "V138_PLAN114_PUBLICATION_CURRENT_TYPE_MODE_INVALID",
+          )
+          chmodSync(absolute, 0o644)
+          writeFileSync(absolute, Buffer.concat([bytes, Buffer.from("\nmutation\n")]))
+          expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
+            "V138_PLAN114_PUBLICATION_BYTES_INVALID",
+          )
+        } finally {
+          rmSync(absolute, { force: true })
+          writeFileSync(absolute, bytes, { mode: 0o644 })
+        }
+      }
     } finally {
-      rmSync(payloadPath, { force: true })
-      writeFileSync(payloadPath, bytes, { mode: 0o644 })
       rmSync(owner, { recursive: true, force: true })
+    }
+  }, 180_000)
+
+  it("never falls back to v1 when any authoritative v2 path is missing", () => {
+    for (const repoPath of [
+      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-v2.md",
+      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json",
+    ]) {
+      const absolute = path.join(repoRoot, repoPath)
+      const bytes = readFileSync(absolute)
+      try {
+        rmSync(absolute)
+        expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
+          "V138_PLAN114_PUBLICATION_V2_PARTIAL",
+        )
+      } finally {
+        writeFileSync(absolute, bytes, { mode: 0o644 })
+      }
     }
   }, 180_000)
 
