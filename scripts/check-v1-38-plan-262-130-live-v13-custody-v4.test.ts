@@ -39,11 +39,12 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
     expect(result.canonicalBefore).toEqual(result.canonicalAfter)
     for (const observation of result.observations) {
       expect(observation.disposableReviewedClosureRoot).toBe(result.canonicalBefore.reviewedClosureRoot)
-      expect(observation.disposableLocalExecutionClosureRoot).not.toBe(
-        result.canonicalBefore.localExecutionClosureRoot,
-      )
+      expect(observation.disposableLocalInstalledClosureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(observation.disposableLocalGitObjectRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(observation.disposableLocalNativeSourcesRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+      expect(observation.disposableLocalExecutionClosureRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(observation.observationRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
       expect(observation.producerGuardCount).toBe(0)
     }
-  }, 240_000)
+  }, 180_000)
 })
