@@ -22,6 +22,11 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const phase = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const reviewPaths = [
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v4.json",
+  `${phase}/262-116-REVIEW-v4.md`,
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v4.json",
+] as const
+const v3ReviewPaths = [
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v3.json",
   `${phase}/262-116-REVIEW-v3.md`,
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v3.json",
@@ -36,8 +41,8 @@ const v1ReviewPaths = [
   `${phase}/262-116-REVIEW.md`,
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1.json",
 ] as const
-const transactionPath = ".planning/.v138-plan116-review-v3-transaction.json"
-const prepublicationSourceCommit = "e14de858"
+const transactionPath = ".planning/.v138-plan116-review-v4-transaction.json"
+const prepublicationSourceCommit = "9713e513"
 const adapterPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts"
 const adapterTestPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts"
 const nativePath = "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c"
@@ -254,6 +259,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
 
   it("authenticates current zero evidence only after a fresh deterministic replay", () => {
     expect(reviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
+    expect(v3ReviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
     expect(v2ReviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
     expect(v1ReviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))).toBe(true)
     const checked = authenticateV138Plan116PublishedReview(repoRoot)
@@ -271,7 +277,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       supersededV1Plan109Eligible: false,
       reviewStatus: "zero_findings",
       currentCustody: "clean_replayed",
-      supersedesPublicationCommit: "2219a36b62b41b45626ed93f13f43edb36463e61",
+      supersedesPublicationCommit: "1c0862e16ff4a32add4308e481df567b1212eb0c",
     })
     expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/)
     for (const repoPath of effectPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
