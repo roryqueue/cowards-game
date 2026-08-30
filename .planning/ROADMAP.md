@@ -50,9 +50,13 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 99/110 terminally truthful plan summaries complete; 11 active closeout plans remain
+**Plans:** 99/112 terminally truthful plan summaries complete; 13 active closeout plans remain
 
-**Current verdict:** CLOSEOUT DAG REPLANNED / PLAN-110 SOLE NEXT ACTION / EVERY AUTHORITY PUBLICATION REVIEW-GATED / FRESH 0/540 / DOWNSTREAM DENIED — Plan120 remains immutable process-invalid history and Plans121/122 remain unchanged completed source/review evidence. Revised Plan110 alone is eligible for the one-shot live-v13 boundary. Admission, lifecycle, final convergence, final eligibility, and later-HEAD authentication now occupy separate commits; no Phase263 work is eligible before Plan129 passes the exact branch.
+**Current verdict:** PLAN-122 V3 FALSE CLEAN / PLAN-130 SOLE NEXT ACTION / PLAN-110 INELIGIBLE / FRESH 0/540 / DOWNSTREAM DENIED — Committed adversarial review `73d1be605aa68a7789c53ce78b20f4922b8b7cec` found two blockers and two warnings: v3 substituted canonical-main custody for disposable measurement, accepted constructor-chain producer recovery, did not enforce strict later HEAD, and omitted exact b331 seven-path scope. The v3 source/trio/review/summary remain immutable process-invalid history. Plan130 must create a no-effect v4 source/test correction; Plan131 must independently review it and publish an additive v4 trio. Only strict-later-HEAD literal-zero v4 may make Plan110 eligible.
+
+<!-- phase-262-closeout-replan-status-v2: {"schema_version":"v1.38-phase-262-closeout-replan-v2","active_plans":112,"trustworthy_summaries":99,"incomplete_plans":["262-130","262-131","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-130","262-131","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-130":95,"262-131":96,"262-110":97,"262-94":98,"262-123":99,"262-124":100,"262-95":101,"262-125":102,"262-126":103,"262-106":104,"262-127":105,"262-128":106,"262-129":107},"plan122_code_review_commit":"73d1be605aa68a7789c53ce78b20f4922b8b7cec","plan122_code_review_blob":"4fc9c04dd5b249625d2d326786e53465dc838425","plan122_code_review_sha256":"f41d9871c7c5fea9f779ff26f8965c8f45fe16061a62ff8b8f033afb2f2f3b5d","plan122_v3_publication_commit":"65a7a246627a411c45ced95bfb3c0296f0f8e4eb","plan122_v3_disposition":"process_invalid_false_clean_custody","plan122_v3_eligible":false,"plan130_source_only":true,"plan131_v4_review_only":true,"next_action":"dispatch-262-130-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The v1 closeout-replan carrier below is superseded only for current counts, waves, v3 eligibility, and next action by v2. Its source/review/publication separation remains binding downstream of Plan131. -->
 
 <!-- phase-262-closeout-replan-status-v1: {"schema_version":"v1.38-phase-262-closeout-replan-v1","active_plans":110,"trustworthy_summaries":99,"incomplete_plans":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-110":95,"262-94":96,"262-123":97,"262-124":98,"262-95":99,"262-125":100,"262-126":101,"262-106":102,"262-127":103,"262-128":104,"262-129":105},"source_review_publication_gates":[["262-94","262-123","262-124"],["262-95","262-125","262-126/262-106"],["262-106","262-127","262-128"]],"plan121_summary_mutated":false,"plan121_metadata_correction_owner":"262-126","summary_tracking_atomic_owners":["262-106","262-128"],"later_head_owner":"262-129","next_action":"dispatch-revised-262-110-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -281,49 +285,57 @@ Plans:
 
 **Wave 94** *(blocked on exact committed Plan-121 source)*
 
-- [x] 262-122-PLAN.md — Independently bind canonical-main custody plus six observation-scoped disposable roots and publish one exact v3 literal-zero-or-blocked trio.
+- [x] 262-122-PLAN.md — Published the immutable v3 trio; committed review `73d1be60` later proved its literal-zero eligibility false and process-invalid.
 
-**Wave 95** *(blocked on committed literal-zero Plan-122 v3 review; covered by standing explicit execution authority)*
+**Wave 95** *(blocked on committed Plan-122 false-clean code review; no effects)*
+
+- [ ] 262-130-PLAN.md — Create/test a closed v4 source correction with genuine per-worktree custody, fail-closed dynamic recovery, strict later HEAD, and exact b331 seven-path scope.
+
+**Wave 96** *(blocked on committed Plan-130 source)*
+
+- [ ] 262-131-PLAN.md — Independently review Plan130 and publish an exact additive v4 trio marking v3 process-invalid/ineligible; literal-zero v4 alone may make Plan110 eligible.
+
+**Wave 97** *(blocked on strict-later-HEAD literal-zero Plan-131 v4; standing execution authorization unchanged)*
 
 - [ ] 262-110-PLAN.md — Invoke reviewed live-v13 once; commit the privacy-safe terminal and conditional unchanged reproduction-v17 while raw journal/private receipts remain owner-local.
 
-**Wave 96** *(blocked on committed Plan-110 terminal summary)*
+**Wave 98** *(blocked on committed Plan-110 terminal summary)*
 
 - [ ] 262-94-PLAN.md — Commit publication-incapable admission checker source and a privacy-safe aggregate manifest before cleanup.
 
-**Wave 97** *(blocked on committed Plan-94 source and aggregate)*
+**Wave 99** *(blocked on committed Plan-94 source and aggregate)*
 
 - [ ] 262-123-PLAN.md — Independently review exact Plan-94 source and aggregate privacy; publish findings only.
 
-**Wave 98** *(blocked on literal-zero Plan-123 review)*
+**Wave 100** *(blocked on literal-zero Plan-123 review)*
 
 - [ ] 262-124-PLAN.md — Invoke the reviewed publisher for disposition/correction/Route-11, then retire owner-local raw evidence after committed aggregate verification.
 
-**Wave 99** *(blocked on committed Plan-124 adjudication)*
+**Wave 101** *(blocked on committed Plan-124 adjudication)*
 
 - [ ] 262-95-PLAN.md — Commit publication-incapable lifecycle-driver source/tests with all-16 and all-plan inventory semantics.
 
-**Wave 100** *(blocked on committed Plan-95 source)*
+**Wave 102** *(blocked on committed Plan-95 source)*
 
 - [ ] 262-125-PLAN.md — Independently review lifecycle source, mutation partitions, coverage, and final-convergence holdback.
 
-**Wave 101** *(blocked on literal-zero Plan-125 review)*
+**Wave 103** *(blocked on literal-zero Plan-125 review)*
 
 - [ ] 262-126-PLAN.md — Publish non-authorizing readiness, exhaustive validation/verification, and additive Plan121 metadata correction.
 
-**Wave 102** *(blocked on committed Plan-126 proof latch)*
+**Wave 104** *(blocked on committed Plan-126 proof latch)*
 
 - [ ] 262-106-PLAN.md — Commit provisional lifecycle, summary, and branch-neutral/pass-only tracking atomically while Phase263 remains denied.
 
-**Wave 103** *(blocked on atomic Plan-106 closeout)*
+**Wave 105** *(blocked on atomic Plan-106 closeout)*
 
 - [ ] 262-127-PLAN.md — Independently audit full convergence, all 16 requirements, all active/history, privacy, and authority edges before eligibility.
 
-**Wave 104** *(blocked on literal-zero Plan-127 convergence)*
+**Wave 106** *(blocked on literal-zero Plan-127 convergence)*
 
 - [ ] 262-128-PLAN.md — Publish the exact final branch atomically; exact pass permits Phase263 planning only, gaps permits bookkeeping only.
 
-**Wave 105** *(blocked on atomic Plan-128 publication)*
+**Wave 107** *(blocked on atomic Plan-128 publication)*
 
 - [ ] 262-129-PLAN.md — Authenticate the final closeout from a strict later HEAD and clean checkout before any Phase263 action.
 
