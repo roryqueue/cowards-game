@@ -77,9 +77,10 @@ const ZERO_COUNTERS = Object.freeze({
   routeStartsConsumed: 0,
 })
 const PATHS = Object.freeze({
-  payload: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v1.json",
-  review: `${PHASE}/262-116-REVIEW.md`,
-  carrier: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1.json",
+  payload: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v2.json",
+  review: `${PHASE}/262-116-REVIEW-v2.md`,
+  carrier: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v2.json",
+  transaction: ".planning/.v138-plan116-review-v2-transaction.json",
   plan114Payload: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
   plan114Review: `${PHASE}/262-114-REVIEW-v2.md`,
   plan114Carrier: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json",
@@ -90,6 +91,17 @@ const PATHS = Object.freeze({
   supplement2: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v2.json",
   supplement3: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json",
 })
+const V1_PUBLICATION_COMMIT = "e1e75fc6ef177a8213d903f1ec365d86f37cf62a"
+const V1_PATHS = Object.freeze([
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v1.json",
+  `${PHASE}/262-116-REVIEW.md`,
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1.json",
+])
+const V1_BLOBS = Object.freeze([
+  "8500f0e16a1b10f8b35bcdfcfb09abfba13f20d3",
+  "f1f5f043d02cdd42359b6eebd5d11b47c677e57a",
+  "85368a06e58b0e18fcdde5bafe6d5482fd131070",
+])
 const REVIEW_PATHS = Object.freeze([PATHS.payload, PATHS.review, PATHS.carrier])
 const SECURE_PATHS = Object.freeze([PATHS.seal, PATHS.envelope])
 const ORDINARY_PATHS = Object.freeze([PATHS.plan114Payload, PATHS.plan114Review,
@@ -120,6 +132,8 @@ const MODE_NAMES = Object.freeze([
 const SOURCE_SELECTOR = ["--check", "source-only"].join("-")
 const WRITE_SELECTOR = ["--write", "supplement-v3"].join("-")
 const COMMITTED_SELECTOR = ["--check", "supplement-v3"].join("-")
+const nativeTransactionSource = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
+  "native/v1-38-plan-262-116-review-transaction-v1.c")
 
 class V138Plan116ProcessIntegrityError extends Error {}
 const fail = (code: string): never => { throw new TypeError(code) }
@@ -221,6 +235,14 @@ const exactPublication = (root: string, commit: string, paths: readonly string[]
   }
   noRewrite(root, commit, paths)
 }
+const authenticateHistoricalV1 = (root: string): void => {
+  exactPublication(root, V1_PUBLICATION_COMMIT, V1_PATHS)
+  for (const [index, repoPath] of V1_PATHS.entries()) {
+    const record = committed(root, V1_PUBLICATION_COMMIT, repoPath)
+    if (record.mode !== "100644" || record.blob !== V1_BLOBS[index])
+      fail("V138_PLAN116_V1_CUSTODY_INVALID")
+  }
+}
 const command = (program: string, args: readonly string[], cwd: string, env?: NodeJS.ProcessEnv): string => {
   const result = spawnSync(program, args, {
     cwd, env: env ?? process.env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
@@ -241,6 +263,39 @@ const commandRejected = (program: string, args: readonly string[], cwd: string,
   if (result.status === 0 || !expected.test(result.stderr))
     fail(`V138_PLAN116_EXPECTED_REJECTION_MISSING:${result.stderr.trim()}`)
 }
+const withNativeTransaction = <T>(run: (executable: string) => T): T => {
+  const owner = mkdtempSync(path.join(tmpdir(), "v138-plan116-native-"))
+  chmodSync(owner, 0o700)
+  const executable = path.join(owner, "transaction")
+  try {
+    command("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror",
+      nativeTransactionSource, "-o", executable], owner)
+    chmodSync(executable, 0o700)
+    const status = lstatSync(executable)
+    if (!status.isFile() || status.isSymbolicLink() || (status.mode & 0o7777) !== 0o700 ||
+        status.nlink !== 1 || status.uid !== process.getuid())
+      throw new V138Plan116ProcessIntegrityError("V138_PLAN116_NATIVE_EXECUTABLE_INVALID")
+    return run(executable)
+  } finally { rmSync(owner, { recursive: true, force: true }) }
+}
+const nativeFileOperation = (executable: string, root: string, action: "create" | "remove",
+  repoPath: string, bytes: Buffer, env?: NodeJS.ProcessEnv): void => {
+  const identity = lstatSync(root)
+  if (!identity.isDirectory() || identity.isSymbolicLink())
+    throw new V138Plan116ProcessIntegrityError("V138_PLAN116_NATIVE_ROOT_INVALID")
+  const result = spawnSync(executable,
+    [root, String(identity.dev), String(identity.ino), action, repoPath], {
+      cwd: root, input: bytes, encoding: "utf8", env: env ?? process.env,
+      stdio: ["pipe", "ignore", "pipe"],
+    })
+  if (result.error !== undefined || result.status === null)
+    throw new V138Plan116ProcessIntegrityError("V138_PLAN116_NATIVE_PROCESS_INTEGRITY")
+  if (result.status !== 0) throw new V138Plan116ProcessIntegrityError(
+    result.stderr.trim() || `V138_PLAN116_NATIVE_FAILED:${String(result.status)}`)
+}
+export const writeV138Plan116RetainedFileForReview = (root: string, repoPath: string,
+  bytes: Buffer): void => withNativeTransaction((executable) =>
+    nativeFileOperation(executable, path.resolve(root), "create", repoPath, bytes))
 
 const independentlyRenderSupplement = (): Json => {
   const body = {
@@ -757,8 +812,10 @@ const renderContracts = (input: {
     input.authentication.supplementSemanticsAuthenticated
   const supplement = independentlyRenderSupplement()
   const body = {
-    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-payload-v1",
-    protocol: "independent-source-separated-adapter-review-v1",
+    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-payload-v2",
+    protocol: "independent-source-separated-adapter-review-v2",
+    supersedesPublicationCommit: V1_PUBLICATION_COMMIT,
+    supersededV1Plan109Eligible: false,
     subjectCommit: SUBJECT_COMMIT,
     subjectTree: SUBJECT_TREE,
     subjectParent: SUBJECT_PARENT,
@@ -805,7 +862,7 @@ const renderContracts = (input: {
     downstreamAuthority: "denied",
   }
   const payload = Object.freeze({ ...body, payloadRoot: rooted(
-    "v138-plan-262-116-supplement-v3-adapter-review-payload-v1", body,
+    "v138-plan-262-116-supplement-v3-adapter-review-payload-v2", body,
   ) })
   const reviewBody = {
     payloadRoot: payload.payloadRoot,
@@ -818,13 +875,15 @@ const renderContracts = (input: {
     freshAccepted: 0,
     downstreamAuthority: "denied",
   }
-  const reviewRoot = rooted("v138-plan-262-116-supplement-v3-adapter-review-markdown-v1", reviewBody)
+  const reviewRoot = rooted("v138-plan-262-116-supplement-v3-adapter-review-markdown-v2", reviewBody)
   const reviewBytes = zero
-    ? Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v1\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Supplement-v3 Adapter Review\n\n**ZERO FINDINGS.** All nine actual source, write, one-path commit, check, recheck, race, cache-substitution, and mutation modes passed. Only revised Plan 109 is eligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
-    : Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v1\nstatus: blocked\nfinding_count: ${findings.length}\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Supplement-v3 Adapter Review\n\n**BLOCKED.** Finding codes: ${findings.map(({ code }) => code).join(", ")}. Revised Plan 109 is ineligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
+    ? Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v2\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Corrected Supplement-v3 Adapter Review\n\n**ZERO FINDINGS.** All nine distinct, rooted actual observations and the disposable closure authenticated. The original v1 trio is immutable superseded history and ineligible. Only revised Plan 109 is eligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
+    : Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v2\nstatus: blocked\nfinding_count: ${findings.length}\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Corrected Supplement-v3 Adapter Review\n\n**BLOCKED.** Finding codes: ${findings.map(({ code }) => code).join(", ")}. Failed boundary: ${input.authentication.failedBoundary ?? "actual_modes"}. The original v1 trio and revised Plan 109 are ineligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
   const carrierBody = {
-    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1",
-    protocol: "nonrecursive-external-review-carrier-v1",
+    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v2",
+    protocol: "nonrecursive-external-review-carrier-v2",
+    supersedesPublicationCommit: V1_PUBLICATION_COMMIT,
+    supersededV1Plan109Eligible: false,
     payloadRoot: payload.payloadRoot,
     reviewRoot,
     findingCount: findings.length,
@@ -842,7 +901,7 @@ const renderContracts = (input: {
     downstreamAuthority: "denied",
   }
   const carrier = Object.freeze({ ...carrierBody, carrierRoot: rooted(
-    "v138-plan-262-116-supplement-v3-adapter-review-carrier-v1", carrierBody,
+    "v138-plan-262-116-supplement-v3-adapter-review-carrier-v2", carrierBody,
   ) })
   return Object.freeze({ payload, reviewBytes, reviewRoot, carrier, plan109Eligible })
 }

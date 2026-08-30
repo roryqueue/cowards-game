@@ -1,4 +1,8 @@
-import { chmodSync, existsSync, lstatSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync,
+  symlinkSync, writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
@@ -10,6 +14,7 @@ import {
   observeV138Plan116FoundationForReview,
   probeV138Plan116GitObjectForReview,
   renderV138Plan116EvidenceForReview,
+  writeV138Plan116RetainedFileForReview,
 } from "./check-v1-38-plan-262-116-supplement-v3-adapter-v1.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -240,6 +245,22 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     expect(probeV138Plan116GitObjectForReview(repoRoot,
       "bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48", "scripts/definitely-absent-plan116.ts"))
       .toBe(false)
+  })
+
+  it("rejects a symlinked publication parent without writing outside the repository", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-plan116-contained-"))
+    const external = mkdtempSync(path.join(tmpdir(), "v138-plan116-external-"))
+    try {
+      mkdirSync(path.join(root, ".planning"))
+      symlinkSync(external, path.join(root, ".planning/artifacts"), "dir")
+      expect(() => writeV138Plan116RetainedFileForReview(root,
+        ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v2.json",
+        Buffer.from("{}\n"))).toThrow(/NATIVE_PARENT_UNSAFE/)
+      expect(readdirSync(external)).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+      rmSync(external, { recursive: true, force: true })
+    }
   })
 
   it("roots a semantic mutation without making the canonical trio or supplement", () => {
