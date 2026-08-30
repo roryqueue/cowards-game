@@ -145,6 +145,14 @@ Plan 262-116 is the sole next action: independently review the exact Plan-115 so
 
 Both source/test files and all four TDD commits were found in the repository.
 
+## Additive Code-review Closure (2026-08-30)
+
+- Commits `6952db17`, `3b9db7fb`, and `c21f0ef8` close the three Plan-115 blockers; `737fd0e6` aligns the prior executable-publication assertion with the stronger current-custody failure.
+- Plan 115 now reports Plan-116 review eligibility only. `plan109Eligible` remains false and `reviewRequired` remains true across source, write, and committed-check projections.
+- Every current custody file must be exact no-follow `0644`, with descriptor identity, size, and mode checked again after reading.
+- The supplement writer now uses a retained-directory native `openat`/`unlinkat`/`fsync` boundary. A real parent symlink-swap race wrote nothing outside the repository and cleaned only through the retained descriptor.
+- The complete focused suite passed 9/9. No canonical supplement, readiness, live, or effect artifact was created; Plan 116 remains the sole next action.
+
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
 *Completed: 2026-08-30*
