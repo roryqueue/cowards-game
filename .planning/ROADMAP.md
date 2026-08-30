@@ -52,9 +52,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 89/97 plans executed
 
-**Current verdict:** PLAN-115 SUPPLEMENT-V3 ADAPTER ONLY NEXT / PLAN-114 V2 AND LIVE-V10 IMMUTABLE / PLAN-110 DENIED EVEN AFTER PLAN-109 / ENVELOPE UNCONSUMED / FRESH 0/540 / DOWNSTREAM DENIED — 89 of 97 plans have summaries. Corrected Plan-114 v2 independently passed all six real disposable modes and remains authoritative at `34bc94ec`; its final clean source/review closure is complete. Research proved Plan-109's claimed Plan-114/live-v10 supplement selectors do not exist, so Plan 115 must add the source-only adapter and Plan 116 must independently review it before revised Plan 109 may publish one inert supplement-v3. Because live-v10 future custody still resolves superseded Plan-114 v1 while supplement-v3 binds authoritative v2, Plan 110 and every later plan remain dependency-denied pending a separate reviewed readiness-consumer correction. No plan creates an envelope, capacity, reset, route/attempt identity, literal, readiness, live effect, or downstream authority.
+**Current verdict:** PLAN-116 INDEPENDENT ADAPTER REVIEW ONLY NEXT / PLAN-115 SOURCE COMPLETE / CANONICAL SUPPLEMENT-V3 ABSENT / PLAN-110 DENIED EVEN AFTER PLAN-109 / ENVELOPE UNCONSUMED / FRESH 0/540 / DOWNSTREAM DENIED — 90 of 97 plans have summaries. Plan 115 committed the exact three-selector source-only adapter and proved exclusive disposable write plus committed check behavior without publishing canonical evidence. Plan 116 must independently review exact source and actual disposable modes before revised Plan 109 may publish one inert supplement-v3. Because live-v10 future custody still resolves superseded Plan-114 v1 while supplement-v3 binds authoritative v2, Plan 110 and every later plan remain dependency-denied pending a separate reviewed readiness-consumer correction. No plan creates an envelope, capacity, reset, route/attempt identity, literal, readiness, live effect, or downstream authority.
 
-<!-- phase-262-supplement-v3-adapter-recovery-topology-v4: {"schema_version":"v1.38-plan-262-supplement-v3-adapter-recovery-topology-v4","active_plans":97,"trustworthy_summaries":89,"immutable_history":["262-113-live-v10","262-114-v1-superseded","262-114-v2-authoritative","262-114-final-clean-review"],"active_chain":["262-115","262-116","262-109"],"dependency_denied":["262-110","262-94","262-95","262-106"],"waves":{"262-115":99,"262-116":100,"262-109":101,"262-110":102,"262-94":103,"262-95":104,"262-106":105},"supplement_version":"v3","next_action":"dispatch-262-115-only","plan_262_110_authorized_after_109":false,"readiness_consumer_correction_required":true,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"admit_03":"blocked","downstream_authority_denied":true} -->
+<!-- phase-262-supplement-v3-adapter-recovery-topology-v4: {"schema_version":"v1.38-plan-262-supplement-v3-adapter-recovery-topology-v4","active_plans":97,"trustworthy_summaries":90,"immutable_history":["262-113-live-v10","262-114-v1-superseded","262-114-v2-authoritative","262-114-final-clean-review","262-115-source-only-adapter"],"active_chain":["262-116","262-109"],"dependency_denied":["262-110","262-94","262-95","262-106"],"waves":{"262-116":100,"262-109":101,"262-110":102,"262-94":103,"262-95":104,"262-106":105},"supplement_version":"v3","next_action":"dispatch-262-116-only","plan_262_110_authorized_after_109":false,"readiness_consumer_correction_required":true,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"admit_03":"blocked","downstream_authority_denied":true} -->
 
 <!-- phase-262-plan-114-closeout-status: {"schema_version":"v1.38-plan-262-114-closeout-v2","supersedes_publication_commit":"ab539ab2b3706981aaeb053b3fafce6b46532b40","publication_commit":"34bc94ec4e348f71e6055a091d60a505cffc0d79","finding_count":0,"actual_modes_passed":6,"plan_262_109_eligible":true,"next_action":"dispatch-revised-262-109-only","admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"downstream_authority_denied":true} -->
 <!-- The recovery topology below is retained as immutable pre-Plan-114 planning history. -->
@@ -229,7 +229,7 @@ Plans:
 
 **Wave 99** *(blocked on authoritative Plan-114 v2 and final clean Plan-114 closure)*
 
-- [ ] 262-115-PLAN.md — Add/test the source-only supplement-v3 adapter with disposable exclusive-write and committed-check coverage; publish no canonical supplement.
+- [x] 262-115-PLAN.md — Add/test the source-only supplement-v3 adapter with disposable exclusive-write and committed-check coverage; publish no canonical supplement.
 
 **Wave 100** *(blocked on exact committed Plan-115 source)*
 
@@ -690,7 +690,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 89/97 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 90/97 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
