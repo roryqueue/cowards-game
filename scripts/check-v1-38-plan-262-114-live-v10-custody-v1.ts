@@ -1,10 +1,14 @@
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -115,6 +119,9 @@ const PATHS = Object.freeze({
   payload: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v1.json",
   review: `${PHASE}/262-114-REVIEW.md`,
   carrier: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v1.json",
+  payloadV2: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
+  reviewV2: `${PHASE}/262-114-REVIEW-v2.md`,
+  carrierV2: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json",
   supplement1: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v1.json",
   supplement2: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v2.json",
   supplement3: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json",
@@ -224,10 +231,31 @@ const assertExactPublication = (root: string, commit: string, paths: readonly st
   for (const repoPath of paths) {
     const entry = git(root, ["ls-tree", commit, "--", repoPath])
     if (!entry.startsWith("100644 blob ")) fail("V138_PLAN114_PUBLICATION_MODE_INVALID")
-    if (!readFileSync(target(root, repoPath)).equals(gitBytes(root, commit, repoPath)))
+    if (!readCurrentRegularNoFollow(root, repoPath).equals(gitBytes(root, commit, repoPath)))
       fail("V138_PLAN114_PUBLICATION_BYTES_INVALID")
   }
   noRewrite(root, commit, paths)
+}
+
+const readCurrentRegularNoFollow = (root: string, repoPath: string): Buffer => {
+  const absolute = target(root, repoPath)
+  const before = lstatSync(absolute)
+  if (!before.isFile() || before.isSymbolicLink() || (before.mode & 0o111) !== 0)
+    fail(`V138_PLAN114_PUBLICATION_CURRENT_TYPE_MODE_INVALID:${repoPath}`)
+  let descriptor: number | undefined
+  try {
+    descriptor = openSync(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0))
+    const opened = fstatSync(descriptor)
+    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino || opened.size !== before.size)
+      fail(`V138_PLAN114_PUBLICATION_CURRENT_IDENTITY_INVALID:${repoPath}`)
+    const bytes = readFileSync(descriptor)
+    const after = fstatSync(descriptor)
+    if (after.dev !== opened.dev || after.ino !== opened.ino || after.size !== opened.size || bytes.length !== opened.size)
+      fail(`V138_PLAN114_PUBLICATION_CURRENT_CHANGED:${repoPath}`)
+    return bytes
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor)
+  }
 }
 
 const inspectProtectedHistory = (root: string): Sha => {
@@ -373,9 +401,12 @@ const sourceAdmission = () => Object.freeze({
   plan112V2ReviewRoot: PLAN_112_V2_ROOTS.review,
   plan112V2CarrierRoot: PLAN_112_V2_ROOTS.carrier,
 })
-const payloadRoot = (body: Json): Sha => rooted("v138-plan-262-114-live-v10-custody-review-payload-v1", body)
-const reviewRoot = (body: Json): Sha => rooted("v138-plan-262-114-live-v10-custody-review-v1", body)
-const carrierRoot = (body: Json): Sha => rooted("v138-plan-262-114-live-v10-custody-review-carrier-v1", body)
+const payloadRoot = (body: Json, version: 1 | 2): Sha =>
+  rooted(`v138-plan-262-114-live-v10-custody-review-payload-v${version}`, body)
+const reviewRoot = (body: Json, version: 1 | 2): Sha =>
+  rooted(`v138-plan-262-114-live-v10-custody-review-v${version}`, body)
+const carrierRoot = (body: Json, version: 1 | 2): Sha =>
+  rooted(`v138-plan-262-114-live-v10-custody-review-carrier-v${version}`, body)
 const supplementRoot = (body: Json): Sha => rooted("v138-successor-source-seal-v13-executable-custody-supplement-v3", body)
 
 const renderContracts = (input: {
@@ -384,12 +415,16 @@ const renderContracts = (input: {
   findings: readonly V138Plan114Finding[]
   actualModesPassed: number
   plan114PublicationCommit?: string
+  evidenceVersion?: 1 | 2
+  modes?: V138Plan114ModeResult
+  linkedObservationRoot?: Sha
 }) => {
+  const version = input.evidenceVersion ?? 1
   const findings = [...input.findings].sort((a, b) => `${a.code}\0${a.detail}`.localeCompare(`${b.code}\0${b.detail}`))
   const zero = findings.length === 0
   const source = sourceAdmission()
   const body = {
-    schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-payload-v1",
+    schemaVersion: `v1.38-plan-262-114-live-v10-custody-review-payload-v${version}`,
     reviewedSourceCommit: input.closure.sourceCommit,
     reviewedClosureRoot: input.closure.reviewedClosureRoot,
     reviewedLocalExecutionClosureRoot: input.linkedLocalExecutionClosureRoot,
@@ -416,8 +451,21 @@ const renderContracts = (input: {
     freshAccepted: 0,
     authorizesExecution: false,
     downstreamAuthority: "denied",
+    ...(version === 2 ? {
+      findings,
+      findingRoot: rooted("v138-plan-262-114-findings-v2", findings),
+      observationRoot: input.modes?.observationRoot ?? input.linkedObservationRoot ?? rooted("v138-plan-262-114-observations-v1", []),
+      linkedReviewEvidenceRoot: rooted("v138-plan-262-114-linked-review-evidence-v2", {
+        reviewedClosureRoot: input.closure.reviewedClosureRoot,
+        linkedLocalExecutionClosureRoot: input.linkedLocalExecutionClosureRoot,
+        observationRoot: input.modes?.observationRoot ?? input.linkedObservationRoot ?? rooted("v138-plan-262-114-observations-v1", []),
+        actualModesPassed: input.actualModesPassed,
+      }),
+      supersedesPublicationCommit: "ab539ab2b3706981aaeb053b3fafce6b46532b40",
+      plan109Eligible: zero && input.actualModesPassed === 6,
+    } : {}),
   }
-  const payload = Object.freeze({ ...body, payloadRoot: payloadRoot(body) })
+  const payload = Object.freeze({ ...body, payloadRoot: payloadRoot(body, version) })
   const rBody = {
     payloadRoot: payload.payloadRoot,
     reviewedClosureRoot: input.closure.reviewedClosureRoot,
@@ -427,12 +475,15 @@ const renderContracts = (input: {
     authorizesExecution: false,
     downstreamAuthority: "denied",
   }
-  const rRoot = reviewRoot(rBody)
+  const rRoot = reviewRoot(rBody, version)
+  const reviewTitle = version === 1
+    ? "Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review"
+    : "Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review v2"
   const reviewBytes = zero
-    ? Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v1\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${rRoot}\n---\n\n# Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review\n\n**ZERO FINDINGS.** Six actual non-live modes passed. Portable reviewed closure: \`${input.closure.reviewedClosureRoot}\`. Linked-review local context: \`${input.linkedLocalExecutionClosureRoot}\`. Live invoked: false. Downstream authority: denied.\n`)
-    : Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v1\nstatus: blocked\nfinding_count: ${findings.length}\nreview_root: ${rRoot}\n---\n\n# Phase 262 Plan 114 Independent Live-v10 Executable-Custody Review\n\n**BLOCKED.** Finding codes: ${findings.map(({ code }) => code).join(", ")}. Actual non-live modes passed: ${input.actualModesPassed}/6. Live invoked: false. Downstream authority: denied.\n`)
+    ? Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v${version}\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${rRoot}\n---\n\n# ${reviewTitle}\n\n**ZERO FINDINGS.** Six actual non-live modes passed. Portable reviewed closure: \`${input.closure.reviewedClosureRoot}\`. Linked-review local context: \`${input.linkedLocalExecutionClosureRoot}\`. Live invoked: false. Downstream authority: denied.\n`)
+    : Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "114"\nreview_type: independent_live_v10_executable_custody_v${version}\nstatus: blocked\nfinding_count: ${findings.length}\nreview_root: ${rRoot}\n---\n\n# ${reviewTitle}\n\n**BLOCKED.** Finding codes: ${findings.map(({ code }) => code).join(", ")}. Actual non-live modes passed: ${input.actualModesPassed}/6. Live invoked: false. Downstream authority: denied.\n`)
   const cBody = {
-    schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-carrier-v1",
+    schemaVersion: `v1.38-plan-262-114-live-v10-custody-review-carrier-v${version}`,
     payloadRoot: payload.payloadRoot,
     reviewRoot: rRoot,
     payloadMode: "100644",
@@ -444,7 +495,7 @@ const renderContracts = (input: {
     authorizesExecution: false,
     downstreamAuthority: "denied",
   }
-  const carrier = Object.freeze({ ...cBody, carrierRoot: carrierRoot(cBody) })
+  const carrier = Object.freeze({ ...cBody, carrierRoot: carrierRoot(cBody, version) })
   let supplement: Json | undefined
   if (input.plan114PublicationCommit !== undefined) {
     const sBody = {
@@ -707,8 +758,24 @@ export const renderV138Plan114EvidenceForReview = (
   })
 }
 
-const locatePublicationCommit = (root: string): string => {
-  const commits = git(root, ["log", "--diff-filter=A", "--format=%H", "--", PATHS.payload]).split("\n").filter(Boolean)
+export const renderV138Plan114CorrectedEvidenceForReview = (
+  repoRootInput: string,
+  findings: readonly V138Plan114Finding[],
+  modes?: V138Plan114ModeResult,
+) => {
+  const foundation = authenticateFoundation(path.resolve(repoRootInput))
+  return renderContracts({
+    closure: foundation.closure,
+    linkedLocalExecutionClosureRoot: modes?.linkedLocalExecutionClosureRoot ?? foundation.closure.localExecutionClosureRoot,
+    findings,
+    actualModesPassed: modes?.actualModesPassed ?? 0,
+    evidenceVersion: 2,
+    modes,
+  })
+}
+
+const locatePublicationCommit = (root: string, payloadPath: string): string => {
+  const commits = git(root, ["log", "--diff-filter=A", "--format=%H", "--", payloadPath]).split("\n").filter(Boolean)
   if (commits.length === 0) fail("V138_PLAN114_PUBLICATION_ABSENT")
   if (commits.length !== 1 || !/^[0-9a-f]{40}$/u.test(commits[0]!)) fail("V138_PLAN114_PUBLICATION_AMBIGUOUS")
   return commits[0]!
@@ -717,20 +784,31 @@ const locatePublicationCommit = (root: string): string => {
 export const authenticateV138Plan114PublishedReview = (repoRootInput: string) => {
   const root = path.resolve(repoRootInput)
   const foundation = authenticateFoundation(root)
-  if (![PATHS.payload, PATHS.review, PATHS.carrier].every((repoPath) => pathPresent(root, repoPath)))
+  const v2Paths = [PATHS.payloadV2, PATHS.reviewV2, PATHS.carrierV2] as const
+  const v1Paths = [PATHS.payload, PATHS.review, PATHS.carrier] as const
+  const paths = v2Paths.every((repoPath) => pathPresent(root, repoPath)) ? v2Paths : v1Paths
+  const version = paths === v2Paths ? 2 as const : 1 as const
+  if (!paths.every((repoPath) => pathPresent(root, repoPath)))
     fail("V138_PLAN114_PUBLICATION_ABSENT")
-  const commit = locatePublicationCommit(root)
-  assertExactPublication(root, commit, [PATHS.payload, PATHS.review, PATHS.carrier])
-  const payload = jsonAt(root, commit, PATHS.payload)
-  const carrier = jsonAt(root, commit, PATHS.carrier)
-  const reviewBytes = gitBytes(root, commit, PATHS.review)
+  const commit = locatePublicationCommit(root, paths[0])
+  assertExactPublication(root, commit, paths)
+  const payload = jsonAt(root, commit, paths[0])
+  const carrier = jsonAt(root, commit, paths[2])
+  const reviewBytes = gitBytes(root, commit, paths[1])
+  const findings = version === 2 ? payload.findings as V138Plan114Finding[] : []
+  if (!Array.isArray(findings) || findings.length !== payload.findingCount ||
+      canonical(findings.map(({ code }) => code)) !== canonical(payload.findingCodes))
+    fail("V138_PLAN114_PUBLICATION_FINDINGS_INVALID")
   const exact = renderContracts({
     closure: foundation.closure,
     linkedLocalExecutionClosureRoot: payload.reviewedLocalExecutionClosureRoot,
-    findings: [], actualModesPassed: 6,
+    findings,
+    actualModesPassed: payload.actualModesPassed,
+    evidenceVersion: version,
+    linkedObservationRoot: payload.observationRoot,
   })
   if (canonical(payload) !== canonical(exact.payload) || !reviewBytes.equals(exact.reviewBytes) ||
-      canonical(carrier) !== canonical(exact.carrier) || exact.plan109Eligible !== true)
+      canonical(carrier) !== canonical(exact.carrier))
     fail("V138_PLAN114_PUBLICATION_RERENDER_INVALID")
   assertAbsent(root, FORBIDDEN)
   return Object.freeze({
@@ -738,9 +816,10 @@ export const authenticateV138Plan114PublishedReview = (repoRootInput: string) =>
     payloadRoot: payload.payloadRoot,
     reviewRoot: carrier.reviewRoot,
     carrierRoot: carrier.carrierRoot,
-    findingCount: 0,
-    actualModesPassed: 6,
-    plan109Eligible: true,
+    evidenceVersion: version,
+    findingCount: findings.length,
+    actualModesPassed: payload.actualModesPassed,
+    plan109Eligible: exact.plan109Eligible,
     liveInvoked: false,
     freshCharged: 0,
     freshAccepted: 0,
@@ -749,8 +828,8 @@ export const authenticateV138Plan114PublishedReview = (repoRootInput: string) =>
   })
 }
 
-const writeReview = (root: string): void => {
-  assertAbsent(root, [PATHS.payload, PATHS.review, PATHS.carrier, ...FORBIDDEN])
+export const writeV138Plan114CorrectedReviewForReview = (root: string): void => {
+  assertAbsent(root, [PATHS.payloadV2, PATHS.reviewV2, PATHS.carrierV2, ...FORBIDDEN])
   const before = captureV138Plan114FoundationForReview(root)
   const modes = executeV138Plan114DisposableModes(root)
   const after = assertV138Plan114FoundationStableForReview(root, before)
@@ -759,16 +838,18 @@ const writeReview = (root: string): void => {
     linkedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
     findings: modes.findings,
     actualModesPassed: modes.actualModesPassed,
+    evidenceVersion: 2,
+    modes,
   })
-  for (const [repoPath, bytes] of [[PATHS.payload, Buffer.from(canonical(evidence.payload))],
-    [PATHS.review, evidence.reviewBytes], [PATHS.carrier, Buffer.from(canonical(evidence.carrier))]] as const)
+  for (const [repoPath, bytes] of [[PATHS.payloadV2, Buffer.from(canonical(evidence.payload))],
+    [PATHS.reviewV2, evidence.reviewBytes], [PATHS.carrierV2, Buffer.from(canonical(evidence.carrier))]] as const)
     writeFileSync(target(root, repoPath), bytes, { mode: 0o644, flag: "wx" })
 }
 
 const execute = (args: readonly string[]): void => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
   if (args.length !== 1) fail("V138_PLAN114_ARGUMENTS_INVALID")
-  if (args[0] === "--write-review") { writeReview(root); return }
+  if (args[0] === "--write-review") { writeV138Plan114CorrectedReviewForReview(root); return }
   if (args[0] === "--check-review") {
     process.stdout.write(`${JSON.stringify(authenticateV138Plan114PublishedReview(root))}\n`); return
   }

@@ -1,4 +1,5 @@
-import { chmodSync, lstatSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, lstatSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
@@ -8,6 +9,7 @@ import {
   captureV138Plan114FoundationForReview,
   executeV138Plan114DisposableModes,
   observeV138Plan114FoundationForReview,
+  renderV138Plan114CorrectedEvidenceForReview,
   renderV138Plan114EvidenceForReview,
   type V138Plan114Finding,
 } from "./check-v1-38-plan-262-114-live-v10-custody-v1.js"
@@ -217,5 +219,47 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
     for (const repoPath of checked.forbiddenDestinations) {
       expect(() => lstatSync(path.join(repoRoot, repoPath))).toThrow()
     }
+  }, 180_000)
+
+  it("rejects a current publication symlink even when its target has exact committed bytes", () => {
+    const payloadPath = path.join(
+      repoRoot,
+      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v1.json",
+    )
+    const bytes = readFileSync(payloadPath)
+    const owner = mkdtempSync(path.join(tmpdir(), "v138-plan114-current-link-"))
+    const external = path.join(owner, "payload.json")
+    writeFileSync(external, bytes)
+    try {
+      rmSync(payloadPath)
+      symlinkSync(external, payloadPath)
+      expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
+        "V138_PLAN114_PUBLICATION_CURRENT_TYPE_MODE_INVALID",
+      )
+    } finally {
+      rmSync(payloadPath, { force: true })
+      writeFileSync(payloadPath, bytes, { mode: 0o644 })
+      rmSync(owner, { recursive: true, force: true })
+    }
+  }, 180_000)
+
+  it("renders an independently authenticatable corrected blocked branch", () => {
+    const finding = {
+      code: "MODE_EXACT_REPRODUCTION_FAILED",
+      severity: "critical" as const,
+      detail: "independent oracle mismatch",
+    }
+    const blocked = renderV138Plan114CorrectedEvidenceForReview(repoRoot, [finding])
+    expect(blocked.payload).toMatchObject({
+      schemaVersion: "v1.38-plan-262-114-live-v10-custody-review-payload-v2",
+      reviewStatus: "blocked",
+      findings: [finding],
+      findingCount: 1,
+      plan109Eligible: false,
+      actualModesPassed: 0,
+    })
+    expect(blocked.reviewBytes.toString("utf8")).toContain("status: blocked")
+    expect(blocked.carrier.schemaVersion)
+      .toBe("v1.38-plan-262-114-live-v10-custody-review-carrier-v2")
   }, 180_000)
 })
