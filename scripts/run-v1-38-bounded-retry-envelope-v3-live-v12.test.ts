@@ -15,6 +15,7 @@ import {
   V138_LIVE_V12_MODES,
   V138_LIVE_V12_PATHS,
   authenticateV138LiveV12SourceOnly,
+  checkV138LiveV12ProspectiveCustodyForReview,
   deriveV138LiveV12ProspectiveContractsForReview,
   executeV138LiveV12Cli,
   inspectV138LiveV12ProductionBoundaryForReview,
@@ -283,4 +284,96 @@ describe("Plan 262-119 allowed live-v12 successor", () => {
       "const producer = runV138V3ProductionLive\n    await producer(repoRoot, {",
     ))).toThrow("V138_LIVE_V12_PRODUCTION_BOUNDARY_INVALID")
   })
+
+  it("requires the producer call to belong only to the closed owner and exact live selector", () => {
+    const source = readFileSync(path.join(repoRoot, V138_LIVE_V12_PATHS.source), "utf8")
+    const withoutOwnerCall = source.replace(
+      "await runV138V3ProductionLive(repoRoot, {",
+      "await Promise.resolve(repoRoot, {",
+    )
+    const movedCalls = [
+      withoutOwnerCall.replace(
+        "const result = authenticateV138LiveV12SourceOnly(root)",
+        "await runV138V3ProductionLive(root, {} as never)\n    const result = authenticateV138LiveV12SourceOnly(root)",
+      ),
+      withoutOwnerCall.replace(
+        "const subjectCommit = resolveCurrentSubjectCommit(root)",
+        "await runV138V3ProductionLive(root, {} as never)\n    const subjectCommit = resolveCurrentSubjectCommit(root)",
+      ),
+      withoutOwnerCall.replace(
+        "if (args[0] === \"--check-post-run-custody\") assertV138LiveV10PostRunForReview(root)",
+        "if (args[0] === \"--check-post-run-custody\") {\n    await runV138V3ProductionLive(root, {} as never)\n    assertV138LiveV10PostRunForReview(root)\n  }",
+      ),
+      withoutOwnerCall.replace(
+        "const result = authenticateFutureCustody(root, args[0] === \"--check-post-run-custody\" ? \"post\" : \"pre\")",
+        "await runV138V3ProductionLive(root, {} as never)\n  const result = authenticateFutureCustody(root, args[0] === \"--check-post-run-custody\" ? \"post\" : \"pre\")",
+      ),
+    ]
+    for (const moved of movedCalls)
+      expect(() => inspectV138LiveV12ProductionBoundarySourceForReview(moved)).toThrow(
+        "V138_LIVE_V12_PRODUCTION_BOUNDARY_INVALID",
+      )
+
+    const missingDispatch = source.replace(
+      "await runV138ReviewedBoundedLiveEnvelopeV12(root)",
+      "await Promise.resolve(root)",
+    )
+    expect(() => inspectV138LiveV12ProductionBoundarySourceForReview(missingDispatch)).toThrow(
+      "V138_LIVE_V12_PRODUCTION_BOUNDARY_INVALID",
+    )
+    const extraDispatch = source.replace(
+      "const result = authenticateV138LiveV12SourceOnly(root)",
+      "await runV138ReviewedBoundedLiveEnvelopeV12(root)\n    const result = authenticateV138LiveV12SourceOnly(root)",
+    )
+    expect(() => inspectV138LiveV12ProductionBoundarySourceForReview(extraDispatch)).toThrow(
+      "V138_LIVE_V12_PRODUCTION_BOUNDARY_INVALID",
+    )
+  })
+
+  it("rejects forged local closure claims and binds every closure layer", () => {
+    withProspectiveClosure((root) => {
+      const sourceCommit = execFileSync(
+        "/usr/bin/git",
+        ["log", "-1", "--format=%H", "--", V138_LIVE_V12_PATHS.source, V138_LIVE_V12_PATHS.tests],
+        { cwd: root, encoding: "utf8" },
+      ).trim()
+      expect(() => deriveV138LiveV12ProspectiveContractsForReview({
+        repoRoot: root,
+        reviewedSourceCommit: sourceCommit,
+        plan120PublicationCommit: "0".repeat(40),
+        reviewedLocalExecutionClosureRoot: `sha256:${"f".repeat(64)}`,
+      })).toThrow("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
+
+      const preview = deriveV138LiveV12ProspectiveContractsForReview({
+        repoRoot: root,
+        reviewedSourceCommit: sourceCommit,
+        plan120PublicationCommit: "0".repeat(40),
+      })
+      expect(preview.payload).toMatchObject({
+        recursiveDependencyRoot: preview.reviewedClosure.recursiveDependencyRoot,
+        recursiveDependencyCount: preview.reviewedClosure.recursiveDependencyCount,
+        installedClosureRoot: preview.reviewedClosure.installedClosureRoot,
+        nodeSha256: preview.reviewedClosure.nodeSha256,
+        pnpmDistributionSha256: preview.reviewedClosure.pnpmDistributionSha256,
+        pathStableNativeSourcesRoot: preview.reviewedClosure.pathStableNativeSourcesRoot,
+        gitExecutableSha256: preview.reviewedClosure.gitExecutableSha256,
+        hardenedGitArgumentsRoot: preview.reviewedClosure.hardenedGitArgumentsRoot,
+        localInstalledClosureRoot: preview.reviewedClosure.localInstalledClosureRoot,
+        localGitObjectRoot: preview.reviewedClosure.localGitObjectRoot,
+        localNativeSourcesRoot: preview.reviewedClosure.localNativeSourcesRoot,
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+      })
+      expect(() => checkV138LiveV12ProspectiveCustodyForReview({
+        repoRoot: root,
+        source: preview.source,
+        reviewedClosure: {
+          ...preview.reviewedClosure,
+          pathnameLaunchReplacementResistanceClaimed: true as false,
+        },
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+        plan120PublicationCommit: "0".repeat(40),
+        plan120: preview,
+      })).toThrow("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
+    })
+  }, 120_000)
 })
