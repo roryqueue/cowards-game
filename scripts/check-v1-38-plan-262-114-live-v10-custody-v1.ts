@@ -327,6 +327,35 @@ const authenticateFoundation = (rootInput: string) => {
   return observed
 }
 
+const semanticFailureFinding = (error: unknown): V138Plan114Finding | undefined => {
+  const detail = error instanceof Error ? error.message : String(error)
+  const mappings = [
+    ["V138_PLAN114_INDEPENDENT_CURRENT_BYTES_INVALID", "RAW_BYTES_DRIFT"],
+    ["V138_PLAN114_INDEPENDENT_CURRENT_MODE_INVALID", "RAW_MODE_DRIFT"],
+    ["V138_PLAN114_INDEPENDENT_SUCCESSOR_REWRITE", "SOURCE_HISTORY_DRIFT"],
+    ["V138_PLAN114_SUCCESSOR_REWRITE", "PROTECTED_HISTORY_DRIFT"],
+    ["V138_PLAN114_HISTORY_ROOT_INVALID", "PUBLICATION_HISTORY_DRIFT"],
+    ["V138_PLAN114_PLAN112_SEMANTICS_INVALID", "PLAN112_SEMANTICS_DRIFT"],
+    ["V138_PLAN114_PAIR_STOP_AUTHORITY_INVALID", "PAIR_COUNTER_PRIVACY_AUTHORITY_DRIFT"],
+    ["V138_PLAN114_PROTECTED_LINEAGE_INVALID", "PROTECTED_HISTORY_DRIFT"],
+  ] as const
+  const match = mappings.find(([prefix]) => detail.startsWith(prefix))
+  return match === undefined ? undefined : Object.freeze({
+    code: match[1], severity: "critical" as const, detail,
+  })
+}
+
+export const observeV138Plan114FoundationForReview = (rootInput: string) => {
+  try {
+    const foundation = authenticateFoundationUncached(path.resolve(rootInput))
+    return Object.freeze({ foundation, findings: Object.freeze([] as V138Plan114Finding[]) })
+  } catch (error) {
+    const finding = semanticFailureFinding(error)
+    if (finding === undefined) throw error
+    return Object.freeze({ foundation: undefined, findings: Object.freeze([finding]) })
+  }
+}
+
 const sourceAdmission = () => Object.freeze({
   correctedPublicationCommit: CORRECTED_PUBLICATION_COMMIT,
   correctedPayloadRoot: CORRECTED_ROOTS.payload,

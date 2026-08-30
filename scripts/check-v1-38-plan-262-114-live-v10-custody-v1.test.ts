@@ -1,10 +1,11 @@
-import { lstatSync, readFileSync } from "node:fs"
+import { chmodSync, lstatSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   PLAN_114_REVIEWED_SOURCE_COMMIT,
   authenticateV138Plan114PublishedReview,
   executeV138Plan114DisposableModes,
+  observeV138Plan114FoundationForReview,
   renderV138Plan114EvidenceForReview,
   type V138Plan114Finding,
 } from "./check-v1-38-plan-262-114-live-v10-custody-v1.js"
@@ -100,6 +101,32 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
     expect(() => renderV138Plan114EvidenceForReview(repoRoot, [])).toThrow(
       "V138_PLAN114_ZERO_REQUIRES_EXECUTED_MODES",
     )
+  }, 180_000)
+
+  it("turns real current-byte and mode mutations into deterministic blocked evidence", () => {
+    const repoPath = "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts"
+    const absolute = path.join(repoRoot, repoPath)
+    const bytes = readFileSync(absolute)
+    try {
+      chmodSync(absolute, 0o755)
+      const mode = observeV138Plan114FoundationForReview(repoRoot)
+      expect(mode.findings.map(({ code }) => code)).toEqual(["RAW_MODE_DRIFT"])
+      chmodSync(absolute, 0o644)
+
+      writeFileSync(absolute, Buffer.concat([bytes, Buffer.from("\n// real Plan114 mutation\n")]))
+      const changed = observeV138Plan114FoundationForReview(repoRoot)
+      expect(changed.findings.map(({ code }) => code)).toEqual(["RAW_BYTES_DRIFT"])
+      writeFileSync(absolute, bytes)
+
+      const first = renderV138Plan114EvidenceForReview(repoRoot, [...mode.findings, ...changed.findings])
+      const second = renderV138Plan114EvidenceForReview(repoRoot, [...changed.findings, ...mode.findings])
+      expect(first.payload).toEqual(second.payload)
+      expect(first.reviewBytes.equals(second.reviewBytes)).toBe(true)
+      expect(first.plan109Eligible).toBe(false)
+    } finally {
+      writeFileSync(absolute, bytes)
+      chmodSync(absolute, 0o644)
+    }
   }, 180_000)
 
   it("roots every custody, mode, history, counter, privacy, and authority mutation as blocked", () => {

@@ -61,10 +61,11 @@ const entry = (root: string, commit: string, repoPath: string): Entry => {
   const current = status.isSymbolicLink()
     ? Buffer.from(readlinkSync(target(root, repoPath)))
     : readFileSync(target(root, repoPath))
-  if (!current.equals(bytes) || (mode === "120000") !== status.isSymbolicLink() ||
+  if (!current.equals(bytes)) fail(`V138_PLAN114_INDEPENDENT_CURRENT_BYTES_INVALID:${repoPath}`)
+  if ((mode === "120000") !== status.isSymbolicLink() ||
       (mode !== "120000" && !status.isFile()) ||
       (mode === "100755") !== ((status.mode & 0o111) !== 0))
-    fail(`V138_PLAN114_INDEPENDENT_CURRENT_ENTRY_INVALID:${repoPath}`)
+    fail(`V138_PLAN114_INDEPENDENT_CURRENT_MODE_INVALID:${repoPath}`)
   return Object.freeze({ path: repoPath, mode, blob: match[2]!, sha256: sha(bytes), bytes })
 }
 const noRewrite = (root: string, commit: string, paths: readonly string[]): void => {
