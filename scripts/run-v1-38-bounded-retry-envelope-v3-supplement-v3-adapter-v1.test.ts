@@ -211,7 +211,7 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       writeV138SupplementV3ForReview(root)
       chmodSync(path.join(root, supplementPath), 0o755)
       commitSupplement(root)
-      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/PUBLICATION_MODE_INVALID/)
+      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/FILE_UNSAFE/)
     })
     withWorktree((root) => {
       writeV138SupplementV3ForReview(root)
