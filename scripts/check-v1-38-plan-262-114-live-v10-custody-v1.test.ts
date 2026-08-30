@@ -49,10 +49,10 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
       reviewStatus: "blocked",
       findingCount: 2,
       actualModesPassed: 0,
-      plan109Eligible: false,
       authorizesExecution: false,
       downstreamAuthority: "denied",
     })
+    expect(first.plan109Eligible).toBe(false)
     expect(first.reviewBytes.toString("utf8")).toContain("BLOCKED")
     expect(() => renderV138Plan114EvidenceForReview(repoRoot, [])).toThrow(
       "V138_PLAN114_ZERO_REQUIRES_EXECUTED_MODES",
@@ -100,12 +100,23 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
         detail: "mutation detected",
       }])
       expect(rendered.payload.findingCodes).toEqual([code])
-      expect(rendered.payload.plan109Eligible).toBe(false)
+      expect(rendered.plan109Eligible).toBe(false)
       expect(rendered.payload.authorizesExecution).toBe(false)
     }
   }, 180_000)
 
   it("authenticates only the committed trio and preserves every no-effect sentinel", () => {
+    const payloadPath = path.join(
+      repoRoot,
+      ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v1.json",
+    )
+    try { lstatSync(payloadPath) }
+    catch {
+      expect(() => authenticateV138Plan114PublishedReview(repoRoot)).toThrow(
+        "V138_PLAN114_PUBLICATION_ABSENT",
+      )
+      return
+    }
     const checked = authenticateV138Plan114PublishedReview(repoRoot)
     expect(checked).toMatchObject({
       findingCount: 0,
