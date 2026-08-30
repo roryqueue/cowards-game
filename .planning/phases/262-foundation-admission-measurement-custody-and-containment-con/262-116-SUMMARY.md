@@ -63,7 +63,7 @@ status: complete
 
 # Phase 262 Plan 116: Independent Supplement-v3 Adapter Review Summary
 
-**Exact Plan-115 adapter custody passed nine independent real execution modes and now has a committed literal-zero review trio that authorizes only revised Plan 109.**
+**Corrected Plan-115 adapter custody passed nine distinct authenticated real execution modes and now has an independently post-authenticated v2 review trio that alone authorizes revised Plan 109.**
 
 ## Performance
 
@@ -77,7 +77,14 @@ status: complete
 
 - Rederived exact Plan-115 commit `bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48`, tree `0f55d28d514e1e5e37ffcdcada88fe606e87ccd3`, parent `a2a5170ad0eb2ff0d8919aa9b78361ec5e34b076`, and the three pinned `100644` blobs without importing adapter acceptance decisions.
 - Passed all nine actual modes: canonical shared source-only, disposable source-only, exclusive write, exact one-path commit, committed check, repeat check, retained-parent swap rejection, pre-seeded cache rejection, and representative mutation rejection.
-- Published and raw-Git-authenticated a dedicated literal-zero review trio at `e1e75fc6ef177a8213d903f1ec365d86f37cf62a`; supplement-v3, readiness, live, producer, and downstream destinations remain absent.
+- Preserved the original v1 trio at `e1e75fc6ef177a8213d903f1ec365d86f37cf62a` byte-for-byte as ineligible history, fixed all nine adversarial review findings, and published the corrected three-add v2 trio at `2219a36b62b41b45626ed93f13f43edb36463e61`; supplement-v3, readiness, live, producer, and downstream destinations remain absent.
+
+## Adversarial Review Correction
+
+- Nine findings were fixed atomically: `4900708f`, `9a403fe5`, `f6194787`, `11483f96`, `50c6b84b`, `119ee781`, `c8461c0b`, `5af4188b`, and `72324c11`. Eligibility is derived only from the exact nine distinct authenticated observations and the bound disposable closure; blocked authentication flags are truthful, failed subject closure is rendered without recapture, and process-integrity failures remain no-publish.
+- Publication now binds current recursive dependencies and uses retained no-follow directory descriptors plus an authenticated transaction marker for contained crash recovery. The final reviewer closure is commit `72324c116f14afda5f64a0045a22152fb111905b`, tree `7438454a15780a295bcb701ea992d237679db558`, parent `2219a36b62b41b45626ed93f13f43edb36463e61`, with reviewer/test/native blobs `ee7b97e4df21e61cb6e13369bcc12baf3040ba9d`, `e748dd783b7b87da5c4e0371a37c866bfb837806`, and `1ac9dbf09cea169bf4b090fb34c4c2e4e9db65b7`.
+- The corrected v2 payload/review/carrier blobs are `8ffeed143f9501503499ae783f9cc5d45fea8c20`, `bb077d3c85552722c6c5f16e044fff5cc81e7408`, and `af51af144cfaf3f32e9369ef2cb491f58ed24946`; their roots are `sha256:08a648525023db9d193bd377c1bda0ab5e9d8534d4681b8931228da4889ab264`, `sha256:622a7fc1bc37701414f152246f347d31e841d27aaeed8589d6b2b14bdbaf84af`, and `sha256:aeddda11d0632711d61face9f01e1fefe7778b12c2b3621c139225446f8c0e12`.
+- The 14-test suite passed before publication, and independent post-publication authentication re-executed the pinned modes and passed with zero findings. Original v1 remains immutable and `plan109Eligible:false`; corrected v2 alone has `plan109Eligible:true`. ADMIT-03 remains 0/540 and Plan 110 remains denied.
 
 ## Task Commits
 
