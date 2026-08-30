@@ -20,6 +20,7 @@ key-files:
   created:
     - scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.ts
     - scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.test.ts
+    - .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-121-REVIEW-FIX.md
   modified: []
 key-decisions:
   - "Preserve Plan120 v2's stored eligibility byte as immutable history while making its current eligibility explicitly false because its local root does not match its published components."
@@ -84,20 +85,26 @@ status: complete
 2. **Task 1 GREEN: implement closed source and v3 custody** — `10bcc7b4`
 3. **Task 2: close context and producer boundaries** — `624fb001`
 4. **Task 2 harness fix: link workspace dependencies** — `b346e2dd`
+5. **Review RED: expose eligibility, call-graph, and closeout gaps** — `25b2628a`
+6. **Review GREEN: separate eligibility and close dynamic producer access** — `82390939`
+7. **Hostile matrix: observation, payload, history, and output mutations** — `acdfdf19`
+8. **Bounded validator fix** — `764cad49`
+9. **Mode and destination harness corrections** — `e9845169`, `933fb96d`, `22aff02a`
 
 ## Exact Source Custody
 
-- Subject commit: `b346e2ddd3ba519036a6dec0f317be3541f2568f`
-- Tree / parent: `a06ec2b974eed1e70c3641ab4295ea544a8680ad` / `624fb001f693e2a7b8c57c8ded043f4bcdf60c7b`
-- Source mode / blob: `100644` / `14bc5ff527b8b1cb2a7ea373b5ba7ece06211d72`
-- Test mode / blob: `100644` / `0560db8820ef776c253e851be264b3da95ab1343`
-- Reviewed closure root: `sha256:719b49cd2cace2545b19b34d6d6031ad825e37c138ee872db6c778820a0df81b`
-- Canonical-main local execution root: `sha256:5673d5a7cf93ef7036e0277e46c06b325664c7953add63c24661aad736f11e2a`
-- Recursive dependency root/count: `sha256:12d08abfb13986b0f16b1a5324f973a83662d8286bc223a98457686f1b124e85` / `136`
-- Checkout manifest root: `sha256:e25f6e14cc477bf053f777d6cce028691507735e7e0ec4d02caaf0122e091f2e`
+- Subject commit: `22aff02a87960c6a418238c76b0b089784bfacc5`
+- Tree / parent: `d05faf1011e98c17eb6af31ea7127972dcc3eddb` / `933fb96deaf7bb35bf834b25e2baaafac616407a`
+- Source mode / blob: `100644` / `eb059d5bb9a0c9396ed27f757afa5f2ebbfabc5d`
+- Test mode / blob: `100644` / `5adcc1b9893c00265ca4240a174fd482e8e6eb64`
+- Reviewed closure root: `sha256:fbf9a32a8ce4611091da77e1290cead36ac8aa2e870a36f58695e7cedb57ae87`
+- Canonical-main local execution root: `sha256:c555462af22d8b23250440886e877939fa15ab73802ff6550f8164c03ebeac7f`
+- Recursive dependency root/count: `sha256:10c59ada76d264f2afdde7546b175c2a55e75254537788242b96593d57b915f8` / `136`
+- Checkout manifest root: `sha256:2577f53f864852e572894ad37ed18401a64c073e3c67c99fdfeec230e778f638`
 - Installed / native roots: `sha256:abdd64bbfda135e994b862c61a477192e150e4de330f4dda67681fd6ab4594cc` / `sha256:81ebeff482f71cf09cb09ff02ec57296a565167e7ade893a791c02cdd143209e`
-- Prospective observation aggregate root: `sha256:952642fd3bf648a77bdfad2618698618ff048d3ff036ae4e3337a31fa09b20ac`
-- Prospective payload/review/carrier roots: `sha256:00ec5eb34ababc08523d8c8dbb1022d1714c75ce8102a56c07c173e6b28393f9` / `sha256:77b0f6e82b68d4e9549f7b91eb4c8638324e84a955c7f0991682e0008bab7374` / `sha256:7c2419dc095d2bef1bdf18c68ab209faef8496ba7be2b3d1e5c5fc4791bdcec9`
+- Prospective observation aggregate root: `sha256:031f6727e89cadab0ecbf03ef04b458ff1aa07aee8f19311ee0f84925f606214`
+- Prospective payload/review/carrier roots: `sha256:bb6fc10c4608617ffe5475c821a0e1711eaa07a2c4f1cc788e632fed02c70128` / `sha256:2c4a1c9774b059d5b6be3b9fda664931b95d5c60a55cbd1dd860a731c98790b5` / `sha256:082c68c167a614abd94f602b026dba85dc33e52fb551e573e87f76084c3ab7ef`
+- Prospective disposition: `prospective_only`, `actualModesPassed: 0`, `plan110Eligible: false`.
 
 ## Immutable Plan120 v2 Disposition
 
@@ -112,6 +119,13 @@ status: complete
 - `--check-reviewed-live-ready` and `--run-reviewed-bounded-live-envelope` were inspected but never invoked.
 - Producer calls, readiness/live invocations, charged identities, and accepted cells remained `0`; ADMIT-03 remains blocked at `0/540`.
 - The sealed pair, envelope, supplement, counters, effect destinations, and every downstream authority remained unchanged.
+
+## Code Review Remediation
+
+- **BL-01 resolved:** prospective observations are explicitly ineligible; only exact six-mode successful schemas plus literal-zero authority/counters can satisfy the future publication checker.
+- **BL-02 resolved:** AST custody rejects dynamic import, `require`, computed/property module access, aliases, extra callable references, moved producer calls, and second live dispatch.
+- **BL-03 resolved:** exact `b331baad` ancestry/scope and all three amended/added closeout documents are blob-, mode-, current-byte-, and no-rewrite-pinned.
+- Canonical remediation record: `262-121-REVIEW-FIX.md`.
 
 ## Decisions Made
 
@@ -151,9 +165,9 @@ No unplanned threat surface. Git/filesystem custody and the future closed produc
 
 ## Verification
 
-- Focused Vitest: 7/7 passed in 242.24 seconds.
+- Focused Vitest: 10/10 passed in 361.45 seconds after review remediation.
 - TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
-- All three producer-incapable CLIs passed from committed subject `b346e2dd`.
+- All three producer-incapable CLIs passed from committed subject `22aff02a`.
 - `git diff --check` passed; no Plan122 review artifact or effect destination exists.
 
 ## User Setup Required
@@ -162,12 +176,12 @@ None.
 
 ## Next Phase Readiness
 
-Plan122 alone is next. It may independently rederive exact subject `b346e2ddd3ba519036a6dec0f317be3541f2568f`, run six fresh disposable producer-incapable observations, and publish at most one v3 literal-zero-or-blocked trio. Plan110 and every candidate, formation, holdout, public, product, production, counted-play, archive, tag, Route-11, and downstream authority remain denied.
+Plan122 alone is next. It may independently rederive exact subject `22aff02a87960c6a418238c76b0b089784bfacc5`, run six fresh disposable producer-incapable observations, and publish at most one v3 literal-zero-or-blocked trio. Plan110 and every candidate, formation, holdout, public, product, production, counted-play, archive, tag, Route-11, and downstream authority remain denied.
 
 ## Self-Check: PASSED
 
 - Both plan-owned source/test files and this summary exist.
-- RED, GREEN, boundary-test, and harness-fix commits exist in Git history.
+- RED, GREEN, boundary-test, harness-fix, review-RED, review-GREEN, hostile-matrix, and bounded-check commits exist in Git history.
 - Subject tree, blobs, portable/local/dependency roots, Plan120 v2 disposition, one-call AST boundary, and zero-effect evidence were rechecked from committed HEAD.
 
 ---
