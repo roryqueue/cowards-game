@@ -248,10 +248,6 @@ const inspectProtectedHistory = (root: string): Sha => {
   return rooted("v138-plan-262-108-independent-protected-history-v1", records.sort().join("\n"))
 }
 
-const foundationCache = new Map<string, Readonly<{
-  closure: V138Plan114IndependentCustody
-  expandedProtectedHistoryRoot: Sha
-}>>()
 const authenticateFoundationUncached = (root: string) => {
   for (const commit of [PLAN_114_REVIEWED_SOURCE_COMMIT, PLAN_113_EVIDENCE_COMMIT,
     PLAN_113_FINAL_REVIEW_COMMIT, PLAN_111_SOURCE_COMMIT]) assertAncestor(root, commit)
@@ -319,12 +315,19 @@ const authenticateFoundationUncached = (root: string) => {
   return Object.freeze({ closure, expandedProtectedHistoryRoot })
 }
 const authenticateFoundation = (rootInput: string) => {
-  const root = path.resolve(rootInput)
-  const cached = foundationCache.get(root)
-  if (cached !== undefined) return cached
-  const observed = authenticateFoundationUncached(root)
-  foundationCache.set(root, observed)
-  return observed
+  return authenticateFoundationUncached(path.resolve(rootInput))
+}
+
+export const captureV138Plan114FoundationForReview = (rootInput: string) =>
+  authenticateFoundation(path.resolve(rootInput))
+
+export const assertV138Plan114FoundationStableForReview = (
+  rootInput: string,
+  before: ReturnType<typeof captureV138Plan114FoundationForReview>,
+) => {
+  const after = authenticateFoundation(path.resolve(rootInput))
+  if (canonical(after) !== canonical(before)) fail("V138_PLAN114_FOUNDATION_CHANGED_DURING_OBSERVATION")
+  return after
 }
 
 const semanticFailureFinding = (error: unknown): V138Plan114Finding | undefined => {
@@ -748,8 +751,15 @@ export const authenticateV138Plan114PublishedReview = (repoRootInput: string) =>
 
 const writeReview = (root: string): void => {
   assertAbsent(root, [PATHS.payload, PATHS.review, PATHS.carrier, ...FORBIDDEN])
+  const before = captureV138Plan114FoundationForReview(root)
   const modes = executeV138Plan114DisposableModes(root)
-  const evidence = renderV138Plan114EvidenceForReview(root, modes.findings, modes)
+  const after = assertV138Plan114FoundationStableForReview(root, before)
+  const evidence = renderContracts({
+    closure: after.closure,
+    linkedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
+    findings: modes.findings,
+    actualModesPassed: modes.actualModesPassed,
+  })
   for (const [repoPath, bytes] of [[PATHS.payload, Buffer.from(canonical(evidence.payload))],
     [PATHS.review, evidence.reviewBytes], [PATHS.carrier, Buffer.from(canonical(evidence.carrier))]] as const)
     writeFileSync(target(root, repoPath), bytes, { mode: 0o644, flag: "wx" })

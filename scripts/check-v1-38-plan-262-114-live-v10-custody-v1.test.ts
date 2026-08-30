@@ -3,7 +3,9 @@ import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   PLAN_114_REVIEWED_SOURCE_COMMIT,
+  assertV138Plan114FoundationStableForReview,
   authenticateV138Plan114PublishedReview,
+  captureV138Plan114FoundationForReview,
   executeV138Plan114DisposableModes,
   observeV138Plan114FoundationForReview,
   renderV138Plan114EvidenceForReview,
@@ -126,6 +128,21 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
     } finally {
       writeFileSync(absolute, bytes)
       chmodSync(absolute, 0o644)
+    }
+  }, 180_000)
+
+  it("re-authenticates current custody after the observation window", () => {
+    const repoPath = "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts"
+    const absolute = path.join(repoRoot, repoPath)
+    const bytes = readFileSync(absolute)
+    const before = captureV138Plan114FoundationForReview(repoRoot)
+    try {
+      writeFileSync(absolute, Buffer.concat([bytes, Buffer.from("\n// post-observation drift\n")]))
+      expect(() => assertV138Plan114FoundationStableForReview(repoRoot, before)).toThrow(
+        "V138_PLAN114_INDEPENDENT_CURRENT_BYTES_INVALID",
+      )
+    } finally {
+      writeFileSync(absolute, bytes)
     }
   }, 180_000)
 
