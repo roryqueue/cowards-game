@@ -1045,7 +1045,9 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
   const visit = (node: ts.Node): void => {
     if (ts.isStringLiteral(node) && node.text === producerModule) {
       producerModuleLiteralCount += 1
-      if (!ts.isImportDeclaration(node.parent)) dynamicProducerAccessCount += 1
+      const isInspectorConstant = ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name) && node.parent.name.text === "producerModule"
+      if (!ts.isImportDeclaration(node.parent) && !isInspectorConstant) dynamicProducerAccessCount += 1
     }
     if (ts.isStringLiteral(node) && node.text === "runV138V3ProductionLive" &&
         (ts.isElementAccessExpression(node.parent) || ts.isPropertyAssignment(node.parent)))
@@ -1081,7 +1083,7 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
     reviewedOwnerCall.arguments.length === 1 && reviewedOwnerCall.arguments[0]?.getText(sourceFile) === "root" &&
     exactLiveSelectorAncestor(reviewedOwnerCall)
   if (!exactImport || importedBindings.length !== 2 || producerReferences !== 2 ||
-      producerModuleLiteralCount !== 1 || dynamicProducerAccessCount !== 0 ||
+      producerModuleLiteralCount !== 2 || dynamicProducerAccessCount !== 0 ||
       !producerCallValid || !reviewedDispatchValid ||
       !source.includes('"--check-reviewed-live-ready"') ||
       !source.includes('"--run-reviewed-bounded-live-envelope"') ||

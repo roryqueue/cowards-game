@@ -25,6 +25,8 @@ import {
   inspectV138LiveV13ProductionBoundaryForReview,
   inspectV138LiveV13ProductionBoundarySourceForReview,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v13.js"
+import { computeV138PathStableLocalExecutionClosureRoot } from
+  "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const producerDestinations = [
@@ -54,6 +56,48 @@ const runExpectingFailure = (script: string, selector: string): string => {
     return `${failure.stdout ?? ""}\n${failure.stderr ?? ""}\n${failure.message}`
   }
 }
+
+const strictObservations = (reviewedClosureRoot: `sha256:${string}`) =>
+  V138_LIVE_V13_REVIEW_MODES.map((mode, index) => {
+    const disposableReviewedClosureRoot = `sha256:${(index + 1).toString(16).padStart(64, "0")}` as const
+    const disposableLocalInstalledClosureRoot = `sha256:${(index + 11).toString(16).padStart(64, "0")}` as const
+    const disposableLocalGitObjectRoot = `sha256:${(index + 21).toString(16).padStart(64, "0")}` as const
+    const disposableLocalNativeSourcesRoot = `sha256:${(index + 31).toString(16).padStart(64, "0")}` as const
+    const disposableLocalExecutionClosureRoot = computeV138PathStableLocalExecutionClosureRoot({
+      reviewedClosureRoot: disposableReviewedClosureRoot,
+      localInstalledClosureRoot: disposableLocalInstalledClosureRoot,
+      localGitObjectRoot: disposableLocalGitObjectRoot,
+      localNativeSourcesRoot: disposableLocalNativeSourcesRoot,
+    })
+    const status = {
+      "--check-source-only": "source_only_checked",
+      "--check-prospective-custody": "prospective_custody_checked",
+      "--check-post-run-custody": "post_run_no_effect_custody_checked",
+      "--check-non-pass-value": "bounded_non_pass_value_checked",
+      "--check-bounded-success-value": "bounded_success_value_checked",
+      "--check-exact-reproduction-v17-value": "exact_reproduction_v17_value_checked",
+    }[mode]
+    const reducedValue = mode === "--check-non-pass-value"
+      ? { classification: "non_pass", reproductionEligible: false }
+      : mode === "--check-bounded-success-value"
+        ? { classification: "bounded_success", reproductionEligible: true }
+        : mode === "--check-exact-reproduction-v17-value"
+          ? { acceptedCells: 540, requiredAccepted: 540, exact: true }
+          : { producerCalls: 0, readinessInvoked: false, liveInvoked: false,
+              freshCharged: 0, freshAccepted: 0, downstreamAuthority: "denied" }
+    const body = {
+      mode,
+      status,
+      producerGuardCount: 0 as const,
+      reducedValue,
+      disposableReviewedClosureRoot,
+      disposableLocalInstalledClosureRoot,
+      disposableLocalGitObjectRoot,
+      disposableLocalNativeSourcesRoot,
+      disposableLocalExecutionClosureRoot,
+    }
+    return { ...body, observationRoot: computeV138LiveV13ObservationRoot(body), reviewedClosureRoot }
+  }).map(({ reviewedClosureRoot: _ignored, ...observation }) => observation)
 
 const withLinkedWorktree = <T>(run: (root: string) => T): T => {
   const owner = mkdtempSync(path.join(tmpdir(), "v138-live-v13-test-"))
@@ -230,6 +274,80 @@ describe("Plan 262-121 closed live-v13 successor", () => {
     expect(prospective.payload).not.toHaveProperty("reviewedLocalExecutionClosureRoot")
   }, 120_000)
 
+  it("admits only six exact successful observations and rejects forged publication bytes", () => {
+    const base = deriveV138LiveV13ProspectiveContractsForReview({
+      repoRoot,
+      reviewedSourceCommit: currentSubjectCommit(),
+      plan122PublicationCommit: "0".repeat(40),
+    })
+    const observations = strictObservations(base.reviewedClosure.reviewedClosureRoot)
+    const eligible = deriveV138LiveV13ProspectiveContractsForReview({
+      repoRoot,
+      reviewedSourceCommit: currentSubjectCommit(),
+      plan122PublicationCommit: "0".repeat(40),
+      observations,
+    })
+    expect(eligible.payload).toMatchObject({
+      reviewStatus: "zero_findings",
+      actualModesPassed: 6,
+      plan110Eligible: true,
+      producerCalls: 0,
+      readinessInvoked: false,
+      liveInvoked: false,
+      freshCharged: 0,
+      freshAccepted: 0,
+      authorizesExecution: false,
+      downstreamAuthority: "denied",
+    })
+    expect(checkV138LiveV13ProspectiveCustodyForReview({
+      repoRoot,
+      source: eligible.source,
+      reviewedClosure: eligible.reviewedClosure,
+      canonicalLocalExecutionClosureRoot: eligible.reviewedClosure.localExecutionClosureRoot,
+      observations,
+      plan122PublicationCommit: "0".repeat(40),
+      plan122: eligible,
+      requireEligiblePublication: true,
+    }).payload.plan110Eligible).toBe(true)
+
+    const invalidObservationSets = [
+      observations.slice(0, 5),
+      [observations[0]!, observations[0]!, ...observations.slice(2)],
+      observations.map((value, index) => index === 1 ? { ...value, status: "prospective_only" } : value),
+      observations.map((value, index) => index === 2
+        ? { ...value, reducedValue: { producerCalls: 1 }, observationRoot: value.observationRoot }
+        : value),
+      observations.map((value, index) => index === 3
+        ? { ...value, disposableLocalInstalledClosureRoot: `sha256:${"f".repeat(64)}` as const }
+        : value),
+    ]
+    for (const candidate of invalidObservationSets)
+      expect(() => deriveV138LiveV13ProspectiveContractsForReview({
+        repoRoot,
+        reviewedSourceCommit: currentSubjectCommit(),
+        plan122PublicationCommit: "0".repeat(40),
+        observations: candidate,
+      })).toThrow("V138_LIVE_V13_OBSERVATIONS_INVALID")
+
+    for (const payload of [
+      { ...eligible.payload, plan110Eligible: false },
+      { ...eligible.payload, actualModesPassed: 0 },
+      { ...eligible.payload, reviewedLocalExecutionClosureRoot:
+        eligible.payload.canonicalLocalExecutionClosureRoot },
+      { ...eligible.payload, productionAuthorized: true },
+      { ...eligible.payload, counters: { ...eligible.payload.counters, acceptedCells: 1 } },
+    ]) expect(() => checkV138LiveV13ProspectiveCustodyForReview({
+      repoRoot,
+      source: eligible.source,
+      reviewedClosure: eligible.reviewedClosure,
+      canonicalLocalExecutionClosureRoot: eligible.reviewedClosure.localExecutionClosureRoot,
+      observations,
+      plan122PublicationCommit: "0".repeat(40),
+      plan122: { ...eligible, payload },
+      requireEligiblePublication: true,
+    })).toThrow("V138_LIVE_V13_PLAN122_CUSTODY_INVALID")
+  }, 180_000)
+
   it("keeps one direct producer call under only the closed live selector", () => {
     const source = readFileSync(path.join(repoRoot, V138_LIVE_V13_PATHS.source), "utf8")
     expect(source.match(/await runV138V3ProductionLive\(/gu)).toHaveLength(1)
@@ -273,6 +391,39 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       }
     })
   }, 120_000)
+
+  it("rejects current bytes, modes, successor rewrites, forbidden outputs, and frozen-history substitution", () => {
+    withLinkedWorktree((root) => {
+      const mutate = (repoPath: string, expected: RegExp) => {
+        const absolute = path.join(root, repoPath)
+        const original = readFileSync(absolute)
+        writeFileSync(absolute, Buffer.concat([original, Buffer.from("\n")]))
+        expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(expected)
+        writeFileSync(absolute, original)
+      }
+      mutate(V138_LIVE_V13_PATHS.plan120PayloadV2, /PUBLICATION_CURRENT_BYTES_INVALID/u)
+      mutate("scripts/run-v1-38-bounded-retry-envelope-v3-live-v12.ts", /PLAN119_ENTRY_INVALID/u)
+      mutate(V138_LIVE_V13_PATHS.envelope, /PAIR_CURRENT_BYTES_INVALID/u)
+      chmodSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary), 0o600)
+      expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/PLAN_CLOSEOUT_CURRENT_BYTES_INVALID/u)
+      chmodSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary), 0o644)
+      const forbidden = path.join(root,
+        ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3-attempt-journal.json")
+      writeFileSync(forbidden, "{}")
+      expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/FORBIDDEN_DESTINATION_PRESENT/u)
+    })
+    withLinkedWorktree((root) => {
+      writeFileSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary), Buffer.concat([
+        readFileSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary)), Buffer.from("\n"),
+      ]))
+      execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V13_PATHS.plan93Summary], { cwd: root })
+      execFileSync("/usr/bin/git", [
+        "-c", "user.name=Plan 262 Mutation", "-c", "user.email=plan262-mutation@example.invalid",
+        "commit", "--quiet", "-m", "test: forbidden closeout rewrite",
+      ], { cwd: root })
+      expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/SUCCESSOR_REWRITE/u)
+    })
+  }, 180_000)
 
   it("keeps the file-backed producer tripwire untouched in all Plan121 modes", () => {
     withLinkedWorktree((root) => {
