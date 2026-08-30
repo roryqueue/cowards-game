@@ -132,6 +132,8 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
       repoRoot,
       writeOutput: (value) => outputs.push(value),
     })
+    await expect(executeV138LiveV11Cli([], { repoRoot })).rejects.toThrow("V138_LIVE_V11_ARGUMENTS_INVALID")
+    await expect(executeV138LiveV11Cli(["--unknown"], { repoRoot })).rejects.toThrow("V138_LIVE_V11_ARGUMENTS_INVALID")
     expect(outputs.map((value) => JSON.parse(value))).toEqual([
       expect.objectContaining({ status: "source_only_checked", producerCalls: 0, readinessInvoked: false, liveInvoked: false }),
       expect.objectContaining({
@@ -280,6 +282,40 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
           reviewRoot: preview.reviewRoot,
         },
       })).toThrow("V138_LIVE_V11_PLAN118_CUSTODY_INVALID")
+      expect(() => checkV138LiveV11ProspectiveCustodyForReview({
+        source: preview.source,
+        reviewedClosure: preview.reviewedClosure,
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+        plan118PublicationCommit: "0".repeat(40),
+        plan118: {
+          payload: preview.payload,
+          reviewBytes: Buffer.concat([preview.reviewBytes, Buffer.from("drift")]),
+          carrier: preview.carrier,
+          reviewRoot: preview.reviewRoot,
+        },
+      })).toThrow("V138_LIVE_V11_PLAN118_CUSTODY_INVALID")
+      expect(() => checkV138LiveV11ProspectiveCustodyForReview({
+        source: preview.source,
+        reviewedClosure: preview.reviewedClosure,
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+        plan118PublicationCommit: "0".repeat(40),
+        plan118: {
+          payload: preview.payload,
+          reviewBytes: preview.reviewBytes,
+          carrier: { ...preview.carrier, authorizesExecution: true },
+          reviewRoot: preview.reviewRoot,
+        },
+      })).toThrow("V138_LIVE_V11_PLAN118_CUSTODY_INVALID")
+      expect(() => checkV138LiveV11ProspectiveCustodyForReview({
+        source: preview.source,
+        reviewedClosure: {
+          ...preview.reviewedClosure,
+          localInstalledClosureRoot: `sha256:${"4".repeat(64)}`,
+        },
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+        plan118PublicationCommit: "0".repeat(40),
+        plan118: preview,
+      })).toThrow()
 
       for (const [repoPath, bytes] of [
         [V138_LIVE_V11_PATHS.plan118Payload, Buffer.from(canonical(preview.payload))],
@@ -306,6 +342,12 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
         expect.objectContaining({ status: "prospective_custody_checked", producerCalls: 0, liveInvoked: false }),
         expect.objectContaining({ status: "post_run_custody_checked", producerCalls: 0, liveInvoked: false }),
       ])
+
+      chmodSync(path.join(root, V138_LIVE_V11_PATHS.plan118Payload), 0o600)
+      expect(() => authenticateV138LiveV11FutureCustodyForReview(root, "pre")).toThrow(
+        /V138_LIVE_V11_CURRENT_ENTRY_INVALID/,
+      )
+      chmodSync(path.join(root, V138_LIVE_V11_PATHS.plan118Payload), 0o644)
 
       for (const repoPath of [
         ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
@@ -351,6 +393,15 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
           downstreamAuthority: "denied",
         },
       })).toEqual({ status: "bounded_success", downstreamAuthority: "denied" })
+
+      const payloadBytes = readFileSync(path.join(root, V138_LIVE_V11_PATHS.plan118Payload))
+      writeFileSync(path.join(root, V138_LIVE_V11_PATHS.plan118Payload), Buffer.concat([payloadBytes, Buffer.from("\n")]))
+      execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V11_PATHS.plan118Payload], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "--quiet", "-m", "fixture forbidden Plan118 rewrite"], { cwd: root })
+      expect(() => authenticateV138LiveV11FutureCustodyForReview(root, "post")).toThrow(
+        /V138_LIVE_V11_PUBLICATION_CURRENT_BYTES_INVALID|V138_LIVE_V11_SUCCESSOR_REWRITE/,
+      )
     })
   }, 180_000)
 })
