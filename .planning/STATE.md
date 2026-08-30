@@ -5,19 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-122-PLAN.md; revised Plan 262-110 is sole next action
-last_updated: "2026-08-30T22:45:48.246Z"
+stopped_at: Phase 262 closeout DAG replanned after Plan 122; revised Plan 262-110 is sole next action
+last_updated: "2026-08-30T22:59:37.000Z"
 last_activity: 2026-08-30
-last_activity_desc: completed independent live-v13 v3 custody review with six producer-incapable modes and exact-three-add publication
+last_activity_desc: replanned remaining Phase 262 into separately committed source, review, publication, convergence, and later-HEAD gates
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 103
+  total_plans: 110
   completed_plans: 99
-  percent: 96
+  percent: 90
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-closeout-replan-status-v1: {"schema_version":"v1.38-phase-262-closeout-replan-v1","active_plans":110,"trustworthy_summaries":99,"incomplete_plans":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-110":95,"262-94":96,"262-123":97,"262-124":98,"262-95":99,"262-125":100,"262-126":101,"262-106":102,"262-127":103,"262-128":104,"262-129":105},"source_review_publication_gates":[["262-94","262-123","262-124"],["262-95","262-125","262-126/262-106"],["262-106","262-127","262-128"]],"plan121_summary_mutated":false,"plan121_metadata_correction_owner":"262-126","raw_receipt_custody":"owner_local_through_262_124_adjudication","aggregate_manifest_owner":"262-94","summary_tracking_atomic_owners":["262-106","262-128"],"later_head_owner":"262-129","assurance_class":"single_operator_local_seal_v1_no_hostile_same_uid","external_custody":false,"next_action":"dispatch-revised-262-110-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The Plan122 and Plan121 closeout carriers below remain immutable completed evidence. Their stale counts, direct downstream topology, and Plan121 requirements-completed metadata are non-authoritative for current routing; Plan126 owns the additive metadata-correction carrier and must not rewrite 262-121-SUMMARY.md. -->
 
 <!-- phase-262-plan-122-closeout-status: {"schema_version":"v1.38-plan-262-122-closeout-v1","proof_status":"independent_live_v13_review_zero_findings","publication_commit":"65a7a246627a411c45ced95bfb3c0296f0f8e4eb","subject_commit":"3882cd5d3ec7a834e1de88254dd0daf955da12aa","closeout_commit":"c92b5d0fb74414d6950eeea8a316b9a779a120d3","review_record_commit":"5ef819d048a38ed3c87a8ee9017b5b5b77472b6b","finding_count":0,"actual_modes_passed":6,"payload_root":"sha256:09bc5c878be265daee2b1521c82b027b481f7760de534c8c07301db425849f90","review_root":"sha256:4771a58f29ff52c8b4bb8df490709642cfec1bbb9dcdaf2fb5aaf24fddd51404","carrier_root":"sha256:ee4c12058a0063b2e9f6aa061a2e99ab9cd4a733f0b1cc546db0756fa06006f1","reviewed_closure_root":"sha256:9b803ab8f108923e1160d308ac91a1e4fabdafea28a0115e290f38cf1fd94952","canonical_local_execution_closure_root":"sha256:58617465d61e1c7bc5f7b90cfeafe2529959051144a55defda56613a7c8e3102","observations_root":"sha256:1bd7144457bd4f6afac6e1d9f59e0db68adc9ce55bc517bc35266dfd89e7870f","plan120_v2_disposition":"process_invalid_local_context_misbinding","plan120_v2_eligible":false,"plan_262_110_eligible":true,"authorizes_execution":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-110-only","admit_03":"blocked","downstream_authority_denied":true} -->
 
@@ -128,11 +132,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 99 terminally truthful summaries across 103 active plans — exactly 4 plans remain and revised Plan 262-110 is the sole eligible next action
-Status: Phase 262 remains in progress; Plans 110 -> 94 -> 95 -> 106 are sequential, with exactly one future live-v13 invocation owned by Plan110 and zero live-v10/live-v11/live-v12 invocation
-Last activity: 2026-08-30 — completed literal-zero Plan122 v3 review with canonical-main custody and six observation-scoped disposable roots
+Plan: 99 terminally truthful summaries across 110 active plans — exactly 11 closeout plans remain and revised Plan 262-110 is the sole eligible next action
+Status: Phase 262 remains in progress; Waves 95-105 enforce source -> independent review -> publication for admission, lifecycle, convergence, eligibility, and later-HEAD closure
+Last activity: 2026-08-30 — replanned remaining closeout after Plan122 without modifying immutable Plan121/122 evidence
 
-Progress: [██████████] 96%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -164,7 +168,7 @@ Progress: [██████████] 96%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 103 plans/98 terminally truthful summaries with exactly five incomplete plans: 122 -> 110 -> 94 -> 95 -> 106 at computed and declared Waves 94-98. Plan121 closed live-v13 source is committed at `b346e2dd` with canonical-main and observation-scoped disposable custody separated; it invoked only three producer-incapable selectors. Plan120's exact-three-add v2 publication `c7390cf5` remains immutable process-invalid history and ineligible. Plan122 alone is next and may independently publish only a v3 Plan110-eligibility trio. Literal zero alone makes Plan110 eligible to invoke live-v13 exactly once. Live-v10/live-v11/live-v12 have zero planned readiness/production invocation. The unchanged historical producer remains sole effect implementation and Plan94 remains sole adjudicator/Route-11 owner. Supplement-v1/v2 remain absent, the B3 pair/envelope and all five counters remain zero, and beyond the required review-v3 trio no producer/effect destination, capacity, reset, identity, literal, readiness publication, live evidence, or downstream authority exists.
+**Current topology:** Active discovery is 110 plans/99 terminally truthful summaries with eleven incomplete closeout plans at Waves 95-105: 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129. Plan121/122 bytes remain immutable completed evidence and Plan120 remains process-invalid history. Plan110 alone may invoke live-v13 once. Plan94 commits source plus a non-authorizing aggregate manifest; Plan123 separately reviews it; Plan124 alone publishes disposition and pass-only Route-11. Plan95 lifecycle source is separately reviewed by Plan125 before Plan126 readiness and Plan106 provisional atomic closeout. Plan127 is the final independent convergence gate before Plan128 eligibility publication, and Plan129 performs the strict later-HEAD clean-checkout check. ADMIT-03, Phase262 completion, Phase263 planning, and every broader authority remain blocked now.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -476,13 +480,13 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 
 ### Pending Todos
 
-- Do not retry Plan262-93 or dispatch Plans110/94/95/106 out of order. Literal-zero Plan122 v3 is committed; dispatch only revised Plan110 for its one separately authorized live-v13 boundary.
+- Do not retry Plan262-93 or skip any Wave 95-105 gate. Dispatch only revised Plan110 now; after it, follow 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129 exactly.
 
 ### Current Blocker/Concerns
 
-- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-121 completed without effects; Plan120 remains permanently ineligible process-invalid history. Plan122 v3 independently returned literal zero and makes only revised Plan110 eligible; every later live/adjudication gate remains unexecuted.
+- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-122 are completed evidence; Plan120 remains permanently ineligible process-invalid history. Plan122 v3 makes only revised Plan110 eligible; every later admission/lifecycle/convergence/publication gate remains unexecuted.
 - ADMIT-03 remains blocked: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
-- Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; Plans 262-94 through 262-106 remain dependency-denied.
+- Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; every closeout plan after 110 remains dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
 - Revised SEAL-01 is satisfied only at `single_operator_local_seal_v1_no_hostile_same_uid`; no independent-custody, hostile-same-UID, malicious-owner, or pathname-launch replacement resistance is claimed.
 - Formation, holdout, public/product/production, counted-play, gameplay-change, archive, and tag authority remain false.
@@ -536,8 +540,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-30T22:45:48.229Z
-Stopped at: Completed 262-122-PLAN.md; revised Plan 262-110 is sole next action
+Last session: 2026-08-30T22:59:37.000Z
+Stopped at: Phase 262 closeout DAG replanned after Plan 122; revised Plan 262-110 is sole next action
 Resume file: None
 
 ### Blockers
