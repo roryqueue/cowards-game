@@ -1004,6 +1004,7 @@ export const checkV138LiveV13ReproductionV17ForReview =
 export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: string) => {
   const sourceFile = ts.createSourceFile(V138_LIVE_V13_PATHS.source, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
   const producerModule = "./run-v1-38-bounded-retry-envelope-v3.js"
+  const producerName = "runV138V3ProductionLive"
   const producerImports = sourceFile.statements.filter((statement): statement is ts.ImportDeclaration =>
     ts.isImportDeclaration(statement) && statement.moduleSpecifier.getText(sourceFile) ===
       '"./run-v1-38-bounded-retry-envelope-v3.js"')
@@ -1017,8 +1018,21 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
   let reviewedOwnerReferences = 0
   let producerModuleLiteralCount = 0
   let dynamicProducerAccessCount = 0
+  let runtimeCodeGenerationCount = 0
+  let runtimeModuleLoaderCount = 0
+  let assembledExecutableAccessCount = 0
   const producerCalls: ts.CallExpression[] = []
   const reviewedOwnerCalls: ts.CallExpression[] = []
+  const constantString = (node: ts.Expression): string | undefined => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text
+    if (ts.isParenthesizedExpression(node)) return constantString(node.expression)
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const left = constantString(node.left)
+      const right = constantString(node.right)
+      return left === undefined || right === undefined ? undefined : left + right
+    }
+    return undefined
+  }
   const enclosingOwner = (node: ts.Node): string | undefined => {
     let current: ts.Node | undefined = node.parent
     while (current !== undefined) {
@@ -1047,6 +1061,32 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
     return false
   }
   const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) &&
+        ["eval", "Function", "AsyncFunction", "GeneratorFunction"].includes(node.text))
+      runtimeCodeGenerationCount += 1
+    if (ts.isIdentifier(node) && ["require", "createRequire", "getBuiltinModule"].includes(node.text))
+      runtimeModuleLoaderCount += 1
+    if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+        ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "constructor")
+      runtimeCodeGenerationCount += 1
+    if (ts.isPropertyAccessExpression(node) && node.name.text === "resolve" &&
+        node.expression.getText(sourceFile) === "import.meta") runtimeModuleLoaderCount += 1
+    if (ts.isPropertyAccessExpression(node) &&
+        node.expression.getText(sourceFile) === "WebAssembly" &&
+        ["compile", "compileStreaming", "instantiate", "instantiateStreaming"].includes(node.name.text))
+      runtimeCodeGenerationCount += 1
+    if (ts.isElementAccessExpression(node) && node.argumentExpression !== undefined) {
+      const assembled = constantString(node.argumentExpression)
+      if (assembled !== undefined &&
+          ["eval", "Function", "require", "createRequire", "getBuiltinModule", producerName]
+            .some((forbidden) => assembled.includes(forbidden))) assembledExecutableAccessCount += 1
+    }
+    if (ts.isBinaryExpression(node)) {
+      const assembled = constantString(node)
+      if (assembled !== undefined &&
+          [producerName, producerModule].some((forbidden) => assembled.includes(forbidden)))
+        assembledExecutableAccessCount += 1
+    }
     if (ts.isStringLiteral(node) && node.text === producerModule) {
       producerModuleLiteralCount += 1
       const isInspectorConstant = ts.isVariableDeclaration(node.parent) &&
@@ -1088,6 +1128,8 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
     exactLiveSelectorAncestor(reviewedOwnerCall)
   if (!exactImport || importedBindings.length !== 2 || producerReferences !== 2 ||
       producerModuleLiteralCount !== 2 || dynamicProducerAccessCount !== 0 ||
+      runtimeCodeGenerationCount !== 0 || runtimeModuleLoaderCount !== 0 ||
+      assembledExecutableAccessCount !== 0 ||
       !producerCallValid || !reviewedDispatchValid ||
       !source.includes('"--check-reviewed-live-ready"') ||
       !source.includes('"--run-reviewed-bounded-live-envelope"') ||
