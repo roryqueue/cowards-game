@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
+  chmodSync,
   closeSync,
   constants,
-  existsSync,
   fstatSync,
   lstatSync,
+  mkdtempSync,
   openSync,
   readFileSync,
   rmSync,
@@ -375,34 +376,94 @@ const supplementProjection = (status: "supplement_v3_written" | "supplement_v3_c
   downstreamAuthority: "denied" as const,
 })
 
-const nativeWriterExecutable = (): string => {
-  const identity = createHash("sha256").update(readFileSync(nativeWriterSource)).digest("hex")
-  const executable = path.join(tmpdir(), `cowards-v138-plan115-writer-${identity}`)
-  if (!existsSync(executable)) {
-    const output = `${executable}.${process.pid}.tmp`
+type NativeWriter = Readonly<{
+  owner: string
+  ownerDevice: number
+  ownerInode: number
+  executable: string
+  executableSha256: string
+}>
+
+const requireOwnerOnlyDirectory = (directory: string) => {
+  const status = lstatSync(directory)
+  const uid = process.getuid?.()
+  if (!status.isDirectory() || status.isSymbolicLink() || (status.mode & 0o7777) !== 0o700 ||
+      (uid !== undefined && status.uid !== uid)) fail("V138_PLAN115_NATIVE_OWNER_DIRECTORY_UNSAFE")
+  return status
+}
+
+const inspectNativeWriter = (writer: NativeWriter): void => {
+  const owner = requireOwnerOnlyDirectory(writer.owner)
+  if (owner.dev !== writer.ownerDevice || owner.ino !== writer.ownerInode)
+    fail("V138_PLAN115_NATIVE_OWNER_DIRECTORY_CHANGED")
+  const before = lstatSync(writer.executable)
+  const uid = process.getuid?.()
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 ||
+      (before.mode & 0o7777) !== 0o700 || (uid !== undefined && before.uid !== uid))
+    fail("V138_PLAN115_NATIVE_EXECUTABLE_UNSAFE")
+  const descriptor = openSync(writer.executable, constants.O_RDONLY | constants.O_NOFOLLOW)
+  try {
+    const opened = fstatSync(descriptor)
+    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino ||
+        opened.size !== before.size || opened.mode !== before.mode || opened.uid !== before.uid)
+      fail("V138_PLAN115_NATIVE_EXECUTABLE_CHANGED")
+    const digest = createHash("sha256").update(readFileSync(descriptor)).digest("hex")
+    const after = fstatSync(descriptor)
+    if (digest !== writer.executableSha256 || after.dev !== opened.dev || after.ino !== opened.ino ||
+        after.size !== opened.size || after.mode !== opened.mode || after.uid !== opened.uid)
+      fail("V138_PLAN115_NATIVE_EXECUTABLE_IDENTITY_INVALID")
+  } finally { closeSync(descriptor) }
+}
+
+const compileNativeWriter = (): NativeWriter => {
+  const owner = mkdtempSync(path.join(tmpdir(), "cowards-v138-plan115-writer-"))
+  try {
+    chmodSync(owner, 0o700)
+    const ownerStatus = requireOwnerOnlyDirectory(owner)
+    const executable = path.join(owner, "writer")
     const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror",
-      nativeWriterSource, "-o", output], { encoding: "utf8" })
+      nativeWriterSource, "-o", executable], { encoding: "utf8" })
     if (compilation.status !== 0)
       fail(`V138_PLAN115_NATIVE_COMPILE_FAILED:${compilation.stderr.trim()}`)
-    const install = spawnSync("/bin/mv", ["-n", output, executable], { encoding: "utf8" })
-    if (install.status !== 0 && !existsSync(executable)) fail("V138_PLAN115_NATIVE_INSTALL_FAILED")
-    if (existsSync(output)) rmSync(output, { force: true })
+    chmodSync(executable, 0o700)
+    const descriptor = openSync(executable, constants.O_RDONLY | constants.O_NOFOLLOW)
+    let executableSha256: string
+    try { executableSha256 = createHash("sha256").update(readFileSync(descriptor)).digest("hex") }
+    finally { closeSync(descriptor) }
+    const writer = Object.freeze({
+      owner, ownerDevice: ownerStatus.dev, ownerInode: ownerStatus.ino, executable, executableSha256,
+    })
+    inspectNativeWriter(writer)
+    return writer
+  } catch (error) {
+    rmSync(owner, { recursive: true, force: true })
+    throw error
   }
-  return executable
+}
+
+const cleanupNativeWriter = (writer: NativeWriter): void => {
+  const owner = lstatSync(writer.owner)
+  if (!owner.isDirectory() || owner.isSymbolicLink() || owner.dev !== writer.ownerDevice ||
+      owner.ino !== writer.ownerInode) fail("V138_PLAN115_NATIVE_OWNER_CLEANUP_UNSAFE")
+  rmSync(writer.owner, { recursive: true, force: true })
 }
 
 const writeExclusiveRetainedParent = (root: string, repoPath: string, bytes: string): void => {
   const identity = lstatSync(root)
   if (!identity.isDirectory() || identity.isSymbolicLink()) fail("V138_PLAN115_NATIVE_ROOT_UNSAFE")
-  const result = spawnSync(nativeWriterExecutable(), [root, String(identity.dev), String(identity.ino), repoPath], {
-    cwd: root,
-    input: bytes,
-    encoding: "utf8",
-    env: process.env,
-    stdio: ["pipe", "ignore", "pipe"],
-  })
-  if (result.status !== 0)
-    fail(result.stderr.trim() || `V138_PLAN115_NATIVE_WRITE_FAILED:${String(result.status)}`)
+  const writer = compileNativeWriter()
+  try {
+    inspectNativeWriter(writer)
+    const result = spawnSync(writer.executable, [root, String(identity.dev), String(identity.ino), repoPath], {
+      cwd: root,
+      input: bytes,
+      encoding: "utf8",
+      env: process.env,
+      stdio: ["pipe", "ignore", "pipe"],
+    })
+    if (result.status !== 0)
+      fail(result.stderr.trim() || `V138_PLAN115_NATIVE_WRITE_FAILED:${String(result.status)}`)
+  } finally { cleanupNativeWriter(writer) }
 }
 
 export const writeV138SupplementV3ForReview = (rootInput: string) => {

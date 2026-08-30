@@ -1,4 +1,5 @@
 import { execFileSync, spawn } from "node:child_process"
+import { createHash } from "node:crypto"
 import {
   chmodSync,
   existsSync,
@@ -30,6 +31,7 @@ const v2CarrierPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-r
 const effectPath = ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json"
 const finalReviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-FINAL-CLEAN-REVIEW.md"
 const pairPath = ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json"
+const nativeWriterPath = "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c"
 const git = (root: string, args: readonly string[]): string => execFileSync(
   "/usr/bin/git",
   ["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgSign=false", ...args],
@@ -275,6 +277,32 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
           renameSync(retained, artifacts)
         }
         rmSync(external, { recursive: true, force: true })
+      }
+    })
+  }, 180_000)
+
+  it("never executes a pre-seeded predictable shared-temp helper", () => {
+    withWorktree((root) => {
+      const cacheRoot = mkdtempSync(path.join(tmpdir(), "v138-plan115-poison-cache-"))
+      const previousTmp = process.env.TMPDIR
+      try {
+        process.env.TMPDIR = cacheRoot
+        const identity = createHash("sha256")
+          .update(readFileSync(path.join(repoRoot, nativeWriterPath))).digest("hex")
+        const legacyExecutable = path.join(cacheRoot, `cowards-v138-plan115-writer-${identity}`)
+        const poisonMarker = path.join(cacheRoot, "poison-executed")
+        writeFileSync(legacyExecutable,
+          `#!/bin/sh\nprintf poison > ${JSON.stringify(poisonMarker)}\nexit 0\n`, { mode: 0o700, flag: "wx" })
+        expect(() => writeV138SupplementV3ForReview(root)).not.toThrow()
+        expect(readFileSync(path.join(root, supplementPath), "utf8")).toContain(
+          "v1.38-successor-source-seal-v13-executable-custody-supplement-v3",
+        )
+        expect(existsSync(poisonMarker)).toBe(false)
+        expect(readdirSync(cacheRoot)).toEqual([path.basename(legacyExecutable)])
+      } finally {
+        if (previousTmp === undefined) delete process.env.TMPDIR
+        else process.env.TMPDIR = previousTmp
+        rmSync(cacheRoot, { recursive: true, force: true })
       }
     })
   }, 180_000)
