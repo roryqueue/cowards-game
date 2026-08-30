@@ -42,7 +42,8 @@ const workspaces = Object.freeze([
   "packages/runtime-wasm-wasi", "packages/service", "packages/spec", "packages/test-utils",
 ])
 
-const withLinkedWorktree = <T>(
+const withLinkedWorktreeAt = <T>(
+  ref: string,
   run: (root: string) => T,
   installation: "shared" | "separate" = "shared",
 ): T => {
@@ -50,7 +51,7 @@ const withLinkedWorktree = <T>(
   const root = path.join(owner, "repo")
   let added = false
   try {
-    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, ref], {
       cwd: repoRoot,
       env: { PATH: "/usr/bin:/bin", HOME: owner, LANG: "C", LC_ALL: "C" },
     })
@@ -80,6 +81,11 @@ const withLinkedWorktree = <T>(
     rmSync(owner, { recursive: true, force: true })
   }
 }
+
+const withLinkedWorktree = <T>(
+  run: (root: string) => T,
+  installation: "shared" | "separate" = "shared",
+): T => withLinkedWorktreeAt("HEAD", run, installation)
 
 const readClosuresInLinkedProcess = (root: string) => JSON.parse(execFileSync(
   path.join(repoRoot, "node_modules/.bin/tsx"),
@@ -282,6 +288,23 @@ describe("Plan 262-113 path-stable custody", () => {
       expect(exact.supplement.createsCapacity).toBe(false)
       expect(exact.supplement.resetsCounters).toBe(false)
       expect(exact.supplement.authorizesExecution).toBe(false)
+
+      withLinkedWorktreeAt(reviewedSourceCommit, (otherRoot) => {
+        const contextWrong = deriveV138LiveV10ProspectiveContractsForReview({
+          repoRoot: otherRoot, source, reviewedSourceCommit, plan114PublicationCommit,
+        })
+        expect(contextWrong.reviewedClosure.reviewedClosureRoot)
+          .toBe(reviewedClosure.reviewedClosureRoot)
+        expect(contextWrong.reviewedClosure.localExecutionClosureRoot)
+          .not.toBe(reviewedClosure.localExecutionClosureRoot)
+        expect(() => checkV138LiveV10ProspectiveCustodyForReview({
+          source,
+          reviewedClosure,
+          plan114PublicationCommit,
+          plan114: contextWrong.plan114,
+          supplement: contextWrong.supplement,
+        })).toThrow("V138_LIVE_V10_REVIEW_LOCAL_CONTEXT_INVALID")
+      }, "separate")
 
       expect(() => checkV138LiveV10ProspectiveCustodyForReview({
         source, reviewedClosure, plan114PublicationCommit,

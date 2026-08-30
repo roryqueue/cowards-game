@@ -563,13 +563,28 @@ export const checkV138LiveV10ProspectiveCustodyForReview = (input: {
   supplement: Json
 }) => {
   checkV138PathStableCustodyForReview(input.reviewedClosure, input.reviewedClosure)
-  const reviewedLocalExecutionClosureRoot = input.plan114.payload.reviewedLocalExecutionClosureRoot
-  if (!/^sha256:[0-9a-f]{64}$/u.test(reviewedLocalExecutionClosureRoot))
+  const reviewedLocalExecutionClosureRoot = input.reviewedClosure.localExecutionClosureRoot
+  if (input.plan114.payload.reviewedLocalExecutionClosureRoot !== reviewedLocalExecutionClosureRoot)
+    fail("V138_LIVE_V10_REVIEW_LOCAL_CONTEXT_INVALID")
+  return checkV138LiveV10ProspectiveCustodyWithAttestedLocal({
+    ...input, reviewedLocalExecutionClosureRoot,
+  })
+}
+
+const checkV138LiveV10ProspectiveCustodyWithAttestedLocal = (input: {
+  source: V138LiveV10SourceAdmission
+  reviewedClosure: V138PathStableCustody
+  reviewedLocalExecutionClosureRoot: string
+  plan114PublicationCommit: string
+  plan114: Readonly<{ payload: Json; reviewBytes: Buffer; carrier: Json; reviewRoot: Sha }>
+  supplement: Json
+}) => {
+  if (!/^sha256:[0-9a-f]{64}$/u.test(input.reviewedLocalExecutionClosureRoot))
     fail("V138_LIVE_V10_REVIEW_LOCAL_CONTEXT_INVALID")
   const exact = renderV138LiveV10ProspectiveContracts({
     source: input.source,
     reviewedClosure: input.reviewedClosure,
-    reviewedLocalExecutionClosureRoot,
+    reviewedLocalExecutionClosureRoot: input.reviewedLocalExecutionClosureRoot,
     plan114PublicationCommit: input.plan114PublicationCommit,
   })
   if (
@@ -586,6 +601,20 @@ export const checkV138LiveV10ProspectiveCustodyForReview = (input: {
     freshAccepted: 0 as const,
     downstreamAuthority: "denied" as const,
     ...exact,
+  })
+}
+
+const checkV138LiveV10CommittedProspectiveCustody = (input: {
+  source: V138LiveV10SourceAdmission
+  reviewedClosure: V138PathStableCustody
+  plan114PublicationCommit: string
+  plan114: Readonly<{ payload: Json; reviewBytes: Buffer; carrier: Json; reviewRoot: Sha }>
+  supplement: Json
+}) => {
+  checkV138PathStableCustodyForReview(input.reviewedClosure, input.reviewedClosure)
+  return checkV138LiveV10ProspectiveCustodyWithAttestedLocal({
+    ...input,
+    reviewedLocalExecutionClosureRoot: input.plan114.payload.reviewedLocalExecutionClosureRoot,
   })
 }
 
@@ -640,7 +669,7 @@ const authenticateFutureCustody = (
   }
   if (boundary === "pre") assertAbsent(root, [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
   else assertAbsent(root, DOWNSTREAM_OUTPUTS)
-  const checked = checkV138LiveV10ProspectiveCustodyForReview({
+  const checked = checkV138LiveV10CommittedProspectiveCustody({
     source, reviewedClosure, plan114PublicationCommit: commit, plan114, supplement,
   })
   return Object.freeze({
