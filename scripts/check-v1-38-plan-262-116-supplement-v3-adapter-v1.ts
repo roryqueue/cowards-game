@@ -1009,6 +1009,13 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
       recordedAuthentication.upstreamAuthenticated && recordedAuthentication.supplementSemanticsAuthenticated)
   if (!authenticationTruthful || (findings.length === 0 && recordedAuthentication.failedBoundary !== null))
     fail("V138_PLAN116_RECORDED_BOUNDARY_INVALID")
+  if (findings.length > 0) {
+    const boundaryFindingValid = recordedAuthentication.failedBoundary === null
+      ? findings.every(({ code }) => code === "ACTUAL_MODE_SUBJECT_REJECTED")
+      : findings.length === 1 && findings[0]?.code === "FOUNDATION_SUBJECT_REJECTED" &&
+        findings[0].detail.startsWith("V138_PLAN116_")
+    if (!boundaryFindingValid) fail("V138_PLAN116_RECORDED_BOUNDARY_FINDING_INVALID")
+  }
   const current = observeV138Plan116FoundationForReview(root)
   if (current.foundation === undefined) fail("V138_PLAN116_BLOCKED_CURRENT_DRIFT")
   const closure = findings.length === 0
@@ -1057,6 +1064,7 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
     actualModesPassed: payload.actualModesPassed,
     reviewStatus: payload.reviewStatus as "zero_findings" | "blocked",
     currentCustody,
+    recordedBoundaryAuthenticated: true as const,
     plan109Eligible: exact.plan109Eligible,
     supplementPublished: false as const,
     producerCalls: 0 as const,

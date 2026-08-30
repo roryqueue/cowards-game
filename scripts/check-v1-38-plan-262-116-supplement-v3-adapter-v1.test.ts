@@ -286,6 +286,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       expect(authenticateV138Plan116PublishedReview(root)).toMatchObject({
         reviewStatus: "blocked",
         currentCustody: "repaired_clean",
+        recordedBoundaryAuthenticated: true,
         findingCount: 1,
         plan109Eligible: false,
       })
