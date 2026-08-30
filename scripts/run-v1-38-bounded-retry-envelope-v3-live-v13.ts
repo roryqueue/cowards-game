@@ -41,6 +41,9 @@ const PAIR_COMMIT = "8080ff66a0880db25db227d23e7e7a0884a79b56"
 const PLAN_93_STOP_COMMIT = "de42f5e7c08925ab3f6829354bd1861b98088ea5"
 const PLAN_93_CURRENT_AMENDMENT_COMMIT = "b331baad29053f523233558f66aa2855f2925b2b"
 const PLAN_93_CURRENT_BLOB = "d540a5a7b0f7200ed86287a3744e46ebd66987bd"
+const PLAN_93_CURRENT_AMENDMENT_PARENT = "b6cd3ec13aa25c6b1a5416a264ddf17855c19bad"
+const PLAN_93_SUMMARY_BLOB = "e2db03c938d23305527bcad6ab0c479fbadd0bd3"
+const PLAN_120_SUMMARY_BLOB = "86621b8f8ac5546b66265b2cc5ca3f6b80468be7"
 const SEAL_ROOT = "sha256:ec1cb108c8fcdd710090e72ccec32ed58574a06d8970a2b44b1bb6f7ec3ea752"
 const ENVELOPE_ROOT = "sha256:f6a92d5ddfc6b10fe5a0600927e0427b112bf0b49f2d03d895a229642456904a"
 const PROTECTED_HISTORY_ROOT = "sha256:77e0e71f62ec4abd997f1df2c1fc9bf1db7b95247404f78b558a634cdc1ec57d"
@@ -111,6 +114,8 @@ export const V138_LIVE_V13_PATHS = Object.freeze({
   source: "scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.ts",
   tests: "scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.test.ts",
   plan93: `${PHASE}/262-93-PRESTART-INTEGRITY-STOP.md`,
+  plan93Summary: `${PHASE}/262-93-SUMMARY.md`,
+  plan120Summary: `${PHASE}/262-120-SUMMARY.md`,
   plan114PayloadV1: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v1.json",
   plan114ReviewV1: `${PHASE}/262-114-REVIEW.md`,
   plan114CarrierV1: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v1.json",
@@ -415,13 +420,39 @@ const authenticatePairAndStop = (root: string): Readonly<{ seal: Json; envelope:
   noRewrite(root, PAIR_COMMIT, [V138_LIVE_V13_PATHS.seal, V138_LIVE_V13_PATHS.envelope])
   requireAncestor(root, PLAN_93_STOP_COMMIT)
   requireAncestor(root, PLAN_93_CURRENT_AMENDMENT_COMMIT)
-  if (git(root, ["ls-tree", PLAN_93_CURRENT_AMENDMENT_COMMIT, "--", V138_LIVE_V13_PATHS.plan93]) !==
-      `100644 blob ${PLAN_93_CURRENT_BLOB}\t${V138_LIVE_V13_PATHS.plan93}` ||
-      !readRegularNoFollow(root, V138_LIVE_V13_PATHS.plan93).equals(
-        gitBytes(root, PLAN_93_CURRENT_AMENDMENT_COMMIT, V138_LIVE_V13_PATHS.plan93),
-      ))
-    fail("V138_LIVE_V13_PLAN93_CURRENT_BYTES_INVALID")
-  noRewrite(root, PLAN_93_CURRENT_AMENDMENT_COMMIT, [V138_LIVE_V13_PATHS.plan93])
+  if (git(root, ["rev-list", "--parents", "-n", "1", PLAN_93_CURRENT_AMENDMENT_COMMIT]) !==
+      `${PLAN_93_CURRENT_AMENDMENT_COMMIT} ${PLAN_93_CURRENT_AMENDMENT_PARENT}`)
+    fail("V138_LIVE_V13_PLAN_CLOSEOUT_ANCESTRY_INVALID")
+  const expectedScope = [
+    ["M", ".planning/ROADMAP.md"],
+    ["M", ".planning/STATE.md"],
+    ["M", `${PHASE}/262-110-PLAN.md`],
+    ["A", V138_LIVE_V13_PATHS.plan120Summary],
+    ["M", `${PHASE}/262-122-PLAN.md`],
+    ["M", V138_LIVE_V13_PATHS.plan93],
+    ["A", V138_LIVE_V13_PATHS.plan93Summary],
+  ].sort((a, b) => a[1]!.localeCompare(b[1]!))
+  const actualScope = git(root, ["diff-tree", "--no-commit-id", "--name-status", "-r", PLAN_93_CURRENT_AMENDMENT_COMMIT])
+    .split("\n").filter(Boolean).map((line) => line.split("\t"))
+    .sort((a, b) => a[1]!.localeCompare(b[1]!))
+  if (canonical(actualScope) !== canonical(expectedScope))
+    fail("V138_LIVE_V13_PLAN_CLOSEOUT_SCOPE_INVALID")
+  for (const [repoPath, blob] of [
+    [V138_LIVE_V13_PATHS.plan93, PLAN_93_CURRENT_BLOB],
+    [V138_LIVE_V13_PATHS.plan93Summary, PLAN_93_SUMMARY_BLOB],
+    [V138_LIVE_V13_PATHS.plan120Summary, PLAN_120_SUMMARY_BLOB],
+  ] as const) {
+    if (git(root, ["ls-tree", PLAN_93_CURRENT_AMENDMENT_COMMIT, "--", repoPath]) !==
+        `100644 blob ${blob}\t${repoPath}` ||
+        !readRegularNoFollow(root, repoPath).equals(
+          gitBytes(root, PLAN_93_CURRENT_AMENDMENT_COMMIT, repoPath),
+        )) fail(`V138_LIVE_V13_PLAN_CLOSEOUT_CURRENT_BYTES_INVALID:${repoPath}`)
+  }
+  noRewrite(root, PLAN_93_CURRENT_AMENDMENT_COMMIT, [
+    V138_LIVE_V13_PATHS.plan93,
+    V138_LIVE_V13_PATHS.plan93Summary,
+    V138_LIVE_V13_PATHS.plan120Summary,
+  ])
   if (seal.sealRoot !== SEAL_ROOT || seal.protectedHistoryRoot !== PROTECTED_HISTORY_ROOT ||
       seal.productionAuthorized !== false || seal.downstreamAuthority !== "denied" ||
       envelope.sealRoot !== SEAL_ROOT || envelope.envelopeRoot !== ENVELOPE_ROOT ||
@@ -591,6 +622,10 @@ export type V138LiveV13ModeObservation = Readonly<{
   status: string
   producerGuardCount: 0
   reducedValue: Json
+  disposableReviewedClosureRoot: Sha
+  disposableLocalInstalledClosureRoot: Sha
+  disposableLocalGitObjectRoot: Sha
+  disposableLocalNativeSourcesRoot: Sha
   disposableLocalExecutionClosureRoot: Sha
   observationRoot: Sha
 }>
@@ -602,6 +637,77 @@ const plan122PayloadRoot = (body: Json): Sha => rooted("v138-plan-262-122-live-v
 const plan122ReviewRoot = (body: Json): Sha => rooted("v138-plan-262-122-live-v13-custody-review-markdown-v3", body)
 const plan122CarrierRoot = (body: Json): Sha => rooted("v138-plan-262-122-live-v13-custody-review-carrier-v3", body)
 
+const REVIEW_STATUS_BY_MODE = Object.freeze({
+  "--check-source-only": "source_only_checked",
+  "--check-prospective-custody": "prospective_custody_checked",
+  "--check-post-run-custody": "post_run_no_effect_custody_checked",
+  "--check-non-pass-value": "bounded_non_pass_value_checked",
+  "--check-bounded-success-value": "bounded_success_value_checked",
+  "--check-exact-reproduction-v17-value": "exact_reproduction_v17_value_checked",
+} as const)
+const checkReducedValue = (mode: V138LiveV13ModeObservation["mode"], value: Json): boolean => {
+  if (mode === "--check-non-pass-value")
+    return canonical(value) === canonical({ classification: "non_pass", reproductionEligible: false })
+  if (mode === "--check-bounded-success-value")
+    return canonical(value) === canonical({ classification: "bounded_success", reproductionEligible: true })
+  if (mode === "--check-exact-reproduction-v17-value")
+    return canonical(value) === canonical({ acceptedCells: 540, requiredAccepted: 540, exact: true })
+  return canonical(value) === canonical({
+    producerCalls: 0,
+    readinessInvoked: false,
+    liveInvoked: false,
+    freshCharged: 0,
+    freshAccepted: 0,
+    downstreamAuthority: "denied",
+  })
+}
+const checkObservations = (
+  observations: readonly V138LiveV13ModeObservation[],
+  canonicalLocalExecutionClosureRoot: Sha,
+): "prospective" | "eligible" => {
+  if (observations.length !== V138_LIVE_V13_REVIEW_MODES.length ||
+      canonical(observations.map(({ mode }) => mode)) !== canonical(V138_LIVE_V13_REVIEW_MODES))
+    fail("V138_LIVE_V13_OBSERVATIONS_INVALID")
+  let prospective = true
+  for (const observation of observations) {
+    const roots = [
+      observation.disposableReviewedClosureRoot,
+      observation.disposableLocalInstalledClosureRoot,
+      observation.disposableLocalGitObjectRoot,
+      observation.disposableLocalNativeSourcesRoot,
+      observation.disposableLocalExecutionClosureRoot,
+      observation.observationRoot,
+    ]
+    if (observation.producerGuardCount !== 0 ||
+        roots.some((root) => !/^sha256:[0-9a-f]{64}$/u.test(root)) ||
+        observation.disposableLocalExecutionClosureRoot === canonicalLocalExecutionClosureRoot ||
+        observation.disposableLocalExecutionClosureRoot !== computeV138PathStableLocalExecutionClosureRoot({
+          reviewedClosureRoot: observation.disposableReviewedClosureRoot,
+          localInstalledClosureRoot: observation.disposableLocalInstalledClosureRoot,
+          localGitObjectRoot: observation.disposableLocalGitObjectRoot,
+          localNativeSourcesRoot: observation.disposableLocalNativeSourcesRoot,
+        }) ||
+        observation.observationRoot !== computeV138LiveV13ObservationRoot({
+          mode: observation.mode,
+          status: observation.status,
+          producerGuardCount: observation.producerGuardCount,
+          reducedValue: observation.reducedValue,
+          disposableReviewedClosureRoot: observation.disposableReviewedClosureRoot,
+          disposableLocalInstalledClosureRoot: observation.disposableLocalInstalledClosureRoot,
+          disposableLocalGitObjectRoot: observation.disposableLocalGitObjectRoot,
+          disposableLocalNativeSourcesRoot: observation.disposableLocalNativeSourcesRoot,
+          disposableLocalExecutionClosureRoot: observation.disposableLocalExecutionClosureRoot,
+        })) fail("V138_LIVE_V13_OBSERVATIONS_INVALID")
+    if (observation.status !== "prospective_only") prospective = false
+  }
+  if (prospective) return "prospective"
+  for (const observation of observations)
+    if (observation.status !== REVIEW_STATUS_BY_MODE[observation.mode] ||
+        !checkReducedValue(observation.mode, observation.reducedValue))
+      fail("V138_LIVE_V13_OBSERVATIONS_INVALID")
+  return "eligible"
+}
+
 const renderPlan122Contracts = (input: {
   source: V138LiveV13SourceAdmission
   reviewedClosure: V138PathStableCustody
@@ -609,24 +715,17 @@ const renderPlan122Contracts = (input: {
   observations: readonly V138LiveV13ModeObservation[]
   plan122PublicationCommit: string
 }) => {
-  const observedModes = input.observations.map(({ mode }) => mode)
   if (!/^[0-9a-f]{40}$/u.test(input.plan122PublicationCommit) ||
       !/^sha256:[0-9a-f]{64}$/u.test(input.canonicalLocalExecutionClosureRoot) ||
       input.canonicalLocalExecutionClosureRoot !== input.reviewedClosure.localExecutionClosureRoot ||
       canonical(input.reviewedClosure.checkoutPaths) !== canonical(V138_LIVE_V13_REVIEWED_SOURCE_PATHS) ||
-      input.reviewedClosure.pathnameLaunchReplacementResistanceClaimed !== false ||
-      canonical(observedModes) !== canonical(V138_LIVE_V13_REVIEW_MODES) ||
-      input.observations.some((observation) =>
-        observation.producerGuardCount !== 0 ||
-        observation.disposableLocalExecutionClosureRoot === input.canonicalLocalExecutionClosureRoot ||
-        observation.observationRoot !== computeV138LiveV13ObservationRoot({
-          mode: observation.mode,
-          status: observation.status,
-          producerGuardCount: observation.producerGuardCount,
-          reducedValue: observation.reducedValue,
-          disposableLocalExecutionClosureRoot: observation.disposableLocalExecutionClosureRoot,
-        })))
+      input.reviewedClosure.pathnameLaunchReplacementResistanceClaimed !== false)
     fail("V138_LIVE_V13_FRESH_CLOSURE_INVALID")
+  const observationDisposition = checkObservations(
+    input.observations,
+    input.canonicalLocalExecutionClosureRoot,
+  )
+  const eligible = observationDisposition === "eligible"
   const body = {
     schemaVersion: "v1.38-plan-262-122-live-v13-custody-review-payload-v3",
     protocol: "independent-live-v13-executable-custody-review-v3",
@@ -677,11 +776,11 @@ const renderPlan122Contracts = (input: {
     observations: input.observations,
     observationsRoot: computeV138LiveV13ObservationsRoot(input.observations),
     counters: ZERO_COUNTERS,
-    reviewStatus: "zero_findings",
+    reviewStatus: eligible ? "zero_findings" : "prospective_only",
     findings: [],
     findingCount: 0,
-    actualModesPassed: 6,
-    plan110Eligible: true,
+    actualModesPassed: eligible ? 6 : 0,
+    plan110Eligible: eligible,
     producerCalls: 0,
     readinessInvoked: false,
     liveInvoked: false,
@@ -702,13 +801,13 @@ const renderPlan122Contracts = (input: {
     payloadRoot: payload.payloadRoot,
     reviewedClosureRoot: payload.reviewedClosureRoot,
     findingCount: 0,
-    actualModesPassed: 6,
-    plan110Eligible: true,
+    actualModesPassed: eligible ? 6 : 0,
+    plan110Eligible: eligible,
     producerCalls: 0,
     downstreamAuthority: "denied",
   }
   const reviewRoot = plan122ReviewRoot(reviewBody)
-  const reviewBytes = Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "122"\nreview_type: independent_live_v13_executable_custody_v3\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 122 Independent Live-v13 Executable-Custody Review v3\n\n**ZERO FINDINGS.** Six producer-incapable modes passed. Only revised Plan 110 is eligible. Authorizes execution: false. Producer calls: 0. Readiness/live invoked: false. Fresh charged/accepted: 0/0. Downstream authority: denied.\n`)
+  const reviewBytes = Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "122"\nreview_type: independent_live_v13_executable_custody_v3\nstatus: ${eligible ? "zero_findings" : "prospective_only"}\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 122 Independent Live-v13 Executable-Custody Review v3\n\n${eligible ? "**ZERO FINDINGS.** Six producer-incapable modes passed. Only revised Plan 110 is eligible." : "**PROSPECTIVE ONLY.** No independently reviewed mode has passed and Plan 110 is ineligible."} Authorizes execution: false. Producer calls: 0. Readiness/live invoked: false. Fresh charged/accepted: 0/0. Downstream authority: denied.\n`)
   const carrierBody = {
     schemaVersion: "v1.38-plan-262-122-live-v13-custody-review-carrier-v3",
     protocol: "nonrecursive-external-review-carrier-v1",
@@ -720,9 +819,9 @@ const renderPlan122Contracts = (input: {
     payloadSha256: sha(Buffer.from(canonical(payload))),
     reviewSha256: sha(reviewBytes),
     findingCount: 0,
-    actualModesPassed: 6,
+    actualModesPassed: eligible ? 6 : 0,
     subjectCommit: input.reviewedClosure.sourceCommit,
-    plan110Eligible: true,
+    plan110Eligible: eligible,
     producerCalls: 0,
     readinessInvoked: false,
     liveInvoked: false,
@@ -752,15 +851,34 @@ export const deriveV138LiveV13ProspectiveContractsForReview = (input: {
       input.canonicalLocalExecutionClosureRoot !== reviewedClosure.localExecutionClosureRoot)
     fail("V138_LIVE_V13_FRESH_CLOSURE_INVALID")
   const observations = input.observations ?? V138_LIVE_V13_REVIEW_MODES.map((mode, index) => {
+    const disposableReviewedClosureRoot = rooted(
+      "v138-plan-262-121-prospective-disposable-reviewed-v1",
+      { mode, index, reviewedClosureRoot: reviewedClosure.reviewedClosureRoot },
+    )
+    const disposableLocalInstalledClosureRoot = rooted(
+      "v138-plan-262-121-prospective-disposable-installed-v1", { mode, index },
+    )
+    const disposableLocalGitObjectRoot = rooted(
+      "v138-plan-262-121-prospective-disposable-git-v1", { mode, index },
+    )
+    const disposableLocalNativeSourcesRoot = rooted(
+      "v138-plan-262-121-prospective-disposable-native-v1", { mode, index },
+    )
     const observationBody = Object.freeze({
       mode,
       status: "prospective_only",
       producerGuardCount: 0 as const,
-      reducedValue: Object.freeze({ producerCalls: 0, index }),
-      disposableLocalExecutionClosureRoot: rooted(
-        "v138-plan-262-121-prospective-disposable-local-v1",
-        { mode, index, reviewedClosureRoot: reviewedClosure.reviewedClosureRoot },
-      ),
+      reducedValue: Object.freeze({ prospectiveIndex: index }),
+      disposableReviewedClosureRoot,
+      disposableLocalInstalledClosureRoot,
+      disposableLocalGitObjectRoot,
+      disposableLocalNativeSourcesRoot,
+      disposableLocalExecutionClosureRoot: computeV138PathStableLocalExecutionClosureRoot({
+        reviewedClosureRoot: disposableReviewedClosureRoot,
+        localInstalledClosureRoot: disposableLocalInstalledClosureRoot,
+        localGitObjectRoot: disposableLocalGitObjectRoot,
+        localNativeSourcesRoot: disposableLocalNativeSourcesRoot,
+      }),
     })
     return Object.freeze({ ...observationBody, observationRoot: computeV138LiveV13ObservationRoot(observationBody) })
   })
@@ -796,6 +914,7 @@ export const checkV138LiveV13ProspectiveCustodyForReview = (input: {
   observations: readonly V138LiveV13ModeObservation[]
   plan122PublicationCommit: string
   plan122: Readonly<{ payload: Json; reviewBytes: Buffer; carrier: Json; reviewRoot: Sha }>
+  requireEligiblePublication?: boolean
 }) => {
   const root = path.resolve(input.repoRoot)
   const freshSource = authenticateV138LiveV13InvariantCustody(root)
@@ -815,6 +934,19 @@ export const checkV138LiveV13ProspectiveCustodyForReview = (input: {
       canonical(input.plan122.carrier) !== canonical(exact.carrier) ||
       input.plan122.reviewRoot !== exact.reviewRoot)
     fail("V138_LIVE_V13_PLAN122_CUSTODY_INVALID")
+  if (input.requireEligiblePublication === true && (
+    exact.payload.reviewStatus !== "zero_findings" ||
+    exact.payload.findingCount !== 0 ||
+    exact.payload.actualModesPassed !== 6 ||
+    exact.payload.plan110Eligible !== true ||
+    exact.payload.producerCalls !== 0 ||
+    exact.payload.readinessInvoked !== false ||
+    exact.payload.liveInvoked !== false ||
+    exact.payload.freshCharged !== 0 ||
+    exact.payload.freshAccepted !== 0 ||
+    exact.payload.authorizesExecution !== false ||
+    exact.payload.downstreamAuthority !== "denied"))
+    fail("V138_LIVE_V13_PLAN122_NOT_ELIGIBLE")
   return Object.freeze({
     ...exact,
     canonicalLocalExecutionClosureRoot: freshClosure.localExecutionClosureRoot,
@@ -849,6 +981,7 @@ const authenticateFutureCustody = (rootInput: string, boundary: "pre" | "post" =
     observations: plan122.payload.observations,
     plan122PublicationCommit: publicationCommit,
     plan122: { ...plan122, reviewRoot: plan122.carrier.reviewRoot },
+    requireEligiblePublication: true,
   })
   if (boundary === "pre") assertAbsent(root, [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
   else assertAbsent(root, DOWNSTREAM_OUTPUTS)
@@ -866,6 +999,7 @@ export const checkV138LiveV13ReproductionV17ForReview =
 
 export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: string) => {
   const sourceFile = ts.createSourceFile(V138_LIVE_V13_PATHS.source, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  const producerModule = "./run-v1-38-bounded-retry-envelope-v3.js"
   const producerImports = sourceFile.statements.filter((statement): statement is ts.ImportDeclaration =>
     ts.isImportDeclaration(statement) && statement.moduleSpecifier.getText(sourceFile) ===
       '"./run-v1-38-bounded-retry-envelope-v3.js"')
@@ -877,6 +1011,8 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
     binding.propertyName === undefined && binding.name.text === "runV138V3ProductionLive")
   let producerReferences = 0
   let reviewedOwnerReferences = 0
+  let producerModuleLiteralCount = 0
+  let dynamicProducerAccessCount = 0
   const producerCalls: ts.CallExpression[] = []
   const reviewedOwnerCalls: ts.CallExpression[] = []
   const enclosingOwner = (node: ts.Node): string | undefined => {
@@ -907,6 +1043,19 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
     return false
   }
   const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteral(node) && node.text === producerModule) {
+      producerModuleLiteralCount += 1
+      if (!ts.isImportDeclaration(node.parent)) dynamicProducerAccessCount += 1
+    }
+    if (ts.isStringLiteral(node) && node.text === "runV138V3ProductionLive" &&
+        (ts.isElementAccessExpression(node.parent) || ts.isPropertyAssignment(node.parent)))
+      dynamicProducerAccessCount += 1
+    if ((ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) &&
+        node.getText(sourceFile).includes("runV138V3ProductionLive")) dynamicProducerAccessCount += 1
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword)
+      dynamicProducerAccessCount += 1
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "require")
+      dynamicProducerAccessCount += 1
     if (ts.isIdentifier(node) && node.text === "runV138V3ProductionLive") producerReferences += 1
     if (ts.isIdentifier(node) && node.text === "runV138ReviewedBoundedLiveEnvelopeV13")
       reviewedOwnerReferences += 1
@@ -932,6 +1081,7 @@ export const inspectV138LiveV13ProductionBoundarySourceForReview = (source: stri
     reviewedOwnerCall.arguments.length === 1 && reviewedOwnerCall.arguments[0]?.getText(sourceFile) === "root" &&
     exactLiveSelectorAncestor(reviewedOwnerCall)
   if (!exactImport || importedBindings.length !== 2 || producerReferences !== 2 ||
+      producerModuleLiteralCount !== 1 || dynamicProducerAccessCount !== 0 ||
       !producerCallValid || !reviewedDispatchValid ||
       !source.includes('"--check-reviewed-live-ready"') ||
       !source.includes('"--run-reviewed-bounded-live-envelope"') ||

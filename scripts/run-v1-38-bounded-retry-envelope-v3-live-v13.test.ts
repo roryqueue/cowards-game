@@ -152,6 +152,10 @@ describe("Plan 262-121 closed live-v13 successor", () => {
         status: observation.status,
         producerGuardCount: observation.producerGuardCount,
         reducedValue: observation.reducedValue,
+        disposableReviewedClosureRoot: observation.disposableReviewedClosureRoot,
+        disposableLocalInstalledClosureRoot: observation.disposableLocalInstalledClosureRoot,
+        disposableLocalGitObjectRoot: observation.disposableLocalGitObjectRoot,
+        disposableLocalNativeSourcesRoot: observation.disposableLocalNativeSourcesRoot,
         disposableLocalExecutionClosureRoot: observation.disposableLocalExecutionClosureRoot,
       }))
     }
