@@ -104,6 +104,7 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       'const k = "getBuiltinModule"; process[k]("node:module")\n',
       'const k = ["con", "structor"].join(""); globalThis[k][k]("return process.getBuiltinModule(\\"module\\").createRequire(import.meta.url)(\\"./run-v1-38-bounded-retry-envelope-v3.js\\").runV138V3ProductionLive")()\n',
       'const g = globalThis; const k = "constructor"; const recovered = g[k][k]\n',
+      'const p = process; const k = process.argv[0]; const recovered = p[k]("node:module")\n',
       'const { constructor: recovered } = globalThis\n',
       'const recovered = Reflect.get(globalThis, "constructor")\n',
     ]) expect(() => inspectV138Plan130BoundarySourceForReview(
