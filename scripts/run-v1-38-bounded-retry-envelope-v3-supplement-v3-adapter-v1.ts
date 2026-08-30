@@ -134,20 +134,23 @@ const git = (root: string, args: readonly string[], allowFailure = false): strin
   runV138RetryV3IsolatedGit(root, args, allowFailure)
 const gitBytes = (root: string, commit: string, repoPath: string): Buffer =>
   runV138RetryV3IsolatedGitBytes(root, ["cat-file", "blob", `${commit}:${repoPath}`])
+const expectedCurrentMode = (repoPath: string): number =>
+  repoPath === PATHS.seal || repoPath === PATHS.envelope ? 0o600 : 0o644
 const readRegularNoFollow = (root: string, repoPath: string): Buffer => {
   const absolute = target(root, repoPath)
+  const expectedMode = expectedCurrentMode(repoPath)
   const before = lstatSync(absolute)
-  if (!before.isFile() || before.isSymbolicLink() || (before.mode & 0o7777) !== 0o644)
+  if (!before.isFile() || before.isSymbolicLink() || (before.mode & 0o7777) !== expectedMode)
     fail(`V138_SUPPLEMENT_ADAPTER_FILE_UNSAFE:${repoPath}`)
   const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
   try {
     const opened = fstatSync(fd)
-    if (!opened.isFile() || (opened.mode & 0o7777) !== 0o644 || opened.dev !== before.dev ||
+    if (!opened.isFile() || (opened.mode & 0o7777) !== expectedMode || opened.dev !== before.dev ||
         opened.ino !== before.ino || opened.size !== before.size)
       fail(`V138_SUPPLEMENT_ADAPTER_FILE_CHANGED:${repoPath}`)
     const bytes = readFileSync(fd)
     const after = fstatSync(fd)
-    if (!after.isFile() || (after.mode & 0o7777) !== 0o644 || after.dev !== opened.dev ||
+    if (!after.isFile() || (after.mode & 0o7777) !== expectedMode || after.dev !== opened.dev ||
         after.ino !== opened.ino || after.size !== opened.size || after.mode !== opened.mode)
       fail(`V138_SUPPLEMENT_ADAPTER_FILE_CHANGED:${repoPath}`)
     return bytes
@@ -314,7 +317,8 @@ const authenticateUpstream = (rootInput: string, allowSupplementV3: boolean) => 
   noRewrite(root, PAIR_COMMIT, [PATHS.seal, PATHS.envelope])
   const plan93 = committed(root, PLAN93_COMMIT, PATHS.plan93)
   noRewrite(root, PLAN93_COMMIT, [PATHS.plan93])
-  if (seal.sealRoot !== SEAL_ROOT || seal.protectedHistoryRoot !== PROTECTED_HISTORY_ROOT ||
+  if (sealRecord.mode !== "100644" || envelopeRecord.mode !== "100644" ||
+      seal.sealRoot !== SEAL_ROOT || seal.protectedHistoryRoot !== PROTECTED_HISTORY_ROOT ||
       seal.productionAuthorized !== false || seal.downstreamAuthority !== "denied" ||
       envelope.sealRoot !== SEAL_ROOT || envelope.envelopeRoot !== ENVELOPE_ROOT ||
       envelope.protectedHistoryRoot !== PROTECTED_HISTORY_ROOT || envelope.status !== "sealed_inactive" ||

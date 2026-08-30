@@ -9,6 +9,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
@@ -30,6 +31,7 @@ const v2ReviewPath = ".planning/phases/262-foundation-admission-measurement-cust
 const v2CarrierPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json"
 const effectPath = ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json"
 const finalReviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-FINAL-CLEAN-REVIEW.md"
+const sealPath = ".planning/artifacts/v1.38-successor-source-seal-v13.json"
 const pairPath = ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json"
 const nativeWriterPath = "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c"
 const git = (root: string, args: readonly string[]): string => execFileSync(
@@ -47,6 +49,7 @@ const withWorktree = <T>(run: (root: string) => T): T => {
     symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
     git(root, ["config", "user.name", "Plan 262 Supplement Test"])
     git(root, ["config", "user.email", "plan262-supplement@example.invalid"])
+    for (const repoPath of [sealPath, pairPath]) chmodSync(path.join(root, repoPath), 0o600)
     return run(root)
   } finally {
     if (added) {
@@ -68,6 +71,7 @@ const withWorktreeAsync = async <T>(run: (root: string) => Promise<T>): Promise<
       "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts",
       "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c",
     ]) writeFileSync(path.join(root, repoPath), readFileSync(path.join(repoRoot, repoPath)))
+    for (const repoPath of [sealPath, pairPath]) chmodSync(path.join(root, repoPath), 0o600)
     return await run(root)
   } finally {
     if (added) {
@@ -118,34 +122,62 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
     expect(source).not.toMatch(/from ["'].+plan-262-114|from ["'].+live-v10/)
   })
 
-  it("independently authenticates authoritative v2, final-clean custody, and exact zero pair", () => {
-    expect(checkV138SupplementV3AdapterSourceOnly(repoRoot)).toMatchObject({
-      status: "source_only_checked",
-      plan114PublicationCommit: "34bc94ec4e348f71e6055a091d60a505cffc0d79",
-      plan114PayloadRoot: "sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac",
-      plan114ReviewRoot: "sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee",
-      plan114CarrierRoot: "sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26",
-      finalCleanReviewCommit: "92415ea08ccddd2c8fae3c8fc922078d14c589c9",
-      plan116ReviewEligible: true,
-      plan109Eligible: false,
-      reviewRequired: true,
-      envelopeStatus: "sealed_inactive",
-      counters: {
-        acceptedCells: 0,
-        calibrationIdentitiesCharged: 0,
-        preflightObservationsConsumed: 0,
-        reproductionIdentitiesCharged: 0,
-        routeStartsConsumed: 0,
-      },
-      createsEnvelope: false,
-      createsCapacity: false,
-      resetsCounters: false,
-      authorizesExecution: false,
-      liveInvoked: false,
-      freshCharged: 0,
-      freshAccepted: 0,
-      downstreamAuthority: "denied",
-    })
+  it("authenticates the canonical shared-checkout 0600 pair and rejects custody-class mode drift", () => {
+    const securePaths = [sealPath, pairPath]
+    const ordinaryPaths = [v2PayloadPath, v2ReviewPath, v2CarrierPath, finalReviewPath]
+    const originalModes = new Map([...securePaths, ...ordinaryPaths].map((repoPath) =>
+      [repoPath, statSync(path.join(repoRoot, repoPath)).mode & 0o7777] as const))
+    try {
+      for (const repoPath of securePaths) chmodSync(path.join(repoRoot, repoPath), 0o600)
+      for (const repoPath of ordinaryPaths) chmodSync(path.join(repoRoot, repoPath), 0o644)
+
+      expect(checkV138SupplementV3AdapterSourceOnly(repoRoot)).toMatchObject({
+        status: "source_only_checked",
+        plan114PublicationCommit: "34bc94ec4e348f71e6055a091d60a505cffc0d79",
+        plan114PayloadRoot: "sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac",
+        plan114ReviewRoot: "sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee",
+        plan114CarrierRoot: "sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26",
+        finalCleanReviewCommit: "92415ea08ccddd2c8fae3c8fc922078d14c589c9",
+        plan116ReviewEligible: true,
+        plan109Eligible: false,
+        reviewRequired: true,
+        envelopeStatus: "sealed_inactive",
+        counters: {
+          acceptedCells: 0,
+          calibrationIdentitiesCharged: 0,
+          preflightObservationsConsumed: 0,
+          reproductionIdentitiesCharged: 0,
+          routeStartsConsumed: 0,
+        },
+        createsEnvelope: false,
+        createsCapacity: false,
+        resetsCounters: false,
+        authorizesExecution: false,
+        liveInvoked: false,
+        freshCharged: 0,
+        freshAccepted: 0,
+        downstreamAuthority: "denied",
+      })
+
+      for (const repoPath of securePaths) {
+        for (const unsafeMode of [0o644, 0o700, 0o640]) {
+          chmodSync(path.join(repoRoot, repoPath), unsafeMode)
+          expect(() => checkV138SupplementV3AdapterSourceOnly(repoRoot))
+            .toThrow(`V138_SUPPLEMENT_ADAPTER_FILE_UNSAFE:${repoPath}`)
+          chmodSync(path.join(repoRoot, repoPath), 0o600)
+        }
+      }
+      for (const repoPath of ordinaryPaths) {
+        for (const unsafeMode of [0o600, 0o755, 0o640]) {
+          chmodSync(path.join(repoRoot, repoPath), unsafeMode)
+          expect(() => checkV138SupplementV3AdapterSourceOnly(repoRoot))
+            .toThrow(`V138_SUPPLEMENT_ADAPTER_FILE_UNSAFE:${repoPath}`)
+          chmodSync(path.join(repoRoot, repoPath), 0o644)
+        }
+      }
+    } finally {
+      for (const [repoPath, mode] of originalModes) chmodSync(path.join(repoRoot, repoPath), mode)
+    }
   }, 180_000)
 
   it("writes once in a disposable worktree and authenticates an exact committed publication twice", () => {
@@ -231,8 +263,10 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       for (const repoPath of [v2PayloadPath, v2ReviewPath, v2CarrierPath, finalReviewPath, supplementPath]) {
         const absolute = path.join(root, repoPath)
         try {
-          chmodSync(absolute, 0o755)
-          expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/FILE_UNSAFE/)
+          for (const unsafeMode of [0o600, 0o755, 0o640]) {
+            chmodSync(absolute, unsafeMode)
+            expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/FILE_UNSAFE/)
+          }
         } finally {
           chmodSync(absolute, 0o644)
         }
