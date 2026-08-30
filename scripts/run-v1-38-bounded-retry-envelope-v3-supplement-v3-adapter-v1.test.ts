@@ -89,7 +89,9 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       plan114ReviewRoot: "sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee",
       plan114CarrierRoot: "sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26",
       finalCleanReviewCommit: "92415ea08ccddd2c8fae3c8fc922078d14c589c9",
-      plan109Eligible: true,
+      plan116ReviewEligible: true,
+      plan109Eligible: false,
+      reviewRequired: true,
       envelopeStatus: "sealed_inactive",
       counters: {
         acceptedCells: 0,
@@ -112,7 +114,13 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
   it("writes once in a disposable worktree and authenticates an exact committed publication twice", () => {
     withWorktree((root) => {
       const written = writeV138SupplementV3ForReview(root)
-      expect(written).toMatchObject({ status: "supplement_v3_written", downstreamAuthority: "denied" })
+      expect(written).toMatchObject({
+        status: "supplement_v3_written",
+        plan116ReviewEligible: true,
+        plan109Eligible: false,
+        reviewRequired: true,
+        downstreamAuthority: "denied",
+      })
       expect(readFileSync(path.join(root, supplementPath), "utf8")).toBe(written.canonicalBytes)
       const publicationCommit = commitSupplement(root)
       expect(git(root, ["ls-tree", publicationCommit, "--", supplementPath])).toMatch(/^100644 blob /)
@@ -122,6 +130,9 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       expect(first).toMatchObject({
         status: "supplement_v3_committed_checked",
         publicationCommit,
+        plan116ReviewEligible: true,
+        plan109Eligible: false,
+        reviewRequired: true,
         counters: {
           acceptedCells: 0,
           calibrationIdentitiesCharged: 0,
