@@ -59,6 +59,8 @@ export type V138Plan114ModeResult = Readonly<{
   reviewedClosureRoot: Sha
   linkedLocalExecutionClosureRoot: Sha
   expandedProtectedHistoryRoot: Sha
+  foundationObservationRoot: Sha
+  reviewedCustody: V138Plan114IndependentCustody
 }>
 
 const PHASE = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
@@ -66,6 +68,7 @@ export const PLAN_114_REVIEWED_SOURCE_COMMIT =
   "ba1f8ddb4d701762d5d443f41edcbb691bb0eda5"
 const SOURCE_TREE = "0a35c771e145b9feee43d696dbb1b6ae10c42b9c"
 const SOURCE_PARENT = "e0215b7738ab44bdd4a8f536cc53ee71008989f9"
+const REVIEWED_CLOSURE_ROOT = "sha256:8929dd2d2d8c9c72c293a7b9e41e722ef274a1296160e877685ce0956969b852"
 const PLAN_113_EVIDENCE_COMMIT = "675effe681fb1ba4d16ba399104c45df98230d12"
 const PLAN_113_FINAL_REVIEW_COMMIT = "28488fd43585f9f6fbfcd80dff2a388e4f754817"
 const CORRECTED_PUBLICATION_COMMIT = "2639ff3b42e2a238919a3104c9fa8c785c69b93d"
@@ -387,6 +390,14 @@ export const observeV138Plan114FoundationForReview = (rootInput: string) => {
   }
 }
 
+const foundationObservationRoot = (
+  observation: ReturnType<typeof observeV138Plan114FoundationForReview>,
+): Sha => rooted("v138-plan-262-114-foundation-observation-v2", {
+  closure: observation.foundation?.closure,
+  expandedProtectedHistoryRoot: observation.foundation?.expandedProtectedHistoryRoot,
+  findings: observation.findings,
+})
+
 const sourceAdmission = () => Object.freeze({
   correctedPublicationCommit: CORRECTED_PUBLICATION_COMMIT,
   correctedPayloadRoot: CORRECTED_ROOTS.payload,
@@ -560,7 +571,8 @@ const linkDependencies = (sourceRoot: string, linkedRoot: string): void => {
 
 export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Plan114ModeResult => {
   const repoRoot = path.resolve(repoRootInput)
-  const foundation = authenticateFoundation(repoRoot)
+  const initialFoundation = observeV138Plan114FoundationForReview(repoRoot)
+  const initialFoundationRoot = foundationObservationRoot(initialFoundation)
   assertAbsent(repoRoot, FORBIDDEN)
   let disposableBase = "HEAD"
   if ([PATHS.payload, PATHS.review, PATHS.carrier].some((repoPath) => pathPresent(repoRoot, repoPath))) {
@@ -580,7 +592,7 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
     linkDependencies(repoRoot, linked)
     const tsx = path.join(linked, "node_modules/.bin/tsx")
     const observations: Array<ReturnType<typeof modeObservation>> = []
-    const findings: V138Plan114Finding[] = []
+    const findings: V138Plan114Finding[] = [...initialFoundation.findings]
     const parseCli = (mode: string, expectedStatus: string, code: string) => {
       const result = spawnSync(tsx, [PATHS.live, mode], {
         cwd: linked, encoding: "utf8",
@@ -613,8 +625,10 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
       sourceCommit: PLAN_114_REVIEWED_SOURCE_COMMIT,
       checkoutPaths: SOURCE_PATHS,
     })
-    if (linkedClosure.reviewedClosureRoot !== foundation.closure.reviewedClosureRoot ||
-        linkedClosure.localExecutionClosureRoot === foundation.closure.localExecutionClosureRoot)
+    if (linkedClosure.reviewedClosureRoot !==
+          (initialFoundation.foundation?.closure.reviewedClosureRoot ?? REVIEWED_CLOSURE_ROOT) ||
+        (initialFoundation.foundation !== undefined &&
+          linkedClosure.localExecutionClosureRoot === initialFoundation.foundation.closure.localExecutionClosureRoot))
       fail("V138_PLAN114_LINKED_CLOSURE_INVALID")
     const candidate = renderContracts({
       closure: linkedClosure,
@@ -715,8 +729,12 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
     const normalized = observations.map((item, index) => ({ ...item, mode: modeNames[index]! }))
     if (normalized.length !== 6) fail("V138_PLAN114_MODE_COUNT_INVALID")
     const sorted = [...findings].sort((a, b) => `${a.code}\0${a.detail}`.localeCompare(`${b.code}\0${b.detail}`))
+    const finalFoundation = observeV138Plan114FoundationForReview(repoRoot)
+    if (foundationObservationRoot(finalFoundation) !== initialFoundationRoot)
+      fail("V138_PLAN114_FOUNDATION_CHANGED_DURING_OBSERVATION")
     return Object.freeze({
-      modeNames, actualModesPassed: 6 - sorted.length, producerCalls: 0 as const,
+      modeNames, actualModesPassed: normalized.filter(({ status }) => status !== "failed").length,
+      producerCalls: 0 as const,
       readinessInvoked: false as const, liveInvoked: false as const,
       freshCharged: 0 as const, freshAccepted: 0 as const,
       observations: Object.freeze(normalized), findings: Object.freeze(sorted),
@@ -730,6 +748,8 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
       reviewedClosureRoot: linkedClosure.reviewedClosureRoot,
       linkedLocalExecutionClosureRoot: linkedClosure.localExecutionClosureRoot,
       expandedProtectedHistoryRoot: linkedFoundation.expandedProtectedHistoryRoot,
+      foundationObservationRoot: initialFoundationRoot,
+      reviewedCustody: linkedClosure,
     })
   } finally {
     if (worktreeAdded) {
@@ -833,11 +853,11 @@ export const authenticateV138Plan114PublishedReview = (repoRootInput: string) =>
 
 export const writeV138Plan114CorrectedReviewForReview = (root: string): void => {
   assertAbsent(root, [PATHS.payloadV2, PATHS.reviewV2, PATHS.carrierV2, ...FORBIDDEN])
-  const before = captureV138Plan114FoundationForReview(root)
   const modes = executeV138Plan114DisposableModes(root)
-  const after = assertV138Plan114FoundationStableForReview(root, before)
+  if (foundationObservationRoot(observeV138Plan114FoundationForReview(root)) !== modes.foundationObservationRoot)
+    fail("V138_PLAN114_FOUNDATION_CHANGED_DURING_OBSERVATION")
   const evidence = renderContracts({
-    closure: after.closure,
+    closure: modes.reviewedCustody,
     linkedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
     findings: modes.findings,
     actualModesPassed: modes.actualModesPassed,

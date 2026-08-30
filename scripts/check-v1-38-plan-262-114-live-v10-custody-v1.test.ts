@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import { chmodSync, lstatSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -12,6 +13,7 @@ import {
   renderV138Plan114CorrectedEvidenceForReview,
   renderV138Plan114EvidenceForReview,
   type V138Plan114Finding,
+  writeV138Plan114CorrectedReviewForReview,
 } from "./check-v1-38-plan-262-114-live-v10-custody-v1.js"
 import {
   computeV138Plan114IndependentReproductionRoot,
@@ -19,6 +21,36 @@ import {
 } from "./lib/v1-38-plan-262-114-independent-semantics-v2.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
+const workspacePaths = [
+  "apps/runtime-service", "apps/web", "apps/worker", "packages/engine", "packages/golden",
+  "packages/map-configs", "packages/persistence", "packages/replay", "packages/runtime-js",
+  "packages/runtime-python", "packages/runtime-supervisor", "packages/runtime-wasm-wasi",
+  "packages/service", "packages/spec", "packages/test-utils",
+]
+
+const withLinkedWorktreeAt = <T>(ref: string, run: (root: string) => T): T => {
+  const owner = mkdtempSync(path.join(tmpdir(), "v138-plan114-writer-test-"))
+  const root = path.join(owner, "repo")
+  let added = false
+  try {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, ref], { cwd: repoRoot })
+    added = true
+    symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    for (const workspace of workspacePaths) {
+      const source = path.join(repoRoot, workspace, "node_modules")
+      try {
+        symlinkSync(source, path.join(root, workspace, "node_modules"), "dir")
+      } catch { /* workspace has no installed projection */ }
+    }
+    return run(root)
+  } finally {
+    if (added) {
+      try { execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot }) }
+      catch { /* preserve primary assertion */ }
+    }
+    rmSync(owner, { recursive: true, force: true })
+  }
+}
 
 describe("Plan 262-114 independent live-v10 custody review", () => {
   it("owns source-separated custody without Plan-113 derivation or root helpers", () => {
@@ -132,6 +164,54 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
       chmodSync(absolute, 0o644)
     }
   }, 180_000)
+
+  it("publishes and authenticates blocked v2 from a real foundation defect", () => {
+    withLinkedWorktreeAt("dfeb17bc", (root) => {
+      const sourcePath = path.join(root, "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts")
+      const sourceBytes = readFileSync(sourcePath)
+      writeFileSync(sourcePath, Buffer.concat([sourceBytes, Buffer.from("\n// observed foundation defect\n")]))
+      writeV138Plan114CorrectedReviewForReview(root)
+      const payloadPath = path.join(
+        root,
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
+      )
+      const payload = JSON.parse(readFileSync(payloadPath, "utf8")) as Record<string, any>
+      expect(payload).toMatchObject({
+        reviewStatus: "blocked",
+        findingCount: 1,
+        findingCodes: ["RAW_BYTES_DRIFT"],
+        actualModesPassed: 6,
+        plan109Eligible: false,
+      })
+
+      writeFileSync(sourcePath, sourceBytes)
+      const reviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-v2.md"
+      const carrierPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json"
+      execFileSync("/usr/bin/git", ["add", "--", path.relative(root, payloadPath), reviewPath, carrierPath], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "--quiet", "-m", "fixture blocked v2"], { cwd: root })
+      expect(authenticateV138Plan114PublishedReview(root)).toMatchObject({
+        evidenceVersion: 2,
+        findingCount: 1,
+        actualModesPassed: 6,
+        plan109Eligible: false,
+      })
+    })
+  }, 300_000)
+
+  it("publishes nothing for an unclassified process-integrity failure", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "v138-plan114-integrity-"))
+    try {
+      expect(() => writeV138Plan114CorrectedReviewForReview(root)).toThrow()
+      for (const repoPath of [
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-v2.md",
+        ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json",
+      ]) expect(() => lstatSync(path.join(root, repoPath))).toThrow()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 
   it("re-authenticates current custody after the observation window", () => {
     const repoPath = "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts"
