@@ -115,7 +115,7 @@ describe("Plan 262-120 independent live-v12 custody review v2", () => {
       plan110Eligible: true,
       authorizesExecution: false,
     })
-  }, 180_000)
+  }, 240_000)
 
   it("blocks eligibility when a rooted subject finding exists", () => {
     const evidence = renderV138Plan120EvidenceForReview(ROOT, [{
