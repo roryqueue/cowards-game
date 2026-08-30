@@ -15,11 +15,14 @@ import { describe, expect, it } from "vitest"
 import {
   V138_LIVE_V11_MODES,
   V138_LIVE_V11_PATHS,
+  authenticateV138LiveV11FutureCustodyForReview,
   authenticateV138LiveV11SourceOnly,
+  checkV138LiveV11PostRunOutputCustodyForReview,
   checkV138LiveV11ProspectiveCustodyForReview,
   deriveV138LiveV11ProspectiveContractsForReview,
   executeV138LiveV11Cli,
   inspectV138LiveV11ProductionBoundaryForReview,
+  inspectV138LiveV11ProductionBoundarySourceForReview,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v11.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -131,7 +134,16 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
     })
     expect(outputs.map((value) => JSON.parse(value))).toEqual([
       expect.objectContaining({ status: "source_only_checked", producerCalls: 0, readinessInvoked: false, liveInvoked: false }),
-      expect.objectContaining({ status: "prospective_custody_checked", producerCalls: 0, readinessInvoked: false, liveInvoked: false }),
+      expect.objectContaining({
+        status: "prospective_custody_checked",
+        payloadRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        reviewRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        carrierRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        reviewedClosureRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        producerCalls: 0,
+        readinessInvoked: false,
+        liveInvoked: false,
+      }),
     ])
     expect(V138_LIVE_V11_MODES).toEqual([
       "--check-source-only",
@@ -188,6 +200,21 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
       liveInvoked: false,
       downstreamAuthority: "denied",
     })
+
+    const aliased = source.replace(
+      "await runV138V3ProductionLive(repoRoot, {",
+      "const invokeProducer = runV138V3ProductionLive\n    await invokeProducer(repoRoot, {",
+    )
+    expect(() => inspectV138LiveV11ProductionBoundarySourceForReview(aliased)).toThrow(
+      "V138_LIVE_V11_PRODUCTION_BOUNDARY_INVALID",
+    )
+    const indirect = source.replace(
+      "await runV138V3ProductionLive(repoRoot, {",
+      "await ({ invoke: runV138V3ProductionLive }).invoke(repoRoot, {",
+    )
+    expect(() => inspectV138LiveV11ProductionBoundarySourceForReview(indirect)).toThrow(
+      "V138_LIVE_V11_PRODUCTION_BOUNDARY_INVALID",
+    )
   })
 
   it("derives and checks a disposable Plan-118 contract through post-no-effect custody", async () => {
@@ -279,6 +306,51 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
         expect.objectContaining({ status: "prospective_custody_checked", producerCalls: 0, liveInvoked: false }),
         expect.objectContaining({ status: "post_run_custody_checked", producerCalls: 0, liveInvoked: false }),
       ])
+
+      for (const repoPath of [
+        ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
+        ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
+        ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json",
+      ]) {
+        const absolute = path.join(root, repoPath)
+        if (repoPath.endsWith("private-v3")) mkdirSync(absolute, { recursive: true })
+        else {
+          mkdirSync(path.dirname(absolute), { recursive: true })
+          writeFileSync(absolute, "fixture\n")
+        }
+      }
+      expect(() => authenticateV138LiveV11FutureCustodyForReview(root, "post")).not.toThrow()
+      expect(checkV138LiveV11PostRunOutputCustodyForReview({
+        journalPresent: true,
+        privateDirectoryPresent: true,
+        terminalPresent: true,
+        lockPresent: false,
+        reproductionPresent: false,
+        adjudicationOrDownstreamPresent: false,
+        outcome: {
+          disposition: "exhausted",
+          completeCleanup: true,
+          reproductionPresent: false,
+          downstreamAuthority: "denied",
+        },
+      })).toEqual({ status: "bounded_terminal", downstreamAuthority: "denied" })
+
+      writeFileSync(path.join(root, ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json"), "fixture\n")
+      expect(() => authenticateV138LiveV11FutureCustodyForReview(root, "post")).not.toThrow()
+      expect(checkV138LiveV11PostRunOutputCustodyForReview({
+        journalPresent: true,
+        privateDirectoryPresent: true,
+        terminalPresent: true,
+        lockPresent: false,
+        reproductionPresent: true,
+        adjudicationOrDownstreamPresent: false,
+        outcome: {
+          disposition: "succeeded",
+          completeCleanup: true,
+          reproductionPresent: true,
+          downstreamAuthority: "denied",
+        },
+      })).toEqual({ status: "bounded_success", downstreamAuthority: "denied" })
     })
   }, 180_000)
 })
