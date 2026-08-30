@@ -578,12 +578,31 @@ export const executeV138Plan118DisposableModes = (repoRootInput: string): V138Pl
       let value: Json
       try { value = JSON.parse(result.stdout.trim()) as Json }
       catch { fail(`V138_PLAN118_MODE_PROCESS_INTEGRITY:${selector}:json`) }
-      const valid = guardClean && value.status === expectedStatus && value.freshCharged === 0 &&
+      const commonValid = value.status === expectedStatus && value.freshCharged === 0 &&
         value.freshAccepted === 0 && value.downstreamAuthority === "denied"
+      const selectorValid = selector === "--check-source-only"
+        ? value.plan114V2PayloadRoot === PLAN_114_ROOTS[1].payload &&
+          value.plan116V4PayloadRoot === PLAN_116_ROOTS[3].payload && value.supplementRoot === SUPPLEMENT_ROOT
+        : selector === "--check-prospective-custody"
+          ? value.subjectCommit === PLAN_118_SUBJECT_COMMIT &&
+            value.reviewedClosureRoot === REVIEWED_CLOSURE_ROOT &&
+            value.plan114V2PayloadRoot === PLAN_114_ROOTS[1].payload &&
+            value.plan116V4PayloadRoot === PLAN_116_ROOTS[3].payload && value.supplementRoot === SUPPLEMENT_ROOT
+          : value.payloadRoot === "sha256:6a262e4b8e267a6be8858c1247a49ceab3c0dbb23b9ebfea9f675a6e02f527e8"
+      const valid = guardClean && commonValid && selectorValid
       if (!valid) findings.push({ code, severity: "critical", subject: selector, detail: canonical(value).trim() })
       if (!guardClean) findings.push({ code: "PRODUCER_GUARD_TRIPPED", severity: "critical",
         subject: selector, detail: `before:${beforeGuard};after:${afterGuard}` })
-      observations.push(modeObservation(name, valid ? expectedStatus : "failed", value, 0))
+      const independentBoundResult = selector === "--check-source-only"
+        ? { status: expectedStatus, plan114V2PayloadRoot: PLAN_114_ROOTS[1].payload,
+          plan116V4PayloadRoot: PLAN_116_ROOTS[3].payload, supplementRoot: SUPPLEMENT_ROOT }
+        : selector === "--check-prospective-custody"
+          ? { status: expectedStatus, subjectCommit: PLAN_118_SUBJECT_COMMIT,
+            reviewedClosureRoot: REVIEWED_CLOSURE_ROOT, plan114V2PayloadRoot: PLAN_114_ROOTS[1].payload,
+            plan116V4PayloadRoot: PLAN_116_ROOTS[3].payload, supplementRoot: SUPPLEMENT_ROOT }
+          : { status: expectedStatus,
+            payloadRoot: "sha256:6a262e4b8e267a6be8858c1247a49ceab3c0dbb23b9ebfea9f675a6e02f527e8" }
+      observations.push(modeObservation(name, valid ? expectedStatus : "failed", independentBoundResult, 0))
     }
     cli("source_only_cli", "--check-source-only", "source_only_checked", "MODE_SOURCE_ONLY_FAILED")
     cli("prospective_custody_cli", "--check-prospective-custody", "prospective_custody_checked",
