@@ -176,7 +176,7 @@ No unplanned threat surface. The checker uses temporary detached worktrees and o
 
 - BL-01 closed by proving the sole producer call is owned only by the production wrapper and dispatched only under the exact production selector; four relocated-call mutations fail closed.
 - BL-01 zero invocation is now independently observed through an owner-private file-backed producer tripwire across the actual CLI modes, rather than accepted from subject-emitted fields.
-- BL-02 closed by making every later-HEAD `--check-review` run all six disposable modes, rederive dependency/toolchain/native/local custody, compare the published local root exactly, and bind fresh observation root `sha256:fd7aeff7ddfe165201572ffaabe94068261d912be5e32592f06a0fe6ec793f84` plus guard root `sha256:e75954803e2febc5668d0b6ae021095a73118efd27393f14ba0e0f2faf797986`.
+- BL-02 closed by making every later-HEAD `--check-review` run all six disposable modes, validate their raw output, rederive dependency/toolchain/native/local custody, compare the published local root exactly, and bind deterministic observation root `sha256:76a9c4704a2c57a1af29272a89a87f9a0aab132a621da246183968218aac026d` plus guard root `sha256:e75954803e2febc5668d0b6ae021095a73118efd27393f14ba0e0f2faf797986`. Two same-HEAD observation runs produced the same root; child-process-local prospective publication roots are deliberately excluded from the stable independent binding.
 - Dependency, installed/toolchain, native, and local-execution closure mutations are rejected. Full evidence is recorded in `262-118-REVIEW-FIX.md`.
 
 ## User Setup Required

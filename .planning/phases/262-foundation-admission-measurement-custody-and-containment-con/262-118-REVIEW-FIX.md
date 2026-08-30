@@ -27,13 +27,13 @@ The disposable runner now derives an exact guarded copy from the authenticated s
 
 **Finding:** The first `--check-review` rerendered the immutable trio but did not execute a fresh disposable closure derivation, compare that linked local execution root with the published payload, or bind fresh mode evidence.
 
-**Applied fix:** `--check-review` now runs all six disposable modes from the exact subject commit, rederives recursive dependency, installed/toolchain, portable native, local native, Git-object, and local execution roots, validates the closure internally, and requires exact equality with the published payload's reviewed/local roots. It recomputes and returns the six-mode observation root and independent producer-guard root. Mutation tests reject dependency-root, installed/toolchain-root, native-root, and local-execution-root drift.
+**Applied fix:** `--check-review` now runs all six disposable modes from the exact subject commit, rederives recursive dependency, installed/toolchain, portable native, local native, Git-object, and local execution roots, validates the closure internally, and requires exact equality with the published payload's reviewed/local roots. It validates each mode's raw output, then binds the observation root only to independently reviewed stable values rather than child-process-local prospective publication roots. It recomputes and returns the six-mode observation root and independent producer-guard root. Mutation tests reject dependency-root, installed/toolchain-root, native-root, and local-execution-root drift.
 
 ## Corrected Later-HEAD Evidence
 
 - Immutable trio publication: `e693f8fe1ff74e2c0d1d733c85c422fd68cb467c`
 - Payload / REVIEW / carrier roots: `sha256:6a262e4b8e267a6be8858c1247a49ceab3c0dbb23b9ebfea9f675a6e02f527e8` / `sha256:be5bea259659c0b8878a09ff7ca7df991fda9b6702c8bc3b90f38922068d8f16` / `sha256:ae957db112a31b563ae5357104351c0c8da90b1de7563d6ab86cfd2223286bcb`
-- Fresh observation root: `sha256:fd7aeff7ddfe165201572ffaabe94068261d912be5e32592f06a0fe6ec793f84`
+- Fresh deterministic observation root (identical across two same-HEAD runs): `sha256:76a9c4704a2c57a1af29272a89a87f9a0aab132a621da246183968218aac026d`
 - Producer-guard observation root: `sha256:e75954803e2febc5668d0b6ae021095a73118efd27393f14ba0e0f2faf797986`
 - Portable reviewed closure: `sha256:6409cf5b7c8a3cbf8cec2f317b04a74b59897a0f4c5c4194cebac716d4a7fa98`
 - Linked/current local execution closure: `sha256:8f1d1049606871e7b160501a141b76e34530485717b0f956e804bcc78ec7f1a4`
