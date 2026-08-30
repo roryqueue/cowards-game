@@ -141,8 +141,17 @@ const target = (rootInput: string, repoPath: string): string => {
   if (!absolute.startsWith(`${root}${path.sep}`)) fail("V138_PLAN116_PATH_INVALID")
   return absolute
 }
-const git = (root: string, args: readonly string[], allowFailure = false): string =>
-  runV138RetryV3IsolatedGit(root, args, allowFailure)
+const git = (root: string, args: readonly string[]): string =>
+  runV138RetryV3IsolatedGit(root, args)
+const gitProbe = (root: string, args: readonly string[]): boolean => {
+  try { git(root, args); return true }
+  catch (error) {
+    if (error instanceof Error && "status" in error &&
+        typeof (error as Error & { status?: unknown }).status === "number" &&
+        (error as Error & { status: number }).status !== 0) return false
+    throw error
+  }
+}
 const gitBytes = (root: string, commit: string, repoPath: string): Buffer =>
   runV138RetryV3IsolatedGitBytes(root, ["cat-file", "blob", `${commit}:${repoPath}`])
 const pathPresent = (root: string, repoPath: string): boolean => {
@@ -178,7 +187,7 @@ const readRegularNoFollow = (root: string, repoPath: string): Buffer => {
   } finally { closeSync(descriptor) }
 }
 const ancestor = (root: string, commit: string): void => {
-  if (git(root, ["merge-base", "--is-ancestor", commit, "HEAD"], true) !== "")
+  if (!gitProbe(root, ["merge-base", "--is-ancestor", commit, "HEAD"]))
     fail(`V138_PLAN116_ANCESTRY_INVALID:${commit}`)
 }
 const noRewrite = (root: string, commit: string, paths: readonly string[]): void => {
@@ -275,7 +284,9 @@ const resolveRelativeImport = (from: string, specifier: string): string => {
   return resolved.endsWith(".js") ? `${resolved.slice(0, -3)}.ts` : resolved
 }
 const objectExists = (root: string, commit: string, repoPath: string): boolean =>
-  git(root, ["cat-file", "-e", `${commit}:${repoPath}`], true) === ""
+  gitProbe(root, ["cat-file", "-e", `${commit}:${repoPath}`])
+export const probeV138Plan116GitObjectForReview =
+  (root: string, commit: string, repoPath: string): boolean => objectExists(root, commit, repoPath)
 const deriveRecursiveClosure = (root: string) => {
   const pending = SUBJECT_ENTRIES.filter(({ path: repoPath }) => repoPath.endsWith(".ts"))
     .map(({ path: repoPath }) => repoPath)

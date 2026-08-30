@@ -8,6 +8,7 @@ import {
   classifyV138Plan116ModeFailureForReview,
   executeV138Plan116DisposableModes,
   observeV138Plan116FoundationForReview,
+  probeV138Plan116GitObjectForReview,
   renderV138Plan116EvidenceForReview,
 } from "./check-v1-38-plan-262-116-supplement-v3-adapter-v1.js"
 
@@ -233,6 +234,12 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     expect(source).not.toMatch(/check-reviewed-live-ready|run-reviewed-bounded-live-envelope/)
     expect(source).not.toMatch(/runV138V3ProductionLive|runV138ReviewedBoundedLiveEnvelope/)
     expect(source).not.toMatch(/--write-supplement-v3["']\s*\)/)
+  })
+
+  it("returns false for an expected missing Git object without weakening integrity failures", () => {
+    expect(probeV138Plan116GitObjectForReview(repoRoot,
+      "bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48", "scripts/definitely-absent-plan116.ts"))
+      .toBe(false)
   })
 
   it("roots a semantic mutation without making the canonical trio or supplement", () => {
