@@ -84,3 +84,31 @@ status: all_fixed
 _Fixed: 2026-08-29T23:48:17Z_
 _Fixer: the agent (gsd-code-fixer)_
 _Iteration: 1_
+
+## Additive Re-review Fix — Iteration 2
+
+**Fixed at:** 2026-08-30T00:09:16Z
+**Source review:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-113-REVIEW-FIX-REVIEW.md`
+**Findings in scope:** 2
+**Fixed:** 2
+**Skipped:** 0
+**Status:** all_fixed
+
+### CR-01: Dangling symlinks bypass forbidden-destination absence checks
+
+**Files modified:** `scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts`, `scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.test.ts`
+**Commit:** `e0215b77`
+**Applied fix:** Replaced every `existsSync` absence decision with a shared `lstat` no-follow classifier. Plan-114, all supplement versions, producer outputs, and downstream outputs now treat regular files, directories, dangling relative or absolute symlinks, and unsafe special entries as present. The final canonical-absence test also uses `lstat` instead of `/usr/bin/test -e`.
+
+### WR-01: Linked review trusts the payload's local execution root
+
+**Files modified:** `scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts`, `scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.test.ts`
+**Commit:** `ba1f8ddb`
+**Applied fix:** The linked-review checker now requires the payload local root to equal the independently derived linked closure local root before checking all rendered bytes and roots. Canonical future custody retains a separate committed-attestation checker and independently derives its canonical local execution root for readiness custody.
+
+### Iteration 2 Verification
+
+- Real dangling relative and absolute symlinks were rejected across the complete forbidden-destination set; a directory at a file destination was also rejected before source admission.
+- A second linked worktree with a physically separate equivalent installation produced the same portable reviewed root and a different local execution root; a fully re-rendered context-wrong trio/supplement was rejected.
+- Focused tests passed, module parse/import passed under the repository's Node 24 toolchain, and `git diff --check` passed.
+- No readiness, live, production, canonical supplement, producer output, or downstream effect was invoked or created.

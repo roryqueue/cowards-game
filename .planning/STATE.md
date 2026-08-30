@@ -390,6 +390,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Portable review identity binds committed files and native inputs by canonical repository-relative path; local Git-object and native absolute-path facts remain in a separately named local execution root. — Preserves portable review without weakening same-operator local assurance.
 - [Phase 262]: Plan-114 must bind the exact committed Plan-113 live-v10 closure; Plan-111 remains immutable source-only base history. — Prevents a fresh review from attesting only the superseded live-v9 closure.
 - [Phase 262]: The historical v3 producer remains the sole effect owner and live-v10 exposes no injectable production bypass. — Keeps effect ownership closed and test seams out of production.
+- [Phase 262]: Forbidden Plan-114, supplement, producer, and downstream destinations are absent only when `lstat` reports no entry; dangling symlinks and unsafe entry types fail closed. — Prevents broken-link and special-file substitution at every pre-effect absence boundary.
+- [Phase 262]: Linked review must derive and bind its own local execution root, while canonical readiness separately treats that committed root as review attestation and derives canonical local custody independently. — Prevents a self-consistent re-render from substituting another linked review context without conflating portable and canonical-local custody.
 
 ### Pending Todos
 
@@ -454,7 +456,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-08-29T01:38:39.332Z
-Stopped at: Completed all seven 262-113 code-review fixes without readiness/live effects; Plan 262-114 independent live-v10 re-review is next
+Stopped at: Completed both additive 262-113 re-review fixes in e0215b77 and ba1f8ddb without readiness/live effects; Plan 262-114 independent live-v10 review remains next
 Resume file: None
 
 ### Blockers

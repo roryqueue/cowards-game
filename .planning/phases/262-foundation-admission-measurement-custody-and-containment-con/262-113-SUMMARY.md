@@ -179,6 +179,14 @@ None - no external service configuration required.
 - Source-only CLI, TypeScript compilation, and `git diff --check` passed.
 - No canonical Plan-114, supplement-v3, or live artifact exists.
 
+## Additive Re-review Closure (2026-08-30)
+
+- Re-review findings `CR-01` and `WR-01` are fixed atomically in `e0215b77` and `ba1f8ddb`.
+- All forbidden Plan-114, supplement, producer, and downstream destinations use one `lstat` no-follow classification boundary; dangling links and unsafe entry types cannot masquerade as absence.
+- Linked review independently binds the submitted local root to the linked closure it derives. Canonical readiness remains distinct: committed linked-local custody is checked as attestation while canonical local custody is independently derived and retained for the pre/post boundary.
+- Real focused fixtures passed for dangling relative/absolute links, an unsafe directory entry, and a fully re-rendered context-wrong linked-local root from a separate equivalent installation.
+- Historical producer behavior, live-v9, Plan-112 publications, Pair B3, zero counters, and denied downstream authority are unchanged. No readiness or live selector ran and no canonical supplement or effect artifact was created.
+
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
 *Completed: 2026-08-29*
