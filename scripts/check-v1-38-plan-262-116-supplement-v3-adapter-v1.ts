@@ -401,6 +401,8 @@ const authenticateIndependentUpstream = (rootInput: string): void => {
       seal.productionAuthorized !== false || envelope.policy.productionAuthorized !== false)
     fail("V138_PLAN116_PAIR_INVALID")
   assertAbsent(root, [PATHS.supplement1, PATHS.supplement2, PATHS.supplement3, ...EFFECT_PATHS])
+}
+const authenticateSupplementSemantics = (): void => {
   const expected = independentlyRenderSupplement()
   if (expected.createsEnvelope !== false || expected.createsCapacity !== false ||
       expected.resetsCounters !== false || expected.authorizesExecution !== false ||
@@ -410,6 +412,7 @@ const authenticateIndependentUpstream = (rootInput: string): void => {
 export const captureV138Plan116FoundationForReview = (rootInput: string) => {
   const closure = captureSubjectClosure(rootInput)
   authenticateIndependentUpstream(rootInput)
+  authenticateSupplementSemantics()
   return Object.freeze({
     ...closure,
     secureCurrentMode: "0600" as const,
@@ -424,22 +427,75 @@ export const captureV138Plan116FoundationForReview = (rootInput: string) => {
   })
 }
 export const observeV138Plan116FoundationForReview = (rootInput: string) => {
+  let closure: ReturnType<typeof captureSubjectClosure>
   try {
-    return Object.freeze({
-      foundation: captureV138Plan116FoundationForReview(rootInput),
-      findings: Object.freeze([] as V138Plan116Finding[]),
-    })
+    closure = captureSubjectClosure(rootInput)
   } catch (error) {
     if (!(error instanceof TypeError)) throw error
     return Object.freeze({
       foundation: undefined,
+      closure: undefined,
+      authentication: Object.freeze({
+        subjectAuthenticated: false, upstreamAuthenticated: false,
+        supplementSemanticsAuthenticated: false, failedBoundary: "subject" as const,
+      }),
       findings: Object.freeze([Object.freeze({
-        code: "FOUNDATION_SUBJECT_REJECTED",
-        severity: "critical" as const,
-        detail: error.message,
+        code: "FOUNDATION_SUBJECT_REJECTED", severity: "critical" as const, detail: error.message,
       })]),
     })
   }
+  try {
+    authenticateIndependentUpstream(rootInput)
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error
+    return Object.freeze({
+      foundation: undefined,
+      closure,
+      authentication: Object.freeze({
+        subjectAuthenticated: true, upstreamAuthenticated: false,
+        supplementSemanticsAuthenticated: false, failedBoundary: "upstream" as const,
+      }),
+      findings: Object.freeze([Object.freeze({
+        code: "FOUNDATION_SUBJECT_REJECTED", severity: "critical" as const, detail: error.message,
+      })]),
+    })
+  }
+  try {
+    authenticateSupplementSemantics()
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error
+    return Object.freeze({
+      foundation: undefined,
+      closure,
+      authentication: Object.freeze({
+        subjectAuthenticated: true, upstreamAuthenticated: true,
+        supplementSemanticsAuthenticated: false, failedBoundary: "supplement" as const,
+      }),
+      findings: Object.freeze([Object.freeze({
+        code: "FOUNDATION_SUBJECT_REJECTED", severity: "critical" as const, detail: error.message,
+      })]),
+    })
+  }
+  return Object.freeze({
+    foundation: Object.freeze({
+      ...closure,
+      secureCurrentMode: "0600" as const,
+      ordinaryCurrentMode: "0644" as const,
+      upstreamAuthenticated: true as const,
+      supplementSemanticsAuthenticated: true as const,
+      supplementRoot: independentlyRenderSupplement().supplementRoot,
+      producerCalls: 0 as const,
+      freshCharged: 0 as const,
+      freshAccepted: 0 as const,
+      downstreamAuthority: "denied" as const,
+    }),
+    closure,
+    authentication: Object.freeze({
+      subjectAuthenticated: true, upstreamAuthenticated: true,
+      supplementSemanticsAuthenticated: true, failedBoundary: null,
+    }),
+    findings: Object.freeze([] as V138Plan116Finding[]),
+  })
 }
 
 const prepareWorktree = (repoRoot: string, owner: string, name: string): string => {
@@ -640,7 +696,13 @@ const validateModeEvidence = (modes: {
 const sortedFindings = (findings: readonly V138Plan116Finding[]) =>
   [...findings].sort((a, b) => `${a.code}\0${a.detail}`.localeCompare(`${b.code}\0${b.detail}`))
 const renderContracts = (input: {
-  closure: ReturnType<typeof captureSubjectClosure>
+  closure?: ReturnType<typeof captureSubjectClosure>
+  authentication: Readonly<{
+    subjectAuthenticated: boolean
+    upstreamAuthenticated: boolean
+    supplementSemanticsAuthenticated: boolean
+    failedBoundary: "subject" | "upstream" | "supplement" | null
+  }>
   findings: readonly V138Plan116Finding[]
   actualModesPassed: number
   observations: readonly Json[]
@@ -650,7 +712,9 @@ const renderContracts = (input: {
 }) => {
   const findings = sortedFindings(input.findings)
   const zero = findings.length === 0
-  const plan109Eligible = zero && input.modeEvidenceAuthenticated === true
+  const plan109Eligible = zero && input.modeEvidenceAuthenticated === true &&
+    input.authentication.subjectAuthenticated && input.authentication.upstreamAuthenticated &&
+    input.authentication.supplementSemanticsAuthenticated
   const supplement = independentlyRenderSupplement()
   const body = {
     schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-payload-v1",
@@ -658,16 +722,18 @@ const renderContracts = (input: {
     subjectCommit: SUBJECT_COMMIT,
     subjectTree: SUBJECT_TREE,
     subjectParent: SUBJECT_PARENT,
-    subjectEntries: input.closure.subjectEntries,
-    recursiveDependencyRoot: input.closure.recursiveDependencyRoot,
-    recursiveDependencyCount: input.closure.recursiveDependencyCount,
-    nativeInputRoot: input.closure.nativeInputRoot,
-    packageManifestRoot: input.closure.packageManifestRoot,
-    reviewedClosureRoot: input.closure.reviewedClosureRoot,
-    localExecutionClosureRoot: input.closure.localExecutionClosureRoot,
+    subjectEntries: input.closure?.subjectEntries ?? SUBJECT_ENTRIES,
+    recursiveDependencyRoot: input.closure?.recursiveDependencyRoot ?? null,
+    recursiveDependencyCount: input.closure?.recursiveDependencyCount ?? 0,
+    nativeInputRoot: input.closure?.nativeInputRoot ?? null,
+    packageManifestRoot: input.closure?.packageManifestRoot ?? null,
+    reviewedClosureRoot: input.closure?.reviewedClosureRoot ?? null,
+    localExecutionClosureRoot: input.closure?.localExecutionClosureRoot ?? null,
     disposableExecutionClosureRoot: input.disposableExecutionClosureRoot ?? null,
-    upstreamAuthenticated: true,
-    supplementSemanticsAuthenticated: true,
+    subjectAuthenticated: input.authentication.subjectAuthenticated,
+    upstreamAuthenticated: input.authentication.upstreamAuthenticated,
+    supplementSemanticsAuthenticated: input.authentication.supplementSemanticsAuthenticated,
+    failedBoundary: input.authentication.failedBoundary,
     supplementRoot: supplement.supplementRoot,
     secureCurrentMode: "0600",
     ordinaryCurrentMode: "0644",
@@ -745,14 +811,18 @@ export const renderV138Plan116EvidenceForReview = (
   repoRootInput: string,
   findings: readonly V138Plan116Finding[],
   modes?: ModeResult,
+  observed?: ReturnType<typeof observeV138Plan116FoundationForReview>,
 ) => {
-  const closure = captureSubjectClosure(repoRootInput)
+  const captured = observed ?? observeV138Plan116FoundationForReview(repoRootInput)
+  const closure = captured.closure
+  const authentication = captured.authentication
   if (findings.length === 0 && modes === undefined) fail("V138_PLAN116_ZERO_REQUIRES_ACTUAL_MODES")
   const modeEvidenceAuthenticated = findings.length === 0
     ? (validateModeEvidence(modes!), true)
     : modes === undefined ? false : (validateModeEvidence(modes), true)
   return renderContracts({
     closure,
+    authentication,
     findings,
     actualModesPassed: modes?.actualModesPassed ?? 0,
     observations: (modes?.observations ?? []) as readonly Json[],
@@ -787,6 +857,10 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
     fail("V138_PLAN116_FINDINGS_INVALID")
   const exact = renderContracts({
     closure,
+    authentication: Object.freeze({
+      subjectAuthenticated: true, upstreamAuthenticated: true,
+      supplementSemanticsAuthenticated: true, failedBoundary: null,
+    }),
     findings,
     actualModesPassed: payload.actualModesPassed,
     observations: payload.observations,

@@ -96,12 +96,16 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       expect(observation.foundation).toBeUndefined()
       expect(observation.findings).toHaveLength(1)
       expect(observation.findings[0]?.code).toBe("FOUNDATION_SUBJECT_REJECTED")
-      const evidence = renderV138Plan116EvidenceForReview(repoRoot, observation.findings)
+      const evidence = renderV138Plan116EvidenceForReview(repoRoot, observation.findings, undefined, observation)
       expect(evidence.payload.reviewStatus).toBe("blocked")
       expect(evidence.payload.findingCount).toBe(1)
       expect(evidence.payload.findingRoot).toMatch(/^sha256:[0-9a-f]{64}$/)
       expect(evidence.payload.plan109Eligible).toBe(false)
       expect(evidence.carrier.plan109Eligible).toBe(false)
+      expect(evidence.payload.subjectAuthenticated).toBe(true)
+      expect(evidence.payload.upstreamAuthenticated).toBe(false)
+      expect(evidence.payload.supplementSemanticsAuthenticated).toBe(false)
+      expect(evidence.payload.failedBoundary).toBe("upstream")
     } finally {
       chmodSync(target, mode)
     }
