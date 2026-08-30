@@ -196,7 +196,7 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
         copyFileSync(path.join(repoRoot, repoPath), path.join(root, repoPath))
       execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V11_PATHS.source, V138_LIVE_V11_PATHS.tests], { cwd: root })
       execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
-        "commit", "--quiet", "-m", "fixture live-v11 subject"], { cwd: root })
+        "commit", "--quiet", "--allow-empty", "-m", "fixture live-v11 subject"], { cwd: root })
       const subjectCommit = execFileSync("/usr/bin/git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim()
       const preview = deriveV138LiveV11ProspectiveContractsForReview({
         repoRoot: root,
