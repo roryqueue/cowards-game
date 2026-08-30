@@ -426,6 +426,10 @@ describe("Plan 262-121 closed live-v13 successor", () => {
         "-c", "user.name=Plan 262 Mutation", "-c", "user.email=plan262-mutation@example.invalid",
         "commit", "--quiet", "-m", "test: forbidden closeout rewrite",
       ], { cwd: root })
+      writeFileSync(
+        path.join(root, V138_LIVE_V13_PATHS.plan93Summary),
+        readFileSync(path.join(repoRoot, V138_LIVE_V13_PATHS.plan93Summary)),
+      )
       expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/SUCCESSOR_REWRITE/u)
     })
   }, 180_000)
