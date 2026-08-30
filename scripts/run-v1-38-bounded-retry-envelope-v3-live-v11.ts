@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import ts from "typescript"
 import {
   V138_BOUNDED_RETRY_V3_PATHS,
   runV138V3ProductionLive,
@@ -342,13 +343,12 @@ export type V138LiveV11SourceAdmission = Readonly<{
   supplement: Json
 }>
 
-export const authenticateV138LiveV11SourceOnly = (rootInput: string): V138LiveV11SourceAdmission => {
+const authenticateV138LiveV11InvariantCustody = (rootInput: string): V138LiveV11SourceAdmission => {
   const root = path.resolve(rootInput)
   authenticatePublicationHistory(root)
   const supplement = authenticateSupplement(root)
   const pair = authenticatePairAndStop(root)
-  assertAbsent(root, [V138_LIVE_V11_PATHS.supplementV1, V138_LIVE_V11_PATHS.supplementV2,
-    ...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
+  assertAbsent(root, [V138_LIVE_V11_PATHS.supplementV1, V138_LIVE_V11_PATHS.supplementV2])
   return Object.freeze({
     plan114V2PublicationCommit: PLAN_114_V2_COMMIT,
     plan114V2PayloadRoot: PLAN_114_ROOTS[1].payload,
@@ -372,6 +372,12 @@ export const authenticateV138LiveV11SourceOnly = (rootInput: string): V138LiveV1
     pair,
     supplement,
   })
+}
+
+export const authenticateV138LiveV11SourceOnly = (rootInput: string): V138LiveV11SourceAdmission => {
+  const source = authenticateV138LiveV11InvariantCustody(rootInput)
+  assertAbsent(path.resolve(rootInput), [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
+  return source
 }
 
 const plan118PayloadRoot = (body: Json): Sha => rooted("v138-plan-262-118-live-v11-custody-review-payload-v1", body)
@@ -521,7 +527,7 @@ const authenticateFutureCustody = (rootInput: string, boundary: "pre" | "post" =
   const subjectCommit = plan118.payload.subjectCommit
   if (typeof subjectCommit !== "string" || !/^[0-9a-f]{40}$/u.test(subjectCommit))
     fail("V138_LIVE_V11_PLAN118_SUBJECT_INVALID")
-  const source = authenticateV138LiveV11SourceOnly(root)
+  const source = authenticateV138LiveV11InvariantCustody(root)
   const reviewedClosure = deriveV138PathStableCustody(root, {
     sourceCommit: subjectCommit,
     checkoutPaths: V138_LIVE_V11_REVIEWED_SOURCE_PATHS,
@@ -538,6 +544,8 @@ const authenticateFutureCustody = (rootInput: string, boundary: "pre" | "post" =
   return checked
 }
 
+export const authenticateV138LiveV11FutureCustodyForReview = authenticateFutureCustody
+
 export const checkV138LiveV11PostRunOutputCustodyForReview =
   checkV138LiveV10PostRunOutputCustodyForReview
 export const computeV138LiveV11ReproductionV17ReceiptRoot =
@@ -545,10 +553,32 @@ export const computeV138LiveV11ReproductionV17ReceiptRoot =
 export const checkV138LiveV11ReproductionV17ForReview =
   checkV138LiveV10ReproductionV17ForReview
 
-export const inspectV138LiveV11ProductionBoundaryForReview = (rootInput: string) => {
-  const source = readRegularNoFollow(path.resolve(rootInput), V138_LIVE_V11_PATHS.source).toString("utf8")
-  const producerCallSites = source.match(/await runV138V3ProductionLive\(/gu)?.length ?? 0
-  if (producerCallSites !== 1 ||
+export const inspectV138LiveV11ProductionBoundarySourceForReview = (source: string) => {
+  const sourceFile = ts.createSourceFile(V138_LIVE_V11_PATHS.source, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  const producerImports = sourceFile.statements.filter((statement): statement is ts.ImportDeclaration =>
+    ts.isImportDeclaration(statement) && statement.moduleSpecifier.getText(sourceFile) ===
+      '"./run-v1-38-bounded-retry-envelope-v3.js"')
+  const importedBindings = producerImports.flatMap((statement) => {
+    const bindings = statement.importClause?.namedBindings
+    return bindings !== undefined && ts.isNamedImports(bindings) ? [...bindings.elements] : []
+  })
+  const exactImport = producerImports.length === 1 && importedBindings.some((binding) =>
+    binding.propertyName === undefined && binding.name.text === "runV138V3ProductionLive")
+  let producerReferences = 0
+  let producerCallSites = 0
+  let directAwaitedCall = false
+  const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && node.text === "runV138V3ProductionLive") producerReferences += 1
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        node.expression.text === "runV138V3ProductionLive") {
+      producerCallSites += 1
+      directAwaitedCall = ts.isAwaitExpression(node.parent)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  if (!exactImport || importedBindings.length !== 2 || producerReferences !== 2 ||
+      producerCallSites !== 1 || !directAwaitedCall ||
       !source.includes('"--check-reviewed-live-ready"') ||
       !source.includes('"--run-reviewed-bounded-live-envelope"') ||
       /runV138ReviewedBoundedLiveEnvelopeV11\s*=\s*async\s*\([^)]*,/u.test(source) ||
@@ -567,6 +597,11 @@ export const inspectV138LiveV11ProductionBoundaryForReview = (rootInput: string)
     downstreamAuthority: "denied" as const,
   })
 }
+
+export const inspectV138LiveV11ProductionBoundaryForReview = (rootInput: string) =>
+  inspectV138LiveV11ProductionBoundarySourceForReview(
+    readRegularNoFollow(path.resolve(rootInput), V138_LIVE_V11_PATHS.source).toString("utf8"),
+  )
 
 export const runV138ReviewedBoundedLiveEnvelopeV11 = async (repoRoot: string): Promise<void> => {
   const ready = authenticateFutureCustody(repoRoot, "pre")
@@ -617,10 +652,26 @@ export const executeV138LiveV11Cli = async (
     return
   }
   if (args[0] === "--check-prospective-custody" && !pathPresent(root, V138_LIVE_V11_PATHS.plan118Payload)) {
-    const source = authenticateV138LiveV11SourceOnly(root)
-    output(`${JSON.stringify({ status: "prospective_custody_checked", subjectCommit: resolveCurrentSubjectCommit(root),
-      plan114V2PayloadRoot: source.plan114V2PayloadRoot, plan116V4PayloadRoot: source.plan116V4PayloadRoot,
-      supplementRoot: source.supplementRoot, producerCalls: 0, readinessInvoked: false,
+    const subjectCommit = resolveCurrentSubjectCommit(root)
+    const prospective = deriveV138LiveV11ProspectiveContractsForReview({
+      repoRoot: root,
+      reviewedSourceCommit: subjectCommit,
+      plan118PublicationCommit: "0".repeat(40),
+    })
+    checkV138LiveV11ProspectiveCustodyForReview({
+      source: prospective.source,
+      reviewedClosure: prospective.reviewedClosure,
+      reviewedLocalExecutionClosureRoot: prospective.reviewedClosure.localExecutionClosureRoot,
+      plan118PublicationCommit: "0".repeat(40),
+      plan118: prospective,
+    })
+    output(`${JSON.stringify({ status: "prospective_custody_checked", subjectCommit,
+      plan114V2PayloadRoot: prospective.source.plan114V2PayloadRoot,
+      plan116V4PayloadRoot: prospective.source.plan116V4PayloadRoot,
+      supplementRoot: prospective.source.supplementRoot, payloadRoot: prospective.payload.payloadRoot,
+      reviewRoot: prospective.reviewRoot, carrierRoot: prospective.carrier.carrierRoot,
+      reviewedClosureRoot: prospective.reviewedClosure.reviewedClosureRoot,
+      producerCalls: 0, readinessInvoked: false,
       liveInvoked: false, freshCharged: 0, freshAccepted: 0, downstreamAuthority: "denied" })}\n`)
     return
   }
