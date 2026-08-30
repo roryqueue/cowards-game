@@ -1,10 +1,10 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-30T03:01:25Z
-review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-115-REVIEW-FIX-REVIEW.md
-iteration: 2
-findings_in_scope: 2
-fixed: 2
+fixed_at: 2026-08-30T03:18:00Z
+review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-115-FINAL-REVIEW.md
+iteration: 3
+findings_in_scope: 1
+fixed: 1
 skipped: 0
 status: all_fixed
 ---
@@ -72,3 +72,23 @@ _Iteration: 1_
 _Fixed: 2026-08-30T03:01:25Z_
 _Fixer: the agent (gsd-code-fixer)_
 _Iteration: 2_
+
+## Additive Final Review Closure — Iteration 3
+
+### CR-01: Universal physical 0644 enforcement rejects the canonical sealed pair
+
+**Files modified:** `scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts`, `scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts`
+**Commit:** `bb1d639a`
+**Applied fix:** Current physical modes are now exact per custody class. The canonical seal and envelope require secure `0600`; ordinary planning, review, and supplement evidence requires `0644`. Regular no-follow reads still bind stable descriptor device, inode, size, and mode, and the sealed pair's committed Git entries are explicitly required to remain `100644`. The direct shared-checkout source-only regression passes with the real `0600` pair and rejects `0644`, executable, and unexpected secure-pair drift plus `0600`, executable, and unexpected ordinary-evidence drift.
+
+## Iteration 3 Verification
+
+- The regression failed before implementation with `V138_SUPPLEMENT_ADAPTER_FILE_UNSAFE` on the `0600` canonical seal, then passed after the path-specific contract was implemented.
+- Direct source-only authentication against the shared checkout passed with seal/envelope mode `0600` and ordinary evidence mode `0644`.
+- TypeScript and `git diff --check` passed; canonical supplement and all readiness/live/producer/effect paths remain absent.
+
+---
+
+_Fixed: 2026-08-30T03:18:00Z_
+_Fixer: the agent (gsd-code-fixer)_
+_Iteration: 3_

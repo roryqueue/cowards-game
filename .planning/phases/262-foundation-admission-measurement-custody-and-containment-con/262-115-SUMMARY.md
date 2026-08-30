@@ -35,7 +35,7 @@ coverage:
     description: Source-only adapter independently authenticates authoritative Plan-114 v2, final-clean custody, and the exact sealed zero-counter pair.
     verification:
       - kind: integration
-        ref: "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts#independently authenticates authoritative v2, final-clean custody, and exact zero pair"
+        ref: "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts#authenticates the canonical shared-checkout 0600 pair and rejects custody-class mode drift"
         status: pass
       - kind: other
         ref: "pnpm exec tsx scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts --check-source-only"
@@ -83,14 +83,14 @@ Each TDD gate was committed atomically:
 
 ## Authoritative Corrected Git Custody for Plan 116
 
-- Final three-file source commit: `a13b5600e3baf31b5460066558bafd53a3bb5581`
-- Tree: `a555fc01a83da07c1ea3c6b79463dad3269aada1`
-- Parent: `89ba082b1e583c55f4a02a30f36925642e6b826a`
-- Adapter: mode `100644`, blob `300832848dacb12d395c4a573182c60b00c71374`
-- Test: mode `100644`, blob `a2275640b28322f20f1e10f4d93449c30fafe782`
+- Final three-file source commit: `bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48`
+- Tree: `0f55d28d514e1e5e37ffcdcada88fe606e87ccd3`
+- Parent: `a2a5170ad0eb2ff0d8919aa9b78361ec5e34b076`
+- Adapter: mode `100644`, blob `de32acd9a664a1efde3390827b59121231e384ee`
+- Test: mode `100644`, blob `2fa32f8c69a5515f4d1e0e31b9c93a23c9c3a21f`
 - Native helper: mode `100644`, blob `a733b6ce9239d02e522a78ad83930037e644a4d0`
 
-The earlier two-file closure at `d7ebb154a4b4341c4249cc7a2141daae9204a222` and the first corrected three-file closure at `737fd0e60c033f873accd9bf60b1599f0bf47951` are immutable superseded history. Plan 116 must review only the exact `a13b5600` closure above.
+The earlier two-file closure at `d7ebb154a4b4341c4249cc7a2141daae9204a222`, first corrected three-file closure at `737fd0e60c033f873accd9bf60b1599f0bf47951`, and owner-private-build closure at `a13b5600e3baf31b5460066558bafd53a3bb5581` are immutable superseded history. Plan 116 must review only the exact `bb1d639a` closure above.
 
 ## Files Created
 
@@ -145,7 +145,7 @@ None.
 
 ## Next Phase Readiness
 
-Plan 262-116 is the sole next action: independently review exact commit `a13b5600e3baf31b5460066558bafd53a3bb5581`, including the adapter, tests, and native helper, plus its real disposable source/write/commit/check modes. Revised Plan 109 remains blocked until that literal-zero-or-blocked review trio exists. ADMIT-03 remains blocked at 0/540; Plan 110 and all later authority remain denied.
+Plan 262-116 is the sole next action: independently review exact commit `bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48`, including the adapter, tests, and native helper, plus canonical shared-checkout source-only and real disposable source/write/commit/check modes. Revised Plan 109 remains blocked until that literal-zero-or-blocked review trio exists. ADMIT-03 remains blocked at 0/540; Plan 110 and all later authority remain denied.
 
 ## Self-Check: PASSED
 
@@ -155,7 +155,7 @@ All three adapter/test/native files and their exact corrected custody entries we
 
 - Commits `6952db17`, `3b9db7fb`, and `c21f0ef8` close the three Plan-115 blockers; `737fd0e6` aligns the prior executable-publication assertion with the stronger current-custody failure.
 - Plan 115 now reports Plan-116 review eligibility only. `plan109Eligible` remains false and `reviewRequired` remains true across source, write, and committed-check projections.
-- Every current custody file must be exact no-follow `0644`, with descriptor identity, size, and mode checked again after reading.
+- Current physical modes are custody-class-specific and exact: the canonical seal/envelope pair is `0600`; ordinary planning, review, and supplement evidence is `0644`. Descriptor identity, size, and mode are checked again after reading, while committed entries remain exact Git `100644`.
 - The supplement writer now uses a retained-directory native `openat`/`unlinkat`/`fsync` boundary. A real parent symlink-swap race wrote nothing outside the repository and cleaned only through the retained descriptor.
 - The complete focused suite passed 9/9. No canonical supplement, readiness, live, or effect artifact was created; Plan 116 remains the sole next action.
 
@@ -164,6 +164,13 @@ All three adapter/test/native files and their exact corrected custody entries we
 - Commit `a13b5600` removes the predictable shared-temporary executable cache. A real pre-seeded poison executable was never run; the freshly compiled helper was authenticated by descriptor and hash and its owner-private directory was removed.
 - The authoritative Plan-116 handoff is the exact three-file closure recorded above. The native helper is a mandatory reviewed input, not an implicit toolchain detail.
 - Plan 115 continues to report Plan-109 ineligible and review-required. No canonical supplement or effect artifact was created.
+
+## Additive Final-mode Review Closure (2026-08-30)
+
+- Commit `bb1d639a` makes physical-mode custody path-specific without accepting alternatives: the canonical seal and envelope require exact `0600`, while every ordinary planning/review/supplement input requires exact `0644`.
+- The canonical shared checkout passed `--check-source-only` with its physical `0600` pair. Secure-pair mutations to `0644`, executable `0700`, and unexpected `0640`, plus ordinary-evidence mutations to `0600`, executable `0755`, and unexpected `0640`, fail closed.
+- The authoritative Plan-116 handoff is now only the exact `bb1d639a` three-file closure recorded above. Git `100644` mode and exact blob checks remain mandatory.
+- Plan-109 remains ineligible and review-required. No canonical supplement, readiness, live, producer, or effect artifact was created.
 
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*
