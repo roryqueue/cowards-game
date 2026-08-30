@@ -377,6 +377,15 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       `${source}\nconst hiddenDynamicProducer = () => import("./run-v1-38-bounded-retry-envelope-v3.js")\n`,
       `${source}\ndeclare const require: (value: string) => unknown\nconst hiddenRequiredProducer = require("./run-v1-38-bounded-retry-envelope-v3.js")\n`,
       `${source}\nconst hiddenComputedProducer = (value: Record<string, unknown>) => value["runV138V3ProductionLive"]\n`,
+      `${source}\nconst hiddenEvalProducer = eval("runV138V3" + "ProductionLive")\n`,
+      `${source}\nconst hiddenIndirectEvalProducer = (0, eval)("runV138V3" + "ProductionLive")\n`,
+      `${source}\nconst hiddenEvalAlias = eval\nhiddenEvalAlias("runV138V3" + "ProductionLive")\n`,
+      `${source}\nconst hiddenFunctionProducer = Function("return runV138V3" + "ProductionLive")()\n`,
+      `${source}\nconst HiddenFunctionAlias = Function\nconst hiddenFunctionAliasProducer = new HiddenFunctionAlias("return runV138V3" + "ProductionLive")()\n`,
+      `${source}\nconst hiddenGlobalEvalProducer = globalThis["ev" + "al"]("runV138V3" + "ProductionLive")\n`,
+      `${source}\nconst hiddenConstructorProducer = (() => undefined).constructor("return runV138V3" + "ProductionLive")()\n`,
+      `${source}\nconst hiddenCreateRequireProducer = module.createRequire(import.meta.url)("./run-v1-38-bounded-retry-envelope-v3.js")\n`,
+      `${source}\nconst hiddenBuiltinLoaderProducer = process["getBuiltin" + "Module"]("module")\n`,
     ]) expect(() => inspectV138LiveV13ProductionBoundarySourceForReview(injected)).toThrow(
       "V138_LIVE_V13_PRODUCTION_BOUNDARY_INVALID",
     )
