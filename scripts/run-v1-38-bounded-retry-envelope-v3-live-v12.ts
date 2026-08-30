@@ -489,15 +489,30 @@ const renderPlan120Contracts = (input: {
 }) => {
   if (!/^[0-9a-f]{40}$/u.test(input.plan120PublicationCommit) ||
       !/^sha256:[0-9a-f]{64}$/u.test(input.reviewedLocalExecutionClosureRoot) ||
+      input.reviewedLocalExecutionClosureRoot !== input.reviewedClosure.localExecutionClosureRoot ||
       canonical(input.reviewedClosure.checkoutPaths) !== canonical(V138_LIVE_V12_REVIEWED_SOURCE_PATHS) ||
       input.reviewedClosure.pathnameLaunchReplacementResistanceClaimed !== false)
-    fail("V138_LIVE_V12_PLAN120_INPUT_INVALID")
+    fail("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
   const body = {
     schemaVersion: "v1.38-plan-262-120-live-v12-custody-review-payload-v2",
     protocol: "independent-live-v12-executable-custody-review-v2",
     subjectCommit: input.reviewedClosure.sourceCommit,
+    sourceTree: input.reviewedClosure.sourceTree,
+    sourceParent: input.reviewedClosure.sourceParent,
+    checkoutManifestRoot: input.reviewedClosure.checkoutManifestRoot,
+    recursiveDependencyRoot: input.reviewedClosure.recursiveDependencyRoot,
+    recursiveDependencyCount: input.reviewedClosure.recursiveDependencyCount,
+    installedClosureRoot: input.reviewedClosure.installedClosureRoot,
+    nodeSha256: input.reviewedClosure.nodeSha256,
+    pnpmDistributionSha256: input.reviewedClosure.pnpmDistributionSha256,
+    pathStableNativeSourcesRoot: input.reviewedClosure.pathStableNativeSourcesRoot,
+    gitExecutableSha256: input.reviewedClosure.gitExecutableSha256,
+    hardenedGitArgumentsRoot: input.reviewedClosure.hardenedGitArgumentsRoot,
     reviewedClosureRoot: input.reviewedClosure.reviewedClosureRoot,
     reviewedLocalExecutionClosureRoot: input.reviewedLocalExecutionClosureRoot,
+    localInstalledClosureRoot: input.reviewedClosure.localInstalledClosureRoot,
+    localGitObjectRoot: input.reviewedClosure.localGitObjectRoot,
+    localNativeSourcesRoot: input.reviewedClosure.localNativeSourcesRoot,
     plan114V2PublicationCommit: input.source.plan114V2PublicationCommit,
     plan114V2PayloadRoot: input.source.plan114V2PayloadRoot,
     plan116V4PublicationCommit: input.source.plan116V4PublicationCommit,
@@ -590,6 +605,9 @@ export const deriveV138LiveV12ProspectiveContractsForReview = (input: {
     checkoutPaths: V138_LIVE_V12_REVIEWED_SOURCE_PATHS,
   })
   checkV138PathStableCustodyForReview(reviewedClosure, reviewedClosure)
+  if (input.reviewedLocalExecutionClosureRoot !== undefined &&
+      input.reviewedLocalExecutionClosureRoot !== reviewedClosure.localExecutionClosureRoot)
+    fail("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
   const contracts = renderPlan120Contracts({
     source,
     reviewedClosure,
@@ -600,15 +618,40 @@ export const deriveV138LiveV12ProspectiveContractsForReview = (input: {
   return Object.freeze({ source, reviewedClosure, ...contracts })
 }
 
+export const checkV138LiveV12FreshClosureForReview = (input: {
+  freshClosure: V138PathStableCustody
+  candidateClosure: V138PathStableCustody
+  claimedLocalExecutionClosureRoot: Sha
+}) => {
+  try { checkV138PathStableCustodyForReview(input.freshClosure, input.candidateClosure) }
+  catch { fail("V138_LIVE_V12_FRESH_CLOSURE_INVALID") }
+  if (input.claimedLocalExecutionClosureRoot !== input.freshClosure.localExecutionClosureRoot ||
+      input.candidateClosure.pathnameLaunchReplacementResistanceClaimed !== false)
+    fail("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
+  return true as const
+}
+
 export const checkV138LiveV12ProspectiveCustodyForReview = (input: {
+  repoRoot: string
   source: V138LiveV12SourceAdmission
   reviewedClosure: V138PathStableCustody
   reviewedLocalExecutionClosureRoot: Sha
   plan120PublicationCommit: string
   plan120: Readonly<{ payload: Json; reviewBytes: Buffer; carrier: Json; reviewRoot: Sha }>
 }) => {
-  checkV138PathStableCustodyForReview(input.reviewedClosure, input.reviewedClosure)
-  const exact = renderPlan120Contracts(input)
+  const root = path.resolve(input.repoRoot)
+  const freshSource = authenticateV138LiveV12InvariantCustody(root)
+  if (canonical(input.source) !== canonical(freshSource)) fail("V138_LIVE_V12_FRESH_SOURCE_INVALID")
+  const freshClosure = deriveV138PathStableCustody(root, {
+    sourceCommit: input.reviewedClosure.sourceCommit,
+    checkoutPaths: V138_LIVE_V12_REVIEWED_SOURCE_PATHS,
+  })
+  checkV138LiveV12FreshClosureForReview({
+    freshClosure,
+    candidateClosure: input.reviewedClosure,
+    claimedLocalExecutionClosureRoot: input.reviewedLocalExecutionClosureRoot,
+  })
+  const exact = renderPlan120Contracts({ ...input, source: freshSource, reviewedClosure: freshClosure })
   if (canonical(input.plan120.payload) !== canonical(exact.payload) ||
       !input.plan120.reviewBytes.equals(exact.reviewBytes) ||
       canonical(input.plan120.carrier) !== canonical(exact.carrier) ||
@@ -616,7 +659,7 @@ export const checkV138LiveV12ProspectiveCustodyForReview = (input: {
     fail("V138_LIVE_V12_PLAN120_CUSTODY_INVALID")
   return Object.freeze({
     ...exact,
-    canonicalLocalExecutionClosureRoot: input.reviewedClosure.localExecutionClosureRoot,
+    canonicalLocalExecutionClosureRoot: freshClosure.localExecutionClosureRoot,
     producerWouldInvoke: true as const,
     producerCalls: 0 as const,
     readinessInvoked: false as const,
@@ -641,6 +684,7 @@ const authenticateFutureCustody = (rootInput: string, boundary: "pre" | "post" =
     checkoutPaths: V138_LIVE_V12_REVIEWED_SOURCE_PATHS,
   })
   const checked = checkV138LiveV12ProspectiveCustodyForReview({
+    repoRoot: root,
     source,
     reviewedClosure,
     reviewedLocalExecutionClosureRoot: plan120.payload.reviewedLocalExecutionClosureRoot,
@@ -673,20 +717,63 @@ export const inspectV138LiveV12ProductionBoundarySourceForReview = (source: stri
   const exactImport = producerImports.length === 1 && importedBindings.some((binding) =>
     binding.propertyName === undefined && binding.name.text === "runV138V3ProductionLive")
   let producerReferences = 0
-  let producerCallSites = 0
-  let directAwaitedCall = false
+  let reviewedOwnerReferences = 0
+  const producerCalls: ts.CallExpression[] = []
+  const reviewedOwnerCalls: ts.CallExpression[] = []
+  const enclosingOwner = (node: ts.Node): string | undefined => {
+    let current: ts.Node | undefined = node.parent
+    while (current !== undefined) {
+      if ((ts.isArrowFunction(current) || ts.isFunctionExpression(current)) &&
+          ts.isVariableDeclaration(current.parent) && ts.isIdentifier(current.parent.name))
+        return current.parent.name.text
+      if (ts.isFunctionDeclaration(current) && current.name !== undefined) return current.name.text
+      current = current.parent
+    }
+    return undefined
+  }
+  const exactLiveSelectorAncestor = (node: ts.Node): boolean => {
+    let current: ts.Node | undefined = node.parent
+    while (current !== undefined) {
+      if (ts.isIfStatement(current)) {
+        const expression = current.expression
+        return ts.isBinaryExpression(expression) &&
+          expression.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+          expression.left.getText(sourceFile) === "args[0]" &&
+          ts.isStringLiteral(expression.right) &&
+          expression.right.text === "--run-reviewed-bounded-live-envelope" &&
+          current.thenStatement.pos <= node.pos && node.end <= current.thenStatement.end
+      }
+      current = current.parent
+    }
+    return false
+  }
   const visit = (node: ts.Node): void => {
     if (ts.isIdentifier(node) && node.text === "runV138V3ProductionLive") producerReferences += 1
+    if (ts.isIdentifier(node) && node.text === "runV138ReviewedBoundedLiveEnvelopeV12")
+      reviewedOwnerReferences += 1
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
-        node.expression.text === "runV138V3ProductionLive") {
-      producerCallSites += 1
-      directAwaitedCall = ts.isAwaitExpression(node.parent)
-    }
+        node.expression.text === "runV138V3ProductionLive") producerCalls.push(node)
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        node.expression.text === "runV138ReviewedBoundedLiveEnvelopeV12") reviewedOwnerCalls.push(node)
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
+  const producerCall = producerCalls[0]
+  const reviewedOwnerCall = reviewedOwnerCalls[0]
+  const producerCallValid = producerCalls.length === 1 && producerCall !== undefined &&
+    ts.isAwaitExpression(producerCall.parent) &&
+    enclosingOwner(producerCall) === "runV138ReviewedBoundedLiveEnvelopeV12" &&
+    producerCall.arguments.length === 2 && producerCall.arguments[0]?.getText(sourceFile) === "repoRoot" &&
+    producerCall.arguments[1] !== undefined && ts.isObjectLiteralExpression(producerCall.arguments[1]) &&
+    canonical(producerCall.arguments[1].properties.map((property) => property.name?.getText(sourceFile)).sort()) ===
+      canonical(["checkPair", "validateInputs"])
+  const reviewedDispatchValid = reviewedOwnerReferences === 2 && reviewedOwnerCalls.length === 1 &&
+    reviewedOwnerCall !== undefined && ts.isAwaitExpression(reviewedOwnerCall.parent) &&
+    enclosingOwner(reviewedOwnerCall) === "executeV138LiveV12Cli" &&
+    reviewedOwnerCall.arguments.length === 1 && reviewedOwnerCall.arguments[0]?.getText(sourceFile) === "root" &&
+    exactLiveSelectorAncestor(reviewedOwnerCall)
   if (!exactImport || importedBindings.length !== 2 || producerReferences !== 2 ||
-      producerCallSites !== 1 || !directAwaitedCall ||
+      !producerCallValid || !reviewedDispatchValid ||
       !source.includes('"--check-reviewed-live-ready"') ||
       !source.includes('"--run-reviewed-bounded-live-envelope"') ||
       /runV138ReviewedBoundedLiveEnvelopeV12\s*=\s*async\s*\([^)]*,/u.test(source) ||
@@ -768,6 +855,7 @@ export const executeV138LiveV12Cli = async (
       plan120PublicationCommit: "0".repeat(40),
     })
     checkV138LiveV12ProspectiveCustodyForReview({
+      repoRoot: root,
       source: prospective.source,
       reviewedClosure: prospective.reviewedClosure,
       reviewedLocalExecutionClosureRoot: prospective.reviewedClosure.localExecutionClosureRoot,

@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process"
 import {
   chmodSync,
+  existsSync,
   lstatSync,
   mkdtempSync,
   readFileSync,
@@ -12,10 +13,15 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
+  computeV138PathStableLocalExecutionClosureRoot,
+  computeV138PathStableReviewedClosureRoot,
+  type V138PathStableCustody,
+} from "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
+import {
   V138_LIVE_V12_MODES,
   V138_LIVE_V12_PATHS,
   authenticateV138LiveV12SourceOnly,
-  checkV138LiveV12ProspectiveCustodyForReview,
+  checkV138LiveV12FreshClosureForReview,
   deriveV138LiveV12ProspectiveContractsForReview,
   executeV138LiveV12Cli,
   inspectV138LiveV12ProductionBoundaryForReview,
@@ -363,17 +369,97 @@ describe("Plan 262-119 allowed live-v12 successor", () => {
         localNativeSourcesRoot: preview.reviewedClosure.localNativeSourcesRoot,
         reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
       })
-      expect(() => checkV138LiveV12ProspectiveCustodyForReview({
-        repoRoot: root,
-        source: preview.source,
-        reviewedClosure: {
+      const forgeClosure = (field: keyof V138PathStableCustody, value: unknown): V138PathStableCustody => {
+        const candidate = { ...preview.reviewedClosure, [field]: value } as V138PathStableCustody
+        const {
+          reviewedClosureRoot: _oldReviewed,
+          localInstalledClosureRoot,
+          localGitObjectRoot,
+          localNativeSourcesRoot,
+          localExecutionClosureRoot: _oldLocal,
+          ...reviewedBody
+        } = candidate
+        const reviewedClosureRoot = computeV138PathStableReviewedClosureRoot(reviewedBody)
+        const localExecutionClosureRoot = computeV138PathStableLocalExecutionClosureRoot({
+          reviewedClosureRoot, localInstalledClosureRoot, localGitObjectRoot, localNativeSourcesRoot,
+        })
+        return { ...candidate, reviewedClosureRoot, localExecutionClosureRoot }
+      }
+      for (const [field, value] of [
+        ["sourceTree", "f".repeat(40)],
+        ["sourceParent", "f".repeat(40)],
+        ["checkoutManifestRoot", `sha256:${"f".repeat(64)}`],
+        ["recursiveDependencyRoot", `sha256:${"f".repeat(64)}`],
+        ["recursiveDependencyCount", preview.reviewedClosure.recursiveDependencyCount + 1],
+        ["installedClosureRoot", `sha256:${"f".repeat(64)}`],
+        ["nodeSha256", `sha256:${"f".repeat(64)}`],
+        ["pnpmDistributionSha256", `sha256:${"f".repeat(64)}`],
+        ["pathStableNativeSourcesRoot", `sha256:${"f".repeat(64)}`],
+        ["gitExecutableSha256", `sha256:${"f".repeat(64)}`],
+        ["hardenedGitArgumentsRoot", `sha256:${"f".repeat(64)}`],
+        ["localInstalledClosureRoot", `sha256:${"f".repeat(64)}`],
+        ["localGitObjectRoot", `sha256:${"f".repeat(64)}`],
+        ["localNativeSourcesRoot", `sha256:${"f".repeat(64)}`],
+      ] as const) expect(() => checkV138LiveV12FreshClosureForReview({
+        freshClosure: preview.reviewedClosure,
+        candidateClosure: forgeClosure(field, value),
+        claimedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+      })).toThrow("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
+      expect(() => checkV138LiveV12FreshClosureForReview({
+        freshClosure: preview.reviewedClosure,
+        candidateClosure: {
           ...preview.reviewedClosure,
           pathnameLaunchReplacementResistanceClaimed: true as false,
         },
-        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
-        plan120PublicationCommit: "0".repeat(40),
-        plan120: preview,
+        claimedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
       })).toThrow("V138_LIVE_V12_FRESH_CLOSURE_INVALID")
     })
   }, 120_000)
+
+  it("keeps a file-backed producer tripwire untouched in all actual Plan119 modes", () => {
+    withLinkedWorktree((root) => {
+      for (const repoPath of [V138_LIVE_V12_PATHS.source, V138_LIVE_V12_PATHS.tests])
+        writeFileSync(path.join(root, repoPath), readFileSync(path.join(repoRoot, repoPath)))
+      for (const packagePath of [
+        "packages/spec", "packages/engine", "packages/runtime-supervisor", "packages/runtime-js",
+        "packages/runtime-wasm-wasi", "packages/runtime-python", "packages/map-configs",
+        "packages/persistence", "packages/replay", "packages/service", "packages/test-utils",
+        "packages/golden", "apps/runtime-service", "apps/worker",
+      ]) {
+        const destination = path.join(root, packagePath, "node_modules")
+        if (!existsSync(destination))
+          symlinkSync(path.join(repoRoot, packagePath, "node_modules"), destination, "dir")
+      }
+      const marker = path.join(path.dirname(root), "producer-called")
+      const producerPath = path.join(root, "scripts/run-v1-38-bounded-retry-envelope-v3.ts")
+      const producer = readFileSync(producerPath, "utf8")
+      const instrumented = producer.replace(
+        "): Promise<void> => {\n  const executionBefore =",
+        `): Promise<void> => {\n  await import("node:fs").then(({ writeFileSync }) => writeFileSync(${JSON.stringify(marker)}, "called"))\n  const executionBefore =`,
+      )
+      expect(instrumented).not.toBe(producer)
+      writeFileSync(producerPath, instrumented)
+      execFileSync("/usr/bin/git", ["add", "--",
+        V138_LIVE_V12_PATHS.source, V138_LIVE_V12_PATHS.tests,
+        "scripts/run-v1-38-bounded-retry-envelope-v3.ts"], { cwd: root })
+      execFileSync("/usr/bin/git", [
+        "-c", "user.name=Plan 262 Tripwire", "-c", "user.email=plan262-tripwire@example.invalid",
+        "commit", "--quiet", "-m", "test: instrument historical producer tripwire",
+      ], { cwd: root })
+
+      for (const selector of [
+        "--check-source-only", "--check-prospective-custody", "--check-post-run-custody",
+      ]) {
+        const output = JSON.parse(execFileSync(
+          "pnpm", ["exec", "tsx", V138_LIVE_V12_PATHS.source, selector],
+          { cwd: root, encoding: "utf8" },
+        )) as Record<string, unknown>
+        expect(output).toMatchObject({
+          producerCalls: 0, readinessInvoked: false, liveInvoked: false,
+          freshCharged: 0, freshAccepted: 0, downstreamAuthority: "denied",
+        })
+        expect(existsSync(marker)).toBe(false)
+      }
+    })
+  }, 180_000)
 })
