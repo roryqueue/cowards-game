@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
+  assertV138Plan118PublishedLocalClosureForReview,
   executeV138Plan118DisposableModes,
   inspectV138Plan118BoundarySourceForReview,
   renderV138Plan118EvidenceForReview,
@@ -25,6 +26,33 @@ describe("Plan 262-118 independent live-v11 custody review", () => {
     expect(() => inspectV138Plan118BoundarySourceForReview(
       source.replace("repoRoot: string", "repoRoot: string, injectedProducer?: unknown"),
     )).toThrow("V138_PLAN118_PRODUCTION_BOUNDARY_INVALID")
+
+    const withoutOwnerCall = source.replace(
+      "runV138V3ProductionLive(repoRoot, {",
+      "Promise.resolve({",
+    )
+    const movedCalls = [
+      withoutOwnerCall.replace(
+        'if (args[0] === "--check-source-only") {',
+        'if (args[0] === "--check-source-only") { await runV138V3ProductionLive(repoRoot, {} as never)',
+      ),
+      withoutOwnerCall.replace(
+        'if (args[0] === "--check-prospective-custody" &&',
+        'if (args[0] === "--check-prospective-custody" && (await runV138V3ProductionLive(repoRoot, {} as never), true) &&',
+      ),
+      withoutOwnerCall.replace(
+        'if (args[0] === "--check-post-run-custody") assertV138LiveV10PostRunForReview(root)',
+        'if (args[0] === "--check-post-run-custody") { await runV138V3ProductionLive(repoRoot, {} as never); assertV138LiveV10PostRunForReview(root) }',
+      ),
+      withoutOwnerCall.replace(
+        "const result = authenticateFutureCustody(root, args[0] ===",
+        'if (args[0] === "--check-reviewed-live-ready") await runV138V3ProductionLive(repoRoot, {} as never)\n  const result = authenticateFutureCustody(root, args[0] ===',
+      ),
+    ]
+    for (const moved of movedCalls)
+      expect(() => inspectV138Plan118BoundarySourceForReview(moved)).toThrow(
+        "V138_PLAN118_PRODUCTION_BOUNDARY_INVALID",
+      )
   })
 
   it("executes exactly six producer-incapable observations and renders literal-zero eligibility", () => {
@@ -45,7 +73,31 @@ describe("Plan 262-118 independent live-v11 custody review", () => {
       liveInvoked: false,
       freshCharged: 0,
       freshAccepted: 0,
+      producerGuardInvocations: 0,
     })
+    expect(modes.producerGuardObservationRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(modes.observations.every((observation) => observation.producerGuardInvocations === 0)).toBe(true)
+    expect(assertV138Plan118PublishedLocalClosureForReview({
+      reviewedClosureRoot: modes.reviewedClosureRoot,
+      reviewedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
+      findingCount: 0,
+      actualModesPassed: 6,
+    }, modes)).toMatchObject({
+      actualModesPassed: 6,
+      producerGuardInvocations: 0,
+      observationRoot: modes.observationRoot,
+    })
+    for (const reviewedCustody of [
+      { ...modes.reviewedCustody, recursiveDependencyRoot: `sha256:${"1".repeat(64)}` },
+      { ...modes.reviewedCustody, installedClosureRoot: `sha256:${"2".repeat(64)}` },
+      { ...modes.reviewedCustody, pathStableNativeSourcesRoot: `sha256:${"3".repeat(64)}` },
+      { ...modes.reviewedCustody, localExecutionClosureRoot: `sha256:${"4".repeat(64)}` },
+    ]) expect(() => assertV138Plan118PublishedLocalClosureForReview({
+      reviewedClosureRoot: modes.reviewedClosureRoot,
+      reviewedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
+      findingCount: 0,
+      actualModesPassed: 6,
+    }, { ...modes, reviewedCustody } as typeof modes)).toThrow()
     const evidence = renderV138Plan118EvidenceForReview(ROOT, modes.findings, modes)
     expect(evidence.payload).toMatchObject({
       findingCount: 0,
