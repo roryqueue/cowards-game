@@ -111,6 +111,27 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     }
   }, 180_000)
 
+  it("renders subject-custody rejection without recapturing the failed closure", () => {
+    const target = path.join(repoRoot, adapterPath)
+    const mode = lstatSync(target).mode & 0o7777
+    try {
+      chmodSync(target, 0o600)
+      const observed = observeV138Plan116FoundationForReview(repoRoot)
+      expect(observed.foundation).toBeUndefined()
+      expect(observed.authentication.failedBoundary).toBe("subject")
+      const evidence = renderV138Plan116EvidenceForReview(repoRoot, observed.findings, undefined, observed)
+      expect(evidence.payload).toMatchObject({
+        reviewStatus: "blocked",
+        subjectAuthenticated: false,
+        upstreamAuthenticated: false,
+        supplementSemanticsAuthenticated: false,
+        failedBoundary: "subject",
+        reviewedClosureRoot: null,
+        plan109Eligible: false,
+      })
+    } finally { chmodSync(target, mode) }
+  })
+
   it("grants revised Plan 109 eligibility only to literal zero after nine clean actual modes", () => {
     const modes = actualModes()
     const zero = renderV138Plan116EvidenceForReview(repoRoot, [], modes)

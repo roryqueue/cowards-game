@@ -908,7 +908,7 @@ export const writeV138Plan116ReviewForReview = (repoRootInput: string): void => 
   const initial = observeV138Plan116FoundationForReview(root)
   let evidence: ReturnType<typeof renderContracts>
   if (initial.foundation === undefined) {
-    evidence = renderV138Plan116EvidenceForReview(root, initial.findings)
+    evidence = renderV138Plan116EvidenceForReview(root, initial.findings, undefined, initial)
   } else {
     try {
       const modes = executeV138Plan116DisposableModes(root)
