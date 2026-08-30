@@ -19,6 +19,8 @@ import {
   V138_LIVE_V13_REVIEW_MODES,
   authenticateV138LiveV13SourceOnly,
   checkV138LiveV13ProspectiveCustodyForReview,
+  checkV138LiveV13ObservationsForReview,
+  checkV138LiveV13PublishedPayloadForReview,
   computeV138LiveV13ObservationRoot,
   deriveV138LiveV13ProspectiveContractsForReview,
   executeV138LiveV13Cli,
@@ -322,28 +324,31 @@ describe("Plan 262-121 closed live-v13 successor", () => {
         : value),
     ]
     for (const candidate of invalidObservationSets)
-      expect(() => deriveV138LiveV13ProspectiveContractsForReview({
-        repoRoot,
-        reviewedSourceCommit: currentSubjectCommit(),
-        plan122PublicationCommit: "0".repeat(40),
-        observations: candidate,
-      })).toThrow("V138_LIVE_V13_OBSERVATIONS_INVALID")
+      expect(() => checkV138LiveV13ObservationsForReview(
+        candidate,
+        eligible.reviewedClosure.localExecutionClosureRoot,
+      )).toThrow("V138_LIVE_V13_OBSERVATIONS_INVALID")
 
-    for (const payload of [
+    const forgedPayloads = [
       { ...eligible.payload, plan110Eligible: false },
       { ...eligible.payload, actualModesPassed: 0 },
       { ...eligible.payload, reviewedLocalExecutionClosureRoot:
         eligible.payload.canonicalLocalExecutionClosureRoot },
       { ...eligible.payload, productionAuthorized: true },
       { ...eligible.payload, counters: { ...eligible.payload.counters, acceptedCells: 1 } },
-    ]) expect(() => checkV138LiveV13ProspectiveCustodyForReview({
+    ]
+    for (const payload of forgedPayloads)
+      expect(() => checkV138LiveV13PublishedPayloadForReview(payload)).toThrow(
+        "V138_LIVE_V13_PLAN122_NOT_ELIGIBLE",
+      )
+    expect(() => checkV138LiveV13ProspectiveCustodyForReview({
       repoRoot,
       source: eligible.source,
       reviewedClosure: eligible.reviewedClosure,
       canonicalLocalExecutionClosureRoot: eligible.reviewedClosure.localExecutionClosureRoot,
       observations,
       plan122PublicationCommit: "0".repeat(40),
-      plan122: { ...eligible, payload },
+      plan122: { ...eligible, payload: forgedPayloads[0]! },
       requireEligiblePublication: true,
     })).toThrow("V138_LIVE_V13_PLAN122_CUSTODY_INVALID")
   }, 180_000)

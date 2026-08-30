@@ -707,6 +707,21 @@ const checkObservations = (
       fail("V138_LIVE_V13_OBSERVATIONS_INVALID")
   return "eligible"
 }
+export const checkV138LiveV13ObservationsForReview = checkObservations
+export const checkV138LiveV13PublishedPayloadForReview = (payload: Json): true => {
+  if (payload.reviewedLocalExecutionClosureRoot !== undefined ||
+      payload.reviewStatus !== "zero_findings" || payload.findingCount !== 0 ||
+      payload.actualModesPassed !== 6 || payload.plan110Eligible !== true ||
+      payload.producerCalls !== 0 || payload.readinessInvoked !== false ||
+      payload.liveInvoked !== false || payload.freshCharged !== 0 || payload.freshAccepted !== 0 ||
+      payload.authorizesExecution !== false || payload.phase263PlanningAuthorized !== false ||
+      payload.candidateSearchAuthorized !== false || payload.formationMaterializationAuthorized !== false ||
+      payload.holdoutOpeningAuthorized !== false || payload.publicAuthorized !== false ||
+      payload.productAuthorized !== false || payload.productionAuthorized !== false ||
+      payload.downstreamAuthority !== "denied" || canonical(payload.counters) !== canonical(ZERO_COUNTERS))
+    fail("V138_LIVE_V13_PLAN122_NOT_ELIGIBLE")
+  return true
+}
 
 const renderPlan122Contracts = (input: {
   source: V138LiveV13SourceAdmission
@@ -934,19 +949,8 @@ export const checkV138LiveV13ProspectiveCustodyForReview = (input: {
       canonical(input.plan122.carrier) !== canonical(exact.carrier) ||
       input.plan122.reviewRoot !== exact.reviewRoot)
     fail("V138_LIVE_V13_PLAN122_CUSTODY_INVALID")
-  if (input.requireEligiblePublication === true && (
-    exact.payload.reviewStatus !== "zero_findings" ||
-    exact.payload.findingCount !== 0 ||
-    exact.payload.actualModesPassed !== 6 ||
-    exact.payload.plan110Eligible !== true ||
-    exact.payload.producerCalls !== 0 ||
-    exact.payload.readinessInvoked !== false ||
-    exact.payload.liveInvoked !== false ||
-    exact.payload.freshCharged !== 0 ||
-    exact.payload.freshAccepted !== 0 ||
-    exact.payload.authorizesExecution !== false ||
-    exact.payload.downstreamAuthority !== "denied"))
-    fail("V138_LIVE_V13_PLAN122_NOT_ELIGIBLE")
+  if (input.requireEligiblePublication === true)
+    checkV138LiveV13PublishedPayloadForReview(exact.payload)
   return Object.freeze({
     ...exact,
     canonicalLocalExecutionClosureRoot: freshClosure.localExecutionClosureRoot,
