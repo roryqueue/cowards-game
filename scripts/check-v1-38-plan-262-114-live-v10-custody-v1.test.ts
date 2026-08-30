@@ -8,6 +8,10 @@ import {
   renderV138Plan114EvidenceForReview,
   type V138Plan114Finding,
 } from "./check-v1-38-plan-262-114-live-v10-custody-v1.js"
+import {
+  computeV138Plan114IndependentReproductionRoot,
+  deriveV138Plan114IndependentPostSemantics,
+} from "./lib/v1-38-plan-262-114-independent-semantics-v2.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 
@@ -20,6 +24,35 @@ describe("Plan 262-114 independent live-v10 custody review", () => {
     expect(source).not.toMatch(/import\s*\{[^}]*deriveV138PathStableCustody/)
     expect(source).not.toMatch(/deriveV138PathStableCustody\s*\(/)
     expect(source).not.toContain("computeV138PathStable")
+  })
+
+  it("derives complete value semantics without subject acceptance or root helpers", () => {
+    expect(deriveV138Plan114IndependentPostSemantics({
+      journalPresent: true,
+      privateDirectoryPresent: true,
+      terminalPresent: true,
+      lockPresent: false,
+      reproductionPresent: false,
+      adjudicationOrDownstreamPresent: false,
+      outcome: {
+        disposition: "exhausted",
+        completeCleanup: true,
+        reproductionPresent: false,
+        downstreamAuthority: "denied",
+      },
+    })).toEqual({ status: "bounded_terminal", downstreamAuthority: "denied" })
+    const body = { privacyProjection: { strategySourceIncluded: false }, productionAuthorized: false }
+    expect(computeV138Plan114IndependentReproductionRoot(body)).not.toBe(
+      computeV138Plan114IndependentReproductionRoot({
+        ...body,
+        privacyProjection: { strategySourceIncluded: true },
+      }),
+    )
+    const source = readFileSync(path.join(
+      repoRoot,
+      "scripts/check-v1-38-plan-262-114-live-v10-custody-v1.ts",
+    ), "utf8")
+    expect(source).not.toMatch(/subject\.computeV138LiveV10/)
   })
 
   it("pins the final Plan-113 closure and executes all six real disposable modes", () => {

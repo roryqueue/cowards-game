@@ -18,6 +18,11 @@ import {
   type V138Plan114IndependentCustody,
 } from "./lib/v1-38-plan-262-114-independent-custody-v2.js"
 import {
+  computeV138Plan114IndependentReproductionRoot,
+  deriveV138Plan114IndependentPostSemantics,
+  deriveV138Plan114IndependentReproductionSemantics,
+} from "./lib/v1-38-plan-262-114-independent-semantics-v2.js"
+import {
   runV138RetryV3IsolatedGit,
   runV138RetryV3IsolatedGitBytes,
 } from "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
@@ -565,23 +570,63 @@ export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Pl
       rmSync(runnerPath, { force: true })
       return value
     }
-    const valueMode = (mode: string, expression: string, expectedStatus: string, code: string) => {
+    const valueMode = (mode: string, expression: string, expected: Json, code: string) => {
       const value = runValue(expression)
-      if (value.status !== expectedStatus || value.downstreamAuthority !== "denied")
+      if (canonical(value) !== canonical(expected))
         findings.push({ code, severity: "critical", detail: canonical(value).trim() })
-      observations.push(modeObservation(mode, value.status === expectedStatus ? expectedStatus : "failed", value))
+      observations.push(modeObservation(mode, canonical(value) === canonical(expected) ? expected.status : "failed", value))
+    }
+    const nonPassFixture = {
+      journalPresent: true, privateDirectoryPresent: true, terminalPresent: true,
+      lockPresent: false, reproductionPresent: false, adjudicationOrDownstreamPresent: false,
+      outcome: { disposition: "exhausted" as const, journalRoot: `sha256:${"1".repeat(64)}` as Sha,
+        stateRoot: `sha256:${"2".repeat(64)}` as Sha, completeCleanup: true,
+        reproductionPresent: false, downstreamAuthority: "denied" },
+    }
+    const successFixture = {
+      ...nonPassFixture, reproductionPresent: true,
+      outcome: { ...nonPassFixture.outcome, disposition: "succeeded" as const, reproductionPresent: true },
     }
     valueMode("post_non_pass_value",
-      "subject.checkV138LiveV10PostRunOutputCustodyForReview({journalPresent:true,privateDirectoryPresent:true,terminalPresent:true,lockPresent:false,reproductionPresent:false,adjudicationOrDownstreamPresent:false,outcome:{disposition:'exhausted',journalRoot:'sha256:'+'1'.repeat(64),stateRoot:'sha256:'+'2'.repeat(64),completeCleanup:true,reproductionPresent:false,downstreamAuthority:'denied'}})",
-      "bounded_terminal", "MODE_NON_PASS_FAILED")
+      `subject.checkV138LiveV10PostRunOutputCustodyForReview(${JSON.stringify(nonPassFixture)})`,
+      deriveV138Plan114IndependentPostSemantics(nonPassFixture), "MODE_NON_PASS_FAILED")
     valueMode("post_success_value",
-      "subject.checkV138LiveV10PostRunOutputCustodyForReview({journalPresent:true,privateDirectoryPresent:true,terminalPresent:true,lockPresent:false,reproductionPresent:true,adjudicationOrDownstreamPresent:false,outcome:{disposition:'succeeded',journalRoot:'sha256:'+'1'.repeat(64),stateRoot:'sha256:'+'2'.repeat(64),completeCleanup:true,reproductionPresent:true,downstreamAuthority:'denied'}})",
-      "bounded_success", "MODE_SUCCESS_FAILED")
-    const reproduction = runValue(`(()=>{const body={schemaVersion:'v1.38-current-matrix-reproduction-v17',status:'passed_exact',admittedCalibrationRoot:'sha256:'+'3'.repeat(64),chargedAttemptCount:540,acceptedCellCount:540,completeCleanup:true,executionRoot:'sha256:'+'4'.repeat(64),runtimeRoute:'v1.18/v1.19/MATCH_KERNEL',samplingMilliseconds:200,partialAcceptedEvidenceReusable:false,privacyProjection:{strategySourceIncluded:false,strategyMemoryIncluded:false,soldierMemoryIncluded:false,objectivePayloadIncluded:false,rawDiagnosticsIncluded:false},phase263PlanningAuthorized:false,candidateSearchAuthorized:false,formationMaterializationAuthorized:false,holdoutOpeningAuthorized:false,publicAuthorized:false,productAuthorized:false,productionAuthorized:false};const receiptRoot=subject.computeV138LiveV10ReproductionV17ReceiptRoot(body);const artifact={...body,receiptRoot};const journalRecords=[{kind:'finish_calibration',routeIdentity:'route:v3:0',owner:'owner',status:'admitted',completeCleanup:true,supervisionRoot:body.admittedCalibrationRoot},{kind:'finish_reproduction',routeIdentity:'route:v3:0',owner:'owner',status:'passed_exact',acceptedCells:540,completeCleanup:true,reproductionRoot:receiptRoot,recordRoot:'sha256:'+'5'.repeat(64)}];const value=subject.checkV138LiveV10ReproductionV17ForReview({artifact,journalRecords,outcome:{disposition:'succeeded',journalRoot:'sha256:'+'5'.repeat(64),stateRoot:'sha256:'+'6'.repeat(64),completeCleanup:true,reproductionPresent:true,downstreamAuthority:'denied'}});return {...value,status:'exact_reproduction'}})()`)
-    if (reproduction.status !== "exact_reproduction" || reproduction.acceptedCellCount !== 540 ||
-        reproduction.downstreamAuthority !== "denied")
+      `subject.checkV138LiveV10PostRunOutputCustodyForReview(${JSON.stringify(successFixture)})`,
+      deriveV138Plan114IndependentPostSemantics(successFixture), "MODE_SUCCESS_FAILED")
+    const reproductionBody = {
+      schemaVersion: "v1.38-current-matrix-reproduction-v17", status: "passed_exact",
+      admittedCalibrationRoot: `sha256:${"3".repeat(64)}`, chargedAttemptCount: 540,
+      acceptedCellCount: 540, completeCleanup: true, executionRoot: `sha256:${"4".repeat(64)}`,
+      runtimeRoute: "v1.18/v1.19/MATCH_KERNEL", samplingMilliseconds: 200,
+      partialAcceptedEvidenceReusable: false,
+      privacyProjection: { strategySourceIncluded: false, strategyMemoryIncluded: false,
+        soldierMemoryIncluded: false, objectivePayloadIncluded: false, rawDiagnosticsIncluded: false },
+      phase263PlanningAuthorized: false, candidateSearchAuthorized: false,
+      formationMaterializationAuthorized: false, holdoutOpeningAuthorized: false,
+      publicAuthorized: false, productAuthorized: false, productionAuthorized: false,
+    }
+    const receiptRoot = computeV138Plan114IndependentReproductionRoot(reproductionBody)
+    const reproductionFixture = {
+      artifact: { ...reproductionBody, receiptRoot },
+      journalRecords: [
+        { kind: "finish_calibration", routeIdentity: "route:v3:0", owner: "owner", status: "admitted",
+          completeCleanup: true, supervisionRoot: reproductionBody.admittedCalibrationRoot },
+        { kind: "finish_reproduction", routeIdentity: "route:v3:0", owner: "owner", status: "passed_exact",
+          acceptedCells: 540, completeCleanup: true, reproductionRoot: receiptRoot,
+          recordRoot: `sha256:${"5".repeat(64)}` },
+      ],
+      outcome: { disposition: "succeeded", journalRoot: `sha256:${"5".repeat(64)}`,
+        stateRoot: `sha256:${"6".repeat(64)}`, completeCleanup: true,
+        reproductionPresent: true, downstreamAuthority: "denied" },
+    }
+    const expectedReproduction = deriveV138Plan114IndependentReproductionSemantics(reproductionFixture)
+    const reproduction = runValue(
+      `subject.checkV138LiveV10ReproductionV17ForReview(${JSON.stringify(reproductionFixture)})`,
+    )
+    if (canonical(reproduction) !== canonical(expectedReproduction))
       findings.push({ code: "MODE_EXACT_REPRODUCTION_FAILED", severity: "critical", detail: canonical(reproduction).trim() })
-    observations.push(modeObservation("exact_reproduction_value", "exact_reproduction", reproduction))
+    observations.push(modeObservation("exact_reproduction_value",
+      canonical(reproduction) === canonical(expectedReproduction) ? "exact_reproduction" : "failed", reproduction))
     const modeNames = ["source_only_cli", "prospective_custody_cli", "post_no_effect_cli",
       "post_non_pass_value", "post_success_value", "exact_reproduction_value"] as const
     const normalized = observations.map((item, index) => ({ ...item, mode: modeNames[index]! }))
