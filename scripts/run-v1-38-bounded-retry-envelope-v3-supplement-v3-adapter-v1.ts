@@ -1,15 +1,16 @@
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import {
   closeSync,
   constants,
-  fchmodSync,
+  existsSync,
   fstatSync,
   lstatSync,
   openSync,
   readFileSync,
-  unlinkSync,
-  writeFileSync,
+  rmSync,
 } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
@@ -94,6 +95,8 @@ const PATHS = Object.freeze({
   supplement2: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v2.json",
   supplement3: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json",
 })
+const nativeWriterSource = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
+  "native/v1-38-plan-262-115-exclusive-writer-v1.c")
 const EFFECT_PATHS = Object.freeze([
   ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
   ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl.lock",
@@ -372,36 +375,43 @@ const supplementProjection = (status: "supplement_v3_written" | "supplement_v3_c
   downstreamAuthority: "denied" as const,
 })
 
-const assertSafeWriteParents = (root: string): void => {
-  for (const repoPath of [".planning", ".planning/artifacts"]) {
-    const record = lstatSync(target(root, repoPath))
-    if (!record.isDirectory() || record.isSymbolicLink())
-      fail(`V138_SUPPLEMENT_ADAPTER_PARENT_UNSAFE:${repoPath}`)
+const nativeWriterExecutable = (): string => {
+  const identity = createHash("sha256").update(readFileSync(nativeWriterSource)).digest("hex")
+  const executable = path.join(tmpdir(), `cowards-v138-plan115-writer-${identity}`)
+  if (!existsSync(executable)) {
+    const output = `${executable}.${process.pid}.tmp`
+    const compilation = spawnSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror",
+      nativeWriterSource, "-o", output], { encoding: "utf8" })
+    if (compilation.status !== 0)
+      fail(`V138_PLAN115_NATIVE_COMPILE_FAILED:${compilation.stderr.trim()}`)
+    const install = spawnSync("/bin/mv", ["-n", output, executable], { encoding: "utf8" })
+    if (install.status !== 0 && !existsSync(executable)) fail("V138_PLAN115_NATIVE_INSTALL_FAILED")
+    if (existsSync(output)) rmSync(output, { force: true })
   }
+  return executable
+}
+
+const writeExclusiveRetainedParent = (root: string, repoPath: string, bytes: string): void => {
+  const identity = lstatSync(root)
+  if (!identity.isDirectory() || identity.isSymbolicLink()) fail("V138_PLAN115_NATIVE_ROOT_UNSAFE")
+  const result = spawnSync(nativeWriterExecutable(), [root, String(identity.dev), String(identity.ino), repoPath], {
+    cwd: root,
+    input: bytes,
+    encoding: "utf8",
+    env: process.env,
+    stdio: ["pipe", "ignore", "pipe"],
+  })
+  if (result.status !== 0)
+    fail(result.stderr.trim() || `V138_PLAN115_NATIVE_WRITE_FAILED:${String(result.status)}`)
 }
 
 export const writeV138SupplementV3ForReview = (rootInput: string) => {
   const root = path.resolve(rootInput)
   const checked = authenticateUpstream(root, false)
-  assertSafeWriteParents(root)
-  const absolute = target(root, PATHS.supplement3)
   const canonicalBytes = canonical(checked.supplement)
-  let fd: number | undefined
-  let created = false
-  try {
-    fd = openSync(absolute, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644)
-    created = true
-    fchmodSync(fd, 0o644)
-    writeFileSync(fd, canonicalBytes)
-    closeSync(fd)
-    fd = undefined
-  } catch (error) {
-    if (fd !== undefined) closeSync(fd)
-    if (created) {
-      try { unlinkSync(absolute) } catch { /* path did not survive the failed exclusive write */ }
-    }
-    throw error
-  }
+  writeExclusiveRetainedParent(root, PATHS.supplement3, canonicalBytes)
+  if (!readRegularNoFollow(root, PATHS.supplement3).equals(Buffer.from(canonicalBytes)))
+    fail("V138_PLAN115_NATIVE_POSTCONDITION_INVALID")
   return Object.freeze({ ...supplementProjection("supplement_v3_written"), canonicalBytes })
 }
 

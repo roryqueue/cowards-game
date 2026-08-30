@@ -1,10 +1,15 @@
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
 import {
   chmodSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -48,6 +53,34 @@ const withWorktree = <T>(run: (root: string) => T): T => {
     }
     rmSync(owner, { recursive: true, force: true })
   }
+}
+const withWorktreeAsync = async <T>(run: (root: string) => Promise<T>): Promise<T> => {
+  const owner = mkdtempSync(path.join(tmpdir(), "v138-plan115-race-test-"))
+  const root = path.join(owner, "repo")
+  let added = false
+  try {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], { cwd: repoRoot })
+    added = true
+    symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    for (const repoPath of [
+      "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts",
+      "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c",
+    ]) writeFileSync(path.join(root, repoPath), readFileSync(path.join(repoRoot, repoPath)))
+    return await run(root)
+  } finally {
+    if (added) {
+      try { execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot }) }
+      catch { /* preserve the primary assertion */ }
+    }
+    rmSync(owner, { recursive: true, force: true })
+  }
+}
+const waitFor = async (predicate: () => boolean): Promise<void> => {
+  for (let attempt = 0; attempt < 5_000; attempt++) {
+    if (predicate()) return
+    await new Promise((resolve) => setTimeout(resolve, 1))
+  }
+  throw new Error("Plan115 native barrier timeout")
 }
 const commitSupplement = (root: string, extraPath?: string): string => {
   git(root, ["add", supplementPath, ...(extraPath === undefined ? [] : [extraPath])])
@@ -204,6 +237,45 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       }
       expect(checkV138CommittedSupplementV3ForReview(root).status)
         .toBe("supplement_v3_committed_checked")
+    })
+  }, 180_000)
+
+  it("does not escape when the authenticated artifacts parent is swapped for a symlink", async () => {
+    await withWorktreeAsync(async (root) => {
+      const external = mkdtempSync(path.join(tmpdir(), "v138-plan115-race-external-"))
+      const artifacts = path.join(root, ".planning/artifacts")
+      const retained = path.join(root, ".planning/artifacts-authenticated")
+      const tag = "parent-swap"
+      try {
+        const script = realpathSync(path.join(root,
+          "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts"))
+        const child = spawn(process.execPath, [path.join(root, "node_modules/tsx/dist/cli.mjs"), script,
+          "--write-supplement-v3"], {
+          cwd: root,
+          env: { ...process.env, V138_PLAN115_NATIVE_TEST_BARRIER: tag },
+          stdio: ["ignore", "ignore", "pipe"],
+        })
+        let stderr = ""
+        let earlyExit: number | null | undefined
+        child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk })
+        child.once("exit", (code) => { earlyExit = code })
+        await waitFor(() => existsSync(path.join(root, `.v138-plan115-ready-${tag}`)) || earlyExit !== undefined)
+        if (earlyExit !== undefined) throw new Error(`Plan115 child exited ${String(earlyExit)}: ${stderr}`)
+        renameSync(artifacts, retained)
+        symlinkSync(external, artifacts, "dir")
+        writeFileSync(path.join(root, `.v138-plan115-continue-${tag}`), "continue\n")
+        const exitCode = await new Promise<number | null>((resolve) => child.once("exit", resolve))
+        expect(exitCode).not.toBe(0)
+        expect(stderr).toContain("V138_PLAN115_NATIVE_PARENT_CHANGED")
+        expect(readdirSync(external)).toEqual([])
+        expect(() => readFileSync(path.join(retained, path.basename(supplementPath)))).toThrow()
+      } finally {
+        if (existsSync(retained)) {
+          try { unlinkSync(artifacts) } catch { /* swap did not install the link */ }
+          renameSync(retained, artifacts)
+        }
+        rmSync(external, { recursive: true, force: true })
+      }
     })
   }, 180_000)
 
