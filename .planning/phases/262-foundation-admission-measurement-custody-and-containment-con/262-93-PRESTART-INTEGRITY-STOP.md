@@ -46,9 +46,8 @@ No source, seal, envelope, historical evidence, or review byte was changed to by
 - Disposition-v3, correction-v11, Route-11 activation, readiness-v3, and lifecycle-v3: absent
 - Downstream authority: denied
 
-The envelope remains byte-identical and `sealed_inactive`. This attempt is not retried, Plan 93 is not complete, and no Plan-93 summary exists; Plans 94, 95, and 106 remain dependency-denied pending separately planned corrective work and a new explicit execution decision.
+The envelope remains byte-identical and `sealed_inactive`. This attempt is never retried. Plan93 is now terminally complete only as fail-closed historical process evidence under `262-93-SUMMARY.md`; its execution objective was not achieved, no live evidence or authority was created, and the current additive successor chain remains separately gated.
 
 ## Assurance Boundary
 
 The result retains `single_operator_local_seal_v1` and makes no independent-custody, hostile-same-UID, malicious-owner, or pathname-launch replacement-resistance claim.
-
