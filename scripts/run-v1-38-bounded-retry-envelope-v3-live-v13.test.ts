@@ -66,6 +66,16 @@ const withLinkedWorktree = <T>(run: (root: string) => T): T => {
     })
     added = true
     symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    for (const packagePath of [
+      "packages/spec", "packages/engine", "packages/runtime-supervisor", "packages/runtime-js",
+      "packages/runtime-wasm-wasi", "packages/runtime-python", "packages/map-configs",
+      "packages/persistence", "packages/replay", "packages/service", "packages/test-utils",
+      "packages/golden", "apps/runtime-service", "apps/worker",
+    ]) {
+      const destination = path.join(root, packagePath, "node_modules")
+      if (!existsSync(destination))
+        symlinkSync(path.join(repoRoot, packagePath, "node_modules"), destination, "dir")
+    }
     for (const repoPath of [V138_LIVE_V13_PATHS.seal, V138_LIVE_V13_PATHS.envelope])
       chmodSync(path.join(root, repoPath), 0o600)
     return run(root)
