@@ -5,19 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-120 independent producer-incapable live-v12 v2 review is the sole next action
-last_updated: "2026-08-30T18:26:38.065Z"
+stopped_at: Plan 262-121 closed live-v13 source-only correction is the sole next action
+last_updated: "2026-08-30"
 last_activity: 2026-08-30
-last_activity_desc: implemented and verified the closed additive live-v12 successor without effects
+last_activity_desc: planned additive live-v13 and source-separated v3 custody correction after Plan120 process-invalid review
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 101
+  total_plans: 103
   completed_plans: 95
-  percent: 94
+  percent: 92
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-live-v13-local-context-correction-topology-v2: {"schema_version":"v1.38-plan-262-live-v13-local-context-correction-topology-v2","active_plans":103,"trustworthy_summaries":95,"immutable_history":["262-114-v2-authoritative","262-116-v4-authoritative","262-109-supplement-v3","262-117-live-v11-source","262-118-v1-literal-zero-review","0f8258d8-allowed-test-correction","262-119-live-v12-source","262-120-v2-process-invalid","c7390cf5-exact-three-add"],"active_chain":["262-121","262-122","262-110","262-94","262-95","262-106"],"waves":{"262-121":106,"262-122":107,"262-110":108,"262-94":109,"262-95":110,"262-106":111},"live_owner":"live-v13","live_execution_plan":"262-110","live_invocation_count_planned":1,"live_v10_invocation_count_planned":0,"live_v11_invocation_count_planned":0,"live_v12_invocation_count_planned":0,"reproduction_owner":"existing-producer","route11_owner":"262-94","supplement_version":"v3","review_v3_trio_planned":true,"plan120_v2_eligible":false,"plan120_v2_disposition":"process_invalid_local_context_misbinding","canonical_main_root_components_bound":true,"disposable_roots_observation_scoped":true,"creates_effect_destination":false,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"next_action":"dispatch-262-121-only","admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"downstream_authority_denied":true} -->
+
+<!-- Historical Plan119 closeout and live-v12 planning topology below remain immutable evidence; their next-action and eligibility projections are superseded by the live-v13 topology above. -->
 
 <!-- phase-262-plan-119-closeout-status: {"schema_version":"v1.38-plan-262-119-closeout-v1","proof_status":"closed_live_v12_allowed_successor_source_complete","subject_commit":"5305f3a0d4bce8a71d74b596dffce15d03faeaea","source_blob":"5b0921a35d461986d9623deb0eebff07e87c64a9","test_blob":"dace72d694016420df1cdc1ab54106c973e876fb","reviewed_closure_root":"sha256:00636f579d7657b3e9352bb64ffb14b3e152751252c1295dada8400577f7069e","local_execution_root":"sha256:f353df0545bd3d00841c688959f3ec8f030feda9ffaa7c8941eca0483e9964cb","allowed_history_root":"sha256:527b9d0ca006b27160278a0723d4978c34074738b23334b4a297e98527eaf059","allowed_correction_commit":"0f8258d888eba27cfaa48a9cc5175e578364077b","focused_tests_passed":6,"producer_incapable_modes_passed":3,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"plan_262_120_eligible":true,"plan_262_110_eligible":false,"next_action":"dispatch-262-120-only","admit_03":"blocked","downstream_authority_denied":true} -->
 
@@ -118,11 +122,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 95 summaries across 101 active plans — Plan 262-120 is the sole eligible next action
-Status: Phase 262 remains in progress; Plans 120 -> 110 -> 94 -> 95 -> 106 are sequential, with exactly one future live-v12 invocation owned by Plan 110 and zero live-v11 invocation
-Last activity: 2026-08-30 — implemented and verified the closed additive live-v12 successor without effects
+Plan: 95 trustworthy summaries across 103 active plans — Plan 262-121 is the sole eligible next action
+Status: Phase 262 remains in progress; Plans 121 -> 122 -> 110 -> 94 -> 95 -> 106 are sequential, with exactly one future live-v13 invocation owned by Plan110 and zero live-v10/live-v11/live-v12 invocation
+Last activity: 2026-08-30 — planned additive live-v13 and source-separated v3 custody correction after Plan120 process-invalid review
 
-Progress: [█████████░] 94%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -154,7 +158,7 @@ Progress: [█████████░] 94%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 101 plans/94 trustworthy summaries. Live-v10, live-v11, Plan118 v1, authoritative Plan-114 v2, stable Plan-116 v4, exact inert supplement-v3 at `a1e693a2`, correction commit `0f8258d8`, and all earlier branches remain immutable. The active chain is 119 -> 120 -> 110 -> 94 -> 95 -> 106 at Waves 104-109. Plan119 alone is next and adds producer-incapable live-v12 source/tests; Plan120 independently executes six producer-incapable modes and may publish only a v2 Plan110-eligibility trio; literal zero alone makes Plan110 eligible to invoke live-v12 exactly once. Live-v11 has zero planned readiness/production invocation. The unchanged historical producer remains sole effect implementation and Plan94 remains sole adjudicator/Route-11 owner. Supplement-v1/v2 remain absent, the B3 pair/envelope and all five counters remain zero, and beyond the required review-v2 trio no producer/effect destination, capacity, reset, identity, literal, readiness publication, live evidence, or downstream authority exists.
+**Current topology:** Active discovery is 103 plans/95 trustworthy summaries. Live-v10, live-v11, Plan118 v1, authoritative Plan-114 v2, stable Plan-116 v4, exact inert supplement-v3 at `a1e693a2`, correction commit `0f8258d8`, Plan119 live-v12, and all earlier branches remain immutable. Plan120's exact-three-add v2 publication `c7390cf5` is process-invalid and ineligible because its top-level local root and adjacent components came from different execution contexts; its bytes are preserved without a trustworthy summary. The active chain is 121 -> 122 -> 110 -> 94 -> 95 -> 106 at Waves 106-111. Plan121 alone is next and adds producer-incapable live-v13 source/tests; Plan122 independently binds a canonical-main root to matching components plus six observation-scoped disposable roots and may publish only a v3 Plan110-eligibility trio. Literal zero alone makes Plan110 eligible to invoke live-v13 exactly once. Live-v10/live-v11/live-v12 have zero planned readiness/production invocation. The unchanged historical producer remains sole effect implementation and Plan94 remains sole adjudicator/Route-11 owner. Supplement-v1/v2 remain absent, the B3 pair/envelope and all five counters remain zero, and beyond the required review-v3 trio no producer/effect destination, capacity, reset, identity, literal, readiness publication, live evidence, or downstream authority exists.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -456,14 +460,18 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Preserve Plan117/118 v1 as truthful immutable non-current history after allowed correction commit 0f8258d8 changed the reviewed test path; do not rewrite, revive, or reinterpret the v1 trio.
 - [Phase 262]: Plan additive live-v12 as Plan119 source-only followed by Plan120 independent v2 review; only literal-zero Plan120 makes revised Plan110 eligible for exactly one live-v12 invocation through the unchanged historical producer.
 - [Phase 262]: Beyond the exact new Plan120 review-v2 trio, the live-v12 correction creates no producer/effect destination, envelope, capacity, counter reset, route/attempt identity, authorization literal, supplement, or downstream authority; live-v11 readiness/production invocation remains zero.
+- [Phase 262]: Preserve Plan120 v2 exact-three-add commit c7390cf5 as immutable process-invalid and ineligible history after later-HEAD checking proved its top-level local root came from a disposable worktree while adjacent component roots came from canonical main. — A stored true eligibility byte cannot override internally inconsistent custody.
+- [Phase 262]: Correct the defect additively as Plan121 closed live-v13 source followed by Plan122 independent v3 review; never rewrite, reuse, revive, or reinterpret Plan120 v2. — Live-v12 hardcodes the invalid v2 contract and cannot safely consume a renamed review.
+- [Phase 262]: Plan122 v3 must bind the freshly derived canonical-main local root to the same published component roots, while disposable local roots exist only inside six complete observation records. — Canonical execution custody and disposable mode custody are distinct contexts.
+- [Phase 262]: Only committed literal-zero Plan122 v3 makes Plan110 eligible; Plan110 alone may invoke live-v13 exactly once, and live-v10/live-v11/live-v12 invocation counts remain zero. — Review creates no envelope, capacity, literal, counter reset, effect destination, or downstream authority.
 
 ### Pending Todos
 
-- Do not retry Plan262-93 or dispatch Plans120/110/94/95/106 out of order. Dispatch only Plan119 source-only, then producer-incapable Plan120; only literal-zero committed Plan120 v2 permits Plan110 to preflight and invoke live-v12 exactly once.
+- Do not retry Plan262-93 or dispatch Plans122/110/94/95/106 out of order. Dispatch only Plan121 source-only, then producer-incapable Plan122; only literal-zero committed Plan122 v3 permits Plan110 to preflight and invoke live-v13 exactly once.
 
 ### Current Blocker/Concerns
 
-- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3 and Plans117/118 completed without effects, but correction commit 0f8258d8 made their v1 current-entry custody non-current; Plans119/120 and every later live/adjudication gate remain unexecuted.
+- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-119 completed without effects; Plan120 published an internally inconsistent v2 review at c7390cf5 and is permanently ineligible. Plans121/122 and every later live/adjudication gate remain unexecuted.
 - ADMIT-03 remains blocked: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
 - Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; Plans 262-94 through 262-106 remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
@@ -520,7 +528,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-08-30T18:26:38.049Z
-Stopped at: Plan 262-120 independent producer-incapable live-v12 v2 review is the sole next action; Plan 262-110 remains denied until committed literal-zero Plan 262-120 v2 review, and live-v11 invocation remains zero
+Stopped at: Plan 262-121 closed live-v13 source-only correction is the sole next action; Plan 262-110 remains denied until committed literal-zero Plan 262-122 v3 review, and live-v10/live-v11/live-v12 invocation remains zero
 Resume file: None
 
 ### Blockers
