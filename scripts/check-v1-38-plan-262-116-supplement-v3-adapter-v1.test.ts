@@ -131,6 +131,26 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     expect(blocked.reviewBytes.toString("utf8")).toContain("BLOCKED")
   }, 300_000)
 
+  it("rejects forged, missing, duplicate, and unbound nine-mode evidence", () => {
+    const forged = {
+      modeNames: [], actualModesPassed: 9, observations: [],
+      observationRoot: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      disposableExecutionClosureRoot: undefined,
+      findings: [], producerCalls: 0, readinessInvoked: false, liveInvoked: false,
+      freshCharged: 0, freshAccepted: 0, downstreamAuthority: "denied",
+    } as unknown as ReturnType<typeof executeV138Plan116DisposableModes>
+    expect(() => renderV138Plan116EvidenceForReview(repoRoot, [], forged))
+      .toThrow(/MODE_EVIDENCE_INVALID/)
+
+    const valid = actualModes()
+    const duplicate = {
+      ...valid,
+      observations: valid.observations.map((item, index) => index === 1 ? valid.observations[0]! : item),
+    } as ReturnType<typeof executeV138Plan116DisposableModes>
+    expect(() => renderV138Plan116EvidenceForReview(repoRoot, [], duplicate))
+      .toThrow(/MODE_EVIDENCE_INVALID/)
+  }, 300_000)
+
   it("authenticates only an exact committed trio and every no-effect sentinel", () => {
     if (!reviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))) return
     const checked = authenticateV138Plan116PublishedReview(repoRoot)

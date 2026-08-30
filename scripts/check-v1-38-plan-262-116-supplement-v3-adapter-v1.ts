@@ -462,7 +462,7 @@ const runAdapter = (root: string, selector: string, env?: NodeJS.ProcessEnv): Js
   return value as Json
 }
 const observation = (mode: string, detail: Json = {}) => Object.freeze({
-  mode, status: "passed" as const,
+  mode, status: "passed" as const, detail,
   observationRoot: rooted("v138-plan-262-116-mode-observation-v1", { mode, detail }),
 })
 const runParentSwapMode = (repoRoot: string, owner: string): void => {
@@ -600,6 +600,43 @@ export const executeV138Plan116DisposableModes = (repoRootInput: string) => {
 }
 
 type ModeResult = ReturnType<typeof executeV138Plan116DisposableModes>
+const validSha = (value: unknown): value is Sha =>
+  typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
+const validateModeEvidence = (modes: {
+  modeNames: unknown
+  actualModesPassed: unknown
+  observations: unknown
+  observationRoot: unknown
+  disposableExecutionClosureRoot: unknown
+  findings: unknown
+  producerCalls: unknown
+  readinessInvoked: unknown
+  liveInvoked: unknown
+  freshCharged: unknown
+  freshAccepted: unknown
+}): readonly Json[] => {
+  if (canonical(modes.modeNames) !== canonical(MODE_NAMES) ||
+      modes.actualModesPassed !== MODE_NAMES.length || !Array.isArray(modes.observations) ||
+      modes.observations.length !== MODE_NAMES.length || !Array.isArray(modes.findings) ||
+      modes.findings.length !== 0 || modes.producerCalls !== 0 || modes.readinessInvoked !== false ||
+      modes.liveInvoked !== false || modes.freshCharged !== 0 || modes.freshAccepted !== 0 ||
+      !validSha(modes.disposableExecutionClosureRoot)) fail("V138_PLAN116_MODE_EVIDENCE_INVALID")
+  const roots = new Set<string>()
+  for (const [index, item] of modes.observations.entries()) {
+    if (typeof item !== "object" || item === null) fail("V138_PLAN116_MODE_EVIDENCE_INVALID")
+    const record = item as Json
+    const detail = record.detail
+    if (record.mode !== MODE_NAMES[index] || record.status !== "passed" ||
+        typeof detail !== "object" || detail === null || Array.isArray(detail) ||
+        record.observationRoot !== rooted("v138-plan-262-116-mode-observation-v1",
+          { mode: record.mode, detail }) || roots.has(record.observationRoot))
+      fail("V138_PLAN116_MODE_EVIDENCE_INVALID")
+    roots.add(record.observationRoot)
+  }
+  if (modes.observationRoot !== rooted("v138-plan-262-116-observations-v1", modes.observations))
+    fail("V138_PLAN116_MODE_EVIDENCE_INVALID")
+  return modes.observations as readonly Json[]
+}
 const sortedFindings = (findings: readonly V138Plan116Finding[]) =>
   [...findings].sort((a, b) => `${a.code}\0${a.detail}`.localeCompare(`${b.code}\0${b.detail}`))
 const renderContracts = (input: {
@@ -609,10 +646,11 @@ const renderContracts = (input: {
   observations: readonly Json[]
   observationRoot?: Sha
   disposableExecutionClosureRoot?: Sha
+  modeEvidenceAuthenticated?: boolean
 }) => {
   const findings = sortedFindings(input.findings)
   const zero = findings.length === 0
-  const plan109Eligible = zero && input.actualModesPassed === MODE_NAMES.length
+  const plan109Eligible = zero && input.modeEvidenceAuthenticated === true
   const supplement = independentlyRenderSupplement()
   const body = {
     schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-payload-v1",
@@ -710,10 +748,9 @@ export const renderV138Plan116EvidenceForReview = (
 ) => {
   const closure = captureSubjectClosure(repoRootInput)
   if (findings.length === 0 && modes === undefined) fail("V138_PLAN116_ZERO_REQUIRES_ACTUAL_MODES")
-  if (findings.length === 0 && (modes!.actualModesPassed !== MODE_NAMES.length ||
-      modes!.findings.length !== 0 || modes!.producerCalls !== 0 || modes!.readinessInvoked !== false ||
-      modes!.liveInvoked !== false || modes!.freshCharged !== 0 || modes!.freshAccepted !== 0))
-    fail("V138_PLAN116_ZERO_REQUIRES_NINE_CLEAN_MODES")
+  const modeEvidenceAuthenticated = findings.length === 0
+    ? (validateModeEvidence(modes!), true)
+    : modes === undefined ? false : (validateModeEvidence(modes), true)
   return renderContracts({
     closure,
     findings,
@@ -721,6 +758,7 @@ export const renderV138Plan116EvidenceForReview = (
     observations: (modes?.observations ?? []) as readonly Json[],
     observationRoot: modes?.observationRoot,
     disposableExecutionClosureRoot: modes?.disposableExecutionClosureRoot,
+    modeEvidenceAuthenticated,
   })
 }
 
@@ -754,6 +792,19 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
     observations: payload.observations,
     observationRoot: payload.observationRoot,
     disposableExecutionClosureRoot: payload.disposableExecutionClosureRoot,
+    modeEvidenceAuthenticated: (validateModeEvidence({
+      modeNames: payload.actualModeNames,
+      actualModesPassed: payload.actualModesPassed,
+      observations: payload.observations,
+      observationRoot: payload.observationRoot,
+      disposableExecutionClosureRoot: payload.disposableExecutionClosureRoot,
+      findings,
+      producerCalls: payload.producerCalls,
+      readinessInvoked: payload.readinessInvoked,
+      liveInvoked: payload.liveInvoked,
+      freshCharged: payload.freshCharged,
+      freshAccepted: payload.freshAccepted,
+    }), true),
   })
   if (canonical(payload) !== canonical(exact.payload) || !reviewBytes.equals(exact.reviewBytes) ||
       canonical(carrier) !== canonical(exact.carrier)) fail("V138_PLAN116_PUBLICATION_RERENDER_INVALID")
