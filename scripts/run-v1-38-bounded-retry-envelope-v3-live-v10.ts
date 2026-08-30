@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
@@ -87,7 +87,6 @@ const DOWNSTREAM_OUTPUTS = Object.freeze([
   V138_BOUNDED_RETRY_V3_PATHS.readiness,
   V138_BOUNDED_RETRY_V3_PATHS.lifecycle,
 ])
-
 export const V138_LIVE_V10_PATHS = Object.freeze({
   source: "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.ts",
   tests: "scripts/run-v1-38-bounded-retry-envelope-v3-live-v10.test.ts",
@@ -108,6 +107,16 @@ export const V138_LIVE_V10_PATHS = Object.freeze({
   supplementV2: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v2.json",
   supplementV3: ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json",
 })
+export const V138_LIVE_V10_FORBIDDEN_DESTINATIONS = Object.freeze([
+  V138_LIVE_V10_PATHS.plan114Payload,
+  V138_LIVE_V10_PATHS.plan114Review,
+  V138_LIVE_V10_PATHS.plan114Carrier,
+  V138_LIVE_V10_PATHS.supplementV1,
+  V138_LIVE_V10_PATHS.supplementV2,
+  V138_LIVE_V10_PATHS.supplementV3,
+  ...PRODUCER_OUTPUTS,
+  ...DOWNSTREAM_OUTPUTS,
+])
 
 export const V138_LIVE_V10_MODES = Object.freeze([
   "--check-source-only",
@@ -308,10 +317,36 @@ const assertPairAndStop = (root: string): Readonly<V138DerivedV3SealEnvelope> =>
   return Object.freeze({ seal: checkedSeal, envelope: checkedEnvelope })
 }
 
-const assertAbsent = (root: string, paths: readonly string[]): void => {
-  for (const repoPath of paths) if (existsSync(target(root, repoPath)))
-    fail(`V138_LIVE_V10_FORBIDDEN_DESTINATION_PRESENT:${repoPath}`)
+type V138LiveV10PathKind = "missing" | "regular" | "directory" | "symlink" | "unsafe"
+
+const classifyPathNoFollow = (root: string, repoPath: string): V138LiveV10PathKind => {
+  try {
+    const stat = lstatSync(target(root, repoPath))
+    if (stat.isSymbolicLink()) return "symlink"
+    if (stat.isFile()) return "regular"
+    if (stat.isDirectory()) return "directory"
+    return "unsafe"
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "missing"
+    throw error
+  }
 }
+
+const pathPresent = (root: string, repoPath: string): boolean =>
+  classifyPathNoFollow(root, repoPath) !== "missing"
+
+export const assertV138LiveV10ForbiddenDestinationsForReview = (
+  root: string,
+  paths: readonly string[],
+): void => {
+  for (const repoPath of paths) {
+    const kind = classifyPathNoFollow(root, repoPath)
+    if (kind !== "missing")
+      fail(`V138_LIVE_V10_FORBIDDEN_DESTINATION_PRESENT:${kind}:${repoPath}`)
+  }
+}
+
+const assertAbsent = assertV138LiveV10ForbiddenDestinationsForReview
 
 export type V138LiveV10SourceAdmission = Readonly<{
   correctedPublicationCommit: string
@@ -600,7 +635,7 @@ const authenticateFutureCustody = (
     const supplementCommit = locateAddCommit(root, V138_LIVE_V10_PATHS.supplementV3)
     assertExactAddPublication(root, supplementCommit, [V138_LIVE_V10_PATHS.supplementV3])
     supplement = jsonAt(root, supplementCommit, V138_LIVE_V10_PATHS.supplementV3)
-  } else if (existsSync(target(root, V138_LIVE_V10_PATHS.supplementV3))) {
+  } else if (pathPresent(root, V138_LIVE_V10_PATHS.supplementV3)) {
     fail("V138_LIVE_V10_SUPPLEMENT_PREMATURE")
   }
   if (boundary === "pre") assertAbsent(root, [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
@@ -641,10 +676,6 @@ const authenticateV138LiveV10SourceOnlyShape = (
   liveInvoked: false, downstreamAuthority: "denied",
 })
 
-const pathPresent = (root: string, repoPath: string): boolean => {
-  try { lstatSync(target(root, repoPath)); return true }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error }
-}
 const readCanonicalJsonNoFollow = (root: string, repoPath: string, maximumBytes: number): Json => {
   try {
     const bytes = readRegularNoFollow(root, repoPath, maximumBytes)

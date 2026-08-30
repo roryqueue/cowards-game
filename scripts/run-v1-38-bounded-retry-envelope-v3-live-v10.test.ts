@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, copyFileSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
@@ -14,7 +14,9 @@ import {
   V138_LIVE_V10_MODES,
   V138_LIVE_V10_PATHS,
   V138_LIVE_V10_REVIEWED_SOURCE_PATHS,
+  V138_LIVE_V10_FORBIDDEN_DESTINATIONS,
   authenticateV138LiveV10SourceOnly,
+  assertV138LiveV10ForbiddenDestinationsForReview,
   assertV138LiveV10PostRunForReview,
   checkV138LiveV10PostRunOutputCustodyForReview,
   checkV138LiveV10ProspectiveCustodyForReview,
@@ -219,6 +221,23 @@ describe("Plan 262-113 path-stable custody", () => {
     expect(linked.localExecutionClosureRoot).not.toBe(exact.localExecutionClosureRoot)
   }, 180_000)
 
+  it("treats dangling links and unsafe entries as present at every forbidden destination", () => {
+    withLinkedWorktree((root) => {
+      for (const [index, repoPath] of V138_LIVE_V10_FORBIDDEN_DESTINATIONS.entries()) {
+        const absolute = path.join(root, repoPath)
+        mkdirSync(path.dirname(absolute), { recursive: true })
+        symlinkSync(index % 2 === 0 ? "../missing-relative-target" : "/definitely/missing/absolute-target", absolute)
+        expect(() => assertV138LiveV10ForbiddenDestinationsForReview(root, [repoPath]))
+          .toThrow("V138_LIVE_V10_FORBIDDEN_DESTINATION_PRESENT")
+        rmSync(absolute)
+      }
+
+      mkdirSync(path.join(root, V138_LIVE_V10_PATHS.plan114Payload), { recursive: true })
+      expect(() => authenticateV138LiveV10SourceOnly(root))
+        .toThrow("V138_LIVE_V10_FORBIDDEN_DESTINATION_PRESENT")
+    })
+  }, 180_000)
+
   it("rejects protected edit-and-restore history instead of trusting current bytes", () => {
     withLinkedWorktree((root) => {
       const repoPath = V138_LIVE_V10_PATHS.plan93Stop
@@ -383,7 +402,6 @@ describe("Plan 262-113 path-stable custody", () => {
       V138_LIVE_V10_PATHS.plan114Review,
       V138_LIVE_V10_PATHS.plan114Carrier,
       V138_LIVE_V10_PATHS.supplementV3,
-    ]) expect(() => execFileSync("/usr/bin/test", ["-e", path.join(repoRoot, repoPath)]))
-      .toThrow()
+    ]) expect(() => lstatSync(path.join(repoRoot, repoPath))).toThrow()
   })
 })
