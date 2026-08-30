@@ -50,9 +50,16 @@ export type V138Plan118ModeResult = Readonly<{
   liveInvoked: false
   freshCharged: 0
   freshAccepted: 0
-  observations: readonly Readonly<{ mode: string; status: string; root: Sha }>[]
+  observations: readonly Readonly<{
+    mode: string
+    status: string
+    producerGuardInvocations: 0
+    root: Sha
+  }>[]
   findings: readonly V138Plan118Finding[]
   observationRoot: Sha
+  producerGuardObservationRoot: Sha
+  producerGuardInvocations: 0
   reviewedCustody: V138PathStableCustody
   reviewedClosureRoot: Sha
   linkedLocalExecutionClosureRoot: Sha
@@ -331,19 +338,50 @@ export const inspectV138Plan118BoundarySourceForReview = (source: string) => {
   let references = 0
   let calls = 0
   let directAwaited = false
+  let producerCall: ts.CallExpression | undefined
+  let reviewedOwnerReferences = 0
+  let reviewedOwnerCalls = 0
+  let reviewedOwnerCall: ts.CallExpression | undefined
   const visit = (node: ts.Node): void => {
     if (ts.isIdentifier(node) && node.text === "runV138V3ProductionLive") references += 1
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
         node.expression.text === "runV138V3ProductionLive") {
       calls += 1
       directAwaited = ts.isAwaitExpression(node.parent)
+      producerCall = node
+    }
+    if (ts.isIdentifier(node) && node.text === "runV138ReviewedBoundedLiveEnvelopeV11")
+      reviewedOwnerReferences += 1
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        node.expression.text === "runV138ReviewedBoundedLiveEnvelopeV11") {
+      reviewedOwnerCalls += 1
+      reviewedOwnerCall = node
     }
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
+  const enclosingVariable = (node: ts.Node | undefined): string | undefined => {
+    for (let current = node?.parent; current !== undefined; current = current.parent)
+      if (ts.isVariableDeclaration(current) && ts.isIdentifier(current.name)) return current.name.text
+    return undefined
+  }
+  const enclosingIf = (node: ts.Node | undefined): ts.IfStatement | undefined => {
+    for (let current = node?.parent; current !== undefined; current = current.parent)
+      if (ts.isIfStatement(current)) return current
+    return undefined
+  }
+  const producerOwner = enclosingVariable(producerCall)
+  const dispatchOwner = enclosingVariable(reviewedOwnerCall)
+  const dispatchIf = enclosingIf(reviewedOwnerCall)
+  const exactProductionCondition = dispatchIf?.expression.getText(sourceFile) ===
+    'args[0] === "--run-reviewed-bounded-live-envelope"'
   if (imports.length !== 1 || bindings.length !== 2 ||
       !bindings.some((binding) => binding.name.text === "runV138V3ProductionLive" && binding.propertyName === undefined) ||
       references !== 2 || calls !== 1 || !directAwaited ||
+      producerOwner !== "runV138ReviewedBoundedLiveEnvelopeV11" ||
+      reviewedOwnerReferences !== 2 || reviewedOwnerCalls !== 1 ||
+      !ts.isAwaitExpression(reviewedOwnerCall?.parent) ||
+      dispatchOwner !== "executeV138LiveV11Cli" || !exactProductionCondition ||
       !source.includes('"--check-reviewed-live-ready"') ||
       !source.includes('"--run-reviewed-bounded-live-envelope"') ||
       /runV138ReviewedBoundedLiveEnvelopeV11\s*=\s*async\s*\([^)]*,/u.test(source) ||
@@ -351,6 +389,8 @@ export const inspectV138Plan118BoundarySourceForReview = (source: string) => {
       /Partial<\{[^}]*?(?:producer|readiness|renderer)/su.test(source))
     fail("V138_PLAN118_PRODUCTION_BOUNDARY_INVALID")
   return Object.freeze({ producerCallSites: 1 as const, producerCalls: 0 as const,
+    producerOwner: "runV138ReviewedBoundedLiveEnvelopeV11" as const,
+    productionDispatchCondition: 'args[0] === "--run-reviewed-bounded-live-envelope"' as const,
     readinessInvoked: false as const, liveInvoked: false as const, downstreamAuthority: "denied" as const })
 }
 
@@ -457,8 +497,9 @@ const renderEvidence = (input: {
   return Object.freeze({ payload, reviewBytes, reviewRoot: rRoot, carrier })
 }
 
-const modeObservation = (mode: string, status: string, value: unknown) => Object.freeze({
-  mode, status, root: rooted("v138-plan-262-118-mode-observation-v1", value),
+const modeObservation = (mode: string, status: string, value: unknown, producerGuardInvocations: 0) => Object.freeze({
+  mode, status, producerGuardInvocations,
+  root: rooted("v138-plan-262-118-mode-observation-v2", { value, producerGuardInvocations }),
 })
 const toolPath = (): string => `${path.dirname(process.execPath)}:/usr/bin:/bin`
 const run = (executable: string, args: readonly string[], cwd: string, home: string): string =>
@@ -498,24 +539,51 @@ export const executeV138Plan118DisposableModes = (repoRootInput: string): V138Pl
     const observations: Array<ReturnType<typeof modeObservation>> = []
     const findings: V138Plan118Finding[] = []
     const tsx = path.join(linked, "node_modules/.bin/tsx")
+    const guardPath = path.join(owner, "producer-invocation-guard.jsonl")
+    const guardedPath = path.join(linked, "scripts/.plan118-live-v11-guarded.ts")
+    const exactSource = readNoFollow(linked, V138_PLAN118_PATHS.source).toString("utf8")
+    const aliasedSource = exactSource.replace(
+      "  runV138V3ProductionLive,\n",
+      "  runV138V3ProductionLive as importedRunV138V3ProductionLive,\n",
+    )
+    if (aliasedSource === exactSource) fail("V138_PLAN118_GUARD_INSTRUMENTATION_INVALID")
+    const guardedSource = aliasedSource.replace(
+      "type Sha = `sha256:${string}`",
+      `import { appendFileSync as appendV138Plan118ProducerGuard } from "node:fs"\nconst runV138V3ProductionLive: typeof importedRunV138V3ProductionLive = async (..._args) => { appendV138Plan118ProducerGuard(${JSON.stringify(guardPath)}, "invoked\\n", { mode: 0o600 }); throw new Error("V138_PLAN118_PRODUCER_GUARD_TRIPPED") }\n\ntype Sha = \`sha256:\${string}\``,
+    )
+    if (guardedSource === aliasedSource) fail("V138_PLAN118_GUARD_INSTRUMENTATION_INVALID")
+    writeFileSync(guardedPath, guardedSource, { mode: 0o600, flag: "wx" })
+    const guardInvocations = (): number => {
+      if (!existsSync(guardPath)) return 0
+      const entry = lstatSync(guardPath)
+      if (!entry.isFile() || entry.isSymbolicLink() || (entry.mode & 0o7777) !== 0o600)
+        fail("V138_PLAN118_PRODUCER_GUARD_INVALID")
+      return readFileSync(guardPath, "utf8").split("\n").filter(Boolean).length
+    }
     const cli = (name: string, selector: string, expectedStatus: string, code: string): void => {
-      const result = spawnSync(tsx, [V138_PLAN118_PATHS.source, selector], { cwd: linked, encoding: "utf8",
+      const beforeGuard = guardInvocations()
+      const result = spawnSync(tsx, ["scripts/.plan118-live-v11-guarded.ts", selector], { cwd: linked, encoding: "utf8",
         env: { PATH: toolPath(), HOME: owner, LANG: "C", LC_ALL: "C" }, stdio: ["ignore", "pipe", "pipe"] })
+      const afterGuard = guardInvocations()
+      const guardClean = beforeGuard === 0 && afterGuard === 0
       if (result.error !== undefined || result.status === null) fail(`V138_PLAN118_MODE_PROCESS_INTEGRITY:${selector}`)
       if (result.status !== 0) {
         const detail = result.stderr.trim() || `exit:${String(result.status)}`
         findings.push({ code, severity: "critical", subject: selector, detail })
-        observations.push(modeObservation(name, "failed", { detail }))
+        if (!guardClean) findings.push({ code: "PRODUCER_GUARD_TRIPPED", severity: "critical",
+          subject: selector, detail: `before:${beforeGuard};after:${afterGuard}` })
+        observations.push(modeObservation(name, "failed", { detail }, 0))
         return
       }
       let value: Json
       try { value = JSON.parse(result.stdout.trim()) as Json }
       catch { fail(`V138_PLAN118_MODE_PROCESS_INTEGRITY:${selector}:json`) }
-      const valid = value.status === expectedStatus && value.producerCalls === 0 &&
-        value.readinessInvoked === false && value.liveInvoked === false && value.freshCharged === 0 &&
+      const valid = guardClean && value.status === expectedStatus && value.freshCharged === 0 &&
         value.freshAccepted === 0 && value.downstreamAuthority === "denied"
       if (!valid) findings.push({ code, severity: "critical", subject: selector, detail: canonical(value).trim() })
-      observations.push(modeObservation(name, valid ? expectedStatus : "failed", value))
+      if (!guardClean) findings.push({ code: "PRODUCER_GUARD_TRIPPED", severity: "critical",
+        subject: selector, detail: `before:${beforeGuard};after:${afterGuard}` })
+      observations.push(modeObservation(name, valid ? expectedStatus : "failed", value, 0))
     }
     cli("source_only_cli", "--check-source-only", "source_only_checked", "MODE_SOURCE_ONLY_FAILED")
     cli("prospective_custody_cli", "--check-prospective-custody", "prospective_custody_checked",
@@ -554,7 +622,7 @@ export const executeV138Plan118DisposableModes = (repoRootInput: string): V138Pl
       const value = runValue(expression)
       const valid = canonical(value) === canonical(expected)
       if (!valid) findings.push({ code, severity: "critical", subject: name, detail: canonical(value).trim() })
-      observations.push(modeObservation(name, valid ? String(expected.status) : "failed", value))
+      observations.push(modeObservation(name, valid ? String(expected.status) : "failed", value, 0))
     }
     const nonPass = { journalPresent: true, privateDirectoryPresent: true, terminalPresent: true,
       lockPresent: false, reproductionPresent: false, adjudicationOrDownstreamPresent: false,
@@ -597,7 +665,8 @@ export const executeV138Plan118DisposableModes = (repoRootInput: string): V138Pl
 
     const modeNames = ["source_only_cli", "prospective_custody_cli", "post_no_effect_cli",
       "post_non_pass_value", "post_success_value", "exact_reproduction_value"] as const
-    if (observations.length !== 6 || boundary.producerCalls !== 0) fail("V138_PLAN118_MODE_COUNT_INVALID")
+    if (observations.length !== 6 || boundary.producerCalls !== 0 || guardInvocations() !== 0)
+      fail("V138_PLAN118_MODE_COUNT_INVALID")
     const sorted = [...findings].sort((a, b) =>
       `${a.code}\0${a.subject}\0${a.detail}`.localeCompare(`${b.code}\0${b.subject}\0${b.detail}`))
     authenticateFoundation(repoRoot)
@@ -606,7 +675,10 @@ export const executeV138Plan118DisposableModes = (repoRootInput: string): V138Pl
       producerCalls: 0 as const, readinessInvoked: false as const, liveInvoked: false as const,
       freshCharged: 0 as const, freshAccepted: 0 as const,
       observations: Object.freeze(observations), findings: Object.freeze(sorted),
-      observationRoot: rooted("v138-plan-262-118-observations-v1", observations),
+      observationRoot: rooted("v138-plan-262-118-observations-v2", observations),
+      producerGuardObservationRoot: rooted("v138-plan-262-118-producer-guard-observations-v1",
+        observations.map(({ mode, producerGuardInvocations }) => ({ mode, producerGuardInvocations }))),
+      producerGuardInvocations: 0 as const,
       reviewedCustody: linkedClosure, reviewedClosureRoot: linkedClosure.reviewedClosureRoot,
       linkedLocalExecutionClosureRoot: linkedClosure.localExecutionClosureRoot,
       sourceTree: linkedClosure.sourceTree, sourceParent: linkedClosure.sourceParent,
@@ -621,6 +693,34 @@ export const executeV138Plan118DisposableModes = (repoRootInput: string): V138Pl
     }
     rmSync(owner, { recursive: true, force: true })
   }
+}
+
+export const assertV138Plan118PublishedLocalClosureForReview = (
+  payload: Pick<Json, "reviewedClosureRoot" | "reviewedLocalExecutionClosureRoot" |
+    "findingCount" | "actualModesPassed">,
+  modes: V138Plan118ModeResult,
+) => {
+  checkV138PathStableCustodyForReview(modes.reviewedCustody, modes.reviewedCustody)
+  const expectedModes = ["source_only_cli", "prospective_custody_cli", "post_no_effect_cli",
+    "post_non_pass_value", "post_success_value", "exact_reproduction_value"]
+  const observationRoot = rooted("v138-plan-262-118-observations-v2", modes.observations)
+  const producerGuardObservationRoot = rooted("v138-plan-262-118-producer-guard-observations-v1",
+    modes.observations.map(({ mode, producerGuardInvocations }) => ({ mode, producerGuardInvocations })))
+  if (payload.reviewedClosureRoot !== modes.reviewedCustody.reviewedClosureRoot ||
+      payload.reviewedLocalExecutionClosureRoot !== modes.reviewedCustody.localExecutionClosureRoot ||
+      payload.findingCount !== 0 || payload.actualModesPassed !== 6 ||
+      canonical(modes.modeNames) !== canonical(expectedModes) || modes.actualModesPassed !== 6 ||
+      modes.findings.length !== 0 || modes.producerGuardInvocations !== 0 ||
+      modes.observations.some(({ producerGuardInvocations }) => producerGuardInvocations !== 0) ||
+      modes.observationRoot !== observationRoot ||
+      modes.producerGuardObservationRoot !== producerGuardObservationRoot)
+    fail("V138_PLAN118_PUBLISHED_LOCAL_CLOSURE_INVALID")
+  return Object.freeze({ actualModesPassed: 6 as const, producerGuardInvocations: 0 as const,
+    observationRoot, producerGuardObservationRoot,
+    reviewedLocalExecutionClosureRoot: modes.reviewedCustody.localExecutionClosureRoot,
+    recursiveDependencyRoot: modes.reviewedCustody.recursiveDependencyRoot,
+    installedClosureRoot: modes.reviewedCustody.installedClosureRoot,
+    pathStableNativeSourcesRoot: modes.reviewedCustody.pathStableNativeSourcesRoot })
 }
 
 export const renderV138Plan118EvidenceForReview = (
@@ -672,11 +772,19 @@ export const authenticateV138Plan118PublishedReview = (rootInput: string) => {
     findings, actualModesPassed: payload.actualModesPassed, observationRoot: payload.observationRoot })
   if (canonical(payload) !== canonical(exact.payload) || !bytes[1]!.equals(exact.reviewBytes) ||
       canonical(carrier) !== canonical(exact.carrier)) fail("V138_PLAN118_PUBLICATION_RERENDER_INVALID")
+  const modes = executeV138Plan118DisposableModes(root)
+  const linked = assertV138Plan118PublishedLocalClosureForReview(payload, modes)
   assertAbsent(root, [...PRODUCER_OUTPUTS, ...DOWNSTREAM_OUTPUTS])
   return Object.freeze({ publicationCommit: commit, payloadRoot: payload.payloadRoot,
     reviewRoot: carrier.reviewRoot, carrierRoot: carrier.carrierRoot,
     findingCount: payload.findingCount, actualModesPassed: payload.actualModesPassed,
     plan110Eligible: payload.findingCount === 0 && payload.actualModesPassed === 6,
+    observationRoot: linked.observationRoot,
+    producerGuardObservationRoot: linked.producerGuardObservationRoot,
+    reviewedLocalExecutionClosureRoot: linked.reviewedLocalExecutionClosureRoot,
+    recursiveDependencyRoot: linked.recursiveDependencyRoot,
+    installedClosureRoot: linked.installedClosureRoot,
+    pathStableNativeSourcesRoot: linked.pathStableNativeSourcesRoot,
     authorizesExecution: false as const, producerCalls: 0 as const,
     readinessInvoked: false as const, liveInvoked: false as const,
     freshCharged: 0 as const, freshAccepted: 0 as const, downstreamAuthority: "denied" as const })
