@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
@@ -7,6 +8,7 @@ import {
   assertV138Plan130StrictLaterHeadForReview,
   authenticateV138Plan130V3InvalidationForReview,
   inspectV138Plan130BoundarySourceForReview,
+  computeV138Plan130RootRelativeNativeCustodyForReview,
   V138_PLAN130_B331_SCOPE,
 } from "./check-v1-38-plan-262-130-live-v13-custody-v4.js"
 
@@ -52,6 +54,27 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
     }
   }, 180_000)
 
+  it("binds local native custody to the supplied execution root", () => {
+    const owner = mkdtempSync(path.join(tmpdir(), "v138-plan130-native-root-"))
+    try {
+      for (const repoPath of [
+        "scripts/native/v1-38-successor-transaction-helper-v6.c",
+        "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
+      ]) {
+        const destination = path.join(owner, repoPath)
+        mkdirSync(path.dirname(destination), { recursive: true })
+        copyFileSync(path.join(ROOT, repoPath), destination)
+      }
+      const canonical = computeV138Plan130RootRelativeNativeCustodyForReview(ROOT)
+      const disposable = computeV138Plan130RootRelativeNativeCustodyForReview(owner)
+      expect(canonical.paths.every((entry) => entry.startsWith(`${ROOT}/`))).toBe(true)
+      expect(disposable.paths.every((entry) => entry.startsWith(`${owner}/`))).toBe(true)
+      expect(disposable.root).not.toBe(canonical.root)
+    } finally {
+      rmSync(owner, { recursive: true, force: true })
+    }
+  })
+
   it("rejects constructor, loader, assembled-name, namespace, and recovered-export paths", () => {
     const source = readFileSync(path.join(ROOT,
       "scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.ts"), "utf8")
@@ -72,6 +95,13 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       'const mod = `./run-v1-38-${"bounded-retry"}-envelope-v3.js`\n',
       'import * as producerNamespace from "./run-v1-38-bounded-retry-envelope-v3.js"\n',
       'const recovered = producerNamespace["runV138" + "V3ProductionLive"]\n',
+      'const k = "constructor"; globalThis[k][k]("return 1")()\n',
+      'const k = "eval"; globalThis[k]("1")\n',
+      'const k = "getBuiltinModule"; process[k]("node:module")\n',
+      'const k = ["con", "structor"].join(""); globalThis[k][k]("return process.getBuiltinModule(\\"module\\").createRequire(import.meta.url)(\\"./run-v1-38-bounded-retry-envelope-v3.js\\").runV138V3ProductionLive")()\n',
+      'const g = globalThis; const k = "constructor"; const recovered = g[k][k]\n',
+      'const { constructor: recovered } = globalThis\n',
+      'const recovered = Reflect.get(globalThis, "constructor")\n',
     ]) expect(() => inspectV138Plan130BoundarySourceForReview(
       source.replace("type Sha =", `${injected}type Sha =`),
     )).toThrow("V138_PLAN130_PRODUCTION_BOUNDARY_INVALID")
