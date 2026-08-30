@@ -161,6 +161,8 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   })
 
   it("roots a semantic mutation without making the canonical trio or supplement", () => {
+    const priorReviewBytes = new Map(reviewPaths.map((repoPath) => [repoPath,
+      existsSync(path.join(repoRoot, repoPath)) ? readFileSync(path.join(repoRoot, repoPath)) : undefined]))
     const modes = actualModes()
     const altered = renderV138Plan116EvidenceForReview(repoRoot, [{
       code: "SUPPLEMENT_SEMANTIC_DRIFT", severity: "critical", detail: "createsCapacity:true",
@@ -170,6 +172,10 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     )
     expect(altered.payload.plan109Eligible).toBe(false)
     expect(existsSync(path.join(repoRoot, supplementPath))).toBe(false)
-    for (const repoPath of reviewPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
+    for (const repoPath of reviewPaths) {
+      const prior = priorReviewBytes.get(repoPath)
+      if (prior === undefined) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
+      else expect(readFileSync(path.join(repoRoot, repoPath))).toEqual(prior)
+    }
   }, 300_000)
 })
