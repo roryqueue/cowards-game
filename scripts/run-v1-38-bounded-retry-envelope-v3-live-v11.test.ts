@@ -16,6 +16,7 @@ import {
   V138_LIVE_V11_PATHS,
   authenticateV138LiveV11SourceOnly,
   executeV138LiveV11Cli,
+  inspectV138LiveV11ProductionBoundaryForReview,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v11.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
@@ -139,5 +140,18 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
     expect(source).not.toMatch(/injectedProducer|producerCallback|injectedReadiness|callerRenderer/u)
     expect(source).toContain("settleV138LiveV9ProducerOutcomeForReview(producerError, postCustodyError)")
     expect(source).toContain("assertV138LiveV10PostRunForReview(repoRoot)")
+
+    expect(inspectV138LiveV11ProductionBoundaryForReview(repoRoot)).toEqual({
+      producerCallSites: 1,
+      readinessSelectorPresent: true,
+      productionSelectorPresent: true,
+      injectedProducerPresent: false,
+      injectedReadinessPresent: false,
+      injectedRendererPresent: false,
+      producerCalls: 0,
+      readinessInvoked: false,
+      liveInvoked: false,
+      downstreamAuthority: "denied",
+    })
   })
 })
