@@ -131,6 +131,9 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       supersedesPublicationCommit: "c7390cf521234e13e6c09c784df25f65a722aa23",
       supersededV2Disposition: "process_invalid_local_context_misbinding",
       supersededV2Plan110Eligible: false,
+      reviewStatus: "prospective_only",
+      actualModesPassed: 0,
+      plan110Eligible: false,
       producerCalls: 0,
       authorizesExecution: false,
       downstreamAuthority: "denied",
@@ -157,6 +160,16 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       V138_LIVE_V13_PATHS.plan122Review,
       V138_LIVE_V13_PATHS.plan122Carrier,
     ]) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
+    expect(() => checkV138LiveV13ProspectiveCustodyForReview({
+      repoRoot,
+      source: prospective.source,
+      reviewedClosure: prospective.reviewedClosure,
+      canonicalLocalExecutionClosureRoot: prospective.reviewedClosure.localExecutionClosureRoot,
+      observations: prospective.payload.observations,
+      plan122PublicationCommit: "0".repeat(40),
+      plan122: prospective,
+      requireEligiblePublication: true,
+    })).toThrow("V138_LIVE_V13_PLAN122_NOT_ELIGIBLE")
   }, 120_000)
 
   it("runs exactly the three producer-incapable Plan121 selectors", async () => {
@@ -233,7 +246,29 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       "await runV138V3ProductionLive(repoRoot, {",
       "await runV138V3ProductionLive(repoRoot, {} as never)\n    await runV138V3ProductionLive(repoRoot, {",
     ))).toThrow("V138_LIVE_V13_PRODUCTION_BOUNDARY_INVALID")
+    for (const injected of [
+      `${source}\nconst hiddenDynamicProducer = () => import("./run-v1-38-bounded-retry-envelope-v3.js")\n`,
+      `${source}\ndeclare const require: (value: string) => unknown\nconst hiddenRequiredProducer = require("./run-v1-38-bounded-retry-envelope-v3.js")\n`,
+      `${source}\nconst hiddenComputedProducer = (value: Record<string, unknown>) => value["runV138V3ProductionLive"]\n`,
+    ]) expect(() => inspectV138LiveV13ProductionBoundarySourceForReview(injected)).toThrow(
+      "V138_LIVE_V13_PRODUCTION_BOUNDARY_INVALID",
+    )
   })
+
+  it("pins both b331 summary additions and the amended stop document", () => {
+    withLinkedWorktree((root) => {
+      for (const repoPath of [
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-93-SUMMARY.md",
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-120-SUMMARY.md",
+      ]) {
+        const absolute = path.join(root, repoPath)
+        const original = readFileSync(absolute)
+        writeFileSync(absolute, Buffer.concat([original, Buffer.from("\n")]))
+        expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/PLAN_CLOSEOUT_CURRENT_BYTES_INVALID/u)
+        writeFileSync(absolute, original)
+      }
+    })
+  }, 120_000)
 
   it("keeps the file-backed producer tripwire untouched in all Plan121 modes", () => {
     withLinkedWorktree((root) => {
