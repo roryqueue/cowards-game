@@ -32,10 +32,10 @@ import { computeV138PathStableLocalExecutionClosureRoot } from
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const producerDestinations = [
-  ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3-attempt-journal.json",
-  ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3-attempt-journal.json.lock",
-  ".planning/artifacts/private/v1.38-plan-262-90-retry-envelope-v3",
-  ".planning/artifacts/v1.38-plan-262-110-live-v13-terminal-v1.json",
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl.lock",
+  ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
+  ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json",
   ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
 ]
 
@@ -413,7 +413,7 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/CURRENT_ENTRY_INVALID/u)
       chmodSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary), 0o644)
       const forbidden = path.join(root,
-        ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3-attempt-journal.json")
+        ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl")
       writeFileSync(forbidden, "{}")
       expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/FORBIDDEN_DESTINATION_PRESENT/u)
     })
