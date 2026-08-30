@@ -72,10 +72,11 @@ const withProspectiveClosure = <T>(run: (root: string) => T): T => withLinkedWor
     readFileSync(path.join(repoRoot, V138_LIVE_V12_PATHS.tests)),
   )
   execFileSync("/usr/bin/git", ["add", V138_LIVE_V12_PATHS.tests], { cwd: root })
-  execFileSync("/usr/bin/git", [
-    "-c", "user.name=Plan 262 Test", "-c", "user.email=plan262-test@example.invalid",
-    "commit", "--quiet", "-m", "test: prospective live-v12 closure",
-  ], { cwd: root })
+  if (execFileSync("/usr/bin/git", ["status", "--short"], { cwd: root, encoding: "utf8" }) !== "")
+    execFileSync("/usr/bin/git", [
+      "-c", "user.name=Plan 262 Test", "-c", "user.email=plan262-test@example.invalid",
+      "commit", "--quiet", "-m", "test: prospective live-v12 closure",
+    ], { cwd: root })
   return run(root)
 })
 const withProspectiveClosureAsync = async <T>(run: (root: string) => Promise<T>): Promise<T> => {
@@ -96,10 +97,11 @@ const withProspectiveClosureAsync = async <T>(run: (root: string) => Promise<T>)
       readFileSync(path.join(repoRoot, V138_LIVE_V12_PATHS.tests)),
     )
     execFileSync("/usr/bin/git", ["add", V138_LIVE_V12_PATHS.tests], { cwd: root })
-    execFileSync("/usr/bin/git", [
-      "-c", "user.name=Plan 262 Test", "-c", "user.email=plan262-test@example.invalid",
-      "commit", "--quiet", "-m", "test: prospective live-v12 closure",
-    ], { cwd: root })
+    if (execFileSync("/usr/bin/git", ["status", "--short"], { cwd: root, encoding: "utf8" }) !== "")
+      execFileSync("/usr/bin/git", [
+        "-c", "user.name=Plan 262 Test", "-c", "user.email=plan262-test@example.invalid",
+        "commit", "--quiet", "-m", "test: prospective live-v12 closure",
+      ], { cwd: root })
     return await run(root)
   } finally {
     if (added) {
