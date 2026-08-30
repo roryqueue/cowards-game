@@ -37,6 +37,7 @@ const v1ReviewPaths = [
   ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v1.json",
 ] as const
 const transactionPath = ".planning/.v138-plan116-review-v3-transaction.json"
+const prepublicationSourceCommit = "e14de858"
 const adapterPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts"
 const adapterTestPath = "scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts"
 const nativePath = "scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c"
@@ -54,7 +55,8 @@ const withReviewWorktree = <T>(run: (root: string) => T): T => {
   const root = path.join(owner, "repo")
   let added = false
   try {
-    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], { cwd: repoRoot })
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root,
+      prepublicationSourceCommit], { cwd: repoRoot })
     added = true
     symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
     for (const repoPath of [
@@ -268,7 +270,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
       supersededV1Plan109Eligible: false,
       reviewStatus: "zero_findings",
       currentCustody: "clean_replayed",
-      supersedesPublicationCommit: "e1e75fc6ef177a8213d903f1ec365d86f37cf62a",
+      supersedesPublicationCommit: "2219a36b62b41b45626ed93f13f43edb36463e61",
     })
     expect(checked.publicationCommit).toMatch(/^[0-9a-f]{40}$/)
     for (const repoPath of effectPaths) expect(existsSync(path.join(repoRoot, repoPath))).toBe(false)
