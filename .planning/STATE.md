@@ -6,9 +6,9 @@ current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
 stopped_at: Completed 262-116-PLAN.md; revised Plan 262-109 is the sole eligible next action
-last_updated: "2026-08-30T14:55:39Z"
+last_updated: "2026-08-30T15:15:22Z"
 last_activity: 2026-08-30
-last_activity_desc: fixed both Plan-116 re-review blockers and independently authenticated additive v3
+last_activity_desc: fixed final Plan-116 replay blocker and authenticated stable additive v4
 progress:
   total_phases: 9
   completed_phases: 0
@@ -18,6 +18,10 @@ progress:
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-plan-116-closeout-v4-status: {"schema_version":"v1.38-plan-262-116-closeout-v4","proof_status":"stable_post_publication_authentication","supersedes_publication_commit":"1c0862e16ff4a32add4308e481df567b1212eb0c","superseded_v1_v2_v3_plan_109_eligible":false,"source_commit":"9713e513","publication_commit":"f03f0e05539a1591b91000fc9d35b8381a082ec2","regression_commit":"65b05d23","finding_count":0,"actual_modes_passed":9,"reviewed_root":"sha256:56c56ea16b52996c1e63a048c7215f7f9fabe12b790f12e9fa63c4fffb556857","observation_root":"sha256:933f1b4607dabc6981c69eaa27c43f1b0f55718320b4c48766e3e20818c497eb","disposable_root":"sha256:65ea2ff5ca63fec76197020ac0eee11f1af4965f8df950105221d5d9933325a6","publication_local_root":null,"payload_root":"sha256:251b01b973f1abde239089e6e49dc6c38c74803a273fa6f104a6cdda156de1d7","review_root":"sha256:d238645459920ba74d9e8265f5b0c0609e636f86d027a2e7f473058f746aedf3","carrier_root":"sha256:3d665d7f562b575a9b2ffdeafbe1458922e2687bd75b32027b39cb67c0a7632b","unrelated_post_publication_commit_authenticates":true,"blocked_lifecycle_preserved":true,"plan_262_109_eligible":true,"supplement_v3_present":false,"readiness_invoked":false,"live_invoked":false,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-109-only","plan_262_110_authorized":false,"admit_03":"blocked","downstream_authority_denied":true} -->
+
+<!-- The Plan-116 v3 closeout below is immutable superseded history and is ineligible. -->
 
 <!-- phase-262-plan-116-closeout-v3-status: {"schema_version":"v1.38-plan-262-116-closeout-v3","proof_status":"reproducible_independent_adapter_review_zero_findings","supersedes_publication_commit":"2219a36b62b41b45626ed93f13f43edb36463e61","superseded_v1_v2_plan_109_eligible":false,"reviewer_final_commit":"747fcaa98b5dd29e7034cb44e6f0ef2b04d7e292","publication_commit":"1c0862e16ff4a32add4308e481df567b1212eb0c","finding_count":0,"actual_modes_passed":9,"observation_root":"sha256:933f1b4607dabc6981c69eaa27c43f1b0f55718320b4c48766e3e20818c497eb","disposable_root":"sha256:7aecafee53b893c23483102dd590099ce74f8f5b55050276dd0aac7a8e56ece0","independent_post_authentication":true,"blocked_repaired_authentication":true,"persistent_drift_fails_closed":true,"payload_root":"sha256:a7028015d8d45381cab4a2be7232239b00830c3839dfdd4e790204e5e3bb64c6","review_root":"sha256:12fae1e53ce2706d1e456e995b335c4e428046087ae510f8f6d24275ce3d6050","carrier_root":"sha256:1aba12b4ad9e75d42b58be0b606cb661fd04b3fa090588ddb30676949209e0c8","plan_262_109_eligible":true,"supplement_v3_present":false,"readiness_invoked":false,"live_invoked":false,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-109-only","plan_262_110_authorized":false,"admit_03":"blocked","downstream_authority_denied":true} -->
 
@@ -114,7 +118,7 @@ Progress: [█████████░] 94%
 
 **Plan-115 corrected closeout (3-file executable closure):** Commit `bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48` binds the adapter, tests, and native helper. Ten focused tests prove exact `0600` canonical sealed-pair custody, exact `0644` ordinary-evidence custody, stable no-follow reads, retained-dirfd publication, parent-swap containment, and rejection of a pre-seeded predictable helper cache. Canonical supplement-v1/v2/v3 and all effects remain absent; ADMIT-03 remains blocked at 0/540 and Plan 262-116 alone is next.
 
-**Plan-116 reproducible closeout:** Additive v3 commit `1c0862e16ff4a32add4308e481df567b1212eb0c` independently reproduces all nine observations and the stable Git-derived disposable root. Repaired blocked history authenticates without eligibility; persistent drift fails closed. V1 and v2 remain immutable and ineligible. V3 alone makes revised Plan 109 eligible; supplement-v3, producer calls, live/readiness execution, and downstream authority remain absent, and ADMIT-03 stays blocked at 0/540.
+**Plan-116 stable closeout:** Additive v4 commit `f03f0e05539a1591b91000fc9d35b8381a082ec2` authenticates after unrelated later commits because publication identity is derived only from pinned Git inputs, never checkout-local or ambient runtime identity. V1-v3 are immutable/ineligible; v4 alone makes revised Plan 109 eligible. Blocked lifecycle behavior is preserved, no effects exist, and ADMIT-03 stays blocked at 0/540.
 
 **Plan-103 closeout (14 min, 2 tasks, 6 files):** Exact Plan-102 source commit `332aae093ef6e26c95a18f21cfd253ccc829ce48` and protected Plan-100/101 history passed independent raw Git byte custody. One owner-only isolated committed trio passed the actual final consumer before the unique canonical publication commit `2f4fd225ca32b0ac67c2fd09f3036cbbe208725c`; 17/17 combined tests and typecheck passed. Finding count is zero, Plan 262-92 alone is eligible, fresh accounting remains 0/540, and all broader authority remains denied.
 
