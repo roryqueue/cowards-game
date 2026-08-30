@@ -472,12 +472,21 @@ const linkDependencies = (sourceRoot: string, linkedRoot: string): void => {
 export const executeV138Plan114DisposableModes = (repoRootInput: string): V138Plan114ModeResult => {
   const repoRoot = path.resolve(repoRootInput)
   const foundation = authenticateFoundation(repoRoot)
-  assertAbsent(repoRoot, [PATHS.payload, PATHS.review, PATHS.carrier, ...FORBIDDEN])
+  assertAbsent(repoRoot, FORBIDDEN)
+  let disposableBase = "HEAD"
+  if ([PATHS.payload, PATHS.review, PATHS.carrier].some((repoPath) => pathPresent(repoRoot, repoPath))) {
+    if (![PATHS.payload, PATHS.review, PATHS.carrier].every((repoPath) => pathPresent(repoRoot, repoPath)))
+      fail("V138_PLAN114_PARTIAL_PUBLICATION_PRESENT")
+    const publications = git(repoRoot, ["log", "--diff-filter=A", "--format=%H", "--", PATHS.payload])
+      .split("\n").filter(Boolean)
+    if (publications.length !== 1) fail("V138_PLAN114_PUBLICATION_AMBIGUOUS")
+    disposableBase = `${publications[0]!}^`
+  }
   const owner = mkdtempSync(path.join(tmpdir(), "v138-plan114-"))
   const linked = path.join(owner, "repo")
   let worktreeAdded = false
   try {
-    run("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", linked, "HEAD"], repoRoot, owner)
+    run("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", linked, disposableBase], repoRoot, owner)
     worktreeAdded = true
     linkDependencies(repoRoot, linked)
     const tsx = path.join(linked, "node_modules/.bin/tsx")
