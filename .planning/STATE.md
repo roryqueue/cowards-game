@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-114-PLAN.md; revised Plan 262-109 only is next
-last_updated: "2026-08-30T00:48:08.263Z"
+stopped_at: Corrected Plan-114 review v2 published and authenticated at 34bc94ec; revised Plan 262-109 only is next
+last_updated: "2026-08-30T01:18:53Z"
 last_activity: 2026-08-29
-last_activity_desc: completed independent six-mode live-v10 review with literal zero findings; revised Plan 109 only is next
+last_activity_desc: corrected source-separated six-mode Plan-114 review v2 published with literal zero findings; revised Plan 109 only is next
 progress:
   total_phases: 9
   completed_phases: 0
@@ -20,7 +20,9 @@ progress:
 # State: Coward's Game
 
 <!-- phase-262-plan-114-closeout-status: {"schema_version":"v1.38-plan-262-114-closeout-v1","proof_status":"independent_live_v10_review_zero_findings","reviewed_source_commit":"ba1f8ddb4d701762d5d443f41edcbb691bb0eda5","evidence_commit":"675effe681fb1ba4d16ba399104c45df98230d12","final_clean_review_commit":"28488fd43585f9f6fbfcd80dff2a388e4f754817","publication_commit":"ab539ab2b3706981aaeb053b3fafce6b46532b40","finding_count":0,"actual_modes_passed":6,"payload_root":"sha256:7a414ac6d41af084e785e9eaed4fc28835806bf1aa339be571befab114e9d857","review_root":"sha256:ab85273e90e40749324b270db1bfc5275b29fbb20b7eebcf9d6d776fe7a0cdec","carrier_root":"sha256:4fba941b15a1435d37d99a1847e44f8bdbb8d5ecafa7a1d8c3b9b60b81dc38fc","plan_262_109_eligible":true,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-109-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
-<!-- The live-v10 recovery topology below is immutable pre-Plan-114 history and is superseded only for next-action eligibility by the closeout carrier above. -->
+<!-- phase-262-plan-114-corrected-closeout-status: {"schema_version":"v1.38-plan-262-114-closeout-v2","proof_status":"source_separated_live_v10_review_zero_findings","supersedes_publication_commit":"ab539ab2b3706981aaeb053b3fafce6b46532b40","publication_commit":"34bc94ec4e348f71e6055a091d60a505cffc0d79","finding_count":0,"actual_modes_passed":6,"payload_root":"sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac","review_root":"sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee","carrier_root":"sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26","plan_262_109_eligible":true,"live_invoked":false,"readiness_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-109-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
+<!-- The Plan-114 v1 closeout above is immutable superseded review history. -->
+<!-- The live-v10 recovery topology below is immutable pre-Plan-114 history and is superseded only for next-action eligibility by the corrected closeout carrier above. -->
 <!-- phase-262-live-v10-recovery-topology-v3: {"schema_version":"v1.38-plan-262-live-v10-recovery-topology-v3","active_plans":95,"trustworthy_summaries":88,"immutable_history":["262-111","262-112-v1","262-112-v2-blocked","live-v9","262-113"],"active_chain":["262-114","262-109","262-110","262-94","262-95","262-106"],"waves":{"262-114":98,"262-109":99,"262-110":100,"262-94":101,"262-95":102,"262-106":103},"supplement_version":"v3","live_owner":"live-v10","reproduction_owner":"existing-producer","route11_owner":"262-94","pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"next_action":"dispatch-262-114-only","admit_03":"blocked","downstream_authority_denied":true} -->
 
 <!-- Plan 93 was invoked exactly once after the v7 pair check passed, but failed closed before the live effect boundary with V138_RETRY_V3_REVIEWED_EXECUTION_CLOSURE_INVALID. No v3 identity was charged and no live artifact exists. Do not retry or dispatch a successor without separately planned corrective work and explicit execution authority. -->
@@ -396,6 +398,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Forbidden Plan-114, supplement, producer, and downstream destinations are absent only when `lstat` reports no entry; dangling symlinks and unsafe entry types fail closed. — Prevents broken-link and special-file substitution at every pre-effect absence boundary.
 - [Phase 262]: Linked review must derive and bind its own local execution root, while canonical readiness separately treats that committed root as review attestation and derives canonical local custody independently. — Prevents a self-consistent re-render from substituting another linked review context without conflating portable and canonical-local custody.
 - [Phase 262]: Plan-114 binds executable source commit ba1f8ddb and separately authenticates evidence commit 675effe6 plus final clean-review commit 28488fd4. — Executable custody must bind source bytes while retaining the exact later review ancestry.
+- [Phase 262]: Corrected Plan-114 v2 owns raw custody and value-semantic derivation, records deterministic blocked findings for observable drift, performs post-observation reauthentication, and authenticates current trio bytes without following links. — The v1 trio remains immutable but is superseded for eligibility by committed v2 at 34bc94ec.
 - [Phase 262]: Literal zero across six real disposable live-v10 modes makes only revised Plan 109 eligible; ADMIT-03 remains blocked at 0/540 and all authority remains denied. — Review success cannot substitute for missing accepted reproduction evidence.
 
 ### Pending Todos
@@ -461,7 +464,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-08-30T00:47:31.514Z
-Stopped at: Completed 262-114-PLAN.md; revised Plan 262-109 only is next
+Stopped at: Corrected Plan-114 review v2 published and authenticated at 34bc94ec; revised Plan 262-109 only is next
 Resume file: None
 
 ### Blockers

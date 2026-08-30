@@ -172,3 +172,11 @@ None.
 - Final focused Vitest report passed 4/4, including all six real disposable modes.
 - TypeScript, `git diff --check`, and `--check-review` passed after publication.
 - Supplement-v1/v2/v3, producer outputs, and all downstream destinations remain absent.
+
+## Additive Corrected Review v2 (2026-08-30)
+
+- The adversarial findings in `262-114-CODE-REVIEW.md` are fixed atomically in `d404a7f0`, `eadbbca0`, `4ed41fe3`, `2a272965`, and `dfeb17bc`.
+- Plan 114 now owns its custody derivation and semantic oracle, converts observable drift into deterministic blocked evidence, performs no cached security decision, reauthenticates after observations, and authenticates current publication files without following symlinks.
+- The immutable v1 trio at `ab539ab2` remains historical. Corrected v2 was published at `34bc94ec` with zero findings and 6/6 actual disposable modes; payload/review/carrier roots are `sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac`, `sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee`, and `sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26`.
+- Read-only committed-v2 authentication passed. Revised Plan 262-109 alone is eligible; ADMIT-03 remains blocked at 0/540 and all broader authority remains denied.
+- No supplement, readiness, producer, live, or downstream selector ran or artifact was created.
