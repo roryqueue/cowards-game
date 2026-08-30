@@ -1,12 +1,55 @@
-import { readFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   checkV138SupplementV3AdapterSourceOnly,
+  checkV138CommittedSupplementV3ForReview,
   V138_SUPPLEMENT_V3_ADAPTER_SELECTORS,
+  writeV138SupplementV3ForReview,
 } from "./run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
+const supplementPath = ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json"
+const v2PayloadPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json"
+const effectPath = ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json"
+const git = (root: string, args: readonly string[]): string => execFileSync(
+  "/usr/bin/git",
+  ["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgSign=false", ...args],
+  { cwd: root, encoding: "utf8" },
+).trim()
+const withWorktree = <T>(run: (root: string) => T): T => {
+  const owner = mkdtempSync(path.join(tmpdir(), "v138-plan115-test-"))
+  const root = path.join(owner, "repo")
+  let added = false
+  try {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], { cwd: repoRoot })
+    added = true
+    symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    git(root, ["config", "user.name", "Plan 262 Supplement Test"])
+    git(root, ["config", "user.email", "plan262-supplement@example.invalid"])
+    return run(root)
+  } finally {
+    if (added) {
+      try { execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot }) }
+      catch { /* preserve the primary assertion */ }
+    }
+    rmSync(owner, { recursive: true, force: true })
+  }
+}
+const commitSupplement = (root: string, extraPath?: string): string => {
+  git(root, ["add", supplementPath, ...(extraPath === undefined ? [] : [extraPath])])
+  git(root, ["commit", "-m", "test: publish supplement v3"])
+  return git(root, ["rev-parse", "HEAD"])
+}
 
 describe("Plan 262-115 source-only supplement-v3 adapter", () => {
   it("proves the historical Plan-114 and live-v10 CLIs remain unchanged and lack supplement selectors", () => {
@@ -61,6 +104,73 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       freshCharged: 0,
       freshAccepted: 0,
       downstreamAuthority: "denied",
+    })
+  }, 180_000)
+
+  it("writes once in a disposable worktree and authenticates an exact committed publication twice", () => {
+    withWorktree((root) => {
+      const written = writeV138SupplementV3ForReview(root)
+      expect(written).toMatchObject({ status: "supplement_v3_written", downstreamAuthority: "denied" })
+      expect(readFileSync(path.join(root, supplementPath), "utf8")).toBe(written.canonicalBytes)
+      const publicationCommit = commitSupplement(root)
+      expect(git(root, ["ls-tree", publicationCommit, "--", supplementPath])).toMatch(/^100644 blob /)
+      const first = checkV138CommittedSupplementV3ForReview(root)
+      const second = checkV138CommittedSupplementV3ForReview(root)
+      expect(first).toEqual(second)
+      expect(first).toMatchObject({
+        status: "supplement_v3_committed_checked",
+        publicationCommit,
+        counters: {
+          acceptedCells: 0,
+          calibrationIdentitiesCharged: 0,
+          preflightObservationsConsumed: 0,
+          reproductionIdentitiesCharged: 0,
+          routeStartsConsumed: 0,
+        },
+        createsEnvelope: false,
+        createsCapacity: false,
+        resetsCounters: false,
+        authorizesExecution: false,
+        liveInvoked: false,
+        freshCharged: 0,
+        freshAccepted: 0,
+        downstreamAuthority: "denied",
+      })
+    })
+  }, 180_000)
+
+  it("rejects current-byte, executable-mode, and add-scope publication mutations", () => {
+    withWorktree((root) => {
+      writeV138SupplementV3ForReview(root)
+      commitSupplement(root)
+      writeFileSync(path.join(root, supplementPath), "{}\n")
+      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/CURRENT_BYTES_INVALID/)
+    })
+    withWorktree((root) => {
+      writeV138SupplementV3ForReview(root)
+      chmodSync(path.join(root, supplementPath), 0o755)
+      commitSupplement(root)
+      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/PUBLICATION_MODE_INVALID/)
+    })
+    withWorktree((root) => {
+      writeV138SupplementV3ForReview(root)
+      const extra = ".planning/artifacts/plan115-extra.txt"
+      writeFileSync(path.join(root, extra), "extra\n")
+      commitSupplement(root, extra)
+      expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/PUBLICATION_SCOPE_INVALID/)
+    })
+  }, 180_000)
+
+  it("fails closed before writing when authoritative v2 is unavailable or effects are present", () => {
+    withWorktree((root) => {
+      rmSync(path.join(root, v2PayloadPath))
+      expect(() => writeV138SupplementV3ForReview(root)).toThrow()
+      expect(() => readFileSync(path.join(root, supplementPath))).toThrow()
+    })
+    withWorktree((root) => {
+      writeFileSync(path.join(root, effectPath), "{}\n")
+      expect(() => writeV138SupplementV3ForReview(root)).toThrow(/FORBIDDEN_PRESENT/)
+      expect(() => readFileSync(path.join(root, supplementPath))).toThrow()
     })
   }, 180_000)
 })
