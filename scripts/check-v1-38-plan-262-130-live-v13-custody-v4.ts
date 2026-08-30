@@ -136,7 +136,7 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
     return named !== undefined && ts.isNamedImports(named) ? [...named.elements] : []
   })
   const stringBindings = new Map<string, string>()
-  const rootAliases = new Set(["globalThis", "module", "Reflect"])
+  const rootAliases = new Set(["globalThis", "process", "module", "Reflect"])
   const constantString = (node: ts.Expression): string | undefined => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text
     if (ts.isIdentifier(node)) return stringBindings.get(node.text)
