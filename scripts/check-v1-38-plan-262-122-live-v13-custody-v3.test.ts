@@ -10,7 +10,7 @@ import {
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
 
-describe("Plan 262-122 independent live-v13 custody review v2", () => {
+describe("Plan 262-122 independent live-v13 custody review v3", () => {
   it("rejects producer aliases, relocated calls, and injectable effect seams", () => {
     const source = readFileSync(path.join(ROOT,
       "scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.ts"), "utf8")
@@ -25,6 +25,16 @@ describe("Plan 262-122 independent live-v13 custody review v2", () => {
     )).toThrow("V138_PLAN122_PRODUCTION_BOUNDARY_INVALID")
     expect(() => inspectV138Plan122BoundarySourceForReview(
       source.replace("repoRoot: string", "repoRoot: string, injectedProducer?: unknown"),
+    )).toThrow("V138_PLAN122_PRODUCTION_BOUNDARY_INVALID")
+    for (const injected of [
+      "const bypass = eval\n",
+      "const bypass = Function('return 1')\n",
+      "const bypass = require('node:module')\n",
+      "const bypass = import('./run-v1-38-bounded-retry-envelope-v3.js')\n",
+      "const bypass = 'runV138' + 'V3ProductionLive'\n",
+      "const bypass = 'getBuiltin' + 'Module'\n",
+    ]) expect(() => inspectV138Plan122BoundarySourceForReview(
+      source.replace("type Sha =", `${injected}type Sha =`),
     )).toThrow("V138_PLAN122_PRODUCTION_BOUNDARY_INVALID")
 
     const withoutOwnerCall = source.replace(
@@ -58,12 +68,12 @@ describe("Plan 262-122 independent live-v13 custody review v2", () => {
   it("executes exactly six producer-incapable observations and renders literal-zero eligibility", () => {
     const modes = executeV138Plan122DisposableModes(ROOT)
     expect(modes.modeNames).toEqual([
-      "source_only_cli",
-      "prospective_custody_cli",
-      "post_no_effect_cli",
-      "post_non_pass_value",
-      "post_success_value",
-      "exact_reproduction_value",
+      "--check-source-only",
+      "--check-prospective-custody",
+      "--check-post-run-custody",
+      "--check-non-pass-value",
+      "--check-bounded-success-value",
+      "--check-exact-reproduction-v17-value",
     ])
     expect(modes).toMatchObject({
       actualModesPassed: 6,
@@ -73,18 +83,23 @@ describe("Plan 262-122 independent live-v13 custody review v2", () => {
       liveInvoked: false,
       freshCharged: 0,
       freshAccepted: 0,
-      producerGuardInvocations: 0,
+      producerGuardCount: 0,
     })
-    expect(modes.producerGuardObservationRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
-    expect(modes.observations.every((observation) => observation.producerGuardInvocations === 0)).toBe(true)
+    expect(modes.observationRoot).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    expect(modes.observations.every((observation) => observation.producerGuardCount === 0)).toBe(true)
     expect(assertV138Plan122PublishedLocalClosureForReview({
       reviewedClosureRoot: modes.reviewedClosureRoot,
-      reviewedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
+      canonicalLocalExecutionClosureRoot: modes.canonicalCustody.localExecutionClosureRoot,
+      localInstalledClosureRoot: modes.canonicalCustody.localInstalledClosureRoot,
+      localGitObjectRoot: modes.canonicalCustody.localGitObjectRoot,
+      localNativeSourcesRoot: modes.canonicalCustody.localNativeSourcesRoot,
+      observations: modes.observations,
+      observationsRoot: modes.observationRoot,
       findingCount: 0,
       actualModesPassed: 6,
     }, modes)).toMatchObject({
       actualModesPassed: 6,
-      producerGuardInvocations: 0,
+      producerGuardCount: 0,
       observationRoot: modes.observationRoot,
     })
     for (const reviewedCustody of [
@@ -94,7 +109,12 @@ describe("Plan 262-122 independent live-v13 custody review v2", () => {
       { ...modes.reviewedCustody, localExecutionClosureRoot: `sha256:${"4".repeat(64)}` },
     ]) expect(() => assertV138Plan122PublishedLocalClosureForReview({
       reviewedClosureRoot: modes.reviewedClosureRoot,
-      reviewedLocalExecutionClosureRoot: modes.linkedLocalExecutionClosureRoot,
+      canonicalLocalExecutionClosureRoot: modes.canonicalCustody.localExecutionClosureRoot,
+      localInstalledClosureRoot: modes.canonicalCustody.localInstalledClosureRoot,
+      localGitObjectRoot: modes.canonicalCustody.localGitObjectRoot,
+      localNativeSourcesRoot: modes.canonicalCustody.localNativeSourcesRoot,
+      observations: modes.observations,
+      observationsRoot: modes.observationRoot,
       findingCount: 0,
       actualModesPassed: 6,
     }, { ...modes, reviewedCustody } as typeof modes)).toThrow()
@@ -133,4 +153,3 @@ describe("Plan 262-122 independent live-v13 custody review v2", () => {
     })
   }, 30_000)
 })
-
