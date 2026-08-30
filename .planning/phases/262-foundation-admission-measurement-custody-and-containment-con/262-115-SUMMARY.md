@@ -20,6 +20,7 @@ key-files:
   created:
     - scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts
     - scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts
+    - scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c
   modified: []
 key-decisions:
   - "Expose exactly source-check, exclusive supplement-v3 write, and committed supplement-v3 check selectors."
@@ -62,13 +63,13 @@ status: complete
 - **Started:** 2026-08-30T02:19:00Z
 - **Completed:** 2026-08-30T02:32:58Z
 - **Tasks:** 2 TDD tasks
-- **Files modified:** 2 source/test files
+- **Files modified:** 3 adapter/test/native source files
 
 ## Accomplishments
 
 - Independently pinned the Plan-114 v2 publication `34bc94ec4e348f71e6055a091d60a505cffc0d79`, final source `1314e24b43f9469e0f6d425c007d88ca2fca9716`, final-clean review `92415ea08ccddd2c8fae3c8fc922078d14c589c9`, and exact sealed pair.
 - Added an exclusive `wx`, no-follow, canonical 0644 supplement-v3 writer and an exact committed-publication checker without importing reviewed Plan-114 or live-v10 code.
-- Passed seven focused tests covering repeatable disposable checks and fail-closed byte, symlink, rewrite, executable-mode, add-scope, authoritative-v2, final-clean, pair, and effect-boundary mutations.
+- Passed ten focused tests covering repeatable disposable checks; fail-closed byte, symlink, rewrite, executable-mode, add-scope, authoritative-v2, final-clean, pair, and effect-boundary mutations; a real parent swap; and shared-cache poisoning.
 - Preserved fresh accounting at 0/540, all five pair counters at zero, all authority false/denied, and canonical supplement-v1/v2/v3 plus effect destinations absent.
 
 ## Task Commits
@@ -80,18 +81,22 @@ Each TDD gate was committed atomically:
 3. **Task 2 RED: require disposable publication lifecycle** — `8c7091c3`
 4. **Task 2 GREEN: implement exclusive write and committed check** — `d7ebb154`
 
-## Git Custody
+## Authoritative Corrected Git Custody for Plan 116
 
-- Final source/test commit: `d7ebb154a4b4341c4249cc7a2141daae9204a222`
-- Tree: `032b6c0c105235c971fd12fccaaeed22fe799ba6`
-- Parent: `8c7091c3072af6958e2671cd0e72b3beafe2f9e3`
-- Adapter: mode `100644`, blob `430f51d92699630b54f5c04e9c5a9d25dcac5f8b`
-- Test: mode `100644`, blob `6f5e9d5b20ad10d8e5d25d7f2c2c83162341bdc1`
+- Final three-file source commit: `a13b5600e3baf31b5460066558bafd53a3bb5581`
+- Tree: `a555fc01a83da07c1ea3c6b79463dad3269aada1`
+- Parent: `89ba082b1e583c55f4a02a30f36925642e6b826a`
+- Adapter: mode `100644`, blob `300832848dacb12d395c4a573182c60b00c71374`
+- Test: mode `100644`, blob `a2275640b28322f20f1e10f4d93449c30fafe782`
+- Native helper: mode `100644`, blob `a733b6ce9239d02e522a78ad83930037e644a4d0`
+
+The earlier two-file closure at `d7ebb154a4b4341c4249cc7a2141daae9204a222` and the first corrected three-file closure at `737fd0e60c033f873accd9bf60b1599f0bf47951` are immutable superseded history. Plan 116 must review only the exact `a13b5600` closure above.
 
 ## Files Created
 
 - `scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts` — closed source/write/check selector surface and raw-Git custody implementation.
 - `scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts` — source-boundary, disposable lifecycle, and adversarial mutation proof.
+- `scripts/native/v1-38-plan-262-115-exclusive-writer-v1.c` — retained-directory exclusive writer and parent-swap containment boundary.
 
 ## Decisions Made
 
@@ -127,23 +132,24 @@ None.
 
 ## Threat Flags
 
-None. The new filesystem write surface is the planned T-262-115-02 boundary and is covered by containment, no-symlink parent checks, exclusive no-follow creation, canonical bytes, and exact committed authentication.
+- The native executable boundary is security-critical. Each invocation compiles in a fresh owner-only `0700` directory, validates owner/device/inode, exact regular-file `0700` mode, link count, descriptor identity, and executable SHA-256 immediately before execution, and safely removes only the same private directory afterward.
+- The filesystem write surface is covered by retained no-follow directory descriptors, exclusive `openat`, exact `0644`, file and parent fsync, canonical-parent identity recheck, and retained-descriptor cleanup.
 
 ## Verification
 
 - `pnpm exec tsc --noEmit --pretty false` — passed.
-- `pnpm exec vitest run scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts --reporter=verbose` — 7/7 passed in 55.86s.
+- `pnpm exec vitest run scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts --reporter=verbose` — 10/10 focused tests.
 - `pnpm exec tsx scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts --check-source-only` — passed with authoritative v2 roots, sealed inactive status, zero counters, and denied downstream authority.
 - Canonical supplement-v1/v2/v3 and effect paths — absent.
 - `git diff --check` — passed.
 
 ## Next Phase Readiness
 
-Plan 262-116 is the sole next action: independently review the exact Plan-115 source/test commit and its real disposable source/write/commit/check modes. Revised Plan 109 remains blocked until that literal-zero-or-blocked review trio exists. ADMIT-03 remains blocked at 0/540; Plan 110 and all later authority remain denied.
+Plan 262-116 is the sole next action: independently review exact commit `a13b5600e3baf31b5460066558bafd53a3bb5581`, including the adapter, tests, and native helper, plus its real disposable source/write/commit/check modes. Revised Plan 109 remains blocked until that literal-zero-or-blocked review trio exists. ADMIT-03 remains blocked at 0/540; Plan 110 and all later authority remain denied.
 
 ## Self-Check: PASSED
 
-Both source/test files and all four TDD commits were found in the repository.
+All three adapter/test/native files and their exact corrected custody entries were found in the repository.
 
 ## Additive Code-review Closure (2026-08-30)
 
@@ -152,6 +158,12 @@ Both source/test files and all four TDD commits were found in the repository.
 - Every current custody file must be exact no-follow `0644`, with descriptor identity, size, and mode checked again after reading.
 - The supplement writer now uses a retained-directory native `openat`/`unlinkat`/`fsync` boundary. A real parent symlink-swap race wrote nothing outside the repository and cleaned only through the retained descriptor.
 - The complete focused suite passed 9/9. No canonical supplement, readiness, live, or effect artifact was created; Plan 116 remains the sole next action.
+
+## Additive Fix Re-review Closure (2026-08-30)
+
+- Commit `a13b5600` removes the predictable shared-temporary executable cache. A real pre-seeded poison executable was never run; the freshly compiled helper was authenticated by descriptor and hash and its owner-private directory was removed.
+- The authoritative Plan-116 handoff is the exact three-file closure recorded above. The native helper is a mandatory reviewed input, not an implicit toolchain detail.
+- Plan 115 continues to report Plan-109 ineligible and review-required. No canonical supplement or effect artifact was created.
 
 ---
 *Phase: 262-foundation-admission-measurement-custody-and-containment-con*

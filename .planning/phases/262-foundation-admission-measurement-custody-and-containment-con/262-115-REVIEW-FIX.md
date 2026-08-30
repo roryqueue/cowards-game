@@ -1,10 +1,10 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-30T02:50:49Z
-review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-115-CODE-REVIEW.md
-iteration: 1
-findings_in_scope: 3
-fixed: 3
+fixed_at: 2026-08-30T03:01:25Z
+review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-115-REVIEW-FIX-REVIEW.md
+iteration: 2
+findings_in_scope: 2
+fixed: 2
 skipped: 0
 status: all_fixed
 ---
@@ -46,3 +46,29 @@ All three critical findings are fixed. Plan 115 remains source-only and review-g
 _Fixed: 2026-08-30T02:50:49Z_
 _Fixer: the agent (gsd-code-fixer)_
 _Iteration: 1_
+
+## Additive Fix Re-review Closure — Iteration 2
+
+### CR-01: Predictable shared-temporary binary cache permits arbitrary helper substitution
+
+**Files modified:** `scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.ts`, `scripts/run-v1-38-bounded-retry-envelope-v3-supplement-v3-adapter-v1.test.ts`
+**Commit:** `a13b5600`
+**Applied fix:** Removed the predictable shared binary cache. Every write compiles in a fresh owner-only `0700` directory, validates directory owner/device/inode, validates the executable as an owner-matching single-link regular `0700` file, rechecks descriptor device/inode/size/mode/owner and SHA-256 immediately before execution, and removes only the same identity-checked private directory afterward. A real pre-seeded legacy cache executable was not invoked.
+
+### CR-02: Plan 116 receives the obsolete pre-fix two-file custody closure
+
+**Files modified:** `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-115-SUMMARY.md`, `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-116-PLAN.md`, `.planning/STATE.md`
+**Commit:** recorded in the additive evidence commit following this report
+**Applied fix:** Replaced the authoritative handoff with final commit `a13b5600e3baf31b5460066558bafd53a3bb5581`, tree `a555fc01a83da07c1ea3c6b79463dad3269aada1`, parent `89ba082b1e583c55f4a02a30f36925642e6b826a`, and exact `100644` blobs `300832848dacb12d395c4a573182c60b00c71374` (adapter), `a2275640b28322f20f1e10f4d93449c30fafe782` (test), and `a733b6ce9239d02e522a78ad83930037e644a4d0` (native helper). The older two-file and first corrected closures are explicitly superseded history.
+
+## Iteration 2 Verification
+
+- The real cache-poison test passed and confirmed the poison marker remained absent and the private compiler directory was cleaned.
+- Plan-116 planning now explicitly requires all three exact modes/blobs plus native cache-poison and parent-swap observations.
+- TypeScript and `git diff --check` passed; canonical supplement and all live/effect paths remain absent.
+
+---
+
+_Fixed: 2026-08-30T03:01:25Z_
+_Fixer: the agent (gsd-code-fixer)_
+_Iteration: 2_
