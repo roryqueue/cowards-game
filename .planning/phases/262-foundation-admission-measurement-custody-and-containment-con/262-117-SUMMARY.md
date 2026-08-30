@@ -12,8 +12,8 @@ requires:
     provides: authoritative Plan-114 v2 live-v10 review history
 provides:
   - closed additive live-v11 source consuming authoritative v2/v4 and supplement-v3
-  - producer-incapable source, prospective, and post-no-effect custody modes
-  - static one-call/no-injection future producer boundary for independent Plan-118 review
+  - producer-incapable source and prospective modes plus exact boundary-aware post-effect custody
+  - static direct-one-call/no-alias/no-injection future producer boundary for independent Plan-118 review
 affects: [262-118, 262-110]
 tech-stack:
   added: []
@@ -76,7 +76,7 @@ status: complete
 
 - Added independent raw-Git/no-follow authentication for immutable Plan-114 v1/v2 and Plan-116 v1-v4 history, requiring v2/v4 as authoritative without fallback.
 - Bound exact supplement-v3 publication `a1e693a2`, unchanged pair `8080ff66`, roots, Plan-93 stop, protected history, zero counters, and exhaustive no-effect/no-authority state.
-- Added producer-incapable source/prospective/post-no-effect modes plus a future Plan-118 contract and reviewer-visible static proof of one historical-producer call with no injection path.
+- Added producer-incapable source/prospective modes, boundary-aware exact post-effect custody, and reviewer-visible static proof of one direct historical-producer call with no alias or injection path.
 - Passed five focused tests, TypeScript, source-only CLI, prospective CLI, raw closure derivation, and `git diff --check` without invoking readiness, live, or producer modes.
 
 ## Task Commits
@@ -88,25 +88,28 @@ Each TDD gate was committed atomically:
 3. **Task 2 RED: require explicit closed-boundary proof** — `6a35fdb8`
 4. **Task 2 GREEN: close and test the future reviewed boundary** — `6ae7afb6`
 5. **Task 2 verification fix: stabilize post-commit disposable replay** — `0ffa3a8b`
+6. **Review RED: expose prospective/post/static gaps** — `a639027d`
+7. **Review RED: expand adversarial custody proof** — `16a77e82`
+8. **Review GREEN: close all Plan-117 review findings** — `41c716c5`
 
 ## Exact Source Custody
 
-- Subject commit: `0ffa3a8b2584245bb8ca91932e02b7679d960716`
-- Tree / parent: `34f6c49e4c1fc77a12888a662af04a418002a6bb` / `6ae7afb6ace39714062bb838c7abe3cdfef0c04b`
-- Source mode / blob: `100644` / `83d90aefd943270b753757eae0c8cd2a8ba8ae79`
-- Test mode / blob: `100644` / `4ebc2ba6d1b6c540886d5a59f2817977e679ff0a`
-- Reviewed closure root: `sha256:b2d666ac5e74183600e49f6d756468dd9cb971a2b260bad37443f316b5841aac`
-- Canonical local execution root: `sha256:c70f213e5b752a10b9ee5b2ae7940029ae9e950a6733108dad799b368a03b261`
-- Recursive dependency root/count: `sha256:4fce5b20cc42657551c40295cf14086d47008137ea2b6d57f886b48f9f97ae7b` / `136`
-- Prospective zero-finding payload root: `sha256:0ed9a255c155ed62934d953f216f1d284318a42a1155f524e28d8bd95ae4cc0e` (placeholder publication commit only; Plan 118 must independently render canonical evidence)
+- Subject commit: `41c716c55cec09a35180cd5229cf2f7545c504d4`
+- Tree / parent: `1f05d2f89a6fa2658f7eb8364e805488fc27205a` / `16a77e824062bd859c3fb1acff767d8b27165dd4`
+- Source mode / blob: `100644` / `4cb2041a1305db808fe7459a64f331558e5f981c`
+- Test mode / blob: `100644` / `e5b32103b0355b4abeecfc6f85cf05a92ad787b8`
+- Reviewed closure root: `sha256:6409cf5b7c8a3cbf8cec2f317b04a74b59897a0f4c5c4194cebac716d4a7fa98`
+- Canonical local execution root: `sha256:8f1d1049606871e7b160501a141b76e34530485717b0f956e804bcc78ec7f1a4`
+- Recursive dependency root/count: `sha256:2d97789c35428207d61698466efe2736d77150b11c726639a256ac75bfc19924` / `136`
+- Prospective payload/review/carrier roots: `sha256:6a262e4b8e267a6be8858c1247a49ceab3c0dbb23b9ebfea9f675a6e02f527e8` / `sha256:be5bea259659c0b8878a09ff7ca7df991fda9b6702c8bc3b90f38922068d8f16` / `sha256:ae957db112a31b563ae5357104351c0c8da90b1de7563d6ab86cfd2223286bcb`
 
 ## Producer-Incapable Evidence
 
 - Source-only authenticated Plan-114 v2 payload root `sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac`.
 - Source-only authenticated Plan-116 v4 payload root `sha256:251b01b973f1abde239089e6e49dc6c38c74803a273fa6f104a6cdda156de1d7`.
 - Source-only authenticated supplement root `sha256:3a653c44db658a89250d4b90d9a3bb086c99ac3fc04ebf8c7107bc66fd4f8e4b`.
-- Disposable prospective and post-run no-effect modes passed against an exact three-add candidate Plan-118 contract.
-- Static inspection found exactly one producer call site, no injected producer/readiness/renderer, and zero producer calls, readiness invocations, live invocations, fresh charged, or fresh accepted.
+- Disposable prospective and post-run no-effect modes passed against an exact three-add candidate Plan-118 contract; review fixtures also accepted valid bounded-terminal and bounded-success post-effect shapes while denying downstream outputs.
+- Static AST inspection found exactly one directly awaited producer call, rejected alias and indirect-call variants, found no injected producer/readiness/renderer, and preserved zero producer calls, readiness invocations, live invocations, fresh charged, or fresh accepted.
 - Supplement-v1/v2, canonical Plan-118 evidence, journal/lock/private/terminal/reproduction, Plan-94 disposition/Route-11, readiness, and lifecycle outputs remain absent.
 
 ## Files Created/Modified
@@ -165,6 +168,13 @@ Each TDD gate was committed atomically:
 
 - Full disposable closure replay takes approximately 86 seconds because source, prospective, and post-no-effect modes each reauthenticate raw Git and installed/toolchain custody. The completed run passed; no timeout or reduced check was accepted.
 
+## Code Review Remediation
+
+- BL-01 fixed by separating immutable invariant custody from pre/post effect absence and retaining exact inherited post-run validation.
+- BL-02 fixed by making canonical prospective mode derive, self-check, and expose the future payload/review/carrier roots.
+- WR-01 fixed with post-effect, selector, review/carrier, installed-closure, publication mode/no-rewrite, and producer alias/indirect-call adversarial cases.
+- Full evidence: `262-117-REVIEW-FIX.md`.
+
 ## Known Stubs
 
 None.
@@ -175,7 +185,7 @@ No unplanned threat surface. The new future effect-capable wrapper is the exact 
 
 ## Verification
 
-- `pnpm exec vitest run scripts/run-v1-38-bounded-retry-envelope-v3-live-v11.test.ts` — 5/5 passed.
+- `pnpm exec vitest run scripts/run-v1-38-bounded-retry-envelope-v3-live-v11.test.ts --reporter=verbose` — 5/5 passed in 169.34 seconds after review fixes.
 - `pnpm exec tsx scripts/run-v1-38-bounded-retry-envelope-v3-live-v11.ts --check-source-only` — exact v2/v4/supplement/pair custody passed with zero calls/effects.
 - `pnpm exec tsx scripts/run-v1-38-bounded-retry-envelope-v3-live-v11.ts --check-prospective-custody` — in-memory future contract check passed with zero calls/effects.
 - `pnpm exec tsc --noEmit --pretty false` — passed.
@@ -188,12 +198,12 @@ None.
 
 ## Next Phase Readiness
 
-Plan 118 alone is eligible to independently review exact subject commit `0ffa3a8b2584245bb8ca91932e02b7679d960716` through six producer-incapable modes. Plan 110 remains denied until literal-zero committed Plan-118 evidence exists. ADMIT-03 remains blocked at fresh `0/540`; no capacity, counter reset, authorization literal, execution authority, Route-11, or downstream authority was created.
+Plan 118 alone is eligible to independently review exact subject commit `41c716c55cec09a35180cd5229cf2f7545c504d4` through six producer-incapable modes. Plan 110 remains denied until literal-zero committed Plan-118 evidence exists. ADMIT-03 remains blocked at fresh `0/540`; no capacity, counter reset, authorization literal, execution authority, Route-11, or downstream authority was created.
 
 ## Self-Check: PASSED
 
 - Both plan-owned source/test files and this summary exist.
-- All five TDD/task commits exist in Git history.
+- All original and review-fix TDD/task commits exist in Git history.
 - Exact subject tree, blobs, closure roots, zero-call evidence, and forbidden-output absence were rechecked from current HEAD.
 
 ---
