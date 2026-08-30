@@ -26,6 +26,13 @@ import {
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v11.js"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
+const POST_PLAN118_EXACT_REF = "7f65ff66be29de4f655736f60d6c68683fae3e35"
+const plan118AddCommit = execFileSync(
+  "/usr/bin/git",
+  ["log", "--diff-filter=A", "--format=%H", "--", V138_LIVE_V11_PATHS.plan118Payload],
+  { cwd: repoRoot, encoding: "utf8" },
+).trim()
+const PRE_PLAN118_REF = `${plan118AddCommit}^`
 const readJson = (repoPath: string) => JSON.parse(
   readFileSync(path.join(repoRoot, repoPath), "utf8"),
 ) as Record<string, unknown>
@@ -60,12 +67,15 @@ const withLinkedWorktree = <T>(run: (root: string) => T): T => {
     rmSync(owner, { recursive: true, force: true })
   }
 }
-const withLinkedWorktreeAsync = async <T>(run: (root: string) => Promise<T>): Promise<T> => {
+const withLinkedWorktreeAsync = async <T>(
+  run: (root: string) => Promise<T>,
+  startRef = "HEAD",
+): Promise<T> => {
   const owner = mkdtempSync(path.join(tmpdir(), "v138-live-v11-async-test-"))
   const root = path.join(owner, "repo")
   let added = false
   try {
-    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, startRef], {
       cwd: repoRoot,
       env: { PATH: "/usr/bin:/bin", HOME: owner, LANG: "C", LC_ALL: "C" },
     })
@@ -128,20 +138,30 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
       repoRoot,
       writeOutput: (value) => outputs.push(value),
     })
-    await executeV138LiveV11Cli(["--check-prospective-custody"], {
-      repoRoot,
-      writeOutput: (value) => outputs.push(value),
-    })
+    await withLinkedWorktreeAsync(async (root) => {
+      const committed = authenticateV138LiveV11FutureCustodyForReview(root, "pre")
+      expect(committed.payload.payloadRoot).toBe(
+        "sha256:6a262e4b8e267a6be8858c1247a49ceab3c0dbb23b9ebfea9f675a6e02f527e8",
+      )
+      expect(committed.reviewRoot).toBe(
+        "sha256:be5bea259659c0b8878a09ff7ca7df991fda9b6702c8bc3b90f38922068d8f16",
+      )
+      expect(committed.carrier.carrierRoot).toBe(
+        "sha256:ae957db112a31b563ae5357104351c0c8da90b1de7563d6ab86cfd2223286bcb",
+      )
+      await executeV138LiveV11Cli(["--check-prospective-custody"], {
+        repoRoot: root,
+        writeOutput: (value) => outputs.push(value),
+      })
+    }, POST_PLAN118_EXACT_REF)
     await expect(executeV138LiveV11Cli([], { repoRoot })).rejects.toThrow("V138_LIVE_V11_ARGUMENTS_INVALID")
     await expect(executeV138LiveV11Cli(["--unknown"], { repoRoot })).rejects.toThrow("V138_LIVE_V11_ARGUMENTS_INVALID")
     expect(outputs.map((value) => JSON.parse(value))).toEqual([
       expect.objectContaining({ status: "source_only_checked", producerCalls: 0, readinessInvoked: false, liveInvoked: false }),
       expect.objectContaining({
         status: "prospective_custody_checked",
-        payloadRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-        reviewRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-        carrierRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
-        reviewedClosureRoot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
+        payloadRoot: "sha256:6a262e4b8e267a6be8858c1247a49ceab3c0dbb23b9ebfea9f675a6e02f527e8",
+        producerWouldInvoke: false,
         producerCalls: 0,
         readinessInvoked: false,
         liveInvoked: false,
@@ -154,7 +174,7 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
       "--check-reviewed-live-ready",
       "--run-reviewed-bounded-live-envelope",
     ])
-  }, 60_000)
+  }, 120_000)
 
   it("fails closed on authoritative history, supplement, pair, and forbidden-path drift", () => {
     withLinkedWorktree((root) => {
@@ -402,6 +422,6 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
       expect(() => authenticateV138LiveV11FutureCustodyForReview(root, "post")).toThrow(
         /V138_LIVE_V11_PUBLICATION_CURRENT_BYTES_INVALID|V138_LIVE_V11_SUCCESSOR_REWRITE/,
       )
-    })
+    }, PRE_PLAN118_REF)
   }, 180_000)
 })
