@@ -28,7 +28,7 @@ key-decisions:
 patterns-established:
   - "Independent effect-owner review runs source, prospective, post-no-effect, non-pass, success, and exact reproduction modes only inside disposable detached worktrees."
   - "Exact-three-add review custody remains ordinary 100644 Git evidence while the sealed pair retains owner-private 0600 working modes."
-requirements-completed: [ADMIT-03, ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10, SEAL-01]
+requirements-completed: [ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10, SEAL-01]
 coverage:
   - id: D1
     description: "Independent raw-Git and no-follow custody authenticates exact Plan-117 source, recursive closure, v2/v4 history, supplement-v3, and the unchanged sealed pair."
