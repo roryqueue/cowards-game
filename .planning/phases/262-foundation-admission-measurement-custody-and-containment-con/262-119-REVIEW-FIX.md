@@ -2,7 +2,7 @@
 phase: 262-foundation-admission-measurement-custody-and-containment-con
 plan: "119"
 fixed_at: 2026-08-30T19:05:00Z
-review_source: out-of-band Plan 119 code review at 88a5f247
+review_source: out-of-band Plan 119 code review at 88a5b24765c588797cc8e91628977669b85c8c3a
 iteration: 1
 findings_in_scope: 2
 fixed: 2
