@@ -5,19 +5,21 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan-114 final semantic blocker fixed without republishing; immutable v2 at 34bc94ec remains authoritative and revised Plan 262-109 only is next
-last_updated: "2026-08-30T01:59:59Z"
+stopped_at: Plan 262-115 is sole next action; Plan 110 remains denied after 109 pending a separate reviewed authoritative-v2 readiness-consumer correction
+last_updated: "2026-08-30T02:18:04Z"
 last_activity: 2026-08-29
-last_activity_desc: Plan-114 deterministic subject rejection now yields blocked evidence; process integrity remains no-publish and immutable v2 remains current
+last_activity_desc: Planned source-only supplement-v3 adapter, independent review, inert Plan-109 publication, and explicit downstream readiness denial
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 95
+  total_plans: 97
   completed_plans: 89
   percent: 0
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-supplement-v3-adapter-recovery-topology-v4: {"schema_version":"v1.38-plan-262-supplement-v3-adapter-recovery-topology-v4","active_plans":97,"trustworthy_summaries":89,"immutable_history":["262-113-live-v10","262-114-v1-superseded","262-114-v2-authoritative","262-114-final-clean-review"],"active_chain":["262-115","262-116","262-109"],"dependency_denied":["262-110","262-94","262-95","262-106"],"waves":{"262-115":99,"262-116":100,"262-109":101,"262-110":102,"262-94":103,"262-95":104,"262-106":105},"supplement_version":"v3","next_action":"dispatch-262-115-only","plan_262_110_authorized_after_109":false,"readiness_consumer_correction_required":true,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"admit_03":"blocked","downstream_authority_denied":true} -->
 
 <!-- phase-262-plan-114-closeout-status: {"schema_version":"v1.38-plan-262-114-closeout-v1","proof_status":"independent_live_v10_review_zero_findings","reviewed_source_commit":"ba1f8ddb4d701762d5d443f41edcbb691bb0eda5","evidence_commit":"675effe681fb1ba4d16ba399104c45df98230d12","final_clean_review_commit":"28488fd43585f9f6fbfcd80dff2a388e4f754817","publication_commit":"ab539ab2b3706981aaeb053b3fafce6b46532b40","finding_count":0,"actual_modes_passed":6,"payload_root":"sha256:7a414ac6d41af084e785e9eaed4fc28835806bf1aa339be571befab114e9d857","review_root":"sha256:ab85273e90e40749324b270db1bfc5275b29fbb20b7eebcf9d6d776fe7a0cdec","carrier_root":"sha256:4fba941b15a1435d37d99a1847e44f8bdbb8d5ecafa7a1d8c3b9b60b81dc38fc","plan_262_109_eligible":true,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-109-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
 <!-- phase-262-plan-114-corrected-closeout-status: {"schema_version":"v1.38-plan-262-114-closeout-v2","proof_status":"source_separated_live_v10_review_zero_findings","supersedes_publication_commit":"ab539ab2b3706981aaeb053b3fafce6b46532b40","publication_commit":"34bc94ec4e348f71e6055a091d60a505cffc0d79","finding_count":0,"actual_modes_passed":6,"payload_root":"sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac","review_root":"sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee","carrier_root":"sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26","plan_262_109_eligible":true,"live_invoked":false,"readiness_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-109-only","admit_03":"blocked","phase_262":"incomplete","phases_263_270_authorized":false,"downstream_authority_denied":true} -->
@@ -92,11 +94,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 88 summaries across 95 active plans — Plan 262-114 is the sole eligible next action
-Status: Phase 262 remains in progress; Plan-113 source is complete without effects and every successor after Plan 114 is dependency-denied
-Last activity: 2026-08-29 — completed path-stable live-v10 source; independent Plan-114 review is next
+Plan: 89 summaries across 97 active plans — Plan 262-115 is the sole eligible next action
+Status: Phase 262 remains in progress; Plan-114 v2/final clean closure is immutable, Plans 115 -> 116 -> 109 are the only active chain, and Plan 110/later remain dependency-denied pending a separate readiness-consumer correction
+Last activity: 2026-08-29 — planned the source-only supplement-v3 adapter, independent review, and inert publication route
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -120,7 +122,7 @@ Progress: [█████████░] 93%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 95 plans/87 summaries. Plan-112 v1 and truthful blocked v2, live-v9, and every earlier branch are immutable history. The active chain is 113 -> 114 -> 109 -> 110 -> 94 -> 95 -> 106 at Waves 97-103; Plan 113 alone is eligible. Supplement-v1/v2 remain absent; supplement-v3 and live-v10 are future only. The pair is sealed inactive at zero and no capacity, reset, literal, live evidence, or downstream authority exists.
+**Current topology:** Active discovery is 97 plans/89 summaries. Plan-113 live-v10, authoritative Plan-114 v2 at `34bc94ec`, the superseded v1 trio, the final clean Plan-114 closure, and every earlier branch remain immutable. The sole active chain is 115 -> 116 -> 109 at Waves 99-101: add the source-only supplement-v3 adapter, independently review its exact committed closure, then publish one inert supplement through that reviewed adapter. Plans 110 -> 94 -> 95 -> 106 are assigned Waves 102-105 but remain dependency-denied because live-v10 future custody still resolves Plan-114 v1; a separate reviewed authoritative-v2 readiness-consumer correction is required after Plan 109. Supplement-v1/v2/v3 remain absent, the pair is sealed inactive at zero, and no capacity, reset, literal, readiness, live evidence, or downstream authority exists.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -405,7 +407,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 
 ### Pending Todos
 
-- Do not retry Plan 262-93 or dispatch Plans 110/94/95/106 out of order. Dispatch only revised Plan 262-109; it may publish exactly supplement-v3 and creates no envelope, capacity, counter reset, authorization literal, or live effect.
+- Do not retry Plan 262-93 or dispatch Plans 109/110/94/95/106 out of order. Dispatch only Plan 262-115, then literal-zero Plan 116, then revised Plan 109. Plan 109 may publish exactly one inert supplement-v3; Plan 110 remains denied afterward until a separate reviewed authoritative-v2 readiness-consumer correction is planned and completed.
 
 ### Current Blocker/Concerns
 
@@ -466,7 +468,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-08-30T00:47:31.514Z
-Stopped at: Corrected Plan-114 review v2 published and authenticated at 34bc94ec; revised Plan 262-109 only is next
+Stopped at: Plan 262-115 source-only supplement-v3 adapter is the sole next action; Plan 110 remains denied after Plan 109 pending separate readiness-consumer correction
 Resume file: None
 
 ### Blockers
