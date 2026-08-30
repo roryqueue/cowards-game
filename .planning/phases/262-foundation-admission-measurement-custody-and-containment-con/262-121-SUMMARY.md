@@ -54,7 +54,7 @@ coverage:
         ref: "scripts/run-v1-38-bounded-retry-envelope-v3-live-v13.test.ts#keeps the file-backed producer tripwire untouched"
         status: pass
     human_judgment: false
-duration: 19min
+duration: 85min
 completed: 2026-08-30
 status: complete
 ---
@@ -65,9 +65,9 @@ status: complete
 
 ## Performance
 
-- **Duration:** 19 min
+- **Duration:** 85 min
 - **Started:** 2026-08-30T20:16:00Z
-- **Completed:** 2026-08-30T20:35:00Z
+- **Completed:** 2026-08-30T21:41:00Z
 - **Tasks:** 2
 - **Files modified:** 2
 
@@ -77,6 +77,7 @@ status: complete
 - Recomputed Plan120's local root from its published components, proved the recorded disposable root mismatch, and fixed current eligibility to false without rewriting historical bytes.
 - Defined Plan122-only v3 paths and root domains with `canonicalLocalExecutionClosureRoot`, six complete observation records, and no ambiguous v2 field.
 - Preserved exactly one static direct `runV138V3ProductionLive` call under the live selector; source, prospective, and post-no-effect selectors recorded zero calls/effects.
+- Closed runtime construction bypasses by rejecting direct and indirect `eval`, function constructors and aliases, assembled executable names, constructor-chain code generation, and alternate module loaders.
 - File-backed disposable-worktree instrumentation proved the historical producer remained unreachable from all three actual Plan121 CLIs.
 
 ## Task Commits
@@ -90,20 +91,22 @@ status: complete
 7. **Hostile matrix: observation, payload, history, and output mutations** — `acdfdf19`
 8. **Bounded validator fix** — `764cad49`
 9. **Mode and destination harness corrections** — `e9845169`, `933fb96d`, `22aff02a`
+10. **Runtime construction RED mutations** — `feff354a`
+11. **Runtime construction fail-closed AST guard** — `3882cd5d`
 
 ## Exact Source Custody
 
-- Subject commit: `22aff02a87960c6a418238c76b0b089784bfacc5`
-- Tree / parent: `d05faf1011e98c17eb6af31ea7127972dcc3eddb` / `933fb96deaf7bb35bf834b25e2baaafac616407a`
-- Source mode / blob: `100644` / `eb059d5bb9a0c9396ed27f757afa5f2ebbfabc5d`
-- Test mode / blob: `100644` / `5adcc1b9893c00265ca4240a174fd482e8e6eb64`
-- Reviewed closure root: `sha256:fbf9a32a8ce4611091da77e1290cead36ac8aa2e870a36f58695e7cedb57ae87`
-- Canonical-main local execution root: `sha256:c555462af22d8b23250440886e877939fa15ab73802ff6550f8164c03ebeac7f`
-- Recursive dependency root/count: `sha256:10c59ada76d264f2afdde7546b175c2a55e75254537788242b96593d57b915f8` / `136`
-- Checkout manifest root: `sha256:2577f53f864852e572894ad37ed18401a64c073e3c67c99fdfeec230e778f638`
+- Subject commit: `3882cd5d3ec7a834e1de88254dd0daf955da12aa`
+- Tree / parent: `79cf4be43901dd5c9d698cc31a43b20d65e3d3be` / `feff354a78020287e5ec95d52abe876b3a223028`
+- Source mode / blob: `100644` / `0d299dc98c3af22d6a2312a7bdc6062538bc1cd9`
+- Test mode / blob: `100644` / `3e32de9f2e9e57bac98fb789bf1dd1941e2bdef1`
+- Reviewed closure root: `sha256:9b803ab8f108923e1160d308ac91a1e4fabdafea28a0115e290f38cf1fd94952`
+- Canonical-main local execution root: `sha256:58617465d61e1c7bc5f7b90cfeafe2529959051144a55defda56613a7c8e3102`
+- Recursive dependency root/count: `sha256:9c9063dd49b637ff907500180d5f3f2bdce1203a72fe5aad67f5a6ba81d3c9df` / `136`
+- Checkout manifest root: `sha256:a2b250113e49e8dd1b259650b2685b34e22d7d000e965d70b72a35bac0b6b0e4`
 - Installed / native roots: `sha256:abdd64bbfda135e994b862c61a477192e150e4de330f4dda67681fd6ab4594cc` / `sha256:81ebeff482f71cf09cb09ff02ec57296a565167e7ade893a791c02cdd143209e`
-- Prospective observation aggregate root: `sha256:031f6727e89cadab0ecbf03ef04b458ff1aa07aee8f19311ee0f84925f606214`
-- Prospective payload/review/carrier roots: `sha256:bb6fc10c4608617ffe5475c821a0e1711eaa07a2c4f1cc788e632fed02c70128` / `sha256:2c4a1c9774b059d5b6be3b9fda664931b95d5c60a55cbd1dd860a731c98790b5` / `sha256:082c68c167a614abd94f602b026dba85dc33e52fb551e573e87f76084c3ab7ef`
+- Prospective observation aggregate root: `sha256:764c86d7cd5681870304326293f5e8846da857d95848a7997a4473a7695a724a`
+- Prospective payload/review/carrier roots: `sha256:778a5062c2edba6d3fadd4b3c55563f0f9ea0f5276cac12e8cb2383ee7f80952` / `sha256:ec0d79232f480f6216cc55cec0cec4d7a5f3cd533d50bbe37393c35decb283df` / `sha256:5c9299f6b16d512c17a839b12e43bfddb36fefcb758ddb095e7870ad48568522`
 - Prospective disposition: `prospective_only`, `actualModesPassed: 0`, `plan110Eligible: false`.
 
 ## Immutable Plan120 v2 Disposition
@@ -123,7 +126,7 @@ status: complete
 ## Code Review Remediation
 
 - **BL-01 resolved:** prospective observations are explicitly ineligible; only exact six-mode successful schemas plus literal-zero authority/counters can satisfy the future publication checker.
-- **BL-02 resolved:** AST custody rejects dynamic import, `require`, computed/property module access, aliases, extra callable references, moved producer calls, and second live dispatch.
+- **BL-02 resolved:** AST custody rejects dynamic import, `require`, computed/property module access, direct and indirect `eval`, function constructors and aliases, assembled executable access, constructor chains, alternate loaders, extra callable references, moved producer calls, and second live dispatch.
 - **BL-03 resolved:** exact `b331baad` ancestry/scope and all three amended/added closeout documents are blob-, mode-, current-byte-, and no-rewrite-pinned.
 - Canonical remediation record: `262-121-REVIEW-FIX.md`.
 
@@ -165,9 +168,9 @@ No unplanned threat surface. Git/filesystem custody and the future closed produc
 
 ## Verification
 
-- Focused Vitest: 10/10 passed in 361.45 seconds after review remediation.
+- Focused Vitest: 10/10 passed in 357.61 seconds after final review remediation.
 - TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
-- All three producer-incapable CLIs passed from committed subject `22aff02a`.
+- All three producer-incapable CLIs passed from committed subject `3882cd5d`.
 - `git diff --check` passed; no Plan122 review artifact or effect destination exists.
 
 ## User Setup Required
@@ -176,12 +179,12 @@ None.
 
 ## Next Phase Readiness
 
-Plan122 alone is next. It may independently rederive exact subject `22aff02a87960c6a418238c76b0b089784bfacc5`, run six fresh disposable producer-incapable observations, and publish at most one v3 literal-zero-or-blocked trio. Plan110 and every candidate, formation, holdout, public, product, production, counted-play, archive, tag, Route-11, and downstream authority remain denied.
+Plan122 alone is next. It may independently rederive exact subject `3882cd5d3ec7a834e1de88254dd0daf955da12aa`, run six fresh disposable producer-incapable observations, and publish at most one v3 literal-zero-or-blocked trio. Plan110 and every candidate, formation, holdout, public, product, production, counted-play, archive, tag, Route-11, and downstream authority remain denied.
 
 ## Self-Check: PASSED
 
 - Both plan-owned source/test files and this summary exist.
-- RED, GREEN, boundary-test, harness-fix, review-RED, review-GREEN, hostile-matrix, and bounded-check commits exist in Git history.
+- RED, GREEN, boundary-test, harness-fix, review-RED, review-GREEN, hostile-matrix, bounded-check, runtime-construction RED, and runtime-construction GREEN commits exist in Git history.
 - Subject tree, blobs, portable/local/dependency roots, Plan120 v2 disposition, one-call AST boundary, and zero-effect evidence were rechecked from committed HEAD.
 
 ---
