@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import {
   authenticateV138Plan116PublishedReview,
   captureV138Plan116FoundationForReview,
+  classifyV138Plan116ModeFailureForReview,
   executeV138Plan116DisposableModes,
   observeV138Plan116FoundationForReview,
   renderV138Plan116EvidenceForReview,
@@ -175,6 +176,17 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
     expect(() => renderV138Plan116EvidenceForReview(repoRoot, [], duplicate))
       .toThrow(/MODE_EVIDENCE_INVALID/)
   }, 300_000)
+
+  it("publishes only enumerated subject rejection and propagates process-integrity failure", () => {
+    expect(classifyV138Plan116ModeFailureForReview(new TypeError("MODE_COMMITTED_CHECK_FAILED")))
+      .toMatchObject({ code: "ACTUAL_MODE_SUBJECT_REJECTED", detail: "MODE_COMMITTED_CHECK_FAILED" })
+    expect(() => classifyV138Plan116ModeFailureForReview(
+      new TypeError("V138_PLAN116_COMMAND_FAILED:/usr/bin/clang"),
+    )).toThrow(/COMMAND_FAILED/)
+    expect(() => classifyV138Plan116ModeFailureForReview(
+      new Error("V138_PLAN116_PROCESS_INTEGRITY:timeout"),
+    )).toThrow(/PROCESS_INTEGRITY/)
+  })
 
   it("authenticates only an exact committed trio and every no-effect sentinel", () => {
     if (!reviewPaths.every((repoPath) => existsSync(path.join(repoRoot, repoPath)))) return

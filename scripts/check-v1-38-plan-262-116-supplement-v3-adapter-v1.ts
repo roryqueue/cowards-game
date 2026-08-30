@@ -121,6 +121,7 @@ const SOURCE_SELECTOR = ["--check", "source-only"].join("-")
 const WRITE_SELECTOR = ["--write", "supplement-v3"].join("-")
 const COMMITTED_SELECTOR = ["--check", "supplement-v3"].join("-")
 
+class V138Plan116ProcessIntegrityError extends Error {}
 const fail = (code: string): never => { throw new TypeError(code) }
 const canonical = (value: unknown): string => {
   const normalize = (item: unknown): unknown => Array.isArray(item)
@@ -216,8 +217,9 @@ const command = (program: string, args: readonly string[], cwd: string, env?: No
     cwd, env: env ?? process.env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
   })
   if (result.error !== undefined || result.status === null)
-    throw new Error(`V138_PLAN116_PROCESS_INTEGRITY:${program}`)
-  if (result.status !== 0) fail(result.stderr.trim() || `V138_PLAN116_COMMAND_FAILED:${program}`)
+    throw new V138Plan116ProcessIntegrityError(`V138_PLAN116_PROCESS_INTEGRITY:${program}`)
+  if (result.status !== 0) throw new V138Plan116ProcessIntegrityError(
+    result.stderr.trim() || `V138_PLAN116_COMMAND_FAILED:${program}`)
   return result.stdout.trim()
 }
 const commandRejected = (program: string, args: readonly string[], cwd: string,
@@ -226,7 +228,7 @@ const commandRejected = (program: string, args: readonly string[], cwd: string,
     cwd, env: env ?? process.env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
   })
   if (result.error !== undefined || result.status === null)
-    throw new Error(`V138_PLAN116_PROCESS_INTEGRITY:${program}`)
+    throw new V138Plan116ProcessIntegrityError(`V138_PLAN116_PROCESS_INTEGRITY:${program}`)
   if (result.status === 0 || !expected.test(result.stderr))
     fail(`V138_PLAN116_EXPECTED_REJECTION_MISSING:${result.stderr.trim()}`)
 }
@@ -695,6 +697,15 @@ const validateModeEvidence = (modes: {
 }
 const sortedFindings = (findings: readonly V138Plan116Finding[]) =>
   [...findings].sort((a, b) => `${a.code}\0${a.detail}`.localeCompare(`${b.code}\0${b.detail}`))
+export const classifyV138Plan116ModeFailureForReview = (error: unknown): V138Plan116Finding => {
+  if (error instanceof TypeError && /^(?:MODE_[A-Z0-9_]+_FAILED|V138_SUPPLEMENT_ADAPTER_(?:FILE_UNSAFE|CURRENT_BYTES_INVALID|SUPPLEMENT_INVALID))(?::|$)/u.test(error.message))
+    return Object.freeze({
+      code: "ACTUAL_MODE_SUBJECT_REJECTED",
+      severity: "critical" as const,
+      detail: error.message,
+    })
+  throw error
+}
 const renderContracts = (input: {
   closure?: ReturnType<typeof captureSubjectClosure>
   authentication: Readonly<{
@@ -914,10 +925,9 @@ export const writeV138Plan116ReviewForReview = (repoRootInput: string): void => 
       const modes = executeV138Plan116DisposableModes(root)
       evidence = renderV138Plan116EvidenceForReview(root, modes.findings, modes)
     } catch (error) {
-      if (!(error instanceof TypeError)) throw error
-      evidence = renderV138Plan116EvidenceForReview(root, [{
-        code: "ACTUAL_MODE_SUBJECT_REJECTED", severity: "critical", detail: error.message,
-      }])
+      evidence = renderV138Plan116EvidenceForReview(root, [
+        classifyV138Plan116ModeFailureForReview(error),
+      ])
     }
   }
   const written: string[] = []
