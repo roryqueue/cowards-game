@@ -63,7 +63,7 @@ status: complete
 
 # Phase 262 Plan 116: Independent Supplement-v3 Adapter Review Summary
 
-**Corrected Plan-115 adapter custody passed nine distinct authenticated real execution modes and now has an independently post-authenticated v2 review trio that alone authorizes revised Plan 109.**
+**Plan-115 adapter custody now has a reproducible, independently post-authenticated v3 review trio that alone authorizes revised Plan 109.**
 
 ## Performance
 
@@ -80,6 +80,10 @@ status: complete
 - Preserved the original v1 trio at `e1e75fc6ef177a8213d903f1ec365d86f37cf62a` byte-for-byte as ineligible history, fixed all nine adversarial review findings, and published the corrected three-add v2 trio at `2219a36b62b41b45626ed93f13f43edb36463e61`; supplement-v3, readiness, live, producer, and downstream destinations remain absent.
 
 ## Adversarial Review Correction
+
+- The fix re-review found two additional blockers. Commits `86e27461`, `af54d5f7`, `e14de858`, and `747fcaa9` add TDD coverage, stable Git-derived disposable identity, repaired-blocked authentication, persistent-drift failure, and final publication fixtures.
+- Additive v3 commit `1c0862e16ff4a32add4308e481df567b1212eb0c` introduced exactly three `100644` paths. Payload/review/carrier blobs are `c94022f5b68dd2b5a8d5d4886ea037c83d2643e8`, `38230b5c2fbb6e041dc62e0e3cc2612124f89a55`, and `89a8563736b3bd7da4445919bc8837613307c182`; roots are `sha256:a7028015d8d45381cab4a2be7232239b00830c3839dfdd4e790204e5e3bb64c6`, `sha256:12fae1e53ce2706d1e456e995b335c4e428046087ae510f8f6d24275ce3d6050`, and `sha256:1aba12b4ad9e75d42b58be0b606cb661fd04b3fa090588ddb30676949209e0c8`.
+- Fresh canonical authentication reproduced observation root `sha256:933f1b4607dabc6981c69eaa27c43f1b0f55718320b4c48766e3e20818c497eb` and stable disposable root `sha256:7aecafee53b893c23483102dd590099ce74f8f5b55050276dd0aac7a8e56ece0`. V1 and v2 remain immutable and ineligible; only v3 grants Plan-109 eligibility. No supplement, readiness, live, producer, or downstream effect exists.
 
 - Nine findings were fixed atomically: `4900708f`, `9a403fe5`, `f6194787`, `11483f96`, `50c6b84b`, `119ee781`, `c8461c0b`, `5af4188b`, and `72324c11`. Eligibility is derived only from the exact nine distinct authenticated observations and the bound disposable closure; blocked authentication flags are truthful, failed subject closure is rendered without recapture, and process-integrity failures remain no-publish.
 - Publication now binds current recursive dependencies and uses retained no-follow directory descriptors plus an authenticated transaction marker for contained crash recovery. The final reviewer closure is commit `72324c116f14afda5f64a0045a22152fb111905b`, tree `7438454a15780a295bcb701ea992d237679db558`, parent `2219a36b62b41b45626ed93f13f43edb36463e61`, with reviewer/test/native blobs `ee7b97e4df21e61cb6e13369bcc12baf3040ba9d`, `e748dd783b7b87da5c4e0371a37c866bfb837806`, and `1ac9dbf09cea169bf4b090fb34c4c2e4e9db65b7`.
