@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process"
 import {
   chmodSync,
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -15,6 +16,8 @@ import {
   V138_LIVE_V11_MODES,
   V138_LIVE_V11_PATHS,
   authenticateV138LiveV11SourceOnly,
+  checkV138LiveV11ProspectiveCustodyForReview,
+  deriveV138LiveV11ProspectiveContractsForReview,
   executeV138LiveV11Cli,
   inspectV138LiveV11ProductionBoundaryForReview,
 } from "./run-v1-38-bounded-retry-envelope-v3-live-v11.js"
@@ -23,6 +26,15 @@ const repoRoot = path.resolve(import.meta.dirname, "..")
 const readJson = (repoPath: string) => JSON.parse(
   readFileSync(path.join(repoRoot, repoPath), "utf8"),
 ) as Record<string, unknown>
+const canonical = (value: unknown): string => {
+  const normalize = (item: unknown): unknown => Array.isArray(item)
+    ? item.map(normalize)
+    : item !== null && typeof item === "object"
+      ? Object.fromEntries(Object.entries(item as Record<string, unknown>)
+          .sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, normalize(child)]))
+      : item
+  return `${JSON.stringify(normalize(value))}\n`
+}
 const withLinkedWorktree = <T>(run: (root: string) => T): T => {
   const owner = mkdtempSync(path.join(tmpdir(), "v138-live-v11-test-"))
   const root = path.join(owner, "repo")
@@ -37,6 +49,28 @@ const withLinkedWorktree = <T>(run: (root: string) => T): T => {
     for (const repoPath of [V138_LIVE_V11_PATHS.seal, V138_LIVE_V11_PATHS.envelope])
       chmodSync(path.join(root, repoPath), 0o600)
     return run(root)
+  } finally {
+    if (added) {
+      try { execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot }) }
+      catch { /* preserve the primary assertion */ }
+    }
+    rmSync(owner, { recursive: true, force: true })
+  }
+}
+const withLinkedWorktreeAsync = async <T>(run: (root: string) => Promise<T>): Promise<T> => {
+  const owner = mkdtempSync(path.join(tmpdir(), "v138-live-v11-async-test-"))
+  const root = path.join(owner, "repo")
+  let added = false
+  try {
+    execFileSync("/usr/bin/git", ["worktree", "add", "--quiet", "--detach", root, "HEAD"], {
+      cwd: repoRoot,
+      env: { PATH: "/usr/bin:/bin", HOME: owner, LANG: "C", LC_ALL: "C" },
+    })
+    added = true
+    symlinkSync(path.join(repoRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    for (const repoPath of [V138_LIVE_V11_PATHS.seal, V138_LIVE_V11_PATHS.envelope])
+      chmodSync(path.join(root, repoPath), 0o600)
+    return await run(root)
   } finally {
     if (added) {
       try { execFileSync("/usr/bin/git", ["worktree", "remove", "--force", root], { cwd: repoRoot }) }
@@ -137,7 +171,8 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
   it("keeps a closed static single-call future live boundary", () => {
     const source = readFileSync(path.join(repoRoot, V138_LIVE_V11_PATHS.source), "utf8")
     expect(source.match(/await runV138V3ProductionLive\(/gu)).toHaveLength(1)
-    expect(source).not.toMatch(/injectedProducer|producerCallback|injectedReadiness|callerRenderer/u)
+    expect(source).not.toMatch(/runV138ReviewedBoundedLiveEnvelopeV11\s*=\s*async\s*\([^)]*,/u)
+    expect(source).not.toMatch(/Partial<\{[^}]*?(?:producer|readiness|renderer)/su)
     expect(source).toContain("settleV138LiveV9ProducerOutcomeForReview(producerError, postCustodyError)")
     expect(source).toContain("assertV138LiveV10PostRunForReview(repoRoot)")
 
@@ -154,4 +189,96 @@ describe("Plan 262-117 authoritative readiness consumer", () => {
       downstreamAuthority: "denied",
     })
   })
+
+  it("derives and checks a disposable Plan-118 contract through post-no-effect custody", async () => {
+    await withLinkedWorktreeAsync(async (root) => {
+      for (const repoPath of [V138_LIVE_V11_PATHS.source, V138_LIVE_V11_PATHS.tests])
+        copyFileSync(path.join(repoRoot, repoPath), path.join(root, repoPath))
+      execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V11_PATHS.source, V138_LIVE_V11_PATHS.tests], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "--quiet", "-m", "fixture live-v11 subject"], { cwd: root })
+      const subjectCommit = execFileSync("/usr/bin/git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim()
+      const preview = deriveV138LiveV11ProspectiveContractsForReview({
+        repoRoot: root,
+        reviewedSourceCommit: subjectCommit,
+        plan118PublicationCommit: "0".repeat(40),
+      })
+      expect(preview.payload).toEqual(expect.objectContaining({
+        schemaVersion: "v1.38-plan-262-118-live-v11-custody-review-payload-v1",
+        subjectCommit,
+        findingCount: 0,
+        actualModesPassed: 6,
+        plan110Eligible: true,
+        producerCalls: 0,
+        readinessInvoked: false,
+        liveInvoked: false,
+        authorizesExecution: false,
+        downstreamAuthority: "denied",
+      }))
+      const checked = checkV138LiveV11ProspectiveCustodyForReview({
+        source: preview.source,
+        reviewedClosure: preview.reviewedClosure,
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+        plan118PublicationCommit: "0".repeat(40),
+        plan118: {
+          payload: preview.payload,
+          reviewBytes: preview.reviewBytes,
+          carrier: preview.carrier,
+          reviewRoot: preview.reviewRoot,
+        },
+      })
+      expect(checked).toEqual(expect.objectContaining({
+        producerCalls: 0,
+        readinessInvoked: false,
+        liveInvoked: false,
+        freshCharged: 0,
+        freshAccepted: 0,
+        downstreamAuthority: "denied",
+      }))
+      for (const mutation of [
+        { ...preview.payload, plan114V2PayloadRoot: `sha256:${"1".repeat(64)}` },
+        { ...preview.payload, plan116V4PayloadRoot: `sha256:${"2".repeat(64)}` },
+        { ...preview.payload, supplementRoot: `sha256:${"3".repeat(64)}` },
+        { ...preview.payload, counters: { ...preview.payload.counters, routeStartsConsumed: 1 } },
+        { ...preview.payload, authorizesExecution: true },
+      ]) expect(() => checkV138LiveV11ProspectiveCustodyForReview({
+        source: preview.source,
+        reviewedClosure: preview.reviewedClosure,
+        reviewedLocalExecutionClosureRoot: preview.reviewedClosure.localExecutionClosureRoot,
+        plan118PublicationCommit: "0".repeat(40),
+        plan118: {
+          payload: mutation,
+          reviewBytes: preview.reviewBytes,
+          carrier: preview.carrier,
+          reviewRoot: preview.reviewRoot,
+        },
+      })).toThrow("V138_LIVE_V11_PLAN118_CUSTODY_INVALID")
+
+      for (const [repoPath, bytes] of [
+        [V138_LIVE_V11_PATHS.plan118Payload, Buffer.from(canonical(preview.payload))],
+        [V138_LIVE_V11_PATHS.plan118Review, preview.reviewBytes],
+        [V138_LIVE_V11_PATHS.plan118Carrier, Buffer.from(canonical(preview.carrier))],
+      ] as const) {
+        mkdirSync(path.dirname(path.join(root, repoPath)), { recursive: true })
+        writeFileSync(path.join(root, repoPath), bytes, { mode: 0o644 })
+      }
+      execFileSync("/usr/bin/git", ["add", "--", V138_LIVE_V11_PATHS.plan118Payload,
+        V138_LIVE_V11_PATHS.plan118Review, V138_LIVE_V11_PATHS.plan118Carrier], { cwd: root })
+      execFileSync("/usr/bin/git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+        "commit", "--quiet", "-m", "fixture Plan118 review"], { cwd: root })
+      const outputs: string[] = []
+      await executeV138LiveV11Cli(["--check-prospective-custody"], {
+        repoRoot: root,
+        writeOutput: (value) => outputs.push(value),
+      })
+      await executeV138LiveV11Cli(["--check-post-run-custody"], {
+        repoRoot: root,
+        writeOutput: (value) => outputs.push(value),
+      })
+      expect(outputs.map((value) => JSON.parse(value))).toEqual([
+        expect.objectContaining({ status: "prospective_custody_checked", producerCalls: 0, liveInvoked: false }),
+        expect.objectContaining({ status: "post_run_custody_checked", producerCalls: 0, liveInvoked: false }),
+      ])
+    })
+  }, 180_000)
 })

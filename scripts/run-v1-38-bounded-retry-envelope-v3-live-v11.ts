@@ -545,6 +545,29 @@ export const computeV138LiveV11ReproductionV17ReceiptRoot =
 export const checkV138LiveV11ReproductionV17ForReview =
   checkV138LiveV10ReproductionV17ForReview
 
+export const inspectV138LiveV11ProductionBoundaryForReview = (rootInput: string) => {
+  const source = readRegularNoFollow(path.resolve(rootInput), V138_LIVE_V11_PATHS.source).toString("utf8")
+  const producerCallSites = source.match(/await runV138V3ProductionLive\(/gu)?.length ?? 0
+  if (producerCallSites !== 1 ||
+      !source.includes('"--check-reviewed-live-ready"') ||
+      !source.includes('"--run-reviewed-bounded-live-envelope"') ||
+      /runV138ReviewedBoundedLiveEnvelopeV11\s*=\s*async\s*\([^)]*,/u.test(source) ||
+      /Partial<\{[^}]*?(?:producer|readiness|renderer)/su.test(source))
+    fail("V138_LIVE_V11_PRODUCTION_BOUNDARY_INVALID")
+  return Object.freeze({
+    producerCallSites: 1 as const,
+    readinessSelectorPresent: true as const,
+    productionSelectorPresent: true as const,
+    injectedProducerPresent: false as const,
+    injectedReadinessPresent: false as const,
+    injectedRendererPresent: false as const,
+    producerCalls: 0 as const,
+    readinessInvoked: false as const,
+    liveInvoked: false as const,
+    downstreamAuthority: "denied" as const,
+  })
+}
+
 export const runV138ReviewedBoundedLiveEnvelopeV11 = async (repoRoot: string): Promise<void> => {
   const ready = authenticateFutureCustody(repoRoot, "pre")
   let producerError: unknown
