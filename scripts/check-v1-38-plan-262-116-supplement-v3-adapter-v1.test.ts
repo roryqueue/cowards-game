@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, lstatSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { afterEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
   authenticateV138Plan116PublishedReview,
   captureV138Plan116FoundationForReview,
@@ -27,14 +27,8 @@ const effectPaths = [
   ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
   ".planning/artifacts/v1.38-plan-262-route-11-activation-v1.json",
 ] as const
-
-afterEach(() => {
-  for (const repoPath of reviewPaths) {
-    const absolute = path.join(repoRoot, repoPath)
-    if (existsSync(absolute) && !readFileSync(absolute).includes(Buffer.from("v1.38-plan-262-116"))) continue
-    rmSync(absolute, { force: true })
-  }
-})
+let cachedModes: ReturnType<typeof executeV138Plan116DisposableModes> | undefined
+const actualModes = () => cachedModes ??= executeV138Plan116DisposableModes(repoRoot)
 
 describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   it("pins exact committed three-file Plan-115 custody and source-separated closure", () => {
@@ -64,7 +58,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   }, 180_000)
 
   it("executes every required real disposable selector, race, cache, and mutation mode", () => {
-    const modes = executeV138Plan116DisposableModes(repoRoot)
+    const modes = actualModes()
     expect(modes.modeNames).toEqual([
       "shared_source_only",
       "disposable_source_only",
@@ -114,7 +108,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   }, 180_000)
 
   it("grants revised Plan 109 eligibility only to literal zero after nine clean actual modes", () => {
-    const modes = executeV138Plan116DisposableModes(repoRoot)
+    const modes = actualModes()
     const zero = renderV138Plan116EvidenceForReview(repoRoot, [], modes)
     expect(zero.payload).toMatchObject({
       reviewStatus: "zero_findings",
@@ -167,7 +161,7 @@ describe("Plan 262-116 independent supplement-v3 adapter review", () => {
   })
 
   it("roots a semantic mutation without making the canonical trio or supplement", () => {
-    const modes = executeV138Plan116DisposableModes(repoRoot)
+    const modes = actualModes()
     const altered = renderV138Plan116EvidenceForReview(repoRoot, [{
       code: "SUPPLEMENT_SEMANTIC_DRIFT", severity: "critical", detail: "createsCapacity:true",
     }], modes)
