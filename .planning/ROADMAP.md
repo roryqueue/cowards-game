@@ -54,7 +54,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Current verdict:** PLAN-120 V2 REVIEW PROCESS-INVALID / PLAN-121 CLOSED LIVE-V13 SOURCE NEXT / PLAN-110 STILL DENIED / PAIR UNCHANGED / FRESH 0/540 / DOWNSTREAM DENIED — Plan120's exact-three-add commit `c7390cf5` is immutable but ineligible because its top-level local root came from a disposable worktree while its adjacent components came from canonical main. Plan121 must add a closed no-effect live-v13 source, then Plan122 must independently publish a context-typed v3 trio whose canonical-main root matches its components and whose six disposable roots remain observation-scoped. Only literal-zero committed Plan122 may make revised Plan110 eligible for exactly one live-v13 invocation through the unchanged historical producer. No new producer/effect destination, envelope, capacity, reset, route/attempt identity, authorization literal, supplement, readiness publication, live effect, or downstream authority exists.
 
-<!-- phase-262-live-v13-local-context-correction-topology-v2: {"schema_version":"v1.38-plan-262-live-v13-local-context-correction-topology-v2","active_plans":103,"trustworthy_summaries":97,"incomplete_plans":["262-121","262-122","262-110","262-94","262-95","262-106"],"immutable_history":["262-93-terminal-prestart-stop","262-114-v2-authoritative","262-116-v4-authoritative","262-109-supplement-v3","262-117-live-v11-source","262-118-v1-literal-zero-review","0f8258d8-allowed-test-correction","262-119-live-v12-source","262-120-v2-process-invalid","c7390cf5-exact-three-add"],"active_chain":["262-121","262-122","262-110","262-94","262-95","262-106"],"waves":{"262-121":106,"262-122":107,"262-110":108,"262-94":109,"262-95":110,"262-106":111},"live_owner":"live-v13","live_execution_plan":"262-110","live_invocation_count_planned":1,"live_v10_invocation_count_planned":0,"live_v11_invocation_count_planned":0,"live_v12_invocation_count_planned":0,"reproduction_owner":"existing-producer","route11_owner":"262-94","supplement_version":"v3","review_v3_trio_planned":true,"plan120_v2_eligible":false,"plan120_v2_disposition":"process_invalid_local_context_misbinding","canonical_main_root_components_bound":true,"disposable_roots_observation_scoped":true,"creates_effect_destination":false,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"next_action":"dispatch-262-121-only","admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"downstream_authority_denied":true} -->
+<!-- phase-262-live-v13-local-context-correction-topology-v2: {"schema_version":"v1.38-plan-262-live-v13-local-context-correction-topology-v2","active_plans":103,"trustworthy_summaries":97,"incomplete_plans":["262-121","262-122","262-110","262-94","262-95","262-106"],"immutable_history":["262-93-terminal-prestart-stop","262-114-v2-authoritative","262-116-v4-authoritative","262-109-supplement-v3","262-117-live-v11-source","262-118-v1-literal-zero-review","0f8258d8-allowed-test-correction","262-119-live-v12-source","262-120-v2-process-invalid","c7390cf5-exact-three-add"],"active_chain":["262-121","262-122","262-110","262-94","262-95","262-106"],"waves":{"262-121":93,"262-122":94,"262-110":95,"262-94":96,"262-95":97,"262-106":98},"live_owner":"live-v13","live_execution_plan":"262-110","live_invocation_count_planned":1,"live_v10_invocation_count_planned":0,"live_v11_invocation_count_planned":0,"live_v12_invocation_count_planned":0,"reproduction_owner":"existing-producer","route11_owner":"262-94","supplement_version":"v3","review_v3_trio_planned":true,"plan120_v2_eligible":false,"plan120_v2_disposition":"process_invalid_local_context_misbinding","canonical_main_root_components_bound":true,"disposable_roots_observation_scoped":true,"creates_effect_destination":false,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"next_action":"dispatch-262-121-only","admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"downstream_authority_denied":true} -->
 
 <!-- Historical live-v12 allowed-successor topology retained as immutable pre-Plan120-failure planning history. -->
 <!-- phase-262-live-v12-allowed-successor-topology-v1: {"schema_version":"v1.38-plan-262-live-v12-allowed-successor-topology-v1","active_plans":101,"trustworthy_summaries":95,"immutable_history":["262-114-v2-authoritative","262-116-v4-authoritative","262-109-supplement-v3","262-117-live-v11-source","262-118-v1-literal-zero-review","0f8258d8-allowed-test-correction","262-119-live-v12-source"],"active_chain":["262-120","262-110","262-94","262-95","262-106"],"waves":{"262-119":104,"262-120":105,"262-110":106,"262-94":107,"262-95":108,"262-106":109},"live_owner":"live-v12","live_execution_plan":"262-110","live_invocation_count_planned":1,"live_v11_invocation_count_planned":0,"reproduction_owner":"existing-producer","route11_owner":"262-94","supplement_version":"v3","review_v2_trio_planned":true,"creates_effect_destination":false,"pair_zero":true,"creates_capacity":false,"resets_counters":false,"creates_authorization_literal":false,"next_action":"dispatch-262-120-only","admit_03":"blocked","fresh_accepted":0,"required_accepted":540,"downstream_authority_denied":true} -->
@@ -266,27 +266,27 @@ Plans:
 
 - [x] 262-120-PLAN.md — Published the exact v2 trio at `c7390cf5`; later canonical-main checking proved local-context misbinding, so eligibility is false and the bytes remain immutable history.
 
-**Wave 106** *(blocked on immutable Plan-120 v2 failure history)*
+**Wave 93** *(blocked on immutable Plan-120 v2 failure history)*
 
 - [ ] 262-121-PLAN.md — Add/test closed context-typed live-v13 source; invoke no readiness, live, or producer selector.
 
-**Wave 107** *(blocked on exact committed Plan-121 source)*
+**Wave 94** *(blocked on exact committed Plan-121 source)*
 
 - [ ] 262-122-PLAN.md — Independently bind canonical-main custody plus six observation-scoped disposable roots and publish one exact v3 literal-zero-or-blocked trio.
 
-**Wave 108** *(blocked on committed literal-zero Plan-122 v3 review; covered by standing explicit execution authority)*
+**Wave 95** *(blocked on committed literal-zero Plan-122 v3 review; covered by standing explicit execution authority)*
 
 - [ ] 262-110-PLAN.md — As sole live owner, preflight and invoke only reviewed live-v13 exactly once through the unchanged historical producer.
 
-**Wave 109** *(blocked on committed Plan-110 terminal summary)*
+**Wave 96** *(blocked on committed Plan-110 terminal summary)*
 
 - [ ] 262-94-PLAN.md — Independently authenticate producer-owned reproduction-v17 and own only exact-pass disposition plus Route-11.
 
-**Wave 110** *(blocked on committed revised Plan-94 summary)*
+**Wave 97** *(blocked on committed revised Plan-94 summary)*
 
 - [ ] 262-95-PLAN.md — Refresh validation/verification, publish readiness-v3, and commit the Stage-1 summary latch without lifecycle mutation.
 
-**Wave 111** *(blocked on committed revised Plan-95 summary and readiness)*
+**Wave 98** *(blocked on committed revised Plan-95 summary and readiness)*
 
 - [ ] 262-106-PLAN.md — Authenticate the committed Stage-1 latch, apply/check the exact pass-versus-gaps lifecycle projection, and commit branch-honest closeout.
 
