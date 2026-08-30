@@ -77,10 +77,10 @@ const ZERO_COUNTERS = Object.freeze({
   routeStartsConsumed: 0,
 })
 const PATHS = Object.freeze({
-  payload: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v3.json",
-  review: `${PHASE}/262-116-REVIEW-v3.md`,
-  carrier: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v3.json",
-  transaction: ".planning/.v138-plan116-review-v3-transaction.json",
+  payload: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v4.json",
+  review: `${PHASE}/262-116-REVIEW-v4.md`,
+  carrier: ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v4.json",
+  transaction: ".planning/.v138-plan116-review-v4-transaction.json",
   plan114Payload: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json",
   plan114Review: `${PHASE}/262-114-REVIEW-v2.md`,
   plan114Carrier: ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json",
@@ -112,6 +112,17 @@ const V2_BLOBS = Object.freeze([
   "8ffeed143f9501503499ae783f9cc5d45fea8c20",
   "bb077d3c85552722c6c5f16e044fff5cc81e7408",
   "af51af144cfaf3f32e9369ef2cb491f58ed24946",
+])
+const V3_PUBLICATION_COMMIT = "1c0862e16ff4a32add4308e481df567b1212eb0c"
+const V3_PATHS = Object.freeze([
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-payload-v3.json",
+  `${PHASE}/262-116-REVIEW-v3.md`,
+  ".planning/artifacts/v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v3.json",
+])
+const V3_BLOBS = Object.freeze([
+  "c94022f5b68dd2b5a8d5d4886ea037c83d2643e8",
+  "38230b5c2fbb6e041dc62e0e3cc2612124f89a55",
+  "89a8563736b3bd7da4445919bc8837613307c182",
 ])
 const REVIEW_PATHS = Object.freeze([PATHS.payload, PATHS.review, PATHS.carrier])
 const SECURE_PATHS = Object.freeze([PATHS.seal, PATHS.envelope])
@@ -260,6 +271,14 @@ const authenticateHistoricalV2 = (root: string): void => {
     const entry = committed(root, V2_PUBLICATION_COMMIT, repoPath)
     if (entry.mode !== "100644" || entry.blob !== V2_BLOBS[index])
       fail(`V138_PLAN116_V2_HISTORY_INVALID:${repoPath}`)
+  }
+}
+const authenticateHistoricalV3 = (root: string): void => {
+  exactPublication(root, V3_PUBLICATION_COMMIT, V3_PATHS)
+  for (const [index, repoPath] of V3_PATHS.entries()) {
+    const entry = committed(root, V3_PUBLICATION_COMMIT, repoPath)
+    if (entry.mode !== "100644" || entry.blob !== V3_BLOBS[index])
+      fail(`V138_PLAN116_V3_HISTORY_INVALID:${repoPath}`)
   }
 }
 const command = (program: string, args: readonly string[], cwd: string, env?: NodeJS.ProcessEnv): string => {
@@ -451,9 +470,6 @@ const captureSubjectClosure = (rootInput: string) => {
     nativeInputManifest: recursive.nativeManifest,
     packageManifest: Object.freeze(packageManifest),
     packageManifestRoot: rooted("v138-plan-262-116-package-manifest-v1", packageManifest),
-    nodeVersion: process.version,
-    platform: process.platform,
-    architecture: process.arch,
   })
   const reviewedClosureRoot = rooted("v138-plan-262-116-reviewed-closure-v1", portable)
   const tsx = target(root, "node_modules/.bin/tsx")
@@ -843,9 +859,9 @@ const renderContracts = (input: {
     input.authentication.supplementSemanticsAuthenticated
   const supplement = independentlyRenderSupplement()
   const body = {
-    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-payload-v3",
-    protocol: "independent-source-separated-adapter-review-v3",
-    supersedesPublicationCommit: V2_PUBLICATION_COMMIT,
+    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-payload-v4",
+    protocol: "independent-source-separated-adapter-review-v4",
+    supersedesPublicationCommit: V3_PUBLICATION_COMMIT,
     supersededV1Plan109Eligible: false,
     subjectCommit: SUBJECT_COMMIT,
     subjectTree: SUBJECT_TREE,
@@ -856,7 +872,7 @@ const renderContracts = (input: {
     nativeInputRoot: input.closure?.nativeInputRoot ?? null,
     packageManifestRoot: input.closure?.packageManifestRoot ?? null,
     reviewedClosureRoot: input.closure?.reviewedClosureRoot ?? null,
-    localExecutionClosureRoot: input.closure?.localExecutionClosureRoot ?? null,
+    localExecutionClosureRoot: null,
     disposableExecutionClosureRoot: input.disposableExecutionClosureRoot ?? null,
     subjectAuthenticated: input.authentication.subjectAuthenticated,
     upstreamAuthenticated: input.authentication.upstreamAuthenticated,
@@ -893,7 +909,7 @@ const renderContracts = (input: {
     downstreamAuthority: "denied",
   }
   const payload = Object.freeze({ ...body, payloadRoot: rooted(
-    "v138-plan-262-116-supplement-v3-adapter-review-payload-v3", body,
+    "v138-plan-262-116-supplement-v3-adapter-review-payload-v4", body,
   ) })
   const reviewBody = {
     payloadRoot: payload.payloadRoot,
@@ -906,14 +922,14 @@ const renderContracts = (input: {
     freshAccepted: 0,
     downstreamAuthority: "denied",
   }
-  const reviewRoot = rooted("v138-plan-262-116-supplement-v3-adapter-review-markdown-v3", reviewBody)
+  const reviewRoot = rooted("v138-plan-262-116-supplement-v3-adapter-review-markdown-v4", reviewBody)
   const reviewBytes = zero
-    ? Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v3\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Reproducible Supplement-v3 Adapter Review\n\n**ZERO FINDINGS.** All nine distinct, rooted actual observations and the stable Git-derived disposable closure authenticated through fresh replay. The v1 and v2 trios are immutable superseded history and ineligible. Only revised Plan 109 is eligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
-    : Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v3\nstatus: blocked\nfinding_count: ${findings.length}\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Reproducible Supplement-v3 Adapter Review\n\n**BLOCKED.** Finding codes: ${findings.map(({ code }) => code).join(", ")}. Failed boundary: ${input.authentication.failedBoundary ?? "actual_modes"}. This archived blocked verdict may authenticate after custody repair but never grants eligibility. The v1 and v2 trios and revised Plan 109 are ineligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
+    ? Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v4\nstatus: zero_findings\nfinding_count: 0\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Stable Supplement-v3 Adapter Review\n\n**ZERO FINDINGS.** All nine distinct, rooted actual observations and the Git-derived reviewed/disposable closures authenticated through fresh replay independently of ambient HEAD, checkout, and runtime identity. The v1 through v3 trios are immutable superseded history and ineligible. Only revised Plan 109 is eligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
+    : Buffer.from(`---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "116"\nreview_type: independent_supplement_v3_adapter_review_v4\nstatus: blocked\nfinding_count: ${findings.length}\nreview_root: ${reviewRoot}\n---\n\n# Phase 262 Plan 116: Stable Supplement-v3 Adapter Review\n\n**BLOCKED.** Finding codes: ${findings.map(({ code }) => code).join(", ")}. Failed boundary: ${input.authentication.failedBoundary ?? "actual_modes"}. This archived blocked verdict may authenticate after custody repair but never grants eligibility. The v1 through v3 trios and revised Plan 109 are ineligible. Supplement published: false. Producer calls: 0. Fresh charged/accepted: 0/0. Live/readiness invoked: false. Downstream authority: denied.\n`)
   const carrierBody = {
-    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v3",
-    protocol: "nonrecursive-external-review-carrier-v3",
-    supersedesPublicationCommit: V2_PUBLICATION_COMMIT,
+    schemaVersion: "v1.38-plan-262-116-supplement-v3-adapter-review-carrier-v4",
+    protocol: "nonrecursive-external-review-carrier-v4",
+    supersedesPublicationCommit: V3_PUBLICATION_COMMIT,
     supersededV1Plan109Eligible: false,
     payloadRoot: payload.payloadRoot,
     reviewRoot,
@@ -932,7 +948,7 @@ const renderContracts = (input: {
     downstreamAuthority: "denied",
   }
   const carrier = Object.freeze({ ...carrierBody, carrierRoot: rooted(
-    "v138-plan-262-116-supplement-v3-adapter-review-carrier-v3", carrierBody,
+    "v138-plan-262-116-supplement-v3-adapter-review-carrier-v4", carrierBody,
   ) })
   return Object.freeze({ payload, reviewBytes, reviewRoot, carrier, plan109Eligible })
 }
@@ -974,6 +990,7 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
   const root = path.resolve(repoRootInput)
   authenticateHistoricalV1(root)
   authenticateHistoricalV2(root)
+  authenticateHistoricalV3(root)
   if (pathPresent(root, PATHS.transaction)) fail("V138_PLAN116_TRANSACTION_INCOMPLETE")
   if (!REVIEW_PATHS.every((repoPath) => pathPresent(root, repoPath)))
     fail("V138_PLAN116_PUBLICATION_PARTIAL_OR_ABSENT")
@@ -1018,9 +1035,20 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
   }
   const current = observeV138Plan116FoundationForReview(root)
   if (current.foundation === undefined) fail("V138_PLAN116_BLOCKED_CURRENT_DRIFT")
-  const closure = findings.length === 0
-    ? current.closure
-    : payload.reviewedClosureRoot === null ? undefined : payload as ReturnType<typeof captureSubjectClosure>
+  if (findings.length === 0) {
+    const stableClosure = (value: Json) => ({
+      subjectCommit: value.subjectCommit, subjectTree: value.subjectTree,
+      subjectParent: value.subjectParent, subjectEntries: value.subjectEntries,
+      recursiveDependencyRoot: value.recursiveDependencyRoot,
+      recursiveDependencyCount: value.recursiveDependencyCount,
+      nativeInputRoot: value.nativeInputRoot, packageManifestRoot: value.packageManifestRoot,
+      reviewedClosureRoot: value.reviewedClosureRoot,
+    })
+    if (canonical(stableClosure(payload)) !== canonical(stableClosure(current.closure as Json)))
+      fail("V138_PLAN116_CURRENT_STABLE_CLOSURE_INVALID")
+  }
+  const closure = payload.reviewedClosureRoot === null
+    ? undefined : payload as ReturnType<typeof captureSubjectClosure>
   let currentCustody: "clean_replayed" | "repaired_clean"
   if (findings.length === 0) {
     const observedAgain = executeV138Plan116DisposableModes(root)
@@ -1055,7 +1083,7 @@ export const authenticateV138Plan116PublishedReview = (repoRootInput: string) =>
   assertAbsent(root, [PATHS.supplement1, PATHS.supplement2, PATHS.supplement3, ...EFFECT_PATHS])
   return Object.freeze({
     publicationCommit,
-    supersedesPublicationCommit: V2_PUBLICATION_COMMIT,
+    supersedesPublicationCommit: V3_PUBLICATION_COMMIT,
     supersededV1Plan109Eligible: false as const,
     payloadRoot: payload.payloadRoot,
     reviewRoot: carrier.reviewRoot,
@@ -1086,12 +1114,12 @@ const renderTransaction = (files: ReturnType<typeof publicationFiles>): Buffer =
     path: file.path, byteLength: file.bytes.length, sha256: sha(file.bytes),
   }))
   const body = Object.freeze({
-    schemaVersion: "v1.38-plan-262-116-review-publication-transaction-v3",
+    schemaVersion: "v1.38-plan-262-116-review-publication-transaction-v4",
     state: "pending",
     files: records,
   })
   return Buffer.from(canonical({ ...body, transactionRoot: rooted(
-    "v138-plan-262-116-review-publication-transaction-v3", body,
+    "v138-plan-262-116-review-publication-transaction-v4", body,
   ) }))
 }
 const recoverTransaction = (root: string, executable: string): void => {
@@ -1102,10 +1130,10 @@ const recoverTransaction = (root: string, executable: string): void => {
   catch { throw new V138Plan116ProcessIntegrityError("V138_PLAN116_TRANSACTION_MARKER_INVALID") }
   const body = { schemaVersion: marker.schemaVersion, state: marker.state, files: marker.files }
   if (!markerBytes.equals(Buffer.from(canonical(marker))) ||
-      marker.schemaVersion !== "v1.38-plan-262-116-review-publication-transaction-v3" ||
+      marker.schemaVersion !== "v1.38-plan-262-116-review-publication-transaction-v4" ||
       marker.state !== "pending" || !Array.isArray(marker.files) ||
       canonical(marker.files.map((item: Json) => item.path)) !== canonical(REVIEW_PATHS) ||
-      marker.transactionRoot !== rooted("v138-plan-262-116-review-publication-transaction-v3", body))
+      marker.transactionRoot !== rooted("v138-plan-262-116-review-publication-transaction-v4", body))
     throw new V138Plan116ProcessIntegrityError("V138_PLAN116_TRANSACTION_MARKER_INVALID")
   for (const record of marker.files as Json[]) {
     if (!Number.isInteger(record.byteLength) || record.byteLength < 0 || !validSha(record.sha256))
@@ -1145,6 +1173,7 @@ export const writeV138Plan116ReviewForReview = (repoRootInput: string,
   const root = path.resolve(repoRootInput)
   authenticateHistoricalV1(root)
   authenticateHistoricalV2(root)
+  authenticateHistoricalV3(root)
   assertAbsent(root, [PATHS.supplement1, PATHS.supplement2, PATHS.supplement3, ...EFFECT_PATHS])
   const initial = observeV138Plan116FoundationForReview(root)
   let evidence: ReturnType<typeof renderContracts>
