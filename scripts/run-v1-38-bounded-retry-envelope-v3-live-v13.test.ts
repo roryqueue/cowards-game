@@ -410,7 +410,7 @@ describe("Plan 262-121 closed live-v13 successor", () => {
       mutate("scripts/run-v1-38-bounded-retry-envelope-v3-live-v12.ts", /PLAN119_ENTRY_INVALID/u)
       mutate(V138_LIVE_V13_PATHS.envelope, /PAIR_CURRENT_BYTES_INVALID/u)
       chmodSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary), 0o600)
-      expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/PLAN_CLOSEOUT_CURRENT_BYTES_INVALID/u)
+      expect(() => authenticateV138LiveV13SourceOnly(root)).toThrow(/CURRENT_ENTRY_INVALID/u)
       chmodSync(path.join(root, V138_LIVE_V13_PATHS.plan93Summary), 0o644)
       const forbidden = path.join(root,
         ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3-attempt-journal.json")
