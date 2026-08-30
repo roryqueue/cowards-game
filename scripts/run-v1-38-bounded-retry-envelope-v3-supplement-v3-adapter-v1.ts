@@ -133,13 +133,20 @@ const gitBytes = (root: string, commit: string, repoPath: string): Buffer =>
 const readRegularNoFollow = (root: string, repoPath: string): Buffer => {
   const absolute = target(root, repoPath)
   const before = lstatSync(absolute)
-  if (!before.isFile() || before.isSymbolicLink()) fail(`V138_SUPPLEMENT_ADAPTER_FILE_UNSAFE:${repoPath}`)
+  if (!before.isFile() || before.isSymbolicLink() || (before.mode & 0o7777) !== 0o644)
+    fail(`V138_SUPPLEMENT_ADAPTER_FILE_UNSAFE:${repoPath}`)
   const fd = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW)
   try {
     const opened = fstatSync(fd)
-    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino || opened.size !== before.size)
+    if (!opened.isFile() || (opened.mode & 0o7777) !== 0o644 || opened.dev !== before.dev ||
+        opened.ino !== before.ino || opened.size !== before.size)
       fail(`V138_SUPPLEMENT_ADAPTER_FILE_CHANGED:${repoPath}`)
-    return readFileSync(fd)
+    const bytes = readFileSync(fd)
+    const after = fstatSync(fd)
+    if (!after.isFile() || (after.mode & 0o7777) !== 0o644 || after.dev !== opened.dev ||
+        after.ino !== opened.ino || after.size !== opened.size || after.mode !== opened.mode)
+      fail(`V138_SUPPLEMENT_ADAPTER_FILE_CHANGED:${repoPath}`)
+    return bytes
   } finally { closeSync(fd) }
 }
 const pathPresent = (root: string, repoPath: string): boolean => {

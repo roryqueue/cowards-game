@@ -20,6 +20,8 @@ import {
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const supplementPath = ".planning/artifacts/v1.38-successor-source-seal-v13-executable-custody-supplement-v3.json"
 const v2PayloadPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-payload-v2.json"
+const v2ReviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-v2.md"
+const v2CarrierPath = ".planning/artifacts/v1.38-plan-262-114-live-v10-custody-review-carrier-v2.json"
 const effectPath = ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json"
 const finalReviewPath = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-FINAL-CLEAN-REVIEW.md"
 const pairPath = ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json"
@@ -184,6 +186,24 @@ describe("Plan 262-115 source-only supplement-v3 adapter", () => {
       writeFileSync(path.join(root, extra), "extra\n")
       commitSupplement(root, extra)
       expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/PUBLICATION_SCOPE_INVALID/)
+    })
+  }, 180_000)
+
+  it("rejects post-commit executable drift at every current authoritative review path", () => {
+    withWorktree((root) => {
+      writeV138SupplementV3ForReview(root)
+      commitSupplement(root)
+      for (const repoPath of [v2PayloadPath, v2ReviewPath, v2CarrierPath, finalReviewPath, supplementPath]) {
+        const absolute = path.join(root, repoPath)
+        try {
+          chmodSync(absolute, 0o755)
+          expect(() => checkV138CommittedSupplementV3ForReview(root)).toThrow(/FILE_UNSAFE/)
+        } finally {
+          chmodSync(absolute, 0o644)
+        }
+      }
+      expect(checkV138CommittedSupplementV3ForReview(root).status)
+        .toBe("supplement_v3_committed_checked")
     })
   }, 180_000)
 
