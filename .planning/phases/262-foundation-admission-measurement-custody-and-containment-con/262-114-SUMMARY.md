@@ -180,3 +180,9 @@ None.
 - The immutable v1 trio at `ab539ab2` remains historical. Corrected v2 was published at `34bc94ec` with zero findings and 6/6 actual disposable modes; payload/review/carrier roots are `sha256:d4ca10f333598968c0f9b9d7729d5193c981f501a8284cdd5626f2f2b5a518ac`, `sha256:f802ac51d79702f1163fd8d5151b2b7384e2d43de1d97f15ddd74f39538a79ee`, and `sha256:8ddd2dc65d0601f8c6d027e225c16e8ea81574f197f877dd4f3c1830f5563c26`.
 - Read-only committed-v2 authentication passed. Revised Plan 262-109 alone is eligible; ADMIT-03 remains blocked at 0/540 and all broader authority remains denied.
 - No supplement, readiness, producer, live, or downstream selector ran or artifact was created.
+
+## Additive Re-review Blocker Closure (2026-08-30)
+
+- Commits `383243e4` and `3366f1a0` close the two follow-up blockers: the real writer now transports classified foundation findings into deterministic blocked evidence, and a published v2 is authoritative with exact three-path fail-closed custody.
+- Tests mutate the actual foundation input and each actual v2 path. Classified defects authenticate as blocked; unclassified integrity produces no publication; partial, missing, symlinked, executable, and byte-drifted v2 never fall back to v1.
+- The v2 trio at `34bc94ec` is unchanged byte-for-byte. V1 is immutable history only, and no new publication, supplement, readiness, live, or downstream artifact was created.

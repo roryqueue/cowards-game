@@ -1,10 +1,10 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-fixed_at: 2026-08-30T01:18:53Z
-review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-CODE-REVIEW.md
-iteration: 1
-findings_in_scope: 5
-fixed: 5
+fixed_at: 2026-08-30T01:37:40Z
+review_path: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-114-REVIEW-FIX-REVIEW.md
+iteration: 2
+findings_in_scope: 2
+fixed: 2
 skipped: 0
 status: all_fixed
 ---
@@ -59,3 +59,33 @@ All five critical findings are fixed. Original v1 payload, REVIEW, carrier, and 
 
 _Fixed: 2026-08-30T01:18:53Z_
 _Fixer: the agent (gsd-code-fixer)_
+
+## Additive Re-review Closure — Iteration 2
+
+Both blockers in `262-114-REVIEW-FIX-REVIEW.md` are fixed. The published v2 payload, REVIEW, carrier, and publication commit `34bc94ec` remain byte-for-byte immutable; this iteration adds only source, tests, and closure evidence.
+
+### CR-01: Semantic finding adapter is not wired into the writer
+
+**Files modified:** `scripts/check-v1-38-plan-262-114-live-v10-custody-v1.ts`, `scripts/check-v1-38-plan-262-114-live-v10-custody-v1.test.ts`
+**Commit:** `383243e4`
+**Applied fix:** The writer now starts from the real foundation observation, carries classified semantic/custody/history findings through all six deterministic disposable modes, and re-observes the complete foundation before publication. A real live-v10 byte defect produces an authenticated blocked v2 result; unclassified process-integrity failure still aborts with no v2 output.
+
+### CR-02: Partial or unsafe v2 silently falls back to v1
+
+**Files modified:** `scripts/check-v1-38-plan-262-114-live-v10-custody-v1.ts`, `scripts/check-v1-38-plan-262-114-live-v10-custody-v1.test.ts`
+**Commit:** `3366f1a0`
+**Applied fix:** Once Git history records v2 publication, v2 is authoritative. Authentication requires all three exact current v2 paths and fails closed for missing, partial, symlinked, executable, or byte-drifted members; it never falls back to historical v1. V1 remains usable only in repositories where v2 was never published and can never grant Plan-109 eligibility.
+
+## Iteration 2 Verification
+
+- Each real v2 path was independently replaced by a symlink, made executable, changed by bytes, and removed; authentication failed closed in every case.
+- The real writer ran six disposable modes against an actual foundation mutation and emitted an authenticated blocked v2 fixture with one finding, six modes passed, and Plan-109 eligibility false.
+- Unclassified integrity failure through the real writer left all v2 destinations absent.
+- The canonical published v2 trio still matches the three blobs at `34bc94ec`; read-only committed-v2 authentication still passes with zero findings and 6/6 modes.
+- No supplement, readiness, producer, live, or downstream artifact was created.
+
+---
+
+_Fixed: 2026-08-30T01:37:40Z_
+_Fixer: the agent (gsd-code-fixer)_
+_Iteration: 2_
