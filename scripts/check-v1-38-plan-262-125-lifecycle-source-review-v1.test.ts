@@ -94,7 +94,7 @@ describe("Plan 262-125 hostile source mutations", () => {
       "reviews", "validations", "verifications",
     ]) {
       const result = await auditLifecycleSource(repoRoot, {
-        sourceText: source.replace(inventoryClass, `removed${inventoryClass}`),
+        sourceText: source.replace(inventoryClass, "REMOVED_INVENTORY_CLASS"),
         skipRuntimeChecks: true,
       })
       expect(result.findings).toContain(`INVENTORY_CLASS_${inventoryClass}_MISSING`)
@@ -131,7 +131,7 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
       validations: 1,
       verifications: 1,
     })
-    expect(Object.values(audit.observations.inventoryCounts).every((count) => count > 0)).toBe(true)
+    expect((Object.values(audit.observations.inventoryCounts) as number[]).every((count) => count > 0)).toBe(true)
   })
 
   it("proves source and prospective selectors do not write watched paths", async () => {
