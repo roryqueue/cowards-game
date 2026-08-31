@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Completed 262-132-PLAN.md; Plan 262-133 is sole next action
-last_updated: "2026-08-31T01:37:42.223Z"
+stopped_at: Plan 262-132 review correction committed; fresh independent review required before Plan 262-133
+last_updated: "2026-08-31T01:49:14.814Z"
 last_activity: 2026-08-31
-last_activity_desc: closed Plan132 source-only v5 correction; Plan133 independent review is sole next action
+last_activity_desc: closed committed Plan132 review blockers with isolated Git and internally authenticated observation custody
 progress:
   total_phases: 9
   completed_phases: 0
@@ -18,6 +18,10 @@ progress:
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-plan-132-review-correction-status: {"schema_version":"v1.38-plan-262-132-review-correction-v1","review_commit":"2bdaf3d84e4f9d8e906381c82fb2788927773eab","red_commit":"772ca8b6","corrected_source_commit":"26c57dfe","review_findings_closed":["CR-01","CR-02"],"isolated_git":true,"replacement_refs_rejected":true,"caller_payload_trusted":false,"v4_eligible":false,"plan_262_133_eligible":false,"plan_262_110_eligible":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"independent-review-plan-262-132-correction","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The Plan132 closeout carrier below remains immutable pre-review history and is superseded for current eligibility and next action by the review-correction carrier above. -->
 
 <!-- phase-262-plan-132-closeout-status: {"schema_version":"v1.38-plan-262-132-closeout-v5","proof_status":"closed_source_only_descendant_and_observation_correction","source_commit":"36fba458","strict_summary_commit":"6a82901a8e73a4c2b8be92ba1b8d606919678784","v4_publication_commit":"b80782214eeb323023287b4589049f0139befdd5","v4_disposition":"process_invalid_descendant_and_observation_validation","v4_eligible":false,"actual_modes_passed":6,"observations_root":"sha256:6d4867c2635613d0e3277b70f2b2efd3bc91c6940731daae2742eef7578e0ce7","finding_count":0,"plan_262_133_eligible":true,"plan_262_110_eligible":false,"authorizes_execution":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-133-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -150,9 +154,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 102 terminally truthful summaries across 114 active plans — exactly 12 closeout plans remain and Plan 262-133 is the sole eligible next action
-Status: Phase 262 remains in progress; Wave 98 independently reviews Plan132 before any v5 publication or Plan110 eligibility
-Last activity: 2026-08-31 — closed source-only v5 correction at 36fba458; Plan133 fresh independent review remains required
+Plan: 102 terminally truthful summaries across 114 active plans — exactly 12 closeout plans remain; Plan 262-133 is ineligible pending fresh Plan132 correction review
+Status: Phase 262 remains in progress; fresh independent review must authenticate corrected source `26c57dfe` before Wave 98
+Last activity: 2026-08-31 — closed committed Plan132 review blockers with isolated Git and internally authenticated observation custody
 
 Progress: [█████████░] 89%
 
@@ -188,7 +192,7 @@ Progress: [█████████░] 89%
 
 **Historical bounded-retry topology:** Route 8 remains immutable obstruction history: Plans 262-69 through 262-73 are summarized, Plan 72 consumed nothing, Plan 73 remained blocked, and the optional activation root is absent. The exact Plan-74 bytes are archived at `archived/262-74-HISTORICAL.md` with SHA-256 `9fc59c094d5423830500c383c1a7613e54a0d2dc6e0ee1a00f4882981f16913d`; no Plan-74 summary exists. Active discovery was 62 plans and 55 summaries before the normal Plan-75 summary, then 62/56. `262-BOUNDED-RETRY-EXECUTION-PROTOCOL.md` originally routed Plans 75-81 sequentially at waves 57-63 and prohibited unfiltered phase execution. This paragraph remains historical and does not override the current corrective carrier.
 
-**Current topology:** Active discovery is 114 plans/102 terminally truthful summaries with twelve incomplete closeout plans at Waves 98-109: 133 -> 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129. Plan132 source commit `36fba458` corrects both committed review blockers without rewriting v4: any strict descendant of exact summary `6a82901a` authenticates under exact immutable custody, and counts/roots derive only from six exact unique ordered genuine observations. Plan133 alone is next and may independently publish only an additive v5 trio. Plan110 remains false until reusable strict-descendant literal-zero v5 passes that review. ADMIT-03 remains blocked at 0/540, Phase262 remains incomplete, and Phase263 planning plus all broader authority remain denied.
+**Current topology:** Active discovery is 114 plans/102 terminally truthful summaries with twelve incomplete closeout plans at Waves 98-109: 133 -> 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129. Committed review `2bdaf3d8` invalidated the pre-review Plan132 source because ambient Git replacement refs and caller-forged payload anchors could cross trust boundaries. RED `772ca8b6` reproduces both attacks; correction `26c57dfe` uses isolated replacement-disabled Git and internal exact-history payload authentication. Fresh independent review is required before Plan133 becomes eligible. Plan133, Plan110, ADMIT-03, Phase263 planning, and all broader authority remain denied; fresh accounting stays 0/540.
 
 **Plan-88 closeout:** Independent source-record replay passed 20 focused tests and authenticated exact Git custody, frozen policy, journal/state roots, 15/15 private receipts, cleanup, runtime/kernel binding, privacy, and immutable v1 history. The outcome is clean exhaustion rather than an assurance defect, so correction-v3 is absent; exact 540/540 is absent, so Route-10 activation is also absent. ADMIT-03 remains blocked; Plan 262-89 subsequently completed the lifecycle refresh as `gaps_found` without mutation.
 
@@ -512,6 +516,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Plan131 v4 remains immutable process-invalid history; stored true eligibility is never current authority. — Plan132 corrects process without rewriting historical evidence.
 - [Phase 262]: Observation counts and roots are derived only after exact six-record validation; aggregate fields in caller input are rejected. — Hostile aggregate claims cannot substitute for genuine observations.
 - [Phase 262]: Plan132 makes only Plan133 review eligible and keeps Plan110 false. — Independent review remains required before any v5 publication or Plan110 eligibility.
+- [Phase 262]: Plan132 correction trusts only isolated replacement-disabled Git and internally authenticated committed observation payloads; Plan133 and Plan110 remain false pending fresh review. — Committed review 2bdaf3d8 invalidated ambient Git and caller-payload trust boundaries.
 
 ### Pending Todos
 
@@ -575,8 +580,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-31T01:37:42.202Z
-Stopped at: Completed 262-132-PLAN.md; Plan 262-133 is sole next action
+Last session: 2026-08-31T01:49:14.793Z
+Stopped at: Plan 262-132 review correction committed; fresh independent review required before Plan 262-133
 Resume file: None
 
 ### Blockers

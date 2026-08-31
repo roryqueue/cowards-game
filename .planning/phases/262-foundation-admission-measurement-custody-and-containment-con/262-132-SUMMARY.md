@@ -9,7 +9,7 @@ requires:
 provides:
   - reusable strict-descendant authentication rooted at the exact Plan131 summary
   - hostile-input validation for six exact ordered genuine v4 observations
-  - explicit Plan110 denial pending independent Plan133 review
+  - explicit Plan133 and Plan110 denial pending independent review of the corrected source
 affects: [262-133, 262-110]
 tech-stack:
   added: []
@@ -23,7 +23,7 @@ key-files:
 key-decisions:
   - "Plan131 v4 remains immutable process-invalid history; stored true eligibility is never current authority."
   - "Observation counts and roots are derived only after exact six-record validation; aggregate fields in caller input are rejected."
-  - "Plan132 can make Plan133 review eligible but keeps Plan110 eligibility false pending independent Plan133 review."
+  - "Plan132 correction keeps both Plan133 and Plan110 eligibility false pending independent review of the hardened source."
 requirements-completed: [ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10, SEAL-01]
 coverage:
   - id: D1
@@ -73,7 +73,8 @@ Additive v5 correction authenticating arbitrary strict summary descendants and d
 - Replaced the invalid immediate-child assumption with reusable authentication of any strict descendant of exact summary `6a82901a`, while retaining exact parent, one-add summary scope, three-add publication scope, current-byte equality, and no-rewrite checks.
 - Validated exactly six unique observations in canonical mode/status order, recomputing per-observation roots, local execution custody joins, mode-specific reduced values, and the aggregate observations root.
 - Rejected empty, missing, duplicate, reordered, forged-status, forged-root, forged-reduced-value, forged-custody, nonzero-producer, and caller-supplied aggregate inputs before eligibility derivation.
-- Preserved the v4 trio, review, summary, and tracking history byte-for-byte as `process_invalid_descendant_and_observation_validation`; Plan110 remains false and only Plan133 review is eligible.
+- Preserved the v4 trio, review, summary, and tracking history byte-for-byte as `process_invalid_descendant_and_observation_validation`; Plan133 and Plan110 remain false pending independent review of the hardened correction.
+- Closed committed review blockers `CR-01` and `CR-02` by routing every Git read through the isolated replacement-disabled custody runner and removing caller-provided payloads from the exported validator trust boundary.
 
 ## Task Commits
 
@@ -81,6 +82,8 @@ Additive v5 correction authenticating arbitrary strict summary descendants and d
 2. **Task 1 GREEN: arbitrary strict-descendant authentication** - `4b11d0a9`
 3. **Task 2 RED: hostile observation authority tests** - `8e8c7de7`
 4. **Task 2 GREEN: genuine-observation aggregate derivation** - `36fba458`
+5. **Review correction RED: hostile replacement and forged-payload tests** - `772ca8b6`
+6. **Review correction GREEN: isolated Git and internal payload authentication** - `26c57dfe`
 
 ## Files Created/Modified
 
@@ -92,11 +95,29 @@ Additive v5 correction authenticating arbitrary strict summary descendants and d
 
 - Exact committed v4 observation bytes are necessary but not sufficient: v5 independently validates their schema, sequence, custody relationships, reduced semantics, and roots before counting them.
 - Literal-zero independent findings are represented by an exact empty findings array; caller-provided count/root fields are rejected rather than compared or trusted.
-- Successful source correction authorizes independent Plan133 review only. It cannot grant Plan110, product, production, public, capacity, reset, readiness, live, producer, or downstream authority.
+- A source correction cannot self-authorize Plan133 review or Plan110. Independent review must first authenticate the hardened commit; product, production, public, capacity, reset, readiness, live, producer, and downstream authority remain denied.
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Rejected ambient Git replacement and repository metadata attacks**
+
+- **Found during:** Committed adversarial review `2bdaf3d8` (`CR-01`)
+- **Issue:** Ambient replacement refs could forge strict-summary ancestry for an unrelated commit.
+- **Fix:** Routed every Git text/byte/ancestry operation through the existing isolated runner and rejected replace refs, dangerous local config, grafts, and shallow history before authentication.
+- **Verification:** A temporary clone with a forged replacement parent fails `V138_PLAN132_REPLACE_REF_FORBIDDEN`.
+- **Commit:** `26c57dfe`
+
+**2. [Rule 1 - Bug] Removed caller-forged payload trust from the exported validator**
+
+- **Found during:** Committed adversarial review `2bdaf3d8` (`CR-02`)
+- **Issue:** A caller could construct self-consistent fake custody roots and supply the payload used as their own trust anchor.
+- **Fix:** The exported validator now takes a repository root and internally authenticates exact committed history; the payload-backed validator is private.
+- **Verification:** A self-consistent six-observation/payload forgery fails before an aggregate is returned.
+- **Commit:** `26c57dfe`
+
+**Total deviations:** 2 auto-fixed bugs. **Impact:** Trust boundaries were tightened without effects or downstream eligibility.
 
 ## Issues Encountered
 
@@ -108,8 +129,8 @@ None - no external service configuration required.
 
 ## Verification
 
-- Focused serialized Vitest: 1 file, 6 tests passed.
-- Source-only CLI: 6 validated modes, 0 findings, Plan133 eligible, Plan110 false, producer/readiness/live calls zero or false, downstream authority denied.
+- Focused serialized Vitest: 1 file, 8 tests passed, including replacement-ref and self-consistent forged-payload attacks.
+- Source-only CLI: 6 validated modes, 0 findings, Plan133 false, Plan110 false, producer/readiness/live calls zero or false, downstream authority denied.
 - TypeScript: `pnpm exec tsc --noEmit` passed.
 - `git diff --check` passed.
 
@@ -119,12 +140,12 @@ None.
 
 ## Next Phase Readiness
 
-Plan133 can independently review the v5 correction. No v5 evidence publication, Plan110 eligibility, live execution, producer call, effect, capacity, or downstream authority exists.
+The hardened Plan132 source requires fresh independent review before Plan133 can proceed. No Plan133 eligibility, v5 evidence publication, Plan110 eligibility, live execution, producer call, effect, capacity, or downstream authority exists.
 
 ## Self-Check: PASSED
 
 - Both source/test files and this summary exist.
-- Task commits `cd5148ea`, `4b11d0a9`, `8e8c7de7`, and `36fba458` exist.
+- Task commits `cd5148ea`, `4b11d0a9`, `8e8c7de7`, `36fba458`, `772ca8b6`, and `26c57dfe` exist.
 - Exact v4 trio, review, summary, and closeout bytes remain protected and unchanged.
 
 ---
