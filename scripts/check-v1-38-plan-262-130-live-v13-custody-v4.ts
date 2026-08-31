@@ -128,6 +128,8 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
   const sourceFile = ts.createSourceFile("live-v13.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
   const producerModule = "./run-v1-38-bounded-retry-envelope-v3.js"
   const producerName = "runV138V3ProductionLive"
+  const pinnedSubjectInspectorSha =
+    "sha256:2163fcd7a7d985dcc6d7f8033698d2dd7d1be2b77df145ccf592397aea6cf39a"
   const imports = sourceFile.statements.filter((statement): statement is ts.ImportDeclaration =>
     ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) &&
     statement.moduleSpecifier.text === producerModule)
@@ -173,6 +175,7 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
   let producerReferences = 0
   let producerCalls = 0
   let ownerCalls = 0
+  let acceptedProcessReferences = 0
   const declarations: ts.VariableDeclaration[] = []
   const collectDeclarations = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node)) declarations.push(node)
@@ -201,7 +204,40 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
     return ts.isPropertyAccessExpression(node) && node.expression.getText(sourceFile) === "process" &&
       node.name.text === "mainModule"
   }
+  const exactNumeric = (node: ts.Expression | undefined, value: string): boolean =>
+    node !== undefined && ts.isNumericLiteral(node) && node.text === value
+  const allowedProcessReference = (node: ts.Identifier): boolean => {
+    const argvOrStdout = node.parent
+    if (!ts.isPropertyAccessExpression(argvOrStdout) || argvOrStdout.expression !== node) return false
+    if (argvOrStdout.name.text === "stdout") {
+      const write = argvOrStdout.parent
+      return ts.isPropertyAccessExpression(write) && write.expression === argvOrStdout &&
+        write.name.text === "write" && ts.isCallExpression(write.parent) && write.parent.expression === write
+    }
+    if (argvOrStdout.name.text !== "argv") return false
+    const use = argvOrStdout.parent
+    if (ts.isElementAccessExpression(use) && use.expression === argvOrStdout)
+      return exactNumeric(use.argumentExpression, "1")
+    return ts.isPropertyAccessExpression(use) && use.expression === argvOrStdout &&
+      use.name.text === "slice" && ts.isCallExpression(use.parent) && use.parent.expression === use &&
+      use.parent.arguments.length === 1 && exactNumeric(use.parent.arguments[0], "2")
+  }
+  const forbiddenToken = /(?:^|[^A-Za-z0-9_$])(?:Reflect|globalThis|global|eval|Function|AsyncFunction|GeneratorFunction|constructor|createRequire|getBuiltinModule|require)(?:$|[^A-Za-z0-9_$])/u
   const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) &&
+        node.name.text === "inspectV138LiveV13ProductionBoundarySourceForReview") {
+      if (sha(node.getText(sourceFile)) !== pinnedSubjectInspectorSha) dangerous += 1
+      return
+    }
+    if (ts.isIdentifier(node) && node.text === "process") {
+      if (!allowedProcessReference(node)) dangerous += 1
+      else acceptedProcessReferences += 1
+    }
+    if (ts.isIdentifier(node) && ["Reflect", "globalThis", "global", "eval", "Function",
+      "AsyncFunction", "GeneratorFunction", "constructor", "createRequire", "getBuiltinModule",
+      "require"].includes(node.text)) dangerous += 1
+    if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+        forbiddenToken.test(node.text)) dangerous += 1
     if (ts.isIdentifier(node) && ["eval", "Function", "AsyncFunction", "GeneratorFunction",
       "require", "createRequire", "getBuiltinModule"].includes(node.text)) dangerous += 1
     if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) dangerous += 1
@@ -232,7 +268,8 @@ export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
   visit(sourceFile)
   if (imports.length !== 1 || bindings.length !== 2 ||
       !bindings.some((binding) => binding.name.text === producerName && binding.propertyName === undefined) ||
-      producerReferences !== 2 || producerCalls !== 1 || ownerCalls !== 1 || dangerous !== 0)
+      producerReferences !== 2 || producerCalls !== 1 || ownerCalls !== 1 ||
+      acceptedProcessReferences !== 4 || dangerous !== 0)
     fail("V138_PLAN130_PRODUCTION_BOUNDARY_INVALID")
   return Object.freeze({ producerCallSites: 1 as const, producerCalls: 0 as const,
     readinessInvoked: false as const, liveInvoked: false as const,
