@@ -582,9 +582,10 @@ const validateExecution = (execution: Json, repositoryClosureRoot: Sha, semantic
       "disposableLocalNativeSourcesRoot", "disposableReviewedClosureRoot", "mode", "observationRoot",
       "producerGuardCount", "reducedValue", "status"], "V138_PLAN142_OBSERVATION_SCHEMA_INVALID")
     const [mode, status] = MODES[ordinal]!
-    if (item.mode !== mode || item.status !== status || item.producerGuardCount !== 0 ||
-        canonical(item.reducedValue) !== canonical(REDUCED[ordinal]) || !isSha(item.observationRoot))
-      fail("V138_PLAN142_OBSERVATION_INVALID")
+    if (item.mode !== mode || item.status !== status) fail("V138_PLAN142_MODE_ORDER_INVALID")
+    if (item.producerGuardCount !== 0) fail("V138_PLAN142_PRODUCER_GUARD_INVALID")
+    if (canonical(item.reducedValue) !== canonical(REDUCED[ordinal])) fail("V138_PLAN142_REDUCED_VALUE_INVALID")
+    if (!isSha(item.observationRoot)) fail("V138_PLAN142_OBSERVATION_INVALID")
     const { observationRoot, ...genuineBody } = item
     if (observationRoot !== rooted("v138-plan-262-133-mode-observation-v5", genuineBody) ||
         !Array.isArray(item.disposableLocalNativeSourcePaths) || item.disposableLocalNativeSourcePaths.length !== 2)
@@ -618,6 +619,22 @@ const validateExecution = (execution: Json, repositoryClosureRoot: Sha, semantic
     return Object.freeze({ ...body,
       stableRecordRoot: rooted("v138-plan-262-142-stable-execution-record-v10", body) })
   }))
+}
+
+/** Pure review seam: validates untrusted values, never executes, authenticates
+ * a root, issues private provenance, or grants eligibility/execution authority. */
+export const validateV138Plan142ExecutionMappingForReview = (
+  execution: unknown, repositoryClosureRoot: Sha, semanticRuntimeRoot: Sha,
+) => {
+  try {
+    if (!isSha(repositoryClosureRoot) || !isSha(semanticRuntimeRoot))
+      fail("V138_PLAN142_MAPPING_ROOT_INVALID")
+    const observations = validateExecution(execution as Json, repositoryClosureRoot, semanticRuntimeRoot)
+    return Object.freeze({ observations,
+      observationsRoot: rooted("v138-plan-262-142-stable-observations-v10", observations),
+      plan143Eligible: false, plan110Eligible: false, authorizesExecution: false,
+      downstreamAuthority: "denied" as const })
+  } catch (error) { fail(publicErrorCode(error)) }
 }
 
 type Provenance = Readonly<{ canonicalRoot: string; rootDev: string; rootIno: string; head: string

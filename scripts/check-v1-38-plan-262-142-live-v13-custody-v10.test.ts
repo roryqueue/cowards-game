@@ -16,6 +16,7 @@ import {
   checkV138Plan142EffectPathsAbsentForReview,
   checkV138Plan142SourceOnlyForReview,
   inspectV138Plan142SemanticRuntimeForReview,
+  validateV138Plan142ExecutionMappingForReview,
   V138_PLAN142_EFFECT_PATHS,
 } from "./check-v1-38-plan-262-142-live-v13-custody-v10.js"
 
@@ -63,9 +64,128 @@ const freshProcess = async (root: string): Promise<string> => (await promisify(e
   { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })).stdout
 
 let BASE: Awaited<ReturnType<typeof buildV138Plan142ProspectiveV10ForReview>>
-const baseline = () => BASE ??= buildV138Plan142ProspectiveV10ForReview(ROOT)
+let GENUINE: any
+const baseline = () => {
+  if (BASE !== undefined) return BASE
+  const realSpawn = childProcess.spawnSync
+  // Observe the actual executor's stdout in memory without replacing it or
+  // issuing a transcript. No raw host-dependent fixture is persisted/emitted.
+  const capture = vi.spyOn(childProcess, "spawnSync").mockImplementation(((file, args, options) => {
+    const result = realSpawn(file, args, options)
+    if (Array.isArray(args) && args.some((arg) => arg.endsWith("/scripts/.plan142-runner.ts"))) {
+      expect(result.status).toBe(0)
+      GENUINE = JSON.parse(String(result.stdout))
+    }
+    return result
+  }) as typeof spawnSync)
+  syncBuiltinESMExports()
+  try { BASE = buildV138Plan142ProspectiveV10ForReview(ROOT); expect(GENUINE).toBeDefined(); return BASE }
+  finally { capture.mockRestore(); syncBuiltinESMExports() }
+}
+type Sha = `sha256:${string}`
+const canonical = (value: any): string => {
+  const sorted = (item: any): any => Array.isArray(item) ? item.map(sorted)
+    : item !== null && typeof item === "object" ? Object.fromEntries(Object.keys(item).sort()
+      .map((key) => [key, sorted(item[key])])) : item
+  return `${JSON.stringify(sorted(value))}\n`
+}
+const digest = (value: string): Sha => `sha256:${createHash("sha256").update(value).digest("hex")}`
+const rooted = (domain: string, value: unknown): Sha => digest(`${domain}\0${canonical(value)}`)
+const NATIVE = [
+  { path: "scripts/native/v1-38-successor-transaction-helper-v6.c", mode: "100644",
+    blob: "ca694310a8a99c30d7a4070a415b968d3e341409",
+    sha256: "sha256:643d5c7a2bc1e92671c73705965d6f3451946faa60be48b34b044962020d261a" },
+  { path: "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c", mode: "100644",
+    blob: "99da3517ccb8b919759663daf713b4f20337b8b1",
+    sha256: "sha256:fef25dc7eab2cb372e6cd7549adb8836ab466340bd8a18b5eb748de906aefcea" },
+]
+const MODES = [
+  ["--check-source-only", "source_only_checked"], ["--check-prospective-custody", "prospective_custody_checked"],
+  ["--check-post-run-custody", "post_run_no_effect_custody_checked"], ["--check-non-pass-value", "bounded_non_pass_value_checked"],
+  ["--check-bounded-success-value", "bounded_success_value_checked"], ["--check-exact-reproduction-v17-value", "exact_reproduction_v17_value_checked"],
+]
+const ZERO_EFFECTS = { downstreamAuthority: "denied", freshAccepted: 0, freshCharged: 0,
+  liveInvoked: false, producerCalls: 0, readinessInvoked: false }
+const REDUCED = [ZERO_EFFECTS, ZERO_EFFECTS, ZERO_EFFECTS,
+  { classification: "non_pass", reproductionEligible: false },
+  { classification: "bounded_success", reproductionEligible: true },
+  { acceptedCells: 540, exact: true, requiredAccepted: 540 }]
+const repairExecution = (execution: any): void => {
+  for (const item of execution.observations) {
+    const { observationRoot: _, ...body } = item
+    item.observationRoot = rooted("v138-plan-262-133-mode-observation-v5", body)
+  }
+  execution.observationsRoot = rooted("v138-plan-262-133-observations-v5", execution.observations)
+}
+const repairNativeMapping = (item: any): void => {
+  item.disposableLocalNativeSourcesRoot = digest(canonical(item.disposableLocalNativeSourcePaths
+    .map((absolute: string, index: number) => [absolute, NATIVE[index]?.sha256])))
+  item.disposableLocalExecutionClosureRoot = rooted("v138-retry-v3-path-stable-local-execution-closure-v1", {
+    reviewedClosureRoot: item.disposableReviewedClosureRoot,
+    localInstalledClosureRoot: item.disposableLocalInstalledClosureRoot,
+    localGitObjectRoot: item.disposableLocalGitObjectRoot,
+    localNativeSourcesRoot: item.disposableLocalNativeSourcesRoot,
+  })
+}
+// Cheap structural fixture, explicitly not genuine or trusted. The same matrix
+// below also runs against the captured genuine six-mode transcript in the suite.
+const structuralExecution = (): any => {
+  const custody = { reviewedClosureRoot: digest("reviewed"), localInstalledClosureRoot: digest("installed"),
+    localGitObjectRoot: digest("git") }
+  const execution = { ...ZERO_EFFECTS, authorizesExecution: false, actualModesPassed: 6, findings: [],
+    canonicalBefore: custody, canonicalAfter: custody, observationsRoot: "",
+    observations: MODES.map(([mode, status], ordinal) => {
+      const item: any = { mode, status, producerGuardCount: 0, reducedValue: structuredClone(REDUCED[ordinal]),
+        disposableReviewedClosureRoot: custody.reviewedClosureRoot,
+        disposableLocalInstalledClosureRoot: custody.localInstalledClosureRoot,
+        disposableLocalGitObjectRoot: custody.localGitObjectRoot,
+        disposableLocalNativeSourcePaths: NATIVE.map(({ path: suffix }) => `/fixture/v138-plan133-mode-${ordinal}-fixture/repo/${suffix}`),
+        observationRoot: "" }
+      repairNativeMapping(item); return item
+    }) }
+  repairExecution(execution); return execution
+}
+const assertMapping = (execution: any, repositoryClosureRoot: Sha, semanticRuntimeRoot: Sha) => {
+  const valid = validateV138Plan142ExecutionMappingForReview(execution, repositoryClosureRoot, semanticRuntimeRoot)!
+  const expected = MODES.map(([mode], ordinal) => {
+    const body = { repositoryClosureRoot, semanticRuntimeRoot, nativeIdentities: NATIVE,
+      mode, ordinal, reducedValue: REDUCED[ordinal], producerGuardCount: 0 }
+    return { ...body, stableRecordRoot: rooted("v138-plan-262-142-stable-execution-record-v10", body) }
+  })
+  expect(valid).toEqual({ observations: expected,
+    observationsRoot: rooted("v138-plan-262-142-stable-observations-v10", expected),
+    plan143Eligible: false, plan110Eligible: false, authorizesExecution: false, downstreamAuthority: "denied" })
+  const cases: Array<[string, (value: any) => void, string]> = [
+    ["mode", (v) => { v.observations[0].mode = MODES[1]![0] }, "MODE_ORDER_INVALID"],
+    ["order", (v) => v.observations.reverse(), "MODE_ORDER_INVALID"],
+    ["status", (v) => { v.observations[0].status = MODES[1]![1] }, "MODE_ORDER_INVALID"],
+    ["reduced value", (v) => { v.observations[5].reducedValue.acceptedCells = 539 }, "REDUCED_VALUE_INVALID"],
+    ["native order", (v) => { v.observations[0].disposableLocalNativeSourcePaths.reverse(); repairNativeMapping(v.observations[0]) }, "GENUINE_NATIVE_INVALID"],
+    ["native omission", (v) => v.observations[0].disposableLocalNativeSourcePaths.pop(), "GENUINE_MAPPING_INVALID"],
+    ["native mapped root", (v) => { v.observations[0].disposableLocalNativeSourcesRoot = digest("wrong-native") }, "GENUINE_MAPPING_INVALID"],
+    ["producer guard", (v) => { v.observations[0].producerGuardCount = 1 }, "PRODUCER_GUARD_INVALID"],
+    ["producer calls", (v) => { v.producerCalls = 1 }, "EXECUTION_SEMANTICS_INVALID"],
+    ["execution authority", (v) => { v.authorizesExecution = true }, "EXECUTION_SEMANTICS_INVALID"],
+  ]
+  for (const [label, mutate, code] of cases) {
+    const changed = structuredClone(execution); mutate(changed); repairExecution(changed)
+    expect(() => validateV138Plan142ExecutionMappingForReview(changed, repositoryClosureRoot, semanticRuntimeRoot), label)
+      .toThrow(`V138_PLAN142_${code}`)
+  }
+  return valid
+}
+const repairCandidate = (value: any): void => {
+  const { payloadRoot: _, ...payload } = value.payload
+  value.payload.payloadRoot = rooted("v138-plan-262-142-prospective-payload-v10", payload)
+  value.carrier.payloadRoot = value.payload.payloadRoot
+  const { carrierRoot: __, ...carrier } = value.carrier
+  value.carrier.carrierRoot = rooted("v138-plan-262-142-prospective-carrier-v10", carrier)
+}
 
 describe("Plan 262-142 semantic runtime custody v10", () => {
+  it("pure mapping rejects repaired semantic mutations without provenance or execution", () => {
+    assertMapping(structuralExecution(), digest("repository"), digest("runtime"))
+  })
   it("content-addresses Node, launcher, complete TypeScript/tsx/esbuild/native trees and loaded transitives", () => {
     baseline()
     const runtime = inspectV138Plan142SemanticRuntimeForReview(ROOT)
@@ -210,12 +330,9 @@ static void require_absences(void) {`).replace(lookup,
     expect(() => checkV138Plan142EffectPathsAbsentForReview(rootLink)).toThrow("V138_PLAN142_EFFECT_COMPONENT_INVALID")
   }, 60_000)
 
-  it("retains metadata, mapping, six-run, privacy, false-authority, and distinct-root determinism", async () => {
+  it("rejects unmodified clones and repaired mutation clones specifically for provenance", () => {
     baseline()
-    expect(BASE.payload.observations).toHaveLength(6)
-    expect(new Set(BASE.payload.observations.map((item) => item.stableRecordRoot)).size).toBe(6)
-    expect(BASE.payload.plan143Eligible).toBe(true); expect(BASE.payload.plan110Eligible).toBe(false)
-    expect(BASE.payload.authorizesExecution).toBe(false); expect(BASE.payload.downstreamAuthority).toBe("denied")
+    const unmodifiedClone = structuredClone(BASE)
     const mutations = [
       (value: any) => value.payload.observations.reverse(),
       (value: any) => value.payload.nativeIdentities.reverse(),
@@ -223,9 +340,36 @@ static void require_absences(void) {`).replace(lookup,
       (value: any) => value.payload.semanticRuntime.entries.pop(),
       (value: any) => value.payload.semanticRuntime.entries.push(value.payload.semanticRuntime.entries[0]),
       (value: any) => { value.payload.observations[0].producerGuardCount = 1 },
-      (value: any) => { value.payload.plan110Eligible = true },
-    ].map((mutate) => { const value = structuredClone(BASE); mutate(value); return value })
-    expect(authenticateV138Plan142ProspectiveV10BatchForReview(mutations, ROOT).every((item) => !item.accepted)).toBe(true)
+    ].map((mutate) => { const value = structuredClone(BASE); mutate(value); repairCandidate(value); return value })
+    const unrepaired = structuredClone(BASE) as any; unrepaired.payload.observations.reverse()
+    const authority = structuredClone(BASE) as any; authority.payload.plan110Eligible = true; repairCandidate(authority)
+    expect(authenticateV138Plan142ProspectiveV10BatchForReview([BASE, unmodifiedClone, ...mutations, unrepaired, authority], ROOT))
+      .toEqual([{ accepted: true }, ...[unmodifiedClone, ...mutations].map(() =>
+        ({ accepted: false, code: "V138_PLAN142_ROOT_PROVENANCE_MISMATCH" })),
+      { accepted: false, code: "V138_PLAN142_PAYLOAD_INVALID" },
+      { accepted: false, code: "V138_PLAN142_PAYLOAD_INVALID" }])
+  }, 480_000)
+
+  it("validates captured genuine execution semantics and independently recomputes ordered stable roots", () => {
+    baseline()
+    const validated = assertMapping(GENUINE, BASE.payload.repositoryClosure.repositoryClosureRoot,
+      BASE.payload.semanticRuntime.semanticRuntimeRoot)
+    expect(validated.observations).toEqual(BASE.payload.observations)
+    expect(validated.observationsRoot).toBe(BASE.payload.observationsRoot)
+    expect(BASE.payload.observations).toHaveLength(6)
+    expect(new Set(BASE.payload.observations.map((item) => item.stableRecordRoot)).size).toBe(6)
+    expect(BASE.payload).toMatchObject({ ...ZERO_EFFECTS, authorizesExecution: false,
+      plan110Eligible: false, plan141Executed: false, plan141Eligible: false, plan143Eligible: true })
+    expect(BASE.carrier).toMatchObject({ plan110Eligible: false, plan143Eligible: true,
+      authorizesExecution: false, downstreamAuthority: "denied" })
+    expect(GENUINE).toMatchObject({ ...ZERO_EFFECTS, authorizesExecution: false, actualModesPassed: 6, findings: [] })
+    // A semantic result remains only an untrusted value, never a provenance token.
+    expect(authenticateV138Plan142ProspectiveV10BatchForReview([validated], ROOT))
+      .toEqual([{ accepted: false, code: "V138_PLAN142_PROSPECTIVE_SCHEMA_INVALID" }])
+    scanPrivacy(validated); scanPrivacy(BASE)
+  }, 480_000)
+
+  it("retains privacy, false-authority, and fresh-process distinct-root determinism", async () => {
     const [leftRoot, rightRoot] = [cloneRepository(), cloneRepository()]
     const [left, right] = await Promise.all([freshProcess(leftRoot), freshProcess(rightRoot)])
     expect(right).toBe(left); scanPrivacy(JSON.parse(left))
