@@ -68,6 +68,16 @@ describe("Plan 262-94 keyed aggregate", () => {
     expect(left.aggregateRoot).not.toBe(right.aggregateRoot)
   })
 
+  it("domain-separates equal material and rejects commitment swaps", () => {
+    const equal = { ...material, receipts: [Buffer.from("same")], journal: Buffer.from("same"), terminal: Buffer.from("same") }
+    const aggregate = buildV138Plan26294Aggregate(key, equal, counts) as any
+    expect(new Set(Object.values(aggregate.commitments)).size).toBe(Object.keys(aggregate.commitments).length)
+    const swapped = structuredClone(aggregate)
+    ;[swapped.commitments.journalRoot, swapped.commitments.terminalRoot] =
+      [swapped.commitments.terminalRoot, swapped.commitments.journalRoot]
+    expect(() => validateV138Plan26294Aggregate(swapped)).toThrow(/AGGREGATE_SCHEMA_INVALID/)
+  })
+
   it("requires the correct retained key for private recomputation", () => {
     const aggregate = buildV138Plan26294Aggregate(key, material, counts)
     expect(verifyV138Plan26294PrivateAggregate(aggregate, key, material, counts)).toBe(true)
@@ -85,6 +95,18 @@ describe("Plan 262-94 keyed aggregate", () => {
       { ordinalMap: { 0: 1 } },
       { byteLengths: [12] },
     ]) expect(() => validateV138Plan26294Aggregate({ ...aggregate, ...injected })).toThrow(/AGGREGATE_SCHEMA_INVALID/)
+  })
+
+  it("rejects recursive schema extensions and malformed counts", () => {
+    const aggregate = buildV138Plan26294Aggregate(key, material, counts) as any
+    expect(() => validateV138Plan26294Aggregate({ ...aggregate, commitments: { ...aggregate.commitments, extra: aggregate.commitments.journalRoot } }))
+      .toThrow(/AGGREGATE_SCHEMA_INVALID/)
+    expect(() => validateV138Plan26294Aggregate({ ...aggregate, authority: { ...aggregate.authority, extra: false } }))
+      .toThrow(/AGGREGATE_SCHEMA_INVALID/)
+    for (const malformed of [-1, 1.5, null, "15"]) {
+      expect(() => validateV138Plan26294Aggregate({ ...aggregate, counts: { ...aggregate.counts, generations: { ...aggregate.counts.generations, v4: malformed } } }))
+        .toThrow()
+    }
   })
 })
 
@@ -143,6 +165,8 @@ describe("Plan 123 review gate and dormant effects", () => {
       { findingCount: 1 }, { plan124Eligible: false }, { authorizesExecution: true },
       { aggregateManifestSha256: `sha256:${"2".repeat(64)}` }, { sourceCommit: "9".repeat(40) },
     ]) expect(() => validateV138Plan262123Review({ ...review, ...patch })).toThrow(/PLAN123_REVIEW_INVALID/)
+    expect(() => validateV138Plan262123Review({ ...review, sourceFiles: [review.sourceFiles[0], review.sourceFiles[0]] }))
+      .toThrow(/PLAN123_REVIEW_INVALID/)
   })
 
   it("plans exact branch writes only after a matching review and never writes in the pure gate", () => {
