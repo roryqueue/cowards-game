@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest"
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
-import { validateV138LiveV14PublishedContractForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v14.js"
+import { validateV138LiveV14PublishedContractForReview, executeV138LiveV14ReviewMode,
+  validateV138LiveV14EffectValuesForReview, checkV138LiveV14EffectState,
+  inspectV138LiveV14ProducerGuardForReview, checkV138LiveV14RootBoundCustodyForReview,
+  buildV138LiveV14GuardedProofForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v14.js"
+import { settleV138LiveV9ProducerOutcomeForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v9.js"
 
 type Json = Record<string, any>
 const SOURCE = "scripts/run-v1-38-bounded-retry-envelope-v3-live-v14.ts"
 const REVIEWER = "scripts/check-v1-38-plan-262-143-live-v13-custody-review-v10.ts"
 const PAYLOAD = ".planning/artifacts/v1.38-plan-262-143-live-v13-custody-review-payload-v10.json"
 const REVIEW = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-143-REVIEW-v10.md"
+const ROOT = fileURLToPath(new URL("../", import.meta.url)).replace(/\/$/, "")
 // Independent fixture canonicalization, root computation and rendering: never call
 // the implementation's builders, inventory, observation runner or review helper.
 const canonical = (value: unknown): string => {
@@ -332,4 +339,31 @@ describe("closed producer boundary", () => {
     }
     expect(all.filter(ts.isCallExpression).filter((n) => n.expression.kind === ts.SyntaxKind.ImportKeyword)).toHaveLength(0)
   })
+})
+
+describe("actual modes", () => {
+  it("runs source-only on actual live-v14 without publication or producer authority", () => {
+    const observation = executeV138LiveV14ReviewMode(ROOT, "source-only")
+    expect(observation).toMatchObject({ mode: "source-only", status: "source_only_checked", reducedValue: noEffect })
+    expect(observation.sourceRoot).toBe(sha(readFileSync(path.join(ROOT, SOURCE), "utf8")))
+  })
+  it("proves all six actual144 modes in two fresh file-guarded roots and processes", () => {
+    const proof = buildV138LiveV14GuardedProofForReview(ROOT)
+    expect(proof).toMatchObject({ producerGuardCount: 0, actualModesPassed: 6, rootCount: 2, processCount: 2 })
+    expect(proof.runs).toHaveLength(2)
+    for (const run of proof.runs) {
+      expect(run).toHaveLength(6)
+      for (let i = 0; i < 6; i++) {
+        expect(run[i]).toMatchObject({ mode: modes[i][0], status: modes[i][1], reducedValue: reductions[i] })
+        expect(run[i].sourceRoot).toBe(sha(readFileSync(path.join(ROOT, SOURCE), "utf8")))
+      }
+    }
+    expect(proof.normalizedEvidenceRoots).toHaveLength(2)
+    expect(proof.normalizedEvidenceRoots[0]).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(proof.normalizedEvidenceRoots[0]).toBe(proof.normalizedEvidenceRoots[1])
+    const publicBytes = canonical(proof)
+    expect(publicBytes).not.toMatch(/\/Users\/|\/private\/|\/var\/|\/tmp\/|transcriptNonce|rootDevice|rootInode|rawDiagnostics|strategySource|StrategyMemory|SoldierMemory/)
+    expect(publicBytes).not.toContain("3882cd5d3ec7a834e1de88254dd0daf955da12aa")
+    expect(() => checkV138LiveV14RootBoundCustodyForReview(ROOT, proof)).toThrow()
+  }, 540000)
 })
