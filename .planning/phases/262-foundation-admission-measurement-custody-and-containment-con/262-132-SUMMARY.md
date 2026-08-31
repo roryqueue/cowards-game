@@ -13,7 +13,7 @@ provides:
 affects: [262-133, 262-110]
 tech-stack:
   added: []
-  patterns: [strict summary ancestry gate, derived observation aggregates, immutable invalid-history disposition]
+  patterns: [isolated bare metadata snapshot, strict summary ancestry gate, derived observation aggregates, immutable invalid-history disposition]
 key-files:
   created:
     - scripts/check-v1-38-plan-262-132-live-v13-custody-v5.ts
@@ -75,6 +75,7 @@ Additive v5 correction authenticating arbitrary strict summary descendants and d
 - Rejected empty, missing, duplicate, reordered, forged-status, forged-root, forged-reduced-value, forged-custody, nonzero-producer, and caller-supplied aggregate inputs before eligibility derivation.
 - Preserved the v4 trio, review, summary, and tracking history byte-for-byte as `process_invalid_descendant_and_observation_validation`; Plan133 and Plan110 remain false pending independent review of the hardened correction.
 - Closed committed review blockers `CR-01` and `CR-02` by routing every Git read through the isolated replacement-disabled custody runner and removing caller-provided payloads from the exported validator trust boundary.
+- Closed V2 review blocker `CR-03` by binding history reads to a private bare metadata snapshot, so concurrent graft, shallow, or local-config insertion cannot forge ancestry or conceal protected-path history.
 
 ## Task Commits
 
@@ -84,6 +85,8 @@ Additive v5 correction authenticating arbitrary strict summary descendants and d
 4. **Task 2 GREEN: genuine-observation aggregate derivation** - `36fba458`
 5. **Review correction RED: hostile replacement and forged-payload tests** - `772ca8b6`
 6. **Review correction GREEN: isolated Git and internal payload authentication** - `26c57dfe`
+7. **V2 correction RED: mutable metadata race and root-first forgery tests** - `26ffbcd9`
+8. **V2 correction GREEN: isolated bare metadata snapshot** - `52d35eb8`
 
 ## Files Created/Modified
 
@@ -117,7 +120,23 @@ Additive v5 correction authenticating arbitrary strict summary descendants and d
 - **Verification:** A self-consistent six-observation/payload forgery fails before an aggregate is returned.
 - **Commit:** `26c57dfe`
 
-**Total deviations:** 2 auto-fixed bugs. **Impact:** Trust boundaries were tightened without effects or downstream eligibility.
+**3. [Rule 1 - Bug] Bound every history read against concurrent metadata mutation**
+
+- **Found during:** Committed V2 review `3bfb7dc2` (`CR-03`)
+- **Issue:** Graft, shallow, and dangerous local configuration were checked before use but remained mutable between isolated Git subprocesses.
+- **Fix:** Resolved and reauthenticated source metadata, then ran every ancestry, object, tree, and path-history query through a private bare metadata snapshot containing only fixed config, bound HEAD, and the explicit content-addressed object store.
+- **Verification:** A hostile clone injects graft, shallow, and config after the initial check while hiding a rewrite; authentication still reports the protected rewrite.
+- **Commit:** `52d35eb8`
+
+**4. [Rule 1 - Test] Exercised forged observations through the current API**
+
+- **Found during:** Committed V2 review `3bfb7dc2` (`WR-01`)
+- **Issue:** The forged-observation regression used obsolete argument order and rejected before inspecting observations.
+- **Fix:** Calls `validateV138Plan132ObservationsForReview(ROOT, payload.observations)` directly.
+- **Verification:** The self-consistent forgery reaches internally authenticated history and fails `V138_PLAN132_OBSERVATIONS_INVALID`.
+- **Commit:** `26ffbcd9`
+
+**Total deviations:** 4 auto-fixed issues (3 bugs, 1 test correction). **Impact:** Trust boundaries were tightened without effects or downstream eligibility.
 
 ## Issues Encountered
 
@@ -129,7 +148,7 @@ None - no external service configuration required.
 
 ## Verification
 
-- Focused serialized Vitest: 1 file, 8 tests passed, including replacement-ref and self-consistent forged-payload attacks.
+- Focused serialized Vitest: 1 file, 9 tests passed, including replacement-ref, concurrent graft/shallow/config, hidden-rewrite, and self-consistent forged-payload attacks.
 - Source-only CLI: 6 validated modes, 0 findings, Plan133 false, Plan110 false, producer/readiness/live calls zero or false, downstream authority denied.
 - TypeScript: `pnpm exec tsc --noEmit` passed.
 - `git diff --check` passed.
@@ -145,7 +164,7 @@ The hardened Plan132 source requires fresh independent review before Plan133 can
 ## Self-Check: PASSED
 
 - Both source/test files and this summary exist.
-- Task commits `cd5148ea`, `4b11d0a9`, `8e8c7de7`, `36fba458`, `772ca8b6`, and `26c57dfe` exist.
+- Task commits `cd5148ea`, `4b11d0a9`, `8e8c7de7`, `36fba458`, `772ca8b6`, `26c57dfe`, `26ffbcd9`, and `52d35eb8` exist.
 - Exact v4 trio, review, summary, and closeout bytes remain protected and unchanged.
 
 ---
