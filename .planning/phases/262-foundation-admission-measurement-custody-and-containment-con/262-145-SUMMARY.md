@@ -14,7 +14,7 @@ provides:
 affects: [262-146, 262-147, ADMIT-03]
 tech-stack:
   added: []
-  patterns: [opaque WeakMap lease, inherited retained descriptor, durable pre-entry invocation marker, stage-aware postcheck]
+  patterns: [opaque WeakMap lease, shared bounded shutdown promise, committed review blob, durable pre-entry invocation marker, strict stage-aware postcheck]
 key-files:
   created:
     - scripts/lib/v1-38-bounded-retry-v4-native-custody-v1.ts
@@ -27,7 +27,7 @@ key-files:
   modified: []
 key-decisions:
   - "Retain and validate the owner's original root open-file description for every under-lease PAIR/LIFE transaction."
-  - "Expose only the single Plan 146 REVIEW.md machine header; inherited producer review/publication paths fail closed into live-v15."
+  - "Authenticate the single Plan 146 REVIEW.md from its exact committed blob and bind the report commit/blob into the invocation marker."
   - "Record the sole corrected invocation durably before producer entry and preserve absent terminal as failure."
 requirements-supported: [ADMIT-03, ADMIT-04, MEAS-02, MEAS-04, MEAS-09, MEAS-10, SEAL-01]
 requirements-completed: []
@@ -77,15 +77,15 @@ status: complete
 
 - Proved real owner → PAIR → LIFE → PAIR composition in separately supervised native fixtures while a second owner stayed excluded until release.
 - Threaded one opaque retained-descriptor lease through all five active native writer call sites without changing the owner-v1 or transaction-v6 C bytes.
-- Froze exact committed source `dafeb114c93ac16559af0aee3d195f1abad2229a`, semantic runtime root `sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e`, envelope root `sha256:8ffad2701b88da06cbfc16120ffb5378df7de5df22a9707b0c11153ad35b2485`, and seal root `sha256:75e05be509227a11d6e31d2ea6c4991194cd08692492ab2e32a1c0b98f71dcdb`.
+- Froze corrected exact committed source `6fd67e32640ec0b4c6e1f60e53b622ec97097609`, semantic runtime root `sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e`, source root `sha256:ec29267a04839c2ddf107284c6087b7a5b8678df13bddbfa55df1d9ca79f60f4`, envelope root `sha256:a4fb6fe9c7062c7c4464e6e4681a5a75e895e7fe28077df1c5ece6845e3dfd42`, and seal root `sha256:4f2d6c1c22d0a81cf1b36bdc64c7f8546a9d5abffcd1d99e50887ffff8ec9384` after the independent code-review repair.
 - Preserved failed Plan 110 as one consumed invocation with zero accepted cells, absent journal/terminal/reproduction, and its empty private-v3 directory unchanged.
 
 ## Verification
 
-- Native custody suite: **4/4 passed in 24.82s**. Each real fixture ran in a separate process group with a 55-second external SIGKILL supervisor.
-- Complete affected suites: **19/19 passed in 28.85s** across four test files.
-- Task 2 suites: **10/10 passed in 3.43s**.
-- Live-v15 suite: **5/5 passed in 376ms**.
+- Native custody suite after review repair: **5/5 passed in 31.84s**. Each real fixture ran in a separate process group with a 55-second external SIGKILL supervisor.
+- Complete affected suites after review repair: **22/22 passed in 38.06s** across four test files.
+- Model/producer suites after review repair: **11/11 passed**.
+- Live-v15 suite after review repair: **6/6 passed**.
 - Targeted TypeScript invocation was run against the five v4/bootstrap source entries. The repository-wide transitive command remains nonzero because of pre-existing legacy errors, but its filtered output contained **zero errors in the affected v4/native/bootstrap files**. This is not claimed as a global TypeScript pass.
 - `git diff --check`: passed.
 - Original native hashes remained `owner=fef25dc7eab2cb372e6cd7549adb8836ab466340bd8a18b5eb748de906aefcea` and `transaction=643d5c7a2bc1e92671c73705965d6f3451946faa60be48b34b044962020d261a`.
@@ -101,6 +101,10 @@ status: complete
 6. **Task 3 RED:** `3d590007`
 7. **Task 3 live-v15 source:** `c8011d33`, `48556aca`, `dafeb114`
 8. **Inactive envelope/seal publication:** `8868f8cd`
+9. **Independent review RED:** `815b98a4`
+10. **Committed review, producer marker, and strict postcheck:** `c3eb164b`, `327ed926`
+11. **Joined bounded native shutdown:** `9dac0a94`, with TypeScript narrowing follow-ups `2482f420`, `6fd67e32`
+12. **Corrected inactive envelope/seal publication:** `4197ee79`
 
 ## Deviations from Plan
 
@@ -128,6 +132,14 @@ status: complete
 - **Committed in:** `6e742a54`
 
 **Total deviations:** 3 auto-fixed (2 bugs, 1 missing critical identity). **Impact:** No scientific, resource, gameplay, privacy, assurance-class, or execution-authority bound changed.
+
+### Independent code-review repair
+
+- Plan 146 review custody now resolves and parses the exact committed review blob, verifies the no-follow working file equals it, requires the report commit to descend from the reviewed source commit, and binds the report commit/blob into readiness and invocation custody.
+- The actual producer entry has no `validateInputs:false` or injected `checkPair` bypass. It authenticates committed review custody and the exact durable invocation marker before acquiring native ownership or creating effects.
+- Native invalidation and release share one bounded shutdown promise. Release joins invalidated shutdown, escalates with `SIGKILL` only after the grace bound, awaits child close before cleanup, and producer cleanup cannot mask the original transaction error.
+- Raw terminal postcheck uses the strict journal/receipt/terminal/reproduction outcome validator. Claimed Plan 94 retirement and hybrid raw/retired state fail closed until Plan 94 supplies its exact committed checker contract.
+- The earlier envelope/seal remain historical failed-source bytes. The same inactive canonical paths were corrected once, before Plan 146, to bind the repaired source only; this grants no execution authority.
 
 ## TDD Gate Compliance
 
