@@ -1,5 +1,11 @@
 # Roadmap: Coward's Game
 
+## Approved D-33R recovery — 2026-08-31
+
+The operator approved exactly one corrected invocation after independently verified native deadlock repair, under unchanged limits. Plans145→146→147 replace failed110 as the executable entry; no further retry or repeated hash-literal checkpoint is authorized. Plan110 and all v3 source, absence evidence and empty private directory remain preserved history. Fresh source/evidence uses v4/live-v15/reproduction-v18, correction-v12 and Route12. Plan145 is next after plan checking;146 must independently verify the real native composition before root147 runs. Phase262 remains incomplete and ADMIT-03 remains0/540; Phases263-270 and candidate/formation/holdout/public/production authority remain denied. This is not adoption of the proposed lean milestone rewrite.
+
+Current inventory:128 plan files,110 completed plans,13 active pending and5 inactive/uncompleted historical plans (including failed110). The failed110 summary records an attempted invocation, not completed work. Older closeout/count/dispatch carriers below are historical.
+
 ## Milestones
 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
@@ -50,7 +56,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 110/125 plans executed (11 active remaining; four inactive unexecuted)
+**Plans:** 110/128 completed;13 active pending,5 inactive/uncompleted historical including failed110
 
 **Current verdict:** PLAN110 NATIVE BOOTSTRAP FAILURE / SOLE INVOCATION USED / FRESH0/540 / NO REENTRY / DOWNSTREAM DENIED. Plan143's source-only proof remains historical passing evidence; it did not execute the actual owner-plus-journal-bootstrap composition. Plan110 and the phase remain incomplete.
 
@@ -76,17 +82,19 @@ The dependency-repair and earlier closeout carriers below are historical; only t
 **Current executable plan list (supersedes historical wave lists below):**
 - [x] 262-144-PLAN.md — Wave108; closed source-only live-v14 contract and actual-consumer proof (`8bb3dbb8` summary)
 - [x] 262-143-PLAN.md — Wave109; independent v10 review closed (summary `2cf1ed90`)
-- [ ] 262-110-PLAN.md — Wave110; sole reviewed live-v14 production owner
-- [ ] 262-94-PLAN.md — Wave111; existing reviewed admission/lifecycle continuation
-- [ ] 262-123-PLAN.md — Wave112; existing reviewed admission/lifecycle continuation
-- [ ] 262-124-PLAN.md — Wave113; existing reviewed admission/lifecycle continuation
-- [ ] 262-95-PLAN.md — Wave114; existing reviewed admission/lifecycle continuation
-- [ ] 262-125-PLAN.md — Wave115; existing reviewed admission/lifecycle continuation
-- [ ] 262-126-PLAN.md — Wave116; existing reviewed admission/lifecycle continuation
-- [ ] 262-106-PLAN.md — Wave117; existing reviewed admission/lifecycle continuation
-- [ ] 262-127-PLAN.md — Wave118; existing reviewed admission/lifecycle continuation
-- [ ] 262-128-PLAN.md — Wave119; existing reviewed admission/lifecycle continuation
-- [ ] 262-129-PLAN.md — Wave120; existing reviewed admission/lifecycle continuation
+- [ ] 262-145-PLAN.md — Wave110; repair native lease and close fresh v4 source
+- [ ] 262-146-PLAN.md — Wave111; one independent exact-source native-composition review
+- [ ] 262-147-PLAN.md — Wave112; root sole corrected live-v15 invocation and unconditional postcheck
+- [ ] 262-94-PLAN.md — Wave113; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-123-PLAN.md — Wave114; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-124-PLAN.md — Wave115; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-95-PLAN.md — Wave116; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-125-PLAN.md — Wave117; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-126-PLAN.md — Wave118; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-106-PLAN.md — Wave119; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-127-PLAN.md — Wave120; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-128-PLAN.md — Wave121; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-129-PLAN.md — Wave122; pending admission/lifecycle continuation on fresh v4 lineage
 
 The Plan142 closeout carrier and its next-action prose below remain immutable historical evidence; the Plan144 closeout carrier controls current dispatch.
 
