@@ -5,19 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-133 literal-zero v5 authenticated from strict tracking descendant; revised Plan 262-110 is next
-last_updated: "2026-08-31T02:35:00.000Z"
+stopped_at: Plan 262-133 code review CR-01 makes v5 process-invalid; Plan 262-134 source-only correction is next
+last_updated: "2026-08-31T02:45:00.000Z"
 last_activity: 2026-08-31
-last_activity_desc: independently authenticated Plan132 and published exact additive literal-zero v5
+last_activity_desc: replanned additive source and independent-review successors after Plan133 authority-carrier validation failure
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 114
+  total_plans: 116
   completed_plans: 103
-  percent: 90
+  percent: 89
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-closeout-replan-status-v4: {"schema_version":"v1.38-phase-262-closeout-replan-v4","active_plans":116,"trustworthy_summaries":103,"incomplete_plans":["262-134","262-135","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-134","262-135","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-134":99,"262-135":100,"262-110":101,"262-94":102,"262-123":103,"262-124":104,"262-95":105,"262-125":106,"262-126":107,"262-106":108,"262-127":109,"262-128":110,"262-129":111},"plan133_code_review_commit":"0da1d2e34eb71df56080212b0e4ffa3e8e11c59a","plan133_code_review_tree":"9532800ef70257b21f521cdcf0453191c27a167f","plan133_code_review_blob":"153282a3e07da974527b948692ad93ddff636136","plan133_code_review_sha256":"2187b34625e46a3a8e72a4f6b22b3f6ccbe111a3718f6ac8520898ac3d8a1d10","plan133_v5_publication_commit":"7bf5b09bf13029cce57e250f75ace5f6b9868900","plan133_v5_disposition":"process_invalid_authority_carrier_validation","plan133_v5_eligible":false,"plan134_source_only":true,"plan135_v6_review_only":true,"plan_262_110_eligible":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-134-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The Plan133 closeout carrier below remains immutable pre-review history and is superseded for current eligibility and next action by committed review 0da1d2e3 and the v4 replan carrier above. -->
 
 <!-- phase-262-plan-133-closeout-status: {"schema_version":"v1.38-plan-262-133-closeout-v5","proof_status":"independent_literal_zero_v5_strict_descendant_authenticated","active_plans":114,"trustworthy_summaries":103,"incomplete_plans":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"subject_commit":"52d35eb88db55e31d7203abb64735d12a53bbcf3","closeout_commit":"3932bfee47ef6316fcaba59182960a831ef455a0","clean_review_commit":"2c6c73fbe6ba2f1796853f421c1eeb2debaf813a","reviewer_source_commit":"222cecd6c8f633e1cec5ae916f95389f9a5f7876","publication_commit":"7bf5b09bf13029cce57e250f75ace5f6b9868900","summary_commit":"ed95a68c","finding_count":0,"actual_modes_passed":6,"observations_root":"sha256:662d4b19c56e483db537b7265d6a0af92f014b7ab6e49f292c101fac800b8a62","payload_root":"sha256:3e4a1863486ceae58f26180eaa73b59a5bff5f01d2a97b177ce03a402bdad8c0","review_root":"sha256:94b384e9ed7b03bac339cdb6b3384b93192d3bb5fc4986b6cf0edfce041afbaf","carrier_root":"sha256:cd2388bb0036262954e9461ccf2fcd04976b4f82aa8fd26175904c748469c609","v4_disposition":"process_invalid_descendant_and_observation_validation","v4_eligible":false,"plan_262_110_eligible":true,"authorizes_execution":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-revised-262-110-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 

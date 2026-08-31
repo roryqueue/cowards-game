@@ -50,9 +50,13 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 103/114 plans executed
+**Plans:** 103/116 plans executed
 
-**Current verdict:** PLAN-133 EXACT V5 LITERAL ZERO / PLAN-131 V4 PROCESS-INVALID AND INELIGIBLE / REVISED PLAN-110 ELIGIBLE / EXECUTION AUTHORITY FALSE / FRESH 0/540 / DOWNSTREAM DENIED — Independent reviewer `222cecd6` authenticated corrected source `52d35eb8`, closeout `3932bfee`, clean review `2c6c73fb`, review `f45ee38d`, exact b331 scope, and immutable v3/v4 history through isolated bare metadata snapshots. Exact-three-add publication `7bf5b09b` records six unique canonical genuine observations and literal zero. Summary `ed95a68c` is its exact one-add child. Plan110 alone is next; no readiness, live, producer, effect, capacity, reset, authorization literal, Phase263, or downstream authority exists.
+**Current verdict:** PLAN-133 V5 PROCESS-INVALID AUTHORITY-CARRIER VALIDATION / PLAN-110 INELIGIBLE / EXECUTION AUTHORITY FALSE / FRESH 0/540 / DOWNSTREAM DENIED — Committed code review `0da1d2e3` proved that v5 does not authenticate its carrier self-root, exact keys, or exhaustive stored no-authority semantics and masks contradictory evidence with hardcoded return values. All v5 source/test/trio/review/summary/tracking bytes remain immutable. Plan134 must create a source-only correction; Plan135 must independently review it and may publish additive v6 only on literal zero. No readiness, live, producer, effect, capacity, reset, authorization literal, retry, Phase263, or downstream authority exists.
+
+<!-- phase-262-closeout-replan-status-v4: {"schema_version":"v1.38-phase-262-closeout-replan-v4","active_plans":116,"trustworthy_summaries":103,"incomplete_plans":["262-134","262-135","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-134","262-135","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-134":99,"262-135":100,"262-110":101,"262-94":102,"262-123":103,"262-124":104,"262-95":105,"262-125":106,"262-126":107,"262-106":108,"262-127":109,"262-128":110,"262-129":111},"plan133_code_review_commit":"0da1d2e34eb71df56080212b0e4ffa3e8e11c59a","plan133_code_review_tree":"9532800ef70257b21f521cdcf0453191c27a167f","plan133_code_review_blob":"153282a3e07da974527b948692ad93ddff636136","plan133_code_review_sha256":"2187b34625e46a3a8e72a4f6b22b3f6ccbe111a3718f6ac8520898ac3d8a1d10","plan133_v5_publication_commit":"7bf5b09bf13029cce57e250f75ace5f6b9868900","plan133_v5_disposition":"process_invalid_authority_carrier_validation","plan133_v5_eligible":false,"plan134_source_only":true,"plan135_v6_review_only":true,"plan_262_110_eligible":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-134-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The Plan133 closeout carrier below remains immutable pre-review history and is superseded for current eligibility and next action by committed review 0da1d2e3 and the v4 replan carrier above. -->
 
 <!-- phase-262-plan-133-closeout-status: {"schema_version":"v1.38-plan-262-133-closeout-v5","proof_status":"independent_literal_zero_v5_strict_descendant_authenticated","subject_commit":"52d35eb88db55e31d7203abb64735d12a53bbcf3","closeout_commit":"3932bfee47ef6316fcaba59182960a831ef455a0","clean_review_commit":"2c6c73fbe6ba2f1796853f421c1eeb2debaf813a","reviewer_source_commit":"222cecd6c8f633e1cec5ae916f95389f9a5f7876","publication_commit":"7bf5b09bf13029cce57e250f75ace5f6b9868900","summary_commit":"ed95a68c","finding_count":0,"actual_modes_passed":6,"observations_root":"sha256:662d4b19c56e483db537b7265d6a0af92f014b7ab6e49f292c101fac800b8a62","payload_root":"sha256:3e4a1863486ceae58f26180eaa73b59a5bff5f01d2a97b177ce03a402bdad8c0","review_root":"sha256:94b384e9ed7b03bac339cdb6b3384b93192d3bb5fc4986b6cf0edfce041afbaf","carrier_root":"sha256:cd2388bb0036262954e9461ccf2fcd04976b4f82aa8fd26175904c748469c609","v4_disposition":"process_invalid_descendant_and_observation_validation","v4_eligible":false,"plan_262_110_eligible":true,"authorizes_execution":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"next_action":"dispatch-revised-262-110-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -327,49 +331,57 @@ Plans:
 
 **Wave 98** *(blocked on exact committed Plan-132 source)*
 
-- [x] 262-133-PLAN.md — Independently reviewed Plan132 and published exact additive literal-zero v5 at `7bf5b09b`; reusable strict-descendant authentication makes only revised Plan110 eligible.
+- [x] 262-133-PLAN.md — Published immutable additive v5 at `7bf5b09b`; committed review `0da1d2e3` later proved its authority-carrier authentication process-invalid and current eligibility false.
 
-**Wave 99** *(blocked on reusable strict-descendant literal-zero Plan-133 v5; standing execution authorization unchanged)*
+**Wave 99** *(blocked on committed Plan-133 CR-01; source/tests only, no effects)*
+
+- [ ] 262-134-PLAN.md — RED-test and correct exact payload/carrier schemas, roots, frozen semantics, and authenticated returned values without modifying v5 or publishing v6.
+
+**Wave 100** *(blocked on exact committed Plan-134 source-only correction)*
+
+- [ ] 262-135-PLAN.md — Independently mutate every authority/counter/schema/root/link field and publish exact additive v6 only on literal zero with reusable strict-descendant authentication.
+
+**Wave 101** *(blocked on reusable strict-descendant literal-zero Plan-135 v6; standing execution authorization unchanged)*
 
 - [ ] 262-110-PLAN.md — Invoke reviewed live-v13 once; commit the privacy-safe terminal and conditional unchanged reproduction-v17 while raw journal/private receipts remain owner-local.
 
-**Wave 100** *(blocked on committed Plan-110 terminal summary)*
+**Wave 102** *(blocked on committed Plan-110 terminal summary)*
 
 - [ ] 262-94-PLAN.md — Commit publication-incapable admission checker source and a privacy-safe aggregate manifest before cleanup.
 
-**Wave 101** *(blocked on committed Plan-94 source and aggregate)*
+**Wave 103** *(blocked on committed Plan-94 source and aggregate)*
 
 - [ ] 262-123-PLAN.md — Independently review exact Plan-94 source and aggregate privacy; publish findings only.
 
-**Wave 102** *(blocked on literal-zero Plan-123 review)*
+**Wave 104** *(blocked on literal-zero Plan-123 review)*
 
 - [ ] 262-124-PLAN.md — Invoke the reviewed publisher for disposition/correction/Route-11, then retire owner-local raw evidence after committed aggregate verification.
 
-**Wave 103** *(blocked on committed Plan-124 adjudication)*
+**Wave 105** *(blocked on committed Plan-124 adjudication)*
 
 - [ ] 262-95-PLAN.md — Commit publication-incapable lifecycle-driver source/tests with all-16 and all-plan inventory semantics.
 
-**Wave 104** *(blocked on committed Plan-95 source)*
+**Wave 106** *(blocked on committed Plan-95 source)*
 
 - [ ] 262-125-PLAN.md — Independently review lifecycle source, mutation partitions, coverage, and final-convergence holdback.
 
-**Wave 105** *(blocked on literal-zero Plan-125 review)*
+**Wave 107** *(blocked on literal-zero Plan-125 review)*
 
 - [ ] 262-126-PLAN.md — Publish non-authorizing readiness, exhaustive validation/verification, and additive Plan121 metadata correction.
 
-**Wave 106** *(blocked on committed Plan-126 proof latch)*
+**Wave 108** *(blocked on committed Plan-126 proof latch)*
 
 - [ ] 262-106-PLAN.md — Commit provisional lifecycle, summary, and branch-neutral/pass-only tracking atomically while Phase263 remains denied.
 
-**Wave 107** *(blocked on atomic Plan-106 closeout)*
+**Wave 109** *(blocked on atomic Plan-106 closeout)*
 
 - [ ] 262-127-PLAN.md — Independently audit full convergence, all 16 requirements, all active/history, privacy, and authority edges before eligibility.
 
-**Wave 108** *(blocked on literal-zero Plan-127 convergence)*
+**Wave 110** *(blocked on literal-zero Plan-127 convergence)*
 
 - [ ] 262-128-PLAN.md — Publish the exact final branch atomically; exact pass permits Phase263 planning only, gaps permits bookkeeping only.
 
-**Wave 109** *(blocked on atomic Plan-128 publication)*
+**Wave 111** *(blocked on atomic Plan-128 publication)*
 
 - [ ] 262-129-PLAN.md — Authenticate the final closeout from a strict later HEAD and clean checkout before any Phase263 action.
 
