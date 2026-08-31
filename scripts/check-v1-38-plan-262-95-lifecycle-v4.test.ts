@@ -19,6 +19,7 @@ import {
   REQUIREMENT_IDS,
   V138_PLAN_262_95_PATHS,
   assertPlan125Review,
+  assertReviewedReadiness,
   buildPlan125ReviewRoot,
   inspectCommittedPhase262Inventory,
   inspectDispositionBranch,
@@ -264,6 +265,24 @@ const createReviewFixture = () => {
   return { root, review }
 }
 
+const commitReviewFixture = (root: string, review: unknown) => {
+  const reviewPath = path.join(root, V138_PLAN_262_95_PATHS.review125)
+  mkdirSync(path.dirname(reviewPath), { recursive: true })
+  writeFileSync(reviewPath, `${JSON.stringify(review)}\n`)
+  execFileSync("git", ["add", V138_PLAN_262_95_PATHS.review125], { cwd: root })
+  execFileSync("git", ["commit", "-qm", "review"], { cwd: root })
+}
+
+const commitInventoryPath = (root: string, relative: string) => {
+  const target = path.join(root, relative)
+  mkdirSync(path.dirname(target), { recursive: true })
+  writeFileSync(target, `${relative}\n`)
+  execFileSync("git", ["add", relative], { cwd: root })
+  execFileSync("git", ["commit", "-qm", `add ${path.basename(relative)}`], {
+    cwd: root,
+  })
+}
+
 describe("Plan 262-125 and Plan 262-126 closed gates", () => {
   it("authenticates the frozen domain-separated literal-zero review schema", () => {
     const { root, review } = createReviewFixture()
@@ -300,6 +319,65 @@ describe("Plan 262-125 and Plan 262-126 closed gates", () => {
       authorizesExecution: false,
       authority: deniedAuthority,
     })
+  })
+
+  it("accepts only the committed Plan 126 summary as the post-readiness inventory transition", () => {
+    const { root, review } = createReviewFixture()
+    commitReviewFixture(root, review)
+    const readiness = validateReviewedReadinessGate(root, review)
+    commitInventoryPath(root, V138_PLAN_262_95_PATHS.summary126)
+
+    expect(assertReviewedReadiness(root, readiness)).toEqual(readiness)
+  })
+
+  it.each([
+    [
+      "another summary instead of Plan 126",
+      [
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-127-SUMMARY.md",
+      ],
+    ],
+    [
+      "an additional summary",
+      [
+        V138_PLAN_262_95_PATHS.summary126,
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-127-SUMMARY.md",
+      ],
+    ],
+    [
+      "an additional review",
+      [
+        V138_PLAN_262_95_PATHS.summary126,
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-126-REVIEW.md",
+      ],
+    ],
+  ])("rejects %s after readiness", (_name, additions) => {
+    const { root, review } = createReviewFixture()
+    commitReviewFixture(root, review)
+    const readiness = validateReviewedReadinessGate(root, review)
+    for (const relative of additions) commitInventoryPath(root, relative)
+
+    expect(() => assertReviewedReadiness(root, readiness)).toThrow(
+      "V138_PLAN_262_95_READINESS_INVALID",
+    )
+  })
+
+  it("rejects stale or modified readiness inventory metadata", () => {
+    const { root, review } = createReviewFixture()
+    commitReviewFixture(root, review)
+    const readiness: any = validateReviewedReadinessGate(root, review)
+    commitInventoryPath(root, V138_PLAN_262_95_PATHS.summary126)
+    const modified = {
+      ...readiness,
+      inventoryCounts: {
+        ...readiness.inventoryCounts,
+        summaries: readiness.inventoryCounts.summaries - 1,
+      },
+    }
+
+    expect(() => assertReviewedReadiness(root, modified)).toThrow(
+      "V138_PLAN_262_95_READINESS_INVALID",
+    )
   })
 
   it("requires committed Plan 126 proof and correction before provisional closeout", () => {

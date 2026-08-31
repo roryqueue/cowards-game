@@ -215,6 +215,43 @@ export interface V138Phase262Inventory {
   roots: Record<string, Sha256>
 }
 
+type InventoryGroups = Pick<
+  V138Phase262Inventory,
+  | "activePlans"
+  | "historicalPlans"
+  | "dormantCarriers"
+  | "summaries"
+  | "reviews"
+  | "validations"
+  | "verifications"
+>
+
+const buildInventory = (groups: InventoryGroups): V138Phase262Inventory => {
+  const allPaths = [...new Set(Object.values(groups).flat())].sort(
+    (left, right) => left.localeCompare(right),
+  )
+  return Object.freeze({
+    requirementIds: REQUIREMENT_IDS,
+    ...groups,
+    allPaths,
+    counts: Object.freeze({
+      ...Object.fromEntries(
+        Object.entries(groups).map(([name, paths]) => [name, paths.length]),
+      ),
+      total: allPaths.length,
+    }),
+    roots: Object.freeze({
+      ...Object.fromEntries(
+        Object.entries(groups).map(([name, paths]) => [
+          name,
+          sha256(canonical(paths)),
+        ]),
+      ),
+      all: sha256(canonical(allPaths)),
+    }),
+  })
+}
+
 export const inspectCommittedPhase262Inventory = (
   root: string,
 ): V138Phase262Inventory => {
@@ -264,29 +301,7 @@ export const inspectCommittedPhase262Inventory = (
   for (const [name, paths] of Object.entries(groups)) {
     if (paths.length === 0) fail(`INVENTORY_${name.toUpperCase()}_EMPTY`)
   }
-  const allPaths = [...new Set(Object.values(groups).flat())].sort(
-    (left, right) => left.localeCompare(right),
-  )
-  return Object.freeze({
-    requirementIds: REQUIREMENT_IDS,
-    ...groups,
-    allPaths,
-    counts: Object.freeze({
-      ...Object.fromEntries(
-        Object.entries(groups).map(([name, paths]) => [name, paths.length]),
-      ),
-      total: allPaths.length,
-    }),
-    roots: Object.freeze({
-      ...Object.fromEntries(
-        Object.entries(groups).map(([name, paths]) => [
-          name,
-          sha256(canonical(paths)),
-        ]),
-      ),
-      all: sha256(canonical(allPaths)),
-    }),
-  })
+  return buildInventory(groups)
 }
 
 export interface DispositionPresence {
@@ -500,12 +515,10 @@ export const assertPlan125Review = (
   return value as Plan125Review
 }
 
-export const validateReviewedReadinessGate = (
-  root: string,
-  reviewInput: unknown,
+const buildReviewedReadiness = (
+  review: Plan125Review,
+  inventory: V138Phase262Inventory,
 ) => {
-  const review = assertPlan125Review(root, reviewInput)
-  const inventory = inspectCommittedPhase262Inventory(root)
   const body = {
     schemaVersion: "v1.38-plan-262-126-lifecycle-readiness-v4",
     reviewRoot: review.reviewRoot,
@@ -528,10 +541,37 @@ export const validateReviewedReadinessGate = (
   })
 }
 
+export const validateReviewedReadinessGate = (
+  root: string,
+  reviewInput: unknown,
+) =>
+  buildReviewedReadiness(
+    assertPlan125Review(root, reviewInput),
+    inspectCommittedPhase262Inventory(root),
+  )
+
 export const assertReviewedReadiness = (root: string, value: any): any => {
   const review = readJson(root, V138_PLAN_262_95_PATHS.review125)
-  const expected = validateReviewedReadinessGate(root, review)
-  if (canonical(value) !== canonical(expected)) fail("READINESS_INVALID")
+  const authenticatedReview = assertPlan125Review(root, review)
+  const current = inspectCommittedPhase262Inventory(root)
+  const expectedCurrent = buildReviewedReadiness(authenticatedReview, current)
+  if (canonical(value) === canonical(expectedCurrent)) return value
+
+  if (!current.summaries.includes(V138_PLAN_262_95_PATHS.summary126))
+    fail("READINESS_INVALID")
+  const baseline = buildInventory({
+    activePlans: current.activePlans,
+    historicalPlans: current.historicalPlans,
+    dormantCarriers: current.dormantCarriers,
+    summaries: current.summaries.filter(
+      (repoPath) => repoPath !== V138_PLAN_262_95_PATHS.summary126,
+    ),
+    reviews: current.reviews,
+    validations: current.validations,
+    verifications: current.verifications,
+  })
+  const expectedBaseline = buildReviewedReadiness(authenticatedReview, baseline)
+  if (canonical(value) !== canonical(expectedBaseline)) fail("READINESS_INVALID")
   return value
 }
 
