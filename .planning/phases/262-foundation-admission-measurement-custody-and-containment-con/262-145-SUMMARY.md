@@ -77,15 +77,15 @@ status: complete
 
 - Proved real owner → PAIR → LIFE → PAIR composition in separately supervised native fixtures while a second owner stayed excluded until release.
 - Threaded one opaque retained-descriptor lease through all five active native writer call sites without changing the owner-v1 or transaction-v6 C bytes.
-- Froze corrected exact committed source `6fd67e32640ec0b4c6e1f60e53b622ec97097609`, semantic runtime root `sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e`, source root `sha256:ec29267a04839c2ddf107284c6087b7a5b8678df13bddbfa55df1d9ca79f60f4`, envelope root `sha256:a4fb6fe9c7062c7c4464e6e4681a5a75e895e7fe28077df1c5ece6845e3dfd42`, and seal root `sha256:4f2d6c1c22d0a81cf1b36bdc64c7f8546a9d5abffcd1d99e50887ffff8ec9384` after the independent code-review repair.
+- Froze iteration-2 exact committed source `06beb2565c94c12b99078f3fa4eff8eeeccf1a56`, semantic runtime root `sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e`, source root `sha256:c2fd2361e35c93185bababd1ff5daf3fd5ba3ea0b3c2541ae8b490f1676a4b14`, envelope root `sha256:5ab3b22b2d4c5ea86e5f23701ea7e967164626e4f2656a510709102947ac549f`, and seal root `sha256:1e8246a86e4747f09706c0e7f2f5a766d1649d566223c46b2997f9462df35f81` after moving the atomic one-use claim into the producer boundary.
 - Preserved failed Plan 110 as one consumed invocation with zero accepted cells, absent journal/terminal/reproduction, and its empty private-v3 directory unchanged.
 
 ## Verification
 
 - Native custody suite after review repair: **5/5 passed in 31.84s**. Each real fixture ran in a separate process group with a 55-second external SIGKILL supervisor.
-- Complete affected suites after review repair: **22/22 passed in 38.06s** across four test files.
+- Complete affected suites after iteration-2 repair: **23/23 passed in 38.23s** across four test files.
 - Model/producer suites after review repair: **11/11 passed**.
-- Live-v15 suite after review repair: **6/6 passed**.
+- Live-v15 suite after iteration-2 repair: **7/7 passed**.
 - Targeted TypeScript invocation was run against the five v4/bootstrap source entries. The repository-wide transitive command remains nonzero because of pre-existing legacy errors, but its filtered output contained **zero errors in the affected v4/native/bootstrap files**. This is not claimed as a global TypeScript pass.
 - `git diff --check`: passed.
 - Original native hashes remained `owner=fef25dc7eab2cb372e6cd7549adb8836ab466340bd8a18b5eb748de906aefcea` and `transaction=643d5c7a2bc1e92671c73705965d6f3451946faa60be48b34b044962020d261a`.
@@ -105,6 +105,8 @@ status: complete
 10. **Committed review, producer marker, and strict postcheck:** `c3eb164b`, `327ed926`
 11. **Joined bounded native shutdown:** `9dac0a94`, with TypeScript narrowing follow-ups `2482f420`, `6fd67e32`
 12. **Corrected inactive envelope/seal publication:** `4197ee79`
+13. **Iteration-2 producer-entry RED/GREEN:** `873d9f3a`, `06beb256`
+14. **Iteration-2 inactive reseal:** `c3f575f2`
 
 ## Deviations from Plan
 
@@ -140,6 +142,7 @@ status: complete
 - Native invalidation and release share one bounded shutdown promise. Release joins invalidated shutdown, escalates with `SIGKILL` only after the grace bound, awaits child close before cleanup, and producer cleanup cannot mask the original transaction error.
 - Raw terminal postcheck uses the strict journal/receipt/terminal/reproduction outcome validator. Claimed Plan 94 retirement and hybrid raw/retired state fail closed until Plan 94 supplies its exact committed checker contract.
 - The earlier envelope/seal remain historical failed-source bytes. The same inactive canonical paths were corrected once, before Plan 146, to bind the repaired source only; this grants no execution authority.
+- Iteration 2 moved the `O_EXCL` one-use invocation claim from the live wrapper into `runV138V4ProductionLive` itself. Direct importers, concurrent calls, sequential calls, and calls after bootstrap failure now all meet the same atomic producer boundary; the wrapper performs readiness only and cannot mint a reusable credential.
 
 ## TDD Gate Compliance
 
