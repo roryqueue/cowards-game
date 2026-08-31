@@ -52,7 +52,14 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 110/125 plans executed (11 active remaining; four inactive unexecuted)
 
-**Current verdict:** PLAN143 LITERAL-ZERO V10 PUBLISHED / PLAN110 NEXT AFTER FRESH DESCENDANT CHECKS / FRESH0/540 / DOWNSTREAM DENIED. Final143 has29/29 exact-source tests, zero independent V3 findings and clean targeted typecheck. Plan144's separate406 unchanged legacy typecheck diagnostics remain documented.
+**Current verdict:** PLAN110 NATIVE BOOTSTRAP FAILURE / SOLE INVOCATION USED / FRESH0/540 / NO REENTRY / DOWNSTREAM DENIED. Plan143's source-only proof remains historical passing evidence; it did not execute the actual owner-plus-journal-bootstrap composition. Plan110 and the phase remain incomplete.
+
+**Current Plan110 failure (2026-08-31):** The sole live-v14 invocation at `bccafa3f` deadlocked in native journal bootstrap: the owner held the exclusive root lock and the synchronous transaction independently waited for that same lock. The blocked transaction was safely terminated, the owner unwound, and live/post checks both exited1. No observation, calibration or Match ran; journal/terminal/reproduction remain absent, while the empty private directory is preserved. Failure summary `2bd6f682` is not a completion or producer terminal. Plan110 must not be re-entered; Plan94's prerequisites are unmet. An explicit operator revision of the terminal-failure/one-shot boundary is required before any fresh live route. Non-authorizing repair design may continue; ADMIT-03 remains0/540 and all downstream authority is denied.
+
+<!-- phase-262-plan-110-bootstrap-failure: {"schema_version":"v1.38-plan-262-110-bootstrap-failure-v1","execution_source":"bccafa3fd3a19514e5db9980b7a2de922a56e3bf","summary_commit":"2bd6f682","status":"blocked_native_owner_transaction_self_deadlock","plan110_complete":false,"live_invocations":1,"producer_invocations":1,"live_exit":1,"post_exit":1,"preflight_observations":0,"route_starts":0,"calibration_attempts":0,"reproduction_cells":0,"fresh_accepted":0,"required_accepted":540,"journal_present":false,"terminal_present":false,"reproduction_present":false,"empty_private_directory_preserved":true,"owned_native_processes_exited":true,"retry_performed":false,"reentry_authorized":false,"third_envelope_authorized":false,"plan94_eligible":false,"phase262_complete":false,"downstream_authority_denied":true,"next_action":"operator-stop-rule-decision-before-any-new-live-route"} -->
+
+The Plan143 and earlier carriers below are immutable pre-execution history, not current permission to invoke Plan110 again.
+
 
 **Current Plan143 closeout (2026-08-31):** Independent literal-zero v10 is published at `3ad69156`, followed directly by summary `2cf1ed90`. Final reviewer source `836c1d6f` passed29/29 tests, clean independent V3 review and targeted typecheck. Only Plan110 is next after mandatory fresh tracking/unrelated-descendant checks; all invocation/fresh counters remain0, ADMIT-03 stays0/540 and downstream authority stays denied.
 
