@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { chmodSync, cpSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
+import fs, { chmodSync, cpSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import childProcess, { execFileSync } from "node:child_process"
@@ -335,6 +335,44 @@ describe("pure predicate metadata and dependency discovery", () => {
 })
 
 describe("heavy current runtime physical byte attacks", () => {
+  it("pure predicate rejects malformed and inaccessible optional peers during capture and retained recheck", () => {
+    const originalSymlink = fs.symlinkSync
+    let exercised = 0
+    const intercepted = vi.spyOn(fs, "symlinkSync").mockImplementation(((target, link, type) => {
+      originalSymlink(target, link, type)
+      if (!String(link).endsWith("/.runtime-node/pnpm")) return
+      const root = path.dirname(path.dirname(String(link)))
+      expect(path.basename(root).startsWith("v138-plan143-runtime-smoke-")).toBe(true)
+      mkdirSync(path.join(root, "scripts"))
+      cpSync(path.join(ROOT, "scripts/check-v1-38-plan-262-142-live-v13-custody-v10.ts"), path.join(root, "scripts/check-v1-38-plan-262-142-live-v13-custody-v10.ts"))
+      const vite = path.join(root, "node_modules/vite")
+      const manifest = JSON.parse(readFileSync(path.join(vite, "package.json"), "utf8"))
+      expect(manifest.peerDependenciesMeta.sass.optional).toBe(true)
+      const optional = path.join(vite, "node_modules/sass")
+      expect(() => lstatSync(optional)).toThrow()
+      const retained = retainV138Plan143RuntimeForReview(root)
+      mkdirSync(optional, { recursive: true })
+      const metadata = path.join(optional, "package.json")
+      try {
+        writeFileSync(metadata, "{invalid-json")
+        expect(() => inspectV138Plan143Runtime(root)).toThrow("V138_PLAN143_PACKAGE_RESOLUTION_ERROR")
+        expect(() => retained.recheck()).toThrow("V138_PLAN143_PACKAGE_RESOLUTION_ERROR")
+        writeFileSync(metadata, JSON.stringify({ name: "sass", version: "0.0.0" }))
+        chmodSync(metadata, 0o000)
+        if (process.getuid?.() !== 0) {
+          expect(() => inspectV138Plan143Runtime(root)).toThrow("V138_PLAN143_PACKAGE_RESOLUTION_ERROR")
+          expect(() => retained.recheck()).toThrow("V138_PLAN143_PACKAGE_RESOLUTION_ERROR")
+        }
+      } finally { chmodSync(metadata, 0o644); rmSync(path.join(vite, "node_modules"), { recursive: true }) }
+      expect(() => retained.recheck()).not.toThrow()
+      exercised++
+    }) as typeof fs.symlinkSync)
+    syncBuiltinESMExports()
+    try {
+      expect(checkV138Plan143PrivateRuntimeCopyForReview(ROOT).resolutionGraphMatched).toBe(true)
+      expect(exercised).toBe(1)
+    } finally { intercepted.mockRestore(); syncBuiltinESMExports() }
+  }, 60000)
   it("pure predicate preserves actual dependency resolution in a physical private runtime copy", () => {
     expect(checkV138Plan143PrivateRuntimeCopyForReview(ROOT)).toEqual({ entries: 3931,
       semanticRuntimeRoot: "sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e",

@@ -237,12 +237,17 @@ export const inspectV138Plan143Source = (input: string) => { const h = history(i
 // The dependency walk follows Node resolution, not a copied inventory or pnpm folder guess.
 const resolvePackage = (from: string, name: string): string | undefined => {
   const req = createRequire(path.join(from, "package.json")); let resolved: string
-  try { try { resolved = req.resolve(name + "/package.json") } catch { resolved = req.resolve(name) } }
-  catch { return undefined }
-  let cursor = path.dirname(realpathSync(resolved))
+  try { resolved = req.resolve(name + "/package.json") }
+  catch (error) {
+    if (!["MODULE_NOT_FOUND", "ERR_PACKAGE_PATH_NOT_EXPORTED"].includes((error as NodeJS.ErrnoException).code ?? "")) fail("PACKAGE_RESOLUTION_ERROR")
+    try { resolved = req.resolve(name) }
+    catch (fallback) { if ((fallback as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") return undefined; fail("PACKAGE_RESOLUTION_ERROR") }
+  }
+  let cursor: string
+  try { cursor = path.dirname(realpathSync(resolved)) } catch { fail("PACKAGE_RESOLUTION_ERROR") }
   while (cursor !== path.dirname(cursor)) {
     try { if (JSON.parse(regular(path.join(cursor, "package.json")).bytes.toString()).name === name) return cursor }
-    catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e }
+    catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") fail("PACKAGE_RESOLUTION_ERROR") }
     cursor = path.dirname(cursor)
   }
   fail("PACKAGE_OWNER")
@@ -280,8 +285,9 @@ const {readFileSync,realpathSync,lstatSync}=require('node:fs');const path=requir
 const root=process.argv[1];const packages=new Map(),edges=[],queue=[];
 function regular(p){const s=lstatSync(p);if(!s.isFile()||s.isSymbolicLink()||!(s.mode&292))throw Error('PACKAGE_MANIFEST');return readFileSync(p,'utf8')}
 function resolve(from,name){const req=createRequire(path.join(from,'package.json'));let found;
-try{try{found=req.resolve(name+'/package.json')}catch{found=req.resolve(name)}}catch{return null}
-let at=path.dirname(realpathSync(found));while(at!==path.dirname(at)){try{if(JSON.parse(regular(path.join(at,'package.json'))).name===name)return at}catch(e){if(e.code!=='ENOENT')throw e}at=path.dirname(at)}throw Error('PACKAGE_OWNER')}
+try{found=req.resolve(name+'/package.json')}catch(e){if(!['MODULE_NOT_FOUND','ERR_PACKAGE_PATH_NOT_EXPORTED'].includes(e.code))throw Error('PACKAGE_RESOLUTION_ERROR');try{found=req.resolve(name)}catch(fallback){if(fallback.code==='MODULE_NOT_FOUND')return null;throw Error('PACKAGE_RESOLUTION_ERROR')}}
+let at;try{at=path.dirname(realpathSync(found))}catch{throw Error('PACKAGE_RESOLUTION_ERROR')}
+while(at!==path.dirname(at)){try{if(JSON.parse(regular(path.join(at,'package.json'))).name===name)return at}catch(e){if(e.code!=='ENOENT')throw Error('PACKAGE_RESOLUTION_ERROR')}at=path.dirname(at)}throw Error('PACKAGE_OWNER')}
 function edge(from,name,required){const to=resolve(from,name);edges.push({from,name,to});if(to)queue.push(to);else if(required)throw Error('PACKAGE_MISSING')}
 try{for(const name of ['typescript','tsx','vitest','@cowards/spec','@cowards/golden'])edge(root,name,true);
 queue.push(realpathSync(path.join(root,'apps/runtime-service')));
@@ -297,7 +303,7 @@ process.stdout.write(JSON.stringify({packages:[...packages.values()],edges}));
   let graph: any
   try { graph = JSON.parse(result.stdout) } catch { fail("PACKAGE_GRAPH_FAILED") }
   if (result.status !== 0) {
-    if (["PACKAGE_ROOT_COLLISION", "PACKAGE_VERSION_COLLISION", "PACKAGE_MISSING", "PACKAGE_MANIFEST", "PACKAGE_OWNER"].includes(graph?.error)) fail(graph.error)
+    if (["PACKAGE_ROOT_COLLISION", "PACKAGE_VERSION_COLLISION", "PACKAGE_MISSING", "PACKAGE_MANIFEST", "PACKAGE_OWNER", "PACKAGE_RESOLUTION_ERROR"].includes(graph?.error)) fail(graph.error)
     fail("PACKAGE_GRAPH_FAILED")
   }
   keys(graph, ["packages", "edges"], "PACKAGE_GRAPH_SCHEMA")
