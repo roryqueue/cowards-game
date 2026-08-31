@@ -132,7 +132,7 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       'const key = ["con", "structor"].reverse().reverse().join(""); []["filter"]?.[key]("return 1")()\n',
     ]) expect(() => inspectV138Plan130BoundarySourceForReview(
       source.replace("type Sha =", `${injected}type Sha =`),
-    )).toThrow("V138_PLAN130_PRODUCTION_BOUNDARY_INVALID")
+    )).toThrow("V138_PLAN130_LIVE_SOURCE_BYTES_INVALID")
   })
 
   it("requires a strict later HEAD and fixes v3 current eligibility false", () => {

@@ -23,6 +23,9 @@ const REVIEW_BLOB = "4fc9c04dd5b249625d2d326786e53465dc838425"
 const REVIEW_SHA256 = "f41d9871c7c5fea9f779ff26f8965c8f45fe16061a62ff8b8f033afb2f2f3b5d"
 const REVIEW_PATH = `${PHASE}/262-122-CODE-REVIEW.md`
 const B331_COMMIT = "b331baad29053f523233558f66aa2855f2925b2b"
+export const V138_PLAN130_APPROVED_LIVE_SOURCE_BLOB = "0d299dc98c3af22d6a2312a7bdc6062538bc1cd9"
+export const V138_PLAN130_APPROVED_LIVE_SOURCE_SHA256 =
+  "sha256:059fe04ce2f3a51db4636bd3bc0553cc6882c3095afd240f15a94e267f83e7bd"
 const V3_PUBLICATION_COMMIT = "65a7a246627a411c45ced95bfb3c0296f0f8e4eb"
 const V3_PATHS = Object.freeze([
   ".planning/artifacts/v1.38-plan-262-122-live-v13-custody-review-carrier-v3.json",
@@ -125,6 +128,8 @@ export const computeV138Plan130RootRelativeNativeCustodyForReview = (rootInput: 
 }
 
 export const inspectV138Plan130BoundarySourceForReview = (source: string) => {
+  if (sha(source) !== V138_PLAN130_APPROVED_LIVE_SOURCE_SHA256)
+    fail("V138_PLAN130_LIVE_SOURCE_BYTES_INVALID")
   const sourceFile = ts.createSourceFile("live-v13.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
   const producerModule = "./run-v1-38-bounded-retry-envelope-v3.js"
   const producerName = "runV138V3ProductionLive"
