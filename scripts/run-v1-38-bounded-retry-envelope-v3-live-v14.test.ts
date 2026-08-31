@@ -155,6 +155,8 @@ describe("pure predicate", () => {
       const extra = structuredClone(baseline)
       valueAt(extra, path).unreviewedExtension = "private diagnostic"
       expect(() => validateV138LiveV14PublishedContractForReview(extra), path.join(".") + " extra").toThrow()
+      repair(extra)
+      expect(() => validateV138LiveV14PublishedContractForReview(extra), path.join(".") + " rehashed extra").toThrow()
       for (const field of Object.keys(valueAt(baseline, path))) {
         const missing = structuredClone(baseline)
         delete valueAt(missing, path)[field]
@@ -271,6 +273,16 @@ describe("pure predicate", () => {
     const oversized = fixture(); oversized.payload.consumerSubject.files = Array(20001).fill(oversized.payload.consumerSubject.files[0])
     expect(() => validateV138LiveV14PublishedContractForReview(oversized)).toThrow()
   })
+  it("distinguishes publication values from effects and never promotes synthetic540 into actual counters", () => {
+    const input = fixture()
+    expect(input.payload.currentExecution.observations[5].reducedValue.acceptedCells).toBe(540)
+    expect(validateV138LiveV14PublishedContractForReview(input)).toBe(true)
+    expect(input.payload.counters).toEqual({ producerCalls: 0, readinessCalls: 0, liveCalls: 0, freshCharged: 0, freshAccepted: 0 })
+    expect(input.payload.authorizesExecution).toBe(false)
+    expect(input.payload.downstreamAuthority).toBe("denied")
+    // A JSON-roundtrippable true validation result is not a root-bound capability.
+    expect(typeof validateV138LiveV14PublishedContractForReview(input)).toBe("boolean")
+  })
 })
 
 describe("closed producer boundary", () => {
@@ -304,6 +316,19 @@ describe("closed producer boundary", () => {
     for (const node of all.filter(ts.isImportDeclaration)) {
       const module = (node.moduleSpecifier as ts.StringLiteral).text
       expect(module).not.toMatch(/live-v(?:11|12|13)\.js$|plan-262-143/)
+      if (/live-v(?:9|10)\.js$/.test(module)) {
+        const bindings = node.importClause?.namedBindings
+        expect(bindings && ts.isNamedImports(bindings)).toBe(true)
+        for (const imported of (bindings as ts.NamedImports).elements) {
+          expect((imported.propertyName ?? imported.name).text).toMatch(/^(?:assertV138LiveV10PostRunForReview|checkV138LiveV10PostRunOutputCustodyForReview|checkV138LiveV10ReproductionV17ForReview|computeV138LiveV10ReproductionV17ReceiptRoot|settleV138LiveV9ProducerOutcomeForReview)$/)
+        }
+      }
+      if (/plan-262-142/.test(module)) {
+        const bindings = node.importClause?.namedBindings
+        expect(bindings && ts.isNamedImports(bindings)).toBe(true)
+        expect((bindings as ts.NamedImports).elements.map((v) => (v.propertyName ?? v.name).text))
+          .toEqual(["inspectV138Plan142SemanticRuntimeForReview"])
+      }
     }
     expect(all.filter(ts.isCallExpression).filter((n) => n.expression.kind === ts.SyntaxKind.ImportKeyword)).toHaveLength(0)
   })
