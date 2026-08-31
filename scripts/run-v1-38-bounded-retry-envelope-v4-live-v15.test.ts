@@ -27,15 +27,25 @@ describe("live-v15 single-review source and invocation boundary", () => {
     expect(() => validateV138LiveV15Review({ ...review(), nativeTestResults: { ...review().nativeTestResults, ownerPairLifePair: false } })).toThrow()
     expect(deriveV138LiveV15SourceRoot(review().sourceCommit, review().sourceFiles)).toMatch(/^sha256:[0-9a-f]{64}$/)
   })
-  it("durably consumes the invocation before producer entry and never reenters after bootstrap failure", () => {
+  it("atomically claims producer entry once and never reenters after bootstrap failure", async () => {
     const root = fixture()
     checkV138LiveV15EffectState(root, "pre")
     const identity = { reviewedSourceRoot: digest, reviewReportCommit: "d".repeat(40), reviewReportBlob: "e".repeat(40) }
-    consumeV138LiveV15Invocation(root, identity)
+    const attempts = await Promise.allSettled([
+      Promise.resolve().then(() => consumeV138LiveV15Invocation(root, identity)),
+      Promise.resolve().then(() => consumeV138LiveV15Invocation(root, identity)),
+    ])
+    expect(attempts.filter(result => result.status === "fulfilled")).toHaveLength(1)
+    expect(attempts.filter(result => result.status === "rejected")).toHaveLength(1)
     expect(authenticateV138LiveV15InvocationMarker(root, identity)).toMatchObject(identity)
     expect(() => consumeV138LiveV15Invocation(root, identity)).toThrow()
     expect(() => checkV138LiveV15EffectState(root, "pre")).toThrow()
     expect(() => checkV138LiveV15EffectState(root, "post")).toThrow(/TERMINAL_ABSENT/)
+  })
+  it("leaves readiness side-effect free so only the producer can claim entry", () => {
+    const source = readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), "run-v1-38-bounded-retry-envelope-v4-live-v15.ts"), "utf8")
+    const runBranch = source.slice(source.indexOf('if (args[0] === "--run-reviewed-bounded-live-envelope")'), source.indexOf('fail("ARGUMENTS_INVALID")', source.indexOf('if (args[0] === "--run-reviewed-bounded-live-envelope")')))
+    expect(runBranch).not.toContain("consumeV138LiveV15Invocation")
   })
   it("never converts a preexisting private directory or symlink into fresh authority", () => {
     const root = fixture(); const target = path.join(root, V138_LIVE_V15_PATHS.privateDir)
