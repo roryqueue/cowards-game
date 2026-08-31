@@ -298,10 +298,11 @@ const repositoryBatch = (root: string, paths: readonly string[]) => {
   if (!equal(bound, rootIdentity(root))) fail("ROOT_CHANGED")
   return { bytes, identity: { device: bound.device, inode: bound.inode } }
 }
-const committed = (h: History, commit: string, paths: readonly string[], noRewrite = true): Record<string, Buffer> => {
+const committed = (h: History, commit: string, paths: readonly string[], noRewrite = true,
+  captured?: ReturnType<typeof repositoryBatch>): Record<string, Buffer> => {
   ancestor(h, commit)
   if (noRewrite && h.git(["log", "--format=%H", `${commit}..${h.head}`, "--", ...paths]) !== "") fail("HISTORY_REWRITE")
-  const batch = repositoryBatch(h.root, paths)
+  const batch = captured ?? repositoryBatch(h.root, paths)
   if (!equal(batch.identity, { device: h.rootBinding.device, inode: h.rootBinding.inode })) fail("ROOT_CHANGED")
   for (const p of paths) {
     if (!/^100(?:644|755) blob [0-9a-f]{40}\t/.test(h.git(["ls-tree", commit, "--", p])) ||
@@ -315,6 +316,23 @@ const parseCanonical = (bytes: Buffer): Json => {
   return value
 }
 const fixedHistory = (h: History) => {
+  const requiredInputs = [V138_BOUNDED_RETRY_V3_PATHS.sourceSummary, V138_BOUNDED_RETRY_V3_PATHS.sourceController,
+    V138_BOUNDED_RETRY_V3_PATHS.sourceModel, V138_BOUNDED_RETRY_V3_PATHS.sourceTests,
+    V138_BOUNDED_RETRY_V3_PATHS.sourceReview, V138_BOUNDED_RETRY_V3_PATHS.sourceReviewReport,
+    V138_BOUNDED_RETRY_V3_PATHS.localSeal, V138_BOUNDED_RETRY_V3_PATHS.protectedHistoryCorrection,
+    V138_BOUNDED_RETRY_V3_PATHS.historicalReceiptManifest, V138_BOUNDED_RETRY_V3_PATHS.historicalEnvelope,
+    V138_BOUNDED_RETRY_V3_PATHS.historicalJournal, V138_BOUNDED_RETRY_V3_PATHS.historicalTerminal,
+    V138_BOUNDED_RETRY_V3_PATHS.historicalSeal, V138_BOUNDED_RETRY_V3_PATHS.historicalDisposition,
+    V138_BOUNDED_RETRY_V3_PATHS.historicalLifecycle]
+  const protectedFiles = V138_BOUNDED_RETRY_V3_PROTECTED_HISTORY.protectedFiles
+  const pairPaths = [V138_BOUNDED_RETRY_V3_PATHS.seal, V138_BOUNDED_RETRY_V3_PATHS.envelope]
+  // One fresh retained snapshot per authentication, not a cached verdict. All
+  // historical commit/blob checks below consume these same freshly read bytes.
+  const snapshot = repositoryBatch(h.root, [...new Set([...requiredInputs, ...pairPaths,
+    ...protectedFiles.map(([p]) => p), ...NATIVES.map(n => n.path), SOURCE142, SOURCE142.replace(/\.ts$/, ".test.ts"),
+    `${PHASE}/262-142-SUMMARY.md`, `${PHASE}/262-93-PRESTART-INTEGRITY-STOP.md`,
+    `${PHASE}/262-93-SUMMARY.md`, `${PHASE}/262-120-SUMMARY.md`])])
+  const readCommitted = (commit: string, paths: readonly string[]) => committed(h, commit, paths, true, snapshot)
   for (const commit of [FINAL142, SUMMARY142, TRACK142, AMENDMENT, PAIR_COMMIT]) ancestor(h, commit)
   if (h.git(["rev-parse", `${TRACK142}^`]) !== SUMMARY142 ||
     h.git(["rev-parse", `${AMENDMENT}^`]) !== "b6cd3ec13aa25c6b1a5416a264ddf17855c19bad") fail("HISTORY_PARENT")
@@ -327,32 +345,21 @@ const fixedHistory = (h: History) => {
     [FINAL142, SOURCE142.replace(/\.ts$/, ".test.ts"), "sha256:b7bbdcc45a23c49a095d654509cf53db849c8fd1fd997ccd2a0eccd0dcf546ea"],
     [SUMMARY142, `${PHASE}/262-142-SUMMARY.md`, "sha256:4d41980186211917f0f39a3154582e6daa753bc5aa1cbc12ceb9610d27ae98fb"],
   ]
-  for (const [commit, p, digest] of pins) if (sha(committed(h, commit, [p])[p]) !== digest) fail("HISTORY_PIN")
+  for (const [commit, p, digest] of pins) if (sha(readCommitted(commit, [p])[p]) !== digest) fail("HISTORY_PIN")
   for (const [p, blob] of [[`${PHASE}/262-93-PRESTART-INTEGRITY-STOP.md`, "d540a5a7b0f7200ed86287a3744e46ebd66987bd"],
     [`${PHASE}/262-93-SUMMARY.md`, "e2db03c938d23305527bcad6ab0c479fbadd0bd3"],
     [`${PHASE}/262-120-SUMMARY.md`, "86621b8f8ac5546b66265b2cc5ca3f6b80468be7"]]) {
-    committed(h, AMENDMENT, [p]); if (h.git(["rev-parse", `${AMENDMENT}:${p}`]) !== blob) fail("AMENDMENT_PIN")
+    readCommitted(AMENDMENT, [p]); if (h.git(["rev-parse", `${AMENDMENT}:${p}`]) !== blob) fail("AMENDMENT_PIN")
   }
   for (const n of NATIVES) {
-    const bytes = committed(h, FINAL142, [n.path])[n.path]
+    const bytes = readCommitted(FINAL142, [n.path])[n.path]
     if (sha(bytes) !== n.sha256 || h.git(["rev-parse", `${FINAL142}:${n.path}`]) !== n.blob) fail("NATIVE_PIN")
   }
-  const pairPaths = [V138_BOUNDED_RETRY_V3_PATHS.seal, V138_BOUNDED_RETRY_V3_PATHS.envelope]
   scope(h, PAIR_COMMIT, pairPaths.map(p => ["A", p]))
-  const pair = committed(h, PAIR_COMMIT, pairPaths)
+  const pair = readCommitted(PAIR_COMMIT, pairPaths)
   const seal = parseCanonical(pair[pairPaths[0]]); const envelope = checkV138InactiveRetryV3Envelope(parseCanonical(pair[pairPaths[1]]))
-  const protectedFiles = V138_BOUNDED_RETRY_V3_PROTECTED_HISTORY.protectedFiles
-  const protectedBatch = readV138WorkspaceBatch(h.root, protectedFiles.map(([p]) => p))
-  for (const [p, digest] of protectedFiles) if (sha(protectedBatch.bytes[p]) !== digest) fail("PROTECTED_HISTORY_CHANGED")
-  const requiredInputs = [V138_BOUNDED_RETRY_V3_PATHS.sourceSummary, V138_BOUNDED_RETRY_V3_PATHS.sourceController,
-    V138_BOUNDED_RETRY_V3_PATHS.sourceModel, V138_BOUNDED_RETRY_V3_PATHS.sourceTests,
-    V138_BOUNDED_RETRY_V3_PATHS.sourceReview, V138_BOUNDED_RETRY_V3_PATHS.sourceReviewReport,
-    V138_BOUNDED_RETRY_V3_PATHS.localSeal, V138_BOUNDED_RETRY_V3_PATHS.protectedHistoryCorrection,
-    V138_BOUNDED_RETRY_V3_PATHS.historicalReceiptManifest, V138_BOUNDED_RETRY_V3_PATHS.historicalEnvelope,
-    V138_BOUNDED_RETRY_V3_PATHS.historicalJournal, V138_BOUNDED_RETRY_V3_PATHS.historicalTerminal,
-    V138_BOUNDED_RETRY_V3_PATHS.historicalSeal, V138_BOUNDED_RETRY_V3_PATHS.historicalDisposition,
-    V138_BOUNDED_RETRY_V3_PATHS.historicalLifecycle]
-  const inputs = committed(h, FINAL142, requiredInputs)
+  for (const [p, digest] of protectedFiles) if (sha(snapshot.bytes[p]) !== digest) fail("PROTECTED_HISTORY_CHANGED")
+  const inputs = readCommitted(FINAL142, requiredInputs)
   const localSeal = JSON.parse(inputs[V138_BOUNDED_RETRY_V3_PATHS.localSeal].toString())
   if (localSeal.verificationRoot !== seal.localSealVerificationRoot || localSeal.assuranceClass !== "single_operator_local_seal_v1" ||
     localSeal.satisfiesRevisedSeal01 !== true || localSeal.independentCustodyClaimed !== false) fail("LOCAL_SEAL_INVALID")
@@ -684,6 +691,15 @@ const valueFixture = (index: number): unknown => {
       completeCleanup: true, reproductionRoot: receiptRoot, recordRoot: outcome.journalRoot },
   ], outcome } as never)
 }
+export const checkV138LiveV14ValueModeForReview = (mode: ReviewMode) => {
+  const index = V138_LIVE_V14_REVIEW_MODES.indexOf(mode)
+  if (index < 3) fail("VALUE_MODE_INVALID")
+  const checked = valueFixture(index) as Json
+  if (index === 3 && checked.status !== "bounded_terminal" || index === 4 && checked.status !== "bounded_success" ||
+    index === 5 && (checked.acceptedCellCount !== 540 || checked.chargedAttemptCount !== 540 ||
+      checked.completeCleanup !== true || checked.downstreamAuthority !== "denied")) fail("VALUE_SEMANTICS")
+  return REDUCED[index]
+}
 
 /** Closed incapable API: no operational selector or caller verdict is accepted. */
 export const executeV138LiveV14ReviewMode = (rootInput: string, mode: ReviewMode) => {
@@ -694,11 +710,7 @@ export const executeV138LiveV14ReviewMode = (rootInput: string, mode: ReviewMode
     const admitted = sourceAdmission(h.root, h)
     checkV138LiveV14EffectState(h.root, "pre")
     if (index === 2) checkV138LiveV14EffectState(h.root, "post")
-    if (index >= 3) {
-      const checked = valueFixture(index) as Json
-      if (index === 3 && checked.status !== "bounded_terminal" || index === 4 && checked.status !== "bounded_success" ||
-        index === 5 && (checked.acceptedCells !== 540 || checked.exact !== true)) fail("VALUE_SEMANTICS")
-    }
+    if (index >= 3) checkV138LiveV14ValueModeForReview(mode)
     // Source/prospective checks attest the current implementation only. They do
     // not fabricate the future independent reviewer's identity or publication.
     recheckRepository(h.root, admitted.repository)

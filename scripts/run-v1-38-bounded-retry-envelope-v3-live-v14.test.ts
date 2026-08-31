@@ -9,6 +9,7 @@ import { validateV138LiveV14PublishedContractForReview, executeV138LiveV14Review
   validateV138LiveV14EffectValuesForReview, checkV138LiveV14EffectState,
   inspectV138LiveV14ProducerGuardForReview, checkV138LiveV14RootBoundCustodyForReview,
   inspectV138LiveV14RuntimeImportsForReview,
+  checkV138LiveV14ValueModeForReview,
   buildV138LiveV14GuardedProofForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v14.js"
 import { settleV138LiveV9ProducerOutcomeForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v9.js"
 
@@ -396,6 +397,12 @@ describe("closed producer boundary", () => {
 })
 
 describe("actual modes", () => {
+  it("executes each value-mode predicate against its real helper return schema", () => {
+    expect(checkV138LiveV14ValueModeForReview("non-pass-value")).toEqual(reductions[3])
+    expect(checkV138LiveV14ValueModeForReview("bounded-success-value")).toEqual(reductions[4])
+    expect(checkV138LiveV14ValueModeForReview("exact-reproduction-v17-value")).toEqual(reductions[5])
+    expect(() => checkV138LiveV14ValueModeForReview("source-only")).toThrow(/VALUE_MODE_INVALID/)
+  })
   it("retains inline type-only side effects under the actual verbatim module configuration", () => {
     const source = `import type { A } from "erased-import";
 export type { B } from "erased-export";
