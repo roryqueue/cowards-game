@@ -1,4 +1,6 @@
-import { execFile, execFileSync } from "node:child_process"
+import childProcess, { execFile, execFileSync, spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { syncBuiltinESMExports } from "node:module"
 import {
   chmodSync, constants, cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync,
   symlinkSync, writeFileSync,
@@ -7,7 +9,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
 import { fileURLToPath } from "node:url"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, describe, expect, it, vi } from "vitest"
 import {
   authenticateV138Plan142ProspectiveV10BatchForReview,
   buildV138Plan142ProspectiveV10ForReview,
@@ -61,10 +63,11 @@ const freshProcess = async (root: string): Promise<string> => (await promisify(e
   { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })).stdout
 
 let BASE: Awaited<ReturnType<typeof buildV138Plan142ProspectiveV10ForReview>>
-beforeAll(async () => { BASE = await buildV138Plan142ProspectiveV10ForReview(ROOT) }, 480_000)
+const baseline = () => BASE ??= buildV138Plan142ProspectiveV10ForReview(ROOT)
 
 describe("Plan 262-142 semantic runtime custody v10", () => {
   it("content-addresses Node, launcher, complete TypeScript/tsx/esbuild/native trees and loaded transitives", () => {
+    baseline()
     const runtime = inspectV138Plan142SemanticRuntimeForReview(ROOT)
     expect(runtime.entries.length).toBeGreaterThan(190)
     expect(runtime.entries.map((entry) => entry.identity)).toEqual(
@@ -85,7 +88,7 @@ describe("Plan 262-142 semantic runtime custody v10", () => {
     expect(identities.some((value) => /@esbuild\/[^@]+@[^/]+\/bin\/esbuild$/u.test(value))).toBe(true)
     expect(runtime.semanticRuntimeRoot).toBe(BASE.payload.semanticRuntime.semanticRuntimeRoot)
     scanPrivacy(runtime); scanPrivacy(BASE)
-  })
+  }, 480_000)
 
   it("rejects runtime omission, symlink, non-regular entry, and coherent dependency substitution", () => {
     const attacks: Array<(root: string) => void> = [
@@ -111,6 +114,7 @@ describe("Plan 262-142 semantic runtime custody v10", () => {
   }, 480_000)
 
   it("binds every transcript to the exact authenticated supplied root and rejects mixed batches", () => {
+    baseline()
     expect(authenticateV138Plan142ProspectiveV10BatchForReview([BASE], ROOT)).toEqual([{ accepted: true }])
     const empty = owner(); const copied = structuredClone(BASE)
     expect(authenticateV138Plan142ProspectiveV10BatchForReview([BASE, copied], empty)
@@ -149,22 +153,65 @@ describe("Plan 262-142 semantic runtime custody v10", () => {
     finally { chmodSync(ancestor, 0o700) }
   })
 
-  it("rejects component replacement races and accepts only unchanged final ENOENT", async () => {
+  it("anchors the actual final lookup through a deterministic transient ancestor ABA", () => {
     const root = owner(); mkdirSync(path.join(root, ".planning/artifacts"), { recursive: true })
     expect(checkV138Plan142EffectPathsAbsentForReview(root)).toBe(true)
-    const artifacts = path.join(root, ".planning/artifacts"); const replacement = path.join(root, ".replacement")
-    mkdirSync(replacement)
-    const attacker = execFile("/bin/sh", ["-c", "while :; do mv \"$1\" \"$1.old\" 2>/dev/null || true; mv \"$2\" \"$1\" 2>/dev/null || true; mv \"$1.old\" \"$2\" 2>/dev/null || true; done", "_", artifacts, replacement])
-    let rejected = false
-    try {
-      for (let attempt = 0; attempt < 200 && !rejected; attempt += 1) {
-        try { checkV138Plan142EffectPathsAbsentForReview(root) } catch { rejected = true }
+    const build = owner(); const artifacts = path.join(root, ".planning/artifacts")
+    const saved = path.join(root, ".planning/saved"); const redirect = path.join(root, "redirect")
+    mkdirSync(redirect)
+    const source = readFileSync(path.join(ROOT, "scripts/native/v1-38-secure-manifest-reader-v6.c"), "utf8")
+    expect(createHash("sha256").update(source).digest("hex"))
+      .toBe("fe1915ef41b134c1a1bae5e1e3df2c26a9ae47a2258b917bd1f1469917abffc1")
+    // Test-only scheduler around the existing final fstatat. All stat results
+    // come from real syscalls; the production reader/bootstrap are unchanged.
+    const lookup = "fstatat(dirs[parent].fd, name, &status, AT_SYMLINK_NOFOLLOW)"
+    expect(source.split(lookup)).toHaveLength(2)
+    const scheduled = source.replace("static void require_absences(void) {", `
+static int scheduled_lookup(int descriptor, const char *name, struct stat *status, int flags) {
+  static int calls = 0;
+  if (++calls != 4 * ${V138_PLAN142_EFFECT_PATHS.length}) return fstatat(descriptor, name, status, flags);
+  if (rename(${JSON.stringify(artifacts)}, ${JSON.stringify(saved)}) != 0 ||
+      symlink(${JSON.stringify(redirect)}, ${JSON.stringify(artifacts)}) != 0) die("TEST_SWAP_FAILED");
+  struct stat link, retained, actual;
+  if (lstat(${JSON.stringify(artifacts)}, &link) != 0 || !S_ISLNK(link.st_mode) ||
+      fstat(descriptor, &retained) != 0 || stat(${JSON.stringify(saved)}, &actual) != 0 ||
+      retained.st_dev != actual.st_dev || retained.st_ino != actual.st_ino) die("TEST_NOT_ANCHORED");
+  int result = fstatat(descriptor, name, status, flags), saved_errno = errno;
+  if (unlink(${JSON.stringify(artifacts)}) != 0 ||
+      rename(${JSON.stringify(saved)}, ${JSON.stringify(artifacts)}) != 0) die("TEST_RESTORE_FAILED");
+  fprintf(stderr, "TEST_FINAL_ABA_ANCHORED\\n"); errno = saved_errno; return result;
+}
+static void require_absences(void) {`).replace(lookup,
+      "scheduled_lookup(dirs[parent].fd, name, &status, AT_SYMLINK_NOFOLLOW)")
+    const instrumented = path.join(build, "scheduled.c"); const executable = path.join(build, "scheduled")
+    writeFileSync(instrumented, scheduled)
+    execFileSync("/usr/bin/clang", ["-std=c11", "-Wall", "-Wextra", "-Werror", instrumented, "-o", executable])
+    const realSpawn = childProcess.spawnSync
+    let scheduledLookups = 0
+    const intercepted = vi.spyOn(childProcess, "spawnSync").mockImplementation(((file, args, options) => {
+      if (String(file).includes("v138-secure-reader-v6-") && String(file).endsWith("/primary/native")) {
+        expect(options?.input).toBe([...V138_PLAN142_EFFECT_PATHS].sort().map((item) => `A\t${item}\n`).join(""))
+        const result = realSpawn(executable, args, options)
+        expect(String(result.stderr)).toContain("TEST_FINAL_ABA_ANCHORED")
+        scheduledLookups += 1
+        return result
       }
-    } finally { attacker.kill() }
-    expect(rejected).toBe(true)
-  })
+      return realSpawn(file, args, options)
+    }) as typeof spawnSync)
+    syncBuiltinESMExports()
+    try {
+      // At the last lookup the reader resolves through the retained artifacts
+      // descriptor, never through the temporary symlink. Safe anchored absence
+      // is permitted even though a directory rename occurred during the lookup.
+      expect(checkV138Plan142EffectPathsAbsentForReview(root)).toBe(true)
+      expect(scheduledLookups).toBe(1)
+    } finally { intercepted.mockRestore(); syncBuiltinESMExports() }
+    const rootLink = path.join(owner(), "root-link"); symlinkSync(root, rootLink)
+    expect(() => checkV138Plan142EffectPathsAbsentForReview(rootLink)).toThrow("V138_PLAN142_EFFECT_COMPONENT_INVALID")
+  }, 60_000)
 
   it("retains metadata, mapping, six-run, privacy, false-authority, and distinct-root determinism", async () => {
+    baseline()
     expect(BASE.payload.observations).toHaveLength(6)
     expect(new Set(BASE.payload.observations.map((item) => item.stableRecordRoot)).size).toBe(6)
     expect(BASE.payload.plan143Eligible).toBe(true); expect(BASE.payload.plan110Eligible).toBe(false)

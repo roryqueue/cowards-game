@@ -9,6 +9,7 @@ import { tmpdir } from "node:os"
 import { createRequire } from "node:module"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { readV138WorkspaceBatch } from "./lib/v1-38-secure-workspace-path-v6.js"
 
 type Sha = `sha256:${string}`
 type Json = Record<string, any>
@@ -120,6 +121,19 @@ const NATIVE_IDENTITIES = Object.freeze([
     blob: "99da3517ccb8b919759663daf713b4f20337b8b1",
     sha256: "sha256:fef25dc7eab2cb372e6cd7549adb8836ab466340bd8a18b5eb748de906aefcea" }),
 ] as const)
+// Existing executor-era reader/bootstrap only; this adds no native authority.
+const ABSENCE_READER_IDENTITIES = Object.freeze([
+  { path: "scripts/lib/v1-38-secure-workspace-path-v6.ts", mode: "100644",
+    blob: "418b006ca59423d50ab263c45f675656c0de0b3f",
+    sha256: "sha256:f8a2959c2db6a9a80147f6d1ece13d30d9fec457d90354e711be0a49319e5f49" },
+  { path: "scripts/lib/v1-38-private-native-bootstrap-v2.ts", mode: "100644",
+    blob: "1ffaf47aa29100f937a335c621ee45ab1e262b61",
+    sha256: "sha256:165bdefcc02fd9448b3f5d778888617f90d16e7e0801bc091726574ecfcfae78" },
+  { path: "scripts/native/v1-38-secure-manifest-reader-v6.c", mode: "100644",
+    blob: "ffc03862525739b58ee7cc9ffae8f598a0b5e19e",
+    sha256: "sha256:fe1915ef41b134c1a1bae5e1e3df2c26a9ae47a2258b917bd1f1469917abffc1" },
+] as const)
+const IMPLEMENTATION_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
 const fail: (code: string) => never = (code) => { throw new TypeError(code) }
 const publicErrorCode = (error: unknown): string => error instanceof Error
@@ -366,31 +380,35 @@ const componentIdentity = (absolute: string, relative: string, directory: boolea
     mode: Number(stat.mode), nlink: String(stat.nlink), uid: String(stat.uid), gid: String(stat.gid),
     size: String(stat.size), mtimeNs: String(stat.mtimeNs), ctimeNs: String(stat.ctimeNs) })
 }
-const effectWalk = (root: string): readonly PathIdentity[] => {
-  const identities: PathIdentity[] = [componentIdentity(root, ".", true)]
-  for (const repoPath of V138_PLAN142_EFFECT_PATHS) {
-    const components = repoPath.split("/"); let current = root
-    for (let index = 0; index < components.length; index += 1) {
-      current = path.join(current, components[index]!)
-      const relative = components.slice(0, index + 1).join("/")
-      if (index === components.length - 1) {
-        try { lstatSync(current); fail(`V138_PLAN142_EFFECT_PATH_OCCUPIED:${repoPath}`) }
-        catch (error) {
-          if (error instanceof Error && error.message.startsWith("V138_PLAN142_")) throw error
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT")
-            fail(`V138_PLAN142_EFFECT_PATH_LOOKUP_FAILED:${repoPath}`)
-        }
-      } else identities.push(componentIdentity(current, relative, true))
-    }
-  }
-  return Object.freeze(identities)
+const authenticateAbsenceReaderBytes = (root: string): void => {
+  for (const identity of ABSENCE_READER_IDENTITIES)
+    if (modeOf(target(root, identity.path)) !== identity.mode ||
+        sha(readRegularNoFollow(target(root, identity.path), "V138_PLAN142_ABSENCE_READER_INVALID")) !== identity.sha256)
+      fail("V138_PLAN142_ABSENCE_READER_INVALID")
 }
-export const checkV138Plan142EffectPathsAbsentForReview = (rootInput: string): true => {
+const checkEffectPathsAbsent = (rootInput: string,
+  expected?: Readonly<{ rootDev: string; rootIno: string }>): true => {
   const root = path.resolve(rootInput)
-  const before = effectWalk(root); const after = effectWalk(root)
-  if (canonical(after) !== canonical(before)) fail("V138_PLAN142_EFFECT_COMPONENT_CHANGED")
+  // Reject the supplied root itself if symlinked, before the helper canonicalizes it.
+  const before = componentIdentity(root, ".", true)
+  authenticateAbsenceReaderBytes(IMPLEMENTATION_ROOT)
+  try {
+    const batch = readV138WorkspaceBatch(root, [], V138_PLAN142_EFFECT_PATHS)
+    if (batch.identity.device !== before.dev || batch.identity.inode !== before.ino ||
+        (expected !== undefined && (batch.identity.device !== expected.rootDev || batch.identity.inode !== expected.rootIno)) ||
+        canonical(componentIdentity(root, ".", true)) !== canonical(before))
+      fail("V138_PLAN142_EFFECT_COMPONENT_CHANGED")
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("V138_PLAN142_")) throw error
+    fail("V138_PLAN142_EFFECT_DESCRIPTOR_BATCH_FAILED")
+  }
+  authenticateAbsenceReaderBytes(IMPLEMENTATION_ROOT)
+  // Descriptor-bound checked snapshot, not a promise of absence after return.
+  // The existing bootstrap's single-operator local-seal limitations still apply.
   return true
 }
+export const checkV138Plan142EffectPathsAbsentForReview = (rootInput: string): true =>
+  checkEffectPathsAbsent(rootInput)
 
 type History = Readonly<{ root: string; sourceRoot: string; head: string; metadataRoot: Sha
   sourceMetadata: string
@@ -483,11 +501,12 @@ const authenticateRepositoryClosure = (history: History) => {
       return Object.freeze({ path: match[3]!, mode: match[1]!, blob: match[2]!, sha256: sha(bytes) })
     }).sort((a, b) => a.path.localeCompare(b.path)))
   } finally { rmSync(owner, { recursive: true, force: true }) }
-  for (const identity of NATIVE_IDENTITIES) {
+  for (const identity of [...NATIVE_IDENTITIES, ...ABSENCE_READER_IDENTITIES]) {
     const actual = entries.find((entry) => entry.path === identity.path)
     if (actual === undefined || canonical(actual) !== canonical(identity))
       fail("V138_PLAN142_NATIVE_IDENTITY_INVALID")
   }
+  authenticateAbsenceReaderBytes(history.sourceRoot)
   const body = Object.freeze({ executorCommit: EXECUTOR_COMMIT, entries })
   return Object.freeze({ ...body,
     repositoryClosureRoot: rooted("v138-plan-262-142-repository-closure-v10", body) })
@@ -610,11 +629,12 @@ const rootIdentity = (rootInput: string) => {
   return Object.freeze({ canonicalRoot, rootDev: String(stat.dev), rootIno: String(stat.ino) })
 }
 const authenticateRoot = (rootInput: string) => {
-  checkV138Plan142EffectPathsAbsentForReview(rootInput)
-  const identity = rootIdentity(rootInput); const history = createHistory(identity.canonicalRoot)
+  const identity = rootIdentity(rootInput)
+  checkEffectPathsAbsent(rootInput, identity)
+  const history = createHistory(identity.canonicalRoot)
   try {
     const repository = authenticateRepositoryClosure(history); const runtime = captureRuntime(identity.canonicalRoot)
-    checkV138Plan142EffectPathsAbsentForReview(identity.canonicalRoot)
+    checkEffectPathsAbsent(identity.canonicalRoot, identity)
     return Object.freeze({ identity, head: history.head, metadataRoot: history.metadataRoot,
       repository, runtime, history })
   } catch (error) { history.dispose(); throw error }
@@ -625,7 +645,7 @@ export const buildV138Plan142ProspectiveV10ForReview = (rootInput: string) => {
     const execution = runExactExecutor(authenticated.history, authenticated.runtime)
     const observations = validateExecution(execution, authenticated.repository.repositoryClosureRoot,
       authenticated.runtime.public.semanticRuntimeRoot)
-    checkV138Plan142EffectPathsAbsentForReview(authenticated.identity.canonicalRoot)
+    checkEffectPathsAbsent(authenticated.identity.canonicalRoot, authenticated.identity)
     const observationsRoot = rooted("v138-plan-262-142-stable-observations-v10", observations)
     const payloadBody = Object.freeze({ schemaVersion: "v1.38-plan-262-142-live-v13-custody-v10",
       protocol: "semantic-runtime-root-provenance-component-walk-v10",
@@ -702,7 +722,7 @@ export const authenticateV138Plan142ProspectiveV10BatchForReview = (
             provenance.semanticRuntimeRoot !== authenticated.runtime.public.semanticRuntimeRoot ||
             provenance.transcriptDigest !== sha(canonical(value)) || provenance.transcriptNonce.length !== 64)
           fail("V138_PLAN142_ROOT_PROVENANCE_MISMATCH")
-        checkV138Plan142EffectPathsAbsentForReview(authenticated.identity.canonicalRoot)
+        checkEffectPathsAbsent(authenticated.identity.canonicalRoot, authenticated.identity)
         return Object.freeze({ accepted: true as const })
       } catch (error) { return Object.freeze({ accepted: false as const,
         code: publicErrorCode(error) }) }
