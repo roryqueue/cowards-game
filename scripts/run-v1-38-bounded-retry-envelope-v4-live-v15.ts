@@ -136,6 +136,16 @@ export const checkV138LiveV15EffectState = (rootInput: string, stage: "pre" | "p
     return freeze({ stage, status: "fresh_inactive", authorizesExecution: false }) }
   if (stage !== "post" || pathKind(root, V138_LIVE_V15_PATHS.invocation) !== "file") fail("INVOCATION_MARKER_REQUIRED")
   const terminalKind = pathKind(root, V138_LIVE_V15_PATHS.terminal)
+  if (terminalKind === "absent" && pathKind(root, V138_LIVE_V15_PATHS.aggregate) === "file" && pathKind(root, V138_LIVE_V15_PATHS.disposition) === "file") {
+    const aggregate = JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.aggregate).toString())
+    const disposition = JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.disposition).toString())
+    if (aggregate.schemaVersion !== "v1.38-plan-262-historical-live-receipt-manifest-v4" || aggregate.assuranceClass !== "single_operator_local_seal_v1" ||
+      !isSha(aggregate.journalSha256) || !isSha(aggregate.terminalSha256) || aggregate.downstreamAuthority !== "denied" ||
+      disposition.schemaVersion !== "v1.38-plan-262-94-admission-disposition-v4" || !isSha(disposition.receiptManifestSha256) ||
+      disposition.requiredAccepted !== 540 || !Number.isSafeInteger(disposition.freshAccepted) || disposition.freshAccepted < 0 ||
+      disposition.freshAccepted > 540 || disposition.downstreamAuthority !== "denied") fail("RETIRED_STATE_INVALID")
+    return freeze({ stage, status: "authenticated_raw_state_retired", freshAccepted: disposition.freshAccepted, downstreamAuthority: "denied" })
+  }
   if (terminalKind === "absent") fail("TERMINAL_ABSENT_BOOTSTRAP_FAILURE")
   if (terminalKind !== "file" || pathKind(root, V138_LIVE_V15_PATHS.journal) !== "file" || pathKind(root, V138_LIVE_V15_PATHS.reproduction) === "directory") fail("POST_STATE_INVALID")
   return freeze({ stage, status: "producer_terminal_present", reproductionPresent: pathKind(root, V138_LIVE_V15_PATHS.reproduction) === "file", downstreamAuthority: "denied" })

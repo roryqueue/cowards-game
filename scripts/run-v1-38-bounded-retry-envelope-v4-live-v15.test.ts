@@ -45,4 +45,14 @@ describe("live-v15 single-review source and invocation boundary", () => {
     expect(() => checkV138LiveV15EffectState(root, "post")).toThrow(/TERMINAL_ABSENT/)
     expect(readFileSync(path.join(root, V138_LIVE_V15_PATHS.journal), "utf8")).toBe("")
   })
+  it("accepts authenticated later aggregate/disposition after raw state retirement", () => {
+    const root = fixture(); consumeV138LiveV15Invocation(root, digest)
+    writeFileSync(path.join(root, V138_LIVE_V15_PATHS.aggregate), JSON.stringify({
+      schemaVersion: "v1.38-plan-262-historical-live-receipt-manifest-v4", assuranceClass: "single_operator_local_seal_v1",
+      journalSha256: digest, terminalSha256: digest, downstreamAuthority: "denied" }))
+    writeFileSync(path.join(root, V138_LIVE_V15_PATHS.disposition), JSON.stringify({
+      schemaVersion: "v1.38-plan-262-94-admission-disposition-v4", receiptManifestSha256: digest,
+      freshAccepted: 0, requiredAccepted: 540, downstreamAuthority: "denied" }))
+    expect(checkV138LiveV15EffectState(root, "post").status).toBe("authenticated_raw_state_retired")
+  })
 })
