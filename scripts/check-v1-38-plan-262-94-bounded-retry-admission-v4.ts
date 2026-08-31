@@ -138,7 +138,7 @@ const keyed = (key: Bytes, domain: string, chunks: readonly Bytes[]): Sha256 => 
   return `sha256:${mac.digest("hex")}`
 }
 const freeze = <T>(value: T): T => {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+  if (value !== null && typeof value === "object" && !ArrayBuffer.isView(value) && !Object.isFrozen(value)) {
     for (const child of Object.values(value as object)) freeze(child)
     Object.freeze(value)
   }
