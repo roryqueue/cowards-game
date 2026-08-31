@@ -6,6 +6,7 @@ import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { inspectV138Plan142SemanticRuntimeForReview } from "./check-v1-38-plan-262-142-live-v13-custody-v10.js"
 import { checkV138InactiveRetryV4Envelope } from "./lib/v1-38-bounded-retry-envelope-v4.js"
+import { checkV138PublishedRetryV4OutcomeWithEnvelope } from "./run-v1-38-bounded-retry-envelope-v4.js"
 
 type Sha = `sha256:${string}`
 type SourceFile = Readonly<{ path: string; mode: "100644" | "100755"; blob: string; sha256: Sha }>
@@ -14,6 +15,7 @@ type Review = Readonly<{ schema: "v1.38-plan-262-146-repair-review-v1"; sourceCo
   nativeTestResults: Readonly<{ command: string; passed: true; ownerPairLifePair: true;
     competingOwnerExcluded: true; invalidLeasesRejected: true; boundedCleanup: true; outerDeadlineMilliseconds: 55000 }>;
   findingCount: 0; plan147Eligible: true; correctedInvocationLimit: 1; authorizesExecution: false }>
+type InvocationIdentity = Readonly<{ reviewedSourceRoot: Sha; reviewReportCommit: string; reviewReportBlob: string }>
 const PHASE = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con"
 const IMPLEMENTATION_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const fail = (code: string): never => { throw new TypeError(`V138_LIVE_V15_${code}`) }
@@ -52,6 +54,10 @@ const git = (root: string, args: readonly string[]): string => execFileSync("/us
   "-c", "core.fsmonitor=false", ...args], { env: { PATH: "/usr/bin:/bin", HOME: "/dev/null", GIT_CONFIG_NOSYSTEM: "1",
     GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_REPLACE_OBJECTS: "1", GIT_TERMINAL_PROMPT: "0" }, timeout: 30_000,
     maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).toString().trim()
+const gitBytes = (root: string, args: readonly string[]): Buffer => execFileSync("/usr/bin/git", ["-C", root, "-c", "core.hooksPath=/dev/null",
+  "-c", "core.fsmonitor=false", ...args], { env: { PATH: "/usr/bin:/bin", HOME: "/dev/null", GIT_CONFIG_NOSYSTEM: "1",
+    GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_REPLACE_OBJECTS: "1", GIT_TERMINAL_PROMPT: "0" }, timeout: 30_000,
+    maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })
 
 export const V138_LIVE_V15_PATHS = freeze({
   model: "scripts/lib/v1-38-bounded-retry-envelope-v4.ts", producer: "scripts/run-v1-38-bounded-retry-envelope-v4.ts",
@@ -90,6 +96,22 @@ export const validateV138LiveV15Review = (value: unknown): Review => {
 const parseReview = (text: string): Review => { const match = text.match(/^```json\n([^]*?)\n```(?:\n|$)/)
   if (!match) { fail("REVIEW_HEADER_REQUIRED") }
   try { return validateV138LiveV15Review(JSON.parse(match![1]!)) } catch { return fail("REVIEW_INVALID") } }
+export const readV138LiveV15CommittedReview = (rootInput: string) => {
+  const root = rootOf(rootInput)
+  let reportCommit: string
+  try { reportCommit = git(root, ["log", "-1", "--format=%H", "HEAD", "--", V138_LIVE_V15_PATHS.review]) } catch { return fail("REVIEW_NOT_COMMITTED") }
+  if (!isGit(reportCommit)) fail("REVIEW_NOT_COMMITTED")
+  const treeLine = git(root, ["ls-tree", reportCommit, "--", V138_LIVE_V15_PATHS.review])
+  const match = treeLine.match(/^100644 blob ([0-9a-f]{40})\t(.+)$/)
+  if (!match || match[2] !== V138_LIVE_V15_PATHS.review) fail("REVIEW_NOT_COMMITTED")
+  const reportBlob = match[1]!
+  const committedBytes = gitBytes(root, ["cat-file", "blob", reportBlob])
+  const workingBytes = readRegular(root, V138_LIVE_V15_PATHS.review)
+  if (!workingBytes.equals(committedBytes)) fail("REVIEW_WORKTREE_CHANGED")
+  const review = parseReview(committedBytes.toString())
+  try { git(root, ["merge-base", "--is-ancestor", review.sourceCommit, reportCommit]) } catch { return fail("REVIEW_LINEAGE_INVALID") }
+  return freeze({ review, reportCommit, reportBlob })
+}
 const currentSources = (root: string, commit: string): SourceFile[] => V138_LIVE_V15_SOURCE_FILES.map(repoPath => {
   const line = git(root, ["ls-tree", commit, "--", repoPath]); const m = line.match(/^(100644|100755) blob ([0-9a-f]{40})\t(.+)$/)
   if (!m || m[3] !== repoPath) fail("SOURCE_NOT_COMMITTED"); const bytes = readRegular(root, repoPath)
@@ -98,7 +120,7 @@ const currentSources = (root: string, commit: string): SourceFile[] => V138_LIVE
 }).sort((a, b) => a.path.localeCompare(b.path))
 
 export const authenticateV138LiveV15ImmutableCustody = (rootInput: string) => {
-  const root = rootOf(rootInput); const review = parseReview(readRegular(root, V138_LIVE_V15_PATHS.review).toString())
+  const root = rootOf(rootInput); const committed = readV138LiveV15CommittedReview(root); const review = committed.review
   if (canonical(currentSources(root, review.sourceCommit)) !== canonical(review.sourceFiles)) fail("REVIEWED_SOURCE_CHANGED")
   const runtime = inspectV138Plan142SemanticRuntimeForReview(root)
   if (runtime.semanticRuntimeRoot !== review.runtimeClosureRoot) fail("RUNTIME_CHANGED")
@@ -109,7 +131,8 @@ export const authenticateV138LiveV15ImmutableCustody = (rootInput: string) => {
     seal.sourceCommit !== review.sourceCommit || envelope.sourceRoot !== seal.sourceRoot || envelope.sealRoot !== seal.sealRoot ||
     seal.runtimeClosureRoot !== review.runtimeClosureRoot || seal.failedPlan110?.liveInvocations !== 1 || seal.failedPlan110?.freshAccepted !== 0 ||
     seal.correctedInvocationLimit !== 1 || seal.authorizesExecution !== false || seal.downstreamAuthority !== "denied") fail("PAIR_INVALID")
-  return freeze({ review, envelope, seal, runtimeClosureRoot: runtime.semanticRuntimeRoot })
+  return freeze({ review, envelope, seal, runtimeClosureRoot: runtime.semanticRuntimeRoot,
+    reportCommit: committed.reportCommit, reportBlob: committed.reportBlob })
 }
 export const checkV138LiveV15PublishedPair = (rootInput: string) => {
   const root = rootOf(rootInput); const envelope = checkV138InactiveRetryV4Envelope(JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.envelope).toString()))
@@ -120,49 +143,61 @@ export const checkV138LiveV15PublishedPair = (rootInput: string) => {
   return freeze({ envelope, seal })
 }
 
-export const consumeV138LiveV15Invocation = (rootInput: string, reviewedSourceRoot: Sha): void => {
-  const root = rootOf(rootInput); if (!isSha(reviewedSourceRoot) || pathKind(root, V138_LIVE_V15_PATHS.privateDir) !== "absent") fail("INVOCATION_ALREADY_CONSUMED")
+export const consumeV138LiveV15Invocation = (rootInput: string, identity: InvocationIdentity): void => {
+  const root = rootOf(rootInput); if (!identity || !isSha(identity.reviewedSourceRoot) || !isGit(identity.reviewReportCommit) ||
+    !isGit(identity.reviewReportBlob) || pathKind(root, V138_LIVE_V15_PATHS.privateDir) !== "absent") fail("INVOCATION_ALREADY_CONSUMED")
   const dir = path.join(root, V138_LIVE_V15_PATHS.privateDir); mkdirSync(dir, { mode: 0o700 })
-  const body = freeze({ schemaVersion: "v1.38-corrected-live-invocation-v1", correctedInvocationLimit: 1, reviewedSourceRoot,
+  const body = freeze({ schemaVersion: "v1.38-corrected-live-invocation-v1", correctedInvocationLimit: 1, ...identity,
     producerEntryRecorded: true, priorFailedInvocationCount: 1, authorizesExecution: false, downstreamAuthority: "denied" })
   const fd = openSync(path.join(root, V138_LIVE_V15_PATHS.invocation), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600)
   try { writeSync(fd, canonical(body)); fsyncSync(fd) } finally { closeSync(fd) }
   const dfd = openSync(dir, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW); try { fsyncSync(dfd) } finally { closeSync(dfd) }
 }
-export const checkV138LiveV15EffectState = (rootInput: string, stage: "pre" | "post") => {
+export const authenticateV138LiveV15InvocationMarker = (rootInput: string, expected?: InvocationIdentity) => {
+  const root = rootOf(rootInput)
+  const marker = JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.invocation).toString()) as Record<string, unknown>
+  if (!equalKeys(marker, ["schemaVersion", "correctedInvocationLimit", "reviewedSourceRoot", "reviewReportCommit", "reviewReportBlob",
+    "producerEntryRecorded", "priorFailedInvocationCount", "authorizesExecution", "downstreamAuthority"]) ||
+    marker.schemaVersion !== "v1.38-corrected-live-invocation-v1" || marker.correctedInvocationLimit !== 1 ||
+    !isSha(marker.reviewedSourceRoot) || !isGit(marker.reviewReportCommit) || !isGit(marker.reviewReportBlob) ||
+    marker.producerEntryRecorded !== true || marker.priorFailedInvocationCount !== 1 || marker.authorizesExecution !== false ||
+    marker.downstreamAuthority !== "denied" || expected !== undefined &&
+      (marker.reviewedSourceRoot !== expected.reviewedSourceRoot || marker.reviewReportCommit !== expected.reviewReportCommit ||
+        marker.reviewReportBlob !== expected.reviewReportBlob)) fail("INVOCATION_MARKER_INVALID")
+  return freeze(marker as unknown as InvocationIdentity & Record<string, unknown>)
+}
+export const checkV138LiveV15EffectState = (rootInput: string, stage: "pre" | "post", expectedInvocation?: InvocationIdentity) => {
   const root = rootOf(rootInput); const downstream = [V138_LIVE_V15_PATHS.aggregate, V138_LIVE_V15_PATHS.disposition, V138_LIVE_V15_PATHS.correction,
     V138_LIVE_V15_PATHS.activation, V138_LIVE_V15_PATHS.readiness, V138_LIVE_V15_PATHS.lifecycle]
   if (stage === "pre") { for (const p of [V138_LIVE_V15_PATHS.journal, V138_LIVE_V15_PATHS.privateDir, V138_LIVE_V15_PATHS.terminal,
     V138_LIVE_V15_PATHS.reproduction, ...downstream]) if (pathKind(root, p) !== "absent") fail("FRESH_EFFECT_PRESENT")
     return freeze({ stage, status: "fresh_inactive", authorizesExecution: false }) }
   if (stage !== "post" || pathKind(root, V138_LIVE_V15_PATHS.invocation) !== "file") fail("INVOCATION_MARKER_REQUIRED")
+  authenticateV138LiveV15InvocationMarker(root, expectedInvocation)
   const terminalKind = pathKind(root, V138_LIVE_V15_PATHS.terminal)
-  if (terminalKind === "absent" && pathKind(root, V138_LIVE_V15_PATHS.aggregate) === "file" && pathKind(root, V138_LIVE_V15_PATHS.disposition) === "file") {
-    const aggregate = JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.aggregate).toString())
-    const disposition = JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.disposition).toString())
-    if (aggregate.schemaVersion !== "v1.38-plan-262-historical-live-receipt-manifest-v4" || aggregate.assuranceClass !== "single_operator_local_seal_v1" ||
-      !isSha(aggregate.journalSha256) || !isSha(aggregate.terminalSha256) || aggregate.downstreamAuthority !== "denied" ||
-      disposition.schemaVersion !== "v1.38-plan-262-94-admission-disposition-v4" || !isSha(disposition.receiptManifestSha256) ||
-      disposition.requiredAccepted !== 540 || !Number.isSafeInteger(disposition.freshAccepted) || disposition.freshAccepted < 0 ||
-      disposition.freshAccepted > 540 || disposition.downstreamAuthority !== "denied") fail("RETIRED_STATE_INVALID")
-    return freeze({ stage, status: "authenticated_raw_state_retired", freshAccepted: disposition.freshAccepted, downstreamAuthority: "denied" })
-  }
+  const retiredPresent = downstream.some(p => pathKind(root, p) !== "absent")
+  if (retiredPresent && terminalKind !== "absent") fail("RETIRED_RAW_HYBRID_INVALID")
+  if (retiredPresent) fail("RETIRED_STATE_CHECKER_UNAVAILABLE")
   if (terminalKind === "absent") fail("TERMINAL_ABSENT_BOOTSTRAP_FAILURE")
   if (terminalKind !== "file" || pathKind(root, V138_LIVE_V15_PATHS.journal) !== "file" || pathKind(root, V138_LIVE_V15_PATHS.reproduction) === "directory") fail("POST_STATE_INVALID")
-  return freeze({ stage, status: "producer_terminal_present", reproductionPresent: pathKind(root, V138_LIVE_V15_PATHS.reproduction) === "file", downstreamAuthority: "denied" })
+  const envelope = checkV138InactiveRetryV4Envelope(JSON.parse(readRegular(root, V138_LIVE_V15_PATHS.envelope).toString()))
+  const outcome = checkV138PublishedRetryV4OutcomeWithEnvelope(root, envelope)
+  return freeze({ stage, status: "producer_terminal_authenticated", ...outcome })
 }
 
 export const executeV138LiveV15Cli = async (args: readonly string[]): Promise<void> => {
   if (args.length !== 1) fail("ARGUMENTS_INVALID")
   if (args[0] === "--check-immutable-review-custody") { const v = authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); process.stdout.write(canonical({ status: "immutable_review_custody_checked", sourceCommit: v.review.sourceCommit, authorizesExecution: false })); return }
   if (args[0] === "--check-reviewed-live-ready") { const v = authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "pre"); process.stdout.write(canonical({ status: "reviewed_live_ready", sourceCommit: v.review.sourceCommit, correctedInvocationLimit: 1, authorizesExecution: false })); return }
-  if (args[0] === "--check-post-run-custody") { authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "post"); process.stdout.write(canonical({ status: "post_run_custody_checked", downstreamAuthority: "denied" })); return }
+  if (args[0] === "--check-post-run-custody") { const v = authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "post",
+    { reviewedSourceRoot: v.seal.sourceRoot, reviewReportCommit: v.reportCommit, reviewReportBlob: v.reportBlob }); process.stdout.write(canonical({ status: "post_run_custody_checked", downstreamAuthority: "denied" })); return }
   if (args[0] === "--run-reviewed-bounded-live-envelope") {
     const v = authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "pre")
-    consumeV138LiveV15Invocation(IMPLEMENTATION_ROOT, v.seal.sourceRoot)
+    const invocationIdentity = { reviewedSourceRoot: v.seal.sourceRoot, reviewReportCommit: v.reportCommit, reviewReportBlob: v.reportBlob }
+    consumeV138LiveV15Invocation(IMPLEMENTATION_ROOT, invocationIdentity)
     const producer = await import("./run-v1-38-bounded-retry-envelope-v4.js")
-    await producer.runV138V4ProductionLive(IMPLEMENTATION_ROOT, { validateInputs: false, checkPair: () => ({ seal: v.seal, envelope: v.envelope }) })
-    authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "post"); return
+    await producer.runV138V4ProductionLive(IMPLEMENTATION_ROOT)
+    authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "post", invocationIdentity); return
   }
   fail("ARGUMENTS_INVALID")
 }

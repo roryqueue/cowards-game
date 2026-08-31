@@ -1668,6 +1668,14 @@ export const reconcileV138RetryV4PrivateReceipts = (
 
 export const checkV138PublishedRetryV4Outcome = (
   repoRoot: string,
+): ReturnType<typeof checkV138PublishedRetryV4OutcomeWithEnvelope> => {
+  const { envelope } = checkPublishedPair(repoRoot)
+  return checkV138PublishedRetryV4OutcomeWithEnvelope(repoRoot, envelope)
+}
+
+export const checkV138PublishedRetryV4OutcomeWithEnvelope = (
+  repoRoot: string,
+  envelope: Readonly<V138InactiveRetryV4Envelope>,
 ): Readonly<{
   disposition: V138DerivedRetryV4State["disposition"]
   journalRoot: V138RetrySha256
@@ -1676,7 +1684,7 @@ export const checkV138PublishedRetryV4Outcome = (
   reproductionPresent: boolean
   downstreamAuthority: "denied"
 }> => {
-  const { envelope } = checkPublishedPair(repoRoot)
+  checkV138InactiveRetryV4Envelope(envelope)
   const records = readJournal(repoRoot)
   const state = deriveV138RetryV4State(envelope, records)
   if (state.disposition === "active") fail("V138_RETRY_TERMINAL_STATE_REQUIRED")
@@ -1745,28 +1753,32 @@ export const requireV138RetryV4ReproductionAbsent = (repoRoot: string): true => 
   return true
 }
 
-export interface V138RetryV4ProductionOptions {
-  readonly checkPair?: () => Readonly<V138DerivedV4SealEnvelope>
-  readonly createEffects?: (
-    append: (record: V138RetryV4JournalRecord) => void,
-  ) => V138BoundedRetryV4ControllerEffects
-  readonly crashBoundary?: (stage: V138RetryV4CrashBoundary) => void
-  readonly validateInputs?: boolean
-}
-
 export const runV138V4ProductionLive = async (
   repoRoot: string,
-  options: V138RetryV4ProductionOptions = {},
 ): Promise<void> => {
-  const authenticateLiveV15 = async () =>
-    (await import("./run-v1-38-bounded-retry-envelope-v4-live-v15.js"))
-      .authenticateV138LiveV15ImmutableCustody(repoRoot)
-  const custodyBefore = options.validateInputs === false ? undefined : await authenticateLiveV15()
+  const liveV15 = await import("./run-v1-38-bounded-retry-envelope-v4-live-v15.js")
+  const authenticateLiveV15 = () => liveV15.authenticateV138LiveV15ImmutableCustody(repoRoot)
+  const custodyBefore = authenticateLiveV15()
+  const invocationIdentity = Object.freeze({ reviewedSourceRoot: custodyBefore.seal.sourceRoot,
+    reviewReportCommit: custodyBefore.reportCommit, reviewReportBlob: custodyBefore.reportBlob })
+  liveV15.authenticateV138LiveV15InvocationMarker(repoRoot, invocationIdentity)
   const recheckExecution = async (): Promise<void> => {
-    if (custodyBefore !== undefined && canonical(await authenticateLiveV15()) !== canonical(custodyBefore))
+    if (canonical(authenticateLiveV15()) !== canonical(custodyBefore))
       fail("V138_RETRY_V4_EXECUTION_CLOSURE_CHANGED")
+    liveV15.authenticateV138LiveV15InvocationMarker(repoRoot, invocationIdentity)
   }
-  const { envelope } = options.checkPair?.() ?? custodyBefore ?? await authenticateLiveV15()
+  const { envelope } = custodyBefore
+  const releaseOwnership = async (
+    ownership: Awaited<ReturnType<typeof acquireV138RetryV4OwnerLease>>,
+    primaryError?: unknown,
+  ): Promise<void> => {
+    try { await ownership.release() } catch (shutdownError) {
+      if (primaryError === undefined) throw shutdownError
+      if (primaryError instanceof Error) Object.defineProperty(primaryError, "shutdownUncertainty", {
+        value: shutdownError instanceof Error ? shutdownError.message : String(shutdownError), enumerable: false,
+      })
+    }
+  }
   for (const repoPath of [
     V138_BOUNDED_RETRY_V4_PATHS.journal,
     `${V138_BOUNDED_RETRY_V4_PATHS.journal}.lock`,
@@ -1784,6 +1796,7 @@ export const runV138V4ProductionLive = async (
   }
   if (terminalStatus === "regular") {
     const ownership = await acquireV138RetryV4OwnerLease(repoRoot)
+    let primaryError: unknown
     try {
       const terminal = readJsonNoFollow(
         repoRoot,
@@ -1805,15 +1818,18 @@ export const runV138V4ProductionLive = async (
       ) {
         fail("V138_RETRY_DUPLICATE_INVOCATION_INVALID")
       }
+    } catch (error) {
+      primaryError = error
+      throw error
     } finally {
-      await ownership.release()
+      await releaseOwnership(ownership, primaryError)
     }
     await recheckExecution()
     return
   }
   const ownership = await acquireV138RetryV4OwnerLease(repoRoot)
+  let primaryError: unknown
   try {
-    options.crashBoundary?.("lock_acquired")
     const privateTarget = path.resolve(
       repoRoot,
       V138_BOUNDED_RETRY_V4_PATHS.privateDir,
@@ -1847,18 +1863,12 @@ export const runV138V4ProductionLive = async (
     if (safeStatus(reproductionTarget) !== "missing")
       fail("V138_RETRY_DESTINATION_UNSAFE")
     const appendJournal = journalAppender(repoRoot, privateTarget, ownership)
-    const append = (record: V138RetryV4JournalRecord): void => {
-      appendJournal(record)
-      options.crashBoundary?.("journal_fsync")
-      options.crashBoundary?.("receipt_fsync")
-    }
+    const append = (record: V138RetryV4JournalRecord): void => appendJournal(record)
     const result = await runV138BoundedRetryV4Controller({
       envelope,
       owner: "repository_operator",
       records: existing,
-      effects:
-        options.createEffects?.(append) ??
-        createV138V4ProductionControllerEffects(repoRoot, append),
+      effects: createV138V4ProductionControllerEffects(repoRoot, append),
     })
     publishV138RetryV4Outcome({
       repoRoot,
@@ -1866,19 +1876,13 @@ export const runV138V4ProductionLive = async (
       reproductionTarget,
       result,
       lease: ownership,
-      hooks: {
-        afterReproductionWrite: () =>
-          options.crashBoundary?.("reproduction_write"),
-        afterReproductionParentFsync: () =>
-          options.crashBoundary?.("reproduction_fsync"),
-        afterTerminalWrite: () => options.crashBoundary?.("terminal_write"),
-        afterTerminalParentFsync: () =>
-          options.crashBoundary?.("terminal_fsync"),
-      },
     })
     await recheckExecution()
+  } catch (error) {
+    primaryError = error
+    throw error
   } finally {
-    await ownership.release()
+    await releaseOwnership(ownership, primaryError)
   }
 }
 
