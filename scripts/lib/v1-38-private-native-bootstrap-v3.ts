@@ -46,6 +46,7 @@ const bounded = (temporary: string, timeout: number) => ({
 })
 
 export const V138_PRIVATE_NATIVE_EXECUTION_ASSURANCE_V3 = Object.freeze({
+  schemaVersion: "v1.38-private-native-execution-assurance-v3" as const,
   assuranceClass: "single_operator_local_seal_v1" as const,
   platform: "darwin" as const,
   descriptorExecutionAvailable: false,
