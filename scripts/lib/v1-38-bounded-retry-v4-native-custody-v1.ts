@@ -65,10 +65,12 @@ type LeaseState = {
   readonly descriptor: number
   readonly child: ChildProcess
   readonly exit: Promise<number | null>
+  readonly close: Promise<number | null>
   readonly cleanup: () => void
   active: boolean
   released: boolean
   cleaned: boolean
+  shutdown?: Promise<number | null>
 }
 const ownerLeases = new WeakMap<V138RetryV4NativeOwnerLease, LeaseState>()
 
@@ -463,6 +465,54 @@ const closeLeaseResources = (state: LeaseState): void => {
   } catch {}
   state.cleanup()
 }
+const boundedClose = (
+  state: LeaseState,
+  milliseconds: number,
+  code: string,
+): { promise: Promise<number | null>; cancel: () => void } => {
+  let timer: NodeJS.Timeout
+  return {
+    promise: new Promise<number | null>((resolve, reject) => {
+      timer = setTimeout(() => reject(new TypeError(code)), milliseconds)
+      timer.unref()
+      state.close.then(resolve, reject)
+    }),
+    cancel: () => clearTimeout(timer),
+  }
+}
+const shutdownLease = (state: LeaseState): Promise<number | null> => {
+  if (state.shutdown !== undefined) return state.shutdown
+  state.active = false
+  state.shutdown = (async () => {
+    try {
+      state.child.stdin?.end()
+    } catch {}
+    const graceful = boundedClose(
+      state,
+      4_000,
+      "V138_RETRY_OWNER_LOCK_RELEASE_TIMEOUT",
+    )
+    try {
+      return await graceful.promise
+    } catch {
+      state.child.kill("SIGKILL")
+      const escalated = boundedClose(
+        state,
+        1_000,
+        "V138_RETRY_OWNER_LOCK_RELEASE_UNCERTAIN",
+      )
+      try {
+        await escalated.promise
+      } finally {
+        escalated.cancel()
+      }
+      fail("V138_RETRY_OWNER_LOCK_RELEASE_TIMEOUT")
+    } finally {
+      graceful.cancel()
+    }
+  })()
+  return state.shutdown
+}
 const validateLease = (
   rootInput: string,
   lease: V138RetryV4NativeOwnerLease,
@@ -493,13 +543,10 @@ const validateLease = (
   return state
 }
 const invalidateLease = (state: LeaseState): void => {
-  if (!state.active) return
-  state.active = false
-  try {
-    state.child.stdin?.end()
-  } catch {}
-  state.child.kill("SIGKILL")
-  closeLeaseResources(state)
+  void shutdownLease(state).catch(() => {
+    // The synchronous native transaction error remains the primary failure.
+    // release() can still join this same shutdown and report its outcome.
+  })
 }
 
 const invokeTransactionNative = (
@@ -704,6 +751,9 @@ export const acquireV138RetryV4NativeOwnerLease = async (
     const exit = new Promise<number | null>((resolve) =>
       child.once("exit", resolve),
     )
+    const close = new Promise<number | null>((resolve) =>
+      child.once("close", resolve),
+    )
     await new Promise<void>((resolve, reject) => {
       let stdout = "",
         stderr = "",
@@ -742,6 +792,7 @@ export const acquireV138RetryV4NativeOwnerLease = async (
       descriptor: rootDescriptor,
       child,
       exit,
+      close,
       cleanup: built.cleanup,
       active: true,
       released: false,
@@ -752,54 +803,17 @@ export const acquireV138RetryV4NativeOwnerLease = async (
       pid: child.pid ?? fail("V138_RETRY_OWNER_LOCK_ACTIVE"),
       waitForExit: () => exit,
       release: async () => {
-        if (state.released || !state.active)
-          fail("V138_RETRY_OWNER_LOCK_RELEASE_INVALID")
+        if (state.released) fail("V138_RETRY_OWNER_LOCK_RELEASE_INVALID")
         state.released = true
-        state.active = false
-        child.stdin?.end()
-        const boundedExit = (milliseconds: number, code: string) => {
-          let timer: NodeJS.Timeout
-          return {
-            promise: new Promise<number | null>((resolve, reject) => {
-              timer = setTimeout(
-                () => reject(new TypeError(code)),
-                milliseconds,
-              )
-              timer.unref()
-              exit.then(resolve, reject)
-            }),
-            cancel: () => clearTimeout(timer),
-          }
-        }
-        let code: number | null = null
-        const graceful = boundedExit(
-          4_000,
-          "V138_RETRY_OWNER_LOCK_RELEASE_TIMEOUT",
-        )
-        try {
-          code = await graceful.promise
-        } catch {
-          child.kill("SIGKILL")
-          const escalated = boundedExit(
-            1_000,
-            "V138_RETRY_OWNER_LOCK_RELEASE_UNCERTAIN",
-          )
-          try {
-            await escalated.promise
-          } finally {
-            escalated.cancel()
-          }
-          fail("V138_RETRY_OWNER_LOCK_RELEASE_TIMEOUT")
-        } finally {
-          graceful.cancel()
-          closeLeaseResources(state)
-        }
+        const code = await shutdownLease(state)
         if (code !== 0) fail("V138_RETRY_OWNER_LOCK_RELEASE_INVALID")
       },
     })
     ownerLeases.set(lease, state)
     child.once("exit", () => {
       state.active = false
+    })
+    child.once("close", () => {
       closeLeaseResources(state)
     })
     return lease

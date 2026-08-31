@@ -21,6 +21,7 @@ const fixture = (body: string): Promise<string> =>
     import { createRequire, syncBuiltinESMExports } from 'node:module';
     const require = createRequire(import.meta.url);
     const cp = require('node:child_process');
+    const originalSpawn = cp.spawn;
     const originalSpawnSync = cp.spawnSync;
     const root = fs.mkdtempSync(path.join(tmpdir(), 'v138-v4-native-fixture-'));
     const leases = [];
@@ -32,6 +33,7 @@ const fixture = (body: string): Promise<string> =>
     const publish = (lease,id) => native.publishV138RetryV4NativePair(root,pair(id),lease);
     try { ${body}; console.log('fixture-passed'); }
     finally {
+      cp.spawn=originalSpawn;
       cp.spawnSync=originalSpawnSync; syncBuiltinESMExports();
       for (const lease of leases) { try { await lease.release(); } catch {} }
       fs.rmSync(root,{recursive:true,force:true});
@@ -140,7 +142,20 @@ describe.skipIf(process.platform !== "darwin")(
     it("invalidates on transaction timeout, waits for owner close and permits new ownership", async () => {
       expect(
         await fixture(`
+      const ownerPrefix='cowards-v138-retry-v4-owner-';
+      const ownerBuildsBefore=fs.readdirSync(tmpdir()).filter(x=>x.startsWith(ownerPrefix)).sort();
       const lease=await acquire();
+      const rootIdentity=fs.statSync(root);
+      const retainedRootDescriptors=()=>fs.readdirSync('/dev/fd').map(Number).filter(fd=>{
+        try { const s=fs.fstatSync(fd); return s.dev===rootIdentity.dev&&s.ino===rootIdentity.ino } catch { return false }
+      });
+      assert.equal(retainedRootDescriptors().length,1);
+      const ownerKills=[];
+      const originalKill=cp.ChildProcess.prototype.kill;
+      cp.ChildProcess.prototype.kill=function(signal){
+        if(this.pid===lease.pid) ownerKills.push(signal);
+        return originalKill.call(this,signal);
+      };
       let measured=false;
       cp.spawnSync=(file,args,options)=>{
         if (String(file).endsWith('/primary/native')) {
@@ -150,11 +165,52 @@ describe.skipIf(process.platform !== "darwin")(
         }
         return originalSpawnSync(file,args,options);
       }; syncBuiltinESMExports();
-      assert.throws(()=>publish(lease,'timeout'),/NATIVE_FAILED/);
+      let transactionError;
+      try { publish(lease,'timeout'); } catch (error) { transactionError=error; }
+      assert(transactionError instanceof Error);
+      assert.match(transactionError.message,/NATIVE_FAILED/);
       assert(measured);
       assert.throws(()=>publish(lease,'after-timeout'),/LEASE_INVALID/);
       cp.spawnSync=originalSpawnSync; syncBuiltinESMExports();
-      try { await lease.release() } catch {}
+      await lease.release();
+      await lease.waitForExit();
+      cp.ChildProcess.prototype.kill=originalKill;
+      assert.deepEqual(ownerKills,[]);
+      assert.deepEqual(retainedRootDescriptors(),[]);
+      assert.deepEqual(fs.readdirSync(tmpdir()).filter(x=>x.startsWith(ownerPrefix)).sort(),ownerBuildsBefore);
+      const next=await acquire(); await next.release();
+    `),
+      ).toContain("fixture-passed")
+    }, 60_000)
+
+    it("shares invalidation shutdown with release and escalates only after the grace bound", async () => {
+      expect(
+        await fixture(`
+      let ownerChild;
+      cp.spawn=(file,args,options)=>{
+        const child=originalSpawn(file,args,options);
+        if(String(file).endsWith('/primary/native')) ownerChild=child;
+        return child;
+      }; syncBuiltinESMExports();
+      const lease=await acquire();
+      assert(ownerChild);
+      const signals=[];
+      const originalKill=ownerChild.kill.bind(ownerChild);
+      ownerChild.kill=(signal)=>{ signals.push(signal); return originalKill(signal); };
+      ownerChild.stdin.end=()=>ownerChild.stdin;
+      cp.spawnSync=(file,args,options)=>{
+        if(String(file).endsWith('/primary/native'))
+          return {status:1,signal:null,stderr:'fixture transaction failure'};
+        return originalSpawnSync(file,args,options);
+      }; syncBuiltinESMExports();
+      const started=Date.now();
+      assert.throws(
+        ()=>publish(lease,'shutdown-failure'),
+        /NATIVE_FAILED/,
+      );
+      await assert.rejects(lease.release(),/RELEASE_TIMEOUT/);
+      assert(Date.now()-started>=3900);
+      assert.deepEqual(signals,['SIGKILL']);
       await lease.waitForExit();
       const next=await acquire(); await next.release();
     `),
