@@ -96,6 +96,8 @@ describe("Plan 262-140 authenticated executor custody v9", () => {
     fabricated.payload.observations = fabricated.payload.observations.map((item: any, ordinal: number) =>
       ({ ...item, stableRecordRoot: `sha256:${String(ordinal).repeat(64)}` }))
     hostile.push(fabricated)
+    // Even a byte-for-byte aggregate copy has no genuine execution transcript identity.
+    hostile.push(clone(BASE))
     const results = authenticateV138Plan140ProspectiveV9BatchForReview([BASE, ...hostile], ROOT)
     expect(results[0]).toEqual({ accepted: true })
     expect(results.slice(1).every((item) => !item.accepted && /V138_PLAN140_/u.test(item.code ?? "")))
@@ -126,6 +128,11 @@ describe("Plan 262-140 authenticated executor custody v9", () => {
       (root) => execFileSync("git", ["-C", root, "config", "--local", "include.path", "/tmp/forged"]),
     ]
     for (const attack of attacks) { const root = cloneRepository(); attack(root); expect(() => checkV138Plan140SourceOnlyForReview(root)).toThrow(/V138_PLAN140_/u) }
+    const concurrent = cloneRepository()
+    const attacker = execFile("/bin/sh", ["-c",
+      "sleep 0.2; git -C \"$1\" config --local include.path /tmp/concurrent-forged", "_", concurrent])
+    try { expect(() => checkV138Plan140SourceOnlyForReview(concurrent)).toThrow(/V138_PLAN140_/u) }
+    finally { attacker.kill() }
   }, 360_000)
 
   it("is fresh/no-cache and deterministic across distinct roots and processes", async () => {
