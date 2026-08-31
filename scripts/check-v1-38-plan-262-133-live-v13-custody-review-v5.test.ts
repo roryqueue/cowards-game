@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import path from "node:path"
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import {
   V138_PLAN133_B331_SCOPE,
   V138_PLAN133_PUBLICATION_SCOPE,
@@ -27,7 +27,13 @@ const canonical = (value: unknown): string => {
 const rooted = (domain: string, value: unknown): string =>
   `sha256:${createHash("sha256").update(`${domain}\0${canonical(value)}`).digest("hex")}`
 
+let genuineModes: ReturnType<typeof executeV138Plan133DisposableObservationsForReview>
+
 describe("Plan 262-133 independent custody review v5", () => {
+  beforeAll(() => {
+    genuineModes = executeV138Plan133DisposableObservationsForReview(ROOT)
+  }, 180_000)
+
   it("pins the corrected Plan132 subject, closeout, clean review, and exact source bytes", () => {
     expect(authenticateV138Plan133Plan132SourceForReview(ROOT)).toMatchObject({
       subjectCommit: "52d35eb88db55e31d7203abb64735d12a53bbcf3",
@@ -68,7 +74,7 @@ describe("Plan 262-133 independent custody review v5", () => {
   })
 
   it("runs exactly six unique canonical genuine disposable observations", () => {
-    const modes = executeV138Plan133DisposableObservationsForReview(ROOT)
+    const modes = genuineModes
     expect(modes.actualModesPassed).toBe(6)
     expect(modes.findings).toEqual([])
     expect(modes.observations.map(({ mode, status }) => [mode, status])).toEqual([
@@ -88,7 +94,7 @@ describe("Plan 262-133 independent custody review v5", () => {
   }, 180_000)
 
   it("rejects empty, missing, duplicate, misordered, status, root, reduced, and producer forgeries", () => {
-    const modes = executeV138Plan133DisposableObservationsForReview(ROOT)
+    const modes = genuineModes
     const mutations = [
       (items: any[]) => items.splice(0),
       (items: any[]) => items.pop(),
@@ -108,7 +114,7 @@ describe("Plan 262-133 independent custody review v5", () => {
   }, 180_000)
 
   it("rejects self-consistent forged custody and caller-forged aggregates", () => {
-    const modes = executeV138Plan133DisposableObservationsForReview(ROOT)
+    const modes = genuineModes
     const observations = clone(modes.observations)
     observations[0].disposableReviewedClosureRoot = `sha256:${"a".repeat(64)}`
     const { observationRoot: _ignored, ...body } = observations[0]
@@ -124,7 +130,7 @@ describe("Plan 262-133 independent custody review v5", () => {
   }, 180_000)
 
   it("derives literal-zero eligibility only after the six-record validation gate", () => {
-    const modes = executeV138Plan133DisposableObservationsForReview(ROOT)
+    const modes = genuineModes
     const evidence = renderV138Plan133EvidenceForReview(ROOT, [], modes)
     expect(evidence.payload).toMatchObject({ findingCount: 0, actualModesPassed: 6,
       supersededV4Plan110Eligible: false, plan110Eligible: true,
