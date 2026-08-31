@@ -201,7 +201,6 @@ export const executeV138LiveV15Cli = async (args: readonly string[]): Promise<vo
   if (args[0] === "--run-reviewed-bounded-live-envelope") {
     const v = authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "pre")
     const invocationIdentity = { reviewedSourceRoot: v.seal.sourceRoot, reviewReportCommit: v.reportCommit, reviewReportBlob: v.reportBlob }
-    consumeV138LiveV15Invocation(IMPLEMENTATION_ROOT, invocationIdentity)
     const producer = await import("./run-v1-38-bounded-retry-envelope-v4.js")
     await producer.runV138V4ProductionLive(IMPLEMENTATION_ROOT)
     authenticateV138LiveV15ImmutableCustody(IMPLEMENTATION_ROOT); checkV138LiveV15EffectState(IMPLEMENTATION_ROOT, "post", invocationIdentity); return

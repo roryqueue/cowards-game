@@ -1761,6 +1761,7 @@ export const runV138V4ProductionLive = async (
   const custodyBefore = authenticateLiveV15()
   const invocationIdentity = Object.freeze({ reviewedSourceRoot: custodyBefore.seal.sourceRoot,
     reviewReportCommit: custodyBefore.reportCommit, reviewReportBlob: custodyBefore.reportBlob })
+  liveV15.consumeV138LiveV15Invocation(repoRoot, invocationIdentity)
   liveV15.authenticateV138LiveV15InvocationMarker(repoRoot, invocationIdentity)
   const recheckExecution = async (): Promise<void> => {
     if (canonical(authenticateLiveV15()) !== canonical(custodyBefore))
