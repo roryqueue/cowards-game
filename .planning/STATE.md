@@ -8,7 +8,7 @@ status: executing
 stopped_at: Plan 262-130 closed v4 source/tests committed; Plan 262-131 is sole next action
 last_updated: "2026-08-30T23:38:47.395Z"
 last_activity: 2026-08-30
-last_activity_desc: corrected Plan130 review blockers at 154ea6f4; Plan131 fresh independent review remains required
+last_activity_desc: corrected Plan130 V2 review blocker at bfc19377; Plan131 fresh independent review remains required
 progress:
   total_phases: 9
   completed_phases: 0
@@ -19,7 +19,7 @@ progress:
 
 # State: Coward's Game
 
-<!-- phase-262-plan-130-closeout-status: {"schema_version":"v1.38-plan-262-130-closeout-v2","proof_status":"closed_v4_source_test_review_correction_complete","source_commit":"154ea6f4","source_tree":"aca6231d359fa6d5414ad0fc19f583e8edcfce38","review_commit":"23e46eba65971db2eeb92305c4959754ec6f5b5e","focused_tests_passed":5,"disposable_modes_passed":6,"guarded_zero_effect_modes_passed":2,"root_relative_native_custody":true,"binding_aware_ast_policy":true,"plan122_v3_disposition":"process_invalid_false_clean_custody","plan122_v3_eligible":false,"plan_262_110_eligible":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"authorizes_execution":false,"next_action":"dispatch-262-131-only","downstream_authority_denied":true} -->
+<!-- phase-262-plan-130-closeout-status: {"schema_version":"v1.38-plan-262-130-closeout-v3","proof_status":"closed_v4_source_test_second_review_correction_complete","source_commit":"bfc19377","source_tree":"3be144c9b4a875f85bc747052cbc48706c2d778e","review_v1_commit":"23e46eba65971db2eeb92305c4959754ec6f5b5e","review_v2_commit":"38f4943531270db40eb24a727ae849895e73d8d0","focused_tests_passed":5,"disposable_modes_passed":6,"guarded_zero_effect_modes_passed":2,"root_relative_native_custody":true,"conservative_syntax_whitelist":true,"exact_process_references":4,"plan122_v3_disposition":"process_invalid_false_clean_custody","plan122_v3_eligible":false,"plan_262_110_eligible":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"authorizes_execution":false,"next_action":"dispatch-262-131-only","downstream_authority_denied":true} -->
 
 <!-- phase-262-closeout-replan-status-v2: {"schema_version":"v1.38-phase-262-closeout-replan-v2","active_plans":112,"trustworthy_summaries":99,"incomplete_plans":["262-130","262-131","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-130","262-131","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-130":95,"262-131":96,"262-110":97,"262-94":98,"262-123":99,"262-124":100,"262-95":101,"262-125":102,"262-126":103,"262-106":104,"262-127":105,"262-128":106,"262-129":107},"plan122_code_review_commit":"73d1be605aa68a7789c53ce78b20f4922b8b7cec","plan122_code_review_tree":"97fa619c4915b6690441d2e4a08cce52c62777ae","plan122_code_review_blob":"4fc9c04dd5b249625d2d326786e53465dc838425","plan122_code_review_sha256":"f41d9871c7c5fea9f779ff26f8965c8f45fe16061a62ff8b8f033afb2f2f3b5d","plan122_v3_publication_commit":"65a7a246627a411c45ced95bfb3c0296f0f8e4eb","plan122_v3_disposition":"process_invalid_false_clean_custody","plan122_v3_eligible":false,"plan130_source_only":true,"plan131_v4_review_only":true,"plan_262_110_eligible":false,"next_action":"dispatch-262-130-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -140,13 +140,13 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
 Plan: 100 terminally truthful summaries across 112 active plans — exactly 12 closeout plans remain and Plan 262-131 is the sole eligible next action
 Status: Phase 262 remains in progress; Wave 96 independently reviews Plan130 before any v4 publication or Plan110 eligibility
-Last activity: 2026-08-30 — corrected Plan130 review blockers at 154ea6f4; Plan131 fresh independent review remains required
+Last activity: 2026-08-30 — corrected Plan130 V2 review blocker at bfc19377; Plan131 fresh independent review remains required
 
 Progress: [█████████░] 89%
 
 ## Performance Metrics
 
-**Plan-130 closeout corrected (2 tasks plus review correction, 2 files):** Five focused tests passed across six genuine linked-worktree custody derivations and two file-backed guarded no-effect modes. Post-closeout review `23e46eba` blockers are corrected at `154ea6f4` with supplied-root-relative native manifests and binding-aware identifier/global/loader recovery rejection, including aliased `process` with unknown computed keys. Exact review `73d1be60`, exact b331 seven-path scope, strict later-HEAD semantics, and immutable v3 invalidation remain closed. Plan110 remains ineligible; Plan131 alone is next and owns fresh independent v4 review/publication.
+**Plan-130 closeout corrected (2 tasks plus two review corrections, 2 files):** Five focused tests passed across six genuine linked-worktree custody derivations and two file-backed guarded no-effect modes. Review V2 `38f49435` is corrected at `bfc19377` with a pinned subject-inspector subtree, categorical dynamic-code/global/loader rejection, and exactly four allowed direct `process` references. Root-relative native custody and prior corrections remain closed. Plan110 remains ineligible; Plan131 alone is next and owns fresh independent v4 review/publication.
 
 **Plan-115 corrected closeout (3-file executable closure):** Commit `bb1d639ac4ba92c9a23ecd0356bc5c139ed4ea48` binds the adapter, tests, and native helper. Ten focused tests prove exact `0600` canonical sealed-pair custody, exact `0644` ordinary-evidence custody, stable no-follow reads, retained-dirfd publication, parent-swap containment, and rejection of a pre-seeded predictable helper cache. Canonical supplement-v1/v2/v3 and all effects remain absent; ADMIT-03 remains blocked at 0/540 and Plan 262-116 alone is next.
 

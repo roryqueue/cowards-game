@@ -7,10 +7,11 @@ requires:
   - 262-122 immutable false-clean v3 publication
   - 73d1be60 committed adversarial review
   - 23e46eba committed post-closeout adversarial review
+  - 38f49435 committed second adversarial review
 provides:
   - closed v4 source/test correction for all four Plan122 findings
   - genuine root-relative per-worktree custody observations without mode salting
-  - binding-aware fail-closed dynamic producer recovery policy
+  - conservative syntactic whitelist for fail-closed producer recovery
 affects: [262-131, 262-110]
 tech-stack:
   added: []
@@ -60,6 +61,8 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 6. **Post-review GREEN: root-relative custody and binding-aware AST policy** - `1f087c68`
 7. **Alias RED: unknown computed key through process alias** - `85e74743`
 8. **Alias GREEN: fail-closed process root aliases** - `154ea6f4`
+9. **V2 review RED: eleven alias/value-flow bypass variants** - `02c643c4`
+10. **V2 review GREEN: pinned inspector and exact process whitelist** - `bfc19377`
 
 ## Decisions Made
 
@@ -89,7 +92,7 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 
 ## Verification
 
-- Final focused Vitest after review correction: 1 file, 5 tests passed in 162.08 seconds.
+- Final focused Vitest after V2 review correction: 1 file, 5 tests passed in 161.57 seconds.
 - TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
 - Source-only probe: 2 guarded modes passed with all calls/effects/authority false or zero and Plan110 ineligible.
 - `git diff --check` passed.
@@ -106,6 +109,17 @@ Committed review `23e46eba` found that the imported custody helper still closed 
 - tracks global aliases and rejects sensitive computed access, destructuring, `Reflect`, recovered callables, and generated loader/producer variants.
 
 No review trio, producer, readiness, live, effect, capacity, counter reset, or authority was created.
+
+## Second Post-Review Correction
+
+Review V2 `38f49435` found eleven remaining value-flow variants through assignment, containers, conditionals, destructuring, parameters, Node `global`, and aliased `Reflect`. RED commit `02c643c4` reproduces all eleven plus explicit parameter/container/conditional cases. GREEN commit `bfc19377` replaces open-ended taint chasing with a conservative syntactic policy:
+
+- the legitimate subject meta-inspector declaration is accepted only at exact SHA-256 `2163fcd7a7d985dcc6d7f8033698d2dd7d1be2b77df145ccf592397aea6cf39a`;
+- `Reflect`, `globalThis`, Node `global`, eval/Function/constructor, createRequire/getBuiltinModule/require, dynamic imports, and their forbidden string tokens are categorically rejected outside that pinned subtree;
+- `process` is accepted only in the exact four legitimate direct shapes: `stdout.write`, two `argv[1]` reads, and `argv.slice(2)`;
+- every other process use—as a value, binding, argument, container, conditional, destructure, assignment alias, parameter, computed member, or unknown key—fails closed.
+
+The legitimate committed live-v13 source passes this whitelist and guarded execution remains no-effect.
 
 ## Known Stubs
 
@@ -124,5 +138,5 @@ No new network endpoint, authentication path, filesystem trust boundary, or sche
 ## Self-Check: PASSED
 
 - Both created source/test files exist.
-- All eight RED/GREEN task and correction commits exist in Git history.
+- All ten RED/GREEN task and correction commits exist in Git history.
 - No v3 source, trio, review, or summary byte was modified.
