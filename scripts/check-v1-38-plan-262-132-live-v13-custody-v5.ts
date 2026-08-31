@@ -1,8 +1,10 @@
 import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { closeSync, constants, fstatSync, openSync, readFileSync } from "node:fs"
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { computeV138PathStableLocalExecutionClosureRoot } from
+  "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
 
 type Sha = `sha256:${string}`
 type Json = Record<string, any>
@@ -33,6 +35,45 @@ const V4_SHAS = Object.freeze([
 ] as const)
 const SUMMARY_BLOB = "53e9fea0967f4886ee31479d11f3db56382396ba"
 const SUMMARY_SHA = "sha256:56b91ace004ce601f48d677264fde925518fa5d910c6dcf49e5eac64cb74a0f9"
+const OBSERVATION_KEYS = Object.freeze([
+  "disposableLocalExecutionClosureRoot", "disposableLocalGitObjectRoot",
+  "disposableLocalInstalledClosureRoot", "disposableLocalNativeSourcePaths",
+  "disposableLocalNativeSourcesRoot", "disposableReviewedClosureRoot", "mode",
+  "observationRoot", "producerGuardCount", "reducedValue", "status",
+].sort())
+const MODES = Object.freeze([
+  ["--check-source-only", "source_only_checked"],
+  ["--check-prospective-custody", "prospective_custody_checked"],
+  ["--check-post-run-custody", "post_run_no_effect_custody_checked"],
+  ["--check-non-pass-value", "bounded_non_pass_value_checked"],
+  ["--check-bounded-success-value", "bounded_success_value_checked"],
+  ["--check-exact-reproduction-v17-value", "exact_reproduction_v17_value_checked"],
+] as const)
+const NATIVE_SUFFIXES = Object.freeze([
+  "scripts/native/v1-38-successor-transaction-helper-v6.c",
+  "scripts/native/v1-38-bounded-retry-v3-owner-lock-v1.c",
+] as const)
+const EFFECT_PATHS = Object.freeze([
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl.lock",
+  ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
+  ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json",
+  ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
+  ".planning/artifacts/v1.38-current-matrix-retry-private-receipt-manifest-v3.json",
+  ".planning/artifacts/v1.38-plan-262-94-admission-disposition-v3.json",
+  ".planning/artifacts/v1.38-phase-262-review-fix-correction-v11.json",
+  ".planning/artifacts/v1.38-plan-262-route-11-activation-v1.json",
+  ".planning/artifacts/v1.38-plan-262-95-lifecycle-driver-readiness-v3.json",
+  ".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v3.json",
+] as const)
+const NO_EFFECT_VALUE = Object.freeze({ downstreamAuthority: "denied", freshAccepted: 0,
+  freshCharged: 0, liveInvoked: false, producerCalls: 0, readinessInvoked: false })
+const REDUCED_VALUES = Object.freeze([
+  NO_EFFECT_VALUE, NO_EFFECT_VALUE, NO_EFFECT_VALUE,
+  Object.freeze({ classification: "non_pass", reproductionEligible: false }),
+  Object.freeze({ classification: "bounded_success", reproductionEligible: true }),
+  Object.freeze({ acceptedCells: 540, exact: true, requiredAccepted: 540 }),
+] as const)
 
 export const V138_PLAN132_PUBLICATION_SCOPE = Object.freeze(
   V4_PATHS.map((repoPath) => `A\t${repoPath}`).sort(),
@@ -51,6 +92,7 @@ const canonical = (value: unknown): string => {
 }
 const sha = (bytes: string | Uint8Array): Sha =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+const rooted = (domain: string, value: unknown): Sha => sha(`${domain}\0${canonical(value)}`)
 const git = (root: string, args: readonly string[]): string =>
   execFileSync("/usr/bin/git", ["-c", "core.hooksPath=/dev/null", ...args], {
     cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
@@ -78,6 +120,16 @@ const readNoFollow = (root: string, repoPath: string): Buffer => {
 }
 const isAncestor = (root: string, ancestor: string, descendant: string): boolean =>
   spawnSync("/usr/bin/git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: root }).status === 0
+const assertEffectsAbsent = (root: string): void => {
+  for (const repoPath of EFFECT_PATHS) {
+    try {
+      lstatSync(path.join(root, ...repoPath.split("/")))
+      fail(`V138_PLAN132_EFFECT_PRESENT:${repoPath}`)
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error
+    }
+  }
+}
 
 export const assertV138Plan132ExactScopeForReview = (
   actualInput: readonly string[],
@@ -148,14 +200,95 @@ export const authenticateV138Plan132V4InvalidHistoryForReview = (
     payload: Object.freeze(payload), carrier: Object.freeze(carrier) })
 }
 
+const exactKeys = (value: Json, expected: readonly string[]): boolean =>
+  canonical(Object.keys(value).sort()) === canonical([...expected].sort())
+const isSha = (value: unknown): value is Sha =>
+  typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
+
+export const validateV138Plan132ObservationsForReview = (
+  observationsInput: unknown,
+  authenticatedPayload: Json,
+) => {
+  if (!Array.isArray(observationsInput) || observationsInput.length !== MODES.length ||
+      !Array.isArray(authenticatedPayload.observations) || authenticatedPayload.observations.length !== MODES.length)
+    fail("V138_PLAN132_OBSERVATIONS_INVALID")
+  const observations = observationsInput as Json[]
+  const seen = new Set<string>()
+  for (const [index, observation] of observations.entries()) {
+    if (observation === null || typeof observation !== "object" || Array.isArray(observation) ||
+        !exactKeys(observation, OBSERVATION_KEYS)) fail("V138_PLAN132_OBSERVATIONS_INVALID")
+    const [mode, status] = MODES[index]!
+    if (observation.mode !== mode || observation.status !== status || seen.has(observation.mode) ||
+        observation.producerGuardCount !== 0) fail("V138_PLAN132_OBSERVATIONS_INVALID")
+    seen.add(observation.mode)
+    const roots = [observation.disposableLocalExecutionClosureRoot,
+      observation.disposableLocalGitObjectRoot, observation.disposableLocalInstalledClosureRoot,
+      observation.disposableLocalNativeSourcesRoot, observation.disposableReviewedClosureRoot,
+      observation.observationRoot]
+    if (roots.some((root) => !isSha(root)) ||
+        observation.disposableReviewedClosureRoot !== authenticatedPayload.canonicalReviewedClosureRoot ||
+        observation.disposableLocalInstalledClosureRoot !== authenticatedPayload.canonicalLocalInstalledClosureRoot ||
+        observation.disposableLocalGitObjectRoot !== authenticatedPayload.canonicalLocalGitObjectRoot ||
+        observation.disposableLocalNativeSourcesRoot === authenticatedPayload.canonicalLocalNativeSourcesRoot ||
+        canonical(observation.reducedValue) !== canonical(REDUCED_VALUES[index]))
+      fail("V138_PLAN132_OBSERVATIONS_INVALID")
+    if (!Array.isArray(observation.disposableLocalNativeSourcePaths) ||
+        observation.disposableLocalNativeSourcePaths.length !== NATIVE_SUFFIXES.length)
+      fail("V138_PLAN132_OBSERVATIONS_INVALID")
+    let disposableRoot: string | undefined
+    for (const [nativeIndex, nativePathValue] of observation.disposableLocalNativeSourcePaths.entries()) {
+      if (typeof nativePathValue !== "string" || !path.isAbsolute(nativePathValue) ||
+          path.normalize(nativePathValue) !== nativePathValue || !nativePathValue.endsWith(NATIVE_SUFFIXES[nativeIndex]!))
+        fail("V138_PLAN132_OBSERVATIONS_INVALID")
+      const candidateRoot = nativePathValue.slice(0, -NATIVE_SUFFIXES[nativeIndex]!.length)
+      if (!candidateRoot.endsWith("/repo/") ||
+          !candidateRoot.includes(`/v138-plan131-mode-${index}-`) ||
+          (disposableRoot !== undefined && disposableRoot !== candidateRoot))
+        fail("V138_PLAN132_OBSERVATIONS_INVALID")
+      disposableRoot = candidateRoot
+    }
+    const localBody = { reviewedClosureRoot: observation.disposableReviewedClosureRoot,
+      localInstalledClosureRoot: observation.disposableLocalInstalledClosureRoot,
+      localGitObjectRoot: observation.disposableLocalGitObjectRoot,
+      localNativeSourcesRoot: observation.disposableLocalNativeSourcesRoot }
+    const { observationRoot, ...observationBody } = observation
+    if (observation.disposableLocalExecutionClosureRoot !==
+          computeV138PathStableLocalExecutionClosureRoot(localBody) ||
+        observationRoot !== rooted("v138-plan-262-131-mode-observation-v4", observationBody) ||
+        canonical(observation) !== canonical(authenticatedPayload.observations[index]))
+      fail("V138_PLAN132_OBSERVATIONS_INVALID")
+  }
+  const observationsRoot = rooted("v138-plan-262-131-observations-v4", observations)
+  if (observationsRoot !== authenticatedPayload.observationsRoot)
+    fail("V138_PLAN132_OBSERVATIONS_INVALID")
+  return Object.freeze({ actualModesPassed: observations.length, observationsRoot })
+}
+
+export const renderV138Plan132SourceCorrectionForReview = (
+  root: string,
+  input: Json,
+) => {
+  if (input === null || typeof input !== "object" || Array.isArray(input) ||
+      !exactKeys(input, ["findings", "observations"])) fail("V138_PLAN132_INPUT_KEYS_INVALID")
+  const history = authenticateV138Plan132V4InvalidHistoryForReview(root)
+  assertEffectsAbsent(path.resolve(root))
+  if (!Array.isArray(input.findings) || input.findings.length !== 0)
+    fail("V138_PLAN132_FINDINGS_INVALID")
+  const aggregate = validateV138Plan132ObservationsForReview(input.observations, history.payload)
+  assertEffectsAbsent(path.resolve(root))
+  return Object.freeze({ ...aggregate, findingCount: input.findings.length, plan133Eligible: true,
+    plan110Eligible: false, v4Disposition: history.disposition, producerCalls: 0,
+    readinessInvoked: false, liveInvoked: false, freshCharged: 0, freshAccepted: 0,
+    authorizesExecution: false, downstreamAuthority: "denied" as const })
+}
+
 const execute = (args: readonly string[]): void => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
   if (args.length === 1 && args[0] === "--check-source-only") {
     const history = authenticateV138Plan132V4InvalidHistoryForReview(root)
-    process.stdout.write(`${JSON.stringify({ sourceOnly: true, v4Disposition: history.disposition,
-      plan110Eligible: false, producerCalls: 0, readinessInvoked: false, liveInvoked: false,
-      freshCharged: 0, freshAccepted: 0, authorizesExecution: false,
-      downstreamAuthority: "denied" })}\n`)
+    const correction = renderV138Plan132SourceCorrectionForReview(root,
+      { observations: history.payload.observations, findings: history.payload.findings })
+    process.stdout.write(`${JSON.stringify({ sourceOnly: true, ...correction })}\n`)
     return
   }
   fail("V138_PLAN132_ARGUMENTS_INVALID")
