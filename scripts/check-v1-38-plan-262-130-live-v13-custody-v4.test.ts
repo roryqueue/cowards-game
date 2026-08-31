@@ -107,6 +107,17 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       'const p = process; const k = process.argv[0]; const recovered = p[k]("node:module")\n',
       'const { constructor: recovered } = globalThis\n',
       'const recovered = Reflect.get(globalThis, "constructor")\n',
+      'const unknownKey = "x"; const R = Reflect; R.get(globalThis, "constructor")\n',
+      'const unknownKey = "x"; const R = Reflect; R.get(globalThis, unknownKey)\n',
+      'const unknownKey = "x"; global[unknownKey]\n',
+      'const unknownKey = "x"; let g; g = globalThis; g[unknownKey]\n',
+      'const unknownKey = "x"; const box = { g: globalThis }; box.g[unknownKey]\n',
+      'const unknownKey = "x"; ((g: any) => g[unknownKey])(globalThis)\n',
+      'const unknownKey = "x"; let p; p = process; p[unknownKey]("node:module")\n',
+      'const unknownKey = "x"; const p = true ? process : process; p[unknownKey]("node:module")\n',
+      'const unknownKey = "x"; const [p] = [process]; p[unknownKey]("node:module")\n',
+      'const unknownKey = "x"; const box = { p: process }; box.p[unknownKey]("node:module")\n',
+      'const unknownKey = "x"; ((p: any) => p[unknownKey]("node:module"))(process)\n',
     ]) expect(() => inspectV138Plan130BoundarySourceForReview(
       source.replace("type Sha =", `${injected}type Sha =`),
     )).toThrow("V138_PLAN130_PRODUCTION_BOUNDARY_INVALID")
