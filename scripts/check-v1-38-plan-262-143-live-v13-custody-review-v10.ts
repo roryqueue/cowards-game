@@ -269,26 +269,59 @@ const launcherTemplate = (root: string): string => {
   if (!match || match[1]!.includes("${")) fail("LAUNCHER_LITERAL")
   return match[1]!.replace(/\\(\\|n|r|t|`)/gu, (_, c: string) => ({ "\\": "\\", n: "\n", r: "\r", t: "\t", "`": "`" })[c]!)
 }
+type PackageGraph = { packages: Array<{ name: string; version: string; root: string }>;
+  edges: Array<{ from: string; name: string; to: string | null }> }
+const resolvedPackageGraph = (root: string): PackageGraph => {
+  // Node keeps resolution caches even when createRequire is constructed again.
+  // A fresh process is required to observe a newly introduced shadow package.
+  // This child reads package metadata only; it never loads a package entry point.
+  const reader = `const {createRequire}=require('node:module');
+const {readFileSync,realpathSync,lstatSync}=require('node:fs');const path=require('node:path');
+const root=process.argv[1];const packages=new Map(),edges=[],queue=[];
+function regular(p){const s=lstatSync(p);if(!s.isFile()||s.isSymbolicLink()||!(s.mode&292))throw Error('PACKAGE_MANIFEST');return readFileSync(p,'utf8')}
+function resolve(from,name){const req=createRequire(path.join(from,'package.json'));let found;
+try{try{found=req.resolve(name+'/package.json')}catch{found=req.resolve(name)}}catch{return null}
+let at=path.dirname(realpathSync(found));while(at!==path.dirname(at)){try{if(JSON.parse(regular(path.join(at,'package.json'))).name===name)return at}catch(e){if(e.code!=='ENOENT')throw e}at=path.dirname(at)}throw Error('PACKAGE_OWNER')}
+function edge(from,name,required){const to=resolve(from,name);edges.push({from,name,to});if(to)queue.push(to);else if(required)throw Error('PACKAGE_MISSING')}
+try{for(const name of ['typescript','tsx','vitest','@cowards/spec','@cowards/golden'])edge(root,name,true);
+queue.push(realpathSync(path.join(root,'apps/runtime-service')));
+while(queue.length){const at=realpathSync(queue.shift()),m=JSON.parse(regular(path.join(at,'package.json')));
+if(typeof m.name!=='string'||typeof m.version!=='string')throw Error('PACKAGE_MANIFEST');
+const prior=packages.get(m.name);if(prior){if(prior.version!==m.version)throw Error('PACKAGE_VERSION_COLLISION');if(prior.root!==at)throw Error('PACKAGE_ROOT_COLLISION');continue}
+packages.set(m.name,{name:m.name,version:m.version,root:at});
+for(const name of Object.keys({...m.dependencies,...m.optionalDependencies,...m.peerDependencies}).sort())edge(at,name,!!m.dependencies?.[name]&&!m.optionalDependencies?.[name])}
+process.stdout.write(JSON.stringify({packages:[...packages.values()],edges}));
+}catch(e){process.stdout.write(JSON.stringify({error:e.message}));process.exitCode=1}`
+  const result = spawnSync(process.execPath, ["-e", reader, root], { env: ENV, encoding: "utf8", timeout: 30000,
+    maxBuffer: 4 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })
+  let graph: any
+  try { graph = JSON.parse(result.stdout) } catch { fail("PACKAGE_GRAPH_FAILED") }
+  if (result.status !== 0) {
+    if (["PACKAGE_ROOT_COLLISION", "PACKAGE_VERSION_COLLISION", "PACKAGE_MISSING", "PACKAGE_MANIFEST", "PACKAGE_OWNER"].includes(graph?.error)) fail(graph.error)
+    fail("PACKAGE_GRAPH_FAILED")
+  }
+  keys(graph, ["packages", "edges"], "PACKAGE_GRAPH_SCHEMA")
+  if (!Array.isArray(graph.packages) || !Array.isArray(graph.edges) || graph.packages.length > 512 || graph.edges.length > 8192) fail("PACKAGE_GRAPH_SCHEMA")
+  return graph as PackageGraph
+}
 const runtimeCapture = (input: string) => {
   const root = rootIdentity(input).canonical
   if (process.env.ESBUILD_BINARY_PATH !== undefined) fail("NATIVE_OVERRIDE")
-  const seeds = ["typescript", "tsx", "vitest", "@cowards/spec", "@cowards/golden"]
-  const queue = seeds.map((name) => resolvePackage(root, name) ?? fail("PACKAGE_MISSING"))
-  queue.push(path.join(root, "apps/runtime-service"))
+  const graph = resolvedPackageGraph(root)
   const seen = new Map<string, { version: string; root: string }>()
-  while (queue.length) {
-    const directory = realpathSync(queue.shift()!)
+  for (const selected of graph.packages) {
+    const directory = realpathSync(selected.root)
     const manifest = JSON.parse(regular(path.join(directory, "package.json")).bytes.toString()) as Json
     if (typeof manifest.name !== "string" || !/^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/iu.test(manifest.name) ||
       typeof manifest.version !== "string" || !/^[a-z0-9.+_-]+$/iu.test(manifest.version)) fail("PACKAGE_MANIFEST")
     const prior = seen.get(manifest.name)
-    if (prior) { if (prior.version !== manifest.version) fail("PACKAGE_VERSION_COLLISION"); continue }
-    seen.set(manifest.name, { version: manifest.version, root: directory })
-    for (const name of Object.keys({ ...manifest.dependencies, ...manifest.optionalDependencies, ...manifest.peerDependencies }).sort()) {
-      const resolved = resolvePackage(directory, name)
-      if (resolved) queue.push(resolved)
-      else if (manifest.dependencies?.[name] && !manifest.optionalDependencies?.[name]) fail("PACKAGE_MISSING")
+    if (prior) {
+      if (prior.version !== manifest.version) fail("PACKAGE_VERSION_COLLISION")
+      if (prior.root !== directory) fail("PACKAGE_ROOT_COLLISION")
+      continue
     }
+    same(selected, { name: manifest.name, version: manifest.version, root: directory }, "PACKAGE_GRAPH_CHANGED")
+    seen.set(manifest.name, { version: manifest.version, root: directory })
   }
   const esbuild = seen.get("esbuild") ?? fail("ESBUILD_MISSING")
   const nativeName = `@esbuild/${process.platform}-${process.arch}`
@@ -320,14 +353,19 @@ const runtimeCapture = (input: string) => {
   const publicValue = freeze({ ...body, semanticRuntimeRoot: hash("v138-plan-262-142-semantic-runtime-v10", body) })
   if (publicValue.entries.length !== 3931 || publicValue.semanticRuntimeRoot !== EXPECTED_RUNTIME) fail("RUNTIME_PIN")
   const verify = () => {
+    same(resolvedPackageGraph(root), graph, "PACKAGE_RESOLUTION_CHANGED")
     for (const f of materials) if (f.origin) {
       const value = regular(f.origin); if (value.mode !== f.entry.mode || value.bytes.length !== f.entry.size || digest(value.bytes) !== f.entry.sha256) fail("RUNTIME_CHANGED")
     }
     for (const t of trees) same(tree(t.root), t.files, "RUNTIME_TREE_CHANGED")
   }
-  verify(); return { public: publicValue, materials, verify }
+  verify(); return { public: publicValue, materials, verify, graph }
 }
 export const inspectV138Plan143Runtime = (root: string) => runtimeCapture(root).public
+export const retainV138Plan143RuntimeForReview = (root: string) => {
+  const captured = runtimeCapture(root)
+  return Object.freeze({ runtime: captured.public, recheck: () => captured.verify() })
+}
 const copyRuntime = (capture: ReturnType<typeof runtimeCapture>, destination: string) => {
   for (const f of capture.materials) {
     const file = path.join(destination, f.destination); mkdirSync(path.dirname(file), { recursive: true })
@@ -741,7 +779,7 @@ const reviewerSubject = (h: History) => {
   return subject
 }
 type PrivateFile = { path: string; mode: string; sha256: string }
-const privateRuntime = (captured: ReturnType<typeof runtimeCapture>, root: string): PrivateFile[] => {
+const privateRuntime = (captured: ReturnType<typeof runtimeCapture>, root: string): { inventory: PrivateFile[]; graph: PackageGraph } => {
   const inventory: PrivateFile[] = []
   for (const f of captured.materials) {
     const id = f.entry.identity
@@ -758,9 +796,18 @@ const privateRuntime = (captured: ReturnType<typeof runtimeCapture>, root: strin
   const distribution = inventory.filter(e => e.path.startsWith(".runtime-pnpm/") && e.sha256 === launcher.sha256)
   if (distribution.length !== 1) fail("PNPM_RESOLUTION")
   symlinkSync("../" + distribution[0]!.path, path.join(root, ".runtime-node/pnpm"))
-  return inventory
+  const originalRoot = captured.graph.edges[0]!.from
+  const mapped = new Map<string, string>([[originalRoot, root]])
+  for (const p of captured.graph.packages) mapped.set(p.root, p.root === path.join(originalRoot, "apps/runtime-service")
+    ? path.join(root, "apps/runtime-service") : path.join(root, "node_modules", p.name))
+  const translate = (p: string): string => mapped.get(p) ?? fail("PRIVATE_PACKAGE_MAPPING")
+  const graph = { packages: captured.graph.packages.map(p => ({ ...p, root: translate(p.root) })),
+    edges: captured.graph.edges.map(e => ({ ...e, from: translate(e.from), to: e.to === null ? null : translate(e.to) })) }
+  same(resolvedPackageGraph(root), graph, "PRIVATE_PACKAGE_RESOLUTION_CHANGED")
+  return { inventory, graph }
 }
-const checkPrivateFiles = (root: string, inventory: PrivateFile[]): void => {
+const checkPrivateFiles = (root: string, inventory: PrivateFile[], graph: PackageGraph): void => {
+  same(resolvedPackageGraph(root), graph, "PRIVATE_PACKAGE_RESOLUTION_CHANGED")
   for (const e of inventory) {
     const current = regular(path.join(root, e.path))
     if (current.mode !== e.mode || digest(current.bytes) !== e.sha256) fail("PRIVATE_MATERIAL_CHANGED")
@@ -768,6 +815,21 @@ const checkPrivateFiles = (root: string, inventory: PrivateFile[]): void => {
   const launcher = inventory.find(e => e.path === ".runtime-launchers/pnpm")!
   const target = inventory.filter(e => e.path.startsWith(".runtime-pnpm/") && e.sha256 === launcher.sha256)
   if (target.length !== 1 || realpathSync(path.join(root, ".runtime-node/pnpm")) !== path.join(root, target[0]!.path)) fail("PRIVATE_PNPM_CHANGED")
+}
+export const checkV138Plan143PrivateRuntimeCopyForReview = (input: string) => {
+  const captured = runtimeCapture(input)
+  const root = realpathSync(mkdtempSync(path.join(tmpdir(), "v138-plan143-runtime-smoke-")))
+  chmodSync(root, 0o700)
+  try {
+    mkdirSync(path.join(root, "apps"))
+    cpSync(path.join(input, "apps/runtime-service"), path.join(root, "apps/runtime-service"), {
+      recursive: true, filter: file => path.basename(file) !== "node_modules",
+    })
+    const { inventory, graph } = privateRuntime(captured, root)
+    checkPrivateFiles(root, inventory, graph); captured.verify()
+    return freeze({ entries: captured.public.entries.length, semanticRuntimeRoot: captured.public.semanticRuntimeRoot,
+      resolutionGraphMatched: true, producerCalls: 0, readinessCalls: 0, liveCalls: 0 })
+  } finally { rmSync(root, { recursive: true, force: true }) }
 }
 const currentExecution = (consumer: Json, runtime: string, native: string, guard: string): Json => {
   const observations = CURRENT_MODES.map((mode, ordinal) => {
@@ -785,23 +847,23 @@ const currentExecution = (consumer: Json, runtime: string, native: string, guard
 const executeCurrentRoots = (h: History, consumer: Json, runtime: ReturnType<typeof runtimeCapture>) => {
   const source = secureFiles(h.supplied, [CURRENT])[CURRENT]!.toString()
   const guard = inspectV138Plan143ProducerBoundary(source)
-  const owners: string[] = []; const copies: Array<{ root: string; owner: string; inventory: PrivateFile[]; closure: ReturnType<typeof discoverRepository> }> = []
+  const owners: string[] = []; const copies: Array<{ root: string; owner: string; inventory: PrivateFile[]; graph: PackageGraph; closure: ReturnType<typeof discoverRepository> }> = []
   const evidenceRoots: string[] = []
   try {
     for (let n = 0; n < 2; n++) {
       const owner = realpathSync(mkdtempSync(path.join(tmpdir(), "v138-independent143-"))); owners.push(owner); chmodSync(owner, 0o700)
       const root = path.join(owner, "repo")
       git(h.root, ["clone", "--quiet", "--no-local", h.root, root])
-      const inventory = privateRuntime(runtime, root)
+      const { inventory, graph } = privateRuntime(runtime, root)
       writeFileSync(path.join(root, CURRENT), guard.transformed)
       writeFileSync(path.join(root, ".producer-guard"), "0", { flag: "wx", mode: 0o600 })
       const closure = discoverRepository(root, CURRENT)
       inventory.push(...closure.files.map(f => ({ path: f.path, sha256: f.sha256, mode: f.mode })))
-      checkPrivateFiles(root, inventory); copies.push({ root, owner, inventory, closure })
+      checkPrivateFiles(root, inventory, graph); copies.push({ root, owner, inventory, graph, closure })
     }
     same(copies[0]!.closure, copies[1]!.closure, "PRIVATE_CLOSURE_NONDETERMINISTIC")
     for (const [index, copy] of copies.entries()) {
-      const { root, owner, inventory, closure } = copy
+      const { root, owner, inventory, graph, closure } = copy
       const nonce = randomBytes(32).toString("hex"), binding = rootIdentity(root), expectedHead = textGit(root, ["rev-parse", "HEAD"])
       const other = copies[1 - index]!.root
       const bootstrap = `import {readFileSync,writeFileSync,lstatSync} from 'node:fs';
@@ -828,12 +890,12 @@ head:execFileSync('/usr/bin/git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
       const bootstrapPath = path.join(root, ".plan143-current-proof.mjs")
       writeFileSync(bootstrapPath, bootstrap, { flag: "wx", mode: 0o600 })
       const checkBootstrap = () => { if (digest(regular(bootstrapPath).bytes) !== digest(bootstrap)) fail("BOOTSTRAP_CHANGED") }
-      checkBootstrap(); checkPrivateFiles(root, inventory)
+      checkBootstrap(); checkPrivateFiles(root, inventory, graph)
       const result = spawnSync(path.join(root, ".runtime-node/node"), ["--import", "tsx", ".plan143-current-proof.mjs"], {
         cwd: root, env: { PATH: `${path.join(root, ".runtime-node") }:/usr/bin:/bin`, HOME: owner, TMPDIR: owner,
           TSX_DISABLE_CACHE: "1", LANG: "C", LC_ALL: "C", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" },
         encoding: "utf8", timeout: 250000, maxBuffer: 8 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })
-      checkBootstrap(); checkPrivateFiles(root, inventory)
+      checkBootstrap(); checkPrivateFiles(root, inventory, graph)
       if (result.status !== 0) fail("CURRENT_CHILD_FAILED")
       const transcript = keys(JSON.parse(result.stdout), ["nonce", "device", "inode", "pid", "head", "observations", "attacks"], "TRANSCRIPT_SCHEMA")
       same([transcript.nonce, transcript.device, transcript.inode, transcript.head], [nonce, binding.dev, binding.ino, expectedHead], "TRANSCRIPT_BINDING")
@@ -847,7 +909,7 @@ head:execFileSync('/usr/bin/git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
       const execution = currentExecution(consumer, CURRENT_RUNTIME, H("native-identities", C_IDENTITIES), guard.guardTransformRoot)
       evidenceRoots.push(H("reproduction", execution))
     }
-    for (const c of copies) { checkPrivateFiles(c.root, c.inventory); checkV138Plan143Absence(c.root) }
+    for (const c of copies) { checkPrivateFiles(c.root, c.inventory, c.graph); checkV138Plan143Absence(c.root) }
     runtime.verify(); h.verify(); same(subjectAt(h, FINAL144, CURRENT, "262-144"), consumer, "CANONICAL_CHANGED")
     same(evidenceRoots[0], evidenceRoots[1], "PROCESS_NONDETERMINISM")
     return { execution: currentExecution(consumer, CURRENT_RUNTIME, H("native-identities", C_IDENTITIES), guard.guardTransformRoot),

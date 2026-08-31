@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, cpSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import childProcess, { execFileSync } from "node:child_process"
@@ -14,6 +14,8 @@ import {
   validateV138Plan143PublishedContract,
   inspectV138Plan143Imports,
   inspectV138Plan143Metadata,
+  retainV138Plan143RuntimeForReview,
+  checkV138Plan143PrivateRuntimeCopyForReview,
 } from "./check-v1-38-plan-262-143-live-v13-custody-review-v10.js"
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -333,6 +335,41 @@ describe("pure predicate metadata and dependency discovery", () => {
 })
 
 describe("heavy current runtime physical byte attacks", () => {
+  it("pure predicate preserves actual dependency resolution in a physical private runtime copy", () => {
+    expect(checkV138Plan143PrivateRuntimeCopyForReview(ROOT)).toEqual({ entries: 3931,
+      semanticRuntimeRoot: "sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e",
+      resolutionGraphMatched: true, producerCalls: 0, readinessCalls: 0, liveCalls: 0 })
+  }, 60000)
+  it("pure predicate rejects a nested same-version package shadow at its actual resolved root", () => {
+    ownedRoot(root => {
+      mkdirSync(path.join(root, "apps")); mkdirSync(path.join(root, "scripts"))
+      symlinkSync(path.join(ROOT, "node_modules"), path.join(root, "node_modules"))
+      const service = path.join(root, "apps/runtime-service")
+      cpSync(path.join(ROOT, "apps/runtime-service"), service, { recursive: true })
+      cpSync(path.join(ROOT, "scripts/check-v1-38-plan-262-142-live-v13-custody-v10.ts"), path.join(root, "scripts/check-v1-38-plan-262-142-live-v13-custody-v10.ts"))
+      const retained = retainV138Plan143RuntimeForReview(root)
+      expect(retained.runtime.entries).toHaveLength(3931)
+      const nested = path.join(service, "node_modules/@cowards/spec")
+      expect(lstatSync(nested).isSymbolicLink()).toBe(true)
+      const originalLink = readlinkSync(nested)
+      unlinkSync(nested)
+      cpSync(path.join(ROOT, "packages/spec"), nested, {
+        recursive: true, filter: source => path.basename(source) !== "node_modules",
+      })
+      const originalManifest = JSON.parse(readFileSync(path.join(ROOT, "packages/spec/package.json"), "utf8"))
+      const copiedManifest = JSON.parse(readFileSync(path.join(nested, "package.json"), "utf8"))
+      expect([copiedManifest.name, copiedManifest.version]).toEqual([originalManifest.name, originalManifest.version])
+      // A distinct root is itself ambiguous even when bytes initially match.
+      expect(() => inspectV138Plan143Runtime(root)).toThrow("V138_PLAN143_PACKAGE_ROOT_COLLISION")
+      expect(() => retained.recheck()).toThrow("V138_PLAN143_PACKAGE_ROOT_COLLISION")
+      writeFileSync(path.join(nested, "shadow-only.ts"), "export const shadowOnly = true\n")
+      expect(() => inspectV138Plan143Runtime(root)).toThrow("V138_PLAN143_PACKAGE_ROOT_COLLISION")
+      expect(() => retained.recheck()).toThrow("V138_PLAN143_PACKAGE_ROOT_COLLISION")
+      rmSync(nested, { recursive: true }); symlinkSync(originalLink, nested)
+      expect(inspectV138Plan143Runtime(root).entries).toHaveLength(3931)
+      expect(() => retained.recheck()).not.toThrow()
+    })
+  }, 60000)
   it("accepts an owned runtime-service copy then rejects bytes, mode, omitted, extra and redirected entries", () => {
     ownedRoot(root => {
       mkdirSync(path.join(root, "apps")); mkdirSync(path.join(root, "scripts"))
