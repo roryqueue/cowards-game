@@ -5,19 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-136 review found a genuine-to-stable native mapping defect; Plan 262-138 source-only correction is next
-last_updated: "2026-08-31T05:00:00.000Z"
+stopped_at: Plan 262-138 source-only v8 correction complete; Plan 262-139 independent review is next
+last_updated: "2026-08-31T05:20:00.000Z"
 last_activity: 2026-08-31
-last_activity_desc: replanned Plan136 review finding into source-only Plan138 and independent v8 Plan139; no execution or effects
+last_activity_desc: completed source-only Plan138 exact genuine-to-stable native custody mapping; Plan139 review next, no publication or effects
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 120
-  completed_plans: 105
+  completed_plans: 106
   percent: 88
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-plan-138-source-only-closeout: {"schema_version":"v1.38-plan-262-138-source-only-closeout-v1","active_plans":120,"trustworthy_summaries":106,"incomplete_plans":["262-139","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135","262-137"],"red_commit":"3fe3aa204f429f2a192bc9ca70ffcdf48ee2ab14","source_commit":"d17c5af0b0484eda7c37299b38d03e3182598d00","source_tree":"94ffe78d0bf0ee9f897d9f68d610ba8b14ddedfc","source_parent":"3fe3aa204f429f2a192bc9ca70ffcdf48ee2ab14","source_blob":"fed8abafba2d05bbdb52bc81d6c176ed084dac9a","source_sha256":"sha256:12c276eb13a73312c36c5cf237e1e91a5c0b080e1482a21bd6a9fc38c812c7c8","test_blob":"f33d96991c246b8c9d41645a19d9692e1b921a9c","test_sha256":"sha256:250063b4c0e445c517bff3a3ecf826e551d237c7edae1acee5130c017db2a80b","summary_commit":"200eb7ec6472f3241fe7d3aa4431190b70792033","summary_blob":"4e91acb587b4152c614a86a94dea8b11e129dc7c","summary_sha256":"sha256:3dd0422b3c9ff5330b4b1a68eb00a7871cdcda6bd8751dc3db396f83b07f7d4a","plan136_review_commit":"9e82ea12af8e63fce5172e5e77ff15c68648ad11","plan136_disposition":"process_invalid_genuine_to_stable_native_mapping","plan137_executed":false,"plan137_eligible":false,"plan139_eligible":true,"plan_262_110_eligible":false,"stable_native_identity_set_root":"sha256:98dc07f3d93f5948f2626071aabc76587ffd5cc60c50d495cebbcef8286abe96","six_record_mode_ordinal_bijection":true,"genuine_path_dependent_roots_verified_then_discarded":true,"host_path_evidence_present":false,"v8_publication_created":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-139-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The v6 replan carrier below is immutable pre-Plan138 history and is superseded for current counts, eligibility, and next action by the Plan138 source-only closeout above. -->
 
 <!-- phase-262-closeout-replan-status-v6: {"schema_version":"v1.38-phase-262-closeout-replan-v6","active_plans":120,"trustworthy_summaries":105,"incomplete_plans":["262-138","262-139","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135","262-137"],"active_chain":["262-138","262-139","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-138":103,"262-139":104,"262-110":105,"262-94":106,"262-123":107,"262-124":108,"262-95":109,"262-125":110,"262-126":111,"262-106":112,"262-127":113,"262-128":114,"262-129":115},"plan136_code_review_commit":"9e82ea12af8e63fce5172e5e77ff15c68648ad11","plan136_code_review_blob":"9cea509302dade7b32dd7f13783971844c7f5680","plan136_code_review_sha256":"c618bb1dde223a32911f49342343d7fc8caf2de4a363f14c03d977801aaf13b5","plan136_v7_disposition":"process_invalid_genuine_to_stable_native_mapping","plan136_v7_eligible":false,"plan137_executed":false,"plan137_eligible":false,"plan138_source_only":true,"plan139_v8_review_only":true,"plan_262_110_eligible":false,"v7_publication_created":false,"v8_publication_created":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-138-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -611,7 +615,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-08-31T02:02:55.770Z
-Stopped at: Plan 262-136 review 9e82ea12 found a genuine-to-stable native mapping defect; Plan 262-138 source-only correction is next
+Stopped at: Plan 262-138 source-only v8 correction complete; Plan 262-139 independent review is next
 Resume file: None
 
 ### Blockers
