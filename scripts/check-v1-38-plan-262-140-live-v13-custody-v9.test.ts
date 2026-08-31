@@ -122,7 +122,7 @@ describe("Plan 262-140 authenticated executor custody v9", () => {
       (root) => execFileSync("git", ["-C", root, "replace", "HEAD", "HEAD^"]),
       (root) => { const gitDir = execFileSync("git", ["-C", root, "rev-parse", "--git-dir"], { encoding: "utf8" }).trim(); mkdirSync(path.join(root, gitDir, "info"), { recursive: true }); writeFileSync(path.join(root, gitDir, "info/grafts"), "forged\n") },
       (root) => { const gitDir = execFileSync("git", ["-C", root, "rev-parse", "--git-dir"], { encoding: "utf8" }).trim(); writeFileSync(path.join(root, gitDir, "shallow"), `${execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim()}\n`) },
-      (root) => { const objects = execFileSync("git", ["-C", root, "rev-parse", "--git-path", "objects"], { encoding: "utf8" }).trim(); mkdirSync(path.join(root, objects, "info"), { recursive: true }); writeFileSync(path.join(root, objects, "info/alternates"), "/tmp/forged\n") },
+      (root) => { const raw = execFileSync("git", ["-C", root, "rev-parse", "--path-format=absolute", "--git-path", "objects"], { encoding: "utf8" }).trim(); mkdirSync(path.join(raw, "info"), { recursive: true }); writeFileSync(path.join(raw, "info/alternates"), "/tmp/forged\n") },
       (root) => execFileSync("git", ["-C", root, "config", "--local", "include.path", "/tmp/forged"]),
     ]
     for (const attack of attacks) { const root = cloneRepository(); attack(root); expect(() => checkV138Plan140SourceOnlyForReview(root)).toThrow(/V138_PLAN140_/u) }
