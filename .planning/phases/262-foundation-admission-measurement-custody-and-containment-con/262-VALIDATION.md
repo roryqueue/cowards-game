@@ -102,6 +102,10 @@ None for Nyquist coverage. ADMIT-03 is not manual-only: its behavior and pass-on
 
 ## Sign-Off
 
+### Additive live-v14 dependency repair (2026-08-31; planned, not executed)
+
+The original audit above remains historical proof. New144 source-only at Wave108 must create scripts/run-v1-38-bounded-retry-envelope-v3-live-v14.test.ts before GREEN; open143 at109 must extend its existing RED test to independently measure actual144, separately from historical142/133. Cheap named pure-predicate/current-subject/stage/AST tests target under60 seconds; full private-runtime/two-root/six-mode suites are heavyweight and run once on final frozen source. Use the exact direct Node24 commands and targeted source-plus-test tsc in144/143 plans, not root files=[] typechecking or worktree package installation. Neither new suite has run at planning time. Independent code review must be clean before144 summary or143 publication; docs-only descendants reuse full proof only under unchanged source/test/runtime identities with focused custody checks. Pre11 absence and post conditional5/six-downstream absence require separate coverage. Current125 plans/108 summaries/13 active/4 inactive is bookkeeping, not ADMIT-03 satisfaction;0/540 and all downstream denials persist.
+
 - `nyquist_compliant: true` means the active Phase 262 contract has executable behavioral coverage.
 - It does **not** complete ADMIT-03, Phase 262, or the milestone.
 - It grants no retry, reproduction, activation, candidate, formation, holdout, public, product, production, counted-play, gameplay-change, Phase 263, archive, or tag authority.
