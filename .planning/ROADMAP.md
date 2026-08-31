@@ -50,9 +50,13 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 101/114 plans executed
+**Plans:** 102/114 plans executed
 
-**Current verdict:** PLAN-131 V4 PROCESS-INVALID / PLAN-132 SOLE NEXT ACTION / PLAN-110 INELIGIBLE / EXECUTION AUTHORITY FALSE / FRESH 0/540 / DOWNSTREAM DENIED — Committed adversarial review `f45ee38d529ba79d63e0b54995ed90d947811dd4` found two blockers: v4 rejected valid later tracking descendants after exact summary `6a82901a`, and its exported renderer could grant eligibility from forged aggregate inputs with no genuine observations. Exact v4 trio `b8078221` and summary `6a82901a` remain immutable `process_invalid_descendant_and_observation_validation` history. Plan132 must create source/tests that accept any strict summary descendant under exact no-rewrite/path custody and derive mode counts/roots from six unique canonically ordered genuine observations; Plan133 must independently review it and publish additive v5. Only reusable strict-descendant literal-zero v5 may make Plan110 eligible.
+**Current verdict:** PLAN-132 V5 SOURCE CORRECTION CLOSED / PLAN-133 SOLE NEXT ACTION / PLAN-110 INELIGIBLE / EXECUTION AUTHORITY FALSE / FRESH 0/540 / DOWNSTREAM DENIED — Source commit `36fba458` accepts any strict descendant of exact summary `6a82901a` while preserving its exact parent/scope and the exact v4 trio/current bytes. It derives six-mode counts and roots only from exact unique canonically ordered genuine observations and rejects empty, missing, duplicate, reordered, forged, or caller-aggregated evidence. Plan131 v4 remains immutable `process_invalid_descendant_and_observation_validation` history. Plan133 must independently review this correction and alone may publish additive v5; Plan110 remains false.
+
+<!-- phase-262-plan-132-closeout-status: {"schema_version":"v1.38-plan-262-132-closeout-v5","proof_status":"closed_source_only_descendant_and_observation_correction","source_commit":"36fba458","strict_summary_commit":"6a82901a8e73a4c2b8be92ba1b8d606919678784","v4_publication_commit":"b80782214eeb323023287b4589049f0139befdd5","v4_disposition":"process_invalid_descendant_and_observation_validation","v4_eligible":false,"actual_modes_passed":6,"observations_root":"sha256:6d4867c2635613d0e3277b70f2b2efd3bc91c6940731daae2742eef7578e0ce7","finding_count":0,"plan_262_133_eligible":true,"plan_262_110_eligible":false,"authorizes_execution":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"next_action":"dispatch-262-133-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The v3 replan carrier below remains immutable planning history and is superseded for current completion, eligibility, and next action by the Plan132 closeout carrier above. -->
 
 <!-- phase-262-closeout-replan-status-v3: {"schema_version":"v1.38-phase-262-closeout-replan-v3","active_plans":114,"trustworthy_summaries":101,"incomplete_plans":["262-132","262-133","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-132","262-133","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-132":97,"262-133":98,"262-110":99,"262-94":100,"262-123":101,"262-124":102,"262-95":103,"262-125":104,"262-126":105,"262-106":106,"262-127":107,"262-128":108,"262-129":109},"plan131_code_review_commit":"f45ee38d529ba79d63e0b54995ed90d947811dd4","plan131_code_review_tree":"9592d1ccbad47e7ef58957c25321eac7c41deb0b","plan131_code_review_blob":"94c76818f17cc473d36acf4946a834c78e210540","plan131_code_review_sha256":"dee7fd56dedaf18f758a3b7b9a5797c9d3698a31036baa2b0770e492b18b0936","plan131_v4_publication_commit":"b80782214eeb323023287b4589049f0139befdd5","plan131_v4_summary_commit":"6a82901a8e73a4c2b8be92ba1b8d606919678784","plan131_v4_disposition":"process_invalid_descendant_and_observation_validation","plan131_v4_eligible":false,"plan132_source_only":true,"plan133_v5_review_only":true,"plan_262_110_eligible":false,"next_action":"dispatch-262-132-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -307,7 +311,7 @@ Plans:
 
 **Wave 97** *(blocked on committed Plan-131 v4 code review; source/tests only, no effects)*
 
-- [ ] 262-132-PLAN.md — Correct later-HEAD authentication and derive all eligibility aggregates from exactly six unique ordered genuine observations while preserving v4 as immutable process-invalid history.
+- [x] 262-132-PLAN.md — Correct later-HEAD authentication and derive all eligibility aggregates from exactly six unique ordered genuine observations while preserving v4 as immutable process-invalid history.
 
 **Wave 98** *(blocked on exact committed Plan-132 source)*
 
@@ -792,7 +796,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 101/112 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 102/114 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
