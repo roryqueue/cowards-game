@@ -23,9 +23,14 @@ const REVIEW_SCHEMA = "v1.38-plan-262-125-lifecycle-source-review-v1"
 const TSX_IMPORT = import.meta.resolve("tsx")
 
 export const EXPECTED_IMPLEMENTATION_COMMIT =
-  "5cf420be17d9e0fa18218ff1828abc5971d65801"
+  "56f52ed342433d80f215c5414b391353cdcf146c"
 export const EXPECTED_SOURCE_COMPLETION_COMMIT =
-  "a4decc35b687d88dda350b5d5078232ef1cc290f"
+  "56f52ed342433d80f215c5414b391353cdcf146c"
+const PRIOR_IMPLEMENTATION_COMMIT = "5cf420be17d9e0fa18218ff1828abc5971d65801"
+const PRIOR_COMPLETION_COMMIT = "a4decc35b687d88dda350b5d5078232ef1cc290f"
+const PRIOR_REVIEW_COMMIT = "ee00b08f9d83c8c7e4b0d503b4a94154c77802f9"
+const PRIOR_REVIEW_ROOT =
+  "sha256:0fb2aac15c55663cddbe01d9ddebd1770d9f3c036aca528a759219ad069ede3f"
 
 export const REVIEW_PATHS = Object.freeze({
   subjectSource: "scripts/check-v1-38-plan-262-95-lifecycle-v4.ts",
@@ -67,9 +72,9 @@ const AUTHORITY_KEYS = Object.freeze([
   "productAuthorized", "productionAuthorized", "publicAuthorized", "tagAuthorized",
 ])
 const EXPECTED_SOURCE_SHA =
-  "sha256:953179437fe287acccd318b209a594cfdd7f58b554a8deced245ce3274fa9a1b"
+  "sha256:39eb34119b5adc5c19371f46cd044744b5040e39ade17cadde3758344d40ecc7"
 const EXPECTED_TEST_SHA =
-  "sha256:7ebeabca08f782b03b274650c3b4df30d067af36a99575f03b99cd7bc9b855ea"
+  "sha256:41a072124d7e912741bcfeb69e2b2ab390effc678409d47b75dd2e957d22040c"
 const EXPECTED_SUMMARY_SHA =
   "sha256:eca488754c11ee7eb5faad618d615a2cd057e6eda18a38b3df5409550306e3aa"
 
@@ -153,8 +158,18 @@ const staticFindings = (sourceText: string, testText: string, summaryText: strin
   if (sha256(summaryText) !== EXPECTED_SUMMARY_SHA) findings.push("SOURCE_SUMMARY_BYTES_MISMATCH")
   for (const requirement of REQUIREMENTS)
     if (!sourceText.includes(`"${requirement}"`)) findings.push(`REQUIREMENT_${requirement}_MISSING`)
+  const inventoryTokenCounts: Record<string, number> = {
+    activePlans: 6,
+    historicalPlans: 6,
+    dormantCarriers: 6,
+    summaries: 7,
+    reviews: 6,
+    validations: 6,
+    verifications: 6,
+  }
   for (const inventoryClass of INVENTORY_CLASSES)
-    if (countToken(sourceText, inventoryClass) !== 3) findings.push(`INVENTORY_CLASS_${inventoryClass}_MISSING`)
+    if (countToken(sourceText, inventoryClass) !== inventoryTokenCounts[inventoryClass])
+      findings.push(`INVENTORY_CLASS_${inventoryClass}_MISSING`)
   const requiredFragments = [
     '"branch_neutral_bookkeeping_only"',
     '"provisional_foundation_status_only"',
@@ -172,6 +187,10 @@ const staticFindings = (sourceText: string, testText: string, summaryText: strin
     '"--apply-provisional-closeout"',
     '"--check-provisional-closeout"',
     "v1.38-plan-262-126-lifecycle-readiness-v4.json",
+    "const expectedCurrent = buildReviewedReadiness(authenticatedReview, current)",
+    "current.summaries.includes(V138_PLAN_262_95_PATHS.summary126)",
+    "repoPath !== V138_PLAN_262_95_PATHS.summary126",
+    "const expectedBaseline = buildReviewedReadiness(authenticatedReview, baseline)",
   ]
   for (const fragment of requiredFragments)
     if (!sourceText.includes(fragment)) findings.push(`CONTRACT_FRAGMENT_MISSING:${fragment}`)
@@ -203,8 +222,20 @@ export const auditLifecycleSource = async (root: string, options: AuditOptions =
     },
     closedGateMutations: 0,
     writerCalls: 0,
+    wr01ChangedPaths: [],
+    readinessInventoryTransition:
+      "exact-current-or-baseline-minus-only-committed-262-126-summary",
   }
   if (options.skipRuntimeChecks) return { findings: [...new Set(findings)].sort(), observations }
+
+  observations.wr01ChangedPaths = git(root, [
+    "diff-tree", "--no-commit-id", "--name-only", "-r",
+    EXPECTED_SOURCE_COMPLETION_COMMIT,
+  ]).split("\n").filter(Boolean).sort()
+  if (canonical(observations.wr01ChangedPaths) !== canonical([
+    REVIEW_PATHS.subjectSource,
+    REVIEW_PATHS.subjectTests,
+  ].sort())) findings.push("WR01_CHANGED_PATH_ALLOWLIST_INVALID")
 
   if (git(root, ["rev-parse", "HEAD"]) !== EXPECTED_SOURCE_COMPLETION_COMMIT &&
       execFileSync("git", ["merge-base", "--is-ancestor", EXPECTED_SOURCE_COMPLETION_COMMIT, "HEAD"], { cwd: root }).length !== 0)
@@ -259,7 +290,7 @@ export const auditLifecycleSource = async (root: string, options: AuditOptions =
     (value: any) => ({ ...value, findingCount: 1 }),
     (value: any) => ({ ...value, plan126Eligible: false }),
     (value: any) => ({ ...value, authorizesExecution: true }),
-    (value: any) => ({ ...value, sourceCommit: EXPECTED_IMPLEMENTATION_COMMIT }),
+    (value: any) => ({ ...value, sourceCommit: PRIOR_COMPLETION_COMMIT }),
     (value: any) => ({ ...value, reviewRoot: `sha256:${"0".repeat(64)}` }),
   ]) {
     try { subject.assertPlan125Review(root, mutate(carrier)); findings.push("FALSE_REVIEW_GATE_ACCEPTED") }
@@ -285,8 +316,8 @@ export const auditLifecycleSource = async (root: string, options: AuditOptions =
 const markdown = (review: any): { reviewMarkdown: string; summaryMarkdown: string } => {
   const verdict = review.findings.length === 0 ? "LITERAL ZERO FINDINGS" : "BLOCKED"
   const findings = review.findings.length === 0 ? "None." : review.findings.map((item: string) => `- ${item}`).join("\n")
-  const reviewMarkdown = `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "125"\nreviewed_implementation_commit: ${EXPECTED_IMPLEMENTATION_COMMIT}\nreviewed_completion_commit: ${EXPECTED_SOURCE_COMPLETION_COMMIT}\nfinding_count: ${review.carrier.findingCount}\nplan126_eligible: ${review.carrier.plan126Eligible}\nauthorizes_execution: false\nreview_root: ${review.carrier.reviewRoot}\nstatus: ${review.carrier.findingCount === 0 ? "clean" : "blocked"}\n---\n\n# Phase 262 Plan 125: Lifecycle Source Review\n\n## Verdict\n\n**${verdict}.** Only Plan 126 eligibility may follow from literal zero. This report authorizes no execution, readiness invocation, lifecycle mutation, Phase 263 work, candidate, formation, holdout, public, product, production, counted-play, gameplay-change, release, archive, or tag action.\n\n## Exact Source Custody\n\n- Plan 95 implementation commit: \`${EXPECTED_IMPLEMENTATION_COMMIT}\`\n- Plan 95 three-file completion commit: \`${EXPECTED_SOURCE_COMPLETION_COMMIT}\`\n- Completion tree: \`${review.carrier.sourceTree}\`\n- Exact source/test/summary files: ${review.carrier.sourceFiles.map((entry: SourceFileIdentity) => `\`${entry.path}\` (${entry.mode}, ${entry.blob}, ${entry.sha256})`).join("; ")}\n\n## Independent Review Coverage\n\n- Actual branch: \`${review.observations.actualBranch.branch}\`, producer \`${review.observations.actualBranch.producerDisposition}\`, fresh \`${review.observations.actualBranch.freshAccepted}/${review.observations.actualBranch.requiredAccepted}\`.\n- All 16 Phase 262 requirement IDs and all dynamic active/historical inventory classes were enumerated.\n- Gaps permit branch-neutral bookkeeping only; pass-only deltas remain provisional; Phase 263 planning/execution remain false pending final convergence.\n- Reproduction-v18 follows producer success, Route-12 is absent for every non-pass, and the assurance wording remains \`single_operator_local_seal_v1_no_hostile_same_uid\`.\n- Source/prospective no-write tripwires passed; ${review.observations.closedGateMutations} false Plan 125/126 gate mutations failed before effects; writer calls: 0.\n\n## Findings\n\n${findings}\n`
-  const summaryMarkdown = `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "125"\nsubsystem: lifecycle-review\ntags: [independent-review, exact-source, non-authorizing, literal-zero]\nrequires:\n  - phase: 262-95\n    provides: committed source-only lifecycle driver\nprovides:\n  - exact committed lifecycle source review\n  - Plan 126 eligibility only at literal zero\naffects: [262-126]\ntech-stack:\n  added: []\n  patterns: [independent canonical root, prospective no-write tripwires, closed writer gates]\nkey-files:\n  created:\n    - scripts/check-v1-38-plan-262-125-lifecycle-source-review-v1.ts\n    - scripts/check-v1-38-plan-262-125-lifecycle-source-review-v1.test.ts\n    - ${REVIEW_PATHS.carrier}\n    - ${REVIEW_PATHS.review}\n    - ${REVIEW_PATHS.summary125}\n  modified: []\nkey-decisions:\n  - "Bind Plan 95 implementation at 5cf420be and the required source/test/summary carrier at completion commit a4decc35."\n  - "Literal zero makes only Plan 126 eligible and authorizes no execution or lifecycle mutation."\nrequirements-completed: []\nstatus: complete\n---\n\n# Phase 262 Plan 125: Lifecycle Source Review Summary\n\n**Independent exact-source review exhausts the Plan 95 mutation, inventory, authority, Route-12, reproduction, and writer-gate contract with literal zero findings.**\n\n## Result\n\n- Finding count: **${review.carrier.findingCount}**\n- Plan 126 eligible: **${review.carrier.plan126Eligible}**\n- Authorizes execution: **false**\n- Actual branch: **gaps**, producer **exhausted**, fresh **0/540**\n- Phase 263 planning/execution eligible: **false/false**\n- Writer calls: **0**\n- Review root: \`${review.carrier.reviewRoot}\`\n\n## Verification\n\n- Exact Plan 95 implementation/completion commits, tree, modes, blobs, and SHA-256 bytes authenticated.\n- All 16 requirements and every dynamic active/historical artifact class covered.\n- Source/prospective no-write tripwires and ${review.observations.closedGateMutations} false review/readiness gate mutations passed.\n- Plan 95 focused suite, Plan 125 suite, targeted typecheck, later-HEAD \`--check-review\`, and \`git diff --check\` are required final proofs.\n\n## Deviations from Plan\n\nNone - plan executed exactly as written.\n\n## Known Stubs\n\nNone.\n\n## Authority and Next Action\n\nPlan 126 is the only eligible successor. Readiness/lifecycle writers were not invoked. ADMIT-03 remains blocked, Phase 262 remains incomplete, and all Phase 263, execution, product, production, release, archive, and tag authority remains false.\n\n## Self-Check: PASSED\n\nThe reviewer, tests, carrier, REVIEW, and SUMMARY are present and the carrier is independently rooted.\n`
+  const reviewMarkdown = `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "125"\nreview_revision: wr-01\nreviewed_source_commit: ${EXPECTED_SOURCE_COMPLETION_COMMIT}\nfinding_count: ${review.carrier.findingCount}\nplan126_eligible: ${review.carrier.plan126Eligible}\nauthorizes_execution: false\nreview_root: ${review.carrier.reviewRoot}\nstatus: ${review.carrier.findingCount === 0 ? "clean" : "blocked"}\n---\n\n# Phase 262 Plan 125: Lifecycle Source Re-Review\n\n## Verdict\n\n**${verdict}.** Only Plan 126 eligibility may follow from literal zero. This report authorizes no execution, readiness invocation, lifecycle mutation, Phase 263 work, candidate, formation, holdout, public, product, production, counted-play, gameplay-change, release, archive, or tag action.\n\n## Revision History\n\nThe prior review at \`${PRIOR_REVIEW_COMMIT}\` with root \`${PRIOR_REVIEW_ROOT}\` truthfully reviewed source \`${PRIOR_IMPLEMENTATION_COMMIT}\` / completion \`${PRIOR_COMPLETION_COMMIT}\`, but became stale when WR-01 changed the Plan 95 source and tests. It remains immutable history and is not current Plan 126 eligibility. This re-review replaces only the canonical carrier, REVIEW, and SUMMARY bytes.\n\n## Exact WR-01 Source Custody\n\n- Reviewed WR-01 commit: \`${EXPECTED_SOURCE_COMPLETION_COMMIT}\`\n- Tree: \`${review.carrier.sourceTree}\`\n- WR-01 changed-path allowlist: ${review.observations.wr01ChangedPaths.map((item: string) => `\`${item}\``).join(", ")}\n- Exact source/test/summary files: ${review.carrier.sourceFiles.map((entry: SourceFileIdentity) => `\`${entry.path}\` (${entry.mode}, ${entry.blob}, ${entry.sha256})`).join("; ")}\n\n## Independent Review Coverage\n\n- Actual branch: \`${review.observations.actualBranch.branch}\`, producer \`${review.observations.actualBranch.producerDisposition}\`, fresh \`${review.observations.actualBranch.freshAccepted}/${review.observations.actualBranch.requiredAccepted}\`.\n- Readiness accepts the exact current inventory or the baseline reconstructed by removing only committed \`262-126-SUMMARY.md\`; substitute/extra summaries, extra reviews, and stale or modified inventory metadata remain rejected.\n- All 16 Phase 262 requirement IDs and all dynamic active/historical inventory classes were enumerated.\n- Gaps permit branch-neutral bookkeeping only; pass-only deltas remain provisional; Phase 263 planning/execution remain false pending final convergence.\n- Reproduction-v18 follows producer success, Route-12 is absent for every non-pass, and the assurance wording remains \`single_operator_local_seal_v1_no_hostile_same_uid\`.\n- Source/prospective no-write tripwires passed; ${review.observations.closedGateMutations} false Plan 125/126 gate mutations failed before effects; writer calls: 0.\n\n## Findings\n\n${findings}\n`
+  const summaryMarkdown = `---\nphase: 262-foundation-admission-measurement-custody-and-containment-con\nplan: "125"\nsubsystem: lifecycle-review\ntags: [independent-re-review, wr-01, exact-source, non-authorizing, literal-zero]\nrequires:\n  - phase: 262-95\n    provides: WR-01 source-only readiness inventory correction\nprovides:\n  - refreshed exact committed lifecycle source review\n  - Plan 126 eligibility only at literal zero\naffects: [262-126]\ntech-stack:\n  added: []\n  patterns: [exact transition allowlist, independent canonical root, closed writer gates]\nkey-files:\n  modified:\n    - scripts/check-v1-38-plan-262-125-lifecycle-source-review-v1.ts\n    - scripts/check-v1-38-plan-262-125-lifecycle-source-review-v1.test.ts\n    - ${REVIEW_PATHS.carrier}\n    - ${REVIEW_PATHS.review}\n    - ${REVIEW_PATHS.summary125}\nkey-decisions:\n  - "Supersede the stale ee00b08f review only after independently authenticating WR-01 commit 56f52ed3 and its exact two-path allowlist."\n  - "Literal zero makes only Plan 126 eligible and authorizes no execution or lifecycle mutation."\nrequirements-completed: []\nstatus: complete\n---\n\n# Phase 262 Plan 125: WR-01 Lifecycle Source Re-Review Summary\n\n**Independent exact-source re-review validates the narrow readiness inventory transition with literal zero findings while preserving the exhausted gaps branch and all authority denials.**\n\n## Result\n\n- Finding count: **${review.carrier.findingCount}**\n- Plan 126 eligible: **${review.carrier.plan126Eligible}**\n- Authorizes execution: **false**\n- Reviewed source commit: **${EXPECTED_SOURCE_COMPLETION_COMMIT}**\n- Actual branch: **gaps**, producer **exhausted**, fresh **0/540**\n- Phase 263 planning/execution eligible: **false/false**\n- Writer calls: **0**\n- Review root: \`${review.carrier.reviewRoot}\`\n\n## Verification\n\n- WR-01 changes exactly the Plan 95 source/test allowlist; modes, blobs, tree, and SHA-256 bytes authenticated.\n- Exact-current and baseline-minus-only-262-126-summary acceptance was reviewed; substitute/extra summary, extra review, and stale metadata rejection remains closed.\n- All 16 requirements, dynamic inventory classes, branch/Route-12/reproduction rules, source/prospective no-write tripwires, and ${review.observations.closedGateMutations} false gates passed.\n- Plan 95 focused suite, Plan 125 suite, targeted typecheck, later-HEAD \`--check-review\`, and \`git diff --check\` are required final proofs.\n\n## Deviations from Plan\n\nNone - WR-01 re-review executed exactly within the requested narrow scope.\n\n## Known Stubs\n\nNone.\n\n## Authority and Next Action\n\nPlan 126 is the only eligible successor. No readiness/lifecycle/tracking writer was invoked. ADMIT-03 remains blocked, Phase 262 remains incomplete, and all Phase 263, execution, product, production, release, archive, and tag authority remains false.\n\n## Self-Check: PASSED\n\nThe refreshed reviewer, tests, carrier, REVIEW, and SUMMARY are present and independently rooted.\n`
   return { reviewMarkdown, summaryMarkdown }
 }
 
@@ -316,11 +347,26 @@ const exclusiveWrite = (root: string, repoPath: string, contents: string): void 
   try { writeFileSync(fd, contents) } finally { closeSync(fd) }
 }
 
+const replaceCommittedReviewFile = (
+  root: string,
+  repoPath: string,
+  contents: string,
+): void => {
+  const target = path.resolve(root, repoPath)
+  if (!target.startsWith(`${path.resolve(root)}${path.sep}`))
+    throw new TypeError("V138_PLAN_262_125_PATH_ESCAPE")
+  if (existsKind(target) !== "regular")
+    throw new TypeError("V138_PLAN_262_125_REVIEW_TARGET_NOT_REGULAR")
+  if (!readFileSync(target).equals(gitBytes(root, "HEAD", repoPath)))
+    throw new TypeError("V138_PLAN_262_125_REVIEW_TARGET_DRIFT")
+  writeFileSync(target, contents)
+}
+
 export const writeLifecycleSourceReview = async (root: string) => {
   const review = await buildLifecycleSourceReview(root)
-  exclusiveWrite(root, REVIEW_PATHS.carrier, canonical(review.carrier))
-  exclusiveWrite(root, REVIEW_PATHS.review, review.reviewMarkdown)
-  exclusiveWrite(root, REVIEW_PATHS.summary125, review.summaryMarkdown)
+  replaceCommittedReviewFile(root, REVIEW_PATHS.carrier, canonical(review.carrier))
+  replaceCommittedReviewFile(root, REVIEW_PATHS.review, review.reviewMarkdown)
+  replaceCommittedReviewFile(root, REVIEW_PATHS.summary125, review.summaryMarkdown)
   return review
 }
 
@@ -341,8 +387,7 @@ export const checkPublishedLifecycleSourceReview = async (root: string) => {
   if (canonical(changed) !== canonical(expectedPaths)) throw new TypeError("V138_PLAN_262_125_COMMIT_PATHS_INVALID")
   if (expected.carrier.findingCount !== 0 || !expected.carrier.plan126Eligible || expected.carrier.authorizesExecution !== false)
     throw new TypeError("V138_PLAN_262_125_NOT_LITERAL_ZERO")
-  if (existsKind(path.join(root, REVIEW_PATHS.readiness126)) !== "absent" ||
-      existsKind(path.join(root, REVIEW_PATHS.legacyReadiness)) !== "absent" ||
+  if (existsKind(path.join(root, REVIEW_PATHS.legacyReadiness)) !== "absent" ||
       existsKind(path.join(root, REVIEW_PATHS.lifecycle106)) !== "absent")
     throw new TypeError("V138_PLAN_262_125_DOWNSTREAM_OUTPUT_PRESENT")
   return expected

@@ -65,6 +65,10 @@ describe("Plan 262-125 hostile source mutations", () => {
     ["readiness selector", '"--write-reviewed-readiness"', '"--write-readiness-unreviewed"'],
     ["closeout selector", '"--apply-provisional-closeout"', '"--apply-closeout-unreviewed"'],
     ["readiness target", "v1.38-plan-262-126-lifecycle-readiness-v4.json", "v1.38-plan-262-95-lifecycle-driver-readiness-v3.json"],
+    ["current inventory acceptance", "const expectedCurrent = buildReviewedReadiness(authenticatedReview, current)", "const expectedCurrent = value"],
+    ["exact Plan126 summary latch", "current.summaries.includes(V138_PLAN_262_95_PATHS.summary126)", "current.summaries.length > 0"],
+    ["only-summary baseline removal", "repoPath !== V138_PLAN_262_95_PATHS.summary126", "repoPath.endsWith(\"-SUMMARY.md\")"],
+    ["baseline metadata comparison", "const expectedBaseline = buildReviewedReadiness(authenticatedReview, baseline)", "const expectedBaseline = value"],
   ])("rejects a mutated %s", async (_name, needle, replacement) => {
     const source = readFileSync(path.join(repoRoot, REVIEW_PATHS.subjectSource), "utf8")
     expect(source).toContain(needle)
@@ -150,6 +154,13 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
         REVIEW_PATHS.summary106,
       ],
     })
+    expect(audit.observations.wr01ChangedPaths).toEqual([
+      REVIEW_PATHS.subjectTests,
+      REVIEW_PATHS.subjectSource,
+    ].sort())
+    expect(audit.observations.readinessInventoryTransition).toBe(
+      "exact-current-or-baseline-minus-only-committed-262-126-summary",
+    )
   })
 
   it("rejects every false Plan125/126 gate before a writer effect", async () => {
