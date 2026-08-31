@@ -362,6 +362,22 @@ const fixedHistory = (h: History) => {
   return freeze({ seal, envelope })
 }
 
+const runtimeModuleSpecifier = (node: ts.Node): string | undefined => {
+  // verbatimModuleSyntax retains inline-all-type empty imports/exports and their
+  // side effects. Only a whole `import type` / `export type` is erased.
+  if (ts.isImportDeclaration(node) && !node.importClause?.isTypeOnly && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) return node.moduleSpecifier.text
+  if (ts.isExportDeclaration(node) && !node.isTypeOnly && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) return node.moduleSpecifier.text
+  if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+    ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) return node.arguments[0].text
+  return undefined
+}
+export const inspectV138LiveV14RuntimeImportsForReview = (source: string): readonly string[] => {
+  const result: string[] = []
+  const visit = (node: ts.Node) => { const spec = runtimeModuleSpecifier(node); if (spec) result.push(spec); ts.forEachChild(node, visit) }
+  visit(ts.createSourceFile("fixture.ts", source, ts.ScriptTarget.Latest, true))
+  return Object.freeze(result)
+}
+
 /** Actual module resolution plus native/config dependencies, not archive133. */
 const repositoryClosure = (root: string, roots: readonly string[]) => {
   const historicalPaths = new Set(git(root, ["ls-tree", "-r", "--name-only", FINAL142]).split("\n"))
@@ -395,20 +411,7 @@ const repositoryClosure = (root: string, roots: readonly string[]) => {
       parsed.add(p)
       const text = bytes.toString("utf8"); const ast = ts.createSourceFile(p, text, ts.ScriptTarget.Latest, true)
       const visit = (node: ts.Node) => {
-        let spec: string | undefined
-        if (ts.isImportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
-          const clause = node.importClause
-          const onlyTypes = clause?.isTypeOnly || clause && !clause.name && clause.namedBindings &&
-            ts.isNamedImports(clause.namedBindings) && clause.namedBindings.elements.length > 0 && clause.namedBindings.elements.every(e => e.isTypeOnly)
-          if (!onlyTypes) spec = node.moduleSpecifier.text
-        }
-        if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
-          const onlyTypes = node.isTypeOnly || node.exportClause && ts.isNamedExports(node.exportClause) &&
-            node.exportClause.elements.length > 0 && node.exportClause.elements.every(e => e.isTypeOnly)
-          if (!onlyTypes) spec = node.moduleSpecifier.text
-        }
-        if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-          ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) spec = node.arguments[0].text
+        const spec = runtimeModuleSpecifier(node)
         if (spec && !spec.startsWith("node:") && !["fs", "path", "crypto", "os", "url", "util", "events", "stream", "buffer", "child_process"].includes(spec)) {
           const resolved = ts.resolveModuleName(spec, absolute, options, ts.sys, resolutionCache).resolvedModule
           if (!resolved) fail(`DEPENDENCY_UNRESOLVED:${p}:${spec}`)
@@ -802,14 +805,20 @@ const materialize = (root: string, materials: RuntimeMaterial[]) => {
   }
   // Only this resolver link is needed by the pinned inspector; all implementation
   // bytes are owned regular copies and the link itself is checked around children.
-  symlinkSync("../.runtime-pnpm/bin/pnpm.cjs", path.join(root, ".runtime-node/pnpm"))
+  symlinkSync(`../${privatePnpmTarget(materials.map(m => ({ path: m.destination, sha256: m.sha256 })))}`, path.join(root, ".runtime-node/pnpm"))
+}
+const privatePnpmTarget = (inventory: readonly { path: string; sha256: Sha }[]): string => {
+  const launcher = inventory.find(e => e.path === ".runtime-launchers/pnpm") ?? fail("PRIVATE_LAUNCHER_MISSING")
+  const candidates = inventory.filter(e => e.path.startsWith(".runtime-pnpm/") && e.sha256 === launcher.sha256)
+  if (candidates.length !== 1) fail("PRIVATE_LAUNCHER_AMBIGUOUS")
+  return candidates[0].path
 }
 const verifyMaterial = (root: string, inventory: readonly { path: string; sha256: Sha; mode: string }[]) => {
   for (const e of inventory) {
     const absolute = path.join(root, e.path)
     if (sha(regular(absolute)) !== e.sha256 || (lstatSync(absolute).mode & 0o111 ? "100755" : "100644") !== e.mode) fail("PRIVATE_BYTES_CHANGED")
   }
-  if (realpathSync(path.join(root, ".runtime-node/pnpm")) !== path.join(root, ".runtime-pnpm/bin/pnpm.cjs")) fail("PRIVATE_RESOLVER_CHANGED")
+  if (realpathSync(path.join(root, ".runtime-node/pnpm")) !== path.join(root, privatePnpmTarget(inventory))) fail("PRIVATE_RESOLVER_CHANGED")
 }
 
 /** Heavy source proof: two actual private roots/processes, no operational API. */

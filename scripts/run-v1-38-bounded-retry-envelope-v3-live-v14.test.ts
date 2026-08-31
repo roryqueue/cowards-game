@@ -8,6 +8,7 @@ import ts from "typescript"
 import { validateV138LiveV14PublishedContractForReview, executeV138LiveV14ReviewMode,
   validateV138LiveV14EffectValuesForReview, checkV138LiveV14EffectState,
   inspectV138LiveV14ProducerGuardForReview, checkV138LiveV14RootBoundCustodyForReview,
+  inspectV138LiveV14RuntimeImportsForReview,
   buildV138LiveV14GuardedProofForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v14.js"
 import { settleV138LiveV9ProducerOutcomeForReview } from "./run-v1-38-bounded-retry-envelope-v3-live-v9.js"
 
@@ -395,6 +396,27 @@ describe("closed producer boundary", () => {
 })
 
 describe("actual modes", () => {
+  it("retains inline type-only side effects under the actual verbatim module configuration", () => {
+    const source = `import type { A } from "erased-import";
+export type { B } from "erased-export";
+import {type C} from "inline-import";
+export {type D} from "inline-export";
+import {type E, value} from "mixed";
+import Default, {type F} from "default";
+import {} from "empty";
+import "side-effect";
+export * from "star";
+const dynamic = import("dynamic"); const required = require("required");`
+    const config = ts.readConfigFile(path.join(ROOT, "tsconfig.base.json"), ts.sys.readFile).config
+    expect(config.compilerOptions.verbatimModuleSyntax).toBe(true)
+    const emitted = ts.transpileModule(source, { compilerOptions: {
+      ...ts.convertCompilerOptionsFromJson(config.compilerOptions, ROOT).options,
+      module: ts.ModuleKind.ESNext,
+    } }).outputText
+    const expected = ["inline-import", "inline-export", "mixed", "default", "empty", "side-effect", "star", "dynamic", "required"]
+    expect(inspectV138LiveV14RuntimeImportsForReview(source)).toEqual(expected)
+    expect(inspectV138LiveV14RuntimeImportsForReview(emitted)).toEqual(expected)
+  })
   it("runs source-only on actual live-v14 without publication or producer authority", () => {
     const observation = executeV138LiveV14ReviewMode(ROOT, "source-only")
     expect(observation).toMatchObject({ mode: "source-only", status: "source_only_checked", reducedValue: noEffect })
