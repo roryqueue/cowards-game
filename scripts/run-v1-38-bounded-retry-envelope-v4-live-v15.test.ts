@@ -5,7 +5,7 @@ import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { validateV138LiveV15Review, consumeV138LiveV15Invocation,
   authenticateV138LiveV15InvocationMarker, checkV138LiveV15EffectState,
-  readV138LiveV15CommittedReview, V138_LIVE_V15_PATHS } from "./run-v1-38-bounded-retry-envelope-v4-live-v15.js"
+  deriveV138LiveV15SourceRoot, readV138LiveV15CommittedReview, V138_LIVE_V15_PATHS } from "./run-v1-38-bounded-retry-envelope-v4-live-v15.js"
 
 const roots: string[] = []
 const fixture = () => { const r = mkdtempSync(path.join(tmpdir(), "v138-live15-test-")); roots.push(r); mkdirSync(path.join(r, ".planning/artifacts"), { recursive: true }); return r }
@@ -25,6 +25,7 @@ describe("live-v15 single-review source and invocation boundary", () => {
       { plan147Eligible: false }, { schema: "v3" }, { sourceFiles: [] }, { unknown: true }])
       expect(() => validateV138LiveV15Review({ ...review(), ...patch })).toThrow()
     expect(() => validateV138LiveV15Review({ ...review(), nativeTestResults: { ...review().nativeTestResults, ownerPairLifePair: false } })).toThrow()
+    expect(deriveV138LiveV15SourceRoot(review().sourceCommit, review().sourceFiles)).toMatch(/^sha256:[0-9a-f]{64}$/)
   })
   it("durably consumes the invocation before producer entry and never reenters after bootstrap failure", () => {
     const root = fixture()

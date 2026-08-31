@@ -59,6 +59,11 @@ const gitBytes = (root: string, args: readonly string[]): Buffer => execFileSync
     GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_REPLACE_OBJECTS: "1", GIT_TERMINAL_PROMPT: "0" }, timeout: 30_000,
     maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })
 
+export const deriveV138LiveV15SourceRoot = (sourceCommit: string, sourceFiles: readonly SourceFile[]): Sha => {
+  if (!isGit(sourceCommit) || !Array.isArray(sourceFiles) || sourceFiles.length === 0) fail("SOURCE_MANIFEST_INVALID")
+  return sha(`v1.38-plan-262-145-source-root-v1\0${canonical({ sourceCommit, sourceFiles })}`)
+}
+
 export const V138_LIVE_V15_PATHS = freeze({
   model: "scripts/lib/v1-38-bounded-retry-envelope-v4.ts", producer: "scripts/run-v1-38-bounded-retry-envelope-v4.ts",
   custody: "scripts/lib/v1-38-bounded-retry-v4-native-custody-v1.ts", bootstrap: "scripts/lib/v1-38-private-native-bootstrap-v3.ts",
@@ -129,6 +134,7 @@ export const authenticateV138LiveV15ImmutableCustody = (rootInput: string) => {
   const envelope = JSON.parse(envelopeBytes.toString()); const seal = JSON.parse(sealBytes.toString())
   if (envelope.schemaVersion !== "retry-envelope:v4" || envelope.status !== "sealed_inactive" || seal.schemaVersion !== "v1.38-successor-source-seal-v14" ||
     seal.sourceCommit !== review.sourceCommit || envelope.sourceRoot !== seal.sourceRoot || envelope.sealRoot !== seal.sealRoot ||
+    seal.sourceRoot !== deriveV138LiveV15SourceRoot(review.sourceCommit, review.sourceFiles) ||
     seal.runtimeClosureRoot !== review.runtimeClosureRoot || seal.failedPlan110?.liveInvocations !== 1 || seal.failedPlan110?.freshAccepted !== 0 ||
     seal.correctedInvocationLimit !== 1 || seal.authorizesExecution !== false || seal.downstreamAuthority !== "denied") fail("PAIR_INVALID")
   return freeze({ review, envelope, seal, runtimeClosureRoot: runtime.semanticRuntimeRoot,
