@@ -5,21 +5,25 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan262-144 source-only proof closed; only independent143 next, no publication or effects
-last_updated: "2026-08-31T16:22:00.000Z"
+stopped_at: Plan262-143 v10 published and summarized; Plan110 next after fresh descendant checks
+last_updated: "2026-08-31T17:44:00.000Z"
 last_activity: 2026-08-31
-last_activity_desc: closed live-v14 source80936682 with23/23 tests and zero-finding V3 review; summary8bb3dbb8; independent143 next
+last_activity_desc: independent143 v10 publication3ad69156 and direct summary2cf1ed90;29/29 tests; Plan110 next
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 125
-  completed_plans: 109
-  percent: 87
+  completed_plans: 110
+  percent: 88
 ---
 
 # State: Coward's Game
 
-**Current Plan144 closeout (2026-08-31):** Source-only live-v14 is closed at `80936682`, with 23/23 final tests, independent V3 zero findings, summary `8bb3dbb8`, and the separate tracking record below. Only revised Plan143 at Wave109 is next; its existing RED/partial source is not GREEN, publication or completion. Closed142 and all earlier history remain immutable. ADMIT-03 stays0/540, Plan110 remains ineligible, and all frozen limits and downstream denials remain unchanged.
+**Current Plan143 closeout (2026-08-31):** Independent literal-zero v10 is published at `3ad69156`, followed directly by summary `2cf1ed90`. Final reviewer source `836c1d6f` passed29/29 tests, clean independent V3 review and targeted typecheck. Only Plan110 is next after mandatory fresh tracking/unrelated-descendant checks; all invocation/fresh counters remain0, ADMIT-03 stays0/540 and downstream authority stays denied.
+
+<!-- phase-262-plan-143-closeout: {"schema_version":"v1.38-plan-262-143-closeout-v1","plan_files":125,"trustworthy_summaries":110,"active_remaining":11,"active_chain":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"source_commit":"836c1d6f52f595eb9682747cc180a6c91d4950c6","source_sha256":"sha256:f5ef187a821ced1d29e960c7343f8cd959bcb947169459495ce5e865a821da92","test_sha256":"sha256:d1683808306a9c4b38ec69708b0e2fd5543b9402e2461d2cf465f2df41612c39","review_commit":"d7c3fed07ea6d8930be0234f3942752a2e8c484f","publication_commit":"3ad691564c36f87f440b672f65e8895c2c5d1859","summary_commit":"2cf1ed905dfa24a40b4266b76b9aad591e54da06","summary_sha256":"sha256:3bab9d4fea4bab8ab1ff11443abba46d5527ec0f7b5c7222a9a85f360f722893","payload_root":"sha256:5fc846c537ba9929f148614f7858899d551fffb33bbecb533e6089a624467d83","consumer_source_commit":"80936682ec7f1d63f2ea5dfdd87c99ccb97966b7","semantic_runtime_entries":3931,"semantic_runtime_closure_root":"sha256:23c3e69706042753c77e40d1b8ecc42416e2b59e2eb063504ab4c41061a3ceae","full_suite_passed":29,"full_suite_seconds":670.63,"targeted_typecheck_exit":0,"independent_findings":0,"v10_publication_created":true,"plan_262_110_eligible":true,"authorizes_execution":false,"producer_calls":0,"readiness_calls":0,"live_calls":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","downstream_authority_denied":true,"next_action":"dispatch-262-110-only-after-fresh-descendant-checks","descendant_verification":"Full proof reused only with unchanged143/144 source/test/runtime; fresh focused and tracking/unrelated-descendant checks mandatory, actual results in execution handoff."} -->
+
+**Historical Plan144 closeout:** Source-only live-v14 remains closed at `80936682`, summary `8bb3dbb8`. Its carrier below and all earlier dispatch prose are historical; the Plan143 closeout above controls current dispatch.
 
 <!-- phase-262-plan-144-source-only-closeout: {"schema_version":"v1.38-plan-262-144-source-only-closeout-v1","plan_files":125,"trustworthy_summaries":109,"active_remaining":12,"active_chain":["262-143","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135","262-137","262-139","262-141"],"source_commit":"80936682ec7f1d63f2ea5dfdd87c99ccb97966b7","source_tree":"b375e61bca63af1043b0b597304e88a046c05cc5","source_parent":"26601a5ec094f9524cacc4c89ad2ae3955ba3b89","source_blob":"45bf7bd7cb381a3bf6b6899ddd2dab3562e45f40","source_sha256":"sha256:8cd920e6c6af34fb09a24d03246bed2ed5f0f658090de1f5a17ad6a166b63807","test_blob":"ee2585a5ea555bc8221c825db9a10990cd1b9cc3","test_sha256":"sha256:2d26e6636868f79a262722736b09fa039252bc0cd3fc246223681a220097820e","summary_commit":"8bb3dbb8093f2a1a6cf3a5a9322c40cd9abe15f0","summary_tree":"9e6448e204dc3911dc43365adda79e036d580a9a","summary_parent":"0ac4c15d02f77801e36612e31829c1359f2865fa","summary_blob":"b53f4da46ad0b184e9cfbb8900168ba74c01154a","summary_sha256":"sha256:88b477558ef3179b2a23d80cc7ec291a60c96ccc0bfd50248f97676d479cffe3","review_reports_commit":"0ac4c15d02f77801e36612e31829c1359f2865fa","independent_v3_findings":0,"full_suite_passed":23,"full_suite_seconds":592.22,"guarded_proof_seconds":472.395,"full_suite_subject":"80936682ec7f1d63f2ea5dfdd87c99ccb97966b7","full_suite_rerun_after_docs":false,"targeted_typecheck_exit":2,"existing_diagnostic_headers":406,"new_diagnostic_headers":0,"typecheck_status":"nonzero_preexisting_baseline_no_new_errors","repository_closure_root":"sha256:25d8387b7fc87923c584dc85f6bc4f4856f65e2a76086eb2a615e127229335a8","semantic_runtime_entries":3931,"semantic_runtime_root":"sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e","consumer_semantic_runtime_closure_root":"sha256:23c3e69706042753c77e40d1b8ecc42416e2b59e2eb063504ab4c41061a3ceae","consumer_version":"live-v14","plan144_source_only_complete":true,"plan143_state":"open_RED_and_partial_source_no_GREEN_or_publication","plan143_eligible":true,"plan_262_110_eligible":false,"v10_publication_created":false,"actual_modes_passed":6,"private_roots":2,"private_processes":2,"producer_guard_count":0,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"third_envelope_authorized":false,"admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true,"next_action":"dispatch-262-143-only","descendant_verification":"reuse exact809 source/test/runtime proof; rerun source-only, eleven-path absence, ancestry and focused predicate/stage tests after tracking; results in execution handoff"} -->
 
@@ -29,7 +33,7 @@ The dependency-repair and earlier closeout carriers below are historical; only t
 
 **Current executable plan list (supersedes historical wave lists below):**
 - [x] 262-144-PLAN.md — Wave108; closed source-only live-v14 contract and actual-consumer proof (`8bb3dbb8` summary)
-- [ ] 262-143-PLAN.md — Wave109; independent v10 review of closed144 and142
+- [x] 262-143-PLAN.md — Wave109; independent v10 review closed (summary `2cf1ed90`)
 - [ ] 262-110-PLAN.md — Wave110; sole reviewed live-v14 production owner
 - [ ] 262-94-PLAN.md — Wave111; existing reviewed admission/lifecycle continuation
 - [ ] 262-123-PLAN.md — Wave112; existing reviewed admission/lifecycle continuation
@@ -602,7 +606,7 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 
 ### Pending Todos
 
-- Do not retry262-93 or trust superseded v3-v9 eligibility. Dispatch only independent143, then110 ->94 ->123 ->124 ->95 ->125 ->126 ->106 ->127 ->128 ->129.143 must independently authenticate closed144 source80936682/summary8bb3dbb8 and actual-consumer six-mode/source/runtime proof plus historical142;110 uses only live-v14 pre/producer/finally-post custody. No readiness/live during143, no new literal or third envelope, no ADMIT-03 credit before exact reviewed540/540.
+- Do not retry262-93 or trust superseded v3-v9 eligibility. After fresh Plan143 tracking/unrelated-descendant checks, dispatch only110 ->94 ->123 ->124 ->95 ->125 ->126 ->106 ->127 ->128 ->129. Plan110 uses only reviewed live-v14 pre/producer/finally-post custody and committed v10 publication3ad69156/summary2cf1ed90. No new literal or third envelope; no ADMIT-03 credit before exact reviewed540/540.
 
 ### Current Blocker/Concerns
 
@@ -662,8 +666,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-31T16:22:00.000Z
-Stopped at: Plan262-144 source-only proof closed; summary8bb3dbb8; only independent143 next; ADMIT-03 blocked at0/540
+Last session: 2026-08-31T17:44:00.000Z
+Stopped at: Plan262-143 v10 publication3ad69156 and summary2cf1ed90; Plan110 next after fresh descendant checks; ADMIT-03 blocked at0/540
 Resume file: None
 
 ### Blockers
