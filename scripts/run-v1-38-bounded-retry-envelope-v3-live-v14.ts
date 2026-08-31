@@ -396,7 +396,17 @@ const repositoryClosure = (root: string, roots: readonly string[]) => {
       const text = bytes.toString("utf8"); const ast = ts.createSourceFile(p, text, ts.ScriptTarget.Latest, true)
       const visit = (node: ts.Node) => {
         let spec: string | undefined
-        if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) spec = node.moduleSpecifier.text
+        if (ts.isImportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+          const clause = node.importClause
+          const onlyTypes = clause?.isTypeOnly || clause && !clause.name && clause.namedBindings &&
+            ts.isNamedImports(clause.namedBindings) && clause.namedBindings.elements.length > 0 && clause.namedBindings.elements.every(e => e.isTypeOnly)
+          if (!onlyTypes) spec = node.moduleSpecifier.text
+        }
+        if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+          const onlyTypes = node.isTypeOnly || node.exportClause && ts.isNamedExports(node.exportClause) &&
+            node.exportClause.elements.length > 0 && node.exportClause.elements.every(e => e.isTypeOnly)
+          if (!onlyTypes) spec = node.moduleSpecifier.text
+        }
         if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
           ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) spec = node.arguments[0].text
         if (spec && !spec.startsWith("node:") && !["fs", "path", "crypto", "os", "url", "util", "events", "stream", "buffer", "child_process"].includes(spec)) {
