@@ -1,4 +1,11 @@
+import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { describe, expect, it } from "vitest"
+import { computeV138PathStableLocalExecutionClosureRoot } from
+  "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
 import {
   V138_PLAN132_PUBLICATION_SCOPE,
   V138_PLAN132_SUMMARY_SCOPE,
@@ -11,6 +18,16 @@ import {
 
 const ROOT = new URL("..", import.meta.url).pathname
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+const canonical = (value: unknown): string => {
+  const normalize = (item: unknown): unknown => Array.isArray(item) ? item.map(normalize)
+    : item !== null && typeof item === "object"
+      ? Object.fromEntries(Object.entries(item as Record<string, unknown>)
+          .sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, normalize(child)]))
+      : item
+  return `${JSON.stringify(normalize(value))}\n`
+}
+const rooted = (domain: string, value: unknown): string =>
+  `sha256:${createHash("sha256").update(`${domain}\0${canonical(value)}`).digest("hex")}`
 
 describe("Plan 262-132 strict descendant custody v5", () => {
   it("accepts tracking, review, planning, and current strict descendants", () => {
@@ -44,6 +61,20 @@ describe("Plan 262-132 strict descendant custody v5", () => {
       .toThrow("V138_PLAN132_HEAD_NOT_STRICT_SUMMARY_DESCENDANT")
   })
 
+  it("rejects an unrelated commit even when a local replacement ref forges ancestry", () => {
+    const owner = mkdtempSync(path.join(tmpdir(), "v138-plan132-replace-"))
+    const repo = path.join(owner, "repo")
+    try {
+      execFileSync("/usr/bin/git", ["clone", "--shared", "--quiet", ROOT, repo])
+      execFileSync("/usr/bin/git", ["replace", "--graft",
+        "6515ea1a2e372a71d9f9d161e395276cf163db76",
+        "6a82901a8e73a4c2b8be92ba1b8d606919678784"], { cwd: repo })
+      expect(() => authenticateV138Plan132V4InvalidHistoryForReview(repo,
+        "6515ea1a2e372a71d9f9d161e395276cf163db76"))
+        .toThrow("V138_PLAN132_REPLACE_REF_FORBIDDEN")
+    } finally { rmSync(owner, { recursive: true, force: true }) }
+  })
+
   it("requires exact publication and summary scopes", () => {
     expect(assertV138Plan132ExactScopeForReview(V138_PLAN132_PUBLICATION_SCOPE,
       V138_PLAN132_PUBLICATION_SCOPE, "PUBLICATION")).toEqual(V138_PLAN132_PUBLICATION_SCOPE)
@@ -60,8 +91,8 @@ describe("Plan 262-132 strict descendant custody v5", () => {
 
   it("derives the six-mode aggregate from exact genuine observations", () => {
     const history = authenticateV138Plan132V4InvalidHistoryForReview(ROOT)
-    expect(validateV138Plan132ObservationsForReview(history.payload.observations,
-      history.payload)).toEqual({
+    expect(validateV138Plan132ObservationsForReview(ROOT,
+      history.payload.observations)).toEqual({
       actualModesPassed: 6,
       observationsRoot: "sha256:6d4867c2635613d0e3277b70f2b2efd3bc91c6940731daae2742eef7578e0ce7",
     })
@@ -108,8 +139,39 @@ describe("Plan 262-132 strict descendant custody v5", () => {
     for (const mutate of mutations) {
       const observations = clone(canonicalObservations)
       mutate(observations)
-      expect(() => validateV138Plan132ObservationsForReview(observations, history.payload))
+      expect(() => validateV138Plan132ObservationsForReview(ROOT, observations))
         .toThrow("V138_PLAN132_OBSERVATIONS_INVALID")
     }
+  })
+
+  it("rejects self-consistent forged observations and a forged payload trust anchor", () => {
+    const history = authenticateV138Plan132V4InvalidHistoryForReview(ROOT)
+    const payload = clone(history.payload)
+    const fakeReviewed = `sha256:${"a".repeat(64)}`
+    const fakeInstalled = `sha256:${"b".repeat(64)}`
+    const fakeGit = `sha256:${"c".repeat(64)}`
+    payload.canonicalReviewedClosureRoot = fakeReviewed
+    payload.canonicalLocalInstalledClosureRoot = fakeInstalled
+    payload.canonicalLocalGitObjectRoot = fakeGit
+    payload.canonicalLocalNativeSourcesRoot = `sha256:${"d".repeat(64)}`
+    for (const observation of payload.observations) {
+      observation.disposableReviewedClosureRoot = fakeReviewed
+      observation.disposableLocalInstalledClosureRoot = fakeInstalled
+      observation.disposableLocalGitObjectRoot = fakeGit
+      observation.disposableLocalNativeSourcesRoot = `sha256:${createHash("sha256")
+        .update(observation.mode).digest("hex")}`
+      observation.disposableLocalExecutionClosureRoot = computeV138PathStableLocalExecutionClosureRoot({
+        reviewedClosureRoot: observation.disposableReviewedClosureRoot,
+        localInstalledClosureRoot: observation.disposableLocalInstalledClosureRoot,
+        localGitObjectRoot: observation.disposableLocalGitObjectRoot,
+        localNativeSourcesRoot: observation.disposableLocalNativeSourcesRoot,
+      })
+      const { observationRoot: _ignored, ...body } = observation
+      observation.observationRoot = rooted("v138-plan-262-131-mode-observation-v4", body)
+    }
+    payload.observationsRoot = rooted("v138-plan-262-131-observations-v4", payload.observations)
+    expect(() => (validateV138Plan132ObservationsForReview as (...args: any[]) => unknown)(
+      payload.observations, payload,
+    )).toThrow("V138_PLAN132_OBSERVATIONS_INVALID")
   })
 })
