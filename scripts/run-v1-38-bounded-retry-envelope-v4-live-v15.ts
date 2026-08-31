@@ -88,7 +88,8 @@ export const validateV138LiveV15Review = (value: unknown): Review => {
   return freeze(v as Review)
 }
 const parseReview = (text: string): Review => { const match = text.match(/^```json\n([^]*?)\n```(?:\n|$)/)
-  if (!match) fail("REVIEW_HEADER_REQUIRED"); try { return validateV138LiveV15Review(JSON.parse(match[1]!)) } catch { return fail("REVIEW_INVALID") } }
+  if (!match) { fail("REVIEW_HEADER_REQUIRED") }
+  try { return validateV138LiveV15Review(JSON.parse(match![1]!)) } catch { return fail("REVIEW_INVALID") } }
 const currentSources = (root: string, commit: string): SourceFile[] => V138_LIVE_V15_SOURCE_FILES.map(repoPath => {
   const line = git(root, ["ls-tree", commit, "--", repoPath]); const m = line.match(/^(100644|100755) blob ([0-9a-f]{40})\t(.+)$/)
   if (!m || m[3] !== repoPath) fail("SOURCE_NOT_COMMITTED"); const bytes = readRegular(root, repoPath)
