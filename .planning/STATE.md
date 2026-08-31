@@ -5,19 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-134 review found cross-root cache and absolute-path evidence defects; Plan 262-136 source-only correction is next
-last_updated: "2026-08-31T03:25:00.000Z"
+stopped_at: Plan 262-136 review found a genuine-to-stable native mapping defect; Plan 262-138 source-only correction is next
+last_updated: "2026-08-31T05:00:00.000Z"
 last_activity: 2026-08-31
-last_activity_desc: replanned Plan134 review findings into source-only Plan136 and independent v7 Plan137; no execution or effects
+last_activity_desc: replanned Plan136 review finding into source-only Plan138 and independent v8 Plan139; no execution or effects
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 118
-  completed_plans: 104
+  total_plans: 120
+  completed_plans: 105
   percent: 88
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-closeout-replan-status-v6: {"schema_version":"v1.38-phase-262-closeout-replan-v6","active_plans":120,"trustworthy_summaries":105,"incomplete_plans":["262-138","262-139","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135","262-137"],"active_chain":["262-138","262-139","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-138":103,"262-139":104,"262-110":105,"262-94":106,"262-123":107,"262-124":108,"262-95":109,"262-125":110,"262-126":111,"262-106":112,"262-127":113,"262-128":114,"262-129":115},"plan136_code_review_commit":"9e82ea12af8e63fce5172e5e77ff15c68648ad11","plan136_code_review_blob":"9cea509302dade7b32dd7f13783971844c7f5680","plan136_code_review_sha256":"c618bb1dde223a32911f49342343d7fc8caf2de4a363f14c03d977801aaf13b5","plan136_v7_disposition":"process_invalid_genuine_to_stable_native_mapping","plan136_v7_eligible":false,"plan137_executed":false,"plan137_eligible":false,"plan138_source_only":true,"plan139_v8_review_only":true,"plan_262_110_eligible":false,"v7_publication_created":false,"v8_publication_created":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-138-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The v5 replan carrier below is immutable pre-Plan136-review history and is superseded for current topology and next action by the v6 carrier above. -->
 
 <!-- phase-262-closeout-replan-status-v5: {"schema_version":"v1.38-phase-262-closeout-replan-v5","active_plans":118,"trustworthy_summaries":104,"incomplete_plans":["262-136","262-137","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135"],"active_chain":["262-136","262-137","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-136":101,"262-137":102,"262-110":103,"262-94":104,"262-123":105,"262-124":106,"262-95":107,"262-125":108,"262-126":109,"262-106":110,"262-127":111,"262-128":112,"262-129":113},"plan134_code_review_commit":"f66ca6417412026e5b75d5af5bae13391e5fbbca","plan134_code_review_tree":"f3dd497dfc0fc68682470ee1337d8f80cc4bec0d","plan134_code_review_blob":"1334017d5e9b1cbbcac31fa854f34c98304f32a1","plan134_code_review_sha256":"68a8cdf39b90771136730d1147b56f191878d6cfa802e8da1a16346425744285","plan134_v6_disposition":"process_invalid_cross_root_cache_and_absolute_path_evidence","plan134_v6_eligible":false,"plan135_executed":false,"plan135_eligible":false,"plan136_source_only":true,"plan137_v7_review_only":true,"plan_262_110_eligible":false,"v6_publication_created":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-136-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -174,9 +178,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 105 terminally truthful summaries across 118 active plans — exactly 12 active closeout plans remain; Plan 262-137 is next and solely eligible
-Status: Phase 262 remains in progress; Plan136 source-only v7 closes both Plan134 findings, Plan134/v6 and Plan135 remain ineligible, and Plan110 remains denied pending independent Plan137 literal-zero review
-Last activity: 2026-08-31 — completed deterministic per-root Plan136 source custody with byte-identical fresh-process evidence and zero effects
+Plan: 105 terminally truthful summaries across 120 active plans — exactly 13 active closeout plans remain; Plan 262-138 is next and solely eligible
+Status: Phase 262 remains in progress; review 9e82ea12 makes Plan136/v7 process-invalid and Plan137 unexecuted/ineligible, while Plan110 remains denied pending Plan138 actual-native mapping correction and independent Plan139 literal-zero v8 review
+Last activity: 2026-08-31 — replanned the Plan136 genuine-to-stable mapping defect into additive Plans138/139 with exact two-C-file identities and zero effects
 
 Progress: [█████████░] 88%
 
@@ -540,14 +544,17 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Plan132 makes only Plan133 review eligible and keeps Plan110 false. — Independent review remains required before any v5 publication or Plan110 eligibility.
 - [Phase 262]: Plan132 correction trusts only isolated replacement-disabled Git and internally authenticated committed observation payloads; Plan133 and Plan110 remain false pending fresh review. — Committed review 2bdaf3d8 invalidated ambient Git and caller-payload trust boundaries.
 - [Phase 262]: Plan132 history-sensitive Git reads use a private bare metadata snapshot with bound HEAD and explicit objects; Plan133 and Plan110 remain false pending fresh review. — V2 review 3bfb7dc2 proved pre-checks alone do not neutralize concurrent graft shallow or config mutation.
+- [Phase 262]: Committed review 9e82ea12 supersedes Plan136's prospective eligibility: its v7 stable native root binds unrelated Plan132 TypeScript blobs instead of the two C files measured by Plan133, so Plan136 is immutable `process_invalid_genuine_to_stable_native_mapping` history and Plan137 remains unexecuted/ineligible.
+- [Phase 262]: Correct additively through Plan138 source/tests and Plan139 independent v8 review; each of six genuine Plan133 custody records must map bijectively, by mode and ordinal, to the exact ordered helper-v6.c and owner-lock-v1.c repository path, mode, Git blob, and SHA-256 content identities before stable native, execution, observation, and aggregate roots are derived.
+- [Phase 262]: Only reusable strict-descendant literal-zero Plan139 v8 may make Plan110 eligible; Plans138/139 create no retry, authority literal, capacity, counter reset, readiness, live, producer, effect, Route-11, Phase263, or downstream authority.
 
 ### Pending Todos
 
-- Do not retry Plan262-93, trust Plan122 v3 or Plan131 v4 eligibility, or skip any Wave 97-109 gate. Dispatch only Plan132 now; then follow 133 -> 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129 exactly, with Plan110 eligible only after reusable strict-descendant literal-zero v5 over six independently validated genuine observations.
+- Do not retry Plan262-93, trust any superseded v3/v4/v5/v6/v7 eligibility, or execute unreviewed Plan137. Dispatch only Plan138 now, then follow 139 -> 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129 exactly. Plan110 may become eligible only after reusable strict-descendant literal-zero v8 proves a six-record bijection from genuine Plan133 custody to the exact ordered helper-v6.c and owner-lock-v1.c path/mode/blob/SHA identities.
 
 ### Current Blocker/Concerns
 
-- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-122 remain immutable completed evidence; Plan120 and Plan122 v3 are process-invalid history, and committed review f45ee38d makes Plan131 v4 process-invalid/ineligible history. Plan110 is not eligible before Plan133 v5 literal zero.
+- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-136 remain immutable history. Committed review 9e82ea12 makes Plan136/v7 `process_invalid_genuine_to_stable_native_mapping`; Plan137 is unexecuted/ineligible, and Plan110 is not eligible before independent Plan139 literal-zero v8.
 - ADMIT-03 remains blocked: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
 - Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; Plans131, 110, and every later closeout plan remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
@@ -604,7 +611,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-08-31T02:02:55.770Z
-Stopped at: Plan 262-133 literal-zero v5 authenticated from strict tracking descendant; revised Plan 262-110 is next
+Stopped at: Plan 262-136 review 9e82ea12 found a genuine-to-stable native mapping defect; Plan 262-138 source-only correction is next
 Resume file: None
 
 ### Blockers
