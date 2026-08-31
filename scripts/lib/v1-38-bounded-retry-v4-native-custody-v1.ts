@@ -514,16 +514,16 @@ const invokeTransactionNative = (
   const normalizedLocks = [...new Set(locks)].sort()
   const token = randomBytes(32).toString("hex")
   const nonce = randomBytes(32).toString("hex")
-  const built = compileV138PrivateNativeV3({
-    source: transactionSource,
-    expectedSourceSha256: EXPECTED_TRANSACTION_SOURCE_SHA256,
-    prefix: "cowards-v138-retry-v4-transaction-",
-    defines: [`-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`],
-    testSubstitution: crashBoundary === "force-compiler-substitution",
-  })
+  let built: ReturnType<typeof compileV138PrivateNativeV3> | undefined
   let capabilityDescriptor: number | undefined
-  let rootDescriptor: number | undefined
   try {
+    built = compileV138PrivateNativeV3({
+      source: transactionSource,
+      expectedSourceSha256: EXPECTED_TRANSACTION_SOURCE_SHA256,
+      prefix: "cowards-v138-retry-v4-transaction-",
+      defines: [`-DV138_CONTROLLER_TOKEN_HEX=\"${token}\"`],
+      testSubstitution: crashBoundary === "force-compiler-substitution",
+    })
     const capabilityPath = path.join(built.directory, "controller.capability")
     const capability =
       [
@@ -575,16 +575,16 @@ const invokeTransactionNative = (
         },
       },
     )
-    if (result.status !== 0) {
-      invalidateLease(state)
+    if (result.status !== 0)
       fail(
         `V138_RETRY_V4_NATIVE_FAILED:${result.status}:${result.error?.message ?? ""}:${result.stderr ?? ""}`,
       )
-    }
+  } catch (error) {
+    invalidateLease(state)
+    throw error
   } finally {
     if (capabilityDescriptor !== undefined) closeSync(capabilityDescriptor)
-    if (rootDescriptor !== undefined) closeSync(rootDescriptor)
-    built.cleanup()
+    built?.cleanup()
   }
 }
 
