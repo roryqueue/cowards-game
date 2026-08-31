@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1.38-successor-source-seal-v14",
-  "sourceCommit": "6fd67e32640ec0b4c6e1f60e53b622ec97097609",
+  "sourceCommit": "06beb2565c94c12b99078f3fa4eff8eeeccf1a56",
   "sourceFiles": [
     {
       "path": "scripts/lib/v1-38-bounded-retry-envelope-v4.test.ts",
@@ -35,29 +35,29 @@
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4-live-v15.test.ts",
       "mode": "100644",
-      "blob": "fa20b1ea60ca2d46e2e968d4539ce771b7b21b84",
-      "sha256": "sha256:888cb7bab22d81261634ecc7087c66c15d564c7db52d0391432461f15d16b576"
+      "blob": "a12272955291c4b5373f1e191f00ccec47860edf",
+      "sha256": "sha256:61ac4c738639c666c777aa90ad47672e4af2bfb568b59b2976ce1d597e1833d8"
     },
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4-live-v15.ts",
       "mode": "100644",
-      "blob": "f8387fda74fba472272d49091e87f48cc62b1e08",
-      "sha256": "sha256:fd582bc3215c6060e904df5287dead3ffb7a9964f3f199e466727ab3c9d3626d"
+      "blob": "7aa071675e50e6663e2624bc4ad80df047c7b143",
+      "sha256": "sha256:2b9f98ab5533823bb1284f46f1db04f08ad7a2e54171da3092e712b606aec8cf"
     },
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4.test.ts",
       "mode": "100644",
-      "blob": "077627edce643b0fd89968f0aebdc11a8e3d34fc",
-      "sha256": "sha256:7c9d76fb325c4b5bc3a82fd50b0787b2b0d3b588ee7f8f1f18d3d7b200757aac"
+      "blob": "7225d5de5a70de06b60d2fc054e81e6b53aa207f",
+      "sha256": "sha256:befa41f6478c030c55e1947758c5a7fdd862aa9d1c16ecbd6a671a4443cea5f3"
     },
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4.ts",
       "mode": "100644",
-      "blob": "c4e94753189340964240d954dc4947c774745b00",
-      "sha256": "sha256:e473186aba3ee43e980b56c231d9cfd15d282680083c1dc17458df1af15a1f15"
+      "blob": "a5365b29ee3b811a307e0919c58b2518b8ef8c62",
+      "sha256": "sha256:152345c3ba20cc02a8da18b9065135fe30ffcd9ea104bb79841f91c7f39c0c21"
     }
   ],
-  "sourceRoot": "sha256:ec29267a04839c2ddf107284c6087b7a5b8678df13bddbfa55df1d9ca79f60f4",
+  "sourceRoot": "sha256:c2fd2361e35c93185bababd1ff5daf3fd5ba3ea0b3c2541ae8b490f1676a4b14",
   "runtimeClosureRoot": "sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e",
   "reviewContractRoot": "sha256:d084a9b9505f8adc0df2e8cf2b489139cc094dcf4c2335b31f22abc1db715390",
   "protectedHistoryRoot": "sha256:77e0e71f62ec4abd997f1df2c1fc9bf1db7b95247404f78b558a634cdc1ec57d",
@@ -88,5 +88,5 @@
   "archiveAuthorized": false,
   "tagAuthorized": false,
   "downstreamAuthority": "denied",
-  "sealRoot": "sha256:4f2d6c1c22d0a81cf1b36bdc64c7f8546a9d5abffcd1d99e50887ffff8ec9384"
+  "sealRoot": "sha256:1e8246a86e4747f09706c0e7f2f5a766d1649d566223c46b2997f9462df35f81"
 }
