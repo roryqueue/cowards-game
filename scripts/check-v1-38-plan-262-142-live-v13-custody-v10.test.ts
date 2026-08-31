@@ -1,6 +1,6 @@
 import { execFile, execFileSync } from "node:child_process"
 import {
-  chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync,
+  chmodSync, constants, cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync,
   symlinkSync, writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -22,28 +22,27 @@ const OWNERS: string[] = []
 const owner = (): string => { const value = mkdtempSync(path.join(tmpdir(), "v138-plan142-test-")); OWNERS.push(value); return value }
 afterAll(() => { for (const value of OWNERS) rmSync(value, { recursive: true, force: true }) })
 
-const physicalPackage = (name: "typescript" | "tsx" | "esbuild"): string => {
-  if (name !== "esbuild") return path.dirname(requireResolve(`${name}/package.json`))
-  const candidates = execFileSync("find", [path.join(ROOT, "node_modules/.pnpm"), "-path", "*/node_modules/esbuild/package.json", "-print"], { encoding: "utf8" }).trim().split("\n").filter(Boolean)
-  if (candidates.length !== 1) throw new Error("TEST_ESBUILD_PACKAGE_AMBIGUOUS")
-  return path.dirname(candidates[0]!)
-}
-const requireResolve = (specifier: string): string => execFileSync(process.execPath,
-  ["-e", `process.stdout.write(require.resolve(${JSON.stringify(specifier)}))`],
-  { cwd: ROOT, encoding: "utf8" })
-const nativePackage = (): string => {
-  const candidates = execFileSync("find", [path.join(ROOT, "node_modules/.pnpm"), "-path", "*/node_modules/@esbuild/*/package.json", "-print"], { encoding: "utf8" }).trim().split("\n").filter(Boolean)
-  if (candidates.length !== 1) throw new Error("TEST_NATIVE_PACKAGE_AMBIGUOUS")
-  return path.dirname(candidates[0]!)
-}
 const copyRuntime = (destination: string): void => {
   const modules = path.join(destination, "node_modules")
   mkdirSync(path.join(modules, ".bin"), { recursive: true })
   cpSync(path.join(ROOT, "node_modules/.bin/tsx"), path.join(modules, ".bin/tsx"))
-  for (const name of ["typescript", "tsx", "esbuild"] as const)
-    cpSync(physicalPackage(name), path.join(modules, name), { recursive: true })
-  const native = nativePackage(); const scoped = path.join(modules, "@esbuild", path.basename(native))
-  mkdirSync(path.dirname(scoped), { recursive: true }); cpSync(native, scoped, { recursive: true })
+  const packages = new Map<string, string>()
+  for (const { identity } of inspectV138Plan142SemanticRuntimeForReview(ROOT).entries) {
+    const match = /^runtime\/package\/(.+)@([^/]+)\/package\.json$/u.exec(identity)
+    if (match !== null) packages.set(match[1]!, match[2]!)
+  }
+  const pnpm = path.join(ROOT, "node_modules/.pnpm"); const folders = readdirSync(pnpm)
+  for (const [name, version] of packages) {
+    const prefix = `${name.replace("/", "+")}@${version}`
+    const folder = folders.find((item) => item === prefix || item.startsWith(`${prefix}_`))
+    if (folder === undefined && !name.startsWith("@cowards/")) throw new Error(`TEST_RUNTIME_PACKAGE_MISSING:${name}`)
+    const source = folder === undefined ? path.join(ROOT, name === "@cowards/runtime-service" ? "apps" : "packages", name.slice("@cowards/".length))
+      : path.join(pnpm, folder, "node_modules", name)
+    const destinationPackage = path.join(modules, name)
+    mkdirSync(path.dirname(destinationPackage), { recursive: true })
+    cpSync(source, destinationPackage, { recursive: true, mode: constants.COPYFILE_FICLONE,
+      filter: (candidate) => candidate !== path.join(source, "node_modules") })
+  }
 }
 const cloneRepository = (runtime = true): string => {
   const destination = path.join(owner(), "checkout")
@@ -96,11 +95,18 @@ describe("Plan 262-142 semantic runtime custody v10", () => {
       (root) => { const file = path.join(root, "node_modules/tsx/dist/cli.mjs"); rmSync(file); symlinkSync("cli.cjs", file) },
       (root) => { const file = path.join(root, "node_modules/typescript/lib/typescript.js"); rmSync(file); mkdirSync(file) },
       (root) => rmSync(path.join(root, "node_modules/esbuild/lib/main.js")),
+      (root) => writeFileSync(path.join(root, "node_modules/tsx/dist/extra.mjs"), "export {}"),
+      (root) => { const dir = path.join(root, "node_modules/tsx/dist")
+        const chunk = readdirSync(dir).find((name) => name.startsWith("register-") && name.endsWith(".mjs"))!
+        writeFileSync(path.join(dir, chunk), "export {}") },
+      (root) => writeFileSync(path.join(root, `node_modules/@esbuild/${process.platform}-${process.arch}/bin/esbuild`), "not-esbuild"),
+      (root) => chmodSync(path.join(root, "node_modules/typescript/lib/typescript.js"), 0o000),
+      (root) => writeFileSync(path.join(root, "node_modules/@cowards/spec/src/index.ts"), "export {}"),
+      (root) => writeFileSync(path.join(root, "node_modules/vitest/package.json"), '{"name":"vitest","version":"0.0.0"}'),
     ]
     for (const attack of attacks) {
       const root = cloneRepository(); attack(root)
-      const result = authenticateV138Plan142ProspectiveV10BatchForReview([BASE], root)
-      expect(result[0]).toMatchObject({ accepted: false })
+      expect(() => inspectV138Plan142SemanticRuntimeForReview(root)).toThrow()
     }
   }, 480_000)
 
@@ -114,6 +120,13 @@ describe("Plan 262-142 semantic runtime custody v10", () => {
     const local = buildV138Plan142ProspectiveV10ForReview(other)
     expect(authenticateV138Plan142ProspectiveV10BatchForReview([local, BASE], other))
       .toEqual([{ accepted: true }, expect.objectContaining({ accepted: false })])
+    const source = path.join(other, "scripts/check-v1-38-plan-262-133-live-v13-custody-review-v5.ts")
+    const original = readFileSync(source)
+    writeFileSync(source, Buffer.concat([original, Buffer.from("\n// source drift\n")]))
+    expect(authenticateV138Plan142ProspectiveV10BatchForReview([local], other)[0]).toMatchObject({ accepted: false })
+    writeFileSync(source, original)
+    execFileSync("git", ["-C", other, "config", "core.ignorecase", "false"])
+    expect(authenticateV138Plan142ProspectiveV10BatchForReview([local], other)[0]).toMatchObject({ accepted: false })
   }, 480_000)
 
   it("walks every component of all eleven effect paths without following links", () => {
@@ -156,6 +169,16 @@ describe("Plan 262-142 semantic runtime custody v10", () => {
     expect(new Set(BASE.payload.observations.map((item) => item.stableRecordRoot)).size).toBe(6)
     expect(BASE.payload.plan143Eligible).toBe(true); expect(BASE.payload.plan110Eligible).toBe(false)
     expect(BASE.payload.authorizesExecution).toBe(false); expect(BASE.payload.downstreamAuthority).toBe("denied")
+    const mutations = [
+      (value: any) => value.payload.observations.reverse(),
+      (value: any) => value.payload.nativeIdentities.reverse(),
+      (value: any) => value.payload.semanticRuntime.entries.reverse(),
+      (value: any) => value.payload.semanticRuntime.entries.pop(),
+      (value: any) => value.payload.semanticRuntime.entries.push(value.payload.semanticRuntime.entries[0]),
+      (value: any) => { value.payload.observations[0].producerGuardCount = 1 },
+      (value: any) => { value.payload.plan110Eligible = true },
+    ].map((mutate) => { const value = structuredClone(BASE); mutate(value); return value })
+    expect(authenticateV138Plan142ProspectiveV10BatchForReview(mutations, ROOT).every((item) => !item.accepted)).toBe(true)
     const [leftRoot, rightRoot] = [cloneRepository(), cloneRepository()]
     const [left, right] = await Promise.all([freshProcess(leftRoot), freshProcess(rightRoot)])
     expect(right).toBe(left); scanPrivacy(JSON.parse(left))
