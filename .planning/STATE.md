@@ -555,14 +555,17 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Committed review 9e82ea12 supersedes Plan136's prospective eligibility: its v7 stable native root binds unrelated Plan132 TypeScript blobs instead of the two C files measured by Plan133, so Plan136 is immutable `process_invalid_genuine_to_stable_native_mapping` history and Plan137 remains unexecuted/ineligible.
 - [Phase 262]: Correct additively through Plan138 source/tests and Plan139 independent v8 review; each of six genuine Plan133 custody records must map bijectively, by mode and ordinal, to the exact ordered helper-v6.c and owner-lock-v1.c repository path, mode, Git blob, and SHA-256 content identities before stable native, execution, observation, and aggregate roots are derived.
 - [Phase 262]: Only reusable strict-descendant literal-zero Plan139 v8 may make Plan110 eligible; Plans138/139 create no retry, authority literal, capacity, counter reset, readiness, live, producer, effect, Route-11, Phase263, or downstream authority.
+- [Phase 262]: Committed adversarial review ea9baf0e supersedes every current Plan138/v8 eligibility statement: Plan138 is immutable `process_invalid_unauthenticated_executor_metadata_and_effect_gate` history, Plan139 remains unexecuted/ineligible, and no v8 publication exists.
+- [Phase 262]: Plan140 authenticates exact Plan133 commit 222cecd6 through a private bound bare snapshot, a 141-entry executable closure root `sha256:e5f374491ec0a93855b0bc2b195356a908af6774865ae408601cbed4aa7afdd4`, exact ordered C tuples, and six genuine stable records while all eleven effect paths fail closed.
+- [Phase 262]: Plan140 makes only Plan141 independent review eligible; Plan110, producer/live execution, fresh charges/acceptance, and all downstream authority remain false or denied.
 
 ### Pending Todos
 
-- Do not retry Plan262-93, trust any superseded v3/v4/v5/v6/v7 eligibility, or execute unreviewed Plan137. Dispatch only Plan138 now, then follow 139 -> 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129 exactly. Plan110 may become eligible only after reusable strict-descendant literal-zero v8 proves a six-record bijection from genuine Plan133 custody to the exact ordered helper-v6.c and owner-lock-v1.c path/mode/blob/SHA identities.
+- Do not retry Plan262-93 or trust any superseded v3/v4/v5/v6/v7/v8 eligibility. Dispatch only Plan141 now, then follow 110 -> 94 -> 123 -> 124 -> 95 -> 125 -> 126 -> 106 -> 127 -> 128 -> 129 exactly. Plan110 may become eligible only after independent literal-zero Plan141 authenticates Plan140's exact 141-entry executor closure, six genuine stable records, immutable metadata, and exhaustive eleven-path no-effect gate.
 
 ### Current Blocker/Concerns
 
-- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-136 remain immutable history. Committed review 9e82ea12 makes Plan136/v7 `process_invalid_genuine_to_stable_native_mapping`; Plan137 is unexecuted/ineligible, and Plan110 is not eligible before independent Plan139 literal-zero v8.
+- Plan262-93 remains the immutable pre-effect stop. Plan109 published inert supplement-v3; Plans117-139 remain immutable history. Committed review ea9baf0e makes Plan138/v8 `process_invalid_unauthenticated_executor_metadata_and_effect_gate`; Plan139 is unexecuted/ineligible, and Plan110 is not eligible before independent Plan141 literal-zero v9 review.
 - ADMIT-03 remains blocked: fresh accepted evidence is 0/540, reproduction-v17 and Route-11 activation are absent, Phase 262 verification is `gaps_found`, and Phase 263 through Phase 270 planning/execution remain denied.
 - Plan 262-101's `CANDIDATE_JSON_HASH_SELF_REFERENCE_UNSATISFIABLE` result remains immutable historical topology. Plan 262-92's canonical pair remains sealed and unconsumed at 0/0; Plans131, 110, and every later closeout plan remain dependency-denied.
 - Phase 262 is Nyquist-compliant but empirically partial. Complete automated coverage, a clean deep review, and correction-v10 do not substitute for the missing exact reproduction.
@@ -618,8 +621,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-08-31T02:02:55.770Z
-Stopped at: Plan 262-138 source-only v8 correction complete; Plan 262-139 independent review is next
+Last session: 2026-08-31T02:05:00.000Z
+Stopped at: Plan 262-140 source-only v9 correction complete; Plan 262-141 independent review is next
 Resume file: None
 
 ### Blockers
