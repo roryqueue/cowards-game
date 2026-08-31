@@ -17,6 +17,16 @@ const fixtureEnvelope = () => createV138InactiveRetryV4Envelope({ sourceRoot: SH
   protectedHistoryRoot: SHA, protectedHistoricalIdentities: [] })
 
 describe("bounded retry v4 lease wiring and synthetic controller", () => {
+  it("keeps the production entry fail-closed behind committed review and invocation custody", () => {
+    const source = readFileSync(path.join(ROOT, V138_BOUNDED_RETRY_V4_PATHS.sourceController), "utf8")
+    const production = source.slice(source.indexOf("export const runV138V4ProductionLive"), source.indexOf("export interface V138BoundedRetryV4CliDependencies"))
+    expect(production).toContain("authenticateV138LiveV15ImmutableCustody")
+    expect(production).toContain("authenticateV138LiveV15InvocationMarker")
+    expect(production).not.toContain("validateInputs")
+    expect(production).not.toContain("checkPair?.")
+    expect(source).toContain("checkV138PublishedRetryV4OutcomeWithEnvelope")
+    expect(source).toContain("shutdownUncertainty")
+  })
   it("binds every native PAIR/LIFE call to the opaque lease argument", () => {
     const source = readFileSync(path.join(ROOT, V138_BOUNDED_RETRY_V4_PATHS.sourceController), "utf8")
     const ast = ts.createSourceFile("producer.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
