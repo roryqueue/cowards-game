@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1.38-successor-source-seal-v14",
-  "sourceCommit": "dafeb114c93ac16559af0aee3d195f1abad2229a",
+  "sourceCommit": "6fd67e32640ec0b4c6e1f60e53b622ec97097609",
   "sourceFiles": [
     {
       "path": "scripts/lib/v1-38-bounded-retry-envelope-v4.test.ts",
@@ -17,14 +17,14 @@
     {
       "path": "scripts/lib/v1-38-bounded-retry-v4-native-custody-v1.test.ts",
       "mode": "100644",
-      "blob": "374ab3edb048dcc557170f94e269fea130cfacbe",
-      "sha256": "sha256:88135155a2b275696934fb8896083e241aafbfcf942e958bb4a293ca620fc52b"
+      "blob": "63a570889b9d18ab9edc00dd9e6dcfe9f750df99",
+      "sha256": "sha256:f9e1e34b0a68d2b1b17edd240ad5f8f7c13ce83eb8f57f1bf6243e1d4dc0b78b"
     },
     {
       "path": "scripts/lib/v1-38-bounded-retry-v4-native-custody-v1.ts",
       "mode": "100644",
-      "blob": "ef34ad6e1ba6042a46975f0457b369e6207bda2e",
-      "sha256": "sha256:bfceb15ebe0cec15fe0fe0434081eba3709f24c2edc9373f7fcdab901e8b6c6d"
+      "blob": "8bc37fe75f0c49acd3e1fb9d24665bec464572c5",
+      "sha256": "sha256:3dd358b231655d8f66b6dc12e15e6fd2d1fcc9ebd492e7e20e32641fa8740d84"
     },
     {
       "path": "scripts/lib/v1-38-private-native-bootstrap-v3.ts",
@@ -35,29 +35,29 @@
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4-live-v15.test.ts",
       "mode": "100644",
-      "blob": "3131de4dffaaccb6c5aa18f916d7353618b3b584",
-      "sha256": "sha256:d2b846ff956fd0ed1cc2ad1dcbd242462126c030191fc119e59259dbd0387065"
+      "blob": "fa20b1ea60ca2d46e2e968d4539ce771b7b21b84",
+      "sha256": "sha256:888cb7bab22d81261634ecc7087c66c15d564c7db52d0391432461f15d16b576"
     },
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4-live-v15.ts",
       "mode": "100644",
-      "blob": "f1406d1decf2ada981bc4127981ae73861a82672",
-      "sha256": "sha256:8570b197935392b12c9326bb0a4763baac6ce203f128b7029baf514e7fa28aa9"
+      "blob": "f8387fda74fba472272d49091e87f48cc62b1e08",
+      "sha256": "sha256:fd582bc3215c6060e904df5287dead3ffb7a9964f3f199e466727ab3c9d3626d"
     },
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4.test.ts",
       "mode": "100644",
-      "blob": "c2694a5d50b264860d6be97c5f968d7ac57ad541",
-      "sha256": "sha256:dd2e4b2ae6d6c0aa07b49f0f2150594ef98d23d89a70dcbdae6ec2f7fd8207a8"
+      "blob": "077627edce643b0fd89968f0aebdc11a8e3d34fc",
+      "sha256": "sha256:7c9d76fb325c4b5bc3a82fd50b0787b2b0d3b588ee7f8f1f18d3d7b200757aac"
     },
     {
       "path": "scripts/run-v1-38-bounded-retry-envelope-v4.ts",
       "mode": "100644",
-      "blob": "084766deee25b083cbb2b8ae0b107a3f8faacacd",
-      "sha256": "sha256:3ca8b89b0d2f3e87d86d08314667fa20f4bb6ae072f0a7ad678f20156bed29bc"
+      "blob": "c4e94753189340964240d954dc4947c774745b00",
+      "sha256": "sha256:e473186aba3ee43e980b56c231d9cfd15d282680083c1dc17458df1af15a1f15"
     }
   ],
-  "sourceRoot": "sha256:8ef2e9e52ed0105ad2b4f538d6bd6500ddb6e6ca8bae34e2e0f1d501fa1787c4",
+  "sourceRoot": "sha256:ec29267a04839c2ddf107284c6087b7a5b8678df13bddbfa55df1d9ca79f60f4",
   "runtimeClosureRoot": "sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e",
   "reviewContractRoot": "sha256:d084a9b9505f8adc0df2e8cf2b489139cc094dcf4c2335b31f22abc1db715390",
   "protectedHistoryRoot": "sha256:77e0e71f62ec4abd997f1df2c1fc9bf1db7b95247404f78b558a634cdc1ec57d",
@@ -88,5 +88,5 @@
   "archiveAuthorized": false,
   "tagAuthorized": false,
   "downstreamAuthority": "denied",
-  "sealRoot": "sha256:75e05be509227a11d6e31d2ea6c4991194cd08692492ab2e32a1c0b98f71dcdb"
+  "sealRoot": "sha256:4f2d6c1c22d0a81cf1b36bdc64c7f8546a9d5abffcd1d99e50887ffff8ec9384"
 }
