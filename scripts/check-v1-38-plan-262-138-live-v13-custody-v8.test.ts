@@ -100,10 +100,8 @@ describe("Plan 262-138 genuine-to-stable custody mapping v8", () => {
         "825772873b7feb81b0ccf19acbb27435b12b6a03" },
       (value) => { value.payload.observations[0].nativeCustodyMapping.nativeIdentities[0].contentSha256 =
         `sha256:${"0".repeat(64)}` },
-      (value) => { value.payload.observations[0].nativeCustodyMapping.genuineNativeSourcesRoot =
-        `sha256:${"1".repeat(64)}` },
-      (value) => { value.payload.observations[0].nativeCustodyMapping.genuineObservationRoot =
-        `sha256:${"2".repeat(64)}` },
+      (value) => { value.payload.observations[0].nativeCustodyMapping.genuineCustodyDomain =
+        "forged-genuine-custody" },
       (value) => { value.payload.observations[0].nativeCustodyMapping.stableNativeIdentitySetRoot =
         `sha256:${"3".repeat(64)}` },
       (value) => { value.payload.observations[0].nativeCustodyMapping.mappingRoot =
