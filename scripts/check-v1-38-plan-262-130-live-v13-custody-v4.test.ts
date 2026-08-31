@@ -88,6 +88,13 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       readinessInvoked: false,
       liveInvoked: false,
     })
+    for (const mutated of [
+      `${source}\n`,
+      `${source}// one-byte-custody-mutation\n`,
+      source.replace("type Sha =", "type  Sha ="),
+      source.replace("type Sha =", "/* custody mutation */\ntype Sha ="),
+    ]) expect(() => inspectV138Plan130BoundarySourceForReview(mutated))
+      .toThrow("V138_PLAN130_LIVE_SOURCE_BYTES_INVALID")
     for (const injected of [
       'globalThis.constructor.constructor("return import(\\"./run-v1-38-bounded-retry-envelope-v3.js\\").then(m => m.runV138V3ProductionLive)")()\n',
       'globalThis["con" + "structor"][`con${"struc"}tor`]("return 1")()\n',
@@ -118,6 +125,11 @@ describe("Plan 262-130 authentic disposable custody v4", () => {
       'const unknownKey = "x"; const [p] = [process]; p[unknownKey]("node:module")\n',
       'const unknownKey = "x"; const box = { p: process }; box.p[unknownKey]("node:module")\n',
       'const unknownKey = "x"; ((p: any) => p[unknownKey]("node:module"))(process)\n',
+      'const key = ["con", "structor"].reverse().reverse().join(""); []["filter"][key]("return 1")()\n',
+      'const key = String.fromCharCode(99,111,110,115,116,114,117,99,116,111,114); []["filter"][key]("return 1")()\n',
+      'const tag = (_s: TemplateStringsArray, ...v: string[]) => v.join(""); const key = tag`${tag`${"con"}`}${tag`${"structor"}`}`; []["filter"][key]("return 1")()\n',
+      'const key = (0, ["con", "structor"].map((value) => value).join("")); []["filter"][key]("return 1")()\n',
+      'const key = ["con", "structor"].reverse().reverse().join(""); []["filter"]?.[key]("return 1")()\n',
     ]) expect(() => inspectV138Plan130BoundarySourceForReview(
       source.replace("type Sha =", `${injected}type Sha =`),
     )).toThrow("V138_PLAN130_PRODUCTION_BOUNDARY_INVALID")
