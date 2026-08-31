@@ -2,13 +2,17 @@ import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 
-const moduleUrl = new URL("./v1-38-bounded-retry-v4-native-custody-v1.ts", import.meta.url).href
+const moduleUrl = new URL(
+  "./v1-38-bounded-retry-v4-native-custody-v1.ts",
+  import.meta.url,
+).href
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url))
 
 // Every native fixture has an independent, process-group supervisor: a blocked
 // synchronous child cannot prevent the parent from enforcing the 55s deadline.
-const fixture = (body: string): Promise<string> => new Promise((resolve, reject) => {
-  const code = `
+const fixture = (body: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const code = `
     import assert from 'node:assert/strict';
     import * as fs from 'node:fs';
     import path from 'node:path';
@@ -33,26 +37,52 @@ const fixture = (body: string): Promise<string> => new Promise((resolve, reject)
       fs.rmSync(root,{recursive:true,force:true});
     }
   `
-  const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "-e", code], {
-    cwd: repoRoot, detached: true, stdio: ["ignore", "pipe", "pipe"],
+    const child = spawn(
+      process.execPath,
+      ["--import", "tsx", "--input-type=module", "-e", code],
+      {
+        cwd: repoRoot,
+        detached: true,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    )
+    let output = ""
+    child.stdout.on("data", (chunk) => {
+      output += chunk
+    })
+    child.stderr.on("data", (chunk) => {
+      output += chunk
+    })
+    const killGroup = () => {
+      if (child.pid) {
+        try {
+          process.kill(-child.pid, "SIGKILL")
+        } catch {}
+      }
+    }
+    const timer = setTimeout(() => {
+      killGroup()
+      reject(new Error(`native fixture exceeded 55s: ${output}`))
+    }, 55_000)
+    child.once("error", (error) => {
+      clearTimeout(timer)
+      killGroup()
+      reject(error)
+    })
+    child.once("close", (code) => {
+      clearTimeout(timer)
+      killGroup()
+      if (code === 0) resolve(output)
+      else reject(new Error(`native fixture failed (${code}): ${output}`))
+    })
   })
-  let output = ""
-  child.stdout.on("data", chunk => { output += chunk })
-  child.stderr.on("data", chunk => { output += chunk })
-  const killGroup = () => { if (child.pid) { try { process.kill(-child.pid, "SIGKILL") } catch {} } }
-  const timer = setTimeout(() => { killGroup(); reject(new Error(`native fixture exceeded 55s: ${output}`)) }, 55_000)
-  child.once("error", error => { clearTimeout(timer); killGroup(); reject(error) })
-  child.once("close", code => {
-    clearTimeout(timer)
-    killGroup()
-    if (code === 0) resolve(output)
-    else reject(new Error(`native fixture failed (${code}): ${output}`))
-  })
-})
 
-describe.skipIf(process.platform !== "darwin")("v4 retained native owner custody", () => {
-  it("composes owner → PAIR → LIFE → PAIR with continuous exclusion", async () => {
-    expect(await fixture(`
+describe.skipIf(process.platform !== "darwin")(
+  "v4 retained native owner custody",
+  () => {
+    it("composes owner → PAIR → LIFE → PAIR with continuous exclusion", async () => {
+      expect(
+        await fixture(`
       const lease=await acquire();
       assert(Object.isFrozen(lease));
       assert.deepEqual(Object.keys(lease).sort(),['pid','release','waitForExit']);
@@ -73,11 +103,13 @@ describe.skipIf(process.platform !== "darwin")("v4 retained native owner custody
       await lease.release();
       assert.throws(()=>publish(lease,'released'),/LEASE_INVALID/);
       const next=await acquire(); await next.release();
-    `)).toContain("fixture-passed")
-  }, 60_000)
+    `),
+      ).toContain("fixture-passed")
+    }, 60_000)
 
-  it("rejects fabricated, wrong-root, closed and reused descriptors before writes", async () => {
-    expect(await fixture(`
+    it("rejects fabricated, wrong-root, closed and reused descriptors before writes", async () => {
+      expect(
+        await fixture(`
       assert.throws(()=>publish(Object.freeze({}),'fabricated'),/LEASE_INVALID/);
       const lease=await acquire();
       const other=fs.mkdtempSync(path.join(root,'other-'));
@@ -91,18 +123,23 @@ describe.skipIf(process.platform !== "darwin")("v4 retained native owner custody
         });
         assert.notEqual(fd,undefined);
         fs.closeSync(fd);
-        let replacement;
-        if (reuse) { replacement=fs.openSync(root,fs.constants.O_RDONLY); assert.equal(replacement,fd); }
+        let replacement; const fillers=[];
+        if (reuse) {
+          do { replacement=fs.openSync('/dev/null',fs.constants.O_RDONLY); fillers.push(replacement) } while(replacement<fd);
+          assert.equal(replacement,fd);
+        }
         assert.throws(()=>publish(active,reuse?'reused':'closed'),/LEASE_INVALID|ROOT_LOCK_BUSY/);
         assert(!fs.existsSync(path.join(root,(reuse?'reused':'closed')+'-left')));
-        if(replacement!==undefined) { try { fs.closeSync(replacement) } catch {} }
+        for(const filler of fillers) { try { fs.closeSync(filler) } catch {} }
         try { await active.release() } catch {}
       }
-    `)).toContain("fixture-passed")
-  }, 60_000)
+    `),
+      ).toContain("fixture-passed")
+    }, 60_000)
 
-  it("invalidates on transaction timeout, waits for owner close and permits new ownership", async () => {
-    expect(await fixture(`
+    it("invalidates on transaction timeout, waits for owner close and permits new ownership", async () => {
+      expect(
+        await fixture(`
       const lease=await acquire();
       let measured=false;
       cp.spawnSync=(file,args,options)=>{
@@ -120,11 +157,13 @@ describe.skipIf(process.platform !== "darwin")("v4 retained native owner custody
       try { await lease.release() } catch {}
       await lease.waitForExit();
       const next=await acquire(); await next.release();
-    `)).toContain("fixture-passed")
-  }, 60_000)
+    `),
+      ).toContain("fixture-passed")
+    }, 60_000)
 
-  it("cleans compiler failure descriptors/builds before owner launch", async () => {
-    expect(await fixture(`
+    it("cleans compiler failure descriptors/builds before owner launch", async () => {
+      expect(
+        await fixture(`
       const prefix='cowards-v138-retry-v4-owner-';
       const before=fs.readdirSync(tmpdir()).filter(x=>x.startsWith(prefix)).sort();
       const descriptors=fs.readdirSync('/dev/fd').length;
@@ -140,6 +179,8 @@ describe.skipIf(process.platform !== "darwin")("v4 retained native owner custody
       assert.deepEqual(fs.readdirSync(tmpdir()).filter(x=>x.startsWith(prefix)).sort(),before);
       cp.spawnSync=originalSpawnSync; syncBuiltinESMExports();
       const next=await acquire(); await next.release();
-    `)).toContain("fixture-passed")
-  }, 60_000)
-})
+    `),
+      ).toContain("fixture-passed")
+    }, 60_000)
+  },
+)
