@@ -102,7 +102,7 @@ describe("Plan 262-132 strict descendant custody v5", () => {
     })).toMatchObject({
       actualModesPassed: 6,
       findingCount: 0,
-      plan133Eligible: true,
+      plan133Eligible: false,
       plan110Eligible: false,
       producerCalls: 0,
       readinessInvoked: false,

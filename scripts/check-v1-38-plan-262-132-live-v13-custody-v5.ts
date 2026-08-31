@@ -1,10 +1,11 @@
-import { execFileSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { computeV138PathStableLocalExecutionClosureRoot } from
   "./lib/v1-38-bounded-retry-v3-path-stable-custody-v1.js"
+import { runV138RetryV3IsolatedGit, runV138RetryV3IsolatedGitBytes } from
+  "./lib/v1-38-bounded-retry-v3-native-custody-v1.js"
 
 type Sha = `sha256:${string}`
 type Json = Record<string, any>
@@ -94,12 +95,9 @@ const sha = (bytes: string | Uint8Array): Sha =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 const rooted = (domain: string, value: unknown): Sha => sha(`${domain}\0${canonical(value)}`)
 const git = (root: string, args: readonly string[]): string =>
-  execFileSync("/usr/bin/git", ["-c", "core.hooksPath=/dev/null", ...args], {
-    cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
-  }).trim()
+  runV138RetryV3IsolatedGit(root, args)
 const gitBytes = (root: string, commit: string, repoPath: string): Buffer =>
-  execFileSync("/usr/bin/git", ["-c", "core.hooksPath=/dev/null", "cat-file", "blob",
-    `${commit}:${repoPath}`], { cwd: root, stdio: ["ignore", "pipe", "pipe"] })
+  runV138RetryV3IsolatedGitBytes(root, ["cat-file", "blob", `${commit}:${repoPath}`])
 const readNoFollow = (root: string, repoPath: string): Buffer => {
   let descriptor: number | undefined
   try {
@@ -118,8 +116,31 @@ const readNoFollow = (root: string, repoPath: string): Buffer => {
     fail(`V138_PLAN132_CURRENT_ENTRY_INVALID:${repoPath}`)
   } finally { if (descriptor !== undefined) closeSync(descriptor) }
 }
-const isAncestor = (root: string, ancestor: string, descendant: string): boolean =>
-  spawnSync("/usr/bin/git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: root }).status === 0
+const isAncestor = (root: string, ancestor: string, descendant: string): boolean => {
+  try {
+    git(root, ["merge-base", "--is-ancestor", ancestor, descendant])
+    return true
+  } catch { return false }
+}
+const assertPathAbsent = (absolute: string, code: string): void => {
+  try {
+    lstatSync(absolute)
+    fail(code)
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error
+  }
+}
+const assertRepositoryMetadataSafe = (root: string): void => {
+  const config = git(root, ["config", "--local", "--list"])
+  if (/(?:^|\n)(?:core\.(?:hookspath|worktree|gitdir|fsmonitor|sshcommand|autocrlf|eol|safecrlf|attributesfile|symlinks)|extensions\.objectformat|include\.|filter\.|url\..*\.insteadof|protocol\.|alias\.)=/iu.test(config))
+    fail("V138_PLAN132_REPOSITORY_CONFIG_FORBIDDEN")
+  if (git(root, ["for-each-ref", "--format=%(refname)", "refs/replace"]) !== "")
+    fail("V138_PLAN132_REPLACE_REF_FORBIDDEN")
+  assertPathAbsent(git(root, ["rev-parse", "--path-format=absolute", "--git-path", "info/grafts"]),
+    "V138_PLAN132_GRAFTS_FORBIDDEN")
+  assertPathAbsent(git(root, ["rev-parse", "--path-format=absolute", "--git-path", "shallow"]),
+    "V138_PLAN132_SHALLOW_HISTORY_FORBIDDEN")
+}
 const assertEffectsAbsent = (root: string): void => {
   for (const repoPath of EFFECT_PATHS) {
     try {
@@ -168,6 +189,7 @@ export const authenticateV138Plan132V4InvalidHistoryForReview = (
   headRef = "HEAD",
 ) => {
   const root = path.resolve(rootInput)
+  assertRepositoryMetadataSafe(root)
   const head = git(root, ["rev-parse", headRef])
   assertV138Plan132StrictSummaryDescendantForReview(SUMMARY, head, isAncestor(root, SUMMARY, head))
   if (git(root, ["rev-parse", `${SUMMARY}^`]) !== PUBLICATION)
@@ -205,7 +227,7 @@ const exactKeys = (value: Json, expected: readonly string[]): boolean =>
 const isSha = (value: unknown): value is Sha =>
   typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
 
-export const validateV138Plan132ObservationsForReview = (
+const validateAuthenticatedObservations = (
   observationsInput: unknown,
   authenticatedPayload: Json,
 ) => {
@@ -264,6 +286,15 @@ export const validateV138Plan132ObservationsForReview = (
   return Object.freeze({ actualModesPassed: observations.length, observationsRoot })
 }
 
+export const validateV138Plan132ObservationsForReview = (
+  rootInput: string,
+  observationsInput: unknown,
+) => {
+  if (typeof rootInput !== "string") fail("V138_PLAN132_OBSERVATIONS_INVALID")
+  const history = authenticateV138Plan132V4InvalidHistoryForReview(rootInput)
+  return validateAuthenticatedObservations(observationsInput, history.payload)
+}
+
 export const renderV138Plan132SourceCorrectionForReview = (
   root: string,
   input: Json,
@@ -274,9 +305,9 @@ export const renderV138Plan132SourceCorrectionForReview = (
   assertEffectsAbsent(path.resolve(root))
   if (!Array.isArray(input.findings) || input.findings.length !== 0)
     fail("V138_PLAN132_FINDINGS_INVALID")
-  const aggregate = validateV138Plan132ObservationsForReview(input.observations, history.payload)
+  const aggregate = validateAuthenticatedObservations(input.observations, history.payload)
   assertEffectsAbsent(path.resolve(root))
-  return Object.freeze({ ...aggregate, findingCount: input.findings.length, plan133Eligible: true,
+  return Object.freeze({ ...aggregate, findingCount: input.findings.length, plan133Eligible: false,
     plan110Eligible: false, v4Disposition: history.disposition, producerCalls: 0,
     readinessInvoked: false, liveInvoked: false, freshCharged: 0, freshAccepted: 0,
     authorizesExecution: false, downstreamAuthority: "denied" as const })
