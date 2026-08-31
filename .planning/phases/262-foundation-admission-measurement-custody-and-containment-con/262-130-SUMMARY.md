@@ -58,6 +58,8 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 4. **Task 2 GREEN: closed producer boundary and v3 invalidation** - `cd6c93c1`
 5. **Post-review RED: root-relative custody and identifier-indirection tests** - `1ad87193`
 6. **Post-review GREEN: root-relative custody and binding-aware AST policy** - `1f087c68`
+7. **Alias RED: unknown computed key through process alias** - `85e74743`
+8. **Alias GREEN: fail-closed process root aliases** - `154ea6f4`
 
 ## Decisions Made
 
@@ -87,7 +89,7 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 
 ## Verification
 
-- Focused Vitest after review correction: 1 file, 5 tests passed in 181.30 seconds.
+- Final focused Vitest after review correction: 1 file, 5 tests passed in 162.08 seconds.
 - TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
 - Source-only probe: 2 guarded modes passed with all calls/effects/authority false or zero and Plan110 ineligible.
 - `git diff --check` passed.
@@ -96,7 +98,7 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 
 ## Post-Review Correction
 
-Committed review `23e46eba` found that the imported custody helper still closed over canonical `import.meta.url` native paths and that identifier-indirected global/loader recovery bypassed the initial AST policy. RED commit `1ad87193` reproduced both blockers. GREEN commit `1f087c68` now:
+Committed review `23e46eba` found that the imported custody helper still closed over canonical `import.meta.url` native paths and that identifier-indirected global/loader recovery bypassed the initial AST policy. RED commit `1ad87193` reproduced both blockers; GREEN commit `1f087c68` corrected them. Follow-up RED/GREEN commits `85e74743`/`154ea6f4` also fail closed when `process` itself is aliased before an unknown computed loader key. The corrected source now:
 
 - hashes the exact two native sources from the supplied execution root, records their absolute root-relative paths, and recomputes the complete local execution closure;
 - proves every disposable native root differs from canonical main while retaining equal portable reviewed closure;
@@ -122,5 +124,5 @@ No new network endpoint, authentication path, filesystem trust boundary, or sche
 ## Self-Check: PASSED
 
 - Both created source/test files exist.
-- All six RED/GREEN task and correction commits exist in Git history.
+- All eight RED/GREEN task and correction commits exist in Git history.
 - No v3 source, trio, review, or summary byte was modified.
