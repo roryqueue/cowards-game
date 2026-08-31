@@ -1,5 +1,9 @@
 # Coward's Game
 
+## Current recovery authority — 2026-08-31
+
+Phase262 remains incomplete at ADMIT-03 0/540. Plan110's sole run failed in native owner/transaction lock composition before allocating observations or Matches; its failure and empty local receipt directory are preserved. The operator approved one corrected invocation under unchanged resource limits. D-33R in the Phase262 context and activation prompt controls this additive repair/review/run; old dispatch/status prose below is historical and does not authorize re-entering110. No further retry, candidate, formation, holdout or public/production authority is implied. Research recommends145→146→147 replacing110 in the pending admission chain, subject to normal GSD plan checking.
+
 ## Current State
 
 **Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22

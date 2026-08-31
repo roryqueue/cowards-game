@@ -1,5 +1,17 @@
 # Activation Prompt: Competitive Strategy Factory and Adversarial League
 
+### D-33R: One corrected run after native bootstrap deadlock (2026-08-31)
+
+The operator answered **"yes"** to: **"The current contract forbids another run after failure. May I revise that rule to permit one corrected run after fixing the deadlock, keeping all resource limits unchanged?"**
+
+This explicitly revises the terminal-failure/one-shot boundary only to permit **one additive corrected live invocation** after the native owner/transaction lock repair is implemented and independently verified. It does not permit re-entering Plan262-110, retrying the corrected invocation, or creating recurring/unbounded recovery authority. The failed invocation at `bccafa3fd3a19514e5db9980b7a2de922a56e3bf`, failure summary `2bd6f682`, failure review/tracking `7e2e3ffa6ba16a5457a9fd7a6819add245f2f537`, missing journal/terminal/reproduction, and empty v3 private directory remain preserved history.
+
+The corrected invocation has fresh versioned source/evidence destinations and attempt identities. Every resource and scientific bound stays unchanged: 200 ms sampling; inclusive 2,500 basis points; eight calibration attempts across four shards per started route; maximum three route starts and twelve preflight observations; four hours from its first preflight observation; at least five minutes after preflight refusal and fifteen minutes after process-valid calibration failure; at most one conditional 540-cell reproduction. No earlier allocation is reclaimed or result reused. The prior bootstrap failed before any observation or allocation; that fact does not erase its invocation.
+
+This is the sole approved exception to D-31R's prior terminal-failure/no-third-envelope stop for this correction. The corrected invocation terminates on the first exact 540/540 result, integrity/contamination/reproduction failure, or unchanged resource/time exhaustion. No further exception is implied. Plain-language approval is sufficient; no repeated operator hash literal is required for planning, repair, review, and this one invocation.
+
+Retain the canonical engine/runtime, accounting, privacy, single-operator local-seal, gameplay and formation-absence boundaries. Do not open the holdout, create candidate or formation artifacts, expose public/canonical evidence, or grant downstream authority before the exact independently checked admission join. This approval does not adopt the separately proposed lean milestone rewrite. Source-only fixes and synthetic native integration tests create no execution authority by themselves.
+
 > Proposed next-after-foundation milestone prompt. Verify the next available version before activation.
 
 ```text

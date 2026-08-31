@@ -63,6 +63,18 @@ This phase admits the exact released v1.37 authority, reproduces the old current
 - **D-31R:** The authorization expires at the first literal 540/540 accepted result, the first terminal integrity/contamination/reproduction failure, exhaustion of three route starts or twelve observations, or the four-hour deadline. It grants no third envelope and no authority to weaken, reset, reclaim, or expand any frozen bound after observing results.
 - **D-32R:** `single_operator_local_seal_v1` remains the exact assurance class. No candidate, Phase 263, formation, holdout-opening, public, product, production, counted-play, gameplay-change, archive, or tag authority exists unless a fresh independently verified 540/540 result produces a new pass-only activation root.
 
+### D-33R: One corrected run after native bootstrap deadlock (2026-08-31)
+
+The operator answered **"yes"** to: **"The current contract forbids another run after failure. May I revise that rule to permit one corrected run after fixing the deadlock, keeping all resource limits unchanged?"**
+
+This explicitly revises the terminal-failure/one-shot boundary only to permit **one additive corrected live invocation** after the native owner/transaction lock repair is implemented and independently verified. It does not permit re-entering Plan262-110, retrying the corrected invocation, or creating recurring/unbounded recovery authority. The failed invocation at `bccafa3fd3a19514e5db9980b7a2de922a56e3bf`, failure summary `2bd6f682`, failure review/tracking `7e2e3ffa6ba16a5457a9fd7a6819add245f2f537`, missing journal/terminal/reproduction, and empty v3 private directory remain preserved history.
+
+The corrected invocation has fresh versioned source/evidence destinations and attempt identities. Every resource and scientific bound stays unchanged: 200 ms sampling; inclusive 2,500 basis points; eight calibration attempts across four shards per started route; maximum three route starts and twelve preflight observations; four hours from its first preflight observation; at least five minutes after preflight refusal and fifteen minutes after process-valid calibration failure; at most one conditional 540-cell reproduction. No earlier allocation is reclaimed or result reused. The prior bootstrap failed before any observation or allocation; that fact does not erase its invocation.
+
+This is the sole approved exception to D-31R's prior terminal-failure/no-third-envelope stop for this correction. The corrected invocation terminates on the first exact 540/540 result, integrity/contamination/reproduction failure, or unchanged resource/time exhaustion. No further exception is implied. Plain-language approval is sufficient; no repeated operator hash literal is required for planning, repair, review, and this one invocation.
+
+Retain the canonical engine/runtime, accounting, privacy, single-operator local-seal, gameplay and formation-absence boundaries. Do not open the holdout, create candidate or formation artifacts, expose public/canonical evidence, or grant downstream authority before the exact independently checked admission join. This approval does not adopt the separately proposed lean milestone rewrite. Source-only fixes and synthetic native integration tests create no execution authority by themselves.
+
 ### the agent's Discretion
 - Exact schema, module, command, storage, and typed-reason names are left to research and planning within the locked evidence and privacy boundaries.
 - The exact finite retry count, scheduling window, preflight cadence, and safe autonomous backoff are left to research and planning, provided they are frozen before execution and cannot be expanded after results are observed.
