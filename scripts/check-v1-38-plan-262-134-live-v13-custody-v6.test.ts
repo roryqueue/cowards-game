@@ -7,6 +7,7 @@ import {
   checkV138Plan134SourceOnlyForReview,
   rootV138Plan134CarrierForReview,
   rootV138Plan134PayloadForReview,
+  shaV138Plan134PayloadForReview,
 } from "./check-v1-38-plan-262-134-live-v13-custody-v6.js"
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -15,7 +16,7 @@ const clone = <T>(value: T): T => structuredClone(value)
 const repairPayload = (evidence: any): void => {
   evidence.payload.payloadRoot = rootV138Plan134PayloadForReview(evidence.payload)
   evidence.carrier.payloadRoot = evidence.payload.payloadRoot
-  evidence.carrier.payloadSha256 = evidence.payloadSha256()
+  evidence.carrier.payloadSha256 = shaV138Plan134PayloadForReview(evidence.payload)
   evidence.carrier.carrierRoot = rootV138Plan134CarrierForReview(evidence.carrier)
 }
 const repairCarrier = (evidence: any): void => {
@@ -85,10 +86,12 @@ describe("Plan 262-134 source-only custody correction v6", () => {
   it("rejects wrong primitive types, stale roots, and individually repaired roots", () => {
     const base = buildV138Plan134ProspectiveV6ForReview(ROOT)
     const payloadScalars = Object.entries(base.payload)
-      .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
+      .filter(([key, value]) => key !== "payloadRoot" &&
+        ["string", "number", "boolean"].includes(typeof value))
       .map(([key]) => key)
     const carrierScalars = Object.entries(base.carrier)
-      .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
+      .filter(([key, value]) => key !== "carrierRoot" &&
+        ["string", "number", "boolean"].includes(typeof value))
       .map(([key]) => key)
     for (const key of payloadScalars) {
       const stale = clone(base) as any
