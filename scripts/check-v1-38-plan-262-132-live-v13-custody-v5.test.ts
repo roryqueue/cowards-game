@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
 import { createHash } from "node:crypto"
-import { mkdtempSync, rmSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
@@ -65,7 +65,7 @@ describe("Plan 262-132 strict descendant custody v5", () => {
     const owner = mkdtempSync(path.join(tmpdir(), "v138-plan132-replace-"))
     const repo = path.join(owner, "repo")
     try {
-      execFileSync("/usr/bin/git", ["clone", "--shared", "--quiet", ROOT, repo])
+      execFileSync("/usr/bin/git", ["clone", "--no-hardlinks", "--quiet", ROOT, repo])
       execFileSync("/usr/bin/git", ["replace", "--graft",
         "6515ea1a2e372a71d9f9d161e395276cf163db76",
         "6a82901a8e73a4c2b8be92ba1b8d606919678784"], { cwd: repo })
@@ -74,6 +74,46 @@ describe("Plan 262-132 strict descendant custody v5", () => {
         .toThrow("V138_PLAN132_REPLACE_REF_FORBIDDEN")
     } finally { rmSync(owner, { recursive: true, force: true }) }
   })
+
+  it("neutralizes graft, shallow, and config inserted after the initial safety check", async () => {
+    const owner = mkdtempSync(path.join(tmpdir(), "v138-plan132-race-"))
+    const repo = path.join(owner, "repo")
+    const injected = path.join(owner, "injected")
+    try {
+      execFileSync("/usr/bin/git", ["clone", "--no-hardlinks", "--quiet", ROOT, repo])
+      execFileSync("/usr/bin/git", ["config", "user.name", "Plan132 Race Test"], { cwd: repo })
+      execFileSync("/usr/bin/git", ["config", "user.email", "plan132-race@example.invalid"], { cwd: repo })
+      const carrierPath = path.join(repo,
+        ".planning/artifacts/v1.38-plan-262-131-live-v13-custody-review-carrier-v4.json")
+      const carrierBytes = readFileSync(carrierPath)
+      writeFileSync(carrierPath, Buffer.concat([carrierBytes, Buffer.from(" ")]))
+      execFileSync("/usr/bin/git", ["add", path.relative(repo, carrierPath)], { cwd: repo })
+      execFileSync("/usr/bin/git", ["commit", "--quiet", "-m", "hostile rewrite"], { cwd: repo })
+      writeFileSync(carrierPath, carrierBytes)
+      execFileSync("/usr/bin/git", ["add", path.relative(repo, carrierPath)], { cwd: repo })
+      execFileSync("/usr/bin/git", ["commit", "--quiet", "-m", "hide hostile rewrite"], { cwd: repo })
+      execFileSync("/usr/bin/git", ["commit", "--quiet", "--allow-empty", "-m", "hostile head"], { cwd: repo })
+      const hostileHead = execFileSync("/usr/bin/git", ["rev-parse", "HEAD"],
+        { cwd: repo, encoding: "utf8" }).trim()
+      const child = spawn("/bin/sh", ["-c", [
+        "sleep 0.45",
+        `printf '%s %s\\n' '${hostileHead}' '6a82901a8e73a4c2b8be92ba1b8d606919678784' > '${repo}/.git/info/grafts'`,
+        `printf '%s\\n' '6515ea1a2e372a71d9f9d161e395276cf163db76' > '${repo}/.git/shallow'`,
+        `/usr/bin/git -C '${repo}' config alias.hostile '!false'`,
+        `touch '${injected}'`,
+      ].join("\n")])
+      let thrown: unknown
+      try {
+        authenticateV138Plan132V4InvalidHistoryForReview(repo, hostileHead)
+      } catch (error) { thrown = error }
+      await new Promise<void>((resolve, reject) => {
+        child.once("error", reject)
+        child.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`injector:${code}`)))
+      })
+      expect(existsSync(injected)).toBe(true)
+      expect(thrown).toMatchObject({ message: expect.stringContaining("V138_PLAN132_PROTECTED_REWRITE:") })
+    } finally { rmSync(owner, { recursive: true, force: true }) }
+  }, 180_000)
 
   it("requires exact publication and summary scopes", () => {
     expect(assertV138Plan132ExactScopeForReview(V138_PLAN132_PUBLICATION_SCOPE,
@@ -170,8 +210,7 @@ describe("Plan 262-132 strict descendant custody v5", () => {
       observation.observationRoot = rooted("v138-plan-262-131-mode-observation-v4", body)
     }
     payload.observationsRoot = rooted("v138-plan-262-131-observations-v4", payload.observations)
-    expect(() => (validateV138Plan132ObservationsForReview as (...args: any[]) => unknown)(
-      payload.observations, payload,
-    )).toThrow("V138_PLAN132_OBSERVATIONS_INVALID")
+    expect(() => validateV138Plan132ObservationsForReview(ROOT, payload.observations))
+      .toThrow("V138_PLAN132_OBSERVATIONS_INVALID")
   })
 })
