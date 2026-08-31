@@ -483,7 +483,7 @@ const boundedClose = (
 const shutdownLease = (state: LeaseState): Promise<number | null> => {
   if (state.shutdown !== undefined) return state.shutdown
   state.active = false
-  state.shutdown = (async () => {
+  const shutdown: Promise<number | null> = (async (): Promise<number | null> => {
     try {
       state.child.stdin?.end()
     } catch {}
@@ -506,12 +506,13 @@ const shutdownLease = (state: LeaseState): Promise<number | null> => {
       } finally {
         escalated.cancel()
       }
-      fail("V138_RETRY_OWNER_LOCK_RELEASE_TIMEOUT")
+      return fail("V138_RETRY_OWNER_LOCK_RELEASE_TIMEOUT")
     } finally {
       graceful.cancel()
     }
   })()
-  return state.shutdown
+  state.shutdown = shutdown
+  return shutdown
 }
 const validateLease = (
   rootInput: string,

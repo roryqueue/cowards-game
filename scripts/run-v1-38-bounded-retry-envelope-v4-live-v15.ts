@@ -108,8 +108,8 @@ export const readV138LiveV15CommittedReview = (rootInput: string) => {
   if (!isGit(reportCommit)) fail("REVIEW_NOT_COMMITTED")
   const treeLine = git(root, ["ls-tree", reportCommit, "--", V138_LIVE_V15_PATHS.review])
   const match = treeLine.match(/^100644 blob ([0-9a-f]{40})\t(.+)$/)
-  if (!match || match[2] !== V138_LIVE_V15_PATHS.review) fail("REVIEW_NOT_COMMITTED")
-  const reportBlob = match[1]!
+  const reportBlob = match?.[1]
+  if (!isGit(reportBlob) || match?.[2] !== V138_LIVE_V15_PATHS.review) fail("REVIEW_NOT_COMMITTED")
   const committedBytes = gitBytes(root, ["cat-file", "blob", reportBlob])
   const workingBytes = readRegular(root, V138_LIVE_V15_PATHS.review)
   if (!workingBytes.equals(committedBytes)) fail("REVIEW_WORKTREE_CHANGED")
