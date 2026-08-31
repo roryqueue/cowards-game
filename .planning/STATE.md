@@ -5,19 +5,23 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: executing
-stopped_at: Plan 262-134 source-only correction complete; independent Plan 262-135 review is next
-last_updated: "2026-08-31T03:10:00.000Z"
+stopped_at: Plan 262-134 review found cross-root cache and absolute-path evidence defects; Plan 262-136 source-only correction is next
+last_updated: "2026-08-31T03:25:00.000Z"
 last_activity: 2026-08-31
-last_activity_desc: completed Plan134 source-only exact-schema and authenticated-return correction with no v6 publication or effects
+last_activity_desc: replanned Plan134 review findings into source-only Plan136 and independent v7 Plan137; no execution or effects
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 116
+  total_plans: 118
   completed_plans: 104
-  percent: 89
+  percent: 88
 ---
 
 # State: Coward's Game
+
+<!-- phase-262-closeout-replan-status-v5: {"schema_version":"v1.38-phase-262-closeout-replan-v5","active_plans":118,"trustworthy_summaries":104,"incomplete_plans":["262-136","262-137","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135"],"active_chain":["262-136","262-137","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"waves":{"262-136":101,"262-137":102,"262-110":103,"262-94":104,"262-123":105,"262-124":106,"262-95":107,"262-125":108,"262-126":109,"262-106":110,"262-127":111,"262-128":112,"262-129":113},"plan134_code_review_commit":"f66ca6417412026e5b75d5af5bae13391e5fbbca","plan134_code_review_tree":"f3dd497dfc0fc68682470ee1337d8f80cc4bec0d","plan134_code_review_blob":"1334017d5e9b1cbbcac31fa854f34c98304f32a1","plan134_code_review_sha256":"68a8cdf39b90771136730d1147b56f191878d6cfa802e8da1a16346425744285","plan134_v6_disposition":"process_invalid_cross_root_cache_and_absolute_path_evidence","plan134_v6_eligible":false,"plan135_executed":false,"plan135_eligible":false,"plan136_source_only":true,"plan137_v7_review_only":true,"plan_262_110_eligible":false,"v6_publication_created":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-136-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
+
+<!-- The Plan134 source-only closeout below is immutable pre-review history and is superseded for current eligibility, counts, topology, and next action by review f66ca641 and the v5 replan carrier above. -->
 
 <!-- phase-262-plan-134-source-only-closeout: {"schema_version":"v1.38-plan-262-134-source-only-closeout-v1","active_plans":116,"trustworthy_summaries":104,"incomplete_plans":["262-135","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"active_chain":["262-135","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"red_commit":"9a0222920bebf3f1eef1c99ff102614262e94376","source_commit":"80d82e91eb763a2d89a104affba6738ebc6ac8c7","source_tree":"b06fdea135c57bc9a7123edf499d4715ae193a9e","source_parent":"9a0222920bebf3f1eef1c99ff102614262e94376","source_blob":"6b4963dd1ee2eee15c45fcdb87919c5da5eff0d7","source_sha256":"sha256:e8a0ae1a2aef6b45d7e24a0aeccfd3c9e864e7e11ac3e30b5f8579bd49c4117b","test_blob":"ea3f3f9ac8abdb66814654d8a78d31022af828db","test_sha256":"sha256:b15cdd2b0b8b7afbb6d067072701c184eca1b747cbd5adc752301bea2cb495eb","summary_commit":"6f141b7a0a040a78e86d09aab6b5b60eaafe33c5","plan133_v5_disposition":"process_invalid_authority_carrier_validation","plan133_v5_eligible":false,"plan135_eligible":true,"plan_262_110_eligible":false,"v6_publication_created":false,"authorizes_execution":false,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"next_action":"dispatch-262-135-only","admit_03":"blocked","phase_262":"incomplete","phase263_planning_eligible":false,"downstream_authority_denied":true} -->
 
@@ -170,11 +174,11 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 262 (foundation-admission-measurement-custody-and-containment-con) — IN PROGRESS / DOWNSTREAM DENIED
-Plan: 103 terminally truthful summaries across 114 active plans — exactly 11 closeout plans remain; revised Plan 262-110 is next and solely eligible
-Status: Phase 262 remains in progress; Plan133 exact literal-zero v5 is authenticated and grants only revised Plan110 eligibility
-Last activity: 2026-08-31 — independently authenticated Plan132 and published exact additive literal-zero v5
+Plan: 104 terminally truthful summaries across 118 active plans — exactly 13 active closeout plans remain; Plan 262-136 is next and solely eligible
+Status: Phase 262 remains in progress; Plan134/v6 is process-invalid under review f66ca641, Plan135 is unexecuted/ineligible, and Plan110 remains denied pending Plan136 source correction plus independent Plan137 v7 review
+Last activity: 2026-08-31 — replanned the two Plan134 critical review findings into a source-only correction and independent reviewer/publication chain
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
