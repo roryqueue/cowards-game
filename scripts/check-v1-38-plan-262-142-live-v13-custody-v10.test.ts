@@ -120,6 +120,9 @@ const repairExecution = (execution: any): void => {
 const repairNativeMapping = (item: any): void => {
   item.disposableLocalNativeSourcesRoot = digest(canonical(item.disposableLocalNativeSourcePaths
     .map((absolute: string, index: number) => [absolute, NATIVE[index]?.sha256])))
+  repairExecutionClosure(item)
+}
+const repairExecutionClosure = (item: any): void => {
   item.disposableLocalExecutionClosureRoot = rooted("v138-retry-v3-path-stable-local-execution-closure-v1", {
     reviewedClosureRoot: item.disposableReviewedClosureRoot,
     localInstalledClosureRoot: item.disposableLocalInstalledClosureRoot,
@@ -161,8 +164,8 @@ const assertMapping = (execution: any, repositoryClosureRoot: Sha, semanticRunti
     ["status", (v) => { v.observations[0].status = MODES[1]![1] }, "MODE_ORDER_INVALID"],
     ["reduced value", (v) => { v.observations[5].reducedValue.acceptedCells = 539 }, "REDUCED_VALUE_INVALID"],
     ["native order", (v) => { v.observations[0].disposableLocalNativeSourcePaths.reverse(); repairNativeMapping(v.observations[0]) }, "GENUINE_NATIVE_INVALID"],
-    ["native omission", (v) => v.observations[0].disposableLocalNativeSourcePaths.pop(), "GENUINE_MAPPING_INVALID"],
-    ["native mapped root", (v) => { v.observations[0].disposableLocalNativeSourcesRoot = digest("wrong-native") }, "GENUINE_MAPPING_INVALID"],
+    ["native omission", (v) => { v.observations[0].disposableLocalNativeSourcePaths.pop(); repairNativeMapping(v.observations[0]) }, "GENUINE_MAPPING_INVALID"],
+    ["native mapped root", (v) => { v.observations[0].disposableLocalNativeSourcesRoot = digest("wrong-native"); repairExecutionClosure(v.observations[0]) }, "GENUINE_MAPPING_INVALID"],
     ["producer guard", (v) => { v.observations[0].producerGuardCount = 1 }, "PRODUCER_GUARD_INVALID"],
     ["producer calls", (v) => { v.producerCalls = 1 }, "EXECUTION_SEMANTICS_INVALID"],
     ["execution authority", (v) => { v.authorizesExecution = true }, "EXECUTION_SEMANTICS_INVALID"],
