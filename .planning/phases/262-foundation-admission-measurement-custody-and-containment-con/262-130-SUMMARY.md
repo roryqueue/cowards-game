@@ -8,6 +8,7 @@ requires:
   - 73d1be60 committed adversarial review
   - 23e46eba committed post-closeout adversarial review
   - 38f49435 committed second adversarial review
+  - bd82289b committed third adversarial review
 provides:
   - closed v4 source/test correction for all four Plan122 findings
   - genuine root-relative per-worktree custody observations without mode salting
@@ -63,6 +64,8 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 8. **Alias GREEN: fail-closed process root aliases** - `154ea6f4`
 9. **V2 review RED: eleven alias/value-flow bypass variants** - `02c643c4`
 10. **V2 review GREEN: pinned inspector and exact process whitelist** - `bfc19377`
+11. **V3 review RED: five synthesis and generic byte mutations** - `32ff6cb0`
+12. **V3 review GREEN: exact immutable live-source byte gate** - `6515ea1a`
 
 ## Decisions Made
 
@@ -92,7 +95,7 @@ Authentic root-relative six-worktree custody derivation, exact review/Git scope 
 
 ## Verification
 
-- Final focused Vitest after V2 review correction: 1 file, 5 tests passed in 161.57 seconds.
+- Final focused Vitest after V3 review correction: 1 file, 5 tests passed in 163.94 seconds.
 - TypeScript: `pnpm exec tsc --noEmit --pretty false` passed.
 - Source-only probe: 2 guarded modes passed with all calls/effects/authority false or zero and Plan110 ineligible.
 - `git diff --check` passed.
@@ -121,6 +124,16 @@ Review V2 `38f49435` found eleven remaining value-flow variants through assignme
 
 The legitimate committed live-v13 source passes this whitelist and guarded execution remains no-effect.
 
+## Third Post-Review Correction
+
+Review V3 `bd82289b` demonstrated five dynamic `constructor` synthesis variants that evaded partial constant folding. RED commit `32ff6cb0` covers those exact reverse/join, character-code, nested-template, sequence/array-transform, and optional-element-access variants, plus generic one-byte, comment, newline, and whitespace mutations. GREEN commit `6515ea1a` closes the boundary by authenticating the complete immutable live-v13 source before parsing:
+
+- approved subject commit: `3882cd5d3ec7a834e1de88254dd0daf955da12aa`;
+- approved source blob: `0d299dc98c3af22d6a2312a7bdc6062538bc1cd9`;
+- approved source SHA-256: `059fe04ce2f3a51db4636bd3bc0553cc6882c3095afd240f15a94e267f83e7bd`.
+
+Every mutated source now fails immediately with `V138_PLAN130_LIVE_SOURCE_BYTES_INVALID`; semantic inspection remains defense in depth for the sole allowed byte sequence. The pin is to immutable live-v13 source, not the Plan130 checker, so no self-reference is introduced.
+
 ## Known Stubs
 
 None.
@@ -138,5 +151,5 @@ No new network endpoint, authentication path, filesystem trust boundary, or sche
 ## Self-Check: PASSED
 
 - Both created source/test files exist.
-- All ten RED/GREEN task and correction commits exist in Git history.
+- All twelve RED/GREEN task and correction commits exist in Git history.
 - No v3 source, trio, review, or summary byte was modified.
