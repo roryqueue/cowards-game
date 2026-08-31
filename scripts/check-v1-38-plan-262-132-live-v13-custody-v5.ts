@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto"
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs"
+import { closeSync, constants, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync,
+  readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { computeV138PathStableLocalExecutionClosureRoot } from
@@ -96,8 +98,6 @@ const sha = (bytes: string | Uint8Array): Sha =>
 const rooted = (domain: string, value: unknown): Sha => sha(`${domain}\0${canonical(value)}`)
 const git = (root: string, args: readonly string[]): string =>
   runV138RetryV3IsolatedGit(root, args)
-const gitBytes = (root: string, commit: string, repoPath: string): Buffer =>
-  runV138RetryV3IsolatedGitBytes(root, ["cat-file", "blob", `${commit}:${repoPath}`])
 const readNoFollow = (root: string, repoPath: string): Buffer => {
   let descriptor: number | undefined
   try {
@@ -116,9 +116,10 @@ const readNoFollow = (root: string, repoPath: string): Buffer => {
     fail(`V138_PLAN132_CURRENT_ENTRY_INVALID:${repoPath}`)
   } finally { if (descriptor !== undefined) closeSync(descriptor) }
 }
-const isAncestor = (root: string, ancestor: string, descendant: string): boolean => {
+const isAncestor = (runner: (args: readonly string[]) => string,
+  ancestor: string, descendant: string): boolean => {
   try {
-    git(root, ["merge-base", "--is-ancestor", ancestor, descendant])
+    runner(["merge-base", "--is-ancestor", ancestor, descendant])
     return true
   } catch { return false }
 }
@@ -140,6 +141,48 @@ const assertRepositoryMetadataSafe = (root: string): void => {
     "V138_PLAN132_GRAFTS_FORBIDDEN")
   assertPathAbsent(git(root, ["rev-parse", "--path-format=absolute", "--git-path", "shallow"]),
     "V138_PLAN132_SHALLOW_HISTORY_FORBIDDEN")
+}
+type HistoryView = Readonly<{
+  root: string
+  head: string
+  git: (args: readonly string[]) => string
+  gitBytes: (args: readonly string[]) => Buffer
+  dispose: () => void
+}>
+const createIsolatedHistoryView = (root: string, headRef: string): HistoryView => {
+  assertRepositoryMetadataSafe(root)
+  const topLevel = realpathSync(git(root, ["rev-parse", "--show-toplevel"]))
+  const commonGitDirectory = realpathSync(git(root,
+    ["rev-parse", "--path-format=absolute", "--git-common-dir"]))
+  const objectDirectory = realpathSync(path.join(commonGitDirectory, "objects"))
+  const head = git(root, ["rev-parse", "--verify", `${headRef}^{commit}`])
+  if (topLevel !== realpathSync(root) || !/^[0-9a-f]{40}$/u.test(head))
+    fail("V138_PLAN132_REPOSITORY_IDENTITY_INVALID")
+  assertPathAbsent(path.join(objectDirectory, "info", "alternates"),
+    "V138_PLAN132_OBJECT_ALTERNATES_FORBIDDEN")
+  assertRepositoryMetadataSafe(root)
+  const snapshot = mkdtempSync(path.join(tmpdir(), "v138-plan132-metadata-"))
+  try {
+    mkdirSync(path.join(snapshot, "objects", "info"), { recursive: true, mode: 0o700 })
+    mkdirSync(path.join(snapshot, "refs", "heads"), { recursive: true, mode: 0o700 })
+    writeFileSync(path.join(snapshot, "config"),
+      "[core]\n\trepositoryformatversion = 0\n\tbare = true\n", { mode: 0o600 })
+    writeFileSync(path.join(snapshot, "HEAD"), `${head}\n`, { mode: 0o600 })
+    writeFileSync(path.join(snapshot, "objects", "info", "alternates"),
+      `${objectDirectory}\n`, { mode: 0o600 })
+    const snapshotGit = (args: readonly string[]) => git(snapshot,
+      [`--git-dir=${snapshot}`, ...args])
+    const snapshotGitBytes = (args: readonly string[]) =>
+      runV138RetryV3IsolatedGitBytes(snapshot,
+        [`--git-dir=${snapshot}`, ...args])
+    if (snapshotGit(["rev-parse", "--verify", `${head}^{commit}`]) !== head)
+      fail("V138_PLAN132_HISTORY_SNAPSHOT_INVALID")
+    return Object.freeze({ root: snapshot, head, git: snapshotGit, gitBytes: snapshotGitBytes,
+      dispose: () => rmSync(snapshot, { recursive: true, force: true }) })
+  } catch (error) {
+    rmSync(snapshot, { recursive: true, force: true })
+    throw error
+  }
 }
 const assertEffectsAbsent = (root: string): void => {
   for (const repoPath of EFFECT_PATHS) {
@@ -173,13 +216,14 @@ export const assertV138Plan132StrictSummaryDescendantForReview = (
   return true
 }
 
-const exactFile = (root: string, commit: string, repoPath: string, blob: string, expectedSha: Sha): Buffer => {
-  if (git(root, ["ls-tree", commit, "--", repoPath]) !== `100644 blob ${blob}\t${repoPath}`)
+const exactFile = (history: HistoryView, root: string, commit: string, repoPath: string,
+  blob: string, expectedSha: Sha): Buffer => {
+  if (history.git(["ls-tree", commit, "--", repoPath]) !== `100644 blob ${blob}\t${repoPath}`)
     fail(`V138_PLAN132_COMMITTED_ENTRY_INVALID:${repoPath}`)
-  const bytes = gitBytes(root, commit, repoPath)
+  const bytes = history.gitBytes(["cat-file", "blob", `${commit}:${repoPath}`])
   if (sha(bytes) !== expectedSha || !readNoFollow(root, repoPath).equals(bytes))
     fail(`V138_PLAN132_COMMITTED_BYTES_INVALID:${repoPath}`)
-  if (git(root, ["log", "--format=%H", `${commit}..HEAD`, "--", repoPath]) !== "")
+  if (history.git(["log", "--format=%H", `${commit}..${history.head}`, "--", repoPath]) !== "")
     fail(`V138_PLAN132_PROTECTED_REWRITE:${repoPath}`)
   return bytes
 }
@@ -189,28 +233,30 @@ export const authenticateV138Plan132V4InvalidHistoryForReview = (
   headRef = "HEAD",
 ) => {
   const root = path.resolve(rootInput)
-  assertRepositoryMetadataSafe(root)
-  const head = git(root, ["rev-parse", headRef])
-  assertV138Plan132StrictSummaryDescendantForReview(SUMMARY, head, isAncestor(root, SUMMARY, head))
-  if (git(root, ["rev-parse", `${SUMMARY}^`]) !== PUBLICATION)
+  const history = createIsolatedHistoryView(root, headRef)
+  try {
+  const head = history.head
+  assertV138Plan132StrictSummaryDescendantForReview(SUMMARY, head,
+    isAncestor(history.git, SUMMARY, head))
+  if (history.git(["rev-parse", `${SUMMARY}^`]) !== PUBLICATION)
     fail("V138_PLAN132_SUMMARY_PARENT_INVALID")
-  const summaryCommits = git(root, ["log", "--diff-filter=A", "--format=%H", "--", SUMMARY_PATH])
+  const summaryCommits = history.git(["log", "--diff-filter=A", "--format=%H", head, "--", SUMMARY_PATH])
     .split("\n").filter(Boolean)
   if (summaryCommits.length !== 1 || summaryCommits[0] !== SUMMARY)
     fail("V138_PLAN132_SUMMARY_IDENTITY_INVALID")
   assertV138Plan132ExactScopeForReview(
-    git(root, ["diff-tree", "--no-commit-id", "--name-status", "-r", PUBLICATION])
+    history.git(["diff-tree", "--no-commit-id", "--name-status", "-r", PUBLICATION])
       .split("\n").filter(Boolean), V138_PLAN132_PUBLICATION_SCOPE, "PUBLICATION")
   assertV138Plan132ExactScopeForReview(
-    git(root, ["diff-tree", "--no-commit-id", "--name-status", "-r", SUMMARY])
+    history.git(["diff-tree", "--no-commit-id", "--name-status", "-r", SUMMARY])
       .split("\n").filter(Boolean), V138_PLAN132_SUMMARY_SCOPE, "SUMMARY")
-  if (git(root, ["rev-parse", `${REVIEW}^{tree}`]) !== REVIEW_TREE ||
-      git(root, ["rev-parse", `${REVIEW}^`]) !== REVIEW_PARENT)
+  if (history.git(["rev-parse", `${REVIEW}^{tree}`]) !== REVIEW_TREE ||
+      history.git(["rev-parse", `${REVIEW}^`]) !== REVIEW_PARENT)
     fail("V138_PLAN132_REVIEW_LINEAGE_INVALID")
-  exactFile(root, REVIEW, REVIEW_PATH, REVIEW_BLOB, REVIEW_SHA)
+  exactFile(history, root, REVIEW, REVIEW_PATH, REVIEW_BLOB, REVIEW_SHA)
   const bytes = V4_PATHS.map((repoPath, index) =>
-    exactFile(root, PUBLICATION, repoPath, V4_BLOBS[index]!, V4_SHAS[index]!))
-  exactFile(root, SUMMARY, SUMMARY_PATH, SUMMARY_BLOB, SUMMARY_SHA)
+    exactFile(history, root, PUBLICATION, repoPath, V4_BLOBS[index]!, V4_SHAS[index]!))
+  exactFile(history, root, SUMMARY, SUMMARY_PATH, SUMMARY_BLOB, SUMMARY_SHA)
   const payload = JSON.parse(bytes[1]!.toString("utf8")) as Json
   const carrier = JSON.parse(bytes[0]!.toString("utf8")) as Json
   if (payload.plan110Eligible !== true || payload.findingCount !== 0 ||
@@ -220,6 +266,7 @@ export const authenticateV138Plan132V4InvalidHistoryForReview = (
     headCommit: head, storedPlan110Eligible: true as const, currentPlan110Eligible: false as const,
     disposition: "process_invalid_descendant_and_observation_validation" as const,
     payload: Object.freeze(payload), carrier: Object.freeze(carrier) })
+  } finally { history.dispose() }
 }
 
 const exactKeys = (value: Json, expected: readonly string[]): boolean =>
