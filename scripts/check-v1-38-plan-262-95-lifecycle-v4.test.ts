@@ -9,6 +9,7 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 import { afterEach, describe, expect, it } from "vitest"
 
@@ -26,7 +27,10 @@ import {
   validateProvisionalCloseoutGate,
 } from "./check-v1-38-plan-262-95-lifecycle-v4.js"
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+)
 const roots: string[] = []
 const sha256 = (bytes: string | Buffer): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -114,7 +118,10 @@ describe("Plan 262-95 committed inventory", () => {
 describe("Plan 262-95 branch honesty", () => {
   it("projects the actual exhausted 0/540 branch as bookkeeping-only gaps", () => {
     const actual = JSON.parse(
-      readFileSync(path.join(repoRoot, V138_PLAN_262_95_PATHS.disposition), "utf8"),
+      readFileSync(
+        path.join(repoRoot, V138_PLAN_262_95_PATHS.disposition),
+        "utf8",
+      ),
     )
     const inspected = inspectDispositionBranch(actual, {
       reproductionPresent: false,
@@ -152,7 +159,12 @@ describe("Plan 262-95 branch honesty", () => {
 
   it.each([
     ["non-pass Route-12", disposition(), false, true],
-    ["successful producer without reproduction", passDisposition(), false, true],
+    [
+      "successful producer without reproduction",
+      passDisposition(),
+      false,
+      true,
+    ],
     [
       "assurance non-pass without preserved reproduction",
       passDisposition(),
@@ -175,7 +187,7 @@ describe("Plan 262-95 branch honesty", () => {
   })
 
   it("preserves reproduction on a later assurance non-pass while forbidding Route-12", () => {
-    const candidate = passDisposition()
+    const candidate: any = passDisposition()
     candidate.status = "non_pass"
     candidate.assuranceStatus = "defects_found"
     candidate.assuranceFindings = ["post-run-assurance"]
@@ -201,13 +213,26 @@ const createReviewFixture = () => {
   const sourceFiles = [
     "scripts/check-v1-38-plan-262-95-lifecycle-v4.ts",
     "scripts/check-v1-38-plan-262-95-lifecycle-v4.test.ts",
-    ".planning/phases/262-x/262-95-SUMMARY.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-95-SUMMARY.md",
   ]
   for (const [index, relative] of sourceFiles.entries()) {
     mkdirSync(path.dirname(path.join(root, relative)), { recursive: true })
     writeFileSync(path.join(root, relative), `fixture-${index}\n`)
   }
-  execFileSync("git", ["add", ...sourceFiles], { cwd: root })
+  const inventoryFiles = [
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-01-PLAN.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/archived/262-02-HISTORICAL.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/dormant/262-03-ACTIVATION-CONTRACT.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-01-SUMMARY.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-01-REVIEW.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md",
+    ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md",
+  ]
+  for (const relative of inventoryFiles) {
+    mkdirSync(path.dirname(path.join(root, relative)), { recursive: true })
+    writeFileSync(path.join(root, relative), `${relative}\n`)
+  }
+  execFileSync("git", ["add", ...sourceFiles, ...inventoryFiles], { cwd: root })
   execFileSync("git", ["commit", "-qm", "fixture"], { cwd: root })
   const sourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: root,
@@ -233,7 +258,7 @@ const createReviewFixture = () => {
     sourceFiles: entries,
     findingCount: 0,
     plan126Eligible: true,
-    authorizesExecution: false,
+    authorizesExecution: false as const,
   }
   const review = { ...body, reviewRoot: buildPlan125ReviewRoot(body) }
   return { root, review }
@@ -249,7 +274,10 @@ describe("Plan 262-125 and Plan 262-126 closed gates", () => {
     ["finding", (review: any) => ({ ...review, findingCount: 1 })],
     ["eligibility", (review: any) => ({ ...review, plan126Eligible: false })],
     ["authority", (review: any) => ({ ...review, authorizesExecution: true })],
-    ["root", (review: any) => ({ ...review, reviewRoot: `sha256:${"0".repeat(64)}` })],
+    [
+      "root",
+      (review: any) => ({ ...review, reviewRoot: `sha256:${"0".repeat(64)}` }),
+    ],
     [
       "source entry",
       (review: any) => ({
