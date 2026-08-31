@@ -1,11 +1,12 @@
-import { execFileSync } from "node:child_process"
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { execFile, execFileSync } from "node:child_process"
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { promisify } from "node:util"
 import { fileURLToPath } from "node:url"
-import { afterAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import {
-  authenticateV138Plan136ProspectiveV7ForReview,
+  authenticateV138Plan136ProspectiveV7BatchForReview,
   buildV138Plan136ProspectiveV7ForReview,
   checkV138Plan136SourceOnlyForReview,
   rootV138Plan136CarrierForReview,
@@ -15,9 +16,11 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const OWNERS: string[] = []
+let BASE: ReturnType<typeof buildV138Plan136ProspectiveV7ForReview>
 const clone = <T>(value: T): T => structuredClone(value)
 const owner = (): string => { const value = mkdtempSync(path.join(tmpdir(), "v138-plan136-test-")); OWNERS.push(value); return value }
 afterAll(() => { for (const value of OWNERS) rmSync(value, { recursive: true, force: true }) })
+beforeAll(() => { BASE = buildV138Plan136ProspectiveV7ForReview(ROOT) }, 240_000)
 
 const repairPayload = (evidence: any): void => {
   evidence.payload.payloadRoot = rootV138Plan136PayloadForReview(evidence.payload)
@@ -31,12 +34,21 @@ const repairCarrier = (evidence: any): void => {
 const cloneRepository = (): string => {
   const destination = path.join(owner(), "checkout")
   execFileSync("git", ["clone", "--quiet", "--no-local", ROOT, destination])
+  for (const relative of [
+    "node_modules", "packages/runtime-wasm-wasi/node_modules", "packages/test-utils/node_modules",
+    "packages/map-configs/node_modules", "packages/runtime-python/node_modules",
+    "packages/runtime-supervisor/node_modules", "packages/spec/node_modules", "packages/golden/node_modules",
+    "packages/runtime-js/node_modules", "packages/persistence/node_modules", "packages/replay/node_modules",
+    "packages/service/node_modules", "packages/engine/node_modules", "apps/runtime-service/node_modules",
+    "apps/web/node_modules", "apps/worker/node_modules",
+  ]) symlinkSync(path.join(ROOT, relative), path.join(destination, relative), "dir")
   return destination
 }
-const freshProcess = (root: string): string => execFileSync(process.execPath, [
+const execFileAsync = promisify(execFile)
+const freshProcess = async (root: string): Promise<string> => (await execFileAsync(process.execPath, [
   "--import", "tsx", path.join(ROOT, "scripts/check-v1-38-plan-262-136-live-v13-custody-v7.ts"),
   "--emit-prospective", root,
-], { cwd: ROOT, encoding: "utf8" })
+], { cwd: ROOT, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 })).stdout
 const scanPrivacy = (value: unknown): void => {
   const serialized = JSON.stringify(value)
   expect(serialized).not.toContain(tmpdir())
@@ -50,7 +62,7 @@ const scanPrivacy = (value: unknown): void => {
 
 describe("Plan 262-136 source-only custody correction v7", () => {
   it("reauthenticates every supplied root after a successful call", () => {
-    expect(checkV138Plan136SourceOnlyForReview(ROOT).plan137Eligible).toBe(true)
+    expect(BASE.payload.plan137Eligible).toBe(true)
     expect(() => checkV138Plan136SourceOnlyForReview(path.join(owner(), "missing")))
       .toThrow(/V138_PLAN136_/u)
     const second = cloneRepository()
@@ -69,9 +81,9 @@ describe("Plan 262-136 source-only custody correction v7", () => {
       .toThrow("V138_PLAN136_EFFECT_PRESENT:.planning/artifacts/v1.38-current-matrix-reproduction-v17.json")
   }, 240_000)
 
-  it("emits byte-identical prospective evidence from fresh processes and distinct roots", () => {
+  it("emits byte-identical prospective evidence from fresh processes and distinct roots", async () => {
     const left = cloneRepository(); const right = cloneRepository()
-    const first = freshProcess(left); const second = freshProcess(right)
+    const [first, second] = await Promise.all([freshProcess(left), freshProcess(right)])
     expect(second).toBe(first)
     const evidence = JSON.parse(first)
     expect(evidence.payload.observations).toHaveLength(6)
@@ -79,8 +91,7 @@ describe("Plan 262-136 source-only custody correction v7", () => {
   }, 240_000)
 
   it("uses strict normalized repository-relative native-source identifiers", () => {
-    const base = buildV138Plan136ProspectiveV7ForReview(ROOT)
-    for (const observation of base.payload.observations) {
+    for (const observation of BASE.payload.observations) {
       expect(observation.disposableLocalNativeSourcePaths).toEqual([
         "custody/native-sources/source.ts", "custody/native-sources/test.ts",
       ])
@@ -90,30 +101,28 @@ describe("Plan 262-136 source-only custody correction v7", () => {
         expect(value.split("/")).not.toContain("..")
       }
     }
-    scanPrivacy(base)
-    scanPrivacy(authenticateV138Plan136ProspectiveV7ForReview(base))
+    scanPrivacy(BASE)
   }, 240_000)
 
-  it("rejects every missing or extra payload and carrier key", () => {
-    const base = buildV138Plan136ProspectiveV7ForReview(ROOT)
+  it("rejects exhaustive schema, root, authority, counter, and link mutations in one fresh batch", () => {
+    const hostile: unknown[] = []
     for (const section of ["payload", "carrier"] as const) {
-      for (const key of Object.keys(base[section])) {
-        const evidence = clone(base) as any; delete evidence[section][key]
-        expect(() => authenticateV138Plan136ProspectiveV7ForReview(evidence)).toThrow(/V138_PLAN136_/u)
+      for (const key of Object.keys(BASE[section])) {
+        const evidence = clone(BASE) as any; delete evidence[section][key]
+        hostile.push(evidence)
       }
-      const evidence = clone(base) as any; evidence[section].unexpected = false
-      expect(() => authenticateV138Plan136ProspectiveV7ForReview(evidence)).toThrow(/V138_PLAN136_/u)
+      const evidence = clone(BASE) as any; evidence[section].unexpected = false
+      hostile.push(evidence)
     }
-  }, 240_000)
-
-  it("rejects nested schema, root, authority, counter, and link mutations", () => {
-    const base = buildV138Plan136ProspectiveV7ForReview(ROOT)
     const mutations: Array<(value: any) => void> = [
       (value) => { delete value.payload.counters.acceptedCells },
       (value) => { value.payload.counters.routeStartsConsumed = 1 },
       (value) => { delete value.payload.observations[0].mode },
       (value) => { value.payload.observations[0].disposableLocalNativeSourcePaths[0] = "/tmp/source.ts" },
       (value) => { value.payload.observations[0].disposableLocalNativeSourcePaths[0] = "../source.ts" },
+      (value) => { value.payload.observations[0].disposableLocalGitObjectRoot = `sha256:${"1".repeat(64)}` },
+      (value) => { value.payload.observations[0].disposableLocalNativeSourcesRoot = `sha256:${"2".repeat(64)}` },
+      (value) => { value.payload.observations[0].disposableLocalExecutionClosureRoot = `sha256:${"3".repeat(64)}` },
       (value) => { value.payload.observations[0].mode = "--check-live" },
       (value) => { value.payload.authorizesExecution = true },
       (value) => { value.payload.plan110Eligible = true },
@@ -127,15 +136,17 @@ describe("Plan 262-136 source-only custody correction v7", () => {
       (value) => { value.carrier.reviewSha256 = `sha256:${"0".repeat(64)}` },
     ]
     for (const mutate of mutations) {
-      const evidence = clone(base) as any; mutate(evidence); repairPayload(evidence); repairCarrier(evidence)
-      expect(() => authenticateV138Plan136ProspectiveV7ForReview(evidence)).toThrow(/V138_PLAN136_/u)
+      const evidence = clone(BASE) as any; mutate(evidence); repairPayload(evidence); repairCarrier(evidence)
+      hostile.push(evidence)
     }
-  }, 240_000)
-
-  it("does not return sanitized values for contradictory authenticated bytes", () => {
-    const base = buildV138Plan136ProspectiveV7ForReview(ROOT) as any
-    base.carrier.authorizesExecution = true; repairCarrier(base)
-    expect(() => authenticateV138Plan136ProspectiveV7ForReview(base))
-      .toThrow("V138_PLAN136_CARRIER_SEMANTICS_INVALID")
+    const contradictory = clone(BASE) as any
+    contradictory.carrier.authorizesExecution = true; repairCarrier(contradictory)
+    hostile.push(contradictory)
+    const results = authenticateV138Plan136ProspectiveV7BatchForReview([BASE, ...hostile], ROOT)
+    expect(results[0]).toEqual({ accepted: true })
+    scanPrivacy(results[0])
+    expect(results.slice(1).every((result) => !result.accepted && /V138_PLAN136_/u.test(result.code ?? "")))
+      .toBe(true)
+    expect(results.at(-1)?.code).toBe("V138_PLAN136_CARRIER_SEMANTICS_INVALID")
   }, 240_000)
 })
