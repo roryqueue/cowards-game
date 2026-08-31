@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createHash } from "node:crypto"
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -57,6 +57,19 @@ const reductions = [noEffect, noEffect, noEffect,
   { classification: "non_pass", reproductionEligible: false },
   { classification: "bounded_success", reproductionEligible: true },
   { acceptedCells: 540, exact: true, requiredAccepted: 540 }]
+const historicalObservationsRoot = (): string => {
+  const historicalModes = ["--check-source-only", "--check-prospective-custody", "--check-post-run-custody",
+    "--check-non-pass-value", "--check-bounded-success-value", "--check-exact-reproduction-v17-value"]
+  const stable = historicalModes.map((mode, ordinal) => {
+    const body = {
+      repositoryClosureRoot: "sha256:46147f2e102e791da37f2f3b91672a046eb275552f73ad2d99de92c0f9c4fd3d",
+      semanticRuntimeRoot: "sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e",
+      nativeIdentities: native, mode, ordinal, reducedValue: reductions[ordinal], producerGuardCount: 0,
+    }
+    return { ...body, stableRecordRoot: sha("v138-plan-262-142-stable-execution-record-v10\0" + canonical(body)) }
+  })
+  return sha("v138-plan-262-142-stable-observations-v10\0" + canonical(stable))
+}
 function subject(plan: string, source: string): Json {
   const files = [source.replace(/\.ts$/, ".test.ts"), source].sort().map((path) => ({
     path, mode: "100644", blob: oid(path), sha256: sha(path),
@@ -118,7 +131,7 @@ function fixture(): Json {
       sourceRoot: "sha256:902fd55d157cba70b4933499c45a8855fc1df6bd373748bd3d7853daf70f22c1",
       semanticRuntimeClosureRoot: "sha256:132282ee554dc0f2ade43cf4917c3049abab6eb64991be6d7daed0776b67754e",
       repositoryClosureRoot: "sha256:46147f2e102e791da37f2f3b91672a046eb275552f73ad2d99de92c0f9c4fd3d",
-      observationsRoot: sha("historical142 observations values only"), plan110Eligible: false,
+      observationsRoot: historicalObservationsRoot(), plan110Eligible: false,
     }, historicalDispositions: structuredClone(historicalDispositions),
     canonicalCustody: { repositoryClosureRoot: "", semanticRuntimeInventory: [
       { identity: "runtime/fixture/node", mode: "100755", size: 123, sha256: sha("synthetic-node") },
@@ -182,6 +195,7 @@ describe("pure predicate", () => {
       ["historical source", (p) => { p.historical142.sourceRoot = sha("substitution") }],
       ["historical runtime", (p) => { p.historical142.semanticRuntimeClosureRoot = sha("substitution") }],
       ["historical archive", (p) => { p.historical142.repositoryClosureRoot = sha("substitution") }],
+      ["historical observations", (p) => { p.historical142.observationsRoot = sha("substitution") }],
       ["historical reorder", (p) => { p.historicalDispositions.reverse() }],
       ["historical missing", (p) => { p.historicalDispositions.pop() }],
       ["historical invented publication", (p) => { p.historicalDispositions[3].plan = "262-135" }],
@@ -290,9 +304,48 @@ describe("pure predicate", () => {
     // A JSON-roundtrippable true validation result is not a root-bound capability.
     expect(typeof validateV138LiveV14PublishedContractForReview(input)).toBe("boolean")
   })
+  it("rejects non-data descriptors without executing getters or serialization callbacks", () => {
+    let callbacks = 0
+    const getter = fixture()
+    Object.defineProperty(getter.payload, "consumerVersion", { enumerable: true,
+      get() { callbacks++; return "live-v14" } })
+    expect(() => validateV138LiveV14PublishedContractForReview(getter)).toThrow()
+    expect(callbacks).toBe(0)
+    const serializer = fixture()
+    Object.defineProperty(serializer.payload.counters, "toJSON", { enumerable: false,
+      value() { callbacks++; return { producerCalls: 0, readinessCalls: 0, liveCalls: 0, freshCharged: 0, freshAccepted: 0 } } })
+    expect(() => validateV138LiveV14PublishedContractForReview(serializer)).toThrow()
+    expect(callbacks).toBe(0)
+    for (const mutate of [
+      (v: Json) => Object.defineProperty(v.payload, "privateHostInfo", { value: "hidden", enumerable: false }),
+      (v: Json) => { v.payload[Symbol("hidden")] = "secret" },
+      (v: Json) => Object.setPrototypeOf(v.payload.counters, { inherited: "private" }),
+      (v: Json) => { v.payload.currentExecution.observations[0].reducedValue.producerCalls = undefined },
+      (v: Json) => { v.payload.counters.liveCalls = () => 0 },
+      (v: Json) => { v.payload.currentExecution.observations.extra = "extension" },
+    ]) {
+      const input = fixture(); mutate(input)
+      expect(() => validateV138LiveV14PublishedContractForReview(input)).toThrow()
+    }
+  })
 })
 
 describe("closed producer boundary", () => {
+  it("recognizes only the exact producer import/call shape for the deterministic file guard", () => {
+    const source = readFileSync(path.join(ROOT, SOURCE), "utf8")
+    const guard = inspectV138LiveV14ProducerGuardForReview(source)
+    expect(guard).toBeDefined()
+    for (const text of [
+      source.replace("runV138V3ProductionLive }", "runV138V3ProductionLive as aliasedProducer }"),
+      source + "\nconst producerAlias = runV138V3ProductionLive;\n",
+      source + "\nrunV138V3ProductionLive('not-executed');\n",
+      source.replace('from "./run-v1-38-bounded-retry-envelope-v3.js"', 'from "./alternate-producer.js"'),
+      source.replace(/await runV138V3ProductionLive\(/, "await (runV138V3ProductionLive as Function)("),
+    ]) {
+      expect(text).not.toBe(source)
+      expect(() => inspectV138LiveV14ProducerGuardForReview(text)).toThrow()
+    }
+  })
   it("contains exactly one static imported producer call with pre/try/finally-post ordering", () => {
     const text = readFileSync(fileURLToPath(new URL("./run-v1-38-bounded-retry-envelope-v3-live-v14.ts", import.meta.url)), "utf8")
     const source = ts.createSourceFile(SOURCE, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
@@ -366,4 +419,247 @@ describe("actual modes", () => {
     expect(publicBytes).not.toContain("3882cd5d3ec7a834e1de88254dd0daf955da12aa")
     expect(() => checkV138LiveV14RootBoundCustodyForReview(ROOT, proof)).toThrow()
   }, 540000)
+})
+
+const effects = [
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl",
+  ".planning/artifacts/v1.38-current-matrix-retry-journal-v3.jsonl.lock",
+  ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
+  ".planning/artifacts/v1.38-current-matrix-retry-terminal-v3.json",
+  ".planning/artifacts/v1.38-current-matrix-reproduction-v17.json",
+  ".planning/artifacts/v1.38-plan-262-historical-live-receipt-manifest-v3.json",
+  ".planning/artifacts/v1.38-plan-262-94-admission-disposition-v3.json",
+  ".planning/artifacts/v1.38-phase-262-review-fix-correction-v11.json",
+  ".planning/artifacts/v1.38-plan-262-route-11-activation-v1.json",
+  ".planning/artifacts/v1.38-plan-262-95-lifecycle-driver-readiness-v3.json",
+  ".planning/artifacts/v1.38-phase-262-current-lifecycle-status-v3.json",
+]
+function privateFixture<T>(work: (root: string) => T): T {
+  const root = realpathSync(mkdtempSync(path.join(tmpdir(), "v138-live14-stage-test-")))
+  try {
+    chmodSync(root, 0o700)
+    mkdirSync(path.join(root, ".planning", "artifacts"), { recursive: true, mode: 0o700 })
+    return work(root)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+}
+const stageInput = (stage: "pre" | "post", mask: number, outcome: Json | null): Json => ({
+  stage, journalPresent: Boolean(mask & 1), privateDirectoryPresent: Boolean(mask & 2),
+  terminalPresent: Boolean(mask & 4), lockPresent: Boolean(mask & 8), reproductionPresent: Boolean(mask & 16),
+  downstreamPresent: Array(6).fill(false), outcome,
+})
+const outcomeFixture = (disposition: "exhausted" | "terminal_failure" | "succeeded" | "active"): Json => ({
+  disposition, journalRoot: sha("journal"), stateRoot: sha("state"), completeCleanup: true,
+  reproductionPresent: disposition === "succeeded", downstreamAuthority: "denied",
+})
+
+describe("stage predicate", () => {
+  it("exhausts all32 producer presence combinations before and after the boundary", () => {
+    const outcomes = [null, outcomeFixture("exhausted"), outcomeFixture("terminal_failure"), outcomeFixture("succeeded"), outcomeFixture("active")]
+    for (const stage of ["pre", "post"] as const) for (let mask = 0; mask < 32; mask++) for (const outcome of outcomes) {
+      const valid = mask === 0 && outcome === null || stage === "post" && (
+        mask === 7 && outcome !== null && ["exhausted", "terminal_failure"].includes(outcome.disposition) ||
+        mask === 23 && outcome?.disposition === "succeeded")
+      const input = stageInput(stage, mask, outcome)
+      if (valid) expect(validateV138LiveV14EffectValuesForReview(input)).toMatchObject({
+        status: mask === 0 ? "no_effects" : mask === 23 ? "bounded_success" : "bounded_terminal", downstreamAuthority: "denied",
+      })
+      else expect(() => validateV138LiveV14EffectValuesForReview(input), `${stage}/${mask}/${outcome?.disposition ?? "none"}`).toThrow()
+    }
+  })
+  it("rejects each downstream presence for every otherwise valid pre/post branch", () => {
+    for (const input of [stageInput("pre", 0, null), stageInput("post", 0, null),
+      stageInput("post", 7, outcomeFixture("exhausted")), stageInput("post", 23, outcomeFixture("succeeded"))]) {
+      for (let index = 0; index < 6; index++) {
+        const changed = structuredClone(input); changed.downstreamPresent[index] = true
+        expect(() => validateV138LiveV14EffectValuesForReview(changed), `${input.stage}/downstream${index}`).toThrow()
+      }
+    }
+  })
+  it("rejects malformed stages, incomplete cleanup, residual lock, outcome mismatch and authority claims", () => {
+    for (const [field, bad] of [["stage", "after"], ["journalPresent", 0], ["downstreamPresent", []],
+      ["downstreamPresent", Array(7).fill(false)], ["downstreamPresent", [false, false, false, false, false, 0]]]) {
+      const input = stageInput("post", 0, null); input[field as string] = bad
+      expect(() => validateV138LiveV14EffectValuesForReview(input)).toThrow()
+    }
+    for (const [field, bad] of [["completeCleanup", false], ["disposition", "active"], ["downstreamAuthority", "allowed"], ["reproductionPresent", false]]) {
+      const input = stageInput("post", 23, outcomeFixture("succeeded")); input.outcome[field as string] = bad
+      expect(() => validateV138LiveV14EffectValuesForReview(input)).toThrow()
+    }
+    const unknownDisposition = stageInput("post", 7, outcomeFixture("exhausted"))
+    unknownDisposition.outcome.disposition = "unknown_terminal"
+    expect(() => validateV138LiveV14EffectValuesForReview(unknownDisposition)).toThrow()
+    for (const field of Object.keys(stageInput("pre", 0, null))) {
+      const input = stageInput("pre", 0, null); delete input[field]
+      expect(() => validateV138LiveV14EffectValuesForReview(input), "missing " + field).toThrow()
+    }
+    expect(() => validateV138LiveV14EffectValuesForReview({ ...stageInput("pre", 0, null), override: true })).toThrow()
+  })
+  it("checks actual eleven absences and all forbidden final presences with owned temporary roots", () => {
+    privateFixture((root) => {
+      expect(checkV138LiveV14EffectState(root, "pre")).toMatchObject({ status: "no_effects", downstreamAuthority: "denied" })
+      expect(checkV138LiveV14EffectState(root, "post")).toMatchObject({ status: "no_effects", downstreamAuthority: "denied" })
+      for (const name of effects) {
+        const destination = path.join(root, name)
+        writeFileSync(destination, "{}\n", { flag: "wx", mode: 0o600 })
+        try {
+          expect(() => checkV138LiveV14EffectState(root, "pre"), name).toThrow()
+          expect(() => checkV138LiveV14EffectState(root, "post"), name).toThrow()
+        } finally { rmSync(destination) }
+      }
+      expect(effects.every((name) => !existsSync(path.join(root, name)))).toBe(true)
+    })
+  }, 60000)
+  it("rejects the actual producer receipt manifest destination before and after effects", () => {
+    privateFixture((root) => {
+      const actualManifest = path.join(root, ".planning/artifacts/v1.38-plan-262-historical-live-receipt-manifest-v3.json")
+      const obsolete142Path = path.join(root, ".planning/artifacts/v1.38-current-matrix-retry-private-receipt-manifest-v3.json")
+      writeFileSync(actualManifest, "{\"syntheticReceiptManifest\":true}\n", { flag: "wx", mode: 0o600 })
+      expect(existsSync(obsolete142Path)).toBe(false)
+      const before = readFileSync(actualManifest)
+      for (const stage of ["pre", "post"] as const) expect(() => checkV138LiveV14EffectState(root, stage)).toThrow()
+      expect(readFileSync(actualManifest).equals(before)).toBe(true)
+    })
+  }, 60000)
+  it("rejects every final symlink and invalid directory type without following targets", () => {
+    privateFixture((root) => {
+      const decoy = path.join(root, "decoy")
+      writeFileSync(decoy, "private-decoy-bytes", { flag: "wx", mode: 0o600 })
+      for (const name of effects) {
+        const destination = path.join(root, name)
+        symlinkSync(decoy, destination)
+        try {
+          for (const stage of ["pre", "post"] as const) expect(() => checkV138LiveV14EffectState(root, stage), `${stage}/${name}/symlink`).toThrow()
+          expect(readFileSync(decoy, "utf8")).toBe("private-decoy-bytes")
+        } finally { rmSync(destination) }
+        mkdirSync(destination, { mode: 0o700 })
+        try {
+          for (const stage of ["pre", "post"] as const) expect(() => checkV138LiveV14EffectState(root, stage), `${stage}/${name}/directory`).toThrow()
+        } finally { rmSync(destination, { recursive: true }) }
+      }
+    })
+  }, 60000)
+  it("rejects each symlinked/non-directory ancestor and a symlinked supplied root", () => {
+    for (const ancestor of [".planning", ".planning/artifacts"]) for (const kind of ["symlink", "file"] as const) {
+      privateFixture((root) => {
+        const destination = path.join(root, ancestor)
+        rmSync(destination, { recursive: true })
+        if (kind === "file") writeFileSync(destination, "not-a-directory", { flag: "wx", mode: 0o600 })
+        else {
+          const decoy = path.join(root, "ancestor-decoy")
+          mkdirSync(path.join(decoy, "artifacts"), { recursive: true, mode: 0o700 })
+          symlinkSync(decoy, destination)
+        }
+        for (const stage of ["pre", "post"] as const) expect(() => checkV138LiveV14EffectState(root, stage), `${stage}/${ancestor}/${kind}`).toThrow()
+      })
+    }
+    privateFixture((root) => {
+      const link = path.join(root, "root-link"); symlinkSync(root, link)
+      for (const stage of ["pre", "post"] as const) expect(() => checkV138LiveV14EffectState(link, stage)).toThrow()
+    })
+  }, 60000)
+  it("rejects fabricated root provenance and copied publication fixtures before effects", () => {
+    privateFixture((first) => privateFixture((second) => {
+      const value = fixture()
+      expect(validateV138LiveV14PublishedContractForReview(value)).toBe(true)
+      for (const root of [first, second]) {
+        for (const claimed of [value, JSON.parse(canonical(value)), { root, ...value }])
+          expect(() => checkV138LiveV14RootBoundCustodyForReview(root, claimed)).toThrow()
+        expect(effects.every((name) => !existsSync(path.join(root, name)))).toBe(true)
+      }
+    }))
+  })
+  it("preserves terminal/reproduction bytes through pure post-assurance error settlement", () => {
+    privateFixture((root) => {
+      const terminal = path.join(root, effects[3]), reproduction = path.join(root, effects[4])
+      writeFileSync(terminal, "synthetic-terminal-must-survive\n", { mode: 0o600, flag: "wx" })
+      writeFileSync(reproduction, "synthetic-reproduction-must-survive\n", { mode: 0o600, flag: "wx" })
+      const before = [readFileSync(terminal), readFileSync(reproduction)]
+      const producerError = new Error("synthetic producer failure"), postError = new Error("synthetic post custody failure")
+      expect(() => settleV138LiveV9ProducerOutcomeForReview(undefined, undefined)).not.toThrow()
+      expect(() => settleV138LiveV9ProducerOutcomeForReview(undefined, postError)).toThrow(postError)
+      expect(() => settleV138LiveV9ProducerOutcomeForReview(producerError, undefined)).toThrow(producerError)
+      try { settleV138LiveV9ProducerOutcomeForReview(producerError, postError); expect.unreachable() }
+      catch (error) {
+        expect(error).toBeInstanceOf(AggregateError)
+        expect((error as AggregateError).errors).toEqual([producerError, postError])
+        expect((error as AggregateError).cause).toBe(producerError)
+      }
+      expect(readFileSync(terminal).equals(before[0])).toBe(true)
+      expect(readFileSync(reproduction).equals(before[1])).toBe(true)
+      expect(effects.filter((_, i) => i !== 3 && i !== 4).every((name) => !existsSync(path.join(root, name)))).toBe(true)
+    })
+  })
+})
+
+describe("stage predicate physical terminal fixtures", () => {
+  it("accepts a physical exhausted journal and rejects terminal and private receipt tampering without producer execution", async () => {
+    const { appendV138RetryV3JournalRecord, deriveV138RetryV3State, checkV138InactiveRetryV3Envelope } =
+      await import("./lib/v1-38-bounded-retry-envelope-v3.js")
+    const envelopePath = ".planning/artifacts/v1.38-plan-262-90-retry-envelope-v3.json"
+    // Read the frozen envelope as data only. All synthetic charges and output
+    // files below exist solely inside this disposable fixture, never at ROOT.
+    const envelopeBytes = readFileSync(path.join(ROOT, envelopePath))
+    const envelope = checkV138InactiveRetryV3Envelope(JSON.parse(envelopeBytes.toString()))
+    let records = appendV138RetryV3JournalRecord([], {
+      kind: "reserve_preflight", identity: "preflight:v3:0", owner: "synthetic-post-fixture",
+    }, 0, envelope.envelopeRoot)
+    records = appendV138RetryV3JournalRecord(records, {
+      kind: "observe_preflight", identity: "preflight:v3:0", owner: "synthetic-post-fixture",
+      effectiveAvailableBasisPoints: 0,
+    }, 0, envelope.envelopeRoot)
+    records = appendV138RetryV3JournalRecord(records, {
+      kind: "time_window_expired", owner: "synthetic-post-fixture", reason: "time_window_expired",
+    }, 4 * 60 * 60 * 1000, envelope.envelopeRoot)
+    const state = deriveV138RetryV3State(envelope, records)
+    expect(state).toMatchObject({ disposition: "exhausted", completeCleanup: true,
+      acceptedCells: 0, calibrationIdentitiesCharged: 0, reproductionIdentitiesCharged: 0 })
+    // Independent projection from the frozen producer's terminal contract.
+    const terminal = {
+      schemaVersion: "v1.38-current-matrix-retry-terminal-v3", terminalReason: state.terminalReason,
+      journalRoot: state.journalRoot, stateRoot: state.stateRoot, disposition: state.disposition,
+      counters: { preflightObservationsConsumed: state.preflightObservationsConsumed,
+        routeStartsConsumed: state.routeStartsConsumed, calibrationIdentitiesCharged: state.calibrationIdentitiesCharged,
+        reproductionIdentitiesCharged: state.reproductionIdentitiesCharged, acceptedCells: state.acceptedCells },
+      freshAccepted: state.acceptedCells, completeCleanup: state.completeCleanup,
+      downstreamAuthority: "denied", productionAuthorized: false,
+    }
+    privateFixture((root) => {
+      writeFileSync(path.join(root, envelopePath), envelopeBytes, { flag: "wx", mode: 0o600 })
+      const journalPath = path.join(root, effects[0]), privatePath = path.join(root, effects[2])
+      const terminalPath = path.join(root, effects[3])
+      mkdirSync(privatePath, { mode: 0o700 })
+      writeFileSync(journalPath, records.map(canonical).join(""), { flag: "wx", mode: 0o600 })
+      writeFileSync(terminalPath, canonical(terminal), { flag: "wx", mode: 0o600 })
+      // The actual producer retains this legitimate bootstrap file alongside receipts.
+      writeFileSync(path.join(privatePath, "journal-bootstrap.commit"), "committed\n", { flag: "wx", mode: 0o600 })
+      const receipts = records.map((record) => {
+        const receipt = path.join(privatePath, `journal-record-${String(record.ordinal).padStart(4, "0")}.json`)
+        writeFileSync(receipt, canonical(record), { flag: "wx", mode: 0o600 })
+        return receipt
+      })
+      const originalJournal = readFileSync(journalPath)
+      expect(checkV138LiveV14EffectState(root, "post")).toMatchObject({ status: "bounded_terminal", downstreamAuthority: "denied" })
+      expect(() => checkV138LiveV14EffectState(root, "pre")).toThrow()
+
+      writeFileSync(terminalPath, canonical({ ...terminal, freshAccepted: 540 }))
+      const badTerminal = readFileSync(terminalPath)
+      expect(() => checkV138LiveV14EffectState(root, "post")).toThrow(/TERMINAL_INVALID/)
+      expect(readFileSync(terminalPath).equals(badTerminal)).toBe(true)
+      writeFileSync(terminalPath, canonical(terminal))
+
+      writeFileSync(receipts[1]!, canonical({ ...records[1], owner: "tampered-owner" }))
+      const badReceipt = readFileSync(receipts[1]!)
+      expect(() => checkV138LiveV14EffectState(root, "post")).toThrow(/PRIVATE_RECEIPT/)
+      expect(readFileSync(receipts[1]!).equals(badReceipt)).toBe(true)
+      writeFileSync(receipts[1]!, canonical(records[1]))
+      chmodSync(receipts[1]!, 0o644)
+      expect(() => checkV138LiveV14EffectState(root, "post")).toThrow(/PRIVATE_RECEIPT/)
+      chmodSync(receipts[1]!, 0o600)
+
+      expect(checkV138LiveV14EffectState(root, "post")).toMatchObject({ status: "bounded_terminal", downstreamAuthority: "denied" })
+      expect(readFileSync(journalPath).equals(originalJournal)).toBe(true)
+      expect(readFileSync(path.join(ROOT, envelopePath)).equals(envelopeBytes)).toBe(true)
+      expect([effects[1], effects[4], ...effects.slice(5)].every((name) => !existsSync(path.join(root, name)))).toBe(true)
+    })
+  }, 60000)
 })
