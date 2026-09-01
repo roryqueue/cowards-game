@@ -91,8 +91,8 @@ describe("lean schedule", () => {
 describe("lean manifest", () => {
   it("strictly preserves custody, history, formation absence, and authority", () => {
     const manifest = createLeanManifest({
-      sourceCommit: "a".repeat(40),
-      sourceTree: "b".repeat(40),
+      commit: "a".repeat(40),
+      tree: "b".repeat(40),
       executableBlobs: { "scripts/example.ts": "c".repeat(40) },
     })
     expect(validateLeanManifest(manifest)).toEqual(manifest)
