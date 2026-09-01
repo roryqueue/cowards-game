@@ -19,7 +19,6 @@ import { createCandidateInitialGameStateV119 } from "../packages/engine/src/kern
 import { createPreparedRuntimeServiceDependenciesV118, executePreparedRuntimeServiceRequestV118 } from "../apps/runtime-service/src/execute-match.js"
 import { createFixtureDeploymentLaneIdentity, createFixtureRuntimeExecutionAuthorityContext } from "../apps/runtime-service/src/runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "../apps/runtime-service/src/runtime-config.js"
-import * as leanAdmissionRecovery from "./check-v1-38-lean-admission.js"
 import {
   LEAN_AUTHORITY_FALSE, LEAN_DEADLINE_MS, buildLeanSchedule,
   LEAN_CURRENT_FORMATION_ROOT, currentFormationIsRealistic, hashLeanValue, leanRequestRealismRoot,
@@ -32,6 +31,7 @@ export const LEAN_LIVE_SELECTOR = "--run-reviewed-live-gate" as const
 export const LEAN_CHILD_SELECTOR = "--execute-reviewed-cell" as const
 export const LEAN_CORRECTIVE_SELECTOR = "--run-reviewed-corrective-gate" as const
 export const LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR = "--recover-reviewed-corrective-interruption" as const
+export const LEAN_DIRECT_SELECTOR = "--run-reviewed-direct-gate" as const
 export const LEAN_CELL_DEADLINE_MS = 45_000
 export const LEAN_CLEANUP_DEADLINE_MS = 2_000
 
@@ -588,6 +588,24 @@ export const syntheticLeanTerminal = async (): Promise<LeanTerminal> => runLeanF
   }),
 })
 
+// Immutable recovery proof fixture retained for Plan 170 history. Nothing calls
+// this function, and the active parser below has no recovery selector branch.
+const retiredLeanCorrectiveRecoveryDispatch = async (selector: string): Promise<void> => {
+  if (selector !== LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR) return
+  const leanAdmissionRecovery = await import("./check-v1-38-lean-admission.js")
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+  const markerPath = path.resolve(repoRoot, leanAdmissionRecovery.LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
+  const terminalPath = path.resolve(repoRoot, leanAdmissionRecovery.LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
+  await runLeanCorrectiveRecoveryOnlyInjected({
+    markerPresent: existsSync(markerPath),
+    terminalPresent: existsSync(terminalPath),
+    cleanup: async () => { await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) },
+    terminalizeInvalid: async () => { leanAdmissionRecovery.terminalizeLeanCorrectiveInterruption(repoRoot) },
+    postcheck: async () => { leanAdmissionRecovery.checkLeanCorrectiveRecoveryTerminal(repoRoot) },
+  })
+}
+void retiredLeanCorrectiveRecoveryDispatch
+
 const main = async (): Promise<void> => {
   const selector = process.argv[2]
   if (selector === "--synthetic") { process.stdout.write(`${JSON.stringify(await syntheticLeanTerminal())}\n`); return }
@@ -627,64 +645,20 @@ const main = async (): Promise<void> => {
     }
     return
   }
-  if (selector === LEAN_LIVE_SELECTOR) {
+  if (selector === LEAN_DIRECT_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    const readiness = checker.loadAndCheckLeanReviewedReady(repoRoot)
+    const { authorization, review } = checker.loadAndCheckLeanDirectReviewedReady(repoRoot)
     const capability = randomBytes(32).toString("hex")
-    const invocation = checker.createLeanInvocation(readiness, hashLeanValue(capability))
-    createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_ARTIFACT_PATHS.invocation), invocation)
+    const invocation = checker.createLeanDirectInvocation(authorization, review, hashLeanValue(capability))
+    const markerPath = path.resolve(repoRoot, checker.LEAN_DIRECT_ARTIFACT_PATHS.invocation)
+    createExclusiveLeanInvocationMarker(markerPath, invocation)
     const terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
-    checker.createExclusiveLeanTerminal(repoRoot, checker.createLeanTerminalArtifact(invocation, terminal))
+    checker.createExclusiveLeanDirectTerminal(repoRoot, checker.createLeanDirectTerminalArtifact(invocation, terminal))
     process.stdout.write(`${JSON.stringify(terminal)}\n`)
     return
   }
-  if (selector === LEAN_CORRECTIVE_SELECTOR) {
-    const checker = await import("./check-v1-38-lean-admission.js")
-    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    const capability = randomBytes(32).toString("hex")
-    const invocation = checker.prepareLeanCorrectiveInvocation(repoRoot, hashLeanValue(capability))
-    const markerPath = path.resolve(repoRoot, checker.LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
-    const terminalPath = path.resolve(repoRoot, checker.LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
-    createExclusiveLeanInvocationMarker(markerPath, invocation)
-    const ownershipToken = randomBytes(32).toString("hex")
-    const execution = createSupervisedLeanExecutionDependencies(capability, {
-      correctiveOwnership: {
-        token: ownershipToken,
-        persist: (pid, processGroupId, token) => { checker.persistLeanCorrectiveChildOwnership(repoRoot, invocation, pid, processGroupId, token) },
-        clear: (token) => { checker.clearLeanCorrectiveChildOwnership(repoRoot, token) },
-      },
-    })
-    await runLeanCorrectiveWrapperInjected({
-      preflight: async () => { checker.checkLeanCorrectiveLaunchAdmission(repoRoot) },
-      invoke: async () => {
-        const terminal = await runLeanFeasibilityInjected(execution)
-        checker.createExclusiveLeanCorrectiveTerminal(repoRoot, checker.createLeanCorrectiveTerminalArtifact(invocation, terminal))
-      },
-      recover: async () => {
-        if (!existsSync(terminalPath)) {
-          await execution.terminateActive()
-          checker.terminalizeLeanCorrectiveInterruption(repoRoot)
-        }
-      },
-      postcheck: async () => { checker.checkLeanCorrectiveTerminal(repoRoot) },
-    })
-    return
-  }
-  if (selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR) {
-    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    const markerPath = path.resolve(repoRoot, leanAdmissionRecovery.LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
-    const terminalPath = path.resolve(repoRoot, leanAdmissionRecovery.LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
-    await runLeanCorrectiveRecoveryOnlyInjected({
-      markerPresent: existsSync(markerPath),
-      terminalPresent: existsSync(terminalPath),
-      cleanup: async () => { await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) },
-      terminalizeInvalid: async () => { leanAdmissionRecovery.terminalizeLeanCorrectiveInterruption(repoRoot) },
-      postcheck: async () => { leanAdmissionRecovery.checkLeanCorrectiveRecoveryTerminal(repoRoot) },
-    })
-    return
-  }
-  throw new TypeError("LEAN_LIVE_SELECTOR_REQUIRES_PLAN_150_READINESS")
+  throw new TypeError("LEAN_DIRECT_SELECTOR_REQUIRED")
 }
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) void main().catch((error: unknown) => {
   process.stderr.write(`${error instanceof Error ? error.message : "LEAN_RUNNER_FAILED"}\n`); process.exitCode = 1
