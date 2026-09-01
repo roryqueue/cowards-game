@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: blocked
-stopped_at: Plan262-124 completed clean exhausted non-pass; Plan262-95 source-only gaps modeling is next; activation remains blocked
+status: in_progress
+stopped_at: Plan262-148 D-34L contract revision; Plan262-149 source/tests are the sole next action
 last_updated: "2026-08-31T23:13:44Z"
-last_activity: 2026-08-31
-last_activity_desc: Plan262-124 committed exhausted 0/540 disposition and retired only owner-local v4 raw evidence; Route12 absent
+last_activity: 2026-09-01
+last_activity_desc: D-34L approved lean_runner_feasibility_v1 as the pending ADMIT-03 prerequisite; historical 0/540 remains immutable
 progress:
   total_phases: 9
   completed_phases: 0
@@ -18,6 +18,10 @@ progress:
 ---
 
 # State: Coward's Game
+
+## Active D-34L lean admission contract — 2026-09-01
+
+The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.
 
 ## Current Plan124 closeout — 2026-08-31
 
@@ -700,3 +704,5 @@ None
 <!-- phase-262-plan-106-provisional-tracking: {"admit03":"blocked","authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false},"branch":"gaps","inventoryCounts":{"activePlans":128,"dormantCarriers":1,"historicalPlans":18,"reviews":165,"summaries":120,"total":434,"validations":1,"verifications":1},"inventoryRoot":"sha256:6df3f7c630d752571765aeea734f6c856f21207d7b947f3f8ecf7bf1ac720399","nextAction":"dispatch-262-127-only","phase262":"incomplete","phase263ExecutionEligible":false,"phase263PlanningEligible":false,"schemaVersion":"v1.38-plan-262-106-provisional-tracking-v1"} -->
 
 <!-- phase-262-plan-128-final-tracking: {"admit03":"blocked","authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false},"branch":"gaps","convergenceReviewRoot":"sha256:7e735320c3d81ea062a0b11c3ccd816487b795d083eca4d83376c315657b5996","inventoryCounts":{"activePlans":128,"dormantCarriers":1,"historicalPlans":18,"reviews":166,"summaries":122,"total":437,"validations":1,"verifications":1},"inventoryRoot":"sha256:741677ff38143200baa398d862a367e89ba7a77a775033d29d95eb285e5aa02d","nextAction":"dispatch-262-129-only","phase262":"incomplete","phase263ExecutionEligible":false,"phase263PlanningEligible":false,"schemaVersion":"v1.38-plan-262-128-final-tracking-v1"} -->
+
+<!-- phase-262-plan-148-lean-tracking: {"activePrerequisite":"lean_runner_feasibility_v1","admit03":"pending","historicalFullMatrix":{"disposition":"exhausted","freshAccepted":0,"requiredAccepted":540,"reproductionPresent":false,"reinterpreted":false},"phase262":"in_progress","phase263PlanningEligible":false,"phase263ExecutionEligible":false,"nextAction":"dispatch-262-149-source-and-tests-only","authorityAllFalse":true} -->

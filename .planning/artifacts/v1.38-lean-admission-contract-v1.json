@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "v1.38-lean-admission-contract-v1",
+  "decision": "D-34L",
+  "activePrerequisite": "lean_runner_feasibility_v1",
+  "historicalFullMatrix": {
+    "disposition": "exhausted",
+    "freshAccepted": 0,
+    "requiredAccepted": 540,
+    "reproductionPresent": false,
+    "reinterpreted": false
+  },
+  "historicalCustody": {
+    "plan128": {
+      "publicationCommit": "45c27939c146f588d2ce526dd912100f5352db05",
+      "tree": "631145ff0c3eb3697aed53c0ffaaf089148b9cab",
+      "protectedBlobs": {
+        ".planning/REQUIREMENTS.md": "0188ef8aad9159255d36075f50431d9f69471c0c",
+        ".planning/ROADMAP.md": "b09b037d1c008c11b26538a83ebb5ed086b79586",
+        ".planning/STATE.md": "a27d3bf07dc9b22cd6b2131decbb47dc02eb919b",
+        ".planning/artifacts/v1.38-phase-262-final-eligibility-v1.json": "28fb1c15a3ffd5cdc0e4cc41ed8c176c5249fa1e",
+        ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-128-SUMMARY.md": "1b33900e319f2f55e5a173ebd99253bbbde9c7a9"
+      }
+    },
+    "plan129": {
+      "verificationCommit": "1cd2a2da213ab40afd146c67c85cecfa38c0dc6a",
+      "verificationPath": ".planning/artifacts/v1.38-plan-262-129-later-head-verification-v1.json",
+      "verificationBlob": "4404b6851f0430054513fbcec5dd8c90851bf2a1",
+      "verificationRoot": "sha256:600be93582bc9307c4dd503a29f1109689bb61a6518b48ed9203403482e57cad"
+    }
+  },
+  "fixtureContract": {
+    "fixturePair": "one_existing_starter_advanced_pair",
+    "arenaLabels": 3,
+    "sideAssignments": 2,
+    "initiativeParities": 2,
+    "uniqueCells": 12,
+    "serialPasses": 2,
+    "chargedMatches": 24,
+    "outerLimitMinutes": 15,
+    "capacityPreflight": false,
+    "calibration": false,
+    "routeBackoff": false,
+    "fullMatrixAllocation": false,
+    "formationMaterialization": false,
+    "currentFormationOnly": true,
+    "canonicalTransitionEngineUnchanged": true,
+    "supervisedRuntimeRequired": true,
+    "exactSourceAndTupleCustodyRequired": true,
+    "requiredSupervisedSuccesses": 24,
+    "requiredCleanupComplete": true,
+    "requiredCrossPassIdentity": [
+      "terminalOutcome",
+      "finalState",
+      "orderedTransitionsAndEvents",
+      "runtimeAccounting"
+    ]
+  },
+  "claimClass": "fixture_feasibility_only",
+  "correctiveRerunLimit": 1,
+  "correctiveRerunPreauthorized": false,
+  "correctiveRerunQualification": "diagnosed_implementation_defect_after_separate_committed_fix_only",
+  "correctiveRerunDisallowedReasons": [
+    "resource_pressure",
+    "slowness",
+    "gameplay_outcome",
+    "unexplained_nondeterminism"
+  ],
+  "partialCellReuseAllowed": false,
+  "nextAction": "dispatch-262-149-source-and-tests-only",
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}

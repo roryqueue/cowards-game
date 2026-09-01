@@ -1,8 +1,8 @@
 # Roadmap: Coward's Game
 
-## Approved D-33R recovery — 2026-08-31
+## Active D-34L lean admission contract — 2026-09-01
 
-The operator approved exactly one corrected invocation after independently verified native deadlock repair, under unchanged limits. Plans145→146→147 replace failed110 as the executable entry; no further retry or repeated hash-literal checkpoint is authorized. Plan110 and all v3 source, absence evidence and empty private directory remain preserved history. Fresh source/evidence uses v4/live-v15/reproduction-v18, correction-v12 and Route12. Plan145 is next after plan checking;146 must independently verify the real native composition before root147 runs. Phase262 remains incomplete and ADMIT-03 remains0/540; Phases263-270 and candidate/formation/holdout/public/production authority remain denied. This is not adoption of the proposed lean milestone rewrite.
+The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.
 
 Current inventory:128 plan files,110 completed plans,13 active pending and5 inactive/uncompleted historical plans (including failed110). The failed110 summary records an attempted invocation, not completed work. Older closeout/count/dispatch carriers below are historical.
 
@@ -46,19 +46,19 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 ### Phase 262: Foundation Admission, Measurement, Local Seal, and Containment Contract
 
 **Goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, single-operator local-seal, claim, and containment contract with explicit assurance limits.
-**Depends on:** Phase 261 (v1.37 complete)
+**Depends on:** Phase 261 (v1.37 complete); Phase 263 remains blocked until reviewed `lean_runner_feasibility_v1` passes
 **Requirements:** ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04, MEAS-01, MEAS-02, MEAS-03, MEAS-04, MEAS-05, MEAS-06, MEAS-07, MEAS-08, MEAS-09, MEAS-10, SEAL-01, DECI-02
 **Success Criteria** (what must be TRUE):
 
   1. Maintainers can start an authoritative v1.38 run only after a machine-checked join of the v1.37 audit, archive commit, annotated tag, independent post-tag attestation, and exact selected semantic/runtime tuple passes; any missing, stale, incompatible, or drifting input produces an explicit stop disposition back to the integrity foundation.
-  2. Researchers can reproduce the persisted current-rules matrix under the resolved tuple, while Starter and Advanced Strategies are mechanically labeled and accepted only as smoke, regression, and throughput fixtures.
+  2. Researchers can pass the reviewed `lean_runner_feasibility_v1` fixture gate: 12 current-formation Starter/Advanced cells run twice serially as 24 charged supervised Matches within 15 minutes, with complete cleanup and byte-identical normalized results across passes; the exhausted 0/540 full-matrix result remains immutable non-pass history.
   3. Before candidate output is inspected, one immutable contract fixes the primary and secondary estimands, complete conditions and cells, splits and opponents, structural budgets and retries, metric code and denominators, hard and compensating gates, stopping and response admission, finalist and portfolio selection, failure accounting, and bounded permitted claims.
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
 **Plans:** 110/128 completed;13 active pending,5 inactive/uncompleted historical including failed110
 
-**Current verdict:** PLAN110 NATIVE BOOTSTRAP FAILURE / SOLE INVOCATION USED / FRESH0/540 / NO REENTRY / DOWNSTREAM DENIED. Plan143's source-only proof remains historical passing evidence; it did not execute the actual owner-plus-journal-bootstrap composition. Plan110 and the phase remain incomplete.
+**Current verdict:** D-34L LEAN RUNNER FEASIBILITY PENDING / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / NO REINTERPRETATION / ALL AUTHORITY FALSE. Plan143's source-only proof remains historical passing evidence; it did not execute the actual owner-plus-journal-bootstrap composition. Plan110 and the phase remain incomplete.
 
 **Current Plan110 failure (2026-08-31):** The sole live-v14 invocation at `bccafa3f` deadlocked in native journal bootstrap: the owner held the exclusive root lock and the synchronous transaction independently waited for that same lock. The blocked transaction was safely terminated, the owner unwound, and live/post checks both exited1. No observation, calibration or Match ran; journal/terminal/reproduction remain absent, while the empty private directory is preserved. Failure summary `2bd6f682` is not a completion or producer terminal. Plan110 must not be re-entered; Plan94's prerequisites are unmet. An explicit operator revision of the terminal-failure/one-shot boundary is required before any fresh live route. Non-authorizing repair design may continue; ADMIT-03 remains0/540 and all downstream authority is denied.
 

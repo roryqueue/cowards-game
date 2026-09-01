@@ -1,5 +1,9 @@
 # Competitive Strategy Factory and Adversarial League
 
+## Active D-34L lean admission contract — 2026-09-01
+
+The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.
+
 **Status:** Proposed research and implementation handoff
 **Prepared:** 2026-07-12
 **Rules baseline:** Current canonical `cowards-rules-v1.4` behavior
