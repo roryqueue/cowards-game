@@ -12,6 +12,7 @@ import {
   validateLeanAdjudication,
   validateLeanEligibility,
   validateLeanInvocation,
+  validateLeanInvocationLineage,
   validateLeanTerminalArtifact,
   createLeanInterruptedTerminal,
   checkLeanManifest,
@@ -140,6 +141,47 @@ describe("lean admission custody", () => {
       phase262Complete: false, phase263PlanningEligible: false,
       phase263ExecutionEligible: false, authority: LEAN_AUTHORITY_FALSE,
     }, adjudication)).not.toThrow()
+  })
+
+  it("rejects every invocation root that does not join the reviewed readiness chain", () => {
+    const manifest = renderLeanManifest(process.cwd(), process.env.LEAN_TEST_SOURCE_COMMIT ?? "HEAD")
+    const review = checkLeanSourceReview(manifest, {
+      schemaVersion: "v1.38-lean-runner-source-review-v2",
+      sourceCommit: manifest.source.commit,
+      manifestRoot: hashLeanValue(manifest),
+      findingCount: 0,
+      findings: [],
+      admitsExecution: false,
+      authority: LEAN_AUTHORITY_FALSE,
+    })
+    const readiness = checkLeanReadiness(manifest, review, {
+      schemaVersion: "v1.38-lean-runner-readiness-v2",
+      sourceCommit: manifest.source.commit,
+      manifestRoot: hashLeanValue(manifest),
+      sourceReviewRoot: hashLeanValue(review),
+      findingCount: 0,
+      plan151Eligible: true,
+      liveInvocationLimit: 1,
+      liveInvocationsConsumed: 0,
+      correctiveRerunAuthorized: false,
+      authority: LEAN_AUTHORITY_FALSE,
+    })
+    const invocation = {
+      schemaVersion: "v1.38-lean-runner-invocation-v1",
+      sourceCommit: readiness.sourceCommit,
+      manifestRoot: readiness.manifestRoot,
+      sourceReviewRoot: readiness.sourceReviewRoot,
+      readinessRoot: hashLeanValue(readiness),
+      childCapabilityRoot: "sha256:" + "4".repeat(64),
+      claimClass: "fixture_feasibility_only",
+      liveInvocationOrdinal: 1,
+      authority: LEAN_AUTHORITY_FALSE,
+    } as const
+    expect(validateLeanInvocationLineage(readiness, invocation)).toEqual(invocation)
+    for (const key of ["sourceCommit", "manifestRoot", "sourceReviewRoot", "readinessRoot"] as const) {
+      const forged = { ...invocation, [key]: key === "sourceCommit" ? "f".repeat(40) : "sha256:" + "f".repeat(64) }
+      expect(() => validateLeanInvocationLineage(readiness, forged)).toThrow(/LEAN_INVOCATION_LINEAGE_MISMATCH/u)
+    }
   })
 
   it("does not allow a claimed pass to escalate eligibility when evidence rederives non-pass", () => {

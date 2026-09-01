@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process"
+import { EventEmitter } from "node:events"
+import { PassThrough } from "node:stream"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -7,6 +9,7 @@ import { buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT, leanRequ
 import {
   LEAN_LIVE_SELECTOR,
   buildCanonicalLeanRequestV118,
+  createSupervisedLeanExecutionDependencies,
   createExclusiveLeanInvocationMarker,
   executePreparedLeanCell,
   parseLeanExecutionResult,
@@ -23,6 +26,30 @@ const dependencies = (mutate?: Partial<LeanExecutionDependencies>): LeanExecutio
   execute: async (cell) => ({ classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true, requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT, ...roots }),
   terminateActive: async () => ({ cleanupComplete: true, orphanedChild: false }),
   ...mutate,
+})
+
+class FakeLeanChild extends EventEmitter {
+  exitCode: number | null = null
+  signalCode: NodeJS.Signals | null = null
+  pid: number | undefined
+  stderr = new PassThrough()
+  sent: unknown[] = []
+  killCalls = 0
+  send(message: unknown): boolean { this.sent.push(message); return true }
+  kill(): boolean { this.killCalls += 1; return true }
+  cleanExit(): void { this.exitCode = 0; this.emit("exit", 0, null) }
+  killedExit(): void { this.signalCode = "SIGKILL"; this.emit("exit", null, "SIGKILL") }
+}
+
+const childResult = (cell = buildLeanSchedule()[0]!) => ({
+  classification: "success" as const,
+  cleanupComplete: true,
+  orphanedChild: false,
+  boardRealism: true,
+  integrityValid: true,
+  requestRealismRoot: leanRequestRealismRoot(cell),
+  currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT,
+  ...roots,
 })
 
 describe("bounded lean runner", () => {
@@ -82,6 +109,57 @@ describe("bounded lean runner", () => {
     expect(cleaned).toBe(1)
     expect(result.counts.cancelled).toBe(1)
     expect(result.counts.unlaunched).toBe(23)
+  })
+
+  it("keeps a successful child active until the same child exits cleanly", async () => {
+    const child = new FakeLeanChild()
+    const deps = createSupervisedLeanExecutionDependencies("a".repeat(64), {
+      spawnChild: () => child as never,
+      cellDeadlineMilliseconds: 500,
+      cleanupDeadlineMilliseconds: 50,
+    })
+    const cell = buildLeanSchedule()[0]!
+    let settled = false
+    const execution = deps.execute(cell, new AbortController().signal).finally(() => { settled = true })
+    child.emit("message", { kind: "ready", capability: "a".repeat(64) })
+    child.emit("message", { kind: "result", capability: "a".repeat(64), result: childResult(cell) })
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    await expect(deps.execute(buildLeanSchedule()[1]!, new AbortController().signal)).rejects.toThrow(/LEAN_CHILD_ALREADY_ACTIVE/u)
+    child.cleanExit()
+    await expect(execution).resolves.toEqual(childResult(cell))
+  })
+
+  it("fails closed when success IPC is followed by a nonzero exit", async () => {
+    const child = new FakeLeanChild()
+    const deps = createSupervisedLeanExecutionDependencies("b".repeat(64), {
+      spawnChild: () => child as never,
+      cellDeadlineMilliseconds: 500,
+      cleanupDeadlineMilliseconds: 50,
+    })
+    const cell = buildLeanSchedule()[0]!
+    const execution = deps.execute(cell, new AbortController().signal)
+    child.emit("message", { kind: "ready", capability: "b".repeat(64) })
+    child.emit("message", { kind: "result", capability: "b".repeat(64), result: childResult(cell) })
+    child.exitCode = 7
+    child.emit("exit", 7, null)
+    await expect(execution).rejects.toThrow(/LEAN_CHILD_FAILED/u)
+  })
+
+  it("uses one bounded termination barrier for abort and refuses an unproved exit", async () => {
+    const child = new FakeLeanChild()
+    const deps = createSupervisedLeanExecutionDependencies("c".repeat(64), {
+      spawnChild: () => child as never,
+      cellDeadlineMilliseconds: 500,
+      cleanupDeadlineMilliseconds: 5,
+    })
+    const controller = new AbortController()
+    const execution = deps.execute(buildLeanSchedule()[0]!, controller.signal)
+    controller.abort()
+    await expect(execution).resolves.toEqual(expect.objectContaining({
+      classification: "cancelled", cleanupComplete: false, orphanedChild: true,
+    }))
+    expect(child.killCalls).toBe(1)
   })
 
   it("turns thrown execution plus failed cleanup into one invalid stop", async () => {
