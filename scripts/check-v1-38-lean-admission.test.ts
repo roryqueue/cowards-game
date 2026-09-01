@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -7,6 +7,7 @@ import {
   LEAN_CORRECTIVE_ARTIFACT_PATHS,
   LEAN_CORRECTIVE_V2_ARTIFACT_PATHS,
   LEAN_CORRECTIVE_V3_ARTIFACT_PATHS,
+  LEAN_CORRECTIVE_V4_ARTIFACT_PATHS,
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
@@ -39,6 +40,11 @@ import {
   renderLeanCorrectiveSourceReviewV3,
   renderLeanCorrectiveReadinessV3,
   checkLeanCorrectiveReadinessV3,
+  checkLeanCorrectiveReadinessV4,
+  deriveLeanCorrectiveFreshEffects,
+  renderLeanCorrectiveManifestV4,
+  renderLeanCorrectiveReadinessV4,
+  renderLeanCorrectiveSourceReviewV4,
   createLeanCorrectiveInterruptionTombstone,
   validateLeanCorrectiveInterruptionTombstone,
   validateLeanDiagnosticCustody,
@@ -148,6 +154,52 @@ describe("lean admission custody", () => {
     expect(() => checkLeanCorrectiveReadinessV3(manifestV3, { ...reviewV3, findingCount: 1 }, readinessV3)).toThrow()
   }, 30_000)
 
+  it("rejects mutation of every v2 predecessor contract leaf", () => {
+    const original = JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest, "utf8")) as Record<string, unknown>
+    const leaves: Array<readonly (string | number)[]> = []
+    const collect = (value: unknown, trail: readonly (string | number)[]): void => {
+      if (value !== null && typeof value === "object") {
+        for (const [key, child] of Object.entries(value)) collect(child, [...trail, Array.isArray(value) ? Number(key) : key])
+      } else leaves.push(trail)
+    }
+    collect(original, [])
+    expect(leaves.length).toBeGreaterThan(50)
+    for (const trail of leaves) {
+      const mutated = structuredClone(original) as Record<string, unknown>
+      let owner: Record<string | number, unknown> = mutated
+      for (const key of trail.slice(0, -1)) owner = owner[key] as Record<string | number, unknown>
+      const key = trail.at(-1)!
+      const current = owner[key]
+      owner[key] = typeof current === "boolean" ? !current : typeof current === "number" ? current + 1 : `${String(current)}-mutated`
+      expect(() => checkLeanCorrectiveManifestV2(process.cwd(), mutated), trail.join(".")).toThrow()
+    }
+  }, 60_000)
+
+  it("binds Plan 165 summary and derives v4 effect presence from disk", () => {
+    const manifest = renderLeanCorrectiveManifestV4(process.cwd(), "HEAD")
+    expect(manifest.plan165Summary).toEqual({
+      commit: "18251a883e77b3a7b0845074faae4d8365ab84d5",
+      blob: "96fecf67546c3c5b9eaa0a72901fbe3f6978b3c4",
+      contentRoot: "sha256:4407a2284cfd1086bb67b7de497424156983a6dedec9684f288069e1ea8788c4",
+    })
+    expect(Object.values(manifest.freshCorrectiveEffects)).toEqual([false, false, false, false, false, false])
+    const review = renderLeanCorrectiveSourceReviewV4(manifest, [])
+    const readiness = renderLeanCorrectiveReadinessV4(manifest, review)
+    expect(checkLeanCorrectiveReadinessV4(manifest, review, readiness)).toEqual(readiness)
+    expect(LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.readiness).toMatch(/readiness-v4\.json$/u)
+
+    const dir = mkdtempSync(path.join(tmpdir(), "lean-effects-")); temporary.push(dir)
+    expect(deriveLeanCorrectiveFreshEffects(dir)).toEqual({
+      readinessV4Present: false, invocationV2Present: false, terminalV2Present: false,
+      adjudicationV2Present: false, eligibilityV2Present: false, childOwnershipPresent: false,
+    })
+    const target = path.resolve(dir, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
+    const parent = path.dirname(target)
+    mkdirSync(parent, { recursive: true })
+    writeFileSync(target, "{}\n")
+    expect(deriveLeanCorrectiveFreshEffects(dir).invocationV2Present).toBe(true)
+  }, 30_000)
+
   it("accepts only epistemically limited diagnostic custody", () => {
     const custody = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-diagnostic-custody-v1.json", "utf8"))
     expect(validateLeanDiagnosticCustody(custody)).toEqual(custody)
@@ -183,6 +235,17 @@ describe("lean admission custody", () => {
       "cleanup: async () => { const recover = checker.recoverLeanCorrectiveOrphan; await recover(repoRoot) }",
     )
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(computedCallback, checker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL/u)
+
+    const importedChecker = checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      "import { firstHop as importedFirstHop } from './recovery-hop.js'\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { importedFirstHop();",
+    )
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, importedChecker, {
+      "./recovery-hop.js": "export { secondHop as firstHop } from './recovery-second.js'",
+      "./recovery-second.js": "import * as lean from './lib/v1-38-lean-runner-feasibility.js'; export const secondHop = () => { const callback = () => lean.buildLeanSchedule(); callback() }",
+      "./lib/v1-38-lean-runner-feasibility.js": readFileSync("scripts/lib/v1-38-lean-runner-feasibility.ts", "utf8"),
+    })).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, importedChecker, {})).toThrow(/LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL/u)
   })
 
   it("uses a schedule-free exact interruption tombstone", () => {
