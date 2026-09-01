@@ -135,11 +135,11 @@ describe("lean admission custody", () => {
     expect(Object.values(LEAN_CORRECTIVE_ARTIFACT_PATHS)).not.toContain(LEAN_ARTIFACT_PATHS.terminal)
   })
 
-  it("keeps failed v1/v2 trust paths historical and admits only fresh v3", () => {
+  it("keeps failed v1/v2/v3 trust paths historical and admits only fresh v4", () => {
     expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest).toMatch(/manifest-v2\.json$/u)
     expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.readiness).toMatch(/readiness-v2\.json$/u)
     expect(LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest).toMatch(/manifest-v3\.json$/u)
-    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest)
+    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest)
     const manifestV2 = checkLeanCorrectiveManifestV2(process.cwd(), JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest, "utf8")))
     const reviewV2 = JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview, "utf8"))
     expect(checkLeanCorrectiveSourceReviewV2(manifestV2, reviewV2).findingCount).toBe(2)

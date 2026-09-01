@@ -680,7 +680,7 @@ const main = async (): Promise<void> => {
       terminalPresent: existsSync(terminalPath),
       cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) },
       terminalizeInvalid: async () => { checker.terminalizeLeanCorrectiveInterruption(repoRoot) },
-      postcheck: async () => { checker.checkLeanCorrectiveTerminal(repoRoot) },
+      postcheck: async () => { checker.checkLeanCorrectiveRecoveryTerminal(repoRoot) },
     })
     return
   }
