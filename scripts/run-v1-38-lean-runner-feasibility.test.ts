@@ -12,6 +12,7 @@ import {
   LEAN_CELL_DEADLINE_MS,
   LEAN_CLEANUP_DEADLINE_MS,
   LEAN_LIVE_SELECTOR,
+  LEAN_DIRECT_SELECTOR,
   buildCanonicalLeanRequestV118,
   createSupervisedLeanExecutionDependencies,
   createExclusiveLeanInvocationMarker,
@@ -60,6 +61,16 @@ const childResult = (cell = buildLeanSchedule()[0]!) => ({
 })
 
 describe("bounded lean runner", () => {
+  it("exposes one direct launch selector and retires recovery from active dispatch", () => {
+    expect(LEAN_DIRECT_SELECTOR).toBe("--run-reviewed-direct-gate")
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const main = source.slice(source.indexOf("const main = async"))
+    expect(main).toContain("selector === LEAN_DIRECT_SELECTOR")
+    expect(main).not.toContain("selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR")
+    expect(main).not.toContain("runLeanCorrectiveRecoveryOnlyInjected")
+    expect(main).not.toContain("terminalizeLeanCorrectiveInterruption")
+  })
+
   it("executes pass A then B serially exactly once", async () => {
     const active = new Set<string>()
     const seen: string[] = []

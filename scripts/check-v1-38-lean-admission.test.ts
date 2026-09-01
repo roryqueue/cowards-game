@@ -64,6 +64,10 @@ import {
   createLeanCorrectiveInterruptionTombstone,
   validateLeanCorrectiveInterruptionTombstone,
   validateLeanDiagnosticCustody,
+  LEAN_DIRECT_ARTIFACT_PATHS,
+  renderLeanDirectAuthorization,
+  checkLeanDirectAuthorization,
+  checkLeanDirectSourceOnly,
 } from "./check-v1-38-lean-admission.js"
 import * as leanAdmissionModule from "./check-v1-38-lean-admission.js"
 
@@ -85,6 +89,23 @@ describe("lean admission custody", () => {
     transitionEventRoot: hashLeanValue({ cell: cell.baseCellId, kind: "events" }),
     runtimeAccountingRoot: hashLeanValue({ cell: cell.baseCellId, kind: "accounting" }),
   })))
+  it("renders an exact D-34L.1 direct authorization with five preserved findings", () => {
+    const authorization = renderLeanDirectAuthorization(process.cwd(), process.env.LEAN_TEST_SOURCE_COMMIT ?? "HEAD")
+    expect(authorization.schemaVersion).toBe("v1.38-lean-runner-direct-authorization-v1")
+    expect(authorization.plan172Review.root).toBe("sha256:54a33fb359f4aa0851da82cd9d8ff6f6aa04d1d905b8467e36b096c21432113c")
+    expect(authorization.plan172Review.findings).toHaveLength(5)
+    expect(authorization.plan172Review.findings.every(({ disposition }) => disposition === "certification_only_nonblocking_under_D_34L_1")).toBe(true)
+    expect(authorization.invocations).toEqual({ allowed: 1, consumed: 0, recoveryAuthorized: false, partialReuseAuthorized: false, relaunchAuthorized: false })
+    expect(Object.values(authorization.freshEffects).every((present) => present === false)).toBe(true)
+    expect(() => checkLeanDirectAuthorization(process.cwd(), authorization)).not.toThrow()
+    expect(() => checkLeanDirectAuthorization(process.cwd(), { ...authorization, deadlineMilliseconds: 899_999 })).toThrow(/LEAN_DIRECT_AUTHORIZATION/u)
+    expect(() => checkLeanDirectAuthorization(process.cwd(), { ...authorization, extra: true })).toThrow(/LEAN_DIRECT_AUTHORIZATION/u)
+  }, 30_000)
+
+  it("keeps all direct destinations absent during source-only closure", () => {
+    expect(Object.keys(LEAN_DIRECT_ARTIFACT_PATHS)).toEqual(["authorization", "review", "invocation", "terminal", "adjudication", "eligibility"])
+    expect(() => checkLeanDirectSourceOnly(process.cwd())).not.toThrow()
+  })
   it("permits only authenticated successor lock residue", () => {
     expect(() => assertLeanStatus(`?? .v138-successor-${"a".repeat(64)}.lock\n`)).not.toThrow()
     expect(() => assertLeanStatus(" M scripts/example.ts\n")).toThrow(/LEAN_WORKTREE_DIRTY/u)
