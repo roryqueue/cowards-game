@@ -248,6 +248,15 @@ describe("lean admission custody", () => {
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, importedChecker, {})).toThrow(/LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL/u)
   })
 
+  it("rejects the exact CR-168-01 function-declaration recovery bypass", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8").replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      "function unsafeRecoveryHop(): void { buildLeanSchedule() }\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { unsafeRecoveryHop();",
+    )
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+  })
+
   it("uses a schedule-free exact interruption tombstone", () => {
     const invocation = {
       schemaVersion: "v1.38-lean-runner-corrective-invocation-v2", sourceCommit: "a".repeat(40),
