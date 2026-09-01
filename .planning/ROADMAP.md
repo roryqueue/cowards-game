@@ -56,15 +56,16 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 128/135 plans executed
+**Plans:** 110/128 completed;13 active pending,5 inactive/uncompleted historical including failed110
 
-**Current verdict:** D-34L LEAN RUNNER FEASIBILITY PENDING / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / NO REINTERPRETATION / ALL AUTHORITY FALSE. Plan153 closed B1-B5 and W1 in source/tests under exact committed manifest custody. Plan154 independent review is next; no v2 readiness, live invocation, ADMIT-03 satisfaction, or downstream authority exists yet.
+**Current verdict:** D-34L LEAN RUNNER FEASIBILITY PENDING / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / NO REINTERPRETATION / ALL AUTHORITY FALSE. Plan143's source-only proof remains historical passing evidence; it did not execute the actual owner-plus-journal-bootstrap composition. Plan110 and the phase remain incomplete.
 
 **Current Plan110 failure (2026-08-31):** The sole live-v14 invocation at `bccafa3f` deadlocked in native journal bootstrap: the owner held the exclusive root lock and the synchronous transaction independently waited for that same lock. The blocked transaction was safely terminated, the owner unwound, and live/post checks both exited1. No observation, calibration or Match ran; journal/terminal/reproduction remain absent, while the empty private directory is preserved. Failure summary `2bd6f682` is not a completion or producer terminal. Plan110 must not be re-entered; Plan94's prerequisites are unmet. An explicit operator revision of the terminal-failure/one-shot boundary is required before any fresh live route. Non-authorizing repair design may continue; ADMIT-03 remains0/540 and all downstream authority is denied.
 
 <!-- phase-262-plan-110-bootstrap-failure: {"schema_version":"v1.38-plan-262-110-bootstrap-failure-v1","execution_source":"bccafa3fd3a19514e5db9980b7a2de922a56e3bf","summary_commit":"2bd6f682","status":"blocked_native_owner_transaction_self_deadlock","plan110_complete":false,"live_invocations":1,"producer_invocations":1,"live_exit":1,"post_exit":1,"preflight_observations":0,"route_starts":0,"calibration_attempts":0,"reproduction_cells":0,"fresh_accepted":0,"required_accepted":540,"journal_present":false,"terminal_present":false,"reproduction_present":false,"empty_private_directory_preserved":true,"owned_native_processes_exited":true,"retry_performed":false,"reentry_authorized":false,"third_envelope_authorized":false,"plan94_eligible":false,"phase262_complete":false,"downstream_authority_denied":true,"next_action":"operator-stop-rule-decision-before-any-new-live-route"} -->
 
 The Plan143 and earlier carriers below are immutable pre-execution history, not current permission to invoke Plan110 again.
+
 
 **Current Plan143 closeout (2026-08-31):** Independent literal-zero v10 is published at `3ad69156`, followed directly by summary `2cf1ed90`. Final reviewer source `836c1d6f` passed29/29 tests, clean independent V3 review and targeted typecheck. Only Plan110 is next after mandatory fresh tracking/unrelated-descendant checks; all invocation/fresh counters remain0, ADMIT-03 stays0/540 and downstream authority stays denied.
 
@@ -79,22 +80,21 @@ The dependency-repair and earlier closeout carriers below are historical; only t
 <!-- phase-262-live-v14-dependency-repair: {"schema_version":"v1.38-phase-262-live-v14-dependency-repair-v1","plan_files":125,"trustworthy_summaries":108,"active_remaining":13,"active_chain":["262-144","262-143","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135","262-137","262-139","262-141"],"waves":{"262-144":108,"262-143":109,"262-110":110,"262-94":111,"262-123":112,"262-124":113,"262-95":114,"262-125":115,"262-126":116,"262-106":117,"262-127":118,"262-128":119,"262-129":120},"research_commit":"2dfa313f7579b6639f89cdedd987ac60d861ffaf","plan142_complete":true,"plan142_tracking":"7edcac4f5977ea8f006b1369536414c8006e64bd","plan143_state":"open_RED_and_partial_source_no_GREEN_or_publication","plan143_red_commit":"1a5251692af696b010ebc4086b764c6a48b92f32","plan144_source_only":true,"consumer_version":"live-v14","plan_262_110_eligible":false,"v10_publication_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"third_envelope_authorized":false,"admit_03":"blocked","phase_262":"incomplete","downstream_authority_denied":true,"next_action":"dispatch-262-144-only"} -->
 
 **Current executable plan list (supersedes historical wave lists below):**
-
 - [x] 262-144-PLAN.md — Wave108; closed source-only live-v14 contract and actual-consumer proof (`8bb3dbb8` summary)
 - [x] 262-143-PLAN.md — Wave109; independent v10 review closed (summary `2cf1ed90`)
-- [x] 262-145-PLAN.md — Wave110; repair native lease and close fresh v4 source
-- [x] 262-146-PLAN.md — Wave111; one independent exact-source native-composition review
-- [x] 262-147-PLAN.md — Wave112; root sole corrected live-v15 invocation and unconditional postcheck
-- [x] 262-94-PLAN.md — Wave113; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-123-PLAN.md — Wave114; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-124-PLAN.md — Wave115; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-95-PLAN.md — Wave116; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-125-PLAN.md — Wave117; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-126-PLAN.md — Wave118; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-106-PLAN.md — Wave119; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-127-PLAN.md — Wave120; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-128-PLAN.md — Wave121; pending admission/lifecycle continuation on fresh v4 lineage
-- [x] 262-129-PLAN.md — Wave122; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-145-PLAN.md — Wave110; repair native lease and close fresh v4 source
+- [ ] 262-146-PLAN.md — Wave111; one independent exact-source native-composition review
+- [ ] 262-147-PLAN.md — Wave112; root sole corrected live-v15 invocation and unconditional postcheck
+- [ ] 262-94-PLAN.md — Wave113; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-123-PLAN.md — Wave114; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-124-PLAN.md — Wave115; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-95-PLAN.md — Wave116; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-125-PLAN.md — Wave117; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-126-PLAN.md — Wave118; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-106-PLAN.md — Wave119; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-127-PLAN.md — Wave120; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-128-PLAN.md — Wave121; pending admission/lifecycle continuation on fresh v4 lineage
+- [ ] 262-129-PLAN.md — Wave122; pending admission/lifecycle continuation on fresh v4 lineage
 
 The Plan142 closeout carrier and its next-action prose below remain immutable historical evidence; the Plan144 closeout carrier controls current dispatch.
 
@@ -256,21 +256,6 @@ The current carrier also resolves the audit's Plan-79 journal-root documentation
 **Plan-76 closeout:** Superseding the prior next-action sentence, the finite retry source/controller and 20 synthetic/fake-process tests are committed under `93ebaac43c13cf6e658769a11e9c2c10f5b35965`. Exact discovery is 62 plans/57 summaries. No live handler ran; fresh charges and accepted cells remain 0/540, canonical seal/envelope/journal/terminal/reproduction artifacts remain absent, and Plan 262-77 is the sole next action.
 
 Plans:
-
-- [x] 262-136-PLAN.md
-- [ ] 262-137-PLAN.md
-- [x] 262-138-PLAN.md
-- [ ] 262-139-PLAN.md
-- [x] 262-140-PLAN.md
-- [ ] 262-141-PLAN.md
-- [x] 262-142-PLAN.md
-- [x] 262-148-PLAN.md
-- [x] 262-149-PLAN.md
-- [x] 262-150-PLAN.md
-- [ ] 262-151-PLAN.md
-- [ ] 262-152-PLAN.md
-- [x] 262-153-PLAN.md
-- [ ] 262-154-PLAN.md
 
 **Wave 70** *(complete)*
 
@@ -434,51 +419,51 @@ Plans:
 
 **Wave 100** *(blocked on exact committed Plan-134 source-only correction)*
 
-- [x] 262-135-PLAN.md — Independently mutate every authority/counter/schema/root/link field and publish exact additive v6 only on literal zero with reusable strict-descendant authentication.
+- [ ] 262-135-PLAN.md — Independently mutate every authority/counter/schema/root/link field and publish exact additive v6 only on literal zero with reusable strict-descendant authentication.
 
 **Wave 101** *(blocked on reusable strict-descendant literal-zero Plan-135 v6; standing execution authorization unchanged)*
 
-- [x] 262-110-PLAN.md — Invoke reviewed live-v13 once; commit the privacy-safe terminal and conditional unchanged reproduction-v17 while raw journal/private receipts remain owner-local.
+- [ ] 262-110-PLAN.md — Invoke reviewed live-v13 once; commit the privacy-safe terminal and conditional unchanged reproduction-v17 while raw journal/private receipts remain owner-local.
 
 **Wave 102** *(blocked on committed Plan-110 terminal summary)*
 
-- [x] 262-94-PLAN.md — Commit publication-incapable admission checker source and a privacy-safe aggregate manifest before cleanup.
+- [ ] 262-94-PLAN.md — Commit publication-incapable admission checker source and a privacy-safe aggregate manifest before cleanup.
 
 **Wave 103** *(blocked on committed Plan-94 source and aggregate)*
 
-- [x] 262-123-PLAN.md — Independently review exact Plan-94 source and aggregate privacy; publish findings only.
+- [ ] 262-123-PLAN.md — Independently review exact Plan-94 source and aggregate privacy; publish findings only.
 
 **Wave 104** *(blocked on literal-zero Plan-123 review)*
 
-- [x] 262-124-PLAN.md — Invoke the reviewed publisher for disposition/correction/Route-11, then retire owner-local raw evidence after committed aggregate verification.
+- [ ] 262-124-PLAN.md — Invoke the reviewed publisher for disposition/correction/Route-11, then retire owner-local raw evidence after committed aggregate verification.
 
 **Wave 105** *(blocked on committed Plan-124 adjudication)*
 
-- [x] 262-95-PLAN.md — Commit publication-incapable lifecycle-driver source/tests with all-16 and all-plan inventory semantics.
+- [ ] 262-95-PLAN.md — Commit publication-incapable lifecycle-driver source/tests with all-16 and all-plan inventory semantics.
 
 **Wave 106** *(blocked on committed Plan-95 source)*
 
-- [x] 262-125-PLAN.md — Independently review lifecycle source, mutation partitions, coverage, and final-convergence holdback.
+- [ ] 262-125-PLAN.md — Independently review lifecycle source, mutation partitions, coverage, and final-convergence holdback.
 
 **Wave 107** *(blocked on literal-zero Plan-125 review)*
 
-- [x] 262-126-PLAN.md — Publish non-authorizing readiness, exhaustive validation/verification, and additive Plan121 metadata correction.
+- [ ] 262-126-PLAN.md — Publish non-authorizing readiness, exhaustive validation/verification, and additive Plan121 metadata correction.
 
 **Wave 108** *(blocked on committed Plan-126 proof latch)*
 
-- [x] 262-106-PLAN.md — Commit provisional lifecycle, summary, and branch-neutral/pass-only tracking atomically while Phase263 remains denied.
+- [ ] 262-106-PLAN.md — Commit provisional lifecycle, summary, and branch-neutral/pass-only tracking atomically while Phase263 remains denied.
 
 **Wave 109** *(blocked on atomic Plan-106 closeout)*
 
-- [x] 262-127-PLAN.md — Independently audit full convergence, all 16 requirements, all active/history, privacy, and authority edges before eligibility.
+- [ ] 262-127-PLAN.md — Independently audit full convergence, all 16 requirements, all active/history, privacy, and authority edges before eligibility.
 
 **Wave 110** *(blocked on literal-zero Plan-127 convergence)*
 
-- [x] 262-128-PLAN.md — Publish the exact final branch atomically; exact pass permits Phase263 planning only, gaps permits bookkeeping only.
+- [ ] 262-128-PLAN.md — Publish the exact final branch atomically; exact pass permits Phase263 planning only, gaps permits bookkeeping only.
 
 **Wave 111** *(blocked on atomic Plan-128 publication)*
 
-- [x] 262-129-PLAN.md — Authenticate the final closeout from a strict later HEAD and clean checkout before any Phase263 action.
+- [ ] 262-129-PLAN.md — Authenticate the final closeout from a strict later HEAD and clean checkout before any Phase263 action.
 
 **Wave 1**
 
@@ -915,7 +900,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 128/135 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 110/125 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
