@@ -10,6 +10,7 @@ import {
   LEAN_AUTHORITY_FALSE,
   LEAN_DEADLINE_MS,
   buildLeanSchedule,
+  currentFormationIsRealistic,
   hashLeanValue,
   reduceLeanExecutions,
   type LeanCell,
@@ -22,6 +23,7 @@ export interface LeanExecutionResult {
   readonly classification: LeanExecutionClassification
   readonly cleanupComplete: boolean
   readonly orphanedChild: boolean
+  readonly boardRealism: boolean
   readonly outcomeRoot?: `sha256:${string}`
   readonly finalStateRoot?: `sha256:${string}`
   readonly transitionEventRoot?: `sha256:${string}`
@@ -34,6 +36,7 @@ export interface LeanExecutionDependencies {
   readonly onAbort?: () => void
   readonly awaitCleanup?: (signal: AbortSignal) => Promise<{ cleanupComplete: boolean; orphanedChild: boolean }>
   readonly deadlineMilliseconds?: number
+  readonly armDeadline?: (onDeadline: () => void, milliseconds: number) => () => void
 }
 
 const unlaunched = (cell: LeanCell): LeanExecutionRecord => ({
@@ -41,6 +44,7 @@ const unlaunched = (cell: LeanCell): LeanExecutionRecord => ({
   classification: "unlaunched",
   cleanupComplete: true,
   orphanedChild: false,
+  boardRealism: currentFormationIsRealistic(cell),
 })
 
 export const runLeanFeasibilityInjected = async (
@@ -52,27 +56,53 @@ export const runLeanFeasibilityInjected = async (
   const started = dependencies.now()
   const deadline = dependencies.deadlineMilliseconds ?? LEAN_DEADLINE_MS
   let deadlineReached = false
+  let resolveDeadline!: () => void
+  const deadlinePromise = new Promise<void>((resolve) => { resolveDeadline = resolve })
+  const abortOnce = (): void => {
+    if (deadlineReached) return
+    deadlineReached = true
+    controller.abort("LEAN_OUTER_DEADLINE")
+    dependencies.onAbort?.()
+    resolveDeadline()
+  }
+  const armDeadline = dependencies.armDeadline ?? ((onDeadline, milliseconds) => {
+    const timer = setTimeout(onDeadline, milliseconds)
+    timer.unref()
+    return () => clearTimeout(timer)
+  })
+  const cancelDeadline = armDeadline(abortOnce, deadline)
   for (const cell of schedule) {
     if (dependencies.now() - started >= deadline) {
-      deadlineReached = true
-      controller.abort("LEAN_OUTER_DEADLINE")
-      dependencies.onAbort?.()
+      abortOnce()
       break
     }
     try {
-      const execution = await dependencies.execute(cell, controller.signal)
+      const execution = await Promise.race([
+        dependencies.execute(cell, controller.signal),
+        deadlinePromise.then((): LeanExecutionResult => ({
+          classification: "cancelled", cleanupComplete: false,
+          orphanedChild: true, boardRealism: currentFormationIsRealistic(cell),
+        })),
+      ])
       records.push({ ...cell, ...execution })
+      if (deadlineReached) break
     } catch {
       records.push({
         ...cell,
         classification: controller.signal.aborted ? "cancelled" : "system_failure",
         cleanupComplete: false,
         orphanedChild: true,
+        boardRealism: currentFormationIsRealistic(cell),
       })
     }
   }
+  cancelDeadline()
   if (deadlineReached && dependencies.awaitCleanup) {
-    await dependencies.awaitCleanup(controller.signal)
+    const cleanup = await dependencies.awaitCleanup(controller.signal)
+    const last = records.at(-1)
+    if (last?.classification === "cancelled") {
+      records[records.length - 1] = { ...last, ...cleanup }
+    }
   }
   for (const cell of schedule.slice(records.length)) records.push(unlaunched(cell))
   return reduceLeanExecutions(records)
@@ -125,24 +155,25 @@ export const createPreparedLeanExecutor = (input: {
   readonly dependencies: PreparedRuntimeServiceDependenciesV118
 }): LeanExecutionDependencies["execute"] => async (cell, signal) => {
   if (signal.aborted) {
-    return { classification: "cancelled", cleanupComplete: true, orphanedChild: false }
+    return { classification: "cancelled", cleanupComplete: true, orphanedChild: false, boardRealism: currentFormationIsRealistic(cell) }
   }
   const response = executePreparedRuntimeServiceRequestV118(
     input.requestForCell(cell),
     input.dependencies,
   ) as PreparedResponse
   if (!response.ok || response.result === undefined) {
-    return { classification: "system_failure", cleanupComplete: true, orphanedChild: false }
+    return { classification: "system_failure", cleanupComplete: true, orphanedChild: false, boardRealism: currentFormationIsRealistic(cell) }
   }
   const result = response.result
   return {
     classification: result.runtimeViolationEventCount === 0 ? "success" : "player_violation",
     cleanupComplete: true,
     orphanedChild: false,
-    outcomeRoot: hashLeanValue(result.outcome),
-    finalStateRoot: hashLeanValue(result.finalState),
-    transitionEventRoot: hashLeanValue(result.chronicle),
-    runtimeAccountingRoot: hashLeanValue({ ledgerPoststateRoot: result.ledgerPoststateRoot }),
+    boardRealism: currentFormationIsRealistic(cell),
+    outcomeRoot: hashLeanValue(normalizeLeanSemantic(result.outcome)),
+    finalStateRoot: hashLeanValue(normalizeLeanSemantic(result.finalState)),
+    transitionEventRoot: hashLeanValue(normalizeLeanSemantic(result.chronicle)),
+    runtimeAccountingRoot: hashLeanValue(normalizeLeanSemantic({ ledgerPoststateRoot: result.ledgerPoststateRoot, runtimeViolationEventCount: result.runtimeViolationEventCount })),
   }
 }
 
@@ -153,6 +184,7 @@ export const syntheticLeanTerminal = async (): Promise<LeanTerminal> =>
       classification: "success",
       cleanupComplete: true,
       orphanedChild: false,
+      boardRealism: currentFormationIsRealistic(cell),
       outcomeRoot: hashLeanValue({ cell: cell.baseCellId, semantic: "outcome" }),
       finalStateRoot: hashLeanValue({ cell: cell.baseCellId, semantic: "state" }),
       transitionEventRoot: hashLeanValue({ cell: cell.baseCellId, semantic: "events" }),
@@ -176,3 +208,17 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 }
 
 export const LEAN_RUNNER_AUTHORITY = LEAN_AUTHORITY_FALSE
+
+const UNSTABLE_KEYS = new Set(["requestId", "matchId", "invocationId", "startedAt", "completedAt", "recordedAt", "wallClockMilliseconds"])
+export const normalizeLeanSemantic = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(normalizeLeanSemantic)
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => !UNSTABLE_KEYS.has(key))
+      .map(([key, child]) => [key, normalizeLeanSemantic(child)]))
+  }
+  if (typeof value === "string") {
+    return value.replaceAll(":pass:a", ":pass:*").replaceAll(":pass:b", ":pass:*")
+  }
+  return value
+}

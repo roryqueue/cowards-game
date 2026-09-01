@@ -16,6 +16,7 @@ const successfulRecords = (): LeanExecutionRecord[] =>
     classification: "success",
     cleanupComplete: true,
     orphanedChild: false,
+    boardRealism: true,
     outcomeRoot: root(cell.cellId.includes("pass:a") ? "1" : "1"),
     finalStateRoot: root("2"),
     transitionEventRoot: root("3"),
@@ -77,6 +78,7 @@ describe("lean schedule", () => {
     for (const mutation of [
       { cleanupComplete: false },
       { orphanedChild: true },
+      { boardRealism: false },
       { finalStateRoot: root("8") },
       { transitionEventRoot: root("8") },
       { runtimeAccountingRoot: root("8") },

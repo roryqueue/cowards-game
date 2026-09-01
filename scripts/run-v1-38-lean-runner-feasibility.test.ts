@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { buildLeanSchedule, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   createExclusiveLeanInvocationMarker,
+  normalizeLeanSemantic,
   runLeanFeasibilityInjected,
   type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
@@ -15,7 +16,7 @@ afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: tr
 
 const dependencies = (mutate?: Partial<LeanExecutionDependencies>): LeanExecutionDependencies => ({
   now: (() => { let value = 0; return () => ++value })(),
-  execute: async () => ({ classification: "success", cleanupComplete: true, orphanedChild: false, ...roots }),
+  execute: async () => ({ classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }),
   ...mutate,
 })
 
@@ -29,7 +30,7 @@ describe("bounded lean runner", () => {
         active.add(cell.cellId)
         seen.push(cell.cellId)
         active.delete(cell.cellId)
-        return { classification: "success", cleanupComplete: true, orphanedChild: false, ...roots }
+        return { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
       },
     }))
     expect(seen).toEqual(buildLeanSchedule().map(({ cellId }) => cellId))
@@ -41,7 +42,7 @@ describe("bounded lean runner", () => {
     const result = await runLeanFeasibilityInjected(dependencies({
       execute: async (cell) => {
         seen.push(cell.cellId)
-        return { classification: cell.ordinal === 3 ? "system_failure" : "success", cleanupComplete: true, orphanedChild: false, ...roots }
+        return { classification: cell.ordinal === 3 ? "system_failure" : "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
       },
     }))
     expect(seen).toHaveLength(24)
@@ -56,13 +57,33 @@ describe("bounded lean runner", () => {
       now: () => (tick += 500_000),
       execute: async (_cell, signal) => ({
         classification: signal.aborted ? "cancelled" : "success",
-        cleanupComplete: true, orphanedChild: false, ...roots,
+        cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots,
       }),
       onAbort: () => { aborted += 1 },
     }))
     expect(aborted).toBe(1)
     expect(result.counts.unlaunched).toBeGreaterThan(0)
     expect(result.result).toBe("non_pass")
+  })
+
+  it("interrupts a hung active request and awaits cleanup", async () => {
+    let cleaned = 0
+    const result = await runLeanFeasibilityInjected(dependencies({
+      execute: async () => new Promise(() => undefined),
+      armDeadline: (expire) => { queueMicrotask(expire); return () => undefined },
+      awaitCleanup: async () => { cleaned += 1; return { cleanupComplete: true, orphanedChild: false } },
+    }))
+    expect(cleaned).toBe(1)
+    expect(result.counts.cancelled).toBe(1)
+    expect(result.counts.unlaunched).toBe(23)
+  })
+
+  it("normalizes only invocation/time identity while retaining semantic dimensions", () => {
+    const normalized = normalizeLeanSemantic({
+      matchId: "match:pass:a", recordedAt: "now", eventId: "event:pass:a",
+      arenaId: "arena:smoke:v1", initiativeSide: "bottom",
+    })
+    expect(normalized).toEqual({ eventId: "event:pass:*", arenaId: "arena:smoke:v1", initiativeSide: "bottom" })
   })
 
   it("durably creates an exclusive invocation marker and refuses reuse", () => {

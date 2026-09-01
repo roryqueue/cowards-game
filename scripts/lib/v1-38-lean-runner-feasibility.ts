@@ -63,6 +63,7 @@ export interface LeanExecutionRecord extends LeanCell {
   readonly classification: LeanExecutionClassification
   readonly cleanupComplete: boolean
   readonly orphanedChild: boolean
+  readonly boardRealism: boolean
   readonly outcomeRoot?: `sha256:${string}`
   readonly finalStateRoot?: `sha256:${string}`
   readonly transitionEventRoot?: `sha256:${string}`
@@ -242,6 +243,7 @@ export const reduceLeanExecutions = (
     ({ cleanupComplete, orphanedChild }) => cleanupComplete && !orphanedChild,
   )
   const passes = !invalid && counts.success === 24 && completeCleanup &&
+    records.every(({ boardRealism }) => boardRealism) &&
     comparedCells === 12 && mismatchCount === 0
   return Object.freeze({
     schemaVersion: LEAN_SCHEMA,
@@ -329,3 +331,14 @@ export const validateLeanManifest = (value: unknown): LeanManifest => {
 }
 
 export const hashLeanValue = canonicalHash
+
+export const currentFormationIsRealistic = (cell: LeanCell): boolean => {
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.arenaId)
+  if (!arena) return false
+  const inside = ({ x, y }: { x: number; y: number }): boolean =>
+    x >= arena.initialBounds.minX && x <= arena.initialBounds.maxX &&
+    y >= arena.initialBounds.minY && y <= arena.initialBounds.maxY
+  return [...BOTTOM_STARTING_POSITIONS, ...TOP_STARTING_POSITIONS, ...arena.terrainStones].every(inside) &&
+    BOTTOM_STARTING_POSITIONS.every(({ x, y }) => x >= 2 && x <= 9 && y === 11) &&
+    TOP_STARTING_POSITIONS.every(({ x, y }) => x >= 2 && x <= 9 && y === 0)
+}
