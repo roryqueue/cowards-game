@@ -29,7 +29,7 @@ describe("lean schedule", () => {
     expect(new Set(schedule.map(({ baseCellId }) => baseCellId)).size).toBe(12)
     expect(schedule.slice(0, 12).every(({ pass }) => pass === "pass:a")).toBe(true)
     expect(schedule.slice(12).every(({ pass }) => pass === "pass:b")).toBe(true)
-    expect(new Set(schedule.map(({ chargedIdentity }) => chargedIdentity).size).toBe(24)
+    expect(new Set(schedule.map(({ chargedIdentity }) => chargedIdentity)).size).toBe(24)
   })
 
   it("passes only complete identical successful evidence", () => {
