@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-review-v1",
+  "sourceCommit": "0f10feaf3d5b4c7ea8c1947bc4ca93dbececaaf4",
+  "manifestRoot": "sha256:e658081ce9e722c4389592e98af32b2949f4f524c787bd9ff30a7ff1a612560f",
+  "findingCount": 5,
+  "findings": [
+    {
+      "id": "CR-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Corrective live readiness omits working-tree authentication before execution."
+    },
+    {
+      "id": "CR-02",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Corrective execution can charge 24 Matches when the fresh terminal destination already exists."
+    },
+    {
+      "id": "CR-03",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Recovery-only cannot terminate and terminalize the active orphan child state it is intended to recover."
+    },
+    {
+      "id": "WR-01",
+      "severity": "warning",
+      "status": "open",
+      "summary": "Structural non-execution checking omits the executable recovery-only CLI selector branch."
+    },
+    {
+      "id": "WR-02",
+      "severity": "warning",
+      "status": "open",
+      "summary": "The prescribed focused verification command fails at the default five-second test timeout."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
