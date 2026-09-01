@@ -40,7 +40,7 @@ status: complete
 - Current topology: **121 summaries / 435 classified paths**
 - Historical readiness topology: **120 summaries / 434 classified paths**
 - Exact delta: `.planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-106-SUMMARY.md` only
-- Review root: `sha256:c17afe5643f7326f958aa207fcbae8c771ac44336319d6328816f5169a011c88`
+- Review root: `sha256:716c39094adb7e168c5f4bfc03b1f91e7705b339073efc6e8dbd9fcd1e966f4c`
 
 ## Verification
 
