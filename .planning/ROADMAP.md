@@ -1,5 +1,13 @@
 # Roadmap: Coward's Game
 
+## Reviewed D-34L result — 2026-09-01
+
+The sole `lean_runner_feasibility_v1` invocation has been independently adjudicated as `non_pass`: 12 unique cells and 24 charges were present with complete cleanup, but only 8 executions succeeded, 16 system-failed, and 8 of 12 cross-pass comparisons mismatched. ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phase 263 planning/execution remain ineligible. The repeated arena-specific pattern may be diagnosed separately; no corrective-rerun authority exists from this adjudication.
+
+Historical full-matrix evidence remains immutable `exhausted` at fresh `0/540`, no reproduction, and `reinterpreted:false`. Candidate search, Phase 264+, formation, holdout, public/product/production, counted-play, canonical-evidence, gameplay-change, archive, release, and tag authority remain false.
+
+<!-- phase-262-lean-roadmap-tracking: {"schemaVersion":"v1.38-phase-262-lean-final-tracking-v1","surface":"roadmap","admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false}} -->
+
 ## Active D-34L lean admission contract — 2026-09-01
 
 The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.
