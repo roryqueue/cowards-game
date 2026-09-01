@@ -7,10 +7,12 @@ import {
   deriveAndValidateLeanTerminal,
   leanRequestRealismRoot,
   projectLeanV118Response,
+  resolveLeanExecutionArena,
   reduceLeanExecutions,
   validateLeanManifest,
   type LeanExecutionRecord,
 } from "./v1-38-lean-runner-feasibility.js"
+import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 
 const root = (value: string) => `sha256:${value.repeat(64).slice(0, 64)}` as const
 
@@ -31,6 +33,40 @@ const successfulRecords = (): LeanExecutionRecord[] =>
   }))
 
 describe("lean schedule", () => {
+  it("preserves declared alias cells while binding one active execution arena", () => {
+    const openField = buildLeanSchedule().find(({ arenaId }) => arenaId === "arena:open-field:v1")!
+    const smoke = buildLeanSchedule().find(({ arenaId }) => arenaId === "arena:smoke:v1")!
+    expect(openField).toMatchObject({
+      arenaId: "arena:open-field:v1",
+      arenaLabel: "Open Field",
+      executionArenaId: "arena:smoke:v1",
+      executionArenaLabel: "Smoke",
+      executionSemanticGeometryHash: openField.semanticGeometryHash,
+    })
+    expect(smoke).toMatchObject({
+      arenaId: "arena:smoke:v1",
+      arenaLabel: "Smoke",
+      executionArenaId: "arena:smoke:v1",
+      executionArenaLabel: "Smoke",
+      executionSemanticGeometryHash: smoke.semanticGeometryHash,
+    })
+    expect(openField.baseCellId).toContain("arena:open-field:v1")
+    expect(openField.chargedIdentity).toContain("arena:open-field:v1")
+  })
+
+  it.each([
+    ["missing target", (catalog: any) => { catalog.arenas[2].aliasOf = "arena:missing:v1" }],
+    ["chained alias", (catalog: any) => { catalog.arenas[0].status = "historical_alias"; catalog.arenas[0].schedulable = false; catalog.arenas[0].aliasOf = "arena:standard-cross:v1" }],
+    ["inactive target", (catalog: any) => { catalog.arenas[0].status = "historical_alias"; catalog.arenas[0].schedulable = false }],
+    ["unschedulable target", (catalog: any) => { catalog.arenas[0].schedulable = false }],
+    ["geometry mismatch", (catalog: any) => { catalog.arenas[2].semanticGeometryHash = catalog.arenas[1].semanticGeometryHash }],
+    ["cyclic alias", (catalog: any) => { catalog.arenas[0].status = "historical_alias"; catalog.arenas[0].schedulable = false; catalog.arenas[0].aliasOf = "arena:open-field:v1" }],
+  ])("rejects %s before execution", (_label, mutate) => {
+    const catalog = structuredClone(CANONICAL_ARENA_CATALOG_V1_37)
+    mutate(catalog)
+    expect(() => resolveLeanExecutionArena(catalog, "arena:open-field:v1")).toThrow(/LEAN_ARENA_/u)
+  })
+
   it("pre-enumerates 12 cells twice in pass order", () => {
     const schedule = buildLeanSchedule()
     expect(schedule).toHaveLength(24)

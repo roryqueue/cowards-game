@@ -7,6 +7,8 @@ import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
+  LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR,
+  LEAN_CORRECTIVE_SELECTOR,
   LEAN_LIVE_SELECTOR,
   buildCanonicalLeanRequestV118,
   createSupervisedLeanExecutionDependencies,
@@ -14,6 +16,8 @@ import {
   executePreparedLeanCell,
   parseLeanExecutionResult,
   runLeanFeasibilityInjected,
+  runLeanCorrectiveRecoveryOnlyInjected,
+  runLeanCorrectiveWrapperInjected,
   type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
 import * as leanRunnerModule from "./run-v1-38-lean-runner-feasibility.js"
@@ -187,7 +191,8 @@ describe("bounded lean runner", () => {
       const previous = initialRoots.get(cell.baseCellId)
       if (previous === undefined) initialRoots.set(cell.baseCellId, prepared.initialStateRoot)
       else expect(prepared.initialStateRoot).toBe(previous)
-      expect(request.match.arenaVariant.id).toBe(cell.arenaId)
+      expect(request.match.arenaVariant.id).toBe(cell.executionArenaId)
+      expect(request.match.arenaVariant.name).toBe(cell.executionArenaLabel)
       expect(request.match.initialInitiativePlayerId).toBe(`player:${cell.initiativeSide}`)
       const fixtureId = (side: "bottom" | "top") => {
         const metadata = request.strategies[side].metadata
@@ -197,6 +202,38 @@ describe("bounded lean runner", () => {
       expect(fixtureId("top")).toBe(cell.topFixtureId)
     }
     expect(LEAN_LIVE_SELECTOR).toBe("--run-reviewed-live-gate")
+    expect(LEAN_CORRECTIVE_SELECTOR).toBe("--run-reviewed-corrective-gate")
+    expect(LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR).toBe("--recover-reviewed-corrective-interruption")
+  })
+
+  it("always recovers and postchecks the normal corrective wrapper", async () => {
+    const calls: string[] = []
+    await expect(runLeanCorrectiveWrapperInjected({
+      invoke: async () => { calls.push("invoke"); throw new Error("interrupted") },
+      recover: async () => { calls.push("recover") },
+      postcheck: async () => { calls.push("postcheck") },
+    })).rejects.toThrow("interrupted")
+    expect(calls).toEqual(["invoke", "recover", "postcheck"])
+  })
+
+  it("recovery-only accepts only marker-present terminal-absent and launches nothing", async () => {
+    const calls: string[] = []
+    await runLeanCorrectiveRecoveryOnlyInjected({
+      markerPresent: true,
+      terminalPresent: false,
+      cleanup: async () => { calls.push("cleanup") },
+      terminalizeInvalid: async () => { calls.push("terminalize") },
+      postcheck: async () => { calls.push("postcheck") },
+    })
+    expect(calls).toEqual(["cleanup", "terminalize", "postcheck"])
+    await expect(runLeanCorrectiveRecoveryOnlyInjected({
+      markerPresent: false, terminalPresent: false,
+      cleanup: async () => undefined, terminalizeInvalid: async () => undefined, postcheck: async () => undefined,
+    })).rejects.toThrow(/LEAN_CORRECTIVE_MARKER_REQUIRED/u)
+    await expect(runLeanCorrectiveRecoveryOnlyInjected({
+      markerPresent: true, terminalPresent: true,
+      cleanup: async () => undefined, terminalizeInvalid: async () => undefined, postcheck: async () => undefined,
+    })).rejects.toThrow(/LEAN_CORRECTIVE_TERMINAL_EXISTS/u)
   })
 
   it("rejects direct child selection before executing any cell", () => {
