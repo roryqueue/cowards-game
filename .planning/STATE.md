@@ -5,14 +5,14 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plans262-156 through 262-160 planned for the approved D-34L corrective path; dispatch Plan262-156 source-only
-last_updated: "2026-09-01T18:55:00Z"
+stopped_at: Plans262-156, 262-161, 262-157 through 262-160, and 262-162 planned for the approved D-34L corrective path; dispatch Plan262-156 source-only
+last_updated: "2026-09-01T19:30:00Z"
 last_activity: 2026-09-01
-last_activity_desc: Revised the corrective chain for independent review, fail-safe live recovery, proof-only adjudication, and final milestone/handoff synchronization
+last_activity_desc: Split the corrective chain into bounded runner, terrain, review, recovery-safe execution, proof, tracking, and handoff plans
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 133
+  total_plans: 135
   completed_plans: 117
   percent: 89
 ---
@@ -23,9 +23,9 @@ progress:
 
 Independent diagnosis isolated two implementation defects behind the reviewed non-pass: Open Field must keep its frozen declared cell identity while resolving its historical alias to active Smoke execution authority, and replay reconstruction/runtime terminal projection must use one canonical y-then-x terrain order. Six diagnosis-only Matches were unpersisted and are non-live, non-charged, and inadmissible as evidence.
 
-The sole active chain is 262-156 -> 262-157 -> 262-158 -> 262-159 -> 262-160. Plan156 may commit only focused source/tests and safe diagnostic custody. Plan157 independently reviews exact source without editing it and may publish readiness only on literal zero; any finding requires newly planned bounded correction/re-review work. Plan158 owns one wrapper that combines exactly one complete fresh 24-Match invocation with unconditional recovery/postcheck that cannot relaunch a Match. Plan159 adjudicates and completes proof only. Plan160 alone synchronizes the milestone and Phase263 handoff. Until exact pass is synchronized, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
+The sole active chain is 262-156 -> 262-161 -> 262-157 -> 262-158 -> 262-159 -> 262-160 -> 262-162. Plan156 may commit only focused runner/alias source and tests plus safe diagnostic custody. Plan161 separately canonicalizes replay/runtime terrain ordering. Plan157 independently reviews the exact combined closure without editing it and may publish readiness only on literal zero; any finding requires newly planned bounded correction/re-review work. Plan158 owns one normal wrapper that combines exactly one complete fresh 24-Match invocation with unconditional recovery/postcheck in `finally`. If external interruption prevents that cleanup, one separately invokable recovery-only selector is allowed solely when the fresh v2 marker exists and its terminal is absent; it cannot start or relaunch a Match and is not a rerun. Plan159 adjudicates and completes proof only. Plan160 synchronizes tracking/audit surfaces, and Plan162 synchronizes project/research/seed/Phase263 handoff surfaces and proves both sets agree. Until exact pass is synchronized across both sets, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
 
-<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v2","activeChain":["262-156","262-157","262-158","262-159","262-160"],"nextAction":"dispatch-262-156-source-only","specificDefects":["historical_alias_execution_identity","canonical_terrain_projection_order"],"diagnosticMatches":6,"observationBasis":"operator_session_observation","rawEvidencePresent":false,"independentlyVerifiable":false,"diagnosticsCharged":false,"diagnosticsAdmissible":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v3","activeChain":["262-156","262-161","262-157","262-158","262-159","262-160","262-162"],"waves":{"262-156":131,"262-161":132,"262-157":133,"262-158":134,"262-159":135,"262-160":136,"262-162":137},"nextAction":"dispatch-262-156-source-only","specificDefects":["historical_alias_execution_identity","canonical_terrain_projection_order"],"diagnosticMatches":6,"observationBasis":"operator_session_observation","rawEvidencePresent":false,"independentlyVerifiable":false,"diagnosticsCharged":false,"diagnosticsAdmissible":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"recoveryOnlyCondition":"fresh_v2_marker_present_terminal_absent","recoveryOnlyIsRerun":false,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Reviewed D-34L result — 2026-09-01
 
