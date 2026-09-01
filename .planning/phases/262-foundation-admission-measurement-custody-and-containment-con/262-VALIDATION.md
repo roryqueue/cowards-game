@@ -18,6 +18,16 @@ Validation coverage remains 16/16 and requirement satisfaction remains 15/16. AD
 
 The arena-specific failure pattern is eligible for separate diagnosis only. This validation neither diagnoses a qualifying implementation defect nor authorizes a corrective rerun.
 
+### Plan 262-152 execution checks
+
+- Current lean suites and containment monitors: 12/12 files and 165/165 tests pass.
+- TypeScript: `pnpm exec tsc --noEmit --pretty false` exits 0.
+- Historical custody, independent adjudication, and five-surface final tracking checks pass.
+- The exact 14-file command also exposes two obsolete historical verifier assertions: Plan 127 rejects the D-34L-required descendant changes to protected Plan 128 tracking paths (18/19 tests pass), and Plan 63 accepts only its original two-state plan inventory (5/6 tests pass). These are legacy verifier compatibility gaps, not lean-terminal, privacy, formation, or authority failures.
+- The Plan 148 later-head fallback still expects either its original 13-path revision set or a now-missing compatibility wrapper named `check-v1-38-plan-262-152-lean-final-tracking-v1.ts`; the active `check-v1-38-lean-admission.ts --check-final-tracking` succeeds directly.
+
+The two legacy suite failures and the fallback-wrapper mismatch are deferred to separately scoped verifier maintenance. They do not turn the reviewed empirical `non_pass` into a pass and do not authorize another execution.
+
 ## Disposition
 
 Phase 262 has complete automated behavioral coverage for its 16 assigned requirements, but it is not empirically complete. The sole corrected retry-v4 invocation ended `exhausted` with fresh `0/540`; ADMIT-03 is blocked, Phase 262 is incomplete, and Phase 263 planning and execution remain false. Tests prove the gates and containment behavior. They do not manufacture the missing 540 accepted cells.

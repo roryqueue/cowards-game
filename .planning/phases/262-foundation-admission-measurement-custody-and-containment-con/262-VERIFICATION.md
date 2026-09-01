@@ -37,6 +37,10 @@ The approved lean replacement was executed exactly once and independently adjudi
 
 The historical full-matrix `exhausted` result remains immutable at fresh `0/540`, no reproduction, and `reinterpreted:false`; it is not substituted for or reinterpreted by the lean result. The repeated arena-specific pattern may be diagnosed separately, but this verification records no diagnosed defect and grants no corrective-rerun authority.
 
+### Verification execution note
+
+The active lean gate verifier, independent adjudication join, and five-surface tracking checker all pass from the committed Plan 262-152 state. Twelve current suites pass 165/165 tests, TypeScript passes, and historical custody passes. Two explicitly included historical suites retain obsolete assumptions: Plan 127 treats required D-34L descendant tracking as Plan 128 drift (18/19 pass), while Plan 63 hard-codes the plan inventory that preceded more than ninety later plans (5/6 pass). The Plan 148 later-head fallback also expects a compatibility wrapper not listed in Plan 262-152, although the active final-tracking checker passes directly. These verifier-maintenance gaps are reported rather than hidden; no source correction or rerun occurred in this plan.
+
 **Phase Goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, single-operator local-seal, claim, and containment contract with explicit assurance limits.
 
 **Verdict:** `gaps_found`. The admission, measurement, local-seal, containment, accounting, privacy, and stop machinery is implemented and tested. The empirical admission latch is not satisfied: the corrected bounded run exhausted at `0/540`. A correctly enforced stop is not achievement of the phase goal.
