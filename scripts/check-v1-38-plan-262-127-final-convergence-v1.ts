@@ -527,10 +527,15 @@ export const assertCommittedAuditCarrier = (root: string, carrier: any): string 
       fail("DEFAULT_AUDIT_SOURCE_FILES")
   }
   const publicationCommit = git(root, ["log", "-1", "--format=%H", "--", PATHS.reviewCarrier])
+  const publicationParents = git(root, ["show", "-s", "--format=%P", publicationCommit])
+    .split(/\s+/u).filter(Boolean)
   if (canonical(changedPaths(root, publicationCommit)) !==
       canonical([PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127].sort()) ||
-      !isAncestor(root, carrier.sourceCommit, publicationCommit))
+      publicationParents.length !== 1 || publicationParents[0] !== carrier.sourceCommit)
     fail("DEFAULT_AUDIT_PUBLICATION")
+  for (const repoPath of [PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127])
+    if (!gitBytes(root, "HEAD", repoPath).equals(gitBytes(root, publicationCommit, repoPath)))
+      fail("DEFAULT_AUDIT_PUBLICATION_BYTES")
   return carrier.sourceCommit
 }
 

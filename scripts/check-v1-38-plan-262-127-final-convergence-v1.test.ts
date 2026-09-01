@@ -224,7 +224,32 @@ describe("Plan 262-127 final convergence", () => {
       ".planning/artifacts/v1.38-plan-262-127-final-convergence-review-v1.json",
       "utf8",
     ))
-    const redirected = { ...carrier, sourceCommit: PLAN_106_COMMIT }
+    const ancestor = "b2078bf0a4ad896d7723f7d1ff913e8745823ba1"
+    const sourcePaths = [
+      "scripts/check-v1-38-plan-262-127-final-convergence-v1.ts",
+      "scripts/check-v1-38-plan-262-127-final-convergence-v1.test.ts",
+    ]
+    const sourceFiles = sourcePaths.map((repoPath) => {
+      const treeEntry = execFileSync(
+        "git", ["ls-tree", ancestor, "--", repoPath], { cwd: root, encoding: "utf8" },
+      ).trim().match(/^(\d+) blob ([a-f0-9]{40})\t/u)
+      if (!treeEntry) throw new TypeError("missing ancestor source")
+      const bytes = execFileSync("git", ["show", `${ancestor}:${repoPath}`], { cwd: root })
+      return {
+        path: repoPath,
+        mode: treeEntry[1],
+        blob: treeEntry[2],
+        sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+      }
+    })
+    const redirected = {
+      ...carrier,
+      sourceCommit: ancestor,
+      sourceTree: execFileSync(
+        "git", ["rev-parse", `${ancestor}^{tree}`], { cwd: root, encoding: "utf8" },
+      ).trim(),
+      sourceFiles,
+    }
     delete redirected.reviewRoot
     const normalize = (value: any): any => Array.isArray(value)
       ? value.map(normalize)
@@ -237,7 +262,7 @@ describe("Plan 262-127 final convergence", () => {
       `v1.38:plan-262:127:final-convergence-review:v1\0${canonical}`,
     ).digest("hex")}`
     expect(() => assertCommittedAuditCarrier(root, redirected))
-      .toThrow(/DEFAULT_AUDIT_SOURCE/)
+      .toThrow(/DEFAULT_AUDIT_PUBLICATION/)
   })
 
   it("preflights all review destinations before a third-file drift can write", () => {
@@ -266,6 +291,32 @@ describe("Plan 262-127 final convergence", () => {
         contents: `new ${repoPath}\n`,
       })))).toThrow(/REVIEW_REPLACEMENT_DRIFT/)
       expect(entries.map(([repoPath]) => readFileSync(path.join(fixture, repoPath))))
+        .toEqual(before)
+    } finally {
+      rmSync(fixture, { recursive: true, force: true })
+    }
+  })
+
+  it("rejects committed companion-only drift before replacing any review file", () => {
+    const fixture = mkdtempSync(path.join(tmpdir(), "plan127-committed-drift-"))
+    const reviewPaths = [
+      ".planning/artifacts/v1.38-plan-262-127-final-convergence-review-v1.json",
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-127-REVIEW.md",
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-127-SUMMARY.md",
+    ]
+    try {
+      execFileSync("git", ["clone", "-q", "--no-hardlinks", root, fixture])
+      execFileSync("git", ["config", "user.email", "plan127@example.invalid"], { cwd: fixture })
+      execFileSync("git", ["config", "user.name", "Plan 127 Test"], { cwd: fixture })
+      writeFileSync(path.join(fixture, reviewPaths[2]), "committed companion drift\n")
+      execFileSync("git", ["add", reviewPaths[2]], { cwd: fixture })
+      execFileSync("git", ["commit", "-q", "-m", "companion drift"], { cwd: fixture })
+      const before = reviewPaths.map((repoPath) => readFileSync(path.join(fixture, repoPath)))
+      expect(() => publishReviewSet(fixture, reviewPaths.map((repoPath) => ({
+        repoPath,
+        contents: `replacement ${repoPath}\n`,
+      })))).toThrow(/DEFAULT_AUDIT_PUBLICATION_BYTES/)
+      expect(reviewPaths.map((repoPath) => readFileSync(path.join(fixture, repoPath))))
         .toEqual(before)
     } finally {
       rmSync(fixture, { recursive: true, force: true })
