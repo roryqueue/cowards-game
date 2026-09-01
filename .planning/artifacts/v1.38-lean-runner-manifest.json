@@ -2,15 +2,35 @@
   "schemaVersion": "v1.38-lean-runner-manifest-v1",
   "claimClass": "fixture_feasibility_only",
   "source": {
-    "commit": "6287a1d2ece1ba1aabdc0a7ca98b814ad19e9b14",
-    "tree": "a25a92969c2717263336465a8dda592eba63aea1",
+    "commit": "6f6a52c74dc5717c13b3bafd00549829f6df8cc3",
+    "tree": "08810294bff1b3a091891cd70fd596ce3556de62",
     "executableBlobs": {
-      "scripts/lib/v1-38-lean-runner-feasibility.ts": "6d4b028ecc976dfe8e5791ff49a8d29380cee6be",
-      "scripts/lib/v1-38-lean-runner-feasibility.test.ts": "191d6c189ad8f6b873a4a54048da93d380be4326",
-      "scripts/run-v1-38-lean-runner-feasibility.ts": "7089457abded7c4ec07b2a41c6e418579e3cf321",
-      "scripts/run-v1-38-lean-runner-feasibility.test.ts": "d094eee955d0d1891583bcb90c9d95d88a87edb4",
-      "scripts/check-v1-38-lean-admission.ts": "af789f9fd61d99e1ededf87c82a741679309209e",
-      "scripts/check-v1-38-lean-admission.test.ts": "b579dfa73dd457274eb643dcab800d4c451d060a"
+      "scripts/lib/v1-38-lean-runner-feasibility.ts": "8f5dccceceee0395cbc282a3ecc1001befd61952",
+      "scripts/lib/v1-38-lean-runner-feasibility.test.ts": "96a30d0a032eda905969f797d13e3cf2fc701886",
+      "scripts/run-v1-38-lean-runner-feasibility.ts": "5e81728759a1897d4b48fd72bfd58d4f462e826a",
+      "scripts/run-v1-38-lean-runner-feasibility.test.ts": "15a3b80ada2f00a868e91850d639dd667ca83fc7",
+      "scripts/check-v1-38-lean-admission.ts": "d1aac5d1e15373a744ea9009d805360f24180b27",
+      "scripts/check-v1-38-lean-admission.test.ts": "2a042b5c2e22b702eba3528a9bfa7cedb5fc7a58",
+      "apps/runtime-service/src/execute-match.ts": "5e72d8e30999975cf66ec0d534682fbdbfd67a50",
+      "apps/runtime-service/src/runtime-execution-current-match.test-support.ts": "d69d36a4be29e2e44fcebe432ad45aeff6a30ad7",
+      "apps/runtime-service/src/runtime-execution-evidence.test-support.ts": "f0268e394862e4fdb5e013d23b5c6cd929f4d4ef",
+      "apps/runtime-service/src/runtime-config.ts": "d13c6f51502cdeb87942009f70889d14a922bcf5",
+      "packages/engine/src/kernel/driver.ts": "c20e840070104c931d1841c67f4a2cfd70509a6d",
+      "packages/engine/src/kernel/step.ts": "72248d36410c816ddf2d0f9cc6868ed5c4ea1484",
+      "packages/engine/src/kernel/validate.ts": "53cbe311304ee3ac3c14c96d78ee2066944804e8",
+      "packages/engine/src/kernel/types.ts": "5aa9539719e239058c128f30c8a4023aaecf02fb",
+      "packages/persistence/src/starter-strategies.ts": "4031ea37126f0dc8895254b65052ccec13f7d361",
+      "packages/persistence/src/advanced-strategies.ts": "ab7c0520ea9c7a7b6c021ce16b8cf290fe9a71dc",
+      "packages/runtime-js/src/executor.ts": "e1012987e09134a27aec80ba34340a3f830f1f68",
+      "packages/runtime-js/src/abi-bridge.ts": "7433effac100ffcaeb0e39016c214b8626458ba9",
+      "packages/runtime-js/src/worker-thread-adapter.ts": "841df6809de0ec8287994b2d9d46e82444c717ba",
+      "packages/spec/src/arena-catalog-v1-37.ts": "39d0046c168d7eed6548badc9e0e74bebcce7db7",
+      "packages/spec/src/constants.ts": "4a44b6b88befd90b55b5557d8b6cfdde30561907",
+      "packages/spec/src/runtime.ts": "d4ad9fa65266ee7ae6426036f897ef4d2b483689",
+      "packages/spec/src/runtime-execution-service.ts": "d3760f83fc0d1f336633787d596c0ffa212601f0",
+      "packages/spec/src/runtime-execution-service-v1-18.ts": "619da57fab06485eeb376cc912062adfbfa23e40",
+      "packages/spec/src/schemas.ts": "7a52757029192fb70cf5a56d295e976c1147b72c",
+      "packages/spec/src/set-condition-policy-v1-37.ts": "3f9101d006685cf2fd71583092e8d8887c52f000"
     }
   },
   "selectedTuple": {
@@ -23,16 +43,8 @@
     "setPolicy": "canonical-set-policy-v1.37-four-condition-v1"
   },
   "fixtures": {
-    "starter": {
-      "id": "starter:aggro-chaser",
-      "version": "v1.4",
-      "sourceHash": "sha256:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1"
-    },
-    "advanced": {
-      "id": "advanced:vanguard-pressure",
-      "version": "v1.5",
-      "sourceHash": "sha256:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37"
-    }
+    "starter": { "id": "starter:aggro-chaser", "version": "v1.4", "sourceHash": "sha256:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1" },
+    "advanced": { "id": "advanced:vanguard-pressure", "version": "v1.5", "sourceHash": "sha256:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37" }
   },
   "arenas": [
     { "id": "arena:smoke:v1", "label": "Smoke", "semanticGeometryHash": "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1" },
