@@ -5,19 +5,25 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-157 completed with five independent findings; Plan158 ineligible pending bounded fix and fresh re-review
-last_updated: "2026-09-01T19:34:00Z"
+stopped_at: Plan262-163 is next for bounded source-only closure of the five Plan157 findings
+last_updated: "2026-09-01T19:41:18Z"
 last_activity: 2026-09-01
-last_activity_desc: Independently reviewed the exact Plan156+161 closure and failed corrective readiness closed on three critical findings and two warnings
+last_activity_desc: Planned bounded Plans163-164 for five finding fixes and fresh literal-zero independent re-review before revised Plan158
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 143
+  total_plans: 145
   completed_plans: 135
-  percent: 94
+  percent: 93
 ---
 
 # State: Coward's Game
+
+## Plan 262-163/164 bounded review-gap closure — 2026-09-01
+
+Plan163 is the sole next action and may edit only the focused lean runner/checker source and tests needed to close CR-01 through CR-03 and WR-01 through WR-02. It authenticates clean tracked bytes before effects, rejects either pre-existing fresh corrective effect, adds a narrowly scoped durable local child-ownership record for authenticated orphan termination, structurally inspects the executable recovery-only CLI branch for zero launch, and stabilizes the expensive focused test without changing production deadlines. It runs no Match and creates no readiness or effect.
+
+Plan164 then binds the exact separately committed Plan163 source and obtains one fresh independent source-only review. Only literal zero findings may create v2 readiness scoped to revised Plan158. Any finding stops again. Plan158 remains ineligible until then and preserves exactly one whole 24-Match corrective rerun plus at most one recovery-only call solely for marker-present/terminal-absent interruption. The failed Plan157 v1 review, first lean attempt, diagnostic observations, historical routes, and all 36 successor locks remain immutable; all downstream authority remains false.
 
 ## Plan 262-157 independent review — 2026-09-01
 
@@ -27,9 +33,9 @@ The exact combined Plan 156 and Plan 161 closure at source commit `0f10feaf3d5b4
 
 Independent diagnosis isolated two implementation defects behind the reviewed non-pass: Open Field must keep its frozen declared cell identity while resolving its historical alias to active Smoke execution authority, and replay reconstruction/runtime terminal projection must use one canonical y-then-x terrain order. Six diagnosis-only Matches were unpersisted and are non-live, non-charged, and inadmissible as evidence.
 
-The sole active chain is 262-156 -> 262-161 -> 262-157 -> 262-158 -> 262-159 -> 262-160 -> 262-162. Plan156 may commit only focused runner/alias source and tests plus safe diagnostic custody. Plan161 separately canonicalizes replay/runtime terrain ordering. Plan157 independently reviews the exact combined closure without editing it and may publish readiness only on literal zero; any finding requires newly planned bounded correction/re-review work. Plan158 owns one normal wrapper that combines exactly one complete fresh 24-Match invocation with unconditional recovery/postcheck in `finally`. If external interruption prevents that cleanup, one separately invokable recovery-only selector is allowed solely when the fresh v2 marker exists and its terminal is absent; it cannot start or relaunch a Match and is not a rerun. Plan159 adjudicates and completes proof only. Plan160 synchronizes tracking/audit surfaces, and Plan162 synchronizes project/research/seed/Phase263 handoff surfaces and proves both sets agree. Until exact pass is synchronized across both sets, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
+The sole active chain is 262-156 -> 262-161 -> 262-157 -> 262-163 -> 262-164 -> 262-158 -> 262-159 -> 262-160 -> 262-162. Plans156 and161 hold the separately committed implementation fixes; Plan157 is immutable failed-review history. Plan163 closes exactly its five source/test findings without effects. Plan164 independently reviews the fresh exact source and may publish v2 readiness only on literal zero. Plan158 owns one normal wrapper that combines exactly one complete fresh 24-Match invocation with clean-byte admission and unconditional authenticated recovery/postcheck in `finally`. If external interruption prevents that cleanup, one separately invokable recovery-only selector is allowed solely when the fresh v2 marker exists and its terminal is absent; it may terminate only the authenticated orphan identified by the durable operational record and cannot start, resume, or relaunch a Match. Plan159 adjudicates and completes proof only. Plan160 synchronizes tracking/audit surfaces, and Plan162 synchronizes project/research/seed/Phase263 handoff surfaces and proves both sets agree. Until exact pass is synchronized across both sets, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
 
-<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v3","activeChain":["262-156","262-161","262-157","262-158","262-159","262-160","262-162"],"waves":{"262-156":131,"262-161":132,"262-157":133,"262-158":134,"262-159":135,"262-160":136,"262-162":137},"nextAction":"dispatch-262-156-source-only","specificDefects":["historical_alias_execution_identity","canonical_terrain_projection_order"],"diagnosticMatches":6,"observationBasis":"operator_session_observation","rawEvidencePresent":false,"independentlyVerifiable":false,"diagnosticsCharged":false,"diagnosticsAdmissible":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"recoveryOnlyCondition":"fresh_v2_marker_present_terminal_absent","recoveryOnlyIsRerun":false,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v4","activeChain":["262-156","262-161","262-157","262-163","262-164","262-158","262-159","262-160","262-162"],"waves":{"262-156":131,"262-161":132,"262-157":133,"262-163":134,"262-164":135,"262-158":136,"262-159":137,"262-160":138,"262-162":139},"nextAction":"dispatch-262-163-source-only","plan157FindingCount":5,"freshReviewRequired":true,"readinessCondition":"literal_zero_findings","correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"recoveryOnlyCondition":"fresh_v2_marker_present_terminal_absent","recoveryOnlyLaunchCapability":false,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Reviewed D-34L result — 2026-09-01
 
@@ -713,13 +719,13 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-01T19:34:00.000Z
-Stopped at: Plan262-157 completed with five independent findings; no readiness or live effect exists
-Resume file: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-157-SUMMARY.md
+Last session: 2026-09-01T19:41:18.000Z
+Stopped at: Plan262-163 is next for bounded source-only closure of five findings
+Resume file: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-163-PLAN.md
 
 ### Blockers
 
-- Plan 262-157 found three critical and two warning corrective-path issues. Corrective readiness is absent, Plan 262-158 is ineligible, live invocation count remains zero, and a newly planned bounded source/test fix plus fresh independent review is required.
+- Plan 262-157 found three critical and two warning corrective-path issues. Plans163-164 now define the bounded source/test fix and fresh independent review. Corrective readiness remains absent and Plan158 remains ineligible until literal-zero v2 review; this is an executable engineering dependency, not a human-only blocker.
 
 <!-- phase-262-plan-106-provisional-tracking: {"admit03":"blocked","authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false},"branch":"gaps","inventoryCounts":{"activePlans":128,"dormantCarriers":1,"historicalPlans":18,"reviews":165,"summaries":120,"total":434,"validations":1,"verifications":1},"inventoryRoot":"sha256:6df3f7c630d752571765aeea734f6c856f21207d7b947f3f8ecf7bf1ac720399","nextAction":"dispatch-262-127-only","phase262":"incomplete","phase263ExecutionEligible":false,"phase263PlanningEligible":false,"schemaVersion":"v1.38-plan-262-106-provisional-tracking-v1"} -->
 
