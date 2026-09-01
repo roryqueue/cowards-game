@@ -338,18 +338,25 @@ const executePreparedLeanRequest = (prepared: CanonicalLeanPreparedRequest) => {
 
 export const executePreparedLeanCellResponse = (cell: LeanCell) => executePreparedLeanRequest(buildCanonicalLeanRequestV118(cell))
 
-export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> => {
-  const prepared = buildCanonicalLeanRequestV118(cell)
-  const projection = projectLeanV118Response(executePreparedLeanRequest(prepared))
+export const finalizePreparedLeanProjection = (
+  projection: ReturnType<typeof projectLeanV118Response>,
+  requestRealismRoot: `sha256:${string}`,
+): LeanExecutionResult => {
+  const semantic = projection.classification === "success" || projection.classification === "player_violation"
   return parseLeanExecutionResult({
     ...projection,
     cleanupComplete: true,
     orphanedChild: false,
     boardRealism: true,
     integrityValid: true,
-    requestRealismRoot: prepared.requestRealismRoot,
-    currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT,
+    ...(semantic ? { requestRealismRoot, currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT } : {}),
   })
+}
+
+export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> => {
+  const prepared = buildCanonicalLeanRequestV118(cell)
+  const projection = projectLeanV118Response(executePreparedLeanRequest(prepared))
+  return finalizePreparedLeanProjection(projection, prepared.requestRealismRoot)
 }
 
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
@@ -466,13 +473,17 @@ export const createSupervisedLeanExecutionDependencies = (
         signal.addEventListener("abort", abort, { once: true })
         child.once("error", failWithCleanup)
         child.on("message", (message: unknown) => {
-          if (settled || message === null || typeof message !== "object") return
+          if (settled) return
+          if (message === null || typeof message !== "object" || Array.isArray(message)) {
+            failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_INVALID"))
+            return
+          }
           const body = message as Record<string, unknown>
-          if (body.kind === "ready" && body.capability === capability) {
+          if (body.kind === "ready" && body.capability === capability && exactKeys(body, ["kind", "capability"])) {
             if (readySeen || pendingResult !== undefined) { failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_DUPLICATE")); return }
             readySeen = true
             child.send({ kind: "execute", capability, cell })
-          } else if (body.kind === "result" && body.capability === capability) {
+          } else if (body.kind === "result" && body.capability === capability && exactKeys(body, ["kind", "capability", "result"])) {
             if (!readySeen || pendingResult !== undefined) { failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_DUPLICATE")); return }
             try {
               pendingResult = parseLeanExecutionResult(body.result)

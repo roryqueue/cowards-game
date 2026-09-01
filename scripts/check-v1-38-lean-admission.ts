@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { closeSync, constants, existsSync, fsyncSync, openSync, readFileSync, writeSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -14,6 +15,7 @@ export const LEAN_ARTIFACT_PATHS = Object.freeze({
   eligibility: ".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json",
 } as const)
 export const LEAN_HISTORICAL_SOURCE_REVIEW_PATH = ".planning/artifacts/v1.38-lean-runner-source-review-v1.json" as const
+export const LEAN_HISTORICAL_SOURCE_REVIEW_SHA256 = "d8fc684745713dacf08e6d09a5c9ea451d145a36006b159bf21e97adbfa4768d" as const
 
 export const LEAN_MANIFEST_PATH = LEAN_ARTIFACT_PATHS.manifest
 export const LEAN_INVOCATION_PATH = LEAN_ARTIFACT_PATHS.invocation
@@ -129,6 +131,10 @@ const assertPrivacySafe = (value: unknown): void => {
 }
 const readJson = (repoRoot: string, artifactPath: string): unknown => JSON.parse(readFileSync(path.resolve(repoRoot, artifactPath), "utf8"))
 
+export const checkHistoricalLeanSourceReviewBytes = (bytes: Uint8Array): void => {
+  if (createHash("sha256").update(bytes).digest("hex") !== LEAN_HISTORICAL_SOURCE_REVIEW_SHA256) throw new TypeError("LEAN_HISTORICAL_SOURCE_REVIEW_DRIFT")
+}
+
 export const assertLeanStatus = (status: string, allowedUntracked: readonly string[] = []): void => {
   const invalid = status.split("\n").filter(Boolean).filter((line) => !(line.startsWith("?? ") && (/^\.v138-successor-[0-9a-f]{64}\.lock$/u.test(line.slice(3)) || allowedUntracked.includes(line.slice(3)))))
   if (invalid.length > 0) throw new TypeError(`LEAN_WORKTREE_DIRTY:${invalid.join(",")}`)
@@ -146,6 +152,7 @@ export const renderLeanManifest = (repoRoot: string, sourceRef: string): LeanMan
 }
 export const checkLeanManifest = (repoRoot: string, rawManifest: unknown): LeanManifest => {
   const manifest = validateLeanManifest(rawManifest)
+  checkHistoricalLeanSourceReviewBytes(readFileSync(path.resolve(repoRoot, LEAN_HISTORICAL_SOURCE_REVIEW_PATH)))
   execFileSync("git", ["merge-base", "--is-ancestor", manifest.source.commit, "HEAD"], { cwd: repoRoot, stdio: "ignore" })
   const paths = Object.keys(manifest.source.executableBlobs)
   if (paths.length !== LEAN_EXECUTABLE_CLOSURE_PATHS.length || paths.some((entry) => !LEAN_EXECUTABLE_CLOSURE_PATHS.includes(entry as never))) throw new TypeError("LEAN_EXECUTABLE_CLOSURE_DRIFT")
@@ -159,8 +166,9 @@ export const checkLeanManifest = (repoRoot: string, rawManifest: unknown): LeanM
 
 export const checkLeanSourceReview = (manifest: LeanManifest, value: unknown): LeanSourceReview => {
   assertPrivacySafe(value)
-  const findingValid = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
-  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
+  const findingValid = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && finding.id.trim().length > 0 && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
+  const findingIds = isObject(value) && Array.isArray(value.findings) ? value.findings.map((finding) => isObject(finding) ? finding.id : undefined) : []
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || new Set(findingIds).size !== findingIds.length || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanSourceReview
 }
 export const renderLeanSourceReviewV2 = (
