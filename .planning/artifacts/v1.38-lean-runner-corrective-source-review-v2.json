@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-review-v2",
+  "sourceCommit": "2c2101c58dc5c8c9fa87e97c5adc79c2e0c0150a",
+  "sourceTree": "32068718914d4ef03150eabb5ab8a3e3233d38a0",
+  "manifestRoot": "sha256:5d8f3b23909ec16674de960fb630185cffa1da4c31cea60e844787e08cc901c3",
+  "findingCount": 2,
+  "findings": [
+    {
+      "id": "CR-164-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The reviewed source implements only the v1 corrective manifest/review/readiness contract and has no v2 paths, schemas, validators, or Plan 164 checker selectors, so the v2 manifest and this review cannot safely authorize Plan 158."
+    },
+    {
+      "id": "WR-01",
+      "severity": "warning",
+      "status": "open",
+      "summary": "The recovery-only structural checker still inspects only two textual blocks and misses the transitive terminalizeLeanCorrectiveInterruption to createLeanInterruptedTerminal to buildLeanSchedule call chain, so the claimed actual-selector zero-schedule-construction proof is false."
+    }
+  ],
+  "plan157FindingDisposition": {
+    "CR-01": "closed",
+    "CR-02": "closed",
+    "CR-03": "closed_for_authenticated_active_orphan",
+    "WR-01": "open",
+    "WR-02": "closed"
+  },
+  "verification": {
+    "focusedTests": {
+      "passed": 62,
+      "failed": 0
+    },
+    "typescript": "passed",
+    "legacyRecoveryStructure": "passed_but_incomplete",
+    "v2SourceReviewSelector": "missing",
+    "v2ReviewedReadySelector": "missing",
+    "successorLockCount": 36,
+    "freshCorrectiveEffectsPresent": false,
+    "liveOrRecoverySelectorInvoked": false
+  },
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
