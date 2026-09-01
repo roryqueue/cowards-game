@@ -241,6 +241,7 @@ describe("bounded lean runner", () => {
     child.emit("message", { kind: "ready", capability: "d".repeat(64) })
     child.emit("message", { kind: "result", capability: "d".repeat(64), result: childResult(cell) })
     child.cleanExit()
+    expect(child.sent).toEqual([])
     await expect(execution).rejects.toThrow(/LEAN_CHILD_PROTOCOL_INVALID/u)
   })
 
