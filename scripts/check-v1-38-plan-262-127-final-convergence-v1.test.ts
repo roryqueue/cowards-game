@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
 
 import {
   AUTHORITY_KEYS,
@@ -9,6 +10,7 @@ import {
   assertAggregateProjection,
   assertFinalReviewGate,
   auditFinalConvergence,
+  classifyRequirements,
   classifyPhase262Paths,
   deriveHistoricalInventory,
   projectFinalAuthority,
@@ -114,6 +116,37 @@ describe("Plan 262-127 final convergence", () => {
       .toThrow(/AGGREGATE_PRIVACY/)
     expect(() => assertAggregateProjection({ nested: { receiptIdentity: "x" } }))
       .toThrow(/AGGREGATE_PRIVACY/)
+    expect(() => assertAggregateProjection({ rawEvidence: "receipt-owner@example.com" }))
+      .toThrow(/AGGREGATE_SCHEMA/)
+    const actual = JSON.parse(readFileSync(
+      ".planning/artifacts/v1.38-plan-262-historical-live-receipt-manifest-v4.json",
+      "utf8",
+    ))
+    expect(assertAggregateProjection(actual).aggregateRoot).toMatch(/^sha256:/)
+  })
+
+  it("rejects contradictory requirement checklist and trace classifications", () => {
+    const actual = readFileSync(".planning/REQUIREMENTS.md", "utf8")
+    expect(Object.keys(classifyRequirements(actual))).toHaveLength(16)
+    expect(() => classifyRequirements(actual.replace(
+      "| ADMIT-01 | Phase 262 | Complete |",
+      "| ADMIT-01 | Phase 262 | Blocked |",
+    ))).toThrow(/REQUIREMENT_ADMIT-01_STATUS/)
+    expect(() => classifyRequirements(actual.replace(
+      "- [ ] **ADMIT-03**:",
+      "- [x] **ADMIT-03**:",
+    ))).toThrow(/REQUIREMENT_ADMIT-03_STATUS/)
+  })
+
+  it("prospective committed checks reauthenticate review and full later-head audit", () => {
+    const source = readFileSync(
+      "scripts/check-v1-38-plan-262-127-final-convergence-v1.ts",
+      "utf8",
+    )
+    expect(source).toContain("assertPublishedReviewAtCommit(root, reviewCommit)")
+    expect(source).toContain("auditFinalConvergence(root, final.review.sourceCommit)")
+    expect(source).toContain("inventoryAt(root, \"HEAD\")")
+    expect(source).toContain("inspectCleanup(root)")
   })
 
   it("allows Phase 263 planning only for exact clean pass", () => {

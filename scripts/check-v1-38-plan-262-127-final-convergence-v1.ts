@@ -287,6 +287,11 @@ const forbiddenAggregateKeys = (value: unknown, trail: string[] = []): string[] 
 export const assertAggregateProjection = (value: any): any => {
   const forbidden = forbiddenAggregateKeys(value)
   if (forbidden.length !== 0) fail("AGGREGATE_PRIVACY")
+  if (!exactKeys(value, [
+    "schemaVersion", "assuranceClass", "assuranceLimitation",
+    "independentCustodyClaimed", "generationsFungible", "priorChargesReusable",
+    "counts", "commitments", "authority", "aggregateRoot",
+  ])) fail("AGGREGATE_SCHEMA")
   return value
 }
 
@@ -349,18 +354,53 @@ const inspectDAG = (root: string, ref: string, inventory: Inventory) => {
   }
 }
 
-const classifyRequirements = (requirementsText: string) => {
+export const classifyRequirements = (requirementsText: string) => {
   const classifications: Record<string, string> = {}
   for (const id of REQUIREMENT_IDS) {
     const checklist = [...requirementsText.matchAll(new RegExp(`^- \\[([ x])\\] \\*\\*${id}\\*\\*:`, "gmu"))]
     const trace = [...requirementsText.matchAll(new RegExp(`^\\| ${id} \\| Phase 262 \\| ([^|]+)\\|$`, "gmu"))]
     if (checklist.length !== 1 || trace.length !== 1) fail(`REQUIREMENT_${id}_CLASSIFICATION`)
-    const expected = id === "ADMIT-03" ? "blocked" : "complete"
-    const actual = `${checklist[0][1] === "x" ? "complete" : "blocked"}:${trace[0][1].trim().toLowerCase()}`
-    if (!actual.startsWith(expected)) fail(`REQUIREMENT_${id}_STATUS`)
+    const checklistStatus = checklist[0][1] === "x" ? "complete" : "blocked"
+    const traceStatus = trace[0][1].trim()
+    const expectedChecklist = id === "ADMIT-03" ? "blocked" : "complete"
+    const expectedTrace = id === "ADMIT-03"
+      ? "Blocked (0/540; partial infrastructure evidence only)"
+      : "Complete"
+    if (checklistStatus !== expectedChecklist || traceStatus !== expectedTrace)
+      fail(`REQUIREMENT_${id}_STATUS`)
+    const actual = `${checklistStatus}:${traceStatus}`
     classifications[id] = actual
   }
   return classifications
+}
+
+const assertStructuredProofCoverage = (
+  validation: string,
+  verification: string,
+  historical: Inventory,
+): void => {
+  const expectedStatus = (id: string) =>
+    id === "ADMIT-03" ? "BLOCKED" : id === "SEAL-01" ? "SATISFIED WITH LIMIT" : "SATISFIED"
+  for (const text of [validation, verification]) {
+    for (const id of REQUIREMENT_IDS) {
+      const rows = [...text.matchAll(new RegExp(`^\\| ${id} \\| COVERED \\| ([^|]+)\\|`, "gmu"))]
+      if (rows.length !== 1 || rows[0][1].trim() !== expectedStatus(id))
+        fail(`PROOF_REQUIREMENT_${id}`)
+    }
+  }
+  const inventoryLine = verification.split("\n").find((line) =>
+    line.startsWith('{"schemaVersion":"v1.38-plan-262-126-wr02-proof-inventory-v1"'))
+  if (!inventoryLine) fail("PROOF_INVENTORY_MISSING")
+  const proof = JSON.parse(inventoryLine as string)
+  if (canonical(proof.counts) !== canonical(historical.counts) ||
+      canonical(proof.roots) !== canonical(historical.roots) ||
+      !exactKeys(proof.classes, [
+        "activePlans", "historicalPlans", "dormantCarriers", "summaries",
+        "reviews", "validations", "verifications",
+      ]) ||
+      Object.keys(proof.classes).some((key) =>
+        canonical(proof.classes[key]) !== canonical((historical as any)[key])))
+    fail("PROOF_INVENTORY_INVALID")
 }
 
 const assertSourceReview = (root: string, ref: string, value: any) => {
@@ -397,17 +437,35 @@ const assertReadiness = (value: any, review: any, historical: Inventory) => {
 }
 
 const inspectAggregate = (aggregate: any, disposition: any) => {
+  assertAggregateProjection(aggregate)
   const forbiddenProjectionKeys = forbiddenAggregateKeys(aggregate)
-  if (forbiddenProjectionKeys.length !== 0) fail("AGGREGATE_PRIVACY")
   if (aggregate?.schemaVersion !== "v1.38-plan-262-historical-live-receipt-manifest-v4" ||
       aggregate?.assuranceClass !== "single_operator_local_seal_v1" ||
       aggregate?.assuranceLimitation !== LOCAL_SEAL_LIMITATION ||
       aggregate?.independentCustodyClaimed !== false || aggregate?.generationsFungible !== false ||
       aggregate?.priorChargesReusable !== false)
     fail("AGGREGATE_SCHEMA")
+  if (!exactKeys(aggregate.commitments, [
+      "historicalRoot", "privateCustodyRoot", "journalRoot", "terminalRoot",
+      "reproductionStateRoot", "protectedHistoryRoot",
+    ]) || Object.values(aggregate.commitments).some((value) =>
+      typeof value !== "string" || !/^sha256:[a-f0-9]{64}$/u.test(value as string)) ||
+      !exactKeys(aggregate.counts, [
+        "generations", "routeStartsCharged", "preflightObservationsCharged",
+        "calibrationIdentitiesCharged", "reproductionIdentitiesCharged",
+        "freshAccepted", "requiredAccepted",
+      ]) || !exactKeys(aggregate.counts.generations, ["v1", "v2", "v3", "v4"]) ||
+      Object.values(aggregate.counts.generations).some((value) => !Number.isSafeInteger(value)) ||
+      Object.entries(aggregate.counts).some(([key, value]) =>
+        key !== "generations" && (!Number.isSafeInteger(value) || (value as number) < 0)))
+    fail("AGGREGATE_SCHEMA")
   assertRooted(aggregate, AGGREGATE_DOMAIN, "aggregateRoot", "AGGREGATE_ROOT")
   assertAllFalse(aggregate.authority, "AGGREGATE_AUTHORITY")
-  if (disposition?.aggregateRoot !== aggregate.aggregateRoot ||
+  if (!exactKeys(disposition, [
+      "aggregateRoot", "assuranceFindings", "assuranceLimitation", "assuranceStatus",
+      "authority", "contamination", "counts", "dispositionRoot", "producerDisposition",
+      "producerSucceeded", "reproductionPreserved", "schemaVersion", "status",
+    ]) || disposition?.aggregateRoot !== aggregate.aggregateRoot ||
       disposition?.assuranceLimitation !== LOCAL_SEAL_LIMITATION ||
       disposition?.status !== "non_pass" || disposition?.producerDisposition !== "exhausted" ||
       disposition?.producerSucceeded !== false || disposition?.assuranceStatus !== "clean" ||
@@ -422,9 +480,17 @@ const inspectAggregate = (aggregate: any, disposition: any) => {
     forbiddenProjectionKeys,
     independentCustodyClaimed: aggregate.independentCustodyClaimed,
     assuranceLimitation: aggregate.assuranceLimitation,
-    rawEvidenceRetired: true,
   }
 }
+
+const inspectCleanup = (root: string) => ({
+  journalAbsent: kind(path.join(root, PATHS.journal)) === "absent",
+  privateV4Absent: kind(path.join(root, PATHS.privateV4)) === "absent",
+  emptyPrivateV3: kind(path.join(root, PATHS.privateV3)) === "directory" &&
+    readdirSync(path.join(root, PATHS.privateV3)).length === 0,
+  rootSuccessorLocks: readdirSync(root).filter((name) =>
+    /^\.v138-successor-[a-f0-9]{64}\.lock$/u.test(name)).length,
+})
 
 export const auditFinalConvergence = async (root: string, ref = "HEAD") => {
   const findings: string[] = []
@@ -449,15 +515,14 @@ export const auditFinalConvergence = async (root: string, ref = "HEAD") => {
   const requirementClassifications = classifyRequirements(requirementsText)
   const validation = gitBytes(root, ref, PATHS.validation).toString("utf8")
   const verification = gitBytes(root, ref, PATHS.verification).toString("utf8")
-  for (const item of [...REQUIREMENT_IDS, ...historicalInventory.allPaths])
-    if (!validation.includes(item) || !verification.includes(item)) fail("PROOF_COVERAGE")
+  assertStructuredProofCoverage(validation, verification, historicalInventory)
   const correction = readJsonAt(root, ref, PATHS.metadataCorrection)
   if (correction?.schemaVersion !== "v1.38-plan-262-121-summary-metadata-correction-v1" ||
       correction?.admit03CompletionCreditGranted !== false || correction?.admit03Status !== "blocked" ||
       correction?.authorizesExecution !== false || correction?.summaryPath !== PATHS.summary121 ||
       correction?.summarySha256 !== sha256(gitBytes(root, ref, PATHS.summary121)))
     fail("METADATA_CORRECTION")
-  const aggregate = inspectAggregate(
+  const aggregateBase = inspectAggregate(
     readJsonAt(root, ref, PATHS.aggregate),
     readJsonAt(root, ref, PATHS.disposition),
   )
@@ -469,15 +534,14 @@ export const auditFinalConvergence = async (root: string, ref = "HEAD") => {
   const reproductionPresent = pathExistsAt(root, ref, PATHS.reproduction)
   const route12Present = pathExistsAt(root, ref, PATHS.route12)
   if (reproductionPresent || route12Present) fail("NONPASS_ARTIFACT_PRESENT")
-  const cleanup = {
-    journalAbsent: kind(path.join(root, PATHS.journal)) === "absent",
-    privateV4Absent: kind(path.join(root, PATHS.privateV4)) === "absent",
-    emptyPrivateV3: kind(path.join(root, PATHS.privateV3)) === "directory" &&
-      readdirSync(path.join(root, PATHS.privateV3)).length === 0,
-    rootSuccessorLocks: readdirSync(root).filter((name) => /^\.v138-successor-[a-f0-9]{64}\.lock$/u.test(name)).length,
-  }
+  const cleanup = inspectCleanup(root)
   if (!cleanup.journalAbsent || !cleanup.privateV4Absent || !cleanup.emptyPrivateV3 || cleanup.rootSuccessorLocks !== 36)
     fail("CLEANUP_STATE")
+  const aggregate = {
+    ...aggregateBase,
+    rawEvidenceRetired:
+      cleanup.journalAbsent && cleanup.privateV4Absent && cleanup.emptyPrivateV3,
+  }
   const dag = inspectDAG(root, ref, inventory)
   if (dag.duplicateIds.length || dag.missingDependencies.length || dag.cycles.length) fail("DAG_INVALID")
   return {
@@ -587,24 +651,29 @@ export const assertFinalReviewGate = (value: any, expectedSourceCommit: string):
   return value
 }
 
-const assertPublishedReview = async (root: string) => {
+const assertPublishedReviewAtCommit = async (root: string, publicationCommit: string) => {
   const expected = await buildReview(root)
-  const actual = JSON.parse(readFileSync(containedTarget(root, PATHS.reviewCarrier), "utf8"))
+  const actual = readJsonAt(root, publicationCommit, PATHS.reviewCarrier)
   assertFinalReviewGate(actual, expected.carrier.sourceCommit)
   if (canonical(actual) !== canonical(expected.carrier) ||
-      readFileSync(containedTarget(root, PATHS.reviewReport), "utf8") !== expected.report ||
-      readFileSync(containedTarget(root, PATHS.summary127), "utf8") !== expected.summary)
+      gitBytes(root, publicationCommit, PATHS.reviewReport).toString("utf8") !== expected.report ||
+      gitBytes(root, publicationCommit, PATHS.summary127).toString("utf8") !== expected.summary)
     fail("PUBLISHED_REVIEW_BYTES")
   assertRooted(actual, REVIEW_DOMAIN, "reviewRoot", "PUBLISHED_REVIEW_ROOT")
-  for (const repoPath of [PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127])
-    if (!readFileSync(containedTarget(root, repoPath)).equals(gitBytes(root, "HEAD", repoPath)))
-      fail("PUBLISHED_REVIEW_NOT_COMMITTED")
-  const publicationCommit = git(root, ["log", "-1", "--format=%H", "--", PATHS.reviewCarrier])
   if (canonical(changedPaths(root, publicationCommit)) !==
       canonical([PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127].sort()) ||
-      !isAncestor(root, expected.carrier.sourceCommit, publicationCommit))
+      git(root, ["show", "-s", "--format=%P", publicationCommit]) !== expected.carrier.sourceCommit)
     fail("PUBLISHED_REVIEW_COMMIT")
   return { ...expected, publicationCommit }
+}
+
+const assertPublishedReview = async (root: string) => {
+  const publicationCommit = git(root, ["log", "-1", "--format=%H", "--", PATHS.reviewCarrier])
+  const expected = await assertPublishedReviewAtCommit(root, publicationCommit)
+  for (const repoPath of [PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127])
+    if (!readFileSync(containedTarget(root, repoPath)).equals(gitBytes(root, publicationCommit, repoPath)))
+      fail("PUBLISHED_REVIEW_NOT_COMMITTED")
+  return expected
 }
 
 const appendMarker = (text: string, name: string, payload: unknown): string => {
@@ -677,9 +746,8 @@ const checkFinalProjection = async (root: string) => {
   if (!/^[a-f0-9]{40}$/u.test(reviewCommit ?? "") || !isAncestor(root, reviewCommit, finalCommit) ||
       canonical(changedPaths(root, finalCommit)) !== canonical(PLAN_128_PATHS))
     fail("FINAL_ATOMIC_COMMIT")
-  const review = readJsonAt(root, reviewCommit, PATHS.reviewCarrier)
-  assertFinalReviewGate(review, frozenSourceCommit(root))
-  assertRooted(review, REVIEW_DOMAIN, "reviewRoot", "FINAL_REVIEW_ROOT")
+  const publishedReview = await assertPublishedReviewAtCommit(root, reviewCommit)
+  const review = publishedReview.carrier
   assertRooted(carrier, FINAL_DOMAIN, "eligibilityRoot", "FINAL_ROOT")
   if (carrier.convergenceReviewRoot !== review.reviewRoot ||
       carrier.branch !== review.branch || carrier.phase263ExecutionEligible !== false ||
@@ -692,7 +760,7 @@ const checkFinalProjection = async (root: string) => {
     if (!text.includes("phase-262-plan-128-final-tracking") ||
         !text.includes('"phase263ExecutionEligible":false')) fail("FINAL_TRACKING")
   }
-  return { finalCommit, carrier, reviewCommit }
+  return { finalCommit, carrier, reviewCommit, review }
 }
 
 const checkLaterHead = async (root: string) => {
@@ -705,11 +773,28 @@ const checkLaterHead = async (root: string) => {
   const anchor = gitBytes(root, anchorCommit, PATHS.anchor129).toString("utf8")
   if (!anchor.includes(final.finalCommit) || !anchor.includes("grants no authority"))
     fail("LATER_HEAD_ANCHOR_BYTES")
-  const aggregate = inspectAggregate(
+  const sourceAudit = await auditFinalConvergence(root, final.review.sourceCommit)
+  const currentInventory = inventoryAt(root, "HEAD")
+  const currentDag = inspectDAG(root, "HEAD", currentInventory)
+  const currentRequirements = classifyRequirements(
+    gitBytes(root, "HEAD", PATHS.requirements).toString("utf8"),
+  )
+  if (currentDag.duplicateIds.length || currentDag.missingDependencies.length || currentDag.cycles.length ||
+      currentDag.nodeCount !== sourceAudit.dag.nodeCount ||
+      Object.keys(currentRequirements).length !== REQUIREMENT_IDS.length)
+    fail("LATER_HEAD_TOPOLOGY")
+  const aggregateBase = inspectAggregate(
     readJsonAt(root, "HEAD", PATHS.aggregate),
     readJsonAt(root, "HEAD", PATHS.disposition),
   )
-  if (!aggregate.rawEvidenceRetired || aggregate.forbiddenProjectionKeys.length !== 0)
+  const cleanup = inspectCleanup(root)
+  const rawEvidenceRetired = cleanup.journalAbsent && cleanup.privateV4Absent && cleanup.emptyPrivateV3
+  if (!rawEvidenceRetired || cleanup.rootSuccessorLocks !== 36 ||
+      aggregateBase.forbiddenProjectionKeys.length !== 0 ||
+      aggregateBase.aggregateRoot !== final.review.aggregate.aggregateRoot ||
+      pathExistsAt(root, "HEAD", PATHS.reproduction) || pathExistsAt(root, "HEAD", PATHS.route12) ||
+      !gitBytes(root, "HEAD", PATHS.lifecycle106).equals(
+        gitBytes(root, final.review.sourceCommit, PATHS.lifecycle106)))
     fail("LATER_HEAD_AGGREGATE")
   return {
     verified: true,
@@ -719,8 +804,13 @@ const checkLaterHead = async (root: string) => {
     phase263PlanningEligible: final.carrier.phase263PlanningEligible,
     phase263ExecutionEligible: false,
     authority: final.carrier.authority,
-    aggregateRoot: aggregate.aggregateRoot,
-    rawEvidenceRetired: true,
+    aggregateRoot: aggregateBase.aggregateRoot,
+    rawEvidenceRetired,
+    inventoryCounts: currentInventory.counts,
+    inventoryRoots: currentInventory.roots,
+    dag: currentDag,
+    requirementClassifications: currentRequirements,
+    cleanup,
   }
 }
 
