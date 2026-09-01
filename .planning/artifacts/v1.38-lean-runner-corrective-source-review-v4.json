@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-review-v4",
+  "sourceCommit": "b8ca31f21b6c768d5a2f32d2201d99b421a8f1cd",
+  "sourceTree": "0e874b70041a39b580bdfeb285c04cfa14085826",
+  "manifestRoot": "sha256:110e9d8307aaaaa63c7ec59d0d150a7d6a649d7b211180f42001a29bbc7ede59",
+  "findingCount": 1,
+  "findings": [
+    {
+      "id": "CR-168-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The recovery structural proof ignores reachable top-level function declarations and unresolved bare callees, allowing a schedule-building recovery hop to pass the no-launch gate."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
