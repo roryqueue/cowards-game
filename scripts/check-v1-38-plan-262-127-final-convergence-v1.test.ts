@@ -28,6 +28,19 @@ import {
 
 const root = process.cwd()
 
+const seedCleanupFixture = (fixture: string): void => {
+  mkdirSync(path.join(
+    fixture,
+    ".planning/artifacts/v1.38-current-matrix-retry-private-v3",
+  ), { recursive: true })
+  for (let index = 0; index < 36; index++) {
+    writeFileSync(
+      path.join(fixture, `.v138-successor-${index.toString(16).padStart(64, "0")}.lock`),
+      "fixture\n",
+    )
+  }
+}
+
 describe("Plan 262-127 final convergence", () => {
   it("freezes all 16 requirements exactly once", () => {
     expect(REQUIREMENT_IDS).toHaveLength(16)
@@ -347,6 +360,31 @@ describe("Plan 262-127 final convergence", () => {
       execFileSync("git", ["add", carrierPath], { cwd: fixture })
       execFileSync("git", ["commit", "-q", "-m", "authority drift"], { cwd: fixture })
       await expect(checkLaterHead(fixture)).rejects.toThrow(/LATER_HEAD_PLAN_128_DRIFT/)
+    } finally {
+      rmSync(fixture, { recursive: true, force: true })
+    }
+  }, 180_000)
+
+  it("accepts immutable publication custody after subsequent checker hardening", async () => {
+    const fixture = mkdtempSync(path.join(tmpdir(), "plan127-post-publication-hardening-"))
+    try {
+      execFileSync("git", ["clone", "-q", "--no-hardlinks", root, fixture])
+      execFileSync("git", ["config", "user.email", "plan127@example.invalid"], { cwd: fixture })
+      execFileSync("git", ["config", "user.name", "Plan 127 Test"], { cwd: fixture })
+      seedCleanupFixture(fixture)
+      const sourcePath = "scripts/check-v1-38-plan-262-127-final-convergence-v1.ts"
+      writeFileSync(
+        path.join(fixture, sourcePath),
+        `${readFileSync(path.join(fixture, sourcePath), "utf8")}\n// unrelated post-publication hardening fixture\n`,
+      )
+      execFileSync("git", ["add", sourcePath], { cwd: fixture })
+      execFileSync("git", ["commit", "-q", "-m", "post-publication hardening"], { cwd: fixture })
+      await expect(checkLaterHead(fixture)).resolves.toMatchObject({
+        verified: true,
+        branch: "gaps",
+        phase263PlanningEligible: false,
+        phase263ExecutionEligible: false,
+      })
     } finally {
       rmSync(fixture, { recursive: true, force: true })
     }
