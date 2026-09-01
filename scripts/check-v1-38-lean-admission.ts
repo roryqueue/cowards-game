@@ -236,6 +236,10 @@ const assertCorrectiveFreshDestinationsAbsent = (repoRoot: string, allowed: read
     if (!allowed.includes(artifactPath) && existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_CORRECTIVE_DESTINATION_EXISTS:${artifactPath}`)
   }
 }
+export const assertLeanCorrectiveFreshEffectsAbsent = (invocationPresent: boolean, terminalPresent: boolean): void => {
+  if (invocationPresent) throw new TypeError("LEAN_CORRECTIVE_INVOCATION_EXISTS")
+  if (terminalPresent) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
+}
 const assertSuccessorLockInventory = (repoRoot: string): void => {
   const lines = git(repoRoot, ["status", "--short", "--untracked-files=all"]).split("\n").filter((line) => /^\?\? \.v138-successor-[0-9a-f]{64}\.lock$/u.test(line))
   if (lines.length !== 36 || new Set(lines).size !== 36) throw new TypeError("LEAN_SUCCESSOR_LOCK_INVENTORY_DRIFT")
@@ -277,6 +281,19 @@ const checkHistoricalLeanReviewHistory = (repoRoot: string): void => {
 export const assertLeanStatus = (status: string, allowedUntracked: readonly string[] = []): void => {
   const invalid = status.split("\n").filter(Boolean).filter((line) => !(line.startsWith("?? ") && (/^\.v138-successor-[0-9a-f]{64}\.lock$/u.test(line.slice(3)) || allowedUntracked.includes(line.slice(3)))))
   if (invalid.length > 0) throw new TypeError(`LEAN_WORKTREE_DIRTY:${invalid.join(",")}`)
+}
+export const assertLeanCorrectiveAdmissionStatus = (status: string, allowedOperationalPaths: readonly string[]): void => {
+  assertLeanStatus(status, allowedOperationalPaths)
+}
+const assertLeanCorrectiveTrackedBytes = (repoRoot: string, sourceCommit: string): void => {
+  try {
+    execFileSync("git", ["diff", "--quiet", sourceCommit, "--", ...LEAN_EXECUTABLE_CLOSURE_PATHS], {
+      cwd: repoRoot,
+      stdio: "ignore",
+    })
+  } catch {
+    throw new TypeError("LEAN_CORRECTIVE_TRACKED_BYTES_DRIFT")
+  }
 }
 const resolveCommit = (repoRoot: string, ref: string): string => {
   const commit = git(repoRoot, ["rev-parse", `${ref}^{commit}`])
@@ -395,12 +412,21 @@ export const renderLeanCorrectiveReadiness = (manifest: LeanManifest, reviewValu
     authority: LEAN_AUTHORITY_FALSE,
   })
 }
-export const loadAndCheckLeanCorrectiveReady = (repoRoot: string): LeanCorrectiveReadiness => {
+export const loadAndCheckLeanCorrectiveReady = (
+  repoRoot: string,
+  allowedOperationalPaths: readonly string[] = [],
+): LeanCorrectiveReadiness => {
+  assertLeanCorrectiveAdmissionStatus(
+    git(repoRoot, ["status", "--short", "--untracked-files=all"]),
+    allowedOperationalPaths,
+  )
   checkLeanFirstEvidenceCustody(repoRoot)
   validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))
   assertSuccessorLockInventory(repoRoot)
   const manifest = checkLeanCorrectiveManifest(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest))
-  return checkLeanCorrectiveReadiness(manifest, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.readiness))
+  const readiness = checkLeanCorrectiveReadiness(manifest, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.readiness))
+  assertLeanCorrectiveTrackedBytes(repoRoot, readiness.sourceCommit)
+  return readiness
 }
 
 export const createLeanCorrectiveInvocation = (readiness: LeanCorrectiveReadiness, childCapabilityRoot: `sha256:${string}`, diagnosticCustody: LeanDiagnosticCustody, firstInvocation: unknown, firstTerminal: unknown): LeanCorrectiveInvocation => validateLeanCorrectiveInvocation({
@@ -417,13 +443,26 @@ export const createLeanCorrectiveInvocation = (readiness: LeanCorrectiveReadines
   correctiveInvocationOrdinal: 1,
   authority: LEAN_AUTHORITY_FALSE,
 })
-export const prepareLeanCorrectiveInvocation = (repoRoot: string, childCapabilityRoot: `sha256:${string}`): LeanCorrectiveInvocation => createLeanCorrectiveInvocation(
-  loadAndCheckLeanCorrectiveReady(repoRoot),
-  childCapabilityRoot,
-  validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH)),
-  readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation),
-  readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal),
-)
+export const prepareLeanCorrectiveInvocation = (repoRoot: string, childCapabilityRoot: `sha256:${string}`): LeanCorrectiveInvocation => {
+  assertLeanCorrectiveFreshEffectsAbsent(
+    existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)),
+    existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)),
+  )
+  return createLeanCorrectiveInvocation(
+    loadAndCheckLeanCorrectiveReady(repoRoot),
+    childCapabilityRoot,
+    validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH)),
+    readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation),
+    readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal),
+  )
+}
+export const checkLeanCorrectiveLaunchAdmission = (repoRoot: string): LeanCorrectiveReadiness => {
+  const marker = LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation
+  const terminal = LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal
+  if (!existsSync(path.resolve(repoRoot, marker))) throw new TypeError("LEAN_CORRECTIVE_MARKER_REQUIRED")
+  if (existsSync(path.resolve(repoRoot, terminal))) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
+  return loadAndCheckLeanCorrectiveReady(repoRoot, [marker])
+}
 export const validateLeanCorrectiveInvocation = (value: unknown): LeanCorrectiveInvocation => {
   const keys = ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "readinessRoot", "firstInvocationRoot", "firstTerminalRoot", "diagnosticCustodyRoot", "childCapabilityRoot", "claimClass", "correctiveInvocationOrdinal", "authority"]
   if (!isObject(value) || !exactKeys(value, keys) || value.schemaVersion !== "v1.38-lean-runner-corrective-invocation-v2" || !isOid(value.sourceCommit) || ![value.manifestRoot, value.sourceReviewRoot, value.readinessRoot, value.firstInvocationRoot, value.firstTerminalRoot, value.diagnosticCustodyRoot, value.childCapabilityRoot].every(isSha) || value.claimClass !== "fixture_feasibility_only" || value.correctiveInvocationOrdinal !== 1 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_INVOCATION_INVALID")
@@ -502,7 +541,8 @@ export const validateLeanInvocationLineage = (readiness: LeanReadiness, value: u
 
 export const loadAndCheckLeanChildInvocation = (repoRoot: string, capability: string): LeanInvocation | LeanCorrectiveInvocation => {
   if (existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))) {
-    const readiness = loadAndCheckLeanCorrectiveReady(repoRoot)
+    if (existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal))) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
+    const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation])
     const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))
     if (invocation.childCapabilityRoot !== hashLeanValue(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_MISMATCH")
     return invocation

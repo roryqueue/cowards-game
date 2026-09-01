@@ -63,6 +63,7 @@ export interface LeanSupervisorOptions {
   readonly cleanupDeadlineMilliseconds?: number
 }
 export interface LeanCorrectiveWrapperDependencies {
+  readonly preflight?: () => Promise<void>
   readonly invoke: () => Promise<void>
   readonly recover: () => Promise<void>
   readonly postcheck: () => Promise<void>
@@ -78,6 +79,7 @@ export interface LeanCorrectiveRecoveryOnlyDependencies {
 export const runLeanCorrectiveWrapperInjected = async (
   dependencies: LeanCorrectiveWrapperDependencies,
 ): Promise<void> => {
+  await dependencies.preflight?.()
   let invocationError: unknown
   try {
     await dependencies.invoke()
@@ -606,6 +608,7 @@ const main = async (): Promise<void> => {
     const execution = createSupervisedLeanExecutionDependencies(capability)
     createExclusiveLeanInvocationMarker(markerPath, invocation)
     await runLeanCorrectiveWrapperInjected({
+      preflight: async () => { checker.checkLeanCorrectiveLaunchAdmission(repoRoot) },
       invoke: async () => {
         const terminal = await runLeanFeasibilityInjected(execution)
         checker.createExclusiveLeanCorrectiveTerminal(repoRoot, checker.createLeanCorrectiveTerminalArtifact(invocation, terminal))
