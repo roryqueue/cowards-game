@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "v1.38-lean-runner-source-review-v3",
+  "sourceCommit": "495e980932feff47e6afb5c26b3cb12c80df0255",
+  "manifestRoot": "sha256:d9180a753d7ac3c689ff5a084cf8bac899ff47b66826bfc9a5123f85cccdcabd",
+  "findingCount": 0,
+  "findings": [],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
