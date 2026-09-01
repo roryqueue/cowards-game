@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import { LEAN_AUTHORITY_FALSE, hashLeanValue, reduceLeanExecutions, buildLeanSchedule, LEAN_CURRENT_FORMATION_ROOT, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_CORRECTIVE_ARTIFACT_PATHS,
+  LEAN_CORRECTIVE_V2_ARTIFACT_PATHS,
+  LEAN_CORRECTIVE_V3_ARTIFACT_PATHS,
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
@@ -30,6 +32,15 @@ import {
   renderLeanSourceReviewV3,
   renderLeanTrackingCarrier,
   checkLeanCorrectiveRecoveryOnlyStructure,
+  checkLeanCorrectiveManifestV2,
+  checkLeanCorrectiveSourceReviewV2,
+  checkLeanCorrectiveReviewOutcomeV2,
+  renderLeanCorrectiveManifestV3,
+  renderLeanCorrectiveSourceReviewV3,
+  renderLeanCorrectiveReadinessV3,
+  checkLeanCorrectiveReadinessV3,
+  createLeanCorrectiveInterruptionTombstone,
+  validateLeanCorrectiveInterruptionTombstone,
   validateLeanDiagnosticCustody,
 } from "./check-v1-38-lean-admission.js"
 import * as leanAdmissionModule from "./check-v1-38-lean-admission.js"
@@ -118,6 +129,25 @@ describe("lean admission custody", () => {
     expect(Object.values(LEAN_CORRECTIVE_ARTIFACT_PATHS)).not.toContain(LEAN_ARTIFACT_PATHS.terminal)
   })
 
+  it("keeps failed v1/v2 trust paths historical and admits only fresh v3", () => {
+    expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest).toMatch(/manifest-v2\.json$/u)
+    expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.readiness).toMatch(/readiness-v2\.json$/u)
+    expect(LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest).toMatch(/manifest-v3\.json$/u)
+    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest)
+    const manifestV2 = checkLeanCorrectiveManifestV2(process.cwd(), JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest, "utf8")))
+    const reviewV2 = JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview, "utf8"))
+    expect(checkLeanCorrectiveSourceReviewV2(manifestV2, reviewV2).findingCount).toBe(2)
+    expect(checkLeanCorrectiveReviewOutcomeV2(manifestV2, reviewV2, undefined)).toBeUndefined()
+    expect(() => checkLeanCorrectiveReviewOutcomeV2(manifestV2, reviewV2, { schemaVersion: "v1.38-lean-runner-corrective-readiness-v2" })).toThrow(/NONZERO_REVIEW/u)
+
+    const manifestV3 = renderLeanCorrectiveManifestV3(process.cwd(), "HEAD")
+    const reviewV3 = renderLeanCorrectiveSourceReviewV3(manifestV3, [])
+    const readinessV3 = renderLeanCorrectiveReadinessV3(manifestV3, reviewV3)
+    expect(checkLeanCorrectiveReadinessV3(manifestV3, reviewV3, readinessV3)).toEqual(readinessV3)
+    expect(() => checkLeanCorrectiveReadinessV3(manifestV3, reviewV2, readinessV3)).toThrow()
+    expect(() => checkLeanCorrectiveReadinessV3(manifestV3, { ...reviewV3, findingCount: 1 }, readinessV3)).toThrow()
+  }, 30_000)
+
   it("accepts only epistemically limited diagnostic custody", () => {
     const custody = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-diagnostic-custody-v1.json", "utf8"))
     expect(validateLeanDiagnosticCustody(custody)).toEqual(custody)
@@ -130,13 +160,34 @@ describe("lean admission custody", () => {
 
   it("proves recovery-only source has no launch capability", () => {
     const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
-    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source)).not.toThrow()
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker)).not.toThrow()
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
       source.replace(
         "cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
         "cleanup: async () => { fork(); await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
       ),
+      checker,
     )).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { buildLeanSchedule();",
+    ))).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+  })
+
+  it("uses a schedule-free exact interruption tombstone", () => {
+    const invocation = {
+      schemaVersion: "v1.38-lean-runner-corrective-invocation-v2", sourceCommit: "a".repeat(40),
+      manifestRoot: "sha256:" + "1".repeat(64), sourceReviewRoot: "sha256:" + "2".repeat(64),
+      readinessRoot: "sha256:" + "3".repeat(64), firstInvocationRoot: "sha256:" + "4".repeat(64),
+      firstTerminalRoot: "sha256:" + "5".repeat(64), diagnosticCustodyRoot: "sha256:" + "6".repeat(64),
+      childCapabilityRoot: "sha256:" + "7".repeat(64), claimClass: "fixture_feasibility_only",
+      correctiveInvocationOrdinal: 1, authority: LEAN_AUTHORITY_FALSE,
+    } as const
+    const tombstone = createLeanCorrectiveInterruptionTombstone(invocation)
+    expect(validateLeanCorrectiveInterruptionTombstone(tombstone, invocation)).toEqual(tombstone)
+    expect(JSON.stringify(tombstone)).not.toMatch(/cellId|schedule|evidence/u)
+    expect(() => validateLeanCorrectiveInterruptionTombstone({ ...tombstone, chargedMatches: 1 }, invocation)).toThrow()
   })
 
   it("strictly binds corrective child ownership to invocation, process group, selector, and token", () => {
