@@ -4,8 +4,9 @@ import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { buildLeanSchedule, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
+  LEAN_LIVE_SELECTOR,
+  buildCanonicalLeanRequest,
   createExclusiveLeanInvocationMarker,
-  normalizeLeanSemantic,
   runLeanFeasibilityInjected,
   type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
@@ -71,19 +72,22 @@ describe("bounded lean runner", () => {
     const result = await runLeanFeasibilityInjected(dependencies({
       execute: async () => new Promise(() => undefined),
       armDeadline: (expire) => { queueMicrotask(expire); return () => undefined },
-      awaitCleanup: async () => { cleaned += 1; return { cleanupComplete: true, orphanedChild: false } },
+      terminateActive: async () => { cleaned += 1; return { cleanupComplete: true, orphanedChild: false } },
     }))
     expect(cleaned).toBe(1)
     expect(result.counts.cancelled).toBe(1)
     expect(result.counts.unlaunched).toBe(23)
   })
 
-  it("normalizes only invocation/time identity while retaining semantic dimensions", () => {
-    const normalized = normalizeLeanSemantic({
-      matchId: "match:pass:a", recordedAt: "now", eventId: "event:pass:a",
-      arenaId: "arena:smoke:v1", initiativeSide: "bottom",
-    })
-    expect(normalized).toEqual({ eventId: "event:pass:*", arenaId: "arena:smoke:v1", initiativeSide: "bottom" })
+  it("builds an exact canonical request for every cell", () => {
+    for (const cell of buildLeanSchedule()) {
+      const request = buildCanonicalLeanRequest(cell)
+      expect(request.match.arenaVariant.id).toBe(cell.arenaId)
+      expect(request.match.initialInitiativePlayerId).toBe(`player:${cell.initiativeSide}`)
+      expect(request.match.bottomStrategyRevisionId).toContain(cell.bottomFixtureId)
+      expect(request.match.topStrategyRevisionId).toContain(cell.topFixtureId)
+    }
+    expect(LEAN_LIVE_SELECTOR).toBe("--run-reviewed-live-gate")
   })
 
   it("durably creates an exclusive invocation marker and refuses reuse", () => {

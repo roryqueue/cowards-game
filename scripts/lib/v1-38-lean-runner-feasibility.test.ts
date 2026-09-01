@@ -3,6 +3,7 @@ import {
   LEAN_AUTHORITY_FALSE,
   buildLeanSchedule,
   createLeanManifest,
+  projectLeanV118Response,
   reduceLeanExecutions,
   validateLeanManifest,
   type LeanExecutionRecord,
@@ -116,5 +117,40 @@ describe("lean manifest", () => {
         }),
       ).toThrow()
     }
+  })
+
+  it("projects only typed v1.18 receipt anchors without deleting semantic fields", () => {
+    const response = {
+      contractVersion: "runtime-execution-service-v1.18",
+      ok: true,
+      kind: "executionResult",
+      requestId: "request:lean",
+      matchId: "match:lean",
+      result: {
+        privacy: "public_receipt",
+        chronicleCanonicalHash: root("1"),
+        transitionTraceRoot: root("2"),
+        finalStateCanonicalHash: root("3"),
+        outcomeCanonicalHash: root("4"),
+        terminal: { status: "complete", reason: "elimination" },
+        accounting: {
+          budgetProfileRoot: root("5"),
+          ledgerPrestateRoot: root("6"),
+          ledgerPoststateRoot: root("7"),
+        },
+        resultClass: "success",
+        ownership: "gameplay",
+        retryable: false,
+        mutationStatus: "committed",
+        semanticReceipt: { claim: {}, algorithm: "Ed25519", keyId: "fixture", signatureBase64: "" },
+      },
+    } as never
+    expect(projectLeanV118Response(response)).toEqual({
+      classification: "success",
+      outcomeRoot: root("4"),
+      finalStateRoot: root("3"),
+      transitionEventRoot: expect.stringMatching(/^sha256:/u),
+      runtimeAccountingRoot: expect.stringMatching(/^sha256:/u),
+    })
   })
 })
