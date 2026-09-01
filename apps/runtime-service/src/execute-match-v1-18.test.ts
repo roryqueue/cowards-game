@@ -6,6 +6,7 @@ import { MATCH_KERNEL, type StrategyRuntime } from "@cowards/engine"
 import { adaptRuntimeForCurrentKernel } from "@cowards/engine/test/current-kernel-runtime"
 import { recordChronicleFromExecution } from "@cowards/replay"
 import {
+  CANONICAL_ARENA_CATALOG_V1_37,
   CANONICAL_COMPATIBILITY_TUPLES,
   DEFAULT_RUNTIME_LIMITS,
   INITIAL_BOUNDS,
@@ -64,6 +65,12 @@ const top = buildStrategyRevision({
   strategyId: "strategy:v118:top",
 })
 const tuple = CANONICAL_COMPATIBILITY_TUPLES[0]!
+const standardCross = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(
+  ({ id }) => id === "arena:standard-cross:v1",
+)
+if (standardCross === undefined) {
+  throw new Error("canonical Standard Cross fixture missing")
+}
 const nestedRequest: RuntimeExecutionServiceRequest =
   bindFixtureCandidateMatchAuthorityV119({
   contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
@@ -73,10 +80,12 @@ const nestedRequest: RuntimeExecutionServiceRequest =
     matchId: "match:v118",
     seed: "seed:v118",
     arenaVariant: {
-      id: "arena:v118",
-      name: "v1.18 semantic admission",
-      initialBounds: INITIAL_BOUNDS,
-      terrainStones: [],
+      id: standardCross.id,
+      name: standardCross.name,
+      initialBounds: { ...standardCross.initialBounds },
+      terrainStones: standardCross.terrainStones.map((position) => ({
+        ...position,
+      })),
     },
     bottomPlayerId: "player:bottom",
     topPlayerId: "player:top",
@@ -230,9 +239,52 @@ const execution = () => {
 
 const validExecutionFixture = execution()
 
-const dependencies = (): PreparedRuntimeServiceDependenciesV118 => {
+const withCanonicalStandardCrossTerrain = (
+  state: typeof validExecutionFixture.execution extends { kind: "completed" }
+    ? typeof validExecutionFixture.execution.result.state
+    : never,
+) => ({
+  ...state,
+  terrainStones: standardCross.terrainStones.map((position) => ({
+    ...position,
+  })),
+})
+
+const differentlyOrderedStandardCrossExecution = () => {
+  const current = validExecutionFixture
+  if (current.execution.kind !== "completed") {
+    throw new Error("fixture execution must complete")
+  }
+  const finalState = withCanonicalStandardCrossTerrain(
+    current.execution.result.state,
+  )
+  return {
+    ...current,
+    response: {
+      ...current.response,
+      result: {
+        ...current.response.result,
+        finalState,
+      },
+    },
+    execution: {
+      ...current.execution,
+      result: {
+        ...current.execution.result,
+        state: finalState,
+      },
+      recorderMaterial: {
+        ...current.execution.recorderMaterial,
+        finalState,
+      },
+    },
+  } as PreparedRuntimeServiceExecutionV118
+}
+
+const dependencies = (
+  currentExecution = validExecutionFixture,
+): PreparedRuntimeServiceDependenciesV118 => {
   const keys = generateKeyPairSync("ed25519")
-  const currentExecution = validExecutionFixture
   return {
     signer: {
       keyId: "runtime-service:semantic-receipt:v1.18",
@@ -255,6 +307,29 @@ const dependencies = (): PreparedRuntimeServiceDependenciesV118 => {
 }
 
 describe("prepared runtime service v1.18 semantic admission", () => {
+  it("accepts Standard Cross across replay reconstruction and terminal binding", () => {
+    expect(standardCross.terrainStones).toEqual([
+      { x: 3, y: 2 },
+      { x: 2, y: 3 },
+      { x: 4, y: 3 },
+      { x: 3, y: 4 },
+    ])
+
+    const response = executePreparedRuntimeServiceRequestV118(
+      request(),
+      dependencies(differentlyOrderedStandardCrossExecution()),
+    )
+
+    expect(response).toMatchObject({
+      ok: true,
+      kind: "executionResult",
+      result: {
+        resultClass: "success",
+        mutationStatus: "committed",
+      },
+    })
+  })
+
   it("joins exact current containment identity and rejects stale or mixed references", () => {
     const authority = createFixtureRuntimeEvidenceAuthorityLoader(
       nestedRequest.evidenceSnapshot,
