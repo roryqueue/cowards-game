@@ -353,6 +353,7 @@ export const checkLeanCorrectiveRecoveryOnlyStructure = (runnerSource: string, c
     if (inspected.has(body)) continue
     inspected.add(body)
     if (/(?:\bfork\s*\(|\bspawn\w*\s*\(|createExclusiveLeanInvocationMarker|buildLeanSchedule\s*\(|executePrepared|runLeanFeasibility|createSupervisedLeanExecutionDependencies|prepareLeanCorrectiveInvocation|child\.send|kind\s*:\s*["']execute["'])/u.test(body)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
+    if (/(?:\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*(?:checker\.)?[A-Za-z_$][\w$]*\s*;|checker\s*\[)/u.test(body)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL")
     for (const call of body.matchAll(/(?<![.\w])([A-Za-z_$][\w$]*)\s*\(/gu)) {
       const callee = definitions.get(call[1]!)
       if (callee !== undefined && !inspected.has(callee)) pending.push(callee)
