@@ -658,7 +658,7 @@ const sourceFilesAt = (root: string, commit: string): SourceFile[] =>
 
 const buildReview = async (root: string) => {
   const sourceCommit = frozenSourceCommit(root)
-  const audit = await auditFinalConvergence(root, sourceCommit)
+  const audit = await auditFinalConvergence(root, PLAN_106_COMMIT)
   const body = {
     schemaVersion: REVIEW_SCHEMA,
     sourceCommit,
@@ -906,7 +906,7 @@ const checkLaterHead = async (root: string) => {
   const anchor = gitBytes(root, anchorCommit, PATHS.anchor129).toString("utf8")
   if (!anchor.includes(final.finalCommit) || !anchor.includes("grants no authority"))
     fail("LATER_HEAD_ANCHOR_BYTES")
-  const sourceAudit = await auditFinalConvergence(root, final.review.sourceCommit)
+  const sourceAudit = await auditFinalConvergence(root, PLAN_106_COMMIT)
   const currentInventory = inventoryAt(root, "HEAD")
   const currentDag = inspectDAG(root, "HEAD", currentInventory)
   const currentRequirementsText = gitBytes(root, "HEAD", PATHS.requirements).toString("utf8")
