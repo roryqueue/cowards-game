@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { LEAN_AUTHORITY_FALSE, hashLeanValue, reduceLeanExecutions, buildLeanSchedule, LEAN_CURRENT_FORMATION_ROOT, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
+  LEAN_CORRECTIVE_ARTIFACT_PATHS,
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
@@ -22,6 +23,8 @@ import {
   renderLeanReadinessV3,
   renderLeanSourceReviewV3,
   renderLeanTrackingCarrier,
+  checkLeanCorrectiveRecoveryOnlyStructure,
+  validateLeanDiagnosticCustody,
 } from "./check-v1-38-lean-admission.js"
 import * as leanAdmissionModule from "./check-v1-38-lean-admission.js"
 
@@ -82,6 +85,32 @@ describe("lean admission custody", () => {
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/spec/src")
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/persistence/src")
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("pnpm-lock.yaml")
+  })
+
+  it("binds corrective destinations without reviving first-attempt paths", () => {
+    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation).toBe(".planning/artifacts/v1.38-lean-runner-corrective-invocation-v2.json")
+    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal).toBe(".planning/artifacts/v1.38-lean-runner-corrective-terminal-v2.json")
+    expect(Object.values(LEAN_CORRECTIVE_ARTIFACT_PATHS)).not.toContain(LEAN_ARTIFACT_PATHS.invocation)
+    expect(Object.values(LEAN_CORRECTIVE_ARTIFACT_PATHS)).not.toContain(LEAN_ARTIFACT_PATHS.terminal)
+  })
+
+  it("accepts only epistemically limited diagnostic custody", () => {
+    const custody = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-diagnostic-custody-v1.json", "utf8"))
+    expect(validateLeanDiagnosticCustody(custody)).toEqual(custody)
+    for (const mutation of [
+      { rawEvidencePresent: true }, { independentlyVerifiable: true }, { persisted: true },
+      { liveInvocation: true }, { charged: true }, { evidenceAdmissible: true },
+      { outcomes: [] },
+    ]) expect(() => validateLeanDiagnosticCustody({ ...custody, ...mutation })).toThrow(/LEAN_DIAGNOSTIC_CUSTODY/u)
+  })
+
+  it("proves recovery-only source has no launch capability", () => {
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
+      readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8"),
+    )).not.toThrow()
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
+      "export const runLeanCorrectiveRecoveryOnlyInjected = async () => { fork(); child.send({kind: 'execute'}) }",
+    )).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
   })
 
   it("requires literal-zero non-authorizing review before readiness", () => {
