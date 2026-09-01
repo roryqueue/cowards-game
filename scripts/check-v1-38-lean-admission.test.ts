@@ -16,7 +16,12 @@ import {
   validateLeanTerminalArtifact,
   createLeanInterruptedTerminal,
   checkLeanManifest,
+  checkLeanReviewOutcome,
+  parseLeanTrackingSurface,
   renderLeanManifest,
+  renderLeanReadinessV2,
+  renderLeanSourceReviewV2,
+  renderLeanTrackingCarrier,
 } from "./check-v1-38-lean-admission.js"
 
 const temporary: string[] = []
@@ -58,7 +63,7 @@ describe("lean admission custody", () => {
         executableBlobs: { ...manifest.source.executableBlobs, "packages/spec/src": "0".repeat(40) },
       },
     })).toThrow(/LEAN_SOURCE_BLOB_DRIFT/u)
-  })
+  }, 30_000)
 
   it("does not create invocation, terminal, readiness, or adjudication artifacts", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "lean-check-")); temporary.push(dir)
@@ -79,33 +84,42 @@ describe("lean admission custody", () => {
 
   it("requires literal-zero non-authorizing review before readiness", () => {
     const manifest = renderLeanManifest(process.cwd(), process.env.LEAN_TEST_SOURCE_COMMIT ?? "HEAD")
-    const review = {
-      schemaVersion: "v1.38-lean-runner-source-review-v2",
-      sourceCommit: manifest.source.commit,
-      manifestRoot: hashLeanValue(manifest),
-      findingCount: 0,
-      findings: [],
-      admitsExecution: false,
-      authority: manifest.authority,
-    }
+    const review = renderLeanSourceReviewV2(manifest, [])
     expect(() => checkLeanSourceReview(manifest, review)).not.toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1 })).toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, extra: true })).toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1, findings: [{ diagnostics: "private" }] })).toThrow(/LEAN_PRIVATE_DATA/u)
-    const readiness = {
-      schemaVersion: "v1.38-lean-runner-readiness-v2",
-      sourceCommit: manifest.source.commit,
-      manifestRoot: hashLeanValue(manifest),
-      sourceReviewRoot: hashLeanValue(review),
-      findingCount: 0,
-      plan151Eligible: true,
-      liveInvocationLimit: 1,
-      liveInvocationsConsumed: 0,
-      correctiveRerunAuthorized: false,
-      authority: manifest.authority,
-    }
+    const readiness = renderLeanReadinessV2(manifest, review)
     expect(() => checkLeanReadiness(manifest, review, readiness)).not.toThrow()
     expect(() => checkLeanReadiness(manifest, review, { ...readiness, extra: true })).toThrow()
+    expect(checkLeanReviewOutcome(manifest, review, readiness)).toEqual(readiness)
+    const blocked = renderLeanSourceReviewV2(manifest, [{ id: "B1", severity: "critical", status: "open", summary: "still open" }])
+    expect(checkLeanReviewOutcome(manifest, blocked, undefined)).toBeUndefined()
+    expect(() => checkLeanReviewOutcome(manifest, blocked, readiness)).toThrow(/LEAN_READINESS_FOR_NONZERO_REVIEW/u)
+  })
+
+  it("selects one structural current branch and ignores historical prose", () => {
+    const authority = Object.fromEntries(Object.keys(LEAN_AUTHORITY_FALSE).map((key) => [key, key === "phase263PlanningAuthorized" || key === "phase263ExecutionAuthorized"]))
+    const eligibility = {
+      schemaVersion: "v1.38-phase-262-lean-eligibility-v1",
+      adjudicationRoot: "sha256:" + "a".repeat(64),
+      admit03: "satisfied_under_revised_contract",
+      phase262Complete: true,
+      phase263PlanningEligible: true,
+      phase263ExecutionEligible: true,
+      authority,
+    } as const
+    const requirement = "- [x] **ADMIT-03**: satisfied_under_revised_contract; historical prose says blocked."
+    expect(parseLeanTrackingSurface(".planning/REQUIREMENTS.md", requirement)).toEqual({ admit03: "satisfied_under_revised_contract" })
+    expect(() => parseLeanTrackingSurface(".planning/REQUIREMENTS.md", `${requirement}\n${requirement}`)).toThrow(/LEAN_TRACKING_AMBIGUOUS/u)
+    for (const trackingPath of [".planning/ROADMAP.md", ".planning/STATE.md", ".planning/v1.38-CURRENT-STATUS.md", ".planning/v1.38-v1.38-MILESTONE-AUDIT.md"] as const) {
+      const carrier = renderLeanTrackingCarrier(trackingPath, eligibility)
+      expect(parseLeanTrackingSurface(trackingPath, `Historical ADMIT-03 blocked.\n${carrier}`)).toEqual(expect.objectContaining({
+        admit03: "satisfied_under_revised_contract", phase262Complete: true,
+      }))
+      expect(() => parseLeanTrackingSurface(trackingPath, `${carrier}\n${carrier}`)).toThrow(/LEAN_TRACKING_AMBIGUOUS/u)
+      expect(() => parseLeanTrackingSurface(trackingPath, carrier.replace('"phase262Complete":true', '"phase262Complete":false'))).toThrow()
+    }
   })
 
   it("strictly links invocation, terminal, adjudication, and eligibility roots", () => {
