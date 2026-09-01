@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { LEAN_AUTHORITY_FALSE, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
+import { LEAN_AUTHORITY_FALSE, hashLeanValue, reduceLeanExecutions, buildLeanSchedule, LEAN_CURRENT_FORMATION_ROOT, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
@@ -22,6 +22,20 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  const passingTerminal = () => reduceLeanExecutions(buildLeanSchedule().map((cell) => ({
+    ...cell,
+    classification: "success" as const,
+    cleanupComplete: true,
+    orphanedChild: false,
+    boardRealism: true,
+    integrityValid: true,
+    requestRealismRoot: leanRequestRealismRoot(cell),
+    currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT,
+    outcomeRoot: hashLeanValue({ cell: cell.baseCellId, kind: "outcome" }),
+    finalStateRoot: hashLeanValue({ cell: cell.baseCellId, kind: "state" }),
+    transitionEventRoot: hashLeanValue({ cell: cell.baseCellId, kind: "events" }),
+    runtimeAccountingRoot: hashLeanValue({ cell: cell.baseCellId, kind: "accounting" }),
+  })))
   it("permits only authenticated successor lock residue", () => {
     expect(() => assertLeanStatus(`?? .v138-successor-${"a".repeat(64)}.lock\n`)).not.toThrow()
     expect(() => assertLeanStatus(" M scripts/example.ts\n")).toThrow(/LEAN_WORKTREE_DIRTY/u)
@@ -125,5 +139,27 @@ describe("lean admission custody", () => {
       phase262Complete: false, phase263PlanningEligible: false,
       phase263ExecutionEligible: false, authority: LEAN_AUTHORITY_FALSE,
     }, adjudication)).not.toThrow()
+  })
+
+  it("does not allow a claimed pass to escalate eligibility when evidence rederives non-pass", () => {
+    const lineage = {
+      sourceCommit: "a".repeat(40), manifestRoot: "sha256:" + "1".repeat(64),
+      sourceReviewRoot: "sha256:" + "2".repeat(64), readinessRoot: "sha256:" + "3".repeat(64),
+      childCapabilityRoot: "sha256:" + "4".repeat(64),
+    } as const
+    const invocation = validateLeanInvocation({
+      schemaVersion: "v1.38-lean-runner-invocation-v1", ...lineage,
+      claimClass: "fixture_feasibility_only", liveInvocationOrdinal: 1, authority: LEAN_AUTHORITY_FALSE,
+    })
+    const derived = passingTerminal()
+    const forged = { ...derived, result: "pass", evidence: derived.evidence.map((cell, index) => index === 0 ? {
+      ...cell, classification: "system_failure", outcomeRoot: undefined, finalStateRoot: undefined,
+      transitionEventRoot: undefined, runtimeAccountingRoot: undefined,
+    } : cell) }
+    expect(() => validateLeanTerminalArtifact({
+      schemaVersion: "v1.38-lean-runner-terminal-v1", ...lineage,
+      invocationRoot: hashLeanValue(invocation), privacy: "safe_aggregate_only",
+      terminal: forged, authority: LEAN_AUTHORITY_FALSE,
+    }, invocation)).toThrow()
   })
 })

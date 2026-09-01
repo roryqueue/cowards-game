@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   LEAN_AUTHORITY_FALSE,
+  LEAN_CURRENT_FORMATION_ROOT,
   buildLeanSchedule,
   createLeanManifest,
+  deriveAndValidateLeanTerminal,
+  leanRequestRealismRoot,
   projectLeanV118Response,
   reduceLeanExecutions,
   validateLeanManifest,
@@ -18,6 +21,9 @@ const successfulRecords = (): LeanExecutionRecord[] =>
     cleanupComplete: true,
     orphanedChild: false,
     boardRealism: true,
+    integrityValid: true,
+    requestRealismRoot: leanRequestRealismRoot(cell),
+    currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT,
     outcomeRoot: root(cell.cellId.includes("pass:a") ? "1" : "1"),
     finalStateRoot: root("2"),
     transitionEventRoot: root("3"),
@@ -53,6 +59,8 @@ describe("lean schedule", () => {
       reinterpreted: false,
     })
     expect(passing.authority).toEqual(LEAN_AUTHORITY_FALSE)
+    expect(passing.evidence).toHaveLength(24)
+    expect(deriveAndValidateLeanTerminal(passing)).toEqual(passing)
   })
 
   it.each([
@@ -101,6 +109,43 @@ describe("lean schedule", () => {
       expect(reduceLeanExecutions(records).result).toBe(
         mutation.cleanupComplete === false || mutation.orphanedChild === true ? "invalid" : "non_pass",
       )
+    }
+  })
+
+  it("rejects every claimed terminal field that contradicts rederived evidence", () => {
+    const terminal = reduceLeanExecutions(successfulRecords())
+    for (const mutation of [
+      { result: "non_pass" },
+      { counts: { ...terminal.counts, success: 23, systemFailure: 1 } },
+      { determinism: { comparedCells: 11, mismatchCount: 0 } },
+      { completeCleanup: false },
+    ]) expect(() => deriveAndValidateLeanTerminal({ ...terminal, ...mutation })).toThrow(/LEAN_TERMINAL_DERIVATION_MISMATCH/u)
+  })
+
+  it("rejects missing, duplicate, extra, reordered, mischarged, and unsafe evidence", () => {
+    const terminal = reduceLeanExecutions(successfulRecords())
+    const mutations = [
+      terminal.evidence.slice(1),
+      [...terminal.evidence, terminal.evidence[0]],
+      [...terminal.evidence.slice(0, 1), terminal.evidence[0], ...terminal.evidence.slice(1)],
+      [terminal.evidence[1], terminal.evidence[0], ...terminal.evidence.slice(2)],
+      terminal.evidence.map((cell, index) => index === 3 ? { ...cell, chargedIdentity: "lean-charge:forged" } : cell),
+      terminal.evidence.map((cell, index) => index === 3 ? { ...cell, privateDiagnostics: "secret" } : cell),
+    ]
+    for (const evidence of mutations) expect(() => deriveAndValidateLeanTerminal({ ...terminal, evidence })).toThrow()
+  })
+
+  it("rejects false realism, malformed roots, and cross-pass semantic drift from evidence", () => {
+    const terminal = reduceLeanExecutions(successfulRecords())
+    for (const mutation of [
+      { boardRealism: false },
+      { requestRealismRoot: root("9") },
+      { currentFormationRoot: root("9") },
+      { outcomeRoot: "not-a-root" },
+      { finalStateRoot: root("9") },
+    ]) {
+      const evidence = terminal.evidence.map((cell, index) => index === 12 ? { ...cell, ...mutation } : cell)
+      expect(() => deriveAndValidateLeanTerminal({ ...terminal, evidence })).toThrow()
     }
   })
 })
