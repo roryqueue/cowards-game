@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -5,8 +6,10 @@ import { afterEach, describe, expect, it } from "vitest"
 import { buildLeanSchedule, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_LIVE_SELECTOR,
-  buildCanonicalLeanRequest,
+  buildCanonicalLeanRequestV118,
   createExclusiveLeanInvocationMarker,
+  executePreparedLeanCellForTest,
+  parseLeanExecutionResult,
   projectLeanPrivateRuntimeResponse,
   runLeanFeasibilityInjected,
   type LeanExecutionDependencies,
@@ -115,7 +118,10 @@ describe("bounded lean runner", () => {
 
   it("builds an exact canonical request for every cell", () => {
     for (const cell of buildLeanSchedule()) {
-      const request = buildCanonicalLeanRequest(cell)
+      const prepared = buildCanonicalLeanRequestV118(cell)
+      const request = prepared.nestedRequest
+      expect(prepared.request.contractVersion).toBe("runtime-execution-service-v1.18")
+      expect(prepared.initialStateRoot).toMatch(/^sha256:/u)
       expect(request.match.arenaVariant.id).toBe(cell.arenaId)
       expect(request.match.initialInitiativePlayerId).toBe(`player:${cell.initiativeSide}`)
       const fixtureId = (side: "bottom" | "top") => {
@@ -127,6 +133,24 @@ describe("bounded lean runner", () => {
     }
     expect(LEAN_LIVE_SELECTOR).toBe("--run-reviewed-live-gate")
   })
+
+  it("rejects direct child selection before executing any cell", () => {
+    expect(() => execFileSync(process.execPath, ["--import", "tsx", "scripts/run-v1-38-lean-runner-feasibility.ts", "--execute-reviewed-cell"], { stdio: "pipe" })).toThrow()
+  })
+
+  it("strictly parses child results and rejects extra or malformed roots", () => {
+    const value = { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
+    expect(parseLeanExecutionResult(value)).toEqual(value)
+    expect(() => parseLeanExecutionResult({ ...value, outcomeRoot: "bad" })).toThrow()
+    expect(() => parseLeanExecutionResult({ ...value, privateDiagnostics: "secret" })).toThrow()
+  })
+
+  it("executes one actual prepared v1.18 fixture path", async () => {
+    const result = await executePreparedLeanCellForTest(buildLeanSchedule()[0]!)
+    expect(["success", "player_violation", "system_failure"]).toContain(result.classification)
+    expect(result.cleanupComplete).toBe(true)
+    expect(result.orphanedChild).toBe(false)
+  }, 30_000)
 
   it("durably creates an exclusive invocation marker and refuses reuse", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "lean-marker-")); temporary.push(dir)

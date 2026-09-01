@@ -2,13 +2,17 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
+import { LEAN_AUTHORITY_FALSE, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
   checkLeanReadiness,
   checkLeanSourceReview,
+  validateLeanAdjudication,
+  validateLeanEligibility,
+  validateLeanInvocation,
+  validateLeanTerminalArtifact,
   checkLeanManifest,
   renderLeanManifest,
 } from "./check-v1-38-lean-admission.js"
@@ -42,6 +46,7 @@ describe("lean admission custody", () => {
     expect(LEAN_ARTIFACT_PATHS.terminal).toBe(".planning/artifacts/v1.38-lean-runner-terminal.json")
     expect(LEAN_ARTIFACT_PATHS.readiness).toBe(".planning/artifacts/v1.38-lean-runner-readiness-v1.json")
     expect(LEAN_ARTIFACT_PATHS.adjudication).toBe(".planning/artifacts/v1.38-lean-runner-adjudication-v1.json")
+    expect(LEAN_ARTIFACT_PATHS.eligibility).toBe(".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json")
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("apps/runtime-service/src/execute-match.ts")
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/engine/src/kernel/driver.ts")
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/spec/src/runtime-execution-service-v1-18.ts")
@@ -61,7 +66,8 @@ describe("lean admission custody", () => {
     }
     expect(() => checkLeanSourceReview(manifest, review)).not.toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1 })).toThrow()
-    expect(() => checkLeanReadiness(manifest, review, {
+    expect(() => checkLeanSourceReview(manifest, { ...review, extra: true })).toThrow()
+    const readiness = {
       schemaVersion: "v1.38-lean-runner-readiness-v1",
       sourceCommit: manifest.source.commit,
       manifestRoot: hashLeanValue(manifest),
@@ -72,6 +78,37 @@ describe("lean admission custody", () => {
       liveInvocationsConsumed: 0,
       correctiveRerunAuthorized: false,
       authority: manifest.authority,
-    })).not.toThrow()
+    }
+    expect(() => checkLeanReadiness(manifest, review, readiness)).not.toThrow()
+    expect(() => checkLeanReadiness(manifest, review, { ...readiness, extra: true })).toThrow()
+  })
+
+  it("strictly links invocation, terminal, adjudication, and eligibility roots", () => {
+    const lineage = {
+      sourceCommit: "a".repeat(40), manifestRoot: "sha256:" + "1".repeat(64),
+      sourceReviewRoot: "sha256:" + "2".repeat(64), readinessRoot: "sha256:" + "3".repeat(64),
+    } as const
+    const invocation = validateLeanInvocation({
+      schemaVersion: "v1.38-lean-runner-invocation-v1", ...lineage,
+      claimClass: "fixture_feasibility_only", liveInvocationOrdinal: 1,
+      authority: Object.fromEntries(Object.keys(LEAN_AUTHORITY_FALSE).map((key) => [key, false])),
+    })
+    const terminal = validateLeanTerminalArtifact({
+      schemaVersion: "v1.38-lean-runner-terminal-v1", ...lineage,
+      invocationRoot: hashLeanValue(invocation), privacy: "safe_aggregate_only",
+      terminal: { ...({} as never) },
+    }, invocation, { allowFixtureTerminal: true })
+    const adjudication = validateLeanAdjudication({
+      schemaVersion: "v1.38-lean-runner-adjudication-v1",
+      terminalRoot: hashLeanValue(terminal), reviewedResult: "invalid",
+      findingCount: 0, findings: [], admitsEligibility: false,
+      authority: LEAN_AUTHORITY_FALSE,
+    }, terminal)
+    expect(() => validateLeanEligibility({
+      schemaVersion: "v1.38-phase-262-lean-eligibility-v1",
+      adjudicationRoot: hashLeanValue(adjudication), admit03: "blocked",
+      phase262Complete: false, phase263PlanningEligible: false,
+      phase263ExecutionEligible: false, authority: LEAN_AUTHORITY_FALSE,
+    }, adjudication)).not.toThrow()
   })
 })

@@ -75,6 +75,13 @@ describe("lean schedule", () => {
     expect(reduceLeanExecutions(records).result).toBe("non_pass")
   })
 
+  it("rejects equal but malformed semantic roots", () => {
+    const records = successfulRecords()
+    records[0] = { ...records[0]!, outcomeRoot: "not-a-sha" as never }
+    records[12] = { ...records[12]!, outcomeRoot: "not-a-sha" as never }
+    expect(reduceLeanExecutions(records).result).toBe("invalid")
+  })
+
   it("requires cleanup and all four semantic roots", () => {
     for (const mutation of [
       { cleanupComplete: false },
