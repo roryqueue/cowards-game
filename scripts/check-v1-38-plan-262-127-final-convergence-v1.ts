@@ -500,14 +500,29 @@ const inspectCleanup = (root: string) => ({
     /^\.v138-successor-[a-f0-9]{64}\.lock$/u.test(name)).length,
 })
 
-export const auditFinalConvergence = async (root: string, ref = "HEAD") => {
+const defaultAuditRef = (root: string): string => {
+  const target = containedTarget(root, PATHS.reviewCarrier)
+  if (kind(target) !== "file") return "HEAD"
+  try {
+    const carrier = JSON.parse(readFileSync(target, "utf8"))
+    return /^[a-f0-9]{40}$/u.test(carrier?.sourceCommit) &&
+      isAncestor(root, carrier.sourceCommit, "HEAD")
+      ? carrier.sourceCommit
+      : "HEAD"
+  } catch {
+    return "HEAD"
+  }
+}
+
+export const auditFinalConvergence = async (root: string, ref?: string) => {
+  const auditRef = ref ?? defaultAuditRef(root)
   const findings: string[] = []
-  const inventory = inventoryAt(root, ref)
+  const inventory = inventoryAt(root, auditRef)
   const historicalInventory = deriveHistoricalInventory(inventory)
   const inventoryDelta = inventory.allPaths.filter((item) => !historicalInventory.allPaths.includes(item))
-  const review = assertSourceReview(root, ref, readJsonAt(root, ref, PATHS.review125))
-  const readiness = assertReadiness(readJsonAt(root, ref, PATHS.readiness126), review, historicalInventory)
-  const lifecycle = readJsonAt(root, ref, PATHS.lifecycle106)
+  const review = assertSourceReview(root, auditRef, readJsonAt(root, auditRef, PATHS.review125))
+  const readiness = assertReadiness(readJsonAt(root, auditRef, PATHS.readiness126), review, historicalInventory)
+  const lifecycle = readJsonAt(root, auditRef, PATHS.lifecycle106)
   assertRooted(lifecycle, LIFECYCLE_DOMAIN, "lifecycleRoot", "LIFECYCLE_ROOT")
   if (lifecycle?.branch !== "gaps" || lifecycle?.admit03 !== "blocked" ||
       lifecycle?.phase262 !== "incomplete" || lifecycle?.phase263PlanningEligible !== false ||
@@ -517,30 +532,30 @@ export const auditFinalConvergence = async (root: string, ref = "HEAD") => {
     fail("LIFECYCLE_HISTORICAL_SNAPSHOT")
   assertAllFalse(lifecycle.authority, "LIFECYCLE_AUTHORITY")
   if (changedPaths(root, PLAN_106_COMMIT).join("\n") !== [...PLAN_106_PATHS].sort().join("\n") ||
-      !isAncestor(root, PLAN_106_COMMIT, ref))
+      !isAncestor(root, PLAN_106_COMMIT, auditRef))
     fail("PLAN106_ATOMIC_COMMIT")
-  const requirementsText = gitBytes(root, ref, PATHS.requirements).toString("utf8")
+  const requirementsText = gitBytes(root, auditRef, PATHS.requirements).toString("utf8")
   const requirementClassifications = classifyRequirements(requirementsText)
-  const validation = gitBytes(root, ref, PATHS.validation).toString("utf8")
-  const verification = gitBytes(root, ref, PATHS.verification).toString("utf8")
+  const validation = gitBytes(root, auditRef, PATHS.validation).toString("utf8")
+  const verification = gitBytes(root, auditRef, PATHS.verification).toString("utf8")
   assertStructuredProofCoverage(validation, verification, historicalInventory)
-  const correction = readJsonAt(root, ref, PATHS.metadataCorrection)
+  const correction = readJsonAt(root, auditRef, PATHS.metadataCorrection)
   if (correction?.schemaVersion !== "v1.38-plan-262-121-summary-metadata-correction-v1" ||
       correction?.admit03CompletionCreditGranted !== false || correction?.admit03Status !== "blocked" ||
       correction?.authorizesExecution !== false || correction?.summaryPath !== PATHS.summary121 ||
-      correction?.summarySha256 !== sha256(gitBytes(root, ref, PATHS.summary121)))
+      correction?.summarySha256 !== sha256(gitBytes(root, auditRef, PATHS.summary121)))
     fail("METADATA_CORRECTION")
   const aggregateBase = inspectAggregate(
-    readJsonAt(root, ref, PATHS.aggregate),
-    readJsonAt(root, ref, PATHS.disposition),
+    readJsonAt(root, auditRef, PATHS.aggregate),
+    readJsonAt(root, auditRef, PATHS.disposition),
   )
-  const terminal = readJsonAt(root, ref, PATHS.terminal)
+  const terminal = readJsonAt(root, auditRef, PATHS.terminal)
   if (terminal?.schemaVersion !== "v1.38-current-matrix-retry-terminal-v4" ||
       terminal?.disposition !== "exhausted" || terminal?.freshAccepted !== 0 ||
       terminal?.completeCleanup !== true || terminal?.downstreamAuthority !== "denied")
     fail("TERMINAL_INVALID")
-  const reproductionPresent = pathExistsAt(root, ref, PATHS.reproduction)
-  const route12Present = pathExistsAt(root, ref, PATHS.route12)
+  const reproductionPresent = pathExistsAt(root, auditRef, PATHS.reproduction)
+  const route12Present = pathExistsAt(root, auditRef, PATHS.route12)
   if (reproductionPresent || route12Present) fail("NONPASS_ARTIFACT_PRESENT")
   const cleanup = inspectCleanup(root)
   if (!cleanup.journalAbsent || !cleanup.privateV4Absent || !cleanup.emptyPrivateV3 || cleanup.rootSuccessorLocks !== 36)
@@ -550,7 +565,7 @@ export const auditFinalConvergence = async (root: string, ref = "HEAD") => {
     rawEvidenceRetired:
       cleanup.journalAbsent && cleanup.privateV4Absent && cleanup.emptyPrivateV3,
   }
-  const dag = inspectDAG(root, ref, inventory)
+  const dag = inspectDAG(root, auditRef, inventory)
   if (dag.duplicateIds.length || dag.missingDependencies.length || dag.cycles.length) fail("DAG_INVALID")
   return {
     findings,
@@ -649,6 +664,18 @@ const exclusiveWrite = (root: string, repoPath: string, contents: string): void 
   const fd = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL |
     (constants.O_NOFOLLOW ?? 0), 0o644)
   try { writeFileSync(fd, contents) } finally { closeSync(fd) }
+}
+
+const publishReviewFile = (root: string, repoPath: string, contents: string): void => {
+  const target = containedTarget(root, repoPath)
+  if (kind(target) === "absent") {
+    exclusiveWrite(root, repoPath, contents)
+    return
+  }
+  if (kind(target) !== "file" ||
+      !readFileSync(target).equals(gitBytes(root, "HEAD", repoPath)))
+    fail("REVIEW_REPLACEMENT_DRIFT")
+  writeFileSync(target, contents)
 }
 
 export const assertFinalReviewGate = (value: any, expectedSourceCommit: string): any => {
@@ -850,9 +877,9 @@ const checkLaterHead = async (root: string) => {
 
 const writeReview = async (root: string) => {
   const review = await buildReview(root)
-  exclusiveWrite(root, PATHS.reviewCarrier, canonical(review.carrier))
-  exclusiveWrite(root, PATHS.reviewReport, review.report)
-  exclusiveWrite(root, PATHS.summary127, review.summary)
+  publishReviewFile(root, PATHS.reviewCarrier, canonical(review.carrier))
+  publishReviewFile(root, PATHS.reviewReport, review.report)
+  publishReviewFile(root, PATHS.summary127, review.summary)
   return review
 }
 
