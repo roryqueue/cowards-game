@@ -5,15 +5,15 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-163 closed all five Plan157 findings source-only; Plan262-164 fresh independent review is next
-last_updated: "2026-09-01T19:59:57Z"
+stopped_at: Plan262-164 completed non-authorizing with two findings; bounded source correction and fresh review are next before Plan158
+last_updated: "2026-09-01T20:15:07Z"
 last_activity: 2026-09-01
-last_activity_desc: Closed CR-01 through CR-03 and WR-01 through WR-02 with 62/62 tests and no live effect
+last_activity_desc: Bound exact Plan163 source and independently found two Plan164 review gaps; readiness and live execution remain absent
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 145
-  completed_plans: 136
+  completed_plans: 137
   percent: 94
 ---
 
@@ -23,7 +23,7 @@ progress:
 
 Plan163 closed CR-01 through CR-03 and WR-01 through WR-02 at exact source commit `2c2101c58dc5c8c9fa87e97c5adc79c2e0c0150a`. Exact tracked-byte admission, independent rejection of either fresh effect, durable token-bound PID/process-group ownership, authenticated bounded orphan termination, actual-selector zero-launch inspection, and the stable test-only timeout all pass in the 62/62 focused suite. It ran no Match and created no readiness or effect.
 
-Plan164 then binds the exact separately committed Plan163 source and obtains one fresh independent source-only review. Only literal zero findings may create v2 readiness scoped to revised Plan158. Any finding stops again. Plan158 remains ineligible until then and preserves exactly one whole 24-Match corrective rerun plus at most one recovery-only call solely for marker-present/terminal-absent interruption. The failed Plan157 v1 review, first lean attempt, diagnostic observations, historical routes, and all 36 successor locks remain immutable; all downstream authority remains false.
+Plan164 bound the exact separately committed Plan163 source and obtained one fresh independent source-only review. The review found two gaps: the executable trust path still implements only v1 corrective review/readiness artifacts, and recovery structural inspection misses the transitive schedule-construction call chain. Readiness v2 remains absent, Plan158 remains ineligible, and no Match or recovery selector ran. A bounded source correction and another fresh independent exact-source review are next. The failed Plan157 v1 review, first lean attempt, diagnostic observations, historical routes, and all 36 successor locks remain immutable; all downstream authority remains false.
 
 ## Plan 262-157 independent review — 2026-09-01
 
@@ -35,7 +35,7 @@ Independent diagnosis isolated two implementation defects behind the reviewed no
 
 The sole active chain is 262-156 -> 262-161 -> 262-157 -> 262-163 -> 262-164 -> 262-158 -> 262-159 -> 262-160 -> 262-162. Plans156 and161 hold the separately committed implementation fixes; Plan157 is immutable failed-review history. Plan163 closes exactly its five source/test findings without effects. Plan164 independently reviews the fresh exact source and may publish v2 readiness only on literal zero. Plan158 owns one normal wrapper that combines exactly one complete fresh 24-Match invocation with clean-byte admission and unconditional authenticated recovery/postcheck in `finally`. If external interruption prevents that cleanup, one separately invokable recovery-only selector is allowed solely when the fresh v2 marker exists and its terminal is absent; it may terminate only the authenticated orphan identified by the durable operational record and cannot start, resume, or relaunch a Match. Plan159 adjudicates and completes proof only. Plan160 synchronizes tracking/audit surfaces, and Plan162 synchronizes project/research/seed/Phase263 handoff surfaces and proves both sets agree. Until exact pass is synchronized across both sets, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
 
-<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v4","activeChain":["262-156","262-161","262-157","262-163","262-164","262-158","262-159","262-160","262-162"],"waves":{"262-156":131,"262-161":132,"262-157":133,"262-163":134,"262-164":135,"262-158":136,"262-159":137,"262-160":138,"262-162":139},"nextAction":"dispatch-262-164-independent-review","plan157FindingCount":5,"plan163Complete":true,"plan163SourceCommit":"2c2101c58dc5c8c9fa87e97c5adc79c2e0c0150a","plan163FocusedTestsPassed":62,"freshReviewRequired":true,"readinessCondition":"literal_zero_findings","correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"recoveryOnlyCondition":"fresh_v2_marker_present_terminal_absent","recoveryOnlyLaunchCapability":false,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v5","activeChain":["262-156","262-161","262-157","262-163","262-164","source-correction","fresh-independent-review","262-158","262-159","262-160","262-162"],"nextAction":"plan-and-execute-bounded-v2-trust-path-and-transitive-recovery-proof-correction","plan157FindingCount":5,"plan163Complete":true,"plan164Complete":true,"plan164FindingCount":2,"plan164CriticalCount":1,"plan164WarningCount":1,"plan164ManifestRoot":"sha256:5d8f3b23909ec16674de960fb630185cffa1da4c31cea60e844787e08cc901c3","plan164ReviewRoot":"sha256:5414d4b1033be93a151f1d496b5005617c7cf6de3600ff709c6c872b156c2d7a","readinessV2Present":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Reviewed D-34L result — 2026-09-01
 
@@ -69,7 +69,6 @@ Current inventory:128 plan files,110 completed plans,13 active pending and5 inac
 
 The Plan143 and earlier carriers below are immutable pre-execution history, not current permission to invoke Plan110 again.
 
-
 **Current Plan143 closeout (2026-08-31):** Independent literal-zero v10 is published at `3ad69156`, followed directly by summary `2cf1ed90`. Final reviewer source `836c1d6f` passed29/29 tests, clean independent V3 review and targeted typecheck. Only Plan110 is next after mandatory fresh tracking/unrelated-descendant checks; all invocation/fresh counters remain0, ADMIT-03 stays0/540 and downstream authority stays denied.
 
 <!-- phase-262-plan-143-closeout: {"schema_version":"v1.38-plan-262-143-closeout-v1","plan_files":125,"trustworthy_summaries":110,"active_remaining":11,"active_chain":["262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"source_commit":"836c1d6f52f595eb9682747cc180a6c91d4950c6","source_sha256":"sha256:f5ef187a821ced1d29e960c7343f8cd959bcb947169459495ce5e865a821da92","test_sha256":"sha256:d1683808306a9c4b38ec69708b0e2fd5543b9402e2461d2cf465f2df41612c39","review_commit":"d7c3fed07ea6d8930be0234f3942752a2e8c484f","publication_commit":"3ad691564c36f87f440b672f65e8895c2c5d1859","summary_commit":"2cf1ed905dfa24a40b4266b76b9aad591e54da06","summary_sha256":"sha256:3bab9d4fea4bab8ab1ff11443abba46d5527ec0f7b5c7222a9a85f360f722893","payload_root":"sha256:5fc846c537ba9929f148614f7858899d551fffb33bbecb533e6089a624467d83","consumer_source_commit":"80936682ec7f1d63f2ea5dfdd87c99ccb97966b7","semantic_runtime_entries":3931,"semantic_runtime_closure_root":"sha256:23c3e69706042753c77e40d1b8ecc42416e2b59e2eb063504ab4c41061a3ceae","full_suite_passed":29,"full_suite_seconds":670.63,"targeted_typecheck_exit":0,"independent_findings":0,"v10_publication_created":true,"plan_262_110_eligible":true,"authorizes_execution":false,"producer_calls":0,"readiness_calls":0,"live_calls":0,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"admit_03":"blocked","phase_262":"incomplete","downstream_authority_denied":true,"next_action":"dispatch-262-110-only-after-fresh-descendant-checks","descendant_verification":"Full proof reused only with unchanged143/144 source/test/runtime; fresh focused and tracking/unrelated-descendant checks mandatory, actual results in execution handoff."} -->
@@ -83,6 +82,7 @@ The dependency-repair and earlier closeout carriers below are historical; only t
 <!-- phase-262-live-v14-dependency-repair: {"schema_version":"v1.38-phase-262-live-v14-dependency-repair-v1","plan_files":125,"trustworthy_summaries":108,"active_remaining":13,"active_chain":["262-144","262-143","262-110","262-94","262-123","262-124","262-95","262-125","262-126","262-106","262-127","262-128","262-129"],"inactive_unexecuted_plans":["262-135","262-137","262-139","262-141"],"waves":{"262-144":108,"262-143":109,"262-110":110,"262-94":111,"262-123":112,"262-124":113,"262-95":114,"262-125":115,"262-126":116,"262-106":117,"262-127":118,"262-128":119,"262-129":120},"research_commit":"2dfa313f7579b6639f89cdedd987ac60d861ffaf","plan142_complete":true,"plan142_tracking":"7edcac4f5977ea8f006b1369536414c8006e64bd","plan143_state":"open_RED_and_partial_source_no_GREEN_or_publication","plan143_red_commit":"1a5251692af696b010ebc4086b764c6a48b92f32","plan144_source_only":true,"consumer_version":"live-v14","plan_262_110_eligible":false,"v10_publication_created":false,"producer_calls":0,"readiness_invoked":false,"live_invoked":false,"fresh_charged":0,"fresh_accepted":0,"required_accepted":540,"creates_capacity":false,"resets_counters":false,"authorization_literal_created":false,"third_envelope_authorized":false,"admit_03":"blocked","phase_262":"incomplete","downstream_authority_denied":true,"next_action":"dispatch-262-144-only"} -->
 
 **Current executable plan list (supersedes historical wave lists below):**
+
 - [x] 262-144-PLAN.md — Wave108; closed source-only live-v14 contract and actual-consumer proof (`8bb3dbb8` summary)
 - [x] 262-143-PLAN.md — Wave109; independent v10 review closed (summary `2cf1ed90`)
 - [x] 262-145-PLAN.md — Wave110; repaired native lease and closed fresh v4 source
@@ -410,6 +410,7 @@ Progress: [█████████░] 87%
 | Phase 262 P130 | 21m54s | 2 tasks | 2 files |
 | Phase 262 P131 | 33m | 3 tasks | 6 files |
 | Phase 262 P132 | 6m | 2 tasks | 3 files |
+| Phase 262 P164 | 11min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -719,13 +720,13 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-01T19:59:57.000Z
-Stopped at: Plan262-163 completed source-only; Plan262-164 independent review is next
-Resume file: .planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-164-PLAN.md
+Last session: 2026-09-01T20:12:58.000Z
+Stopped at: Plan262-164 completed non-authorizing with two findings; source correction and fresh review required before Plan158
+Resume file: None
 
 ### Blockers
 
-- Plan 262-163 closed the five Plan157 findings. Corrective readiness remains absent and Plan158 remains ineligible until Plan164 independently records literal-zero v2 review; this is an executable engineering dependency, not a human-only blocker.
+- Plan 262-164 found CR-164-01 and transitive WR-01. Corrective readiness remains absent and Plan158 remains ineligible until a bounded source correction implements the v2 trust path and complete recovery call-graph proof, followed by another fresh independent literal-zero review. This is an executable engineering dependency, not a human-only blocker.
 
 <!-- phase-262-plan-106-provisional-tracking: {"admit03":"blocked","authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false},"branch":"gaps","inventoryCounts":{"activePlans":128,"dormantCarriers":1,"historicalPlans":18,"reviews":165,"summaries":120,"total":434,"validations":1,"verifications":1},"inventoryRoot":"sha256:6df3f7c630d752571765aeea734f6c856f21207d7b947f3f8ecf7bf1ac720399","nextAction":"dispatch-262-127-only","phase262":"incomplete","phase263ExecutionEligible":false,"phase263PlanningEligible":false,"schemaVersion":"v1.38-plan-262-106-provisional-tracking-v1"} -->
 
