@@ -16,10 +16,23 @@ export const LEAN_ARTIFACT_PATHS = Object.freeze({
 } as const)
 export const LEAN_DIAGNOSTIC_CUSTODY_PATH = ".planning/artifacts/v1.38-lean-runner-diagnostic-custody-v1.json" as const
 export const LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH = ".v138-lean-corrective-child-ownership.json" as const
-export const LEAN_CORRECTIVE_ARTIFACT_PATHS = Object.freeze({
+export const LEAN_CORRECTIVE_V1_ARTIFACT_PATHS = Object.freeze({
   manifest: ".planning/artifacts/v1.38-lean-runner-corrective-source-manifest-v1.json",
   sourceReview: ".planning/artifacts/v1.38-lean-runner-corrective-source-review-v1.json",
   readiness: ".planning/artifacts/v1.38-lean-runner-corrective-readiness-v1.json",
+} as const)
+export const LEAN_CORRECTIVE_V2_ARTIFACT_PATHS = Object.freeze({
+  manifest: ".planning/artifacts/v1.38-lean-runner-corrective-source-manifest-v2.json",
+  sourceReview: ".planning/artifacts/v1.38-lean-runner-corrective-source-review-v2.json",
+  readiness: ".planning/artifacts/v1.38-lean-runner-corrective-readiness-v2.json",
+} as const)
+export const LEAN_CORRECTIVE_V3_ARTIFACT_PATHS = Object.freeze({
+  manifest: ".planning/artifacts/v1.38-lean-runner-corrective-source-manifest-v3.json",
+  sourceReview: ".planning/artifacts/v1.38-lean-runner-corrective-source-review-v3.json",
+  readiness: ".planning/artifacts/v1.38-lean-runner-corrective-readiness-v3.json",
+} as const)
+export const LEAN_CORRECTIVE_ARTIFACT_PATHS = Object.freeze({
+  ...LEAN_CORRECTIVE_V3_ARTIFACT_PATHS,
   invocation: ".planning/artifacts/v1.38-lean-runner-corrective-invocation-v2.json",
   terminal: ".planning/artifacts/v1.38-lean-runner-corrective-terminal-v2.json",
   adjudication: ".planning/artifacts/v1.38-lean-runner-corrective-adjudication-v2.json",
@@ -160,7 +173,7 @@ export interface LeanCorrectiveSourceReview {
   readonly authority: typeof LEAN_AUTHORITY_FALSE
 }
 export interface LeanCorrectiveReadiness {
-  readonly schemaVersion: "v1.38-lean-runner-corrective-readiness-v1"
+  readonly schemaVersion: "v1.38-lean-runner-corrective-readiness-v3"
   readonly sourceCommit: string
   readonly manifestRoot: `sha256:${string}`
   readonly sourceReviewRoot: `sha256:${string}`
@@ -170,6 +183,48 @@ export interface LeanCorrectiveReadiness {
   readonly correctiveInvocationsConsumed: 0
   readonly recoveryOnlyLimit: 1
   readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanCorrectiveManifestV3 extends Omit<LeanManifest, "schemaVersion"> {
+  readonly schemaVersion: "v1.38-lean-runner-corrective-source-manifest-v3"
+  readonly predecessorRoots: {
+    readonly failedManifestV1Root: `sha256:${string}`
+    readonly failedReviewV1Root: `sha256:${string}`
+    readonly failedManifestV2Root: `sha256:${string}`
+    readonly failedReviewV2Root: `sha256:${string}`
+    readonly firstInvocationRoot: `sha256:${string}`
+    readonly firstTerminalRoot: `sha256:${string}`
+    readonly diagnosticCustodyRoot: `sha256:${string}`
+  }
+  readonly successorLockCount: 36
+  readonly freshCorrectiveEffects: {
+    readonly readinessV3Present: false
+    readonly invocationV2Present: false
+    readonly terminalV2Present: false
+    readonly adjudicationV2Present: false
+    readonly eligibilityV2Present: false
+    readonly childOwnershipPresent: false
+  }
+}
+export interface LeanCorrectiveSourceReviewV3 {
+  readonly schemaVersion: "v1.38-lean-runner-corrective-source-review-v3"
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly manifestRoot: `sha256:${string}`
+  readonly findingCount: number
+  readonly findings: readonly LeanReviewFinding[]
+  readonly admitsExecution: false
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanCorrectiveInterruptionTombstone extends Omit<LeanCorrectiveInvocation, "schemaVersion" | "correctiveInvocationOrdinal" | "claimClass"> {
+  readonly schemaVersion: "v1.38-lean-runner-corrective-interruption-tombstone-v1"
+  readonly invocationRoot: `sha256:${string}`
+  readonly result: "invalid"
+  readonly recoveryTerminalized: true
+  readonly chargedMatches: 0
+  readonly successfulMatches: 0
+  readonly completeCleanup: true
+  readonly formationMaterialized: false
+  readonly privacy: "safe_aggregate_only"
 }
 export interface LeanCorrectiveInvocation {
   readonly schemaVersion: "v1.38-lean-runner-corrective-invocation-v2"
@@ -263,8 +318,8 @@ const assertSuccessorLockInventory = (repoRoot: string): void => {
   if (lines.length !== 36 || new Set(lines).size !== 36) throw new TypeError("LEAN_SUCCESSOR_LOCK_INVENTORY_DRIFT")
 }
 
-export const checkLeanCorrectiveRecoveryOnlyStructure = (source: string): void => {
-  const extractBlock = (marker: string): string => {
+export const checkLeanCorrectiveRecoveryOnlyStructure = (runnerSource: string, checkerSource?: string): void => {
+  const extractBlock = (source: string, marker: string): string => {
     const start = source.indexOf(marker)
     const brace = source.indexOf("{", start)
     if (start < 0 || brace < 0) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
@@ -278,11 +333,36 @@ export const checkLeanCorrectiveRecoveryOnlyStructure = (source: string): void =
     }
     throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
   }
-  const helper = extractBlock("export const runLeanCorrectiveRecoveryOnlyInjected")
-  const selector = extractBlock("if (selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR)")
-  const inspected = `${helper}\n${selector}`
+  const checker = checkerSource ?? readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "check-v1-38-lean-admission.ts"), "utf8")
+  const selector = extractBlock(runnerSource, "if (selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR)")
+  const helper = extractBlock(runnerSource, "export const runLeanCorrectiveRecoveryOnlyInjected")
   if (!selector.includes("runLeanCorrectiveRecoveryOnlyInjected") || !selector.includes("recoverLeanCorrectiveOrphan")) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
-  if (/(?:\bfork\s*\(|\bspawn\w*\s*\(|createExclusiveLeanInvocationMarker|buildLeanSchedule|executePrepared|runLeanFeasibility|createSupervisedLeanExecutionDependencies|prepareLeanCorrectiveInvocation|child\.send|kind\s*:\s*["']execute["'])/u.test(inspected)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
+  const modules = [runnerSource, checker]
+  const roots = [selector, helper]
+  for (const exported of ["recoverLeanCorrectiveOrphan", "terminalizeLeanCorrectiveInterruption", "checkLeanCorrectiveTerminal"]) roots.push(extractBlock(checker, `export const ${exported}`))
+  const definitions = new Map<string, string>()
+  for (const source of modules) {
+    for (const match of source.matchAll(/(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)(?::[^=]+)?\s*=>\s*\{/gu)) {
+      try { definitions.set(match[1]!, extractBlock(source, match[0]!)) } catch { /* non-reachable parser edge; roots still fail closed */ }
+    }
+  }
+  const pending = [...roots]
+  const inspected = new Set<string>()
+  while (pending.length > 0) {
+    const body = pending.pop()!
+    if (inspected.has(body)) continue
+    inspected.add(body)
+    if (/(?:\bfork\s*\(|\bspawn\w*\s*\(|createExclusiveLeanInvocationMarker|buildLeanSchedule\s*\(|executePrepared|runLeanFeasibility|createSupervisedLeanExecutionDependencies|prepareLeanCorrectiveInvocation|child\.send|kind\s*:\s*["']execute["'])/u.test(body)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
+    for (const call of body.matchAll(/(?<![.\w])([A-Za-z_$][\w$]*)\s*\(/gu)) {
+      const callee = definitions.get(call[1]!)
+      if (callee !== undefined && !inspected.has(callee)) pending.push(callee)
+    }
+    for (const call of body.matchAll(/checker\.([A-Za-z_$][\w$]*)\s*\(/gu)) {
+      const callee = definitions.get(call[1]!)
+      if (callee === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${call[1]}`)
+      if (!inspected.has(callee)) pending.push(callee)
+    }
+  }
 }
 
 export const checkLeanCorrectiveSourceOnly = (repoRoot: string): void => {
@@ -444,6 +524,84 @@ export const renderLeanCorrectiveReadiness = (manifest: LeanManifest, reviewValu
     authority: LEAN_AUTHORITY_FALSE,
   })
 }
+
+type LeanCorrectiveManifestV2 = Record<string, unknown> & { source: { commit: string, tree: string, executableBlobs: Record<string, string> } }
+export const checkLeanCorrectiveManifestV2 = (repoRoot: string, value: unknown): LeanCorrectiveManifestV2 => {
+  assertPrivacySafe(value)
+  const topKeys = ["schemaVersion", "claimClass", "source", "reviewClosure", "immutableRoots", "selectedTuple", "fixtures", "arenas", "formation", "scheduleRoot", "runtimeLimitsRoot", "normalization", "deadlineMilliseconds", "historicalFullMatrix", "freshCorrectiveEffects", "successorLockCount", "formationMaterialized", "authority"]
+  if (!isObject(value) || !exactKeys(value, topKeys) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-manifest-v2" || value.claimClass !== "fixture_feasibility_only" || !isObject(value.source) || !exactKeys(value.source, ["commit", "tree", "executableBlobs"]) || !isOid(value.source.commit) || !isOid(value.source.tree) || !isObject(value.source.executableBlobs)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V2_INVALID")
+  const blobs = value.source.executableBlobs
+  if (!exactKeys(blobs, LEAN_EXECUTABLE_CLOSURE_PATHS) || git(repoRoot, ["show", "-s", "--format=%T", value.source.commit]) !== value.source.tree) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V2_SOURCE_DRIFT")
+  for (const sourcePath of LEAN_EXECUTABLE_CLOSURE_PATHS) if (git(repoRoot, ["rev-parse", `${value.source.commit}:${sourcePath}`]) !== blobs[sourcePath]) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V2_SOURCE_DRIFT")
+  if (!isObject(value.reviewClosure) || !exactKeys(value.reviewClosure, ["plan163SummaryCommit", "plan163SummaryBlob", "plan157ReviewBlob", "failedManifestV1Root", "failedReviewV1Root", "closedFindingIds"]) || value.reviewClosure.failedManifestV1Root !== hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.manifest)) || value.reviewClosure.failedReviewV1Root !== hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.sourceReview))) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V2_REVIEW_DRIFT")
+  if (!isObject(value.immutableRoots) || !exactKeys(value.immutableRoots, ["d34lContractRoot", "firstInvocationRoot", "firstTerminalRoot", "diagnosticCustodyRoot"]) || value.immutableRoots.firstInvocationRoot !== hashLeanValue(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation)) || value.immutableRoots.firstTerminalRoot !== hashLeanValue(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal)) || value.immutableRoots.diagnosticCustodyRoot !== hashLeanValue(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V2_ROOT_DRIFT")
+  if (!isObject(value.freshCorrectiveEffects) || !exactKeys(value.freshCorrectiveEffects, ["readinessV2Present", "invocationV2Present", "terminalV2Present", "adjudicationV2Present", "eligibilityV2Present", "childOwnershipPresent"]) || Object.values(value.freshCorrectiveEffects).some((present) => present !== false) || value.successorLockCount !== 36 || value.formationMaterialized !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V2_EFFECT_DRIFT")
+  assertSuccessorLockInventory(repoRoot)
+  return globalThis.structuredClone(value) as LeanCorrectiveManifestV2
+}
+export const checkLeanCorrectiveSourceReviewV2 = (manifest: LeanCorrectiveManifestV2, value: unknown): LeanCorrectiveSourceReviewV3 => {
+  assertPrivacySafe(value)
+  const findingValid = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "sourceTree", "manifestRoot", "findingCount", "findings", "plan157FindingDisposition", "verification", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-review-v2" || value.sourceCommit !== manifest.source.commit || value.sourceTree !== manifest.source.tree || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) <= 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_SOURCE_REVIEW_V2_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveSourceReviewV3
+}
+export const checkLeanCorrectiveReviewOutcomeV2 = (manifest: LeanCorrectiveManifestV2, reviewValue: unknown, readinessValue: unknown | undefined): undefined => {
+  const review = checkLeanCorrectiveSourceReviewV2(manifest, reviewValue)
+  if (review.findingCount === 0) throw new TypeError("LEAN_CORRECTIVE_V2_HISTORY_MUST_FAIL")
+  if (readinessValue !== undefined) throw new TypeError("LEAN_CORRECTIVE_READINESS_FOR_NONZERO_REVIEW")
+  return undefined
+}
+
+export const renderLeanCorrectiveManifestV3 = (repoRoot: string, sourceRef: string): LeanCorrectiveManifestV3 => {
+  const base = renderLeanManifest(repoRoot, sourceRef)
+  const manifest = {
+    ...base,
+    schemaVersion: "v1.38-lean-runner-corrective-source-manifest-v3",
+    predecessorRoots: {
+      failedManifestV1Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.manifest)),
+      failedReviewV1Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.sourceReview)),
+      failedManifestV2Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest)),
+      failedReviewV2Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview)),
+      firstInvocationRoot: hashLeanValue(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation)),
+      firstTerminalRoot: hashLeanValue(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal)),
+      diagnosticCustodyRoot: hashLeanValue(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH)),
+    },
+    successorLockCount: 36,
+    freshCorrectiveEffects: {
+      readinessV3Present: false, invocationV2Present: false, terminalV2Present: false,
+      adjudicationV2Present: false, eligibilityV2Present: false, childOwnershipPresent: false,
+    },
+  } as LeanCorrectiveManifestV3
+  return manifest
+}
+export const checkLeanCorrectiveManifestV3 = (repoRoot: string, value: unknown): LeanCorrectiveManifestV3 => {
+  assertPrivacySafe(value)
+  if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-manifest-v3" || !isObject(value.source) || !isOid(value.source.commit)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V3_INVALID")
+  const expected = renderLeanCorrectiveManifestV3(repoRoot, value.source.commit)
+  if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V3_DRIFT")
+  assertSuccessorLockInventory(repoRoot)
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveManifestV3
+}
+export const renderLeanCorrectiveSourceReviewV3 = (manifest: LeanCorrectiveManifestV3, findings: readonly LeanReviewFinding[]): LeanCorrectiveSourceReviewV3 => checkLeanCorrectiveSourceReviewV3(manifest, {
+  schemaVersion: "v1.38-lean-runner-corrective-source-review-v3", sourceCommit: manifest.source.commit,
+  sourceTree: manifest.source.tree, manifestRoot: hashLeanValue(manifest), findingCount: findings.length,
+  findings, admitsExecution: false, authority: LEAN_AUTHORITY_FALSE,
+})
+export const checkLeanCorrectiveSourceReviewV3 = (manifest: LeanCorrectiveManifestV3, value: unknown): LeanCorrectiveSourceReviewV3 => {
+  assertPrivacySafe(value)
+  const validFinding = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && finding.id.length > 0 && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "sourceTree", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-review-v3" || value.sourceCommit !== manifest.source.commit || value.sourceTree !== manifest.source.tree || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(validFinding) || new Set(value.findings.map((finding) => (finding as Record<string, unknown>).id)).size !== value.findings.length || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_SOURCE_REVIEW_V3_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveSourceReviewV3
+}
+export const checkLeanCorrectiveReadinessV3 = (manifest: LeanCorrectiveManifestV3, reviewValue: unknown, value: unknown): LeanCorrectiveReadiness => {
+  const review = checkLeanCorrectiveSourceReviewV3(manifest, reviewValue)
+  if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan158Eligible", "correctiveInvocationLimit", "correctiveInvocationsConsumed", "recoveryOnlyLimit", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-corrective-readiness-v3" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan158Eligible !== true || value.correctiveInvocationLimit !== 1 || value.correctiveInvocationsConsumed !== 0 || value.recoveryOnlyLimit !== 1 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_READINESS_V3_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveReadiness
+}
+export const renderLeanCorrectiveReadinessV3 = (manifest: LeanCorrectiveManifestV3, reviewValue: unknown): LeanCorrectiveReadiness => {
+  const review = checkLeanCorrectiveSourceReviewV3(manifest, reviewValue)
+  return checkLeanCorrectiveReadinessV3(manifest, review, { schemaVersion: "v1.38-lean-runner-corrective-readiness-v3", sourceCommit: manifest.source.commit, manifestRoot: hashLeanValue(manifest), sourceReviewRoot: hashLeanValue(review), findingCount: 0, plan158Eligible: true, correctiveInvocationLimit: 1, correctiveInvocationsConsumed: 0, recoveryOnlyLimit: 1, authority: LEAN_AUTHORITY_FALSE })
+}
 export const loadAndCheckLeanCorrectiveReady = (
   repoRoot: string,
   allowedOperationalPaths: readonly string[] = [],
@@ -455,8 +613,8 @@ export const loadAndCheckLeanCorrectiveReady = (
   checkLeanFirstEvidenceCustody(repoRoot)
   validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))
   assertSuccessorLockInventory(repoRoot)
-  const manifest = checkLeanCorrectiveManifest(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest))
-  const readiness = checkLeanCorrectiveReadiness(manifest, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.readiness))
+  const manifest = checkLeanCorrectiveManifestV3(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest))
+  const readiness = checkLeanCorrectiveReadinessV3(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.readiness))
   assertLeanCorrectiveTrackedBytes(repoRoot, readiness.sourceCommit)
   return readiness
 }
@@ -638,6 +796,34 @@ export const validateLeanCorrectiveTerminalArtifact = (value: unknown, invocatio
   const terminal = checkTerminalValue(value.terminal)
   if (value.recoveryTerminalized && terminal.result !== "invalid") throw new TypeError("LEAN_CORRECTIVE_RECOVERY_TERMINAL_INVALID")
   return { ...(globalThis.structuredClone(value) as Omit<LeanCorrectiveTerminalArtifact, "terminal">), terminal }
+}
+
+export const createLeanCorrectiveInterruptionTombstone = (invocation: LeanCorrectiveInvocation): LeanCorrectiveInterruptionTombstone => validateLeanCorrectiveInterruptionTombstone({
+  schemaVersion: "v1.38-lean-runner-corrective-interruption-tombstone-v1",
+  sourceCommit: invocation.sourceCommit,
+  manifestRoot: invocation.manifestRoot,
+  sourceReviewRoot: invocation.sourceReviewRoot,
+  readinessRoot: invocation.readinessRoot,
+  firstInvocationRoot: invocation.firstInvocationRoot,
+  firstTerminalRoot: invocation.firstTerminalRoot,
+  diagnosticCustodyRoot: invocation.diagnosticCustodyRoot,
+  childCapabilityRoot: invocation.childCapabilityRoot,
+  invocationRoot: hashLeanValue(invocation),
+  result: "invalid",
+  recoveryTerminalized: true,
+  chargedMatches: 0,
+  successfulMatches: 0,
+  completeCleanup: true,
+  formationMaterialized: false,
+  privacy: "safe_aggregate_only",
+  authority: LEAN_AUTHORITY_FALSE,
+}, invocation)
+export const validateLeanCorrectiveInterruptionTombstone = (value: unknown, invocationValue: unknown): LeanCorrectiveInterruptionTombstone => {
+  assertPrivacySafe(value)
+  const invocation = validateLeanCorrectiveInvocation(invocationValue)
+  const keys = ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "readinessRoot", "firstInvocationRoot", "firstTerminalRoot", "diagnosticCustodyRoot", "childCapabilityRoot", "invocationRoot", "result", "recoveryTerminalized", "chargedMatches", "successfulMatches", "completeCleanup", "formationMaterialized", "privacy", "authority"]
+  if (!isObject(value) || !exactKeys(value, keys) || value.schemaVersion !== "v1.38-lean-runner-corrective-interruption-tombstone-v1" || value.sourceCommit !== invocation.sourceCommit || value.manifestRoot !== invocation.manifestRoot || value.sourceReviewRoot !== invocation.sourceReviewRoot || value.readinessRoot !== invocation.readinessRoot || value.firstInvocationRoot !== invocation.firstInvocationRoot || value.firstTerminalRoot !== invocation.firstTerminalRoot || value.diagnosticCustodyRoot !== invocation.diagnosticCustodyRoot || value.childCapabilityRoot !== invocation.childCapabilityRoot || value.invocationRoot !== hashLeanValue(invocation) || value.result !== "invalid" || value.recoveryTerminalized !== true || value.chargedMatches !== 0 || value.successfulMatches !== 0 || value.completeCleanup !== true || value.formationMaterialized !== false || value.privacy !== "safe_aggregate_only" || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_INTERRUPTION_TOMBSTONE_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveInterruptionTombstone
 }
 
 export const validateLeanAdjudication = (value: unknown, terminalValue: unknown): LeanAdjudication => {
@@ -828,7 +1014,7 @@ export const assertNoLeanChildProcess = (): void => {
   if (commands.split("\n").some((command) => command.includes("run-v1-38-lean-runner-feasibility") && command.includes("--execute-reviewed-cell"))) throw new TypeError("LEAN_CHILD_STILL_ACTIVE")
 }
 export const createExclusiveLeanTerminal = (repoRoot: string, terminal: LeanTerminalArtifact): void => writeExclusiveDurable(path.resolve(repoRoot, LEAN_ARTIFACT_PATHS.terminal), terminal)
-export const createExclusiveLeanCorrectiveTerminal = (repoRoot: string, terminal: LeanCorrectiveTerminalArtifact): void => writeExclusiveDurable(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal), terminal)
+export const createExclusiveLeanCorrectiveTerminal = (repoRoot: string, terminal: LeanCorrectiveTerminalArtifact | LeanCorrectiveInterruptionTombstone): void => writeExclusiveDurable(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal), terminal)
 export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {
   const markerPath = path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
   const terminalPath = path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
@@ -837,16 +1023,19 @@ export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void =>
   assertNoLeanChildProcess()
   const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation])
   const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))
-  createExclusiveLeanCorrectiveTerminal(repoRoot, createLeanCorrectiveTerminalArtifact(invocation, createLeanInterruptedTerminal(), true))
+  createExclusiveLeanCorrectiveTerminal(repoRoot, createLeanCorrectiveInterruptionTombstone(invocation))
 }
-export const checkLeanCorrectiveTerminal = (repoRoot: string): LeanCorrectiveTerminalArtifact => {
+export const checkLeanCorrectiveTerminal = (repoRoot: string): LeanCorrectiveTerminalArtifact | LeanCorrectiveInterruptionTombstone => {
   checkLeanFirstEvidenceCustody(repoRoot)
   assertSuccessorLockInventory(repoRoot)
   const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal])
   const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))
-  const terminal = validateLeanCorrectiveTerminalArtifact(readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal), invocation)
+  const rawTerminal = readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
+  const terminal = isObject(rawTerminal) && rawTerminal.schemaVersion === "v1.38-lean-runner-corrective-interruption-tombstone-v1"
+    ? validateLeanCorrectiveInterruptionTombstone(rawTerminal, invocation)
+    : validateLeanCorrectiveTerminalArtifact(rawTerminal, invocation)
   assertNoLeanChildProcess()
-  if (!terminal.terminal.completeCleanup) throw new TypeError("LEAN_CORRECTIVE_CLEANUP_INCOMPLETE")
+  if (!("terminal" in terminal ? terminal.terminal.completeCleanup : terminal.completeCleanup)) throw new TypeError("LEAN_CORRECTIVE_CLEANUP_INCOMPLETE")
   return terminal
 }
 
@@ -934,7 +1123,23 @@ const main = (): void => {
   } else if (selector === "--check-corrective-source-only") {
     checkLeanCorrectiveSourceOnly(repoRoot)
   } else if (selector === "--check-corrective-recovery-only-structure") {
-    checkLeanCorrectiveRecoveryOnlyStructure(readFileSync(path.resolve(repoRoot, "scripts/run-v1-38-lean-runner-feasibility.ts"), "utf8"))
+    checkLeanCorrectiveRecoveryOnlyStructure(
+      readFileSync(path.resolve(repoRoot, "scripts/run-v1-38-lean-runner-feasibility.ts"), "utf8"),
+      readFileSync(path.resolve(repoRoot, "scripts/check-v1-38-lean-admission.ts"), "utf8"),
+    )
+  } else if (selector === "--check-corrective-source-review-v2") {
+    const manifest = checkLeanCorrectiveManifestV2(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest))
+    checkLeanCorrectiveReviewOutcomeV2(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview), existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.readiness)) ? readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.readiness) : undefined)
+  } else if (selector === "--render-corrective-manifest-v3") {
+    process.stdout.write(`${JSON.stringify(renderLeanCorrectiveManifestV3(repoRoot, process.argv[3] ?? "HEAD"), null, 2)}\n`)
+    return
+  } else if (selector === "--check-corrective-manifest-v3") {
+    checkLeanCorrectiveManifestV3(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest))
+  } else if (selector === "--check-corrective-source-review-v3") {
+    const manifest = checkLeanCorrectiveManifestV3(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest))
+    checkLeanCorrectiveSourceReviewV3(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.sourceReview))
+  } else if (selector === "--check-corrective-reviewed-ready-v3") {
+    loadAndCheckLeanCorrectiveReady(repoRoot)
   } else if (selector === "--check-corrective-source-review") {
     checkLeanFirstEvidenceCustody(repoRoot)
     validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))
