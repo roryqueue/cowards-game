@@ -345,6 +345,91 @@ describe("lean admission custody", () => {
     ))).toThrow(/SIGNAL_POLICY/u)
   })
 
+  it("CR-170-01 binds the separately committed Plan 169 summary in corrective v6 lineage", () => {
+    const manifest = renderLeanCorrectiveManifestV5(process.cwd(), "HEAD") as unknown as Record<string, unknown>
+    expect(manifest.plan169Summary).toEqual({
+      commit: "c33111d5046860b61f686545e4341280305f035a",
+      blob: "8b4bab02e1e3262e32d0c5efcde9c58f509073ef",
+      contentRoot: "sha256:b24af58afb224715eb2e40bedef0150f761e1b7b04687c9346e256e77b79a65b",
+    })
+  })
+
+  it.each([
+    ["destructive git vector through a local alias", (checker: string) => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      'export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { const args = ["clean", "-fdx"]; git(repoRoot, args);',
+    )],
+    ["alternate process signal through parameters", (checker: string) => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      'function unsafeSignal(processGroupId: number, signal: "SIGUSR1"): void { process.kill(-processGroupId, signal) }\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { unsafeSignal(4312, "SIGUSR1");',
+    )],
+    ["noncanonical unlink target", (checker: string) => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      'export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { unlinkSync(path.resolve(repoRoot, "package.json"));',
+    )],
+    ["extra process-list argument", (checker: string) => checker.replace(
+      'execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" })',
+      'execFileSync("ps", ["-p", String(pid), "-o", "command=", "-ww"], { encoding: "utf8" })',
+    )],
+    ["wrong process-list options", (checker: string) => checker.replace(
+      'execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" })',
+      'execFileSync("ps", ["-p", String(pid), "-o", "command="], { shell: true })',
+    )],
+    ["wrong exec arity through an argument alias", (checker: string) => checker.replace(
+      "const git = (repoRoot: string, args: readonly string[]): string => execFileSync(\"git\", args, { cwd: repoRoot, encoding: \"utf8\", stdio: [\"ignore\", \"pipe\", \"pipe\"] }).trim()",
+      'const git = (repoRoot: string, args: readonly string[]): string => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }, "extra").trim()',
+    )],
+  ])("CR-170-02 rejects %s", (_name, mutate) => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate(checker))).toThrow(/LEAN_CORRECTIVE_RECOVERY_(?:EXEC|SIGNAL|CAPABILITY)_POLICY/u)
+  })
+
+  it.each([
+    ["local map method", (checker: string) => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      'export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { const local = { map: () => buildLeanSchedule() }; local.map();',
+    )],
+    ["shadowed JSON.parse", (checker: string) => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      'export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { const JSON = { parse: () => buildLeanSchedule() }; JSON.parse();',
+    )],
+    ["shadowed TypeError", (checker: string) => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      'export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { const TypeError = function (): void { buildLeanSchedule() }; new TypeError();',
+    )],
+    ["readFileSync from an unaudited module", (checker: string) => checker.replace(
+      'import { closeSync, constants, existsSync, fsyncSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs"',
+      'import { closeSync, constants, existsSync, fsyncSync, openSync, unlinkSync, writeSync } from "node:fs"\nimport { readFileSync } from "not-node-fs"',
+    )],
+  ])("CR-170-03 rejects %s", (_name, mutate) => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate(checker))).toThrow()
+  })
+
+  it.each([
+    ["function before alias", "function colliding(): void { String('safe') }\nconst colliding = safeHop", "colliding()"],
+    ["alias before function", "const colliding = safeHop\nfunction colliding(): void { String('safe') }", "colliding()"],
+    ["function before import", "function colliding(): void { String('safe') }\nimport { readFileSync as colliding } from 'node:fs'", "colliding('x')"],
+    ["import before function", "import { readFileSync as colliding } from 'node:fs'\nfunction colliding(): void { String('safe') }", "colliding('x')"],
+    ["function before re-export", "function colliding(): void { String('safe') }\nexport { safeHop as colliding } from './safe-hop.js'", "colliding()"],
+    ["re-export before function", "export { safeHop as colliding } from './safe-hop.js'\nfunction colliding(): void { String('safe') }", "colliding()"],
+    ["namespace before function", "import * as colliding from './safe-hop.js'\nfunction colliding(): void { String('safe') }", "colliding()"],
+    ["function before namespace", "function colliding(): void { String('safe') }\nimport * as colliding from './safe-hop.js'", "colliding()"],
+    ["lexical duplicate", "function outer(): void { const colliding = (): void => { String('safe') }; const colliding = (): void => { buildLeanSchedule() }; colliding() }", "outer()"],
+    ["rebound after declaration", "let colliding = (): void => { String('safe') }; colliding = (): void => { buildLeanSchedule() }", "colliding()"],
+  ])("WR-170-01 rejects %s regardless of registration priority", (_name, declarations, call) => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8").replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      `${declarations}\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { ${call};`,
+    )
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker, {
+      "./safe-hop.js": "export const safeHop = (): void => { String('safe') }",
+    })).toThrow(/LEAN_CORRECTIVE_RECOVERY_(?:AMBIGUOUS_BINDING|REBINDING)/u)
+  })
+
   it("uses a schedule-free exact interruption tombstone", () => {
     const invocation = {
       schemaVersion: "v1.38-lean-runner-corrective-invocation-v2", sourceCommit: "a".repeat(40),
