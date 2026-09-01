@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "v1.38-lean-runner-manifest-v1",
+  "claimClass": "fixture_feasibility_only",
+  "source": {
+    "commit": "c59c5fab491d9f9bbb711536870957f0b4b39fac",
+    "tree": "2aaaf1d6dd7ab67aebe1c40653ae453a93e01cb0",
+    "executableBlobs": {
+      "scripts/lib/v1-38-lean-runner-feasibility.ts": "d4c17160c7caaf42bb8c0653a5937a6f9281471e",
+      "scripts/lib/v1-38-lean-runner-feasibility.test.ts": "d5bc87b783ac03c8c2ee6093479dfd5107dea1c0",
+      "scripts/run-v1-38-lean-runner-feasibility.ts": "8979595410dd02c8104fb19b57fc6eab33a5fc67",
+      "scripts/run-v1-38-lean-runner-feasibility.test.ts": "1c472156b33806d507256684eabe26248ee22381",
+      "scripts/check-v1-38-lean-admission.ts": "af789f9fd61d99e1ededf87c82a741679309209e",
+      "scripts/check-v1-38-lean-admission.test.ts": "b579dfa73dd457274eb643dcab800d4c451d060a"
+    }
+  },
+  "selectedTuple": {
+    "tupleId": "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+    "rules": "cowards-rules-v1.4",
+    "engine": "engine-kernel-v1.37-candidate-1",
+    "runtimeAbi": "strategy-runtime-abi-v1.19",
+    "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+    "arenaCatalog": "canonical-arena-catalog-v1.37",
+    "setPolicy": "canonical-set-policy-v1.37-four-condition-v1"
+  },
+  "fixtures": {
+    "starter": {
+      "id": "starter:aggro-chaser",
+      "version": "v1.4",
+      "sourceHash": "sha256:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1"
+    },
+    "advanced": {
+      "id": "advanced:vanguard-pressure",
+      "version": "v1.5",
+      "sourceHash": "sha256:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37"
+    }
+  },
+  "arenas": [
+    { "id": "arena:smoke:v1", "label": "Smoke", "semanticGeometryHash": "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1" },
+    { "id": "arena:standard-cross:v1", "label": "Standard Cross", "semanticGeometryHash": "sha256:87e0d0c2f555328b9863edfc25faf30300db7ce77a1d18fce9b22839560eeb4d" },
+    { "id": "arena:open-field:v1", "label": "Open Field", "semanticGeometryHash": "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1" }
+  ],
+  "formation": { "profile": "current_edge_rank", "root": "sha256:47134b3e56129bc2a35262add054528cc66db6717ea3650a0f611cfa9bffff31" },
+  "scheduleRoot": "sha256:75bea3426a9d771331b2e519268aa23f537e98dafd1c9e3a67221f22352cf1e2",
+  "runtimeLimitsRoot": "sha256:41168c80ca59ce151383ddbc8379172149a50fc4d29aa01a6baed777ecc1b116",
+  "normalization": ["terminalOutcome", "finalState", "orderedTransitionsAndEvents", "runtimeAccounting"],
+  "deadlineMilliseconds": 900000,
+  "historicalFullMatrix": { "disposition": "exhausted", "freshAccepted": 0, "requiredAccepted": 540, "reinterpreted": false },
+  "formationMaterialized": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
