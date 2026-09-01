@@ -166,6 +166,7 @@ describe("lean admission custody", () => {
     await recoverLeanCorrectiveOrphanInjected(ownership, {
       expectedInvocationRoot: ownership.invocationRoot,
       commandForPid: () => `node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell ${ownership.token}`,
+      processGroupForPid: () => ownership.processGroupId,
       signalProcessGroup: (_group, signal) => { signals.push(signal); alive = false },
       processIsAlive: () => alive,
       wait: async () => undefined,
@@ -175,6 +176,7 @@ describe("lean admission custody", () => {
     await expect(recoverLeanCorrectiveOrphanInjected(ownership, {
       expectedInvocationRoot: "sha256:" + "2".repeat(64),
       commandForPid: () => `node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell ${ownership.token}`,
+      processGroupForPid: () => ownership.processGroupId,
       signalProcessGroup: (_group, signal) => { signals.push(signal) },
       processIsAlive: () => true,
       wait: async () => undefined,
@@ -186,12 +188,24 @@ describe("lean admission custody", () => {
       await expect(recoverLeanCorrectiveOrphanInjected(ownership, {
         expectedInvocationRoot: ownership.invocationRoot,
         commandForPid: () => command,
+        processGroupForPid: () => ownership.processGroupId,
         signalProcessGroup: (_group, signal) => { rejectedSignals.push(signal) },
         processIsAlive: () => true,
         wait: async () => undefined,
       })).rejects.toThrow(/LEAN_CORRECTIVE_CHILD_(?:STALE|IDENTITY)/u)
       expect(rejectedSignals).toEqual([])
     }
+
+    const groupSignals: string[] = []
+    await expect(recoverLeanCorrectiveOrphanInjected(ownership, {
+      expectedInvocationRoot: ownership.invocationRoot,
+      commandForPid: () => `node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell ${ownership.token}`,
+      processGroupForPid: () => ownership.processGroupId + 1,
+      signalProcessGroup: (_group, signal) => { groupSignals.push(signal) },
+      processIsAlive: () => true,
+      wait: async () => undefined,
+    })).rejects.toThrow(/LEAN_CORRECTIVE_CHILD_IDENTITY/u)
+    expect(groupSignals).toEqual([])
   })
 
   it("requires literal-zero non-authorizing review before readiness", () => {
