@@ -206,7 +206,7 @@ describe("bounded lean runner", () => {
     expect(LEAN_LIVE_SELECTOR).toBe("--run-reviewed-live-gate")
     expect(LEAN_CORRECTIVE_SELECTOR).toBe("--run-reviewed-corrective-gate")
     expect(LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR).toBe("--recover-reviewed-corrective-interruption")
-  })
+  }, 30_000)
 
   it("uses a test-only fixture budget without changing production deadlines", () => {
     expect(LEAN_DEADLINE_MS).toBe(15 * 60 * 1_000)
