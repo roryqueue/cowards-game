@@ -1,5 +1,17 @@
 # Activation Prompt: Competitive Strategy Factory and Adversarial League
 
+### D-34L.1: Lean single-operator execution closure (2026-09-01)
+
+The operator approved the lean ADMIT-03 replacement and directed execution to proceed. `lean_runner_feasibility_v1` is a private, single-operator, non-production-grade fixture-feasibility experiment. Its final corrective execution prerequisite is one bounded review of the actual result-validity path, not literal-zero certification of every static verifier, recovery, summary-custody, or hypothetical mutation-resistance claim.
+
+Plan 172's v6 manifest, review, and five findings remain immutable non-authorizing history. CR-V6-01 through CR-V6-04 and WR-V6-01 are accepted as certification-completeness findings only under this lean contract because they concern plan-summary custody, hypothetical mutated-source analysis, recovery-only proof, or a post-publication source-only assertion. They are not erased, marked fixed, or reinterpreted as zero findings. A true finding in any of the seven result-validity categories frozen by the lean closure research still blocks execution.
+
+The single corrective 24-Match run may proceed from one committed compact execution authorization that binds the exact runnable result-producing source and executable closure, the immutable first-attempt and diagnosis/fix evidence, the frozen fixture/runtime/schedule/current-formation tuple, the exact Plan 172 review root with all five certification-only dispositions, one unconsumed corrective invocation, `recoveryAuthorized:false`, and exhaustive false broader authority. No recursive manifest/reviewer/readiness version chain and no literal-zero global reviewer result is required.
+
+The recovery-only selector and recovery certification are outside the active contract and must be unreachable from the authorized launch. The run starts only in a clean local session with no active lean child and creates an exclusive attempt marker before the first Match. Normal exceptions, deadline expiry, or graceful abort attempt bounded child cleanup and fail closed. If power loss, process death, or interruption prevents terminal publication, marker-without-terminal is itself the terminal invalid outcome: the corrective opportunity is consumed, partial Matches are unusable, relaunch and recovery-based evidence are forbidden, and every downstream authority remains false. Later operational cleanup may terminate a leftover process but cannot create evidence or restore retry authority.
+
+Only an exact checked terminal pass authorizes Phase 263 planning and execution. Every other state, including missing terminal, invalid or non-pass terminal, incomplete cleanup, partial schedule, or ambiguous process state, consumes the corrective opportunity and keeps all downstream authority false. Archive and tag remain unauthorized.
+
 ### D-34L: Lean ADMIT-03 replacement (2026-09-01)
 
 The operator explicitly approved: **"Approve the lean ADMIT-03 replacement and proceed."** This decision supersedes the full `540/540` reproduction as the active prerequisite for Phase 263. It does not reinterpret, erase, retry, or convert the immutable historical result: the corrected full-matrix attempt remains `exhausted`, fresh `0/540`, with no reproduction, and `reinterpreted: false`.

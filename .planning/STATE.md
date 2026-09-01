@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-169 is the sole next source-only correction; Plan170 fresh v5 review follows before Plan158
-last_updated: "2026-09-01T21:35:00Z"
+stopped_at: Plan262-173 is the sole next direct source-only action under D-34L.1
+last_updated: "2026-09-01T23:15:00Z"
 last_activity: 2026-09-01
-last_activity_desc: Planned the bounded CR-168-01 AST/module-resolution closure plus fresh v5 independent review; readiness and live execution remain absent
+last_activity_desc: Approved D-34L.1 and planned the compact direct authorization, seven-category validity review, and sole no-recovery live closure
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 151
-  completed_plans: 141
+  total_plans: 157
+  completed_plans: 145
   percent: 93
 ---
 
 # State: Coward's Game
+
+## Approved D-34L.1 lean execution closure — 2026-09-01
+
+The operator approved the private lean ADMIT-03 replacement and directed execution to proceed. Research determined that Plan172's four critical and one warning finding concern production-style certification completeness, not the exact committed result-producing path. All five remain immutable, open, non-authorizing history and are not reinterpreted as zero.
+
+Plans173 through176 replace Plans158 through160 and162 as the sole active closure. Plan173 commits the complete direct schema/launcher/checker source with recovery unreachable. Plan174 publishes one compact authorization over those exact bytes and owns one independent seven-category result-validity review. Plan175 alone may create the marker, invoke the complete 24-Match gate once, and independently adjudicate the committed outcome. Plan176 separately synchronizes requirements, tracking, audit, validation, and UAT. Marker-without-terminal is consumed invalid and permits no recovery, partial evidence, resume, or relaunch. Phase263 and every broader authority remain false unless exact pass is independently synchronized; archive/tag remain false.
+
+<!-- phase-262-lean-direct-state: {"schemaVersion":"v1.38-phase-262-lean-direct-plan-v2","decision":"D-34L.1","activeChain":["262-173","262-174","262-175","262-176"],"waves":{"262-173":144,"262-174":145,"262-175":146,"262-176":147},"nextAction":"dispatch-262-173-direct-source","plan172FindingCount":5,"plan172CertificationOnlyCount":5,"blockingValidityCategories":7,"globalLiteralZeroRequired":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"supersededInactivePlans":["262-158","262-159","262-160","262-162"],"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plans 262-169/170 bounded successor correction — 2026-09-01
 

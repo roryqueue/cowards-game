@@ -13,6 +13,15 @@ This phase admits the exact released v1.37 authority, reproduces the old current
 <decisions>
 ## Implementation Decisions
 
+### D-34L.1: Lean single-operator execution closure (2026-09-01)
+
+- The approved `lean_runner_feasibility_v1` corrective run is a private single-operator fixture-feasibility experiment. Execution depends on a bounded review of seven actual result-validity categories, not a literal-zero global certification review.
+- Plan 172's v6 manifest/review and CR-V6-01 through CR-V6-04 plus WR-V6-01 remain immutable, non-authorizing, nonzero history. Under this clarification they are certification-completeness findings, not defects in the exact committed result-producing path; no finding is erased, fixed by prose, or recounted as zero.
+- One compact direct authorization binds the exact runnable result-producing source/closure, first-attempt and diagnosis/fix history, frozen tuple and 12-cell/two-pass schedule, Plan 172 review root and all five dispositions, one unconsumed invocation, `recoveryAuthorized:false`, and all broader authority false. Recursive manifest/readiness versions are excluded.
+- The active validity review blocks on any finding in exactly seven categories: source/dirty-byte drift; multiple launch; tuple or schedule drift; supervised-runtime escape; acceptance of partial/interrupted/unclean evidence; private-data disclosure; or authority from anything other than exact pass. Certification-only findings remain visible but do not block.
+- The recovery-only selector is outside the active contract and unreachable from the authorized launch. Marker-without-terminal consumes the opportunity as terminal invalid; partial work is unusable, and there is no evidence recovery, relaunch, or restored retry authority. Operational cleanup cannot create evidence.
+- Only exact pass authorizes Phase 263 planning/execution. Non-pass, invalid, absent terminal, incomplete cleanup, partial coverage, or ambiguity consumes the sole corrective opportunity and leaves every authority false. Archive and tag remain false.
+
 ### Milestone-wide integrity charter
 - **D-01:** Evidence is immutable and content-addressed. There is no mutable `latest`; a changed input, policy, implementation, or result creates a new branch with a new root.
 - **D-02:** Missing, stale, incompatible, contaminated, incomplete, mismatched, or non-reproducible evidence fails closed. Process/integrity failure is distinct from a process-valid empirical failure and blocks authoritative progress.

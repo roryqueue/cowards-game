@@ -60,3 +60,13 @@ After the corrected full-matrix producer truthfully exhausted at fresh `0/540`, 
 Research selected `lean_runner_feasibility_v1`: 12 unique current-rules fixture cells spanning three canonical arena labels, both side assignments, and both initiative parities, executed twice serially for 24 charged Matches. A pass requires 24/24 supervised success, complete cleanup, exact coverage, unchanged current formation, and exact normalized semantic equality across passes within 15 minutes. It proves runner feasibility only and authorizes Phase 263 planning/execution only.
 
 The historical full-matrix result remains immutable and failed; this revision does not call it reproduced. Formation work remains blocked until a serious current-rules league is built and frozen, and every public, product, production, counted-play, gameplay-change, holdout, archive, release, and tag authority remains false.
+
+## Contract clarification: lean single-operator execution closure
+
+**Date:** 2026-09-01
+
+After Plan 172 preserved four critical and one warning finding in the production-style certification wrapper, the user approved the lean replacement and instructed the milestone to proceed. Research classified the complete five-finding set rather than suppressing it. None of the findings identified a defect in canonical request construction, the fixed 12-cell/two-pass schedule, supervised Strategy execution, result reduction, cleanup reporting, or exact-pass adjudication. They instead concern plan-summary custody, hypothetical mutation resistance in a recovery verifier, and a post-publication lifecycle assertion.
+
+The accepted clarification is D-34L.1: retain all five findings as immutable certification-only history, replace the recursive literal-zero readiness chain with one compact direct authorization plus one bounded seven-category result-validity review, remove recovery from the active contract, and consume the single corrective opportunity on marker creation even if no terminal can be published. Only exact checked pass may grant Phase 263 planning/execution; every other authority remains false.
+
+No option comparison remained material after the research classification. This clarification narrows assurance ceremony for the already-approved private experiment; it does not weaken the exact empirical pass condition, canonical runtime boundary, privacy rules, current formation, charge accounting, or downstream least-authority rule.
