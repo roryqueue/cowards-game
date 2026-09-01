@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { closeSync, constants, existsSync, fsyncSync, openSync, readFileSync, writeSync } from "node:fs"
+import { closeSync, constants, existsSync, fsyncSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { LEAN_AUTHORITY_FALSE, buildLeanSchedule, createLeanManifest, currentFormationIsRealistic, deriveAndValidateLeanTerminal, hashLeanValue, reduceLeanExecutions, validateLeanManifest, type LeanManifest, type LeanTerminal } from "./lib/v1-38-lean-runner-feasibility.js"
@@ -15,6 +15,7 @@ export const LEAN_ARTIFACT_PATHS = Object.freeze({
   eligibility: ".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json",
 } as const)
 export const LEAN_DIAGNOSTIC_CUSTODY_PATH = ".planning/artifacts/v1.38-lean-runner-diagnostic-custody-v1.json" as const
+export const LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH = ".v138-lean-corrective-child-ownership.json" as const
 export const LEAN_CORRECTIVE_ARTIFACT_PATHS = Object.freeze({
   manifest: ".planning/artifacts/v1.38-lean-runner-corrective-source-manifest-v1.json",
   sourceReview: ".planning/artifacts/v1.38-lean-runner-corrective-source-review-v1.json",
@@ -191,6 +192,22 @@ export interface LeanCorrectiveTerminalArtifact extends Omit<LeanCorrectiveInvoc
   readonly recoveryTerminalized: boolean
   readonly terminal: LeanTerminal
 }
+export interface LeanCorrectiveChildOwnership {
+  readonly schemaVersion: "v1.38-lean-corrective-child-ownership-v1"
+  readonly invocationRoot: `sha256:${string}`
+  readonly childPid: number
+  readonly processGroupId: number
+  readonly selector: "--execute-reviewed-cell"
+  readonly token: string
+  readonly commandArguments: readonly ["--execute-reviewed-cell", string]
+}
+export interface LeanCorrectiveOrphanRecoveryDependencies {
+  readonly expectedInvocationRoot: `sha256:${string}`
+  readonly commandForPid: (pid: number) => string | undefined
+  readonly signalProcessGroup: (processGroupId: number, signal: "SIGTERM" | "SIGKILL") => void
+  readonly processIsAlive: (pid: number) => boolean
+  readonly wait: (milliseconds: number) => Promise<void>
+}
 
 const git = (repoRoot: string, args: readonly string[]): string => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim()
 const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value)
@@ -246,11 +263,25 @@ const assertSuccessorLockInventory = (repoRoot: string): void => {
 }
 
 export const checkLeanCorrectiveRecoveryOnlyStructure = (source: string): void => {
-  const start = source.indexOf("export const runLeanCorrectiveRecoveryOnlyInjected")
-  const end = source.indexOf("\n}\n", start)
-  if (start < 0) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
-  const body = source.slice(start, end < 0 ? source.length : end + 3)
-  if (/(?:\bfork\s*\(|\bspawn\w*\s*\(|createExclusiveLeanInvocationMarker|buildLeanSchedule|executePrepared|runLeanFeasibility|child\.send|kind\s*:\s*["']execute["'])/u.test(body)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
+  const extractBlock = (marker: string): string => {
+    const start = source.indexOf(marker)
+    const brace = source.indexOf("{", start)
+    if (start < 0 || brace < 0) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
+    let depth = 0
+    for (let index = brace; index < source.length; index += 1) {
+      if (source[index] === "{") depth += 1
+      else if (source[index] === "}") {
+        depth -= 1
+        if (depth === 0) return source.slice(start, index + 1)
+      }
+    }
+    throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
+  }
+  const helper = extractBlock("export const runLeanCorrectiveRecoveryOnlyInjected")
+  const selector = extractBlock("if (selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR)")
+  const inspected = `${helper}\n${selector}`
+  if (!selector.includes("runLeanCorrectiveRecoveryOnlyInjected") || !selector.includes("recoverLeanCorrectiveOrphan")) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
+  if (/(?:\bfork\s*\(|\bspawn\w*\s*\(|createExclusiveLeanInvocationMarker|buildLeanSchedule|executePrepared|runLeanFeasibility|createSupervisedLeanExecutionDependencies|prepareLeanCorrectiveInvocation|child\.send|kind\s*:\s*["']execute["'])/u.test(inspected)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
 }
 
 export const checkLeanCorrectiveSourceOnly = (repoRoot: string): void => {
@@ -539,12 +570,18 @@ export const validateLeanInvocationLineage = (readiness: LeanReadiness, value: u
   return invocation
 }
 
-export const loadAndCheckLeanChildInvocation = (repoRoot: string, capability: string): LeanInvocation | LeanCorrectiveInvocation => {
+export const loadAndCheckLeanChildInvocation = (repoRoot: string, capability: string, ownershipToken?: string): LeanInvocation | LeanCorrectiveInvocation => {
   if (existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))) {
     if (existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal))) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
-    const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation])
+    const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH])
     const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))
     if (invocation.childCapabilityRoot !== hashLeanValue(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_MISMATCH")
+    const ownership = validateLeanCorrectiveChildOwnership(readJson(repoRoot, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH))
+    if (
+      ownershipToken === undefined || ownership.token !== ownershipToken ||
+      ownership.invocationRoot !== hashLeanValue(invocation) || ownership.childPid !== process.pid ||
+      process.argv[2] !== ownership.selector || process.argv[3] !== ownership.token
+    ) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
     return invocation
   }
   const readiness = loadAndCheckLeanReviewedReady(
@@ -687,6 +724,98 @@ const writeExclusiveDurable = (target: string, value: unknown): void => {
     try { fsyncSync(parent) } finally { closeSync(parent) }
   } finally { if (descriptor !== undefined) closeSync(descriptor) }
 }
+export const createLeanCorrectiveChildOwnership = (
+  invocationRoot: string,
+  childPid: number,
+  processGroupId: number,
+  token: string,
+): LeanCorrectiveChildOwnership => validateLeanCorrectiveChildOwnership({
+  schemaVersion: "v1.38-lean-corrective-child-ownership-v1",
+  invocationRoot,
+  childPid,
+  processGroupId,
+  selector: "--execute-reviewed-cell",
+  token,
+  commandArguments: ["--execute-reviewed-cell", token],
+})
+export const validateLeanCorrectiveChildOwnership = (value: unknown): LeanCorrectiveChildOwnership => {
+  const keys = ["schemaVersion", "invocationRoot", "childPid", "processGroupId", "selector", "token", "commandArguments"]
+  if (
+    !isObject(value) || !exactKeys(value, keys) ||
+    value.schemaVersion !== "v1.38-lean-corrective-child-ownership-v1" || !isSha(value.invocationRoot) ||
+    !Number.isSafeInteger(value.childPid) || (value.childPid as number) <= 1 ||
+    !Number.isSafeInteger(value.processGroupId) || value.processGroupId !== value.childPid ||
+    value.selector !== "--execute-reviewed-cell" || typeof value.token !== "string" || !/^[0-9a-f]{64}$/u.test(value.token) ||
+    !Array.isArray(value.commandArguments) || value.commandArguments.length !== 2 ||
+    value.commandArguments[0] !== value.selector || value.commandArguments[1] !== value.token
+  ) throw new TypeError("LEAN_CORRECTIVE_CHILD_OWNERSHIP_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveChildOwnership
+}
+export const persistLeanCorrectiveChildOwnership = (
+  repoRoot: string,
+  invocation: LeanCorrectiveInvocation,
+  childPid: number,
+  processGroupId: number,
+  token: string,
+): void => {
+  const ownership = createLeanCorrectiveChildOwnership(hashLeanValue(invocation), childPid, processGroupId, token)
+  writeExclusiveDurable(path.resolve(repoRoot, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH), ownership)
+}
+export const clearLeanCorrectiveChildOwnership = (repoRoot: string, token: string): void => {
+  const target = path.resolve(repoRoot, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH)
+  const ownership = validateLeanCorrectiveChildOwnership(readJson(repoRoot, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH))
+  if (ownership.token !== token) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
+  unlinkSync(target)
+  const parent = openSync(path.dirname(target), constants.O_RDONLY)
+  try { fsyncSync(parent) } finally { closeSync(parent) }
+}
+const commandMatchesLeanCorrectiveOwnership = (command: string, ownership: LeanCorrectiveChildOwnership): boolean => {
+  const words = command.trim().split(/\s+/u)
+  const selectorIndex = words.indexOf(ownership.selector)
+  return /(?:^|\/)run-v1-38-lean-runner-feasibility\.ts(?:\s|$)/u.test(command) &&
+    selectorIndex >= 0 && words[selectorIndex + 1] === ownership.token &&
+    words.filter((word) => word === ownership.selector).length === 1 &&
+    words.filter((word) => word === ownership.token).length === 1
+}
+export const recoverLeanCorrectiveOrphanInjected = async (
+  ownershipValue: unknown,
+  dependencies: LeanCorrectiveOrphanRecoveryDependencies,
+): Promise<void> => {
+  const ownership = validateLeanCorrectiveChildOwnership(ownershipValue)
+  if (ownership.invocationRoot !== dependencies.expectedInvocationRoot) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
+  const command = dependencies.commandForPid(ownership.childPid)
+  if (command === undefined || command.trim().length === 0 || !dependencies.processIsAlive(ownership.childPid)) throw new TypeError("LEAN_CORRECTIVE_CHILD_STALE")
+  if (!commandMatchesLeanCorrectiveOwnership(command, ownership)) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
+  dependencies.signalProcessGroup(ownership.processGroupId, "SIGTERM")
+  for (let attempt = 0; attempt < 20 && dependencies.processIsAlive(ownership.childPid); attempt += 1) await dependencies.wait(50)
+  if (dependencies.processIsAlive(ownership.childPid)) {
+    dependencies.signalProcessGroup(ownership.processGroupId, "SIGKILL")
+    for (let attempt = 0; attempt < 20 && dependencies.processIsAlive(ownership.childPid); attempt += 1) await dependencies.wait(50)
+  }
+  if (dependencies.processIsAlive(ownership.childPid)) throw new TypeError("LEAN_CORRECTIVE_CHILD_EXIT_UNPROVED")
+}
+const processIsAlive = (pid: number): boolean => {
+  try { process.kill(pid, 0); return true } catch (error) { return (error as NodeJS.ErrnoException).code === "EPERM" }
+}
+export const recoverLeanCorrectiveOrphan = async (repoRoot: string): Promise<void> => {
+  const markerPath = LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation
+  const terminalPath = LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal
+  if (!existsSync(path.resolve(repoRoot, markerPath))) throw new TypeError("LEAN_CORRECTIVE_MARKER_REQUIRED")
+  if (existsSync(path.resolve(repoRoot, terminalPath))) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
+  const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [markerPath, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH])
+  const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, markerPath))
+  const ownership = validateLeanCorrectiveChildOwnership(readJson(repoRoot, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH))
+  await recoverLeanCorrectiveOrphanInjected(ownership, {
+    expectedInvocationRoot: hashLeanValue(invocation),
+    commandForPid: (pid) => {
+      try { return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" }).trim() || undefined } catch { return undefined }
+    },
+    signalProcessGroup: (processGroupId, signal) => { process.kill(-processGroupId, signal) },
+    processIsAlive,
+    wait: async (milliseconds) => { await new Promise<void>((resolve) => setTimeout(resolve, milliseconds)) },
+  })
+  clearLeanCorrectiveChildOwnership(repoRoot, ownership.token)
+}
 export const assertNoLeanChildProcess = (): void => {
   const commands = execFileSync("ps", ["-axo", "command="], { encoding: "utf8" })
   if (commands.split("\n").some((command) => command.includes("run-v1-38-lean-runner-feasibility") && command.includes("--execute-reviewed-cell"))) throw new TypeError("LEAN_CHILD_STILL_ACTIVE")
@@ -699,14 +828,14 @@ export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void =>
   if (!existsSync(markerPath)) throw new TypeError("LEAN_CORRECTIVE_MARKER_REQUIRED")
   if (existsSync(terminalPath)) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
   assertNoLeanChildProcess()
-  const readiness = loadAndCheckLeanCorrectiveReady(repoRoot)
+  const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation])
   const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))
   createExclusiveLeanCorrectiveTerminal(repoRoot, createLeanCorrectiveTerminalArtifact(invocation, createLeanInterruptedTerminal(), true))
 }
 export const checkLeanCorrectiveTerminal = (repoRoot: string): LeanCorrectiveTerminalArtifact => {
   checkLeanFirstEvidenceCustody(repoRoot)
   assertSuccessorLockInventory(repoRoot)
-  const readiness = loadAndCheckLeanCorrectiveReady(repoRoot)
+  const readiness = loadAndCheckLeanCorrectiveReady(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal])
   const invocation = validateLeanCorrectiveInvocationLineage(repoRoot, readiness, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation))
   const terminal = validateLeanCorrectiveTerminalArtifact(readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal), invocation)
   assertNoLeanChildProcess()

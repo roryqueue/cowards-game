@@ -61,6 +61,11 @@ export interface LeanSupervisorOptions {
   readonly spawnChild?: () => ChildProcess
   readonly cellDeadlineMilliseconds?: number
   readonly cleanupDeadlineMilliseconds?: number
+  readonly correctiveOwnership?: {
+    readonly token: string
+    readonly persist: (pid: number, processGroupId: number, token: string) => void
+    readonly clear: (token: string) => void
+  }
 }
 export interface LeanCorrectiveWrapperDependencies {
   readonly preflight?: () => Promise<void>
@@ -429,6 +434,12 @@ export const createSupervisedLeanExecutionDependencies = (
   let active: ChildProcess | undefined
   let termination: Promise<LeanCleanupResult> | undefined
   let lastCleanup: LeanCleanupResult | undefined
+  let ownershipPersisted = false
+  const clearOwnership = (): void => {
+    if (!ownershipPersisted || options.correctiveOwnership === undefined) return
+    options.correctiveOwnership.clear(options.correctiveOwnership.token)
+    ownershipPersisted = false
+  }
   const terminateActive = async (): Promise<LeanCleanupResult> => {
     if (termination !== undefined) return termination
     const child = active
@@ -447,9 +458,11 @@ export const createSupervisedLeanExecutionDependencies = (
       complete = true
       clearTimeout(timer)
       active = undefined
-      lastCleanup = result
+      let finalResult = result
+      try { clearOwnership() } catch { finalResult = { cleanupComplete: false, orphanedChild: true } }
+      lastCleanup = finalResult
       termination = undefined
-      resolveTermination(result)
+      resolveTermination(finalResult)
     }
     const timer = setTimeout(
       () => finish({ cleanupComplete: false, orphanedChild: true }),
@@ -471,7 +484,9 @@ export const createSupervisedLeanExecutionDependencies = (
     cleanupDeadlineMilliseconds: options.cleanupDeadlineMilliseconds,
     execute: async (cell, signal) => {
       if (active !== undefined) throw new TypeError("LEAN_CHILD_ALREADY_ACTIVE")
-      const child = options.spawnChild?.() ?? fork(fileURLToPath(import.meta.url), [LEAN_CHILD_SELECTOR], {
+      const ownership = options.correctiveOwnership
+      if (ownership !== undefined && !/^[0-9a-f]{64}$/u.test(ownership.token)) throw new TypeError("LEAN_CORRECTIVE_CHILD_TOKEN_INVALID")
+      const child = options.spawnChild?.() ?? fork(fileURLToPath(import.meta.url), [LEAN_CHILD_SELECTOR, ...(ownership === undefined ? [] : [ownership.token])], {
           cwd: process.cwd(), execArgv: ["--import", "tsx"],
           detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"],
           env: { ...process.env, LEAN_CHILD_CAPABILITY: capability },
@@ -484,6 +499,7 @@ export const createSupervisedLeanExecutionDependencies = (
         let settled = false
         let terminating = false
         let readySeen = false
+        let ownershipReadySeen = false
         let pendingResult: LeanExecutionResult | undefined
         const settle = (complete: () => void): void => {
           if (settled) return
@@ -520,7 +536,16 @@ export const createSupervisedLeanExecutionDependencies = (
             return
           }
           const body = message as Record<string, unknown>
-          if (body.kind === "ready" && body.capability === capability && exactKeys(body, ["kind", "capability"])) {
+          if (ownership !== undefined && body.kind === "ownership-ready" && body.token === ownership.token && exactKeys(body, ["kind", "token"])) {
+            if (ownershipReadySeen || readySeen || pendingResult !== undefined || child.pid === undefined) { failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_DUPLICATE")); return }
+            ownershipReadySeen = true
+            try {
+              ownership.persist(child.pid, child.pid, ownership.token)
+              ownershipPersisted = true
+              child.send({ kind: "admit", token: ownership.token })
+            } catch (error) { failWithCleanup(error) }
+          } else if (body.kind === "ready" && body.capability === capability && exactKeys(body, ["kind", "capability"])) {
+            if (ownership !== undefined && !ownershipPersisted) { failWithCleanup(new TypeError("LEAN_CORRECTIVE_CHILD_OWNERSHIP_REQUIRED")); return }
             if (readySeen || pendingResult !== undefined) { failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_DUPLICATE")); return }
             readySeen = true
             child.send({ kind: "execute", capability, cell })
@@ -536,6 +561,7 @@ export const createSupervisedLeanExecutionDependencies = (
         child.once("exit", (code, exitSignal) => {
           if (terminating || settled) return
           active = undefined
+          try { clearOwnership() } catch (error) { settle(() => reject(error)); return }
           lastCleanup = { cleanupComplete: true, orphanedChild: false }
           if (code === 0 && exitSignal === null && pendingResult !== undefined) {
             settle(() => resolve({ ...pendingResult!, cleanupComplete: true, orphanedChild: false }))
@@ -566,11 +592,13 @@ const main = async (): Promise<void> => {
   if (selector === "--synthetic") { process.stdout.write(`${JSON.stringify(await syntheticLeanTerminal())}\n`); return }
   if (selector === LEAN_CHILD_SELECTOR) {
     const capability = process.env.LEAN_CHILD_CAPABILITY
+    const ownershipToken = process.argv[3]
     if (typeof process.send !== "function" || !/^[0-9a-f]{64}$/u.test(capability ?? "")) throw new TypeError("LEAN_CHILD_PARENT_REQUIRED")
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    checker.loadAndCheckLeanChildInvocation(repoRoot, capability!)
-    process.once("message", (message: unknown) => {
+    const beginAdmittedExecution = (): void => {
+      checker.loadAndCheckLeanChildInvocation(repoRoot, capability!, ownershipToken)
+      process.once("message", (message: unknown) => {
       void (async () => {
         if (message === null || typeof message !== "object") throw new TypeError("LEAN_CHILD_MESSAGE_INVALID")
         const body = message as Record<string, unknown>
@@ -582,8 +610,20 @@ const main = async (): Promise<void> => {
         process.exitCode = 1
         process.disconnect()
       })
-    })
-    process.send({ kind: "ready", capability })
+      })
+      process.send?.({ kind: "ready", capability })
+    }
+    if (ownershipToken === undefined) beginAdmittedExecution()
+    else {
+      if (!/^[0-9a-f]{64}$/u.test(ownershipToken)) throw new TypeError("LEAN_CORRECTIVE_CHILD_TOKEN_INVALID")
+      process.once("message", (message: unknown) => {
+        if (message === null || typeof message !== "object" || Array.isArray(message)) throw new TypeError("LEAN_CORRECTIVE_CHILD_ADMISSION_INVALID")
+        const body = message as Record<string, unknown>
+        if (body.kind !== "admit" || body.token !== ownershipToken || !exactKeys(body, ["kind", "token"])) throw new TypeError("LEAN_CORRECTIVE_CHILD_ADMISSION_INVALID")
+        beginAdmittedExecution()
+      })
+      process.send({ kind: "ownership-ready", token: ownershipToken })
+    }
     return
   }
   if (selector === LEAN_LIVE_SELECTOR) {
@@ -605,8 +645,15 @@ const main = async (): Promise<void> => {
     const invocation = checker.prepareLeanCorrectiveInvocation(repoRoot, hashLeanValue(capability))
     const markerPath = path.resolve(repoRoot, checker.LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
     const terminalPath = path.resolve(repoRoot, checker.LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
-    const execution = createSupervisedLeanExecutionDependencies(capability)
     createExclusiveLeanInvocationMarker(markerPath, invocation)
+    const ownershipToken = randomBytes(32).toString("hex")
+    const execution = createSupervisedLeanExecutionDependencies(capability, {
+      correctiveOwnership: {
+        token: ownershipToken,
+        persist: (pid, processGroupId, token) => { checker.persistLeanCorrectiveChildOwnership(repoRoot, invocation, pid, processGroupId, token) },
+        clear: (token) => { checker.clearLeanCorrectiveChildOwnership(repoRoot, token) },
+      },
+    })
     await runLeanCorrectiveWrapperInjected({
       preflight: async () => { checker.checkLeanCorrectiveLaunchAdmission(repoRoot) },
       invoke: async () => {
@@ -631,7 +678,7 @@ const main = async (): Promise<void> => {
     await runLeanCorrectiveRecoveryOnlyInjected({
       markerPresent: existsSync(markerPath),
       terminalPresent: existsSync(terminalPath),
-      cleanup: async () => { checker.assertNoLeanChildProcess() },
+      cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) },
       terminalizeInvalid: async () => { checker.terminalizeLeanCorrectiveInterruption(repoRoot) },
       postcheck: async () => { checker.checkLeanCorrectiveTerminal(repoRoot) },
     })

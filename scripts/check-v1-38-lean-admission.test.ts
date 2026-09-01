@@ -129,11 +129,13 @@ describe("lean admission custody", () => {
   })
 
   it("proves recovery-only source has no launch capability", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source)).not.toThrow()
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
-      readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8"),
-    )).not.toThrow()
-    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
-      "export const runLeanCorrectiveRecoveryOnlyInjected = async () => { fork(); child.send({kind: 'execute'}) }",
+      source.replace(
+        "cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
+        "cleanup: async () => { fork(); await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
+      ),
     )).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
   })
 
@@ -147,7 +149,6 @@ describe("lean admission custody", () => {
     expect(LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH).toBe(".v138-lean-corrective-child-ownership.json")
     expect(validateLeanCorrectiveChildOwnership(ownership)).toEqual(ownership)
     for (const mutation of [
-      { invocationRoot: "sha256:" + "2".repeat(64) },
       { childPid: 0 },
       { processGroupId: 4313 },
       { selector: "--run-reviewed-corrective-gate" },
@@ -169,6 +170,15 @@ describe("lean admission custody", () => {
       processIsAlive: () => alive,
       wait: async () => undefined,
     })
+    expect(signals).toEqual(["SIGTERM"])
+
+    await expect(recoverLeanCorrectiveOrphanInjected(ownership, {
+      expectedInvocationRoot: "sha256:" + "2".repeat(64),
+      commandForPid: () => `node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell ${ownership.token}`,
+      signalProcessGroup: (_group, signal) => { signals.push(signal) },
+      processIsAlive: () => true,
+      wait: async () => undefined,
+    })).rejects.toThrow(/LEAN_CORRECTIVE_CHILD_IDENTITY/u)
     expect(signals).toEqual(["SIGTERM"])
 
     for (const command of ["", `node other.ts --execute-reviewed-cell ${ownership.token}`, "node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell wrong"]) {
