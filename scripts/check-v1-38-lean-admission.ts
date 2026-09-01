@@ -62,6 +62,12 @@ export interface LeanSourceReview {
   readonly admitsExecution: false
   readonly authority: typeof LEAN_AUTHORITY_FALSE
 }
+export interface LeanReviewFinding {
+  readonly id: string
+  readonly severity: "critical" | "warning"
+  readonly status: "open"
+  readonly summary: string
+}
 export interface LeanReadiness {
   readonly schemaVersion: "v1.38-lean-runner-readiness-v2"
   readonly sourceCommit: string
@@ -157,11 +163,51 @@ export const checkLeanSourceReview = (manifest: LeanManifest, value: unknown): L
   if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanSourceReview
 }
+export const renderLeanSourceReviewV2 = (
+  manifest: LeanManifest,
+  findings: readonly LeanReviewFinding[],
+): LeanSourceReview => checkLeanSourceReview(manifest, {
+  schemaVersion: "v1.38-lean-runner-source-review-v2",
+  sourceCommit: manifest.source.commit,
+  manifestRoot: hashLeanValue(manifest),
+  findingCount: findings.length,
+  findings,
+  admitsExecution: false,
+  authority: LEAN_AUTHORITY_FALSE,
+})
 export const checkLeanReadiness = (manifest: LeanManifest, reviewValue: unknown, value: unknown): LeanReadiness => {
   assertPrivacySafe(value)
   const review = checkLeanSourceReview(manifest, reviewValue)
   if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan151Eligible", "liveInvocationLimit", "liveInvocationsConsumed", "correctiveRerunAuthorized", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-readiness-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan151Eligible !== true || value.liveInvocationLimit !== 1 || value.liveInvocationsConsumed !== 0 || value.correctiveRerunAuthorized !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_READINESS_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanReadiness
+}
+export const renderLeanReadinessV2 = (manifest: LeanManifest, reviewValue: unknown): LeanReadiness => {
+  const review = checkLeanSourceReview(manifest, reviewValue)
+  return checkLeanReadiness(manifest, review, {
+    schemaVersion: "v1.38-lean-runner-readiness-v2",
+    sourceCommit: manifest.source.commit,
+    manifestRoot: hashLeanValue(manifest),
+    sourceReviewRoot: hashLeanValue(review),
+    findingCount: 0,
+    plan151Eligible: true,
+    liveInvocationLimit: 1,
+    liveInvocationsConsumed: 0,
+    correctiveRerunAuthorized: false,
+    authority: LEAN_AUTHORITY_FALSE,
+  })
+}
+export const checkLeanReviewOutcome = (
+  manifest: LeanManifest,
+  reviewValue: unknown,
+  readinessValue: unknown | undefined,
+): LeanReadiness | undefined => {
+  const review = checkLeanSourceReview(manifest, reviewValue)
+  if (review.findingCount !== 0) {
+    if (readinessValue !== undefined) throw new TypeError("LEAN_READINESS_FOR_NONZERO_REVIEW")
+    return undefined
+  }
+  if (readinessValue === undefined) throw new TypeError("LEAN_LITERAL_ZERO_READINESS_MISSING")
+  return checkLeanReadiness(manifest, review, readinessValue)
 }
 
 const assertForbiddenScopeAbsent = (repoRoot: string, allowed: readonly string[]): void => {
@@ -274,6 +320,62 @@ export const validateLeanEligibility = (value: unknown, adjudicationValue: unkno
   if (!isObject(value) || !exactKeys(value, ["schemaVersion", "adjudicationRoot", "admit03", "phase262Complete", "phase263PlanningEligible", "phase263ExecutionEligible", "authority"]) || value.schemaVersion !== "v1.38-phase-262-lean-eligibility-v1" || value.adjudicationRoot !== hashLeanValue(adjudication) || value.admit03 !== (passed ? "satisfied_under_revised_contract" : "blocked") || value.phase262Complete !== passed || value.phase263PlanningEligible !== passed || value.phase263ExecutionEligible !== passed || !exactEligibilityAuthority(value.authority, passed)) throw new TypeError("LEAN_ELIGIBILITY_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanEligibility
 }
+
+const TRACKING_MARKERS = Object.freeze({
+  ".planning/ROADMAP.md": { marker: "phase-262-lean-roadmap-tracking", surface: "roadmap" },
+  ".planning/STATE.md": { marker: "phase-262-lean-state-tracking", surface: "state" },
+  ".planning/v1.38-CURRENT-STATUS.md": { marker: "phase-262-lean-current-status-tracking", surface: "current_status" },
+  ".planning/v1.38-v1.38-MILESTONE-AUDIT.md": { marker: "phase-262-lean-milestone-audit-tracking", surface: "milestone_audit" },
+} as const)
+type StructuredTrackingPath = keyof typeof TRACKING_MARKERS
+type TrackingPath = StructuredTrackingPath | ".planning/REQUIREMENTS.md"
+interface LeanTrackingCarrier {
+  readonly schemaVersion: "v1.38-phase-262-lean-final-tracking-v1"
+  readonly surface: (typeof TRACKING_MARKERS)[StructuredTrackingPath]["surface"]
+  readonly admit03: LeanEligibility["admit03"]
+  readonly phase262Complete: boolean
+  readonly phase263PlanningEligible: boolean
+  readonly phase263ExecutionEligible: boolean
+  readonly authority: LeanEligibility["authority"]
+}
+export const parseLeanTrackingSurface = (
+  trackingPath: TrackingPath,
+  body: string,
+): Pick<LeanEligibility, "admit03"> | LeanTrackingCarrier => {
+  if (trackingPath === ".planning/REQUIREMENTS.md") {
+    const rows = body.split("\n").filter((line) => /^- \[[ x]\] \*\*ADMIT-03\*\*:/u.test(line))
+    if (rows.length !== 1) throw new TypeError("LEAN_TRACKING_AMBIGUOUS:requirements")
+    return { admit03: rows[0]!.startsWith("- [x]") ? "satisfied_under_revised_contract" : "blocked" }
+  }
+  const descriptor = TRACKING_MARKERS[trackingPath]
+  const escaped = descriptor.marker.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")
+  const matches = [...body.matchAll(new RegExp(`<!-- ${escaped}: (\\{[^\\n]*\\}) -->`, "gu"))]
+  if (matches.length !== 1) throw new TypeError(`LEAN_TRACKING_AMBIGUOUS:${descriptor.surface}`)
+  let value: unknown
+  try { value = JSON.parse(matches[0]![1]!) } catch { throw new TypeError(`LEAN_TRACKING_MALFORMED:${descriptor.surface}`) }
+  const keys = ["schemaVersion", "surface", "admit03", "phase262Complete", "phase263PlanningEligible", "phase263ExecutionEligible", "authority"]
+  if (!isObject(value) || !exactKeys(value, keys) || value.schemaVersion !== "v1.38-phase-262-lean-final-tracking-v1" || value.surface !== descriptor.surface || !["satisfied_under_revised_contract", "blocked"].includes(String(value.admit03))) throw new TypeError(`LEAN_TRACKING_INVALID:${descriptor.surface}`)
+  const passed = value.admit03 === "satisfied_under_revised_contract"
+  if (value.phase262Complete !== passed || value.phase263PlanningEligible !== passed || value.phase263ExecutionEligible !== passed || !exactEligibilityAuthority(value.authority, passed)) throw new TypeError(`LEAN_TRACKING_INVALID:${descriptor.surface}`)
+  return globalThis.structuredClone(value) as unknown as LeanTrackingCarrier
+}
+export const renderLeanTrackingCarrier = (
+  trackingPath: StructuredTrackingPath,
+  eligibility: LeanEligibility,
+): string => {
+  const descriptor = TRACKING_MARKERS[trackingPath]
+  const carrier: LeanTrackingCarrier = {
+    schemaVersion: "v1.38-phase-262-lean-final-tracking-v1",
+    surface: descriptor.surface,
+    admit03: eligibility.admit03,
+    phase262Complete: eligibility.phase262Complete,
+    phase263PlanningEligible: eligibility.phase263PlanningEligible,
+    phase263ExecutionEligible: eligibility.phase263ExecutionEligible,
+    authority: eligibility.authority,
+  }
+  parseLeanTrackingSurface(trackingPath, `<!-- ${descriptor.marker}: ${JSON.stringify(carrier)} -->`)
+  return `<!-- ${descriptor.marker}: ${JSON.stringify(carrier)} -->`
+}
 const writeExclusiveDurable = (target: string, value: unknown): void => {
   let descriptor: number | undefined
   try {
@@ -300,6 +402,15 @@ const main = (): void => {
   else if (selector === "--check-source-review") {
     assertForbiddenScopeAbsent(repoRoot, [LEAN_ARTIFACT_PATHS.manifest, LEAN_ARTIFACT_PATHS.sourceReview])
     const manifest = checkLeanManifest(repoRoot, readJson(repoRoot, LEAN_ARTIFACT_PATHS.manifest)); checkLeanSourceReview(manifest, readJson(repoRoot, LEAN_ARTIFACT_PATHS.sourceReview))
+  } else if (selector === "--check-review-outcome") {
+    const readinessPresent = existsSync(path.resolve(repoRoot, LEAN_ARTIFACT_PATHS.readiness))
+    assertForbiddenScopeAbsent(repoRoot, [LEAN_ARTIFACT_PATHS.manifest, LEAN_ARTIFACT_PATHS.sourceReview, ...(readinessPresent ? [LEAN_ARTIFACT_PATHS.readiness] : [])])
+    const manifest = checkLeanManifest(repoRoot, readJson(repoRoot, LEAN_ARTIFACT_PATHS.manifest))
+    checkLeanReviewOutcome(
+      manifest,
+      readJson(repoRoot, LEAN_ARTIFACT_PATHS.sourceReview),
+      readinessPresent ? readJson(repoRoot, LEAN_ARTIFACT_PATHS.readiness) : undefined,
+    )
   } else if (selector === "--check-reviewed-ready") { loadAndCheckLeanReviewedReady(repoRoot) }
   else if (selector === "--terminalize-interruption") {
     const readiness = loadAndCheckLeanReviewedReady(
@@ -347,10 +458,19 @@ const main = (): void => {
     const terminal = validateLeanTerminalArtifact(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal), invocation)
     const adjudication = validateLeanAdjudication(readJson(repoRoot, LEAN_ARTIFACT_PATHS.adjudication), terminal)
     const eligibility = validateLeanEligibility(readJson(repoRoot, LEAN_ARTIFACT_PATHS.eligibility), adjudication)
-    const expected = eligibility.phase262Complete ? "satisfied_under_revised_contract" : "blocked"
     for (const trackingPath of [".planning/REQUIREMENTS.md", ".planning/ROADMAP.md", ".planning/STATE.md", ".planning/v1.38-CURRENT-STATUS.md", ".planning/v1.38-v1.38-MILESTONE-AUDIT.md"]) {
       const body = readFileSync(path.resolve(repoRoot, trackingPath), "utf8")
-      if (!body.includes("ADMIT-03") || !body.includes(expected)) throw new TypeError(`LEAN_FINAL_TRACKING_DRIFT:${trackingPath}`)
+      const tracking = parseLeanTrackingSurface(trackingPath as TrackingPath, body)
+      if (tracking.admit03 !== eligibility.admit03) throw new TypeError(`LEAN_FINAL_TRACKING_DRIFT:${trackingPath}`)
+      if (trackingPath !== ".planning/REQUIREMENTS.md" && hashLeanValue(tracking) !== hashLeanValue({
+        schemaVersion: "v1.38-phase-262-lean-final-tracking-v1",
+        surface: (TRACKING_MARKERS[trackingPath as StructuredTrackingPath]).surface,
+        admit03: eligibility.admit03,
+        phase262Complete: eligibility.phase262Complete,
+        phase263PlanningEligible: eligibility.phase263PlanningEligible,
+        phase263ExecutionEligible: eligibility.phase263ExecutionEligible,
+        authority: eligibility.authority,
+      })) throw new TypeError(`LEAN_FINAL_TRACKING_DRIFT:${trackingPath}`)
     }
   } else throw new TypeError("LEAN_CHECK_SELECTOR_INVALID")
   process.stdout.write(`${JSON.stringify({ ok: true, selector, liveInvocationCount: 0, authority: LEAN_AUTHORITY_FALSE })}\n`)

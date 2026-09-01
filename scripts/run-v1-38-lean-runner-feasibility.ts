@@ -380,35 +380,43 @@ export const createSupervisedLeanExecutionDependencies = (
   if (!/^[0-9a-f]{64}$/u.test(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_INVALID")
   let active: ChildProcess | undefined
   let termination: Promise<LeanCleanupResult> | undefined
+  let lastCleanup: LeanCleanupResult | undefined
   const terminateActive = async (): Promise<LeanCleanupResult> => {
     if (termination !== undefined) return termination
     const child = active
-    if (child === undefined || child.exitCode !== null || child.signalCode !== null) { active = undefined; return { cleanupComplete: true, orphanedChild: false } }
-    termination = new Promise<LeanCleanupResult>((resolve) => {
-      let complete = false
-      const finish = (result: LeanCleanupResult): void => {
-        if (complete) return
-        complete = true
-        clearTimeout(timer)
-        active = undefined
-        termination = undefined
-        resolve(result)
-      }
-      const timer = setTimeout(
-        () => finish({ cleanupComplete: false, orphanedChild: true }),
-        options.cleanupDeadlineMilliseconds ?? LEAN_CLEANUP_DEADLINE_MS,
-      )
-      timer.unref()
-      child.once("exit", () => finish({ cleanupComplete: true, orphanedChild: false }))
-      try {
-        if (child.pid !== undefined) {
-          try { process.kill(-child.pid, "SIGKILL") } catch { child.kill("SIGKILL") }
-        } else child.kill("SIGKILL")
-      } catch {
-        finish({ cleanupComplete: false, orphanedChild: true })
-      }
-    })
-    return termination
+    if (child === undefined) return lastCleanup ?? { cleanupComplete: true, orphanedChild: false }
+    if (child.exitCode !== null || child.signalCode !== null) {
+      active = undefined
+      lastCleanup = { cleanupComplete: true, orphanedChild: false }
+      return lastCleanup
+    }
+    let resolveTermination!: (result: LeanCleanupResult) => void
+    const pending = new Promise<LeanCleanupResult>((resolve) => { resolveTermination = resolve })
+    termination = pending
+    let complete = false
+    const finish = (result: LeanCleanupResult): void => {
+      if (complete) return
+      complete = true
+      clearTimeout(timer)
+      active = undefined
+      lastCleanup = result
+      termination = undefined
+      resolveTermination(result)
+    }
+    const timer = setTimeout(
+      () => finish({ cleanupComplete: false, orphanedChild: true }),
+      options.cleanupDeadlineMilliseconds ?? LEAN_CLEANUP_DEADLINE_MS,
+    )
+    timer.unref()
+    child.once("exit", () => finish({ cleanupComplete: true, orphanedChild: false }))
+    try {
+      if (child.pid !== undefined) {
+        try { process.kill(-child.pid, "SIGKILL") } catch { child.kill("SIGKILL") }
+      } else child.kill("SIGKILL")
+    } catch {
+      finish({ cleanupComplete: false, orphanedChild: true })
+    }
+    return pending
   }
   return {
     now: () => performance.now(), terminateActive,
@@ -421,6 +429,7 @@ export const createSupervisedLeanExecutionDependencies = (
           env: { ...process.env, LEAN_CHILD_CAPABILITY: capability },
         })
       active = child
+      lastCleanup = undefined
       let stderr = ""
       child.stderr?.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8") })
       return await new Promise<LeanExecutionResult>((resolve, reject) => {
@@ -475,6 +484,7 @@ export const createSupervisedLeanExecutionDependencies = (
         child.once("exit", (code, exitSignal) => {
           if (terminating || settled) return
           active = undefined
+          lastCleanup = { cleanupComplete: true, orphanedChild: false }
           if (code === 0 && exitSignal === null && pendingResult !== undefined) {
             settle(() => resolve({ ...pendingResult!, cleanupComplete: true, orphanedChild: false }))
           } else {
