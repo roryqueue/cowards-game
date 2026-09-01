@@ -24,6 +24,7 @@ import {
   inspectCommittedPhase262Inventory,
   inspectDispositionBranch,
   projectLifecycleBranch,
+  replaceReviewedReadiness,
   validateReviewedReadinessGate,
   validateProvisionalCloseoutGate,
 } from "./check-v1-38-plan-262-95-lifecycle-v4.js"
@@ -35,6 +36,19 @@ const repoRoot = path.resolve(
 const roots: string[] = []
 const sha256 = (bytes: string | Buffer): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+const canonicalFixture = (value: unknown): string => {
+  const normalizeFixture = (child: any): any =>
+    Array.isArray(child)
+      ? child.map(normalizeFixture)
+      : child !== null && typeof child === "object"
+        ? Object.fromEntries(
+            Object.entries(child)
+              .sort(([left], [right]) => left.localeCompare(right))
+              .map(([key, nested]) => [key, normalizeFixture(nested)]),
+          )
+        : child
+  return `${JSON.stringify(normalizeFixture(value))}\n`
+}
 
 afterEach(() => {
   while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true })
@@ -283,6 +297,74 @@ const commitInventoryPath = (root: string, relative: string) => {
   })
 }
 
+const fixtureSourceFiles = [
+  "scripts/check-v1-38-plan-262-95-lifecycle-v4.ts",
+  "scripts/check-v1-38-plan-262-95-lifecycle-v4.test.ts",
+  ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-95-SUMMARY.md",
+]
+
+const buildFixtureReview = (root: string) => {
+  const sourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim()
+  const sourceTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim()
+  const sourceFiles = fixtureSourceFiles.map((relative) => ({
+    path: relative,
+    mode: "100644",
+    blob: execFileSync("git", ["rev-parse", `HEAD:${relative}`], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim(),
+    sha256: sha256(readFileSync(path.join(root, relative))),
+  }))
+  const body = {
+    schemaVersion: PLAN_125_REVIEW_SCHEMA,
+    sourceCommit,
+    sourceTree,
+    sourceFiles,
+    findingCount: 0,
+    plan126Eligible: true,
+    authorizesExecution: false as const,
+  }
+  return { ...body, reviewRoot: buildPlan125ReviewRoot(body) }
+}
+
+const prepareReplacementFixture = () => {
+  const { root, review: oldReview } = createReviewFixture()
+  commitReviewFixture(root, oldReview)
+  const oldReadiness = validateReviewedReadinessGate(root, oldReview)
+  const dispositionPath = path.join(root, V138_PLAN_262_95_PATHS.disposition)
+  const readinessPath = path.join(root, V138_PLAN_262_95_PATHS.readiness)
+  mkdirSync(path.dirname(dispositionPath), { recursive: true })
+  writeFileSync(dispositionPath, `${JSON.stringify(disposition())}\n`)
+  mkdirSync(path.dirname(readinessPath), { recursive: true })
+  writeFileSync(readinessPath, canonicalFixture(oldReadiness))
+  execFileSync(
+    "git",
+    [
+      "add",
+      V138_PLAN_262_95_PATHS.disposition,
+      V138_PLAN_262_95_PATHS.readiness,
+    ],
+    { cwd: root },
+  )
+  execFileSync("git", ["commit", "-qm", "old readiness"], { cwd: root })
+  commitInventoryPath(root, V138_PLAN_262_95_PATHS.summary126)
+  writeFileSync(
+    path.join(root, V138_PLAN_262_95_PATHS.source),
+    "fixture-current-source\n",
+  )
+  execFileSync("git", ["add", V138_PLAN_262_95_PATHS.source], { cwd: root })
+  execFileSync("git", ["commit", "-qm", "current source"], { cwd: root })
+  const freshReview = buildFixtureReview(root)
+  commitReviewFixture(root, freshReview)
+  return { root, oldReadiness, freshReview }
+}
+
 describe("Plan 262-125 and Plan 262-126 closed gates", () => {
   it("authenticates the frozen domain-separated literal-zero review schema", () => {
     const { root, review } = createReviewFixture()
@@ -401,6 +483,96 @@ describe("Plan 262-125 and Plan 262-126 closed gates", () => {
       ).toThrow()
     }
   })
+
+  it("atomically replaces only stale canonical readiness after refreshed review", () => {
+    const { root, oldReadiness, freshReview } = prepareReplacementFixture()
+    const beforeDisposition = readFileSync(
+      path.join(root, V138_PLAN_262_95_PATHS.disposition),
+    )
+
+    const replacement = replaceReviewedReadiness(root)
+
+    expect(replacement.sourceCommit).toBe(freshReview.sourceCommit)
+    expect(replacement.reviewRoot).toBe(freshReview.reviewRoot)
+    expect(replacement.readinessRoot).not.toBe(oldReadiness.readinessRoot)
+    expect(
+      readFileSync(path.join(root, V138_PLAN_262_95_PATHS.disposition), "utf8"),
+    ).toBe(beforeDisposition.toString("utf8"))
+    expect(
+      JSON.parse(
+        readFileSync(
+          path.join(root, V138_PLAN_262_95_PATHS.readiness),
+          "utf8",
+        ),
+      ),
+    ).toEqual(replacement)
+  })
+
+  it.each([
+    "missing",
+    "malformed",
+    "noncanonical",
+    "current",
+    "drift",
+    "stale-review",
+  ])(
+    "rejects %s readiness replacement state",
+    (failure) => {
+      const { root, freshReview } = prepareReplacementFixture()
+      const readinessPath = path.join(root, V138_PLAN_262_95_PATHS.readiness)
+      if (failure === "missing") rmSync(readinessPath)
+      if (failure === "malformed") {
+        writeFileSync(readinessPath, "{\n")
+        execFileSync("git", ["add", V138_PLAN_262_95_PATHS.readiness], {
+          cwd: root,
+        })
+        execFileSync("git", ["commit", "-qm", "malformed readiness"], {
+          cwd: root,
+        })
+      }
+      if (failure === "noncanonical") {
+        const parsed = JSON.parse(readFileSync(readinessPath, "utf8"))
+        writeFileSync(readinessPath, `${JSON.stringify(parsed, null, 2)}\n`)
+        execFileSync("git", ["add", V138_PLAN_262_95_PATHS.readiness], {
+          cwd: root,
+        })
+        execFileSync("git", ["commit", "-qm", "noncanonical readiness"], {
+          cwd: root,
+        })
+      }
+      if (failure === "current") {
+        writeFileSync(
+          readinessPath,
+          canonicalFixture(validateReviewedReadinessGate(root, freshReview)),
+        )
+        execFileSync("git", ["add", V138_PLAN_262_95_PATHS.readiness], {
+          cwd: root,
+        })
+        execFileSync("git", ["commit", "-qm", "current readiness"], {
+          cwd: root,
+        })
+      }
+      if (failure === "drift")
+        writeFileSync(
+          path.join(root, V138_PLAN_262_95_PATHS.source),
+          "uncommitted mutation\n",
+        )
+      if (failure === "stale-review") {
+        writeFileSync(
+          path.join(root, V138_PLAN_262_95_PATHS.source),
+          "committed after review\n",
+        )
+        execFileSync("git", ["add", V138_PLAN_262_95_PATHS.source], {
+          cwd: root,
+        })
+        execFileSync("git", ["commit", "-qm", "source after review"], {
+          cwd: root,
+        })
+      }
+
+      expect(() => replaceReviewedReadiness(root)).toThrow()
+    },
+  )
 })
 
 describe("Plan 262-95 command publication incapability", () => {

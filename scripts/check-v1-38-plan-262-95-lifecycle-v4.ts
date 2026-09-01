@@ -4,9 +4,12 @@ import { createHash } from "node:crypto"
 import {
   closeSync,
   constants,
+  fsyncSync,
   lstatSync,
   openSync,
   readFileSync,
+  renameSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
@@ -198,6 +201,46 @@ const exclusiveWrite = (
     writeFileSync(fd, bytes)
   } finally {
     closeSync(fd)
+  }
+}
+
+const atomicReplaceRegular = (
+  root: string,
+  repoPath: string,
+  bytes: string,
+): void => {
+  const target = path.resolve(root, repoPath)
+  const relative = path.relative(root, target)
+  if (relative.startsWith("..") || path.isAbsolute(relative))
+    fail("PATH_ESCAPE")
+  if (safeKind(target) !== "regular") fail("REPLACE_TARGET_NOT_REGULAR")
+  const temporary = path.join(
+    path.dirname(target),
+    `.${path.basename(target)}.replace-${process.pid}`,
+  )
+  if (safeKind(temporary) !== "absent") fail("REPLACE_TEMP_PRESENT")
+  let created = false
+  try {
+    const fd = openSync(
+      temporary,
+      constants.O_WRONLY |
+        constants.O_CREAT |
+        constants.O_EXCL |
+        (constants.O_NOFOLLOW ?? 0),
+      0o644,
+    )
+    created = true
+    try {
+      writeFileSync(fd, bytes)
+      fsyncSync(fd)
+    } finally {
+      closeSync(fd)
+    }
+    if (safeKind(target) !== "regular") fail("REPLACE_TARGET_CHANGED")
+    renameSync(temporary, target)
+    created = false
+  } finally {
+    if (created && safeKind(temporary) === "regular") unlinkSync(temporary)
   }
 }
 
@@ -515,6 +558,22 @@ export const assertPlan125Review = (
   return value as Plan125Review
 }
 
+const assertReviewMatchesCurrentSource = (
+  root: string,
+  review: Plan125Review,
+): void => {
+  for (const entry of review.sourceFiles) {
+    const currentBlob = (() => {
+      try {
+        return git(root, ["rev-parse", `HEAD:${entry.path}`])
+      } catch {
+        return fail("REVIEW_CURRENT_SOURCE_MISSING")
+      }
+    })()
+    if (currentBlob !== entry.blob) fail("REVIEW_CURRENT_SOURCE_STALE")
+  }
+}
+
 const buildReviewedReadiness = (
   review: Plan125Review,
   inventory: V138Phase262Inventory,
@@ -553,6 +612,14 @@ export const validateReviewedReadinessGate = (
 export const assertReviewedReadiness = (root: string, value: any): any => {
   const review = readJson(root, V138_PLAN_262_95_PATHS.review125)
   const authenticatedReview = assertPlan125Review(root, review)
+  return assertReadinessForReview(root, value, authenticatedReview)
+}
+
+const assertReadinessForReview = (
+  root: string,
+  value: any,
+  authenticatedReview: Plan125Review,
+): any => {
   const current = inspectCommittedPhase262Inventory(root)
   const expectedCurrent = buildReviewedReadiness(authenticatedReview, current)
   if (canonical(value) === canonical(expectedCurrent)) return value
@@ -708,6 +775,74 @@ export const writeReviewedReadiness = (root: string): any => {
   const readiness = validateReviewedReadinessGate(root, review)
   exclusiveWrite(root, V138_PLAN_262_95_PATHS.readiness, canonical(readiness))
   return readiness
+}
+
+export const replaceReviewedReadiness = (root: string): any => {
+  if (
+    safeKind(path.join(root, V138_PLAN_262_95_PATHS.legacyReadiness)) !==
+    "absent"
+  )
+    fail("LEGACY_READINESS_PRESENT")
+  const trackedDrift = git(root, [
+    "status",
+    "--porcelain",
+    "--untracked-files=no",
+  ])
+  if (trackedDrift !== "") fail("REPLACEMENT_TRACKED_DRIFT")
+  assertWorkingEqualsCommitted(root, V138_PLAN_262_95_PATHS.review125)
+  assertWorkingEqualsCommitted(root, V138_PLAN_262_95_PATHS.readiness)
+
+  let oldReadiness: any
+  const oldBytes = readRegular(root, V138_PLAN_262_95_PATHS.readiness).toString(
+    "utf8",
+  )
+  try {
+    oldReadiness = JSON.parse(oldBytes)
+  } catch {
+    fail("REPLACEMENT_READINESS_MALFORMED")
+  }
+  if (canonical(oldReadiness) !== oldBytes)
+    fail("REPLACEMENT_READINESS_NONCANONICAL")
+  const oldReview = assertPlan125Review(root, {
+    schemaVersion: PLAN_125_REVIEW_SCHEMA,
+    sourceCommit: oldReadiness?.sourceCommit,
+    sourceTree: oldReadiness?.sourceTree,
+    sourceFiles: oldReadiness?.sourceFiles,
+    findingCount: 0,
+    plan126Eligible: true,
+    authorizesExecution: false,
+    reviewRoot: oldReadiness?.reviewRoot,
+  })
+  assertReadinessForReview(root, oldReadiness, oldReview)
+
+  const freshReview = assertPlan125Review(
+    root,
+    readJson(root, V138_PLAN_262_95_PATHS.review125),
+  )
+  assertReviewMatchesCurrentSource(root, freshReview)
+  if (
+    freshReview.reviewRoot === oldReview.reviewRoot ||
+    freshReview.sourceCommit === oldReview.sourceCommit
+  )
+    fail("REPLACEMENT_READINESS_NOT_STALE")
+  const inspected = inspectDispositionBranch(
+    readJson(root, V138_PLAN_262_95_PATHS.disposition),
+    currentPresence(root),
+  )
+  const projection = projectLifecycleBranch(inspected)
+  if (
+    projection.branch !== "gaps" ||
+    canonical(projection.authority) !== canonical(FALSE_AUTHORITY)
+  )
+    fail("REPLACEMENT_BRANCH_INVALID")
+
+  const replacement = validateReviewedReadinessGate(root, freshReview)
+  atomicReplaceRegular(
+    root,
+    V138_PLAN_262_95_PATHS.readiness,
+    canonical(replacement),
+  )
+  return replacement
 }
 
 export const checkReviewedReadiness = (root: string): any => {
@@ -890,6 +1025,10 @@ const main = (): void => {
   }
   if (selector === "--check-reviewed-readiness") {
     process.stdout.write(canonical(checkReviewedReadiness(root)))
+    return
+  }
+  if (selector === "--replace-reviewed-readiness") {
+    process.stdout.write(canonical(replaceReviewedReadiness(root)))
     return
   }
   if (selector === "--apply-provisional-closeout") {
