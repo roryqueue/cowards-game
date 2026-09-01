@@ -16,6 +16,7 @@ import {
   runLeanFeasibilityInjected,
   type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
+import * as leanRunnerModule from "./run-v1-38-lean-runner-feasibility.js"
 
 const roots = { outcomeRoot: hashLeanValue("outcome"), finalStateRoot: hashLeanValue("state"), transitionEventRoot: hashLeanValue("events"), runtimeAccountingRoot: hashLeanValue("accounting") }
 const temporary: string[] = []
@@ -208,6 +209,54 @@ describe("bounded lean runner", () => {
     expect(parseLeanExecutionResult(value)).toEqual(value)
     expect(() => parseLeanExecutionResult({ ...value, outcomeRoot: "bad" })).toThrow()
     expect(() => parseLeanExecutionResult({ ...value, privateDiagnostics: "secret" })).toThrow()
+  })
+
+  it("records a prepared system failure without attaching semantic-only roots", () => {
+    const finalize = (leanRunnerModule as unknown as {
+      finalizePreparedLeanProjection: (projection: unknown, requestRealismRoot: string) => unknown
+    }).finalizePreparedLeanProjection
+    expect(() => finalize({ classification: "system_failure" }, leanRequestRealismRoot(buildLeanSchedule()[0]!))).not.toThrow()
+    expect(finalize({ classification: "system_failure" }, leanRequestRealismRoot(buildLeanSchedule()[0]!))).toEqual({
+      classification: "system_failure",
+      cleanupComplete: true,
+      orphanedChild: false,
+      boardRealism: true,
+      integrityValid: true,
+    })
+  })
+
+  it.each([
+    ["primitive", "invalid"],
+    ["extra ready key", { kind: "ready", capability: "d".repeat(64), extra: true }],
+  ])("rejects a %s IPC envelope even if valid output follows", async (_label, invalidMessage) => {
+    const child = new FakeLeanChild()
+    const deps = createSupervisedLeanExecutionDependencies("d".repeat(64), {
+      spawnChild: () => child as never,
+      cellDeadlineMilliseconds: 500,
+      cleanupDeadlineMilliseconds: 50,
+    })
+    const cell = buildLeanSchedule()[0]!
+    const execution = deps.execute(cell, new AbortController().signal)
+    child.emit("message", invalidMessage)
+    child.emit("message", { kind: "ready", capability: "d".repeat(64) })
+    child.emit("message", { kind: "result", capability: "d".repeat(64), result: childResult(cell) })
+    child.cleanExit()
+    await expect(execution).rejects.toThrow(/LEAN_CHILD_PROTOCOL_INVALID/u)
+  })
+
+  it("rejects a result IPC envelope with extra keys", async () => {
+    const child = new FakeLeanChild()
+    const deps = createSupervisedLeanExecutionDependencies("e".repeat(64), {
+      spawnChild: () => child as never,
+      cellDeadlineMilliseconds: 500,
+      cleanupDeadlineMilliseconds: 50,
+    })
+    const cell = buildLeanSchedule()[0]!
+    const execution = deps.execute(cell, new AbortController().signal)
+    child.emit("message", { kind: "ready", capability: "e".repeat(64) })
+    child.emit("message", { kind: "result", capability: "e".repeat(64), result: childResult(cell), extra: true })
+    child.cleanExit()
+    await expect(execution).rejects.toThrow(/LEAN_CHILD_PROTOCOL_INVALID/u)
   })
 
   it("executes one actual prepared v1.18 fixture path", async () => {

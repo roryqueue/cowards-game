@@ -23,6 +23,7 @@ import {
   renderLeanSourceReviewV2,
   renderLeanTrackingCarrier,
 } from "./check-v1-38-lean-admission.js"
+import * as leanAdmissionModule from "./check-v1-38-lean-admission.js"
 
 const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
@@ -96,6 +97,20 @@ describe("lean admission custody", () => {
     const blocked = renderLeanSourceReviewV2(manifest, [{ id: "B1", severity: "critical", status: "open", summary: "still open" }])
     expect(checkLeanReviewOutcome(manifest, blocked, undefined)).toBeUndefined()
     expect(() => checkLeanReviewOutcome(manifest, blocked, readiness)).toThrow(/LEAN_READINESS_FOR_NONZERO_REVIEW/u)
+    expect(() => renderLeanSourceReviewV2(manifest, [
+      { id: "", severity: "warning", status: "open", summary: "empty identifier" },
+    ])).toThrow(/LEAN_SOURCE_REVIEW_INVALID/u)
+    expect(() => renderLeanSourceReviewV2(manifest, [
+      { id: "CR-DUPLICATE", severity: "critical", status: "open", summary: "first" },
+      { id: "CR-DUPLICATE", severity: "warning", status: "open", summary: "second" },
+    ])).toThrow(/LEAN_SOURCE_REVIEW_INVALID/u)
+  })
+
+  it("authenticates the immutable Plan 150 v1 review bytes", () => {
+    const checkHistorical = (leanAdmissionModule as unknown as {
+      checkHistoricalLeanSourceReviewBytes: (bytes: Buffer) => void
+    }).checkHistoricalLeanSourceReviewBytes
+    expect(() => checkHistorical(Buffer.from("mutated historical review", "utf8"))).toThrow(/LEAN_HISTORICAL_SOURCE_REVIEW_DRIFT/u)
   })
 
   it("selects one structural current branch and ignores historical prose", () => {
