@@ -50,3 +50,13 @@ After the first finite envelope completed its reviewed, validated, and audited n
 The accepted interpretation is exact and finite: a fresh versioned envelope may use up to three new route starts, twelve new preflight observations, three eight-attempt/four-shard calibration allocations, and at most one conditional 540-cell reproduction within four hours. It preserves the 200 ms sampler, inclusive 2,500-basis-point gate, backoffs, canonical runtime/kernel, privacy, gameplay, and formation-absence rules. It cannot reuse or modify any prior identity or artifact and does not authorize a third envelope.
 
 No additional literal checkpoint is required inside this envelope. A fresh independent 540/540 pass remains the only path to activation and Phase 263; every non-pass branch remains publishable process evidence with downstream authority denied.
+
+## Contract revision: lean ADMIT-03 replacement
+
+**Date:** 2026-09-01
+
+After the corrected full-matrix producer truthfully exhausted at fresh `0/540`, the user asked whether the requirement could be fixed or unblocked. The assistant recommended preserving that result while replacing the production-scale reproduction prerequisite with a small, timeboxed deterministic runner-feasibility gate. The user explicitly approved: **"Approve the lean ADMIT-03 replacement and proceed."**
+
+Research selected `lean_runner_feasibility_v1`: 12 unique current-rules fixture cells spanning three canonical arena labels, both side assignments, and both initiative parities, executed twice serially for 24 charged Matches. A pass requires 24/24 supervised success, complete cleanup, exact coverage, unchanged current formation, and exact normalized semantic equality across passes within 15 minutes. It proves runner feasibility only and authorizes Phase 263 planning/execution only.
+
+The historical full-matrix result remains immutable and failed; this revision does not call it reproduced. Formation work remains blocked until a serious current-rules league is built and frozen, and every public, product, production, counted-play, gameplay-change, holdout, archive, release, and tag authority remains false.

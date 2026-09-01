@@ -1,5 +1,17 @@
 # Activation Prompt: Competitive Strategy Factory and Adversarial League
 
+### D-34L: Lean ADMIT-03 replacement (2026-09-01)
+
+The operator explicitly approved: **"Approve the lean ADMIT-03 replacement and proceed."** This decision supersedes the full `540/540` reproduction as the active prerequisite for Phase 263. It does not reinterpret, erase, retry, or convert the immutable historical result: the corrected full-matrix attempt remains `exhausted`, fresh `0/540`, with no reproduction, and `reinterpreted: false`.
+
+The replacement is `lean_runner_feasibility_v1`, a private fixture-feasibility gate using exactly one existing Starter/Advanced pair across the three canonical arena labels, both side assignments, and both initiative parities: 12 unique cells executed twice serially, for exactly 24 charged Matches. Pass requires 24/24 supervised successes, exact schedule coverage, complete cleanup, unchanged current formation, and byte-identical normalized terminal outcome, final-state, ordered transition/event, and runtime-accounting roots between corresponding passes. The command has a 15-minute outer cap, no 2,500-basis-point headroom gate, no calibration or route backoff, and no 540-cell allocation.
+
+This gate proves only that the exact committed canonical runner/runtime path is operable and deterministic for a small stratified fixture schedule on the recorded single-operator host. Starter and Advanced remain smoke/regression fixtures. The receipt must be labeled `fixture_feasibility_only` and cannot claim balance, strength, metagame quality, exploitability, historical-matrix equivalence, 540-cell capacity, or future reliability.
+
+Any source/tuple, integrity, privacy, formation-absence, cleanup, coverage, runtime, timeout, or determinism defect is a non-pass. At most one whole-gate corrective rerun is permitted, and only after a specific implementation defect is diagnosed and fixed in a separate committed source revision. Resource pressure, slow execution, gameplay outcome, or unexplained nondeterminism does not qualify. Partial cells are never reused.
+
+A reviewed pass satisfies ADMIT-03 **under this revised contract** and authorizes only Phase 263 planning/execution plus its private fixture-feasibility work. Phase 264 and later execution, scaled candidate search, formation materialization, holdout opening, public/product/production/counted/canonical evidence, gameplay changes, milestone archive, release, and tag remain unauthorized until their ordinary dependencies pass. The serious current-rules Strategy league must still be built, red-teamed, evaluated, and frozen before any formation profile is materialized.
+
 ### D-33R: One corrected run after native bootstrap deadlock (2026-08-31)
 
 The operator answered **"yes"** to: **"The current contract forbids another run after failure. May I revise that rule to permit one corrected run after fixing the deadlock, keeping all resource limits unchanged?"**

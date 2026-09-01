@@ -75,6 +75,16 @@ This is the sole approved exception to D-31R's prior terminal-failure/no-third-e
 
 Retain the canonical engine/runtime, accounting, privacy, single-operator local-seal, gameplay and formation-absence boundaries. Do not open the holdout, create candidate or formation artifacts, expose public/canonical evidence, or grant downstream authority before the exact independently checked admission join. This approval does not adopt the separately proposed lean milestone rewrite. Source-only fixes and synthetic native integration tests create no execution authority by themselves.
 
+### D-34L: Lean ADMIT-03 replacement (2026-09-01)
+
+- The operator approved the lean ADMIT-03 replacement and directed work to proceed. The active Phase 263 prerequisite is now `lean_runner_feasibility_v1`; the historical full-matrix attempt remains immutable `exhausted`, fresh `0/540`, no reproduction, and `reinterpreted:false`.
+- The gate freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both side assignments, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, one 15-minute outer limit, and no capacity preflight/calibration/route-backoff/540-cell machinery.
+- Pass requires exact source/tuple/current-formation custody, 24/24 supervised success, exact complete coverage, complete cleanup, and byte-identical normalized terminal outcome, final-state, ordered transition/event, and runtime-accounting roots for each corresponding cell across passes.
+- The only permitted claim is `fixture_feasibility_only`. No balance, strength, metagame, exploitability, historical-equivalence, capacity, or future-reliability claim follows.
+- At most one complete corrective rerun is available only after a diagnosed implementation defect and separate committed fix. Resource pressure, slowness, gameplay outcomes, or unexplained nondeterminism are not qualifying reasons; partial cells are not reusable.
+- A reviewed pass authorizes Phase 263 planning/execution only. Phase 264+, scaled candidate search, formation materialization, holdout opening, public/product/production/counted/canonical evidence, rules changes, archive, release, and tag remain false until their normal dependencies pass.
+- D-34L supersedes D-10, D-23R through D-33R only as the active admission path. Those decisions and every charged identity/artifact remain immutable history. The broader proposed lean-milestone phase-cap rewrite remains unadopted.
+
 ### the agent's Discretion
 - Exact schema, module, command, storage, and typed-reason names are left to research and planning within the locked evidence and privacy boundaries.
 - The exact finite retry count, scheduling window, preflight cadence, and safe autonomous backoff are left to research and planning, provided they are frozen before execution and cannot be expanded after results are observed.
