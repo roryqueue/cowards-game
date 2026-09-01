@@ -216,6 +216,24 @@ describe("bounded lean runner", () => {
     expect(calls).toEqual(["invoke", "recover", "postcheck"])
   })
 
+  it("checks corrective admission immediately before invoke", async () => {
+    const calls: string[] = []
+    await runLeanCorrectiveWrapperInjected({
+      preflight: async () => { calls.push("preflight") },
+      invoke: async () => { calls.push("invoke") },
+      recover: async () => { calls.push("recover") },
+      postcheck: async () => { calls.push("postcheck") },
+    })
+    expect(calls).toEqual(["preflight", "invoke", "recover", "postcheck"])
+    await expect(runLeanCorrectiveWrapperInjected({
+      preflight: async () => { throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS") },
+      invoke: async () => { calls.push("forbidden-invoke") },
+      recover: async () => { calls.push("forbidden-recover") },
+      postcheck: async () => { calls.push("forbidden-postcheck") },
+    })).rejects.toThrow(/LEAN_CORRECTIVE_TERMINAL_EXISTS/u)
+    expect(calls).not.toContain("forbidden-invoke")
+  })
+
   it("recovery-only accepts only marker-present terminal-absent and launches nothing", async () => {
     const calls: string[] = []
     await runLeanCorrectiveRecoveryOnlyInjected({

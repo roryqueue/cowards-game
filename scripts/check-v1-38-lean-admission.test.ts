@@ -8,6 +8,8 @@ import {
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
+  assertLeanCorrectiveAdmissionStatus,
+  assertLeanCorrectiveFreshEffectsAbsent,
   checkLeanReadiness,
   checkLeanSourceReview,
   validateLeanAdjudication,
@@ -50,6 +52,24 @@ describe("lean admission custody", () => {
     expect(() => assertLeanStatus(`?? .v138-successor-${"a".repeat(64)}.lock\n`)).not.toThrow()
     expect(() => assertLeanStatus(" M scripts/example.ts\n")).toThrow(/LEAN_WORKTREE_DIRTY/u)
     expect(() => assertLeanStatus("?? unexpected.txt\n")).toThrow(/LEAN_WORKTREE_DIRTY/u)
+  })
+
+  it("fails corrective admission on tracked drift and permits only stage-exact operational residue", () => {
+    const lock = `.v138-successor-${"a".repeat(64)}.lock`
+    expect(() => assertLeanCorrectiveAdmissionStatus(`?? ${lock}\n`, [])).not.toThrow()
+    expect(() => assertLeanCorrectiveAdmissionStatus(
+      `?? ${lock}\n?? .planning/artifacts/v1.38-lean-runner-corrective-invocation-v2.json\n`,
+      [".planning/artifacts/v1.38-lean-runner-corrective-invocation-v2.json"],
+    )).not.toThrow()
+    expect(() => assertLeanCorrectiveAdmissionStatus(" M scripts/run-v1-38-lean-runner-feasibility.ts\n", [])).toThrow(/LEAN_WORKTREE_DIRTY/u)
+    expect(() => assertLeanCorrectiveAdmissionStatus("?? .planning/artifacts/v1.38-lean-runner-corrective-terminal-v2.json\n", [])).toThrow(/LEAN_WORKTREE_DIRTY/u)
+  })
+
+  it("rejects either pre-existing fresh corrective effect before launch", () => {
+    expect(() => assertLeanCorrectiveFreshEffectsAbsent(false, false)).not.toThrow()
+    expect(() => assertLeanCorrectiveFreshEffectsAbsent(true, false)).toThrow(/LEAN_CORRECTIVE_INVOCATION_EXISTS/u)
+    expect(() => assertLeanCorrectiveFreshEffectsAbsent(false, true)).toThrow(/LEAN_CORRECTIVE_TERMINAL_EXISTS/u)
+    expect(() => assertLeanCorrectiveFreshEffectsAbsent(true, true)).toThrow()
   })
 
   it("renders and checks exact committed source without effects", () => {
