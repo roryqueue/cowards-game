@@ -254,6 +254,31 @@ describe("bounded lean runner", () => {
     })).rejects.toThrow(/LEAN_CORRECTIVE_TERMINAL_EXISTS/u)
   })
 
+  it("durably records child ownership before corrective admission and clears it after exit", async () => {
+    const child = new FakeLeanChild()
+    child.pid = 4312
+    const calls: string[] = []
+    const token = "f".repeat(64)
+    const deps = createSupervisedLeanExecutionDependencies("c".repeat(64), {
+      spawnChild: () => child as never,
+      correctiveOwnership: {
+        token,
+        persist: (pid, processGroupId, actualToken) => { calls.push(`persist:${pid}:${processGroupId}:${actualToken}`) },
+        clear: (actualToken) => { calls.push(`clear:${actualToken}`) },
+      },
+    })
+    const cell = buildLeanSchedule()[0]!
+    const execution = deps.execute(cell, new AbortController().signal)
+    child.emit("message", { kind: "ownership-ready", token })
+    expect(calls).toEqual([`persist:4312:4312:${token}`])
+    expect(child.sent).toEqual([{ kind: "admit", token }])
+    child.emit("message", { kind: "ready", capability: "c".repeat(64) })
+    child.emit("message", { kind: "result", capability: "c".repeat(64), result: childResult(cell) })
+    child.cleanExit()
+    await expect(execution).resolves.toMatchObject({ classification: "success" })
+    expect(calls).toEqual([`persist:4312:4312:${token}`, `clear:${token}`])
+  })
+
   it("rejects direct child selection before executing any cell", () => {
     expect(() => execFileSync(process.execPath, ["--import", "tsx", "scripts/run-v1-38-lean-runner-feasibility.ts", "--execute-reviewed-cell"], { stdio: "pipe" })).toThrow()
   })

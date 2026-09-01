@@ -10,6 +10,10 @@ import {
   assertLeanStatus,
   assertLeanCorrectiveAdmissionStatus,
   assertLeanCorrectiveFreshEffectsAbsent,
+  createLeanCorrectiveChildOwnership,
+  validateLeanCorrectiveChildOwnership,
+  recoverLeanCorrectiveOrphanInjected,
+  LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH,
   checkLeanReadiness,
   checkLeanSourceReview,
   validateLeanAdjudication,
@@ -131,6 +135,53 @@ describe("lean admission custody", () => {
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
       "export const runLeanCorrectiveRecoveryOnlyInjected = async () => { fork(); child.send({kind: 'execute'}) }",
     )).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+  })
+
+  it("strictly binds corrective child ownership to invocation, process group, selector, and token", () => {
+    const ownership = createLeanCorrectiveChildOwnership(
+      "sha256:" + "1".repeat(64),
+      4312,
+      4312,
+      "b".repeat(64),
+    )
+    expect(LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH).toBe(".v138-lean-corrective-child-ownership.json")
+    expect(validateLeanCorrectiveChildOwnership(ownership)).toEqual(ownership)
+    for (const mutation of [
+      { invocationRoot: "sha256:" + "2".repeat(64) },
+      { childPid: 0 },
+      { processGroupId: 4313 },
+      { selector: "--run-reviewed-corrective-gate" },
+      { token: "short" },
+      { commandArguments: ["--execute-reviewed-cell"] },
+    ]) expect(() => validateLeanCorrectiveChildOwnership({ ...ownership, ...mutation })).toThrow(/LEAN_CORRECTIVE_CHILD_OWNERSHIP/u)
+  })
+
+  it("terminates only an authenticated active orphan and proves exit", async () => {
+    const ownership = createLeanCorrectiveChildOwnership(
+      "sha256:" + "1".repeat(64), 4312, 4312, "b".repeat(64),
+    )
+    const signals: string[] = []
+    let alive = true
+    await recoverLeanCorrectiveOrphanInjected(ownership, {
+      expectedInvocationRoot: ownership.invocationRoot,
+      commandForPid: () => `node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell ${ownership.token}`,
+      signalProcessGroup: (_group, signal) => { signals.push(signal); alive = false },
+      processIsAlive: () => alive,
+      wait: async () => undefined,
+    })
+    expect(signals).toEqual(["SIGTERM"])
+
+    for (const command of ["", `node other.ts --execute-reviewed-cell ${ownership.token}`, "node scripts/run-v1-38-lean-runner-feasibility.ts --execute-reviewed-cell wrong"]) {
+      const rejectedSignals: string[] = []
+      await expect(recoverLeanCorrectiveOrphanInjected(ownership, {
+        expectedInvocationRoot: ownership.invocationRoot,
+        commandForPid: () => command,
+        signalProcessGroup: (_group, signal) => { rejectedSignals.push(signal) },
+        processIsAlive: () => true,
+        wait: async () => undefined,
+      })).rejects.toThrow(/LEAN_CORRECTIVE_CHILD_(?:STALE|IDENTITY)/u)
+      expect(rejectedSignals).toEqual([])
+    }
   })
 
   it("requires literal-zero non-authorizing review before readiness", () => {
