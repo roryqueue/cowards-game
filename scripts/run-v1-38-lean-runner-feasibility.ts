@@ -29,6 +29,8 @@ import {
 
 export const LEAN_LIVE_SELECTOR = "--run-reviewed-live-gate" as const
 export const LEAN_CHILD_SELECTOR = "--execute-reviewed-cell" as const
+export const LEAN_CORRECTIVE_SELECTOR = "--run-reviewed-corrective-gate" as const
+export const LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR = "--recover-reviewed-corrective-interruption" as const
 export const LEAN_CELL_DEADLINE_MS = 45_000
 export const LEAN_CLEANUP_DEADLINE_MS = 2_000
 
@@ -59,6 +61,43 @@ export interface LeanSupervisorOptions {
   readonly spawnChild?: () => ChildProcess
   readonly cellDeadlineMilliseconds?: number
   readonly cleanupDeadlineMilliseconds?: number
+}
+export interface LeanCorrectiveWrapperDependencies {
+  readonly invoke: () => Promise<void>
+  readonly recover: () => Promise<void>
+  readonly postcheck: () => Promise<void>
+}
+export interface LeanCorrectiveRecoveryOnlyDependencies {
+  readonly markerPresent: boolean
+  readonly terminalPresent: boolean
+  readonly cleanup: () => Promise<void>
+  readonly terminalizeInvalid: () => Promise<void>
+  readonly postcheck: () => Promise<void>
+}
+
+export const runLeanCorrectiveWrapperInjected = async (
+  dependencies: LeanCorrectiveWrapperDependencies,
+): Promise<void> => {
+  let invocationError: unknown
+  try {
+    await dependencies.invoke()
+  } catch (error) {
+    invocationError = error
+  } finally {
+    await dependencies.recover()
+    await dependencies.postcheck()
+  }
+  if (invocationError !== undefined) throw invocationError
+}
+
+export const runLeanCorrectiveRecoveryOnlyInjected = async (
+  dependencies: LeanCorrectiveRecoveryOnlyDependencies,
+): Promise<void> => {
+  if (!dependencies.markerPresent) throw new TypeError("LEAN_CORRECTIVE_MARKER_REQUIRED")
+  if (dependencies.terminalPresent) throw new TypeError("LEAN_CORRECTIVE_TERMINAL_EXISTS")
+  await dependencies.cleanup()
+  await dependencies.terminalizeInvalid()
+  await dependencies.postcheck()
 }
 
 const unlaunched = (cell: LeanCell): LeanExecutionRecord => ({
@@ -211,7 +250,7 @@ const certificateReference = (
 }
 
 export const buildCanonicalLeanRequestV118 = (cell: LeanCell): CanonicalLeanPreparedRequest => {
-  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.arenaId)
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.executionArenaId)
   const tuple = CANONICAL_COMPATIBILITY_TUPLES.find(({ tuple: candidate }) => candidate.runtimeAbi === CURRENT_SEMANTIC_RUNTIME_ABI_VERSION)
   if (arena === undefined || tuple === undefined) throw new TypeError("LEAN_CANONICAL_INPUT_MISSING")
   const bottom = fixtureRevision(cell.bottomFixtureId)
@@ -556,6 +595,9 @@ const main = async (): Promise<void> => {
     checker.createExclusiveLeanTerminal(repoRoot, checker.createLeanTerminalArtifact(invocation, terminal))
     process.stdout.write(`${JSON.stringify(terminal)}\n`)
     return
+  }
+  if (selector === LEAN_CORRECTIVE_SELECTOR || selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR) {
+    throw new TypeError("LEAN_CORRECTIVE_SOURCE_ONLY")
   }
   throw new TypeError("LEAN_LIVE_SELECTOR_REQUIRES_PLAN_150_READINESS")
 }

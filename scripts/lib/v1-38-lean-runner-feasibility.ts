@@ -6,6 +6,8 @@ import {
   DEFAULT_RUNTIME_LIMITS,
   TOP_STARTING_POSITIONS,
   encodeCanonicalJson,
+  type ArenaCatalogRecordV137,
+  type ArenaCatalogV137,
   type RuntimeExecutionServiceResponseV118,
 } from "@cowards/spec"
 import { findAdvancedStrategy } from "../../packages/persistence/src/advanced-strategies.js"
@@ -55,6 +57,9 @@ export interface LeanCell {
   readonly arenaId: string
   readonly arenaLabel: string
   readonly semanticGeometryHash: `sha256:${string}`
+  readonly executionArenaId: string
+  readonly executionArenaLabel: string
+  readonly executionSemanticGeometryHash: `sha256:${string}`
   readonly bottomFixtureId: string
   readonly topFixtureId: string
   readonly initiativeSide: "bottom" | "top"
@@ -160,10 +165,15 @@ export const LEAN_CURRENT_FORMATION_ROOT = canonicalHash({
  * request against the same fields and the canonical current initial state.
  */
 export const leanRequestRealismRoot = (cell: LeanCell): `sha256:${string}` => canonicalHash({
-  arena: {
+  declaredArena: {
     id: cell.arenaId,
     label: cell.arenaLabel,
     semanticGeometryHash: cell.semanticGeometryHash,
+  },
+  executionArena: {
+    id: cell.executionArenaId,
+    label: cell.executionArenaLabel,
+    semanticGeometryHash: cell.executionSemanticGeometryHash,
   },
   fixtures: { bottom: cell.bottomFixtureId, top: cell.topFixtureId },
   initiativeSide: cell.initiativeSide,
@@ -177,9 +187,30 @@ const sidePairs = [
   [LEAN_FIXTURES.advanced, LEAN_FIXTURES.starter],
 ] as const
 
+export const resolveLeanExecutionArena = (
+  catalog: Pick<ArenaCatalogV137, "arenas">,
+  declaredArenaId: string,
+): ArenaCatalogRecordV137 => {
+  const declared = catalog.arenas.find(({ id }) => id === declaredArenaId)
+  if (declared === undefined) throw new TypeError("LEAN_ARENA_DECLARED_MISSING")
+  if (declared.status === "active") {
+    if (!declared.schedulable || declared.aliasOf !== undefined) throw new TypeError("LEAN_ARENA_ACTIVE_INVALID")
+    return declared
+  }
+  if (declared.aliasOf === undefined) throw new TypeError("LEAN_ARENA_ALIAS_TARGET_MISSING")
+  const target = catalog.arenas.find(({ id }) => id === declared.aliasOf)
+  if (target === undefined) throw new TypeError("LEAN_ARENA_ALIAS_TARGET_MISSING")
+  if (target.id === declared.id || target.aliasOf === declared.id) throw new TypeError("LEAN_ARENA_ALIAS_CYCLE")
+  if (target.status !== "active") throw new TypeError("LEAN_ARENA_ALIAS_CHAINED")
+  if (!target.schedulable || target.aliasOf !== undefined) throw new TypeError("LEAN_ARENA_ALIAS_TARGET_INACTIVE")
+  if (target.semanticGeometryHash !== declared.semanticGeometryHash) throw new TypeError("LEAN_ARENA_ALIAS_GEOMETRY_MISMATCH")
+  return target
+}
+
 export const buildLeanSchedule = (): readonly LeanCell[] => {
   const base: Omit<LeanCell, "cellId" | "chargedIdentity" | "ordinal" | "pass">[] = []
   for (const arena of CANONICAL_ARENA_CATALOG_V1_37.arenas) {
+    const executionArena = resolveLeanExecutionArena(CANONICAL_ARENA_CATALOG_V1_37, arena.id)
     for (const [bottomFixtureId, topFixtureId] of sidePairs) {
       for (const initiativeSide of ["bottom", "top"] as const) {
         const baseCellId = [
@@ -194,6 +225,9 @@ export const buildLeanSchedule = (): readonly LeanCell[] => {
           arenaId: arena.id,
           arenaLabel: arena.name,
           semanticGeometryHash: arena.semanticGeometryHash,
+          executionArenaId: executionArena.id,
+          executionArenaLabel: executionArena.name,
+          executionSemanticGeometryHash: executionArena.semanticGeometryHash,
           bottomFixtureId,
           topFixtureId,
           initiativeSide,
@@ -314,7 +348,7 @@ const isOid = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{40}$/u.test(value)
 
 const validateLeanExecutionEvidence = (value: unknown): LeanExecutionRecord => {
-  const cellKeys = ["cellId", "baseCellId", "chargedIdentity", "ordinal", "pass", "arenaId", "arenaLabel", "semanticGeometryHash", "bottomFixtureId", "topFixtureId", "initiativeSide"]
+  const cellKeys = ["cellId", "baseCellId", "chargedIdentity", "ordinal", "pass", "arenaId", "arenaLabel", "semanticGeometryHash", "executionArenaId", "executionArenaLabel", "executionSemanticGeometryHash", "bottomFixtureId", "topFixtureId", "initiativeSide"]
   const commonKeys = [...cellKeys, "classification", "cleanupComplete", "orphanedChild", "boardRealism", "integrityValid"]
   if (!exactKeys(value, commonKeys) && !exactKeys(value, [...commonKeys, "requestRealismRoot", "currentFormationRoot", "outcomeRoot", "finalStateRoot", "transitionEventRoot", "runtimeAccountingRoot"])) throw new TypeError("LEAN_EVIDENCE_KEYS")
   const candidate = value as unknown as LeanExecutionRecord
@@ -440,7 +474,7 @@ export const projectLeanV118Response = (
 }
 
 export const currentFormationIsRealistic = (cell: LeanCell): boolean => {
-  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.arenaId)
+  const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.executionArenaId)
   if (!arena) return false
   const inside = ({ x, y }: { x: number; y: number }): boolean =>
     x >= arena.initialBounds.minX && x <= arena.initialBounds.maxX &&
