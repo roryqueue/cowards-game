@@ -374,7 +374,7 @@ export const classifyRequirements = (requirementsText: string) => {
   return classifications
 }
 
-const assertStructuredProofCoverage = (
+export const assertStructuredProofCoverage = (
   validation: string,
   verification: string,
   historical: Inventory,
@@ -436,6 +436,26 @@ const assertReadiness = (value: any, review: any, historical: Inventory) => {
   return value
 }
 
+export const assertDispositionProjection = (disposition: any, aggregate: any): any => {
+  if (!exactKeys(disposition, [
+      "aggregateRoot", "assuranceFindings", "assuranceLimitation", "assuranceStatus",
+      "authority", "contamination", "counts", "dispositionRoot", "producerDisposition",
+      "producerSucceeded", "reproductionPreserved", "schemaVersion", "status",
+    ]) || forbiddenAggregateKeys(disposition).length !== 0 ||
+      disposition?.schemaVersion !== "v1.38-plan-262-94-admission-disposition-v4" ||
+      disposition?.aggregateRoot !== aggregate.aggregateRoot ||
+      !Array.isArray(disposition?.assuranceFindings) || disposition.assuranceFindings.length !== 0 ||
+      canonical(disposition?.counts) !== canonical(aggregate.counts) ||
+      disposition?.assuranceLimitation !== LOCAL_SEAL_LIMITATION ||
+      disposition?.status !== "non_pass" || disposition?.producerDisposition !== "exhausted" ||
+      disposition?.producerSucceeded !== false || disposition?.assuranceStatus !== "clean" ||
+      disposition?.contamination !== false || disposition?.reproductionPreserved !== false)
+    fail("DISPOSITION_BRANCH")
+  assertRooted(disposition, DISPOSITION_DOMAIN, "dispositionRoot", "DISPOSITION_ROOT")
+  assertAllFalse(disposition.authority, "DISPOSITION_AUTHORITY")
+  return disposition
+}
+
 const inspectAggregate = (aggregate: any, disposition: any) => {
   assertAggregateProjection(aggregate)
   const forbiddenProjectionKeys = forbiddenAggregateKeys(aggregate)
@@ -461,19 +481,7 @@ const inspectAggregate = (aggregate: any, disposition: any) => {
     fail("AGGREGATE_SCHEMA")
   assertRooted(aggregate, AGGREGATE_DOMAIN, "aggregateRoot", "AGGREGATE_ROOT")
   assertAllFalse(aggregate.authority, "AGGREGATE_AUTHORITY")
-  if (!exactKeys(disposition, [
-      "aggregateRoot", "assuranceFindings", "assuranceLimitation", "assuranceStatus",
-      "authority", "contamination", "counts", "dispositionRoot", "producerDisposition",
-      "producerSucceeded", "reproductionPreserved", "schemaVersion", "status",
-    ]) || disposition?.aggregateRoot !== aggregate.aggregateRoot ||
-      disposition?.assuranceLimitation !== LOCAL_SEAL_LIMITATION ||
-      disposition?.status !== "non_pass" || disposition?.producerDisposition !== "exhausted" ||
-      disposition?.producerSucceeded !== false || disposition?.assuranceStatus !== "clean" ||
-      disposition?.contamination !== false || disposition?.counts?.freshAccepted !== 0 ||
-      disposition?.counts?.requiredAccepted !== 540 || disposition?.reproductionPreserved !== false)
-    fail("DISPOSITION_BRANCH")
-  assertRooted(disposition, DISPOSITION_DOMAIN, "dispositionRoot", "DISPOSITION_ROOT")
-  assertAllFalse(disposition.authority, "DISPOSITION_AUTHORITY")
+  assertDispositionProjection(disposition, aggregate)
   return {
     aggregateRoot: aggregate.aggregateRoot,
     dispositionRoot: disposition.dispositionRoot,
@@ -682,6 +690,16 @@ const appendMarker = (text: string, name: string, payload: unknown): string => {
   return `${text.trimEnd()}\n\n${open}${JSON.stringify(normalize(payload as Json))} -->\n`
 }
 
+export const assertTrackingUnchanged = (
+  current: Record<string, string>,
+  expected: Record<string, string>,
+): true => {
+  if (canonical(Object.keys(current).sort()) !== canonical(Object.keys(expected).sort()) ||
+      Object.keys(expected).some((repoPath) => current[repoPath] !== expected[repoPath]))
+    fail("LATER_HEAD_TRACKING_DRIFT")
+  return true
+}
+
 const buildFinalProjection = async (root: string) => {
   const review = await assertPublishedReview(root)
   const branch = review.carrier.branch as "pass" | "gaps"
@@ -776,13 +794,28 @@ const checkLaterHead = async (root: string) => {
   const sourceAudit = await auditFinalConvergence(root, final.review.sourceCommit)
   const currentInventory = inventoryAt(root, "HEAD")
   const currentDag = inspectDAG(root, "HEAD", currentInventory)
-  const currentRequirements = classifyRequirements(
-    gitBytes(root, "HEAD", PATHS.requirements).toString("utf8"),
+  const currentRequirementsText = gitBytes(root, "HEAD", PATHS.requirements).toString("utf8")
+  const currentRequirements = classifyRequirements(currentRequirementsText)
+  const currentValidation = gitBytes(root, "HEAD", PATHS.validation).toString("utf8")
+  const currentVerification = gitBytes(root, "HEAD", PATHS.verification).toString("utf8")
+  assertStructuredProofCoverage(
+    currentValidation,
+    currentVerification,
+    sourceAudit.historicalInventory,
   )
   if (currentDag.duplicateIds.length || currentDag.missingDependencies.length || currentDag.cycles.length ||
       currentDag.nodeCount !== sourceAudit.dag.nodeCount ||
       Object.keys(currentRequirements).length !== REQUIREMENT_IDS.length)
     fail("LATER_HEAD_TOPOLOGY")
+  const trackingPaths = [PATHS.requirements, PATHS.roadmap, PATHS.state]
+  assertTrackingUnchanged(
+    Object.fromEntries(trackingPaths.map((repoPath) => [
+      repoPath, gitBytes(root, "HEAD", repoPath).toString("utf8"),
+    ])),
+    Object.fromEntries(trackingPaths.map((repoPath) => [
+      repoPath, gitBytes(root, final.finalCommit, repoPath).toString("utf8"),
+    ])),
+  )
   const aggregateBase = inspectAggregate(
     readJsonAt(root, "HEAD", PATHS.aggregate),
     readJsonAt(root, "HEAD", PATHS.disposition),
@@ -792,6 +825,7 @@ const checkLaterHead = async (root: string) => {
   if (!rawEvidenceRetired || cleanup.rootSuccessorLocks !== 36 ||
       aggregateBase.forbiddenProjectionKeys.length !== 0 ||
       aggregateBase.aggregateRoot !== final.review.aggregate.aggregateRoot ||
+      aggregateBase.dispositionRoot !== final.review.aggregate.dispositionRoot ||
       pathExistsAt(root, "HEAD", PATHS.reproduction) || pathExistsAt(root, "HEAD", PATHS.route12) ||
       !gitBytes(root, "HEAD", PATHS.lifecycle106).equals(
         gitBytes(root, final.review.sourceCommit, PATHS.lifecycle106)))

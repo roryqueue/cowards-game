@@ -8,7 +8,10 @@ import {
   PLAN_128_PATHS,
   REQUIREMENT_IDS,
   assertAggregateProjection,
+  assertDispositionProjection,
   assertFinalReviewGate,
+  assertStructuredProofCoverage,
+  assertTrackingUnchanged,
   auditFinalConvergence,
   classifyRequirements,
   classifyPhase262Paths,
@@ -138,15 +141,46 @@ describe("Plan 262-127 final convergence", () => {
     ))).toThrow(/REQUIREMENT_ADMIT-03_STATUS/)
   })
 
-  it("prospective committed checks reauthenticate review and full later-head audit", () => {
-    const source = readFileSync(
-      "scripts/check-v1-38-plan-262-127-final-convergence-v1.ts",
+  it("prospective later-head gates reject proof, tracking and disposition drift", async () => {
+    const result = await auditFinalConvergence(root)
+    const validation = readFileSync(
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VALIDATION.md",
       "utf8",
     )
-    expect(source).toContain("assertPublishedReviewAtCommit(root, reviewCommit)")
-    expect(source).toContain("auditFinalConvergence(root, final.review.sourceCommit)")
-    expect(source).toContain("inventoryAt(root, \"HEAD\")")
-    expect(source).toContain("inspectCleanup(root)")
+    const verification = readFileSync(
+      ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-VERIFICATION.md",
+      "utf8",
+    )
+    expect(() => assertStructuredProofCoverage(
+      validation.replace(
+        "| ADMIT-01 | COVERED | SATISFIED |",
+        "| ADMIT-01 | COVERED | BLOCKED |",
+      ),
+      verification,
+      result.historicalInventory,
+    )).toThrow(/PROOF_REQUIREMENT_ADMIT-01/)
+    expect(() => assertTrackingUnchanged(
+      { requirements: "phase263PlanningAuthorized:true" },
+      { requirements: "phase263PlanningAuthorized:false" },
+    )).toThrow(/LATER_HEAD_TRACKING_DRIFT/)
+    const aggregate = JSON.parse(readFileSync(
+      ".planning/artifacts/v1.38-plan-262-historical-live-receipt-manifest-v4.json",
+      "utf8",
+    ))
+    const disposition = JSON.parse(readFileSync(
+      ".planning/artifacts/v1.38-plan-262-94-admission-disposition-v4.json",
+      "utf8",
+    ))
+    expect(assertDispositionProjection(disposition, aggregate).dispositionRoot)
+      .toMatch(/^sha256:/)
+    expect(() => assertDispositionProjection({
+      ...disposition,
+      assuranceFindings: ["raw-receipt-owner@example.com"],
+    }, aggregate)).toThrow(/DISPOSITION_BRANCH/)
+    expect(() => assertDispositionProjection({
+      ...disposition,
+      counts: { ...disposition.counts, freshAccepted: 1 },
+    }, aggregate)).toThrow(/DISPOSITION_BRANCH/)
   })
 
   it("allows Phase 263 planning only for exact clean pass", () => {
