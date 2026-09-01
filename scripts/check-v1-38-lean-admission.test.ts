@@ -173,6 +173,16 @@ describe("lean admission custody", () => {
       "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
       "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { buildLeanSchedule();",
     ))).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+    const transitiveChecker = checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      "const unsafeRecoveryHop = (): void => { buildLeanSchedule() }\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { unsafeRecoveryHop();",
+    )
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, transitiveChecker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+    const computedCallback = source.replace(
+      "cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
+      "cleanup: async () => { const recover = checker.recoverLeanCorrectiveOrphan; await recover(repoRoot) }",
+    )
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(computedCallback, checker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL/u)
   })
 
   it("uses a schedule-free exact interruption tombstone", () => {
