@@ -6,6 +6,7 @@ import {
   DEFAULT_RUNTIME_LIMITS,
   TOP_STARTING_POSITIONS,
   encodeCanonicalJson,
+  type RuntimeExecutionServiceResponseV118,
 } from "@cowards/spec"
 import { findAdvancedStrategy } from "../../packages/persistence/src/advanced-strategies.js"
 import { findStarterStrategy } from "../../packages/persistence/src/starter-strategies.js"
@@ -201,6 +202,7 @@ const rootsEqual = (left: LeanExecutionRecord, right: LeanExecutionRecord): bool
 
 export const reduceLeanExecutions = (
   records: readonly LeanExecutionRecord[],
+  forceInvalid = false,
 ): LeanTerminal => {
   const counts = {
     success: 0,
@@ -211,7 +213,7 @@ export const reduceLeanExecutions = (
     unlaunched: 0,
   }
   const seen = new Map<string, LeanExecutionRecord>()
-  let invalid = records.length !== 24
+  let invalid = forceInvalid || records.length !== 24
   for (const record of records) {
     const expected = expectedById.get(record.cellId)
     if (
@@ -242,6 +244,7 @@ export const reduceLeanExecutions = (
   const completeCleanup = records.length === 24 && records.every(
     ({ cleanupComplete, orphanedChild }) => cleanupComplete && !orphanedChild,
   )
+  if (!completeCleanup) invalid = true
   const passes = !invalid && counts.success === 24 && completeCleanup &&
     records.every(({ boardRealism }) => boardRealism) &&
     comparedCells === 12 && mismatchCount === 0
@@ -331,6 +334,31 @@ export const validateLeanManifest = (value: unknown): LeanManifest => {
 }
 
 export const hashLeanValue = canonicalHash
+
+/**
+ * The lean gate compares the explicit public-receipt anchors issued by the
+ * strict v1.18 service. It deliberately does not recursively delete keys or
+ * rewrite arbitrary strings: doing so could erase genuine gameplay drift.
+ */
+export const projectLeanV118Response = (
+  response: RuntimeExecutionServiceResponseV118,
+): Pick<
+  LeanExecutionRecord,
+  "classification" | "outcomeRoot" | "finalStateRoot" |
+    "transitionEventRoot" | "runtimeAccountingRoot"
+> | { readonly classification: "system_failure" } => {
+  if (!response.ok) return Object.freeze({ classification: "system_failure" })
+  return Object.freeze({
+    classification: "success",
+    outcomeRoot: response.result.outcomeCanonicalHash,
+    finalStateRoot: response.result.finalStateCanonicalHash,
+    transitionEventRoot: canonicalHash({
+      chronicleCanonicalHash: response.result.chronicleCanonicalHash,
+      transitionTraceRoot: response.result.transitionTraceRoot,
+    }),
+    runtimeAccountingRoot: canonicalHash(response.result.accounting),
+  })
+}
 
 export const currentFormationIsRealistic = (cell: LeanCell): boolean => {
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.arenaId)

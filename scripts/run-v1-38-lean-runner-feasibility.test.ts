@@ -7,6 +7,7 @@ import {
   LEAN_LIVE_SELECTOR,
   buildCanonicalLeanRequest,
   createExclusiveLeanInvocationMarker,
+  projectLeanPrivateRuntimeResponse,
   runLeanFeasibilityInjected,
   type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
@@ -18,6 +19,7 @@ afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: tr
 const dependencies = (mutate?: Partial<LeanExecutionDependencies>): LeanExecutionDependencies => ({
   now: (() => { let value = 0; return () => ++value })(),
   execute: async () => ({ classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }),
+  terminateActive: async () => ({ cleanupComplete: true, orphanedChild: false }),
   ...mutate,
 })
 
@@ -79,13 +81,49 @@ describe("bounded lean runner", () => {
     expect(result.counts.unlaunched).toBe(23)
   })
 
+  it("turns thrown execution plus failed cleanup into one invalid stop", async () => {
+    let launched = 0
+    const result = await runLeanFeasibilityInjected(dependencies({
+      execute: async () => { launched += 1; throw new Error("fixture crash") },
+      terminateActive: async () => { throw new Error("cleanup crash") },
+    }))
+    expect(launched).toBe(1)
+    expect(result.result).toBe("invalid")
+    expect(result.counts.unlaunched).toBe(23)
+    expect(result.completeCleanup).toBe(false)
+  })
+
+  it("projects the reviewed private runtime seam without request identity normalization", () => {
+    const response = {
+      ok: true,
+      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
+      result: {
+        finalState: { outcome: { winnerPlayerId: "player:bottom", reason: "elimination" }, matchId: "semantic-match" },
+        chronicle: { metadata: { matchId: "semantic-match" }, events: [] },
+        runtimeViolationEventCount: 0,
+        semanticReceipt: { requestId: "unstable-and-deliberately-not-recursed" },
+      },
+    } as never
+    expect(projectLeanPrivateRuntimeResponse(response)).toMatchObject({
+      classification: "success",
+      outcomeRoot: expect.stringMatching(/^sha256:/u),
+      finalStateRoot: expect.stringMatching(/^sha256:/u),
+      transitionEventRoot: expect.stringMatching(/^sha256:/u),
+      runtimeAccountingRoot: expect.stringMatching(/^sha256:/u),
+    })
+  })
+
   it("builds an exact canonical request for every cell", () => {
     for (const cell of buildLeanSchedule()) {
       const request = buildCanonicalLeanRequest(cell)
       expect(request.match.arenaVariant.id).toBe(cell.arenaId)
       expect(request.match.initialInitiativePlayerId).toBe(`player:${cell.initiativeSide}`)
-      expect(request.match.bottomStrategyRevisionId).toContain(cell.bottomFixtureId)
-      expect(request.match.topStrategyRevisionId).toContain(cell.topFixtureId)
+      const fixtureId = (side: "bottom" | "top") => {
+        const metadata = request.strategies[side].metadata
+        return metadata.starterLineage?.starterId ?? metadata.advancedLineage?.advancedId
+      }
+      expect(fixtureId("bottom")).toBe(cell.bottomFixtureId)
+      expect(fixtureId("top")).toBe(cell.topFixtureId)
     }
     expect(LEAN_LIVE_SELECTOR).toBe("--run-reviewed-live-gate")
   })

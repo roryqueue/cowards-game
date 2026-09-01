@@ -86,7 +86,9 @@ describe("lean schedule", () => {
     ]) {
       const records = successfulRecords()
       records[12] = { ...records[12]!, ...mutation }
-      expect(reduceLeanExecutions(records).result).toBe("non_pass")
+      expect(reduceLeanExecutions(records).result).toBe(
+        mutation.cleanupComplete === false || mutation.orphanedChild === true ? "invalid" : "non_pass",
+      )
     }
   })
 })

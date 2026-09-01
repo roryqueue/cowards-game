@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+import { hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
@@ -52,7 +53,7 @@ describe("lean admission custody", () => {
     const review = {
       schemaVersion: "v1.38-lean-runner-source-review-v1",
       sourceCommit: manifest.source.commit,
-      manifestRoot: "sha256:" + "a".repeat(64),
+      manifestRoot: hashLeanValue(manifest),
       findingCount: 0,
       findings: [],
       admitsExecution: false,
@@ -63,6 +64,8 @@ describe("lean admission custody", () => {
     expect(() => checkLeanReadiness(manifest, review, {
       schemaVersion: "v1.38-lean-runner-readiness-v1",
       sourceCommit: manifest.source.commit,
+      manifestRoot: hashLeanValue(manifest),
+      sourceReviewRoot: hashLeanValue(review),
       findingCount: 0,
       plan151Eligible: true,
       liveInvocationLimit: 1,
