@@ -5,10 +5,12 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
+import { buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT, LEAN_DEADLINE_MS, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR,
   LEAN_CORRECTIVE_SELECTOR,
+  LEAN_CELL_DEADLINE_MS,
+  LEAN_CLEANUP_DEADLINE_MS,
   LEAN_LIVE_SELECTOR,
   buildCanonicalLeanRequestV118,
   createSupervisedLeanExecutionDependencies,
@@ -204,6 +206,16 @@ describe("bounded lean runner", () => {
     expect(LEAN_LIVE_SELECTOR).toBe("--run-reviewed-live-gate")
     expect(LEAN_CORRECTIVE_SELECTOR).toBe("--run-reviewed-corrective-gate")
     expect(LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR).toBe("--recover-reviewed-corrective-interruption")
+  })
+
+  it("uses a test-only fixture budget without changing production deadlines", () => {
+    expect(LEAN_DEADLINE_MS).toBe(15 * 60 * 1_000)
+    expect(LEAN_CELL_DEADLINE_MS).toBe(45_000)
+    expect(LEAN_CLEANUP_DEADLINE_MS).toBe(2_000)
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.test.ts", "utf8")
+    const start = source.indexOf('it("builds an exact canonical request for every cell"')
+    const end = source.indexOf('it("uses a test-only fixture budget', start)
+    expect(source.slice(start, end)).toMatch(/\}, 30_000\)\s*$/u)
   })
 
   it("always recovers and postchecks the normal corrective wrapper", async () => {
