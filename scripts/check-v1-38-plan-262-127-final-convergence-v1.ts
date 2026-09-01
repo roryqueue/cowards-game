@@ -657,8 +657,10 @@ const sourceFilesAt = (root: string, commit: string): SourceFile[] =>
     }
   })
 
-const buildReview = async (root: string) => {
-  const sourceCommit = frozenSourceCommit(root)
+const buildReview = async (
+  root: string,
+  sourceCommit = frozenSourceCommit(root),
+) => {
   const audit = await auditFinalConvergence(root, PLAN_106_COMMIT)
   const body = {
     schemaVersion: REVIEW_SCHEMA,
@@ -776,7 +778,13 @@ export const assertFinalReviewGate = (value: any, expectedSourceCommit: string):
 }
 
 const assertPublishedReviewAtCommit = async (root: string, publicationCommit: string) => {
-  const expected = await buildReview(root)
+  const publicationParents = git(root, ["show", "-s", "--format=%P", publicationCommit])
+    .split(/\s+/u).filter(Boolean)
+  if (publicationParents.length !== 1 ||
+      canonical(changedPaths(root, publicationCommit)) !==
+        canonical([PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127].sort()))
+    fail("PUBLISHED_REVIEW_COMMIT")
+  const expected = await buildReview(root, publicationParents[0])
   const actual = readJsonAt(root, publicationCommit, PATHS.reviewCarrier)
   assertFinalReviewGate(actual, expected.carrier.sourceCommit)
   if (canonical(actual) !== canonical(expected.carrier) ||
@@ -784,9 +792,7 @@ const assertPublishedReviewAtCommit = async (root: string, publicationCommit: st
       gitBytes(root, publicationCommit, PATHS.summary127).toString("utf8") !== expected.summary)
     fail("PUBLISHED_REVIEW_BYTES")
   assertRooted(actual, REVIEW_DOMAIN, "reviewRoot", "PUBLISHED_REVIEW_ROOT")
-  if (canonical(changedPaths(root, publicationCommit)) !==
-      canonical([PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127].sort()) ||
-      git(root, ["show", "-s", "--format=%P", publicationCommit]) !== expected.carrier.sourceCommit)
+  if (publicationParents[0] !== expected.carrier.sourceCommit)
     fail("PUBLISHED_REVIEW_COMMIT")
   return { ...expected, publicationCommit }
 }
