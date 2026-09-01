@@ -121,7 +121,7 @@ describe("Plan 262-95 committed inventory", () => {
     expect(inventory.summaries.length).toBeGreaterThan(0)
     expect(inventory.reviews.length).toBeGreaterThan(0)
     expect(inventory.validations).toHaveLength(1)
-    expect(inventory.verifications).toHaveLength(1)
+    expect(inventory.verifications).toHaveLength(2)
     expect(inventory.allPaths).toEqual(
       [...inventory.allPaths].sort((left, right) => left.localeCompare(right)),
     )

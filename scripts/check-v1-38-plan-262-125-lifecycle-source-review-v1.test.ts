@@ -18,6 +18,14 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const temporaryRoots: string[] = []
 
+const historicalSnapshotRoot = (): string => {
+  const root = mkdtempSync(path.join(tmpdir(), "v138-plan-125-historical-"))
+  temporaryRoots.push(root)
+  execFileSync("git", ["clone", "-q", "--no-hardlinks", repoRoot, root])
+  execFileSync("git", ["checkout", "-q", "--detach", EXPECTED_SOURCE_COMPLETION_COMMIT], { cwd: root })
+  return root
+}
+
 afterEach(() => {
   while (temporaryRoots.length)
     rmSync(temporaryRoots.pop()!, { recursive: true, force: true })
@@ -25,7 +33,7 @@ afterEach(() => {
 
 describe("Plan 262-125 exact source custody", () => {
   it("pins the implementation and three-file completion commits", async () => {
-    const review = await buildLifecycleSourceReview(repoRoot)
+    const review = await buildLifecycleSourceReview(historicalSnapshotRoot())
     expect(review.evidence.implementationCommit).toBe(
       EXPECTED_IMPLEMENTATION_COMMIT,
     )
@@ -40,7 +48,7 @@ describe("Plan 262-125 exact source custody", () => {
   })
 
   it("finds literal zero gaps in the exact committed subject", async () => {
-    const review = await buildLifecycleSourceReview(repoRoot)
+    const review = await buildLifecycleSourceReview(historicalSnapshotRoot())
     expect(review.findings).toEqual([])
     expect(review.carrier).toMatchObject({
       findingCount: 0,
@@ -117,7 +125,7 @@ describe("Plan 262-125 hostile source mutations", () => {
 
 describe("Plan 262-125 runtime and effect tripwires", () => {
   it("independently observes exhausted 0/540 and all authority false", async () => {
-    const audit = await auditLifecycleSource(repoRoot)
+    const audit = await auditLifecycleSource(historicalSnapshotRoot())
     expect(audit.observations.actualBranch).toMatchObject({
       branch: "gaps",
       producerDisposition: "exhausted",
@@ -133,7 +141,7 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
   })
 
   it("covers all dynamic classes and all sixteen requirements", async () => {
-    const audit = await auditLifecycleSource(repoRoot)
+    const audit = await auditLifecycleSource(historicalSnapshotRoot())
     expect(audit.observations.requirementIds).toHaveLength(16)
     expect(audit.observations.inventoryCounts).toMatchObject({
       activePlans: expect.any(Number),
@@ -148,7 +156,7 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
   })
 
   it("proves source and prospective selectors do not write watched paths", async () => {
-    const audit = await auditLifecycleSource(repoRoot)
+    const audit = await auditLifecycleSource(historicalSnapshotRoot())
     expect(audit.observations.noWriteSelectors).toEqual({
       sourceOnly: true,
       prospective: true,
@@ -179,7 +187,7 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
   })
 
   it("rejects every false Plan125/126 gate before a writer effect", async () => {
-    const audit = await auditLifecycleSource(repoRoot)
+    const audit = await auditLifecycleSource(historicalSnapshotRoot())
     expect(audit.observations.closedGateMutations).toBeGreaterThanOrEqual(16)
     expect(audit.observations.writerCalls).toBe(0)
   })
@@ -187,9 +195,7 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
 
 describe("Plan 262-125 publication", () => {
   it("checks a literal-zero carrier from a strict later HEAD", async () => {
-    const root = mkdtempSync(path.join(tmpdir(), "v138-plan-125-published-"))
-    temporaryRoots.push(root)
-    execFileSync("git", ["clone", "-q", repoRoot, root])
+    const root = historicalSnapshotRoot()
     execFileSync("git", ["config", "user.email", "fixture@example.invalid"], { cwd: root })
     execFileSync("git", ["config", "user.name", "fixture"], { cwd: root })
     const review = await buildLifecycleSourceReview(root)
@@ -205,5 +211,5 @@ describe("Plan 262-125 publication", () => {
     expect(checked.carrier.findingCount).toBe(0)
     expect(checked.carrier.plan126Eligible).toBe(true)
     expect(checked.carrier.authorizesExecution).toBe(false)
-  })
+  }, 180_000)
 })

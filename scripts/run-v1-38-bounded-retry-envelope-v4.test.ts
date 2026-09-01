@@ -9,12 +9,41 @@ import {
   acquireV138RetryV4OwnerLease,
   runV138BoundedRetryV4Controller,
 } from "./run-v1-38-bounded-retry-envelope-v4.js"
-import { V138_BOUNDED_RETRY_V4_POLICY, createV138InactiveRetryV4Envelope } from "./lib/v1-38-bounded-retry-envelope-v4.js"
+import {
+  V138_BOUNDED_RETRY_V4_IDENTITIES,
+  V138_BOUNDED_RETRY_V4_POLICY,
+  appendV138RetryV4JournalRecord,
+  createV138InactiveRetryV4Envelope,
+} from "./lib/v1-38-bounded-retry-envelope-v4.js"
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const SHA = `sha256:${"a".repeat(64)}` as const
 const fixtureEnvelope = () => createV138InactiveRetryV4Envelope({ sourceRoot: SHA, reviewRoot: SHA, sealRoot: SHA,
   protectedHistoryRoot: SHA, protectedHistoricalIdentities: [] })
+const admittedJournal = (includeSupervisionRoot = true) => {
+  const envelope = fixtureEnvelope()
+  let records: readonly any[] = []
+  let atMilliseconds = 0
+  const append = (event: any) => {
+    records = appendV138RetryV4JournalRecord(
+      records,
+      event,
+      atMilliseconds++,
+      envelope.envelopeRoot,
+    )
+  }
+  const preflightIdentity = V138_BOUNDED_RETRY_V4_IDENTITIES.preflights[0]
+  const routeIdentity = V138_BOUNDED_RETRY_V4_IDENTITIES.routes[0]
+  const identities = V138_BOUNDED_RETRY_V4_IDENTITIES.calibrations.slice(0, 8)
+  append({ kind: "reserve_preflight", identity: preflightIdentity, owner: "fixture" })
+  append({ kind: "observe_preflight", identity: preflightIdentity, owner: "fixture",
+    effectiveAvailableBasisPoints: 3000 })
+  append({ kind: "reserve_route", identity: routeIdentity, owner: "fixture", preflightIdentity })
+  append({ kind: "reserve_calibration", routeIdentity, owner: "fixture", identities })
+  append({ kind: "finish_calibration", routeIdentity, owner: "fixture", status: "admitted",
+    completeCleanup: true, ...(includeSupervisionRoot ? { supervisionRoot: SHA } : {}) })
+  return { envelope, records }
+}
 
 describe("bounded retry v4 lease wiring and synthetic controller", () => {
   it("keeps the production entry fail-closed behind committed review and invocation custody", () => {
@@ -84,5 +113,41 @@ describe("bounded retry v4 lease wiring and synthetic controller", () => {
     } })
     expect(result.state).toMatchObject({ disposition: "succeeded", calibrationIdentitiesCharged: 8,
       reproductionIdentitiesCharged: 540, acceptedCells: 540 })
+  })
+
+  it("recovers the durable admitted supervision root across a controller restart", async () => {
+    const { envelope, records } = admittedJournal()
+    let now = 100, calibrationCalls = 0, reproductionCalls = 0
+    const result = await runV138BoundedRetryV4Controller({ envelope, owner: "fixture", records, effects: {
+      monotonicMilliseconds: () => now++, waitUntil: async target => { now = target },
+      observePreflight: async () => ({ available: false }),
+      runCalibration: async () => { calibrationCalls++; return { status: "system_failure", completeCleanup: false } },
+      runReproduction: async ({ identities, supervisionRoot }) => {
+        reproductionCalls++
+        expect(supervisionRoot).toBe(SHA)
+        return { status: "passed_exact", acceptedCells: identities.length, completeCleanup: true,
+          reproductionRoot: SHA }
+      },
+      appendDurableRecord: () => {},
+    } })
+    expect(calibrationCalls).toBe(0)
+    expect(reproductionCalls).toBe(1)
+    expect(result.state).toMatchObject({ disposition: "succeeded", reproductionIdentitiesCharged: 540,
+      acceptedCells: 540 })
+  })
+
+  it("rejects missing admitted supervision custody before charging or effects", async () => {
+    const { envelope, records } = admittedJournal(false)
+    let appended = 0, reproductions = 0
+    await expect(runV138BoundedRetryV4Controller({ envelope, owner: "fixture", records, effects: {
+      monotonicMilliseconds: () => 100, waitUntil: async () => {},
+      observePreflight: async () => ({ available: false }),
+      runCalibration: async () => ({ status: "system_failure", completeCleanup: false }),
+      runReproduction: async () => { reproductions++; return { status: "system_failure", acceptedCells: 0,
+        completeCleanup: false } },
+      appendDurableRecord: () => { appended++ },
+    } })).rejects.toThrow(/ADMITTED_SUPERVISION_ROOT/)
+    expect(appended).toBe(0)
+    expect(reproductions).toBe(0)
   })
 })
