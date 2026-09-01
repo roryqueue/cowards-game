@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "v1.38-lean-runner-source-review-v1",
+  "sourceCommit": "880ffcaac0d571bba66677891aadff2f1a428d02",
+  "manifestRoot": "sha256:556f3f52752322fff373f49d2ac68c7f19b32a743741dd77988b551a39eff047",
+  "findingCount": 6,
+  "findings": [
+    {
+      "id": "B1",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Terminal result is trusted rather than rederived from counts, determinism, cleanup, and evidence."
+    },
+    {
+      "id": "B2",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The parent resolves on the result message before child exit, so serial execution and complete cleanup are not proven."
+    },
+    {
+      "id": "B3",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Invocation lineage is not fully joined to source, manifest, source review, and readiness."
+    },
+    {
+      "id": "B4",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Final tracking uses ambiguous substring checks and accepts contradictory branch state."
+    },
+    {
+      "id": "B5",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The aggregate terminal lacks the privacy-safe per-cell projection needed for independent charge, realism, and cross-pass root adjudication."
+    },
+    {
+      "id": "W1",
+      "severity": "warning",
+      "status": "open",
+      "summary": "The required focused suite can exceed the default five-second test timeout."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
