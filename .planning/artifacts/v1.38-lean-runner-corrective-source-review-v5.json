@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-review-v5",
+  "sourceCommit": "c1bda8cf8a42c1e4a26ccb1a44129f48f826c00e",
+  "sourceTree": "bce72f68971e896fef585c609da4279d6fe743e0",
+  "manifestRoot": "sha256:194a64af7c9436e1ccf2eab91553ecdb63368216092d091d0533d71c74c1e857",
+  "findingCount": 4,
+  "findings": [
+    {
+      "id": "CR-170-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The v5 manifest does not bind the committed Plan 169 summary identity required by Plan 170."
+    },
+    {
+      "id": "CR-170-02",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Recovery proof accepts capability calls whose security-relevant arguments are not exactly proven."
+    },
+    {
+      "id": "CR-170-03",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Name-based call and constructor allowlists can be shadowed or rebound to arbitrary reachable behavior."
+    },
+    {
+      "id": "WR-170-01",
+      "severity": "warning",
+      "status": "open",
+      "summary": "Module indexing silently accepts some ambiguous alias/import collisions instead of failing closed."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
