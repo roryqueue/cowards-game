@@ -591,6 +591,7 @@ export interface V138BoundedRetryV4ControllerEffects {
     input: Readonly<{
       routeIdentity: V138RetryV4RouteIdentity
       identities: readonly V138RetryV4ReproductionIdentity[]
+      supervisionRoot: V138RetrySha256
     }>,
   ) => Promise<
     Readonly<{
@@ -796,6 +797,10 @@ export const runV138BoundedRetryV4Controller = async (
     admittedAwaitingReproduction !== undefined
   ) {
     const routeIdentity = admittedAwaitingReproduction.routeIdentity
+    const supervisionRoot = admittedAwaitingReproduction.supervisionRoot
+    if (!isSha256(supervisionRoot)) {
+      fail("V138_RETRY_ADMITTED_SUPERVISION_ROOT_INVALID")
+    }
     if (deadlineGuard()) return finish()
     append({
       kind: "reserve_reproduction",
@@ -811,6 +816,7 @@ export const runV138BoundedRetryV4Controller = async (
       reproduction = await input.effects.runReproduction({
         routeIdentity,
         identities: V138_BOUNDED_RETRY_V4_IDENTITIES.reproduction,
+        supervisionRoot,
       })
     } catch {
       reproduction = {
@@ -917,6 +923,10 @@ export const runV138BoundedRetryV4Controller = async (
     if (calibration.status !== "admitted" || !calibration.completeCleanup) {
       continue
     }
+    if (!isSha256(calibration.supervisionRoot)) {
+      fail("V138_RETRY_ADMITTED_SUPERVISION_ROOT_INVALID")
+    }
+    const supervisionRoot = calibration.supervisionRoot
 
     if (deadlineGuard()) return finish()
     append({
@@ -933,6 +943,7 @@ export const runV138BoundedRetryV4Controller = async (
       reproduction = await input.effects.runReproduction({
         routeIdentity,
         identities: V138_BOUNDED_RETRY_V4_IDENTITIES.reproduction,
+        supervisionRoot,
       })
     } catch {
       reproduction = {
@@ -1462,7 +1473,6 @@ export const createV138V4ProductionControllerEffects = (
   repoRoot: string,
   appendDurableRecord: (record: V138RetryV4JournalRecord) => void,
 ): V138BoundedRetryV4ControllerEffects => {
-  let admittedCalibrationRoot: V138RetrySha256 | undefined
   return {
     monotonicMilliseconds: () => Number(process.hrtime.bigint() / 1_000_000n),
     waitUntil: async (target) => {
@@ -1499,8 +1509,6 @@ export const createV138V4ProductionControllerEffects = (
           observeDarwinHeadroomOwned(executeMemoryPressure),
         repoRoot,
       })
-      admittedCalibrationRoot =
-        receipt.status === "admitted" ? receipt.calibrationRoot : undefined
       return {
         status:
           receipt.status === "admitted"
@@ -1513,15 +1521,11 @@ export const createV138V4ProductionControllerEffects = (
         supervisionRoot: receipt.calibrationRoot,
       }
     },
-    runReproduction: async () => {
-      if (admittedCalibrationRoot === undefined) {
-        fail("V138_RETRY_ADMITTED_CALIBRATION_REQUIRED")
-      }
-      const calibrationRoot = admittedCalibrationRoot as V138RetrySha256
+    runReproduction: async ({ supervisionRoot }) => {
       const inventory = enumerateV138CurrentMatrix(repoRoot)
       const result = await executeV138ParallelMatrix({
         inventory,
-        admittedCalibrationRoot: calibrationRoot,
+        admittedCalibrationRoot: supervisionRoot,
         runner: createV138SubprocessShardRunner(repoRoot, {
           useLegacyHostMemory: false,
         }),
@@ -1531,7 +1535,7 @@ export const createV138V4ProductionControllerEffects = (
       })
       const artifact = buildV138ReproductionV18({
         execution: result,
-        admittedCalibrationRoot: calibrationRoot,
+        admittedCalibrationRoot: supervisionRoot,
       })
       const passed = artifact.status === "passed_exact"
       return {

@@ -20,13 +20,13 @@ import {
   auditFinalConvergence,
   classifyRequirements,
   classifyPhase262Paths,
+  checkLaterHead,
   deriveHistoricalInventory,
   publishReviewSet,
   projectFinalAuthority,
 } from "./check-v1-38-plan-262-127-final-convergence-v1"
 
 const root = process.cwd()
-const TSX_IMPORT = import.meta.resolve("tsx")
 
 describe("Plan 262-127 final convergence", () => {
   it("freezes all 16 requirements exactly once", () => {
@@ -334,7 +334,7 @@ describe("Plan 262-127 final convergence", () => {
     ])
   })
 
-  it("rejects committed final-carrier authority drift from a later HEAD", () => {
+  it("rejects committed final-carrier authority drift from a later HEAD", async () => {
     const fixture = mkdtempSync(path.join(tmpdir(), "plan127-later-head-drift-"))
     try {
       execFileSync("git", ["clone", "-q", "--no-hardlinks", root, fixture])
@@ -346,11 +346,7 @@ describe("Plan 262-127 final convergence", () => {
       writeFileSync(path.join(fixture, carrierPath), `${JSON.stringify(carrier)}\n`)
       execFileSync("git", ["add", carrierPath], { cwd: fixture })
       execFileSync("git", ["commit", "-q", "-m", "authority drift"], { cwd: fixture })
-      expect(() => execFileSync(
-        process.execPath,
-        ["--import", TSX_IMPORT, "scripts/check-v1-38-plan-262-127-final-convergence-v1.ts", "--check-later-head"],
-        { cwd: fixture, encoding: "utf8", timeout: 180_000, stdio: "pipe" },
-      )).toThrow(/LATER_HEAD_PLAN_128_DRIFT/)
+      await expect(checkLaterHead(fixture)).rejects.toThrow(/LATER_HEAD_PLAN_128_DRIFT/)
     } finally {
       rmSync(fixture, { recursive: true, force: true })
     }

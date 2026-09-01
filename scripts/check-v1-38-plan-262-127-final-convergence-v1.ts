@@ -873,8 +873,9 @@ const writeFinalProjection = async (root: string) => {
   return projection
 }
 
-const checkFinalProjection = async (root: string) => {
-  const finalCommit = git(root, ["log", "-1", "--format=%H", "--", PATHS.finalCarrier])
+const checkFinalProjection = async (root: string, expectedFinalCommit?: string) => {
+  const finalCommit = expectedFinalCommit ??
+    git(root, ["log", "-1", "--format=%H", "--", PATHS.finalCarrier])
   const carrier = readJsonAt(root, finalCommit, PATHS.finalCarrier)
   const reviewCommit = carrier?.convergenceReviewCommit
   if (!/^[a-f0-9]{40}$/u.test(reviewCommit ?? "") || !isAncestor(root, reviewCommit, finalCommit) ||
@@ -897,11 +898,15 @@ const checkFinalProjection = async (root: string) => {
   return { finalCommit, carrier, reviewCommit, review }
 }
 
-const checkLaterHead = async (root: string) => {
-  const final = await checkFinalProjection(root)
+export const checkLaterHead = async (root: string) => {
   const anchorCommit = git(root, ["log", "-1", "--format=%H", "--", PATHS.anchor129])
   const parents = git(root, ["show", "-s", "--format=%P", anchorCommit]).split(" ").filter(Boolean)
-  if (parents.length !== 1 || parents[0] !== final.finalCommit ||
+  if (parents.length !== 1) fail("LATER_HEAD_ANCHOR")
+  if (PLAN_128_PATHS.some((repoPath) =>
+    !gitBytes(root, "HEAD", repoPath).equals(gitBytes(root, parents[0]!, repoPath))))
+    fail("LATER_HEAD_PLAN_128_DRIFT")
+  const final = await checkFinalProjection(root, parents[0])
+  if (parents[0] !== final.finalCommit ||
       canonical(changedPaths(root, anchorCommit)) !== canonical([PATHS.anchor129]) ||
       !isAncestor(root, anchorCommit, "HEAD")) fail("LATER_HEAD_ANCHOR")
   const anchor = gitBytes(root, anchorCommit, PATHS.anchor129).toString("utf8")
