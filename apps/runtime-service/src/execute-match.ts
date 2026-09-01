@@ -84,6 +84,7 @@ import { createPinnedPythonContainerRuntime } from "./pinned-python-container-ru
 import { createPinnedWasmtimeContainerRuntime } from "./pinned-wasmtime-container-runtime.js"
 import {
   createCurrentReplay,
+  canonicalReplayTerrain,
   createCandidateReplayV119,
   createVersionedReplayV117,
   recordChronicleFromExecution,
@@ -1268,7 +1269,7 @@ const projectFinalStateForReplay = (state: GameState): ReplayState => ({
         lastSuccessfulMoveDirection,
       }),
     ),
-    terrainStones: state.terrainStones.map((position) => ({ ...position })),
+    terrainStones: canonicalReplayTerrain(state.terrainStones),
   },
   ...(state.outcome === undefined ? {} : { outcome: state.outcome }),
 })
@@ -1546,7 +1547,15 @@ const executeParsedRequest = (
     reconstructedTerminalState === undefined ||
     !reconstructedTerminalState.ok ||
     !isDeepStrictEqual(
-      reconstructedTerminalState.state,
+      {
+        ...reconstructedTerminalState.state,
+        board: {
+          ...reconstructedTerminalState.state.board,
+          terrainStones: canonicalReplayTerrain(
+            reconstructedTerminalState.state.board.terrainStones,
+          ),
+        },
+      },
       projectFinalStateForReplay(recorded.finalState),
     ) ||
     !isDeepStrictEqual(recorded.finalState, result.execution.result.state) ||

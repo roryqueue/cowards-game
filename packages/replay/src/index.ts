@@ -25,6 +25,7 @@ export {
   type ReplayCompatibilityIdentityResolution,
 } from "./validate.js"
 export * from "./replay-transition.js"
+export { canonicalReplayTerrain } from "./reconstruct.js"
 export * from "./reconstruct.js"
 export * from "./project.js"
 export * from "./debug-explanations.js"

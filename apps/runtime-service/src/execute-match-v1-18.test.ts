@@ -12,6 +12,7 @@ import {
   INITIAL_BOUNDS,
   RUNTIME_EXECUTION_SERVICE_VERSION,
   RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+  createSetScenarioV137,
   createRuntimeSemanticTupleV118,
   encodeCanonicalJson,
   type JsonValue,
@@ -30,9 +31,11 @@ import {
 } from "./execute-match.js"
 import {
   bindFixtureCandidateMatchAuthorityV119,
+  createFixtureDeploymentLaneIdentity,
   createFixtureRuntimeEvidenceAuthorityLoader,
   createFixtureRuntimeExecutionEvidenceSnapshot,
 } from "./runtime-execution-evidence.test-support.js"
+import { executeCurrentMatchServiceTestSupport } from "./runtime-execution-current-match.test-support.js"
 import { createRuntimeServiceConfig } from "./runtime-config.js"
 import { createRuntimeExecutionHttpServer } from "./server.js"
 
@@ -73,34 +76,97 @@ if (standardCross === undefined) {
 }
 const nestedRequest: RuntimeExecutionServiceRequest =
   bindFixtureCandidateMatchAuthorityV119({
-  contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
-  kind: "executeMatch",
-  requestId: "request:v118:nested",
-  match: {
-    matchId: "match:v118",
-    seed: "seed:v118",
-    arenaVariant: {
-      id: standardCross.id,
-      name: standardCross.name,
-      initialBounds: { ...standardCross.initialBounds },
-      terrainStones: standardCross.terrainStones.map((position) => ({
-        ...position,
-      })),
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION,
+    kind: "executeMatch",
+    requestId: "request:v118:nested",
+    match: {
+      matchId: "match:v118",
+      seed: "seed:v118",
+      arenaVariant: {
+        id: "arena:v118",
+        name: "v1.18 semantic admission",
+        initialBounds: INITIAL_BOUNDS,
+        terrainStones: [],
+      },
+      bottomPlayerId: "player:bottom",
+      topPlayerId: "player:top",
+      bottomStrategyRevisionId: bottom.id,
+      topStrategyRevisionId: top.id,
+      maxPhases: 1,
     },
-    bottomPlayerId: "player:bottom",
-    topPlayerId: "player:top",
-    bottomStrategyRevisionId: bottom.id,
-    topStrategyRevisionId: top.id,
-    maxPhases: 1,
-  },
-  strategies: { bottom, top },
-  limits: DEFAULT_RUNTIME_LIMITS,
-  evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
-    fixtureId: "v118-semantic-admission",
-    bottom,
-    top,
-  }),
+    strategies: { bottom, top },
+    limits: DEFAULT_RUNTIME_LIMITS,
+    evidenceSnapshot: createFixtureRuntimeExecutionEvidenceSnapshot({
+      fixtureId: "v118-semantic-admission",
+      bottom,
+      top,
+    }),
   })
+
+const standardCrossNestedRequest = (): RuntimeExecutionServiceRequest => {
+  const candidateMatch = nestedRequest.match.candidateMatch
+  if (candidateMatch === undefined) {
+    return {
+      ...nestedRequest,
+      match: {
+        ...nestedRequest.match,
+        arenaVariant: {
+          id: standardCross.id,
+          name: standardCross.name,
+          initialBounds: { ...standardCross.initialBounds },
+          terrainStones: standardCross.terrainStones.map((position) => ({
+            ...position,
+          })),
+        },
+      },
+    }
+  }
+  const scenario = createSetScenarioV137({
+    arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion,
+    arenaSemanticGeometryHash: standardCross.semanticGeometryHash,
+    entrantA: {
+      entrantKey: nestedRequest.evidenceSnapshot.entrants.bottom.entrantKey,
+      playerId: nestedRequest.match.bottomPlayerId,
+    },
+    entrantB: {
+      entrantKey: nestedRequest.evidenceSnapshot.entrants.top.entrantKey,
+      playerId: nestedRequest.match.topPlayerId,
+    },
+    baseSeed: nestedRequest.match.seed,
+  })
+  const condition = scenario.conditions[0]!
+  return {
+    ...nestedRequest,
+    match: {
+      ...nestedRequest.match,
+      arenaVariant: {
+        id: standardCross.id,
+        name: standardCross.name,
+        initialBounds: { ...standardCross.initialBounds },
+        terrainStones: standardCross.terrainStones.map((position) => ({
+          ...position,
+        })),
+      },
+      initialInitiativePlayerId: condition.initialInitiativePlayerId,
+      candidateMatch: {
+        ...candidateMatch,
+        arenaVariantId: standardCross.id,
+        arenaCatalogVersion: scenario.arenaCatalogVersion,
+        arenaSemanticGeometryHash: scenario.arenaSemanticGeometryHash,
+        setPolicyVersion: scenario.setPolicyVersion,
+        scenarioId: scenario.scenarioId,
+        conditionId: condition.conditionId,
+        conditionOrdinal: condition.ordinal,
+        conditionSuffix: condition.suffix,
+        requestIdentity: condition.requestIdentity,
+        bottomEntrantKey: condition.bottomEntrantKey,
+        topEntrantKey: condition.topEntrantKey,
+        initialInitiativeEntrantKey: condition.initialInitiativeEntrantKey,
+        initialInitiativePlayerId: condition.initialInitiativePlayerId,
+      },
+    },
+  }
+}
 
 const sha256 = (value: string | Uint8Array): `sha256:${string}` =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -178,11 +244,12 @@ const runtime: StrategyRuntime = {
 }
 
 const execution = () => {
-  const { candidateMatch, ...match } = nestedRequest.match as typeof nestedRequest.match & {
-    readonly candidateMatch?:
-      | RuntimeExecutionCandidateMatchAuthorityV119
-      | undefined
-  }
+  const { candidateMatch, ...match } =
+    nestedRequest.match as typeof nestedRequest.match & {
+      readonly candidateMatch?:
+        | RuntimeExecutionCandidateMatchAuthorityV119
+        | undefined
+    }
   const matchExecution =
     candidateMatch === undefined
       ? MATCH_KERNEL.runMatch({
@@ -191,8 +258,7 @@ const execution = () => {
         })
       : MATCH_KERNEL.runMatchV119({
           ...match,
-          initialInitiativePlayerId:
-            candidateMatch.initialInitiativePlayerId,
+          initialInitiativePlayerId: candidateMatch.initialInitiativePlayerId,
           runtime: adaptRuntimeForCurrentKernel(runtime),
         })
   const recorded = recordChronicleFromExecution({
@@ -239,46 +305,32 @@ const execution = () => {
 
 const validExecutionFixture = execution()
 
-const withCanonicalStandardCrossTerrain = (
-  state: typeof validExecutionFixture.execution extends { kind: "completed" }
-    ? typeof validExecutionFixture.execution.result.state
-    : never,
-) => ({
-  ...state,
-  terrainStones: standardCross.terrainStones.map((position) => ({
-    ...position,
-  })),
-})
-
-const differentlyOrderedStandardCrossExecution = () => {
+const withTerminalTerrain = (
+  terrainStones: readonly Readonly<{ x: number; y: number }>[],
+): PreparedRuntimeServiceExecutionV118 => {
   const current = validExecutionFixture
-  if (current.execution.kind !== "completed") {
+  if (current.execution.kind !== "completed" || !current.response.ok) {
     throw new Error("fixture execution must complete")
   }
-  const finalState = withCanonicalStandardCrossTerrain(
-    current.execution.result.state,
-  )
+  const finalState = {
+    ...current.execution.result.state,
+    terrainStones: terrainStones.map(({ x, y }) => ({ x, y })),
+  }
   return {
     ...current,
     response: {
       ...current.response,
-      result: {
-        ...current.response.result,
-        finalState,
-      },
+      result: { ...current.response.result, finalState },
     },
     execution: {
       ...current.execution,
-      result: {
-        ...current.execution.result,
-        state: finalState,
-      },
+      result: { ...current.execution.result, state: finalState },
       recorderMaterial: {
         ...current.execution.recorderMaterial,
         finalState,
       },
     },
-  } as PreparedRuntimeServiceExecutionV118
+  }
 }
 
 const dependencies = (
@@ -315,19 +367,65 @@ describe("prepared runtime service v1.18 semantic admission", () => {
       { x: 3, y: 4 },
     ])
 
-    const response = executePreparedRuntimeServiceRequestV118(
-      request(),
-      dependencies(differentlyOrderedStandardCrossExecution()),
+    const runtimeConfig = createRuntimeServiceConfig({
+      strategyExecutionAdapter: "worker-thread",
+      semanticReceiptSecret: "standard-cross-terminal-binding-secret",
+      resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+    })
+    const standardCrossRequest = standardCrossNestedRequest()
+    const response = executeCurrentMatchServiceTestSupport(
+      standardCrossRequest,
+      runtimeConfig,
+      {
+        authorityLoader: createFixtureRuntimeEvidenceAuthorityLoader(
+          standardCrossRequest.evidenceSnapshot,
+          standardCrossRequest.strategies,
+        ),
+      },
     )
+    if (!response.ok) {
+      throw new Error(JSON.stringify(response.systemFailure))
+    }
 
     expect(response).toMatchObject({
       ok: true,
       kind: "executionResult",
       result: {
-        resultClass: "success",
-        mutationStatus: "committed",
+        privacy: "internal_runtime_result",
+        finalState: {
+          arenaVariant: { id: standardCross.id },
+          terrainStones: standardCross.terrainStones,
+        },
       },
     })
+  })
+
+  it("keeps non-order terrain mutations behind the integrity boundary", () => {
+    const terrainMutations = [
+      standardCross.terrainStones.slice(0, -1),
+      [
+        ...standardCross.terrainStones.slice(0, -1),
+        standardCross.terrainStones[0]!,
+      ],
+      [...standardCross.terrainStones.slice(0, -1), { x: 5, y: 5 }],
+      [...standardCross.terrainStones.slice(0, -1), { x: 12, y: 12 }],
+    ]
+
+    for (const terrainStones of terrainMutations) {
+      expect(
+        executePreparedRuntimeServiceRequestV118(
+          request(),
+          dependencies(withTerminalTerrain(terrainStones)),
+        ),
+      ).toMatchObject({
+        ok: false,
+        kind: "systemFailure",
+        systemFailure: {
+          classification: "system_failure",
+          mutationStatus: "none",
+        },
+      })
+    }
   })
 
   it("joins exact current containment identity and rejects stale or mixed references", () => {
@@ -367,8 +465,7 @@ describe("prepared runtime service v1.18 semantic admission", () => {
         identityManifestRoot:
           certificate.laneIdentityHash as `sha256:${string}`,
         evidenceGraphRoot: attestation.attestationHash as `sha256:${string}`,
-        laneIdentityHash:
-          certificate.laneIdentityHash as `sha256:${string}`,
+        laneIdentityHash: certificate.laneIdentityHash as `sha256:${string}`,
       },
     }
     expect(

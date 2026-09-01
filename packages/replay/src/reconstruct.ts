@@ -52,6 +52,25 @@ export interface ReplayTimelineEntry {
   state: ReplayState
 }
 
+/**
+ * Projects terrain into the canonical arena-contract order without mutating
+ * or otherwise interpreting the supplied coordinates.
+ */
+export const canonicalReplayTerrain = (
+  terrainStones: readonly Readonly<{ x: number; y: number }>[],
+): Array<{ x: number; y: number }> =>
+  terrainStones
+    .map(({ x, y }) => ({ x, y }))
+    .sort((left, right) => left.y - right.y || left.x - right.x)
+
+const canonicalizeReplayStateTerrain = (state: ReplayState): ReplayState => ({
+  ...state,
+  board: {
+    ...state.board,
+    terrainStones: canonicalReplayTerrain(state.board.terrainStones),
+  },
+})
+
 export interface Replay {
   stateAt(sequence: number): ReplayStateResult
   iterateReplay(): IterableIterator<ReplayTimelineEntry>
@@ -407,8 +426,8 @@ const finalReplayState = (
         lastSuccessfulMoveDirection,
       }),
     ),
-    terrainStones: execution.recorderMaterial.finalState.terrainStones.map(
-      (position) => ({ ...position }),
+    terrainStones: canonicalReplayTerrain(
+      execution.recorderMaterial.finalState.terrainStones,
     ),
   },
   ...(execution.recorderMaterial.finalState.outcome === undefined
@@ -547,8 +566,18 @@ const validateReplayReconstructionWithSemantics = (
 
   const last = execution.transitions.at(-1)!
   const finalState = finalReplayState(execution)
-  const projectedFinal = replayStateFromCurrentProjection(last.afterState)
+  const projectedFinalProjection = replayStateFromCurrentProjection(
+    last.afterState,
+  )
+  const projectedFinal =
+    projectedFinalProjection === undefined
+      ? undefined
+      : canonicalizeReplayStateTerrain(projectedFinalProjection)
   const terminalSnapshot = chronicle.snapshots.at(-1)
+  const terminalSnapshotState =
+    terminalSnapshot === undefined
+      ? undefined
+      : canonicalizeReplayStateTerrain(stateFromSnapshot(terminalSnapshot))
   const outcome = execution.recorderMaterial.finalState.outcome
   const recordedFinalState =
     input.recordedFinalState ?? reconstructedRecording.finalState
@@ -567,8 +596,7 @@ const validateReplayReconstructionWithSemantics = (
     projectedFinal === undefined ||
     stableStringify(projectedFinal) !== stableStringify(finalState) ||
     terminalSnapshot?.kind !== "TERMINAL" ||
-    stableStringify(stateFromSnapshot(terminalSnapshot)) !==
-      stableStringify(finalState) ||
+    stableStringify(terminalSnapshotState) !== stableStringify(finalState) ||
     stableStringify(terminalEvents[0]!.payload) !== stableStringify(outcome)
   ) {
     return { ok: false, code: "CURRENT_TERMINAL_STATE_MISMATCH" }
