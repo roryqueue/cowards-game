@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "v1.38-plan-262-129-later-head-verification-v1",
+  "result": "pass",
+  "verified": true,
+  "checker": {
+    "selector": "--check-later-head",
+    "sourceCommit": "f14f7921a9b8a8f5275b22b7b52256b454e3eb0f",
+    "sourceBlob": "e978fe28117176212fd7161a4eaea6d6f05fc2e2"
+  },
+  "checkedHead": "4e09c40368e5f97788e56b55be2c231d5e18e163",
+  "finalPublication": {
+    "commit": "45c27939c146f588d2ce526dd912100f5352db05",
+    "tree": "631145ff0c3eb3697aed53c0ffaaf089148b9cab",
+    "parent": "f5221b2ea65d1f071a32b03964a89298f4956c8f",
+    "atomicPathsVerified": true,
+    "trackingUnchanged": true
+  },
+  "anchor": {
+    "commit": "4e09c40368e5f97788e56b55be2c231d5e18e163",
+    "directChildOfFinalPublication": true,
+    "onlyPath": ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-129-LATER-HEAD-ANCHOR.md",
+    "grantsAuthority": false
+  },
+  "branch": "gaps",
+  "admit03": {
+    "status": "blocked",
+    "freshAccepted": 0,
+    "requiredAccepted": 540
+  },
+  "phase262": "incomplete",
+  "phase263PlanningEligible": false,
+  "phase263ExecutionEligible": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  },
+  "dag": {
+    "nodeCount": 146,
+    "edgeCount": 146,
+    "duplicateIds": [],
+    "missingDependencies": [],
+    "cycles": []
+  },
+  "requirements": {
+    "classified": 16,
+    "satisfied": 15,
+    "blocked": ["ADMIT-03"]
+  },
+  "inventoryCounts": {
+    "activePlans": 128,
+    "dormantCarriers": 1,
+    "historicalPlans": 18,
+    "reviews": 166,
+    "summaries": 123,
+    "total": 438,
+    "validations": 1,
+    "verifications": 1
+  },
+  "inventoryRoot": "sha256:de023bfaa1eeb08b46d6d544ce20894707ece2c1a3156398c7e5ac248c116c88",
+  "aggregate": {
+    "aggregateRoot": "sha256:3e447df9c9ada2f5d91f7edf3d7730d2452313acc90b65ea27e1a95bc45d2dce",
+    "dispositionRoot": "sha256:d339732801c0d8673b81d997806eb87d78b30edf0424e8dc7cde8cfe639ecd47",
+    "rawEvidenceRetired": true,
+    "receiptLevelDataPresent": false
+  },
+  "cleanup": {
+    "journalAbsent": true,
+    "privateV4Absent": true,
+    "emptyPrivateV3": true,
+    "rootSuccessorLocks": 36,
+    "rootSuccessorLockManifestRoot": "sha256:c6d15de9d3b16a65f6320269384a8f0c433c7498ca9ffd19034511b6159399c2",
+    "knownOperationalLockResidueAllowed": true
+  },
+  "assuranceLimitation": "single_operator_local_seal_v1_no_hostile_same_uid",
+  "independentCustodyClaimed": false,
+  "externalCustodyClaimed": false,
+  "nextAction": "stop-on-gaps-branch-no-phase-263-work"
+}
