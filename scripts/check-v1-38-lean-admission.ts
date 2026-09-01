@@ -302,35 +302,48 @@ const main = (): void => {
     const manifest = checkLeanManifest(repoRoot, readJson(repoRoot, LEAN_ARTIFACT_PATHS.manifest)); checkLeanSourceReview(manifest, readJson(repoRoot, LEAN_ARTIFACT_PATHS.sourceReview))
   } else if (selector === "--check-reviewed-ready") { loadAndCheckLeanReviewedReady(repoRoot) }
   else if (selector === "--terminalize-interruption") {
-    loadAndCheckLeanReviewedReady(
+    const readiness = loadAndCheckLeanReviewedReady(
       repoRoot,
       [LEAN_ARTIFACT_PATHS.invocation],
       [LEAN_ARTIFACT_PATHS.manifest, LEAN_ARTIFACT_PATHS.sourceReview, LEAN_ARTIFACT_PATHS.readiness, LEAN_ARTIFACT_PATHS.invocation],
     )
     if (existsSync(path.resolve(repoRoot, LEAN_ARTIFACT_PATHS.terminal))) throw new TypeError("LEAN_TERMINAL_ALREADY_EXISTS")
     assertNoLeanChildProcess()
-    const invocation = validateLeanInvocation(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
+    const invocation = validateLeanInvocationLineage(readiness, readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
     createExclusiveLeanTerminal(repoRoot, createLeanTerminalArtifact(invocation, createLeanInterruptedTerminal()))
   }
   else if (selector === "--check-terminal" || selector === "--check-post-run") {
     assertForbiddenScopeAbsent(repoRoot, [LEAN_ARTIFACT_PATHS.manifest, LEAN_ARTIFACT_PATHS.sourceReview, LEAN_ARTIFACT_PATHS.readiness, LEAN_ARTIFACT_PATHS.invocation, LEAN_ARTIFACT_PATHS.terminal])
-    loadAndCheckLeanReviewedReady(
+    const readiness = loadAndCheckLeanReviewedReady(
       repoRoot,
       [LEAN_ARTIFACT_PATHS.invocation, LEAN_ARTIFACT_PATHS.terminal],
       [LEAN_ARTIFACT_PATHS.manifest, LEAN_ARTIFACT_PATHS.sourceReview, LEAN_ARTIFACT_PATHS.readiness, LEAN_ARTIFACT_PATHS.invocation, LEAN_ARTIFACT_PATHS.terminal],
     )
-    const invocation = validateLeanInvocation(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
+    const invocation = validateLeanInvocationLineage(readiness, readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
     const terminal = validateLeanTerminalArtifact(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal), invocation)
-    if (selector === "--check-post-run" && !terminal.terminal.completeCleanup) throw new TypeError("LEAN_CLEANUP_INCOMPLETE")
+    if (selector === "--check-post-run") {
+      assertNoLeanChildProcess()
+      if (!terminal.terminal.completeCleanup) throw new TypeError("LEAN_CLEANUP_INCOMPLETE")
+    }
   } else if (selector === "--check-adjudication" || selector === "--check-eligibility") {
     assertForbiddenScopeAbsent(repoRoot, Object.values(LEAN_ARTIFACT_PATHS))
-    const invocation = validateLeanInvocation(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
+    const readiness = loadAndCheckLeanReviewedReady(
+      repoRoot,
+      [LEAN_ARTIFACT_PATHS.invocation, LEAN_ARTIFACT_PATHS.terminal, LEAN_ARTIFACT_PATHS.adjudication, LEAN_ARTIFACT_PATHS.eligibility],
+      Object.values(LEAN_ARTIFACT_PATHS),
+    )
+    const invocation = validateLeanInvocationLineage(readiness, readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
     const terminal = validateLeanTerminalArtifact(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal), invocation)
     const adjudication = readJson(repoRoot, LEAN_ARTIFACT_PATHS.adjudication)
     const checked = validateLeanAdjudication(adjudication, terminal)
     validateLeanEligibility(readJson(repoRoot, LEAN_ARTIFACT_PATHS.eligibility), checked)
   } else if (selector === "--check-final-tracking") {
-    const invocation = validateLeanInvocation(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
+    const readiness = loadAndCheckLeanReviewedReady(
+      repoRoot,
+      [LEAN_ARTIFACT_PATHS.invocation, LEAN_ARTIFACT_PATHS.terminal, LEAN_ARTIFACT_PATHS.adjudication, LEAN_ARTIFACT_PATHS.eligibility],
+      Object.values(LEAN_ARTIFACT_PATHS),
+    )
+    const invocation = validateLeanInvocationLineage(readiness, readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
     const terminal = validateLeanTerminalArtifact(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal), invocation)
     const adjudication = validateLeanAdjudication(readJson(repoRoot, LEAN_ARTIFACT_PATHS.adjudication), terminal)
     const eligibility = validateLeanEligibility(readJson(repoRoot, LEAN_ARTIFACT_PATHS.eligibility), adjudication)

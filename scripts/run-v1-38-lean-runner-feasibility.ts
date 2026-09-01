@@ -55,6 +55,11 @@ export interface LeanExecutionDependencies {
   readonly cleanupDeadlineMilliseconds?: number
   readonly armDeadline?: (onDeadline: () => void, milliseconds: number) => () => void
 }
+export interface LeanSupervisorOptions {
+  readonly spawnChild?: () => ChildProcess
+  readonly cellDeadlineMilliseconds?: number
+  readonly cleanupDeadlineMilliseconds?: number
+}
 
 const unlaunched = (cell: LeanCell): LeanExecutionRecord => ({
   ...cell, classification: "unlaunched", cleanupComplete: true,
@@ -368,41 +373,66 @@ const parseLeanCell = (value: unknown): LeanCell => {
   return expected
 }
 
-export const createSupervisedLeanExecutionDependencies = (capability: string): LeanExecutionDependencies => {
+export const createSupervisedLeanExecutionDependencies = (
+  capability: string,
+  options: LeanSupervisorOptions = {},
+): LeanExecutionDependencies => {
   if (!/^[0-9a-f]{64}$/u.test(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_INVALID")
   let active: ChildProcess | undefined
+  let termination: Promise<LeanCleanupResult> | undefined
   const terminateActive = async (): Promise<LeanCleanupResult> => {
+    if (termination !== undefined) return termination
     const child = active
     if (child === undefined || child.exitCode !== null || child.signalCode !== null) { active = undefined; return { cleanupComplete: true, orphanedChild: false } }
-    if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGKILL") } catch { child.kill("SIGKILL") } } else child.kill("SIGKILL")
-    await new Promise<void>((resolve) => {
-      if (child.exitCode !== null || child.signalCode !== null) resolve()
-      else child.once("exit", () => resolve())
+    termination = new Promise<LeanCleanupResult>((resolve) => {
+      let complete = false
+      const finish = (result: LeanCleanupResult): void => {
+        if (complete) return
+        complete = true
+        clearTimeout(timer)
+        active = undefined
+        termination = undefined
+        resolve(result)
+      }
+      const timer = setTimeout(
+        () => finish({ cleanupComplete: false, orphanedChild: true }),
+        options.cleanupDeadlineMilliseconds ?? LEAN_CLEANUP_DEADLINE_MS,
+      )
+      timer.unref()
+      child.once("exit", () => finish({ cleanupComplete: true, orphanedChild: false }))
+      try {
+        if (child.pid !== undefined) {
+          try { process.kill(-child.pid, "SIGKILL") } catch { child.kill("SIGKILL") }
+        } else child.kill("SIGKILL")
+      } catch {
+        finish({ cleanupComplete: false, orphanedChild: true })
+      }
     })
-    active = undefined
-    return { cleanupComplete: true, orphanedChild: false }
+    return termination
   }
   return {
     now: () => performance.now(), terminateActive,
+    cleanupDeadlineMilliseconds: options.cleanupDeadlineMilliseconds,
     execute: async (cell, signal) => {
       if (active !== undefined) throw new TypeError("LEAN_CHILD_ALREADY_ACTIVE")
-      const child = fork(fileURLToPath(import.meta.url), [LEAN_CHILD_SELECTOR], {
-        cwd: process.cwd(), execArgv: ["--import", "tsx"],
-        detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"],
-        env: { ...process.env, LEAN_CHILD_CAPABILITY: capability },
-      })
+      const child = options.spawnChild?.() ?? fork(fileURLToPath(import.meta.url), [LEAN_CHILD_SELECTOR], {
+          cwd: process.cwd(), execArgv: ["--import", "tsx"],
+          detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"],
+          env: { ...process.env, LEAN_CHILD_CAPABILITY: capability },
+        })
       active = child
       let stderr = ""
       child.stderr?.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8") })
       return await new Promise<LeanExecutionResult>((resolve, reject) => {
         let settled = false
         let terminating = false
+        let readySeen = false
+        let pendingResult: LeanExecutionResult | undefined
         const settle = (complete: () => void): void => {
           if (settled) return
           settled = true
           clearTimeout(timer)
           signal.removeEventListener("abort", abort)
-          active = undefined
           complete()
         }
         const terminateWith = (classification: "timeout" | "cancelled"): void => {
@@ -413,26 +443,43 @@ export const createSupervisedLeanExecutionDependencies = (capability: string): L
             (error: unknown) => settle(() => reject(error)),
           )
         }
-        const timer = setTimeout(() => terminateWith("timeout"), LEAN_CELL_DEADLINE_MS)
+        const failWithCleanup = (error: unknown): void => {
+          if (settled || terminating) return
+          terminating = true
+          void terminateActive().then(
+            () => settle(() => reject(error)),
+            () => settle(() => reject(error)),
+          )
+        }
+        const timer = setTimeout(() => terminateWith("timeout"), options.cellDeadlineMilliseconds ?? LEAN_CELL_DEADLINE_MS)
         timer.unref()
         const abort = () => terminateWith("cancelled")
         signal.addEventListener("abort", abort, { once: true })
-        child.once("error", (error) => settle(() => reject(error)))
+        child.once("error", failWithCleanup)
         child.on("message", (message: unknown) => {
           if (settled || message === null || typeof message !== "object") return
           const body = message as Record<string, unknown>
           if (body.kind === "ready" && body.capability === capability) {
+            if (readySeen || pendingResult !== undefined) { failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_DUPLICATE")); return }
+            readySeen = true
             child.send({ kind: "execute", capability, cell })
           } else if (body.kind === "result" && body.capability === capability) {
+            if (!readySeen || pendingResult !== undefined) { failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_DUPLICATE")); return }
             try {
-              const result = parseLeanExecutionResult(body.result)
-              settle(() => resolve(result))
-            } catch (error) { settle(() => reject(error)) }
+              pendingResult = parseLeanExecutionResult(body.result)
+            } catch (error) { failWithCleanup(error) }
+          } else {
+            failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_INVALID"))
           }
         })
-        child.once("exit", (code) => {
+        child.once("exit", (code, exitSignal) => {
           if (terminating || settled) return
-          settle(() => reject(new TypeError(code === 0 ? "LEAN_CHILD_RESULT_MISSING" : stderr.trim() || "LEAN_CHILD_FAILED")))
+          active = undefined
+          if (code === 0 && exitSignal === null && pendingResult !== undefined) {
+            settle(() => resolve({ ...pendingResult!, cleanupComplete: true, orphanedChild: false }))
+          } else {
+            settle(() => reject(new TypeError(code === 0 && exitSignal === null ? "LEAN_CHILD_RESULT_MISSING" : stderr.trim() || "LEAN_CHILD_FAILED")))
+          }
         })
       })
     },
