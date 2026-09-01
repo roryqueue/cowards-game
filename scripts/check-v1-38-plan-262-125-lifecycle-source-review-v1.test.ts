@@ -69,6 +69,15 @@ describe("Plan 262-125 hostile source mutations", () => {
     ["exact Plan126 summary latch", "current.summaries.includes(V138_PLAN_262_95_PATHS.summary126)", "current.summaries.length > 0"],
     ["only-summary baseline removal", "repoPath !== V138_PLAN_262_95_PATHS.summary126", "repoPath.endsWith(\"-SUMMARY.md\")"],
     ["baseline metadata comparison", "const expectedBaseline = buildReviewedReadiness(authenticatedReview, baseline)", "const expectedBaseline = value"],
+    ["replacement selector", '"--replace-reviewed-readiness"', '"--replace-readiness-unreviewed"'],
+    ["exclusive temporary", "constants.O_EXCL", "0"],
+    ["no-follow temporary", "constants.O_NOFOLLOW", "0"],
+    ["temporary durability", "fsyncSync(fd)", "void 0"],
+    ["atomic rename", "renameSync(temporary, target)", "writeFileSync(target, bytes)"],
+    ["tracked drift gate", 'fail("REPLACEMENT_TRACKED_DRIFT")', "void 0"],
+    ["canonical readiness gate", 'fail("REPLACEMENT_READINESS_NONCANONICAL")', "void 0"],
+    ["stale review gate", 'fail("REPLACEMENT_READINESS_NOT_STALE")', "void 0"],
+    ["gaps branch gate", 'projection.branch !== "gaps"', "false"],
   ])("rejects a mutated %s", async (_name, needle, replacement) => {
     const source = readFileSync(path.join(repoRoot, REVIEW_PATHS.subjectSource), "utf8")
     expect(source).toContain(needle)
@@ -161,6 +170,12 @@ describe("Plan 262-125 runtime and effect tripwires", () => {
     expect(audit.observations.readinessInventoryTransition).toBe(
       "exact-current-or-baseline-minus-only-committed-262-126-summary",
     )
+    expect(audit.observations.readinessReplacementInvocations).toBe(0)
+    expect(audit.observations.committedStaleReadiness).toMatchObject({
+      sha256: "sha256:376f8a9bbf020215469b2d75047a9dde0c480febd91f62fef7cb79402ac3136e",
+      sourceCommit: "a4decc35b687d88dda350b5d5078232ef1cc290f",
+      reviewRoot: "sha256:0fb2aac15c55663cddbe01d9ddebd1770d9f3c036aca528a759219ad069ede3f",
+    })
   })
 
   it("rejects every false Plan125/126 gate before a writer effect", async () => {
