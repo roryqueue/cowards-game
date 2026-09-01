@@ -1144,11 +1144,10 @@ const main = (): void => {
   } else if (selector === "--check-corrective-source-review") {
     checkLeanFirstEvidenceCustody(repoRoot)
     validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))
-    const manifest = checkLeanCorrectiveManifest(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest))
-    checkLeanCorrectiveSourceReview(manifest, readJson(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.sourceReview))
+    const manifest = checkLeanCorrectiveManifest(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.manifest))
+    checkLeanCorrectiveSourceReview(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.sourceReview))
   } else if (selector === "--check-corrective-readiness") {
-    loadAndCheckLeanCorrectiveReady(repoRoot)
-    assertCorrectiveFreshDestinationsAbsent(repoRoot, [LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest, LEAN_CORRECTIVE_ARTIFACT_PATHS.sourceReview, LEAN_CORRECTIVE_ARTIFACT_PATHS.readiness])
+    throw new TypeError("LEAN_CORRECTIVE_V1_READINESS_RETIRED")
   } else if (selector === "--check-corrective-terminal-or-terminalized-invalid") {
     checkLeanCorrectiveTerminal(repoRoot)
   } else throw new TypeError("LEAN_CHECK_SELECTOR_INVALID")
