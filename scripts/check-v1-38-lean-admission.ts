@@ -204,6 +204,7 @@ export interface LeanCorrectiveChildOwnership {
 export interface LeanCorrectiveOrphanRecoveryDependencies {
   readonly expectedInvocationRoot: `sha256:${string}`
   readonly commandForPid: (pid: number) => string | undefined
+  readonly processGroupForPid: (pid: number) => number | undefined
   readonly signalProcessGroup: (processGroupId: number, signal: "SIGTERM" | "SIGKILL") => void
   readonly processIsAlive: (pid: number) => boolean
   readonly wait: (milliseconds: number) => Promise<void>
@@ -785,7 +786,7 @@ export const recoverLeanCorrectiveOrphanInjected = async (
   if (ownership.invocationRoot !== dependencies.expectedInvocationRoot) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
   const command = dependencies.commandForPid(ownership.childPid)
   if (command === undefined || command.trim().length === 0 || !dependencies.processIsAlive(ownership.childPid)) throw new TypeError("LEAN_CORRECTIVE_CHILD_STALE")
-  if (!commandMatchesLeanCorrectiveOwnership(command, ownership)) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
+  if (dependencies.processGroupForPid(ownership.childPid) !== ownership.processGroupId || !commandMatchesLeanCorrectiveOwnership(command, ownership)) throw new TypeError("LEAN_CORRECTIVE_CHILD_IDENTITY_MISMATCH")
   dependencies.signalProcessGroup(ownership.processGroupId, "SIGTERM")
   for (let attempt = 0; attempt < 20 && dependencies.processIsAlive(ownership.childPid); attempt += 1) await dependencies.wait(50)
   if (dependencies.processIsAlive(ownership.childPid)) {
@@ -809,6 +810,12 @@ export const recoverLeanCorrectiveOrphan = async (repoRoot: string): Promise<voi
     expectedInvocationRoot: hashLeanValue(invocation),
     commandForPid: (pid) => {
       try { return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" }).trim() || undefined } catch { return undefined }
+    },
+    processGroupForPid: (pid) => {
+      try {
+        const value = Number(execFileSync("ps", ["-p", String(pid), "-o", "pgid="], { encoding: "utf8" }).trim())
+        return Number.isSafeInteger(value) && value > 1 ? value : undefined
+      } catch { return undefined }
     },
     signalProcessGroup: (processGroupId, signal) => { process.kill(-processGroupId, signal) },
     processIsAlive,
