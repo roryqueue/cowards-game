@@ -2,7 +2,9 @@
 
 ## Reviewed D-34L result — 2026-09-01
 
-The sole `lean_runner_feasibility_v1` invocation has been independently adjudicated as `non_pass`: 12 unique cells and 24 charges were present with complete cleanup, but only 8 executions succeeded, 16 system-failed, and 8 of 12 cross-pass comparisons mismatched. ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phase 263 planning/execution remain ineligible. The repeated arena-specific pattern may be diagnosed separately; no corrective-rerun authority exists from this adjudication.
+The sole `lean_runner_feasibility_v1` invocation has been independently adjudicated as `non_pass`.
+
+All 12 unique cells and 24 charges were present with complete cleanup, but only 8 executions succeeded, 16 system-failed, and 8 of 12 cross-pass comparisons mismatched. ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phase 263 planning/execution remain ineligible. The repeated arena-specific pattern may be diagnosed separately; no corrective-rerun authority exists from this adjudication.
 
 Historical full-matrix evidence remains immutable `exhausted` at fresh `0/540`, no reproduction, and `reinterpreted:false`. Candidate search, Phase 264+, formation, holdout, public/product/production, counted-play, canonical-evidence, gameplay-change, archive, release, and tag authority remain false.
 
