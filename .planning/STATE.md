@@ -5,27 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-165 is the sole next source-only correction; Plan166 fresh v3 review follows before Plan158
-last_updated: "2026-09-01T20:18:32Z"
+stopped_at: Plan262-167 is the sole next source-only correction; Plan168 fresh v4 review follows before Plan158
+last_updated: "2026-09-01T20:55:00Z"
 last_activity: 2026-09-01
-last_activity_desc: Planned the bounded CR-164-01/WR-164-01 correction and fresh v3 independent review; readiness and live execution remain absent
+last_activity_desc: Planned the bounded CR-166-01/02 and WR-166-01 closure plus fresh v4 independent review; readiness and live execution remain absent
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 147
-  completed_plans: 137
+  total_plans: 149
+  completed_plans: 139
   percent: 93
 ---
 
 # State: Coward's Game
 
-## Plans 262-165/166 bounded successor correction — 2026-09-01
+## Plans 262-167/168 bounded successor correction — 2026-09-01
 
-Plan165 is the sole next action and closes exactly CR-164-01 and WR-164-01 source-only. It must implement strict immutable v2 history validation, fresh v3 manifest/review/readiness schemas and selectors, fresh-v3-only runner consumption, a schedule-free interruption tombstone, and transitive actual-selector recovery proof across runner and checker. Focused RED/GREEN may create only committed source, tests, and summary; no live or recovery selector, Match, marker, terminal, ownership record, adjudication, eligibility, manifest, review, or readiness effect may run or appear.
+Plan167 is the sole next action and closes exactly CR-166-01, CR-166-02, and WR-166-01 source-only. It must authenticate every v2 predecessor field/root, bind the committed Plan165 summary, derive v4 fresh-effect absence from the filesystem, consume only fresh v4 readiness, and prove the actual recovery selector inert through imported runner/checker/library helpers. Focused RED/GREEN may create only committed source, tests, and summary; no live or recovery selector, Match, marker, terminal, ownership record, adjudication, eligibility, manifest, review, or readiness effect may run or appear.
 
-Plan166 follows only the separately committed Plan165 closure. It creates a fresh exact-source v3 manifest and exactly one independent source-only review. Any finding leaves v3 readiness absent and stops. Literal zero alone may create one Plan158-only v3 readiness. Revised Plan158 consumes only that v3 lineage and still owns exactly one complete 24-Match corrective wrapper; the fresh effect destinations remain v2. Plans159, 160, and 162 follow in waves139-141. All prior history and exactly 36 successor locks remain preserved; Phase263 and every broader authority remain false.
+Plan168 follows only the separately committed Plan167 closure. It creates a fresh exact-source v4 manifest and exactly one independent source-only review. Any finding leaves v4 readiness absent and stops. Literal zero alone may create one Plan158-only v4 readiness. Revised Plan158 consumes only that v4 lineage and still owns exactly one complete 24-Match corrective wrapper; the fresh effect destinations remain v2. Plans159, 160, and 162 follow in waves141-143. All prior history and exactly 36 successor locks remain preserved; Phase263 and every broader authority remain false.
 
-<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v6","activeChain":["262-156","262-161","262-157","262-163","262-164","262-165","262-166","262-158","262-159","262-160","262-162"],"waves":{"262-165":136,"262-166":137,"262-158":138,"262-159":139,"262-160":140,"262-162":141},"nextAction":"dispatch-262-165-source-only","plan164FindingCount":2,"plan164CriticalCount":1,"plan164WarningCount":1,"freshV3ReviewRequired":true,"readinessV3Present":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v7","activeChain":["262-156","262-161","262-157","262-163","262-164","262-165","262-166","262-167","262-168","262-158","262-159","262-160","262-162"],"waves":{"262-167":138,"262-168":139,"262-158":140,"262-159":141,"262-160":142,"262-162":143},"nextAction":"dispatch-262-167-source-only","plan166FindingCount":3,"plan166CriticalCount":2,"plan166WarningCount":1,"freshV4ReviewRequired":true,"readinessV4Present":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-163/164 bounded review-gap closure — 2026-09-01
 
