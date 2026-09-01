@@ -5,14 +5,14 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plans262-156 through 262-159 planned for the approved D-34L corrective path; dispatch Plan262-156 source-only
-last_updated: "2026-09-01T18:45:00Z"
+stopped_at: Plans262-156 through 262-160 planned for the approved D-34L corrective path; dispatch Plan262-156 source-only
+last_updated: "2026-09-01T18:55:00Z"
 last_activity: 2026-09-01
-last_activity_desc: Planned focused alias-resolution and terrain-order fixes, independent review, one full fresh corrective gate, and pass-only adjudication
+last_activity_desc: Revised the corrective chain for independent review, fail-safe live recovery, proof-only adjudication, and final milestone/handoff synchronization
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 132
+  total_plans: 133
   completed_plans: 117
   percent: 89
 ---
@@ -23,9 +23,9 @@ progress:
 
 Independent diagnosis isolated two implementation defects behind the reviewed non-pass: Open Field must keep its frozen declared cell identity while resolving its historical alias to active Smoke execution authority, and replay reconstruction/runtime terminal projection must use one canonical y-then-x terrain order. Six diagnosis-only Matches were unpersisted and are non-live, non-charged, and inadmissible as evidence.
 
-The sole active chain is 262-156 -> 262-157 -> 262-158 -> 262-159. Plan156 may commit only focused source/tests and safe diagnostic custody. Plan157 independently reviews exact source and may publish readiness only on literal zero. Plan158 may then invoke exactly one complete fresh 24-Match corrective gate with no partial or historical reuse. Plan159 alone may adjudicate and make Phase263 eligible on exact pass. Until then ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
+The sole active chain is 262-156 -> 262-157 -> 262-158 -> 262-159 -> 262-160. Plan156 may commit only focused source/tests and safe diagnostic custody. Plan157 independently reviews exact source without editing it and may publish readiness only on literal zero; any finding requires newly planned bounded correction/re-review work. Plan158 owns one wrapper that combines exactly one complete fresh 24-Match invocation with unconditional recovery/postcheck that cannot relaunch a Match. Plan159 adjudicates and completes proof only. Plan160 alone synchronizes the milestone and Phase263 handoff. Until exact pass is synchronized, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
 
-<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v1","activeChain":["262-156","262-157","262-158","262-159"],"nextAction":"dispatch-262-156-source-only","specificDefects":["historical_alias_execution_identity","canonical_terrain_projection_order"],"diagnosticMatches":6,"diagnosticsCharged":false,"diagnosticsAdmissible":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v2","activeChain":["262-156","262-157","262-158","262-159","262-160"],"nextAction":"dispatch-262-156-source-only","specificDefects":["historical_alias_execution_identity","canonical_terrain_projection_order"],"diagnosticMatches":6,"observationBasis":"operator_session_observation","rawEvidencePresent":false,"independentlyVerifiable":false,"diagnosticsCharged":false,"diagnosticsAdmissible":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Reviewed D-34L result — 2026-09-01
 
