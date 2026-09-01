@@ -473,7 +473,7 @@ export const createSupervisedLeanExecutionDependencies = (
         signal.addEventListener("abort", abort, { once: true })
         child.once("error", failWithCleanup)
         child.on("message", (message: unknown) => {
-          if (settled) return
+          if (settled || terminating) return
           if (message === null || typeof message !== "object" || Array.isArray(message)) {
             failWithCleanup(new TypeError("LEAN_CHILD_PROTOCOL_INVALID"))
             return

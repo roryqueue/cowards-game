@@ -7,8 +7,8 @@ import { LEAN_AUTHORITY_FALSE, buildLeanSchedule, createLeanManifest, currentFor
 
 export const LEAN_ARTIFACT_PATHS = Object.freeze({
   manifest: ".planning/artifacts/v1.38-lean-runner-manifest.json",
-  sourceReview: ".planning/artifacts/v1.38-lean-runner-source-review-v2.json",
-  readiness: ".planning/artifacts/v1.38-lean-runner-readiness-v2.json",
+  sourceReview: ".planning/artifacts/v1.38-lean-runner-source-review-v3.json",
+  readiness: ".planning/artifacts/v1.38-lean-runner-readiness-v3.json",
   invocation: ".planning/artifacts/v1.38-lean-runner-invocation-v1.json",
   terminal: ".planning/artifacts/v1.38-lean-runner-terminal.json",
   adjudication: ".planning/artifacts/v1.38-lean-runner-adjudication-v1.json",
@@ -16,6 +16,9 @@ export const LEAN_ARTIFACT_PATHS = Object.freeze({
 } as const)
 export const LEAN_HISTORICAL_SOURCE_REVIEW_PATH = ".planning/artifacts/v1.38-lean-runner-source-review-v1.json" as const
 export const LEAN_HISTORICAL_SOURCE_REVIEW_SHA256 = "d8fc684745713dacf08e6d09a5c9ea451d145a36006b159bf21e97adbfa4768d" as const
+export const LEAN_HISTORICAL_SOURCE_REVIEW_V2_PATH = ".planning/artifacts/v1.38-lean-runner-source-review-v2.json" as const
+export const LEAN_HISTORICAL_SOURCE_REVIEW_V2_SHA256 = "1c46efb6bf504982c46304c381705a570687388fbf7bbfc717edf358bd49045b" as const
+export const LEAN_HISTORICAL_READINESS_V2_PATH = ".planning/artifacts/v1.38-lean-runner-readiness-v2.json" as const
 
 export const LEAN_MANIFEST_PATH = LEAN_ARTIFACT_PATHS.manifest
 export const LEAN_INVOCATION_PATH = LEAN_ARTIFACT_PATHS.invocation
@@ -56,7 +59,7 @@ export const LEAN_EXECUTABLE_CLOSURE_PATHS = Object.freeze([
 export const LEAN_SOURCE_PATHS = LEAN_EXECUTABLE_CLOSURE_PATHS
 
 export interface LeanSourceReview {
-  readonly schemaVersion: "v1.38-lean-runner-source-review-v2"
+  readonly schemaVersion: "v1.38-lean-runner-source-review-v3"
   readonly sourceCommit: string
   readonly manifestRoot: `sha256:${string}`
   readonly findingCount: number
@@ -71,7 +74,7 @@ export interface LeanReviewFinding {
   readonly summary: string
 }
 export interface LeanReadiness {
-  readonly schemaVersion: "v1.38-lean-runner-readiness-v2"
+  readonly schemaVersion: "v1.38-lean-runner-readiness-v3"
   readonly sourceCommit: string
   readonly manifestRoot: `sha256:${string}`
   readonly sourceReviewRoot: `sha256:${string}`
@@ -134,6 +137,14 @@ const readJson = (repoRoot: string, artifactPath: string): unknown => JSON.parse
 export const checkHistoricalLeanSourceReviewBytes = (bytes: Uint8Array): void => {
   if (createHash("sha256").update(bytes).digest("hex") !== LEAN_HISTORICAL_SOURCE_REVIEW_SHA256) throw new TypeError("LEAN_HISTORICAL_SOURCE_REVIEW_DRIFT")
 }
+export const checkHistoricalLeanSourceReviewV2Bytes = (bytes: Uint8Array): void => {
+  if (createHash("sha256").update(bytes).digest("hex") !== LEAN_HISTORICAL_SOURCE_REVIEW_V2_SHA256) throw new TypeError("LEAN_HISTORICAL_SOURCE_REVIEW_V2_DRIFT")
+}
+const checkHistoricalLeanReviewHistory = (repoRoot: string): void => {
+  checkHistoricalLeanSourceReviewBytes(readFileSync(path.resolve(repoRoot, LEAN_HISTORICAL_SOURCE_REVIEW_PATH)))
+  checkHistoricalLeanSourceReviewV2Bytes(readFileSync(path.resolve(repoRoot, LEAN_HISTORICAL_SOURCE_REVIEW_V2_PATH)))
+  if (existsSync(path.resolve(repoRoot, LEAN_HISTORICAL_READINESS_V2_PATH))) throw new TypeError("LEAN_HISTORICAL_READINESS_V2_MUST_REMAIN_ABSENT")
+}
 
 export const assertLeanStatus = (status: string, allowedUntracked: readonly string[] = []): void => {
   const invalid = status.split("\n").filter(Boolean).filter((line) => !(line.startsWith("?? ") && (/^\.v138-successor-[0-9a-f]{64}\.lock$/u.test(line.slice(3)) || allowedUntracked.includes(line.slice(3)))))
@@ -152,7 +163,7 @@ export const renderLeanManifest = (repoRoot: string, sourceRef: string): LeanMan
 }
 export const checkLeanManifest = (repoRoot: string, rawManifest: unknown): LeanManifest => {
   const manifest = validateLeanManifest(rawManifest)
-  checkHistoricalLeanSourceReviewBytes(readFileSync(path.resolve(repoRoot, LEAN_HISTORICAL_SOURCE_REVIEW_PATH)))
+  checkHistoricalLeanReviewHistory(repoRoot)
   execFileSync("git", ["merge-base", "--is-ancestor", manifest.source.commit, "HEAD"], { cwd: repoRoot, stdio: "ignore" })
   const paths = Object.keys(manifest.source.executableBlobs)
   if (paths.length !== LEAN_EXECUTABLE_CLOSURE_PATHS.length || paths.some((entry) => !LEAN_EXECUTABLE_CLOSURE_PATHS.includes(entry as never))) throw new TypeError("LEAN_EXECUTABLE_CLOSURE_DRIFT")
@@ -168,14 +179,14 @@ export const checkLeanSourceReview = (manifest: LeanManifest, value: unknown): L
   assertPrivacySafe(value)
   const findingValid = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && finding.id.trim().length > 0 && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
   const findingIds = isObject(value) && Array.isArray(value.findings) ? value.findings.map((finding) => isObject(finding) ? finding.id : undefined) : []
-  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || new Set(findingIds).size !== findingIds.length || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v3" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || new Set(findingIds).size !== findingIds.length || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanSourceReview
 }
-export const renderLeanSourceReviewV2 = (
+export const renderLeanSourceReviewV3 = (
   manifest: LeanManifest,
   findings: readonly LeanReviewFinding[],
 ): LeanSourceReview => checkLeanSourceReview(manifest, {
-  schemaVersion: "v1.38-lean-runner-source-review-v2",
+  schemaVersion: "v1.38-lean-runner-source-review-v3",
   sourceCommit: manifest.source.commit,
   manifestRoot: hashLeanValue(manifest),
   findingCount: findings.length,
@@ -186,13 +197,13 @@ export const renderLeanSourceReviewV2 = (
 export const checkLeanReadiness = (manifest: LeanManifest, reviewValue: unknown, value: unknown): LeanReadiness => {
   assertPrivacySafe(value)
   const review = checkLeanSourceReview(manifest, reviewValue)
-  if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan151Eligible", "liveInvocationLimit", "liveInvocationsConsumed", "correctiveRerunAuthorized", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-readiness-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan151Eligible !== true || value.liveInvocationLimit !== 1 || value.liveInvocationsConsumed !== 0 || value.correctiveRerunAuthorized !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_READINESS_INVALID")
+  if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan151Eligible", "liveInvocationLimit", "liveInvocationsConsumed", "correctiveRerunAuthorized", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-readiness-v3" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan151Eligible !== true || value.liveInvocationLimit !== 1 || value.liveInvocationsConsumed !== 0 || value.correctiveRerunAuthorized !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_READINESS_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanReadiness
 }
-export const renderLeanReadinessV2 = (manifest: LeanManifest, reviewValue: unknown): LeanReadiness => {
+export const renderLeanReadinessV3 = (manifest: LeanManifest, reviewValue: unknown): LeanReadiness => {
   const review = checkLeanSourceReview(manifest, reviewValue)
   return checkLeanReadiness(manifest, review, {
-    schemaVersion: "v1.38-lean-runner-readiness-v2",
+    schemaVersion: "v1.38-lean-runner-readiness-v3",
     sourceCommit: manifest.source.commit,
     manifestRoot: hashLeanValue(manifest),
     sourceReviewRoot: hashLeanValue(review),

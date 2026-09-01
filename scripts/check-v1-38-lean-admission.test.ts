@@ -19,8 +19,8 @@ import {
   checkLeanReviewOutcome,
   parseLeanTrackingSurface,
   renderLeanManifest,
-  renderLeanReadinessV2,
-  renderLeanSourceReviewV2,
+  renderLeanReadinessV3,
+  renderLeanSourceReviewV3,
   renderLeanTrackingCarrier,
 } from "./check-v1-38-lean-admission.js"
 import * as leanAdmissionModule from "./check-v1-38-lean-admission.js"
@@ -73,7 +73,8 @@ describe("lean admission custody", () => {
 
   it("uses the one canonical Plan 150-152 path map and full minimum closure", () => {
     expect(LEAN_ARTIFACT_PATHS.terminal).toBe(".planning/artifacts/v1.38-lean-runner-terminal.json")
-    expect(LEAN_ARTIFACT_PATHS.readiness).toBe(".planning/artifacts/v1.38-lean-runner-readiness-v2.json")
+    expect(LEAN_ARTIFACT_PATHS.sourceReview).toBe(".planning/artifacts/v1.38-lean-runner-source-review-v3.json")
+    expect(LEAN_ARTIFACT_PATHS.readiness).toBe(".planning/artifacts/v1.38-lean-runner-readiness-v3.json")
     expect(LEAN_ARTIFACT_PATHS.adjudication).toBe(".planning/artifacts/v1.38-lean-runner-adjudication-v1.json")
     expect(LEAN_ARTIFACT_PATHS.eligibility).toBe(".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json")
     expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("apps/runtime-service/src")
@@ -85,22 +86,22 @@ describe("lean admission custody", () => {
 
   it("requires literal-zero non-authorizing review before readiness", () => {
     const manifest = renderLeanManifest(process.cwd(), process.env.LEAN_TEST_SOURCE_COMMIT ?? "HEAD")
-    const review = renderLeanSourceReviewV2(manifest, [])
+    const review = renderLeanSourceReviewV3(manifest, [])
     expect(() => checkLeanSourceReview(manifest, review)).not.toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1 })).toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, extra: true })).toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1, findings: [{ diagnostics: "private" }] })).toThrow(/LEAN_PRIVATE_DATA/u)
-    const readiness = renderLeanReadinessV2(manifest, review)
+    const readiness = renderLeanReadinessV3(manifest, review)
     expect(() => checkLeanReadiness(manifest, review, readiness)).not.toThrow()
     expect(() => checkLeanReadiness(manifest, review, { ...readiness, extra: true })).toThrow()
     expect(checkLeanReviewOutcome(manifest, review, readiness)).toEqual(readiness)
-    const blocked = renderLeanSourceReviewV2(manifest, [{ id: "B1", severity: "critical", status: "open", summary: "still open" }])
+    const blocked = renderLeanSourceReviewV3(manifest, [{ id: "B1", severity: "critical", status: "open", summary: "still open" }])
     expect(checkLeanReviewOutcome(manifest, blocked, undefined)).toBeUndefined()
     expect(() => checkLeanReviewOutcome(manifest, blocked, readiness)).toThrow(/LEAN_READINESS_FOR_NONZERO_REVIEW/u)
-    expect(() => renderLeanSourceReviewV2(manifest, [
+    expect(() => renderLeanSourceReviewV3(manifest, [
       { id: "", severity: "warning", status: "open", summary: "empty identifier" },
     ])).toThrow(/LEAN_SOURCE_REVIEW_INVALID/u)
-    expect(() => renderLeanSourceReviewV2(manifest, [
+    expect(() => renderLeanSourceReviewV3(manifest, [
       { id: "CR-DUPLICATE", severity: "critical", status: "open", summary: "first" },
       { id: "CR-DUPLICATE", severity: "warning", status: "open", summary: "second" },
     ])).toThrow(/LEAN_SOURCE_REVIEW_INVALID/u)
@@ -111,6 +112,13 @@ describe("lean admission custody", () => {
       checkHistoricalLeanSourceReviewBytes: (bytes: Buffer) => void
     }).checkHistoricalLeanSourceReviewBytes
     expect(() => checkHistorical(Buffer.from("mutated historical review", "utf8"))).toThrow(/LEAN_HISTORICAL_SOURCE_REVIEW_DRIFT/u)
+  })
+
+  it("authenticates immutable Plan 154 v2 review bytes", () => {
+    const checkHistoricalV2 = (leanAdmissionModule as unknown as {
+      checkHistoricalLeanSourceReviewV2Bytes: (bytes: Buffer) => void
+    }).checkHistoricalLeanSourceReviewV2Bytes
+    expect(() => checkHistoricalV2(Buffer.from("mutated v2 review", "utf8"))).toThrow(/LEAN_HISTORICAL_SOURCE_REVIEW_V2_DRIFT/u)
   })
 
   it("selects one structural current branch and ignores historical prose", () => {
@@ -175,7 +183,7 @@ describe("lean admission custody", () => {
   it("rejects every invocation root that does not join the reviewed readiness chain", () => {
     const manifest = renderLeanManifest(process.cwd(), process.env.LEAN_TEST_SOURCE_COMMIT ?? "HEAD")
     const review = checkLeanSourceReview(manifest, {
-      schemaVersion: "v1.38-lean-runner-source-review-v2",
+      schemaVersion: "v1.38-lean-runner-source-review-v3",
       sourceCommit: manifest.source.commit,
       manifestRoot: hashLeanValue(manifest),
       findingCount: 0,
@@ -184,7 +192,7 @@ describe("lean admission custody", () => {
       authority: LEAN_AUTHORITY_FALSE,
     })
     const readiness = checkLeanReadiness(manifest, review, {
-      schemaVersion: "v1.38-lean-runner-readiness-v2",
+      schemaVersion: "v1.38-lean-runner-readiness-v3",
       sourceCommit: manifest.source.commit,
       manifestRoot: hashLeanValue(manifest),
       sourceReviewRoot: hashLeanValue(review),
