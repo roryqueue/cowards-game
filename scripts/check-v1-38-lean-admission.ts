@@ -2,17 +2,18 @@ import { execFileSync } from "node:child_process"
 import { closeSync, constants, existsSync, fsyncSync, openSync, readFileSync, writeSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { LEAN_AUTHORITY_FALSE, buildLeanSchedule, createLeanManifest, currentFormationIsRealistic, hashLeanValue, reduceLeanExecutions, validateLeanManifest, type LeanManifest, type LeanTerminal } from "./lib/v1-38-lean-runner-feasibility.js"
+import { LEAN_AUTHORITY_FALSE, buildLeanSchedule, createLeanManifest, currentFormationIsRealistic, deriveAndValidateLeanTerminal, hashLeanValue, reduceLeanExecutions, validateLeanManifest, type LeanManifest, type LeanTerminal } from "./lib/v1-38-lean-runner-feasibility.js"
 
 export const LEAN_ARTIFACT_PATHS = Object.freeze({
   manifest: ".planning/artifacts/v1.38-lean-runner-manifest.json",
-  sourceReview: ".planning/artifacts/v1.38-lean-runner-source-review-v1.json",
-  readiness: ".planning/artifacts/v1.38-lean-runner-readiness-v1.json",
+  sourceReview: ".planning/artifacts/v1.38-lean-runner-source-review-v2.json",
+  readiness: ".planning/artifacts/v1.38-lean-runner-readiness-v2.json",
   invocation: ".planning/artifacts/v1.38-lean-runner-invocation-v1.json",
   terminal: ".planning/artifacts/v1.38-lean-runner-terminal.json",
   adjudication: ".planning/artifacts/v1.38-lean-runner-adjudication-v1.json",
   eligibility: ".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json",
 } as const)
+export const LEAN_HISTORICAL_SOURCE_REVIEW_PATH = ".planning/artifacts/v1.38-lean-runner-source-review-v1.json" as const
 
 export const LEAN_MANIFEST_PATH = LEAN_ARTIFACT_PATHS.manifest
 export const LEAN_INVOCATION_PATH = LEAN_ARTIFACT_PATHS.invocation
@@ -53,7 +54,7 @@ export const LEAN_EXECUTABLE_CLOSURE_PATHS = Object.freeze([
 export const LEAN_SOURCE_PATHS = LEAN_EXECUTABLE_CLOSURE_PATHS
 
 export interface LeanSourceReview {
-  readonly schemaVersion: "v1.38-lean-runner-source-review-v1"
+  readonly schemaVersion: "v1.38-lean-runner-source-review-v2"
   readonly sourceCommit: string
   readonly manifestRoot: `sha256:${string}`
   readonly findingCount: number
@@ -62,7 +63,7 @@ export interface LeanSourceReview {
   readonly authority: typeof LEAN_AUTHORITY_FALSE
 }
 export interface LeanReadiness {
-  readonly schemaVersion: "v1.38-lean-runner-readiness-v1"
+  readonly schemaVersion: "v1.38-lean-runner-readiness-v2"
   readonly sourceCommit: string
   readonly manifestRoot: `sha256:${string}`
   readonly sourceReviewRoot: `sha256:${string}`
@@ -84,7 +85,7 @@ export interface LeanInvocation {
   readonly liveInvocationOrdinal: 1
   readonly authority: typeof LEAN_AUTHORITY_FALSE
 }
-export interface LeanTerminalArtifact extends Omit<LeanInvocation, "schemaVersion" | "liveInvocationOrdinal" | "claimClass" | "childCapabilityRoot"> {
+export interface LeanTerminalArtifact extends Omit<LeanInvocation, "schemaVersion" | "liveInvocationOrdinal" | "claimClass"> {
   readonly schemaVersion: "v1.38-lean-runner-terminal-v1"
   readonly invocationRoot: `sha256:${string}`
   readonly privacy: "safe_aggregate_only"
@@ -152,13 +153,14 @@ export const checkLeanManifest = (repoRoot: string, rawManifest: unknown): LeanM
 
 export const checkLeanSourceReview = (manifest: LeanManifest, value: unknown): LeanSourceReview => {
   assertPrivacySafe(value)
-  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v1" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
+  const findingValid = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-source-review-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(findingValid) || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_SOURCE_REVIEW_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanSourceReview
 }
 export const checkLeanReadiness = (manifest: LeanManifest, reviewValue: unknown, value: unknown): LeanReadiness => {
   assertPrivacySafe(value)
   const review = checkLeanSourceReview(manifest, reviewValue)
-  if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan151Eligible", "liveInvocationLimit", "liveInvocationsConsumed", "correctiveRerunAuthorized", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-readiness-v1" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan151Eligible !== true || value.liveInvocationLimit !== 1 || value.liveInvocationsConsumed !== 0 || value.correctiveRerunAuthorized !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_READINESS_INVALID")
+  if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan151Eligible", "liveInvocationLimit", "liveInvocationsConsumed", "correctiveRerunAuthorized", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-readiness-v2" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan151Eligible !== true || value.liveInvocationLimit !== 1 || value.liveInvocationsConsumed !== 0 || value.correctiveRerunAuthorized !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_READINESS_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanReadiness
 }
 
@@ -182,20 +184,17 @@ export const loadAndCheckLeanReviewedReady = (
   return checkLeanReadiness(manifest, readJson(repoRoot, LEAN_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_ARTIFACT_PATHS.readiness))
 }
 
-const checkTerminalValue = (value: unknown): LeanTerminal => {
-  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "claimClass", "historicalFullMatrix", "schedule", "result", "counts", "determinism", "completeCleanup", "formationMaterialized", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-feasibility-v1" || value.claimClass !== "fixture_feasibility_only" || !["pass", "non_pass", "invalid"].includes(String(value.result)) || typeof value.completeCleanup !== "boolean" || value.formationMaterialized !== false || !exactFalseAuthority(value.authority) || !isObject(value.schedule) || !exactKeys(value.schedule, ["uniqueCells", "passes", "chargedExecutions"]) || value.schedule.uniqueCells !== 12 || value.schedule.passes !== 2 || value.schedule.chargedExecutions !== 24 || !isObject(value.counts) || !exactKeys(value.counts, ["success", "playerViolation", "systemFailure", "timeout", "cancelled", "unlaunched"]) || !Object.values(value.counts).every((count) => Number.isSafeInteger(count) && (count as number) >= 0) || Object.values(value.counts).reduce((sum, count) => sum + Number(count), 0) !== 24 || !isObject(value.determinism) || !exactKeys(value.determinism, ["comparedCells", "mismatchCount"]) || !Number.isSafeInteger(value.determinism.comparedCells) || !Number.isSafeInteger(value.determinism.mismatchCount) || !isObject(value.historicalFullMatrix) || !exactKeys(value.historicalFullMatrix, ["disposition", "freshAccepted", "requiredAccepted", "reinterpreted"]) || value.historicalFullMatrix.disposition !== "exhausted" || value.historicalFullMatrix.freshAccepted !== 0 || value.historicalFullMatrix.requiredAccepted !== 540 || value.historicalFullMatrix.reinterpreted !== false) throw new TypeError("LEAN_TERMINAL_INVALID")
-  return globalThis.structuredClone(value) as unknown as LeanTerminal
-}
+const checkTerminalValue = (value: unknown): LeanTerminal => deriveAndValidateLeanTerminal(value)
 
 export const createLeanInterruptedTerminal = (): LeanTerminal => reduceLeanExecutions(
-  buildLeanSchedule().map((cell) => ({
+  buildLeanSchedule().map((cell, ordinal) => ({
     ...cell,
     classification: "unlaunched" as const,
     cleanupComplete: true,
     orphanedChild: false,
     boardRealism: currentFormationIsRealistic(cell),
+    integrityValid: ordinal !== 0,
   })),
-  true,
 )
 
 export const createLeanInvocation = (readiness: LeanReadiness, childCapabilityRoot: `sha256:${string}`): LeanInvocation => validateLeanInvocation({
@@ -216,14 +215,25 @@ export const validateLeanInvocation = (value: unknown): LeanInvocation => {
   return globalThis.structuredClone(value) as unknown as LeanInvocation
 }
 
+export const validateLeanInvocationLineage = (readiness: LeanReadiness, value: unknown): LeanInvocation => {
+  const invocation = validateLeanInvocation(value)
+  if (
+    invocation.sourceCommit !== readiness.sourceCommit ||
+    invocation.manifestRoot !== readiness.manifestRoot ||
+    invocation.sourceReviewRoot !== readiness.sourceReviewRoot ||
+    invocation.readinessRoot !== hashLeanValue(readiness)
+  ) throw new TypeError("LEAN_INVOCATION_LINEAGE_MISMATCH")
+  return invocation
+}
+
 export const loadAndCheckLeanChildInvocation = (repoRoot: string, capability: string): LeanInvocation => {
   const readiness = loadAndCheckLeanReviewedReady(
     repoRoot,
     [LEAN_ARTIFACT_PATHS.invocation],
     [LEAN_ARTIFACT_PATHS.manifest, LEAN_ARTIFACT_PATHS.sourceReview, LEAN_ARTIFACT_PATHS.readiness, LEAN_ARTIFACT_PATHS.invocation],
   )
-  const invocation = validateLeanInvocation(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
-  if (invocation.readinessRoot !== hashLeanValue(readiness) || invocation.childCapabilityRoot !== hashLeanValue(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_MISMATCH")
+  const invocation = validateLeanInvocationLineage(readiness, readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation))
+  if (invocation.childCapabilityRoot !== hashLeanValue(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_MISMATCH")
   return invocation
 }
 
@@ -233,6 +243,7 @@ export const createLeanTerminalArtifact = (invocation: LeanInvocation, terminal:
   manifestRoot: invocation.manifestRoot,
   sourceReviewRoot: invocation.sourceReviewRoot,
   readinessRoot: invocation.readinessRoot,
+  childCapabilityRoot: invocation.childCapabilityRoot,
   invocationRoot: hashLeanValue(invocation),
   privacy: "safe_aggregate_only",
   terminal,
@@ -242,7 +253,7 @@ export const createLeanTerminalArtifact = (invocation: LeanInvocation, terminal:
 export const validateLeanTerminalArtifact = (value: unknown, invocationValue: unknown): LeanTerminalArtifact => {
   assertPrivacySafe(value)
   const invocation = validateLeanInvocation(invocationValue)
-  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "readinessRoot", "invocationRoot", "privacy", "terminal", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-terminal-v1" || value.sourceCommit !== invocation.sourceCommit || value.manifestRoot !== invocation.manifestRoot || value.sourceReviewRoot !== invocation.sourceReviewRoot || value.readinessRoot !== invocation.readinessRoot || value.invocationRoot !== hashLeanValue(invocation) || value.privacy !== "safe_aggregate_only" || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_TERMINAL_ARTIFACT_INVALID")
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "readinessRoot", "childCapabilityRoot", "invocationRoot", "privacy", "terminal", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-terminal-v1" || value.sourceCommit !== invocation.sourceCommit || value.manifestRoot !== invocation.manifestRoot || value.sourceReviewRoot !== invocation.sourceReviewRoot || value.readinessRoot !== invocation.readinessRoot || value.childCapabilityRoot !== invocation.childCapabilityRoot || value.invocationRoot !== hashLeanValue(invocation) || value.privacy !== "safe_aggregate_only" || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_TERMINAL_ARTIFACT_INVALID")
   return { ...(globalThis.structuredClone(value) as Omit<LeanTerminalArtifact, "terminal">), terminal: checkTerminalValue(value.terminal) }
 }
 
@@ -250,7 +261,8 @@ export const validateLeanAdjudication = (value: unknown, terminalValue: unknown)
   assertPrivacySafe(value)
   if (!isObject(terminalValue)) throw new TypeError("LEAN_ADJUDICATION_INVALID")
   const terminal = terminalValue as unknown as LeanTerminalArtifact
-  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "terminalRoot", "reviewedResult", "findingCount", "findings", "admitsEligibility", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-adjudication-v1" || value.terminalRoot !== hashLeanValue(terminal) || value.reviewedResult !== terminal.terminal.result || value.findingCount !== 0 || !Array.isArray(value.findings) || value.findings.length !== 0 || value.admitsEligibility !== (terminal.terminal.result === "pass") || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_ADJUDICATION_INVALID")
+  const rederived = checkTerminalValue(terminal.terminal)
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "terminalRoot", "reviewedResult", "findingCount", "findings", "admitsEligibility", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-adjudication-v1" || value.terminalRoot !== hashLeanValue(terminal) || value.reviewedResult !== rederived.result || value.findingCount !== 0 || !Array.isArray(value.findings) || value.findings.length !== 0 || value.admitsEligibility !== (rederived.result === "pass") || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_ADJUDICATION_INVALID")
   return globalThis.structuredClone(value) as unknown as LeanAdjudication
 }
 

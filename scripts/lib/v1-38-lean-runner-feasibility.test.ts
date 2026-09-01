@@ -74,7 +74,7 @@ describe("lean schedule", () => {
     const original = records[4]!
     if (classification === "player_violation") records[4] = { ...original, classification }
     else {
-      const { outcomeRoot: _outcome, finalStateRoot: _state, transitionEventRoot: _events, runtimeAccountingRoot: _accounting, ...base } = original
+      const { outcomeRoot: _outcome, finalStateRoot: _state, transitionEventRoot: _events, runtimeAccountingRoot: _accounting, requestRealismRoot: _request, currentFormationRoot: _formation, ...base } = original
       records[4] = { ...base, classification }
     }
     expect(reduceLeanExecutions(records).result).toBe("non_pass")
@@ -107,7 +107,7 @@ describe("lean schedule", () => {
       const records = successfulRecords()
       records[12] = { ...records[12]!, ...mutation }
       expect(reduceLeanExecutions(records).result).toBe(
-        mutation.cleanupComplete === false || mutation.orphanedChild === true ? "invalid" : "non_pass",
+        mutation.cleanupComplete === false || mutation.orphanedChild === true || mutation.boardRealism === false ? "invalid" : "non_pass",
       )
     }
   })

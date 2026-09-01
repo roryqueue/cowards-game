@@ -21,7 +21,8 @@ import { createFixtureDeploymentLaneIdentity, createFixtureRuntimeExecutionAutho
 import { createRuntimeServiceConfig } from "../apps/runtime-service/src/runtime-config.js"
 import {
   LEAN_AUTHORITY_FALSE, LEAN_DEADLINE_MS, buildLeanSchedule,
-  currentFormationIsRealistic, hashLeanValue, projectLeanV118Response, reduceLeanExecutions,
+  LEAN_CURRENT_FORMATION_ROOT, currentFormationIsRealistic, hashLeanValue, leanRequestRealismRoot,
+  projectLeanV118Response, reduceLeanExecutions,
   type LeanCell, type LeanExecutionClassification, type LeanExecutionRecord,
   type LeanTerminal,
 } from "./lib/v1-38-lean-runner-feasibility.js"
@@ -36,6 +37,9 @@ export interface LeanExecutionResult {
   readonly cleanupComplete: boolean
   readonly orphanedChild: boolean
   readonly boardRealism: boolean
+  readonly integrityValid: boolean
+  readonly requestRealismRoot?: `sha256:${string}`
+  readonly currentFormationRoot?: `sha256:${string}`
   readonly outcomeRoot?: `sha256:${string}`
   readonly finalStateRoot?: `sha256:${string}`
   readonly transitionEventRoot?: `sha256:${string}`
@@ -54,7 +58,7 @@ export interface LeanExecutionDependencies {
 
 const unlaunched = (cell: LeanCell): LeanExecutionRecord => ({
   ...cell, classification: "unlaunched", cleanupComplete: true,
-  orphanedChild: false, boardRealism: currentFormationIsRealistic(cell),
+  orphanedChild: false, boardRealism: currentFormationIsRealistic(cell), integrityValid: true,
 })
 const boundedCleanup = async (dependencies: LeanExecutionDependencies): Promise<LeanCleanupResult> => {
   let timer: NodeJS.Timeout | undefined
@@ -103,7 +107,7 @@ export const runLeanFeasibilityInjected = async (dependencies: LeanExecutionDepe
           dependencies.execute(cell, controller.signal),
           deadlinePromise.then((): LeanExecutionResult => ({
             classification: "cancelled", cleanupComplete: false, orphanedChild: true,
-            boardRealism: currentFormationIsRealistic(cell),
+            boardRealism: currentFormationIsRealistic(cell), integrityValid: true,
           })),
         ])
         records.push({ ...cell, ...execution })
@@ -112,6 +116,7 @@ export const runLeanFeasibilityInjected = async (dependencies: LeanExecutionDepe
         records.push({
           ...cell, classification: controller.signal.aborted ? "cancelled" : "system_failure",
           cleanupComplete: false, orphanedChild: true, boardRealism: currentFormationIsRealistic(cell),
+          integrityValid: false,
         })
         stopLaunching = true
         runnerInvalid = true
@@ -126,6 +131,7 @@ export const runLeanFeasibilityInjected = async (dependencies: LeanExecutionDepe
     if (!cleanup.cleanupComplete || cleanup.orphanedChild) runnerInvalid = true
   }
   for (const cell of schedule.slice(records.length)) records.push(unlaunched(cell))
+  if (runnerInvalid && records.length > 0) records[0] = { ...records[0]!, integrityValid: false }
   return reduceLeanExecutions(records, runnerInvalid)
 }
 
@@ -160,6 +166,7 @@ export interface CanonicalLeanPreparedRequest {
   readonly request: RuntimeExecutionServiceRequestV118
   readonly nestedRequest: RuntimeExecutionServiceRequest
   readonly initialStateRoot: `sha256:${string}`
+  readonly requestRealismRoot: `sha256:${string}`
   readonly context: ReturnType<typeof createFixtureRuntimeExecutionAuthorityContext>
 }
 
@@ -281,11 +288,16 @@ export const buildCanonicalLeanRequestV118 = (cell: LeanCell): CanonicalLeanPrep
     accounting: { budgetProfileRoot, ledgerPrestateRoot },
     match: nestedRequest,
   })
-  return { request, nestedRequest, initialStateRoot: hashLeanValue(initial.state), context: authority }
+  return {
+    request,
+    nestedRequest,
+    initialStateRoot: hashLeanValue(initial.state),
+    requestRealismRoot: leanRequestRealismRoot(cell),
+    context: authority,
+  }
 }
 
-export const executePreparedLeanCellResponse = (cell: LeanCell) => {
-  const prepared = buildCanonicalLeanRequestV118(cell)
+const executePreparedLeanRequest = (prepared: CanonicalLeanPreparedRequest) => {
   const keys = generateKeyPairSync("ed25519")
   const actual = createPreparedRuntimeServiceDependenciesV118({
       runtimeConfig: createRuntimeServiceConfig({
@@ -319,13 +331,19 @@ export const executePreparedLeanCellResponse = (cell: LeanCell) => {
   return response
 }
 
+export const executePreparedLeanCellResponse = (cell: LeanCell) => executePreparedLeanRequest(buildCanonicalLeanRequestV118(cell))
+
 export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> => {
-  const projection = projectLeanV118Response(executePreparedLeanCellResponse(cell))
+  const prepared = buildCanonicalLeanRequestV118(cell)
+  const projection = projectLeanV118Response(executePreparedLeanRequest(prepared))
   return parseLeanExecutionResult({
     ...projection,
     cleanupComplete: true,
     orphanedChild: false,
     boardRealism: true,
+    integrityValid: true,
+    requestRealismRoot: prepared.requestRealismRoot,
+    currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT,
   })
 }
 
@@ -337,8 +355,8 @@ export const parseLeanExecutionResult = (value: unknown): LeanExecutionResult =>
   const classification = candidate.classification
   if (!["success", "player_violation", "system_failure", "timeout", "cancelled", "unlaunched"].includes(String(classification))) throw new TypeError("LEAN_CHILD_OUTPUT_INVALID")
   const successful = classification === "success" || classification === "player_violation"
-  const keys = ["classification", "cleanupComplete", "orphanedChild", "boardRealism", ...(successful ? ["outcomeRoot", "finalStateRoot", "transitionEventRoot", "runtimeAccountingRoot"] : [])]
-  if (!exactKeys(candidate, keys) || typeof candidate.cleanupComplete !== "boolean" || typeof candidate.orphanedChild !== "boolean" || typeof candidate.boardRealism !== "boolean" || (successful && ![candidate.outcomeRoot, candidate.finalStateRoot, candidate.transitionEventRoot, candidate.runtimeAccountingRoot].every(isSha))) throw new TypeError("LEAN_CHILD_OUTPUT_INVALID")
+  const keys = ["classification", "cleanupComplete", "orphanedChild", "boardRealism", "integrityValid", ...(successful ? ["requestRealismRoot", "currentFormationRoot", "outcomeRoot", "finalStateRoot", "transitionEventRoot", "runtimeAccountingRoot"] : [])]
+  if (!exactKeys(candidate, keys) || typeof candidate.cleanupComplete !== "boolean" || typeof candidate.orphanedChild !== "boolean" || typeof candidate.boardRealism !== "boolean" || typeof candidate.integrityValid !== "boolean" || (successful && ![candidate.requestRealismRoot, candidate.currentFormationRoot, candidate.outcomeRoot, candidate.finalStateRoot, candidate.transitionEventRoot, candidate.runtimeAccountingRoot].every(isSha))) throw new TypeError("LEAN_CHILD_OUTPUT_INVALID")
   return globalThis.structuredClone(candidate) as unknown as LeanExecutionResult
 }
 
@@ -391,7 +409,7 @@ export const createSupervisedLeanExecutionDependencies = (capability: string): L
           if (settled || terminating) return
           terminating = true
           void terminateActive().then(
-            (cleanup) => settle(() => resolve(parseLeanExecutionResult({ classification, ...cleanup, boardRealism: currentFormationIsRealistic(cell) }))),
+            (cleanup) => settle(() => resolve(parseLeanExecutionResult({ classification, ...cleanup, boardRealism: currentFormationIsRealistic(cell), integrityValid: true }))),
             (error: unknown) => settle(() => reject(error)),
           )
         }
@@ -425,7 +443,8 @@ export const syntheticLeanTerminal = async (): Promise<LeanTerminal> => runLeanF
   now: () => 0, terminateActive: async () => ({ cleanupComplete: true, orphanedChild: false }),
   execute: async (cell) => ({
     classification: "success", cleanupComplete: true, orphanedChild: false,
-    boardRealism: currentFormationIsRealistic(cell),
+    boardRealism: currentFormationIsRealistic(cell), integrityValid: true,
+    requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT,
     outcomeRoot: hashLeanValue({ cell: cell.baseCellId, semantic: "outcome" }),
     finalStateRoot: hashLeanValue({ cell: cell.baseCellId, semantic: "state" }),
     transitionEventRoot: hashLeanValue({ cell: cell.baseCellId, semantic: "events" }),

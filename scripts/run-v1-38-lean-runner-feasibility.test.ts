@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { buildLeanSchedule, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
+import { buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
 import {
   LEAN_LIVE_SELECTOR,
   buildCanonicalLeanRequestV118,
@@ -20,7 +20,7 @@ afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: tr
 
 const dependencies = (mutate?: Partial<LeanExecutionDependencies>): LeanExecutionDependencies => ({
   now: (() => { let value = 0; return () => ++value })(),
-  execute: async () => ({ classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }),
+  execute: async (cell) => ({ classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true, requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT, ...roots }),
   terminateActive: async () => ({ cleanupComplete: true, orphanedChild: false }),
   ...mutate,
 })
@@ -35,7 +35,7 @@ describe("bounded lean runner", () => {
         active.add(cell.cellId)
         seen.push(cell.cellId)
         active.delete(cell.cellId)
-        return { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
+        return { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true, requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT, ...roots }
       },
     }))
     expect(seen).toEqual(buildLeanSchedule().map(({ cellId }) => cellId))
@@ -48,8 +48,8 @@ describe("bounded lean runner", () => {
       execute: async (cell) => {
         seen.push(cell.cellId)
         return cell.ordinal === 3
-          ? { classification: "system_failure", cleanupComplete: true, orphanedChild: false, boardRealism: true }
-          : { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
+          ? { classification: "system_failure", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true }
+          : { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true, requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT, ...roots }
       },
     }))
     expect(seen).toHaveLength(24)
@@ -62,10 +62,9 @@ describe("bounded lean runner", () => {
     let aborted = 0
     const result = await runLeanFeasibilityInjected(dependencies({
       now: () => (tick += 500_000),
-      execute: async (_cell, signal) => ({
-        classification: signal.aborted ? "cancelled" : "success",
-        cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots,
-      }),
+      execute: async (cell, signal) => signal.aborted
+        ? { classification: "cancelled", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true }
+        : { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true, requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT, ...roots },
       onAbort: () => { aborted += 1 },
     }))
     expect(aborted).toBe(1)
@@ -126,7 +125,8 @@ describe("bounded lean runner", () => {
   })
 
   it("strictly parses child results and rejects extra or malformed roots", () => {
-    const value = { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
+    const cell = buildLeanSchedule()[0]!
+    const value = { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true, requestRealismRoot: leanRequestRealismRoot(cell), currentFormationRoot: LEAN_CURRENT_FORMATION_ROOT, ...roots }
     expect(parseLeanExecutionResult(value)).toEqual(value)
     expect(() => parseLeanExecutionResult({ ...value, outcomeRoot: "bad" })).toThrow()
     expect(() => parseLeanExecutionResult({ ...value, privateDiagnostics: "secret" })).toThrow()

@@ -65,6 +65,9 @@ export interface LeanExecutionRecord extends LeanCell {
   readonly cleanupComplete: boolean
   readonly orphanedChild: boolean
   readonly boardRealism: boolean
+  readonly integrityValid: boolean
+  readonly requestRealismRoot?: `sha256:${string}`
+  readonly currentFormationRoot?: `sha256:${string}`
   readonly outcomeRoot?: `sha256:${string}`
   readonly finalStateRoot?: `sha256:${string}`
   readonly transitionEventRoot?: `sha256:${string}`
@@ -96,6 +99,7 @@ export interface LeanTerminal {
   }
   readonly determinism: { readonly comparedCells: number; readonly mismatchCount: number }
   readonly completeCleanup: boolean
+  readonly evidence: readonly LeanExecutionRecord[]
   readonly formationMaterialized: false
   readonly authority: LeanAuthority
 }
@@ -144,6 +148,29 @@ const canonicalHash = (value: unknown): `sha256:${string}` => {
   if (!encoded.ok) throw new TypeError(`LEAN_CANONICAL_${encoded.error.code}`)
   return sha256(encoded.bytes)
 }
+
+export const LEAN_CURRENT_FORMATION_ROOT = canonicalHash({
+  bottom: BOTTOM_STARTING_POSITIONS,
+  top: TOP_STARTING_POSITIONS,
+})
+
+/**
+ * Privacy-safe commitment reconstructed from the scheduled public identities.
+ * The live adapter emits this root only after checking its actual prepared
+ * request against the same fields and the canonical current initial state.
+ */
+export const leanRequestRealismRoot = (cell: LeanCell): `sha256:${string}` => canonicalHash({
+  arena: {
+    id: cell.arenaId,
+    label: cell.arenaLabel,
+    semanticGeometryHash: cell.semanticGeometryHash,
+  },
+  fixtures: { bottom: cell.bottomFixtureId, top: cell.topFixtureId },
+  initiativeSide: cell.initiativeSide,
+  formationRoot: LEAN_CURRENT_FORMATION_ROOT,
+  runtimeLimitsRoot: canonicalHash(DEFAULT_RUNTIME_LIMITS),
+  runtimeAbi: "strategy-runtime-abi-v1.19",
+})
 
 const sidePairs = [
   [LEAN_FIXTURES.starter, LEAN_FIXTURES.advanced],
@@ -214,15 +241,24 @@ export const reduceLeanExecutions = (
   }
   const seen = new Map<string, LeanExecutionRecord>()
   let invalid = forceInvalid || records.length !== 24
-  for (const record of records) {
+  for (const [recordIndex, record] of records.entries()) {
     const expected = expectedById.get(record.cellId)
+    const semanticRoots = [record.outcomeRoot, record.finalStateRoot, record.transitionEventRoot, record.runtimeAccountingRoot]
+    const launchedWithSemanticEvidence = record.classification === "success" || record.classification === "player_violation"
     if (
       expected === undefined ||
       seen.has(record.cellId) ||
-      (["success", "player_violation"].includes(record.classification) &&
-        ![record.outcomeRoot, record.finalStateRoot, record.transitionEventRoot, record.runtimeAccountingRoot].every(isSha)) ||
-      (!["success", "player_violation"].includes(record.classification) &&
-        [record.outcomeRoot, record.finalStateRoot, record.transitionEventRoot, record.runtimeAccountingRoot].some((root) => root !== undefined)) ||
+      expected.ordinal !== recordIndex ||
+      record.integrityValid !== true ||
+      (launchedWithSemanticEvidence &&
+        (!semanticRoots.every(isSha) ||
+          record.requestRealismRoot !== leanRequestRealismRoot(record) ||
+          record.currentFormationRoot !== LEAN_CURRENT_FORMATION_ROOT ||
+          record.boardRealism !== true)) ||
+      (!launchedWithSemanticEvidence &&
+        (semanticRoots.some((root) => root !== undefined) ||
+          record.requestRealismRoot !== undefined ||
+          record.currentFormationRoot !== undefined)) ||
       JSON.stringify(expected) !== JSON.stringify(
         Object.fromEntries(Object.keys(expected).map((key) => [key, record[key as keyof LeanCell]])),
       )
@@ -263,6 +299,7 @@ export const reduceLeanExecutions = (
     counts: Object.freeze(counts),
     determinism: Object.freeze({ comparedCells, mismatchCount }),
     completeCleanup,
+    evidence: Object.freeze(records.map((record) => Object.freeze(globalThis.structuredClone(record)))),
     formationMaterialized: false,
     authority: LEAN_AUTHORITY_FALSE,
   })
@@ -275,6 +312,44 @@ const isSha = (value: unknown): value is `sha256:${string}` =>
   typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
 const isOid = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{40}$/u.test(value)
+
+const validateLeanExecutionEvidence = (value: unknown): LeanExecutionRecord => {
+  const cellKeys = ["cellId", "baseCellId", "chargedIdentity", "ordinal", "pass", "arenaId", "arenaLabel", "semanticGeometryHash", "bottomFixtureId", "topFixtureId", "initiativeSide"]
+  const commonKeys = [...cellKeys, "classification", "cleanupComplete", "orphanedChild", "boardRealism", "integrityValid"]
+  if (!exactKeys(value, commonKeys) && !exactKeys(value, [...commonKeys, "requestRealismRoot", "currentFormationRoot", "outcomeRoot", "finalStateRoot", "transitionEventRoot", "runtimeAccountingRoot"])) throw new TypeError("LEAN_EVIDENCE_KEYS")
+  const candidate = value as unknown as LeanExecutionRecord
+  const expected = expectedById.get(candidate.cellId)
+  if (
+    expected === undefined ||
+    JSON.stringify(expected) !== JSON.stringify(Object.fromEntries(Object.keys(expected).map((key) => [key, candidate[key as keyof LeanCell]]))) ||
+    !["success", "player_violation", "system_failure", "timeout", "cancelled", "unlaunched"].includes(candidate.classification) ||
+    typeof candidate.cleanupComplete !== "boolean" ||
+    typeof candidate.orphanedChild !== "boolean" ||
+    typeof candidate.boardRealism !== "boolean" ||
+    typeof candidate.integrityValid !== "boolean"
+  ) throw new TypeError("LEAN_EVIDENCE_INVALID")
+  const semantic = candidate.classification === "success" || candidate.classification === "player_violation"
+  if (semantic) {
+    if (
+      ![candidate.outcomeRoot, candidate.finalStateRoot, candidate.transitionEventRoot, candidate.runtimeAccountingRoot, candidate.requestRealismRoot, candidate.currentFormationRoot].every(isSha) ||
+      candidate.requestRealismRoot !== leanRequestRealismRoot(candidate) ||
+      candidate.currentFormationRoot !== LEAN_CURRENT_FORMATION_ROOT
+    ) throw new TypeError("LEAN_EVIDENCE_REALISM_INVALID")
+  } else if ([candidate.outcomeRoot, candidate.finalStateRoot, candidate.transitionEventRoot, candidate.runtimeAccountingRoot, candidate.requestRealismRoot, candidate.currentFormationRoot].some((root) => root !== undefined)) {
+    throw new TypeError("LEAN_EVIDENCE_CLASSIFICATION_ROOTS")
+  }
+  return globalThis.structuredClone(candidate)
+}
+
+export const deriveAndValidateLeanTerminal = (value: unknown): LeanTerminal => {
+  const keys = ["schemaVersion", "claimClass", "historicalFullMatrix", "schedule", "result", "counts", "determinism", "completeCleanup", "evidence", "formationMaterialized", "authority"]
+  if (!exactKeys(value, keys) || !Array.isArray(value.evidence)) throw new TypeError("LEAN_TERMINAL_KEYS")
+  const evidence = value.evidence.map(validateLeanExecutionEvidence)
+  if (evidence.length !== buildLeanSchedule().length || evidence.some((record, ordinal) => record.ordinal !== ordinal)) throw new TypeError("LEAN_EVIDENCE_ORDER")
+  const derived = reduceLeanExecutions(evidence)
+  if (canonicalHash(derived) !== canonicalHash(value)) throw new TypeError("LEAN_TERMINAL_DERIVATION_MISMATCH")
+  return derived
+}
 
 export const createLeanManifest = (source: LeanManifest["source"]): LeanManifest => {
   const starter = findStarterStrategy(LEAN_FIXTURES.starter)
@@ -297,7 +372,7 @@ export const createLeanManifest = (source: LeanManifest["source"]): LeanManifest
     })),
     formation: {
       profile: "current_edge_rank",
-      root: canonicalHash({ bottom: BOTTOM_STARTING_POSITIONS, top: TOP_STARTING_POSITIONS }),
+      root: LEAN_CURRENT_FORMATION_ROOT,
     },
     scheduleRoot: canonicalHash(buildLeanSchedule()),
     runtimeLimitsRoot: canonicalHash(DEFAULT_RUNTIME_LIMITS),
