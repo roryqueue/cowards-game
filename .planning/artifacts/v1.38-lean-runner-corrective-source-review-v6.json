@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-review-v6",
+  "sourceCommit": "b69f87e7238fd05f9ff9850597196155711d8e54",
+  "sourceTree": "03ef4b8a3dd6bf109d6d862a16905f86444d78f5",
+  "manifestRoot": "sha256:8f2ec559de607db7f39bdafb9ac16bedf7dd52c5ae7a59069821e7d1c6386e02",
+  "findingCount": 5,
+  "findings": [
+    {
+      "id": "CR-V6-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The v6 source manifest omits the required committed Plan 171 summary identity and its checker cannot enforce the dual-summary closure."
+    },
+    {
+      "id": "CR-V6-02",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Recovery proof accepts an audited filesystem import without proving its exact arity, options, or canonical target."
+    },
+    {
+      "id": "CR-V6-03",
+      "severity": "critical",
+      "status": "open",
+      "summary": "External namespace imports can spoof trusted global receiver names because method admission ignores namespace provenance."
+    },
+    {
+      "id": "CR-V6-04",
+      "severity": "critical",
+      "status": "open",
+      "summary": "Callback-object aliases can bypass recovery reachability because callback identity does not propagate through identifier arguments and parameters."
+    },
+    {
+      "id": "WR-V6-01",
+      "severity": "warning",
+      "status": "open",
+      "summary": "The required focused post-publication suite retains a source-only destination-absence assertion and is not green after manifest publication."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
