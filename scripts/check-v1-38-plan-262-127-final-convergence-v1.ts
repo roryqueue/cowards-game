@@ -4,11 +4,14 @@ import { createHash } from "node:crypto"
 import {
   closeSync,
   constants,
+  fsyncSync,
   lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
   readdirSync,
+  renameSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs"
 import path from "node:path"
@@ -500,15 +503,44 @@ const inspectCleanup = (root: string) => ({
     /^\.v138-successor-[a-f0-9]{64}\.lock$/u.test(name)).length,
 })
 
+export const assertCommittedAuditCarrier = (root: string, carrier: any): string => {
+  if (carrier?.schemaVersion !== REVIEW_SCHEMA || carrier?.findingCount !== 0 ||
+      carrier?.plan128Eligible !== true || carrier?.authorizesExecution !== false ||
+      carrier?.phase263PlanningEligible !== false || carrier?.phase263ExecutionEligible !== false ||
+      !/^[a-f0-9]{40}$/u.test(carrier?.sourceCommit ?? "") ||
+      !/^[a-f0-9]{40}$/u.test(carrier?.sourceTree ?? "") ||
+      !Array.isArray(carrier?.sourceFiles) || carrier.sourceFiles.length !== 2)
+    fail("DEFAULT_AUDIT_CARRIER")
+  assertRooted(carrier, REVIEW_DOMAIN, "reviewRoot", "DEFAULT_AUDIT_REVIEW_ROOT")
+  if (!isAncestor(root, carrier.sourceCommit, "HEAD") ||
+      git(root, ["rev-parse", `${carrier.sourceCommit}^{tree}`]) !== carrier.sourceTree)
+    fail("DEFAULT_AUDIT_SOURCE")
+  const expectedPaths = [PATHS.source, PATHS.tests].sort()
+  if (canonical(carrier.sourceFiles.map((entry: any) => entry.path).sort()) !== canonical(expectedPaths))
+    fail("DEFAULT_AUDIT_SOURCE_FILES")
+  for (const entry of carrier.sourceFiles) {
+    const match = /^(\d+) blob ([a-f0-9]{40})\t/u.exec(
+      git(root, ["ls-tree", carrier.sourceCommit, "--", entry.path]),
+    )
+    if (!match || entry.mode !== match[1] || entry.blob !== match[2] ||
+        entry.sha256 !== sha256(gitBytes(root, carrier.sourceCommit, entry.path)))
+      fail("DEFAULT_AUDIT_SOURCE_FILES")
+  }
+  const publicationCommit = git(root, ["log", "-1", "--format=%H", "--", PATHS.reviewCarrier])
+  if (canonical(changedPaths(root, publicationCommit)) !==
+      canonical([PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127].sort()) ||
+      !isAncestor(root, carrier.sourceCommit, publicationCommit))
+    fail("DEFAULT_AUDIT_PUBLICATION")
+  return carrier.sourceCommit
+}
+
 const defaultAuditRef = (root: string): string => {
-  const target = containedTarget(root, PATHS.reviewCarrier)
-  if (kind(target) !== "file") return "HEAD"
+  if (!pathExistsAt(root, "HEAD", PATHS.reviewCarrier)) return "HEAD"
   try {
-    const carrier = JSON.parse(readFileSync(target, "utf8"))
-    return /^[a-f0-9]{40}$/u.test(carrier?.sourceCommit) &&
-      isAncestor(root, carrier.sourceCommit, "HEAD")
-      ? carrier.sourceCommit
-      : "HEAD"
+    return assertCommittedAuditCarrier(
+      root,
+      readJsonAt(root, "HEAD", PATHS.reviewCarrier),
+    )
   } catch {
     return "HEAD"
   }
@@ -666,16 +698,67 @@ const exclusiveWrite = (root: string, repoPath: string, contents: string): void 
   try { writeFileSync(fd, contents) } finally { closeSync(fd) }
 }
 
-const publishReviewFile = (root: string, repoPath: string, contents: string): void => {
-  const target = containedTarget(root, repoPath)
-  if (kind(target) === "absent") {
-    exclusiveWrite(root, repoPath, contents)
-    return
-  }
-  if (kind(target) !== "file" ||
-      !readFileSync(target).equals(gitBytes(root, "HEAD", repoPath)))
+interface ReviewPublicationEntry {
+  repoPath: string
+  contents: string
+}
+
+export const publishReviewSet = (root: string, entries: ReviewPublicationEntry[]): void => {
+  const expectedPaths = [PATHS.reviewCarrier, PATHS.reviewReport, PATHS.summary127].sort()
+  if (canonical(entries.map((entry) => entry.repoPath).sort()) !== canonical(expectedPaths))
+    fail("REVIEW_PUBLICATION_PATHS")
+  const targets = entries.map((entry) => ({
+    ...entry,
+    target: containedTarget(root, entry.repoPath),
+  }))
+  const targetKinds = targets.map(({ target }) => kind(target))
+  if (!targetKinds.every((value) => value === "absent") &&
+      !targetKinds.every((value) => value === "file"))
     fail("REVIEW_REPLACEMENT_DRIFT")
-  writeFileSync(target, contents)
+
+  const replacing = targetKinds[0] === "file"
+  const originals = new Map<string, Buffer | null>()
+  for (const { repoPath, target } of targets) {
+    const original = replacing ? readFileSync(target) : null
+    originals.set(target, original)
+    if (replacing && !original?.equals(gitBytes(root, "HEAD", repoPath)))
+      fail("REVIEW_REPLACEMENT_DRIFT")
+  }
+  if (replacing)
+    assertCommittedAuditCarrier(root, readJsonAt(root, "HEAD", PATHS.reviewCarrier))
+
+  const prepared: Array<{ target: string; temporary: string }> = []
+  try {
+    for (const [index, { target, contents }] of targets.entries()) {
+      mkdirSync(path.dirname(target), { recursive: true })
+      const temporary = `${target}.plan127-${process.pid}-${index}.tmp`
+      const fd = openSync(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL |
+        (constants.O_NOFOLLOW ?? 0), 0o644)
+      try {
+        writeFileSync(fd, contents)
+        fsyncSync(fd)
+      } finally {
+        closeSync(fd)
+      }
+      prepared.push({ target, temporary })
+    }
+    for (const item of prepared) renameSync(item.temporary, item.target)
+  } catch (error) {
+    for (const { target } of targets) {
+      const original = originals.get(target)
+      try {
+        if (original === null) {
+          if (kind(target) === "file") unlinkSync(target)
+        } else if (original !== undefined) {
+          writeFileSync(target, original)
+        }
+      } catch { /* preserve the original publication error */ }
+    }
+    throw error
+  } finally {
+    for (const { temporary } of prepared)
+      if (kind(temporary) === "file") unlinkSync(temporary)
+  }
 }
 
 export const assertFinalReviewGate = (value: any, expectedSourceCommit: string): any => {
@@ -877,9 +960,11 @@ const checkLaterHead = async (root: string) => {
 
 const writeReview = async (root: string) => {
   const review = await buildReview(root)
-  publishReviewFile(root, PATHS.reviewCarrier, canonical(review.carrier))
-  publishReviewFile(root, PATHS.reviewReport, review.report)
-  publishReviewFile(root, PATHS.summary127, review.summary)
+  publishReviewSet(root, [
+    { repoPath: PATHS.reviewCarrier, contents: canonical(review.carrier) },
+    { repoPath: PATHS.reviewReport, contents: review.report },
+    { repoPath: PATHS.summary127, contents: review.summary },
+  ])
   return review
 }
 

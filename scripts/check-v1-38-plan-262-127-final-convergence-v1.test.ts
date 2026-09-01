@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { readFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 
 import {
   AUTHORITY_KEYS,
@@ -8,6 +12,7 @@ import {
   PLAN_128_PATHS,
   REQUIREMENT_IDS,
   assertAggregateProjection,
+  assertCommittedAuditCarrier,
   assertDispositionProjection,
   assertFinalReviewGate,
   assertStructuredProofCoverage,
@@ -16,6 +21,7 @@ import {
   classifyRequirements,
   classifyPhase262Paths,
   deriveHistoricalInventory,
+  publishReviewSet,
   projectFinalAuthority,
 } from "./check-v1-38-plan-262-127-final-convergence-v1"
 
@@ -211,6 +217,59 @@ describe("Plan 262-127 final convergence", () => {
       .toThrow(/REVIEW_AUTHORITY/)
     expect(() => assertFinalReviewGate(valid, "c".repeat(40)))
       .toThrow(/REVIEW_STALE/)
+  })
+
+  it("rejects a rooted carrier redirected to an older ancestor", () => {
+    const carrier = JSON.parse(readFileSync(
+      ".planning/artifacts/v1.38-plan-262-127-final-convergence-review-v1.json",
+      "utf8",
+    ))
+    const redirected = { ...carrier, sourceCommit: PLAN_106_COMMIT }
+    delete redirected.reviewRoot
+    const normalize = (value: any): any => Array.isArray(value)
+      ? value.map(normalize)
+      : value !== null && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).sort(([left], [right]) =>
+          left.localeCompare(right)).map(([key, child]) => [key, normalize(child)]))
+        : value
+    const canonical = `${JSON.stringify(normalize(redirected))}\n`
+    redirected.reviewRoot = `sha256:${createHash("sha256").update(
+      `v1.38:plan-262:127:final-convergence-review:v1\0${canonical}`,
+    ).digest("hex")}`
+    expect(() => assertCommittedAuditCarrier(root, redirected))
+      .toThrow(/DEFAULT_AUDIT_SOURCE/)
+  })
+
+  it("preflights all review destinations before a third-file drift can write", () => {
+    const fixture = mkdtempSync(path.join(tmpdir(), "plan127-publication-"))
+    const entries = [
+      [".planning/artifacts/v1.38-plan-262-127-final-convergence-review-v1.json", "old carrier\n"],
+      [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-127-REVIEW.md", "old review\n"],
+      [".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-127-SUMMARY.md", "old summary\n"],
+    ] as const
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: fixture })
+      execFileSync("git", ["config", "user.email", "plan127@example.invalid"], { cwd: fixture })
+      execFileSync("git", ["config", "user.name", "Plan 127 Test"], { cwd: fixture })
+      for (const [repoPath, contents] of entries) {
+        const target = path.join(fixture, repoPath)
+        mkdirSync(path.dirname(target), { recursive: true })
+        writeFileSync(target, contents)
+      }
+      execFileSync("git", ["add", ...entries.map(([repoPath]) => repoPath)], { cwd: fixture })
+      execFileSync("git", ["commit", "-q", "-m", "fixture"], { cwd: fixture })
+      const third = path.join(fixture, entries[2][0])
+      writeFileSync(third, "dirty summary\n")
+      const before = entries.map(([repoPath]) => readFileSync(path.join(fixture, repoPath)))
+      expect(() => publishReviewSet(fixture, entries.map(([repoPath]) => ({
+        repoPath,
+        contents: `new ${repoPath}\n`,
+      })))).toThrow(/REVIEW_REPLACEMENT_DRIFT/)
+      expect(entries.map(([repoPath]) => readFileSync(path.join(fixture, repoPath))))
+        .toEqual(before)
+    } finally {
+      rmSync(fixture, { recursive: true, force: true })
+    }
   })
 
   it("freezes the exact atomic Plan 128 path set", () => {
