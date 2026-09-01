@@ -1,6 +1,6 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-verified: 2026-09-01T01:46:25Z
+verified: 2026-09-01T18:22:45Z
 status: gaps_found
 score: 4/5 must-haves verified
 requirements_score: 15/16 satisfied
@@ -11,25 +11,31 @@ re_verification:
   previous_score: 4/5
   gaps_closed: []
   gaps_remaining:
-    - "The persisted current-rules matrix was not reproduced: the bounded producer exhausted with fresh accepted 0/540."
+    - "The reviewed D-34L lean fixture gate returned non_pass: 8/24 supervised successes, 16 system failures, and 8/12 cross-pass mismatches."
   regressions: []
 gaps:
   - truth: "Researchers can reproduce the persisted current-rules matrix under the resolved tuple, while Starter and Advanced Strategies are accepted only as fixtures."
     status: failed
-    reason: "The sole corrected bounded invocation terminated exhausted with zero accepted cells; ADMIT-03 therefore remains blocked."
+    reason: "The sole lean invocation completed cleanup but produced only 8/24 supervised successes, 16 system failures, and 8/12 cross-pass mismatches; ADMIT-03 therefore remains blocked."
     artifacts:
-      - path: ".planning/artifacts/v1.38-current-matrix-retry-terminal-v4.json"
-        issue: "disposition=exhausted and freshAccepted=0"
-      - path: ".planning/artifacts/v1.38-plan-262-94-admission-disposition-v4.json"
-        issue: "status=non_pass, producerSucceeded=false, and requiredAccepted=540"
-      - path: ".planning/artifacts/v1.38-phase-262-final-eligibility-v1.json"
-        issue: "branch=gaps, admit03=blocked, and phase262=incomplete"
+      - path: ".planning/artifacts/v1.38-lean-runner-terminal.json"
+        issue: "result=non_pass, success=8, systemFailure=16, and mismatchCount=8"
+      - path: ".planning/artifacts/v1.38-lean-runner-adjudication-v1.json"
+        issue: "reviewedResult=non_pass and admitsEligibility=false"
+      - path: ".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json"
+        issue: "admit03=blocked, phase262Complete=false, and Phase263 eligibility false"
     missing:
-      - "A valid 540/540 current-rules reproduction under an explicitly approved future scope; the exhausted envelope grants no retry authority."
-      - "A new milestone/product-scope decision before any further empirical route or Phase 263 work."
+      - "A reviewed exact D-34L pass with 24/24 supervised successes, zero failed cells, complete cleanup, and four identical normalized roots across both passes for all 12 cells."
+      - "Before any one permitted whole-gate correction, a separately committed plan must diagnose and fix a specific implementation defect; this adjudication creates no rerun authority."
 ---
 
 # Phase 262: Goal-Backward Verification
+
+## Current D-34L verdict — 2026-09-01
+
+The approved lean replacement was executed exactly once and independently adjudicated without rerunning it. Schedule, charge, lineage, cleanup, board-realism, privacy, selected-tuple, fixture, arena, and current-formation custody checks passed. The empirical gate did not: 8 of 24 executions succeeded, 16 system-failed, and 8 of 12 cross-pass comparisons mismatched. The reviewed result is `non_pass`, so ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phase 263 planning/execution remain false.
+
+The historical full-matrix `exhausted` result remains immutable at fresh `0/540`, no reproduction, and `reinterpreted:false`; it is not substituted for or reinterpreted by the lean result. The repeated arena-specific pattern may be diagnosed separately, but this verification records no diagnosed defect and grants no corrective-rerun authority.
 
 **Phase Goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, single-operator local-seal, claim, and containment contract with explicit assurance limits.
 

@@ -5,10 +5,18 @@ status: partial
 nyquist_compliant: true
 coverage_state: complete
 empirical_state: blocked
-last_audited: 2026-08-31
+last_audited: 2026-09-01
 ---
 
 # Phase 262 Validation Strategy
+
+## D-34L final adjudication — 2026-09-01
+
+The one authorized `lean_runner_feasibility_v1` invocation is complete and independently adjudicated. Its 12 unique cells ran in two serial passes as exactly 24 charged executions with complete cleanup, board-realistic inputs, and no orphaned child. The terminal rederives to `non_pass`: 8 supervised successes, 16 system failures, and 8 of 12 cross-pass cells without the four required identical success roots. The independent adjudication has zero integrity findings, but only an exact reviewed pass could satisfy ADMIT-03.
+
+Validation coverage remains 16/16 and requirement satisfaction remains 15/16. ADMIT-03 is now blocked by the reviewed lean empirical result rather than pending or by the historical 540-cell requirement. The older full-matrix result remains separate immutable history at `exhausted`, fresh `0/540`, no reproduction, and `reinterpreted:false`. No Phase 263, candidate, formation, holdout, public/product/production, counted-play, canonical-evidence, gameplay-change, archive, release, or tag authority follows.
+
+The arena-specific failure pattern is eligible for separate diagnosis only. This validation neither diagnoses a qualifying implementation defect nor authorizes a corrective rerun.
 
 ## Disposition
 
