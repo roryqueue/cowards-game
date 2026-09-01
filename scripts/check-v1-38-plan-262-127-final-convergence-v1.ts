@@ -542,10 +542,11 @@ export const assertCommittedAuditCarrier = (root: string, carrier: any): string 
 const defaultAuditRef = (root: string): string => {
   if (!pathExistsAt(root, "HEAD", PATHS.reviewCarrier)) return "HEAD"
   try {
-    return assertCommittedAuditCarrier(
+    assertCommittedAuditCarrier(
       root,
       readJsonAt(root, "HEAD", PATHS.reviewCarrier),
     )
+    return PLAN_106_COMMIT
   } catch {
     return "HEAD"
   }
