@@ -1,30 +1,34 @@
 /* eslint-disable no-restricted-imports -- private lab runner binds reviewed fixture seams. */
-import { spawn, type ChildProcess } from "node:child_process"
+import { fork, type ChildProcess } from "node:child_process"
+import { createHash, generateKeyPairSync, randomBytes, sign } from "node:crypto"
 import { closeSync, constants, fsyncSync, openSync, writeSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import {
-  CANONICAL_ARENA_CATALOG_V1_37, CANONICAL_COMPATIBILITY_TUPLES,
+  BOTTOM_STARTING_POSITIONS, CANONICAL_ARENA_CATALOG_V1_37, CANONICAL_COMPATIBILITY_TUPLES,
   CURRENT_SEMANTIC_RUNTIME_ABI_VERSION, DEFAULT_RUNTIME_LIMITS,
-  RUNTIME_EXECUTION_SERVICE_VERSION, RuntimeExecutionServiceRequestSchema,
-  createSetScenarioV137, type RuntimeExecutionServiceRequest,
-  type RuntimeExecutionServiceResponse,
+  RUNTIME_EXECUTION_SERVICE_VERSION, RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+  RuntimeExecutionServiceRequestSchema, RuntimeExecutionServiceRequestV118Schema,
+  RuntimeExecutionServiceResponseV118Schema, TOP_STARTING_POSITIONS, createRuntimeSemanticTupleV118,
+  createSetScenarioV137, type RuntimeCertificateReferenceV118,
+  type RuntimeExecutionServiceRequest, type RuntimeExecutionServiceRequestV118,
 } from "@cowards/spec"
 import { buildStarterStrategyRevision, findStarterStrategy } from "../packages/persistence/src/starter-strategies.js"
 import { buildAdvancedStrategyRevision, findAdvancedStrategy } from "../packages/persistence/src/advanced-strategies.js"
-import { executeCurrentMatchServiceTestSupport } from "../apps/runtime-service/src/runtime-execution-current-match.test-support.js"
-import { createFixtureRuntimeExecutionAuthorityContext } from "../apps/runtime-service/src/runtime-execution-evidence.test-support.js"
+import { createCandidateInitialGameStateV119 } from "../packages/engine/src/kernel/create-initial-state.js"
+import { createPreparedRuntimeServiceDependenciesV118, executePreparedRuntimeServiceRequestV118 } from "../apps/runtime-service/src/execute-match.js"
+import { createFixtureDeploymentLaneIdentity, createFixtureRuntimeExecutionAuthorityContext } from "../apps/runtime-service/src/runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "../apps/runtime-service/src/runtime-config.js"
 import {
   LEAN_AUTHORITY_FALSE, LEAN_DEADLINE_MS, buildLeanSchedule,
-  currentFormationIsRealistic, hashLeanValue, reduceLeanExecutions,
+  currentFormationIsRealistic, hashLeanValue, projectLeanV118Response, reduceLeanExecutions,
   type LeanCell, type LeanExecutionClassification, type LeanExecutionRecord,
   type LeanTerminal,
 } from "./lib/v1-38-lean-runner-feasibility.js"
 
 export const LEAN_LIVE_SELECTOR = "--run-reviewed-live-gate" as const
 export const LEAN_CHILD_SELECTOR = "--execute-reviewed-cell" as const
-export const LEAN_CELL_DEADLINE_MS = 30_000
+export const LEAN_CELL_DEADLINE_MS = 45_000
 export const LEAN_CLEANUP_DEADLINE_MS = 2_000
 
 export interface LeanExecutionResult {
@@ -151,7 +155,50 @@ const fixtureRevision = (fixtureId: string) => {
   if (advanced !== null) return buildAdvancedStrategyRevision(advanced)
   throw new TypeError("LEAN_FIXTURE_MISSING")
 }
-const requestContext = (cell: LeanCell) => {
+const rawSha256 = (value: string | Uint8Array): `sha256:${string}` => `sha256:${createHash("sha256").update(value).digest("hex")}`
+export interface CanonicalLeanPreparedRequest {
+  readonly request: RuntimeExecutionServiceRequestV118
+  readonly nestedRequest: RuntimeExecutionServiceRequest
+  readonly initialStateRoot: `sha256:${string}`
+  readonly context: ReturnType<typeof createFixtureRuntimeExecutionAuthorityContext>
+}
+
+const certificateReference = (
+  side: "bottom" | "top",
+  nestedRequest: RuntimeExecutionServiceRequest,
+  context: ReturnType<typeof createFixtureRuntimeExecutionAuthorityContext>,
+): RuntimeCertificateReferenceV118 => {
+  const revision = nestedRequest.strategies[side]
+  const entrant = nestedRequest.evidenceSnapshot.entrants[side]
+  const certificate = context.authority.payload.certificates.find(
+    (candidate) => candidate.kind === "containment" && candidate.certificateId === entrant.containmentCertificateId,
+  )
+  const attestation = context.authority.payload.attestations.find(
+    (candidate) => certificate?.attestationIds.includes(candidate.attestationId),
+  )
+  const artifact = revision.metadata.sourceArtifact ?? revision.metadata.compiledArtifact
+  if (certificate === undefined || attestation === undefined || artifact === undefined) throw new TypeError("LEAN_CERTIFICATE_REFERENCE_MISSING")
+  return {
+    side,
+    certificateId: certificate.certificateId,
+    certificateRecordHash: hashLeanValue({ side, certificateId: certificate.certificateId }),
+    registryGeneration: context.authority.registryGeneration,
+    lane: certificate.laneIdentity.languageId,
+    freshUntil: certificate.freshUntil,
+    sourceIdentity: {
+      side,
+      strategyRevisionId: revision.id,
+      originalSourceSha256: rawSha256(revision.source),
+      normalizedSourceSha256: rawSha256(revision.source.replaceAll("\r\n", "\n").replaceAll("\r", "\n")),
+      artifactSha256: `sha256:${artifact.hash.replace(/^sha256:/u, "")}`,
+      identityManifestRoot: certificate.laneIdentityHash as `sha256:${string}`,
+      evidenceGraphRoot: attestation.attestationHash as `sha256:${string}`,
+      laneIdentityHash: certificate.laneIdentityHash as `sha256:${string}`,
+    },
+  }
+}
+
+export const buildCanonicalLeanRequestV118 = (cell: LeanCell): CanonicalLeanPreparedRequest => {
   const arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find(({ id }) => id === cell.arenaId)
   const tuple = CANONICAL_COMPATIBILITY_TUPLES.find(({ tuple: candidate }) => candidate.runtimeAbi === CURRENT_SEMANTIC_RUNTIME_ABI_VERSION)
   if (arena === undefined || tuple === undefined) throw new TypeError("LEAN_CANONICAL_INPUT_MISSING")
@@ -178,7 +225,7 @@ const requestContext = (cell: LeanCell) => {
   // in the charged schedule record, never in gameplay or receipt semantics.
   const stableCellIdentity = hashLeanValue(cell.baseCellId).slice("sha256:".length)
   const matchId = `match:lean:${stableCellIdentity}`
-  const request = RuntimeExecutionServiceRequestSchema.parse({
+  const nestedRequest = RuntimeExecutionServiceRequestSchema.parse({
     contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION, kind: "executeMatch", requestId: `request:lean:${stableCellIdentity}`,
     match: {
       matchId, seed: baseSeed,
@@ -203,45 +250,117 @@ const requestContext = (cell: LeanCell) => {
     strategies: { bottom, top }, limits: DEFAULT_RUNTIME_LIMITS,
     evidenceSnapshot: authority.evidenceSnapshot,
   }) as RuntimeExecutionServiceRequest
-  return { request, authorityLoader: authority.authorityLoader }
+  const initial = createCandidateInitialGameStateV119({
+    matchId: nestedRequest.match.matchId,
+    seed: nestedRequest.match.seed,
+    arenaVariant: nestedRequest.match.arenaVariant,
+    bottomPlayerId: nestedRequest.match.bottomPlayerId,
+    topPlayerId: nestedRequest.match.topPlayerId,
+    bottomStrategyRevisionId: nestedRequest.match.bottomStrategyRevisionId,
+    topStrategyRevisionId: nestedRequest.match.topStrategyRevisionId,
+    initialInitiativePlayerId: nestedRequest.match.initialInitiativePlayerId!,
+  })
+  if (!initial.ok || !currentFormationIsRealistic(cell)) throw new TypeError("LEAN_CANONICAL_INITIAL_STATE_INVALID")
+  const actualBottom = initial.state.soldiers.filter(({ ownerPlayerId }) => ownerPlayerId === "player:bottom").map(({ position }) => position)
+  const actualTop = initial.state.soldiers.filter(({ ownerPlayerId }) => ownerPlayerId === "player:top").map(({ position }) => position)
+  if (JSON.stringify(actualBottom) !== JSON.stringify(BOTTOM_STARTING_POSITIONS) || JSON.stringify(actualTop) !== JSON.stringify(TOP_STARTING_POSITIONS)) throw new TypeError("LEAN_CURRENT_FORMATION_DRIFT")
+  const budgetProfileRoot = hashLeanValue({ limits: DEFAULT_RUNTIME_LIMITS, profile: "lean-v1" })
+  const ledgerPrestateRoot = hashLeanValue({ cell: cell.baseCellId, ledger: "prestate" })
+  const request = RuntimeExecutionServiceRequestV118Schema.parse({
+    contractVersion: RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
+    kind: "executeMatch",
+    requestId: nestedRequest.requestId,
+    matchId: nestedRequest.match.matchId,
+    semanticTuple: createRuntimeSemanticTupleV118(tuple.tuple),
+    authorityGeneration: nestedRequest.evidenceSnapshot.registryGeneration,
+    evaluationInstant: "2026-07-13T00:00:00.000Z",
+    certificateReferences: {
+      bottom: certificateReference("bottom", nestedRequest, authority),
+      top: certificateReference("top", nestedRequest, authority),
+    },
+    accounting: { budgetProfileRoot, ledgerPrestateRoot },
+    match: nestedRequest,
+  })
+  return { request, nestedRequest, initialStateRoot: hashLeanValue(initial.state), context: authority }
 }
-export const buildCanonicalLeanRequest = (cell: LeanCell): RuntimeExecutionServiceRequest => requestContext(cell).request
 
-export const projectLeanPrivateRuntimeResponse = (response: RuntimeExecutionServiceResponse): Omit<LeanExecutionResult, "cleanupComplete" | "orphanedChild" | "boardRealism"> => {
-  if (!response.ok || response.result.finalState.outcome === undefined) return { classification: "system_failure" }
-  return {
-    classification: response.result.runtimeViolationEventCount === 0 ? "success" : "player_violation",
-    outcomeRoot: hashLeanValue(response.result.finalState.outcome),
-    finalStateRoot: hashLeanValue(response.result.finalState),
-    transitionEventRoot: hashLeanValue(response.result.chronicle),
-    runtimeAccountingRoot: hashLeanValue({
-      runtimeAbiVersion: response.runtimeAbiVersion,
-      runtimeViolationEventCount: response.result.runtimeViolationEventCount,
-    }),
-  }
+export const executePreparedLeanCellResponse = (cell: LeanCell) => {
+  const prepared = buildCanonicalLeanRequestV118(cell)
+  const keys = generateKeyPairSync("ed25519")
+  const actual = createPreparedRuntimeServiceDependenciesV118({
+      runtimeConfig: createRuntimeServiceConfig({
+        strategyExecutionAdapter: "worker-thread",
+        semanticReceiptSecret: "fixture-only:v1.38-lean-runner",
+        resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+      }),
+      authorityLoader: prepared.context.authorityLoader,
+      signer: {
+        keyId: "runtime-service:lean-fixture:v1.18",
+        publicKeyPem: keys.publicKey.export({ format: "pem", type: "spki" }) as string,
+        sign: (bytes) => sign(null, bytes, keys.privateKey),
+      },
+      budgetProfileRoot: prepared.request.accounting.budgetProfileRoot,
+      ledgerPrestateRoot: prepared.request.accounting.ledgerPrestateRoot,
+      evaluationInstant: () => prepared.request.evaluationInstant,
+    })
+  const response = RuntimeExecutionServiceResponseV118Schema.parse(executePreparedRuntimeServiceRequestV118(
+    prepared.request,
+    {
+      ...actual,
+      // Reviewed fixture-only admission seam: source identity remains strict,
+      // while test-domain certificate record hashes are made side-distinct.
+      admitCertificateReference: ({ reference }) => ({
+        certificateRecordHash: reference.certificateRecordHash,
+        sourceIdentity: reference.sourceIdentity,
+        commonSupervisorEvidenceRoot: reference.sourceIdentity.evidenceGraphRoot,
+      }),
+    },
+  ))
+  return response
 }
-const executeReviewedCellInChild = (cell: LeanCell): LeanExecutionResult => {
-  const { request, authorityLoader } = requestContext(cell)
-  const response = executeCurrentMatchServiceTestSupport(request, createRuntimeServiceConfig({
-    strategyExecutionAdapter: "worker-thread", semanticReceiptSecret: "fixture-only:v1.38-lean-runner",
-  }), { authorityLoader })
-  return { ...projectLeanPrivateRuntimeResponse(response), cleanupComplete: true, orphanedChild: false, boardRealism: currentFormationIsRealistic(cell) }
+
+export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> => {
+  const projection = projectLeanV118Response(executePreparedLeanCellResponse(cell))
+  return parseLeanExecutionResult({
+    ...projection,
+    cleanupComplete: true,
+    orphanedChild: false,
+    boardRealism: true,
+  })
 }
-const encodeCell = (cell: LeanCell): string => Buffer.from(JSON.stringify(cell), "utf8").toString("base64url")
-const decodeCell = (value: string): LeanCell => {
-  const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as LeanCell
-  const expected = buildLeanSchedule().find(({ cellId }) => cellId === parsed.cellId)
-  if (expected === undefined || JSON.stringify(parsed) !== JSON.stringify(expected)) throw new TypeError("LEAN_CHILD_CELL_INVALID")
+
+const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
+const isSha = (value: unknown): value is `sha256:${string}` => typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
+export const parseLeanExecutionResult = (value: unknown): LeanExecutionResult => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError("LEAN_CHILD_OUTPUT_INVALID")
+  const candidate = value as Record<string, unknown>
+  const classification = candidate.classification
+  if (!["success", "player_violation", "system_failure", "timeout", "cancelled", "unlaunched"].includes(String(classification))) throw new TypeError("LEAN_CHILD_OUTPUT_INVALID")
+  const successful = classification === "success" || classification === "player_violation"
+  const keys = ["classification", "cleanupComplete", "orphanedChild", "boardRealism", ...(successful ? ["outcomeRoot", "finalStateRoot", "transitionEventRoot", "runtimeAccountingRoot"] : [])]
+  if (!exactKeys(candidate, keys) || typeof candidate.cleanupComplete !== "boolean" || typeof candidate.orphanedChild !== "boolean" || typeof candidate.boardRealism !== "boolean" || (successful && ![candidate.outcomeRoot, candidate.finalStateRoot, candidate.transitionEventRoot, candidate.runtimeAccountingRoot].every(isSha))) throw new TypeError("LEAN_CHILD_OUTPUT_INVALID")
+  return globalThis.structuredClone(candidate) as unknown as LeanExecutionResult
+}
+
+const parseLeanCell = (value: unknown): LeanCell => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError("LEAN_CHILD_CELL_INVALID")
+  const candidate = value as LeanCell
+  const expected = buildLeanSchedule().find(({ cellId }) => cellId === candidate.cellId)
+  if (expected === undefined || JSON.stringify(candidate) !== JSON.stringify(expected)) throw new TypeError("LEAN_CHILD_CELL_INVALID")
   return expected
 }
 
-export const createSupervisedLeanExecutionDependencies = (): LeanExecutionDependencies => {
+export const createSupervisedLeanExecutionDependencies = (capability: string): LeanExecutionDependencies => {
+  if (!/^[0-9a-f]{64}$/u.test(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_INVALID")
   let active: ChildProcess | undefined
   const terminateActive = async (): Promise<LeanCleanupResult> => {
     const child = active
     if (child === undefined || child.exitCode !== null || child.signalCode !== null) { active = undefined; return { cleanupComplete: true, orphanedChild: false } }
     if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGKILL") } catch { child.kill("SIGKILL") } } else child.kill("SIGKILL")
-    await new Promise<void>((resolve) => child.once("exit", () => resolve()))
+    await new Promise<void>((resolve) => {
+      if (child.exitCode !== null || child.signalCode !== null) resolve()
+      else child.once("exit", () => resolve())
+    })
     active = undefined
     return { cleanupComplete: true, orphanedChild: false }
   }
@@ -249,24 +368,53 @@ export const createSupervisedLeanExecutionDependencies = (): LeanExecutionDepend
     now: () => performance.now(), terminateActive,
     execute: async (cell, signal) => {
       if (active !== undefined) throw new TypeError("LEAN_CHILD_ALREADY_ACTIVE")
-      const child = spawn(process.execPath, ["--import", "tsx", fileURLToPath(import.meta.url), LEAN_CHILD_SELECTOR, encodeCell(cell)], {
-        cwd: process.cwd(), detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"],
+      const child = fork(fileURLToPath(import.meta.url), [LEAN_CHILD_SELECTOR], {
+        cwd: process.cwd(), execArgv: ["--import", "tsx"],
+        detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"],
+        env: { ...process.env, LEAN_CHILD_CAPABILITY: capability },
       })
       active = child
-      let stdout = ""; let stderr = ""
-      child.stdout?.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8") })
+      let stderr = ""
       child.stderr?.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8") })
       return await new Promise<LeanExecutionResult>((resolve, reject) => {
-        const finish = (result: LeanExecutionResult): void => { active = undefined; resolve(result) }
-        const timer = setTimeout(() => { void terminateActive().then(() => finish({ classification: "timeout", cleanupComplete: true, orphanedChild: false, boardRealism: currentFormationIsRealistic(cell) })) }, LEAN_CELL_DEADLINE_MS)
+        let settled = false
+        let terminating = false
+        const settle = (complete: () => void): void => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          signal.removeEventListener("abort", abort)
+          active = undefined
+          complete()
+        }
+        const terminateWith = (classification: "timeout" | "cancelled"): void => {
+          if (settled || terminating) return
+          terminating = true
+          void terminateActive().then(
+            (cleanup) => settle(() => resolve(parseLeanExecutionResult({ classification, ...cleanup, boardRealism: currentFormationIsRealistic(cell) }))),
+            (error: unknown) => settle(() => reject(error)),
+          )
+        }
+        const timer = setTimeout(() => terminateWith("timeout"), LEAN_CELL_DEADLINE_MS)
         timer.unref()
-        const abort = () => { void terminateActive().then(() => finish({ classification: "cancelled", cleanupComplete: true, orphanedChild: false, boardRealism: currentFormationIsRealistic(cell) })) }
+        const abort = () => terminateWith("cancelled")
         signal.addEventListener("abort", abort, { once: true })
-        child.once("error", reject)
+        child.once("error", (error) => settle(() => reject(error)))
+        child.on("message", (message: unknown) => {
+          if (settled || message === null || typeof message !== "object") return
+          const body = message as Record<string, unknown>
+          if (body.kind === "ready" && body.capability === capability) {
+            child.send({ kind: "execute", capability, cell })
+          } else if (body.kind === "result" && body.capability === capability) {
+            try {
+              const result = parseLeanExecutionResult(body.result)
+              settle(() => resolve(result))
+            } catch (error) { settle(() => reject(error)) }
+          }
+        })
         child.once("exit", (code) => {
-          clearTimeout(timer); signal.removeEventListener("abort", abort); active = undefined
-          if (code !== 0) return reject(new TypeError(stderr.trim() || "LEAN_CHILD_FAILED"))
-          try { resolve(JSON.parse(stdout) as LeanExecutionResult) } catch { reject(new TypeError("LEAN_CHILD_OUTPUT_INVALID")) }
+          if (terminating || settled) return
+          settle(() => reject(new TypeError(code === 0 ? "LEAN_CHILD_RESULT_MISSING" : stderr.trim() || "LEAN_CHILD_FAILED")))
         })
       })
     },
@@ -288,17 +436,37 @@ export const syntheticLeanTerminal = async (): Promise<LeanTerminal> => runLeanF
 const main = async (): Promise<void> => {
   const selector = process.argv[2]
   if (selector === "--synthetic") { process.stdout.write(`${JSON.stringify(await syntheticLeanTerminal())}\n`); return }
-  if (selector === LEAN_CHILD_SELECTOR) { process.stdout.write(`${JSON.stringify(executeReviewedCellInChild(decodeCell(process.argv[3] ?? "")))}\n`); return }
+  if (selector === LEAN_CHILD_SELECTOR) {
+    const capability = process.env.LEAN_CHILD_CAPABILITY
+    if (typeof process.send !== "function" || !/^[0-9a-f]{64}$/u.test(capability ?? "")) throw new TypeError("LEAN_CHILD_PARENT_REQUIRED")
+    const checker = await import("./check-v1-38-lean-admission.js")
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+    checker.loadAndCheckLeanChildInvocation(repoRoot, capability!)
+    process.once("message", (message: unknown) => {
+      void (async () => {
+        if (message === null || typeof message !== "object") throw new TypeError("LEAN_CHILD_MESSAGE_INVALID")
+        const body = message as Record<string, unknown>
+        if (body.kind !== "execute" || body.capability !== capability) throw new TypeError("LEAN_CHILD_CAPABILITY_MISMATCH")
+        const result = await executePreparedLeanCell(parseLeanCell(body.cell))
+        process.send?.({ kind: "result", capability, result }, () => process.disconnect())
+      })().catch((error: unknown) => {
+        process.stderr.write(`${error instanceof Error ? error.message : "LEAN_CHILD_FAILED"}\n`)
+        process.exitCode = 1
+        process.disconnect()
+      })
+    })
+    process.send({ kind: "ready", capability })
+    return
+  }
   if (selector === LEAN_LIVE_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
     const readiness = checker.loadAndCheckLeanReviewedReady(repoRoot)
-    createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_ARTIFACT_PATHS.invocation), {
-      schemaVersion: "v1.38-lean-runner-invocation-v1", sourceCommit: readiness.sourceCommit,
-      liveInvocationOrdinal: 1, authority: LEAN_AUTHORITY_FALSE,
-    })
-    const terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies())
-    checker.createExclusiveLeanTerminal(repoRoot, terminal)
+    const capability = randomBytes(32).toString("hex")
+    const invocation = checker.createLeanInvocation(readiness, hashLeanValue(capability))
+    createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_ARTIFACT_PATHS.invocation), invocation)
+    const terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
+    checker.createExclusiveLeanTerminal(repoRoot, checker.createLeanTerminalArtifact(invocation, terminal))
     process.stdout.write(`${JSON.stringify(terminal)}\n`)
     return
   }

@@ -63,7 +63,12 @@ describe("lean schedule", () => {
     "unlaunched",
   ] as const)("rejects %s", (classification) => {
     const records = successfulRecords()
-    records[4] = { ...records[4]!, classification }
+    const original = records[4]!
+    if (classification === "player_violation") records[4] = { ...original, classification }
+    else {
+      const { outcomeRoot: _outcome, finalStateRoot: _state, transitionEventRoot: _events, runtimeAccountingRoot: _accounting, ...base } = original
+      records[4] = { ...base, classification }
+    }
     expect(reduceLeanExecutions(records).result).toBe("non_pass")
   })
 

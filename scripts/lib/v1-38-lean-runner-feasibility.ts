@@ -219,6 +219,10 @@ export const reduceLeanExecutions = (
     if (
       expected === undefined ||
       seen.has(record.cellId) ||
+      (["success", "player_violation"].includes(record.classification) &&
+        ![record.outcomeRoot, record.finalStateRoot, record.transitionEventRoot, record.runtimeAccountingRoot].every(isSha)) ||
+      (!["success", "player_violation"].includes(record.classification) &&
+        [record.outcomeRoot, record.finalStateRoot, record.transitionEventRoot, record.runtimeAccountingRoot].some((root) => root !== undefined)) ||
       JSON.stringify(expected) !== JSON.stringify(
         Object.fromEntries(Object.keys(expected).map((key) => [key, record[key as keyof LeanCell]])),
       )

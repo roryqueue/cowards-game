@@ -13,6 +13,7 @@ import {
   validateLeanEligibility,
   validateLeanInvocation,
   validateLeanTerminalArtifact,
+  createLeanInterruptedTerminal,
   checkLeanManifest,
   renderLeanManifest,
 } from "./check-v1-38-lean-admission.js"
@@ -35,6 +36,13 @@ describe("lean admission custody", () => {
     expect(manifest.formationMaterialized).toBe(false)
     expect(() => checkLeanManifest(repoRoot, manifest)).not.toThrow()
     expect(() => checkLeanManifest(repoRoot, { ...manifest, scheduleRoot: `sha256:${"0".repeat(64)}` })).toThrow()
+    expect(() => checkLeanManifest(repoRoot, {
+      ...manifest,
+      source: {
+        ...manifest.source,
+        executableBlobs: { ...manifest.source.executableBlobs, "packages/spec/src": "0".repeat(40) },
+      },
+    })).toThrow(/LEAN_SOURCE_BLOB_DRIFT/u)
   })
 
   it("does not create invocation, terminal, readiness, or adjudication artifacts", () => {
@@ -47,10 +55,11 @@ describe("lean admission custody", () => {
     expect(LEAN_ARTIFACT_PATHS.readiness).toBe(".planning/artifacts/v1.38-lean-runner-readiness-v1.json")
     expect(LEAN_ARTIFACT_PATHS.adjudication).toBe(".planning/artifacts/v1.38-lean-runner-adjudication-v1.json")
     expect(LEAN_ARTIFACT_PATHS.eligibility).toBe(".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json")
-    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("apps/runtime-service/src/execute-match.ts")
-    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/engine/src/kernel/driver.ts")
-    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/spec/src/runtime-execution-service-v1-18.ts")
-    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/persistence/src/starter-strategies.ts")
+    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("apps/runtime-service/src")
+    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/engine/src")
+    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/spec/src")
+    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("packages/persistence/src")
+    expect(LEAN_EXECUTABLE_CLOSURE_PATHS).toContain("pnpm-lock.yaml")
   })
 
   it("requires literal-zero non-authorizing review before readiness", () => {
@@ -67,6 +76,7 @@ describe("lean admission custody", () => {
     expect(() => checkLeanSourceReview(manifest, review)).not.toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1 })).toThrow()
     expect(() => checkLeanSourceReview(manifest, { ...review, extra: true })).toThrow()
+    expect(() => checkLeanSourceReview(manifest, { ...review, findingCount: 1, findings: [{ diagnostics: "private" }] })).toThrow(/LEAN_PRIVATE_DATA/u)
     const readiness = {
       schemaVersion: "v1.38-lean-runner-readiness-v1",
       sourceCommit: manifest.source.commit,
@@ -87,6 +97,7 @@ describe("lean admission custody", () => {
     const lineage = {
       sourceCommit: "a".repeat(40), manifestRoot: "sha256:" + "1".repeat(64),
       sourceReviewRoot: "sha256:" + "2".repeat(64), readinessRoot: "sha256:" + "3".repeat(64),
+      childCapabilityRoot: "sha256:" + "4".repeat(64),
     } as const
     const invocation = validateLeanInvocation({
       schemaVersion: "v1.38-lean-runner-invocation-v1", ...lineage,
@@ -94,10 +105,14 @@ describe("lean admission custody", () => {
       authority: Object.fromEntries(Object.keys(LEAN_AUTHORITY_FALSE).map((key) => [key, false])),
     })
     const terminal = validateLeanTerminalArtifact({
-      schemaVersion: "v1.38-lean-runner-terminal-v1", ...lineage,
+      schemaVersion: "v1.38-lean-runner-terminal-v1",
+      sourceCommit: lineage.sourceCommit,
+      manifestRoot: lineage.manifestRoot,
+      sourceReviewRoot: lineage.sourceReviewRoot,
+      readinessRoot: lineage.readinessRoot,
       invocationRoot: hashLeanValue(invocation), privacy: "safe_aggregate_only",
-      terminal: { ...({} as never) },
-    }, invocation, { allowFixtureTerminal: true })
+      terminal: createLeanInterruptedTerminal(), authority: LEAN_AUTHORITY_FALSE,
+    }, invocation)
     const adjudication = validateLeanAdjudication({
       schemaVersion: "v1.38-lean-runner-adjudication-v1",
       terminalRoot: hashLeanValue(terminal), reviewedResult: "invalid",

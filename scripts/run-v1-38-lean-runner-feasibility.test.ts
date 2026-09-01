@@ -8,9 +8,8 @@ import {
   LEAN_LIVE_SELECTOR,
   buildCanonicalLeanRequestV118,
   createExclusiveLeanInvocationMarker,
-  executePreparedLeanCellForTest,
+  executePreparedLeanCell,
   parseLeanExecutionResult,
-  projectLeanPrivateRuntimeResponse,
   runLeanFeasibilityInjected,
   type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
@@ -48,7 +47,9 @@ describe("bounded lean runner", () => {
     const result = await runLeanFeasibilityInjected(dependencies({
       execute: async (cell) => {
         seen.push(cell.cellId)
-        return { classification: cell.ordinal === 3 ? "system_failure" : "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
+        return cell.ordinal === 3
+          ? { classification: "system_failure", cleanupComplete: true, orphanedChild: false, boardRealism: true }
+          : { classification: "success", cleanupComplete: true, orphanedChild: false, boardRealism: true, ...roots }
       },
     }))
     expect(seen).toHaveLength(24)
@@ -96,32 +97,18 @@ describe("bounded lean runner", () => {
     expect(result.completeCleanup).toBe(false)
   })
 
-  it("projects the reviewed private runtime seam without request identity normalization", () => {
-    const response = {
-      ok: true,
-      runtimeAbiVersion: "strategy-runtime-abi-v1.19",
-      result: {
-        finalState: { outcome: { winnerPlayerId: "player:bottom", reason: "elimination" }, matchId: "semantic-match" },
-        chronicle: { metadata: { matchId: "semantic-match" }, events: [] },
-        runtimeViolationEventCount: 0,
-        semanticReceipt: { requestId: "unstable-and-deliberately-not-recursed" },
-      },
-    } as never
-    expect(projectLeanPrivateRuntimeResponse(response)).toMatchObject({
-      classification: "success",
-      outcomeRoot: expect.stringMatching(/^sha256:/u),
-      finalStateRoot: expect.stringMatching(/^sha256:/u),
-      transitionEventRoot: expect.stringMatching(/^sha256:/u),
-      runtimeAccountingRoot: expect.stringMatching(/^sha256:/u),
-    })
-  })
-
   it("builds an exact canonical request for every cell", () => {
+    const initialRoots = new Map<string, string>()
     for (const cell of buildLeanSchedule()) {
       const prepared = buildCanonicalLeanRequestV118(cell)
       const request = prepared.nestedRequest
       expect(prepared.request.contractVersion).toBe("runtime-execution-service-v1.18")
       expect(prepared.initialStateRoot).toMatch(/^sha256:/u)
+      expect(prepared.request.semanticTuple.components.runtimeAbi).toBe("strategy-runtime-abi-v1.19")
+      expect(request.limits).toEqual(expect.objectContaining({ timeoutMs: expect.any(Number) }))
+      const previous = initialRoots.get(cell.baseCellId)
+      if (previous === undefined) initialRoots.set(cell.baseCellId, prepared.initialStateRoot)
+      else expect(prepared.initialStateRoot).toBe(previous)
       expect(request.match.arenaVariant.id).toBe(cell.arenaId)
       expect(request.match.initialInitiativePlayerId).toBe(`player:${cell.initiativeSide}`)
       const fixtureId = (side: "bottom" | "top") => {
@@ -146,11 +133,12 @@ describe("bounded lean runner", () => {
   })
 
   it("executes one actual prepared v1.18 fixture path", async () => {
-    const result = await executePreparedLeanCellForTest(buildLeanSchedule()[0]!)
-    expect(["success", "player_violation", "system_failure"]).toContain(result.classification)
+    const result = await executePreparedLeanCell(buildLeanSchedule()[0]!)
+    expect(result.classification).toBe("success")
+    expect(result.outcomeRoot).toMatch(/^sha256:/u)
     expect(result.cleanupComplete).toBe(true)
     expect(result.orphanedChild).toBe(false)
-  }, 30_000)
+  }, 50_000)
 
   it("durably creates an exclusive invocation marker and refuses reuse", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "lean-marker-")); temporary.push(dir)
