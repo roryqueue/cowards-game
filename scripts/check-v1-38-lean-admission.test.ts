@@ -9,6 +9,7 @@ import {
   LEAN_CORRECTIVE_V3_ARTIFACT_PATHS,
   LEAN_CORRECTIVE_V4_ARTIFACT_PATHS,
   LEAN_CORRECTIVE_V5_ARTIFACT_PATHS,
+  LEAN_CORRECTIVE_V6_ARTIFACT_PATHS,
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
@@ -52,6 +53,14 @@ import {
   renderLeanCorrectiveManifestV5,
   renderLeanCorrectiveReadinessV5,
   renderLeanCorrectiveSourceReviewV5,
+  checkLeanCorrectiveReviewOutcomeV6,
+  checkLeanCorrectiveManifestV6,
+  checkLeanCorrectiveReadinessV6,
+  checkLeanCorrectiveSourceOnlyV6,
+  deriveLeanCorrectiveFreshEffectsV6,
+  renderLeanCorrectiveManifestV6,
+  renderLeanCorrectiveReadinessV6,
+  renderLeanCorrectiveSourceReviewV6,
   createLeanCorrectiveInterruptionTombstone,
   validateLeanCorrectiveInterruptionTombstone,
   validateLeanDiagnosticCustody,
@@ -146,7 +155,7 @@ describe("lean admission custody", () => {
     expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest).toMatch(/manifest-v2\.json$/u)
     expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.readiness).toMatch(/readiness-v2\.json$/u)
     expect(LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest).toMatch(/manifest-v3\.json$/u)
-    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest)
+    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V6_ARTIFACT_PATHS.manifest)
     const manifestV2 = checkLeanCorrectiveManifestV2(process.cwd(), JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest, "utf8")))
     const reviewV2 = JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview, "utf8"))
     expect(checkLeanCorrectiveSourceReviewV2(manifestV2, reviewV2).findingCount).toBe(2)
@@ -346,13 +355,25 @@ describe("lean admission custody", () => {
   })
 
   it("CR-170-01 binds the separately committed Plan 169 summary in corrective v6 lineage", () => {
-    const manifest = renderLeanCorrectiveManifestV5(process.cwd(), "HEAD") as unknown as Record<string, unknown>
+    const manifest = renderLeanCorrectiveManifestV6(process.cwd(), "HEAD")
     expect(manifest.plan169Summary).toEqual({
-      commit: "c33111d5046860b61f686545e4341280305f035a",
+      commit: "c33111d565cd7ebfb824270d67a71f71e536539a",
       blob: "8b4bab02e1e3262e32d0c5efcde9c58f509073ef",
       contentRoot: "sha256:b24af58afb224715eb2e40bedef0150f761e1b7b04687c9346e256e77b79a65b",
     })
-  })
+    expect(manifest.predecessorRoots.failedManifestV5Root).toBe(hashLeanValue(JSON.parse(readFileSync(LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest, "utf8"))))
+    expect(manifest.predecessorRoots.failedReviewV5Root).toBe(hashLeanValue(JSON.parse(readFileSync(LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.sourceReview, "utf8"))))
+    expect(Object.values(manifest.freshCorrectiveEffects)).toEqual([false, false, false, false, false, false])
+    expect(Object.values(deriveLeanCorrectiveFreshEffectsV6(process.cwd()))).toEqual([false, false, false, false, false, false])
+    const review = renderLeanCorrectiveSourceReviewV6(manifest, [])
+    const readiness = renderLeanCorrectiveReadinessV6(manifest, review)
+    expect(checkLeanCorrectiveReadinessV6(manifest, review, readiness)).toEqual(readiness)
+    expect(checkLeanCorrectiveReviewOutcomeV6(manifest, review, readiness)).toEqual(readiness)
+    expect(() => checkLeanCorrectiveReviewOutcomeV6(manifest, review, undefined)).toThrow(/READINESS_REQUIRED/u)
+    expect(() => checkLeanCorrectiveManifestV6(process.cwd(), { ...manifest, plan169Summary: { ...manifest.plan169Summary, blob: "0".repeat(40) } })).toThrow(/MANIFEST_V6_DRIFT/u)
+    expect(() => checkLeanCorrectiveManifestV6(process.cwd(), { ...manifest, predecessorRoots: { ...manifest.predecessorRoots, failedReviewV5Root: `sha256:${"0".repeat(64)}` } })).toThrow(/MANIFEST_V6_DRIFT/u)
+    expect(() => checkLeanCorrectiveSourceOnlyV6(process.cwd())).not.toThrow()
+  }, 30_000)
 
   it.each([
     ["destructive git vector through a local alias", (checker: string) => checker.replace(
