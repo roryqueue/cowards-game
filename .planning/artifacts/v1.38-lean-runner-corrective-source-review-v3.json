@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-review-v3",
+  "sourceCommit": "df6d5755d5833e14979674ad78299717fb8871d4",
+  "sourceTree": "f32f5f7e0663c818b9186e7236889aced7e73067",
+  "manifestRoot": "sha256:e4f183c9b335f18f482a60980e12822ae5ca4cd59190e64dc5829e79c6a82b40",
+  "findingCount": 3,
+  "findings": [
+    {
+      "id": "CR-166-01",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The v3 manifest omits the separately committed Plan 165 summary identity and hardcodes fresh-effect absence instead of deriving and rejecting filesystem presence."
+    },
+    {
+      "id": "CR-166-02",
+      "severity": "critical",
+      "status": "open",
+      "summary": "The historical v2 validator does not authenticate every v2 field and root, allowing mutated predecessor contract values to be accepted and rebound by v3."
+    },
+    {
+      "id": "WR-166-01",
+      "severity": "warning",
+      "status": "open",
+      "summary": "The recovery-only structural checker ignores unresolved imported calls and therefore misses a transitive path from recovery validation to schedule construction."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
