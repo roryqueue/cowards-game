@@ -1,5 +1,13 @@
 # Roadmap: Coward's Game
 
+## Approved D-34L corrective path — 2026-09-01
+
+Independent diagnosis isolated two implementation defects behind the reviewed 8/24 lean result: the historical Open Field label was sent to runtime as an unschedulable alias instead of retaining its label-cell identity while resolving to active Smoke execution authority, and replay reconstruction/runtime terminal projection did not apply one consistent canonical terrain order for Standard Cross. The six diagnosis-only Matches were unpersisted and are non-live, non-charged, and inadmissible as evidence.
+
+Plans 262-156 through 262-159 are the sole active corrective chain: focused source fixes and tests, independent review plus exact-source readiness, exactly one full fresh 24-Match corrective invocation, then independent adjudication and proof/tracking refresh. No Match may run before Plan157 publishes literal-zero readiness. The first marker/terminal, historical 0/540 result, six diagnostic classifications, and all 36 successor locks remain immutable or inadmissible as applicable. Phase263 and every broader authority remain false unless Plan159 independently rederives an exact corrective pass; no archive or tag is authorized.
+
+<!-- phase-262-lean-corrective-roadmap: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v1","activeChain":["262-156","262-157","262-158","262-159"],"nextAction":"dispatch-262-156-source-only","specificDefects":["historical_alias_execution_identity","canonical_terrain_projection_order"],"diagnosticMatches":6,"diagnosticsCharged":false,"diagnosticsAdmissible":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"archiveAuthorized":false,"tagAuthorized":false} -->
+
 ## Reviewed D-34L result — 2026-09-01
 
 The sole `lean_runner_feasibility_v1` invocation has been independently adjudicated as `non_pass`.
