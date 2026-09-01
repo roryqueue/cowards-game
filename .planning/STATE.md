@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-164 completed non-authorizing with two findings; bounded source correction and fresh review are next before Plan158
-last_updated: "2026-09-01T20:15:07Z"
+stopped_at: Plan262-165 is the sole next source-only correction; Plan166 fresh v3 review follows before Plan158
+last_updated: "2026-09-01T20:18:32Z"
 last_activity: 2026-09-01
-last_activity_desc: Bound exact Plan163 source and independently found two Plan164 review gaps; readiness and live execution remain absent
+last_activity_desc: Planned the bounded CR-164-01/WR-164-01 correction and fresh v3 independent review; readiness and live execution remain absent
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 145
+  total_plans: 147
   completed_plans: 137
-  percent: 94
+  percent: 93
 ---
 
 # State: Coward's Game
+
+## Plans 262-165/166 bounded successor correction — 2026-09-01
+
+Plan165 is the sole next action and closes exactly CR-164-01 and WR-164-01 source-only. It must implement strict immutable v2 history validation, fresh v3 manifest/review/readiness schemas and selectors, fresh-v3-only runner consumption, a schedule-free interruption tombstone, and transitive actual-selector recovery proof across runner and checker. Focused RED/GREEN may create only committed source, tests, and summary; no live or recovery selector, Match, marker, terminal, ownership record, adjudication, eligibility, manifest, review, or readiness effect may run or appear.
+
+Plan166 follows only the separately committed Plan165 closure. It creates a fresh exact-source v3 manifest and exactly one independent source-only review. Any finding leaves v3 readiness absent and stops. Literal zero alone may create one Plan158-only v3 readiness. Revised Plan158 consumes only that v3 lineage and still owns exactly one complete 24-Match corrective wrapper; the fresh effect destinations remain v2. Plans159, 160, and 162 follow in waves139-141. All prior history and exactly 36 successor locks remain preserved; Phase263 and every broader authority remain false.
+
+<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v6","activeChain":["262-156","262-161","262-157","262-163","262-164","262-165","262-166","262-158","262-159","262-160","262-162"],"waves":{"262-165":136,"262-166":137,"262-158":138,"262-159":139,"262-160":140,"262-162":141},"nextAction":"dispatch-262-165-source-only","plan164FindingCount":2,"plan164CriticalCount":1,"plan164WarningCount":1,"freshV3ReviewRequired":true,"readinessV3Present":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-163/164 bounded review-gap closure — 2026-09-01
 
@@ -33,9 +41,7 @@ The exact combined Plan 156 and Plan 161 closure at source commit `0f10feaf3d5b4
 
 Independent diagnosis isolated two implementation defects behind the reviewed non-pass: Open Field must keep its frozen declared cell identity while resolving its historical alias to active Smoke execution authority, and replay reconstruction/runtime terminal projection must use one canonical y-then-x terrain order. Six diagnosis-only Matches were unpersisted and are non-live, non-charged, and inadmissible as evidence.
 
-The sole active chain is 262-156 -> 262-161 -> 262-157 -> 262-163 -> 262-164 -> 262-158 -> 262-159 -> 262-160 -> 262-162. Plans156 and161 hold the separately committed implementation fixes; Plan157 is immutable failed-review history. Plan163 closes exactly its five source/test findings without effects. Plan164 independently reviews the fresh exact source and may publish v2 readiness only on literal zero. Plan158 owns one normal wrapper that combines exactly one complete fresh 24-Match invocation with clean-byte admission and unconditional authenticated recovery/postcheck in `finally`. If external interruption prevents that cleanup, one separately invokable recovery-only selector is allowed solely when the fresh v2 marker exists and its terminal is absent; it may terminate only the authenticated orphan identified by the durable operational record and cannot start, resume, or relaunch a Match. Plan159 adjudicates and completes proof only. Plan160 synchronizes tracking/audit surfaces, and Plan162 synchronizes project/research/seed/Phase263 handoff surfaces and proves both sets agree. Until exact pass is synchronized across both sets, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
-
-<!-- phase-262-lean-corrective-state: {"schemaVersion":"v1.38-phase-262-lean-corrective-plan-v5","activeChain":["262-156","262-161","262-157","262-163","262-164","source-correction","fresh-independent-review","262-158","262-159","262-160","262-162"],"nextAction":"plan-and-execute-bounded-v2-trust-path-and-transitive-recovery-proof-correction","plan157FindingCount":5,"plan163Complete":true,"plan164Complete":true,"plan164FindingCount":2,"plan164CriticalCount":1,"plan164WarningCount":1,"plan164ManifestRoot":"sha256:5d8f3b23909ec16674de960fb630185cffa1da4c31cea60e844787e08cc901c3","plan164ReviewRoot":"sha256:5414d4b1033be93a151f1d496b5005617c7cf6de3600ff709c6c872b156c2d7a","readinessV2Present":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryOnlyInvocationsAllowed":1,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+The sole active chain is now 262-156 -> 262-161 -> 262-157 -> 262-163 -> 262-164 -> 262-165 -> 262-166 -> 262-158 -> 262-159 -> 262-160 -> 262-162. Plans156 and161 hold the separately committed implementation fixes; Plans157 and164 are immutable failed-review history. Plans165/166 own exactly the bounded trust-path/recovery correction and fresh independent v3 review. Plan158 remains the sole complete corrective wrapper. Plans159, 160, and 162 remain adjudication/proof and the two synchronization sets. Until exact pass is synchronized across both sets, ADMIT-03 is blocked, Phase262 is incomplete, all downstream authority is false, and archive/tag are forbidden.
 
 ## Reviewed D-34L result — 2026-09-01
 
@@ -720,13 +726,13 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-01T20:12:58.000Z
-Stopped at: Plan262-164 completed non-authorizing with two findings; source correction and fresh review required before Plan158
+Last session: 2026-09-01T20:18:32.000Z
+Stopped at: Plan262-165 planned as the sole next source-only correction; Plan166 fresh v3 review follows before Plan158
 Resume file: None
 
 ### Blockers
 
-- Plan 262-164 found CR-164-01 and transitive WR-01. Corrective readiness remains absent and Plan158 remains ineligible until a bounded source correction implements the v2 trust path and complete recovery call-graph proof, followed by another fresh independent literal-zero review. This is an executable engineering dependency, not a human-only blocker.
+- Plan262-165/166 are the executable engineering closure for CR-164-01 and WR-164-01. Plan165 must complete source-only with no effect; Plan166 must then independently review the exact committed bytes and may publish v3 readiness only on literal zero. No human-only blocker exists.
 
 <!-- phase-262-plan-106-provisional-tracking: {"admit03":"blocked","authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false},"branch":"gaps","inventoryCounts":{"activePlans":128,"dormantCarriers":1,"historicalPlans":18,"reviews":165,"summaries":120,"total":434,"validations":1,"verifications":1},"inventoryRoot":"sha256:6df3f7c630d752571765aeea734f6c856f21207d7b947f3f8ecf7bf1ac720399","nextAction":"dispatch-262-127-only","phase262":"incomplete","phase263ExecutionEligible":false,"phase263PlanningEligible":false,"schemaVersion":"v1.38-plan-262-106-provisional-tracking-v1"} -->
 
