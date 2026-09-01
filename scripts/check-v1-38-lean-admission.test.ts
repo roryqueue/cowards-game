@@ -8,6 +8,7 @@ import {
   LEAN_CORRECTIVE_V2_ARTIFACT_PATHS,
   LEAN_CORRECTIVE_V3_ARTIFACT_PATHS,
   LEAN_CORRECTIVE_V4_ARTIFACT_PATHS,
+  LEAN_CORRECTIVE_V5_ARTIFACT_PATHS,
   LEAN_ARTIFACT_PATHS,
   LEAN_EXECUTABLE_CLOSURE_PATHS,
   assertLeanStatus,
@@ -45,6 +46,12 @@ import {
   renderLeanCorrectiveManifestV4,
   renderLeanCorrectiveReadinessV4,
   renderLeanCorrectiveSourceReviewV4,
+  checkLeanCorrectiveReviewOutcomeV5,
+  checkLeanCorrectiveReadinessV5,
+  deriveLeanCorrectiveFreshEffectsV5,
+  renderLeanCorrectiveManifestV5,
+  renderLeanCorrectiveReadinessV5,
+  renderLeanCorrectiveSourceReviewV5,
   createLeanCorrectiveInterruptionTombstone,
   validateLeanCorrectiveInterruptionTombstone,
   validateLeanDiagnosticCustody,
@@ -135,11 +142,11 @@ describe("lean admission custody", () => {
     expect(Object.values(LEAN_CORRECTIVE_ARTIFACT_PATHS)).not.toContain(LEAN_ARTIFACT_PATHS.terminal)
   })
 
-  it("keeps failed v1/v2/v3 trust paths historical and admits only fresh v4", () => {
+  it("keeps failed v1/v2/v3/v4 trust paths historical and admits only fresh v5", () => {
     expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest).toMatch(/manifest-v2\.json$/u)
     expect(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.readiness).toMatch(/readiness-v2\.json$/u)
     expect(LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest).toMatch(/manifest-v3\.json$/u)
-    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest)
+    expect(LEAN_CORRECTIVE_ARTIFACT_PATHS.manifest).toBe(LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest)
     const manifestV2 = checkLeanCorrectiveManifestV2(process.cwd(), JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest, "utf8")))
     const reviewV2 = JSON.parse(readFileSync(LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview, "utf8"))
     expect(checkLeanCorrectiveSourceReviewV2(manifestV2, reviewV2).findingCount).toBe(2)
@@ -200,6 +207,26 @@ describe("lean admission custody", () => {
     expect(deriveLeanCorrectiveFreshEffects(dir).invocationV2Present).toBe(true)
   }, 30_000)
 
+  it("prepares only the additive v5 review-outcome trust contract", () => {
+    const manifest = renderLeanCorrectiveManifestV5(process.cwd(), "HEAD")
+    expect(manifest.schemaVersion).toBe("v1.38-lean-runner-corrective-source-manifest-v5")
+    expect(manifest.predecessorRoots.failedManifestV4Root).toBe(hashLeanValue(JSON.parse(readFileSync(LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest, "utf8"))))
+    expect(manifest.predecessorRoots.failedReviewV4Root).toBe(hashLeanValue(JSON.parse(readFileSync(LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.sourceReview, "utf8"))))
+    expect(Object.values(manifest.freshCorrectiveEffects)).toEqual([false, false, false, false, false, false])
+    expect(deriveLeanCorrectiveFreshEffectsV5(process.cwd()).readinessV5Present).toBe(false)
+
+    const passingReview = renderLeanCorrectiveSourceReviewV5(manifest, [])
+    const readiness = renderLeanCorrectiveReadinessV5(manifest, passingReview)
+    expect(checkLeanCorrectiveReadinessV5(manifest, passingReview, readiness)).toEqual(readiness)
+    expect(checkLeanCorrectiveReviewOutcomeV5(manifest, passingReview, readiness)).toEqual(readiness)
+    expect(() => checkLeanCorrectiveReviewOutcomeV5(manifest, passingReview, undefined)).toThrow(/READINESS_REQUIRED/u)
+
+    const failedReview = renderLeanCorrectiveSourceReviewV5(manifest, [{ id: "CR-test", severity: "critical", status: "open", summary: "synthetic" }])
+    expect(checkLeanCorrectiveReviewOutcomeV5(manifest, failedReview, undefined)).toBeUndefined()
+    expect(() => checkLeanCorrectiveReviewOutcomeV5(manifest, failedReview, readiness)).toThrow(/READINESS_FORBIDDEN/u)
+    expect(LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.readiness).toMatch(/readiness-v5\.json$/u)
+  }, 30_000)
+
   it("accepts only epistemically limited diagnostic custody", () => {
     const custody = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-diagnostic-custody-v1.json", "utf8"))
     expect(validateLeanDiagnosticCustody(custody)).toEqual(custody)
@@ -216,8 +243,8 @@ describe("lean admission custody", () => {
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker)).not.toThrow()
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(
       source.replace(
-        "cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
-        "cleanup: async () => { fork(); await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
+        "cleanup: async () => { await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) }",
+        "cleanup: async () => { fork(); await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) }",
       ),
       checker,
     )).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
@@ -231,8 +258,8 @@ describe("lean admission custody", () => {
     )
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, transitiveChecker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
     const computedCallback = source.replace(
-      "cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) }",
-      "cleanup: async () => { const recover = checker.recoverLeanCorrectiveOrphan; await recover(repoRoot) }",
+      "cleanup: async () => { await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) }",
+      "cleanup: async () => { const recover = leanAdmissionRecovery.recoverLeanCorrectiveOrphan; await recover(repoRoot) }",
     )
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(computedCallback, checker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL/u)
 
@@ -255,6 +282,67 @@ describe("lean admission custody", () => {
       "function unsafeRecoveryHop(): void { buildLeanSchedule() }\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { unsafeRecoveryHop();",
     )
     expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker)).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+  })
+
+  it("traverses declaration, expression, arrow, alias, import, and re-export call shapes", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    const inject = (declarations: string, call: string): string => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      `${declarations}\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { ${call};`,
+    )
+    for (const [declaration, call] of [
+      ["function safeHop(): void { String('safe') }", "safeHop()"],
+      ["const safeHop = value => { String(value) }", "safeHop(repoRoot)"],
+      ["let safeHop = function (): void { String('safe') }", "safeHop()"],
+      ["const actualHop = (): void => { String('safe') }; const safeHop = actualHop", "safeHop()"],
+    ] as const) expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, inject(declaration, call))).not.toThrow()
+
+    const imported = inject("import defaultHop, { namedHop as aliasHop } from './safe-hop.js'", "defaultHop(); aliasHop()")
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, imported, {
+      "./safe-hop.js": "export default function (): void { String('safe') }; export { safeHop as namedHop } from './safe-second.js'",
+      "./safe-second.js": "export const safeHop = function (): void { String('safe') }",
+    })).not.toThrow()
+
+    const unsafeImported = inject("import defaultHop from './unsafe-hop.js'", "defaultHop()")
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, unsafeImported, {
+      "./unsafe-hop.js": "export { unsafeHop as default } from './unsafe-second.js'",
+      "./unsafe-second.js": "export function unsafeHop(): void { buildLeanSchedule() }",
+    })).toThrow(/LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY/u)
+  })
+
+  it("fails closed for unresolved and unsupported reachable call shapes", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    const mutate = (declaration: string, call = "unsafeHop()"): string => checker.replace(
+      "export const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => {",
+      `${declaration}\nexport const terminalizeLeanCorrectiveInterruption = (repoRoot: string): void => { ${call};`,
+    )
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate("", "unknownBare()"))).toThrow(/UNRESOLVED_CALL/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate("function unsafeHop(): void { unknownLater() }"))).toThrow(/UNRESOLVED_CALL/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate("function unsafeHop(): void { danger.launch() }"))).toThrow(/UNRESOLVED_CALL/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate("function unsafeHop(): void { new Worker() }"))).toThrow(/NEW_EXPRESSION/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate("import { unsafeHop } from 'external-package'"))).toThrow(/EXTERNAL_CALL/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, mutate("function unsafeHop(: void { String('bad') }"))).toThrow(/PARSE_ERROR/u)
+  })
+
+  it("follows every recovery dependency callback and enforces exact process capabilities", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const checker = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    for (const [before, after] of [
+      ["cleanup: async () => { await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) }", "cleanup: async () => { buildLeanSchedule(); await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) }"],
+      ["terminalizeInvalid: async () => { leanAdmissionRecovery.terminalizeLeanCorrectiveInterruption(repoRoot) }", "terminalizeInvalid: async () => { buildLeanSchedule(); leanAdmissionRecovery.terminalizeLeanCorrectiveInterruption(repoRoot) }"],
+      ["postcheck: async () => { leanAdmissionRecovery.checkLeanCorrectiveRecoveryTerminal(repoRoot) }", "postcheck: async () => { buildLeanSchedule(); leanAdmissionRecovery.checkLeanCorrectiveRecoveryTerminal(repoRoot) }"],
+    ] as const) expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source.replace(before, after), checker)).toThrow(/LAUNCH_CAPABILITY/u)
+
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker.replace(
+      'execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" })',
+      'execFileSync("sh", ["-p", String(pid), "-o", "command="], { encoding: "utf8" })',
+    ))).toThrow(/EXEC_POLICY/u)
+    expect(() => checkLeanCorrectiveRecoveryOnlyStructure(source, checker.replace(
+      "process.kill(-processGroupId, signal)",
+      'process.kill(-processGroupId, "SIGUSR1")',
+    ))).toThrow(/SIGNAL_POLICY/u)
   })
 
   it("uses a schedule-free exact interruption tombstone", () => {

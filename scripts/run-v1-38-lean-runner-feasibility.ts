@@ -19,6 +19,7 @@ import { createCandidateInitialGameStateV119 } from "../packages/engine/src/kern
 import { createPreparedRuntimeServiceDependenciesV118, executePreparedRuntimeServiceRequestV118 } from "../apps/runtime-service/src/execute-match.js"
 import { createFixtureDeploymentLaneIdentity, createFixtureRuntimeExecutionAuthorityContext } from "../apps/runtime-service/src/runtime-execution-evidence.test-support.js"
 import { createRuntimeServiceConfig } from "../apps/runtime-service/src/runtime-config.js"
+import * as leanAdmissionRecovery from "./check-v1-38-lean-admission.js"
 import {
   LEAN_AUTHORITY_FALSE, LEAN_DEADLINE_MS, buildLeanSchedule,
   LEAN_CURRENT_FORMATION_ROOT, currentFormationIsRealistic, hashLeanValue, leanRequestRealismRoot,
@@ -671,16 +672,15 @@ const main = async (): Promise<void> => {
     return
   }
   if (selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR) {
-    const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    const markerPath = path.resolve(repoRoot, checker.LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
-    const terminalPath = path.resolve(repoRoot, checker.LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
+    const markerPath = path.resolve(repoRoot, leanAdmissionRecovery.LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)
+    const terminalPath = path.resolve(repoRoot, leanAdmissionRecovery.LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)
     await runLeanCorrectiveRecoveryOnlyInjected({
       markerPresent: existsSync(markerPath),
       terminalPresent: existsSync(terminalPath),
-      cleanup: async () => { await checker.recoverLeanCorrectiveOrphan(repoRoot) },
-      terminalizeInvalid: async () => { checker.terminalizeLeanCorrectiveInterruption(repoRoot) },
-      postcheck: async () => { checker.checkLeanCorrectiveRecoveryTerminal(repoRoot) },
+      cleanup: async () => { await leanAdmissionRecovery.recoverLeanCorrectiveOrphan(repoRoot) },
+      terminalizeInvalid: async () => { leanAdmissionRecovery.terminalizeLeanCorrectiveInterruption(repoRoot) },
+      postcheck: async () => { leanAdmissionRecovery.checkLeanCorrectiveRecoveryTerminal(repoRoot) },
     })
     return
   }

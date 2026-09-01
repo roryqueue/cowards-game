@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { closeSync, constants, existsSync, fsyncSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import ts from "typescript"
 import { LEAN_AUTHORITY_FALSE, buildLeanSchedule, createLeanManifest, currentFormationIsRealistic, deriveAndValidateLeanTerminal, hashLeanValue, reduceLeanExecutions, validateLeanManifest, type LeanManifest, type LeanTerminal } from "./lib/v1-38-lean-runner-feasibility.js"
 
 export const LEAN_ARTIFACT_PATHS = Object.freeze({
@@ -36,8 +37,13 @@ export const LEAN_CORRECTIVE_V4_ARTIFACT_PATHS = Object.freeze({
   sourceReview: ".planning/artifacts/v1.38-lean-runner-corrective-source-review-v4.json",
   readiness: ".planning/artifacts/v1.38-lean-runner-corrective-readiness-v4.json",
 } as const)
+export const LEAN_CORRECTIVE_V5_ARTIFACT_PATHS = Object.freeze({
+  manifest: ".planning/artifacts/v1.38-lean-runner-corrective-source-manifest-v5.json",
+  sourceReview: ".planning/artifacts/v1.38-lean-runner-corrective-source-review-v5.json",
+  readiness: ".planning/artifacts/v1.38-lean-runner-corrective-readiness-v5.json",
+} as const)
 export const LEAN_CORRECTIVE_ARTIFACT_PATHS = Object.freeze({
-  ...LEAN_CORRECTIVE_V4_ARTIFACT_PATHS,
+  ...LEAN_CORRECTIVE_V5_ARTIFACT_PATHS,
   invocation: ".planning/artifacts/v1.38-lean-runner-corrective-invocation-v2.json",
   terminal: ".planning/artifacts/v1.38-lean-runner-corrective-terminal-v2.json",
   adjudication: ".planning/artifacts/v1.38-lean-runner-corrective-adjudication-v2.json",
@@ -178,7 +184,7 @@ export interface LeanCorrectiveSourceReview {
   readonly authority: typeof LEAN_AUTHORITY_FALSE
 }
 export interface LeanCorrectiveReadiness {
-  readonly schemaVersion: "v1.38-lean-runner-corrective-readiness-v3" | "v1.38-lean-runner-corrective-readiness-v4"
+  readonly schemaVersion: "v1.38-lean-runner-corrective-readiness-v3" | "v1.38-lean-runner-corrective-readiness-v4" | "v1.38-lean-runner-corrective-readiness-v5"
   readonly sourceCommit: string
   readonly manifestRoot: `sha256:${string}`
   readonly sourceReviewRoot: `sha256:${string}`
@@ -216,6 +222,34 @@ export interface LeanCorrectiveFreshEffects {
 }
 export interface LeanCorrectiveSourceReviewV4 {
   readonly schemaVersion: "v1.38-lean-runner-corrective-source-review-v4"
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly manifestRoot: `sha256:${string}`
+  readonly findingCount: number
+  readonly findings: readonly LeanReviewFinding[]
+  readonly admitsExecution: false
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanCorrectiveFreshEffectsV5 {
+  readonly readinessV5Present: boolean
+  readonly invocationV2Present: boolean
+  readonly terminalV2Present: boolean
+  readonly adjudicationV2Present: boolean
+  readonly eligibilityV2Present: boolean
+  readonly childOwnershipPresent: boolean
+}
+export interface LeanCorrectiveManifestV5 extends Omit<LeanManifest, "schemaVersion"> {
+  readonly schemaVersion: "v1.38-lean-runner-corrective-source-manifest-v5"
+  readonly plan165Summary: { readonly commit: string, readonly blob: string, readonly contentRoot: `sha256:${string}` }
+  readonly predecessorRoots: LeanCorrectiveManifestV4["predecessorRoots"] & {
+    readonly failedManifestV4Root: `sha256:${string}`
+    readonly failedReviewV4Root: `sha256:${string}`
+  }
+  readonly successorLockCount: 36
+  readonly freshCorrectiveEffects: LeanCorrectiveFreshEffectsV5
+}
+export interface LeanCorrectiveSourceReviewV5 {
+  readonly schemaVersion: "v1.38-lean-runner-corrective-source-review-v5"
   readonly sourceCommit: string
   readonly sourceTree: string
   readonly manifestRoot: `sha256:${string}`
@@ -363,98 +397,308 @@ export const checkLeanCorrectiveRecoveryOnlyStructure = (
   checkerSource?: string,
   importedSources: Readonly<Record<string, string>> = {},
 ): void => {
-  const extractBlock = (source: string, marker: string): string => {
-    const start = source.indexOf(marker)
-    const brace = source.indexOf("{", start)
-    if (start < 0 || brace < 0) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
-    let depth = 0
-    for (let index = brace; index < source.length; index += 1) {
-      if (source[index] === "{") depth += 1
-      else if (source[index] === "}") {
-        depth -= 1
-        if (depth === 0) return source.slice(start, index + 1)
-      }
-    }
-    throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
-  }
   const checker = checkerSource ?? readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "check-v1-38-lean-admission.ts"), "utf8")
-  const selector = extractBlock(runnerSource, "if (selector === LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR)")
-  const helper = extractBlock(runnerSource, "export const runLeanCorrectiveRecoveryOnlyInjected")
-  if (!selector.includes("runLeanCorrectiveRecoveryOnlyInjected") || !selector.includes("recoverLeanCorrectiveOrphan")) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
-  const modules = new Map<string, string>([
+  const moduleSources = new Map<string, string>([
     ["runner", runnerSource],
     ["checker", checker],
     ["./lib/v1-38-lean-runner-feasibility.js", readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "lib/v1-38-lean-runner-feasibility.ts"), "utf8")],
     ...Object.entries(importedSources),
   ])
-  const definitions = new Map<string, string>()
-  const namedImports = new Map<string, { module: string, imported: string }>()
-  const namespaceImports = new Map<string, string>()
-  const localAliases = new Map<string, string>()
-  for (const [moduleId, source] of modules) {
-    for (const match of source.matchAll(/(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)(?::[^=]+)?\s*=>\s*\{/gu)) {
-      try { definitions.set(`${moduleId}:${match[1]!}`, extractBlock(source, match[0]!)) } catch { /* reachable parse failures are rejected below */ }
+  type FunctionNode = ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction
+  type FunctionTarget = { readonly moduleId: string, readonly node: FunctionNode, readonly identity: string }
+  type ImportBinding = { readonly specifier: string, readonly imported: string, readonly namespace: boolean, readonly external: boolean }
+  type ModuleIndex = {
+    readonly sourceFile: ts.SourceFile
+    readonly functions: Map<string, FunctionTarget>
+    readonly aliases: Map<string, string>
+    readonly imports: Map<string, ImportBinding>
+    readonly reexports: Map<string, ImportBinding>
+  }
+  type CallbackBinding = FunctionTarget | ReadonlyMap<string, FunctionTarget>
+  type PendingTarget = { readonly target: FunctionTarget, readonly bindings: ReadonlyMap<string, CallbackBinding> }
+
+  const forbiddenNames = new Set([
+    "fork", "spawn", "spawnSync", "createExclusiveLeanInvocationMarker", "buildLeanSchedule",
+    "buildCanonicalLeanRequest", "createCandidateInitialGameState", "createCandidateInitialGameStateV119",
+    "executePrepared", "executePreparedRuntimeServiceRequestV118", "runLeanFeasibilityInjected",
+    "createSupervisedLeanExecutionDependencies", "prepareLeanCorrectiveInvocation",
+  ])
+  const inertBareCalls = new Set([
+    "Boolean", "Number", "String", "BigInt", "structuredClone", "setTimeout", "clearTimeout",
+  ])
+  const inertImportedCalls = new Set([
+    "createHash", "closeSync", "existsSync", "fsyncSync", "openSync", "readFileSync", "unlinkSync", "writeSync",
+    "fileURLToPath", "pathToFileURL", "encodeCanonicalJson",
+  ])
+  const inertMemberCalls = new Set([
+    "Array.isArray", "JSON.parse", "JSON.stringify", "Number.isSafeInteger", "Object.entries", "Object.keys", "Object.values",
+    "Buffer.from", "globalThis.structuredClone", "path.dirname", "path.resolve",
+  ])
+  const inertPrototypeMethods = new Set([
+    "add", "at", "digest", "every", "filter", "get", "has", "includes", "indexOf", "join", "map", "set", "slice", "some", "sort",
+    "split", "startsWith", "test", "toString", "trim", "update",
+  ])
+  const scriptKind = ts.ScriptKind.TS
+  const indexes = new Map<string, ModuleIndex>()
+
+  const normalizeRelative = (fromModule: string, specifier: string): string => {
+    if (!specifier.startsWith(".")) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_EXTERNAL_MODULE:${specifier}`)
+    if (fromModule === "runner" && /check-v1-38-lean-admission\.js$/u.test(specifier)) return "checker"
+    const directCandidates = [specifier, specifier.replace(/\.js$/u, ".ts")]
+    for (const candidate of directCandidates) if (moduleSources.has(candidate)) return candidate
+    const base = fromModule === "runner" || fromModule === "checker" ? "." : path.posix.dirname(fromModule)
+    const normalized = path.posix.normalize(path.posix.join(base, specifier))
+    const rooted = normalized.startsWith(".") ? normalized : `./${normalized}`
+    for (const candidate of [rooted, rooted.replace(/\.js$/u, ".ts"), rooted.replace(/\.ts$/u, ".js")]) {
+      if (moduleSources.has(candidate)) return candidate
     }
-    for (const match of source.matchAll(/import\s*\{([^}]+)\}\s*from\s*["'](\.[^"']+)["']/gu)) {
-      for (const binding of match[1]!.split(",")) {
-        const parts = binding.trim().split(/\s+as\s+/u)
-        if (parts[0]) namedImports.set(`${moduleId}:${parts[1] ?? parts[0]}`, { module: match[2]!, imported: parts[0] })
+    throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${fromModule}:${specifier}`)
+  }
+
+  for (const [moduleId, source] of moduleSources) {
+    const sourceFile = ts.createSourceFile(moduleId, source, ts.ScriptTarget.Latest, true, scriptKind)
+    const parseDiagnostics = (sourceFile as ts.SourceFile & { readonly parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics ?? []
+    if (parseDiagnostics.length > 0) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_PARSE_ERROR:${moduleId}`)
+    const index: ModuleIndex = { sourceFile, functions: new Map(), aliases: new Map(), imports: new Map(), reexports: new Map() }
+    const recordFunction = (name: string, node: FunctionNode): void => {
+      if (index.functions.has(name) || index.aliases.has(name) || index.imports.has(name)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_AMBIGUOUS_BINDING:${moduleId}:${name}`)
+      index.functions.set(name, { moduleId, node, identity: `${moduleId}:${name}:${node.pos}:${node.end}` })
+    }
+    for (const statement of sourceFile.statements) {
+      if (ts.isFunctionDeclaration(statement)) {
+        if (statement.name !== undefined) recordFunction(statement.name.text, statement)
+        if (statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) === true) {
+          if (index.functions.has("default")) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_AMBIGUOUS_BINDING:${moduleId}:default`)
+          index.functions.set("default", { moduleId, node: statement, identity: `${moduleId}:default:${statement.pos}:${statement.end}` })
+        }
+      }
+      else if (ts.isVariableStatement(statement)) {
+        for (const declaration of statement.declarationList.declarations) {
+          if (!ts.isIdentifier(declaration.name) || declaration.initializer === undefined) continue
+          if (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer)) recordFunction(declaration.name.text, declaration.initializer)
+          else if (ts.isIdentifier(declaration.initializer)) index.aliases.set(declaration.name.text, declaration.initializer.text)
+        }
+      } else if (ts.isImportDeclaration(statement)) {
+        if (!ts.isStringLiteral(statement.moduleSpecifier)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_DYNAMIC_IMPORT:${moduleId}`)
+        const specifier = statement.moduleSpecifier.text
+        const clause = statement.importClause
+        if (clause === undefined) continue
+        const external = !specifier.startsWith(".")
+        if (clause.name !== undefined) index.imports.set(clause.name.text, { specifier, imported: "default", namespace: false, external })
+        if (clause.namedBindings !== undefined && ts.isNamespaceImport(clause.namedBindings)) index.imports.set(clause.namedBindings.name.text, { specifier, imported: "*", namespace: true, external })
+        if (clause.namedBindings !== undefined && ts.isNamedImports(clause.namedBindings)) {
+          for (const element of clause.namedBindings.elements) index.imports.set(element.name.text, { specifier, imported: element.propertyName?.text ?? element.name.text, namespace: false, external })
+        }
+      } else if (ts.isExportDeclaration(statement) && statement.exportClause !== undefined && ts.isNamedExports(statement.exportClause) && statement.moduleSpecifier !== undefined && ts.isStringLiteral(statement.moduleSpecifier)) {
+        const specifier = statement.moduleSpecifier.text
+        for (const element of statement.exportClause.elements) index.reexports.set(element.name.text, { specifier, imported: element.propertyName?.text ?? element.name.text, namespace: false, external: !specifier.startsWith(".") })
+      } else if (ts.isExportAssignment(statement) && !statement.isExportEquals && (ts.isArrowFunction(statement.expression) || ts.isFunctionExpression(statement.expression))) {
+        recordFunction("default", statement.expression)
       }
     }
-    for (const match of source.matchAll(/import\s*\*\s*as\s*([A-Za-z_$][\w$]*)\s*from\s*["'](\.[^"']+)["']/gu)) namespaceImports.set(`${moduleId}:${match[1]!}`, match[2]!)
-    for (const match of source.matchAll(/(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\s*(?:as\s+[^;\n]+)?(?:;|\n)/gu)) localAliases.set(`${moduleId}:${match[1]!}`, match[2]!)
-    for (const match of source.matchAll(/export\s*\{([^}]+)\}\s*from\s*["'](\.[^"']+)["']/gu)) {
-      for (const binding of match[1]!.split(",")) {
-        const parts = binding.trim().split(/\s+as\s+/u)
-        if (parts[0]) namedImports.set(`${moduleId}:${parts[1] ?? parts[0]}`, { module: match[2]!, imported: parts[0] })
+    indexes.set(moduleId, index)
+  }
+
+  const resolveFunction = (moduleId: string, name: string, trail = new Set<string>()): FunctionTarget | undefined => {
+    const key = `${moduleId}:${name}`
+    if (trail.has(key)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_AMBIGUOUS_BINDING:${key}`)
+    trail.add(key)
+    const index = indexes.get(moduleId)
+    if (index === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${moduleId}`)
+    const direct = index.functions.get(name)
+    if (direct !== undefined) return direct
+    const alias = index.aliases.get(name)
+    if (alias !== undefined) return resolveFunction(moduleId, alias, trail)
+    const binding = index.imports.get(name) ?? index.reexports.get(name)
+    if (binding === undefined || binding.namespace) return undefined
+    if (binding.external) return undefined
+    return resolveFunction(normalizeRelative(moduleId, binding.specifier), binding.imported, trail)
+  }
+
+  const targetForInline = (moduleId: string, node: ts.ArrowFunction | ts.FunctionExpression): FunctionTarget => ({
+    moduleId, node, identity: `${moduleId}:inline:${node.pos}:${node.end}`,
+  })
+  const bindArguments = (target: FunctionTarget, args: readonly ts.Expression[], callerModule: string): ReadonlyMap<string, CallbackBinding> => {
+    const bindings = new Map<string, CallbackBinding>()
+    target.node.parameters.forEach((parameter, index) => {
+      if (!ts.isIdentifier(parameter.name)) return
+      const argument = args[index]
+      if (argument === undefined) return
+      if (ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) bindings.set(parameter.name.text, targetForInline(callerModule, argument))
+      else if (ts.isObjectLiteralExpression(argument)) {
+        const callbacks = new Map<string, FunctionTarget>()
+        for (const property of argument.properties) {
+          if (ts.isShorthandPropertyAssignment(property)) {
+            const resolved = resolveFunction(callerModule, property.name.text)
+            if (resolved !== undefined) callbacks.set(property.name.text, resolved)
+            continue
+          }
+          if (!ts.isPropertyAssignment(property) || (!ts.isIdentifier(property.name) && !ts.isStringLiteral(property.name))) continue
+          if (ts.isArrowFunction(property.initializer) || ts.isFunctionExpression(property.initializer)) callbacks.set(property.name.text, targetForInline(callerModule, property.initializer))
+          else if (ts.isIdentifier(property.initializer)) {
+            const resolved = resolveFunction(callerModule, property.initializer.text)
+            if (resolved !== undefined) callbacks.set(property.name.text, resolved)
+          }
+        }
+        bindings.set(parameter.name.text, callbacks)
       }
+    })
+    return bindings
+  }
+
+  const pending: PendingTarget[] = []
+  const queue = (target: FunctionTarget, bindings: ReadonlyMap<string, CallbackBinding> = new Map()): void => { pending.push({ target, bindings }) }
+  const helper = resolveFunction("runner", "runLeanCorrectiveRecoveryOnlyInjected")
+  if (helper === undefined) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
+  for (const name of ["recoverLeanCorrectiveOrphan", "terminalizeLeanCorrectiveInterruption", "checkLeanCorrectiveRecoveryTerminal"]) {
+    const target = resolveFunction("checker", name)
+    if (target === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING:${name}`)
+    queue(target)
+  }
+  const runnerIndex = indexes.get("runner")!
+  let selectorFound = false
+  const findSelector = (node: ts.Node): void => {
+    if (ts.isIfStatement(node) && node.expression.getText(runnerIndex.sourceFile).includes("LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR")) {
+      selectorFound = true
+      const synthetic: FunctionTarget = {
+        moduleId: "runner",
+        node: ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, node.thenStatement),
+        identity: `runner:recovery-selector:${node.pos}:${node.end}`,
+      }
+      Object.defineProperty(synthetic.node, "pos", { value: node.thenStatement.pos })
+      Object.defineProperty(synthetic.node, "end", { value: node.thenStatement.end })
+      queue(synthetic)
+      return
     }
+    ts.forEachChild(node, findSelector)
   }
-  const pending: Array<{ module: string, body: string }> = [
-    { module: "runner", body: selector },
-    { module: "runner", body: helper },
-  ]
-  for (const exported of ["recoverLeanCorrectiveOrphan", "terminalizeLeanCorrectiveInterruption", "checkLeanCorrectiveRecoveryTerminal"]) {
-    pending.push({ module: "checker", body: extractBlock(checker, `export const ${exported}`) })
-  }
+  findSelector(runnerIndex.sourceFile)
+  if (!selectorFound) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_STRUCTURE_MISSING")
+
   const inspected = new Set<string>()
-  const resolveImported = (moduleId: string, local: string): { module: string, name: string } | undefined => {
-    const binding = namedImports.get(`${moduleId}:${local}`)
-    if (binding === undefined) return undefined
-    if (!modules.has(binding.module)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${local}`)
-    return { module: binding.module, name: binding.imported }
+  const callText = (expression: ts.Expression, sourceFile: ts.SourceFile): string => expression.getText(sourceFile)
+  const resolveLexicalFunction = (current: FunctionTarget, name: string, trail = new Set<string>()): FunctionTarget | undefined => {
+    if (trail.has(name)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_AMBIGUOUS_BINDING:${name}`)
+    trail.add(name)
+    let found: FunctionTarget | undefined
+    let alias: string | undefined
+    const scan = (node: ts.Node): void => {
+      if (node !== current.node.body && (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node))) return
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === name && node.initializer !== undefined) {
+        if (found !== undefined || alias !== undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_AMBIGUOUS_BINDING:${name}`)
+        if (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) found = targetForInline(current.moduleId, node.initializer)
+        else if (ts.isIdentifier(node.initializer)) alias = node.initializer.text
+      }
+      ts.forEachChild(node, scan)
+    }
+    scan(current.node.body)
+    if (found !== undefined) return found
+    return alias === undefined ? undefined : resolveLexicalFunction(current, alias, trail)
   }
-  const queueDefinition = (moduleId: string, name: string): boolean => {
-    const direct = definitions.get(`${moduleId}:${name}`)
-    if (direct !== undefined) { pending.push({ module: moduleId, body: direct }); return true }
-    const alias = localAliases.get(`${moduleId}:${name}`)
-    if (alias !== undefined) return queueDefinition(moduleId, alias)
-    const imported = resolveImported(moduleId, name)
-    if (imported === undefined) return false
-    if (queueDefinition(imported.module, imported.name)) return true
-    throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${name}`)
+  const assertExecFileSyncPolicy = (call: ts.CallExpression, sourceFile: ts.SourceFile): void => {
+    const [command, argv, options] = call.arguments
+    if (command === undefined || argv === undefined || options === undefined || !ts.isStringLiteral(command) || !ts.isObjectLiteralExpression(options)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_EXEC_POLICY")
+    if (command.text === "git" && ts.isIdentifier(argv) && argv.text === "args") return
+    if (!ts.isArrayLiteralExpression(argv)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_EXEC_POLICY")
+    const args = argv.elements.map((element) => element.getText(sourceFile))
+    const validGit = command.text === "git" && (
+      JSON.stringify(args.slice(0, 2)) === JSON.stringify(["\"diff\"", "\"--quiet\""]) ||
+      JSON.stringify(args.slice(0, 2)) === JSON.stringify(["\"merge-base\"", "\"--is-ancestor\""])
+    )
+    const validPs = command.text === "ps" && (
+      JSON.stringify(args) === JSON.stringify(["\"-axo\"", "\"command=\""]) ||
+      (args[0] === "\"-p\"" && args[1] === "String(pid)" && args[2] === "\"-o\"" && ["\"command=\"", "\"pgid=\""].includes(args[3] ?? ""))
+    )
+    if (!validPs && !validGit) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_EXEC_POLICY:${call.getText(sourceFile)}`)
   }
+  const assertProcessKillPolicy = (call: ts.CallExpression, sourceFile: ts.SourceFile): void => {
+    const args = call.arguments.map((argument) => argument.getText(sourceFile))
+    const validProbe = args.length === 2 && args[0] === "pid" && args[1] === "0"
+    const validGroupSignal = args.length === 2 && args[0] === "-processGroupId" && args[1] === "signal"
+    if (!validProbe && !validGroupSignal) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_SIGNAL_POLICY")
+  }
+  const inspectCall = (call: ts.CallExpression, current: PendingTarget, sourceFile: ts.SourceFile): void => {
+    if (call.expression.kind === ts.SyntaxKind.ImportKeyword) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_DYNAMIC_IMPORT")
+    if (ts.isElementAccessExpression(call.expression)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_COMPUTED_CALL")
+    if (ts.isIdentifier(call.expression)) {
+      const name = call.expression.text
+      if (forbiddenNames.has(name)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
+      const callback = current.bindings.get(name)
+      if (callback !== undefined) {
+        if (callback instanceof Map) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${name}`)
+        queue(callback, bindArguments(callback, call.arguments, current.target.moduleId)); return
+      }
+      const lexical = resolveLexicalFunction(current.target, name)
+      if (lexical !== undefined) { queue(lexical, bindArguments(lexical, call.arguments, current.target.moduleId)); return }
+      const local = resolveFunction(current.target.moduleId, name)
+      if (local !== undefined) { queue(local, bindArguments(local, call.arguments, current.target.moduleId)); return }
+      const imported = indexes.get(current.target.moduleId)!.imports.get(name)
+      if (imported !== undefined) {
+        if (!imported.external) {
+          const resolved = resolveFunction(normalizeRelative(current.target.moduleId, imported.specifier), imported.imported)
+          if (resolved === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${name}`)
+          queue(resolved, bindArguments(resolved, call.arguments, current.target.moduleId)); return
+        }
+        if (name === "execFileSync" && imported.specifier === "node:child_process") { assertExecFileSyncPolicy(call, sourceFile); return }
+        if (inertImportedCalls.has(name)) return
+        throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_EXTERNAL_CALL:${name}`)
+      }
+      if (inertBareCalls.has(name)) return
+      throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${name}`)
+    }
+    if (!ts.isPropertyAccessExpression(call.expression)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL")
+    const receiver = call.expression.expression
+    const property = call.expression.name.text
+    if (forbiddenNames.has(property) || property === "send") throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
+    if (ts.isIdentifier(receiver)) {
+      const callbackOwner = current.bindings.get(receiver.text)
+      if (callbackOwner instanceof Map) {
+        const callback = callbackOwner.get(property)
+        if (callback === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${receiver.text}.${property}`)
+        queue(callback, bindArguments(callback, call.arguments, current.target.moduleId)); return
+      }
+      const imported = indexes.get(current.target.moduleId)!.imports.get(receiver.text)
+      if (imported?.namespace === true) {
+        if (imported.external) {
+          const key = `${receiver.text}.${property}`
+          if (inertMemberCalls.has(key)) return
+          throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_EXTERNAL_CALL:${key}`)
+        }
+        const resolved = resolveFunction(normalizeRelative(current.target.moduleId, imported.specifier), property)
+        if (resolved === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${property}`)
+        queue(resolved, bindArguments(resolved, call.arguments, current.target.moduleId)); return
+      }
+      if (receiver.text === "checker") {
+        const resolved = resolveFunction("checker", property)
+        if (resolved === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${property}`)
+        queue(resolved, bindArguments(resolved, call.arguments, current.target.moduleId)); return
+      }
+      const exact = `${receiver.text}.${property}`
+      if (exact === "process.kill") { assertProcessKillPolicy(call, sourceFile); return }
+      if (inertMemberCalls.has(exact) || inertPrototypeMethods.has(property)) return
+    }
+    if (inertPrototypeMethods.has(property)) return
+    throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${callText(call.expression, sourceFile)}`)
+  }
+
   while (pending.length > 0) {
     const current = pending.pop()!
-    const identity = `${current.module}\0${current.body}`
+    const bindingIdentity = [...current.bindings.entries()].map(([name, binding]) => `${name}:${binding instanceof Map ? [...binding.keys()].sort().join(",") : binding.identity}`).sort().join("|")
+    const identity = `${current.target.identity}:${bindingIdentity}`
     if (inspected.has(identity)) continue
     inspected.add(identity)
-    const body = current.body
-    if (/(?:\bfork\s*\(|\bspawn\w*\s*\(|createExclusiveLeanInvocationMarker|buildLeanSchedule\s*\(|buildCanonicalLeanRequest|createCandidateInitialGameState|executePrepared|runLeanFeasibility|createSupervisedLeanExecutionDependencies|prepareLeanCorrectiveInvocation|child\.send|kind\s*:\s*["']execute["'])/u.test(body)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LAUNCH_CAPABILITY")
-    if (/(?:\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*(?:checker\.)?[A-Za-z_$][\w$]*\s*;|checker\s*\[)/u.test(body)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL")
-    for (const call of body.matchAll(/(?<![.\w])([A-Za-z_$][\w$]*)\s*\(/gu)) {
-      queueDefinition(current.module, call[1]!)
+    const index = indexes.get(current.target.moduleId)!
+    const body = current.target.node.body
+    const visit = (node: ts.Node): void => {
+      if (node !== body && (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node))) return
+      if (ts.isNewExpression(node)) {
+        const callee = node.expression.getText(index.sourceFile)
+        if (!["Map", "Promise", "Set", "TypeError"].includes(callee)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_NEW_EXPRESSION:${callee}`)
+      }
+      if (ts.isCallExpression(node)) inspectCall(node, current, index.sourceFile)
+      ts.forEachChild(node, visit)
     }
-    for (const call of body.matchAll(/checker\.([A-Za-z_$][\w$]*)\s*\(/gu)) {
-      const callee = definitions.get(`checker:${call[1]!}`)
-      if (callee === undefined) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${call[1]}`)
-      pending.push({ module: "checker", body: callee })
-    }
-    for (const call of body.matchAll(/([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)\s*\(/gu)) {
-      const importedModule = namespaceImports.get(`${current.module}:${call[1]!}`)
-      if (importedModule === undefined) continue
-      if (!modules.has(importedModule) || !queueDefinition(importedModule, call[2]!)) throw new TypeError(`LEAN_CORRECTIVE_RECOVERY_UNRESOLVED_CALL:${call[2]}`)
-    }
+    visit(body)
   }
 }
 
@@ -777,6 +1021,90 @@ export const renderLeanCorrectiveReadinessV4 = (manifest: LeanCorrectiveManifest
   const review = checkLeanCorrectiveSourceReviewV4(manifest, reviewValue)
   return checkLeanCorrectiveReadinessV4(manifest, review, { schemaVersion: "v1.38-lean-runner-corrective-readiness-v4", sourceCommit: manifest.source.commit, manifestRoot: hashLeanValue(manifest), sourceReviewRoot: hashLeanValue(review), findingCount: 0, plan158Eligible: true, correctiveInvocationLimit: 1, correctiveInvocationsConsumed: 0, recoveryOnlyLimit: 1, authority: LEAN_AUTHORITY_FALSE })
 }
+export const deriveLeanCorrectiveFreshEffectsV5 = (repoRoot: string): LeanCorrectiveFreshEffectsV5 => ({
+  readinessV5Present: existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.readiness)),
+  invocationV2Present: existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.invocation)),
+  terminalV2Present: existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.terminal)),
+  adjudicationV2Present: existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.adjudication)),
+  eligibilityV2Present: existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_ARTIFACT_PATHS.eligibility)),
+  childOwnershipPresent: existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_CHILD_OWNERSHIP_PATH)),
+})
+const noCorrectiveFreshEffectsV5 = (effects: LeanCorrectiveFreshEffectsV5): boolean => Object.values(effects).every((present) => present === false)
+const buildLeanCorrectiveManifestV5 = (repoRoot: string, sourceRef: string, effects: LeanCorrectiveFreshEffectsV5): LeanCorrectiveManifestV5 => {
+  if (git(repoRoot, ["rev-parse", `${PLAN165_SUMMARY_COMMIT}:${PLAN165_SUMMARY_PATH}`]) !== PLAN165_SUMMARY_BLOB || git(repoRoot, ["rev-parse", `HEAD:${PLAN165_SUMMARY_PATH}`]) !== PLAN165_SUMMARY_BLOB || `sha256:${sha256File(path.resolve(repoRoot, PLAN165_SUMMARY_PATH))}` !== PLAN165_SUMMARY_ROOT) throw new TypeError("LEAN_PLAN165_SUMMARY_DRIFT")
+  const base = renderLeanManifest(repoRoot, sourceRef)
+  return {
+    ...base,
+    schemaVersion: "v1.38-lean-runner-corrective-source-manifest-v5",
+    plan165Summary: { commit: PLAN165_SUMMARY_COMMIT, blob: PLAN165_SUMMARY_BLOB, contentRoot: PLAN165_SUMMARY_ROOT },
+    predecessorRoots: {
+      failedManifestV1Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.manifest)),
+      failedReviewV1Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V1_ARTIFACT_PATHS.sourceReview)),
+      failedManifestV2Root: hashLeanValue(checkLeanCorrectiveManifestV2(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.manifest))),
+      failedReviewV2Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V2_ARTIFACT_PATHS.sourceReview)),
+      failedManifestV3Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.manifest)),
+      failedReviewV3Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V3_ARTIFACT_PATHS.sourceReview)),
+      failedManifestV4Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest)),
+      failedReviewV4Root: hashLeanValue(readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.sourceReview)),
+      firstInvocationRoot: hashLeanValue(readJson(repoRoot, LEAN_ARTIFACT_PATHS.invocation)),
+      firstTerminalRoot: hashLeanValue(readJson(repoRoot, LEAN_ARTIFACT_PATHS.terminal)),
+      diagnosticCustodyRoot: hashLeanValue(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH)),
+    },
+    successorLockCount: 36,
+    freshCorrectiveEffects: effects,
+  }
+}
+export const renderLeanCorrectiveManifestV5 = (repoRoot: string, sourceRef: string): LeanCorrectiveManifestV5 => {
+  const effects = deriveLeanCorrectiveFreshEffectsV5(repoRoot)
+  if (!noCorrectiveFreshEffectsV5(effects)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V5_EFFECT_PRESENT")
+  return buildLeanCorrectiveManifestV5(repoRoot, sourceRef, effects)
+}
+export const checkLeanCorrectiveManifestV5 = (repoRoot: string, value: unknown): LeanCorrectiveManifestV5 => {
+  assertPrivacySafe(value)
+  if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-manifest-v5" || !isObject(value.source) || !isOid(value.source.commit)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V5_INVALID")
+  const expected = renderLeanCorrectiveManifestV5(repoRoot, value.source.commit)
+  if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V5_DRIFT")
+  assertSuccessorLockInventory(repoRoot)
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveManifestV5
+}
+const checkRecordedLeanCorrectiveManifestV5 = (repoRoot: string, value: unknown): LeanCorrectiveManifestV5 => {
+  if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-manifest-v5" || !isObject(value.source) || !isOid(value.source.commit)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V5_INVALID")
+  const expected = buildLeanCorrectiveManifestV5(repoRoot, value.source.commit, {
+    readinessV5Present: false, invocationV2Present: false, terminalV2Present: false,
+    adjudicationV2Present: false, eligibilityV2Present: false, childOwnershipPresent: false,
+  })
+  if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_CORRECTIVE_MANIFEST_V5_DRIFT")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveManifestV5
+}
+export const checkLeanCorrectiveSourceReviewV5 = (manifest: LeanCorrectiveManifestV5, value: unknown): LeanCorrectiveSourceReviewV5 => {
+  assertPrivacySafe(value)
+  const validFinding = (finding: unknown): boolean => isObject(finding) && exactKeys(finding, ["id", "severity", "status", "summary"]) && typeof finding.id === "string" && finding.id.length > 0 && ["critical", "warning"].includes(String(finding.severity)) && finding.status === "open" && typeof finding.summary === "string" && finding.summary.length > 0
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "sourceTree", "manifestRoot", "findingCount", "findings", "admitsExecution", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-corrective-source-review-v5" || value.sourceCommit !== manifest.source.commit || value.sourceTree !== manifest.source.tree || value.manifestRoot !== hashLeanValue(manifest) || !Number.isSafeInteger(value.findingCount) || (value.findingCount as number) < 0 || !Array.isArray(value.findings) || value.findings.length !== value.findingCount || !value.findings.every(validFinding) || new Set(value.findings.map((finding) => (finding as Record<string, unknown>).id)).size !== value.findings.length || value.admitsExecution !== false || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_SOURCE_REVIEW_V5_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveSourceReviewV5
+}
+export const renderLeanCorrectiveSourceReviewV5 = (manifest: LeanCorrectiveManifestV5, findings: readonly LeanReviewFinding[]): LeanCorrectiveSourceReviewV5 => checkLeanCorrectiveSourceReviewV5(manifest, {
+  schemaVersion: "v1.38-lean-runner-corrective-source-review-v5", sourceCommit: manifest.source.commit,
+  sourceTree: manifest.source.tree, manifestRoot: hashLeanValue(manifest), findingCount: findings.length,
+  findings, admitsExecution: false, authority: LEAN_AUTHORITY_FALSE,
+})
+export const checkLeanCorrectiveReadinessV5 = (manifest: LeanCorrectiveManifestV5, reviewValue: unknown, value: unknown): LeanCorrectiveReadiness => {
+  const review = checkLeanCorrectiveSourceReviewV5(manifest, reviewValue)
+  if (review.findingCount !== 0 || !isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "manifestRoot", "sourceReviewRoot", "findingCount", "plan158Eligible", "correctiveInvocationLimit", "correctiveInvocationsConsumed", "recoveryOnlyLimit", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-corrective-readiness-v5" || value.sourceCommit !== manifest.source.commit || value.manifestRoot !== hashLeanValue(manifest) || value.sourceReviewRoot !== hashLeanValue(review) || value.findingCount !== 0 || value.plan158Eligible !== true || value.correctiveInvocationLimit !== 1 || value.correctiveInvocationsConsumed !== 0 || value.recoveryOnlyLimit !== 1 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_CORRECTIVE_READINESS_V5_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanCorrectiveReadiness
+}
+export const renderLeanCorrectiveReadinessV5 = (manifest: LeanCorrectiveManifestV5, reviewValue: unknown): LeanCorrectiveReadiness => {
+  const review = checkLeanCorrectiveSourceReviewV5(manifest, reviewValue)
+  return checkLeanCorrectiveReadinessV5(manifest, review, { schemaVersion: "v1.38-lean-runner-corrective-readiness-v5", sourceCommit: manifest.source.commit, manifestRoot: hashLeanValue(manifest), sourceReviewRoot: hashLeanValue(review), findingCount: 0, plan158Eligible: true, correctiveInvocationLimit: 1, correctiveInvocationsConsumed: 0, recoveryOnlyLimit: 1, authority: LEAN_AUTHORITY_FALSE })
+}
+export const checkLeanCorrectiveReviewOutcomeV5 = (manifest: LeanCorrectiveManifestV5, reviewValue: unknown, readinessValue: unknown): LeanCorrectiveReadiness | undefined => {
+  const review = checkLeanCorrectiveSourceReviewV5(manifest, reviewValue)
+  if (review.findingCount !== 0) {
+    if (readinessValue !== undefined) throw new TypeError("LEAN_CORRECTIVE_NONZERO_REVIEW_V5_READINESS_FORBIDDEN")
+    return undefined
+  }
+  if (readinessValue === undefined) throw new TypeError("LEAN_CORRECTIVE_ZERO_REVIEW_V5_READINESS_REQUIRED")
+  return checkLeanCorrectiveReadinessV5(manifest, review, readinessValue)
+}
 export const loadAndCheckLeanCorrectiveReady = (
   repoRoot: string,
   allowedOperationalPaths: readonly string[] = [],
@@ -788,26 +1116,26 @@ export const loadAndCheckLeanCorrectiveReady = (
   checkLeanFirstEvidenceCustody(repoRoot)
   validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))
   assertSuccessorLockInventory(repoRoot)
-  const manifest = checkRecordedLeanCorrectiveManifestV4(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest))
-  const readiness = checkLeanCorrectiveReadinessV4(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.readiness))
+  const manifest = checkRecordedLeanCorrectiveManifestV5(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest))
+  const readiness = checkLeanCorrectiveReadinessV5(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.readiness))
   assertLeanCorrectiveTrackedBytes(repoRoot, readiness.sourceCommit)
   return readiness
 }
 const loadAndCheckLeanCorrectiveRecoveryLineage = (
   repoRoot: string,
   allowedOperationalPaths: readonly string[],
-): { manifest: LeanCorrectiveManifestV4, readiness: LeanCorrectiveReadiness } => {
+): { manifest: LeanCorrectiveManifestV5, readiness: LeanCorrectiveReadiness } => {
   assertLeanCorrectiveAdmissionStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]), allowedOperationalPaths)
   checkLeanFirstEvidenceCustody(repoRoot)
   validateLeanDiagnosticCustody(readJson(repoRoot, LEAN_DIAGNOSTIC_CUSTODY_PATH))
   assertSuccessorLockInventory(repoRoot)
-  for (const artifactPath of Object.values(LEAN_CORRECTIVE_V4_ARTIFACT_PATHS)) {
+  for (const artifactPath of Object.values(LEAN_CORRECTIVE_V5_ARTIFACT_PATHS)) {
     if (git(repoRoot, ["hash-object", artifactPath]) !== git(repoRoot, ["rev-parse", `HEAD:${artifactPath}`])) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LINEAGE_DRIFT")
   }
-  const manifestValue = readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest)
-  if (!isObject(manifestValue) || manifestValue.schemaVersion !== "v1.38-lean-runner-corrective-source-manifest-v4" || !isObject(manifestValue.source) || !isOid(manifestValue.source.commit) || !isOid(manifestValue.source.tree) || !isObject(manifestValue.plan165Summary) || JSON.stringify(manifestValue.plan165Summary) !== JSON.stringify({ commit: PLAN165_SUMMARY_COMMIT, blob: PLAN165_SUMMARY_BLOB, contentRoot: PLAN165_SUMMARY_ROOT }) || !isObject(manifestValue.freshCorrectiveEffects) || !noCorrectiveFreshEffects(manifestValue.freshCorrectiveEffects as unknown as LeanCorrectiveFreshEffects) || !exactFalseAuthority(manifestValue.authority)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LINEAGE_INVALID")
-  const manifest = globalThis.structuredClone(manifestValue) as unknown as LeanCorrectiveManifestV4
-  const readiness = checkLeanCorrectiveReadinessV4(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.readiness))
+  const manifestValue = readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest)
+  if (!isObject(manifestValue) || manifestValue.schemaVersion !== "v1.38-lean-runner-corrective-source-manifest-v5" || !isObject(manifestValue.source) || !isOid(manifestValue.source.commit) || !isOid(manifestValue.source.tree) || !isObject(manifestValue.plan165Summary) || JSON.stringify(manifestValue.plan165Summary) !== JSON.stringify({ commit: PLAN165_SUMMARY_COMMIT, blob: PLAN165_SUMMARY_BLOB, contentRoot: PLAN165_SUMMARY_ROOT }) || !isObject(manifestValue.freshCorrectiveEffects) || !noCorrectiveFreshEffectsV5(manifestValue.freshCorrectiveEffects as unknown as LeanCorrectiveFreshEffectsV5) || !exactFalseAuthority(manifestValue.authority)) throw new TypeError("LEAN_CORRECTIVE_RECOVERY_LINEAGE_INVALID")
+  const manifest = globalThis.structuredClone(manifestValue) as unknown as LeanCorrectiveManifestV5
+  const readiness = checkLeanCorrectiveReadinessV5(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.sourceReview), readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.readiness))
   assertLeanCorrectiveTrackedBytes(repoRoot, readiness.sourceCommit)
   return { manifest, readiness }
 }
@@ -1350,6 +1678,20 @@ const main = (): void => {
     const manifest = checkRecordedLeanCorrectiveManifestV4(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.manifest))
     checkLeanCorrectiveSourceReviewV4(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V4_ARTIFACT_PATHS.sourceReview))
   } else if (selector === "--check-corrective-reviewed-ready-v4") {
+    throw new TypeError("LEAN_CORRECTIVE_READINESS_V4_RETIRED")
+  } else if (selector === "--render-corrective-manifest-v5") {
+    process.stdout.write(`${JSON.stringify(renderLeanCorrectiveManifestV5(repoRoot, process.argv[3] ?? "HEAD"), null, 2)}\n`)
+    return
+  } else if (selector === "--check-corrective-manifest-v5") {
+    checkLeanCorrectiveManifestV5(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest))
+  } else if (selector === "--check-corrective-source-review-v5") {
+    const manifest = checkRecordedLeanCorrectiveManifestV5(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest))
+    checkLeanCorrectiveSourceReviewV5(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.sourceReview))
+  } else if (selector === "--check-corrective-review-outcome-v5") {
+    const manifest = checkRecordedLeanCorrectiveManifestV5(repoRoot, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.manifest))
+    const readinessPresent = existsSync(path.resolve(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.readiness))
+    checkLeanCorrectiveReviewOutcomeV5(manifest, readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.sourceReview), readinessPresent ? readJson(repoRoot, LEAN_CORRECTIVE_V5_ARTIFACT_PATHS.readiness) : undefined)
+  } else if (selector === "--check-corrective-reviewed-ready-v5") {
     loadAndCheckLeanCorrectiveReady(repoRoot)
   } else if (selector === "--check-corrective-source-review") {
     checkLeanFirstEvidenceCustody(repoRoot)
