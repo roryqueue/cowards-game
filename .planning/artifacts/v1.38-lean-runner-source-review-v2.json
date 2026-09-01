@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "v1.38-lean-runner-source-review-v2",
+  "sourceCommit": "104f5c83609b40ba5f32dd7b448aa28752067e72",
+  "manifestRoot": "sha256:117fe486e0f73621e9a4ea8e9e1f2b4a5962981319de78358f488467c63816e8",
+  "findingCount": 1,
+  "findings": [
+    {
+      "id": "WR-262-154-R2-01",
+      "severity": "warning",
+      "status": "open",
+      "summary": "Queued child messages can send execute after protocol termination has begun."
+    }
+  ],
+  "admitsExecution": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
