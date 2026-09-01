@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "v1.38-lean-runner-diagnostic-custody-v1",
+  "claimClass": "diagnostic_inadmissibility_only",
+  "diagnosticExecutions": 6,
+  "observationBasis": "operator_session_observation",
+  "rawEvidencePresent": false,
+  "independentlyVerifiable": false,
+  "persisted": false,
+  "liveInvocation": false,
+  "charged": false,
+  "evidenceAdmissible": false,
+  "formationMaterialized": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
