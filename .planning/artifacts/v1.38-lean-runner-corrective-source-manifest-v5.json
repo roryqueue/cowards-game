@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "v1.38-lean-runner-corrective-source-manifest-v5",
+  "claimClass": "fixture_feasibility_only",
+  "source": {
+    "commit": "c1bda8cf8a42c1e4a26ccb1a44129f48f826c00e",
+    "tree": "bce72f68971e896fef585c609da4279d6fe743e0",
+    "executableBlobs": {
+      "scripts/lib/v1-38-lean-runner-feasibility.ts": "068dfab5e64fe08b915048cc29a3e778d41c0f9b",
+      "scripts/lib/v1-38-lean-runner-feasibility.test.ts": "23033f0baa222f268005afacccc15ef4ed54ffb9",
+      "scripts/run-v1-38-lean-runner-feasibility.ts": "9654fcd50d4b052cd2f164355ab22416ec85e16c",
+      "scripts/run-v1-38-lean-runner-feasibility.test.ts": "fa73dd47ce96e599b1dbdebf8ffd2a64d44e1af1",
+      "scripts/check-v1-38-lean-admission.ts": "fd0c6c6ca41dd560982013907bec1b3c8b3c3be4",
+      "scripts/check-v1-38-lean-admission.test.ts": "e087802ca34f8b88033290f69f5d8daea4a4fe84",
+      "apps/runtime-service/src": "fdd99de6def647c09a62e1828022f7bf64903919",
+      "packages/engine/src": "bd4863e0e266db5dd224db9f3b6efbc5fcb80d75",
+      "packages/persistence/src": "4e033da7348e962ac058b8dae0ef5c66b0980ac5",
+      "packages/replay/src": "a2607b95d7872bfb154b38482dc5eb2b38a7f27f",
+      "packages/runtime-js/src": "45c27cbaef6c7626ada669637cb7c6a706be8ab1",
+      "packages/runtime-python/src": "99f2e64639abda0d75c25473936706db9e239554",
+      "packages/runtime-supervisor/src": "45b2f561db1b0d2976a8490ededb4910dac1fa7e",
+      "packages/runtime-wasm-wasi/src": "4809132436f4fc5580047152e9805b59b00dbf92",
+      "packages/spec/src": "d86bfdb4990e45f61bec25183051ba0ee6a7c6d0",
+      "apps/runtime-service/package.json": "c6ebc56ce3e2b7331acf8ff72e9872c250c4a006",
+      "packages/engine/package.json": "7fdcbe4c6b1a852e76329f94b570cf065d973b16",
+      "packages/persistence/package.json": "1c8eb0ffb70c4b2081ca6145464865e740160648",
+      "packages/replay/package.json": "d0154c2e4e8c862cc39bb0c4b92c88458b7b6f96",
+      "packages/runtime-js/package.json": "536bbc4db6f5ebbce756570a85c4e8f2720b6855",
+      "packages/runtime-python/package.json": "8702b6e3a690514d8e4acc8b41aa0a3b14733705",
+      "packages/runtime-supervisor/package.json": "247b5c5e4b168ac3233351b3ff440459fafd941b",
+      "packages/runtime-wasm-wasi/package.json": "7e6eb07a8ed1ab6383b4622e45683f1101554e52",
+      "packages/spec/package.json": "d3489f2aa99b9c79eaaffc7e38d308b560afb0b5",
+      "package.json": "f470c35c5549c239067ebb78274e93692b169e3d",
+      "pnpm-lock.yaml": "3cbadfe3a6297d1706c026d381cb4b565935faea",
+      "tsconfig.json": "d1c932addaa4771c624d425e9761e1f3cf2c7793"
+    }
+  },
+  "selectedTuple": {
+    "tupleId": "sha256:37c9a07425d454c74859112debcc3ef362d43e80d5767560d9bde28a3c8d5e73",
+    "rules": "cowards-rules-v1.4",
+    "engine": "engine-kernel-v1.37-candidate-1",
+    "runtimeAbi": "strategy-runtime-abi-v1.19",
+    "chronicle": "chronicle-recorder-current-events-v1.37-candidate-1",
+    "arenaCatalog": "canonical-arena-catalog-v1.37",
+    "setPolicy": "canonical-set-policy-v1.37-four-condition-v1"
+  },
+  "fixtures": {
+    "starter": {
+      "id": "starter:aggro-chaser",
+      "version": "v1.4",
+      "sourceHash": "sha256:5de2d2086b97ce8a122f3085e400287f0b79aeb932bfaf2749837a2fc2990bd1"
+    },
+    "advanced": {
+      "id": "advanced:vanguard-pressure",
+      "version": "v1.5",
+      "sourceHash": "sha256:02959d4cbed8186f3a5298c0cb8153369702c043cf4c616c51fd3c8459d57b37"
+    }
+  },
+  "arenas": [
+    {
+      "id": "arena:smoke:v1",
+      "label": "Smoke",
+      "semanticGeometryHash": "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1"
+    },
+    {
+      "id": "arena:standard-cross:v1",
+      "label": "Standard Cross",
+      "semanticGeometryHash": "sha256:87e0d0c2f555328b9863edfc25faf30300db7ce77a1d18fce9b22839560eeb4d"
+    },
+    {
+      "id": "arena:open-field:v1",
+      "label": "Open Field",
+      "semanticGeometryHash": "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1"
+    }
+  ],
+  "formation": {
+    "profile": "current_edge_rank",
+    "root": "sha256:47134b3e56129bc2a35262add054528cc66db6717ea3650a0f611cfa9bffff31"
+  },
+  "scheduleRoot": "sha256:805d1be5bb51baf31de9b812d570a812c12541482a2c2b3853f225337adb6600",
+  "runtimeLimitsRoot": "sha256:41168c80ca59ce151383ddbc8379172149a50fc4d29aa01a6baed777ecc1b116",
+  "normalization": [
+    "terminalOutcome",
+    "finalState",
+    "orderedTransitionsAndEvents",
+    "runtimeAccounting"
+  ],
+  "deadlineMilliseconds": 900000,
+  "historicalFullMatrix": {
+    "disposition": "exhausted",
+    "freshAccepted": 0,
+    "requiredAccepted": 540,
+    "reinterpreted": false
+  },
+  "formationMaterialized": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  },
+  "plan165Summary": {
+    "commit": "18251a883e77b3a7b0845074faae4d8365ab84d5",
+    "blob": "96fecf67546c3c5b9eaa0a72901fbe3f6978b3c4",
+    "contentRoot": "sha256:4407a2284cfd1086bb67b7de497424156983a6dedec9684f288069e1ea8788c4"
+  },
+  "predecessorRoots": {
+    "failedManifestV1Root": "sha256:e658081ce9e722c4389592e98af32b2949f4f524c787bd9ff30a7ff1a612560f",
+    "failedReviewV1Root": "sha256:aab28cec42461db7777b37b712e504ece295158748ea8c6793928c08e6df8c81",
+    "failedManifestV2Root": "sha256:5d8f3b23909ec16674de960fb630185cffa1da4c31cea60e844787e08cc901c3",
+    "failedReviewV2Root": "sha256:5414d4b1033be93a151f1d496b5005617c7cf6de3600ff709c6c872b156c2d7a",
+    "failedManifestV3Root": "sha256:e4f183c9b335f18f482a60980e12822ae5ca4cd59190e64dc5829e79c6a82b40",
+    "failedReviewV3Root": "sha256:f7d14a0421ec10604354769dfb6fe9cda16a8ce526bc186774c8243fcaa83455",
+    "failedManifestV4Root": "sha256:110e9d8307aaaaa63c7ec59d0d150a7d6a649d7b211180f42001a29bbc7ede59",
+    "failedReviewV4Root": "sha256:2a1b1663b01370a713cc1f9c46b6d7e7df8a774aae7b85e2b4f1e4c98d6156d3",
+    "firstInvocationRoot": "sha256:bc427dcf90e91f0f8b0c0bec06da785493704cf7b3ee6a5e18458c7d63c095dc",
+    "firstTerminalRoot": "sha256:e17f20fbd6644758f9cd2202496a199199b2a46b0474d42e82785a9c3e0a6cae",
+    "diagnosticCustodyRoot": "sha256:f0e7391745f9f379c5d961db4df7654285da99da7bffa8bd6103f2db03a6fb2c"
+  },
+  "successorLockCount": 36,
+  "freshCorrectiveEffects": {
+    "readinessV5Present": false,
+    "invocationV2Present": false,
+    "terminalV2Present": false,
+    "adjudicationV2Present": false,
+    "eligibilityV2Present": false,
+    "childOwnershipPresent": false
+  }
+}
