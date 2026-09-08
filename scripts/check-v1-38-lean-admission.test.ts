@@ -84,6 +84,7 @@ describe("lean admission custody", () => {
       LEAN_DIRECT_V3_ARTIFACT_PATHS: Record<string, string>
       checkLeanDirectContainerSourceOnlyV3: unknown
       validateLeanContainerPreflightArtifactV2: unknown
+      validateLeanContainerPreflightOutcomeV2: (value: unknown) => unknown
       validateLeanDirectAuthorizationV3: unknown
       checkLeanDirectValidityReviewV3: unknown
       loadAndCheckLeanDirectReviewedReadyV3: unknown
@@ -99,6 +100,9 @@ describe("lean admission custody", () => {
     })
     expect(module.checkLeanDirectContainerSourceOnlyV3).toBeTypeOf("function")
     expect(module.validateLeanContainerPreflightArtifactV2).toBeTypeOf("function")
+    expect(module.validateLeanContainerPreflightOutcomeV2({ status: "non_pass", reasonCode: "container_preflight_refused" })).toEqual({ status: "non_pass", reasonCode: "container_preflight_refused" })
+    expect(() => module.validateLeanContainerPreflightOutcomeV2({ status: "non_pass", reasonCode: "raw_runtime_error" })).toThrow(/PREFLIGHT_OUTCOME_INVALID/u)
+    expect(() => module.validateLeanContainerPreflightOutcomeV2({ status: "non_pass", reasonCode: "container_preflight_refused", stderr: "private" })).toThrow(/PREFLIGHT_OUTCOME_INVALID/u)
     expect(module.validateLeanDirectAuthorizationV3).toBeTypeOf("function")
     expect(module.checkLeanDirectValidityReviewV3).toBeTypeOf("function")
     expect(module.loadAndCheckLeanDirectReviewedReadyV3).toBeTypeOf("function")
@@ -130,9 +134,11 @@ describe("lean admission custody", () => {
     expect(commitTouchesLeanRunnableSource([".planning/phases/262-example/262-177-SUMMARY.md"])).toBe(false)
   })
 
-  it("keeps every v2 effect absent in the source-only closure", () => {
+  it("keeps the blocked v2 review as history and every other v2 effect absent", () => {
     expect(checkLeanDirectContainerSourceOnlyV2).toBeTypeOf("function")
-    for (const artifactPath of Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS)) {
+    expect(hashLeanValue(JSON.parse(readFileSync(LEAN_DIRECT_V2_ARTIFACT_PATHS.review, "utf8"))))
+      .toBe("sha256:ffcee7e51426ceb898a2210ece0d42241c02214adcd289368fd288a5f124f173")
+    for (const artifactPath of Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS).filter((candidate) => candidate !== LEAN_DIRECT_V2_ARTIFACT_PATHS.review)) {
       expect(() => readFileSync(artifactPath, "utf8")).toThrow()
     }
   })

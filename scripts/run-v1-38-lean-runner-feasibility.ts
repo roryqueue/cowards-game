@@ -402,7 +402,7 @@ const dockerText = (args: readonly string[]): string => {
   return result.stdout.trim()
 }
 
-const preflightProbeInput = (method: LeanContainerPreflightSample["method"]): unknown => {
+export const buildLeanContainerPreflightProbeInput = (method: LeanContainerPreflightSample["method"]): unknown => {
   const bottom = {
     id: "bottom-soldier-1", ownerPlayerId: "player:bottom", status: "ACTIVE",
     position: { x: 5, y: 10 }, facing: "UP", lastSuccessfulMoveDirection: null,
@@ -421,7 +421,13 @@ const preflightProbeInput = (method: LeanContainerPreflightSample["method"]): un
     })
   }
   const cells = []
-  for (let dy = -2; dy <= 2; dy += 1) for (let dx = -2; dx <= 2; dx += 1) cells.push({ dx, dy, contents: dx === 0 && dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY" })
+  for (let dy = -2; dy <= 2; dy += 1) for (let dx = -2; dx <= 2; dx += 1) cells.push({
+    dx,
+    dy,
+    absoluteX: bottom.position.x + dx,
+    absoluteY: bottom.position.y + dy,
+    contents: dx === 0 && dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY",
+  })
   return SoldierBrainInputSchema.parse({
     self: bottom, awarenessGrid: { cells }, cycleIndex: 0, maxCycles: 12,
     hasAdvancedThisActivation: false, soldierMemory: {},
@@ -449,7 +455,7 @@ export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidenc
     if (artifact === undefined) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ARTIFACT_MISSING")
     const source = Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
     for (const method of ["selectActivations", "soldierBrain"] as const) {
-      const request = { source, methodName: method, input: preflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 } as const
+      const request = { source, methodName: method, input: buildLeanContainerPreflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 } as const
       const warm = adapter.execute(request)
       if (!warm.ok) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
       for (let ordinal = 0; ordinal < 3; ordinal += 1) {
@@ -904,23 +910,23 @@ const main = async (): Promise<void> => {
   if (selector === LEAN_DIRECT_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV2> | undefined
+    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV3> | undefined
     let capability = ""
-    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV2> | undefined
+    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV3> | undefined
     let terminal: LeanTerminal | undefined
     await runLeanDirectGateInjected({
-      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV2(repoRoot) },
+      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV3(repoRoot) },
       preflight: async () => { runActualLeanContainerPreflight() },
       createMarker: () => {
         if (reviewed === undefined) throw new TypeError("LEAN_DIRECT_REVIEW_REQUIRED")
         capability = randomBytes(32).toString("hex")
-        invocation = checker.createLeanDirectInvocationV2(reviewed.authorization, reviewed.review, hashLeanValue(capability))
-        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V2_ARTIFACT_PATHS.invocation), invocation)
+        invocation = checker.createLeanDirectInvocationV3(reviewed.authorization, reviewed.review, hashLeanValue(capability))
+        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V3_ARTIFACT_PATHS.invocation), invocation)
       },
       invoke: async () => {
         if (invocation === undefined) throw new TypeError("LEAN_DIRECT_MARKER_REQUIRED")
         terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
-        checker.createExclusiveLeanDirectTerminalV2(repoRoot, checker.createLeanDirectTerminalArtifactV2(invocation, terminal))
+        checker.createExclusiveLeanDirectTerminalV3(repoRoot, checker.createLeanDirectTerminalArtifactV3(invocation, terminal))
       },
     })
     process.stdout.write(`${JSON.stringify(terminal)}\n`)
