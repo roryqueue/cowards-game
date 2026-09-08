@@ -5,14 +5,14 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-174 completed blocked; Plan175 is not admitted
-last_updated: "2026-09-08T15:06:50.652Z"
+stopped_at: Plan262-177 container source correction ready for execution
+last_updated: "2026-09-08T00:00:00.000Z"
 last_activity: 2026-09-08
-last_activity_desc: Plan174 committed one direct authorization and one independent seven-category review; two validity findings deny Plan175 with no live or recovery effects
+last_activity_desc: Planned additive Plans177-178 to close Plan174 source-custody and hostile-runtime findings before Plan175
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 157
+  total_plans: 159
   completed_plans: 147
   percent: 92
 ---
@@ -21,11 +21,11 @@ progress:
 
 ## Approved D-34L.1 lean execution closure — 2026-09-01
 
-The operator approved the private lean ADMIT-03 replacement and directed execution to proceed. Research determined that Plan172's four critical and one warning finding concern production-style certification completeness, not the exact committed result-producing path. All five remain immutable, open, non-authorizing history and are not reinterpreted as zero.
+The operator approved the private lean ADMIT-03 replacement and directed execution to proceed. Plan172's four critical and one warning finding remain immutable, open, non-authorizing certification history. Plan174 independently found two active defects in the direct path: the v1 authorization named the wrong commit/tree and the reachable Match selected the non-hostile worker-thread adapter.
 
-Plans173 through176 replace Plans158 through160 and162 as the sole active closure. Plan173 commits the complete direct schema/launcher/checker source with recovery unreachable. Plan174 publishes one compact authorization over those exact bytes and owns one independent seven-category result-validity review. Plan175 alone may create the marker, invoke the complete 24-Match gate once, and independently adjudicate the committed outcome. Plan176 separately synchronizes requirements, tracking, audit, validation, and UAT. Marker-without-terminal is consumed invalid and permits no recovery, partial evidence, resume, or relaunch. Phase263 and every broader authority remain false unless exact pass is independently synchronized; archive/tag remain false.
+Plans177 and178 now precede revised Plans175 and176. Plan177 rebuilds the fixed TypeScript fixtures for `runtime-js-container-subprocess`, selects the exact local digest-pinned `container-subprocess` boundary with existing hostile limits, adds a non-consuming Docker/image/harness/performance preflight before marker creation, and implements an explicit-source authorization v2 writer. Plan178 publishes that preflight and authorization over the separately committed Plan177 runnable bytes and obtains one fresh seven-category review. Plan175 remains denied unless preflight passes and the review has zero active findings. Marker-without-terminal remains consumed invalid with no recovery, partial evidence, resume, or relaunch. Phase263 and every broader authority remain false unless exact pass is independently synchronized; archive/tag remain false.
 
-<!-- phase-262-lean-direct-state: {"schemaVersion":"v1.38-phase-262-lean-direct-plan-v2","decision":"D-34L.1","activeChain":["262-173","262-174","262-175","262-176"],"waves":{"262-173":144,"262-174":145,"262-175":146,"262-176":147},"nextAction":"plan-source-only-correction-for-plan174-findings","plan172FindingCount":5,"plan172CertificationOnlyCount":5,"blockingValidityCategories":7,"plan174BlockingFindingCount":2,"plan175Eligible":false,"globalLiteralZeroRequired":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"supersededInactivePlans":["262-158","262-159","262-160","262-162"],"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-direct-state: {"schemaVersion":"v1.38-phase-262-lean-direct-plan-v3","decision":"D-34L.1","activeChain":["262-173","262-174","262-177","262-178","262-175","262-176"],"waves":{"262-173":144,"262-174":145,"262-177":146,"262-178":147,"262-175":148,"262-176":149},"nextAction":"dispatch-262-177-container-source","plan172FindingCount":5,"plan172CertificationOnlyCount":5,"blockingValidityCategories":7,"plan174BlockingFindingCount":2,"containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","preflightRequiredBeforeMarker":true,"plan175Eligible":false,"globalLiteralZeroRequired":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"supersededInactivePlans":["262-158","262-159","262-160","262-162"],"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plans 262-169/170 bounded successor correction — 2026-09-01
 
@@ -737,8 +737,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-08T15:06:12.005Z
-Stopped at: Completed 262-174-PLAN.md with two blocking validity findings; Plan175 is not admitted
+Last session: 2026-09-08
+Stopped at: Plan262-177 container source correction ready for execution
 Resume file: None
 
 ### Blockers
@@ -753,4 +753,4 @@ Resume file: None
 
 <!-- phase-262-plan-148-lean-tracking: {"activePrerequisite":"lean_runner_feasibility_v1","admit03":"pending","historicalFullMatrix":{"disposition":"exhausted","freshAccepted":0,"requiredAccepted":540,"reproductionPresent":false,"reinterpreted":false},"phase262":"in_progress","phase263PlanningEligible":false,"phase263ExecutionEligible":false,"nextAction":"dispatch-262-149-source-and-tests-only","authorityAllFalse":true} -->
 
-- Plan175 is not admitted: direct authorization source commit/tree disagrees with Plan173's frozen runnable closure, and the reachable worker-thread adapter is not a hostile-Strategy sandbox.
+- No human-only blocker exists. Execute Plan177, then Plan178; Plan175 remains denied unless the new container preflight passes and the fresh seven-category review has zero active findings.
