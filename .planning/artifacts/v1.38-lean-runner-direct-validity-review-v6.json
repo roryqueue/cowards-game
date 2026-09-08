@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "v1.38-lean-runner-direct-validity-review-v6",
+  "authorizationRoot": null,
+  "preflightRoot": "sha256:466e2b6f0ebaa2f04909861b711457f475e520cd9f509e1ca5e19c73fff44689",
+  "sourceCommit": "ae4fd480197393d1c7d27dbc43878d3b31e36b25",
+  "sourceTree": "0c402d3f1eaab766325948d1925ef0aafa1fd7b7",
+  "categories": [
+    {
+      "category": "source_or_dirty_byte_drift",
+      "status": "finding",
+      "evidence": "BLOCKER CR-01: exact Git reauthentication resolves Plan185 source ae4fd480197393d1c7d27dbc43878d3b31e36b25 to tree 0c402d3f1eaab766325948d1925ef0aafa1fd7b7 and executable-blob closure sha256:007eb34c12041eb535f0ff4b5999e8b894fa105fff421fb64dd5045822ac93ae, matching the committed preflight artifact and current tracked runnable bytes. Plan185's committed summary instead asserts sha256:1e187745221a31d67d1d284b3e4abb0cc83d231b85b89910b99c3e31244c30fa for that same exact source, leaving two incompatible custody claims. Publish a non-authorizing correction that binds the exact recomputed closure and ensure any successor preflight and authorization contract uses only that root. Exactly 36 expected locks remain."
+    },
+    {
+      "category": "multiple_launch",
+      "status": "pass",
+      "evidence": "The committed artifact records exactly one non-consuming preflight-v5 and zero Match invocations. Authorization-v6, invocation-v6, terminal-v6, adjudication-v6, and eligibility-v6 are absent. Plan175 is therefore unreachable and the sole corrective Match opportunity remains unconsumed."
+    },
+    {
+      "category": "tuple_or_schedule_drift",
+      "status": "pass",
+      "evidence": "Reachable source preserves the frozen 12-cell two-pass 24-Match schedule, both fixed fixtures, side and initiative coverage, canonical arena mapping, exact container adapter and image, method ceilings, 45000 ms cell bound, and 900000 ms outer bound. The lifecycle-plus-two-sided method projection is unchanged, and the refused preflight grants no reinterpretation authority."
+    },
+    {
+      "category": "supervised_runtime_escape",
+      "status": "pass",
+      "evidence": "Each prepared Match creates one create/start sequence and one persistent docker exec -i broker stream. Both legacy and v1.17 methods traverse that stream; no per-method Docker lifecycle or host fallback is reachable. Each request launches a fresh in-container Node child under the unchanged digest-pinned image, network-none, read-only-root, noexec tmpfs, memory, CPU, PID, cap-drop, no-new-privileges, minimal-environment, shell-false, byte-cap, and timeout controls."
+    },
+    {
+      "category": "partial_interrupted_or_unclean_evidence",
+      "status": "pass",
+      "evidence": "The host issues one request at a time with contiguous request IDs, exact-key NDJSON envelopes, canonical base64, one-frame validation, and exact response correlation. Any timeout, stream error, malformed or surplus frame, stale or future ID, signal, nonzero exit, error output, or cap breach poisons the session and enters removal without retry. Exact-name absence accepts only the bounded no-such-object response, ambiguous status-1 results remain unknown, stream close precedes forced container removal, and incomplete cleanup is returned as orphaned rather than accepted. The committed preflight is non_pass, so none of these source-level conclusions is treated as runtime evidence."
+    },
+    {
+      "category": "private_data_disclosure",
+      "status": "pass",
+      "evidence": "The preflight artifact contains only exact source identity, a generic refusal reason, invocation counts, and false authority. This review records only code-level conclusions and cryptographic roots; it exposes no player-authored code, hidden runtime memory, hidden objective data, raw process stream, environment, credential, or host-specific output."
+    },
+    {
+      "category": "non_pass_authority",
+      "status": "pass",
+      "evidence": "Preflight-v5 is exact non_pass/container_preflight_refused. Authorization-v6 and every downstream v6 effect are absent, admitsPlan175 is false, and every authority bit remains false. Neither source improvements nor reviewer conclusions convert the refused preflight into execution authority."
+    }
+  ],
+  "blockingFindingCount": 1,
+  "certificationOnlyHistory": [
+    {
+      "id": "CR-V6-01",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-02",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-03",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-04",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "WR-V6-01",
+      "severity": "warning",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    }
+  ],
+  "admitsPlan175": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
