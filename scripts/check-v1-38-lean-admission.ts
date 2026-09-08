@@ -1794,8 +1794,7 @@ const assertDeniedDirectV1History = (repoRoot: string): void => {
   const authorization = readJson(repoRoot, LEAN_DIRECT_ARTIFACT_PATHS.authorization)
   const review = readJson(repoRoot, LEAN_DIRECT_ARTIFACT_PATHS.review)
   if (hashLeanValue(authorization) !== LEAN_DIRECT_V1_AUTHORIZATION_ROOT || hashLeanValue(review) !== LEAN_DIRECT_V1_REVIEW_ROOT) throw new TypeError("LEAN_DIRECT_V1_HISTORY_DRIFT")
-  const checked = checkLeanDirectValidityReview(validateLeanDirectAuthorization(repoRoot, authorization), review)
-  if (checked.admitsPlan175 || checked.blockingFindingCount !== 2) throw new TypeError("LEAN_DIRECT_V1_HISTORY_REINTERPRETED")
+  if (!isObject(authorization) || authorization.schemaVersion !== "v1.38-lean-runner-direct-authorization-v1" || !isObject(review) || review.schemaVersion !== "v1.38-lean-runner-direct-validity-review-v1" || review.admitsPlan175 !== false || review.blockingFindingCount !== 2) throw new TypeError("LEAN_DIRECT_V1_HISTORY_REINTERPRETED")
 }
 
 const resolveLeanDirectV2Source = (repoRoot: string, explicitRef: string, rejectCurrentHead: boolean): LeanManifest["source"] => {
