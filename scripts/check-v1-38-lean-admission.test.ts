@@ -79,6 +79,56 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the fresh collision-free v7 trust and effect family", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_V7_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v6.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v7.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v7.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v7.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v7.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v7.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v7.json",
+    })
+    for (const key of [
+      "checkLeanDirectPreflightReferenceSourceOnlyV7", "validateLeanContainerPreflightArtifactV6",
+      "writeLeanContainerPreflightArtifactV6", "renderLeanDirectAuthorizationV7",
+      "checkLeanDirectValidityReviewV7", "checkLeanDirectReviewDispositionV7",
+      "loadAndCheckLeanDirectReviewedReadyV7", "createLeanDirectInvocationV7",
+      "createLeanDirectTerminalArtifactV7",
+    ]) expect(module[key]).toBeTypeOf("function")
+  })
+
+  it("persists only closed privacy-safe preflight diagnostic reason codes", () => {
+    const module = leanAdmissionModule as unknown as {
+      classifyLeanContainerPreflightFailure: (error: unknown) => string
+      validateLeanContainerPreflightOutcomeV4: (value: unknown) => unknown
+    }
+    const cases = [
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_DOCKER_UNAVAILABLE"), "docker_unavailable"],
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_INSPECT_INVALID"), "image_inspect_invalid"],
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT"), "adapter_drift"],
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_ARTIFACT_MISSING"), "fixture_artifact_missing"],
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED"), "probe_failed"],
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_LIFECYCLE_FAILED"), "cleanup_incomplete"],
+      [new TypeError("LEAN_CONTAINER_PREFLIGHT_INFEASIBLE"), "evaluation_refused"],
+      [Object.assign(new Error("private path /Users/example and stderr bytes"), { stack: "private frame" }), "unexpected_failure"],
+    ] as const
+    for (const [error, reasonCode] of cases) {
+      expect(module.classifyLeanContainerPreflightFailure(error)).toBe(reasonCode)
+      expect(module.validateLeanContainerPreflightOutcomeV4({ status: "non_pass", reasonCode })).toEqual({ status: "non_pass", reasonCode })
+    }
+    expect(() => module.validateLeanContainerPreflightOutcomeV4({ status: "non_pass", reasonCode: "private frame" })).toThrow()
+    expect(() => module.validateLeanContainerPreflightOutcomeV4({ status: "non_pass", reasonCode: "unexpected_failure", stderr: "private" })).toThrow()
+  })
+
+  it("authenticates the additive exact 29-path Plan185 closure correction", () => {
+    const module = leanAdmissionModule as unknown as {
+      checkLeanPlan185ClosureCorrection: (repoRoot: string) => void
+    }
+    expect(() => module.checkLeanPlan185ClosureCorrection(process.cwd())).not.toThrow()
+  })
+
   it("reserves the fresh collision-free v6 persistent-stream trust and effect family", () => {
     const module = leanAdmissionModule as unknown as Record<string, unknown>
     expect(module.LEAN_DIRECT_V6_ARTIFACT_PATHS).toEqual({
