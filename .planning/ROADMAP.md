@@ -76,7 +76,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 **Plans:** 150/161 plans executed
 
-**Current verdict:** D-34L.1 PLAN178 PREFLIGHT NON-PASS / ONE ACTIVE PROBE-INPUT FINDING / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / PLAN172 FIVE CERTIFICATION FINDINGS PRESERVED / ZERO MATCHES CONSUMED / RECOVERY FALSE / ALL AUTHORITY FALSE. Plan177 source custody passed, but Plan178's `soldierBrain` preflight input omitted schema-required absolute coordinates. Authorization v2 is absent and Plan175 remains denied. A bounded additive source-only repair and fresh versioned preflight/review chain is next. Phase262 remains incomplete.
+**Current verdict:** D-34L.1 PLAN179 SOURCE REPAIR COMPLETE / PLAN178 NON-PASS PRESERVED / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / PLAN172 FIVE CERTIFICATION FINDINGS PRESERVED / ZERO MATCHES CONSUMED / RECOVERY FALSE / ALL AUTHORITY FALSE. Plan179 adds the schema-required absolute awareness coordinates without changing relative contents and establishes collision-free preflight-v2/authorization-v3/review-v3 paths. Plan180 is next for one fresh non-consuming preflight and independent review; Plan175 remains denied until that exact pass-plus-zero-finding join. Phase262 remains incomplete.
 
 **Current Plan110 failure (2026-08-31):** The sole live-v14 invocation at `bccafa3f` deadlocked in native journal bootstrap: the owner held the exclusive root lock and the synchronous transaction independently waited for that same lock. The blocked transaction was safely terminated, the owner unwound, and live/post checks both exited1. No observation, calibration or Match ran; journal/terminal/reproduction remain absent, while the empty private directory is preserved. Failure summary `2bd6f682` is not a completion or producer terminal. Plan110 must not be re-entered; Plan94's prerequisites are unmet. An explicit operator revision of the terminal-failure/one-shot boundary is required before any fresh live route. Non-authorizing repair design may continue; ADMIT-03 remains0/540 and all downstream authority is denied.
 
@@ -276,11 +276,11 @@ The current carrier also resolves the audit's Plan-79 journal-root documentation
 Plans:
 
 - [x] 262-136-PLAN.md
-- [x] 262-137-PLAN.md
+- [ ] 262-137-PLAN.md
 - [x] 262-138-PLAN.md
 - [ ] 262-139-PLAN.md
 - [x] 262-140-PLAN.md
-- [x] 262-141-PLAN.md
+- [ ] 262-141-PLAN.md
 - [x] 262-142-PLAN.md
 - [x] 262-148-PLAN.md
 - [x] 262-149-PLAN.md
@@ -292,11 +292,11 @@ Plans:
 - [x] 262-155-PLAN.md
 - [x] 262-156-PLAN.md
 - [x] 262-157-PLAN.md
-- [x] 262-158-PLAN.md
+- [ ] 262-158-PLAN.md
 - [ ] 262-159-PLAN.md
 - [x] 262-160-PLAN.md
 - [x] 262-161-PLAN.md
-- [x] 262-162-PLAN.md
+- [ ] 262-162-PLAN.md
 - [x] 262-163-PLAN.md
 - [x] 262-164-PLAN.md
 - [x] 262-165-PLAN.md
@@ -309,12 +309,12 @@ Plans:
 - [x] 262-172-PLAN.md
 - [x] 262-173-PLAN.md
 - [x] 262-174-PLAN.md
-- [x] 262-175-PLAN.md
+- [ ] 262-175-PLAN.md
 - [ ] 262-176-PLAN.md
 - [x] 262-177-PLAN.md
 - [x] 262-178-PLAN.md
 - [x] 262-179-PLAN.md
-- [x] 262-180-PLAN.md
+- [ ] 262-180-PLAN.md
 
 **Wave 70** *(complete)*
 
