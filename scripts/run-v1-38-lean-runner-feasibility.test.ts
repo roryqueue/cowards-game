@@ -13,7 +13,12 @@ import {
   LEAN_CLEANUP_DEADLINE_MS,
   LEAN_LIVE_SELECTOR,
   LEAN_DIRECT_SELECTOR,
+  LEAN_CONTAINER_IMAGE,
+  LEAN_CONTAINER_ADAPTER_ID,
   buildCanonicalLeanRequestV118,
+  createContainerFixtureRevision,
+  evaluateLeanContainerPreflight,
+  runLeanDirectGateInjected,
   createSupervisedLeanExecutionDependencies,
   createExclusiveLeanInvocationMarker,
   executePreparedLeanCell,
@@ -61,6 +66,115 @@ const childResult = (cell = buildLeanSchedule()[0]!) => ({
 })
 
 describe("bounded lean runner", () => {
+  it("rebuilds fixed fixtures for the exact container runtime without changing library lineage", () => {
+    for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"]) {
+      const revision = createContainerFixtureRevision(fixtureId)
+      expect(revision.runtime.adapter.id).toBe("runtime-js-container-subprocess")
+      expect(revision.runtime.limits).toMatchObject({
+        filesystem: "read-only-root",
+        network: "disabled",
+      })
+      expect(revision.metadata.sourceArtifact).toMatchObject({
+        format: "transpiled-javascript",
+        hash: expect.any(String),
+      })
+      expect(revision.metadata.providerValidation).toMatchObject({
+        providerId: "fixture-provider:typescript:container-subprocess",
+        sourceHash: revision.sourceHash,
+        sourceBytes: revision.sourceBytes,
+        artifactHash: revision.metadata.sourceArtifact?.hash,
+      })
+      if (fixtureId.startsWith("starter:")) {
+        expect(revision.metadata.starterLineage?.starterId).toBe(fixtureId)
+      } else {
+        expect(revision.metadata.advancedLineage?.advancedId).toBe(fixtureId)
+      }
+    }
+  })
+
+  it("accepts only the exact digest, container adapter, hostile limits, probes, and feasible throughput", () => {
+    const evidence = evaluateLeanContainerPreflight({
+      dockerServerVersion: "29.4.0",
+      imageReference: LEAN_CONTAINER_IMAGE,
+      localRepoDigests: [LEAN_CONTAINER_IMAGE],
+      adapterId: LEAN_CONTAINER_ADAPTER_ID,
+      controls: {
+        network: "none", readOnlyRoot: true, tmpfs: "/tmp:rw,noexec,nosuid,size=16m",
+        memory: "64m", cpus: "0.5", pidsLimit: 64, capDrop: "ALL",
+        noNewPrivileges: true, environment: "minimal", shell: false,
+        stdoutLimit: true, stderrLimit: true, methodTimeout: true,
+      },
+      samples: [
+        { fixtureId: "starter:aggro-chaser", method: "selectActivations", elapsedMilliseconds: 1, ok: true },
+        { fixtureId: "starter:aggro-chaser", method: "soldierBrain", elapsedMilliseconds: 1, ok: true },
+        { fixtureId: "advanced:vanguard-pressure", method: "selectActivations", elapsedMilliseconds: 1, ok: true },
+        { fixtureId: "advanced:vanguard-pressure", method: "soldierBrain", elapsedMilliseconds: 1, ok: true },
+      ],
+    })
+    expect(evidence.status).toBe("pass")
+    expect(evidence.projectedCellMilliseconds).toBeLessThanOrEqual(45_000)
+    expect(evidence.projectedRunMilliseconds).toBeLessThanOrEqual(900_000)
+    expect(Object.keys(evidence).sort()).toEqual([
+      "adapterId", "cellDeadlineMilliseconds", "controlsRoot", "dockerServerVersion",
+      "imageReference", "methodCeilings", "outerDeadlineMilliseconds", "projectedCellMilliseconds",
+      "projectedRunMilliseconds", "sampleCount", "sampleRoot", "startupCleanupMarginMilliseconds",
+      "status",
+    ].sort())
+  })
+
+  it.each([
+    ["floating image", { imageReference: "node:24-alpine" }],
+    ["missing digest", { localRepoDigests: [] }],
+    ["worker fallback", { adapterId: "worker-thread" }],
+    ["network drift", { controls: { network: "bridge" } }],
+    ["failed probe", { samples: [{ fixtureId: "starter:aggro-chaser", method: "selectActivations", elapsedMilliseconds: 1, ok: false }] }],
+    ["infeasible", { samples: [
+      { fixtureId: "starter:aggro-chaser", method: "selectActivations", elapsedMilliseconds: 100, ok: true },
+      { fixtureId: "starter:aggro-chaser", method: "soldierBrain", elapsedMilliseconds: 100, ok: true },
+      { fixtureId: "advanced:vanguard-pressure", method: "selectActivations", elapsedMilliseconds: 100, ok: true },
+      { fixtureId: "advanced:vanguard-pressure", method: "soldierBrain", elapsedMilliseconds: 100, ok: true },
+    ] }],
+  ])("fails closed before marker for %s", (_label, override) => {
+    const base = {
+      dockerServerVersion: "29.4.0",
+      imageReference: LEAN_CONTAINER_IMAGE,
+      localRepoDigests: [LEAN_CONTAINER_IMAGE],
+      adapterId: LEAN_CONTAINER_ADAPTER_ID,
+      controls: {
+        network: "none", readOnlyRoot: true, tmpfs: "/tmp:rw,noexec,nosuid,size=16m",
+        memory: "64m", cpus: "0.5", pidsLimit: 64, capDrop: "ALL",
+        noNewPrivileges: true, environment: "minimal", shell: false,
+        stdoutLimit: true, stderrLimit: true, methodTimeout: true,
+      },
+      samples: [
+        { fixtureId: "starter:aggro-chaser", method: "selectActivations", elapsedMilliseconds: 1, ok: true },
+        { fixtureId: "starter:aggro-chaser", method: "soldierBrain", elapsedMilliseconds: 1, ok: true },
+        { fixtureId: "advanced:vanguard-pressure", method: "selectActivations", elapsedMilliseconds: 1, ok: true },
+        { fixtureId: "advanced:vanguard-pressure", method: "soldierBrain", elapsedMilliseconds: 1, ok: true },
+      ],
+    }
+    expect(() => evaluateLeanContainerPreflight({ ...base, ...override, controls: { ...base.controls, ...("controls" in override ? override.controls : {}) } } as never)).toThrow(/LEAN_CONTAINER_PREFLIGHT/u)
+  })
+
+  it("orders reviewed-ready and non-consuming preflight before marker and Match invocation", async () => {
+    const calls: string[] = []
+    await runLeanDirectGateInjected({
+      checkReviewedReady: async () => { calls.push("ready") },
+      preflight: async () => { calls.push("preflight") },
+      createMarker: () => { calls.push("marker") },
+      invoke: async () => { calls.push("invoke") },
+    })
+    expect(calls).toEqual(["ready", "preflight", "marker", "invoke"])
+    calls.length = 0
+    await expect(runLeanDirectGateInjected({
+      checkReviewedReady: async () => { calls.push("ready") },
+      preflight: async () => { calls.push("preflight"); throw new Error("LEAN_CONTAINER_PREFLIGHT_FAILED") },
+      createMarker: () => { calls.push("forbidden-marker") },
+      invoke: async () => { calls.push("forbidden-invoke") },
+    })).rejects.toThrow(/LEAN_CONTAINER_PREFLIGHT/u)
+    expect(calls).toEqual(["ready", "preflight"])
+  })
+
   it("exposes one direct launch selector and retires recovery from active dispatch", () => {
     expect(LEAN_DIRECT_SELECTOR).toBe("--run-reviewed-direct-gate")
     const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
