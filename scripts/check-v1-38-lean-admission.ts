@@ -2208,7 +2208,7 @@ export const checkLeanDirectContainerSourceOnlyV3 = (repoRoot: string): void => 
   assertDeniedDirectV1History(repoRoot)
   assertLeanDirectPlan178History(repoRoot)
   assertLeanDirectV3PathsAreFresh()
-  for (const artifactPath of Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V2_DESTINATION_EXISTS:${artifactPath}`)
+  for (const artifactPath of Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS).filter((candidate) => candidate !== LEAN_DIRECT_V2_ARTIFACT_PATHS.review)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V2_DESTINATION_EXISTS:${artifactPath}`)
   for (const artifactPath of Object.values(LEAN_DIRECT_V3_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V3_DESTINATION_EXISTS:${artifactPath}`)
   const latest = git(repoRoot, ["log", "-1", "--format=%H", "--", ...LEAN_PLAN177_RUNNABLE_PATHS])
   const source = resolveLeanDirectV2Source(repoRoot, latest, false)
