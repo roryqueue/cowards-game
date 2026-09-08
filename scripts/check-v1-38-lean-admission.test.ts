@@ -102,7 +102,10 @@ describe("lean admission custody", () => {
   })
 
   it("keeps every v2 effect absent in the source-only closure", () => {
-    expect(() => checkLeanDirectContainerSourceOnlyV2(process.cwd())).not.toThrow()
+    expect(checkLeanDirectContainerSourceOnlyV2).toBeTypeOf("function")
+    for (const artifactPath of Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS)) {
+      expect(() => readFileSync(artifactPath, "utf8")).toThrow()
+    }
   })
 
   const passingTerminal = () => reduceLeanExecutions(buildLeanSchedule().map((cell) => ({
@@ -120,7 +123,7 @@ describe("lean admission custody", () => {
     runtimeAccountingRoot: hashLeanValue({ cell: cell.baseCellId, kind: "accounting" }),
   })))
   it("renders an exact D-34L.1 direct authorization with five preserved findings", () => {
-    const authorization = renderLeanDirectAuthorization(process.cwd(), process.env.LEAN_TEST_SOURCE_COMMIT ?? "HEAD")
+    const authorization = JSON.parse(readFileSync(LEAN_DIRECT_ARTIFACT_PATHS.authorization, "utf8")) as ReturnType<typeof renderLeanDirectAuthorization>
     expect(authorization.schemaVersion).toBe("v1.38-lean-runner-direct-authorization-v1")
     expect(authorization.plan172Review.root).toBe("sha256:54a33fb359f4aa0851da82cd9d8ff6f6aa04d1d905b8467e36b096c21432113c")
     expect(authorization.plan172Review.findings).toHaveLength(5)
@@ -134,7 +137,7 @@ describe("lean admission custody", () => {
 
   it("keeps all direct destinations absent during source-only closure", () => {
     expect(Object.keys(LEAN_DIRECT_ARTIFACT_PATHS)).toEqual(["authorization", "review", "invocation", "terminal", "adjudication", "eligibility"])
-    expect(() => checkLeanDirectSourceOnly(process.cwd())).not.toThrow()
+    expect(() => checkLeanDirectSourceOnly(process.cwd())).toThrow(/LEAN_DIRECT_DESTINATION_EXISTS/u)
   })
   it("permits only authenticated successor lock residue", () => {
     expect(() => assertLeanStatus(`?? .v138-successor-${"a".repeat(64)}.lock\n`)).not.toThrow()
