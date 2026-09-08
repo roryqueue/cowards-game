@@ -79,6 +79,30 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the fresh collision-free v5 trust and effect family", () => {
+    const module = leanAdmissionModule as unknown as {
+      LEAN_DIRECT_V5_ARTIFACT_PATHS: Record<string, string>
+      checkLeanDirectContainerSourceOnlyV5: unknown
+      validateLeanContainerPreflightArtifactV4: unknown
+      renderLeanDirectAuthorizationV5: unknown
+      checkLeanDirectValidityReviewV5: unknown
+      checkLeanDirectReviewDispositionV5: unknown
+      loadAndCheckLeanDirectReviewedReadyV5: unknown
+      createLeanDirectInvocationV5: unknown
+      createLeanDirectTerminalArtifactV5: unknown
+    }
+    expect(module.LEAN_DIRECT_V5_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v4.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v5.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v5.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v5.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v5.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v5.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v5.json",
+    })
+    for (const key of ["checkLeanDirectContainerSourceOnlyV5", "validateLeanContainerPreflightArtifactV4", "renderLeanDirectAuthorizationV5", "checkLeanDirectValidityReviewV5", "checkLeanDirectReviewDispositionV5", "loadAndCheckLeanDirectReviewedReadyV5", "createLeanDirectInvocationV5", "createLeanDirectTerminalArtifactV5"] as const) expect(module[key]).toBeTypeOf("function")
+  })
+
   it("reserves a collision-free v4 trust and effect family", async () => {
     const module = await import("./check-v1-38-lean-admission.js") as unknown as {
       LEAN_DIRECT_V4_ARTIFACT_PATHS: Record<string, string>
