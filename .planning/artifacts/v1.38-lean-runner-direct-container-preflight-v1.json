@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "v1.38-lean-runner-container-preflight-outcome-v1",
+  "status": "non_pass",
+  "sourceCommit": "a734dc36794e5de2d64a99793b3e075e0df33148",
+  "sourceTree": "c09ccacfda174609ac36ea348055c98be8090fa4",
+  "executableClosureRoot": "sha256:53cc9f23c709b99a642d58337c42a2047cf36d8d8bc4efc54fb3b3264c6fb58f",
+  "environment": {
+    "dockerServerVersion": "29.4.0",
+    "imageReference": "node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14",
+    "localRepoDigestPresent": true,
+    "adapterId": "container-subprocess"
+  },
+  "failure": {
+    "reasonCode": "soldier_brain_probe_input_schema_invalid",
+    "stage": "fixture_method_probe_input_construction",
+    "fixtureMethod": "soldierBrain",
+    "safeSummary": "The frozen soldierBrain preflight input omitted schema-required absoluteX and absoluteY coordinates for awareness-grid cells.",
+    "repairAttempted": false,
+    "rerunAttempted": false
+  },
+  "evidence": {
+    "acceptedSampleCount": 0,
+    "partialSamplesReusable": false,
+    "throughputProjectionAvailable": false,
+    "cellDeadlineMilliseconds": 45000,
+    "outerDeadlineMilliseconds": 900000
+  },
+  "consuming": false,
+  "preflightInvocations": 1,
+  "matchInvocations": 0,
+  "authorizationWritten": false,
+  "markerWritten": false,
+  "terminalWritten": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
