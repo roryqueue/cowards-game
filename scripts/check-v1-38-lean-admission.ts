@@ -1705,6 +1705,9 @@ export const checkLeanDirectValidityReview = (authorization: LeanDirectAuthoriza
 }
 export const loadAndCheckLeanDirectReviewedReady = (repoRoot: string, allowedOperationalPaths: readonly string[] = []): { authorization: LeanDirectAuthorization, review: LeanDirectValidityReview } => {
   assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]), allowedOperationalPaths)
+  for (const artifactPath of [LEAN_DIRECT_ARTIFACT_PATHS.invocation, LEAN_DIRECT_ARTIFACT_PATHS.terminal, LEAN_DIRECT_ARTIFACT_PATHS.adjudication, LEAN_DIRECT_ARTIFACT_PATHS.eligibility]) {
+    if (!allowedOperationalPaths.includes(artifactPath) && existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_EFFECT_EXISTS:${artifactPath}`)
+  }
   const authorization = checkLeanDirectAuthorization(repoRoot, readJson(repoRoot, LEAN_DIRECT_ARTIFACT_PATHS.authorization))
   const review = checkLeanDirectValidityReview(authorization, readJson(repoRoot, LEAN_DIRECT_ARTIFACT_PATHS.review))
   if (!review.admitsPlan175 || review.blockingFindingCount !== 0) throw new TypeError("LEAN_DIRECT_PLAN175_NOT_ADMITTED")
