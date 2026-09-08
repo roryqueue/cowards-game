@@ -74,9 +74,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 147/159 plans executed
+**Plans:** 149/159 plans executed
 
-**Current verdict:** D-34L.1 PLAN174 REVIEW BLOCKED / PLANS177-178 CONTAINER CLOSURE PLANNED / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / PLAN172 FIVE CERTIFICATION FINDINGS PRESERVED / ONE INVOCATION UNCONSUMED / RECOVERY FALSE / ALL AUTHORITY FALSE. Plan177 is next. Plan175 remains denied until an exact digest-pinned container preflight passes and a fresh seven-category Plan178 review has zero active findings. Phase262 remains incomplete.
+**Current verdict:** D-34L.1 PLAN178 PREFLIGHT NON-PASS / ONE ACTIVE PROBE-INPUT FINDING / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / PLAN172 FIVE CERTIFICATION FINDINGS PRESERVED / ZERO MATCHES CONSUMED / RECOVERY FALSE / ALL AUTHORITY FALSE. Plan177 source custody passed, but Plan178's `soldierBrain` preflight input omitted schema-required absolute coordinates. Authorization v2 is absent and Plan175 remains denied. A bounded additive source-only repair and fresh versioned preflight/review chain is next. Phase262 remains incomplete.
 
 **Current Plan110 failure (2026-08-31):** The sole live-v14 invocation at `bccafa3f` deadlocked in native journal bootstrap: the owner held the exclusive root lock and the synchronous transaction independently waited for that same lock. The blocked transaction was safely terminated, the owner unwound, and live/post checks both exited1. No observation, calibration or Match ran; journal/terminal/reproduction remain absent, while the empty private directory is preserved. Failure summary `2bd6f682` is not a completion or producer terminal. Plan110 must not be re-entered; Plan94's prerequisites are unmet. An explicit operator revision of the terminal-failure/one-shot boundary is required before any fresh live route. Non-authorizing repair design may continue; ADMIT-03 remains0/540 and all downstream authority is denied.
 
@@ -311,8 +311,8 @@ Plans:
 - [x] 262-174-PLAN.md
 - [ ] 262-175-PLAN.md
 - [ ] 262-176-PLAN.md
-- [ ] 262-177-PLAN.md
-- [ ] 262-178-PLAN.md
+- [x] 262-177-PLAN.md
+- [x] 262-178-PLAN.md
 
 **Wave 70** *(complete)*
 
@@ -957,7 +957,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 147/157 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 149/159 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |

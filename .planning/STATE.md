@@ -5,16 +5,16 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan262-177 container source correction ready for execution
-last_updated: "2026-09-08T00:00:00.000Z"
+stopped_at: Plan262-178 preflight non-pass; additive probe-input repair required
+last_updated: "2026-09-08T16:32:00.000Z"
 last_activity: 2026-09-08
-last_activity_desc: Planned additive Plans177-178 to close Plan174 source-custody and hostile-runtime findings before Plan175
+last_activity_desc: Completed Plan262-178 with one non-consuming preflight refusal and one independent blocker; zero Matches consumed
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 159
-  completed_plans: 147
-  percent: 92
+  completed_plans: 149
+  percent: 93
 ---
 
 # State: Coward's Game
@@ -23,9 +23,9 @@ progress:
 
 The operator approved the private lean ADMIT-03 replacement and directed execution to proceed. Plan172's four critical and one warning finding remain immutable, open, non-authorizing certification history. Plan174 independently found two active defects in the direct path: the v1 authorization named the wrong commit/tree and the reachable Match selected the non-hostile worker-thread adapter.
 
-Plans177 and178 now precede revised Plans175 and176. Plan177 rebuilds the fixed TypeScript fixtures for `runtime-js-container-subprocess`, selects the exact local digest-pinned `container-subprocess` boundary with existing hostile limits, adds a non-consuming Docker/image/harness/performance preflight before marker creation, and implements an explicit-source authorization v2 writer. Plan178 publishes that preflight and authorization over the separately committed Plan177 runnable bytes and obtains one fresh seven-category review. Plan175 remains denied unless preflight passes and the review has zero active findings. Marker-without-terminal remains consumed invalid with no recovery, partial evidence, resume, or relaunch. Phase263 and every broader authority remain false unless exact pass is independently synchronized; archive/tag remain false.
+Plan177 rebuilt the fixed TypeScript fixtures for `runtime-js-container-subprocess`, selected the exact local digest-pinned `container-subprocess` boundary with existing hostile limits, and committed the explicit-source v2 trust path. Plan178 then invoked the non-consuming preflight exactly once. It failed before complete method sampling because the `soldierBrain` probe omitted schema-required `absoluteX` and `absoluteY` awareness-cell coordinates. One fresh independent seven-category review recorded one active blocker and denied Plan175. Authorization v2, marker, Match, terminal, and every downstream effect remain absent; the corrective Match opportunity remains unconsumed. The next action is a bounded additive source-only repair and fresh versioned preflight/review chain. Phase263 and every broader authority remain false; archive/tag remain false.
 
-<!-- phase-262-lean-direct-state: {"schemaVersion":"v1.38-phase-262-lean-direct-plan-v3","decision":"D-34L.1","activeChain":["262-173","262-174","262-177","262-178","262-175","262-176"],"waves":{"262-173":144,"262-174":145,"262-177":146,"262-178":147,"262-175":148,"262-176":149},"nextAction":"dispatch-262-177-container-source","plan172FindingCount":5,"plan172CertificationOnlyCount":5,"blockingValidityCategories":7,"plan174BlockingFindingCount":2,"containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","preflightRequiredBeforeMarker":true,"plan175Eligible":false,"globalLiteralZeroRequired":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"supersededInactivePlans":["262-158","262-159","262-160","262-162"],"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
+<!-- phase-262-lean-direct-state: {"schemaVersion":"v1.38-phase-262-lean-direct-plan-v4","decision":"D-34L.1","completedChain":["262-173","262-174","262-177","262-178"],"pendingChain":["262-175","262-176"],"nextAction":"plan-additive-soldier-brain-preflight-repair","plan172FindingCount":5,"plan172CertificationOnlyCount":5,"plan174BlockingFindingCount":2,"plan178BlockingFindingCount":1,"plan178PreflightStatus":"non_pass","plan178FailureReason":"soldier_brain_probe_input_schema_invalid","containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","preflightRequiredBeforeMarker":true,"authorizationV2Present":false,"plan175Eligible":false,"globalLiteralZeroRequired":false,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"matchInvocations":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plans 262-169/170 bounded successor correction — 2026-09-01
 
@@ -737,8 +737,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-08
-Stopped at: Plan262-177 container source correction ready for execution
+Last session: 2026-09-08T16:32:00Z
+Stopped at: Completed 262-178-PLAN.md with preflight non-pass; additive source repair required
 Resume file: None
 
 ### Blockers
