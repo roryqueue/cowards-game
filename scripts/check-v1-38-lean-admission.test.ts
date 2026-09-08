@@ -124,9 +124,15 @@ describe("lean admission custody", () => {
 
   it("authenticates the additive exact 29-path Plan185 closure correction", () => {
     const module = leanAdmissionModule as unknown as {
-      checkLeanPlan185ClosureCorrection: (repoRoot: string) => void
+      checkLeanPlan185ClosureCorrection: (repoRoot: string, summaryOverride?: string) => void
     }
-    expect(() => module.checkLeanPlan185ClosureCorrection(process.cwd())).not.toThrow()
+    const correction = [
+      "ae4fd480197393d1c7d27dbc43878d3b31e36b25", "29-path",
+      "sha256:007eb34c12041eb535f0ff4b5999e8b894fa105fff421fb64dd5045822ac93ae",
+      "sha256:1e187745221a31d67d1d284b3e4abb0cc83d231b85b89910b99c3e31244c30fa",
+      "stale superseded",
+    ].join("\n")
+    expect(() => module.checkLeanPlan185ClosureCorrection(process.cwd(), correction)).not.toThrow()
   })
 
   it("reserves the fresh collision-free v6 persistent-stream trust and effect family", () => {

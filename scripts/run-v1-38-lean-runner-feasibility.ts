@@ -1037,23 +1037,23 @@ const main = async (): Promise<void> => {
   if (selector === LEAN_DIRECT_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV6> | undefined
+    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV7> | undefined
     let capability = ""
-    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV6> | undefined
+    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV7> | undefined
     let terminal: LeanTerminal | undefined
     await runLeanDirectGateInjected({
-      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV6(repoRoot) },
+      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV7(repoRoot) },
       preflight: async () => { runActualLeanContainerPreflight() },
       createMarker: () => {
         if (reviewed === undefined) throw new TypeError("LEAN_DIRECT_REVIEW_REQUIRED")
         capability = randomBytes(32).toString("hex")
-        invocation = checker.createLeanDirectInvocationV6(reviewed.authorization, reviewed.review, hashLeanValue(capability))
-        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V6_ARTIFACT_PATHS.invocation), invocation)
+        invocation = checker.createLeanDirectInvocationV7(reviewed.authorization, reviewed.review, hashLeanValue(capability))
+        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V7_ARTIFACT_PATHS.invocation), invocation)
       },
       invoke: async () => {
         if (invocation === undefined) throw new TypeError("LEAN_DIRECT_MARKER_REQUIRED")
         terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
-        checker.createExclusiveLeanDirectTerminalV6(repoRoot, checker.createLeanDirectTerminalArtifactV6(invocation, terminal))
+        checker.createExclusiveLeanDirectTerminalV7(repoRoot, checker.createLeanDirectTerminalArtifactV7(invocation, terminal))
       },
     })
     process.stdout.write(`${JSON.stringify(terminal)}\n`)
