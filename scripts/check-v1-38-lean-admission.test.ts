@@ -68,6 +68,10 @@ import {
   renderLeanDirectAuthorization,
   validateLeanDirectAuthorization,
   checkLeanDirectSourceOnly,
+  LEAN_DIRECT_V2_ARTIFACT_PATHS,
+  validateLeanDirectV2ExplicitSourceRef,
+  commitTouchesLeanRunnableSource,
+  checkLeanDirectContainerSourceOnlyV2,
 } from "./check-v1-38-lean-admission.js"
 import * as leanAdmissionModule from "./check-v1-38-lean-admission.js"
 
@@ -75,6 +79,32 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("defines an additive v2 container trust path and preserves denied v1 bytes", () => {
+    expect(LEAN_DIRECT_V2_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-container-preflight-v1.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v2.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v2.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v2.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v2.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v2.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v2.json",
+    })
+    expect(hashLeanValue(JSON.parse(readFileSync(LEAN_DIRECT_ARTIFACT_PATHS.authorization, "utf8")))).toBe("sha256:3c546e446e8f5fb9f062676d88ebf18b58ccf2070c6d9faa636fe8312634c04c")
+    expect(hashLeanValue(JSON.parse(readFileSync(LEAN_DIRECT_ARTIFACT_PATHS.review, "utf8")))).toBe("sha256:8c0b81a777ec5b5513a4afbf582906f7d19a12e8102b1e1688d12e39f453d073")
+  })
+
+  it("requires an explicit commit oid and rejects HEAD or documentation-only commits", () => {
+    expect(() => validateLeanDirectV2ExplicitSourceRef(undefined)).toThrow(/EXPLICIT_SOURCE/u)
+    expect(() => validateLeanDirectV2ExplicitSourceRef("HEAD")).toThrow(/EXPLICIT_SOURCE/u)
+    expect(validateLeanDirectV2ExplicitSourceRef("a".repeat(40))).toBe("a".repeat(40))
+    expect(commitTouchesLeanRunnableSource(["scripts/run-v1-38-lean-runner-feasibility.ts"])).toBe(true)
+    expect(commitTouchesLeanRunnableSource([".planning/phases/262-example/262-177-SUMMARY.md"])).toBe(false)
+  })
+
+  it("keeps every v2 effect absent in the source-only closure", () => {
+    expect(() => checkLeanDirectContainerSourceOnlyV2(process.cwd())).not.toThrow()
+  })
+
   const passingTerminal = () => reduceLeanExecutions(buildLeanSchedule().map((cell) => ({
     ...cell,
     classification: "success" as const,
