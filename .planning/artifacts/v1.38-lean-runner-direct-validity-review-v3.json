@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "v1.38-lean-runner-direct-validity-review-v3",
+  "authorizationRoot": null,
+  "preflightRoot": "sha256:46a4c2cd629edffbba99bee8797761a0e434fa7972a88e71aee7389ae1df7a1e",
+  "sourceCommit": "4261dcd0998f81dbd822f1c435ff92d8d41483bb",
+  "sourceTree": "6c97c1075aacb89f1da6688e275caeb007c68f97",
+  "categories": [
+    {
+      "category": "source_or_dirty_byte_drift",
+      "status": "pass",
+      "evidence": "Source commit 4261dcd0998f81dbd822f1c435ff92d8d41483bb resolves to tree 6c97c1075aacb89f1da6688e275caeb007c68f97 and executable closure root sha256:a126ceda28183d64afd3fff950f55eea72ab8be6619262504855a063fede6462. It remains the latest commit touching the four Plan179 runnable paths; all current differences from that source are committed planning artifacts, the executable closure has no byte drift, and exactly 36 authenticated successor locks are the only worktree residue before this review is recorded."
+    },
+    {
+      "category": "multiple_launch",
+      "status": "pass",
+      "evidence": "The direct selector requires reviewed readiness and a fresh non-consuming runtime preflight before exclusive marker creation. The committed v2 preflight is non_pass and authorization v3 is absent, so reviewed readiness cannot succeed and the selector cannot reach marker creation or launch. Invocation, terminal, adjudication, and eligibility v3 destinations are absent; this review invoked no preflight, selector, or Match."
+    },
+    {
+      "category": "tuple_or_schedule_drift",
+      "status": "finding",
+      "evidence": "BLOCKER CR-01: the exact source preserves the unchanged 24-Match/12-cell tuple and schedule, but its fresh-container-per-method execution topology cannot satisfy the frozen deadlines. The one preflight produced 16 clean container lifecycles with exit 0; warm probes excluded, observed start-to-die lower-bound method maxima were 204.305 ms for selectActivations and 105.455 ms for soldierBrain. Even this lower bound projects to at least 63,790 ms per cell and 1,530,960 ms for the run, above the unchanged 45,000 ms cell and 900,000 ms outer limits. Adapter wall time can only be greater, so Plan175 is infeasible through this topology. Implement and independently test a private-lab per-Match persistent or batched container protocol under the identical pinned image, containment controls, runtime semantics, tuple, schedule, and deadlines, then run a newly planned non-consuming preflight; do not change bounds or spend the Match opportunity."
+    },
+    {
+      "category": "supervised_runtime_escape",
+      "status": "pass",
+      "evidence": "The reachable prepared Match path selects service adapter container-subprocess and registry adapter runtime-js-container-subprocess. The adapter has fallback false and uses the exact digest-pinned Node image with shell disabled, network none, read-only root, constrained noexec tmpfs, memory, CPU, and PID limits, all capabilities dropped, no-new-privileges, minimal environment, and strict JSON IPC. The non-pass preflight grants no fallback or alternate runtime authority."
+    },
+    {
+      "category": "partial_interrupted_or_unclean_evidence",
+      "status": "pass",
+      "evidence": "The immutable preflight is a complete schema-valid non_pass terminal outcome with preflightInvocations 1, consuming false, matchInvocations 0, and every authority flag false. It contains no reusable samples or success projection, produced no authorization, and cannot be treated as partial pass evidence. No invocation, terminal, adjudication, or eligibility effect exists."
+    },
+    {
+      "category": "private_data_disclosure",
+      "status": "pass",
+      "evidence": "The preflight and this review expose only source identities, aggregate status and invocation counts, a bounded reason code, cryptographic roots, category conclusions, and false authority flags. They contain no private player data, executable player bytes, process streams, environment values, host paths, credentials, keys, or raw runtime details."
+    },
+    {
+      "category": "non_pass_authority",
+      "status": "pass",
+      "evidence": "Authorization v3 is absent exactly because the preflight status is non_pass. The authorization builder rejects every status other than exact pass, reviewed-ready requires both exact-pass preflight and exact authorization, and this review sets admitsPlan175 false with all authority flags false. No other artifact, historical finding disposition, or reviewer statement grants execution authority."
+    }
+  ],
+  "blockingFindingCount": 1,
+  "certificationOnlyHistory": [
+    {
+      "id": "CR-V6-01",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-02",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-03",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-04",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "WR-V6-01",
+      "severity": "warning",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    }
+  ],
+  "admitsPlan175": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
