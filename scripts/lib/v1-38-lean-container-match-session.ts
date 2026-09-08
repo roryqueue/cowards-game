@@ -66,14 +66,14 @@ const STREAM_WORKER_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
 const { spawn } = require("node:child_process");
 const child=spawn(workerData.command,workerData.args,{env:{PATH:workerData.path},shell:false,stdio:["pipe","pipe","pipe"],windowsHide:true});
-let stdout=Buffer.alloc(0), stderr=Buffer.alloc(0), pending=null, exited=null;
+let stdout=Buffer.alloc(0), stderr=Buffer.alloc(0), pending=null, exited=null, forced=false;
 const finish=(state,bytes=Buffer.alloc(0))=>{ if(!pending)return; const cap=pending.response.byteLength; if(bytes.length>cap){state=-2;bytes=Buffer.alloc(0)} else new Uint8Array(pending.response).set(bytes); Atomics.store(new Int32Array(pending.control),1,bytes.length); Atomics.store(new Int32Array(pending.control),0,state); Atomics.notify(new Int32Array(pending.control),0); pending=null; };
 child.on("spawn",()=>{Atomics.store(new Int32Array(workerData.start),0,1);Atomics.notify(new Int32Array(workerData.start),0)});
 child.on("error",()=>{if(Atomics.load(new Int32Array(workerData.start),0)===0){Atomics.store(new Int32Array(workerData.start),0,-1);Atomics.notify(new Int32Array(workerData.start),0)}finish(-3)});
 child.stderr.on("data",d=>{stderr=Buffer.concat([stderr,d]);if(stderr.length>workerData.max)finish(-4)});
 child.stdout.on("data",d=>{stdout=Buffer.concat([stdout,d]);if(stdout.length>workerData.max)return finish(-2);const newline=stdout.indexOf(10);if(newline>=0){const frame=stdout.subarray(0,newline+1);stdout=stdout.subarray(newline+1);if(stdout.length!==0)return finish(-5);finish(stderr.length===0?1:-4,frame)}});
-child.on("exit",(code,signal)=>{exited={code,signal};if(pending)finish(-6)});
-parentPort.on("message",m=>{if(m.type==="exchange"){if(pending||exited||stdout.length||stderr.length)return void finish(-5);pending=m;child.stdin.write(Buffer.from(m.request));}else if(m.type==="close"){pending=m;child.stdin.end();if(exited)finish(exited.code===0&&!exited.signal&&stderr.length===0?1:-6)}});
+child.on("exit",(code,signal)=>{exited={code,signal};if(pending)finish(pending.type==="close"&&stderr.length===0&&(forced||(code===0&&!signal))?1:-6)});
+parentPort.on("message",m=>{if(m.type==="exchange"){const occupied=pending!==null||exited!==null||stdout.length!==0||stderr.length!==0;pending=m;if(occupied)return void finish(-5);child.stdin.write(Buffer.from(m.request));}else if(m.type==="close"){if(pending){finish(-7);forced=true}pending=m;child.stdin.end();if(forced&&!exited)child.kill("SIGKILL");if(exited)finish(stderr.length===0&&(forced||(exited.code===0&&!exited.signal))?1:-6)}});
 `
 
 const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, args, options) => {
@@ -145,7 +145,9 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
-    assertActive(); const requestId = nextRequestId++; const payload = Buffer.from(input); const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit })}\n`
+    assertActive(); const requestId = nextRequestId++; const inputBytes = typeof input === "string" ? Buffer.byteLength(input) : input.byteLength
+    if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
+    const payload = Buffer.from(input); const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit })}\n`
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
       const raw = stream!.exchange(frame, { timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) })
