@@ -17,7 +17,7 @@ import {
   type StrategyRevision,
 } from "@cowards/spec"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
-import { createContainerSubprocessStrategyExecutionAdapter } from "../packages/runtime-js/src/container-subprocess-adapter.js"
+import type { StrategyExecutionAdapterV117 } from "../packages/runtime-js/src/adapter.js"
 import { buildStarterStrategyRevision, findStarterStrategy } from "../packages/persistence/src/starter-strategies.js"
 import { buildAdvancedStrategyRevision, findAdvancedStrategy } from "../packages/persistence/src/advanced-strategies.js"
 import { createCandidateInitialGameStateV119 } from "../packages/engine/src/kernel/create-initial-state.js"
@@ -31,6 +31,11 @@ import {
   type LeanCell, type LeanExecutionClassification, type LeanExecutionRecord,
   type LeanTerminal,
 } from "./lib/v1-38-lean-runner-feasibility.js"
+import {
+  createLeanContainerMatchSession,
+  type LeanContainerMatchSession,
+  type LeanContainerSessionCloseResult,
+} from "./lib/v1-38-lean-container-match-session.js"
 
 export const LEAN_LIVE_SELECTOR = "--run-reviewed-live-gate" as const
 export const LEAN_CHILD_SELECTOR = "--execute-reviewed-cell" as const
@@ -72,6 +77,10 @@ export interface LeanContainerPreflightInput {
   readonly localRepoDigests: readonly string[]
   readonly adapterId: string
   readonly controls: LeanContainerControls
+  readonly lifecycleSamples: readonly {
+    readonly elapsedMilliseconds: number
+    readonly cleanupComplete: boolean
+  }[]
   readonly samples: readonly LeanContainerPreflightSample[]
 }
 export interface LeanContainerPreflightEvidence {
@@ -82,6 +91,9 @@ export interface LeanContainerPreflightEvidence {
   readonly controlsRoot: `sha256:${string}`
   readonly sampleCount: number
   readonly sampleRoot: `sha256:${string}`
+  readonly lifecycleSampleCount: number
+  readonly lifecycleSampleRoot: `sha256:${string}`
+  readonly lifecycleMaximumMilliseconds: number
   readonly methodCeilings: typeof LEAN_CONTAINER_METHOD_CEILINGS
   readonly startupCleanupMarginMilliseconds: number
   readonly projectedCellMilliseconds: number
@@ -355,6 +367,7 @@ export const evaluateLeanContainerPreflight = (
     "advanced:vanguard-pressure\0selectActivations", "advanced:vanguard-pressure\0soldierBrain",
   ])
   if (input.samples.length < expectedPairs.size || input.samples.some(({ ok, elapsedMilliseconds }) => !ok || !Number.isFinite(elapsedMilliseconds) || elapsedMilliseconds < 0)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
+  if (input.lifecycleSamples.length < 1 || input.lifecycleSamples.some(({ elapsedMilliseconds, cleanupComplete }) => !cleanupComplete || !Number.isFinite(elapsedMilliseconds) || elapsedMilliseconds < 0)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_LIFECYCLE_FAILED")
   const grouped = new Map<string, number[]>()
   for (const sample of input.samples) {
     const key = `${sample.fixtureId}\0${sample.method}`
@@ -365,8 +378,9 @@ export const evaluateLeanContainerPreflight = (
   }
   if ([...expectedPairs].some((key) => (grouped.get(key)?.length ?? 0) < 1)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_OBSERVATION_MISSING")
   const maxima = (method: LeanContainerPreflightSample["method"]): number => Math.max(...input.samples.filter((sample) => sample.method === method).map(({ elapsedMilliseconds }) => elapsedMilliseconds))
+  const lifecycleMaximumMilliseconds = Math.max(...input.lifecycleSamples.map(({ elapsedMilliseconds }) => elapsedMilliseconds))
   const projectedCellMilliseconds = Math.ceil(
-    LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS + 2 * (
+    LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS + lifecycleMaximumMilliseconds + 2 * (
       LEAN_CONTAINER_METHOD_CEILINGS.selectActivations * maxima("selectActivations") +
       LEAN_CONTAINER_METHOD_CEILINGS.soldierBrain * maxima("soldierBrain")
     ),
@@ -381,6 +395,9 @@ export const evaluateLeanContainerPreflight = (
     controlsRoot: hashLeanValue(LEAN_CONTAINER_CONTROLS),
     sampleCount: input.samples.length,
     sampleRoot: hashLeanValue(input.samples),
+    lifecycleSampleCount: input.lifecycleSamples.length,
+    lifecycleSampleRoot: hashLeanValue(input.lifecycleSamples),
+    lifecycleMaximumMilliseconds,
     methodCeilings: LEAN_CONTAINER_METHOD_CEILINGS,
     startupCleanupMarginMilliseconds: LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS,
     projectedCellMilliseconds,
@@ -446,24 +463,38 @@ export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidenc
   } catch {
     throw new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_INSPECT_INVALID")
   }
-  const adapter = createContainerSubprocessStrategyExecutionAdapter({ image: LEAN_CONTAINER_IMAGE })
-  if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
   const samples: LeanContainerPreflightSample[] = []
+  const lifecycleSamples: { elapsedMilliseconds: number; cleanupComplete: boolean }[] = []
   for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"] as const) {
+    const lifecycleStarted = process.hrtime.bigint()
+    const session = createLeanContainerMatchSession({ matchId: `match:lean:preflight:${fixtureId}`, image: LEAN_CONTAINER_IMAGE })
+    const lifecycleCreateMilliseconds = Number(process.hrtime.bigint() - lifecycleStarted) / 1_000_000
+    const adapter = session.adapter
+    if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
     const revision = createContainerFixtureRevision(fixtureId)
     const artifact = revision.metadata.sourceArtifact
     if (artifact === undefined) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ARTIFACT_MISSING")
     const source = Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
-    for (const method of ["selectActivations", "soldierBrain"] as const) {
-      const request = { source, methodName: method, input: buildLeanContainerPreflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 } as const
-      const warm = adapter.execute(request)
-      if (!warm.ok) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
-      for (let ordinal = 0; ordinal < 3; ordinal += 1) {
-        const started = process.hrtime.bigint()
-        const result = adapter.execute(request)
-        const elapsedMilliseconds = Number(process.hrtime.bigint() - started) / 1_000_000
-        samples.push({ fixtureId, method, elapsedMilliseconds, ok: result.ok })
+    let close: LeanContainerSessionCloseResult
+    try {
+      for (const method of ["selectActivations", "soldierBrain"] as const) {
+        const request = { source, methodName: method, input: buildLeanContainerPreflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 } as const
+        const warm = adapter.execute(request)
+        if (!warm.ok) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
+        for (let ordinal = 0; ordinal < 3; ordinal += 1) {
+          const started = process.hrtime.bigint()
+          const result = adapter.execute(request)
+          const elapsedMilliseconds = Number(process.hrtime.bigint() - started) / 1_000_000
+          samples.push({ fixtureId, method, elapsedMilliseconds, ok: result.ok })
+        }
       }
+    } finally {
+      const cleanupStarted = process.hrtime.bigint()
+      close = session.close()
+      lifecycleSamples.push({
+        elapsedMilliseconds: lifecycleCreateMilliseconds + Number(process.hrtime.bigint() - cleanupStarted) / 1_000_000,
+        cleanupComplete: close.cleanupComplete && !close.orphanedChild,
+      })
     }
   }
   return evaluateLeanContainerPreflight({
@@ -472,6 +503,7 @@ export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidenc
     localRepoDigests,
     adapterId: adapter.metadata.id,
     controls: LEAN_CONTAINER_CONTROLS,
+    lifecycleSamples,
     samples,
   })
 }
@@ -610,15 +642,22 @@ export const buildCanonicalLeanRequestV118 = (cell: LeanCell): CanonicalLeanPrep
   }
 }
 
-const executePreparedLeanRequest = (prepared: CanonicalLeanPreparedRequest) => {
+const executePreparedLeanRequest = (
+  prepared: CanonicalLeanPreparedRequest,
+  sessionAdapter?: StrategyExecutionAdapterV117,
+) => {
   const keys = generateKeyPairSync("ed25519")
+  const configured = createRuntimeServiceConfig({
+    strategyExecutionAdapter: LEAN_CONTAINER_ADAPTER_ID,
+    containerImage: LEAN_CONTAINER_IMAGE,
+    semanticReceiptSecret: "fixture-only:v1.38-lean-runner",
+    resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
+  })
+  const runtimeConfig = sessionAdapter === undefined
+    ? configured
+    : { ...configured, adapter: sessionAdapter, metadata: sessionAdapter.metadata }
   const actual = createPreparedRuntimeServiceDependenciesV118({
-      runtimeConfig: createRuntimeServiceConfig({
-        strategyExecutionAdapter: LEAN_CONTAINER_ADAPTER_ID,
-        containerImage: LEAN_CONTAINER_IMAGE,
-        semanticReceiptSecret: "fixture-only:v1.38-lean-runner",
-        resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
-      }),
+      runtimeConfig,
       authorityLoader: prepared.context.authorityLoader,
       signer: {
         keyId: "runtime-service:lean-fixture:v1.18",
@@ -645,7 +684,15 @@ const executePreparedLeanRequest = (prepared: CanonicalLeanPreparedRequest) => {
   return response
 }
 
-export const executePreparedLeanCellResponse = (cell: LeanCell) => executePreparedLeanRequest(buildCanonicalLeanRequestV118(cell))
+export const executePreparedLeanCellResponse = (cell: LeanCell) => {
+  const prepared = buildCanonicalLeanRequestV118(cell)
+  const session = createLeanContainerMatchSession({ matchId: prepared.request.matchId, image: LEAN_CONTAINER_IMAGE })
+  try { return executePreparedLeanRequest(prepared, session.adapter) }
+  finally {
+    const cleanup = session.close()
+    if (!cleanup.cleanupComplete || cleanup.orphanedChild) throw new TypeError("LEAN_CONTAINER_SESSION_CLEANUP_AMBIGUOUS")
+  }
+}
 
 export const finalizePreparedLeanProjection = (
   projection: ReturnType<typeof projectLeanV118Response>,
@@ -662,11 +709,46 @@ export const finalizePreparedLeanProjection = (
   })
 }
 
-export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> => {
+type LeanPreparedProjection = ReturnType<typeof projectLeanV118Response>
+export interface ExecutePreparedLeanCellDependencies {
+  readonly createSession: (input: { readonly matchId: string; readonly image: typeof LEAN_CONTAINER_IMAGE }) => Pick<LeanContainerMatchSession, "adapter" | "close">
+  readonly executePrepared: (prepared: CanonicalLeanPreparedRequest, adapter: StrategyExecutionAdapterV117) => LeanPreparedProjection
+}
+
+const defaultPreparedLeanCellDependencies: ExecutePreparedLeanCellDependencies = {
+  createSession: createLeanContainerMatchSession,
+  executePrepared: (prepared, adapter) => projectLeanV118Response(executePreparedLeanRequest(prepared, adapter)),
+}
+
+export const executePreparedLeanCellInjected = async (
+  cell: LeanCell,
+  dependencies: ExecutePreparedLeanCellDependencies,
+): Promise<LeanExecutionResult> => {
   const prepared = buildCanonicalLeanRequestV118(cell)
-  const projection = projectLeanV118Response(executePreparedLeanRequest(prepared))
+  let session: Pick<LeanContainerMatchSession, "adapter" | "close"> | undefined
+  let projection: LeanPreparedProjection | undefined
+  let executionFailed = false
+  try {
+    session = dependencies.createSession({ matchId: prepared.request.matchId, image: LEAN_CONTAINER_IMAGE })
+    projection = dependencies.executePrepared(prepared, session.adapter)
+  } catch {
+    executionFailed = true
+  }
+  const cleanup = session?.close() ?? { cleanupComplete: false, orphanedChild: true }
+  if (executionFailed || projection === undefined || !cleanup.cleanupComplete || cleanup.orphanedChild) {
+    return parseLeanExecutionResult({
+      classification: "system_failure",
+      cleanupComplete: cleanup.cleanupComplete,
+      orphanedChild: cleanup.orphanedChild,
+      boardRealism: true,
+      integrityValid: false,
+    })
+  }
   return finalizePreparedLeanProjection(projection, prepared.requestRealismRoot)
 }
+
+export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> =>
+  executePreparedLeanCellInjected(cell, defaultPreparedLeanCellDependencies)
 
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
 const isSha = (value: unknown): value is `sha256:${string}` => typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
@@ -910,23 +992,23 @@ const main = async (): Promise<void> => {
   if (selector === LEAN_DIRECT_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV3> | undefined
+    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV4> | undefined
     let capability = ""
-    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV3> | undefined
+    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV4> | undefined
     let terminal: LeanTerminal | undefined
     await runLeanDirectGateInjected({
-      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV3(repoRoot) },
+      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV4(repoRoot) },
       preflight: async () => { runActualLeanContainerPreflight() },
       createMarker: () => {
         if (reviewed === undefined) throw new TypeError("LEAN_DIRECT_REVIEW_REQUIRED")
         capability = randomBytes(32).toString("hex")
-        invocation = checker.createLeanDirectInvocationV3(reviewed.authorization, reviewed.review, hashLeanValue(capability))
-        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V3_ARTIFACT_PATHS.invocation), invocation)
+        invocation = checker.createLeanDirectInvocationV4(reviewed.authorization, reviewed.review, hashLeanValue(capability))
+        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation), invocation)
       },
       invoke: async () => {
         if (invocation === undefined) throw new TypeError("LEAN_DIRECT_MARKER_REQUIRED")
         terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
-        checker.createExclusiveLeanDirectTerminalV3(repoRoot, checker.createLeanDirectTerminalArtifactV3(invocation, terminal))
+        checker.createExclusiveLeanDirectTerminalV4(repoRoot, checker.createLeanDirectTerminalArtifactV4(invocation, terminal))
       },
     })
     process.stdout.write(`${JSON.stringify(terminal)}\n`)

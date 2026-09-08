@@ -90,6 +90,15 @@ export const LEAN_DIRECT_V3_ARTIFACT_PATHS = Object.freeze({
   adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v3.json",
   eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v3.json",
 } as const)
+export const LEAN_DIRECT_V4_ARTIFACT_PATHS = Object.freeze({
+  preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v3.json",
+  authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v4.json",
+  review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v4.json",
+  invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v4.json",
+  terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v4.json",
+  adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v4.json",
+  eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v4.json",
+} as const)
 export const LEAN_FIRST_INVOCATION_SHA256 = "40725af9f20ae945c19e1a60995e1eac2c51d00ac60453a8ffe42287368f4fa8" as const
 export const LEAN_FIRST_TERMINAL_SHA256 = "87adadc50d720c3a7f68be57d26caeab2f001102113060f88d6a96f419bdb2bd" as const
 export const LEAN_FIRST_INVOCATION_BLOB = "948a858103a28ad13f2b8497f1cd00d58cd6c2ba" as const
@@ -138,6 +147,11 @@ export const LEAN_EXECUTABLE_CLOSURE_PATHS = Object.freeze([
   "tsconfig.json",
 ] as const)
 export const LEAN_SOURCE_PATHS = LEAN_EXECUTABLE_CLOSURE_PATHS
+export const LEAN_DIRECT_V4_EXECUTABLE_CLOSURE_PATHS = Object.freeze([
+  ...LEAN_EXECUTABLE_CLOSURE_PATHS,
+  "scripts/lib/v1-38-lean-container-match-session.ts",
+  "scripts/lib/v1-38-lean-container-match-session.test.ts",
+] as const)
 
 export interface LeanSourceReview {
   readonly schemaVersion: "v1.38-lean-runner-source-review-v3"
@@ -455,6 +469,60 @@ export interface LeanDirectInvocationV3 {
 }
 export interface LeanDirectTerminalArtifactV3 extends Omit<LeanDirectInvocationV3, "schemaVersion" | "claimClass" | "invocationOrdinal"> {
   readonly schemaVersion: "v1.38-lean-runner-direct-terminal-v3"
+  readonly invocationRoot: `sha256:${string}`
+  readonly privacy: "safe_aggregate_only"
+  readonly terminal: LeanTerminal
+}
+export interface LeanContainerPreflightArtifactV3 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-container-preflight-v3"
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly executableClosureRoot: `sha256:${string}`
+  readonly preflight: LeanContainerPreflightOutcomeV2
+  readonly consuming: false
+  readonly preflightInvocations: 1
+  readonly matchInvocations: 0
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectAuthorizationV4 extends Omit<LeanDirectAuthorizationV3, "schemaVersion" | "containerPreflight"> {
+  readonly schemaVersion: "v1.38-lean-runner-direct-authorization-v4"
+  readonly containerPreflight: {
+    readonly path: typeof LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight
+    readonly root: `sha256:${string}`
+  }
+  readonly plan180History: {
+    readonly preflightPath: typeof LEAN_DIRECT_V3_ARTIFACT_PATHS.preflight
+    readonly preflightSha256: `sha256:${string}`
+    readonly reviewPath: typeof LEAN_DIRECT_V3_ARTIFACT_PATHS.review
+    readonly reviewSha256: `sha256:${string}`
+    readonly status: "non_pass_preserved"
+  }
+}
+export interface LeanDirectValidityReviewV4 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-validity-review-v4"
+  readonly authorizationRoot: `sha256:${string}` | null
+  readonly preflightRoot: `sha256:${string}`
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly categories: LeanDirectValidityReview["categories"]
+  readonly blockingFindingCount: number
+  readonly certificationOnlyHistory: LeanDirectAuthorization["plan172Review"]["findings"]
+  readonly admitsPlan175: boolean
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectInvocationV4 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-invocation-v4"
+  readonly authorizationRoot: `sha256:${string}`
+  readonly validityReviewRoot: `sha256:${string}`
+  readonly preflightRoot: `sha256:${string}`
+  readonly sourceCommit: string
+  readonly childCapabilityRoot: `sha256:${string}`
+  readonly claimClass: "fixture_feasibility_only"
+  readonly invocationOrdinal: 1
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectTerminalArtifactV4 extends Omit<LeanDirectInvocationV4, "schemaVersion" | "claimClass" | "invocationOrdinal"> {
+  readonly schemaVersion: "v1.38-lean-runner-direct-terminal-v4"
   readonly invocationRoot: `sha256:${string}`
   readonly privacy: "safe_aggregate_only"
   readonly terminal: LeanTerminal
@@ -1845,6 +1913,8 @@ export const checkLeanDirectSourceOnly = (repoRoot: string): void => {
 const LEAN_DIRECT_V1_AUTHORIZATION_ROOT = "sha256:3c546e446e8f5fb9f062676d88ebf18b58ccf2070c6d9faa636fe8312634c04c" as const
 const LEAN_DIRECT_V1_REVIEW_ROOT = "sha256:8c0b81a777ec5b5513a4afbf582906f7d19a12e8102b1e1688d12e39f453d073" as const
 const LEAN_PLAN177_RUNNABLE_PATHS = Object.freeze([
+  "scripts/lib/v1-38-lean-container-match-session.ts",
+  "scripts/lib/v1-38-lean-container-match-session.test.ts",
   "scripts/run-v1-38-lean-runner-feasibility.ts",
   "scripts/run-v1-38-lean-runner-feasibility.test.ts",
   "scripts/check-v1-38-lean-admission.ts",
@@ -1879,6 +1949,32 @@ const resolveLeanDirectV2Source = (repoRoot: string, explicitRef: string, reject
     if (git(repoRoot, ["rev-parse", `HEAD:${sourcePath}`]) !== oid) throw new TypeError(`LEAN_DIRECT_V2_SOURCE_CLOSURE_DRIFT:${sourcePath}`)
   }
   return source
+}
+
+const resolveLeanDirectV4Source = (repoRoot: string, explicitRef: string, rejectCurrentHead: boolean): LeanManifest["source"] => {
+  const requested = validateLeanDirectV2ExplicitSourceRef(explicitRef)
+  const commit = git(repoRoot, ["rev-parse", `${requested}^{commit}`])
+  if (commit !== requested) throw new TypeError("LEAN_DIRECT_V4_SOURCE_OID_DRIFT")
+  const head = git(repoRoot, ["rev-parse", "HEAD^{commit}"])
+  if (rejectCurrentHead && commit === head) throw new TypeError("LEAN_DIRECT_V4_SOURCE_IS_CURRENT_HEAD")
+  try { execFileSync("git", ["merge-base", "--is-ancestor", commit, head], { cwd: repoRoot, stdio: "ignore" }) } catch { throw new TypeError("LEAN_DIRECT_V4_SOURCE_NOT_ANCESTOR") }
+  const changedPaths = git(repoRoot, ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit]).split("\n").filter(Boolean)
+  if (!commitTouchesLeanRunnableSource(changedPaths)) throw new TypeError("LEAN_DIRECT_V4_SOURCE_DOCUMENTATION_ONLY")
+  const source: LeanManifest["source"] = {
+    commit,
+    tree: git(repoRoot, ["show", "-s", "--format=%T", commit]),
+    executableBlobs: Object.fromEntries(LEAN_DIRECT_V4_EXECUTABLE_CLOSURE_PATHS.map((sourcePath) => [sourcePath, git(repoRoot, ["rev-parse", `${commit}:${sourcePath}`])])),
+  }
+  for (const [sourcePath, oid] of Object.entries(source.executableBlobs)) {
+    if (git(repoRoot, ["rev-parse", `HEAD:${sourcePath}`]) !== oid) throw new TypeError(`LEAN_DIRECT_V4_SOURCE_CLOSURE_DRIFT:${sourcePath}`)
+  }
+  return source
+}
+
+const assertLeanDirectV4TrackedBytes = (repoRoot: string, sourceCommit: string): void => {
+  try {
+    execFileSync("git", ["diff", "--quiet", sourceCommit, "--", ...LEAN_DIRECT_V4_EXECUTABLE_CLOSURE_PATHS], { cwd: repoRoot, stdio: "ignore" })
+  } catch { throw new TypeError("LEAN_DIRECT_V4_TRACKED_BYTES_DRIFT") }
 }
 
 const validateLeanContainerPreflightEvidence = (value: unknown): LeanContainerPreflightEvidence => {
@@ -2286,6 +2382,291 @@ export const checkLeanDirectAdjudicationV3 = (repoRoot: string): void => {
   const passed = result === "pass"
   if (!isObject(eligibility) || eligibility.schemaVersion !== "v1.38-phase-262-lean-direct-eligibility-v3" || eligibility.adjudicationRoot !== hashLeanValue(adjudication) || eligibility.admit03 !== (passed ? "satisfied_under_revised_contract" : "blocked") || eligibility.phase262Complete !== passed || eligibility.phase263PlanningEligible !== passed || eligibility.phase263ExecutionEligible !== passed || !exactEligibilityAuthority(eligibility.authority, passed)) throw new TypeError("LEAN_DIRECT_V3_ELIGIBILITY_INVALID")
 }
+
+const LEAN_DIRECT_PLAN180_PREFLIGHT_SHA256 = "5fe36a5dfc5c2dac388b532af36faeab0683e0ead716ddb0a6a9da2fa1a5536b" as const
+const LEAN_DIRECT_PLAN180_REVIEW_SHA256 = "19b4e0b1bdd53b9cf69cfd22282e677204abf0aec839dc749e5e3d4eba794eca" as const
+
+const assertLeanDirectPlan180History = (repoRoot: string): void => {
+  if (
+    sha256File(path.resolve(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.preflight)) !== LEAN_DIRECT_PLAN180_PREFLIGHT_SHA256 ||
+    sha256File(path.resolve(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.review)) !== LEAN_DIRECT_PLAN180_REVIEW_SHA256
+  ) throw new TypeError("LEAN_DIRECT_PLAN180_HISTORY_DRIFT")
+  const preflight = readJson(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.preflight)
+  const review = readJson(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.review)
+  if (
+    !isObject(preflight) || !isObject(preflight.preflight) || preflight.preflight.status !== "non_pass" || preflight.matchInvocations !== 0 || !exactFalseAuthority(preflight.authority) ||
+    !isObject(review) || review.admitsPlan175 !== false || review.blockingFindingCount !== 1 || !exactFalseAuthority(review.authority)
+  ) throw new TypeError("LEAN_DIRECT_PLAN180_HISTORY_REINTERPRETED")
+  for (const artifactPath of Object.values(LEAN_DIRECT_V3_ARTIFACT_PATHS).filter((candidate) => ![LEAN_DIRECT_V3_ARTIFACT_PATHS.preflight, LEAN_DIRECT_V3_ARTIFACT_PATHS.review].includes(candidate))) {
+    if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_PLAN180_HISTORY_EFFECT:${artifactPath}`)
+  }
+}
+
+const assertLeanDirectV4PathsAreFresh = (): void => {
+  const historical = [
+    ...Object.values(LEAN_DIRECT_ARTIFACT_PATHS),
+    ...Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS),
+    ...Object.values(LEAN_DIRECT_V3_ARTIFACT_PATHS),
+    LEAN_DIRECT_PLAN178_PREFLIGHT_PATH,
+    LEAN_DIRECT_PLAN178_REVIEW_PATH,
+  ]
+  const fresh = Object.values(LEAN_DIRECT_V4_ARTIFACT_PATHS)
+  if (new Set(fresh).size !== fresh.length || fresh.some((candidate) => historical.includes(candidate as never))) throw new TypeError("LEAN_DIRECT_V4_PATH_ALIAS")
+}
+
+const validateLeanContainerSessionPreflightEvidence = (value: unknown): LeanContainerPreflightEvidence => {
+  const keys = [
+    "status", "dockerServerVersion", "imageReference", "adapterId", "controlsRoot",
+    "sampleCount", "sampleRoot", "lifecycleSampleCount", "lifecycleSampleRoot",
+    "lifecycleMaximumMilliseconds", "methodCeilings", "startupCleanupMarginMilliseconds",
+    "projectedCellMilliseconds", "projectedRunMilliseconds", "cellDeadlineMilliseconds",
+    "outerDeadlineMilliseconds",
+  ]
+  if (
+    !isObject(value) || !exactKeys(value, keys) || value.status !== "pass" ||
+    value.imageReference !== LEAN_CONTAINER_IMAGE || value.adapterId !== LEAN_CONTAINER_ADAPTER_ID ||
+    value.controlsRoot !== hashLeanValue(LEAN_CONTAINER_CONTROLS) ||
+    JSON.stringify(value.methodCeilings) !== JSON.stringify(LEAN_CONTAINER_METHOD_CEILINGS) ||
+    value.startupCleanupMarginMilliseconds !== LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS ||
+    value.cellDeadlineMilliseconds !== LEAN_CELL_DEADLINE_MS || value.outerDeadlineMilliseconds !== 900000 ||
+    !Number.isSafeInteger(value.sampleCount) || (value.sampleCount as number) < 4 || !isSha(value.sampleRoot) ||
+    !Number.isSafeInteger(value.lifecycleSampleCount) || (value.lifecycleSampleCount as number) < 1 || !isSha(value.lifecycleSampleRoot) ||
+    !Number.isFinite(value.lifecycleMaximumMilliseconds) || (value.lifecycleMaximumMilliseconds as number) < 0 ||
+    !Number.isFinite(value.projectedCellMilliseconds) || !Number.isFinite(value.projectedRunMilliseconds) ||
+    (value.projectedCellMilliseconds as number) > LEAN_CELL_DEADLINE_MS || (value.projectedRunMilliseconds as number) > 900000 ||
+    typeof value.dockerServerVersion !== "string"
+  ) throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanContainerPreflightEvidence
+}
+
+export const validateLeanContainerPreflightOutcomeV3 = (value: unknown): LeanContainerPreflightOutcomeV2 => {
+  if (isObject(value) && value.status === "non_pass") {
+    if (!exactKeys(value, ["status", "reasonCode"]) || value.reasonCode !== "container_preflight_refused") throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_OUTCOME_INVALID")
+    return globalThis.structuredClone(value) as LeanContainerPreflightOutcomeV2
+  }
+  return validateLeanContainerSessionPreflightEvidence(value)
+}
+
+const buildLeanContainerPreflightArtifactV3 = (repoRoot: string, explicitSourceRef: string, outcome: unknown): LeanContainerPreflightArtifactV3 => {
+  const source = resolveLeanDirectV4Source(repoRoot, explicitSourceRef, true)
+  return {
+    schemaVersion: "v1.38-lean-runner-direct-container-preflight-v3",
+    sourceCommit: source.commit,
+    sourceTree: source.tree,
+    executableClosureRoot: hashLeanValue(source.executableBlobs),
+    preflight: validateLeanContainerPreflightOutcomeV3(outcome),
+    consuming: false,
+    preflightInvocations: 1,
+    matchInvocations: 0,
+    authority: LEAN_AUTHORITY_FALSE,
+  }
+}
+
+export const renderLeanContainerPreflightArtifactV3 = (repoRoot: string, explicitSourceRef: string, outcome: unknown): LeanContainerPreflightArtifactV3 => {
+  assertLeanDirectPlan178History(repoRoot)
+  assertLeanDirectPlan180History(repoRoot)
+  assertLeanDirectV4PathsAreFresh()
+  return buildLeanContainerPreflightArtifactV3(repoRoot, explicitSourceRef, outcome)
+}
+
+export const validateLeanContainerPreflightArtifactV3 = (repoRoot: string, value: unknown): LeanContainerPreflightArtifactV3 => {
+  assertPrivacySafe(value)
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "sourceCommit", "sourceTree", "executableClosureRoot", "preflight", "consuming", "preflightInvocations", "matchInvocations", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-direct-container-preflight-v3" || !isOid(value.sourceCommit) || !isOid(value.sourceTree) || !isSha(value.executableClosureRoot) || value.consuming !== false || value.preflightInvocations !== 1 || value.matchInvocations !== 0 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_INVALID")
+  const expected = buildLeanContainerPreflightArtifactV3(repoRoot, value.sourceCommit, value.preflight)
+  if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_DRIFT")
+  return globalThis.structuredClone(value) as unknown as LeanContainerPreflightArtifactV3
+}
+
+export const writeLeanContainerPreflightArtifactV3 = (repoRoot: string, explicitSourceRef: string): LeanContainerPreflightArtifactV3 => {
+  assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]))
+  assertLeanDirectPlan178History(repoRoot)
+  assertLeanDirectPlan180History(repoRoot)
+  assertLeanDirectV4PathsAreFresh()
+  for (const artifactPath of Object.values(LEAN_DIRECT_V4_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V4_DESTINATION_EXISTS:${artifactPath}`)
+  const sourceRef = validateLeanDirectV2ExplicitSourceRef(explicitSourceRef)
+  const source = resolveLeanDirectV4Source(repoRoot, sourceRef, true)
+  assertLeanDirectV4TrackedBytes(repoRoot, source.commit)
+  assertSuccessorLockInventory(repoRoot)
+  let outcome: LeanContainerPreflightOutcomeV2
+  try { outcome = runActualLeanContainerPreflight() }
+  catch { outcome = { status: "non_pass", reasonCode: "container_preflight_refused" } }
+  const artifact = renderLeanContainerPreflightArtifactV3(repoRoot, sourceRef, outcome)
+  writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight), artifact)
+  return artifact
+}
+
+const buildLeanDirectAuthorizationV4 = (repoRoot: string, explicitSourceRef: string, preflight: LeanContainerPreflightArtifactV3): LeanDirectAuthorizationV4 => {
+  if (preflight.preflight.status !== "pass") throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_NOT_PASS")
+  const source = resolveLeanDirectV4Source(repoRoot, explicitSourceRef, true)
+  if (preflight.sourceCommit !== source.commit || preflight.sourceTree !== source.tree || preflight.executableClosureRoot !== hashLeanValue(source.executableBlobs)) throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_SOURCE_DRIFT")
+  const base = buildLeanDirectAuthorization(repoRoot, source.commit)
+  return {
+    ...base,
+    schemaVersion: "v1.38-lean-runner-direct-authorization-v4",
+    source,
+    containerPreflight: { path: LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight, root: hashLeanValue(preflight) },
+    runtimeBoundary: {
+      registryAdapterId: "runtime-js-container-subprocess",
+      serviceAdapterId: LEAN_CONTAINER_ADAPTER_ID,
+      image: LEAN_CONTAINER_IMAGE,
+      controlsRoot: hashLeanValue(LEAN_CONTAINER_CONTROLS),
+      methodCeilings: LEAN_CONTAINER_METHOD_CEILINGS,
+      startupCleanupMarginMilliseconds: LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS,
+      cellDeadlineMilliseconds: LEAN_CELL_DEADLINE_MS,
+      outerDeadlineMilliseconds: 900000,
+    },
+    plan174History: {
+      authorizationPath: LEAN_DIRECT_ARTIFACT_PATHS.authorization,
+      authorizationRoot: LEAN_DIRECT_V1_AUTHORIZATION_ROOT,
+      reviewPath: LEAN_DIRECT_ARTIFACT_PATHS.review,
+      reviewRoot: LEAN_DIRECT_V1_REVIEW_ROOT,
+      status: "denied_preserved",
+      resolvedByNewSource: ["CR-01", "CR-02"],
+    },
+    plan178History: {
+      preflightPath: LEAN_DIRECT_PLAN178_PREFLIGHT_PATH,
+      preflightSha256: `sha256:${LEAN_DIRECT_PLAN178_PREFLIGHT_SHA256}`,
+      reviewPath: LEAN_DIRECT_PLAN178_REVIEW_PATH,
+      reviewSha256: `sha256:${LEAN_DIRECT_PLAN178_REVIEW_SHA256}`,
+      status: "non_pass_preserved",
+    },
+    plan180History: {
+      preflightPath: LEAN_DIRECT_V3_ARTIFACT_PATHS.preflight,
+      preflightSha256: `sha256:${LEAN_DIRECT_PLAN180_PREFLIGHT_SHA256}`,
+      reviewPath: LEAN_DIRECT_V3_ARTIFACT_PATHS.review,
+      reviewSha256: `sha256:${LEAN_DIRECT_PLAN180_REVIEW_SHA256}`,
+      status: "non_pass_preserved",
+    },
+  }
+}
+
+export const renderLeanDirectAuthorizationV4 = (repoRoot: string, explicitSourceRef: string): LeanDirectAuthorizationV4 => {
+  assertLeanDirectPlan180History(repoRoot)
+  const preflight = validateLeanContainerPreflightArtifactV3(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight))
+  for (const artifactPath of Object.values(LEAN_DIRECT_V4_ARTIFACT_PATHS).filter((candidate) => candidate !== LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V4_DESTINATION_EXISTS:${artifactPath}`)
+  return buildLeanDirectAuthorizationV4(repoRoot, validateLeanDirectV2ExplicitSourceRef(explicitSourceRef), preflight)
+}
+
+export const validateLeanDirectAuthorizationV4 = (repoRoot: string, value: unknown): LeanDirectAuthorizationV4 => {
+  assertPrivacySafe(value)
+  if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-direct-authorization-v4" || !isObject(value.source) || !isOid(value.source.commit)) throw new TypeError("LEAN_DIRECT_V4_AUTHORIZATION_INVALID")
+  const preflight = validateLeanContainerPreflightArtifactV3(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight))
+  const expected = buildLeanDirectAuthorizationV4(repoRoot, value.source.commit, preflight)
+  if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_DIRECT_V4_AUTHORIZATION_DRIFT")
+  return globalThis.structuredClone(value) as unknown as LeanDirectAuthorizationV4
+}
+
+export const checkLeanDirectAuthorizationV4 = (repoRoot: string, value: unknown): LeanDirectAuthorizationV4 => {
+  const authorization = validateLeanDirectAuthorizationV4(repoRoot, value)
+  assertLeanDirectV4TrackedBytes(repoRoot, authorization.source.commit)
+  assertLeanDirectPlan180History(repoRoot)
+  assertSuccessorLockInventory(repoRoot)
+  return authorization
+}
+
+export const writeLeanDirectAuthorizationV4 = (repoRoot: string, explicitSourceRef: string): LeanDirectAuthorizationV4 => {
+  const authorization = renderLeanDirectAuthorizationV4(repoRoot, explicitSourceRef)
+  writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.authorization), authorization)
+  return authorization
+}
+
+export const checkLeanDirectContainerSourceOnlyV4 = (repoRoot: string): void => {
+  assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]))
+  checkLeanFirstEvidenceCustody(repoRoot)
+  assertDeniedDirectV1History(repoRoot)
+  assertLeanDirectPlan178History(repoRoot)
+  assertLeanDirectPlan180History(repoRoot)
+  assertLeanDirectV4PathsAreFresh()
+  for (const artifactPath of Object.values(LEAN_DIRECT_V4_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V4_DESTINATION_EXISTS:${artifactPath}`)
+  const latest = git(repoRoot, ["log", "-1", "--format=%H", "--", ...LEAN_PLAN177_RUNNABLE_PATHS])
+  const source = resolveLeanDirectV4Source(repoRoot, latest, false)
+  if (source.commit !== latest) throw new TypeError("LEAN_DIRECT_V4_SOURCE_DRIFT")
+  assertLeanDirectV4TrackedBytes(repoRoot, source.commit)
+  assertSuccessorLockInventory(repoRoot)
+}
+
+export const checkLeanDirectValidityReviewV4 = (repoRoot: string, value: unknown): LeanDirectValidityReviewV4 => {
+  assertPrivacySafe(value)
+  const preflight = validateLeanContainerPreflightArtifactV3(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight))
+  const authorizationPresent = existsSync(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.authorization))
+  const authorization = authorizationPresent ? checkLeanDirectAuthorizationV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.authorization)) : undefined
+  if (!isObject(value) || !exactKeys(value, ["schemaVersion", "authorizationRoot", "preflightRoot", "sourceCommit", "sourceTree", "categories", "blockingFindingCount", "certificationOnlyHistory", "admitsPlan175", "authority"]) || value.schemaVersion !== "v1.38-lean-runner-direct-validity-review-v4" || value.authorizationRoot !== (authorization === undefined ? null : hashLeanValue(authorization)) || value.preflightRoot !== hashLeanValue(preflight) || value.sourceCommit !== preflight.sourceCommit || value.sourceTree !== preflight.sourceTree || !Array.isArray(value.categories) || value.categories.length !== LEAN_DIRECT_VALIDITY_CATEGORIES.length || !Number.isSafeInteger(value.blockingFindingCount) || (value.blockingFindingCount as number) < 0 || JSON.stringify(value.certificationOnlyHistory) !== JSON.stringify(plan172Findings(repoRoot)) || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_DIRECT_V4_REVIEW_INVALID")
+  for (const [index, expected] of LEAN_DIRECT_VALIDITY_CATEGORIES.entries()) {
+    const item = value.categories[index]
+    if (!isObject(item) || !exactKeys(item, ["category", "status", "evidence"]) || item.category !== expected || !["pass", "finding"].includes(String(item.status)) || typeof item.evidence !== "string" || item.evidence.length === 0) throw new TypeError("LEAN_DIRECT_V4_REVIEW_INVALID")
+  }
+  const findings = value.categories.filter((item) => isObject(item) && item.status === "finding").length
+  const admitted = preflight.preflight.status === "pass" && authorization !== undefined && findings === 0
+  if (value.blockingFindingCount !== findings || value.admitsPlan175 !== admitted) throw new TypeError("LEAN_DIRECT_V4_REVIEW_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanDirectValidityReviewV4
+}
+
+export const loadAndCheckLeanDirectReviewedReadyV4 = (repoRoot: string, allowedOperationalPaths: readonly string[] = []): { authorization: LeanDirectAuthorizationV4; review: LeanDirectValidityReviewV4; preflight: LeanContainerPreflightArtifactV3 } => {
+  assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]), allowedOperationalPaths)
+  for (const artifactPath of [LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation, LEAN_DIRECT_V4_ARTIFACT_PATHS.terminal, LEAN_DIRECT_V4_ARTIFACT_PATHS.adjudication, LEAN_DIRECT_V4_ARTIFACT_PATHS.eligibility]) if (!allowedOperationalPaths.includes(artifactPath) && existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V4_EFFECT_EXISTS:${artifactPath}`)
+  const preflight = validateLeanContainerPreflightArtifactV3(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight))
+  if (preflight.preflight.status !== "pass") throw new TypeError("LEAN_DIRECT_V4_PREFLIGHT_NOT_PASS")
+  const authorization = checkLeanDirectAuthorizationV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.authorization))
+  const review = checkLeanDirectValidityReviewV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.review))
+  if (!review.admitsPlan175 || review.blockingFindingCount !== 0) throw new TypeError("LEAN_DIRECT_V4_PLAN175_NOT_ADMITTED")
+  return { authorization, review, preflight }
+}
+
+export const checkLeanDirectReviewDispositionV4 = (repoRoot: string): LeanDirectValidityReviewV4 => {
+  assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]), [LEAN_DIRECT_V4_ARTIFACT_PATHS.review])
+  const review = checkLeanDirectValidityReviewV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.review))
+  if (review.admitsPlan175) {
+    loadAndCheckLeanDirectReviewedReadyV4(repoRoot)
+  } else {
+    for (const artifactPath of [LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation, LEAN_DIRECT_V4_ARTIFACT_PATHS.terminal, LEAN_DIRECT_V4_ARTIFACT_PATHS.adjudication, LEAN_DIRECT_V4_ARTIFACT_PATHS.eligibility]) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V4_DENIED_EFFECT:${artifactPath}`)
+    if (Object.values(review.authority).some(Boolean)) throw new TypeError("LEAN_DIRECT_V4_DENIED_AUTHORITY")
+  }
+  return review
+}
+
+export const createLeanDirectInvocationV4 = (authorization: LeanDirectAuthorizationV4, review: LeanDirectValidityReviewV4, childCapabilityRoot: `sha256:${string}`): LeanDirectInvocationV4 => ({
+  schemaVersion: "v1.38-lean-runner-direct-invocation-v4",
+  authorizationRoot: hashLeanValue(authorization), validityReviewRoot: hashLeanValue(review),
+  preflightRoot: authorization.containerPreflight.root, sourceCommit: authorization.source.commit,
+  childCapabilityRoot, claimClass: "fixture_feasibility_only", invocationOrdinal: 1,
+  authority: LEAN_AUTHORITY_FALSE,
+})
+
+const validateLeanDirectInvocationV4 = (repoRoot: string, value: unknown): LeanDirectInvocationV4 => {
+  const { authorization, review } = loadAndCheckLeanDirectReviewedReadyV4(repoRoot, [LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation])
+  if (!isObject(value) || !isSha(value.childCapabilityRoot) || JSON.stringify(value) !== JSON.stringify(createLeanDirectInvocationV4(authorization, review, value.childCapabilityRoot))) throw new TypeError("LEAN_DIRECT_V4_INVOCATION_INVALID")
+  return globalThis.structuredClone(value) as unknown as LeanDirectInvocationV4
+}
+
+export const createLeanDirectTerminalArtifactV4 = (invocation: LeanDirectInvocationV4, terminal: LeanTerminal): LeanDirectTerminalArtifactV4 => ({
+  schemaVersion: "v1.38-lean-runner-direct-terminal-v4",
+  authorizationRoot: invocation.authorizationRoot, validityReviewRoot: invocation.validityReviewRoot,
+  preflightRoot: invocation.preflightRoot, sourceCommit: invocation.sourceCommit,
+  childCapabilityRoot: invocation.childCapabilityRoot, invocationRoot: hashLeanValue(invocation),
+  privacy: "safe_aggregate_only", terminal: deriveAndValidateLeanTerminal(terminal), authority: LEAN_AUTHORITY_FALSE,
+})
+
+export const createExclusiveLeanDirectTerminalV4 = (repoRoot: string, terminal: LeanDirectTerminalArtifactV4): void =>
+  writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.terminal), terminal)
+
+export const checkLeanDirectPostRunV4 = (repoRoot: string): { invocation: LeanDirectInvocationV4; terminal?: LeanDirectTerminalArtifactV4; markerOnly: boolean } => {
+  const invocation = validateLeanDirectInvocationV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation))
+  if (!existsSync(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.terminal))) return { invocation, markerOnly: true }
+  const value = readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.terminal)
+  const expected = createLeanDirectTerminalArtifactV4(invocation, (value as LeanDirectTerminalArtifactV4).terminal)
+  if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_DIRECT_V4_TERMINAL_INVALID")
+  return { invocation, terminal: value as LeanDirectTerminalArtifactV4, markerOnly: false }
+}
+
+export const checkLeanDirectAdjudicationV4 = (repoRoot: string): void => {
+  const { invocation, terminal, markerOnly } = checkLeanDirectPostRunV4(repoRoot)
+  const adjudication = readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.adjudication)
+  const result = markerOnly ? "invalid" : deriveAndValidateLeanTerminal(terminal!.terminal).result
+  if (!isObject(adjudication) || adjudication.schemaVersion !== "v1.38-lean-runner-direct-adjudication-v4" || adjudication.invocationRoot !== hashLeanValue(invocation) || adjudication.terminalRoot !== (terminal === undefined ? null : hashLeanValue(terminal)) || adjudication.reviewedResult !== result || adjudication.markerOnly !== markerOnly || adjudication.opportunityConsumed !== true || adjudication.admitsEligibility !== (result === "pass") || !exactFalseAuthority(adjudication.authority)) throw new TypeError("LEAN_DIRECT_V4_ADJUDICATION_INVALID")
+  const eligibility = readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.eligibility)
+  const passed = result === "pass"
+  if (!isObject(eligibility) || eligibility.schemaVersion !== "v1.38-phase-262-lean-direct-eligibility-v4" || eligibility.adjudicationRoot !== hashLeanValue(adjudication) || eligibility.admit03 !== (passed ? "satisfied_under_revised_contract" : "blocked") || eligibility.phase262Complete !== passed || eligibility.phase263PlanningEligible !== passed || eligibility.phase263ExecutionEligible !== passed || !exactEligibilityAuthority(eligibility.authority, passed)) throw new TypeError("LEAN_DIRECT_V4_ELIGIBILITY_INVALID")
+}
 export const loadAndCheckLeanCorrectiveReady = (
   repoRoot: string,
   allowedOperationalPaths: readonly string[] = [],
@@ -2500,7 +2881,13 @@ export const checkLeanDirectAdjudication = (repoRoot: string): LeanDirectEligibi
   return validateLeanDirectEligibility(readJson(repoRoot, LEAN_DIRECT_ARTIFACT_PATHS.eligibility), adjudication)
 }
 
-export const loadAndCheckLeanChildInvocation = (repoRoot: string, capability: string, ownershipToken?: string): LeanInvocation | LeanCorrectiveInvocation | LeanDirectInvocation | LeanDirectInvocationV3 => {
+export const loadAndCheckLeanChildInvocation = (repoRoot: string, capability: string, ownershipToken?: string): LeanInvocation | LeanCorrectiveInvocation | LeanDirectInvocation | LeanDirectInvocationV3 | LeanDirectInvocationV4 => {
+  if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation))) {
+    if (ownershipToken !== undefined || existsSync(path.resolve(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.terminal))) throw new TypeError("LEAN_DIRECT_V4_CHILD_ADMISSION_INVALID")
+    const invocation = validateLeanDirectInvocationV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation))
+    if (invocation.childCapabilityRoot !== hashLeanValue(capability)) throw new TypeError("LEAN_CHILD_CAPABILITY_MISMATCH")
+    return invocation
+  }
   if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.invocation))) {
     if (ownershipToken !== undefined || existsSync(path.resolve(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.terminal))) throw new TypeError("LEAN_DIRECT_V3_CHILD_ADMISSION_INVALID")
     const invocation = validateLeanDirectInvocationV3(repoRoot, readJson(repoRoot, LEAN_DIRECT_V3_ARTIFACT_PATHS.invocation))
@@ -2933,6 +3320,29 @@ const main = (): void => {
     checkLeanDirectContainerSourceOnlyV2(repoRoot)
   } else if (selector === "--check-direct-container-source-only-v3") {
     checkLeanDirectContainerSourceOnlyV3(repoRoot)
+  } else if (selector === "--check-direct-container-session-source-only-v4") {
+    checkLeanDirectContainerSourceOnlyV4(repoRoot)
+  } else if (selector === "--write-direct-container-preflight-v3") {
+    writeLeanContainerPreflightArtifactV3(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3]))
+  } else if (selector === "--check-direct-container-preflight-v3") {
+    assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]))
+    validateLeanContainerPreflightArtifactV3(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.preflight))
+  } else if (selector === "--render-direct-authorization-v4") {
+    process.stdout.write(`${JSON.stringify(renderLeanDirectAuthorizationV4(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3])), null, 2)}\n`)
+    return
+  } else if (selector === "--write-direct-authorization-v4") {
+    writeLeanDirectAuthorizationV4(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3]))
+  } else if (selector === "--check-direct-authorization-v4") {
+    assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]))
+    checkLeanDirectAuthorizationV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_V4_ARTIFACT_PATHS.authorization))
+  } else if (selector === "--check-direct-review-disposition-v4") {
+    checkLeanDirectReviewDispositionV4(repoRoot)
+  } else if (selector === "--check-direct-reviewed-ready-v4") {
+    loadAndCheckLeanDirectReviewedReadyV4(repoRoot)
+  } else if (selector === "--check-direct-post-run-v4") {
+    checkLeanDirectPostRunV4(repoRoot)
+  } else if (selector === "--check-direct-adjudication-v4" || selector === "--check-direct-final-tracking-v4") {
+    checkLeanDirectAdjudicationV4(repoRoot)
   } else if (selector === "--write-direct-container-preflight-v2") {
     writeLeanContainerPreflightArtifactV2(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3]))
   } else if (selector === "--check-direct-container-preflight-v2") {
