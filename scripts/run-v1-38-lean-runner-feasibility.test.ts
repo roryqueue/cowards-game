@@ -18,6 +18,8 @@ import {
   LEAN_CONTAINER_ADAPTER_ID,
   buildCanonicalLeanRequestV118,
   createContainerFixtureRevision,
+  parseExactDockerImageIdentity,
+  exactDockerImageIdentityEquals,
   evaluateLeanContainerPreflight,
   runLeanDirectGateInjected,
   createSupervisedLeanExecutionDependencies,
@@ -67,6 +69,24 @@ const childResult = (cell = buildLeanSchedule()[0]!) => ({
 })
 
 describe("bounded lean runner", () => {
+  it("normalizes only exact repository plus lowercase sha256 identity", () => {
+    const canonical = "node@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"
+    expect(parseExactDockerImageIdentity(LEAN_CONTAINER_IMAGE)).toEqual({
+      repository: "node",
+      digest: "2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14",
+    })
+    expect(exactDockerImageIdentityEquals(LEAN_CONTAINER_IMAGE, canonical)).toBe(true)
+    expect(exactDockerImageIdentityEquals(LEAN_CONTAINER_IMAGE, `other/${canonical}`)).toBe(false)
+    expect(exactDockerImageIdentityEquals(LEAN_CONTAINER_IMAGE, `node@sha256:${"0".repeat(64)}`)).toBe(false)
+    for (const invalid of [
+      "node:24-alpine", `sha256:${"2".repeat(64)}`, `node@sha256:${"A".repeat(64)}`,
+      `node@sha256:${"2".repeat(63)}`, `prefix-${canonical}-suffix`,
+    ]) expect(exactDockerImageIdentityEquals(LEAN_CONTAINER_IMAGE, invalid)).toBe(false)
+
+    const ported = `registry.example:5000/ns/node:24@sha256:${"3".repeat(64)}`
+    expect(parseExactDockerImageIdentity(ported)).toEqual({ repository: "registry.example:5000/ns/node", digest: "3".repeat(64) })
+  })
+
   it("derives all 25 absolute awareness coordinates without changing relative contents", () => {
     const bottom = {
       id: "bottom-soldier-1", ownerPlayerId: "player:bottom", status: "ACTIVE",
@@ -130,7 +150,7 @@ describe("bounded lean runner", () => {
     const evidence = evaluateLeanContainerPreflight({
       dockerServerVersion: "29.4.0",
       imageReference: LEAN_CONTAINER_IMAGE,
-      localRepoDigests: [LEAN_CONTAINER_IMAGE],
+      localRepoDigests: [LEAN_CONTAINER_IMAGE.replace(":24-alpine@", "@")],
       adapterId: LEAN_CONTAINER_ADAPTER_ID,
       controls: {
         network: "none", readOnlyRoot: true, tmpfs: "/tmp:rw,noexec,nosuid,size=16m",
