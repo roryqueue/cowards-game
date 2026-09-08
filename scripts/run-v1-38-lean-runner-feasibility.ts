@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-imports -- private lab runner binds reviewed fixture seams. */
-import { fork, type ChildProcess } from "node:child_process"
+import { fork, spawnSync, type ChildProcess } from "node:child_process"
+import { Buffer } from "node:buffer"
 import { createHash, generateKeyPairSync, randomBytes, sign } from "node:crypto"
 import { closeSync, constants, existsSync, fsyncSync, openSync, writeSync } from "node:fs"
 import path from "node:path"
@@ -10,9 +11,13 @@ import {
   RUNTIME_EXECUTION_SERVICE_VERSION, RUNTIME_EXECUTION_SERVICE_VERSION_V1_18,
   RuntimeExecutionServiceRequestSchema, RuntimeExecutionServiceRequestV118Schema,
   RuntimeExecutionServiceResponseV118Schema, TOP_STARTING_POSITIONS, createRuntimeSemanticTupleV118,
+  defaultRuntimeMetadata, StrategyRevisionSchema, StrategyInputSchema, SoldierBrainInputSchema,
   createSetScenarioV137, type RuntimeCertificateReferenceV118,
   type RuntimeExecutionServiceRequest, type RuntimeExecutionServiceRequestV118,
+  type StrategyRevision,
 } from "@cowards/spec"
+import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
+import { createContainerSubprocessStrategyExecutionAdapter } from "../packages/runtime-js/src/container-subprocess-adapter.js"
 import { buildStarterStrategyRevision, findStarterStrategy } from "../packages/persistence/src/starter-strategies.js"
 import { buildAdvancedStrategyRevision, findAdvancedStrategy } from "../packages/persistence/src/advanced-strategies.js"
 import { createCandidateInitialGameStateV119 } from "../packages/engine/src/kernel/create-initial-state.js"
@@ -32,8 +37,65 @@ export const LEAN_CHILD_SELECTOR = "--execute-reviewed-cell" as const
 export const LEAN_CORRECTIVE_SELECTOR = "--run-reviewed-corrective-gate" as const
 export const LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR = "--recover-reviewed-corrective-interruption" as const
 export const LEAN_DIRECT_SELECTOR = "--run-reviewed-direct-gate" as const
+export const LEAN_CONTAINER_ADAPTER_ID = "container-subprocess" as const
+export const LEAN_CONTAINER_RUNTIME_ID = "runtime-js-container-subprocess" as const
+export const LEAN_CONTAINER_IMAGE = "node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14" as const
 export const LEAN_CELL_DEADLINE_MS = 45_000
 export const LEAN_CLEANUP_DEADLINE_MS = 2_000
+export const LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS = 5_000
+export const LEAN_CONTAINER_METHOD_CEILINGS = Object.freeze({ selectActivations: 20, soldierBrain: 240 })
+
+export interface LeanContainerPreflightSample {
+  readonly fixtureId: "starter:aggro-chaser" | "advanced:vanguard-pressure"
+  readonly method: "selectActivations" | "soldierBrain"
+  readonly elapsedMilliseconds: number
+  readonly ok: boolean
+}
+export interface LeanContainerControls {
+  readonly network: "none"
+  readonly readOnlyRoot: true
+  readonly tmpfs: "/tmp:rw,noexec,nosuid,size=16m"
+  readonly memory: "64m"
+  readonly cpus: "0.5"
+  readonly pidsLimit: 64
+  readonly capDrop: "ALL"
+  readonly noNewPrivileges: true
+  readonly environment: "minimal"
+  readonly shell: false
+  readonly stdoutLimit: true
+  readonly stderrLimit: true
+  readonly methodTimeout: true
+}
+export interface LeanContainerPreflightInput {
+  readonly dockerServerVersion: string
+  readonly imageReference: string
+  readonly localRepoDigests: readonly string[]
+  readonly adapterId: string
+  readonly controls: LeanContainerControls
+  readonly samples: readonly LeanContainerPreflightSample[]
+}
+export interface LeanContainerPreflightEvidence {
+  readonly status: "pass"
+  readonly dockerServerVersion: string
+  readonly imageReference: typeof LEAN_CONTAINER_IMAGE
+  readonly adapterId: typeof LEAN_CONTAINER_ADAPTER_ID
+  readonly controlsRoot: `sha256:${string}`
+  readonly sampleCount: number
+  readonly sampleRoot: `sha256:${string}`
+  readonly methodCeilings: typeof LEAN_CONTAINER_METHOD_CEILINGS
+  readonly startupCleanupMarginMilliseconds: number
+  readonly projectedCellMilliseconds: number
+  readonly projectedRunMilliseconds: number
+  readonly cellDeadlineMilliseconds: number
+  readonly outerDeadlineMilliseconds: number
+}
+
+export const LEAN_CONTAINER_CONTROLS: LeanContainerControls = Object.freeze({
+  network: "none", readOnlyRoot: true, tmpfs: "/tmp:rw,noexec,nosuid,size=16m",
+  memory: "64m", cpus: "0.5", pidsLimit: 64, capDrop: "ALL",
+  noNewPrivileges: true, environment: "minimal", shell: false,
+  stdoutLimit: true, stderrLimit: true, methodTimeout: true,
+})
 
 export interface LeanExecutionResult {
   readonly classification: LeanExecutionClassification
@@ -80,6 +142,21 @@ export interface LeanCorrectiveRecoveryOnlyDependencies {
   readonly cleanup: () => Promise<void>
   readonly terminalizeInvalid: () => Promise<void>
   readonly postcheck: () => Promise<void>
+}
+export interface LeanDirectGateDependencies {
+  readonly checkReviewedReady: () => Promise<void>
+  readonly preflight: () => Promise<void>
+  readonly createMarker: () => void
+  readonly invoke: () => Promise<void>
+}
+
+export const runLeanDirectGateInjected = async (
+  dependencies: LeanDirectGateDependencies,
+): Promise<void> => {
+  await dependencies.checkReviewedReady()
+  await dependencies.preflight()
+  dependencies.createMarker()
+  await dependencies.invoke()
 }
 
 export const runLeanCorrectiveWrapperInjected = async (
@@ -206,7 +283,7 @@ export const createExclusiveLeanInvocationMarker = (markerPath: string, marker: 
   } finally { if (descriptor !== undefined) closeSync(descriptor) }
 }
 
-const fixtureRevision = (fixtureId: string) => {
+const legacyFixtureRevision = (fixtureId: string) => {
   const starter = findStarterStrategy(fixtureId)
   if (starter !== null) return buildStarterStrategyRevision(starter)
   const advanced = findAdvancedStrategy(fixtureId)
@@ -214,6 +291,184 @@ const fixtureRevision = (fixtureId: string) => {
   throw new TypeError("LEAN_FIXTURE_MISSING")
 }
 const rawSha256 = (value: string | Uint8Array): `sha256:${string}` => `sha256:${createHash("sha256").update(value).digest("hex")}`
+
+export const createContainerFixtureRevision = (fixtureId: string): StrategyRevision => {
+  const legacy = legacyFixtureRevision(fixtureId)
+  const current = defaultRuntimeMetadata("typescript")
+  const runtime = {
+    ...current,
+    adapter: { id: LEAN_CONTAINER_RUNTIME_ID, version: current.adapter.version },
+    limits: { ...current.limits, filesystem: "read-only-root" as const, network: "disabled" as const },
+  }
+  const preliminary = buildStrategyRevision({
+    source: legacy.source,
+    strategyId: legacy.strategyId,
+    metadata: { ...legacy.metadata, providerValidation: undefined },
+    runtime,
+  })
+  const artifact = preliminary.metadata.sourceArtifact
+  if (artifact === undefined) throw new TypeError("LEAN_CONTAINER_FIXTURE_ARTIFACT_MISSING")
+  return StrategyRevisionSchema.parse(buildStrategyRevision({
+    source: legacy.source,
+    strategyId: legacy.strategyId,
+    runtime,
+    metadata: {
+      ...legacy.metadata,
+      sourceArtifact: artifact,
+      providerValidation: {
+        providerId: "fixture-provider:typescript:container-subprocess",
+        contractVersion: "fixture-provider-validation-v1.38",
+        sourceHash: preliminary.sourceHash,
+        sourceBytes: preliminary.sourceBytes,
+        artifactHash: artifact.hash,
+        artifactBytes: artifact.bytes,
+        proof: `sha256:${rawSha256(JSON.stringify({ fixtureId, sourceHash: preliminary.sourceHash, artifactHash: artifact.hash })).slice("sha256:".length)}`,
+      },
+    },
+  }))
+}
+
+const fixtureRevision = (fixtureId: string) => createContainerFixtureRevision(fixtureId)
+
+const parseDockerVersion = (version: string): readonly [number, number, number] => {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/u.exec(version)
+  if (match === null) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_DOCKER_VERSION")
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+const dockerVersionCompatible = (version: string): boolean => {
+  const [major, minor, patch] = parseDockerVersion(version)
+  return major > 29 || (major === 29 && (minor > 4 || (minor === 4 && patch >= 0)))
+}
+
+const exactContainerControls = (value: LeanContainerControls): boolean =>
+  JSON.stringify(value) === JSON.stringify(LEAN_CONTAINER_CONTROLS)
+
+export const evaluateLeanContainerPreflight = (
+  input: LeanContainerPreflightInput,
+): LeanContainerPreflightEvidence => {
+  if (!dockerVersionCompatible(input.dockerServerVersion)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_DOCKER_INCOMPATIBLE")
+  if (input.imageReference !== LEAN_CONTAINER_IMAGE || !input.localRepoDigests.includes(LEAN_CONTAINER_IMAGE)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_DRIFT")
+  if (input.adapterId !== LEAN_CONTAINER_ADAPTER_ID || !exactContainerControls(input.controls)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ISOLATION_DRIFT")
+  const expectedPairs = new Set([
+    "starter:aggro-chaser\0selectActivations", "starter:aggro-chaser\0soldierBrain",
+    "advanced:vanguard-pressure\0selectActivations", "advanced:vanguard-pressure\0soldierBrain",
+  ])
+  if (input.samples.length < expectedPairs.size || input.samples.some(({ ok, elapsedMilliseconds }) => !ok || !Number.isFinite(elapsedMilliseconds) || elapsedMilliseconds < 0)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
+  const grouped = new Map<string, number[]>()
+  for (const sample of input.samples) {
+    const key = `${sample.fixtureId}\0${sample.method}`
+    if (!expectedPairs.has(key)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_SAMPLE_DRIFT")
+    const values = grouped.get(key) ?? []
+    values.push(sample.elapsedMilliseconds)
+    grouped.set(key, values)
+  }
+  if ([...expectedPairs].some((key) => (grouped.get(key)?.length ?? 0) < 1)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_OBSERVATION_MISSING")
+  const maxima = (method: LeanContainerPreflightSample["method"]): number => Math.max(...input.samples.filter((sample) => sample.method === method).map(({ elapsedMilliseconds }) => elapsedMilliseconds))
+  const projectedCellMilliseconds = Math.ceil(
+    LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS + 2 * (
+      LEAN_CONTAINER_METHOD_CEILINGS.selectActivations * maxima("selectActivations") +
+      LEAN_CONTAINER_METHOD_CEILINGS.soldierBrain * maxima("soldierBrain")
+    ),
+  )
+  const projectedRunMilliseconds = projectedCellMilliseconds * 24
+  if (projectedCellMilliseconds > LEAN_CELL_DEADLINE_MS || projectedRunMilliseconds > LEAN_DEADLINE_MS) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_INFEASIBLE")
+  return Object.freeze({
+    status: "pass",
+    dockerServerVersion: input.dockerServerVersion,
+    imageReference: LEAN_CONTAINER_IMAGE,
+    adapterId: LEAN_CONTAINER_ADAPTER_ID,
+    controlsRoot: hashLeanValue(LEAN_CONTAINER_CONTROLS),
+    sampleCount: input.samples.length,
+    sampleRoot: hashLeanValue(input.samples),
+    methodCeilings: LEAN_CONTAINER_METHOD_CEILINGS,
+    startupCleanupMarginMilliseconds: LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS,
+    projectedCellMilliseconds,
+    projectedRunMilliseconds,
+    cellDeadlineMilliseconds: LEAN_CELL_DEADLINE_MS,
+    outerDeadlineMilliseconds: LEAN_DEADLINE_MS,
+  })
+}
+
+const dockerText = (args: readonly string[]): string => {
+  const result = spawnSync("docker", args, {
+    encoding: "utf8",
+    env: { PATH: process.env.PATH ?? "" },
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+  })
+  if (result.error !== undefined || result.status !== 0 || result.signal !== null) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_DOCKER_UNAVAILABLE")
+  return result.stdout.trim()
+}
+
+const preflightProbeInput = (method: LeanContainerPreflightSample["method"]): unknown => {
+  const bottom = {
+    id: "bottom-soldier-1", ownerPlayerId: "player:bottom", status: "ACTIVE",
+    position: { x: 5, y: 10 }, facing: "UP", lastSuccessfulMoveDirection: null,
+  } as const
+  const top = {
+    id: "top-soldier-1", ownerPlayerId: "player:top", status: "ACTIVE",
+    position: { x: 5, y: 1 }, facing: "DOWN", lastSuccessfulMoveDirection: null,
+  } as const
+  if (method === "selectActivations") {
+    return StrategyInputSchema.parse({
+      phaseNumber: 1, roundNumber: 1, activationCount: 1,
+      initialInitiativePlayerId: "player:bottom", hasInitialInitiative: true,
+      roundInitiativePlayerId: "player:bottom", hasRoundInitiative: true,
+      board: { bounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, soldiers: [bottom, top], terrainStones: [] },
+      mySoldiers: [bottom], enemySoldiers: [top], strategyMemory: {},
+    })
+  }
+  const cells = []
+  for (let dy = -2; dy <= 2; dy += 1) for (let dx = -2; dx <= 2; dx += 1) cells.push({ dx, dy, contents: dx === 0 && dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY" })
+  return SoldierBrainInputSchema.parse({
+    self: bottom, awarenessGrid: { cells }, cycleIndex: 0, maxCycles: 12,
+    hasAdvancedThisActivation: false, soldierMemory: {},
+    objective: { preferred: "UP", safeDirs: ["UP", "LEFT", "RIGHT"], contractionSoon: false },
+  })
+}
+
+export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidence => {
+  const dockerServerVersion = dockerText(["version", "--format", "{{.Server.Version}}"])
+  const repoDigestsRaw = dockerText(["image", "inspect", "--format", "{{json .RepoDigests}}", LEAN_CONTAINER_IMAGE])
+  let localRepoDigests: readonly string[]
+  try {
+    const parsed = JSON.parse(repoDigestsRaw) as unknown
+    if (!Array.isArray(parsed) || !parsed.every((value) => typeof value === "string")) throw new TypeError()
+    localRepoDigests = parsed
+  } catch {
+    throw new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_INSPECT_INVALID")
+  }
+  const adapter = createContainerSubprocessStrategyExecutionAdapter({ image: LEAN_CONTAINER_IMAGE })
+  if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
+  const samples: LeanContainerPreflightSample[] = []
+  for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"] as const) {
+    const revision = createContainerFixtureRevision(fixtureId)
+    const artifact = revision.metadata.sourceArtifact
+    if (artifact === undefined) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ARTIFACT_MISSING")
+    const source = Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
+    for (const method of ["selectActivations", "soldierBrain"] as const) {
+      const request = { source, methodName: method, input: preflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 } as const
+      const warm = adapter.execute(request)
+      if (!warm.ok) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
+      for (let ordinal = 0; ordinal < 3; ordinal += 1) {
+        const started = process.hrtime.bigint()
+        const result = adapter.execute(request)
+        const elapsedMilliseconds = Number(process.hrtime.bigint() - started) / 1_000_000
+        samples.push({ fixtureId, method, elapsedMilliseconds, ok: result.ok })
+      }
+    }
+  }
+  return evaluateLeanContainerPreflight({
+    dockerServerVersion,
+    imageReference: LEAN_CONTAINER_IMAGE,
+    localRepoDigests,
+    adapterId: adapter.metadata.id,
+    controls: LEAN_CONTAINER_CONTROLS,
+    samples,
+  })
+}
 export interface CanonicalLeanPreparedRequest {
   readonly request: RuntimeExecutionServiceRequestV118
   readonly nestedRequest: RuntimeExecutionServiceRequest
@@ -353,7 +608,8 @@ const executePreparedLeanRequest = (prepared: CanonicalLeanPreparedRequest) => {
   const keys = generateKeyPairSync("ed25519")
   const actual = createPreparedRuntimeServiceDependenciesV118({
       runtimeConfig: createRuntimeServiceConfig({
-        strategyExecutionAdapter: "worker-thread",
+        strategyExecutionAdapter: LEAN_CONTAINER_ADAPTER_ID,
+        containerImage: LEAN_CONTAINER_IMAGE,
         semanticReceiptSecret: "fixture-only:v1.38-lean-runner",
         resolveDeploymentLaneIdentity: createFixtureDeploymentLaneIdentity,
       }),
@@ -648,13 +904,25 @@ const main = async (): Promise<void> => {
   if (selector === LEAN_DIRECT_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    const { authorization, review } = checker.loadAndCheckLeanDirectReviewedReady(repoRoot)
-    const capability = randomBytes(32).toString("hex")
-    const invocation = checker.createLeanDirectInvocation(authorization, review, hashLeanValue(capability))
-    const markerPath = path.resolve(repoRoot, checker.LEAN_DIRECT_ARTIFACT_PATHS.invocation)
-    createExclusiveLeanInvocationMarker(markerPath, invocation)
-    const terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
-    checker.createExclusiveLeanDirectTerminal(repoRoot, checker.createLeanDirectTerminalArtifact(invocation, terminal))
+    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReady> | undefined
+    let capability = ""
+    let invocation: ReturnType<typeof checker.createLeanDirectInvocation> | undefined
+    let terminal: LeanTerminal | undefined
+    await runLeanDirectGateInjected({
+      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReady(repoRoot) },
+      preflight: async () => { runActualLeanContainerPreflight() },
+      createMarker: () => {
+        if (reviewed === undefined) throw new TypeError("LEAN_DIRECT_REVIEW_REQUIRED")
+        capability = randomBytes(32).toString("hex")
+        invocation = checker.createLeanDirectInvocation(reviewed.authorization, reviewed.review, hashLeanValue(capability))
+        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_ARTIFACT_PATHS.invocation), invocation)
+      },
+      invoke: async () => {
+        if (invocation === undefined) throw new TypeError("LEAN_DIRECT_MARKER_REQUIRED")
+        terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
+        checker.createExclusiveLeanDirectTerminal(repoRoot, checker.createLeanDirectTerminalArtifact(invocation, terminal))
+      },
+    })
     process.stdout.write(`${JSON.stringify(terminal)}\n`)
     return
   }

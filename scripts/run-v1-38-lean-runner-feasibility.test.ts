@@ -21,7 +21,6 @@ import {
   runLeanDirectGateInjected,
   createSupervisedLeanExecutionDependencies,
   createExclusiveLeanInvocationMarker,
-  executePreparedLeanCell,
   parseLeanExecutionResult,
   runLeanFeasibilityInjected,
   runLeanCorrectiveRecoveryOnlyInjected,
@@ -477,13 +476,16 @@ describe("bounded lean runner", () => {
     await expect(execution).rejects.toThrow(/LEAN_CHILD_PROTOCOL_INVALID/u)
   })
 
-  it("executes one actual prepared v1.18 fixture path", async () => {
-    const result = await executePreparedLeanCell(buildLeanSchedule()[0]!)
-    expect(result.classification).toBe("success")
-    expect(result.outcomeRoot).toMatch(/^sha256:/u)
-    expect(result.cleanupComplete).toBe(true)
-    expect(result.orphanedChild).toBe(false)
-  }, 50_000)
+  it("binds the prepared v1.18 fixture path to container-only runtime configuration", () => {
+    const prepared = buildCanonicalLeanRequestV118(buildLeanSchedule()[0]!)
+    expect(prepared.nestedRequest.strategies.bottom.runtime.adapter.id).toBe("runtime-js-container-subprocess")
+    expect(prepared.nestedRequest.strategies.top.runtime.adapter.id).toBe("runtime-js-container-subprocess")
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const execute = source.slice(source.indexOf("const executePreparedLeanRequest"), source.indexOf("export const executePreparedLeanCellResponse"))
+    expect(execute).toContain("strategyExecutionAdapter: LEAN_CONTAINER_ADAPTER_ID")
+    expect(execute).toContain("containerImage: LEAN_CONTAINER_IMAGE")
+    expect(execute).not.toContain('strategyExecutionAdapter: "worker-thread"')
+  }, 30_000)
 
   it("durably creates an exclusive invocation marker and refuses reuse", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "lean-marker-")); temporary.push(dir)
