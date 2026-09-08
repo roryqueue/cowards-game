@@ -41,6 +41,10 @@ One digest-pinned hostile container and one long-lived Docker stream now serve e
 - **Preserved successor locks:** 36
 - **Docker preflights / Match invocations:** 0 / 0
 
+## Successor Closure Correction
+
+Plan187 reauthenticated runnable commit `ae4fd480197393d1c7d27dbc43878d3b31e36b25` as an exact 29-path executable closure with root `sha256:007eb34c12041eb535f0ff4b5999e8b894fa105fff421fb64dd5045822ac93ae`. The earlier `sha256:1e187745221a31d67d1d284b3e4abb0cc83d231b85b89910b99c3e31244c30fa` line above is a stale 27-path claim and is superseded by this additive correction. It remains in place as immutable historical text and grants no authority.
+
 ## Accomplishments
 
 - Replaced the per-method Docker CLI lifecycle with exactly one Match-scoped `docker exec -i` stream and an in-container broker.
