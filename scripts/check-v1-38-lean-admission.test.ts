@@ -79,6 +79,20 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the fresh collision-free v6 persistent-stream trust and effect family", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_V6_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v5.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v6.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v6.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v6.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v6.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v6.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v6.json",
+    })
+    for (const key of ["checkLeanDirectContainerStreamSourceOnlyV6", "validateLeanContainerPreflightArtifactV5", "renderLeanDirectAuthorizationV6", "checkLeanDirectValidityReviewV6", "checkLeanDirectReviewDispositionV6", "loadAndCheckLeanDirectReviewedReadyV6", "createLeanDirectInvocationV6", "createLeanDirectTerminalArtifactV6"] as const) expect(module[key]).toBeTypeOf("function")
+  })
+
   it("reserves the fresh collision-free v5 trust and effect family", () => {
     const module = leanAdmissionModule as unknown as {
       LEAN_DIRECT_V5_ARTIFACT_PATHS: Record<string, string>
