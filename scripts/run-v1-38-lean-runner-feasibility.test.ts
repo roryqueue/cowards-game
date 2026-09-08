@@ -23,6 +23,7 @@ import {
   createSupervisedLeanExecutionDependencies,
   createExclusiveLeanInvocationMarker,
   parseLeanExecutionResult,
+  executePreparedLeanCellInjected,
   runLeanFeasibilityInjected,
   runLeanCorrectiveRecoveryOnlyInjected,
   runLeanCorrectiveWrapperInjected,
@@ -523,6 +524,35 @@ describe("bounded lean runner", () => {
     expect(execute).toContain("containerImage: LEAN_CONTAINER_IMAGE")
     expect(execute).not.toContain('strategyExecutionAdapter: "worker-thread"')
   }, 30_000)
+
+  it("opens one Match-scoped session and closes it before projecting evidence", async () => {
+    const cell = buildLeanSchedule()[0]!
+    const calls: string[] = []
+    const projection = await executePreparedLeanCellInjected(cell, {
+      createSession: ({ matchId }) => {
+        calls.push(`open:${matchId}`)
+        return {
+          adapter: { metadata: { id: "container-subprocess" } } as never,
+          close: () => { calls.push("close"); return { cleanupComplete: true, orphanedChild: false } },
+        } as never
+      },
+      executePrepared: (_prepared, adapter) => {
+        calls.push(`execute:${adapter.metadata.id}`)
+        return { classification: "success", ...roots }
+      },
+    })
+    expect(calls).toEqual([`open:match:lean:${hashLeanValue(cell.baseCellId).slice(7)}`, "execute:container-subprocess", "close"])
+    expect(projection).toMatchObject({ classification: "success", cleanupComplete: true, orphanedChild: false })
+  })
+
+  it("fails the cell closed when session cleanup is ambiguous", async () => {
+    const cell = buildLeanSchedule()[0]!
+    const projection = await executePreparedLeanCellInjected(cell, {
+      createSession: () => ({ adapter: { metadata: { id: "container-subprocess" } } as never, close: () => ({ cleanupComplete: false, orphanedChild: true }) }) as never,
+      executePrepared: () => ({ classification: "success", ...roots }),
+    })
+    expect(projection).toEqual({ classification: "system_failure", cleanupComplete: false, orphanedChild: true, boardRealism: true, integrityValid: false })
+  })
 
   it("durably creates an exclusive invocation marker and refuses reuse", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "lean-marker-")); temporary.push(dir)

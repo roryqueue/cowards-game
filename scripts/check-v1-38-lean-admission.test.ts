@@ -79,6 +79,21 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves a collision-free v4 trust and effect family", async () => {
+    const module = await import("./check-v1-38-lean-admission.js") as unknown as { LEAN_DIRECT_V4_ARTIFACT_PATHS: Record<string, string> }
+    expect(module.LEAN_DIRECT_V4_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v3.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v4.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v4.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v4.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v4.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v4.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v4.json",
+    })
+    const prior = Object.values({ ...LEAN_DIRECT_ARTIFACT_PATHS, ...LEAN_DIRECT_V2_ARTIFACT_PATHS })
+    expect(new Set([...prior, ...Object.values(module.LEAN_DIRECT_V4_ARTIFACT_PATHS)]).size).toBe(prior.length + Object.values(module.LEAN_DIRECT_V4_ARTIFACT_PATHS).length)
+  })
+
   it("defines an additive collision-free v3 direct trust path", () => {
     const module = leanAdmissionModule as unknown as {
       LEAN_DIRECT_V3_ARTIFACT_PATHS: Record<string, string>
