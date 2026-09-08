@@ -50,6 +50,34 @@ export const LEAN_CLEANUP_DEADLINE_MS = 2_000
 export const LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS = 5_000
 export const LEAN_CONTAINER_METHOD_CEILINGS = Object.freeze({ selectActivations: 20, soldierBrain: 240 })
 
+export interface ExactDockerImageIdentity {
+  readonly repository: string
+  readonly digest: string
+}
+
+export const parseExactDockerImageIdentity = (value: string): ExactDockerImageIdentity | undefined => {
+  const match = /^(.+)@sha256:([0-9a-f]{64})$/u.exec(value)
+  if (match === null) return undefined
+  let repository = match[1]!
+  const lastSlash = repository.lastIndexOf("/")
+  const tagColon = repository.lastIndexOf(":")
+  if (tagColon > lastSlash) repository = repository.slice(0, tagColon)
+  if (repository.length === 0 || /[@\s]/u.test(repository)) return undefined
+  return { repository, digest: match[2]! }
+}
+
+export const exactDockerImageIdentityEquals = (left: string, right: string): boolean => {
+  const a = parseExactDockerImageIdentity(left)
+  const b = parseExactDockerImageIdentity(right)
+  return a !== undefined && b !== undefined && a.repository === b.repository && a.digest === b.digest
+}
+
+export const deriveLeanContainerName = (matchId: string): string =>
+  `cg-v138-${createHash("sha256").update(`${LEAN_CONTAINER_IMAGE}\0${matchId}`, "utf8").digest("hex").slice(0, 40)}`
+
+export const deriveLeanContainerOwnershipLabel = (matchId: string): string =>
+  `v1.38-lean-owner:${createHash("sha256").update(`owner\0${LEAN_CONTAINER_IMAGE}\0${matchId}`, "utf8").digest("hex")}`
+
 export interface LeanContainerPreflightSample {
   readonly fixtureId: "starter:aggro-chaser" | "advanced:vanguard-pressure"
   readonly method: "selectActivations" | "soldierBrain"
@@ -360,7 +388,7 @@ export const evaluateLeanContainerPreflight = (
   input: LeanContainerPreflightInput,
 ): LeanContainerPreflightEvidence => {
   if (!dockerVersionCompatible(input.dockerServerVersion)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_DOCKER_INCOMPATIBLE")
-  if (input.imageReference !== LEAN_CONTAINER_IMAGE || !input.localRepoDigests.includes(LEAN_CONTAINER_IMAGE)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_DRIFT")
+  if (input.imageReference !== LEAN_CONTAINER_IMAGE || !input.localRepoDigests.some((candidate) => exactDockerImageIdentityEquals(LEAN_CONTAINER_IMAGE, candidate))) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_DRIFT")
   if (input.adapterId !== LEAN_CONTAINER_ADAPTER_ID || !exactContainerControls(input.controls)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ISOLATION_DRIFT")
   const expectedPairs = new Set([
     "starter:aggro-chaser\0selectActivations", "starter:aggro-chaser\0soldierBrain",
@@ -467,7 +495,8 @@ export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidenc
   const lifecycleSamples: { elapsedMilliseconds: number; cleanupComplete: boolean }[] = []
   for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"] as const) {
     const lifecycleStarted = process.hrtime.bigint()
-    const session = createLeanContainerMatchSession({ matchId: `match:lean:preflight:${fixtureId}`, image: LEAN_CONTAINER_IMAGE })
+    const matchId = `match:lean:preflight:${fixtureId}`
+    const session = createLeanContainerMatchSession({ matchId, containerName: deriveLeanContainerName(matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(matchId), image: LEAN_CONTAINER_IMAGE })
     const lifecycleCreateMilliseconds = Number(process.hrtime.bigint() - lifecycleStarted) / 1_000_000
     const adapter = session.adapter
     if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
@@ -686,7 +715,7 @@ const executePreparedLeanRequest = (
 
 export const executePreparedLeanCellResponse = (cell: LeanCell) => {
   const prepared = buildCanonicalLeanRequestV118(cell)
-  const session = createLeanContainerMatchSession({ matchId: prepared.request.matchId, image: LEAN_CONTAINER_IMAGE })
+  const session = createLeanContainerMatchSession({ matchId: prepared.request.matchId, containerName: deriveLeanContainerName(prepared.request.matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(prepared.request.matchId), image: LEAN_CONTAINER_IMAGE })
   try { return executePreparedLeanRequest(prepared, session.adapter) }
   finally {
     const cleanup = session.close()
@@ -711,7 +740,7 @@ export const finalizePreparedLeanProjection = (
 
 type LeanPreparedProjection = ReturnType<typeof projectLeanV118Response>
 export interface ExecutePreparedLeanCellDependencies {
-  readonly createSession: (input: { readonly matchId: string; readonly image: typeof LEAN_CONTAINER_IMAGE }) => Pick<LeanContainerMatchSession, "adapter" | "close">
+  readonly createSession: (input: { readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: typeof LEAN_CONTAINER_IMAGE }) => Pick<LeanContainerMatchSession, "adapter" | "close">
   readonly executePrepared: (prepared: CanonicalLeanPreparedRequest, adapter: StrategyExecutionAdapterV117) => LeanPreparedProjection
 }
 
@@ -729,7 +758,7 @@ export const executePreparedLeanCellInjected = async (
   let projection: LeanPreparedProjection | undefined
   let executionFailed = false
   try {
-    session = dependencies.createSession({ matchId: prepared.request.matchId, image: LEAN_CONTAINER_IMAGE })
+    session = dependencies.createSession({ matchId: prepared.request.matchId, containerName: deriveLeanContainerName(prepared.request.matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(prepared.request.matchId), image: LEAN_CONTAINER_IMAGE })
     projection = dependencies.executePrepared(prepared, session.adapter)
   } catch {
     executionFailed = true
@@ -992,23 +1021,23 @@ const main = async (): Promise<void> => {
   if (selector === LEAN_DIRECT_SELECTOR) {
     const checker = await import("./check-v1-38-lean-admission.js")
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV4> | undefined
+    let reviewed: ReturnType<typeof checker.loadAndCheckLeanDirectReviewedReadyV5> | undefined
     let capability = ""
-    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV4> | undefined
+    let invocation: ReturnType<typeof checker.createLeanDirectInvocationV5> | undefined
     let terminal: LeanTerminal | undefined
     await runLeanDirectGateInjected({
-      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV4(repoRoot) },
+      checkReviewedReady: async () => { reviewed = checker.loadAndCheckLeanDirectReviewedReadyV5(repoRoot) },
       preflight: async () => { runActualLeanContainerPreflight() },
       createMarker: () => {
         if (reviewed === undefined) throw new TypeError("LEAN_DIRECT_REVIEW_REQUIRED")
         capability = randomBytes(32).toString("hex")
-        invocation = checker.createLeanDirectInvocationV4(reviewed.authorization, reviewed.review, hashLeanValue(capability))
-        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V4_ARTIFACT_PATHS.invocation), invocation)
+        invocation = checker.createLeanDirectInvocationV5(reviewed.authorization, reviewed.review, hashLeanValue(capability))
+        createExclusiveLeanInvocationMarker(path.resolve(repoRoot, checker.LEAN_DIRECT_V5_ARTIFACT_PATHS.invocation), invocation)
       },
       invoke: async () => {
         if (invocation === undefined) throw new TypeError("LEAN_DIRECT_MARKER_REQUIRED")
         terminal = await runLeanFeasibilityInjected(createSupervisedLeanExecutionDependencies(capability))
-        checker.createExclusiveLeanDirectTerminalV4(repoRoot, checker.createLeanDirectTerminalArtifactV4(invocation, terminal))
+        checker.createExclusiveLeanDirectTerminalV5(repoRoot, checker.createLeanDirectTerminalArtifactV5(invocation, terminal))
       },
     })
     process.stdout.write(`${JSON.stringify(terminal)}\n`)

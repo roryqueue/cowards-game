@@ -53,6 +53,8 @@ export type LeanContainerMatchTransport = (
 
 export interface LeanContainerMatchSessionOptions {
   readonly matchId: string
+  readonly containerName: string
+  readonly ownershipLabel: string
   readonly image: string
   readonly dockerPath?: string | undefined
   readonly transport?: LeanContainerMatchTransport | undefined
@@ -105,8 +107,11 @@ const assertSafeIdentity = (label: string, value: string): void => {
   }
 }
 
-const createArgs = (image: string): readonly string[] => [
+const OWNER_LABEL = "v1.38-lean-owner"
+const createArgs = (image: string, containerName: string, ownershipLabel: string): readonly string[] => [
   "create",
+  "--name", containerName,
+  "--label", `${OWNER_LABEL}=${ownershipLabel}`,
   "--interactive",
   "--network", "none",
   "--read-only",
@@ -147,6 +152,11 @@ export const createLeanContainerMatchSession = (
   options: LeanContainerMatchSessionOptions,
 ): LeanContainerMatchSession => {
   assertSafeIdentity("MATCH_ID", options.matchId)
+  assertSafeIdentity("CONTAINER_NAME", options.containerName)
+  assertSafeIdentity("OWNERSHIP_LABEL", options.ownershipLabel)
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/u.test(options.containerName)) {
+    throw new TypeError("LEAN_CONTAINER_SESSION_CONTAINER_NAME_INVALID")
+  }
   assertSafeIdentity("IMAGE", options.image)
   const dockerPath = options.dockerPath ?? "docker"
   const transport = options.transport ?? defaultTransport
@@ -154,25 +164,51 @@ export const createLeanContainerMatchSession = (
   let state: LeanContainerMatchSession["state"] = "active"
   let cleanupResult: LeanContainerSessionCloseResult | undefined
 
-  const created = transport(dockerPath, createArgs(options.image), {
-    timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS,
-    maxBufferBytes: 4_096,
-  })
-  assertCleanControlResult(created, "LEAN_CONTAINER_SESSION_CREATE_FAILED")
-  const containerId = created.stdout.toString("utf8").trim()
-  assertSafeIdentity("CONTAINER_ID", containerId)
-
-  const remove = (): LeanContainerSessionCloseResult => {
-    if (cleanupResult !== undefined) return cleanupResult
-    const removed = transport(dockerPath, ["rm", "--force", containerId], {
+  const inspectOwner = (): "absent" | "owned" | "foreign" | "unknown" => {
+    const inspected = transport(dockerPath, ["inspect", "--format", `{{index .Config.Labels \"${OWNER_LABEL}\"}}`, options.containerName], {
       timeoutMilliseconds: cleanupTimeout,
       maxBufferBytes: 4_096,
     })
-    cleanupResult = removed.error === undefined && removed.signal === null && removed.status === 0 && removed.stderr.byteLength === 0
+    if (inspected.error === undefined && inspected.signal === null && inspected.status === 1) return "absent"
+    if (inspected.error !== undefined || inspected.signal !== null || inspected.status !== 0 || inspected.stderr.byteLength !== 0) return "unknown"
+    return inspected.stdout.toString("utf8").trim() === options.ownershipLabel ? "owned" : "foreign"
+  }
+
+  const initialOwner = inspectOwner()
+  if (initialOwner === "owned" || initialOwner === "foreign") throw new TypeError("LEAN_CONTAINER_SESSION_NAME_COLLISION")
+  if (initialOwner !== "absent") throw new TypeError("LEAN_CONTAINER_SESSION_NAME_CHECK_FAILED")
+
+  const remove = (): LeanContainerSessionCloseResult => {
+    if (cleanupResult !== undefined) return cleanupResult
+    const removed = transport(dockerPath, ["rm", "--force", options.containerName], {
+      timeoutMilliseconds: cleanupTimeout,
+      maxBufferBytes: 4_096,
+    })
+    const absent = inspectOwner() === "absent"
+    cleanupResult = removed.error === undefined && removed.signal === null && removed.status === 0 && removed.stderr.byteLength === 0 && absent
       ? { cleanupComplete: true, orphanedChild: false }
       : { cleanupComplete: false, orphanedChild: true }
     return cleanupResult
   }
+
+  const created = transport(dockerPath, createArgs(options.image, options.containerName, options.ownershipLabel), {
+    timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS,
+    maxBufferBytes: 4_096,
+  })
+  const ownershipAfterCreate = inspectOwner()
+  const createOutput = created.stdout.toString("utf8").trim()
+  const createClean = created.error === undefined && created.signal === null && created.status === 0 &&
+    created.stderr.byteLength === 0 && /^[a-zA-Z0-9._:-]+$/u.test(createOutput)
+  if (!createClean || ownershipAfterCreate !== "owned") {
+    if (ownershipAfterCreate === "owned") {
+      const cleanup = remove()
+      if (!cleanup.cleanupComplete) throw new TypeError("LEAN_CONTAINER_SESSION_CREATE_CLEANUP_INCOMPLETE")
+    } else if (ownershipAfterCreate === "foreign" || ownershipAfterCreate === "unknown") {
+      throw new TypeError("LEAN_CONTAINER_SESSION_CREATE_CLEANUP_INCOMPLETE")
+    }
+    throw new TypeError("LEAN_CONTAINER_SESSION_CREATE_FAILED")
+  }
+  const containerId = options.containerName
 
   const poison = (): void => {
     state = "poisoned"
