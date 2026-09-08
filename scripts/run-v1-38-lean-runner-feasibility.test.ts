@@ -138,6 +138,7 @@ describe("bounded lean runner", () => {
         noNewPrivileges: true, environment: "minimal", shell: false,
         stdoutLimit: true, stderrLimit: true, methodTimeout: true,
       },
+      lifecycleSamples: [{ elapsedMilliseconds: 10, cleanupComplete: true }],
       samples: [
         { fixtureId: "starter:aggro-chaser", method: "selectActivations", elapsedMilliseconds: 1, ok: true },
         { fixtureId: "starter:aggro-chaser", method: "soldierBrain", elapsedMilliseconds: 1, ok: true },
@@ -151,7 +152,8 @@ describe("bounded lean runner", () => {
     expect(Object.keys(evidence).sort()).toEqual([
       "adapterId", "cellDeadlineMilliseconds", "controlsRoot", "dockerServerVersion",
       "imageReference", "methodCeilings", "outerDeadlineMilliseconds", "projectedCellMilliseconds",
-      "projectedRunMilliseconds", "sampleCount", "sampleRoot", "startupCleanupMarginMilliseconds",
+      "projectedRunMilliseconds", "sampleCount", "sampleRoot", "lifecycleSampleCount",
+      "lifecycleSampleRoot", "lifecycleMaximumMilliseconds", "startupCleanupMarginMilliseconds",
       "status",
     ].sort())
   })
@@ -180,6 +182,7 @@ describe("bounded lean runner", () => {
         noNewPrivileges: true, environment: "minimal", shell: false,
         stdoutLimit: true, stderrLimit: true, methodTimeout: true,
       },
+      lifecycleSamples: [{ elapsedMilliseconds: 10, cleanupComplete: true }],
       samples: [
         { fixtureId: "starter:aggro-chaser", method: "selectActivations", elapsedMilliseconds: 1, ok: true },
         { fixtureId: "starter:aggro-chaser", method: "soldierBrain", elapsedMilliseconds: 1, ok: true },
