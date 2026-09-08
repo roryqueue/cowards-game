@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "v1.38-lean-runner-direct-validity-review-blocked-outcome-v2",
+  "reviewDisposition": "blocked_preflight_non_pass",
+  "sourceCommit": "a734dc36794e5de2d64a99793b3e075e0df33148",
+  "sourceTree": "c09ccacfda174609ac36ea348055c98be8090fa4",
+  "executableClosureRoot": "sha256:53cc9f23c709b99a642d58337c42a2047cf36d8d8bc4efc54fb3b3264c6fb58f",
+  "preflight": {
+    "path": ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v1.json",
+    "contentSha256": "sha256:f7a22597fd6661fdc4d060ae5c9447c2b33b3c63c685c3a93eec89f7cfd55953",
+    "status": "non_pass",
+    "reasonCode": "soldier_brain_probe_input_schema_invalid",
+    "consuming": false,
+    "matchInvocations": 0
+  },
+  "authorizationV2Present": false,
+  "categories": [
+    {
+      "category": "source_or_dirty_byte_drift",
+      "status": "pass",
+      "evidence": "The reviewed runnable source commit a734dc36794e5de2d64a99793b3e075e0df33148 resolves to tree c09ccacfda174609ac36ea348055c98be8090fa4 and executable closure root sha256:53cc9f23c709b99a642d58337c42a2047cf36d8d8bc4efc54fb3b3264c6fb58f. It is the latest commit touching the four Plan177 runnable paths; the current descendant changes only committed planning artifacts, tracked bytes are clean, and exactly 36 authenticated successor locks are the only worktree residue."
+    },
+    {
+      "category": "multiple_launch",
+      "status": "pass",
+      "evidence": "The actual direct selector performs reviewed-ready validation and the non-consuming preflight before exclusive marker creation. No v2 authorization exists, so reviewed-ready cannot succeed; v2 marker, terminal, adjudication, and eligibility artifacts are absent. No Match, live, recovery, or relaunch selector was invoked by this review."
+    },
+    {
+      "category": "tuple_or_schedule_drift",
+      "status": "finding",
+      "evidence": "BLOCKER CR-01: the committed non-pass preflight correctly records that preflightProbeInput('soldierBrain') constructs all 25 awareness cells with only dx, dy, and contents, while AwarenessCellSchema requires absoluteX and absoluteY. SoldierBrainInputSchema.parse therefore fails before either fixture method can be measured, leaving acceptedSampleCount 0 and no throughput projection. The Plan178 direct blocked-outcome path also has no matching checker: the committed checker recognizes only the pass-path v1.38-lean-runner-container-preflight-v1 at a different path and the authorization-backed review schema with admitsPlan179, while the plan requires the direct non-pass outcome and admitsPlan175. This review must remain distinct and fail closed."
+    },
+    {
+      "category": "supervised_runtime_escape",
+      "status": "pass",
+      "evidence": "The actual Match construction selects service adapter container-subprocess and fixture adapter runtime-js-container-subprocess. The adapter runs the pinned Node image with shell disabled, network none, read-only root, constrained tmpfs, memory/CPU/PID limits, all capabilities dropped, no-new-privileges, minimal environment, strict JSON IPC, and fallback false. The current Docker server is 29.4.0 and the exact pinned RepoDigest remains locally present. No container method or Match was executed during this review."
+    },
+    {
+      "category": "partial_interrupted_or_unclean_evidence",
+      "status": "pass",
+      "evidence": "The committed preflight is an explicit non-pass with zero accepted samples, partialSamplesReusable false, repairAttempted false, rerunAttempted false, authorizationWritten false, markerWritten false, terminalWritten false, and matchInvocations 0. No partial evidence can enter the pass-only authorization path, and all v2 live effects remain absent."
+    },
+    {
+      "category": "private_data_disclosure",
+      "status": "pass",
+      "evidence": "The committed preflight and this review contain only source identities, aggregate booleans/counts, fixed limits, public fixture-method identity, a safe reason code/summary, and cryptographic roots. They contain no Strategy source, StrategyMemory, SoldierMemory, objective payload, stdout/stderr, environment dump, host path, credential, key, or raw private runtime diagnostic."
+    },
+    {
+      "category": "non_pass_authority",
+      "status": "pass",
+      "evidence": "Preflight status non_pass produced no v2 authorization and therefore cannot admit the direct live selector. This outcome sets admitsPlan175 false and every archive, candidate, counted-play, formation, foundation, gameplay, holdout, Phase263, product, production, public, and tag authority flag false. It does not claim an authorization root."
+    }
+  ],
+  "blockingFindingCount": 1,
+  "certificationOnlyHistory": [
+    {
+      "id": "CR-V6-01",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-02",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-03",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-04",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "WR-V6-01",
+      "severity": "warning",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    }
+  ],
+  "plan174History": {
+    "status": "denied_preserved",
+    "deniedV1AuthorizationRoot": "sha256:3c546e446e8f5fb9f062676d88ebf18b58ccf2070c6d9faa636fe8312634c04c",
+    "deniedV1ReviewRoot": "sha256:8c0b81a777ec5b5513a4afbf582906f7d19a12e8102b1e1688d12e39f453d073",
+    "blockingFindingCount": 2
+  },
+  "expectedPassPathMismatch": {
+    "checkerAcceptsBlockedOutcome": false,
+    "checkerAuthorizationRequired": true,
+    "checkerReviewField": "admitsPlan179",
+    "planReviewField": "admitsPlan175",
+    "disposition": "documented_fail_closed_no_checker_invocation"
+  },
+  "admitsPlan175": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
