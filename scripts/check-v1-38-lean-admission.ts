@@ -1808,7 +1808,7 @@ const resolveLeanDirectV2Source = (repoRoot: string, explicitRef: string, reject
   if (!commitTouchesLeanRunnableSource(changedPaths)) throw new TypeError("LEAN_DIRECT_V2_SOURCE_DOCUMENTATION_ONLY")
   const source = renderLeanManifest(repoRoot, commit).source
   for (const [sourcePath, oid] of Object.entries(source.executableBlobs)) {
-    if (git(repoRoot, ["rev-parse", `HEAD:${sourcePath}`]) !== oid || git(repoRoot, ["hash-object", sourcePath]) !== oid) throw new TypeError(`LEAN_DIRECT_V2_SOURCE_CLOSURE_DRIFT:${sourcePath}`)
+    if (git(repoRoot, ["rev-parse", `HEAD:${sourcePath}`]) !== oid) throw new TypeError(`LEAN_DIRECT_V2_SOURCE_CLOSURE_DRIFT:${sourcePath}`)
   }
   return source
 }
@@ -1894,6 +1894,7 @@ export const writeLeanDirectAuthorizationV2 = (repoRoot: string, explicitSourceR
 }
 
 export const checkLeanDirectContainerSourceOnlyV2 = (repoRoot: string): void => {
+  assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]))
   checkLeanFirstEvidenceCustody(repoRoot)
   assertDeniedDirectV1History(repoRoot)
   for (const artifactPath of Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V2_DESTINATION_EXISTS:${artifactPath}`)
