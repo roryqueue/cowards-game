@@ -79,6 +79,47 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the fresh collision-free v8 exact-absence trust and effect family", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_V8_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v7.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v8.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v8.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v8.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v8.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v8.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v8.json",
+    })
+    const priorPaths = [
+      LEAN_DIRECT_ARTIFACT_PATHS,
+      LEAN_DIRECT_V2_ARTIFACT_PATHS,
+      module.LEAN_DIRECT_V3_ARTIFACT_PATHS,
+      module.LEAN_DIRECT_V4_ARTIFACT_PATHS,
+      module.LEAN_DIRECT_V5_ARTIFACT_PATHS,
+      module.LEAN_DIRECT_V6_ARTIFACT_PATHS,
+      module.LEAN_DIRECT_V7_ARTIFACT_PATHS,
+    ].flatMap((paths) => Object.values(paths as Record<string, string>))
+    const freshPaths = Object.values(module.LEAN_DIRECT_V8_ARTIFACT_PATHS as Record<string, string>)
+    expect(new Set([...priorPaths, ...freshPaths]).size).toBe(priorPaths.length + freshPaths.length)
+    for (const key of [
+      "checkLeanDirectExactAbsenceSourceOnlyV8", "validateLeanContainerPreflightArtifactV7",
+      "writeLeanContainerPreflightArtifactV7", "renderLeanDirectAuthorizationV8",
+      "checkLeanDirectValidityReviewV8", "checkLeanDirectReviewDispositionV8",
+      "loadAndCheckLeanDirectReviewedReadyV8", "createLeanDirectInvocationV8",
+      "createLeanDirectTerminalArtifactV8",
+    ]) expect(module[key]).toBeTypeOf("function")
+  })
+
+  it("keeps the v8 absence predicate byte-exact instead of normalized", () => {
+    const source = readFileSync("scripts/lib/v1-38-lean-container-match-session.ts", "utf8")
+    const predicate = source.match(/const exactAbsent[\s\S]*?\n\)/u)?.[0] ?? ""
+    expect(predicate).toContain("result.stdout.byteLength === 0")
+    expect(predicate).toContain("Error: No such object:")
+    expect(predicate).toContain('result.stdout.equals(Buffer.from("\\n", "utf8"))')
+    expect(predicate).toContain("error: no such object:")
+    expect(predicate).not.toMatch(/\.trim\(|toLowerCase|toUpperCase|\s\+/u)
+  })
+
   it("reserves the fresh collision-free v7 trust and effect family", () => {
     const module = leanAdmissionModule as unknown as Record<string, unknown>
     expect(module.LEAN_DIRECT_V7_ARTIFACT_PATHS).toEqual({
