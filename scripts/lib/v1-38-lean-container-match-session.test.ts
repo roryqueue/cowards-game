@@ -5,6 +5,7 @@ import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 
 const result = (stdout: string | Uint8Array = "", override: Partial<LeanContainerTransportResult> = {}): LeanContainerTransportResult => ({ status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), ...override })
 const absent = (name: string) => result("", { status: 1, stderr: Buffer.from(`Error: No such object: ${name}\n`) })
+const absentDocker29 = (name: string) => result("\n", { status: 1, stderr: Buffer.from(`error: no such object: ${name}\n`) })
 const owned = (label: string) => result(`${label}\n`)
 const fakeTransport = (responses: LeanContainerTransportResult[]) => {
   const calls: Parameters<LeanContainerMatchTransport>[] = []
@@ -80,6 +81,51 @@ describe("lean Match-scoped hostile container session", () => {
   it("requires exact absence after removal and reports ambiguous cleanup", () => {
     const label = "owner:e"; const control = fakeTransport([absent("lean-e"), result("id\n"), owned(label), result(), result(), result("", { status: 1 })]); const persistent = fakeStream([])
     const session = createLeanContainerMatchSession({ matchId: "match:e", containerName: "lean-e", ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
+    expect(session.close()).toEqual({ cleanupComplete: false, orphanedChild: true })
+  })
+
+  it.each([
+    ["historical", absent],
+    ["Docker 29.4", absentDocker29],
+  ])("accepts the exact %s absence tuple before create and after removal", (_label, exactAbsence) => {
+    const name = `lean-exact-${String(_label).replace(/[^a-z0-9]/giu, "-").toLowerCase()}`
+    const ownershipLabel = `owner:${name}`
+    const control = fakeTransport([exactAbsence(name), result(`${name}-id\n`), owned(ownershipLabel), result(), result(), exactAbsence(name)])
+    const persistent = fakeStream([])
+    const session = createLeanContainerMatchSession({ matchId: `match:${name}`, containerName: name, ownershipLabel, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
+    expect(session.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
+    expect(control.calls.map(([, args]) => args[0])).toEqual(["inspect", "create", "inspect", "start", "rm", "inspect"])
+  })
+
+  it.each([
+    ["wrong status", result("\n", { status: 2, stderr: Buffer.from("error: no such object: lean-d\n") })],
+    ["non-null signal", result("\n", { status: 1, signal: "SIGKILL", stderr: Buffer.from("error: no such object: lean-d\n") })],
+    ["transport error", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-d\n"), error: new Error("transport") })],
+    ["zero stdout", result("", { status: 1, stderr: Buffer.from("error: no such object: lean-d\n") })],
+    ["extra stdout", result("\n\n", { status: 1, stderr: Buffer.from("error: no such object: lean-d\n") })],
+    ["wrong stderr case", result("\n", { status: 1, stderr: Buffer.from("Error: no such object: lean-d\n") })],
+    ["wrong target", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-other\n") })],
+    ["wrong prefix", result("\n", { status: 1, stderr: Buffer.from("docker: error: no such object: lean-d\n") })],
+    ["wrong suffix", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-d!\n") })],
+    ["missing stderr newline", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-d") })],
+    ["extra stderr newline", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-d\n\n") })],
+    ["extra stderr bytes", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-d\nextra") })],
+  ])("rejects Docker 29.4 %s near misses before create", (_label, inspect) => {
+    const control = fakeTransport([inspect]); const persistent = fakeStream([])
+    expect(() => createLeanContainerMatchSession({ matchId: "match:d", containerName: "lean-d", ownershipLabel: "owner:d", image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })).toThrow(/NAME_CHECK_FAILED/u)
+    expect(control.calls).toHaveLength(1); expect(persistent.calls).toHaveLength(0)
+  })
+
+  it.each([
+    ["wrong status", result("\n", { status: 2, stderr: Buffer.from("error: no such object: lean-cleanup\n") })],
+    ["other stdout", result("x", { status: 1, stderr: Buffer.from("error: no such object: lean-cleanup\n") })],
+    ["wrong case", result("\n", { status: 1, stderr: Buffer.from("Error: no such object: lean-cleanup\n") })],
+    ["wrong target", result("\n", { status: 1, stderr: Buffer.from("error: no such object: other\n") })],
+    ["missing newline", result("\n", { status: 1, stderr: Buffer.from("error: no such object: lean-cleanup") })],
+  ])("rejects Docker 29.4 %s near misses after removal", (_label, finalInspect) => {
+    const name = "lean-cleanup"; const label = "owner:cleanup"
+    const control = fakeTransport([absentDocker29(name), result("id\n"), owned(label), result(), result(), finalInspect]); const persistent = fakeStream([])
+    const session = createLeanContainerMatchSession({ matchId: "match:cleanup", containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
     expect(session.close()).toEqual({ cleanupComplete: false, orphanedChild: true })
   })
 
