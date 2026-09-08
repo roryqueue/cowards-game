@@ -21,6 +21,7 @@ import {
   parseExactDockerImageIdentity,
   exactDockerImageIdentityEquals,
   evaluateLeanContainerPreflight,
+  runActualLeanContainerPreflight,
   runLeanDirectGateInjected,
   createSupervisedLeanExecutionDependencies,
   createExclusiveLeanInvocationMarker,
@@ -69,6 +70,60 @@ const childResult = (cell = buildLeanSchedule()[0]!) => ({
 })
 
 describe("bounded lean runner", () => {
+  it("drives the injected no-Docker preflight through both fixtures and the real evaluator", () => {
+    const calls: string[] = []
+    let tick = 0n
+    const evidence = runActualLeanContainerPreflight({
+      dockerText: (args) => {
+        calls.push(`docker:${args.join(" ")}`)
+        return args[0] === "version"
+          ? "29.4.0"
+          : JSON.stringify([LEAN_CONTAINER_IMAGE.replace(":24-alpine@", "@")])
+      },
+      createSession: ({ matchId }) => {
+        calls.push(`open:${matchId}`)
+        return {
+          matchId,
+          containerId: `container:${matchId}`,
+          adapter: {
+            metadata: { id: LEAN_CONTAINER_ADAPTER_ID, diagnostics: { fallback: false } },
+            execute: ({ methodName }) => {
+              calls.push(`execute:${matchId}:${methodName}`)
+              return { ok: true, value: null }
+            },
+          },
+          state: "active",
+          close: () => {
+            calls.push(`close:${matchId}`)
+            return { cleanupComplete: true, orphanedChild: false }
+          },
+        } as never
+      },
+      nowNanoseconds: () => { tick += 1_000_000n; return tick },
+      evaluate: (input) => {
+        calls.push("evaluate")
+        return evaluateLeanContainerPreflight(input)
+      },
+    })
+
+    expect(evidence.status).toBe("pass")
+    expect(evidence.adapterId).toBe(LEAN_CONTAINER_ADAPTER_ID)
+    expect(calls.filter((call) => call.startsWith("open:"))).toHaveLength(2)
+    expect(calls.filter((call) => call.startsWith("execute:"))).toHaveLength(16)
+    expect(calls.filter((call) => call.startsWith("close:"))).toHaveLength(2)
+    expect(calls.at(-1)).toBe("evaluate")
+  })
+
+  it("keeps final preflight evidence independent of the fixture-loop adapter binding", () => {
+    const source = readFileSync("scripts/run-v1-38-lean-runner-feasibility.ts", "utf8")
+    const start = source.indexOf("export const runActualLeanContainerPreflight")
+    const end = source.indexOf("export interface CanonicalLeanPreparedRequest", start)
+    const body = source.slice(start, end)
+    const finalEvidence = body.slice(body.lastIndexOf("return evaluateLeanContainerPreflight"))
+    expect(finalEvidence).toContain("adapterId: LEAN_CONTAINER_ADAPTER_ID")
+    expect(finalEvidence).not.toMatch(/adapterId:\s*adapter\b/u)
+  })
+
   it("normalizes only exact repository plus lowercase sha256 identity", () => {
     const canonical = "node@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"
     expect(parseExactDockerImageIdentity(LEAN_CONTAINER_IMAGE)).toEqual({
