@@ -480,9 +480,25 @@ export const buildLeanContainerPreflightProbeInput = (method: LeanContainerPrefl
   })
 }
 
-export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidence => {
-  const dockerServerVersion = dockerText(["version", "--format", "{{.Server.Version}}"])
-  const repoDigestsRaw = dockerText(["image", "inspect", "--format", "{{json .RepoDigests}}", LEAN_CONTAINER_IMAGE])
+export interface LeanContainerPreflightDependencies {
+  readonly dockerText: (args: readonly string[]) => string
+  readonly createSession: (options: Parameters<typeof createLeanContainerMatchSession>[0]) => LeanContainerMatchSession
+  readonly nowNanoseconds: () => bigint
+  readonly evaluate: typeof evaluateLeanContainerPreflight
+}
+
+export const runActualLeanContainerPreflight = (
+  overrides: Partial<LeanContainerPreflightDependencies> = {},
+): LeanContainerPreflightEvidence => {
+  const dependencies: LeanContainerPreflightDependencies = {
+    dockerText,
+    createSession: createLeanContainerMatchSession,
+    nowNanoseconds: () => process.hrtime.bigint(),
+    evaluate: evaluateLeanContainerPreflight,
+    ...overrides,
+  }
+  const dockerServerVersion = dependencies.dockerText(["version", "--format", "{{.Server.Version}}"])
+  const repoDigestsRaw = dependencies.dockerText(["image", "inspect", "--format", "{{json .RepoDigests}}", LEAN_CONTAINER_IMAGE])
   let localRepoDigests: readonly string[]
   try {
     const parsed = JSON.parse(repoDigestsRaw) as unknown
@@ -494,10 +510,10 @@ export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidenc
   const samples: LeanContainerPreflightSample[] = []
   const lifecycleSamples: { elapsedMilliseconds: number; cleanupComplete: boolean }[] = []
   for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"] as const) {
-    const lifecycleStarted = process.hrtime.bigint()
+    const lifecycleStarted = dependencies.nowNanoseconds()
     const matchId = `match:lean:preflight:${fixtureId}`
-    const session = createLeanContainerMatchSession({ matchId, containerName: deriveLeanContainerName(matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(matchId), image: LEAN_CONTAINER_IMAGE })
-    const lifecycleCreateMilliseconds = Number(process.hrtime.bigint() - lifecycleStarted) / 1_000_000
+    const session = dependencies.createSession({ matchId, containerName: deriveLeanContainerName(matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(matchId), image: LEAN_CONTAINER_IMAGE })
+    const lifecycleCreateMilliseconds = Number(dependencies.nowNanoseconds() - lifecycleStarted) / 1_000_000
     const adapter = session.adapter
     if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
     const revision = createContainerFixtureRevision(fixtureId)
@@ -511,26 +527,26 @@ export const runActualLeanContainerPreflight = (): LeanContainerPreflightEvidenc
         const warm = adapter.execute(request)
         if (!warm.ok) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_PROBE_FAILED")
         for (let ordinal = 0; ordinal < 3; ordinal += 1) {
-          const started = process.hrtime.bigint()
+          const started = dependencies.nowNanoseconds()
           const result = adapter.execute(request)
-          const elapsedMilliseconds = Number(process.hrtime.bigint() - started) / 1_000_000
+          const elapsedMilliseconds = Number(dependencies.nowNanoseconds() - started) / 1_000_000
           samples.push({ fixtureId, method, elapsedMilliseconds, ok: result.ok })
         }
       }
     } finally {
-      const cleanupStarted = process.hrtime.bigint()
+      const cleanupStarted = dependencies.nowNanoseconds()
       close = session.close()
       lifecycleSamples.push({
-        elapsedMilliseconds: lifecycleCreateMilliseconds + Number(process.hrtime.bigint() - cleanupStarted) / 1_000_000,
+        elapsedMilliseconds: lifecycleCreateMilliseconds + Number(dependencies.nowNanoseconds() - cleanupStarted) / 1_000_000,
         cleanupComplete: close.cleanupComplete && !close.orphanedChild,
       })
     }
   }
-  return evaluateLeanContainerPreflight({
+  return dependencies.evaluate({
     dockerServerVersion,
     imageReference: LEAN_CONTAINER_IMAGE,
     localRepoDigests,
-    adapterId: adapter.metadata.id,
+    adapterId: LEAN_CONTAINER_ADAPTER_ID,
     controls: LEAN_CONTAINER_CONTROLS,
     lifecycleSamples,
     samples,

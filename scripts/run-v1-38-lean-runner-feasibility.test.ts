@@ -119,7 +119,7 @@ describe("bounded lean runner", () => {
     const start = source.indexOf("export const runActualLeanContainerPreflight")
     const end = source.indexOf("export interface CanonicalLeanPreparedRequest", start)
     const body = source.slice(start, end)
-    const finalEvidence = body.slice(body.lastIndexOf("return evaluateLeanContainerPreflight"))
+    const finalEvidence = body.slice(body.lastIndexOf("return dependencies.evaluate"))
     expect(finalEvidence).toContain("adapterId: LEAN_CONTAINER_ADAPTER_ID")
     expect(finalEvidence).not.toMatch(/adapterId:\s*adapter\b/u)
   })
