@@ -6,6 +6,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT, LEAN_DEADLINE_MS, leanRequestRealismRoot } from "./lib/v1-38-lean-runner-feasibility.js"
+import { SoldierBrainInputSchema } from "../packages/spec/src/schemas.js"
 import {
   LEAN_CORRECTIVE_RECOVERY_ONLY_SELECTOR,
   LEAN_CORRECTIVE_SELECTOR,
@@ -65,6 +66,39 @@ const childResult = (cell = buildLeanSchedule()[0]!) => ({
 })
 
 describe("bounded lean runner", () => {
+  it("derives all 25 absolute awareness coordinates without changing relative contents", () => {
+    const bottom = {
+      id: "bottom-soldier-1", ownerPlayerId: "player:bottom", status: "ACTIVE",
+      position: { x: 5, y: 10 }, facing: "UP", lastSuccessfulMoveDirection: null,
+    } as const
+    const relativeOnlyCells = []
+    for (let dy = -2; dy <= 2; dy += 1) for (let dx = -2; dx <= 2; dx += 1) {
+      relativeOnlyCells.push({ dx, dy, contents: dx === 0 && dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY" })
+    }
+    expect(relativeOnlyCells).toHaveLength(25)
+    expect(() => SoldierBrainInputSchema.parse({
+      self: bottom, awarenessGrid: { cells: relativeOnlyCells }, cycleIndex: 0, maxCycles: 12,
+      hasAdvancedThisActivation: false, soldierMemory: {},
+      objective: { preferred: "UP", safeDirs: ["UP", "LEFT", "RIGHT"], contractionSoon: false },
+    })).toThrow()
+
+    const buildProbe = (leanRunnerModule as unknown as {
+      buildLeanContainerPreflightProbeInput: (method: "selectActivations" | "soldierBrain") => unknown
+    }).buildLeanContainerPreflightProbeInput
+    expect(buildProbe).toBeTypeOf("function")
+    const selectActivations = buildProbe("selectActivations")
+    for (const _fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"]) {
+      expect(selectActivations).toEqual(buildProbe("selectActivations"))
+      const input = SoldierBrainInputSchema.parse(buildProbe("soldierBrain"))
+      expect(input.awarenessGrid.cells).toHaveLength(25)
+      for (const cell of input.awarenessGrid.cells) {
+        expect(cell.absoluteX).toBe(bottom.position.x + cell.dx)
+        expect(cell.absoluteY).toBe(bottom.position.y + cell.dy)
+        expect(cell.contents).toBe(cell.dx === 0 && cell.dy === 0 ? "FRIENDLY_ACTIVE" : "EMPTY")
+      }
+    }
+  })
+
   it("rebuilds fixed fixtures for the exact container runtime without changing library lineage", () => {
     for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"]) {
       const revision = createContainerFixtureRevision(fixtureId)

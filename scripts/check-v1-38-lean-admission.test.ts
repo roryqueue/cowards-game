@@ -79,6 +79,35 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("defines an additive collision-free v3 direct trust path", () => {
+    const module = leanAdmissionModule as unknown as {
+      LEAN_DIRECT_V3_ARTIFACT_PATHS: Record<string, string>
+      checkLeanDirectContainerSourceOnlyV3: unknown
+      validateLeanContainerPreflightArtifactV2: unknown
+      validateLeanDirectAuthorizationV3: unknown
+      checkLeanDirectValidityReviewV3: unknown
+      loadAndCheckLeanDirectReviewedReadyV3: unknown
+    }
+    expect(module.LEAN_DIRECT_V3_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v2.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v3.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v3.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v3.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v3.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v3.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v3.json",
+    })
+    expect(module.checkLeanDirectContainerSourceOnlyV3).toBeTypeOf("function")
+    expect(module.validateLeanContainerPreflightArtifactV2).toBeTypeOf("function")
+    expect(module.validateLeanDirectAuthorizationV3).toBeTypeOf("function")
+    expect(module.checkLeanDirectValidityReviewV3).toBeTypeOf("function")
+    expect(module.loadAndCheckLeanDirectReviewedReadyV3).toBeTypeOf("function")
+
+    const historical = Object.values({ ...LEAN_DIRECT_ARTIFACT_PATHS, ...LEAN_DIRECT_V2_ARTIFACT_PATHS })
+    expect(new Set([...historical, ...Object.values(module.LEAN_DIRECT_V3_ARTIFACT_PATHS)]).size)
+      .toBe(historical.length + Object.values(module.LEAN_DIRECT_V3_ARTIFACT_PATHS).length)
+  })
+
   it("defines an additive v2 container trust path and preserves denied v1 bytes", () => {
     expect(LEAN_DIRECT_V2_ARTIFACT_PATHS).toEqual({
       preflight: ".planning/artifacts/v1.38-lean-runner-container-preflight-v1.json",
