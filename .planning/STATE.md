@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Planned 262-193/194 Worker lifecycle repair and fresh zero-Match preflight; Plan193 is next
-last_updated: "2026-09-09T02:10:00.000Z"
+stopped_at: Completed 262-193-PLAN.md terminal non-pass; additive formatted-inspect successor required
+last_updated: "2026-09-09T02:42:19.472Z"
 last_activity: 2026-08-31
 last_activity_desc: closed Plan144 with23/23 tests in592.22s, independent V3 zero findings, summary8bb3dbb8 and separate tracking; targeted tsc has406 existing diagnostics and zero new; no publication or effects
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 175
-  completed_plans: 163
+  total_plans: 177
+  completed_plans: 164
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plan 262-193 Worker lifecycle repair and terminal diagnostic — 2026-09-09
+
+Plan193 completed its two TDD tasks. The broker now accepts a result only after one request-bound completion receipt, one transferred-port close, and one successful natural Worker exit agree; delayed success no longer depends on a forced 100 ms termination race. Focused verification passes with 89 active tests, 25 immutable historical skips, and clean TypeScript.
+
+The one authorized attempt-2 broker-only diagnostic is immutable `docker_unavailable` before container creation. Its bare `docker inspect` received Docker 29.4's exact absent tuple with stdout `[]\n`, which the diagnostic correctly refused because its predicate was copied from the formatted inspect used by the real session. Cleanup is complete, preflight and Match counts are zero, and all authority remains false. Plan194 is not eligible. Eight of the operator's ten bounded attempts remain. The next action is a fresh additive source/diagnostic successor that uses the exact formatted inspect form, preserves the Plan193 artifact byte-for-byte, and runs no Match before a passing fresh preflight.
+
+<!-- phase-262-plan-193-terminal-state: {"schemaVersion":"v1.38-phase-262-worker-lifecycle-terminal-v1","plan193":"complete_non_pass","sourceCommit":"04b2eee905cf84ba1440a3fb266e27ca07397f0c","diagnosticRoot":"sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4","diagnosticStage":"docker_unavailable","containerCreated":false,"cleanupComplete":true,"preflightInvocations":0,"matchInvocations":0,"attemptsAuthorized":10,"attemptsConsumed":2,"attemptsRemaining":8,"plan194Eligible":false,"nextAction":"plan-additive-formatted-inspect-diagnostic-successor","successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plans 262-193/194 Worker lifecycle repair route — 2026-09-08
 
@@ -436,6 +444,7 @@ Progress: [█████████░] 87%
 | Phase 262 P174 | 14min | 2 tasks | 4 files |
 | Phase 262 P180 | 12min | 2 tasks | 4 files |
 | Phase 262 P192 | 9m | 2 tasks | 4 files |
+| Phase 262 P193 | 20m | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -688,6 +697,8 @@ Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
 - [Phase 262]: Repair with a private per-Match persistent or batched supervised container session. — Keep the sandbox, tuple, schedule, and deadline bounds unchanged before a fresh non-consuming preflight.
 - [Phase 262]: Preserve preflight-v8 as immutable non_pass/probe_failed and leave authorization-v9 absent. — The sole bounded preflight did not pass, so pass-only authority cannot exist.
 - [Phase 262]: Deny Plan175 for this route; nine bounded diagnostic/repair/preflight attempts remain under operator authorization. — The route consumed one non-consuming preflight and zero Matches.
+- [Phase 262]: Require one request-bound completion, one port close, and one zero-code natural Worker exit before accepting success. — Removes the fragile success-path termination race without weakening deadlines or containment.
+- [Phase 262]: Preserve the attempt-2 diagnostic denial and repair its Docker absence query additively. — Single-use evidence cannot be rewritten or retried; eight bounded attempts remain.
 
 ### Pending Todos
 
@@ -751,8 +762,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-09T01:48:54.714Z
-Stopped at: Completed 262-192-PLAN.md; preflight-v8 probe_failed, zero Matches, nine bounded retries remain
+Last session: 2026-09-09T02:42:19.452Z
+Stopped at: Completed 262-193-PLAN.md terminal non-pass; additive formatted-inspect successor required
 Resume file: None
 
 ### Blockers
