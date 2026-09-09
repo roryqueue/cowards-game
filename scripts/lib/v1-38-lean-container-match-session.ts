@@ -9,7 +9,7 @@ import { CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 } from "../../packages/runtime-js
 import { observeCandidateSubprocessV117 } from "../../packages/runtime-js/src/candidate-subprocess-observation.js"
 import { containerSubprocessStrategyExecutionAdapterMetadata } from "../../packages/runtime-js/src/container-subprocess-adapter.js"
 import { RUNTIME_TIMEOUT_MS } from "../../packages/runtime-js/src/guards.js"
-import { SUBPROCESS_HARNESS_SOURCE, SUBPROCESS_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/subprocess-harness.js"
+import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE, WORKER_SIGNAL_V117 } from "../../packages/runtime-js/src/worker-harness.js"
 import { assertWithinByteCap, encodeSubprocessIpcRequest, parseSubprocessIpcResponse, SUBPROCESS_STDERR_BYTES, SUBPROCESS_STDOUT_BYTES, SubprocessSystemFailure } from "../../packages/runtime-js/src/subprocess-ipc.js"
 
 export interface LeanContainerTransportResult { readonly status: number | null; readonly signal: string | null; readonly stdout: Buffer; readonly stderr: Buffer; readonly error?: Error | undefined }
@@ -41,25 +41,55 @@ const defaultTransport: LeanContainerMatchTransport = (command, args, options) =
   return { status: spawned.status, signal: spawned.signal, stdout: Buffer.isBuffer(spawned.stdout) ? spawned.stdout : Buffer.alloc(0), stderr: Buffer.isBuffer(spawned.stderr) ? spawned.stderr : Buffer.alloc(0), ...(spawned.error === undefined ? {} : { error: spawned.error }) }
 }
 
-const BROKER_SOURCE = `
-import { spawnSync } from "node:child_process";
+export const LEAN_CONTAINER_BROKER_SOURCE = `
 import { createInterface } from "node:readline";
-const harnesses = ${JSON.stringify({ legacy: SUBPROCESS_HARNESS_SOURCE, v117: SUBPROCESS_HARNESS_V117_SOURCE })};
+import { MessageChannel, receiveMessageOnPort, Worker } from "node:worker_threads";
+const harnesses = ${JSON.stringify({ legacy: WORKER_HARNESS_SOURCE, v117: WORKER_HARNESS_V117_SOURCE })};
+const signals = ${JSON.stringify(WORKER_SIGNAL_V117)};
 let expected = 1;
+let queue=Promise.resolve();
 const exact=(o,k)=>Object.keys(o).sort().join("\\0")===k.slice().sort().join("\\0");
 const canonical=(s)=>{ try { return Buffer.from(s,"base64").toString("base64")===s; } catch { return false; } };
-const rl=createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
-rl.on("line",line=>{
+const workerUrl=(source)=>new URL("data:text/javascript;charset=utf-8,"+encodeURIComponent(source));
+const resources={maxOldGenerationSizeMb:16,maxYoungGenerationSizeMb:8,stackSizeMb:4};
+const frame=(tag)=>Uint8Array.of(tag.charCodeAt(0));
+const hostEnvelope=(raw,go,termination)=>{const header=Buffer.alloc(24);header.write("CG17",0,"ascii");header.writeUInt8(1,4);header.writeUInt8((go===undefined?0:1)|(termination===undefined?0:2),5);header.writeUInt16BE(0,6);header.writeBigUInt64BE(go===undefined?0n:go,8);header.writeUInt32BE(termination===undefined?0:termination,16);header.writeUInt32BE(raw.byteLength,20);return Buffer.concat([header,Buffer.from(raw)]);};
+const terminate=async(worker,grace)=>{let timer;const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("termination grace exceeded")),grace)});try{await Promise.race([worker.terminate(),timeout]);}finally{clearTimeout(timer)}};
+const parsePayload=(q)=>{let value;try{value=JSON.parse(Buffer.from(q.payloadBase64,"base64").toString("utf8"))}catch{return null}return value&&typeof value==="object"&&!Array.isArray(value)?value:null;};
+const runLegacy=async(q,request)=>{
+  if(!exact(request,["source","methodName","input","outputByteLimit"])&& !exact(request,["source","methodName","input"]))return {status:70,signal:null,out:Buffer.alloc(0),err:Buffer.from("Subprocess request failed schema validation\\n")};
+  const signalBuffer=new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);const signal=new Int32Array(signalBuffer);const {port1,port2}=new MessageChannel();
+  const worker=new Worker(workerUrl(harnesses.legacy),{workerData:{source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:port2,signalBuffer},transferList:[port2],env: {},execArgv: [],resourceLimits: resources});
+  const wait=Atomics.wait(signal,0,0,q.timeoutMilliseconds);if(wait==="timed-out"||Atomics.load(signal,0)!==1){await terminate(worker,100);port1.close();return {status:null,signal:"SIGKILL",out:Buffer.alloc(0),err:Buffer.alloc(0)}}
+  const received=receiveMessageOnPort(port1);await terminate(worker,100);port1.close();
+  if(!received||!received.message||typeof received.message!=="object")return {status:70,signal:null,out:Buffer.alloc(0),err:Buffer.from("Subprocess response failed schema validation\\n")};
+  return {status:0,signal:null,out:Buffer.from(JSON.stringify(received.message)),err:Buffer.alloc(0)};
+};
+const runV117=async(q,request)=>{
+  if(!exact(request,["source","methodName","input","outputByteLimit","methodWallMilliseconds","startupTimeoutMilliseconds","cancellationGraceMilliseconds"]))return {status:0,signal:null,out:hostEnvelope(frame("T")),err:Buffer.alloc(0)};
+  const signalBuffer=new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);const signal=new Int32Array(signalBuffer);const {port1,port2}=new MessageChannel();const launched=process.hrtime.bigint();
+  const worker=new Worker(workerUrl(harnesses.v117),{workerData:{source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:port2,signalBuffer},transferList:[port2],env: {},execArgv: [],resourceLimits: resources});
+  const launchMs=Number(process.hrtime.bigint()-launched)/1000000;const startup=Math.max(0,request.startupTimeoutMilliseconds-launchMs);const startupWait=Atomics.wait(signal,0,signals.starting,startup);
+  if(startupWait==="timed-out"||Atomics.load(signal,0)===signals.starting){await terminate(worker,request.cancellationGraceMilliseconds);port1.close();return {status:0,signal:null,out:hostEnvelope(frame("H")),err:Buffer.alloc(0)}}
+  let go;if(Atomics.load(signal,0)===signals.ready){go=process.hrtime.bigint();Atomics.store(signal,0,signals.go);Atomics.notify(signal,0);const methodWait=Atomics.wait(signal,0,signals.go,request.methodWallMilliseconds);if(methodWait==="timed-out"||Atomics.load(signal,0)!==signals.done){const began=process.hrtime.bigint();await terminate(worker,request.cancellationGraceMilliseconds);const elapsed=Math.ceil(Number(process.hrtime.bigint()-began)/1000000);port1.close();return {status:0,signal:null,out:elapsed<=request.cancellationGraceMilliseconds?hostEnvelope(frame("D"),go,elapsed):hostEnvelope(frame("H"),go),err:Buffer.alloc(0)}}}
+  if(Atomics.load(signal,0)!==signals.done){await terminate(worker,request.cancellationGraceMilliseconds);port1.close();return {status:0,signal:null,out:hostEnvelope(frame("R"),go),err:Buffer.alloc(0)}}
+  const received=receiveMessageOnPort(port1);await terminate(worker,request.cancellationGraceMilliseconds);port1.close();const output=received&&received.message;
+  return {status:0,signal:null,out:hostEnvelope(output instanceof Uint8Array?output:frame("R"),go),err:Buffer.alloc(0)};
+};
+const handle=async(line)=>{
   let q;
   try { q=JSON.parse(line); } catch { process.exit(71); }
   if(!q||typeof q!=="object"||!exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit"])||q.requestId!==expected||!(q.mode in harnesses)||typeof q.payloadBase64!=="string"||!canonical(q.payloadBase64)||!Number.isSafeInteger(q.timeoutMilliseconds)||q.timeoutMilliseconds<1||!Number.isSafeInteger(q.stdoutByteLimit)||q.stdoutByteLimit<1||!Number.isSafeInteger(q.stderrByteLimit)||q.stderrByteLimit<0) process.exit(72);
   expected++;
-  const child=spawnSync(process.execPath,["--input-type=module","--eval",harnesses[q.mode]],{input:Buffer.from(q.payloadBase64,"base64"),stdio:["pipe","pipe","pipe"],timeout:q.timeoutMilliseconds,killSignal:"SIGKILL",maxBuffer:Math.max(q.stdoutByteLimit,q.stderrByteLimit)});
-  const out=Buffer.isBuffer(child.stdout)?child.stdout:Buffer.alloc(0); const err=Buffer.isBuffer(child.stderr)?child.stderr:Buffer.alloc(0);
-  const frame={requestId:q.requestId,status:child.status,signal:child.signal,stdoutBase64:out.toString("base64"),stderrBase64:err.toString("base64")};
-  process.stdout.write(JSON.stringify(frame)+"\\n");
-});
-rl.on("close",()=>process.exit(0));
+  const request=parsePayload(q);if(request===null)process.exit(72);
+  const result=q.mode==="legacy"?await runLegacy(q,request):await runV117(q,request);
+  if(result.out.byteLength>q.stdoutByteLimit||result.err.byteLength>q.stderrByteLimit)process.exit(74);
+  const response={requestId:q.requestId,status:result.status,signal:result.signal,stdoutBase64:result.out.toString("base64"),stderrBase64:result.err.toString("base64")};
+  process.stdout.write(JSON.stringify(response)+"\\n");
+};
+const rl=createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
+rl.on("line",line=>{queue=queue.then(()=>handle(line)).catch(()=>process.exit(73));});
+rl.on("close",()=>{queue.then(()=>process.exit(0),()=>process.exit(73));});
 `
 
 const STREAM_WORKER_SOURCE = `
@@ -144,7 +174,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const poison = (): void => { state = "poisoned"; remove() }
   try {
     const started = transport(dockerPath, ["start", containerId], { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES }); assertCleanControlResult(started, "LEAN_CONTAINER_SESSION_START_FAILED")
-    stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", BROKER_SOURCE], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
+    stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", LEAN_CONTAINER_BROKER_SOURCE], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
@@ -171,7 +201,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     execute(request) { const stdoutLimit = request.outputByteLimit ?? SUBPROCESS_STDOUT_BYTES; const encoded = encodeSubprocessIpcRequest({ source: request.source, methodName: request.methodName, input: request.input, outputByteLimit: request.outputByteLimit }); return strictJsonResponse(runMethod(request, "legacy", request.timeoutMs ?? RUNTIME_TIMEOUT_MS, stdoutLimit, SUBPROCESS_STDERR_BYTES, encoded).stdout, stdoutLimit) },
     executeV117(request) { return executeStrategyRuntimeAbiV117({ requestBytes: request.requestBytes, executableSource: request.executableSource, signingIdentity: request.signingIdentity, invokeGuest(guest) {
       const observed = (observation: RuntimeGuestObservationV117) => createRuntimeGuestExecutionV117(observation, consumeCandidateEvidenceFixture(request, observeRuntimeGuestAccountingV117(observation, guest.outputByteLimit)))
-      const input = JSON.stringify({ source: guest.executableSource, methodName: guest.methodName, input: guest.input, outputByteLimit: guest.outputByteLimit, methodWallMilliseconds: guest.timeoutMs })
+      const input = JSON.stringify({ source: guest.executableSource, methodName: guest.methodName, input: guest.input, outputByteLimit: guest.outputByteLimit, methodWallMilliseconds: guest.timeoutMs, startupTimeoutMilliseconds: guest.startupTimeoutMs, cancellationGraceMilliseconds: guest.cancellationGraceMilliseconds })
       const launchStartedNanoseconds = process.hrtime.bigint(); const timeoutMilliseconds = guest.startupTimeoutMs + guest.timeoutMs + guest.cancellationGraceMilliseconds; const stdoutLimit = CANDIDATE_HOST_ENVELOPE_OVERHEAD_V117 + guest.stdoutByteLimit + 1
       let method: LeanContainerTransportResult; try { method = runMethod({ source: guest.executableSource, methodName: guest.methodName, input: guest.input }, "v117", timeoutMilliseconds, stdoutLimit, guest.stderrByteLimit, input) } catch { return observed({ kind: "system_failure", code: "TRANSPORT_CRASH", retryable: false }) }
       const observation = observeCandidateSubprocessV117({ result: { ...method, terminationReceiptPresent: true, stdoutEof: true, stderrEof: true, containerCleanupRequired: false }, launchStartedNanoseconds, receivedAtNanoseconds: process.hrtime.bigint(), startupTimeoutMilliseconds: guest.startupTimeoutMs, methodWallMilliseconds: guest.timeoutMs, cancellationGraceMilliseconds: guest.cancellationGraceMilliseconds, outputByteLimit: guest.outputByteLimit, stdoutByteLimit: guest.stdoutByteLimit, stderrByteLimit: guest.stderrByteLimit })

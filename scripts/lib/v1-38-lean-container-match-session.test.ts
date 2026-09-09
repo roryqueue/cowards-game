@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer"
+import { spawnSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
-import { createLeanContainerMatchSession, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult } from "./v1-38-lean-container-match-session.js"
+import { createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult } from "./v1-38-lean-container-match-session.js"
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 
 const result = (stdout: string | Uint8Array = "", override: Partial<LeanContainerTransportResult> = {}): LeanContainerTransportResult => ({ status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), ...override })
@@ -30,6 +31,20 @@ const create = (name: string, streamResponses: unknown[]) => {
   const session = createLeanContainerMatchSession({ matchId: `match:${name}`, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
   return { control, persistent, session }
 }
+const runBroker = (requests: readonly Record<string, unknown>[]) => {
+  const input = requests.map((request) => JSON.stringify(request)).join("\n") + "\n"
+  const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", LEAN_CONTAINER_BROKER_SOURCE], { input, encoding: "utf8", timeout: 5_000, maxBuffer: 1_048_576 })
+  return { broker, frames: broker.stdout.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>) }
+}
+const legacyBrokerRequest = (requestId: number, source: string, timeoutMilliseconds = 1_000) => ({
+  requestId,
+  mode: "legacy",
+  payloadBase64: Buffer.from(JSON.stringify({ source, methodName: "selectActivations", input: {}, outputByteLimit: 1024 })).toString("base64"),
+  timeoutMilliseconds,
+  stdoutByteLimit: 1024,
+  stderrByteLimit: 4096,
+})
+const decodeLegacyBrokerFrame = (frame: Record<string, unknown>) => JSON.parse(Buffer.from(frame.stdoutBase64 as string, "base64").toString("utf8")) as unknown
 
 describe("lean Match-scoped hostile container session", () => {
   it("uses one fresh bounded guest Worker per broker request without a child process", () => {
@@ -40,7 +55,8 @@ describe("lean Match-scoped hostile container session", () => {
     expect(brokerSource).toContain("env: {}")
     expect(brokerSource).toContain("execArgv: []")
     expect(brokerSource).toContain("resourceLimits:")
-    expect(brokerSource).toContain("await worker.terminate()")
+    expect(brokerSource).toContain("worker.terminate()")
+    expect(brokerSource).toContain("await terminate(worker")
     expect(brokerSource).not.toContain("spawnSync")
     expect(brokerSource).not.toContain("node:child_process")
     fixture.session.close()
@@ -56,6 +72,25 @@ describe("lean Match-scoped hostile container session", () => {
     fixture.session.adapter.execute({ source: "b", methodName: "selectActivations", input: {} })
     expect(fixture.persistent.frames.map((frame) => JSON.parse(frame).requestId)).toEqual([1, 2])
     fixture.session.close()
+  })
+
+  it("executes repeated and alternating Strategy sources in fresh stateless Workers", () => {
+    const counter = 'let count=0; module.exports.default={selectActivations(){count+=1;return [count]}}'
+    const other = 'globalThis.leak=99; module.exports.default={selectActivations(){return [7]}}'
+    const { broker, frames } = runBroker([legacyBrokerRequest(1, counter), legacyBrokerRequest(2, other), legacyBrokerRequest(3, counter)])
+    expect({ status: broker.status, stderr: broker.stderr }).toEqual({ status: 0, stderr: "" })
+    expect(frames.map((frame) => frame.requestId)).toEqual([1, 2, 3])
+    expect(frames.map(decodeLegacyBrokerFrame)).toEqual([{ ok: true, value: [1] }, { ok: false, violation: { type: "FORBIDDEN_CAPABILITY", message: "FORBIDDEN_CAPABILITY: leak" } }, { ok: true, value: [1] }])
+  })
+
+  it("preserves forbidden-capability failures and kills timed-out Workers", () => {
+    const forbidden = 'module.exports.default={selectActivations(){return process.cwd()}}'
+    const hung = 'module.exports.default={selectActivations(){while(true){} }}'
+    const forbiddenRun = runBroker([legacyBrokerRequest(1, forbidden)])
+    expect(decodeLegacyBrokerFrame(forbiddenRun.frames[0]!)).toEqual({ ok: false, violation: { type: "FORBIDDEN_CAPABILITY", message: "FORBIDDEN_CAPABILITY: process" } })
+    const timeoutRun = runBroker([legacyBrokerRequest(1, hung, 25)])
+    expect(timeoutRun.broker.status).toBe(0)
+    expect(timeoutRun.frames[0]).toMatchObject({ requestId: 1, status: null, signal: "SIGKILL", stdoutBase64: "", stderrBase64: "" })
   })
 
   it("multiplexes mixed methods through exactly one persistent Docker stream", () => {
