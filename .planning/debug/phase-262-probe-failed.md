@@ -130,6 +130,14 @@ updated: 2026-09-09T23:15:00-04:00
 - verification: Confirmed by one uniquely named non-Match diagnostic using exact source/runtime/evaluator behavior: 12/12 calls succeeded, 2/2 sessions cleaned up, evaluator code was exactly `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE`, no owned container remained, no canonical writer/live selector/Match/marker ran, and all 36 locks remained.
 - files_changed: []
 
+## Plan 262-199 actual-fixture stage diagnostic-v4 — 2026-09-10
+
+- checked: one exact-image, exact-controls, actual-public-fixture stage diagnostic over Plan197 source `ebb2be95310b0371d00c472519e4fb5a86ce6b77`, consuming attempt 7 of 10
+- found: the diagnostic traversed its owned container path once but the new v13 writer rejected the bounded in-memory result before exclusive persistence with `LEAN_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_INVALID`
+- diagnosed implementation defect: the diagnostic increments `requestCounts.attempted` before `adapter.execute`, but appends its aggregate timing only after `adapter.execute` returns; when the adapter throws, the writer produces fewer timing observations than attempts while the validator incorrectly requires equality
+- effects: the diagnostic-v4 destination remains absent; zero preflight entry points and zero Matches were invoked; no authority or downstream effect was created; no owned container remains; all 36 successor locks remain
+- implication: attempt 7 is consumed and must not be retried. A fresh additive successor may repair the diagnostic projection and use attempt 8 under the existing bounded authorization; three attempts remain.
+
 ## Plan 262-193 Worker lifecycle diagnostic — 2026-09-09
 
 - checked: one authorized exact-image/exact-controls broker-only lifecycle diagnostic over committed source `04b2eee905cf84ba1440a3fb266e27ca07397f0c`
