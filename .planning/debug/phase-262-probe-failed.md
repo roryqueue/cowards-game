@@ -156,6 +156,14 @@ updated: 2026-09-09T23:15:00-04:00
 - effects: this reproduction invoked zero preflights and zero Matches, created no authority or operational effect, retained no Strategy source/input/output/memory/objective or raw runtime diagnostic, and preserved all 36 successor locks
 - implication: the separately committed repair may remove only observation-order tracking and rejection; attempt 9 remains limited to one diagnostic-v6 confirmation after fresh v15 custody
 
+## Plan 262-201 actual-fixture confirmation diagnostic-v6 — 2026-09-10
+
+- checked: exactly one attempt-9 diagnostic over committed source `a27c5d007131301a6d93029ed75734e7fd40c8d9`, tree `46f68a7759332b3f72971c964bfce006118ba5c5`, and executable closure `sha256:0572eef74c5fd271121c12ef1ba28654e80fd8edfbc03c00d85674ef2e9dd33c`
+- found: immutable diagnostic-v6 byte root `sha256:02decbcd7dd02b85f0247b1d699fbe92e32b230ad56f82a612d2bd11cf1068a0` completed all 16 planned public fixture requests successfully; aggregate request maximum was 1409.059432 ms and lifecycle maximum was 4754.965798 ms
+- cleanup: both expected sessions closed completely, no owned container remained, and all 36 successor locks remained
+- effects: zero preflight invocations, zero Match invocations, no operational effect, no authority, and no retained Strategy source/input/output/memory/objective or raw runtime diagnostic
+- implication: attempt 9 passes, one bounded attempt remains, and Plan202 is eligible to run exactly one preflight-v12 under the unchanged frozen bounds; diagnostic-v6 itself grants no Match authority
+
 ## Plan 262-193 Worker lifecycle diagnostic — 2026-09-09
 
 - checked: one authorized exact-image/exact-controls broker-only lifecycle diagnostic over committed source `04b2eee905cf84ba1440a3fb266e27ca07397f0c`
