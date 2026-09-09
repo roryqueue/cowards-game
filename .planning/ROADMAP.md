@@ -2,11 +2,11 @@
 
 ## Approved D-34L.1 lean execution closure — 2026-09-01
 
-Plan172 preserved four critical and one warning finding in the production-style certification wrapper. The approved D-34L.1 clarification keeps all five findings immutable and nonzero, classifies them as certification-only for this private single-operator experiment, and does not claim they were fixed. Plan174 then found two active result-validity defects: wrong exact commit/tree custody and a reachable non-hostile worker-thread runtime.
+Plan192 preserved its sole preflight-v8 as immutable `non_pass/probe_failed`, invoked zero Matches, and denied Plan175. Read-only diagnosis found the strongest source-level cause: the Plan191 broker awaited successful Worker termination for only 100 ms, so constrained 0.5-CPU scheduling could reject a valid result and terminate the broker with exit 73. The bounded artifact intentionally cannot recover the exact internal lifecycle stage.
 
-Plans177 and178 closed the two Plan174 findings but the first non-consuming container preflight then exposed one source-local fixture defect: SoldierBrain awareness cells omitted schema-required absolute coordinates. Plan179 repairs only those cells from the unchanged Soldier position plus relative offsets, proves the frozen semantics, and creates fresh preflight-v2/authorization-v3/review-v3/effect paths while preserving the Plan178 non-pass. Plan180 runs exactly one fresh non-consuming preflight and one seven-category independent review. Plan175 alone may run only if that preflight passes and the review has zero active findings; Plan176 then synchronizes final truth. The denied v1 authorization/review, Plan178 non-pass/review, and Plan172 certification history remain immutable. Plans158 through160 and162 remain superseded inactive. Phase263 and every broader authority remain false unless exact pass is independently synchronized; archive and tag remain false.
+Plan193 is the next additive source repair. It replaces the fragile success termination race with an explicit completion-plus-natural-exit handshake, retains every frozen deadline and containment control, and runs one exact-image/exact-controls broker-only diagnostic with zero preflights and zero Matches. Plan194 then runs exactly one fresh non-consuming preflight-v9 and one independent seven-category review. These are authorized attempts 2 and 3 of the operator's ten-attempt envelope; seven remain if Plan194 denies. Plan175 alone may run the 24-Match gate only after exact Plan194 admission and without another preflight; Plan176 synchronizes final truth. Phase263 and every broader authority remain false unless exact pass is independently synchronized; archive and tag remain false.
 
-<!-- phase-262-lean-direct-roadmap: {"schemaVersion":"v1.38-phase-262-lean-direct-plan-v4","decision":"D-34L.1","activeChain":["262-173","262-174","262-177","262-178","262-179","262-180","262-175","262-176"],"waves":{"262-173":144,"262-174":145,"262-177":146,"262-178":147,"262-179":148,"262-180":149,"262-175":150,"262-176":151},"nextAction":"dispatch-262-179-preflight-fixture-repair","plan172FindingCount":5,"plan172CertificationOnlyCount":5,"plan174BlockingFindingCount":2,"plan178PreflightStatus":"non_pass","plan178MatchInvocations":0,"blockingValidityCategories":7,"containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","preflightRequiredBeforeMarker":true,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"supersededInactivePlans":["262-158","262-159","262-160","262-162"],"successorLockCount":36,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"archiveAuthorized":false,"tagAuthorized":false} -->
+<!-- phase-262-lean-direct-roadmap: {"schemaVersion":"v1.38-phase-262-worker-lifecycle-plan-v1","decision":"D-34L.1","activeChain":["262-191","262-192","262-193","262-194","262-175","262-176"],"waves":{"262-191":160,"262-192":161,"262-193":162,"262-194":163,"262-175":164,"262-176":165},"nextAction":"dispatch-262-193-worker-lifecycle-repair","plan192PreflightStatus":"non_pass","plan192MatchInvocations":0,"attemptsAuthorized":10,"attemptsConsumed":1,"plan193AttemptOrdinal":2,"plan194AttemptOrdinal":3,"attemptsRemainingIfPlan194Denies":7,"blockingValidityCategories":7,"containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","preflightRequiredBeforeMarker":true,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"markerWithoutTerminalConsumes":true,"successorLockCount":36,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"archiveAuthorized":false,"tagAuthorized":false} -->
 
 ## Reviewed D-34L result — 2026-09-01
 
@@ -74,7 +74,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 163/173 plans executed
+**Plans:** 163/175 plans executed
 
 **Current verdict:** D-34L.1 PLAN190 NON-PASS PRESERVED / HISTORICAL FULL MATRIX EXHAUSTED 0/540 / PLAN172 FIVE CERTIFICATION FINDINGS PRESERVED / ZERO CORRECTIVE MATCHES CONSUMED / RECOVERY FALSE / ALL AUTHORITY FALSE. Plan190 proved the remaining blocker is per-method guest-process startup overhead inside the otherwise persistent container broker. The operator authorized up to ten additional non-consuming diagnostic-and-repair attempts. Plan191 is the source-only fresh-worker repair, Plan192 is exactly one fresh non-consuming preflight plus seven-category review, and revised Plans175/176 remain the sole run-and-close pair. Phase262 remains incomplete.
 
@@ -327,6 +327,8 @@ Plans:
 - [x] 262-190-PLAN.md
 - [x] 262-191-PLAN.md
 - [x] 262-192-PLAN.md
+- [ ] 262-193-PLAN.md — Repair the success-path Worker lifecycle and run one exact-controls broker-only diagnostic with zero Matches.
+- [ ] 262-194-PLAN.md — Run one fresh zero-Match preflight and independently review the seven D-34L.1 validity categories.
 
 **Wave 70** *(complete)*
 
@@ -971,7 +973,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 163/173 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 163/175 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |

@@ -5,8 +5,8 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed 262-192-PLAN.md; preflight-v8 probe_failed, zero Matches, nine bounded retries remain
-last_updated: "2026-09-09T01:48:54.735Z"
+stopped_at: Planned 262-193/194 Worker lifecycle repair and fresh zero-Match preflight; Plan193 is next
+last_updated: "2026-09-09T02:10:00.000Z"
 last_activity: 2026-08-31
 last_activity_desc: closed Plan144 with23/23 tests in592.22s, independent V3 zero findings, summary8bb3dbb8 and separate tracking; targeted tsc has406 existing diagnostics and zero new; no publication or effects
 progress:
@@ -18,6 +18,14 @@ progress:
 ---
 
 # State: Coward's Game
+
+## Plans 262-193/194 Worker lifecycle repair route — 2026-09-08
+
+Plan192 is immutable `non_pass/probe_failed`, invoked zero Matches, and left authorization-v9 absent. Read-only diagnosis found that Plan191 waits only 100 ms for successful Worker termination; under the exact 0.5-CPU/64-MB controls this can reject a valid result and terminate the broker with exit 73. The bounded artifact intentionally does not identify the exact internal lifecycle stage.
+
+Plan193 is the sole next action. It uses TDD to require an explicit result/port/exit handshake and bounded event-friendly success lifecycle while preserving fresh Workers, serialized correlation, resource limits, strict frames/caps, no fallback, and every startup/method/cancellation/cell/outer deadline. After separately committed source custody, it runs exactly one exact-image/exact-controls broker-only diagnostic, zero preflights, and zero Matches. Plan194 follows only a passing diagnostic and runs exactly one fresh non-consuming preflight-v9 plus one independent seven-category review. They consume attempts 2 and 3 of the operator's ten-attempt authorization; seven remain if Plan194 denies. Revised Plan175 may run without another preflight only on exact Plan194 admission; Plan176 then synchronizes truth. ADMIT-03 remains blocked, Phase263 remains ineligible, and every broader authority remains false.
+
+<!-- phase-262-plan-193-194-state: {"schemaVersion":"v1.38-phase-262-worker-lifecycle-plan-v1","activeChain":["262-193","262-194","262-175","262-176"],"waves":{"262-193":162,"262-194":163,"262-175":164,"262-176":165},"nextAction":"dispatch-262-193-worker-lifecycle-repair","plan192PreflightStatus":"non_pass","plan192MatchInvocations":0,"attemptsAuthorized":10,"attemptsConsumed":1,"plan193AttemptOrdinal":2,"plan194AttemptOrdinal":3,"attemptsRemainingIfPlan194Denies":7,"preflightRequiredBeforeMarker":true,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Approved D-34L.1 lean execution closure — 2026-09-01
 
