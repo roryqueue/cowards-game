@@ -24,6 +24,15 @@ describe("approved private closeout", () => {
     for (const value of [{ status: "non_pass" }, { status: "pass", cleanupComplete: false }, { status: "pass", source: "private" }]) {
       expect(() => validateCloseoutPreflight(value, "sha256:test")).toThrow()
     }
+    const valid = { schemaVersion: "v1.38-lean-closeout-preflight-v1", bindingRoot: "sha256:test", status: "pass", cleanupComplete: true, profile: CLOSEOUT_PROFILE, reason: "admitted", aggregates: { sampleCount: 12, successfulSamples: 12, lifecycleCount: 2, selectMaximumMilliseconds: 10, soldierMaximumMilliseconds: 10, lifecycleMaximumMilliseconds: 100, projectedCellMilliseconds: 10300, projectedRunMilliseconds: 247200 } }
+    expect(validateCloseoutPreflight(valid, "sha256:test").status).toBe("pass")
+    for (const altered of [
+      { ...valid, profile: { ...CLOSEOUT_PROFILE, cpus: "4" } },
+      { ...valid, status: "non_pass" },
+      { ...valid, cleanupComplete: false },
+      { ...valid, aggregates: { ...valid.aggregates, successfulSamples: 11 } },
+      { ...valid, aggregates: { ...valid.aggregates, projectedCellMilliseconds: 1, projectedRunMilliseconds: 24 } },
+    ]) expect(() => validateCloseoutPreflight(altered, "sha256:test")).toThrow()
   })
   it("requires complete independent seven-category review", () => {
     expect(() => validateReview({ categories: ["pass"] })).toThrow()
