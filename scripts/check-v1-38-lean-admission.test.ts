@@ -79,6 +79,48 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the complete fresh v12 diagnostic and operational family", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_V12_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v11.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v12.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v12.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v12.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v12.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v12.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v12.json",
+    })
+    expect(module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V3_PATH).toBe(".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v3.json")
+    const historical = [LEAN_DIRECT_ARTIFACT_PATHS, LEAN_DIRECT_V2_ARTIFACT_PATHS, module.LEAN_DIRECT_V3_ARTIFACT_PATHS, module.LEAN_DIRECT_V4_ARTIFACT_PATHS, module.LEAN_DIRECT_V5_ARTIFACT_PATHS, module.LEAN_DIRECT_V6_ARTIFACT_PATHS, module.LEAN_DIRECT_V7_ARTIFACT_PATHS, module.LEAN_DIRECT_V8_ARTIFACT_PATHS, module.LEAN_DIRECT_V9_ARTIFACT_PATHS, module.LEAN_DIRECT_V10_ARTIFACT_PATHS, module.LEAN_DIRECT_V11_ARTIFACT_PATHS].flatMap((paths) => Object.values(paths as Record<string, string>))
+    const fresh = Object.values(module.LEAN_DIRECT_V12_ARTIFACT_PATHS as Record<string, string>)
+    const diagnostics = [module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_PATH, module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V2_PATH, module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V3_PATH] as string[]
+    expect(new Set([...historical, ...fresh, ...diagnostics]).size).toBe(historical.length + fresh.length + diagnostics.length)
+    for (const key of [
+      "checkLeanDirectWorkerLifecycleSourceOnlyV12", "writeLeanDirectWorkerLifecycleDiagnosticV3", "checkLeanDirectWorkerLifecycleDiagnosticV3",
+      "validateLeanContainerPreflightArtifactV11", "writeLeanContainerPreflightArtifactV11", "renderLeanDirectAuthorizationV12",
+      "validateLeanDirectAuthorizationV12", "writeLeanDirectAuthorizationV12", "checkLeanDirectValidityReviewV12",
+      "checkLeanDirectReviewDispositionV12", "loadAndCheckLeanDirectReviewedReadyV12", "createLeanDirectInvocationV12",
+      "createLeanDirectTerminalArtifactV12", "checkLeanDirectPostRunV12", "checkLeanDirectAdjudicationV12",
+      "checkLeanDirectFinalTrackingV12",
+    ]) expect(module[key]).toBeTypeOf("function")
+  })
+
+  it("preserves both denial diagnostics and validates diagnostic-v3 as attempt five only", () => {
+    const module = leanAdmissionModule as unknown as {
+      validateLeanWorkerLifecycleDiagnosticV3: (repoRoot: string, value: unknown) => unknown
+    }
+    const first = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v1.json", "utf8")) as Record<string, unknown>
+    const second = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2.json", "utf8")) as Record<string, unknown>
+    expect(hashLeanValue(first)).toBe("sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4")
+    expect(hashLeanValue(second)).toBe("sha256:b2945922437dcdbbf1b0a2c13e847cafd2e8b89c2147fb1b7dbafebcc52d72b9")
+    const candidate = { ...second, schemaVersion: "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v3", attemptOrdinal: 5 }
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV3(process.cwd(), { ...candidate, attemptOrdinal: 4 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV3(process.cwd(), { ...candidate, attemptLimit: 11 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV3(process.cwd(), { ...candidate, preflightInvocations: 1 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV3(process.cwd(), { ...candidate, matchInvocations: 1 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV3(process.cwd(), { ...candidate, rawOutput: "private" })).toThrow()
+  })
+
   it("reserves the complete fresh v11 diagnostic and operational family", () => {
     const module = leanAdmissionModule as unknown as Record<string, unknown>
     expect(module.LEAN_DIRECT_V11_ARTIFACT_PATHS).toEqual({
