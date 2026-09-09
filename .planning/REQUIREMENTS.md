@@ -12,9 +12,9 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 - [x] **ADMIT-01**: Maintainers can begin authoritative v1.38 Strategy evaluation only when the v1.37 audit, archive commit, annotated tag, and independent post-tag checker all resolve and pass.
 - [x] **ADMIT-02**: Every v1.38 research root resolves and records the exact selected rules, engine, runtime ABI, Chronicle, arena-catalog, Set-policy, canonical-JSON, provider, runtime, and conformance identities instead of trusting copied labels.
-- [ ] **ADMIT-03**: Before candidate search, researchers can pass `lean_runner_feasibility_v1`: one existing Starter/Advanced fixture pair across three canonical arena labels, both side assignments, and both initiative parities (12 unique cells) executes twice serially as exactly 24 charged supervised Matches within a 15-minute outer limit, with complete coverage and cleanup and byte-identical normalized terminal outcome, final-state, ordered transition/event, and runtime-accounting roots across passes. This is `fixture_feasibility_only`; the historical full-matrix result remains immutable `exhausted` at fresh `0/540`, no reproduction, and `reinterpreted:false`.
+- [ ] **ADMIT-03**: Before candidate search, researchers can pass `lean_runner_feasibility_v1`: one existing Starter/Advanced fixture pair across three canonical arena labels, both side assignments, and both initiative parities (12 unique cells) executes twice serially as exactly 24 charged supervised Matches within the D-34L.2 approved 60-minute outer limit and 120-second per-cell limit using 2 CPUs/256 MB, with complete coverage and cleanup and byte-identical normalized terminal outcome, final-state, ordered transition/event, and runtime-accounting roots across passes. Per-method Strategy limits remain unchanged. This is `fixture_feasibility_only`; the historical full-matrix result remains immutable `exhausted` at fresh `0/540`, no reproduction, and `reinterpreted:false`.
 
-  Current adjudication: the sole lean invocation is a reviewed `non_pass` with 8/24 supervised successes, 16 system failures, and 8/12 cross-pass mismatches. It does not satisfy ADMIT-03 or authorize Phase 263. The trace table retains its historical blocked label for compatibility with the immutable final-convergence proof; this paragraph and the structured current tracking carriers record the active D-34L reason.
+  Current disposition: D-34L.2 and Plan203 are approved, awaiting implementation/review and one fresh preflight before the original remaining corrective 24-Match opportunity. ADMIT-03 is still pending. The first lean invocation remains a reviewed `non_pass` with 8/24 supervised successes, 16 system failures, and 8/12 cross-pass mismatches; the ten-attempt envelope remains exhausted with zero Matches. Only the fresh independently adjudicated exact pass satisfies this requirement and opens Phase263.
 - [x] **ADMIT-04**: A missing, stale, incompatible, or semantically drifting predecessor authority stops authoritative v1.38 work and returns the defect to the integrity foundation without repairing, normalizing, or changing canonical behavior inside this milestone.
 
 ### Measurement, Claims, Budgets, and Custody Contract
@@ -189,7 +189,7 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 |-------------|-------|--------|
 | ADMIT-01 | Phase 262 | Complete |
 | ADMIT-02 | Phase 262 | Complete |
-| ADMIT-03 | Phase 262 | Blocked (0/540; partial infrastructure evidence only) |
+| ADMIT-03 | Phase 262 | Pending approved Plan203 closeout; requires fresh reviewed 24/24 pass |
 | ADMIT-04 | Phase 262 | Complete |
 | MEAS-01 | Phase 262 | Complete |
 | MEAS-02 | Phase 262 | Complete |

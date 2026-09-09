@@ -1,5 +1,11 @@
 # Roadmap: Coward's Game
 
+## Active approved D-34L.2 consolidated closeout — 2026-09-09
+
+Plan262-203 is the sole active remaining Phase262 plan. The operator approved 2 CPUs/256 MB, 120 seconds per Match cell, and 60 minutes overall for one private fixture-feasibility route. Implement and independently review the isolated budget profile, then main orchestrator runs one fresh preflight and only on pass the original remaining 24-Match opportunity. Independent adjudication, phase verification, validation/UAT, and tracking/audit synchronization are included in this same plan. Exact pass completes Phase262 and enables Phase263; any terminal failure stops operational execution. Plans175/176 are superseded, not executed; all consumed history and 36 locks remain preserved. Older dispatch carriers below are historical and must not be followed.
+
+<!-- phase-262-closeout-current: {"decision":"D-34L.2","activeChain":["262-203"],"supersededUnexecuted":["262-175","262-176"],"cpu":2,"memoryMb":256,"cellDeadlineMs":120000,"outerDeadlineMs":3600000,"freshPreflightsAllowed":1,"conditionalOriginalMatchOpportunity":1,"matches":24,"phase262Complete":false,"phase263Eligible":false} -->
+
 ## Approved D-34L.1 lean execution closure — 2026-09-01
 
 Plan200 consumed attempt 8 of 10 with one diagnostic-v5 and localized the first failure to `advanced:vanguard-pressure:selectActivations:sample:1`, coarse `session_failure`; cleanup incompleteness was secondary. Read-only exact reproduction then showed a valid receipt=1, close=1, exit=1, exitCode=0 lifecycle rejected only because Node delivered exit before the MessagePort receipt. Removing only that order rejection passed 50/50 in memory.
@@ -69,12 +75,12 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 **Success Criteria** (what must be TRUE):
 
   1. Maintainers can start an authoritative v1.38 run only after a machine-checked join of the v1.37 audit, archive commit, annotated tag, independent post-tag attestation, and exact selected semantic/runtime tuple passes; any missing, stale, incompatible, or drifting input produces an explicit stop disposition back to the integrity foundation.
-  2. Researchers can pass the reviewed `lean_runner_feasibility_v1` fixture gate: 12 current-formation Starter/Advanced cells run twice serially as 24 charged supervised Matches within 15 minutes, with complete cleanup and byte-identical normalized results across passes; the exhausted 0/540 full-matrix result remains immutable non-pass history.
+  2. Researchers can pass the reviewed `lean_runner_feasibility_v1` fixture gate under approved D-34L.2: 12 current-formation Starter/Advanced cells run twice serially as 24 charged supervised Matches within 60 minutes overall and 120 seconds per cell using 2 CPUs/256 MB, with unchanged per-method limits, complete cleanup and byte-identical normalized results across passes; the exhausted 0/540 full-matrix result remains immutable non-pass history.
   3. Before candidate output is inspected, one immutable contract fixes the primary and secondary estimands, complete conditions and cells, splits and opponents, structural budgets and retries, metric code and denominators, hard and compensating gates, stopping and response admission, finalist and portfolio selection, failure accounting, and bounded permitted claims.
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 170/183 plans executed
+**Plans:** 1 active remaining closeout plan (262-203); earlier execution inventories below are historical, and Plans175/176 are superseded unexecuted.
 
 **Current verdict:** PLAN200 ATTEMPT-8 TERMINAL DIAGNOSTIC / EXIT-BEFORE-RECEIPT ORDER REJECTION REPRODUCED / TWO AUTHORIZED ATTEMPTS REMAIN / ZERO MATCHES / ALL AUTHORITY FALSE. Plan201 owns the minimal repair plus attempt-9 diagnostic-v6. Exact pass alone enables Plan202's final attempt-10 preflight/review; admitted review alone enables rebased Plan175 without another preflight.
 
@@ -309,8 +315,8 @@ Plans:
 - [x] 262-172-PLAN.md
 - [x] 262-173-PLAN.md
 - [x] 262-174-PLAN.md
-- [x] 262-175-PLAN.md
-- [ ] 262-176-PLAN.md
+- [ ] 262-175-PLAN.md — Superseded unexecuted carrier; operational/adjudication tasks absorbed by Plan203.
+- [ ] 262-176-PLAN.md — Superseded unexecuted carrier; tracking/validation/UAT tasks absorbed by Plan203.
 - [x] 262-177-PLAN.md
 - [x] 262-178-PLAN.md
 - [x] 262-179-PLAN.md
@@ -336,7 +342,8 @@ Plans:
 - [x] 262-199-PLAN.md — Run one exact actual-fixture stage diagnostic as attempt 7 with zero preflights and zero Matches.
 - [x] 262-200-PLAN.md — Repair throw-path timing accounting and run one diagnostic-v5 as attempt 8 with zero preflights and zero Matches.
 - [x] 262-201-PLAN.md — Remove only exit-before-receipt order rejection, stress both protocols, and run attempt-9 diagnostic-v6.
-- [ ] 262-202-PLAN.md — Run final attempt-10 preflight-v12 and independently review seven categories; zero Matches.
+- [x] 262-202-PLAN.md — Final attempt-10 preflight-v12 refused; independent seven-category review complete; zero Matches.
+- [ ] 262-203-PLAN.md — Sole consolidated approved budget implementation, review, preflight, conditional 24-Match run, independent adjudication, and phase closure.
 
 **Wave 70** *(complete)*
 

@@ -8,9 +8,9 @@ Plan201 fixed a reproduced Worker event-delivery race. Its real-container diagno
 
 All ten newly authorized attempts are spent. No Matches ran in that envelope. The original corrective 24-Match opportunity remains unconsumed. Phase262 is not complete: ADMIT-03 still requires 24/24 supervised Matches and matching deterministic roots across two passes.
 
-## Recommended decision — pending operator approval
+## Approved decision — 2026-09-09
 
-Revise only this private fixture-feasibility infrastructure budget from 0.5 CPU / 64 MB / 45 seconds per cell / 15 minutes overall to **2 CPUs / 256 MB / 120 seconds per cell / 60 minutes overall**. These are bounded proposed budgets, not a claim that the repaired runtime has already demonstrated feasibility within them.
+The operator replied **approved** to this exact proposal at commit `4192a72d`. Revise only this private fixture-feasibility infrastructure budget from 0.5 CPU / 64 MB / 45 seconds per cell / 15 minutes overall to **2 CPUs / 256 MB / 120 seconds per cell / 60 minutes overall**. These are approved bounds, not a claim that the repaired runtime has already demonstrated feasibility within them.
 
 Authorize one consolidated implementation-and-closeout route: update the budget and necessary consumers together; run focused regression tests and one independent review; run exactly one fresh preflight; only on pass, consume the original corrective 24-Match opportunity once; independently adjudicate deterministic equality and cleanup; then close Phase262 and proceed to Phase263 only on exact pass. If the preflight or Match run fails, record the outcome and stop operational execution without an automatic retry.
 
@@ -18,6 +18,6 @@ Preserve fixtures, schedule, both passes, per-method Strategy limits, canonical 
 
 Use one consolidated closeout plan if approved. Routine source fixes and document corrections remain tasks in that plan rather than generating a new plan and authority version for each edit; preserve any actually consumed operational attempt as immutable history.
 
-## Decision required
+## Execution disposition
 
-Approval is required because this changes the previously frozen infrastructure limits and authorizes execution beyond the user's ten-attempt cap. The existing instruction to continue autonomously does not by itself establish the new numeric limits. This document grants no execution authority.
+The explicit approval establishes D-34L.2 and Plan262-203 as the sole active closeout route. Plans175/176 are superseded, unexecuted carriers of work now owned by Plan203; their old selectors must not be dispatched. The exhausted ten-attempt envelope remains exhausted. This is one new preflight opportunity and conditional consumption of the original remaining 24-Match opportunity, not a further retry envelope. No repeated operator literal is required. Runtime execution begins only after implementation and independent source review pass; the main orchestrator owns operational launch.

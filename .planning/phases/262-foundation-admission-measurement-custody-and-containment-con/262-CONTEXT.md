@@ -13,6 +13,13 @@ This phase admits the exact released v1.37 authority, reproduces the old current
 <decisions>
 ## Implementation Decisions
 
+### D-34L.2: Approved consolidated Phase262 closeout (2026-09-09)
+
+- The operator approved `262-CLOSEOUT-DECISION.md` at `4192a72d`: exactly 2 CPUs, 256 MB container memory, 120,000 ms per Match cell, and 3,600,000 ms overall for this private fixture-feasibility route. This supersedes only the previous infrastructure budget for the new route; all historical profiles and evidence retain their original limits.
+- One Plan262-203 owns implementation, routine fixes, independent source review, exactly one fresh preflight, the conditional original 24-Match opportunity, independent adjudication, validation/UAT/verification, and tracking/audit synchronization. Dormant Plans175/176 are superseded without pretending they executed. Do not create per-edit plan/authorization-version chains or request repeated literals.
+- Main-orchestrator launch requires reviewed committed source and exact passing preflight. Preserve unchanged per-method Strategy limits, both passes, fixed fixtures/schedule, canonical kernel, runtime supervision, information/privacy boundaries, normalized four-root equality, and complete cleanup. Terminal preflight failure or any Match outcome ends operational authority with no automatic retry.
+- Only independently verified exact 24/24 pass completes ADMIT-03 and Phase262 and permits Phase263. Preserve historical 0/540, first lean 8/24, all ten failed-envelope attempts, existing findings, all consumed bytes, and all 36 locks. No formation, holdout, public, counted, production, archive, or tag authority follows from this infrastructure approval.
+
 ### D-34L.1: Lean single-operator execution closure (2026-09-01)
 
 - The approved `lean_runner_feasibility_v1` corrective run is a private single-operator fixture-feasibility experiment. Execution depends on a bounded review of seven actual result-validity categories, not a literal-zero global certification review.
