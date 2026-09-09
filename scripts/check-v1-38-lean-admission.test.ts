@@ -128,6 +128,90 @@ describe("lean admission custody", () => {
     expect(result).toMatchObject({ terminalStage: "complete", requestCounts: { planned: 16, attempted: 16, successful: 16 }, cleanup: { sessionsExpected: 2, sessionsClosed: 2, complete: true } })
   })
 
+  it.each([
+    [1, "starter:aggro-chaser:selectActivations:warm"],
+    [4, "starter:aggro-chaser:selectActivations:sample:3"],
+    [5, "starter:aggro-chaser:soldierBrain:warm"],
+    [8, "starter:aggro-chaser:soldierBrain:sample:3"],
+    [9, "advanced:vanguard-pressure:selectActivations:warm"],
+    [12, "advanced:vanguard-pressure:selectActivations:sample:3"],
+    [13, "advanced:vanguard-pressure:soldierBrain:warm"],
+    [16, "advanced:vanguard-pressure:soldierBrain:sample:3"],
+  ])("records throw-safe timing and stops at attempted call %i", (failingCall, terminalStage) => {
+    const module = leanAdmissionModule as unknown as {
+      runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => Record<string, any>
+    }
+    let call = 0
+    let tick = 0n
+    const result = module.runLeanActualFixtureStageDiagnosticInjected({
+      nowNanoseconds: () => { tick += 1_000_000n; return tick },
+      createSession: () => ({
+        adapter: {
+          metadata: { id: "container-subprocess", diagnostics: { fallback: false } },
+          execute: () => { call += 1; if (call === failingCall) throw new Error("private adapter failure"); return { ok: true, value: [] } },
+        },
+        close: () => ({ cleanupComplete: true, orphanedChild: false }),
+      }),
+    })
+    expect(result).toMatchObject({
+      terminalStage,
+      resultClass: "session_failure",
+      violationType: null,
+      requestCounts: { attempted: failingCall, successful: failingCall - 1 },
+      aggregateTimings: { requestCount: failingCall },
+    })
+    expect(result.aggregateTimings.totalMilliseconds).toBeGreaterThanOrEqual(0)
+    expect(result.aggregateTimings.maximumMilliseconds).toBeGreaterThanOrEqual(0)
+    expect(JSON.stringify(result)).not.toContain("private adapter failure")
+  })
+
+  it("preserves the first adapter failure when close also fails", () => {
+    const module = leanAdmissionModule as unknown as {
+      runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => Record<string, any>
+    }
+    let tick = 0n
+    const result = module.runLeanActualFixtureStageDiagnosticInjected({
+      nowNanoseconds: () => { tick += 1_000_000n; return tick },
+      createSession: () => ({
+        adapter: { metadata: { id: "container-subprocess", diagnostics: { fallback: false } }, execute: () => { throw new Error("private request") } },
+        close: () => { throw new Error("private cleanup") },
+      }),
+    })
+    expect(result).toMatchObject({
+      terminalStage: "starter:aggro-chaser:selectActivations:warm",
+      resultClass: "session_failure",
+      violationType: null,
+      requestCounts: { attempted: 1, successful: 0 },
+      aggregateTimings: { requestCount: 1 },
+      cleanup: { complete: false },
+    })
+    expect(JSON.stringify(result)).not.toContain("private")
+  })
+
+  it("uses session:close only when cleanup is the first failure", () => {
+    const module = leanAdmissionModule as unknown as {
+      runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => Record<string, any>
+    }
+    let tick = 0n
+    const result = module.runLeanActualFixtureStageDiagnosticInjected({
+      nowNanoseconds: () => { tick += 1_000_000n; return tick },
+      createSession: () => ({
+        adapter: { metadata: { id: "container-subprocess", diagnostics: { fallback: false } }, execute: () => ({ ok: true, value: [] }) },
+        close: () => ({ cleanupComplete: false, orphanedChild: true }),
+      }),
+    })
+    expect(result).toMatchObject({ terminalStage: "starter:aggro-chaser:session:close", resultClass: "session_failure", violationType: null, requestCounts: { attempted: 8, successful: 8 }, aggregateTimings: { requestCount: 8 }, cleanup: { complete: false } })
+  })
+
+  it("retires attempt seven and reserves only fresh diagnostic-v5 custody", () => {
+    const module = leanAdmissionModule as unknown as Record<string, any>
+    expect(() => module.writeLeanActualFixtureStageDiagnosticV4(process.cwd())).toThrow("LEAN_DIRECT_V13_ATTEMPT_CONSUMED")
+    expect(module.LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH).toBe(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5.json")
+    for (const key of ["checkLeanDirectActualFixtureSourceOnlyV14", "validateLeanActualFixtureStageDiagnosticV5", "writeLeanActualFixtureStageDiagnosticV5", "checkLeanActualFixtureStageDiagnosticV5"]) expect(module[key]).toBeTypeOf("function")
+    expect(readFileSync(".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-199-SUMMARY.md", "utf8")).toContain("97241136")
+    expect(() => readFileSync(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4.json", "utf8")).toThrow()
+  })
+
   it("stops at the exact public failing fixture method ordinal and retains only a coarse violation", () => {
     const module = leanAdmissionModule as unknown as {
       runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => unknown
