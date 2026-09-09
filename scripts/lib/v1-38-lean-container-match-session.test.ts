@@ -32,6 +32,32 @@ const create = (name: string, streamResponses: unknown[]) => {
 }
 
 describe("lean Match-scoped hostile container session", () => {
+  it("uses one fresh bounded guest Worker per broker request without a child process", () => {
+    const fixture = create("lean-worker-shape", [])
+    const brokerSource = fixture.persistent.calls[0]![1].at(-1)!
+    expect(brokerSource).toContain('from "node:worker_threads"')
+    expect(brokerSource).toContain("new Worker(")
+    expect(brokerSource).toContain("env: {}")
+    expect(brokerSource).toContain("execArgv: []")
+    expect(brokerSource).toContain("resourceLimits:")
+    expect(brokerSource).toContain("await worker.terminate()")
+    expect(brokerSource).not.toContain("spawnSync")
+    expect(brokerSource).not.toContain("node:child_process")
+    fixture.session.close()
+  })
+
+  it("keeps broker requests serialized and correlates each terminal frame", () => {
+    const fixture = create("lean-worker-order", [response(1, []), response(2, [])])
+    const brokerSource = fixture.persistent.calls[0]![1].at(-1)!
+    expect(brokerSource).toContain("queue=queue.then")
+    expect(brokerSource).toContain("requestId:q.requestId")
+    expect(brokerSource).toContain("expected++")
+    fixture.session.adapter.execute({ source: "a", methodName: "selectActivations", input: {} })
+    fixture.session.adapter.execute({ source: "b", methodName: "selectActivations", input: {} })
+    expect(fixture.persistent.frames.map((frame) => JSON.parse(frame).requestId)).toEqual([1, 2])
+    fixture.session.close()
+  })
+
   it("multiplexes mixed methods through exactly one persistent Docker stream", () => {
     const fixture = create("lean-a", [response(1, ["soldier:1"]), response(2, { action: "WAIT" })])
     expect(fixture.session.adapter.execute({ source: "source-a", methodName: "selectActivations", input: {}, outputByteLimit: 1024 })).toEqual({ ok: true, value: ["soldier:1"] })
