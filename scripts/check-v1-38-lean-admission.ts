@@ -3432,9 +3432,9 @@ export const checkLeanDirectFinalTrackingV10 = (repoRoot: string): void => { che
 const LEAN_DIRECT_TUPLE_REPAIR_COMMIT = "e166a2b73fbaeee065f463fbe85738d08124fde7" as const
 const LEAN_DIRECT_DIAGNOSTIC_V1_ROOT = "sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4" as const
 const assertLeanDirectDiagnosticV1History = (repoRoot: string): LeanWorkerLifecycleDiagnosticV1 => {
-  const diagnostic = validateLeanWorkerLifecycleDiagnosticV1(repoRoot, readJson(repoRoot, LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_PATH))
-  if (hashLeanValue(diagnostic) !== LEAN_DIRECT_DIAGNOSTIC_V1_ROOT || diagnostic.stage !== "docker_unavailable" || diagnostic.preflightInvocations !== 0 || diagnostic.matchInvocations !== 0 || !exactFalseAuthority(diagnostic.authority)) throw new TypeError("LEAN_DIRECT_DIAGNOSTIC_V1_HISTORY_DRIFT")
-  return diagnostic
+  const diagnostic = readJson(repoRoot, LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_PATH)
+  if (hashLeanValue(diagnostic) !== LEAN_DIRECT_DIAGNOSTIC_V1_ROOT || !isObject(diagnostic) || diagnostic.schemaVersion !== "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v1" || diagnostic.stage !== "docker_unavailable" || diagnostic.attemptOrdinal !== 2 || diagnostic.attemptLimit !== 10 || diagnostic.preflightInvocations !== 0 || diagnostic.matchInvocations !== 0 || !exactFalseAuthority(diagnostic.authority)) throw new TypeError("LEAN_DIRECT_DIAGNOSTIC_V1_HISTORY_DRIFT")
+  return globalThis.structuredClone(diagnostic) as unknown as LeanWorkerLifecycleDiagnosticV1
 }
 const assertLeanDirectV11PathsAreFresh = (): void => {
   const historical = [...Object.values(LEAN_DIRECT_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V2_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V3_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V4_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V5_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V6_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V7_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V8_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V9_ARTIFACT_PATHS), ...Object.values(LEAN_DIRECT_V10_ARTIFACT_PATHS), LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_PATH]
