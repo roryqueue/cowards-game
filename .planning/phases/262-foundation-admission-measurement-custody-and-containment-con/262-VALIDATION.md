@@ -5,10 +5,29 @@ status: partial
 nyquist_compliant: true
 coverage_state: complete
 empirical_state: blocked
-last_audited: 2026-09-01
+last_audited: 2026-09-09
 ---
 
 # Phase 262 Validation Strategy
+
+## Current Plan262-203 validation
+
+Automated coverage remains complete; empirical satisfaction remains 15/16. ADMIT-03 did not pass: the one approved closeout preflight is consumed with `non_pass/docker_unavailable`, zero samples, zero lifecycles, and no Matches. No replay-realism result is claimed for a run that never started. The recorded default projection with zero samples is not a performance estimate. Docker availability was restored afterward without repeating preflight; this does not prove the approved budgets sufficient.
+
+| Current check | Result |
+|---|---|
+| Shared profile/session/runner synthetic regression | 93 passed |
+| Dedicated closeout guards, cleanup, interruption | 8 passed |
+| Exact predecessor admission and profile-neutral classifier/containment selection | 11 passed |
+| Complete primary study and canonical v3 local seal selection | 2 passed |
+| TypeScript | pass |
+| Independent seven-category source review | pass; zero unresolved findings |
+| Main preflight | non-pass before samples; no Match admitted |
+| Read-only post-run branch check | pass; authenticates refusal, not empirical success |
+
+No UI was changed. No new missing behavioral coverage was found in this bounded closeout; the unresolved item is an operational prerequisite and expired single-use authority, not a test that can manufacture 24 successful Matches. Historical test results below remain historical, including their explicitly recorded verifier-maintenance gaps.
+
+## Historical validation snapshots (not active dispatch instructions)
 
 ## D-34L final adjudication — 2026-09-01
 

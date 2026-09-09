@@ -1,10 +1,10 @@
 # Roadmap: Coward's Game
 
-## Active approved D-34L.2 consolidated closeout — 2026-09-09
+## Current D-34L.2 consolidated closeout outcome — 2026-09-09
 
-Plan262-203 is the sole active remaining Phase262 plan. The operator approved 2 CPUs/256 MB, 120 seconds per Match cell, and 60 minutes overall for one private fixture-feasibility route. Implement and independently review the isolated budget profile, then main orchestrator runs one fresh preflight and only on pass the original remaining 24-Match opportunity. Independent adjudication, phase verification, validation/UAT, and tracking/audit synchronization are included in this same plan. Exact pass completes Phase262 and enables Phase263; any terminal failure stops operational execution. Plans175/176 are superseded, not executed; all consumed history and 36 locks remain preserved. Older dispatch carriers below are historical and must not be followed.
+Plan262-203 implemented the isolated 2 CPU/256 MB, 120-second-cell/60-minute-outer profile and obtained independent seven-category source review with zero unresolved findings. Main consumed its sole preflight: `non_pass/docker_unavailable`, zero samples/lifecycles/Matches. The service was restored afterward, but no preflight was repeated and no Match was admitted. ADMIT-03 and Phase262 remain incomplete; Phase263 cannot begin. A fresh preflight requires explicit renewed authority. Plans175/176 remain superseded unexecuted; all consumed history and 36 locks are preserved. Older dispatch carriers below are historical and must not be followed.
 
-<!-- phase-262-closeout-current: {"decision":"D-34L.2","activeChain":["262-203"],"supersededUnexecuted":["262-175","262-176"],"cpu":2,"memoryMb":256,"cellDeadlineMs":120000,"outerDeadlineMs":3600000,"freshPreflightsAllowed":1,"conditionalOriginalMatchOpportunity":1,"matches":24,"phase262Complete":false,"phase263Eligible":false} -->
+<!-- phase-262-closeout-current: {"decision":"D-34L.2","activeChain":[],"terminalPlan":"262-203","supersededUnexecuted":["262-175","262-176"],"cpu":2,"memoryMb":256,"cellDeadlineMs":120000,"outerDeadlineMs":3600000,"preflightsConsumed":1,"freshPreflightsAllowed":0,"matchesRun":0,"result":"non_pass","reason":"docker_unavailable","phase262Complete":false,"phase263Eligible":false} -->
 
 ## Approved D-34L.1 lean execution closure — 2026-09-01
 
@@ -80,7 +80,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 1 active remaining closeout plan (262-203); earlier execution inventories below are historical, and Plans175/176 are superseded unexecuted.
+**Plans:** Plan262-203 is terminal non-pass; no operational plan is currently executable without renewed preflight authority. Earlier execution inventories below are historical, and Plans175/176 are superseded unexecuted.
 
 **Current verdict:** PLAN200 ATTEMPT-8 TERMINAL DIAGNOSTIC / EXIT-BEFORE-RECEIPT ORDER REJECTION REPRODUCED / TWO AUTHORIZED ATTEMPTS REMAIN / ZERO MATCHES / ALL AUTHORITY FALSE. Plan201 owns the minimal repair plus attempt-9 diagnostic-v6. Exact pass alone enables Plan202's final attempt-10 preflight/review; admitted review alone enables rebased Plan175 without another preflight.
 
@@ -343,7 +343,7 @@ Plans:
 - [x] 262-200-PLAN.md — Repair throw-path timing accounting and run one diagnostic-v5 as attempt 8 with zero preflights and zero Matches.
 - [x] 262-201-PLAN.md — Remove only exit-before-receipt order rejection, stress both protocols, and run attempt-9 diagnostic-v6.
 - [x] 262-202-PLAN.md — Final attempt-10 preflight-v12 refused; independent seven-category review complete; zero Matches.
-- [ ] 262-203-PLAN.md — Sole consolidated approved budget implementation, review, preflight, conditional 24-Match run, independent adjudication, and phase closure.
+- [x] 262-203-PLAN.md — Terminal non-pass: reviewed implementation; sole preflight refused Docker unavailable before samples/Matches; independent refusal adjudication and blocked-phase tracking. Phase262 is not complete.
 
 **Wave 70** *(complete)*
 
@@ -988,7 +988,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 170/183 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 terminal non-pass | Blocked: fresh preflight authority required | - |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |

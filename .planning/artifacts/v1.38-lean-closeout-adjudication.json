@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "v1.38-lean-closeout-adjudication-v1",
+  "reviewer": "/root/adjudicate_closeout",
+  "producer": "/root",
+  "terminalRoot": "sha256:dd6d1eb77186c65fc56a25575c083496dcbf8a121de896964b3eed1509ce933d",
+  "result": "non_pass",
+  "admitsPhase263": false
+}

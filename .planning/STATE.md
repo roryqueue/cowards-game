@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: in_progress
-stopped_at: Approved D-34L.2; execute consolidated Plan262-203 after independent plan review
-last_updated: "2026-09-09T05:41:59.330Z"
-last_activity: 2026-09-10
-last_activity_desc: approved consolidated Plan203 infrastructure budget and conditional closeout
+status: blocked
+stopped_at: Plan262-203 preflight consumed with Docker unavailable; service restored, fresh preflight authority required
+last_updated: "2026-09-09T11:45:55Z"
+last_activity: 2026-09-09
+last_activity_desc: Plan203 source reviewed; sole preflight refused before samples or Matches; OrbStack restored
 progress:
   total_phases: 9
   completed_phases: 0
@@ -18,6 +18,12 @@ progress:
 ---
 
 # State: Coward's Game
+
+## Current disposition after Plan 262-203
+
+The approved closeout profile is implemented and independently source-reviewed with zero unresolved findings. The sole fresh preflight is consumed: `non_pass/docker_unavailable`, zero samples, zero lifecycles, zero Matches. Its immutable result is committed at `baeced61`. No invocation or Match terminal exists. ADMIT-03 remains unmet (15/16 Phase262 requirements satisfied), and Phase263 remains gated.
+
+The main orchestrator subsequently started the installed OrbStack application; a read-only Docker availability check returned server version 29.4.0. This resolves service availability only. It does not reset the consumed preflight, establish performance feasibility, or authorize Matches. Further execution requires explicit approval of a fresh preflight under the same profile, with Matches still conditional on its pass. Do not rerun consumed selectors. All earlier dispatch instructions below are historical, including the originally approved Plan203 launch instructions.
 
 ## Current disposition after Plan 262-202
 

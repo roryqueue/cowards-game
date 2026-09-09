@@ -1,8 +1,9 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-verified: 2026-09-01T18:22:45Z
+verified: 2026-09-09T11:44:36Z
 status: gaps_found
-score: 4/5 must-haves verified
+score: 8/9 must-haves verified
+roadmap_score: 4/5
 requirements_score: 15/16 satisfied
 behavior_unverified: 0
 overrides_applied: 0
@@ -11,27 +12,100 @@ re_verification:
   previous_score: 4/5
   gaps_closed: []
   gaps_remaining:
-    - "The reviewed D-34L lean fixture gate returned non_pass: 8/24 supervised successes, 16 system failures, and 8/12 cross-pass mismatches."
+    - "ADMIT-03 remains blocked: Plan203 sole preflight returned non_pass/docker_unavailable before any samples or Matches."
   regressions: []
 gaps:
-  - truth: "Researchers can reproduce the persisted current-rules matrix under the resolved tuple, while Starter and Advanced Strategies are accepted only as fixtures."
+  - truth: "Researchers can pass the D-34L.2 reviewed 24-Match fixture feasibility gate with complete cleanup and identical normalized results across passes."
     status: failed
-    reason: "The sole lean invocation completed cleanup but produced only 8/24 supervised successes, 16 system failures, and 8/12 cross-pass mismatches; ADMIT-03 therefore remains blocked."
+    reason: "The sole approved Plan203 preflight returned non_pass/docker_unavailable with zero samples and lifecycles; no Match invocation or terminal exists. Its consumed authority permits no retry."
     artifacts:
-      - path: ".planning/artifacts/v1.38-lean-runner-terminal.json"
-        issue: "result=non_pass, success=8, systemFailure=16, and mismatchCount=8"
-      - path: ".planning/artifacts/v1.38-lean-runner-adjudication-v1.json"
-        issue: "reviewedResult=non_pass and admitsEligibility=false"
-      - path: ".planning/artifacts/v1.38-phase-262-lean-eligibility-v1.json"
-        issue: "admit03=blocked, phase262Complete=false, and Phase263 eligibility false"
+      - path: ".planning/artifacts/v1.38-lean-closeout-preflight.json"
+        issue: "status=non_pass, reason=docker_unavailable, sampleCount=0, lifecycleCount=0"
+      - path: ".planning/artifacts/v1.38-lean-closeout-adjudication.json"
+        issue: "result=non_pass, admitsPhase263=false"
     missing:
       - "A reviewed exact D-34L pass with 24/24 supervised successes, zero failed cells, complete cleanup, and four identical normalized roots across both passes for all 12 cells."
-      - "Before any one permitted whole-gate correction, a separately committed plan must diagnose and fix a specific implementation defect; this adjudication creates no rerun authority."
+      - "Explicit operator revision of the consumed single-preflight/no-retry boundary; the orchestrator subsequently restored Docker, but this grants neither retry nor Phase263 authority."
 ---
 
 # Phase 262: Goal-Backward Verification
 
-## Current D-34L verdict — 2026-09-01
+## Current D-34L.2 verdict — 2026-09-09, Plan262-203
+
+**Phase goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, single-operator local-seal, claim, and containment contract with explicit assurance limits.
+
+**Status: gaps_found.** Independent reviewer `/root/adjudicate_closeout` inspected the committed controller, review, consumption marker and actual preflight bytes, not a SUMMARY claim. The sole preflight returned `non_pass/docker_unavailable`, with zero samples, zero lifecycles and no Match invocation or terminal. ADMIT-03 remains blocked, Phase262 remains incomplete, and Phase263 is not admitted. A correctly enforced stop does not establish fixture feasibility.
+
+The preflight SHA-256 is `dd6d1eb77186c65fc56a25575c083496dcbf8a121de896964b3eed1509ce933d`. Its `cleanupComplete:false` is not evidence of an orphaned container: the captured lifecycle count is zero. Its 5,000 ms cell/120,000 ms run projections are formula defaults with no observed timing samples and **must not be described as measured feasibility**. The independently checked source/tree, preserved-history and 36-lock roots match the committed review. No changes to `packages` or `apps` occurred between pre-closeout `4192a72d` and the reviewed/consumed closeout.
+
+### Current observable truths
+
+Roadmap criteria are retained in full; Plan203 adds four nonduplicative truths. Its 24/24 proof requirement is merged with roadmap criterion 2, not counted twice.
+
+| # | Truth | Status | Evidence |
+|---|---|---|---|
+| 1 | Exact v1.37 authority and semantic/runtime join precedes authoritative work; drift stops. | VERIFIED | Existing foundation-admission proof and unchanged foundation implementation; orchestrator's focused foundation checks passed in this closeout. |
+| 2 | Reviewed D-34L.2 fixture gate produces 24/24 successes, twelve paired cells, complete cleanup and four matching normalized roots. | FAILED — BLOCKER | Preflight non-pass; zero Matches; no closeout invocation or terminal. |
+| 3 | Immutable pre-search contract fixes estimands, cells, budgets, gates, accounting, selection and claims. | VERIFIED | Existing study/measurement policies and unchanged evaluators; focused complete-study test passed during closeout. |
+| 4 | Bounded single-operator local seal retains its explicit assurance exclusions. | VERIFIED | Existing canonical v3 proof and unchanged verifier; focused mutation/wrong-domain test passed during closeout. |
+| 5 | Literal profiles, equal compute, classifiers and rejection gates are frozen; executable formation material stays absent. | VERIFIED | Existing protocol/containment artifacts and focused classifier/formation checks passed during closeout. |
+| 6 | Only explicit closeout profile uses 2 CPUs/256 MB and 120000/3600000 ms; old defaults remain. | VERIFIED | `LEAN_CLOSEOUT_PROFILE` propagates into Docker create controls, shared evaluator and supervised child/outer deadlines; source review and reported profile regression tests pass. |
+| 7 | Independent source review precedes exclusive preflight; exact pass alone admits the original Match opportunity. | VERIFIED | `runPreflight` writes consumption before probe; `runMatches` validates pass before invocation; committed seven-category review; independent named rejection test passes. |
+| 8 | Independent adjudication governs closure; non-pass cannot open Phase263. | VERIFIED | `checkPostRun` derives non-pass from committed preflight with invocation/terminal absent; adjudication binds exact preflight bytes and false eligibility. |
+| 9 | Consumed artifacts and 36 locks are unchanged; Plans175/176 are superseded unexecuted. | VERIFIED | Independent `--check-post-run` authenticates history and lock roots; Plan203 declares supersession without execution summaries. |
+
+**Score:** 8/9 merged truths; roadmap 4/5; requirements 15/16. No truth is deferred to Phase263: its roadmap dependency explicitly requires this gate. No verification override applies. No UI or rendered dynamic-data artifact was introduced. There are no human visual/UAT items; the blocking issue is missing real empirical evidence and expired operational authority, not uncertain UI behavior.
+
+### Current artifacts and wiring
+
+| Artifact | Substantive implementation and connection | Status |
+|---|---|---|
+| `scripts/run-v1-38-lean-closeout.ts` | Dedicated selectors authenticate source, consume once, invoke profiled canonical runner, reduce outcomes and validate adjudication. | VERIFIED |
+| `scripts/lib/v1-38-lean-infrastructure-profile.ts` and shared session/runner | Explicit profile controls real Docker args, preflight budgets and child execution; historical default branches remain. | VERIFIED |
+| `v1.38-lean-closeout-source-review.json` | Seven-category independent pass over source `24ce8b94bfdb8813935165c96da9bc3f7cec46ee`; exact closure/history/locks authenticated. | VERIFIED |
+| `v1.38-lean-closeout-preflight-consumption.json` → preflight | Review and binding roots agree; committed one-shot non-pass flows to post-run checker. | VERIFIED |
+| `v1.38-lean-closeout-invocation.json` / terminal | Absent, as required when preflight fails; not fabricated successful evidence. | EXPECTED ABSENCE; ADMIT-03 not satisfied |
+| `v1.38-lean-closeout-adjudication.json` | Different producer/reviewer; exact preflight byte root; non-pass/false eligibility. | VERIFIED by independent derivation; committed-file checker is final orchestrator step |
+
+### Current requirement regression assessment
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| ADMIT-01 | SATISFIED | Existing exact authority join; focused foundation regression. |
+| ADMIT-02 | SATISFIED | Selected semantic/runtime tuple authenticated by closeout binding. |
+| ADMIT-03 | BLOCKED | Actual preflight non-pass; no 24-Match proof. |
+| ADMIT-04 | SATISFIED | Source/history drift and failed admission remain fail-closed. |
+| MEAS-01 | SATISFIED | Existing frozen estimands/cells/splits/opponents unchanged. |
+| MEAS-02 | SATISFIED | Approved explicit infrastructure profile; one consumed preflight, no retry. |
+| MEAS-03 | SATISFIED | Frozen metrics/denominators/claims unchanged; defaults not treated as observations. |
+| MEAS-04 | SATISFIED | Failed preflight retained; no accepted Match evidence claimed. |
+| MEAS-05 | SATISFIED | Source/runtime identities bound and authenticated. |
+| MEAS-06 | SATISFIED | Existing population/core/finalist policies unchanged. |
+| MEAS-07 | SATISFIED | Existing response/probe/red-team thresholds unchanged. |
+| MEAS-08 | SATISFIED | Fixture-only scope; no competitive strength claim. |
+| MEAS-09 | SATISFIED | Operational process failure is not rules/formation result. |
+| MEAS-10 | SATISFIED | Profile-neutral protocol/privacy/formation absence preserved. |
+| SEAL-01 | SATISFIED WITH LIMIT | Existing local-seal proof; no external/hostile-same-UID assurance added. |
+| DECI-02 | SATISFIED | Existing classifier/denominator/rejection policies unchanged. |
+
+Plan203 declares all sixteen Phase262 requirements; none is orphaned. The previously satisfied requirements receive regression checks rather than new operational execution.
+
+### Current independent checks and limitations
+
+| Check | Result |
+|---|---|
+| `pnpm exec tsx scripts/run-v1-38-lean-closeout.ts --check-post-run` | PASS, independently run; no Docker/Matches/probe invoked. |
+| `pnpm exec vitest run scripts/run-v1-38-lean-closeout.test.ts --pool=forks --maxWorkers=1 --no-file-parallelism -t 'rejects non-pass, cleanup failure, surplus private payload and profile drift'` | PASS, 1 test; 7 skipped; independent process, synthetic only. |
+| Historical/package regression | `git diff --name-only 4192a72d HEAD -- packages apps` empty; history/36 locks authenticated by post-run. |
+| Source debt marker scan | No `TBD`, `FIXME`, or `XXX` in closeout controller/test and changed session/runner source. |
+| Existing focused foundation/classifier/study/local-seal checks | Orchestrator reports 13 passing selected tests; retained as provenance, not represented as independently rerun here. |
+| Source profile/runner regression and typecheck | Executor reports 93 shared + 8 dedicated tests and TypeScript pass; source review authenticates implementation, but synthetic tests are not actual fixture feasibility evidence. |
+
+**Concrete blocker:** Explicit operator revision of the consumed single-preflight/no-retry boundary is required before any fresh preflight. After the failed attempt, the orchestrator reports restoring installed OrbStack and a successful read-only Docker server check (29.4.0), without rerunning preflight or Matches. That resolves the service availability issue, not the consumed authority or missing empirical proof. This reviewer did not operate Docker. No retry, Match, candidate, holdout opening, formation materialization, public/counting change, archive or tag is authorized by this adjudication.
+
+## Historical D-34L snapshot — 2026-09-01
+
+Everything below is retained historical verification evidence, including historical test claims and then-current next actions. It does not override the current Plan203 verdict above and does not authorize a retry. The first 8/24 lean result and older exhausted 0/540 remain distinct immutable non-passes.
 
 The approved lean replacement was executed exactly once and independently adjudicated without rerunning it. Schedule, charge, lineage, cleanup, board-realism, privacy, selected-tuple, fixture, arena, and current-formation custody checks passed. The empirical gate did not: 8 of 24 executions succeeded, 16 system-failed, and 8 of 12 cross-pass comparisons mismatched. The reviewed result is `non_pass`, so ADMIT-03 remains blocked, Phase 262 remains incomplete, and Phase 263 planning/execution remain false.
 
