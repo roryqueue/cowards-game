@@ -79,6 +79,45 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the complete fresh v11 diagnostic and operational family", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_V11_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v10.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v11.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v11.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v11.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v11.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v11.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v11.json",
+    })
+    expect(module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V2_PATH).toBe(".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2.json")
+    const historical = [LEAN_DIRECT_ARTIFACT_PATHS, LEAN_DIRECT_V2_ARTIFACT_PATHS, module.LEAN_DIRECT_V3_ARTIFACT_PATHS, module.LEAN_DIRECT_V4_ARTIFACT_PATHS, module.LEAN_DIRECT_V5_ARTIFACT_PATHS, module.LEAN_DIRECT_V6_ARTIFACT_PATHS, module.LEAN_DIRECT_V7_ARTIFACT_PATHS, module.LEAN_DIRECT_V8_ARTIFACT_PATHS, module.LEAN_DIRECT_V9_ARTIFACT_PATHS, module.LEAN_DIRECT_V10_ARTIFACT_PATHS].flatMap((paths) => Object.values(paths as Record<string, string>))
+    const fresh = Object.values(module.LEAN_DIRECT_V11_ARTIFACT_PATHS as Record<string, string>)
+    expect(new Set([...historical, ...fresh, module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_PATH as string, module.LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V2_PATH as string]).size).toBe(historical.length + fresh.length + 2)
+    for (const key of [
+      "checkLeanDirectWorkerLifecycleSourceOnlyV11", "writeLeanDirectWorkerLifecycleDiagnosticV2", "checkLeanDirectWorkerLifecycleDiagnosticV2",
+      "validateLeanContainerPreflightArtifactV10", "writeLeanContainerPreflightArtifactV10", "renderLeanDirectAuthorizationV11",
+      "validateLeanDirectAuthorizationV11", "writeLeanDirectAuthorizationV11", "checkLeanDirectValidityReviewV11",
+      "checkLeanDirectReviewDispositionV11", "loadAndCheckLeanDirectReviewedReadyV11", "createLeanDirectInvocationV11",
+      "createLeanDirectTerminalArtifactV11", "checkLeanDirectPostRunV11", "checkLeanDirectAdjudicationV11",
+      "checkLeanDirectFinalTrackingV11",
+    ]) expect(module[key]).toBeTypeOf("function")
+  })
+
+  it("validates diagnostic-v2 as attempt three with aggregate-only zero-effect evidence", () => {
+    const module = leanAdmissionModule as unknown as {
+      validateLeanWorkerLifecycleDiagnosticV2: (repoRoot: string, value: unknown) => unknown
+    }
+    const prior = JSON.parse(readFileSync(".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v1.json", "utf8")) as Record<string, unknown>
+    expect(prior.stage).toBe("docker_unavailable")
+    expect(hashLeanValue(prior)).toBe("sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4")
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV2(process.cwd(), { ...prior, schemaVersion: "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2", attemptOrdinal: 2 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV2(process.cwd(), { ...prior, schemaVersion: "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2", attemptOrdinal: 3, attemptLimit: 11 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV2(process.cwd(), { ...prior, schemaVersion: "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2", attemptOrdinal: 3, preflightInvocations: 1 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV2(process.cwd(), { ...prior, schemaVersion: "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2", attemptOrdinal: 3, matchInvocations: 1 })).toThrow()
+    expect(() => module.validateLeanWorkerLifecycleDiagnosticV2(process.cwd(), { ...prior, schemaVersion: "v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v2", attemptOrdinal: 3, stderr: "private" })).toThrow()
+  })
+
   it("admits only the exact Docker absent-object byte tuples", () => {
     const exactAbsent = (leanAdmissionModule as unknown as {
       exactDockerAbsentDiagnostic: (
