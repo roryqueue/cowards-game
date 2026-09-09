@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed 262-198 preflight-v11 denial; plan next bounded diagnostic/repair route
+stopped_at: Planned 262-199 actual-fixture stage diagnostic; execute attempt 7 only
 last_updated: "2026-09-09T04:08:00.000Z"
 last_activity: 2026-09-09
-last_activity_desc: completed Plan198 attempt-6 zero-Match preflight and independent seven-category denial; four bounded attempts remain
+last_activity_desc: planned Plan199 attempt-7 actual-fixture stage diagnostic with zero preflight and Match authority
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 179
+  total_plans: 180
   completed_plans: 167
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plan 262-199 actual-fixture stage diagnostic planned — 2026-09-09
+
+Plan199 is the sole next action after Plan198's immutable `non_pass/probe_failed` preflight-v11 and non-authorizing zero-finding review-v12. It first uses TDD to create fresh v13 diagnostic-only custody, a closed privacy-safe schema, and structural proof that the new selectors cannot reach either preflight entry point, any Match construction/invocation, or any authority/effect writer.
+
+After the source is committed separately, Plan199 consumes exactly attempt 7 of 10 with one actual-fixture stage diagnostic through the real persistent broker. It uses the exact Plan197 runnable source, image, controls, public fixtures, and deterministic starter-then-advanced, selectActivations-then-soldierBrain warm/sample order. It persists only authenticated roots, a bounded public stage, optional coarse failure classification, aggregate timing/counts, cleanup, zero preflights, zero Matches, and false authority. It then stops; repair and fresh-preflight planning wait for the result. Three bounded attempts remain afterward. All prior diagnostics and Plan198 evidence remain immutable, all 36 locks remain, and ADMIT-03, Plans175/176, Phase263, and every broader authority remain blocked.
+
+<!-- phase-262-plan-199-planning-state: {"schemaVersion":"v1.38-phase-262-actual-fixture-stage-diagnostic-plan-v1","activePlan":"262-199","wave":166,"dependsOn":"262-198","attemptsAuthorized":10,"attemptsConsumed":6,"plan199AttemptOrdinal":7,"attemptsRemainingAfterPlan199":3,"runnableSourceCommit":"ebb2be95310b0371d00c472519e4fb5a86ce6b77","runnableSourceTree":"058b4d392681cf7face17ed06de396ca92dcdb0a","runnableClosureRoot":"sha256:8e0fc828adfc0c47b806886f5ac451194cfa06c7e701572b7e67c641d4c469fe","containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","controlsRoot":"sha256:f7f7306dc1f8e5757bd7844ac577373ddf5061ee25950233640b2e8602cd6133","diagnosticV3Status":"pass","preflightV11Status":"non_pass","reviewV12AdmitsPlan175":false,"preflightInvocations":0,"matchInvocations":0,"successorLockCount":36,"nextAction":"dispatch-262-199-actual-fixture-stage-diagnostic","repairPlanningDeferred":true,"freshPreflightPlanningDeferred":true,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-198 terminal preflight-v11 denial — 2026-09-09
 
@@ -795,7 +803,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-09-09T04:08:00.000Z
-Stopped at: Completed 262-198-PLAN.md; plan next bounded diagnostic/repair successor
+Stopped at: Planned 262-199-PLAN.md; execute attempt-7 diagnostic only
 Resume file: None
 
 ### Blockers
