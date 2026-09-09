@@ -3535,7 +3535,7 @@ export const checkLeanDirectFinalTrackingV11 = (repoRoot: string): void => { che
 
 const LEAN_DIRECT_DOCKER_29_4_TUPLE_REPAIR_COMMIT = "e54784622a3c057738fa3dc91dc3f93da1d30084" as const
 const LEAN_DIRECT_DIAGNOSTIC_V2_ROOT = "sha256:b2945922437dcdbbf1b0a2c13e847cafd2e8b89c2147fb1b7dbafebcc52d72b9" as const
-const LEAN_DIRECT_ATTEMPT4_DEBUG_COMMIT = "a40a7ff59deef84ec7ad1c7ea8ab83767d08ec4e" as const
+const LEAN_DIRECT_ATTEMPT4_DEBUG_COMMIT = "a40a7ff572e105067a8e9f041c27246fc828bc05" as const
 const LEAN_DIRECT_ATTEMPT4_DEBUG_SHA256 = "sha256:3fbd8acd8b6e7c8caa176177b83b0557e803e7e2679a39359935fce283ad1452" as const
 const LEAN_DIRECT_DEBUG_PATH = ".planning/debug/phase-262-probe-failed.md" as const
 
