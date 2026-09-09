@@ -5,8 +5,8 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed 262-193-PLAN.md terminal non-pass; additive formatted-inspect successor required
-last_updated: "2026-09-09T02:42:19.472Z"
+stopped_at: Planned 262-195/196 exact Docker29.4 tuple repair and fresh zero-Match preflight; Plan195 is next
+last_updated: "2026-09-09T03:00:00.000Z"
 last_activity: 2026-08-31
 last_activity_desc: closed Plan144 with23/23 tests in592.22s, independent V3 zero findings, summary8bb3dbb8 and separate tracking; targeted tsc has406 existing diagnostics and zero new; no publication or effects
 progress:
@@ -18,6 +18,14 @@ progress:
 ---
 
 # State: Coward's Game
+
+## Plans 262-195/196 exact Docker 29.4 tuple route — 2026-09-09
+
+Plan193's Worker lifecycle repair remains green, while diagnostic-v1 is immutable `docker_unavailable` because its exact absence allowlist did not admit Docker 29.4 bare inspect's status-1/null-signal/no-error tuple with stdout `[]\n` and the exact uppercase absent-object stderr. It created no container, preflight, or Match and consumed attempt 2 of 10.
+
+Plan195 is the sole next action. It uses TDD to add only that exact tuple alongside existing exact alternatives, rejects all near misses and daemon/permission/transport failures, creates complete v11 custody/tooling, and runs one broker-only diagnostic-v2 as attempt 3 with zero preflights and zero Matches. Plan196 follows only diagnostic pass and runs one fresh preflight-v10 as attempt 4 plus exactly one independent seven-category review. Six attempts remain if Plan196 denies. Plan194 remains unexecuted/ineligible. Revised Plan175 may run without another preflight only on exact Plan196 admission; Plan176 then synchronizes truth. ADMIT-03 remains blocked, Phase263 remains ineligible, and every broader authority remains false.
+
+<!-- phase-262-plan-195-196-state: {"schemaVersion":"v1.38-phase-262-docker-29-4-tuple-plan-v1","activeChain":["262-195","262-196","262-175","262-176"],"inactiveUnexecutedPlans":["262-194"],"waves":{"262-195":163,"262-196":164,"262-175":165,"262-176":166},"nextAction":"dispatch-262-195-exact-absence-tuple-repair","diagnosticV1Status":"docker_unavailable","diagnosticV1Root":"sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4","attemptsAuthorized":10,"attemptsConsumed":2,"plan195AttemptOrdinal":3,"plan196AttemptOrdinal":4,"attemptsRemainingIfPlan196Denies":6,"preflightRequiredBeforeMarker":true,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-193 Worker lifecycle repair and terminal diagnostic — 2026-09-09
 
