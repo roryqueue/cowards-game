@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Planned 262-199 actual-fixture stage diagnostic; execute attempt 7 only
-last_updated: "2026-09-09T04:08:00.000Z"
+stopped_at: Plan 262-199 attempt 7 terminal non-pass; plan additive attempt-8 successor
+last_updated: "2026-09-09T04:33:15.458Z"
 last_activity: 2026-09-09
-last_activity_desc: planned Plan199 attempt-7 actual-fixture stage diagnostic with zero preflight and Match authority
+last_activity_desc: Plan199 v13 custody passed; sole attempt-7 diagnostic failed closed at result validation with zero preflights and Matches
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 180
-  completed_plans: 167
+  completed_plans: 168
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plan 262-199 terminal diagnostic projection failure — 2026-09-09
+
+Plan199 completed its source-only v13 custody and invoked the actual-fixture diagnostic exactly once as attempt 7 of 10. The owned run cleaned up, invoked zero preflights and zero Matches, created no authority or downstream effect, and preserved all 36 locks. Its new writer rejected the bounded in-memory result before persistence because `requestCounts.attempted` advances before `adapter.execute`, while aggregate timing advances only after a return; an adapter throw therefore violated the validator's overly strict equality check.
+
+Attempt 7 is consumed and cannot be retried. Diagnostic-v4 remains absent. Three bounded attempts remain. The next action is a fresh additive successor that repairs the diagnostic projection and may consume attempt 8 once; ADMIT-03, Plan175, Phase263, and every broader authority remain blocked.
+
+<!-- phase-262-plan-199-terminal-state: {"schemaVersion":"v1.38-phase-262-plan-199-terminal-v1","plan199":"complete_non_pass","sourceCommit":"ebb2be95310b0371d00c472519e4fb5a86ce6b77","sourceTree":"058b4d392681cf7face17ed06de396ca92dcdb0a","executableClosureRoot":"sha256:8e0fc828adfc0c47b806886f5ac451194cfa06c7e701572b7e67c641d4c469fe","diagnosticV4Present":false,"terminalReason":"projection_validation_failed","preflightInvocations":0,"matchInvocations":0,"attemptsAuthorized":10,"attemptsConsumed":7,"attemptsRemaining":3,"successorLockCount":36,"nextAction":"plan-additive-projection-repair-and-attempt-8","admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-199 actual-fixture stage diagnostic planned — 2026-09-09
 
@@ -802,8 +810,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-09T04:08:00.000Z
-Stopped at: Planned 262-199-PLAN.md; execute attempt-7 diagnostic only
+Last session: 2026-09-09T04:33:15.435Z
+Stopped at: Completed 262-199-PLAN.md with terminal non-pass; plan additive attempt-8 successor
 Resume file: None
 
 ### Blockers
