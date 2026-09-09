@@ -144,7 +144,13 @@ const checkInvocation = (capability?: string) => {
 }
 type CleanupTransport = (args: readonly string[]) => { status: number | null; stdout: string; stderr: string; error?: unknown; signal?: unknown }
 /** The daemon survives a killed host child. Remove only the exact owned container. */
-export const cleanupCloseoutCell = (cell: LeanCell, transport: CleanupTransport = (args) => spawnSync("docker", [...args], { encoding: "utf8", timeout: 2000, maxBuffer: 8192, shell: false, env: { PATH: process.env.PATH ?? "" } })) => {
+export const cleanupCloseoutCell = (cell: LeanCell, injectedTransport?: CleanupTransport) => {
+  const deadline = performance.now() + 2000
+  const transport: CleanupTransport = injectedTransport ?? ((args) => {
+    const remaining = Math.floor(deadline - performance.now())
+    if (remaining < 1) throw new TypeError("CLOSEOUT_CLEANUP_TIMEOUT")
+    return spawnSync("docker", [...args], { encoding: "utf8", timeout: remaining, maxBuffer: 8192, shell: false, env: { PATH: process.env.PATH ?? "" } })
+  })
   const matchId = `match:lean:${hashLeanValue(cell.baseCellId).slice("sha256:".length)}`
   const name = deriveLeanContainerName(matchId)
   const owner = deriveLeanContainerOwnershipLabel(matchId)
@@ -194,7 +200,12 @@ const runMatches = async () => {
     cellDeadlineMilliseconds: CLOSEOUT_PROFILE.cellDeadlineMilliseconds,
     spawnChild: () => fork(fileURLToPath(import.meta.url), ["--closeout-child"], { cwd: ROOT, execArgv: ["--import", "tsx"], detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"], env: { ...process.env, CLOSEOUT_CAPABILITY: capability } }),
   })
-  const terminal = await runLeanFeasibilityInjected(superviseCloseoutCleanup(supervisor))
+  const supervised = superviseCloseoutCleanup(supervisor)
+  const interrupt = () => { void supervised.terminateActive() }
+  process.once("SIGINT", interrupt); process.once("SIGTERM", interrupt)
+  let terminal: LeanTerminal
+  try { terminal = await runLeanFeasibilityInjected(supervised) }
+  finally { process.removeListener("SIGINT", interrupt); process.removeListener("SIGTERM", interrupt) }
   write("terminal", { schemaVersion: "v1.38-lean-closeout-terminal-v1", bindingRoot, invocationRoot: fileRoot("invocation"), profile: CLOSEOUT_PROFILE, scheduleRoot: hashLeanValue(buildLeanSchedule()), terminal })
   process.stdout.write(`${JSON.stringify({ result: terminal.result, counts: terminal.counts, determinism: terminal.determinism, completeCleanup: terminal.completeCleanup })}\n`)
 }
