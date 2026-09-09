@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "v1.38-lean-runner-direct-validity-review-v12",
+  "authorizationRoot": null,
+  "preflightRoot": "sha256:9224a99f0ca51a43e23103048a5c03ab00ee0d3340db8b4a62472d0f73f512d5",
+  "sourceCommit": "ebb2be95310b0371d00c472519e4fb5a86ce6b77",
+  "sourceTree": "058b4d392681cf7face17ed06de396ca92dcdb0a",
+  "categories": [
+    {
+      "category": "source_or_dirty_byte_drift",
+      "status": "pass",
+      "evidence": "Exact Git reauthentication resolves Plan197 source ebb2be95310b0371d00c472519e4fb5a86ce6b77 to tree 058b4d392681cf7face17ed06de396ca92dcdb0a and the exact 29-path executable closure sha256:8e0fc828adfc0c47b806886f5ac451194cfa06c7e701572b7e67c641d4c469fe. Current runnable bytes match, lifecycle v1 and v2 remain immutable denials, lifecycle v3 remains an exact pass, attempt-4 history remains preserved, and exactly 36 expected locks remain."
+    },
+    {
+      "category": "multiple_launch",
+      "status": "pass",
+      "evidence": "Exactly one committed non-consuming preflight-v11 records one preflight invocation and zero Match invocations. Authorization-v12 and every invocation, terminal, adjudication, and eligibility v12 effect are absent, so the corrective Match opportunity remains unconsumed."
+    },
+    {
+      "category": "tuple_or_schedule_drift",
+      "status": "pass",
+      "evidence": "Reachable source preserves the frozen 12-cell two-pass 24-Match schedule, fixed Starter and Advanced fixtures, three canonical arena mappings, both sides, both initiative parities, current edge-rank formation, exact runtime-js-container-subprocess adapter, digest-pinned node:24-alpine image, method ceilings, 45000 ms cell deadline, and 900000 ms outer deadline. The non-pass preflight grants no reinterpretation authority."
+    },
+    {
+      "category": "supervised_runtime_escape",
+      "status": "pass",
+      "evidence": "Reachable Plan197 source uses one Match-scoped Docker container and one persistent framed stream, with a fresh resource-bounded in-container Worker for each method request, empty Worker environment and exec arguments, request-bound completion and natural-exit checks, serialized request IDs, poison-on-failure cleanup, and no host execution fallback. Diagnostic-v3 passed this lifecycle; the later failed preflight grants no execution authority."
+    },
+    {
+      "category": "partial_interrupted_or_unclean_evidence",
+      "status": "pass",
+      "evidence": "The committed probe_failed outcome is rejected as non-pass rather than accepted as complete evidence. Only the bounded aggregate artifact exists; no partial result, interrupted result, unclean result, authorization, Match effect, or downstream operational evidence was accepted."
+    },
+    {
+      "category": "private_data_disclosure",
+      "status": "pass",
+      "evidence": "The preflight artifact persists only exact source identity, the bounded probe_failed reason code, invocation counters, and false authority. It exposes no strategy source, strategy or soldier memory, objective payload, raw probe output, environment, credential, host path, or private runtime detail."
+    },
+    {
+      "category": "non_pass_authority",
+      "status": "pass",
+      "evidence": "Preflight-v11 is exact non_pass/probe_failed. Authorization-v12 is absent, admitsPlan175 is false, every authority bit remains false, and no invocation, terminal, adjudication, or eligibility effect exists. Neither diagnostic-v3 success, source quality, nor zero review findings converts the non-pass into authority."
+    }
+  ],
+  "blockingFindingCount": 0,
+  "certificationOnlyHistory": [
+    {
+      "id": "CR-V6-01",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-02",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-03",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "CR-V6-04",
+      "severity": "critical",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    },
+    {
+      "id": "WR-V6-01",
+      "severity": "warning",
+      "status": "open",
+      "disposition": "certification_only_nonblocking_under_D_34L_1"
+    }
+  ],
+  "admitsPlan175": false,
+  "authority": {
+    "archiveAuthorized": false,
+    "candidateSearchAuthorized": false,
+    "countedPlayAuthorized": false,
+    "formationMaterializationAuthorized": false,
+    "foundationActivationAuthorized": false,
+    "gameplayChangeAuthorized": false,
+    "holdoutOpeningAuthorized": false,
+    "phase263ExecutionAuthorized": false,
+    "phase263PlanningAuthorized": false,
+    "productAuthorized": false,
+    "productionAuthorized": false,
+    "publicAuthorized": false,
+    "tagAuthorized": false
+  }
+}
