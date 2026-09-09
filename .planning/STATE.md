@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed 262-200 attempt-8 diagnostic-v5; additive runtime repair planning is next
+stopped_at: Planned final Plans 262-201/202; execute event-order repair and attempt-9 diagnostic first
 last_updated: "2026-09-09T04:58:29.019Z"
 last_activity: 2026-09-10
-last_activity_desc: completed Plan200 throw-safe accounting and terminal attempt-8 diagnostic-v5; two bounded attempts remain
+last_activity_desc: planned minimal exit-before-receipt repair, attempt-9 diagnostic, and conditional final attempt-10 preflight/review
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 181
+  total_plans: 183
   completed_plans: 169
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plans 262-201/202 final bounded repair chain planned — 2026-09-10
+
+Read-only exact reproduction of Plan200's Advanced selectActivations failure observed receipt=1, port close=1, natural exit=1, exitCode=0, and `exitBeforeReceipt=true`; the old broker returned exit 73 solely because it treated that valid Node delivery order as inconsistent. Removing only the ordering rejection in memory passed 50/50. The later cleanup failure was secondary to broker poison, not a separate root cause.
+
+Plan201 is next. It TDD-removes only the order rejection while retaining exactly one valid request-bound receipt, one port close, one code-0 natural exit, all error/duplicate/missing/inconsistency failures, and the single unchanged overall deadline. It adds no ACK handshake, grace, retry, reuse, fallback, or limit change, and proves both legacy and v1.17 Advanced rapid-exit paths at least 50 times each. After separate source custody, it consumes attempt 9 with exactly one diagnostic-v6 and zero preflights/Matches. Plan202 is eligible only on exact diagnostic pass; it consumes final attempt 10 with one preflight-v12 and independent seven-category review, zero Matches. Exact admission sends rebased Plan175 to the original sole 24-Match opportunity without another preflight; denial exhausts attempts and requires a human checkpoint. Plan176 then synchronizes the independently adjudicated Match branch. All prior evidence, 36 locks, frozen bounds, privacy, formation absence, and broader-authority denials remain unchanged.
+
+<!-- phase-262-plan-201-202-planning-state: {"schemaVersion":"v1.38-phase-262-final-event-order-repair-plan-v1","activeChain":["262-201","262-202","262-175","262-176"],"waves":{"262-201":168,"262-202":169,"262-175":170,"262-176":171},"attemptsAuthorized":10,"attemptsConsumed":8,"plan201AttemptOrdinal":9,"plan202AttemptOrdinal":10,"attemptsRemainingIfPlan202Denies":0,"diagnosticV5Root":"sha256:3c2c3954c5a4aaedf3ad06b30c264aa9eec0849892579c1f8569c266a9abce07","rootCause":"exit_before_receipt_order_rejection","reproduction":{"fixture":"advanced:vanguard-pressure","method":"selectActivations","receiptCount":1,"closeCount":1,"exitCount":1,"exitCode":0,"exitBeforeReceipt":true,"oldExitStatus":73,"inMemoryPasses":50,"inMemoryAttempts":50},"ackHandshake":false,"minimumStressPerProtocol":50,"preflightInvocationsPlan201":0,"matchInvocationsPlans201202":0,"correctiveMatchOpportunityRemaining":1,"successorLockCount":36,"nextAction":"dispatch-262-201-event-order-repair-and-diagnostic-v6","admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-200 terminal attempt-8 diagnostic — 2026-09-10
 
@@ -829,7 +837,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-09-09T04:58:28.997Z
-Stopped at: Completed 262-200-PLAN.md; additive runtime repair planning is next
+Stopped at: Planned 262-201/202 and rebased 262-175/176; execute Plan201 only
 Resume file: None
 
 ### Blockers
@@ -844,4 +852,4 @@ Resume file: None
 
 <!-- phase-262-plan-148-lean-tracking: {"activePrerequisite":"lean_runner_feasibility_v1","admit03":"pending","historicalFullMatrix":{"disposition":"exhausted","freshAccepted":0,"requiredAccepted":540,"reproductionPresent":false,"reinterpreted":false},"phase262":"in_progress","phase263PlanningEligible":false,"phase263ExecutionEligible":false,"nextAction":"dispatch-262-149-source-and-tests-only","authorityAllFalse":true} -->
 
-- No human-only blocker exists. Execute Plan177, then Plan178; Plan175 remains denied unless the new container preflight passes and the fresh seven-category review has zero active findings.
+- No human-only blocker exists before Plan201. Execute Plan201 only; Plan202 requires exact diagnostic-v6 pass, and Plan175 requires exact preflight-v12 pass plus a zero-blocker seven-category review-v15.
