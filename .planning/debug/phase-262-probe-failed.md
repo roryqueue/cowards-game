@@ -138,6 +138,15 @@ updated: 2026-09-09T23:15:00-04:00
 - effects: the diagnostic-v4 destination remains absent; zero preflight entry points and zero Matches were invoked; no authority or downstream effect was created; no owned container remains; all 36 successor locks remain
 - implication: attempt 7 is consumed and must not be retried. A fresh additive successor may repair the diagnostic projection and use attempt 8 under the existing bounded authorization; three attempts remain.
 
+## Plan 262-200 throw-safe actual-fixture stage diagnostic-v5 — 2026-09-10
+
+- checked: one exact-image, exact-controls, actual-public-fixture stage diagnostic over Plan197 runnable source `ebb2be95310b0371d00c472519e4fb5a86ce6b77`, consuming attempt 8 of 10 after the separately committed throw-safe accounting repair
+- found: the immutable diagnostic root is `sha256:3c2c3954c5a4aaedf3ad06b30c264aa9eec0849892579c1f8569c266a9abce07`; the first failure was `advanced:vanguard-pressure:selectActivations:sample:1` with coarse class `session_failure` and no violation type
+- accounting: 10 requests attempted, 9 successful, and exactly 10 aggregate request timings; aggregate request time was 4295.839477 ms with a 1331.537582 ms maximum; two lifecycle observations totaled 6002.287416 ms with a 4906.203153 ms maximum
+- cleanup: one of two sessions closed cleanly and aggregate cleanup is incomplete; the cleanup result did not replace the earlier request-failure stage or class
+- effects: exactly zero preflight invocations and zero Match invocations ran; no authority or downstream effect was created, no owned container remained, diagnostic-v4 stayed absent, and all 36 successor locks remained
+- implication: attempt 8 is consumed and the route stops here with two attempts remaining. Runtime repair and any fresh preflight require a new additive plan informed by this committed stage result.
+
 ## Plan 262-193 Worker lifecycle diagnostic — 2026-09-09
 
 - checked: one authorized exact-image/exact-controls broker-only lifecycle diagnostic over committed source `04b2eee905cf84ba1440a3fb266e27ca07397f0c`

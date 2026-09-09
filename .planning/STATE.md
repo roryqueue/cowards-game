@@ -5,19 +5,29 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Planned 262-200 attempt-8 throw-timing repair and diagnostic-v5
-last_updated: "2026-09-09T04:33:15.458Z"
-last_activity: 2026-09-09
-last_activity_desc: planned Plan200 narrow projection repair and one attempt-8 diagnostic-v5; runtime repair and preflight remain deferred
+stopped_at: Completed 262-200 attempt-8 diagnostic-v5; additive runtime repair planning is next
+last_updated: "2026-09-09T04:58:29.019Z"
+last_activity: 2026-09-10
+last_activity_desc: completed Plan200 throw-safe accounting and terminal attempt-8 diagnostic-v5; two bounded attempts remain
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 181
-  completed_plans: 168
+  completed_plans: 169
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plan 262-200 terminal attempt-8 diagnostic — 2026-09-10
+
+Plan200 permanently retired the attempt-7 diagnostic-v4 writer, authenticated exact Plan199 terminal history, and corrected request timing so every attempted adapter call records one finite non-negative observation in `finally`. The first request-failure stage and coarse class now survive later cleanup failure without retaining exception content.
+
+The sole diagnostic-v5 invocation consumed attempt 8 of 10. Its immutable root is `sha256:3c2c3954c5a4aaedf3ad06b30c264aa9eec0849892579c1f8569c266a9abce07`. It stopped at `advanced:vanguard-pressure:selectActivations:sample:1` with coarse `session_failure`, attempted 10 requests, completed 9, recorded exactly 10 request timings, and reported incomplete cleanup with one of two sessions closed. It invoked zero preflights and zero Matches, created no authority or operational effect, left no owned container, preserved diagnostic-v4 absence, and retained all 36 successor locks.
+
+Attempt 8 is consumed and cannot be retried. Two bounded attempts remain. The next action is an additive runtime repair plan focused on the Advanced selectActivations request/cleanup boundary; any fresh preflight remains forbidden until that separately committed repair passes its source-only proof and custody. ADMIT-03, Plan175, Phase263, and every broader authority remain blocked.
+
+<!-- phase-262-plan-200-terminal-state: {"schemaVersion":"v1.38-phase-262-plan-200-terminal-v1","plan200":"complete_non_pass_diagnostic","sourceCommit":"ebb2be95310b0371d00c472519e4fb5a86ce6b77","sourceTree":"058b4d392681cf7face17ed06de396ca92dcdb0a","executableClosureRoot":"sha256:8e0fc828adfc0c47b806886f5ac451194cfa06c7e701572b7e67c641d4c469fe","diagnosticV5Root":"sha256:3c2c3954c5a4aaedf3ad06b30c264aa9eec0849892579c1f8569c266a9abce07","terminalStage":"advanced:vanguard-pressure:selectActivations:sample:1","resultClass":"session_failure","requestCounts":{"planned":16,"attempted":10,"successful":9},"timingCount":10,"cleanupComplete":false,"preflightInvocations":0,"matchInvocations":0,"attemptsAuthorized":10,"attemptsConsumed":8,"attemptsRemaining":2,"successorLockCount":36,"nextAction":"plan-additive-runtime-repair-before-preflight","admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-200 throw-path timing repair and diagnostic-v5 planned — 2026-09-09
 
@@ -818,8 +828,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-09T04:33:15.435Z
-Stopped at: Planned 262-200-PLAN.md; execute throw-timing repair then attempt-8 diagnostic-v5 only
+Last session: 2026-09-09T04:58:28.997Z
+Stopped at: Completed 262-200-PLAN.md; additive runtime repair planning is next
 Resume file: None
 
 ### Blockers
