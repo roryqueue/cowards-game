@@ -3351,7 +3351,8 @@ const assertLeanDirectV10TrackedBytes = (repoRoot: string, sourceCommit: string)
 export const exactDockerAbsentDiagnostic = (status: number | null, signal: NodeJS.Signals | null, error: Error | undefined, stdout: string, stderr: string, name: string): boolean => error === undefined && signal === null && status === 1 && (
   (stdout === "" && stderr === `Error: No such object: ${name}\n`) ||
   (stdout === "\n" && stderr === `error: no such object: ${name}\n`) ||
-  (stdout === "[]\n" && stderr === `Error: No such object: ${name}\n`)
+  (stdout === "[]\n" && stderr === `Error: No such object: ${name}\n`) ||
+  (stdout === "[]\n" && stderr === `error: no such object: ${name}\n`)
 )
 const diagnosticDocker = (args: readonly string[], input?: string): ReturnType<typeof spawnSync> => spawnSync("docker", [...args], { encoding: "utf8", env: { PATH: process.env.PATH ?? "" }, shell: false, stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"], input, timeout: 30_000, maxBuffer: 1_048_576 })
 const diagnosticRequest = (requestId: number, mode: "legacy" | "v117"): Record<string, unknown> => {
