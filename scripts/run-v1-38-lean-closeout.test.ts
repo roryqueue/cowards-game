@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { buildLeanSchedule, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
-import { syntheticLeanTerminal } from "./run-v1-38-lean-runner-feasibility.js"
-import { CLOSEOUT_PROFILE, consumeCloseout, validateCloseoutPreflight, validateCloseoutTerminal, validateReview } from "./run-v1-38-lean-closeout.js"
+import { syntheticLeanTerminal, deriveLeanContainerName, deriveLeanContainerOwnershipLabel, runLeanFeasibilityInjected } from "./run-v1-38-lean-runner-feasibility.js"
+import { CLOSEOUT_PROFILE, consumeCloseout, validateCloseoutPreflight, validateCloseoutTerminal, validateReview, cleanupCloseoutCell, superviseCloseoutCleanup } from "./run-v1-38-lean-closeout.js"
 
 describe("approved private closeout", () => {
   it("uses the exact approved profile", () => {
@@ -37,6 +37,35 @@ describe("approved private closeout", () => {
   it("requires complete independent seven-category review", () => {
     expect(() => validateReview({ categories: ["pass"] })).toThrow()
     expect(() => validateReview({ disposition: "pass", reviewer: "", blockers: 0 })).toThrow()
+  })
+  it("removes only owned containers and verifies actual absence after host termination", () => {
+    const cell = buildLeanSchedule()[0]!
+    const matchId = `match:lean:${hashLeanValue(cell.baseCellId).slice("sha256:".length)}`
+    const name = deriveLeanContainerName(matchId)
+    const calls: readonly string[][] = []
+    let n = 0
+    const clean = cleanupCloseoutCell(cell, (args) => {
+      ;(calls as string[][]).push([...args]); n++
+      return n === 1 ? { status: 0, stdout: deriveLeanContainerOwnershipLabel(matchId) + "\n", stderr: "" } : n === 2 ? { status: 0, stdout: name + "\n", stderr: "" } : { status: 1, stdout: "\n", stderr: `error: no such object: ${name}\n` }
+    })
+    expect(clean.cleanupComplete).toBe(true)
+    expect(calls[1]).toEqual(["rm", "--force", name])
+    let foreignCalls = 0
+    expect(cleanupCloseoutCell(cell, () => { foreignCalls++; return { status: 0, stdout: "foreign\n", stderr: "" } }).cleanupComplete).toBe(false)
+    expect(foreignCalls).toBe(1)
+  })
+  it("timeout or unexpected child exit cannot claim clean daemon cleanup; remaining cells unlaunched", async () => {
+    for (const thrown of [false, true]) {
+      let cleanupCalls = 0
+      const proof = await runLeanFeasibilityInjected(superviseCloseoutCleanup({ now: () => 0, execute: async () => {
+        if (thrown) throw Error("child exited")
+        return { classification: "timeout", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: true }
+      }, terminateActive: async () => ({ cleanupComplete: true, orphanedChild: false }) }, () => { cleanupCalls++; return { cleanupComplete: false, orphanedChild: true } }))
+      expect(proof.completeCleanup).toBe(false)
+      expect(proof.result).toBe("invalid")
+      expect(proof.counts.unlaunched).toBe(23)
+      expect(cleanupCalls).toBeGreaterThan(0)
+    }
   })
   it("rederives complete 24-cell paired proof and rejects changed or surplus evidence", async () => {
     const proof = await syntheticLeanTerminal()

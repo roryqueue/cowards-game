@@ -1,5 +1,5 @@
 /* Private fixture-feasibility route; no public or counted-play authority. */
-import { fork, execFileSync } from "node:child_process"
+import { fork, execFileSync, spawnSync } from "node:child_process"
 import { randomBytes, createHash } from "node:crypto"
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
@@ -10,11 +10,12 @@ import {
   LEAN_CONTAINER_METHOD_CEILINGS, LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS,
   createExclusiveLeanInvocationMarker, createSupervisedLeanExecutionDependencies,
   executePreparedLeanCell, runActualLeanContainerPreflight, runLeanFeasibilityInjected,
-  type LeanContainerPreflightInput,
+  deriveLeanContainerName, deriveLeanContainerOwnershipLabel,
+  type LeanContainerPreflightInput, type LeanExecutionDependencies,
 } from "./run-v1-38-lean-runner-feasibility.js"
 import {
   buildLeanSchedule, hashLeanValue, LEAN_CURRENT_FORMATION_ROOT,
-  deriveAndValidateLeanTerminal, type LeanTerminal,
+  deriveAndValidateLeanTerminal, type LeanTerminal, type LeanCell,
 } from "./lib/v1-38-lean-runner-feasibility.js"
 
 export const CLOSEOUT_PROFILE = LEAN_CLOSEOUT_PROFILE
@@ -141,6 +142,45 @@ const checkInvocation = (capability?: string) => {
   if (!exact(invocation, ["schemaVersion", "bindingRoot", "preflightRoot", "capability", "parentPid"]) || invocation.schemaVersion !== "v1.38-lean-closeout-invocation-v1" || invocation.bindingRoot !== bindingRoot || invocation.preflightRoot !== fileRoot("preflight") || !/^[a-f0-9]{64}$/u.test(String(invocation.capability)) || (capability !== undefined && (invocation.capability !== capability || invocation.parentPid !== process.ppid))) fail("INVOCATION_CUSTODY")
   return { review, bindingRoot, invocation }
 }
+type CleanupTransport = (args: readonly string[]) => { status: number | null; stdout: string; stderr: string; error?: unknown; signal?: unknown }
+/** The daemon survives a killed host child. Remove only the exact owned container. */
+export const cleanupCloseoutCell = (cell: LeanCell, transport: CleanupTransport = (args) => spawnSync("docker", [...args], { encoding: "utf8", timeout: 2000, maxBuffer: 8192, shell: false, env: { PATH: process.env.PATH ?? "" } })) => {
+  const matchId = `match:lean:${hashLeanValue(cell.baseCellId).slice("sha256:".length)}`
+  const name = deriveLeanContainerName(matchId)
+  const owner = deriveLeanContainerOwnershipLabel(matchId)
+  const inspect = () => transport(["inspect", "--format", '{{index .Config.Labels "v1.38-lean-owner"}}', name])
+  const absent = (r: ReturnType<CleanupTransport>) => !r.error && !r.signal && r.status === 1 && ((r.stdout === "" && r.stderr === `Error: No such object: ${name}\n`) || (r.stdout === "\n" && r.stderr === `error: no such object: ${name}\n`))
+  try {
+    const first = inspect()
+    if (absent(first)) return { cleanupComplete: true, orphanedChild: false }
+    if (first.error || first.signal || first.status !== 0 || first.stderr !== "" || first.stdout.trim() !== owner) return { cleanupComplete: false, orphanedChild: true }
+    const removed = transport(["rm", "--force", name])
+    const clean = !removed.error && !removed.signal && removed.status === 0 && removed.stderr === "" && absent(inspect())
+    return { cleanupComplete: clean, orphanedChild: !clean }
+  } catch { return { cleanupComplete: false, orphanedChild: true } }
+}
+export const superviseCloseoutCleanup = (supervisor: LeanExecutionDependencies, cleanup: typeof cleanupCloseoutCell = cleanupCloseoutCell): LeanExecutionDependencies => {
+  let activeCell: LeanCell | undefined
+  let lastContainer = { cleanupComplete: true, orphanedChild: false }
+  return { ...supervisor, deadlineMilliseconds: CLOSEOUT_PROFILE.outerDeadlineMilliseconds, stopOnFailure: true,
+    execute: async (cell, signal) => {
+      activeCell = cell
+      lastContainer = { cleanupComplete: false, orphanedChild: true }
+      const result = await supervisor.execute(cell, signal)
+      const container = cleanup(cell)
+      lastContainer = container
+      activeCell = undefined
+      return { ...result, cleanupComplete: result.cleanupComplete && container.cleanupComplete, orphanedChild: result.orphanedChild || container.orphanedChild }
+    },
+    terminateActive: async () => {
+      const host = await supervisor.terminateActive()
+      const container = activeCell === undefined ? lastContainer : cleanup(activeCell)
+      lastContainer = container
+      activeCell = undefined
+      return { cleanupComplete: host.cleanupComplete && container.cleanupComplete, orphanedChild: host.orphanedChild || container.orphanedChild }
+    },
+  }
+}
 const runMatches = async () => {
   const review = authenticate(); committed("preflight"); committed("preflight-consumption")
   absent("invocation", "terminal", "adjudication")
@@ -154,7 +194,7 @@ const runMatches = async () => {
     cellDeadlineMilliseconds: CLOSEOUT_PROFILE.cellDeadlineMilliseconds,
     spawnChild: () => fork(fileURLToPath(import.meta.url), ["--closeout-child"], { cwd: ROOT, execArgv: ["--import", "tsx"], detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"], env: { ...process.env, CLOSEOUT_CAPABILITY: capability } }),
   })
-  const terminal = await runLeanFeasibilityInjected({ ...supervisor, deadlineMilliseconds: CLOSEOUT_PROFILE.outerDeadlineMilliseconds, stopOnFailure: true })
+  const terminal = await runLeanFeasibilityInjected(superviseCloseoutCleanup(supervisor))
   write("terminal", { schemaVersion: "v1.38-lean-closeout-terminal-v1", bindingRoot, invocationRoot: fileRoot("invocation"), profile: CLOSEOUT_PROFILE, scheduleRoot: hashLeanValue(buildLeanSchedule()), terminal })
   process.stdout.write(`${JSON.stringify({ result: terminal.result, counts: terminal.counts, determinism: terminal.determinism, completeCleanup: terminal.completeCleanup })}\n`)
 }
