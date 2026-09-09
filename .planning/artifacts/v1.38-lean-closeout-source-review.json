@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "v1.38-lean-closeout-source-review-v1",
+  "disposition": "pass",
+  "reviewer": "/root/implement_closeout/review_closeout",
+  "producer": "/root/implement_closeout",
+  "categories": {
+    "source_dirty_drift": "pass",
+    "multiple_launch": "pass",
+    "tuple_schedule_drift": "pass",
+    "supervision_escape": "pass",
+    "partial_interrupted_unclean": "pass",
+    "private_disclosure": "pass",
+    "non_pass_authority": "pass"
+  },
+  "blockers": 0,
+  "binding": {
+    "sourceCommit": "24ce8b94bfdb8813935165c96da9bc3f7cec46ee",
+    "sourceTree": "a71555843f6d163fb6fdcc5efc102b4e0c31c72e",
+    "closureRoot": "sha256:d9c66e612ce612b76e0933bbd02384c54fa2353e5081204db8d23707207ce796",
+    "historyRoot": "sha256:3f823f1476dea9d0eb70df69666dc6ae5bd8cd5e49be67a3ee938c3f35b20651",
+    "locksRoot": "sha256:051a9915f7dbff39cde00dd3700d4cb01e7d95526c38b4b731a2332d93bac051",
+    "scheduleRoot": "sha256:805d1be5bb51baf31de9b812d570a812c12541482a2c2b3853f225337adb6600",
+    "tupleRoot": "sha256:d12749094548821bf69206250ff537108cc2f2ca5bb264dca1b9b836eb932f42",
+    "runtimeLimitsRoot": "sha256:41168c80ca59ce151383ddbc8379172149a50fc4d29aa01a6baed777ecc1b116",
+    "requestRoots": [
+      "sha256:07113c8f8d80abf53f71daecdee922e319b3132e48dd36390e2a76d06b61f0e7",
+      "sha256:8f6204d5dac438d4574ca08de05a6d8fc1e8cf3a3ca4a681b8a0b551842909b4",
+      "sha256:e4404323d5d6536f3968dab9af0e909811e0c78af75c1a233723a1554ca8e27f",
+      "sha256:fce4e47def5dad55653489be9eee5d08c50bc64884cc362926e8676e124799bf",
+      "sha256:45a868cee5ce1e34604a99b84e1a6dc7288ea8ecbc8c0fdd9c5c9d22f4e133e3",
+      "sha256:3a7f1dbacd971597321cc964fb55e889e3bc743e6930f8e1275cef1826ae0729",
+      "sha256:503a36742aa07870c6b71c0e9982d8d608a9ee3b54796d28102f2149c587a2a0",
+      "sha256:a3571fb86fc0edb38b9939ae36caefedc16a282f6d6295250dc00b0fe1f24f3e",
+      "sha256:77b5db2ef3b65c89a690b13593c3588b06bd0881e1fe6c858665fecd078daa3d",
+      "sha256:bd53d589d3997f0d50174d54c1ba82f0a7540cdc188e1687d4bba46c26909a95",
+      "sha256:40fdeae6d7f5496835e8654f584482b22053ddd97ec0c37c05878d0de09ba6ea",
+      "sha256:15ce6932fe87fd9b093b48c2f692393cb0d56fc264b31c3aecbc6cfa40d22ee9",
+      "sha256:5314f05aae570dac77146b25c247c91b894f6569644d994e14e96f69b054142c",
+      "sha256:4f00350146249fcd206fdac98e5b4cddab000e4c67238e32ba644be715b36bf7",
+      "sha256:457d943366e8ba806e244f6135102128cc20f0f5c37a756bb13a275a7e2d4dac",
+      "sha256:a3f8627c0e44353adae6881b17ef34b1539506a566b93298129bf749c07fcfcb",
+      "sha256:c9a2e7d9c98edd63f46a389ad2032495baea38b767b47bc8a1f12cccc2d25399",
+      "sha256:8ffef36f2587e90d4df500d3818013b251baf412184c214531c153946024d434",
+      "sha256:15d104faafdf2bfb28d5cee52a92b84a60928c3be0b0b0c18f59576cfd90d5eb",
+      "sha256:f391e8763e65bdb66df8b639f299bec2cf2fddf96a1f83b20213ff6fe6a7be03",
+      "sha256:b9755443d2f53ce6d140709369a275416d05580153e222a0e0caf977fa529d05",
+      "sha256:840fc2871420182ba17df582ca463a8be88adcc61923197f1286e5504b37311a",
+      "sha256:68cdc4ab8c1410ff5d3924e183a34d35f76c631c4401bb26e7624b42f9cf7a6e",
+      "sha256:7e143130c06720dbd5e13003a96a201a0c8410b6fb870b68b9f7df594c8ffdf6"
+    ],
+    "formationRoot": "sha256:47134b3e56129bc2a35262add054528cc66db6717ea3650a0f611cfa9bffff31",
+    "profile": {
+      "cpus": "2",
+      "memory": "256m",
+      "cellDeadlineMilliseconds": 120000,
+      "outerDeadlineMilliseconds": 3600000
+    },
+    "image": "node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"
+  }
+}
