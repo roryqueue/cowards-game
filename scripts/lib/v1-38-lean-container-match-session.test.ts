@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
 import { createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult } from "./v1-38-lean-container-match-session.js"
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
+import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 
 const result = (stdout: string | Uint8Array = "", override: Partial<LeanContainerTransportResult> = {}): LeanContainerTransportResult => ({ status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), ...override })
 const absent = (name: string) => result("", { status: 1, stderr: Buffer.from(`Error: No such object: ${name}\n`) })
@@ -31,11 +32,15 @@ const create = (name: string, streamResponses: unknown[]) => {
   const session = createLeanContainerMatchSession({ matchId: `match:${name}`, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
   return { control, persistent, session }
 }
-const runBroker = (requests: readonly Record<string, unknown>[]) => {
+const runBroker = (requests: readonly Record<string, unknown>[], brokerSource = LEAN_CONTAINER_BROKER_SOURCE) => {
   const input = requests.map((request) => JSON.stringify(request)).join("\n") + "\n"
-  const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", LEAN_CONTAINER_BROKER_SOURCE], { input, encoding: "utf8", timeout: 5_000, maxBuffer: 1_048_576 })
+  const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", brokerSource], { input, encoding: "utf8", timeout: 5_000, maxBuffer: 1_048_576 })
   return { broker, frames: broker.stdout.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>) }
 }
+const brokerWithHarnesses = (legacy: string, v117 = WORKER_HARNESS_V117_SOURCE) => LEAN_CONTAINER_BROKER_SOURCE.replace(
+  `const harnesses = ${JSON.stringify({ legacy: WORKER_HARNESS_SOURCE, v117: WORKER_HARNESS_V117_SOURCE })};`,
+  `const harnesses = ${JSON.stringify({ legacy, v117 })};`,
+)
 const legacyBrokerRequest = (requestId: number, source: string, timeoutMilliseconds = 1_000) => ({
   requestId,
   mode: "legacy",
@@ -57,6 +62,11 @@ describe("lean Match-scoped hostile container session", () => {
     expect(brokerSource).toContain("resourceLimits:")
     expect(brokerSource).toContain("worker.terminate()")
     expect(brokerSource).toContain("await terminate(worker")
+    expect(brokerSource).toContain('kind:"completion"')
+    expect(brokerSource).toContain('port1.on("close"')
+    expect(brokerSource).toContain('worker.on("exit"')
+    expect(brokerSource).toContain("await reconcile(")
+    expect(brokerSource).not.toContain("await terminate(worker,100);port1.close();\n  if(!received")
     expect(brokerSource).not.toContain("spawnSync")
     expect(brokerSource).not.toContain("node:child_process")
     fixture.session.close()
@@ -91,6 +101,33 @@ describe("lean Match-scoped hostile container session", () => {
     const timeoutRun = runBroker([legacyBrokerRequest(1, hung, 25)])
     expect(timeoutRun.broker.status).toBe(0)
     expect(timeoutRun.frames[0]).toMatchObject({ requestId: 1, status: null, signal: "SIGKILL", stdoutBase64: "", stderrBase64: "" })
+  })
+
+  it("waits beyond the obsolete 100 ms success race for port close and natural exit", () => {
+    const delayed = WORKER_HARNESS_SOURCE.replace("port.close()", "setTimeout(() => port.close(), 175)")
+    const started = performance.now()
+    const { broker, frames } = runBroker([legacyBrokerRequest(1, 'module.exports.default={selectActivations(){return [1]}}')], brokerWithHarnesses(delayed))
+    expect({ status: broker.status, stderr: broker.stderr }).toEqual({ status: 0, stderr: "" })
+    expect(performance.now() - started).toBeGreaterThanOrEqual(150)
+    expect(frames).toHaveLength(1)
+    expect(decodeLegacyBrokerFrame(frames[0]!)).toEqual({ ok: true, value: [1] })
+  })
+
+  it.each([
+    ["missing close", WORKER_HARNESS_SOURCE.replace("port.close()", "setInterval(() => {}, 1_000)")],
+    ["nonzero exit", WORKER_HARNESS_SOURCE.replace("port.close()", "process.exitCode = 9; port.close()")],
+    ["duplicate result", WORKER_HARNESS_SOURCE.replace("port.postMessage(capRuntimeResult(await runStrategy(workerData.source)))", "port.postMessage(capRuntimeResult(await runStrategy(workerData.source))); port.postMessage({ ok: true, value: [] })")],
+  ])("fails closed without a response on %s", (_label, harness) => {
+    const { broker, frames } = runBroker([legacyBrokerRequest(1, 'module.exports.default={selectActivations(){return [1]}}', 300)], brokerWithHarnesses(harness))
+    expect(broker.status).toBe(73)
+    expect(frames).toEqual([])
+  })
+
+  it("rejects a completion receipt whose request identity does not match", () => {
+    const harness = WORKER_HARNESS_SOURCE.replace("port.postMessage(capRuntimeResult(await runStrategy(workerData.source)))", "workerData.port.postMessage({ requestId: workerData.requestId + 1, kind: 'completion', value: capRuntimeResult(await runStrategy(workerData.source)) })")
+    const { broker, frames } = runBroker([legacyBrokerRequest(1, 'module.exports.default={selectActivations(){return [1]}}')], brokerWithHarnesses(harness))
+    expect(broker.status).toBe(73)
+    expect(frames).toEqual([])
   })
 
   it("multiplexes mixed methods through exactly one persistent Docker stream", () => {
