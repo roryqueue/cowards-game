@@ -144,3 +144,10 @@ updated: 2026-09-09T23:15:00-04:00
 - checked: one fresh exact-image/exact-controls broker-only diagnostic-v2, bounded attempt 3 of 10
 - found: the immutable aggregate disposition is `docker_unavailable`; zero broker requests succeeded, cleanup is complete, preflight invocations are zero, Match invocations are zero, and every authority bit is false
 - implication: Plan196 remains ineligible on this lineage and no preflight or Match may run. The committed diagnostic intentionally does not persist raw Docker output, so any next repair must use a separately bounded non-consuming diagnostic path and must preserve both diagnostic denials byte-for-byte.
+
+## Plan 262-197 bounded absence diagnosis — 2026-09-10
+
+- checked: one read-only absent-name inspect over source `d4cce642`, recorded as diagnostic/repair attempt 4 of 10 and not as diagnostic-v3 or reusable evidence
+- found: Docker returned status 1, signal null, no transport error, stdout exactly `[]\n`, and stderr exactly `error: no such object: <requested-name>\n`; the requested container name was represented only by this privacy-safe placeholder
+- effects: no container was created, zero preflights ran, zero Matches ran, no canonical artifact or authority was produced, and all authority remains false
+- implication: the observed lowercase Docker 29.4 tuple is outside the current closed allowlist; admit only these exact bytes additively, preserve diagnostic-v1 and diagnostic-v2 as immutable denials, and spend a separate attempt only after committed source custody passes

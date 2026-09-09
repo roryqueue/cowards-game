@@ -142,6 +142,7 @@ describe("lean admission custody", () => {
     expect(call(1, null, undefined, "[]\n", `Error: No such object: ${name}\n`)).toBe(true)
     expect(call(1, null, undefined, "", `Error: No such object: ${name}\n`)).toBe(true)
     expect(call(1, null, undefined, "\n", `error: no such object: ${name}\n`)).toBe(true)
+    expect(call(1, null, undefined, "[]\n", `error: no such object: ${name}\n`)).toBe(true)
 
     const nearMisses: ReadonlyArray<readonly [number | null, NodeJS.Signals | null, Error | undefined, string, string, string?]> = [
       [1, null, undefined, "", ""],
@@ -150,7 +151,13 @@ describe("lean admission custody", () => {
       [1, null, undefined, " []\n", `Error: No such object: ${name}\n`],
       [1, null, undefined, "[]\n ", `Error: No such object: ${name}\n`],
       [1, null, undefined, "\ufffd[]\n", `Error: No such object: ${name}\n`],
-      [1, null, undefined, "[]\n", `error: no such object: ${name}\n`],
+      [1, null, undefined, "[]\n", `error: no such object: ${name}`],
+      [1, null, undefined, "[]\n", `error: no such object: ${name}\nextra`],
+      [1, null, undefined, "[]\n", `error: no such object: another-container\n`],
+      [1, null, undefined, "[]", `error: no such object: ${name}\n`],
+      [1, null, undefined, "[]\n\n", `error: no such object: ${name}\n`],
+      [1, null, undefined, " []\n", `error: no such object: ${name}\n`],
+      [1, null, undefined, "\ufffd[]\n", `error: no such object: ${name}\n`],
       [1, null, undefined, "[]\n", `Error: No such object: ${name}`],
       [1, null, undefined, "[]\n", `Error: No such object: ${name}\nextra`],
       [1, null, undefined, "[]\n", ` Error: No such object: ${name}\n`],
@@ -160,6 +167,9 @@ describe("lean admission custody", () => {
       [1, null, new Error("spawn failed"), "[]\n", `Error: No such object: ${name}\n`],
       [1, null, undefined, "[]\n", "Cannot connect to the Docker daemon\n"],
       [1, null, undefined, "[]\n", "permission denied\n"],
+      [0, null, undefined, "[]\n", `error: no such object: ${name}\n`],
+      [1, "SIGTERM", undefined, "[]\n", `error: no such object: ${name}\n`],
+      [1, null, new Error("spawn failed"), "[]\n", `error: no such object: ${name}\n`],
       [null, "SIGTERM", undefined, "", "timeout"],
     ]
     for (const args of nearMisses) expect(call(...args)).toBe(false)
