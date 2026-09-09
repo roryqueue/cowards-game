@@ -3941,8 +3941,9 @@ const assertLeanDirectAttempt8History = (repoRoot: string): LeanActualFixtureSta
   try { execFileSync("git", ["merge-base", "--is-ancestor", LEAN_DIRECT_V15_PLAN200_COMMIT, "HEAD"], { cwd: repoRoot, stdio: "ignore" }) } catch { throw new TypeError("LEAN_DIRECT_V15_ATTEMPT_HISTORY_DRIFT") }
   const summaryRoot = `sha256:${createHash("sha256").update(readFileSync(path.resolve(repoRoot, LEAN_DIRECT_V15_PLAN200_SUMMARY_PATH))).digest("hex")}`
   if (summaryRoot !== LEAN_DIRECT_V15_PLAN200_SUMMARY_ROOT) throw new TypeError("LEAN_DIRECT_V15_ATTEMPT_SUMMARY_DRIFT")
-  const diagnostic = readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH)
-  if (hashLeanValue(diagnostic) !== LEAN_DIRECT_V15_DIAGNOSTIC_V5_ROOT || !isObject(diagnostic) || diagnostic.schemaVersion !== "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5" || diagnostic.attemptOrdinal !== 8 || diagnostic.attemptLimit !== 10 || diagnostic.attemptsRemaining !== 2 || diagnostic.preflightInvocations !== 0 || diagnostic.matchInvocations !== 0 || !exactFalseAuthority(diagnostic.authority)) throw new TypeError("LEAN_DIRECT_V15_DIAGNOSTIC_V5_DRIFT")
+  const diagnosticBytes = readFileSync(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH))
+  const diagnostic = JSON.parse(diagnosticBytes.toString("utf8")) as unknown
+  if (`sha256:${createHash("sha256").update(diagnosticBytes).digest("hex")}` !== LEAN_DIRECT_V15_DIAGNOSTIC_V5_ROOT || !isObject(diagnostic) || diagnostic.schemaVersion !== "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5" || diagnostic.attemptOrdinal !== 8 || diagnostic.attemptLimit !== 10 || diagnostic.attemptsRemaining !== 2 || diagnostic.preflightInvocations !== 0 || diagnostic.matchInvocations !== 0 || !exactFalseAuthority(diagnostic.authority)) throw new TypeError("LEAN_DIRECT_V15_DIAGNOSTIC_V5_DRIFT")
   if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH))) throw new TypeError("LEAN_DIRECT_V15_CONSUMED_DESTINATION_APPEARED")
   return globalThis.structuredClone(diagnostic) as unknown as LeanActualFixtureStageDiagnosticV5
 }
