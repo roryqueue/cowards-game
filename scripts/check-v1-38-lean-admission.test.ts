@@ -79,6 +79,108 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the fresh v13 actual-fixture diagnostic without operational effects", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH).toBe(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4.json")
+    expect(module.LEAN_DIRECT_V13_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v12.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v13.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v13.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v13.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v13.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v13.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v13.json",
+    })
+    for (const key of [
+      "checkLeanDirectActualFixtureSourceOnlyV13",
+      "runLeanActualFixtureStageDiagnosticInjected",
+      "validateLeanActualFixtureStageDiagnosticV4",
+      "writeLeanActualFixtureStageDiagnosticV4",
+      "checkLeanActualFixtureStageDiagnosticV4",
+    ]) expect(module[key]).toBeTypeOf("function")
+  })
+
+  it("runs the exact public fixture and method schedule without a preflight or Match", () => {
+    const module = leanAdmissionModule as unknown as {
+      runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => unknown
+    }
+    const calls: string[] = []
+    let tick = 0n
+    const result = module.runLeanActualFixtureStageDiagnosticInjected({
+      nowNanoseconds: () => { tick += 1_000_000n; return tick },
+      createSession: ({ matchId }: { matchId: string }) => {
+        const fixture = matchId.endsWith("starter-aggro-chaser") ? "starter:aggro-chaser" : "advanced:vanguard-pressure"
+        return {
+          adapter: {
+            metadata: { id: "container-subprocess", diagnostics: { fallback: false } },
+            execute: ({ methodName }: { methodName: string }) => { calls.push(`${fixture}:${methodName}`); return { ok: true, value: [] } },
+          },
+          close: () => ({ cleanupComplete: true, orphanedChild: false }),
+        }
+      },
+    }) as Record<string, unknown>
+    expect(calls).toEqual([
+      ...Array(4).fill("starter:aggro-chaser:selectActivations"),
+      ...Array(4).fill("starter:aggro-chaser:soldierBrain"),
+      ...Array(4).fill("advanced:vanguard-pressure:selectActivations"),
+      ...Array(4).fill("advanced:vanguard-pressure:soldierBrain"),
+    ])
+    expect(result).toMatchObject({ terminalStage: "complete", requestCounts: { planned: 16, attempted: 16, successful: 16 }, cleanup: { sessionsExpected: 2, sessionsClosed: 2, complete: true } })
+  })
+
+  it("validates only the closed privacy-safe attempt-seven projection", () => {
+    const module = leanAdmissionModule as unknown as {
+      validateLeanActualFixtureStageDiagnosticV4: (repoRoot: string, value: unknown) => unknown
+    }
+    const candidate = {
+      schemaVersion: "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4",
+      sourceCommit: "ebb2be95310b0371d00c472519e4fb5a86ce6b77",
+      sourceTree: "058b4d392681cf7face17ed06de396ca92dcdb0a",
+      executableClosureRoot: "sha256:8e0fc828adfc0c47b806886f5ac451194cfa06c7e701572b7e67c641d4c469fe",
+      image: "node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14",
+      controlsRoot: "sha256:f7f7306dc1f8e5757bd7844ac577373ddf5061ee25950233640b2e8602cd6133",
+      history: {
+        diagnosticV1Root: "sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4",
+        diagnosticV2Root: "sha256:b2945922437dcdbbf1b0a2c13e847cafd2e8b89c2147fb1b7dbafebcc52d72b9",
+        diagnosticV3Root: "sha256:4fa84662a12b68071c30a1d36fd1f608d641ac9c0741f91f1216622ea330fd48",
+        preflightV11Root: "sha256:9224a99f0ca51a43e23103048a5c03ab00ee0d3340db8b4a62472d0f73f512d5",
+        reviewV12Root: "sha256:bff24f7e8ee7f43905880a6880d1b52e70a71281dd74f921a41b1f60553b1817",
+      },
+      terminalStage: "complete",
+      resultClass: null,
+      violationType: null,
+      requestCounts: { planned: 16, attempted: 16, successful: 16 },
+      aggregateTimings: { requestCount: 16, totalMilliseconds: 16, maximumMilliseconds: 1, lifecycleCount: 2, lifecycleTotalMilliseconds: 4, lifecycleMaximumMilliseconds: 2 },
+      cleanup: { sessionsExpected: 2, sessionsClosed: 2, complete: true },
+      attemptOrdinal: 7,
+      attemptLimit: 10,
+      attemptsRemaining: 3,
+      preflightInvocations: 0,
+      matchInvocations: 0,
+      authority: LEAN_AUTHORITY_FALSE,
+    }
+    expect(module.validateLeanActualFixtureStageDiagnosticV4(process.cwd(), candidate)).toEqual(candidate)
+    for (const mutation of [
+      { ...candidate, attemptOrdinal: 8 },
+      { ...candidate, terminalStage: "starter source leaked" },
+      { ...candidate, resultClass: "failure", violationType: null },
+      { ...candidate, preflightInvocations: 1 },
+      { ...candidate, matchInvocations: 1 },
+      { ...candidate, source: "private" },
+      { ...candidate, stderr: "private" },
+      { ...candidate, rawSamples: [1] },
+    ]) expect(() => module.validateLeanActualFixtureStageDiagnosticV4(process.cwd(), mutation)).toThrow()
+  })
+
+  it("keeps the diagnostic selector structurally isolated from preflight, Match, and effect writers", () => {
+    const source = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    const block = source.match(/export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH[\s\S]*?export const checkLeanActualFixtureStageDiagnosticV4[\s\S]*?\n\}/u)?.[0] ?? ""
+    expect(block).toContain("createContainerFixtureRevision")
+    expect(block).toContain("buildLeanContainerPreflightProbeInput")
+    expect(block).toContain("createLeanContainerMatchSession")
+    for (const forbidden of ["runActualLeanContainerPreflight(", "evaluateLeanContainerPreflight(", "createMatch(", "executeMatch(", "writeLeanContainerPreflightArtifact", "writeLeanDirectAuthorization", "createExclusiveLeanDirectInvocation", "writeLeanDirectAdjudicationAndEligibility"]) expect(block).not.toContain(forbidden)
+  })
+
   it("reserves the complete fresh v12 diagnostic and operational family", () => {
     const module = leanAdmissionModule as unknown as Record<string, unknown>
     expect(module.LEAN_DIRECT_V12_ARTIFACT_PATHS).toEqual({
