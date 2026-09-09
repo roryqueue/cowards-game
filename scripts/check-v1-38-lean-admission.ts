@@ -181,6 +181,7 @@ export const LEAN_DIRECT_V12_ARTIFACT_PATHS = Object.freeze({
 } as const)
 export const LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V3_PATH = ".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v3.json" as const
 export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH = ".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4.json" as const
+export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH = ".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5.json" as const
 export const LEAN_DIRECT_V13_ARTIFACT_PATHS = Object.freeze({
   preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v12.json",
   authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v13.json",
@@ -3669,7 +3670,7 @@ const LEAN_RUNTIME_VIOLATION_TYPES = Object.freeze(["INVALID_OUTPUT", "TIMEOUT",
 type LeanActualFixtureId = typeof LEAN_ACTUAL_FIXTURE_IDS[number]
 type LeanActualFixtureMethod = typeof LEAN_ACTUAL_FIXTURE_METHODS[number]
 type LeanActualFixtureStage = "complete" | `${LeanActualFixtureId}:session:create` | `${LeanActualFixtureId}:session:close` | `${LeanActualFixtureId}:${LeanActualFixtureMethod}:warm` | `${LeanActualFixtureId}:${LeanActualFixtureMethod}:sample:${1 | 2 | 3}`
-type LeanActualFixtureResultClass = "player_violation" | null
+type LeanActualFixtureResultClass = "player_violation" | "session_failure" | null
 type LeanActualFixtureViolationType = typeof LEAN_RUNTIME_VIOLATION_TYPES[number] | null
 
 export interface LeanActualFixtureStageDiagnosticV4 {
@@ -3694,6 +3695,13 @@ export interface LeanActualFixtureStageDiagnosticV4 {
   readonly authority: typeof LEAN_AUTHORITY_FALSE
 }
 
+export interface LeanActualFixtureStageDiagnosticV5 extends Omit<LeanActualFixtureStageDiagnosticV4, "schemaVersion" | "history" | "attemptOrdinal" | "attemptsRemaining"> {
+  readonly schemaVersion: "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5"
+  readonly history: typeof LEAN_DIRECT_V14_HISTORY
+  readonly attemptOrdinal: 8
+  readonly attemptsRemaining: 2
+}
+
 interface LeanActualFixtureDiagnosticDependencies {
   readonly createSession: (options: Parameters<typeof createLeanContainerMatchSession>[0]) => Pick<LeanContainerMatchSession, "adapter" | "close">
   readonly nowNanoseconds: () => bigint
@@ -3704,6 +3712,22 @@ const isLeanActualFixtureStage = (value: unknown): value is LeanActualFixtureSta
   return LEAN_ACTUAL_FIXTURE_IDS.some((fixtureId) => value === `${fixtureId}:session:create` || value === `${fixtureId}:session:close` || LEAN_ACTUAL_FIXTURE_METHODS.some((method) => value === `${fixtureId}:${method}:warm` || [1, 2, 3].some((ordinal) => value === `${fixtureId}:${method}:sample:${ordinal}`)))
 }
 const finiteNonNegative = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0
+const LEAN_DIRECT_V14_PLAN199_COMMIT = "97241136e4279c57c5734a896a886afe31fa327a" as const
+const LEAN_DIRECT_V14_PLAN199_SUMMARY_PATH = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-199-SUMMARY.md" as const
+const LEAN_DIRECT_V14_PLAN199_SUMMARY_ROOT = "sha256:16f76622d37a6ad882936377cf81cecf3022067680b8dd45ba68dbb82ea7e5a5" as const
+const LEAN_DIRECT_V14_HISTORY = Object.freeze({
+  ...LEAN_DIRECT_V13_HISTORY,
+  attempt7Commit: LEAN_DIRECT_V14_PLAN199_COMMIT,
+  attempt7SummaryRoot: LEAN_DIRECT_V14_PLAN199_SUMMARY_ROOT,
+  diagnosticV4Absent: true,
+} as const)
+const assertLeanDirectAttempt7History = (repoRoot: string): void => {
+  if (git(repoRoot, ["rev-parse", `${LEAN_DIRECT_V14_PLAN199_COMMIT}^{commit}`]) !== LEAN_DIRECT_V14_PLAN199_COMMIT) throw new TypeError("LEAN_DIRECT_V13_ATTEMPT_HISTORY_DRIFT")
+  try { execFileSync("git", ["merge-base", "--is-ancestor", LEAN_DIRECT_V14_PLAN199_COMMIT, "HEAD"], { cwd: repoRoot, stdio: "ignore" }) } catch { throw new TypeError("LEAN_DIRECT_V13_ATTEMPT_HISTORY_DRIFT") }
+  const summaryRoot = `sha256:${createHash("sha256").update(readFileSync(path.resolve(repoRoot, LEAN_DIRECT_V14_PLAN199_SUMMARY_PATH))).digest("hex")}`
+  if (summaryRoot !== LEAN_DIRECT_V14_PLAN199_SUMMARY_ROOT) throw new TypeError("LEAN_DIRECT_V13_ATTEMPT_SUMMARY_DRIFT")
+  if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH))) throw new TypeError("LEAN_DIRECT_V13_CONSUMED_DESTINATION_APPEARED")
+}
 const assertLeanDirectV13History = (repoRoot: string): void => {
   for (const [artifactPath, expected] of [
     [LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_PATH, LEAN_DIRECT_V13_HISTORY.diagnosticV1Root],
@@ -3750,22 +3774,43 @@ export const runLeanActualFixtureStageDiagnosticInjected = (overrides: Partial<L
         for (let ordinal = 0; ordinal <= 3; ordinal += 1) {
           terminalStage = ordinal === 0 ? `${fixtureId}:${method}:warm` : `${fixtureId}:${method}:sample:${ordinal as 1 | 2 | 3}`
           const started = dependencies.nowNanoseconds(); attempted += 1
-          const result = session.adapter.execute({ source, methodName: method, input: buildLeanContainerPreflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 })
-          requestTimings.push(Number(dependencies.nowNanoseconds() - started) / 1_000_000)
-          if (!result.ok) { resultClass = "player_violation"; violationType = LEAN_RUNTIME_VIOLATION_TYPES.includes(result.violation.type) ? result.violation.type : null; break diagnostic }
+          let result: ReturnType<LeanContainerMatchSession["adapter"]["execute"]>
+          try {
+            result = session.adapter.execute({ source, methodName: method, input: buildLeanContainerPreflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 })
+          } catch {
+            resultClass = "session_failure"; violationType = null; break diagnostic
+          } finally {
+            const elapsed = Number(dependencies.nowNanoseconds() - started) / 1_000_000
+            requestTimings.push(finiteNonNegative(elapsed) ? elapsed : 0)
+          }
+          if (!result.ok) {
+            if (LEAN_RUNTIME_VIOLATION_TYPES.includes(result.violation.type)) { resultClass = "player_violation"; violationType = result.violation.type }
+            else { resultClass = "session_failure"; violationType = null }
+            break diagnostic
+          }
           successful += 1
         }
       }
     } catch {
+      resultClass = "session_failure"; violationType = null
       break diagnostic
     } finally {
       if (session !== undefined) {
         const stageBeforeClose = terminalStage
-        try { const closed = session.close(); if (closed.cleanupComplete && !closed.orphanedChild) sessionsClosed += 1; else { cleanupComplete = false; terminalStage = `${fixtureId}:session:close` } } catch { cleanupComplete = false; terminalStage = `${fixtureId}:session:close` }
+        const failureBeforeClose = resultClass !== null
+        try {
+          const closed = session.close()
+          if (closed.cleanupComplete && !closed.orphanedChild) sessionsClosed += 1
+          else { cleanupComplete = false; if (!failureBeforeClose) { terminalStage = `${fixtureId}:session:close`; resultClass = "session_failure"; violationType = null } }
+        } catch {
+          cleanupComplete = false
+          if (!failureBeforeClose) { terminalStage = `${fixtureId}:session:close`; resultClass = "session_failure"; violationType = null }
+        }
         if (cleanupComplete) terminalStage = stageBeforeClose
       }
       lifecycleTimings.push(Number(dependencies.nowNanoseconds() - lifecycleStarted) / 1_000_000)
     }
+    if (resultClass !== null) break diagnostic
   }
   if (attempted === 16 && successful === 16 && sessionsClosed === 2 && cleanupComplete) terminalStage = "complete"
   return {
@@ -3786,8 +3831,25 @@ export const validateLeanActualFixtureStageDiagnosticV4 = (repoRoot: string, val
   return globalThis.structuredClone(value) as unknown as LeanActualFixtureStageDiagnosticV4
 }
 export const checkLeanDirectActualFixtureSourceOnlyV13 = (repoRoot: string): void => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectV13DestinationsFresh(repoRoot); assertSuccessorLockInventory(repoRoot) }
-export const writeLeanActualFixtureStageDiagnosticV4 = (repoRoot: string): LeanActualFixtureStageDiagnosticV4 => { checkLeanDirectActualFixtureSourceOnlyV13(repoRoot); const diagnostic = buildLeanActualFixtureStageDiagnosticV4(runLeanActualFixtureStageDiagnosticInjected()); validateLeanActualFixtureStageDiagnosticV4(repoRoot, diagnostic); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH), diagnostic); return diagnostic }
-export const checkLeanActualFixtureStageDiagnosticV4 = (repoRoot: string): LeanActualFixtureStageDiagnosticV4 => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); for (const effectPath of Object.values(LEAN_DIRECT_V13_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, effectPath))) throw new TypeError(`LEAN_DIRECT_V13_EFFECT_EXISTS:${effectPath}`); const diagnostic = validateLeanActualFixtureStageDiagnosticV4(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH)); assertSuccessorLockInventory(repoRoot); return diagnostic }
+export const writeLeanActualFixtureStageDiagnosticV4 = (_repoRoot: string): never => { throw new TypeError("LEAN_DIRECT_V13_ATTEMPT_CONSUMED") }
+export const checkLeanActualFixtureStageDiagnosticV4 = (repoRoot: string): void => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectAttempt7History(repoRoot); assertSuccessorLockInventory(repoRoot) }
+
+const buildLeanActualFixtureStageDiagnosticV5 = (observed: ReturnType<typeof runLeanActualFixtureStageDiagnosticInjected>): LeanActualFixtureStageDiagnosticV5 => ({ schemaVersion: "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5", sourceCommit: LEAN_DIRECT_V13_SOURCE_COMMIT, sourceTree: LEAN_DIRECT_V13_SOURCE_TREE, executableClosureRoot: LEAN_DIRECT_V13_CLOSURE_ROOT, image: LEAN_CONTAINER_IMAGE, controlsRoot: LEAN_DIRECT_V13_CONTROLS_ROOT, history: LEAN_DIRECT_V14_HISTORY, ...observed, attemptOrdinal: 8, attemptLimit: 10, attemptsRemaining: 2, preflightInvocations: 0, matchInvocations: 0, authority: LEAN_AUTHORITY_FALSE })
+export const validateLeanActualFixtureStageDiagnosticV5 = (repoRoot: string, value: unknown): LeanActualFixtureStageDiagnosticV5 => {
+  assertPrivacySafe(value)
+  const keys = ["schemaVersion", "sourceCommit", "sourceTree", "executableClosureRoot", "image", "controlsRoot", "history", "terminalStage", "resultClass", "violationType", "requestCounts", "aggregateTimings", "cleanup", "attemptOrdinal", "attemptLimit", "attemptsRemaining", "preflightInvocations", "matchInvocations", "authority"]
+  if (!isObject(value) || !exactKeys(value, keys) || value.schemaVersion !== "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5" || value.sourceCommit !== LEAN_DIRECT_V13_SOURCE_COMMIT || value.sourceTree !== LEAN_DIRECT_V13_SOURCE_TREE || value.executableClosureRoot !== LEAN_DIRECT_V13_CLOSURE_ROOT || value.image !== LEAN_CONTAINER_IMAGE || value.controlsRoot !== LEAN_DIRECT_V13_CONTROLS_ROOT || JSON.stringify(value.history) !== JSON.stringify(LEAN_DIRECT_V14_HISTORY) || !isLeanActualFixtureStage(value.terminalStage) || ![null, "player_violation", "session_failure"].includes(value.resultClass as never) || !(value.violationType === null || LEAN_RUNTIME_VIOLATION_TYPES.includes(value.violationType as never)) || (value.resultClass === "player_violation") !== (value.violationType !== null) || !isObject(value.requestCounts) || !exactKeys(value.requestCounts, ["planned", "attempted", "successful"]) || value.requestCounts.planned !== 16 || !Number.isSafeInteger(value.requestCounts.attempted) || !Number.isSafeInteger(value.requestCounts.successful) || (value.requestCounts.attempted as number) < 0 || (value.requestCounts.attempted as number) > 16 || (value.requestCounts.successful as number) < 0 || (value.requestCounts.successful as number) > (value.requestCounts.attempted as number) || !isObject(value.aggregateTimings) || !exactKeys(value.aggregateTimings, ["requestCount", "totalMilliseconds", "maximumMilliseconds", "lifecycleCount", "lifecycleTotalMilliseconds", "lifecycleMaximumMilliseconds"]) || value.aggregateTimings.requestCount !== value.requestCounts.attempted || !finiteNonNegative(value.aggregateTimings.totalMilliseconds) || !finiteNonNegative(value.aggregateTimings.maximumMilliseconds) || !Number.isSafeInteger(value.aggregateTimings.lifecycleCount) || !finiteNonNegative(value.aggregateTimings.lifecycleTotalMilliseconds) || !finiteNonNegative(value.aggregateTimings.lifecycleMaximumMilliseconds) || !isObject(value.cleanup) || !exactKeys(value.cleanup, ["sessionsExpected", "sessionsClosed", "complete"]) || value.cleanup.sessionsExpected !== 2 || !Number.isSafeInteger(value.cleanup.sessionsClosed) || (value.cleanup.sessionsClosed as number) < 0 || (value.cleanup.sessionsClosed as number) > 2 || typeof value.cleanup.complete !== "boolean" || value.attemptOrdinal !== 8 || value.attemptLimit !== 10 || value.attemptsRemaining !== 2 || value.preflightInvocations !== 0 || value.matchInvocations !== 0 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_INVALID")
+  if (value.terminalStage === "complete" ? value.requestCounts.attempted !== 16 || value.requestCounts.successful !== 16 || value.cleanup.sessionsClosed !== 2 || value.cleanup.complete !== true || value.resultClass !== null : value.resultClass === null) throw new TypeError("LEAN_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_DISPOSITION_INVALID")
+  assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectAttempt7History(repoRoot)
+  return globalThis.structuredClone(value) as unknown as LeanActualFixtureStageDiagnosticV5
+}
+const assertLeanDirectV14DestinationsFresh = (repoRoot: string): void => {
+  assertLeanDirectAttempt7History(repoRoot)
+  if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH))) throw new TypeError("LEAN_DIRECT_V14_DESTINATION_EXISTS")
+}
+export const checkLeanDirectActualFixtureSourceOnlyV14 = (repoRoot: string): void => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectV14DestinationsFresh(repoRoot); assertSuccessorLockInventory(repoRoot) }
+export const writeLeanActualFixtureStageDiagnosticV5 = (repoRoot: string): LeanActualFixtureStageDiagnosticV5 => { checkLeanDirectActualFixtureSourceOnlyV14(repoRoot); const diagnostic = buildLeanActualFixtureStageDiagnosticV5(runLeanActualFixtureStageDiagnosticInjected()); validateLeanActualFixtureStageDiagnosticV5(repoRoot, diagnostic); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH), diagnostic); return diagnostic }
+export const checkLeanActualFixtureStageDiagnosticV5 = (repoRoot: string): LeanActualFixtureStageDiagnosticV5 => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectAttempt7History(repoRoot); for (const effectPath of Object.values(LEAN_DIRECT_V13_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, effectPath))) throw new TypeError(`LEAN_DIRECT_V14_EFFECT_EXISTS:${effectPath}`); const diagnostic = validateLeanActualFixtureStageDiagnosticV5(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH)); assertSuccessorLockInventory(repoRoot); return diagnostic }
 export const loadAndCheckLeanCorrectiveReady = (
   repoRoot: string,
   allowedOperationalPaths: readonly string[] = [],
@@ -4614,6 +4676,12 @@ const main = (): void => {
     writeLeanActualFixtureStageDiagnosticV4(repoRoot)
   } else if (selector === "--check-direct-actual-fixture-stage-diagnostic-v4") {
     checkLeanActualFixtureStageDiagnosticV4(repoRoot)
+  } else if (selector === "--check-direct-actual-fixture-source-only-v14") {
+    checkLeanDirectActualFixtureSourceOnlyV14(repoRoot)
+  } else if (selector === "--write-direct-actual-fixture-stage-diagnostic-v5") {
+    writeLeanActualFixtureStageDiagnosticV5(repoRoot)
+  } else if (selector === "--check-direct-actual-fixture-stage-diagnostic-v5") {
+    checkLeanActualFixtureStageDiagnosticV5(repoRoot)
   } else if (selector === "--check-direct-container-stream-source-only-v6") {
     checkLeanDirectContainerStreamSourceOnlyV6(repoRoot)
   } else if (selector === "--write-direct-container-preflight-v5") {

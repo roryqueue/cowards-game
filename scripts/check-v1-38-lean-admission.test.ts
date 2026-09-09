@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -208,7 +209,7 @@ describe("lean admission custody", () => {
     expect(() => module.writeLeanActualFixtureStageDiagnosticV4(process.cwd())).toThrow("LEAN_DIRECT_V13_ATTEMPT_CONSUMED")
     expect(module.LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH).toBe(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5.json")
     for (const key of ["checkLeanDirectActualFixtureSourceOnlyV14", "validateLeanActualFixtureStageDiagnosticV5", "writeLeanActualFixtureStageDiagnosticV5", "checkLeanActualFixtureStageDiagnosticV5"]) expect(module[key]).toBeTypeOf("function")
-    expect(readFileSync(".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-199-SUMMARY.md", "utf8")).toContain("97241136")
+    expect(execFileSync("git", ["rev-parse", "97241136e4279c57c5734a896a886afe31fa327a^{commit}"], { encoding: "utf8" }).trim()).toBe("97241136e4279c57c5734a896a886afe31fa327a")
     expect(() => readFileSync(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4.json", "utf8")).toThrow()
   })
 
