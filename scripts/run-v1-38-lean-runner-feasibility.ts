@@ -37,6 +37,9 @@ import {
   type LeanContainerSessionCloseResult,
 } from "./lib/v1-38-lean-container-match-session.js"
 
+import { assertLeanInfrastructureProfile, LEAN_CLOSEOUT_PROFILE, type LeanInfrastructureProfile } from "./lib/v1-38-lean-infrastructure-profile.js"
+export { LEAN_CLOSEOUT_PROFILE } from "./lib/v1-38-lean-infrastructure-profile.js"
+
 export const LEAN_LIVE_SELECTOR = "--run-reviewed-live-gate" as const
 export const LEAN_CHILD_SELECTOR = "--execute-reviewed-cell" as const
 export const LEAN_CORRECTIVE_SELECTOR = "--run-reviewed-corrective-gate" as const
@@ -88,8 +91,8 @@ export interface LeanContainerControls {
   readonly network: "none"
   readonly readOnlyRoot: true
   readonly tmpfs: "/tmp:rw,noexec,nosuid,size=16m"
-  readonly memory: "64m"
-  readonly cpus: "0.5"
+  readonly memory: "64m" | "256m"
+  readonly cpus: "0.5" | "2"
   readonly pidsLimit: 64
   readonly capDrop: "ALL"
   readonly noNewPrivileges: true
@@ -152,6 +155,7 @@ export interface LeanExecutionResult {
 }
 export interface LeanCleanupResult { readonly cleanupComplete: boolean; readonly orphanedChild: boolean }
 export interface LeanExecutionDependencies {
+  readonly stopOnFailure?: boolean
   readonly now: () => number
   readonly execute: (cell: LeanCell, signal: AbortSignal) => Promise<LeanExecutionResult>
   readonly terminateActive: () => Promise<LeanCleanupResult>
@@ -280,7 +284,7 @@ export const runLeanFeasibilityInjected = async (dependencies: LeanExecutionDepe
           })),
         ])
         records.push({ ...cell, ...execution })
-        if (deadlineReached || !execution.cleanupComplete || execution.orphanedChild) { stopLaunching = true; break }
+        if (deadlineReached || !execution.cleanupComplete || execution.orphanedChild || (dependencies.stopOnFailure === true && execution.classification !== "success")) { stopLaunching = true; break }
       } catch {
         records.push({
           ...cell, classification: controller.signal.aborted ? "cancelled" : "system_failure",
@@ -381,15 +385,21 @@ const dockerVersionCompatible = (version: string): boolean => {
   return major > 29 || (major === 29 && (minor > 4 || (minor === 4 && patch >= 0)))
 }
 
-const exactContainerControls = (value: LeanContainerControls): boolean =>
-  JSON.stringify(value) === JSON.stringify(LEAN_CONTAINER_CONTROLS)
+const containerControlsForProfile = (profile?: LeanInfrastructureProfile): LeanContainerControls => {
+  assertLeanInfrastructureProfile(profile)
+  return profile === "closeout" ? { ...LEAN_CONTAINER_CONTROLS, cpus: LEAN_CLOSEOUT_PROFILE.cpus, memory: LEAN_CLOSEOUT_PROFILE.memory } : LEAN_CONTAINER_CONTROLS
+}
 
 export const evaluateLeanContainerPreflight = (
   input: LeanContainerPreflightInput,
+  infrastructureProfile?: LeanInfrastructureProfile,
 ): LeanContainerPreflightEvidence => {
+  const controls = containerControlsForProfile(infrastructureProfile)
+  const cellDeadline = infrastructureProfile === "closeout" ? LEAN_CLOSEOUT_PROFILE.cellDeadlineMilliseconds : LEAN_CELL_DEADLINE_MS
+  const outerDeadline = infrastructureProfile === "closeout" ? LEAN_CLOSEOUT_PROFILE.outerDeadlineMilliseconds : LEAN_DEADLINE_MS
   if (!dockerVersionCompatible(input.dockerServerVersion)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_DOCKER_INCOMPATIBLE")
   if (input.imageReference !== LEAN_CONTAINER_IMAGE || !input.localRepoDigests.some((candidate) => exactDockerImageIdentityEquals(LEAN_CONTAINER_IMAGE, candidate))) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_IMAGE_DRIFT")
-  if (input.adapterId !== LEAN_CONTAINER_ADAPTER_ID || !exactContainerControls(input.controls)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ISOLATION_DRIFT")
+  if (input.adapterId !== LEAN_CONTAINER_ADAPTER_ID || JSON.stringify(input.controls) !== JSON.stringify(controls)) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ISOLATION_DRIFT")
   const expectedPairs = new Set([
     "starter:aggro-chaser\0selectActivations", "starter:aggro-chaser\0soldierBrain",
     "advanced:vanguard-pressure\0selectActivations", "advanced:vanguard-pressure\0soldierBrain",
@@ -414,13 +424,13 @@ export const evaluateLeanContainerPreflight = (
     ),
   )
   const projectedRunMilliseconds = projectedCellMilliseconds * 24
-  if (projectedCellMilliseconds > LEAN_CELL_DEADLINE_MS || projectedRunMilliseconds > LEAN_DEADLINE_MS) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_INFEASIBLE")
+  if (projectedCellMilliseconds > cellDeadline || projectedRunMilliseconds > outerDeadline) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_INFEASIBLE")
   return Object.freeze({
     status: "pass",
     dockerServerVersion: input.dockerServerVersion,
     imageReference: LEAN_CONTAINER_IMAGE,
     adapterId: LEAN_CONTAINER_ADAPTER_ID,
-    controlsRoot: hashLeanValue(LEAN_CONTAINER_CONTROLS),
+    controlsRoot: hashLeanValue(controls),
     sampleCount: input.samples.length,
     sampleRoot: hashLeanValue(input.samples),
     lifecycleSampleCount: input.lifecycleSamples.length,
@@ -430,8 +440,8 @@ export const evaluateLeanContainerPreflight = (
     startupCleanupMarginMilliseconds: LEAN_CONTAINER_STARTUP_CLEANUP_MARGIN_MS,
     projectedCellMilliseconds,
     projectedRunMilliseconds,
-    cellDeadlineMilliseconds: LEAN_CELL_DEADLINE_MS,
-    outerDeadlineMilliseconds: LEAN_DEADLINE_MS,
+    cellDeadlineMilliseconds: cellDeadline,
+    outerDeadlineMilliseconds: outerDeadline,
   })
 }
 
@@ -489,7 +499,9 @@ export interface LeanContainerPreflightDependencies {
 
 export const runActualLeanContainerPreflight = (
   overrides: Partial<LeanContainerPreflightDependencies> = {},
+  infrastructureProfile?: LeanInfrastructureProfile,
 ): LeanContainerPreflightEvidence => {
+  const controls = containerControlsForProfile(infrastructureProfile)
   const dependencies: LeanContainerPreflightDependencies = {
     dockerText,
     createSession: createLeanContainerMatchSession,
@@ -512,16 +524,16 @@ export const runActualLeanContainerPreflight = (
   for (const fixtureId of ["starter:aggro-chaser", "advanced:vanguard-pressure"] as const) {
     const lifecycleStarted = dependencies.nowNanoseconds()
     const matchId = `match:lean:preflight:${fixtureId}`
-    const session = dependencies.createSession({ matchId, containerName: deriveLeanContainerName(matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(matchId), image: LEAN_CONTAINER_IMAGE })
+    const session = dependencies.createSession({ matchId, containerName: deriveLeanContainerName(matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(matchId), image: LEAN_CONTAINER_IMAGE, ...(infrastructureProfile === undefined ? {} : { infrastructureProfile }) })
     const lifecycleCreateMilliseconds = Number(dependencies.nowNanoseconds() - lifecycleStarted) / 1_000_000
     const adapter = session.adapter
-    if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
-    const revision = createContainerFixtureRevision(fixtureId)
-    const artifact = revision.metadata.sourceArtifact
-    if (artifact === undefined) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ARTIFACT_MISSING")
-    const source = Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
     let close: LeanContainerSessionCloseResult
     try {
+      if (adapter.metadata.id !== LEAN_CONTAINER_ADAPTER_ID || adapter.metadata.diagnostics?.fallback !== false) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
+      const revision = createContainerFixtureRevision(fixtureId)
+      const artifact = revision.metadata.sourceArtifact
+      if (artifact === undefined) throw new TypeError("LEAN_CONTAINER_PREFLIGHT_ARTIFACT_MISSING")
+      const source = Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
       for (const method of ["selectActivations", "soldierBrain"] as const) {
         const request = { source, methodName: method, input: buildLeanContainerPreflightProbeInput(method), timeoutMs: 5_000, outputByteLimit: 32_768 } as const
         const warm = adapter.execute(request)
@@ -547,10 +559,10 @@ export const runActualLeanContainerPreflight = (
     imageReference: LEAN_CONTAINER_IMAGE,
     localRepoDigests,
     adapterId: LEAN_CONTAINER_ADAPTER_ID,
-    controls: LEAN_CONTAINER_CONTROLS,
+    controls,
     lifecycleSamples,
     samples,
-  })
+  }, infrastructureProfile)
 }
 export interface CanonicalLeanPreparedRequest {
   readonly request: RuntimeExecutionServiceRequestV118
@@ -687,7 +699,7 @@ export const buildCanonicalLeanRequestV118 = (cell: LeanCell): CanonicalLeanPrep
   }
 }
 
-const executePreparedLeanRequest = (
+export const executePreparedLeanRequest = (
   prepared: CanonicalLeanPreparedRequest,
   sessionAdapter?: StrategyExecutionAdapterV117,
 ) => {
@@ -756,7 +768,7 @@ export const finalizePreparedLeanProjection = (
 
 type LeanPreparedProjection = ReturnType<typeof projectLeanV118Response>
 export interface ExecutePreparedLeanCellDependencies {
-  readonly createSession: (input: { readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: typeof LEAN_CONTAINER_IMAGE }) => Pick<LeanContainerMatchSession, "adapter" | "close">
+  readonly createSession: (input: { readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: typeof LEAN_CONTAINER_IMAGE; readonly infrastructureProfile?: LeanInfrastructureProfile }) => Pick<LeanContainerMatchSession, "adapter" | "close">
   readonly executePrepared: (prepared: CanonicalLeanPreparedRequest, adapter: StrategyExecutionAdapterV117) => LeanPreparedProjection
 }
 
@@ -768,13 +780,15 @@ const defaultPreparedLeanCellDependencies: ExecutePreparedLeanCellDependencies =
 export const executePreparedLeanCellInjected = async (
   cell: LeanCell,
   dependencies: ExecutePreparedLeanCellDependencies,
+  infrastructureProfile?: LeanInfrastructureProfile,
 ): Promise<LeanExecutionResult> => {
+  assertLeanInfrastructureProfile(infrastructureProfile)
   const prepared = buildCanonicalLeanRequestV118(cell)
   let session: Pick<LeanContainerMatchSession, "adapter" | "close"> | undefined
   let projection: LeanPreparedProjection | undefined
   let executionFailed = false
   try {
-    session = dependencies.createSession({ matchId: prepared.request.matchId, containerName: deriveLeanContainerName(prepared.request.matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(prepared.request.matchId), image: LEAN_CONTAINER_IMAGE })
+    session = dependencies.createSession({ matchId: prepared.request.matchId, containerName: deriveLeanContainerName(prepared.request.matchId), ownershipLabel: deriveLeanContainerOwnershipLabel(prepared.request.matchId), image: LEAN_CONTAINER_IMAGE, ...(infrastructureProfile === undefined ? {} : { infrastructureProfile }) })
     projection = dependencies.executePrepared(prepared, session.adapter)
   } catch {
     executionFailed = true
@@ -792,8 +806,8 @@ export const executePreparedLeanCellInjected = async (
   return finalizePreparedLeanProjection(projection, prepared.requestRealismRoot)
 }
 
-export const executePreparedLeanCell = async (cell: LeanCell): Promise<LeanExecutionResult> =>
-  executePreparedLeanCellInjected(cell, defaultPreparedLeanCellDependencies)
+export const executePreparedLeanCell = async (cell: LeanCell, infrastructureProfile?: LeanInfrastructureProfile): Promise<LeanExecutionResult> =>
+  executePreparedLeanCellInjected(cell, defaultPreparedLeanCellDependencies, infrastructureProfile)
 
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
 const isSha = (value: unknown): value is `sha256:${string}` => typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
@@ -954,7 +968,8 @@ export const createSupervisedLeanExecutionDependencies = (
           try { clearOwnership() } catch (error) { settle(() => reject(error)); return }
           lastCleanup = { cleanupComplete: true, orphanedChild: false }
           if (code === 0 && exitSignal === null && pendingResult !== undefined) {
-            settle(() => resolve({ ...pendingResult!, cleanupComplete: true, orphanedChild: false }))
+            lastCleanup = { cleanupComplete: pendingResult.cleanupComplete, orphanedChild: pendingResult.orphanedChild }
+            settle(() => resolve(pendingResult!))
           } else {
             settle(() => reject(new TypeError(code === 0 && exitSignal === null ? "LEAN_CHILD_RESULT_MISSING" : stderr.trim() || "LEAN_CHILD_FAILED")))
           }

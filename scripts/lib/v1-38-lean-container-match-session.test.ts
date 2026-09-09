@@ -66,6 +66,22 @@ const advancedSource = () => {
 }
 
 describe("lean Match-scoped hostile container session", () => {
+  it("selects the approved resources only for an explicit closeout session", () => {
+    for (const profile of [undefined, "closeout"] as const) {
+      const name = `lean-profile-${profile ?? "historical"}`
+      const label = `owner:${name}`
+      const control = fakeTransport([absent(name), result(`${name}-id\n`), owned(label), result(), result(), absent(name)])
+      const persistent = fakeStream([])
+      const session = createLeanContainerMatchSession({ matchId: `match:${name}`, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory, infrastructureProfile: profile })
+      const args = control.calls.find((call) => call[1][0] === "create")![1]
+      expect(args[args.indexOf("--cpus") + 1]).toBe(profile === "closeout" ? "2" : "0.5")
+      expect(args[args.indexOf("--memory") + 1]).toBe(profile === "closeout" ? "256m" : "64m")
+      expect(args).toContain("no-new-privileges")
+      expect(args[args.indexOf("--network") + 1]).toBe("none")
+      expect(session.close()).toEqual({ cleanupComplete: true, orphanedChild: false })
+    }
+  })
+
   it("uses one fresh bounded guest Worker per broker request without a child process", () => {
     const fixture = create("lean-worker-shape", [])
     const brokerSource = fixture.persistent.calls[0]![1].at(-1)!

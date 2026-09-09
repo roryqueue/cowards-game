@@ -70,6 +70,70 @@ const childResult = (cell = buildLeanSchedule()[0]!) => ({
 })
 
 describe("bounded lean runner", () => {
+  it("stops a closeout allocation on the actual first failed cell without charging another", async () => {
+    let calls = 0
+    const terminal = await runLeanFeasibilityInjected(dependencies({
+      stopOnFailure: true,
+      execute: async () => { calls += 1; return { classification: "system_failure", cleanupComplete: true, orphanedChild: false, boardRealism: true, integrityValid: false } },
+    }))
+    expect(calls).toBe(1)
+    expect(terminal.counts.systemFailure).toBe(1)
+    expect(terminal.counts.unlaunched).toBe(23)
+  })
+
+  it("closes a preflight session when its adapter metadata is refused", () => {
+    let closes = 0
+    expect(() => runActualLeanContainerPreflight({
+      dockerText: (args) => args[0] === "version" ? "29.4.0" : JSON.stringify([LEAN_CONTAINER_IMAGE]),
+      createSession: () => ({ adapter: { metadata: { id: "wrong" } }, close: () => { closes += 1; return { cleanupComplete: true, orphanedChild: false } } }) as never,
+    }, "closeout")).toThrow("LEAN_CONTAINER_PREFLIGHT_ADAPTER_DRIFT")
+    expect(closes).toBe(1)
+  })
+
+  it("propagates closeout resources to probes and applies only its approved deadlines", async () => {
+    let tick = 0n
+    const seen: unknown[] = []
+    const evidence = runActualLeanContainerPreflight({
+      dockerText: (args) => args[0] === "version" ? "29.4.0" : JSON.stringify([LEAN_CONTAINER_IMAGE]),
+      nowNanoseconds: () => { tick += 100_000_000n; return tick },
+      createSession: (options) => {
+        seen.push(options.infrastructureProfile)
+        return { matchId: options.matchId, containerId: "fake", state: "active", adapter: { metadata: { id: LEAN_CONTAINER_ADAPTER_ID, diagnostics: { fallback: false } }, execute: () => ({ ok: true, value: null }) }, close: () => ({ cleanupComplete: true, orphanedChild: false }) } as never
+      },
+      evaluate: (input, profile) => {
+        expect(profile).toBe("closeout")
+        expect(input.controls).toMatchObject({ cpus: "2", memory: "256m" })
+        expect(() => evaluateLeanContainerPreflight(input)).toThrow("LEAN_CONTAINER_PREFLIGHT_ISOLATION_DRIFT")
+        expect(() => evaluateLeanContainerPreflight({ ...input, controls: leanRunnerModule.LEAN_CONTAINER_CONTROLS }, "closeout")).toThrow("LEAN_CONTAINER_PREFLIGHT_ISOLATION_DRIFT")
+        expect(() => evaluateLeanContainerPreflight({ ...input, controls: leanRunnerModule.LEAN_CONTAINER_CONTROLS })).toThrow("LEAN_CONTAINER_PREFLIGHT_INFEASIBLE")
+        expect(() => evaluateLeanContainerPreflight({ ...input, samples: input.samples.map((sample) => ({ ...sample, elapsedMilliseconds: 300 })) }, "closeout")).toThrow("LEAN_CONTAINER_PREFLIGHT_INFEASIBLE")
+        return evaluateLeanContainerPreflight(input, profile)
+      },
+    }, "closeout")
+    expect(seen).toEqual(["closeout", "closeout"])
+    expect(evidence).toMatchObject({ status: "pass", cellDeadlineMilliseconds: 120_000, outerDeadlineMilliseconds: 3_600_000 })
+    await executePreparedLeanCellInjected(buildLeanSchedule()[0]!, {
+      createSession: (options) => {
+        expect(options.infrastructureProfile).toBe("closeout")
+        return { adapter: {} as never, close: () => ({ cleanupComplete: true, orphanedChild: false }) }
+      },
+      executePrepared: () => ({ classification: "success", ...roots }),
+    }, "closeout")
+  })
+
+  it("preserves failed container cleanup even when its supervisor child exits cleanly", async () => {
+    const child = new FakeLeanChild()
+    const capability = "e".repeat(64)
+    const deps = createSupervisedLeanExecutionDependencies(capability, { spawnChild: () => child as never, cellDeadlineMilliseconds: 500 })
+    const cell = buildLeanSchedule()[0]!
+    const execution = deps.execute(cell, new AbortController().signal)
+    const failure = { classification: "system_failure", cleanupComplete: false, orphanedChild: true, boardRealism: true, integrityValid: false }
+    child.emit("message", { kind: "ready", capability })
+    child.emit("message", { kind: "result", capability, result: failure })
+    child.cleanExit()
+    await expect(execution).resolves.toEqual(failure)
+  })
+
   it("drives the injected no-Docker preflight through both fixtures and the real evaluator", () => {
     const calls: string[] = []
     let tick = 0n

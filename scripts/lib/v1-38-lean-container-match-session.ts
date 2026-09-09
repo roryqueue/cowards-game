@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
+import { assertLeanInfrastructureProfile, LEAN_CLOSEOUT_PROFILE, type LeanInfrastructureProfile } from "./v1-38-lean-infrastructure-profile.js"
 import type { RuntimeResult } from "@cowards/engine"
 import type { StrategyExecutionAdapterV117, StrategyExecutionRequest } from "../../packages/runtime-js/src/adapter.js"
 import { createRuntimeGuestExecutionV117, executeStrategyRuntimeAbiV117, observeRuntimeGuestAccountingV117, type RuntimeGuestObservationV117 } from "../../packages/runtime-js/src/abi-bridge.js"
@@ -22,6 +23,7 @@ export interface LeanContainerPersistentStream {
 }
 export type LeanContainerPersistentStreamFactory = (command: string, args: readonly string[], options: { readonly startupTimeoutMilliseconds: number; readonly maxBufferBytes: number }) => LeanContainerPersistentStream
 export interface LeanContainerMatchSessionOptions {
+  readonly infrastructureProfile?: LeanInfrastructureProfile | undefined
   readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: string
   readonly dockerPath?: string | undefined; readonly transport?: LeanContainerMatchTransport | undefined
   readonly streamFactory?: LeanContainerPersistentStreamFactory | undefined; readonly cleanupTimeoutMilliseconds?: number | undefined
@@ -143,7 +145,7 @@ const defaultStreamFactory: LeanContainerPersistentStreamFactory = (command, arg
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
 const canonicalBase64 = (value: string): boolean => { try { return Buffer.from(value, "base64").toString("base64") === value } catch { return false } }
 const assertSafeIdentity = (label: string, value: string): void => { if (value.length === 0 || value.startsWith("-") || !/^[a-zA-Z0-9._:/@-]+$/u.test(value)) throw new TypeError(`LEAN_CONTAINER_SESSION_${label}_INVALID`) }
-const createArgs = (image: string, containerName: string, ownershipLabel: string): readonly string[] => ["create", "--name", containerName, "--label", `${OWNER_LABEL}=${ownershipLabel}`, "--interactive", "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "--memory", "64m", "--cpus", "0.5", "--pids-limit", "64", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--env", "NODE_ENV=production", "--workdir", "/tmp", image, "node", "--input-type=module", "--eval", INERT_CONTAINER_SOURCE]
+const createArgs = (image: string, containerName: string, ownershipLabel: string, profile?: LeanInfrastructureProfile): readonly string[] => ["create", "--name", containerName, "--label", `${OWNER_LABEL}=${ownershipLabel}`, "--interactive", "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "--memory", profile === "closeout" ? LEAN_CLOSEOUT_PROFILE.memory : "64m", "--cpus", profile === "closeout" ? LEAN_CLOSEOUT_PROFILE.cpus : "0.5", "--pids-limit", "64", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--env", "NODE_ENV=production", "--workdir", "/tmp", image, "node", "--input-type=module", "--eval", INERT_CONTAINER_SOURCE]
 const assertCleanControlResult = (result: LeanContainerTransportResult, code: string): void => { if (result.error !== undefined || result.signal !== null || result.status !== 0 || result.stderr.byteLength !== 0) throw new TypeError(code) }
 const exactAbsent = (result: LeanContainerTransportResult, name: string): boolean => result.error === undefined && result.signal === null && result.status === 1 && (
   (result.stdout.byteLength === 0 && result.stderr.equals(Buffer.from(`Error: No such object: ${name}\n`, "utf8")))
@@ -152,6 +154,7 @@ const exactAbsent = (result: LeanContainerTransportResult, name: string): boolea
 const strictJsonResponse = (stdout: Buffer, byteLimit: number): RuntimeResult<unknown> => { const text = stdout.toString("utf8"); assertWithinByteCap("stdout", text, byteLimit); let parsed: unknown; try { parsed = JSON.parse(text) } catch { throw new SubprocessSystemFailure("MALFORMED_IPC", "Container session response was not one JSON frame") }; if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Container session response frame is invalid"); const record = parsed as Record<string, unknown>; if (!exactKeys(record, record.ok === true ? ["ok", "value"] : ["ok", "violation"])) throw new SubprocessSystemFailure("MALFORMED_IPC", "Container session response frame has surplus fields"); return parseSubprocessIpcResponse(text, byteLimit) }
 
 export const createLeanContainerMatchSession = (options: LeanContainerMatchSessionOptions): LeanContainerMatchSession => {
+  assertLeanInfrastructureProfile(options.infrastructureProfile)
   assertSafeIdentity("MATCH_ID", options.matchId); assertSafeIdentity("CONTAINER_NAME", options.containerName); assertSafeIdentity("OWNERSHIP_LABEL", options.ownershipLabel); assertSafeIdentity("IMAGE", options.image)
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/u.test(options.containerName)) throw new TypeError("LEAN_CONTAINER_SESSION_CONTAINER_NAME_INVALID")
   const dockerPath = options.dockerPath ?? "docker"; const transport = options.transport ?? defaultTransport; const streamFactory = options.streamFactory ?? defaultStreamFactory; const cleanupTimeout = options.cleanupTimeoutMilliseconds ?? DEFAULT_CLEANUP_TIMEOUT_MS
@@ -171,7 +174,7 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
     cleanupResult = streamClosed && removed.error === undefined && removed.signal === null && removed.status === 0 && removed.stderr.byteLength === 0 && absent ? { cleanupComplete: true, orphanedChild: false } : { cleanupComplete: false, orphanedChild: true }
     return cleanupResult
   }
-  const created = transport(dockerPath, createArgs(options.image, options.containerName, options.ownershipLabel), { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES })
+  const created = transport(dockerPath, createArgs(options.image, options.containerName, options.ownershipLabel, options.infrastructureProfile), { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES })
   const ownershipAfterCreate = inspectOwner(); const createOutput = created.stdout.toString("utf8").trim(); const createClean = created.error === undefined && created.signal === null && created.status === 0 && created.stderr.byteLength === 0 && /^[a-zA-Z0-9._:-]+$/u.test(createOutput)
   if (!createClean || ownershipAfterCreate !== "owned") { if (ownershipAfterCreate === "owned") { const cleanup = remove(); if (!cleanup.cleanupComplete) throw new TypeError("LEAN_CONTAINER_SESSION_CREATE_CLEANUP_INCOMPLETE") } else if (ownershipAfterCreate === "foreign" || ownershipAfterCreate === "unknown") throw new TypeError("LEAN_CONTAINER_SESSION_CREATE_CLEANUP_INCOMPLETE"); throw new TypeError("LEAN_CONTAINER_SESSION_CREATE_FAILED") }
   const containerId = options.containerName
