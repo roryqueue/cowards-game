@@ -151,3 +151,10 @@ updated: 2026-09-09T23:15:00-04:00
 - found: Docker returned status 1, signal null, no transport error, stdout exactly `[]\n`, and stderr exactly `error: no such object: <requested-name>\n`; the requested container name was represented only by this privacy-safe placeholder
 - effects: no container was created, zero preflights ran, zero Matches ran, no canonical artifact or authority was produced, and all authority remains false
 - implication: the observed lowercase Docker 29.4 tuple is outside the current closed allowlist; admit only these exact bytes additively, preserve diagnostic-v1 and diagnostic-v2 as immutable denials, and spend a separate attempt only after committed source custody passes
+
+## Plan 262-197 Worker lifecycle diagnostic-v3 — 2026-09-10
+
+- checked: one exact-image, exact-controls broker-only lifecycle diagnostic over committed v12 source `ebb2be95310b0371d00c472519e4fb5a86ce6b77`, recorded as diagnostic/repair attempt 5 of 10
+- found: the immutable privacy-safe aggregate disposition is `pass`; one legacy and one v1.17 request both completed successfully, the broker stream closed cleanly after the request-bound completion, port-close, and natural Worker-exit lifecycle, and cleanup completed
+- effects: exactly zero preflights and zero Matches ran, no authorization or downstream effect was created, all authority remains false, no owned container remained, and exactly 36 successor locks remained
+- implication: Plan 262-198 is eligible to perform its separately bounded preflight-v11; diagnostic-v1 and diagnostic-v2 remain immutable `docker_unavailable` denials and this diagnostic grants no Match authority by itself
