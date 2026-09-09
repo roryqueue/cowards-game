@@ -147,6 +147,15 @@ updated: 2026-09-09T23:15:00-04:00
 - effects: exactly zero preflight invocations and zero Match invocations ran; no authority or downstream effect was created, no owned container remained, diagnostic-v4 stayed absent, and all 36 successor locks remained
 - implication: attempt 8 is consumed and the route stops here with two attempts remaining. Runtime repair and any fresh preflight require a new additive plan informed by this committed stage result.
 
+## Plan 262-201 read-only completion-order reproduction — 2026-09-10
+
+- checked: the bounded public `advanced:vanguard-pressure` `selectActivations` failure from attempt 8 through the real persistent broker lifecycle
+- found: exactly one correlated completion receipt, one port close, and one natural Worker exit with code 0 were observed; the natural exit was observed before the receipt, and the obsolete order latch alone converted that otherwise valid lifecycle into broker exit 73
+- control: removing only the order latch in memory accepted 50 of 50 repetitions while retaining the exact receipt, close, exit-count, exit-code, correlation, deadline, error, duplicate, missing-event, resource, containment, and cleanup checks
+- cleanup: the later cleanup failure was secondary to broker poison after the false lifecycle rejection, not an independent primary cause
+- effects: this reproduction invoked zero preflights and zero Matches, created no authority or operational effect, retained no Strategy source/input/output/memory/objective or raw runtime diagnostic, and preserved all 36 successor locks
+- implication: the separately committed repair may remove only observation-order tracking and rejection; attempt 9 remains limited to one diagnostic-v6 confirmation after fresh v15 custody
+
 ## Plan 262-193 Worker lifecycle diagnostic — 2026-09-09
 
 - checked: one authorized exact-image/exact-controls broker-only lifecycle diagnostic over committed source `04b2eee905cf84ba1440a3fb266e27ca07397f0c`

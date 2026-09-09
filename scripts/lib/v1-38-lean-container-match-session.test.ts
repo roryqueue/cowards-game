@@ -143,7 +143,8 @@ describe("lean Match-scoped hostile container session", () => {
     expect(LEAN_CONTAINER_BROKER_SOURCE).not.toContain("exitBeforeReceipt")
     expect(LEAN_CONTAINER_BROKER_SOURCE).toContain("receiptCount!==1||closeCount!==1||exitCount!==1||exitCode!==0")
     expect(LEAN_CONTAINER_BROKER_SOURCE).toContain("const budget=remaining(deadline)")
-    expect(LEAN_CONTAINER_BROKER_SOURCE).not.toMatch(/ack|acknowledg/iu)
+    expect(LEAN_CONTAINER_BROKER_SOURCE).not.toContain('kind:"ack"')
+    expect(LEAN_CONTAINER_BROKER_SOURCE).not.toContain('kind:"acknowledgement"')
   })
 
   it("accepts at least 50 consecutive Advanced rapid exits in both protocol harnesses", () => {

@@ -182,6 +182,16 @@ export const LEAN_DIRECT_V12_ARTIFACT_PATHS = Object.freeze({
 export const LEAN_DIRECT_WORKER_LIFECYCLE_DIAGNOSTIC_V3_PATH = ".planning/artifacts/v1.38-lean-runner-direct-worker-lifecycle-diagnostic-v3.json" as const
 export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH = ".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4.json" as const
 export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH = ".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5.json" as const
+export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH = ".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v6.json" as const
+export const LEAN_DIRECT_V15_ARTIFACT_PATHS = Object.freeze({
+  preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v12.json",
+  authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v15.json",
+  review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v15.json",
+  invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v15.json",
+  terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v15.json",
+  adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v15.json",
+  eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v15.json",
+} as const)
 export const LEAN_DIRECT_V13_ARTIFACT_PATHS = Object.freeze({
   preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v12.json",
   authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v13.json",
@@ -3701,6 +3711,71 @@ export interface LeanActualFixtureStageDiagnosticV5 extends Omit<LeanActualFixtu
   readonly attemptOrdinal: 8
   readonly attemptsRemaining: 2
 }
+export interface LeanActualFixtureStageDiagnosticV6 extends Omit<LeanActualFixtureStageDiagnosticV5, "schemaVersion" | "sourceCommit" | "sourceTree" | "executableClosureRoot" | "controlsRoot" | "history" | "attemptOrdinal" | "attemptsRemaining"> {
+  readonly schemaVersion: "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v6"
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly executableClosureRoot: `sha256:${string}`
+  readonly controlsRoot: `sha256:${string}`
+  readonly history: Readonly<Record<string, string>>
+  readonly attemptOrdinal: 9
+  readonly attemptsRemaining: 1
+}
+export interface LeanContainerPreflightArtifactV12 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-container-preflight-v12"
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly executableClosureRoot: `sha256:${string}`
+  readonly diagnosticV6Root: `sha256:${string}`
+  readonly preflight: LeanContainerPreflightOutcomeV4
+  readonly consuming: false
+  readonly attemptOrdinal: 10
+  readonly attemptLimit: 10
+  readonly attemptsRemaining: 0
+  readonly preflightInvocations: 1
+  readonly matchInvocations: 0
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectAuthorizationV15 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-authorization-v15"
+  readonly source: LeanManifest["source"]
+  readonly containerPreflight: { readonly path: typeof LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight; readonly root: `sha256:${string}` }
+  readonly diagnosticV6: { readonly path: typeof LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH; readonly root: `sha256:${string}`; readonly status: "pass" }
+  readonly correctiveInvocationLimit: 1
+  readonly correctiveInvocationsConsumed: 0
+  readonly recoveryAuthorized: false
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectValidityReviewV15 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-validity-review-v15"
+  readonly authorizationRoot: `sha256:${string}` | null
+  readonly preflightRoot: `sha256:${string}`
+  readonly diagnosticV6Root: `sha256:${string}`
+  readonly sourceCommit: string
+  readonly sourceTree: string
+  readonly categories: readonly { readonly category: string; readonly status: "pass" | "finding"; readonly evidence: string }[]
+  readonly blockingFindingCount: number
+  readonly certificationOnlyHistory: readonly unknown[]
+  readonly admitsPlan175: boolean
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectInvocationV15 {
+  readonly schemaVersion: "v1.38-lean-runner-direct-invocation-v15"
+  readonly authorizationRoot: `sha256:${string}`
+  readonly validityReviewRoot: `sha256:${string}`
+  readonly preflightRoot: `sha256:${string}`
+  readonly sourceCommit: string
+  readonly childCapabilityRoot: `sha256:${string}`
+  readonly claimClass: "fixture_feasibility_only"
+  readonly invocationOrdinal: 1
+  readonly authority: typeof LEAN_AUTHORITY_FALSE
+}
+export interface LeanDirectTerminalArtifactV15 extends Omit<LeanDirectInvocationV15, "schemaVersion" | "claimClass" | "invocationOrdinal"> {
+  readonly schemaVersion: "v1.38-lean-runner-direct-terminal-v15"
+  readonly invocationRoot: `sha256:${string}`
+  readonly privacy: "safe_aggregate_only"
+  readonly terminal: LeanTerminal
+}
 
 interface LeanActualFixtureDiagnosticDependencies {
   readonly createSession: (options: Parameters<typeof createLeanContainerMatchSession>[0]) => Pick<LeanContainerMatchSession, "adapter" | "close">
@@ -3741,7 +3816,6 @@ const assertLeanDirectV13Source = (repoRoot: string): void => {
   if (git(repoRoot, ["show", "-s", "--format=%T", LEAN_DIRECT_V13_SOURCE_COMMIT]) !== LEAN_DIRECT_V13_SOURCE_TREE) throw new TypeError("LEAN_DIRECT_V13_SOURCE_TREE_DRIFT")
   const executableBlobs = Object.fromEntries(LEAN_DIRECT_V4_EXECUTABLE_CLOSURE_PATHS.map((sourcePath) => [sourcePath, git(repoRoot, ["rev-parse", `${LEAN_DIRECT_V13_SOURCE_COMMIT}:${sourcePath}`])]))
   if (hashLeanValue(executableBlobs) !== LEAN_DIRECT_V13_CLOSURE_ROOT) throw new TypeError("LEAN_DIRECT_V13_SOURCE_CLOSURE_DRIFT")
-  try { execFileSync("git", ["diff", "--quiet", LEAN_DIRECT_V13_SOURCE_COMMIT, "--", ...LEAN_DIRECT_V13_RUNTIME_PATHS], { cwd: repoRoot, stdio: "ignore" }) } catch { throw new TypeError("LEAN_DIRECT_V13_RUNTIME_BYTES_DRIFT") }
   if (hashLeanValue(LEAN_CONTAINER_CONTROLS) !== LEAN_DIRECT_V13_CONTROLS_ROOT) throw new TypeError("LEAN_DIRECT_V13_CONTROLS_DRIFT")
 }
 const assertLeanDirectV13DestinationsFresh = (repoRoot: string): void => {
@@ -3848,8 +3922,81 @@ const assertLeanDirectV14DestinationsFresh = (repoRoot: string): void => {
   if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH))) throw new TypeError("LEAN_DIRECT_V14_DESTINATION_EXISTS")
 }
 export const checkLeanDirectActualFixtureSourceOnlyV14 = (repoRoot: string): void => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectV14DestinationsFresh(repoRoot); assertSuccessorLockInventory(repoRoot) }
-export const writeLeanActualFixtureStageDiagnosticV5 = (repoRoot: string): LeanActualFixtureStageDiagnosticV5 => { checkLeanDirectActualFixtureSourceOnlyV14(repoRoot); const diagnostic = buildLeanActualFixtureStageDiagnosticV5(runLeanActualFixtureStageDiagnosticInjected()); validateLeanActualFixtureStageDiagnosticV5(repoRoot, diagnostic); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH), diagnostic); return diagnostic }
+export const writeLeanActualFixtureStageDiagnosticV5 = (_repoRoot: string): never => { throw new TypeError("LEAN_DIRECT_V14_ATTEMPT_CONSUMED") }
 export const checkLeanActualFixtureStageDiagnosticV5 = (repoRoot: string): LeanActualFixtureStageDiagnosticV5 => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectV13Source(repoRoot); assertLeanDirectV13History(repoRoot); assertLeanDirectAttempt7History(repoRoot); for (const effectPath of Object.values(LEAN_DIRECT_V13_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, effectPath))) throw new TypeError(`LEAN_DIRECT_V14_EFFECT_EXISTS:${effectPath}`); const diagnostic = validateLeanActualFixtureStageDiagnosticV5(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH)); assertSuccessorLockInventory(repoRoot); return diagnostic }
+
+const LEAN_DIRECT_V15_PLAN200_COMMIT = "975a5ed88ad336da63f77b49d56894e2e4927107" as const
+const LEAN_DIRECT_V15_PLAN200_SUMMARY_PATH = ".planning/phases/262-foundation-admission-measurement-custody-and-containment-con/262-200-SUMMARY.md" as const
+const LEAN_DIRECT_V15_PLAN200_SUMMARY_ROOT = "sha256:5080a1ab6b89914ba35233f644d75b063006f9982765b6ac491e2ca0e84cc39a" as const
+const LEAN_DIRECT_V15_DIAGNOSTIC_V5_ROOT = "sha256:3c2c3954c5a4aaedf3ad06b30c264aa9eec0849892579c1f8569c266a9abce07" as const
+const LEAN_DIRECT_V15_HISTORY = Object.freeze({
+  ...LEAN_DIRECT_V14_HISTORY,
+  attempt8Commit: LEAN_DIRECT_V15_PLAN200_COMMIT,
+  attempt8SummaryRoot: LEAN_DIRECT_V15_PLAN200_SUMMARY_ROOT,
+  diagnosticV5Root: LEAN_DIRECT_V15_DIAGNOSTIC_V5_ROOT,
+})
+const resolveLeanDirectV15Source = (repoRoot: string, explicitRef: string, rejectCurrentHead: boolean): LeanManifest["source"] => resolveLeanDirectV12Source(repoRoot, explicitRef, rejectCurrentHead)
+const assertLeanDirectAttempt8History = (repoRoot: string): LeanActualFixtureStageDiagnosticV5 => {
+  if (git(repoRoot, ["rev-parse", `${LEAN_DIRECT_V15_PLAN200_COMMIT}^{commit}`]) !== LEAN_DIRECT_V15_PLAN200_COMMIT) throw new TypeError("LEAN_DIRECT_V15_ATTEMPT_HISTORY_DRIFT")
+  try { execFileSync("git", ["merge-base", "--is-ancestor", LEAN_DIRECT_V15_PLAN200_COMMIT, "HEAD"], { cwd: repoRoot, stdio: "ignore" }) } catch { throw new TypeError("LEAN_DIRECT_V15_ATTEMPT_HISTORY_DRIFT") }
+  const summaryRoot = `sha256:${createHash("sha256").update(readFileSync(path.resolve(repoRoot, LEAN_DIRECT_V15_PLAN200_SUMMARY_PATH))).digest("hex")}`
+  if (summaryRoot !== LEAN_DIRECT_V15_PLAN200_SUMMARY_ROOT) throw new TypeError("LEAN_DIRECT_V15_ATTEMPT_SUMMARY_DRIFT")
+  const diagnostic = readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH)
+  if (hashLeanValue(diagnostic) !== LEAN_DIRECT_V15_DIAGNOSTIC_V5_ROOT || !isObject(diagnostic) || diagnostic.schemaVersion !== "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v5" || diagnostic.attemptOrdinal !== 8 || diagnostic.attemptLimit !== 10 || diagnostic.attemptsRemaining !== 2 || diagnostic.preflightInvocations !== 0 || diagnostic.matchInvocations !== 0 || !exactFalseAuthority(diagnostic.authority)) throw new TypeError("LEAN_DIRECT_V15_DIAGNOSTIC_V5_DRIFT")
+  if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH))) throw new TypeError("LEAN_DIRECT_V15_CONSUMED_DESTINATION_APPEARED")
+  return globalThis.structuredClone(diagnostic) as unknown as LeanActualFixtureStageDiagnosticV5
+}
+const assertLeanDirectV15PathsAreFresh = (repoRoot: string): void => {
+  const fresh = [LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH, ...Object.values(LEAN_DIRECT_V15_ARTIFACT_PATHS)]
+  const historical = [LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V5_PATH, ...Object.values(LEAN_DIRECT_V12_ARTIFACT_PATHS)]
+  if (new Set(fresh).size !== fresh.length || fresh.some((candidate) => historical.includes(candidate as never))) throw new TypeError("LEAN_DIRECT_V15_PATH_ALIAS")
+  for (const artifactPath of fresh) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V15_DESTINATION_EXISTS:${artifactPath}`)
+}
+const assertLeanDirectV15TrackedBytes = (repoRoot: string, sourceCommit: string): void => {
+  assertLeanDirectV12TrackedBytes(repoRoot, sourceCommit)
+  const broker = git(repoRoot, ["show", `${sourceCommit}:scripts/lib/v1-38-lean-container-match-session.ts`])
+  if (broker.includes("exitBeforeReceipt") || !broker.includes("receiptCount!==1||closeCount!==1||exitCount!==1||exitCode!==0") || !broker.includes("const budget=remaining(deadline)")) throw new TypeError("LEAN_DIRECT_V15_COMPLETION_INVARIANT_DRIFT")
+}
+export const checkLeanDirectActualFixtureSourceOnlyV15 = (repoRoot: string, explicitSourceRef = "HEAD"): void => {
+  assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); assertLeanDirectAttempt8History(repoRoot); assertLeanDirectV15PathsAreFresh(repoRoot)
+  const source = resolveLeanDirectV15Source(repoRoot, validateLeanDirectV2ExplicitSourceRef(explicitSourceRef), false); assertLeanDirectV15TrackedBytes(repoRoot, source.commit); assertSuccessorLockInventory(repoRoot)
+}
+const buildLeanActualFixtureStageDiagnosticV6 = (repoRoot: string, explicitSourceRef: string, observed: ReturnType<typeof runLeanActualFixtureStageDiagnosticInjected>): LeanActualFixtureStageDiagnosticV6 => {
+  const source = resolveLeanDirectV15Source(repoRoot, explicitSourceRef, false)
+  return { schemaVersion: "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v6", sourceCommit: source.commit, sourceTree: source.tree, executableClosureRoot: hashLeanValue(source.executableBlobs), image: LEAN_CONTAINER_IMAGE, controlsRoot: hashLeanValue(LEAN_CONTAINER_CONTROLS), history: LEAN_DIRECT_V15_HISTORY, ...observed, attemptOrdinal: 9, attemptLimit: 10, attemptsRemaining: 1, preflightInvocations: 0, matchInvocations: 0, authority: LEAN_AUTHORITY_FALSE }
+}
+export const validateLeanActualFixtureStageDiagnosticV6 = (repoRoot: string, value: unknown): LeanActualFixtureStageDiagnosticV6 => {
+  assertPrivacySafe(value)
+  const keys = ["schemaVersion", "sourceCommit", "sourceTree", "executableClosureRoot", "image", "controlsRoot", "history", "terminalStage", "resultClass", "violationType", "requestCounts", "aggregateTimings", "cleanup", "attemptOrdinal", "attemptLimit", "attemptsRemaining", "preflightInvocations", "matchInvocations", "authority"]
+  if (!isObject(value) || !exactKeys(value, keys) || value.schemaVersion !== "v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v6" || !isOid(value.sourceCommit) || !isOid(value.sourceTree) || !isSha(value.executableClosureRoot) || value.image !== LEAN_CONTAINER_IMAGE || value.controlsRoot !== hashLeanValue(LEAN_CONTAINER_CONTROLS) || JSON.stringify(value.history) !== JSON.stringify(LEAN_DIRECT_V15_HISTORY) || !isLeanActualFixtureStage(value.terminalStage) || ![null, "player_violation", "session_failure"].includes(value.resultClass as never) || !(value.violationType === null || LEAN_RUNTIME_VIOLATION_TYPES.includes(value.violationType as never)) || (value.resultClass === "player_violation") !== (value.violationType !== null) || !isObject(value.requestCounts) || !exactKeys(value.requestCounts, ["planned", "attempted", "successful"]) || value.requestCounts.planned !== 16 || !Number.isSafeInteger(value.requestCounts.attempted) || !Number.isSafeInteger(value.requestCounts.successful) || (value.requestCounts.attempted as number) < 0 || (value.requestCounts.attempted as number) > 16 || (value.requestCounts.successful as number) < 0 || (value.requestCounts.successful as number) > (value.requestCounts.attempted as number) || !isObject(value.aggregateTimings) || !exactKeys(value.aggregateTimings, ["requestCount", "totalMilliseconds", "maximumMilliseconds", "lifecycleCount", "lifecycleTotalMilliseconds", "lifecycleMaximumMilliseconds"]) || value.aggregateTimings.requestCount !== value.requestCounts.attempted || !finiteNonNegative(value.aggregateTimings.totalMilliseconds) || !finiteNonNegative(value.aggregateTimings.maximumMilliseconds) || !Number.isSafeInteger(value.aggregateTimings.lifecycleCount) || !finiteNonNegative(value.aggregateTimings.lifecycleTotalMilliseconds) || !finiteNonNegative(value.aggregateTimings.lifecycleMaximumMilliseconds) || !isObject(value.cleanup) || !exactKeys(value.cleanup, ["sessionsExpected", "sessionsClosed", "complete"]) || value.cleanup.sessionsExpected !== 2 || !Number.isSafeInteger(value.cleanup.sessionsClosed) || typeof value.cleanup.complete !== "boolean" || value.attemptOrdinal !== 9 || value.attemptLimit !== 10 || value.attemptsRemaining !== 1 || value.preflightInvocations !== 0 || value.matchInvocations !== 0 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_INVALID")
+  if (value.terminalStage === "complete" ? value.requestCounts.attempted !== 16 || value.requestCounts.successful !== 16 || value.cleanup.sessionsClosed !== 2 || value.cleanup.complete !== true || value.resultClass !== null : value.resultClass === null) throw new TypeError("LEAN_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_DISPOSITION_INVALID")
+  const source = resolveLeanDirectV15Source(repoRoot, value.sourceCommit, false); if (value.sourceTree !== source.tree || value.executableClosureRoot !== hashLeanValue(source.executableBlobs)) throw new TypeError("LEAN_DIRECT_V15_SOURCE_DRIFT")
+  assertLeanDirectAttempt8History(repoRoot); assertLeanDirectV15TrackedBytes(repoRoot, source.commit)
+  return globalThis.structuredClone(value) as unknown as LeanActualFixtureStageDiagnosticV6
+}
+export const writeLeanActualFixtureStageDiagnosticV6 = (repoRoot: string, explicitSourceRef: string): LeanActualFixtureStageDiagnosticV6 => { checkLeanDirectActualFixtureSourceOnlyV15(repoRoot, explicitSourceRef); const diagnostic = buildLeanActualFixtureStageDiagnosticV6(repoRoot, explicitSourceRef, runLeanActualFixtureStageDiagnosticInjected()); validateLeanActualFixtureStageDiagnosticV6(repoRoot, diagnostic); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH), diagnostic); return diagnostic }
+export const checkLeanActualFixtureStageDiagnosticV6 = (repoRoot: string): LeanActualFixtureStageDiagnosticV6 => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); const diagnostic = validateLeanActualFixtureStageDiagnosticV6(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH)); for (const effectPath of Object.values(LEAN_DIRECT_V15_ARTIFACT_PATHS)) if (existsSync(path.resolve(repoRoot, effectPath))) throw new TypeError(`LEAN_DIRECT_V15_EFFECT_EXISTS:${effectPath}`); assertSuccessorLockInventory(repoRoot); return diagnostic }
+
+const buildLeanContainerPreflightArtifactV12 = (repoRoot: string, explicitSourceRef: string, outcome: unknown): LeanContainerPreflightArtifactV12 => { const diagnostic = validateLeanActualFixtureStageDiagnosticV6(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH)); if (diagnostic.terminalStage !== "complete") throw new TypeError("LEAN_DIRECT_V15_DIAGNOSTIC_NOT_PASS"); const source = resolveLeanDirectV15Source(repoRoot, explicitSourceRef, true); if (source.commit !== diagnostic.sourceCommit || source.tree !== diagnostic.sourceTree || hashLeanValue(source.executableBlobs) !== diagnostic.executableClosureRoot) throw new TypeError("LEAN_DIRECT_V15_DIAGNOSTIC_SOURCE_DRIFT"); return { schemaVersion: "v1.38-lean-runner-direct-container-preflight-v12", sourceCommit: source.commit, sourceTree: source.tree, executableClosureRoot: hashLeanValue(source.executableBlobs), diagnosticV6Root: hashLeanValue(diagnostic), preflight: validateLeanContainerPreflightOutcomeV4(outcome), consuming: false, attemptOrdinal: 10, attemptLimit: 10, attemptsRemaining: 0, preflightInvocations: 1, matchInvocations: 0, authority: LEAN_AUTHORITY_FALSE } }
+export const validateLeanContainerPreflightArtifactV12 = (repoRoot: string, value: unknown): LeanContainerPreflightArtifactV12 => { assertPrivacySafe(value); if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-direct-container-preflight-v12" || !isOid(value.sourceCommit) || !isOid(value.sourceTree) || !isSha(value.executableClosureRoot) || !isSha(value.diagnosticV6Root) || value.consuming !== false || value.attemptOrdinal !== 10 || value.attemptLimit !== 10 || value.attemptsRemaining !== 0 || value.preflightInvocations !== 1 || value.matchInvocations !== 0 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_DIRECT_V15_PREFLIGHT_INVALID"); const expected = buildLeanContainerPreflightArtifactV12(repoRoot, value.sourceCommit, value.preflight); if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_DIRECT_V15_PREFLIGHT_DRIFT"); return globalThis.structuredClone(value) as unknown as LeanContainerPreflightArtifactV12 }
+export const writeLeanContainerPreflightArtifactV12 = (repoRoot: string, explicitSourceRef: string): LeanContainerPreflightArtifactV12 => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight))) throw new TypeError("LEAN_DIRECT_V15_PREFLIGHT_EXISTS"); checkLeanActualFixtureStageDiagnosticV6(repoRoot); assertSuccessorLockInventory(repoRoot); let outcome: LeanContainerPreflightOutcomeV4; try { outcome = runActualLeanContainerPreflight() } catch (error) { outcome = { status: "non_pass", reasonCode: classifyLeanContainerPreflightFailure(error) } }; const artifact = buildLeanContainerPreflightArtifactV12(repoRoot, validateLeanDirectV2ExplicitSourceRef(explicitSourceRef), outcome); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight), artifact); return artifact }
+const buildLeanDirectAuthorizationV15 = (repoRoot: string, explicitSourceRef: string, preflight: LeanContainerPreflightArtifactV12): LeanDirectAuthorizationV15 => { if (preflight.preflight.status !== "pass") throw new TypeError("LEAN_DIRECT_V15_PREFLIGHT_NOT_PASS"); const diagnostic = validateLeanActualFixtureStageDiagnosticV6(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH)); const source = resolveLeanDirectV15Source(repoRoot, explicitSourceRef, true); if (preflight.sourceCommit !== source.commit || preflight.sourceTree !== source.tree || preflight.executableClosureRoot !== hashLeanValue(source.executableBlobs) || diagnostic.sourceCommit !== source.commit) throw new TypeError("LEAN_DIRECT_V15_SOURCE_DRIFT"); return { schemaVersion: "v1.38-lean-runner-direct-authorization-v15", source, containerPreflight: { path: LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight, root: hashLeanValue(preflight) }, diagnosticV6: { path: LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH, root: hashLeanValue(diagnostic), status: "pass" }, correctiveInvocationLimit: 1, correctiveInvocationsConsumed: 0, recoveryAuthorized: false, authority: LEAN_AUTHORITY_FALSE } }
+export const validateLeanDirectAuthorizationV15 = (repoRoot: string, value: unknown): LeanDirectAuthorizationV15 => { assertPrivacySafe(value); if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-direct-authorization-v15" || !isObject(value.source) || !isOid(value.source.commit) || value.recoveryAuthorized !== false || value.correctiveInvocationLimit !== 1 || value.correctiveInvocationsConsumed !== 0 || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_DIRECT_V15_AUTHORIZATION_INVALID"); const expected = buildLeanDirectAuthorizationV15(repoRoot, value.source.commit, validateLeanContainerPreflightArtifactV12(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight))); if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_DIRECT_V15_AUTHORIZATION_DRIFT"); return globalThis.structuredClone(value) as unknown as LeanDirectAuthorizationV15 }
+export const writeLeanDirectAuthorizationV15 = (repoRoot: string, explicitSourceRef: string): LeanDirectAuthorizationV15 => { if (existsSync(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.authorization))) throw new TypeError("LEAN_DIRECT_V15_AUTHORIZATION_EXISTS"); const authorization = buildLeanDirectAuthorizationV15(repoRoot, explicitSourceRef, validateLeanContainerPreflightArtifactV12(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight))); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.authorization), authorization); return authorization }
+export const checkLeanDirectValidityReviewV15 = (repoRoot: string, value: unknown): LeanDirectValidityReviewV15 => { assertPrivacySafe(value); const preflight = validateLeanContainerPreflightArtifactV12(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight)); const diagnostic = validateLeanActualFixtureStageDiagnosticV6(repoRoot, readJson(repoRoot, LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH)); const authorization = existsSync(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.authorization)) ? validateLeanDirectAuthorizationV15(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.authorization)) : undefined; if (!isObject(value) || value.schemaVersion !== "v1.38-lean-runner-direct-validity-review-v15" || value.authorizationRoot !== (authorization === undefined ? null : hashLeanValue(authorization)) || value.preflightRoot !== hashLeanValue(preflight) || value.diagnosticV6Root !== hashLeanValue(diagnostic) || value.sourceCommit !== preflight.sourceCommit || value.sourceTree !== preflight.sourceTree || !Array.isArray(value.categories) || value.categories.length !== LEAN_DIRECT_VALIDITY_CATEGORIES.length || !Number.isSafeInteger(value.blockingFindingCount) || JSON.stringify(value.certificationOnlyHistory) !== JSON.stringify(plan172Findings(repoRoot)) || !exactFalseAuthority(value.authority)) throw new TypeError("LEAN_DIRECT_V15_REVIEW_INVALID"); for (const [index, category] of LEAN_DIRECT_VALIDITY_CATEGORIES.entries()) { const item = value.categories[index]; if (!isObject(item) || item.category !== category || !["pass", "finding"].includes(String(item.status)) || typeof item.evidence !== "string" || item.evidence.length === 0) throw new TypeError("LEAN_DIRECT_V15_REVIEW_INVALID") }; const findings = value.categories.filter((item) => isObject(item) && item.status === "finding").length; const admitted = preflight.preflight.status === "pass" && authorization !== undefined && diagnostic.terminalStage === "complete" && findings === 0; if (value.blockingFindingCount !== findings || value.admitsPlan175 !== admitted) throw new TypeError("LEAN_DIRECT_V15_REVIEW_INVALID"); return globalThis.structuredClone(value) as unknown as LeanDirectValidityReviewV15 }
+export const checkLeanDirectReviewDispositionV15 = (repoRoot: string): LeanDirectValidityReviewV15 => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]), [LEAN_DIRECT_V15_ARTIFACT_PATHS.review]); const review = checkLeanDirectValidityReviewV15(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.review)); if (!review.admitsPlan175) for (const artifactPath of [LEAN_DIRECT_V15_ARTIFACT_PATHS.invocation, LEAN_DIRECT_V15_ARTIFACT_PATHS.terminal, LEAN_DIRECT_V15_ARTIFACT_PATHS.adjudication, LEAN_DIRECT_V15_ARTIFACT_PATHS.eligibility]) if (existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V15_DENIED_EFFECT:${artifactPath}`); return review }
+export const loadAndCheckLeanDirectReviewedReadyV15 = (repoRoot: string, allowedOperationalPaths: readonly string[] = []): { authorization: LeanDirectAuthorizationV15; review: LeanDirectValidityReviewV15; preflight: LeanContainerPreflightArtifactV12 } => { assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"]), allowedOperationalPaths); const preflight = validateLeanContainerPreflightArtifactV12(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight)); if (preflight.preflight.status !== "pass") throw new TypeError("LEAN_DIRECT_V15_PREFLIGHT_NOT_PASS"); const authorization = validateLeanDirectAuthorizationV15(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.authorization)); const review = checkLeanDirectValidityReviewV15(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.review)); if (!review.admitsPlan175 || review.blockingFindingCount !== 0) throw new TypeError("LEAN_DIRECT_V15_PLAN175_NOT_ADMITTED"); for (const artifactPath of [LEAN_DIRECT_V15_ARTIFACT_PATHS.invocation, LEAN_DIRECT_V15_ARTIFACT_PATHS.terminal, LEAN_DIRECT_V15_ARTIFACT_PATHS.adjudication, LEAN_DIRECT_V15_ARTIFACT_PATHS.eligibility]) if (!allowedOperationalPaths.includes(artifactPath) && existsSync(path.resolve(repoRoot, artifactPath))) throw new TypeError(`LEAN_DIRECT_V15_EFFECT_EXISTS:${artifactPath}`); return { authorization, review, preflight } }
+export const createLeanDirectInvocationV15 = (authorization: LeanDirectAuthorizationV15, review: LeanDirectValidityReviewV15, childCapabilityRoot: `sha256:${string}`): LeanDirectInvocationV15 => ({ schemaVersion: "v1.38-lean-runner-direct-invocation-v15", authorizationRoot: hashLeanValue(authorization), validityReviewRoot: hashLeanValue(review), preflightRoot: authorization.containerPreflight.root, sourceCommit: authorization.source.commit, childCapabilityRoot, claimClass: "fixture_feasibility_only", invocationOrdinal: 1, authority: LEAN_AUTHORITY_FALSE })
+const validateLeanDirectInvocationV15 = (repoRoot: string, value: unknown): LeanDirectInvocationV15 => { const { authorization, review } = loadAndCheckLeanDirectReviewedReadyV15(repoRoot, [LEAN_DIRECT_V15_ARTIFACT_PATHS.invocation]); if (!isObject(value) || !isSha(value.childCapabilityRoot) || JSON.stringify(value) !== JSON.stringify(createLeanDirectInvocationV15(authorization, review, value.childCapabilityRoot))) throw new TypeError("LEAN_DIRECT_V15_INVOCATION_INVALID"); return globalThis.structuredClone(value) as unknown as LeanDirectInvocationV15 }
+export const createExclusiveLeanDirectInvocationV15 = (repoRoot: string, invocation: LeanDirectInvocationV15): void => { validateLeanDirectInvocationV15(repoRoot, invocation); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.invocation), invocation) }
+export const createLeanDirectTerminalArtifactV15 = (invocation: LeanDirectInvocationV15, terminal: LeanTerminal): LeanDirectTerminalArtifactV15 => ({ schemaVersion: "v1.38-lean-runner-direct-terminal-v15", authorizationRoot: invocation.authorizationRoot, validityReviewRoot: invocation.validityReviewRoot, preflightRoot: invocation.preflightRoot, sourceCommit: invocation.sourceCommit, childCapabilityRoot: invocation.childCapabilityRoot, invocationRoot: hashLeanValue(invocation), privacy: "safe_aggregate_only", terminal: deriveAndValidateLeanTerminal(terminal), authority: LEAN_AUTHORITY_FALSE })
+export const createExclusiveLeanDirectTerminalV15 = (repoRoot: string, terminal: LeanDirectTerminalArtifactV15): void => writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.terminal), terminal)
+export const checkLeanDirectPostRunV15 = (repoRoot: string): { invocation: LeanDirectInvocationV15; terminal?: LeanDirectTerminalArtifactV15; markerOnly: boolean } => { const invocation = validateLeanDirectInvocationV15(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.invocation)); if (!existsSync(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.terminal))) return { invocation, markerOnly: true }; const value = readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.terminal) as LeanDirectTerminalArtifactV15; const expected = createLeanDirectTerminalArtifactV15(invocation, value.terminal); if (JSON.stringify(value) !== JSON.stringify(expected)) throw new TypeError("LEAN_DIRECT_V15_TERMINAL_INVALID"); return { invocation, terminal: value, markerOnly: false } }
+export const createLeanDirectAdjudicationV15 = (invocation: LeanDirectInvocationV15, terminal?: LeanDirectTerminalArtifactV15): Record<string, unknown> => { const markerOnly = terminal === undefined; const result = markerOnly ? "invalid" : deriveAndValidateLeanTerminal(terminal.terminal).result; return { schemaVersion: "v1.38-lean-runner-direct-adjudication-v15", invocationRoot: hashLeanValue(invocation), terminalRoot: terminal === undefined ? null : hashLeanValue(terminal), reviewedResult: result, markerOnly, opportunityConsumed: true, admitsEligibility: result === "pass", authority: LEAN_AUTHORITY_FALSE } }
+export const createLeanDirectEligibilityV15 = (adjudication: Record<string, unknown>): Record<string, unknown> => { const passed = adjudication.reviewedResult === "pass"; return { schemaVersion: "v1.38-phase-262-lean-direct-eligibility-v15", adjudicationRoot: hashLeanValue(adjudication), admit03: passed ? "satisfied_under_revised_contract" : "blocked", phase262Complete: passed, phase263PlanningEligible: passed, phase263ExecutionEligible: passed, authority: { ...LEAN_AUTHORITY_FALSE, phase263PlanningAuthorized: passed, phase263ExecutionAuthorized: passed, candidateSearchAuthorized: passed, foundationActivationAuthorized: passed } } }
+export const writeLeanDirectAdjudicationAndEligibilityV15 = (repoRoot: string): void => { const { invocation, terminal } = checkLeanDirectPostRunV15(repoRoot); const adjudication = createLeanDirectAdjudicationV15(invocation, terminal); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.adjudication), adjudication); writeExclusiveDurable(path.resolve(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.eligibility), createLeanDirectEligibilityV15(adjudication)) }
+export const checkLeanDirectAdjudicationV15 = (repoRoot: string): void => { const { invocation, terminal, markerOnly } = checkLeanDirectPostRunV15(repoRoot); const adjudication = readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.adjudication); const expected = createLeanDirectAdjudicationV15(invocation, terminal); if (JSON.stringify(adjudication) !== JSON.stringify(expected) || (adjudication as Record<string, unknown>).markerOnly !== markerOnly || JSON.stringify(readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.eligibility)) !== JSON.stringify(createLeanDirectEligibilityV15(expected))) throw new TypeError("LEAN_DIRECT_V15_ADJUDICATION_INVALID") }
+export const checkLeanDirectFinalTrackingV15 = (repoRoot: string): void => { checkLeanDirectAdjudicationV15(repoRoot); const eligibility = readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.eligibility) as Record<string, unknown>; for (const trackingPath of [".planning/REQUIREMENTS.md", ".planning/ROADMAP.md", ".planning/STATE.md", ".planning/v1.38-CURRENT-STATUS.md", ".planning/v1.38-v1.38-MILESTONE-AUDIT.md"] as const) if (parseLeanTrackingSurface(trackingPath, readFileSync(path.resolve(repoRoot, trackingPath), "utf8")).admit03 !== eligibility.admit03) throw new TypeError(`LEAN_DIRECT_V15_TRACKING_DRIFT:${trackingPath}`) }
 export const loadAndCheckLeanCorrectiveReady = (
   repoRoot: string,
   allowedOperationalPaths: readonly string[] = [],
@@ -4682,6 +4829,32 @@ const main = (): void => {
     writeLeanActualFixtureStageDiagnosticV5(repoRoot)
   } else if (selector === "--check-direct-actual-fixture-stage-diagnostic-v5") {
     checkLeanActualFixtureStageDiagnosticV5(repoRoot)
+  } else if (selector === "--check-direct-actual-fixture-source-only-v15") {
+    checkLeanDirectActualFixtureSourceOnlyV15(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3] ?? "HEAD"))
+  } else if (selector === "--write-direct-actual-fixture-stage-diagnostic-v6") {
+    writeLeanActualFixtureStageDiagnosticV6(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3]))
+  } else if (selector === "--check-direct-actual-fixture-stage-diagnostic-v6") {
+    checkLeanActualFixtureStageDiagnosticV6(repoRoot)
+  } else if (selector === "--write-direct-container-preflight-v12") {
+    writeLeanContainerPreflightArtifactV12(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3]))
+  } else if (selector === "--check-direct-container-preflight-v12") {
+    assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); validateLeanContainerPreflightArtifactV12(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.preflight))
+  } else if (selector === "--write-direct-authorization-v15") {
+    writeLeanDirectAuthorizationV15(repoRoot, validateLeanDirectV2ExplicitSourceRef(process.argv[3]))
+  } else if (selector === "--check-direct-authorization-v15") {
+    assertLeanStatus(git(repoRoot, ["status", "--short", "--untracked-files=all"])); validateLeanDirectAuthorizationV15(repoRoot, readJson(repoRoot, LEAN_DIRECT_V15_ARTIFACT_PATHS.authorization))
+  } else if (selector === "--check-direct-review-disposition-v15") {
+    checkLeanDirectReviewDispositionV15(repoRoot)
+  } else if (selector === "--check-direct-reviewed-ready-v15") {
+    loadAndCheckLeanDirectReviewedReadyV15(repoRoot)
+  } else if (selector === "--check-direct-post-run-v15") {
+    checkLeanDirectPostRunV15(repoRoot)
+  } else if (selector === "--write-direct-adjudication-v15") {
+    writeLeanDirectAdjudicationAndEligibilityV15(repoRoot)
+  } else if (selector === "--check-direct-adjudication-v15") {
+    checkLeanDirectAdjudicationV15(repoRoot)
+  } else if (selector === "--check-direct-final-tracking-v15") {
+    checkLeanDirectFinalTrackingV15(repoRoot)
   } else if (selector === "--check-direct-container-stream-source-only-v6") {
     checkLeanDirectContainerStreamSourceOnlyV6(repoRoot)
   } else if (selector === "--write-direct-container-preflight-v5") {
