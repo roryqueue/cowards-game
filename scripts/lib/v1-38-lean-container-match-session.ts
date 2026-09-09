@@ -43,7 +43,7 @@ const defaultTransport: LeanContainerMatchTransport = (command, args, options) =
 
 export const LEAN_CONTAINER_BROKER_SOURCE = `
 import { createInterface } from "node:readline";
-import { MessageChannel, receiveMessageOnPort, Worker } from "node:worker_threads";
+import { MessageChannel, Worker } from "node:worker_threads";
 const harnesses = ${JSON.stringify({ legacy: WORKER_HARNESS_SOURCE, v117: WORKER_HARNESS_V117_SOURCE })};
 const signals = ${JSON.stringify(WORKER_SIGNAL_V117)};
 let expected = 1;
@@ -55,25 +55,29 @@ const resources={maxOldGenerationSizeMb:16,maxYoungGenerationSizeMb:8,stackSizeM
 const frame=(tag)=>Uint8Array.of(tag.charCodeAt(0));
 const hostEnvelope=(raw,go,termination)=>{const header=Buffer.alloc(24);header.write("CG17",0,"ascii");header.writeUInt8(1,4);header.writeUInt8((go===undefined?0:1)|(termination===undefined?0:2),5);header.writeUInt16BE(0,6);header.writeBigUInt64BE(go===undefined?0n:go,8);header.writeUInt32BE(termination===undefined?0:termination,16);header.writeUInt32BE(raw.byteLength,20);return Buffer.concat([header,Buffer.from(raw)]);};
 const terminate=async(worker,grace)=>{let timer;const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("termination grace exceeded")),grace)});try{await Promise.race([worker.terminate(),timeout]);}finally{clearTimeout(timer)}};
+const now=()=>process.hrtime.bigint();
+const remaining=(deadline)=>Math.max(0,Math.floor(Number(deadline-now())/1000000));
+const authenticatedHarness=(source)=>{const marker='import { workerData } from "node:worker_threads"';const replacement='import { workerData as rawWorkerData } from "node:worker_threads"\\nconst completionPort={postMessage(value,transferList){rawWorkerData.port.postMessage({requestId:rawWorkerData.requestId,kind:"completion",value},transferList)},close(){rawWorkerData.port.close()}}\\nconst workerData={...rawWorkerData,port:completionPort}';if(!source.includes(marker)||source.indexOf(marker)!==source.lastIndexOf(marker))throw new Error("guest harness import ambiguity");return source.replace(marker,replacement)};
+const supervise=(q,worker,port,deadline)=>{let receipt;let receiptCount=0;let closeCount=0;let exitCount=0;let exitCode;let exitBeforeReceipt=false;let failure;let wake;const settled=new Promise(resolve=>{wake=resolve});const notify=()=>{if(failure!==undefined||receiptCount>1||closeCount>1||exitCount>1||(receiptCount===1&&closeCount===1&&exitCount===1))wake()};port.on("message",message=>{if(exitCount!==0)exitBeforeReceipt=true;receiptCount+=1;if(!message||typeof message!=="object"||!exact(message,["requestId","kind","value"])||message.requestId!==q.requestId||message.kind!=="completion")failure=new Error("completion receipt invalid");else receipt=message.value;notify()});port.on("close",()=>{closeCount+=1;notify()});worker.on("error",()=>{failure=new Error("worker error");notify()});worker.on("exit",code=>{exitCount+=1;exitCode=code;if(receiptCount===0)exitBeforeReceipt=true;notify()});return async()=>{let timer;try{const budget=remaining(deadline);if(budget<1)throw new Error("completion budget exhausted");await Promise.race([settled,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("completion lifecycle timeout")),budget)})]);if(failure!==undefined)throw failure;if(receiptCount!==1||closeCount!==1||exitCount!==1||exitCode!==0||exitBeforeReceipt)throw new Error("completion lifecycle inconsistent");return receipt}finally{clearTimeout(timer)}}};
+const forceFailure=async(worker,port,grace,error)=>{try{await terminate(worker,grace)}finally{port.close()}throw error};
 const parsePayload=(q)=>{let value;try{value=JSON.parse(Buffer.from(q.payloadBase64,"base64").toString("utf8"))}catch{return null}return value&&typeof value==="object"&&!Array.isArray(value)?value:null;};
 const runLegacy=async(q,request)=>{
   if(!exact(request,["source","methodName","input","outputByteLimit"])&& !exact(request,["source","methodName","input"]))return {status:70,signal:null,out:Buffer.alloc(0),err:Buffer.from("Subprocess request failed schema validation\\n")};
-  const signalBuffer=new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);const signal=new Int32Array(signalBuffer);const {port1,port2}=new MessageChannel();
-  const worker=new Worker(workerUrl(harnesses.legacy),{workerData:{source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:port2,signalBuffer},transferList:[port2],env: {},execArgv: [],resourceLimits: resources});
-  const wait=Atomics.wait(signal,0,0,q.timeoutMilliseconds);if(wait==="timed-out"||Atomics.load(signal,0)!==1){await terminate(worker,100);port1.close();return {status:null,signal:"SIGKILL",out:Buffer.alloc(0),err:Buffer.alloc(0)}}
-  const received=receiveMessageOnPort(port1);await terminate(worker,100);port1.close();
-  if(!received||!received.message||typeof received.message!=="object")return {status:70,signal:null,out:Buffer.alloc(0),err:Buffer.from("Subprocess response failed schema validation\\n")};
-  return {status:0,signal:null,out:Buffer.from(JSON.stringify(received.message)),err:Buffer.alloc(0)};
+  const deadline=now()+BigInt(q.timeoutMilliseconds)*1000000n;const signalBuffer=new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);const signal=new Int32Array(signalBuffer);const {port1,port2}=new MessageChannel();
+  const worker=new Worker(workerUrl(authenticatedHarness(harnesses.legacy)),{workerData:{requestId:q.requestId,source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:port2,signalBuffer},transferList:[port2],env: {},execArgv: [],resourceLimits: resources});const reconcile=supervise(q,worker,port1,deadline);
+  const wait=Atomics.wait(signal,0,0,remaining(deadline));if(wait==="timed-out"||Atomics.load(signal,0)!==1){await terminate(worker,100);port1.close();return {status:null,signal:"SIGKILL",out:Buffer.alloc(0),err:Buffer.alloc(0)}}
+  let output;try{output=await reconcile()}catch(error){return forceFailure(worker,port1,100,error)}
+  return {status:0,signal:null,out:Buffer.from(JSON.stringify(output)),err:Buffer.alloc(0)};
 };
 const runV117=async(q,request)=>{
   if(!exact(request,["source","methodName","input","outputByteLimit","methodWallMilliseconds","startupTimeoutMilliseconds","cancellationGraceMilliseconds"]))return {status:0,signal:null,out:hostEnvelope(frame("T")),err:Buffer.alloc(0)};
-  const signalBuffer=new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);const signal=new Int32Array(signalBuffer);const {port1,port2}=new MessageChannel();const launched=process.hrtime.bigint();
-  const worker=new Worker(workerUrl(harnesses.v117),{workerData:{source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:port2,signalBuffer},transferList:[port2],env: {},execArgv: [],resourceLimits: resources});
+  const deadline=now()+BigInt(q.timeoutMilliseconds)*1000000n;const signalBuffer=new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);const signal=new Int32Array(signalBuffer);const {port1,port2}=new MessageChannel();const launched=process.hrtime.bigint();
+  const worker=new Worker(workerUrl(authenticatedHarness(harnesses.v117)),{workerData:{requestId:q.requestId,source:request.source,methodName:request.methodName,input:request.input,outputByteLimit:request.outputByteLimit,port:port2,signalBuffer},transferList:[port2],env: {},execArgv: [],resourceLimits: resources});const reconcile=supervise(q,worker,port1,deadline);
   const launchMs=Number(process.hrtime.bigint()-launched)/1000000;const startup=Math.max(0,request.startupTimeoutMilliseconds-launchMs);const startupWait=Atomics.wait(signal,0,signals.starting,startup);
   if(startupWait==="timed-out"||Atomics.load(signal,0)===signals.starting){await terminate(worker,request.cancellationGraceMilliseconds);port1.close();return {status:0,signal:null,out:hostEnvelope(frame("H")),err:Buffer.alloc(0)}}
   let go;if(Atomics.load(signal,0)===signals.ready){go=process.hrtime.bigint();Atomics.store(signal,0,signals.go);Atomics.notify(signal,0);const methodWait=Atomics.wait(signal,0,signals.go,request.methodWallMilliseconds);if(methodWait==="timed-out"||Atomics.load(signal,0)!==signals.done){const began=process.hrtime.bigint();await terminate(worker,request.cancellationGraceMilliseconds);const elapsed=Math.ceil(Number(process.hrtime.bigint()-began)/1000000);port1.close();return {status:0,signal:null,out:elapsed<=request.cancellationGraceMilliseconds?hostEnvelope(frame("D"),go,elapsed):hostEnvelope(frame("H"),go),err:Buffer.alloc(0)}}}
   if(Atomics.load(signal,0)!==signals.done){await terminate(worker,request.cancellationGraceMilliseconds);port1.close();return {status:0,signal:null,out:hostEnvelope(frame("R"),go),err:Buffer.alloc(0)}}
-  const received=receiveMessageOnPort(port1);await terminate(worker,request.cancellationGraceMilliseconds);port1.close();const output=received&&received.message;
+  let output;try{output=await reconcile()}catch(error){return forceFailure(worker,port1,request.cancellationGraceMilliseconds,error)}
   return {status:0,signal:null,out:hostEnvelope(output instanceof Uint8Array?output:frame("R"),go),err:Buffer.alloc(0)};
 };
 const handle=async(line)=>{

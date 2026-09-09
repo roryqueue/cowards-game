@@ -49,6 +49,14 @@ const legacyBrokerRequest = (requestId: number, source: string, timeoutMilliseco
   stdoutByteLimit: 1024,
   stderrByteLimit: 4096,
 })
+const v117BrokerRequest = (requestId: number, source: string, timeoutMilliseconds = 1_000) => ({
+  requestId,
+  mode: "v117",
+  payloadBase64: Buffer.from(JSON.stringify({ source, methodName: "selectActivations", input: {}, outputByteLimit: 1024, methodWallMilliseconds: 500, startupTimeoutMilliseconds: 300, cancellationGraceMilliseconds: 200 })).toString("base64"),
+  timeoutMilliseconds,
+  stdoutByteLimit: 4096,
+  stderrByteLimit: 4096,
+})
 const decodeLegacyBrokerFrame = (frame: Record<string, unknown>) => JSON.parse(Buffer.from(frame.stdoutBase64 as string, "base64").toString("utf8")) as unknown
 
 describe("lean Match-scoped hostile container session", () => {
@@ -63,7 +71,7 @@ describe("lean Match-scoped hostile container session", () => {
     expect(brokerSource).toContain("worker.terminate()")
     expect(brokerSource).toContain("await terminate(worker")
     expect(brokerSource).toContain('kind:"completion"')
-    expect(brokerSource).toContain('port1.on("close"')
+    expect(brokerSource).toContain('port.on("close"')
     expect(brokerSource).toContain('worker.on("exit"')
     expect(brokerSource).toContain("await reconcile(")
     expect(brokerSource).not.toContain("await terminate(worker,100);port1.close();\n  if(!received")
@@ -113,6 +121,18 @@ describe("lean Match-scoped hostile container session", () => {
     expect(decodeLegacyBrokerFrame(frames[0]!)).toEqual({ ok: true, value: [1] })
   })
 
+  it("requires the same completion and natural-exit handshake for v1.17", () => {
+    const delayed = WORKER_HARNESS_V117_SOURCE.replace("workerData.port.close()", "setTimeout(() => workerData.port.close(), 175)")
+    const started = performance.now()
+    const { broker, frames } = runBroker([v117BrokerRequest(1, 'module.exports.default={selectActivations(){return [1]}}')], brokerWithHarnesses(WORKER_HARNESS_SOURCE, delayed))
+    expect({ status: broker.status, stderr: broker.stderr }).toEqual({ status: 0, stderr: "" })
+    expect(performance.now() - started).toBeGreaterThanOrEqual(150)
+    expect(frames).toHaveLength(1)
+    const envelope = Buffer.from(frames[0]!.stdoutBase64 as string, "base64")
+    expect(envelope.subarray(0, 4).toString("ascii")).toBe("CG17")
+    expect(envelope.subarray(24, 25).toString("ascii")).toBe("S")
+  })
+
   it.each([
     ["missing close", WORKER_HARNESS_SOURCE.replace("port.close()", "setInterval(() => {}, 1_000)")],
     ["nonzero exit", WORKER_HARNESS_SOURCE.replace("port.close()", "process.exitCode = 9; port.close()")],
@@ -124,8 +144,8 @@ describe("lean Match-scoped hostile container session", () => {
   })
 
   it("rejects a completion receipt whose request identity does not match", () => {
-    const harness = WORKER_HARNESS_SOURCE.replace("port.postMessage(capRuntimeResult(await runStrategy(workerData.source)))", "workerData.port.postMessage({ requestId: workerData.requestId + 1, kind: 'completion', value: capRuntimeResult(await runStrategy(workerData.source)) })")
-    const { broker, frames } = runBroker([legacyBrokerRequest(1, 'module.exports.default={selectActivations(){return [1]}}')], brokerWithHarnesses(harness))
+    const brokerSource = brokerWithHarnesses(WORKER_HARNESS_SOURCE).replace("requestId:rawWorkerData.requestId,kind:\"completion\"", "requestId:rawWorkerData.requestId+1,kind:\"completion\"")
+    const { broker, frames } = runBroker([legacyBrokerRequest(1, 'module.exports.default={selectActivations(){return [1]}}')], brokerSource)
     expect(broker.status).toBe(73)
     expect(frames).toEqual([])
   })
