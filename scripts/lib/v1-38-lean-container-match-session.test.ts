@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult } from "./v1-38-lean-container-match-session.js"
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
+import { createContainerFixtureRevision } from "../run-v1-38-lean-runner-feasibility.js"
 
 const result = (stdout: string | Uint8Array = "", override: Partial<LeanContainerTransportResult> = {}): LeanContainerTransportResult => ({ status: 0, signal: null, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), ...override })
 const absent = (name: string) => result("", { status: 1, stderr: Buffer.from(`Error: No such object: ${name}\n`) })
@@ -32,9 +33,9 @@ const create = (name: string, streamResponses: unknown[]) => {
   const session = createLeanContainerMatchSession({ matchId: `match:${name}`, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, transport: control.transport, streamFactory: persistent.factory })
   return { control, persistent, session }
 }
-const runBroker = (requests: readonly Record<string, unknown>[], brokerSource = LEAN_CONTAINER_BROKER_SOURCE) => {
+const runBroker = (requests: readonly Record<string, unknown>[], brokerSource = LEAN_CONTAINER_BROKER_SOURCE, timeout = 5_000) => {
   const input = requests.map((request) => JSON.stringify(request)).join("\n") + "\n"
-  const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", brokerSource], { input, encoding: "utf8", timeout: 5_000, maxBuffer: 1_048_576 })
+  const broker = spawnSync(process.execPath, ["--input-type=module", "--eval", brokerSource], { input, encoding: "utf8", timeout, maxBuffer: 1_048_576 })
   return { broker, frames: broker.stdout.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>) }
 }
 const brokerWithHarnesses = (legacy: string, v117 = WORKER_HARNESS_V117_SOURCE) => LEAN_CONTAINER_BROKER_SOURCE.replace(
@@ -58,6 +59,11 @@ const v117BrokerRequest = (requestId: number, source: string, timeoutMillisecond
   stderrByteLimit: 4096,
 })
 const decodeLegacyBrokerFrame = (frame: Record<string, unknown>) => JSON.parse(Buffer.from(frame.stdoutBase64 as string, "base64").toString("utf8")) as unknown
+const advancedSource = () => {
+  const artifact = createContainerFixtureRevision("advanced:vanguard-pressure").metadata.sourceArtifact
+  if (artifact === undefined) throw new Error("advanced fixture artifact missing")
+  return Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
+}
 
 describe("lean Match-scoped hostile container session", () => {
   it("uses one fresh bounded guest Worker per broker request without a child process", () => {
@@ -131,6 +137,21 @@ describe("lean Match-scoped hostile container session", () => {
     const envelope = Buffer.from(frames[0]!.stdoutBase64 as string, "base64")
     expect(envelope.subarray(0, 4).toString("ascii")).toBe("CG17")
     expect(envelope.subarray(24, 25).toString("ascii")).toBe("S")
+  })
+
+  it("accepts natural exit before receipt observation while retaining the exact three-event invariant", () => {
+    expect(LEAN_CONTAINER_BROKER_SOURCE).not.toContain("exitBeforeReceipt")
+    expect(LEAN_CONTAINER_BROKER_SOURCE).toContain("receiptCount!==1||closeCount!==1||exitCount!==1||exitCode!==0")
+    expect(LEAN_CONTAINER_BROKER_SOURCE).toContain("const budget=remaining(deadline)")
+    expect(LEAN_CONTAINER_BROKER_SOURCE).not.toMatch(/ack|acknowledg/iu)
+  })
+
+  it("accepts at least 50 consecutive Advanced rapid exits in both protocol harnesses", () => {
+    const source = advancedSource()
+    const legacy = runBroker(Array.from({ length: 50 }, (_, index) => legacyBrokerRequest(index + 1, source)), LEAN_CONTAINER_BROKER_SOURCE, 30_000)
+    expect({ status: legacy.broker.status, stderr: legacy.broker.stderr, frames: legacy.frames.length }).toEqual({ status: 0, stderr: "", frames: 50 })
+    const v117 = runBroker(Array.from({ length: 50 }, (_, index) => v117BrokerRequest(index + 1, source)), LEAN_CONTAINER_BROKER_SOURCE, 30_000)
+    expect({ status: v117.broker.status, stderr: v117.broker.stderr, frames: v117.frames.length }).toEqual({ status: 0, stderr: "", frames: 50 })
   })
 
   it.each([

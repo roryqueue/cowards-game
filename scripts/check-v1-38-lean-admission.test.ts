@@ -213,6 +213,22 @@ describe("lean admission custody", () => {
     expect(() => readFileSync(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v4.json", "utf8")).toThrow()
   })
 
+  it("retires attempt eight and exposes only the fresh v15 diagnostic and operational toolchain", () => {
+    const module = leanAdmissionModule as unknown as Record<string, any>
+    expect(() => module.writeLeanActualFixtureStageDiagnosticV5(process.cwd())).toThrow("LEAN_DIRECT_V14_ATTEMPT_CONSUMED")
+    expect(module.LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V6_PATH).toBe(".planning/artifacts/v1.38-lean-runner-direct-actual-fixture-stage-diagnostic-v6.json")
+    expect(module.LEAN_DIRECT_V15_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v12.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v15.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v15.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v15.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v15.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v15.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v15.json",
+    })
+    for (const key of ["checkLeanDirectActualFixtureSourceOnlyV15", "validateLeanActualFixtureStageDiagnosticV6", "writeLeanActualFixtureStageDiagnosticV6", "checkLeanActualFixtureStageDiagnosticV6", "writeLeanContainerPreflightArtifactV12", "writeLeanDirectAuthorizationV15", "checkLeanDirectReviewDispositionV15", "loadAndCheckLeanDirectReviewedReadyV15", "createLeanDirectInvocationV15", "createExclusiveLeanDirectInvocationV15", "createLeanDirectTerminalArtifactV15", "createExclusiveLeanDirectTerminalV15", "checkLeanDirectPostRunV15", "writeLeanDirectAdjudicationAndEligibilityV15", "checkLeanDirectAdjudicationV15", "checkLeanDirectFinalTrackingV15"]) expect(module[key]).toBeTypeOf("function")
+  })
+
   it("stops at the exact public failing fixture method ordinal and retains only a coarse violation", () => {
     const module = leanAdmissionModule as unknown as {
       runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => unknown
