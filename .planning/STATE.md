@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Plan 262-199 attempt 7 terminal non-pass; plan additive attempt-8 successor
+stopped_at: Planned 262-200 attempt-8 throw-timing repair and diagnostic-v5
 last_updated: "2026-09-09T04:33:15.458Z"
 last_activity: 2026-09-09
-last_activity_desc: Plan199 v13 custody passed; sole attempt-7 diagnostic failed closed at result validation with zero preflights and Matches
+last_activity_desc: planned Plan200 narrow projection repair and one attempt-8 diagnostic-v5; runtime repair and preflight remain deferred
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 180
+  total_plans: 181
   completed_plans: 168
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plan 262-200 throw-path timing repair and diagnostic-v5 planned — 2026-09-09
+
+Plan200 is the sole next action after Plan199's terminal attempt-7 projection rejection. Task1 first permanently retires the v13 diagnostic-v4 writer so the shared-code repair cannot revive attempt 7, then uses TDD to change only diagnostic accounting: every attempted adapter call appends one finite non-negative elapsed timing in `finally`, including throw branches, so aggregate timing count remains exactly equal to attempted count. A throw retains the first bounded public fixture/method/ordinal and only a coarse `session_failure` class even if cleanup later fails; no error content is retained. Exact Plan199 commit `97241136e4279c57c5734a896a886afe31fa327a`, summary root `sha256:16f76622d37a6ad882936377cf81cecf3022067680b8dd45ba68dbb82ea7e5a5`, and diagnostic-v4 absence are immutable attempt-7 history.
+
+After a separate source commit and fresh v14 diagnostic-only custody, Task2 consumes exactly attempt 8 of 10 with one collision-free diagnostic-v5. It uses the exact Plan197 source/image/controls and unchanged starter-then-advanced, selectActivations-then-soldierBrain warm/sample order through the real persistent broker. It invokes zero preflights and zero Matches, creates no effect or authority, cleans up its owned session, preserves all 36 locks, and stops after the result. Runtime repair and fresh-preflight planning are deferred until diagnostic-v5 is known. Two bounded attempts remain afterward; ADMIT-03, Plans175/176, Phase263, and every broader authority remain blocked.
+
+<!-- phase-262-plan-200-planning-state: {"schemaVersion":"v1.38-phase-262-throw-timing-diagnostic-plan-v1","activePlan":"262-200","wave":167,"dependsOn":"262-199","attemptsAuthorized":10,"attemptsConsumed":7,"plan200AttemptOrdinal":8,"attemptsRemainingAfterPlan200":2,"plan199Commit":"97241136e4279c57c5734a896a886afe31fa327a","plan199SummaryRoot":"sha256:16f76622d37a6ad882936377cf81cecf3022067680b8dd45ba68dbb82ea7e5a5","diagnosticV4Present":false,"runnableSourceCommit":"ebb2be95310b0371d00c472519e4fb5a86ce6b77","runnableSourceTree":"058b4d392681cf7face17ed06de396ca92dcdb0a","runnableClosureRoot":"sha256:8e0fc828adfc0c47b806886f5ac451194cfa06c7e701572b7e67c641d4c469fe","containerImage":"node:24-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","controlsRoot":"sha256:f7f7306dc1f8e5757bd7844ac577373ddf5061ee25950233640b2e8602cd6133","preflightInvocations":0,"matchInvocations":0,"successorLockCount":36,"nextAction":"dispatch-262-200-throw-timing-repair-and-diagnostic-v5","runtimeRepairPlanningDeferred":true,"freshPreflightPlanningDeferred":true,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-199 terminal diagnostic projection failure — 2026-09-09
 
@@ -811,7 +819,7 @@ The route-specific entries below are retained as chronological context only. The
 ## Session Continuity
 
 Last session: 2026-09-09T04:33:15.435Z
-Stopped at: Completed 262-199-PLAN.md with terminal non-pass; plan additive attempt-8 successor
+Stopped at: Planned 262-200-PLAN.md; execute throw-timing repair then attempt-8 diagnostic-v5 only
 Resume file: None
 
 ### Blockers
