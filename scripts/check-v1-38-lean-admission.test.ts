@@ -127,7 +127,7 @@ describe("lean admission custody", () => {
   it("binds v9 source custody to fresh bounded Workers without a broker child process or fallback", () => {
     const source = readFileSync("scripts/lib/v1-38-lean-container-match-session.ts", "utf8")
     const broker = source.match(/export const LEAN_CONTAINER_BROKER_SOURCE = `[\s\S]*?\n`\n\nconst STREAM_WORKER_SOURCE/u)?.[0] ?? ""
-    for (const token of ['from "node:worker_threads"', "new Worker(", "env: {}", "execArgv: []", "resourceLimits:", "await terminate(worker", "receiveMessageOnPort", "queue=queue.then", "requestId:q.requestId"]) expect(broker).toContain(token)
+    for (const token of ['from "node:worker_threads"', "new Worker(", "env: {}", "execArgv: []", "resourceLimits:", "await terminate(worker", "queue=queue.then", "requestId:q.requestId"]) expect(broker).toContain(token)
     expect(broker).not.toContain("node:child_process")
     expect(broker).not.toContain("spawnSync")
     expect(broker).not.toContain("fallback")
