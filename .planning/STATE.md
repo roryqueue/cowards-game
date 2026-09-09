@@ -5,19 +5,25 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed Plan262-201 passing diagnostic-v6; execute Plan262-202 only
+stopped_at: Completed Plan262-202 terminal refusal; ten attempts exhausted; infrastructure budget decision pending
 last_updated: "2026-09-09T05:41:59.330Z"
 last_activity: 2026-09-10
-last_activity_desc: completed minimal exit-before-receipt repair and passing attempt-9 diagnostic-v6
+last_activity_desc: completed final preflight refusal and consolidated Phase262 closeout decision
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 185
-  completed_plans: 170
+  completed_plans: 171
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Current disposition after Plan 262-202
+
+The ten-attempt envelope is exhausted. Diagnostic-v6 completed 16/16 fixture calls with complete cleanup; preflight-v12 ended `non_pass/evaluation_refused`. The independent review passed all seven categories with zero findings. No Match ran in this envelope. ADMIT-03 remains unmet and Phase263 remains gated. Earlier next-action entries below are historical; do not dispatch their selectors.
+
+The proposed next decision is recorded in `phases/262-foundation-admission-measurement-custody-and-containment-con/262-CLOSEOUT-DECISION.md`. It is a proposal, not execution authority. No further numbered repair plan or operational retry is authorized by this disposition.
 
 ## Plans 262-201/202 final bounded repair chain planned — 2026-09-10
 
