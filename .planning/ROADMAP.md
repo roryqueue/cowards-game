@@ -74,9 +74,9 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
   4. A named repository operator can demonstrate the `single_operator_local_seal_v1` profile-agnostic commitment, restricted out-of-repository storage, tool-mediated access/query ledger, one consumed opening, bounded safe receipt, terminal contamination, and retirement workflow whose lineage contains no profile-conditioned or current-trained input. Evidence states that this is not independent custody and makes no separate-permissioning, non-collusion, comprehensive-host-monitoring, cryptographic-erasure, forensic-deletion, or malicious-owner-resistance claim, while reports keep process failure, current-rules failure, formation rejection, formation pass, and contamination distinct and forbid threshold softening.
   5. The literal three profiles, equal-compute dimensions, telemetry, classifiers, and rejection thresholds are precommitted with validated profile-agnostic fixtures, while executable formation namespaces, manifests, states, caches, prompts, traces, replays, and results remain absent.
 
-**Plans:** 164/177 plans executed
+**Plans:** 165/177 plans executed
 
-**Current verdict:** PLAN193 TERMINAL NON-PASS PRESERVED / EXACT DOCKER 29.4 TUPLE REPAIR PLANNED / ZERO PREFLIGHTS / ZERO MATCHES / EIGHT AUTHORIZED ATTEMPTS REMAIN BEFORE PLAN195 / ALL AUTHORITY FALSE. Plan195 repairs only the bare-inspect exact tuple and runs diagnostic-v2 as attempt 3; Plan196 runs preflight-v10 as attempt 4 only after diagnostic pass. Plan194 remains unexecuted and ineligible. Revised Plans175/176 and Phase263 remain dependency-gated.
+**Current verdict:** PLAN195 TERMINAL NON-PASS PRESERVED / EXACT DOCKER 29.4 TUPLE REPAIR COMPLETE / ZERO PREFLIGHTS / ZERO MATCHES / SEVEN AUTHORIZED ATTEMPTS REMAIN / ALL AUTHORITY FALSE. Diagnostic-v2 ended `docker_unavailable` with cleanup complete, so Plan196 and Plan194 remain unexecuted and ineligible. A fresh additive non-consuming diagnostic/repair successor is required before any preflight; revised Plans175/176 and Phase263 remain dependency-gated.
 
 **Current Plan110 failure (2026-08-31):** The sole live-v14 invocation at `bccafa3f` deadlocked in native journal bootstrap: the owner held the exclusive root lock and the synchronous transaction independently waited for that same lock. The blocked transaction was safely terminated, the owner unwound, and live/post checks both exited1. No observation, calibration or Match ran; journal/terminal/reproduction remain absent, while the empty private directory is preserved. Failure summary `2bd6f682` is not a completion or producer terminal. Plan110 must not be re-entered; Plan94's prerequisites are unmet. An explicit operator revision of the terminal-failure/one-shot boundary is required before any fresh live route. Non-authorizing repair design may continue; ADMIT-03 remains0/540 and all downstream authority is denied.
 
@@ -329,7 +329,7 @@ Plans:
 - [x] 262-192-PLAN.md
 - [x] 262-193-PLAN.md — Repair the success-path Worker lifecycle and run one exact-controls broker-only diagnostic with zero Matches.
 - [ ] 262-194-PLAN.md — Run one fresh zero-Match preflight and independently review the seven D-34L.1 validity categories.
-- [ ] 262-195-PLAN.md — Admit only the exact Docker 29.4 bare-inspect absence tuple and run fresh broker diagnostic-v2.
+- [x] 262-195-PLAN.md — Admit only the exact Docker 29.4 bare-inspect absence tuple and run fresh broker diagnostic-v2.
 - [ ] 262-196-PLAN.md — Run one fresh zero-Match preflight-v10 and independently review the seven D-34L.1 categories.
 
 **Wave 70** *(complete)*
@@ -975,7 +975,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 164/177 | In Progress|  |
+| 262. Foundation Admission, Measurement, Custody, and Containment Contract | 165/177 | In Progress|  |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |

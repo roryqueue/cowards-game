@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Planned 262-195/196 exact Docker29.4 tuple repair and fresh zero-Match preflight; Plan195 is next
-last_updated: "2026-09-09T03:00:00.000Z"
-last_activity: 2026-08-31
-last_activity_desc: closed Plan144 with23/23 tests in592.22s, independent V3 zero findings, summary8bb3dbb8 and separate tracking; targeted tsc has406 existing diagnostics and zero new; no publication or effects
+stopped_at: Completed 262-195 with immutable diagnostic-v2 docker_unavailable; Plan196 is ineligible and a fresh additive diagnostic/repair successor is next
+last_updated: "2026-09-09T03:18:56.126Z"
+last_activity: 2026-09-09
+last_activity_desc: completed Plan195 exact Docker tuple repair and v11 toolchain; attempt-3 diagnostic denied docker_unavailable with cleanup complete, zero preflights, and zero Matches
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 177
-  completed_plans: 164
+  completed_plans: 165
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plan 262-195 exact tuple repair and terminal diagnostic-v2 — 2026-09-09
+
+Plan195 completed both TDD tasks. The diagnostic absence predicate now admits only the exact Docker 29.4 status-1/null-signal/no-error tuple with stdout `[]\n` and uppercase requested-name absent-object stderr terminated by LF, in addition to the two previously accepted exact tuples. Focused verification passes with 93 active tests, 25 immutable historical skips, clean TypeScript, exact v11 source custody, and all 36 successor locks preserved.
+
+The sole attempt-3 broker-only diagnostic-v2 terminalized `docker_unavailable`. Its aggregate artifact records zero successful broker requests, complete cleanup, zero preflight invocations, zero Match invocations, and every authority bit false. Diagnostic-v1 remains byte-immutable at `sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4`. Plan196 is ineligible, ADMIT-03 remains blocked, and seven bounded attempts remain. The next action is a fresh additive non-consuming diagnostic/repair successor; no Match may run before a passing fresh preflight.
+
+<!-- phase-262-plan-195-terminal-state: {"schemaVersion":"v1.38-phase-262-exact-tuple-terminal-v1","plan195":"complete_non_pass","sourceCommit":"4b41459ddff8be9dde86840425e6cea10e4dc6a7","diagnosticV1Root":"sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4","diagnosticV2Stage":"docker_unavailable","diagnosticV2Root":"sha256:b2945922437dcdbbf1b0a2c13e847cafd2e8b89c2147fb1b7dbafebcc52d72b9","cleanupComplete":true,"preflightInvocations":0,"matchInvocations":0,"attemptsAuthorized":10,"attemptsConsumed":3,"attemptsRemaining":7,"plan196Eligible":false,"nextAction":"plan-additive-non-consuming-diagnostic-repair-successor","successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plans 262-195/196 exact Docker 29.4 tuple route — 2026-09-09
 
@@ -770,8 +778,8 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-09T02:42:19.452Z
-Stopped at: Completed 262-193-PLAN.md terminal non-pass; additive formatted-inspect successor required
+Last session: 2026-09-10T03:18:56.102Z
+Stopped at: Completed 262-195-PLAN.md terminal non-pass; fresh additive diagnostic/repair successor required
 Resume file: None
 
 ### Blockers
