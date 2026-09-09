@@ -2,7 +2,7 @@
 status: diagnosed
 trigger: "Plan188 preflight-v6 over source 4c5b6700 completed in approximately 5.5 seconds as non_pass/probe_failed, with zero Matches, no marker, and no authorization; seven review categories otherwise passed."
 created: 2026-09-08
-updated: 2026-09-08T19:42:00-04:00
+updated: 2026-09-08T20:57:47-04:00
 ---
 
 # Phase 262 preflight probe failure
@@ -17,14 +17,54 @@ updated: 2026-09-08T19:42:00-04:00
 
 ## Current Focus
 
-- hypothesis: confirmed — the hard-coded exact Docker absence predicate rejects the installed Docker 29.4 absent-object response, so preflight cannot create its first session
-- test: real diagnostic session plus direct bounded observation of the identical inspect command
-- expecting: satisfied — actual status/stdout/stderr differs deterministically from the fabricated unit-test tuple
-- next_action: return diagnose-only root cause; production repair and the one fresh preflight remain for the parent workflow
+- hypothesis: confirmed — Plan190 reached `evaluateLeanContainerPreflight`, which rejected otherwise valid samples as `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE` because per-method Node subprocess startup dominates each call and the frozen worst-case projection exceeds both deadlines
+- test: one uniquely named, separate non-Match diagnostic through the exact source/runtime path with only injected session identity and evaluator observation
+- expecting: satisfied — all 12 samples were successful and both sessions cleaned up, then the evaluator emitted exactly `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE`; the recomputed 228,191 ms cell and 5,476,584 ms run projections exceed 45,000 ms and 900,000 ms
+- next_action: return diagnose-only root cause and recommend a narrow runtime repair that amortizes guest startup while preserving the container boundary, method timeouts, frozen schedule, and all other bounds
+- fault_tree:
+  - OR: guest warm/probe evaluation returned non-ok
+  - OR: container/session lifecycle or throughput exceeded a frozen bound
+  - OR: aggregate sample shape/value failed evaluator validation
+  - OR: evaluator rejected a valid aggregate because source/runtime identity did not match
 - reasoning_checkpoint:
 - tdd_checkpoint:
 
 ## Evidence
+
+- timestamp: 2026-09-08T20:58:00-04:00
+  checked: Plan190 artifact, summary, exact source `d0193911`, writer classification, and evaluator control flow
+  found: Plan190 persisted `evaluation_refused` after 11.46 seconds; that reason is emitted only for otherwise-unmapped `LEAN_CONTAINER_PREFLIGHT_*` errors. In this path Docker, image, adapter, fixture, probe, session, and cleanup failures map to other public reasons; the evaluator's remaining candidate errors are version, sample drift, observation missing, and infeasible projection.
+  implication: because the run lasted long enough for the two-fixture sample loop and the exact environment/source identity passed independent review, `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE` is the leading falsifiable hypothesis; a bounded aggregate diagnostic can distinguish it without a Match or canonical artifact writer.
+
+- timestamp: 2026-09-08T21:01:00-04:00
+  checked: first diagnostic command setup
+  found: module instantiation failed before execution because `createLeanContainerMatchSession` was imported from the runner rather than its defining library; Docker showed no owned containers afterward, tracked effects were limited to this debug record, and all 36 locks remained.
+  implication: no diagnostic container, fixture evaluation, canonical preflight, or Match was invoked; correct the import and perform the authorized diagnostic attempt.
+
+- timestamp: 2026-09-08T21:05:00-04:00
+  checked: uniquely named diagnostic launched with `node --input-type=module`
+  found: session startup failed because the diagnostic launcher's inherited ESM mode made `STREAM_WORKER_SOURCE` evaluate without CommonJS `require`; the diagnostic container was removed, no aggregate reached the evaluator, no repository effect was created, and all 36 locks remained.
+  implication: this is a diagnostic-launcher mismatch, not evidence about the canonical Plan190 failure. Match the canonical CommonJS parent mode before testing the evaluator hypothesis.
+
+- timestamp: 2026-09-08T20:57:47-04:00
+  checked: one uniquely named CommonJS-mode non-Match diagnostic over the exact Plan189 runtime and evaluator
+  found: all 12 measured calls returned ok and both lifecycle samples cleaned up. Select-activation latency was 120.419041-497.194717 ms (maximum 497.194717 ms); SoldierBrain latency was 115.821142-421.485917 ms (maximum 421.485917 ms); lifecycle maximum was 989.078735 ms. The evaluator emitted exactly `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE`.
+  implication: probe correctness, cleanup, sample shape, observation coverage, Docker version, image identity, adapter identity, and controls all passed; rejection is exclusively the frozen deadline projection.
+
+- timestamp: 2026-09-08T20:57:47-04:00
+  checked: independent recomputation using the evaluator formula and observed maxima
+  found: `ceil(5000 + 989.078735 + 2 * (20 * 497.194717 + 240 * 421.485917))` is 228,191 ms per cell; multiplied by 24 it is 5,476,584 ms per run. These are 5.07 times the 45,000 ms cell deadline and 6.09 times the 900,000 ms outer deadline.
+  implication: the evaluator correctly refuses the measured implementation under unchanged frozen bounds; changing only the public classification or thresholds would hide rather than repair the cause.
+
+- timestamp: 2026-09-08T20:57:47-04:00
+  checked: container-session broker execution mechanism and post-diagnostic state
+  found: the Docker stream is persistent, but `BROKER_SOURCE` calls `spawnSync(process.execPath, ...)` for every Strategy method request, paying a fresh Node process startup for every one of the projected 520 calls per cell. No owned container remained, no canonical writer or selector ran, no Match or marker was created, repository effects were limited to this debug record, and all 36 locks remained.
+  implication: the direct mechanism behind infeasibility is per-method guest-process launch overhead inside the otherwise persistent Match-scoped container.
+
+- timestamp: 2026-09-08T20:57:47-04:00
+  checked: final zero-effect inventory after diagnosis
+  found: Docker reported no container carrying the `v1.38-lean-owner` label; authorization-v8, invocation-v8, terminal-v8, adjudication-v8, and eligibility-v8 remained absent; Git showed only this debug record as tracked-modified; lock count remained exactly 36.
+  implication: diagnosis stayed within the authorized non-consuming path and did not start or authorize any Match work.
 
 - timestamp: 2026-09-08T12:00:00-04:00
   checked: canonical Plan188 outputs and source search
@@ -63,6 +103,18 @@ updated: 2026-09-08T19:42:00-04:00
 
 ## Eliminated
 
+- hypothesis: Plan190 was refused because a fixture method returned a player/runtime violation or malformed response
+  evidence: all 12 observed samples had `ok: true`, and the evaluator was reached with complete sample coverage
+  timestamp: 2026-09-08T20:57:47-04:00
+
+- hypothesis: Plan190 was refused because lifecycle cleanup was incomplete
+  evidence: both diagnostic lifecycle samples reported cleanup complete and no owned container remained after the run
+  timestamp: 2026-09-08T20:57:47-04:00
+
+- hypothesis: Plan190 was refused because of Docker version, image, adapter, controls, sample-shape, or observation-coverage drift
+  evidence: `evaluateLeanContainerPreflight` passed all preceding guards and threw the later, exact code `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE`
+  timestamp: 2026-09-08T20:57:47-04:00
+
 - hypothesis: the default Worker/BROKER persistent stream fails during startup, framing, or first method execution
   evidence: the real diagnostic failed in the initial name/absence inspection before container create, streamFactory invocation, broker startup, or adapter.execute
   timestamp: 2026-09-08T19:38:00-04:00
@@ -73,7 +125,7 @@ updated: 2026-09-08T19:42:00-04:00
 
 ## Resolution
 
-- root_cause: At scripts/lib/v1-38-lean-container-match-session.ts:114, exactAbsent hard-codes an absent-container response of status 1, empty stdout, and uppercase `Error: No such object: <name>\n`. The installed compatible Docker returns status 1 but writes a newline to stdout and lowercase `error: no such object: <name>\n`. Therefore a truly absent preflight container is classified unknown, createLeanContainerMatchSession throws LEAN_CONTAINER_SESSION_NAME_CHECK_FAILED before create, and the preflight writer collapses that LEAN_CONTAINER_SESSION_* failure to probe_failed.
-- fix: Not applied in diagnose-only mode. Repair direction is to define and test the exact accepted Docker 29.4 absent response actually emitted by the pinned environment (including stream bytes/case), without weakening other fail-closed status/error branches, then use the separately authorized fresh preflight.
-- verification: Confirmed with one unique non-Match real-Docker session diagnostic and one bounded read-only inspect observation; no container was created, no Strategy method ran, and no preflight or Match selector was invoked.
+- root_cause: The prior Docker-absence defect is repaired. Plan190's new `evaluation_refused` is the evaluator's exact `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE` decision. Although the Docker exec stream is persistent, `BROKER_SOURCE` in `scripts/lib/v1-38-lean-container-match-session.ts` starts a fresh Node subprocess with `spawnSync(process.execPath, ...)` for every Strategy method request. Observed method maxima of 497.194717 ms for selectActivations and 421.485917 ms for SoldierBrain, plus 989.078735 ms lifecycle, project through the frozen two-side 20/240 ceilings to 228,191 ms per cell and 5,476,584 ms for 24 cells, exceeding the unchanged 45,000 ms and 900,000 ms deadlines. The public writer correctly collapses this exact evaluator code to `evaluation_refused`.
+- fix: Not applied in diagnose-only mode. Narrow repair direction: keep one Match-scoped digest-pinned container and the current fail-closed host supervision, but amortize guest startup by replacing the broker's per-method `spawnSync(node, harness)` with a persistent per-fixture guest execution channel inside that container (or an equivalently measured contained mechanism). Preserve exact request correlation, JSON/byte validation, deterministic source identity, method timeout/poison-and-remove behavior, cleanup proof, the 20/240 ceilings, and both frozen deadlines. Add a real-boundary regression proving bounded aggregate throughput before authorizing another preflight; do not raise deadlines or weaken the evaluator.
+- verification: Confirmed by one uniquely named non-Match diagnostic using exact source/runtime/evaluator behavior: 12/12 calls succeeded, 2/2 sessions cleaned up, evaluator code was exactly `LEAN_CONTAINER_PREFLIGHT_INFEASIBLE`, no owned container remained, no canonical writer/live selector/Match/marker ran, and all 36 locks remained.
 - files_changed: []
