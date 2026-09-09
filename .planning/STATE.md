@@ -5,19 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/D
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
 status: in_progress
-stopped_at: Completed 262-195 with immutable diagnostic-v2 docker_unavailable; Plan196 is ineligible and a fresh additive diagnostic/repair successor is next
-last_updated: "2026-09-09T03:18:56.126Z"
+stopped_at: Planned 262-197/198 lowercase Docker29.4 tuple repair and fresh zero-Match preflight; Plan197 is next
+last_updated: "2026-09-10T00:00:00.000Z"
 last_activity: 2026-09-09
 last_activity_desc: completed Plan195 exact Docker tuple repair and v11 toolchain; attempt-3 diagnostic denied docker_unavailable with cleanup complete, zero preflights, and zero Matches
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 177
+  total_plans: 179
   completed_plans: 165
   percent: 0
 ---
 
 # State: Coward's Game
+
+## Plans 262-197/198 lowercase Docker 29.4 tuple route — 2026-09-09
+
+After Plan195's immutable diagnostic-v2 denial, one separately bounded read-only absent-name inspect at source d4cce642 consumed attempt 4 of 10. It created no container and invoked zero preflights and zero Matches. The exact observed tuple was status 1, null signal, undefined transport error, stdout `[]\n`, and lowercase stderr `error: no such object: cg-v138-lifecycle-4b41459ddff8be9d\n`.
+
+Plan197 is the sole next action. It records attempt 4 privacy-safely, adds only that exact requested-name tuple alongside prior exact alternatives, creates complete v12 custody/tooling, and runs broker diagnostic-v3 as attempt 5 with zero preflights/Matches. Plan198 follows only diagnostic pass and runs preflight-v11 as attempt 6 plus exactly seven-category review. Four attempts remain on denial. Plans194/196 are unexecuted/ineligible. Revised Plan175 may run without another preflight only on exact Plan198 admission; Plan176 synchronizes truth. ADMIT-03, Phase263, and all broader authority remain blocked.
+
+<!-- phase-262-plan-197-198-state: {"schemaVersion":"v1.38-phase-262-docker-29-4-lowercase-tuple-plan-v1","activeChain":["262-197","262-198","262-175","262-176"],"inactiveUnexecutedPlans":["262-194","262-196"],"waves":{"262-197":164,"262-198":165,"262-175":166,"262-176":167},"nextAction":"dispatch-262-197-exact-lowercase-tuple-repair","diagnosticV1Status":"docker_unavailable","diagnosticV2Status":"docker_unavailable","attemptsAuthorized":10,"attemptsConsumed":4,"plan197DiagnosticAttemptOrdinal":5,"plan198PreflightAttemptOrdinal":6,"attemptsRemainingIfPlan198Denies":4,"preflightRequiredBeforeMarker":true,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"successorLockCount":36,"admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"allBroaderAuthorityFalse":true} -->
 
 ## Plan 262-195 exact tuple repair and terminal diagnostic-v2 — 2026-09-09
 
