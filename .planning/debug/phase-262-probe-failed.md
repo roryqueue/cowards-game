@@ -2,7 +2,7 @@
 status: diagnosed
 trigger: "Plan188 preflight-v6 over source 4c5b6700 completed in approximately 5.5 seconds as non_pass/probe_failed, with zero Matches, no marker, and no authorization; seven review categories otherwise passed."
 created: 2026-09-08
-updated: 2026-09-08T20:57:47-04:00
+updated: 2026-09-09T23:15:00-04:00
 ---
 
 # Phase 262 preflight probe failure
@@ -136,3 +136,11 @@ updated: 2026-09-08T20:57:47-04:00
 - found: the immutable aggregate artifact is `docker_unavailable` at canonical root `sha256:e849dd83d14888f2361ec830bf139ef2cddd7f67fd615aad1bfcd1fe4e2587a4`; it recorded zero successful broker requests, cleanup complete, zero preflight invocations, zero Match invocations, and all authority false
 - isolated cause: the diagnostic used bare `docker inspect <name>`, for which Docker 29.4 returned status 1, stdout `[]\n`, and stderr `error: no such object: <name>\n`; its exact absence predicate intentionally accepted only the formatted-inspect tuples already used by the repaired session, so it refused before container creation
 - implication: the Worker lifecycle repair itself remains unit-proven, but this Plan193 diagnostic is terminally non-passing and cannot admit Plan194. A fresh additive successor must use the session's exact formatted absence check before spending another broker-only diagnostic or preflight attempt. The committed diagnostic must not be rewritten or retried.
+
+## Plan 262-195 exact-tuple repair and diagnostic-v2 — 2026-09-09
+
+- checked: TDD-protected admission of only status 1, null signal, no transport error, stdout exactly `[]\n`, and uppercase requested-name absent-object stderr exactly terminated by LF, while retaining the two historical exact tuples
+- found: focused admission and broker tests passed, TypeScript passed, and source-only v11 custody authenticated committed source `4b41459ddff8be9dde86840425e6cea10e4dc6a7` with all 36 successor locks and every fresh v11 effect absent
+- checked: one fresh exact-image/exact-controls broker-only diagnostic-v2, bounded attempt 3 of 10
+- found: the immutable aggregate disposition is `docker_unavailable`; zero broker requests succeeded, cleanup is complete, preflight invocations are zero, Match invocations are zero, and every authority bit is false
+- implication: Plan196 remains ineligible on this lineage and no preflight or Match may run. The committed diagnostic intentionally does not persist raw Docker output, so any next repair must use a separately bounded non-consuming diagnostic path and must preserve both diagnostic denials byte-for-byte.
