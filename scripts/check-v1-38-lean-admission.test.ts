@@ -79,6 +79,32 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("reserves the fresh collision-free v9 guest-worker trust and effect family", () => {
+    const module = leanAdmissionModule as unknown as Record<string, unknown>
+    expect(module.LEAN_DIRECT_V9_ARTIFACT_PATHS).toEqual({
+      preflight: ".planning/artifacts/v1.38-lean-runner-direct-container-preflight-v8.json",
+      authorization: ".planning/artifacts/v1.38-lean-runner-direct-authorization-v9.json",
+      review: ".planning/artifacts/v1.38-lean-runner-direct-validity-review-v9.json",
+      invocation: ".planning/artifacts/v1.38-lean-runner-direct-invocation-v9.json",
+      terminal: ".planning/artifacts/v1.38-lean-runner-direct-terminal-v9.json",
+      adjudication: ".planning/artifacts/v1.38-lean-runner-direct-adjudication-v9.json",
+      eligibility: ".planning/artifacts/v1.38-phase-262-lean-direct-eligibility-v9.json",
+    })
+    const historical = [LEAN_DIRECT_ARTIFACT_PATHS, LEAN_DIRECT_V2_ARTIFACT_PATHS, module.LEAN_DIRECT_V3_ARTIFACT_PATHS, module.LEAN_DIRECT_V4_ARTIFACT_PATHS, module.LEAN_DIRECT_V5_ARTIFACT_PATHS, module.LEAN_DIRECT_V6_ARTIFACT_PATHS, module.LEAN_DIRECT_V7_ARTIFACT_PATHS, module.LEAN_DIRECT_V8_ARTIFACT_PATHS].flatMap((paths) => Object.values(paths as Record<string, string>))
+    const fresh = Object.values(module.LEAN_DIRECT_V9_ARTIFACT_PATHS as Record<string, string>)
+    expect(new Set([...historical, ...fresh]).size).toBe(historical.length + fresh.length)
+    for (const key of ["checkLeanDirectGuestWorkerSourceOnlyV9", "validateLeanContainerPreflightArtifactV8", "writeLeanContainerPreflightArtifactV8", "renderLeanDirectAuthorizationV9", "checkLeanDirectValidityReviewV9", "checkLeanDirectReviewDispositionV9", "loadAndCheckLeanDirectReviewedReadyV9", "createLeanDirectInvocationV9", "createLeanDirectTerminalArtifactV9"]) expect(module[key]).toBeTypeOf("function")
+  })
+
+  it("binds v9 source custody to fresh bounded Workers without a broker child process or fallback", () => {
+    const source = readFileSync("scripts/lib/v1-38-lean-container-match-session.ts", "utf8")
+    const broker = source.match(/export const LEAN_CONTAINER_BROKER_SOURCE = `[\s\S]*?\n`\n\nconst STREAM_WORKER_SOURCE/u)?.[0] ?? ""
+    for (const token of ['from "node:worker_threads"', "new Worker(", "env: {}", "execArgv: []", "resourceLimits:", "await terminate(worker", "receiveMessageOnPort", "queue=queue.then", "requestId:q.requestId"]) expect(broker).toContain(token)
+    expect(broker).not.toContain("node:child_process")
+    expect(broker).not.toContain("spawnSync")
+    expect(broker).not.toContain("fallback")
+  })
+
   it("reserves the fresh collision-free v8 exact-absence trust and effect family", () => {
     const module = leanAdmissionModule as unknown as Record<string, unknown>
     expect(module.LEAN_DIRECT_V8_ARTIFACT_PATHS).toEqual({
