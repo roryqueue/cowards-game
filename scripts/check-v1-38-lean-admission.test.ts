@@ -79,6 +79,60 @@ const temporary: string[] = []
 afterEach(() => temporary.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
 describe("lean admission custody", () => {
+  it("admits only the exact Docker absent-object byte tuples", () => {
+    const exactAbsent = (leanAdmissionModule as unknown as {
+      exactDockerAbsentDiagnostic: (
+        status: number | null,
+        signal: NodeJS.Signals | null,
+        error: Error | undefined,
+        stdout: string,
+        stderr: string,
+        name: string,
+      ) => boolean
+    }).exactDockerAbsentDiagnostic
+    const name = "cg-v138-lifecycle-requested"
+    const call = (
+      status: number | null,
+      signal: NodeJS.Signals | null,
+      error: Error | undefined,
+      stdout: string,
+      stderr: string,
+      requestedName = name,
+    ) => exactAbsent(status, signal, error, stdout, stderr, requestedName)
+
+    expect(call(1, null, undefined, "[]\n", `Error: No such object: ${name}\n`)).toBe(true)
+    expect(call(1, null, undefined, "", `Error: No such object: ${name}\n`)).toBe(true)
+    expect(call(1, null, undefined, "\n", `error: no such object: ${name}\n`)).toBe(true)
+
+    const nearMisses: ReadonlyArray<readonly [number | null, NodeJS.Signals | null, Error | undefined, string, string, string?]> = [
+      [1, null, undefined, "", ""],
+      [1, null, undefined, "[]", `Error: No such object: ${name}\n`],
+      [1, null, undefined, "[]\n\n", `Error: No such object: ${name}\n`],
+      [1, null, undefined, " []\n", `Error: No such object: ${name}\n`],
+      [1, null, undefined, "[]\n ", `Error: No such object: ${name}\n`],
+      [1, null, undefined, "\ufffd[]\n", `Error: No such object: ${name}\n`],
+      [1, null, undefined, "[]\n", `error: no such object: ${name}\n`],
+      [1, null, undefined, "[]\n", `Error: No such object: ${name}`],
+      [1, null, undefined, "[]\n", `Error: No such object: ${name}\nextra`],
+      [1, null, undefined, "[]\n", ` Error: No such object: ${name}\n`],
+      [1, null, undefined, "[]\n", `Error: No such object: another-container\n`],
+      [0, null, undefined, "[]\n", `Error: No such object: ${name}\n`],
+      [1, "SIGTERM", undefined, "[]\n", `Error: No such object: ${name}\n`],
+      [1, null, new Error("spawn failed"), "[]\n", `Error: No such object: ${name}\n`],
+      [1, null, undefined, "[]\n", "Cannot connect to the Docker daemon\n"],
+      [1, null, undefined, "[]\n", "permission denied\n"],
+      [null, "SIGTERM", undefined, "", "timeout"],
+    ]
+    for (const args of nearMisses) expect(call(...args)).toBe(false)
+  })
+
+  it("routes diagnostic pre-create and post-remove absence through one exact predicate", () => {
+    const source = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
+    const writer = source.match(/export const writeLeanDirectWorkerLifecycleDiagnosticV1[\s\S]*?\n\}\nexport const checkLeanDirectWorkerLifecycleDiagnosticV1/u)?.[0] ?? ""
+    expect(writer.match(/exactDockerAbsentDiagnostic\(/gu)).toHaveLength(2)
+    expect(writer).toContain("absent.error")
+  })
+
   it("reserves the fresh collision-free v10 lifecycle trust and effect family", () => {
     const module = leanAdmissionModule as unknown as Record<string, unknown>
     expect(module.LEAN_DIRECT_V10_ARTIFACT_PATHS).toEqual({
