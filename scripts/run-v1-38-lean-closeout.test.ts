@@ -67,6 +67,18 @@ describe("approved private closeout", () => {
       expect(cleanupCalls).toBeGreaterThan(0)
     }
   })
+  it("latches interruption even when the child exits cleanly", async () => {
+    const normal = await syntheticLeanTerminal()
+    const interruption = new AbortController()
+    let launches = 0
+    const proof = await runLeanFeasibilityInjected(superviseCloseoutCleanup({ now: () => 0, execute: async () => {
+      launches++; interruption.abort(); return normal.evidence[0]!
+    }, terminateActive: async () => ({ cleanupComplete: true, orphanedChild: false }) }, () => ({ cleanupComplete: true, orphanedChild: false }), interruption.signal))
+    expect(proof.result).not.toBe("pass")
+    expect(proof.counts.cancelled).toBe(1)
+    expect(proof.counts.unlaunched).toBe(23)
+    expect(launches).toBe(1)
+  })
   it("rederives complete 24-cell paired proof and rejects changed or surplus evidence", async () => {
     const proof = await syntheticLeanTerminal()
     const envelope = { schemaVersion: "v1.38-lean-closeout-terminal-v1", bindingRoot: "sha256:test", invocationRoot: "sha256:invoke", profile: CLOSEOUT_PROFILE, scheduleRoot: hashLeanValue(buildLeanSchedule()), terminal: proof }

@@ -165,17 +165,19 @@ export const cleanupCloseoutCell = (cell: LeanCell, injectedTransport?: CleanupT
     return { cleanupComplete: clean, orphanedChild: !clean }
   } catch { return { cleanupComplete: false, orphanedChild: true } }
 }
-export const superviseCloseoutCleanup = (supervisor: LeanExecutionDependencies, cleanup: typeof cleanupCloseoutCell = cleanupCloseoutCell): LeanExecutionDependencies => {
+export const superviseCloseoutCleanup = (supervisor: LeanExecutionDependencies, cleanup: typeof cleanupCloseoutCell = cleanupCloseoutCell, interruption?: AbortSignal): LeanExecutionDependencies => {
   let activeCell: LeanCell | undefined
   let lastContainer = { cleanupComplete: true, orphanedChild: false }
   return { ...supervisor, deadlineMilliseconds: CLOSEOUT_PROFILE.outerDeadlineMilliseconds, stopOnFailure: true,
     execute: async (cell, signal) => {
+      if (interruption?.aborted) return { classification: "cancelled", cleanupComplete: lastContainer.cleanupComplete, orphanedChild: lastContainer.orphanedChild, boardRealism: true, integrityValid: true }
       activeCell = cell
       lastContainer = { cleanupComplete: false, orphanedChild: true }
       const result = await supervisor.execute(cell, signal)
       const container = cleanup(cell)
       lastContainer = container
       activeCell = undefined
+      if (interruption?.aborted) return { classification: "cancelled", cleanupComplete: result.cleanupComplete && container.cleanupComplete, orphanedChild: result.orphanedChild || container.orphanedChild, boardRealism: result.boardRealism, integrityValid: result.integrityValid }
       return { ...result, cleanupComplete: result.cleanupComplete && container.cleanupComplete, orphanedChild: result.orphanedChild || container.orphanedChild }
     },
     terminateActive: async () => {
@@ -200,8 +202,9 @@ const runMatches = async () => {
     cellDeadlineMilliseconds: CLOSEOUT_PROFILE.cellDeadlineMilliseconds,
     spawnChild: () => fork(fileURLToPath(import.meta.url), ["--closeout-child"], { cwd: ROOT, execArgv: ["--import", "tsx"], detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"], env: { ...process.env, CLOSEOUT_CAPABILITY: capability } }),
   })
-  const supervised = superviseCloseoutCleanup(supervisor)
-  const interrupt = () => { void supervised.terminateActive() }
+  const interruption = new AbortController()
+  const supervised = superviseCloseoutCleanup(supervisor, cleanupCloseoutCell, interruption.signal)
+  const interrupt = () => { interruption.abort(); void supervised.terminateActive() }
   process.once("SIGINT", interrupt); process.once("SIGTERM", interrupt)
   let terminal: LeanTerminal
   try { terminal = await runLeanFeasibilityInjected(supervised) }
