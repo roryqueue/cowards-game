@@ -128,6 +128,26 @@ describe("lean admission custody", () => {
     expect(result).toMatchObject({ terminalStage: "complete", requestCounts: { planned: 16, attempted: 16, successful: 16 }, cleanup: { sessionsExpected: 2, sessionsClosed: 2, complete: true } })
   })
 
+  it("stops at the exact public failing fixture method ordinal and retains only a coarse violation", () => {
+    const module = leanAdmissionModule as unknown as {
+      runLeanActualFixtureStageDiagnosticInjected: (dependencies: Record<string, unknown>) => unknown
+    }
+    let call = 0
+    let tick = 0n
+    const result = module.runLeanActualFixtureStageDiagnosticInjected({
+      nowNanoseconds: () => { tick += 1_000_000n; return tick },
+      createSession: () => ({
+        adapter: {
+          metadata: { id: "container-subprocess", diagnostics: { fallback: false } },
+          execute: () => { call += 1; return call === 3 ? { ok: false, violation: { type: "TIMEOUT", message: "must not persist" } } : { ok: true, value: [] } },
+        },
+        close: () => ({ cleanupComplete: true, orphanedChild: false }),
+      }),
+    })
+    expect(result).toMatchObject({ terminalStage: "starter:aggro-chaser:selectActivations:sample:2", resultClass: "player_violation", violationType: "TIMEOUT", requestCounts: { attempted: 3, successful: 2 } })
+    expect(JSON.stringify(result)).not.toContain("must not persist")
+  })
+
   it("validates only the closed privacy-safe attempt-seven projection", () => {
     const module = leanAdmissionModule as unknown as {
       validateLeanActualFixtureStageDiagnosticV4: (repoRoot: string, value: unknown) => unknown
@@ -174,7 +194,7 @@ describe("lean admission custody", () => {
 
   it("keeps the diagnostic selector structurally isolated from preflight, Match, and effect writers", () => {
     const source = readFileSync("scripts/check-v1-38-lean-admission.ts", "utf8")
-    const block = source.match(/export const LEAN_DIRECT_ACTUAL_FIXTURE_STAGE_DIAGNOSTIC_V4_PATH[\s\S]*?export const checkLeanActualFixtureStageDiagnosticV4[\s\S]*?\n\}/u)?.[0] ?? ""
+    const block = source.match(/const LEAN_DIRECT_V13_SOURCE_COMMIT[\s\S]*?export const checkLeanActualFixtureStageDiagnosticV4[\s\S]*?\n\}/u)?.[0] ?? ""
     expect(block).toContain("createContainerFixtureRevision")
     expect(block).toContain("buildLeanContainerPreflightProbeInput")
     expect(block).toContain("createLeanContainerMatchSession")
