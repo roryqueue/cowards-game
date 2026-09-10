@@ -43,8 +43,8 @@ Tests are created before implementation in each owning task (task-local Wave0). 
 | 263-03-1 | 3 | PLAN-03 | T-263-03-B/C | `packages/strategy-lab/src/planner/brain.test.ts` | pending creation/execution |
 | 263-03-2 | 3 | PLAN-04, PLAN-05 | T-263-03-A | `packages/strategy-lab/src/planner/emission.test.ts` | pending creation/execution |
 | 263-04-1 | 2 | FACT-02 | T-263-04-A | `packages/strategy-lab/src/runtime-bridge.test.ts` | pending creation/execution |
-| 263-04-2 | 2 | PLAN-04, PLAN-06 | T-263-04-B/C/D | `scripts/lib/v1-38-planner-supervised-runtime.test.ts packages/runtime-js/src/planner-benchmark-observer.test.ts` | pending creation/execution |
-| 263-04-3 | 2 | PLAN-06 | T-263-04-C | `packages/strategy-lab/src/benchmark.test.ts` | pending creation/execution |
+| 263-04-2 | 2 | PLAN-04, PLAN-06 | T-263-04-B/C/D | `scripts/lib/v1-38-planner-supervised-runtime.test.ts scripts/lib/v1-38-lean-container-match-session.test.ts` — selected-v1.19 roundtrip/profile mismatch and owned timing channel | pending creation/execution |
+| 263-04-3 | 2 | PLAN-06 | T-263-04-C | `packages/strategy-lab/src/benchmark.test.ts packages/runtime-js/src/planner-benchmark-observer.test.ts` — private method observer and nearest-rank reducer | pending creation/execution |
 | 263-05-1 | 2 | FACT-03, FACT-04 | T-263-05-B | `packages/strategy-lab/src/tasks.test.ts` | pending creation/execution |
 | 263-05-2 | 2 | FACT-04 | T-263-05-A/B | `packages/strategy-lab/src/shards.test.ts` | pending creation/execution |
 | 263-05-3 | 2 | FACT-03 | T-263-05-C | `packages/strategy-lab/src/runner-invariance.test.ts` | pending creation/execution |
