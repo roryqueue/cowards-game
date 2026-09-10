@@ -4,9 +4,28 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { buildLeanSchedule, hashLeanValue } from "./lib/v1-38-lean-runner-feasibility.js"
 import { syntheticLeanTerminal, deriveLeanContainerName, deriveLeanContainerOwnershipLabel, runLeanFeasibilityInjected } from "./run-v1-38-lean-runner-feasibility.js"
-import { CLOSEOUT_PROFILE, consumeCloseout, validateCloseoutPreflight, validateCloseoutTerminal, validateReview, cleanupCloseoutCell, superviseCloseoutCleanup } from "./run-v1-38-lean-closeout.js"
+import { CLOSEOUT_PROFILE, consumeCloseout, validateCloseoutPreflight, validateCloseoutTerminal, validateReview, cleanupCloseoutCell, superviseCloseoutCleanup, closeoutPaths, resolveCloseoutSelector, validateRetryPredecessorRoots, RETRY_PREDECESSOR_ROOTS } from "./run-v1-38-lean-closeout.js"
 
 describe("approved private closeout", () => {
+  it("exposes exactly one separate retry namespace and propagates a closed child selector", () => {
+    expect(closeoutPaths(false).preflight).toBe(".planning/artifacts/v1.38-lean-closeout-preflight.json")
+    expect(closeoutPaths(true).preflight).toBe(".planning/artifacts/v1.38-lean-closeout-retry-preflight.json")
+    expect(resolveCloseoutSelector("--retry-closeout-child")).toEqual({ retry: true, selector: "--closeout-child" })
+    for (const selector of ["--retry2-preflight", "--retry-retry-run", "--retry-recover", "--retry-../preflight"]) expect(() => resolveCloseoutSelector(selector)).toThrow()
+    const dir = mkdtempSync(path.join(tmpdir(), "closeout-retry-test-"))
+    try {
+      const original = path.join(dir, "original.json"), retry = path.join(dir, "retry.json")
+      consumeCloseout(original, { result: "non_pass" }); const bytes = readFileSync(original)
+      consumeCloseout(retry, { result: "new" })
+      expect(() => consumeCloseout(retry, { result: "again" })).toThrow()
+      expect(readFileSync(original)).toEqual(bytes)
+    } finally { rmSync(dir, { recursive: true }) }
+  })
+  it("binds exact consumed predecessor bytes rather than accepting a rewritten failure", () => {
+    expect(validateRetryPredecessorRoots(RETRY_PREDECESSOR_ROOTS)).toEqual(RETRY_PREDECESSOR_ROOTS)
+    expect(() => validateRetryPredecessorRoots({ ...RETRY_PREDECESSOR_ROOTS, preflight: "sha256:changed" })).toThrow()
+    expect(() => validateRetryPredecessorRoots({ ...RETRY_PREDECESSOR_ROOTS, extra: "unreviewed" })).toThrow()
+  })
   it("uses the exact approved profile", () => {
     expect(CLOSEOUT_PROFILE).toEqual({ cpus: "2", memory: "256m", cellDeadlineMilliseconds: 120000, outerDeadlineMilliseconds: 3600000 })
   })
