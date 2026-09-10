@@ -11,6 +11,9 @@ playwright-report
 postgres-data
 redis-data
 
+# Private offline Strategy lab evidence; never public or committed raw data.
+/.strategy-lab/
+
 # GSD transient agent tracking (runtime-owned, never milestone evidence)
 .planning/agent-history.json
 .planning/current-agent-id.txt
