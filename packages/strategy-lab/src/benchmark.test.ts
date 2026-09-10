@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { MATCH_KERNEL } from "@cowards/engine"
 import { LAB_ADMITTED_ROOTS, labRoot } from "./contracts.js"
-import { buildFeasibilityCorpus, PLANNER_FEASIBILITY_PROTOCOL } from "./feasibility-protocol.js"
+import { buildFeasibilityCorpus, evaluateFeasibilityTiming, PLANNER_FEASIBILITY_PROTOCOL } from "./feasibility-protocol.js"
 import { runPlannerBenchmark, evaluatePlannerBenchmark, type BenchmarkProvider, type BenchmarkObservation } from "./benchmark.js"
 const root = labRoot("synthetic-benchmark", 1)
 const corpus = buildFeasibilityCorpus()
+const inputRoots = { selectActivations: corpus.selectActivations.map((c) => labRoot("runtime-input", c.input)), soldierBrain: corpus.soldierBrain.map((c) => labRoot("runtime-input", c.input)) }
 const commitment = { corpusRoot: corpus.root, sourceRoot: root, executableRoot: root, harnessRoot: root, profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot, attemptRoot: root, machineRoot: root }
 const synthetic = (ms = 1): BenchmarkProvider => {
   let ordinal = 0
@@ -12,12 +13,18 @@ const synthetic = (ms = 1): BenchmarkProvider => {
   const identity = { revisionId: "synthetic-only", sourceRoot: root, executableRoot: root, harnessRoot: root, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, budgetRoot: commitment.budgetRoot, attemptRoot: root }
   return { identity, invoke(request) {
     const invocationRoot = labRoot("synthetic-benchmark-call", ordinal)
-    const e = { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: ordinal++, invocationRoot, charged: true, completed: true, outputBytes: 40, result: { ok: true as const, value: {} } }
-    const observation: BenchmarkObservation = { runtime: e, observation: { binding: { invocationRoot, sourceRoot: root, executableRoot: root, inputRoot: e.inputRoot, method: request.kind, tupleId: identity.tupleId, harnessRoot: root, profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot }, durationMs: ms, complete: true }, transportMs: 10, totalMs: 12, provenance: "synthetic_transport" }
+    const e = { identity, requestId: request.requestId, method: request.kind, inputRoot: inputRoots[request.kind][ordinal % 1100 % 100]!, ordinal: ordinal++, invocationRoot, charged: true, completed: true, outputBytes: 40, result: { ok: true as const, value: {} } }
+    const observation: BenchmarkObservation = { runtime: e, observation: { binding: { invocationRoot, sourceRoot: root, executableRoot: root, inputRoot: e.inputRoot, method: request.kind, tupleId: identity.tupleId, harnessRoot: root, profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot }, durationMs: ms, complete: true }, transportMs: 10, totalMs: 12, machineRoot: root, provenance: "synthetic_transport" }
     issued.add(e); timingIssued.add(observation); observations.set(e, observation); return e
   }, verify(e) { return issued.has(e) }, timing(e) { return observations.get(e) }, verifyTiming(e) { return timingIssued.has(e) }, close() { return { cleanupComplete: true, orphanedChild: false } } }
 }
 describe("fixed benchmark protocol with synthetic observations only", () => {
+  it("uses nearest-rank sample990, not interpolation or trimming", () => {
+    const samples: number[] = Array.from({ length: 1000 }, (_, i) => i < 990 ? 1 : 100)
+    expect(evaluateFeasibilityTiming({ selectActivations: samples, soldierBrain: samples }).passed).toBe(true)
+    samples[989] = 5
+    expect(evaluateFeasibilityTiming({ selectActivations: samples, soldierBrain: Array(1000).fill(1) })).toMatchObject({ passed: false, selectActivationsP99Ms: 5, soldierBrainP99Ms: 1 })
+  })
   it("charges 2200 calls, excludes exactly100 warmups per method, never claims empirical pass", async () => {
     const result = await runPlannerBenchmark({ provider: synthetic(), commitment, corpus })
     expect(result).toMatchObject({ charged: 2200, measuredPerMethod: 1000, warmupsPerMethod: 100, passed: false, protocolPassed: true, empirical: false, selectActivationsP99Ms: 1, soldierBrainP99Ms: 1 })

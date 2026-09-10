@@ -7,7 +7,7 @@ import { buildPlannerBenchmarkObserverHarness, WORKER_HARNESS_SOURCE, WORKER_HAR
 
 describe("private method observer source contract (no Strategy execution)", () => {
   it("keeps default and historical harness bytes exact", () => {
-    const before = execFileSync("git", ["show", "233ee746:packages/runtime-js/src/worker-harness.ts"], { encoding: "utf8" })
+    const before = execFileSync("git", ["show", "233ee746:packages/runtime-js/src/worker-harness.ts"], { encoding: "utf8", cwd: new URL("../../../", import.meta.url) })
     const current = readFileSync(new URL("./worker-harness.ts", import.meta.url), "utf8")
     expect(current.startsWith(before)).toBe(true)
     expect(buildPlannerBenchmarkObserverHarness()).not.toBe(WORKER_HARNESS_SOURCE)
@@ -19,7 +19,8 @@ describe("private method observer source contract (no Strategy execution)", () =
     expect(source.indexOf("const plannerNow")).toBeLessThan(source.indexOf("const runStrategy"))
     expect(source).toContain("const started = plannerNow()")
     expect(source).toContain("try { return method.call(strategy, workerData.input) }")
-    expect(source).toContain("finally { plannerDurationMs = Number(plannerNow() - started) / 1000000 }")
+    expect(source).toContain("const plannerNumber = Number")
+    expect(source).toContain("finally { plannerDurationMs = plannerNumber(plannerNow() - started) / 1000000 }")
     expect(source).toContain("binding: workerData.timingBinding")
     expect(source).toContain("output: value, timing:")
     const moduleBody = source.slice(source.indexOf("const createStrategyModuleSource"), source.indexOf("const strategyModuleUrl"))

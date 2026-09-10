@@ -375,3 +375,35 @@ const main = async () => {
 }
 void main()
 `
+
+/** Private coordinator opt-in; never substituted into default runtime exports.
+ * The imported Strategy module has a separate lexical scope and receives only
+ * workerData.input. Neither this clock nor the owned completion port is a guest
+ * capability. The existing broker still requires one receipt/close/natural exit.
+ */
+export const buildPlannerBenchmarkObserverHarness = (): string => {
+  const replace = (source: string, marker: string, value: string): string => {
+    if (source.indexOf(marker) < 0 || source.indexOf(marker) !== source.lastIndexOf(marker)) throw new TypeError("PLANNER_OBSERVER_SEAM_DRIFT")
+    return source.replace(marker, value)
+  }
+  let source = replace(WORKER_HARNESS_SOURCE,
+    'import { workerData } from "node:worker_threads"',
+    'import { workerData } from "node:worker_threads"\nimport { hrtime as plannerHrtime } from "node:process"\nconst plannerNow = plannerHrtime.bigint.bind(plannerHrtime)\nconst plannerNumber = Number\nlet plannerDurationMs')
+  source = replace(source,
+    'const value = method.call(strategy, workerData.input)',
+    `const value = (() => {
+    const started = plannerNow()
+    try { return method.call(strategy, workerData.input) }
+    finally { plannerDurationMs = plannerNumber(plannerNow() - started) / 1000000 }
+  })()`)
+  source = replace(source, 'const port = workerData.port', `const port = {
+  postMessage(value) {
+    workerData.port.postMessage({ output: value, timing: {
+      binding: workerData.timingBinding, durationMs: plannerDurationMs,
+      complete: typeof plannerDurationMs === "number",
+    } })
+  },
+  close() { workerData.port.close() },
+}`)
+  return source
+}
