@@ -29,6 +29,8 @@ describe("fixed task and stream identity", () => {
   it("freezes independent SHA256 counter vectors and validates counters/domains", () => {
     const id = enumerateLabTasks(taskContext).tasks[0]!.id
     const a = deriveLabStream(id, "assignment", 0)
+    expect(id).toBe("sha256:83dec422de29217d559667e698fc871aa0ea2768c10c5b6527826cbe7456c34f")
+    expect(a).toBe("9c6e520c230643a8fb4cf92e64e631535a1146f404775212c2fa36595bbc4ea8")
     expect(a).toMatch(/^[a-f0-9]{64}$/)
     expect(a).toBe(deriveLabStream(id, "assignment", 0))
     expect(a).not.toBe(deriveLabStream(id, "fallback", 0))
