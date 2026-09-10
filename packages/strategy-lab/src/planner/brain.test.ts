@@ -47,7 +47,7 @@ describe("nine-Action local planner", () => {
     expect(action).toEqual({ type: "MOVE",direction })
     const result = adjudicate(f,action)
     expect(result.kind).toBe("completed")
-    expect(result.recorderMaterial?.events.some(e => e.type === "PUSH_RESOLVED" && e.payload.pushedOffBoard === true)).toBe(true)
+    expect(result.recorderMaterial?.events.some(e => e.type === "PUSH_RESOLVED" && e.payload && typeof e.payload === "object" && !Array.isArray(e.payload) && e.payload.pushedOffBoard === true)).toBe(true)
   })
   it("canonical rear-entry Backstab and safe facing avoid mutual loss", () => {
     const f = fixture()
