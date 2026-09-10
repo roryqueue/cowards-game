@@ -34,6 +34,7 @@ describe("frozen source-independent feasibility protocol", () => {
   })
   it("builds100 stable legal cases per method with full mission/family coverage and frozen exact hashes", () => {
     const corpus = buildFeasibilityCorpus()
+    expect(corpus.root).toBe("sha256:b14605fdf1d117e0759fb75df0719f6196f54dda8f63660b14742937a7edaed3")
     expect(corpus).toEqual(buildFeasibilityCorpus())
     expect(corpus.selectActivations).toHaveLength(100)
     expect(corpus.soldierBrain).toHaveLength(100)
@@ -41,6 +42,7 @@ describe("frozen source-independent feasibility protocol", () => {
       expect(new Set(corpus[method].map((c) => c.mission)).size).toBe(10)
       expect(new Set(corpus[method].map((c) => c.family)).size).toBe(10)
       expect(new Set(corpus[method].map((c) => c.caseRoot)).size).toBe(100)
+      expect(new Set(corpus[method].map((c) => c.inputRoot)).size).toBe(100)
       for (const c of corpus[method]) {
         const schema = method === "selectActivations" ? resolveStrategyInputSchema("strategy-runtime-abi-v1.19") : resolveSoldierBrainInputSchema("strategy-runtime-abi-v1.19")
         expect(schema!.safeParse(c.input).success).toBe(true)
