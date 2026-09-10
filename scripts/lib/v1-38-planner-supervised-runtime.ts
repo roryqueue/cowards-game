@@ -7,12 +7,13 @@ import { createSelectedCurrentRuntimeFromRevisionV119 } from "../../packages/run
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
-import { createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
+import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
 
 const rawRoot = (value: string | Uint8Array): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}`
 export interface PlannerTimingEvidence {
   observation: LeanTimingObservation; runtime: LabRuntimeEvidence; totalMs: number; transportMs: number;
   provenance: "supervised_container" | "synthetic_transport";
+  machineRoot: LabRoot;
 }
 export interface PlannerSupervisedRuntime extends LabSupervisedProvider {
   invoke(request: LabKernelRequest, identity: LabRuntimeIdentity): LabRuntimeEvidence;
@@ -22,13 +23,16 @@ export interface PlannerSupervisedRuntime extends LabSupervisedProvider {
 }
 export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatchSessionOptions, "infrastructureProfile" | "privateObserver"> {
   revision: StrategyRevision; attemptRoot: LabRoot; budgetRoot: LabRoot;
-  /** Source produced by the reviewed observer builder, frozen in the coordinator manifest. */
-  observerHarness?: { source: string; expectedRoot: LabRoot };
+  /** Source produced by the reviewed observer builder; expectedRoot hashes the
+   * actual buildLeanAuthenticatedHarnessSource(source) worker bytes. */
+  observerHarness?: { source: string; expectedRoot: LabRoot; machineRoot: LabRoot };
   signal?: AbortSignal;
   invocationLimit?: number;
 }
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
+  const observerHarness = options.observerHarness && freezeLabValue({ ...options.observerHarness })
+  const provenance = options.transport || options.streamFactory ? "synthetic_transport" as const : "supervised_container" as const
   const revision = StrategyRevisionSchema.parse(options.revision)
   const expectedLimits = { ...DEFAULT_RUNTIME_LIMITS, environment: "empty", filesystem: revision.runtime.limits.filesystem, network: revision.runtime.limits.network }
   if (options.image !== LAB_ADMITTED_ROOTS.image || revision.runtime.abiVersion !== "strategy-runtime-abi-v1.19" || revision.runtime.adapter.id !== "runtime-js-container-subprocess" || revision.runtime.language.id !== "typescript" ||
@@ -36,16 +40,17 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   const rebuilt = buildStrategyRevision({ source: revision.source, runtime: revision.runtime, ...(revision.strategyId === undefined ? {} : { strategyId: revision.strategyId }) })
   const artifact = revision.metadata.sourceArtifact
   if (!rebuilt.validation.valid || rebuilt.id !== revision.id || rebuilt.sourceHash !== revision.sourceHash || rebuilt.sourceBytes !== revision.sourceBytes || !artifact || labRoot("artifact", artifact) !== labRoot("artifact", rebuilt.metadata.sourceArtifact)) throw new TypeError("LAB_SOURCE_ADMISSION")
-  const harness = options.observerHarness?.source ?? WORKER_HARNESS_SOURCE
-  if (options.observerHarness && rawRoot(harness) !== options.observerHarness.expectedRoot) throw new TypeError("LAB_HARNESS_IDENTITY")
-  const identity: LabRuntimeIdentity = freezeLabValue({ revisionId: revision.id, sourceRoot: rawRoot(revision.source), executableRoot: `sha256:${artifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: options.image, harnessRoot: rawRoot(harness), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
+  const harness = observerHarness?.source ?? WORKER_HARNESS_SOURCE
+  const harnessRoot = rawRoot(buildLeanAuthenticatedHarnessSource(harness))
+  if (observerHarness && (harnessRoot !== observerHarness.expectedRoot || !/^sha256:[a-f0-9]{64}$/.test(observerHarness.machineRoot))) throw new TypeError("LAB_HARNESS_IDENTITY")
+  const identity: LabRuntimeIdentity = freezeLabValue({ revisionId: revision.id, sourceRoot: rawRoot(revision.source), executableRoot: `sha256:${artifact.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: options.image, harnessRoot, budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
   const issued = new WeakSet<object>(); const timings = new WeakMap<object, PlannerTimingEvidence>(); const issuedTiming = new WeakSet<object>()
   const accounting: LabRuntimeEvidence[] = []; const seen = new Set<string>()
   let stopped = false; let pending: LeanTimingBinding | undefined; let observed: LeanTimingObservation | undefined; let observedTransportMs = 0
   const began = performance.now()
   const limit = options.invocationLimit ?? 24800
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
-  const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(options.observerHarness === undefined ? {} : { privateObserver: {
+  const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
     harnessSource: harness,
     binding(request) {
       if (!pending || rawRoot(request.source) !== identity.executableRoot || request.methodName !== pending.method || labRoot("runtime-input", request.input) !== pending.inputRoot) throw new TypeError("LAB_DISPATCH_BINDING")
@@ -79,13 +84,13 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
         e.result = request.kind === "selectActivations" ? executor.selectActivations(input as Parameters<typeof executor.selectActivations>[0]) : executor.runSoldierBrain(input as Parameters<typeof executor.runSoldierBrain>[0])
         e.completed = session.state === "active"
         e.outputBytes = Buffer.byteLength(JSON.stringify(e.result))
-        if (options.observerHarness && !observed) throw new TypeError("LAB_TIMING_MISSING")
+        if (observerHarness && !observed) throw new TypeError("LAB_TIMING_MISSING")
         if (!e.result.ok && "systemFailure" in e.result) close()
       } catch { e.result = { ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code: "MALFORMED_IPC", retryable: false } }; close() }
       const totalMs = performance.now() - started
       const observation = observed as LeanTimingObservation | undefined
       if (observation && e.completed && e.result.ok) {
-        const timing = freezeLabValue({ observation, runtime: e, totalMs, transportMs: observedTransportMs, provenance: options.transport || options.streamFactory ? "synthetic_transport" as const : "supervised_container" as const })
+        const timing = freezeLabValue({ observation, runtime: e, totalMs, transportMs: observedTransportMs, machineRoot: observerHarness!.machineRoot, provenance })
         timings.set(e, timing); issuedTiming.add(timing)
       }
       pending = undefined

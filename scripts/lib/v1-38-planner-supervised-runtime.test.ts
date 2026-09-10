@@ -8,6 +8,7 @@ import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/con
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
 import type { LeanContainerMatchTransport, LeanContainerPersistentStreamFactory } from "./v1-38-lean-container-match-session.js"
+import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-match-session.js"
 
 const source = "export default { selectActivations(input) { return { activationOrders: [], strategyMemory: input.strategyMemory }; }, soldierBrain(input) { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: input.soldierMemory }; } };"
 const runtime = { ...defaultRuntimeMetadata("typescript"), adapter: { ...defaultRuntimeMetadata("typescript").adapter, id: "runtime-js-container-subprocess" } }
@@ -80,7 +81,7 @@ describe("planner selected-v1.19 host with injected transport only", () => {
   })
   it.each([undefined, "missing-timing", "forged-timing"])("binds private timing and fails closed on %s", (fault) => {
     const opts = options(fault)
-    const host = createPlannerSupervisedRuntime({ ...opts, observerHarness: { source: WORKER_HARNESS_SOURCE, expectedRoot: `sha256:${createHash("sha256").update(WORKER_HARNESS_SOURCE).digest("hex")}` } })
+    const host = createPlannerSupervisedRuntime({ ...opts, observerHarness: { source: WORKER_HARNESS_SOURCE, machineRoot: root, expectedRoot: `sha256:${createHash("sha256").update(buildLeanAuthenticatedHarnessSource(WORKER_HARNESS_SOURCE)).digest("hex")}` } })
     const e = host.invoke(request("selectActivations"), host.identity)
     if (fault) { expect(e.result).toMatchObject({ ok: false, systemFailure: {} }); expect(host.timing(e)).toBeUndefined() }
     else {

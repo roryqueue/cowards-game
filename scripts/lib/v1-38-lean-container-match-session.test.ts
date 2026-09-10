@@ -1,7 +1,8 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
+import ts from "typescript"
 import { describe, expect, it } from "vitest"
-import { createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
+import { buildLeanAuthenticatedHarnessSource, buildLeanObserverBrokerSource, createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { createContainerFixtureRevision } from "../run-v1-38-lean-runner-feasibility.js"
@@ -66,6 +67,16 @@ const advancedSource = () => {
 }
 
 describe("private observer synthetic transport", () => {
+  it("binds exactly the transformed worker bytes and parses the opt-in broker", () => {
+    const parsed = ts.createSourceFile("broker.mjs", LEAN_CONTAINER_BROKER_SOURCE, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+    let replacement: string | undefined
+    const visit = (node: ts.Node) => { if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "replacement" && node.initializer && ts.isStringLiteral(node.initializer)) replacement = node.initializer.text; ts.forEachChild(node, visit) }
+    visit(parsed)
+    expect(replacement).toBeDefined()
+    expect(buildLeanAuthenticatedHarnessSource(WORKER_HARNESS_SOURCE)).toBe(WORKER_HARNESS_SOURCE.replace('import { workerData } from "node:worker_threads"', replacement!))
+    const observer = ts.createSourceFile("observer-broker.mjs", buildLeanObserverBrokerSource(WORKER_HARNESS_SOURCE), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+    expect((observer as any).parseDiagnostics).toHaveLength(0)
+  })
   const binding: LeanTimingBinding = { invocationRoot: "call", sourceRoot: "source", executableRoot: "executable", inputRoot: "input", method: "selectActivations", tupleId: "tuple", harnessRoot: "harness", profileRoot: "profile" }
   it.each(["missing", "wrong", "duplicate", "stale", "negative", "infinite", "incomplete"])("rejects %s observation", (fault) => {
     const value: any = { binding: { ...binding }, durationMs: 1, complete: true }

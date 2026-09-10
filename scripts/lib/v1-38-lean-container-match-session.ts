@@ -137,6 +137,14 @@ export const buildLeanObserverBrokerSource = (harnessSource: string): string => 
   return source
 }
 
+/** Exact bytes of the existing broker's authenticatedHarness transformation. */
+export const buildLeanAuthenticatedHarnessSource = (source: string): string => {
+  const marker = 'import { workerData } from "node:worker_threads"'
+  const replacement = 'import { workerData as rawWorkerData } from "node:worker_threads"\nconst completionPort={postMessage(value,transferList){rawWorkerData.port.postMessage({requestId:rawWorkerData.requestId,kind:"completion",value},transferList)},close(){rawWorkerData.port.close()}}\nconst workerData={...rawWorkerData,port:completionPort}'
+  if (!source.includes(marker) || source.indexOf(marker) !== source.lastIndexOf(marker)) throw new TypeError("LEAN_HARNESS_IDENTITY")
+  return source.replace(marker, replacement)
+}
+
 const STREAM_WORKER_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
 const { spawn } = require("node:child_process");
