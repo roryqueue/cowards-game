@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createHash } from "node:crypto"
-import { validateStrategySource } from "@cowards/runtime-js"
+import { validateStrategySource } from "../../../runtime-js/src/validation.js"
 import { SoldierBrainResultSchema, StrategyResultSchema, encodeCanonicalJson } from "@cowards/spec"
 import { emitPlannerSource, buildPlannerCandidate, assertPlannerSourceClosure, mapPlannerMissionCorpus } from "./emit.js"
 import { runPlannerSoldierBrain } from "./brain.js"
