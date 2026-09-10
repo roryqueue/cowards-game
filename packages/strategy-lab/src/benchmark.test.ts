@@ -20,11 +20,24 @@ const synthetic = (ms = 1): BenchmarkProvider => {
 }
 describe("fixed benchmark protocol with synthetic observations only", () => {
   it.each(["sourceRoot", "harnessRoot", "attemptRoot"] as const)("rejects wrong initial %s before any charged call", async field => {
-    const provider = synthetic(); let calls = 0
+    const provider = synthetic(); let calls = 0, closed = 0
     provider.identity[field] = labRoot("wrong", field)
     provider.invoke = () => { calls++; throw new Error("must not dispatch") }
-    await expect(runPlannerBenchmark({ provider, commitment, corpus })).rejects.toThrow("LAB_BENCHMARK_PROVIDER_IDENTITY")
+    provider.close = () => { closed++; return { cleanupComplete: true, orphanedChild: false } }
+    expect(await runPlannerBenchmark({ provider, commitment, corpus })).toMatchObject({ passed: false, charged: 0, cleanupComplete: true, reason: "admission_rejected" })
     expect(calls).toBe(0)
+    expect(closed).toBe(1)
+  })
+  it.each(["malformed-corpus", "copy-failure", "cleanup-throws", "cleanup-incomplete"])("closes rejected owned setup exactly once: %s", async fault => {
+    const provider = synthetic(); let calls = 0, closed = 0
+    provider.invoke = () => { calls++; throw new Error("must not dispatch") }
+    provider.close = () => { closed++; if (fault === "cleanup-throws") throw new Error("uncertain cleanup"); return { cleanupComplete: fault !== "cleanup-incomplete", orphanedChild: false } }
+    const badCorpus = structuredClone(corpus)
+    if (fault === "malformed-corpus") badCorpus.selectActivations.pop()
+    const badCommitment = fault === "copy-failure" ? new Proxy(commitment, {}) : { ...commitment, sourceRoot: labRoot("wrong", 1) }
+    expect(await runPlannerBenchmark({ provider, commitment: badCommitment, corpus: badCorpus })).toMatchObject({ passed: false, charged: 0, reason: "admission_rejected", cleanupComplete: !fault.startsWith("cleanup-") })
+    expect(calls).toBe(0)
+    expect(closed).toBe(1)
   })
   it.each(["source", "timing", "request", "machine"])("stops after one charged wrong returned %s binding", async field => {
     const provider = synthetic(), original = provider.timing
@@ -67,7 +80,7 @@ describe("fixed benchmark protocol with synthetic observations only", () => {
   })
   it("rejects altered corpus and stops after a charged failed call without resampling", async () => {
     const changed = structuredClone(corpus); changed.selectActivations[0]!.input.strategyMemory = { tampered: true }
-    await expect(runPlannerBenchmark({ provider: synthetic(), commitment, corpus: changed })).rejects.toThrow()
+    expect(await runPlannerBenchmark({ provider: synthetic(), commitment, corpus: changed })).toMatchObject({ passed: false, charged: 0, reason: "admission_rejected" })
     const p = synthetic(); p.timing = () => undefined
     expect(await runPlannerBenchmark({ provider: p, commitment, corpus })).toMatchObject({ passed: false, charged: 1, reason: "incomplete_or_failed" })
   })

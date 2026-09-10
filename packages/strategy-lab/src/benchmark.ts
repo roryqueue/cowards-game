@@ -86,16 +86,20 @@ export const evaluatePlannerBenchmark = (options: {
 
 export const runPlannerBenchmark = async (options: { provider: BenchmarkProvider; commitment: BenchmarkCommitment; corpus: Corpus }) => {
   const { provider } = options
-  // Admission precedes all dispatch; immutable copies prevent post-result edits.
-  assertCorpus(options.corpus, options.commitment)
-  const commitment = freezeLabValue(structuredClone(options.commitment))
-  const identity = freezeLabValue(admittedIdentity(commitment))
-  if (typeof identity.revisionId !== "string" || identity.revisionId.length === 0 || labRoot("runtime-identity", provider.identity) !== labRoot("runtime-identity", identity)) throw new TypeError("LAB_BENCHMARK_PROVIDER_IDENTITY")
-  const corpus = freezeLabValue(structuredClone(options.corpus))
   const observations: BenchmarkObservation[] = []
   const invocationRoots = new Set<string>()
   let charged = 0; let clean = false
+  let commitment: BenchmarkCommitment | undefined, corpus: Corpus | undefined
+  let admitted = false
   try {
+    // Ownership already exists on entry, so every admission/copy failure must
+    // pass through the same exactly-once provider cleanup guard as dispatch.
+    assertCorpus(options.corpus, options.commitment)
+    commitment = freezeLabValue(structuredClone(options.commitment))
+    const identity = freezeLabValue(admittedIdentity(commitment))
+    if (typeof identity.revisionId !== "string" || identity.revisionId.length === 0 || labRoot("runtime-identity", provider.identity) !== labRoot("runtime-identity", identity)) throw new TypeError("LAB_BENCHMARK_PROVIDER_IDENTITY")
+    corpus = freezeLabValue(structuredClone(options.corpus))
+    admitted = true
     for (let ordinal = 0; ordinal < 2200; ordinal++) {
       const request = structuredClone(requestAt(ordinal, corpus, commitment))
       charged++
@@ -105,11 +109,12 @@ export const runPlannerBenchmark = async (options: { provider: BenchmarkProvider
       assertObservation(provider, commitment, timing, request, ordinal, invocationRoots)
       observations.push(timing)
     }
-  } catch { /* A charged failed call terminates this allocation, never resamples. */ }
+  } catch { /* Admission uses zero calls; a charged failure never resamples. */ }
   finally {
     try { const cleanup = provider.close(); clean = cleanup.cleanupComplete && !cleanup.orphanedChild } catch { clean = false }
   }
-  if (observations.length !== 2200 || !clean) return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, reason: "incomplete_or_failed" })
+  if (!admitted || !commitment || !corpus) return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, cleanupComplete: clean, reason: "admission_rejected" })
+  if (observations.length !== 2200 || !clean) return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, cleanupComplete: clean, reason: "incomplete_or_failed" })
   try { return evaluatePlannerBenchmark({ provider, commitment, observedCommitment: commitment, observations, corpus, cleanupComplete: clean }) }
-  catch { return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, reason: "incomplete_or_failed" }) }
+  catch { return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, cleanupComplete: clean, reason: "incomplete_or_failed" }) }
 }
