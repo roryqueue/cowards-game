@@ -4,8 +4,8 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
 current_phase: 262
 current_phase_name: foundation-admission-measurement-custody-and-containment-con
-status: blocked
-stopped_at: Plan262-203 preflight consumed with Docker unavailable; service restored, fresh preflight authority required
+status: in_progress
+stopped_at: Approved Plan262-203 continuation; source-only retry wiring and review before one fresh preflight
 last_updated: "2026-09-09T11:45:55Z"
 last_activity: 2026-09-09
 last_activity_desc: Plan203 source reviewed; sole preflight refused before samples or Matches; OrbStack restored
@@ -18,6 +18,10 @@ progress:
 ---
 
 # State: Coward's Game
+
+## Approved continuation — 2026-09-09
+
+The operator answered "yes, approved" to one fresh preflight, followed by the original remaining 24 Matches only if it passes. Docker availability was independently checked before preparation and returned server29.4.0. Continue within Plan262-203, with fixed `v1.38-lean-closeout-retry-*` records and independent source review. Preserve the original refusal and all prior history. No further retry is authorized. The same 2 CPU/256 MB, 120-second-cell/60-minute-outer bounds and all scientific/privacy/formation gates apply. Phase263 remains denied until exact-pass independent adjudication and phase verification.
 
 ## Current disposition after Plan 262-203
 
