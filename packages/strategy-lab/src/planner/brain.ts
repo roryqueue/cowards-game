@@ -49,7 +49,9 @@ const rankBrainAction = (input: SoldierBrainInputV119,action: Action,ordinal: nu
   facing = action.direction
   const v = brainVector(action.direction)
   if (action.type === "MOVE") {
-    if (input.self.lastSuccessfulMoveDirection === brainOpposite(action.direction)) hard[1]! -= 1
+    // Impossible reversal is never a survival escape: canonical terminal cleanup
+    // cannot be traded against a favorable intended destination.
+    if (input.self.lastSuccessfulMoveDirection === brainOpposite(action.direction)) { hard[0]! -= 3; hard[1]! -= 1 }
     const cell = brainCell(input,v.x,v.y), beyond = brainCell(input,v.x*2,v.y*2)
     if (!cell || cell.contents === "WALL") hard[0]! -= 2
     const activeContact = cell?.contents === "ENEMY_ACTIVE" || cell?.contents === "FRIENDLY_ACTIVE"

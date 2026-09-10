@@ -76,6 +76,33 @@ describe("nine-Action local planner", () => {
     graph.goal = { ...f.self.position! }
     expect(runPlannerSoldierBrain(f.input(true,0,graph)).action).toEqual({ type: "TURN_TO_STONE" })
   })
+  it("defensive intent avoids exposed rear and impossible reversal even when boxed", () => {
+    const f = fixture(); f.enemy.position = { x: 4,y: 5 }; f.enemy.facing = "RIGHT"
+    f.state.terrainStones = [{ x: 5,y: 4 },{ x: 5,y: 6 },{ x: 6,y: 5 }]
+    const action = runPlannerSoldierBrain(f.input(true)).action
+    expect(action).not.toEqual({ type: "TURN",direction: "RIGHT" })
+    expect(action).not.toEqual({ type: "MOVE",direction: "LEFT" })
+    const outcome = adjudicate(f,action)
+    expect(outcome.kind).toBe("completed")
+    expect(outcome.recorderMaterial?.events.filter(e => e.type === "BACKSTAB_RESOLVED")).toHaveLength(0)
+    for (const direction of ["UP","RIGHT","DOWN","LEFT"] as Direction[]) {
+      const input = f.input(true)
+      input.self.lastSuccessfulMoveDirection = direction
+      const chosen = runPlannerSoldierBrain(input).action
+      const opposite = { UP: "DOWN",DOWN: "UP",LEFT: "RIGHT",RIGHT: "LEFT" }[direction]
+      expect(chosen).not.toEqual({ type: "MOVE",direction: opposite })
+    }
+  })
+  it("canonical no-Advance cleanup turns blocked last-Cycle intent to STONE", () => {
+    const f = fixture(); f.state.terrainStones = [{ x: 5,y: 4 },{ x: 6,y: 5 },{ x: 5,y: 6 },{ x: 4,y: 5 }]
+    const outcome = MATCH_KERNEL.runActivationFromStateV119({ state: f.state,soldierId: f.self.id,runtime: {
+      selectActivations() { throw new Error("not used") },
+      runSoldierBrain(input) { return { ok: true as const,value: runPlannerSoldierBrain(input as ReturnType<typeof f.input>) } },
+    } })
+    expect(outcome.kind).toBe("completed")
+    expect(outcome.result?.state.soldiers.find(s => s.id === f.self.id)?.status).toBe("STONE")
+    expect(outcome.recorderMaterial?.events.some(e => e.type === "MOVE_ADVANCED")).toBe(false)
+  })
   it("canonical corpus and reversed cell order give bounded deterministic results", () => {
     for (const c of buildFeasibilityCorpus().soldierBrain) {
       const result = runPlannerSoldierBrain(c.input)
