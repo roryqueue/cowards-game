@@ -23,6 +23,7 @@ import { buildPlannerBenchmarkObserverHarness } from "../packages/runtime-js/src
 import { createPlannerSupervisedRuntime, type PlannerSupervisedRuntime } from "./lib/v1-38-planner-supervised-runtime.js"
 import { buildLeanAuthenticatedHarnessSource } from "./lib/v1-38-lean-container-match-session.js"
 import { findAdvancedStrategy } from "../packages/persistence/src/advanced-strategies.js"
+import { plannerExecutableClosure } from "./lib/v1-38-executable-closure.js"
 
 const REPOSITORY = fileURLToPath(new URL("../",import.meta.url))
 const REVIEW = join(REPOSITORY,".planning/phases/263-legal-planner-and-deterministic-runner-feasibility/263-REVIEW.md")
@@ -167,7 +168,7 @@ const buildFrozenMaterial = () => {
   const protocolRoot = labRoot("planner-final-protocol",{ protocol: PLANNER_FEASIBILITY_PROTOCOL,corpusRoot: corpus.root,inventoryRoot: inventory.root })
   const graph = enumerateLabTasks({ admittedRoot: labRoot("admission",LAB_ADMITTED_ROOTS),algorithm: "hierarchical-planner-v1",candidateRoot: candidate.sourceRoot,opponentRoot: rawRoot(fixture.source),inputRoot: corpus.root,budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot })
   const implementationPaths = ["scripts/run-v1-38-planner-feasibility.ts","scripts/lib/v1-38-planner-supervised-runtime.ts","scripts/lib/v1-38-lean-container-match-session.ts",...['contracts','feasibility-protocol','planner-corpus','benchmark','runtime-bridge','runner','shards','tasks','identity','reduce','worker'].map(name => `packages/strategy-lab/src/${name}.ts`)]
-  const implementationRoot = labRoot("planner-implementation",implementationPaths.map(path => ({ path,root: rawRoot(readFileSync(join(REPOSITORY,path))) })))
+  const implementationRoot = plannerExecutableClosure(REPOSITORY, implementationPaths).root
   const executionRoot = labRoot("supervised-execution",{ candidate: candidate.sourceRoot,executable: candidate.revision.metadata.sourceArtifact!.hash,fixture: rawRoot(fixture.source),provider: "selected-runtime-v1.19",protocolRoot,harnessRoot,implementationRoot })
   return { candidate,corpus,inventory,fixture,observerSource,harnessRoot,protocolRoot,graph,executionRoot }
 }
