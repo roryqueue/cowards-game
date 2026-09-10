@@ -1,13 +1,14 @@
 ---
 phase: 263-legal-planner-and-deterministic-runner-feasibility
-reviewed: 2026-09-10T03:37:24Z
-review_iteration: 2
+reviewed: 2026-09-10T05:10:00Z
+review_iteration: 3
 depth: standard
-review_scope: partial-pre-integration-completed-slices
-review_commit: 5f09714e
+review_scope: full-source-pre-empirical
+review_commit: d98e3ddf8d03688d9de73112acc3a27d71ade5b1
 diff_base: b26a0caa
-files_reviewed: 36
+files_reviewed: 42
 files_reviewed_list:
+  - .gitignore
   - packages/runtime-js/src/planner-benchmark-observer.test.ts
   - packages/runtime-js/src/worker-harness.ts
   - packages/strategy-lab/package.json
@@ -20,6 +21,9 @@ files_reviewed_list:
   - packages/strategy-lab/src/identity.ts
   - packages/strategy-lab/src/index.ts
   - packages/strategy-lab/src/planner-corpus.ts
+  - packages/strategy-lab/src/planner/brain.ts
+  - packages/strategy-lab/src/planner/brain.test.ts
+  - packages/strategy-lab/src/planner/information-boundary.test.ts
   - packages/strategy-lab/src/planner/emit.ts
   - packages/strategy-lab/src/planner/emission.test.ts
   - packages/strategy-lab/src/planner/assign.test.ts
@@ -44,27 +48,93 @@ files_reviewed_list:
   - scripts/lib/v1-38-lean-container-match-session.ts
   - scripts/lib/v1-38-planner-supervised-runtime.test.ts
   - scripts/lib/v1-38-planner-supervised-runtime.ts
+  - scripts/run-v1-38-planner-feasibility.ts
+  - scripts/run-v1-38-planner-feasibility.test.ts
 findings:
-  critical: 2
+  critical: 5
   warning: 0
   info: 0
-  total: 2
-resolved_findings: [CR-01, CR-02, CR-03, CR-04, CR-05, WR-01]
-active_findings: [CR-06, CR-07]
+  total: 5
+resolved_findings: [CR-01, CR-02, CR-03, CR-04, CR-05, WR-01, CR-06, CR-07]
+active_findings: [CR-08, CR-09, CR-10, CR-11, CR-12]
+source_root: sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b
+execution_root: sha256:33b9d8486ed6cac2f5219706406dfddf0a7b482067b3ffe2298fe8213f4160f0
 status: issues_found
 ---
 
-# Phase 263: Partial Pre-integration Code Review
+# Phase 263: Full-source Pre-empirical Code Review
 
 ## Summary
 
-Iteration 2 independently re-reviewed the six fixes through `5f09714e`, with the same 32 files plus the four named corpus/worker/emission files. The original six findings are resolved; **two cleanup blockers remain (CR-06 and CR-07)**. Frontmatter counts describe only active findings. The original review below is retained as historical evidence, not an active fix list. This remains **a partial pre-integration review**, not a whole-phase pass or empirical feasibility result. The completed brain implementation as a whole and in-progress Plan 06 CLI remain excluded; emission review here covers the corpus/static-builder integration, not guest execution.
+Iteration 3 covers the complete submitted source path through `d98e3ddf`, including the newly completed brain/emitter and CLI, with 41 source/configuration files plus `.gitignore`. The eight earlier findings are resolved; five new integration blockers remain. Frontmatter counts describe only active findings. This is a full-source **pre-empirical** review, not a whole-phase pass or empirical feasibility result. The historical partial reviews below remain unchanged evidence, not active fix lists.
 
 No structural pre-pass was supplied. Source files were not modified. No live Strategy, supervisor, container, preflight, benchmark or Match was executed. Reproductions used trusted synthetic worker output, pure reductions, injected failing callbacks and source-graph fixtures only. Temporary synthetic shard directories were removed by their own scoped cleanup; historical files and locks were untouched.
 
 ## Narrative Findings (AI reviewer)
 
-## Iteration 2 — Active Findings
+## Iteration 3 — Active Findings
+
+### CR-08: Benchmark inherits a 120-second Match lifetime
+
+**Classification:** BLOCKER
+
+**Files:** `/Users/roryquinlan/runtime/cowards-game/scripts/lib/v1-38-planner-supervised-runtime.ts:50`, `:69`; `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-planner-feasibility.ts:385`.
+
+**Issue:** One supervised host serves all 2,200 benchmark calls, but every host stops 120 seconds after construction. This is the per-Match cap applied to a non-Match benchmark. Transport and module setup are intentionally excluded from direct-call p99: 2,200 valid calls with 60 ms transport each take 132 seconds and fail despite direct calls below 5 ms and remaining overall budget. This is a static operational counterexample, not a measured latency claim.
+
+**Fix:** Give the benchmark an explicit host lifetime bounded by remaining overall time, while retaining the 120-second cap for each Match, the selected 1,000 ms invocation profile and unchanged strict 5 ms p99. Add a fake-clock/injected-transport test completing benchmark calls across 120 seconds and a separate Match test proving its deadline remains enforced.
+
+### CR-09: Failed-run receipts lose durable precharges
+
+**Classification:** BLOCKER
+
+**Files:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-planner-feasibility.ts:257-285`, `:381`, `:389-391`, `:411`.
+
+**Issue:** Receipt counts come from successfully returned in-memory summaries rather than the durable charge ledger. If the guard throws after N validation records, `finally` publishes those records, but the assignment to `validation` never completes; the receipt reports zero cases and guest calls. For the benchmark, a charge is published before `host.invoke`; if invocation throws before returning evidence, no record is published. Benchmark accounting retains the charge, whereas read-only verification counts records and rejects the truthful failure summary. A consumed/interrupted run cannot be represented consistently, and already-charged work appears unused or disappears.
+
+**Fix:** Derive terminal charged/guest-call/unused/uncertain counts from durable precharges and retained dispositions in a guaranteed failure path. Keep invocation attempts distinct from allocated charges when dispatch is uncertain. Publish an explicit failed/uncertain disposition for a charged call without normal evidence; verify this as non-pass without retrying or fabricating completion. Inject failure after N completed cases and after benchmark precharge but before evidence, and assert run/verify count agreement.
+
+### CR-10: Read-only verification accepts malformed counts and drops failure predicates
+
+**Classification:** BLOCKER
+
+**Files:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-planner-feasibility.ts:333-352`, `:427-434`, `:451-453`.
+
+**Issue:** Retained JSON is type-cast instead of schema-admitted. The receipt comparison never checks `matchAttemptsCharged`, unused counts, guest-call count, schema version or status enum. Validation evidence checks only a subset of runtime binding and does not establish classification from the retained result; the read-only Match path also skips the expected immutable run-binding admission used by execution. Benchmark rederivation returns `passed` solely from timings/count, disregarding a retained non-pass cleanup result. These are local consistency checks, not an external-authenticity requirement.
+
+**Evidence:** A temporary prepared synthetic fixture with a correctly bound consumed marker and receipt `{status:"non_pass",casesCharged:0,benchmarkCalls:0,matchAttemptsCharged:999,matchAttemptsUnused:-975}` was accepted by `verifyPlannerFeasibility`, returning `status:"non_pass"` instead of rejecting the impossible receipt. The receipt lacked every other required field. No runtime host was constructed. The scoped temporary directory was removed.
+
+**Fix:** Strictly admit retained envelopes and receipts; independently derive all published counts from the charge/terminal inventory, bind the existing run header to expected manifest identities read-only, and retain cleanup/provenance/completion predicates in derived pass status. Cross-check validation result classification and runtime identity, not just value hashes. Add tamper tests for missing/unknown fields, impossible counts, changed classification/identity, wrong run binding, and complete timing samples with cleanup failure. No producer attestation or new custody layer is needed.
+
+### CR-11: Execution root omits selected executable dependencies
+
+**Classification:** BLOCKER
+
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-planner-feasibility.ts:169-171`.
+
+**Issue:** `implementationRoot` hashes the CLI, host/session and selected lab modules, but not their selected runtime executor/ABI/normalization or canonical engine implementation dependencies. A change to `packages/runtime-js/src/executor.ts`, for example, can alter actual dispatch or results without changing this execution root, candidate bytes or observer harness. The inherited source-closure constant is not recomputed against that live dependency closure. Prepare captures the new working tree, and run compares against that prepared tree, so changing such a dependency between review and prepare does not invalidate the root-based review gate.
+
+**Fix:** Hash the actual selected local executable dependency closure using the existing static dependency resolution machinery or an explicitly checked closure, including runtime and canonical kernel dependencies. Do not include self-referential report/artifact files or introduce a separate custody route. Test that mutating an executor/ABI/kernel dependency changes executionRoot and that unresolved selected dependencies fail closed.
+
+### CR-12: A routine test starts real execution after the review becomes clean
+
+**Classification:** BLOCKER
+
+**File:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-planner-feasibility.test.ts:69-77`.
+
+**Issue:** The test prepares current material and calls the real `runPlannerFeasibility`, expecting the repository's actual review to be unresolved. There is no mocked host or injected review fixture. As soon as the review becomes clean with matching roots, that gate passes and an ordinary test starts supervised validation/source execution before eventually failing its expectation or timeout. Safety and test outcome depend on mutable planning-document status, violating the synthetic-only pre-empirical test boundary.
+
+**Fix:** Inject a deterministic unresolved review fixture and a denied/spied host factory, or isolate admission behind an injected read-only dependency. Assert zero host/provider invocations even when the repository contains a valid clean review. Do not rerun this test against a clean report until it is isolated.
+
+## Iteration 3 — Resolution and verification
+
+CR-06 is resolved by moving all provider-owned admission inside cleanup handling, including zero-allocation rejection; cleanup uncertainty remains non-pass. CR-07 is resolved by terminating relays independently and bounding cancellation by the remaining cleanup budget, with explicit incomplete cleanup. Earlier six resolutions remain applicable. The resource-owner change closes the 170 validation contexts as their final cases finish, keeping peak ownership one without resetting intentional reused contexts.
+
+Read-only source inspection yielded candidate size **24,294 bytes**, sourceRoot `sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b` and executionRoot `sha256:33b9d8486ed6cac2f5219706406dfddf0a7b482067b3ffe2298fe8213f4160f0`. These identify an **issues-found** snapshot, not admission for Task 3. The inspected brain is self-contained emitted tactics, not a copied engine resolver; the mapped 100-case corpus, 256-case inventory (232 intended guest calls and 24 source/input rejections), semantic geometry projection and private production exclusion remain present. No measured feasibility assertion follows from these static checks.
+
+Independent current synthetic regression run: **5 suites, 45 tests passed**, 76.30 seconds wall time (57.71 seconds tests): `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/benchmark.test.ts packages/strategy-lab/src/worker.test.ts packages/strategy-lab/src/planner/emission.test.ts packages/strategy-lab/src/planner/information-boundary.test.ts scripts/run-v1-38-planner-feasibility.test.ts`. The CLI test was safe only because the report was still unresolved (CR-12). No live guest, supervisor, container, preflight, Match, benchmark or final empirical manifest was run. Only this report was edited; no commit was made.
+
+## Iteration 2 — Historical Findings (both resolved in iteration 3)
 
 ### CR-06: Pre-dispatch benchmark rejection skips provider cleanup
 
