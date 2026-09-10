@@ -215,7 +215,7 @@ const assertReviewed = (manifest: Manifest) => {
   // Independent reviewer owns these fields; there is no user approval token.
   if (!/^status:\s*clean\s*$/mu.test(review) || !review.includes(manifest.sourceRoot) || !review.includes(manifest.executionRoot) || rawRoot(review) !== manifest.reviewRoot) throw new TypeError("LAB_REVIEW_NOT_CLEAN_OR_BOUND")
 }
-const createHost = (material: ReturnType<typeof buildFrozenMaterial>,manifest: Manifest,revision: StrategyRevision,id: string,limit: number,signal: AbortSignal,observer = false) => createPlannerSupervisedRuntime({ revision,attemptRoot: labRoot("feasibility-host",{ manifestRoot: manifest.root,id }),budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,matchId: `phase263:${id}`,containerName: `planner-263-${manifest.root.slice(7,19)}-${id}`,ownershipLabel: `owner:planner-263-${manifest.root.slice(7,19)}-${id}`,image: LAB_ADMITTED_ROOTS.image,invocationLimit: limit,signal,...(observer ? { observerHarness: { source: material.observerSource,expectedRoot: material.harnessRoot,machineRoot: manifest.machineRoot } } : {}) })
+const createHost = (material: ReturnType<typeof buildFrozenMaterial>,manifest: Manifest,revision: StrategyRevision,id: string,limit: number,signal: AbortSignal,observer = false,benchmarkLifetimeMs?: number) => createPlannerSupervisedRuntime({ revision,attemptRoot: labRoot("feasibility-host",{ manifestRoot: manifest.root,id }),budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,matchId: `phase263:${id}`,containerName: `planner-263-${manifest.root.slice(7,19)}-${id}`,ownershipLabel: `owner:planner-263-${manifest.root.slice(7,19)}-${id}`,image: LAB_ADMITTED_ROOTS.image,invocationLimit: limit,signal,...(observer ? { observerHarness: { source: material.observerSource,expectedRoot: material.harnessRoot,machineRoot: manifest.machineRoot }, ...(benchmarkLifetimeMs === undefined ? {} : { benchmarkLifetimeMs }) } : {}) })
 
 /** Own only currently live contexts. Failed cleanup remains owned and cannot be retried or replaced. */
 export const createValidationContextOwner = <T extends { close(): { cleanupComplete: boolean; orphanedChild: boolean } }>(cases: readonly { ordinal: number; context: string }[]) => {
@@ -382,7 +382,7 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
     publish(join(paths.outputDirectory,"validation-result.json"),validation)
     if (!validation.passed) throw new TypeError("LAB_VALIDATION_NON_PASS")
     guard()
-    const host = createHost(material,manifest,material.candidate.revision,"benchmark",2200,controller.signal,true)
+    const host = createHost(material,manifest,material.candidate.revision,"benchmark",2200,controller.signal,true,Math.max(0,3600000-(performance.now()-start)))
     const commitment = { revisionId: host.identity.revisionId,corpusRoot: manifest.corpusRoot,sourceRoot: manifest.sourceRoot,executableRoot: host.identity.executableRoot,harnessRoot: manifest.harnessRoot,profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot,budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,attemptRoot: host.identity.attemptRoot,machineRoot: manifest.machineRoot }
     const provider = { ...host,invoke(request: LabKernelRequest,identity: typeof host.identity) {
       guard(); const ordinal = host.accounting.length

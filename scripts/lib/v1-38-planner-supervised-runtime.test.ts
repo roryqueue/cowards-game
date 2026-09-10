@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi, afterEach } from "vitest"
+import { performance } from "node:perf_hooks"
+afterEach(() => vi.restoreAllMocks())
 import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
@@ -42,6 +44,21 @@ const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, 
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
 
 describe("planner selected-v1.19 host with injected transport only", () => {
+  it("permits explicit benchmark lifetime past120s while retaining the Match deadline", () => {
+    let now = 0
+    vi.spyOn(performance, "now").mockImplementation(() => now)
+    const opts = options()
+    const benchmark = createPlannerSupervisedRuntime({ ...opts, invocationLimit: 2200, benchmarkLifetimeMs: 180000, observerHarness: { source: WORKER_HARNESS_SOURCE, machineRoot: root, expectedRoot: `sha256:${createHash("sha256").update(buildLeanAuthenticatedHarnessSource(WORKER_HARNESS_SOURCE)).digest("hex")}` } })
+    expect(benchmark.invoke(request("selectActivations", "first"), benchmark.identity).result.ok).toBe(true)
+    now = 132000
+    expect(benchmark.invoke(request("soldierBrain", "after120"), benchmark.identity).result.ok).toBe(true)
+    now = 180000
+    expect(() => benchmark.invoke(request("soldierBrain", "expired"), benchmark.identity)).toThrow(/STOPPED/)
+    const match = createPlannerSupervisedRuntime(options())
+    now += 120000
+    expect(() => match.invoke(request("soldierBrain"), match.identity)).toThrow(/STOPPED/)
+    expect(opts.frames.every(frame => frame.timeoutMilliseconds === 1000)).toBe(true)
+  })
   it("preserves both method outputs and memory through actual selected executor", () => {
     const opts = options(); const host = createPlannerSupervisedRuntime(opts)
     for (const method of ["selectActivations", "soldierBrain"] as const) {

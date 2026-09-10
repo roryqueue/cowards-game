@@ -28,6 +28,8 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   observerHarness?: { source: string; expectedRoot: LabRoot; machineRoot: LabRoot };
   signal?: AbortSignal;
   invocationLimit?: number;
+  /** Benchmark only: the coordinator's remaining overall budget, not Match time. */
+  benchmarkLifetimeMs?: number;
 }
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
@@ -49,6 +51,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   let stopped = false; let pending: LeanTimingBinding | undefined; let observed: LeanTimingObservation | undefined; let observedTransportMs = 0
   const began = performance.now()
   const limit = options.invocationLimit ?? 24800
+  const lifetime = options.benchmarkLifetimeMs ?? 120000
+  if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3600000 || (options.benchmarkLifetimeMs !== undefined && (!observerHarness || limit !== 2200))) throw new TypeError("LAB_RUNTIME_LIFETIME")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
   const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
     harnessSource: harness,
@@ -66,7 +70,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
     identity, get accounting() { return [...accounting] }, close,
     verify(e) { return issued.has(e) }, timing(e) { return timings.get(e) }, verifyTiming(e) { return issuedTiming.has(e) },
     invoke(request, admitted) {
-      if (stopped || session.state !== "active" || options.signal?.aborted || performance.now() - began >= 120000 || accounting.length >= limit) { close(); throw new TypeError("LAB_RUNTIME_STOPPED") }
+      if (stopped || session.state !== "active" || options.signal?.aborted || performance.now() - began >= lifetime || accounting.length >= limit) { close(); throw new TypeError("LAB_RUNTIME_STOPPED") }
       if (labRoot("identity", admitted) !== labRoot("identity", identity) || request.semanticTupleId !== identity.tupleId || seen.has(request.requestId)) { close(); throw new TypeError("LAB_REQUEST_BINDING") }
       const parsed = (request.kind === "selectActivations" ? StrategyInputV119Schema : SoldierBrainInputV119Schema).safeParse(request.input)
       if (!parsed.success) { close(); throw new TypeError("LAB_INPUT_INVALID") }
