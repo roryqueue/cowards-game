@@ -1,18 +1,26 @@
 import { exactLabKeys, labRoot, LabSemanticRecordSchema, type LabRoot } from "./contracts.js"
 import { assignLabTasks, validateLabTaskGraph, type LabAssignment, type LabLayout, type LabTaskGraph } from "./tasks.js"
-import { publishLabShard, recordLabAttemptStart, resumeLabInventory, validateLabStoredRecord, type LabStoredRecord } from "./shards.js"
+import { bindLabInventory, publishLabShard, recordLabAttemptStart, resumeLabInventory, validateLabStoredRecord, type LabStoredRecord } from "./shards.js"
 import { reduceLabRecords } from "./reduce.js"
 import { runLabWorkerPool } from "./worker.js"
 
 export interface RunLabTaskOptions {
   directory: string; graph: LabTaskGraph; layout: LabLayout; machineRoot: LabRoot;
-  job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; execute: (assignment: LabAssignment) => Promise<LabStoredRecord> };
+  job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; executionRoot: LabRoot; execute: (assignment: LabAssignment) => Promise<LabStoredRecord> };
   syntheticDispatchLimit?: number;
 }
 export const runLabTasks = async (options: RunLabTaskOptions) => {
   const graph = validateLabTaskGraph(options.graph)
   const assigned = assignLabTasks(graph, options.layout)
+  // executionRoot commits the source/executable/provider/protocol tuple selected
+  // by the coordinator; layout deliberately remains operational and may change.
+  bindLabInventory(options.directory, graph, { kind: options.job.kind, machineRoot: options.machineRoot,
+    executionRoot: options.job.kind === "supervised" ? options.job.executionRoot : labRoot("synthetic-execution", graph.root) })
   const initial = resumeLabInventory(options.directory, graph)
+  for (const record of initial.records) {
+    if (record.operational.machineRoot !== options.machineRoot) throw new TypeError("LAB_JOB_BINDING")
+    if (options.job.kind === "supervised" && record.semantic !== null && record.trace === null) throw new TypeError("LAB_SUPERVISED_TRACE_REQUIRED")
+  }
   if (options.syntheticDispatchLimit !== undefined && (options.job.kind !== "synthetic" || !Number.isSafeInteger(options.syntheticDispatchLimit) || options.syntheticDispatchLimit < 0 || options.syntheticDispatchLimit > 24 || options.syntheticDispatchLimit % options.layout.shardSize !== 0)) throw new TypeError("LAB_SYNTHETIC_DISPATCH_BOUND")
   let dispatch = assigned.filter((a) => initial.pendingAttemptIds.includes(a.attempt.id))
   if (initial.uncertainAttemptIds.length) dispatch = [] // no retries or refunded capacity

@@ -20,7 +20,7 @@ const directory = (dir: string): string => {
   return path
 }
 const safePath = (dir: string, id: string) => {
-  if (!/^(?:shard-[a-f0-9]{64}\.json|trace-[a-f0-9]{64}\.bin|attempt-[a-f0-9]{64}\.(?:started|finished)\.json)$/u.test(id)) return fail("ARTIFACT_ID")
+  if (!/^(?:run-binding\.json|shard-[a-f0-9]{64}\.json|trace-[a-f0-9]{64}\.bin|attempt-[a-f0-9]{64}\.(?:started|finished)\.json)$/u.test(id)) return fail("ARTIFACT_ID")
   return join(directory(dir), id)
 }
 const boundedRead = (path: string, cap: number): Uint8Array => {
@@ -66,6 +66,21 @@ const publishBytes = (dir: string, id: string, bytes: Uint8Array, fault?: LabPub
   try { fsyncSync(directoryFd) } finally { closeSync(directoryFd) }
   if (fault === "after-publish") return fail("INJECTED_AFTER_PUBLISH")
   unlinkSync(temporary)
+}
+
+/** Operational evidence class is immutable but not scientific task identity. */
+export const bindLabInventory = (dir: string, graph: LabTaskGraph, binding: { kind: "synthetic" | "supervised"; machineRoot: LabRoot; executionRoot: LabRoot }) => {
+  if (!isLabRoot(binding.machineRoot) || !isLabRoot(binding.executionRoot)) return fail("RUN_BINDING")
+  const expected = { schemaVersion: "lab-run-binding-v1", graphRoot: graph.root, ...binding }
+  const names = readdirSync(directory(dir))
+  if (names.includes("run-binding.json")) {
+    const actual = parse(boundedRead(safePath(dir, "run-binding.json"), MAX_SHARD_BYTES))
+    if (labRoot("run-binding", actual) !== labRoot("run-binding", expected)) return fail("RUN_BINDING")
+  } else {
+    // Old/unbound records cannot be retroactively assigned a live evidence class.
+    if (names.some((name) => !name.endsWith(".tmp"))) return fail("UNBOUND_INVENTORY")
+    publishBytes(dir, "run-binding.json", canonicalBytes(expected))
+  }
 }
 
 export const publishLabTrace = (dir: string, bytes: Uint8Array): LabTraceReference => {
@@ -145,6 +160,7 @@ export const resumeLabInventory = (dir: string, input: LabTaskGraph) => {
   const started = new Set<LabRoot>(), completed = new Set<LabRoot>()
   const recordShards = new Map<LabRoot, LabRoot>()
   for (const name of names) {
+    if (name === "run-binding.json") continue // runner validates the expected immutable binding before resume
     if (name.endsWith(".tmp")) continue // Interrupted bytes are not accepted evidence.
     if (/^trace-[a-f0-9]{64}\.bin$/u.test(name)) continue
     if (/^attempt-[a-f0-9]{64}\.started\.json$/u.test(name)) {
