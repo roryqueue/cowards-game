@@ -12,6 +12,17 @@ const dirs: string[] = []
 const directory = () => { const d = realpathSync(mkdtempSync(join(tmpdir(), "lab-runner-test-"))); dirs.push(d); return d }
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 describe("actual trusted-thread runner and typed canonical reduction", () => {
+  it("restricts checkpoint dispatch to unique preallocated opportunities without changing coverage", async () => {
+    const options = { directory: directory(), graph, layout: { workers: 1, shardSize: 3, order: "forward" } as const, machineRoot: r, job: { kind: "synthetic" as const } }
+    for (const attemptOrdinals of [[0, 0], [-1], [24], [0.5], Array(25).fill(0)]) await expect(runLabTasks({ ...options, attemptOrdinals })).rejects.toThrow("LAB_ATTEMPT_SELECTION")
+    const first = await runLabTasks({ ...options, attemptOrdinals: [0, 1, 2] })
+    expect(first.dispatched).toBe(3)
+    expect(first.reduction).toBeNull()
+    const resumed = await runLabTasks({ ...options, attemptOrdinals: [0, 1, 2] })
+    expect(resumed.dispatched).toBe(0)
+    expect(resumed.records).toHaveLength(3)
+    expect(resumed.reduction).toBeNull()
+  }, 30000)
   it("rejects synthetic-to-supervised and machine-drift resume before dispatch", async () => {
     const options = { directory: directory(), graph, layout: { workers: 1, shardSize: 3, order: "forward" } as const, machineRoot: r, job: { kind: "synthetic" as const } }
     await runLabTasks({ ...options, syntheticDispatchLimit: 3 })

@@ -8,10 +8,13 @@ export interface RunLabTaskOptions {
   directory: string; graph: LabTaskGraph; layout: LabLayout; machineRoot: LabRoot;
   job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; executionRoot: LabRoot; execute: (assignment: LabAssignment) => Promise<LabStoredRecord>; cancel: (assignment: LabAssignment) => Promise<void> | void };
   syntheticDispatchLimit?: number;
+  /** Selects existing opportunities for a checkpoint, never changes coverage or budget. */
+  attemptOrdinals?: readonly number[];
 }
 export const runLabTasks = async (options: RunLabTaskOptions) => {
   const graph = validateLabTaskGraph(options.graph)
   const assigned = assignLabTasks(graph, options.layout)
+  if (options.attemptOrdinals !== undefined && (!Array.isArray(options.attemptOrdinals) || options.attemptOrdinals.length > 24 || new Set(options.attemptOrdinals).size !== options.attemptOrdinals.length || options.attemptOrdinals.some(ordinal => !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= 24))) throw new TypeError("LAB_ATTEMPT_SELECTION")
   // executionRoot commits the source/executable/provider/protocol tuple selected
   // by the coordinator; layout deliberately remains operational and may change.
   bindLabInventory(options.directory, graph, { kind: options.job.kind, machineRoot: options.machineRoot,
@@ -23,6 +26,7 @@ export const runLabTasks = async (options: RunLabTaskOptions) => {
   }
   if (options.syntheticDispatchLimit !== undefined && (options.job.kind !== "synthetic" || !Number.isSafeInteger(options.syntheticDispatchLimit) || options.syntheticDispatchLimit < 0 || options.syntheticDispatchLimit > 24 || options.syntheticDispatchLimit % options.layout.shardSize !== 0)) throw new TypeError("LAB_SYNTHETIC_DISPATCH_BOUND")
   let dispatch = assigned.filter((a) => initial.pendingAttemptIds.includes(a.attempt.id))
+  if (options.attemptOrdinals !== undefined) dispatch = dispatch.filter(a => options.attemptOrdinals!.includes(a.attempt.ordinal))
   if (initial.uncertainAttemptIds.length) dispatch = [] // no retries or refunded capacity
   if (options.syntheticDispatchLimit !== undefined) dispatch = dispatch.slice(0, options.syntheticDispatchLimit)
   const pendingShards = new Map<number, LabStoredRecord[]>()
