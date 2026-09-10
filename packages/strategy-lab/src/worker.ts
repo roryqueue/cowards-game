@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { Worker, isMainThread, parentPort, threadId, workerData } from "node:worker_threads"
 import type { LabAssignment } from "./tasks.js"
 
-interface WireTask { id: string; taskId: string; ordinal: number }
+interface WireTask { id: string; taskId: string; representativeId: string; ordinal: number }
 interface WorkerConfiguration { kind: "synthetic" | "supervised"; tasks: WireTask[]; loseOrdinal: number | null }
 const wireRoot = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`
 // Fixed repository-owned entry. No eval, dynamic source, package import, or
@@ -22,7 +22,7 @@ if (!isMainThread) {
       const task = config.tasks[index]!
       if (task.ordinal === config.loseOrdinal) process.exit(2)
       if (config.kind === "supervised") { parentPort!.postMessage({ kind: "invoke", id: task.id, threadId }); return }
-      const root = wireRoot(`lab-synthetic-only:${task.taskId}`)
+      const root = wireRoot(`lab-synthetic-only:${task.representativeId}`)
       parentPort!.postMessage({ kind: "result", id: task.id, threadId, payload: {
         semantic: { schemaVersion: "lab-semantic-record-v1", taskRoot: task.taskId, classification: "success", outcome: "DRAW", finalStateRoot: root, transitionRoot: wireRoot(`transitions:${root}`), runtimeAccountingRoot: wireRoot(`accounting:${root}`) }, invocationCount: 1,
       } })
@@ -58,7 +58,7 @@ export const runLabWorkerPool = async (assignments: readonly LabAssignment[], wo
     const owned = assignments.filter((a) => a.worker === slot)
     if (owned.length === 0) return Promise.resolve()
     return new Promise<void>((accept, reject) => {
-      const worker = new Worker(new URL(import.meta.url), { execArgv: [], workerData: { kind, tasks: owned.map((a) => ({ id: a.attempt.id, taskId: a.task.id, ordinal: a.attempt.ordinal })), loseOrdinal: loseOrdinal ?? null } satisfies WorkerConfiguration })
+      const worker = new Worker(new URL(import.meta.url), { execArgv: [], workerData: { kind, tasks: owned.map((a) => ({ id: a.attempt.id, taskId: a.task.id, representativeId: a.task.representativeId, ordinal: a.attempt.ordinal })), loseOrdinal: loseOrdinal ?? null } satisfies WorkerConfiguration })
       pool.push(worker)
       let cursor = 0, done = false, state: "ready" | "start" | "result" = "ready"
       const deadline = createLabWorkerDeadline(() => reject(new Error("LAB_WORKER_DEADLINE")))

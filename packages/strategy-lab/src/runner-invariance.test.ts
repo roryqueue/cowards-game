@@ -5,6 +5,7 @@ import { join } from "node:path"
 import { enumerateLabTasks, type LabLayout } from "./tasks.js"
 import { runLabTasks } from "./runner.js"
 import { reduceLabRecords } from "./reduce.js"
+import { labRoot } from "./contracts.js"
 const r = `sha256:${"a".repeat(64)}` as const
 const graph = enumerateLabTasks({ admittedRoot: r, algorithm: "hierarchical-planner-v1", candidateRoot: r, opponentRoot: r, inputRoot: r, budgetRoot: r })
 const dirs: string[] = []
@@ -62,5 +63,16 @@ describe("actual trusted-thread runner and typed canonical reduction", () => {
     const tampered = structuredClone(result.records)
     tampered[0]!.semantic!.outcome = "bottom"
     expect(() => reduceLabRecords(graph, tampered)).toThrow()
+    for (const field of ["outcome", "finalStateRoot", "transitionRoot", "runtimeAccountingRoot"] as const) {
+      const wrongAliases = structuredClone(result.records)
+      for (const record of wrongAliases) if (graph.tasks.find((task) => task.id === record.attempt.taskRoot)?.purpose === "alias-compatibility") {
+        if (field === "outcome") record.semantic!.outcome = "top"
+        else record.semantic![field] = r
+        if (record.attempt.classification === "success" || record.attempt.classification === "player_violation") record.attempt.semanticRoot = labRoot("semantic-record", record.semantic)
+      }
+      const reduction = reduceLabRecords(graph, wrongAliases)
+      expect(reduction.status).toBe("non_pass")
+      expect(reduction.payoffs).toEqual([])
+    }
   }, 30000)
 })

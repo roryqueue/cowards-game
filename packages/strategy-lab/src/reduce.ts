@@ -23,6 +23,17 @@ export const reduceLabRecords = (input: LabTaskGraph, values: readonly LabStored
     // Explicit schema-owned semantic projection, not recursive metadata stripping.
     return { taskId: task.id, purpose: task.purpose, representativeId: task.representativeId, record: taskRecords[0]!.semantic }
   }).sort((a,b) => a.taskId < b.taskId ? -1 : a.taskId > b.taskId ? 1 : 0)
+  // These schema-owned roots must represent geometry-equivalent gameplay and
+  // runtime semantics, not request/attempt/arena-label or trace identities.
+  const geometrySemantics = (record: LabStoredRecord["semantic"]) => record === null ? null : ({
+    classification: record.classification, outcome: record.outcome,
+    finalStateRoot: record.finalStateRoot, transitionRoot: record.transitionRoot,
+    runtimeAccountingRoot: record.runtimeAccountingRoot,
+  })
+  for (const alias of semantic.filter((entry) => entry.purpose === "alias-compatibility")) {
+    const representative = semantic.find((entry) => entry.taskId === alias.representativeId && entry.purpose === "scientific")
+    if (!representative || labRoot("alias-semantics", geometrySemantics(alias.record)) !== labRoot("alias-semantics", geometrySemantics(representative.record))) comparable = false
+  }
   const complete = counts.success === 24 && comparable && records.every((r) => r.operational.cleanup === "complete")
   const payoffs = complete ? semantic.filter((s) => s.purpose === "scientific").map((s) => ({ taskId: s.taskId, outcome: s.record!.outcome, bottomScore: s.record!.outcome === "DRAW" ? 0.5 : s.record!.outcome === "bottom" ? 1 : 0 })) : []
   const payload = { schemaVersion: "lab-semantic-reduction-v1", graphRoot: graph.root, semantic, payoffs, status: complete ? "complete" : "non_pass" }
