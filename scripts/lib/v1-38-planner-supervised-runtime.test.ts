@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
@@ -31,7 +32,8 @@ const fixture = (fault?: string) => {
     const r = JSON.parse(Buffer.from(q.payloadBase64, "base64").toString())
     const result = fault === "violation" ? { ok: false, violation: { type: "FORBIDDEN_CAPABILITY", message: "synthetic blocked" } }
       : { ok: true, value: r.methodName === "selectActivations" ? { activationOrders: [], strategyMemory: r.input.strategyMemory } : { action: { type: "TURN_TO_STONE" }, soldierMemory: r.input.soldierMemory } }
-    return Buffer.from(JSON.stringify({ requestId: fault === "request" ? 999 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify(result)).toString("base64"), stderrBase64: "" }) + "\n")
+    const timing = q.timingBinding && fault !== "missing-timing" ? { binding: { ...q.timingBinding, ...(fault === "forged-timing" ? { inputRoot: "wrong" } : {}) }, durationMs: 2, complete: true } : undefined
+    return Buffer.from(JSON.stringify({ requestId: fault === "request" ? 999 : q.requestId, status: 0, signal: null, stdoutBase64: Buffer.from(JSON.stringify(result)).toString("base64"), stderrBase64: "", ...(timing ? { timing } : {}) }) + "\n")
   }, close() { return { status: fault === "cleanup" ? 1 : 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) } } })
   return { transport, streamFactory, frames, calls }
 }
@@ -75,5 +77,19 @@ describe("planner selected-v1.19 host with injected transport only", () => {
     const bad = createPlannerSupervisedRuntime(options("cleanup"))
     expect(() => bad.invoke({ ...request("selectActivations"), input: {} } as any, bad.identity)).toThrow()
     expect(closePlannerRuntime(bad).cleanupComplete).toBe(false)
+  })
+  it.each([undefined, "missing-timing", "forged-timing"])("binds private timing and fails closed on %s", (fault) => {
+    const opts = options(fault)
+    const host = createPlannerSupervisedRuntime({ ...opts, observerHarness: { source: WORKER_HARNESS_SOURCE, expectedRoot: `sha256:${createHash("sha256").update(WORKER_HARNESS_SOURCE).digest("hex")}` } })
+    const e = host.invoke(request("selectActivations"), host.identity)
+    if (fault) { expect(e.result).toMatchObject({ ok: false, systemFailure: {} }); expect(host.timing(e)).toBeUndefined() }
+    else {
+      const timing = host.timing(e)!
+      expect(timing).toMatchObject({ provenance: "synthetic_transport", observation: { durationMs: 2, binding: { invocationRoot: e.invocationRoot } } })
+      expect(host.verifyTiming(timing)).toBe(true)
+      expect(host.verifyTiming(structuredClone(timing))).toBe(false)
+      expect(e.result).not.toHaveProperty("timing")
+    }
+    closePlannerRuntime(host)
   })
 })

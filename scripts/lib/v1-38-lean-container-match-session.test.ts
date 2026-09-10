@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
-import { createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult } from "./v1-38-lean-container-match-session.js"
+import { createLeanContainerMatchSession, LEAN_CONTAINER_BROKER_SOURCE, validateLeanTimingObservation, type LeanContainerMatchTransport, type LeanContainerPersistentStream, type LeanContainerPersistentStreamFactory, type LeanContainerTransportResult, type LeanTimingBinding } from "./v1-38-lean-container-match-session.js"
 import { LEAN_CONTAINER_IMAGE } from "../run-v1-38-lean-runner-feasibility.js"
 import { WORKER_HARNESS_SOURCE, WORKER_HARNESS_V117_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { createContainerFixtureRevision } from "../run-v1-38-lean-runner-feasibility.js"
@@ -64,6 +64,35 @@ const advancedSource = () => {
   if (artifact === undefined) throw new Error("advanced fixture artifact missing")
   return Buffer.from(artifact.bytesBase64, "base64").toString("utf8")
 }
+
+describe("private observer synthetic transport", () => {
+  const binding: LeanTimingBinding = { invocationRoot: "call", sourceRoot: "source", executableRoot: "executable", inputRoot: "input", method: "selectActivations", tupleId: "tuple", harnessRoot: "harness", profileRoot: "profile" }
+  it.each(["missing", "wrong", "duplicate", "stale", "negative", "infinite", "incomplete"])("rejects %s observation", (fault) => {
+    const value: any = { binding: { ...binding }, durationMs: 1, complete: true }
+    if (fault === "missing") delete value.binding
+    if (fault === "wrong") value.binding.inputRoot = "forged"
+    if (fault === "duplicate") value.extra = value
+    if (fault === "stale") value.binding.invocationRoot = "old"
+    if (fault === "negative") value.durationMs = -1
+    if (fault === "infinite") value.durationMs = Infinity
+    if (fault === "incomplete") value.complete = false
+    expect(() => validateLeanTimingObservation(value, binding)).toThrow()
+  })
+  it("strips owned timing before ordinary result parsing and preserves default broker bytes", () => {
+    const name = "phase263-observer"; const label = "owner:phase263-observer"
+    const control = fakeTransport([absent(name), result("id\n"), owned(label), result(), result(), absent(name)])
+    const persistent = fakeStream([{ ...response(1, { activationOrders: [], strategyMemory: null }), timing: { binding, durationMs: 2, complete: true } }])
+    const observed: unknown[] = []
+    const session = createLeanContainerMatchSession({ matchId: name, containerName: name, ownershipLabel: label, image: LEAN_CONTAINER_IMAGE, infrastructureProfile: "closeout", transport: control.transport, streamFactory: persistent.factory, privateObserver: { harnessSource: WORKER_HARNESS_SOURCE, binding: () => binding, observe: (v) => observed.push(v) } })
+    expect(session.adapter.execute({ source: "synthetic", methodName: "selectActivations", input: {}, timeoutMs: 1000 })).toEqual({ ok: true, value: { activationOrders: [], strategyMemory: null } })
+    expect(observed).toHaveLength(1)
+    expect(JSON.parse(persistent.frames[0]!).timingBinding).toEqual(binding)
+    session.close()
+    const normal = create("phase263-disabled", [])
+    expect(normal.persistent.calls[0]![1].at(-1)).toBe(LEAN_CONTAINER_BROKER_SOURCE)
+    normal.session.close()
+  })
+})
 
 describe("lean Match-scoped hostile container session", () => {
   it("selects the approved resources only for an explicit closeout session", () => {

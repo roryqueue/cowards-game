@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer"
 import { spawnSync } from "node:child_process"
 import { Worker } from "node:worker_threads"
 import { assertLeanInfrastructureProfile, LEAN_CLOSEOUT_PROFILE, type LeanInfrastructureProfile } from "./v1-38-lean-infrastructure-profile.js"
-import type { RuntimeResult } from "@cowards/engine"
+import type { RuntimeResult } from "../../packages/engine/src/index.js"
 import type { StrategyExecutionAdapterV117, StrategyExecutionRequest } from "../../packages/runtime-js/src/adapter.js"
 import { createRuntimeGuestExecutionV117, executeStrategyRuntimeAbiV117, observeRuntimeGuestAccountingV117, type RuntimeGuestObservationV117 } from "../../packages/runtime-js/src/abi-bridge.js"
 import { consumeCandidateEvidenceFixture } from "../../packages/runtime-js/src/candidate-evidence-fixture.js"
@@ -23,10 +23,29 @@ export interface LeanContainerPersistentStream {
 }
 export type LeanContainerPersistentStreamFactory = (command: string, args: readonly string[], options: { readonly startupTimeoutMilliseconds: number; readonly maxBufferBytes: number }) => LeanContainerPersistentStream
 export interface LeanContainerMatchSessionOptions {
+  /** Private trusted coordinator only. Omitted by every historical caller. */
+  readonly privateObserver?: LeanPrivateObserver | undefined
   readonly infrastructureProfile?: LeanInfrastructureProfile | undefined
   readonly matchId: string; readonly containerName: string; readonly ownershipLabel: string; readonly image: string
   readonly dockerPath?: string | undefined; readonly transport?: LeanContainerMatchTransport | undefined
   readonly streamFactory?: LeanContainerPersistentStreamFactory | undefined; readonly cleanupTimeoutMilliseconds?: number | undefined
+}
+export interface LeanTimingBinding {
+  invocationRoot: string; sourceRoot: string; executableRoot: string; inputRoot: string;
+  method: "selectActivations" | "soldierBrain"; tupleId: string; harnessRoot: string; profileRoot: string;
+}
+export interface LeanTimingObservation { binding: LeanTimingBinding; durationMs: number; complete: true }
+export interface LeanPrivateObserver {
+  harnessSource: string;
+  binding(request: StrategyExecutionRequest): LeanTimingBinding;
+  observe(observation: LeanTimingObservation, transportMs: number): void;
+}
+const timingKeys = ["invocationRoot", "sourceRoot", "executableRoot", "inputRoot", "method", "tupleId", "harnessRoot", "profileRoot"] as const
+export const validateLeanTimingObservation = (value: unknown, expected: LeanTimingBinding): LeanTimingObservation => {
+  if (!value || typeof value !== "object" || !exactKeys(value as Record<string, unknown>, ["binding", "durationMs", "complete"])) throw new TypeError("LEAN_TIMING_INVALID")
+  const r = value as LeanTimingObservation
+  if (!r.binding || !exactKeys(r.binding as unknown as Record<string, unknown>, timingKeys) || timingKeys.some((key) => r.binding[key] !== expected[key]) || r.complete !== true || !Number.isFinite(r.durationMs) || r.durationMs < 0 || r.durationMs > 1000) throw new TypeError("LEAN_TIMING_INVALID")
+  return Object.freeze({ ...r, binding: Object.freeze({ ...r.binding }) })
 }
 export interface LeanContainerSessionCloseResult { readonly cleanupComplete: boolean; readonly orphanedChild: boolean }
 export interface LeanContainerMatchSession { readonly matchId: string; readonly containerId: string; readonly adapter: StrategyExecutionAdapterV117; readonly state: "active" | "poisoned" | "closed"; close(): LeanContainerSessionCloseResult }
@@ -97,6 +116,26 @@ const rl=createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false}
 rl.on("line",line=>{queue=queue.then(()=>handle(line)).catch(()=>process.exit(73));});
 rl.on("close",()=>{queue.then(()=>process.exit(0),()=>process.exit(73));});
 `
+
+/** Clone the transport only for a private instrumented session. Historical bytes stay fixed. */
+export const buildLeanObserverBrokerSource = (harnessSource: string): string => {
+  const replace = (source: string, before: string, after: string) => {
+    if (!source.includes(before) || source.indexOf(before) !== source.lastIndexOf(before)) throw new TypeError("LEAN_OBSERVER_SEAM_DRIFT")
+    return source.replace(before, after)
+  }
+  let source = replace(LEAN_CONTAINER_BROKER_SOURCE,
+    `const harnesses = ${JSON.stringify({ legacy: WORKER_HARNESS_SOURCE, v117: WORKER_HARNESS_V117_SOURCE })};`,
+    `const harnesses = ${JSON.stringify({ legacy: harnessSource, v117: WORKER_HARNESS_V117_SOURCE })};`)
+  source = replace(source, 'new Worker(workerUrl(authenticatedHarness(harnesses.legacy)),{workerData:{requestId:q.requestId,source:request.source', 'new Worker(workerUrl(authenticatedHarness(harnesses.legacy)),{workerData:{timingBinding:q.timingBinding,requestId:q.requestId,source:request.source')
+  source = replace(source, 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit"])', 'exact(q,["requestId","mode","payloadBase64","timeoutMilliseconds","stdoutByteLimit","stderrByteLimit","timingBinding"])')
+  source = replace(source, '!(q.mode in harnesses)', 'q.mode!=="legacy"||!q.timingBinding||q.timingBinding.method!==JSON.parse(Buffer.from(q.payloadBase64,"base64").toString("utf8")).methodName')
+  source = replace(source,
+    'return {status:0,signal:null,out:Buffer.from(JSON.stringify(output)),err:Buffer.alloc(0)};',
+    `if(!output||!exact(output,["output","timing"])||!output.timing||!exact(output.timing,["binding","durationMs","complete"])||JSON.stringify(output.timing.binding)!==JSON.stringify(q.timingBinding)||output.timing.complete!==true||!Number.isFinite(output.timing.durationMs)||output.timing.durationMs<0||output.timing.durationMs>q.timeoutMilliseconds||Buffer.byteLength(JSON.stringify(output.timing))>2048)throw new Error("observer binding invalid");
+  return {status:0,signal:null,out:Buffer.from(JSON.stringify(output.output)),err:Buffer.alloc(0),timing:output.timing};`)
+  source = replace(source, 'stderrBase64:result.err.toString("base64")}', 'stderrBase64:result.err.toString("base64"),timing:result.timing}')
+  return source
+}
 
 const STREAM_WORKER_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
@@ -181,25 +220,34 @@ export const createLeanContainerMatchSession = (options: LeanContainerMatchSessi
   const poison = (): void => { state = "poisoned"; remove() }
   try {
     const started = transport(dockerPath, ["start", containerId], { timeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: CONTROL_BUFFER_BYTES }); assertCleanControlResult(started, "LEAN_CONTAINER_SESSION_START_FAILED")
-    stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", LEAN_CONTAINER_BROKER_SOURCE], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
+    stream = streamFactory(dockerPath, ["exec", "-i", containerId, "node", "--input-type=module", "--eval", options.privateObserver === undefined ? LEAN_CONTAINER_BROKER_SOURCE : buildLeanObserverBrokerSource(options.privateObserver.harnessSource)], { startupTimeoutMilliseconds: DEFAULT_CONTROL_TIMEOUT_MS, maxBufferBytes: STREAM_FRAME_LIMIT_BYTES })
   } catch { poison(); throw new TypeError("LEAN_CONTAINER_SESSION_START_FAILED") }
   const assertActive = (): void => { if (state === "poisoned") throw new TypeError("LEAN_CONTAINER_SESSION_POISONED"); if (state === "closed") throw new TypeError("LEAN_CONTAINER_SESSION_CLOSED") }
   const runMethod = (request: StrategyExecutionRequest, mode: "legacy" | "v117", timeoutMilliseconds: number, stdoutLimit: number, stderrLimit: number, input: string | Uint8Array): LeanContainerTransportResult => {
     assertActive(); const requestId = nextRequestId++; const inputBytes = typeof input === "string" ? Buffer.byteLength(input) : input.byteLength
     if (inputBytes > STREAM_FRAME_LIMIT_BYTES / 2) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded payload cap") }
-    const payload = Buffer.from(input); const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit })}\n`
+    const observer = options.privateObserver
+    const timingBinding = observer?.binding(request)
+    if (observer && (mode !== "legacy" || timeoutMilliseconds !== 1000 || options.infrastructureProfile !== "closeout" || !timingBinding || timingBinding.method !== request.methodName)) { poison(); throw new TypeError("LEAN_OBSERVER_PROFILE") }
+    const payload = Buffer.from(input); const frame = `${JSON.stringify({ requestId, mode, payloadBase64: payload.toString("base64"), timeoutMilliseconds, stdoutByteLimit: stdoutLimit, stderrByteLimit: stderrLimit, ...(timingBinding === undefined ? {} : { timingBinding }) })}\n`
     if (Buffer.byteLength(frame) > STREAM_FRAME_LIMIT_BYTES) { poison(); throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Container session request exceeded frame cap") }
     try {
+      const transportStart = observer ? process.hrtime.bigint() : undefined
       const raw = stream!.exchange(frame, { timeoutMilliseconds, maxBufferBytes: Math.min(STREAM_FRAME_LIMIT_BYTES, Math.max(stdoutLimit, stderrLimit) * 2 + CONTROL_BUFFER_BYTES) })
+      const transportMs = transportStart === undefined ? 0 : Number(process.hrtime.bigint() - transportStart) / 1e6
       if (raw.byteLength > STREAM_FRAME_LIMIT_BYTES || raw.at(-1) !== 10 || raw.subarray(0, -1).includes(10)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was not one frame")
       let parsed: unknown; try { parsed = JSON.parse(raw.subarray(0, -1).toString("utf8")) } catch { throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was malformed") }
       if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response was invalid")
       const value = parsed as Record<string, unknown>
-      if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64"]) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed")
+      if (!exactKeys(value, ["requestId", "status", "signal", "stdoutBase64", "stderrBase64", ...(observer ? ["timing"] : [])]) || value.requestId !== requestId || !(value.status === null || Number.isSafeInteger(value.status)) || !(value.signal === null || typeof value.signal === "string") || typeof value.stdoutBase64 !== "string" || typeof value.stderrBase64 !== "string" || !canonicalBase64(value.stdoutBase64) || !canonicalBase64(value.stderrBase64)) throw new SubprocessSystemFailure("MALFORMED_IPC", "Persistent response correlation failed")
       const stdout = Buffer.from(value.stdoutBase64, "base64"); const stderr = Buffer.from(value.stderrBase64, "base64")
       if (stdout.byteLength > stdoutLimit || stderr.byteLength > stderrLimit || stderr.byteLength !== 0) throw new SubprocessSystemFailure("STDIO_CAP_EXCEEDED", "Persistent response exceeded cap or emitted stderr")
       if (value.signal !== null) throw new SubprocessSystemFailure("SUBPROCESS_SIGNAL", "Container method was signalled")
       if (value.status !== 0) throw new SubprocessSystemFailure("SUBPROCESS_EXIT", "Container method exited nonzero")
+      if (observer && timingBinding) {
+        if (Buffer.byteLength(JSON.stringify(value.timing)) > 2048) throw new TypeError("LEAN_TIMING_CAP")
+        observer.observe(validateLeanTimingObservation(value.timing, timingBinding), transportMs)
+      }
       return { status: value.status as number, signal: value.signal as null, stdout, stderr }
     } catch (error) { poison(); throw error } finally { void request }
   }
