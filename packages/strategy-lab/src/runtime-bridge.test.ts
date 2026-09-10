@@ -55,6 +55,7 @@ describe("private canonical effect pump (synthetic effects, no source execution)
       geometries.add(arena.semanticGeometryHash)
       expect(state.soldiers).toHaveLength(16)
       for (const position of [...state.soldiers.map((s) => s.position), ...state.terrainStones]) {
+        if (!position) throw new Error("canonical start must not contain a missing position")
         expect(position.x).toBeGreaterThanOrEqual(arena.initialBounds.minX); expect(position.x).toBeLessThanOrEqual(arena.initialBounds.maxX)
         expect(position.y).toBeGreaterThanOrEqual(arena.initialBounds.minY); expect(position.y).toBeLessThanOrEqual(arena.initialBounds.maxY)
       }
