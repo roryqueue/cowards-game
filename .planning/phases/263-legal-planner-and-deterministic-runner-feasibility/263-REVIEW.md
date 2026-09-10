@@ -1,12 +1,13 @@
 ---
 phase: 263-legal-planner-and-deterministic-runner-feasibility
-reviewed: 2026-09-10T05:10:00Z
-review_iteration: 3
+reviewed: 2026-09-10T04:25:00Z
+review_iteration: 5
 depth: standard
 review_scope: full-source-pre-empirical
-review_commit: d98e3ddf8d03688d9de73112acc3a27d71ade5b1
+review_commit: adbe720b
+review_working_tree: includes-reviewed-uncommitted-deadline-ordering-correction
 diff_base: b26a0caa
-files_reviewed: 42
+files_reviewed: 44
 files_reviewed_list:
   - .gitignore
   - packages/runtime-js/src/planner-benchmark-observer.test.ts
@@ -50,29 +51,65 @@ files_reviewed_list:
   - scripts/lib/v1-38-planner-supervised-runtime.ts
   - scripts/run-v1-38-planner-feasibility.ts
   - scripts/run-v1-38-planner-feasibility.test.ts
+  - scripts/lib/v1-38-executable-closure.ts
+  - scripts/lib/v1-38-executable-closure.test.ts
 findings:
-  critical: 5
+  critical: 0
   warning: 0
   info: 0
-  total: 5
-resolved_findings: [CR-01, CR-02, CR-03, CR-04, CR-05, WR-01, CR-06, CR-07]
-active_findings: [CR-08, CR-09, CR-10, CR-11, CR-12]
+  total: 0
+resolved_findings: [CR-01, CR-02, CR-03, CR-04, CR-05, WR-01, CR-06, CR-07, CR-08, CR-09, CR-10, CR-11, CR-12]
+active_findings: []
 source_root: sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b
-execution_root: sha256:33b9d8486ed6cac2f5219706406dfddf0a7b482067b3ffe2298fe8213f4160f0
-status: issues_found
+execution_root: sha256:08cb747202ea9d67ec28119b1c776fcc2efabfcd8986887dd1dfdf25bfc2ca1c
+status: clean
 ---
 
 # Phase 263: Full-source Pre-empirical Code Review
 
 ## Summary
 
-Iteration 3 covers the complete submitted source path through `d98e3ddf`, including the newly completed brain/emitter and CLI, with 41 source/configuration files plus `.gitignore`. The eight earlier findings are resolved; five new integration blockers remain. Frontmatter counts describe only active findings. This is a full-source **pre-empirical** review, not a whole-phase pass or empirical feasibility result. The historical partial reviews below remain unchanged evidence, not active fix lists.
+Iteration 5 independently rechecks the remaining deadline/precharge correction on `adbe720b` plus the reviewed uncommitted CLI/test changes. All reported findings are resolved; no active scoped defects remain. This is **full-source pre-empirical clean**, not phase completion or a measured feasibility pass. Historical reviews remain evidence, not active fix lists. Frontmatter roots bind the actual inspected source bytes, including the final correction.
 
 No structural pre-pass was supplied. Source files were not modified. No live Strategy, supervisor, container, preflight, benchmark or Match was executed. Reproductions used trusted synthetic worker output, pure reductions, injected failing callbacks and source-graph fixtures only. Temporary synthetic shard directories were removed by their own scoped cleanup; historical files and locks were untouched.
 
 ## Narrative Findings (AI reviewer)
 
-## Iteration 3 — Active Findings
+## Iteration 5 — Clean pre-empirical resolution
+
+CR-09 is resolved: the production `allocatePlannerBenchmarkCall` publishes the immutable allocation before invoking the deadline guard. A throwing guard returns a charged failure through `runPlannerBenchmark`; the coordinator's unconditional `readPlannerCharges(...,true)` terminalizes the missing record as uncertain before deriving the receipt. Summary and durable allocation counts agree, while confirmed guest-call count remains zero. The same reasoning holds after N completed calls because `host.accounting.length` selects the next fixed ordinal and no retry occurs.
+
+The synthetic regression uses that production helper with a throwing guard, retains a charged=1 failure summary, and verifies the non-pass receipt with one uncertain benchmark charge and zero confirmed benchmark guest calls. Its host remains deny-by-default. This independent narrow recheck read the actual source/test diff and terminalization/verification call chain; parent owns the currently running regression and strict-type checks. No test result from that pending run is asserted here. The prior independent 21/21 synthetic test result is retained below.
+
+Read-only `inspectPlannerFeasibility()` independently confirms sourceRoot **`sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b`**, **24,294 source bytes**, and executionRoot **`sha256:08cb747202ea9d67ec28119b1c776fcc2efabfcd8986887dd1dfdf25bfc2ca1c`**. The source remains unchanged; the execution root now includes the deadline allocation correction. This is a source review binding only, not an empirical result, production authorization or final manifest. `git diff --check` passes. No live guest/source, host, supervisor, container, preflight, benchmark or Match was executed. Only this review document was edited by the reviewer; no commit was made.
+
+## Iteration 4 — Historical Finding (resolved in iteration 5)
+
+### CR-09 (remaining edge): Deadline guard still precedes durable benchmark allocation
+
+**Classification:** BLOCKER
+
+**Files:** `/Users/roryquinlan/runtime/cowards-game/scripts/run-v1-38-planner-feasibility.ts:497-505`, `:454`; `/Users/roryquinlan/runtime/cowards-game/packages/strategy-lab/src/benchmark.ts:105-106`.
+
+**Issue:** The new durable inventory fixes interrupted validation and exceptions after benchmark precharge. However, `runPlannerBenchmark` increments its allocation count before calling `provider.invoke`, whose first action is still `guard()` outside the charge/terminalization block. An overall deadline at that boundary leaves summary `charged=N+1` but durable charges/records N. The receipt now truthfully derives N; read-only verification then rejects the retained summary at line 454. The normal deadline failure still cannot produce a self-consistent retained non-pass.
+
+**Evidence:** An admitted synthetic provider with the same guard-before-ledger ordering returned `{charged:1,ledger:0,closed:1,passed:false}` when the guard threw on its first call. There was no host, source or transport execution. The same mismatch applies after N calls. Static tracing shows the CLI catch cannot publish an uncertain record because the guard is outside its `try`.
+
+**Fix:** Publish the allocated benchmark charge before the guard and place the guard inside the terminalization `try`, matching the benchmark loop's allocation semantics. Retain an explicit no-dispatch/uncertain terminal disposition when the guard throws; keep confirmed guest calls zero for that allocation. Add the first-call and after-N deadline regressions, requiring matching summary/ledger/receipt counts and successful read-only verification of non-pass. No retry or additional execution allocation is needed.
+
+## Iteration 4 — Resolutions and inspected binding
+
+- CR-08 resolved: observer benchmark host uses the coordinator's bounded remaining lifetime; ordinary Match host remains 120 seconds and every invocation remains 1,000 ms.
+- CR-10 resolved for the reported counterexamples: strict receipt/envelope admission, derived ledger counts, runtime classification/identity, expected run header and cleanup predicates reject the malformed count fixture and prevent cleanup failure being promoted to pass.
+- CR-11 resolved: selected local executable imports and installed dependency bytes now contribute to executionRoot; executor/schema/kernel mutation and unresolved-edge fixtures cover the omitted closure.
+- CR-12 resolved: deterministic unresolved review fixture and deny-by-default host mock isolate routine CLI tests independently of actual review status.
+- CR-09's validation-summary and post-precharge exception paths are corrected; only the ordering edge above remains active.
+
+Independent read-only `inspectPlannerFeasibility()` confirms **24,294 source bytes**, sourceRoot `sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b`, and executionRoot `sha256:197afa2f4bb487c2a3bd71e0c84b5cb96cbd53f3e405b9aa9c768255afd11888`. These identify an issues-found snapshot, not Task 3 admission. No live source, supervisor, container, Match, benchmark, preflight or final empirical manifest was executed. Only the review document was edited; no commit was made.
+
+Independent focused regression: **3 suites, 21 tests passed**, 78.93 seconds wall time (70.20 seconds tests): `./node_modules/.bin/vitest run --maxWorkers=1 scripts/run-v1-38-planner-feasibility.test.ts scripts/lib/v1-38-planner-supervised-runtime.test.ts scripts/lib/v1-38-executable-closure.test.ts`. Tests use denied hosts, synthetic transport, static source closure and temporary local fixtures only. The unchanged 36-case worker matrix was not repeated. `git diff --check` passes.
+
+## Iteration 3 — Historical Findings (four resolved; CR-09 narrowed above)
 
 ### CR-08: Benchmark inherits a 120-second Match lifetime
 

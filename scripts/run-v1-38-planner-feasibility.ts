@@ -403,6 +403,11 @@ export const readPlannerChargeInventory = (paths: PlannerPaths, terminalize = fa
   return readPlannerCharges(paths,manifest,material,terminalize)
 }
 
+/** Persist the allocated call even when its deadline guard prevents dispatch. */
+export const allocatePlannerBenchmarkCall = (outputDirectory: string,manifestRoot: LabRoot,ordinal: number,request: LabKernelRequest,guard: () => void) => {
+  publish(join(outputDirectory,"benchmark",`charge-${ordinal}.json`),{ manifestRoot,ordinal,requestRoot: labRoot("benchmark-request",request) })
+  guard()
+}
 export const retainedBenchmarkPass = (timingPassed: boolean,retained: number,summaryPassed: boolean,cleanupComplete: boolean) => timingPassed && retained===2200 && summaryPassed && cleanupComplete
 const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material: ReturnType<typeof buildFrozenMaterial>) => {
   const durations: { selectActivations: number[]; soldierBrain: number[] } = { selectActivations: [],soldierBrain: [] }
@@ -494,8 +499,8 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
       try { const result=host.close(); cleanup={cleanupComplete:result.cleanupComplete,orphanedChild:result.orphanedChild}; return result }
       finally { publish(join(paths.outputDirectory,"benchmark-cleanup.json"),cleanup) }
     },invoke(request: LabKernelRequest,identity: typeof host.identity) {
-      guard(); const ordinal = host.accounting.length
-      publish(join(paths.outputDirectory,"benchmark",`charge-${ordinal}.json`),{ manifestRoot: manifest.root,ordinal,requestRoot: labRoot("benchmark-request",request) })
+      const ordinal = host.accounting.length
+      allocatePlannerBenchmarkCall(paths.outputDirectory,manifest.root,ordinal,request,guard)
       try {
         const e = host.invoke(request,identity)
         publish(join(paths.outputDirectory,"benchmark",`record-${ordinal}.json`),{ evidence: e,timing: host.timing(e) ?? null })
