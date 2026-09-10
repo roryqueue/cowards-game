@@ -39,9 +39,9 @@ Current inventory: 153 phase plan files, 141 completed plans, 8 active pending, 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
 - **v1.36 Competition Maturity** - Phases 249-255, shipped 2026-07-12 ([archive](milestones/v1.36-ROADMAP.md))
 - **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, shipped 2026-07-22 ([archive](milestones/v1.37-ROADMAP.md))
-- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, paused/deferred at Phase 262
+- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, active at Phase 263; Phase 262 independently verified complete
 
-## v1.38 Competitive Strategy Factory and Adversarial League — PAUSED/DEFERRED
+## v1.38 Competitive Strategy Factory and Adversarial League
 
 ## Overview
 
