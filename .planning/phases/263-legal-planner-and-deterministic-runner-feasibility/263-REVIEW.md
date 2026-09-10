@@ -1,11 +1,12 @@
 ---
 phase: 263-legal-planner-and-deterministic-runner-feasibility
-reviewed: 2026-09-10T03:15:37Z
+reviewed: 2026-09-10T03:37:24Z
+review_iteration: 2
 depth: standard
 review_scope: partial-pre-integration-completed-slices
-review_commit: d13db633
+review_commit: 5f09714e
 diff_base: b26a0caa
-files_reviewed: 32
+files_reviewed: 36
 files_reviewed_list:
   - packages/runtime-js/src/planner-benchmark-observer.test.ts
   - packages/runtime-js/src/worker-harness.ts
@@ -18,6 +19,9 @@ files_reviewed_list:
   - packages/strategy-lab/src/feasibility-protocol.ts
   - packages/strategy-lab/src/identity.ts
   - packages/strategy-lab/src/index.ts
+  - packages/strategy-lab/src/planner-corpus.ts
+  - packages/strategy-lab/src/planner/emit.ts
+  - packages/strategy-lab/src/planner/emission.test.ts
   - packages/strategy-lab/src/planner/assign.test.ts
   - packages/strategy-lab/src/planner/assign.ts
   - packages/strategy-lab/src/planner/missions.test.ts
@@ -32,6 +36,7 @@ files_reviewed_list:
   - packages/strategy-lab/src/tasks.test.ts
   - packages/strategy-lab/src/tasks.ts
   - packages/strategy-lab/src/worker.ts
+  - packages/strategy-lab/src/worker.test.ts
   - packages/strategy-lab/tsconfig.json
   - scripts/check-v1-38-lab-boundaries.test.ts
   - scripts/check-v1-38-lab-boundaries.ts
@@ -40,10 +45,12 @@ files_reviewed_list:
   - scripts/lib/v1-38-planner-supervised-runtime.test.ts
   - scripts/lib/v1-38-planner-supervised-runtime.ts
 findings:
-  critical: 5
-  warning: 1
+  critical: 2
+  warning: 0
   info: 0
-  total: 6
+  total: 2
+resolved_findings: [CR-01, CR-02, CR-03, CR-04, CR-05, WR-01]
+active_findings: [CR-06, CR-07]
 status: issues_found
 ---
 
@@ -51,11 +58,58 @@ status: issues_found
 
 ## Summary
 
-Standard adversarial review of the 32 explicitly submitted files from completed Plans 01, 02, 04 and 05 at `d13db633`. This is **not a whole-phase pass**, empirical feasibility result, or review of in-progress Plan 03 brain/emission work. Plans 06/07 integration and actual execution remain outside this review. Five blockers affect result validity or bounded execution; one warning concerns the boundary monitor. Fix in the existing plans before empirical execution; no new certification or custody workflow is required.
+Iteration 2 independently re-reviewed the six fixes through `5f09714e`, with the same 32 files plus the four named corpus/worker/emission files. The original six findings are resolved; **two cleanup blockers remain (CR-06 and CR-07)**. Frontmatter counts describe only active findings. The original review below is retained as historical evidence, not an active fix list. This remains **a partial pre-integration review**, not a whole-phase pass or empirical feasibility result. The completed brain implementation as a whole and in-progress Plan 06 CLI remain excluded; emission review here covers the corpus/static-builder integration, not guest execution.
 
 No structural pre-pass was supplied. Source files were not modified. No live Strategy, supervisor, container, preflight, benchmark or Match was executed. Reproductions used trusted synthetic worker output, pure reductions, injected failing callbacks and source-graph fixtures only. Temporary synthetic shard directories were removed by their own scoped cleanup; historical files and locks were untouched.
 
 ## Narrative Findings (AI reviewer)
+
+## Iteration 2 — Active Findings
+
+### CR-06: Pre-dispatch benchmark rejection skips provider cleanup
+
+**Classification:** BLOCKER
+
+**File:** `/Users/roryquinlan/runtime/cowards-game/packages/strategy-lab/src/benchmark.ts:89-97`
+
+**Issue:** The new provider identity admission (and corpus admission/immutable-copy steps) executes before the `try/finally` that closes the provider. A mismatched source/harness/attempt now correctly consumes zero invocations, but rejects without closing the already-created provider. `createPlannerSupervisedRuntime` creates its container session before returning the provider, so this leaves owned resources running on precisely the rejected setup path. This is distinct from the corrected late-dispatch defect CR-05.
+
+**Evidence:** A synthetic provider with a wrong identity and counters returned `LAB_BENCHMARK_PROVIDER_IDENTITY` with `invoked: 0, closed: 0`. No source or container was executed.
+
+**Fix:** Put all admission after provider ownership inside an outer cleanup guard, keeping zero invocation charge on admission rejection. Close exactly once on invalid corpus, identity mismatch and clone/admission exceptions; preserve cleanup uncertainty as non-pass rather than asserting successful cleanup. Add close-count assertions to the initial-binding rejection tests and a malformed-corpus rejection test.
+
+### CR-07: A stuck cancellation callback prevents terminal failure and relay termination
+
+**Classification:** BLOCKER
+
+**File:** `/Users/roryquinlan/runtime/cowards-game/packages/strategy-lab/src/worker.ts:85-90`
+
+**Issue:** Failure handling clears every deadline, then awaits all external `cancel` callbacks without any bound, and only afterward terminates relay workers. The public callback type explicitly allows a Promise. If owned-supervisor cancellation never settles, the failed pool never returns, surviving relay threads are never terminated, and `runLabTasks` cannot publish its charged-failure/unused dispositions. Thus the newly added cleanup hook can defeat the bounded failure path even after a timeout or worker loss has already been detected.
+
+**Evidence:** A synthetic relay was deliberately lost at ordinal 0 and its cancellation hook returned a never-settling Promise. Cancellation was invoked once and the pool remained unsettled. Static tracing confirms all pool deadlines were cleared before that wait and no subsequent timeout exists. The synthetic test process exited after observing the condition; it launched no external supervisor.
+
+**Fix:** Terminate owned relay workers in a guaranteed cleanup path independent of callback settlement. Bound asynchronous supervisor cancellation using the declared cleanup/remaining outer budget; retain unresolved cleanup as explicit incomplete/non-pass evidence and preserve charges without retrying. Add tests for rejected and never-settling cancellation, including two workers so a surviving relay is verified terminated. A cancellation failure must not be reported as successful cleanup.
+
+## Iteration 2 — Resolved Original Findings
+
+| Finding | Disposition and inspected correction |
+| --- | --- |
+| CR-01 | Resolved: immutable run-binding header joins graph, evidence class, machine and execution commitment before resume; old unbound inventory cannot be adopted; resumed scored supervised records require traces. |
+| CR-02 | Resolved: per-attempt timer resets at each charged dispatch; two synthetic 70-second attempts can complete cumulatively. The new cancellation implementation has the separate CR-07 defect. |
+| CR-03 | Resolved: explicit alias projection compares classification, outcome and all three semantic roots with its scientific representative; mismatch prevents payoffs. |
+| CR-04 | Resolved before measurement: mapped mission corpus is now used by the frozen protocol and benchmark. Actual mission/absence/stale/failure paths and exact mapped root are tested; no empirical result was reinterpreted. |
+| CR-05 | Resolved: full immutable provider identity is admitted before dispatch and every returned observation is bound before the next call. The admission cleanup omission is separately CR-06. |
+| WR-01 | Resolved: TypeScript lexical symbols distinguish outer and inner bindings; candidate assignments remain conservative and the original shadowing counterexample is covered. |
+
+`attemptOrdinals` only filters the already-allocated graph, rejects duplicates/non-integers/out-of-range values, excludes already-published work, and cannot reduce fewer than 24 records into scored coverage. It does not mint attempts or change scientific identities. `executionRoot` is immutable inventory admission, not authority to skip runtime identity checks; its concrete construction remains Plan 06's responsibility. System/unused records still cannot yield payoffs, and normal lost-worker terminalization conservatively retains incomplete cleanup.
+
+### Iteration 2 verification
+
+Independent explicit completed-file run: **7 suites, 74 tests passed**, 185.12 seconds wall time (167.75 seconds tests). Command: `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/worker.test.ts packages/strategy-lab/src/shards.test.ts packages/strategy-lab/src/runner-invariance.test.ts packages/strategy-lab/src/benchmark.test.ts packages/strategy-lab/src/feasibility-protocol.test.ts packages/strategy-lab/src/planner/emission.test.ts scripts/check-v1-38-lab-boundaries.test.ts`. This includes the complete 36-case synthetic worker/layout/order/lifecycle matrix, real relay workers with synthetic payloads/fake time, mapped corpus checks, static emission, injected benchmark calculations and boundary fixtures. Passing regressions do not cover the two newly reproduced cleanup defects. No Plan 06 WIP CLI suite or historical guest-execution suite was included. `git diff --check` passes for the review artifact. No source files were changed or committed by this reviewer.
+
+## Original Review — Iteration 1 Historical Record (all six findings resolved)
+
+Reviewed at `d13db633` on 2026-09-10T03:15:37Z. The original severity, evidence and fix suggestions below are retained; they are not additional active findings.
 
 ## Critical Issues
 
