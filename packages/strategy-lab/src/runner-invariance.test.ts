@@ -12,6 +12,24 @@ const dirs: string[] = []
 const directory = () => { const d = realpathSync(mkdtempSync(join(tmpdir(), "lab-runner-test-"))); dirs.push(d); return d }
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 describe("actual trusted-thread runner and typed canonical reduction", () => {
+  it("publishes charged failure dispositions after stalled supervisor cancellation", async () => {
+    let release!: () => void
+    const bothStarted = new Promise<void>(resolve => { release = resolve })
+    const result = await runLabTasks({ directory: directory(), graph, layout: { workers: 2, shardSize: 1, order: "forward" }, machineRoot: r,
+      job: { kind: "supervised", executionRoot: r, remainingCleanupMs: () => 20,
+        execute: async assignment => {
+          if (assignment.worker === 1) { release(); return new Promise(() => {}) }
+          await bothStarted; throw new Error("synthetic transport failure")
+        },
+        cancel: async () => new Promise<void>(() => {}),
+      },
+    })
+    expect(result).toMatchObject({ cleanupComplete: false, relaysTerminated: true })
+    expect(result.reduction).toMatchObject({ status: "non_pass", counts: { systemFailure: 2, unused: 22 }, payoffs: [] })
+    const charged = result.records.filter(record => record.attempt.classification === "system_failure")
+    expect(charged).toHaveLength(2)
+    expect(charged.every(record => record.attempt.invocationCount === 24800 && record.operational.cleanup === "incomplete")).toBe(true)
+  }, 30000)
   it("restricts checkpoint dispatch to unique preallocated opportunities without changing coverage", async () => {
     const options = { directory: directory(), graph, layout: { workers: 1, shardSize: 3, order: "forward" } as const, machineRoot: r, job: { kind: "synthetic" as const } }
     for (const attemptOrdinals of [[0, 0], [-1], [24], [0.5], Array(25).fill(0)]) await expect(runLabTasks({ ...options, attemptOrdinals })).rejects.toThrow("LAB_ATTEMPT_SELECTION")

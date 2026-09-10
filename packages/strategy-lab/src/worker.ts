@@ -40,6 +40,8 @@ export interface LabWorkerHooks {
   onResult(assignment: LabAssignment, result: unknown): Promise<void> | void
   invoke?(assignment: LabAssignment): Promise<unknown>
   cancel?(assignment: LabAssignment): Promise<void> | void
+  /** Remaining coordinator-owned outer budget, never a fresh Match allowance. */
+  remainingCleanupMs?(): number
 }
 /** Reset at every state boundary; one Match allowance never times a batch. */
 export const createLabWorkerDeadline = (expire: () => void) => {
@@ -53,7 +55,8 @@ export const runLabWorkerPool = async (assignments: readonly LabAssignment[], wo
   const pool: Worker[] = [], threadIds: number[] = []
   const deadlines: ReturnType<typeof createLabWorkerDeadline>[] = []
   const active = new Map<number, LabAssignment>()
-  let failed = false
+  const startedAt = performance.now()
+  let failed = false, cleanupComplete = true
   const runs = Array.from({ length: workers }, (_, slot) => {
     const owned = assignments.filter((a) => a.worker === slot)
     if (owned.length === 0) return Promise.resolve()
@@ -75,7 +78,7 @@ export const runLabWorkerPool = async (assignments: readonly LabAssignment[], wo
           if (!assignment || message.id !== assignment.attempt.id) throw new TypeError("LAB_WORKER_TASK_BINDING")
           if (message.kind === "start" && state === "start") { hooks.onStart(assignment); active.set(slot, assignment); state = "result"; deadline.arm("attempt"); worker.postMessage({ kind: "go" }); return }
           if (message.kind === "invoke" && state === "result" && kind === "supervised" && hooks.invoke) { const payload = await hooks.invoke(assignment); if (!failed) worker.postMessage({ kind: "external", payload }); return }
-          if (message.kind === "result" && state === "result") { deadline.clear(); await hooks.onResult(assignment, message.payload); active.delete(slot); cursor += 1; state = "start"; deadline.arm("transport"); worker.postMessage({ kind: "next" }); return }
+          if (message.kind === "result" && state === "result") { deadline.clear(); await hooks.onResult(assignment, message.payload); if (failed) return; active.delete(slot); cursor += 1; state = "start"; deadline.arm("transport"); worker.postMessage({ kind: "next" }); return }
           throw new TypeError("LAB_WORKER_PROTOCOL")
         })().catch(reject)
       })
@@ -85,10 +88,29 @@ export const runLabWorkerPool = async (assignments: readonly LabAssignment[], wo
   catch {
     failed = true
     deadlines.forEach((deadline) => deadline.clear())
-    // Owned external supervisors must be cancelled too, not merely relay threads.
-    await Promise.allSettled([...active.values()].map(async (assignment) => hooks.cancel?.(assignment)))
-    await Promise.all(pool.map((w) => w.terminate())); await Promise.allSettled(runs)
+    // Stop every owned relay immediately, independent of external cancellation
+    // settlement. A stuck callback must not prevent charged terminal accounting.
+    const relayStops = pool.map(worker => worker.terminate())
+    const poolRemaining = Math.max(0, 3600000 - (performance.now() - startedAt))
+    let remaining = poolRemaining
+    try {
+      const requested = hooks.remainingCleanupMs?.() ?? poolRemaining
+      remaining = Number.isFinite(requested) ? Math.max(0, Math.min(poolRemaining, requested)) : 0
+    } catch { remaining = 0 }
+    let cancellationTimer: ReturnType<typeof setTimeout> | undefined
+    try {
+      const expires = new Promise<boolean>(resolve => { cancellationTimer = setTimeout(() => resolve(false), remaining) })
+      const cancelled = Promise.allSettled([...active.values()].map(async assignment => {
+        if (kind === "supervised" && !hooks.cancel) throw new TypeError("LAB_CANCEL_MISSING")
+        await hooks.cancel?.(assignment)
+      })).then(results => results.every(result => result.status === "fulfilled"))
+      const boundedCancellation = Promise.race([cancelled, expires])
+      await Promise.allSettled(relayStops)
+      cleanupComplete = await boundedCancellation
+      await Promise.allSettled(runs)
+    } finally { if (cancellationTimer !== undefined) clearTimeout(cancellationTimer) }
   }
   finally { deadlines.forEach((deadline) => deadline.clear()) }
-  return { failed, threadIds }
+  const relaysTerminated = pool.every(worker => worker.threadId === -1)
+  return { failed, threadIds, cleanupComplete: cleanupComplete && relaysTerminated, relaysTerminated }
 }

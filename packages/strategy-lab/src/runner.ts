@@ -6,7 +6,7 @@ import { runLabWorkerPool } from "./worker.js"
 
 export interface RunLabTaskOptions {
   directory: string; graph: LabTaskGraph; layout: LabLayout; machineRoot: LabRoot;
-  job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; executionRoot: LabRoot; execute: (assignment: LabAssignment) => Promise<LabStoredRecord>; cancel: (assignment: LabAssignment) => Promise<void> | void };
+  job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; executionRoot: LabRoot; execute: (assignment: LabAssignment) => Promise<LabStoredRecord>; cancel: (assignment: LabAssignment) => Promise<void> | void; remainingCleanupMs?: () => number };
   syntheticDispatchLimit?: number;
   /** Selects existing opportunities for a checkpoint, never changes coverage or budget. */
   attemptOrdinals?: readonly number[];
@@ -45,7 +45,7 @@ export const runLabTasks = async (options: RunLabTaskOptions) => {
   }
   const pool = await runLabWorkerPool(dispatch, options.layout.workers, options.job.kind, {
     onStart: (a) => recordLabAttemptStart(options.directory, graph, a.attempt.id),
-    ...(options.job.kind === "supervised" ? { cancel: options.job.cancel, invoke: async (a: LabAssignment) => {
+    ...(options.job.kind === "supervised" ? { cancel: options.job.cancel, ...(options.job.remainingCleanupMs ? { remainingCleanupMs: options.job.remainingCleanupMs } : {}), invoke: async (a: LabAssignment) => {
       if (options.job.kind !== "supervised") throw new TypeError("LAB_JOB_KIND")
       return assemble(a, await options.job.execute(a))
     } } : {}),
@@ -71,6 +71,6 @@ export const runLabTasks = async (options: RunLabTaskOptions) => {
     }
     inventory = resumeLabInventory(options.directory, graph)
   }
-  const reduction = inventory.records.length === 24 ? reduceLabRecords(graph, inventory.records, { layout: options.layout, machineRoot: options.machineRoot, ledgerRoot: inventory.ledgerRoot, threadIds: pool.threadIds, mode: options.job.kind }) : null
-  return { records: inventory.records, reduction, dispatched: dispatch.length, threadIds: pool.threadIds, ledgerRoot: inventory.ledgerRoot }
+  const reduction = inventory.records.length === 24 ? reduceLabRecords(graph, inventory.records, { layout: options.layout, machineRoot: options.machineRoot, ledgerRoot: inventory.ledgerRoot, threadIds: pool.threadIds, mode: options.job.kind, cleanupComplete: pool.cleanupComplete, relaysTerminated: pool.relaysTerminated }) : null
+  return { records: inventory.records, reduction, dispatched: dispatch.length, threadIds: pool.threadIds, ledgerRoot: inventory.ledgerRoot, cleanupComplete: pool.cleanupComplete, relaysTerminated: pool.relaysTerminated }
 }

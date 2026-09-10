@@ -1,8 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest"
 import { createLabWorkerDeadline, runLabWorkerPool } from "./worker.js"
 import { assignLabTasks, enumerateLabTasks } from "./tasks.js"
+import { Worker } from "node:worker_threads"
 
 afterEach(() => vi.useRealTimers())
+afterEach(() => vi.restoreAllMocks())
 it("resets the admitted per-attempt allowance instead of charging a worker batch", () => {
   vi.useFakeTimers()
   const expire = vi.fn(), deadline = createLabWorkerDeadline(expire)
@@ -45,4 +47,28 @@ it("charges two valid70s relay attempts, but cancels and stops one over120s atte
   expect(starts).toHaveBeenCalledOnce()
   expect(results).not.toHaveBeenCalled()
   expect(cancel).toHaveBeenCalledExactlyOnceWith(tasks[0])
+}, 30000)
+it.each(["rejected", "never-settling"])("terminates both owned relays despite %s cancellation and retains incomplete cleanup", async fault => {
+  const root = `sha256:${"a".repeat(64)}` as const
+  const graph = enumerateLabTasks({ admittedRoot: root, algorithm: "hierarchical-planner-v1", candidateRoot: root, opponentRoot: root, inputRoot: root, budgetRoot: root })
+  const tasks = assignLabTasks(graph, { workers: 2, shardSize: 1, order: "forward" }).slice(0, 2)
+  const termination = vi.spyOn(Worker.prototype, "terminate")
+  let release!: () => void
+  const bothStarted = new Promise<void>(resolve => { release = resolve })
+  const starts = vi.fn(), results = vi.fn()
+  const cancel = vi.fn(async () => { if (fault === "rejected") throw new Error("cleanup failed"); return new Promise<void>(() => {}) })
+  const result = await runLabWorkerPool(tasks, 2, "supervised", {
+    onStart: starts, onResult: results, cancel, remainingCleanupMs: () => 20,
+    invoke: async assignment => {
+      if (assignment.worker === 1) { release(); return new Promise(() => {}) }
+      await bothStarted
+      throw new Error("synthetic transport failure")
+    },
+  })
+  expect(result).toMatchObject({ failed: true, cleanupComplete: false, relaysTerminated: true })
+  expect(starts).toHaveBeenCalledTimes(2)
+  expect(results).not.toHaveBeenCalled()
+  expect(cancel).toHaveBeenCalledTimes(2)
+  expect(termination).toHaveBeenCalledTimes(2)
+  expect(termination.mock.contexts.every(worker => worker instanceof Worker && worker.threadId === -1)).toBe(true)
 }, 30000)
