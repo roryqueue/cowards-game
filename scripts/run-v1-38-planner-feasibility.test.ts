@@ -1,4 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+const safety = vi.hoisted(() => ({ deniedHost: vi.fn(() => { throw new Error("TEST_LIVE_HOST_DENIED") }), review: "---\nstatus: issues_found\n---\nDeterministic unresolved test fixture.\n" }))
+// No routine test in this module may construct a host, regardless of the real
+// repository's review state. Synthetic hosts must be explicitly supplied.
+vi.mock("./lib/v1-38-planner-supervised-runtime.js", () => ({ createPlannerSupervisedRuntime: safety.deniedHost }))
+vi.mock("node:fs", async importOriginal => {
+  const actual = await importOriginal<typeof import("node:fs")>()
+  return { ...actual, readFileSync: (...args: Parameters<typeof actual.readFileSync>) => String(args[0]).endsWith("/263-REVIEW.md") ? safety.review : Reflect.apply(actual.readFileSync, actual, args) }
+})
 import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
@@ -75,6 +83,7 @@ describe("private feasibility CLI synthetic/read-only modes", () => {
     expect(verifyPlannerFeasibility(options)).toMatchObject({ status: "prepared",executed: false })
     expect(readFileSync(options.manifestPath,"utf8")).not.toContain("SECRET")
     await expect(runPlannerFeasibility(options)).rejects.toThrow(/REVIEW/)
+    expect(safety.deniedHost).not.toHaveBeenCalled() // even if real REVIEW becomes clean
     expect(resolve(options.outputDirectory)).not.toBe(process.cwd())
   },30000)
 })
