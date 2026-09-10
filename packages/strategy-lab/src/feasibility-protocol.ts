@@ -1,6 +1,7 @@
 import { CANONICAL_ARENA_CATALOG_V1_37, DEFAULT_RUNTIME_LIMITS, type StrategyInputV119, type SoldierBrainInputV119 } from "@cowards/spec"
 import { createInitialGameState, createStrategyInputV119, createSoldierBrainInputV119 } from "@cowards/engine"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "./contracts.js"
+import { mapPlannerMissionCorpus } from "./planner-corpus.js"
 
 export const FEASIBILITY_MISSIONS = ["evacuation", "rear-entry", "edge-push", "screen", "anchor", "graph-cut-stone", "reserve", "recovery", "bait", "pincer"] as const
 export const FEASIBILITY_FAMILIES = ["positive", "stale", "failure", "fallback", "tactic", "defense", "boundary", "Advance", "memory", "hostile-schema"] as const
@@ -11,7 +12,7 @@ export interface FeasibilityCase<T> { ordinal: number; mission: string; family: 
  * The hostile-schema timing family is VALID boundary-sized input. Invalid inputs
  * belong exclusively to Plan06's separately frozen256 invocation inventory.
  */
-export const buildFeasibilityCorpus = () => {
+export const buildFixtureFeasibilityCorpus = () => {
   const selectActivations: FeasibilityCase<StrategyInputV119>[] = []
   const soldierBrain: FeasibilityCase<SoldierBrainInputV119>[] = []
   for (const [missionIndex, mission] of FEASIBILITY_MISSIONS.entries()) {
@@ -61,6 +62,9 @@ export const buildFeasibilityCorpus = () => {
   const root = labRoot("timing-corpus", { selectActivations: selectActivations.map((c) => c.caseRoot), soldierBrain: soldierBrain.map((c) => c.caseRoot) })
   return freezeLabValue({ selectActivations, soldierBrain, root })
 }
+
+/** Final premeasurement corpus: both benchmark admission and protocol bind it. */
+export const buildFeasibilityCorpus = () => mapPlannerMissionCorpus(buildFixtureFeasibilityCorpus())
 
 const benchmark = {
   identity: "v1.38-direct-execution-benchmark-v1", hardwareClass: "profile-neutral-fixed-hardware-class-v1",

@@ -7,5 +7,5 @@
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc -b", "test": "vitest run --maxWorkers=1" },
-  "dependencies": { "@cowards/spec": "workspace:*", "@cowards/engine": "workspace:*" }
+  "dependencies": { "@cowards/spec": "workspace:*", "@cowards/engine": "workspace:*", "@cowards/runtime-js": "workspace:*" }
 }

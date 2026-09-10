@@ -5,8 +5,8 @@ import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../../runtime-js/src/revision.js"
 import { validateStrategySource } from "../../../runtime-js/src/validation.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot } from "../contracts.js"
-import { PLANNER_FEASIBILITY_PROTOCOL, type buildFeasibilityCorpus } from "../feasibility-protocol.js"
-import { MISSION_KINDS, createMission, fallbackMission, type MissionKind } from "./missions.js"
+import { PLANNER_FEASIBILITY_PROTOCOL } from "../feasibility-protocol.js"
+export { mapPlannerMissionCorpus } from "../planner-corpus.js"
 
 const BUILD_ALGORITHM = "planner-static-typescript-concat-v1"
 const SOURCE_MODULES = ["missions.ts","assign.ts","brain.ts"] as const
@@ -70,24 +70,4 @@ export const buildPlannerCandidate = () => {
   if (!revision.validation.valid || revision.sourceBytes > 65536) throw new TypeError("PLANNER_CANDIDATE_SOURCE")
   const moduleRoots = SOURCE_MODULES.map(name => ({ name,root: rawSourceRoot(readFileSync(new URL(name,import.meta.url),"utf8")) }))
   return freezeLabValue({ schemaVersion: "planner-candidate-v1",privacy: "private_offline",buildAlgorithm: BUILD_ALGORITHM,source,sourceRoot: rawSourceRoot(source),sourceBytes: revision.sourceBytes,preferredSourceBytes: 49152,preferredSizeMet: revision.sourceBytes < 49152,hardSourceBytes: 65536,revision,moduleRoots,abi: "strategy-runtime-abi-v1.19",tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot,budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,budget: PLANNER_FEASIBILITY_PROTOCOL.budget,empiricalPassed: false })
-}
-
-/** Explicit premeasurement mapping. This changes corpus roots and must be frozen
- * by Plan06; never substitute it into an already measured manifest. Family labels
- * describe canonical observations, not claims of tactical success or reachability. */
-export const mapPlannerMissionCorpus = (corpus: ReturnType<typeof buildFeasibilityCorpus>) => {
-  const selectActivations = corpus.selectActivations.map(c => structuredClone(c))
-  const mappings: { ordinal: number; requested: string; realized: string; fallback: boolean }[] = []
-  const soldierBrain = corpus.soldierBrain.map(c => {
-    const planner = selectActivations.find(p => p.ordinal === c.ordinal)
-    if (!planner || !MISSION_KINDS.includes(c.mission as MissionKind)) throw new TypeError("PLANNER_CORPUS_PAIR")
-    const intended = createMission(c.mission as MissionKind,planner.input,c.input.self.id)
-    const objective = intended ?? fallbackMission(planner.input,c.input.self.id)
-    mappings.push({ ordinal: c.ordinal,requested: c.mission,realized: objective.kind,fallback: intended === null })
-    const input = { ...structuredClone(c.input),objective }
-    const inputRoot = labRoot("timing-input",input)
-    return { ...c,input,inputRoot,caseRoot: labRoot("timing-case",{ method: "soldierBrain",ordinal: c.ordinal,mission: c.mission,family: c.family,inputRoot }) }
-  })
-  const root = labRoot("timing-corpus",{ selectActivations: selectActivations.map(c => c.caseRoot),soldierBrain: soldierBrain.map(c => c.caseRoot) })
-  return freezeLabValue({ selectActivations,soldierBrain,root,mappingVersion: "fixture-to-mission-v1",sourceCorpusRoot: corpus.root,mappings })
 }

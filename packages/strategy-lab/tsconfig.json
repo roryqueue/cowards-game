@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "composite": true, "rootDir": "src", "outDir": "dist", "types": ["node"] },
-  "references": [{ "path": "../spec" }, { "path": "../engine" }],
+  "references": [{ "path": "../spec" }, { "path": "../engine" }, { "path": "../runtime-js" }],
   "include": ["src"]
 }

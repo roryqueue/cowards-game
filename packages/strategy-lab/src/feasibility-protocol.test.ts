@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { resolveStrategyInputSchema, resolveSoldierBrainInputSchema, DEFAULT_RUNTIME_LIMITS } from "@cowards/spec"
 import { PLANNER_FEASIBILITY_PROTOCOL as P, buildFeasibilityCorpus, buildFeasibilityAllocation, validateFeasibilityAllocation, evaluateFeasibilityTiming, validateFeasibilityProtocol } from "./feasibility-protocol.js"
+import { evaluateMission, validateMission, type MissionObjective } from "./planner/missions.js"
+import { observeBrainMission } from "./planner/brain.js"
 
 describe("frozen source-independent feasibility protocol", () => {
   it("freezes 24 charges across12 labels but only8 scientific cells", () => {
@@ -34,7 +36,9 @@ describe("frozen source-independent feasibility protocol", () => {
   })
   it("builds100 stable legal cases per method with full mission/family coverage and frozen exact hashes", () => {
     const corpus = buildFeasibilityCorpus()
-    expect(corpus.root).toBe("sha256:b14605fdf1d117e0759fb75df0719f6196f54dda8f63660b14742937a7edaed3")
+    expect(corpus.sourceCorpusRoot).toBe("sha256:b14605fdf1d117e0759fb75df0719f6196f54dda8f63660b14742937a7edaed3")
+    expect(corpus.root).not.toBe(corpus.sourceCorpusRoot)
+    expect(corpus.root).toBe("sha256:fe109ecf734e1f8d0dcdebd140037f083a4a51f7e28cd22a0e313133eb116340")
     expect(corpus).toEqual(buildFeasibilityCorpus())
     expect(corpus.selectActivations).toHaveLength(100)
     expect(corpus.soldierBrain).toHaveLength(100)
@@ -51,5 +55,20 @@ describe("frozen source-independent feasibility protocol", () => {
     }
     expect(corpus.root).toBe(P.corpusRoot)
     expect(P.benchmark.inputReset).toBe("fresh-input-and-memory-every-call")
+  })
+  it("exercises deployed active, expired, target-failed and absent fallback paths", () => {
+    const corpus = buildFeasibilityCorpus()
+    const observed = new Set(corpus.soldierBrain.map(c => observeBrainMission(c.input).status))
+    expect(observed).toEqual(new Set(["active", "complete", "stale", "absent", "invalid"]))
+    for (const c of corpus.selectActivations.filter(c => c.family !== "hostile-schema")) {
+      const missions = (c.input.strategyMemory as { missions: MissionObjective[] }).missions
+      expect(missions.every(m => validateMission(m, c.input))).toBe(true)
+      const statuses = missions.map(m => evaluateMission(m, c.input).status)
+      if (c.family === "stale") expect(statuses).toContain("stale")
+      if (c.family === "failure") expect(statuses).toContain("failed")
+      if (c.family === "fallback") expect(missions).toEqual([])
+    }
+    const kinds = corpus.soldierBrain.filter(c => c.family === "positive").map(c => (c.input.objective as unknown as MissionObjective).kind)
+    expect(new Set(kinds).size).toBe(10)
   })
 })

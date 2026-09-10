@@ -4,7 +4,7 @@ import { validateStrategySource } from "../../../runtime-js/src/validation.js"
 import { SoldierBrainResultSchema, StrategyResultSchema, encodeCanonicalJson } from "@cowards/spec"
 import { emitPlannerSource, buildPlannerCandidate, assertPlannerSourceClosure, mapPlannerMissionCorpus } from "./emit.js"
 import { runPlannerSoldierBrain } from "./brain.js"
-import { buildFeasibilityCorpus } from "../feasibility-protocol.js"
+import { buildFixtureFeasibilityCorpus } from "../feasibility-protocol.js"
 
 describe("static planner source builder (never executes source)", () => {
   it("emits stable complete bytes, valid revision and exact selected runtime binding", () => {
@@ -33,13 +33,13 @@ describe("static planner source builder (never executes source)", () => {
     expect(StrategyResultSchema.safeParse({ activationOrders: [],strategyMemory: "x".repeat(32768) }).success).toBe(false)
   })
   it("explicitly maps fixtureContext to real ten-mission packets before final corpus freeze", () => {
-    const original = buildFeasibilityCorpus(), mapped = mapPlannerMissionCorpus(original)
+    const original = buildFixtureFeasibilityCorpus(), mapped = mapPlannerMissionCorpus(original)
     expect(mapped.root).not.toBe(original.root)
-    expect(new Set(mapped.soldierBrain.map(c => (c.input.objective as { kind: string }).kind)).size).toBe(10)
+    expect(new Set(mapped.soldierBrain.filter(c => c.family === "positive").map(c => (c.input.objective as { kind: string }).kind)).size).toBe(10)
     for (const c of mapped.soldierBrain) {
       expect(encodeCanonicalJson(c.input.objective!,{ context: "canonical-manifest" }).ok).toBe(true)
       const result = runPlannerSoldierBrain(c.input)
-      expect(result.soldierMemory).not.toMatchObject({ planner: { missionStatus: "invalid" } })
+      if (c.family !== "hostile-schema") expect(result.soldierMemory).not.toMatchObject({ planner: { missionStatus: "invalid" } })
       expect(SoldierBrainResultSchema.safeParse(result).success).toBe(true)
     }
     expect(original.soldierBrain[0]!.input.objective).toHaveProperty("fixtureContext")
