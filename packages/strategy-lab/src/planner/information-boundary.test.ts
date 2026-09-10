@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { buildPlannerValidationInventory, evaluatePlannerValidation, type PlannerValidationRecord } from "../../../../../../scripts/run-v1-38-planner-feasibility.js"
 import { selectPlannerActivations } from "./assign.js"
 import { runPlannerSoldierBrain } from "./brain.js"
 import { labRoot } from "../contracts.js"
 import type { SoldierBrainInputV119, StrategyInputV119 } from "@cowards/spec"
+// Dynamic trusted test helper import keeps root CLI outside the package's build graph.
+const { buildPlannerValidationInventory,evaluatePlannerValidation } = await import(new URL("../../../../scripts/run-v1-38-planner-feasibility.ts",import.meta.url).href)
 
 describe("frozen legal-information inventory, trusted modules only", () => {
   it("64 canonical pairs differ privately but have identical input bytes before choices and memory", () => {
@@ -18,7 +19,7 @@ describe("frozen legal-information inventory, trusted modules only", () => {
   })
   it("tactical positive controls reject constant decisions and distinguish actual calls from static rejection", () => {
     const inventory = buildPlannerValidationInventory()
-    const records: PlannerValidationRecord[] = inventory.cases.map(c => {
+    const records = inventory.cases.map((c: { ordinal: number; root: string; inputRoot: string; expected: { classification: string }; method: string; family: string; input: unknown }) => {
       const rejection = c.expected.classification !== "success"
       const value = c.method === "selectActivations" ? selectPlannerActivations(c.input as StrategyInputV119) : c.family === "hostile" ? null : runPlannerSoldierBrain(c.input as SoldierBrainInputV119)
       return { ordinal: c.ordinal,caseRoot: c.root,inputRoot: c.inputRoot,classification: c.expected.classification,guestCalls: c.expected.classification === "source_rejection" || c.expected.classification === "input_rejection" ? 0 : 1,value: rejection ? null : value,provenance: "synthetic",cleanupComplete: true }

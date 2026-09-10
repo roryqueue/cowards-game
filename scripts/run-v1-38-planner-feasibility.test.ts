@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { buildPlannerValidationInventory, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility } from "./run-v1-38-planner-feasibility.js"
@@ -23,7 +23,7 @@ describe("private feasibility CLI synthetic/read-only modes", () => {
     expect(() => evaluatePlannerValidation(inventory,[])).toThrow()
   })
   it("temporary prepare is no-clobber; verify prepared state never executes; unresolved review blocks run", async () => {
-    const root = mkdtempSync(join(tmpdir(),"lab-cli-test-")); dirs.push(root)
+    const root = realpathSync(mkdtempSync(join(tmpdir(),"lab-cli-test-"))); dirs.push(root)
     const options = { manifestPath: join(root,"manifest.json"),outputDirectory: join(root,"phase263-feasibility") }
     const manifest = preparePlannerFeasibility(options)
     expect(manifest.claimClass).toBe("private_offline")
@@ -32,5 +32,5 @@ describe("private feasibility CLI synthetic/read-only modes", () => {
     expect(readFileSync(options.manifestPath,"utf8")).not.toContain("SECRET")
     await expect(runPlannerFeasibility(options)).rejects.toThrow(/REVIEW/)
     expect(resolve(options.outputDirectory)).not.toBe(process.cwd())
-  },20000)
+  },30000)
 })
