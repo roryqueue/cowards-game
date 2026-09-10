@@ -5,6 +5,8 @@ import { deriveLabTaskId, validateLabTaskContext, type LabTaskContext, type LabT
 export interface LabTask { id: LabRoot; identity: LabTaskIdentity; purpose: "scientific" | "alias-compatibility"; representativeId: LabRoot; ordinal: number }
 export interface LabPlannedAttempt { id: LabRoot; taskId: LabRoot; ordinal: number; pass: "baseline" | "variant"; retry: 0 }
 export interface LabTaskGraph { context: LabTaskContext; tasks: readonly LabTask[]; attempts: readonly LabPlannedAttempt[]; root: LabRoot }
+// Only deeply frozen graphs constructed here are trusted-cache members.
+const constructedGraphs = new WeakSet<object>()
 export const enumerateLabTasks = (input: unknown): Readonly<LabTaskGraph> => {
   const context = validateLabTaskContext(input)
   const representatives = new Map<LabRoot, LabRoot>()
@@ -24,9 +26,12 @@ export const enumerateLabTasks = (input: unknown): Readonly<LabTaskGraph> => {
     const ordinal = passIndex * 12 + task.ordinal
     return { id: labRoot("attempt-id", { taskId: task.id, ordinal, pass }), taskId: task.id, ordinal, pass, retry: 0 }
   }))
-  return freezeLabValue({ context, tasks, attempts, root: labRoot("task-graph", { context, tasks, attempts }) })
+  const graph = freezeLabValue({ context, tasks, attempts, root: labRoot("task-graph", { context, tasks, attempts }) })
+  constructedGraphs.add(graph)
+  return graph
 }
 export const validateLabTaskGraph = (graph: LabTaskGraph): Readonly<LabTaskGraph> => {
+  if (constructedGraphs.has(graph)) return graph
   const expected = enumerateLabTasks(graph.context)
   if (labRoot("graph-admission", expected) !== labRoot("graph-admission", graph)) throw new TypeError("LAB_GRAPH_DRIFT")
   return expected

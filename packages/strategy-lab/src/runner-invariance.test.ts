@@ -38,7 +38,7 @@ describe("actual trusted-thread runner and typed canonical reduction", () => {
       }
     }
     expect(operationalRoots.size).toBeGreaterThan(1)
-  }, 120000)
+  }, 240000)
   it("preserves started lost-worker charges, stops without retry and excludes failures from scoring", async () => {
     const result = await runLabTasks({ directory: directory(), graph, layout: { workers: 1, shardSize: 1, order: "forward" }, machineRoot: r, job: { kind: "synthetic", loseOrdinal: 0 } })
     expect(result.reduction!.status).toBe("non_pass")

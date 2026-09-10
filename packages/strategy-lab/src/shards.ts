@@ -129,6 +129,7 @@ export const publishLabShard = (dir: string, input: LabTaskGraph, values: readon
   return freezeLabValue({ id, root })
 }
 export const readLabShard = (dir: string, input: LabTaskGraph, id: string): Readonly<LabShard> => {
+  input = validateLabTaskGraph(input)
   const value = parse(boundedRead(safePath(dir, id), MAX_SHARD_BYTES))
   if (!exactLabKeys(value, ["schemaVersion", "graphRoot", "records", "root"]) || value.schemaVersion !== "lab-shard-v1" || value.graphRoot !== input.root || !Array.isArray(value.records) || value.records.length < 1 || value.records.length > 3 || !isLabRoot(value.root) || id !== `shard-${value.root.slice(7)}.json`) return fail("SHARD_BINDING")
   const records = value.records.map((v) => validateLabStoredRecord(input, v))

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { deriveLabTaskId, deriveLabStream } from "./identity.js"
-import { enumerateLabTasks, assignLabTasks } from "./tasks.js"
+import { enumerateLabTasks, assignLabTasks, validateLabTaskGraph } from "./tasks.js"
 const root = `sha256:${"a".repeat(64)}` as const
 export const taskContext = { admittedRoot: root, algorithm: "hierarchical-planner-v1", candidateRoot: root, opponentRoot: root, inputRoot: root, budgetRoot: root }
 describe("fixed task and stream identity", () => {
@@ -38,5 +38,15 @@ describe("fixed task and stream identity", () => {
     expect(() => deriveLabStream(id, "assignment", -1)).toThrow()
     expect(() => deriveLabStream(id, "assignment", Number.MAX_SAFE_INTEGER + 1)).toThrow()
     expect(() => deriveLabStream("not-a-root", "assignment", 0)).toThrow()
+  })
+  it("never caches caller-mutable graph admission across later tampering", () => {
+    const graph = enumerateLabTasks(taskContext)
+    expect(Object.isFrozen(graph.tasks[0]!.identity)).toBe(true)
+    const caller = structuredClone(graph)
+    expect(validateLabTaskGraph(caller)).toEqual(graph)
+    caller.attempts[0]!.retry = 1 as 0
+    expect(() => validateLabTaskGraph(caller)).toThrow()
+    expect(() => assignLabTasks(caller, { workers: 1, shardSize: 1, order: "forward" })).toThrow()
+    expect(validateLabTaskGraph(graph)).toBe(graph)
   })
 })
