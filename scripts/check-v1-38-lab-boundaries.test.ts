@@ -10,8 +10,16 @@ describe("one-way lab boundary monitor", () => {
     'void import("@cowards/strategy-lab")',
     'const target = "@cowards/strategy-lab"; void import(target)',
     'void import("@cowards/strategy-" + "lab")',
+    'const target = "@cowards/strategy-lab"; void import(target); function f() { const target = "node:fs"; }',
+    'let target = "node:fs"; target = "@cowards/strategy-lab"; void import(target)',
+    'let target = "@cowards/strategy-lab"; target = unknownValue; void import(target)',
+    'let target = "@cowards/"; target += "strategy-lab"; void import(target)',
   ])("catches production import forms: %s", (source) => {
     expect(checkLabBoundaries({ files: { ...lab, "apps/web/src/index.ts": source } }).ok).toBe(false)
+  })
+  it("does not resolve a harmless outer binding through a shadowed inner declaration", () => {
+    const source = 'const target = "node:fs"; void import(target); function f() { const target = "@cowards/strategy-lab"; }'
+    expect(checkLabBoundaries({ files: { ...lab, "apps/web/src/index.ts": source } }).ok).toBe(true)
   })
   it("resolves aliases and transitive reexports rather than just direct text", () => {
     const files = { ...lab,
