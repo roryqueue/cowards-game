@@ -19,9 +19,23 @@ import {
 } from "./lib/v1-38-lean-runner-feasibility.js"
 
 export const CLOSEOUT_PROFILE = LEAN_CLOSEOUT_PROFILE
-export const CLOSEOUT_PATHS = Object.freeze(Object.fromEntries([
+const selectorPattern = /^--(retry-)?(describe-source|check-source|preflight|run|closeout-child|check-post-run|check-adjudication|check-tracking)$/u
+export const resolveCloseoutSelector = (value: string) => {
+  const match = selectorPattern.exec(value)
+  if (!match) throw new TypeError("CLOSEOUT_SELECTOR")
+  return { retry: match[1] !== undefined, selector: `--${match[2]}` }
+}
+const RETRY = selectorPattern.test(process.argv[2] ?? "") && resolveCloseoutSelector(process.argv[2]!).retry
+export const closeoutPaths = (retry: boolean) => Object.freeze(Object.fromEntries([
   "source-review", "preflight-consumption", "preflight", "invocation", "terminal", "adjudication",
-].map((name) => [name, `.planning/artifacts/v1.38-lean-closeout-${name}.json`]))) as Readonly<Record<string, string>>
+].map((name) => [name, `.planning/artifacts/v1.38-lean-closeout-${retry ? "retry-" : ""}${name}.json`]))) as Readonly<Record<string, string>>
+export const CLOSEOUT_PATHS = closeoutPaths(RETRY)
+export const RETRY_PREDECESSOR_ROOTS = Object.freeze({
+  "source-review": "sha256:bdd3b2a5ec5fd05b6de31ee489e2f8e2481ae5dc33ce859de1cc50ce434c7b57",
+  "preflight-consumption": "sha256:3c293d441edf72ca57490153c4f9786d41ce6759c247182c3296f233446aa594",
+  preflight: "sha256:dd6d1eb77186c65fc56a25575c083496dcbf8a121de896964b3eed1509ce933d",
+  adjudication: "sha256:3fc50498e74a69edfc031f919a0ea1ca8f2ca1933f9a7f0ffe5a0a20526a35d2",
+})
 export const REVIEW_CATEGORIES = ["source_dirty_drift", "multiple_launch", "tuple_schedule_drift", "supervision_escape", "partial_interrupted_unclean", "private_disclosure", "non_pass_authority"] as const
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourcePaths = ["scripts", "packages", "apps", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json"]
@@ -34,6 +48,20 @@ const read = (key: string): unknown => JSON.parse(readFileSync(destination(key),
 export const consumeCloseout = createExclusiveLeanInvocationMarker
 const write = (key: string, value: Readonly<Record<string, unknown>>) => consumeCloseout(destination(key), value)
 const sha = (bytes: Buffer | string) => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+export const validateRetryPredecessorRoots = (value: unknown) => {
+  if (!equal(value, RETRY_PREDECESSOR_ROOTS)) fail("RETRY_PREDECESSOR_DRIFT")
+  return RETRY_PREDECESSOR_ROOTS
+}
+const checkRetryPredecessor = () => {
+  const old = closeoutPaths(false)
+  const roots = Object.fromEntries(Object.keys(RETRY_PREDECESSOR_ROOTS).map((key) => {
+    const file = old[key]!
+    if (git("diff", "HEAD", "--", file) !== "" || git("ls-files", "--", file) === "") fail("PREDECESSOR_UNCOMMITTED")
+    return [key, sha(readFileSync(path.join(ROOT, file)))]
+  }))
+  validateRetryPredecessorRoots(roots)
+  for (const key of ["invocation", "terminal"]) if (existsSync(path.join(ROOT, old[key]!))) fail("ORIGINAL_OPPORTUNITY_CONSUMED")
+}
 const fileRoot = (key: string) => sha(readFileSync(destination(key)))
 const committed = (key: string): void => {
   if (git("diff", "HEAD", "--", CLOSEOUT_PATHS[key]!) !== "" || git("ls-files", "--", CLOSEOUT_PATHS[key]!) === "") fail("UNCOMMITTED_EVIDENCE")
@@ -57,6 +85,7 @@ export interface CloseoutBinding {
   readonly formationRoot: string
   readonly profile: typeof CLOSEOUT_PROFILE
   readonly image: string
+  readonly predecessorRoots?: typeof RETRY_PREDECESSOR_ROOTS
 }
 const closureAt = (ref: string) => sha(git("ls-tree", "-r", ref, "--", ...sourcePaths))
 const tupleRoot = () => hashLeanValue(CANONICAL_COMPATIBILITY_TUPLES.find(({ tuple }) => tuple.runtimeAbi === CURRENT_SEMANTIC_RUNTIME_ABI_VERSION) ?? fail("TUPLE"))
@@ -68,13 +97,15 @@ const locksRoot = () => {
 }
 export const createCloseoutBinding = (): CloseoutBinding => {
   const sourceCommit = git("rev-parse", "HEAD")
-  return { sourceCommit, sourceTree: git("rev-parse", "HEAD^{tree}"), closureRoot: closureAt("HEAD"), historyRoot: historyAt("HEAD"), locksRoot: locksRoot(), scheduleRoot: hashLeanValue(buildLeanSchedule()), tupleRoot: tupleRoot(), runtimeLimitsRoot: hashLeanValue(DEFAULT_RUNTIME_LIMITS), requestRoots: buildLeanSchedule().map((cell) => hashLeanValue(cell)), formationRoot: LEAN_CURRENT_FORMATION_ROOT, profile: CLOSEOUT_PROFILE, image: LEAN_CONTAINER_IMAGE }
+  if (RETRY) checkRetryPredecessor()
+  return { sourceCommit, sourceTree: git("rev-parse", "HEAD^{tree}"), closureRoot: closureAt("HEAD"), historyRoot: historyAt("HEAD"), locksRoot: locksRoot(), scheduleRoot: hashLeanValue(buildLeanSchedule()), tupleRoot: tupleRoot(), runtimeLimitsRoot: hashLeanValue(DEFAULT_RUNTIME_LIMITS), requestRoots: buildLeanSchedule().map((cell) => hashLeanValue(cell)), formationRoot: LEAN_CURRENT_FORMATION_ROOT, profile: CLOSEOUT_PROFILE, image: LEAN_CONTAINER_IMAGE, ...(RETRY ? { predecessorRoots: RETRY_PREDECESSOR_ROOTS } : {}) }
 }
 interface Review { readonly schemaVersion: string; readonly disposition: "pass"; readonly reviewer: string; readonly producer: string; readonly categories: Readonly<Record<string, "pass">>; readonly blockers: 0; readonly binding: CloseoutBinding }
 export const validateReview = (value: unknown): Review => {
   if (!exact(value, ["schemaVersion", "disposition", "reviewer", "producer", "categories", "blockers", "binding"]) || value.schemaVersion !== "v1.38-lean-closeout-source-review-v1" || value.disposition !== "pass" || value.blockers !== 0 || typeof value.reviewer !== "string" || value.reviewer.length < 3 || typeof value.producer !== "string" || value.reviewer === value.producer || !exact(value.categories, REVIEW_CATEGORIES) || Object.values(value.categories).some((v) => v !== "pass")) fail("SOURCE_REVIEW")
   const binding = value.binding
-  if (!exact(binding, ["sourceCommit", "sourceTree", "closureRoot", "historyRoot", "locksRoot", "scheduleRoot", "tupleRoot", "runtimeLimitsRoot", "requestRoots", "formationRoot", "profile", "image"]) || !/^[a-f0-9]{40}$/u.test(String(binding.sourceCommit)) || !equal(binding.profile, CLOSEOUT_PROFILE) || binding.image !== LEAN_CONTAINER_IMAGE || binding.scheduleRoot !== hashLeanValue(buildLeanSchedule()) || binding.tupleRoot !== tupleRoot() || binding.runtimeLimitsRoot !== hashLeanValue(DEFAULT_RUNTIME_LIMITS) || binding.formationRoot !== LEAN_CURRENT_FORMATION_ROOT || !equal(binding.requestRoots, buildLeanSchedule().map((cell) => hashLeanValue(cell)))) fail("BINDING")
+  if (!exact(binding, ["sourceCommit", "sourceTree", "closureRoot", "historyRoot", "locksRoot", "scheduleRoot", "tupleRoot", "runtimeLimitsRoot", "requestRoots", "formationRoot", "profile", "image", ...(RETRY ? ["predecessorRoots"] : [])]) || !/^[a-f0-9]{40}$/u.test(String(binding.sourceCommit)) || !equal(binding.profile, CLOSEOUT_PROFILE) || binding.image !== LEAN_CONTAINER_IMAGE || binding.scheduleRoot !== hashLeanValue(buildLeanSchedule()) || binding.tupleRoot !== tupleRoot() || binding.runtimeLimitsRoot !== hashLeanValue(DEFAULT_RUNTIME_LIMITS) || binding.formationRoot !== LEAN_CURRENT_FORMATION_ROOT || !equal(binding.requestRoots, buildLeanSchedule().map((cell) => hashLeanValue(cell)))) fail("BINDING")
+  if (RETRY) validateRetryPredecessorRoots(binding.predecessorRoots)
   return value as unknown as Review
 }
 const authenticate = (allowUncommittedOperational = false): Review => {
@@ -87,6 +118,7 @@ const authenticate = (allowUncommittedOperational = false): Review => {
   git("merge-base", "--is-ancestor", b.sourceCommit, "HEAD")
   if (b.sourceTree !== git("rev-parse", `${b.sourceCommit}^{tree}`) || b.closureRoot !== closureAt(b.sourceCommit) || b.closureRoot !== closureAt("HEAD") || b.historyRoot !== historyAt("HEAD") || b.historyRoot !== historyAt(b.sourceCommit) || b.locksRoot !== locksRoot()) fail("SOURCE_OR_HISTORY_DRIFT")
   originalAbsent()
+  if (RETRY) checkRetryPredecessor()
   return review
 }
 interface Preflight { readonly schemaVersion: string; readonly bindingRoot: string; readonly status: "pass" | "non_pass"; readonly cleanupComplete: boolean; readonly profile: typeof CLOSEOUT_PROFILE; readonly reason: string; readonly aggregates: Record<string, number> }
@@ -200,7 +232,7 @@ const runMatches = async () => {
   checkInvocation()
   const supervisor = createSupervisedLeanExecutionDependencies(capability, {
     cellDeadlineMilliseconds: CLOSEOUT_PROFILE.cellDeadlineMilliseconds,
-    spawnChild: () => fork(fileURLToPath(import.meta.url), ["--closeout-child"], { cwd: ROOT, execArgv: ["--import", "tsx"], detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"], env: { ...process.env, CLOSEOUT_CAPABILITY: capability } }),
+    spawnChild: () => fork(fileURLToPath(import.meta.url), [RETRY ? "--retry-closeout-child" : "--closeout-child"], { cwd: ROOT, execArgv: ["--import", "tsx"], detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe", "ipc"], env: { ...process.env, CLOSEOUT_CAPABILITY: capability } }),
   })
   const interruption = new AbortController()
   const supervised = superviseCloseoutCleanup(supervisor, cleanupCloseoutCell, interruption.signal)
@@ -248,7 +280,7 @@ const checkAdjudication = () => {
   return value
 }
 const main = async () => {
-  switch (process.argv[2]) {
+  switch (resolveCloseoutSelector(process.argv[2] ?? "").selector) {
     case "--describe-source": process.stdout.write(`${JSON.stringify(createCloseoutBinding(), null, 2)}\n`); return
     case "--check-source": authenticate(); break
     case "--preflight": runPreflight(); return
