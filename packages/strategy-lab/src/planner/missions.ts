@@ -73,6 +73,11 @@ export const validateMission = (value: unknown, input: StrategyInputV119): value
   if (!Number.isSafeInteger(o.issuedPhase) || o.issuedPhase < 1 || o.expiresPhase !== o.issuedPhase + 1 || ![1,2,3,4].includes(o.issuedRound)) return false
   if (!input.mySoldiers.some(s => s.id === o.soldierId) || (o.targetId && !input.board.soldiers.some(s => s.id === o.targetId)) || (o.partnerId && !input.mySoldiers.some(s => s.id === o.partnerId && s.id !== o.soldierId))) return false
   if ((o.targetId === "") !== (o.targetPosition === null)) return false
+  const enemyTarget = ["rear-entry","edge-push","bait","pincer"].includes(o.kind)
+  if (enemyTarget && !input.enemySoldiers.some(s => s.id === o.targetId)) return false
+  if (o.kind === "screen" && !input.mySoldiers.some(s => s.id === o.targetId && s.id !== o.soldierId)) return false
+  if (!enemyTarget && o.kind !== "screen" && o.targetId !== "") return false
+  if (["bait","pincer"].includes(o.kind) !== (o.partnerId !== "")) return false
   return JSON.stringify(o).length <= 1024
 }
 

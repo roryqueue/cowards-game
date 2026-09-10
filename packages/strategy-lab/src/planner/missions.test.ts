@@ -40,6 +40,8 @@ describe("ten observable mission lifecycles", () => {
     expect(validateMission({ ...objective, teacher: "secret" }, f.input())).toBe(false)
     expect(validateMission({ ...objective, goal: { x: 999, y: 0 } }, f.input())).toBe(false)
     expect(validateMission({ ...objective, targetId: "hidden" }, f.input())).toBe(false)
+    expect(validateMission({ ...objective, targetId: f.ally.id, targetPosition: f.ally.position }, f.input())).toBe(false)
+    expect(validateMission({ ...objective, kind: "reserve" }, f.input())).toBe(false)
     f.enemy.position = { x: 8, y: 2 }
     expect(evaluateMission(objective, f.input()).status).toBe("stale")
   })

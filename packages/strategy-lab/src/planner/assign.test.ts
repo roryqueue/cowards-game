@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest"
 import { StrategyResultSchema } from "@cowards/spec"
-import { missionFixture } from "./missions.test.js"
+import { createInitialGameState, createStrategyInputV119 } from "@cowards/engine"
 import { compareAssignmentCandidates, selectPlannerActivations } from "./assign.js"
 import { buildFeasibilityCorpus } from "../feasibility-protocol.js"
+
+const missionFixture = () => {
+  const state = createInitialGameState({ matchId: "assign", seed: "assign", arenaVariant: { id: "fixture", name: "fixture", initialBounds: { minX: 0, minY: 0, maxX: 11, maxY: 11 }, terrainStones: [] }, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "b", topStrategyRevisionId: "t" })
+  state.soldiers.forEach(s => { s.status = "FALLEN"; s.position = null })
+  const self = state.soldiers[0]!, ally = state.soldiers[1]!, enemy = state.soldiers.find(s => s.ownerPlayerId === "top")!
+  Object.assign(self, { status: "ACTIVE", position: { x: 4,y: 4 }, facing: "UP" })
+  Object.assign(ally, { status: "ACTIVE", position: { x: 6,y: 4 }, facing: "UP" })
+  Object.assign(enemy, { status: "ACTIVE", position: { x: 5,y: 2 }, facing: "UP" })
+  return { state,self,input: () => createStrategyInputV119(state,"bottom") }
+}
 
 describe("ordered dual-initiative beam", () => {
   it("hard failures cannot be compensated by any soft reward", () => {
