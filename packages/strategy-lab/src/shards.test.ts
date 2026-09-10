@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { enumerateLabTasks } from "./tasks.js"
@@ -8,7 +8,7 @@ import { publishLabShard, readLabShard, resumeLabInventory, publishLabTrace, rec
 const r = `sha256:${"a".repeat(64)}` as const
 export const graphFixture = () => enumerateLabTasks({ admittedRoot: r, algorithm: "hierarchical-planner-v1", candidateRoot: r, opponentRoot: r, inputRoot: r, budgetRoot: r })
 const dirs: string[] = []
-const directory = () => { const d = mkdtempSync(join(tmpdir(), "lab-shard-test-")); dirs.push(d); return d }
+const directory = () => { const d = realpathSync(mkdtempSync(join(tmpdir(), "lab-shard-test-"))); dirs.push(d); return d }
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }) })
 export const recordFixture = (ordinal = 0): LabStoredRecord => {
   const attempt = graphFixture().attempts[ordinal]!
