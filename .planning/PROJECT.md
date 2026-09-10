@@ -1,5 +1,9 @@
 # Coward's Game
 
+## Current v1.38 progress — Phase262 verified complete
+
+Phase262's approved lean fixture gate passed24/24 supervised Matches with zero failures, complete cleanup and twelve identical four-root pairs; independent verification satisfies all16 Phase262 requirements. Phase263 research and planning are next. Source/profile regression125/125 and TypeScript pass. This is fixture feasibility, not competitive strength. Three arena labels cover two geometries. Prior failed/consumed routes remain history, never restart instructions. The current approved profile is2CPUs/256MB,120seconds per cell/60minutes overall; all per-method Strategy limits and canonical rules remain unchanged. Formation remains gated by the later current-league freeze. Older progress snapshots below are superseded by this section.
+
 ## Active D-34L lean admission contract — 2026-09-01
 
 The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.

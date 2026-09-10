@@ -28,15 +28,23 @@ key-decisions:
   - Restore service availability without interpreting that as performance evidence or new authority
 patterns-established:
   - Historical infrastructure defaults remain unchanged; closeout explicitly selects the new profile
-requirements-completed: []
+requirements-completed: [ADMIT-01, ADMIT-02, ADMIT-03, ADMIT-04, MEAS-01, MEAS-02, MEAS-03, MEAS-04, MEAS-05, MEAS-06, MEAS-07, MEAS-08, MEAS-09, MEAS-10, SEAL-01, DECI-02]
 requirements-preserved: [ADMIT-01, ADMIT-02, ADMIT-04, MEAS-01, MEAS-02, MEAS-03, MEAS-04, MEAS-05, MEAS-06, MEAS-07, MEAS-08, MEAS-09, MEAS-10, SEAL-01, DECI-02]
-requirements-blocked: [ADMIT-03]
+requirements-blocked: []
 completed: 2026-09-09
-status: terminal_non_pass
-phase_complete: false
+status: complete
+phase_complete: true
 ---
 
-# Plan262-203: Reviewed closeout infrastructure; preflight refused before runtime samples
+# Plan262-203: Approved retry proves24/24 deterministic fixture feasibility
+
+## Current approved continuation — independently verified pass
+
+The operator expressly approved one fresh preflight and conditional24-Match run after the original Docker-unavailable refusal. Docker availability was checked before consumption. Source-only retry wiring preserves all four original artifact roots and uses one fixed retry namespace; source `8a9d81549c2923dfbc4ab5843c8e3ad76cb5594a` passed independent seven-category review at `5e0a8bde`. Preflight `9887b601` passed12/12 samples with two clean lifecycles. Terminal `1277e306` records24/24 successes, all other classifications zero, complete cleanup and12 identical four-root pairs. Independent adjudication binds `sha256:5d4b4f967269687fc4278bd0684ab7fe3daba70f6140d7c393bd2642ea099cf8`; Phase262 verification passes9/9 truths and16/16 requirements. Post-run four-suite regression125/125 and TypeScript pass. Phase263 research/planning is next.
+
+The test covers three canonical arena labels but two geometries, due a canonical alias. Its claim is fixture feasibility only, never competitive strength. Original0/540, first lean8/24, ten-attempt history, original closeout refusal and36locks remain unchanged. No further closeout retry, formation, holdout, public/counted play, rules change, milestone archive or tag is authorized by this result. All routine wiring/review corrections stayed within this plan.
+
+## Historical original closeout result (preserved)
 
 The approved profile and controller are implemented, tested, and independently reviewed. The one approved preflight stopped because Docker was unavailable; no samples or Matches ran. OrbStack was restored afterward, but the preflight was not repeated.
 

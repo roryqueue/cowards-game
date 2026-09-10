@@ -1,36 +1,96 @@
 ---
 phase: 262-foundation-admission-measurement-custody-and-containment-con
-verified: 2026-09-09T11:44:36Z
-status: gaps_found
-score: 8/9 must-haves verified
-roadmap_score: 4/5
-requirements_score: 15/16 satisfied
+verified: 2026-09-10T01:48:18Z
+status: passed
+score: 9/9 must-haves verified
+roadmap_score: 5/5
+requirements_score: 16/16 satisfied
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
-  previous_score: 4/5
-  gaps_closed: []
-  gaps_remaining:
-    - "ADMIT-03 remains blocked: Plan203 sole preflight returned non_pass/docker_unavailable before any samples or Matches."
+  previous_score: 8/9
+  gaps_closed:
+    - "ADMIT-03: approved one-retry continuation produced 24/24 successes, complete cleanup and twelve identical four-root pairs."
+  gaps_remaining: []
   regressions: []
-gaps:
-  - truth: "Researchers can pass the D-34L.2 reviewed 24-Match fixture feasibility gate with complete cleanup and identical normalized results across passes."
-    status: failed
-    reason: "The sole approved Plan203 preflight returned non_pass/docker_unavailable with zero samples and lifecycles; no Match invocation or terminal exists. Its consumed authority permits no retry."
-    artifacts:
-      - path: ".planning/artifacts/v1.38-lean-closeout-preflight.json"
-        issue: "status=non_pass, reason=docker_unavailable, sampleCount=0, lifecycleCount=0"
-      - path: ".planning/artifacts/v1.38-lean-closeout-adjudication.json"
-        issue: "result=non_pass, admitsPhase263=false"
-    missing:
-      - "A reviewed exact D-34L pass with 24/24 supervised successes, zero failed cells, complete cleanup, and four identical normalized roots across both passes for all 12 cells."
-      - "Explicit operator revision of the consumed single-preflight/no-retry boundary; the orchestrator subsequently restored Docker, but this grants neither retry nor Phase263 authority."
 ---
 
 # Phase 262: Goal-Backward Verification
 
-## Current D-34L.2 verdict — 2026-09-09, Plan262-203
+## Current verified pass — approved Plan262-203 continuation
+
+**Phase goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, single-operator local-seal, claim, and containment contract with explicit assurance limits.
+
+**Status: passed.** Independent reviewer `/root/adjudicate_closeout` rederived the actual committed retry evidence at `1277e306` without rerunning any preflight or Match. All 24 charged supervised executions succeeded; player violations, system failures, timeouts, cancellations and unlaunched cells are all zero. Twelve unique cells each have two distinct passes and identical terminal-outcome, final-state, ordered-transition/event and runtime-accounting roots. All records have complete cleanup, no orphaned child, valid integrity and realistic current-formation evidence. ADMIT-03 is satisfied and Phase263 becomes eligible through this independent adjudication and synchronized phase proof, not by changing the raw terminal's all-false authority fields.
+
+Terminal byte root: `sha256:5d4b4f967269687fc4278bd0684ab7fe3daba70f6140d7c393bd2642ea099cf8`. The approved retry review binds source `8a9d81549c2923dfbc4ab5843c8e3ad76cb5594a`, exact closure, tuple, image, profile, schedule, prior history and all 36 lock bytes. It additionally pins all four original closeout artifacts. The successful preflight has 12/12 samples, two clean lifecycles and a projected 42,076 ms per cell / 1,009,824 ms overall, below the approved 120,000/3,600,000 ms limits. These are preflight projections, not claimed observed full-Match durations. The reviewed supervisor enforces the actual deadlines.
+
+### Current observable truths — all roadmap criteria retained
+
+| # | Truth | Status | Evidence |
+|---|---|---|---|
+| 1 | Exact v1.37 authority and semantic/runtime join precedes authoritative work; drift stops. | VERIFIED | Existing foundation admission and focused regression; runtime tuple additionally authenticated by retry checker. |
+| 2 | D-34L.2 fixture gate produces 24/24 successes, twelve paired cells, complete cleanup and four matching normalized roots. | VERIFIED | Committed real terminal; independently counted all records and paired all roots; canonical reducer independently rerun by read-only checker. |
+| 3 | Immutable pre-search contract fixes estimands, cells, budgets, gates, accounting, selection and claims. | VERIFIED | Existing study/measurement policies and prior focused complete-study regression remain unchanged. |
+| 4 | Bounded single-operator local seal retains explicit assurance exclusions. | VERIFIED | Existing canonical v3 proof and focused mutation/wrong-domain regression unchanged; no holdout opening performed. |
+| 5 | Literal profiles, equal compute, classifiers and rejection gates are frozen; executable formation material stays absent. | VERIFIED | Existing protocol/containment proof and regressions unchanged; authenticated history, unchanged source scope and terminal formation flag retain absence. |
+| 6 | Only explicit closeout profile uses 2 CPUs/256 MB and 120000/3600000 ms; historical defaults remain. | VERIFIED | Independently reviewed profile propagation and unchanged shared code; actual preflight and terminal bind exact profile. |
+| 7 | Independent review precedes exclusive preflight; exact pass alone admits one conditional Match invocation. | VERIFIED | Committed sequence source review → preflight → terminal; checker authenticates exclusive consumption and invocation joins; retry selector tests passed. |
+| 8 | Independent adjudication governs closure; non-pass cannot open Phase263. | VERIFIED | Original non-pass adjudication remains false; new independent byte-bound pass admits Phase263 only after complete proof; rejection/derivation tests passed. |
+| 9 | Consumed artifacts and 36 locks are unchanged; Plans175/176 remain superseded unexecuted. | VERIFIED | Retry checker validates original four byte roots, historical root and lock root; supersession records unchanged, no fabricated summaries. |
+
+**Score:** 9/9 merged truths (roadmap 5/5), requirements 16/16. No overrides, deferred gaps, behavior-unverified truths or human verification items. The plan-specific 24/24 truth duplicates roadmap criterion 2 and is merged rather than counted twice.
+
+### Current artifacts, wiring and data-flow trace
+
+| Artifact/link | Substantive behavior and evidence | Status |
+|---|---|---|
+| Retry source review → controller | Exact source/tree/closure/profile/schedule/history/locks and predecessor roots are authenticated by `authenticate` and `checkRetryPredecessor`. | VERIFIED |
+| Retry preflight consumption → preflight → invocation | Exact review/binding roots, pass, complete samples/cleanup and approved projections checked before invocation. | VERIFIED |
+| Canonical request → profiled container/child → terminal | Reviewed canonical engine path with existing fixture pair, fixed arena-label schedule, real cleanup, four normalized roots and fixed-profile supervision. | VERIFIED |
+| Terminal records → `deriveAndValidateLeanTerminal` | Exact schema, schedule membership/order, request-realism/current-formation roots, complete cleanup and all twelve root pairs rederived. | VERIFIED |
+| Terminal → retry adjudication | Different producer/reviewer; exact SHA-256 terminal bytes, `result:pass`, `admitsPhase263:true`. | VERIFIED by independent derivation; committed-file join is final orchestrator step |
+
+No rendered UI/data-flow artifact was changed. This table traces the real evidence flow instead. Exact terminal/record schemas reject surplus private payloads; committed evidence is bounded metadata, flags and roots, not Strategy source or memories.
+
+### Current requirement coverage
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| ADMIT-01 | SATISFIED | Existing exact v1.37 authority join and regression. |
+| ADMIT-02 | SATISFIED | Current exact semantic/runtime tuple authenticated. |
+| ADMIT-03 | SATISFIED | Independently validated real 24/24 paired fixture proof under approved limits. |
+| ADMIT-04 | SATISFIED | Drift/failure rejection preserved; historical failures not normalized into pass. |
+| MEAS-01 | SATISFIED | Frozen estimands/cells/splits/opponents unchanged. |
+| MEAS-02 | SATISFIED | Approved bounded profile and single retry; unique 24 charges. |
+| MEAS-03 | SATISFIED | Frozen denominators/gates/claims unchanged; projection correctly distinguished from observed duration. |
+| MEAS-04 | SATISFIED | Old failed work retained separately; complete fresh accounting. |
+| MEAS-05 | SATISFIED | Source/runtime targets bound and authenticated. |
+| MEAS-06 | SATISFIED | Existing population/core/finalist policies unchanged. |
+| MEAS-07 | SATISFIED | Existing response/probe/red-team thresholds unchanged. |
+| MEAS-08 | SATISFIED | `fixture_feasibility_only`; no competitive strength claim. |
+| MEAS-09 | SATISFIED | Previous process failure and current fixture pass remain distinct from rules/formation outcomes. |
+| MEAS-10 | SATISFIED | Existing equal-compute/privacy/formation-absence protocol preserved. |
+| SEAL-01 | SATISFIED WITH LIMIT | Existing local-seal assurance only; no independent custody or hostile-owner resistance claim. |
+| DECI-02 | SATISFIED | Existing classifier/denominator/rejection contracts unchanged. |
+
+All sixteen requirements are claimed by Plan203; none is orphaned. Previously satisfied scientific/containment requirements received unchanged-source/history regression checks and retain the thirteen focused passing checks recorded earlier in this closeout; no operational rerun was used to reverify them.
+
+### Current independent checks and realistic interpretation
+
+- `pnpm exec tsx scripts/run-v1-38-lean-closeout.ts --retry-check-post-run`: PASS from committed terminal, reauthenticating custody and rederiving all evidence; no runtime invocation.
+- Independent direct JSON/byte computation: 24 unique charged identities, 12 unique cells, two distinct passes each, all four root pairs equal, every record successful/clean/integrity-valid/realistic; terminal byte root matches the adjudication above.
+- Named synthetic test `rederives complete 24-cell paired proof and rejects changed or surplus evidence`: PASS (1 selected, 9 skipped). Earlier independent retry namespace and pinned-predecessor mutation tests also passed.
+- Orchestrator's fresh post-run validation: four focused suites, 125/125 tests passed, and TypeScript passed. Recorded as orchestrator-run evidence, not misrepresented as additional independent reviewer executions.
+- Three declared arena labels (Smoke, Standard Cross, Open Field) represent **two distinct semantic geometries**, consistent with the frozen canonical alias resolver. Do not claim three independent geometries or general strategy strength from these 24 fixture executions.
+- No source change since the seven-category clean retry review; previously fixed interruption/container-cleanup regressions remain applicable. No new debt-marker or privacy finding.
+
+The historical full matrix remains `exhausted`, fresh `0/540`, `reinterpreted:false`; the first lean result remains 8/24 with its failures; the original closeout Docker-unavailable refusal and adjudication remain unchanged. This pass closes fixture feasibility only. It permits the next phase's staged work, not formation materialization, holdout opening, counted/public/production play, rule changes, archive or tag. Those require their own later milestone gates. No further retry is granted.
+
+## Historical original D-34L.2 refusal — 2026-09-09, Plan262-203
+
+Everything below is retained historical verification, including then-current blockers and next actions. The approved continuation and current pass above supersede its current-state interpretation without changing any consumed artifact bytes.
 
 **Phase goal:** Maintainers can begin v1.38 research only under the exact released v1.37 authority and an immutable pre-search scientific, budget, single-operator local-seal, claim, and containment contract with explicit assurance limits.
 
