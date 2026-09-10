@@ -71,12 +71,19 @@ CLI syntax is `--prepare|--run|--verify --manifest <path> --output <path>`. Exac
 - [Rule3] Information test uses a dynamic trusted root-CLI import so package TypeScript does not pull root scripts into its `rootDir`; source implementation remains statically typed and standalone-checked.
 - [Rule3] macOS temporary directory tests canonicalize `/var` to its real `/private/var` location before strict no-symlink publication.
 - [Rule2] Source/input rejection accounting explicitly separates case charges and actual guest dispatches, avoiding fabricated execution counts.
-- Parent/fixer already integrated final mapped protocol and runner admission/filtering. CLI does not remap a final corpus. Cleanup CR06/CR07 fixes are still parent/fixer-owned; optional `job.remainingCleanupMs()` can use `Math.max(0,3600000-(performance.now()-start))` when that interface lands.
+- Parent/fixer integrated final mapped protocol, runner admission/filtering and CR06/CR07 cleanup. CLI does not remap a final corpus. `job.remainingCleanupMs()` now reports `Math.max(0,3600000-(performance.now()-start))`; cancellation and final owned cleanup check both cleanupComplete and orphanedChild, retaining non-pass truth rather than ignoring returned cleanup failures.
 - Independent Task2 review must inspect the newly wired live branches and read-only verifier. The synthetic tests do not establish real supervisor behavior, live p99, complete Match success or byte-identical actual-source reproduction.
 - Parent Task3 must perform the exact-runtime availability check, final clean review/root binding, sole final preparation/run and required eight geometry-baseline/all-failure trace realism review. No final manifest or feasibility report has been created.
 - Read-only evidence reconstruction is a private local integrity check, not a new producer-attestation mechanism. Runtime issuance is checked during the owned execution path; serialized data is never promoted into a live supervisor issuer.
 - No shared STATE/ROADMAP/REQUIREMENTS, review document, other-agent source, historical lock or consumed Phase262 selector was modified.
 
+## Task 1 Resource Correction
+
+- [Rule1] Parent inspection found validation retained all170 admitted contexts until the full inventory ended. The injected context owner now precomputes each context's last case, closes fresh contexts immediately and reused contexts after their final declared case, and has a hard cap of two owned contexts. Per-case finally plus outer fallback drains early exits. An unsuccessful close remains owned, prevents replacement, and is never silently retried.
+- Full256-case lifecycle regression confirms232 synthetic dispatches,24 static admission rejections with no host construction,170 total contexts, peak one live host, each host closed exactly once, and32 calls on each genuinely reused method context. A second regression covers failed cleanup, early exit and hard-cap rejection.
+- RED observed two missing-helper failures. GREEN: the focused CLI/information suite passed7/7 in39.28seconds; strict standalone CLI/test TypeScript passed. No actual runtime host, container, emitted source, Match or benchmark was executed.
+- Implementation closure changed; parent must regenerate inspection/review bindings before final preparation. Inventory counts and case expectations were not changed.
+
 ## Self-Check: PASSED (Task 1 Only)
 
-All three owned source/test files exist, both task commits exist,5 tests and both typechecks pass. Tasks2/3 and final empirical report remain incomplete by explicit delegation.
+All three owned source/test files exist; prior task commits exist. The corrected suite passes7 tests and the standalone typecheck passes. Tasks2/3 and final empirical report remain incomplete by explicit delegation.

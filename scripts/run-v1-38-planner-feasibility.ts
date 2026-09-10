@@ -217,8 +217,39 @@ const assertReviewed = (manifest: Manifest) => {
 }
 const createHost = (material: ReturnType<typeof buildFrozenMaterial>,manifest: Manifest,revision: StrategyRevision,id: string,limit: number,signal: AbortSignal,observer = false) => createPlannerSupervisedRuntime({ revision,attemptRoot: labRoot("feasibility-host",{ manifestRoot: manifest.root,id }),budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,matchId: `phase263:${id}`,containerName: `planner-263-${manifest.root.slice(7,19)}-${id}`,ownershipLabel: `owner:planner-263-${manifest.root.slice(7,19)}-${id}`,image: LAB_ADMITTED_ROOTS.image,invocationLimit: limit,signal,...(observer ? { observerHarness: { source: material.observerSource,expectedRoot: material.harnessRoot,machineRoot: manifest.machineRoot } } : {}) })
 
+/** Own only currently live contexts. Failed cleanup remains owned and cannot be retried or replaced. */
+export const createValidationContextOwner = <T extends { close(): { cleanupComplete: boolean; orphanedChild: boolean } }>(cases: readonly { ordinal: number; context: string }[]) => {
+  const last = new Map<string,number>()
+  for (const c of cases) last.set(c.context,Math.max(last.get(c.context) ?? -1,c.ordinal))
+  const owned = new Map<string,{ host: T; closeAttempted: boolean }>(),finished = new Set<string>()
+  let clean = true
+  const close = (context: string) => {
+    const entry = owned.get(context)
+    if (!entry || entry.closeAttempted) return
+    entry.closeAttempted = true
+    try {
+      const result = entry.host.close()
+      if (result.cleanupComplete && !result.orphanedChild) { owned.delete(context); finished.add(context) }
+      else clean = false
+    } catch { clean = false }
+  }
+  return {
+    acquire(c: { ordinal: number; context: string },factory: () => T): T {
+      if (!clean) throw new TypeError("LAB_VALIDATION_CLEANUP")
+      if (!last.has(c.context) || finished.has(c.context)) throw new TypeError("LAB_VALIDATION_CONTEXT")
+      const existing = owned.get(c.context)
+      if (existing) return existing.host
+      if (owned.size >= 2) throw new TypeError("LAB_VALIDATION_HOST_CAP")
+      const host = factory(); owned.set(c.context,{ host,closeAttempted: false }); return host
+    },
+    finishCase(c: { ordinal: number; context: string }): boolean { if (last.get(c.context) === c.ordinal) close(c.context); return clean },
+    closeAll(): boolean { for (const context of owned.keys()) close(context); return clean },
+    get remainingOwnedContexts() { return owned.size },
+  }
+}
+
 const runValidation = async (material: ReturnType<typeof buildFrozenMaterial>,manifest: Manifest,output: string,signal: AbortSignal,guard: () => void) => {
-  const hosts = new Map<string,PlannerSupervisedRuntime>(),records: PlannerValidationRecord[] = []
+  const hosts = createValidationContextOwner<PlannerSupervisedRuntime>(material.inventory.cases),records: PlannerValidationRecord[] = []
   const evidence = new Map<number,unknown>()
   let cleanupComplete = true
   try {
@@ -234,9 +265,7 @@ const runValidation = async (material: ReturnType<typeof buildFrozenMaterial>,ma
         else if (!inputGate.success) classification = "input_rejection"
         else {
           const revision = c.source === null ? material.candidate.revision : buildStrategyRevision({ source,runtime: material.candidate.revision.runtime })
-          const key = c.context
-          let host = hosts.get(key)
-          if (!host) { host = createHost(material,manifest,revision,`v-${key}`,64,signal); hosts.set(key,host) }
+          const host = hosts.acquire(c,() => createHost(material,manifest,revision,`v-${c.context}`,64,signal))
           if (host.identity.sourceRoot !== rawRoot(source) || host.identity.executableRoot !== `sha256:${revision.metadata.sourceArtifact!.hash}`) throw new TypeError("LAB_VALIDATION_SOURCE")
           guestCalls = 1
           const e = await host.invoke(requestForValidation(c),host.identity)
@@ -244,11 +273,12 @@ const runValidation = async (material: ReturnType<typeof buildFrozenMaterial>,ma
           evidence.set(c.ordinal,e); classification = classifyRuntime(e.result); value = e.result.ok ? e.result.value : null
         }
       } catch { classification = "system_failure" }
+      finally { if (!hosts.finishCase(c)) classification = "system_failure" }
       records.push({ ordinal: c.ordinal,caseRoot: c.root,inputRoot: c.inputRoot,classification,guestCalls,value,provenance: "supervised_container",cleanupComplete: false })
       if (classification !== c.expected.classification) break
     }
   } finally {
-    for (const host of hosts.values()) try { const closed = host.close(); cleanupComplete = cleanupComplete && closed.cleanupComplete && !closed.orphanedChild } catch { cleanupComplete = false }
+    cleanupComplete = hosts.closeAll()
     for (const record of records) { record.cleanupComplete = cleanupComplete; publish(join(output,"validation",`record-${record.ordinal}.json`),{ record,evidence: evidence.get(record.ordinal) ?? null }) }
   }
   if (records.length !== 256) return { passed: false,protocolPassed: false,empirical: true,casesCharged: records.length,guestCalls: records.reduce((n,r) => n+r.guestCalls,0),unused: 256-records.length,cleanupComplete }
@@ -332,6 +362,20 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
   publish(join(paths.outputDirectory,"consumed.json"),{ manifestRoot: manifest.root,executionRoot: manifest.executionRoot })
   const deadline = setTimeout(() => controller.abort(),Math.max(1,3600000-(performance.now()-start)))
   const owned = new Map<string,PlannerSupervisedRuntime[]>()
+  const closeAttempted = new WeakSet<PlannerSupervisedRuntime>()
+  let ownedCleanupComplete = true
+  const closeOwned = (id: string) => {
+    let complete = true
+    for (const host of owned.get(id) ?? []) {
+      if (closeAttempted.has(host)) { complete = false; continue }
+      closeAttempted.add(host)
+      try { const result = host.close(); if (!result.cleanupComplete || result.orphanedChild) complete = false }
+      catch { complete = false }
+    }
+    if (complete) owned.delete(id)
+    else ownedCleanupComplete = false
+    return complete
+  }
   let validation: Awaited<ReturnType<typeof runValidation>> | null = null,benchmark: Awaited<ReturnType<typeof runPlannerBenchmark>> | null = null,reason = "incomplete",passed = false
   try {
     validation = await runValidation(material,manifest,paths.outputDirectory,controller.signal,guard)
@@ -350,7 +394,7 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
     benchmark = await runPlannerBenchmark({ provider,commitment,corpus: material.corpus })
     publish(join(paths.outputDirectory,"benchmark-result.json"),benchmark)
     if (!benchmark.passed) throw new TypeError("LAB_BENCHMARK_NON_PASS")
-    const job = { kind: "supervised" as const,executionRoot: manifest.executionRoot,execute: (a: LabAssignment) => executeMatchAssignment(a,material,manifest,paths.outputDirectory,controller.signal,guard,owned),cancel: (a: LabAssignment) => { for (const host of owned.get(a.attempt.id) ?? []) host.close(); owned.delete(a.attempt.id) } }
+    const job = { kind: "supervised" as const,executionRoot: manifest.executionRoot,remainingCleanupMs: () => Math.max(0,3600000-(performance.now()-start)),execute: (a: LabAssignment) => executeMatchAssignment(a,material,manifest,paths.outputDirectory,controller.signal,guard,owned),cancel: (a: LabAssignment) => { if (!closeOwned(a.attempt.id)) throw new TypeError("LAB_CLEANUP_INCOMPLETE") } }
     const base = { directory: join(paths.outputDirectory,"lab-matches"),graph: material.graph,machineRoot: manifest.machineRoot,job }
     for (const batch of [{ ordinals: [0,1,2,3,4,5],workers: 1 as const,shardSize: 1 as const,order: "forward" as const },{ ordinals: [6,7,8,9,10,11],workers: 1 as const,shardSize: 1 as const,order: "forward" as const },{ ordinals: Array.from({ length: 12 },(_,i) => i+12),workers: 2 as const,shardSize: 3 as const,order: "reverse" as const }]) {
       guard()
@@ -362,7 +406,7 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
     publish(join(paths.outputDirectory,"reduction.json"),{ ...complete.reduction,semanticBytes: Buffer.from(complete.reduction.semanticBytes).toString("base64") })
     passed = true; reason = "complete"
   } catch (error) { reason = error instanceof TypeError && /^LAB_[A-Z_]+$/.test(error.message) ? error.message : "LAB_EXECUTION_NON_PASS" }
-  finally { controller.abort(); clearTimeout(deadline); for (const hosts of owned.values()) for (const host of hosts) try { host.close() } catch { passed = false; reason = "LAB_CLEANUP_INCOMPLETE" } }
+  finally { controller.abort(); clearTimeout(deadline); for (const id of owned.keys()) closeOwned(id); if (!ownedCleanupComplete) { passed = false; reason = "LAB_CLEANUP_INCOMPLETE" } }
   const inventory = resumeLabInventory(join(paths.outputDirectory,"lab-matches"),material.graph)
   const receipt = { schemaVersion: "planner-feasibility-receipt-v1",status: passed ? "passed" : "non_pass",empirical: true,reason,casesCharged: validation?.casesCharged ?? 0,validationGuestCalls: validation?.guestCalls ?? 0,benchmarkCalls: benchmark?.charged ?? 0,matchAttemptsCharged: inventory.records.filter(r => r.attempt.classification !== "unused").length+inventory.uncertainAttemptIds.length,matchAttemptsUnused: inventory.pendingAttemptIds.length+inventory.records.filter(r => r.attempt.classification === "unused").length,scientificCells: 8,arenaLabels: 3,geometries: 2,elapsedMs: performance.now()-start,hostPeakRssKiB: process.resourceUsage().maxRSS,productionAuthorized: false }
   publish(join(paths.outputDirectory,"receipt.json"),receipt)
