@@ -16,6 +16,7 @@ export const missionFixture = () => {
 describe("ten observable mission lifecycles", () => {
   for (const kind of MISSION_KINDS) it(`${kind}: active, complete, stale, failed and fallback`, () => {
     const f = missionFixture()
+    if (kind === "recovery") f.self.facing = "DOWN"
     const objective = createMission(kind, f.input(), f.self.id)!
     expect(objective).toBeTruthy()
     expect(evaluateMission(objective, f.input()).status).toBe("active")
