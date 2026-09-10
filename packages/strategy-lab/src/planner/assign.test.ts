@@ -3,6 +3,9 @@ import { StrategyResultSchema } from "@cowards/spec"
 import { createInitialGameState, createStrategyInputV119 } from "@cowards/engine"
 import { compareAssignmentCandidates, selectPlannerActivations } from "./assign.js"
 import { buildFeasibilityCorpus } from "../feasibility-protocol.js"
+import { selectPlannerActivations as referenceSelect, scoreAssignment as referenceScore } from "./assign-reference.test-helper.js"
+import { scoreAssignment } from "./assign.js"
+import { createMission } from "./missions.js"
 
 const missionFixture = () => {
   const state = createInitialGameState({ matchId: "assign", seed: "assign", arenaVariant: { id: "fixture", name: "fixture", initialBounds: { minX: 0, minY: 0, maxX: 11, maxY: 11 }, terrainStones: [] }, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "b", topStrategyRevisionId: "t" })
@@ -15,6 +18,24 @@ const missionFixture = () => {
 }
 
 describe("ordered dual-initiative beam", () => {
+  it("matches the frozen pure selector across all mapped cases and budget boundaries", () => {
+    for (const c of buildFeasibilityCorpus().selectActivations) for (const maxExpansions of [0,1,75,76,255,256]) {
+      const before=JSON.stringify(c.input)
+      expect(selectPlannerActivations(c.input,{maxExpansions})).toEqual(referenceSelect(c.input,{maxExpansions}))
+      expect(JSON.stringify(c.input)).toBe(before)
+    }
+  },60000)
+  it("does not alias objectives sharing an abbreviated key or leak facts between calls", () => {
+    const f=missionFixture(),input=f.input()
+    const a=createMission("recovery",input,f.self.id)!,b={...a,goalFacing:"LEFT" as const}
+    for (const orders of [[a],[b],[a,b],[b,a]]) for (const first of [true,false]) expect(scoreAssignment(orders,input,first)).toEqual(referenceScore(orders,input,first))
+    input.strategyMemory={missions:[a,b]}
+    for(const maxExpansions of [0,1,16,256]) expect(selectPlannerActivations(input,{maxExpansions})).toEqual(referenceSelect(input,{maxExpansions}))
+    f.self.facing="LEFT"
+    const changed=f.input(); changed.strategyMemory={missions:[a,b]}
+    expect(selectPlannerActivations(changed)).toEqual(referenceSelect(changed))
+    expect(selectPlannerActivations(input)).toEqual(referenceSelect(input))
+  })
   it("hard failures cannot be compensated by any soft reward", () => {
     expect(compareAssignmentCandidates({ hard: [0,0,0,0], soft: -999999, key: "b" }, { hard: [0,-1,0,0], soft: 999999, key: "a" })).toBeLessThan(0)
   })
