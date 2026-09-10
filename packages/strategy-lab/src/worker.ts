@@ -39,9 +39,20 @@ export interface LabWorkerHooks {
   onStart(assignment: LabAssignment): void
   onResult(assignment: LabAssignment, result: unknown): Promise<void> | void
   invoke?(assignment: LabAssignment): Promise<unknown>
+  cancel?(assignment: LabAssignment): Promise<void> | void
+}
+/** Reset at every state boundary; one Match allowance never times a batch. */
+export const createLabWorkerDeadline = (expire: () => void) => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const clear = () => { if (timer !== undefined) clearTimeout(timer); timer = undefined }
+  return { clear, arm: (stage: "transport" | "attempt") => {
+    clear(); timer = setTimeout(expire, stage === "attempt" ? 120000 : 3600000)
+  } }
 }
 export const runLabWorkerPool = async (assignments: readonly LabAssignment[], workers: 1 | 2, kind: "synthetic" | "supervised", hooks: LabWorkerHooks, loseOrdinal?: number) => {
   const pool: Worker[] = [], threadIds: number[] = []
+  const deadlines: ReturnType<typeof createLabWorkerDeadline>[] = []
+  const active = new Map<number, LabAssignment>()
   let failed = false
   const runs = Array.from({ length: workers }, (_, slot) => {
     const owned = assignments.filter((a) => a.worker === slot)
@@ -50,26 +61,34 @@ export const runLabWorkerPool = async (assignments: readonly LabAssignment[], wo
       const worker = new Worker(new URL(import.meta.url), { execArgv: [], workerData: { kind, tasks: owned.map((a) => ({ id: a.attempt.id, taskId: a.task.id, ordinal: a.attempt.ordinal })), loseOrdinal: loseOrdinal ?? null } satisfies WorkerConfiguration })
       pool.push(worker)
       let cursor = 0, done = false, state: "ready" | "start" | "result" = "ready"
-      const timeout = setTimeout(() => reject(new Error("LAB_WORKER_DEADLINE")), 120000)
+      const deadline = createLabWorkerDeadline(() => reject(new Error("LAB_WORKER_DEADLINE")))
+      deadlines.push(deadline); deadline.arm("transport")
       worker.on("error", reject)
-      worker.on("exit", (code) => { clearTimeout(timeout); if (code === 0 && done) accept(); else reject(new Error("LAB_WORKER_LOST")) })
+      worker.on("exit", (code) => { deadline.clear(); if (code === 0 && done) accept(); else reject(new Error("LAB_WORKER_LOST")) })
       worker.on("message", (message: { kind: string; id?: string; threadId: number; payload?: unknown }) => {
         void (async () => {
           if (failed) return
           if (!Number.isSafeInteger(message.threadId) || message.threadId <= 0) throw new TypeError("LAB_WORKER_ID")
-          if (message.kind === "ready" && state === "ready") { threadIds.push(message.threadId); state = "start"; worker.postMessage({ kind: "next" }); return }
-          if (message.kind === "done" && cursor === owned.length && state === "start") { done = true; return }
+          if (message.kind === "ready" && state === "ready") { threadIds.push(message.threadId); state = "start"; deadline.arm("transport"); worker.postMessage({ kind: "next" }); return }
+          if (message.kind === "done" && cursor === owned.length && state === "start") { done = true; deadline.clear(); return }
           const assignment = owned[cursor]
           if (!assignment || message.id !== assignment.attempt.id) throw new TypeError("LAB_WORKER_TASK_BINDING")
-          if (message.kind === "start" && state === "start") { hooks.onStart(assignment); state = "result"; worker.postMessage({ kind: "go" }); return }
-          if (message.kind === "invoke" && state === "result" && kind === "supervised" && hooks.invoke) { worker.postMessage({ kind: "external", payload: await hooks.invoke(assignment) }); return }
-          if (message.kind === "result" && state === "result") { await hooks.onResult(assignment, message.payload); cursor += 1; state = "start"; worker.postMessage({ kind: "next" }); return }
+          if (message.kind === "start" && state === "start") { hooks.onStart(assignment); active.set(slot, assignment); state = "result"; deadline.arm("attempt"); worker.postMessage({ kind: "go" }); return }
+          if (message.kind === "invoke" && state === "result" && kind === "supervised" && hooks.invoke) { const payload = await hooks.invoke(assignment); if (!failed) worker.postMessage({ kind: "external", payload }); return }
+          if (message.kind === "result" && state === "result") { deadline.clear(); await hooks.onResult(assignment, message.payload); active.delete(slot); cursor += 1; state = "start"; deadline.arm("transport"); worker.postMessage({ kind: "next" }); return }
           throw new TypeError("LAB_WORKER_PROTOCOL")
         })().catch(reject)
       })
     })
   })
   try { await Promise.all(runs) }
-  catch { failed = true; await Promise.all(pool.map((w) => w.terminate())); await Promise.allSettled(runs) }
+  catch {
+    failed = true
+    deadlines.forEach((deadline) => deadline.clear())
+    // Owned external supervisors must be cancelled too, not merely relay threads.
+    await Promise.allSettled([...active.values()].map(async (assignment) => hooks.cancel?.(assignment)))
+    await Promise.all(pool.map((w) => w.terminate())); await Promise.allSettled(runs)
+  }
+  finally { deadlines.forEach((deadline) => deadline.clear()) }
   return { failed, threadIds }
 }

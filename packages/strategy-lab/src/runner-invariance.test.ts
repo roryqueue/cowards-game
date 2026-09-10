@@ -15,7 +15,7 @@ describe("actual trusted-thread runner and typed canonical reduction", () => {
     const options = { directory: directory(), graph, layout: { workers: 1, shardSize: 3, order: "forward" } as const, machineRoot: r, job: { kind: "synthetic" as const } }
     await runLabTasks({ ...options, syntheticDispatchLimit: 3 })
     let calls = 0
-    await expect(runLabTasks({ ...options, job: { kind: "supervised", executionRoot: r, execute: async () => { calls++; throw new Error("must not dispatch") } } })).rejects.toThrow("LAB_RUN_BINDING")
+    await expect(runLabTasks({ ...options, job: { kind: "supervised", executionRoot: r, cancel: () => {}, execute: async () => { calls++; throw new Error("must not dispatch") } } })).rejects.toThrow("LAB_RUN_BINDING")
     await expect(runLabTasks({ ...options, machineRoot: `sha256:${"b".repeat(64)}` })).rejects.toThrow("LAB_RUN_BINDING")
     expect(calls).toBe(0)
   }, 30000)

@@ -6,7 +6,7 @@ import { runLabWorkerPool } from "./worker.js"
 
 export interface RunLabTaskOptions {
   directory: string; graph: LabTaskGraph; layout: LabLayout; machineRoot: LabRoot;
-  job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; executionRoot: LabRoot; execute: (assignment: LabAssignment) => Promise<LabStoredRecord> };
+  job: { kind: "synthetic"; loseOrdinal?: number } | { kind: "supervised"; executionRoot: LabRoot; execute: (assignment: LabAssignment) => Promise<LabStoredRecord>; cancel: (assignment: LabAssignment) => Promise<void> | void };
   syntheticDispatchLimit?: number;
 }
 export const runLabTasks = async (options: RunLabTaskOptions) => {
@@ -41,7 +41,7 @@ export const runLabTasks = async (options: RunLabTaskOptions) => {
   }
   const pool = await runLabWorkerPool(dispatch, options.layout.workers, options.job.kind, {
     onStart: (a) => recordLabAttemptStart(options.directory, graph, a.attempt.id),
-    ...(options.job.kind === "supervised" ? { invoke: async (a: LabAssignment) => {
+    ...(options.job.kind === "supervised" ? { cancel: options.job.cancel, invoke: async (a: LabAssignment) => {
       if (options.job.kind !== "supervised") throw new TypeError("LAB_JOB_KIND")
       return assemble(a, await options.job.execute(a))
     } } : {}),
