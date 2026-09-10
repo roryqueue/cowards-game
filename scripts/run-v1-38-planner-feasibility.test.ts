@@ -18,10 +18,24 @@ import { buildFeasibilityCorpus } from "../packages/strategy-lab/src/feasibility
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { allocatePlannerBenchmarkCall, admitRetainedRuntime, admitRetainedValidationResult } from "./run-v1-38-planner-feasibility.js"
 import { LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
+import { assertRetainedPlannerP99, plannerCleanupComplete } from "./run-v1-38-planner-feasibility.js"
 
 const dirs: string[] = []
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir,{ recursive: true,force: true }) })
 describe("private feasibility CLI synthetic/read-only modes", () => {
+  it("keeps successful cleanup independent of failed timing and rejects forged non-pass p99",()=>{
+    const timing={selectActivationsP99Ms:9,soldierBrainP99Ms:1,passed:false}
+    const close=vi.fn(()=>({cleanupComplete:true,orphanedChild:false})),closed=close()
+    const charges={validationUncertainCases:0,benchmarkUncertainCalls:0}
+    expect(plannerCleanupComplete(true,charges,true,closed.cleanupComplete&&!closed.orphanedChild)).toBe(true)
+    expect(retainedBenchmarkPass(timing.passed,2200,false,true)).toBe(false)
+    expect(()=>assertRetainedPlannerP99({...timing},timing)).not.toThrow()
+    expect(()=>assertRetainedPlannerP99({...timing,selectActivationsP99Ms:1},timing)).toThrow(/P99_DRIFT/)
+    expect(plannerCleanupComplete(true,charges,true,false)).toBe(false)
+    expect(plannerCleanupComplete(true,{...charges,benchmarkUncertainCalls:1},true,true)).toBe(false)
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(safety.deniedHost).not.toHaveBeenCalled()
+  })
   it("rejects altered retained runtime identity and result classification without a host",()=>{
     const root=labRoot("fixture",{}),c=buildPlannerValidationInventory().cases[0]!
     const identity={revisionId:"fixture",sourceRoot:root,executableRoot:root,tupleId:MATCH_KERNEL.tupleId,tupleRoot:LAB_ADMITTED_ROOTS.tupleRoot,image:LAB_ADMITTED_ROOTS.image,harnessRoot:root,budgetRoot:root,attemptRoot:root,runtimeLimitsRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot}

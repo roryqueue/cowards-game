@@ -409,6 +409,10 @@ export const allocatePlannerBenchmarkCall = (outputDirectory: string,manifestRoo
   guard()
 }
 export const retainedBenchmarkPass = (timingPassed: boolean,retained: number,summaryPassed: boolean,cleanupComplete: boolean) => timingPassed && retained===2200 && summaryPassed && cleanupComplete
+export const assertRetainedPlannerP99 = (summary: Record<string,unknown>,timing: ReturnType<typeof evaluateFeasibilityTiming>) => {
+  for (const [key,value] of Object.entries(timing)) if (key!=="passed" && summary[key]!==value) throw new TypeError("LAB_RETAINED_P99_DRIFT")
+}
+export const plannerCleanupComplete = (owned: boolean,charges: {validationUncertainCases:number;benchmarkUncertainCalls:number},validation: boolean,benchmark: boolean) => owned && charges.validationUncertainCases===0 && charges.benchmarkUncertainCalls===0 && validation && benchmark
 const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material: ReturnType<typeof buildFrozenMaterial>) => {
   const durations: { selectActivations: number[]; soldierBrain: number[] } = { selectActivations: [],soldierBrain: [] }
   const transportMs:number[]=[],totalMs:number[]=[]
@@ -457,7 +461,7 @@ const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material
     } else if(typeof envelope.cleanupComplete!=="boolean" || !["admission_rejected","incomplete_or_failed"].includes(String(envelope.reason)) || summary.passed || envelope.protocolPassed || envelope.empirical) throw new TypeError("LAB_BENCHMARK_SUMMARY_SCHEMA")
     summaryPassed=summary.passed && envelope.protocolPassed===true && envelope.empirical===true && (!("cleanupComplete" in envelope) || envelope.cleanupComplete===true)
     if (summary.charged !== retained || (summary.passed && (!timing?.passed || retained !== 2200))) throw new TypeError("LAB_RETAINED_BENCHMARK_DERIVATION")
-    if (timing && summary.passed) for (const [key,val] of Object.entries(timing)) if (key !== "passed" && JSON.stringify((summary as unknown as Record<string,unknown>)[key]) !== JSON.stringify(val)) throw new TypeError("LAB_RETAINED_P99_DRIFT")
+    if (timing && "commitment" in envelope) assertRetainedPlannerP99(envelope,timing)
   }
   return { passed: retainedBenchmarkPass(timing?.passed===true,retained,summaryPassed,cleanupComplete),retained,cleanupComplete }
 }
@@ -486,17 +490,18 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
     else ownedCleanupComplete = false
     return complete
   }
-  let validation: Awaited<ReturnType<typeof runValidation>> | null = null,benchmark: Awaited<ReturnType<typeof runPlannerBenchmark>> | null = null,reason = "incomplete",passed = false
+  let validation: Awaited<ReturnType<typeof runValidation>> | null = null,benchmark: Awaited<ReturnType<typeof runPlannerBenchmark>> | null = null,reason = "incomplete",passed = false,benchmarkCleanupComplete = true
   try {
     validation = await runValidation(material,manifest,paths.outputDirectory,controller.signal,guard)
     publish(join(paths.outputDirectory,"validation-result.json"),validation)
     if (!validation.passed) throw new TypeError("LAB_VALIDATION_NON_PASS")
     guard()
+    benchmarkCleanupComplete = false
     const host = createHost(material,manifest,material.candidate.revision,"benchmark",2200,controller.signal,true,Math.max(0,3600000-(performance.now()-start)))
     const commitment = { revisionId: host.identity.revisionId,corpusRoot: manifest.corpusRoot,sourceRoot: manifest.sourceRoot,executableRoot: host.identity.executableRoot,harnessRoot: manifest.harnessRoot,profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot,budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,attemptRoot: host.identity.attemptRoot,machineRoot: manifest.machineRoot }
     const provider = { ...host,close() {
       let cleanup={cleanupComplete:false,orphanedChild:true}
-      try { const result=host.close(); cleanup={cleanupComplete:result.cleanupComplete,orphanedChild:result.orphanedChild}; return result }
+      try { const result=host.close(); cleanup={cleanupComplete:result.cleanupComplete,orphanedChild:result.orphanedChild}; benchmarkCleanupComplete=result.cleanupComplete&&!result.orphanedChild; return result }
       finally { publish(join(paths.outputDirectory,"benchmark-cleanup.json"),cleanup) }
     },invoke(request: LabKernelRequest,identity: typeof host.identity) {
       const ordinal = host.accounting.length
@@ -529,7 +534,7 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
   finally { controller.abort(); clearTimeout(deadline); for (const id of owned.keys()) closeOwned(id); if (!ownedCleanupComplete) { passed = false; reason = "LAB_CLEANUP_INCOMPLETE" } }
   const inventory = resumeLabInventory(join(paths.outputDirectory,"lab-matches"),material.graph)
   const charges = readPlannerCharges(paths,manifest,material,true)
-  const receipt = { schemaVersion: "planner-feasibility-receipt-v1",status: passed ? "passed" : "non_pass",empirical: true,reason,...charges,matchAttemptsCharged: inventory.records.filter(r => r.attempt.classification !== "unused").length+inventory.uncertainAttemptIds.length,matchAttemptsUnused: inventory.pendingAttemptIds.length+inventory.records.filter(r => r.attempt.classification === "unused").length,matchAttemptsUncertain: inventory.uncertainAttemptIds.length,cleanupComplete: ownedCleanupComplete && charges.validationUncertainCases === 0 && charges.benchmarkUncertainCalls === 0 && (validation?.cleanupComplete ?? true) && (benchmark === null || ("cleanupComplete" in benchmark ? benchmark.cleanupComplete : benchmark.passed)),scientificCells: 8,arenaLabels: 3,geometries: 2,elapsedMs: performance.now()-start,hostPeakRssKiB: process.resourceUsage().maxRSS,productionAuthorized: false }
+  const receipt = { schemaVersion: "planner-feasibility-receipt-v1",status: passed ? "passed" : "non_pass",empirical: true,reason,...charges,matchAttemptsCharged: inventory.records.filter(r => r.attempt.classification !== "unused").length+inventory.uncertainAttemptIds.length,matchAttemptsUnused: inventory.pendingAttemptIds.length+inventory.records.filter(r => r.attempt.classification === "unused").length,matchAttemptsUncertain: inventory.uncertainAttemptIds.length,cleanupComplete: plannerCleanupComplete(ownedCleanupComplete,charges,validation?.cleanupComplete??true,benchmarkCleanupComplete),scientificCells: 8,arenaLabels: 3,geometries: 2,elapsedMs: performance.now()-start,hostPeakRssKiB: process.resourceUsage().maxRSS,productionAuthorized: false }
   publish(join(paths.outputDirectory,"receipt.json"),receipt)
   return receipt
 }
