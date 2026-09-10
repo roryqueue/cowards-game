@@ -872,7 +872,17 @@ Plans:
   4. The private offline lab has an executable one-way dependency graph into canonical spec, engine, replay helpers, and supervised runtime adapters while production packages, apps, images, routes, generated contracts, and deployment manifests cannot import it; every research Match advances through the exact selected `MATCH_KERNEL` with no copied resolver, alternate legality, second transition loop, or profile-specific transition code.
   5. One non-secret command pre-enumerates stable task identities and domain-separated streams, validates strict bounded artifacts, and reproduces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume with complete coverage, atomic publication, and tamper detection.
 
-**Plans:** TBD
+**Plans:** 7 plans
+
+Plans:
+- [ ] 263-01-PLAN.md — Private contracts, fixed feasibility protocol and production isolation.
+- [ ] 263-02-PLAN.md — Ten-mission ordered dual-initiative assignment planner.
+- [ ] 263-03-PLAN.md — Nine-Action SoldierBrain and self-contained source emission.
+- [ ] 263-04-PLAN.md — Canonical supervised bridge and trusted direct-method benchmark.
+- [ ] 263-05-PLAN.md — Stable tasks, atomic shards and worker/resume invariance.
+- [ ] 263-06-PLAN.md — One-command bounded actual-source feasibility and pre-run review.
+- [ ] 263-07-PLAN.md — Independent goal-backward verification, validation and private UAT.
+
 **Research flag:** Spike planner/source/runtime feasibility, canonical effect-pump equivalence, deterministic parallelism, throughput, and trace-retention limits before freezing the scale architecture.
 
 ### Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake
