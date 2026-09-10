@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { execFileSync } from "node:child_process"
-import { closeSync, constants, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs"
+import { closeSync, constants, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeFileSync } from "node:fs"
 import { arch, cpus, platform, release } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -268,6 +268,7 @@ const runValidation = async (material: ReturnType<typeof buildFrozenMaterial>,ma
           const host = hosts.acquire(c,() => createHost(material,manifest,revision,`v-${c.context}`,64,signal))
           if (host.identity.sourceRoot !== rawRoot(source) || host.identity.executableRoot !== `sha256:${revision.metadata.sourceArtifact!.hash}`) throw new TypeError("LAB_VALIDATION_SOURCE")
           guestCalls = 1
+          publish(join(output,"validation",`dispatch-${c.ordinal}.json`),{ manifestRoot: manifest.root,ordinal: c.ordinal,caseRoot: c.root })
           const e = await host.invoke(requestForValidation(c),host.identity)
           if (!host.verify(e) || e.requestId !== c.root || e.inputRoot !== labRoot("runtime-input",c.input) || !e.charged || !e.completed) throw new TypeError("LAB_VALIDATION_RUNTIME_BINDING")
           evidence.set(c.ordinal,e); classification = classifyRuntime(e.result); value = e.result.ok ? e.result.value : null
@@ -323,6 +324,46 @@ const executeMatchAssignment = async (a: LabAssignment,material: ReturnType<type
   return record
 }
 
+/** Durable precharges own allocation counts, even when no normal reply exists.
+ * Dispatch markers distinguish attempted calls from confirmed returned charges. */
+export const readPlannerCharges = (paths: PlannerPaths, manifest: Manifest, material: ReturnType<typeof buildFrozenMaterial>, terminalize = false) => {
+  let casesCharged = 0, validationGuestAttempts = 0, validationGuestCalls = 0, validationUncertainCases = 0, benchmarkCalls = 0, benchmarkGuestCalls = 0, benchmarkUncertainCalls = 0
+  for (const lane of ["validation", "benchmark"] as const) {
+    const cap = lane === "validation" ? 256 : 2200, dir = join(paths.outputDirectory,lane)
+    for (const name of readdirSync(dir)) {
+      if (name.endsWith(".tmp")) continue
+      const match = /^(case|charge|dispatch|record)-(\d+)\.json$/.exec(name)
+      if (!match || Number(match[2]) >= cap || String(Number(match[2])) !== match[2] || (lane === "benchmark" && match[1] !== "charge" && match[1] !== "record")) throw new TypeError("LAB_LEDGER_ARTIFACT")
+    }
+    let gap = false
+    for (let i = 0; i < cap; i++) {
+      const chargeFile = join(dir,`charge-${i}.json`),recordFile = join(dir,`record-${i}.json`),dispatchFile = join(dir,`dispatch-${i}.json`)
+      if (!existsSync(chargeFile)) { gap = true; if (existsSync(recordFile) || existsSync(dispatchFile)) throw new TypeError("LAB_UNCHARGED_RECORD"); continue }
+      if (gap) throw new TypeError("LAB_CHARGE_GAP")
+      const c = material.inventory.cases[i]
+      const method = i < 1100 ? "selectActivations" : "soldierBrain"
+      const expected = lane === "validation" ? { manifestRoot: manifest.root,caseRoot: c!.root,ordinal: i } : { manifestRoot: manifest.root,ordinal: i,requestRoot: labRoot("benchmark-request", { kind: method,semanticTupleId: MATCH_KERNEL.tupleId,requestId: labRoot("benchmark-call",{ sourceRoot: manifest.sourceRoot,corpusRoot: manifest.corpusRoot,ordinal: i,method }),coordinates: { phaseNumber: 1,roundNumber: 1,stage: method === "selectActivations" ? "select_bottom" : "soldier_effect",ordinal: i },input: material.corpus[method][i%1100%100]!.input }) }
+      if (labRoot("charge",parseCanonical(chargeFile)) !== labRoot("charge",expected)) throw new TypeError("LAB_CHARGE_BINDING")
+      if (!existsSync(recordFile) && terminalize) publish(recordFile,lane === "validation" ? { uncertain: true,record: null,evidence: null } : { uncertain: true,evidence: null,timing: null })
+      const retained = existsSync(recordFile) ? parseCanonical(recordFile) as Record<string,unknown> : null
+      const evidence = retained?.evidence as { charged?: boolean } | null
+      if (lane === "validation") {
+        casesCharged++
+        const dispatched = existsSync(dispatchFile)
+        if (dispatched && labRoot("dispatch",parseCanonical(dispatchFile)) !== labRoot("dispatch",{ manifestRoot: manifest.root,ordinal: i,caseRoot: c!.root })) throw new TypeError("LAB_DISPATCH_BINDING")
+        validationGuestAttempts += Number(dispatched)
+        validationGuestCalls += Number(evidence?.charged === true)
+        validationUncertainCases += Number(!retained || retained.uncertain === true || (dispatched && !evidence))
+      } else { benchmarkCalls++; benchmarkGuestCalls += Number(evidence?.charged === true); benchmarkUncertainCalls += Number(!evidence) }
+    }
+  }
+  return { casesCharged,casesUnused: 256-casesCharged,validationGuestAttempts,validationGuestCalls,validationUncertainCases,benchmarkCalls,benchmarkCallsUnused: 2200-benchmarkCalls,benchmarkGuestCalls,benchmarkUncertainCalls }
+}
+export const readPlannerChargeInventory = (paths: PlannerPaths, terminalize = false) => {
+  const { manifest,material } = admitPrepared(paths)
+  return readPlannerCharges(paths,manifest,material,terminalize)
+}
+
 const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material: ReturnType<typeof buildFrozenMaterial>) => {
   const durations: { selectActivations: number[]; soldierBrain: number[] } = { selectActivations: [],soldierBrain: [] }
   const expectedAttempt = labRoot("feasibility-host",{ manifestRoot: manifest.root,id: "benchmark" })
@@ -331,6 +372,7 @@ const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material
     const file = join(paths.outputDirectory,"benchmark",`record-${i}.json`)
     if (!existsSync(file)) break
     const value = parseCanonical(file) as unknown as { evidence: import("../packages/strategy-lab/src/runtime-bridge.js").LabRuntimeEvidence; timing: import("../packages/strategy-lab/src/benchmark.js").BenchmarkObservation | null }
+    if ((value as unknown as { uncertain?: boolean }).uncertain === true) { retained++; continue }
     const e = value.evidence,timing = value.timing,method = i < 1100 ? "selectActivations" : "soldierBrain",entry = material.corpus[method][i%1100%100]!
     const requestId = labRoot("benchmark-call",{ sourceRoot: manifest.sourceRoot,corpusRoot: manifest.corpusRoot,ordinal: i,method })
     const expectedRequest = { kind: method,semanticTupleId: MATCH_KERNEL.tupleId,requestId,coordinates: { phaseNumber: 1,roundNumber: 1,stage: method === "selectActivations" ? "select_bottom" : "soldier_effect",ordinal: i },input: entry.input }
@@ -387,9 +429,15 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
     const provider = { ...host,invoke(request: LabKernelRequest,identity: typeof host.identity) {
       guard(); const ordinal = host.accounting.length
       publish(join(paths.outputDirectory,"benchmark",`charge-${ordinal}.json`),{ manifestRoot: manifest.root,ordinal,requestRoot: labRoot("benchmark-request",request) })
-      const e = host.invoke(request,identity)
-      publish(join(paths.outputDirectory,"benchmark",`record-${ordinal}.json`),{ evidence: e,timing: host.timing(e) ?? null })
-      return e
+      try {
+        const e = host.invoke(request,identity)
+        publish(join(paths.outputDirectory,"benchmark",`record-${ordinal}.json`),{ evidence: e,timing: host.timing(e) ?? null })
+        return e
+      } catch (error) {
+        const file = join(paths.outputDirectory,"benchmark",`record-${ordinal}.json`)
+        if (!existsSync(file)) publish(file,{ uncertain: true,evidence: null,timing: null })
+        throw error
+      }
     } }
     benchmark = await runPlannerBenchmark({ provider,commitment,corpus: material.corpus })
     publish(join(paths.outputDirectory,"benchmark-result.json"),benchmark)
@@ -408,7 +456,8 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
   } catch (error) { reason = error instanceof TypeError && /^LAB_[A-Z_]+$/.test(error.message) ? error.message : "LAB_EXECUTION_NON_PASS" }
   finally { controller.abort(); clearTimeout(deadline); for (const id of owned.keys()) closeOwned(id); if (!ownedCleanupComplete) { passed = false; reason = "LAB_CLEANUP_INCOMPLETE" } }
   const inventory = resumeLabInventory(join(paths.outputDirectory,"lab-matches"),material.graph)
-  const receipt = { schemaVersion: "planner-feasibility-receipt-v1",status: passed ? "passed" : "non_pass",empirical: true,reason,casesCharged: validation?.casesCharged ?? 0,validationGuestCalls: validation?.guestCalls ?? 0,benchmarkCalls: benchmark?.charged ?? 0,matchAttemptsCharged: inventory.records.filter(r => r.attempt.classification !== "unused").length+inventory.uncertainAttemptIds.length,matchAttemptsUnused: inventory.pendingAttemptIds.length+inventory.records.filter(r => r.attempt.classification === "unused").length,scientificCells: 8,arenaLabels: 3,geometries: 2,elapsedMs: performance.now()-start,hostPeakRssKiB: process.resourceUsage().maxRSS,productionAuthorized: false }
+  const charges = readPlannerCharges(paths,manifest,material,true)
+  const receipt = { schemaVersion: "planner-feasibility-receipt-v1",status: passed ? "passed" : "non_pass",empirical: true,reason,...charges,matchAttemptsCharged: inventory.records.filter(r => r.attempt.classification !== "unused").length+inventory.uncertainAttemptIds.length,matchAttemptsUnused: inventory.pendingAttemptIds.length+inventory.records.filter(r => r.attempt.classification === "unused").length,matchAttemptsUncertain: inventory.uncertainAttemptIds.length,cleanupComplete: ownedCleanupComplete && charges.validationUncertainCases === 0 && charges.benchmarkUncertainCalls === 0 && (validation?.cleanupComplete ?? true) && (benchmark === null || ("cleanupComplete" in benchmark ? benchmark.cleanupComplete : benchmark.passed)),scientificCells: 8,arenaLabels: 3,geometries: 2,elapsedMs: performance.now()-start,hostPeakRssKiB: process.resourceUsage().maxRSS,productionAuthorized: false }
   publish(join(paths.outputDirectory,"receipt.json"),receipt)
   return receipt
 }
@@ -421,10 +470,12 @@ export const verifyPlannerFeasibility = (paths: PlannerPaths) => {
   if (!existsSync(join(paths.outputDirectory,"consumed.json"))) return { status: "prepared",executed: false,manifestRoot: manifest.root }
   if (labRoot("consumed",parseCanonical(join(paths.outputDirectory,"consumed.json"))) !== labRoot("consumed",{ manifestRoot: manifest.root,executionRoot: manifest.executionRoot })) throw new TypeError("LAB_CONSUMED_BINDING")
   const records: PlannerValidationRecord[] = []
+  const charges = readPlannerCharges(paths,manifest,material)
   for (const c of material.inventory.cases) {
     const file = join(paths.outputDirectory,"validation",`record-${c.ordinal}.json`)
     if (!existsSync(file)) break
     const retained = parseCanonical(file) as unknown as { record: PlannerValidationRecord; evidence: { result: { ok: boolean; value?: unknown }; inputRoot: string; identity: { sourceRoot: string }; requestId: string } | null }
+    if ((retained as unknown as { uncertain?: boolean }).uncertain === true) continue
     if (labRoot("retained-charge",parseCanonical(join(paths.outputDirectory,"validation",`charge-${c.ordinal}.json`))) !== labRoot("retained-charge",{ manifestRoot: manifest.root,caseRoot: c.root,ordinal: c.ordinal })) throw new TypeError("LAB_RETAINED_VALIDATION_CHARGE")
     if (retained.record.guestCalls && (!retained.evidence || retained.evidence.requestId !== c.root || retained.evidence.inputRoot !== labRoot("runtime-input",c.input) || retained.evidence.identity.sourceRoot !== rawRoot(c.source ?? material.candidate.source) || (retained.evidence.result.ok && labRoot("result",retained.evidence.result.value) !== labRoot("result",retained.record.value)))) throw new TypeError("LAB_RETAINED_VALIDATION")
     records.push(retained.record)
@@ -449,7 +500,7 @@ export const verifyPlannerFeasibility = (paths: PlannerPaths) => {
   const receiptPath = join(paths.outputDirectory,"receipt.json")
   if (!existsSync(receiptPath)) return { status: "incomplete_non_pass",executed: false,validationCasesRetained: records.length,uncertainMatchAttempts: matches.uncertainAttemptIds.length }
   const receipt = parseCanonical(receiptPath) as unknown as { status: string; casesCharged: number; matchAttemptsCharged: number; benchmarkCalls: number }
-  if (receipt.casesCharged !== records.length || receipt.benchmarkCalls !== benchmark.retained || (receipt.status === "passed" && (!validation.passed || !benchmark.passed || reduction?.status !== "complete" || receipt.benchmarkCalls !== 2200))) throw new TypeError("LAB_RECEIPT_DERIVATION")
+  if (receipt.casesCharged !== charges.casesCharged || receipt.benchmarkCalls !== charges.benchmarkCalls || (receipt.status === "passed" && (!validation.passed || !benchmark.passed || reduction?.status !== "complete" || receipt.benchmarkCalls !== 2200))) throw new TypeError("LAB_RECEIPT_DERIVATION")
   return { status: receipt.status,executed: false,manifestRoot: manifest.root,validationCasesRetained: records.length,semanticRoot: reduction?.semanticRoot ?? null }
 }
 

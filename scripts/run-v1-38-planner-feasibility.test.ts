@@ -7,16 +7,38 @@ vi.mock("node:fs", async importOriginal => {
   const actual = await importOriginal<typeof import("node:fs")>()
   return { ...actual, readFileSync: (...args: Parameters<typeof actual.readFileSync>) => String(args[0]).endsWith("/263-REVIEW.md") ? safety.review : Reflect.apply(actual.readFileSync, actual, args) }
 })
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { buildPlannerValidationInventory, createValidationContextOwner, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility } from "./run-v1-38-planner-feasibility.js"
+import { buildPlannerValidationInventory, createValidationContextOwner, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility, readPlannerChargeInventory } from "./run-v1-38-planner-feasibility.js"
 import { validateStrategySource } from "../packages/runtime-js/src/validation.js"
-import { SoldierBrainInputV119Schema, StrategyInputV119Schema } from "@cowards/spec"
+import { SoldierBrainInputV119Schema, StrategyInputV119Schema, admitCanonicalJsonValue } from "@cowards/spec"
+import { labRoot } from "../packages/strategy-lab/src/contracts.js"
+import { buildFeasibilityCorpus } from "../packages/strategy-lab/src/feasibility-protocol.js"
+import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 
 const dirs: string[] = []
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir,{ recursive: true,force: true }) })
 describe("private feasibility CLI synthetic/read-only modes", () => {
+  it("preserves durable charges without returned summaries and verifies an interrupted non-pass", () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(),"lab-cli-ledger-"))); dirs.push(root)
+    const paths = { manifestPath: join(root,"manifest.json"),outputDirectory: join(root,"phase263-feasibility") }
+    const manifest = preparePlannerFeasibility(paths)
+    const write = (file: string,value: unknown) => { const encoded = admitCanonicalJsonValue(value,{ profile:"canonical-manifest" }); if (!encoded.ok) throw Error("fixture"); writeFileSync(join(paths.outputDirectory,file),encoded.canonicalBytes) }
+    write("consumed.json",{ manifestRoot:manifest.root,executionRoot:manifest.executionRoot })
+    const inventory = buildPlannerValidationInventory()
+    for (let i=0;i<3;i++) write(`validation/charge-${i}.json`,{manifestRoot:manifest.root,ordinal:i,caseRoot:inventory.cases[i]!.root})
+    write("validation/dispatch-0.json",{manifestRoot:manifest.root,ordinal:0,caseRoot:inventory.cases[0]!.root})
+    const request = {kind:"selectActivations",semanticTupleId:MATCH_KERNEL.tupleId,requestId:labRoot("benchmark-call",{sourceRoot:manifest.sourceRoot,corpusRoot:manifest.corpusRoot,ordinal:0,method:"selectActivations"}),coordinates:{phaseNumber:1,roundNumber:1,stage:"select_bottom",ordinal:0},input:buildFeasibilityCorpus().selectActivations[0]!.input}
+    write("benchmark/charge-0.json",{manifestRoot:manifest.root,ordinal:0,requestRoot:labRoot("benchmark-request",request)})
+    const counts = readPlannerChargeInventory(paths,true)
+    expect(counts).toMatchObject({casesCharged:3,casesUnused:253,validationGuestAttempts:1,validationGuestCalls:0,validationUncertainCases:3,benchmarkCalls:1,benchmarkGuestCalls:0,benchmarkUncertainCalls:1,benchmarkCallsUnused:2199})
+    const receipt = {schemaVersion:"planner-feasibility-receipt-v1",status:"non_pass",empirical:true,reason:"LAB_INTERRUPTED",...counts,matchAttemptsCharged:0,matchAttemptsUnused:24,matchAttemptsUncertain:0,cleanupComplete:false,scientificCells:8,arenaLabels:3,geometries:2,elapsedMs:1,hostPeakRssKiB:1,productionAuthorized:false}
+    write("receipt.json",receipt)
+    expect(verifyPlannerFeasibility(paths)).toMatchObject({status:"non_pass",executed:false})
+    expect(readPlannerChargeInventory(paths)).toEqual(counts)
+    expect(safety.deniedHost).not.toHaveBeenCalled()
+  },60000)
   it("owns at most two hosts across256 cases, closes fresh promptly and genuinely reuses declared contexts", () => {
     const inventory = buildPlannerValidationInventory()
     const owner = createValidationContextOwner<{ close(): { cleanupComplete: boolean; orphanedChild: boolean }; calls: number; closes: number }>(inventory.cases)
