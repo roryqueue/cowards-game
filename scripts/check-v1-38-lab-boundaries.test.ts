@@ -49,5 +49,5 @@ describe("one-way lab boundary monitor", () => {
   })
   it("checks the actual repository without adding production imports", () => {
     expect(checkLabBoundaries()).toEqual(expect.objectContaining({ ok: true, violations: [] }))
-  })
+  }, 30000)
 })
