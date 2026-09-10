@@ -6,7 +6,7 @@ import { runPlannerBenchmark, evaluatePlannerBenchmark, type BenchmarkProvider, 
 const root = labRoot("synthetic-benchmark", 1)
 const corpus = buildFeasibilityCorpus()
 const inputRoots = { selectActivations: corpus.selectActivations.map((c) => labRoot("runtime-input", c.input)), soldierBrain: corpus.soldierBrain.map((c) => labRoot("runtime-input", c.input)) }
-const commitment = { corpusRoot: corpus.root, sourceRoot: root, executableRoot: root, harnessRoot: root, profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot, attemptRoot: root, machineRoot: root }
+const commitment = { revisionId: "synthetic-only", corpusRoot: corpus.root, sourceRoot: root, executableRoot: root, harnessRoot: root, profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot, attemptRoot: root, machineRoot: root }
 const synthetic = (ms = 1): BenchmarkProvider => {
   let ordinal = 0
   const issued = new WeakSet<object>(); const observations = new WeakMap<object, BenchmarkObservation>(); const timingIssued = new WeakSet<object>()
@@ -19,6 +19,28 @@ const synthetic = (ms = 1): BenchmarkProvider => {
   }, verify(e) { return issued.has(e) }, timing(e) { return observations.get(e) }, verifyTiming(e) { return timingIssued.has(e) }, close() { return { cleanupComplete: true, orphanedChild: false } } }
 }
 describe("fixed benchmark protocol with synthetic observations only", () => {
+  it.each(["sourceRoot", "harnessRoot", "attemptRoot"] as const)("rejects wrong initial %s before any charged call", async field => {
+    const provider = synthetic(); let calls = 0
+    provider.identity[field] = labRoot("wrong", field)
+    provider.invoke = () => { calls++; throw new Error("must not dispatch") }
+    await expect(runPlannerBenchmark({ provider, commitment, corpus })).rejects.toThrow("LAB_BENCHMARK_PROVIDER_IDENTITY")
+    expect(calls).toBe(0)
+  })
+  it.each(["source", "timing", "request", "machine"])("stops after one charged wrong returned %s binding", async field => {
+    const provider = synthetic(), original = provider.timing
+    let calls = 0
+    provider.timing = e => {
+      calls++
+      const observation = original(e)!
+      if (field === "source") e.identity.sourceRoot = labRoot("wrong", 1)
+      if (field === "timing") observation.observation.binding.inputRoot = labRoot("wrong", 1)
+      if (field === "request") e.requestId = "wrong"
+      if (field === "machine") observation.machineRoot = labRoot("wrong", 1)
+      return observation
+    }
+    expect(await runPlannerBenchmark({ provider, commitment, corpus })).toMatchObject({ passed: false, charged: 1, reason: "incomplete_or_failed" })
+    expect(calls).toBe(1)
+  })
   it("uses nearest-rank sample990, not interpolation or trimming", () => {
     const samples: number[] = Array.from({ length: 1000 }, (_, i) => i < 990 ? 1 : 100)
     expect(evaluateFeasibilityTiming({ selectActivations: samples, soldierBrain: samples }).passed).toBe(true)

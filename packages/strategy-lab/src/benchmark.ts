@@ -1,7 +1,7 @@
 import { MATCH_KERNEL } from "@cowards/engine"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "./contracts.js"
 import { buildFeasibilityCorpus, evaluateFeasibilityTiming, PLANNER_FEASIBILITY_PROTOCOL } from "./feasibility-protocol.js"
-import type { LabKernelRequest, LabRuntimeEvidence, LabSupervisedProvider } from "./runtime-bridge.js"
+import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "./runtime-bridge.js"
 
 export interface BenchmarkObservation {
   runtime: LabRuntimeEvidence;
@@ -14,6 +14,7 @@ export interface BenchmarkProvider extends LabSupervisedProvider {
   verifyTiming(evidence: BenchmarkObservation): boolean;
 }
 export interface BenchmarkCommitment {
+  revisionId: string;
   corpusRoot: LabRoot; sourceRoot: LabRoot; executableRoot: LabRoot; harnessRoot: LabRoot;
   profileRoot: string; budgetRoot: LabRoot; attemptRoot: LabRoot; machineRoot: LabRoot;
 }
@@ -42,6 +43,21 @@ const requestAt = (ordinal: number, corpus: Corpus, commitment: BenchmarkCommitm
   } as LabKernelRequest
 }
 
+const admittedIdentity = (commitment: BenchmarkCommitment): LabRuntimeIdentity => ({
+  revisionId: commitment.revisionId, sourceRoot: commitment.sourceRoot, executableRoot: commitment.executableRoot,
+  harnessRoot: commitment.harnessRoot, budgetRoot: commitment.budgetRoot, attemptRoot: commitment.attemptRoot,
+  runtimeLimitsRoot: commitment.profileRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image,
+})
+const assertObservation = (provider: BenchmarkProvider, commitment: BenchmarkCommitment, observation: BenchmarkObservation, request: LabKernelRequest, ordinal: number, invocationRoots: Set<string>) => {
+  const e = observation.runtime, b = observation.observation.binding
+  if (!provider.verify(e) || !provider.verifyTiming(observation) || observation.machineRoot !== commitment.machineRoot || !e.result.ok || !e.charged || !e.completed || e.ordinal !== ordinal || e.method !== request.kind || e.requestId !== request.requestId || e.inputRoot !== runtimeInputRoots[request.kind][ordinal % 1100 % 100] ||
+    Object.keys(e.identity).length !== Object.keys(admittedIdentity(commitment)).length || Object.entries(admittedIdentity(commitment)).some(([key, value]) => e.identity[key as keyof LabRuntimeIdentity] !== value) ||
+    b.invocationRoot !== e.invocationRoot || b.sourceRoot !== commitment.sourceRoot || b.executableRoot !== commitment.executableRoot || b.inputRoot !== e.inputRoot || b.method !== request.kind || b.tupleId !== MATCH_KERNEL.tupleId || b.harnessRoot !== commitment.harnessRoot || b.profileRoot !== commitment.profileRoot ||
+    !Number.isSafeInteger(e.outputBytes) || e.outputBytes < 0 || e.outputBytes > 262144 || invocationRoots.has(e.invocationRoot) || observation.observation.complete !== true || !Number.isFinite(observation.observation.durationMs) || observation.observation.durationMs < 0 || observation.observation.durationMs > 1000 ||
+    !Number.isFinite(observation.totalMs) || observation.totalMs < 0 || !Number.isFinite(observation.transportMs) || observation.transportMs < 0 || !["synthetic_transport", "supervised_container"].includes(observation.provenance)) throw new TypeError("LAB_BENCHMARK_BINDING")
+  invocationRoots.add(e.invocationRoot)
+}
+
 /** Trusted host issuance is required even for replay evaluation; serializable
  * timing assertions and caller-provided clocks are not accepted as evidence. */
 export const evaluatePlannerBenchmark = (options: {
@@ -56,13 +72,7 @@ export const evaluatePlannerBenchmark = (options: {
   let empirical = true
   for (const [ordinal, observation] of observations.entries()) {
     const request = requestAt(ordinal, corpus, commitment)
-    const e = observation.runtime; const b = observation.observation.binding
-    if (!provider.verify(e) || !provider.verifyTiming(observation) || observation.machineRoot !== commitment.machineRoot || !e.result.ok || !e.charged || !e.completed || e.ordinal !== ordinal || e.method !== request.kind || e.requestId !== request.requestId || e.inputRoot !== runtimeInputRoots[request.kind][ordinal % 1100 % 100] ||
-      e.identity.sourceRoot !== commitment.sourceRoot || e.identity.executableRoot !== commitment.executableRoot || e.identity.harnessRoot !== commitment.harnessRoot || e.identity.budgetRoot !== commitment.budgetRoot || e.identity.attemptRoot !== commitment.attemptRoot || e.identity.runtimeLimitsRoot !== commitment.profileRoot || e.identity.tupleId !== MATCH_KERNEL.tupleId || e.identity.tupleRoot !== LAB_ADMITTED_ROOTS.tupleRoot || e.identity.image !== LAB_ADMITTED_ROOTS.image ||
-      b.invocationRoot !== e.invocationRoot || b.sourceRoot !== commitment.sourceRoot || b.executableRoot !== commitment.executableRoot || b.inputRoot !== e.inputRoot || b.method !== request.kind || b.tupleId !== MATCH_KERNEL.tupleId || b.harnessRoot !== commitment.harnessRoot || b.profileRoot !== commitment.profileRoot ||
-      !Number.isSafeInteger(e.outputBytes) || e.outputBytes < 0 || e.outputBytes > 262144 || invocationRoots.has(e.invocationRoot) || observation.observation.complete !== true || !Number.isFinite(observation.observation.durationMs) || observation.observation.durationMs < 0 || observation.observation.durationMs > 1000 ||
-      !Number.isFinite(observation.totalMs) || observation.totalMs < 0 || !Number.isFinite(observation.transportMs) || observation.transportMs < 0 || !["synthetic_transport", "supervised_container"].includes(observation.provenance)) throw new TypeError("LAB_BENCHMARK_BINDING")
-    invocationRoots.add(e.invocationRoot)
+    assertObservation(provider, commitment, observation, request, ordinal, invocationRoots)
     empirical = empirical && observation.provenance === "supervised_container"
     if (ordinal % 1100 >= 100) durations[request.kind].push(observation.observation.durationMs)
   }
@@ -79,16 +89,20 @@ export const runPlannerBenchmark = async (options: { provider: BenchmarkProvider
   // Admission precedes all dispatch; immutable copies prevent post-result edits.
   assertCorpus(options.corpus, options.commitment)
   const commitment = freezeLabValue(structuredClone(options.commitment))
+  const identity = freezeLabValue(admittedIdentity(commitment))
+  if (typeof identity.revisionId !== "string" || identity.revisionId.length === 0 || labRoot("runtime-identity", provider.identity) !== labRoot("runtime-identity", identity)) throw new TypeError("LAB_BENCHMARK_PROVIDER_IDENTITY")
   const corpus = freezeLabValue(structuredClone(options.corpus))
   const observations: BenchmarkObservation[] = []
+  const invocationRoots = new Set<string>()
   let charged = 0; let clean = false
   try {
     for (let ordinal = 0; ordinal < 2200; ordinal++) {
       const request = structuredClone(requestAt(ordinal, corpus, commitment))
       charged++
-      const e = await provider.invoke(request, provider.identity)
+      const e = await provider.invoke(request, identity)
       const timing = provider.timing(e)
-      if (!e.result.ok || !e.charged || !e.completed || !timing || !provider.verify(e) || !provider.verifyTiming(timing)) break
+      if (!timing || timing.runtime !== e) break
+      assertObservation(provider, commitment, timing, request, ordinal, invocationRoots)
       observations.push(timing)
     }
   } catch { /* A charged failed call terminates this allocation, never resamples. */ }
@@ -96,5 +110,6 @@ export const runPlannerBenchmark = async (options: { provider: BenchmarkProvider
     try { const cleanup = provider.close(); clean = cleanup.cleanupComplete && !cleanup.orphanedChild } catch { clean = false }
   }
   if (observations.length !== 2200 || !clean) return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, reason: "incomplete_or_failed" })
-  return evaluatePlannerBenchmark({ provider, commitment, observedCommitment: commitment, observations, corpus, cleanupComplete: clean })
+  try { return evaluatePlannerBenchmark({ provider, commitment, observedCommitment: commitment, observations, corpus, cleanupComplete: clean }) }
+  catch { return freezeLabValue({ passed: false, protocolPassed: false, empirical: false, charged, reason: "incomplete_or_failed" }) }
 }
