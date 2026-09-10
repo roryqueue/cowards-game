@@ -7,10 +7,10 @@ current_phase_name: legal-planner-and-deterministic-runner-feasibility
 current_plan: 6
 total_plans_in_phase: 7
 status: in_progress
-stopped_at: Plan263-06 source review clean; safe regression complete; sole empirical gate next
+stopped_at: Phase263 actual validation passed; selection timing failed; same-plan isolated source optimization and terminal verification in progress
 last_updated: "2026-09-10T02:43:00Z"
 last_activity: 2026-09-09
-last_activity_desc: Five plans complete; full-source review clean;196 safe regression tests pass; empirical allocation unconsumed
+last_activity_desc: Phase263 sole allocation consumed; selection p99 64.135270ms; zero Matches; no retry remaining
 progress:
   total_phases: 9
   completed_phases: 1
@@ -23,7 +23,7 @@ progress:
 
 ## Current Phase263 execution
 
-Plans263-01 through05 are implemented (5/7 plans). Plan06 Tasks1/2 are complete: full-source independent review is clean after same-plan corrections; the emitted candidate remains24294bytes. Final safe regression passes181 phase/canonical tests,8 CLI tests and7 injected/static supervisor seam tests (196 total), with strict CLI types and package build passing. Exact pinned runtime image is available. The sole final preparation and empirical gate are next; no Phase263 allocation has yet been consumed. Shared requirements remain pending actual gates and phase verification.
+Plans263-01 through05 are implemented (5/7 plans). Plan06 consumed its sole actual run after clean independent source review and196safe tests:256validation cases passed (232guest calls), but selection p99=64.135270ms failed strict<5ms; SoldierBrain p99=2.349449ms passed. All2200benchmark calls completed; zero Matches ran and24slots remain unused. Read-only verification confirms non_pass. Plan07 records the actual gap; Phase264 remains blocked. Ordinary behavior-preserving caching/reporting repair is underway in an isolated branch with no extra timing or allocation. A fresh empirical envelope requires operator revision of the consumed zero-retry bound, not a repeated literal checkpoint. See263-FEASIBILITY.md for immutable roots and cleanup-summary nuance.
 
 Decisions: freeze exact expected manifest before execution; keep corpus fixture context distinct from deployed mission ABI; retain1000ms selected runtime and separate strict<5ms direct-method gate. PLAN-06/FACT-01/FACT-04 remain pending full downstream verification, not completed by synthetic tests. No new blockers. Task commits:cf3b5399,60c517f0,ae8815c3,d6fc27ee,535f63c1,06de724d. Execution task work approximately10minutes;3tasks/9owned files. Session stopped at completed263-01; no resume file. Historical sections below remain immutable context.
 

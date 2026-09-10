@@ -1,9 +1,9 @@
 ---
 phase: 263
 slug: legal-planner-and-deterministic-runner-feasibility
-status: draft
+status: partial
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-09-09
 ---
 
@@ -31,7 +31,7 @@ created: 2026-09-09
 
 ## Per-Task Verification Map
 
-Tests are created before implementation in each owning task (task-local Wave0). No consumer plan may run before its declared dependencies. All rows are planned, not passed. Prefix every test path below with `pnpm exec vitest run --maxWorkers=1`; this gives the exact non-watch command.
+Tests were created in the owning implementation tasks. No consumer plan ran before its declared dependencies. The original per-task command map below is retained as planning history; the executed disposition table in the audit section supersedes its pending status cells. Actual source timing and Match feasibility are not inferred from synthetic tests.
 
 | Task ID | Wave | Requirements | Threat Ref | Automated test paths | Status |
 |---|---|---|---|---|---|
@@ -66,11 +66,11 @@ Tests are created before implementation in each owning task (task-local Wave0). 
 
 ## Wave 0 Requirements
 
-- [ ] Create private package and test scripts using existing infrastructure.
-- [ ] Create shared canonical state/legal-input fixtures and each missing test file in its owning implementation task.
-- [ ] Bind fixed manifest/benchmark/allocation before empirical execution; do not reuse consumed Phase 262 authority or artifacts.
-- [ ] Include hostile-input, hidden-state pairs, board-start realism, three-way runtime failure and interruption/cleanup tests.
-- [ ] Fix exact commands/task mapping during planning; no watch-mode flags.
+- [x] Create private package and test scripts using existing infrastructure.
+- [x] Create shared canonical state/legal-input fixtures and each missing test file in its owning implementation task.
+- [x] Bind fixed manifest/benchmark/allocation before empirical execution; do not reuse consumed Phase 262 authority or artifacts.
+- [x] Include hostile-input, hidden-state pairs, board-start realism, three-way runtime failure and interruption/cleanup tests.
+- [x] Fix exact commands/task mapping during planning; no watch-mode flags.
 
 ## Manual-Only Verifications
 
@@ -85,4 +85,33 @@ All phase behaviors have automated verification. No UI is created or changed; br
 - [ ] Actual-source gate passes under unchanged bounds.
 - [ ] `nyquist_compliant: true` only after demonstrated coverage.
 
-**Approval:** Pending checked plans and execution evidence; ordinary implementation proceeds under the user's autonomous milestone authorization.
+**Disposition:** Partial, not a phase pass. The actual selection timing gate failed; downstream Match evidence is blocked. Routine repair is authorized, but the consumed no-retry run cannot be reused.
+
+## Validation Audit — 2026-09-10
+
+| Task | Executed evidence | Current status |
+|---|---|---|
+| 263-01-1 | Contracts/schema tests | Passed synthetic |
+| 263-01-2 | Frozen protocol/corpus/allocation tests | Passed synthetic |
+| 263-01-3 | Isolation/boundary monitor and negative imports | Passed static |
+| 263-02-1 | Ten mission lifecycle tests | Passed pure fixtures |
+| 263-02-2 | Lexicographic assignment/budget/tie-break tests | Passed pure fixtures |
+| 263-03-1 | Canonical tactic/Advance/fallback brain tests | Passed pure fixtures |
+| 263-03-2 | Static emission/schema/source-size tests | Passed static; actual validation also passed |
+| 263-04-1 | Kernel/provider three-way failure tests | Passed injected; actual Match equivalence pending |
+| 263-04-2 | Selected supervisor and injected lifecycle/cleanup tests | Passed injected; real validation/benchmark calls completed |
+| 263-04-3 | Observer binding and percentile tests | Passed synthetic; real selection timing failed |
+| 263-05-1 | Stable tasks/alias/scientific denominator tests | Passed synthetic |
+| 263-05-2 | Immutable shards/retained failure/charge/resume tests | Passed synthetic |
+| 263-05-3 | 36worker/shard/order/restart variants and faults | Passed real workers with trusted synthetic jobs; not real Matches |
+| 263-06-1 | CLI/information/lifecycle/retained ledger regression | Passed8 CLI tests plus package information tests |
+| 263-06-2 | Independent full-source review | Clean before measurement; see subsequent terminal reporting limitations |
+| 263-06-3 | Sole frozen actual run and read-only verify | Terminal non-pass: selection64.135270ms; brain2.349449ms;0Matches |
+| 263-07-1 | Independent goal-backward source/evidence review | See263-VERIFICATION.md; gaps remain |
+| 263-07-2 | Private operator UAT and coverage records | Recorded truthfully;3pass/1issue/2blocked |
+
+Final pre-run command used installed local Vitest with `--maxWorkers=1` for `packages/strategy-lab`, the boundary monitor, selected supervised host, observer, executable closure and canonical kernel contract/ownership tests:181/181 passed across19files in223.60seconds. CLI8/8 passed in72.99seconds. Selected static/injected historical session cases7/7 passed in2.58seconds;53 unrelated historical cases were deliberately excluded because some execute guest source. Total196 safe tests, strict standalone CLI/test TypeScript and package build passed. Focused feedback can exceed the original30-second target for closure rebuilding; the full Cartesian worker matrix is deliberately slow and separately identified.
+
+Actual validation consumed256case slots, including232guest calls and24expected pre-runtime rejections. All2200benchmark calls completed. No invocation is retried or reclassified into a new allocation. The sole empirical run lasted8.62minutes and retained13,784,794private bytes. Read-only `--verify` returned non_pass with zero execution. There are no Match traces;8baseline realism inspections,24-Match invariance and complete scientific reduction remain blocked, not manual waivers.
+
+Nyquist remains false because the hard actual-source requirement fails and dependent empirical requirements are incomplete. Adding more synthetic tests cannot satisfy the missing real gate. See263-FEASIBILITY.md for exact roots and cleanup-summary nuance; immutable receipts are preserved. No source edits or extra measurement were made during this validation audit.

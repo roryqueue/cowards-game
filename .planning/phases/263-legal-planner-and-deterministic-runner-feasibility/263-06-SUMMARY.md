@@ -2,7 +2,7 @@
 phase: 263-legal-planner-and-deterministic-runner-feasibility
 plan: "06"
 subsystem: strategy-lab-cli
-tags: [partial, task-one-only, frozen-inventory, synthetic-validation]
+tags: [terminal-non-pass, frozen-inventory, actual-validation, timing-failure]
 requires: [{phase: 263-01, provides: Final mapped protocol}, {phase: 263-03, provides: Static source builder}, {phase: 263-04, provides: Selected supervisor and observer}, {phase: 263-05, provides: Bound runner and private shards}]
 provides: [Private prepare/run/verify command, Frozen256-case inventory, Read-only retained-evidence reconstruction]
 affects: [263-06-task-2, 263-06-task-3, 263-07]
@@ -19,15 +19,15 @@ key-decisions:
 requirements-covered: [PLAN-04, PLAN-05, PLAN-06, FACT-02, FACT-03, FACT-04]
 requirements-completed: []
 duration: 25min
-completed: null
-status: partial
-tasks-completed: 2
+completed: 2026-09-10
+status: terminal_non_pass
+tasks-completed: 3
 tasks-total: 3
 ---
 
-# Phase 263 Plan 06: Task 1 Partial Summary
+# Phase 263 Plan 06: Terminal Non-pass Summary
 
-Task1 implements the private CLI and frozen256-case validation inventory. Task2 independent full-source review is now clean after the same-plan fixes below. Task3 sole live allocation remains parent-owned and unconsumed; this is not plan or empirical completion.
+Tasks1/2 implemented and independently reviewed the private CLI. Task3 consumed its sole actual-source run:256 validation cases passed, but selection p99 failed64.135270ms against strict<5ms. SoldierBrain passed2.349449ms. Zero Matches ran. Accounting is terminal; phase feasibility is not satisfied. Historical task checkpoints below are superseded by the terminal section.
 
 ## Task 1 Commits
 
@@ -95,3 +95,9 @@ The final independent review resolves CR-01 through CR-12 and WR-01, with zero a
 Final CLI regression:8/8 passed in72.99seconds. Strict standalone CLI/test TypeScript and package build pass. Seven injected/static supervisor seam tests pass, with53 unrelated tests excluded to avoid unauthorized guest execution. Exact Docker server29.4.0 and pinned image availability were checked read-only. Full safe phase and canonical seam regression is the remaining pre-run check. No final manifest or live allocation has been consumed at this checkpoint.
 
 Final pre-run regression subsequently passed181/181 across19 phase/canonical test files in223.60seconds. Together with8 CLI and7 selected injected/static supervisor tests,196 tests pass. No live guest execution occurred in those tests. Source review/fixes are committed as `cc60a512`; the final preparation/run remains unconsumed at this checkpoint.
+
+## Task 3 Terminal Actual-source Result
+
+The immutable manifest was prepared at `d138fdb2fe1767bb1d5439b4c935e1ea91deba0c`, then --run invoked exactly once without intervening source or Git changes. Actual validation passed256/256cases with232guest calls and24expected pre-runtime rejections. Benchmark completed2200calls: selection p99=64.135270ms FAILED; SoldierBrain p99=2.349449ms PASSED. All24Match slots remain unused because the hard gate correctly denied dispatch. Total elapsed517054.38332ms, no uncertain charges. Read-only --verify subsequently returned non_pass with no execution.
+
+See263-FEASIBILITY.md for exact manifest/receipt roots, complete counts, private evidence footprint, observed cleanup facts and the aggregate-cleanup reporting nuance. No source timing was repeated and no threshold was changed. Plan263-07 records gaps and partial UAT; Phase264 remains blocked. A behavior-preserving source optimization is being prepared in an isolated branch only. A fresh actual-source allocation requires operator revision of the consumed no-retry envelope; no exact literal or new numbered plan chain is needed.
