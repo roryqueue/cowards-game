@@ -8,7 +8,7 @@ Plan203's explicitly approved retry continuation produced24/24 successful superv
 
 Plan262-203 implemented the isolated 2 CPU/256 MB, 120-second-cell/60-minute-outer profile and obtained independent seven-category source review with zero unresolved findings. Main consumed its sole preflight: `non_pass/docker_unavailable`, zero samples/lifecycles/Matches. The service was restored afterward, but no preflight was repeated and no Match was admitted. ADMIT-03 and Phase262 remain incomplete; Phase263 cannot begin. A fresh preflight requires explicit renewed authority. Plans175/176 remain superseded unexecuted; all consumed history and 36 locks are preserved. Older dispatch carriers below are historical and must not be followed.
 
-<!-- phase-262-closeout-current: {"decision":"D-34L.2","activeChain":[],"terminalPlan":"262-203","supersededUnexecuted":["262-175","262-176"],"cpu":2,"memoryMb":256,"cellDeadlineMs":120000,"outerDeadlineMs":3600000,"preflightsConsumed":1,"freshPreflightsAllowed":0,"matchesRun":0,"result":"non_pass","reason":"docker_unavailable","phase262Complete":false,"phase263Eligible":false} -->
+<!-- phase-262-closeout-current: {"decision":"D-34L.2-approved-retry","activeChain":[],"terminalPlan":"262-203","supersededUnexecuted":["262-175","262-176"],"cpu":2,"memoryMb":256,"cellDeadlineMs":120000,"outerDeadlineMs":3600000,"preflightsConsumed":2,"freshPreflightsAllowed":0,"matchesRun":24,"result":"pass","phase262Complete":true,"phase263Eligible":true} -->
 
 ## Approved D-34L.1 lean execution closure — 2026-09-01
 
@@ -994,13 +994,13 @@ Plans:
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 0/TBD | Discussion complete; research/planning eligible | - |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
-| 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
-| 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
-| 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
-| 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
-| 269. Sealed Evaluation, Causal Decision, and Current-Only Certification | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
-| 270. Independent Verification and Release Closure | 0/TBD | Discussion complete; planning/execution denied by Phase 262 | - |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; awaits Phase263 | - |
+| 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
+| 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
+| 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
+| 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; awaits Phase267 | - |
+| 269. Sealed Evaluation, Causal Decision, and Current-Only Certification | 0/TBD | Discussion complete; awaits Phase268 | - |
+| 270. Independent Verification and Release Closure | 0/TBD | Discussion complete; awaits Phase269 | - |
 
 ---
 *Roadmap created: 2026-07-27*
