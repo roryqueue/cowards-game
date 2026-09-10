@@ -10,16 +10,30 @@ vi.mock("node:fs", async importOriginal => {
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { buildPlannerValidationInventory, createValidationContextOwner, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility, readPlannerChargeInventory } from "./run-v1-38-planner-feasibility.js"
+import { admitPlannerReceipt, retainedBenchmarkPass, buildPlannerValidationInventory, createValidationContextOwner, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility, readPlannerChargeInventory } from "./run-v1-38-planner-feasibility.js"
 import { validateStrategySource } from "../packages/runtime-js/src/validation.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { buildFeasibilityCorpus } from "../packages/strategy-lab/src/feasibility-protocol.js"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
+import { admitRetainedRuntime, admitRetainedValidationResult } from "./run-v1-38-planner-feasibility.js"
+import { LAB_ADMITTED_ROOTS } from "../packages/strategy-lab/src/contracts.js"
 
 const dirs: string[] = []
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir,{ recursive: true,force: true }) })
 describe("private feasibility CLI synthetic/read-only modes", () => {
+  it("rejects altered retained runtime identity and result classification without a host",()=>{
+    const root=labRoot("fixture",{}),c=buildPlannerValidationInventory().cases[0]!
+    const identity={revisionId:"fixture",sourceRoot:root,executableRoot:root,tupleId:MATCH_KERNEL.tupleId,tupleRoot:LAB_ADMITTED_ROOTS.tupleRoot,image:LAB_ADMITTED_ROOTS.image,harnessRoot:root,budgetRoot:root,attemptRoot:root,runtimeLimitsRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot}
+    const request={kind:"selectActivations",semanticTupleId:MATCH_KERNEL.tupleId,requestId:c.root,coordinates:{phaseNumber:1,roundNumber:1,stage:"select_bottom",ordinal:0},input:c.input} as Parameters<typeof admitRetainedRuntime>[2]
+    const e={identity,requestId:request.requestId,method:request.kind,inputRoot:labRoot("runtime-input",request.input),ordinal:0,invocationRoot:labRoot("supervised-invocation",{identity,requestId:request.requestId,method:request.kind,inputRoot:labRoot("runtime-input",request.input),ordinal:0}),charged:true,completed:true,outputBytes:1,result:{ok:false,violation:{type:"INVALID_OUTPUT",message:"synthetic"}}}
+    const admitted=admitRetainedRuntime(e,identity,request,0)
+    expect(()=>admitRetainedValidationResult({classification:"player_violation",value:null},admitted)).not.toThrow()
+    expect(()=>admitRetainedValidationResult({classification:"success",value:null},admitted)).toThrow(/CLASSIFICATION/)
+    expect(()=>admitRetainedRuntime({...e,identity:{...identity,revisionId:"changed"}},identity,request,0)).toThrow(/BINDING/)
+    expect(()=>admitRetainedRuntime({...e,unknown:true},identity,request,0)).toThrow(/SCHEMA/)
+    expect(safety.deniedHost).not.toHaveBeenCalled()
+  })
   it("preserves durable charges without returned summaries and verifies an interrupted non-pass", () => {
     const root = realpathSync(mkdtempSync(join(tmpdir(),"lab-cli-ledger-"))); dirs.push(root)
     const paths = { manifestPath: join(root,"manifest.json"),outputDirectory: join(root,"phase263-feasibility") }
@@ -37,8 +51,19 @@ describe("private feasibility CLI synthetic/read-only modes", () => {
     write("receipt.json",receipt)
     expect(verifyPlannerFeasibility(paths)).toMatchObject({status:"non_pass",executed:false})
     expect(readPlannerChargeInventory(paths)).toEqual(counts)
+    for(const altered of [{...receipt,benchmarkCalls:999},{...receipt,matchAttemptsUnused:-1},{...receipt,extra:true},{...receipt,cleanupComplete:"yes"},{...receipt,validationGuestCalls:undefined}]) expect(()=>admitPlannerReceipt(altered)).toThrow()
+    write("receipt.json",{...receipt,validationGuestCalls:1})
+    expect(()=>verifyPlannerFeasibility(paths)).toThrow(/RECEIPT_DERIVATION/)
+    write("receipt.json",receipt)
+    write("lab-matches/run-binding.json",{schemaVersion:"lab-run-binding-v1",graphRoot:manifest.graphRoot,kind:"synthetic",machineRoot:manifest.machineRoot,executionRoot:manifest.executionRoot})
+    expect(()=>verifyPlannerFeasibility(paths)).toThrow(/RUN_BINDING/)
     expect(safety.deniedHost).not.toHaveBeenCalled()
   },60000)
+  it("never promotes complete low latency samples after failed summary or cleanup",()=>{
+    expect(retainedBenchmarkPass(true,2200,true,true)).toBe(true)
+    expect(retainedBenchmarkPass(true,2200,false,true)).toBe(false)
+    expect(retainedBenchmarkPass(true,2200,true,false)).toBe(false)
+  })
   it("owns at most two hosts across256 cases, closes fresh promptly and genuinely reuses declared contexts", () => {
     const inventory = buildPlannerValidationInventory()
     const owner = createValidationContextOwner<{ close(): { cleanupComplete: boolean; orphanedChild: boolean }; calls: number; closes: number }>(inventory.cases)

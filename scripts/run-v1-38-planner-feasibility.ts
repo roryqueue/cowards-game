@@ -10,7 +10,7 @@ import { createInitialGameState, createSoldierBrainInputV119, createStrategyInpu
 import { buildPlannerCandidate, mapPlannerMissionCorpus } from "../packages/strategy-lab/src/planner/emit.js"
 import { createMission, fallbackMission, MISSION_KINDS } from "../packages/strategy-lab/src/planner/missions.js"
 import { buildFeasibilityAllocation, buildFeasibilityCorpus, evaluateFeasibilityTiming, PLANNER_FEASIBILITY_PROTOCOL } from "../packages/strategy-lab/src/feasibility-protocol.js"
-import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
+import { LAB_ADMITTED_ROOTS, exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { enumerateLabTasks, type LabAssignment } from "../packages/strategy-lab/src/tasks.js"
 import { runLabTasks } from "../packages/strategy-lab/src/runner.js"
 import { resumeLabInventory, publishLabTrace, type LabStoredRecord } from "../packages/strategy-lab/src/shards.js"
@@ -19,11 +19,12 @@ import { runCanonicalLabMatch, type LabKernelRequest, type LabMatchExecution } f
 import { runPlannerBenchmark } from "../packages/strategy-lab/src/benchmark.js"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
 import { validateStrategySource } from "../packages/runtime-js/src/validation.js"
-import { buildPlannerBenchmarkObserverHarness } from "../packages/runtime-js/src/worker-harness.js"
+import { buildPlannerBenchmarkObserverHarness, WORKER_HARNESS_SOURCE } from "../packages/runtime-js/src/worker-harness.js"
 import { createPlannerSupervisedRuntime, type PlannerSupervisedRuntime } from "./lib/v1-38-planner-supervised-runtime.js"
 import { buildLeanAuthenticatedHarnessSource } from "./lib/v1-38-lean-container-match-session.js"
 import { findAdvancedStrategy } from "../packages/persistence/src/advanced-strategies.js"
 import { plannerExecutableClosure } from "./lib/v1-38-executable-closure.js"
+import { RuntimeViolationTypeSchema } from "@cowards/spec"
 
 const REPOSITORY = fileURLToPath(new URL("../",import.meta.url))
 const REVIEW = join(REPOSITORY,".planning/phases/263-legal-planner-and-deterministic-runner-feasibility/263-REVIEW.md")
@@ -148,6 +149,32 @@ const parseCanonical = (path: string) => {
   const fd = openSync(path,constants.O_RDONLY|constants.O_NOFOLLOW)
   try { const value = admitCanonicalJsonBytes(readFileSync(fd),{ profile: "canonical-manifest",operation: "require-canonical" }); if (!value.ok) throw new TypeError("LAB_ARTIFACT_ENCODING"); return value.value } finally { closeSync(fd) }
 }
+const exact = (value: unknown, keys: string[]) => { if (!exactLabKeys(value,keys)) throw new TypeError("LAB_RETAINED_SCHEMA"); return value }
+const boundedInteger = (value: unknown, max: number) => Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= max
+const rootValue = (value: unknown) => typeof value === "string" && /^sha256:[a-f0-9]{64}$/.test(value)
+export const admitPlannerReceipt = (value: unknown) => {
+  const receipt = exact(value,["schemaVersion","status","empirical","reason","casesCharged","casesUnused","validationGuestAttempts","validationGuestCalls","validationUncertainCases","benchmarkCalls","benchmarkCallsUnused","benchmarkGuestCalls","benchmarkUncertainCalls","matchAttemptsCharged","matchAttemptsUnused","matchAttemptsUncertain","cleanupComplete","scientificCells","arenaLabels","geometries","elapsedMs","hostPeakRssKiB","productionAuthorized"])
+  for (const [key,limit] of Object.entries({casesCharged:256,casesUnused:256,validationGuestAttempts:232,validationGuestCalls:232,validationUncertainCases:256,benchmarkCalls:2200,benchmarkCallsUnused:2200,benchmarkGuestCalls:2200,benchmarkUncertainCalls:2200,matchAttemptsCharged:24,matchAttemptsUnused:24,matchAttemptsUncertain:24})) if (!boundedInteger(receipt[key],limit)) throw new TypeError("LAB_RECEIPT_COUNTS")
+  if (receipt.schemaVersion !== "planner-feasibility-receipt-v1" || !["passed","non_pass"].includes(String(receipt.status)) || typeof receipt.empirical !== "boolean" || typeof receipt.cleanupComplete !== "boolean" || typeof receipt.reason !== "string" || !/^(?:complete|incomplete|LAB_[A-Z_]+)$/.test(receipt.reason) || receipt.productionAuthorized !== false || receipt.scientificCells !== 8 || receipt.arenaLabels !== 3 || receipt.geometries !== 2 || !Number.isFinite(receipt.elapsedMs) || Number(receipt.elapsedMs)<0 || !boundedInteger(receipt.hostPeakRssKiB,Number.MAX_SAFE_INTEGER) || Number(receipt.casesCharged)+Number(receipt.casesUnused)!==256 || Number(receipt.benchmarkCalls)+Number(receipt.benchmarkCallsUnused)!==2200 || Number(receipt.matchAttemptsCharged)+Number(receipt.matchAttemptsUnused)!==24) throw new TypeError("LAB_RECEIPT_SCHEMA")
+  return receipt
+}
+const expectedRuntimeIdentity = (manifest: Manifest,revision: StrategyRevision,id: string,harnessRoot: LabRoot) => ({ revisionId:revision.id,sourceRoot:rawRoot(revision.source),executableRoot:`sha256:${revision.metadata.sourceArtifact!.hash}`,tupleId:MATCH_KERNEL.tupleId,tupleRoot:LAB_ADMITTED_ROOTS.tupleRoot,image:LAB_ADMITTED_ROOTS.image,harnessRoot,budgetRoot:PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,attemptRoot:labRoot("feasibility-host",{manifestRoot:manifest.root,id}),runtimeLimitsRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
+export const admitRetainedRuntime = (value: unknown,identity: ReturnType<typeof expectedRuntimeIdentity>,request: LabKernelRequest,ordinal: number) => {
+  const e = exact(value,["identity","requestId","method","inputRoot","ordinal","invocationRoot","charged","completed","outputBytes","result"])
+  if (labRoot("identity",e.identity)!==labRoot("identity",identity) || e.ordinal!==ordinal || e.requestId!==request.requestId || e.method!==request.kind || e.inputRoot!==labRoot("runtime-input",request.input) || e.charged!==true || typeof e.completed!=="boolean" || !boundedInteger(e.outputBytes,262144) || !rootValue(e.invocationRoot) || e.invocationRoot!==labRoot("supervised-invocation",{identity,requestId:e.requestId,method:e.method,inputRoot:e.inputRoot,ordinal})) throw new TypeError("LAB_RETAINED_RUNTIME_BINDING")
+  const result = e.result as Record<string,unknown>
+  if (result?.ok===true) { exact(result,["ok","value"]); const parsed=(request.kind==="selectActivations" ? StrategyResultSchema : SoldierBrainResultSchema).safeParse(result.value); if (!e.completed || !parsed.success || labRoot("result",parsed.data)!==labRoot("result",result.value)) throw new TypeError("LAB_RETAINED_RUNTIME_RESULT") }
+  else {
+    exact(result,result?.systemFailure===undefined ? ["ok","violation"] : ["ok","violation","systemFailure"])
+    const violation = exact(result.violation,["type","message"])
+    if (result.ok!==false || !RuntimeViolationTypeSchema.safeParse(violation.type).success || typeof violation.message!=="string") throw new TypeError("LAB_RETAINED_RUNTIME_RESULT")
+    if (result.systemFailure!==undefined) { const failure=exact(result.systemFailure,["code","retryable"]); if(typeof failure.code!=="string" || typeof failure.retryable!=="boolean") throw new TypeError("LAB_RETAINED_RUNTIME_RESULT") }
+  }
+  return value as import("../packages/strategy-lab/src/runtime-bridge.js").LabRuntimeEvidence
+}
+export const admitRetainedValidationResult = (record: Pick<PlannerValidationRecord,"classification"|"value">,e: import("../packages/strategy-lab/src/runtime-bridge.js").LabRuntimeEvidence) => {
+  if(record.classification!==classifyRuntime(e.result) || (e.result.ok ? labRoot("value",record.value)!==labRoot("value",e.result.value) : record.value!==null)) throw new TypeError("LAB_RETAINED_CLASSIFICATION")
+}
 const publish = (path: string,value: unknown) => {
   const parent = dirname(resolve(path)); if (realpathSync(parent) !== parent) throw new TypeError("LAB_ARTIFACT_PARENT")
   const temporary = `${path}.tmp`,fd = openSync(temporary,constants.O_CREAT|constants.O_EXCL|constants.O_WRONLY|constants.O_NOFOLLOW,0o600)
@@ -191,7 +218,9 @@ export const preparePlannerFeasibility = (paths: PlannerPaths) => {
 }
 type Manifest = ReturnType<typeof preparePlannerFeasibility>
 const admitPrepared = (paths: PlannerPaths) => {
-  const raw = parseCanonical(paths.manifestPath) as unknown as Manifest
+  const raw = exact(parseCanonical(paths.manifestPath),["schemaVersion","claimClass","sourceRoot","fixtureRoot","corpusRoot","inventoryRoot","harnessRoot","protocolRoot","graphRoot","executionRoot","machineRoot","environment","reviewRoot","reviewedSourceRoot","outputDirectory","budgets","root"]) as unknown as Manifest
+  const env = exact(raw.environment,["gitCommit","dirtyRoot","lockfileRoot","node","v8","openssl","platform","release","arch","cpuModels","logicalCpus"])
+  if (!Object.entries(env).filter(([key])=>key!=="cpuModels"&&key!=="logicalCpus").every(([,v])=>typeof v==="string") || !Array.isArray(env.cpuModels) || !env.cpuModels.every(v=>typeof v==="string") || !boundedInteger(env.logicalCpus,100000) || raw.machineRoot!==labRoot("machine",env) || raw.reviewedSourceRoot!==raw.sourceRoot || !rootValue(raw.reviewRoot) || labRoot("budget",raw.budgets)!==labRoot("budget",{validationCases:256,benchmarkCalls:2200,matchAttempts:24,matchMethodCalls:24800,methodCalls:597656,perMatchMs:120000,overallMs:3600000,retries:0})) throw new TypeError("LAB_MANIFEST_SCHEMA")
   const { root,...payload } = raw
   if (root !== labRoot("feasibility-manifest",payload) || raw.schemaVersion !== "planner-feasibility-manifest-v1" || raw.claimClass !== "private_offline" || raw.outputDirectory !== resolve(paths.outputDirectory) || realpathSync(paths.outputDirectory) !== resolve(paths.outputDirectory) || (lstatSync(paths.outputDirectory).mode & 0o077) !== 0) throw new TypeError("LAB_MANIFEST")
   const material = buildFrozenMaterial()
@@ -275,9 +304,9 @@ const runValidation = async (material: ReturnType<typeof buildFrozenMaterial>,ma
           evidence.set(c.ordinal,e); classification = classifyRuntime(e.result); value = e.result.ok ? e.result.value : null
         }
       } catch { classification = "system_failure" }
-      finally { if (!hosts.finishCase(c)) classification = "system_failure" }
+      finally { if (!hosts.finishCase(c)) cleanupComplete = false }
       records.push({ ordinal: c.ordinal,caseRoot: c.root,inputRoot: c.inputRoot,classification,guestCalls,value,provenance: "supervised_container",cleanupComplete: false })
-      if (classification !== c.expected.classification) break
+      if (classification !== c.expected.classification || !cleanupComplete) break
     }
   } finally {
     cleanupComplete = hosts.closeAll()
@@ -347,10 +376,19 @@ export const readPlannerCharges = (paths: PlannerPaths, manifest: Manifest, mate
       if (labRoot("charge",parseCanonical(chargeFile)) !== labRoot("charge",expected)) throw new TypeError("LAB_CHARGE_BINDING")
       if (!existsSync(recordFile) && terminalize) publish(recordFile,lane === "validation" ? { uncertain: true,record: null,evidence: null } : { uncertain: true,evidence: null,timing: null })
       const retained = existsSync(recordFile) ? parseCanonical(recordFile) as Record<string,unknown> : null
+      if (retained) {
+        exact(retained,lane==="validation" ? (retained.uncertain===true ? ["uncertain","record","evidence"] : ["record","evidence"]) : (retained.uncertain===true ? ["uncertain","evidence","timing"] : ["evidence","timing"]))
+        if (retained.uncertain===true && (retained.evidence!==null || (lane==="validation" ? retained.record!==null : retained.timing!==null))) throw new TypeError("LAB_UNCERTAIN_DISPOSITION")
+        if (lane==="validation" && retained.uncertain!==true) {
+          const record=exact(retained.record,["ordinal","caseRoot","inputRoot","classification","guestCalls","value","provenance","cleanupComplete"])
+          if (record.ordinal!==i || record.caseRoot!==c!.root || record.inputRoot!==c!.inputRoot || !["success","source_rejection","input_rejection","player_violation","system_failure"].includes(String(record.classification)) || !["synthetic","supervised_container"].includes(String(record.provenance)) || typeof record.cleanupComplete!=="boolean" || !boundedInteger(record.guestCalls,1) || record.guestCalls!==Number(existsSync(dispatchFile))) throw new TypeError("LAB_VALIDATION_RECORD_SCHEMA")
+        }
+      }
       const evidence = retained?.evidence as { charged?: boolean } | null
       if (lane === "validation") {
         casesCharged++
         const dispatched = existsSync(dispatchFile)
+        if (evidence && !dispatched) throw new TypeError("LAB_UNDISPATCHED_EVIDENCE")
         if (dispatched && labRoot("dispatch",parseCanonical(dispatchFile)) !== labRoot("dispatch",{ manifestRoot: manifest.root,ordinal: i,caseRoot: c!.root })) throw new TypeError("LAB_DISPATCH_BINDING")
         validationGuestAttempts += Number(dispatched)
         validationGuestCalls += Number(evidence?.charged === true)
@@ -365,8 +403,10 @@ export const readPlannerChargeInventory = (paths: PlannerPaths, terminalize = fa
   return readPlannerCharges(paths,manifest,material,terminalize)
 }
 
+export const retainedBenchmarkPass = (timingPassed: boolean,retained: number,summaryPassed: boolean,cleanupComplete: boolean) => timingPassed && retained===2200 && summaryPassed && cleanupComplete
 const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material: ReturnType<typeof buildFrozenMaterial>) => {
   const durations: { selectActivations: number[]; soldierBrain: number[] } = { selectActivations: [],soldierBrain: [] }
+  const transportMs:number[]=[],totalMs:number[]=[]
   const expectedAttempt = labRoot("feasibility-host",{ manifestRoot: manifest.root,id: "benchmark" })
   let retained = 0
   for (let i = 0; i < 2200; i++) {
@@ -377,22 +417,44 @@ const verifyRetainedBenchmark = (paths: PlannerPaths,manifest: Manifest,material
     const e = value.evidence,timing = value.timing,method = i < 1100 ? "selectActivations" : "soldierBrain",entry = material.corpus[method][i%1100%100]!
     const requestId = labRoot("benchmark-call",{ sourceRoot: manifest.sourceRoot,corpusRoot: manifest.corpusRoot,ordinal: i,method })
     const expectedRequest = { kind: method,semanticTupleId: MATCH_KERNEL.tupleId,requestId,coordinates: { phaseNumber: 1,roundNumber: 1,stage: method === "selectActivations" ? "select_bottom" : "soldier_effect",ordinal: i },input: entry.input }
+    admitRetainedRuntime(e,expectedRuntimeIdentity(manifest,material.candidate.revision,"benchmark",manifest.harnessRoot),expectedRequest as LabKernelRequest,i)
     if (labRoot("retained-charge",parseCanonical(join(paths.outputDirectory,"benchmark",`charge-${i}.json`))) !== labRoot("retained-charge",{ manifestRoot: manifest.root,ordinal: i,requestRoot: labRoot("benchmark-request",expectedRequest) })) throw new TypeError("LAB_RETAINED_BENCHMARK_CHARGE")
     if (!e || e.ordinal !== i || e.method !== method || e.requestId !== requestId || e.inputRoot !== labRoot("runtime-input",entry.input) || e.identity.sourceRoot !== manifest.sourceRoot || e.identity.executableRoot !== `sha256:${material.candidate.revision.metadata.sourceArtifact!.hash}` || e.identity.harnessRoot !== manifest.harnessRoot || e.identity.attemptRoot !== expectedAttempt || e.identity.tupleId !== MATCH_KERNEL.tupleId || e.identity.runtimeLimitsRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || !e.charged) throw new TypeError("LAB_RETAINED_BENCHMARK_BINDING")
     retained++
     if (!e.result.ok || !e.completed || !timing) break
     const b = timing.observation.binding
+    exact(timing,["observation","runtime","totalMs","transportMs","provenance","machineRoot"])
+    exact(timing.observation,["binding","durationMs","complete"])
+    exact(b,["invocationRoot","sourceRoot","executableRoot","inputRoot","method","tupleId","harnessRoot","profileRoot"])
+    if (timing.observation.complete!==true || !Number.isFinite(timing.totalMs) || timing.totalMs<0 || !Number.isFinite(timing.transportMs) || timing.transportMs<0 || labRoot("timing-runtime",timing.runtime)!==labRoot("timing-runtime",e)) throw new TypeError("LAB_RETAINED_TIMING_BINDING")
     if (timing.provenance !== "supervised_container" || timing.machineRoot !== manifest.machineRoot || b.invocationRoot !== e.invocationRoot || b.sourceRoot !== e.identity.sourceRoot || b.executableRoot !== e.identity.executableRoot || b.inputRoot !== e.inputRoot || b.method !== method || b.harnessRoot !== manifest.harnessRoot || b.profileRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || b.tupleId !== MATCH_KERNEL.tupleId || !Number.isFinite(timing.observation.durationMs) || timing.observation.durationMs < 0 || timing.observation.durationMs > 1000) throw new TypeError("LAB_RETAINED_TIMING_BINDING")
     if (i%1100 >= 100) durations[method].push(timing.observation.durationMs)
+    transportMs.push(timing.transportMs); totalMs.push(timing.totalMs)
   }
   const timing = durations.selectActivations.length === 1000 && durations.soldierBrain.length === 1000 ? evaluateFeasibilityTiming(durations) : null
   const file = join(paths.outputDirectory,"benchmark-result.json")
+  let summaryPassed=false,cleanupComplete=false
+  const cleanupFile=join(paths.outputDirectory,"benchmark-cleanup.json")
+  if (existsSync(cleanupFile)) {
+    const cleanup=exact(parseCanonical(cleanupFile),["cleanupComplete","orphanedChild"])
+    if(typeof cleanup.cleanupComplete!=="boolean" || typeof cleanup.orphanedChild!=="boolean") throw new TypeError("LAB_BENCHMARK_CLEANUP_SCHEMA")
+    cleanupComplete=cleanup.cleanupComplete&&!cleanup.orphanedChild
+  }
   if (existsSync(file)) {
     const summary = parseCanonical(file) as unknown as { passed: boolean; charged: number; selectActivationsP99Ms?: number; soldierBrainP99Ms?: number }
+    const envelope=summary as unknown as Record<string,unknown>
+    exact(summary,"commitment" in envelope ? ["selectActivationsP99Ms","soldierBrainP99Ms","passed","protocolPassed","empirical","charged","measuredPerMethod","warmupsPerMethod","warmupRule","commitment","transportMs","totalMs"] : ["passed","protocolPassed","empirical","charged","cleanupComplete","reason"])
+    if(typeof summary.passed!=="boolean" || typeof envelope.protocolPassed!=="boolean" || typeof envelope.empirical!=="boolean" || !boundedInteger(summary.charged,2200)) throw new TypeError("LAB_BENCHMARK_SUMMARY_SCHEMA")
+    if ("commitment" in envelope) {
+      const identity=expectedRuntimeIdentity(manifest,material.candidate.revision,"benchmark",manifest.harnessRoot)
+      const commitment={revisionId:identity.revisionId,corpusRoot:manifest.corpusRoot,sourceRoot:manifest.sourceRoot,executableRoot:identity.executableRoot,harnessRoot:manifest.harnessRoot,profileRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot,budgetRoot:PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,attemptRoot:identity.attemptRoot,machineRoot:manifest.machineRoot}
+      if(envelope.measuredPerMethod!==1000 || envelope.warmupsPerMethod!==100 || envelope.warmupRule!=="exclude-first-100-per-method-only" || labRoot("commitment",envelope.commitment)!==labRoot("commitment",commitment) || labRoot("transport",envelope.transportMs)!==labRoot("transport",transportMs) || labRoot("total",envelope.totalMs)!==labRoot("total",totalMs)) throw new TypeError("LAB_BENCHMARK_SUMMARY_DERIVATION")
+    } else if(typeof envelope.cleanupComplete!=="boolean" || !["admission_rejected","incomplete_or_failed"].includes(String(envelope.reason)) || summary.passed || envelope.protocolPassed || envelope.empirical) throw new TypeError("LAB_BENCHMARK_SUMMARY_SCHEMA")
+    summaryPassed=summary.passed && envelope.protocolPassed===true && envelope.empirical===true && (!("cleanupComplete" in envelope) || envelope.cleanupComplete===true)
     if (summary.charged !== retained || (summary.passed && (!timing?.passed || retained !== 2200))) throw new TypeError("LAB_RETAINED_BENCHMARK_DERIVATION")
     if (timing && summary.passed) for (const [key,val] of Object.entries(timing)) if (key !== "passed" && JSON.stringify((summary as unknown as Record<string,unknown>)[key]) !== JSON.stringify(val)) throw new TypeError("LAB_RETAINED_P99_DRIFT")
   }
-  return { passed: timing?.passed === true && retained === 2200,retained }
+  return { passed: retainedBenchmarkPass(timing?.passed===true,retained,summaryPassed,cleanupComplete),retained,cleanupComplete }
 }
 
 export const runPlannerFeasibility = async (paths: PlannerPaths) => {
@@ -427,7 +489,11 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
     guard()
     const host = createHost(material,manifest,material.candidate.revision,"benchmark",2200,controller.signal,true,Math.max(0,3600000-(performance.now()-start)))
     const commitment = { revisionId: host.identity.revisionId,corpusRoot: manifest.corpusRoot,sourceRoot: manifest.sourceRoot,executableRoot: host.identity.executableRoot,harnessRoot: manifest.harnessRoot,profileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot,budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,attemptRoot: host.identity.attemptRoot,machineRoot: manifest.machineRoot }
-    const provider = { ...host,invoke(request: LabKernelRequest,identity: typeof host.identity) {
+    const provider = { ...host,close() {
+      let cleanup={cleanupComplete:false,orphanedChild:true}
+      try { const result=host.close(); cleanup={cleanupComplete:result.cleanupComplete,orphanedChild:result.orphanedChild}; return result }
+      finally { publish(join(paths.outputDirectory,"benchmark-cleanup.json"),cleanup) }
+    },invoke(request: LabKernelRequest,identity: typeof host.identity) {
       guard(); const ordinal = host.accounting.length
       publish(join(paths.outputDirectory,"benchmark",`charge-${ordinal}.json`),{ manifestRoot: manifest.root,ordinal,requestRoot: labRoot("benchmark-request",request) })
       try {
@@ -472,24 +538,45 @@ export const verifyPlannerFeasibility = (paths: PlannerPaths) => {
   if (labRoot("consumed",parseCanonical(join(paths.outputDirectory,"consumed.json"))) !== labRoot("consumed",{ manifestRoot: manifest.root,executionRoot: manifest.executionRoot })) throw new TypeError("LAB_CONSUMED_BINDING")
   const records: PlannerValidationRecord[] = []
   const charges = readPlannerCharges(paths,manifest,material)
+  const contextOrdinals=new Map<string,number>()
   for (const c of material.inventory.cases) {
     const file = join(paths.outputDirectory,"validation",`record-${c.ordinal}.json`)
     if (!existsSync(file)) break
     const retained = parseCanonical(file) as unknown as { record: PlannerValidationRecord; evidence: { result: { ok: boolean; value?: unknown }; inputRoot: string; identity: { sourceRoot: string }; requestId: string } | null }
+    const dispatched=existsSync(join(paths.outputDirectory,"validation",`dispatch-${c.ordinal}.json`))
+    const ordinal=contextOrdinals.get(c.context)??0
+    if(dispatched) contextOrdinals.set(c.context,ordinal+1)
     if ((retained as unknown as { uncertain?: boolean }).uncertain === true) continue
+    if(retained.evidence) {
+      const revision=c.source===null ? material.candidate.revision : buildStrategyRevision({source:c.source,runtime:material.candidate.revision.runtime})
+      const e=admitRetainedRuntime(retained.evidence,expectedRuntimeIdentity(manifest,revision,`v-${c.context}`,rawRoot(buildLeanAuthenticatedHarnessSource(WORKER_HARNESS_SOURCE))),requestForValidation(c),ordinal)
+      admitRetainedValidationResult(retained.record,e)
+    } else {
+      const sourceValid=validateStrategySource(c.source??material.candidate.source).valid,inputValid=(c.method==="selectActivations"?StrategyInputV119Schema:SoldierBrainInputV119Schema).safeParse(c.input).success
+      const classification=!sourceValid?"source_rejection":!inputValid?"input_rejection":"system_failure"
+      if(retained.record.classification!==classification || retained.record.value!==null) throw new TypeError("LAB_RETAINED_CLASSIFICATION")
+    }
     if (labRoot("retained-charge",parseCanonical(join(paths.outputDirectory,"validation",`charge-${c.ordinal}.json`))) !== labRoot("retained-charge",{ manifestRoot: manifest.root,caseRoot: c.root,ordinal: c.ordinal })) throw new TypeError("LAB_RETAINED_VALIDATION_CHARGE")
-    if (retained.record.guestCalls && (!retained.evidence || retained.evidence.requestId !== c.root || retained.evidence.inputRoot !== labRoot("runtime-input",c.input) || retained.evidence.identity.sourceRoot !== rawRoot(c.source ?? material.candidate.source) || (retained.evidence.result.ok && labRoot("result",retained.evidence.result.value) !== labRoot("result",retained.record.value)))) throw new TypeError("LAB_RETAINED_VALIDATION")
+    if (retained.record.guestCalls && retained.evidence && (retained.evidence.requestId !== c.root || retained.evidence.inputRoot !== labRoot("runtime-input",c.input) || retained.evidence.identity.sourceRoot !== rawRoot(c.source ?? material.candidate.source))) throw new TypeError("LAB_RETAINED_VALIDATION")
     records.push(retained.record)
   }
   const validation = records.length === 256 ? evaluatePlannerValidation(material.inventory,records) : { passed: false,casesCharged: records.length }
   const benchmark = verifyRetainedBenchmark(paths,manifest,material)
   const matches = resumeLabInventory(join(paths.outputDirectory,"lab-matches"),material.graph)
+  const headerPath=join(paths.outputDirectory,"lab-matches","run-binding.json")
+  if (existsSync(headerPath)) {
+    if(labRoot("run-binding",parseCanonical(headerPath))!==labRoot("run-binding",{schemaVersion:"lab-run-binding-v1",graphRoot:material.graph.root,kind:"supervised",machineRoot:manifest.machineRoot,executionRoot:manifest.executionRoot})) throw new TypeError("LAB_RETAINED_RUN_BINDING")
+  } else if(matches.records.length || matches.uncertainAttemptIds.length) throw new TypeError("LAB_RETAINED_RUN_BINDING")
   for (const record of matches.records) {
+    if(record.operational.machineRoot!==manifest.machineRoot) throw new TypeError("LAB_RETAINED_MATCH_MACHINE")
     if (record.semantic !== null && record.trace === null) throw new TypeError("LAB_RETAINED_MATCH_TRACE")
     if (record.trace) {
       const bytes = readFileSync(join(paths.outputDirectory,"lab-matches",record.trace.id))
       if (rawRoot(bytes) !== record.trace.root || bytes.length !== record.trace.bytes) throw new TypeError("LAB_RETAINED_TRACE_HASH")
       const execution = JSON.parse(bytes.toString("utf8")) as LabMatchExecution
+      exact(execution,execution.kind==="completed"?["kind","privacy","result","transitions","accounting"]:["kind","privacy","transitions","unchangedState","failure","accounting"])
+      if(!["completed","failure"].includes(execution.kind) || !Array.isArray(execution.transitions) || !Array.isArray(execution.accounting)) throw new TypeError("LAB_TRACE_SCHEMA")
+      if(execution.kind==="completed") exact(execution.result,["state","events"])
       if (execution.privacy !== "private_offline" || execution.transitions.some(t => t.semanticTupleId !== MATCH_KERNEL.tupleId) || labRoot("semantic-rederive",derivePlannerMatchSemantic(execution,record.attempt.taskRoot)) !== labRoot("semantic-rederive",record.semantic)) throw new TypeError("LAB_RETAINED_TRACE_SEMANTICS")
     }
   }
@@ -500,7 +587,12 @@ export const verifyPlannerFeasibility = (paths: PlannerPaths) => {
   }
   const receiptPath = join(paths.outputDirectory,"receipt.json")
   if (!existsSync(receiptPath)) return { status: "incomplete_non_pass",executed: false,validationCasesRetained: records.length,uncertainMatchAttempts: matches.uncertainAttemptIds.length }
-  const receipt = parseCanonical(receiptPath) as unknown as { status: string; casesCharged: number; matchAttemptsCharged: number; benchmarkCalls: number }
+  const receipt = admitPlannerReceipt(parseCanonical(receiptPath))
+  const derivedCounts={...charges,matchAttemptsCharged:matches.records.filter(r=>r.attempt.classification!=="unused").length+matches.uncertainAttemptIds.length,matchAttemptsUnused:matches.pendingAttemptIds.length+matches.records.filter(r=>r.attempt.classification==="unused").length,matchAttemptsUncertain:matches.uncertainAttemptIds.length}
+  if(Object.entries(derivedCounts).some(([key,value])=>receipt[key]!==value)) throw new TypeError("LAB_RECEIPT_DERIVATION")
+  const retainedClean=charges.validationUncertainCases===0&&charges.benchmarkUncertainCalls===0&&matches.uncertainAttemptIds.length===0&&records.every(r=>r.cleanupComplete)&&matches.records.every(r=>r.operational.cleanup==="complete")&&(charges.benchmarkCalls===0||benchmark.cleanupComplete)
+  if(receipt.cleanupComplete===true&&!retainedClean) throw new TypeError("LAB_RECEIPT_CLEANUP")
+  if(receipt.status==="passed"&&(!receipt.empirical||!receipt.cleanupComplete||records.some(r=>r.provenance!=="supervised_container")||charges.validationGuestCalls!==232||charges.validationUncertainCases!==0||charges.benchmarkUncertainCalls!==0)) throw new TypeError("LAB_RECEIPT_PASS_PREDICATES")
   if (receipt.casesCharged !== charges.casesCharged || receipt.benchmarkCalls !== charges.benchmarkCalls || (receipt.status === "passed" && (!validation.passed || !benchmark.passed || reduction?.status !== "complete" || receipt.benchmarkCalls !== 2200))) throw new TypeError("LAB_RECEIPT_DERIVATION")
   return { status: receipt.status,executed: false,manifestRoot: manifest.root,validationCasesRetained: records.length,semanticRoot: reduction?.semanticRoot ?? null }
 }
