@@ -35,7 +35,7 @@ implementation_status: implementation_only_pending_phase_integration_and_evidenc
 metrics:
   duration: 14m
   completed: 2026-09-13
-status: integration_correction_required
+status: complete
 ---
 
 # Phase 264 Plan 03: Search Teacher and Distiller Summary
@@ -62,6 +62,7 @@ status: integration_correction_required
 1. **Task 1: Create the independent offline teacher and distillation package** — `7fb2b83e` (feat)
 2. **Task 2: Emit and test the distilled legal student (RED)** — `f0216ebd` (test)
 3. **Task 2: Emit and test the distilled legal student (GREEN)** — `135ebbe3` (feat)
+4. **Same-plan readiness correction: bounded teacher and legal student controller** — `7516aa5c` (fix)
 
 ## Files Created/Modified
 
@@ -102,11 +103,19 @@ status: integration_correction_required
 - **Verification:** Focused Vitest suite proves unresolved and direct-import source denial.
 - **Committed in:** `135ebbe3`
 
-**Total deviations:** 2 auto-fixed (1 Rule 1 bug, 1 Rule 2 critical boundary).
+**3. [Rule 1 - Bug] Replaced one-step hash-parity teaching and activation-source surrogate**
+- **Found during:** Same-plan independent readiness check
+- **Issue:** The initial leaf had no bounded counterfactual frontier and emitted activation behavior diverged from its trusted student.
+- **Fix:** Added bounded canonical-kernel branch/depth accounting and schema-admitted feature controllers for both entrypoints.
+- **Files modified:** `packages/strategy-oracle-teacher/src/teacher.ts`, `packages/strategy-oracle-teacher/src/distill.ts`, `packages/strategy-oracle-teacher/src/emit.ts`, `packages/strategy-oracle-teacher/src/teacher.test.ts`
+- **Verification:** Focused Vitest suite (3/3) and package TypeScript build pass.
+- **Committed in:** `7516aa5c`
+
+**Total deviations:** 3 auto-fixed (2 Rule 1 bugs, 1 Rule 2 critical boundary).
 
 ## Known Stubs
 
-Independent264-TEACHER-READINESS-CHECK.md found a one-transition/hash-parity teacher rather than bounded counterfactual search, and an emitted sorted-prefix activation surrogate rather than the tested distilled policy. Main also identified the two-action exact-input lookup/default-STONE representation as insufficient for the serious legal-student goal. These are same-plan corrections, not completed by the three passing mechanics tests. Replace them with bounded alternative/depth search through the canonical kernel, outcome-based selection, a legal-feature student covering both entrypoints and normal canonical Actions, and structural correspondence between the trusted student and emitted source. No actual candidate or empirical claim is made.
+None. The readiness-check mechanics gaps were repaired in `7516aa5c`. This remains private factory proposal data, not candidate, empirical, or production evidence.
 
 ## Issues Encountered
 
