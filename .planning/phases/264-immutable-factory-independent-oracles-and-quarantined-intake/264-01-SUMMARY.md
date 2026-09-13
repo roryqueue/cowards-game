@@ -44,6 +44,8 @@ Private candidates now have a noncircular, immutable evidence chain from oracle 
 
 ## Verification
 
+- Final after same-plan repairs: all5focused test files pass18tests (main3.90seconds, independent reviewer3.81seconds); unfiltered `tsc -b packages/strategy-lab` passes in both checks. `264-FOUNDATION-REVIEW.md` is independently clean at459017f8. Earlier9-test task result below is historical, not the final assurance claim.
+
 - `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/contracts.test.ts packages/strategy-lab/src/factory/identity.test.ts packages/strategy-lab/src/factory/ledger.test.ts packages/strategy-lab/src/factory/repository.test.ts packages/strategy-lab/src/factory/admission.test.ts` — passed (5 files, 9 tests).
 - `./node_modules/.bin/tsc -b packages/strategy-lab` — passed.
 - `git diff --check` — passed.
@@ -71,6 +73,10 @@ Private candidates now have a noncircular, immutable evidence chain from oracle 
 ## Known Stubs
 
 None.
+
+## Independent review and same-plan corrections
+
+The original implementation had provenance, exact-provider binding, durability, path/recovery, finalization and opponent-attribution gaps. Two repair passes fixed them without a new plan or empirical allocation; see264-FOUNDATION-REVIEW-FIX.md and historical reviews6d103482/ec38006f. Final flow is `admitFactory(packet, proposal, sourceBytes)` → `authorizeFactorySupervision` → `superviseFactory` issued participant-bound receipt → `finalizeFactoryCandidate` after fingerprints. Finalization cannot use pre-execution authorization, fabricated receipts or failed Match evidence. Main commits:f7e28680,32ac8941,7189b470,6aa9d349,87bf320a,c05588dd,459017f8. All work remains private source/injected-test proof, not empirical independence or gameplay evidence.
 
 ## Next Phase Readiness
 
