@@ -35,7 +35,7 @@ implementation_status: implementation_only_pending_phase_integration_and_evidenc
 metrics:
   duration: 14m
   completed: 2026-09-13
-status: complete
+status: integration_correction_required
 ---
 
 # Phase 264 Plan 03: Search Teacher and Distiller Summary
@@ -106,7 +106,7 @@ status: complete
 
 ## Known Stubs
 
-None. This leaf emits private factory proposal data only; it makes no candidate-admission, empirical, or production claim.
+Independent264-TEACHER-READINESS-CHECK.md found a one-transition/hash-parity teacher rather than bounded counterfactual search, and an emitted sorted-prefix activation surrogate rather than the tested distilled policy. Main also identified the two-action exact-input lookup/default-STONE representation as insufficient for the serious legal-student goal. These are same-plan corrections, not completed by the three passing mechanics tests. Replace them with bounded alternative/depth search through the canonical kernel, outcome-based selection, a legal-feature student covering both entrypoints and normal canonical Actions, and structural correspondence between the trusted student and emitted source. No actual candidate or empirical claim is made.
 
 ## Issues Encountered
 
