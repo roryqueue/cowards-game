@@ -1,6 +1,6 @@
 ---
 phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
-reviewed: 2026-09-13T18:52:00Z
+reviewed: 2026-09-13T22:57:00Z
 depth: standard
 files_reviewed: 3
 files_reviewed_list:
@@ -8,42 +8,34 @@ files_reviewed_list:
   - scripts/check-v1-38-lab-boundaries.test.ts
   - .dockerignore
 findings:
-  critical: 1
-  warning: 1
+  critical: 0
+  warning: 0
   info: 0
-  total: 2
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 264: Code Review Report
 
-**Reviewed:** 2026-09-13T18:52:00Z
+**Reviewed:** 2026-09-13T22:57:00Z
 **Depth:** standard
 **Files Reviewed:** 3
-**Status:** issues_found
+**Status:** clean
 
 ## Summary
 
-Reviewed the Plan 264 integration that adds the three private oracle package names to the existing lab-boundary monitor and Docker context exclusions. The focused Vitest suite passes (29 tests), but image-copy detection is incomplete for ordinary Dockerfile flags and the `.dockerignore` parser accepts only exact directory entries. The report is a source-graph monitor finding, not a claim that the monitor provides container or runtime security certification.
+The fixer closes the two findings recorded in the prior review committed as `6d103482`: Dockerfile `COPY`/`ADD` inspection now conservatively handles flags, JSON form, shell form, continuations, broad package sources, and stage copies; the exact-literal `.dockerignore` requirement is now documented and tested as repository policy. The boundary monitor remains a source-graph monitor, not container or runtime security certification.
 
-## Critical Issues
+All reviewed files now meet the scoped boundary-monitor requirements. No current findings.
 
-### CR-01: Dockerfile copy flags bypass private-image detection
+Verification: direct focused Vitest passed37/37 tests; the actual-repository monitor returned `ok:true` with no violations. Main independently ran the same37-test suite (8.51seconds). The policy requires literal ignore entries; it does not claim to interpret every valid Docker ignore pattern. Per the [Docker reference](https://docs.docker.com/reference/dockerfile/#copy--from), `--from` reads a stage/image/context source and cannot be proved safe by local `.dockerignore` entries alone.
 
-**File:** `scripts/check-v1-38-lab-boundaries.ts:67`
-**Issue:** The `COPY`/`ADD` expression only matches an instruction whose first argument is `.` or `./`. It does not accept standard options such as `COPY --chown=1000:1000 . /app`, `COPY --from=builder . /app`, or `ADD --checksum=... . /app`. In a Dockerfile using one of these forms, a missing or incomplete `.dockerignore` produces no `IMAGE_INCLUDES_LAB` violation, even though the instruction copies the entire build context and can include `packages/strategy-oracle-*` (and `packages/strategy-lab`) in the image. The added tests cover only the unflagged form, so this regression is not exercised.
-**Fix:** Parse Dockerfile instructions after consuming zero or more `--name[=value]` options, then apply the context-copy check to the remaining source arguments. Add fixtures for at least `--chown`, `--from`, and `ADD` options with absent/incomplete exclusions; retain the existing positive case for a complete exclusion list.
+## Previous Review History
 
-## Warnings
-
-### WR-01: Valid Docker ignore glob patterns are treated as missing exclusions
-
-**File:** `scripts/check-v1-38-lab-boundaries.ts:36-39`
-**Issue:** `excludesPrivateImages` requires one exact line per discovered package directory. Valid Docker ignore rules such as `packages/strategy-oracle-*`, `packages/strategy-oracle-tactical/**`, or an equivalent rooted/leading-slash form do not satisfy that test, so a repository using a safe wildcard policy is rejected as exposed. This can make the boundary check fail closed for CI even though Docker would exclude the private package, and the tests do not cover the supported pattern forms.
-**Fix:** Implement Docker-ignore matching for the private directory probes (including rooted patterns, `**`, trailing `/**`, comments, and negation ordering), or deliberately document and test the exact-entry restriction as a repository policy instead of implicitly treating all other valid rules as unsafe.
+The superseded blocker and warning are preserved in commit `6d103482` for audit history; this report records the clean re-review at `b5bff9ab`.
 
 ---
 
-_Reviewed: 2026-09-13T18:52:00Z_
+_Reviewed: 2026-09-13T22:57:00Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
