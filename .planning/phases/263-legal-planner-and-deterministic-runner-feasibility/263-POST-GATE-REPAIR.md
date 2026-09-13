@@ -4,7 +4,7 @@ plans: [263-02,263-06]
 status: source_repaired_unmeasured
 review_status: clean
 empirical_pass: false
-new_allocation_authorized: false
+new_allocation_authorized: true
 ---
 
 # Phase263 — Same-plan post-gate repair
@@ -33,5 +33,7 @@ The historical --verify result was obtained against the historical implementatio
 No emitted source, timing sample, preflight, host or Match has been run for this repair. The required selection p99 improvement from64.135270ms to strictly below5ms remains unmeasured. Phase263 cannot pass or unlock264 on reference tests alone.
 
 ## Human-only boundary
+
+Update2026-09-13: the operator answered **approved** to the proposed maximum-three-attempt envelope. The exact additive bounds and predeclared destinations are recorded in263-RETRY-ENVELOPE.md. The original failed run remains consumed; the approved fresh envelope has not started at this update. The proposal below is retained as approval context, not a separate authority route.
 
 The prior empirical allocation is consumed with zero retries. A new bounded repair-and-test envelope needs operator approval. A recommendation to reduce repeated interruptions is at most three fresh attempts, each retaining the existing256case/2200timing-call limits, strict5ms thresholds, runtime/resources and60-minute per-run cap; Match execution remains conditional on all gates passing and stops within the existing24-Match/120-second-per-Match allocation. Stop the envelope on its first full pass or after its third terminal result. Failed attempts remain charged and immutable. This is a proposal, not authority, and requires no new numbered plan, seal or exact literal.
