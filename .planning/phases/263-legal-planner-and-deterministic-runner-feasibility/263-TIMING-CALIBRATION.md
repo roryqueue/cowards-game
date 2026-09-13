@@ -1,12 +1,12 @@
 ---
 phase: 263
 plans: [263-01, 263-06, 263-07]
-status: approved_pending_review
+status: reserved
 approved: 2026-09-13
 operator_response: yes
 maximum_fresh_attempts: 1
-attempts_started: 0
-attempts_remaining: 1
+attempts_started: 1
+attempts_remaining: 0
 ---
 
 # Approved pre-search timing calibration
@@ -30,4 +30,4 @@ Canonical engine, rules, formations, legal-information boundaries, privacy, acco
 
 ## Outcome
 
-Not run. No pass is inferred from approval or source tests.
+Reserved once after34/34 focused tests, package TypeScript build and clean independent263-CALIBRATION-REVIEW.md. Reviewed source implementation1ad9f2e3; candidate remains31725bytes at sha256:1ac048cc2f2cbd9c8df497fc56af18be2861adf24a8f33450744f603ba9d62ed. Prospective protocol sha256:8b7d1ae2c991d9fa769c8ad8ea242bad4cb4f43e45eacf25115d2787b6438b02; execution sha256:927e9cead59805fefeae1a6d7386e5e145403a8fb9b73d274241601dc04d08e1. Corpus,256-case inventory and actual observer/harness roots match the preceding run. Read-only Docker check returned29.4.0 and the exact pinned image is present. No result is inferred. The sole destination is now reserved; there is no second attempt or fallback destination.
