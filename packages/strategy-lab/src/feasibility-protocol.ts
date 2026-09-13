@@ -87,7 +87,7 @@ const budget = {
   stopOnExhaustion: true, recordUnusedAllocations: true,
 } as const
 export const PLANNER_FEASIBILITY_PROTOCOL = freezeLabValue({
-  schemaVersion: "planner-feasibility-protocol-v1", admitted: LAB_ADMITTED_ROOTS,
+  schemaVersion: "planner-feasibility-protocol-v2", admitted: LAB_ADMITTED_ROOTS,
   benchmark, budget, runtimeLimits: structuredClone(DEFAULT_RUNTIME_LIMITS),
   corpusRoot: buildFeasibilityCorpus().root,
   harnessRoot: labRoot("benchmark-harness-spec", benchmark), budgetRoot: labRoot("structural-budget", budget),

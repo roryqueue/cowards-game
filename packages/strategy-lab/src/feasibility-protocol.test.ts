@@ -18,6 +18,9 @@ describe("frozen source-independent feasibility protocol", () => {
     expect(() => validateFeasibilityAllocation(a.map((v) => ({ ...v, retry: 1 })))).toThrow()
   })
   it("preserves benchmark identity, admitted runtime and strict separate method p99", () => {
+    expect(P.schemaVersion).toBe("planner-feasibility-protocol-v2")
+    const { thresholds: _thresholds, ...oldBenchmark } = P.benchmark
+    expect(() => validateFeasibilityProtocol({ ...P, schemaVersion: "planner-feasibility-protocol-v1", benchmark: { ...oldBenchmark, identity: "v1.38-direct-execution-benchmark-v1", thresholdMs: 5 } })).toThrow("LAB_PROTOCOL_DRIFT")
     expect(P.benchmark.identity).toBe("v1.38-direct-execution-benchmark-v2")
     expect(P.benchmark.thresholds).toEqual({ selectActivationsP99Ms: 20, soldierBrainP99Ms: 5 })
     expect(P.benchmark.totalInvocations).toBe(2200)
