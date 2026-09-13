@@ -9,6 +9,8 @@ new_allocation_authorized: true
 
 # Phase263 — Same-plan post-gate repair
 
+Latest2026-09-13: the first approved fresh attempt measured the initial caching repair at selection33.819629ms and brain2.629893ms, an honest non-pass with zero Matches and complete cleanup. Further same-plan source work now shares per-Soldier mission construction/graph-cut rankings and precomputes scoring contributions while evaluating both full initiative vectors together. Commitsab102872/7acd0ba2 passed49integration tests, final12assignment stress tests and package types; independent five-file review is clean in263-RETRY-2-REVIEW.md. Attempt2 is reserved under263-RETRY-ENVELOPE.md; its source is still unmeasured. Original and retry1 evidence remain immutable. Historical repair-stage descriptions below apply only at their original timestamps.
+
 The selection planner now reuses call-local mission facts instead of repeatedly validating and reconstructing them inside the beam. It caches by objective identity, preserves order-dependent penalties and both initiative hypotheses, and keeps the original256-expansion limit, beam size, tie breaks, decisions and returned memory/counters. No game rule, input boundary or search budget changed.
 
 The original selector is retained only as a trusted test reference. All100 mapped inputs across budgets0,1,75,76,255,256 produce identical complete outputs (600comparisons), with separate identity-collision and call-isolation tests. This proves the tested behavior equivalence, not a speedup or arbitrary-input exhaustive equivalence.

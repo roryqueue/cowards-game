@@ -1,11 +1,11 @@
 ---
 phase: 263
 plans: [263-02,263-06,263-07]
-status: attempt_1_non_pass_repairing
+status: attempt_2_reserved
 approved: 2026-09-13
 operator_response: approved
 maximum_fresh_attempts: 3
-attempts_started: 1
+attempts_started: 2
 stop_on_first_full_pass: true
 original_run_consumed: true
 ---
@@ -29,7 +29,7 @@ The operator approved the immediately preceding proposal: **up to three fresh bo
 | Envelope ordinal | Manifest under this phase directory | Private output under repository | State |
 |---|---|---|---|
 | 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | consumed: validation passed, selection timing non-pass, zero Matches |
-| 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | unused |
+| 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | reserved for sole prepare/run |
 | 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | unused |
 
 The orchestrator reserves the next ordinal before its final preparation; it will not reuse a terminal/partially prepared destination. Every successful preparation gets exactly one --run invocation. Existing no-clobber manifest, consumed-marker and per-call/Match charge publication remain authoritative within each attempt. Cross-attempt accounting identifies units by envelope ordinal plus manifest/attempt root, not by a reused label alone. Every unused unit remains unused; no old Match capacity is rolled forward.
@@ -63,3 +63,7 @@ Retained private evidence is never committed. Bindings:
 - All36historical lock names/bytes retain aggregate `390aa9bdded6289a80d4df07a170c00edaff5bd30d7153375c825664ad614059`.
 
 Historical verification must use this attempt's source and retained files; later source repairs must not rewrite its manifest to bypass drift checks.
+
+### Attempt2 reservation — 2026-09-13
+
+Reserve attempt2 after mission construction and paired assignment scoring optimizations atab102872/7acd0ba2,49combined safe integration tests, corrected final12assignment tests/package build and clean independent five-file review in263-RETRY-2-REVIEW.md. Both full initiative vectors, all256expansions, beam4 and complete output/counters remain unchanged in differential tests. Source is32265bytes, `sha256:bfaf8b6a6c2a4eaef9b4b0c8c64b3ea33111c38279b15529923244cd9b7ffa2b`; execution `sha256:ec7691e692f6e699bb514cf4249c8773be283a1badb1aad5b8a1155e9c776dd8`. Protocol/corpus/inventory/harness roots remain unchanged. Docker29.4.0 and the exact pinned image were available read-only. Final source is unmeasured at reservation; no pass is inferred. Attempt3 remains unused.
