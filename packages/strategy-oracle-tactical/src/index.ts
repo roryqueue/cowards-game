@@ -1,0 +1,5 @@
+export { selectTacticalActivations, runTacticalSoldierBrain } from "./selector.js"
+export { expandTacticalSearch, selectTacticalSearchNode } from "./search.js"
+export { scoreTacticalAction, scoreTacticalMission } from "./scoring.js"
+export type { TacticalMission, TacticalRank } from "./scoring.js"
+export type { TacticalSearchNode } from "./search.js"
