@@ -899,8 +899,34 @@ Plans:
   4. At least three materially independent automated mechanisms—the structured tactical optimizer, search-teacher/distiller, and provider-neutral frozen-bundle program synthesizer—pass an audited shared-helper allowlist and dependency, authorship, behavior, counterfactual-correlation, clone, and failure-mode review.
   5. Human and external submissions enter through a quarantined channel with frozen disclosure, submission, reviewer, independence, conflict, provenance, validation, and acceptance budgets; only validated deterministic explicit source can enter the factory, and every failed or rejected attack remains in the evidence root.
 
-**Plans:** TBD
-**Research flag:** Spike strategic-core independence tests, clone-threshold calibration, provider/model identity drift, submission confidentiality, and hostile intake before fixing the final oracle package boundaries.
+**Plans:** 0/8 complete; research and offline AI design complete, independent plan review passed, all11requirements/24decisions covered. Source implementation proceeds before the single late genuine-provider/intake/calibration input checkpoint; no synthetic participation or old allocation reuse is permitted.
+
+**Wave1 — shared private foundation**
+
+- [ ] 264-01-PLAN.md — Durable immutable factory repository, charged ledger and selected supervised admission.
+
+**Wave2 — independent leaves, after Wave1**
+
+- [ ] 264-02-PLAN.md — Independent tactical optimizer and exact data-only emitter.
+- [ ] 264-03-PLAN.md — Canonical counterfactual teacher and legal-information student/distiller.
+- [ ] 264-04-PLAN.md — Frozen provider-neutral model bundles and explicit-source emitter.
+- [ ] 264-06-PLAN.md — Quarantined human/external intake, disclosure and provenance protocol.
+
+**Wave3 — integration, after all leaves**
+
+- [ ] 264-05-PLAN.md — Six derived fingerprints, private ingestion/calibration CLI and recursive independence boundaries.
+
+**Wave4 — consolidated late real-input gate**
+
+- [ ] 264-07-PLAN.md — Exact provider/participant/protocol and finite fresh calibration decision, or honest unresolved readiness.
+
+**Wave5 — conditional evidence, after Wave4**
+
+- [ ] 264-08-PLAN.md — Fresh bounded calibration or explicit blocked readiness; independent review/validation/verification handoff.
+
+Cross-cutting constraints: private outputs, canonical engine and existing hostile supervision only; no shared strategic cores; no consumed Phase263 reuse; no fabricated model/human evidence; no Phase265 league, holdout, formation, public/counted/production or rules changes.
+
+**Research flag:** Completed implementation research; actual numerical clone calibration remains gated by a fresh frozen protocol before league admission.
 
 ### Phase 265: Serious Current-Rules League and Development Red Team
 
@@ -1005,7 +1031,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Researching; Phase263 prerequisite passed | - |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/8 | Executing; research and independent plan review passed | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
