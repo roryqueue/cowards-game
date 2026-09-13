@@ -10,7 +10,7 @@ vi.mock("node:fs", async importOriginal => {
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { admitPlannerReceipt, retainedBenchmarkPass, buildPlannerValidationInventory, createValidationContextOwner, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility, readPlannerChargeInventory } from "./run-v1-38-planner-feasibility.js"
+import { admitPlannerReceipt, retainedBenchmarkPass, buildPlannerValidationInventory, createValidationContextOwner, evaluatePlannerValidation, parsePlannerArguments, preparePlannerFeasibility, verifyPlannerFeasibility, runPlannerFeasibility, readPlannerChargeInventory, assertPlannerReviewBinding } from "./run-v1-38-planner-feasibility.js"
 import { validateStrategySource } from "../packages/runtime-js/src/validation.js"
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
@@ -126,6 +126,10 @@ describe("private feasibility CLI synthetic/read-only modes", () => {
     expect(() => parsePlannerArguments(["--run","--verify","--manifest","a","--output","b"])).toThrow()
     expect(() => parsePlannerArguments(["--run","--manifest","a","--output","b","--secret","x"])).toThrow()
     expect(parsePlannerArguments(["--verify","--manifest","a","--output","b"]).mode).toBe("verify")
+    expect(parsePlannerArguments(["--verify","--manifest","a","--output","b","--review",".planning/phases/263-legal-planner-and-deterministic-runner-feasibility/263-REVIEW-FIX.md"]).reviewPath).toContain("263-REVIEW-FIX.md")
+    expect(() => parsePlannerArguments(["--verify","--manifest","a","--output","b","--review","x","--review","y"])).toThrow()
+    expect(() => parsePlannerArguments(["--verify","--manifest","a","--output","b","--unknown","x"])).toThrow()
+    expect(() => assertPlannerReviewBinding({ sourceRoot: "sha256:" + "a".repeat(64),executionRoot: "sha256:" + "b".repeat(64),reviewRoot: "sha256:" + "c".repeat(64) }, "/tmp/not-a-review.md")).toThrow(/LAB_REVIEW_PATH/)
   })
   it("freezes exactly256 classified cases and rejects missing/duplicated/tampered records", () => {
     const inventory = buildPlannerValidationInventory()

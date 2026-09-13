@@ -27,7 +27,8 @@ import { plannerExecutableClosure } from "./lib/v1-38-executable-closure.js"
 import { RuntimeViolationTypeSchema } from "@cowards/spec"
 
 const REPOSITORY = fileURLToPath(new URL("../",import.meta.url))
-const REVIEW = join(REPOSITORY,".planning/phases/263-legal-planner-and-deterministic-runner-feasibility/263-REVIEW.md")
+const REVIEW_DIRECTORY = join(REPOSITORY,".planning/phases/263-legal-planner-and-deterministic-runner-feasibility")
+const REVIEW = join(REVIEW_DIRECTORY,"263-REVIEW.md")
 const rawRoot = (value: string | Uint8Array): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}`
 type Method = "selectActivations" | "soldierBrain"
 type Classification = "success" | "source_rejection" | "input_rejection" | "player_violation" | "system_failure"
@@ -142,7 +143,17 @@ export const evaluatePlannerValidation = (inventory: ReturnType<typeof buildPlan
   return freezeLabValue({ passed: valid && empirical,protocolPassed: valid,empirical,casesCharged: 256,guestCalls,sourceRejected: records.filter(r => r.classification === "source_rejection").length,inputRejected: records.filter(r => r.classification === "input_rejection").length })
 }
 
-export interface PlannerPaths { manifestPath: string; outputDirectory: string }
+export interface PlannerPaths { manifestPath: string; outputDirectory: string; reviewPath?: string }
+const reviewPathFor = (reviewPath?: string) => {
+  const candidate = resolve(reviewPath ?? REVIEW)
+  const directory = realpathSync(REVIEW_DIRECTORY)
+  const relative = candidate === directory ? "" : candidate.slice(directory.length + 1)
+  if (!relative || !candidate.startsWith(`${directory}/`) || !/\.md$/i.test(candidate) || !/review/i.test(relative)) throw new TypeError("LAB_REVIEW_PATH")
+  const stat = lstatSync(candidate)
+  if (!stat.isFile() || stat.isSymbolicLink() || realpathSync(candidate) !== candidate) throw new TypeError("LAB_REVIEW_PATH")
+  return candidate
+}
+const readReview = (reviewPath?: string) => readFileSync(reviewPathFor(reviewPath),"utf8")
 const canonical = (value: unknown): Uint8Array => { const r = admitCanonicalJsonValue(value,{ profile: "canonical-manifest" }); if (!r.ok) throw new TypeError("LAB_CANONICAL_ARTIFACT"); return r.canonicalBytes }
 const parseCanonical = (path: string) => {
   const stat = lstatSync(path); if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 262144) throw new TypeError("LAB_ARTIFACT_FILE")
@@ -206,7 +217,7 @@ export const inspectPlannerFeasibility = () => {
 }
 export const preparePlannerFeasibility = (paths: PlannerPaths) => {
   if (existsSync(paths.manifestPath) || existsSync(paths.outputDirectory)) throw new TypeError("LAB_PREPARE_NO_CLOBBER")
-  const material = buildFrozenMaterial(),environment = captureEnvironment(),review = readFileSync(REVIEW,"utf8")
+  const material = buildFrozenMaterial(),environment = captureEnvironment(),review = readReview(paths.reviewPath)
   const payload = { schemaVersion: "planner-feasibility-manifest-v1",claimClass: "private_offline",sourceRoot: material.candidate.sourceRoot,fixtureRoot: rawRoot(material.fixture.source),corpusRoot: material.corpus.root,inventoryRoot: material.inventory.root,harnessRoot: material.harnessRoot,protocolRoot: material.protocolRoot,graphRoot: material.graph.root,executionRoot: material.executionRoot,machineRoot: labRoot("machine",environment),environment,reviewRoot: rawRoot(review),reviewedSourceRoot: material.candidate.sourceRoot,outputDirectory: resolve(paths.outputDirectory),budgets: { validationCases: 256,benchmarkCalls: 2200,matchAttempts: 24,matchMethodCalls: 24800,methodCalls: 597656,perMatchMs: 120000,overallMs: 3600000,retries: 0 } }
   const manifest = { ...payload,root: labRoot("feasibility-manifest",payload) }
   mkdirSync(paths.outputDirectory,{ mode: 0o700 }); mkdirSync(join(paths.outputDirectory,"lab-matches"),{ mode: 0o700 }); mkdirSync(join(paths.outputDirectory,"validation"),{ mode: 0o700 })
@@ -230,21 +241,22 @@ const admitPrepared = (paths: PlannerPaths) => {
 }
 export const parsePlannerArguments = (args: readonly string[]) => {
   const modes = args.filter(a => ["--prepare","--run","--verify"].includes(a))
-  if (modes.length !== 1 || args.length !== 5) throw new TypeError("LAB_CLI_ARGUMENTS")
+  if (modes.length !== 1 || ![5,7].includes(args.length)) throw new TypeError("LAB_CLI_ARGUMENTS")
   const mode = modes[0]!.slice(2) as "prepare" | "run" | "verify"
   const flags = new Map<string,string>()
-  for (let i = 0; i < args.length; i++) { if (args[i] === modes[0]) continue; if (!["--manifest","--output"].includes(args[i]!) || !args[i+1] || args[i+1]!.startsWith("--") || flags.has(args[i]!)) throw new TypeError("LAB_CLI_ARGUMENTS"); flags.set(args[i]!,args[++i]!) }
+  for (let i = 0; i < args.length; i++) { if (args[i] === modes[0]) continue; if (!["--manifest","--output","--review"].includes(args[i]!) || !args[i+1] || args[i+1]!.startsWith("--") || flags.has(args[i]!)) throw new TypeError("LAB_CLI_ARGUMENTS"); flags.set(args[i]!,args[++i]!) }
   if (!flags.has("--manifest") || !flags.has("--output")) throw new TypeError("LAB_CLI_ARGUMENTS")
-  return { mode,manifestPath: resolve(flags.get("--manifest")!),outputDirectory: resolve(flags.get("--output")!) }
+  return { mode,manifestPath: resolve(flags.get("--manifest")!),outputDirectory: resolve(flags.get("--output")!),...(flags.has("--review") ? { reviewPath: resolve(flags.get("--review")!) } : {}) }
 }
 
 const requestForValidation = (c: PlannerValidationCase): LabKernelRequest => ({ kind: c.method,semanticTupleId: MATCH_KERNEL.tupleId,requestId: c.root,coordinates: { phaseNumber: 1,roundNumber: 1,stage: c.method === "selectActivations" ? "select_bottom" : "soldier_effect",ordinal: c.ordinal },input: c.input }) as LabKernelRequest
 const classifyRuntime = (value: { ok: boolean; systemFailure?: unknown }): Classification => value.ok ? "success" : value.systemFailure ? "system_failure" : "player_violation"
-const assertReviewed = (manifest: Manifest) => {
-  const review = readFileSync(REVIEW,"utf8")
+export const assertPlannerReviewBinding = (manifest: Pick<Manifest,"sourceRoot" | "executionRoot" | "reviewRoot">, reviewPath?: string) => {
+  const review = readReview(reviewPath)
   // Independent reviewer owns these fields; there is no user approval token.
   if (!/^status:\s*clean\s*$/mu.test(review) || !review.includes(manifest.sourceRoot) || !review.includes(manifest.executionRoot) || rawRoot(review) !== manifest.reviewRoot) throw new TypeError("LAB_REVIEW_NOT_CLEAN_OR_BOUND")
 }
+const assertReviewed = (manifest: Manifest, reviewPath?: string) => assertPlannerReviewBinding(manifest,reviewPath)
 const createHost = (material: ReturnType<typeof buildFrozenMaterial>,manifest: Manifest,revision: StrategyRevision,id: string,limit: number,signal: AbortSignal,observer = false,benchmarkLifetimeMs?: number) => createPlannerSupervisedRuntime({ revision,attemptRoot: labRoot("feasibility-host",{ manifestRoot: manifest.root,id }),budgetRoot: PLANNER_FEASIBILITY_PROTOCOL.budgetRoot,matchId: `phase263:${id}`,containerName: `planner-263-${manifest.root.slice(7,19)}-${id}`,ownershipLabel: `owner:planner-263-${manifest.root.slice(7,19)}-${id}`,image: LAB_ADMITTED_ROOTS.image,invocationLimit: limit,signal,...(observer ? { observerHarness: { source: material.observerSource,expectedRoot: material.harnessRoot,machineRoot: manifest.machineRoot }, ...(benchmarkLifetimeMs === undefined ? {} : { benchmarkLifetimeMs }) } : {}) })
 
 /** Own only currently live contexts. Failed cleanup remains owned and cannot be retried or replaced. */
@@ -470,7 +482,7 @@ export const runPlannerFeasibility = async (paths: PlannerPaths) => {
   const start = performance.now(),controller = new AbortController()
   const guard = () => { if (controller.signal.aborted || performance.now()-start >= 3600000) { controller.abort(); throw new TypeError("LAB_OVERALL_DEADLINE") } }
   const { manifest,material } = admitPrepared(paths)
-  assertReviewed(manifest)
+  assertReviewed(manifest,paths.reviewPath)
   if (labRoot("machine",captureEnvironment()) !== manifest.machineRoot) throw new TypeError("LAB_MACHINE_OR_SOURCE_DRIFT")
   guard()
   publish(join(paths.outputDirectory,"consumed.json"),{ manifestRoot: manifest.root,executionRoot: manifest.executionRoot })
