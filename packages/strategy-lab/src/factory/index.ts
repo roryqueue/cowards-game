@@ -3,12 +3,14 @@ export {
   FactoryProposalSchema,
   FactoryValidationEvidenceSchema,
   FactoryCandidateSchema,
+  factoryProposalFromPacket,
 } from "./contracts.js"
 export type {
   FactoryBuildIdentity,
   FactoryCandidate,
   FactoryDisposition,
   FactoryFingerprintRoots,
+  FactoryInheritedAuthority,
   FactoryLineage,
   FactoryNativeLane,
   FactoryOraclePacket,
@@ -43,5 +45,5 @@ export {
   resumeFactoryAttemptInventory,
 } from "./repository.js"
 export type { FactoryRepository } from "./repository.js"
-export { admitFactory, mapFactorySupervision } from "./admission.js"
-export type { FactoryAdmission } from "./admission.js"
+export { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory } from "./admission.js"
+export type { FactoryAdmission, FactorySourceAdmission, FactorySupervisionProvider, FactorySupervisionReceipt } from "./admission.js"
