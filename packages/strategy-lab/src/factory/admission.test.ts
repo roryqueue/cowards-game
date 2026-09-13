@@ -80,8 +80,35 @@ describe("hostile private candidate admission", () => {
     const input = { match: {} as Parameters<typeof superviseFactory>[2]["match"], providers: { candidate: provider() } }
     for (const change of [
       { sourceRoot: `sha256:${"1".repeat(64)}` }, { nativeLane: { ...admission.nativeLane, providerId: "wrong-provider" } },
-      { factoryValidationRoot: `sha256:${"2".repeat(64)}` }, { factoryProposalRoot: `sha256:${"3".repeat(64)}` },
+      { factoryPacketRoot: `sha256:${"2".repeat(64)}` }, { factoryValidationRoot: `sha256:${"3".repeat(64)}` },
+      { factoryProposalRoot: `sha256:${"4".repeat(64)}` },
     ]) await expect(superviseFactory(admission, "candidate", { ...input, providers: { candidate: provider(change) } })).rejects.toThrow("FACTORY_ADMISSION")
     expect(invoked).toBe(false)
+  })
+
+  it("rechecks the issued identity after every provider invocation", async () => {
+    const { packet, proposal, validation } = admittedCandidate()
+    const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes: source }), validation })
+    let invoked = false
+    const provider: FactorySupervisionProvider = {
+      identity: {
+        revisionId: "candidate", sourceRoot: admission.sourceRoot, executableRoot: sourceRoot, tupleId: "tuple", tupleRoot: packet.build.compatibilityTupleRoot,
+        image: "image", harnessRoot: sourceRoot, budgetRoot: sourceRoot, attemptRoot: sourceRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot,
+        nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot,
+      },
+      async invoke() {
+        invoked = true
+        return { identity: { ...this.identity, sourceRoot: `sha256:${"a".repeat(64)}` } } as never
+      },
+      verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } },
+    }
+    const input = { match: {} as Parameters<typeof superviseFactory>[2]["match"], providers: { candidate: provider } }
+    await expect(superviseFactory(admission, "candidate", input, async ({ providers }) => {
+      const selected = providers.candidate
+      if (!selected) throw new Error("missing candidate provider")
+      await selected.invoke({} as never, selected.identity)
+      return { kind: "failure", privacy: "private_offline", transitions: [], unchangedState: null, failure: { classification: "system_failure", code: "TEST" }, accounting: [] }
+    })).rejects.toThrow("FACTORY_ADMISSION")
+    expect(invoked).toBe(true)
   })
 })
