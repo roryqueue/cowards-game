@@ -1,11 +1,11 @@
 ---
 phase: 263
 plans: [263-02,263-06,263-07]
-status: approved_not_started
+status: attempt_1_reserved
 approved: 2026-09-13
 operator_response: approved
 maximum_fresh_attempts: 3
-attempts_started: 0
+attempts_started: 1
 stop_on_first_full_pass: true
 original_run_consumed: true
 ---
@@ -28,7 +28,7 @@ The operator approved the immediately preceding proposal: **up to three fresh bo
 
 | Envelope ordinal | Manifest under this phase directory | Private output under repository | State |
 |---|---|---|---|
-| 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | unused |
+| 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | reserved for sole prepare/run |
 | 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | unused |
 | 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | unused |
 
@@ -44,4 +44,4 @@ After a full pass, independently verify the retained result, close Phase263's va
 
 ## Attempt ledger
 
-No attempt started at approval recording. Append actual reserved/terminal identities, counts and outcomes as they occur; do not infer a pass from source review or pure tests.
+Attempt1 reserved after the optional review binding passed9focused tests and TypeScript, independent delta review was clean, and Docker29.4.0 plus the exact pinned image were available. Source commit6ab67731; review263-RETRY-1-REVIEW.md; emitted source026983d62848aefa2d29fbf7a92bf05adb8c75121fa27cb3093a1a18576e9c24; executiond9672f7fffe8831af2ccff83aa29ad62c337a4ef9cd8c71c6ff8424929290db3. Two envelope slots remain unused. Record actual manifest/counts/result after terminalization; no pass is inferred here.
