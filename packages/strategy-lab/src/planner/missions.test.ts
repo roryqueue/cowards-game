@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { createInitialGameState, createStrategyInputV119 } from "@cowards/engine"
 import { encodeCanonicalJson } from "@cowards/spec"
-import { MISSION_KINDS, createMission, evaluateMission, fallbackMission, validateMission } from "./missions.js"
+import { MISSION_KINDS, createMission, createMissionOptions, evaluateMission, fallbackMission, validateMission } from "./missions.js"
+import { createMission as referenceMission } from "./missions-reference.test-helper.js"
+import { buildFeasibilityCorpus } from "../feasibility-protocol.js"
 
 export const missionFixture = () => {
   const state = createInitialGameState({ matchId: "missions", seed: "missions", arenaVariant: { id: "fixture", name: "fixture", initialBounds: { minX: 0, minY: 0, maxX: 11, maxY: 11 }, terrainStones: [] }, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "b", topStrategyRevisionId: "t" })
@@ -14,6 +16,34 @@ export const missionFixture = () => {
 }
 
 describe("ten observable mission lifecycles", () => {
+  it("batch and single generation exactly match the frozen reference on every mapped observation", () => {
+    for (const c of buildFeasibilityCorpus().selectActivations) {
+      const before = JSON.stringify(c.input)
+      for (const self of c.input.mySoldiers) {
+        const expected = MISSION_KINDS.map(kind => referenceMission(kind,c.input,self.id))
+        expect(MISSION_KINDS.map(kind => createMission(kind,c.input,self.id))).toEqual(expected)
+        expect(createMissionOptions(c.input,self.id)).toEqual(expected.filter(o => o !== null))
+      }
+      expect(createMissionOptions(c.input,"absent")).toEqual([])
+      expect(JSON.stringify(c.input)).toBe(before)
+    }
+  },30000)
+  it("preserves ties, local obstruction rankings and call isolation across deterministic board variations", () => {
+    for (let n = 0; n < 48; n++) {
+      const f = missionFixture()
+      f.self.position = { x: n % 10 + 1, y: Math.floor(n / 10) + 1 }
+      f.ally.position = { x: (n * 3) % 10 + 1, y: (n * 7) % 10 + 1 }
+      f.enemy.position = { x: (n * 7 + 2) % 10 + 1, y: (n * 3 + 2) % 10 + 1 }
+      if (n % 3 === 0) f.ally.status = "STONE"
+      if (n % 5 === 0) f.enemy.status = "FALLEN", f.enemy.position = null
+      const input = f.input()
+      input.board.terrainStones = Array.from({length: n % 7},(_,i) => ({x:(n+i*3)%12,y:(n*3+i*5)%12}))
+      const expected = MISSION_KINDS.map(kind => referenceMission(kind,input,f.self.id)).filter(o => o !== null)
+      expect(createMissionOptions(input,f.self.id)).toEqual(expected)
+      input.enemySoldiers.reverse(); input.mySoldiers.reverse(); input.board.soldiers.reverse(); input.board.terrainStones.reverse()
+      expect(createMissionOptions(input,f.self.id)).toEqual(expected)
+    }
+  })
   for (const kind of MISSION_KINDS) it(`${kind}: active, complete, stale, failed and fallback`, () => {
     const f = missionFixture()
     if (kind === "recovery") f.self.facing = "DOWN"

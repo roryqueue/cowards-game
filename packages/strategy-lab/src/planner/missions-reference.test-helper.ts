@@ -1,3 +1,4 @@
+// Frozen pre-batch pure heuristic reference for behavior-preserving regression tests only.
 import type { StrategyInputV119, Direction } from "@cowards/spec"
 
 export const MISSION_KINDS = ["evacuation", "rear-entry", "edge-push", "screen", "anchor", "graph-cut-stone", "reserve", "recovery", "bait", "pincer"] as const
@@ -29,7 +30,7 @@ export const cutPreference = (p: Point, input: StrategyInputV119) => {
   return separated
 }
 
-const missionContext = (input: StrategyInputV119, soldierId: string) => {
+export const createMission = (kind: MissionKind, input: StrategyInputV119, soldierId: string): MissionObjective | null => {
   const self = input.mySoldiers.find(s => s.id === soldierId)
   if (!self?.position || self.status !== "ACTIVE") return null
   const p = self.position, bounds = input.board.bounds
@@ -37,12 +38,6 @@ const missionContext = (input: StrategyInputV119, soldierId: string) => {
   const allies = input.mySoldiers.filter(s => s.id !== soldierId && s.status === "ACTIVE" && s.position).sort((a, b) => distance(p, a.position!) - distance(p, b.position!) || compareIds(a.id, b.id))
   const enemy = enemies[0], ally = allies[0]
   const center = { x: Math.floor((bounds.minX + bounds.maxX) / 2), y: Math.floor((bounds.minY + bounds.maxY) / 2) }
-  return { self, p, bounds, enemy, ally, center }
-}
-
-const createMissionInContext = (kind: MissionKind, input: StrategyInputV119, context: NonNullable<ReturnType<typeof missionContext>>): MissionObjective | null => {
-  const { self, p, bounds, enemy, ally, center } = context
-  const soldierId = self.id
   let goal = { ...p }, goalFacing = self.facing ?? "UP", target = enemy, partnerId = ""
   switch (kind) {
     case "evacuation": goal = center; target = undefined; break
@@ -56,10 +51,7 @@ const createMissionInContext = (kind: MissionKind, input: StrategyInputV119, con
     case "anchor": goal = center; goalFacing = enemy?.position ? toward(center, enemy.position) : goalFacing; target = undefined; break
     case "graph-cut-stone": {
       const candidates = [p, { x: p.x - 1, y: p.y }, { x: p.x + 1, y: p.y }, { x: p.x, y: p.y - 1 }, { x: p.x, y: p.y + 1 }].filter(q => inside(q,input) && !input.board.terrainStones.some(t => samePoint(t,q)) && !input.board.soldiers.some(s => s.id !== self.id && s.status !== "FALLEN" && samePoint(s.position,q)))
-      // Connectivity and travel depend only on the current observation and point.
-      // Compute each once, preserving the original complete tie-break order.
-      const ranked = candidates.map(point => ({ point, cut: cutPreference(point,input), travel: distance(p,point) }))
-      goal = ranked.sort((a,b) => b.cut-a.cut || a.travel-b.travel || a.point.x-b.point.x || a.point.y-b.point.y)[0]?.point ?? p; target = undefined
+      goal = candidates.sort((a,b) => cutPreference(b,input)-cutPreference(a,input) || distance(p,a)-distance(p,b) || a.x-b.x || a.y-b.y)[0] ?? p; target = undefined
     } break
     case "reserve": target = undefined; break
     case "recovery": goalFacing = enemy?.position ? toward(p, enemy.position) : toward(p, center); target = undefined; break
@@ -69,17 +61,6 @@ const createMissionInContext = (kind: MissionKind, input: StrategyInputV119, con
   if (!inside(goal, input)) return null
   const objective: MissionObjective = { schemaVersion: "mission-v1", kind, soldierId, issuedPhase: input.phaseNumber, issuedRound: input.roundNumber, expiresPhase: input.phaseNumber + 1, goal, goalFacing, targetId: target?.id ?? "", targetPosition: target?.position ? { ...target.position } : null, partnerId }
   return validateMission(objective, input) ? objective : null
-}
-
-export const createMission = (kind: MissionKind, input: StrategyInputV119, soldierId: string): MissionObjective | null => {
-  const context = missionContext(input,soldierId)
-  return context ? createMissionInContext(kind,input,context) : null
-}
-
-/** One read-only observation context per Soldier, with no cache surviving the call. */
-export const createMissionOptions = (input: StrategyInputV119, soldierId: string): MissionObjective[] => {
-  const context = missionContext(input,soldierId)
-  return context ? MISSION_KINDS.map(kind => createMissionInContext(kind,input,context)).filter((o): o is MissionObjective => o !== null) : []
 }
 
 /** Known ASCII fields make JSON length exactly canonical UTF-8 length, independent of key order. */
@@ -121,3 +102,4 @@ export const fallbackMission = (input: StrategyInputV119, soldierId: string): Mi
   if (!mission) throw new TypeError("MISSION_NO_ACTIVE_SOLDIER")
   return mission
 }
+
