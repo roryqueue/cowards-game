@@ -28,7 +28,8 @@ key-decisions:
 patterns-established:
   - "Factory leaves bind fixed inherited engine/runtime/source-closure pins while owning their algorithm version."
   - "Trusted leaf controllers receive legal inputs in unit tests; candidate source execution remains reserved for existing supervision."
-requirements-completed: [ORCL-01, ORCL-02]
+requirements-contributed: [ORCL-01, ORCL-02]
+requirement_status: implementation_only_pending_phase_integration_and_evidence
 coverage:
   - id: D1
     description: Independent tactical selector, scoring, bounded search, and legal-input response behavior.
@@ -54,7 +55,7 @@ coverage:
     human_judgment: false
 duration: 6min
 completed: 2026-09-13
-status: complete
+status: integration_correction_required
 ---
 
 # Phase 264 Plan 02: Independent Tactical Optimizer Summary
@@ -119,7 +120,7 @@ status: complete
 
 ## Known Stubs
 
-None. The emitted source is intentionally data-only, not an unwired candidate or placeholder; supervised execution is deliberately deferred to the existing factory/runtime path.
+Main integration check found that the handwritten source in `emit.ts` does not include the package's actual bounded-search controller. Its emitted selector uses a greedy nearest-target ranking while advertising the beam algorithm. The closure check also rejects named capabilities but does not resolve free identifiers. These are same-plan implementation gaps, not grounds for claiming completion from the four passing host-controller/packet tests. Correction is queued after the teacher's shared-checkout write window: compile the exact leaf-owned controller/helper closure and prove it structurally without executing generated source. Independent review remains pending.
 
 ## Issues Encountered
 
