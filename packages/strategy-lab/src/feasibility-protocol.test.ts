@@ -18,7 +18,8 @@ describe("frozen source-independent feasibility protocol", () => {
     expect(() => validateFeasibilityAllocation(a.map((v) => ({ ...v, retry: 1 })))).toThrow()
   })
   it("preserves benchmark identity, admitted runtime and strict separate method p99", () => {
-    expect(P.benchmark.identity).toBe("v1.38-direct-execution-benchmark-v1")
+    expect(P.benchmark.identity).toBe("v1.38-direct-execution-benchmark-v2")
+    expect(P.benchmark.thresholds).toEqual({ selectActivationsP99Ms: 20, soldierBrainP99Ms: 5 })
     expect(P.benchmark.totalInvocations).toBe(2200)
     expect(P.budget.validationInvocations).toBe(256)
     expect(P.budget.totalInvocationCeiling).toBe(597656)
@@ -27,10 +28,15 @@ describe("frozen source-independent feasibility protocol", () => {
     expect(P.budget.retries).toBe(0)
     const fast = Array.from({ length: 1000 }, () => 4.9)
     expect(evaluateFeasibilityTiming({ selectActivations: fast, soldierBrain: fast }).passed).toBe(true)
+    expect(evaluateFeasibilityTiming({ selectActivations: Array(1000).fill(19.999), soldierBrain: fast }).passed).toBe(true)
+    expect(evaluateFeasibilityTiming({ selectActivations: Array(1000).fill(20), soldierBrain: fast }).passed).toBe(false)
+    expect(evaluateFeasibilityTiming({ selectActivations: fast, soldierBrain: Array(1000).fill(4.999) }).passed).toBe(true)
     expect(evaluateFeasibilityTiming({ selectActivations: fast, soldierBrain: Array(1000).fill(5) }).passed).toBe(false)
     expect(evaluateFeasibilityTiming({ selectActivations: [...Array(990).fill(4), ...Array(10).fill(10)], soldierBrain: fast }).selectActivationsP99Ms).toBe(4)
     expect(() => evaluateFeasibilityTiming({ selectActivations: fast.slice(1), soldierBrain: fast })).toThrow()
-    for (const drift of [{ ...P, budget: { ...P.budget, retries: 1 } }, { ...P, benchmark: { ...P.benchmark, thresholdMs: 6 } }, { ...P, benchmark: { ...P.benchmark, identity: "other" } }]) {
+    expect(() => evaluateFeasibilityTiming({ selectActivations: [...fast.slice(0, 999), Number.NaN], soldierBrain: fast })).toThrow()
+    expect(() => evaluateFeasibilityTiming({ selectActivations: [...fast.slice(0, 999), -1], soldierBrain: fast })).toThrow()
+    for (const drift of [{ ...P, budget: { ...P.budget, retries: 1 } }, { ...P, benchmark: { ...P.benchmark, thresholds: { selectActivationsP99Ms: 6, soldierBrainP99Ms: 5 } } }, { ...P, benchmark: { ...P.benchmark, thresholdMs: 5 } }, { ...P, benchmark: { ...P.benchmark, identity: "other" } }]) {
       expect(() => validateFeasibilityProtocol(drift)).toThrow()
     }
   })

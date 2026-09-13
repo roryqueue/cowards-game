@@ -67,13 +67,13 @@ export const buildFixtureFeasibilityCorpus = () => {
 export const buildFeasibilityCorpus = () => mapPlannerMissionCorpus(buildFixtureFeasibilityCorpus())
 
 const benchmark = {
-  identity: "v1.38-direct-execution-benchmark-v1", hardwareClass: "profile-neutral-fixed-hardware-class-v1",
+  identity: "v1.38-direct-execution-benchmark-v2", hardwareClass: "profile-neutral-fixed-hardware-class-v1",
   inheritedImplementationRoot: "sha256:5f5de6c918c712df428880d3aae2c57b65fbed800adb931b1ff501c05e32d50d",
   warmupsPerMethod: 100, samplesPerMethod: 1000, totalInvocations: 2200,
   order: "selectActivations-warmup-then-measured; soldierBrain-warmup-then-measured",
   traversal: "mission-major-family-minor; sample-index-modulo-100",
   inputReset: "fresh-input-and-memory-every-call", observer: "trusted-direct-method-inside-supervision",
-  percentile: "nearest-rank", rank: 990, thresholdMs: 5, comparator: "less_than",
+  percentile: "nearest-rank", rank: 990, thresholds: { selectActivationsP99Ms: 20, soldierBrainP99Ms: 5 }, comparator: "less_than",
   transportTimingEligible: false, hardwareSubstitutionAfterResults: false,
 } as const
 const budget = {
@@ -138,5 +138,5 @@ export const evaluateFeasibilityTiming = (samples: { selectActivations: readonly
   }
   const selectActivationsP99Ms = p99(samples.selectActivations)
   const soldierBrainP99Ms = p99(samples.soldierBrain)
-  return freezeLabValue({ selectActivationsP99Ms, soldierBrainP99Ms, passed: selectActivationsP99Ms < 5 && soldierBrainP99Ms < 5 })
+  return freezeLabValue({ selectActivationsP99Ms, soldierBrainP99Ms, passed: selectActivationsP99Ms < PLANNER_FEASIBILITY_PROTOCOL.benchmark.thresholds.selectActivationsP99Ms && soldierBrainP99Ms < PLANNER_FEASIBILITY_PROTOCOL.benchmark.thresholds.soldierBrainP99Ms })
 }

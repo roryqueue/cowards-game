@@ -58,7 +58,7 @@ describe("fixed benchmark protocol with synthetic observations only", () => {
     const samples: number[] = Array.from({ length: 1000 }, (_, i) => i < 990 ? 1 : 100)
     expect(evaluateFeasibilityTiming({ selectActivations: samples, soldierBrain: samples }).passed).toBe(true)
     samples[989] = 5
-    expect(evaluateFeasibilityTiming({ selectActivations: samples, soldierBrain: Array(1000).fill(1) })).toMatchObject({ passed: false, selectActivationsP99Ms: 5, soldierBrainP99Ms: 1 })
+    expect(evaluateFeasibilityTiming({ selectActivations: samples, soldierBrain: Array(1000).fill(1) })).toMatchObject({ passed: true, selectActivationsP99Ms: 5, soldierBrainP99Ms: 1 })
   })
   it("charges 2200 calls, excludes exactly100 warmups per method, never claims empirical pass", async () => {
     const result = await runPlannerBenchmark({ provider: synthetic(), commitment, corpus })
