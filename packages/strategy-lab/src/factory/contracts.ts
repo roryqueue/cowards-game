@@ -130,10 +130,10 @@ export const FactoryValidationEvidenceSchema = bound<FactoryValidationEvidence>(
   return value as unknown as FactoryValidationEvidence
 })
 
-export interface FactoryCandidate { schemaVersion: "factory-candidate-v1"; privacy: "private_offline"; root: LabRoot; proposal: FactoryProposal; validation: FactoryValidationEvidence; fingerprints: FactoryFingerprintRoots; lineage: FactoryLineage }
+export interface FactoryCandidate { schemaVersion: "factory-candidate-v1"; privacy: "private_offline"; root: LabRoot; proposal: FactoryProposal; validation: FactoryValidationEvidence; supervisionReceiptRoot: LabRoot; fingerprints: FactoryFingerprintRoots; lineage: FactoryLineage }
 export const FactoryCandidateSchema = bound<FactoryCandidate>((value) => {
-  const keys = ["schemaVersion", "privacy", "root", "proposal", "validation", "fingerprints", "lineage"] as const
-  if (!exact(value, keys) || value.schemaVersion !== "factory-candidate-v1" || value.privacy !== "private_offline" || !root(value.root)) return fail("CANDIDATE")
+  const keys = ["schemaVersion", "privacy", "root", "proposal", "validation", "supervisionReceiptRoot", "fingerprints", "lineage"] as const
+  if (!exact(value, keys) || value.schemaVersion !== "factory-candidate-v1" || value.privacy !== "private_offline" || !root(value.root) || !root(value.supervisionReceiptRoot)) return fail("CANDIDATE")
   const proposal = FactoryProposalSchema.parse(value.proposal), validation = FactoryValidationEvidenceSchema.parse(value.validation)
   if (validation.proposalRoot !== proposal.root || validation.status !== "valid" ||
       labRoot("factory-native-lane-v1", validation.exactNativeLane) !== labRoot("factory-native-lane-v1", proposal.nativeLane) ||
@@ -157,7 +157,7 @@ export const factoryValidationFixture = (proposal: FactoryProposal): FactoryVali
   const value = { schemaVersion: "factory-validation-evidence-v1" as const, privacy: "private_offline" as const, root: fixtureRoot("3"), proposalRoot: proposal.root, validationRoot: fixtureRoot("4"), status: "valid" as const, exactNativeLane: proposal.nativeLane, evidenceRoot: fixtureRoot("5") }
   return { ...value, root: deriveFactoryValidationRoot(value) }
 }
-export const factoryCandidateFixture = (proposal: FactoryProposal, validation: FactoryValidationEvidence): FactoryCandidate => {
-  const value = { schemaVersion: "factory-candidate-v1" as const, privacy: "private_offline" as const, root: fixtureRoot("6"), proposal, validation, fingerprints: { sourceStructureRoot: fixtureRoot("7"), lineageRoot: fixtureRoot("8"), dependencyRoot: fixtureRoot("9"), legalInputDecisionRoot: fixtureRoot("0"), chronicleBehaviorRoot: fixtureRoot("a"), matchupResponseRoot: fixtureRoot("b") }, lineage: proposal.lineage }
+export const factoryCandidateFixture = (proposal: FactoryProposal, validation: FactoryValidationEvidence, supervisionReceiptRoot = fixtureRoot("6")): FactoryCandidate => {
+  const value = { schemaVersion: "factory-candidate-v1" as const, privacy: "private_offline" as const, root: fixtureRoot("6"), proposal, validation, supervisionReceiptRoot, fingerprints: { sourceStructureRoot: fixtureRoot("7"), lineageRoot: fixtureRoot("8"), dependencyRoot: fixtureRoot("9"), legalInputDecisionRoot: fixtureRoot("0"), chronicleBehaviorRoot: fixtureRoot("a"), matchupResponseRoot: fixtureRoot("b") }, lineage: proposal.lineage }
   return { ...value, root: deriveFactoryCandidateRoot(value) }
 }

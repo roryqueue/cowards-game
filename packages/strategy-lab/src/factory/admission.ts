@@ -12,6 +12,7 @@ const canonical = (value: unknown) => { const admitted = admitCanonicalJsonValue
 const same = (left: unknown, right: unknown) => labRoot("factory-admission-comparison-v1", left) === labRoot("factory-admission-comparison-v1", right)
 const sourceAdmissions = new WeakSet<object>()
 const supervisionAdmissions = new WeakSet<object>()
+const issuedSupervisionReceipts = new WeakSet<object>()
 const samePacketProjection = (proposal: FactoryProposal, packet: FactoryOraclePacket) =>
   proposal.packetRoot === packet.root && proposal.oracleFamily === packet.oracleFamily && proposal.doctrineFamily === packet.doctrineFamily &&
   proposal.split === packet.split && same(proposal.source, packet.source) && same(proposal.build, packet.build) &&
@@ -57,14 +58,16 @@ export const authorizeFactorySupervision = (input: { sourceAdmission: FactorySou
   supervisionAdmissions.add(admission)
   return admission
 }
-/** Final candidate publication is only legal after trace-derived fingerprints have been attached. */
-export const finalizeFactoryCandidate = (input: { admission: FactoryAdmission; candidate: FactoryCandidate; repository?: FactoryRepository }): Readonly<{ candidateRoot: LabRoot; artifactRoot: LabRoot }> => {
-  if (!supervisionAdmissions.has(input.admission)) return fail()
+/** Final candidate publication is only legal after successful trace-derived supervision. */
+export const finalizeFactoryCandidate = (input: { receipt: FactorySupervisionReceipt; candidate: FactoryCandidate; repository?: FactoryRepository }): Readonly<{ candidateRoot: LabRoot; artifactRoot: LabRoot; supervisionReceiptRoot: LabRoot }> => {
+  if (!issuedSupervisionReceipts.has(input.receipt) || mapFactorySupervision(input.receipt).disposition !== "accepted") return fail()
   const candidate = FactoryCandidateSchema.parse(input.candidate)
-  if (candidate.proposal.root !== input.admission.proposalRoot || candidate.validation.root !== input.admission.validationRoot ||
-      !same(candidate.proposal.nativeLane, input.admission.nativeLane) || !same(candidate.lineage, candidate.proposal.lineage)) return fail()
+  const admission = input.receipt.admission
+  if (candidate.proposal.root !== admission.proposalRoot || candidate.validation.root !== admission.validationRoot ||
+      candidate.supervisionReceiptRoot !== input.receipt.root || !same(candidate.proposal.nativeLane, admission.nativeLane) ||
+      !same(candidate.lineage, candidate.proposal.lineage)) return fail()
   const artifactRoot = input.repository ? publishFactoryArtifact(input.repository, canonical(candidate)) : candidate.root
-  return freezeLabValue({ candidateRoot: candidate.root, artifactRoot })
+  return freezeLabValue({ candidateRoot: candidate.root, artifactRoot, supervisionReceiptRoot: input.receipt.root })
 }
 export interface FactorySupervisionProvider extends LabSupervisedProvider {
   readonly identity: LabRuntimeIdentity & {
@@ -73,7 +76,8 @@ export interface FactorySupervisionProvider extends LabSupervisedProvider {
   };
 }
 export interface FactorySupervisionReceipt {
-  readonly admission: FactoryAdmission; readonly execution: LabMatchExecution; readonly root: LabRoot;
+  readonly admission: FactoryAdmission; readonly candidatePlayerId: string; readonly candidateIdentity: FactorySupervisionProvider["identity"];
+  readonly execution: LabMatchExecution; readonly root: LabRoot;
 }
 const boundIdentity = (identity: FactorySupervisionProvider["identity"], admission: FactoryAdmission) =>
   identity.sourceRoot === admission.sourceRoot && identity.runtimeLimitsRoot === admission.nativeLane.runtimeProfileRoot &&
@@ -82,13 +86,17 @@ const boundIdentity = (identity: FactorySupervisionProvider["identity"], admissi
 const requireBoundIdentity = (identity: FactorySupervisionProvider["identity"], admission: FactoryAdmission) => {
   if (!boundIdentity(identity, admission)) return fail()
 }
-const receiptRoot = (admission: FactoryAdmission, execution: LabMatchExecution) =>
-  labRoot("factory-supervision-receipt-v1", { authorizationRoot: admission.authorizationRoot, execution })
+const receiptRoot = (admission: FactoryAdmission, candidatePlayerId: string, candidateIdentity: FactorySupervisionProvider["identity"], execution: LabMatchExecution) =>
+  labRoot("factory-supervision-receipt-v1", { authorizationRoot: admission.authorizationRoot, candidatePlayerId, candidateIdentity, execution })
 export const mapFactorySupervision = (receipt: FactorySupervisionReceipt): Readonly<{ disposition: Extract<FactoryDisposition, "accepted" | "player_violation" | "system_failure">; scoredAsGameplay: false; evidenceRoot: LabRoot }> => {
-  if (receipt.root !== receiptRoot(receipt.admission, receipt.execution)) return fail()
+  if (!issuedSupervisionReceipts.has(receipt) || receipt.root !== receiptRoot(receipt.admission, receipt.candidatePlayerId, receipt.candidateIdentity, receipt.execution)) return fail()
   const execution = receipt.execution
-  const disposition = execution.kind === "failure" ? "system_failure" as const : execution.accounting.some((entry) => !entry.result.ok && !("systemFailure" in entry.result)) ? "player_violation" as const : "accepted" as const
-  return freezeLabValue({ disposition, scoredAsGameplay: false as const, evidenceRoot: labRoot("factory-supervision-evidence-v1", execution) })
+  const candidateAccounting = execution.accounting.filter((entry) => same(entry.identity, receipt.candidateIdentity))
+  if (!candidateAccounting.length) return fail()
+  const anySystemFailure = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result)
+  const candidateViolation = candidateAccounting.some((entry) => !entry.result.ok && !("systemFailure" in entry.result))
+  const disposition = anySystemFailure ? "system_failure" as const : candidateViolation ? "player_violation" as const : "accepted" as const
+  return freezeLabValue({ disposition, scoredAsGameplay: false as const, evidenceRoot: labRoot("factory-supervision-evidence-v1", { receiptRoot: receipt.root, candidatePlayerId: receipt.candidatePlayerId, execution }) })
 }
 /**
  * The only execution seam binds the admitted source to the selected trusted
@@ -101,19 +109,29 @@ export const superviseFactory = async (
   run: typeof runCanonicalLabMatch = runCanonicalLabMatch,
 ): Promise<FactorySupervisionReceipt> => {
   if (!supervisionAdmissions.has(admission)) return fail()
+  if (candidatePlayerId !== input.match.bottomPlayerId && candidatePlayerId !== input.match.topPlayerId) return fail()
   const provider = input.providers[candidatePlayerId] as FactorySupervisionProvider | undefined
   if (!provider) return fail()
   requireBoundIdentity(provider.identity, admission)
+  const candidateIdentity = freezeLabValue(structuredClone(provider.identity)) as FactorySupervisionProvider["identity"]
+  const candidateInvocationRoots = new Set<LabRoot>()
   const boundProvider: FactorySupervisionProvider = {
     ...provider,
     async invoke(request, admittedRuntimeIdentity) {
       requireBoundIdentity(provider.identity, admission)
       const evidence = await provider.invoke(request, admittedRuntimeIdentity)
       requireBoundIdentity(evidence.identity as FactorySupervisionProvider["identity"], admission)
+      if (!same(evidence.identity, candidateIdentity)) return fail()
+      candidateInvocationRoots.add(evidence.invocationRoot)
       return evidence
     },
   }
   const execution = await run({ ...input, providers: { ...input.providers, [candidatePlayerId]: boundProvider } })
-  return freezeLabValue({ admission, execution, root: receiptRoot(admission, execution) })
+  const candidateAccounting = execution.accounting.filter((entry) => same(entry.identity, candidateIdentity))
+  if (!candidateInvocationRoots.size || candidateAccounting.length !== candidateInvocationRoots.size ||
+      candidateAccounting.some((entry) => !candidateInvocationRoots.has(entry.invocationRoot))) return fail()
+  const receipt = freezeLabValue({ admission, candidatePlayerId, candidateIdentity, execution, root: receiptRoot(admission, candidatePlayerId, candidateIdentity, execution) })
+  issuedSupervisionReceipts.add(receipt)
+  return receipt
 }
 export type { LabSupervisedProvider }
