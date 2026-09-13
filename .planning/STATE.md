@@ -4,13 +4,13 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
-current_plan: 2
+current_plan: 3
 total_plans_in_phase: 8
 status: in_progress
-stopped_at: Phase264 Plan01 independently clean; executing parallel oracle leaves02/03/04 then intake06
-last_updated: "2026-09-13T23:21:57Z"
+stopped_at: Phase264 teacher03 executing; same-plan tactical02 emitted-controller correction queued next, then04/06
+last_updated: "2026-09-13T23:35:00Z"
 last_activity: 2026-09-13
-last_activity_desc: Foundation18tests and unfiltered package types pass; independent foundation and37-test legacy boundary reviews clean
+last_activity_desc: Foundation complete/pushed; tactical host tests pass4 but emitted-controller mismatch blocks02completion; teacher write window active
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ progress:
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-13
+
+Current dispatch: shared-checkout executors serialize perGSD. Teacher03 is active on its own package; tactical02 initial implementation is committed but main found its emitted source is a simplified surrogate, not the tested bounded-search core, plus incomplete free-identifier closure checks. These are recorded in264-02-SUMMARY.md and queued for the same executor after03finishes, without a new plan. Then04and06, then05integration. The attempted third concurrent executor hit the task limit; existing executors can be reused, so this is not a human blocker. Plan01 remains the only independently completed plan. A new264foundation-recovery pending marker was removed after its fixes were applied and independently verified; historical263markers/locks were not changed.
 
 Plan264-01 is complete after two same-plan repair passes and clean independent re-review at459017f8. Exact source/proposal admission precedes validation, issued participant-bound supervision receipts, and final receipt-bound candidates; opponent failure is not candidate failure and remains unscored. Main and reviewer independently passed18factory tests and full package build. Legacy boundary integration passes37tests and clean re-review. Continue parallel02/03/04, then06 as a slot opens; all four precede05. No new experiments or previous allocation reuse occurred. The untracked Phase263 recovery/cache/36locks remain untouched.
 
