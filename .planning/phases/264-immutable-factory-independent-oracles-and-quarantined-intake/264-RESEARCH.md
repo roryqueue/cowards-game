@@ -310,26 +310,26 @@ const packetRoot = labRoot("factory-intake-packet-v1", packet)
 |---|---|
 | Framework | Vitest `4.1.6` [VERIFIED: `package.json`] |
 | Config file | package-level scripts; no separate config required by current `@cowards/strategy-lab`. [VERIFIED: `packages/strategy-lab/package.json`] |
-| Quick run command | `pnpm --filter @cowards/strategy-lab test -- --runInBand` is not supported by Vitest; use `pnpm --filter @cowards/strategy-lab test -- src/factory/*.test.ts` after files exist. [VERIFIED: `packages/strategy-lab/package.json`] |
-| Full suite command | `pnpm turbo test --concurrency=1` [VERIFIED: `package.json`, project memory guidance] |
+| Quick run command | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/*.test.ts` after files exist. [VERIFIED: existing Vitest binary and `packages/strategy-lab/package.json`] |
+| Full suite command | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/*.test.ts packages/strategy-oracle-*/src/*.test.ts` plus scoped `./node_modules/.bin/tsc -b packages/strategy-lab packages/strategy-oracle-tactical packages/strategy-oracle-teacher packages/strategy-oracle-model` after package creation. [ASSUMED: proposed Phase 264 package paths; command must be adjusted to actual package names] |
 
 ### Phase Requirements → Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |---|---|---|---|---|
-| FACT-05/06 | Root stability, immutable lineage, complete charged terminal ledger | unit/property | `pnpm --filter @cowards/strategy-lab test -- src/factory/ledger.test.ts` | ❌ Wave 0 |
-| FACT-07 | Direct execution/import/fallback denial and three-way runtime disposition | unit/integration | `pnpm --filter @cowards/strategy-lab test -- src/factory/admission.test.ts` | ❌ Wave 0 |
-| FACT-08 | Six dimensions, labeled calibration corpus, `unresolved` exclusion | unit/property | `pnpm --filter @cowards/strategy-lab test -- src/factory/fingerprint.test.ts` | ❌ Wave 0 |
-| ORCL-01/02/03 | Strategic-core physical isolation and legal-input-only student | static/unit | `pnpm exec tsx scripts/check-v1-38-factory-boundaries.ts` | ❌ Wave 0 |
-| ORCL-04 | Exact frozen bundle, drift/missing identity terminal block, no runner call | unit | `pnpm --filter @cowards/strategy-lab test -- src/factory/model-bundle.test.ts` | ❌ Wave 0 |
-| ORCL-05 | Disclosure/provenance/budget policy and failed/rejected retention | unit | `pnpm --filter @cowards/strategy-lab test -- src/factory/intake.test.ts` | ❌ Wave 0 |
-| ORCL-06/07 | Helper denylist plus multi-axis independence receipt | static/unit | `pnpm exec tsx scripts/check-v1-38-factory-boundaries.ts` | ❌ Wave 0 |
+| FACT-05/06 | Root stability, immutable lineage, complete charged terminal ledger | unit/property | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/ledger.test.ts` | ❌ Wave 0 |
+| FACT-07 | Direct execution/import/fallback denial and three-way runtime disposition | unit/integration | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/admission.test.ts` | ❌ Wave 0 |
+| FACT-08 | Six dimensions, labeled calibration corpus, `unresolved` exclusion | unit/property + bounded supervised calibration | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/fingerprint.test.ts` | ❌ Wave 0 |
+| ORCL-01/02/03 | Strategic-core isolation, legal-input-only student, and evidence from an approved bounded supervised candidate calibration | static/unit + bounded supervised calibration | `./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts` | ❌ Wave 0 |
+| ORCL-04 | Exact frozen bundle, drift/missing identity terminal block, no Match/search invocation | unit | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/model-bundle.test.ts` | ❌ Wave 0 |
+| ORCL-05 | Disclosure/provenance/budget policy and failed/rejected retention | unit | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake.test.ts` | ❌ Wave 0 |
+| ORCL-06/07 | Helper denylist plus independence receipt and approved bounded supervised evidence across the three mechanisms | static/unit + bounded supervised calibration | `./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts` | ❌ Wave 0 |
 
 ### Sampling Rate
 
-- **Per task commit:** targeted package tests plus factory boundary monitor. [VERIFIED: existing package test pattern]
-- **Per wave merge:** `pnpm turbo test --concurrency=1` and `pnpm turbo typecheck`. [VERIFIED: `package.json`, project memory guidance]
-- **Phase gate:** all phase requirement tests and the boundary monitor green; no Match/league score claim required or authorized. [VERIFIED: `264-CONTEXT.md`]
+- **Per task commit:** targeted direct Vitest invocation plus the factory boundary monitor; do not invoke historical empirical CLI selectors. [VERIFIED: `packages/strategy-lab/package.json`, parent planning direction]
+- **Per wave merge:** the bounded pure/injected Phase 264 Vitest files, scoped TypeScript builds for new packages, and existing private boundary/kernel tests only. Do not run `turbo test`, `pnpm exec`, or broad historical guest suites because they may reach consumed experiment paths or rewrite the lockfile. [VERIFIED: parent planning direction]
+- **Phase gate:** static/pure checks are necessary but not sufficient. Before FACT-08 and ORCL-01/02/03/07 readiness, execute the predeclared bounded supervised candidate calibration that produces genuine tactical/student outputs and all six fingerprint dimensions; its allocation is an explicit planning dependency and must not be invented in research. No Phase 265 league/payoff/competitive claim is authorized here. [VERIFIED: `264-CONTEXT.md` D-11 through D-19]
 
 ### Wave 0 Gaps
 
@@ -337,6 +337,7 @@ const packetRoot = labRoot("factory-intake-packet-v1", packet)
 - [ ] Three private oracle package manifests/entry points with no shared strategic-core imports.
 - [ ] `scripts/check-v1-38-factory-boundaries.ts` for production reachability, helper allowlist, oracle cross-import, and prohibited execution paths.
 - [ ] Provider-neutral frozen-bundle and quarantined-intake test fixtures with no real provider, reviewer, or guest execution.
+- [ ] A separately approved, bounded Phase 264 supervised calibration protocol and allocation for tactical/student emission, fingerprints, clone/correlation evidence, and independence receipts; it must charge and retain failures but must not create Phase 265 league/score evidence. [VERIFIED: `264-CONTEXT.md` D-04, D-11 through D-19]
 
 ## Security Domain
 
