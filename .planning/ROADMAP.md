@@ -899,7 +899,7 @@ Plans:
   4. At least three materially independent automated mechanisms—the structured tactical optimizer, search-teacher/distiller, and provider-neutral frozen-bundle program synthesizer—pass an audited shared-helper allowlist and dependency, authorship, behavior, counterfactual-correlation, clone, and failure-mode review.
   5. Human and external submissions enter through a quarantined channel with frozen disclosure, submission, reviewer, independence, conflict, provenance, validation, and acceptance budgets; only validated deterministic explicit source can enter the factory, and every failed or rejected attack remains in the evidence root.
 
-**Plans:** 1/8 complete; private foundation independently reviewed clean after same-plan repairs,18focused tests and package types pass. Parallel oracle leaves and quarantined intake are next. All11requirements/24decisions remain covered by the plans; no synthetic participation or old allocation reuse is permitted.
+**Plans:** 2/8 complete; private foundation and tactical controller independently checked after same-plan repairs (18 foundation tests, 6 tactical tests, package types). Teacher correction is active, then model bundles, quarantined intake and integration. Shared-checkout writes are serialized. All11requirements/24decisions remain covered by the plans; no synthetic participation or old allocation reuse is permitted.
 
 **Wave1 — shared private foundation**
 
@@ -907,7 +907,7 @@ Plans:
 
 **Wave2 — independent leaves, after Wave1**
 
-- [ ] 264-02-PLAN.md — Independent tactical optimizer and exact data-only emitter.
+- [x] 264-02-PLAN.md — Independent tactical optimizer and exact data-only emitter.
 - [ ] 264-03-PLAN.md — Canonical counterfactual teacher and legal-information student/distiller.
 - [ ] 264-04-PLAN.md — Frozen provider-neutral model bundles and explicit-source emitter.
 - [ ] 264-06-PLAN.md — Quarantined human/external intake, disclosure and provenance protocol.
@@ -1031,7 +1031,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 1/8 | Executing parallel leaves; foundation independently clean | - |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 2/8 | Teacher correction active; foundation and tactical checked | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
