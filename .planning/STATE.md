@@ -7,10 +7,10 @@ current_phase_name: legal-planner-and-deterministic-runner-feasibility
 current_plan: 6
 total_plans_in_phase: 7
 status: in_progress
-stopped_at: Approved Phase263 three-attempt envelope; separate review wiring and runtime availability before attempt1
+stopped_at: Phase263 approved retry1 timing non-pass; behavior-preserving repair before approved attempt2
 last_updated: "2026-09-13T12:53:10Z"
 last_activity: 2026-09-13
-last_activity_desc: Operator approved at most3fresh bounded attempts;0started; all original bounds/evidence preserved
+last_activity_desc: Retry1 validation256passed, selection p99 33.819629ms non-pass, zero Matches; two approved attempts remain
 progress:
   total_phases: 9
   completed_phases: 1
@@ -26,6 +26,8 @@ progress:
 Resumed the source-only post-gate repair and independent verification. The operator requested efficient autonomous continuation and smaller-model subagents. A focused Terra reviewer checks the isolated two-commit caching/reporting fix; a Luna verifier closes only the safe injected-failure uncertainty. Both are forbidden from new empirical source runs. Main and origin/main were f7a8a0c0 at resume; original receipt/manifest/consumption bytes and36locks are unchanged. No prior failed agent is assumed to have completed its unfinished review. Do not advance Phase264 from summary counts: actual Phase263 verification remains gaps_found.
 
 ## Current Phase263 execution
+
+Latest2026-09-13: approved retry1 is consumed and independently rederived non_pass. All256validation cases passed (232guest calls);2200benchmark calls completed. Selection p99=33.819629ms still fails strict<5ms; SoldierBrain=2.629893ms passes. Zero Matches ran, cleanup completed, and all36historical locks are unchanged. The operator-approved three-attempt envelope in263-RETRY-ENVELOPE.md has two unused attempts. Continue exact-output source optimization, independent focused review and approved attempt2 without another literal or approval. Phase264 remains gated until an actual full Phase263 pass. Earlier approval-pending descriptions below are historical and superseded.
 
 Update2026-09-13: same-plan caching/reporting repairs are integrated as a6ae616d/b7f1281f, independently reviewed clean in263-POST-GATE-REVIEW.md, and pass33focused integration tests plus strict types/package build. A smaller-model verifier passed11injected failure tests, bringing goal-backward verification to8/11 without changing the measured timing failure or zero-Match unknowns. The repaired source is25107bytes and unmeasured. The sole remaining human-only checkpoint is approving a fresh bounded empirical envelope; a maximum-three-attempt proposal in263-POST-GATE-REPAIR.md is not yet authorized. No exact literal, new plan chain or external custody system is required. Phase264 cannot start until actual Phase263 gates pass.
 

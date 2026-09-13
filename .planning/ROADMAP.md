@@ -872,7 +872,7 @@ Plans:
   4. The private offline lab has an executable one-way dependency graph into canonical spec, engine, replay helpers, and supervised runtime adapters while production packages, apps, images, routes, generated contracts, and deployment manifests cannot import it; every research Match advances through the exact selected `MATCH_KERNEL` with no copied resolver, alternate legality, second transition loop, or profile-specific transition code.
   5. One non-secret command pre-enumerates stable task identities and domain-separated streams, validates strict bounded artifacts, and reproduces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume with complete coverage, atomic publication, and tamper detection.
 
-**Plans:** 5/7 implementation plans accepted; Plan06 terminal non-pass; Plan07 verification recorded with gaps. Same-plan caching repair reviewed/tested; fresh empirical allocation requires approval. Phase263 remains incomplete.
+**Plans:** 5/7 implementation plans accepted; Plan06 terminal non-pass; Plan07 verification recorded with gaps. Approved retry1 passed validation but selection p99=33.819629ms fails strict<5ms; zero Matches. Same-plan source repair continues with two approved bounded attempts remaining. Phase263 remains incomplete.
 
 Plans:
 

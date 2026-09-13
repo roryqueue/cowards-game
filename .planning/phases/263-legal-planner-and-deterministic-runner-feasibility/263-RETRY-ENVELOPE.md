@@ -1,7 +1,7 @@
 ---
 phase: 263
 plans: [263-02,263-06,263-07]
-status: attempt_1_reserved
+status: attempt_1_non_pass_repairing
 approved: 2026-09-13
 operator_response: approved
 maximum_fresh_attempts: 3
@@ -28,7 +28,7 @@ The operator approved the immediately preceding proposal: **up to three fresh bo
 
 | Envelope ordinal | Manifest under this phase directory | Private output under repository | State |
 |---|---|---|---|
-| 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | reserved for sole prepare/run |
+| 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | consumed: validation passed, selection timing non-pass, zero Matches |
 | 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | unused |
 | 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | unused |
 
@@ -45,3 +45,21 @@ After a full pass, independently verify the retained result, close Phase263's va
 ## Attempt ledger
 
 Attempt1 reserved after the optional review binding passed9focused tests and TypeScript, independent delta review was clean, and Docker29.4.0 plus the exact pinned image were available. Source commit6ab67731; review263-RETRY-1-REVIEW.md; emitted source026983d62848aefa2d29fbf7a92bf05adb8c75121fa27cb3093a1a18576e9c24; executiond9672f7fffe8831af2ccff83aa29ad62c337a4ef9cd8c71c6ff8424929290db3. Two envelope slots remain unused. Record actual manifest/counts/result after terminalization; no pass is inferred here.
+
+### Attempt1 terminal — 2026-09-13
+
+Prepared and invoked exactly once over committed HEAD5ef8f332. All256validation cases passed (232guest calls,16source rejections,8input rejections). All2200benchmark calls completed without uncertainty. Direct-method p99: selection33.819629ms, SoldierBrain2.629893ms. Selection fails the unchanged strict<5ms gate; therefore zero Matches ran and24slots remain unused. Cleanup completed; no owned container remained. Elapsed579400.404474ms (9.66minutes), host peak RSS798836KiB. Read-only --verify independently rederived non_pass before further source work.
+
+The call-local caching repair reduced observed selection p99 from64.135270ms to33.819629ms but did not establish feasibility. This is a comparison between separate bounded runs, not controlled component profiling. Ordinary exact-output scoring optimization continues within Plan02. Attempts2and3 remain approved and unused; no repeated operator checkpoint is needed before them.
+
+Retained private evidence is never committed. Bindings:
+
+- Manifest logical root: `sha256:534e52dc99b7e833233fde071ca9f6b884ef0be78a9e6d509feaf8d9ca33a544`.
+- Receipt bytes: `sha256:06010f915fe96c8a7ca714a84014f2dac1eaeb36f989fdc4ac289b61e8fd629a`.
+- Consumption bytes: `sha256:b5b37e4b3025236755a76915885f46ed9b885bb58546890330cc5215a6f392c7`.
+- Validation result bytes: `sha256:1fd593fc5be37f3a9cb6c48f93be83085ee13947a5299c0e60df8b5ecd85f9fd`.
+- Benchmark result bytes: `sha256:661bd789506e889fa7d900e6a519114379c8087551471e4b72d4ecd6a9d870fb`.
+- Benchmark cleanup bytes: `sha256:b6ec473e56d103e26a99e6e8edcf60c21a035f16b262cf143a915a2d31f316df`.
+- All36historical lock names/bytes retain aggregate `390aa9bdded6289a80d4df07a170c00edaff5bd30d7153375c825664ad614059`.
+
+Historical verification must use this attempt's source and retained files; later source repairs must not rewrite its manifest to bypass drift checks.

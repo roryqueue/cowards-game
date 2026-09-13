@@ -2,6 +2,8 @@
 
 ## Current v1.38 progress — Phase263 speed repair
 
+Latest2026-09-13: the operator approved up to three fresh bounded attempts. Attempt1 passed256validation cases but selection p99=33.819629ms remains above the unchanged strict5ms gate; SoldierBrain=2.629893ms passes. All2200benchmark calls completed, zero Matches ran and cleanup is complete. Two approved attempts remain; source-only exact-output scoring optimization and independent review continue within the existing phase plans. See263-RETRY-ENVELOPE.md. No further approval is needed for those remaining bounded attempts. The earlier approval-pending snapshot below is historical.
+
 Phase262 is verified complete:24/24 supervised fixture Matches, zero failures, complete cleanup and twelve matching four-root pairs. Phase263 has five accepted implementation plans and a terminal first feasibility run:256validation cases passed, but selection p99=64.135270ms failed the unchanged strict<5ms gate; SoldierBrain passed2.349449ms. Zero Matches ran in Phase263. A call-local caching repair is under source-only review, with600exact-output reference comparisons reported and no new speed sample. Existing seven phase plans remain the scope. The original consumed allocation and all36historical locks are preserved; a fresh bounded empirical envelope needs operator revision, not another literal/seal chain. The runtime remains2CPUs/256MB,120seconds per Match/60minutes per run, with all per-method limits and rules unchanged. Formation remains gated by the later current-league freeze. Older snapshots below are historical and superseded by this section.
 
 ## Active D-34L lean admission contract — 2026-09-01
