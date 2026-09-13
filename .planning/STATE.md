@@ -6,11 +6,11 @@ current_phase: 263
 current_phase_name: legal-planner-and-deterministic-runner-feasibility
 current_plan: 6
 total_plans_in_phase: 7
-status: awaiting_operator_allocation_revision
-stopped_at: Phase263 caching repair integrated and independently reviewed; fresh bounded empirical envelope requires approval
+status: in_progress
+stopped_at: Approved Phase263 three-attempt envelope; separate review wiring and runtime availability before attempt1
 last_updated: "2026-09-13T12:53:10Z"
 last_activity: 2026-09-13
-last_activity_desc: Cache repair on main;33integration tests and types pass; independent verification8/11; no fresh empirical authority
+last_activity_desc: Operator approved at most3fresh bounded attempts;0started; all original bounds/evidence preserved
 progress:
   total_phases: 9
   completed_phases: 1
