@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { SoldierBrainInputV119Schema, type SoldierBrainInputV119 } from "@cowards/spec"
 import { FactoryOraclePacketSchema } from "../../strategy-lab/src/factory/index.js"
 import { describe, expect, it } from "vitest"
 import {
@@ -69,7 +70,7 @@ describe("tactical oracle", () => {
   it("is deterministic and picks a local response from only the tactical objective and awareness", () => {
     const result = selectTacticalActivations(legalInput())
     const objective = result.activationOrders[0]!.objective
-    const brainInput = {
+    const brainInput = SoldierBrainInputV119Schema.parse({
       self: soldier("self:a", "self", 1, 1),
       awarenessGrid: { cells: Array.from({ length: 25 }, (_, index) => ({ dx: index % 5 - 2, dy: Math.floor(index / 5) - 2, absoluteX: index % 5 - 1, absoluteY: Math.floor(index / 5) - 1, contents: index === 13 ? "ENEMY_ACTIVE" as const : "EMPTY" as const, ...(index === 13 ? { facing: "LEFT" as const } : {}) })) },
       cycleIndex: 1,
@@ -77,7 +78,8 @@ describe("tactical oracle", () => {
       objective,
       soldierMemory: {},
       hasAdvancedThisActivation: false,
-    }
-    expect(runTacticalSoldierBrain(brainInput)).toEqual(runTacticalSoldierBrain(brainInput))
+    })
+    const typedBrainInput = brainInput as unknown as SoldierBrainInputV119
+    expect(runTacticalSoldierBrain(typedBrainInput)).toEqual(runTacticalSoldierBrain(typedBrainInput))
   })
 })
