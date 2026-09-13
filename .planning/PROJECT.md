@@ -1,8 +1,8 @@
 # Coward's Game
 
-## Current v1.38 progress — Phase262 verified complete
+## Current v1.38 progress — Phase263 speed repair
 
-Phase262's approved lean fixture gate passed24/24 supervised Matches with zero failures, complete cleanup and twelve identical four-root pairs; independent verification satisfies all16 Phase262 requirements. Phase263 research and planning are next. Source/profile regression125/125 and TypeScript pass. This is fixture feasibility, not competitive strength. Three arena labels cover two geometries. Prior failed/consumed routes remain history, never restart instructions. The current approved profile is2CPUs/256MB,120seconds per cell/60minutes overall; all per-method Strategy limits and canonical rules remain unchanged. Formation remains gated by the later current-league freeze. Older progress snapshots below are superseded by this section.
+Phase262 is verified complete:24/24 supervised fixture Matches, zero failures, complete cleanup and twelve matching four-root pairs. Phase263 has five accepted implementation plans and a terminal first feasibility run:256validation cases passed, but selection p99=64.135270ms failed the unchanged strict<5ms gate; SoldierBrain passed2.349449ms. Zero Matches ran in Phase263. A call-local caching repair is under source-only review, with600exact-output reference comparisons reported and no new speed sample. Existing seven phase plans remain the scope. The original consumed allocation and all36historical locks are preserved; a fresh bounded empirical envelope needs operator revision, not another literal/seal chain. The runtime remains2CPUs/256MB,120seconds per Match/60minutes per run, with all per-method limits and rules unchanged. Formation remains gated by the later current-league freeze. Older snapshots below are historical and superseded by this section.
 
 ## Active D-34L lean admission contract — 2026-09-01
 
