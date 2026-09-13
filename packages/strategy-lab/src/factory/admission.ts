@@ -10,6 +10,8 @@ const fail = (): never => { throw new TypeError("FACTORY_ADMISSION") }
 const bytesRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 const canonical = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok || admitted.canonicalByteLength > 262144) return fail(); return admitted.canonicalBytes }
 const same = (left: unknown, right: unknown) => labRoot("factory-admission-comparison-v1", left) === labRoot("factory-admission-comparison-v1", right)
+const sourceAdmissions = new WeakSet<object>()
+const supervisionAdmissions = new WeakSet<object>()
 const samePacketProjection = (proposal: FactoryProposal, packet: FactoryOraclePacket) =>
   proposal.packetRoot === packet.root && proposal.oracleFamily === packet.oracleFamily && proposal.doctrineFamily === packet.doctrineFamily &&
   proposal.split === packet.split && same(proposal.source, packet.source) && same(proposal.build, packet.build) &&
@@ -38,20 +40,26 @@ export const admitFactory = (input: { packet: FactoryOraclePacket; proposal: Fac
     source: publishFactoryArtifact(input.repository, input.sourceBytes), packet: publishFactoryArtifact(input.repository, canonical(packet)),
     proposal: publishFactoryArtifact(input.repository, canonical(proposal)),
   } : { source: bytesRoot(input.sourceBytes), packet: packet.root, proposal: proposal.root }
-  return freezeLabValue({ sourceRoot: bytesRoot(input.sourceBytes), packetRoot: packet.root, proposalRoot: proposal.root, nativeLane: proposal.nativeLane, artifacts })
+  const admission = freezeLabValue({ sourceRoot: bytesRoot(input.sourceBytes), packetRoot: packet.root, proposalRoot: proposal.root, nativeLane: proposal.nativeLane, artifacts })
+  sourceAdmissions.add(admission)
+  return admission
 }
 export const authorizeFactorySupervision = (input: { sourceAdmission: FactorySourceAdmission; validation: FactoryValidationEvidence; repository?: FactoryRepository }): Readonly<FactoryAdmission> => {
-  const validation = FactoryValidationEvidenceSchema.parse(input.validation), sourceAdmission = freezeLabValue(structuredClone(input.sourceAdmission))
+  if (!sourceAdmissions.has(input.sourceAdmission)) return fail()
+  const validation = FactoryValidationEvidenceSchema.parse(input.validation), sourceAdmission = input.sourceAdmission
   if (validation.status !== "valid" || validation.proposalRoot !== sourceAdmission.proposalRoot || !same(validation.exactNativeLane, sourceAdmission.nativeLane)) return fail()
   const artifacts = {
     ...sourceAdmission.artifacts,
     validation: input.repository ? publishFactoryArtifact(input.repository, canonical(validation)) : validation.root,
   }
   const authorization = { sourceRoot: sourceAdmission.sourceRoot, packetRoot: sourceAdmission.packetRoot, proposalRoot: sourceAdmission.proposalRoot, validationRoot: validation.root, nativeLane: sourceAdmission.nativeLane }
-  return freezeLabValue({ ...authorization, authorizationRoot: labRoot("factory-supervision-authorization-v1", authorization), artifacts })
+  const admission = freezeLabValue({ ...authorization, authorizationRoot: labRoot("factory-supervision-authorization-v1", authorization), artifacts })
+  supervisionAdmissions.add(admission)
+  return admission
 }
 /** Final candidate publication is only legal after trace-derived fingerprints have been attached. */
 export const finalizeFactoryCandidate = (input: { admission: FactoryAdmission; candidate: FactoryCandidate; repository?: FactoryRepository }): Readonly<{ candidateRoot: LabRoot; artifactRoot: LabRoot }> => {
+  if (!supervisionAdmissions.has(input.admission)) return fail()
   const candidate = FactoryCandidateSchema.parse(input.candidate)
   if (candidate.proposal.root !== input.admission.proposalRoot || candidate.validation.root !== input.admission.validationRoot ||
       !same(candidate.proposal.nativeLane, input.admission.nativeLane) || !same(candidate.lineage, candidate.proposal.lineage)) return fail()
@@ -92,6 +100,7 @@ export const superviseFactory = async (
   input: Parameters<typeof runCanonicalLabMatch>[0],
   run: typeof runCanonicalLabMatch = runCanonicalLabMatch,
 ): Promise<FactorySupervisionReceipt> => {
+  if (!supervisionAdmissions.has(admission)) return fail()
   const provider = input.providers[candidatePlayerId] as FactorySupervisionProvider | undefined
   if (!provider) return fail()
   requireBoundIdentity(provider.identity, admission)

@@ -30,6 +30,7 @@ describe("hostile private candidate admission", () => {
   it("accepts a complete projection from the same packet and rejects an unbound receipt", () => {
     const { packet, proposal, validation } = admittedCandidate()
     const sourceAdmission = admitFactory({ packet, proposal, sourceBytes: source })
+    expect(() => authorizeFactorySupervision({ sourceAdmission: { ...sourceAdmission }, validation })).toThrow("FACTORY_ADMISSION")
     const admission = authorizeFactorySupervision({ sourceAdmission, validation })
     expect(admission.sourceRoot).toBe(sourceRoot)
     expect(() => mapFactorySupervision({
