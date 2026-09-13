@@ -38,7 +38,8 @@ describe("one-way lab boundary monitor", () => {
   })
   it("recognizes private oracle leaves without treating their contract import as production", () => {
     const files = { ...lab,
-      "packages/strategy-oracle-tactical/src/index.ts": 'import type { Packet } from "../../strategy-lab/src/factory/contracts.js"',
+      "packages/strategy-oracle-tactical/src/index.ts": 'import type { Packet } from "@cowards/strategy-lab/factory"',
+      "packages/strategy-lab/src/factory/index.ts": 'export type { Packet } from "./contracts.js"',
       "packages/strategy-lab/src/factory/contracts.ts": "export interface Packet { sourceRoot: string }",
     }
     expect(checkLabBoundaries({ files }).ok).toBe(true)
@@ -55,6 +56,24 @@ describe("one-way lab boundary monitor", () => {
     expect(checkLabBoundaries({ files: { ...base, "Dockerfile": "COPY . /app", ".dockerignore": "packages/strategy-lab\n" } }).ok).toBe(false)
     expect(checkLabBoundaries({ files: { ...base, "Dockerfile": "COPY . /app", ".dockerignore": `packages/strategy-lab\npackages/strategy-oracle-${family}\n` } }).ok).toBe(true)
     expect(checkLabBoundaries({ files: { ...base, "Dockerfile": "COPY . /app", ".dockerignore": `packages/strategy-lab\npackages/strategy-oracle-${family}\n!packages/strategy-oracle-${family}/src\n` } }).ok).toBe(false)
+  })
+  it.each([
+    "COPY --chown=1000:1000 . /app",
+    "COPY --chmod=755 --link . /app",
+    'COPY --chown=1000:1000 ["./", "/app"]',
+    "COPY --from=builder . /app",
+    "ADD --checksum=sha256:abc . /app",
+    "COPY packages /app/packages",
+    ["COPY --chown=1000:1000 \\", "      . /app"].join("\n"),
+  ])("inspects flagged and broad image copies: %s", (instruction) => {
+    const files = { ...lab, "Dockerfile": instruction }
+    expect(checkLabBoundaries({ files }).violations.some(v => v.code === "IMAGE_INCLUDES_LAB")).toBe(true)
+  })
+  it("requires documented literal exclusion policy and does not treat stage sources as context", () => {
+    const files = { ...lab, "Dockerfile": "COPY --chown=1000:1000 . /app", ".dockerignore": "packages/strategy-lab\n" }
+    expect(checkLabBoundaries({ files }).ok).toBe(true)
+    expect(checkLabBoundaries({ files: { ...files, ".dockerignore": "packages/strategy-*\n" } }).ok).toBe(false)
+    expect(checkLabBoundaries({ files: { ...files, "Dockerfile": "COPY --from=builder . /app" } }).ok).toBe(false)
   })
   it.each([
     ["apps/go-backend/main.go", 'import "cowards/strategy-lab"'],

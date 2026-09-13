@@ -14,6 +14,33 @@ const allowedCore = /^(?:packages\/(?:spec|engine|replay|runtime-js)\/)/u
 const allowedNode = new Set(["node:crypto", "node:fs", "node:fs/promises", "node:path", "node:url", "node:os", "node:worker_threads", "node:buffer"])
 const ignoredDirectories = new Set(["node_modules", ".git", ".planning", "dist", ".next", ".turbo", "coverage", "vendor", "test-results", ".cache"])
 const sourceExtension = /\.[cm]?[jt]sx?$/u
+/** Conservative COPY/ADD inspection, not a Dockerfile interpreter. */
+const imageCopyUnproven = (source: string, contextExcluded: boolean): boolean => {
+  const instructions = source.replace(/^\s*#.*$/gmu, "").replace(/\\\r?\n/gu, " ")
+  for (const match of instructions.matchAll(/^\s*(?:ONBUILD\s+)?(?:COPY|ADD)\s+(.+)$/gimu)) {
+    if (/^\s*#\s*escape\s*=/gimu.test(source)) return true
+    let args = match[1]!.trim(), fromStage = false
+    while (args.startsWith("--")) {
+      const flag = /^--([a-z-]+)(?:=([^\s]+))?\s+/iu.exec(args)
+      if (!flag || (!flag[2] && !["link", "parents", "keep-git-dir", "unpack"].includes(flag[1]!.toLowerCase()))) return true
+      if (flag[1]!.toLowerCase() === "from") fromStage = true
+      args = args.slice(flag[0].length)
+    }
+    let operands: string[]
+    try {
+      const parsed: unknown = args.startsWith("[") ? JSON.parse(args) : args.split(/\s+/u)
+      if (!Array.isArray(parsed) || parsed.length < 2 || !parsed.every(p => typeof p === "string")) return true
+      operands = parsed
+    } catch { return true }
+    for (const operand of operands.slice(0, -1)) {
+      const path = posix.normalize(operand.replace(/^["']|["']$/gu, "").replace(/^\/+/u, "")).replace(/\/$/u, "")
+      const broad = path === "." || path === "packages" || /[*?$[\]]/u.test(path)
+      // --from uses another stage/image, not the ignored local build context.
+      if (broad && (fromStage || !contextExcluded)) return true
+    }
+  }
+  return false
+}
 const loadFiles = (): Record<string, string> => {
   const files: Record<string, string> = {}
   const walk = (dir: string) => {
@@ -35,6 +62,8 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
   const files = options.files ?? loadFiles()
   const privateDirectories = new Set(["packages/strategy-lab", ...Object.keys(files).filter(isOracle).map(p => p.split("/").slice(0, 2).join("/"))])
   const imageExclusions = (files[".dockerignore"] ?? "").split(/\r?\n/u).map(line => line.trim().replace(/\/$/u, ""))
+  // Repository policy requires literal directory exclusions. Globs are not
+  // interpreted as unsafe Docker syntax; they simply do not prove this policy.
   // A negation can re-include a private subtree: refuse ambiguous ignore policy.
   const excludesPrivateImages = !imageExclusions.some(line => line.startsWith("!")) && [...privateDirectories].every(directory => imageExclusions.includes(directory))
   const violations: LabBoundaryViolation[] = []
@@ -50,7 +79,7 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
   const host: ts.ModuleResolutionHost = { fileExists: (p) => files[key(p)] !== undefined, readFile: (p) => files[key(p)], directoryExists: (p) => directories.has(key(p)) }
   const configs = Object.entries(files).filter(([p]) => /(?:^|\/)tsconfig(?:\.[^/]*)?\.json$/u.test(p)).map(([p, source]) => ({ path: p, config: ts.parseConfigFileTextToJson(p, source).config as { compilerOptions?: { paths?: Record<string, string[]>; baseUrl?: string } } | undefined }))
   const resolveEdge = (from: string, specifier: string): string | undefined => {
-    const paths: Record<string, string[]> = { "@cowards/*": ["packages/*/src/index.ts"] }
+    const paths: Record<string, string[]> = { "@cowards/*": ["packages/*/src/index.ts"], "@cowards/strategy-lab/factory": ["packages/strategy-lab/src/factory/index.ts"] }
     for (const { path, config } of configs) {
       if (posix.dirname(path) !== "." && !from.startsWith(`${posix.dirname(path)}/`)) continue
       for (const [alias, targets] of Object.entries(config?.compilerOptions?.paths ?? {})) paths[alias] = targets.map((target) => posix.join(posix.dirname(path), config?.compilerOptions?.baseUrl ?? ".", target))
@@ -64,7 +93,7 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
     const generatedOrPublic = /(?:^|\/)(?:artifacts|generated|public)\//u.test(path)
     if ((production(path) || deployment || generatedOrPublic) && path !== ".dockerignore" && !sourceExtension.test(path) && labText.test(source)) add("PRODUCTION_ARTIFACT_EXPOSURE", path)
     if (generatedOrPublic && !sourceExtension.test(path) && /"(?:strategyMemory|soldierMemory|objective|privateTrace|hostPath)"\s*:/u.test(source) && /\/public\//u.test(path)) add("PRIVATE_PUBLIC_PAYLOAD", path)
-    if (/dockerfile/iu.test(path) && /(?:COPY|ADD)\s+(?:\[\s*")?\.\/?["\s,]/u.test(source) && !excludesPrivateImages) add("IMAGE_INCLUDES_LAB", path)
+    if (/dockerfile/iu.test(path) && imageCopyUnproven(source, excludesPrivateImages)) add("IMAGE_INCLUDES_LAB", path)
     if (path === "packages/strategy-lab/package.json") {
       const manifest = JSON.parse(source) as { private?: boolean; scripts?: Record<string, string>; dependencies?: Record<string, string> }
       if (manifest.private !== true || manifest.scripts?.build !== undefined) add("LAB_PRODUCTION_BUILD", path)

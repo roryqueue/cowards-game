@@ -1,4 +1,6 @@
 # Private strategy development and evidence never belong in application images.
+# Boundary policy requires these literal entries and no re-inclusion rules.
+# Glob-only alternatives need separate review; this is not a general ignore parser.
 .strategy-lab
 .planning
 packages/strategy-lab
