@@ -36,6 +36,26 @@ describe("one-way lab boundary monitor", () => {
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/core.ts": 'import "@cowards/spec"; import "node:crypto"', "packages/spec/src/index.ts": "export {}" } }).ok).toBe(true)
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/core.ts": 'import "node:vm"' } }).ok).toBe(false)
   })
+  it("recognizes private oracle leaves without treating their contract import as production", () => {
+    const files = { ...lab,
+      "packages/strategy-oracle-tactical/src/index.ts": 'import type { Packet } from "../../strategy-lab/src/factory/contracts.js"',
+      "packages/strategy-lab/src/factory/contracts.ts": "export interface Packet { sourceRoot: string }",
+    }
+    expect(checkLabBoundaries({ files }).ok).toBe(true)
+  })
+  it.each(["tactical", "teacher", "model"])("rejects direct, transitive, and deployment exposure of the %s oracle", (family) => {
+    const oracle = `packages/strategy-oracle-${family}/src/index.ts`
+    const base = { [oracle]: "export const privateOracle = 1" }
+    expect(checkLabBoundaries({ files: { ...base, "apps/web/src/index.ts": `import "@cowards/strategy-oracle-${family}"` } }).ok).toBe(false)
+    expect(checkLabBoundaries({ files: { ...base,
+      "apps/web/src/index.ts": 'import "../../../scripts/bridge.js"',
+      "scripts/bridge.ts": `export * from "../${oracle.replace(/\.ts$/u, ".js")}"`,
+    } }).violations.some(v => v.code === "PRODUCTION_REACHES_LAB")).toBe(true)
+    expect(checkLabBoundaries({ files: { ...base, "deploy/service.yaml": `include: packages/strategy-oracle-${family}` } }).ok).toBe(false)
+    expect(checkLabBoundaries({ files: { ...base, "Dockerfile": "COPY . /app", ".dockerignore": "packages/strategy-lab\n" } }).ok).toBe(false)
+    expect(checkLabBoundaries({ files: { ...base, "Dockerfile": "COPY . /app", ".dockerignore": `packages/strategy-lab\npackages/strategy-oracle-${family}\n` } }).ok).toBe(true)
+    expect(checkLabBoundaries({ files: { ...base, "Dockerfile": "COPY . /app", ".dockerignore": `packages/strategy-lab\npackages/strategy-oracle-${family}\n!packages/strategy-oracle-${family}/src\n` } }).ok).toBe(false)
+  })
   it.each([
     ["apps/go-backend/main.go", 'import "cowards/strategy-lab"'],
     ["packages/spec/artifacts/generated.json", '{"privateTrace":"lab-artifacts"}'],

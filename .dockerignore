@@ -1,0 +1,7 @@
+# Private strategy development and evidence never belong in application images.
+.strategy-lab
+.planning
+packages/strategy-lab
+packages/strategy-oracle-tactical
+packages/strategy-oracle-teacher
+packages/strategy-oracle-model

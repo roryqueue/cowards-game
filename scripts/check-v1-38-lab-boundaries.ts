@@ -5,9 +5,11 @@ import ts from "typescript"
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const isLab = (p: string) => p.startsWith("packages/strategy-lab/")
+const isOracle = (p: string) => /^packages\/strategy-oracle-(?:tactical|teacher|model)\//u.test(p)
+const isPrivateStrategy = (p: string) => isLab(p) || isOracle(p)
 const isTest = (p: string) => /(?:\.test|\.spec)\.[cm]?[jt]sx?$/u.test(p) || /(?:^|\/)(?:test|__tests__|testdata)\//u.test(p) || /_test\.go$/u.test(p)
-const production = (p: string) => /^(?:packages|apps)\//u.test(p) && !isLab(p) && !isTest(p)
-const labText = /strategy[-_/]lab|private[-_]lab|lab[-_]artifacts|lab[-_]trace|planner-feasibility/iu
+const production = (p: string) => /^(?:packages|apps)\//u.test(p) && !isPrivateStrategy(p) && !isTest(p)
+const labText = /strategy[-_/](?:lab|oracle)|private[-_]lab|lab[-_]artifacts|lab[-_]trace|planner-feasibility/iu
 const allowedCore = /^(?:packages\/(?:spec|engine|replay|runtime-js)\/)/u
 const allowedNode = new Set(["node:crypto", "node:fs", "node:fs/promises", "node:path", "node:url", "node:os", "node:worker_threads", "node:buffer"])
 const ignoredDirectories = new Set(["node_modules", ".git", ".planning", "dist", ".next", ".turbo", "coverage", "vendor", "test-results", ".cache"])
@@ -31,6 +33,10 @@ export interface LabBoundaryViolation { code: string; file: string }
 /** Offline source graph monitor, not a sandbox or a claim about arbitrary runtime-generated code. */
 export const checkLabBoundaries = (options: { files?: Readonly<Record<string, string>> } = {}) => {
   const files = options.files ?? loadFiles()
+  const privateDirectories = new Set(["packages/strategy-lab", ...Object.keys(files).filter(isOracle).map(p => p.split("/").slice(0, 2).join("/"))])
+  const imageExclusions = (files[".dockerignore"] ?? "").split(/\r?\n/u).map(line => line.trim().replace(/\/$/u, ""))
+  // A negation can re-include a private subtree: refuse ambiguous ignore policy.
+  const excludesPrivateImages = !imageExclusions.some(line => line.startsWith("!")) && [...privateDirectories].every(directory => imageExclusions.includes(directory))
   const violations: LabBoundaryViolation[] = []
   const add = (code: string, file: string) => { if (!violations.some((v) => v.code === code && v.file === file)) violations.push({ code, file }) }
   const graph = new Map<string, Set<string>>()
@@ -56,9 +62,9 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
     if (isTest(path)) continue
     const deployment = /(?:^|\/)(?:Dockerfile[^/]*|[^/]*docker[^/]*|compose[^/]*|deploy[^/]*)(?:\/|$)/iu.test(path)
     const generatedOrPublic = /(?:^|\/)(?:artifacts|generated|public)\//u.test(path)
-    if ((production(path) || deployment || generatedOrPublic) && !sourceExtension.test(path) && labText.test(source)) add("PRODUCTION_ARTIFACT_EXPOSURE", path)
+    if ((production(path) || deployment || generatedOrPublic) && path !== ".dockerignore" && !sourceExtension.test(path) && labText.test(source)) add("PRODUCTION_ARTIFACT_EXPOSURE", path)
     if (generatedOrPublic && !sourceExtension.test(path) && /"(?:strategyMemory|soldierMemory|objective|privateTrace|hostPath)"\s*:/u.test(source) && /\/public\//u.test(path)) add("PRIVATE_PUBLIC_PAYLOAD", path)
-    if (/dockerfile/iu.test(path) && /(?:COPY|ADD)\s+(?:\[\s*")?\.\/?["\s,]/u.test(source) && !/^packages\/strategy-lab\/?$/mu.test(files[".dockerignore"] ?? "")) add("IMAGE_INCLUDES_LAB", path)
+    if (/dockerfile/iu.test(path) && /(?:COPY|ADD)\s+(?:\[\s*")?\.\/?["\s,]/u.test(source) && !excludesPrivateImages) add("IMAGE_INCLUDES_LAB", path)
     if (path === "packages/strategy-lab/package.json") {
       const manifest = JSON.parse(source) as { private?: boolean; scripts?: Record<string, string>; dependencies?: Record<string, string> }
       if (manifest.private !== true || manifest.scripts?.build !== undefined) add("LAB_PRODUCTION_BUILD", path)
@@ -115,7 +121,7 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
       }
       const target = resolveEdge(path, specifier)
       if (target) edges.add(target)
-      if (production(path) && (labText.test(specifier) || (target && isLab(target)))) add("PRODUCTION_REACHES_LAB", path)
+      if (production(path) && (labText.test(specifier) || (target && isPrivateStrategy(target)))) add("PRODUCTION_REACHES_LAB", path)
       if (!target && labText.test(specifier) && !isLab(path)) add("UNRESOLVED_LAB_EDGE", path)
       const staticBuildTool = path === "packages/strategy-lab/src/planner/emit.ts" && specifier === "typescript"
       if (isLab(path) && !(target && (isLab(target) || allowedCore.test(target))) && !allowedNode.has(specifier) && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
@@ -138,7 +144,7 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
     const visit = (current: string) => {
       if (visited.has(current)) return
       visited.add(current)
-      if (production(path) && isLab(current)) add("PRODUCTION_REACHES_LAB", path)
+      if (production(path) && isPrivateStrategy(current)) add("PRODUCTION_REACHES_LAB", path)
       if (isLab(path) && current !== path && !isLab(current) && !allowedCore.test(current)) add("CORE_TRANSITIVE_DEPENDENCY_DENIED", path)
       for (const next of graph.get(current) ?? []) visit(next)
     }
