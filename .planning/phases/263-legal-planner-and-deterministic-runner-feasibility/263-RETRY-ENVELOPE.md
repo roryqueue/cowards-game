@@ -1,7 +1,7 @@
 ---
 phase: 263
 plans: [263-02,263-06,263-07]
-status: attempt_2_reserved
+status: attempt_2_non_pass_repairing
 approved: 2026-09-13
 operator_response: approved
 maximum_fresh_attempts: 3
@@ -29,7 +29,7 @@ The operator approved the immediately preceding proposal: **up to three fresh bo
 | Envelope ordinal | Manifest under this phase directory | Private output under repository | State |
 |---|---|---|---|
 | 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | consumed: validation passed, selection timing non-pass, zero Matches |
-| 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | reserved for sole prepare/run |
+| 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | consumed: validation passed, selection timing non-pass, zero Matches |
 | 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | unused |
 
 The orchestrator reserves the next ordinal before its final preparation; it will not reuse a terminal/partially prepared destination. Every successful preparation gets exactly one --run invocation. Existing no-clobber manifest, consumed-marker and per-call/Match charge publication remain authoritative within each attempt. Cross-attempt accounting identifies units by envelope ordinal plus manifest/attempt root, not by a reused label alone. Every unused unit remains unused; no old Match capacity is rolled forward.
@@ -67,3 +67,16 @@ Historical verification must use this attempt's source and retained files; later
 ### Attempt2 reservation — 2026-09-13
 
 Reserve attempt2 after mission construction and paired assignment scoring optimizations atab102872/7acd0ba2,49combined safe integration tests, corrected final12assignment tests/package build and clean independent five-file review in263-RETRY-2-REVIEW.md. Both full initiative vectors, all256expansions, beam4 and complete output/counters remain unchanged in differential tests. Source is32265bytes, `sha256:bfaf8b6a6c2a4eaef9b4b0c8c64b3ea33111c38279b15529923244cd9b7ffa2b`; execution `sha256:ec7691e692f6e699bb514cf4249c8773be283a1badb1aad5b8a1155e9c776dd8`. Protocol/corpus/inventory/harness roots remain unchanged. Docker29.4.0 and the exact pinned image were available read-only. Final source is unmeasured at reservation; no pass is inferred. Attempt3 remains unused.
+
+### Attempt2 terminal — 2026-09-13
+
+Prepared and invoked exactly once over HEADdc8ed18a. Validation256/256 passed (232guest calls,16source rejects,8input rejects);2200benchmark calls completed without uncertainty. Selection p99=20.915845ms fails strict<5ms; SoldierBrain p99=2.310270ms passes. Zero Matches ran,24Match slots remain unused and cleanup completed with no owned container. Elapsed546990.005245ms (9.12minutes), host peak RSS800892KiB. Main read-only --verify rederived non_pass before further source changes; independent Luna evidence review matched all counts, invocation identities and p99 values.
+
+Selection remains slow even at activationCount1:300measured samples, median12.486213ms and minimum9.141939ms. Counts2/3/4 medians were15.623643/16.375492/16.933999ms. All1000retained input roots matched the immutable ordinal-to-corpus mapping. These retained observations motivate further exact-output construction/representation optimization; no extra profiling or timing call occurred. One approved attempt remains unused.
+
+- Manifest logical root: `sha256:f8cfb2056c802a8a56d077b82fe87f79688d74427515ff490acfff632034acf0`.
+- Receipt bytes: `sha256:ba501cf181d51432f105d01505ce044278b18ccd138c3ab73309d9771600e65a`.
+- Consumption bytes: `sha256:7ec4b14e1c14acb23817d723f3df8d1b2e6fcaa54c6cd244a1e24bd8a576a8b8`.
+- Benchmark result bytes: `sha256:9c15df9ad04c71b5e1a877c4fda2f849b0c1ad28f90ee3afb09f567400e7e355`.
+
+All earlier evidence remains immutable. The next candidate must receive new source review before the final approved attempt; no third-attempt pass is presumed and no fourth attempt is authorized.
