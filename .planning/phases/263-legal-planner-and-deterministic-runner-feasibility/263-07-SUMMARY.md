@@ -27,7 +27,7 @@ On2026-09-13 a focused smaller-model verifier independently passed11/11 injected
 
 VALIDATION records all18task dispositions,196pre-run safe tests, strict types/package build, actual256-case validation, and the actual failed timing gate. Nyquist remains false while the required empirical behavior is incomplete. UAT directly observes3passes,1speed issue and2blocked Match/replay checks; it does not fabricate user acceptance. No UI was changed and no Match trace exists to inspect.
 
-The two reporting warnings found during verification (aggregate cleanup conflation and non-pass p99 summary comparison) are being corrected in the source-only post-gate repair. They do not alter or rescue the original timing result. All immutable private evidence and historical locks remain unchanged. Source repair stays within existing Plans02/06, not a new plan chain.
+The two reporting warnings found during verification (aggregate cleanup conflation and non-pass p99 summary comparison) were corrected in the independently reviewed source-only post-gate repair and pass the final33-test focused integration suite. They do not alter or rescue the original timing result. All immutable private evidence and historical locks remain unchanged. Source repair stays within existing Plans02/06, not a new plan chain.
 
 ## Outcome
 

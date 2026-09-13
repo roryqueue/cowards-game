@@ -6,11 +6,11 @@ current_phase: 263
 current_phase_name: legal-planner-and-deterministic-runner-feasibility
 current_plan: 6
 total_plans_in_phase: 7
-status: in_progress
-stopped_at: Phase263 actual validation passed; selection timing failed; same-plan isolated source optimization and terminal verification in progress
-last_updated: "2026-09-13T12:45:20Z"
+status: awaiting_operator_allocation_revision
+stopped_at: Phase263 caching repair integrated and independently reviewed; fresh bounded empirical envelope requires approval
+last_updated: "2026-09-13T12:53:10Z"
 last_activity: 2026-09-13
-last_activity_desc: Phase263 sole allocation consumed; selection p99 64.135270ms; zero Matches; no retry remaining
+last_activity_desc: Cache repair on main;33integration tests and types pass; independent verification8/11; no fresh empirical authority
 progress:
   total_phases: 9
   completed_phases: 1
@@ -26,6 +26,8 @@ progress:
 Resumed the source-only post-gate repair and independent verification. The operator requested efficient autonomous continuation and smaller-model subagents. A focused Terra reviewer checks the isolated two-commit caching/reporting fix; a Luna verifier closes only the safe injected-failure uncertainty. Both are forbidden from new empirical source runs. Main and origin/main were f7a8a0c0 at resume; original receipt/manifest/consumption bytes and36locks are unchanged. No prior failed agent is assumed to have completed its unfinished review. Do not advance Phase264 from summary counts: actual Phase263 verification remains gaps_found.
 
 ## Current Phase263 execution
+
+Update2026-09-13: same-plan caching/reporting repairs are integrated as a6ae616d/b7f1281f, independently reviewed clean in263-POST-GATE-REVIEW.md, and pass33focused integration tests plus strict types/package build. A smaller-model verifier passed11injected failure tests, bringing goal-backward verification to8/11 without changing the measured timing failure or zero-Match unknowns. The repaired source is25107bytes and unmeasured. The sole remaining human-only checkpoint is approving a fresh bounded empirical envelope; a maximum-three-attempt proposal in263-POST-GATE-REPAIR.md is not yet authorized. No exact literal, new plan chain or external custody system is required. Phase264 cannot start until actual Phase263 gates pass.
 
 Plans263-01 through05 are implemented (5/7 plans). Plan06 consumed its sole actual run after clean independent source review and196safe tests:256validation cases passed (232guest calls), but selection p99=64.135270ms failed strict<5ms; SoldierBrain p99=2.349449ms passed. All2200benchmark calls completed; zero Matches ran and24slots remain unused. Read-only verification confirms non_pass. Plan07 records the actual gap; Phase264 remains blocked. Ordinary behavior-preserving caching/reporting repair is underway in an isolated branch with no extra timing or allocation. A fresh empirical envelope requires operator revision of the consumed zero-retry bound, not a repeated literal checkpoint. See263-FEASIBILITY.md for immutable roots and cleanup-summary nuance.
 
