@@ -1,6 +1,6 @@
 ---
 phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
-reviewed: 2026-09-13T22:52:33Z
+reviewed: 2026-09-13T23:12:08Z
 depth: deep
 files_reviewed: 12
 files_reviewed_list:
@@ -17,101 +17,56 @@ files_reviewed_list:
   - packages/strategy-lab/src/factory/admission.test.ts
   - packages/strategy-lab/package.json
 findings:
-  critical: 4
-  warning: 2
+  critical: 2
+  warning: 0
   info: 0
-  total: 6
+  total: 2
 status: issues_found
 ---
 
 # Phase 264: Foundation Code Review Report
 
-**Reviewed:** 2026-09-13T22:52:33Z
+**Reviewed:** 2026-09-13T23:12:08Z
 **Depth:** deep
 **Files Reviewed:** 12
 **Status:** issues_found
 
 ## Summary
 
-The factory’s direct schema, identity, repository, ledger, admission, and package-export closure were reviewed against FACT-05 through FACT-07 and Plan 264-01. The focused factory suite passes (5 files, 9 tests), as does `tsc -b packages/strategy-lab`, but the passing tests leave core authorization, durability, and source-to-provider binding unproved. The current implementation can accept a candidate whose source and provenance conflict with its packet, and it does not make the supervised provider execute that accepted candidate.
+This re-review covers the repaired foundation at `6aa9d349` and supersedes the prior six findings retained in `6d103482`. The prior packet-projection, inherited-authority, durable-directory-sync, strict-root-path, and temporary-recovery defects are repaired and covered by the focused suite. However, the new staged API does not enforce its final two stages: it can publish a candidate or classify a fabricated receipt without any issued supervised execution, and it cannot attribute a player violation to the authorized candidate rather than the opponent.
+
+Verification run locally: `vitest run --maxWorkers=1` over all five scoped factory test files passed (15 tests, 3.84s); `tsc -b packages/strategy-lab` exited successfully.
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-01: Admission accepts a proposal/candidate that contradicts its authoritative packet
+### CR-01: Final candidate and accepted supervision evidence can bypass the issued supervision receipt
 
 **Classification:** BLOCKER
 
-**File:** `packages/strategy-lab/src/factory/contracts.ts:94-104`, `packages/strategy-lab/src/factory/admission.ts:15-17`
+**File:** `packages/strategy-lab/src/factory/admission.ts:57-67`, `packages/strategy-lab/src/factory/admission.ts:85-91`, `packages/strategy-lab/src/factory/admission.ts:102-117`
 
-**Issue:** `FactoryProposalSchema` treats `packetRoot` as an unverified reference and permits every copied provenance field to differ from the packet. `admitFactory` only checks the proposal’s packet root plus lane language/provider ID; it does not compare source identity, build/toolchain/tuple, versions, oracle/doctrine family, split, full lane, or lineage with the parsed packet. It also permits `candidate.lineage` to differ from `proposal.lineage`. The existing passing admission test demonstrates the flaw: it passes the original packet at line 11, creates a proposal from a modified packet-shaped value with a different source at line 12, and admission succeeds at line 15. This produces an immutable root chain with mutually contradictory provenance, violating FACT-05/D-07/D-08 rather than rejecting hostile metadata.
+**Issue:** `supervisionAdmissions` is populated by `authorizeFactorySupervision` at line 57, before `superviseFactory` runs. `finalizeFactoryCandidate` only checks that authorization set at line 62, so it publishes a fingerprinted candidate without requiring a supervision receipt or any execution. Separately, `mapFactorySupervision` verifies only a recomputable content root; it has no issued-receipt membership check. A caller can therefore create an object-shaped completed execution, calculate `labRoot("factory-supervision-receipt-v1", { authorizationRoot, execution })`, and receive `accepted` without calling a provider. Direct focused reproduction returned both `finalizedWithoutSupervision true` and `fabricatedReceipt accepted`.
 
-**Fix:** Build a proposal only from a parsed packet (or validate a complete projection before deriving/accepting its root), and require `candidate.lineage` to equal the proposal lineage. In `admitFactory`, compare every packet-bound field before source-byte publication, for example:
+This breaks the promised sequence `admitFactory -> authorizeFactorySupervision -> superviseFactory receipt -> finalize`, permits root-shaped evidence to stand in for actual hostile-source supervision, and violates FACT-07/D-03/D-04.
 
-```ts
-if (!sameFactoryProjection(candidate.proposal, packet) ||
-    !sameFactoryLineage(candidate.lineage, candidate.proposal.lineage)) {
-  throw new TypeError("FACTORY_ADMISSION")
-}
-```
+**Fix:** Register the receipt object in a private `WeakSet` only after `superviseFactory` returns from the trusted bridge. Require that registered receipt—not merely the pre-execution authorization—in both `mapFactorySupervision` and `finalizeFactoryCandidate`; finalization should reject non-success receipts and bind its trace/fingerprint evidence to the receipt root. Add regression tests that direct finalization after authorization and a recomputed structural receipt both throw before any candidate is published or classified.
 
-Add negative tests for source, build, tuple, versions, doctrine/oracle, split, full lane, and each lineage edge; the current success fixture must be changed to use a packet whose root is recomputed from the same source identity.
-
-### CR-02: The supervision seam does not bind the provider to the admitted candidate or source
+### CR-02: Candidate supervision is not tied to a Match participant, and disposition includes opponent violations
 
 **Classification:** BLOCKER
 
-**File:** `packages/strategy-lab/src/factory/admission.ts:14-25`, `packages/strategy-lab/src/runtime-bridge.ts:40-42`
+**File:** `packages/strategy-lab/src/factory/admission.ts:87-91`, `packages/strategy-lab/src/factory/admission.ts:97-117`
 
-**Issue:** `admitFactory` only validates and optionally stores bytes; it neither invokes nor returns an authorization for supervision. `superviseFactory` takes only the generic `runCanonicalLabMatch` input, which has no candidate, admitted source root, native lane, or factory packet/validation root. The runtime bridge accepts a provider when revision ID and shared tuple/image/limit pins match, but never compares `LabRuntimeIdentity.sourceRoot` to the factory candidate. A caller can therefore admit candidate A and run a provider for unrelated source B while reporting the resulting execution as A’s factory evidence. This breaks the required exact hostile-source path and the “same authorized candidate reaches the selected supervision” guarantee in FACT-07/D-03/D-10.
+**Issue:** `candidatePlayerId` is only used as a key into `input.providers`; it is never required to equal `input.match.bottomPlayerId` or `topPlayerId`. Thus `superviseFactory` can return a receipt for a bound provider under a detached key that the Match never invokes. Also, `FactorySupervisionReceipt` does not retain the candidate player/identity, and `mapFactorySupervision` marks the candidate `player_violation` when *any* accounting entry has a violation. An opponent’s invalid output is consequently attributed to the admitted candidate. A focused no-Match reproduction with `candidatePlayerId: "detached"` returned a receipt despite a Match with only `bottom`/`top`; a receipt containing only an opponent violation mapped to `player_violation`.
 
-**Fix:** Make supervision accept a validated `FactoryAdmission`/candidate authorization and bind it to provider issuance. Require the provider identity’s `sourceRoot`, exact native lane/runtime profile, and immutable validation/candidate roots to equal that authorization before every invocation; reject rather than map any mismatch. Have the orchestration API return one root-bound execution receipt that `mapFactorySupervision` consumes. Add an integration test that attempts to supervise a different source root or provider/lane after a successful admission and expects a pre-execution rejection.
+This violates exact candidate source/lane supervision and the required three-way candidate disposition semantics in FACT-07/D-03/D-04/D-10.
 
-### CR-03: “Durable” attempt charges are not durable across a crash
-
-**Classification:** BLOCKER
-
-**File:** `packages/strategy-lab/src/factory/repository.ts:20-22`, `packages/strategy-lab/src/factory/repository.ts:30`
-
-**Issue:** `recordFactoryAttemptStart` considers a charge complete once `atomic` returns. `atomic` fsyncs the temporary file before `linkSync`, but never fsyncs the containing directory after adding the hard-link name. A power loss after `linkSync` can lose the directory entry even though the caller has proceeded to validation/supervision. That violates the charge-before-work durability guarantee: the work may have occurred with no persisted start to which a terminal can be attached.
-
-**Fix:** After successfully linking the immutable target (and after unlinking the temporary name), open the already-validated repository directory and `fsyncSync` it before returning. Handle directory-sync failure as a failed publication and do not permit work to start. Add a fault-injection seam/test that proves supervision cannot proceed until both file content and directory-entry durability steps have completed.
-
-### CR-04: Hostile packet schemas accept unpinned runtime and inherited-authority identities
-
-**Classification:** BLOCKER
-
-**File:** `packages/strategy-lab/src/factory/contracts.ts:44-57`, `packages/strategy-lab/src/factory/contracts.ts:67-70`
-
-**Issue:** The schema merely checks that `compatibilityTupleRoot` and `runtimeProfileRoot` look like hashes and that ABI/algorithm are bounded strings. It never binds them to the inherited admitted authority (`LAB_ADMITTED_ROOTS`/`LAB_VERSIONS`) or to an explicitly supplied, trusted immutable successor record. Consequently a packet with an arbitrary tuple/runtime-profile hash and arbitrary algorithm is accepted once its self-derived root is recomputed. This was reproduced with `compatibilityTupleRoot` and `runtimeProfileRoot` set to `sha256:` plus 64 nines and `algorithm: "unapproved-algorithm"`; `FactoryOraclePacketSchema.parse` accepted it. The fixture’s use of admitted roots does not enforce the production path. FACT-05/D-01 require the actual predecessor/runtime contract to be mandatory, not self-attested metadata.
-
-**Fix:** Add an explicit immutable inherited-authority object (or exact fields) to the packet and require equality with the approved tuple/runtime/version pins for this phase. If future profile/version changes are legitimate, validate their roots against a supplied trusted registry/authorization record before parsing a candidate; do not accept arbitrary root-shaped strings. Add tests that recompute a packet root after replacing each pin and verify rejection.
-
-## Warnings
-
-### WR-01: Root-only artifact reads construct paths from an unvalidated runtime value
-
-**Classification:** WARNING
-
-**File:** `packages/strategy-lab/src/factory/repository.ts:12`, `packages/strategy-lab/src/factory/repository.ts:29`
-
-**Issue:** `readFactoryArtifact` accepts `LabRoot`, but that type disappears at runtime, and `artifactName` slices it without validating its 64-hex digest. A caller can pass `sha256:../../../../escaped`; `join` then resolves the supposed repository artifact path to `/escaped.bin`. The later digest comparison rejects the result, so this is not currently an artifact-content disclosure, but it does perform an out-of-repository read and defeats the stated root-only/no-escape filesystem boundary.
-
-**Fix:** Validate `id` with the strict `^sha256:[0-9a-f]{64}$` predicate before deriving any filename, and construct the name only from the validated 64-character digest. Add traversal and symlink-race regression tests.
-
-### WR-02: A crash can leave a predictable temporary name that prevents conservative recovery
-
-**Classification:** WARNING
-
-**File:** `packages/strategy-lab/src/factory/repository.ts:20-22`, `packages/strategy-lab/src/factory/repository.ts:35`
-
-**Issue:** Every publication uses the fixed `${target}.tmp` name. If the process crashes after creating it, later `openSync(...O_EXCL)` fails with `EEXIST`; meanwhile resume silently skips all `.tmp` files. A charged attempt with a terminal temporary file can thus remain permanently start-only/uncertain and cannot publish its required system-failure terminal without manual filesystem intervention. The resume test covers malformed terminal bytes, not interrupted temporary publication.
-
-**Fix:** Use a unique temporary filename for each publication and clean only validated, repository-owned stale files under a documented recovery rule (or surface them as explicit uncertain evidence and permit a fresh terminal publication). Add a crash-recovery test with a pre-existing target `.tmp` file and verify that the attempt reaches exactly one terminal disposition without overwriting content.
+**Fix:** Reject a candidate player ID unless it is one of the Match’s two participant IDs. Record the bound candidate player ID and exact provider identity in the issued receipt, require that the provider was actually invoked, and classify only that provider’s accounting entries. Treat any Match-level system failure as system failure, but do not turn an opponent player violation into the candidate’s disposition. Add tests for a detached provider key and a valid candidate paired with an opponent player violation.
 
 ---
 
-_Reviewed: 2026-09-13T22:52:33Z_
+_Reviewed: 2026-09-13T23:12:08Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
