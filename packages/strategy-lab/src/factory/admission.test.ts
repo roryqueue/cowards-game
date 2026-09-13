@@ -209,6 +209,8 @@ describe("hostile private candidate admission", () => {
       const evidence = await candidate.invoke({} as never, candidate.identity)
       return { kind: "failure", privacy: "private_offline", transitions: [], unchangedState: null, failure: { classification: "system_failure", code: "TEST" }, accounting: [evidence] } as never
     })
-    expect(mapFactorySupervision(systemFailure).disposition).toBe("system_failure")
+    const systemFailureOutcome = mapFactorySupervision(systemFailure)
+    expect(systemFailureOutcome.disposition).toBe("system_failure")
+    expect(systemFailureOutcome.candidateDisposition).toBe("system_failure")
   })
 })
