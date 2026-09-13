@@ -35,12 +35,14 @@ implementation_status: implementation_only_pending_phase_integration_and_evidenc
 metrics:
   duration: 14m
   completed: 2026-09-13
-status: complete
+status: integration_correction_required
 ---
 
 # Phase 264 Plan 03: Search Teacher and Distiller Summary
 
-**A private canonical-transition teacher now distills deterministic legal-input student policy into rooted, non-executed factory packets.**
+**Current independent disposition: incomplete; five substantive search, accounting and emission gaps remain after the first correction.**
+
+The recheck of `7516aa5c` found a non-global node cap, unused opponent assumptions, a handwritten emitted-policy duplicate, no alternative mission/Action runtime resumes, and no search-result-to-legal-training seam. See `264-TEACHER-READINESS-CHECK.md`. Three passing tests and the package build do not close those gaps. A same-plan correction is queued after the model leaf; the task-stage accomplishment statements below are historical progress, not a current readiness or empirical claim.
 
 ## Performance
 
