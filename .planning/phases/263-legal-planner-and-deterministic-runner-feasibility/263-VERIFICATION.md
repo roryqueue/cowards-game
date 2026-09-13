@@ -1,54 +1,58 @@
 ---
 phase: 263-legal-planner-and-deterministic-runner-feasibility
-verified: 2026-09-13T17:19:40Z
-status: gaps_found
-score: 8/11 must-haves verified
-behavior_unverified: 2
+verified: 2026-09-13T21:42:35Z
+status: passed
+score: 11/11 must-haves verified
+behavior_unverified: 0
 overrides_applied: 0
-phase_complete: false
-factory_eligible: false
+phase_complete: true
+factory_eligible: true
 allocation_consumed: true
 retries_remaining: 0
 re_verification:
   previous_status: gaps_found
   previous_score: 8/11
-  gaps_closed: []
-  gaps_remaining:
-    - "PLAN-06 frozen selection-method p99 remains above 5 ms after the third and final consumed attempt"
-    - "FACT-02 actual-source Match equivalence has no Match evidence"
-    - "FACT-03 complete actual-source reproduction matrix has no semantic evidence"
-    - "FACT-04 actual-source publication/shard/trace inventory has no empirical evidence"
+  gaps_closed:
+    - "PLAN-06 frozen selection-method p99 gate under the approved prospective <20 ms calibration"
+    - "FACT-02 actual-source Match equivalence through the canonical kernel"
+    - "FACT-03 complete actual-source reproduction and resume matrix"
+    - "FACT-04 actual-source publication, shard, trace, and accounting inventory"
+  gaps_remaining: []
   regressions: []
-requirements_satisfied: [PLAN-01, PLAN-02, PLAN-03, PLAN-04, PLAN-05, FACT-01]
-requirements_blocked: [PLAN-06]
-requirements_pending_empirical: [FACT-02, FACT-03, FACT-04]
-gaps:
-  - truth: "The candidate meets frozen runtime feasibility limits before factory scale."
-    status: failed
-    reason: "Independently rederived retry-3 selection-method p99 is 14.171262 ms; the frozen gate is strictly below 5 ms. Three consumed attempts are exhausted."
-    artifacts:
-      - path: packages/strategy-lab/src/planner/assign.ts
-        issue: "The measured emitted selection implementation misses the unchanged direct-method speed gate."
-      - path: .planning/phases/263-legal-planner-and-deterministic-runner-feasibility/263-FEASIBILITY.md
-        issue: "Terminal non-pass; zero Matches and no empirical semantic reduction."
-    missing:
-      - "A qualifying runtime result under an explicitly approved future bounded contract and fresh allocation; no retry remains in the current envelope."
-behavior_unverified_items:
-  - truth: "Actual-source research Matches advance through the selected canonical kernel with equivalent gameplay evidence."
-    test: "Only under future approved authority, inspect the bounded actual-source Match/effect evidence."
-    expected: "Canonical state, transition and accounting equivalence; no alternative resolver."
-    why_human: "The bridge is present and wired, but zero Matches ran; static call tracing cannot establish actual-source equivalence."
-  - truth: "The complete actual-source schedule reproduces semantic bytes across worker, shard, order, restart and resume variants."
-    test: "Only under future approved authority, compare the contracted complete two-run inventory and private traces."
-    expected: "24 accounted attempts, eight scientific cells, alias agreement and identical semantic reductions."
-    why_human: "The benchmark correctly prevented dispatch; there are no Match records or semantic roots. Synthetic fixtures are not this empirical proof."
+requirements_satisfied: [PLAN-01, PLAN-02, PLAN-03, PLAN-04, PLAN-05, PLAN-06, FACT-01, FACT-02, FACT-03, FACT-04]
+requirements_blocked: []
+requirements_pending_empirical: []
 ---
 
 # Phase 263: Legal Planner and Deterministic Runner Feasibility Verification
 
+## Current calibrated re-verification — terminal pass
+
+The approved single fresh calibration attempt is independently verified from retained aggregate evidence. It passed the prospective contract: selection p99 `17.019799 ms < 20 ms`, SoldierBrain p99 `1.58373 ms < 5 ms`, with all other bounds unchanged. Validation has 256 cases / 232 guest calls / 24 rejects; benchmark has 2,200 calls; Match allocation has 24 charged / 0 unused attempts; cleanup is complete; and there are zero uncertain units. The actual-source inventory contains 24 successful attempts, 16 shard records, 24 non-empty traces (187,807,888 trace bytes), 12 paired semantic-root comparisons identical/0 differing, and reduction counts of 8 scientific cells, 3 labels, and 2 geometries. The parent read-only `--verify` also completed with `status: passed`, `productionAuthorized:false`, unchanged pre-run history fingerprints, and reduction `24 success / 0 playerViolation / 0 systemFailure`.
+
+**Current score: 11/11 truths verified; behavior-unverified: 0; current gaps: none.** Private review is machine/read-only; browser UI is not applicable. No source, guest, timing, preparation, allocation, Match, Docker, or evidence mutation was performed by this verifier.
+
+Current bindings: `.strategy-lab/phase263-feasibility-calibration-1`, `263-feasibility-calibration-1-manifest.json`, `263-TIMING-CALIBRATION.md`, and `263-CALIBRATION-REVIEW.md`; source-review commit `1ad9f2e3`, preparation/run HEAD `6cc1f837`. The original run and retry-1/2/3 remain preserved as historical non-pass evidence, including their former strict `<5 ms` selection failures and zero-Match outcomes. The approved calibration changes only the selection threshold to `<20 ms`; it grants no production, formation, holdout, public, counted-play, or rules-change authority. A new consumed-envelope revision would require operator authority.
+
+### Current truth closure
+
+| Truths | Evidence | Status |
+|---|---|---|
+| Planner, missions, SoldierBrain, emission, and legal-information boundaries | Frozen source review, retained validation, focused pure/injected tests | VERIFIED |
+| Timing supervision | 2,200 records; nearest-rank p99 17.019799/1.58373 ms against 20/5 ms gates | VERIFIED |
+| Canonical actual-source Matches | 24 successful attempts through the bridge/kernel; no alternate resolver found | VERIFIED |
+| Reproduction, resume, and reduction | 16 shards, 24 traces, 12 identical paired roots, 8 cells/3 labels/2 geometries | VERIFIED |
+| Allocation, cleanup, privacy, and report accounting | 24 charged/0 unused, zero uncertain, cleanup complete, private aggregate report | VERIFIED |
+
+### Current requirements closure
+
+PLAN-01..06 and FACT-01..04 are all satisfied by current code and retained evidence (10/10); no orphaned requirement remains. PLAN-06 is satisfied by the approved calibrated timing contract. FACT-02, FACT-03, and FACT-04 are closed by the actual-source Match, shard/trace, paired-root, resume, cleanup, and reduction inventory. No human verification section is required.
+
+> The remaining body below is the preserved historical retry-3 verification record. Its `gaps_found`, 8/11 score, failed `<5 ms` result, and zero-Match conclusions are historical only and are superseded by the current calibrated pass above; they are retained to preserve independent historical findings and actual outcomes.
+
 **Phase Goal:** Researchers can prove that the hierarchical planner and deterministic lab runner produce legal, deployable, reproducible work through the canonical kernel before committing to factory scale.
 
-**Status:** gaps_found — valid terminal non-pass, not phase completion. **Initial verification:** no previous Phase263 VERIFICATION or accepted override existed.
+**Historical retry-3 status:** gaps_found — valid terminal non-pass before the approved calibration. This is not the current phase status. **Initial verification:** no previous Phase263 VERIFICATION or accepted override existed.
 
 The selection method fails the frozen runtime feasibility gate. The runner correctly stops before Matches. Preserving a valid negative experiment satisfies the stop/accounting contract, but does not satisfy the roadmap's deployable/reproducible-work goal or unlock Phase264.
 

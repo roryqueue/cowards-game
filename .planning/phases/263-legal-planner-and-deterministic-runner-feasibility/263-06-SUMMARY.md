@@ -2,7 +2,7 @@
 phase: 263-legal-planner-and-deterministic-runner-feasibility
 plan: "06"
 subsystem: strategy-lab-cli
-tags: [terminal-non-pass, frozen-inventory, actual-validation, timing-failure]
+tags: [calibrated-pass, frozen-inventory, actual-validation, reproduction]
 requires: [{phase: 263-01, provides: Final mapped protocol}, {phase: 263-03, provides: Static source builder}, {phase: 263-04, provides: Selected supervisor and observer}, {phase: 263-05, provides: Bound runner and private shards}]
 provides: [Private prepare/run/verify command, Frozen256-case inventory, Read-only retained-evidence reconstruction]
 affects: [263-06-task-2, 263-06-task-3, 263-07]
@@ -17,15 +17,23 @@ key-decisions:
   - Independent clean review must bind both emitted sourceRoot and the full coordinator executionRoot before run.
   - Baseline/alias/reproduction Match identities derive from geometry rather than physical attempt or arena label.
 requirements-covered: [PLAN-04, PLAN-05, PLAN-06, FACT-02, FACT-03, FACT-04]
-requirements-completed: []
+requirements-completed: [PLAN-04, PLAN-05, PLAN-06, FACT-02, FACT-03, FACT-04]
 duration: 25min
-completed: 2026-09-10
-status: terminal_non_pass
+completed: 2026-09-13
+status: passed
 tasks-completed: 3
 tasks-total: 3
 ---
 
-# Phase 263 Plan 06: Terminal Non-pass Summary
+# Phase 263 Plan 06: Calibrated Feasibility Pass
+
+## Current outcome — 2026-09-13
+
+The sole prospectively approved selection<20ms/brain<5ms attempt passed:256 validation cases,2200 benchmark calls, selection17.019799ms/brain1.583730ms p99,24/24 successful Matches, zero uncertain/unused units and complete cleanup in22.18minutes. The emitted candidate remains31725bytes. Read-only verification passed; independent closure verifies11/11 truths and10/10 requirements. Reproduction covers12 identical paired semantic roots,8 scientific cells,3 arena labels but2 geometries,16 shards and24 private traces. This proves private runner feasibility, not competitive strength.
+
+Exact manifest and evidence roots are in263-TIMING-CALIBRATION.md and263-FEASIBILITY.md. Clean source review binds1ad9f2e3; prepare/run HEAD is6cc1f837. Final safe regression196/196 and TypeScript pass. Phase263 is complete; Phase264 research/planning may proceed. The original plus three earlier attempts remain non-pass; their receipts/consumption bytes and36 locks are unchanged. No further use of any consumed attempt is authorized.
+
+## Historical original execution — preserved non-pass
 
 Tasks1/2 implemented and independently reviewed the private CLI. Task3 consumed its sole actual-source run:256 validation cases passed, but selection p99 failed64.135270ms against strict<5ms. SoldierBrain passed2.349449ms. Zero Matches ran. Accounting is terminal; phase feasibility is not satisfied. Historical task checkpoints below are superseded by the terminal section.
 

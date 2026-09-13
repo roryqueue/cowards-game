@@ -32,19 +32,19 @@ Each requirement is complete only when its named behavior has an immutable evide
 
 ### Legal Hierarchical Planner
 
-- [ ] **PLAN-01**: Researchers can deterministically enumerate or beam-search ordered Soldier and mission assignments with a full-board planner that evaluates both initiative hypotheses and enforces hard survival and tactical constraints before soft preferences.
-- [ ] **PLAN-02**: The planner can represent evacuation, rear entry, edge push, screen, anchor, graph-cut STONE, reserve, recovery, bait, and pincer missions with explicit objective and fallback semantics.
-- [ ] **PLAN-03**: A 5x5 SoldierBrain can consider all nine canonical Actions, detect stale objectives, use authoritative `hasAdvancedThisActivation`, handle immediate legal threats and opportunities, and choose a cheap deterministic legal fallback before budget exhaustion.
-- [ ] **PLAN-04**: Every deployed choice is reproducible from only canonical StrategyInput or SoldierBrainInput, objective, StrategyMemory, and SoldierMemory; privileged offline teacher state cannot directly select emitted Actions.
-- [ ] **PLAN-05**: Every accepted planner output is deterministic, synchronous, package-free, capability-free, self-contained source within canonical source/objective/memory/output limits and performs no live model inference or human interaction during Matches.
-- [ ] **PLAN-06**: Forced-tactic, defense, legality, hidden-state-pair, stale-objective, hostile-input, determinism, source-size, memory, objective, output, and runtime feasibility gates pass before factory-scale search; an honest feasibility failure is preserved rather than hidden by extra compute or relaxed runtime limits.
+- [x] **PLAN-01**: Researchers can deterministically enumerate or beam-search ordered Soldier and mission assignments with a full-board planner that evaluates both initiative hypotheses and enforces hard survival and tactical constraints before soft preferences.
+- [x] **PLAN-02**: The planner can represent evacuation, rear entry, edge push, screen, anchor, graph-cut STONE, reserve, recovery, bait, and pincer missions with explicit objective and fallback semantics.
+- [x] **PLAN-03**: A 5x5 SoldierBrain can consider all nine canonical Actions, detect stale objectives, use authoritative `hasAdvancedThisActivation`, handle immediate legal threats and opportunities, and choose a cheap deterministic legal fallback before budget exhaustion.
+- [x] **PLAN-04**: Every deployed choice is reproducible from only canonical StrategyInput or SoldierBrainInput, objective, StrategyMemory, and SoldierMemory; privileged offline teacher state cannot directly select emitted Actions.
+- [x] **PLAN-05**: Every accepted planner output is deterministic, synchronous, package-free, capability-free, self-contained source within canonical source/objective/memory/output limits and performs no live model inference or human interaction during Matches.
+- [x] **PLAN-06**: Forced-tactic, defense, legality, hidden-state-pair, stale-objective, hostile-input, determinism, source-size, memory, objective, output, and runtime feasibility gates pass before factory-scale search; an honest feasibility failure is preserved rather than hidden by extra compute or relaxed runtime limits.
 
 ### Deterministic Lab and Immutable Strategy Factory
 
-- [ ] **FACT-01**: The competitive lab is a private offline package and executable set whose dependency graph may import canonical spec, engine, replay helpers, and supervised runtime adapters while production packages, apps, images, routes, generated contracts, and deployment manifests cannot import the lab.
-- [ ] **FACT-02**: All research Matches advance through the exact selected canonical `MATCH_KERNEL`; the lab contains no copied resolver, second transition loop, alternate Action legality, or profile-specific transition code.
-- [ ] **FACT-03**: One non-secret command rebuilds declared candidates, schedules, payoffs, telemetry, and roots from an immutable manifest; the lab pre-enumerates stable task identities, derives independent deterministic streams from a root commitment, assigns tasks before execution, and produces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume.
-- [ ] **FACT-04**: Lab schemas, algorithms, PRNGs, manifests, shards, matrices, traces, receipts, and roots use strict bounded validation, canonical encoding, domain-separated identities, complete coverage checks, atomic publication, and tamper detection.
+- [x] **FACT-01**: The competitive lab is a private offline package and executable set whose dependency graph may import canonical spec, engine, replay helpers, and supervised runtime adapters while production packages, apps, images, routes, generated contracts, and deployment manifests cannot import the lab.
+- [x] **FACT-02**: All research Matches advance through the exact selected canonical `MATCH_KERNEL`; the lab contains no copied resolver, second transition loop, alternate Action legality, or profile-specific transition code.
+- [x] **FACT-03**: One non-secret command rebuilds declared candidates, schedules, payoffs, telemetry, and roots from an immutable manifest; the lab pre-enumerates stable task identities, derives independent deterministic streams from a root commitment, assigns tasks before execution, and produces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume.
+- [x] **FACT-04**: Lab schemas, algorithms, PRNGs, manifests, shards, matrices, traces, receipts, and roots use strict bounded validation, canonical encoding, domain-separated identities, complete coverage checks, atomic publication, and tamper detection.
 - [ ] **FACT-05**: Every candidate is an immutable revision-like artifact binding exact source bytes/hash, build identity, compatibility tuple, factory and algorithm versions, lineage, doctrine and oracle families, split identity, validation result, runtime profile, and behavior fingerprint.
 - [ ] **FACT-06**: Append-only ledgers preserve and charge all accepted, rejected, invalid, duplicate, legal-but-weak, failed, retried, and system-failed attempts with task, budget, and disposition evidence.
 - [ ] **FACT-07**: Source emitted by search, models, humans, or external submitters is treated as hostile and executes only through the existing supervised provider/runtime boundary with exact success, player-violation, and system-failure semantics and no fallback.
@@ -201,16 +201,16 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | MEAS-08 | Phase 262 | Complete |
 | MEAS-09 | Phase 262 | Complete |
 | MEAS-10 | Phase 262 | Complete |
-| PLAN-01 | Phase 263 | Pending |
-| PLAN-02 | Phase 263 | Pending |
-| PLAN-03 | Phase 263 | Pending |
-| PLAN-04 | Phase 263 | Pending |
-| PLAN-05 | Phase 263 | Pending |
-| PLAN-06 | Phase 263 | Pending |
-| FACT-01 | Phase 263 | Pending |
-| FACT-02 | Phase 263 | Pending |
-| FACT-03 | Phase 263 | Pending |
-| FACT-04 | Phase 263 | Pending |
+| PLAN-01 | Phase 263 | Complete |
+| PLAN-02 | Phase 263 | Complete |
+| PLAN-03 | Phase 263 | Complete |
+| PLAN-04 | Phase 263 | Complete |
+| PLAN-05 | Phase 263 | Complete |
+| PLAN-06 | Phase 263 | Complete |
+| FACT-01 | Phase 263 | Complete |
+| FACT-02 | Phase 263 | Complete |
+| FACT-03 | Phase 263 | Complete |
+| FACT-04 | Phase 263 | Complete |
 | FACT-05 | Phase 264 | Pending |
 | FACT-06 | Phase 264 | Pending |
 | FACT-07 | Phase 264 | Pending |

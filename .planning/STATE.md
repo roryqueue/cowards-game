@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
-current_phase: 263
-current_phase_name: legal-planner-and-deterministic-runner-feasibility
-current_plan: 6
-total_plans_in_phase: 7
-status: in_progress
-stopped_at: Phase263 approved prospective timing calibration; source review then one fresh bounded run
-last_updated: "2026-09-13T21:09:10Z"
+current_phase: 264
+current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
+current_plan: 0
+total_plans_in_phase: 0
+status: researching
+stopped_at: Phase263 verified complete; continuing Phase264 research and planning autonomously
+last_updated: "2026-09-13T21:55:00Z"
 last_activity: 2026-09-13
-last_activity_desc: Operator approved selection<20ms with unchanged brain<5ms and one fresh bounded attempt; all historical non-pass results preserved
+last_activity_desc: Calibrated attempt passed24/24 Matches; independent11/11 truths and10/10 requirements; final196 tests pass
 progress:
   total_phases: 9
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 5
-  percent: 11
+  completed_plans: 7
+  percent: 22
 ---
 
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-13
 
-Resumed the source-only post-gate repair and independent verification. The operator requested efficient autonomous continuation and smaller-model subagents. A focused Terra reviewer checks the isolated two-commit caching/reporting fix; a Luna verifier closes only the safe injected-failure uncertainty. Both are forbidden from new empirical source runs. Main and origin/main were f7a8a0c0 at resume; original receipt/manifest/consumption bytes and36locks are unchanged. No prior failed agent is assumed to have completed its unfinished review. Do not advance Phase264 from summary counts: actual Phase263 verification remains gaps_found.
+Phase263 is independently complete after the sole approved calibrated attempt passed. Continue Phase264 research → planning → execution → review/fix → validate → verify/UAT under the user's autonomous instruction; use smaller-model agents for bounded work. Do not rerun consumed Phase262/263 allocations. Historical receipts and36locks remain unchanged. Phase263 completion is grounded in actual24/24 Matches, read-only reconstruction, independent11/11 truths and10/10 requirements,6/6 private UAT and196/196 regression tests plus TypeScript, not summary counts.
 
 ## Current Phase263 execution
 
-**Current authority after operator yes,2026-09-13:**263-TIMING-CALIBRATION.md approves selection p99<20ms, unchanged SoldierBrain<5ms and every other bound, then exactly one fresh bounded attempt. Source/protocol boundary tests and independent review precede fresh manifest preparation. Validation and both timing gates must pass before the conditional24Matches. No prior allocation is reused, no failure reclassified, no new numbered plan or literal checkpoint. One fresh attempt is approved and not yet started. Phase263 remains incomplete; Phase264 needs full actual pass. Earlier exhausted-envelope snapshots below are historical.
+**Current verified closeout2026-09-13:**263-TIMING-CALIBRATION.md records the single approved prospective selection<20ms/brain<5ms attempt:256 validation cases and2200 benchmark calls passed, p99=17.019799/1.583730ms,24/24 successful Matches,12 identical paired semantic roots,8 scientific cells/3 labels/2 geometries, complete cleanup and zero uncertain/unused units. Phase263 is complete; Phase264 research/planning is eligible. All earlier failures remain non-pass, all attempts consumed, no new numbered plan or literal checkpoint. This is private feasibility only; formation still requires Phase266 freeze and no public/counted/production authority follows.
 
 ## Historical Phase263 snapshots — not current dispatch authority
 

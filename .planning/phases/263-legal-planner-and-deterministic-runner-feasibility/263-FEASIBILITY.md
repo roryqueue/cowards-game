@@ -1,17 +1,42 @@
 ---
 phase: 263
 plan: "06"
-status: non_pass
-reason: LAB_BENCHMARK_NON_PASS
+status: passed
+reason: complete
 empirical: true
 allocation_consumed: true
 retries_remaining: 0
-phase_complete: false
-factory_eligible: false
+phase_complete: true
+factory_eligible: true
 production_authorized: false
 ---
 
 # Phase 263 — Actual-source feasibility result
+
+## Current calibrated result — 2026-09-13
+
+The operator-approved prospective selection<20ms/brain<5ms run **passed**, and main read-only verification independently reconstructed that pass without any runtime launch. Exactly one fresh calibrated run was prepared and executed over HEAD6cc1f837. Independent verification passed11/11 truths and10/10 requirements; private UAT passed6/6. Phase263 is complete and Phase264 may proceed. Historical results below remain non-pass under their original contract.
+
+| Check | Observed | Disposition |
+|---|---:|---|
+| Frozen validation cases | 256/256 | Pass |
+| Actual validation guest calls | 232 | Pass |
+| Expected pre-runtime rejects | 16source +8input | Pass |
+| Benchmark calls | 2200/2200 | Complete |
+| Selection direct-method p99 | 17.019799ms | Pass: strict<20ms |
+| SoldierBrain direct-method p99 | 1.583730ms | Pass: strict<5ms |
+| Match attempts | 24/24 successes | No player violations or system failures |
+| Uncertain calls / unused Matches | 0 / 0 | Complete accounting |
+| Scientific coverage | 8cells,3labels,2geometries | Aliases not treated as scientific diversity |
+| Complete elapsed time | 22.18minutes | Within60minutes |
+| Cleanup | Complete | No owned container remained |
+| Retained private traces | 24,187807888bytes | All Matches retained |
+
+Source remains31725bytes atsha256:1ac048cc2f2cbd9c8df497fc56af18be2861adf24a8f33450744f603ba9d62ed. Candidate, corpus, validation inventory, actual observer, runtime, kernel and budgets are unchanged from the previous attempt; only the explicitly approved forward timing protocol changed. Full bindings and resource accounting:263-TIMING-CALIBRATION.md and263-feasibility-calibration-1-manifest.json. Private evidence is in the ignored owner-only calibration directory, not committed or public.
+
+This establishes bounded legal-runner feasibility, not competitive strength, metagame robustness, a league freeze, formation findings or production authorization. The five-run history is disclosed: one original and three bounded attempts failed the original selection<5ms target; the sole calibrated run passed the newly approved target. No failed result was retroactively relabeled.
+
+## Historical original run — immutable non-pass
 
 The sole bounded run passed behavioral validation but failed the selection-method speed gate. It correctly dispatched **zero Matches**. This is an honest terminal non-pass, not Phase263 completion or competitive-strength evidence.
 

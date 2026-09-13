@@ -1,8 +1,8 @@
 # Roadmap: Coward's Game
 
-## Current verified progress — Phase262 complete
+## Current verified progress — Phases262 and263 complete
 
-Plan203's explicitly approved retry continuation produced24/24 successful supervised Matches, complete cleanup and12 identical four-root pairs. Independent adjudication and phase verification pass16/16 requirements; Phase262 is complete. Phase263 is now eligible for research → planning → execution. This result is fixture feasibility only, not competitive strength. All old failure records/36locks remain unchanged; formation still waits for Phase266 freeze. The older terminal/dispatch sections below are historical, not instructions to restart consumed routes.
+Phase263's sole prospectively approved calibrated attempt passed256 validation cases,2200 benchmark calls and24/24 actual-source Matches with complete cleanup and12 identical paired semantic roots. Independent verification passed11/11 truths and10/10 requirements; final196/196 tests and TypeScript passed. Phase264 now proceeds research → planning → execution. Phase262 remains complete at16/16 requirements. These are feasibility results, not competitive strength. All old failure records/36locks remain unchanged; formation still waits for Phase266 freeze. Older terminal/dispatch sections below are historical, not instructions to restart consumed routes.
 
 ## Current D-34L.2 consolidated closeout outcome — 2026-09-09
 
@@ -872,7 +872,7 @@ Plans:
   4. The private offline lab has an executable one-way dependency graph into canonical spec, engine, replay helpers, and supervised runtime adapters while production packages, apps, images, routes, generated contracts, and deployment manifests cannot import it; every research Match advances through the exact selected `MATCH_KERNEL` with no copied resolver, alternate legality, second transition loop, or profile-specific transition code.
   5. One non-secret command pre-enumerates stable task identities and domain-separated streams, validates strict bounded artifacts, and reproduces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume with complete coverage, atomic publication, and tamper detection.
 
-**Plans:** 5/7 implementation plans accepted; previous Plan06 runs remain non-pass and Plan07 verification records gaps. Operator-approved2026-09-13 prospective calibration sets selection p99<20ms, unchanged brain<5ms and every other bound, plus exactly one fresh bounded attempt under263-TIMING-CALIBRATION.md. Source review and actual validation/timing precede conditional24Matches. No pass presumed; Phase263 remains incomplete and Phase264 gated.
+**Plans:** 7/7 complete. The sole approved prospective selection<20ms/brain<5ms attempt passed at17.019799/1.583730ms,256 validation cases and24/24 Matches. Independent verification11/11 truths,10/10 requirements, private UAT6/6, final196/196 tests and TypeScript pass. Phase264 is eligible. Previous failed runs remain non-pass; all consumed allocations stay consumed. See263-TIMING-CALIBRATION.md and263-VERIFICATION.md.
 
 Plans:
 
@@ -881,8 +881,8 @@ Plans:
 - [x] 263-03-PLAN.md — Nine-Action SoldierBrain and self-contained source emission.
 - [x] 263-04-PLAN.md — Canonical supervised bridge and trusted direct-method benchmark.
 - [x] 263-05-PLAN.md — Stable tasks, atomic shards and worker/resume invariance.
-- [ ] 263-06-PLAN.md — One-command bounded actual-source feasibility and pre-run review.
-- [ ] 263-07-PLAN.md — Independent goal-backward verification, validation and private UAT.
+- [x] 263-06-PLAN.md — One-command bounded actual-source feasibility and pre-run review.
+- [x] 263-07-PLAN.md — Independent goal-backward verification, validation and private UAT.
 
 **Research flag:** Spike planner/source/runtime feasibility, canonical effect-pump equivalence, deterministic parallelism, throughput, and trace-retention limits before freezing the scale architecture.
 
@@ -1004,8 +1004,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
-| 263. Legal Planner and Deterministic Runner Feasibility | 5/7 | Approved prospective timing calibration; one fresh bounded attempt |  |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; awaits Phase263 | - |
+| 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Researching; Phase263 prerequisite passed | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |

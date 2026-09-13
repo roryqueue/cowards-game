@@ -1,7 +1,7 @@
 ---
 phase: 263
 plans: [263-01, 263-06, 263-07]
-status: reserved
+status: passed
 approved: 2026-09-13
 operator_response: yes
 maximum_fresh_attempts: 1
@@ -29,5 +29,18 @@ The last bounded run measured selection p99 14.171262 ms and SoldierBrain 1.7327
 Canonical engine, rules, formations, legal-information boundaries, privacy, accounting and cleanup remain unchanged. No factory scale before Phase263 passes; no formation before Phase266 freeze; no holdout opening, public/counting/production or rules authority is granted. All historical receipts, manifests, authorization bytes and 36 locks are preserved. Historical verification uses its historical source/protocol, never rewritten manifests.
 
 ## Outcome
+
+The sole run overHEAD6cc1f837 completed **passed** in1330670.970273ms (22.18minutes), within3600000ms. All256validation cases passed (232guest calls,16source and8input rejects); all2200benchmark calls completed. Selection p99=17.019799ms passes strict<20ms; SoldierBrain p99=1.583730ms passes unchanged strict<5ms. The conditional24Matches completed successfully with zero player violations/system failures/uncertain calls, zero unused allocations, eight scientific cells and complete cleanup. All24private traces were retained (187807888bytes); total private evidence201654009bytes. Host peak RSS981284KiB is host accounting, not container memory usage.
+
+Main read-only --verify rederived **passed** with zero runtime execution before any post-run source changes. Reduction reports24successes and eight scientific payoff rows. No owned container remained. All original/retry receipt and consumption bytes and36locks match the pre-run fingerprint. Independent goal-backward verification passed11/11 truths and10/10 requirements, private UAT passed6/6, and validation is Nyquist-compliant. Final safe regression passed196/196 tests across19 files in323.09seconds plus the strategy-lab TypeScript build. Phase263 is complete; ordinary Phase264 work may proceed, with no broader scientific or production claim.
+
+- Manifest logical root: `sha256:90c0930ceff0f32a95b7d41061c22ce2459f5a7bd590fe7370082055c3a6bc0e`.
+- Receipt bytes: `sha256:053094603157479c1ff42deeb6754490ad048f650a8003d4d6aee8a1155cc03d`.
+- Consumed bytes: `sha256:e0511059c1a1ae8cf7825426db521269acf2f50a5db01bd7d95da8eb5628cce8`.
+- Benchmark-result bytes: `sha256:b49641e5bfe309bc44fd97c8fa794d5b234b7ab8f2b4f4688a183c10d40cdf58`.
+- Reduction bytes: `sha256:86f798b1624eb04ef690d5570ca2f017ff4e599904a0bae1b44a0330103cb69e`.
+- Scientific semantic root: `sha256:20484be30ab24fd00975bac6e4973cdbcde55996e39fff60a183b8da2734cf3f`.
+
+### Historical pre-run reservation
 
 Reserved once after34/34 focused tests, package TypeScript build and clean independent263-CALIBRATION-REVIEW.md. Reviewed source implementation1ad9f2e3; candidate remains31725bytes at sha256:1ac048cc2f2cbd9c8df497fc56af18be2861adf24a8f33450744f603ba9d62ed. Prospective protocol sha256:8b7d1ae2c991d9fa769c8ad8ea242bad4cb4f43e45eacf25115d2787b6438b02; execution sha256:927e9cead59805fefeae1a6d7386e5e145403a8fb9b73d274241601dc04d08e1. Corpus,256-case inventory and actual observer/harness roots match the preceding run. Read-only Docker check returned29.4.0 and the exact pinned image is present. No result is inferred. The sole destination is now reserved; there is no second attempt or fallback destination.

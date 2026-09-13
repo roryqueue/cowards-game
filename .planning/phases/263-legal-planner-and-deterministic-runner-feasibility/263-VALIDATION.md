@@ -1,15 +1,36 @@
 ---
 phase: 263
 slug: legal-planner-and-deterministic-runner-feasibility
-status: partial
-nyquist_compliant: false
+status: passed
+nyquist_compliant: true
 wave_0_complete: true
 created: 2026-09-09
 ---
 
 # Phase 263 — Validation Strategy
 
-## Current audit — 2026-09-13 approved envelope exhausted
+## Current audit — calibrated terminal pass (2026-09-13)
+
+The approved single fresh calibration attempt passed the prospective contract. Retained evidence independently confirms 256 validation cases / 232 guest calls / 24 rejects, 2,200 benchmark calls, selection p99 `17.019799 ms < 20 ms`, SoldierBrain p99 `1.58373 ms < 5 ms`, 24 charged Match attempts / 0 unused, zero uncertain units, cleanup complete, 24 successful actual-source attempts, 16 shards, 24 traces, 12 identical paired semantic-root comparisons, and 8 scientific cells / 3 labels / 2 geometries. The parent read-only `--verify` returned `status: passed`, `productionAuthorized:false`, and preserved pre-run history fingerprints. Source review is clean at `1ad9f2e3`; preparation/run binding is `6cc1f837`. No extra run, source edit, or human UI confirmation is implied.
+
+All ten requirements (PLAN-01..06, FACT-01..04) now have current evidence. The original and retry-1/2/3 non-pass audits remain below as immutable historical records; their former strict `<5 ms` selection failures and zero-Match conclusions are not current status.
+
+Final main-orchestrator regression:196/196 tests across19 files passed in323.09seconds, followed by a passing strategy-lab TypeScript build. Coverage includes the private lab, boundary/CLI tests, injected supervisor tests, runtime observer and canonical kernel contracts/ownership. No historical real-guest container suite or additional empirical attempt was run.
+
+### Current validation sign-off
+
+- [x] Every task has automated verification or an explicit preceding Wave 0 dependency.
+- [x] No three consecutive tasks lack automated verification.
+- [x] All missing references are implemented and exercised.
+- [x] Focused latency is measured and acceptable under the approved calibrated contract.
+- [x] Actual-source gate passes under unchanged bounds except the explicitly approved selection calibration to `<20 ms`.
+- [x] `nyquist_compliant: true` after demonstrated coverage.
+
+**Current disposition:** Passed for the private feasibility contract. This does not authorize production gameplay, formation, holdout, public/counted status, or a durable rating claim.
+
+## Historical audit (preserved)
+
+## Historical retry audit — 2026-09-13 approved envelope exhausted
 
 All3approved attempts passed the unchanged256-case actual validation and completed2200timing calls each with complete cleanup. Selection p99 fell33.819629→20.915845→14.171262ms but never passed strict<5ms; latest SoldierBrain1.732708ms passes. Zero Matches ran. Main read-only --verify returned non_pass for each attempt before subsequent source changes. Independent retained-evidence reviews reconcile counts/p99 and preserve the failed scientific gate. See263-RETRY-ENVELOPE.md and263-VERIFICATION.md.
 
