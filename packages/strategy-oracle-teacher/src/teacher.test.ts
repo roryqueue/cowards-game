@@ -4,6 +4,7 @@ import { FactoryOraclePacketSchema } from "../../strategy-lab/src/factory/index.
 import {
   assertTeacherSourceClosure,
   chooseDistilledStudentAction,
+  compileLegalStudentPolicy,
   distillLegalStudent,
   emitTeacherFactoryPacket,
   emitTeacherSource,
@@ -23,7 +24,7 @@ const packetRequest = () => ({
 const canonicalMatch = () => ({
   matchId: "teacher-counterfactual-match", seed: "teacher-counterfactual-seed",
   arenaVariant: { id: "teacher-arena", name: "Teacher arena", initialBounds: { minX: 0, maxX: 11, minY: 0, maxY: 11 }, terrainStones: [] },
-  bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "bottom-revision", topStrategyRevisionId: "top-revision",
+  bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "bottom-revision", topStrategyRevisionId: "top-revision", runtime: {} as never,
 })
 
 describe("teacher oracle", () => {
@@ -36,6 +37,8 @@ describe("teacher oracle", () => {
     expect(packet.provider.modelVersion).toBe("teacher-v1")
     const source = emitTeacherSource(distillLegalStudent(training("TURN")))
     expect(() => assertTeacherSourceClosure(source)).not.toThrow()
+    expect(() => assertTeacherSourceClosure("const x = missing; export default {}; ")).toThrow("TEACHER_SOURCE_FREE_IDENTIFIER")
+    expect(() => assertTeacherSourceClosure("import x from 'unsafe'; export default x;")) .toThrow("TEACHER_SOURCE_CAPABILITY")
     expect(source).not.toMatch(/\b(?:import|eval|vm|Function|require)\b/u)
   })
 
@@ -47,11 +50,16 @@ describe("teacher oracle", () => {
 
   it("uses teacher counterfactuals offline but never in identical deployed legal choices", () => {
     const student = distillLegalStudent(training("TURN"))
+    const policy = compileLegalStudentPolicy(student)
     const first = searchCanonicalCounterfactual({ canonicalMatch: canonicalMatch(), counterfactual: { opponentHypothesis: "cautious", hiddenBranchBias: 0 } })
     const second = searchCanonicalCounterfactual({ canonicalMatch: canonicalMatch(), counterfactual: { opponentHypothesis: "cautious", hiddenBranchBias: 1 } })
     expect(first.selectedTemplate).not.toBe(second.selectedTemplate)
+    expect(first.canonicalTransitionRoot).toBe(second.canonicalTransitionRoot)
     const alteredTeacherOnlyData = { ...legalInput(), teacherCounterfactual: second } as ReturnType<typeof legalInput>
     expect(chooseDistilledStudentAction(student, legalInput())).toEqual(chooseDistilledStudentAction(student, alteredTeacherOnlyData))
     expect(emitTeacherSource(distillLegalStudent(training("TURN")))).not.toBe(emitTeacherSource(distillLegalStudent(training("TURN_TO_STONE"))))
+    expect(emitTeacherSource(student)).toContain(policy.representation)
+    expect(emitTeacherSource(student)).toContain(JSON.stringify(policy.rules[0]!.observationKey))
+    expect(emitTeacherSource(student)).not.toMatch(/counterfactual|opponentHypothesis/u)
   })
 })

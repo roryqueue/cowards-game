@@ -17,8 +17,26 @@ export interface DistilledLegalStudent {
   readonly rules: readonly Readonly<{ observationKey: string; action: StudentAction }>[]
 }
 
-const stable = (value: unknown): string => JSON.stringify(value, Object.keys(value as Record<string, unknown>).sort())
+const canonicalize = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalize)
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, canonicalize(child)]))
+  }
+  return value
+}
+const stable = (value: unknown): string => JSON.stringify(canonicalize(value))
 const keyFor = (input: LegalStudentInput) => stable({ observation: input.observation, objective: input.objective, memory: input.memory })
+
+export interface CompiledLegalStudentPolicy {
+  readonly representation: "canonical-legal-observation-objective-memory-v1"
+  readonly rules: readonly Readonly<{ observationKey: string; action: StudentAction }>[]
+}
+
+/** The trusted chooser and source emitter both consume this explicit, stripped representation. */
+export const compileLegalStudentPolicy = (student: DistilledLegalStudent): CompiledLegalStudentPolicy => {
+  if (student.schemaVersion !== "teacher-distilled-student-v1" || !Array.isArray(student.rules)) throw new TypeError("TEACHER_STUDENT")
+  return Object.freeze({ representation: "canonical-legal-observation-objective-memory-v1", rules: student.rules })
+}
 
 /** Distillation deliberately accepts only previously stripped legal training records, never teacher receipts. */
 export const distillLegalStudent = (records: readonly LegalTrainingRecord[]): DistilledLegalStudent => {
@@ -28,4 +46,4 @@ export const distillLegalStudent = (records: readonly LegalTrainingRecord[]): Di
 }
 
 export const chooseDistilledStudentAction = (student: DistilledLegalStudent, input: LegalStudentInput): StudentAction =>
-  student.rules.find((rule) => rule.observationKey === keyFor(input))?.action ?? { type: "TURN_TO_STONE" }
+  compileLegalStudentPolicy(student).rules.find((rule) => rule.observationKey === keyFor(input))?.action ?? { type: "TURN_TO_STONE" }
