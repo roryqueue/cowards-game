@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    "paths": {
+      "@cowards/strategy-lab": ["../strategy-lab/src/index.ts"],
+      "@cowards/strategy-lab/factory": ["../strategy-lab/src/factory/index.ts"],
+      "@cowards/runtime-js": ["../runtime-js/src/index.ts"]
+    }
+  },
+  "references": [{ "path": "../spec" }, { "path": "../runtime-js" }, { "path": "../strategy-lab" }],
+  "include": ["src"]
+}
