@@ -89,4 +89,3 @@ export const selectPlannerActivations = (input: StrategyInputV119, budget: Assig
   }
   return { activationOrders: best.map(objective => ({ soldierId: objective.soldierId, objective })), strategyMemory: { missions: best, planner: { schemaVersion: "assignment-v1", expansions, reserved: count, hypothesisEvaluations: 2 * (1 + expansions), hypotheses: ["entrant-first","entrant-second"], beam: 4 } } }
 }
-
