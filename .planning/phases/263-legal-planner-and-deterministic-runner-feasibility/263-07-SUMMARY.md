@@ -15,6 +15,12 @@ key-files:
 
 # Phase263 Plan07 — Verified Negative Result
 
+## Final approved-envelope update — 2026-09-13
+
+The three approved fresh attempts are exhausted. All passed256actual validation cases and completed2200timing calls, with zero Matches and complete cleanup. Latest selection p99=14.171262ms still fails strict<5ms; SoldierBrain=1.732708ms passes. Main read-only --verify rederived each non-pass before later source changes. Final sourcebca54da1 is independently reviewed clean and passes62integration/51final source tests plus types. Current bounds, exact per-attempt results and private evidence roots are in263-RETRY-ENVELOPE.md;263-VERIFICATION/UAT/VALIDATION reflect the latest result. Earlier verification narrative below is preserved as initial-run context.
+
+The workflow has reached a real operator decision: further measured work or a recalibrated pre-search timing gate needs approval. No fourth run, Match, factory scale, formation, archive or tag is authorized by this negative result. There is no new numbered-plan or literal/custody ceremony. Phase263 remains incomplete; scientific failure is not an audit finding that can be relabeled away.
+
 The independent goal-backward, validation and private UAT loop is recorded. It does not pass Phase263: the actual selection speed gate failed and no actual-source Match/reproduction evidence exists.
 
 ## Task1 — Independent Verification

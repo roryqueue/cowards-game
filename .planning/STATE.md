@@ -6,11 +6,11 @@ current_phase: 263
 current_phase_name: legal-planner-and-deterministic-runner-feasibility
 current_plan: 6
 total_plans_in_phase: 7
-status: in_progress
-stopped_at: Phase263 approved retry2 timing non-pass; behavior-preserving repair before final approved attempt3
-last_updated: "2026-09-13T12:53:10Z"
+status: blocked
+stopped_at: Phase263 three-attempt envelope exhausted; operator decision required on next bounded admission contract
+last_updated: "2026-09-13T17:19:13Z"
 last_activity: 2026-09-13
-last_activity_desc: Retry2 validation256passed, selection p99 20.915845ms non-pass, zero Matches; one approved attempt remains
+last_activity_desc: Retry3 independently verified non-pass at14.171262ms selection;256validation passed, zero Matches; no attempts remain
 progress:
   total_phases: 9
   completed_phases: 1
@@ -26,6 +26,10 @@ progress:
 Resumed the source-only post-gate repair and independent verification. The operator requested efficient autonomous continuation and smaller-model subagents. A focused Terra reviewer checks the isolated two-commit caching/reporting fix; a Luna verifier closes only the safe injected-failure uncertainty. Both are forbidden from new empirical source runs. Main and origin/main were f7a8a0c0 at resume; original receipt/manifest/consumption bytes and36locks are unchanged. No prior failed agent is assumed to have completed its unfinished review. Do not advance Phase264 from summary counts: actual Phase263 verification remains gaps_found.
 
 ## Current Phase263 execution
+
+**Authoritative final update2026-09-13:** all3approved attempts are consumed. Final candidatebca54da1 (31725bytes) passes actual256-case validation,62integration/51final source tests, package types and clean independent review. Final2200-call timing gives selection p99=14.171262ms (fails strict<5ms), SoldierBrain=1.732708ms (passes). Zero Matches, no uncertain calls, complete cleanup; main read-only --verify and independent retained-evidence audit agree. Verification remains gaps_found8/11, with PLAN-06 blocked and FACT-02/03/04 empirical work unexecuted. Phase262 remains complete; Phase264 onward, formation, archive/tag remain gated. All prior bytes/36locks are preserved.
+
+The only next checkpoint is an operator decision: a fresh bounded run and/or pre-search timing-gate calibration. Proposed, not approved: selection<20ms, unchanged brain<5ms and every other bound, then one fresh full run with the existing conditional24-Match check. No fourth attempt, relaxed threshold, new numbered plan, literal or custody route is active. See263-RETRY-ENVELOPE.md and263-VERIFICATION.md. Earlier update blocks below are historical and cannot dispatch another run.
 
 Latest update2026-09-13: approved retry2 is consumed and independently rederived non_pass. Validation256passed/232guest calls,2200complete timing calls, selection p99=20.915845ms, brain=2.310270ms, zero Matches and complete cleanup. One approved attempt remains. Continue the compact internal representation and immutable intrinsic-reference optimizations, exact-output tests and independent review before final attempt3. No runtime/policy/threshold/rules change is authorized; Phase264 remains gated. The immediately following retry1 update is superseded by this one.
 

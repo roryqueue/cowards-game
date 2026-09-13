@@ -9,6 +9,14 @@ created: 2026-09-09
 
 # Phase 263 — Validation Strategy
 
+## Current audit — 2026-09-13 approved envelope exhausted
+
+All3approved attempts passed the unchanged256-case actual validation and completed2200timing calls each with complete cleanup. Selection p99 fell33.819629→20.915845→14.171262ms but never passed strict<5ms; latest SoldierBrain1.732708ms passes. Zero Matches ran. Main read-only --verify returned non_pass for each attempt before subsequent source changes. Independent retained-evidence reviews reconcile counts/p99 and preserve the failed scientific gate. See263-RETRY-ENVELOPE.md and263-VERIFICATION.md.
+
+Final sourcebca54da1 has clean independent three-file review263-RETRY-3-REVIEW.md,62/62integration tests across six files (126.15s),51/51final source tests across four files (36.84s), package TypeScript and diff-check passes. Differential coverage includes every budget0..256 on two fixed complex observations, full output/memory/counter equality, earlier600mapped comparisons, varied threats/edges/memory/order/collision/fallback cases, and frozen-input mutation checks. Intermediate implementation/test defects were corrected before empirical preparation. All edits stay in existing Plans02/06/07; no production/runtime/rules/formation/holdout boundary changed.
+
+Nyquist remains false and empirical rows remain blocked. Three observed negative results do not satisfy PLAN-06 or the unexecuted actual Match/reproduction/trace requirements FACT-02/03/04. The remaining blocker needs an operator decision on fresh bounded authority and/or explicit pre-search gate calibration; no routine UI click, external custody service or repeated literal is required. No fourth run is authorized. Historical task maps and initial-run evidence below remain historical, not current dispatch instructions.
+
 ## Test Infrastructure
 
 | Property | Value |

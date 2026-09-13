@@ -1,11 +1,12 @@
 ---
 phase: 263
 plans: [263-02,263-06,263-07]
-status: attempt_3_reserved
+status: exhausted_non_pass
 approved: 2026-09-13
 operator_response: approved
 maximum_fresh_attempts: 3
 attempts_started: 3
+attempts_remaining: 0
 stop_on_first_full_pass: true
 original_run_consumed: true
 ---
@@ -30,7 +31,7 @@ The operator approved the immediately preceding proposal: **up to three fresh bo
 |---|---|---|---|
 | 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | consumed: validation passed, selection timing non-pass, zero Matches |
 | 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | consumed: validation passed, selection timing non-pass, zero Matches |
-| 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | reserved for sole prepare/run; final approved slot |
+| 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | consumed: validation passed, selection timing non-pass, zero Matches |
 
 The orchestrator reserves the next ordinal before its final preparation; it will not reuse a terminal/partially prepared destination. Every successful preparation gets exactly one --run invocation. Existing no-clobber manifest, consumed-marker and per-call/Match charge publication remain authoritative within each attempt. Cross-attempt accounting identifies units by envelope ordinal plus manifest/attempt root, not by a reused label alone. Every unused unit remains unused; no old Match capacity is rolled forward.
 
@@ -84,3 +85,25 @@ All earlier evidence remains immutable. The next candidate must receive new sour
 ### Attempt3 reservation — 2026-09-13
 
 Final slot reserved over sourcebca54da1 after compact assignment records, stable top-four beam retention, original lazy fallback behavior, unchanged public scorer and immutable references to allowed sanitized math intrinsics. Candidate31725bytes, source `sha256:1ac048cc2f2cbd9c8df497fc56af18be2861adf24a8f33450744f603ba9d62ed`; execution `sha256:5e84325cf32960f25c8e2e06bec034e6ac0f6a956a8a713ff2ba4ac43d754eb2`. New independent three-file review263-RETRY-3-REVIEW.md is clean;62integration and51final source tests/package build passed, including all257budget differential coverage. Protocol, corpus, case inventory and owned observer roots remain identical. No observation-dependent work is hoisted outside the measured method; only constant references to permitted math functions are bound once. No runtime, gate, expansion, beam, rule, privacy or source-size bound changed. Docker29.4.0 remains available. Final source remains unmeasured at reservation. Stop on this attempt's terminal outcome; no fourth attempt is authorized.
+
+### Attempt3 terminal and envelope exhaustion — 2026-09-13
+
+Prepared and invoked exactly once over HEADad668a1e. Validation256/256 passed (232guest calls,16source rejects,8input rejects); all2200timing calls completed without uncertainty. Selection p99=14.171262ms still fails strict<5ms; SoldierBrain p99=1.732708ms passes. Zero Matches ran and24slots remain unused. Cleanup completed and no owned container remained. Elapsed499802.787957ms (8.33minutes), host peak RSS820192KiB. Main read-only --verify returned non_pass with no execution before any post-run edits.
+
+- Manifest logical root: `sha256:a566f8484529370040e0eca38f7fca257710c31a38d5013a1cea22df4c1510ed`.
+- Receipt bytes: `sha256:3ee0254b88e9bb3befff4bd2a0848639b5f6f8d38c18b02310ea8ce7befa468a`.
+- Consumption bytes: `sha256:d03e6b9fcd9a73345c2c4fb235a4a71167ba56827369033cff6d55a46b17e908`.
+- Benchmark result bytes: `sha256:1666910b7ae7351622f12632b14e9d43ee54883a4d60872e216e9a04ddd67b6f`.
+
+| Run | Selection p99 ms | SoldierBrain p99 ms | Validation | Matches | Disposition |
+|---|---:|---:|---|---:|---|
+| Original, outside this envelope | 64.135270 | 2.349449 | 256passed | 0 | non-pass |
+| Approved1 | 33.819629 | 2.629893 | 256passed | 0 | non-pass |
+| Approved2 | 20.915845 | 2.310270 | 256passed | 0 | non-pass |
+| Approved3 | 14.171262 | 1.732708 | 256passed | 0 | non-pass |
+
+The envelope consumed exactly3fresh runs,768validation case slots (696guest calls and72pre-runtime rejections),6600benchmark calls and zero Matches, with complete cleanup and no uncertain call in each run. Its measured run time totals27.10minutes, below the180-minute outer aggregate ceiling. Each run's24unused Match slots remain unused and cannot be pooled or rolled forward. Original run bytes, all earlier attempt records and36historical locks remain protected. The last source's observed selection p99 is approximately4.5times faster than the original, but separate-run comparisons are not controlled per-component profiling and do not turn any non-pass into a pass.
+
+**Human-only decision:** the approved envelope is exhausted. Phase263 remains incomplete and Phase264 gated by PLAN-06 plus unexecuted FACT-02/03/04 empirical evidence. A fourth run or changed admission target requires explicit operator approval; no exact literal, new numbered plan or custody system is needed. A proposed pre-search calibration is selection p99<20ms while retaining SoldierBrain<5ms and every other fixed limit, followed by one fresh bounded full run with the existing conditional24-Match check. This is only a proposal based on observed runtime performance: it is not adopted, does not retroactively reclassify these runs, and grants no execution authority.
+
+Independent final closeout consistency review found one stale PROJECT lifecycle-carrier label; it was explicitly marked historical/superseded without changing its artifacts. Focused independent rereview reports zero active closeout consistency findings. This is not a passed milestone audit or scientific gate. Final hash checks confirm all8original/retry receipt-and-consumption files and all36historical locks unchanged; no private raw evidence is committed.

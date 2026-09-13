@@ -1,6 +1,6 @@
 ---
 phase: 263-legal-planner-and-deterministic-runner-feasibility
-verified: 2026-09-13T12:45:26Z
+verified: 2026-09-13T17:19:40Z
 status: gaps_found
 score: 8/11 must-haves verified
 behavior_unverified: 2
@@ -9,20 +9,30 @@ phase_complete: false
 factory_eligible: false
 allocation_consumed: true
 retries_remaining: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 8/11
+  gaps_closed: []
+  gaps_remaining:
+    - "PLAN-06 frozen selection-method p99 remains above 5 ms after the third and final consumed attempt"
+    - "FACT-02 actual-source Match equivalence has no Match evidence"
+    - "FACT-03 complete actual-source reproduction matrix has no semantic evidence"
+    - "FACT-04 actual-source publication/shard/trace inventory has no empirical evidence"
+  regressions: []
 requirements_satisfied: [PLAN-01, PLAN-02, PLAN-03, PLAN-04, PLAN-05, FACT-01]
 requirements_blocked: [PLAN-06]
 requirements_pending_empirical: [FACT-02, FACT-03, FACT-04]
 gaps:
   - truth: "The candidate meets frozen runtime feasibility limits before factory scale."
     status: failed
-    reason: "Independently rederived selection-method p99 is 64.13527 ms; the frozen gate is strictly below 5 ms. The sole allocation is consumed."
+    reason: "Independently rederived retry-3 selection-method p99 is 14.171262 ms; the frozen gate is strictly below 5 ms. Three consumed attempts are exhausted."
     artifacts:
       - path: packages/strategy-lab/src/planner/assign.ts
         issue: "The measured emitted selection implementation misses the unchanged direct-method speed gate."
       - path: .planning/phases/263-legal-planner-and-deterministic-runner-feasibility/263-FEASIBILITY.md
         issue: "Terminal non-pass; zero Matches and no empirical semantic reduction."
     missing:
-      - "A qualifying runtime result under an explicitly approved future bounded contract, not a retry of this consumed run."
+      - "A qualifying runtime result under an explicitly approved future bounded contract and fresh allocation; no retry remains in the current envelope."
 behavior_unverified_items:
   - truth: "Actual-source research Matches advance through the selected canonical kernel with equivalent gameplay evidence."
     test: "Only under future approved authority, inspect the bounded actual-source Match/effect evidence."
@@ -44,9 +54,9 @@ The selection method fails the frozen runtime feasibility gate. The runner corre
 
 ## Evidence boundary
 
-This verification independently read implementation and retained private records; SUMMARY claims were navigation only. The parent ran the planned read-only `--verify`; its result is `non_pass`, `executed:false`, 256 retained validation cases and no semantic root. This verifier independently recalculated both p99 values directly from all 2200 retained observations and ran four single-named pure policy tests plus the static dependency scan. No guest, host, benchmark, preflight, full Match, preparation or consumed selector was rerun. No executable source or empirical evidence was changed.
+This final re-verification independently read implementation and retry-3 retained private records; SUMMARY claims were navigation only. The parent ran the planned read-only `--verify`; its result is `non_pass`, `executed:false`, 256 retained validation cases and no semantic root. This verifier independently recalculated both retry-3 p99 values directly from all 2200 retained observations and confirmed the count/cleanup inventory. Original evidence and retry-1/retry-2 evidence remain preserved. No guest, host, benchmark, preflight, full Match, preparation or consumed selector was rerun. No executable source or empirical evidence was changed.
 
-Frozen bindings: manifest `sha256:074d63e3879dee0f43ee01cb18eec4e088d79eb5092b2219feeb27cd8d87721e`; emitted source `sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b`; execution closure `sha256:08cb747202ea9d67ec28119b1c776fcc2efabfcd8986887dd1dfdf25bfc2ca1c`; run commit `d138fdb2fe1767bb1d5439b4c935e1ea91deba0c`.
+Original frozen bindings remain historical: manifest `sha256:074d63e3879dee0f43ee01cb18eec4e088d79eb5092b2219feeb27cd8d87721e`; source `sha256:6bf1f02f273f4c743781aee7f9a9693aa55096e687bedaedba49504e4c14907b`; execution `sha256:08cb747202ea9d67ec28119b1c776fcc2efabfcd8986887dd1dfdf25bfc2ca1c`; source commit `d138fdb2fe1767bb1d5439b4c935e1ea91deba0c`. Inherited line-number pointers below refer to that original reviewed source, not the shifted lines in the optimized file. Final retry-3 review reports clean source review at `bca54da1`; integration/source/type evidence is recorded at `62`/`51` by the parent. The retry-3 retained envelope independently reports terminal non-pass; no new authority is inferred from source cleanliness. Current exact roots are in263-RETRY-ENVELOPE.md and263-feasibility-retry-3-manifest.json.
 
 Only aggregates and source-code references appear below. Private source, inputs, outputs, objectives, memories and per-call diagnostics remain in the ignored evidence directory.
 
@@ -60,17 +70,17 @@ Rows 1–5 retain the complete roadmap success-criterion scope. Rows 6–11 merg
 |---|---|---|---|
 | 1 | Full-board ordered assignment under both initiative hypotheses, all ten missions/fallbacks, hard survival/tactical constraints before soft preferences. | VERIFIED | `planner/assign.ts:6` lexicographic comparison, `:53` worst whole-hypothesis score, `:59` bounded beam and reserved assignments; `missions.ts` implements all ten lifecycle branches. Fresh expired-memory/visible-danger and evacuation-lifecycle tests pass; retained validation passes. This proves bounded policy behavior, not strategic strength. |
 | 2 | 5x5 SoldierBrain considers nine Actions, detects stale objectives, uses authoritative Advance, handles immediate threats/opportunities and reserves cheap fallback. | VERIFIED | `planner/brain.ts:7` nine Actions, `:12` local mission admission, `:43` intention ranking, `:99` reservation before optional work. Fresh zero-budget and authoritative-Advance tests pass; actual validation includes tactical/stale controls. No exhaustive optimality is claimed. |
-| 3 | Legal-information paired choices and self-contained deterministic bounded candidate pass frozen source/objective/memory/output/runtime gates; failure is preserved without extra compute. | FAILED — BLOCKER | 256 validation cases pass, 232 actual guest calls; source is 24294 bytes. Selection p99 **64.13527 ms** fails strict **<5 ms**; brain p99 2.349449 ms passes. Correct failure preservation does not cancel the runtime requirement. |
+| 3 | Legal-information paired choices and self-contained deterministic bounded candidate pass frozen source/objective/memory/output/runtime gates; failure is preserved without extra compute. | FAILED — BLOCKER | Retry-3 retained envelope: 256 validation cases pass, 232 guest calls; 2,200 benchmark calls. Selection p99 **14.171262 ms** fails strict **<5 ms**; brain p99 **1.732708 ms** passes. Correct failure preservation does not cancel the runtime requirement. |
 | 4 | Private one-way dependency graph and every research Match through exact MATCH_KERNEL, without copied resolver/legality/transition loop. | UNCERTAIN — WARNING; PRESENT_BEHAVIOR_UNVERIFIED | Static boundary scan: 6618 files, zero violations. `runtime-bridge.ts:29–72` calls canonical machine/step/resume; CLI invokes it. Actual-source Match equivalence is unexercised: zero Matches. |
 | 5 | Non-secret command, stable task/stream identities, strict artifacts and identical complete reductions across worker/shard/order/restart/resume, atomicity and tamper detection. | UNCERTAIN — WARNING; PRESENT_BEHAVIOR_UNVERIFIED | `tasks.ts`, `identity.ts`, `shards.ts`, `reduce.ts`, `runner.ts` are substantive and wired to CLI. The complete empirical branch at CLI `:517–526` is not reached. Empty Match inventory, no semantic root; synthetic proofs do not establish actual-source reproducibility. |
 | 6 | Wrong bindings/host failures return unscored unchanged gameplay with complete owned-resource cleanup. | VERIFIED | `runtime-bridge.ts:35–82` retains initial state, emits empty failed transitions, validates request/identity and closes providers. Fresh focused run: `./node_modules/.bin/vitest run packages/strategy-lab/src/runtime-bridge.test.ts --maxWorkers=1` — 11/11 tests passed, including eight wrong-binding faults, unchanged-state/no-result assertions, player/system distinction, and cleanup uncertainty rejection. |
-| 7 | Trusted method-body timing stays within supervision without exposing guest clocks or relaxing limits. | VERIFIED | `benchmark.ts` validates issued request/method/input/identity observations; CLI `:414–462` traces retained bindings; actual 2200 successful completed records independently parsed. Exact p99 derived from `timing.observation.durationMs`, not transport/host timing. |
-| 8 | Manifest/admission and allocation distinguish 24 attempts from eight scientific cells; every unit is charged or unused and failures cannot become payoffs. | VERIFIED | Strict admitted roots/manifest checks in `contracts.ts` and CLI `admitPrepared`; `tasks.ts` pre-enumerates 12 labels/cells twice, with aliases. Retained receipt: 256 cases, 232 validation guest calls, 2200 benchmark calls, 0 charged/24 unused Matches, zero uncertain units. `reduce.ts` admits payoffs only for complete comparable success. |
+| 7 | Trusted method-body timing stays within supervision without exposing guest clocks or relaxing limits. | VERIFIED | `benchmark.ts` validates issued request/method/input/identity observations; retry-3 contains 2,200 successful completed records with unique ordinals/invocation roots and cleanup. Exact p99 is derived from `timing.observation.durationMs`, not transport/host timing. |
+| 8 | Manifest/admission and allocation distinguish 24 attempts from eight scientific cells; every unit is charged or unused and failures cannot become payoffs. | VERIFIED | Strict admitted roots/manifest checks in `contracts.ts` and CLI `admitPrepared`; `tasks.ts` pre-enumerates 12 labels/cells twice, with aliases. Retry-3 receipt: 256 cases, 232 validation guest calls, 2,200 benchmark calls, 0 charged/24 unused Matches, zero uncertain units. `reduce.ts` admits payoffs only for complete comparable success. |
 | 9 | Actual source passes or records an honest terminal non-pass; failed feasibility blocks scale and grants no broader authority. | VERIFIED | `consumed.json` binds exact manifest/execution roots; CLI `:516` throws on benchmark non-pass before Match dispatch. Receipt and FEASIBILITY report say non-pass and production false. No retries remain; unused Match capacity is not new execution authority. |
 | 10 | All ten requirements are independently mapped to code and actual evidence. | VERIFIED | Requirements table below distinguishes six bounded/static satisfactions, one failed gate and three pending empirical requirements; none omitted or orphaned. |
 | 11 | Validation/UAT distinguish automated proof, private trace review and unverified behavior. | VERIFIED | Independently read final `263-UAT.md` (3 passed/1 issue/2 blocked) and `263-VALIDATION.md` (partial, Nyquist false; executed audit supersedes historical pending map). Both preserve failed speed and unavailable Match/reproduction/realism evidence, without inventing human acceptance. |
 
-**Score: 8/11 truths verified; 2 present-but-behavior-unverified; 1 blocker.** A recorded non-pass is not an override. No overrides or explicit PLAN prohibition blocks were found.
+**Score: 8/11 truths verified; 2 present-but-behavior-unverified; 1 blocker.** A recorded non-pass is not an override. No overrides or explicit PLAN prohibition blocks were found. Retry-3 is the third and final consumed attempt; the envelope is exhausted.
 
 ### Required Artifacts and Key Links
 
@@ -105,9 +115,13 @@ Each test command uses `./node_modules/.bin/vitest run --maxWorkers=1` with the 
 | Authoritative Advance | `planner/brain.test.ts` — `uses authoritative Advance, not forged SoldierMemory, at final Cycle` | PASS, 1 test, 2.41s |
 | Wrong bindings / unchanged failure / cleanup | `runtime-bridge.test.ts` — `rolls back bad %s binding without a score` (8 cases), `keeps player violations distinct and rejects cleanup uncertainty` | PASS, 11 tests total in focused file, 2.17s |
 | Dependency denial | `./node_modules/.bin/tsx scripts/check-v1-38-lab-boundaries.ts` | PASS; 6618 files, zero violations |
-| Benchmark reduction | Read-only Node parser over 2200 retained JSON records; exclude first 100 per method, numeric sort, index 989 | 1000 measured/method, 0 failed/incomplete observations; selection 64.13527 FAIL, brain 2.349449 PASS |
+| Benchmark reduction | Read-only parser over retry-3's 2,200 retained JSON records; exclude first 100 per method, numeric sort, index 989 | 1,000 measured/method, 0 failed/incomplete observations; selection 14.171262 FAIL, brain 1.732708 PASS |
 
 No full-suite rerun. No separate shell probe is declared in Phase263 plans. The phase-specific retained `--verify` is the applicable read-only runnable check, performed by the parent; probe/guest regeneration is prohibited for this consumed run.
+
+### Retry-3 Re-verification (Terminal)
+
+Independent read-only audit of `.strategy-lab/phase263-feasibility-retry-3` confirms 2,200 benchmark records and charge receipts (1,100 per method), unique ordinals and invocation roots, and zero malformed/incomplete records. The 1,000 measured samples per method (after the frozen first-100 warmups) independently produce selection p99 **14.171262 ms** and SoldierBrain p99 **1.732708 ms**, matching the retained benchmark result. Validation remains 256 cases / 232 guest calls / 24 rejects (16 source, 8 input). The receipt records 0 charged and 24 unused Match attempts, cleanup complete, terminal `non_pass`; `benchmark-cleanup.json` reports no orphaned child; `lab-matches/` contains zero files. The three-attempt envelope is exhausted. Final review artifacts record clean source review (`bca54da1`) and integration/source/type evidence (`62`/`51`); these do not convert the failed frozen speed gate or absent Match evidence into a pass.
 
 ### Requirements Coverage
 
@@ -120,7 +134,7 @@ All PLAN-01..06 and FACT-01..04 appear in plans and the Phase263 traceability ta
 | PLAN-03 | 03,07 | Nine Actions, stale/local mission, authoritative Advance and reserved legal intention; fresh zero-budget/Advance checks and actual tactical validation | SATISFIED |
 | PLAN-04 | 03,04,06,07 | `emit.ts` lexical closure and legal-input-only policy; actual paired hidden-state/fresh/reused-context validation | SATISFIED for frozen validation domain; no arbitrary-state exhaustive proof |
 | PLAN-05 | 03,06,07 | Exact 24294-byte synchronous self-contained source; capability/source and canonical result bounds; expected 16 source/8 input rejections and 232 guest calls | SATISFIED; does not include PLAN-06's distinct p99 gate |
-| PLAN-06 | 01,04,06,07 | Validation passes but selectActivations p99 64.13527 ms violates strict <5 ms | BLOCKED; honest failure preserved |
+| PLAN-06 | 01,04,06,07 | Retry-3 validation passes but selectActivations p99 14.171262 ms violates strict <5 ms; three-attempt envelope is exhausted | BLOCKED; honest failure preserved |
 | FACT-01 | 01,07 | Private package and executable dependency graph; fresh static scan 6618 files/zero violations | SATISFIED within supported static-graph model, not arbitrary-code sandbox certification |
 | FACT-02 | 04,06,07 | Canonical bridge is present/wired, no alternate transition owner found | NEEDS HUMAN / pending actual-source Match equivalence; zero Matches |
 | FACT-03 | 05,06,07 | Preassigned identity/stream and one-command runner/reduction implemented | NEEDS HUMAN / pending actual two-run worker/shard/order/restart/resume evidence |
