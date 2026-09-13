@@ -8,11 +8,11 @@ requires:
     provides: strict private FactoryOraclePacket contract and inherited authority pins
 provides:
   - independent tactical selector, mission/Action scoring, bounded search, and local response logic
-  - root-bound data-only tactical factory packet emitter with a self-contained deterministic source closure
+  - root-bound data-only factory packet emitter compiled from exact tactical controller modules
 affects: [264-05, 264-07, private-factory-admission]
 tech-stack:
   added: []
-  patterns: [leaf-owned strategic core, static emitted-source closure, data-only factory packet]
+  patterns: [leaf-owned strategic core, static module bundling, free-identifier source closure, data-only factory packet]
 key-files:
   created:
     - packages/strategy-oracle-tactical/src/selector.ts
@@ -23,7 +23,7 @@ key-files:
   modified: []
 key-decisions:
   - "Keep tactical mission, Action, search, and response logic physically local to this leaf."
-  - "Return a static checked candidate as packet data; neither tests nor the leaf execute emitted source."
+  - "Compile the exact leaf-owned controller modules into static checked candidate data; neither tests nor the leaf execute it."
   - "Record required local deterministic optimizer provenance without asserting any model participation."
 patterns-established:
   - "Factory leaves bind fixed inherited engine/runtime/source-closure pins while owning their algorithm version."
@@ -53,27 +53,27 @@ coverage:
         ref: ./node_modules/.bin/tsc -b packages/strategy-oracle-tactical
         status: pass
     human_judgment: false
-duration: 6min
+duration: 21min
 completed: 2026-09-13
-status: integration_correction_required
+status: complete
 ---
 
 # Phase 264 Plan 02: Independent Tactical Optimizer Summary
 
-**A private tactical leaf with independently owned scoring and bounded search emits deterministic, root-bound candidate source as factory data.**
+**A private tactical leaf compiles its own selector, scoring, bounded search, and response modules into deterministic root-bound candidate data.**
 
 ## Performance
 
-- **Duration:** 6 min
+- **Duration:** 21 min
 - **Started:** 2026-09-13T23:25:00Z
-- **Completed:** 2026-09-13T23:30:56Z
+- **Completed:** 2026-09-13T23:44:01Z
 - **Tasks:** 2/2
 - **Files modified:** 8
 
 ## Accomplishments
 
 - Added a physically separate tactical selector with owned mission scoring, Action scoring, bounded beam expansion, and local Soldier response generation.
-- Added static AST/lexical closure checks and a self-contained deterministic source emitter without evaluating or importing generated candidate code.
+- Added static module bundling for the exact tactical controller plus AST closure checks that reject unresolved identifiers and capability recovery paths, without evaluating generated candidate code.
 - Bound exact source bytes, factory packet root, inherited authority, native lane, and required local optimizer provenance through the factory schema.
 
 ## Task Commits
@@ -81,19 +81,20 @@ status: integration_correction_required
 1. **Task 1: Establish the tactical leaf package and owned strategic core** - `eea1fa2f` (feat)
 2. **Task 2 RED: Emit and prove legal deterministic tactical candidate source** - `98f217b7` (test)
 3. **Task 2 GREEN: Emit and prove legal deterministic tactical candidate source** - `09aecee0` (feat)
+4. **Task 2 correction: Bundle exact tactical controller source** - `24cf671b` (fix)
 
 ## Files Created/Modified
 
 - `packages/strategy-oracle-tactical/package.json` - private leaf package metadata without new package installation.
 - `packages/strategy-oracle-tactical/tsconfig.json` - independent composite build and foundation references.
 - `packages/strategy-oracle-tactical/src/{selector,scoring,search}.ts` - owned tactical strategic core.
-- `packages/strategy-oracle-tactical/src/emit.ts` - checked source closure and exact `emitTacticalFactoryPacket` data emitter.
+- `packages/strategy-oracle-tactical/src/emit.ts` - static bundler, manifest-root correspondence proof, checked source closure, and exact `emitTacticalFactoryPacket` data emitter.
 - `packages/strategy-oracle-tactical/src/{index,tactical.test}.ts` - narrow leaf entrypoint and focused legal-input/provenance tests.
 
 ## Decisions Made
 
 - Tactical behavior ranks only canonical board or awareness observations, objectives, and deterministic tie keys; it reads no hidden or counterfactual input.
-- The emitted source is never executed by this package. Unit tests exercise the trusted owned controller; existing supervised runtime admission remains the only later source-execution lane.
+- The emitted source is a transpiled closure of the exact trusted tactical modules, not a handwritten mirror. Unit tests exercise trusted controllers and static source structure; existing supervised runtime admission remains the only later source-execution lane.
 - The factory contract's provider fields identify the local deterministic optimizer's required provenance and do not represent real model evidence or participation.
 
 ## Deviations from Plan
@@ -116,11 +117,19 @@ status: integration_correction_required
 - **Verification:** Package TypeScript build passes.
 - **Committed in:** `09aecee0`
 
-**Total deviations:** 2 auto-fixed (Rule 1: 1; Rule 3: 1). No scope expansion or package installation occurred.
+**3. [Rule 1 - Bug] Replaced the emitted handwritten tactical surrogate with the exact owned controller closure**
+- **Found during:** Same-plan integration review after Task 2
+- **Issue:** The source advertised `tactical-beam-v1` but had independently handwritten greedy selection and Action scoring, so it could drift from the owned bounded-search controller.
+- **Fix:** Statically bundled the authored `scoring.ts`, `search.ts`, and `selector.ts` modules in dependency order; added a source-manifest correspondence root plus free-identifier and capability-recovery closure tests.
+- **Files modified:** `packages/strategy-oracle-tactical/src/{emit,index,tactical.test}.ts`
+- **Verification:** Six focused Vitest tests and the package TypeScript build pass; tests do not execute emitted code.
+- **Committed in:** `24cf671b`
+
+**Total deviations:** 3 auto-fixed (Rule 1: 2; Rule 3: 1). No scope expansion or package installation occurred.
 
 ## Known Stubs
 
-Main integration check found that the handwritten source in `emit.ts` does not include the package's actual bounded-search controller. Its emitted selector uses a greedy nearest-target ranking while advertising the beam algorithm. The closure check also rejects named capabilities but does not resolve free identifiers. These are same-plan implementation gaps, not grounds for claiming completion from the four passing host-controller/packet tests. Correction is queued after the teacher's shared-checkout write window: compile the exact leaf-owned controller/helper closure and prove it structurally without executing generated source. Independent review remains pending.
+None. The correction replaces the handwritten emitted surrogate with a static bundle of the leaf's real scoring, bounded-search, selector, and response modules. Candidate source remains intentionally data-only until existing later supervision.
 
 ## Issues Encountered
 
@@ -132,9 +141,9 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 
-Plan 05 can ingest the exact `emitTacticalFactoryPacket` export after it wires all leaf packages. These unit mechanics establish implementation readiness only; they do not claim independent-oracle evidence, actual candidate admission, model participation, calibration, Match execution, league readiness, or empirical success.
+Plan 05 can ingest the exact `emitTacticalFactoryPacket` export after it wires all leaf packages. The remaining phase requirement status is intentionally contributed/implementation-only pending combined-wave integration, static boundary review, and later supervised source behavior verification. Nothing here claims independent-oracle evidence, actual candidate admission, model participation, calibration, Match execution, league readiness, or empirical success.
 
 ## Self-Check: PASSED
 
 - Confirmed all eight tactical package source/config artifacts and this summary exist.
-- Confirmed task commits `eea1fa2f`, `98f217b7`, and `09aecee0` exist in git history.
+- Confirmed task commits `eea1fa2f`, `98f217b7`, `09aecee0`, and `24cf671b` exist in git history.
