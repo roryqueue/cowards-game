@@ -152,7 +152,7 @@ Commitment-secret ingress is only `<absolute-local-seal-root>/input/commitment-s
 Starting competitive gates to calibrate and precommit:
 
 - Zero accepted runtime violations, system failures, information-boundary violations, or private-data leaks.
-- Source below 64KB, preferably below 48KB, and direct execution targeting less than 5ms p99 under a fixed benchmark.
+- Source below 64KB, preferably below 48KB, and direct execution originally targeting less than 5ms p99 under a fixed benchmark. The operator-approved pre-search calibration of2026-09-13 sets selection p99<20ms and SoldierBrain p99<5ms for one fresh Phase263 bounded attempt, with every other limit unchanged; see263-TIMING-CALIBRATION.md. Historical failures are not reclassified.
 - At least 12 league Strategies across six behavioral families and five genuinely independent planner cores.
 - At least three structurally and behaviorally distinct finalists.
 - Two consecutive response iterations exceeding 55% Set score against the preceding frozen mixture on untouched conditions.

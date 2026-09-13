@@ -30,3 +30,7 @@ The user requested strong recommendations for every phase in one batch and asked
 ## Deferred Ideas
 
 - Factory scale, response oracles, league execution, formation artifacts, and production changes remain outside Phase 263.
+
+## Prospective timing calibration — 2026-09-13
+
+After all three approved retries failed the original selection-speed gate, the recommendation was selection p99<20ms, unchanged SoldierBrain<5ms and every other bound, followed by one fresh bounded attempt with Matches conditional on validation and timing passing. User response: **yes**. The approved decision is recorded in CONTEXT.md and263-TIMING-CALIBRATION.md. Previous runs remain failed under their original contract; no competitive/formation outcome informed this pre-search calibration.

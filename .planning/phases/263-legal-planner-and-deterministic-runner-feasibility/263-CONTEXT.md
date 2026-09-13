@@ -1,7 +1,9 @@
 # Phase 263: Legal Planner and Deterministic Runner Feasibility - Context
 
 **Gathered:** 2026-07-27
-**Status:** Discussion complete; Phase 262 ADMIT-03 satisfied and independently verified (31c0bb1c); research complete, planning in progress. Execution follows checked Phase 263 plans.
+**Status:** Phase262 complete; Phase263 implementation exists and empirical verification remains incomplete. On2026-09-13 the operator approved the prospective timing calibration and one fresh bounded attempt in263-TIMING-CALIBRATION.md. Older failed allocations stay consumed.
+
+**Approved exception to historical D-14/D-15:** selection p99<20ms, SoldierBrain p99<5ms, every other limit unchanged. This applies only prospectively through the fresh protocol and run; it does not reclassify prior failures or permit unbounded retries. See263-TIMING-CALIBRATION.md for the exact one-run plan. Earlier no-relaxation statements below still govern all other limits and unauthorized changes.
 
 <domain>
 ## Phase Boundary

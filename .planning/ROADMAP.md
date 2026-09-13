@@ -872,7 +872,7 @@ Plans:
   4. The private offline lab has an executable one-way dependency graph into canonical spec, engine, replay helpers, and supervised runtime adapters while production packages, apps, images, routes, generated contracts, and deployment manifests cannot import it; every research Match advances through the exact selected `MATCH_KERNEL` with no copied resolver, alternate legality, second transition loop, or profile-specific transition code.
   5. One non-secret command pre-enumerates stable task identities and domain-separated streams, validates strict bounded artifacts, and reproduces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume with complete coverage, atomic publication, and tamper detection.
 
-**Plans:** 5/7 implementation plans accepted; Plan06 terminal non-pass; Plan07 verification recorded with gaps. All3approved fresh attempts are exhausted; final selection p99=14.171262ms fails strict<5ms despite256validation passes, clean source review and62integration/51final source tests. Zero Matches, complete cleanup. A fresh admission contract requires an operator decision; Phase263 remains incomplete and Phase264 gated.
+**Plans:** 5/7 implementation plans accepted; previous Plan06 runs remain non-pass and Plan07 verification records gaps. Operator-approved2026-09-13 prospective calibration sets selection p99<20ms, unchanged brain<5ms and every other bound, plus exactly one fresh bounded attempt under263-TIMING-CALIBRATION.md. Source review and actual validation/timing precede conditional24Matches. No pass presumed; Phase263 remains incomplete and Phase264 gated.
 
 Plans:
 
@@ -1004,7 +1004,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
-| 263. Legal Planner and Deterministic Runner Feasibility | 5/7 | Blocked: speed gate; approved envelope exhausted |  |
+| 263. Legal Planner and Deterministic Runner Feasibility | 5/7 | Approved prospective timing calibration; one fresh bounded attempt |  |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 0/TBD | Discussion complete; awaits Phase263 | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |

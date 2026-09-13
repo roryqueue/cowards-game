@@ -1,5 +1,9 @@
 # Project Research Summary
 
+## Current pre-search calibration — 2026-09-13
+
+Phase262 subsequently passed its approved Plan203 continuation; older admission snapshots below are historical. Phase263's four historical runs (one original and three envelope attempts) remain non-pass. The operator now approves selection p99<20ms and unchanged SoldierBrain<5ms, preserving every other bound, followed by exactly one fresh bounded attempt with Matches only after validation/timing pass. See263-TIMING-CALIBRATION.md. This is a prospective pre-search decision, not retroactive evidence or authorization for factory/league scale, formations, holdout, public/counting or production.
+
 ## Active D-34L lean admission contract — 2026-09-01
 
 The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.

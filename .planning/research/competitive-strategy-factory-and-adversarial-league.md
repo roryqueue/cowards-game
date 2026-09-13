@@ -107,7 +107,7 @@ Deployable Strategy source is capped at 64KB and must be synchronous, determinis
 
 Offline evolution, self-play, search, model-assisted coding, opening-book generation, and teacher training are allowed only when their result is distilled to legal deterministic source such as decision trees, integer scorers, tables, formulas, or explicit control flow.
 
-The written spec and current runtime enforcement disagree on time budgets. Final targets must be fixed only after the integrity milestone establishes one contract. Until then, design for a fixed deterministic node budget and target less than 5ms p99 in direct execution, leaving substantial headroom.
+The written spec and current runtime enforcement disagree on time budgets. Final targets must be fixed only after the integrity milestone establishes one contract. The original design target was less than5ms p99. Prospective operator-approved calibration2026-09-13 uses selection p99<20ms and SoldierBrain p99<5ms, preserving deterministic node and runtime budgets;263-TIMING-CALIBRATION.md governs one fresh bounded attempt, not retroactive credit.
 
 ## First competitive controller
 
@@ -286,7 +286,7 @@ These are starting thresholds to precommit during planning, not current results:
 - forced tactic, defense, legality, determinism, and hostile-input suites pass;
 - zero runtime violations, system failures, or private-state leaks in accepted evidence;
 - emitted source is preferably below 48KB and always below the canonical 64KB cap;
-- direct-call p99 is below 5ms under a fixed benchmark profile;
+- direct-call p99 meets the pre-search frozen per-method targets under a fixed benchmark profile (approved2026-09-13: selection<20ms, SoldierBrain<5ms; historical5ms failures remain failures);
 - at least three finalists are structurally and behaviorally distinct;
 - two consecutive response iterations exceed 55% Set score against the previous frozen meta-mixture on untouched conditions;
 - at least one deployable pure Strategy exceeds 60% against an independent probe field;

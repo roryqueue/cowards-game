@@ -6,11 +6,11 @@ current_phase: 263
 current_phase_name: legal-planner-and-deterministic-runner-feasibility
 current_plan: 6
 total_plans_in_phase: 7
-status: blocked
-stopped_at: Phase263 three-attempt envelope exhausted; operator decision required on next bounded admission contract
-last_updated: "2026-09-13T17:19:13Z"
+status: in_progress
+stopped_at: Phase263 approved prospective timing calibration; source review then one fresh bounded run
+last_updated: "2026-09-13T21:09:10Z"
 last_activity: 2026-09-13
-last_activity_desc: Retry3 independently verified non-pass at14.171262ms selection;256validation passed, zero Matches; no attempts remain
+last_activity_desc: Operator approved selection<20ms with unchanged brain<5ms and one fresh bounded attempt; all historical non-pass results preserved
 progress:
   total_phases: 9
   completed_phases: 1
@@ -26,6 +26,8 @@ progress:
 Resumed the source-only post-gate repair and independent verification. The operator requested efficient autonomous continuation and smaller-model subagents. A focused Terra reviewer checks the isolated two-commit caching/reporting fix; a Luna verifier closes only the safe injected-failure uncertainty. Both are forbidden from new empirical source runs. Main and origin/main were f7a8a0c0 at resume; original receipt/manifest/consumption bytes and36locks are unchanged. No prior failed agent is assumed to have completed its unfinished review. Do not advance Phase264 from summary counts: actual Phase263 verification remains gaps_found.
 
 ## Current Phase263 execution
+
+**Current authority after operator yes,2026-09-13:**263-TIMING-CALIBRATION.md approves selection p99<20ms, unchanged SoldierBrain<5ms and every other bound, then exactly one fresh bounded attempt. Source/protocol boundary tests and independent review precede fresh manifest preparation. Validation and both timing gates must pass before the conditional24Matches. No prior allocation is reused, no failure reclassified, no new numbered plan or literal checkpoint. One fresh attempt is approved and not yet started. Phase263 remains incomplete; Phase264 needs full actual pass. Earlier exhausted-envelope snapshots below are historical.
 
 **Authoritative final update2026-09-13:** all3approved attempts are consumed. Final candidatebca54da1 (31725bytes) passes actual256-case validation,62integration/51final source tests, package types and clean independent review. Final2200-call timing gives selection p99=14.171262ms (fails strict<5ms), SoldierBrain=1.732708ms (passes). Zero Matches, no uncertain calls, complete cleanup; main read-only --verify and independent retained-evidence audit agree. Verification remains gaps_found8/11, with PLAN-06 blocked and FACT-02/03/04 empirical work unexecuted. Phase262 remains complete; Phase264 onward, formation, archive/tag remain gated. All prior bytes/36locks are preserved.
 
