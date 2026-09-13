@@ -157,7 +157,7 @@ describe("hostile private candidate admission", () => {
   })
 
   it("rejects detached or uninvoked candidate providers and fabricated receipts", async () => {
-    const { admission } = authorized()
+    const { admission, proposal, validation } = authorized()
     let invoked = false
     const detached = providerFor(admission)
     detached.invoke = async () => { invoked = true; return {} as never }
@@ -181,7 +181,7 @@ describe("hostile private candidate admission", () => {
   })
 
   it("classifies only the admitted candidate's violation while preserving any Match system failure", async () => {
-    const { admission } = authorized()
+    const { admission, proposal, validation } = authorized()
     const successProvider = providerFor(admission)
     const opponentIdentity = { ...successProvider.identity, revisionId: "opponent", sourceRoot: `sha256:${"b".repeat(64)}` }
     const opponentViolation = { identity: opponentIdentity, result: { ok: false, violation: { code: "OPPONENT_INVALID" } } } as never
@@ -191,7 +191,14 @@ describe("hostile private candidate admission", () => {
       const evidence = await candidate.invoke({} as never, candidate.identity)
       return { kind: "completed", privacy: "private_offline", result: {}, transitions: [], accounting: [evidence, opponentViolation] } as never
     })
-    expect(mapFactorySupervision(opponentOnlyReceipt).disposition).toBe("accepted")
+    const opponentOnlyOutcome = mapFactorySupervision(opponentOnlyReceipt)
+    expect(opponentOnlyOutcome.candidateDisposition).toBe("accepted")
+    expect(opponentOnlyOutcome.disposition).toBe("player_violation")
+    expect(opponentOnlyOutcome.scoredAsGameplay).toBe(false)
+    expect(() => finalizeFactoryCandidate({
+      receipt: opponentOnlyReceipt,
+      candidate: factoryCandidateFixture(proposal, validation, opponentOnlyReceipt.root),
+    })).toThrow("FACTORY_ADMISSION")
 
     const candidateViolation = await superviseFactory(admission, "candidate", { match: matchParticipants, providers: { candidate: providerFor(admission, { ok: false, violation: { code: "CANDIDATE_INVALID" } }) } }, runCandidateOnce)
     expect(mapFactorySupervision(candidateViolation).disposition).toBe("player_violation")

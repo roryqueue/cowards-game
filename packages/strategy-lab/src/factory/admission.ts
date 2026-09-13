@@ -88,15 +88,21 @@ const requireBoundIdentity = (identity: FactorySupervisionProvider["identity"], 
 }
 const receiptRoot = (admission: FactoryAdmission, candidatePlayerId: string, candidateIdentity: FactorySupervisionProvider["identity"], execution: LabMatchExecution) =>
   labRoot("factory-supervision-receipt-v1", { authorizationRoot: admission.authorizationRoot, candidatePlayerId, candidateIdentity, execution })
-export const mapFactorySupervision = (receipt: FactorySupervisionReceipt): Readonly<{ disposition: Extract<FactoryDisposition, "accepted" | "player_violation" | "system_failure">; scoredAsGameplay: false; evidenceRoot: LabRoot }> => {
+export const mapFactorySupervision = (receipt: FactorySupervisionReceipt): Readonly<{
+  disposition: Extract<FactoryDisposition, "accepted" | "player_violation" | "system_failure">;
+  candidateDisposition: Extract<FactoryDisposition, "accepted" | "player_violation" | "system_failure">;
+  scoredAsGameplay: false; evidenceRoot: LabRoot;
+}> => {
   if (!issuedSupervisionReceipts.has(receipt) || receipt.root !== receiptRoot(receipt.admission, receipt.candidatePlayerId, receipt.candidateIdentity, receipt.execution)) return fail()
   const execution = receipt.execution
   const candidateAccounting = execution.accounting.filter((entry) => same(entry.identity, receipt.candidateIdentity))
   if (!candidateAccounting.length) return fail()
   const anySystemFailure = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result)
+  const anyPlayerViolation = execution.accounting.some((entry) => !entry.result.ok && !("systemFailure" in entry.result))
   const candidateViolation = candidateAccounting.some((entry) => !entry.result.ok && !("systemFailure" in entry.result))
-  const disposition = anySystemFailure ? "system_failure" as const : candidateViolation ? "player_violation" as const : "accepted" as const
-  return freezeLabValue({ disposition, scoredAsGameplay: false as const, evidenceRoot: labRoot("factory-supervision-evidence-v1", { receiptRoot: receipt.root, candidatePlayerId: receipt.candidatePlayerId, execution }) })
+  const disposition = anySystemFailure ? "system_failure" as const : anyPlayerViolation ? "player_violation" as const : "accepted" as const
+  const candidateDisposition = anySystemFailure ? "system_failure" as const : candidateViolation ? "player_violation" as const : "accepted" as const
+  return freezeLabValue({ disposition, candidateDisposition, scoredAsGameplay: false as const, evidenceRoot: labRoot("factory-supervision-evidence-v1", { receiptRoot: receipt.root, candidatePlayerId: receipt.candidatePlayerId, execution }) })
 }
 /**
  * The only execution seam binds the admitted source to the selected trusted
