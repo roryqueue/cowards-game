@@ -9,12 +9,13 @@ export const compareAssignmentCandidates = (a: AssignmentCandidate, b: Assignmen
   return b.soft - a.soft || compareIds(a.key,b.key)
 }
 const objectiveKey = (o: MissionObjective) => `${o.soldierId}/${String(MISSION_KINDS.indexOf(o.kind)).padStart(2,"0")}/${o.goal.x}/${o.goal.y}`
+const assignmentMin = Math.min
 const assignmentFacts = (o: MissionObjective,input: StrategyInputV119) => {
   const self = input.mySoldiers.find(s => s.id === o.soldierId)
   if (!self?.position || self.status !== "ACTIVE") return null
   const enemies = input.enemySoldiers.filter(s => s.status === "ACTIVE" && s.position)
   return {
-    self,nearest: enemies.reduce((d,s) => Math.min(d,distance(self.position!,s.position!)),99),
+    self,nearest: enemies.reduce((d,s) => assignmentMin(d,distance(self.position!,s.position!)),99),
     deadline: input.roundNumber === 4 && edgeDistance(self.position,input) === 0,
     blocked: input.board.terrainStones.some(p => samePoint(p,o.goal)) || input.board.soldiers.some(s => s.id !== o.soldierId && s.status !== "FALLEN" && samePoint(s.position,o.goal)),
     status: evaluateMission(o,input).status,travel: distance(self.position,o.goal),
@@ -24,90 +25,69 @@ const assignmentFacts = (o: MissionObjective,input: StrategyInputV119) => {
 type AssignmentFacts = ReturnType<typeof assignmentFacts>
 type AssignmentContribution = { facts: AssignmentFacts; key: string; hard0: number; hard1: number; hard3: number; softFirst: number; softSecond: number }
 type AssignmentCache = { objectives: MissionObjective[]; contributions: AssignmentContribution[]; omitted: { id: string; hard0: number; hard2: number }[] }
+type AssignmentRecord = { objective: MissionObjective; soldierId: string; key: string; contribution: AssignmentContribution }
+
+const scoreAssignmentRecords = (orders: AssignmentRecord[], input: StrategyInputV119, cache: AssignmentCache): AssignmentCandidate => {
+  const firstHard = [0,0,0,0], secondHard = [0,0,0,0], selected = new Set(orders.map(o => o.soldierId)); let firstSoft = 0, secondSoft = 0
+  for (const [slot,record] of orders.entries()) {
+    const o = record.objective, contribution = record.contribution, facts = contribution.facts
+    if (!facts) { firstHard[1]!--; secondHard[1]!--; continue }
+    firstHard[0]! += contribution.hard0 - (facts.deadline ? slot : 0); secondHard[0]! += contribution.hard0 - (facts.deadline ? slot : 0)
+    firstHard[1]! += contribution.hard1; secondHard[1]! += contribution.hard1; firstHard[3]! += contribution.hard3; secondHard[3]! += contribution.hard3
+    firstSoft += contribution.softFirst; secondSoft += contribution.softSecond
+    if (facts.nearest <= 1 && !["recovery","evacuation","rear-entry","edge-push"].includes(o.kind)) { firstHard[2]! -= 1 + slot; secondHard[2]! -= 2 + slot }
+    if (facts.nearest <= 1) { firstHard[2]! -= slot; secondHard[2]! -= 1 + slot }
+    if (o.kind === "pincer" && !selected.has(o.partnerId)) { firstHard[3]!--; secondHard[3]!-- }
+    for (let i = 0; i < slot; i++) if (samePoint(orders[i]!.objective.goal,o.goal)) { firstHard[3]!--; secondHard[3]!--; break }
+  }
+  for (const penalty of cache.omitted) if (!selected.has(penalty.id)) { firstHard[0]! += penalty.hard0; secondHard[0]! += penalty.hard0; firstHard[2]! += penalty.hard2; secondHard[2]! += penalty.hard2 }
+  const key = orders.map(record => record.key).join("|"), first = { hard: firstHard,soft: firstSoft,key }, second = { hard: secondHard,soft: secondSoft,key }
+  return compareAssignmentCandidates(first,second) > 0 ? first : second
+}
 
 /** Heuristic obligations only. Neither hypothetical initiative branch changes the board
  * or claims an Action legal; the canonical kernel alone adjudicates execution. */
-const scoreAssignmentInternal = (orders: MissionObjective[], input: StrategyInputV119, entrantFirst: boolean, factsFor: (o: MissionObjective) => AssignmentFacts, keyFor: (o: MissionObjective) => string = objectiveKey, cache?: AssignmentCache): AssignmentCandidate => {
+export const scoreAssignment = (orders: MissionObjective[], input: StrategyInputV119, entrantFirst: boolean, factsFor: (o: MissionObjective) => AssignmentFacts = o => assignmentFacts(o,input)): AssignmentCandidate => {
   const hard = [0,0,0,0], selected = new Set(orders.map(o => o.soldierId))
   let soft = 0
-  for (const [slot,o] of orders.entries()) {
-    const objectiveIndex = cache ? cache.objectives.indexOf(o) : -1
-    const contribution = objectiveIndex >= 0 ? cache!.contributions[objectiveIndex]! : null
-    const facts = contribution?.facts ?? factsFor(o)
+  for (const [index,o] of orders.entries()) {
+    const facts = factsFor(o)
     if (!facts) { hard[1]! -= 1; continue }
     const { self,nearest,deadline,status,travel } = facts
     // Entrant-second and later slots expose threatened Soldiers to more intervening responses.
-    const delay = slot + (entrantFirst ? 0 : 1)
-    if (contribution) { hard[0]! += contribution.hard0 - (deadline ? slot : 0); hard[1]! += contribution.hard1; hard[3]! += contribution.hard3; soft += entrantFirst ? contribution.softFirst : contribution.softSecond }
-    else {
-      if (deadline && o.kind !== "evacuation") hard[0]! -= 10
-      if (deadline) hard[0]! -= slot
-      if (facts.blocked) hard[1]! -= 1
-      if (status === "failed" || status === "stale") hard[3]! -= 1
-      switch (o.kind) {
-        case "evacuation": soft += (deadline ? 80 : facts.edge < 2 ? 20 : -20) - travel; break
-        case "rear-entry": soft += 18 - travel * 2; break
-        case "edge-push": soft += 20 - (o.targetPosition ? edgeDistance(o.targetPosition,input) * 4 : 20) - travel; break
-        case "screen": soft += 10 - travel + (entrantFirst ? 2 : -2); break
-        case "anchor": soft += 6 - travel; break
-        case "graph-cut-stone": soft += facts.cut * 4 - travel - 12; break
-        case "reserve": soft += nearest > 4 ? 2 : -10; break
-        case "recovery": soft += self.facing !== o.goalFacing ? 12 : -8; break
-        case "bait": soft += 8 - travel - (entrantFirst ? 0 : 6); break
-        case "pincer": soft += 24 - travel * 2; break
-      }
-    }
+    const delay = index + (entrantFirst ? 0 : 1)
+    if (deadline && o.kind !== "evacuation") hard[0]! -= 10
+    if (deadline) hard[0]! -= index
     if (nearest <= 1 && !["recovery","evacuation","rear-entry","edge-push"].includes(o.kind)) hard[2]! -= 1 + delay
     if (nearest <= 1) hard[2]! -= delay
+    if (facts.blocked) hard[1]! -= 1
+    if (status === "failed" || status === "stale") hard[3]! -= 1
     if (o.kind === "pincer" && !selected.has(o.partnerId)) hard[3]! -= 1
-    if (orders.slice(0,slot).some(previous => samePoint(previous.goal,o.goal))) hard[3]! -= 1
+    if (orders.slice(0,index).some(previous => samePoint(previous.goal,o.goal))) hard[3]! -= 1
+    switch (o.kind) {
+      case "evacuation": soft += (deadline ? 80 : facts.edge < 2 ? 20 : -20) - travel; break
+      case "rear-entry": soft += 18 - travel * 2; break
+      case "edge-push": soft += 20 - (o.targetPosition ? edgeDistance(o.targetPosition,input) * 4 : 20) - travel; break
+      case "screen": soft += 10 - travel + (entrantFirst ? 2 : -2); break
+      case "anchor": soft += 6 - travel; break
+      case "graph-cut-stone": soft += facts.cut * 4 - travel - 12; break
+      case "reserve": soft += nearest > 4 ? 2 : -10; break
+      case "recovery": soft += self.facing !== o.goalFacing ? 12 : -8; break
+      case "bait": soft += 8 - travel - (entrantFirst ? 0 : 6); break
+      case "pincer": soft += 24 - travel * 2; break
+    }
   }
   for (const self of input.mySoldiers) if (self.status === "ACTIVE" && self.position && !selected.has(self.id)) {
-    if (cache) {
-      const penalty = cache.omitted.find(value => value.id === self.id)
-      if (penalty) { hard[0]! += penalty.hard0; hard[2]! += penalty.hard2 }
-      continue
-    }
     if (input.roundNumber === 4 && edgeDistance(self.position,input) === 0) hard[0]! -= 10
     if (input.enemySoldiers.some(s => s.status === "ACTIVE" && s.position && distance(self.position!,s.position) <= 1)) hard[2]! -= 2
   }
-  return { hard, soft, key: orders.map(o => { const objectiveIndex = cache ? cache.objectives.indexOf(o) : -1; return objectiveIndex >= 0 ? cache!.contributions[objectiveIndex]!.key : keyFor(o) }).join("|") }
-}
-export const scoreAssignment = (orders: MissionObjective[], input: StrategyInputV119, entrantFirst: boolean, factsFor: (o: MissionObjective) => AssignmentFacts = o => assignmentFacts(o,input)): AssignmentCandidate => scoreAssignmentInternal(orders,input,entrantFirst,factsFor)
-const robustScore = (orders: MissionObjective[], input: StrategyInputV119, factsFor: (o: MissionObjective) => AssignmentFacts, cache?: AssignmentCache) => {
-  if (cache) {
-    const firstHard = [0,0,0,0], secondHard = [0,0,0,0], selected = new Set(orders.map(o => o.soldierId)); let firstSoft = 0, secondSoft = 0
-    for (const [slot,o] of orders.entries()) {
-      const objectiveIndex = cache.objectives.indexOf(o), contribution = cache.contributions[objectiveIndex]!
-      const facts = contribution.facts, delayFirst = slot, delaySecond = slot + 1
-      if (!facts) { firstHard[1]!--; secondHard[1]!--; continue }
-      firstHard[0]! += contribution.hard0 - (facts.deadline ? slot : 0); secondHard[0]! += contribution.hard0 - (facts.deadline ? slot : 0)
-      firstHard[1]! += contribution.hard1; secondHard[1]! += contribution.hard1; firstHard[3]! += contribution.hard3; secondHard[3]! += contribution.hard3
-      firstSoft += contribution.softFirst; secondSoft += contribution.softSecond
-      const threatened = facts.nearest <= 1 && !["recovery","evacuation","rear-entry","edge-push"].includes(o.kind)
-      if (threatened) { firstHard[2]! -= 1 + delayFirst; secondHard[2]! -= 1 + delaySecond }
-      if (facts.nearest <= 1) { firstHard[2]! -= delayFirst; secondHard[2]! -= delaySecond }
-      if (o.kind === "pincer" && !selected.has(o.partnerId)) { firstHard[3]!--; secondHard[3]!-- }
-      if (orders.slice(0,slot).some(previous => samePoint(previous.goal,o.goal))) { firstHard[3]!--; secondHard[3]!-- }
-    }
-    for (const self of input.mySoldiers) if (self.status === "ACTIVE" && self.position && !selected.has(self.id)) {
-      const penalty = cache.omitted.find(value => value.id === self.id)
-      if (penalty) { firstHard[0]! += penalty.hard0; secondHard[0]! += penalty.hard0; firstHard[2]! += penalty.hard2; secondHard[2]! += penalty.hard2 }
-    }
-    const key = orders.map(o => cache.contributions[cache.objectives.indexOf(o)]!.key).join("|")
-    const first = { hard: firstHard,soft: firstSoft,key }, second = { hard: secondHard,soft: secondSoft,key }
-    return compareAssignmentCandidates(first,second) > 0 ? first : second
-  }
-  const first = scoreAssignmentInternal(orders,input,true,factsFor,objectiveKey,cache)
-  const second = scoreAssignmentInternal(orders,input,false,factsFor,objectiveKey,cache)
-  // Compare full lexicographic vectors, not independent components from impossible mixed worlds.
-  return compareAssignmentCandidates(first,second) > 0 ? first : second
+  return { hard, soft, key: orders.map(objectiveKey).join("|") }
 }
 
 export const selectPlannerActivations = (input: StrategyInputV119, budget: AssignmentBudget = { maxExpansions: 256 }): StrategyResult => {
   if (!Number.isSafeInteger(budget.maxExpansions) || budget.maxExpansions < 0 || budget.maxExpansions > 256) throw new TypeError("ASSIGNMENT_BUDGET")
   const active = input.mySoldiers.filter(s => s.status === "ACTIVE" && s.position).sort((a,b) => compareIds(a.id,b.id))
-  const count = Math.min(input.activationCount,active.length)
+  const count = assignmentMin(input.activationCount,active.length)
   // The observation and objectives are read-only for this call. Identity, never
   // the abbreviated sorting key, owns cached facts; no state survives a call.
   const reserves: (MissionObjective | undefined)[] = []
@@ -156,20 +136,46 @@ export const selectPlannerActivations = (input: StrategyInputV119, budget: Assig
   }
   for (const objective of fallback) cacheObjective(objective)
   for (const soldierOptions of options) for (const objective of soldierOptions) cacheObjective(objective)
-  let best = fallback, bestScore = robustScore(best,input,() => null,cache), expansions = 0
-  const complete = (prefix: MissionObjective[]) => [...prefix, ...active.filter(s => !prefix.some(o => o.soldierId === s.id)).slice(0,count-prefix.length).map(reserveFor)]
-  let beam: MissionObjective[][] = [[]]
+  const records = cache.objectives.map((objective,index) => ({ objective,soldierId: objective.soldierId,key: cache.contributions[index]!.key,contribution: cache.contributions[index]! }))
+  const recordFor = (objective: MissionObjective) => records[cache.objectives.indexOf(objective)]!
+  const recordOptions = options.map(values => values.map(recordFor)), recordFallback = fallback.map(recordFor)
+  const fallbackRecordFor = (index: number): AssignmentRecord => {
+    const existing = recordFallback[index]
+    if (existing) return existing
+    // Only unusual duplicate-ID inputs can need a filler beyond the first
+    // `count` Soldiers. Keep the original lazy validation/throw behavior.
+    const objective = reserveFor(active[index]!)
+    cacheObjective(objective)
+    const contribution = cache.contributions[cache.objectives.indexOf(objective)]!
+    return recordFallback[index] = { objective,soldierId: objective.soldierId,key: contribution.key,contribution }
+  }
+  let best = recordFallback.slice(), bestScore = scoreAssignmentRecords(best,input,cache), expansions = 0
+  const complete = (prefix: AssignmentRecord[]) => {
+    const selected = new Set(prefix.map(record => record.soldierId)), result = prefix.slice()
+    for (let index = 0; index < active.length && result.length < count; index++) if (!selected.has(active[index]!.id)) result.push(fallbackRecordFor(index))
+    return result
+  }
+  let beam: AssignmentRecord[][] = [[]]
   for (let depth = 0; depth < count && expansions < budget.maxExpansions; depth++) {
-    const next: { orders: MissionObjective[]; score: AssignmentCandidate }[] = []
-    for (const prefix of beam) for (const soldierOptions of options) for (const objective of soldierOptions) {
-      if (prefix.some(o => o.soldierId === objective.soldierId)) continue
+    const next: { orders: AssignmentRecord[]; score: AssignmentCandidate }[] = []
+    for (const prefix of beam) for (const soldierOptions of recordOptions) for (const record of soldierOptions) {
+      if (prefix.some(o => o.soldierId === record.soldierId)) continue
       if (expansions >= budget.maxExpansions) break
       expansions++
-      const orders = [...prefix,objective], full = complete(orders), score = robustScore(full,input,() => null,cache)
+      const orders = [...prefix,record], full = complete(orders), score = scoreAssignmentRecords(full,input,cache)
       if (compareAssignmentCandidates(score,bestScore) < 0) { best = full; bestScore = score }
-      next.push({ orders,score })
+      // Stable top-four selection is exactly stable sort followed by slice(0,4).
+      // Equal candidates go after earlier arrivals; every expansion is still
+      // scored and can update the global best, even when it misses the beam.
+      let insertion = 0
+      while (insertion < next.length && compareAssignmentCandidates(next[insertion]!.score,score) <= 0) insertion++
+      if (insertion < 4) {
+        next.splice(insertion,0,{ orders,score })
+        if (next.length > 4) next.pop()
+      }
     }
-    beam = next.sort((a,b) => compareAssignmentCandidates(a.score,b.score)).slice(0,4).map(c => c.orders)
+    beam = next.map(c => c.orders)
   }
-  return { activationOrders: best.map(objective => ({ soldierId: objective.soldierId, objective })), strategyMemory: { missions: best, planner: { schemaVersion: "assignment-v1", expansions, reserved: count, hypothesisEvaluations: 2 * (1 + expansions), hypotheses: ["entrant-first","entrant-second"], beam: 4 } } }
+  const missions = best.map(record => record.objective)
+  return { activationOrders: missions.map(objective => ({ soldierId: objective.soldierId, objective })), strategyMemory: { missions, planner: { schemaVersion: "assignment-v1", expansions, reserved: count, hypothesisEvaluations: 2 * (1 + expansions), hypotheses: ["entrant-first","entrant-second"], beam: 4 } } }
 }

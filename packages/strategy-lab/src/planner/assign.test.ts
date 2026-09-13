@@ -113,6 +113,19 @@ describe("ordered dual-initiative beam", () => {
       }
     }
   }, 60000)
+  it("matches frozen reference across every partial-beam budget on fixed complex observations", () => {
+    const corpus = buildFeasibilityCorpus().selectActivations
+    const observations = [
+      corpus.find(c => c.family === "positive")!.input,
+      corpus.find(c => c.family === "memory")!.input,
+    ]
+    for (const original of observations) {
+      const input = structuredClone(original)
+      input.activationCount = 4
+      input.strategyMemory = structuredClone(input.strategyMemory)
+      for (let maxExpansions = 0; maxExpansions <= 256; maxExpansions++) compareFrozen(input, maxExpansions)
+    }
+  }, 60000)
   it("does not alias objectives sharing an abbreviated key or leak facts between calls", () => {
     const f=missionFixture(),input=f.input()
     const a=createMission("recovery",input,f.self.id)!,b={...a,goalFacing:"LEFT" as const}

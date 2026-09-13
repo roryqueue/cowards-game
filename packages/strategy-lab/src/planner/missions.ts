@@ -8,13 +8,17 @@ export type MissionObjective = {
   issuedPhase: number; issuedRound: number; expiresPhase: number
   goal: Point; goalFacing: Direction; targetId: string; targetPosition: Point | null; partnerId: string
 }
-export const distance = (a: Point, b: Point) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+// Immutable references to the already-sanitized deterministic intrinsics. These
+// contain no observation or search state; the runtime's capability policy is
+// unchanged. Avoid repeating guarded property lookup/binding in geometry loops.
+const missionAbs = Math.abs, missionMin = Math.min, missionFloor = Math.floor
+export const distance = (a: Point, b: Point) => missionAbs(a.x - b.x) + missionAbs(a.y - b.y)
 export const samePoint = (a: Point | null, b: Point | null) => a !== null && b !== null && a.x === b.x && a.y === b.y
 export const compareIds = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0
 export const inside = (p: Point, input: StrategyInputV119) => p.x >= input.board.bounds.minX && p.x <= input.board.bounds.maxX && p.y >= input.board.bounds.minY && p.y <= input.board.bounds.maxY
-export const edgeDistance = (p: Point, input: StrategyInputV119) => Math.min(p.x - input.board.bounds.minX, input.board.bounds.maxX - p.x, p.y - input.board.bounds.minY, input.board.bounds.maxY - p.y)
+export const edgeDistance = (p: Point, input: StrategyInputV119) => missionMin(p.x - input.board.bounds.minX, input.board.bounds.maxX - p.x, p.y - input.board.bounds.minY, input.board.bounds.maxY - p.y)
 const vector = (d: Direction): Point => d === "UP" ? { x: 0, y: -1 } : d === "DOWN" ? { x: 0, y: 1 } : d === "LEFT" ? { x: -1, y: 0 } : { x: 1, y: 0 }
-const toward = (a: Point, b: Point): Direction => Math.abs(b.x - a.x) > Math.abs(b.y - a.y) ? b.x > a.x ? "RIGHT" : "LEFT" : b.y > a.y ? "DOWN" : "UP"
+const toward = (a: Point, b: Point): Direction => missionAbs(b.x - a.x) > missionAbs(b.y - a.y) ? b.x > a.x ? "RIGHT" : "LEFT" : b.y > a.y ? "DOWN" : "UP"
 
 /** Visible occupancy graph only; this scores a potential obstruction, never resolves an Action. */
 export const cutPreference = (p: Point, input: StrategyInputV119) => {
@@ -36,7 +40,7 @@ const missionContext = (input: StrategyInputV119, soldierId: string) => {
   const enemies = input.enemySoldiers.filter(s => s.status === "ACTIVE" && s.position).sort((a, b) => distance(p, a.position!) - distance(p, b.position!) || compareIds(a.id, b.id))
   const allies = input.mySoldiers.filter(s => s.id !== soldierId && s.status === "ACTIVE" && s.position).sort((a, b) => distance(p, a.position!) - distance(p, b.position!) || compareIds(a.id, b.id))
   const enemy = enemies[0], ally = allies[0]
-  const center = { x: Math.floor((bounds.minX + bounds.maxX) / 2), y: Math.floor((bounds.minY + bounds.maxY) / 2) }
+  const center = { x: missionFloor((bounds.minX + bounds.maxX) / 2), y: missionFloor((bounds.minY + bounds.maxY) / 2) }
   return { self, p, bounds, enemy, ally, center }
 }
 
@@ -52,7 +56,7 @@ const createMissionInContext = (kind: MissionKind, input: StrategyInputV119, con
       const edges = [{ gap: e.x - bounds.minX, x: e.x + 1, y: e.y }, { gap: bounds.maxX - e.x, x: e.x - 1, y: e.y }, { gap: e.y - bounds.minY, x: e.x, y: e.y + 1 }, { gap: bounds.maxY - e.y, x: e.x, y: e.y - 1 }].sort((a,b) => a.gap-b.gap || a.x-b.x || a.y-b.y)
       goal = { x: edges[0]!.x, y: edges[0]!.y }; goalFacing = toward(goal, e)
     } break
-    case "screen": if (!ally?.position || !enemy?.position) return null; target = ally; goal = { x: Math.floor((ally.position.x + enemy.position.x) / 2), y: Math.floor((ally.position.y + enemy.position.y) / 2) }; goalFacing = toward(goal, enemy.position); break
+    case "screen": if (!ally?.position || !enemy?.position) return null; target = ally; goal = { x: missionFloor((ally.position.x + enemy.position.x) / 2), y: missionFloor((ally.position.y + enemy.position.y) / 2) }; goalFacing = toward(goal, enemy.position); break
     case "anchor": goal = center; goalFacing = enemy?.position ? toward(center, enemy.position) : goalFacing; target = undefined; break
     case "graph-cut-stone": {
       const candidates = [p, { x: p.x - 1, y: p.y }, { x: p.x + 1, y: p.y }, { x: p.x, y: p.y - 1 }, { x: p.x, y: p.y + 1 }].filter(q => inside(q,input) && !input.board.terrainStones.some(t => samePoint(t,q)) && !input.board.soldiers.some(s => s.id !== self.id && s.status !== "FALLEN" && samePoint(s.position,q)))
