@@ -1,11 +1,11 @@
 ---
 phase: 263
 plans: [263-02,263-06,263-07]
-status: attempt_2_non_pass_repairing
+status: attempt_3_reserved
 approved: 2026-09-13
 operator_response: approved
 maximum_fresh_attempts: 3
-attempts_started: 2
+attempts_started: 3
 stop_on_first_full_pass: true
 original_run_consumed: true
 ---
@@ -30,7 +30,7 @@ The operator approved the immediately preceding proposal: **up to three fresh bo
 |---|---|---|---|
 | 1 | `263-feasibility-retry-1-manifest.json` | `.strategy-lab/phase263-feasibility-retry-1` | consumed: validation passed, selection timing non-pass, zero Matches |
 | 2 | `263-feasibility-retry-2-manifest.json` | `.strategy-lab/phase263-feasibility-retry-2` | consumed: validation passed, selection timing non-pass, zero Matches |
-| 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | unused |
+| 3 | `263-feasibility-retry-3-manifest.json` | `.strategy-lab/phase263-feasibility-retry-3` | reserved for sole prepare/run; final approved slot |
 
 The orchestrator reserves the next ordinal before its final preparation; it will not reuse a terminal/partially prepared destination. Every successful preparation gets exactly one --run invocation. Existing no-clobber manifest, consumed-marker and per-call/Match charge publication remain authoritative within each attempt. Cross-attempt accounting identifies units by envelope ordinal plus manifest/attempt root, not by a reused label alone. Every unused unit remains unused; no old Match capacity is rolled forward.
 
@@ -80,3 +80,7 @@ Selection remains slow even at activationCount1:300measured samples, median12.48
 - Benchmark result bytes: `sha256:9c15df9ad04c71b5e1a877c4fda2f849b0c1ad28f90ee3afb09f567400e7e355`.
 
 All earlier evidence remains immutable. The next candidate must receive new source review before the final approved attempt; no third-attempt pass is presumed and no fourth attempt is authorized.
+
+### Attempt3 reservation — 2026-09-13
+
+Final slot reserved over sourcebca54da1 after compact assignment records, stable top-four beam retention, original lazy fallback behavior, unchanged public scorer and immutable references to allowed sanitized math intrinsics. Candidate31725bytes, source `sha256:1ac048cc2f2cbd9c8df497fc56af18be2861adf24a8f33450744f603ba9d62ed`; execution `sha256:5e84325cf32960f25c8e2e06bec034e6ac0f6a956a8a713ff2ba4ac43d754eb2`. New independent three-file review263-RETRY-3-REVIEW.md is clean;62integration and51final source tests/package build passed, including all257budget differential coverage. Protocol, corpus, case inventory and owned observer roots remain identical. No observation-dependent work is hoisted outside the measured method; only constant references to permitted math functions are bound once. No runtime, gate, expansion, beam, rule, privacy or source-size bound changed. Docker29.4.0 remains available. Final source remains unmeasured at reservation. Stop on this attempt's terminal outcome; no fourth attempt is authorized.
