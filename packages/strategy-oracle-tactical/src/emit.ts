@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import * as ts from "typescript"
 import {
   deriveFactoryOraclePacketRoot,
   FactoryOraclePacketSchema,
   type FactoryOraclePacket,
 } from "../../strategy-lab/src/factory/index.js"
-import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, type LabRoot } from "../../strategy-lab/src/contracts.js"
+import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, labRoot, type LabRoot } from "../../strategy-lab/src/contracts.js"
 
 const SOURCE_BYTES = new TextEncoder()
 const ROOT = /^sha256:[0-9a-f]{64}$/u
@@ -29,14 +30,34 @@ export interface TacticalFactoryRequest {
   lineage: { predecessorRoot: LabRoot; correctionRoot: LabRoot | null; retryParentRoot: LabRoot | null }
 }
 
-const sourceModules = (source: string) => {
-  const ast = ts.createSourceFile("tactical-source.ts", source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS)
+const TACTICAL_SOURCE_MODULES = ["scoring.ts", "search.ts", "selector.ts"] as const
+type TacticalSourceModuleName = typeof TACTICAL_SOURCE_MODULES[number]
+export interface TacticalSourceModule { readonly name: TacticalSourceModuleName; readonly source: string }
+
+const validateEmittedSource = (source: string): string => {
+  const sourcePath = "tactical-source.js"
+  const ast = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.JS)
   const denied = new Set(["eval", "Function", "globalThis", "process", "require", "Date", "fetch", "WebAssembly", "constructor", "__proto__", "prototype", "random"])
+  const options: ts.CompilerOptions = { allowJs: true, checkJs: true, noLib: true, noResolve: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext }
+  const host = ts.createCompilerHost(options)
+  host.getSourceFile = (name) => name === sourcePath ? ast : undefined
+  host.fileExists = (name) => name === sourcePath
+  host.readFile = (name) => name === sourcePath ? source : undefined
+  const program = ts.createProgram([sourcePath], options, host)
+  const checker = program.getTypeChecker()
+  const globals = new Set(["Math", "Number", "String", "JSON", "Array", "Object", "Set", "TypeError", "undefined", "null"])
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || ts.isExportDeclaration(node) || ts.isAwaitExpression(node) || node.kind === ts.SyntaxKind.ImportKeyword || node.kind === ts.SyntaxKind.AsyncKeyword || node.kind === ts.SyntaxKind.ThisKeyword) fail("SOURCE_CAPABILITY")
-    if (ts.isIdentifier(node) && denied.has(node.text)) fail("SOURCE_CAPABILITY")
+    if (ts.isIdentifier(node)) {
+      if (denied.has(node.text)) fail("SOURCE_CAPABILITY")
+      const parent = node.parent
+      const propertyName = (ts.isPropertyAccessExpression(parent) && parent.name === node) || ((ts.isPropertyAssignment(parent) || ts.isMethodDeclaration(parent)) && parent.name === node)
+      if (!propertyName && !globals.has(node.text) && checker.getSymbolAtLocation(node) === undefined) fail("SOURCE_FREE_IDENTIFIER")
+    }
+    if (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression) && denied.has(node.argumentExpression.text)) fail("SOURCE_CAPABILITY")
     ts.forEachChild(node, visit)
   }
+  if (program.getSyntacticDiagnostics().length > 0) fail("SOURCE_SYNTAX")
   visit(ast)
   const output = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, removeComments: true },
@@ -49,55 +70,63 @@ const sourceModules = (source: string) => {
 /** Static closure checking only; emitted source remains data and is never imported or executed here. */
 export const assertTacticalSourceClosure = (source: string): void => {
   if (typeof source !== "string" || source.length === 0 || source.length > 65536) fail("SOURCE_SIZE")
-  const compiled = sourceModules(source)
+  const compiled = validateEmittedSource(source)
   if (!compiled.includes("export default") || /\b(?:import|eval|Function|require|process|fetch|Date|Math\.random)\b/u.test(compiled)) fail("SOURCE_CLOSURE")
 }
 
-/**
- * The leaf's closed student source mirrors the tactical selector's legal-input
- * scoring shape. It contains no dependency on the lab, engine, runtime, or
- * another oracle and is intentionally returned as hostile data only.
- */
-export const emitTacticalSource = (): string => {
-  const source = `
-const tacticalDirections = ["UP", "RIGHT", "DOWN", "LEFT"];
-const distance = (left, right) => Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
-const toward = (from, to, fallback) => {
-  const horizontal = to.x - from.x, vertical = to.y - from.y;
-  if (Math.abs(horizontal) >= Math.abs(vertical) && horizontal !== 0) return horizontal > 0 ? "RIGHT" : "LEFT";
-  if (vertical !== 0) return vertical > 0 ? "DOWN" : "UP";
-  return fallback;
-};
-const selectActivations = (input) => {
-  const enemies = input.enemySoldiers.filter((soldier) => soldier.status === "ACTIVE" && soldier.position).sort((left, right) => left.id.localeCompare(right.id));
-  const active = input.mySoldiers.filter((soldier) => soldier.status === "ACTIVE" && soldier.position).map((soldier) => {
-    const closest = enemies.map((enemy) => ({ enemy, range: distance(soldier.position, enemy.position) })).sort((left, right) => left.range - right.range || left.enemy.id.localeCompare(right.enemy.id))[0];
-    const target = closest ? closest.enemy.position : { x: Math.trunc((input.board.bounds.minX + input.board.bounds.maxX) / 2), y: Math.trunc((input.board.bounds.minY + input.board.bounds.maxY) / 2) };
-    const facing = toward(soldier.position, target, soldier.facing || "UP");
-    const edge = Math.min(soldier.position.x - input.board.bounds.minX, input.board.bounds.maxX - soldier.position.x, soldier.position.y - input.board.bounds.minY, input.board.bounds.maxY - soldier.position.y);
-    return { soldier, target, facing, closest, score: edge * 3 - (closest ? closest.range * 4 : 0) + (input.hasRoundInitiative ? 3 : 0) };
-  }).sort((left, right) => right.score - left.score || left.soldier.id.localeCompare(right.soldier.id)).slice(0, input.activationCount);
-  return { activationOrders: active.map((entry) => ({ soldierId: entry.soldier.id, objective: { schemaVersion: "tactical-mission-v1", soldierId: entry.soldier.id, targetId: entry.closest ? entry.closest.enemy.id : null, goal: entry.target, goalFacing: entry.facing, posture: entry.closest ? "press" : "screen" } })), strategyMemory: { tactical: { schemaVersion: "tactical-memory-v1", algorithm: "tactical-beam-v1", selected: active.map((entry) => entry.soldier.id) } } };
-};
-const soldierBrain = (input) => {
-  const mission = input.objective && input.objective.schemaVersion === "tactical-mission-v1" && input.objective.soldierId === input.self.id ? input.objective : null;
-  const choices = tacticalDirections.flatMap((direction) => [{ type: "MOVE", direction }, { type: "TURN", direction }]).concat([{ type: "TURN_TO_STONE" }]);
-  const chosen = choices.map((action, ordinal) => {
-    const direction = action.type === "TURN_TO_STONE" ? (input.self.facing || "UP") : action.direction;
-    const delta = direction === "UP" ? { x: 0, y: -1 } : direction === "DOWN" ? { x: 0, y: 1 } : direction === "LEFT" ? { x: -1, y: 0 } : { x: 1, y: 0 };
-    const cell = action.type === "MOVE" ? input.awarenessGrid.cells.find((entry) => entry.dx === delta.x && entry.dy === delta.y) : null;
-    const blocked = action.type === "MOVE" && (!cell || ["WALL", "FRIENDLY_ACTIVE", "FRIENDLY_STONE", "TERRAIN_STONE"].includes(cell.contents));
-    const next = { x: input.self.position ? input.self.position.x + (action.type === "MOVE" ? delta.x : 0) : 0, y: input.self.position ? input.self.position.y + (action.type === "MOVE" ? delta.y : 0) : 0 };
-    const score = (blocked ? -100 : 0) + (action.type === "MOVE" && input.hasAdvancedThisActivation ? -20 : 0) + (cell && cell.contents === "ENEMY_ACTIVE" ? 12 : 0) + (mission && mission.goalFacing === direction ? 6 : 0) - (mission && input.self.position ? distance(next, mission.goal) * 3 : 0) + (action.type === "MOVE" ? 4 : 0);
-    return { action, score, ordinal };
-  }).sort((left, right) => right.score - left.score || left.ordinal - right.ordinal)[0];
-  return { action: chosen.action, soldierMemory: { tactical: { schemaVersion: "tactical-brain-v1", posture: mission ? mission.posture : "screen", cycle: input.cycleIndex } } };
-};
-export default { selectActivations, soldierBrain };
-`
-  assertTacticalSourceClosure(source)
-  return sourceModules(source)
+export const loadTacticalSourceModules = (): readonly TacticalSourceModule[] => TACTICAL_SOURCE_MODULES.map((name) => ({ name, source: readFileSync(new URL(name, import.meta.url), "utf8") }))
+
+const permittedImports: Readonly<Record<TacticalSourceModuleName, readonly string[]>> = {
+  "scoring.ts": ["@cowards/spec"],
+  "search.ts": ["@cowards/spec", "./scoring.js"],
+  "selector.ts": ["@cowards/spec", "./scoring.js", "./search.js"],
 }
+
+const moduleText = (module: TacticalSourceModule): string => {
+  const ast = ts.createSourceFile(module.name, module.source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS)
+  return ast.statements.map((statement) => {
+    if (ts.isImportDeclaration(statement)) {
+      const specifier = ts.isStringLiteral(statement.moduleSpecifier) ? statement.moduleSpecifier.text : ""
+      if (!permittedImports[module.name].includes(specifier) || (specifier === "@cowards/spec" && !statement.importClause?.isTypeOnly)) fail("MODULE_IMPORT")
+      return ""
+    }
+    if (ts.isExportDeclaration(statement) || ts.isExportAssignment(statement)) fail("MODULE_EXPORT")
+    return statement.getText(ast).replace(/^export\s+/u, "")
+  }).join("\n")
+}
+
+/** Static bundling of this leaf's exact authored controller modules; no generated code is run. */
+export const compileTacticalSourceModules = (modules: readonly TacticalSourceModule[]): string => {
+  if (modules.length !== TACTICAL_SOURCE_MODULES.length || modules.some((module, index) => module.name !== TACTICAL_SOURCE_MODULES[index])) fail("MODULE_MANIFEST")
+  const authored = `${modules.map(moduleText).join("\n")}\nexport default { selectActivations(input) { return selectTacticalActivations(input); }, soldierBrain(input) { return runTacticalSoldierBrain(input); } };\n`
+  const output = ts.transpileModule(authored, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, removeComments: true },
+    reportDiagnostics: true,
+  })
+  if (output.diagnostics?.some((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)) fail("SOURCE_TYPESCRIPT")
+  const source = output.outputText.replace(/\r\n?/gu, "\n")
+  assertTacticalSourceClosure(source)
+  return source
+}
+
+export interface TacticalSourceManifest {
+  readonly schemaVersion: "tactical-source-manifest-v1"
+  readonly sourceRoot: LabRoot
+  readonly sourceBytes: number
+  readonly moduleRoots: readonly Readonly<{ name: TacticalSourceModuleName; root: LabRoot }>[]
+  readonly root: LabRoot
+}
+
+/** Binds exact authored controller bytes to the compiled candidate source without executing either. */
+export const tacticalSourceManifest = (modules: readonly TacticalSourceModule[] = loadTacticalSourceModules()): TacticalSourceManifest => {
+  const source = compileTacticalSourceModules(modules)
+  const moduleRoots = modules.map((module) => ({ name: module.name, root: sourceRoot(module.source) }))
+  const value = { schemaVersion: "tactical-source-manifest-v1" as const, sourceRoot: sourceRoot(source), sourceBytes: SOURCE_BYTES.encode(source).byteLength, moduleRoots }
+  return Object.freeze({ ...value, root: labRoot("tactical-source-manifest-v1", value) })
+}
+
+/** Emits the exact bundled tactical controller as closed hostile data. */
+export const emitTacticalSource = (): string => compileTacticalSourceModules(loadTacticalSourceModules())
 
 const validRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 const requestIsValid = (request: TacticalFactoryRequest): void => {

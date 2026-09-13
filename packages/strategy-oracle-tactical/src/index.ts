@@ -3,5 +3,12 @@ export { expandTacticalSearch, selectTacticalSearchNode } from "./search.js"
 export { scoreTacticalAction, scoreTacticalMission } from "./scoring.js"
 export type { TacticalMission, TacticalRank } from "./scoring.js"
 export type { TacticalSearchNode } from "./search.js"
-export { emitTacticalFactoryPacket } from "./emit.js"
-export type { TacticalFactoryRequest } from "./emit.js"
+export {
+  assertTacticalSourceClosure,
+  compileTacticalSourceModules,
+  emitTacticalFactoryPacket,
+  emitTacticalSource,
+  loadTacticalSourceModules,
+  tacticalSourceManifest,
+} from "./emit.js"
+export type { TacticalFactoryRequest, TacticalSourceManifest, TacticalSourceModule } from "./emit.js"

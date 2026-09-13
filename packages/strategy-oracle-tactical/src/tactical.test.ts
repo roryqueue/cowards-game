@@ -3,11 +3,16 @@ import { SoldierBrainInputV119Schema, type SoldierBrainInputV119 } from "@coward
 import { FactoryOraclePacketSchema } from "../../strategy-lab/src/factory/index.js"
 import { describe, expect, it } from "vitest"
 import {
+  assertTacticalSourceClosure,
+  compileTacticalSourceModules,
   emitTacticalFactoryPacket,
+  emitTacticalSource,
   expandTacticalSearch,
+  loadTacticalSourceModules,
   runTacticalSoldierBrain,
   scoreTacticalMission,
   selectTacticalActivations,
+  tacticalSourceManifest,
 } from "./index.js"
 
 const root = (value: string) => `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}` as const
@@ -49,6 +54,26 @@ describe("tactical oracle", () => {
     expect(packet.source.root).toBe(packet.source.sha256)
     expect(packet.source.byteLength).toBeGreaterThan(200)
     expect(packet.provider.modelVersion).toBe("tactical-v1")
+    expect(packet.source.root).toBe(tacticalSourceManifest().sourceRoot)
+  })
+
+  it("bundles the exact selector, scoring, and bounded-search source rather than a surrogate", () => {
+    const source = emitTacticalSource()
+    expect(source).toContain("expandTacticalSearch")
+    expect(source).toContain("scoreTacticalMission")
+    expect(source).toContain("scoreTacticalAction")
+    expect(source).not.toMatch(/\bimport\b|\beval\b|\bFunction\b|\brequire\b/u)
+    const modules = loadTacticalSourceModules()
+    const changed = modules.map((module) => module.name === "search.ts" ? { ...module, source: `${module.source}\nconst tacticalSourceCorrespondenceProbe = 1\n` } : module)
+    expect(tacticalSourceManifest(changed).sourceRoot).not.toBe(tacticalSourceManifest(modules).sourceRoot)
+    expect(compileTacticalSourceModules(changed)).not.toBe(source)
+  })
+
+  it("rejects free identifiers and capability recovery in source closure checks", () => {
+    expect(() => assertTacticalSourceClosure("const value = leaked; export default { selectActivations(input) { return value; }, soldierBrain(input) { return value; } };"))
+      .toThrow("TACTICAL_SOURCE_FREE_IDENTIFIER")
+    expect(() => assertTacticalSourceClosure("const value = Object[\"constructor\"]; export default { selectActivations(input) { return value; }, soldierBrain(input) { return value; } };"))
+      .toThrow("TACTICAL_SOURCE_CAPABILITY")
   })
 
   it("rejects malformed source provenance and a missing local-model provenance field", () => {
