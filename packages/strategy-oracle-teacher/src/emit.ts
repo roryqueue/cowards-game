@@ -36,7 +36,7 @@ const validAction = (action: unknown): action is StudentAction =>
   ((action as StudentAction).type === "TURN_TO_STONE" || ((action as StudentAction).type === "TURN" && (action as { direction?: unknown }).direction === "UP"))
 
 const validStudent = (student: DistilledLegalStudent): void => {
-  if (student.schemaVersion !== "teacher-distilled-student-v1" || !Array.isArray(student.rules) || student.rules.length > 256 || !student.rules.every((rule) => typeof rule.observationKey === "string" && rule.observationKey.length > 0 && rule.observationKey.length <= 16384 && validAction(rule.action))) fail("STUDENT")
+  if (student.schemaVersion !== "teacher-distilled-student-v2" || !["press", "screen"].includes(student.activationMode) || !["move", "turn", "stone"].includes(student.brainMode)) fail("STUDENT")
 }
 
 const sourceModules = (source: string): string => {
@@ -78,14 +78,12 @@ export const assertTeacherSourceClosure = (source: string): void => {
 export const emitTeacherSource = (student: DistilledLegalStudent): string => {
   validStudent(student)
   const policy = compileLegalStudentPolicy(student)
-  const source = `
+const source = `
 const policyRepresentation = ${JSON.stringify(policy.representation)};
-const teacherRules = ${JSON.stringify(policy.rules)};
-const canonicalize = (value) => Array.isArray(value) ? value.map(canonicalize) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, canonicalize(child)])) : value;
-const legalKey = (observation, objective, memory) => JSON.stringify(canonicalize({ observation, objective, memory }));
-const studentAction = (observation, objective, memory) => policyRepresentation === "canonical-legal-observation-objective-memory-v1" ? teacherRules.find((rule) => rule.observationKey === legalKey(observation, objective, memory))?.action || { type: "TURN_TO_STONE" } : { type: "TURN_TO_STONE" };
-const selectActivations = (input) => ({ activationOrders: (input.mySoldiers || []).filter((soldier) => soldier.status === "ACTIVE" && soldier.position).sort((left, right) => left.id.localeCompare(right.id)).slice(0, input.activationCount || 0).map((soldier) => ({ soldierId: soldier.id, objective: null })), strategyMemory: { teacher: { schemaVersion: "teacher-student-memory-v1", decision: studentAction(input.board || {}, null, input.strategyMemory || {}).type } } });
-const soldierBrain = (input) => ({ action: studentAction(input.awarenessGrid || {}, input.objective || null, input.soldierMemory || {}), soldierMemory: input.soldierMemory || {} });
+const student = ${JSON.stringify(policy.student)};
+const direction = (dx, dy) => Math.abs(dx) >= Math.abs(dy) ? dx >= 0 ? "RIGHT" : "LEFT" : dy >= 0 ? "DOWN" : "UP";
+const selectActivations = (input) => ({ activationOrders: (input.mySoldiers || []).filter((soldier) => soldier.status === "ACTIVE" && soldier.position).sort((left, right) => (left.position.x + left.position.y) - (right.position.x + right.position.y) || left.id.localeCompare(right.id)).slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id, objective: { schemaVersion: "teacher-legal-mission-v1", mode: student.activationMode, goal: soldier.position } })), strategyMemory: { teacher: { schemaVersion: "teacher-student-v2", mode: student.activationMode } } });
+const soldierBrain = (input) => { const enemy = input.awarenessGrid.cells.filter((cell) => cell.contents === "ENEMY_ACTIVE").sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - Math.abs(right.dx) - Math.abs(right.dy))[0]; const facing = enemy ? direction(enemy.dx, enemy.dy) : input.self.facing || "UP"; const cell = input.awarenessGrid.cells.find((entry) => entry.dx === (facing === "RIGHT" ? 1 : facing === "LEFT" ? -1 : 0) && entry.dy === (facing === "DOWN" ? 1 : facing === "UP" ? -1 : 0)); const action = student.brainMode === "stone" && !input.hasAdvancedThisActivation ? { type: "TURN_TO_STONE" } : student.brainMode === "turn" || input.hasAdvancedThisActivation || !cell || cell.contents !== "EMPTY" ? { type: "TURN", direction: facing } : { type: "MOVE", direction: facing }; return { action, soldierMemory: { teacher: { schemaVersion: "teacher-brain-v2", mode: student.brainMode } } }; };
 export default { selectActivations, soldierBrain };
 `
   assertTeacherSourceClosure(source)

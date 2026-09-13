@@ -10,8 +10,9 @@ export {
   distillLegalStudent,
   type CompiledLegalStudentPolicy,
   type DistilledLegalStudent,
-  type LegalStudentInput,
   type LegalTrainingRecord,
+  runDistilledActivations,
+  runDistilledSoldierBrain,
   type StudentAction,
 } from "./distill.js"
 export { assertTeacherSourceClosure, emitTeacherFactoryPacket, emitTeacherSource, type TeacherFactoryRequest } from "./emit.js"
