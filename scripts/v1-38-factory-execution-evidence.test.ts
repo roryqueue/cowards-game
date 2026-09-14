@@ -3,7 +3,7 @@ import { deriveFactoryNegativeWitness, deriveFactorySharedHelperAudit, readFacto
 import { emitTacticalFactoryPacket, emitTacticalSource } from "../packages/strategy-oracle-tactical/src/emit.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createFactoryExecutionEvidenceFixture } from "./fixtures/factory-execution-evidence-fixture.js"
-import { readFactoryArtifact, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
+import { publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { admitCanonicalJsonValue } from "@cowards/spec"
 
 const root = labRoot("fixture", "fixture")
@@ -14,16 +14,25 @@ describe("factory empirical authorship prerequisite", () => {
   it("reopens the complete fake retained chain and rejects rerooted review, search, training, audit, and witness joins", async () => {
     const fixture = await createFactoryExecutionEvidenceFixture()
     expect(readFactoryExecutionEvidence(fixture.repository, fixture.executionEvidenceArtifactRoot, fixture.fresh)).toMatchObject({ schemaVersion: "factory-calibration-execution-evidence-v1" })
-    const raw = JSON.parse(new TextDecoder().decode(readFactoryArtifact(fixture.repository, fixture.executionEvidenceArtifactRoot))) as Record<string, any>
     const encode = (value: unknown) => { const result = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!result.ok) throw new Error("encode"); return result.canonicalBytes }
-    for (const key of ["sourceReviewArtifactRoot", "teacherSearchArtifactRoot", "teacherTrainingArtifactRoot", "sharedHelperAuditArtifactRoot"] as const) {
-      const value = { ...raw, [key]: root }, { root: _old, ...body } = value
-      const changed = publishFactoryArtifact(fixture.repository, encode({ ...body, root: labRoot("factory-calibration-execution-evidence-v1", body) }))
-      expect(() => readFactoryExecutionEvidence(fixture.repository, changed, fixture.fresh)).toThrow()
+    const rooted = (domain: string, value: Record<string, unknown>) => publishFactoryArtifact(fixture.repository, encode({ ...value, root: labRoot(domain, value) }))
+    const withLink = (key: string, artifactRoot: string) => {
+      const body = { ...fixture.values.executionValue, [key]: artifactRoot }
+      return rooted("factory-calibration-execution-evidence-v1", body)
     }
-    const value = { ...raw, negativeWitnessArtifactRoots: { ...raw.negativeWitnessArtifactRoots, S01: root } }, { root: _old, ...body } = value
-    const changed = publishFactoryArtifact(fixture.repository, encode({ ...body, root: labRoot("factory-calibration-execution-evidence-v1", body) }))
-    expect(() => readFactoryExecutionEvidence(fixture.repository, changed, fixture.fresh)).toThrow()
+    const changedReview = rooted("factory-source-review-v1", { ...fixture.values.reviewValue, sourceCommit: "b".repeat(40) })
+    expect(() => readFactoryExecutionEvidence(fixture.repository, withLink("sourceReviewArtifactRoot", changedReview), fixture.fresh)).toThrow("REVIEW")
+    const changedSearch = rooted("factory-teacher-search-evidence-v1", { ...fixture.values.searchValue, receipt: { ...fixture.values.searchValue.receipt, selectedOutcomeRoot: root } })
+    expect(() => readFactoryExecutionEvidence(fixture.repository, withLink("teacherSearchArtifactRoot", changedSearch), fixture.fresh)).toThrow("TEACHER_SEARCH")
+    const changedTraining = rooted("factory-teacher-training-evidence-v1", { ...fixture.values.trainingValue, student: { bogus: true } })
+    expect(() => readFactoryExecutionEvidence(fixture.repository, withLink("teacherTrainingArtifactRoot", changedTraining), fixture.fresh)).toThrow("TEACHER_TRAINING")
+    const { root: _auditRoot, ...auditBody } = fixture.values.audit
+    const changedAudit = rooted("factory-shared-helper-audit-v1", { ...auditBody, strategicSharingViolations: Number(auditBody.strategicSharingViolations) + 1 })
+    expect(() => readFactoryExecutionEvidence(fixture.repository, withLink("sharedHelperAuditArtifactRoot", changedAudit), fixture.fresh)).toThrow("SHARED_HELPER_AUDIT")
+    const { root: _witnessRoot, ...witnessBody } = fixture.values.witnesses.S01
+    const changedWitness = rooted("factory-negative-admission-witness-v1", { ...witnessBody, runtimeExecuted: true })
+    const body = { ...fixture.values.executionValue, negativeWitnessArtifactRoots: { ...fixture.values.executionValue.negativeWitnessArtifactRoots, S01: changedWitness } }
+    expect(() => readFactoryExecutionEvidence(fixture.repository, rooted("factory-calibration-execution-evidence-v1", body), fixture.fresh)).toThrow("NEGATIVE_WITNESS")
   })
   it("derives a charged negative witness from actual source and packet without runtime", () => {
     expect(deriveFactoryNegativeWitness(record)).toMatchObject({ sourceRoot: packet.source.root, packetRoot: packet.root, charged: true, allocation: "none", runtimeExecuted: false, disposition: "rejected", mutation: "append-newline-source-mismatch" })
