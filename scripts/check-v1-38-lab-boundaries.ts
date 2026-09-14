@@ -41,19 +41,25 @@ const imageCopyUnproven = (source: string, contextExcluded: boolean): boolean =>
   }
   return false
 }
-export const loadLabBoundaryFiles = (): Record<string, string> => {
+export const loadLabBoundaryFiles = (inventoryRoot = repositoryRoot): Record<string, string> => {
   const files: Record<string, string> = {}
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.isSymbolicLink()) continue
       const path = resolve(dir, entry.name)
-      if (entry.isDirectory()) { if (!ignoredDirectories.has(entry.name)) walk(path); continue }
+      if (entry.isDirectory()) {
+        // Canonical private experiment evidence is data, not source inventory.
+        // Exclude only this root directory; a public/.strategy-lab copy remains
+        // visible to the exposure checks, as does any explicit source import.
+        if (!ignoredDirectories.has(entry.name) && path !== resolve(inventoryRoot, ".strategy-lab")) walk(path)
+        continue
+      }
       if (sourceExtension.test(entry.name) || /\.(?:json|ya?ml|toml|go|sh)$/u.test(entry.name) || /dockerfile|dockerignore/iu.test(entry.name)) {
-        files[relative(repositoryRoot, path).replaceAll("\\", "/")] = readFileSync(path, "utf8")
+        files[relative(inventoryRoot, path).replaceAll("\\", "/")] = readFileSync(path, "utf8")
       }
     }
   }
-  walk(repositoryRoot)
+  walk(inventoryRoot)
   return files
 }
 const loadFiles = loadLabBoundaryFiles

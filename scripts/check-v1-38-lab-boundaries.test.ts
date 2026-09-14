@@ -1,8 +1,24 @@
 import { describe, expect, it } from "vitest"
-import { checkLabBoundaries, validateLabReceipt } from "./check-v1-38-lab-boundaries.js"
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { checkLabBoundaries, loadLabBoundaryFiles, validateLabReceipt } from "./check-v1-38-lab-boundaries.js"
 
 const lab = { "packages/strategy-lab/src/index.ts": "export const privateLab = 1" }
 describe("one-way lab boundary monitor", () => {
+  it("does not read canonical private evidence but still scans copies under public roots", () => {
+    const directory = mkdtempSync(join(tmpdir(), "factory-source-inventory-"))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"))
+      mkdirSync(join(directory, "apps/web/public/.strategy-lab"), { recursive: true })
+      writeFileSync(join(directory, ".strategy-lab/private.json"), '{"privateTrace":"strategy-lab"}')
+      writeFileSync(join(directory, "apps/web/public/.strategy-lab/copied.json"), '{"privateTrace":"strategy-lab"}')
+      const files = loadLabBoundaryFiles(directory)
+      expect(files).not.toHaveProperty(".strategy-lab/private.json")
+      expect(Object.keys(files)).toEqual(["apps/web/public/.strategy-lab/copied.json"])
+      expect(checkLabBoundaries({ files }).ok).toBe(false)
+    } finally { rmSync(directory, { recursive: true, force: true }) }
+  })
   it.each([
     'import { privateLab } from "@cowards/strategy-lab"',
     'export * from "@cowards/strategy-lab"',
