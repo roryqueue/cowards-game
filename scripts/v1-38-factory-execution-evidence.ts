@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { isAbsolute } from "node:path"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { admitFrozenModelBundle } from "../packages/strategy-oracle-model/src/bundle.js"
@@ -79,6 +80,21 @@ export const readFactoryExecutionEvidence = (repository: FactoryRepository, arti
 }
 const fail = (code: string): never => { throw new TypeError(`FACTORY_EXECUTION_${code}`) }
 const same = (left: unknown, right: unknown) => labRoot("factory-execution-equality-v1", left) === labRoot("factory-execution-equality-v1", right)
+const decodeChargedAuthorTranscript = (raw: string, request: Record<string, unknown>) => {
+  const events = raw.split(/\r?\n/u).filter(Boolean).map((line) => { try { return JSON.parse(line) as Record<string, any> } catch { return fail("AUTHOR_PROTOCOL") } })
+  const starts = events.filter((event) => event.id === 2), turns = events.filter((event) => event.id === 3)
+  if (starts.length !== 1 || turns.length !== 1) return fail("AUTHOR_PROTOCOL")
+  const started = starts[0]!.result as Record<string, any>, sandbox = started?.sandbox as Record<string, unknown>, turnId = turns[0]!.result?.turn?.id
+  const settings = request.frozenSettings as Record<string, unknown>, cwd = request.cwd
+  if (started.model !== request.requestedModel || started.modelProvider !== settings.providerId || started.cwd !== cwd || typeof cwd !== "string" || !isAbsolute(cwd) || request.cwdClass !== "fresh-disclosed-packet-only-outside-repository" || started.approvalPolicy !== "never" || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(started.instructionSources) || started.instructionSources.length !== 0 || typeof turnId !== "string" || turnId.length === 0) return fail("AUTHOR_ISOLATION")
+  if (events.some((event) => event.method === "model/rerouted" || (event.method === "item/completed" && event.params?.turnId === turnId && !["agentMessage", "reasoning"].includes(String(event.params?.item?.type))))) return fail("AUTHOR_TOOLS")
+  const completions = events.filter((event) => event.method === "turn/completed" && event.params?.turn?.id === turnId && event.params.turn.status === "completed")
+  const returnedUsage = events.filter((event) => event.method === "thread/tokenUsage/updated" && event.params?.turnId === turnId).at(-1)?.params?.tokenUsage?.total
+  if (completions.length !== 1 || !returnedUsage) return fail("AUTHOR_PROTOCOL")
+  const clientSettings = request.clientSettings, launchEnvironment = request.launchEnvironment as Record<string, unknown>
+  if (!Array.isArray(clientSettings) || clientSettings[0] !== "--stdio" || clientSettings[1] !== "--strict-config" || clientSettings.slice(2).length !== 22 || clientSettings.slice(2).some((value, index) => index % 2 === 0 ? value !== "--disable" : typeof value !== "string") || !launchEnvironment || !exactLabKeys(launchEnvironment, Object.hasOwn(launchEnvironment, "CODEX_HOME") ? ["PATH", "LANG", "LC_ALL", "CODEX_HOME"] : ["PATH", "LANG", "LC_ALL"]) || launchEnvironment.LANG !== "C.UTF-8" || launchEnvironment.LC_ALL !== "C.UTF-8") return fail("AUTHOR_LAUNCH")
+  return { started, returnedUsage }
+}
 /** Reopen every charged author attempt, not merely the winning model label. */
 export const verifyFactoryAuthoringRecords = (repository: FactoryRepository, references: readonly FactoryAuthoringRecordRefs[], value: unknown): void => {
   if (!Array.isArray(references) || references.length < 1 || references.length > 4) return fail("AUTHOR_ATTEMPTS")
@@ -102,10 +118,9 @@ export const verifyFactoryAuthoringRecords = (repository: FactoryRepository, ref
     if (totalTokens > 200_000 || terminal.requestedModel !== request.requestedModel || terminal.reportedModel !== request.requestedModel) return fail("AUTHOR_IDENTITY")
     const stdin = new TextDecoder("utf-8", { fatal: true }).decode(readFactoryArtifact(repository, refs.stdin)), raw = new TextDecoder("utf-8", { fatal: true }).decode(readFactoryArtifact(repository, refs.response))
     if (factoryEvidenceByteRoot(stdin) !== terminal.requestBytesRoot || factoryEvidenceByteRoot(raw) !== terminal.responseBytesRoot || request.context !== stdin) return fail("AUTHOR_BYTES")
-    const events = raw.split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line) as Record<string, any>)
-    const identities = events.filter((event) => event.id === 2 && event.result?.model), returnedUsage = events.filter((event) => event.method === "thread/tokenUsage/updated").at(-1)?.params?.tokenUsage?.total
+    const decoded = decodeChargedAuthorTranscript(raw, request), returnedUsage = decoded.returnedUsage
     const settings = request.frozenSettings as Record<string, unknown>
-    if (identities.length !== 1 || identities[0]!.result.model !== request.requestedModel || identities[0]!.result.modelProvider !== settings.providerId || !returnedUsage || returnedUsage.inputTokens !== usage.inputTokens || returnedUsage.outputTokens !== usage.outputTokens || returnedUsage.cachedInputTokens !== usage.cachedInputTokens || returnedUsage.totalTokens !== usage.totalTokens) return fail("AUTHOR_PROTOCOL")
+    if (returnedUsage.inputTokens !== usage.inputTokens || returnedUsage.outputTokens !== usage.outputTokens || returnedUsage.cachedInputTokens !== usage.cachedInputTokens || returnedUsage.totalTokens !== usage.totalTokens) return fail("AUTHOR_PROTOCOL")
     if (refs.source === null ? terminal.sourceBytesRoot !== null : factoryEvidenceByteRoot(readFactoryArtifact(repository, refs.source)) !== terminal.sourceBytesRoot) return fail("AUTHOR_SOURCE")
     if (last && (bundle.attempt.attemptRoot !== start.root || bundle.attempt.ordinal !== index + 1 || bundle.attempt.budgetRoot !== settings.budgetRoot || bundle.source.root !== terminal.sourceBytesRoot || bundle.provenance.requestRecord.bodyUtf8 !== stdin || bundle.provenance.rawResponseRecord.bodyUtf8 !== raw || bundle.provenance.requestedModelId !== request.requestedModel || bundle.provenance.client.version !== request.clientVersion || bundle.provider.settingsRoot !== settings.settingsRoot || bundle.provider.promptRoot !== settings.promptRoot || bundle.provider.contextRoot !== settings.contextRoot || !same(bundle.provenance.actualUsage, usage) || bundle.accounting.elapsedMilliseconds !== elapsed)) return fail("AUTHOR_WINNER_BINDING")
   }

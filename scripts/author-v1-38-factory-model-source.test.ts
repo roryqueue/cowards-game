@@ -22,7 +22,7 @@ const launchFor = (parent: string) => buildFactoryAuthorCommand(createFactoryAut
 describe("operational factory authoring", () => {
   it("binds packet, recipes, settings and model into a tool-disabled isolated launch", () => {
     const parent = directory(), result = launchFor(parent); expect(result.status).toBe("ready"); if (result.status !== "ready") return
-    expect(result.argv[0]).toBe(capability.codexExecutable); expect(result.argv.filter((item) => item === "--disable")).toHaveLength(11); expect(result.argv).toEqual(expect.arrayContaining(["app-server", "--stdio", "--strict-config"])); expect(result.requestRecord).toMatchObject({ requestedModel: "gpt-5.6-sol", codexExecutable: capability.codexExecutable, launchEnvironment: result.env, frozenSettings, recipes: { S01: "tactical-base-exact", S12: "s05-guard-one-turn-to-stone" } })
+    expect(result.argv[0]).toBe(capability.codexExecutable); expect(result.argv.filter((item) => item === "--disable")).toHaveLength(11); expect(result.argv).toEqual(expect.arrayContaining(["app-server", "--stdio", "--strict-config"])); expect(result.requestRecord).toMatchObject({ requestedModel: "gpt-5.6-sol", codexExecutable: capability.codexExecutable, launchEnvironment: result.env, frozenSettings, cwd: result.cwd, recipes: { S01: "tactical-base-exact", S12: "s05-guard-one-turn-to-stone" } })
     expect(result.env).toEqual({ PATH: "/tool/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8", CODEX_HOME: join(parent, "auth") }); expect(readFileSync(result.packetPath)).toEqual(Buffer.from(packet)); expect(JSON.stringify(result)).not.toContain(".planning")
   })
   it("fails closed without exact installed capability evidence", () => {
@@ -47,14 +47,14 @@ describe("operational factory authoring", () => {
     const parent = directory(), auth = join(parent, "native-auth.json"), executableLink = join(parent, "codex"); writeFileSync(auth, "not-read-by-author-code"); symlinkSync(capability.codexExecutable, executableLink)
     const linkedCapability = { ...capability, codexExecutable: executableLink }
     const times = [1_000, 1_010, 1_060, 1_070, 1_080]
-    const rawJsonl = new TextEncoder().encode([
-      { jsonrpc: "2.0", id: 2, result: { thread: { id: "thread-1" }, model: "gpt-5.6-sol", modelProvider: "openai-codex", cwd: join(parent, "disclosed"), sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
+    const rawJsonlFor = (cwd: string) => new TextEncoder().encode([
+      { jsonrpc: "2.0", id: 2, result: { thread: { id: "thread-1" }, model: "gpt-5.6-sol", modelProvider: "openai-codex", cwd, sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
       { jsonrpc: "2.0", id: 3, result: { turn: { id: "turn-1" } } },
       { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "item-1", type: "agentMessage", text: JSON.stringify({ source }) } } },
       { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { threadId: "thread-1", turnId: "turn-1", tokenUsage: { total: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, last: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 } } } },
       { jsonrpc: "2.0", method: "turn/completed", params: { threadId: "thread-1", turn: { id: "turn-1", status: "completed" } } },
     ].map((event) => JSON.stringify(event)).join("\n") + "\n")
-    const result = await runFactoryAppServerAuthorAttempt({ allocation: createFactoryAuthoringAllocation(), packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), stateDirectory: join(parent, "state"), existingAuthFile: auth, ledgerDirectory: join(parent, "ledger"), model: "gpt-5.6-sol", modelProvider: "openai-codex", frozenSettings, capability: linkedCapability, clock: () => times.shift()!, transportFactory: async (options) => { expect(options).toMatchObject({ codexExecutable: capability.codexExecutable, env: { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", CODEX_HOME: join(parent, "state"), LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }, requestedModel: "gpt-5.6-sol", requestedProvider: "openai-codex" }); expect(options.cwd).toContain("/disclosed/author-"); return { threadId: "thread-1", reportedModel: "gpt-5.6-sol", async close() { return "sigterm" as const }, async startTurn() { return { sourceMessage: JSON.stringify({ source }), usage: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, reportedModel: "gpt-5.6-sol", rawJsonl } } } } })
+    const result = await runFactoryAppServerAuthorAttempt({ allocation: createFactoryAuthoringAllocation(), packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), stateDirectory: join(parent, "state"), existingAuthFile: auth, ledgerDirectory: join(parent, "ledger"), model: "gpt-5.6-sol", modelProvider: "openai-codex", frozenSettings, capability: linkedCapability, clock: () => times.shift()!, transportFactory: async (options) => { expect(options).toMatchObject({ codexExecutable: capability.codexExecutable, env: { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", CODEX_HOME: join(parent, "state"), LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }, requestedModel: "gpt-5.6-sol", requestedProvider: "openai-codex" }); expect(options.cwd).toContain("/disclosed/author-"); return { threadId: "thread-1", reportedModel: "gpt-5.6-sol", async close() { return "sigterm" as const }, async startTurn() { return { sourceMessage: JSON.stringify({ source }), usage: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, reportedModel: "gpt-5.6-sol", rawJsonl: rawJsonlFor(options.cwd) } } } } })
     expect(result.terminal).toMatchObject({ disposition: "valid", reportedModel: "gpt-5.6-sol", usage: { totalTokens: 20 } }); expect(result.bundle?.provenance.rawResponseRecord.bodyUtf8).toContain("tokenUsage")
     const store = join(parent, "factory-store"); mkdirSync(store); const repository = createFactoryRepository(realpathSync(store))
     const canonical = (value: unknown) => { const parsed = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!parsed.ok) throw new Error("canonical"); return parsed.canonicalBytes }
@@ -66,6 +66,19 @@ describe("operational factory authoring", () => {
     const changed = { ...terminalValue, usage: { ...original.usage, inputTokens: 13, totalTokens: 21 } }
     const changedRoot = publishFactoryArtifact(repository, canonical({ ...changed, root: labRoot("factory-model-author-attempt-terminal-v1", changed) }))
     expect(() => verifyFactoryAuthoringRecords(repository, [{ ...refs, terminal: changedRoot }], result.bundle)).toThrow("AUTHOR_PROTOCOL")
+    const retainedRequest = JSON.parse(readFileSync(join(parent, "ledger", "A-01", "request.json"), "utf8")) as { cwd: string }
+    const originalEvents = new TextDecoder().decode(rawJsonlFor(retainedRequest.cwd)).trim().split("\n").map((line) => JSON.parse(line))
+    const expectTranscriptFailure = (mutate: (events: any[]) => void, code: string) => {
+      const events = structuredClone(originalEvents); mutate(events)
+      const bytes = new TextEncoder().encode(events.map((event) => JSON.stringify(event)).join("\n") + "\n"), response = publishFactoryArtifact(repository, bytes)
+      const corrected = { ...terminalValue, responseBytesRoot: `sha256:${createHash("sha256").update(bytes).digest("hex")}` }
+      const terminal = publishFactoryArtifact(repository, canonical({ ...corrected, root: labRoot("factory-model-author-attempt-terminal-v1", corrected) }))
+      expect(() => verifyFactoryAuthoringRecords(repository, [{ ...refs, response, terminal }], result.bundle)).toThrow(code)
+    }
+    expectTranscriptFailure((events) => { events[0].result.cwd = "/tmp/drift" }, "AUTHOR_ISOLATION")
+    expectTranscriptFailure((events) => { events[0].result.sandbox.networkAccess = true }, "AUTHOR_ISOLATION")
+    expectTranscriptFailure((events) => { events[0].result.instructionSources = ["user"] }, "AUTHOR_ISOLATION")
+    expectTranscriptFailure((events) => { events.splice(2, 0, { jsonrpc: "2.0", method: "item/completed", params: { turnId: "turn-1", item: { type: "commandExecution" } } }) }, "AUTHOR_TOOLS")
     const failedCleanup = { schemaVersion: "factory-model-author-process-cleanup-v1", startRoot: result.start.root, disposition: "failed_to_exit" }
     const cleanupRoot = publishFactoryArtifact(repository, canonical({ ...failedCleanup, root: labRoot("factory-model-author-process-cleanup-v1", failedCleanup) }))
     expect(() => verifyFactoryAuthoringRecords(repository, [{ ...refs, cleanup: cleanupRoot }], result.bundle)).toThrow("AUTHOR_TERMINAL")
