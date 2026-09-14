@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 status: executing
-stopped_at: Phase264 Plan08 source assessment and runner implemented; finishing retained-chain tests and independent review fixes before bounded empirical launch
-last_updated: "2026-09-14T15:28:40Z"
+stopped_at: Phase264 Plan08 exact source review passed; main preparing approved bounded empirical launch
+last_updated: "2026-09-14T17:15:00Z"
 last_activity: 2026-09-14
-last_activity_desc: Plan264-08 numeric calibration, source observations, retained assessment and 90-minute runner implemented; source-only review and fixture repairs continue, zero empirical consumption
+last_activity_desc: Plan264-08 source reviewed at 3a8a90b4 with zero findings; 65 focused tests and 1292-file boundary check pass; zero empirical consumption
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current exact-source gate:** Independent Plan07/08 review passes at `3a8a90b453fa7c8630fefc18b90e6d5997543413` with zero unresolved relevant findings. Main's complete focused regression passes65/65 across12files, strict five-script types pass, and the1292-file private boundary check finds zero violations. The reviewer also passed12/12 retained-evidence tests. Main now executes existing Plan08 Task4 under the approved4-attempt/30-minute authoring and48-workload/90-minute limits, after freezing the exact prospective inputs. No generation, teacher search, guest or Match has run yet; no new approval or numbered plan is required. Plan08/Phase264 remain incomplete until the actual bounded result and verification are retained. Earlier progress paragraphs are historical.
 
 **Current Plan08 execution:** Numeric six-signal calibration, source-backed allocation reopening, observation/clone/dependency helpers, full retained assessment/read-only reopening and direct runner readiness are implemented through818decc0. The runner rejects fresh mechanics hooks and enforces the90-minute window before charge and again before provider creation. Three observation review findings are independently resolved at0932d615; the earlier-attempt author-isolation finding is being repaired with a complete retained-chain fixture. Main's latest focused assessor/runner/observation/source-audit run passed17/17 and strict assessor types pass. This is source-only progress, not an empirical pass or Plan08 completion. Continue current same-plan testing/review/fixes, then main's already-approved4-attempt/30-minute authoring and48-workload/90-minute run only after exact source review is clean. No live model handshake, generation, teacher search, guest or Match has run. No new human input or numbered plan is needed.
 
