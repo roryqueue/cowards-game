@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
-status: in_progress
-stopped_at: Phase264 Plan08 client updated and Sol advertised; bounded continuation is preparing after source compatibility review
-last_updated: "2026-09-14T17:42:00Z"
+status: blocked
+stopped_at: Phase264 Plan08 client works and compatibility repairs independently clean; stop-on-error continuation needed for two remaining authoring attempts; no Matches
+last_updated: "2026-09-14T23:06:00Z"
 last_activity: 2026-09-14
-last_activity_desc: Final f9f0cd63 source review clean; 79 tests, strict types, affected builds and1292-file boundary check pass; one charged authoring failure, zero workloads, no further execution authority
+last_activity_desc: Final f2f14864 source review clean; 77 tests, strict types, builds and1292 boundary files pass; client works; two charged attempts, two unused, zero workloads
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,10 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current verified handoff:** Client support is resolved. Final compatibility source `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755` is independently clean with zero unresolved findings; main passed 77/77 tests across 13 suites, strict affected types, model/lab builds and 1,292 boundary files. The normal exact prompt echo is handled consistently; only redundant text-delta notifications are suppressed upstream, with exact received evidence and unchanged bounds. Immutable outcome `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db3b2dd3a8c9bf` remains a failure and was independently reopened. Two attempts are charged cumulatively, two remain unused, and zero teacher searches/workloads/Matches occurred. The only remaining human checkpoint is permission to resume at most those two attempts in a fresh 30-minute window, using the same Sol model and unchanged cumulative four-attempt and 48-workload/90-minute limits. No client change, exact literal, new numbered plan or external custody is needed. Phase 264 remains 4/5 verified truths; actual independence and Phase 265 remain gated. See 264-CLIENT-CONTINUATION-OUTCOME.md and 264-CLIENT-ECHO-REVIEW.md. All following snapshots are history.
+
+**Current client-update outcome:** The update worked: exact `gpt-5.6-sol` was advertised and completed a real authoring turn on Codex0.154.0 after clean independent source/composition review. The local checker rejected its ordinary echoed `userMessage`, so fresh A-01 remains `system_failure`. Immutable outcome `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db3b2dd3a8c9bf` retains exact raw response bytes, actual9,767tokens,54,751ms and complete SIGTERM cleanup. This is cumulative attempt2; two slots remain unused, not automatically reusable after terminal stop. Zero admitted sources, teacher searches, workloads or Matches. Main continues source-only echo/response-size compatibility fixes and independent review. The next human-only checkpoint is simple permission to resume at most the two remaining attempts with the same model and unchanged limits; no new numbered plan or literal. See264-CLIENT-CONTINUATION-OUTCOME.md. All following continuation/approval paragraphs are historical.
 
 **Current continuation:** The operator updated the client and said, “okay done, if that worked please continue. if not let me know”. A read-only installed-client0.154.0 model/list now advertises the exact `gpt-5.6-sol`; zero authoring attempts or workloads were consumed by that check. This resumes the previously discussed at-most-three unused authoring slots in a fresh30-minute window, preserving the old one-attempt failure and cumulative four-attempt ceiling, unchanged48workload/90-minute ceiling, and all other boundaries. No GPT-5.5 substitution is selected. An exact0.154 compatibility fix for the obsolete imagegenext listing is committed atf638687f and undergoing independent review; all eleven disable arguments remain. Main will freeze fresh private inputs before authoring. Earlier approval-pending and blocked paragraphs are historical, not the current operator decision.
 

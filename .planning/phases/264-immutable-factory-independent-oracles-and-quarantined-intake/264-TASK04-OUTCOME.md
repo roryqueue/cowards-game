@@ -13,6 +13,8 @@ independence: unresolved
 
 # Bounded Task04 outcome
 
+**Historical first attempt:** The later approved client-update continuation and its separate failed outcome are recorded in `264-CLIENT-CONTINUATION-OUTCOME.md`. The update resolved Sol support; the new local prompt-echo failure brings cumulative charged attempts to two, with zero workloads. All first-attempt roots and observations below remain unchanged history.
+
 The first charged model-authoring attempt failed because the installed Codex CLI0.139.0 cannot use the selected `gpt-5.6-sol` model. The fresh, task-owned client log records an HTTP400 requiring a newer client. The same client's freshly fetched catalog advertises `gpt-5.5` and `gpt-5.3-codex-spark`, not the requested model. No model substitution, client installation, extra authoring attempt, teacher search or supervised workload followed.
 
 This is an actual bounded failure, not an independence assessment or a phase pass. It leaves Phase264's real three-mechanism evidence unresolved and Phase265 ineligible.

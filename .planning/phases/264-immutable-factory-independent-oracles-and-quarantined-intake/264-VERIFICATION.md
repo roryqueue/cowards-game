@@ -7,9 +7,9 @@ behavior_unverified: 0
 overrides_applied: 0
 re_verification: false
 human_verification:
-  - test: "After final source review of the RUN-01/RUN-02 repair, make a new operator-only stop/model decision before any further authoring."
+  - test: "After final source review of the client prompt-echo and response-size repairs, approve continuation of at most the two unused authoring attempts before further authoring."
     expected: "No failed slot, workload, or unavailable usage is silently reused; any renewed route is separately authorized and remains bounded."
-    why_human: "The current system-failure stop is immutable and the next provider/model choice is an external operator decision."
+    why_human: "The updated client supports the chosen model, but the agreed stop-on-system-failure rule requires renewed operator continuation."
 ---
 
 # Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake Verification
@@ -18,11 +18,17 @@ human_verification:
 
 **Verified:** 2026-09-14
 
-**Status:** human_needed — Task04 reached a retained A-01 authoring system failure. No retry, teacher search, workload, threshold, or independence result followed. Final RUN-01/RUN-02 repair review at `f9f0cd63adeabc9c29ac3defbb259b4c3a318ab0` has zero unresolved relevant source findings; a new operator-only stop/model decision remains required before any renewed execution.
+**Status:** human_needed — The client update resolved Sol support; a fresh provider turn completed but our local checker rejected its prompt echo. This second charged attempt remains a system failure. No teacher search, workload, threshold or independence result followed. Final compatibility source `f2f14864` is independently clean with 77/77 main tests, strict types, builds and boundary checks passing. The agreed terminal-stop rule requires renewed operator continuation before another authoring turn; no client setup or source-review blocker remains.
 
 **Re-verification:** Current Task04 addendum below; the original source/mechanics review is retained verbatim as historical context.
 
-## Current Task04 Addendum — Retained Bounded Failure
+## Current client-update outcome
+
+Final source review and outcome-accounting audit are both clean. `264-CLIENT-ECHO-REVIEW.md` records all original source findings and their verified closure at `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`. This is source verification only, not a revised terminal, admitted Strategy, real independence result or Phase 264 completion.
+
+The exact-source reviewed continuation used Codex0.154.0 and the unchanged selected Sol model. One fresh attempt (cumulative2) consumed9,767tokens over54,751ms, retained its complete raw response and completed SIGTERM cleanup. A normal `userMessage` was rejected by the item whitelist; the terminal is not reclassified from `system_failure`. Outcome `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db3b2dd3a8c9bf` preserves the previous failure and exact two-chunk raw reconstruction. Two authoring slots and48workloads remain unused. See264-CLIENT-CONTINUATION-OUTCOME.md for details and repair status. Current score remains4/5; actual three-mechanism independence is unverified and Phase265 remains ineligible.
+
+## Historical first Task04 Addendum — Retained Bounded Failure
 
 The actual bounded route prepared frozen roots and then charged exactly one authoring attempt. A-01 terminalized `system_failure` after the selected model/client combination was unavailable. The immutable corrected outcome root is `sha256:86afd06a8e66f8d54dbee6f2484e67d7573435e0869f000e6f9aaef5097281a6`, which additively preserves predecessor `sha256:e76142f8e3c9e612d9f9829d5c7a70f0a953ae5f751d2ebf0ab68a24575fc19c`.
 
