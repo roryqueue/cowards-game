@@ -96,7 +96,7 @@ status: complete
 2. **Task 2: Admit explicit hostile submissions into the common evidence root** - `f6701dc9` (feat)
 3. **Task 2 follow-up: retain malformed retry charges** - `821d104c` (fix)
 4. **Plan 06 readiness repair: close eight intake findings** - `a2b9324f` (fix)
-5. **Plan 06 follow-up: bind accounting to start identity** - pending repair commit
+5. **Plan06 final linkage/configuration repair** - `8fd69582` (fix), including retained accounting identity hardening.
 
 ## Files Created/Modified
 
@@ -141,7 +141,7 @@ status: complete
 
 ## Issues Encountered
 
-Initial passing tests did not prove connected blocked-artifact retention or ledger filename integrity. Both were reproduced and corrected in the same plan; final independent recheck is pending.
+Initial passing tests did not prove connected blocked-artifact retention or ledger filename integrity. Both were reproduced and corrected at8fd69582. Final independent recheck passes2/2truths with zero remaining findings.
 
 ## User Setup Required
 
@@ -154,7 +154,7 @@ The private intake mechanics are repaired for downstream readiness/calibration r
 ## Verification
 
 - `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — latest repair passed15; initial repair passed14.
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — initial repair passed32; latest combined regression remains to run.
+- Latest combined regression over exact `contracts`, `identity`, `ledger`, `repository`, `admission`, `intake-protocol` and `intake` test files passes33tests in11.40seconds; no broad historical suite was run.
 - `./node_modules/.bin/tsc -b packages/strategy-lab --pretty false` — passed.
 
 ## Self-Check: PASSED

@@ -29,7 +29,7 @@ Run targeted checks at every task commit, combined bounded integration at each w
 - Plan03: 7 focused teacher tests and full unfiltered package build in main; independent re-review closed all six authoritative findings. Canonical Action consequences, actual global work counters, connected legal distillation and exact shared-controller emission are inspected mechanics, not empirical quality evidence.
 - Plan04: 7 focused model tests, package build and independent provenance/lineage recheck. Genuine model evidence and companion persistence/consumption remain downstream responsibilities.
 - Workspace integration: added only the four missing private-package importer records to `pnpm-lock.yaml`, matching each manifest's existing workspace dependencies. A direct check confirmed all four mappings; every external resolution and snapshot after the `packages:` section remains byte-identical. No install or dependency version change occurred, and no private package was added to the default build references.
-- Plan06 remains incomplete. Its initial passing tests did not establish all required intake-budget and source/provenance behavior; the independent eight-finding repair is underway. The final phase suite and empirical readiness are still pending.
+- Plan06: final15focused intake/protocol tests, full package build and independent2/2truth recheck pass after initial eight findings and two remaining linkage/retention defects were fixed. Combined exact factory suite passes33tests. Unavailable protocol retains a non-authorizing refusal, with no attempt or source work. Plan05 integration, the final phase suite and empirical readiness remain pending.
 
 ## Requirement Verification Map
 
