@@ -12,6 +12,7 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
   ignoreKill = false
   signals: Array<NodeJS.Signals | undefined> = []
   rerouteOnTurn = false
+  failThenComplete = false
   kill(signal?: NodeJS.Signals): boolean { this.killed = true; this.signals.push(signal); if ((!this.ignoreTerm && signal === "SIGTERM") || (!this.ignoreKill && signal === "SIGKILL")) queueMicrotask(() => this.emit("close", 0)); return true }
   private reply(request: Record<string, unknown>): void {
     const response = (result: unknown): void => { this.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n`)) }
@@ -22,6 +23,7 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
       response({ turn: { id: "turn-1" } })
       for (const message of [
         ...(this.rerouteOnTurn ? [{ jsonrpc: "2.0", method: "model/rerouted", params: { threadId: "thread-1", turnId: "turn-1", fromModel: "gpt-5.6-luna", toModel: "other", reason: "fallback" } }] : []),
+        ...(this.failThenComplete ? [{ jsonrpc: "2.0", method: "turn/failed", params: { threadId: "thread-1", turn: { id: "turn-1", status: "failed" } } }] : []),
         { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", completedAtMs: 1, item: { id: "item-1", type: "agentMessage", text: "{\"source\":\"source\"}" } } },
         { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { threadId: "thread-1", turnId: "turn-1", tokenUsage: { total: { inputTokens: 30, cachedInputTokens: 5, outputTokens: 12, reasoningOutputTokens: 2, totalTokens: 42 }, last: { inputTokens: 30, cachedInputTokens: 5, outputTokens: 12, reasoningOutputTokens: 2, totalTokens: 42 }, modelContextWindow: null } } },
         { jsonrpc: "2.0", method: "turn/completed", params: { threadId: "thread-1", turn: { id: "turn-1", status: "completed" } } },
@@ -70,6 +72,13 @@ describe("factory Codex app-server transport", () => {
     const failure = await transport.startTurn("emit source only").catch((error: unknown) => error)
     expect(failure).toMatchObject({ message: "FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT", evidence: { reportedModel: "gpt-5.6-luna", usage: { totalTokens: 42 }, terminalStatus: "completed" } })
     expect(new TextDecoder().decode(failure.evidence.rawJsonl)).toContain('"model/rerouted"')
+  })
+  it("keeps a relevant failed turn forbidden when a completion follows", async () => {
+    const fake = new FakeAppServer(); fake.failThenComplete = true
+    const transport = await createFactoryAppServerTransport({ ...options, spawn: () => fake })
+    const failure = await transport.startTurn("emit source only").catch((error: unknown) => error)
+    expect(failure).toMatchObject({ message: "FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT", evidence: { terminalStatus: "failed" } })
+    expect(new TextDecoder().decode(failure.evidence.rawJsonl)).toContain('"turn/failed"')
   })
   it("refuses an unadvertised exact model before thread creation or charge", async () => {
     const fake = new FakeAppServer()

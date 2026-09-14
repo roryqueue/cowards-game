@@ -81,13 +81,18 @@ export const readFactoryExecutionEvidence = (repository: FactoryRepository, arti
 }
 const fail = (code: string): never => { throw new TypeError(`FACTORY_EXECUTION_${code}`) }
 const same = (left: unknown, right: unknown) => labRoot("factory-execution-equality-v1", left) === labRoot("factory-execution-equality-v1", right)
-const decodeChargedAuthorTranscript = (raw: string, request: Record<string, unknown>) => {
+export const decodeChargedAuthorTranscript = (raw: string, request: Record<string, unknown>) => {
   const events = raw.split(/\r?\n/u).filter(Boolean).map((line) => { try { return JSON.parse(line) as Record<string, any> } catch { return fail("AUTHOR_PROTOCOL") } })
   const starts = events.filter((event) => event.result?.thread && event.result?.model && event.result?.modelProvider), turns = events.filter((event) => event.result?.turn && !event.result?.model)
   if (starts.length !== 1 || turns.length !== 1) return fail("AUTHOR_PROTOCOL")
   const started = starts[0]!.result as Record<string, any>, sandbox = started?.sandbox as Record<string, unknown>, turnId = turns[0]!.result?.turn?.id
   const settings = request.frozenSettings as Record<string, unknown>, cwd = request.cwd
   if (started.model !== request.requestedModel || started.modelProvider !== settings.providerId || started.cwd !== cwd || typeof cwd !== "string" || !isAbsolute(cwd) || request.cwdClass !== "fresh-disclosed-packet-only-outside-repository" || started.approvalPolicy !== "never" || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(started.instructionSources) || started.instructionSources.length !== 0 || typeof turnId !== "string" || turnId.length === 0) return fail("AUTHOR_ISOLATION")
+  if (events.some((event) => {
+    if (event.method !== "turn/failed" && event.method !== "error") return false
+    const failedTurnId = event.params?.turn?.id ?? event.params?.turnId
+    return failedTurnId === undefined ? event.method === "error" : failedTurnId === turnId
+  })) return fail("AUTHOR_PROTOCOL")
   if (events.some((event) => event.method === "model/rerouted" || (event.method === "item/completed" && event.params?.turnId === turnId && !["agentMessage", "reasoning"].includes(String(event.params?.item?.type))))) return fail("AUTHOR_TOOLS")
   const completions = events.filter((event) => event.method === "turn/completed" && event.params?.turn?.id === turnId && event.params.turn.status === "completed")
   const returnedUsage = events.filter((event) => event.method === "thread/tokenUsage/updated" && event.params?.turnId === turnId).at(-1)?.params?.tokenUsage?.total

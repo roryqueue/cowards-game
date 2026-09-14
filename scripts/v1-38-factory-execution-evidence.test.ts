@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { deriveFactoryNegativeWitness, deriveFactorySharedHelperAudit, readFactoryExecutionEvidence, verifyFactoryAuthoringRecords } from "./v1-38-factory-execution-evidence.js"
+import { decodeChargedAuthorTranscript, deriveFactoryNegativeWitness, deriveFactorySharedHelperAudit, readFactoryExecutionEvidence, verifyFactoryAuthoringRecords } from "./v1-38-factory-execution-evidence.js"
 import { emitTacticalFactoryPacket, emitTacticalSource } from "../packages/strategy-oracle-tactical/src/emit.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createFactoryExecutionEvidenceFixture } from "./fixtures/factory-execution-evidence-fixture.js"
@@ -12,6 +12,17 @@ const packet = emitTacticalFactoryPacket({ split: "development", doctrineFamily:
 const record = { packet, sourceUtf8: emitTacticalSource(), sourceRoot: packet.source.root, packetRoot: packet.root, root } as never
 
 describe("factory empirical authorship prerequisite", () => {
+  it("permanently rejects a relevant error before a later successful completion", () => {
+    const request = { requestedModel: "model", cwd: "/isolated", cwdClass: "fresh-disclosed-packet-only-outside-repository", frozenSettings: { providerId: "provider" }, clientSettings: ["--stdio", "--strict-config", ...["shell_tool", "unified_exec", "browser_use", "browser_use_external", "apps", "plugins", "computer_use", "image_generation", "imagegenext", "standalone_web_search", "multi_agent"].flatMap((feature) => ["--disable", feature])], launchEnvironment: { PATH: "/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } }
+    const events = [
+      { result: { thread: { id: "thread" }, model: "model", modelProvider: "provider", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
+      { result: { turn: { id: "turn" } } },
+      { method: "error", params: { turnId: "turn", message: "failed" } },
+      { method: "thread/tokenUsage/updated", params: { turnId: "turn", tokenUsage: { total: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, totalTokens: 2 } } } },
+      { method: "turn/completed", params: { turn: { id: "turn", status: "completed" } } },
+    ].map(JSON.stringify).join("\n")
+    expect(() => decodeChargedAuthorTranscript(events, request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
+  })
   it("covers admission, ledger and identity dependencies in the reviewed source snapshot",()=>{
     const paths=factoryAssessmentImplementationManifest().entries.map(entry=>entry.path)
     for(const name of ["ledger","contracts","identity"])expect(paths).toContain(`packages/strategy-lab/src/factory/${name}.ts`)

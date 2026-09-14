@@ -153,6 +153,15 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
   }
   if (!reportedModelId || !requestedModelId || !providerId) fail("RAW_RESPONSE_IDENTITY")
   if (!turnId) fail("RAW_RESPONSE_TURN_ID")
+  const failed = messages.some((message) => {
+    if (message.method !== "turn/failed" && message.method !== "error") return false
+    const params = message.params !== null && typeof message.params === "object" && !Array.isArray(message.params) ? message.params as RecordValue : null
+    if (!params) return message.method === "error"
+    const turn = params.turn !== null && typeof params.turn === "object" && !Array.isArray(params.turn) ? params.turn as RecordValue : null
+    const failedTurnId = textValue(turn?.id) ?? textValue(params.turnId)
+    return failedTurnId === null ? message.method === "error" : failedTurnId === turnId
+  })
+  if (failed) fail("RAW_RESPONSE_TURN_FAILURE")
   const completed = messages.some((message) => {
     if (message.method !== "turn/completed") return false
     const params = objectRecord(message.params, "RAW_RESPONSE"), turn = objectRecord(params.turn, "RAW_RESPONSE")

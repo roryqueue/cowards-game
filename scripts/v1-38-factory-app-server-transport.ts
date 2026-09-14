@@ -86,12 +86,17 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
     }
     const params = record(message.params)
     if (message.method === "model/rerouted" && params) { const turnId = text(params.turnId); if (turnId) forbiddenTurns.add(turnId) }
+    if ((message.method === "turn/failed" || message.method === "error") && params) {
+      const failedTurn = record(params.turn)
+      const failedTurnId = text(failedTurn?.id) ?? text(params.turnId)
+      if (failedTurnId) forbiddenTurns.add(failedTurnId)
+    }
     if (message.method === "thread/tokenUsage/updated" && params) { const turnId = text(params.turnId), tokenUsage = record(params.tokenUsage), total = record(tokenUsage?.total); if (turnId && total) usageByTurn.set(turnId, total) }
     if ((message.method === "item/started" || message.method === "item/completed") && params) { const turnId = text(params.turnId), item = record(params.item), itemType = text(item?.type); if (turnId && itemType && !["reasoning", "agentMessage"].includes(itemType)) forbiddenTurns.add(turnId); if (turnId && message.method === "item/completed" && itemType === "agentMessage" && typeof item?.text === "string") messagesByTurn.set(turnId, [...(messagesByTurn.get(turnId) ?? []), item.text]) }
     if ((message.method === "turn/completed" || message.method === "turn/failed") && params) {
       const turn = record(params.turn) ?? params
       const idValue = text(turn.id) ?? text(params.turnId)
-      if (idValue) terminal.set(idValue, Object.freeze({ ...params, turn }))
+      if (idValue && !terminal.has(idValue)) terminal.set(idValue, Object.freeze({ ...params, turn }))
     }
   }
   child.stdout.on("data", (chunk) => {

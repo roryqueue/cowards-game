@@ -132,6 +132,18 @@ describe("frozen model oracle", () => {
     expect(assessFrozenModelIdentity(bundle, { ...equal, modelId: "different-model" })).toMatchObject({ kind: "blocked", reason: "identity_drift", charged: true })
   })
 
+  it("rejects a failed admitted turn even when valid source, usage, and completion follow", () => {
+    const v1 = bundleInput(), retained = v2Records()
+    const failedBody = retained.rawResponseRecord.bodyUtf8.replace(
+      '{"jsonrpc":"2.0","method":"item/completed"',
+      '{"jsonrpc":"2.0","method":"turn/failed","params":{"turnId":"turn-1","turn":{"id":"turn-1","status":"failed"}}}\n{"jsonrpc":"2.0","method":"item/completed"',
+    )
+    const rawValue = { format: "codex-exec-json" as const, bodyUtf8: failedBody }
+    const raw = { ...rawValue, root: deriveFrozenModelRawResponseRecordRoot(rawValue) }
+    const value = { ...v1, schemaVersion: "frozen-model-bundle-v2" as const, provider: { ...v1.provider, modelVersion: null, servingSnapshot: { availability: "unavailable" as const } }, request: { ...v1.request, root: retained.requestRecord.root, byteLength: retained.requestRecord.byteLength }, provenance: { requestedModelId: v1.provider.modelId, reportedModelId: v1.provider.modelId, client: { version: "codex-cli-test", settingsRoot: v1.provider.settingsRoot }, servingSnapshot: { availability: "unavailable" as const }, requestRecordRoot: retained.requestRecord.root, responseRecordRoot: raw.root, requestRecord: retained.requestRecord, rawResponseRecord: raw, actualUsage: { inputTokens: 12, outputTokens: 34, cachedInputTokens: 0, totalTokens: 46 } } }
+    expect(() => admitFrozenModelBundle({ ...value, root: deriveFrozenModelBundleRoot(value) })).toThrow("MODEL_RAW_RESPONSE_TURN_FAILURE")
+  })
+
   it("rejects unknown or malformed provenance fields before root conversion", () => {
     const unknown = { ...bundleInput(), extra: true }
     const negativeAccounting = { ...bundleInput(), accounting: { ...bundleInput().accounting, inputTokens: -1 } }
