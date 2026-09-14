@@ -30,4 +30,34 @@ describe("private factory dependency boundary", () => {
   ])("rejects %s", (_name, files) => {
     expect(checkFactoryBoundaries({ files: { ...base, ...files } }).ok).toBe(false)
   })
+
+  it("keeps lexical reassignment and conditional loader possibilities in the shared graph", () => {
+    const files = { ...base,
+      "packages/strategy-oracle-teacher/src/index.ts": "export const teacher = 1",
+      "packages/strategy-oracle-model/src/emit.ts": 'let dep = "@cowards/spec"; dep = "@cowards/strategy-oracle-teacher"; void import(dep)',
+    }
+    expect(checkFactoryBoundaries({ files }).violations.some(entry => entry.code === "ORACLE_EXTERNAL_ROUTE")).toBe(true)
+  })
+
+  it.each([
+    ["shared scoring helper", { "packages/strategy-oracle-model/src/emit.ts": 'import "../../strategy-shared/src/scoring.js"', "packages/strategy-shared/src/scoring.ts": "export const score = 1" }],
+    ["node vm", { "packages/strategy-oracle-model/src/emit.ts": 'import vm from "node:vm"; vm.runInNewContext(source)' }],
+    ["new Function", { "packages/strategy-oracle-model/src/emit.ts": "new Function('candidate')" }],
+    ["package prefix spoof", { "packages/strategy-oracle-model/src/emit.ts": 'import "@cowards/spec-evil"' }],
+    ["public generated consumer", { "public/generated/consumer.ts": 'export * from "@cowards/strategy-oracle-model"', "packages/strategy-oracle-model/src/index.ts": "export const model = 1" }],
+    ["neutral manifest re-export", {
+      "packages/strategy-oracle-model/src/emit.ts": 'import "@neutral/package"',
+      "packages/neutral/package.json": JSON.stringify({ name: "@neutral/package", exports: { ".": "./src/bridge.ts" } }),
+      "packages/neutral/src/bridge.ts": 'export * from "@cowards/strategy-oracle-teacher"',
+      "packages/strategy-oracle-teacher/src/index.ts": "export const teacher = 1",
+    }],
+    ["tsconfig alias re-export", {
+      "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@neutral/*": ["packages/neutral/*"] } } }),
+      "packages/strategy-oracle-model/src/emit.ts": 'import "@neutral/bridge"',
+      "packages/neutral/bridge.ts": 'export * from "@cowards/strategy-oracle-teacher"',
+      "packages/strategy-oracle-teacher/src/index.ts": "export const teacher = 1",
+    }],
+  ])("rejects review bypass: %s", (_name, files) => {
+    expect(checkFactoryBoundaries({ files: { ...base, ...files } }).ok).toBe(false)
+  })
 })

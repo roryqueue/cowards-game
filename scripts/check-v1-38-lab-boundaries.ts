@@ -41,7 +41,7 @@ const imageCopyUnproven = (source: string, contextExcluded: boolean): boolean =>
   }
   return false
 }
-const loadFiles = (): Record<string, string> => {
+export const loadLabBoundaryFiles = (): Record<string, string> => {
   const files: Record<string, string> = {}
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -55,6 +55,60 @@ const loadFiles = (): Record<string, string> => {
   }
   walk(repositoryRoot)
   return files
+}
+const loadFiles = loadLabBoundaryFiles
+
+export interface LabBoundaryGraph {
+  readonly files: Readonly<Record<string, string>>
+  readonly graph: ReadonlyMap<string, ReadonlySet<string>>
+  readonly unresolved: ReadonlyMap<string, readonly (string | undefined)[]>
+}
+/** Shared AST/module-resolution graph used by the factory policy monitor. */
+export const collectLabBoundaryGraph = (options: { files?: Readonly<Record<string, string>> } = {}): LabBoundaryGraph => {
+  const files = options.files ?? loadFiles(), graph = new Map<string, Set<string>>(), unresolved = new Map<string, (string | undefined)[]>()
+  const root = "/lab-boundary", key = (path: string) => posix.relative(root, path), directories = new Set<string>(["."])
+  for (const file of Object.keys(files)) { let directory = posix.dirname(file); while (directory !== ".") { directories.add(directory); directory = posix.dirname(directory) } }
+  const host: ts.ModuleResolutionHost = { fileExists: path => files[key(path)] !== undefined, readFile: path => files[key(path)], directoryExists: path => directories.has(key(path)) }
+  const configs = Object.entries(files).filter(([path]) => /(?:^|\/)tsconfig(?:\.[^/]*)?\.json$/u.test(path)).map(([path, source]) => ({ path, config: ts.parseConfigFileTextToJson(path, source).config as { compilerOptions?: { paths?: Record<string, string[]>; baseUrl?: string } } | undefined }))
+  const manifests = new Map<string, { path: string; entries: readonly string[] }>()
+  const strings = (value: unknown): string[] => typeof value === "string" ? [value] : value && typeof value === "object" ? Object.values(value as Record<string, unknown>).flatMap(strings) : []
+  for (const [path, source] of Object.entries(files)) if (path.endsWith("/package.json")) try { const manifest = JSON.parse(source) as { name?: unknown; main?: unknown; module?: unknown; exports?: unknown }; if (typeof manifest.name === "string") manifests.set(manifest.name, { path, entries: [...new Set([...(typeof manifest.main === "string" ? [manifest.main] : []), ...(typeof manifest.module === "string" ? [manifest.module] : []), ...strings(manifest.exports)])] }) } catch { /* policy checker reports malformed manifests separately */ }
+  const resolveSpecifier = (from: string, specifier: string): string[] => {
+    const paths: Record<string, string[]> = { "@cowards/*": ["packages/*/src/index.ts"], "@cowards/strategy-lab/factory": ["packages/strategy-lab/src/factory/index.ts"], "@cowards/strategy-lab/factory/packet": ["packages/strategy-lab/src/factory/packet.ts"] }
+    for (const { path, config } of configs) {
+      if (posix.dirname(path) !== "." && !from.startsWith(`${posix.dirname(path)}/`)) continue
+      for (const [alias, targets] of Object.entries(config?.compilerOptions?.paths ?? {})) paths[alias] = targets.map(target => posix.join(posix.dirname(path), config?.compilerOptions?.baseUrl ?? ".", target))
+    }
+    const resolved = ts.resolveModuleName(specifier, `${root}/${from}`, { moduleResolution: ts.ModuleResolutionKind.Bundler, baseUrl: root, paths, allowJs: true, resolveJsonModule: true }, host).resolvedModule
+    if (resolved) return [key(resolved.resolvedFileName)]
+    const owner = [...manifests.entries()].find(([name]) => specifier === name || specifier.startsWith(`${name}/`))
+    if (!owner) return []
+    const [name, manifest] = owner, subpath = specifier.slice(name.length)
+    const requested = subpath ? manifest.entries.filter(entry => entry.includes(subpath.slice(1))) : manifest.entries
+    return requested.flatMap(entry => {
+      const base = posix.join(posix.dirname(manifest.path), entry).replace(/^\.\//u, "")
+      return [base, `${base}.ts`, `${base}.js`, `${base}/index.ts`, `${base}/index.js`].filter(candidate => files[candidate] !== undefined)
+    })
+  }
+  for (const [path, source] of Object.entries(files)) {
+    const edges = new Set<string>(), missing: (string | undefined)[] = []
+    if (sourceExtension.test(path) && !isTest(path)) {
+      const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true), options: ts.CompilerOptions = { noLib: true, noResolve: true, allowJs: true, target: ts.ScriptTarget.Latest }, bindingHost = ts.createCompilerHost(options)
+      bindingHost.getSourceFile = name => name === path ? ast : undefined; bindingHost.fileExists = name => name === path; bindingHost.readFile = name => name === path ? source : undefined
+      const checker = ts.createProgram([path], options, bindingHost).getTypeChecker(), bindings = new Map<ts.Symbol, ts.Expression[]>(), uncertain = new Set<ts.Symbol>()
+      const bind = (name: ts.Identifier, value: ts.Expression) => { const symbol = checker.getSymbolAtLocation(name); if (symbol) bindings.set(symbol, [...(bindings.get(symbol) ?? []), value]) }
+      const collect = (node: ts.Node): void => { if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) bind(node.name, node.initializer); if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) { bind(node.left, node.right); if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) { const symbol = checker.getSymbolAtLocation(node.left); if (symbol) uncertain.add(symbol) } }; ts.forEachChild(node, collect) }
+      collect(ast)
+      const constant = (node: ts.Expression, depth = 0): (string | undefined)[] => { if (depth > 8) return [undefined]; if (ts.isStringLiteralLike(node)) return [node.text]; if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isNonNullExpression(node)) return constant(node.expression, depth + 1); if (ts.isIdentifier(node)) { const symbol = checker.getSymbolAtLocation(node), values = symbol && bindings.get(symbol), candidates = values ? values.flatMap(value => constant(value, depth + 1)) : [undefined]; return symbol && uncertain.has(symbol) ? [...candidates, undefined] : candidates }; if (ts.isConditionalExpression(node)) return [...constant(node.whenTrue, depth + 1), ...constant(node.whenFalse, depth + 1)]; if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) { const left = constant(node.left, depth + 1), right = constant(node.right, depth + 1); return left.length * right.length > 64 ? [undefined] : left.flatMap(a => right.map(b => a !== undefined && b !== undefined ? a + b : undefined)) }; return [undefined] }
+      const inspect = (expression: ts.Expression) => forEach(constant(expression), specifier => { if (specifier === undefined) { missing.push(undefined); return }; const targets = resolveSpecifier(path, specifier); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(specifier) })
+      const forEach = <T>(values: readonly T[], action: (value: T) => void) => values.forEach(action)
+      const visit = (node: ts.Node): void => { if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) inspect(node.moduleSpecifier as ts.Expression); if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) inspect(node.moduleReference.expression); if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === "require") || (ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "require")) && node.arguments[0]) inspect(node.arguments[0]); ts.forEachChild(node, visit) }
+      visit(ast)
+    }
+    if (path.endsWith("/package.json")) try { const manifest = JSON.parse(source) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; main?: unknown; module?: unknown; exports?: unknown }; for (const dependency of Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })) { if (/^@cowards\/(?:spec|engine|replay|runtime-js|strategy-lab)$/u.test(dependency)) continue; const targets = resolveSpecifier(path, dependency); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(dependency) }; for (const entry of [...(typeof manifest.main === "string" ? [manifest.main] : []), ...(typeof manifest.module === "string" ? [manifest.module] : []), ...strings(manifest.exports)]) { const targets = resolveSpecifier(path, `./${entry.replace(/^\.\//u, "")}`); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(entry) } } catch { missing.push(undefined) }
+    graph.set(path, edges); if (missing.length) unresolved.set(path, missing)
+  }
+  return { files, graph, unresolved }
 }
 export interface LabBoundaryViolation { code: string; file: string }
 /** Offline source graph monitor, not a sandbox or a claim about arbitrary runtime-generated code. */
