@@ -114,6 +114,12 @@ describe("frozen model oracle", () => {
     const changedRaw = { ...changedRawValue, root: deriveFrozenModelRawResponseRecordRoot(changedRawValue) }
     const coherentUsageSubstitution = { ...value, provenance: { ...value.provenance, responseRecordRoot: changedRaw.root, rawResponseRecord: changedRaw } }
     expect(() => admitFrozenModelBundle({ ...coherentUsageSubstitution, root: deriveFrozenModelBundleRoot(coherentUsageSubstitution) })).toThrow("MODEL_PROVENANCE")
+
+    const providerLines = retained.rawResponseRecord.bodyUtf8.replace('"modelProvider":"frozen-provider"', '"modelProvider":"substituted-provider"')
+    const providerRawValue = { format: "codex-exec-json" as const, bodyUtf8: providerLines }
+    const providerRaw = { ...providerRawValue, root: deriveFrozenModelRawResponseRecordRoot(providerRawValue) }
+    const coherentProviderSubstitution = { ...value, provenance: { ...value.provenance, responseRecordRoot: providerRaw.root, rawResponseRecord: providerRaw } }
+    expect(() => admitFrozenModelBundle({ ...coherentProviderSubstitution, root: deriveFrozenModelBundleRoot(coherentProviderSubstitution) })).toThrow("MODEL_PROVENANCE")
   })
 
   it("treats separately constructed equal v2 identities as equal and primitive changes as drift", () => {
