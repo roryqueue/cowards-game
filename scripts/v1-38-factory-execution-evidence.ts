@@ -94,12 +94,12 @@ export const decodeChargedAuthorTranscript = (raw: string, request: Record<strin
     return true
   })) return fail("AUTHOR_PROTOCOL")
   if (events.some((event) => event.method === "model/rerouted" || (event.method === "item/completed" && event.params?.turnId === turnId && !["agentMessage", "reasoning", "userMessage"].includes(String(event.params?.item?.type))))) return fail("AUTHOR_TOOLS")
-  const userStarts = new Set<string>(), userCompletions = new Set<string>()
+  const userIds = new Set<string>(), userStarts = new Set<string>(), userCompletions = new Set<string>()
   for (const event of events.filter((candidate) => ["item/started", "item/completed"].includes(String(candidate.method)) && candidate.params?.item?.type === "userMessage")) {
     const params = event.params, item = params.item, content = item.content
     if (params.threadId !== threadId || params.turnId !== turnId || typeof item.id !== "string" || !Array.isArray(content) || content.length !== 1 || content[0]?.type !== "text" || content[0]?.text !== request.context) return fail("AUTHOR_PROTOCOL")
-    if (event.method === "item/started") { if (userStarts.has(item.id) || (userStarts.size > 0 && !userCompletions.has(item.id))) return fail("AUTHOR_PROTOCOL"); userStarts.add(item.id) }
-    else { if (userCompletions.has(item.id) || (userStarts.size > 0 && !userStarts.has(item.id)) || (userCompletions.size > 0 && !userStarts.has(item.id))) return fail("AUTHOR_PROTOCOL"); userCompletions.add(item.id) }
+    if (event.method === "item/started") { if (userStarts.has(item.id) || (userIds.size > 0 && !userIds.has(item.id))) return fail("AUTHOR_PROTOCOL"); userIds.add(item.id); userStarts.add(item.id) }
+    else { if (userCompletions.has(item.id) || !userStarts.has(item.id) || (userIds.size > 0 && !userIds.has(item.id))) return fail("AUTHOR_PROTOCOL"); userCompletions.add(item.id) }
   }
   if ([...userStarts].some((itemId) => !userCompletions.has(itemId))) return fail("AUTHOR_PROTOCOL")
   const completions = events.filter((event) => event.method === "turn/completed" && event.params?.turn?.id === turnId && event.params.turn.status === "completed")

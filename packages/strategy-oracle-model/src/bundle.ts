@@ -101,7 +101,7 @@ interface DecodedModelResponse {
 export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: string): Readonly<DecodedModelResponse> => {
   let reportedModelId: string | null = null, requestedModelId: string | null = null, providerId: string | null = null, threadId: string | null = null, turnId: string | null = null
   let source: string | null = null, usage: DecodedModelResponse["usage"] | null = null
-  const userStarts = new Set<string>(), userCompletions = new Set<string>()
+  const userIds = new Set<string>(), userStarts = new Set<string>(), userCompletions = new Set<string>()
   const messages: RecordValue[] = []
   for (const line of bodyUtf8.split(/\r?\n/u).filter((entry) => entry.length > 0)) {
     let message: RecordValue
@@ -135,8 +135,8 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: 
           if (expectedPrompt === undefined || params.threadId !== threadId || !itemId || !Array.isArray(content) || content.length !== 1 || !objectRecord(content[0], "RAW_RESPONSE") || (content[0] as RecordValue).type !== "text" || (content[0] as RecordValue).text !== expectedPrompt) fail("RAW_RESPONSE")
           if (!itemId) fail("RAW_RESPONSE")
           const admittedItemId = itemId as string
-          if (message.method === "item/started") { if (userStarts.has(admittedItemId) || (userStarts.size > 0 && !userCompletions.has(admittedItemId))) fail("RAW_RESPONSE"); userStarts.add(admittedItemId) }
-          else if (userCompletions.has(admittedItemId) || (userStarts.size > 0 && !userStarts.has(admittedItemId)) || (userCompletions.size > 0 && !userStarts.has(admittedItemId))) fail("RAW_RESPONSE")
+          if (message.method === "item/started") { if (userStarts.has(admittedItemId) || (userIds.size > 0 && !userIds.has(admittedItemId))) fail("RAW_RESPONSE"); userIds.add(admittedItemId); userStarts.add(admittedItemId) }
+          else if (userCompletions.has(admittedItemId) || !userStarts.has(admittedItemId) || (userIds.size > 0 && !userIds.has(admittedItemId))) fail("RAW_RESPONSE")
           else userCompletions.add(admittedItemId)
         } else if (message.method === "item/completed" && item.type === "agentMessage" && typeof item.text === "string") {
           if (source !== null) fail("RAW_RESPONSE")

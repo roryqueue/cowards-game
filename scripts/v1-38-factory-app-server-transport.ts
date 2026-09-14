@@ -64,7 +64,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
   const pending = new Map<number, { resolve(value: JsonRecord): void; reject(error: Error): void }>()
   const terminal = new Map<string, JsonRecord>(), usageByTurn = new Map<string, JsonRecord>(), messagesByTurn = new Map<string, string[]>()
   const forbiddenTurns = new Set<string>()
-  const userMessageStarted = new Set<string>(), userMessageCompleted = new Set<string>()
+  const userMessageIds = new Set<string>(), userMessageStarted = new Set<string>(), userMessageCompleted = new Set<string>()
   const userMessageTurnIds = new Set<string>()
   let protocolTurnFailure = false
   let admittedThreadId: string | null = null
@@ -103,8 +103,9 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
       const turnId = text(params.turnId), item = record(params.item), itemType = text(item?.type)
       if (itemType === "userMessage") {
         const itemId = text(item?.id)
-        if (params.threadId !== admittedThreadId || !turnId || !itemId || userMessageText(item) !== activeSourceMessage || (message.method === "item/started" ? userMessageStarted.has(itemId) || (userMessageStarted.size > 0 && !userMessageCompleted.has(itemId)) : userMessageCompleted.has(itemId) || (userMessageStarted.size > 0 && !userMessageStarted.has(itemId)) || (userMessageCompleted.size > 0 && !userMessageStarted.has(itemId)))) protocolTurnFailure = true
+        if (params.threadId !== admittedThreadId || !turnId || !itemId || userMessageText(item) !== activeSourceMessage || (message.method === "item/started" ? userMessageStarted.has(itemId) || (userMessageIds.size > 0 && !userMessageIds.has(itemId)) : userMessageCompleted.has(itemId) || !userMessageStarted.has(itemId) || (userMessageIds.size > 0 && !userMessageIds.has(itemId)))) protocolTurnFailure = true
         else {
+          userMessageIds.add(itemId)
           userMessageTurnIds.add(turnId)
           if (message.method === "item/started") userMessageStarted.add(itemId)
           else userMessageCompleted.add(itemId)

@@ -13,7 +13,7 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
   signals: Array<NodeJS.Signals | undefined> = []
   rerouteOnTurn = false
   failThenComplete = false
-  userEcho: "none" | "valid" | "substituted" | "wrong-thread" | "started-only" = "none"
+  userEcho: "none" | "valid" | "substituted" | "wrong-thread" | "started-only" | "completed-only" = "none"
   kill(signal?: NodeJS.Signals): boolean { this.killed = true; this.signals.push(signal); if ((!this.ignoreTerm && signal === "SIGTERM") || (!this.ignoreKill && signal === "SIGKILL")) queueMicrotask(() => this.emit("close", 0)); return true }
   private reply(request: Record<string, unknown>): void {
     const response = (result: unknown): void => { this.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n`)) }
@@ -26,8 +26,9 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
       if (this.userEcho !== "none") {
         const threadId = this.userEcho === "wrong-thread" ? "other-thread" : "thread-1", text = this.userEcho === "substituted" ? "different prompt" : "emit source only"
         const item = { id: "user-1", type: "userMessage", content: [{ type: "text", text }] }
-        userMessages.push({ jsonrpc: "2.0", method: "item/started", params: { threadId, turnId: "turn-1", item } })
-        if (this.userEcho !== "started-only") userMessages.push({ jsonrpc: "2.0", method: "item/completed", params: { threadId, turnId: "turn-1", item } })
+        if (this.userEcho === "completed-only") userMessages.push({ jsonrpc: "2.0", method: "item/completed", params: { threadId, turnId: "turn-1", item } })
+        else userMessages.push({ jsonrpc: "2.0", method: "item/started", params: { threadId, turnId: "turn-1", item } })
+        if (this.userEcho !== "started-only" && this.userEcho !== "completed-only") userMessages.push({ jsonrpc: "2.0", method: "item/completed", params: { threadId, turnId: "turn-1", item } })
       }
       for (const message of [
         ...userMessages,
@@ -94,7 +95,7 @@ describe("factory Codex app-server transport", () => {
     const fake = new FakeAppServer(); fake.userEcho = "valid"
     const transport = await createFactoryAppServerTransport({ ...options, spawn: () => fake })
     await expect(transport.startTurn("emit source only")).resolves.toMatchObject({ sourceMessage: '{"source":"source"}' })
-    for (const variant of ["substituted", "wrong-thread", "started-only"] as const) {
+    for (const variant of ["substituted", "wrong-thread", "started-only", "completed-only"] as const) {
       const next = new FakeAppServer(); next.userEcho = variant
       const nextTransport = await createFactoryAppServerTransport({ ...options, spawn: () => next })
       await expect(nextTransport.startTurn("emit source only")).rejects.toMatchObject({ message: "FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT" })
