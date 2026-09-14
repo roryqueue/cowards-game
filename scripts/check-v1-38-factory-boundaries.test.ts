@@ -11,6 +11,10 @@ const base = {
 }
 
 describe("private factory dependency boundary", () => {
+  it("admits the exact reviewed numeric AST analyzer, not arbitrary factory TypeScript consumers", () => {
+    expect(checkFactoryBoundaries({files:{...base,"packages/strategy-lab/src/factory/numeric-calibration.ts":'import ts from "typescript"; ts.createSourceFile("data.ts", text, 9);'}}).ok).toBe(true)
+    expect(checkFactoryBoundaries({files:{...base,"packages/strategy-lab/src/factory/unknown.ts":'import ts from "typescript";'}}).ok).toBe(false)
+  })
   it("allows only the narrow packet contract from an oracle", () => {
     expect(checkFactoryBoundaries({ files: base })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
   })
