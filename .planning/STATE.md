@@ -7,10 +7,10 @@ current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 current_plan: 5
 total_plans_in_phase: 8
 status: in_progress
-stopped_at: Phase264 intake06 independently passed; integration05 active with isolated boundary task
-last_updated: "2026-09-14T00:55:00Z"
+stopped_at: Phase264 integration05 comparison inputs being completed; final workload review next
+last_updated: "2026-09-14T02:11:09Z"
 last_activity: 2026-09-13
-last_activity_desc: Five plans independently complete; 33 factory regression tests pass; connected integration and isolated boundary work active
+last_activity_desc: Five plans complete; 150 integration and 16 ownership tests pass; concrete corpus reviewed; paired workload integration active
 progress:
   total_phases: 9
   completed_phases: 2
@@ -23,7 +23,7 @@ progress:
 
 ## Session Continuity — 2026-09-13
 
-Current dispatch: Plans01,02,03,04,06 are independently complete at the implementation level. Intake's final repairs at8fd69582 pass15focused tests, all33factory regression tests and full types; independent recheck passes2/2truths with zero remaining findings. Teacher03's repair at961d3e07/e4228a47 passes7tests/full types and independent review; model04 passes7tests and tactical02 passes6. Plan05 connected integration is active in main, with its independent boundary task isolated in a separate worktree. Main owns lifecycle and cherry-pick integration; only one executor writes main. Plan07 remains the single late missing-facts decision after all buildable work. No empirical independence, strength, provider/human participation or new allocation follows from source tests. Historical Phase263 recovery markers and36locks remain unchanged.
+Current dispatch: Plans01,02,03,04,06 are independently complete at the implementation level. Plan05 integrated source atb04d8b8b passes150safe tests across19files in48.02seconds, all four private package builds, the1269-file boundary monitor and all three CLI help paths. An additional16kernel ownership/legal-information tests pass in12.13seconds. Complete bounded private trace storage, authenticated producer evidence, retained graph parsing, non-consuming intake reload and safe adapter options are integrated. Independent review identified three remaining buildable comparison-input gaps; main's concrete corpus helper at66b79e6d passes3tests and independent review, while one main executor connects exact retained graph and paired workload inputs. Main owns lifecycle/pushes; independent reviews and the evaluation audit are source-only. Plan07 remains the single late missing-facts decision after all buildable work. No empirical independence, strength, provider/human participation or new allocation follows from these tests. Historical Phase263 recovery markers and36locks remain unchanged.
 
 Plan264-01 is complete after two same-plan repair passes and clean independent re-review at459017f8. Exact source/proposal admission precedes validation, issued participant-bound supervision receipts, and final receipt-bound candidates; opponent failure is not candidate failure and remains unscored. Main and reviewer independently passed18factory tests and full package build. Legacy boundary integration passes37tests and clean re-review. Oracle leaves and intake precede05; their shared-checkout write windows are serialized. No new experiments or previous allocation reuse occurred. The untracked Phase263 recovery/cache/36locks remain untouched.
 

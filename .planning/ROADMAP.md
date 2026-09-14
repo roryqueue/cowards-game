@@ -39,7 +39,7 @@ Current inventory: 153 phase plan files, 141 completed plans, 8 active pending, 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
 - **v1.36 Competition Maturity** - Phases 249-255, shipped 2026-07-12 ([archive](milestones/v1.36-ROADMAP.md))
 - **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, shipped 2026-07-22 ([archive](milestones/v1.37-ROADMAP.md))
-- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, active at Phase 263; Phase 262 independently verified complete
+- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, active at Phase 264; Phases 262 and 263 independently verified complete
 
 ## v1.38 Competitive Strategy Factory and Adversarial League
 
@@ -60,7 +60,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 ## Phases
 
 - [x] **Phase 262: Foundation Admission, Measurement, Local Seal, and Containment Contract** - Admit the exact v1.37 authority and freeze every estimand, budget, gate, claim, honest local-seal rule, and non-materialization boundary before candidate search. Verified complete2026-09-09.
-- [ ] **Phase 263: Legal Planner and Deterministic Runner Feasibility** - Prove the deployable hierarchical planner and canonical-kernel runner are legal, bounded, deterministic, and reproducible before scale.
+- [x] **Phase 263: Legal Planner and Deterministic Runner Feasibility** - Prove the deployable hierarchical planner and canonical-kernel runner are legal, bounded, deterministic, and reproducible before scale. Independently verified complete2026-09-13.
 - [ ] **Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake** - Produce immutable candidates through materially independent response channels while preserving hostile-source isolation, provenance, diversity evidence, and failed attempts.
 - [ ] **Phase 265: Serious Current-Rules League and Development Red Team** - Complete the current-rules empirical game, response loop, portfolio, pure-finalist decision, and full precommitted development attack budget.
 - [ ] **Phase 266: Content-Addressed Current-League Freeze** - Freeze the complete current-rules evidence root and enforce the one-way gate that alone can unlock formation materialization.
@@ -899,7 +899,7 @@ Plans:
   4. At least three materially independent automated mechanisms—the structured tactical optimizer, search-teacher/distiller, and provider-neutral frozen-bundle program synthesizer—pass an audited shared-helper allowlist and dependency, authorship, behavior, counterfactual-correlation, clone, and failure-mode review.
   5. Human and external submissions enter through a quarantined channel with frozen disclosure, submission, reviewer, independence, conflict, provenance, validation, and acceptance budgets; only validated deterministic explicit source can enter the factory, and every failed or rejected attack remains in the evidence root.
 
-**Plans:** 5/8 complete; foundation, tactical, teacher, frozen-model and intake independently checked after same-plan repairs (33 combined factory tests, 6 tactical, 7 teacher and 7 model tests; package types). Connected integration05 is active, with the boundary task isolated for parallel work. Shared-checkout source writes are serialized. All11requirements/24decisions remain covered by the plans; no synthetic participation or old allocation reuse is permitted.
+**Plans:** 5/8 complete; foundation, tactical, teacher, frozen-model and intake independently checked. Connected integration05 atb04d8b8b passes150safe tests across19files, all four package builds and the1269-file private-boundary monitor; another16kernel/information-boundary tests pass. Complete private trace retention, authenticated evidence and non-consuming intake reload are integrated. Three remaining comparison-input gaps are being closed within05: retained graph inputs, predeclared paired workloads and a concrete development corpus. The corpus helper passes3tests and independent review at66b79e6d. Plan07 remains one late exact-facts decision after all buildable work; no synthetic participation or old allocation reuse is permitted.
 
 **Wave1 — shared private foundation**
 
