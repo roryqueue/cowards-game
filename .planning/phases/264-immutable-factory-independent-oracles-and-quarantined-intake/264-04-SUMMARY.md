@@ -10,6 +10,7 @@ provides:
   - fail-closed immutable frozen-model bundle admission with stable commitment roots
   - charged unavailable and provider-identity-drift dispositions
   - data-only explicit TypeScript source conversion through emitModelFactoryPacket
+  - issued root-bound full-bundle provenance companion for each exact emitted packet
 affects: [264-05, 264-07, private-factory-admission]
 tech-stack:
   added: []
@@ -24,6 +25,7 @@ key-files:
 key-decisions:
   - "Treat provider output as externally supplied immutable input; this leaf has no provider client, credentials, network, retry, or execution path."
   - "Require an identity-preserving admitted object before packet conversion so structural clones cannot forge provenance."
+  - "Bind the complete admitted frozen request-response/accounting/attempt bundle to the exact packet through an issued companion; request lineage cannot replace bundle lineage."
   - "Apply local AST default-object, required-method, free-identifier, and capability checks before existing runtime lexical validation; this remains static preflight, not sandbox certification."
 requirements-contributed: [ORCL-01, ORCL-04]
 requirement_status: implementation_only_pending_phase_integration_and_evidence
@@ -48,6 +50,9 @@ coverage:
       - kind: unit
         ref: packages/strategy-oracle-model/src/model.test.ts#rejects structural clones and source with an unbound capability or wrong export shape
         status: pass
+      - kind: unit
+        ref: packages/strategy-oracle-model/src/model.test.ts#retains an issued full frozen-bundle companion and rejects clones or lineage overrides
+        status: pass
       - kind: other
         ref: ./node_modules/.bin/tsc -b packages/strategy-oracle-model
         status: pass
@@ -71,6 +76,7 @@ status: complete
 - Added canonical, exact-key frozen bundle validation for provider/model/version/settings/prompt/context commitments, request and response commitments, accounting, attempts, native lane, lineage, and raw source bytes.
 - Added durable charged terminal blocks for unavailable providers and provider identity drift, each with its own immutable root and no replacement or retry allocation.
 - Added the exact `emitModelFactoryPacket` export, which accepts only runtime-admitted bundles, preserves the fixed factory provenance pins, and returns data through the strict factory schema.
+- Added an issued, root-bound full-bundle companion API. It retains request/response/accounting/resource/attempt/budget provenance beside only the exact emitted packet, rejects clones, and rejects request lineage that differs from the bundle lineage.
 - Added static source checks for a default object with real `selectActivations` and `soldierBrain` methods, free identifiers, imports, async/this, and direct or computed constructor-capability recovery. Generated source is never evaluated here.
 
 ## Task Commits
@@ -78,15 +84,24 @@ status: complete
 1. **Task 1 RED: Define frozen model bundle boundaries** - `48dcf80f` (test)
 2. **Tasks 1-2 GREEN: Admit frozen provenance and emit packet data** - `68b5094c` (feat)
 3. **Verification fixture cleanup** - `684e743d` (test)
+4. **Post-review provenance repair** - `42298ff8` (fix)
 
 ## Verification
 
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-oracle-model/src/model.test.ts` — 5 tests passed.
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-oracle-model/src/model.test.ts` — 7 tests passed.
 - `./node_modules/.bin/tsc -b packages/strategy-oracle-model` — passed.
 
 ## Deviations from Plan
 
-None - plan behavior was implemented within the private leaf. Compiler-directed narrowing changes only made the fail-closed validation branches explicit; they did not alter scope or contracts.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Retained full frozen provenance beside the emitted packet**
+- **Found during:** Post-plan readiness review.
+- **Issue:** The strict packet preserved source and provider roots but dropped immutable request/response/accounting/resource/attempt/budget provenance; request lineage could silently replace bundle lineage.
+- **Fix:** Added an issued, root-rederived full-bundle companion keyed to the exact emitted packet and required exact lineage equality before emission.
+- **Files modified:** `packages/strategy-oracle-model/src/{emit,index,model.test}.ts`
+- **Verification:** Seven focused tests and the package TypeScript build pass. The companion remains data only and does not execute source or contact a provider.
+- **Commit:** `42298ff8`
 
 ## Known Stubs
 
@@ -94,9 +109,9 @@ None. Test fixtures model the shape and validation mechanics of frozen input onl
 
 ## Next Phase Readiness
 
-Plan 05 may consume the exact `emitModelFactoryPacket` entrypoint as data. Real frozen provider bundles, external model participation, source admission/execution, Match behavior, calibration, and empirical oracle evidence remain pending the later supervised Plan 07 workflow.
+Plan 05 must obtain the companion from the exact emitted packet, require issued-object provenance, and atomically retain it with the packet before any validation or supervision. Real frozen provider bundles, external model participation, source admission/execution, Match behavior, calibration, and empirical oracle evidence remain pending the later supervised Plan 07 workflow.
 
 ## Self-Check: PASSED
 
 - Confirmed the four model-leaf artifacts listed above exist.
-- Confirmed commits `48dcf80f`, `68b5094c`, and `684e743d` exist in git history.
+- Confirmed commits `48dcf80f`, `68b5094c`, `684e743d`, and `42298ff8` exist in git history.
