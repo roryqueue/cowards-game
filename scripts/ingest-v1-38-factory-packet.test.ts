@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { factoryOraclePacketFixture } from "../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
@@ -10,6 +11,7 @@ import { deriveIntakeProvenanceRoot } from "../packages/strategy-lab/src/factory
 import { admitFrozenIntakeProtocol, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot } from "../packages/strategy-lab/src/factory/intake-protocol.js"
 import { createFactoryRepository, readFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { deriveFrozenModelBundleRoot, deriveFrozenModelResponseRoot } from "../packages/strategy-oracle-model/src/bundle.js"
+import { distillLegalStudent, projectTeacherSearchToLegalTraining, searchCanonicalCounterfactual } from "../packages/strategy-oracle-teacher/src/index.js"
 import { ingestNamedFactoryPacket, readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
 
 const dirs: string[] = []
@@ -32,6 +34,25 @@ describe("named private factory ingestion", () => {
     expect(reloaded.producerIdentity).toBe("emitTacticalFactoryPacket")
     expect(reloaded.sourceUtf8).toContain("export default")
     expect(readFactoryArtifact(repository, result.artifactRoot).byteLength).toBeLessThanOrEqual(262_144)
+  })
+
+  it("ingests and reloads a nonempty canonical-search teacher student as inert source data", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-teacher-ingest-test-"))); dirs.push(directory)
+    const repository = createFactoryRepository(directory)
+    const search = searchCanonicalCounterfactual({ canonicalMatch: { matchId: "teacher-ingestion-mechanics", seed: "teacher-ingestion-mechanics", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "bottom-fixture", topStrategyRevisionId: "top-fixture", initialInitiativePlayerId: "bottom" }, studentPlayerId: "bottom", counterfactual: { opponentHypothesis: "cautious" }, maxDepth: 3, maxNodes: 128 })
+    const records = projectTeacherSearchToLegalTraining(search)
+    expect(records.length).toBeGreaterThan(0)
+    const student = distillLegalStudent(records)
+    const request = { producerIdentity: "emitTeacherFactoryPacket" as const, origin: "teacher-oracle" as const, evidenceClass: "real_producer" as const, producerInput: { student, request: { split: "development" as const, doctrineFamily: "teacher-ingestion", provider: { providerId: "teacher-local", modelId: "offline-search-teacher", modelVersion: "teacher-v3", settingsRoot: root("1"), promptRoot: root("2"), contextRoot: root("3") }, build: { buildRoot: root("4"), toolchainRoot: root("5") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } } } }
+    const result = await ingestNamedFactoryPacket(request, repository)
+    if (result.disposition !== "accepted") throw new Error("teacher ingestion")
+    const retained = readFactoryIngestion(createFactoryRepository(directory), result.artifactRoot)
+    expect(retained.packetRoot).toBe(result.packetRoot)
+    expect(retained.sourceRoot).toBe(result.sourceRoot)
+    expect(retained.sourceUtf8).toContain("controllerSoldierBrain")
+    expect(retained.producerInput).toEqual(request.producerInput)
+    expect(resumeFactoryAttemptInventory(repository).completedAttemptRoots).toHaveLength(0)
+    await expect(ingestNamedFactoryPacket(request, repository)).rejects.toThrow("FACTORY_INGEST_DUPLICATE")
   })
 
   it("rejects fabricated producer labels and mismatched provenance before publication", async () => {
