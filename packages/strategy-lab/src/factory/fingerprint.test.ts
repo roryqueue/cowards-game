@@ -9,7 +9,7 @@ import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommit
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "./repository.js"
-import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
+import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
 
 const dirs: string[] = []
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
@@ -112,6 +112,15 @@ const evidenceArtifact = (repo: ReturnType<typeof repository>, values: { proposa
 }
 
 describe("six derived factory fingerprints", () => {
+  it("accepts an exact fresh-v2 producer authorization and rejects a coherently rerooted slot substitution", () => {
+    const producerArtifactRoot = root("a")
+    const value = { schemaVersion: "factory-calibration-authorization-v2", status: "authorized", allocationRoot: root("b"), sourceSlots: ["S01"], slotIngestionArtifactRoots: { S01: producerArtifactRoot }, cellRoots: [root("c")], workloadArtifactRoots: [root("d")], geometryDesign: "two_geometry_side_confounded_pilot", competitiveClaim: "none" }
+    const authorization = { ...value, root: labRoot("factory-calibration-authorization-v2", value) }
+    expect(isFactoryProducerAuthorized(authorization, authorization.root, producerArtifactRoot)).toBe(true)
+    const changed = { ...value, slotIngestionArtifactRoots: { S01: root("e") } }
+    const rerooted = { ...changed, root: labRoot("factory-calibration-authorization-v2", changed) }
+    expect(isFactoryProducerAuthorized(rerooted, rerooted.root, producerArtifactRoot)).toBe(false)
+  })
   it("rederives every dimension from repository evidence and strips private request/result/event payloads", async () => {
     const { repo, proposal, validation, admission } = admitted(), receipt = await supervision(admission)
     const evidence = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt })

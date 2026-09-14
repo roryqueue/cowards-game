@@ -58,6 +58,20 @@ const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdent
 const issuedEvidence = new WeakSet<object>()
 const authorizedProducerEvidence = new WeakMap<object, LabRoot>()
 const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"]
+export const isFactoryProducerAuthorized = (authorization: Record<string, unknown>, manifestAuthorizationRoot: LabRoot, producerArtifactRoot: LabRoot): boolean => {
+  const { root: authorizationRoot, ...authorizationValue } = authorization
+  const v1Authorized = authorization.schemaVersion === "factory-calibration-authorization-v1" &&
+    authorizationRoot === labRoot("factory-calibration-authorization-v1", authorizationValue) &&
+    Array.isArray(authorization.ingestionArtifactRoots) && authorization.ingestionArtifactRoots.includes(producerArtifactRoot) &&
+    Array.isArray(authorization.workloadArtifactRoots)
+  const v2Slots = authorization.slotIngestionArtifactRoots
+  const v2Authorized = exactLabKeys(authorization, ["schemaVersion", "status", "allocationRoot", "sourceSlots", "slotIngestionArtifactRoots", "cellRoots", "workloadArtifactRoots", "geometryDesign", "competitiveClaim", "root"]) &&
+    authorization.schemaVersion === "factory-calibration-authorization-v2" && authorization.geometryDesign === "two_geometry_side_confounded_pilot" && authorization.competitiveClaim === "none" &&
+    authorizationRoot === labRoot("factory-calibration-authorization-v2", authorizationValue) &&
+    v2Slots !== null && typeof v2Slots === "object" && !Array.isArray(v2Slots) &&
+    Object.values(v2Slots).includes(producerArtifactRoot) && Array.isArray(authorization.workloadArtifactRoots)
+  return authorization.status === "authorized" && authorizationRoot === manifestAuthorizationRoot && (v1Authorized || v2Authorized)
+}
 const validateNodes = (value: unknown, edge: "parents" | "dependencies") => {
   if (!Array.isArray(value) || value.length < 1 || value.length > 1024) return fail("NODES")
   const list = value as unknown[]
@@ -112,17 +126,8 @@ const verifyAuthorizedProducer = (repository: FactoryRepository, manifestArtifac
   if (!listed || listed.producerIdentity !== value.producerIdentity || listed.origin !== value.origin) return fail("PRODUCER_MANIFEST_BINDING")
   const authorizationParsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, manifest.authorizationArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
   if (!authorizationParsed.ok || !authorizationParsed.value || typeof authorizationParsed.value !== "object" || Array.isArray(authorizationParsed.value)) return fail("PRODUCER_AUTHORIZATION")
-  const authorization = authorizationParsed.value as Record<string, unknown>, { root: authorizationRoot, ...authorizationValue } = authorization
-  const v1Authorized = authorization.schemaVersion === "factory-calibration-authorization-v1" &&
-    authorizationRoot === labRoot("factory-calibration-authorization-v1", authorizationValue) &&
-    Array.isArray(authorization.ingestionArtifactRoots) && authorization.ingestionArtifactRoots.includes(value.producerArtifactRoot) &&
-    Array.isArray(authorization.workloadArtifactRoots)
-  const v2Slots = authorization.slotIngestionArtifactRoots
-  const v2Authorized = authorization.schemaVersion === "factory-calibration-authorization-v2" &&
-    authorizationRoot === labRoot("factory-calibration-authorization-v2", authorizationValue) &&
-    v2Slots !== null && typeof v2Slots === "object" && !Array.isArray(v2Slots) &&
-    Object.values(v2Slots).includes(value.producerArtifactRoot) && Array.isArray(authorization.workloadArtifactRoots)
-  if (authorization.status !== "authorized" || authorizationRoot !== manifest.authorizationRoot || (!v1Authorized && !v2Authorized)) return fail("PRODUCER_AUTHORIZATION")
+  const authorization = authorizationParsed.value as Record<string, unknown>
+  if (!isFactoryProducerAuthorized(authorization, manifest.authorizationRoot, value.producerArtifactRoot)) return fail("PRODUCER_AUTHORIZATION")
   const producerParsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, value.producerArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
   if (!producerParsed.ok || !exact(producerParsed.value, ["schemaVersion", "privacy", "root", "producerIdentity", "origin", "evidenceClass", "packetRoot", "sourceRoot", "runtimeProfileRoot", "nativeLane", "packet", "sourceUtf8", "producerInput", "modelCompanion"])) return fail("PRODUCER_RECORD")
   const producer = producerParsed.value as Record<string, unknown>, { root: producerRoot, ...producerValue } = producer
