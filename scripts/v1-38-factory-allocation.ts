@@ -1,6 +1,14 @@
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value)
 const fail = (code: string): never => { throw new TypeError(`FACTORY_AUTHOR_${code}`) }
+export const FACTORY_DISABLED_AUTHOR_FEATURES = ["shell_tool", "unified_exec", "browser_use", "browser_use_external", "apps", "plugins", "computer_use", "image_generation", "imagegenext", "standalone_web_search", "multi_agent"] as const
+/** Freeze policy and input across corrections while each attempt gets fresh isolated paths. */
+export const factoryAuthoringRequestPolicyRoot = (request:Readonly<Record<string,unknown>>):LabRoot => {
+  const environment=request.launchEnvironment
+  if(!environment || typeof environment!=="object" || Array.isArray(environment))return fail("REQUEST_POLICY")
+  const {CODEX_HOME:_isolatedHome,...rest}=environment as Record<string,unknown>
+  return labRoot("factory-model-author-request-policy-v1",{...request,cwd:"fresh-isolated-attempt",launchEnvironment:{...rest,...(Object.hasOwn(environment,"CODEX_HOME")?{CODEX_HOME:"fresh-isolated-attempt"}:{})}})
+}
 
 export type FactorySourceSlot = "S01" | "S02" | "S03" | "S04" | "S05" | "S06" | "S07" | "S08" | "S09" | "S10" | "S11" | "S12"
 export interface FactoryAuthoringAllocation {

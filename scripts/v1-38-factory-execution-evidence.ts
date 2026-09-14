@@ -3,7 +3,7 @@ import { isAbsolute } from "node:path"
 import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { admitFrozenModelBundle } from "../packages/strategy-oracle-model/src/bundle.js"
-import { createFactoryAuthoringAllocation } from "./v1-38-factory-allocation.js"
+import { createFactoryAuthoringAllocation, FACTORY_DISABLED_AUTHOR_FEATURES, factoryAuthoringRequestPolicyRoot } from "./v1-38-factory-allocation.js"
 import { readFactoryCanonicalRecord, requireFactoryRecordRoot } from "./v1-38-factory-fresh-evidence.js"
 import type { readFreshFactoryCalibration } from "./v1-38-factory-fresh-evidence.js"
 import type { FactoryIngestionRecord } from "./ingest-v1-38-factory-packet.js"
@@ -93,7 +93,7 @@ const decodeChargedAuthorTranscript = (raw: string, request: Record<string, unkn
   const returnedUsage = events.filter((event) => event.method === "thread/tokenUsage/updated" && event.params?.turnId === turnId).at(-1)?.params?.tokenUsage?.total
   if (completions.length !== 1 || !returnedUsage) return fail("AUTHOR_PROTOCOL")
   const clientSettings = request.clientSettings, launchEnvironment = request.launchEnvironment as Record<string, unknown>
-  if (!Array.isArray(clientSettings) || clientSettings[0] !== "--stdio" || clientSettings[1] !== "--strict-config" || clientSettings.slice(2).length !== 22 || clientSettings.slice(2).some((value, index) => index % 2 === 0 ? value !== "--disable" : typeof value !== "string") || !launchEnvironment || !exactLabKeys(launchEnvironment, Object.hasOwn(launchEnvironment, "CODEX_HOME") ? ["PATH", "LANG", "LC_ALL", "CODEX_HOME"] : ["PATH", "LANG", "LC_ALL"]) || launchEnvironment.LANG !== "C.UTF-8" || launchEnvironment.LC_ALL !== "C.UTF-8") return fail("AUTHOR_LAUNCH")
+  if (!same(clientSettings,["--stdio","--strict-config",...FACTORY_DISABLED_AUTHOR_FEATURES.flatMap(feature=>["--disable",feature])]) || !launchEnvironment || !exactLabKeys(launchEnvironment, Object.hasOwn(launchEnvironment, "CODEX_HOME") ? ["PATH", "LANG", "LC_ALL", "CODEX_HOME"] : ["PATH", "LANG", "LC_ALL"]) || launchEnvironment.LANG !== "C.UTF-8" || launchEnvironment.LC_ALL !== "C.UTF-8") return fail("AUTHOR_LAUNCH")
   return { started, returnedUsage }
 }
 /** Reopen every charged author attempt, not merely the winning model label. */
@@ -108,10 +108,11 @@ export const verifyFactoryAuthoringRecords = (repository: FactoryRepository, ref
     requireFactoryRecordRoot(terminal, "factory-model-author-attempt-terminal-v1")
     requireFactoryRecordRoot(cleanup, "factory-model-author-process-cleanup-v1")
     const requestRoot = labRoot("factory-model-author-request-v1", request)
-    if (index === 0) { firstStart = Number(start.startedAtMs); requestIdentity = requestRoot }
+    const policyRoot=factoryAuthoringRequestPolicyRoot(request)
+    if (index === 0) { firstStart = Number(start.startedAtMs); requestIdentity = policyRoot }
     const startedAt = Number(start.startedAtMs), elapsed = Number(terminal.elapsedMilliseconds), usage = terminal.usage as Record<string, number> | null
     const last = index === references.length - 1
-    if (start.schemaVersion !== "factory-model-author-attempt-start-v1" || start.allocationRoot !== allocation.root || start.ordinal !== allocation.attempts[index] || start.firstStartedAtMs !== firstStart || start.requestRecordRoot !== requestRoot || requestRoot !== requestIdentity || request.allocationRoot !== allocation.root || !Number.isSafeInteger(startedAt) || !Number.isSafeInteger(elapsed) || firstStart < 0 || startedAt < firstStart || startedAt < priorStart || elapsed < 0 || startedAt + elapsed - firstStart >= 1_800_000) return fail("AUTHOR_START")
+    if (start.schemaVersion !== "factory-model-author-attempt-start-v1" || start.allocationRoot !== allocation.root || start.ordinal !== allocation.attempts[index] || start.firstStartedAtMs !== firstStart || start.requestRecordRoot !== requestRoot || policyRoot !== requestIdentity || request.allocationRoot !== allocation.root || !Number.isSafeInteger(startedAt) || !Number.isSafeInteger(elapsed) || firstStart < 0 || startedAt < firstStart || startedAt < priorStart || elapsed < 0 || startedAt + elapsed - firstStart >= 1_800_000) return fail("AUTHOR_START")
     priorStart = startedAt
     if (terminal.schemaVersion !== "factory-model-author-attempt-terminal-v1" || terminal.startRoot !== start.root || terminal.disposition !== (last ? "valid" : "invalid") || cleanup.schemaVersion !== "factory-model-author-process-cleanup-v1" || cleanup.startRoot !== start.root || !["already_exited", "sigterm", "sigkill"].includes(String(cleanup.disposition))) return fail("AUTHOR_TERMINAL")
     if (!usage || ![usage.inputTokens, usage.outputTokens, usage.cachedInputTokens, usage.totalTokens].every(Number.isSafeInteger) || usage.inputTokens! < 0 || usage.outputTokens! < 0 || usage.cachedInputTokens! < 0 || usage.cachedInputTokens! > usage.inputTokens! || usage.totalTokens !== usage.inputTokens! + usage.outputTokens! || usage.totalTokens > 50_000) return fail("AUTHOR_USAGE")

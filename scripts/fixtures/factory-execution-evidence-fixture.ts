@@ -7,7 +7,7 @@ import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strate
 import { createFactoryRepository, publishFactoryArtifact } from "../../packages/strategy-lab/src/factory/repository.js"
 import { deriveFrozenModelBundleRoot, deriveFrozenModelRawResponseRecordRoot, deriveFrozenModelRequestRecordRoot, deriveFrozenModelResponseRoot } from "../../packages/strategy-oracle-model/src/bundle.js"
 import { distillLegalStudent } from "../../packages/strategy-oracle-teacher/src/distill.js"
-import { createFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES } from "../v1-38-factory-allocation.js"
+import { createFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, FACTORY_DISABLED_AUTHOR_FEATURES } from "../v1-38-factory-allocation.js"
 import { deriveFactoryNegativeWitness, deriveFactorySharedHelperAudit, factoryEvidenceByteRoot, type FactoryAuthoringRecordRefs } from "../v1-38-factory-execution-evidence.js"
 import { ingestNamedFactoryPacket } from "../ingest-v1-38-factory-packet.js"
 import { factoryAssessmentImplementationRoot } from "../v1-38-factory-implementation.js"
@@ -31,7 +31,7 @@ export const createFactoryExecutionEvidenceFixture = async () => {
     { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { turnId: "turn-1", tokenUsage: { total: { ...usage, reasoningOutputTokens: 1 } } } },
     { jsonrpc: "2.0", method: "turn/completed", params: { turn: { id: "turn-1", status: "completed" } } },
   ].map((event) => JSON.stringify(event)).join("\n") + "\n"
-  const request = { schemaVersion: "factory-model-author-request-v1", allocationRoot: allocation.root, packetRoot: root("packet"), requestedModel: "gpt-5.6-sol", codexExecutable: "/usr/bin/codex", clientVersion: "codex-cli 0.139.0", clientSettings: ["--stdio", "--strict-config", ...Object.keys(FACTORY_SOURCE_RECIPES).slice(0, 11).flatMap((name) => ["--disable", name])], launchEnvironment: { PATH: "/usr/bin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }, frozenSettings: settings, recipes: FACTORY_SOURCE_RECIPES, context: stdin, cwd, cwdClass: "fresh-disclosed-packet-only-outside-repository" }
+  const request = { schemaVersion: "factory-model-author-request-v1", allocationRoot: allocation.root, packetRoot: root("packet"), requestedModel: "gpt-5.6-sol", codexExecutable: "/usr/bin/codex", clientVersion: "codex-cli 0.139.0", clientSettings: ["--stdio", "--strict-config", ...FACTORY_DISABLED_AUTHOR_FEATURES.flatMap((name) => ["--disable", name])], launchEnvironment: { PATH: "/usr/bin:/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }, frozenSettings: settings, recipes: FACTORY_SOURCE_RECIPES, context: stdin, cwd, cwdClass: "fresh-disclosed-packet-only-outside-repository" }
   const requestRoot = labRoot("factory-model-author-request-v1", request)
   const startValue = { schemaVersion: "factory-model-author-attempt-start-v1", allocationRoot: allocation.root, ordinal: "A-01", startedAtMs: 1000, firstStartedAtMs: 1000, requestRecordRoot: requestRoot }, start = { ...startValue, root: labRoot("factory-model-author-attempt-start-v1", startValue) }
   const terminalValue = { schemaVersion: "factory-model-author-attempt-terminal-v1", startRoot: start.root, disposition: "valid", usage, elapsedMilliseconds: 50, requestBytesRoot: bytesRoot(stdin), responseBytesRoot: bytesRoot(raw), sourceBytesRoot: bytesRoot(source), requestedModel: request.requestedModel, reportedModel: request.requestedModel }, terminal = { ...terminalValue, root: labRoot("factory-model-author-attempt-terminal-v1", terminalValue) }
