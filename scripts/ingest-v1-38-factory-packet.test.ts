@@ -98,4 +98,18 @@ describe("named private factory ingestion", () => {
     expect(reloaded.modelCompanion?.bundle).toEqual(bundle)
     expect(reloaded.modelCompanion?.packetRoot).toBe(reloaded.packetRoot)
   })
+
+  it("re-admits a v2 bundle only with its exact private unavailable-snapshot provenance", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-ingest-v2-test-"))); dirs.push(directory)
+    const repository = createFactoryRepository(directory)
+    const modelSource = "export default {selectActivations(){return {activationOrders:[],strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}"
+    const hash = (value: string): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}` as LabRoot
+    const responseValue = { format: "explicit-typescript-source" as const, source: modelSource }
+    const v1 = { schemaVersion: "frozen-model-bundle-v1" as const, privacy: "private_offline" as const, provider: { providerId: "frozen-provider", modelId: "reported-model", modelVersion: "undisclosed", settingsRoot: root("1"), promptRoot: root("2"), contextRoot: root("3") }, request: { root: root("4"), byteLength: 1, encoding: "utf8" as const }, response: { ...responseValue, root: deriveFrozenModelResponseRoot(responseValue) }, source: { root: hash(modelSource), sha256: hash(modelSource), byteLength: new TextEncoder().encode(modelSource).byteLength, encoding: "utf8" as const }, accounting: { inputTokens: 1, outputTokens: 1, tokenLimit: 2, elapsedMilliseconds: 1, resourceRoot: root("5") }, attempt: { attemptRoot: root("6"), budgetRoot: root("7"), ordinal: 0 }, nativeLane: { language: "typescript" as const, providerId: "frozen-provider", runtimeAbi: "strategy-runtime-abi-v1.19" as const, runtimeProfileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, translation: "none" as const }, lineage: { predecessorRoot: root("8"), correctionRoot: null, retryParentRoot: null } }
+    const value = { ...v1, schemaVersion: "frozen-model-bundle-v2" as const, provenance: { requestedModelId: "requested-model", reportedModelId: "reported-model", client: { version: "codex-cli-test", settingsRoot: v1.provider.settingsRoot }, servingSnapshot: { availability: "unavailable" as const }, requestRecordRoot: v1.request.root, responseRecordRoot: v1.response.root, actualUsage: { inputTokens: 1, outputTokens: 1, cachedInputTokens: 0, totalTokens: 2 } } }
+    const bundle = { ...value, root: deriveFrozenModelBundleRoot(value) }
+    const result = await ingestNamedFactoryPacket({ producerIdentity: "emitModelFactoryPacket", origin: "model-oracle", evidenceClass: "real_producer", producerInput: { bundle, request: { split: "development", doctrineFamily: "model-v2", build: { buildRoot: root("9"), toolchainRoot: root("a") }, lineage: bundle.lineage } } }, repository)
+    if (result.disposition !== "accepted") throw new Error("v2 model ingestion")
+    expect(readFactoryIngestion(repository, result.artifactRoot).modelCompanion?.bundle.schemaVersion).toBe("frozen-model-bundle-v2")
+  })
 })

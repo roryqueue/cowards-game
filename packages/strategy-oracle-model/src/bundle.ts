@@ -31,7 +31,7 @@ export interface FrozenModelProvider {
   readonly providerId: string; readonly modelId: string; readonly modelVersion: string
   readonly settingsRoot: LabRoot; readonly promptRoot: LabRoot; readonly contextRoot: LabRoot
 }
-export interface FrozenModelBundle {
+export interface FrozenModelBundleV1 {
   readonly schemaVersion: "frozen-model-bundle-v1"; readonly privacy: "private_offline"; readonly root: LabRoot
   readonly provider: FrozenModelProvider
   readonly request: Readonly<{ root: LabRoot; byteLength: number; encoding: "utf8" }>
@@ -42,6 +42,18 @@ export interface FrozenModelBundle {
   readonly nativeLane: Readonly<{ language: "typescript"; providerId: string; runtimeAbi: "strategy-runtime-abi-v1.19"; runtimeProfileRoot: LabRoot; translation: "none" }>
   readonly lineage: Readonly<{ predecessorRoot: LabRoot; correctionRoot: LabRoot | null; retryParentRoot: LabRoot | null }>
 }
+export interface FrozenModelBundleV2 extends Omit<FrozenModelBundleV1, "schemaVersion"> {
+  readonly schemaVersion: "frozen-model-bundle-v2"
+  /** The provider did not disclose a serving build; client metadata is never substituted for it. */
+  readonly provenance: Readonly<{
+    requestedModelId: string; reportedModelId: string
+    client: Readonly<{ version: string; settingsRoot: LabRoot }>
+    servingSnapshot: Readonly<{ availability: "unavailable" }>
+    requestRecordRoot: LabRoot; responseRecordRoot: LabRoot
+    actualUsage: Readonly<{ inputTokens: number; outputTokens: number; cachedInputTokens: number; totalTokens: number }>
+  }>
+}
+export type FrozenModelBundle = FrozenModelBundleV1 | FrozenModelBundleV2
 
 const provider = (value: unknown): FrozenModelProvider => {
   if (!exact(value, ["providerId", "modelId", "modelVersion", "settingsRoot", "promptRoot", "contextRoot"]) || !name(value.providerId) || !text(value.modelId) || !text(value.modelVersion) || ![value.settingsRoot, value.promptRoot, value.contextRoot].every(root)) fail("PROVENANCE")
@@ -54,9 +66,10 @@ export const deriveFrozenModelBundleRoot = <T extends object>(value: T): LabRoot
   labRoot("frozen-model-bundle-v1", Object.fromEntries(Object.entries(value).filter(([key]) => key !== "root")))
 
 const validateBundle = (value: unknown): FrozenModelBundle => {
+  const isV2 = value !== null && typeof value === "object" && !Array.isArray(value) && (value as RecordValue).schemaVersion === "frozen-model-bundle-v2"
   const keys = ["schemaVersion", "privacy", "root", "provider", "request", "response", "source", "accounting", "attempt", "nativeLane", "lineage"] as const
-  const record = requiredRecord(value, keys)
-  if (record.schemaVersion !== "frozen-model-bundle-v1" || record.privacy !== "private_offline" || !root(record.root)) fail()
+  const record = requiredRecord(value, isV2 ? [...keys, "provenance"] : keys)
+  if ((record.schemaVersion !== "frozen-model-bundle-v1" && record.schemaVersion !== "frozen-model-bundle-v2") || record.privacy !== "private_offline" || !root(record.root)) fail()
   const identity = provider(record.provider)
   const request = requiredRecord(record.request, ["root", "byteLength", "encoding"], "REQUEST")
   if (!root(request.root) || !integer(request.byteLength, 262144) || request.byteLength < 1 || request.encoding !== "utf8") fail("REQUEST")
@@ -73,6 +86,16 @@ const validateBundle = (value: unknown): FrozenModelBundle => {
   if (nativeLane.language !== "typescript" || nativeLane.providerId !== identity.providerId || nativeLane.runtimeAbi !== "strategy-runtime-abi-v1.19" || !root(nativeLane.runtimeProfileRoot) || nativeLane.translation !== "none") fail("NATIVE_LANE")
   const lineage = requiredRecord(record.lineage, ["predecessorRoot", "correctionRoot", "retryParentRoot"], "LINEAGE")
   if (!root(lineage.predecessorRoot) || ![lineage.correctionRoot, lineage.retryParentRoot].every((entry) => entry === null || root(entry))) fail("LINEAGE")
+  if (record.schemaVersion === "frozen-model-bundle-v2") {
+    const provenance = requiredRecord(record.provenance, ["requestedModelId", "reportedModelId", "client", "servingSnapshot", "requestRecordRoot", "responseRecordRoot", "actualUsage"], "PROVENANCE")
+    const client = requiredRecord(provenance.client, ["version", "settingsRoot"], "PROVENANCE")
+    const snapshot = requiredRecord(provenance.servingSnapshot, ["availability"], "PROVENANCE")
+    const usage = requiredRecord(provenance.actualUsage, ["inputTokens", "outputTokens", "cachedInputTokens", "totalTokens"], "PROVENANCE")
+    if (!text(provenance.requestedModelId) || !text(provenance.reportedModelId) || !text(client.version) || !root(client.settingsRoot) || snapshot.availability !== "unavailable" ||
+        !root(provenance.requestRecordRoot) || !root(provenance.responseRecordRoot) || provenance.requestRecordRoot !== request.root || provenance.responseRecordRoot !== responseData.root ||
+        !integer(usage.inputTokens, 10_000_000) || !integer(usage.outputTokens, 10_000_000) || !integer(usage.cachedInputTokens, 10_000_000) || !integer(usage.totalTokens, 10_000_000) || usage.cachedInputTokens > usage.inputTokens || usage.totalTokens !== usage.inputTokens + usage.outputTokens ||
+        usage.inputTokens !== accounting.inputTokens || usage.outputTokens !== accounting.outputTokens || client.settingsRoot !== identity.settingsRoot || identity.modelId !== provenance.reportedModelId || identity.modelVersion === client.version) fail("PROVENANCE")
+  }
   if (record.root !== deriveFrozenModelBundleRoot(record)) fail("ROOT")
   return record as unknown as FrozenModelBundle
 }

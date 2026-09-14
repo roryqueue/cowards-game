@@ -58,6 +58,26 @@ describe("frozen model oracle", () => {
     expect(drift.root).not.toBe(unavailable.root)
   })
 
+  it("requires a truthful v2 request/response/usage companion and an explicitly unavailable serving snapshot", () => {
+    const v1 = bundleInput()
+    const value = {
+      ...v1,
+      schemaVersion: "frozen-model-bundle-v2" as const,
+      provider: { ...v1.provider, modelVersion: "undisclosed" },
+      provenance: {
+        requestedModelId: "gpt-small-requested", reportedModelId: v1.provider.modelId,
+        client: { version: "codex-cli-test", settingsRoot: v1.provider.settingsRoot },
+        servingSnapshot: { availability: "unavailable" as const },
+        requestRecordRoot: v1.request.root, responseRecordRoot: v1.response.root,
+        actualUsage: { inputTokens: v1.accounting.inputTokens, outputTokens: v1.accounting.outputTokens, cachedInputTokens: 0, totalTokens: v1.accounting.inputTokens + v1.accounting.outputTokens },
+      },
+    }
+    const admitted = admitFrozenModelBundle({ ...value, root: deriveFrozenModelBundleRoot(value) })
+    expect(admitted.schemaVersion).toBe("frozen-model-bundle-v2")
+    expect(() => admitFrozenModelBundle({ ...value, provenance: { ...value.provenance, servingSnapshot: { availability: "available" } }, root: deriveFrozenModelBundleRoot({ ...value, provenance: { ...value.provenance, servingSnapshot: { availability: "available" } } }) })).toThrow("MODEL_PROVENANCE")
+    expect(() => admitFrozenModelBundle({ ...value, provider: { ...value.provider, modelVersion: value.provenance.client.version }, root: deriveFrozenModelBundleRoot({ ...value, provider: { ...value.provider, modelVersion: value.provenance.client.version } }) })).toThrow("MODEL_PROVENANCE")
+  })
+
   it("rejects unknown or malformed provenance fields before root conversion", () => {
     const unknown = { ...bundleInput(), extra: true }
     const negativeAccounting = { ...bundleInput(), accounting: { ...bundleInput().accounting, inputTokens: -1 } }
