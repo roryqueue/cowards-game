@@ -34,7 +34,9 @@ patterns-established:
   - "All intake metadata uses exact canonical keys, bounded identifiers/integers, domain-separated roots, and recursive freezing."
   - "Source bytes remain data and can proceed only through the existing admitFactory seam; intake never executes source or creates gameplay evidence."
 
-requirements-completed: [ORCL-01, ORCL-05]
+requirements-completed: []
+requirements-contributed: [ORCL-01, ORCL-05]
+requirements-status: "Mechanics contributed; global empirical requirements remain pending because no genuine participant, external, provider, or candidate evidence was created."
 
 coverage:
   - id: D1
@@ -63,7 +65,7 @@ coverage:
         status: pass
     human_judgment: false
 
-duration: 8min
+duration: 25min
 completed: 2026-09-14
 status: complete
 ---
@@ -74,7 +76,7 @@ status: complete
 
 ## Performance
 
-- **Duration:** 8 min
+- **Duration:** 25 min including bounded readiness repair
 - **Started:** 2026-09-14T00:20:00Z
 - **Completed:** 2026-09-14T00:28:00Z
 - **Tasks:** 2
@@ -85,13 +87,15 @@ status: complete
 - Added strict frozen protocol validation requiring explicit participant/reviewer identifiers, authorization roots, disclosure, provenance, validation, conflict, confidentiality, acceptance, and bounded resource policy.
 - Added deep-frozen roots-only reviewer projection with exact runtime validation and denial of unknown, holdout, other-source, memory, objective, host, evaluator, credential, and security payload classes.
 - Replaced caller-controlled ordinals with durable pre-validation charging, repository-derived attempt/reviewer/acceptance/time accounting, unique attempt roots, retry/duplicate detection, and retained terminal evidence.
-- Added focused tests covering valid fully rooted protocol, prohibited projection injection, valid source forwarding through a temporary repository, invalid/provenance/conflict/duplicate/retry/weak retention, budget exhaustion, ledger completion, and no gameplay claim.
+- Added non-executing runtime-js source validation and exact review acceptance, reviewer/provenance binding, packet build/toolchain/runtime cross-links, protocol-scoped retries and elapsed accounting, and fail-closed accounting reads.
+- Added focused tests covering valid fully rooted protocol, prohibited projection injection, valid source forwarding through a temporary repository, invalid/provenance/conflict/duplicate/retry/weak retention, budget exhaustion, ledger completion, malformed-protocol blocking, source-kind validation, cross-link validation, accounting corruption, and no gameplay claim.
 
 ## Task Commits
 
 1. **Task 1: Define the exact frozen intake protocol and disclosure classes** - `06ab180f` (feat)
 2. **Task 2: Admit explicit hostile submissions into the common evidence root** - `f6701dc9` (feat)
 3. **Task 2 follow-up: retain malformed retry charges** - `821d104c` (fix)
+4. **Plan 06 readiness repair: close eight intake findings** - pending repair commit
 
 ## Files Created/Modified
 
@@ -118,8 +122,16 @@ status: complete
 - **Verification:** Focused intake tests (6) and strategy-lab TypeScript build pass.
 - **Committed in:** follow-up fix commit below.
 
-**Total deviations:** 1 auto-fixed (Rule 1 bug)
-**Impact on plan:** Preserves the required charge-before-validation boundary without expanding scope.
+**2. [Rule 1 - Bug] Close all eight readiness findings**
+- **Found during:** bounded Plan 264-06 intake readiness review
+- **Issue:** Acceptance did not require explicit review; reviewer/provenance and packet build/runtime identities were not fully cross-bound; retries were not protocol-scoped; source-kind validation was declarative; accounting corruption could be treated as zero; elapsed totals crossed protocols; malformed protocol handling was not explicitly non-authorizing.
+- **Fix:** Require `reviewDisposition: "accept"`, bind reviewer and builder/toolchain/runtime roots, validate deterministic source without execution, scope retry and elapsed checks to the protocol, fail closed on accounting artifacts and unknown elapsed use, and return an immutable non-authorizing blocked configuration without allocating an attempt for malformed protocols.
+- **Files modified:** `packages/strategy-lab/src/factory/intake.ts`, `packages/strategy-lab/src/factory/intake.test.ts`, `packages/strategy-lab/src/factory/intake-protocol.ts`, `packages/strategy-lab/src/factory/intake-protocol.test.ts`
+- **Verification:** Focused intake/protocol suite (14 tests), full factory suite (32 tests), and strategy-lab TypeScript build pass.
+- **Committed in:** repair commit below.
+
+**Total deviations:** 2 auto-fixed (charge-boundary bug plus eight readiness findings)
+**Impact on plan:** All repairs remain inside the existing four-file intake scope and preserve the no-source-execution/private-only boundary.
 
 ## Issues Encountered
 
@@ -131,19 +143,19 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 
-The private intake path is ready for downstream readiness/calibration work. No real participant, model, external provider, gameplay, candidate-completion, production, public, or holdout claim was created; empirical participation remains pending explicit authorized inputs.
+The private intake mechanics are repaired for downstream readiness/calibration review. ORCL-01 and ORCL-05 are contributed by these mechanics but remain globally pending empirical evidence. No real participant, model, external provider, gameplay, candidate-completion, production, public, or holdout claim was created.
 
 ## Verification
 
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — passed (9 tests).
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — passed (27 tests).
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — passed (14 tests).
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — passed (32 tests).
 - `./node_modules/.bin/tsc -b packages/strategy-lab --pretty false` — passed.
 
 ## Self-Check: PASSED
 
 - All four scoped source/test files exist.
-- Task commits `06ab180f` and `f6701dc9` exist in git history.
-- Summary is intentionally limited to Plan 264-06 and does not claim external participation or empirical candidate evidence.
+- Task commits `06ab180f`, `f6701dc9`, and repair commits exist in git history.
+- Summary is intentionally limited to Plan 264-06; requirements are marked contributed/pending rather than globally complete.
 
 ---
 *Phase: 264-immutable-factory-independent-oracles-and-quarantined-intake*
