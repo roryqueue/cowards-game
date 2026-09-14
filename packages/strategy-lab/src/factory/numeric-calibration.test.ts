@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { classifyNumericComparison, compareNumericEvidence, freezeNumericCalibrationThreshold, type NumericCalibrationEvidence, type NumericComparison } from "./numeric-calibration.js"
+import { classifyNumericComparison, compareNumericEvidence, extractSourceStructureTokens, freezeNumericCalibrationThreshold, type NumericCalibrationEvidence, type NumericComparison } from "./numeric-calibration.js"
 
 const evidence = (suffix: string, variation = false): NumericCalibrationEvidence => ({
   sourceStructureTokens: ["export", "default", "select", variation ? suffix : "shared"],
-  lineageEdgeTokens: ["base->candidate", variation ? suffix : "shared-edge"],
-  dependencyEdgeTokens: ["runtime->abi", variation ? suffix : "shared-dependency"],
+  lineageEdgeTokens: [{ label: "parent", from: "base", to: variation ? suffix : "shared-edge" }],
+  dependencyEdgeTokens: [{ label: "imports", from: "runtime", to: variation ? suffix : "shared-dependency" }],
   legalInputSamples: { select: ["legal", variation ? suffix : "turn"] },
   chronicleSamples: { phase: ["activation", variation ? suffix : "stone"] },
   matchupSamples: { fixed: ["draw", variation ? suffix : "stable"] },
@@ -29,6 +29,13 @@ describe("numeric factory calibration", () => {
     expect(result.weightedMean).toBeGreaterThan(0)
     expect(result.weightedMean).toBeLessThan(1)
     for (const dimension of Object.values(result.dimensions)) { expect(dimension.score).toBeGreaterThanOrEqual(0); expect(dimension.score).toBeLessThanOrEqual(1); expect(dimension.informativeCount).toBeGreaterThan(0) }
+  })
+
+  it("extracts source structure without treating local binding names as semantics", () => {
+    const left = extractSourceStructureTokens("const alpha = 1; export default { soldierBrain() { return alpha + 2 } }")
+    const right = extractSourceStructureTokens("const beta = 1; export default { soldierBrain() { return beta + 2 } }")
+    expect(left).toEqual(right)
+    expect(left).toContain("property:soldierBrain")
   })
 
   it("treats absent edges and unmatched behavioral sample keys as noninformative", () => {
@@ -64,8 +71,11 @@ describe("numeric factory calibration", () => {
     const frozen = freezeNumericCalibrationThreshold(validControls())
     if (frozen.status !== "frozen") throw new Error("expected frozen threshold")
     expect(classifyNumericComparison(comparison(0.9, 0), frozen.threshold)).toBe("unresolved")
-    const mixed = comparison(0.9); mixed.dimensions.matchup = { score: 0.1, informativeCount: 1 }
+    const baseline = comparison(0.9), mixed = { ...baseline, dimensions: { ...baseline.dimensions, matchup: { score: 0.1, informativeCount: 1 } }, weightedMean: (0.9 * 5 + 0.1) / 6 }
     expect(classifyNumericComparison(mixed, frozen.threshold)).toBe("unresolved")
+    expect(classifyNumericComparison({ ...comparison(0.9), dimensions: { ...comparison(0.9).dimensions, sourceStructure: { score: -0.1, informativeCount: 1 } } }, frozen.threshold)).toBe("unresolved")
+    expect(freezeNumericCalibrationThreshold({ ...validControls(), "S11/S12": undefined } as unknown as ReturnType<typeof validControls>)).toMatchObject({ status: "unresolved" })
     expect(() => compareNumericEvidence({ ...evidence("left"), sourceStructureTokens: [""] }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
+    expect(() => compareNumericEvidence({ ...evidence("left"), lineageEdgeTokens: [{ label: "parent", from: "sha256:" + "a".repeat(64), to: "child" }] }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
   })
 })

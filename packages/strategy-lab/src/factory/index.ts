@@ -67,5 +67,7 @@ export {
   createFactoryCalibrationReport,
 } from "./calibration.js"
 export type { FactoryCalibrationCase, FactoryCalibrationCaseKind, FactoryCalibrationObservation, FactoryCalibrationIngestion, FactoryCalibrationManifest, FactoryCalibrationReport, FactoryCalibrationWorkload, FactoryCalibrationWorkloadRef } from "./calibration.js"
+export { NUMERIC_DIMENSIONS, classifyNumericComparison, compareNumericEvidence, extractSourceStructureTokens, freezeNumericCalibrationThreshold } from "./numeric-calibration.js"
+export type { ConcreteEdgeToken, NumericCalibrationEvidence, NumericCalibrationThreshold, NumericClassification, NumericComparison, NumericControlId, NumericControlTable, NumericDimension, NumericDimensionComparison, NumericThresholdFit } from "./numeric-calibration.js"
 export { publishFactorySupervisionArtifacts, readFactorySupervisionArtifactRecords } from "./supervision-artifacts.js"
 export type { StoredFactorySupervision, StoredFactorySupervisionDescriptor, StoredFactorySupervisionRecord } from "./supervision-artifacts.js"
