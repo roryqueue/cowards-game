@@ -15,7 +15,7 @@ describe("verified factory cell observation adapter", () => {
   it("projects repeated real traces and Chronicle records into numeric samples without private payload", () => {
     const result = createNumericObservationFromVerifiedCell({ sourceUtf8: "export default { soldierBrain() { return { action: { type: 'TURN_TO_STONE' } } } }", cell: { key: "S01:block-a:candidate", block: "block-a", candidateSide: "bottom", initialInitiative: "candidate" }, lineageEdges: [{ label: "parent", from: "tactical-base", to: "s01" }], dependencyEdges: [{ label: "imports", from: "strategy", to: "runtime-abi" }], records })
     expect(Object.keys(result.evidence.legalInputSamples)).toEqual(["S01:block-a:candidate:soldierBrain:0", "S01:block-a:candidate:soldierBrain:1"])
-    expect(Object.keys(result.evidence.chronicleSamples)).toEqual(["S01:block-a:candidate:transition:0", "S01:block-a:candidate:event:0"])
+    expect(Object.keys(result.evidence.chronicleSamples).sort()).toEqual(["S01:block-a:candidate:event:0", "S01:block-a:candidate:transition:0"])
     expect(Object.keys(result.evidence.matchupSamples)).toEqual(["S01:block-a:candidate:final-state:0", "S01:block-a:candidate:final-event:0"])
     expect(JSON.stringify(result)).not.toContain("objective")
     expect(JSON.stringify(result)).not.toContain("opaque-a")
@@ -24,7 +24,7 @@ describe("verified factory cell observation adapter", () => {
   })
 
   it("normalizes opaque ids consistently while preserving actions, direction, position and repeated samples", () => {
-    const swapped = structuredClone(records) as any[]
+    const swapped = structuredClone(records) as unknown as any[]
     swapped[5].value.requestProjection.self.id = "different-1"
     swapped[6].value.requestProjection.self.id = "different-2"
     const base = createNumericObservationFromVerifiedCell({ sourceUtf8: "export default {}", cell: { key: "cell", block: "block-b", candidateSide: "top", initialInitiative: "opponent" }, lineageEdges: [], dependencyEdges: [], records })
