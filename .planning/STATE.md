@@ -4,8 +4,8 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
-status: blocked
-stopped_at: Phase264 Plan08 source repairs independently clean; only operator approval to reopen stopped authoring with supported model remains
+status: in_progress
+stopped_at: Phase264 Plan08 client updated and Sol advertised; bounded continuation is preparing after source compatibility review
 last_updated: "2026-09-14T17:42:00Z"
 last_activity: 2026-09-14
 last_activity_desc: Final f9f0cd63 source review clean; 79 tests, strict types, affected builds and1292-file boundary check pass; one charged authoring failure, zero workloads, no further execution authority
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current continuation:** The operator updated the client and said, “okay done, if that worked please continue. if not let me know”. A read-only installed-client0.154.0 model/list now advertises the exact `gpt-5.6-sol`; zero authoring attempts or workloads were consumed by that check. This resumes the previously discussed at-most-three unused authoring slots in a fresh30-minute window, preserving the old one-attempt failure and cumulative four-attempt ceiling, unchanged48workload/90-minute ceiling, and all other boundaries. No GPT-5.5 substitution is selected. An exact0.154 compatibility fix for the obsolete imagegenext listing is committed atf638687f and undergoing independent review; all eleven disable arguments remain. Main will freeze fresh private inputs before authoring. Earlier approval-pending and blocked paragraphs are historical, not the current operator decision.
 
 **Verified handoff:** RUN-01/02 and both contradictory-error findings are independently resolved at `f9f0cd63adeabc9c29ac3defbb259b4c3a318ab0`. Main passed79/79 tests across13explicit files, strict affected types, model/lab package builds and1292source-boundary files with zero violations. Independent final recheck passes35/35 and zero findings. Current verification is4/5 truths: source/mechanics and truthful blocked readiness pass; actual three-mechanism independence remains unresolved. Corrected immutable outcome `sha256:86afd06a8e66f8d54dbee6f2484e67d7573435e0869f000e6f9aaef5097281a6` preserves its original predecessor and marks lost protocol/reported identity/usage unavailable. One authoring attempt was charged; no valid source, teacher search or workload followed; all36historical locks remain. The only human checkpoint is approval to use supported `gpt-5.5` and reopen at most the three remaining authoring attempts in a fresh30-minute window, retaining the48workload/90-minute ceiling and all other bounds. Do not run any authoring command before that approval. No new numbered plan or long authorization literal is needed. Earlier progress paragraphs are historical.
 

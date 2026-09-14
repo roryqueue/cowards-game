@@ -1,13 +1,17 @@
 ---
 phase: 264
 plan: "07"
-status: terminal_authoring_system_failure
+status: approved_client_update_continuation
 decided: 2026-09-14
 operator_response: approved
 empirical_outcome: one_charged_authoring_failure_zero_workloads
 ---
 
 # Approved bounded fresh-generation decision
+
+## Current operator continuation — 2026-09-14
+
+After choosing to update the client instead of changing models, the operator said: “okay done, if that worked please continue. if not let me know”. The installed0.154.0 client now advertises `gpt-5.6-sol` in a read-only model/list check. Resume with that same model, a fresh private ledger and30-minute window, at most three fresh attempts, and the unchanged48workload/90-minute limit. The prior failed attempt remains charged: cumulative maximum four, no old ledger reuse or rewritten outcome. Prior usage remains unavailable; reserve its full50,000-token slot rather than treating missing usage as zero, leaving at most150,000 accounted fresh tokens. All stop, isolation, resource, scientific, privacy and formation bounds remain. Source compatibility and command-composition review must pass before generation; no new literal or numbered plan is required. The original failed outcome below remains history.
 
 The operator approved the complete recommendation in264-CONTEXT.md after reporting no usable current-rules model submissions. This is the single input decision for existing Plans07/08, not a new literal or numbered route. It is not a claim that readiness passed.
 
