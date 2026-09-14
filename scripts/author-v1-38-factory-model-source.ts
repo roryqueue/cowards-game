@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url"
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { admitFrozenModelBundle, deriveFrozenModelBundleRoot, deriveFrozenModelRawResponseRecordRoot, deriveFrozenModelRequestRecordRoot, deriveFrozenModelResponseRoot, type FrozenModelBundleV2 } from "../packages/strategy-oracle-model/src/bundle.js"
 import { assertModelSourceClosure } from "../packages/strategy-oracle-model/src/emit.js"
-import { createFactoryAppServerTransport, type FactoryAppServerTransport, type FactoryAppServerTransportOptions, type FactoryAppServerTurnResult } from "./v1-38-factory-app-server-transport.js"
+import { createFactoryAppServerTransport, FactoryAppServerTurnFailure, type FactoryAppServerTransport, type FactoryAppServerTransportOptions, type FactoryAppServerTurnResult } from "./v1-38-factory-app-server-transport.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`FACTORY_AUTHOR_${code}`) }
@@ -65,7 +65,7 @@ export const startAuthorAttempt = (ledgerDirectory: string, allocation: FactoryA
   const draft = { schemaVersion: "factory-model-author-attempt-start-v1" as const, allocationRoot: admitted.root, ordinal, startedAtMs: nowMs, firstStartedAtMs, requestRecordRoot: launch.requestRecordRoot }; const start = Object.freeze({ ...draft, root: labRoot("factory-model-author-attempt-start-v1", draft) })
   atomicJson(join(directory, "request.json"), launch.requestRecord); writeFileSync(join(directory, "request.stdin"), launch.stdin, { flag: "wx", mode: 0o600 }); atomicJson(join(directory, "start.json"), start); return start
 }
-export interface AuthorChildResult { readonly exitCode: number; readonly stdout: Uint8Array; readonly stderr: Uint8Array; readonly admitted?: Readonly<{ reportedModel: string; usage: ModelUsageRecord; source: string; validEnvelope: true }>; readonly elapsedMilliseconds?: number }
+export interface AuthorChildResult { readonly exitCode: number; readonly stdout: Uint8Array; readonly stderr: Uint8Array; readonly admitted?: Readonly<{ reportedModel: string; usage: ModelUsageRecord | null; source: string | null; validEnvelope: boolean }>; readonly elapsedMilliseconds?: number }
 export type AuthorChild = (launch: FactoryAuthorLaunchPlan, timeoutMs: number) => AuthorChildResult
 const parseEvents = (bytes: Uint8Array) => { let usage: ModelUsageRecord | null = null, reportedModel: string | null = null, source: string | null = null, turnsStarted = 0, turnsCompleted = 0, finals = 0; let forbidden = false
   for (const line of new TextDecoder().decode(bytes).split(/\r?\n/u).filter(Boolean)) { const event = JSON.parse(line) as Record<string, unknown>; if (event.type === "thread.started" && typeof event.model === "string") { if (reportedModel !== null && reportedModel !== event.model) forbidden = true; reportedModel = event.model } else if (event.type === "turn.started") turnsStarted += 1; else if (event.type === "turn.completed") { turnsCompleted += 1; const raw = event.usage as Record<string, unknown> | undefined; if (!raw || ![raw.input_tokens, raw.cached_input_tokens, raw.output_tokens, raw.reasoning_output_tokens].every(Number.isSafeInteger) || Number(raw.reasoning_output_tokens) < 0 || Number(raw.reasoning_output_tokens) > Number(raw.output_tokens)) forbidden = true; else usage = { inputTokens: Number(raw.input_tokens), cachedInputTokens: Number(raw.cached_input_tokens), outputTokens: Number(raw.output_tokens), totalTokens: Number(raw.input_tokens) + Number(raw.output_tokens) } } else if (event.type === "turn.failed" || event.type === "error") forbidden = true; else if (typeof event.type === "string" && event.type.startsWith("item.")) { const item = event.item as Record<string, unknown> | undefined, itemType = item?.type; if (itemType === "reasoning") continue; if (itemType !== "agent_message") forbidden = true; else if (event.type === "item.completed") { finals += 1; if (typeof item?.text === "string") { try { const value = JSON.parse(item.text) as Record<string, unknown>; if (Object.keys(value).length === 1 && typeof value.source === "string") source = value.source } catch { /* correction-eligible invalid source */ } } } } }
@@ -120,7 +120,13 @@ export const runFactoryAppServerAuthorAttempt = async (input: AppServerAuthorAtt
     const start = startAuthorAttempt(input.ledgerDirectory, input.allocation, launch, clock), before = clock(); started = start
     let observed: FactoryAppServerTurnResult
     const remaining = input.allocation.windowMinutes * 60_000 - Math.max(0, before - start.firstStartedAtMs)
-    try { observed = await transport.startTurn(launch.stdin, remaining) } catch (error) { terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => { throw error }, clock); observed = null as never }
+    try { observed = await transport.startTurn(launch.stdin, remaining) } catch (error) {
+      const after = clock()
+      terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => error instanceof FactoryAppServerTurnFailure
+        ? { exitCode: 1, stdout: error.evidence.rawJsonl, stderr: new TextEncoder().encode(error.message), elapsedMilliseconds: Math.max(0, after - before), admitted: { reportedModel: error.evidence.reportedModel, usage: error.evidence.usage ? { inputTokens: error.evidence.usage.inputTokens, outputTokens: error.evidence.usage.outputTokens, cachedInputTokens: error.evidence.usage.cachedInputTokens, totalTokens: error.evidence.usage.totalTokens } : null, source: null, validEnvelope: false } }
+        : { exitCode: 1, stdout: new Uint8Array(), stderr: new TextEncoder().encode(error instanceof Error ? error.message : String(error)), elapsedMilliseconds: Math.max(0, after - before) }, clock)
+      observed = null as never
+    }
     if (terminal === null) {
       const after = clock(); let source = ""; try { const sourceValue = JSON.parse(observed.sourceMessage) as Record<string, unknown>; if (Object.keys(sourceValue).length === 1 && typeof sourceValue.source === "string") source = sourceValue.source } catch { /* retained as correction-eligible invalid output */ }
       const usage: ModelUsageRecord = { inputTokens: observed.usage.inputTokens, outputTokens: observed.usage.outputTokens, cachedInputTokens: observed.usage.cachedInputTokens, totalTokens: observed.usage.totalTokens }

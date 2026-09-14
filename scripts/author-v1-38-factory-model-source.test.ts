@@ -8,6 +8,7 @@ import { admitCanonicalJsonValue } from "@cowards/spec"
 import { createFactoryRepository, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { verifyFactoryAuthoringRecords, type FactoryAuthoringRecordRefs } from "./v1-38-factory-execution-evidence.js"
 import { buildFactoryAuthorCommand, completeAuthorAttempt, createFactoryAuthoringAllocation, createFrozenModelBundleV2FromAuthorAttempt, inspectAuthoringCapability, runFactoryAppServerAuthorAttempt, startAuthorAttempt, type AuthoringCapability, type FrozenAuthorSettings } from "./author-v1-38-factory-model-source.js"
+import { FactoryAppServerTurnFailure } from "./v1-38-factory-app-server-transport.js"
 
 const temporary: string[] = [], root = (value: string): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}` as LabRoot
 afterEach(() => { for (const path of temporary.splice(0)) rmSync(path, { recursive: true, force: true }) })
@@ -20,6 +21,13 @@ const eventStream = (model: string | null, message = JSON.stringify({ source }),
 const launchFor = (parent: string) => buildFactoryAuthorCommand(createFactoryAuthoringAllocation(), { packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), model: "gpt-5.6-sol", capability, frozenSettings, codePath: "/tool/bin", authHome: join(parent, "auth") })
 
 describe("operational factory authoring", () => {
+  it("retains charged failed-turn protocol bytes, usage, and elapsed time without a bundle", async () => {
+    const parent = directory(), auth = join(parent, "auth.json"), raw = new TextEncoder().encode('{"jsonrpc":"2.0","method":"turn/failed","params":{"turnId":"turn-1"}}\n'); writeFileSync(auth, "fake")
+    const times = [1000, 1010, 1060, 1070, 1080]
+    const result = await runFactoryAppServerAuthorAttempt({ allocation: createFactoryAuthoringAllocation(), packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), stateDirectory: join(parent, "state"), existingAuthFile: auth, ledgerDirectory: join(parent, "ledger"), model: "gpt-5.6-sol", modelProvider: "openai-codex", frozenSettings, capability, clock: () => times.shift()!, transportFactory: async () => ({ threadId: "thread-1", reportedModel: "gpt-5.6-sol", async close() { return "sigterm" as const }, async startTurn() { throw new FactoryAppServerTurnFailure("HTTP 400", { rawJsonl: raw, usage: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, reportedModel: "gpt-5.6-sol", terminalStatus: "failed" }) } }) })
+    expect(result).toMatchObject({ terminal: { disposition: "system_failure", usage: { totalTokens: 20 }, reportedModel: "gpt-5.6-sol", elapsedMilliseconds: 50 }, bundle: null })
+    expect(readFileSync(join(parent, "ledger", "A-01", "response.jsonl"))).toEqual(Buffer.from(raw))
+  })
   it("permits the next invalid-output correction in a fresh isolated cwd and state", async () => {
     const parent=directory(),auth=join(parent,"native-auth.json");writeFileSync(auth,"fake-only")
     const records:FactoryAuthoringRecordRefs[]=[]

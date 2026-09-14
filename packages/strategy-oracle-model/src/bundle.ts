@@ -106,16 +106,19 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
     let message: RecordValue
     try { message = JSON.parse(line) as RecordValue } catch { return fail("RAW_RESPONSE") }
     messages.push(message)
-    if (message.id === 2) {
-      const result = objectRecord(message.result, "RAW_RESPONSE")
+    const response = message.result !== null && typeof message.result === "object" && !Array.isArray(message.result) ? message.result as RecordValue : null
+    if (response && response.thread && response.model && response.modelProvider) {
+      if (reportedModelId !== null) fail("RAW_RESPONSE")
+      const result = response
       const resultModel = textValue(result.model), resultProvider = textValue(result.modelProvider)
       const sandbox = objectRecord(result.sandbox, "RAW_RESPONSE")
       if (!resultModel || !resultProvider || result.approvalPolicy !== "never" || sandbox.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(result.instructionSources) || result.instructionSources.length !== 0) fail("RAW_RESPONSE")
       reportedModelId = resultModel
       requestedModelId = resultModel
       providerId = resultProvider
-    } else if (message.id === 3) {
-      const result = objectRecord(message.result, "RAW_RESPONSE"), turn = objectRecord(result.turn, "RAW_RESPONSE")
+    } else if (response && response.turn) {
+      if (turnId !== null) fail("RAW_RESPONSE")
+      const result = response, turn = objectRecord(result.turn, "RAW_RESPONSE")
       const resultTurnId = textValue(turn.id)
       if (!resultTurnId) fail("RAW_RESPONSE")
       turnId = resultTurnId

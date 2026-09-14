@@ -16,6 +16,7 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
   private reply(request: Record<string, unknown>): void {
     const response = (result: unknown): void => { this.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n`)) }
     if (request.method === "initialize") response({ protocolVersion: "1" })
+    if (request.method === "model/list") response({ data: [{ id: "gpt-5.6-luna", model: "gpt-5.6-luna", hidden: false }], nextCursor: null })
     if (request.method === "thread/start") response({ thread: { id: "thread-1" }, model: "gpt-5.6-luna", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] })
     if (request.method === "turn/start") {
       response({ turn: { id: "turn-1" } })
@@ -39,7 +40,7 @@ describe("factory Codex app-server transport", () => {
     const result = await transport.startTurn("emit source only")
     expect(result).toMatchObject({ sourceMessage: '{"source":"source"}', usage: { totalTokens: 42 }, reportedModel: "gpt-5.6-luna" })
     expect(new TextDecoder().decode(result.rawJsonl)).toContain('"turn/completed"')
-    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "thread/start", "turn/start"])
+    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "model/list", "thread/start", "turn/start"])
   })
   it("rejects model rerouting before a turn can start", async () => {
     const fake = new FakeAppServer()
@@ -49,7 +50,7 @@ describe("factory Codex app-server transport", () => {
       fake.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result: { thread: { id: "thread-1" }, model: "rerouted", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } })}\n`))
     }
     await expect(createFactoryAppServerTransport({ ...options, spawn: () => fake })).rejects.toThrow("FACTORY_APP_SERVER_THREAD_START_CONTRACT")
-    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "thread/start"])
+    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "model/list", "thread/start"])
     expect(fake.killed).toBe(true)
   })
   it("refuses an effective approval policy other than never before turn start", async () => {
@@ -60,13 +61,20 @@ describe("factory Codex app-server transport", () => {
       fake.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result: { thread: { id: "thread-1" }, model: "gpt-5.6-luna", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "on-request", instructionSources: [] } })}\n`))
     }
     await expect(createFactoryAppServerTransport({ ...options, spawn: () => fake })).rejects.toThrow("FACTORY_APP_SERVER_THREAD_START_CONTRACT")
-    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "thread/start"])
+    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "model/list", "thread/start"])
     expect(fake.killed).toBe(true)
   })
   it("rejects an explicit in-turn reroute even when a terminal message follows", async () => {
     const fake = new FakeAppServer(); fake.rerouteOnTurn = true
     const transport = await createFactoryAppServerTransport({ ...options, spawn: () => fake })
-    await expect(transport.startTurn("emit source only")).rejects.toThrow("FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT")
+    const failure = await transport.startTurn("emit source only").catch((error: unknown) => error)
+    expect(failure).toMatchObject({ message: "FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT", evidence: { reportedModel: "gpt-5.6-luna", usage: { totalTokens: 42 }, terminalStatus: "completed" } })
+    expect(new TextDecoder().decode(failure.evidence.rawJsonl)).toContain('"model/rerouted"')
+  })
+  it("refuses an unadvertised exact model before thread creation or charge", async () => {
+    const fake = new FakeAppServer()
+    await expect(createFactoryAppServerTransport({ ...options, requestedModel: "gpt-5.6-sol", spawn: () => fake })).rejects.toThrow("FACTORY_APP_SERVER_MODEL_UNAVAILABLE")
+    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "model/list"])
   })
   it("waits for termination and escalates an ignored SIGTERM", async () => {
     const fake = new FakeAppServer(); fake.ignoreTerm = true

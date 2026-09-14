@@ -83,7 +83,7 @@ const fail = (code: string): never => { throw new TypeError(`FACTORY_EXECUTION_$
 const same = (left: unknown, right: unknown) => labRoot("factory-execution-equality-v1", left) === labRoot("factory-execution-equality-v1", right)
 const decodeChargedAuthorTranscript = (raw: string, request: Record<string, unknown>) => {
   const events = raw.split(/\r?\n/u).filter(Boolean).map((line) => { try { return JSON.parse(line) as Record<string, any> } catch { return fail("AUTHOR_PROTOCOL") } })
-  const starts = events.filter((event) => event.id === 2), turns = events.filter((event) => event.id === 3)
+  const starts = events.filter((event) => event.result?.thread && event.result?.model && event.result?.modelProvider), turns = events.filter((event) => event.result?.turn && !event.result?.model)
   if (starts.length !== 1 || turns.length !== 1) return fail("AUTHOR_PROTOCOL")
   const started = starts[0]!.result as Record<string, any>, sandbox = started?.sandbox as Record<string, unknown>, turnId = turns[0]!.result?.turn?.id
   const settings = request.frozenSettings as Record<string, unknown>, cwd = request.cwd

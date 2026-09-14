@@ -27,6 +27,15 @@ export interface FactoryAppServerTurnResult {
   readonly reportedModel: string
   readonly rawJsonl: Uint8Array
 }
+export interface FactoryAppServerTurnFailureEvidence {
+  readonly rawJsonl: Uint8Array
+  readonly usage: FactoryAppServerTurnResult["usage"] | null
+  readonly reportedModel: string
+  readonly terminalStatus: string | null
+}
+export class FactoryAppServerTurnFailure extends Error {
+  constructor(message: string, readonly evidence: FactoryAppServerTurnFailureEvidence) { super(message); this.name = "FactoryAppServerTurnFailure" }
+}
 
 export interface FactoryAppServerTransport {
   readonly threadId: string
@@ -109,6 +118,16 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
   })
   try {
     await request("initialize", Object.freeze({ clientInfo: Object.freeze({ name: "cowards-game-v1.38-factory", version: "1" }), capabilities: Object.freeze({}) }))
+    let cursor: string | null = null, modelAvailable = false
+    for (let page = 0; page < 10; page += 1) {
+      const listed = await request("model/list", Object.freeze({ includeHidden: true, limit: 1000, cursor }))
+      const data = listed.data
+      if (!Array.isArray(data) || !(listed.nextCursor === null || typeof listed.nextCursor === "string")) fail("MODEL_CATALOG")
+      if ((data as unknown[]).some((entry: unknown) => record(entry)?.model === options.requestedModel)) modelAvailable = true
+      cursor = listed.nextCursor as string | null
+      if (modelAvailable || cursor === null) break
+    }
+    if (!modelAvailable) fail("MODEL_UNAVAILABLE")
     const started = await request("thread/start", Object.freeze({ cwd: options.cwd, model: options.requestedModel, modelProvider: options.requestedProvider, sandbox: "read-only", approvalPolicy: "never", ephemeral: true, baseInstructions: "Return only the requested inert source JSON. Never request tools or external context.", developerInstructions: null, config: Object.freeze({}) }))
     const thread = record(started.thread)
     const threadId = text(thread?.id)
@@ -121,20 +140,26 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
       async startTurn(sourceMessage: string, timeoutMs = options.timeoutMs): Promise<FactoryAppServerTurnResult> {
         if (!sourceMessage || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1) fail("SOURCE_MESSAGE")
         const deadline = Date.now() + timeoutMs
-        const startedTurn = await request("turn/start", Object.freeze({ threadId: admittedThreadId, input: Object.freeze([{ type: "text", text: sourceMessage }]) }), Math.max(1, deadline - Date.now()))
-        const turn = record(startedTurn.turn) ?? startedTurn
-        const turnId = text(turn.id)
-        if (!turnId) fail("TURN_START")
-        const admittedTurnId = turnId as string
-        while (!terminal.has(admittedTurnId)) {
-          if (Date.now() >= deadline) fail("TURN_TIMEOUT")
-          await new Promise<void>((resolve) => setTimeout(resolve, 5))
+        let admittedTurnId: string | null = null
+        try {
+          const startedTurn = await request("turn/start", Object.freeze({ threadId: admittedThreadId, input: Object.freeze([{ type: "text", text: sourceMessage }]) }), Math.max(1, deadline - Date.now()))
+          const turn = record(startedTurn.turn) ?? startedTurn
+          admittedTurnId = text(turn.id)
+          if (!admittedTurnId) fail("TURN_START")
+          const turnKey = admittedTurnId as string
+          while (!terminal.has(turnKey)) { if (Date.now() >= deadline) fail("TURN_TIMEOUT"); await new Promise<void>((resolve) => setTimeout(resolve, 5)) }
+          const completed = terminal.get(turnKey)!, completedTurn = record(completed.turn) ?? completed, status = text(completedTurn.status)
+          const rawUsage = usageByTurn.get(turnKey), messages = messagesByTurn.get(turnKey) ?? []
+          const usage = rawUsage && { inputTokens: nonNegativeInteger(rawUsage.inputTokens), cachedInputTokens: nonNegativeInteger(rawUsage.cachedInputTokens), outputTokens: nonNegativeInteger(rawUsage.outputTokens), reasoningOutputTokens: nonNegativeInteger(rawUsage.reasoningOutputTokens), totalTokens: nonNegativeInteger(rawUsage.totalTokens) }
+          if (status !== "completed" || forbiddenTurns.has(turnKey) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
+          return Object.freeze({ sourceMessage: messages[0]!, usage: usage as FactoryAppServerTurnResult["usage"], reportedModel: admittedModel, rawJsonl: byteCopy(raw) })
+        } catch (error) {
+          const rawUsage = admittedTurnId ? usageByTurn.get(admittedTurnId) : null
+          const parsed = rawUsage && { inputTokens: nonNegativeInteger(rawUsage.inputTokens), cachedInputTokens: nonNegativeInteger(rawUsage.cachedInputTokens), outputTokens: nonNegativeInteger(rawUsage.outputTokens), reasoningOutputTokens: nonNegativeInteger(rawUsage.reasoningOutputTokens), totalTokens: nonNegativeInteger(rawUsage.totalTokens) }
+          const usage = parsed && !Object.values(parsed).some((value) => value === null) && parsed.totalTokens === parsed.inputTokens! + parsed.outputTokens! ? parsed as FactoryAppServerTurnResult["usage"] : null
+          const ended = admittedTurnId ? terminal.get(admittedTurnId) : null, status = text(record(ended?.turn)?.status) ?? text(ended?.status)
+          throw new FactoryAppServerTurnFailure(error instanceof Error ? error.message : "FACTORY_APP_SERVER_TURN_FAILURE", Object.freeze({ rawJsonl: byteCopy(raw), usage, reportedModel: admittedModel, terminalStatus: status }))
         }
-        const completed = terminal.get(admittedTurnId)!, completedTurn = record(completed.turn) ?? completed, status = text(completedTurn.status)
-        const rawUsage = usageByTurn.get(admittedTurnId), messages = messagesByTurn.get(admittedTurnId) ?? []
-        const usage = rawUsage && { inputTokens: nonNegativeInteger(rawUsage.inputTokens), cachedInputTokens: nonNegativeInteger(rawUsage.cachedInputTokens), outputTokens: nonNegativeInteger(rawUsage.outputTokens), reasoningOutputTokens: nonNegativeInteger(rawUsage.reasoningOutputTokens), totalTokens: nonNegativeInteger(rawUsage.totalTokens) }
-        if (status !== "completed" || forbiddenTurns.has(admittedTurnId) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
-        return Object.freeze({ sourceMessage: messages[0]!, usage: usage as FactoryAppServerTurnResult["usage"], reportedModel: admittedModel, rawJsonl: byteCopy(raw) })
       },
       async close(): Promise<"already_exited" | "sigterm" | "sigkill"> {
         if (observedClose) return "already_exited"
