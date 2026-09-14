@@ -24,7 +24,10 @@ const fail = (code: string): never => { throw new TypeError(`FACTORY_ASSESSMENT_
 const encode = (value: unknown) => { const result = admitCanonicalJsonValue(value, {profile:"canonical-manifest"}); return result.ok ? result.canonicalBytes : fail("CANONICAL") }
 const same = (left: unknown, right: unknown) => labRoot("factory-assessment-equality-v1",left) === labRoot("factory-assessment-equality-v1",right)
 const record = (value: unknown): Record<string,unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string,unknown> : fail("RECORD")
-export const factoryWorkloadResourceViolations = (_started:number,_completed:number,_invocations:number,_lifetime:number):readonly string[] => []
+export const factoryWorkloadResourceViolations = (started:number,completed:number,invocations:number,lifetime:number):readonly string[] => {
+  if (![started,completed,invocations,lifetime].every(Number.isSafeInteger) || started<0 || completed<started || invocations<0 || lifetime<1 || lifetime>120000) return ["invalid_resource_measurement"]
+  return [...(completed-started>lifetime?["lifetime_exceeded"]:[]),...(invocations>256?["invocations_exceeded"]:[])]
+}
 
 /** Pure decision helper; only the retained-evidence entrypoint can publish readiness. */
 export const decideFactoryIndependence = (controls: NumericControlTable, baseEdges: Record<string,NumericComparison>, priorReasons: readonly string[], sharing: number): {status:"affirmed"|"unresolved";reasons:readonly string[]} => {
@@ -115,6 +118,8 @@ export const assessFactoryIndependence = (repository: FactoryRepository, input: 
     const accountingRecords = retained.records.filter((item) => item.kind === "accounting"), traces = retained.records.filter((item) => item.kind === "trace")
     if (usage.schemaVersion !== "factory-calibration-actual-usage-v1" || usage.startRoot !== start.root || usage.receiptRoot !== retained.descriptor.receiptRoot || usage.supervisionArtifactRoot !== supervisionRoot || usage.totalInvocations !== accountingRecords.length || usage.candidateInvocations !== traces.length || traces.length < 1 || traces.length > 256) return fail("USAGE")
     if (usage.startedAtMs !== startedAtMs || !Number.isSafeInteger(usage.completedAtMs) || Number(usage.completedAtMs) < startedAtMs) return fail("WINDOW_COMPLETION")
+    const resourceViolations=factoryWorkloadResourceViolations(startedAtMs,Number(usage.completedAtMs),accountingRecords.length,Number(accounting.maxLifetimeMs))
+    if(resourceViolations.length){reasons.push(...resourceViolations.map(reason=>`cell:${ordinal}:${reason}`));continue}
     if (Number(usage.completedAtMs) - firstStart > 5400000) reasons.push(`cell:${ordinal}:window_overrun`)
     if (usage.retainedRecordCount !== retained.descriptor.recordCount || usage.retainedByteLength !== retained.descriptor.byteLength || usage.outputBytes !== accountingRecords.reduce((sum,item) => sum+Number(record(item.value).outputBytes),0)) return fail("USAGE_TOTALS")
     if (accountingRecords.some((item) => record(record(item.value).result).ok !== true) || traces.some((item) => record(item.value).classification !== "success")) { reasons.push(`cell:${ordinal}:runtime_failure`); continue }

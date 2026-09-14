@@ -109,11 +109,20 @@ export const buildFactoryCalibrationMatchInput = (workload: FactoryCalibrationWo
   const initialInitiativePlayerId = workload.condition.initialInitiative === "candidate" ? candidatePlayerId : opponentPlayerId
   return { matchId: `factory-calibration-${workload.root.slice(7, 23)}-${startRoot.slice(7, 15)}`, seed: workload.condition.seed, arenaVariant, bottomPlayerId, topPlayerId, bottomStrategyRevisionId: workload.condition.candidateSide === "bottom" ? candidateRevisionId : workload.opponent.opponentId, topStrategyRevisionId: workload.condition.candidateSide === "top" ? candidateRevisionId : workload.opponent.opponentId, initialInitiativePlayerId, maxPhases: workload.condition.maxPhases }
 }
-export const boundFactoryWorkloadProviders = (providers:Readonly<Record<string,LabSupervisedProvider>>,_limit:number,_deadlineMs:number):Readonly<Record<string,LabSupervisedProvider>> => providers
-const defaultPlan = (workload: FactoryCalibrationWorkload, _admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot): FactoryCalibrationAttemptPlan => {
+/** The shared cap counts both participants; a refused next call never reaches a provider. */
+export const boundFactoryWorkloadProviders = (providers:Readonly<Record<string,LabSupervisedProvider>>,limit:number,deadlineMs:number):Readonly<Record<string,LabSupervisedProvider>> => {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 256 || !Number.isSafeInteger(deadlineMs)) return fail("WORKLOAD_BUDGET")
+  let invocations=0
+  return Object.fromEntries(Object.entries(providers).map(([id,provider])=>[id,{identity:provider.identity,invoke(request:LabKernelRequest,identity:LabSupervisedProvider["identity"]){
+    if(invocations >= limit || Date.now() >= deadlineMs) return fail("WORKLOAD_BUDGET_EXHAUSTED")
+    invocations++
+    return provider.invoke(request,identity)
+  },verify(evidence:LabRuntimeEvidence){return provider.verify(evidence)},close(){return provider.close()}}]))
+}
+const defaultPlan = (workload: FactoryCalibrationWorkload, _admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot, deadlineMs:number): FactoryCalibrationAttemptPlan => {
   const candidatePlayerId = "factory-candidate", opponentPlayerId = workload.opponent.opponentId
   const match = buildFactoryCalibrationMatchInput(workload, provider.identity.revisionId, startRoot)
-  return { candidatePlayerId, input: { match, providers: { [candidatePlayerId]: provider, [opponentPlayerId]: createFixedMechanicsOpponent(workload, startRoot, provider.identity.budgetRoot) } }, run: runCanonicalLabMatch }
+  return { candidatePlayerId, input: { match, providers: { [candidatePlayerId]: provider, [opponentPlayerId]: createFixedMechanicsOpponent(workload, startRoot, provider.identity.budgetRoot) } }, run: (input)=>runCanonicalLabMatch({...input,providers:boundFactoryWorkloadProviders(input.providers,workload.budget.maxInvocations,deadlineMs)}) }
 }
 
 const errorDisposition = (error: unknown, providerCreated: boolean): "invalid" | "system_failure" => {
@@ -198,15 +207,17 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
       validationRoot = validation.root
       const admission = authorizeFactorySupervision({ sourceAdmission, validation, repository })
       if (fresh) {
-        remainingLifetimeMs = remainingFreshWorkloadLifetime(firstWorkloadStartedAtMs, Date.now())
-        if (remainingLifetimeMs === 0) fail("WINDOW_EXHAUSTED")
+        const beforeProviderMs = Date.now()
+        remainingLifetimeMs = Math.min(remainingFreshWorkloadLifetime(firstWorkloadStartedAtMs,beforeProviderMs),startedAtMs+workload.budget.maxLifetimeMs-beforeProviderMs)
+        if (remainingLifetimeMs <= 0) fail("WINDOW_EXHAUSTED")
       }
       provider = createFactorySupervisedRuntime({ ...hooks.runtimeOptions, matchId: `factory-calibration-${start.root.slice(7, 23)}`, containerName: `factory-calibration-${start.root.slice(7, 19)}`, ownershipLabel: "v1.38-factory-calibration", admission, sourceBytes, attemptRoot: start.root, budgetRoot: start.budgetRoot, image: manifest.supervision.image, invocationLimit: workload.budget.maxInvocations, factoryLifetimeMs: Math.min(workload.budget.maxLifetimeMs, remainingLifetimeMs) })
       providerCreated = true
-      const attemptPlan = hooks.plan ? hooks.plan(admission, provider, start.root, workload) : defaultPlan(workload, admission, provider, start.root)
+      const attemptPlan = hooks.plan ? hooks.plan(admission, provider, start.root, workload) : defaultPlan(workload, admission, provider, start.root,Math.min(startedAtMs+workload.budget.maxLifetimeMs,firstWorkloadStartedAtMs+5400000-5000))
       if (attemptPlan.candidatePlayerId !== attemptPlan.input.match.bottomPlayerId && attemptPlan.candidatePlayerId !== attemptPlan.input.match.topPlayerId) fail("CANDIDATE_PLAYER")
       const receipt = await superviseFactory(admission, attemptPlan.candidatePlayerId, { ...attemptPlan.input, providers: { ...attemptPlan.input.providers, [attemptPlan.candidatePlayerId]: provider } }, attemptPlan.run)
       const cleanup = provider.close()
+      const completedAtMs = Date.now()
       provider = undefined
       if (!cleanup.cleanupComplete || cleanup.orphanedChild) fail("CLEANUP")
       const storedSupervision = publishFactorySupervisionArtifacts(repository, receipt)
@@ -215,11 +226,12 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
         schemaVersion: "factory-calibration-actual-usage-v1", startRoot: start.root, receiptRoot: receipt.root,
         supervisionArtifactRoot: storedSupervision.artifactRoot, totalInvocations: receipt.execution.accounting.length,
         candidateInvocations: receipt.traces.length, outputBytes: receipt.execution.accounting.reduce((total, entry) => total + entry.outputBytes, 0),
-        retainedRecordCount: storedSupervision.recordCount, retainedByteLength: storedSupervision.byteLength, startedAtMs, completedAtMs: Date.now(),
+        retainedRecordCount: storedSupervision.recordCount, retainedByteLength: storedSupervision.byteLength, startedAtMs, completedAtMs,
       }))
       const supervision = mapFactorySupervision(receipt)
-      if (supervision.candidateDisposition !== "accepted") {
-        disposition = supervision.candidateDisposition
+      const budgetOverrun = fresh && (completedAtMs-startedAtMs > workload.budget.maxLifetimeMs || receipt.execution.accounting.length > workload.budget.maxInvocations)
+      if (budgetOverrun || supervision.candidateDisposition !== "accepted") {
+        disposition = budgetOverrun ? "system_failure" : supervision.candidateDisposition
         outputRoot = disposition === "system_failure" ? null : storedSupervision.artifactRoot
         duplicateEvidenceRoot = supervision.evidenceRoot
         finalEvidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-terminal-evidence-v1", startRoot: start.root, disposition, supervisionArtifactRoot: storedSupervision.artifactRoot, actualUsageRoot }))
