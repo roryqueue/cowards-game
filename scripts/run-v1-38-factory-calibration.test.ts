@@ -10,16 +10,158 @@ import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
 import { buildFactoryCalibrationMatchInput, deriveFactoryCalibrationOutcome, deriveFixedMechanicsOpponentIdentityRoot, runFactoryCalibration } from "./run-v1-38-factory-calibration.js"
+import * as freshEvidence from "./v1-38-factory-fresh-evidence.js"
+import * as executionEvidence from "./v1-38-factory-execution-evidence.js"
+import * as assessor from "./assess-v1-38-factory-independence.js"
 
 const dirs: string[] = [], root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 const encode = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok) throw new Error("encode"); return admitted.canonicalBytes }
-const publishWorkload = (repository: ReturnType<typeof createFactoryRepository>, candidateIngestionArtifactRoot: LabRoot, pairGroup = "pair-a", initialInitiative: "candidate" | "opponent" = "candidate") => {
-  const workload = createFactoryCalibrationWorkload({ candidateIngestionArtifactRoot, pairGroup, pairAxis: "initialInitiative", condition: { arenaId: "arena:smoke:v1", seed: `seed-${pairGroup}`, candidateSide: "bottom", initialInitiative, maxPhases: 1 }, opponent: { kind: "fixed_mechanics", opponentId: "factory-fixed-mechanics-v1", identityRoot: deriveFixedMechanicsOpponentIdentityRoot() }, budget: { maxInvocations: 64, maxLifetimeMs: 120_000 }, lineageManifestArtifactRoot: null, dependencyManifestArtifactRoot: null })
-  return { workload, artifactRoot: publishFactoryArtifact(repository, encode(workload)) }
+const publishWorkload = (
+  repository: ReturnType<typeof createFactoryRepository>,
+  candidateIngestionArtifactRoot: LabRoot,
+  pairGroup = "pair-a",
+  initialInitiative: "candidate" | "opponent" = "candidate",
+) => {
+  const workload = createFactoryCalibrationWorkload({
+    candidateIngestionArtifactRoot,
+    pairGroup,
+    pairAxis: "initialInitiative",
+    condition: {
+      arenaId: "arena:smoke:v1",
+      seed: `seed-${pairGroup}`,
+      candidateSide: "bottom",
+      initialInitiative,
+      maxPhases: 1,
+    },
+    opponent: {
+      kind: "fixed_mechanics",
+      opponentId: "factory-fixed-mechanics-v1",
+      identityRoot: deriveFixedMechanicsOpponentIdentityRoot(),
+    },
+    budget: { maxInvocations: 64, maxLifetimeMs: 120_000 },
+    lineageManifestArtifactRoot: null,
+    dependencyManifestArtifactRoot: null,
+  })
+  return {
+    workload,
+    artifactRoot: publishFactoryArtifact(repository, encode(workload)),
+  }
 }
-afterEach(() => { for (const directory of dirs.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+const publishMockFreshManifest = (
+  repository: ReturnType<typeof createFactoryRepository>,
+) => {
+  const protocolValue = {
+      schemaVersion: "factory-calibration-protocol-v1",
+      phase: "264",
+      purpose: "development-independence-calibration",
+      split: "development",
+    },
+    protocol = {
+      ...protocolValue,
+      root: labRoot("factory-calibration-protocol-v1", protocolValue),
+    }
+  const protocolArtifactRoot = publishFactoryArtifact(
+    repository,
+    encode(protocol),
+  )
+  const allocationValue = {
+      schemaVersion: "factory-calibration-allocation-v1",
+      protocolRoot: protocol.root,
+      phase: "264",
+      maxAttempts: 1,
+      maxInvocationsPerAttempt: 64,
+      maxLifetimeMs: 120_000,
+    },
+    allocation = {
+      ...allocationValue,
+      root: labRoot("factory-calibration-allocation-v1", allocationValue),
+    }
+  const allocationArtifactRoot = publishFactoryArtifact(
+    repository,
+    encode(allocation),
+  )
+  const ingestion = {
+    artifactRoot: root("5"),
+    packetRoot: root("6"),
+    sourceRoot: root("7"),
+    producerIdentity: "emitTacticalFactoryPacket" as const,
+    origin: "tactical-oracle" as const,
+    evidenceClass: "real_producer" as const,
+  }
+  const workload = publishWorkload(repository, ingestion.artifactRoot)
+  const authorizationValue = {
+      schemaVersion: "factory-calibration-authorization-v2",
+      status: "authorized",
+      allocationRoot: allocation.root,
+      sourceSlots: ["S01"],
+      slotIngestionArtifactRoots: { S01: ingestion.artifactRoot },
+      cellRoots: [workload.workload.root],
+      workloadArtifactRoots: [workload.artifactRoot],
+      geometryDesign: "two_geometry_side_confounded_pilot",
+      competitiveClaim: "none",
+    },
+    authorization = {
+      ...authorizationValue,
+      root: labRoot("factory-calibration-authorization-v2", authorizationValue),
+    }
+  const authorizationArtifactRoot = publishFactoryArtifact(
+    repository,
+    encode(authorization),
+  )
+  const supervision = {
+    adapterId: "runtime-js-container-subprocess" as const,
+    runtimeAbi: "strategy-runtime-abi-v1.19" as const,
+    image: LAB_ADMITTED_ROOTS.image,
+    runtimeProfileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot,
+  }
+  const manifest = createFactoryCalibrationManifest({
+    authorizationRoot: authorization.root,
+    authorizationArtifactRoot,
+    protocolRoot: protocol.root,
+    protocolArtifactRoot,
+    allocationRoot: allocation.root,
+    allocationArtifactRoot,
+    studyPolicyRoot: "sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17",
+    measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95",
+    maxAttempts: 1,
+    maxInvocationsPerAttempt: 64,
+    maxLifetimeMs: 120_000,
+    supervision,
+    ingestions: [ingestion],
+    workloads: [
+      {
+        artifactRoot: workload.artifactRoot,
+        root: workload.workload.root,
+        candidateIngestionArtifactRoot: ingestion.artifactRoot,
+        pairGroup: workload.workload.pairGroup,
+      },
+    ],
+  })
+  return publishFactoryArtifact(repository, encode(manifest))
+}
+afterEach(() => {
+  vi.restoreAllMocks()
+  for (const directory of dirs.splice(0))
+    rmSync(directory, { recursive: true, force: true })
+})
 
 describe("factory calibration runner retention", () => {
+  it("validates fresh execution evidence before charging and maps the direct assessment", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-fresh-run-test-"))); dirs.push(directory)
+    const repository = createFactoryRepository(directory), manifestArtifactRoot = publishMockFreshManifest(repository), evidenceRoot = root("a")
+    vi.spyOn(freshEvidence, "readFreshFactoryCalibration").mockReturnValue({} as never)
+    vi.spyOn(executionEvidence, "readFactoryExecutionEvidence").mockImplementation(() => { throw new TypeError("FACTORY_EXECUTION_BAD") })
+    await expect(runFactoryCalibration(manifestArtifactRoot, repository, { executionEvidenceArtifactRoot: evidenceRoot })).rejects.toThrow("FACTORY_EXECUTION_BAD")
+    expect(resumeFactoryAttemptInventory(repository).completedAttemptRoots).toHaveLength(0)
+    vi.mocked(executionEvidence.readFactoryExecutionEvidence).mockReturnValue({} as never)
+    vi.spyOn(assessor, "assessFactoryIndependence").mockReturnValue({ status: "affirmed", reasons: [], assessmentRoot: root("b"), assessmentArtifactRoot: root("c"), thresholdArtifactRoot: root("d"), manifestRoot: root("e"), allocationRoot: root("f") })
+    vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(5_395_000)
+    const result = await runFactoryCalibration(manifestArtifactRoot, repository, { executionEvidenceArtifactRoot: evidenceRoot })
+    expect(result.readiness).toBe("affirmed")
+    expect(assessor.assessFactoryIndependence).toHaveBeenCalledOnce()
+    expect(resumeFactoryAttemptInventory(repository).completedAttemptRoots).toHaveLength(0)
+    expect(vi.mocked(assessor.assessFactoryIndependence).mock.calls[0]![1].windowTerminalArtifactRoot).toMatch(/^sha256:/u)
+  })
   it("materializes only the declared canonical arena, positions, side, initiative, and one-phase bound", () => {
     const workload = createFactoryCalibrationWorkload({ candidateIngestionArtifactRoot: root("1"), pairGroup: "realism-pair", pairAxis: "initialInitiative", condition: { arenaId: "arena:smoke:v1", seed: "realism-seed", candidateSide: "top", initialInitiative: "opponent", maxPhases: 1 }, opponent: { kind: "fixed_mechanics", opponentId: "factory-fixed-mechanics-v1", identityRoot: deriveFixedMechanicsOpponentIdentityRoot() }, budget: { maxInvocations: 64, maxLifetimeMs: 120_000 }, lineageManifestArtifactRoot: null, dependencyManifestArtifactRoot: null })
     const match = buildFactoryCalibrationMatchInput(workload, "candidate-revision", root("2"))

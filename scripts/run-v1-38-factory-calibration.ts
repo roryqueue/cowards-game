@@ -32,8 +32,6 @@ export interface FactoryCalibrationRunnerHooks {
   /** Historical mechanics fixtures are never an admissible fresh-v2 route. */
   readonly legacyMechanics?: true
   readonly executionEvidenceArtifactRoot?: LabRoot
-  /** Test-only clock injection; the operational CLI always uses the host clock. */
-  readonly clock?: () => number
   readonly runtimeOptions?: Partial<Omit<FactorySupervisedRuntimeOptions, "admission" | "sourceBytes" | "attemptRoot" | "budgetRoot" | "image" | "invocationLimit" | "benchmarkLifetimeMs" | "factoryLifetimeMs" | "matchId" | "containerName" | "ownershipLabel">>
   readonly plan?: (admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot, workload: FactoryCalibrationWorkload) => FactoryCalibrationAttemptPlan
 }
@@ -119,7 +117,7 @@ const defaultPlan = (workload: FactoryCalibrationWorkload, _admission: FactoryAd
 
 const errorDisposition = (error: unknown, providerCreated: boolean): "invalid" | "system_failure" => {
   const message = error instanceof Error ? error.message : "unknown"
-  if (/^(?:FACTORY_RUN_CLEANUP|LAB_)/u.test(message)) return "system_failure"
+  if (/^(?:FACTORY_RUN_(?:CLEANUP|WINDOW_EXHAUSTED)|LAB_)/u.test(message)) return "system_failure"
   if (!providerCreated || /^FACTORY_RUNTIME_(?:UNSUPPORTED_NATIVE_LANE|NATIVE_LANE_IDENTITY|SOURCE_BINDING|SOURCE_ENCODING|REVISION_BINDING|LIFETIME)$/u.test(message)) return "invalid"
   return "system_failure"
 }
@@ -156,19 +154,19 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
     ingestion: FactoryCalibrationManifest["ingestions"][number]; producerIdentity: FactoryFingerprintEvidence["producerIdentity"]; origin: FactoryFingerprintEvidence["origin"]; retainedRoot: LabRoot
     storedSupervisionArtifactRoot: LabRoot; storedExecutionRoot: LabRoot; attemptPlan: FactoryCalibrationAttemptPlan; selectedRealPath: boolean
   }>> = []
-  const clock = hooks.clock ?? Date.now
-  const firstWorkloadStartedAtMs = clock()
+  const firstWorkloadStartedAtMs = Date.now()
   let windowTerminalArtifactRoot: LabRoot | null = null
   for (let ordinal = 0; ordinal < manifest.workloads.length; ordinal += 1) {
     const workloadRef = manifest.workloads[ordinal]!
     const ingestion = manifest.ingestions.find((entry) => entry.artifactRoot === workloadRef.candidateIngestionArtifactRoot) ?? fail("WORKLOAD_INGESTION")
-    const remainingLifetimeMs = fresh ? remainingFreshWorkloadLifetime(firstWorkloadStartedAtMs, clock()) : manifest.maxLifetimeMs
+    const startedAtMs = Date.now()
+    let remainingLifetimeMs = fresh ? remainingFreshWorkloadLifetime(firstWorkloadStartedAtMs, startedAtMs) : manifest.maxLifetimeMs
     if (fresh && remainingLifetimeMs === 0) {
-      const windowTerminal = { schemaVersion: "factory-calibration-window-terminal-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, reason: "timebox_exhausted", nextOrdinal: ordinal, firstWorkloadStartedAtMs, observedAtMs: clock(), completedCount: terminalRoots.length }
+      const windowTerminal = { schemaVersion: "factory-calibration-window-terminal-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, reason: "timebox_exhausted", nextOrdinal: ordinal, firstWorkloadStartedAtMs, observedAtMs: startedAtMs, completedCount: terminalRoots.length }
       windowTerminalArtifactRoot = publishFactoryArtifact(repository, encode({ ...windowTerminal, root: labRoot("factory-calibration-window-terminal-v1", windowTerminal) }))
       break
     }
-    const accountingRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-accounting-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, ordinal, workloadArtifactRoot: workloadRef.artifactRoot, firstWorkloadStartedAtMs, maxInvocations: manifest.maxInvocationsPerAttempt, maxLifetimeMs: remainingLifetimeMs }))
+    const accountingRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-accounting-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, ordinal, workloadArtifactRoot: workloadRef.artifactRoot, firstWorkloadStartedAtMs, startedAtMs, maxInvocations: manifest.maxInvocationsPerAttempt, maxLifetimeMs: remainingLifetimeMs }))
     const start = createFactoryAttemptStart({
       taskRoot: manifest.protocolRoot,
       budgetRoot: labRoot("factory-calibration-attempt-budget-v1", { allocationRoot: manifest.allocationRoot, ordinal }),
@@ -198,6 +196,10 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
       const validation = validateSelectedSource(proposal, sourceBytes)
       validationRoot = validation.root
       const admission = authorizeFactorySupervision({ sourceAdmission, validation, repository })
+      if (fresh) {
+        remainingLifetimeMs = remainingFreshWorkloadLifetime(firstWorkloadStartedAtMs, Date.now())
+        if (remainingLifetimeMs === 0) fail("WINDOW_EXHAUSTED")
+      }
       provider = createFactorySupervisedRuntime({ ...hooks.runtimeOptions, matchId: `factory-calibration-${start.root.slice(7, 23)}`, containerName: `factory-calibration-${start.root.slice(7, 19)}`, ownershipLabel: "v1.38-factory-calibration", admission, sourceBytes, attemptRoot: start.root, budgetRoot: start.budgetRoot, image: manifest.supervision.image, invocationLimit: workload.budget.maxInvocations, factoryLifetimeMs: Math.min(workload.budget.maxLifetimeMs, remainingLifetimeMs) })
       providerCreated = true
       const attemptPlan = hooks.plan ? hooks.plan(admission, provider, start.root, workload) : defaultPlan(workload, admission, provider, start.root)
@@ -212,7 +214,7 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
         schemaVersion: "factory-calibration-actual-usage-v1", startRoot: start.root, receiptRoot: receipt.root,
         supervisionArtifactRoot: storedSupervision.artifactRoot, totalInvocations: receipt.execution.accounting.length,
         candidateInvocations: receipt.traces.length, outputBytes: receipt.execution.accounting.reduce((total, entry) => total + entry.outputBytes, 0),
-        retainedRecordCount: storedSupervision.recordCount, retainedByteLength: storedSupervision.byteLength,
+        retainedRecordCount: storedSupervision.recordCount, retainedByteLength: storedSupervision.byteLength, startedAtMs, completedAtMs: Date.now(),
       }))
       const supervision = mapFactorySupervision(receipt)
       if (supervision.candidateDisposition !== "accepted") {
@@ -231,7 +233,7 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
       }
     } catch (error) {
       disposition = errorDisposition(error, providerCreated)
-      const evidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-error-v1", startRoot: start.root, disposition, error: error instanceof Error ? error.message : "unknown" }))
+      const evidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-error-v1", startRoot: start.root, disposition, error: error instanceof Error ? error.message : "unknown", startedAtMs, completedAtMs: Date.now() }))
       outputRoot = disposition === "system_failure" ? null : evidenceRoot
       duplicateEvidenceRoot = evidenceRoot
       finalEvidenceRoot = evidenceRoot
