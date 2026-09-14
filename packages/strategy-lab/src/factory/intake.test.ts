@@ -6,7 +6,8 @@ import { join } from "node:path"
 import { labRoot } from "../contracts.js"
 import { factoryOraclePacketFixture } from "./contracts.js"
 import { deriveFactoryOraclePacketRoot } from "./identity.js"
-import { createFactoryRepository, readFactoryArtifact, resumeFactoryAttemptInventory } from "./repository.js"
+import { createFactoryRepository, publishFactoryArtifact, publishFactoryAttemptTerminal, readFactoryArtifact, recordFactoryAttemptStart, resumeFactoryAttemptInventory } from "./repository.js"
+import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "./ledger.js"
 import { admitQuarantinedIntakePacket, deriveIntakeProvenanceRoot, type IntakeProvenance, type QuarantinedIntakePacket } from "./intake.js"
 import { admitFrozenIntakeProtocol, blockedIntakeConfiguration, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot, type FrozenIntakeProtocol } from "./intake-protocol.js"
 
@@ -159,6 +160,16 @@ describe("quarantined intake", () => {
     expect(admitQuarantinedIntakePacket(input(firstProtocol, packet("p1"), { elapsedMinutes: 1 }), repo).disposition).toBe("accepted")
     expect(admitQuarantinedIntakePacket(input(otherProtocol, packet("p2"), { elapsedMinutes: 1 }), repo).disposition).toBe("accepted")
     expect(admitQuarantinedIntakePacket(input(firstProtocol, packet("p3"), { elapsedMinutes: 1, reviewerId: "reviewer-two", provenance: provenance(firstProtocol, packet("p3"), "reviewer-two") }), repo).disposition).toBe("accepted")
+  })
+
+  it("ignores complete automated calibration accounting but never same-protocol intake accounting", () => {
+    const repo = repository(), p = protocol()
+    const automatedAccounting = publishFactoryArtifact(repo, new TextEncoder().encode("automated-accounting"))
+    const automated = createFactoryAttemptStart({ taskRoot: p.root, budgetRoot: root("1"), candidateRoot: root("2"), authoringMechanism: "automated-oracle", inputRoot: root("3"), resourceAccountingRoot: automatedAccounting, retryParentRoot: null })
+    recordFactoryAttemptStart(repo, automated)
+    const evidence = root("4")
+    publishFactoryAttemptTerminal(repo, automated, createFactoryAttemptTerminal({ startRoot: automated.root, disposition: "unresolved", outputRoot: evidence, validationRoot: root("5"), duplicateEvidenceRoot: root("6"), finalEvidenceRoot: root("7") }))
+    expect(admitQuarantinedIntakePacket(input(p, packet("mixed")), repo).disposition).toBe("accepted")
   })
 
   it("rejects caller ordinals/unknown fields, NaN or negative elapsed values, and retains the charge", () => {

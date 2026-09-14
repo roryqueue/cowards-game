@@ -169,10 +169,12 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
     const artifactRoot = publishFactoryArtifact(repository, encoded.canonicalBytes)
     return freezeLabValue({ disposition: "blocked_configuration", attemptRoot: null, artifactRoot, configurationRoot: blocked.root, authorized: false, allocation: "none" })
   }
-  const packetRoot = safePacketRoot(input?.packet), prior = readLedger(repository), attemptOrdinal = prior.length + 1
-  const priorAccounting = prior.map((record) => ({ record, accounting: readAccounting(repository, record.start.resourceAccountingRoot, { taskRoot: record.start.taskRoot, candidateRoot: record.start.candidateRoot, budgetRoot: record.start.budgetRoot, inputRoot: record.start.inputRoot }) }))
+  const packetRoot = safePacketRoot(input?.packet), prior = readLedger(repository)
+  const scopedIntake = prior.filter((record) => record.start.authoringMechanism === "external-submission" && record.start.taskRoot === protocol.root)
+  const attemptOrdinal = scopedIntake.length + 1
+  const priorAccounting = scopedIntake.map((record) => ({ record, accounting: readAccounting(repository, record.start.resourceAccountingRoot, { taskRoot: record.start.taskRoot, candidateRoot: record.start.candidateRoot, budgetRoot: record.start.budgetRoot, inputRoot: record.start.inputRoot }) }))
   const priorOrdinals = priorAccounting.map(({ accounting }) => accounting.attemptOrdinal as number)
-  if (priorAccounting.some(({ accounting }) => accounting.elapsedMinutes === null) || new Set(priorOrdinals).size !== priorOrdinals.length || priorOrdinals.some((ordinal) => ordinal < 1 || ordinal > prior.length) || new Set(Array.from({ length: prior.length }, (_, index) => index + 1)).size !== new Set(priorOrdinals).size) return fail("ACCOUNTING_UNCERTAIN")
+  if (priorAccounting.some(({ accounting }) => accounting.elapsedMinutes === null) || new Set(priorOrdinals).size !== priorOrdinals.length || priorOrdinals.some((ordinal) => ordinal < 1 || ordinal > scopedIntake.length) || new Set(Array.from({ length: scopedIntake.length }, (_, index) => index + 1)).size !== new Set(priorOrdinals).size) return fail("ACCOUNTING_UNCERTAIN")
   const provenanceRoot = safeProvenanceRoot(input?.provenance)
   const participantId = typeof input?.participantId === "string" ? input.participantId : "invalid-participant"
   const reviewerId = typeof input?.reviewerId === "string" ? input.reviewerId : "invalid-reviewer"
@@ -205,19 +207,18 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
         (input.retryParentRoot !== undefined && input.retryParentRoot !== null && !isRoot(input.retryParentRoot)) ||
         (input.reviewDisposition !== undefined && !["accept", "reject", "legal_but_weak"].includes(input.reviewDisposition))) throw new TypeError("invalid-input")
     if (input.retryParentRoot !== undefined && input.retryParentRoot !== null) {
-      if (!prior.some((record) => record.start.root === input.retryParentRoot && record.start.taskRoot === protocol.root && record.start.candidateRoot === packetRoot)) throw new TypeError("invalid-retry")
+      if (!scopedIntake.some((record) => record.start.root === input.retryParentRoot && record.start.candidateRoot === packetRoot)) throw new TypeError("invalid-retry")
       disposition = "retried"; reason = "declared-retry"; throw new TypeError("terminal")
     }
     const packet = FactoryOraclePacketSchema.parse(input.packet)
     admitProvenance(input.provenance, protocol, packet.root, packet.source.root, input.reviewerId, packet)
     if (input.sourceBytes.byteLength !== packet.source.byteLength || byteRoot(input.sourceBytes) !== packet.source.root) throw new TypeError("source-invalid")
     validateDeterministicSource(input.sourceBytes, packet)
-    if (prior.some((record) => record.start.taskRoot === protocol.root && record.start.candidateRoot === packet.root)) { disposition = "duplicate"; reason = "packet-already-retained"; throw new TypeError("terminal") }
-    const scoped = priorAccounting.filter(({ record }) => record.start.taskRoot === protocol.root)
-    const reviewerUses = scoped.filter(({ accounting }) => accounting.reviewerId === input.reviewerId).length
-    const accepted = scoped.filter(({ record }) => record.terminal.disposition === "accepted").length
-    const elapsedTotal = scoped.reduce((total, { accounting }) => total + (typeof accounting.elapsedMinutes === "number" ? accounting.elapsedMinutes : 0), 0)
-    const used = scoped.length
+    if (scopedIntake.some((record) => record.start.candidateRoot === packet.root)) { disposition = "duplicate"; reason = "packet-already-retained"; throw new TypeError("terminal") }
+    const reviewerUses = priorAccounting.filter(({ accounting }) => accounting.reviewerId === input.reviewerId).length
+    const accepted = priorAccounting.filter(({ record }) => record.terminal.disposition === "accepted").length
+    const elapsedTotal = priorAccounting.reduce((total, { accounting }) => total + (typeof accounting.elapsedMinutes === "number" ? accounting.elapsedMinutes : 0), 0)
+    const used = priorAccounting.length
     if (used >= protocol.submissionLimit || used >= protocol.reviewerLimit || reviewerUses >= protocol.reviewerReuseLimit || accepted >= protocol.acceptanceBudget || elapsedTotal + input.elapsedMinutes > protocol.timeLimitMinutes) {
       disposition = "rejected"; reason = "budget-exhausted"; throw new TypeError("terminal")
     }

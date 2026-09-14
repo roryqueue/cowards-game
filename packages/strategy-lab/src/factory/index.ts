@@ -49,8 +49,18 @@ export { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, ma
 export type { FactoryAdmission, FactorySourceAdmission, FactorySupervisionProvider, FactorySupervisionReceipt } from "./admission.js"
 export {
   createFactoryFingerprintEvidence,
+  createFactoryGraphNodeArtifact,
   deriveFactoryFingerprints,
   deriveFactorySourceStructureRoot,
   requireIssuedFactoryIndependenceReceipt,
 } from "./fingerprint.js"
 export type { FactoryFingerprintEvidence, FactoryIndependenceReceipt } from "./fingerprint.js"
+export {
+  FACTORY_CALIBRATION_CORPUS,
+  admitFactoryCalibrationManifest,
+  createFactoryCalibrationManifest,
+  createFactoryCalibrationReport,
+} from "./calibration.js"
+export type { FactoryCalibrationCase, FactoryCalibrationIngestion, FactoryCalibrationManifest, FactoryCalibrationReport } from "./calibration.js"
+export { publishFactorySupervisionArtifacts, readFactorySupervisionArtifactRecords } from "./supervision-artifacts.js"
+export type { StoredFactorySupervision, StoredFactorySupervisionDescriptor, StoredFactorySupervisionRecord } from "./supervision-artifacts.js"
