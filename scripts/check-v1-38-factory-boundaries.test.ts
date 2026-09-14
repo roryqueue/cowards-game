@@ -22,7 +22,9 @@ describe("private factory dependency boundary", () => {
     ["barrel factory reach", { "packages/strategy-oracle-model/src/emit.ts": 'export * from "../../strategy-lab/src/factory/index.js"' }],
     ["computed private loader", { "packages/strategy-oracle-model/src/emit.ts": 'const leaf = "@cowards/strategy-oracle-" + "teacher"; void import(leaf)' }],
     ["unresolved private loader", { "packages/strategy-oracle-model/src/emit.ts": "void import(loader)" }],
+    ["hostile execution", { "packages/strategy-oracle-model/src/emit.ts": "eval('candidate')" }],
     ["strategic manifest edge", { "packages/strategy-oracle-tactical/package.json": JSON.stringify({ dependencies: { "@cowards/strategy-oracle-teacher": "workspace:*" } }) }],
+    ["strategic package entrypoint", { "packages/strategy-oracle-tactical/package.json": JSON.stringify({ exports: { ".": "./src/selector.ts" } }) }],
     ["production route", { "apps/web/src/bridge.ts": 'export * from "@cowards/strategy-oracle-model"' }],
     ["public artifact", { "apps/web/public/factory.json": '{"privateTrace":"factory"}' }],
   ])("rejects %s", (_name, files) => {

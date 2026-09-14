@@ -4,7 +4,7 @@ import {
   deriveFactoryOraclePacketRoot,
   FactoryOraclePacketSchema,
   type FactoryOraclePacket,
-} from "../../strategy-lab/src/factory/index.js"
+} from "../../strategy-lab/src/factory/packet.js"
 import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, freezeLabValue, labRoot, type LabRoot } from "../../strategy-lab/src/contracts.js"
 import { requireFrozenModelBundle, type FrozenModelBundle } from "./bundle.js"
 

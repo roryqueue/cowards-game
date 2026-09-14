@@ -5,7 +5,7 @@ import {
   deriveFactoryOraclePacketRoot,
   FactoryOraclePacketSchema,
   type FactoryOraclePacket,
-} from "../../strategy-lab/src/factory/index.js"
+} from "../../strategy-lab/src/factory/packet.js"
 import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, labRoot, type LabRoot } from "../../strategy-lab/src/contracts.js"
 
 const SOURCE_BYTES = new TextEncoder()

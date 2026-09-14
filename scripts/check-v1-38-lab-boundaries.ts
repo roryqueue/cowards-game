@@ -10,7 +10,7 @@ const isPrivateStrategy = (p: string) => isLab(p) || isOracle(p)
 const isTest = (p: string) => /(?:\.test|\.spec)\.[cm]?[jt]sx?$/u.test(p) || /(?:^|\/)(?:test|__tests__|testdata)\//u.test(p) || /_test\.go$/u.test(p)
 const production = (p: string) => /^(?:packages|apps)\//u.test(p) && !isPrivateStrategy(p) && !isTest(p)
 const labText = /strategy[-_/](?:lab|oracle)|private[-_]lab|lab[-_]artifacts|lab[-_]trace|planner-feasibility/iu
-const allowedCore = /^(?:packages\/(?:spec|engine|replay|runtime-js)\/)/u
+const allowedCore = /^(?:packages\/(?:spec|engine|replay|runtime-js|runtime-supervisor)\/)/u
 const allowedNode = new Set(["node:crypto", "node:fs", "node:fs/promises", "node:path", "node:url", "node:os", "node:worker_threads", "node:buffer"])
 const ignoredDirectories = new Set(["node_modules", ".git", ".planning", "dist", ".next", ".turbo", "coverage", "vendor", "test-results", ".cache"])
 const sourceExtension = /\.[cm]?[jt]sx?$/u
@@ -79,7 +79,11 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
   const host: ts.ModuleResolutionHost = { fileExists: (p) => files[key(p)] !== undefined, readFile: (p) => files[key(p)], directoryExists: (p) => directories.has(key(p)) }
   const configs = Object.entries(files).filter(([p]) => /(?:^|\/)tsconfig(?:\.[^/]*)?\.json$/u.test(p)).map(([p, source]) => ({ path: p, config: ts.parseConfigFileTextToJson(p, source).config as { compilerOptions?: { paths?: Record<string, string[]>; baseUrl?: string } } | undefined }))
   const resolveEdge = (from: string, specifier: string): string | undefined => {
-    const paths: Record<string, string[]> = { "@cowards/*": ["packages/*/src/index.ts"], "@cowards/strategy-lab/factory": ["packages/strategy-lab/src/factory/index.ts"] }
+    const paths: Record<string, string[]> = {
+      "@cowards/*": ["packages/*/src/index.ts"],
+      "@cowards/strategy-lab/factory": ["packages/strategy-lab/src/factory/index.ts"],
+      "@cowards/strategy-lab/factory/packet": ["packages/strategy-lab/src/factory/packet.ts"],
+    }
     for (const { path, config } of configs) {
       if (posix.dirname(path) !== "." && !from.startsWith(`${posix.dirname(path)}/`)) continue
       for (const [alias, targets] of Object.entries(config?.compilerOptions?.paths ?? {})) paths[alias] = targets.map((target) => posix.join(posix.dirname(path), config?.compilerOptions?.baseUrl ?? ".", target))
