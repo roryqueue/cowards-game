@@ -9,9 +9,10 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
   readonly stdin = { write: (chunk: string): boolean => { this.writes.push(chunk); this.reply(JSON.parse(chunk) as Record<string, unknown>); return true } }
   killed = false
   ignoreTerm = false
+  ignoreKill = false
   signals: Array<NodeJS.Signals | undefined> = []
   rerouteOnTurn = false
-  kill(signal?: NodeJS.Signals): boolean { this.killed = true; this.signals.push(signal); if (!this.ignoreTerm || signal === "SIGKILL") queueMicrotask(() => this.emit("close", 0)); return true }
+  kill(signal?: NodeJS.Signals): boolean { this.killed = true; this.signals.push(signal); if ((!this.ignoreTerm && signal === "SIGTERM") || (!this.ignoreKill && signal === "SIGKILL")) queueMicrotask(() => this.emit("close", 0)); return true }
   private reply(request: Record<string, unknown>): void {
     const response = (result: unknown): void => { this.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n`)) }
     if (request.method === "initialize") response({ protocolVersion: "1" })
@@ -71,6 +72,12 @@ describe("factory Codex app-server transport", () => {
     const fake = new FakeAppServer(); fake.ignoreTerm = true
     const transport = await createFactoryAppServerTransport({ ...options, spawn: () => fake })
     await expect(transport.close()).resolves.toBe("sigkill")
+    expect(fake.signals).toEqual(["SIGTERM", "SIGKILL"])
+  })
+  it("fails cleanup when the child ignores both termination signals", async () => {
+    const fake = new FakeAppServer(); fake.ignoreTerm = true; fake.ignoreKill = true
+    const transport = await createFactoryAppServerTransport({ ...options, spawn: () => fake })
+    await expect(transport.close()).rejects.toThrow("FACTORY_APP_SERVER_PROCESS_DID_NOT_EXIT")
     expect(fake.signals).toEqual(["SIGTERM", "SIGKILL"])
   })
 })

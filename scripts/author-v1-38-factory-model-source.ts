@@ -109,6 +109,10 @@ export const completeAuthorAttempt = (ledgerDirectory: string, start: AuthorAtte
 export const createFrozenModelBundleV2FromAuthorAttempt = (ledgerDirectory: string, allocation: FactoryAuthoringAllocation, launch: FactoryAuthorLaunchPlan, start: AuthorAttemptStart): Readonly<FrozenModelBundleV2> => {
   const ledger = resolve(ledgerDirectory), entry = readLedger(ledger, admitFactoryAuthoringAllocation(allocation), launch).find((item) => item.start.root === start.root)
   if (!entry?.terminal || entry.terminal.disposition !== "valid" || !entry.terminal.usage || entry.terminal.reportedModel === null) return fail("BUNDLE_TERMINAL")
+  let cleanup: Record<string, unknown>
+  try { cleanup = parseJson<Record<string, unknown>>(join(ledger, start.ordinal, "process-cleanup.json")) } catch { return fail("BUNDLE_CLEANUP") }
+  const cleanupRoot = cleanup.root, cleanupDraft = Object.fromEntries(Object.entries(cleanup).filter(([key]) => key !== "root"))
+  if (cleanup.schemaVersion !== "factory-model-author-process-cleanup-v1" || cleanup.startRoot !== start.root || !["already_exited", "sigterm", "sigkill"].includes(String(cleanup.disposition)) || cleanupRoot !== labRoot("factory-model-author-process-cleanup-v1", cleanupDraft)) return fail("BUNDLE_CLEANUP")
   const directory = join(ledger, start.ordinal), bodyUtf8 = readFileSync(join(directory, "request.stdin"), "utf8"), rawBodyUtf8 = readFileSync(join(directory, "response.jsonl"), "utf8"), source = readFileSync(join(directory, "emitted-source.ts"), "utf8")
   const settings = launch.requestRecord.frozenSettings as unknown as FrozenAuthorSettings, clientVersion = launch.requestRecord.clientVersion
   if (typeof clientVersion !== "string") return fail("BUNDLE_CLIENT")
@@ -123,26 +127,38 @@ export const createFrozenModelBundleV2FromAuthorAttempt = (ledgerDirectory: stri
 export interface AppServerAuthorAttemptInput { readonly allocation: FactoryAuthoringAllocation; readonly packetBytes: Uint8Array; readonly packetRoot: LabRoot; readonly disclosedDirectory: string; readonly stateDirectory: string; readonly existingAuthFile: string; readonly ledgerDirectory: string; readonly model: string; readonly modelProvider: string; readonly frozenSettings: FrozenAuthorSettings; readonly capability: AuthoringCapability; readonly clock?: AuthorClock; readonly transportFactory?: (options: FactoryAppServerTransportOptions) => Promise<FactoryAppServerTransport> }
 /** Operational two-stage path: app-server negotiates exact identity/context before the charged turn starts. */
 export const runFactoryAppServerAuthorAttempt = async (input: AppServerAuthorAttemptInput): Promise<Readonly<{ start: AuthorAttemptStart; terminal: AuthorAttemptTerminal; bundle: Readonly<FrozenModelBundleV2> | null }>> => {
+  if (!isAbsolute(input.capability.codexExecutable)) return fail("CAPABILITY_EXECUTABLE")
+  const canonicalExecutable = realpathSync(input.capability.codexExecutable)
+  const capability = Object.freeze({ ...input.capability, codexExecutable: canonicalExecutable })
   const clock = input.clock ?? Date.now, stateDirectory = resolve(input.stateDirectory); mkdirSync(stateDirectory, { mode: 0o700 }); if (readdirSync(stateDirectory).length !== 0 || !lstatSync(resolve(input.existingAuthFile)).isFile()) return fail("AUTH_BINDING")
   writeFileSync(join(stateDirectory, "config.toml"), `model = ${JSON.stringify(input.model)}\napproval_policy = "never"\nsandbox_mode = "read-only"\n`, { flag: "wx", mode: 0o600 }); symlinkSync(resolve(input.existingAuthFile), join(stateDirectory, "auth.json"))
-  const launch = buildFactoryAuthorCommand(input.allocation, { packetBytes: input.packetBytes, packetRoot: input.packetRoot, disclosedDirectory: input.disclosedDirectory, model: input.model, capability: input.capability, frozenSettings: input.frozenSettings, authHome: stateDirectory })
+  const launch = buildFactoryAuthorCommand(input.allocation, { packetBytes: input.packetBytes, packetRoot: input.packetRoot, disclosedDirectory: input.disclosedDirectory, model: input.model, capability, frozenSettings: input.frozenSettings, authHome: stateDirectory })
   if (launch.status !== "ready") return fail("CAPABILITY")
-  const transport = await (input.transportFactory ?? createFactoryAppServerTransport)({ codexExecutable: input.capability.codexExecutable, codexHome: stateDirectory, cwd: launch.cwd, env: launch.env, requestedModel: input.model, requestedProvider: input.modelProvider, timeoutMs: input.allocation.windowMinutes * 60_000 })
-  let started: AuthorAttemptStart | null = null
-  let outcome: Readonly<{ start: AuthorAttemptStart; terminal: AuthorAttemptTerminal; bundle: Readonly<FrozenModelBundleV2> | null }> | null = null
+  const transport = await (input.transportFactory ?? createFactoryAppServerTransport)({ codexExecutable: canonicalExecutable, codexHome: stateDirectory, cwd: launch.cwd, env: launch.env, requestedModel: input.model, requestedProvider: input.modelProvider, timeoutMs: input.allocation.windowMinutes * 60_000 })
+  let started: AuthorAttemptStart | null = null, terminal: AuthorAttemptTerminal | null = null
   try {
     const start = startAuthorAttempt(input.ledgerDirectory, input.allocation, launch, clock), before = clock(); started = start
     let observed: FactoryAppServerTurnResult
     const remaining = input.allocation.windowMinutes * 60_000 - Math.max(0, before - start.firstStartedAtMs)
-    try { observed = await transport.startTurn(launch.stdin, remaining) } catch (error) { const terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => { throw error }, clock); outcome = Object.freeze({ start, terminal, bundle: null }); return outcome }
-    const after = clock(); let source = ""; try { const sourceValue = JSON.parse(observed.sourceMessage) as Record<string, unknown>; if (Object.keys(sourceValue).length === 1 && typeof sourceValue.source === "string") source = sourceValue.source } catch { /* retained as correction-eligible invalid output */ }
-    const usage: ModelUsageRecord = { inputTokens: observed.usage.inputTokens, outputTokens: observed.usage.outputTokens, cachedInputTokens: observed.usage.cachedInputTokens, totalTokens: observed.usage.totalTokens }
-    const terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => ({ exitCode: 0, stdout: observed.rawJsonl, stderr: new Uint8Array(), elapsedMilliseconds: Math.max(0, after - before), admitted: { reportedModel: observed.reportedModel, usage, source, validEnvelope: true } }), clock)
-    outcome = Object.freeze({ start, terminal, bundle: terminal.disposition === "valid" ? createFrozenModelBundleV2FromAuthorAttempt(input.ledgerDirectory, input.allocation, launch, start) : null }); return outcome
+    try { observed = await transport.startTurn(launch.stdin, remaining) } catch (error) { terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => { throw error }, clock); observed = null as never }
+    if (terminal === null) {
+      const after = clock(); let source = ""; try { const sourceValue = JSON.parse(observed.sourceMessage) as Record<string, unknown>; if (Object.keys(sourceValue).length === 1 && typeof sourceValue.source === "string") source = sourceValue.source } catch { /* retained as correction-eligible invalid output */ }
+      const usage: ModelUsageRecord = { inputTokens: observed.usage.inputTokens, outputTokens: observed.usage.outputTokens, cachedInputTokens: observed.usage.cachedInputTokens, totalTokens: observed.usage.totalTokens }
+      terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => ({ exitCode: 0, stdout: observed.rawJsonl, stderr: new Uint8Array(), elapsedMilliseconds: Math.max(0, after - before), admitted: { reportedModel: observed.reportedModel, usage, source, validEnvelope: true } }), clock)
+    }
   } finally {
-    const disposition = await transport.close()
-    if (started) { const draft = { schemaVersion: "factory-model-author-process-cleanup-v1" as const, startRoot: started.root, disposition }; atomicJson(join(resolve(input.ledgerDirectory), started.ordinal, "process-cleanup.json"), { ...draft, root: labRoot("factory-model-author-process-cleanup-v1", draft) }) }
+    if (started) {
+      let disposition: "already_exited" | "sigterm" | "sigkill" | "failed_to_exit"
+      try { disposition = await transport.close() } catch (error) {
+        disposition = "failed_to_exit"
+        const draft = { schemaVersion: "factory-model-author-process-cleanup-v1" as const, startRoot: started.root, disposition }; atomicJson(join(resolve(input.ledgerDirectory), started.ordinal, "process-cleanup.json"), { ...draft, root: labRoot("factory-model-author-process-cleanup-v1", draft) })
+        throw error
+      }
+      const draft = { schemaVersion: "factory-model-author-process-cleanup-v1" as const, startRoot: started.root, disposition }; atomicJson(join(resolve(input.ledgerDirectory), started.ordinal, "process-cleanup.json"), { ...draft, root: labRoot("factory-model-author-process-cleanup-v1", draft) })
+    } else await transport.close()
   }
+  if (!started || !terminal) return fail("ATTEMPT_RESULT")
+  return Object.freeze({ start: started, terminal, bundle: terminal.disposition === "valid" ? createFrozenModelBundleV2FromAuthorAttempt(input.ledgerDirectory, input.allocation, launch, started) : null })
 }
 
 export const createIndependentSourceReviewHandoff = (allocation: FactoryAuthoringAllocation) => Object.freeze({ status: "source_ready_for_independent_review" as const, allocationRoot: admitFactoryAuthoringAllocation(allocation).root, empiricalAction: "not_authorized" as const })
