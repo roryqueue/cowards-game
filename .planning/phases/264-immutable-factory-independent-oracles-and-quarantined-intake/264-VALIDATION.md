@@ -22,6 +22,14 @@ Use the existing Vitest4.1.6 and TypeScript6.0.3 workspace. No package installat
 
 Run targeted checks at every task commit, combined bounded integration at each wave, and the explicit final source/contract suite before verification/UAT. No watch mode. The planner must replace placeholder task commands with exact paths in the map below.
 
+## Interim implementation evidence
+
+- Plan01: 18 focused factory tests, package build and clean independent source review.
+- Plan02: 6 focused tactical tests, package build and independent owned-source correspondence check.
+- Plan04: 7 focused model tests, package build and independent provenance/lineage recheck. Genuine model evidence and companion persistence/consumption remain downstream responsibilities.
+- Workspace integration: added only the four missing private-package importer records to `pnpm-lock.yaml`, matching each manifest's existing workspace dependencies. A direct check confirmed all four mappings; every external resolution and snapshot after the `packages:` section remains byte-identical. No install or dependency version change occurred, and no private package was added to the default build references.
+- Plans03/06 remain incomplete. Their initial passing tests did not establish the required search/training and intake-budget behavior; targeted repairs are underway. The final phase suite and empirical readiness are still pending.
+
 ## Requirement Verification Map
 
 | Requirement | Behavior and required evidence | Initial test seam | Status |

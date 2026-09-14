@@ -308,6 +308,51 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
 
+  packages/strategy-lab:
+    dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@cowards/runtime-js':
+        specifier: workspace:*
+        version: link:../runtime-js
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:../spec
+
+  packages/strategy-oracle-model:
+    dependencies:
+      '@cowards/runtime-js':
+        specifier: workspace:*
+        version: link:../runtime-js
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:../spec
+      '@cowards/strategy-lab':
+        specifier: workspace:*
+        version: link:../strategy-lab
+
+  packages/strategy-oracle-tactical:
+    dependencies:
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:../spec
+      '@cowards/strategy-lab':
+        specifier: workspace:*
+        version: link:../strategy-lab
+
+  packages/strategy-oracle-teacher:
+    dependencies:
+      '@cowards/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@cowards/spec':
+        specifier: workspace:*
+        version: link:../spec
+      '@cowards/strategy-lab':
+        specifier: workspace:*
+        version: link:../strategy-lab
+
   packages/test-utils:
     dependencies:
       '@cowards/engine':
