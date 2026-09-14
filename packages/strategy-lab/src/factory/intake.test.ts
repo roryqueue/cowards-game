@@ -93,6 +93,12 @@ describe("quarantined intake", () => {
     expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toHaveLength(3)
   })
 
+  it("charges malformed retry metadata before rejecting it", () => {
+    const repo = repository(), result = admitQuarantinedIntakePacket({ ...input(), retryParentRoot: "not-a-root" } as never, repo)
+    expect(result.disposition).toBe("invalid")
+    expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toHaveLength(1)
+  })
+
   it("does not overwrite a retained attempt or expose gameplay claims", () => {
     const repo = repository(), first = admitQuarantinedIntakePacket(input(), repo), again = admitQuarantinedIntakePacket(input(), repo)
     expect(again.attemptRoot).not.toBe(first.attemptRoot)

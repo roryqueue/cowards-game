@@ -127,6 +127,9 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
   const participantId = typeof input?.participantId === "string" ? input.participantId : "invalid-participant"
   const reviewerId = typeof input?.reviewerId === "string" ? input.reviewerId : "invalid-reviewer"
   const elapsedMinutes = input?.elapsedMinutes
+  const retryParentRoot = input?.retryParentRoot === undefined || input?.retryParentRoot === null
+    ? null
+    : isRoot(input.retryParentRoot) ? input.retryParentRoot : rawRoot(input.retryParentRoot, "intake-invalid-retry-v1")
   const accounting = accountingRoot(repository, {
     schemaVersion: "intake-accounting-v1", protocolRoot: protocol.root, attemptOrdinal, participantId, reviewerId, packetRoot, provenanceRoot,
     elapsedMinutes: typeof elapsedMinutes === "number" && Number.isFinite(elapsedMinutes) ? elapsedMinutes : null,
@@ -138,7 +141,7 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
     authoringMechanism: "external-submission",
     inputRoot: labRoot("intake-input-v1", { protocolRoot: protocol.root, packetRoot, provenanceRoot, attemptOrdinal }),
     resourceAccountingRoot: accounting,
-    retryParentRoot: input?.retryParentRoot ?? null,
+    retryParentRoot,
   })
   recordFactoryAttemptStart(repository, attempt)
   let disposition: QuarantinedIntakeResult["disposition"] = "invalid", reason = "invalid-input"
