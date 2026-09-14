@@ -7,11 +7,26 @@ import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js
 import { admitFactoryCalibrationWorkload, createFactoryCalibrationManifest, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
+import { FACTORY_SOURCE_RECIPES, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`FACTORY_PREPARE_${code}`) }
 const root = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 const exact = (value: unknown, keys: readonly string[]) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("\0") === [...keys].sort().join("\0")
+export interface FreshFactoryCalibrationCell {
+  readonly root: LabRoot; readonly slot: FactorySourceSlot; readonly block: "A" | "B"; readonly arenaId: "arena:smoke:v1" | "arena:standard-cross:v1"
+  readonly candidateSide: "bottom" | "top"; readonly initialInitiative: "candidate" | "opponent"; readonly seed: "factory-264-control-v1"; readonly maxPhases: 1
+}
+/** Source-only declaration. These are not runtime invocations or Match records. */
+export const createFreshFactoryCalibrationCells = (): readonly FreshFactoryCalibrationCell[] => Object.freeze(
+  (Object.keys(FACTORY_SOURCE_RECIPES) as FactorySourceSlot[]).flatMap((slot, slotIndex) => [
+    ["A", "arena:smoke:v1", "bottom"], ["A", "arena:smoke:v1", "bottom"], ["B", "arena:standard-cross:v1", "top"], ["B", "arena:standard-cross:v1", "top"],
+  ].map(([block, arenaId, candidateSide], conditionIndex) => {
+    const initialInitiative = conditionIndex % 2 === 0 ? "candidate" as const : "opponent" as const
+    const value = { slot, block: block as "A" | "B", arenaId: arenaId as FreshFactoryCalibrationCell["arenaId"], candidateSide: candidateSide as "bottom" | "top", initialInitiative, seed: "factory-264-control-v1" as const, maxPhases: 1 as const, ordinal: slotIndex * 4 + conditionIndex }
+    return Object.freeze({ ...value, root: labRoot("factory-calibration-cell-v1", value) })
+  })),
+)
 export interface FactoryCalibrationAuthorization {
   readonly schemaVersion: "factory-calibration-authorization-v1"; readonly root: LabRoot; readonly status: "authorized"
   readonly protocolArtifactRoot: LabRoot; readonly allocationArtifactRoot: LabRoot
