@@ -7,7 +7,8 @@ import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-
 import { createFactoryCalibrationWorkload } from "../packages/strategy-lab/src/factory/calibration.js"
 import { createFactoryRepository, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
-import { createFreshFactoryCalibrationCells, prepareFactoryCalibration } from "./prepare-v1-38-factory-calibration.js"
+import { createFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
+import { createFreshFactoryCalibrationCells, prepareFactoryCalibration, prepareFreshFactoryCalibration } from "./prepare-v1-38-factory-calibration.js"
 
 const dirs: string[] = [], root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 afterEach(() => { for (const directory of dirs.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -44,5 +45,22 @@ describe("fresh factory calibration preparation", () => {
     expect(result.manifest.allocationRoot).toBe(allocation.root)
     expect(result.manifest.workloads).toEqual([{ artifactRoot: workloadArtifactRoot, root: workload.root, candidateIngestionArtifactRoot: ingestion.artifactRoot, pairGroup: "prepare-pair" }])
     expect(() => prepareFactoryCalibration(`\`\`\`json\n${new TextDecoder().decode(encode({ ...decision, protocolArtifactRoot: root("9"), root: labRoot("factory-calibration-authorization-v1", { ...decisionValue, protocolArtifactRoot: root("9") }) }))}\n\`\`\``, repository)).toThrow()
+  })
+  it("publishes only the exact rooted 12-slot, 48-cell Plan-07 allocation", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-fresh-prepare-test-"))); dirs.push(directory)
+    const repository = createFactoryRepository(directory), slotIngestionArtifactRoots = {} as Record<FactorySourceSlot, LabRoot>
+    for (const [index, slot] of (Object.keys(FACTORY_SOURCE_RECIPES) as FactorySourceSlot[]).entries()) {
+      const ingestion = await ingestNamedFactoryPacket({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: { split: "development", doctrineFamily: `fresh-${slot.toLowerCase()}`, provider: { providerId: `fresh-${slot.toLowerCase()}`, modelId: "local", modelVersion: "v1", settingsRoot: root(String(index % 10)), promptRoot: root("b"), contextRoot: root("c") }, build: { buildRoot: root("d"), toolchainRoot: root("e") }, lineage: { predecessorRoot: root("f"), correctionRoot: null, retryParentRoot: null } } }, repository)
+      if (ingestion.disposition !== "accepted") throw new Error("ingestion")
+      slotIngestionArtifactRoots[slot] = ingestion.artifactRoot
+    }
+    const input = { allocation: createFactoryAuthoringAllocation(), slotIngestionArtifactRoots, protocolRoot: root("1"), protocolArtifactRoot: root("2"), studyPolicyRoot: "sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17" as LabRoot, measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" as LabRoot, opponentIdentityRoot: root("7"), supervision: { adapterId: "runtime-js-container-subprocess" as const, runtimeAbi: "strategy-runtime-abi-v1.19" as const, image: LAB_ADMITTED_ROOTS.image, runtimeProfileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot } }
+    const result = prepareFreshFactoryCalibration(input, repository)
+    expect(result.manifest).toMatchObject({ allocationRoot: input.allocation.root, maxAttempts: 48, maxInvocationsPerAttempt: 256, maxLifetimeMs: 120_000 })
+    expect(result.manifest.workloads).toHaveLength(48); expect(new Set(result.manifest.workloads.map((entry) => entry.artifactRoot)).size).toBe(48); expect(result.cellRoots).toEqual(createFreshFactoryCalibrationCells().map((cell) => cell.root))
+    const missing = { ...slotIngestionArtifactRoots }; delete (missing as Partial<Record<FactorySourceSlot, LabRoot>>).S12
+    expect(() => prepareFreshFactoryCalibration({ ...input, slotIngestionArtifactRoots: missing as Record<FactorySourceSlot, LabRoot> }, repository)).toThrow("FACTORY_PREPARE_FRESH_ALLOCATION")
+    expect(() => prepareFreshFactoryCalibration({ ...input, slotIngestionArtifactRoots: { ...slotIngestionArtifactRoots, S13: root("9") } as Record<FactorySourceSlot, LabRoot> }, repository)).toThrow("FACTORY_PREPARE_FRESH_ALLOCATION")
+    expect(() => prepareFreshFactoryCalibration({ ...input, allocation: { ...input.allocation, maxInvocations: 255 } }, repository)).toThrow("FACTORY_AUTHOR_ALLOCATION")
   })
 })

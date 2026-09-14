@@ -4,10 +4,10 @@ import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { admitFactoryCalibrationWorkload, createFactoryCalibrationManifest, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
+import { admitFactoryCalibrationWorkload, createFactoryCalibrationManifest, createFactoryCalibrationWorkload, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
-import { FACTORY_SOURCE_RECIPES, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
+import { admitFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, type FactoryAuthoringAllocation, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`FACTORY_PREPARE_${code}`) }
@@ -27,6 +27,52 @@ export const createFreshFactoryCalibrationCells = (): readonly FreshFactoryCalib
     return Object.freeze({ ...value, root: labRoot("factory-calibration-cell-v1", value) })
   })),
 )
+
+export interface FreshFactoryCalibrationInput {
+  readonly allocation: FactoryAuthoringAllocation
+  readonly slotIngestionArtifactRoots: Readonly<Record<FactorySourceSlot, LabRoot>>
+  readonly protocolRoot: LabRoot; readonly protocolArtifactRoot: LabRoot
+  readonly studyPolicyRoot: LabRoot; readonly measurementPolicyRoot: LabRoot
+  readonly opponentIdentityRoot: LabRoot
+  readonly supervision: FactoryCalibrationManifest["supervision"]
+}
+/**
+ * Plan-07-only preparation path. Unlike the historical generic preparer below,
+ * it derives, publishes, and binds the complete approved 12-slot/48-cell set.
+ * Plan 08 may materialize the slot ingestions supplied here; this function does
+ * not claim those source transformations or observations already exist.
+ */
+export const prepareFreshFactoryCalibration = (input: FreshFactoryCalibrationInput, repository: FactoryRepository): Readonly<{ manifest: FactoryCalibrationManifest; artifactRoot: LabRoot; cellRoots: readonly LabRoot[] }> => {
+  const allocation = admitFactoryAuthoringAllocation(input.allocation), cells = createFreshFactoryCalibrationCells()
+  const suppliedSlots = Object.keys(input.slotIngestionArtifactRoots).sort()
+  if (suppliedSlots.join("\0") !== (Object.keys(FACTORY_SOURCE_RECIPES) as FactorySourceSlot[]).sort().join("\0") || cells.length !== allocation.workloadCount || allocation.maxInvocations !== 256 || allocation.maxLifetimeMs !== 120_000) return fail("FRESH_ALLOCATION")
+  const suppliedRoots = suppliedSlots.map((slot) => input.slotIngestionArtifactRoots[slot as FactorySourceSlot])
+  if (!suppliedRoots.every(root) || new Set(suppliedRoots).size !== 12 || ![input.protocolRoot, input.protocolArtifactRoot, input.studyPolicyRoot, input.measurementPolicyRoot, input.opponentIdentityRoot].every(root)) return fail("FRESH_SLOTS")
+  const ingestions = suppliedRoots.map((artifactRoot) => {
+    const record = readFactoryIngestion(repository, artifactRoot)
+    return { artifactRoot, packetRoot: record.packetRoot, sourceRoot: record.sourceRoot, producerIdentity: record.producerIdentity, origin: record.origin, evidenceClass: record.evidenceClass }
+  })
+  const workloadArtifactRoots = cells.map((cell) => {
+    const ingestionArtifactRoot = input.slotIngestionArtifactRoots[cell.slot]
+    const workload = createFactoryCalibrationWorkload({
+      candidateIngestionArtifactRoot: ingestionArtifactRoot, pairGroup: `${cell.slot.toLowerCase()}-${cell.block.toLowerCase()}-${cell.initialInitiative}`, pairAxis: "initialInitiative",
+      condition: { arenaId: cell.arenaId, seed: cell.seed, candidateSide: cell.candidateSide, initialInitiative: cell.initialInitiative, maxPhases: cell.maxPhases },
+      opponent: { kind: "fixed_mechanics", opponentId: "factory-fixed-mechanics-v1", identityRoot: input.opponentIdentityRoot }, budget: { maxInvocations: 256, maxLifetimeMs: 120_000 },
+      lineageManifestArtifactRoot: null, dependencyManifestArtifactRoot: null,
+    })
+    return { workload, artifactRoot: publishFactoryArtifact(repository, (() => { const encoded = admitCanonicalJsonValue(workload, { profile: "canonical-manifest" }); if (!encoded.ok) return fail("FRESH_WORKLOAD"); return encoded.canonicalBytes })()) }
+  })
+  if (workloadArtifactRoots.length !== 48 || new Set(workloadArtifactRoots.map((entry) => entry.artifactRoot)).size !== 48) return fail("FRESH_WORKLOADS")
+  const allocationEncoded = admitCanonicalJsonValue(allocation, { profile: "canonical-manifest" }); if (!allocationEncoded.ok) return fail("FRESH_ALLOCATION_BYTES")
+  const allocationArtifactRoot = publishFactoryArtifact(repository, allocationEncoded.canonicalBytes)
+  const authorizationValue = { schemaVersion: "factory-calibration-authorization-v2" as const, status: "authorized" as const, allocationRoot: allocation.root, sourceSlots: allocation.sourceSlots, cellRoots: cells.map((cell) => cell.root), workloadArtifactRoots: workloadArtifactRoots.map((entry) => entry.artifactRoot), geometryDesign: "two_geometry_side_confounded_pilot" as const, competitiveClaim: "none" as const }
+  const authorization = { ...authorizationValue, root: labRoot("factory-calibration-authorization-v2", authorizationValue) }
+  const authorizationEncoded = admitCanonicalJsonValue(authorization, { profile: "canonical-manifest" }); if (!authorizationEncoded.ok) return fail("FRESH_AUTHORIZATION")
+  const authorizationArtifactRoot = publishFactoryArtifact(repository, authorizationEncoded.canonicalBytes)
+  const manifest = createFactoryCalibrationManifest({ authorizationRoot: authorization.root, authorizationArtifactRoot, protocolRoot: input.protocolRoot, protocolArtifactRoot: input.protocolArtifactRoot, allocationRoot: allocation.root, allocationArtifactRoot, studyPolicyRoot: input.studyPolicyRoot, measurementPolicyRoot: input.measurementPolicyRoot, maxAttempts: 48, maxInvocationsPerAttempt: 256, maxLifetimeMs: 120_000, supervision: input.supervision, ingestions, workloads: workloadArtifactRoots.map(({ workload, artifactRoot }) => ({ artifactRoot, root: workload.root, candidateIngestionArtifactRoot: workload.candidateIngestionArtifactRoot, pairGroup: workload.pairGroup })) })
+  const encoded = admitCanonicalJsonValue(manifest, { profile: "canonical-manifest" }); if (!encoded.ok) return fail("FRESH_MANIFEST")
+  return Object.freeze({ manifest, artifactRoot: publishFactoryArtifact(repository, encoded.canonicalBytes), cellRoots: Object.freeze(cells.map((cell) => cell.root)) })
+}
 export interface FactoryCalibrationAuthorization {
   readonly schemaVersion: "factory-calibration-authorization-v1"; readonly root: LabRoot; readonly status: "authorized"
   readonly protocolArtifactRoot: LabRoot; readonly allocationArtifactRoot: LabRoot

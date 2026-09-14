@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -82,4 +83,20 @@ export const completeAuthorAttempt = (ledgerDirectory: string, start: AuthorAtte
 }
 
 export const createIndependentSourceReviewHandoff = (allocation: FactoryAuthoringAllocation) => Object.freeze({ status: "source_ready_for_independent_review" as const, allocationRoot: admitFactoryAuthoringAllocation(allocation).root, empiricalAction: "not_authorized" as const })
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href && process.argv.includes("--help")) process.stdout.write("Usage: author-v1-38-factory-model-source --help (prepares/captures only; operator-owned launch)\n")
+
+const argument = (name: string) => { const index = process.argv.indexOf(name); return index < 0 ? undefined : process.argv[index + 1] }
+const commandOutput = (command: string, args: readonly string[]) => { const result = spawnSync(command, args, { encoding: "utf8", env: { PATH: process.env.PATH ?? "/usr/bin:/bin:/usr/sbin:/sbin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } }); if (result.status !== 0) return fail("CAPABILITY_COMMAND"); return result.stdout }
+const main = () => {
+  if (process.argv.includes("--help")) { process.stdout.write("Usage: author-v1-38-factory-model-source --run-attempt --allocation <json> --packet <json> --packet-root <sha256> --disclosed-directory <new-dir> --ledger <dir> --model <exact-id> --now-ms <integer>\n"); return }
+  if (!process.argv.includes("--run-attempt")) return fail("COMMAND")
+  const allocationPath = argument("--allocation"), packetPath = argument("--packet"), packetRoot = argument("--packet-root"), disclosedDirectory = argument("--disclosed-directory"), ledger = argument("--ledger"), model = argument("--model"), now = Number(argument("--now-ms"))
+  if (!allocationPath || !packetPath || !packetRoot || !disclosedDirectory || !ledger || !model || !Number.isSafeInteger(now)) return fail("ARGUMENTS")
+  const allocation = admitFactoryAuthoringAllocation(JSON.parse(readFileSync(resolve(allocationPath), "utf8"))), packetBytes = readFileSync(resolve(packetPath))
+  const capability = { codexVersion: commandOutput("codex", ["--version"]), execHelp: commandOutput("codex", ["exec", "--help"]), featureList: commandOutput("codex", ["features", "list"]) }
+  const launch = buildFactoryAuthorCommand(allocation, { packetBytes, packetRoot: packetRoot as LabRoot, disclosedDirectory, model, capability, codePath: process.env.PATH, authHome: process.env.CODEX_HOME })
+  if (launch.status !== "ready") { process.stdout.write(`${JSON.stringify(launch)}\n`); return }
+  const start = startAuthorAttempt(ledger, allocation, launch, now)
+  const terminal = completeAuthorAttempt(ledger, start, launch, (plan) => { const result = spawnSync(plan.argv[0]!, plan.argv.slice(1), { cwd: plan.cwd, env: plan.env, input: plan.stdin, maxBuffer: 32 * 1024 * 1024 }); return { exitCode: result.status ?? 1, stdout: result.stdout, stderr: result.stderr } })
+  process.stdout.write(`${JSON.stringify({ startRoot: start.root, terminalRoot: terminal.root, disposition: terminal.disposition })}\n`)
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) { try { main() } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1 } }
