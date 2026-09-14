@@ -7,7 +7,7 @@ import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js
 import { admitFactoryCalibrationWorkload, createFactoryCalibrationManifest, createFactoryCalibrationWorkload, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
-import { admitFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, type FactoryAuthoringAllocation, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
+import { admitFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, type FactoryAuthoringAllocation, type FactorySourceSlot } from "./v1-38-factory-allocation.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
