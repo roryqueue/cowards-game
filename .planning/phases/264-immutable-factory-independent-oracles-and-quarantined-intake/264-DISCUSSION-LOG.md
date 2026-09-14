@@ -22,6 +22,18 @@ The user requested strong recommendations for every phase in one batch and asked
 **User's choice:** `1` — approve the entire recommendation batch.
 **Notes:** Phase 264 therefore locks the private revision-like candidate store, complete attempt ledger, three physically and strategically independent automated cores, quarantined human/external intake, exact native-lane identity, and fail-closed treatment of unresolved clones or independence.
 
+## Follow-up: current-rules model submissions — 2026-09-14
+
+**Question:** “Do you have saved AI-generated Strategy submissions we can use? If not, say ‘none yet’; we can settle the smallest practical way to obtain them and the experiment budget together.”
+
+**User's answer:** “I have ones for the old ruleset stored somewhere locally, but I don't think they would still work, so effectively ‘none yet’.”
+
+**Captured fact:** No usable current-rules submission was supplied. Old-rule compatibility and provenance remain untested; the user did not provide a search location. Old Strategies are neither accepted nor declared definitively incompatible.
+
+**Still pending:** One bounded fresh-generation/calibration decision. This clarification alone does not authorize model calls, allocate experimental runs, change D-17/D-20 provenance, declare a human/external channel used or unused, complete Plan07, or waive the three automated mechanisms. No new numbered plan or repeated authorization literal is proposed.
+
+**Recommendation presented for one decision:** Fresh generation using existing Codex access; up to four authoring attempts/30minutes and48supervised development workloads/90minutes, all allocations frozen before output; keep three automated mechanisms and record Phase264 human intake as unused; accept honestly reported model identity with undisclosed internal snapshot explicitly unavailable, while retaining exact prompt/output/source and actual usage. Complete the existing Plan08 assessment/freeze implementation before expecting a fresh run to clear readiness. No later red-team, league, holdout, formation or rules requirement is waived. **Approval pending.**
+
 ## the agent's Discretion
 
 - Internal APIs, package substructure, fingerprint representation, and reviewer tooling.
