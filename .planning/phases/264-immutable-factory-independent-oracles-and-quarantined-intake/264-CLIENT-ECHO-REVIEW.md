@@ -58,3 +58,14 @@ All three paths now require a single non-empty ID with started-before-completed 
 _Reviewed: 2026-09-14T19:06:00-04:00_
 _Reviewer: /root/review_264_client_check_
 _Depth: deep_
+
+## Approved Two-Attempt Composition Addendum
+
+**Reviewed:** 2026-09-14T19:10:00-04:00
+**Composition:** `/private/tmp/cg-264-task04-approved-Un1gVC/dispatch.mts`
+**Bound source commit:** `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`
+**Current checkout:** `c31c043729344feded43a639d7dd431e27647914` (planning-only changes after the bound source)
+
+Static composition recheck found no new findings. `review-binding.json`, the clean-report gate, ancestry check, non-planning diff check, and clean tracked-worktree check bind preparation to the reviewed source. The dispatch creates a new ledger and permits only `A-01`/`A-02`; it records two separately retained prior charged attempts (an unavailable 50,000-token reservation and known 9,767 tokens), caps fresh authoring at 100,000 tokens, and records a maximum accounted cumulative total of 159,767 below the original 200,000-token ceiling. The fresh ledger receives the existing 30-minute first-attempt window, and valid or fatal terminals stop further authoring.
+
+Materialization is gated on a valid retained author bundle and `verifyFactoryAuthoringRecords`; it retains three real base ingestions, nine calibration-only controls, and the linked review/implementation/evidence roots. The fresh-calibration reopening requires exactly 12 slots and 48 canonical workloads, while the runner requires the fresh authorization and execution-evidence gate before workload supervision. The dispatch was not executed; this is a composition review, not an empirical pass.
