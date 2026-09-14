@@ -107,7 +107,18 @@ status: complete
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Charge malformed retry metadata before validation**
+- **Found during:** post-task self-review of Task 2
+- **Issue:** An invalid caller-supplied retry root could fail attempt construction before the required durable charge.
+- **Fix:** Normalize malformed retry metadata to a deterministic invalid root for the start record, then retain the terminal `invalid` disposition.
+- **Files modified:** `packages/strategy-lab/src/factory/intake.ts`, `packages/strategy-lab/src/factory/intake.test.ts`
+- **Verification:** Focused intake tests (6) and strategy-lab TypeScript build pass.
+- **Committed in:** follow-up fix commit below.
+
+**Total deviations:** 1 auto-fixed (Rule 1 bug)
+**Impact on plan:** Preserves the required charge-before-validation boundary without expanding scope.
 
 ## Issues Encountered
 
@@ -123,7 +134,7 @@ The private intake path is ready for downstream readiness/calibration work. No r
 
 ## Verification
 
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — passed (8 tests).
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — passed (9 tests).
 - `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — passed (26 tests).
 - `./node_modules/.bin/tsc -b packages/strategy-lab --pretty false` — passed.
 
