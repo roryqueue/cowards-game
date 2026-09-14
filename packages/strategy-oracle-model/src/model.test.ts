@@ -7,6 +7,8 @@ import {
   assessFrozenModelIdentity,
   assertModelSourceClosure,
   deriveFrozenModelBundleRoot,
+  deriveFrozenModelRawResponseRecordRoot,
+  deriveFrozenModelRequestRecordRoot,
   deriveFrozenModelResponseRoot,
   getIssuedModelFactoryPacketProvenance,
   emitModelFactoryPacket,
@@ -16,6 +18,14 @@ import {
 const root = (value: string) => `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}` as const
 const source = `export default { selectActivations(input) { return { activationOrders: [], strategyMemory: {} }; }, soldierBrain(input) { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }; } };`
 const sourceRoot = root(source)
+const v2Records = (sourceValue = source) => {
+  const requestValue = { byteLength: new TextEncoder().encode("author disclosed packet").byteLength, encoding: "utf8" as const, bodyUtf8: "author disclosed packet" }
+  const rawResponseValue = { format: "codex-exec-json" as const, bodyUtf8: JSON.stringify({ source: sourceValue, usage: { inputTokens: 12, outputTokens: 34, cachedInputTokens: 0 } }) }
+  return {
+    requestRecord: { ...requestValue, root: deriveFrozenModelRequestRecordRoot(requestValue) },
+    rawResponseRecord: { ...rawResponseValue, root: deriveFrozenModelRawResponseRecordRoot(rawResponseValue) },
+  }
+}
 const bundleInput = () => {
   const response = { root: root("unused-response-root"), format: "explicit-typescript-source" as const, source }
   const value = {
@@ -60,22 +70,27 @@ describe("frozen model oracle", () => {
 
   it("requires a truthful v2 request/response/usage companion and an explicitly unavailable serving snapshot", () => {
     const v1 = bundleInput()
+    const retained = v2Records()
     const value = {
       ...v1,
       schemaVersion: "frozen-model-bundle-v2" as const,
-      provider: { ...v1.provider, modelVersion: "undisclosed" },
+      provider: { ...v1.provider, modelVersion: null, servingSnapshot: { availability: "unavailable" as const } },
+      request: { ...v1.request, root: retained.requestRecord.root, byteLength: retained.requestRecord.byteLength },
       provenance: {
         requestedModelId: "gpt-small-requested", reportedModelId: v1.provider.modelId,
         client: { version: "codex-cli-test", settingsRoot: v1.provider.settingsRoot },
         servingSnapshot: { availability: "unavailable" as const },
-        requestRecordRoot: v1.request.root, responseRecordRoot: v1.response.root,
+        requestRecordRoot: retained.requestRecord.root, responseRecordRoot: retained.rawResponseRecord.root,
+        requestRecord: retained.requestRecord, rawResponseRecord: retained.rawResponseRecord,
         actualUsage: { inputTokens: v1.accounting.inputTokens, outputTokens: v1.accounting.outputTokens, cachedInputTokens: 0, totalTokens: v1.accounting.inputTokens + v1.accounting.outputTokens },
       },
     }
     const admitted = admitFrozenModelBundle({ ...value, root: deriveFrozenModelBundleRoot(value) })
     expect(admitted.schemaVersion).toBe("frozen-model-bundle-v2")
     expect(() => admitFrozenModelBundle({ ...value, provenance: { ...value.provenance, servingSnapshot: { availability: "available" } }, root: deriveFrozenModelBundleRoot({ ...value, provenance: { ...value.provenance, servingSnapshot: { availability: "available" } } }) })).toThrow("MODEL_PROVENANCE")
-    expect(() => admitFrozenModelBundle({ ...value, provider: { ...value.provider, modelVersion: value.provenance.client.version }, root: deriveFrozenModelBundleRoot({ ...value, provider: { ...value.provider, modelVersion: value.provenance.client.version } }) })).toThrow("MODEL_PROVENANCE")
+    expect(() => admitFrozenModelBundle({ ...value, provider: { ...value.provider, modelVersion: "server-build-42" }, root: deriveFrozenModelBundleRoot({ ...value, provider: { ...value.provider, modelVersion: "server-build-42" } }) })).toThrow("MODEL_PROVENANCE")
+    expect(() => admitFrozenModelBundle({ ...value, provenance: { ...value.provenance, requestRecord: { ...value.provenance.requestRecord, bodyUtf8: "changed" } }, root: deriveFrozenModelBundleRoot({ ...value, provenance: { ...value.provenance, requestRecord: { ...value.provenance.requestRecord, bodyUtf8: "changed" } } }) })).toThrow("MODEL_PROVENANCE")
+    expect(() => admitFrozenModelBundle({ ...value, provenance: { ...value.provenance, rawResponseRecord: { ...value.provenance.rawResponseRecord, bodyUtf8: "{\"changed\":true}" } }, root: deriveFrozenModelBundleRoot({ ...value, provenance: { ...value.provenance, rawResponseRecord: { ...value.provenance.rawResponseRecord, bodyUtf8: "{\"changed\":true}" } } }) })).toThrow("MODEL_PROVENANCE")
   })
 
   it("rejects unknown or malformed provenance fields before root conversion", () => {

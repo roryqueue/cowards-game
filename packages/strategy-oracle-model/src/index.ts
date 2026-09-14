@@ -2,10 +2,12 @@ export {
   admitFrozenModelBundle,
   assessFrozenModelIdentity,
   deriveFrozenModelBundleRoot,
+  deriveFrozenModelRawResponseRecordRoot,
+  deriveFrozenModelRequestRecordRoot,
   deriveFrozenModelResponseRoot,
   requireFrozenModelBundle,
 } from "./bundle.js"
-export type { FrozenModelBlock, FrozenModelBundle, FrozenModelProvider } from "./bundle.js"
+export type { FrozenModelBlock, FrozenModelBundle, FrozenModelProvider, FrozenModelProviderV2, FrozenModelRawResponseRecord, FrozenModelRequestRecord } from "./bundle.js"
 export {
   assertModelSourceClosure,
   deriveModelFactoryPacketProvenanceRoot,

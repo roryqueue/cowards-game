@@ -14,6 +14,7 @@ export type {
   FactoryLineage,
   FactoryNativeLane,
   FactoryOraclePacket,
+  FactoryProviderIdentity,
   FactoryProposal,
   FactorySourceIdentity,
   FactorySplit,

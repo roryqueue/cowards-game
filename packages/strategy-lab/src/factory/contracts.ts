@@ -31,6 +31,9 @@ export type FactorySplit = "development" | "validation" | "probe"
 export type FactoryDisposition = "accepted" | "rejected" | "invalid" | "duplicate" | "legal_but_weak" | "retried" | "unresolved" | "player_violation" | "system_failure"
 export interface FactorySourceIdentity { root: LabRoot; sha256: LabRoot; byteLength: number; encoding: "utf8" }
 export interface FactoryBuildIdentity { buildRoot: LabRoot; toolchainRoot: LabRoot; compatibilityTupleRoot: LabRoot }
+export type FactoryProviderIdentity =
+  | { providerId: string; modelId: string; modelVersion: string; settingsRoot: LabRoot; promptRoot: LabRoot; contextRoot: LabRoot }
+  | { providerId: string; modelId: string; modelVersion: null; settingsRoot: LabRoot; promptRoot: LabRoot; contextRoot: LabRoot; servingSnapshot: { availability: "unavailable" } }
 /**
  * Pins inherited execution authority. These fields intentionally do not
  * describe an oracle's strategic algorithm: a new oracle may have new
@@ -87,14 +90,22 @@ const fingerprints = (value: unknown): FactoryFingerprintRoots => {
 
 export interface FactoryOraclePacket {
   schemaVersion: "factory-oracle-packet-v1"; privacy: "private_offline"; root: LabRoot; oracleFamily: string; doctrineFamily: string;
-  source: FactorySourceIdentity; provider: { providerId: string; modelId: string; modelVersion: string; settingsRoot: LabRoot; promptRoot: LabRoot; contextRoot: LabRoot };
+  source: FactorySourceIdentity; provider: FactoryProviderIdentity;
   inheritedAuthority: FactoryInheritedAuthority; build: FactoryBuildIdentity; versions: FactoryVersions; nativeLane: FactoryNativeLane; lineage: FactoryLineage; split: FactorySplit;
 }
 export const FactoryOraclePacketSchema = bound<FactoryOraclePacket>((value) => {
   const keys = ["schemaVersion", "privacy", "root", "oracleFamily", "doctrineFamily", "source", "provider", "inheritedAuthority", "build", "versions", "nativeLane", "lineage", "split"] as const
   if (!exact(value, keys) || value.schemaVersion !== "factory-oracle-packet-v1" || value.privacy !== "private_offline" || !root(value.root) || !name(value.oracleFamily) || !name(value.doctrineFamily) || !["development", "validation", "probe"].includes(String(value.split))) return fail("PACKET")
   source(value.source); const authority = inheritedAuthority(value.inheritedAuthority); const buildIdentity = build(value.build); versions(value.versions); const nativeLane = lane(value.nativeLane); lineage(value.lineage)
-  if (!exact(value.provider, ["providerId", "modelId", "modelVersion", "settingsRoot", "promptRoot", "contextRoot"]) || !name(value.provider.providerId) || !text(value.provider.modelId) || !text(value.provider.modelVersion) || ![value.provider.settingsRoot, value.provider.promptRoot, value.provider.contextRoot].every(root) || nativeLane.providerId !== value.provider.providerId ||
+  const providerKeys = exact(value.provider, ["providerId", "modelId", "modelVersion", "settingsRoot", "promptRoot", "contextRoot"])
+    ? "v1"
+    : exact(value.provider, ["providerId", "modelId", "modelVersion", "settingsRoot", "promptRoot", "contextRoot", "servingSnapshot"])
+      ? "v2-unavailable"
+      : "invalid"
+  const providerIdentity = value.provider as FactoryProviderIdentity
+  if (providerKeys === "invalid" || !name(providerIdentity.providerId) || !text(providerIdentity.modelId) ||
+      (providerKeys === "v1" ? !text(providerIdentity.modelVersion) : providerIdentity.modelVersion !== null || !exact(providerIdentity.servingSnapshot, ["availability"]) || providerIdentity.servingSnapshot.availability !== "unavailable") ||
+      ![providerIdentity.settingsRoot, providerIdentity.promptRoot, providerIdentity.contextRoot].every(root) || nativeLane.providerId !== providerIdentity.providerId ||
       buildIdentity.compatibilityTupleRoot !== authority.compatibilityTupleRoot || nativeLane.runtimeProfileRoot !== authority.runtimeProfileRoot || nativeLane.runtimeAbi !== authority.runtimeAbi || value.root !== deriveFactoryOraclePacketRoot(value)) return fail("PACKET")
   return value as unknown as FactoryOraclePacket
 })
