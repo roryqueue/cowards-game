@@ -96,6 +96,7 @@ status: complete
 2. **Task 2: Admit explicit hostile submissions into the common evidence root** - `f6701dc9` (feat)
 3. **Task 2 follow-up: retain malformed retry charges** - `821d104c` (fix)
 4. **Plan 06 readiness repair: close eight intake findings** - `a2b9324f` (fix)
+5. **Plan 06 follow-up: bind accounting to start identity** - pending repair commit
 
 ## Files Created/Modified
 
@@ -125,7 +126,7 @@ status: complete
 **2. [Rule 1 - Bug] Close all eight readiness findings**
 - **Found during:** bounded Plan 264-06 intake readiness review
 - **Issue:** Acceptance did not require explicit review; reviewer/provenance and packet build/runtime identities were not fully cross-bound; retries were not protocol-scoped; source-kind validation was declarative; accounting corruption could be treated as zero; elapsed totals crossed protocols; malformed protocol handling was not explicitly non-authorizing.
-- **Fix:** Require `reviewDisposition: "accept"`, bind reviewer and builder/toolchain/runtime roots, validate deterministic source without execution, scope retry and elapsed checks to the protocol, fail closed on accounting artifacts and unknown elapsed use, and return an immutable non-authorizing blocked configuration without allocating an attempt for malformed protocols.
+- **Fix:** Require `reviewDisposition: "accept"`, bind reviewer and builder/toolchain/runtime roots, validate deterministic source without execution, scope retry and elapsed checks to the protocol, fail closed on accounting artifacts and unknown elapsed use, bind accounting to each start's task/budget/input/candidate identity, and return an immutable non-authorizing blocked configuration without allocating an attempt for malformed protocols.
 - **Files modified:** `packages/strategy-lab/src/factory/intake.ts`, `packages/strategy-lab/src/factory/intake.test.ts`, `packages/strategy-lab/src/factory/intake-protocol.ts`, `packages/strategy-lab/src/factory/intake-protocol.test.ts`
 - **Verification:** Focused intake/protocol suite (14 tests), full factory suite (32 tests), and strategy-lab TypeScript build pass.
 - **Committed in:** `a2b9324f`.
