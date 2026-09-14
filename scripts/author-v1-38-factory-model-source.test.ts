@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { assessAuthoringUsage, buildFactoryAuthorCommand, createFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES } from "./author-v1-38-factory-model-source.js"
+import { assessAuthoringUsage, buildFactoryAuthorCommand, createFactoryAuthoringAllocation, createIndependentSourceReviewHandoff, FACTORY_SOURCE_RECIPES } from "./author-v1-38-factory-model-source.js"
 
 const root = `sha256:${"a".repeat(64)}` as const
 describe("fresh model authoring allocation", () => {
@@ -18,5 +18,6 @@ describe("fresh model authoring allocation", () => {
     expect(assessAuthoringUsage(null)).toBe("charged_terminal_stop")
     expect(assessAuthoringUsage({ inputTokens: 25_000, outputTokens: 25_001, cachedInputTokens: 0, totalTokens: 50_001 })).toBe("charged_terminal_stop")
     expect(assessAuthoringUsage({ inputTokens: 25_000, outputTokens: 25_000, cachedInputTokens: 5_000, totalTokens: 50_000 })).toBe("within_ceiling")
+    expect(createIndependentSourceReviewHandoff(allocation)).toMatchObject({ status: "source_ready_for_independent_review", empiricalAction: "not_authorized" })
   })
 })

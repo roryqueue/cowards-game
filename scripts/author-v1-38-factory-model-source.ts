@@ -46,4 +46,10 @@ export const buildFactoryAuthorCommand = (allocation: FactoryAuthoringAllocation
   return Object.freeze({ status: "ready" as const, cwd: "disclosed-packet-only" as const, packetRoot, argv: Object.freeze(["codex", "exec", "--ephemeral", "--json", "--ignore-user-config", "Author only the disclosed ABI packet; emit explicit TypeScript source as JSON data."]) })
 }
 
+/** Explicitly records the only release point from this source-only plan. */
+export const createIndependentSourceReviewHandoff = (allocation: FactoryAuthoringAllocation): Readonly<{ status: "source_ready_for_independent_review"; allocationRoot: LabRoot; empiricalAction: "not_authorized" }> => {
+  const admitted = admitFactoryAuthoringAllocation(allocation)
+  return Object.freeze({ status: "source_ready_for_independent_review" as const, allocationRoot: admitted.root, empiricalAction: "not_authorized" as const })
+}
+
 if (process.argv.includes("--help")) process.stdout.write("Usage: author-v1-38-factory-model-source --help (constructs no model request)\n")
