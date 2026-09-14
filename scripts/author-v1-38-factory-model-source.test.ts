@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { LAB_ADMITTED_ROOTS, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
+import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
+import { admitCanonicalJsonValue } from "@cowards/spec"
+import { createFactoryRepository, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
+import { verifyFactoryAuthoringRecords, type FactoryAuthoringRecordRefs } from "./v1-38-factory-execution-evidence.js"
 import { buildFactoryAuthorCommand, completeAuthorAttempt, createFactoryAuthoringAllocation, createFrozenModelBundleV2FromAuthorAttempt, inspectAuthoringCapability, runFactoryAppServerAuthorAttempt, startAuthorAttempt, type AuthoringCapability, type FrozenAuthorSettings } from "./author-v1-38-factory-model-source.js"
 
 const temporary: string[] = [], root = (value: string): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}` as LabRoot
@@ -53,6 +56,19 @@ describe("operational factory authoring", () => {
     ].map((event) => JSON.stringify(event)).join("\n") + "\n")
     const result = await runFactoryAppServerAuthorAttempt({ allocation: createFactoryAuthoringAllocation(), packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), stateDirectory: join(parent, "state"), existingAuthFile: auth, ledgerDirectory: join(parent, "ledger"), model: "gpt-5.6-sol", modelProvider: "openai-codex", frozenSettings, capability: linkedCapability, clock: () => times.shift()!, transportFactory: async (options) => { expect(options).toMatchObject({ codexExecutable: capability.codexExecutable, env: { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", CODEX_HOME: join(parent, "state"), LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }, requestedModel: "gpt-5.6-sol", requestedProvider: "openai-codex" }); expect(options.cwd).toContain("/disclosed/author-"); return { threadId: "thread-1", reportedModel: "gpt-5.6-sol", async close() { return "sigterm" as const }, async startTurn() { return { sourceMessage: JSON.stringify({ source }), usage: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, reportedModel: "gpt-5.6-sol", rawJsonl } } } } })
     expect(result.terminal).toMatchObject({ disposition: "valid", reportedModel: "gpt-5.6-sol", usage: { totalTokens: 20 } }); expect(result.bundle?.provenance.rawResponseRecord.bodyUtf8).toContain("tokenUsage")
+    const store = join(parent, "factory-store"); mkdirSync(store); const repository = createFactoryRepository(realpathSync(store))
+    const canonical = (value: unknown) => { const parsed = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!parsed.ok) throw new Error("canonical"); return parsed.canonicalBytes }
+    const retain = (name: string, json = true) => { const bytes = readFileSync(join(parent, "ledger", "A-01", name)); return publishFactoryArtifact(repository, json ? canonical(JSON.parse(bytes.toString("utf8"))) : bytes) }
+    const refs: FactoryAuthoringRecordRefs = { start: retain("start.json"), request: retain("request.json"), stdin: retain("request.stdin", false), response: retain("response.jsonl", false), source: retain("emitted-source.ts", false), terminal: retain("terminal.json"), cleanup: retain("process-cleanup.json") }
+    expect(() => verifyFactoryAuthoringRecords(repository, [refs], result.bundle)).not.toThrow()
+    expect(() => verifyFactoryAuthoringRecords(repository, [refs, refs], result.bundle)).toThrow("AUTHOR_TERMINAL")
+    const original = JSON.parse(readFileSync(join(parent, "ledger", "A-01", "terminal.json"), "utf8")), { root: _root, ...terminalValue } = original
+    const changed = { ...terminalValue, usage: { ...original.usage, inputTokens: 13, totalTokens: 21 } }
+    const changedRoot = publishFactoryArtifact(repository, canonical({ ...changed, root: labRoot("factory-model-author-attempt-terminal-v1", changed) }))
+    expect(() => verifyFactoryAuthoringRecords(repository, [{ ...refs, terminal: changedRoot }], result.bundle)).toThrow("AUTHOR_PROTOCOL")
+    const failedCleanup = { schemaVersion: "factory-model-author-process-cleanup-v1", startRoot: result.start.root, disposition: "failed_to_exit" }
+    const cleanupRoot = publishFactoryArtifact(repository, canonical({ ...failedCleanup, root: labRoot("factory-model-author-process-cleanup-v1", failedCleanup) }))
+    expect(() => verifyFactoryAuthoringRecords(repository, [{ ...refs, cleanup: cleanupRoot }], result.bundle)).toThrow("AUTHOR_TERMINAL")
   })
   it("keeps structurally invalid source correction-eligible but missing identity/usage and forbidden tools terminal", () => {
     const cases = [
