@@ -32,6 +32,7 @@ describe("inert, source-backed calibration controls", () => {
   it("roundtrips the exact opaque-id/geometry mapping before the unchanged base entrypoint", () => {
     const result = deriveFactoryControl("S06", artifactRoot, base("model-oracle"))
     expect(result.source).toContain("factoryCalibrationMap(factoryCalibrationMap(input))")
+    expect(result.source).toContain('value.split("").reverse().join("")')
     expect(result.proof.claim).toBe("identity-roundtrip-only")
   })
 })

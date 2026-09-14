@@ -25,7 +25,7 @@ const transform = (slot: FactoryControlSlot, source: string): string => {
   // delegation; this is an identity control, not an invariance/robustness claim.
   const map = slot === "S06" ? `
 const factoryCalibrationMap = (value, key = "") => {
-  if (typeof value === "string" && (key === "id" || key === "soldierId")) return value.startsWith("opaque:") ? value.slice(7) : "opaque:" + value;
+  if (typeof value === "string" && (key === "id" || key === "soldierId")) return value.split("").reverse().join("");
   if (Array.isArray(value)) return value.map(item => factoryCalibrationMap(item, key));
   if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, key === "position" && (name === "x" || name === "y") && typeof item === "number" ? 11 - item : factoryCalibrationMap(item, name)]));
   return value;
