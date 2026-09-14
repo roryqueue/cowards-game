@@ -26,6 +26,8 @@ export interface FactoryCalibrationAttemptPlan {
   readonly runtimeOptions?: Omit<FactorySupervisedRuntimeOptions, "admission" | "sourceBytes" | "attemptRoot" | "budgetRoot">
 }
 export interface FactoryCalibrationRunnerHooks {
+  /** Historical mechanics fixtures are never an admissible fresh-v2 route. */
+  readonly legacyMechanics?: true
   readonly runtimeOptions?: Partial<Omit<FactorySupervisedRuntimeOptions, "admission" | "sourceBytes" | "attemptRoot" | "budgetRoot" | "image" | "invocationLimit" | "benchmarkLifetimeMs" | "factoryLifetimeMs" | "matchId" | "containerName" | "ownershipLabel">>
   readonly plan?: (admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot, workload: FactoryCalibrationWorkload) => FactoryCalibrationAttemptPlan
 }
@@ -123,7 +125,9 @@ export const deriveFactoryCalibrationOutcome = (execution: LabMatchExecution, ma
 
 export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repository: FactoryRepository, hooks: FactoryCalibrationRunnerHooks = {}): Promise<Readonly<FactoryCalibrationRunResult>> => {
   const manifest = admitFactoryCalibrationManifest(readCanonicalRecord(repository, manifestArtifactRoot))
+  const authorization = readCanonicalRecord(repository, manifest.authorizationArtifactRoot)
   verifyRetainedAuthority(repository, manifest)
+  if (authorization.schemaVersion === "factory-calibration-authorization-v1" && hooks.legacyMechanics !== true && !(hooks.runtimeOptions && hooks.plan)) return fail("LEGACY_MECHANICS_HOOKS")
   const terminalRoots: LabRoot[] = []
   const supervisionArtifactRoots: LabRoot[] = []
   const candidateArtifactRoots: LabRoot[] = []
