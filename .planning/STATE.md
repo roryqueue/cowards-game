@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 status: executing
-stopped_at: Phase264 Plan08 Task4 approved continuation; two fresh attempts maximum with two earlier failures charged; source/composition check before execution
+stopped_at: Phase264 Plan08 Task4 supervised48workload run in progress; first fresh Sol attempt valid; do not rerun or reset charged allocation
 last_updated: "2026-09-14T23:06:00Z"
 last_activity: 2026-09-14
-last_activity_desc: Operator approved two remaining Sol attempts in a fresh30-minute window; cumulative four-attempt and48workload90-minute limits unchanged; zero new executions
+last_activity_desc: Valid cumulative author attempt3 used9027tokens;12sources prepared, one70node teacher search,48workload run active; assessment pending
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Live Task4 run:** First approved fresh author A-01 is valid:37,263ms/9,027tokens, exact Sol, cleanup complete. This is cumulative attempt3; authoring stopped on first valid, preserving both earlier failures. All12sources materialized, teacher search70nodes/depth3/3alternatives within128nodes, and the48workload runner is active. Store `.strategy-lab/factory-264-fresh-20260914-approved-two`, control `/private/tmp/cg-264-task04-approved-Un1gVC`, main terminal session39246. Do not rerun author/materialize/run commands or reset charged capacity after interruption. Assess and reopen the retained result once the current process completes; no threshold, independence, or Phase265 eligibility is yet claimed. See264-FRESH-CALIBRATION-OUTCOME.md for exact roots and accounting. All following snapshots are historical.
 
 **Current approved continuation:** The operator answered “yes” to resuming the two remaining authoring attempts under the same limits. Main continues existing Plan08 Task4 with a fresh private ledger and30-minute window, exact Sol, at most two fresh attempts, preserving both earlier failures and their50,000-token unknown reservation plus9,767 known tokens. Fresh cap100,000, cumulative attempt capfour, unchanged48workloads/90minutes and all scientific/runtime/privacy/holdout/formation boundaries. Source remains independently reviewed `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`; command composition is rechecked before execution. No new authorization literal, numbered plan or client action is required. Prior terminal snapshots below remain history. Phase264 actual independence and Phase265 stay gated pending real evidence.
 
