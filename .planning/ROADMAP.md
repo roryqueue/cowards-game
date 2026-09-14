@@ -899,7 +899,7 @@ Plans:
   4. At least three materially independent automated mechanisms—the structured tactical optimizer, search-teacher/distiller, and provider-neutral frozen-bundle program synthesizer—pass an audited shared-helper allowlist and dependency, authorship, behavior, counterfactual-correlation, clone, and failure-mode review.
   5. Human and external submissions enter through a quarantined channel with frozen disclosure, submission, reviewer, independence, conflict, provenance, validation, and acceptance budgets; only validated deterministic explicit source can enter the factory, and every failed or rejected attack remains in the evidence root.
 
-**Plans:** 6/8 complete at the source/mechanics level. Final connected integration05 at `f7395d8a` passes156/156safe tests across20files, all four package builds, standalone four-script types and the1271-file private-boundary monitor; another16kernel/information-boundary tests pass. Retained graph inputs, exact paired workloads, concrete comparison cases, complete private traces, authenticated evidence and non-consuming intake reload are independently closed. The16-fixture evaluation index and source-only CI gate are present. Goal verification is `human_needed` (3/5 truths), with6private source UAT cases passed and1real-readiness case blocked. Plan07 needs actual model/provider input facts and an intake protocol or explicit unused/unavailable-channel decision plus fresh finite calibration limits; Plan08 then produces actual or blocked readiness. No synthetic participation, empirical independence claim or old allocation reuse is permitted. Phase264 is not yet phase-complete and Phase265 remains gated.
+**Plans:** 7/8 complete at the source/mechanics level. Integration05 remains independently complete at `f7395d8a`. Plan07 is independently source-complete at `d1cbfa98`: real app-server capture, honest model provenance, confirmed cleanup, source-rederived twelve-slot controls and24opposite-initiative pairs. Main's full focused check passed52/52 at4eda4d27; the final independent relevant-suite check passed38/38, with strict types/package builds and zero boundary violations. The user-approved envelope remains up to4model-authoring attempts/30minutes and48supervised development workloads/90minutes; human/external intake is unused and undisclosed snapshots are honestly unavailable. Execute Plan08's source-backed numeric assessment, exact runner/author linkage and90-minute guard now, then independent source review before main consumes the approved allocation. No fresh authoring or workloads have started. Previous3/5-truth verification and6/7private UAT remain historical, not a current readiness pass. No synthetic participation, empirical independence claim or old allocation reuse is permitted. Phase264 is not yet phase-complete and Phase265 remains gated.
 
 **Wave1 — shared private foundation**
 
@@ -918,11 +918,11 @@ Plans:
 
 **Wave4 — consolidated late real-input gate**
 
-- [ ] 264-07-PLAN.md — Exact provider/participant/protocol and finite fresh calibration decision, or honest unresolved readiness.
+- [x] 264-07-PLAN.md — Approved bounded authoring route, honest model provenance and source-backed controls; independently rechecked clean.
 
 **Wave5 — conditional evidence, after Wave4**
 
-- [ ] 264-08-PLAN.md — Fresh bounded calibration or explicit blocked readiness; independent review/validation/verification handoff.
+- [ ] 264-08-PLAN.md — Source-backed numeric calibration and assessment, followed by the approved bounded run and independent validation/verification.
 
 Cross-cutting constraints: private outputs, canonical engine and existing hostile supervision only; no shared strategic cores; no consumed Phase263 reuse; no fabricated model/human evidence; no Phase265 league, holdout, formation, public/counted/production or rules changes.
 
@@ -1031,7 +1031,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 6/8 | Code verified; Plan07 real-input decision needed | - |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 7/8 | Plan07 source complete; executing Plan08 assessment | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
