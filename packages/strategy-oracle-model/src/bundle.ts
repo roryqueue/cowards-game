@@ -93,13 +93,13 @@ export const deriveFrozenModelBundleRoot = <T extends object>(value: T): LabRoot
 }
 
 interface DecodedModelResponse {
-  readonly requestedModelId: string; readonly reportedModelId: string; readonly source: string
+  readonly requestedModelId: string; readonly reportedModelId: string; readonly providerId: string; readonly source: string
   readonly usage: Readonly<{ inputTokens: number; outputTokens: number; cachedInputTokens: number; totalTokens: number }>
 }
 
 /** Strictly decodes the retained Codex app-server JSONL evidence without executing source. */
 export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<DecodedModelResponse> => {
-  let reportedModelId: string | null = null, requestedModelId: string | null = null, turnId: string | null = null
+  let reportedModelId: string | null = null, requestedModelId: string | null = null, providerId: string | null = null, turnId: string | null = null
   let source: string | null = null, usage: DecodedModelResponse["usage"] | null = null
   const messages: RecordValue[] = []
   for (const line of bodyUtf8.split(/\r?\n/u).filter((entry) => entry.length > 0)) {
@@ -109,9 +109,11 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
     if (message.id === 2) {
       const result = objectRecord(message.result, "RAW_RESPONSE")
       const resultModel = textValue(result.model), resultProvider = textValue(result.modelProvider)
-      if (!resultModel || !resultProvider) fail("RAW_RESPONSE")
+      const sandbox = objectRecord(result.sandbox, "RAW_RESPONSE")
+      if (!resultModel || !resultProvider || result.approvalPolicy !== "never" || sandbox.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(result.instructionSources) || result.instructionSources.length !== 0) fail("RAW_RESPONSE")
       reportedModelId = resultModel
       requestedModelId = resultModel
+      providerId = resultProvider
     } else if (message.id === 3) {
       const result = objectRecord(message.result, "RAW_RESPONSE"), turn = objectRecord(result.turn, "RAW_RESPONSE")
       const resultTurnId = textValue(turn.id)
@@ -146,7 +148,7 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
       }
     }
   }
-  if (!reportedModelId || !requestedModelId) fail("RAW_RESPONSE_IDENTITY")
+  if (!reportedModelId || !requestedModelId || !providerId) fail("RAW_RESPONSE_IDENTITY")
   if (!turnId) fail("RAW_RESPONSE_TURN_ID")
   const completed = messages.some((message) => {
     if (message.method !== "turn/completed") return false
@@ -156,7 +158,7 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
   if (!completed) fail("RAW_RESPONSE_TURN_COMPLETION")
   if (!source) fail("RAW_RESPONSE_SOURCE")
   if (!usage) fail("RAW_RESPONSE_USAGE")
-  return Object.freeze({ requestedModelId, reportedModelId, source, usage }) as Readonly<DecodedModelResponse>
+  return Object.freeze({ requestedModelId, reportedModelId, providerId, source, usage }) as Readonly<DecodedModelResponse>
 }
 
 const validateBundle = (value: unknown): FrozenModelBundle => {
@@ -196,7 +198,7 @@ const validateBundle = (value: unknown): FrozenModelBundle => {
         !root(rawResponseRecord.root) || rawResponseRecord.format !== "codex-exec-json" || !text(rawResponseRecord.bodyUtf8, 262144) || rawResponseRecord.root !== deriveFrozenModelRawResponseRecordRoot({ format: rawResponseRecord.format, bodyUtf8: rawResponseRecord.bodyUtf8 }) || provenance.responseRecordRoot !== rawResponseRecord.root ||
         !integer(usage.inputTokens, 10_000_000) || !integer(usage.outputTokens, 10_000_000) || !integer(usage.cachedInputTokens, 10_000_000) || !integer(usage.totalTokens, 10_000_000) || usage.cachedInputTokens > usage.inputTokens || usage.totalTokens !== usage.inputTokens + usage.outputTokens ||
         usage.inputTokens !== accounting.inputTokens || usage.outputTokens !== accounting.outputTokens || client.settingsRoot !== identity.settingsRoot || identity.modelId !== provenance.reportedModelId ||
-        decoded.source !== responseData.source || decoded.requestedModelId !== provenance.requestedModelId || decoded.reportedModelId !== provenance.reportedModelId ||
+        decoded.source !== responseData.source || decoded.requestedModelId !== provenance.requestedModelId || decoded.reportedModelId !== provenance.reportedModelId || decoded.providerId !== identity.providerId ||
         decoded.usage.inputTokens !== usage.inputTokens || decoded.usage.outputTokens !== usage.outputTokens || decoded.usage.cachedInputTokens !== usage.cachedInputTokens || decoded.usage.totalTokens !== usage.totalTokens ||
         (identity as FrozenModelProviderV2).servingSnapshot.availability !== "unavailable") fail("PROVENANCE")
   }

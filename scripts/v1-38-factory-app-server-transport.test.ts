@@ -13,7 +13,7 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
   private reply(request: Record<string, unknown>): void {
     const response = (result: unknown): void => { this.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n`)) }
     if (request.method === "initialize") response({ protocolVersion: "1" })
-    if (request.method === "thread/start") response({ thread: { id: "thread-1" }, model: "gpt-5.6-luna", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, instructionSources: [] })
+    if (request.method === "thread/start") response({ thread: { id: "thread-1" }, model: "gpt-5.6-luna", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] })
     if (request.method === "turn/start") {
       response({ turn: { id: "turn-1" } })
       for (const message of [
@@ -42,7 +42,18 @@ describe("factory Codex app-server transport", () => {
     const original = fake["reply"].bind(fake)
     fake["reply"] = (request: Record<string, unknown>): void => {
       if (request.method !== "thread/start") return original(request)
-      fake.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result: { thread: { id: "thread-1" }, model: "rerouted", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, instructionSources: [] } })}\n`))
+      fake.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result: { thread: { id: "thread-1" }, model: "rerouted", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } })}\n`))
+    }
+    await expect(createFactoryAppServerTransport({ codexHome: "/fresh", cwd: "/isolated", requestedModel: "gpt-5.6-luna", requestedProvider: "openai", timeoutMs: 100, spawn: () => fake })).rejects.toThrow("FACTORY_APP_SERVER_THREAD_START_CONTRACT")
+    expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "thread/start"])
+    expect(fake.killed).toBe(true)
+  })
+  it("refuses an effective approval policy other than never before turn start", async () => {
+    const fake = new FakeAppServer()
+    const original = fake["reply"].bind(fake)
+    fake["reply"] = (request: Record<string, unknown>): void => {
+      if (request.method !== "thread/start") return original(request)
+      fake.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result: { thread: { id: "thread-1" }, model: "gpt-5.6-luna", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "on-request", instructionSources: [] } })}\n`))
     }
     await expect(createFactoryAppServerTransport({ codexHome: "/fresh", cwd: "/isolated", requestedModel: "gpt-5.6-luna", requestedProvider: "openai", timeoutMs: 100, spawn: () => fake })).rejects.toThrow("FACTORY_APP_SERVER_THREAD_START_CONTRACT")
     expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "thread/start"])

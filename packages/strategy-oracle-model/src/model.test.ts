@@ -21,7 +21,7 @@ const sourceRoot = root(source)
 const v2Records = (sourceValue = source) => {
   const requestValue = { byteLength: new TextEncoder().encode("author disclosed packet").byteLength, encoding: "utf8" as const, bodyUtf8: "author disclosed packet" }
   const rawResponseValue = { format: "codex-exec-json" as const, bodyUtf8: [
-    { jsonrpc: "2.0", id: 2, result: { thread: { id: "thread-1" }, model: "frozen-model", modelProvider: "frozen-provider", cwd: "/disclosed", sandbox: { type: "readOnly", networkAccess: false }, instructionSources: [] } },
+    { jsonrpc: "2.0", id: 2, result: { thread: { id: "thread-1" }, model: "frozen-model", modelProvider: "frozen-provider", cwd: "/disclosed", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
     { jsonrpc: "2.0", id: 3, result: { turn: { id: "turn-1" } } },
     { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "item-1", type: "agentMessage", text: JSON.stringify({ source: sourceValue }) } } },
     { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { threadId: "thread-1", turnId: "turn-1", tokenUsage: { total: { inputTokens: 12, cachedInputTokens: 0, outputTokens: 34, reasoningOutputTokens: 2, totalTokens: 46 }, last: { inputTokens: 12, cachedInputTokens: 0, outputTokens: 34, reasoningOutputTokens: 2, totalTokens: 46 } } } },

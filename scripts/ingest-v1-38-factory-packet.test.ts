@@ -108,7 +108,7 @@ describe("named private factory ingestion", () => {
     const requestRecordValue = { byteLength: new TextEncoder().encode("disclosed packet").byteLength, encoding: "utf8" as const, bodyUtf8: "disclosed packet" }
     const requestRecord = { ...requestRecordValue, root: deriveFrozenModelRequestRecordRoot(requestRecordValue) }
     const rawResponseRecordValue = { format: "codex-exec-json" as const, bodyUtf8: [
-      { jsonrpc: "2.0", id: 2, result: { thread: { id: "thread-1" }, model: "reported-model", modelProvider: "frozen-provider", cwd: "/disclosed", sandbox: { type: "readOnly", networkAccess: false }, instructionSources: [] } },
+      { jsonrpc: "2.0", id: 2, result: { thread: { id: "thread-1" }, model: "reported-model", modelProvider: "frozen-provider", cwd: "/disclosed", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
       { jsonrpc: "2.0", id: 3, result: { turn: { id: "turn-1" } } },
       { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "item-1", type: "agentMessage", text: JSON.stringify({ source: modelSource }) } } },
       { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { threadId: "thread-1", turnId: "turn-1", tokenUsage: { total: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, reasoningOutputTokens: 0, totalTokens: 2 }, last: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, reasoningOutputTokens: 0, totalTokens: 2 } } } },

@@ -104,7 +104,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
     const thread = record(started.thread)
     const threadId = text(thread?.id)
     const reportedModel = text(started.model), provider = text(started.modelProvider), cwd = text(started.cwd), sandbox = record(started.sandbox), instructionSources = started.instructionSources
-    if (!threadId || reportedModel !== options.requestedModel || provider !== options.requestedProvider || cwd !== options.cwd || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(instructionSources) || instructionSources.length !== 0) fail("THREAD_START_CONTRACT")
+    if (!threadId || reportedModel !== options.requestedModel || provider !== options.requestedProvider || cwd !== options.cwd || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || started.approvalPolicy !== "never" || !Array.isArray(instructionSources) || instructionSources.length !== 0) fail("THREAD_START_CONTRACT")
     const admittedThreadId = threadId as string
     const admittedModel = reportedModel as string
     return Object.freeze({
