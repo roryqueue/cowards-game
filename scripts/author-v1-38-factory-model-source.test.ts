@@ -61,6 +61,12 @@ describe("operational factory authoring", () => {
   })
   it("fails closed without exact installed capability evidence", () => {
     expect(inspectAuthoringCapability({ ...capability, featureList: capability.featureList.replace("shell_tool stable\n", "") }).available).toBe(false)
+    const missingLegacyFeature = capability.featureList.replace("imagegenext stable\n", "")
+    const compatible = inspectAuthoringCapability({ ...capability, codexVersion: "codex-cli 0.154.0", featureList: missingLegacyFeature })
+    expect(compatible.available).toBe(true)
+    expect(compatible.disabledFeatures).toEqual(inspectAuthoringCapability({ ...capability, codexVersion: "codex-cli 0.154.0" }).disabledFeatures)
+    expect(inspectAuthoringCapability({ ...capability, featureList: missingLegacyFeature }).available).toBe(false)
+    expect(inspectAuthoringCapability({ ...capability, codexVersion: "codex-cli 0.155.0", featureList: missingLegacyFeature }).available).toBe(false)
     expect(buildFactoryAuthorCommand(createFactoryAuthoringAllocation(), { packetBytes: packet, packetRoot, disclosedDirectory: join(directory(), "missing"), model: "gpt-5.6-sol", capability: { ...capability, execHelp: "--json" }, frozenSettings })).toEqual({ status: "authoring_context_capability_unavailable" })
   })
   it("rejects repository-contained and symlinked disclosed roots", () => {
