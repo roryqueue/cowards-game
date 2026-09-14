@@ -4,6 +4,8 @@ import { readFactoryArtifact, type FactoryRepository } from "../packages/strateg
 import { admitFrozenModelBundle } from "../packages/strategy-oracle-model/src/bundle.js"
 import { createFactoryAuthoringAllocation } from "./v1-38-factory-allocation.js"
 import { readFactoryCanonicalRecord, requireFactoryRecordRoot } from "./v1-38-factory-fresh-evidence.js"
+import type { readFreshFactoryCalibration } from "./v1-38-factory-fresh-evidence.js"
+import type { FactoryIngestionRecord } from "./ingest-v1-38-factory-packet.js"
 
 export interface FactoryAuthoringRecordRefs {
   readonly start: LabRoot; readonly request: LabRoot; readonly stdin: LabRoot; readonly response: LabRoot
@@ -18,6 +20,9 @@ export interface FactoryExecutionEvidence {
   readonly negativeWitnessArtifactRoots: Readonly<Record<"S01" | "S03" | "S05", LabRoot>>
 }
 export const factoryEvidenceByteRoot = (bytes: Uint8Array | string): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+export const deriveFactoryNegativeWitness = (_record: FactoryIngestionRecord): Record<string, unknown> => ({})
+export const deriveFactorySharedHelperAudit = (_records: Readonly<Record<"S01" | "S03" | "S05", FactoryIngestionRecord>>): Record<string, unknown> => ({})
+export const readFactoryExecutionEvidence = (_repository: FactoryRepository, _artifactRoot: LabRoot, _fresh: ReturnType<typeof readFreshFactoryCalibration>): FactoryExecutionEvidence => { throw new TypeError("FACTORY_EXECUTION_UNIMPLEMENTED") }
 const fail = (code: string): never => { throw new TypeError(`FACTORY_EXECUTION_${code}`) }
 const same = (left: unknown, right: unknown) => labRoot("factory-execution-equality-v1", left) === labRoot("factory-execution-equality-v1", right)
 /** Reopen every charged author attempt, not merely the winning model label. */
