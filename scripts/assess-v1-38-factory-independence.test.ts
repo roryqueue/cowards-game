@@ -2,7 +2,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { decideFactoryIndependence, readRetainedFactoryLedger, verifyRetainedFactoryAssessment } from "./assess-v1-38-factory-independence.js"
+import { decideFactoryIndependence, factoryWorkloadResourceViolations, readRetainedFactoryLedger, verifyRetainedFactoryAssessment } from "./assess-v1-38-factory-independence.js"
 import { NUMERIC_DIMENSIONS, type NumericComparison, type NumericControlTable } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
@@ -14,6 +14,11 @@ const score = (n: number): NumericComparison => ({ dimensions: Object.fromEntrie
 const controls: NumericControlTable = { "S01/S02":score(.9), "S03/S04":score(.95), "S05/S06":score(.9), "S01/S07":score(.7), "S01/S08":score(.3), "S11/S12":score(.7) }
 const edges = {"S01/S03":score(.1),"S01/S05":score(.2),"S03/S05":score(.25)}
 describe("finite factory independence decision", () => {
+  it("rejects actual per-cell overruns even within the outer window",()=>{
+    expect(factoryWorkloadResourceViolations(1000,121000,256,120000)).toEqual([])
+    expect(factoryWorkloadResourceViolations(1000,121001,256,120000)).toContain("lifetime_exceeded")
+    expect(factoryWorkloadResourceViolations(1000,2000,257,120000)).toContain("invocations_exceeded")
+  })
   it("affirms only complete controls and all three distinct base edges", () => {
     expect(decideFactoryIndependence(controls,edges,[],0)).toMatchObject({status:"affirmed",reasons:[]})
   })

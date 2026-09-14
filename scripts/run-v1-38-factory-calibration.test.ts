@@ -9,12 +9,21 @@ import { createFactoryCalibrationManifest, createFactoryCalibrationWorkload } fr
 import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
-import { buildFactoryCalibrationMatchInput, deriveFactoryCalibrationOutcome, deriveFixedMechanicsOpponentIdentityRoot, runFactoryCalibration } from "./run-v1-38-factory-calibration.js"
+import { boundFactoryWorkloadProviders, buildFactoryCalibrationMatchInput, deriveFactoryCalibrationOutcome, deriveFixedMechanicsOpponentIdentityRoot, runFactoryCalibration } from "./run-v1-38-factory-calibration.js"
 import * as freshEvidence from "./v1-38-factory-fresh-evidence.js"
 import * as executionEvidence from "./v1-38-factory-execution-evidence.js"
 import * as assessor from "./assess-v1-38-factory-independence.js"
 
 const dirs: string[] = [], root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
+it("shares one finite invocation and time budget across both providers", () => {
+  const invoke=vi.fn(()=>({})), raw={identity:{},invoke,verify:()=>true,close:()=>({cleanupComplete:true,orphanedChild:false})} as never
+  const providers=boundFactoryWorkloadProviders({bottom:raw,top:raw},2,Date.now()+10000)
+  providers.bottom!.invoke({} as never,{} as never)
+  providers.top!.invoke({} as never,{} as never)
+  expect(()=>providers.bottom!.invoke({} as never,{} as never)).toThrow("WORKLOAD_BUDGET_EXHAUSTED")
+  expect(invoke).toHaveBeenCalledTimes(2)
+  expect(()=>boundFactoryWorkloadProviders({bottom:raw},2,0).bottom!.invoke({} as never,{} as never)).toThrow("WORKLOAD_BUDGET_EXHAUSTED")
+})
 const encode = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok) throw new Error("encode"); return admitted.canonicalBytes }
 const publishWorkload = (
   repository: ReturnType<typeof createFactoryRepository>,

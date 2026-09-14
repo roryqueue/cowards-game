@@ -109,6 +109,7 @@ export const buildFactoryCalibrationMatchInput = (workload: FactoryCalibrationWo
   const initialInitiativePlayerId = workload.condition.initialInitiative === "candidate" ? candidatePlayerId : opponentPlayerId
   return { matchId: `factory-calibration-${workload.root.slice(7, 23)}-${startRoot.slice(7, 15)}`, seed: workload.condition.seed, arenaVariant, bottomPlayerId, topPlayerId, bottomStrategyRevisionId: workload.condition.candidateSide === "bottom" ? candidateRevisionId : workload.opponent.opponentId, topStrategyRevisionId: workload.condition.candidateSide === "top" ? candidateRevisionId : workload.opponent.opponentId, initialInitiativePlayerId, maxPhases: workload.condition.maxPhases }
 }
+export const boundFactoryWorkloadProviders = (providers:Readonly<Record<string,LabSupervisedProvider>>,_limit:number,_deadlineMs:number):Readonly<Record<string,LabSupervisedProvider>> => providers
 const defaultPlan = (workload: FactoryCalibrationWorkload, _admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot): FactoryCalibrationAttemptPlan => {
   const candidatePlayerId = "factory-candidate", opponentPlayerId = workload.opponent.opponentId
   const match = buildFactoryCalibrationMatchInput(workload, provider.identity.revisionId, startRoot)

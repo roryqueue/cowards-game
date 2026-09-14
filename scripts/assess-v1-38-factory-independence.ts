@@ -16,6 +16,7 @@ import { createNumericObservationFromVerifiedCell, type VerifiedFactoryCellObser
 import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 import type { FactorySourceSlot } from "./v1-38-factory-allocation.js"
+import { factoryAssessmentImplementationRoot as implementationRoot } from "./v1-38-factory-implementation.js"
 
 const BASE_EDGES = ["S01/S03", "S01/S05", "S03/S05"] as const
 const CONTROL_IDS: readonly NumericControlId[] = ["S01/S02", "S03/S04", "S05/S06", "S01/S07", "S01/S08", "S11/S12"]
@@ -23,6 +24,7 @@ const fail = (code: string): never => { throw new TypeError(`FACTORY_ASSESSMENT_
 const encode = (value: unknown) => { const result = admitCanonicalJsonValue(value, {profile:"canonical-manifest"}); return result.ok ? result.canonicalBytes : fail("CANONICAL") }
 const same = (left: unknown, right: unknown) => labRoot("factory-assessment-equality-v1",left) === labRoot("factory-assessment-equality-v1",right)
 const record = (value: unknown): Record<string,unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string,unknown> : fail("RECORD")
+export const factoryWorkloadResourceViolations = (_started:number,_completed:number,_invocations:number,_lifetime:number):readonly string[] => []
 
 /** Pure decision helper; only the retained-evidence entrypoint can publish readiness. */
 export const decideFactoryIndependence = (controls: NumericControlTable, baseEdges: Record<string,NumericComparison>, priorReasons: readonly string[], sharing: number): {status:"affirmed"|"unresolved";reasons:readonly string[]} => {
@@ -66,8 +68,6 @@ export interface FactoryAssessmentResult {
   readonly assessmentRoot: LabRoot; readonly assessmentArtifactRoot: LabRoot | null
   readonly thresholdArtifactRoot: LabRoot | null; readonly manifestRoot: LabRoot; readonly allocationRoot: LabRoot
 }
-const IMPLEMENTATION_FILES = ["assess-v1-38-factory-independence.ts", "v1-38-factory-execution-evidence.ts", "v1-38-factory-source-audit.ts", "v1-38-factory-observations.ts", "../packages/strategy-lab/src/factory/numeric-calibration.ts"] as const
-const implementationRoot = () => labRoot("factory-assessment-implementation-v1", IMPLEMENTATION_FILES.map((path) => ({path,root:factoryEvidenceByteRoot(readFileSync(new URL(path,import.meta.url)))})))
 const rooted = (schemaVersion:string, value:Record<string,unknown>) => { const body = {schemaVersion,...value}; return {...body,root:labRoot(schemaVersion,body)} }
 const artifactIdentity = (value:unknown) => factoryEvidenceByteRoot(encode(value))
 
