@@ -28,7 +28,7 @@ const bound = <T>(validator: (value: unknown) => T) => Object.freeze({
 })
 
 export type FactorySplit = "development" | "validation" | "probe"
-export type FactoryDisposition = "accepted" | "rejected" | "invalid" | "duplicate" | "legal_but_weak" | "retried" | "player_violation" | "system_failure"
+export type FactoryDisposition = "accepted" | "rejected" | "invalid" | "duplicate" | "legal_but_weak" | "retried" | "unresolved" | "player_violation" | "system_failure"
 export interface FactorySourceIdentity { root: LabRoot; sha256: LabRoot; byteLength: number; encoding: "utf8" }
 export interface FactoryBuildIdentity { buildRoot: LabRoot; toolchainRoot: LabRoot; compatibilityTupleRoot: LabRoot }
 /**

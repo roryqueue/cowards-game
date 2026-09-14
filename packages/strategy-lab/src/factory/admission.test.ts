@@ -7,7 +7,7 @@ import {
   factoryProposalFromPacket,
   factoryValidationFixture,
 } from "./contracts.js"
-import { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider } from "./admission.js"
+import { admitFactory, authorizeFactorySupervision, deriveFactoryOrderedRecordDescriptor, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider } from "./admission.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot, deriveFactoryProposalRoot } from "./identity.js"
 
 const source = new TextEncoder().encode("export default {}")
@@ -52,6 +52,14 @@ const authorized = () => {
 }
 
 describe("hostile private candidate admission", () => {
+  it("commits real-sized ordered trace sets per record without monolithic canonicalization", () => {
+    const records = Array.from({ length: 4_096 }, (_, ordinal) => ({ ordinal, payload: "x".repeat(2_048) }))
+    const descriptor = deriveFactoryOrderedRecordDescriptor("factory-large-trace-test", records)
+    expect(descriptor.count).toBe(records.length)
+    const reordered = [...records]
+    ;[reordered[0], reordered[1]] = [reordered[1]!, reordered[0]!]
+    expect(deriveFactoryOrderedRecordDescriptor("factory-large-trace-test", reordered).root).not.toBe(descriptor.root)
+  })
   it("accepts a complete projection from the same packet and rejects an unbound receipt", () => {
     const { packet, proposal, validation } = admittedCandidate()
     const sourceAdmission = admitFactory({ packet, proposal, sourceBytes: source })
@@ -141,7 +149,7 @@ describe("hostile private candidate admission", () => {
   it("requires an issued successful receipt before it publishes a final candidate", async () => {
     const { proposal, validation, admission } = authorized()
     const unexecuted = factoryCandidateFixture(proposal, validation)
-    expect(() => finalizeFactoryCandidate({ receipt: { admission } as never, candidate: unexecuted })).toThrow("FACTORY_ADMISSION")
+    expect(() => finalizeFactoryCandidate({ receipt: { admission }, candidate: unexecuted } as never)).toThrow("FACTORY_ADMISSION")
 
     const failureReceipt = await superviseFactory(admission, "candidate", { match: matchParticipants, providers: { candidate: providerFor(admission) } }, async ({ providers }) => {
       const candidate = providers.candidate
@@ -149,7 +157,7 @@ describe("hostile private candidate admission", () => {
       const evidence = await candidate.invoke({} as never, candidate.identity)
       return { kind: "failure", privacy: "private_offline", transitions: [], unchangedState: null, failure: { classification: "system_failure", code: "TEST" }, accounting: [evidence] } as never
     })
-    expect(() => finalizeFactoryCandidate({ receipt: failureReceipt, candidate: factoryCandidateFixture(proposal, validation, failureReceipt.root) })).toThrow("FACTORY_ADMISSION")
+    expect(() => finalizeFactoryCandidate({ receipt: failureReceipt, candidate: factoryCandidateFixture(proposal, validation, failureReceipt.root) } as never)).toThrow("FACTORY_ADMISSION")
 
     const successReceipt = await superviseFactory(admission, "candidate", { match: matchParticipants, providers: { candidate: providerFor(admission) } }, runCandidateOnce)
     expect(() => finalizeFactoryCandidate({ receipt: successReceipt, candidate: factoryCandidateFixture(proposal, validation, successReceipt.root) } as never)).toThrow("FACTORY_ADMISSION")
@@ -197,7 +205,7 @@ describe("hostile private candidate admission", () => {
     expect(() => finalizeFactoryCandidate({
       receipt: opponentOnlyReceipt,
       candidate: factoryCandidateFixture(proposal, validation, opponentOnlyReceipt.root),
-    })).toThrow("FACTORY_ADMISSION")
+    } as never)).toThrow("FACTORY_ADMISSION")
 
     const candidateViolation = await superviseFactory(admission, "candidate", { match: matchParticipants, providers: { candidate: providerFor(admission, { ok: false, violation: { code: "CANDIDATE_INVALID" } }) } }, runCandidateOnce)
     expect(mapFactorySupervision(candidateViolation).disposition).toBe("player_violation")

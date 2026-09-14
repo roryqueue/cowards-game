@@ -9,7 +9,7 @@ import { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, su
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "./repository.js"
-import { createFactoryFingerprintEvidence, deriveFactoryFingerprints, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
+import { createFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
 
 const dirs: string[] = []
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
@@ -64,8 +64,8 @@ const supervision = async (admission: FactoryAdmission) => superviseFactory(admi
       mySoldiers: [], enemySoldiers: [], strategyMemory: { private: "strip-me" },
       initialInitiativePlayerId: "candidate", hasInitialInitiative: true, roundInitiativePlayerId: "candidate", hasRoundInitiative: true,
     },
-  } as never
-  const evidence = await providers.candidate!.invoke(request, providers.candidate!.identity)
+  }
+  const evidence = await providers.candidate!.invoke(request as never, providers.candidate!.identity)
   return {
     kind: "completed", privacy: "private_offline",
     result: { state: {}, events: [] },
@@ -114,10 +114,7 @@ describe("six derived factory fingerprints", () => {
     const a = deriveFactoryFingerprints({ repository: first.repo, supervisionReceipt: firstReceipt, evidenceArtifactRoot: firstArtifact })
 
     const rewritten = new TextEncoder().encode("const renamed=(value)=>value.phaseNumber>0?[]:[];\nexport default {selectActivations(value){return {activationOrders:renamed(value),strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}")
-    const second = admitted()
-    publishFactoryArtifact(second.repo, rewritten)
-    const b = deriveFactoryFingerprints({ repository: first.repo, supervisionReceipt: firstReceipt, evidenceArtifactRoot: firstArtifact, sourceOverrideForMechanics: rewritten })
-    expect(b.fingerprints.sourceStructureRoot).toBe(a.fingerprints.sourceStructureRoot)
+    expect(deriveFactorySourceStructureRoot(rewritten)).toBe(a.fingerprints.sourceStructureRoot)
     expect(a.status).not.toBe("independent")
   })
 
@@ -127,8 +124,7 @@ describe("six derived factory fingerprints", () => {
     const mismatch = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidenceArtifactRoot: artifactRoot, claimedFingerprints: { ...factoryCandidateFixture(proposal, validation).fingerprints, sourceStructureRoot: root("f") } })
     expect(mismatch.status).toBe("unresolved")
     expect(mismatch.reasons).toContain("claimed_fingerprint_mismatch")
-    const noTrace = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: { ...receipt, traces: [] } as never, evidenceArtifactRoot: artifactRoot })
-    expect(noTrace.reasons).toContain("missing_legal_trace")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: { ...receipt, traces: [] } as never, evidenceArtifactRoot: artifactRoot })).toThrow("FACTORY_FINGERPRINT_SUPERVISION_RECEIPT")
   })
 
   it("requires the exact issued derivation receipt before final candidate publication", async () => {

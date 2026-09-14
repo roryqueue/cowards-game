@@ -23,7 +23,7 @@ export const validateFactoryAttemptStart = (value: unknown): Readonly<FactoryAtt
   return entry as unknown as FactoryAttemptStart
 })
 export const validateFactoryAttemptTerminal = (value: unknown): Readonly<FactoryAttemptTerminal> => canonical(value, (entry) => {
-  const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "player_violation", "system_failure"]
+  const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"]
   if (!exact(entry, terminalKeys) || entry.schemaVersion !== "factory-attempt-terminal-v1" || entry.privacy !== "private_offline" || ![entry.root, entry.startRoot, entry.validationRoot, entry.duplicateEvidenceRoot, entry.finalEvidenceRoot].every(root) || !dispositions.includes(entry.disposition as FactoryDisposition) || !(entry.outputRoot === null || root(entry.outputRoot)) || (entry.disposition === "system_failure" && entry.outputRoot !== null) || (entry.disposition !== "system_failure" && entry.outputRoot === null) || entry.root !== deriveFactoryAttemptRoot(entry)) return fail()
   return entry as unknown as FactoryAttemptTerminal
 })

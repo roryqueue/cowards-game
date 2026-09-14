@@ -47,3 +47,10 @@ export {
 export type { FactoryRepository } from "./repository.js"
 export { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory } from "./admission.js"
 export type { FactoryAdmission, FactorySourceAdmission, FactorySupervisionProvider, FactorySupervisionReceipt } from "./admission.js"
+export {
+  createFactoryFingerprintEvidence,
+  deriveFactoryFingerprints,
+  deriveFactorySourceStructureRoot,
+  requireIssuedFactoryIndependenceReceipt,
+} from "./fingerprint.js"
+export type { FactoryFingerprintEvidence, FactoryIndependenceReceipt } from "./fingerprint.js"
