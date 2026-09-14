@@ -13,7 +13,7 @@ const match = () => ({ matchId: "teacher-match", seed: "teacher-seed", arenaVari
 
 describe("teacher oracle", () => {
   it("evaluates multiple canonical alternatives over bounded depth and node caps", () => {
-    const receipt = searchCanonicalCounterfactual({ canonicalMatch: match(), counterfactual: { opponentHypothesis: "cautious", hiddenBranchBias: 0 }, maxDepth: 2, maxNodes: 12 })
+    const receipt = searchCanonicalCounterfactual({ canonicalMatch: match(), counterfactual: { opponentHypothesis: "cautious" }, maxDepth: 2, maxNodes: 12 })
     expect(receipt.depthReached).toBeGreaterThanOrEqual(2)
     expect(receipt.alternativesEvaluated).toBeGreaterThanOrEqual(2)
     expect(receipt.nodesVisited).toBeLessThanOrEqual(12)
