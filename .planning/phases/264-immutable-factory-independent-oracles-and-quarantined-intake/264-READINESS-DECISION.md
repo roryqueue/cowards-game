@@ -1,10 +1,10 @@
 ---
 phase: 264
 plan: "07"
-status: approved_pending_manifest
+status: terminal_authoring_system_failure
 decided: 2026-09-14
 operator_response: approved
-empirical_outcome: not_run
+empirical_outcome: one_charged_authoring_failure_zero_workloads
 ---
 
 # Approved bounded fresh-generation decision
@@ -26,4 +26,4 @@ All generated code is hostile and runs only through the selected supervised runt
 
 ## Current execution disposition
 
-No model request or empirical workload has run. The outer authority is approved; the exact content-addressed input/allocation manifest and reviewed runnable assessment are still implementation prerequisites. Main owns empirical launch, accounting, lifecycle and pushes. Ordinary corrections inside this scope do not require another approval.
+The source and prospective-input gates passed. Task04 charged A-01, which ended in `system_failure` because the selected model requires a newer installed client. No usable source, teacher search or workload followed. Three authoring slots and48workloads are unused but cannot automatically be reused after this terminal outcome. See264-TASK04-OUTCOME.md for actual roots, accounting, local repair findings and the narrow operator-only continuation decision. Ordinary source repairs continue without new approval; another authoring turn does not.

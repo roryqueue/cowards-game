@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
-status: executing
-stopped_at: Phase264 Plan08 exact source review passed; main preparing approved bounded empirical launch
-last_updated: "2026-09-14T17:15:00Z"
+status: blocked
+stopped_at: Phase264 Plan08 source repairs independently clean; only operator approval to reopen stopped authoring with supported model remains
+last_updated: "2026-09-14T17:42:00Z"
 last_activity: 2026-09-14
-last_activity_desc: Plan264-08 source reviewed at 3a8a90b4 with zero findings; 65 focused tests and 1292-file boundary check pass; zero empirical consumption
+last_activity_desc: Final f9f0cd63 source review clean; 79 tests, strict types, affected builds and1292-file boundary check pass; one charged authoring failure, zero workloads, no further execution authority
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,10 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Verified handoff:** RUN-01/02 and both contradictory-error findings are independently resolved at `f9f0cd63adeabc9c29ac3defbb259b4c3a318ab0`. Main passed79/79 tests across13explicit files, strict affected types, model/lab package builds and1292source-boundary files with zero violations. Independent final recheck passes35/35 and zero findings. Current verification is4/5 truths: source/mechanics and truthful blocked readiness pass; actual three-mechanism independence remains unresolved. Corrected immutable outcome `sha256:86afd06a8e66f8d54dbee6f2484e67d7573435e0869f000e6f9aaef5097281a6` preserves its original predecessor and marks lost protocol/reported identity/usage unavailable. One authoring attempt was charged; no valid source, teacher search or workload followed; all36historical locks remain. The only human checkpoint is approval to use supported `gpt-5.5` and reopen at most the three remaining authoring attempts in a fresh30-minute window, retaining the48workload/90-minute ceiling and all other bounds. Do not run any authoring command before that approval. No new numbered plan or long authorization literal is needed. Earlier progress paragraphs are historical.
+
+**Current Task04 terminal:** A-01 charged once and ended `system_failure`; the provider's HTTP400 says the selected `gpt-5.6-sol` needs a newer client. The task-owned catalog advertises `gpt-5.5` and spark. Native process cleanup completed; usage is unavailable, zero valid sources/teacher searches/workloads. The earlier npm-wrapper setup failure consumed zero attempts. Immutable outcome `sha256:e76142f8e3c9e612d9f9829d5c7a70f0a953ae5f751d2ebf0ab68a24575fc19c` and264-TASK04-OUTCOME.md retain the exact accounting and incomplete failure-capture limitation. Main/worker now fix RUN-01 model availability and RUN-02 failure retention using source-only tests and independent review. No further authoring is eligible under the terminal-stop rule. After repairs, ask only the narrow operator decision: supported `gpt-5.5`, at most three remaining attempts in one fresh30-minute window, same48workload/90-minute ceiling and all other bounds. No new numbered plan, long literal or external custody route. Phase264 independence and Phase265 remain blocked; earlier paragraphs are historical.
 
 **Current exact-source gate:** Independent Plan07/08 review passes at `3a8a90b453fa7c8630fefc18b90e6d5997543413` with zero unresolved relevant findings. Main's complete focused regression passes65/65 across12files, strict five-script types pass, and the1292-file private boundary check finds zero violations. The reviewer also passed12/12 retained-evidence tests. Main now executes existing Plan08 Task4 under the approved4-attempt/30-minute authoring and48-workload/90-minute limits, after freezing the exact prospective inputs. No generation, teacher search, guest or Match has run yet; no new approval or numbered plan is required. Plan08/Phase264 remain incomplete until the actual bounded result and verification are retained. Earlier progress paragraphs are historical.
 

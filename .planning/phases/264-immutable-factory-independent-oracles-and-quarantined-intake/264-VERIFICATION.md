@@ -1,32 +1,44 @@
 ---
 phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
-verified: 2026-09-13
+verified: 2026-09-14
 status: human_needed
-score: 3/5 must-haves verified
+score: 4/5 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 re_verification: false
 human_verification:
-  - test: "Record the single Plan 07 readiness decision: either exact fresh provider/model/version/settings, authorized human/external protocol, and finite allocation roots, or an explicit blocked/unavailable decision."
-    expected: "The decision is immutable, root-bound, and does not reuse Phase 263 capacity or invent participant/provider evidence."
-    why_human: "Those are external/operator facts and authority decisions absent from this repository; source inspection cannot establish them."
-  - test: "If fresh inputs are authorized, execute only the resulting Plan 08 manifest through the private prepare/runner path and inspect retained roots; otherwise publish the blocked calibration-readiness report without launching."
-    expected: "Every disposition and provenance root is retained, synthetic mechanics remain mechanics-only, and readiness is either evidence-backed or explicitly blocked."
-    why_human: "The operator must first supply or decline the external facts in Plan 07; the Plan 08 prepare/run/report follow-on is automated once that decision exists."
-  - test: "Document ORCL-01's separately controlled human/external channel as available, unused, or blocked, without fabricating a participant."
-    expected: "An unused channel is recorded as unused/blocked; actual human participation is not required merely to implement the channel, but no genuine human/external evidence or anti-dominance claim is made without it."
-    why_human: "Channel availability and any real participant/provenance facts are external facts, while the intake mechanics themselves are source-verifiable."
+  - test: "After final source review of the RUN-01/RUN-02 repair, make a new operator-only stop/model decision before any further authoring."
+    expected: "No failed slot, workload, or unavailable usage is silently reused; any renewed route is separately authorized and remains bounded."
+    why_human: "The current system-failure stop is immutable and the next provider/model choice is an external operator decision."
 ---
 
 # Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake Verification
 
 **Phase Goal:** Researchers can produce immutable, diverse Strategy candidates through genuinely independent automated and human response channels without weakening hostile-source or production boundaries.
 
-**Verified:** 2026-09-13
+**Verified:** 2026-09-14
 
-**Status:** human_needed — Plans 01–06 have bounded source/mechanics closure; the late Plan 07 facts/decision are not present. Plan 08 is an automated follow-on after that decision, not a separate human-only checkpoint.
+**Status:** human_needed — Task04 reached a retained A-01 authoring system failure. No retry, teacher search, workload, threshold, or independence result followed. Final RUN-01/RUN-02 repair review at `f9f0cd63adeabc9c29ac3defbb259b4c3a318ab0` has zero unresolved relevant source findings; a new operator-only stop/model decision remains required before any renewed execution.
 
-**Re-verification:** No prior phase verification report existed.
+**Re-verification:** Current Task04 addendum below; the original source/mechanics review is retained verbatim as historical context.
+
+## Current Task04 Addendum — Retained Bounded Failure
+
+The actual bounded route prepared frozen roots and then charged exactly one authoring attempt. A-01 terminalized `system_failure` after the selected model/client combination was unavailable. The immutable corrected outcome root is `sha256:86afd06a8e66f8d54dbee6f2484e67d7573435e0869f000e6f9aaef5097281a6`, which additively preserves predecessor `sha256:e76142f8e3c9e612d9f9829d5c7a70f0a953ae5f751d2ebf0ab68a24575fc19c`.
+
+| Current fact | Retained disposition |
+|---|---|
+| Authoring | One A-01 start/terminal/cleanup; three slots unused and not automatically reusable. |
+| Usage/protocol | `unavailable`, not zero; the retained response is zero bytes and is explicitly incomplete provider evidence. `reportedThreadModel` is `null` and effective negotiation evidence is unavailable. |
+| Source/bundle | No valid source or frozen bundle. |
+| Human/external intake | Unused; no participant, submission, or external provenance was opened. |
+| Teacher/tactical/workloads | 0 teacher searches, 0 tactical emissions, 0 workloads started/completed. |
+| Assessment/readiness | Actual blocked readiness is retained: no threshold or assessment root; independence remains `unresolved`; no counted/public/production/formation/holdout authority. |
+| Cleanup | Retained SIGTERM cleanup completed. |
+
+The local diagnostic roots the requested-model/client incompatibility, but lost raw protocol capture means it does **not** establish a successful thread-start identity, measured provider-turn duration, or provider token usage. The failed record is retained as a failure, not backfilled or reclassified. Current score is **4/5**: Truths 1–3 remain source/mechanics-verified and Truth 5 has a retained actual-or-blocked readiness plus unused intake disposition; Truth 4, actual three-mechanism independence, remains unresolved. RUN-01 (advertised-model precheck) and RUN-02 (failure protocol/elapsed retention) received a clean exact-source recheck at `f9f0cd63adeabc9c29ac3defbb259b4c3a318ab0`; the route remains stopped pending the separately required operator-only stop/model decision.
+
+## Historical Verification (Pre-Task04)
 
 ## Goal Achievement
 
