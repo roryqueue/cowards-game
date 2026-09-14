@@ -11,6 +11,7 @@ import { admitFactory } from "../packages/strategy-lab/src/factory/admission.js"
 import { factoryProposalFromPacket } from "../packages/strategy-lab/src/factory/contracts.js"
 import { distillLegalStudent, projectTeacherSearchToLegalTraining } from "../packages/strategy-oracle-teacher/src/distill.js"
 import { auditFactorySource } from "./v1-38-factory-source-audit.js"
+import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
 
 export interface FactoryAuthoringRecordRefs {
   readonly start: LabRoot; readonly request: LabRoot; readonly stdin: LabRoot; readonly response: LabRoot
@@ -51,7 +52,7 @@ export const readFactoryExecutionEvidence = (repository: FactoryRepository, arti
   const value = raw as unknown as FactoryExecutionEvidence
   const review = readFactoryCanonicalRecord(repository, value.sourceReviewArtifactRoot)
   requireFactoryRecordRoot(review, "factory-source-review-v1")
-  if (!exactLabKeys(review, ["schemaVersion", "sourceCommit", "reviewerId", "authorIds", "status", "unresolvedFindings", "reportArtifactRoot", "root"]) || review.schemaVersion !== "factory-source-review-v1" || review.sourceCommit !== value.sourceCommit || review.status !== "passed" || review.unresolvedFindings !== 0 || typeof review.reviewerId !== "string" || !Array.isArray(review.authorIds) || review.authorIds.length === 0 || review.authorIds.includes(review.reviewerId)) return fail("REVIEW")
+  if (!exactLabKeys(review, ["schemaVersion", "sourceCommit", "implementationRoot", "reviewerId", "authorIds", "status", "unresolvedFindings", "reportArtifactRoot", "root"]) || review.schemaVersion !== "factory-source-review-v1" || review.sourceCommit !== value.sourceCommit || review.implementationRoot !== factoryAssessmentImplementationRoot() || review.status !== "passed" || review.unresolvedFindings !== 0 || typeof review.reviewerId !== "string" || !Array.isArray(review.authorIds) || review.authorIds.length === 0 || review.authorIds.includes(review.reviewerId)) return fail("REVIEW")
   const report = new TextDecoder("utf-8", { fatal: true }).decode(readFactoryArtifact(repository, review.reportArtifactRoot as LabRoot))
   if (!report.includes(value.sourceCommit)) return fail("REVIEW_SOURCE")
   const model = fresh.ingestions.S05.modelCompanion
