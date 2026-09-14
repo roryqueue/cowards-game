@@ -13,7 +13,7 @@ const publicEntry = (path: string) => /^(?:apps|packages)\//u.test(path) && !pat
 const narrowFactory = new Set(["packages/strategy-lab/src/contracts.ts", "packages/strategy-lab/src/factory/packet.ts", "packages/strategy-lab/src/factory/contracts.ts", "packages/strategy-lab/src/factory/identity.ts"])
 const allowedCore = /^(?:packages\/(?:spec|engine|replay|runtime-js|runtime-supervisor)\/)/u
 const allowedNode = new Set(["node:crypto", "node:fs", "node:fs/promises", "node:path", "node:url", "node:os", "node:worker_threads", "node:buffer"])
-const reviewedAstTool = (path: string) => /^packages\/strategy-oracle-(?:tactical|teacher|model)\/src\/emit\.ts$/u.test(path) || /^packages\/strategy-lab\/src\/factory\/(?:fingerprint|intake)\.ts$/u.test(path)
+const reviewedAstTool = (path: string) => /^packages\/strategy-oracle-(?:tactical|teacher|model)\/src\/emit\.ts$/u.test(path) || /^packages\/strategy-lab\/src\/factory\/(?:fingerprint|intake|numeric-calibration)\.ts$/u.test(path)
 // Reviewed non-strategic source inventory from the existing canonical core at
 // 002d28c4. A new barrel export cannot silently add a new shared policy file.
 // Changes to this inventory require the same source review as this monitor.

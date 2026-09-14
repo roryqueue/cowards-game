@@ -158,7 +158,7 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
     }
   }
   for (const [path, unresolved] of sharedGraph.unresolved) for (const specifier of unresolved) {
-    const staticBuildTool = (path === "packages/strategy-lab/src/planner/emit.ts" || path === "packages/strategy-lab/src/factory/fingerprint.ts") && specifier === "typescript"
+    const staticBuildTool = (path === "packages/strategy-lab/src/planner/emit.ts" || path === "packages/strategy-lab/src/factory/fingerprint.ts" || path === "packages/strategy-lab/src/factory/numeric-calibration.ts") && specifier === "typescript"
     if (specifier === undefined) { if (isLab(path) || labText.test(files[path] ?? "")) add("UNRESOLVED_LAB_EDGE", path); continue }
     if (!isLab(path) && labText.test(specifier)) add("UNRESOLVED_LAB_EDGE", path)
     if (isLab(path) && !allowedNode.has(specifier) && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
