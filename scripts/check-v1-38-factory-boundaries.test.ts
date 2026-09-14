@@ -15,6 +15,20 @@ describe("private factory dependency boundary", () => {
     expect(checkFactoryBoundaries({ files: base })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
   })
 
+  it("retains exact allowed oracle manifest dependencies without opening package barrels", () => {
+    const files = { ...base, "packages/strategy-oracle-model/package.json": JSON.stringify({ dependencies: { "@cowards/strategy-lab": "workspace:*", "@cowards/engine": "workspace:*" } }) }
+    expect(checkFactoryBoundaries({ files })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
+  })
+
+  it("permits only a declared static third-party dependency inside the audited core closure", () => {
+    const files = { ...base,
+      "packages/strategy-oracle-model/src/emit.ts": 'import "@cowards/spec"',
+      "packages/spec/src/index.ts": 'import "zod"; export const schema = 1',
+      "packages/spec/package.json": JSON.stringify({ name: "@cowards/spec", dependencies: { zod: "3.0.0" } }),
+    }
+    expect(checkFactoryBoundaries({ files })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
+  })
+
   it.each([
     ["direct oracle sharing", { "packages/strategy-oracle-tactical/src/emit.ts": 'import "@cowards/strategy-oracle-teacher"' }],
     ["transitive planner sharing", { "packages/strategy-oracle-tactical/src/emit.ts": 'import "./bridge.js"', "packages/strategy-oracle-tactical/src/bridge.ts": 'export * from "../../strategy-lab/src/planner/selector.js"' }],
@@ -24,6 +38,7 @@ describe("private factory dependency boundary", () => {
     ["unresolved private loader", { "packages/strategy-oracle-model/src/emit.ts": "void import(loader)" }],
     ["hostile execution", { "packages/strategy-oracle-model/src/emit.ts": "eval('candidate')" }],
     ["strategic manifest edge", { "packages/strategy-oracle-tactical/package.json": JSON.stringify({ dependencies: { "@cowards/strategy-oracle-teacher": "workspace:*" } }) }],
+    ["unknown manifest dependency", { "packages/strategy-oracle-tactical/package.json": JSON.stringify({ dependencies: { "@neutral/package": "workspace:*" } }) }],
     ["strategic package entrypoint", { "packages/strategy-oracle-tactical/package.json": JSON.stringify({ exports: { ".": "./src/selector.ts" } }) }],
     ["production route", { "apps/web/src/bridge.ts": 'export * from "@cowards/strategy-oracle-model"' }],
     ["public artifact", { "apps/web/public/factory.json": '{"privateTrace":"factory"}' }],
@@ -58,6 +73,14 @@ describe("private factory dependency boundary", () => {
       "packages/strategy-oracle-teacher/src/index.ts": "export const teacher = 1",
     }],
   ])("rejects review bypass: %s", (_name, files) => {
+    expect(checkFactoryBoundaries({ files: { ...base, ...files } }).ok).toBe(false)
+  })
+
+  it.each([
+    ["transitive dynamic core loader", { "packages/strategy-oracle-model/src/index.ts": 'import "@cowards/engine"', "packages/engine/src/index.ts": "export const rule = import(selectModule())" }],
+    ["transitive new Function", { "packages/strategy-oracle-model/src/index.ts": 'import "@cowards/engine"', "packages/engine/src/index.ts": "export const rule = new Function(source)" }],
+    ["unaudited direct core scorer", { "packages/strategy-oracle-model/src/index.ts": 'import "../../engine/src/strategy-selector.js"', "packages/engine/src/strategy-selector.ts": "export const score = 1" }],
+  ])("rejects transitive core bypass: %s", (_name, files) => {
     expect(checkFactoryBoundaries({ files: { ...base, ...files } }).ok).toBe(false)
   })
 })

@@ -14,6 +14,10 @@ const narrowFactory = new Set(["packages/strategy-lab/src/contracts.ts", "packag
 const allowedCore = /^(?:packages\/(?:spec|engine|replay|runtime-js|runtime-supervisor)\/)/u
 const allowedNode = new Set(["node:crypto", "node:fs", "node:fs/promises", "node:path", "node:url", "node:os", "node:worker_threads", "node:buffer"])
 const reviewedAstTool = (path: string) => /^packages\/strategy-oracle-(?:tactical|teacher|model)\/src\/emit\.ts$/u.test(path) || /^packages\/strategy-lab\/src\/factory\/(?:fingerprint|intake)\.ts$/u.test(path)
+const auditedCoreRoots = new Set(["packages/spec/src/index.ts", "packages/engine/src/index.ts", "packages/replay/src/index.ts", "packages/runtime-js/src/index.ts", "packages/runtime-supervisor/src/index.ts"])
+const allowedOracleManifestDependency = new Set(["@cowards/spec", "@cowards/engine", "@cowards/replay", "@cowards/runtime-js", "@cowards/strategy-lab"])
+const allowedUnresolved = (path: string, specifier: string | undefined): boolean =>
+  (specifier === "typescript" && reviewedAstTool(path)) || (specifier !== undefined && allowedNode.has(specifier))
 
 const hasHostileExecution = (value: string, path: string): boolean => {
   const ast = ts.createSourceFile(path, value, ts.ScriptTarget.Latest, true); let hostile = false
@@ -32,23 +36,38 @@ export const checkFactoryBoundaries = (options: { files?: Readonly<Record<string
   const shared = collectLabBoundaryGraph(options), files = shared.files
   const violations: FactoryBoundaryViolation[] = [...checkLabBoundaries({ files }).violations]
   const add = (code: string, file: string) => { if (!violations.some(entry => entry.code === code && entry.file === file)) violations.push({ code, file }) }
+  for (const [path, dependencies] of shared.manifestDependencies) {
+    if (!oracle(path)) continue
+    for (const dependency of dependencies) if (!allowedOracleManifestDependency.has(dependency)) add("ORACLE_MANIFEST_DEPENDENCY_DENIED", path)
+  }
   for (const [path, missing] of shared.unresolved) {
     if (!privatePath(path)) continue
     for (const specifier of missing) {
-      if (specifier === "typescript" && reviewedAstTool(path)) continue
-      if (specifier !== undefined && allowedNode.has(specifier)) continue
+      if (allowedUnresolved(path, specifier)) continue
       add("UNRESOLVED_PRIVATE_LOADER", path)
     }
   }
   for (const [path, value] of Object.entries(files)) if (privatePath(path) && source.test(path) && !test.test(path) && hasHostileExecution(value, path)) add("PRIVATE_HOSTILE_EXECUTION", path)
+  const auditedCore = new Set<string>()
+  const collectCore = (path: string): void => { if (auditedCore.has(path)) return; auditedCore.add(path); for (const next of shared.graph.get(path) ?? []) collectCore(next) }
+  for (const path of auditedCoreRoots) if (files[path] !== undefined) collectCore(path)
+  const declaredCoreDependency = (path: string, specifier: string | undefined): boolean => {
+    if (!auditedCore.has(path) || specifier === undefined) return false
+    const owner = [...shared.manifestDependencies.keys()]
+      .filter(manifest => path.startsWith(`${manifest.slice(0, -"package.json".length)}`))
+      .sort((left, right) => right.length - left.length)[0]
+    return owner !== undefined && (shared.manifestDependencies.get(owner) ?? []).includes(specifier)
+  }
   for (const origin of shared.graph.keys()) {
     const seen = new Set<string>()
     const visit = (path: string): void => {
       if (seen.has(path)) return
       seen.add(path)
+      if (oracle(origin) && path !== origin && (shared.unresolved.get(path) ?? []).some(specifier => !allowedUnresolved(path, specifier) && !declaredCoreDependency(path, specifier))) add("ORACLE_TRANSITIVE_UNRESOLVED", origin)
+      if (oracle(origin) && path !== origin && source.test(path) && hasHostileExecution(files[path] ?? "", path)) add("ORACLE_TRANSITIVE_HOSTILE_EXECUTION", origin)
       if (oracle(origin) && path !== origin) {
         const ownLeaf = oracle(path) && root(path) === root(origin)
-        if (!ownLeaf && !allowedCore.test(path) && !narrowFactory.has(path)) add("ORACLE_EXTERNAL_ROUTE", origin)
+        if (!ownLeaf && (!allowedCore.test(path) || !auditedCore.has(path)) && !narrowFactory.has(path)) add("ORACLE_EXTERNAL_ROUTE", origin)
       }
       if (factory(origin) && oracle(path)) add("FACTORY_REACHES_ORACLE", origin)
       if (publicEntry(origin) && privatePath(path)) add("PUBLIC_REACHES_PRIVATE_FACTORY", origin)

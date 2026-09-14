@@ -36,6 +36,9 @@ describe("one-way lab boundary monitor", () => {
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/core.ts": 'import "@cowards/spec"; import "node:crypto"', "packages/spec/src/index.ts": "export {}" } }).ok).toBe(true)
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/core.ts": 'import "node:vm"' } }).ok).toBe(false)
   })
+  it("allows TypeScript only in the reviewed factory fingerprint collector", () => {
+    expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/factory/fingerprint.ts": 'import ts from "typescript"; export { ts }' } }).ok).toBe(true)
+  })
   it("recognizes private oracle leaves without treating their contract import as production", () => {
     const files = { ...lab,
       "packages/strategy-oracle-tactical/src/index.ts": 'import type { Packet } from "@cowards/strategy-lab/factory"',

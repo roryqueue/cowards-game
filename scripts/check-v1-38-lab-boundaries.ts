@@ -62,10 +62,12 @@ export interface LabBoundaryGraph {
   readonly files: Readonly<Record<string, string>>
   readonly graph: ReadonlyMap<string, ReadonlySet<string>>
   readonly unresolved: ReadonlyMap<string, readonly (string | undefined)[]>
+  /** Declared package dependencies stay visible to policy without opening package barrels. */
+  readonly manifestDependencies: ReadonlyMap<string, readonly string[]>
 }
 /** Shared AST/module-resolution graph used by the factory policy monitor. */
 export const collectLabBoundaryGraph = (options: { files?: Readonly<Record<string, string>> } = {}): LabBoundaryGraph => {
-  const files = options.files ?? loadFiles(), graph = new Map<string, Set<string>>(), unresolved = new Map<string, (string | undefined)[]>()
+  const files = options.files ?? loadFiles(), graph = new Map<string, Set<string>>(), unresolved = new Map<string, (string | undefined)[]>(), manifestDependencies = new Map<string, readonly string[]>()
   const root = "/lab-boundary", key = (path: string) => posix.relative(root, path), directories = new Set<string>(["."])
   for (const file of Object.keys(files)) { let directory = posix.dirname(file); while (directory !== ".") { directories.add(directory); directory = posix.dirname(directory) } }
   const host: ts.ModuleResolutionHost = { fileExists: path => files[key(path)] !== undefined, readFile: path => files[key(path)], directoryExists: path => directories.has(key(path)) }
@@ -105,15 +107,28 @@ export const collectLabBoundaryGraph = (options: { files?: Readonly<Record<strin
       const visit = (node: ts.Node): void => { if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) inspect(node.moduleSpecifier as ts.Expression); if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) inspect(node.moduleReference.expression); if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === "require") || (ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "require")) && node.arguments[0]) inspect(node.arguments[0]); ts.forEachChild(node, visit) }
       visit(ast)
     }
-    if (path.endsWith("/package.json")) try { const manifest = JSON.parse(source) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; main?: unknown; module?: unknown; exports?: unknown }; for (const dependency of Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })) { if (/^@cowards\/(?:spec|engine|replay|runtime-js|strategy-lab)$/u.test(dependency)) continue; const targets = resolveSpecifier(path, dependency); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(dependency) }; for (const entry of [...(typeof manifest.main === "string" ? [manifest.main] : []), ...(typeof manifest.module === "string" ? [manifest.module] : []), ...strings(manifest.exports)]) { const targets = resolveSpecifier(path, `./${entry.replace(/^\.\//u, "")}`); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(entry) } } catch { missing.push(undefined) }
+    if (path.endsWith("/package.json")) try {
+      const manifest = JSON.parse(source) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; main?: unknown; module?: unknown; exports?: unknown }
+      const dependencies = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })
+      manifestDependencies.set(path, dependencies)
+      for (const dependency of dependencies) {
+        // A package declaration is metadata, not authorization to traverse a
+        // package barrel. Its exact value is retained above for policy checks.
+        if (/^@cowards\/(?:spec|engine|replay|runtime-js|strategy-lab)$/u.test(dependency)) continue
+        const targets = resolveSpecifier(path, dependency)
+        if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(dependency)
+      }
+      for (const entry of [...(typeof manifest.main === "string" ? [manifest.main] : []), ...(typeof manifest.module === "string" ? [manifest.module] : []), ...strings(manifest.exports)]) { const targets = resolveSpecifier(path, `./${entry.replace(/^\.\//u, "")}`); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(entry) }
+    } catch { missing.push(undefined) }
     graph.set(path, edges); if (missing.length) unresolved.set(path, missing)
   }
-  return { files, graph, unresolved }
+  return { files, graph, unresolved, manifestDependencies }
 }
 export interface LabBoundaryViolation { code: string; file: string }
 /** Offline source graph monitor, not a sandbox or a claim about arbitrary runtime-generated code. */
 export const checkLabBoundaries = (options: { files?: Readonly<Record<string, string>> } = {}) => {
   const files = options.files ?? loadFiles()
+  const sharedGraph = collectLabBoundaryGraph({ files })
   const privateDirectories = new Set(["packages/strategy-lab", ...Object.keys(files).filter(isOracle).map(p => p.split("/").slice(0, 2).join("/"))])
   const imageExclusions = (files[".dockerignore"] ?? "").split(/\r?\n/u).map(line => line.trim().replace(/\/$/u, ""))
   // Repository policy requires literal directory exclusions. Globs are not
@@ -122,29 +137,7 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
   const excludesPrivateImages = !imageExclusions.some(line => line.startsWith("!")) && [...privateDirectories].every(directory => imageExclusions.includes(directory))
   const violations: LabBoundaryViolation[] = []
   const add = (code: string, file: string) => { if (!violations.some((v) => v.code === code && v.file === file)) violations.push({ code, file }) }
-  const graph = new Map<string, Set<string>>()
-  const root = "/lab-boundary"
-  const key = (p: string) => posix.relative(root, p)
-  const directories = new Set<string>(["."])
-  for (const file of Object.keys(files)) {
-    let directory = posix.dirname(file)
-    while (directory !== ".") { directories.add(directory); directory = posix.dirname(directory) }
-  }
-  const host: ts.ModuleResolutionHost = { fileExists: (p) => files[key(p)] !== undefined, readFile: (p) => files[key(p)], directoryExists: (p) => directories.has(key(p)) }
-  const configs = Object.entries(files).filter(([p]) => /(?:^|\/)tsconfig(?:\.[^/]*)?\.json$/u.test(p)).map(([p, source]) => ({ path: p, config: ts.parseConfigFileTextToJson(p, source).config as { compilerOptions?: { paths?: Record<string, string[]>; baseUrl?: string } } | undefined }))
-  const resolveEdge = (from: string, specifier: string): string | undefined => {
-    const paths: Record<string, string[]> = {
-      "@cowards/*": ["packages/*/src/index.ts"],
-      "@cowards/strategy-lab/factory": ["packages/strategy-lab/src/factory/index.ts"],
-      "@cowards/strategy-lab/factory/packet": ["packages/strategy-lab/src/factory/packet.ts"],
-    }
-    for (const { path, config } of configs) {
-      if (posix.dirname(path) !== "." && !from.startsWith(`${posix.dirname(path)}/`)) continue
-      for (const [alias, targets] of Object.entries(config?.compilerOptions?.paths ?? {})) paths[alias] = targets.map((target) => posix.join(posix.dirname(path), config?.compilerOptions?.baseUrl ?? ".", target))
-    }
-    const resolved = ts.resolveModuleName(specifier, `${root}/${from}`, { moduleResolution: ts.ModuleResolutionKind.Bundler, baseUrl: root, paths, allowJs: true, resolveJsonModule: true }, host).resolvedModule
-    return resolved ? key(resolved.resolvedFileName) : undefined
-  }
+  let graph = new Map<string, Set<string>>()
   for (const [path, source] of Object.entries(files)) {
     if (isTest(path)) continue
     const deployment = /(?:^|\/)(?:Dockerfile[^/]*|[^/]*docker[^/]*|compose[^/]*|deploy[^/]*)(?:\/|$)/iu.test(path)
@@ -157,74 +150,17 @@ export const checkLabBoundaries = (options: { files?: Readonly<Record<string, st
       if (manifest.private !== true || manifest.scripts?.build !== undefined) add("LAB_PRODUCTION_BUILD", path)
       for (const dependency of Object.keys(manifest.dependencies ?? {})) if (!/^@cowards\/(?:spec|engine|replay|runtime-js)$/u.test(dependency)) add("CORE_DEPENDENCY_DENIED", path)
     }
-    if (!sourceExtension.test(path)) continue
-    const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
-    // Symbol identity preserves lexical scope: a nested same-name declaration
-    // cannot overwrite the binding used by an outer import expression.
-    const bindingOptions: ts.CompilerOptions = { noLib: true, noResolve: true, allowJs: true, target: ts.ScriptTarget.Latest }
-    const bindingHost = ts.createCompilerHost(bindingOptions)
-    bindingHost.getSourceFile = name => name === path ? ast : undefined
-    bindingHost.fileExists = name => name === path
-    bindingHost.readFile = name => name === path ? source : undefined
-    const checker = ts.createProgram([path], bindingOptions, bindingHost).getTypeChecker()
-    const bindings = new Map<ts.Symbol, ts.Expression[]>()
-    const uncertain = new Set<ts.Symbol>()
-    const bind = (name: ts.Identifier, value: ts.Expression) => {
-      const symbol = checker.getSymbolAtLocation(name)
-      if (symbol) bindings.set(symbol, [...(bindings.get(symbol) ?? []), value])
-    }
-    const collect = (node: ts.Node) => {
-      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) bind(node.name, node.initializer)
-      if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-        bind(node.left, node.right)
-        if (node.operatorToken.kind !== ts.SyntaxKind.EqualsToken) { const symbol = checker.getSymbolAtLocation(node.left); if (symbol) uncertain.add(symbol) }
-      }
-      ts.forEachChild(node, collect)
-    }
-    collect(ast)
-    const constant = (node: ts.Expression, depth = 0): (string | undefined)[] => {
-      if (depth > 8) return [undefined]
-      if (ts.isStringLiteralLike(node)) return [node.text]
-      if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isNonNullExpression(node)) return constant(node.expression, depth + 1)
-      if (ts.isIdentifier(node)) {
-        const symbol = checker.getSymbolAtLocation(node), values = symbol && bindings.get(symbol)
-        const candidates = values ? values.flatMap(value => constant(value, depth + 1)) : [undefined]
-        return symbol && uncertain.has(symbol) ? [...candidates, undefined] : candidates
-      }
-      if (ts.isConditionalExpression(node)) return [...constant(node.whenTrue, depth + 1), ...constant(node.whenFalse, depth + 1)]
-      if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-        const left = constant(node.left, depth + 1), right = constant(node.right, depth + 1)
-        if (left.length * right.length > 64) return [undefined]
-        return left.flatMap(a => right.map(b => a !== undefined && b !== undefined ? a + b : undefined))
-      }
-      return [undefined]
-    }
-    const edges = new Set<string>()
-    const inspectEdge = (expression: ts.Expression) => {
-      for (const specifier of new Set(constant(expression))) {
-      if (specifier === undefined) {
-        if (isLab(path) || labText.test(expression.getText(ast)) || labText.test(source)) add("UNRESOLVED_LAB_EDGE", path)
-        continue
-      }
-      const target = resolveEdge(path, specifier)
-      if (target) edges.add(target)
-      if (production(path) && (labText.test(specifier) || (target && isPrivateStrategy(target)))) add("PRODUCTION_REACHES_LAB", path)
-      if (!target && labText.test(specifier) && !isLab(path)) add("UNRESOLVED_LAB_EDGE", path)
-      const staticBuildTool = path === "packages/strategy-lab/src/planner/emit.ts" && specifier === "typescript"
-      if (isLab(path) && !(target && (isLab(target) || allowedCore.test(target))) && !allowedNode.has(specifier) && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
-      }
-    }
-    const visit = (node: ts.Node) => {
-      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) inspectEdge(node.moduleSpecifier as ts.Expression)
-      if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) inspectEdge(node.moduleReference.expression)
-      if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === "require") || (ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "require"))) {
-        if (node.arguments[0]) inspectEdge(node.arguments[0])
-      }
-      ts.forEachChild(node, visit)
-    }
-    visit(ast)
-    graph.set(path, edges)
   }
+  for (const [path, unresolved] of sharedGraph.unresolved) for (const specifier of unresolved) {
+    const staticBuildTool = (path === "packages/strategy-lab/src/planner/emit.ts" || path === "packages/strategy-lab/src/factory/fingerprint.ts") && specifier === "typescript"
+    if (specifier === undefined) { if (isLab(path) || labText.test(files[path] ?? "")) add("UNRESOLVED_LAB_EDGE", path); continue }
+    if (!isLab(path) && labText.test(specifier)) add("UNRESOLVED_LAB_EDGE", path)
+    if (isLab(path) && !allowedNode.has(specifier) && !staticBuildTool) add("CORE_DEPENDENCY_DENIED", path)
+  }
+  for (const [path, edges] of sharedGraph.graph) if (isLab(path)) for (const target of edges) if (!isLab(target) && !allowedCore.test(target)) add("CORE_DEPENDENCY_DENIED", path)
+  // The policy-specific pass above preserves historical violation codes; all
+  // reachability decisions consume the single shared lexical resolver.
+  graph = new Map([...sharedGraph.graph].map(([path, edges]) => [path, new Set(edges)]))
   for (const path of graph.keys()) {
     if (!production(path) && !isLab(path)) continue
     const visited = new Set<string>()
