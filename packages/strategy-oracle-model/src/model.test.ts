@@ -19,7 +19,7 @@ import { decodeFrozenModelRawResponse } from "./bundle.js"
 const root = (value: string) => `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}` as const
 const source = `export default { selectActivations(input) { return { activationOrders: [], strategyMemory: {} }; }, soldierBrain(input) { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }; } };`
 const sourceRoot = root(source)
-const v2Records = (sourceValue = source, userEcho = false, echoText = "author disclosed packet") => {
+const v2Records = (sourceValue = source, userEcho = false, echoText = "author disclosed packet", duplicateEcho = false) => {
   const requestValue = { byteLength: new TextEncoder().encode(echoText).byteLength, encoding: "utf8" as const, bodyUtf8: echoText }
   const rawResponseValue = { format: "codex-exec-json" as const, bodyUtf8: [
     { jsonrpc: "2.0", id: 2, result: { data: [{ id: "frozen-model", model: "frozen-model" }], nextCursor: null } },
@@ -28,6 +28,7 @@ const v2Records = (sourceValue = source, userEcho = false, echoText = "author di
     ...(userEcho ? [
       { jsonrpc: "2.0", method: "item/started", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "user-1", type: "userMessage", content: [{ type: "text", text: echoText }] } } },
       { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "user-1", type: "userMessage", content: [{ type: "text", text: echoText }] } } },
+      ...(duplicateEcho ? [{ jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "user-2", type: "userMessage", content: [{ type: "text", text: echoText }] } } }] : []),
     ] : []),
     { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "item-1", type: "agentMessage", text: JSON.stringify({ source: sourceValue }) } } },
     { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { threadId: "thread-1", turnId: "turn-1", tokenUsage: { total: { inputTokens: 12, cachedInputTokens: 0, outputTokens: 34, reasoningOutputTokens: 2, totalTokens: 46 }, last: { inputTokens: 12, cachedInputTokens: 0, outputTokens: 34, reasoningOutputTokens: 2, totalTokens: 46 } } } },
@@ -64,6 +65,7 @@ describe("frozen model oracle", () => {
     expect(decodeFrozenModelRawResponse(retained.rawResponseRecord.bodyUtf8, prompt).source).toBe(source)
     const substituted = retained.rawResponseRecord.bodyUtf8.replace(prompt, "different prompt")
     expect(() => decodeFrozenModelRawResponse(substituted, prompt)).toThrow("MODEL_RAW_RESPONSE")
+    expect(() => decodeFrozenModelRawResponse(v2Records(source, true, prompt, true).rawResponseRecord.bodyUtf8, prompt)).toThrow("MODEL_RAW_RESPONSE")
   })
   it("admits complete canonical frozen provenance without any producer invocation", () => {
     const bundle = admitFrozenModelBundle(bundleInput())

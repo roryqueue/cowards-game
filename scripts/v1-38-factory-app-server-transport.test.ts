@@ -51,6 +51,7 @@ describe("factory Codex app-server transport", () => {
     const result = await transport.startTurn("emit source only")
     expect(result).toMatchObject({ sourceMessage: '{"source":"source"}', usage: { totalTokens: 42 }, reportedModel: "gpt-5.6-luna" })
     expect(new TextDecoder().decode(result.rawJsonl)).toContain('"turn/completed"')
+    expect(JSON.parse(fake.writes[0]!).params).toEqual({ clientInfo: { name: "cowards-game-v1.38-factory", version: "1" }, capabilities: { experimentalApi: false, optOutNotificationMethods: ["item/agentMessage/delta"] } })
     expect(fake.writes.map((line) => JSON.parse(line).method)).toEqual(["initialize", "model/list", "thread/start", "turn/start"])
   })
   it("rejects model rerouting before a turn can start", async () => {

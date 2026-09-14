@@ -103,7 +103,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
       const turnId = text(params.turnId), item = record(params.item), itemType = text(item?.type)
       if (itemType === "userMessage") {
         const itemId = text(item?.id)
-        if (params.threadId !== admittedThreadId || !turnId || !itemId || userMessageText(item) !== activeSourceMessage || (message.method === "item/started" ? userMessageStarted.has(itemId) : userMessageCompleted.has(itemId) || (userMessageStarted.size > 0 && !userMessageStarted.has(itemId)))) protocolTurnFailure = true
+        if (params.threadId !== admittedThreadId || !turnId || !itemId || userMessageText(item) !== activeSourceMessage || (message.method === "item/started" ? userMessageStarted.has(itemId) || (userMessageStarted.size > 0 && !userMessageCompleted.has(itemId)) : userMessageCompleted.has(itemId) || (userMessageStarted.size > 0 && !userMessageStarted.has(itemId)) || (userMessageCompleted.size > 0 && !userMessageStarted.has(itemId)))) protocolTurnFailure = true
         else {
           userMessageTurnIds.add(turnId)
           if (message.method === "item/started") userMessageStarted.add(itemId)
@@ -143,7 +143,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
     try { child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`) } catch (error) { pending.delete(id); clearTimeout(timer); reject(error instanceof Error ? error : new Error("FACTORY_APP_SERVER_WRITE")) }
   })
   try {
-    await request("initialize", Object.freeze({ clientInfo: Object.freeze({ name: "cowards-game-v1.38-factory", version: "1" }), capabilities: Object.freeze({}) }))
+    await request("initialize", Object.freeze({ clientInfo: Object.freeze({ name: "cowards-game-v1.38-factory", version: "1" }), capabilities: Object.freeze({ experimentalApi: false, optOutNotificationMethods: Object.freeze(["item/agentMessage/delta"]) }) }))
     let cursor: string | null = null, modelAvailable = false
     for (let page = 0; page < 10; page += 1) {
       const listed = await request("model/list", Object.freeze({ includeHidden: true, limit: 1000, cursor }))

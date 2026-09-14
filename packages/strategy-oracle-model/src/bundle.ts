@@ -133,16 +133,16 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: 
         if (item.type === "userMessage") {
           const content = item.content, itemId = textValue(item.id)
           if (expectedPrompt === undefined || params.threadId !== threadId || !itemId || !Array.isArray(content) || content.length !== 1 || !objectRecord(content[0], "RAW_RESPONSE") || (content[0] as RecordValue).type !== "text" || (content[0] as RecordValue).text !== expectedPrompt) fail("RAW_RESPONSE")
-          if (message.method === "item/started") { if (userStarts.has(itemId)) fail("RAW_RESPONSE"); userStarts.add(itemId) }
-          else if (userCompletions.has(itemId) || (userStarts.size > 0 && !userStarts.has(itemId))) fail("RAW_RESPONSE")
+          if (message.method === "item/started") { if (userStarts.has(itemId) || (userStarts.size > 0 && !userCompletions.has(itemId))) fail("RAW_RESPONSE"); userStarts.add(itemId) }
+          else if (userCompletions.has(itemId) || (userStarts.size > 0 && !userStarts.has(itemId)) || (userCompletions.size > 0 && !userStarts.has(itemId))) fail("RAW_RESPONSE")
           else userCompletions.add(itemId)
-        } else if (item.type === "agentMessage" && typeof item.text === "string") {
+        } else if (message.method === "item/completed" && item.type === "agentMessage" && typeof item.text === "string") {
           if (source !== null) fail("RAW_RESPONSE")
           let envelope: RecordValue
           try { envelope = JSON.parse(item.text) as RecordValue } catch { return fail("RAW_RESPONSE") }
           if (!exact(envelope, ["source"]) || !text(envelope.source, 65536)) fail("RAW_RESPONSE")
           source = envelope.source as string
-        } else if (item.type !== "reasoning") fail("RAW_RESPONSE")
+        } else if (item.type !== "reasoning" && !(item.type === "agentMessage" && message.method === "item/started")) fail("RAW_RESPONSE")
       }
     } else if (message.method === "thread/tokenUsage/updated") {
       const params = objectRecord(message.params, "RAW_RESPONSE")
