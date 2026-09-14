@@ -5,12 +5,18 @@ import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createFactoryExecutionEvidenceFixture } from "./fixtures/factory-execution-evidence-fixture.js"
 import { publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { admitCanonicalJsonValue } from "@cowards/spec"
+import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 
 const root = labRoot("fixture", "fixture")
 const packet = emitTacticalFactoryPacket({ split: "development", doctrineFamily: "test", provider: { providerId: "test", modelId: "fixture", modelVersion: "fixture", settingsRoot: root, promptRoot: root, contextRoot: root }, build: { buildRoot: root, toolchainRoot: root }, lineage: { predecessorRoot: root, correctionRoot: null, retryParentRoot: null } })
 const record = { packet, sourceUtf8: emitTacticalSource(), sourceRoot: packet.source.root, packetRoot: packet.root, root } as never
 
 describe("factory empirical authorship prerequisite", () => {
+  it("covers admission, ledger and identity dependencies in the reviewed source snapshot",()=>{
+    const paths=factoryAssessmentImplementationManifest().entries.map(entry=>entry.path)
+    for(const name of ["ledger","contracts","identity"])expect(paths).toContain(`packages/strategy-lab/src/factory/${name}.ts`)
+    expect(paths.some(path=>path.startsWith(".planning/")||path.startsWith(".strategy-lab/"))).toBe(false)
+  })
   it("reopens the complete fake retained chain and rejects rerooted review, search, training, audit, and witness joins", async () => {
     const fixture = await createFactoryExecutionEvidenceFixture()
     expect(readFactoryExecutionEvidence(fixture.repository, fixture.executionEvidenceArtifactRoot, fixture.fresh)).toMatchObject({ schemaVersion: "factory-calibration-execution-evidence-v1" })
@@ -22,6 +28,8 @@ describe("factory empirical authorship prerequisite", () => {
     }
     const changedReview = rooted("factory-source-review-v1", { ...fixture.values.reviewValue, sourceCommit: "b".repeat(40) })
     expect(() => readFactoryExecutionEvidence(fixture.repository, withLink("sourceReviewArtifactRoot", changedReview), fixture.fresh)).toThrow("REVIEW")
+    const changedImplementation = rooted("factory-source-review-v1",{...fixture.values.reviewValue,implementationRoot:labRoot("changed-implementation","ledger-admission-changed")})
+    expect(()=>readFactoryExecutionEvidence(fixture.repository,withLink("sourceReviewArtifactRoot",changedImplementation),fixture.fresh)).toThrow("REVIEW")
     const changedSearch = rooted("factory-teacher-search-evidence-v1", { ...fixture.values.searchValue, receipt: { ...fixture.values.searchValue.receipt, selectedOutcomeRoot: root } })
     expect(() => readFactoryExecutionEvidence(fixture.repository, withLink("teacherSearchArtifactRoot", changedSearch), fixture.fresh)).toThrow("TEACHER_SEARCH")
     const changedTraining = rooted("factory-teacher-training-evidence-v1", { ...fixture.values.trainingValue, student: { bogus: true } })

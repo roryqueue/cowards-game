@@ -1,20 +1,16 @@
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-// Fixed review inventory, never a caller-selected set of files or evidence paths.
-export const FACTORY_REVIEWED_IMPLEMENTATION_FILES = [
-  "assess-v1-38-factory-independence.ts", "v1-38-factory-implementation.ts", "v1-38-factory-execution-evidence.ts",
-  "v1-38-factory-source-audit.ts", "v1-38-factory-observations.ts", "v1-38-factory-fresh-evidence.ts",
-  "v1-38-factory-allocation.ts", "v1-38-factory-controls.ts", "run-v1-38-factory-calibration.ts",
-  "prepare-v1-38-factory-calibration.ts", "ingest-v1-38-factory-packet.ts", "author-v1-38-factory-model-source.ts",
-  "v1-38-factory-app-server-transport.ts", "lib/v1-38-factory-supervised-runtime.ts",
-  "../packages/strategy-lab/src/factory/numeric-calibration.ts", "../packages/strategy-lab/src/factory/fingerprint.ts",
-  "../packages/strategy-lab/src/factory/calibration.ts", "../packages/strategy-lab/src/factory/admission.ts",
-  "../packages/strategy-lab/src/factory/supervision-artifacts.ts", "../packages/strategy-lab/src/factory/repository.ts",
-  "../packages/strategy-oracle-model/src/bundle.ts", "../packages/strategy-oracle-model/src/emit.ts",
-  "../packages/strategy-oracle-tactical/src/emit.ts", "../packages/strategy-oracle-tactical/src/selector.ts",
-  "../packages/strategy-oracle-tactical/src/scoring.ts", "../packages/strategy-oracle-tactical/src/search.ts",
-  "../packages/strategy-oracle-teacher/src/emit.ts", "../packages/strategy-oracle-teacher/src/controller.ts",
-  "../packages/strategy-oracle-teacher/src/teacher.ts", "../packages/strategy-oracle-teacher/src/distill.ts",
-] as const
-export const factoryAssessmentImplementationRoot = ():LabRoot => labRoot("factory-reviewed-implementation-v1",FACTORY_REVIEWED_IMPLEMENTATION_FILES.map((path) => ({path,root:`sha256:${createHash("sha256").update(readFileSync(new URL(path,import.meta.url))).digest("hex")}`})))
+import { loadLabBoundaryFiles } from "./check-v1-38-lab-boundaries.js"
+/** Conservative local source snapshot using the existing boundary inventory.
+ * Includes admission/identity/ledger dependencies and configuration. Inventory
+ * excludes .planning, .strategy-lab, dependencies and generated output; this
+ * never opens private experimental evidence or asks for external attestation.
+ */
+export const factoryAssessmentImplementationManifest = () => {
+  const files=loadLabBoundaryFiles(resolve(dirname(fileURLToPath(import.meta.url)),".."))
+  const entries=Object.keys(files).filter(path=>!/(?:\.test|\.spec)\.[cm]?[jt]sx?$/u.test(path)&&!/(?:^|\/)(?:test|__tests__|testdata)\//u.test(path)&&!path.startsWith("scripts/fixtures/")).sort().map(path=>({path,root:`sha256:${createHash("sha256").update(files[path]!).digest("hex")}`}))
+  return {entries,root:labRoot("factory-reviewed-implementation-v2",entries)}
+}
+export const factoryAssessmentImplementationRoot = ():LabRoot => factoryAssessmentImplementationManifest().root

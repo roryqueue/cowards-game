@@ -2,11 +2,18 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { decideFactoryIndependence, factoryWorkloadResourceViolations, readRetainedFactoryLedger, verifyRetainedFactoryAssessment } from "./assess-v1-38-factory-independence.js"
+import { assessFactoryIndependence, decideFactoryIndependence, factoryWorkloadResourceViolations, readRetainedFactoryLedger, verifyRetainedFactoryAssessment } from "./assess-v1-38-factory-independence.js"
 import { NUMERIC_DIMENSIONS, type NumericComparison, type NumericControlTable } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
-import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
+import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, publishFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
-import { labRoot } from "../packages/strategy-lab/src/contracts.js"
+import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
+import { admitCanonicalJsonValue } from "@cowards/spec"
+import { createFactoryExecutionEvidenceFixture } from "./fixtures/factory-execution-evidence-fixture.js"
+import { createFactoryAuthoringAllocation, type FactorySourceSlot } from "./v1-38-factory-allocation.js"
+import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
+import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
+import { prepareFreshFactoryCalibration } from "./prepare-v1-38-factory-calibration.js"
+import { deriveFixedMechanicsOpponentIdentityRoot } from "./run-v1-38-factory-calibration.js"
 const directories:string[]=[]
 afterEach(() => { for(const directory of directories.splice(0)) rmSync(directory,{recursive:true,force:true}) })
 const store=()=>{const directory=realpathSync(mkdtempSync(join(tmpdir(),"factory-assessor-test-")));directories.push(directory);return createFactoryRepository(directory)}
@@ -14,6 +21,27 @@ const score = (n: number): NumericComparison => ({ dimensions: Object.fromEntrie
 const controls: NumericControlTable = { "S01/S02":score(.9), "S03/S04":score(.95), "S05/S06":score(.9), "S01/S07":score(.7), "S01/S08":score(.3), "S11/S12":score(.7) }
 const edges = {"S01/S03":score(.1),"S01/S05":score(.2),"S03/S05":score(.25)}
 describe("finite factory independence decision", () => {
+  it("reopens a full source-bound but unrun allocation as unresolved, without inventing cells",async()=>{
+    const fixture=await createFactoryExecutionEvidenceFixture();directories.push(fixture.repository.directory)
+    const {repository}=fixture
+    const publish=(value:unknown)=>{const encoded=admitCanonicalJsonValue(value,{profile:"canonical-manifest"});if(!encoded.ok)throw Error("canonical");return publishFactoryArtifact(repository,encoded.canonicalBytes)}
+    const slots={} as Record<FactorySourceSlot,LabRoot>
+    for(const slot of ["S01","S03","S05"] as const)slots[slot]=publish(fixture.fresh.ingestions[slot])
+    for(const slot of Object.keys(FACTORY_CONTROL_BASES) as FactoryControlSlot[]) {
+      const result=await ingestNamedFactoryPacket({producerIdentity:"materializeFactoryCalibrationControl",origin:"calibration-control",evidenceClass:"calibration_only",producerInput:{slot,baseIngestionArtifactRoot:slots[FACTORY_CONTROL_BASES[slot]]}},repository)
+      if(result.disposition!=="accepted")throw Error("control");slots[slot]=result.artifactRoot
+    }
+    const protocolBody={schemaVersion:"factory-calibration-protocol-v1",phase:"264",purpose:"development-independence-calibration",split:"development"}
+    const protocol={...protocolBody,root:labRoot("factory-calibration-protocol-v1",protocolBody)}
+    const prepared=prepareFreshFactoryCalibration({allocation:createFactoryAuthoringAllocation(),slotIngestionArtifactRoots:slots,protocolRoot:protocol.root,protocolArtifactRoot:publish(protocol),studyPolicyRoot:"sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17",measurementPolicyRoot:"sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95",opponentIdentityRoot:deriveFixedMechanicsOpponentIdentityRoot(),supervision:{adapterId:"runtime-js-container-subprocess",runtimeAbi:"strategy-runtime-abi-v1.19",image:LAB_ADMITTED_ROOTS.image,runtimeProfileRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot}},repository)
+    const execution={...fixture.values.executionValue,manifestRoot:prepared.manifest.root}
+    const executionEvidenceArtifactRoot=publish({...execution,root:labRoot("factory-calibration-execution-evidence-v1",execution)})
+    const input={manifestArtifactRoot:prepared.artifactRoot,executionEvidenceArtifactRoot,ledgerRoot:readRetainedFactoryLedger(repository).ledgerRoot,terminalRoots:[],supervisionArtifactRoots:[],pairingArtifactRoots:[],candidateArtifactRoots:[]}
+    const result=assessFactoryIndependence(repository,input)
+    expect(result.status).toBe("unresolved");expect(result.reasons).toContain("incomplete_48_cells");expect(result.thresholdArtifactRoot).toBe(null)
+    expect(verifyRetainedFactoryAssessment(repository,result.assessmentArtifactRoot!)).toMatchObject({status:"unresolved",assessmentRoot:result.assessmentRoot})
+    expect(()=>assessFactoryIndependence(repository,{...input,terminalRoots:[labRoot("fixture","invented")]})).toThrow("TERMINAL_ROOTS")
+  },30000)
   it("rejects actual per-cell overruns even within the outer window",()=>{
     expect(factoryWorkloadResourceViolations(1000,121000,256,120000)).toEqual([])
     expect(factoryWorkloadResourceViolations(1000,121001,256,120000)).toContain("lifetime_exceeded")
