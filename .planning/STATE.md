@@ -6,11 +6,11 @@ current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 current_plan: 7
 total_plans_in_phase: 8
-status: awaiting_input
-stopped_at: Phase264 operator reports no usable current-rule model submissions; bounded fresh-generation recommendation pending
+status: in_progress
+stopped_at: Phase264 approved bounded fresh-generation route; revise existing Plans07/08 and implement assessment before consumption
 last_updated: "2026-09-14T12:24:03Z"
 last_activity: 2026-09-14
-last_activity_desc: Operator confirms no usable current-rule model submissions; bounded fresh-generation and honest model-identity recommendation pending
+last_activity_desc: Operator approved four authoring attempts and48development workloads with honest model provenance; source implementation continues
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ progress:
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current approved dispatch:** The operator answered `approved` to the bounded fresh-generation recommendation. Adopted scope is recorded in264-READINESS-DECISION.md and revised D-17/D-20/D-21. Continue existing Plans07/08 autonomously: exact prospective allocations, missing empirical assessment/freeze source, independent review, then at most4authoring attempts/30minutes and48development workloads/90minutes. No generation or workload has run. Three automated mechanisms remain required, Phase264 human/external intake is unused/zero, and all historical/runtime/rules/privacy/holdout/formation bounds remain unchanged. The following approval-pending paragraph is a historical snapshot superseded by this update.
 
 Current dispatch: Plans01 through06 are independently complete at the implementation level. Final Plan05 source at `f7395d8a` passes156/156safe tests across20files in53.02seconds, all four private package builds, standalone four-script types, the1271-file boundary monitor and all three CLI help paths. An additional16kernel ownership/legal-information tests pass in12.13seconds. Complete private trace retention, authenticated producer evidence, retained graph parsing, exact paired workloads, the concrete comparison corpus, non-consuming intake reload and safe adapter options are integrated; no known buildable Plan05 gap remains. The16-fixture evaluation index and existing CI source-only gate are complete. Independent goal verification is `human_needed` (3/5 phase truths): source/mechanics closure is verified, while real three-mechanism independence and actual-or-blocked readiness remain pending. Private UAT passes6source cases and blocks1real-input case. On2026-09-14 the operator clarified that only unlocated, untested old-rules model submissions exist: effectively no usable current-rules input. Plan07 now has a proposed bounded fresh-generation route in264-CONTEXT.md, including honest treatment of undisclosed internal model snapshots; approval and exact allocation are still pending. Local Codex CLI/authentication are available, but no generation request ran. Plan08 also requires completing the empirical assessment/freeze implementation: the current runner collects unresolved evidence and cannot clear readiness by itself. This is remaining implementation work, not an additional human-only input or a new numbered plan. Phase264 and Phase265 remain incomplete/ineligible until their evidence requirements are satisfied. Main owns lifecycle/pushes. No empirical run, strength claim, provider/human participation, old allocation reuse, formation or public/counted/production action occurred. Historical Phase263 recovery markers and36locks remain unchanged.
 

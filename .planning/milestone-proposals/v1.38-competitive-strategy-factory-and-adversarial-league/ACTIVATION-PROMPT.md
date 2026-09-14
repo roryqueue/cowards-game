@@ -1,5 +1,9 @@
 # Activation Prompt: Competitive Strategy Factory and Adversarial League
 
+## Approved Phase264 model-provenance and bounded-input revision — 2026-09-14
+
+For existing Plans264-07/08, the operator approved fresh model generation through existing Codex access, at most4authoring attempts including corrections within30minutes and48supervised development workloads within90minutes, exact allocations frozen before output, and Phase264 human/external intake explicitly unused/zero. All three automated mechanisms remain required. Exact supplied prompt/context, requested/reported model IDs, generation-client version/settings, actual usage, request/response and emitted source must be retained. An undisclosed internal serving snapshot may be explicitly unavailable, never invented or silently substituted; reproducibility concerns frozen emitted programs rather than identical model regeneration. Missing required records and actual identity drift still fail closed. Complete and independently review the real assessment/freeze path before consumption; mechanical fixtures do not establish empirical thresholds. This prospective revision does not reinterpret prior evidence or waive later red-team, equal-profile, information-boundary, holdout, audit/archive/tag or rules/formation constraints. The precise scope is264-READINESS-DECISION.md and revised264-CONTEXT.md D-17/D-20/D-21.
+
 ### D-34L.1: Lean single-operator execution closure (2026-09-01)
 
 The operator approved the lean ADMIT-03 replacement and directed execution to proceed. `lean_runner_feasibility_v1` is a private, single-operator, non-production-grade fixture-feasibility experiment. Its final corrective execution prerequisite is one bounded review of the actual result-validity path, not literal-zero certification of every static verifier, recovery, summary-custody, or hypothetical mutation-resistance claim.

@@ -9,6 +9,10 @@ scope: large
 
 # SEED-002: Competitive Strategy Factory and Adversarial League
 
+## Approved Phase264 input revision — 2026-09-14
+
+The operator approved the bounded fresh-generation route in264-READINESS-DECISION.md:4authoring attempts/30minutes,48supervised development workloads/90minutes, exact pre-output allocations, three automated mechanisms, Phase264 human/external intake unused/zero, and exact exposed model/client/prompt/source/usage provenance with an undisclosed internal serving snapshot explicitly unavailable. Real assessment/freeze implementation and independent review precede consumption. Prior evidence and later league/red-team/equal-profile/holdout/formation/release requirements are unchanged. This supersedes older exact-internal-version assumptions only for the prospective approved route; no current readiness pass is asserted.
+
 ## Current pre-search handoff — 2026-09-13
 
 Phase262 subsequently passed its approved Plan203 continuation; older snapshots below are historical. The operator approved prospective Phase263 selection p99<20ms, unchanged SoldierBrain<5ms and every other bound, plus exactly one fresh bounded attempt under263-TIMING-CALIBRATION.md. Prior failures remain unchanged. Factory scale still requires full Phase263 verification; current league freeze still precedes any lab formation work, and no public/counting/production or rules authority is added.

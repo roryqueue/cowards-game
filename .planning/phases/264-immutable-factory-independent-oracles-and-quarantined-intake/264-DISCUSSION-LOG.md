@@ -34,6 +34,12 @@ The user requested strong recommendations for every phase in one batch and asked
 
 **Recommendation presented for one decision:** Fresh generation using existing Codex access; up to four authoring attempts/30minutes and48supervised development workloads/90minutes, all allocations frozen before output; keep three automated mechanisms and record Phase264 human intake as unused; accept honestly reported model identity with undisclosed internal snapshot explicitly unavailable, while retaining exact prompt/output/source and actual usage. Complete the existing Plan08 assessment/freeze implementation before expecting a fresh run to clear readiness. No later red-team, league, holdout, formation or rules requirement is waived. **Approval pending.**
 
+## Approval of bounded fresh-generation route — 2026-09-14
+
+**User's answer:** `approved`.
+
+**Decision:** Adopt the complete preceding recommendation: four authoring attempts including corrections within30minutes; at most48 supervised development workloads within90minutes; exact prospective allocations before output; three automated mechanisms retained; Phase264 human/external channel unused/zero; explicitly undisclosed internal serving snapshot allowed alongside exact exposed provenance and actual usage. Finish Plan08's real assessment/freeze implementation before consumption. Ordinary implementation, review/fix and verification proceed under the standing autonomous instruction, without another routine literal checkpoint. No broader gameplay, production, public, holdout or formation authority is added.
+
 ## the agent's Discretion
 
 - Internal APIs, package substructure, fingerprint representation, and reviewer tooling.

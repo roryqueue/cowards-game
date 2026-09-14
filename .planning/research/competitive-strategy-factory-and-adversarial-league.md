@@ -1,5 +1,9 @@
 # Competitive Strategy Factory and Adversarial League
 
+## Approved Phase264 input revision — 2026-09-14
+
+The operator approved the bounded fresh-generation route in264-READINESS-DECISION.md:4authoring attempts/30minutes,48supervised development workloads/90minutes, exact pre-output allocations, three automated mechanisms, Phase264 human/external intake unused/zero, and exact exposed model/client/prompt/source/usage provenance with an undisclosed internal serving snapshot explicitly unavailable. Real assessment/freeze implementation and independent review precede consumption. Prior evidence and later league/red-team/equal-profile/holdout/formation/release requirements are unchanged. This supersedes older exact-internal-version assumptions only for the prospective approved route; no current readiness pass is asserted.
+
 ## Active D-34L lean admission contract — 2026-09-01
 
 The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.

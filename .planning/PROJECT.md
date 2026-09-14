@@ -2,6 +2,8 @@
 
 ## Current v1.38 progress — Phases262 and263 complete
 
+**Phase264 update2026-09-14:** Six of eight plans are independently complete at source/mechanics level. The operator approved one bounded fresh-generation route using existing Codex access (at most4authoring attempts/30minutes and48supervised development workloads/90minutes). Exact allocations and the missing empirical assessment/freeze path are prepared and reviewed before consumption. D-17/D-20 permit an explicitly undisclosed serving snapshot with exact exposed provenance and actual usage; Phase264 human/external intake is unused/zero. No generation or workload has run and no independence/readiness pass is yet claimed. See264-READINESS-DECISION.md; later league, human red team, formation, holdout and release gates are unchanged.
+
 **Authoritative update2026-09-13:** the sole approved prospective selection<20ms/brain<5ms attempt passed256 validation cases,2200 benchmark calls and24/24 Matches. Measured p99=17.019799/1.583730ms; cleanup/accounting complete. Independent verification11/11 truths and10/10 requirements, private UAT6/6, final196/196 tests and TypeScript pass. Phase263 is complete and Phase264 research/planning proceeds autonomously. This proves bounded legal-runner feasibility, not competitive strength. All earlier non-pass results and consumed envelopes stay unchanged. The snapshots below are historical, not current authorization.
 
 ### Historical Phase263 snapshots — not current routing
