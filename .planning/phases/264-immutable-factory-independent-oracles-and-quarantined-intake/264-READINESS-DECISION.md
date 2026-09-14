@@ -1,15 +1,19 @@
 ---
 phase: 264
 plan: "07"
-status: blocked_client_update_continuation_system_failure
+status: approved_two_remaining_authoring_attempts
 decided: 2026-09-14
-operator_response: approved
+operator_response: yes
 empirical_outcome: two_cumulative_charged_authoring_failures_zero_workloads
 ---
 
 # Approved bounded fresh-generation decision
 
-## Current terminal outcome
+## Current approved continuation
+
+The operator answered “yes” to “May I resume with the two remaining authoring attempts under the same limits?” Resume existing Plan08 Task4 with at most two fresh authoring attempts in a fresh30-minute window, exact `gpt-5.6-sol`, and the unchanged48workload/90-minute limit. The prior two failures remain charged; cumulative ceiling stays four. Preserve the first unavailable-usage50,000-token reservation and the second9,767 known tokens; fresh token ceiling is100,000, at most159,767 accounted cumulatively, below the original200,000 ceiling. No old source, ledger or outcome is rescued or reused. First valid output or terminal/system/identity/usage/root-reopen failure stops authoring. All other scientific, runtime, privacy, holdout and formation bounds remain unchanged. Exact reviewed source is `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`; a read-only command-composition recheck precedes main-owned execution. This is not a new plan or assurance chain.
+
+## Historical terminal outcome — superseded only for unused capacity
 
 Source repairs are now independently clean at `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`; main passed 77/77 tests, strict types, affected builds and the 1,292-file boundary check. No client change or source-review blocker remains. The only pending input is permission to resume at most the two unused attempts under the same model and limits; this document does not grant that continuation.
 

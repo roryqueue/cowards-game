@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
-status: blocked
-stopped_at: Phase264 Plan08 client works and compatibility repairs independently clean; stop-on-error continuation needed for two remaining authoring attempts; no Matches
+status: executing
+stopped_at: Phase264 Plan08 Task4 approved continuation; two fresh attempts maximum with two earlier failures charged; source/composition check before execution
 last_updated: "2026-09-14T23:06:00Z"
 last_activity: 2026-09-14
-last_activity_desc: Final f2f14864 source review clean; 77 tests, strict types, builds and1292 boundary files pass; client works; two charged attempts, two unused, zero workloads
+last_activity_desc: Operator approved two remaining Sol attempts in a fresh30-minute window; cumulative four-attempt and48workload90-minute limits unchanged; zero new executions
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current approved continuation:** The operator answered “yes” to resuming the two remaining authoring attempts under the same limits. Main continues existing Plan08 Task4 with a fresh private ledger and30-minute window, exact Sol, at most two fresh attempts, preserving both earlier failures and their50,000-token unknown reservation plus9,767 known tokens. Fresh cap100,000, cumulative attempt capfour, unchanged48workloads/90minutes and all scientific/runtime/privacy/holdout/formation boundaries. Source remains independently reviewed `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`; command composition is rechecked before execution. No new authorization literal, numbered plan or client action is required. Prior terminal snapshots below remain history. Phase264 actual independence and Phase265 stay gated pending real evidence.
 
 **Current verified handoff:** Client support is resolved. Final compatibility source `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755` is independently clean with zero unresolved findings; main passed 77/77 tests across 13 suites, strict affected types, model/lab builds and 1,292 boundary files. The normal exact prompt echo is handled consistently; only redundant text-delta notifications are suppressed upstream, with exact received evidence and unchanged bounds. Immutable outcome `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db3b2dd3a8c9bf` remains a failure and was independently reopened. Two attempts are charged cumulatively, two remain unused, and zero teacher searches/workloads/Matches occurred. The only remaining human checkpoint is permission to resume at most those two attempts in a fresh 30-minute window, using the same Sol model and unchanged cumulative four-attempt and 48-workload/90-minute limits. No client change, exact literal, new numbered plan or external custody is needed. Phase 264 remains 4/5 verified truths; actual independence and Phase 265 remain gated. See 264-CLIENT-CONTINUATION-OUTCOME.md and 264-CLIENT-ECHO-REVIEW.md. All following snapshots are history.
 
