@@ -98,9 +98,10 @@ interface DecodedModelResponse {
 }
 
 /** Strictly decodes the retained Codex app-server JSONL evidence without executing source. */
-export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<DecodedModelResponse> => {
-  let reportedModelId: string | null = null, requestedModelId: string | null = null, providerId: string | null = null, turnId: string | null = null
+export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: string): Readonly<DecodedModelResponse> => {
+  let reportedModelId: string | null = null, requestedModelId: string | null = null, providerId: string | null = null, threadId: string | null = null, turnId: string | null = null
   let source: string | null = null, usage: DecodedModelResponse["usage"] | null = null
+  const userStarts = new Set<string>(), userCompletions = new Set<string>()
   const messages: RecordValue[] = []
   for (const line of bodyUtf8.split(/\r?\n/u).filter((entry) => entry.length > 0)) {
     let message: RecordValue
@@ -116,6 +117,8 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
       reportedModelId = resultModel
       requestedModelId = resultModel
       providerId = resultProvider
+      threadId = textValue((result.thread as RecordValue).id)
+      if (!threadId) fail("RAW_RESPONSE")
     } else if (response && response.turn) {
       if (turnId !== null) fail("RAW_RESPONSE")
       const result = response, turn = objectRecord(result.turn, "RAW_RESPONSE")
@@ -123,11 +126,17 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
       if (!resultTurnId) fail("RAW_RESPONSE")
       turnId = resultTurnId
     } else if (message.method === "model/rerouted") fail("RAW_RESPONSE")
-    else if (message.method === "item/completed") {
+    else if (message.method === "item/started" || message.method === "item/completed") {
       const params = objectRecord(message.params, "RAW_RESPONSE")
       if (turnId !== null && params.turnId === turnId) {
         const item = objectRecord(params.item, "RAW_RESPONSE")
-        if (item.type === "agentMessage" && typeof item.text === "string") {
+        if (item.type === "userMessage") {
+          const content = item.content, itemId = textValue(item.id)
+          if (expectedPrompt === undefined || params.threadId !== threadId || !itemId || !Array.isArray(content) || content.length !== 1 || !objectRecord(content[0], "RAW_RESPONSE") || (content[0] as RecordValue).type !== "text" || (content[0] as RecordValue).text !== expectedPrompt) fail("RAW_RESPONSE")
+          if (message.method === "item/started") { if (userStarts.has(itemId)) fail("RAW_RESPONSE"); userStarts.add(itemId) }
+          else if (userCompletions.has(itemId) || (userStarts.size > 0 && !userStarts.has(itemId))) fail("RAW_RESPONSE")
+          else userCompletions.add(itemId)
+        } else if (item.type === "agentMessage" && typeof item.text === "string") {
           if (source !== null) fail("RAW_RESPONSE")
           let envelope: RecordValue
           try { envelope = JSON.parse(item.text) as RecordValue } catch { return fail("RAW_RESPONSE") }
@@ -153,6 +162,7 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<Decoded
   }
   if (!reportedModelId || !requestedModelId || !providerId) fail("RAW_RESPONSE_IDENTITY")
   if (!turnId) fail("RAW_RESPONSE_TURN_ID")
+  if ([...userStarts].some((itemId) => !userCompletions.has(itemId))) fail("RAW_RESPONSE")
   const failed = messages.some((message) => {
     if (message.method !== "turn/failed" && message.method !== "error") return false
     return true
@@ -197,7 +207,7 @@ const validateBundle = (value: unknown): FrozenModelBundle => {
     const requestRecord = requiredRecord(provenance.requestRecord, ["root", "byteLength", "encoding", "bodyUtf8"], "PROVENANCE")
     const rawResponseRecord = requiredRecord(provenance.rawResponseRecord, ["root", "format", "bodyUtf8"], "PROVENANCE")
     const usage = requiredRecord(provenance.actualUsage, ["inputTokens", "outputTokens", "cachedInputTokens", "totalTokens"], "PROVENANCE")
-    const decoded = typeof rawResponseRecord.bodyUtf8 === "string" ? decodeFrozenModelRawResponse(rawResponseRecord.bodyUtf8) : fail("RAW_RESPONSE")
+    const decoded = typeof rawResponseRecord.bodyUtf8 === "string" && typeof requestRecord.bodyUtf8 === "string" ? decodeFrozenModelRawResponse(rawResponseRecord.bodyUtf8, requestRecord.bodyUtf8) : fail("RAW_RESPONSE")
     if (!text(provenance.requestedModelId) || !text(provenance.reportedModelId) || !text(client.version) || !root(client.settingsRoot) || snapshot.availability !== "unavailable" ||
         !root(provenance.requestRecordRoot) || !root(provenance.responseRecordRoot) ||
         !root(requestRecord.root) || !integer(requestRecord.byteLength, 262144) || requestRecord.byteLength < 1 || requestRecord.encoding !== "utf8" || !text(requestRecord.bodyUtf8, 262144) ||

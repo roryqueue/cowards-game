@@ -87,12 +87,21 @@ export const decodeChargedAuthorTranscript = (raw: string, request: Record<strin
   if (starts.length !== 1 || turns.length !== 1) return fail("AUTHOR_PROTOCOL")
   const started = starts[0]!.result as Record<string, any>, sandbox = started?.sandbox as Record<string, unknown>, turnId = turns[0]!.result?.turn?.id
   const settings = request.frozenSettings as Record<string, unknown>, cwd = request.cwd
-  if (started.model !== request.requestedModel || started.modelProvider !== settings.providerId || started.cwd !== cwd || typeof cwd !== "string" || !isAbsolute(cwd) || request.cwdClass !== "fresh-disclosed-packet-only-outside-repository" || started.approvalPolicy !== "never" || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(started.instructionSources) || started.instructionSources.length !== 0 || typeof turnId !== "string" || turnId.length === 0) return fail("AUTHOR_ISOLATION")
+  const threadId = started.thread?.id
+  if (started.model !== request.requestedModel || started.modelProvider !== settings.providerId || started.cwd !== cwd || typeof cwd !== "string" || !isAbsolute(cwd) || request.cwdClass !== "fresh-disclosed-packet-only-outside-repository" || started.approvalPolicy !== "never" || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(started.instructionSources) || started.instructionSources.length !== 0 || typeof threadId !== "string" || threadId.length === 0 || typeof turnId !== "string" || turnId.length === 0) return fail("AUTHOR_ISOLATION")
   if (events.some((event) => {
     if (event.method !== "turn/failed" && event.method !== "error") return false
     return true
   })) return fail("AUTHOR_PROTOCOL")
-  if (events.some((event) => event.method === "model/rerouted" || (event.method === "item/completed" && event.params?.turnId === turnId && !["agentMessage", "reasoning"].includes(String(event.params?.item?.type))))) return fail("AUTHOR_TOOLS")
+  if (events.some((event) => event.method === "model/rerouted" || (event.method === "item/completed" && event.params?.turnId === turnId && !["agentMessage", "reasoning", "userMessage"].includes(String(event.params?.item?.type))))) return fail("AUTHOR_TOOLS")
+  const userStarts = new Set<string>(), userCompletions = new Set<string>()
+  for (const event of events.filter((candidate) => ["item/started", "item/completed"].includes(String(candidate.method)) && candidate.params?.item?.type === "userMessage")) {
+    const params = event.params, item = params.item, content = item.content
+    if (params.threadId !== threadId || params.turnId !== turnId || typeof item.id !== "string" || !Array.isArray(content) || content.length !== 1 || content[0]?.type !== "text" || content[0]?.text !== request.context) return fail("AUTHOR_PROTOCOL")
+    if (event.method === "item/started") { if (userStarts.has(item.id)) return fail("AUTHOR_PROTOCOL"); userStarts.add(item.id) }
+    else { if (userCompletions.has(item.id) || (userStarts.size > 0 && !userStarts.has(item.id))) return fail("AUTHOR_PROTOCOL"); userCompletions.add(item.id) }
+  }
+  if ([...userStarts].some((itemId) => !userCompletions.has(itemId))) return fail("AUTHOR_PROTOCOL")
   const completions = events.filter((event) => event.method === "turn/completed" && event.params?.turn?.id === turnId && event.params.turn.status === "completed")
   const returnedUsage = events.filter((event) => event.method === "thread/tokenUsage/updated" && event.params?.turnId === turnId).at(-1)?.params?.tokenUsage?.total
   if (completions.length !== 1 || !returnedUsage) return fail("AUTHOR_PROTOCOL")

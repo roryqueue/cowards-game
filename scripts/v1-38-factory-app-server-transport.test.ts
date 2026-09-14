@@ -13,6 +13,7 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
   signals: Array<NodeJS.Signals | undefined> = []
   rerouteOnTurn = false
   failThenComplete = false
+  userEcho: "none" | "valid" | "substituted" | "wrong-thread" | "started-only" = "none"
   kill(signal?: NodeJS.Signals): boolean { this.killed = true; this.signals.push(signal); if ((!this.ignoreTerm && signal === "SIGTERM") || (!this.ignoreKill && signal === "SIGKILL")) queueMicrotask(() => this.emit("close", 0)); return true }
   private reply(request: Record<string, unknown>): void {
     const response = (result: unknown): void => { this.stdout.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", id: request.id, result })}\n`)) }
@@ -21,7 +22,15 @@ class FakeAppServer extends EventEmitter implements FactoryAppServerProcess {
     if (request.method === "thread/start") response({ thread: { id: "thread-1" }, model: "gpt-5.6-luna", modelProvider: "openai", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] })
     if (request.method === "turn/start") {
       response({ turn: { id: "turn-1" } })
+      const userMessages: Record<string, unknown>[] = []
+      if (this.userEcho !== "none") {
+        const threadId = this.userEcho === "wrong-thread" ? "other-thread" : "thread-1", text = this.userEcho === "substituted" ? "different prompt" : "emit source only"
+        const item = { id: "user-1", type: "userMessage", content: [{ type: "text", text }] }
+        userMessages.push({ jsonrpc: "2.0", method: "item/started", params: { threadId, turnId: "turn-1", item } })
+        if (this.userEcho !== "started-only") userMessages.push({ jsonrpc: "2.0", method: "item/completed", params: { threadId, turnId: "turn-1", item } })
+      }
       for (const message of [
+        ...userMessages,
         ...(this.rerouteOnTurn ? [{ jsonrpc: "2.0", method: "model/rerouted", params: { threadId: "thread-1", turnId: "turn-1", fromModel: "gpt-5.6-luna", toModel: "other", reason: "fallback" } }] : []),
         ...(this.failThenComplete ? [{ jsonrpc: "2.0", method: "turn/failed", params: { threadId: "thread-1", turn: { id: "other-turn", status: "failed" } } }] : []),
         { jsonrpc: "2.0", method: "item/completed", params: { threadId: "thread-1", turnId: "turn-1", completedAtMs: 1, item: { id: "item-1", type: "agentMessage", text: "{\"source\":\"source\"}" } } },
@@ -79,6 +88,16 @@ describe("factory Codex app-server transport", () => {
     const failure = await transport.startTurn("emit source only").catch((error: unknown) => error)
     expect(failure).toMatchObject({ message: "FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT", evidence: { terminalStatus: "completed" } })
     expect(new TextDecoder().decode(failure.evidence.rawJsonl)).toContain('"turn/failed"')
+  })
+  it("accepts only an exact submitted-prompt user echo with a complete item lifecycle", async () => {
+    const fake = new FakeAppServer(); fake.userEcho = "valid"
+    const transport = await createFactoryAppServerTransport({ ...options, spawn: () => fake })
+    await expect(transport.startTurn("emit source only")).resolves.toMatchObject({ sourceMessage: '{"source":"source"}' })
+    for (const variant of ["substituted", "wrong-thread", "started-only"] as const) {
+      const next = new FakeAppServer(); next.userEcho = variant
+      const nextTransport = await createFactoryAppServerTransport({ ...options, spawn: () => next })
+      await expect(nextTransport.startTurn("emit source only")).rejects.toMatchObject({ message: "FACTORY_APP_SERVER_TURN_TERMINAL_CONTRACT" })
+    }
   })
   it("refuses an unadvertised exact model before thread creation or charge", async () => {
     const fake = new FakeAppServer()

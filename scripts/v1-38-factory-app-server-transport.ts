@@ -48,6 +48,7 @@ type JsonRecord = Readonly<Record<string, unknown>>
 const fail = (code: string): never => { throw new TypeError(`FACTORY_APP_SERVER_${code}`) }
 const record = (value: unknown): JsonRecord | null => value !== null && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : null
 const text = (value: unknown): string | null => typeof value === "string" && value.length > 0 ? value : null
+const userMessageText = (item: JsonRecord | null): string | null => { const content = item?.content; if (!Array.isArray(content) || content.length !== 1) return null; const part = record(content[0]); return part?.type === "text" ? text(part.text) : null }
 const nonNegativeInteger = (value: unknown): number | null => Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : null
 const byteCopy = (parts: readonly Buffer[]): Uint8Array => Uint8Array.from(Buffer.concat(parts))
 
@@ -63,7 +64,11 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
   const pending = new Map<number, { resolve(value: JsonRecord): void; reject(error: Error): void }>()
   const terminal = new Map<string, JsonRecord>(), usageByTurn = new Map<string, JsonRecord>(), messagesByTurn = new Map<string, string[]>()
   const forbiddenTurns = new Set<string>()
+  const userMessageStarted = new Set<string>(), userMessageCompleted = new Set<string>()
+  const userMessageTurnIds = new Set<string>()
   let protocolTurnFailure = false
+  let admittedThreadId: string | null = null
+  let activeSourceMessage: string | null = null
   let sequence = 0
   let buffered = ""
   let closed: Error | null = null
@@ -94,7 +99,21 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
       if (failedTurnId) forbiddenTurns.add(failedTurnId)
     }
     if (message.method === "thread/tokenUsage/updated" && params) { const turnId = text(params.turnId), tokenUsage = record(params.tokenUsage), total = record(tokenUsage?.total); if (turnId && total) usageByTurn.set(turnId, total) }
-    if ((message.method === "item/started" || message.method === "item/completed") && params) { const turnId = text(params.turnId), item = record(params.item), itemType = text(item?.type); if (turnId && itemType && !["reasoning", "agentMessage"].includes(itemType)) forbiddenTurns.add(turnId); if (turnId && message.method === "item/completed" && itemType === "agentMessage" && typeof item?.text === "string") messagesByTurn.set(turnId, [...(messagesByTurn.get(turnId) ?? []), item.text]) }
+    if ((message.method === "item/started" || message.method === "item/completed") && params) {
+      const turnId = text(params.turnId), item = record(params.item), itemType = text(item?.type)
+      if (itemType === "userMessage") {
+        const itemId = text(item?.id)
+        if (params.threadId !== admittedThreadId || !turnId || !itemId || userMessageText(item) !== activeSourceMessage || (message.method === "item/started" ? userMessageStarted.has(itemId) : userMessageCompleted.has(itemId) || (userMessageStarted.size > 0 && !userMessageStarted.has(itemId)))) protocolTurnFailure = true
+        else {
+          userMessageTurnIds.add(turnId)
+          if (message.method === "item/started") userMessageStarted.add(itemId)
+          else userMessageCompleted.add(itemId)
+        }
+      } else {
+        if (turnId && itemType && !["reasoning", "agentMessage"].includes(itemType)) forbiddenTurns.add(turnId)
+        if (turnId && message.method === "item/completed" && itemType === "agentMessage" && typeof item?.text === "string") messagesByTurn.set(turnId, [...(messagesByTurn.get(turnId) ?? []), item.text])
+      }
+    }
     if ((message.method === "turn/completed" || message.method === "turn/failed") && params) {
       const turn = record(params.turn) ?? params
       const idValue = text(turn.id) ?? text(params.turnId)
@@ -140,12 +159,13 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
     const threadId = text(thread?.id)
     const reportedModel = text(started.model), provider = text(started.modelProvider), cwd = text(started.cwd), sandbox = record(started.sandbox), instructionSources = started.instructionSources
     if (!threadId || reportedModel !== options.requestedModel || provider !== options.requestedProvider || cwd !== options.cwd || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || started.approvalPolicy !== "never" || !Array.isArray(instructionSources) || instructionSources.length !== 0) fail("THREAD_START_CONTRACT")
-    const admittedThreadId = threadId as string
+    admittedThreadId = threadId
     const admittedModel = reportedModel as string
     return Object.freeze({
-      threadId: admittedThreadId, reportedModel: admittedModel,
+      threadId: threadId as string, reportedModel: admittedModel,
       async startTurn(sourceMessage: string, timeoutMs = options.timeoutMs): Promise<FactoryAppServerTurnResult> {
         if (!sourceMessage || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1) fail("SOURCE_MESSAGE")
+        activeSourceMessage = sourceMessage
         const deadline = Date.now() + timeoutMs
         let admittedTurnId: string | null = null
         try {
@@ -158,7 +178,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
           const completed = terminal.get(turnKey)!, completedTurn = record(completed.turn) ?? completed, status = text(completedTurn.status)
           const rawUsage = usageByTurn.get(turnKey), messages = messagesByTurn.get(turnKey) ?? []
           const usage = rawUsage && { inputTokens: nonNegativeInteger(rawUsage.inputTokens), cachedInputTokens: nonNegativeInteger(rawUsage.cachedInputTokens), outputTokens: nonNegativeInteger(rawUsage.outputTokens), reasoningOutputTokens: nonNegativeInteger(rawUsage.reasoningOutputTokens), totalTokens: nonNegativeInteger(rawUsage.totalTokens) }
-          if (status !== "completed" || protocolTurnFailure || forbiddenTurns.has(turnKey) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
+          if (status !== "completed" || protocolTurnFailure || forbiddenTurns.has(turnKey) || [...userMessageTurnIds].some((itemId) => itemId !== turnKey) || [...userMessageStarted].some((itemId) => !userMessageCompleted.has(itemId)) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
           return Object.freeze({ sourceMessage: messages[0]!, usage: usage as FactoryAppServerTurnResult["usage"], reportedModel: admittedModel, rawJsonl: byteCopy(raw) })
         } catch (error) {
           const rawUsage = admittedTurnId ? usageByTurn.get(admittedTurnId) : null
