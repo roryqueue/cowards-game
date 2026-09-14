@@ -57,6 +57,7 @@ describe("private factory dependency boundary", () => {
   it.each([
     ["shared scoring helper", { "packages/strategy-oracle-model/src/emit.ts": 'import "../../strategy-shared/src/scoring.js"', "packages/strategy-shared/src/scoring.ts": "export const score = 1" }],
     ["node vm", { "packages/strategy-oracle-model/src/emit.ts": 'import vm from "node:vm"; vm.runInNewContext(source)' }],
+    ["direct child process", { "packages/strategy-oracle-model/src/emit.ts": 'import { spawn } from "node:child_process"' }],
     ["new Function", { "packages/strategy-oracle-model/src/emit.ts": "new Function('candidate')" }],
     ["package prefix spoof", { "packages/strategy-oracle-model/src/emit.ts": 'import "@cowards/spec-evil"' }],
     ["public generated consumer", { "public/generated/consumer.ts": 'export * from "@cowards/strategy-oracle-model"', "packages/strategy-oracle-model/src/index.ts": "export const model = 1" }],
@@ -77,6 +78,22 @@ describe("private factory dependency boundary", () => {
   })
 
   it.each([
+    ["factory transitive hostile core execution", {
+      "packages/strategy-lab/src/factory/admission.ts": 'import "@cowards/engine"',
+      "packages/engine/src/index.ts": "export const rule = new Function(source)",
+    }],
+    ["new scorer re-exported by a core barrel", {
+      "packages/strategy-oracle-model/src/index.ts": 'import "@cowards/engine"',
+      "packages/engine/src/index.ts": 'export * from "./strategy-selector.js"',
+      "packages/engine/src/strategy-selector.ts": "export const score = 1",
+    }],
+    ["shared scorer reachable through an allowed manifest dependency", {
+      "packages/strategy-oracle-tactical/package.json": JSON.stringify({ name: "@cowards/strategy-oracle-tactical", dependencies: { "@cowards/spec": "workspace:*" } }),
+      "packages/spec/package.json": JSON.stringify({ name: "@cowards/spec", dependencies: { "@cowards/strategy-shared": "workspace:*" }, exports: "./src/index.ts" }),
+      "packages/spec/src/index.ts": "export const schema = 1",
+      "packages/strategy-shared/package.json": JSON.stringify({ name: "@cowards/strategy-shared", exports: "./src/index.ts" }),
+      "packages/strategy-shared/src/index.ts": "export const score = 1",
+    }],
     ["transitive dynamic core loader", { "packages/strategy-oracle-model/src/index.ts": 'import "@cowards/engine"', "packages/engine/src/index.ts": "export const rule = import(selectModule())" }],
     ["transitive new Function", { "packages/strategy-oracle-model/src/index.ts": 'import "@cowards/engine"', "packages/engine/src/index.ts": "export const rule = new Function(source)" }],
     ["unaudited direct core scorer", { "packages/strategy-oracle-model/src/index.ts": 'import "../../engine/src/strategy-selector.js"', "packages/engine/src/strategy-selector.ts": "export const score = 1" }],
