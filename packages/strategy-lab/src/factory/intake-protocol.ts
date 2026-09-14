@@ -89,7 +89,7 @@ export const admitFrozenIntakeProtocol = (value: unknown): Readonly<FrozenIntake
 
 export type IntakeBlockedReason = "incomplete_protocol" | "unauthorized_participant" | "unauthorized_reviewer"
 export const blockedIntakeConfiguration = (reason: IntakeBlockedReason) => freezeLabValue({
-  schemaVersion: "intake-blocked-v1" as const, privacy: "private_offline" as const, reason,
+  schemaVersion: "intake-blocked-v1" as const, privacy: "private_offline" as const, authorized: false as const, allocation: "none" as const, reason,
   root: labRoot("intake-blocked-v1", { reason }),
 })
 

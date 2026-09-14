@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { createHash } from "node:crypto"
-import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { mkdtempSync, realpathSync, readdirSync, rmSync, unlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../contracts.js"
@@ -8,7 +8,7 @@ import { factoryOraclePacketFixture } from "./contracts.js"
 import { deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, resumeFactoryAttemptInventory } from "./repository.js"
 import { admitQuarantinedIntakePacket, deriveIntakeProvenanceRoot, type IntakeProvenance, type QuarantinedIntakePacket } from "./intake.js"
-import { admitFrozenIntakeProtocol, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot, type FrozenIntakeProtocol } from "./intake-protocol.js"
+import { admitFrozenIntakeProtocol, blockedIntakeConfiguration, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot, type FrozenIntakeProtocol } from "./intake-protocol.js"
 
 const root = (letter: string) => `sha256:${letter.repeat(64)}` as `sha256:${string}`
 const dirs: string[] = []
@@ -24,17 +24,18 @@ const protocol = (overrides: Partial<FrozenIntakeProtocol> = {}): FrozenIntakePr
   const authorized = { ...draft, authorization: deriveIntakeAuthorizationRoot(draft) }
   return admitFrozenIntakeProtocol({ ...authorized, root: deriveFrozenIntakeProtocolRoot(authorized) })
 }
-const source = new TextEncoder().encode("export default {}")
+const source = new TextEncoder().encode("export default { selectActivations() { return { activationOrders: [], StrategyMemory: {} } }, soldierBrain() { return { action: { type: 'ADVANCE' }, SoldierMemory: {} } } }")
 const sourceRoot = `sha256:${createHash("sha256").update(source).digest("hex")}` as `sha256:${string}`
-const packet = (suffix = ""): ReturnType<typeof factoryOraclePacketFixture> => {
+const packet = (suffix = "", sourceBytes = source): ReturnType<typeof factoryOraclePacketFixture> => {
   const fixture = factoryOraclePacketFixture()
-  const value = { ...fixture, source: { ...fixture.source, root: sourceRoot, sha256: sourceRoot, byteLength: source.byteLength }, doctrineFamily: suffix ? `fixture-doctrine-${suffix}` : fixture.doctrineFamily }
+  const sourceIdentity = `sha256:${createHash("sha256").update(sourceBytes).digest("hex")}` as `sha256:${string}`
+  const value = { ...fixture, source: { ...fixture.source, root: sourceIdentity, sha256: sourceIdentity, byteLength: sourceBytes.byteLength }, doctrineFamily: suffix ? `fixture-doctrine-${suffix}` : fixture.doctrineFamily }
   return { ...value, root: deriveFactoryOraclePacketRoot(value) }
 }
 const provenance = (p: FrozenIntakeProtocol, packetValue: ReturnType<typeof packet>, reviewerId = "reviewer-one"): IntakeProvenance => {
   const value = {
     schemaVersion: "intake-provenance-v1" as const, root: root("0"), participantId: p.participantId, reviewerId,
-    packetRoot: packetValue.root, sourceRoot: packetValue.source.root, builderRoot: root("c"), toolchainRoot: root("d"), dependencyRoot: root("e"), runtimeRoot: root("f"),
+    packetRoot: packetValue.root, sourceRoot: packetValue.source.root, builderRoot: packetValue.build.buildRoot, toolchainRoot: packetValue.build.toolchainRoot, dependencyRoot: root("e"), runtimeRoot: packetValue.nativeLane.runtimeProfileRoot,
     sourceKind: "explicit-deterministic" as const, execution: "data-only" as const, liveAgent: false as const, complete: true as const,
   }
   return { ...value, root: deriveIntakeProvenanceRoot(value) }
@@ -45,11 +46,20 @@ const repository = () => {
 }
 const input = (p = protocol(), packetValue = packet(), overrides: Partial<QuarantinedIntakePacket> = {}): QuarantinedIntakePacket => ({
   protocol: p, packet: packetValue, sourceBytes: new Uint8Array(source), provenance: provenance(p, packetValue), participantId: p.participantId,
-  reviewerId: "reviewer-one", elapsedMinutes: 1, conflictFree: true, ...overrides,
+  reviewerId: "reviewer-one", elapsedMinutes: 1, conflictFree: true, reviewDisposition: "accept", ...overrides,
 })
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe("quarantined intake", () => {
+  it("does not invent authority for malformed protocol configuration", () => {
+    const repo = repository()
+    expect(() => admitQuarantinedIntakePacket({ protocol: {} } as never, repo)).toThrow("INTAKE_PROTOCOL")
+    expect(readdirSync(repo.directory)).toEqual([])
+    const blocked = blockedIntakeConfiguration("incomplete_protocol")
+    expect(blocked.authorized).toBe(false)
+    expect(blocked.allocation).toBe("none")
+  })
+
   it("forwards explicit deterministic source as data through common admission and retains a root", () => {
     const repo = repository(), result = admitQuarantinedIntakePacket(input(), repo)
     expect(result.disposition).toBe("accepted")
@@ -63,7 +73,7 @@ describe("quarantined intake", () => {
     const conflict = admitQuarantinedIntakePacket({ ...input(p, packet("conflict")), conflictFree: false }, repo)
     const weak = admitQuarantinedIntakePacket({ ...input(p, packet("weak")), reviewDisposition: "legal_but_weak" }, repo)
     const duplicate = admitQuarantinedIntakePacket({ ...first }, repo)
-    const retry = admitQuarantinedIntakePacket({ ...input(p, packet("retry")), retryParentRoot: invalid.attemptRoot }, repo)
+    const retry = admitQuarantinedIntakePacket({ ...input(p), retryParentRoot: invalid.attemptRoot }, repo)
     expect(invalid.disposition).toBe("invalid")
     expect(conflict.disposition).toBe("rejected")
     expect(weak.disposition).toBe("legal_but_weak")
@@ -76,21 +86,65 @@ describe("quarantined intake", () => {
     const repo = repository(), p = protocol({ reviewerReuseLimit: 1, acceptanceBudget: 1, timeLimitMinutes: 2 })
     const first = admitQuarantinedIntakePacket(input(p), repo)
     const reusedReviewer = admitQuarantinedIntakePacket(input(p, packet("reuse")), repo)
-    const exhaustedAcceptance = admitQuarantinedIntakePacket(input(p, packet("acceptance"), { reviewerId: "reviewer-two" }), repo)
+    const acceptancePacket = packet("acceptance")
+    const exhaustedAcceptance = admitQuarantinedIntakePacket(input(p, acceptancePacket, { reviewerId: "reviewer-two", provenance: provenance(p, acceptancePacket, "reviewer-two") }), repo)
     expect(first.disposition).toBe("accepted")
     expect(reusedReviewer.disposition).toBe("rejected")
     expect(exhaustedAcceptance.disposition).toBe("rejected")
   })
 
+  it("requires an explicit accepted review and binds reviewer/provenance and packet build/runtime roots", () => {
+    const repo = repository(), p = protocol(), base = input(p, packet("review"))
+    const { reviewDisposition: _reviewDisposition, ...withoutReview } = base
+    const missingReview = admitQuarantinedIntakePacket(withoutReview, repo)
+    const reviewerPacket = packet("reviewer"), reviewerBase = input(p, reviewerPacket)
+    const mismatchedReviewerProvenance = { ...reviewerBase.provenance, reviewerId: "reviewer-two" as const }
+    const mismatchedReviewer = admitQuarantinedIntakePacket({ ...reviewerBase, provenance: { ...mismatchedReviewerProvenance, root: deriveIntakeProvenanceRoot(mismatchedReviewerProvenance) } }, repo)
+    expect(missingReview.disposition).toBe("rejected")
+    expect(mismatchedReviewer.disposition).toBe("invalid")
+    for (const field of ["builderRoot", "toolchainRoot", "runtimeRoot"] as const) {
+      const candidate = input(p, packet(`cross-${field}`)), changed = { ...candidate.provenance, [field]: root("1") }
+      const result = admitQuarantinedIntakePacket({ ...candidate, provenance: { ...changed, root: deriveIntakeProvenanceRoot(changed) } }, repo)
+      expect(result.disposition, field).toBe("invalid")
+    }
+  })
+
+  it("rejects prose or opaque source bytes through non-executing runtime-js validation", () => {
+    const repo = repository(), p = protocol(), prose = new TextEncoder().encode("advice only"), prosePacket = packet("prose", prose)
+    const result = admitQuarantinedIntakePacket(input(p, prosePacket, { sourceBytes: prose }), repo)
+    expect(result.disposition).toBe("invalid")
+    const unsupportedBase = input(p, packet("unsupported")), unsupportedValue = { ...unsupportedBase.packet, nativeLane: { ...unsupportedBase.packet.nativeLane, language: "python" as const } }
+    const unsupportedPacket = { ...unsupportedValue, root: deriveFactoryOraclePacketRoot(unsupportedValue) }
+    const unsupported = admitQuarantinedIntakePacket(input(p, unsupportedPacket, { provenance: provenance(p, unsupportedPacket) }), repo)
+    expect(unsupported.disposition).toBe("invalid")
+  })
+
+  it("keeps retry lineage within the active protocol and fails closed on missing accounting artifacts", () => {
+    const repo = repository(), p = protocol(), first = admitQuarantinedIntakePacket(input(p), repo), other = protocol({ participantId: "participant-beta" })
+    const crossProtocolRetry = admitQuarantinedIntakePacket({ ...input(other), retryParentRoot: first.attemptRoot }, repo)
+    expect(crossProtocolRetry.disposition).toBe("invalid")
+    const artifacts = readdirSync(repo.directory).filter((name) => name.startsWith("factory-artifact-"))
+    for (const artifact of artifacts) unlinkSync(join(repo.directory, artifact))
+    expect(() => admitQuarantinedIntakePacket(input(p, packet("corrupt")), repo)).toThrow()
+  })
+
+  it("scopes elapsed usage to the active protocol", () => {
+    const repo = repository(), firstProtocol = protocol({ timeLimitMinutes: 2, acceptanceBudget: 3 }), otherProtocol = protocol({ participantId: "participant-beta", timeLimitMinutes: 1 })
+    expect(admitQuarantinedIntakePacket(input(firstProtocol, packet("p1"), { elapsedMinutes: 1 }), repo).disposition).toBe("accepted")
+    expect(admitQuarantinedIntakePacket(input(otherProtocol, packet("p2"), { elapsedMinutes: 1 }), repo).disposition).toBe("accepted")
+    expect(admitQuarantinedIntakePacket(input(firstProtocol, packet("p3"), { elapsedMinutes: 1, reviewerId: "reviewer-two", provenance: provenance(firstProtocol, packet("p3"), "reviewer-two") }), repo).disposition).toBe("accepted")
+  })
+
   it("rejects caller ordinals/unknown fields, NaN or negative elapsed values, and retains the charge", () => {
     const repo = repository(), p = protocol()
     const unknown = admitQuarantinedIntakePacket({ ...input(p), submissionOrdinal: 0 } as never, repo)
-    const nan = admitQuarantinedIntakePacket({ ...input(p, packet("nan")), elapsedMinutes: Number.NaN }, repo)
-    const negative = admitQuarantinedIntakePacket({ ...input(p, packet("negative")), elapsedMinutes: -1 }, repo)
+    const nanRepo = repository(), nan = admitQuarantinedIntakePacket({ ...input(p, packet("nan")), elapsedMinutes: Number.NaN }, nanRepo)
+    const negativeRepo = repository(), negative = admitQuarantinedIntakePacket({ ...input(p, packet("negative")), elapsedMinutes: -1 }, negativeRepo)
     expect(unknown.disposition).toBe("invalid")
     expect(nan.disposition).toBe("invalid")
     expect(negative.disposition).toBe("invalid")
-    expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toHaveLength(3)
+    expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toHaveLength(1)
+    expect(() => admitQuarantinedIntakePacket(input(p, packet("after-nan")), nanRepo)).toThrow("INTAKE_ACCOUNTING_UNCERTAIN")
   })
 
   it("charges malformed retry metadata before rejecting it", () => {

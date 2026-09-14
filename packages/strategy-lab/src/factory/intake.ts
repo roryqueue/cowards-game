@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { readFileSync, readdirSync } from "node:fs"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
+import { validateStrategySource } from "@cowards/runtime-js"
 import { admitFactory, type FactorySourceAdmission } from "./admission.js"
 import { factoryProposalFromPacket, FactoryOraclePacketSchema, type FactoryOraclePacket } from "./contracts.js"
 import { admitFrozenIntakeProtocol, type FrozenIntakeProtocol } from "./intake-protocol.js"
@@ -53,17 +54,27 @@ export interface IntakeProvenance {
 const provenanceKeys = ["schemaVersion", "root", "participantId", "reviewerId", "packetRoot", "sourceRoot", "builderRoot", "toolchainRoot", "dependencyRoot", "runtimeRoot", "sourceKind", "execution", "liveAgent", "complete"] as const
 const withoutRoot = (value: Record<string, unknown>) => { const { root: _root, ...rest } = value; return rest }
 export const deriveIntakeProvenanceRoot = (value: Omit<IntakeProvenance, "root"> | IntakeProvenance): LabRoot => labRoot("intake-provenance-v1", withoutRoot(value as unknown as Record<string, unknown>))
-const admitProvenance = (value: unknown, protocol: FrozenIntakeProtocol, packetRoot: LabRoot, sourceRoot: LabRoot): Readonly<IntakeProvenance> => {
+const admitProvenance = (value: unknown, protocol: FrozenIntakeProtocol, packetRoot: LabRoot, sourceRoot: LabRoot, reviewerId: string, packet: FactoryOraclePacket): Readonly<IntakeProvenance> => {
   const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
   if (!admitted.ok || admitted.canonicalByteLength > 131072 || !exact(admitted.value, provenanceKeys)) return fail("PROVENANCE")
   const provenance = admitted.value as Record<string, unknown>
   if (provenance.schemaVersion !== "intake-provenance-v1" || !isRoot(provenance.root) ||
-      provenance.participantId !== protocol.participantId || typeof provenance.reviewerId !== "string" || !protocol.reviewerIds.includes(provenance.reviewerId) ||
+      provenance.participantId !== protocol.participantId || provenance.reviewerId !== reviewerId || typeof provenance.reviewerId !== "string" || !protocol.reviewerIds.includes(provenance.reviewerId) ||
       provenance.packetRoot !== packetRoot || provenance.sourceRoot !== sourceRoot ||
-      !isRoot(provenance.builderRoot) || !isRoot(provenance.toolchainRoot) || !isRoot(provenance.dependencyRoot) || !isRoot(provenance.runtimeRoot) ||
+      provenance.builderRoot !== packet.build.buildRoot || provenance.toolchainRoot !== packet.build.toolchainRoot || !isRoot(provenance.dependencyRoot) || provenance.runtimeRoot !== packet.nativeLane.runtimeProfileRoot ||
       provenance.sourceKind !== "explicit-deterministic" || provenance.execution !== "data-only" || provenance.liveAgent !== false || provenance.complete !== true ||
       provenance.root !== deriveIntakeProvenanceRoot(provenance as unknown as IntakeProvenance)) return fail("PROVENANCE")
   return freezeLabValue(provenance as unknown as IntakeProvenance)
+}
+
+const validateDeterministicSource = (sourceBytes: Uint8Array, packet: FactoryOraclePacket): void => {
+  let source: string
+  try { source = new TextDecoder("utf-8", { fatal: true }).decode(sourceBytes) } catch { throw new TypeError("source-invalid-encoding") }
+  if (source.length === 0 || source.includes("\u0000")) throw new TypeError("source-invalid-kind")
+  if (packet.nativeLane.language === "typescript" || packet.nativeLane.language === "javascript") {
+    const validation = validateStrategySource(source)
+    if (!validation.valid) throw new TypeError("source-invalid-strategy")
+  } else throw new TypeError("source-unsupported-language")
 }
 
 export interface QuarantinedIntakePacket {
@@ -111,11 +122,16 @@ const accountingRoot = (repository: FactoryRepository, value: Record<string, unk
   if (!admitted.ok) return rawRoot(value, "intake-invalid-accounting-v1")
   return publishFactoryArtifact(repository, admitted.canonicalBytes)
 }
-const readAccounting = (repository: FactoryRepository, root: LabRoot): Record<string, unknown> | null => {
-  try {
-    const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, root), { profile: "canonical-manifest", operation: "require-canonical" })
-    return parsed.ok && parsed.value && typeof parsed.value === "object" && !Array.isArray(parsed.value) ? parsed.value as Record<string, unknown> : null
-  } catch { return null }
+const readAccounting = (repository: FactoryRepository, root: LabRoot, expected?: { readonly taskRoot: LabRoot; readonly candidateRoot: LabRoot }): Record<string, unknown> => {
+  const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, root), { profile: "canonical-manifest", operation: "require-canonical" })
+  if (!parsed.ok || !parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return fail("ACCOUNTING")
+  const value = parsed.value as Record<string, unknown>
+  if (!exact(value, ["schemaVersion", "protocolRoot", "attemptOrdinal", "participantId", "reviewerId", "packetRoot", "provenanceRoot", "elapsedMinutes"]) ||
+      value.schemaVersion !== "intake-accounting-v1" || !isRoot(value.protocolRoot) || typeof value.attemptOrdinal !== "number" || !Number.isSafeInteger(value.attemptOrdinal) || value.attemptOrdinal < 1 ||
+      !isIdentifier(value.participantId) || !isIdentifier(value.reviewerId) || !isRoot(value.packetRoot) || !isRoot(value.provenanceRoot) ||
+      !(value.elapsedMinutes === null || (typeof value.elapsedMinutes === "number" && Number.isFinite(value.elapsedMinutes) && value.elapsedMinutes >= 0)) ||
+      (expected !== undefined && (value.protocolRoot !== expected.taskRoot || value.packetRoot !== expected.candidateRoot))) return fail("ACCOUNTING")
+  return value
 }
 const terminalEvidence = (attemptRoot: LabRoot, protocolRoot: LabRoot, disposition: string, reason: string): LabRoot => labRoot("intake-terminal-evidence-v1", { attemptRoot, protocolRoot, disposition, reason })
 
@@ -123,6 +139,9 @@ const terminalEvidence = (attemptRoot: LabRoot, protocolRoot: LabRoot, dispositi
 export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, repository: FactoryRepository): Readonly<QuarantinedIntakeResult> => {
   const protocol = admitFrozenIntakeProtocol(input?.protocol)
   const packetRoot = safePacketRoot(input?.packet), prior = readLedger(repository), attemptOrdinal = prior.length + 1
+  const priorAccounting = prior.map((record) => ({ record, accounting: readAccounting(repository, record.start.resourceAccountingRoot, { taskRoot: record.start.taskRoot, candidateRoot: record.start.candidateRoot }) }))
+  const priorOrdinals = priorAccounting.map(({ accounting }) => accounting.attemptOrdinal as number)
+  if (priorAccounting.some(({ accounting }) => accounting.elapsedMinutes === null) || new Set(priorOrdinals).size !== priorOrdinals.length || priorOrdinals.some((ordinal) => ordinal < 1 || ordinal > prior.length) || new Set(Array.from({ length: prior.length }, (_, index) => index + 1)).size !== new Set(priorOrdinals).size) return fail("ACCOUNTING_UNCERTAIN")
   const provenanceRoot = safeProvenanceRoot(input?.provenance)
   const participantId = typeof input?.participantId === "string" ? input.participantId : "invalid-participant"
   const reviewerId = typeof input?.reviewerId === "string" ? input.reviewerId : "invalid-reviewer"
@@ -155,29 +174,26 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
         (input.retryParentRoot !== undefined && input.retryParentRoot !== null && !isRoot(input.retryParentRoot)) ||
         (input.reviewDisposition !== undefined && !["accept", "reject", "legal_but_weak"].includes(input.reviewDisposition))) throw new TypeError("invalid-input")
     if (input.retryParentRoot !== undefined && input.retryParentRoot !== null) {
-      if (!prior.some((record) => record.start.root === input.retryParentRoot)) throw new TypeError("invalid-retry")
+      if (!prior.some((record) => record.start.root === input.retryParentRoot && record.start.taskRoot === protocol.root && record.start.candidateRoot === packetRoot)) throw new TypeError("invalid-retry")
       disposition = "retried"; reason = "declared-retry"; throw new TypeError("terminal")
     }
     const packet = FactoryOraclePacketSchema.parse(input.packet)
-    admitProvenance(input.provenance, protocol, packet.root, packet.source.root)
+    admitProvenance(input.provenance, protocol, packet.root, packet.source.root, input.reviewerId, packet)
     if (input.sourceBytes.byteLength !== packet.source.byteLength || byteRoot(input.sourceBytes) !== packet.source.root) throw new TypeError("source-invalid")
+    validateDeterministicSource(input.sourceBytes, packet)
     if (prior.some((record) => record.start.taskRoot === protocol.root && record.start.candidateRoot === packet.root)) { disposition = "duplicate"; reason = "packet-already-retained"; throw new TypeError("terminal") }
-    const reviewerUses = prior.filter((record) => {
-      const accountingRecord = readAccounting(repository, record.start.resourceAccountingRoot)
-      return record.start.taskRoot === protocol.root && accountingRecord?.reviewerId === input.reviewerId
-    }).length
-    const accepted = prior.filter((record) => record.start.taskRoot === protocol.root && record.terminal.disposition === "accepted").length
-    const elapsedTotal = prior.reduce((total, record) => {
-      const value = readAccounting(repository, record.start.resourceAccountingRoot)?.elapsedMinutes
-      return total + (typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0)
-    }, 0)
-    const used = prior.filter((record) => record.start.taskRoot === protocol.root).length
+    const scoped = priorAccounting.filter(({ record }) => record.start.taskRoot === protocol.root)
+    const reviewerUses = scoped.filter(({ accounting }) => accounting.reviewerId === input.reviewerId).length
+    const accepted = scoped.filter(({ record }) => record.terminal.disposition === "accepted").length
+    const elapsedTotal = scoped.reduce((total, { accounting }) => total + (typeof accounting.elapsedMinutes === "number" ? accounting.elapsedMinutes : 0), 0)
+    const used = scoped.length
     if (used >= protocol.submissionLimit || used >= protocol.reviewerLimit || reviewerUses >= protocol.reviewerReuseLimit || accepted >= protocol.acceptanceBudget || elapsedTotal + input.elapsedMinutes > protocol.timeLimitMinutes) {
       disposition = "rejected"; reason = "budget-exhausted"; throw new TypeError("terminal")
     }
     if (!input.conflictFree) { disposition = "rejected"; reason = "conflict-declared"; throw new TypeError("terminal") }
     if (input.reviewDisposition === "reject") { disposition = "rejected"; reason = "review-rejected"; throw new TypeError("terminal") }
     if (input.reviewDisposition === "legal_but_weak") { disposition = "legal_but_weak"; reason = "review-weak"; throw new TypeError("terminal") }
+    if (input.reviewDisposition !== "accept") { disposition = "rejected"; reason = "review-required"; throw new TypeError("terminal") }
     admission = admitFactory({ packet, proposal: factoryProposalFromPacket(packet), sourceBytes: new Uint8Array(input.sourceBytes), repository })
     disposition = "accepted"; reason = "common-admission"
   } catch (error) {
