@@ -8,7 +8,9 @@ import {
   assertModelSourceClosure,
   deriveFrozenModelBundleRoot,
   deriveFrozenModelResponseRoot,
+  getIssuedModelFactoryPacketProvenance,
   emitModelFactoryPacket,
+  requireIssuedModelFactoryPacketProvenance,
 } from "./index.js"
 
 const root = (value: string) => `sha256:${createHash("sha256").update(value, "utf8").digest("hex")}` as const
@@ -74,6 +76,44 @@ describe("frozen model oracle", () => {
     expect(FactoryOraclePacketSchema.parse(packet)).toEqual(packet)
     expect(packet.source.root).toBe(sourceRoot)
     expect(packet.provider).toEqual(bundle.provider)
+  })
+
+  it("retains an issued full frozen-bundle companion and rejects clones or lineage overrides", () => {
+    const bundle = admitFrozenModelBundle(bundleInput())
+    const packet = emitModelFactoryPacket(bundle, factoryRequest())
+    const provenance = getIssuedModelFactoryPacketProvenance(packet)
+    expect(provenance.bundle).toBe(bundle)
+    expect(provenance.bundleRoot).toBe(bundle.root)
+    expect(provenance.packetRoot).toBe(packet.root)
+    expect(requireIssuedModelFactoryPacketProvenance(packet, provenance)).toBe(provenance)
+    expect(() => requireIssuedModelFactoryPacketProvenance(packet, structuredClone(provenance))).toThrow("MODEL_UNISSUED_PROVENANCE")
+    expect(() => getIssuedModelFactoryPacketProvenance({ ...packet })).toThrow("MODEL_UNISSUED_PACKET")
+    const request = factoryRequest()
+    expect(() => emitModelFactoryPacket(bundle, { ...request, lineage: { ...request.lineage, correctionRoot: root("lineage-override") } }))
+      .toThrow("MODEL_LINEAGE")
+  })
+
+  it("changes the provenance companion root when retained frozen request, response, accounting, or attempt changes", () => {
+    const baseline = admitFrozenModelBundle(bundleInput())
+    const baselineRoot = getIssuedModelFactoryPacketProvenance(emitModelFactoryPacket(baseline, factoryRequest())).root
+    const requestInput = bundleInput()
+    const changedRequest = { ...requestInput, request: { ...requestInput.request, byteLength: requestInput.request.byteLength + 1 } }
+    const accountingInput = bundleInput()
+    const changedAccounting = { ...accountingInput, accounting: { ...accountingInput.accounting, inputTokens: accountingInput.accounting.inputTokens + 1 } }
+    const attemptInput = bundleInput()
+    const changedAttempt = { ...attemptInput, attempt: { ...attemptInput.attempt, ordinal: attemptInput.attempt.ordinal + 1 } }
+    const responseInput = bundleInput(), changedSource = `${source}\n`
+    const response = { format: "explicit-typescript-source" as const, source: changedSource }
+    const changedResponse = {
+      ...responseInput,
+      response: { ...response, root: deriveFrozenModelResponseRoot(response) },
+      source: { root: root(changedSource), sha256: root(changedSource), byteLength: new TextEncoder().encode(changedSource).byteLength, encoding: "utf8" as const },
+    }
+    for (const changed of [changedRequest, changedAccounting, changedAttempt, changedResponse]) {
+      const bundle = admitFrozenModelBundle({ ...changed, root: deriveFrozenModelBundleRoot(changed) })
+      const companion = getIssuedModelFactoryPacketProvenance(emitModelFactoryPacket(bundle, factoryRequest()))
+      expect(companion.root).not.toBe(baselineRoot)
+    }
   })
 
   it("rejects structural clones and source with an unbound capability or wrong export shape", () => {

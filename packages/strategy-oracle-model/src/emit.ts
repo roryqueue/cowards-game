@@ -5,7 +5,7 @@ import {
   FactoryOraclePacketSchema,
   type FactoryOraclePacket,
 } from "../../strategy-lab/src/factory/index.js"
-import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, type LabRoot } from "../../strategy-lab/src/contracts.js"
+import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, freezeLabValue, labRoot, type LabRoot } from "../../strategy-lab/src/contracts.js"
 import { requireFrozenModelBundle, type FrozenModelBundle } from "./bundle.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
@@ -13,11 +13,57 @@ const NAME = /^[a-z][a-z0-9-]{0,95}$/u
 const sourceBytes = new TextEncoder()
 const fail = (code: string): never => { throw new TypeError(`MODEL_${code}`) }
 const root = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
+const same = (left: unknown, right: unknown) => labRoot("frozen-model-comparison-v1", left) === labRoot("frozen-model-comparison-v1", right)
+const issuedProvenance = new WeakSet<object>()
+const provenanceByPacket = new WeakMap<object, Readonly<ModelFactoryPacketProvenance>>()
 
 export interface ModelFactoryRequest {
   readonly split: "development" | "validation" | "probe"; readonly doctrineFamily: string
   readonly build: { readonly buildRoot: LabRoot; readonly toolchainRoot: LabRoot }
   readonly lineage: { readonly predecessorRoot: LabRoot; readonly correctionRoot: LabRoot | null; readonly retryParentRoot: LabRoot | null }
+}
+
+/** Private immutable companion retained with the exact emitted packet, never a caller assertion. */
+export interface ModelFactoryPacketProvenance {
+  readonly schemaVersion: "frozen-model-packet-provenance-v1"; readonly privacy: "private_offline"; readonly root: LabRoot
+  readonly bundleRoot: LabRoot; readonly packetRoot: LabRoot; readonly sourceRoot: LabRoot; readonly bundle: Readonly<FrozenModelBundle>
+}
+
+export const deriveModelFactoryPacketProvenanceRoot = (value: Omit<ModelFactoryPacketProvenance, "root">): LabRoot =>
+  labRoot("frozen-model-packet-provenance-v1", value)
+
+const issueModelFactoryPacketProvenance = (packet: FactoryOraclePacket, bundle: Readonly<FrozenModelBundle>): Readonly<ModelFactoryPacketProvenance> => {
+  const value = {
+    schemaVersion: "frozen-model-packet-provenance-v1" as const,
+    privacy: "private_offline" as const,
+    bundleRoot: bundle.root,
+    packetRoot: packet.root,
+    sourceRoot: bundle.source.root,
+    bundle,
+  }
+  const provenance = freezeLabValue({ ...value, root: deriveModelFactoryPacketProvenanceRoot(value) })
+  issuedProvenance.add(provenance)
+  provenanceByPacket.set(packet, provenance)
+  return provenance
+}
+
+/** Requires the exact emitted packet and its issued companion, then rederives all linkage roots. */
+export const requireIssuedModelFactoryPacketProvenance = (
+  packet: FactoryOraclePacket,
+  provenance: ModelFactoryPacketProvenance,
+): Readonly<ModelFactoryPacketProvenance> => {
+  if (provenanceByPacket.get(packet) !== provenance || !issuedProvenance.has(provenance)) fail("UNISSUED_PROVENANCE")
+  const bundle = requireFrozenModelBundle(provenance.bundle)
+  if (provenance.root !== deriveModelFactoryPacketProvenanceRoot({ schemaVersion: provenance.schemaVersion, privacy: provenance.privacy, bundleRoot: provenance.bundleRoot, packetRoot: provenance.packetRoot, sourceRoot: provenance.sourceRoot, bundle: provenance.bundle }) ||
+      provenance.bundleRoot !== bundle.root || provenance.packetRoot !== packet.root || provenance.sourceRoot !== bundle.source.root ||
+      packet.source.root !== provenance.sourceRoot || !same(packet.provider, bundle.provider) || !same(packet.lineage, bundle.lineage)) fail("PROVENANCE_BINDING")
+  return provenance
+}
+
+export const getIssuedModelFactoryPacketProvenance = (packet: FactoryOraclePacket): Readonly<ModelFactoryPacketProvenance> => {
+  const provenance = provenanceByPacket.get(packet)
+  if (!provenance) return fail("UNISSUED_PACKET")
+  return requireIssuedModelFactoryPacketProvenance(packet, provenance)
 }
 
 /** Supplements lexical runtime validation with syntax/default-export/free-identifier closure checks. */
@@ -79,6 +125,7 @@ const validateRequest = (request: ModelFactoryRequest): void => {
 export const emitModelFactoryPacket = (bundle: FrozenModelBundle, request: ModelFactoryRequest): FactoryOraclePacket => {
   const admitted = requireFrozenModelBundle(bundle)
   validateRequest(request)
+  if (!same(request.lineage, admitted.lineage)) fail("LINEAGE")
   assertModelSourceClosure(admitted.response.source)
   const packet = {
     schemaVersion: "factory-oracle-packet-v1" as const,
@@ -96,5 +143,7 @@ export const emitModelFactoryPacket = (bundle: FrozenModelBundle, request: Model
     split: request.split,
   }
   if (admitted.nativeLane.runtimeProfileRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot || sourceBytes.encode(admitted.response.source).byteLength !== admitted.source.byteLength) fail("PINNED_LANE")
-  return FactoryOraclePacketSchema.parse({ ...packet, root: deriveFactoryOraclePacketRoot(packet) })
+  const emitted = FactoryOraclePacketSchema.parse({ ...packet, root: deriveFactoryOraclePacketRoot(packet) })
+  issueModelFactoryPacketProvenance(emitted, admitted)
+  return emitted
 }

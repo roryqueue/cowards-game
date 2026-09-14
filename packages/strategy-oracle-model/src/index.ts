@@ -6,5 +6,11 @@ export {
   requireFrozenModelBundle,
 } from "./bundle.js"
 export type { FrozenModelBlock, FrozenModelBundle, FrozenModelProvider } from "./bundle.js"
-export { assertModelSourceClosure, emitModelFactoryPacket } from "./emit.js"
-export type { ModelFactoryRequest } from "./emit.js"
+export {
+  assertModelSourceClosure,
+  deriveModelFactoryPacketProvenanceRoot,
+  emitModelFactoryPacket,
+  getIssuedModelFactoryPacketProvenance,
+  requireIssuedModelFactoryPacketProvenance,
+} from "./emit.js"
+export type { ModelFactoryPacketProvenance, ModelFactoryRequest } from "./emit.js"
