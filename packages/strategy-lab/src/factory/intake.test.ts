@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { createHash } from "node:crypto"
-import { mkdtempSync, realpathSync, readdirSync, rmSync, unlinkSync } from "node:fs"
+import { mkdtempSync, realpathSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { labRoot } from "../contracts.js"
 import { factoryOraclePacketFixture } from "./contracts.js"
 import { deriveFactoryOraclePacketRoot } from "./identity.js"
-import { createFactoryRepository, resumeFactoryAttemptInventory } from "./repository.js"
+import { createFactoryRepository, readFactoryArtifact, resumeFactoryAttemptInventory } from "./repository.js"
 import { admitQuarantinedIntakePacket, deriveIntakeProvenanceRoot, type IntakeProvenance, type QuarantinedIntakePacket } from "./intake.js"
 import { admitFrozenIntakeProtocol, blockedIntakeConfiguration, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot, type FrozenIntakeProtocol } from "./intake-protocol.js"
 
@@ -24,7 +24,7 @@ const protocol = (overrides: Partial<FrozenIntakeProtocol> = {}): FrozenIntakePr
   const authorized = { ...draft, authorization: deriveIntakeAuthorizationRoot(draft) }
   return admitFrozenIntakeProtocol({ ...authorized, root: deriveFrozenIntakeProtocolRoot(authorized) })
 }
-const source = new TextEncoder().encode("export default { selectActivations() { return { activationOrders: [], StrategyMemory: {} } }, soldierBrain() { return { action: { type: 'ADVANCE' }, SoldierMemory: {} } } }")
+const source = new TextEncoder().encode("export default { selectActivations() { return { activationOrders: [], strategyMemory: {} } }, soldierBrain() { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: {} } } }")
 const sourceRoot = `sha256:${createHash("sha256").update(source).digest("hex")}` as `sha256:${string}`
 const packet = (suffix = "", sourceBytes = source): ReturnType<typeof factoryOraclePacketFixture> => {
   const fixture = factoryOraclePacketFixture()
@@ -53,8 +53,13 @@ afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: tru
 describe("quarantined intake", () => {
   it("does not invent authority for malformed protocol configuration", () => {
     const repo = repository()
-    expect(() => admitQuarantinedIntakePacket({ protocol: {} } as never, repo)).toThrow("INTAKE_PROTOCOL")
-    expect(readdirSync(repo.directory)).toEqual([])
+    const result = admitQuarantinedIntakePacket({ protocol: {} } as never, repo)
+    expect(result).toMatchObject({ disposition: "blocked_configuration", attemptRoot: null, authorized: false, allocation: "none" })
+    if (result.disposition !== "blocked_configuration") throw new Error("expected blocked configuration")
+    expect(Object.isFrozen(result)).toBe(true)
+    expect(JSON.parse(new TextDecoder().decode(readFactoryArtifact(repo, result.artifactRoot)))).toEqual(blockedIntakeConfiguration("incomplete_protocol"))
+    expect(readdirSync(repo.directory).every(name => name.startsWith("factory-artifact-"))).toBe(true)
+    expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toEqual([])
     const blocked = blockedIntakeConfiguration("incomplete_protocol")
     expect(blocked.authorized).toBe(false)
     expect(blocked.allocation).toBe("none")
@@ -126,6 +131,27 @@ describe("quarantined intake", () => {
     const artifacts = readdirSync(repo.directory).filter((name) => name.startsWith("factory-artifact-"))
     for (const artifact of artifacts) unlinkSync(join(repo.directory, artifact))
     expect(() => admitQuarantinedIntakePacket(input(p, packet("corrupt")), repo)).toThrow()
+  })
+
+  it("rejects renamed starts, orphan terminals and terminals whose root does not bind their start", () => {
+    for (const mutation of ["renamed-start", "orphan-terminal", "mismatched-terminal"] as const) {
+      const repo = repository()
+      const first = admitQuarantinedIntakePacket(input(), repo)
+      const names = readdirSync(repo.directory)
+      const startName = names.find(name => name.endsWith(".started.json"))!
+      const terminalName = names.find(name => name.endsWith(".terminal.json"))!
+      if (mutation === "renamed-start") renameSync(join(repo.directory, startName), join(repo.directory, `factory-attempt-${"f".repeat(64)}.started.json`))
+      if (mutation === "orphan-terminal") unlinkSync(join(repo.directory, startName))
+      if (mutation === "mismatched-terminal") {
+        // A separately valid terminal is placed under this start's filename.
+        const otherRepo = repository()
+        const other = admitQuarantinedIntakePacket(input(protocol(), packet("other")), otherRepo)
+        expect(other.attemptRoot).not.toBe(first.attemptRoot)
+        const otherName = readdirSync(otherRepo.directory).find(name => name.endsWith(".terminal.json"))!
+        writeFileSync(join(repo.directory, terminalName), readFileSync(join(otherRepo.directory, otherName)))
+      }
+      expect(() => admitQuarantinedIntakePacket(input(protocol(), packet("after-corruption")), repo), mutation).toThrow()
+    }
   })
 
   it("scopes elapsed usage to the active protocol", () => {

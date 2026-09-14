@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto"
-import { readFileSync, readdirSync } from "node:fs"
+import { lstatSync, readFileSync, readdirSync } from "node:fs"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { validateStrategySource } from "@cowards/runtime-js"
 import { admitFactory, type FactorySourceAdmission } from "./admission.js"
 import { factoryProposalFromPacket, FactoryOraclePacketSchema, type FactoryOraclePacket } from "./contracts.js"
-import { admitFrozenIntakeProtocol, type FrozenIntakeProtocol } from "./intake-protocol.js"
-import { createFactoryAttemptStart, createFactoryAttemptTerminal, validateFactoryAttemptStart, validateFactoryAttemptTerminal, type FactoryAttemptStart, type FactoryAttemptTerminal } from "./ledger.js"
+import { admitFrozenIntakeProtocol, blockedIntakeConfiguration, type FrozenIntakeProtocol } from "./intake-protocol.js"
+import { createFactoryAttemptStart, createFactoryAttemptTerminal, validateFactoryAttemptLedger, validateFactoryAttemptStart, validateFactoryAttemptTerminal, type FactoryAttemptStart, type FactoryAttemptTerminal } from "./ledger.js"
 import { publishFactoryArtifact, publishFactoryAttemptTerminal, readFactoryArtifact, recordFactoryAttemptStart, type FactoryRepository } from "./repository.js"
 import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 
@@ -89,11 +89,21 @@ export interface QuarantinedIntakePacket {
   readonly retryParentRoot?: LabRoot | null
   readonly reviewDisposition?: "accept" | "reject" | "legal_but_weak"
 }
-export interface QuarantinedIntakeResult {
+export interface QuarantinedIntakeAttemptResult {
   readonly disposition: "accepted" | "rejected" | "invalid" | "duplicate" | "legal_but_weak" | "retried"
   readonly attemptRoot: LabRoot
   readonly admission?: FactorySourceAdmission
 }
+export interface QuarantinedIntakeBlockedResult {
+  readonly disposition: "blocked_configuration"
+  readonly attemptRoot: null
+  readonly artifactRoot: LabRoot
+  readonly configurationRoot: LabRoot
+  readonly authorized: false
+  readonly allocation: "none"
+  readonly admission?: never
+}
+export type QuarantinedIntakeResult = QuarantinedIntakeAttemptResult | QuarantinedIntakeBlockedResult
 
 const requiredInputKeys = ["protocol", "packet", "sourceBytes", "provenance", "participantId", "reviewerId", "elapsedMinutes", "conflictFree"] as const
 const optionalInputKeys = ["retryParentRoot", "reviewDisposition"] as const
@@ -102,20 +112,29 @@ const readLedger = (repository: FactoryRepository): ReadonlyArray<{ start: Facto
   for (const name of readdirSync(repository.directory)) {
     const started = /^factory-attempt-([a-f0-9]{64})\.started\.json$/u.exec(name)
     const terminal = /^factory-attempt-([a-f0-9]{64})\.terminal\.json$/u.exec(name)
+    if (!started && !terminal) {
+      if (!/^factory-artifact-[a-f0-9]{64}\.bin$/u.test(name)) return fail("UNCERTAIN_LEDGER")
+      continue
+    }
+    const path = `${repository.directory}/${name}`
+    const stat = lstatSync(path)
+    if (!stat.isFile() || stat.size > 262144) return fail("LEDGER")
     if (started) {
-      const parsed = admitCanonicalJsonBytes(readFileSync(`${repository.directory}/${name}`), { profile: "canonical-manifest", operation: "require-canonical" })
+      const parsed = admitCanonicalJsonBytes(readFileSync(path), { profile: "canonical-manifest", operation: "require-canonical" })
       if (!parsed.ok) return fail("LEDGER")
       const value = validateFactoryAttemptStart(parsed.value)
+      if (value.root !== `sha256:${started[1]}` || starts.has(value.root)) return fail("LEDGER_BINDING")
       starts.set(value.root, value)
     } else if (terminal) {
-      const parsed = admitCanonicalJsonBytes(readFileSync(`${repository.directory}/${name}`), { profile: "canonical-manifest", operation: "require-canonical" })
+      const parsed = admitCanonicalJsonBytes(readFileSync(path), { profile: "canonical-manifest", operation: "require-canonical" })
       if (!parsed.ok) return fail("LEDGER")
       const value = validateFactoryAttemptTerminal(parsed.value)
+      if (value.startRoot !== `sha256:${terminal[1]}` || terminals.has(value.startRoot)) return fail("LEDGER_BINDING")
       terminals.set(value.startRoot, value)
     }
   }
-  if ([...starts.keys()].some((root) => !terminals.has(root))) return fail("UNCERTAIN_LEDGER")
-  return [...starts.values()].map((start) => ({ start, terminal: terminals.get(start.root)! }))
+  if ([...starts.keys()].some((root) => !terminals.has(root)) || [...terminals.keys()].some((root) => !starts.has(root))) return fail("UNCERTAIN_LEDGER")
+  return [...starts.values()].map((start) => ({ start, terminal: validateFactoryAttemptLedger(start, terminals.get(start.root)!) }))
 }
 const accountingRoot = (repository: FactoryRepository, value: Record<string, unknown>): LabRoot => {
   const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
@@ -137,9 +156,19 @@ const readAccounting = (repository: FactoryRepository, root: LabRoot, expected?:
 }
 const terminalEvidence = (attemptRoot: LabRoot, protocolRoot: LabRoot, disposition: string, reason: string): LabRoot => labRoot("intake-terminal-evidence-v1", { attemptRoot, protocolRoot, disposition, reason })
 
-/** Charge and durably start before inspecting the hostile packet; never execute source. */
+/** Admit configuration first; with valid authority, charge before hostile packet validation. */
 export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, repository: FactoryRepository): Readonly<QuarantinedIntakeResult> => {
-  const protocol = admitFrozenIntakeProtocol(input?.protocol)
+  let protocol: Readonly<FrozenIntakeProtocol>
+  try { protocol = admitFrozenIntakeProtocol(input?.protocol) }
+  catch {
+    // No valid protocol means no budget or participant authority. Retain only
+    // the coarse configuration refusal, without reading source or allocating.
+    const blocked = blockedIntakeConfiguration("incomplete_protocol")
+    const encoded = admitCanonicalJsonValue(blocked, { profile: "canonical-manifest" })
+    if (!encoded.ok) return fail("BLOCKED_CONFIGURATION")
+    const artifactRoot = publishFactoryArtifact(repository, encoded.canonicalBytes)
+    return freezeLabValue({ disposition: "blocked_configuration", attemptRoot: null, artifactRoot, configurationRoot: blocked.root, authorized: false, allocation: "none" })
+  }
   const packetRoot = safePacketRoot(input?.packet), prior = readLedger(repository), attemptOrdinal = prior.length + 1
   const priorAccounting = prior.map((record) => ({ record, accounting: readAccounting(repository, record.start.resourceAccountingRoot, { taskRoot: record.start.taskRoot, candidateRoot: record.start.candidateRoot, budgetRoot: record.start.budgetRoot, inputRoot: record.start.inputRoot }) }))
   const priorOrdinals = priorAccounting.map(({ accounting }) => accounting.attemptOrdinal as number)
@@ -165,7 +194,7 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
     retryParentRoot,
   })
   recordFactoryAttemptStart(repository, attempt)
-  let disposition: QuarantinedIntakeResult["disposition"] = "invalid", reason = "invalid-input"
+  let disposition: QuarantinedIntakeAttemptResult["disposition"] = "invalid", reason = "invalid-input"
   let admission: FactorySourceAdmission | undefined
   try {
     const inputObject = input as unknown as Record<string, unknown>

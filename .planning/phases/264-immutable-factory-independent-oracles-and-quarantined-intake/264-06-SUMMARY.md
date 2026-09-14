@@ -108,7 +108,7 @@ status: complete
 ## Decisions Made
 
 - The channel accepts opaque authorization identifiers only; it does not assert real human/external participation or invent defaults.
-- Every call receives a durable start record before hostile packet/provenance/source validation. Failed, rejected, weak, duplicate, retry, and accepted results all receive a terminal record in the common private repository.
+- With a valid admitted protocol, every submission receives a durable start record before hostile packet/provenance/source validation. Failed, rejected, weak, duplicate, retry, and accepted results receive a terminal record. Invalid configuration has no allocation authority and retains only a non-authorizing blocked artifact.
 - Acceptance, reviewer reuse, duplicate, and cumulative time checks use retained accounting artifacts rather than caller ordinals or claimed counters.
 
 ## Deviations from Plan
@@ -123,20 +123,25 @@ status: complete
 - **Verification:** Focused intake tests (6) and strategy-lab TypeScript build pass.
 - **Committed in:** follow-up fix commit below.
 
-**2. [Rule 1 - Bug] Close all eight readiness findings**
+**2. [Rule 1 - Bug] Initial eight-finding repair**
 - **Found during:** bounded Plan 264-06 intake readiness review
 - **Issue:** Acceptance did not require explicit review; reviewer/provenance and packet build/runtime identities were not fully cross-bound; retries were not protocol-scoped; source-kind validation was declarative; accounting corruption could be treated as zero; elapsed totals crossed protocols; malformed protocol handling was not explicitly non-authorizing.
-- **Fix:** Require `reviewDisposition: "accept"`, bind reviewer and builder/toolchain/runtime roots, validate deterministic source without execution, scope retry and elapsed checks to the protocol, fail closed on accounting artifacts and unknown elapsed use, bind accounting to each start's task/budget/input/candidate identity, and return an immutable non-authorizing blocked configuration without allocating an attempt for malformed protocols.
+- **Fix:** Require `reviewDisposition: "accept"`, bind reviewer and builder/toolchain/runtime roots, validate deterministic source without execution, scope retry and elapsed checks to the protocol, fail closed on accounting artifacts and unknown elapsed use, and bind accounting to each start's task/budget/input/candidate identity. Independent recheck found that blocked-configuration retention and ledger filename/orphan binding remained incomplete; the initial all-eight-closed claim was incorrect.
 - **Files modified:** `packages/strategy-lab/src/factory/intake.ts`, `packages/strategy-lab/src/factory/intake.test.ts`, `packages/strategy-lab/src/factory/intake-protocol.ts`, `packages/strategy-lab/src/factory/intake-protocol.test.ts`
 - **Verification:** Focused intake/protocol suite (14 tests), full factory suite (32 tests), and strategy-lab TypeScript build pass.
 - **Committed in:** `a2b9324f`.
 
-**Total deviations:** 2 auto-fixed (charge-boundary bug plus eight readiness findings)
+**3. [Rule 1 - Bug] Finish blocked-configuration retention and ledger linkage**
+- **Found during:** independent recheck and main source inspection.
+- **Fix:** The actual intake entrypoint publishes an immutable coarse configuration refusal before packet/source inspection, returns `blocked_configuration` with `attemptRoot: null`, and allocates no attempt. Ledger reads validate bounded regular files, exact filename/root pairs, orphan and duplicate absence, complete start/terminal binding and uncertain temporary files. The executor's accounting crosslink additions are preserved.
+- **Verification:** New tests reproduced both defects before repair; afterward all15 intake/protocol tests and the full unfiltered strategy-lab build pass. The unexecuted source fixture now uses canonical memory fields and `TURN_TO_STONE`, not a nonexistent `ADVANCE` Action.
+
+**Total deviations:** 3 same-plan repair groups; no new allocation or numbered plan.
 **Impact on plan:** All repairs remain inside the existing four-file intake scope and preserve the no-source-execution/private-only boundary.
 
 ## Issues Encountered
 
-None - focused Vitest and strategy-lab TypeScript verification pass.
+Initial passing tests did not prove connected blocked-artifact retention or ledger filename integrity. Both were reproduced and corrected in the same plan; final independent recheck is pending.
 
 ## User Setup Required
 
@@ -148,8 +153,8 @@ The private intake mechanics are repaired for downstream readiness/calibration r
 
 ## Verification
 
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — passed (14 tests).
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — passed (32 tests).
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — latest repair passed15; initial repair passed14.
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — initial repair passed32; latest combined regression remains to run.
 - `./node_modules/.bin/tsc -b packages/strategy-lab --pretty false` — passed.
 
 ## Self-Check: PASSED

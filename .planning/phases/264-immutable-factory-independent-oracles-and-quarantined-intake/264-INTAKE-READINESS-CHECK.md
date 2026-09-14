@@ -3,9 +3,11 @@ phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
 scope: plan-06-private-intake-readiness
 checked: 2026-09-14
 status: gaps_found
-targeted_test: 9/9 passed
-score: 0/2 must-have truths fully verified
-open_gaps: 8
+targeted_test: 14/14 passed
+score: 1/2 must-have truths fully verified
+recheck: 2026-09-14
+repaired_source_commit: a2b9324f
+open_gaps: 2
 ---
 
 # Phase 264 Plan 06 Intake Readiness Check
@@ -23,9 +25,27 @@ This is a bounded code-and-focused-test review of the private intake mechanics. 
 - `packages/strategy-lab/src/factory/intake.test.ts`
 - Plan 06 and its summary
 
-Targeted command: `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — **9 tests passed**.
+Targeted command: `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — **14 tests passed** after the `a2b9324f` repair.
 
-## Goal-backward truths
+## Re-check after `a2b9324f`
+
+Seven of the eight initial intake findings are closed by the repaired source and focused regressions. Explicit review acceptance, reviewer/provenance equality, same-protocol retry lineage, static source validation, packet build/runtime root binding, protocol-scoped elapsed budgets, and fail-closed accounting are now exercised. Unsupported native languages are rejected before common admission.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Explicit review and reviewer identity | PASS (mechanics) | Omitted review disposition is terminal `rejected`; only `accept` proceeds. Provenance reviewer ID must equal the charged reviewer ID. |
+| Source/provenance authenticity | PASS (mechanics) | UTF-8 and `validateStrategySource` checks reject prose/opaque bytes without source execution; builder/toolchain/runtime roots are compared to packet build/native-lane roots. |
+| Retry, time, and acceptance budgets | PASS (mechanics) | Retry parent must belong to the active protocol and same candidate packet; usage and elapsed totals are filtered to the active protocol; caller ordinals cannot set accounting. |
+| Accounting and ledger cross-links | **PARTIAL — GAP** | Corrupt/missing accounting now fails closed and accounting is cross-checked against task/candidate/budget/input roots. However `readLedger` ignores orphan terminal files and does not bind each terminal filename’s captured start root to the filename/start record before returning prior records. |
+| Invalid protocol handling | **PARTIAL — GAP** | `blockedIntakeConfiguration` now returns a frozen `{authorized:false, allocation:"none"}` record, but it is only called by a unit test. `admitQuarantinedIntakePacket` still throws from `admitFrozenIntakeProtocol` before repository charge and never publishes/retains the blocked non-authorizing artifact. |
+
+The focused fixtures remain synthetic and do not establish real participant authorization, external attack evidence, candidate validity, gameplay, or provider participation.
+
+## Historical initial review (superseded findings retained)
+
+The original 9-test review recorded eight gaps: optional review, reviewer mismatch, cross-protocol retry, malformed-protocol charging, declarative-only source kind, unbound provenance roots, accounting reset, and cross-protocol elapsed totals. The repaired source closes all except the malformed-protocol retention issue, while the stricter ledger recheck identified the separate orphan-terminal cross-link gap above.
+
+## Historical goal-backward truths
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
