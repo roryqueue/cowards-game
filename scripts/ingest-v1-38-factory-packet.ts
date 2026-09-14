@@ -9,8 +9,8 @@ import type { DistilledLegalStudent } from "../packages/strategy-oracle-teacher/
 import { admitFrozenModelBundle, type FrozenModelBundle } from "../packages/strategy-oracle-model/src/bundle.js"
 import { emitModelFactoryPacket, getIssuedModelFactoryPacketProvenance, requireIssuedModelFactoryPacketProvenance, type ModelFactoryPacketProvenance, type ModelFactoryRequest } from "../packages/strategy-oracle-model/src/emit.js"
 import { freezeLabValue, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { FactoryOraclePacketSchema, type FactoryNativeLane, type FactoryOraclePacket } from "../packages/strategy-lab/src/factory/contracts.js"
-import { admitQuarantinedIntakePacket, type QuarantinedIntakePacket, type QuarantinedIntakeResult } from "../packages/strategy-lab/src/factory/intake.js"
+import { FactoryOraclePacketSchema, factoryProposalFromPacket, type FactoryNativeLane, type FactoryOraclePacket } from "../packages/strategy-lab/src/factory/contracts.js"
+import { admitQuarantinedIntakePacket, reopenAcceptedQuarantinedIntakePacket, type QuarantinedIntakePacket, type QuarantinedIntakeResult } from "../packages/strategy-lab/src/factory/intake.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_INGEST_${code}`) }
@@ -136,7 +136,11 @@ export const readFactoryIngestion = (repository: FactoryRepository, artifactRoot
   } else if (stored.producerIdentity === "emitTeacherFactoryPacket") {
     const input = stored.producerInput as { student: DistilledLegalStudent; request: TeacherFactoryRequest }
     if (emitTeacherFactoryPacket(input.student, input.request).root !== packet.root || emitTeacherSource(input.student) !== stored.sourceUtf8) return fail("RELOAD_TEACHER")
-  } else return fail("RELOAD_INTAKE_REQUIRES_ISSUED_SESSION")
+  } else if (stored.producerIdentity === "admitQuarantinedIntakePacket") {
+    const input = stored.producerInput as Omit<QuarantinedIntakePacket, "sourceBytes">
+    const admission = reopenAcceptedQuarantinedIntakePacket({ ...input, packet, sourceBytes: bytes }, repository)
+    if (admission.packetRoot !== packet.root || admission.sourceRoot !== stored.sourceRoot || admission.proposalRoot !== factoryProposalFromPacket(packet).root) return fail("RELOAD_INTAKE")
+  } else return fail("RELOAD_PRODUCER")
   const { root, ...withoutRoot } = stored
   if (root !== recordRoot(withoutRoot)) return fail("RELOAD_ROOT")
   return issue(stored)

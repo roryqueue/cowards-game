@@ -1,6 +1,6 @@
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
-import { deriveFactoryExecutionCommitment, deriveFactoryOrderedRecordDescriptor, isIssuedFactorySupervisionReceipt, type FactorySupervisionReceipt } from "./admission.js"
+import { deriveFactoryExecutionCommitment, deriveFactoryOrderedRecordDescriptor, deriveFactorySupervisionReceiptRoot, isIssuedFactorySupervisionReceipt, type FactorySupervisionReceipt } from "./admission.js"
 import { publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "./repository.js"
 
 const CAP = 262144
@@ -148,9 +148,13 @@ export const readFactorySupervisionArtifactRecords = (repository: FactoryReposit
   if (start !== bytes.byteLength || output.length !== descriptor.recordCount || counts.get("receipt") !== 1 || counts.get("execution") !== 1) return fail("RECORD_COUNT")
   const values = (kind: StoredFactorySupervisionRecord["kind"]) => output.filter(record => record.kind === kind).map(record => record.value)
   const metadata = values("receipt")[0]
-  if (!exactLabKeys(metadata, ["admission", "candidatePlayerId", "candidateIdentity", "root"])) return fail("RECEIPT_METADATA")
+  if (!exactLabKeys(metadata, ["admission", "candidatePlayerId", "candidateIdentity", "matchup", "root"])) return fail("RECEIPT_METADATA")
   const receiptMetadata = metadata as unknown as Omit<FactorySupervisionReceipt, "execution" | "traces">
   if (!receiptMetadata.admission || !isRoot(receiptMetadata.admission.authorizationRoot) || receiptMetadata.root !== descriptor.receiptRoot) return fail("RECEIPT_BINDING")
+  const matchup = receiptMetadata.matchup
+  if (!matchup || (matchup.status === "verified"
+    ? !exactLabKeys(matchup, ["status", "conditionRoot", "opponentRoot", "side", "initialInitiative"]) || !isRoot(matchup.conditionRoot) || !isRoot(matchup.opponentRoot) || !["bottom", "top"].includes(matchup.side) || typeof matchup.initialInitiative !== "boolean"
+    : !exactLabKeys(matchup, ["status", "reason"]) || matchup.status !== "unavailable" || matchup.reason !== "incomplete_match_metadata")) return fail("MATCHUP_METADATA")
   const header = values("execution")[0] as Record<string, unknown> | null
   if (!header || typeof header !== "object" || Array.isArray(header) || !["completed", "failure"].includes(String(header.kind))) return fail("EXECUTION_METADATA")
   const transitions = values("transition"), accounting = values("accounting"), traces = values("trace")
@@ -165,13 +169,8 @@ export const readFactorySupervisionArtifactRecords = (repository: FactoryReposit
   }
   const executionCommitment = deriveFactoryExecutionCommitment(execution)
   const traceCommitment = deriveFactoryOrderedRecordDescriptor("factory-supervision-trace", traces)
-  const receiptRoot = labRoot("factory-supervision-receipt-v1", {
-    authorizationRoot: receiptMetadata.admission.authorizationRoot,
-    candidatePlayerId: receiptMetadata.candidatePlayerId,
-    candidateIdentity: receiptMetadata.candidateIdentity,
-    execution: executionCommitment,
-    traces: traceCommitment,
-  })
+  const { root: _storedRoot, ...receiptFields } = receiptMetadata
+  const receiptRoot = deriveFactorySupervisionReceiptRoot({ ...receiptFields, execution, traces: traces as unknown as FactorySupervisionReceipt["traces"] })
   if (receiptRoot !== descriptor.receiptRoot || labRoot("factory-stored-execution-v1", executionCommitment) !== descriptor.executionRoot || traceCommitment.root !== descriptor.tracesRoot) return fail("CONTENT_BINDING")
   return freezeLabValue({ descriptor, records: output, issued: false as const })
 }

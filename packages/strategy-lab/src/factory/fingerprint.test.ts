@@ -3,8 +3,8 @@ import { mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { admitCanonicalJsonValue } from "@cowards/spec"
-import { labRoot, type LabRoot } from "../contracts.js"
+import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
 import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommitment, finalizeFactoryCandidate, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider, type FactorySupervisionReceipt } from "./admission.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
@@ -79,6 +79,20 @@ const supervision = async (admission: FactoryAdmission) => superviseFactory(admi
     accounting: [evidence],
   } as never
 })
+const verifiedSupervision = async (admission: FactoryAdmission, seed: string) => {
+  const opponent = {
+    identity: { revisionId: "opponent", sourceRoot: root("1"), executableRoot: root("2"), tupleId: "tuple", tupleRoot: root("3"), image: "image", harnessRoot: root("4"), budgetRoot: root("5"), attemptRoot: root("6"), runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot },
+    invoke() { throw new Error("unreachable") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } },
+  }
+  return superviseFactory(admission, "candidate", {
+    match: { matchId: `match-${seed}`, seed, arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, bottomPlayerId: "candidate", topPlayerId: "opponent", bottomStrategyRevisionId: "candidate", topStrategyRevisionId: "opponent", initialInitiativePlayerId: "candidate", maxPhases: 1 },
+    providers: { candidate: providerFor(admission), opponent },
+  }, async ({ providers }) => {
+    const request = { kind: "selectActivations", requestId: `factory:${seed}`, semanticTupleId: "tuple", input: { phaseNumber: 1, roundNumber: 1, activationCount: 1, board: { bounds: { minX: 0, maxX: 1, minY: 0, maxY: 1 }, soldiers: [], terrainStones: [] }, mySoldiers: [], enemySoldiers: [], strategyMemory: null, initialInitiativePlayerId: "candidate", hasInitialInitiative: true, roundInitiativePlayerId: "candidate", hasRoundInitiative: true } }
+    const evidence = await providers.candidate!.invoke(request as never, providers.candidate!.identity)
+    return { kind: "completed", privacy: "private_offline", result: { state: {}, events: [] }, transitions: [], accounting: [evidence] } as never
+  })
+}
 const evidenceArtifact = (repo: ReturnType<typeof repository>, values: { proposalRoot: LabRoot; validationRoot: LabRoot; receipt: FactorySupervisionReceipt }) => {
   const lineageNodes = [{ root: values.proposalRoot, parents: [root("b")] }, { root: root("b"), parents: [] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repo, { kind: "lineage", nodeRoot: node.root, links: node.parents }) }))
   const dependencyNodes = [{ root: root("c"), dependencies: [root("d")] }, { root: root("d"), dependencies: [] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repo, { kind: "dependency", nodeRoot: node.root, links: node.dependencies }) }))
@@ -145,7 +159,59 @@ describe("six derived factory fingerprints", () => {
     if (!encoded.ok) throw new Error("changed response encoding")
     const changed = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: changedResponse, evidenceArtifactRoot: publishFactoryArtifact(repo, encoded.canonicalBytes) })
     expect(changed.fingerprints.matchupResponseRoot).toBe(mismatch.fingerprints.matchupResponseRoot)
-    expect(changed.reasons).toContain("paired_matchup_metadata_unverified")
+    expect(changed.reasons).toContain("matchup_metadata_unavailable")
+
+    const forgedLineageValue = { schemaVersion: "factory-lineage-manifest-v1", proposalArtifactRoot: admission.artifacts.proposal, nodeArtifactRoots: [admission.artifacts.proposal] }
+    const forgedLineage = { ...forgedLineageValue, root: labRoot("factory-lineage-manifest-v1", forgedLineageValue) }
+    const forgedEncoded = admitCanonicalJsonValue(forgedLineage, { profile: "canonical-manifest" })
+    if (!forgedEncoded.ok) throw new Error("forged lineage encoding")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot, lineageManifestArtifactRoot: publishFactoryArtifact(repo, forgedEncoded.canonicalBytes) })).toThrow("FACTORY_FINGERPRINT_LINEAGE_GRAPH")
+  })
+
+  it("derives paired matchup metadata only from the snapshotted issued executions", async () => {
+    const { repo, proposal, validation, admission } = admitted()
+    const first = await verifiedSupervision(admission, "first"), second = await verifiedSupervision(admission, "second")
+    expect(first.matchup.status).toBe("verified")
+    expect(second.matchup.status).toBe("verified")
+    const artifact = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt: first })
+    const single = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })
+    const paired = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, pairedSupervisionReceipts: [first, second], evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })
+    expect(paired.fingerprints.matchupResponseRoot).not.toBe(single.fingerprints.matchupResponseRoot)
+    expect(paired.reasons).not.toContain("paired_counterfactual_unavailable")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, pairedSupervisionReceipts: [first, first], evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })).toThrow("FACTORY_FINGERPRINT_PAIRED_RECEIPT_DUPLICATE")
+  })
+
+  it("optionally rederives lineage and locked dependencies from closed retained manifests", async () => {
+    const repo = repository()
+    const toolchainValue = { schemaVersion: "factory-locked-package-manifest-v1", packageId: "toolchain:ts", dependencies: [] }, toolchainEncoded = admitCanonicalJsonValue(toolchainValue, { profile: "canonical-manifest" }); if (!toolchainEncoded.ok) throw new Error("toolchain")
+    const toolchainRoot = publishFactoryArtifact(repo, toolchainEncoded.canonicalBytes)
+    const buildValue = { schemaVersion: "factory-locked-package-manifest-v1", packageId: "./helper.js", dependencies: ["toolchain:ts"] }, buildEncoded = admitCanonicalJsonValue(buildValue, { profile: "canonical-manifest" }); if (!buildEncoded.ok) throw new Error("build")
+    const buildRoot = publishFactoryArtifact(repo, buildEncoded.canonicalBytes)
+    const importedSource = new TextEncoder().encode(`import helper from "./helper.js"; ${sourceText}`), importedSourceRoot = `sha256:${createHash("sha256").update(importedSource).digest("hex")}` as LabRoot
+    const fixture = factoryOraclePacketFixture()
+    const packetValue = { ...fixture, source: { ...fixture.source, root: importedSourceRoot, sha256: importedSourceRoot, byteLength: importedSource.byteLength }, build: { ...fixture.build, buildRoot, toolchainRoot }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } }
+    const packet = { ...packetValue, root: deriveFactoryOraclePacketRoot(packetValue) }, proposal = factoryProposalFromPacket(packet), validation = factoryValidationFixture(proposal)
+    const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes: importedSource, repository: repo }), validation, repository: repo })
+    const receipt = await supervision(admission), evidence = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt })
+    const anchor = { schemaVersion: "factory-lineage-anchor-v1", root: LAB_ADMITTED_ROOTS.currentStartRoot, parents: [] }
+    const anchorBytes = admitCanonicalJsonValue(anchor, { profile: "canonical-manifest" }); if (!anchorBytes.ok) throw new Error("anchor")
+    const anchorArtifactRoot = publishFactoryArtifact(repo, anchorBytes.canonicalBytes)
+    const lineageValue = { schemaVersion: "factory-lineage-manifest-v1", proposalArtifactRoot: admission.artifacts.proposal, nodeArtifactRoots: [admission.artifacts.proposal, anchorArtifactRoot] }
+    const lineage = { ...lineageValue, root: labRoot("factory-lineage-manifest-v1", lineageValue) }, lineageBytes = admitCanonicalJsonValue(lineage, { profile: "canonical-manifest" }); if (!lineageBytes.ok) throw new Error("lineage")
+    const dependencyNodes = [
+      { specifier: "$source", contentRoot: importedSourceRoot, artifactRoot: admission.artifacts.source, dependencies: [buildRoot] },
+      { specifier: "./helper.js", contentRoot: buildRoot, artifactRoot: buildRoot, dependencies: [toolchainRoot] },
+      { specifier: "toolchain:ts", contentRoot: toolchainRoot, artifactRoot: toolchainRoot, dependencies: [] },
+    ]
+    const dependencyValue = { schemaVersion: "factory-locked-dependency-manifest-v1", proposalArtifactRoot: admission.artifacts.proposal, sourceArtifactRoot: admission.artifacts.source, nodes: dependencyNodes }
+    const dependency = { ...dependencyValue, root: labRoot("factory-locked-dependency-manifest-v1", dependencyValue) }, dependencyBytes = admitCanonicalJsonValue(dependency, { profile: "canonical-manifest" }); if (!dependencyBytes.ok) throw new Error("dependency")
+    const derived = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: evidence.evidence, evidenceArtifactRoot: evidence.artifactRoot, lineageManifestArtifactRoot: publishFactoryArtifact(repo, lineageBytes.canonicalBytes), dependencyManifestArtifactRoot: publishFactoryArtifact(repo, dependencyBytes.canonicalBytes) })
+    expect(derived.reasons).not.toContain("lineage_parent_artifacts_unverified")
+    expect(derived.reasons).not.toContain("recursive_dependency_manifest_unverified")
+    expect(derived.status).toBe("unresolved")
+    const repointedValue = { ...dependencyValue, nodes: dependencyNodes.map((node, index) => index === 0 ? { ...node, dependencies: [toolchainRoot] } : node) }
+    const repointed = { ...repointedValue, root: labRoot("factory-locked-dependency-manifest-v1", repointedValue) }, repointedBytes = admitCanonicalJsonValue(repointed, { profile: "canonical-manifest" }); if (!repointedBytes.ok) throw new Error("repointed")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: evidence.evidence, evidenceArtifactRoot: evidence.artifactRoot, dependencyManifestArtifactRoot: publishFactoryArtifact(repo, repointedBytes.canonicalBytes) })).toThrow("FACTORY_FINGERPRINT_DEPENDENCY_EDGE_MISMATCH")
   })
 
   it("requires the exact issued derivation receipt before final candidate publication", async () => {

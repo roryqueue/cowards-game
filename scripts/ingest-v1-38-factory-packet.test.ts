@@ -4,7 +4,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createFactoryRepository, readFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
+import { factoryOraclePacketFixture } from "../packages/strategy-lab/src/factory/contracts.js"
+import { deriveFactoryOraclePacketRoot } from "../packages/strategy-lab/src/factory/identity.js"
+import { deriveIntakeProvenanceRoot } from "../packages/strategy-lab/src/factory/intake.js"
+import { admitFrozenIntakeProtocol, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot } from "../packages/strategy-lab/src/factory/intake-protocol.js"
+import { createFactoryRepository, readFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { deriveFrozenModelBundleRoot, deriveFrozenModelResponseRoot } from "../packages/strategy-oracle-model/src/bundle.js"
 import { ingestNamedFactoryPacket, readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
 
@@ -41,6 +45,22 @@ describe("named private factory ingestion", () => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-ingest-test-"))); dirs.push(directory)
     const result = await ingestNamedFactoryPacket({ producerIdentity: "admitQuarantinedIntakePacket", origin: "human-external-intake", evidenceClass: "real_producer", producerInput: { protocol: {} } }, createFactoryRepository(directory))
     expect(result).toMatchObject({ disposition: "blocked_configuration", attemptRoot: null, authorized: false, allocation: "none" })
+  })
+
+  it("reloads an accepted intake from its original charge without consuming another attempt", async () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-ingest-test-"))); dirs.push(directory)
+    const repository = createFactoryRepository(directory)
+    const protocolDraft = { schemaVersion: "frozen-intake-protocol-v1" as const, privacy: "private_offline" as const, root: root("0"), authorization: root("0"), participantId: "participant-alpha", reviewerIds: ["reviewer-one"], participantAuthorizationRoot: root("a"), reviewerAuthorizationRoot: root("b"), disclosure: "source-and-provenance" as const, submissionLimit: 1, timeLimitMinutes: 10, reviewerLimit: 1, reviewerReuseLimit: 1, conflictsDeclared: true as const, conflictPolicy: "reject-on-conflict" as const, confidentiality: "private_offline" as const, provenanceRequired: true as const, provenancePolicy: "complete-explicit-deterministic" as const, validationRequired: true as const, validationPolicy: "common-hostile-admission" as const, acceptanceBudget: 1, acceptancePolicy: "accept-only-reviewed-source" as const, dispositionPolicy: "retain-all-terminal-outcomes" as const }
+    const authorized = { ...protocolDraft, authorization: deriveIntakeAuthorizationRoot(protocolDraft) }
+    const protocol = admitFrozenIntakeProtocol({ ...authorized, root: deriveFrozenIntakeProtocolRoot(authorized) })
+    const sourceUtf8 = "export default {selectActivations(){return {activationOrders:[],strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}", bytes = new TextEncoder().encode(sourceUtf8)
+    const sourceRoot = `sha256:${createHash("sha256").update(bytes).digest("hex")}` as LabRoot, fixture = factoryOraclePacketFixture()
+    const packetValue = { ...fixture, oracleFamily: "human-external-intake", source: { ...fixture.source, root: sourceRoot, sha256: sourceRoot, byteLength: bytes.byteLength } }, packet = { ...packetValue, root: deriveFactoryOraclePacketRoot(packetValue) }
+    const provenanceValue = { schemaVersion: "intake-provenance-v1" as const, root: root("0"), participantId: protocol.participantId, reviewerId: "reviewer-one", packetRoot: packet.root, sourceRoot, builderRoot: packet.build.buildRoot, toolchainRoot: packet.build.toolchainRoot, dependencyRoot: root("e"), runtimeRoot: packet.nativeLane.runtimeProfileRoot, sourceKind: "explicit-deterministic" as const, execution: "data-only" as const, liveAgent: false as const, complete: true as const }, provenance = { ...provenanceValue, root: deriveIntakeProvenanceRoot(provenanceValue) }
+    const result = await ingestNamedFactoryPacket({ producerIdentity: "admitQuarantinedIntakePacket", origin: "human-external-intake", evidenceClass: "real_producer", producerInput: { protocol, packet, sourceBytes: bytes, provenance, participantId: protocol.participantId, reviewerId: "reviewer-one", elapsedMinutes: 1, conflictFree: true, reviewDisposition: "accept" } }, repository)
+    if (result.disposition !== "accepted") throw new Error("intake ingestion")
+    expect(readFactoryIngestion(repository, result.artifactRoot).packetRoot).toBe(packet.root)
+    expect(resumeFactoryAttemptInventory(repository).completedAttemptRoots).toHaveLength(1)
   })
 
   it("retains the full admitted model companion and re-admits it on reload", async () => {

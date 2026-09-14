@@ -8,7 +8,7 @@ import { factoryOraclePacketFixture } from "./contracts.js"
 import { deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact, publishFactoryAttemptTerminal, readFactoryArtifact, recordFactoryAttemptStart, resumeFactoryAttemptInventory } from "./repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "./ledger.js"
-import { admitQuarantinedIntakePacket, deriveIntakeProvenanceRoot, type IntakeProvenance, type QuarantinedIntakePacket } from "./intake.js"
+import { admitQuarantinedIntakePacket, deriveIntakeProvenanceRoot, reopenAcceptedQuarantinedIntakePacket, type IntakeProvenance, type QuarantinedIntakePacket } from "./intake.js"
 import { admitFrozenIntakeProtocol, blockedIntakeConfiguration, deriveFrozenIntakeProtocolRoot, deriveIntakeAuthorizationRoot, type FrozenIntakeProtocol } from "./intake-protocol.js"
 
 const root = (letter: string) => `sha256:${letter.repeat(64)}` as `sha256:${string}`
@@ -67,10 +67,14 @@ describe("quarantined intake", () => {
   })
 
   it("forwards explicit deterministic source as data through common admission and retains a root", () => {
-    const repo = repository(), result = admitQuarantinedIntakePacket(input(), repo)
+    const repo = repository(), retainedInput = input(), result = admitQuarantinedIntakePacket(retainedInput, repo)
     expect(result.disposition).toBe("accepted")
     expect(result.admission?.sourceRoot).toBe(sourceRoot)
     expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toHaveLength(1)
+    const reopened = reopenAcceptedQuarantinedIntakePacket(retainedInput, repo)
+    expect(reopened.sourceRoot).toBe(sourceRoot)
+    expect(resumeFactoryAttemptInventory(repo).completedAttemptRoots).toHaveLength(1)
+    expect(() => reopenAcceptedQuarantinedIntakePacket({ ...retainedInput, elapsedMinutes: 2 }, repo)).toThrow("INTAKE_REOPEN_ACCOUNTING")
   })
 
   it("charges and retains invalid, incomplete-provenance, conflict, weak, duplicate, and retry outcomes", () => {

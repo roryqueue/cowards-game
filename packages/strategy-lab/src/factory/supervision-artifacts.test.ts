@@ -29,7 +29,7 @@ const setup = () => {
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 
 // Injected mechanism evidence only. No candidate source, guest, or Match runs.
-const issuedFixture = async (admission: FactoryAdmission, transitions: readonly unknown[], failure = false) => {
+const issuedFixture = async (admission: FactoryAdmission, transitions: readonly unknown[], failure = false, completeMetadata = false) => {
   const identity = {
     revisionId: "mechanics-candidate", sourceRoot, executableRoot: sourceRoot, tupleId: "tuple", tupleRoot: root("1"),
     image: "fixture-image", harnessRoot: root("2"), budgetRoot: root("3"), attemptRoot: root("4"), runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot,
@@ -40,7 +40,9 @@ const issuedFixture = async (admission: FactoryAdmission, transitions: readonly 
     invoke(request) { return { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: root("5"), charged: true, completed: true, outputBytes: 2, result: { ok: true, value: { activationOrders: [], strategyMemory: { private: "retained-only-in-private-artifacts" } } } } },
     verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } },
   }
-  return superviseFactory(admission, "candidate", { match: { bottomPlayerId: "candidate", topPlayerId: "opponent" }, providers: { candidate: provider } } as never, async ({ providers }) => {
+  const match = { bottomPlayerId: "candidate", topPlayerId: "opponent", ...(completeMetadata ? { matchId: "mechanics-only", seed: "fixture-seed", arenaVariant: "empty", bottomStrategyRevisionId: "mechanics-candidate", topStrategyRevisionId: "mechanics-opponent", initialInitiativePlayerId: "candidate" } : {}) }
+  const opponents = completeMetadata ? { opponent: { ...provider, identity: { ...identity, revisionId: "mechanics-opponent", sourceRoot: root("e") } } } : {}
+  return superviseFactory(admission, "candidate", { match, providers: { candidate: provider, ...opponents } } as never, async ({ providers }) => {
     const input = { phaseNumber: 1, roundNumber: 1, board: { bounds: {}, soldiers: [], terrainStones: [] }, mySoldiers: [], enemySoldiers: [], activationCount: 1, initialInitiativePlayerId: "candidate", hasInitialInitiative: true, roundInitiativePlayerId: "candidate", hasRoundInitiative: true }
     const evidence = await providers.candidate!.invoke({ kind: "selectActivations", requestId: "fixture:1", semanticTupleId: "tuple", coordinates: {}, input } as never, identity)
     return (failure ? { kind: "failure", privacy: "private_offline", transitions, accounting: [evidence], unchangedState: { fixture: true }, failure: { classification: "system_failure", code: "CLEANUP_INCOMPLETE" } } : { kind: "completed", privacy: "private_offline", transitions, accounting: [evidence], result: { state: { fixture: true }, events: [{ sequence: 1, fixture: true }] } }) as never
@@ -49,6 +51,15 @@ const issuedFixture = async (admission: FactoryAdmission, transitions: readonly 
 const limits = { maxBytes: 32 * 1024 * 1024, maxRecords: 10000 }
 
 describe("bounded private supervision persistence", () => {
+  it("rebinds complete matchup metadata through the same receipt identity recipe", async () => {
+    const { repository, admission } = setup()
+    const receipt = await issuedFixture(admission, [], false, true)
+    expect(receipt.matchup).toMatchObject({ status: "verified", side: "bottom", initialInitiative: true })
+    const stored = publishFactorySupervisionArtifacts(repository, receipt)
+    const reopened = readFactorySupervisionArtifactRecords(repository, stored.artifactRoot, limits)
+    expect(reopened.records.find(record => record.kind === "receipt")?.value).toMatchObject({ matchup: receipt.matchup })
+    expect(reopened.issued).toBe(false)
+  })
   it("round-trips full issued mechanics evidence without minting renewed authority", async () => {
     const { repository, admission } = setup()
     const receipt = await issuedFixture(admission, [{ sequence: 0, fixture: true }])

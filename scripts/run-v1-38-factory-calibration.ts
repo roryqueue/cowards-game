@@ -9,7 +9,7 @@ import { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, ma
 import { admitFactoryCalibrationManifest, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
 import { deriveFactoryCandidateRoot, deriveFactoryValidationRoot } from "../packages/strategy-lab/src/factory/identity.js"
 import { FactoryCandidateSchema, factoryProposalFromPacket, type FactoryProposal, type FactoryValidationEvidence } from "../packages/strategy-lab/src/factory/contracts.js"
-import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints } from "../packages/strategy-lab/src/factory/fingerprint.js"
+import { createAuthorizedFactoryFingerprintEvidence, createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints, type FactoryFingerprintEvidence } from "../packages/strategy-lab/src/factory/fingerprint.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal, validateFactoryAttemptStart, type FactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { createFactoryRepository, publishFactoryArtifact, publishFactoryAttemptTerminal, readFactoryArtifact, recordFactoryAttemptStart, resumeFactoryAttemptInventory, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { publishFactorySupervisionArtifacts } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
@@ -168,14 +168,18 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
         const opponentId = candidateSide === "bottom" ? attemptPlan.input.match.topPlayerId : attemptPlan.input.match.bottomPlayerId
         const opponent = attemptPlan.input.providers[opponentId]
         if (!opponent) return fail("OPPONENT")
-        const evidence = createFactoryFingerprintEvidence({
+        const selectedRealPath = hooks.plan === undefined && hooks.runtimeOptions === undefined
+        const evidenceValue: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root"> = {
           proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: receipt.root,
-          producerIdentity: retained.producerIdentity, origin: retained.origin, evidenceClass: "mechanics_only", producerArtifactRoot: null,
+          producerIdentity: retained.producerIdentity, origin: retained.origin, evidenceClass: selectedRealPath ? "real_producer" as const : "mechanics_only" as const, producerArtifactRoot: selectedRealPath ? ingestion.artifactRoot : null,
           authorshipRoots: [retained.root], lineageNodes, dependencyNodes,
           matchupResponses: [{ supervisionReceiptRoot: receipt.root, conditionRoot: labRoot("factory-issued-match-condition-v1", attemptPlan.input.match), opponentRoot: labRoot("factory-issued-opponent-identity-v1", opponent.identity), side: candidateSide, initialInitiative: attemptPlan.input.match.initialInitiativePlayerId === attemptPlan.candidatePlayerId, outcome: receipt.execution.kind === "failure" ? "failure" : "draw", responseRoot: storedSupervision.executionRoot }],
           counterfactualPairs: [{ leftRoot: proposal.root, rightRoot: proposal.root, relation: "borderline" }],
           failureModes: [supervision.disposition],
-        })
+        }
+        const evidence = selectedRealPath
+          ? createAuthorizedFactoryFingerprintEvidence({ repository, calibrationManifestArtifactRoot: manifestArtifactRoot, value: evidenceValue })
+          : createFactoryFingerprintEvidence(evidenceValue)
         const evidenceArtifactRoot = publishFactoryArtifact(repository, encode(evidence))
         const independence = deriveFactoryFingerprints({ repository, supervisionReceipt: receipt, evidence, evidenceArtifactRoot })
         const candidateValue = { schemaVersion: "factory-candidate-v1" as const, privacy: "private_offline" as const, proposal, validation, supervisionReceiptRoot: receipt.root, fingerprints: independence.fingerprints, lineage: proposal.lineage }

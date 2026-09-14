@@ -239,3 +239,22 @@ export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, rep
   publishFactoryAttemptTerminal(repository, attempt, terminal)
   return freezeLabValue({ disposition, attemptRoot: attempt.root, ...(admission ? { admission } : {}) })
 }
+
+/**
+ * Reconstructs a previously accepted intake admission from immutable retained
+ * facts. This never allocates, charges, or publishes a second ledger record.
+ */
+export const reopenAcceptedQuarantinedIntakePacket = (input: QuarantinedIntakePacket, repository: FactoryRepository): Readonly<FactorySourceAdmission> => {
+  const protocol = admitFrozenIntakeProtocol(input?.protocol)
+  const packet = FactoryOraclePacketSchema.parse(input?.packet)
+  if (!(input?.sourceBytes instanceof Uint8Array) || input.sourceBytes.byteLength !== packet.source.byteLength || byteRoot(input.sourceBytes) !== packet.source.root || input.participantId !== protocol.participantId || !protocol.reviewerIds.includes(input.reviewerId) || typeof input.elapsedMinutes !== "number" || !Number.isFinite(input.elapsedMinutes) || input.elapsedMinutes < 0 || input.elapsedMinutes > protocol.timeLimitMinutes || input.conflictFree !== true || input.reviewDisposition !== "accept" || (input.retryParentRoot !== undefined && input.retryParentRoot !== null)) return fail("REOPEN_INPUT")
+  const admittedProvenance = admitProvenance(input.provenance, protocol, packet.root, packet.source.root, input.reviewerId, packet)
+  validateDeterministicSource(input.sourceBytes, packet)
+  const proposal = factoryProposalFromPacket(packet)
+  const matches = readLedger(repository).filter(({ start, terminal }) => start.authoringMechanism === "external-submission" && start.taskRoot === protocol.root && start.candidateRoot === packet.root && terminal.disposition === "accepted" && terminal.outputRoot === proposal.root)
+  if (matches.length !== 1) return fail("REOPEN_LEDGER")
+  const { start } = matches[0]!
+  const accounting = readAccounting(repository, start.resourceAccountingRoot, { taskRoot: start.taskRoot, candidateRoot: start.candidateRoot, budgetRoot: start.budgetRoot, inputRoot: start.inputRoot })
+  if (accounting.participantId !== input.participantId || accounting.reviewerId !== input.reviewerId || accounting.provenanceRoot !== admittedProvenance.root || accounting.elapsedMinutes !== input.elapsedMinutes) return fail("REOPEN_ACCOUNTING")
+  return admitFactory({ packet, proposal, sourceBytes: new Uint8Array(input.sourceBytes), repository })
+}

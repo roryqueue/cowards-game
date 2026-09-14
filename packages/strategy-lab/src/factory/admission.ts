@@ -85,8 +85,12 @@ export interface FactorySupervisionProvider extends LabSupervisedProvider {
 }
 export interface FactorySupervisionReceipt {
   readonly admission: FactoryAdmission; readonly candidatePlayerId: string; readonly candidateIdentity: FactorySupervisionProvider["identity"];
+  readonly matchup: FactorySupervisionMatchup
   readonly execution: LabMatchExecution; readonly traces: readonly FactorySupervisionTrace[]; readonly root: LabRoot;
 }
+export type FactorySupervisionMatchup =
+  | Readonly<{ status: "verified"; conditionRoot: LabRoot; opponentRoot: LabRoot; side: "bottom" | "top"; initialInitiative: boolean }>
+  | Readonly<{ status: "unavailable"; reason: "incomplete_match_metadata" }>
 export interface FactorySupervisionTrace {
   readonly root: LabRoot; readonly invocationRoot: LabRoot; readonly inputRoot: LabRoot; readonly method: "selectActivations" | "soldierBrain";
   readonly ordinal: number; readonly classification: "success" | "player_violation" | "system_failure";
@@ -142,13 +146,14 @@ const boundIdentity = (identity: FactorySupervisionProvider["identity"], admissi
 const requireBoundIdentity = (identity: FactorySupervisionProvider["identity"], admission: FactoryAdmission) => {
   if (!boundIdentity(identity, admission)) return fail()
 }
-const receiptRoot = (admission: FactoryAdmission, candidatePlayerId: string, candidateIdentity: FactorySupervisionProvider["identity"], execution: LabMatchExecution, traces: readonly FactorySupervisionTrace[]) =>
+export const deriveFactorySupervisionReceiptRoot = (receipt: Omit<FactorySupervisionReceipt, "root">): LabRoot =>
   labRoot("factory-supervision-receipt-v1", {
-    authorizationRoot: admission.authorizationRoot,
-    candidatePlayerId,
-    candidateIdentity,
-    execution: deriveFactoryExecutionCommitment(execution),
-    traces: deriveFactoryOrderedRecordDescriptor("factory-supervision-trace", traces),
+    authorizationRoot: receipt.admission.authorizationRoot,
+    candidatePlayerId: receipt.candidatePlayerId,
+    candidateIdentity: receipt.candidateIdentity,
+    matchup: receipt.matchup,
+    execution: deriveFactoryExecutionCommitment(receipt.execution),
+    traces: deriveFactoryOrderedRecordDescriptor("factory-supervision-trace", receipt.traces),
   })
 const requestProjection = (request: Parameters<LabSupervisedProvider["invoke"]>[0]): Readonly<Record<string, unknown>> => {
   const input = request?.input && typeof request.input === "object" ? request.input as unknown as Record<string, unknown> : null
@@ -174,7 +179,11 @@ const traceFor = (request: Parameters<LabSupervisedProvider["invoke"]>[0], evide
   const value = { invocationRoot: evidence.invocationRoot, inputRoot: evidence.inputRoot, method, ordinal: evidence.ordinal, classification: result.classification, requestProjection: requestProjection(request), decisionProjection: result.decisionProjection }
   return freezeLabValue({ ...value, root: labRoot("factory-supervision-trace-v1", value) })
 }
-export const isIssuedFactorySupervisionReceipt = (receipt: FactorySupervisionReceipt): boolean => issuedSupervisionReceipts.has(receipt) && receipt.root === receiptRoot(receipt.admission, receipt.candidatePlayerId, receipt.candidateIdentity, receipt.execution, receipt.traces)
+export const isIssuedFactorySupervisionReceipt = (receipt: FactorySupervisionReceipt): boolean => {
+  if (!receipt?.matchup || (receipt.matchup.status !== "verified" && receipt.matchup.status !== "unavailable")) return false
+  const { root, ...value } = receipt
+  return issuedSupervisionReceipts.has(receipt) && root === deriveFactorySupervisionReceiptRoot(value)
+}
 export const mapFactorySupervision = (receipt: FactorySupervisionReceipt): Readonly<{
   disposition: Extract<FactoryDisposition, "accepted" | "player_violation" | "system_failure">;
   candidateDisposition: Extract<FactoryDisposition, "accepted" | "player_violation" | "system_failure">;
@@ -221,12 +230,23 @@ export const superviseFactory = async (
       return evidence
     },
   }
+  const matchSnapshot = freezeLabValue(structuredClone(input.match))
+  const candidateSide = candidatePlayerId === matchSnapshot.bottomPlayerId ? "bottom" as const : "top" as const
+  const opponentPlayerId = candidateSide === "bottom" ? matchSnapshot.topPlayerId : matchSnapshot.bottomPlayerId
+  const opponent = input.providers[opponentPlayerId]
+  const opponentIdentity = opponent ? freezeLabValue(structuredClone(opponent.identity)) : undefined
+  const completeMatch = typeof matchSnapshot.matchId === "string" && typeof matchSnapshot.seed === "string" && matchSnapshot.arenaVariant !== undefined &&
+    typeof matchSnapshot.bottomStrategyRevisionId === "string" && typeof matchSnapshot.topStrategyRevisionId === "string" &&
+    (matchSnapshot.initialInitiativePlayerId === matchSnapshot.bottomPlayerId || matchSnapshot.initialInitiativePlayerId === matchSnapshot.topPlayerId)
+  const matchup: FactorySupervisionMatchup = completeMatch && opponentIdentity
+    ? freezeLabValue({ status: "verified" as const, conditionRoot: labRoot("factory-supervision-match-condition-v1", matchSnapshot), opponentRoot: labRoot("factory-supervision-opponent-identity-v1", opponentIdentity), side: candidateSide, initialInitiative: matchSnapshot.initialInitiativePlayerId === candidatePlayerId })
+    : freezeLabValue({ status: "unavailable" as const, reason: "incomplete_match_metadata" as const })
   const execution = await run({ ...input, providers: { ...input.providers, [candidatePlayerId]: boundProvider } })
   const candidateAccounting = execution.accounting.filter((entry) => same(entry.identity, candidateIdentity))
   if (!candidateInvocationRoots.size || candidateAccounting.length !== candidateInvocationRoots.size ||
       candidateAccounting.some((entry) => !candidateInvocationRoots.has(entry.invocationRoot))) return fail()
-  const receiptValue = { admission, candidatePlayerId, candidateIdentity, execution, traces }
-  const receipt = freezeLabValue({ ...receiptValue, root: receiptRoot(admission, candidatePlayerId, candidateIdentity, execution, traces) })
+  const receiptValue = { admission, candidatePlayerId, candidateIdentity, matchup, execution, traces }
+  const receipt = freezeLabValue({ ...receiptValue, root: deriveFactorySupervisionReceiptRoot(receiptValue) })
   issuedSupervisionReceipts.add(receipt)
   return receipt
 }

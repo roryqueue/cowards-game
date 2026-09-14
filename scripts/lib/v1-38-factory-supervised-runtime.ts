@@ -10,7 +10,7 @@ const fail = (code: string): never => { throw new TypeError(`FACTORY_RUNTIME_${c
 const rawRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 const same = (left: unknown, right: unknown) => labRoot("factory-runtime-binding-v1", left) === labRoot("factory-runtime-binding-v1", right)
 
-export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedRuntimeOptions, "revision" | "image"> {
+export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedRuntimeOptions, "revision" | "image" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory"> {
   readonly admission: FactoryAdmission
   readonly sourceBytes: Uint8Array
   readonly image?: string
@@ -25,6 +25,8 @@ export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedR
  * confused with the runtime adapter id.
  */
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
+  const supplied = options as unknown as Record<string, unknown>
+  if (["benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => Object.prototype.hasOwnProperty.call(supplied, key))) return fail("UNSUPPORTED_OPTION")
   const admission = options.admission
   if (admission.nativeLane.language !== "typescript" || admission.nativeLane.translation !== "none") return fail("UNSUPPORTED_NATIVE_LANE")
   if (admission.nativeLane.runtimeAbi !== "strategy-runtime-abi-v1.19" || admission.nativeLane.runtimeProfileRoot !== LAB_ADMITTED_ROOTS.runtimeLimitsRoot) return fail("NATIVE_LANE_IDENTITY")

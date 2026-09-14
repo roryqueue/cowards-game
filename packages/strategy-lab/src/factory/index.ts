@@ -45,8 +45,8 @@ export {
   resumeFactoryAttemptInventory,
 } from "./repository.js"
 export type { FactoryRepository } from "./repository.js"
-export { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory } from "./admission.js"
-export type { FactoryAdmission, FactorySourceAdmission, FactorySupervisionProvider, FactorySupervisionReceipt } from "./admission.js"
+export { admitFactory, authorizeFactorySupervision, deriveFactorySupervisionReceiptRoot, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory } from "./admission.js"
+export type { FactoryAdmission, FactorySourceAdmission, FactorySupervisionMatchup, FactorySupervisionProvider, FactorySupervisionReceipt } from "./admission.js"
 export {
   createFactoryFingerprintEvidence,
   createFactoryGraphNodeArtifact,
