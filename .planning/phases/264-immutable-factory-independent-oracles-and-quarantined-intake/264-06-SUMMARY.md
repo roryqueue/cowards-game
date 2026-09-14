@@ -95,7 +95,7 @@ status: complete
 1. **Task 1: Define the exact frozen intake protocol and disclosure classes** - `06ab180f` (feat)
 2. **Task 2: Admit explicit hostile submissions into the common evidence root** - `f6701dc9` (feat)
 3. **Task 2 follow-up: retain malformed retry charges** - `821d104c` (fix)
-4. **Plan 06 readiness repair: close eight intake findings** - pending repair commit
+4. **Plan 06 readiness repair: close eight intake findings** - `a2b9324f` (fix)
 
 ## Files Created/Modified
 
@@ -128,7 +128,7 @@ status: complete
 - **Fix:** Require `reviewDisposition: "accept"`, bind reviewer and builder/toolchain/runtime roots, validate deterministic source without execution, scope retry and elapsed checks to the protocol, fail closed on accounting artifacts and unknown elapsed use, and return an immutable non-authorizing blocked configuration without allocating an attempt for malformed protocols.
 - **Files modified:** `packages/strategy-lab/src/factory/intake.ts`, `packages/strategy-lab/src/factory/intake.test.ts`, `packages/strategy-lab/src/factory/intake-protocol.ts`, `packages/strategy-lab/src/factory/intake-protocol.test.ts`
 - **Verification:** Focused intake/protocol suite (14 tests), full factory suite (32 tests), and strategy-lab TypeScript build pass.
-- **Committed in:** repair commit below.
+- **Committed in:** `a2b9324f`.
 
 **Total deviations:** 2 auto-fixed (charge-boundary bug plus eight readiness findings)
 **Impact on plan:** All repairs remain inside the existing four-file intake scope and preserve the no-source-execution/private-only boundary.
