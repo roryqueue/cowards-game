@@ -7,15 +7,40 @@ import {
   type FactoryOraclePacket,
 } from "../../strategy-lab/src/factory/index.js"
 import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, type LabRoot } from "../../strategy-lab/src/contracts.js"
-import { compileLegalStudentPolicy, type DistilledLegalStudent, type StudentAction } from "./distill.js"
+import { compileLegalStudentPolicy, type DistilledLegalStudent } from "./distill.js"
 
 const SOURCE_BYTES = new TextEncoder()
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const NAME = /^[a-z][a-z0-9-]{0,95}$/u
 const fail = (code: string): never => { throw new TypeError(`TEACHER_${code}`) }
 const sourceRoot = (source: string): LabRoot => `sha256:${createHash("sha256").update(source, "utf8").digest("hex")}` as LabRoot
-const controllerSource = () => readFileSync(new URL("./controller.ts", import.meta.url), "utf8").split("\n").filter((line) => !line.startsWith("export type")).join("\n").replace(/^export\s+/gmu, "")
+const REQUIRED_ENTRYPOINTS = ["controllerSelectActivations", "controllerSoldierBrain"] as const
+const rawControllerSource = () => readFileSync(new URL("../src/controller.ts", import.meta.url), "utf8").replace(/\r\n?/gu, "\n")
+const controllerSource = (source: string) => source.split("\n").filter((line) => !line.startsWith("export type")).join("\n").replace(/^export\s+/gmu, "")
 const validRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
+
+export interface TeacherControllerManifest {
+  readonly schemaVersion: "teacher-controller-manifest-v1"
+  readonly sourceRoot: LabRoot
+  readonly entrypoints: readonly ["controllerSelectActivations", "controllerSoldierBrain"]
+}
+
+/** Data-only source manifest. Used to prove emitted source follows owned controller bytes. */
+export const deriveTeacherControllerManifest = (source: string): TeacherControllerManifest => {
+  if (typeof source !== "string" || source.length === 0 || source.length > 65536) fail("CONTROLLER_SOURCE")
+  const ast = ts.createSourceFile("controller.ts", source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS)
+  const checked = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 }, reportDiagnostics: true })
+  if (checked.diagnostics?.some((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)) fail("CONTROLLER_SOURCE")
+  const exported = new Set<string>()
+  for (const statement of ast.statements) {
+    if (!ts.isVariableStatement(statement) || !statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) continue
+    for (const declaration of statement.declarationList.declarations) if (ts.isIdentifier(declaration.name) && declaration.initializer && (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))) exported.add(declaration.name.text)
+  }
+  if (!REQUIRED_ENTRYPOINTS.every((name) => exported.has(name))) fail("CONTROLLER_ENTRYPOINT")
+  return Object.freeze({ schemaVersion: "teacher-controller-manifest-v1", sourceRoot: sourceRoot(source.replace(/\r\n?/gu, "\n")), entrypoints: Object.freeze([...REQUIRED_ENTRYPOINTS]) as TeacherControllerManifest["entrypoints"] })
+}
+
+export const getTeacherControllerManifest = (): TeacherControllerManifest => deriveTeacherControllerManifest(rawControllerSource())
 
 export interface TeacherFactoryRequest {
   readonly split: "development" | "validation" | "probe"
@@ -33,14 +58,6 @@ export interface TeacherFactoryRequest {
   readonly lineage: { readonly predecessorRoot: LabRoot; readonly correctionRoot: LabRoot | null; readonly retryParentRoot: LabRoot | null }
 }
 
-const validAction = (action: unknown): action is StudentAction =>
-  !!action && typeof action === "object" &&
-  ((action as StudentAction).type === "TURN_TO_STONE" || ((action as StudentAction).type === "TURN" && (action as { direction?: unknown }).direction === "UP"))
-
-const validStudent = (student: DistilledLegalStudent): void => {
-  if (student.schemaVersion !== "teacher-distilled-student-v2" || !["press", "screen"].includes(student.activationMode) || !["move", "turn", "stone"].includes(student.brainMode)) fail("STUDENT")
-}
-
 const sourceModules = (source: string): string => {
   const ast = ts.createSourceFile("teacher-source.ts", source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS)
   const denied = new Set(["eval", "Function", "globalThis", "process", "require", "Date", "fetch", "WebAssembly", "constructor", "__proto__", "prototype", "random"])
@@ -52,8 +69,30 @@ const sourceModules = (source: string): string => {
   const program = ts.createProgram(["teacher-source.ts"], options, host)
   const checker = program.getTypeChecker()
   const globals = new Set(["Math", "Number", "String", "JSON", "Array", "Object", "Set", "TypeError", "undefined", "null"])
+  const declaredCallables = new Set<string>()
+  for (const statement of ast.statements) {
+    if (!ts.isVariableStatement(statement)) continue
+    for (const declaration of statement.declarationList.declarations) if (ts.isIdentifier(declaration.name) && declaration.initializer && (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer))) declaredCallables.add(declaration.name.text)
+  }
+  const defaults = ast.statements.filter((statement): statement is ts.ExportAssignment => ts.isExportAssignment(statement) && !statement.isExportEquals)
+  if (defaults.length !== 1) fail("SOURCE_EXPORT_SHAPE")
+  const defaultExpression = defaults[0]!.expression
+  const defaultObject = ts.isObjectLiteralExpression(defaultExpression) ? defaultExpression : fail("SOURCE_EXPORT_SHAPE")
+  const defaultProperties = defaultObject.properties
+  if (defaultProperties.length !== 2) fail("SOURCE_EXPORT_SHAPE")
+  const defaultNames = defaultProperties.map((property) => {
+    if (ts.isShorthandPropertyAssignment(property)) return property.name.text
+    if (ts.isPropertyAssignment(property) && ts.isIdentifier(property.name) && ts.isIdentifier(property.initializer) && property.name.text === property.initializer.text) return property.name.text
+    return fail("SOURCE_EXPORT_SHAPE")
+  }).sort()
+  if (defaultNames.join(",") !== "selectActivations,soldierBrain" || defaultNames.some((name) => !declaredCallables.has(name))) fail("SOURCE_EXPORT_SHAPE")
+
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || ts.isExportDeclaration(node) || ts.isAwaitExpression(node) || node.kind === ts.SyntaxKind.ImportKeyword || node.kind === ts.SyntaxKind.AsyncKeyword || node.kind === ts.SyntaxKind.ThisKeyword) fail("SOURCE_CAPABILITY")
+    if (ts.isElementAccessExpression(node)) {
+      const argument = node.argumentExpression
+      if (!argument || !ts.isNumericLiteral(argument)) fail("SOURCE_COMPUTED_ACCESS")
+    }
     if (ts.isIdentifier(node)) {
       if (denied.has(node.text)) fail("SOURCE_CAPABILITY")
       const parent = node.parent
@@ -78,15 +117,16 @@ export const assertTeacherSourceClosure = (source: string): void => {
 
 /** Emits a closed student that consults only the caller's legal observation, objective, and memory. */
 export const emitTeacherSource = (student: DistilledLegalStudent): string => {
-  validStudent(student)
   const policy = compileLegalStudentPolicy(student)
+  const ownedSource = rawControllerSource()
+  const controllerManifest = getTeacherControllerManifest()
 const source = `
-${controllerSource()}
+${controllerSource(ownedSource)}
 const policyRepresentation = ${JSON.stringify(policy.representation)};
 const student = ${JSON.stringify(policy.student)};
-const direction = (dx, dy) => Math.abs(dx) >= Math.abs(dy) ? dx >= 0 ? "RIGHT" : "LEFT" : dy >= 0 ? "DOWN" : "UP";
-const selectActivations = (input) => ({ activationOrders: (input.mySoldiers || []).filter((soldier) => soldier.status === "ACTIVE" && soldier.position).sort((left, right) => (left.position.x + left.position.y) - (right.position.x + right.position.y) || left.id.localeCompare(right.id)).slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id, objective: { schemaVersion: "teacher-legal-mission-v1", mode: student.activationMode, goal: soldier.position } })), strategyMemory: { teacher: { schemaVersion: "teacher-student-v2", mode: student.activationMode } } });
-const soldierBrain = (input) => ({ action: controllerBrainAction(student.featurePolicy, input), soldierMemory: { teacher: { schemaVersion: "teacher-brain-v2", mode: student.brainMode } } });
+const controllerManifest = ${JSON.stringify(controllerManifest)};
+const selectActivations = (input) => controllerSelectActivations(student.featurePolicy, input);
+const soldierBrain = (input) => controllerSoldierBrain(student.featurePolicy, input);
 export default { selectActivations, soldierBrain };
 `
   assertTeacherSourceClosure(source)
