@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 status: executing
-stopped_at: Phase264 Plan07 independently source-complete; execute Plan08 assessment and exact runner binding before bounded empirical launch
-last_updated: "2026-09-14T14:56:00Z"
+stopped_at: Phase264 Plan08 source assessment and runner implemented; finishing retained-chain tests and independent review fixes before bounded empirical launch
+last_updated: "2026-09-14T15:28:40Z"
 last_activity: 2026-09-14
-last_activity_desc: Plan264-07 repaired and independently rechecked clean at d1cbfa98; Plan08 execution next, no empirical resources consumed
+last_activity_desc: Plan264-08 numeric calibration, source observations, retained assessment and 90-minute runner implemented; source-only review and fixture repairs continue, zero empirical consumption
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current Plan08 execution:** Numeric six-signal calibration, source-backed allocation reopening, observation/clone/dependency helpers, full retained assessment/read-only reopening and direct runner readiness are implemented through818decc0. The runner rejects fresh mechanics hooks and enforces the90-minute window before charge and again before provider creation. Three observation review findings are independently resolved at0932d615; the earlier-attempt author-isolation finding is being repaired with a complete retained-chain fixture. Main's latest focused assessor/runner/observation/source-audit run passed17/17 and strict assessor types pass. This is source-only progress, not an empirical pass or Plan08 completion. Continue current same-plan testing/review/fixes, then main's already-approved4-attempt/30-minute authoring and48-workload/90-minute run only after exact source review is clean. No live model handshake, generation, teacher search, guest or Match has run. No new human input or numbered plan is needed.
 
 **Current source review:** Plan07 is independently source-complete at d1cbfa98 after repair of all original and recheck findings. Seven of eight implementation plans are complete. Main's ten-suite source check passed52/52 at4eda4d27, final targeted main check18/18 and independent final check38/38; package builds and strict types pass. Execute Plan08 now: source/receipt-backed numeric assessment, exact fresh runner/author linkage and90-minute guard, then independent source review before main's already-approved bounded launch. No model generation, live handshake, guest or workload has run. No new operator input or numbered plan is needed. Earlier source-review snapshots below remain historical.
 
