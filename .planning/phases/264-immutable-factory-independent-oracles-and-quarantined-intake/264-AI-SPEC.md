@@ -256,8 +256,10 @@ Attribute provider-reported input/output tokens and wall time to every attempt; 
 
 **CI/CD Integration:**
 ```bash
-# Planned interface after Phase 264 files exist; do not run broad historical selectors.
-./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/{ledger,admission,fingerprint,model-bundle,intake}.test.ts && ./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts
+# Source/mechanics checks only; the model bundle is owned by its private leaf.
+# Run after Plan05 integration. Do not run broad historical selectors.
+./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/ledger.test.ts packages/strategy-lab/src/factory/admission.test.ts packages/strategy-lab/src/factory/fingerprint.test.ts packages/strategy-lab/src/factory/intake.test.ts packages/strategy-oracle-model/src/model.test.ts scripts/check-v1-38-factory-boundaries.test.ts
+./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts
 ```
 
 ### Reference Dataset
