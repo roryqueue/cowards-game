@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { admitCanonicalJsonValue } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
+import { createFactoryCalibrationWorkload } from "../packages/strategy-lab/src/factory/calibration.js"
 import { createFactoryRepository, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
 import { prepareFactoryCalibration } from "./prepare-v1-38-factory-calibration.js"
@@ -24,12 +25,15 @@ describe("fresh factory calibration preparation", () => {
     const allocationValue = { schemaVersion: "factory-calibration-allocation-v1", protocolRoot: protocol.root, phase: "264", maxAttempts: 1, maxInvocationsPerAttempt: 64, maxLifetimeMs: 120_000 }
     const allocation = { ...allocationValue, root: labRoot("factory-calibration-allocation-v1", allocationValue) }
     const allocationArtifactRoot = publishFactoryArtifact(repository, encode(allocation))
-    const decisionValue = { schemaVersion: "factory-calibration-authorization-v1", status: "authorized", protocolArtifactRoot, allocationArtifactRoot, studyPolicyRoot: "sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17", measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95", maxAttempts: 1, maxInvocationsPerAttempt: 64, maxLifetimeMs: 120_000, supervision: { adapterId: "runtime-js-container-subprocess", runtimeAbi: "strategy-runtime-abi-v1.19", image: LAB_ADMITTED_ROOTS.image, runtimeProfileRoot: ingestion.record.runtimeProfileRoot }, ingestionArtifactRoots: [ingestion.artifactRoot] }
+    const workload = createFactoryCalibrationWorkload({ candidateIngestionArtifactRoot: ingestion.artifactRoot, pairGroup: "prepare-pair", pairAxis: "initialInitiative", condition: { arenaId: "arena:smoke:v1", seed: "prepare-seed", candidateSide: "bottom", initialInitiative: "candidate", maxPhases: 1 }, opponent: { kind: "fixed_mechanics", opponentId: "factory-fixed-mechanics-v1", identityRoot: root("8") }, budget: { maxInvocations: 64, maxLifetimeMs: 120_000 }, lineageManifestArtifactRoot: null, dependencyManifestArtifactRoot: null })
+    const workloadArtifactRoot = publishFactoryArtifact(repository, encode(workload))
+    const decisionValue = { schemaVersion: "factory-calibration-authorization-v1", status: "authorized", protocolArtifactRoot, allocationArtifactRoot, studyPolicyRoot: "sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17", measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95", maxAttempts: 1, maxInvocationsPerAttempt: 64, maxLifetimeMs: 120_000, supervision: { adapterId: "runtime-js-container-subprocess", runtimeAbi: "strategy-runtime-abi-v1.19", image: LAB_ADMITTED_ROOTS.image, runtimeProfileRoot: ingestion.record.runtimeProfileRoot }, ingestionArtifactRoots: [ingestion.artifactRoot], workloadArtifactRoots: [workloadArtifactRoot] }
     const decision = { ...decisionValue, root: labRoot("factory-calibration-authorization-v1", decisionValue) }
     const result = prepareFactoryCalibration(`Plan 07 decision\n\n\`\`\`json\n${new TextDecoder().decode(encode(decision))}\n\`\`\``, repository)
     expect(result.manifest.authorizationRoot).toBe(decision.root)
     expect(result.manifest.protocolRoot).toBe(protocol.root)
     expect(result.manifest.allocationRoot).toBe(allocation.root)
+    expect(result.manifest.workloads).toEqual([{ artifactRoot: workloadArtifactRoot, root: workload.root, candidateIngestionArtifactRoot: ingestion.artifactRoot, pairGroup: "prepare-pair" }])
     expect(() => prepareFactoryCalibration(`\`\`\`json\n${new TextDecoder().decode(encode({ ...decision, protocolArtifactRoot: root("9"), root: labRoot("factory-calibration-authorization-v1", { ...decisionValue, protocolArtifactRoot: root("9") }) }))}\n\`\`\``, repository)).toThrow()
   })
 })

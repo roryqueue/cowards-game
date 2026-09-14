@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest"
 import { LAB_ADMITTED_ROOTS } from "../contracts.js"
-import { FACTORY_CALIBRATION_CORPUS, createFactoryCalibrationReport, createFactoryCalibrationManifest } from "./calibration.js"
+import { createFactoryCalibrationManifest, createFactoryCalibrationReport, evaluateFactoryCalibrationCorpus } from "./calibration.js"
 
 const root = (letter: string) => `sha256:${letter.repeat(64)}` as const
 
 describe("factory independence calibration contracts", () => {
   it("labels the complete development-only mechanics corpus without inventing thresholds", () => {
-    expect(FACTORY_CALIBRATION_CORPUS.map((entry) => entry.caseKind).sort()).toEqual([
-      "expected_false_positive", "latent_divergence", "near_identical_behavior", "semantic_rewrite", "shared_selector_variant", "symmetry_opaque_id_variant",
+    const observations = evaluateFactoryCalibrationCorpus()
+    expect(observations.map((entry) => entry.caseId).sort()).toEqual([
+      "expected-false-positive", "latent-divergence", "near-identical-behavior", "semantic-rewrite", "shared-selector", "symmetry-opaque-id",
     ].sort())
-    expect(FACTORY_CALIBRATION_CORPUS.every((entry) => entry.evidenceClass === "mechanics_only" && entry.split === "development")).toBe(true)
-    const report = createFactoryCalibrationReport(FACTORY_CALIBRATION_CORPUS.map((entry) => ({ caseId: entry.caseId, dimensionRoots: [root("a"), root("b")] })))
+    expect(observations.every((entry) => entry.evidenceClass === "mechanics_only" && entry.independence === "unresolved")).toBe(true)
+    const report = createFactoryCalibrationReport(observations)
     expect(report.thresholds).toBeNull()
     expect(report.readiness).toBe("authorization_required")
   })
@@ -23,9 +24,11 @@ describe("factory independence calibration contracts", () => {
       maxAttempts: 4, maxInvocationsPerAttempt: 64, maxLifetimeMs: 120_000,
       supervision: { adapterId: "runtime-js-container-subprocess", runtimeAbi: "strategy-runtime-abi-v1.19", image: LAB_ADMITTED_ROOTS.image, runtimeProfileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot },
       ingestions: [{ artifactRoot: root("5"), packetRoot: root("6"), sourceRoot: root("7"), producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer" }],
+      workloads: [{ artifactRoot: root("8"), root: root("9"), candidateIngestionArtifactRoot: root("5"), pairGroup: "pair-a" }],
     })
     expect(manifest.root).toMatch(/^sha256:/u)
     expect(JSON.stringify(manifest)).not.toMatch(/threshold|selector|phase263/iu)
     expect(() => createFactoryCalibrationManifest({ ...manifest, maxAttempts: Number.POSITIVE_INFINITY } as never)).toThrow()
+    expect(() => createFactoryCalibrationReport(structuredClone(evaluateFactoryCalibrationCorpus()))).toThrow("UNISSUED")
   })
 })

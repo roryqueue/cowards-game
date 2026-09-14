@@ -5,8 +5,8 @@ import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATAL
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider } from "../packages/strategy-lab/src/factory/admission.js"
-import { admitFactoryCalibrationManifest, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
+import { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, mapFactorySupervision, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider, type FactorySupervisionReceipt } from "../packages/strategy-lab/src/factory/admission.js"
+import { admitFactoryCalibrationManifest, admitFactoryCalibrationWorkload, type FactoryCalibrationManifest, type FactoryCalibrationWorkload } from "../packages/strategy-lab/src/factory/calibration.js"
 import { deriveFactoryCandidateRoot, deriveFactoryValidationRoot } from "../packages/strategy-lab/src/factory/identity.js"
 import { FactoryCandidateSchema, factoryProposalFromPacket, type FactoryProposal, type FactoryValidationEvidence } from "../packages/strategy-lab/src/factory/contracts.js"
 import { createAuthorizedFactoryFingerprintEvidence, createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints, type FactoryFingerprintEvidence } from "../packages/strategy-lab/src/factory/fingerprint.js"
@@ -27,7 +27,7 @@ export interface FactoryCalibrationAttemptPlan {
 }
 export interface FactoryCalibrationRunnerHooks {
   readonly runtimeOptions?: Partial<Omit<FactorySupervisedRuntimeOptions, "admission" | "sourceBytes" | "attemptRoot" | "budgetRoot" | "image" | "invocationLimit" | "benchmarkLifetimeMs" | "factoryLifetimeMs" | "matchId" | "containerName" | "ownershipLabel">>
-  readonly plan?: (admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot) => FactoryCalibrationAttemptPlan
+  readonly plan?: (admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot, workload: FactoryCalibrationWorkload) => FactoryCalibrationAttemptPlan
 }
 export interface FactoryCalibrationRunResult {
   readonly manifestRoot: LabRoot; readonly readinessArtifactRoot: LabRoot; readonly readiness: "not_ready"
@@ -46,7 +46,7 @@ const rooted = (record: Record<string, unknown>, domain: string): boolean => {
 }
 const verifyRetainedAuthority = (repository: FactoryRepository, manifest: FactoryCalibrationManifest) => {
   const authorization = readCanonicalRecord(repository, manifest.authorizationArtifactRoot)
-  if (!rooted(authorization, "factory-calibration-authorization-v1") || authorization.root !== manifest.authorizationRoot || authorization.schemaVersion !== "factory-calibration-authorization-v1" || authorization.status !== "authorized" || authorization.protocolArtifactRoot !== manifest.protocolArtifactRoot || authorization.allocationArtifactRoot !== manifest.allocationArtifactRoot || authorization.studyPolicyRoot !== manifest.studyPolicyRoot || authorization.measurementPolicyRoot !== manifest.measurementPolicyRoot || authorization.maxAttempts !== manifest.maxAttempts || authorization.maxInvocationsPerAttempt !== manifest.maxInvocationsPerAttempt || authorization.maxLifetimeMs !== manifest.maxLifetimeMs || !same(authorization.supervision, manifest.supervision) || !same(authorization.ingestionArtifactRoots, manifest.ingestions.map((entry) => entry.artifactRoot))) return fail("AUTHORIZATION_BINDING")
+  if (!rooted(authorization, "factory-calibration-authorization-v1") || authorization.root !== manifest.authorizationRoot || authorization.schemaVersion !== "factory-calibration-authorization-v1" || authorization.status !== "authorized" || authorization.protocolArtifactRoot !== manifest.protocolArtifactRoot || authorization.allocationArtifactRoot !== manifest.allocationArtifactRoot || authorization.studyPolicyRoot !== manifest.studyPolicyRoot || authorization.measurementPolicyRoot !== manifest.measurementPolicyRoot || authorization.maxAttempts !== manifest.maxAttempts || authorization.maxInvocationsPerAttempt !== manifest.maxInvocationsPerAttempt || authorization.maxLifetimeMs !== manifest.maxLifetimeMs || !same(authorization.supervision, manifest.supervision) || !same(authorization.ingestionArtifactRoots, manifest.ingestions.map((entry) => entry.artifactRoot)) || !same(authorization.workloadArtifactRoots, manifest.workloads.map((entry) => entry.artifactRoot))) return fail("AUTHORIZATION_BINDING")
   const protocol = readCanonicalRecord(repository, manifest.protocolArtifactRoot)
   if (!rooted(protocol, "factory-calibration-protocol-v1") || protocol.root !== manifest.protocolRoot || protocol.schemaVersion !== "factory-calibration-protocol-v1" || protocol.phase !== "264" || protocol.purpose !== "development-independence-calibration" || protocol.split !== "development") return fail("PROTOCOL_BINDING")
   const allocation = readCanonicalRecord(repository, manifest.allocationArtifactRoot)
@@ -72,8 +72,10 @@ const validateSelectedSource = (proposal: FactoryProposal, sourceBytes: Uint8Arr
   return Object.freeze({ ...value, root: deriveFactoryValidationRoot(value) })
 }
 
-const createInertOpponent = (attemptRoot: LabRoot, budgetRoot: LabRoot): LabSupervisedProvider => {
-  const identity = freezeLabValue({ revisionId: "factory-calibration-inert-opponent-v1", sourceRoot: labRoot("factory-inert-opponent-source-v1", "fixed"), executableRoot: labRoot("factory-inert-opponent-executable-v1", "fixed"), tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: labRoot("factory-inert-opponent-harness-v1", "fixed"), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
+export const deriveFixedMechanicsOpponentIdentityRoot = (): LabRoot => labRoot("factory-fixed-mechanics-opponent-identity-v1", { opponentId: "factory-fixed-mechanics-v1", tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
+const createFixedMechanicsOpponent = (workload: FactoryCalibrationWorkload, attemptRoot: LabRoot, budgetRoot: LabRoot): LabSupervisedProvider => {
+  if (workload.opponent.identityRoot !== deriveFixedMechanicsOpponentIdentityRoot()) return fail("OPPONENT_IDENTITY")
+  const identity = freezeLabValue({ revisionId: workload.opponent.opponentId, sourceRoot: labRoot("factory-fixed-mechanics-opponent-source-v1", workload.opponent.opponentId), executableRoot: labRoot("factory-fixed-mechanics-opponent-executable-v1", workload.opponent.opponentId), tupleId: MATCH_KERNEL.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: labRoot("factory-fixed-mechanics-opponent-harness-v1", workload.opponent.opponentId), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot })
   const issued = new WeakSet<object>()
   let ordinal = 0
   return {
@@ -89,10 +91,19 @@ const createInertOpponent = (attemptRoot: LabRoot, budgetRoot: LabRoot): LabSupe
   }
 }
 
-const defaultPlan = (admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot): FactoryCalibrationAttemptPlan => {
-  const candidatePlayerId = "factory-candidate", opponentPlayerId = "factory-inert-opponent"
-  const match = { matchId: `factory-calibration-${startRoot.slice(7, 23)}`, seed: `factory-calibration-${startRoot.slice(23, 39)}`, arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")!, bottomPlayerId: candidatePlayerId, topPlayerId: opponentPlayerId, bottomStrategyRevisionId: provider.identity.revisionId, topStrategyRevisionId: "factory-calibration-inert-opponent-v1", initialInitiativePlayerId: candidatePlayerId, maxPhases: 1 }
-  return { candidatePlayerId, input: { match, providers: { [candidatePlayerId]: provider, [opponentPlayerId]: createInertOpponent(startRoot, provider.identity.budgetRoot) } }, run: runCanonicalLabMatch }
+export const buildFactoryCalibrationMatchInput = (workload: FactoryCalibrationWorkload, candidateRevisionId: string, startRoot: LabRoot) => {
+  const candidatePlayerId = "factory-candidate", opponentPlayerId = workload.opponent.opponentId
+  const arenaVariant = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === workload.condition.arenaId)
+  if (!arenaVariant) return fail("ARENA")
+  const bottomPlayerId = workload.condition.candidateSide === "bottom" ? candidatePlayerId : opponentPlayerId
+  const topPlayerId = workload.condition.candidateSide === "top" ? candidatePlayerId : opponentPlayerId
+  const initialInitiativePlayerId = workload.condition.initialInitiative === "candidate" ? candidatePlayerId : opponentPlayerId
+  return { matchId: `factory-calibration-${workload.root.slice(7, 23)}-${startRoot.slice(7, 15)}`, seed: workload.condition.seed, arenaVariant, bottomPlayerId, topPlayerId, bottomStrategyRevisionId: workload.condition.candidateSide === "bottom" ? candidateRevisionId : workload.opponent.opponentId, topStrategyRevisionId: workload.condition.candidateSide === "top" ? candidateRevisionId : workload.opponent.opponentId, initialInitiativePlayerId, maxPhases: workload.condition.maxPhases }
+}
+const defaultPlan = (workload: FactoryCalibrationWorkload, _admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot): FactoryCalibrationAttemptPlan => {
+  const candidatePlayerId = "factory-candidate", opponentPlayerId = workload.opponent.opponentId
+  const match = buildFactoryCalibrationMatchInput(workload, provider.identity.revisionId, startRoot)
+  return { candidatePlayerId, input: { match, providers: { [candidatePlayerId]: provider, [opponentPlayerId]: createFixedMechanicsOpponent(workload, startRoot, provider.identity.budgetRoot) } }, run: runCanonicalLabMatch }
 }
 
 const errorDisposition = (error: unknown, providerCreated: boolean): "invalid" | "system_failure" => {
@@ -107,15 +118,23 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
   verifyRetainedAuthority(repository, manifest)
   const terminalRoots: LabRoot[] = []
   const supervisionArtifactRoots: LabRoot[] = []
-  for (let ordinal = 0; ordinal < manifest.ingestions.length; ordinal += 1) {
-    const ingestion = manifest.ingestions[ordinal]!
-    const accountingRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-accounting-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, ordinal, maxInvocations: manifest.maxInvocationsPerAttempt, maxLifetimeMs: manifest.maxLifetimeMs }))
+  const candidateArtifactRoots: LabRoot[] = []
+  const pairingArtifactRoots: LabRoot[] = []
+  const pendingPairing: Array<Readonly<{
+    workload: FactoryCalibrationWorkload; receipt: FactorySupervisionReceipt; proposal: FactoryProposal; validation: FactoryValidationEvidence
+    ingestion: FactoryCalibrationManifest["ingestions"][number]; producerIdentity: FactoryFingerprintEvidence["producerIdentity"]; origin: FactoryFingerprintEvidence["origin"]; retainedRoot: LabRoot
+    storedSupervisionArtifactRoot: LabRoot; storedExecutionRoot: LabRoot; attemptPlan: FactoryCalibrationAttemptPlan; selectedRealPath: boolean
+  }>> = []
+  for (let ordinal = 0; ordinal < manifest.workloads.length; ordinal += 1) {
+    const workloadRef = manifest.workloads[ordinal]!
+    const ingestion = manifest.ingestions.find((entry) => entry.artifactRoot === workloadRef.candidateIngestionArtifactRoot) ?? fail("WORKLOAD_INGESTION")
+    const accountingRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-accounting-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, ordinal, workloadArtifactRoot: workloadRef.artifactRoot, maxInvocations: manifest.maxInvocationsPerAttempt, maxLifetimeMs: manifest.maxLifetimeMs }))
     const start = createFactoryAttemptStart({
       taskRoot: manifest.protocolRoot,
       budgetRoot: labRoot("factory-calibration-attempt-budget-v1", { allocationRoot: manifest.allocationRoot, ordinal }),
       candidateRoot: ingestion.packetRoot,
       authoringMechanism: "automated-oracle",
-      inputRoot: ingestion.artifactRoot,
+      inputRoot: workloadRef.artifactRoot,
       resourceAccountingRoot: accountingRoot,
       retryParentRoot: null,
     })
@@ -129,22 +148,24 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
     let providerCreated = false
     try {
       // Validation intentionally begins only after the durable start above.
+      const workload = admitFactoryCalibrationWorkload(readCanonicalRecord(repository, workloadRef.artifactRoot))
+      if (workload.root !== workloadRef.root || workload.candidateIngestionArtifactRoot !== ingestion.artifactRoot || workload.pairGroup !== workloadRef.pairGroup || workload.budget.maxInvocations > manifest.maxInvocationsPerAttempt || workload.budget.maxLifetimeMs > manifest.maxLifetimeMs) fail("WORKLOAD_BINDING")
       const retained = readFactoryIngestion(repository, ingestion.artifactRoot)
-      if (retained.packetRoot !== ingestion.packetRoot || retained.sourceRoot !== ingestion.sourceRoot || retained.producerIdentity !== ingestion.producerIdentity || retained.origin !== ingestion.origin) return fail("INGESTION_BINDING")
+      if (retained.packetRoot !== ingestion.packetRoot || retained.sourceRoot !== ingestion.sourceRoot || retained.producerIdentity !== ingestion.producerIdentity || retained.origin !== ingestion.origin) fail("INGESTION_BINDING")
       const sourceBytes = new TextEncoder().encode(retained.sourceUtf8)
       const proposal = factoryProposalFromPacket(retained.packet)
       const sourceAdmission = admitFactory({ packet: retained.packet, proposal, sourceBytes, repository })
       const validation = validateSelectedSource(proposal, sourceBytes)
       validationRoot = validation.root
       const admission = authorizeFactorySupervision({ sourceAdmission, validation, repository })
-      provider = createFactorySupervisedRuntime({ ...hooks.runtimeOptions, matchId: `factory-calibration-${start.root.slice(7, 23)}`, containerName: `factory-calibration-${start.root.slice(7, 19)}`, ownershipLabel: "v1.38-factory-calibration", admission, sourceBytes, attemptRoot: start.root, budgetRoot: start.budgetRoot, image: manifest.supervision.image, invocationLimit: manifest.maxInvocationsPerAttempt, factoryLifetimeMs: manifest.maxLifetimeMs })
+      provider = createFactorySupervisedRuntime({ ...hooks.runtimeOptions, matchId: `factory-calibration-${start.root.slice(7, 23)}`, containerName: `factory-calibration-${start.root.slice(7, 19)}`, ownershipLabel: "v1.38-factory-calibration", admission, sourceBytes, attemptRoot: start.root, budgetRoot: start.budgetRoot, image: manifest.supervision.image, invocationLimit: workload.budget.maxInvocations, factoryLifetimeMs: workload.budget.maxLifetimeMs })
       providerCreated = true
-      const attemptPlan = hooks.plan ? hooks.plan(admission, provider, start.root) : defaultPlan(admission, provider, start.root)
-      if (attemptPlan.candidatePlayerId !== attemptPlan.input.match.bottomPlayerId && attemptPlan.candidatePlayerId !== attemptPlan.input.match.topPlayerId) return fail("CANDIDATE_PLAYER")
+      const attemptPlan = hooks.plan ? hooks.plan(admission, provider, start.root, workload) : defaultPlan(workload, admission, provider, start.root)
+      if (attemptPlan.candidatePlayerId !== attemptPlan.input.match.bottomPlayerId && attemptPlan.candidatePlayerId !== attemptPlan.input.match.topPlayerId) fail("CANDIDATE_PLAYER")
       const receipt = await superviseFactory(admission, attemptPlan.candidatePlayerId, { ...attemptPlan.input, providers: { ...attemptPlan.input.providers, [attemptPlan.candidatePlayerId]: provider } }, attemptPlan.run)
       const cleanup = provider.close()
       provider = undefined
-      if (!cleanup.cleanupComplete || cleanup.orphanedChild) return fail("CLEANUP")
+      if (!cleanup.cleanupComplete || cleanup.orphanedChild) fail("CLEANUP")
       const storedSupervision = publishFactorySupervisionArtifacts(repository, receipt)
       supervisionArtifactRoots.push(storedSupervision.artifactRoot)
       const actualUsageRoot = publishFactoryArtifact(repository, encode({
@@ -160,35 +181,13 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
         duplicateEvidenceRoot = supervision.evidenceRoot
         finalEvidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-terminal-evidence-v1", startRoot: start.root, disposition, supervisionArtifactRoot: storedSupervision.artifactRoot, actualUsageRoot }))
       } else {
-        // Only actual retained stages are represented. Parent and recursive lock
-        // evidence remains explicitly unverified until Plan 07 supplies it.
-        const lineageNodes = [{ root: proposal.root, parents: [] as LabRoot[] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repository, { kind: "lineage", nodeRoot: node.root, links: node.parents }) }))
-        const dependencyNodes = [{ root: proposal.source.root, dependencies: [] as LabRoot[] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repository, { kind: "dependency", nodeRoot: node.root, links: node.dependencies }) }))
-        const candidateSide = attemptPlan.candidatePlayerId === attemptPlan.input.match.bottomPlayerId ? "bottom" as const : "top" as const
-        const opponentId = candidateSide === "bottom" ? attemptPlan.input.match.topPlayerId : attemptPlan.input.match.bottomPlayerId
-        const opponent = attemptPlan.input.providers[opponentId]
-        if (!opponent) return fail("OPPONENT")
-        const selectedRealPath = hooks.plan === undefined && hooks.runtimeOptions === undefined
-        const evidenceValue: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root"> = {
-          proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: receipt.root,
-          producerIdentity: retained.producerIdentity, origin: retained.origin, evidenceClass: selectedRealPath ? "real_producer" as const : "mechanics_only" as const, producerArtifactRoot: selectedRealPath ? ingestion.artifactRoot : null,
-          authorshipRoots: [retained.root], lineageNodes, dependencyNodes,
-          matchupResponses: [{ supervisionReceiptRoot: receipt.root, conditionRoot: labRoot("factory-issued-match-condition-v1", attemptPlan.input.match), opponentRoot: labRoot("factory-issued-opponent-identity-v1", opponent.identity), side: candidateSide, initialInitiative: attemptPlan.input.match.initialInitiativePlayerId === attemptPlan.candidatePlayerId, outcome: receipt.execution.kind === "failure" ? "failure" : "draw", responseRoot: storedSupervision.executionRoot }],
-          counterfactualPairs: [{ leftRoot: proposal.root, rightRoot: proposal.root, relation: "borderline" }],
-          failureModes: [supervision.disposition],
-        }
-        const evidence = selectedRealPath
-          ? createAuthorizedFactoryFingerprintEvidence({ repository, calibrationManifestArtifactRoot: manifestArtifactRoot, value: evidenceValue })
-          : createFactoryFingerprintEvidence(evidenceValue)
-        const evidenceArtifactRoot = publishFactoryArtifact(repository, encode(evidence))
-        const independence = deriveFactoryFingerprints({ repository, supervisionReceipt: receipt, evidence, evidenceArtifactRoot })
-        const candidateValue = { schemaVersion: "factory-candidate-v1" as const, privacy: "private_offline" as const, proposal, validation, supervisionReceiptRoot: receipt.root, fingerprints: independence.fingerprints, lineage: proposal.lineage }
-        const candidate = FactoryCandidateSchema.parse({ ...candidateValue, root: deriveFactoryCandidateRoot(candidateValue) })
-        const finalized = finalizeFactoryCandidate({ receipt, independenceReceipt: independence, candidate, repository })
+        // The attempt is final now. Pairing/fingerprinting runs only after every
+        // declared sibling receipt is durable; no terminal is ever rewritten.
         disposition = "unresolved"
-        outputRoot = finalized.artifactRoot
-        duplicateEvidenceRoot = independence.supportingRoots.cloneEvidenceRoot
-        finalEvidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-terminal-evidence-v1", startRoot: start.root, disposition, supervisionArtifactRoot: storedSupervision.artifactRoot, actualUsageRoot, independenceReceiptRoot: independence.root, candidateArtifactRoot: finalized.artifactRoot }))
+        outputRoot = storedSupervision.artifactRoot
+        duplicateEvidenceRoot = supervision.evidenceRoot
+        finalEvidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-terminal-evidence-v1", startRoot: start.root, disposition, supervisionArtifactRoot: storedSupervision.artifactRoot, actualUsageRoot, pairing: "pending_retained_group" }))
+        pendingPairing.push(freezeLabValue({ workload, receipt, proposal, validation, ingestion, producerIdentity: retained.producerIdentity, origin: retained.origin, retainedRoot: retained.root, storedSupervisionArtifactRoot: storedSupervision.artifactRoot, storedExecutionRoot: storedSupervision.executionRoot, attemptPlan, selectedRealPath: hooks.plan === undefined && hooks.runtimeOptions === undefined }))
       }
     } catch (error) {
       disposition = errorDisposition(error, providerCreated)
@@ -210,8 +209,58 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
     terminalRoots.push(terminal.root)
     if (terminal.disposition === "system_failure") break
   }
+  const groups = new Map<string, typeof pendingPairing>()
+  for (const item of pendingPairing) groups.set(item.workload.pairGroup, [...(groups.get(item.workload.pairGroup) ?? []), item])
+  for (const [pairGroup, entries] of groups) {
+    const first = entries[0]!
+    const workloadMatchesReceipt = (entry: typeof first) => {
+      const matchup = entry.receipt.matchup, match = entry.attemptPlan.input.match
+      const candidateSide = entry.workload.condition.candidateSide
+      const expectedOpponentId = candidateSide === "bottom" ? match.topPlayerId : match.bottomPlayerId
+      return matchup.status === "verified" && match.seed === entry.workload.condition.seed && match.arenaVariant.id === entry.workload.condition.arenaId &&
+        match.maxPhases === entry.workload.condition.maxPhases && (candidateSide === "bottom" ? match.bottomPlayerId : match.topPlayerId) === entry.attemptPlan.candidatePlayerId &&
+        expectedOpponentId === entry.workload.opponent.opponentId && matchup.conditionRoot === labRoot("factory-supervision-match-condition-v1", match) &&
+        matchup.side === candidateSide && matchup.initialInitiative === (entry.workload.condition.initialInitiative === "candidate")
+    }
+    const paired = entries.length === 2 &&
+      new Set(entries.map((entry) => entry.receipt.root)).size === 2 &&
+      entries.every((entry) => entry.proposal.root === first.proposal.root && entry.receipt.admission.sourceRoot === first.receipt.admission.sourceRoot && entry.workload.pairAxis === "initialInitiative" &&
+        entry.workload.candidateIngestionArtifactRoot === first.workload.candidateIngestionArtifactRoot && entry.workload.condition.arenaId === first.workload.condition.arenaId && entry.workload.condition.seed === first.workload.condition.seed && entry.workload.condition.candidateSide === first.workload.condition.candidateSide && entry.workload.condition.maxPhases === first.workload.condition.maxPhases && same(entry.workload.opponent, first.workload.opponent) && same(entry.workload.budget, first.workload.budget) &&
+        workloadMatchesReceipt(entry)) &&
+      new Set(entries.map((entry) => entry.workload.condition.initialInitiative)).size === 2
+    const pairingValue = { schemaVersion: "factory-calibration-pairing-v1" as const, privacy: "private_offline" as const, pairGroup, status: paired ? "paired" as const : "unavailable" as const, workloadRoots: entries.map((entry) => entry.workload.root), receiptRoots: entries.map((entry) => entry.receipt.root) }
+    pairingArtifactRoots.push(publishFactoryArtifact(repository, encode({ ...pairingValue, root: labRoot("factory-calibration-pairing-v1", pairingValue) })))
+    for (const entry of entries) {
+      try {
+        const lineageNodes = [{ root: entry.proposal.root, parents: [] as LabRoot[] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repository, { kind: "lineage", nodeRoot: node.root, links: node.parents }) }))
+        const dependencyNodes = [{ root: entry.proposal.source.root, dependencies: [] as LabRoot[] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repository, { kind: "dependency", nodeRoot: node.root, links: node.dependencies }) }))
+        const candidateSide = entry.attemptPlan.candidatePlayerId === entry.attemptPlan.input.match.bottomPlayerId ? "bottom" as const : "top" as const
+        const opponentId = candidateSide === "bottom" ? entry.attemptPlan.input.match.topPlayerId : entry.attemptPlan.input.match.bottomPlayerId
+        const opponent = entry.attemptPlan.input.providers[opponentId] ?? fail("OPPONENT")
+        const evidenceValue: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root"> = {
+          proposalRoot: entry.proposal.root, validationRoot: entry.validation.root, supervisionReceiptRoot: entry.receipt.root,
+          producerIdentity: entry.producerIdentity, origin: entry.origin, evidenceClass: entry.selectedRealPath ? "real_producer" as const : "mechanics_only" as const, producerArtifactRoot: entry.selectedRealPath ? entry.ingestion.artifactRoot : null,
+          authorshipRoots: [entry.retainedRoot], lineageNodes, dependencyNodes,
+          matchupResponses: [{ supervisionReceiptRoot: entry.receipt.root, conditionRoot: labRoot("factory-issued-match-condition-v1", entry.attemptPlan.input.match), opponentRoot: labRoot("factory-issued-opponent-identity-v1", opponent.identity), side: candidateSide, initialInitiative: entry.attemptPlan.input.match.initialInitiativePlayerId === entry.attemptPlan.candidatePlayerId, outcome: entry.receipt.execution.kind === "failure" ? "failure" : "draw", responseRoot: entry.storedExecutionRoot }],
+          counterfactualPairs: [{ leftRoot: entries[0]!.proposal.root, rightRoot: entries.at(-1)!.proposal.root, relation: paired ? "correlated" : "borderline" }],
+          failureModes: ["accepted"],
+        }
+        const evidence = entry.selectedRealPath
+          ? createAuthorizedFactoryFingerprintEvidence({ repository, calibrationManifestArtifactRoot: manifestArtifactRoot, value: evidenceValue })
+          : createFactoryFingerprintEvidence(evidenceValue)
+        const evidenceArtifactRoot = publishFactoryArtifact(repository, encode(evidence))
+        const independence = deriveFactoryFingerprints({ repository, supervisionReceipt: entry.receipt, pairedSupervisionReceipts: paired ? entries.map((item) => item.receipt) : [entry.receipt], evidence, evidenceArtifactRoot, ...(entry.workload.lineageManifestArtifactRoot === null ? {} : { lineageManifestArtifactRoot: entry.workload.lineageManifestArtifactRoot }), ...(entry.workload.dependencyManifestArtifactRoot === null ? {} : { dependencyManifestArtifactRoot: entry.workload.dependencyManifestArtifactRoot }) })
+        const candidateValue = { schemaVersion: "factory-candidate-v1" as const, privacy: "private_offline" as const, proposal: entry.proposal, validation: entry.validation, supervisionReceiptRoot: entry.receipt.root, fingerprints: independence.fingerprints, lineage: entry.proposal.lineage }
+        const candidate = FactoryCandidateSchema.parse({ ...candidateValue, root: deriveFactoryCandidateRoot(candidateValue) })
+        candidateArtifactRoots.push(finalizeFactoryCandidate({ receipt: entry.receipt, independenceReceipt: independence, candidate, repository }).artifactRoot)
+      } catch (error) {
+        const value = { schemaVersion: "factory-calibration-pairing-failure-v1" as const, privacy: "private_offline" as const, pairGroup, workloadRoot: entry.workload.root, receiptRoot: entry.receipt.root, error: error instanceof Error ? error.message : "unknown" }
+        pairingArtifactRoots.push(publishFactoryArtifact(repository, encode({ ...value, root: labRoot("factory-calibration-pairing-failure-v1", value) })))
+      }
+    }
+  }
   const inventory = resumeFactoryAttemptInventory(repository)
-  const readiness = { schemaVersion: "factory-calibration-readiness-v1", privacy: "private_offline", manifestRoot: manifest.root, ledgerRoot: inventory.ledgerRoot, terminalRoots, supervisionArtifactRoots, status: "not_ready", reason: "calibration_thresholds_not_frozen" }
+  const readiness = { schemaVersion: "factory-calibration-readiness-v1", privacy: "private_offline", manifestRoot: manifest.root, ledgerRoot: inventory.ledgerRoot, terminalRoots, supervisionArtifactRoots, pairingArtifactRoots, candidateArtifactRoots, status: "not_ready", reason: "calibration_thresholds_not_frozen" }
   const readinessArtifactRoot = publishFactoryArtifact(repository, encode(readiness))
   return freezeLabValue({ manifestRoot: manifest.root, readinessArtifactRoot, readiness: "not_ready", terminalRoots, supervisionArtifactRoots, ledgerRoot: inventory.ledgerRoot })
 }

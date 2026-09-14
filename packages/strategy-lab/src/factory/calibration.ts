@@ -1,6 +1,10 @@
-import { admitCanonicalJsonValue } from "@cowards/spec"
+import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, LAB_VERSIONS, exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
+import { requireIssuedFactoryCalibrationObservations, type FactoryCalibrationObservation } from "./calibration-corpus.js"
 import type { FactoryFingerprintEvidence } from "./fingerprint.js"
+
+export { FACTORY_CALIBRATION_CORPUS, evaluateFactoryCalibrationCorpus, requireIssuedFactoryCalibrationObservations } from "./calibration-corpus.js"
+export type { FactoryCalibrationCase, FactoryCalibrationCaseKind, FactoryCalibrationObservation } from "./calibration-corpus.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const NAME = /^[a-z][a-zA-Z0-9._:-]{0,127}$/u
@@ -13,24 +17,6 @@ const canonical = <T>(value: unknown, validate: (record: Record<string, unknown>
   return freezeLabValue(validate(admitted.value as Record<string, unknown>))
 }
 
-export type FactoryCalibrationCaseKind = "semantic_rewrite" | "shared_selector_variant" | "symmetry_opaque_id_variant" | "near_identical_behavior" | "latent_divergence" | "expected_false_positive"
-export interface FactoryCalibrationCase {
-  readonly caseId: string
-  readonly caseKind: FactoryCalibrationCaseKind
-  readonly split: "development"
-  readonly evidenceClass: "mechanics_only"
-  readonly expectedRelation: "correlated" | "distinct" | "borderline"
-}
-
-export const FACTORY_CALIBRATION_CORPUS: readonly FactoryCalibrationCase[] = freezeLabValue([
-  { caseId: "semantic-rewrite", caseKind: "semantic_rewrite", split: "development", evidenceClass: "mechanics_only", expectedRelation: "correlated" },
-  { caseId: "shared-selector", caseKind: "shared_selector_variant", split: "development", evidenceClass: "mechanics_only", expectedRelation: "correlated" },
-  { caseId: "symmetry-opaque-id", caseKind: "symmetry_opaque_id_variant", split: "development", evidenceClass: "mechanics_only", expectedRelation: "correlated" },
-  { caseId: "near-identical-behavior", caseKind: "near_identical_behavior", split: "development", evidenceClass: "mechanics_only", expectedRelation: "borderline" },
-  { caseId: "latent-divergence", caseKind: "latent_divergence", split: "development", evidenceClass: "mechanics_only", expectedRelation: "distinct" },
-  { caseId: "expected-false-positive", caseKind: "expected_false_positive", split: "development", evidenceClass: "mechanics_only", expectedRelation: "borderline" },
-])
-
 export interface FactoryCalibrationReport {
   readonly schemaVersion: "factory-calibration-report-v1"
   readonly privacy: "private_offline"
@@ -41,14 +27,14 @@ export interface FactoryCalibrationReport {
   readonly thresholds: null
   readonly readiness: "authorization_required"
 }
-export const createFactoryCalibrationReport = (observations: readonly Readonly<{ caseId: string; dimensionRoots: readonly LabRoot[] }>[]): Readonly<FactoryCalibrationReport> => {
-  if (!Array.isArray(observations) || observations.length !== FACTORY_CALIBRATION_CORPUS.length || observations.some((entry, index) => entry.caseId !== FACTORY_CALIBRATION_CORPUS[index]?.caseId || !Array.isArray(entry.dimensionRoots) || entry.dimensionRoots.length < 1 || !entry.dimensionRoots.every(root))) return fail("OBSERVATIONS")
+export const createFactoryCalibrationReport = (observations: readonly FactoryCalibrationObservation[]): Readonly<FactoryCalibrationReport> => {
+  const issued = requireIssuedFactoryCalibrationObservations(observations)
   const value = {
     schemaVersion: "factory-calibration-report-v1" as const,
     privacy: "private_offline" as const,
-    corpusRoot: labRoot("factory-calibration-corpus-v1", FACTORY_CALIBRATION_CORPUS),
-    observationCount: observations.length,
-    observationsRoot: labRoot("factory-calibration-observations-v1", observations),
+    corpusRoot: labRoot("factory-calibration-corpus-v1", issued.map((entry) => entry.caseRoot)),
+    observationCount: issued.length,
+    observationsRoot: labRoot("factory-calibration-observations-v1", issued.map((entry) => entry.root)),
     thresholds: null,
     readiness: "authorization_required" as const,
   }
@@ -61,6 +47,29 @@ export interface FactoryCalibrationIngestion {
   readonly artifactRoot: LabRoot; readonly packetRoot: LabRoot; readonly sourceRoot: LabRoot
   readonly producerIdentity: FactoryProducerIdentity; readonly origin: FactoryIngestionOrigin; readonly evidenceClass: "real_producer"
 }
+export interface FactoryCalibrationWorkload {
+  readonly schemaVersion: "factory-calibration-workload-v1"; readonly privacy: "private_offline"; readonly root: LabRoot
+  readonly candidateIngestionArtifactRoot: LabRoot; readonly pairGroup: string; readonly pairAxis: "initialInitiative"
+  readonly condition: Readonly<{ arenaId: string; seed: string; candidateSide: "bottom" | "top"; initialInitiative: "candidate" | "opponent"; maxPhases: 1 }>
+  readonly opponent: Readonly<{ kind: "fixed_mechanics"; opponentId: "factory-fixed-mechanics-v1"; identityRoot: LabRoot }>
+  readonly budget: Readonly<{ maxInvocations: number; maxLifetimeMs: number }>
+  readonly lineageManifestArtifactRoot: LabRoot | null; readonly dependencyManifestArtifactRoot: LabRoot | null
+}
+export interface FactoryCalibrationWorkloadRef { readonly artifactRoot: LabRoot; readonly root: LabRoot; readonly candidateIngestionArtifactRoot: LabRoot; readonly pairGroup: string }
+const workloadKeys = ["schemaVersion", "privacy", "root", "candidateIngestionArtifactRoot", "pairGroup", "pairAxis", "condition", "opponent", "budget", "lineageManifestArtifactRoot", "dependencyManifestArtifactRoot"] as const
+const deriveWorkloadRoot = (value: Omit<FactoryCalibrationWorkload, "root">) => labRoot("factory-calibration-workload-v1", value)
+export const admitFactoryCalibrationWorkload = (value: unknown): Readonly<FactoryCalibrationWorkload> => canonical(value, (record) => {
+  if (!exact(record, workloadKeys) || record.schemaVersion !== "factory-calibration-workload-v1" || record.privacy !== "private_offline" || !root(record.root) || !root(record.candidateIngestionArtifactRoot) || typeof record.pairGroup !== "string" || !NAME.test(record.pairGroup) || record.pairAxis !== "initialInitiative" || !exact(record.condition, ["arenaId", "seed", "candidateSide", "initialInitiative", "maxPhases"]) || !exact(record.opponent, ["kind", "opponentId", "identityRoot"]) || !exact(record.budget, ["maxInvocations", "maxLifetimeMs"]) || !(record.lineageManifestArtifactRoot === null || root(record.lineageManifestArtifactRoot)) || !(record.dependencyManifestArtifactRoot === null || root(record.dependencyManifestArtifactRoot))) return fail("WORKLOAD")
+  const condition = record.condition as Record<string, unknown>, opponent = record.opponent as Record<string, unknown>, budget = record.budget as Record<string, unknown>
+  if (typeof condition.arenaId !== "string" || !CANONICAL_ARENA_CATALOG_V1_37.arenas.some((arena) => arena.id === condition.arenaId) || typeof condition.seed !== "string" || condition.seed.length < 1 || condition.seed.length > 128 || !["bottom", "top"].includes(String(condition.candidateSide)) || !["candidate", "opponent"].includes(String(condition.initialInitiative)) || condition.maxPhases !== 1 || opponent.kind !== "fixed_mechanics" || opponent.opponentId !== "factory-fixed-mechanics-v1" || !root(opponent.identityRoot) || !Number.isSafeInteger(budget.maxInvocations) || Number(budget.maxInvocations) < 1 || !Number.isSafeInteger(budget.maxLifetimeMs) || Number(budget.maxLifetimeMs) < 1) return fail("WORKLOAD")
+  const typed = record as unknown as FactoryCalibrationWorkload, { root: _root, ...withoutRoot } = typed
+  if (typed.root !== deriveWorkloadRoot(withoutRoot)) return fail("WORKLOAD_ROOT")
+  return typed
+})
+export const createFactoryCalibrationWorkload = (value: Omit<FactoryCalibrationWorkload, "schemaVersion" | "privacy" | "root">): Readonly<FactoryCalibrationWorkload> => {
+  const draft = { schemaVersion: "factory-calibration-workload-v1" as const, privacy: "private_offline" as const, ...value }
+  return admitFactoryCalibrationWorkload({ ...draft, root: deriveWorkloadRoot(draft) })
+}
 export interface FactoryCalibrationManifest {
   readonly schemaVersion: "factory-calibration-manifest-v1"; readonly privacy: "private_offline"; readonly root: LabRoot
   readonly authorizationRoot: LabRoot; readonly authorizationArtifactRoot: LabRoot
@@ -70,8 +79,9 @@ export interface FactoryCalibrationManifest {
   readonly maxAttempts: number; readonly maxInvocationsPerAttempt: number; readonly maxLifetimeMs: number
   readonly supervision: Readonly<{ adapterId: "runtime-js-container-subprocess"; runtimeAbi: "strategy-runtime-abi-v1.19"; image: string; runtimeProfileRoot: LabRoot }>
   readonly ingestions: readonly FactoryCalibrationIngestion[]
+  readonly workloads: readonly FactoryCalibrationWorkloadRef[]
 }
-const manifestKeys = ["schemaVersion", "privacy", "root", "authorizationRoot", "authorizationArtifactRoot", "protocolRoot", "protocolArtifactRoot", "allocationRoot", "allocationArtifactRoot", "studyPolicyRoot", "measurementPolicyRoot", "maxAttempts", "maxInvocationsPerAttempt", "maxLifetimeMs", "supervision", "ingestions"] as const
+const manifestKeys = ["schemaVersion", "privacy", "root", "authorizationRoot", "authorizationArtifactRoot", "protocolRoot", "protocolArtifactRoot", "allocationRoot", "allocationArtifactRoot", "studyPolicyRoot", "measurementPolicyRoot", "maxAttempts", "maxInvocationsPerAttempt", "maxLifetimeMs", "supervision", "ingestions", "workloads"] as const
 const deriveManifestRoot = (value: Omit<FactoryCalibrationManifest, "root">): LabRoot => labRoot("factory-calibration-manifest-v1", value)
 export const admitFactoryCalibrationManifest = (value: unknown): Readonly<FactoryCalibrationManifest> => canonical(value, (record) => {
   if (!exact(record, manifestKeys) || record.schemaVersion !== "factory-calibration-manifest-v1" || record.privacy !== "private_offline" || ![record.root, record.authorizationRoot, record.authorizationArtifactRoot, record.protocolRoot, record.protocolArtifactRoot, record.allocationRoot, record.allocationArtifactRoot, record.studyPolicyRoot, record.measurementPolicyRoot].every(root)) return fail("MANIFEST")
@@ -87,6 +97,12 @@ export const admitFactoryCalibrationManifest = (value: unknown): Readonly<Factor
   for (const item of record.ingestions) {
     if (!exact(item, ["artifactRoot", "packetRoot", "sourceRoot", "producerIdentity", "origin", "evidenceClass"]) || ![item.artifactRoot, item.packetRoot, item.sourceRoot].every(root) || !["emitTacticalFactoryPacket", "emitTeacherFactoryPacket", "emitModelFactoryPacket", "admitQuarantinedIntakePacket"].includes(String(item.producerIdentity)) || !["tactical-oracle", "teacher-oracle", "model-oracle", "human-external-intake"].includes(String(item.origin)) || item.evidenceClass !== "real_producer" || seen.has(String(item.artifactRoot))) return fail("INGESTION")
     seen.add(String(item.artifactRoot))
+  }
+  if (!Array.isArray(record.workloads) || record.workloads.length < 1 || record.workloads.length > Number(record.maxAttempts)) return fail("WORKLOADS")
+  const workloadRoots = new Set<string>()
+  for (const item of record.workloads) {
+    if (!exact(item, ["artifactRoot", "root", "candidateIngestionArtifactRoot", "pairGroup"]) || !root(item.artifactRoot) || !root(item.root) || !root(item.candidateIngestionArtifactRoot) || typeof item.pairGroup !== "string" || !NAME.test(item.pairGroup) || !seen.has(item.candidateIngestionArtifactRoot) || workloadRoots.has(item.artifactRoot)) return fail("WORKLOAD_REF")
+    workloadRoots.add(item.artifactRoot)
   }
   const typed = record as unknown as FactoryCalibrationManifest
   const { root: _root, ...withoutRoot } = typed

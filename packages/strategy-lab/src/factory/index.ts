@@ -57,10 +57,14 @@ export {
 export type { FactoryFingerprintEvidence, FactoryIndependenceReceipt } from "./fingerprint.js"
 export {
   FACTORY_CALIBRATION_CORPUS,
+  evaluateFactoryCalibrationCorpus,
+  requireIssuedFactoryCalibrationObservations,
+  admitFactoryCalibrationWorkload,
   admitFactoryCalibrationManifest,
+  createFactoryCalibrationWorkload,
   createFactoryCalibrationManifest,
   createFactoryCalibrationReport,
 } from "./calibration.js"
-export type { FactoryCalibrationCase, FactoryCalibrationIngestion, FactoryCalibrationManifest, FactoryCalibrationReport } from "./calibration.js"
+export type { FactoryCalibrationCase, FactoryCalibrationCaseKind, FactoryCalibrationObservation, FactoryCalibrationIngestion, FactoryCalibrationManifest, FactoryCalibrationReport, FactoryCalibrationWorkload, FactoryCalibrationWorkloadRef } from "./calibration.js"
 export { publishFactorySupervisionArtifacts, readFactorySupervisionArtifactRecords } from "./supervision-artifacts.js"
 export type { StoredFactorySupervision, StoredFactorySupervisionDescriptor, StoredFactorySupervisionRecord } from "./supervision-artifacts.js"

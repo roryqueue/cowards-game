@@ -4,7 +4,7 @@ import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createFactoryCalibrationManifest, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
+import { admitFactoryCalibrationWorkload, createFactoryCalibrationManifest, type FactoryCalibrationManifest } from "../packages/strategy-lab/src/factory/calibration.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
 
@@ -19,6 +19,8 @@ export interface FactoryCalibrationAuthorization {
   readonly maxAttempts: number; readonly maxInvocationsPerAttempt: number; readonly maxLifetimeMs: number
   readonly supervision: FactoryCalibrationManifest["supervision"]
   readonly ingestionArtifactRoots: readonly LabRoot[]
+  /** Predeclared canonical attempt records, never a runner-generated schedule. */
+  readonly workloadArtifactRoots: readonly LabRoot[]
 }
 const authorizationRoot = (value: Omit<FactoryCalibrationAuthorization, "root">) => labRoot("factory-calibration-authorization-v1", value)
 export const extractFactoryCalibrationAuthorization = (markdown: string): Readonly<FactoryCalibrationAuthorization> => {
@@ -27,9 +29,9 @@ export const extractFactoryCalibrationAuthorization = (markdown: string): Readon
   if (blocks.length !== 1) return fail("AUTHORIZATION_RECORD_COUNT")
   const bytes = new TextEncoder().encode(blocks[0]![1]!)
   const admitted = admitCanonicalJsonBytes(bytes, { profile: "canonical-manifest", operation: "require-canonical" })
-  if (!admitted.ok || !exact(admitted.value, ["schemaVersion", "root", "status", "protocolArtifactRoot", "allocationArtifactRoot", "studyPolicyRoot", "measurementPolicyRoot", "maxAttempts", "maxInvocationsPerAttempt", "maxLifetimeMs", "supervision", "ingestionArtifactRoots"])) return fail("AUTHORIZATION")
+  if (!admitted.ok || !exact(admitted.value, ["schemaVersion", "root", "status", "protocolArtifactRoot", "allocationArtifactRoot", "studyPolicyRoot", "measurementPolicyRoot", "maxAttempts", "maxInvocationsPerAttempt", "maxLifetimeMs", "supervision", "ingestionArtifactRoots", "workloadArtifactRoots"])) return fail("AUTHORIZATION")
   const record = admitted.value as unknown as FactoryCalibrationAuthorization
-  if (record.schemaVersion !== "factory-calibration-authorization-v1" || record.status !== "authorized" || ![record.root, record.protocolArtifactRoot, record.allocationArtifactRoot, record.studyPolicyRoot, record.measurementPolicyRoot].every(root) || !Array.isArray(record.ingestionArtifactRoots) || record.ingestionArtifactRoots.length < 1 || !record.ingestionArtifactRoots.every(root)) return fail("AUTHORIZATION")
+  if (record.schemaVersion !== "factory-calibration-authorization-v1" || record.status !== "authorized" || ![record.root, record.protocolArtifactRoot, record.allocationArtifactRoot, record.studyPolicyRoot, record.measurementPolicyRoot].every(root) || !Array.isArray(record.ingestionArtifactRoots) || record.ingestionArtifactRoots.length < 1 || !record.ingestionArtifactRoots.every(root) || !Array.isArray(record.workloadArtifactRoots) || record.workloadArtifactRoots.length < 1 || !record.workloadArtifactRoots.every(root)) return fail("AUTHORIZATION")
   for (const bound of [record.maxAttempts, record.maxInvocationsPerAttempt, record.maxLifetimeMs]) if (!Number.isSafeInteger(bound) || bound < 1 || bound > 1_000_000) return fail("BOUND")
   const { root: _root, ...withoutRoot } = record
   if (record.root !== authorizationRoot(withoutRoot)) return fail("AUTHORIZATION_ROOT")
@@ -64,6 +66,13 @@ export const prepareFactoryCalibration = (markdown: string, repository: FactoryR
     const record = readFactoryIngestion(repository, artifactRoot)
     return { artifactRoot, packetRoot: record.packetRoot, sourceRoot: record.sourceRoot, producerIdentity: record.producerIdentity, origin: record.origin, evidenceClass: record.evidenceClass }
   })
+  const ingestionRoots = new Set(ingestions.map((entry) => entry.artifactRoot))
+  if (new Set(authorization.workloadArtifactRoots).size !== authorization.workloadArtifactRoots.length || authorization.workloadArtifactRoots.length > authorization.maxAttempts) return fail("WORKLOADS")
+  const workloads = authorization.workloadArtifactRoots.map((artifactRoot) => {
+    const workload = admitFactoryCalibrationWorkload(readRecord(artifactRoot))
+    if (!ingestionRoots.has(workload.candidateIngestionArtifactRoot) || workload.budget.maxInvocations > authorization.maxInvocationsPerAttempt || workload.budget.maxLifetimeMs > authorization.maxLifetimeMs) return fail("WORKLOAD_BINDING")
+    return { artifactRoot, root: workload.root, candidateIngestionArtifactRoot: workload.candidateIngestionArtifactRoot, pairGroup: workload.pairGroup }
+  })
   const authorizationArtifactRoot = publishFactoryArtifact(repository, (() => { const encoded = admitCanonicalJsonValue(authorization, { profile: "canonical-manifest" }); if (!encoded.ok) return fail("AUTHORIZATION_ARTIFACT"); return encoded.canonicalBytes })())
   const manifest = createFactoryCalibrationManifest({
     authorizationRoot: authorization.root, authorizationArtifactRoot,
@@ -71,7 +80,7 @@ export const prepareFactoryCalibration = (markdown: string, repository: FactoryR
     allocationRoot: allocation.root as LabRoot, allocationArtifactRoot: authorization.allocationArtifactRoot,
     studyPolicyRoot: authorization.studyPolicyRoot, measurementPolicyRoot: authorization.measurementPolicyRoot,
     maxAttempts: authorization.maxAttempts, maxInvocationsPerAttempt: authorization.maxInvocationsPerAttempt, maxLifetimeMs: authorization.maxLifetimeMs,
-    supervision: authorization.supervision, ingestions,
+    supervision: authorization.supervision, ingestions, workloads,
   })
   const encoded = admitCanonicalJsonValue(manifest, { profile: "canonical-manifest" })
   if (!encoded.ok) return fail("MANIFEST")
