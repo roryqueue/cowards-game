@@ -3,7 +3,8 @@ export type NumericDimension = typeof NUMERIC_DIMENSIONS[number]
 export type NumericClassification = "correlated" | "distinct" | "unresolved"
 
 export interface NumericCalibrationEvidence {
-  readonly sourceStructureTokens: readonly string[]
+  /** Exact retained UTF-8 source text; structure tokens are derived internally and never supplied as evidence. */
+  readonly sourceUtf8: string
   readonly lineageEdgeTokens: readonly ConcreteEdgeToken[]
   readonly dependencyEdgeTokens: readonly ConcreteEdgeToken[]
   readonly legalInputSamples: Readonly<Record<string, readonly string[]>>
@@ -70,7 +71,7 @@ const summarize = (dimensions: Record<NumericDimension, NumericDimensionComparis
 }
 
 export const compareNumericEvidence = (left: NumericCalibrationEvidence, right: NumericCalibrationEvidence): Readonly<NumericComparison> => summarize({
-  sourceStructure: tokenDimension(left.sourceStructureTokens, right.sourceStructureTokens),
+  sourceStructure: tokenDimension(extractSourceStructureTokens(left.sourceUtf8), extractSourceStructureTokens(right.sourceUtf8)),
   lineage: tokenDimension(edges(left.lineageEdgeTokens), edges(right.lineageEdgeTokens)),
   dependency: tokenDimension(edges(left.dependencyEdgeTokens), edges(right.dependencyEdgeTokens)),
   legalInput: sampleDimension(left.legalInputSamples, right.legalInputSamples),

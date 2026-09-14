@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { classifyNumericComparison, compareNumericEvidence, extractSourceStructureTokens, freezeNumericCalibrationThreshold, type NumericCalibrationEvidence, type NumericComparison } from "./numeric-calibration.js"
 
 const evidence = (suffix: string, variation = false): NumericCalibrationEvidence => ({
-  sourceStructureTokens: ["export", "default", "select", variation ? suffix : "shared"],
+  sourceUtf8: `export default { soldierBrain() { return ${JSON.stringify(variation ? suffix : "shared")} } }`,
   lineageEdgeTokens: [{ label: "parent", from: "base", to: variation ? suffix : "shared-edge" }],
   dependencyEdgeTokens: [{ label: "imports", from: "runtime", to: variation ? suffix : "shared-dependency" }],
   legalInputSamples: { select: ["legal", variation ? suffix : "turn"] },
@@ -75,7 +75,7 @@ describe("numeric factory calibration", () => {
     expect(classifyNumericComparison(mixed, frozen.threshold)).toBe("unresolved")
     expect(classifyNumericComparison({ ...comparison(0.9), dimensions: { ...comparison(0.9).dimensions, sourceStructure: { score: -0.1, informativeCount: 1 } } }, frozen.threshold)).toBe("unresolved")
     expect(freezeNumericCalibrationThreshold({ ...validControls(), "S11/S12": undefined } as unknown as ReturnType<typeof validControls>)).toMatchObject({ status: "unresolved" })
-    expect(() => compareNumericEvidence({ ...evidence("left"), sourceStructureTokens: [""] }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
+    expect(() => compareNumericEvidence({ ...evidence("left"), sourceUtf8: "export default {" }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
     expect(() => compareNumericEvidence({ ...evidence("left"), lineageEdgeTokens: [{ label: "parent", from: "sha256:" + "a".repeat(64), to: "child" }] }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
   })
 })
