@@ -16,6 +16,9 @@ import { publishFactorySupervisionArtifacts } from "../packages/strategy-lab/src
 import { runCanonicalLabMatch, type LabKernelRequest, type LabMatchExecution, type LabRuntimeEvidence, type LabSupervisedProvider } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
 import { createFactorySupervisedRuntime, type FactorySupervisedRuntimeOptions } from "./lib/v1-38-factory-supervised-runtime.js"
+import { assessFactoryIndependence } from "./assess-v1-38-factory-independence.js"
+import { readFactoryExecutionEvidence } from "./v1-38-factory-execution-evidence.js"
+import { readFreshFactoryCalibration, remainingFreshWorkloadLifetime } from "./v1-38-factory-fresh-evidence.js"
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_RUN_${code}`) }
 const encode = (value: unknown): Uint8Array => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok || admitted.canonicalByteLength > 262144) return fail("ARTIFACT"); return admitted.canonicalBytes }
@@ -28,11 +31,14 @@ export interface FactoryCalibrationAttemptPlan {
 export interface FactoryCalibrationRunnerHooks {
   /** Historical mechanics fixtures are never an admissible fresh-v2 route. */
   readonly legacyMechanics?: true
+  readonly executionEvidenceArtifactRoot?: LabRoot
+  /** Test-only clock injection; the operational CLI always uses the host clock. */
+  readonly clock?: () => number
   readonly runtimeOptions?: Partial<Omit<FactorySupervisedRuntimeOptions, "admission" | "sourceBytes" | "attemptRoot" | "budgetRoot" | "image" | "invocationLimit" | "benchmarkLifetimeMs" | "factoryLifetimeMs" | "matchId" | "containerName" | "ownershipLabel">>
   readonly plan?: (admission: FactoryAdmission, provider: FactorySupervisionProvider, startRoot: LabRoot, workload: FactoryCalibrationWorkload) => FactoryCalibrationAttemptPlan
 }
 export interface FactoryCalibrationRunResult {
-  readonly manifestRoot: LabRoot; readonly readinessArtifactRoot: LabRoot; readonly readiness: "not_ready"
+  readonly manifestRoot: LabRoot; readonly readinessArtifactRoot: LabRoot; readonly readiness: "affirmed" | "unresolved" | "not_ready"
   readonly terminalRoots: readonly LabRoot[]; readonly supervisionArtifactRoots: readonly LabRoot[]; readonly ledgerRoot: LabRoot
 }
 
@@ -46,13 +52,7 @@ const rooted = (record: Record<string, unknown>, domain: string): boolean => {
   const { root, ...value } = record
   return root === labRoot(domain, value)
 }
-const verifyRetainedAuthority = (repository: FactoryRepository, manifest: FactoryCalibrationManifest) => {
-  const authorization = readCanonicalRecord(repository, manifest.authorizationArtifactRoot)
-  if (!rooted(authorization, "factory-calibration-authorization-v1") || authorization.root !== manifest.authorizationRoot || authorization.schemaVersion !== "factory-calibration-authorization-v1" || authorization.status !== "authorized" || authorization.protocolArtifactRoot !== manifest.protocolArtifactRoot || authorization.allocationArtifactRoot !== manifest.allocationArtifactRoot || authorization.studyPolicyRoot !== manifest.studyPolicyRoot || authorization.measurementPolicyRoot !== manifest.measurementPolicyRoot || authorization.maxAttempts !== manifest.maxAttempts || authorization.maxInvocationsPerAttempt !== manifest.maxInvocationsPerAttempt || authorization.maxLifetimeMs !== manifest.maxLifetimeMs || !same(authorization.supervision, manifest.supervision) || !same(authorization.ingestionArtifactRoots, manifest.ingestions.map((entry) => entry.artifactRoot)) || !same(authorization.workloadArtifactRoots, manifest.workloads.map((entry) => entry.artifactRoot))) return fail("AUTHORIZATION_BINDING")
-  const protocol = readCanonicalRecord(repository, manifest.protocolArtifactRoot)
-  if (!rooted(protocol, "factory-calibration-protocol-v1") || protocol.root !== manifest.protocolRoot || protocol.schemaVersion !== "factory-calibration-protocol-v1" || protocol.phase !== "264" || protocol.purpose !== "development-independence-calibration" || protocol.split !== "development") return fail("PROTOCOL_BINDING")
-  const allocation = readCanonicalRecord(repository, manifest.allocationArtifactRoot)
-  if (!rooted(allocation, "factory-calibration-allocation-v1") || allocation.root !== manifest.allocationRoot || allocation.schemaVersion !== "factory-calibration-allocation-v1" || allocation.phase !== "264" || allocation.protocolRoot !== manifest.protocolRoot || allocation.maxAttempts !== manifest.maxAttempts || allocation.maxInvocationsPerAttempt !== manifest.maxInvocationsPerAttempt || allocation.maxLifetimeMs !== manifest.maxLifetimeMs) return fail("ALLOCATION_BINDING")
+const verifyUnconsumedAllocation = (repository: FactoryRepository, manifest: FactoryCalibrationManifest) => {
   for (const name of readdirSync(repository.directory)) {
     if (!/^factory-attempt-[a-f0-9]{64}\.started\.json$/u.test(name)) continue
     const parsed = admitCanonicalJsonBytes(readFileSync(resolve(repository.directory, name)), { profile: "canonical-manifest", operation: "require-canonical" })
@@ -61,6 +61,15 @@ const verifyRetainedAuthority = (repository: FactoryRepository, manifest: Factor
     const accounting = readCanonicalRecord(repository, start.resourceAccountingRoot)
     if (start.taskRoot === manifest.protocolRoot || accounting.allocationRoot === manifest.allocationRoot) return fail("ALLOCATION_CONSUMED")
   }
+}
+const verifyRetainedAuthority = (repository: FactoryRepository, manifest: FactoryCalibrationManifest) => {
+  const authorization = readCanonicalRecord(repository, manifest.authorizationArtifactRoot)
+  if (!rooted(authorization, "factory-calibration-authorization-v1") || authorization.root !== manifest.authorizationRoot || authorization.schemaVersion !== "factory-calibration-authorization-v1" || authorization.status !== "authorized" || authorization.protocolArtifactRoot !== manifest.protocolArtifactRoot || authorization.allocationArtifactRoot !== manifest.allocationArtifactRoot || authorization.studyPolicyRoot !== manifest.studyPolicyRoot || authorization.measurementPolicyRoot !== manifest.measurementPolicyRoot || authorization.maxAttempts !== manifest.maxAttempts || authorization.maxInvocationsPerAttempt !== manifest.maxInvocationsPerAttempt || authorization.maxLifetimeMs !== manifest.maxLifetimeMs || !same(authorization.supervision, manifest.supervision) || !same(authorization.ingestionArtifactRoots, manifest.ingestions.map((entry) => entry.artifactRoot)) || !same(authorization.workloadArtifactRoots, manifest.workloads.map((entry) => entry.artifactRoot))) return fail("AUTHORIZATION_BINDING")
+  const protocol = readCanonicalRecord(repository, manifest.protocolArtifactRoot)
+  if (!rooted(protocol, "factory-calibration-protocol-v1") || protocol.root !== manifest.protocolRoot || protocol.schemaVersion !== "factory-calibration-protocol-v1" || protocol.phase !== "264" || protocol.purpose !== "development-independence-calibration" || protocol.split !== "development") return fail("PROTOCOL_BINDING")
+  const allocation = readCanonicalRecord(repository, manifest.allocationArtifactRoot)
+  if (!rooted(allocation, "factory-calibration-allocation-v1") || allocation.root !== manifest.allocationRoot || allocation.schemaVersion !== "factory-calibration-allocation-v1" || allocation.phase !== "264" || allocation.protocolRoot !== manifest.protocolRoot || allocation.maxAttempts !== manifest.maxAttempts || allocation.maxInvocationsPerAttempt !== manifest.maxInvocationsPerAttempt || allocation.maxLifetimeMs !== manifest.maxLifetimeMs) return fail("ALLOCATION_BINDING")
+  verifyUnconsumedAllocation(repository, manifest)
 }
 
 const validateSelectedSource = (proposal: FactoryProposal, sourceBytes: Uint8Array): FactoryValidationEvidence => {
@@ -126,8 +135,18 @@ export const deriveFactoryCalibrationOutcome = (execution: LabMatchExecution, ma
 export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repository: FactoryRepository, hooks: FactoryCalibrationRunnerHooks = {}): Promise<Readonly<FactoryCalibrationRunResult>> => {
   const manifest = admitFactoryCalibrationManifest(readCanonicalRecord(repository, manifestArtifactRoot))
   const authorization = readCanonicalRecord(repository, manifest.authorizationArtifactRoot)
-  verifyRetainedAuthority(repository, manifest)
-  if (authorization.schemaVersion === "factory-calibration-authorization-v1" && hooks.legacyMechanics !== true && !(hooks.runtimeOptions && hooks.plan)) return fail("LEGACY_MECHANICS_HOOKS")
+  const fresh = authorization.schemaVersion === "factory-calibration-authorization-v2"
+    ? readFreshFactoryCalibration(repository, manifest, deriveFixedMechanicsOpponentIdentityRoot())
+    : null
+  if (fresh) {
+    verifyUnconsumedAllocation(repository, manifest)
+    if (hooks.legacyMechanics || hooks.runtimeOptions || hooks.plan) return fail("FRESH_MECHANICS_HOOKS")
+    if (!hooks.executionEvidenceArtifactRoot) return fail("EXECUTION_EVIDENCE")
+    readFactoryExecutionEvidence(repository, hooks.executionEvidenceArtifactRoot, fresh)
+  } else {
+    verifyRetainedAuthority(repository, manifest)
+    if (hooks.legacyMechanics !== true && !(hooks.runtimeOptions && hooks.plan)) return fail("LEGACY_MECHANICS_HOOKS")
+  }
   const terminalRoots: LabRoot[] = []
   const supervisionArtifactRoots: LabRoot[] = []
   const candidateArtifactRoots: LabRoot[] = []
@@ -137,10 +156,19 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
     ingestion: FactoryCalibrationManifest["ingestions"][number]; producerIdentity: FactoryFingerprintEvidence["producerIdentity"]; origin: FactoryFingerprintEvidence["origin"]; retainedRoot: LabRoot
     storedSupervisionArtifactRoot: LabRoot; storedExecutionRoot: LabRoot; attemptPlan: FactoryCalibrationAttemptPlan; selectedRealPath: boolean
   }>> = []
+  const clock = hooks.clock ?? Date.now
+  const firstWorkloadStartedAtMs = clock()
+  let windowTerminalArtifactRoot: LabRoot | null = null
   for (let ordinal = 0; ordinal < manifest.workloads.length; ordinal += 1) {
     const workloadRef = manifest.workloads[ordinal]!
     const ingestion = manifest.ingestions.find((entry) => entry.artifactRoot === workloadRef.candidateIngestionArtifactRoot) ?? fail("WORKLOAD_INGESTION")
-    const accountingRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-accounting-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, ordinal, workloadArtifactRoot: workloadRef.artifactRoot, maxInvocations: manifest.maxInvocationsPerAttempt, maxLifetimeMs: manifest.maxLifetimeMs }))
+    const remainingLifetimeMs = fresh ? remainingFreshWorkloadLifetime(firstWorkloadStartedAtMs, clock()) : manifest.maxLifetimeMs
+    if (fresh && remainingLifetimeMs === 0) {
+      const windowTerminal = { schemaVersion: "factory-calibration-window-terminal-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, reason: "timebox_exhausted", nextOrdinal: ordinal, firstWorkloadStartedAtMs, observedAtMs: clock(), completedCount: terminalRoots.length }
+      windowTerminalArtifactRoot = publishFactoryArtifact(repository, encode({ ...windowTerminal, root: labRoot("factory-calibration-window-terminal-v1", windowTerminal) }))
+      break
+    }
+    const accountingRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-accounting-v1", manifestRoot: manifest.root, allocationRoot: manifest.allocationRoot, ordinal, workloadArtifactRoot: workloadRef.artifactRoot, firstWorkloadStartedAtMs, maxInvocations: manifest.maxInvocationsPerAttempt, maxLifetimeMs: remainingLifetimeMs }))
     const start = createFactoryAttemptStart({
       taskRoot: manifest.protocolRoot,
       budgetRoot: labRoot("factory-calibration-attempt-budget-v1", { allocationRoot: manifest.allocationRoot, ordinal }),
@@ -170,7 +198,7 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
       const validation = validateSelectedSource(proposal, sourceBytes)
       validationRoot = validation.root
       const admission = authorizeFactorySupervision({ sourceAdmission, validation, repository })
-      provider = createFactorySupervisedRuntime({ ...hooks.runtimeOptions, matchId: `factory-calibration-${start.root.slice(7, 23)}`, containerName: `factory-calibration-${start.root.slice(7, 19)}`, ownershipLabel: "v1.38-factory-calibration", admission, sourceBytes, attemptRoot: start.root, budgetRoot: start.budgetRoot, image: manifest.supervision.image, invocationLimit: workload.budget.maxInvocations, factoryLifetimeMs: workload.budget.maxLifetimeMs })
+      provider = createFactorySupervisedRuntime({ ...hooks.runtimeOptions, matchId: `factory-calibration-${start.root.slice(7, 23)}`, containerName: `factory-calibration-${start.root.slice(7, 19)}`, ownershipLabel: "v1.38-factory-calibration", admission, sourceBytes, attemptRoot: start.root, budgetRoot: start.budgetRoot, image: manifest.supervision.image, invocationLimit: workload.budget.maxInvocations, factoryLifetimeMs: Math.min(workload.budget.maxLifetimeMs, remainingLifetimeMs) })
       providerCreated = true
       const attemptPlan = hooks.plan ? hooks.plan(admission, provider, start.root, workload) : defaultPlan(workload, admission, provider, start.root)
       if (attemptPlan.candidatePlayerId !== attemptPlan.input.match.bottomPlayerId && attemptPlan.candidatePlayerId !== attemptPlan.input.match.topPlayerId) fail("CANDIDATE_PLAYER")
@@ -274,18 +302,20 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
     }
   }
   const inventory = resumeFactoryAttemptInventory(repository)
-  const readiness = { schemaVersion: "factory-calibration-readiness-v1", privacy: "private_offline", manifestRoot: manifest.root, ledgerRoot: inventory.ledgerRoot, terminalRoots, supervisionArtifactRoots, pairingArtifactRoots, candidateArtifactRoots, status: "not_ready", reason: "calibration_thresholds_not_frozen" }
+  const assessment = fresh ? assessFactoryIndependence(repository, { manifestArtifactRoot, executionEvidenceArtifactRoot: hooks.executionEvidenceArtifactRoot!, ledgerRoot: inventory.ledgerRoot, terminalRoots, supervisionArtifactRoots, pairingArtifactRoots, candidateArtifactRoots, windowTerminalArtifactRoot }, { persist: true }) : null
+  const readiness = { schemaVersion: "factory-calibration-readiness-v1", privacy: "private_offline", manifestRoot: manifest.root, ledgerRoot: inventory.ledgerRoot, terminalRoots, supervisionArtifactRoots, pairingArtifactRoots, candidateArtifactRoots, status: assessment?.status ?? "not_ready", reasons: assessment?.reasons ?? ["legacy_mechanics_only"], assessmentArtifactRoot: assessment?.assessmentArtifactRoot ?? null, thresholdArtifactRoot: assessment?.thresholdArtifactRoot ?? null, windowTerminalArtifactRoot }
   const readinessArtifactRoot = publishFactoryArtifact(repository, encode(readiness))
-  return freezeLabValue({ manifestRoot: manifest.root, readinessArtifactRoot, readiness: "not_ready", terminalRoots, supervisionArtifactRoots, ledgerRoot: inventory.ledgerRoot })
+  return freezeLabValue({ manifestRoot: manifest.root, readinessArtifactRoot, readiness: assessment?.status ?? "not_ready", terminalRoots, supervisionArtifactRoots, ledgerRoot: inventory.ledgerRoot })
 }
 
-const help = "Usage: run-v1-38-factory-calibration --repository <factory-directory> --manifest <artifact-root>\nRuns only the retained Phase 264 allocation through the selected container adapter."
+const help = "Usage: run-v1-38-factory-calibration --repository <factory-directory> --manifest <artifact-root> --execution-evidence <artifact-root>\nRuns only the retained Phase 264 allocation through the selected container adapter."
 const argument = (name: string) => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined }
 const main = async () => {
   if (process.argv.includes("--help")) { process.stdout.write(`${help}\n`); return }
-  const directory = argument("--repository"), manifest = argument("--manifest")
+  const directory = argument("--repository"), manifest = argument("--manifest"), executionEvidence = argument("--execution-evidence")
   if (!directory || !manifest || !/^sha256:[0-9a-f]{64}$/u.test(manifest)) return fail("ARGUMENTS")
-  const result = await runFactoryCalibration(manifest as LabRoot, createFactoryRepository(resolve(directory)))
+  if (executionEvidence !== undefined && !/^sha256:[0-9a-f]{64}$/u.test(executionEvidence)) return fail("ARGUMENTS")
+  const result = await runFactoryCalibration(manifest as LabRoot, createFactoryRepository(resolve(directory)), executionEvidence === undefined ? {} : { executionEvidenceArtifactRoot: executionEvidence as LabRoot })
   process.stdout.write(`${JSON.stringify(result)}\n`)
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) void main().catch((error) => { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1 })
