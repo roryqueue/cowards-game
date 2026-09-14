@@ -39,6 +39,8 @@ describe("factory empirical authorship prerequisite", () => {
     expect(decodeChargedAuthorTranscript(events, request).returnedUsage).toMatchObject({ inputTokens: 1, outputTokens: 1 })
     const duplicate = [...eventValues.slice(0, 4), { method: "item/completed", params: { threadId: "thread", turnId: "turn", item: { id: "user-2", type: "userMessage", content: [{ type: "text", text: context }] } } }, ...eventValues.slice(4)].map(JSON.stringify).join("\n")
     expect(() => decodeChargedAuthorTranscript(duplicate, request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
+    const emptyId = structuredClone(eventValues); emptyId[2]!.params.item.id = ""
+    expect(() => decodeChargedAuthorTranscript(emptyId.map(JSON.stringify).join("\n"), request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
   })
   it("covers admission, ledger and identity dependencies in the reviewed source snapshot",()=>{
     const paths=factoryAssessmentImplementationManifest().entries.map(entry=>entry.path)

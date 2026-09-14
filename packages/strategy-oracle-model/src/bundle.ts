@@ -128,9 +128,9 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: 
     } else if (message.method === "model/rerouted") fail("RAW_RESPONSE")
     else if (message.method === "item/started" || message.method === "item/completed") {
       const params = objectRecord(message.params, "RAW_RESPONSE")
-      if (turnId !== null && params.turnId === turnId) {
-        const item = objectRecord(params.item, "RAW_RESPONSE")
-        if (item.type === "userMessage") {
+      const item = objectRecord(params.item, "RAW_RESPONSE")
+      if (item.type === "userMessage") {
+        if (turnId === null || params.turnId !== turnId) fail("RAW_RESPONSE")
           const content = item.content, itemId = textValue(item.id)
           if (expectedPrompt === undefined || params.threadId !== threadId || !itemId || !Array.isArray(content) || content.length !== 1 || !objectRecord(content[0], "RAW_RESPONSE") || (content[0] as RecordValue).type !== "text" || (content[0] as RecordValue).text !== expectedPrompt) fail("RAW_RESPONSE")
           if (!itemId) fail("RAW_RESPONSE")
@@ -138,14 +138,13 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: 
           if (message.method === "item/started") { if (userStarts.has(admittedItemId) || (userIds.size > 0 && !userIds.has(admittedItemId))) fail("RAW_RESPONSE"); userIds.add(admittedItemId); userStarts.add(admittedItemId) }
           else if (userCompletions.has(admittedItemId) || !userStarts.has(admittedItemId) || (userIds.size > 0 && !userIds.has(admittedItemId))) fail("RAW_RESPONSE")
           else userCompletions.add(admittedItemId)
-        } else if (message.method === "item/completed" && item.type === "agentMessage" && typeof item.text === "string") {
+      } else if (turnId !== null && params.turnId === turnId && message.method === "item/completed" && item.type === "agentMessage" && typeof item.text === "string") {
           if (source !== null) fail("RAW_RESPONSE")
           let envelope: RecordValue
           try { envelope = JSON.parse(item.text) as RecordValue } catch { return fail("RAW_RESPONSE") }
           if (!exact(envelope, ["source"]) || !text(envelope.source, 65536)) fail("RAW_RESPONSE")
           source = envelope.source as string
-        } else if (item.type !== "reasoning" && !(item.type === "agentMessage" && message.method === "item/started")) fail("RAW_RESPONSE")
-      }
+      } else if (turnId !== null && params.turnId === turnId && item.type !== "reasoning" && !(item.type === "agentMessage" && message.method === "item/started")) fail("RAW_RESPONSE")
     } else if (message.method === "thread/tokenUsage/updated") {
       const params = objectRecord(message.params, "RAW_RESPONSE")
       if (turnId !== null && params.turnId === turnId) {

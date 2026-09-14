@@ -97,7 +97,7 @@ export const decodeChargedAuthorTranscript = (raw: string, request: Record<strin
   const userIds = new Set<string>(), userStarts = new Set<string>(), userCompletions = new Set<string>()
   for (const event of events.filter((candidate) => ["item/started", "item/completed"].includes(String(candidate.method)) && candidate.params?.item?.type === "userMessage")) {
     const params = event.params, item = params.item, content = item.content
-    if (params.threadId !== threadId || params.turnId !== turnId || typeof item.id !== "string" || !Array.isArray(content) || content.length !== 1 || content[0]?.type !== "text" || content[0]?.text !== request.context) return fail("AUTHOR_PROTOCOL")
+    if (params.threadId !== threadId || params.turnId !== turnId || typeof item.id !== "string" || item.id.length === 0 || !Array.isArray(content) || content.length !== 1 || content[0]?.type !== "text" || content[0]?.text !== request.context) return fail("AUTHOR_PROTOCOL")
     if (event.method === "item/started") { if (userStarts.has(item.id) || (userIds.size > 0 && !userIds.has(item.id))) return fail("AUTHOR_PROTOCOL"); userIds.add(item.id); userStarts.add(item.id) }
     else { if (userCompletions.has(item.id) || !userStarts.has(item.id) || (userIds.size > 0 && !userIds.has(item.id))) return fail("AUTHOR_PROTOCOL"); userCompletions.add(item.id) }
   }

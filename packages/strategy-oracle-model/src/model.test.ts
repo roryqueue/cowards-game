@@ -66,6 +66,8 @@ describe("frozen model oracle", () => {
     const substituted = retained.rawResponseRecord.bodyUtf8.replace(prompt, "different prompt")
     expect(() => decodeFrozenModelRawResponse(substituted, prompt)).toThrow("MODEL_RAW_RESPONSE")
     expect(() => decodeFrozenModelRawResponse(v2Records(source, true, prompt, true).rawResponseRecord.bodyUtf8, prompt)).toThrow("MODEL_RAW_RESPONSE")
+    const staleTurn = retained.rawResponseRecord.bodyUtf8.replace('"turnId":"turn-1","item":{"id":"user-1"', '"turnId":"stale-turn","item":{"id":"user-1"')
+    expect(() => decodeFrozenModelRawResponse(staleTurn, prompt)).toThrow("MODEL_RAW_RESPONSE")
   })
   it("admits complete canonical frozen provenance without any producer invocation", () => {
     const bundle = admitFrozenModelBundle(bundleInput())
