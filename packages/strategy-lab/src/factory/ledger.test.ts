@@ -8,7 +8,7 @@ const start = () => createFactoryAttemptStart({ taskRoot: r, budgetRoot: r, cand
 describe("charged factory attempt ledger", () => {
   it("charges before work and retains every terminal disposition as unscored private evidence", () => {
     const charged = start()
-    for (const disposition of ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "player_violation", "system_failure"] as const) {
+    for (const disposition of ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"] as const) {
       const terminal = createFactoryAttemptTerminal({ startRoot: charged.root, disposition, outputRoot: disposition === "system_failure" ? null : r, validationRoot: r, duplicateEvidenceRoot: r, finalEvidenceRoot: r })
       expect(validateFactoryAttemptLedger(charged, terminal).disposition).toBe(disposition)
       expect(terminal.privacy).toBe("private_offline")

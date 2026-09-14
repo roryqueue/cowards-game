@@ -152,8 +152,7 @@ describe("hostile private candidate admission", () => {
     expect(() => finalizeFactoryCandidate({ receipt: failureReceipt, candidate: factoryCandidateFixture(proposal, validation, failureReceipt.root) })).toThrow("FACTORY_ADMISSION")
 
     const successReceipt = await superviseFactory(admission, "candidate", { match: matchParticipants, providers: { candidate: providerFor(admission) } }, runCandidateOnce)
-    const final = finalizeFactoryCandidate({ receipt: successReceipt, candidate: factoryCandidateFixture(proposal, validation, successReceipt.root) })
-    expect(final.supervisionReceiptRoot).toBe(successReceipt.root)
+    expect(() => finalizeFactoryCandidate({ receipt: successReceipt, candidate: factoryCandidateFixture(proposal, validation, successReceipt.root) } as never)).toThrow("FACTORY_ADMISSION")
   })
 
   it("rejects detached or uninvoked candidate providers and fabricated receipts", async () => {
