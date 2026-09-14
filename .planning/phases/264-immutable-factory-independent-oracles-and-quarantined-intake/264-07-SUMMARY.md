@@ -3,8 +3,8 @@ phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
 plan: "07"
 subsystem: private-model-factory-route
 tags: [private, immutable-provenance, source-only, codex-cli, calibration-manifest]
-status: complete
-completed: "2026-09-14"
+status: in_progress
+source_review: issues_found
 dependency_graph:
   requires: [264-05, 264-06]
   provides: [truthful-v2-model-provenance, frozen-authoring-allocation, source-review-handoff]
@@ -29,6 +29,8 @@ decisions:
 ---
 
 # Phase 264 Plan 07: Fresh Route Summary
+
+**Main integration correction —2026-09-14:** Do not treat this plan as complete. Independent264-REVIEW.md found four substantive gaps: authoring isolation is caller-asserted, the durable author-attempt/capture lifecycle is absent, the48-cell declaration is not enforced by preparation, and v2 provenance still accepts invented version metadata and unverified record roots. The tests below passed but do not establish the missing behavior. Repair remains within Plan07 under existing approval; no empirical allocation has been consumed. Earlier accomplishment claims below describe the executor's initial partial implementation and are superseded where inconsistent with this correction.
 
 Truthful successor model provenance and the complete private fresh-route allocation are source-ready for independent review, with no model request, generated source, workload, Match, or empirical claim produced.
 
@@ -64,13 +66,13 @@ Truthful successor model provenance and the complete private fresh-route allocat
 
 ## Known Stubs
 
-None. The command builder intentionally returns inert argv/cwd data and never launches a process; this is the plan's required isolation boundary, not an unwired output.
+The initial command description is not the required operational isolation/capture boundary. Durable launch/attempt/record retention and fresh-allocation enforcement remain unwired; see the four findings in264-REVIEW.md.
 
 ## Next Phase Readiness
 
 Independent source review is the only permitted next release gate. No readiness, independence, provider/model availability, token-cap enforcement, generated-source validity, calibration, Match, runtime, human/external intake, holdout, formation, public, counted, production, or gameplay claim is made here.
 
-## Self-Check: PASSED
+## Self-Check: INCOMPLETE AFTER INDEPENDENT REVIEW
 
 - All scoped source/test paths named above exist.
 - All three task commits are present in git history.
