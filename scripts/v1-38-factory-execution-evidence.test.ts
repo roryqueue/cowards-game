@@ -23,6 +23,20 @@ describe("factory empirical authorship prerequisite", () => {
     ].map(JSON.stringify).join("\n")
     expect(() => decodeChargedAuthorTranscript(events, request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
   })
+  it("accepts a compact exact user-echo transcript through retained-evidence decoding", () => {
+    const context = "emit source only", request = { requestedModel: "model", cwd: "/isolated", cwdClass: "fresh-disclosed-packet-only-outside-repository", context, frozenSettings: { providerId: "provider" }, clientSettings: ["--stdio", "--strict-config", ...["shell_tool", "unified_exec", "browser_use", "browser_use_external", "apps", "plugins", "computer_use", "image_generation", "imagegenext", "standalone_web_search", "multi_agent"].flatMap((feature) => ["--disable", feature])], launchEnvironment: { PATH: "/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } }
+    const userItem = { id: "user-1", type: "userMessage", content: [{ type: "text", text: context }] }
+    const events = [
+      { result: { thread: { id: "thread" }, model: "model", modelProvider: "provider", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
+      { result: { turn: { id: "turn" } } },
+      { method: "item/started", params: { threadId: "thread", turnId: "turn", item: userItem } },
+      { method: "item/completed", params: { threadId: "thread", turnId: "turn", item: userItem } },
+      { method: "item/completed", params: { threadId: "thread", turnId: "turn", item: { id: "agent-1", type: "agentMessage", text: JSON.stringify({ source: "source" }) } } },
+      { method: "thread/tokenUsage/updated", params: { turnId: "turn", tokenUsage: { total: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, totalTokens: 2 } } } },
+      { method: "turn/completed", params: { turn: { id: "turn", status: "completed" } } },
+    ].map(JSON.stringify).join("\n")
+    expect(decodeChargedAuthorTranscript(events, request).returnedUsage).toMatchObject({ inputTokens: 1, outputTokens: 1 })
+  })
   it("covers admission, ledger and identity dependencies in the reviewed source snapshot",()=>{
     const paths=factoryAssessmentImplementationManifest().entries.map(entry=>entry.path)
     for(const name of ["ledger","contracts","identity"])expect(paths).toContain(`packages/strategy-lab/src/factory/${name}.ts`)

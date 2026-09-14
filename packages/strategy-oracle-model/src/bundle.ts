@@ -133,9 +133,11 @@ export const decodeFrozenModelRawResponse = (bodyUtf8: string, expectedPrompt?: 
         if (item.type === "userMessage") {
           const content = item.content, itemId = textValue(item.id)
           if (expectedPrompt === undefined || params.threadId !== threadId || !itemId || !Array.isArray(content) || content.length !== 1 || !objectRecord(content[0], "RAW_RESPONSE") || (content[0] as RecordValue).type !== "text" || (content[0] as RecordValue).text !== expectedPrompt) fail("RAW_RESPONSE")
-          if (message.method === "item/started") { if (userStarts.has(itemId) || (userStarts.size > 0 && !userCompletions.has(itemId))) fail("RAW_RESPONSE"); userStarts.add(itemId) }
-          else if (userCompletions.has(itemId) || (userStarts.size > 0 && !userStarts.has(itemId)) || (userCompletions.size > 0 && !userStarts.has(itemId))) fail("RAW_RESPONSE")
-          else userCompletions.add(itemId)
+          if (!itemId) fail("RAW_RESPONSE")
+          const admittedItemId = itemId as string
+          if (message.method === "item/started") { if (userStarts.has(admittedItemId) || (userStarts.size > 0 && !userCompletions.has(admittedItemId))) fail("RAW_RESPONSE"); userStarts.add(admittedItemId) }
+          else if (userCompletions.has(admittedItemId) || (userStarts.size > 0 && !userStarts.has(admittedItemId)) || (userCompletions.size > 0 && !userStarts.has(admittedItemId))) fail("RAW_RESPONSE")
+          else userCompletions.add(admittedItemId)
         } else if (message.method === "item/completed" && item.type === "agentMessage" && typeof item.text === "string") {
           if (source !== null) fail("RAW_RESPONSE")
           let envelope: RecordValue
