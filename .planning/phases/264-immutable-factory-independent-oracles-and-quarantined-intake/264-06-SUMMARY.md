@@ -91,6 +91,7 @@ status: complete
 
 1. **Task 1: Define the exact frozen intake protocol and disclosure classes** - `06ab180f` (feat)
 2. **Task 2: Admit explicit hostile submissions into the common evidence root** - `f6701dc9` (feat)
+3. **Task 2 follow-up: retain malformed retry charges** - `821d104c` (fix)
 
 ## Files Created/Modified
 
@@ -135,7 +136,7 @@ The private intake path is ready for downstream readiness/calibration work. No r
 ## Verification
 
 - `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts` — passed (9 tests).
-- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — passed (26 tests).
+- `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory` — passed (27 tests).
 - `./node_modules/.bin/tsc -b packages/strategy-lab --pretty false` — passed.
 
 ## Self-Check: PASSED
