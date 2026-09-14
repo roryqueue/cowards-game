@@ -26,6 +26,11 @@ jobs:
           version: latest
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - name: Private factory source and evaluation checks (no experimental runs)
+        timeout-minutes: 5
+        run: |
+          ./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/contracts.test.ts packages/strategy-lab/src/factory/identity.test.ts packages/strategy-lab/src/factory/repository.test.ts packages/strategy-lab/src/factory/ledger.test.ts packages/strategy-lab/src/factory/admission.test.ts packages/strategy-lab/src/factory/fingerprint.test.ts packages/strategy-lab/src/factory/calibration-corpus.test.ts packages/strategy-lab/src/factory/calibration.test.ts packages/strategy-lab/src/factory/intake-protocol.test.ts packages/strategy-lab/src/factory/intake.test.ts packages/strategy-lab/src/factory/supervision-artifacts.test.ts packages/strategy-oracle-tactical/src/tactical.test.ts packages/strategy-oracle-teacher/src/teacher.test.ts packages/strategy-oracle-model/src/model.test.ts scripts/ingest-v1-38-factory-packet.test.ts scripts/prepare-v1-38-factory-calibration.test.ts scripts/run-v1-38-factory-calibration.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts scripts/check-v1-38-factory-boundaries.test.ts
+          ./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts
       - run: pnpm test:fast
 
   service-e2e:

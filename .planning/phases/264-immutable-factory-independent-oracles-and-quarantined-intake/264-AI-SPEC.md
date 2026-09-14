@@ -266,6 +266,8 @@ Attribute provider-reported input/output tokens and wall time to every attempt; 
 
 **Size:** 16 development fixtures (expand to 20 only from observed Phase 264 failures; no holdout or league cases).
 
+**Executable inventory:** `264-EVAL-REFERENCE.md` maps the16 reference fixtures and their exact assertions to existing source tests. The six-category clone comparison corpus is separate supporting coverage. The named private source/evaluation step in `.github/workflows/ci.yml` runs those files plus connected runner/retention and boundary regressions using existing installed dependencies. This is a source/mechanics gate only; it grants no empirical allocation and is not production deployment.
+
 **Composition:**
 Four accepted/rebuilt immutable roots; four missing/drifted provider or malformed-bundle blocks; three legal-input/hidden-state/direct-execution denials; three shared-selector, semantic-rewrite, symmetry/near-behavior clone cases; and two disclosure/conflict/failed-intake ledger cases. Every fixture carries expected deterministic disposition and required receipt fields. Synthetic fixtures prove mechanics only; genuine model, external, or candidate evidence requires its actual frozen records and otherwise remains unresolved.
 
