@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, symlinkSync, writeFileSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, symlinkSync, writeFileSync } from "node:fs"
+import { dirname, isAbsolute, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { admitFrozenModelBundle, deriveFrozenModelBundleRoot, deriveFrozenModelRawResponseRecordRoot, deriveFrozenModelRequestRecordRoot, deriveFrozenModelResponseRoot, type FrozenModelBundleV2 } from "../packages/strategy-oracle-model/src/bundle.js"
@@ -42,23 +42,29 @@ export interface ModelUsageRecord { readonly inputTokens: number; readonly outpu
 export const assessAuthoringUsage = (usage: ModelUsageRecord | null): "within_ceiling" | "charged_terminal_stop" => !usage || ![usage.inputTokens, usage.outputTokens, usage.cachedInputTokens, usage.totalTokens].every(Number.isSafeInteger) || usage.inputTokens < 0 || usage.outputTokens < 0 || usage.cachedInputTokens < 0 || usage.cachedInputTokens > usage.inputTokens || usage.totalTokens !== usage.inputTokens + usage.outputTokens || usage.totalTokens > 50_000 ? "charged_terminal_stop" : "within_ceiling"
 
 const FEATURES = ["shell_tool", "unified_exec", "browser_use", "browser_use_external", "apps", "plugins", "computer_use", "image_generation", "imagegenext", "standalone_web_search", "multi_agent"] as const
-export interface AuthoringCapability { readonly codexVersion: string; readonly execHelp: string; readonly appServerHelp: string; readonly featureList: string }
+export interface AuthoringCapability { readonly codexExecutable: string; readonly codexVersion: string; readonly execHelp: string; readonly appServerHelp: string; readonly featureList: string }
 export const inspectAuthoringCapability = (input: AuthoringCapability) => {
   const names = new Set(input.featureList.split(/\r?\n/u).map((line) => line.trim().split(/\s+/u)[0]).filter(Boolean))
   const help = ["--model", "--sandbox", "--cd", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", "--json", "instructions are read from stdin"]
-  return Object.freeze({ available: /^codex-cli\s+\d+\.\d+\.\d+$/u.test(input.codexVersion.trim()) && help.every((flag) => input.execHelp.includes(flag)) && ["--stdio", "--strict-config", "--disable"].every((flag) => input.appServerHelp.includes(flag)) && FEATURES.every((feature) => names.has(feature)), clientVersion: input.codexVersion.trim(), disabledFeatures: Object.freeze([...FEATURES]) })
+  return Object.freeze({ available: isAbsolute(input.codexExecutable) && /^codex-cli\s+\d+\.\d+\.\d+$/u.test(input.codexVersion.trim()) && help.every((flag) => input.execHelp.includes(flag)) && ["--stdio", "--strict-config", "--disable"].every((flag) => input.appServerHelp.includes(flag)) && FEATURES.every((feature) => names.has(feature)), codexExecutable: input.codexExecutable, clientVersion: input.codexVersion.trim(), disabledFeatures: Object.freeze([...FEATURES]) })
 }
 export interface FactoryAuthorLaunchPlan { readonly status: "ready"; readonly cwd: string; readonly argv: readonly string[]; readonly env: Readonly<Record<string, string>>; readonly stdin: string; readonly packetPath: string; readonly packetRoot: LabRoot; readonly requestedModel: string; readonly requestRecord: Readonly<Record<string, unknown>>; readonly requestRecordRoot: LabRoot }
 export interface FrozenAuthorSettings { readonly providerId: string; readonly settingsRoot: LabRoot; readonly promptRoot: LabRoot; readonly contextRoot: LabRoot; readonly budgetRoot: LabRoot; readonly runtimeProfileRoot: LabRoot; readonly predecessorRoot: LabRoot; readonly correctionRoot: LabRoot | null; readonly retryParentRoot: LabRoot | null }
+const outsideRepository = (path: string): boolean => {
+  let current = path
+  for (;;) { if (existsSync(join(current, ".git"))) return false; const parent = dirname(current); if (parent === current) return true; current = parent }
+}
 export const buildFactoryAuthorCommand = (allocation: FactoryAuthoringAllocation, input: Readonly<{ packetBytes: Uint8Array; packetRoot: LabRoot; disclosedDirectory: string; model: string; capability: AuthoringCapability; frozenSettings: FrozenAuthorSettings; codePath?: string; authHome?: string }>): Readonly<FactoryAuthorLaunchPlan> | Readonly<{ status: "authoring_context_capability_unavailable" }> => {
   const admitted = admitFactoryAuthoringAllocation(allocation), capability = inspectAuthoringCapability(input.capability)
   if (!capability.available || !isRoot(input.packetRoot) || bytesRoot(input.packetBytes) !== input.packetRoot || !/^[-a-zA-Z0-9_.:]+$/u.test(input.model) || !/^[a-z][a-z0-9-]{0,95}$/u.test(input.frozenSettings.providerId) || ![input.frozenSettings.settingsRoot, input.frozenSettings.promptRoot, input.frozenSettings.contextRoot, input.frozenSettings.budgetRoot, input.frozenSettings.runtimeProfileRoot, input.frozenSettings.predecessorRoot].every(isRoot) || ![input.frozenSettings.correctionRoot, input.frozenSettings.retryParentRoot].every((value) => value === null || isRoot(value))) return Object.freeze({ status: "authoring_context_capability_unavailable" as const })
-  const cwd = resolve(input.disclosedDirectory); mkdirSync(cwd, { mode: 0o700 }); if (readdirSync(cwd).length !== 0) return fail("DISCLOSED_DIRECTORY_NOT_EMPTY")
+  const controlledRoot = resolve(input.disclosedDirectory); if (!existsSync(controlledRoot)) mkdirSync(controlledRoot, { mode: 0o700 }); if (lstatSync(controlledRoot).isSymbolicLink() || readdirSync(controlledRoot).length !== 0) return fail("DISCLOSED_DIRECTORY_NOT_EMPTY")
+  const canonicalRoot = realpathSync(controlledRoot); if (!outsideRepository(canonicalRoot)) return fail("DISCLOSED_DIRECTORY_REPOSITORY")
+  const cwd = realpathSync(mkdtempSync(join(canonicalRoot, "author-"))); if (!outsideRepository(cwd)) return fail("DISCLOSED_DIRECTORY_REPOSITORY")
   const packetPath = join(cwd, "admitted-packet.json"); writeFileSync(packetPath, input.packetBytes, { flag: "wx", mode: 0o400 })
-  const argv = ["codex", "app-server", "--stdio", "--strict-config", ...capability.disabledFeatures.flatMap((feature) => ["--disable", feature])]
+  const argv = [capability.codexExecutable, "app-server", "--stdio", "--strict-config", ...capability.disabledFeatures.flatMap((feature) => ["--disable", feature])]
   const stdin = `Author deterministic TypeScript using only this admitted packet. Do not request tools, files, network, or host context. Return one JSON object with a source string.\n<admitted-packet root="${input.packetRoot}">\n${new TextDecoder().decode(input.packetBytes)}\n</admitted-packet>\n`
   const env: Record<string, string> = { PATH: input.codePath ?? "/usr/bin:/bin:/usr/sbin:/sbin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }; if (input.authHome) env.CODEX_HOME = resolve(input.authHome)
-  const requestRecord = Object.freeze({ schemaVersion: "factory-model-author-request-v1", allocationRoot: admitted.root, packetRoot: input.packetRoot, requestedModel: input.model, clientVersion: capability.clientVersion, clientSettings: argv.slice(2), frozenSettings: input.frozenSettings, recipes: FACTORY_SOURCE_RECIPES, context: stdin, cwdClass: "fresh-disclosed-packet-only" })
+  const requestRecord = Object.freeze({ schemaVersion: "factory-model-author-request-v1", allocationRoot: admitted.root, packetRoot: input.packetRoot, requestedModel: input.model, codexExecutable: capability.codexExecutable, clientVersion: capability.clientVersion, clientSettings: argv.slice(2), launchEnvironment: env, frozenSettings: input.frozenSettings, recipes: FACTORY_SOURCE_RECIPES, context: stdin, cwdClass: "fresh-disclosed-packet-only-outside-repository" })
   return Object.freeze({ status: "ready", cwd, argv: Object.freeze(argv), env: Object.freeze(env), stdin, packetPath, packetRoot: input.packetRoot, requestedModel: input.model, requestRecord, requestRecordRoot: labRoot("factory-model-author-request-v1", requestRecord) })
 }
 
@@ -121,17 +127,22 @@ export const runFactoryAppServerAuthorAttempt = async (input: AppServerAuthorAtt
   writeFileSync(join(stateDirectory, "config.toml"), `model = ${JSON.stringify(input.model)}\napproval_policy = "never"\nsandbox_mode = "read-only"\n`, { flag: "wx", mode: 0o600 }); symlinkSync(resolve(input.existingAuthFile), join(stateDirectory, "auth.json"))
   const launch = buildFactoryAuthorCommand(input.allocation, { packetBytes: input.packetBytes, packetRoot: input.packetRoot, disclosedDirectory: input.disclosedDirectory, model: input.model, capability: input.capability, frozenSettings: input.frozenSettings, authHome: stateDirectory })
   if (launch.status !== "ready") return fail("CAPABILITY")
-  const transport = await (input.transportFactory ?? createFactoryAppServerTransport)({ codexHome: stateDirectory, cwd: launch.cwd, requestedModel: input.model, requestedProvider: input.modelProvider, timeoutMs: input.allocation.windowMinutes * 60_000 })
+  const transport = await (input.transportFactory ?? createFactoryAppServerTransport)({ codexExecutable: input.capability.codexExecutable, codexHome: stateDirectory, cwd: launch.cwd, env: launch.env, requestedModel: input.model, requestedProvider: input.modelProvider, timeoutMs: input.allocation.windowMinutes * 60_000 })
+  let started: AuthorAttemptStart | null = null
+  let outcome: Readonly<{ start: AuthorAttemptStart; terminal: AuthorAttemptTerminal; bundle: Readonly<FrozenModelBundleV2> | null }> | null = null
   try {
-    const start = startAuthorAttempt(input.ledgerDirectory, input.allocation, launch, clock), before = clock()
+    const start = startAuthorAttempt(input.ledgerDirectory, input.allocation, launch, clock), before = clock(); started = start
     let observed: FactoryAppServerTurnResult
     const remaining = input.allocation.windowMinutes * 60_000 - Math.max(0, before - start.firstStartedAtMs)
-    try { observed = await transport.startTurn(launch.stdin, remaining) } catch (error) { const terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => { throw error }, clock); return Object.freeze({ start, terminal, bundle: null }) }
+    try { observed = await transport.startTurn(launch.stdin, remaining) } catch (error) { const terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => { throw error }, clock); outcome = Object.freeze({ start, terminal, bundle: null }); return outcome }
     const after = clock(); let source = ""; try { const sourceValue = JSON.parse(observed.sourceMessage) as Record<string, unknown>; if (Object.keys(sourceValue).length === 1 && typeof sourceValue.source === "string") source = sourceValue.source } catch { /* retained as correction-eligible invalid output */ }
     const usage: ModelUsageRecord = { inputTokens: observed.usage.inputTokens, outputTokens: observed.usage.outputTokens, cachedInputTokens: observed.usage.cachedInputTokens, totalTokens: observed.usage.totalTokens }
     const terminal = completeAuthorAttempt(input.ledgerDirectory, start, launch, () => ({ exitCode: 0, stdout: observed.rawJsonl, stderr: new Uint8Array(), elapsedMilliseconds: Math.max(0, after - before), admitted: { reportedModel: observed.reportedModel, usage, source, validEnvelope: true } }), clock)
-    return Object.freeze({ start, terminal, bundle: terminal.disposition === "valid" ? createFrozenModelBundleV2FromAuthorAttempt(input.ledgerDirectory, input.allocation, launch, start) : null })
-  } finally { transport.close() }
+    outcome = Object.freeze({ start, terminal, bundle: terminal.disposition === "valid" ? createFrozenModelBundleV2FromAuthorAttempt(input.ledgerDirectory, input.allocation, launch, start) : null }); return outcome
+  } finally {
+    const disposition = await transport.close()
+    if (started) { const draft = { schemaVersion: "factory-model-author-process-cleanup-v1" as const, startRoot: started.root, disposition }; atomicJson(join(resolve(input.ledgerDirectory), started.ordinal, "process-cleanup.json"), { ...draft, root: labRoot("factory-model-author-process-cleanup-v1", draft) }) }
+  }
 }
 
 export const createIndependentSourceReviewHandoff = (allocation: FactoryAuthoringAllocation) => Object.freeze({ status: "source_ready_for_independent_review" as const, allocationRoot: admitFactoryAuthoringAllocation(allocation).root, empiricalAction: "not_authorized" as const })
@@ -144,7 +155,8 @@ const main = async () => {
   const allocationPath = argument("--allocation"), packetPath = argument("--packet"), packetRoot = argument("--packet-root"), disclosedDirectory = argument("--disclosed-directory"), stateDirectory = argument("--state-directory"), authFile = argument("--auth-file"), ledger = argument("--ledger"), model = argument("--model"), modelProvider = argument("--model-provider"), settingsPath = argument("--settings")
   if (!allocationPath || !packetPath || !packetRoot || !disclosedDirectory || !stateDirectory || !authFile || !ledger || !model || !modelProvider || !settingsPath) return fail("ARGUMENTS")
   const allocation = admitFactoryAuthoringAllocation(JSON.parse(readFileSync(resolve(allocationPath), "utf8"))), packetBytes = readFileSync(resolve(packetPath))
-  const capability = { codexVersion: commandOutput("codex", ["--version"]), execHelp: commandOutput("codex", ["exec", "--help"]), appServerHelp: commandOutput("codex", ["app-server", "--help"]), featureList: commandOutput("codex", ["features", "list"]) }, frozenSettings = JSON.parse(readFileSync(resolve(settingsPath), "utf8")) as FrozenAuthorSettings
+  const codexExecutable = realpathSync(commandOutput("/usr/bin/which", ["codex"]).trim())
+  const capability = { codexExecutable, codexVersion: commandOutput(codexExecutable, ["--version"]), execHelp: commandOutput(codexExecutable, ["exec", "--help"]), appServerHelp: commandOutput(codexExecutable, ["app-server", "--help"]), featureList: commandOutput(codexExecutable, ["features", "list"]) }, frozenSettings = JSON.parse(readFileSync(resolve(settingsPath), "utf8")) as FrozenAuthorSettings
   const result = await runFactoryAppServerAuthorAttempt({ allocation, packetBytes, packetRoot: packetRoot as LabRoot, disclosedDirectory, stateDirectory, existingAuthFile: authFile, ledgerDirectory: ledger, model, modelProvider, frozenSettings, capability })
   process.stdout.write(`${JSON.stringify({ startRoot: result.start.root, terminalRoot: result.terminal.root, disposition: result.terminal.disposition, bundleRoot: result.bundle?.root ?? null })}\n`)
 }

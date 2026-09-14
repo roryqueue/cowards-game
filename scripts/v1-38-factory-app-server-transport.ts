@@ -9,10 +9,12 @@ export interface FactoryAppServerProcess {
 }
 
 export interface FactoryAppServerTransportOptions {
+  readonly codexExecutable: string
   /** A newly created, caller-prepared Codex state directory. This helper never reads or copies authentication. */
   readonly codexHome: string
   /** An empty, disclosed-packet-only directory; it must not be the repository checkout. */
   readonly cwd: string
+  readonly env: Readonly<Record<string, string>>
   readonly requestedModel: string
   readonly requestedProvider: string
   readonly timeoutMs: number
@@ -30,7 +32,7 @@ export interface FactoryAppServerTransport {
   readonly threadId: string
   readonly reportedModel: string
   startTurn(sourceMessage: string, timeoutMs?: number): Promise<FactoryAppServerTurnResult>
-  close(): void
+  close(): Promise<"already_exited" | "sigterm" | "sigkill">
 }
 
 type JsonRecord = Readonly<Record<string, unknown>>
@@ -46,7 +48,8 @@ const byteCopy = (parts: readonly Buffer[]): Uint8Array => Uint8Array.from(Buffe
  * CODEX_HOME binding and this helper neither discovers nor copies credentials.
  */
 export const createFactoryAppServerTransport = async (options: FactoryAppServerTransportOptions): Promise<FactoryAppServerTransport> => {
-  if (!options.codexHome || !options.cwd || !options.requestedModel || !options.requestedProvider || !Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 1) fail("OPTIONS")
+  const envKeys = Object.keys(options.env).sort()
+  if (!options.codexExecutable.startsWith("/") || !options.codexHome || !options.cwd || !options.requestedModel || !options.requestedProvider || !Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 1 || envKeys.join("\0") !== ["CODEX_HOME", "LANG", "LC_ALL", "PATH"].sort().join("\0") || options.env.CODEX_HOME !== options.codexHome) fail("OPTIONS")
   const raw: Buffer[] = []
   const pending = new Map<number, { resolve(value: JsonRecord): void; reject(error: Error): void }>()
   const terminal = new Map<string, JsonRecord>(), usageByTurn = new Map<string, JsonRecord>(), messagesByTurn = new Map<string, string[]>()
@@ -55,10 +58,10 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
   let buffered = ""
   let closed: Error | null = null
   const defaultSpawn = (command: string, args: readonly string[], spawnOptions: Readonly<{ cwd: string; env: Readonly<Record<string, string>>; stdio: "pipe" }>): FactoryAppServerProcess => spawnChild(command, [...args], spawnOptions) as ChildProcessWithoutNullStreams
-  const child = (options.spawn ?? defaultSpawn)("codex", [
+  const child = (options.spawn ?? defaultSpawn)(options.codexExecutable, [
     "app-server", "--stdio", "--strict-config",
     ...["shell_tool", "unified_exec", "browser_use", "browser_use_external", "apps", "plugins", "computer_use", "image_generation", "imagegenext", "standalone_web_search", "multi_agent"].flatMap((feature) => ["--disable", feature]),
-  ], { cwd: options.cwd, env: Object.freeze({ PATH: process.env.PATH ?? "", CODEX_HOME: options.codexHome, LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }), stdio: "pipe" })
+  ], { cwd: options.cwd, env: options.env, stdio: "pipe" })
   const rejectPending = (error: Error): void => { for (const request of pending.values()) request.reject(error); pending.clear() }
   const acceptLine = (line: string): void => {
     if (!line.trim()) return
@@ -90,7 +93,13 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
   // not a mixed diagnostics stream that callers might later mistake for JSONL evidence.
   child.stderr.on("data", () => undefined)
   child.on("error", (error) => { closed = error instanceof Error ? error : new Error("FACTORY_APP_SERVER_PROCESS_ERROR"); rejectPending(closed) })
-  child.on("close", () => { closed ??= new Error("FACTORY_APP_SERVER_PROCESS_CLOSED"); rejectPending(closed) })
+  let observedClose = false
+  const closeWaiters: Array<() => void> = []
+  child.on("close", () => { observedClose = true; for (const resolve of closeWaiters.splice(0)) resolve(); closed ??= new Error("FACTORY_APP_SERVER_PROCESS_CLOSED"); rejectPending(closed) })
+  const waitForClose = (timeoutMs: number): Promise<boolean> => observedClose ? Promise.resolve(true) : new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), timeoutMs)
+    closeWaiters.push(() => { clearTimeout(timer); resolve(true) })
+  })
   const request = (method: string, params: JsonRecord, timeoutMs = options.timeoutMs): Promise<JsonRecord> => new Promise((resolve, reject) => {
     if (closed) { reject(closed); return }
     const id = ++sequence
@@ -127,7 +136,14 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
         if (status !== "completed" || forbiddenTurns.has(admittedTurnId) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
         return Object.freeze({ sourceMessage: messages[0]!, usage: usage as FactoryAppServerTurnResult["usage"], reportedModel: admittedModel, rawJsonl: byteCopy(raw) })
       },
-      close: () => { child.kill("SIGTERM") },
+      async close(): Promise<"already_exited" | "sigterm" | "sigkill"> {
+        if (observedClose) return "already_exited"
+        child.kill("SIGTERM")
+        if (await waitForClose(250)) return "sigterm"
+        child.kill("SIGKILL")
+        if (await waitForClose(250)) return "sigkill"
+        return fail("PROCESS_DID_NOT_EXIT")
+      },
     })
   } catch (error) { child.kill("SIGTERM"); throw error }
 }

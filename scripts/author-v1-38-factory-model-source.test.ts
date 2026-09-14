@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -10,7 +10,7 @@ const temporary: string[] = [], root = (value: string): LabRoot => `sha256:${cre
 afterEach(() => { for (const path of temporary.splice(0)) rmSync(path, { recursive: true, force: true }) })
 const directory = () => { const value = mkdtempSync(join(tmpdir(), "factory-author-test-")); temporary.push(value); return value }
 const packet = new TextEncoder().encode('{"abi":"disclosed"}'), packetRoot = root(new TextDecoder().decode(packet))
-const capability: AuthoringCapability = { codexVersion: "codex-cli 0.139.0", execHelp: "--model --sandbox --cd --skip-git-repo-check --ephemeral --ignore-user-config --json instructions are read from stdin", appServerHelp: "--stdio --strict-config --disable", featureList: "shell_tool stable\nunified_exec stable\nbrowser_use stable\nbrowser_use_external stable\napps stable\nplugins stable\ncomputer_use stable\nimage_generation stable\nimagegenext stable\nstandalone_web_search stable\nmulti_agent stable\n" }
+const capability: AuthoringCapability = { codexExecutable: "/opt/codex/bin/codex", codexVersion: "codex-cli 0.139.0", execHelp: "--model --sandbox --cd --skip-git-repo-check --ephemeral --ignore-user-config --json instructions are read from stdin", appServerHelp: "--stdio --strict-config --disable", featureList: "shell_tool stable\nunified_exec stable\nbrowser_use stable\nbrowser_use_external stable\napps stable\nplugins stable\ncomputer_use stable\nimage_generation stable\nimagegenext stable\nstandalone_web_search stable\nmulti_agent stable\n" }
 const frozenSettings: FrozenAuthorSettings = { providerId: "openai-codex", settingsRoot: root("settings"), promptRoot: root("prompt"), contextRoot: root("context"), budgetRoot: root("budget"), runtimeProfileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, predecessorRoot: root("parent"), correctionRoot: null, retryParentRoot: null }
 const source = `export default { selectActivations(input) { return { activationOrders: [], strategyMemory: {} }; }, soldierBrain(input) { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }; } };`
 const eventStream = (model: string | null, message = JSON.stringify({ source }), usage = true) => new TextEncoder().encode(`${JSON.stringify({ type: "thread.started", thread_id: "t1", ...(model ? { model } : {}) })}\n{"type":"turn.started"}\n{"type":"item.completed","item":{"id":"r1","type":"reasoning","text":"benign"}}\n${JSON.stringify({ type: "item.completed", item: { id: "a1", type: "agent_message", text: message } })}\n${usage ? '{"type":"turn.completed","usage":{"input_tokens":30000,"cached_input_tokens":1000,"output_tokens":20000,"reasoning_output_tokens":2000}}\n' : ""}`)
@@ -19,12 +19,18 @@ const launchFor = (parent: string) => buildFactoryAuthorCommand(createFactoryAut
 describe("operational factory authoring", () => {
   it("binds packet, recipes, settings and model into a tool-disabled isolated launch", () => {
     const parent = directory(), result = launchFor(parent); expect(result.status).toBe("ready"); if (result.status !== "ready") return
-    expect(result.argv.filter((item) => item === "--disable")).toHaveLength(11); expect(result.argv).toEqual(expect.arrayContaining(["app-server", "--stdio", "--strict-config"])); expect(result.requestRecord).toMatchObject({ requestedModel: "gpt-5.6-sol", frozenSettings, recipes: { S01: "tactical-base-exact", S12: "s05-guard-one-turn-to-stone" } })
+    expect(result.argv[0]).toBe(capability.codexExecutable); expect(result.argv.filter((item) => item === "--disable")).toHaveLength(11); expect(result.argv).toEqual(expect.arrayContaining(["app-server", "--stdio", "--strict-config"])); expect(result.requestRecord).toMatchObject({ requestedModel: "gpt-5.6-sol", codexExecutable: capability.codexExecutable, launchEnvironment: result.env, frozenSettings, recipes: { S01: "tactical-base-exact", S12: "s05-guard-one-turn-to-stone" } })
     expect(result.env).toEqual({ PATH: "/tool/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8", CODEX_HOME: join(parent, "auth") }); expect(readFileSync(result.packetPath)).toEqual(Buffer.from(packet)); expect(JSON.stringify(result)).not.toContain(".planning")
   })
   it("fails closed without exact installed capability evidence", () => {
     expect(inspectAuthoringCapability({ ...capability, featureList: capability.featureList.replace("shell_tool stable\n", "") }).available).toBe(false)
     expect(buildFactoryAuthorCommand(createFactoryAuthoringAllocation(), { packetBytes: packet, packetRoot, disclosedDirectory: join(directory(), "missing"), model: "gpt-5.6-sol", capability: { ...capability, execHelp: "--json" }, frozenSettings })).toEqual({ status: "authoring_context_capability_unavailable" })
+  })
+  it("rejects repository-contained and symlinked disclosed roots", () => {
+    const parent = directory(), repository = join(parent, "repository"); mkdirSync(join(repository, ".git"), { recursive: true })
+    expect(() => launchFor(repository)).toThrow("FACTORY_AUTHOR_DISCLOSED_DIRECTORY_REPOSITORY")
+    const outside = join(parent, "outside"), linked = join(parent, "linked"); mkdirSync(join(outside, "disclosed"), { recursive: true }); mkdirSync(linked); symlinkSync(join(outside, "disclosed"), join(linked, "disclosed"))
+    expect(() => launchFor(linked)).toThrow("FACTORY_AUTHOR_DISCLOSED_DIRECTORY_NOT_EMPTY")
   })
   it("parses documented exec JSONL but refuses a V2 bundle without raw reported identity", () => {
     const parent = directory(), allocation = createFactoryAuthoringAllocation(), ledger = join(parent, "ledger"), launch = launchFor(parent); if (launch.status !== "ready") throw new Error("launch")
@@ -44,7 +50,7 @@ describe("operational factory authoring", () => {
       { jsonrpc: "2.0", method: "thread/tokenUsage/updated", params: { threadId: "thread-1", turnId: "turn-1", tokenUsage: { total: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, last: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 } } } },
       { jsonrpc: "2.0", method: "turn/completed", params: { threadId: "thread-1", turn: { id: "turn-1", status: "completed" } } },
     ].map((event) => JSON.stringify(event)).join("\n") + "\n")
-    const result = await runFactoryAppServerAuthorAttempt({ allocation: createFactoryAuthoringAllocation(), packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), stateDirectory: join(parent, "state"), existingAuthFile: auth, ledgerDirectory: join(parent, "ledger"), model: "gpt-5.6-sol", modelProvider: "openai-codex", frozenSettings, capability, clock: () => times.shift()!, transportFactory: async (options) => { expect(options).toMatchObject({ requestedModel: "gpt-5.6-sol", requestedProvider: "openai-codex", cwd: join(parent, "disclosed") }); return { threadId: "thread-1", reportedModel: "gpt-5.6-sol", close() {}, async startTurn() { return { sourceMessage: JSON.stringify({ source }), usage: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, reportedModel: "gpt-5.6-sol", rawJsonl } } } } })
+    const result = await runFactoryAppServerAuthorAttempt({ allocation: createFactoryAuthoringAllocation(), packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), stateDirectory: join(parent, "state"), existingAuthFile: auth, ledgerDirectory: join(parent, "ledger"), model: "gpt-5.6-sol", modelProvider: "openai-codex", frozenSettings, capability, clock: () => times.shift()!, transportFactory: async (options) => { expect(options).toMatchObject({ codexExecutable: capability.codexExecutable, env: { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", CODEX_HOME: join(parent, "state"), LANG: "C.UTF-8", LC_ALL: "C.UTF-8" }, requestedModel: "gpt-5.6-sol", requestedProvider: "openai-codex" }); expect(options.cwd).toContain("/disclosed/author-"); return { threadId: "thread-1", reportedModel: "gpt-5.6-sol", async close() { return "sigterm" as const }, async startTurn() { return { sourceMessage: JSON.stringify({ source }), usage: { inputTokens: 12, cachedInputTokens: 2, outputTokens: 8, reasoningOutputTokens: 1, totalTokens: 20 }, reportedModel: "gpt-5.6-sol", rawJsonl } } } } })
     expect(result.terminal).toMatchObject({ disposition: "valid", reportedModel: "gpt-5.6-sol", usage: { totalTokens: 20 } }); expect(result.bundle?.provenance.rawResponseRecord.bodyUtf8).toContain("tokenUsage")
   })
   it("keeps structurally invalid source correction-eligible but missing identity/usage and forbidden tools terminal", () => {
