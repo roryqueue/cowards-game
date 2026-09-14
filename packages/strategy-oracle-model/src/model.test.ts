@@ -15,11 +15,11 @@ const root = (value: string) => `sha256:${createHash("sha256").update(value, "ut
 const source = `export default { selectActivations(input) { return { activationOrders: [], strategyMemory: {} }; }, soldierBrain(input) { return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} }; } };`
 const sourceRoot = root(source)
 const bundleInput = () => {
-  const response = { root: root("placeholder"), format: "explicit-typescript-source" as const, source }
+  const response = { root: root("unused-response-root"), format: "explicit-typescript-source" as const, source }
   const value = {
     schemaVersion: "frozen-model-bundle-v1" as const,
     privacy: "private_offline" as const,
-    root: root("placeholder"),
+    root: root("unused-bundle-root"),
     provider: { providerId: "frozen-provider", modelId: "frozen-model", modelVersion: "2026-09", settingsRoot: root("settings"), promptRoot: root("prompt"), contextRoot: root("context") },
     request: { root: root("request"), byteLength: 101, encoding: "utf8" as const },
     response: { ...response, root: deriveFrozenModelResponseRoot(response) },
