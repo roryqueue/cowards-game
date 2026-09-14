@@ -37,6 +37,14 @@ Run targeted checks at every task commit, combined bounded integration at each w
 
 ## Requirement Verification Map
 
+### Final Plan05 source/mechanics validation
+
+Atf7395d8a, main passed156/156tests in20explicit files in53.02seconds, all four private package builds, standalone four-script types with explicit TypeScript6 `--ignoreConfig --types node`, the1271-file source monitor, all three CLI help paths and the CI YAML syntax/format check. Another16unchanged kernel ownership/legal-information regressions pass in12.13seconds. Independent264-WORKLOAD-CLOSURE-REVIEW.md passes6focused tests and finds no remaining Plan05 implementation gap. The16-fixture evaluation index and source-only CI gate are complete; no remote CI result or empirical readiness is inferred.
+
+The exact main suite is the19files in the `Private factory source and evaluation checks (no experimental runs)` step of `.github/workflows/ci.yml`, plus `scripts/check-v1-38-lab-boundaries.test.ts`, invoked together with `./node_modules/.bin/vitest run --maxWorkers=1`. The additional command is `./node_modules/.bin/vitest run --maxWorkers=1 packages/engine/src/kernel/runtime-ownership.test.ts packages/strategy-lab/src/planner/information-boundary.test.ts`. Full exact package/script type commands are retained in264-05-SUMMARY.md.
+
+Plan05's known source gaps are closed, not waived. Phase-level validation remains draft/non-Nyquist-final until the Plan07 decision and Plan08 evidence map exist. Actual model provenance, authorized intake protocol/fresh allocation and empirical threshold freeze remain explicit missing inputs. Private UAT passes6source/mechanics cases and blocks1actual-readiness case; it does not count fabricated external participation or reuse Phase263 evidence.
+
 | Requirement | Behavior and required evidence | Initial test seam | Status |
 |---|---|---|---|
 | FACT-05 | Exact immutable candidate/source/native-lane/lineage roots plus private root-only publication/read/resume | 264-01: `factory/{contracts,identity,repository}.test.ts`; 264-08 actual-or-blocked receipt | `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/contracts.test.ts packages/strategy-lab/src/factory/identity.test.ts packages/strategy-lab/src/factory/repository.test.ts` |

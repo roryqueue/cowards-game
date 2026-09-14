@@ -899,7 +899,7 @@ Plans:
   4. At least three materially independent automated mechanisms—the structured tactical optimizer, search-teacher/distiller, and provider-neutral frozen-bundle program synthesizer—pass an audited shared-helper allowlist and dependency, authorship, behavior, counterfactual-correlation, clone, and failure-mode review.
   5. Human and external submissions enter through a quarantined channel with frozen disclosure, submission, reviewer, independence, conflict, provenance, validation, and acceptance budgets; only validated deterministic explicit source can enter the factory, and every failed or rejected attack remains in the evidence root.
 
-**Plans:** 5/8 complete; foundation, tactical, teacher, frozen-model and intake independently checked. Connected integration05 atb04d8b8b passes150safe tests across19files, all four package builds and the1269-file private-boundary monitor; another16kernel/information-boundary tests pass. Complete private trace retention, authenticated evidence and non-consuming intake reload are integrated. Three remaining comparison-input gaps are being closed within05: retained graph inputs, predeclared paired workloads and a concrete development corpus. The corpus helper passes3tests and independent review at66b79e6d. Plan07 remains one late exact-facts decision after all buildable work; no synthetic participation or old allocation reuse is permitted.
+**Plans:** 6/8 complete at the source/mechanics level. Final connected integration05 at `f7395d8a` passes156/156safe tests across20files, all four package builds, standalone four-script types and the1271-file private-boundary monitor; another16kernel/information-boundary tests pass. Retained graph inputs, exact paired workloads, concrete comparison cases, complete private traces, authenticated evidence and non-consuming intake reload are independently closed. The16-fixture evaluation index and source-only CI gate are present. Goal verification is `human_needed` (3/5 truths), with6private source UAT cases passed and1real-readiness case blocked. Plan07 needs actual model/provider input facts and an intake protocol or explicit unused/unavailable-channel decision plus fresh finite calibration limits; Plan08 then produces actual or blocked readiness. No synthetic participation, empirical independence claim or old allocation reuse is permitted. Phase264 is not yet phase-complete and Phase265 remains gated.
 
 **Wave1 — shared private foundation**
 
@@ -914,7 +914,7 @@ Plans:
 
 **Wave3 — integration, after all leaves**
 
-- [ ] 264-05-PLAN.md — Six derived fingerprints, private ingestion/calibration CLI and recursive independence boundaries.
+- [x] 264-05-PLAN.md — Six derived fingerprints, private ingestion/calibration CLI and recursive independence boundaries.
 
 **Wave4 — consolidated late real-input gate**
 
@@ -1031,7 +1031,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 |-------|----------------|--------|-----------|
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
-| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 5/8 | Connected factory integration active | - |
+| 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 6/8 | Code verified; Plan07 real-input decision needed | - |
 | 265. Serious Current-Rules League and Development Red Team | 0/TBD | Discussion complete; awaits Phase264 | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
