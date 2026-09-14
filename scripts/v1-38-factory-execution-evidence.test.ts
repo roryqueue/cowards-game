@@ -17,7 +17,7 @@ describe("factory empirical authorship prerequisite", () => {
     const events = [
       { result: { thread: { id: "thread" }, model: "model", modelProvider: "provider", cwd: "/isolated", sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } },
       { result: { turn: { id: "turn" } } },
-      { method: "error", params: { turnId: "turn", message: "failed" } },
+      { method: "error", params: { turnId: "other-turn", message: "failed" } },
       { method: "thread/tokenUsage/updated", params: { turnId: "turn", tokenUsage: { total: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, totalTokens: 2 } } } },
       { method: "turn/completed", params: { turn: { id: "turn", status: "completed" } } },
     ].map(JSON.stringify).join("\n")

@@ -136,7 +136,7 @@ describe("frozen model oracle", () => {
     const v1 = bundleInput(), retained = v2Records()
     const failedBody = retained.rawResponseRecord.bodyUtf8.replace(
       '{"jsonrpc":"2.0","method":"item/completed"',
-      '{"jsonrpc":"2.0","method":"turn/failed","params":{"turnId":"turn-1","turn":{"id":"turn-1","status":"failed"}}}\n{"jsonrpc":"2.0","method":"item/completed"',
+      '{"jsonrpc":"2.0","method":"turn/failed","params":{"turnId":"other-turn","turn":{"id":"other-turn","status":"failed"}}}\n{"jsonrpc":"2.0","method":"item/completed"',
     )
     const rawValue = { format: "codex-exec-json" as const, bodyUtf8: failedBody }
     const raw = { ...rawValue, root: deriveFrozenModelRawResponseRecordRoot(rawValue) }

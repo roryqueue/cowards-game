@@ -90,8 +90,7 @@ export const decodeChargedAuthorTranscript = (raw: string, request: Record<strin
   if (started.model !== request.requestedModel || started.modelProvider !== settings.providerId || started.cwd !== cwd || typeof cwd !== "string" || !isAbsolute(cwd) || request.cwdClass !== "fresh-disclosed-packet-only-outside-repository" || started.approvalPolicy !== "never" || sandbox?.type !== "readOnly" || sandbox.networkAccess !== false || !Array.isArray(started.instructionSources) || started.instructionSources.length !== 0 || typeof turnId !== "string" || turnId.length === 0) return fail("AUTHOR_ISOLATION")
   if (events.some((event) => {
     if (event.method !== "turn/failed" && event.method !== "error") return false
-    const failedTurnId = event.params?.turn?.id ?? event.params?.turnId
-    return failedTurnId === undefined ? event.method === "error" : failedTurnId === turnId
+    return true
   })) return fail("AUTHOR_PROTOCOL")
   if (events.some((event) => event.method === "model/rerouted" || (event.method === "item/completed" && event.params?.turnId === turnId && !["agentMessage", "reasoning"].includes(String(event.params?.item?.type))))) return fail("AUTHOR_TOOLS")
   const completions = events.filter((event) => event.method === "turn/completed" && event.params?.turn?.id === turnId && event.params.turn.status === "completed")

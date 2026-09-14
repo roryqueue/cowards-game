@@ -63,6 +63,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
   const pending = new Map<number, { resolve(value: JsonRecord): void; reject(error: Error): void }>()
   const terminal = new Map<string, JsonRecord>(), usageByTurn = new Map<string, JsonRecord>(), messagesByTurn = new Map<string, string[]>()
   const forbiddenTurns = new Set<string>()
+  let protocolTurnFailure = false
   let sequence = 0
   let buffered = ""
   let closed: Error | null = null
@@ -86,9 +87,10 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
     }
     const params = record(message.params)
     if (message.method === "model/rerouted" && params) { const turnId = text(params.turnId); if (turnId) forbiddenTurns.add(turnId) }
-    if ((message.method === "turn/failed" || message.method === "error") && params) {
-      const failedTurn = record(params.turn)
-      const failedTurnId = text(failedTurn?.id) ?? text(params.turnId)
+    if (message.method === "turn/failed" || message.method === "error") {
+      protocolTurnFailure = true
+      const failedTurn = record(params?.turn)
+      const failedTurnId = text(failedTurn?.id) ?? text(params?.turnId)
       if (failedTurnId) forbiddenTurns.add(failedTurnId)
     }
     if (message.method === "thread/tokenUsage/updated" && params) { const turnId = text(params.turnId), tokenUsage = record(params.tokenUsage), total = record(tokenUsage?.total); if (turnId && total) usageByTurn.set(turnId, total) }
@@ -156,7 +158,7 @@ export const createFactoryAppServerTransport = async (options: FactoryAppServerT
           const completed = terminal.get(turnKey)!, completedTurn = record(completed.turn) ?? completed, status = text(completedTurn.status)
           const rawUsage = usageByTurn.get(turnKey), messages = messagesByTurn.get(turnKey) ?? []
           const usage = rawUsage && { inputTokens: nonNegativeInteger(rawUsage.inputTokens), cachedInputTokens: nonNegativeInteger(rawUsage.cachedInputTokens), outputTokens: nonNegativeInteger(rawUsage.outputTokens), reasoningOutputTokens: nonNegativeInteger(rawUsage.reasoningOutputTokens), totalTokens: nonNegativeInteger(rawUsage.totalTokens) }
-          if (status !== "completed" || forbiddenTurns.has(turnKey) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
+          if (status !== "completed" || protocolTurnFailure || forbiddenTurns.has(turnKey) || messages.length !== 1 || !usage || Object.values(usage).some((value) => value === null) || usage.totalTokens !== usage.inputTokens! + usage.outputTokens!) fail("TURN_TERMINAL_CONTRACT")
           return Object.freeze({ sourceMessage: messages[0]!, usage: usage as FactoryAppServerTurnResult["usage"], reportedModel: admittedModel, rawJsonl: byteCopy(raw) })
         } catch (error) {
           const rawUsage = admittedTurnId ? usageByTurn.get(admittedTurnId) : null
