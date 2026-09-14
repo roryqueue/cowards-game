@@ -1,34 +1,35 @@
 ---
 phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
 scope: plan-03-teacher-readiness
-checked: 2026-09-13
-status: gaps_found
-targeted_test: 3/3 passed
-recheck: 2026-09-13
-resolved_gaps: 2
-open_gaps: 5
+checked: 2026-09-14
+status: passed
+targeted_test: 7/7 passed
+recheck: 2026-09-14
+repaired_source_commit: 961d3e07
+resolved_gaps: 7
+open_gaps: 0
 ---
 
 # Phase 264 Teacher Readiness Check
 
 This is a bounded source/mechanics review, not candidate, empirical, Match, runtime, or certification evidence. No generated source was executed.
 
-## Re-check after `7516aa5c` / `4e6b4360`
+## Re-check after `961d3e07` / review fix `f27230e1`
 
-The focused test passed 3/3, and the two original findings are substantively improved: the teacher now evaluates multiple canonical branches over multiple depths, and both trusted entrypoints consume schema-admitted legal input. The following open gaps remain after inspecting the repaired code directly.
+The focused test passed 7/7. The six authoritative findings in `264-TEACHER-CODE-REVIEW.md` are closed at the source/mechanics boundary; no generated source was executed and no empirical claim is made.
 
 | Check | Result | Evidence |
 |---|---|---|
-| Actual canonical frontier/depth search | **PARTIAL — GAP** | `teacher.ts:12-25` evaluates three seeded branches and repeated `MATCH_KERNEL.stepMatch` nodes, but `maxNodes` is not a global cap: each branch can consume `maxDepth` nodes, so `maxNodes: 2, maxDepth: 6` can visit 12 nodes. `depthReached` is also reported as `maxDepth` even when a branch terminates early. Enforce the cap across the whole frontier and report actual depth. |
-| Counterfactual state affects teacher ranking | **GAP** | `teacher.ts:12-25` validates `hiddenBranchBias` but never uses `hiddenBranchBias` or `opponentHypothesis` in branch seeds, node scoring, or selection. The teacher’s counterfactual input therefore cannot change the selected result. |
-| Canonical branch exploration reaches scored outcomes | **GAP** | `teacher.ts:16-23` advances each branch until the first `effect`/non-transition result and never sends a `runtime_resume` result for any alternative mission/Action. The score is only accumulated event count/completion status; it is not a counterfactual gameplay outcome ranking. |
-| Teacher search is connected to distillation | **GAP** | `TeacherSearchReceipt` is not accepted by or converted into `LegalTrainingRecord`; `distillLegalStudent` accepts caller-supplied `activation`/`brain` labels only. There is no receipt → legal training target → distilled student seam, so privileged offline exploration is not actually what produces the student. |
-| Legal-schema student boundary and unseen legal inputs | PASS (mechanics) | `distill.ts:24-32` parses `StrategyInputV119Schema`/`SoldierBrainInputV119Schema`; activation and brain controllers vary over legal observations, and the focused test exercises unseen enemy directions and both entrypoints. Unknown teacher fields are rejected by schema parsing. |
-| Same tested representation in both emitted entrypoints | **GAP** | `emit.ts:80-82` embeds the distilled modes but reimplements activation/brain logic as a handwritten source string. It mirrors `runDistilledActivations`/`runDistilledSoldierBrain` rather than bundling or mechanically deriving the exact tested controller. Add correspondence tests or emit the shared controller representation without a second handwritten policy. |
-| Source/packet roots and strict closure | PASS (mechanics) | `emit.ts:34-48,94-101` rejects free identifiers/imports/capabilities, requires `export default`, embeds `controllerRoot`, hashes emitted source, and `FactoryOraclePacketSchema` validates the packet root/source/provenance linkage. |
-| Teacher/opponent/host data leakage | PASS (mechanics) | Emitted source contains only the distilled student modes/controller root and legal observation fields; no `counterfactual`, `opponentHypothesis`, host, or search-state identifiers appear. Source remains unexecuted. |
+| Canonical frontier/depth search and global cap | PASS (mechanics) | `teacher.ts` charges machine creation, every advance, and every `runtime_resume` through one `nodesVisited` counter. Branch depth increments only on student decisions; terminal and low-budget paths report actual depth/alternatives. The focused test covers `maxNodes: 2`, `maxDepth: 6`, and early terminal work. |
+| Counterfactual state affects teacher ranking | PASS (mechanics) | Cautious/aggressive opponent policies are selected separately from candidate templates and alter canonical branch state roots, outcome roots, and work counts in the focused paired test. |
+| Canonical branch exploration reaches scored outcomes | PASS (mechanics) | Each candidate mission/Action is schema-valid, resumed through `MATCH_KERNEL`, and advanced/resumed through bounded depth. Scores use canonical outcome and Soldier state consequences, not event counts or arbitrary hypothesis bonuses. `runtime_resume` applies the selected action before the returned machine is scored. |
+| Teacher search is connected to distillation | PASS (mechanics) | `projectTeacherSearchToLegalTraining` accepts the exact receipt shape, strips receipt scores/state to selected schema-admitted legal input/target records, and those records feed `distillLegalStudent` and packet emission. |
+| Legal-schema student boundary and unseen legal inputs | PASS (mechanics) | Exact Strategy/Brain schemas, Action schemas, bounded feature policies, deep freezing, and paired unseen legal inputs are covered by the focused test. Teacher-only fields and unknown record kinds are rejected. |
+| Same tested representation in both emitted entrypoints | PASS (mechanics) | `controller.ts` owns both entrypoints; trusted wrappers and `emitTeacherSource` call those same named controller functions. The controller manifest hashes the owned bytes, requires both entrypoints, and the test detects changed bytes for either function. |
+| Source/packet roots and strict closure | PASS (mechanics) | Closure checks require one default object with two locally callable methods, reject imports/free identifiers/async/this and nonnumeric computed access, embed the controller manifest, and validate the rooted factory packet. |
+| Teacher/opponent/host data leakage | PASS (mechanics) | Emitted source contains only bounded distilled feature policy/controller data and legal observation processing; no counterfactual/opponent/search state or host/evaluator data is embedded. Source remains unexecuted. |
 
-The repaired test count alone does not close the three gaps above. The previous one-step teacher and fixed-prefix findings are retained below as resolved history, not current findings.
+The distilled brain intentionally reduces teacher Action directions to legal feature-conditioned modes; the student recomputes a direction from its legal observation rather than memorizing a privileged or opaque target. This is a bounded representation choice, not a disconnected search path, and its gameplay quality remains unclaimed.
 
 ## Historical initial review (superseded findings retained)
 
@@ -58,7 +59,7 @@ Targeted command: `./node_modules/.bin/vitest run --maxWorkers=1 packages/strate
 | Packet/data API and root wiring | PASS (mechanics) | `emitTeacherFactoryPacket` is exported from the leaf, constructs the strict `FactoryOraclePacket`, binds inherited authority/build/lineage/provider roots, and the test parses the packet through `FactoryOraclePacketSchema`. No candidate or production path is exercised here. |
 | Shared strategic core prohibition | PASS in reviewed files | The teacher leaf does not import the tactical selector, scorer, or planner search implementation; only canonical engine and factory/schema seams are imported. Full phase-wide independence remains a later integration concern. |
 
-## Current required actions
+## Historical required actions (resolved by the repaired source)
 
 1. Enforce `maxNodes` globally across all branches/depths and report actual reached depth in `teacher.ts`.
 2. Bind `opponentHypothesis`/`hiddenBranchBias` into deterministic branch generation or ranking so counterfactual alternatives affect teacher selection while remaining teacher-only.
@@ -68,6 +69,6 @@ Targeted command: `./node_modules/.bin/vitest run --maxWorkers=1 packages/strate
 
 ## Scope disposition
 
-These are Plan 03 / ORCL-01 and ORCL-03 readiness gaps. Plan 05 factory ingestion and Plan 07 independent-channel evidence may add integration and cross-channel proofs, but they do not by themselves repair a teacher that lacks bounded search or an emitted policy that differs from its tested student. No actual candidate or empirical claim is made.
+The Plan 03 / ORCL-01 and ORCL-03 source/mechanics checks pass after the repaired source review. Plan 05 factory ingestion and Plan 07 independent-channel evidence may add integration and cross-channel proofs, but this report makes no actual candidate, empirical, provider, gameplay, or certification claim.
 
 _Independent bounded review; no source edits or commit performed._

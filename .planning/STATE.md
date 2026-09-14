@@ -7,15 +7,15 @@ current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 current_plan: 6
 total_plans_in_phase: 8
 status: in_progress
-stopped_at: Phase264 model04 independently passed; teacher03 isolated repair and intake06 implementation active, then05
-last_updated: "2026-09-14T00:03:00Z"
+stopped_at: Phase264 teacher03 independently passed; intake06 eight-finding repair active, then05
+last_updated: "2026-09-14T00:41:35Z"
 last_activity: 2026-09-13
-last_activity_desc: Three plans independently complete; teacher repair isolated from main intake work; private workspace linkage synchronized
+last_activity_desc: Four plans independently complete; teacher repair integrated and checked; intake source and accounting repair active
 progress:
   total_phases: 9
   completed_phases: 2
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 4
   percent: 22
 ---
 
@@ -23,7 +23,7 @@ progress:
 
 ## Session Continuity — 2026-09-13
 
-Current dispatch: Plans 01, 02 and 04 are independently complete at the implementation level. Model 04's full-bundle provenance companion and lineage repair pass seven tests and independent recheck; tactical 02 passes six tests and source-correspondence review. Teacher 03's six consolidated findings are assigned to an isolated GSD repair worktree, while a fresh smaller-model executor completes intake 06 in main. Its initial 50fb67d0 seam and two tests were insufficient and have no completed summary. Only one source executor writes main; independent read-only checks and the isolated repair can run alongside it. Both 03 and 06 must pass before 05 integration. No candidate admission, empirical independence or strength claim follows from source tests. Historical Phase 263 recovery markers and 36 locks remain unchanged.
+Current dispatch: Plans 01, 02, 03 and 04 are independently complete at the implementation level. Teacher03's isolated repair is integrated at961d3e07/e4228a47; main's seven tests and full build pass, and independent re-review closes all six authoritative findings. Model04 passes seven tests and provenance/lineage recheck; tactical02 passes six tests and source-correspondence review. Intake06's nine initial tests were insufficient: independent review found eight source/provenance/accounting gaps, now assigned to its smaller-model executor in main. Only one source executor writes main; independent read-only checks run alongside it. Intake must pass before05 integration. No candidate admission, empirical independence or strength claim follows from source tests. Historical Phase263 recovery markers and36 locks remain unchanged.
 
 Plan264-01 is complete after two same-plan repair passes and clean independent re-review at459017f8. Exact source/proposal admission precedes validation, issued participant-bound supervision receipts, and final receipt-bound candidates; opponent failure is not candidate failure and remains unscored. Main and reviewer independently passed18factory tests and full package build. Legacy boundary integration passes37tests and clean re-review. Oracle leaves and intake precede05; their shared-checkout write windows are serialized. No new experiments or previous allocation reuse occurred. The untracked Phase263 recovery/cache/36locks remain untouched.
 

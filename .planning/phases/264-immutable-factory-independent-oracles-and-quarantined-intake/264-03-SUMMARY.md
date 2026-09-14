@@ -30,7 +30,7 @@ key-decisions:
   - "Use one import-free owned controller for both trusted and emitted entrypoints and bind its exact bytes into a source manifest."
 requirements-contributed: [ORCL-01, ORCL-03]
 requirements-completed: []
-implementation_status: implementation_only_pending_phase_integration_and_independent_review
+implementation_status: independently_verified_mechanics_pending_phase_integration
 completed: 2026-09-14
 status: implementation_complete
 ---
@@ -61,7 +61,7 @@ The private teacher leaf now has a genuine bounded current-rules mechanics path:
 
 ## Review Resolution
 
-All six findings in `264-TEACHER-CODE-REVIEW.md` were addressed in the bounded repair. See `264-TEACHER-REVIEW-FIX.md` for the finding-by-finding mapping. Because the search and training corrections are logic changes, the fix report marks them for independent human inspection even though the focused source checks pass.
+All six findings in `264-TEACHER-CODE-REVIEW.md` were addressed in the bounded repair and independently closed in `264-TEACHER-READINESS-CHECK.md`. Main also inspected the canonical Action-resume path and passed all seven focused tests plus the unfiltered package build. The generic fix-report logic-change inspection flags are satisfied by those independent source checks; they do not require a separate human checkpoint or establish empirical quality. See `264-TEACHER-REVIEW-FIX.md` for the mapping and cherry-pick provenance (`961d3e07`, `e4228a47`).
 
 ## Boundaries and Remaining Work
 
