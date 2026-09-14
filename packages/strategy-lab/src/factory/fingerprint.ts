@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import * as ts from "typescript"
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
-import { deriveFactoryOrderedRecordDescriptor, isIssuedFactorySupervisionReceipt, type FactorySupervisionReceipt } from "./admission.js"
+import { deriveFactoryExecutionCommitment, deriveFactoryOrderedRecordDescriptor, isIssuedFactorySupervisionReceipt, type FactorySupervisionReceipt } from "./admission.js"
 import {
   FactoryOraclePacketSchema,
   FactoryProposalSchema,
@@ -10,7 +10,7 @@ import {
   type FactoryDisposition,
   type FactoryFingerprintRoots,
 } from "./contracts.js"
-import { readFactoryArtifact, type FactoryRepository } from "./repository.js"
+import { publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "./repository.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const NAME = /^[a-z][a-zA-Z0-9._:-]{0,127}$/u
@@ -33,11 +33,12 @@ export interface FactoryFingerprintEvidence {
   readonly producerIdentity: "emitTacticalFactoryPacket" | "emitTeacherFactoryPacket" | "emitModelFactoryPacket" | "admitQuarantinedIntakePacket"
   readonly origin: "tactical-oracle" | "teacher-oracle" | "model-oracle" | "human-external-intake"
   readonly evidenceClass: "real_producer" | "mechanics_only"
+  readonly producerArtifactRoot: LabRoot | null
   readonly authorshipRoots: readonly LabRoot[]
-  readonly lineageNodes: readonly Readonly<{ root: LabRoot; parents: readonly LabRoot[] }>[]
-  readonly dependencyNodes: readonly Readonly<{ root: LabRoot; dependencies: readonly LabRoot[] }>[]
+  readonly lineageNodes: readonly Readonly<{ root: LabRoot; artifactRoot: LabRoot; parents: readonly LabRoot[] }>[]
+  readonly dependencyNodes: readonly Readonly<{ root: LabRoot; artifactRoot: LabRoot; dependencies: readonly LabRoot[] }>[]
   readonly matchupResponses: readonly Readonly<{
-    conditionRoot: LabRoot; opponentRoot: LabRoot; side: "bottom" | "top"; initialInitiative: boolean
+    supervisionReceiptRoot: LabRoot; conditionRoot: LabRoot; opponentRoot: LabRoot; side: "bottom" | "top"; initialInitiative: boolean
     outcome: "bottom" | "top" | "draw" | "failure"; responseRoot: LabRoot
   }>[]
   readonly counterfactualPairs: readonly Readonly<{ leftRoot: LabRoot; rightRoot: LabRoot; relation: "distinct" | "correlated" | "borderline" }>[]
@@ -50,33 +51,34 @@ const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdent
   emitModelFactoryPacket: "model-oracle",
   admitQuarantinedIntakePacket: "human-external-intake",
 }
+const issuedEvidence = new WeakSet<object>()
 const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"]
 const validateNodes = (value: unknown, edge: "parents" | "dependencies") => {
   if (!Array.isArray(value) || value.length < 1 || value.length > 1024) return fail("NODES")
   const list = value as unknown[]
   const nodes = list.map((entry: unknown) => {
-    if (!exact(entry, ["root", edge]) || !isRoot(entry.root) || !Array.isArray(entry[edge]) || entry[edge].length > 64 || !entry[edge].every(isRoot)) fail("NODES")
-    return entry as unknown as { readonly root: LabRoot; readonly parents: readonly LabRoot[]; readonly dependencies: readonly LabRoot[] }
+    if (!exact(entry, ["root", "artifactRoot", edge]) || !isRoot(entry.root) || !isRoot(entry.artifactRoot) || !Array.isArray(entry[edge]) || entry[edge].length > 64 || !entry[edge].every(isRoot)) fail("NODES")
+    return entry as unknown as { readonly root: LabRoot; readonly artifactRoot: LabRoot; readonly parents: readonly LabRoot[]; readonly dependencies: readonly LabRoot[] }
   })
   if (new Set(nodes.map((entry) => entry.root)).size !== nodes.length) fail("NODE_DUPLICATE")
   return nodes
 }
 const validateEvidence = (value: unknown): Readonly<FactoryFingerprintEvidence> => {
   const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
-  const keys = ["schemaVersion", "privacy", "root", "proposalRoot", "validationRoot", "supervisionReceiptRoot", "producerIdentity", "origin", "evidenceClass", "authorshipRoots", "lineageNodes", "dependencyNodes", "matchupResponses", "counterfactualPairs", "failureModes"] as const
+  const keys = ["schemaVersion", "privacy", "root", "proposalRoot", "validationRoot", "supervisionReceiptRoot", "producerIdentity", "origin", "evidenceClass", "producerArtifactRoot", "authorshipRoots", "lineageNodes", "dependencyNodes", "matchupResponses", "counterfactualPairs", "failureModes"] as const
   if (!admitted.ok) return fail("EVIDENCE")
   if (admitted.canonicalByteLength > 262144) return fail("EVIDENCE")
   if (!exact(admitted.value, keys)) return fail("EVIDENCE")
   const record: Record<string, unknown> = admitted.value
   if (record.schemaVersion !== "factory-fingerprint-evidence-v1" || record.privacy !== "private_offline" || ![record.root, record.proposalRoot, record.validationRoot, record.supervisionReceiptRoot].every(isRoot) ||
       !(typeof record.producerIdentity === "string" && Object.hasOwn(producerOrigins, record.producerIdentity)) || record.origin !== producerOrigins[record.producerIdentity as FactoryFingerprintEvidence["producerIdentity"]] ||
-      !["real_producer", "mechanics_only"].includes(String(record.evidenceClass)) || !Array.isArray(record.authorshipRoots) || record.authorshipRoots.length < 1 || record.authorshipRoots.length > 64 || !record.authorshipRoots.every(isRoot) ||
+      !["real_producer", "mechanics_only"].includes(String(record.evidenceClass)) || !(record.producerArtifactRoot === null || isRoot(record.producerArtifactRoot)) || !Array.isArray(record.authorshipRoots) || record.authorshipRoots.length < 1 || record.authorshipRoots.length > 64 || !record.authorshipRoots.every(isRoot) ||
       !Array.isArray(record.matchupResponses) || record.matchupResponses.length < 1 || record.matchupResponses.length > 4096 || !Array.isArray(record.counterfactualPairs) || record.counterfactualPairs.length < 1 || record.counterfactualPairs.length > 4096 ||
       !Array.isArray(record.failureModes) || record.failureModes.length < 1 || record.failureModes.length > 64 || !record.failureModes.every((entry: unknown) => dispositions.includes(entry as FactoryDisposition))) fail("EVIDENCE")
   validateNodes(record.lineageNodes, "parents")
   validateNodes(record.dependencyNodes, "dependencies")
   for (const response of record.matchupResponses as unknown[]) {
-    if (!exact(response, ["conditionRoot", "opponentRoot", "side", "initialInitiative", "outcome", "responseRoot"]) || ![response.conditionRoot, response.opponentRoot, response.responseRoot].every(isRoot) || !["bottom", "top"].includes(String(response.side)) || typeof response.initialInitiative !== "boolean" || !["bottom", "top", "draw", "failure"].includes(String(response.outcome))) fail("MATCHUP")
+    if (!exact(response, ["supervisionReceiptRoot", "conditionRoot", "opponentRoot", "side", "initialInitiative", "outcome", "responseRoot"]) || ![response.supervisionReceiptRoot, response.conditionRoot, response.opponentRoot, response.responseRoot].every(isRoot) || !["bottom", "top"].includes(String(response.side)) || typeof response.initialInitiative !== "boolean" || !["bottom", "top", "draw", "failure"].includes(String(response.outcome))) fail("MATCHUP")
   }
   for (const pair of record.counterfactualPairs as unknown[]) {
     if (!exact(pair, ["leftRoot", "rightRoot", "relation"]) || ![pair.leftRoot, pair.rightRoot].every(isRoot) || !["distinct", "correlated", "borderline"].includes(String(pair.relation))) fail("COUNTERFACTUAL")
@@ -87,8 +89,24 @@ const validateEvidence = (value: unknown): Readonly<FactoryFingerprintEvidence> 
 }
 
 export const createFactoryFingerprintEvidence = (value: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root">): Readonly<FactoryFingerprintEvidence> => {
+  if (value.evidenceClass !== "mechanics_only" || value.producerArtifactRoot !== null) return fail("CALLER_REAL_PRODUCER")
   const draft = { schemaVersion: "factory-fingerprint-evidence-v1" as const, privacy: "private_offline" as const, ...value }
-  return validateEvidence({ ...draft, root: labRoot("factory-fingerprint-evidence-v1", draft) })
+  const evidence = validateEvidence({ ...draft, root: labRoot("factory-fingerprint-evidence-v1", draft) })
+  issuedEvidence.add(evidence)
+  return evidence
+}
+
+const validateGraphArtifacts = (repository: FactoryRepository, nodes: readonly Readonly<{ root: LabRoot; artifactRoot: LabRoot; links: readonly LabRoot[] }>[], kind: "lineage" | "dependency") => {
+  for (const node of nodes) {
+    const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, node.artifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
+    if (!parsed.ok || !exact(parsed.value, ["schemaVersion", "kind", "nodeRoot", "links"]) || parsed.value.schemaVersion !== "factory-graph-node-v1" || parsed.value.kind !== kind || parsed.value.nodeRoot !== node.root || !Array.isArray(parsed.value.links) || !parsed.value.links.every(isRoot) || labRoot("factory-graph-links-v1", parsed.value.links) !== labRoot("factory-graph-links-v1", node.links)) return fail("GRAPH_ARTIFACT")
+  }
+}
+export const createFactoryGraphNodeArtifact = (repository: FactoryRepository, value: { readonly kind: "lineage" | "dependency"; readonly nodeRoot: LabRoot; readonly links: readonly LabRoot[] }): LabRoot => {
+  if (!isRoot(value.nodeRoot) || !Array.isArray(value.links) || value.links.length > 64 || !value.links.every(isRoot)) return fail("GRAPH_ARTIFACT")
+  const encoded = admitCanonicalJsonValue({ schemaVersion: "factory-graph-node-v1", ...value }, { profile: "canonical-manifest" })
+  if (!encoded.ok || encoded.canonicalByteLength > 262144) return fail("GRAPH_ARTIFACT")
+  return publishFactoryArtifact(repository, encoded.canonicalBytes)
 }
 
 /** Structural identity ignores trivia and local binding names, but preserves control flow, operators, literals and semantic property/API identifiers. */
@@ -112,7 +130,9 @@ export const deriveFactorySourceStructureRoot = (sourceBytes: Uint8Array): LabRo
       const symbol = checker.getSymbolAtLocation(node)
       const parent = node.parent
       const semantic = (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
-        ((ts.isPropertyAssignment(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent)) && parent.name === node && !ts.isShorthandPropertyAssignment(parent))
+        (ts.isShorthandPropertyAssignment(parent) && parent.name === node) ||
+        (ts.isBindingElement(parent) && parent.name === node && parent.propertyName === undefined && ts.isObjectBindingPattern(parent.parent)) ||
+        ((ts.isPropertyAssignment(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent)) && parent.name === node)
       if (semantic || !symbol) return [node.kind, node.text]
       if (!bindings.has(symbol)) bindings.set(symbol, `binding:${bindings.size}`)
       return [node.kind, bindings.get(symbol)]
@@ -177,6 +197,8 @@ export const requireIssuedFactoryIndependenceReceipt = (receipt: FactoryIndepend
 export const deriveFactoryFingerprints = (input: {
   readonly repository: FactoryRepository
   readonly supervisionReceipt: FactorySupervisionReceipt
+  readonly pairedSupervisionReceipts?: readonly FactorySupervisionReceipt[]
+  readonly evidence: FactoryFingerprintEvidence
   readonly evidenceArtifactRoot: LabRoot
   readonly claimedFingerprints?: FactoryFingerprintRoots
 }): Readonly<FactoryIndependenceReceipt> => {
@@ -197,26 +219,34 @@ export const deriveFactoryFingerprints = (input: {
   const parsedEvidence = admitCanonicalJsonBytes(evidenceBytes, { profile: "canonical-manifest", operation: "require-canonical" })
   if (!parsedEvidence.ok) return fail("EVIDENCE_BYTES")
   const evidence = validateEvidence(parsedEvidence.value)
+  if (!issuedEvidence.has(input.evidence) || input.evidence.root !== evidence.root || labRoot("factory-evidence-instance-v1", input.evidence) !== labRoot("factory-evidence-instance-v1", evidence)) return fail("UNISSUED_EVIDENCE")
   if (evidence.proposalRoot !== proposal.root || evidence.validationRoot !== validation.root || evidence.supervisionReceiptRoot !== receipt.root) return fail("EVIDENCE_BINDING")
+  if (evidence.evidenceClass === "real_producer") return fail("REAL_PRODUCER_EVIDENCE_UNVERIFIED")
+  validateGraphArtifacts(input.repository, evidence.lineageNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.parents })), "lineage")
+  validateGraphArtifacts(input.repository, evidence.dependencyNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.dependencies })), "dependency")
+  const pairedCommitments = (input.pairedSupervisionReceipts ?? [receipt]).map((entry) => {
+    if (!isIssuedFactorySupervisionReceipt(entry)) return fail("PAIRED_RECEIPT")
+    return { supervisionReceiptRoot: entry.root, execution: deriveFactoryExecutionCommitment(entry.execution) }
+  })
 
   const lineageNodes = evidence.lineageNodes.map((node) => ({ root: node.root, links: node.parents }))
   const dependencyNodes = evidence.dependencyNodes.map((node) => ({ root: node.root, links: node.dependencies }))
   const fingerprints: FactoryFingerprintRoots = freezeLabValue({
     sourceStructureRoot: deriveFactorySourceStructureRoot(source),
-    lineageRoot: deriveFactoryOrderedRecordDescriptor("factory-lineage-fingerprint", evidence.lineageNodes).root,
-    dependencyRoot: deriveFactoryOrderedRecordDescriptor("factory-dependency-fingerprint", evidence.dependencyNodes).root,
+    lineageRoot: labRoot("factory-lineage-fingerprint-v1", { packetLineage: proposal.lineage, predecessorArtifacts: "unverified" }),
+    dependencyRoot: labRoot("factory-dependency-fingerprint-v1", { sourceRoot: admission.sourceRoot, build: proposal.build, recursiveLockedManifest: "unverified" }),
     legalInputDecisionRoot: deriveFactoryOrderedRecordDescriptor("factory-legal-input-decision-fingerprint", receipt.traces.map((trace) => ({ invocationRoot: trace.invocationRoot, inputRoot: trace.inputRoot, method: trace.method, ordinal: trace.ordinal, request: safeProjection(trace.requestProjection), decision: safeProjection(trace.decisionProjection), classification: trace.classification }))).root,
     chronicleBehaviorRoot: receipt.execution.kind === "completed"
       ? deriveFactoryOrderedRecordDescriptor("factory-chronicle-behavior-fingerprint", receipt.execution.transitions.map((transition) => safeProjection({ transitionKind: transition.transitionKind, coordinates: transition.coordinates, classification: transition.classification, events: transition.events, beforeState: transition.beforeState, afterState: transition.afterState, terminalStatus: transition.terminalStatus }))).root
       : labRoot("factory-chronicle-behavior-fingerprint-failure-v1", receipt.execution.failure),
-    matchupResponseRoot: deriveFactoryOrderedRecordDescriptor("factory-matchup-response-fingerprint", evidence.matchupResponses).root,
+    matchupResponseRoot: deriveFactoryOrderedRecordDescriptor("factory-matchup-response-fingerprint", pairedCommitments).root,
   })
-  const reasons = new Set<string>(["calibration_thresholds_not_frozen"])
+  const reasons = new Set<string>(["calibration_thresholds_not_frozen", "lineage_parent_artifacts_unverified", "recursive_dependency_manifest_unverified", "paired_matchup_metadata_unverified"])
   if (!receipt.traces.length) reasons.add("missing_legal_trace")
   if (graphIssue(lineageNodes)) reasons.add("lineage_graph_unresolved")
   if (graphIssue(dependencyNodes)) reasons.add("dependency_graph_unresolved")
   if (evidence.counterfactualPairs.some((pair) => pair.relation === "borderline")) reasons.add("counterfactual_materiality_borderline")
-  if (evidence.evidenceClass !== "real_producer") reasons.add("mechanics_only_evidence")
+  reasons.add("mechanics_only_evidence")
   if (!evidence.failureModes.includes("accepted")) reasons.add("accepted_failure_mode_absent")
   if (input.claimedFingerprints && Object.entries(fingerprints).some(([key, value]) => input.claimedFingerprints?.[key as keyof FactoryFingerprintRoots] !== value)) reasons.add("claimed_fingerprint_mismatch")
   const supportingRoots = freezeLabValue({

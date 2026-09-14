@@ -5,11 +5,11 @@ import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot, type LabRoot } from "../contracts.js"
-import { admitFactory, authorizeFactorySupervision, finalizeFactoryCandidate, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider } from "./admission.js"
+import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommitment, finalizeFactoryCandidate, superviseFactory, type FactoryAdmission, type FactorySupervisionProvider, type FactorySupervisionReceipt } from "./admission.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "./repository.js"
-import { createFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
+import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
 
 const dirs: string[] = []
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
@@ -79,27 +79,29 @@ const supervision = async (admission: FactoryAdmission) => superviseFactory(admi
     accounting: [evidence],
   } as never
 })
-const evidenceArtifact = (repo: ReturnType<typeof repository>, values: { proposalRoot: LabRoot; validationRoot: LabRoot; supervisionReceiptRoot: LabRoot }) => {
+const evidenceArtifact = (repo: ReturnType<typeof repository>, values: { proposalRoot: LabRoot; validationRoot: LabRoot; receipt: FactorySupervisionReceipt }) => {
+  const lineageNodes = [{ root: values.proposalRoot, parents: [root("b")] }, { root: root("b"), parents: [] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repo, { kind: "lineage", nodeRoot: node.root, links: node.parents }) }))
+  const dependencyNodes = [{ root: root("c"), dependencies: [root("d")] }, { root: root("d"), dependencies: [] }].map((node) => ({ ...node, artifactRoot: createFactoryGraphNodeArtifact(repo, { kind: "dependency", nodeRoot: node.root, links: node.dependencies }) }))
+  const matchup = { supervisionReceiptRoot: values.receipt.root, conditionRoot: root("e"), opponentRoot: root("f"), side: "bottom" as const, initialInitiative: true, outcome: "draw" as const }
   const record = createFactoryFingerprintEvidence({
-    ...values,
-    producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer",
+    proposalRoot: values.proposalRoot, validationRoot: values.validationRoot, supervisionReceiptRoot: values.receipt.root,
+    producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "mechanics_only", producerArtifactRoot: null,
     authorshipRoots: [root("a")],
-    lineageNodes: [{ root: values.proposalRoot, parents: [root("b")] }, { root: root("b"), parents: [] }],
-    dependencyNodes: [{ root: root("c"), dependencies: [root("d")] }, { root: root("d"), dependencies: [] }],
-    matchupResponses: [{ conditionRoot: root("e"), opponentRoot: root("f"), side: "bottom", initialInitiative: true, outcome: "draw", responseRoot: root("a") }],
+    lineageNodes, dependencyNodes,
+    matchupResponses: [{ ...matchup, responseRoot: labRoot("factory-issued-matchup-response-v1", { ...matchup, execution: deriveFactoryExecutionCommitment(values.receipt.execution) }) }],
     counterfactualPairs: [{ leftRoot: root("b"), rightRoot: root("c"), relation: "borderline" }],
     failureModes: ["accepted"],
   })
   const encoded = admitCanonicalJsonValue(record, { profile: "canonical-manifest" })
   if (!encoded.ok) throw new Error("test evidence encoding")
-  return publishFactoryArtifact(repo, encoded.canonicalBytes)
+  return { evidence: record, artifactRoot: publishFactoryArtifact(repo, encoded.canonicalBytes) }
 }
 
 describe("six derived factory fingerprints", () => {
   it("rederives every dimension from repository evidence and strips private request/result/event payloads", async () => {
     const { repo, proposal, validation, admission } = admitted(), receipt = await supervision(admission)
-    const artifactRoot = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: receipt.root })
-    const derived = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidenceArtifactRoot: artifactRoot })
+    const evidence = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt })
+    const derived = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: evidence.evidence, evidenceArtifactRoot: evidence.artifactRoot })
     expect(Object.keys(derived.fingerprints).sort()).toEqual(["chronicleBehaviorRoot", "dependencyRoot", "legalInputDecisionRoot", "lineageRoot", "matchupResponseRoot", "sourceStructureRoot"].sort())
     expect(derived.status).toBe("unresolved")
     expect(derived.quarantined).toBe(true)
@@ -110,27 +112,46 @@ describe("six derived factory fingerprints", () => {
 
   it("normalizes comments, whitespace and local identifier renames but never promotes a label or borderline evidence", async () => {
     const first = admitted(), firstReceipt = await supervision(first.admission)
-    const firstArtifact = evidenceArtifact(first.repo, { proposalRoot: first.proposal.root, validationRoot: first.validation.root, supervisionReceiptRoot: firstReceipt.root })
-    const a = deriveFactoryFingerprints({ repository: first.repo, supervisionReceipt: firstReceipt, evidenceArtifactRoot: firstArtifact })
+    const firstArtifact = evidenceArtifact(first.repo, { proposalRoot: first.proposal.root, validationRoot: first.validation.root, receipt: firstReceipt })
+    const a = deriveFactoryFingerprints({ repository: first.repo, supervisionReceipt: firstReceipt, evidence: firstArtifact.evidence, evidenceArtifactRoot: firstArtifact.artifactRoot })
 
     const rewritten = new TextEncoder().encode("const renamed=(value)=>value.phaseNumber>0?[]:[];\nexport default {selectActivations(value){return {activationOrders:renamed(value),strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}")
     expect(deriveFactorySourceStructureRoot(rewritten)).toBe(a.fingerprints.sourceStructureRoot)
     expect(a.status).not.toBe("independent")
   })
 
+  it("preserves shorthand property keys even when their local value binding is renamed", () => {
+    const alpha = new TextEncoder().encode("const alpha = 1; const decision = { alpha };")
+    const beta = new TextEncoder().encode("const beta = 1; const decision = { beta };")
+    expect(deriveFactorySourceStructureRoot(alpha)).not.toBe(deriveFactorySourceStructureRoot(beta))
+    const alphaBinding = new TextEncoder().encode("const { alpha } = input; consume(alpha);")
+    const betaBinding = new TextEncoder().encode("const { beta } = input; consume(beta);")
+    expect(deriveFactorySourceStructureRoot(alphaBinding)).not.toBe(deriveFactorySourceStructureRoot(betaBinding))
+  })
+
   it("quarantines absent traces, conflicting evidence and caller-supplied dimension mismatches", async () => {
     const { repo, proposal, validation, admission } = admitted(), receipt = await supervision(admission)
-    const artifactRoot = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: receipt.root })
-    const mismatch = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidenceArtifactRoot: artifactRoot, claimedFingerprints: { ...factoryCandidateFixture(proposal, validation).fingerprints, sourceStructureRoot: root("f") } })
+    const artifact = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt })
+    const mismatch = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot, claimedFingerprints: { ...factoryCandidateFixture(proposal, validation).fingerprints, sourceStructureRoot: root("f") } })
     expect(mismatch.status).toBe("unresolved")
     expect(mismatch.reasons).toContain("claimed_fingerprint_mismatch")
-    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: { ...receipt, traces: [] } as never, evidenceArtifactRoot: artifactRoot })).toThrow("FACTORY_FINGERPRINT_SUPERVISION_RECEIPT")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: { ...receipt, traces: [] } as never, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })).toThrow("FACTORY_FINGERPRINT_SUPERVISION_RECEIPT")
+    expect(() => createFactoryFingerprintEvidence({ ...artifact.evidence, evidenceClass: "real_producer", producerArtifactRoot: root("1") } as never)).toThrow("FACTORY_FINGERPRINT_CALLER_REAL_PRODUCER")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: { ...artifact.evidence }, evidenceArtifactRoot: artifact.artifactRoot })).toThrow("FACTORY_FINGERPRINT_UNISSUED_EVIDENCE")
+
+    const { root: _evidenceRoot, schemaVersion: _schemaVersion, privacy: _privacy, ...evidenceValue } = artifact.evidence
+    const changedResponse = createFactoryFingerprintEvidence({ ...evidenceValue, matchupResponses: artifact.evidence.matchupResponses.map((response) => ({ ...response, conditionRoot: root("1"), responseRoot: root("2") })) })
+    const encoded = admitCanonicalJsonValue(changedResponse, { profile: "canonical-manifest" })
+    if (!encoded.ok) throw new Error("changed response encoding")
+    const changed = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: changedResponse, evidenceArtifactRoot: publishFactoryArtifact(repo, encoded.canonicalBytes) })
+    expect(changed.fingerprints.matchupResponseRoot).toBe(mismatch.fingerprints.matchupResponseRoot)
+    expect(changed.reasons).toContain("paired_matchup_metadata_unverified")
   })
 
   it("requires the exact issued derivation receipt before final candidate publication", async () => {
     const { repo, proposal, validation, admission } = admitted(), supervisionReceipt = await supervision(admission)
-    const artifactRoot = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: supervisionReceipt.root })
-    const independenceReceipt = deriveFactoryFingerprints({ repository: repo, supervisionReceipt, evidenceArtifactRoot: artifactRoot })
+    const artifact = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt: supervisionReceipt })
+    const independenceReceipt = deriveFactoryFingerprints({ repository: repo, supervisionReceipt, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })
     const base = factoryCandidateFixture(proposal, validation, supervisionReceipt.root)
     const candidateValue = { ...base, fingerprints: independenceReceipt.fingerprints }
     const candidate = { ...candidateValue, root: deriveFactoryCandidateRoot(candidateValue) }
