@@ -195,7 +195,7 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
         outputRoot = storedSupervision.artifactRoot
         duplicateEvidenceRoot = supervision.evidenceRoot
         finalEvidenceRoot = publishFactoryArtifact(repository, encode({ schemaVersion: "factory-calibration-terminal-evidence-v1", startRoot: start.root, disposition, supervisionArtifactRoot: storedSupervision.artifactRoot, actualUsageRoot, pairing: "pending_retained_group" }))
-        pendingPairing.push(freezeLabValue({ workload, receipt, proposal, validation, ingestion, producerIdentity: retained.producerIdentity, origin: retained.origin, retainedRoot: retained.root, storedSupervisionArtifactRoot: storedSupervision.artifactRoot, storedExecutionRoot: storedSupervision.executionRoot, attemptPlan, selectedRealPath: hooks.plan === undefined && hooks.runtimeOptions === undefined }))
+        pendingPairing.push(freezeLabValue({ workload, receipt, proposal, validation, ingestion, producerIdentity: retained.producerIdentity, origin: retained.origin, retainedRoot: retained.root, storedSupervisionArtifactRoot: storedSupervision.artifactRoot, storedExecutionRoot: storedSupervision.executionRoot, attemptPlan, selectedRealPath: retained.evidenceClass === "real_producer" && hooks.plan === undefined && hooks.runtimeOptions === undefined }))
       }
     } catch (error) {
       disposition = errorDisposition(error, providerCreated)

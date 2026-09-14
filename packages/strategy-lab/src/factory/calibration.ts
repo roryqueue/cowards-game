@@ -45,7 +45,7 @@ export type FactoryIngestionOrigin = FactoryFingerprintEvidence["origin"]
 export type FactoryProducerIdentity = FactoryFingerprintEvidence["producerIdentity"]
 export interface FactoryCalibrationIngestion {
   readonly artifactRoot: LabRoot; readonly packetRoot: LabRoot; readonly sourceRoot: LabRoot
-  readonly producerIdentity: FactoryProducerIdentity; readonly origin: FactoryIngestionOrigin; readonly evidenceClass: "real_producer"
+  readonly producerIdentity: FactoryProducerIdentity; readonly origin: FactoryIngestionOrigin; readonly evidenceClass: "real_producer" | "calibration_only"
 }
 export interface FactoryCalibrationWorkload {
   readonly schemaVersion: "factory-calibration-workload-v1"; readonly privacy: "private_offline"; readonly root: LabRoot
@@ -95,7 +95,8 @@ export const admitFactoryCalibrationManifest = (value: unknown): Readonly<Factor
   if (!Array.isArray(record.ingestions) || record.ingestions.length < 1 || record.ingestions.length > Number(record.maxAttempts)) return fail("INGESTIONS")
   const seen = new Set<string>()
   for (const item of record.ingestions) {
-    if (!exact(item, ["artifactRoot", "packetRoot", "sourceRoot", "producerIdentity", "origin", "evidenceClass"]) || ![item.artifactRoot, item.packetRoot, item.sourceRoot].every(root) || !["emitTacticalFactoryPacket", "emitTeacherFactoryPacket", "emitModelFactoryPacket", "admitQuarantinedIntakePacket"].includes(String(item.producerIdentity)) || !["tactical-oracle", "teacher-oracle", "model-oracle", "human-external-intake"].includes(String(item.origin)) || item.evidenceClass !== "real_producer" || seen.has(String(item.artifactRoot))) return fail("INGESTION")
+    const origins: Record<string, string> = { emitTacticalFactoryPacket: "tactical-oracle", emitTeacherFactoryPacket: "teacher-oracle", emitModelFactoryPacket: "model-oracle", admitQuarantinedIntakePacket: "human-external-intake", materializeFactoryCalibrationControl: "calibration-control" }
+    if (!exact(item, ["artifactRoot", "packetRoot", "sourceRoot", "producerIdentity", "origin", "evidenceClass"]) || ![item.artifactRoot, item.packetRoot, item.sourceRoot].every(root) || !Object.hasOwn(origins, String(item.producerIdentity)) || item.origin !== origins[String(item.producerIdentity)] || item.evidenceClass !== (item.origin === "calibration-control" ? "calibration_only" : "real_producer") || seen.has(String(item.artifactRoot))) return fail("INGESTION")
     seen.add(String(item.artifactRoot))
   }
   if (!Array.isArray(record.workloads) || record.workloads.length < 1 || record.workloads.length > Number(record.maxAttempts)) return fail("WORKLOADS")

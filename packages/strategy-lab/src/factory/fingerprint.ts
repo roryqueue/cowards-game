@@ -33,8 +33,8 @@ export interface FactoryFingerprintEvidence {
   readonly proposalRoot: LabRoot
   readonly validationRoot: LabRoot
   readonly supervisionReceiptRoot: LabRoot
-  readonly producerIdentity: "emitTacticalFactoryPacket" | "emitTeacherFactoryPacket" | "emitModelFactoryPacket" | "admitQuarantinedIntakePacket"
-  readonly origin: "tactical-oracle" | "teacher-oracle" | "model-oracle" | "human-external-intake"
+  readonly producerIdentity: "emitTacticalFactoryPacket" | "emitTeacherFactoryPacket" | "emitModelFactoryPacket" | "admitQuarantinedIntakePacket" | "materializeFactoryCalibrationControl"
+  readonly origin: "tactical-oracle" | "teacher-oracle" | "model-oracle" | "human-external-intake" | "calibration-control"
   readonly evidenceClass: "real_producer" | "mechanics_only"
   readonly producerArtifactRoot: LabRoot | null
   readonly authorshipRoots: readonly LabRoot[]
@@ -53,6 +53,7 @@ const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdent
   emitTeacherFactoryPacket: "teacher-oracle",
   emitModelFactoryPacket: "model-oracle",
   admitQuarantinedIntakePacket: "human-external-intake",
+  materializeFactoryCalibrationControl: "calibration-control",
 }
 const issuedEvidence = new WeakSet<object>()
 const authorizedProducerEvidence = new WeakMap<object, LabRoot>()
@@ -88,6 +89,8 @@ const validateEvidence = (value: unknown): Readonly<FactoryFingerprintEvidence> 
     if (!exact(pair, ["leftRoot", "rightRoot", "relation"]) || ![pair.leftRoot, pair.rightRoot].every(isRoot) || !["distinct", "correlated", "borderline"].includes(String(pair.relation))) fail("COUNTERFACTUAL")
   }
   const typed = record as unknown as FactoryFingerprintEvidence
+  // Calibration descendants must never masquerade as independent producers.
+  if (typed.origin === "calibration-control" && typed.evidenceClass !== "mechanics_only") return fail("CONTROL_NOT_PRODUCER")
   if (typed.root !== labRoot("factory-fingerprint-evidence-v1", withoutRoot(typed))) fail("EVIDENCE_ROOT")
   return freezeLabValue(typed)
 }

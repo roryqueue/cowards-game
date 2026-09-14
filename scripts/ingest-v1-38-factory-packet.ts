@@ -12,6 +12,7 @@ import { freezeLabValue, labRoot, type LabRoot } from "../packages/strategy-lab/
 import { FactoryOraclePacketSchema, factoryProposalFromPacket, type FactoryNativeLane, type FactoryOraclePacket } from "../packages/strategy-lab/src/factory/contracts.js"
 import { admitQuarantinedIntakePacket, reopenAcceptedQuarantinedIntakePacket, type QuarantinedIntakePacket, type QuarantinedIntakeResult } from "../packages/strategy-lab/src/factory/intake.js"
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
+import { deriveFactoryControl, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_INGEST_${code}`) }
 const byteRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -20,6 +21,7 @@ const producerOrigins = {
   emitTeacherFactoryPacket: "teacher-oracle",
   emitModelFactoryPacket: "model-oracle",
   admitQuarantinedIntakePacket: "human-external-intake",
+  materializeFactoryCalibrationControl: "calibration-control",
 } as const
 export type NamedFactoryProducer = keyof typeof producerOrigins
 export type NamedFactoryOrigin = typeof producerOrigins[NamedFactoryProducer]
@@ -27,12 +29,12 @@ export type NamedFactoryOrigin = typeof producerOrigins[NamedFactoryProducer]
 export interface FactoryIngestionRequest {
   readonly producerIdentity: NamedFactoryProducer
   readonly origin: NamedFactoryOrigin
-  readonly evidenceClass: "real_producer"
+  readonly evidenceClass: "real_producer" | "calibration_only"
   readonly producerInput: unknown
 }
 export interface FactoryIngestionRecord {
   readonly schemaVersion: "factory-ingestion-v1"; readonly privacy: "private_offline"; readonly root: LabRoot
-  readonly producerIdentity: NamedFactoryProducer; readonly origin: NamedFactoryOrigin; readonly evidenceClass: "real_producer"
+  readonly producerIdentity: NamedFactoryProducer; readonly origin: NamedFactoryOrigin; readonly evidenceClass: "real_producer" | "calibration_only"
   readonly packetRoot: LabRoot; readonly sourceRoot: LabRoot; readonly runtimeProfileRoot: LabRoot; readonly nativeLane: FactoryNativeLane
   readonly packet: FactoryOraclePacket; readonly sourceUtf8: string; readonly producerInput: unknown
   readonly modelCompanion: ModelFactoryPacketProvenance | null
@@ -60,6 +62,12 @@ const sourceBytes = (source: string): Uint8Array => new TextEncoder().encode(sou
 type MaterializedPacket = { packet: FactoryOraclePacket; source: string; companion: ModelFactoryPacketProvenance | null; storedInput?: unknown }
 const materialize = async (request: FactoryIngestionRequest, repository: FactoryRepository): Promise<MaterializedPacket | Extract<QuarantinedIntakeResult, { disposition: "blocked_configuration" }>> => {
   switch (request.producerIdentity) {
+    case "materializeFactoryCalibrationControl": {
+      const input = request.producerInput as { slot: FactoryControlSlot; baseIngestionArtifactRoot: LabRoot }
+      const base = readFactoryIngestion(repository, input.baseIngestionArtifactRoot)
+      const control = deriveFactoryControl(input.slot, input.baseIngestionArtifactRoot, base)
+      return { packet: control.packet, source: control.source, companion: null, storedInput: { slot: input.slot, baseIngestionArtifactRoot: input.baseIngestionArtifactRoot, proof: control.proof } }
+    }
     case "emitTacticalFactoryPacket": {
       const input = request.producerInput as TacticalFactoryRequest
       return { packet: emitTacticalFactoryPacket(input), source: emitTacticalSource(), companion: null }
@@ -95,7 +103,7 @@ export const requireIssuedFactoryIngestion = (record: FactoryIngestionRecord): R
 }
 
 export const ingestNamedFactoryPacket = async (request: FactoryIngestionRequest, repository: FactoryRepository): Promise<FactoryIngestionResult> => {
-  if (!Object.hasOwn(producerOrigins, request?.producerIdentity) || request.origin !== producerOrigins[request.producerIdentity] || request.evidenceClass !== "real_producer") return fail("PRODUCER")
+  if (!Object.hasOwn(producerOrigins, request?.producerIdentity) || request.origin !== producerOrigins[request.producerIdentity] || request.evidenceClass !== (request.producerIdentity === "materializeFactoryCalibrationControl" ? "calibration_only" : "real_producer")) return fail("PRODUCER")
   const materialized = await materialize(request, repository)
   if ("disposition" in materialized) {
     if (materialized.disposition !== "blocked_configuration") return fail("INTAKE_NOT_ACCEPTED")
@@ -119,14 +127,20 @@ export const ingestNamedFactoryPacket = async (request: FactoryIngestionRequest,
 }
 
 /** Reload replays the named data-only producer; model companions are re-admitted before emission. */
-export const readFactoryIngestion = (repository: FactoryRepository, artifactRoot: LabRoot): Readonly<FactoryIngestionRecord> => {
+export const readFactoryIngestion = (repository: FactoryRepository, artifactRoot: LabRoot, controlDepth = 0): Readonly<FactoryIngestionRecord> => {
+  if (controlDepth > 1) return fail("CONTROL_PARENT")
   const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, artifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
   if (!parsed.ok || !parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return fail("RELOAD")
   const stored = parsed.value as unknown as FactoryIngestionRecord
-  if (!Object.hasOwn(producerOrigins, stored.producerIdentity) || stored.origin !== producerOrigins[stored.producerIdentity] || stored.evidenceClass !== "real_producer") return fail("RELOAD_PRODUCER")
+  if (!Object.hasOwn(producerOrigins, stored.producerIdentity) || stored.origin !== producerOrigins[stored.producerIdentity] || stored.evidenceClass !== (stored.producerIdentity === "materializeFactoryCalibrationControl" ? "calibration_only" : "real_producer")) return fail("RELOAD_PRODUCER")
   const packet = FactoryOraclePacketSchema.parse(stored.packet), bytes = sourceBytes(stored.sourceUtf8)
   if (stored.packetRoot !== packet.root || stored.sourceRoot !== packet.source.root || byteRoot(bytes) !== stored.sourceRoot || stored.nativeLane.runtimeProfileRoot !== stored.runtimeProfileRoot) return fail("RELOAD_BINDING")
-  if (stored.producerIdentity === "emitModelFactoryPacket") {
+  if (stored.producerIdentity === "materializeFactoryCalibrationControl") {
+    const input = stored.producerInput as { slot: FactoryControlSlot; baseIngestionArtifactRoot: LabRoot; proof: unknown }
+    const base = readFactoryIngestion(repository, input.baseIngestionArtifactRoot, controlDepth + 1)
+    const control = deriveFactoryControl(input.slot, input.baseIngestionArtifactRoot, base)
+    if (stored.modelCompanion !== null || control.packet.root !== packet.root || control.source !== stored.sourceUtf8 || labRoot("factory-control-compare-v1", control.proof) !== labRoot("factory-control-compare-v1", input.proof)) return fail("RELOAD_CONTROL")
+  } else if (stored.producerIdentity === "emitModelFactoryPacket") {
     const input = stored.producerInput as { request: ModelFactoryRequest }
     if (!stored.modelCompanion) return fail("RELOAD_MODEL")
     const bundle = admitFrozenModelBundle(stored.modelCompanion.bundle), replayed = emitModelFactoryPacket(bundle, input.request), companion = getIssuedModelFactoryPacketProvenance(replayed)

@@ -8,6 +8,7 @@ import { admitFactoryCalibrationWorkload, createFactoryCalibrationManifest, crea
 import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readFactoryIngestion } from "./ingest-v1-38-factory-packet.js"
 import { admitFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, type FactoryAuthoringAllocation, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
+import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`FACTORY_PREPARE_${code}`) }
@@ -39,8 +40,8 @@ export interface FreshFactoryCalibrationInput {
 /**
  * Plan-07-only preparation path. Unlike the historical generic preparer below,
  * it derives, publishes, and binds the complete approved 12-slot/48-cell set.
- * Plan 08 may materialize the slot ingestions supplied here; this function does
- * not claim those source transformations or observations already exist.
+ * Ingestions reopen to their named base emitter or exact prescribed
+ * calibration-only transformation. Observations remain a separate run gate.
  */
 export const prepareFreshFactoryCalibration = (input: FreshFactoryCalibrationInput, repository: FactoryRepository): Readonly<{ manifest: FactoryCalibrationManifest; artifactRoot: LabRoot; cellRoots: readonly LabRoot[] }> => {
   const allocation = admitFactoryAuthoringAllocation(input.allocation), cells = createFreshFactoryCalibrationCells()
@@ -48,14 +49,31 @@ export const prepareFreshFactoryCalibration = (input: FreshFactoryCalibrationInp
   if (suppliedSlots.join("\0") !== (Object.keys(FACTORY_SOURCE_RECIPES) as FactorySourceSlot[]).sort().join("\0") || cells.length !== allocation.workloadCount || allocation.maxInvocations !== 256 || allocation.maxLifetimeMs !== 120_000) return fail("FRESH_ALLOCATION")
   const suppliedRoots = suppliedSlots.map((slot) => input.slotIngestionArtifactRoots[slot as FactorySourceSlot])
   if (!suppliedRoots.every(root) || new Set(suppliedRoots).size !== 12 || ![input.protocolRoot, input.protocolArtifactRoot, input.studyPolicyRoot, input.measurementPolicyRoot, input.opponentIdentityRoot].every(root)) return fail("FRESH_SLOTS")
-  const ingestions = suppliedRoots.map((artifactRoot) => {
-    const record = readFactoryIngestion(repository, artifactRoot)
+  const records = suppliedRoots.map((artifactRoot) => readFactoryIngestion(repository, artifactRoot))
+  const bases = { S01: "emitTacticalFactoryPacket", S03: "emitTeacherFactoryPacket", S05: "emitModelFactoryPacket" } as const
+  for (const [index, slot] of suppliedSlots.entries()) {
+    const record = records[index]!
+    if (record.packet.split !== "development") return fail("FRESH_SPLIT")
+    if (Object.hasOwn(bases, slot)) {
+      if (record.producerIdentity !== bases[slot as keyof typeof bases] || record.evidenceClass !== "real_producer") return fail("FRESH_BASE_MECHANISM")
+    } else {
+      const input = record.producerInput as { slot?: unknown; baseIngestionArtifactRoot?: unknown }
+      if (record.producerIdentity !== "materializeFactoryCalibrationControl" || record.evidenceClass !== "calibration_only" || input.slot !== slot || input.baseIngestionArtifactRoot !== inputRootForBase(slot as FactoryControlSlot)) return fail("FRESH_CONTROL_PROVENANCE")
+    }
+  }
+  function inputRootForBase(slot: FactoryControlSlot) { return input.slotIngestionArtifactRoots[FACTORY_CONTROL_BASES[slot]] }
+  const protocol = admitCanonicalJsonBytes(readFactoryArtifact(repository, input.protocolArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
+  if (!protocol.ok || !exact(protocol.value, ["schemaVersion", "root", "phase", "purpose", "split"])) return fail("FRESH_PROTOCOL")
+  const protocolRecord = protocol.value as Record<string, unknown>, { root: protocolRoot, ...protocolValue } = protocolRecord
+  if (protocolRecord.schemaVersion !== "factory-calibration-protocol-v1" || protocolRecord.phase !== "264" || protocolRecord.purpose !== "development-independence-calibration" || protocolRecord.split !== "development" || protocolRoot !== input.protocolRoot || protocolRoot !== labRoot("factory-calibration-protocol-v1", protocolValue)) return fail("FRESH_PROTOCOL")
+  const ingestions = suppliedRoots.map((artifactRoot, index) => {
+    const record = records[index]!
     return { artifactRoot, packetRoot: record.packetRoot, sourceRoot: record.sourceRoot, producerIdentity: record.producerIdentity, origin: record.origin, evidenceClass: record.evidenceClass }
   })
   const workloadArtifactRoots = cells.map((cell) => {
     const ingestionArtifactRoot = input.slotIngestionArtifactRoots[cell.slot]
     const workload = createFactoryCalibrationWorkload({
-      candidateIngestionArtifactRoot: ingestionArtifactRoot, pairGroup: `${cell.slot.toLowerCase()}-${cell.block.toLowerCase()}-${cell.initialInitiative}`, pairAxis: "initialInitiative",
+      candidateIngestionArtifactRoot: ingestionArtifactRoot, pairGroup: `${cell.slot.toLowerCase()}-${cell.block.toLowerCase()}`, pairAxis: "initialInitiative",
       condition: { arenaId: cell.arenaId, seed: cell.seed, candidateSide: cell.candidateSide, initialInitiative: cell.initialInitiative, maxPhases: cell.maxPhases },
       opponent: { kind: "fixed_mechanics", opponentId: "factory-fixed-mechanics-v1", identityRoot: input.opponentIdentityRoot }, budget: { maxInvocations: 256, maxLifetimeMs: 120_000 },
       lineageManifestArtifactRoot: null, dependencyManifestArtifactRoot: null,
@@ -65,7 +83,7 @@ export const prepareFreshFactoryCalibration = (input: FreshFactoryCalibrationInp
   if (workloadArtifactRoots.length !== 48 || new Set(workloadArtifactRoots.map((entry) => entry.artifactRoot)).size !== 48) return fail("FRESH_WORKLOADS")
   const allocationEncoded = admitCanonicalJsonValue(allocation, { profile: "canonical-manifest" }); if (!allocationEncoded.ok) return fail("FRESH_ALLOCATION_BYTES")
   const allocationArtifactRoot = publishFactoryArtifact(repository, allocationEncoded.canonicalBytes)
-  const authorizationValue = { schemaVersion: "factory-calibration-authorization-v2" as const, status: "authorized" as const, allocationRoot: allocation.root, sourceSlots: allocation.sourceSlots, cellRoots: cells.map((cell) => cell.root), workloadArtifactRoots: workloadArtifactRoots.map((entry) => entry.artifactRoot), geometryDesign: "two_geometry_side_confounded_pilot" as const, competitiveClaim: "none" as const }
+  const authorizationValue = { schemaVersion: "factory-calibration-authorization-v2" as const, status: "authorized" as const, allocationRoot: allocation.root, sourceSlots: allocation.sourceSlots, slotIngestionArtifactRoots: input.slotIngestionArtifactRoots, cellRoots: cells.map((cell) => cell.root), workloadArtifactRoots: workloadArtifactRoots.map((entry) => entry.artifactRoot), geometryDesign: "two_geometry_side_confounded_pilot" as const, competitiveClaim: "none" as const }
   const authorization = { ...authorizationValue, root: labRoot("factory-calibration-authorization-v2", authorizationValue) }
   const authorizationEncoded = admitCanonicalJsonValue(authorization, { profile: "canonical-manifest" }); if (!authorizationEncoded.ok) return fail("FRESH_AUTHORIZATION")
   const authorizationArtifactRoot = publishFactoryArtifact(repository, authorizationEncoded.canonicalBytes)
@@ -98,7 +116,8 @@ export const extractFactoryCalibrationAuthorization = (markdown: string): Readon
   if (record.root !== authorizationRoot(withoutRoot)) return fail("AUTHORIZATION_ROOT")
   return Object.freeze(record)
 }
-export const prepareFactoryCalibration = (markdown: string, repository: FactoryRepository): Readonly<{ manifest: FactoryCalibrationManifest; artifactRoot: LabRoot }> => {
+/** Historical mechanics fixture reader; never the fresh Plan07 route or CLI. */
+export const prepareHistoricalFactoryCalibration = (markdown: string, repository: FactoryRepository): Readonly<{ manifest: FactoryCalibrationManifest; artifactRoot: LabRoot }> => {
   const authorization = extractFactoryCalibrationAuthorization(markdown)
   const readRecord = (artifactRoot: LabRoot) => {
     const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, artifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
@@ -148,13 +167,19 @@ export const prepareFactoryCalibration = (markdown: string, repository: FactoryR
   return Object.freeze({ manifest, artifactRoot: publishFactoryArtifact(repository, encoded.canonicalBytes) })
 }
 
-const help = "Usage: prepare-v1-38-factory-calibration --repository <factory-directory> --decision <plan07-markdown>"
+/** Actual Plan07 entrypoint accepts only the complete fresh canonical input. */
+export const prepareFactoryCalibration = (bytes: Uint8Array, repository: FactoryRepository) => {
+  const parsed = admitCanonicalJsonBytes(bytes, { profile: "canonical-manifest", operation: "require-canonical" })
+  if (!parsed.ok || !exact(parsed.value, ["allocation", "slotIngestionArtifactRoots", "protocolRoot", "protocolArtifactRoot", "studyPolicyRoot", "measurementPolicyRoot", "opponentIdentityRoot", "supervision"])) return fail("FRESH_INPUT")
+  return prepareFreshFactoryCalibration(parsed.value as unknown as FreshFactoryCalibrationInput, repository)
+}
+const help = "Usage: prepare-v1-38-factory-calibration --repository <factory-directory> --fresh-input <canonical-json-file>"
 const argument = (name: string) => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined }
 const main = () => {
   if (process.argv.includes("--help")) { process.stdout.write(`${help}\n`); return }
-  const directory = argument("--repository"), decision = argument("--decision")
-  if (!directory || !decision) return fail("ARGUMENTS")
-  const result = prepareFactoryCalibration(readFileSync(resolve(decision), "utf8"), createFactoryRepository(resolve(directory)))
+  const directory = argument("--repository"), freshInput = argument("--fresh-input")
+  if (!directory || !freshInput || process.argv.includes("--decision")) return fail("ARGUMENTS")
+  const result = prepareFactoryCalibration(readFileSync(resolve(freshInput)), createFactoryRepository(resolve(directory)))
   process.stdout.write(`${JSON.stringify({ manifestRoot: result.manifest.root, artifactRoot: result.artifactRoot })}\n`)
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) { try { main() } catch (error) { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1 } }
