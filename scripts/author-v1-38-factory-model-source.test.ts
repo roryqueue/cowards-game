@@ -20,6 +20,32 @@ const eventStream = (model: string | null, message = JSON.stringify({ source }),
 const launchFor = (parent: string) => buildFactoryAuthorCommand(createFactoryAuthoringAllocation(), { packetBytes: packet, packetRoot, disclosedDirectory: join(parent, "disclosed"), model: "gpt-5.6-sol", capability, frozenSettings, codePath: "/tool/bin", authHome: join(parent, "auth") })
 
 describe("operational factory authoring", () => {
+  it("permits the next invalid-output correction in a fresh isolated cwd and state", async () => {
+    const parent=directory(),auth=join(parent,"native-auth.json");writeFileSync(auth,"fake-only")
+    const records:FactoryAuthoringRecordRefs[]=[]
+    const repositoryPath=join(parent,"factory-retained");mkdirSync(repositoryPath);const repository=createFactoryRepository(realpathSync(repositoryPath))
+    let lastBundle:unknown
+    for(let attempt=0;attempt<2;attempt++) {
+      const times=[1000+attempt*100,1010+attempt*100,1060+attempt*100,1070+attempt*100,1080+attempt*100]
+      const emitted=attempt===0?"export const invalid = 1":source
+      const result=await runFactoryAppServerAuthorAttempt({allocation:createFactoryAuthoringAllocation(),packetBytes:packet,packetRoot,disclosedDirectory:join(parent,`disclosed-${attempt}`),stateDirectory:join(parent,`state-${attempt}`),existingAuthFile:auth,ledgerDirectory:join(parent,"ledger"),model:"gpt-5.6-sol",modelProvider:"openai-codex",frozenSettings,capability,clock:()=>times.shift()!,transportFactory:async(options)=>({threadId:"t",reportedModel:"gpt-5.6-sol",async close(){return "sigterm" as const},async startTurn(){
+        const usage={inputTokens:12,cachedInputTokens:2,outputTokens:8,reasoningOutputTokens:1,totalTokens:20}
+        const rawJsonl=new TextEncoder().encode([
+          {jsonrpc:"2.0",id:2,result:{thread:{id:"t"},model:"gpt-5.6-sol",modelProvider:"openai-codex",cwd:options.cwd,sandbox:{type:"readOnly",networkAccess:false},approvalPolicy:"never",instructionSources:[]}},
+          {jsonrpc:"2.0",id:3,result:{turn:{id:"u"}}},
+          {jsonrpc:"2.0",method:"item/completed",params:{threadId:"t",turnId:"u",item:{type:"agentMessage",text:JSON.stringify({source:emitted})}}},
+          {jsonrpc:"2.0",method:"thread/tokenUsage/updated",params:{threadId:"t",turnId:"u",tokenUsage:{total:usage,last:usage}}},
+          {jsonrpc:"2.0",method:"turn/completed",params:{threadId:"t",turn:{id:"u",status:"completed"}}}
+        ].map(value=>JSON.stringify(value)).join("\n")+"\n")
+        return {sourceMessage:JSON.stringify({source:emitted}),usage,reportedModel:"gpt-5.6-sol",rawJsonl}
+      }})})
+      expect(result.terminal.disposition).toBe(attempt===0?"invalid":"valid")
+      const retain=(name:string,json=true)=>{const bytes=readFileSync(join(parent,"ledger",result.start.ordinal,name));if(!json)return publishFactoryArtifact(repository,bytes);const parsed=admitCanonicalJsonValue(JSON.parse(bytes.toString("utf8")),{profile:"canonical-manifest"});if(!parsed.ok)throw Error("canonical");return publishFactoryArtifact(repository,parsed.canonicalBytes)}
+      records.push({start:retain("start.json"),request:retain("request.json"),stdin:retain("request.stdin",false),response:retain("response.jsonl",false),source:attempt===0?null:retain("emitted-source.ts",false),terminal:retain("terminal.json"),cleanup:retain("process-cleanup.json")})
+      lastBundle=result.bundle
+    }
+    expect(()=>verifyFactoryAuthoringRecords(repository,records,lastBundle)).not.toThrow()
+  })
   it("binds packet, recipes, settings and model into a tool-disabled isolated launch", () => {
     const parent = directory(), result = launchFor(parent); expect(result.status).toBe("ready"); if (result.status !== "ready") return
     expect(result.argv[0]).toBe(capability.codexExecutable); expect(result.argv.filter((item) => item === "--disable")).toHaveLength(11); expect(result.argv).toEqual(expect.arrayContaining(["app-server", "--stdio", "--strict-config"])); expect(result.requestRecord).toMatchObject({ requestedModel: "gpt-5.6-sol", codexExecutable: capability.codexExecutable, launchEnvironment: result.env, frozenSettings, cwd: result.cwd, recipes: { S01: "tactical-base-exact", S12: "s05-guard-one-turn-to-stone" } })
