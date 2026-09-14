@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto"
-import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
+import { exactLabKeys, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { readFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { admitFrozenModelBundle } from "../packages/strategy-oracle-model/src/bundle.js"
 import { createFactoryAuthoringAllocation } from "./v1-38-factory-allocation.js"
 import { readFactoryCanonicalRecord, requireFactoryRecordRoot } from "./v1-38-factory-fresh-evidence.js"
 import type { readFreshFactoryCalibration } from "./v1-38-factory-fresh-evidence.js"
 import type { FactoryIngestionRecord } from "./ingest-v1-38-factory-packet.js"
+import { admitFactory } from "../packages/strategy-lab/src/factory/admission.js"
+import { factoryProposalFromPacket } from "../packages/strategy-lab/src/factory/contracts.js"
+import { distillLegalStudent, projectTeacherSearchToLegalTraining } from "../packages/strategy-oracle-teacher/src/distill.js"
+import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 
 export interface FactoryAuthoringRecordRefs {
   readonly start: LabRoot; readonly request: LabRoot; readonly stdin: LabRoot; readonly response: LabRoot
@@ -20,9 +24,59 @@ export interface FactoryExecutionEvidence {
   readonly negativeWitnessArtifactRoots: Readonly<Record<"S01" | "S03" | "S05", LabRoot>>
 }
 export const factoryEvidenceByteRoot = (bytes: Uint8Array | string): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
-export const deriveFactoryNegativeWitness = (_record: FactoryIngestionRecord): Record<string, unknown> => ({})
-export const deriveFactorySharedHelperAudit = (_records: Readonly<Record<"S01" | "S03" | "S05", FactoryIngestionRecord>>): Record<string, unknown> => ({})
-export const readFactoryExecutionEvidence = (_repository: FactoryRepository, _artifactRoot: LabRoot, _fresh: ReturnType<typeof readFreshFactoryCalibration>): FactoryExecutionEvidence => { throw new TypeError("FACTORY_EXECUTION_UNIMPLEMENTED") }
+export const deriveFactoryNegativeWitness = (record: FactoryIngestionRecord): Record<string, unknown> => {
+  const sourceBytes = new TextEncoder().encode(record.sourceUtf8), proposal = factoryProposalFromPacket(record.packet)
+  // Establish the real positive byte/packet binding before the one negative mutation.
+  admitFactory({ packet: record.packet, proposal, sourceBytes })
+  const mutated = new TextEncoder().encode(`${record.sourceUtf8}\n`)
+  let rejected = false
+  try { admitFactory({ packet: record.packet, proposal, sourceBytes: mutated }) } catch (error) { if (error instanceof TypeError && error.message === "FACTORY_ADMISSION") rejected = true; else throw error }
+  if (!rejected) throw new TypeError("FACTORY_EXECUTION_NEGATIVE_WITNESS")
+  const value = { schemaVersion: "factory-negative-admission-witness-v1", ingestionRoot: record.root, sourceRoot: record.sourceRoot, packetRoot: record.packetRoot, mutatedSourceRoot: factoryEvidenceByteRoot(mutated), charged: true, allocation: "none", runtimeExecuted: false, disposition: "rejected", mutation: "append-newline-source-mismatch" }
+  return { ...value, root: labRoot("factory-negative-admission-witness-v1", value) }
+}
+export const deriveFactorySharedHelperAudit = (records: Readonly<Record<"S01" | "S03" | "S05", FactoryIngestionRecord>>): Record<string, unknown> => {
+  const slots = ["S01", "S03", "S05"] as const
+  const audits = slots.map((slot) => auditFactorySource(records[slot].sourceUtf8))
+  const sharedBodies = [[0,1],[0,2],[1,2]].map(([left,right]) => audits[left!]!.functionBodies.filter((body) => audits[right!]!.functionBodies.includes(body)).length)
+  const value = { schemaVersion: "factory-shared-helper-audit-v1", sourceRoots: Object.fromEntries(slots.map((slot) => [slot, records[slot].sourceRoot])), forbiddenModuleCounts: audits.map((audit) => audit.forbiddenModuleCount), sharedSubstantialBodyCounts: sharedBodies, strategicSharingViolations: sharedBodies.reduce((sum, count) => sum + count, 0) + audits.reduce((sum, audit) => sum + audit.forbiddenModuleCount, 0), limitation: "syntactic-clone-screen-not-semantic-proof" }
+  return { ...value, root: labRoot("factory-shared-helper-audit-v1", value) }
+}
+/** Reopens local evidence only. A clean source review is not a custody attestation. */
+export const readFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>): FactoryExecutionEvidence => {
+  const raw = readFactoryCanonicalRecord(repository, artifactRoot)
+  if (!exactLabKeys(raw, ["schemaVersion", "root", "manifestRoot", "sourceCommit", "sourceReviewArtifactRoot", "authoring", "teacherSearchArtifactRoot", "teacherTrainingArtifactRoot", "sharedHelperAuditArtifactRoot", "negativeWitnessArtifactRoots"]) || raw.schemaVersion !== "factory-calibration-execution-evidence-v1" || raw.manifestRoot !== fresh.manifest.root || typeof raw.sourceCommit !== "string" || !/^[a-f0-9]{40}$/u.test(raw.sourceCommit)) return fail("INDEX")
+  requireFactoryRecordRoot(raw, "factory-calibration-execution-evidence-v1")
+  const value = raw as unknown as FactoryExecutionEvidence
+  const review = readFactoryCanonicalRecord(repository, value.sourceReviewArtifactRoot)
+  requireFactoryRecordRoot(review, "factory-source-review-v1")
+  if (!exactLabKeys(review, ["schemaVersion", "sourceCommit", "reviewerId", "authorIds", "status", "unresolvedFindings", "reportArtifactRoot", "root"]) || review.schemaVersion !== "factory-source-review-v1" || review.sourceCommit !== value.sourceCommit || review.status !== "passed" || review.unresolvedFindings !== 0 || typeof review.reviewerId !== "string" || !Array.isArray(review.authorIds) || review.authorIds.length === 0 || review.authorIds.includes(review.reviewerId)) return fail("REVIEW")
+  const report = new TextDecoder("utf-8", { fatal: true }).decode(readFactoryArtifact(repository, review.reportArtifactRoot as LabRoot))
+  if (!report.includes(value.sourceCommit)) return fail("REVIEW_SOURCE")
+  const model = fresh.ingestions.S05.modelCompanion
+  if (!model) return fail("MODEL")
+  verifyFactoryAuthoringRecords(repository, value.authoring, model.bundle)
+  const search = readFactoryCanonicalRecord(repository, value.teacherSearchArtifactRoot)
+  requireFactoryRecordRoot(search, "factory-teacher-search-evidence-v1")
+  const request = search.request as Record<string, unknown>, receipt = search.receipt as Record<string, unknown>
+  if (search.schemaVersion !== "factory-teacher-search-evidence-v1" || search.charged !== true || search.runs !== 1 || search.allocationOrdinal !== 0 || !request || request.maxDepth !== 3 || request.maxNodes !== 128 || !receipt || !Number.isSafeInteger(receipt.nodesVisited) || Number(receipt.nodesVisited) < 1 || Number(receipt.nodesVisited) > 128 || Number(receipt.depthReached) > 3 || Number(receipt.alternativesEvaluated) < 2 || receipt.canonicalTransitionRoot !== receipt.selectedOutcomeRoot) return fail("TEACHER_SEARCH")
+  const records = projectTeacherSearchToLegalTraining(receipt)
+  const outcomes = receipt.outcomes as Array<Record<string, unknown>>
+  for (const outcome of outcomes) {
+    const expected = factoryEvidenceByteRoot(JSON.stringify({ template: outcome.template, score: outcome.score, stateRoot: outcome.stateRoot, terminal: outcome.terminal }))
+    if (outcome.outcomeRoot !== expected) return fail("TEACHER_OUTCOME")
+  }
+  if (!same(receipt.outcomeRoots, outcomes.map((outcome) => outcome.outcomeRoot)) || !outcomes.some((outcome) => outcome.template === receipt.selectedTemplate && outcome.outcomeRoot === receipt.selectedOutcomeRoot)) return fail("TEACHER_SELECTION")
+  const training = readFactoryCanonicalRecord(repository, value.teacherTrainingArtifactRoot)
+  requireFactoryRecordRoot(training, "factory-teacher-training-evidence-v1")
+  const teacherInput = fresh.ingestions.S03.producerInput as { student: unknown }
+  if (training.schemaVersion !== "factory-teacher-training-evidence-v1" || training.searchArtifactRoot !== value.teacherSearchArtifactRoot || !same(training.records, records) || !same(training.student, distillLegalStudent(records)) || !same(training.student, teacherInput.student)) return fail("TEACHER_TRAINING")
+  const audit = readFactoryCanonicalRecord(repository, value.sharedHelperAuditArtifactRoot)
+  if (!same(audit, deriveFactorySharedHelperAudit(fresh.ingestions))) return fail("SHARED_HELPER_AUDIT")
+  if (!exactLabKeys(value.negativeWitnessArtifactRoots, ["S01", "S03", "S05"])) return fail("NEGATIVE_WITNESSES")
+  for (const slot of ["S01", "S03", "S05"] as const) if (!same(readFactoryCanonicalRecord(repository, value.negativeWitnessArtifactRoots[slot]), deriveFactoryNegativeWitness(fresh.ingestions[slot]))) return fail("NEGATIVE_WITNESS")
+  return value
+}
 const fail = (code: string): never => { throw new TypeError(`FACTORY_EXECUTION_${code}`) }
 const same = (left: unknown, right: unknown) => labRoot("factory-execution-equality-v1", left) === labRoot("factory-execution-equality-v1", right)
 /** Reopen every charged author attempt, not merely the winning model label. */
