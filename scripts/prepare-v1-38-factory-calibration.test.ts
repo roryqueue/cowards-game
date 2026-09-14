@@ -11,6 +11,7 @@ import { createHash } from "node:crypto"
 import { distillLegalStudent } from "../packages/strategy-oracle-teacher/src/distill.js"
 import { deriveFrozenModelBundleRoot, deriveFrozenModelResponseRoot } from "../packages/strategy-oracle-model/src/bundle.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
+import { readFreshFactoryCalibration } from "./v1-38-factory-fresh-evidence.js"
 import { createFactoryAuthoringAllocation, FACTORY_SOURCE_RECIPES, type FactorySourceSlot } from "./author-v1-38-factory-model-source.js"
 import { createFreshFactoryCalibrationCells, prepareFactoryCalibration, prepareHistoricalFactoryCalibration, prepareFreshFactoryCalibration } from "./prepare-v1-38-factory-calibration.js"
 
@@ -96,6 +97,9 @@ describe("fresh factory calibration preparation", () => {
     const protocol = { ...protocolValue, root: labRoot("factory-calibration-protocol-v1", protocolValue) }
     const input = { allocation: createFactoryAuthoringAllocation(), slotIngestionArtifactRoots: slots, protocolRoot: protocol.root, protocolArtifactRoot: publishFactoryArtifact(repository, encode(protocol)), studyPolicyRoot: "sha256:e004fed152f38ab7ac5570c7df6c95b59025244f821698eb504263494b9d5a17" as LabRoot, measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" as LabRoot, opponentIdentityRoot: root("7"), supervision: { adapterId: "runtime-js-container-subprocess" as const, runtimeAbi: "strategy-runtime-abi-v1.19" as const, image: LAB_ADMITTED_ROOTS.image, runtimeProfileRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot } }
     const result = prepareFactoryCalibration(encode(input), repository)
+    expect(readFreshFactoryCalibration(repository, result.manifest, input.opponentIdentityRoot)).toMatchObject({ allocation: input.allocation })
+    expect(() => readFreshFactoryCalibration(repository, { ...result.manifest, maxAttempts: 47 }, input.opponentIdentityRoot)).toThrow("FRESH")
+    expect(() => readFreshFactoryCalibration(repository, result.manifest, root("8"))).toThrow("FRESH")
     expect(result.manifest.workloads).toHaveLength(48)
     expect(result.manifest.ingestions.filter((entry) => entry.evidenceClass === "real_producer")).toHaveLength(3)
     const groups = new Map<string, string[]>()
