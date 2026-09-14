@@ -122,7 +122,7 @@ const accountingRoot = (repository: FactoryRepository, value: Record<string, unk
   if (!admitted.ok) return rawRoot(value, "intake-invalid-accounting-v1")
   return publishFactoryArtifact(repository, admitted.canonicalBytes)
 }
-const readAccounting = (repository: FactoryRepository, root: LabRoot, expected?: { readonly taskRoot: LabRoot; readonly candidateRoot: LabRoot }): Record<string, unknown> => {
+const readAccounting = (repository: FactoryRepository, root: LabRoot, expected?: { readonly taskRoot: LabRoot; readonly candidateRoot: LabRoot; readonly budgetRoot: LabRoot; readonly inputRoot: LabRoot }): Record<string, unknown> => {
   const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, root), { profile: "canonical-manifest", operation: "require-canonical" })
   if (!parsed.ok || !parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return fail("ACCOUNTING")
   const value = parsed.value as Record<string, unknown>
@@ -130,7 +130,9 @@ const readAccounting = (repository: FactoryRepository, root: LabRoot, expected?:
       value.schemaVersion !== "intake-accounting-v1" || !isRoot(value.protocolRoot) || typeof value.attemptOrdinal !== "number" || !Number.isSafeInteger(value.attemptOrdinal) || value.attemptOrdinal < 1 ||
       !isIdentifier(value.participantId) || !isIdentifier(value.reviewerId) || !isRoot(value.packetRoot) || !isRoot(value.provenanceRoot) ||
       !(value.elapsedMinutes === null || (typeof value.elapsedMinutes === "number" && Number.isFinite(value.elapsedMinutes) && value.elapsedMinutes >= 0)) ||
-      (expected !== undefined && (value.protocolRoot !== expected.taskRoot || value.packetRoot !== expected.candidateRoot))) return fail("ACCOUNTING")
+      (expected !== undefined && (value.protocolRoot !== expected.taskRoot || value.packetRoot !== expected.candidateRoot ||
+        labRoot("intake-budget-attempt-v1", { protocolRoot: value.protocolRoot, attemptOrdinal: value.attemptOrdinal }) !== expected.budgetRoot ||
+        labRoot("intake-input-v1", { protocolRoot: value.protocolRoot, packetRoot: value.packetRoot, provenanceRoot: value.provenanceRoot, attemptOrdinal: value.attemptOrdinal }) !== expected.inputRoot))) return fail("ACCOUNTING")
   return value
 }
 const terminalEvidence = (attemptRoot: LabRoot, protocolRoot: LabRoot, disposition: string, reason: string): LabRoot => labRoot("intake-terminal-evidence-v1", { attemptRoot, protocolRoot, disposition, reason })
@@ -139,7 +141,7 @@ const terminalEvidence = (attemptRoot: LabRoot, protocolRoot: LabRoot, dispositi
 export const admitQuarantinedIntakePacket = (input: QuarantinedIntakePacket, repository: FactoryRepository): Readonly<QuarantinedIntakeResult> => {
   const protocol = admitFrozenIntakeProtocol(input?.protocol)
   const packetRoot = safePacketRoot(input?.packet), prior = readLedger(repository), attemptOrdinal = prior.length + 1
-  const priorAccounting = prior.map((record) => ({ record, accounting: readAccounting(repository, record.start.resourceAccountingRoot, { taskRoot: record.start.taskRoot, candidateRoot: record.start.candidateRoot }) }))
+  const priorAccounting = prior.map((record) => ({ record, accounting: readAccounting(repository, record.start.resourceAccountingRoot, { taskRoot: record.start.taskRoot, candidateRoot: record.start.candidateRoot, budgetRoot: record.start.budgetRoot, inputRoot: record.start.inputRoot }) }))
   const priorOrdinals = priorAccounting.map(({ accounting }) => accounting.attemptOrdinal as number)
   if (priorAccounting.some(({ accounting }) => accounting.elapsedMinutes === null) || new Set(priorOrdinals).size !== priorOrdinals.length || priorOrdinals.some((ordinal) => ordinal < 1 || ordinal > prior.length) || new Set(Array.from({ length: prior.length }, (_, index) => index + 1)).size !== new Set(priorOrdinals).size) return fail("ACCOUNTING_UNCERTAIN")
   const provenanceRoot = safeProvenanceRoot(input?.provenance)
