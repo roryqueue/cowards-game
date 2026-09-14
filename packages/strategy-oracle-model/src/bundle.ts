@@ -15,6 +15,8 @@ const exact = (value: unknown, keys: readonly string[]): value is RecordValue =>
 }
 const requiredRecord = (value: unknown, keys: readonly string[], code = "BUNDLE"): RecordValue =>
   exact(value, keys) ? value : fail(code)
+const objectRecord = (value: unknown, code: string): RecordValue =>
+  value !== null && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : fail(code)
 const requiredResponse = (value: RecordValue): Readonly<{ root: LabRoot; format: "explicit-typescript-source"; source: string }> => {
   if (root(value.root) && value.format === "explicit-typescript-source" && text(value.source, 65536)) {
     return { root: value.root, format: value.format, source: value.source }
@@ -24,6 +26,7 @@ const requiredResponse = (value: RecordValue): Readonly<{ root: LabRoot; format:
 const root = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 const name = (value: unknown): value is string => typeof value === "string" && NAME.test(value)
 const text = (value: unknown, limit = 128): value is string => typeof value === "string" && value.length > 0 && value.length <= limit
+const textValue = (value: unknown, limit = 128): string | null => text(value, limit) ? value : null
 const integer = (value: unknown, maximum: number): value is number => Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= maximum
 const rawSourceRoot = (source: string): LabRoot => `sha256:${createHash("sha256").update(source, "utf8").digest("hex")}` as LabRoot
 
@@ -83,8 +86,78 @@ export const deriveFrozenModelRequestRecordRoot = (value: Omit<FrozenModelReques
   labRoot("frozen-model-request-record-v2", value)
 export const deriveFrozenModelRawResponseRecordRoot = (value: Omit<FrozenModelRawResponseRecord, "root">): LabRoot =>
   labRoot("frozen-model-raw-response-record-v2", value)
-export const deriveFrozenModelBundleRoot = <T extends object>(value: T): LabRoot =>
-  labRoot("frozen-model-bundle-v1", Object.fromEntries(Object.entries(value).filter(([key]) => key !== "root")))
+export const deriveFrozenModelBundleRoot = <T extends object>(value: T): LabRoot => {
+  const record = value as RecordValue
+  const domain = record.schemaVersion === "frozen-model-bundle-v2" ? "frozen-model-bundle-v2" : "frozen-model-bundle-v1"
+  return labRoot(domain, Object.fromEntries(Object.entries(value).filter(([key]) => key !== "root")))
+}
+
+interface DecodedModelResponse {
+  readonly requestedModelId: string; readonly reportedModelId: string; readonly source: string
+  readonly usage: Readonly<{ inputTokens: number; outputTokens: number; cachedInputTokens: number; totalTokens: number }>
+}
+
+/** Strictly decodes the retained Codex app-server JSONL evidence without executing source. */
+export const decodeFrozenModelRawResponse = (bodyUtf8: string): Readonly<DecodedModelResponse> => {
+  let reportedModelId: string | null = null, requestedModelId: string | null = null, turnId: string | null = null
+  let source: string | null = null, usage: DecodedModelResponse["usage"] | null = null
+  const messages: RecordValue[] = []
+  for (const line of bodyUtf8.split(/\r?\n/u).filter((entry) => entry.length > 0)) {
+    let message: RecordValue
+    try { message = JSON.parse(line) as RecordValue } catch { return fail("RAW_RESPONSE") }
+    messages.push(message)
+    if (message.id === 2) {
+      const result = objectRecord(message.result, "RAW_RESPONSE")
+      const resultModel = textValue(result.model), resultProvider = textValue(result.modelProvider)
+      if (!resultModel || !resultProvider) fail("RAW_RESPONSE")
+      reportedModelId = resultModel
+      requestedModelId = resultModel
+    } else if (message.id === 3) {
+      const result = objectRecord(message.result, "RAW_RESPONSE"), turn = objectRecord(result.turn, "RAW_RESPONSE")
+      const resultTurnId = textValue(turn.id)
+      if (!resultTurnId) fail("RAW_RESPONSE")
+      turnId = resultTurnId
+    } else if (message.method === "model/rerouted") fail("RAW_RESPONSE")
+    else if (message.method === "item/completed") {
+      const params = objectRecord(message.params, "RAW_RESPONSE")
+      if (turnId !== null && params.turnId === turnId) {
+        const item = objectRecord(params.item, "RAW_RESPONSE")
+        if (item.type === "agentMessage" && typeof item.text === "string") {
+          if (source !== null) fail("RAW_RESPONSE")
+          let envelope: RecordValue
+          try { envelope = JSON.parse(item.text) as RecordValue } catch { return fail("RAW_RESPONSE") }
+          if (!exact(envelope, ["source"]) || !text(envelope.source, 65536)) fail("RAW_RESPONSE")
+          source = envelope.source as string
+        } else if (item.type !== "reasoning") fail("RAW_RESPONSE")
+      }
+    } else if (message.method === "thread/tokenUsage/updated") {
+      const params = objectRecord(message.params, "RAW_RESPONSE")
+      if (turnId !== null && params.turnId === turnId) {
+        const tokenUsage = objectRecord(params.tokenUsage, "RAW_RESPONSE")
+        const total = objectRecord(tokenUsage.total, "RAW_RESPONSE")
+        if (![total.inputTokens, total.cachedInputTokens, total.outputTokens, total.reasoningOutputTokens, total.totalTokens].every((entry) => integer(entry, 10_000_000))) fail("RAW_RESPONSE")
+        if (Number(total.cachedInputTokens) > Number(total.inputTokens) || Number(total.totalTokens) !== Number(total.inputTokens) + Number(total.outputTokens)) fail("RAW_RESPONSE")
+        usage = { inputTokens: Number(total.inputTokens), cachedInputTokens: Number(total.cachedInputTokens), outputTokens: Number(total.outputTokens), totalTokens: Number(total.totalTokens) }
+      }
+    } else if (message.method === "turn/completed") {
+      const params = objectRecord(message.params, "RAW_RESPONSE"), turn = objectRecord(params.turn, "RAW_RESPONSE")
+      if (turnId !== null && turn.id === turnId) {
+        if (turn.status !== "completed") fail("RAW_RESPONSE_TURN_STATUS")
+      }
+    }
+  }
+  if (!reportedModelId || !requestedModelId) fail("RAW_RESPONSE_IDENTITY")
+  if (!turnId) fail("RAW_RESPONSE_TURN_ID")
+  const completed = messages.some((message) => {
+    if (message.method !== "turn/completed") return false
+    const params = objectRecord(message.params, "RAW_RESPONSE"), turn = objectRecord(params.turn, "RAW_RESPONSE")
+    return turn.id === turnId && turn.status === "completed"
+  })
+  if (!completed) fail("RAW_RESPONSE_TURN_COMPLETION")
+  if (!source) fail("RAW_RESPONSE_SOURCE")
+  if (!usage) fail("RAW_RESPONSE_USAGE")
+  return Object.freeze({ requestedModelId, reportedModelId, source, usage }) as Readonly<DecodedModelResponse>
+}
 
 const validateBundle = (value: unknown): FrozenModelBundle => {
   const isV2 = value !== null && typeof value === "object" && !Array.isArray(value) && (value as RecordValue).schemaVersion === "frozen-model-bundle-v2"
@@ -114,6 +187,7 @@ const validateBundle = (value: unknown): FrozenModelBundle => {
     const requestRecord = requiredRecord(provenance.requestRecord, ["root", "byteLength", "encoding", "bodyUtf8"], "PROVENANCE")
     const rawResponseRecord = requiredRecord(provenance.rawResponseRecord, ["root", "format", "bodyUtf8"], "PROVENANCE")
     const usage = requiredRecord(provenance.actualUsage, ["inputTokens", "outputTokens", "cachedInputTokens", "totalTokens"], "PROVENANCE")
+    const decoded = typeof rawResponseRecord.bodyUtf8 === "string" ? decodeFrozenModelRawResponse(rawResponseRecord.bodyUtf8) : fail("RAW_RESPONSE")
     if (!text(provenance.requestedModelId) || !text(provenance.reportedModelId) || !text(client.version) || !root(client.settingsRoot) || snapshot.availability !== "unavailable" ||
         !root(provenance.requestRecordRoot) || !root(provenance.responseRecordRoot) ||
         !root(requestRecord.root) || !integer(requestRecord.byteLength, 262144) || requestRecord.byteLength < 1 || requestRecord.encoding !== "utf8" || !text(requestRecord.bodyUtf8, 262144) ||
@@ -122,6 +196,8 @@ const validateBundle = (value: unknown): FrozenModelBundle => {
         !root(rawResponseRecord.root) || rawResponseRecord.format !== "codex-exec-json" || !text(rawResponseRecord.bodyUtf8, 262144) || rawResponseRecord.root !== deriveFrozenModelRawResponseRecordRoot({ format: rawResponseRecord.format, bodyUtf8: rawResponseRecord.bodyUtf8 }) || provenance.responseRecordRoot !== rawResponseRecord.root ||
         !integer(usage.inputTokens, 10_000_000) || !integer(usage.outputTokens, 10_000_000) || !integer(usage.cachedInputTokens, 10_000_000) || !integer(usage.totalTokens, 10_000_000) || usage.cachedInputTokens > usage.inputTokens || usage.totalTokens !== usage.inputTokens + usage.outputTokens ||
         usage.inputTokens !== accounting.inputTokens || usage.outputTokens !== accounting.outputTokens || client.settingsRoot !== identity.settingsRoot || identity.modelId !== provenance.reportedModelId ||
+        decoded.source !== responseData.source || decoded.requestedModelId !== provenance.requestedModelId || decoded.reportedModelId !== provenance.reportedModelId ||
+        decoded.usage.inputTokens !== usage.inputTokens || decoded.usage.outputTokens !== usage.outputTokens || decoded.usage.cachedInputTokens !== usage.cachedInputTokens || decoded.usage.totalTokens !== usage.totalTokens ||
         (identity as FrozenModelProviderV2).servingSnapshot.availability !== "unavailable") fail("PROVENANCE")
   }
   if (record.root !== deriveFrozenModelBundleRoot(record)) fail("ROOT")
@@ -176,6 +252,9 @@ export const assessFrozenModelIdentity = (
     return fail("UNAVAILABLE_ATTEMPT")
   }
   const admitted = requireFrozenModelBundle(bundle)
-  const same = Object.entries(expected).every(([key, value]) => admitted.provider[key as keyof FrozenModelProvider] === value)
+  const same = deriveProviderIdentityRoot(expected) === deriveProviderIdentityRoot(admitted.provider)
   return same ? freezeLabValue({ kind: "available" as const, bundle: admitted }) : block({ reason: "identity_drift", attempt: admitted.attempt, expected, observed: admitted.provider })
 }
+
+const deriveProviderIdentityRoot = (value: FrozenModelProvider | FrozenModelProviderV2): LabRoot =>
+  labRoot(value.modelVersion === null ? "frozen-model-provider-v2" : "frozen-model-provider-v1", value)
