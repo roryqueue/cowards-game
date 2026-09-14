@@ -112,6 +112,14 @@ const errorDisposition = (error: unknown, providerCreated: boolean): "invalid" |
   if (!providerCreated || /^FACTORY_RUNTIME_(?:UNSUPPORTED_NATIVE_LANE|NATIVE_LANE_IDENTITY|SOURCE_BINDING|SOURCE_ENCODING|REVISION_BINDING|LIFETIME)$/u.test(message)) return "invalid"
   return "system_failure"
 }
+export const deriveFactoryCalibrationOutcome = (execution: LabMatchExecution, match: FactoryCalibrationAttemptPlan["input"]["match"]): "bottom" | "top" | "draw" | "failure" => {
+  if (execution.kind === "failure") return "failure"
+  const outcome = execution.result.state?.outcome
+  if (outcome?.type === "DRAW") return "draw"
+  if (outcome?.type === "WIN" && outcome.winnerPlayerId === match.bottomPlayerId) return "bottom"
+  if (outcome?.type === "WIN" && outcome.winnerPlayerId === match.topPlayerId) return "top"
+  return fail("MATCH_OUTCOME")
+}
 
 export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repository: FactoryRepository, hooks: FactoryCalibrationRunnerHooks = {}): Promise<Readonly<FactoryCalibrationRunResult>> => {
   const manifest = admitFactoryCalibrationManifest(readCanonicalRecord(repository, manifestArtifactRoot))
@@ -225,7 +233,7 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
     const paired = entries.length === 2 &&
       new Set(entries.map((entry) => entry.receipt.root)).size === 2 &&
       entries.every((entry) => entry.proposal.root === first.proposal.root && entry.receipt.admission.sourceRoot === first.receipt.admission.sourceRoot && entry.workload.pairAxis === "initialInitiative" &&
-        entry.workload.candidateIngestionArtifactRoot === first.workload.candidateIngestionArtifactRoot && entry.workload.condition.arenaId === first.workload.condition.arenaId && entry.workload.condition.seed === first.workload.condition.seed && entry.workload.condition.candidateSide === first.workload.condition.candidateSide && entry.workload.condition.maxPhases === first.workload.condition.maxPhases && same(entry.workload.opponent, first.workload.opponent) && same(entry.workload.budget, first.workload.budget) &&
+        entry.workload.candidateIngestionArtifactRoot === first.workload.candidateIngestionArtifactRoot && entry.workload.condition.arenaId === first.workload.condition.arenaId && entry.workload.condition.seed === first.workload.condition.seed && entry.workload.condition.candidateSide === first.workload.condition.candidateSide && entry.workload.condition.maxPhases === first.workload.condition.maxPhases && same(entry.workload.opponent, first.workload.opponent) && same(entry.workload.budget, first.workload.budget) && entry.workload.lineageManifestArtifactRoot === first.workload.lineageManifestArtifactRoot && entry.workload.dependencyManifestArtifactRoot === first.workload.dependencyManifestArtifactRoot &&
         workloadMatchesReceipt(entry)) &&
       new Set(entries.map((entry) => entry.workload.condition.initialInitiative)).size === 2
     const pairingValue = { schemaVersion: "factory-calibration-pairing-v1" as const, privacy: "private_offline" as const, pairGroup, status: paired ? "paired" as const : "unavailable" as const, workloadRoots: entries.map((entry) => entry.workload.root), receiptRoots: entries.map((entry) => entry.receipt.root) }
@@ -241,8 +249,10 @@ export const runFactoryCalibration = async (manifestArtifactRoot: LabRoot, repos
           proposalRoot: entry.proposal.root, validationRoot: entry.validation.root, supervisionReceiptRoot: entry.receipt.root,
           producerIdentity: entry.producerIdentity, origin: entry.origin, evidenceClass: entry.selectedRealPath ? "real_producer" as const : "mechanics_only" as const, producerArtifactRoot: entry.selectedRealPath ? entry.ingestion.artifactRoot : null,
           authorshipRoots: [entry.retainedRoot], lineageNodes, dependencyNodes,
-          matchupResponses: [{ supervisionReceiptRoot: entry.receipt.root, conditionRoot: labRoot("factory-issued-match-condition-v1", entry.attemptPlan.input.match), opponentRoot: labRoot("factory-issued-opponent-identity-v1", opponent.identity), side: candidateSide, initialInitiative: entry.attemptPlan.input.match.initialInitiativePlayerId === entry.attemptPlan.candidatePlayerId, outcome: entry.receipt.execution.kind === "failure" ? "failure" : "draw", responseRoot: entry.storedExecutionRoot }],
-          counterfactualPairs: [{ leftRoot: entries[0]!.proposal.root, rightRoot: entries.at(-1)!.proposal.root, relation: paired ? "correlated" : "borderline" }],
+          matchupResponses: [{ supervisionReceiptRoot: entry.receipt.root, conditionRoot: labRoot("factory-issued-match-condition-v1", entry.attemptPlan.input.match), opponentRoot: labRoot("factory-issued-opponent-identity-v1", opponent.identity), side: candidateSide, initialInitiative: entry.attemptPlan.input.match.initialInitiativePlayerId === entry.attemptPlan.candidatePlayerId, outcome: deriveFactoryCalibrationOutcome(entry.receipt.execution, entry.attemptPlan.input.match), responseRoot: entry.storedExecutionRoot }],
+          // A declared and successfully retained pair is an available comparison,
+          // not a measured correlation or a frozen materiality conclusion.
+          counterfactualPairs: [{ leftRoot: entries[0]!.proposal.root, rightRoot: entries.at(-1)!.proposal.root, relation: "borderline" }],
           failureModes: ["accepted"],
         }
         const evidence = entry.selectedRealPath
