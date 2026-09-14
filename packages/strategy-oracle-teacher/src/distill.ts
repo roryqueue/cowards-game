@@ -1,9 +1,10 @@
 import { SoldierBrainInputV119Schema, StrategyInputV119Schema, type Action, type SoldierBrainInputV119, type SoldierBrainResult, type StrategyInputV119, type StrategyResult } from "../../spec/src/index.js"
 import { createHash } from "node:crypto"
+import { TEACHER_CONTROLLER_VERSION, controllerBrainAction, controllerFeature, type TeacherFeaturePolicy } from "./controller.js"
 
 export type StudentAction = Action
 export type LegalTrainingRecord = { readonly kind: "activation"; readonly input: unknown; readonly target: "press" | "screen" } | { readonly kind: "brain"; readonly input: unknown; readonly target: StudentAction }
-export interface DistilledLegalStudent { readonly schemaVersion: "teacher-distilled-student-v2"; readonly activationMode: "press" | "screen"; readonly brainMode: "move" | "turn" | "stone"; readonly controllerRoot: `sha256:${string}` }
+export interface DistilledLegalStudent { readonly schemaVersion: "teacher-distilled-student-v2"; readonly activationMode: "press" | "screen"; readonly brainMode: "move" | "turn" | "stone"; readonly featurePolicy: TeacherFeaturePolicy; readonly controllerRoot: `sha256:${string}` }
 export interface CompiledLegalStudentPolicy { readonly representation: "canonical-v119-legal-features-v1"; readonly student: DistilledLegalStudent; readonly controllerRoot: `sha256:${string}` }
 const root = (value: unknown): `sha256:${string}` => `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`
 const actionType = (action: Action): "move" | "turn" | "stone" => action.type === "MOVE" ? "move" : action.type === "TURN" ? "turn" : "stone"
@@ -16,7 +17,8 @@ export const distillLegalStudent = (records: readonly LegalTrainingRecord[]): Di
     if (record.kind === "activation") { if (!StrategyInputV119Schema.safeParse(record.input).success) throw new TypeError("TEACHER_TRAINING_ACTIVATION"); activation.push(record.target) }
     else { if (!SoldierBrainInputV119Schema.safeParse(record.input).success) throw new TypeError("TEACHER_TRAINING_BRAIN"); brain.push(actionType(record.target)) }
   }
-  const value = { schemaVersion: "teacher-distilled-student-v2" as const, activationMode: most(activation, "press"), brainMode: most(brain, "move"), controllerRoot: root({ representation: "canonical-v119-legal-features-v1", activation: most(activation, "press"), brain: most(brain, "move") }) }
+  const featurePolicy: TeacherFeaturePolicy = { activation: [most(activation, "press")], brain: records.filter((record): record is Extract<LegalTrainingRecord, { kind: "brain" }> => record.kind === "brain").map((record) => ({ enemy: controllerFeature(SoldierBrainInputV119Schema.parse(record.input)) as "left" | "right" | "vertical", action: actionType(record.target) })) }
+  const value = { schemaVersion: "teacher-distilled-student-v2" as const, activationMode: most(activation, "press"), brainMode: most(brain, "move"), featurePolicy, controllerRoot: root({ version: TEACHER_CONTROLLER_VERSION, representation: "canonical-v119-legal-features-v1", featurePolicy }) }
   return Object.freeze(value)
 }
 export const compileLegalStudentPolicy = (student: DistilledLegalStudent): CompiledLegalStudentPolicy => {
@@ -35,7 +37,7 @@ export const runDistilledActivations = (student: DistilledLegalStudent, value: u
 export const runDistilledSoldierBrain = (student: DistilledLegalStudent, value: unknown): SoldierBrainResult => {
   const input = SoldierBrainInputV119Schema.parse(value), policy = compileLegalStudentPolicy(student), enemy = input.awarenessGrid.cells.filter((cell) => cell.contents === "ENEMY_ACTIVE").sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - Math.abs(right.dx) - Math.abs(right.dy))[0]
   const facing = enemy ? direction(enemy.dx, enemy.dy) : input.self.facing ?? "UP", cell = input.awarenessGrid.cells.find((entry) => entry.dx === (facing === "RIGHT" ? 1 : facing === "LEFT" ? -1 : 0) && entry.dy === (facing === "DOWN" ? 1 : facing === "UP" ? -1 : 0))
-  const action: Action = policy.student.brainMode === "stone" && !input.hasAdvancedThisActivation ? { type: "TURN_TO_STONE" } : policy.student.brainMode === "turn" || input.hasAdvancedThisActivation || cell?.contents !== "EMPTY" ? { type: "TURN", direction: facing } : { type: "MOVE", direction: facing }
+  const action: Action = controllerBrainAction(policy.student.featurePolicy, input)
   return { action, soldierMemory: { teacher: { schemaVersion: "teacher-brain-v2", mode: policy.student.brainMode } } }
 }
 export const chooseDistilledStudentAction = (student: DistilledLegalStudent, input: unknown): StudentAction => runDistilledSoldierBrain(student, input).action

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import * as ts from "typescript"
 import {
   deriveFactoryOraclePacketRoot,
@@ -13,6 +14,7 @@ const ROOT = /^sha256:[0-9a-f]{64}$/u
 const NAME = /^[a-z][a-z0-9-]{0,95}$/u
 const fail = (code: string): never => { throw new TypeError(`TEACHER_${code}`) }
 const sourceRoot = (source: string): LabRoot => `sha256:${createHash("sha256").update(source, "utf8").digest("hex")}` as LabRoot
+const controllerSource = () => readFileSync(new URL("./controller.ts", import.meta.url), "utf8").split("\n").filter((line) => !line.startsWith("export type")).join("\n").replace(/^export\s+/gmu, "")
 const validRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 
 export interface TeacherFactoryRequest {
@@ -79,11 +81,12 @@ export const emitTeacherSource = (student: DistilledLegalStudent): string => {
   validStudent(student)
   const policy = compileLegalStudentPolicy(student)
 const source = `
+${controllerSource()}
 const policyRepresentation = ${JSON.stringify(policy.representation)};
 const student = ${JSON.stringify(policy.student)};
 const direction = (dx, dy) => Math.abs(dx) >= Math.abs(dy) ? dx >= 0 ? "RIGHT" : "LEFT" : dy >= 0 ? "DOWN" : "UP";
 const selectActivations = (input) => ({ activationOrders: (input.mySoldiers || []).filter((soldier) => soldier.status === "ACTIVE" && soldier.position).sort((left, right) => (left.position.x + left.position.y) - (right.position.x + right.position.y) || left.id.localeCompare(right.id)).slice(0, input.activationCount).map((soldier) => ({ soldierId: soldier.id, objective: { schemaVersion: "teacher-legal-mission-v1", mode: student.activationMode, goal: soldier.position } })), strategyMemory: { teacher: { schemaVersion: "teacher-student-v2", mode: student.activationMode } } });
-const soldierBrain = (input) => { const enemy = input.awarenessGrid.cells.filter((cell) => cell.contents === "ENEMY_ACTIVE").sort((left, right) => Math.abs(left.dx) + Math.abs(left.dy) - Math.abs(right.dx) - Math.abs(right.dy))[0]; const facing = enemy ? direction(enemy.dx, enemy.dy) : input.self.facing || "UP"; const cell = input.awarenessGrid.cells.find((entry) => entry.dx === (facing === "RIGHT" ? 1 : facing === "LEFT" ? -1 : 0) && entry.dy === (facing === "DOWN" ? 1 : facing === "UP" ? -1 : 0)); const action = student.brainMode === "stone" && !input.hasAdvancedThisActivation ? { type: "TURN_TO_STONE" } : student.brainMode === "turn" || input.hasAdvancedThisActivation || !cell || cell.contents !== "EMPTY" ? { type: "TURN", direction: facing } : { type: "MOVE", direction: facing }; return { action, soldierMemory: { teacher: { schemaVersion: "teacher-brain-v2", mode: student.brainMode } } }; };
+const soldierBrain = (input) => ({ action: controllerBrainAction(student.featurePolicy, input), soldierMemory: { teacher: { schemaVersion: "teacher-brain-v2", mode: student.brainMode } } });
 export default { selectActivations, soldierBrain };
 `
   assertTeacherSourceClosure(source)
