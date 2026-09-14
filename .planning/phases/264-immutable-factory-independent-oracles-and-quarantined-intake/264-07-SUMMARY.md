@@ -72,6 +72,6 @@ Independent source review is the only permitted next release gate. No readiness,
 
 ## Self-Check: PASSED
 
-- All six source/test paths named above exist.
+- All scoped source/test paths named above exist.
 - All three task commits are present in git history.
 - The summary is limited to source mechanics and reports no empirical action.
