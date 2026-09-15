@@ -45,20 +45,20 @@ Each requirement is complete only when its named behavior has an immutable evide
 - [x] **FACT-02**: All research Matches advance through the exact selected canonical `MATCH_KERNEL`; the lab contains no copied resolver, second transition loop, alternate Action legality, or profile-specific transition code.
 - [x] **FACT-03**: One non-secret command rebuilds declared candidates, schedules, payoffs, telemetry, and roots from an immutable manifest; the lab pre-enumerates stable task identities, derives independent deterministic streams from a root commitment, assigns tasks before execution, and produces byte-identical reductions across worker counts, shard sizes, completion order, restart, and resume.
 - [x] **FACT-04**: Lab schemas, algorithms, PRNGs, manifests, shards, matrices, traces, receipts, and roots use strict bounded validation, canonical encoding, domain-separated identities, complete coverage checks, atomic publication, and tamper detection.
-- [ ] **FACT-05**: Every candidate is an immutable revision-like artifact binding exact source bytes/hash, build identity, compatibility tuple, factory and algorithm versions, lineage, doctrine and oracle families, split identity, validation result, runtime profile, and behavior fingerprint.
-- [ ] **FACT-06**: Append-only ledgers preserve and charge all accepted, rejected, invalid, duplicate, legal-but-weak, failed, retried, and system-failed attempts with task, budget, and disposition evidence.
-- [ ] **FACT-07**: Source emitted by search, models, humans, or external submitters is treated as hostile and executes only through the existing supervised provider/runtime boundary with exact success, player-violation, and system-failure semantics and no fallback.
-- [ ] **FACT-08**: Frozen source-structure, lineage, dependency, legal-input decision, Chronicle-behavior, and matchup-response fingerprints detect cosmetic clones and correlated variants without treating source hashes or doctrine labels alone as diversity evidence.
+- [x] **FACT-05**: Every candidate is an immutable revision-like artifact binding exact source bytes/hash, build identity, compatibility tuple, factory and algorithm versions, lineage, doctrine and oracle families, split identity, validation result, runtime profile, and behavior fingerprint.
+- [x] **FACT-06**: Append-only ledgers preserve and charge all accepted, rejected, invalid, duplicate, legal-but-weak, failed, retried, and system-failed attempts with task, budget, and disposition evidence.
+- [x] **FACT-07**: Source emitted by search, models, humans, or external submitters is treated as hostile and executes only through the existing supervised provider/runtime boundary with exact success, player-violation, and system-failure semantics and no fallback.
+- [x] **FACT-08**: Frozen source-structure, lineage, dependency, legal-input decision, Chronicle-behavior, and matchup-response fingerprints detect cosmetic clones and correlated variants without treating source hashes or doctrine labels alone as diversity evidence.
 
 ### Independent Oracles and Red-Team Intake
 
-- [ ] **ORCL-01**: The league has at least three materially independent automated response mechanisms plus a separately documented human or external-submission channel before anti-dominance claims are allowed.
-- [ ] **ORCL-02**: A separate private structured-tactical-optimizer package produces legal deterministic candidate programs through its own strategic selector, mission scoring, Action scoring, and search state.
-- [ ] **ORCL-03**: A separate private search-teacher/distiller package can explore privileged counterfactuals offline while emitting students whose decisions reproduce from canonical legal information sets only.
-- [ ] **ORCL-04**: A separate private provider-neutral model-synthesis package records immutable request/response bundles, exact provider and requested/reported model identifiers, generation-client version/settings, submitted prompts/context, actual returned usage, source and attempt identities. Under the operator-approved 2026-09-14 Phase264 route, an undisclosed internal serving snapshot is explicitly unavailable, never invented or substituted; reproducibility concerns frozen emitted programs, not identical regeneration or undisclosed weights. Missing required provenance or identity drift still fails closed. Model calls occur outside the deterministic Match/search runner, which consumes frozen bundles only, and the channel emits only validated deterministic explicit source.
-- [ ] **ORCL-05**: Human and external submissions enter through a quarantined intake with frozen disclosure, submission and reviewer budgets, independence/conflict declarations, immutable provenance, validation, acceptance/rejection, and private review evidence.
-- [ ] **ORCL-06**: Shared oracle code is limited by an audited allowlist for literal legality, geometry, schemas, artifact creation, and reporting; shared strategic selectors, scorers, search trees, learned parameters, or prompts invalidate independence.
-- [ ] **ORCL-07**: Dependency, authorship, source, behavior, counterfactual-correlation, clone, and failure-mode evidence supports every independence claim, and failed or rejected automated, model, human, and external attacks remain in the evidence root.
+- [x] **ORCL-01**: The league has at least three materially independent automated response mechanisms plus a separately documented human or external-submission channel before anti-dominance claims are allowed.
+- [x] **ORCL-02**: A separate private structured-tactical-optimizer package produces legal deterministic candidate programs through its own strategic selector, mission scoring, Action scoring, and search state.
+- [x] **ORCL-03**: A separate private search-teacher/distiller package can explore privileged counterfactuals offline while emitting students whose decisions reproduce from canonical legal information sets only.
+- [x] **ORCL-04**: A separate private provider-neutral model-synthesis package records immutable request/response bundles, exact provider and requested/reported model identifiers, generation-client version/settings, submitted prompts/context, actual returned usage, source and attempt identities. Under the operator-approved 2026-09-14 Phase264 route, an undisclosed internal serving snapshot is explicitly unavailable, never invented or substituted; reproducibility concerns frozen emitted programs, not identical regeneration or undisclosed weights. Missing required provenance or identity drift still fails closed. Model calls occur outside the deterministic Match/search runner, which consumes frozen bundles only, and the channel emits only validated deterministic explicit source.
+- [x] **ORCL-05**: Human and external submissions enter through a quarantined intake with frozen disclosure, submission and reviewer budgets, independence/conflict declarations, immutable provenance, validation, acceptance/rejection, and private review evidence.
+- [x] **ORCL-06**: Shared oracle code is limited by an audited allowlist for literal legality, geometry, schemas, artifact creation, and reporting; shared strategic selectors, scorers, search trees, learned parameters, or prompts invalidate independence.
+- [x] **ORCL-07**: Dependency, authorship, source, behavior, counterfactual-correlation, clone, and failure-mode evidence supports every independence claim, and failed or rejected automated, model, human, and external attacks remain in the evidence root.
 
 ### Serious Current-Rules League
 
@@ -211,17 +211,17 @@ Roadmap creation assigns every v1.38 requirement to exactly one phase.
 | FACT-02 | Phase 263 | Complete |
 | FACT-03 | Phase 263 | Complete |
 | FACT-04 | Phase 263 | Complete |
-| FACT-05 | Phase 264 | Pending |
-| FACT-06 | Phase 264 | Pending |
-| FACT-07 | Phase 264 | Pending |
-| FACT-08 | Phase 264 | Pending |
-| ORCL-01 | Phase 264 | Pending |
-| ORCL-02 | Phase 264 | Pending |
-| ORCL-03 | Phase 264 | Pending |
-| ORCL-04 | Phase 264 | Pending |
-| ORCL-05 | Phase 264 | Pending |
-| ORCL-06 | Phase 264 | Pending |
-| ORCL-07 | Phase 264 | Pending |
+| FACT-05 | Phase 264 | Complete — 264-VERIFICATION.md |
+| FACT-06 | Phase 264 | Complete — 264-VERIFICATION.md |
+| FACT-07 | Phase 264 | Complete — 264-VERIFICATION.md |
+| FACT-08 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-01 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-02 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-03 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-04 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-05 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-06 | Phase 264 | Complete — 264-VERIFICATION.md |
+| ORCL-07 | Phase 264 | Complete — 264-VERIFICATION.md |
 | LEAG-01 | Phase 265 | Pending |
 | LEAG-02 | Phase 265 | Pending |
 | LEAG-03 | Phase 265 | Pending |

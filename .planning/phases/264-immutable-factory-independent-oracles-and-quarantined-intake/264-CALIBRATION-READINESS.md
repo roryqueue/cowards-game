@@ -1,31 +1,60 @@
 ---
 phase: 264
 plan: "08"
-status: blocked
-reason: authoring_system_failure
-actual_assessment: absent
-independence: unresolved
+status: affirmed_verified
+actual_assessment: retained
+independence: affirmed_development_only
 human_external: unused_zero
 ---
 
 # Phase264 calibration readiness
 
-Not ready. The client update resolved the original model-support problem: Codex0.154.0 advertised Sol and completed a fresh authoring turn. The local checker rejected an ordinary prompt echo, leaving the second cumulative attempt `system_failure`. No source was admitted, so materialization, teacher search, supervised calibration and numerical assessment did not start.
+Client support is resolved. The approved continuation produced one valid Sol-authored program and completed all48supervised development workloads. The corrected assessment affirms all three automated mechanisms under the frozen development criteria, with no unresolved reasons. Exact read-only reopening passed, reproduced the assessment identity and threshold, and confirmed the unchanged48-entry ledger with zero extra Matches.
 
-The current result and roots are in [264-CLIENT-CONTINUATION-OUTCOME.md](264-CLIENT-CONTINUATION-OUTCOME.md). Its private immutable outcome is `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db3b2dd3a8c9bf`. The earlier corrected failure `sha256:86afd06a8e66f8d54dbee6f2484e67d7573435e0869f000e6f9aaef5097281a6` and its predecessor remain unchanged in [264-TASK04-OUTCOME.md](264-TASK04-OUTCOME.md).
+## Actual assessment
 
-| Allocation | Consumed | Unused | Disposition |
-|---|---:|---:|---|
-| Model-authoring attempts | 2 | 2 | System-failure stop; unused slots cannot be silently retried |
-| Supervised development workloads | 0 | 48 | Not started |
-| Teacher searches | 0 | 1 | Not started |
-| Tactical source emissions | 0 | 1 | Not started |
-| Human/external submissions or authoring | 0 | 0 | Explicitly unused |
+Assessment artifact: `sha256:25913b26fa81fa15177774fbdcf9c0d1ef244ad13910bc664bfde4ea8c2e43f8`; assessment identity: `sha256:0446fef49598ef425c883774adb23159ade4b1e44f630463a72562777a9ecea1`; threshold artifact: `sha256:f6098c9e14ed868e162a9374557e518678996b619f3f8912fb8723113328fa72`.
 
-The fresh turn's actual usage is9,767tokens, with exact raw protocol and54,751ms retained. The first attempt's usage/protocol remain unavailable, not zero, with its50,000-token slot reserved. Both processes completed cleanup. No failed attempt is reclassified or used as an accepted source. The current412,045-byte response is retained in two bounded chunks with exact byte reconstruction; this failure packaging does not widen the model/artifact limits.
+| Comparison | Mean agreement | Frozen classification |
+|---|---:|---|
+| Tactical cosmetic control S01/S02 | 0.913793 | Correlated |
+| Teacher cosmetic control S03/S04 | 0.901396 | Correlated |
+| Model cosmetic control S05/S06 | 0.785015 | Correlated |
+| Near-identical control S01/S07 | 0.675525 | Unresolved |
+| Latent-divergence control S01/S08 | 0.670749 | Distinct |
+| Expected false-positive control S11/S12 | 0.752364 | Unresolved |
+| Tactical / teacher S01/S03 | 0.478257 | Distinct |
+| Tactical / model S01/S05 | 0.414363 | Distinct |
+| Teacher / model S03/S05 | 0.411454 | Distinct |
 
-The planned48cells remain twelve sources × two fixed geometry/side blocks × two initiatives. This side-confounded, one-phase, fixed-opponent development design would not establish competitive strength even if completed. Here there are no completed cells, pairs, numerical thresholds, base-mechanism comparisons or empirical realism observations at all. The source-only canonical board tests are not substituted for them.
+Every comparison has all six informative dimensions. Mean agreement is not a win rate or confidence level. The three positive controls are correlated, latent divergence is distinct, and both required borderlines remain unresolved. The minimum positive-to-latent separation is0.114265, above the frozen0.05minimum. The distinct ceiling is0.6707492931476291. All three base edges are below it; strategic-sharing violations are zero.
 
-Phase264's genuine three-mechanism independence requirement remains unresolved. Phase265, baseline freeze, formation experiments, holdout opening, public/counted play, production behavior and rules changes remain ineligible. The prompt-echo and redundant-streaming compatibility repairs are source-only work under the same plan, with independent review before continuation. A further authoring attempt requires only permission to resume at most the two unused slots under the same model and limits; no long authorization literal, new numbered plan or external custody system is required.
+The near-identical control is only0.004776above the distinct ceiling. This narrow margin is a limitation worth watching in later development, not a confidence interval or permission to retune the frozen calibration. No thresholds, weights or samples were selected after seeing base-edge results.
 
-Final source review is clean at `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`: 77/77 main tests, strict affected types, model/lab builds, 1,292 boundary files and independent 28-test review pass. There is no remaining client-installation or known source-review blocker. This source pass cannot substitute for actual calibration or override the failed attempt's stop rule.
+| Allocation | Actual use | Remaining disposition |
+|---|---:|---|
+| Model-authoring attempts | 3 cumulatively | Two historical failures plus one valid attempt; first-valid stopping closes the unused fourth slot |
+| Accounted model tokens | 68,794 | 50,000 reserved unavailable +9,767 prior known +9,027 valid; not zero for missing usage |
+| Teacher searches | 1 | 70nodes, depth3, three alternatives; no further search |
+| Tactical emission / teacher distillation | 1 each | Completed |
+| Supervised development workloads | 48/48 | All complete; no further workloads |
+| Pairs / candidate publications | 24 /48 | All retained; zero pairing failures |
+| Human/external submissions or effort | 0 | Explicitly unused |
+
+The valid author ran37,263ms and completed cleanup. Workloads retained their original pre-pairing unresolved terminals; all execution records completed without player violation or system failure. Individual canonical outcomes do not establish competitive strength against the fixed mechanics opponent.
+
+All48receipt/replay chains and1,768content-addressed artifacts (164,389,603bytes) were reopened, with zero byte-root, transition/hash/reconstruction or board violations. Every initial board contained16ACTIVE Soldiers at current-rules edge positions. Inspection artifact `sha256:2f40cb879203aa5fb6632033d6d373f769b214ec1b90fb5abd133400b0e0b3be`; ledger `sha256:bf42aef97fabcb571d46a1612692e2d49a3147ae8f8943f1dabf425574b9f575`.
+
+## Preserved analysis failures and current correction
+
+1. Original reviewed execution source f2f14864 completed gameplay, then its final assessor exceeded the canonical envelope while comparing large observation maps. Failure/inventory `sha256:0ac92d697b9f79a5b639a0abc786ba2ddb2697ce08e58f0aa1726d5c66e8d0e2` preserves absent threshold/assessment/readiness.
+2. First corrected reader33b1bdc6 then rejected valid, internally-derived long literal tokens before retaining control scores. Failure `sha256:5d49827ed68a23a5d0b836ed030c451d80e6f2d2d92cd178bc82391fc2415fac` preserves that separate outcome and its predecessor correction.
+3. Current independently reviewed source `68b01431db6110575ded60d4bfe2ca5611441dcb` fixes both input-domain defects without changing token contents, observations, score formula, thresholds, workloads or runtime bounds. It grants the longer token limit only to internally parsed source under the unchanged65,536-character source ceiling. All external tokens stay at256. Correction `sha256:380308f4b8c2aee5a3920466daa5327bf81d5d4159de65661f990ad002a3d807` binds unchanged historical execution and the new assessor.
+
+The correction runs only over retained data, with zero additional model calls, teacher searches or Matches. Main source validation passed31/31 focused tests after the repair, strict types, lab build and1,296boundary files. The earlier comprehensive explicit source suite passed231/231tests; these software passes are not a numerical independence result.
+
+## Limits and next action
+
+The affirmative assessment, exact read-only reopening and independent goal verification are complete (5/5 truths,11/11 requirements). Phase265 research/planning is eligible. The design is twelve sources × two fixed geometry/side blocks × two initiatives, one Phase with a fixed opponent. Arena and side are deliberately confounded. It is neither a serious-league strength test nor an arena/side causal comparison.
+
+Phase265, baseline freeze, formation experiments, holdout opening, counted/public play, production behavior and rules changes remain gated. The two historical authoring failures and both analysis failures remain unchanged. Full roots and operational handoff are in [264-FRESH-CALIBRATION-OUTCOME.md](264-FRESH-CALIBRATION-OUTCOME.md).

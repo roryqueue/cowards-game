@@ -1,10 +1,10 @@
 ---
 phase: 264
 plan: "08"
-status: completed_workloads_assessment_correction
+status: affirmed_verified
 source_commit: f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755
 privacy: private_offline
-independence: pending
+independence: affirmed_development_only
 ---
 
 # Fresh bounded calibration — approved two-attempt continuation
@@ -58,3 +58,9 @@ Historical outcomes `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db
 The first reviewed correction artifact `sha256:98e2f0341498231e5a549b941aabefc93a75b27908d33a49abb8a05b6d77477d` reopened the original48cells but then failed with `NUMERIC_CALIBRATION_EVIDENCE` before retaining any control table, threshold or assessment. Immutable correction-failure artifact `sha256:5d49827ed68a23a5d0b836ed030c451d80e6f2d2d92cd178bc82391fc2415fac` links the original failure and exact first correction. It retains source-token length aggregates only: eight slots contain literal-derived tokens703–4,585characters, within the existing65,536-character source bound but beyond the scorer's generic256-character token check.
 
 The ordinary same-data repair is confined to source provenance: internally parsed source tokens retain their exact strings and use the existing source bound plus longest prefix. Externally supplied edge and observation tokens remain capped at256, with no parser, Jaccard, informative-count, weight, cutoff, Match, runtime or resource-policy change. Independent review is required on the new source before a separately rooted correction; no authoring, teacher search or Match retry occurs. The original and first-correction failures are not reclassified. Use `reassess-retained-v2.mts` only after its exact-source review; old helper/result paths stay historical.
+
+## Corrected actual result
+
+Source68b01431 passed independent review with zero findings and31/31 focused tests. Correction `sha256:380308f4b8c2aee5a3920466daa5327bf81d5d4159de65661f990ad002a3d807` produced **affirmed**, with no reasons and zero sharing violations. Assessment artifact `sha256:25913b26fa81fa15177774fbdcf9c0d1ef244ad13910bc664bfde4ea8c2e43f8`, identity `sha256:0446fef49598ef425c883774adb23159ade4b1e44f630463a72562777a9ecea1`, and threshold artifact `sha256:f6098c9e14ed868e162a9374557e518678996b619f3f8912fb8723113328fa72` are retained. All48cells/24pairs are included, all six dimensions are informative, all controls classify as required, and all three base edges are distinct. See264-CALIBRATION-READINESS.md for aggregate values and limitations.
+
+Read-only exact re-assessment/reopening passed with exit0, returning `affirmed`, no reasons, the identical assessment identity and threshold, the unchanged ledger,48retainedworkloads and zero extra Matches. Private verification result: `/private/tmp/cg-264-task04-approved-Un1gVC/corrected-assessment-reopened-v2.json`. The command was `node --import tsx /private/tmp/cg-264-task04-approved-Un1gVC/reassess-retained-v2.mts verify`; it reopens the corrected assessment using its recorded reviewed-source binding, not a new experimental run. No extra authoring, search or Match followed the original allocation. Independent goal verification remains the final phase closeout check.

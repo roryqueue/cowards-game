@@ -1,13 +1,35 @@
 ---
 phase: 264
 slug: immutable-factory-independent-oracles-and-quarantined-intake
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-09-13
 ---
 
 # Phase264 — Validation Strategy
+
+## Current validation audit — 2026-09-14
+
+The current source is independently reviewed at68b01431. All21tasks across eight plans have explicit automated verification, and every referenced test file exists. No missing source-test seam remains after adding oversized-map equality, long internally-derived source-token, immutable correction-history and v2 assessment/reopen regressions. This is test coverage, not a claim that all scientific acceptance criteria pass.
+
+| Task group | Verification | Current result |
+|---|---|---|
+| 01.1–01.3 | Factory contracts, identity, repository, ledger, admission; lab build | Covered / green |
+| 02.1–02.2 | Tactical leaf tests and build | Covered / green |
+| 03.1–03.2 | Teacher/distillation tests and build | Covered / green |
+| 04.1–04.2 | Model bundle/emission tests and build | Covered / green |
+| 05.1–05.3 | Fingerprint/corpus, ingestion, preparation, supervised runner, boundary tests | Covered / green |
+| 06.1–06.2 | Quarantined intake/protocol tests | Covered / green |
+| 07.1–07.3 | Author/transport, frozen provenance, controls, fresh allocation and review bindings | Covered / green |
+| 08.1–08.3 | Numeric controls, equality, source domain, complete assessment and fresh-run guards | Covered / green |
+| 08.4 | All48retained roots, replay/board checks, exact corrected assessment reopening | All green; exact affirmative assessment and unchanged ledger reproduced, zero extra Matches |
+
+Current explicit pre-correction suite:231/231tests across30files in87.19seconds, four private-package builds, strict six-script types and1,292boundary files. Final correction suite:31/31tests across five files in38.90seconds, lab build, strict assessor types and1,296boundary files. A disk-backed fixture first exceeded its default5-second test timeout at5.456seconds; only that test now has15seconds, with a clean rerun. No guest/Match deadline changed.
+
+The final five-file command is `./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/factory/numeric-calibration.test.ts scripts/v1-38-factory-assessment-correction.test.ts scripts/assess-v1-38-factory-independence.test.ts scripts/v1-38-factory-execution-evidence.test.ts scripts/run-v1-38-factory-calibration.test.ts`. The separate map-equality suite passes4/4. Missing automated tests:0; unresolved empirical acceptance is not converted into a synthetic pass.
+
+Real evidence now exists: one valid author, one70node teacher search,48completedworkloads,24pairs/48publications, and a complete root/replay/board inspection of1,768artifacts with zero violations. Original and corrected-assessor failures are separately retained. The corrected assessment affirmed all three base mechanisms and exact read-only verification reproduced its identity and threshold with no additional execution. Read264-CALIBRATION-READINESS.md for current truth; every interim paragraph below is historical. Independent goal verification is separate from this completed validation-coverage audit.
 
 ## Test Infrastructure
 
@@ -78,12 +100,12 @@ Most code and retained-artifact checks are automated. Phase264 human/external in
 
 ## Validation Sign-Off
 
-- [ ] Every task has exact automated verification or preceding Wave0 coverage.
-- [ ] No three consecutive tasks lack automated verification.
-- [ ] All test references exist and pass.
-- [ ] Pure/injected and empirical evidence are separately identified.
-- [ ] All requirement and decision claims have actual supporting evidence.
-- [ ] Source/private/production boundaries pass.
-- [ ] Independent goal verification and private UAT complete.
+- [x] Every task has exact automated verification or preceding Wave0 coverage.
+- [x] No three consecutive tasks lack automated verification.
+- [x] All test references exist and pass.
+- [x] Pure/injected and empirical evidence are separately identified.
+- [x] All requirement and decision claims have actual supporting evidence.
+- [x] Source/private/production boundaries pass.
+- [x] Independent goal verification and private UAT complete:5/5 truths,11/11 requirements and7/7 private acceptance cases.
 
 Approval: existing autonomous implementation instruction applies to in-scope plans; this draft does not authorize reruns, external spending or expand frozen scientific bounds.

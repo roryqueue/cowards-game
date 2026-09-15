@@ -2,26 +2,30 @@
 gsd_state_version: 1.0
 milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
-current_phase: 264
-current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
-status: executing
-stopped_at: Phase264 Plan08 Task4 all48workloads retained; final reviewed source-token correction assessing same data; no new execution
-last_updated: "2026-09-15T01:08:48Z"
+current_phase: 265
+current_phase_name: serious-current-rules-league-and-development-red-team
+status: researching
+stopped_at: Phase264 independently complete; Phase265 research first under standing autonomy
+last_updated: "2026-09-15T01:30:00Z"
 last_activity: 2026-09-14
-last_activity_desc: All48workloads and24pairs complete; all byte roots and board/replay checks pass; corrected final assessment pending
+last_activity_desc: All48workloads and24pairs complete; actual three-mechanism assessment affirmed and reopened exactly; no extra execution
 progress:
   total_phases: 9
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
-  percent: 22
-current_plan: 8
-total_plans_in_phase: 8
+  completed_plans: 8
+  percent: 33
+current_plan: 0
+total_plans_in_phase: 0
 ---
 
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current phase transition:** Phase264 independently passed5/5 truths and11/11 requirements with no gaps; private UAT7/7 and validation/security/evaluation checks complete. Phase265 research/planning is the current task. No renewed literal or routine approval is needed. The following experiment handoff and earlier snapshots describe completed work.
+
+**Current completed experiment:** Plan08 Task4 obtained a valid Sol Strategy on cumulative author attempt3, completed48/48workloads and24pairs, and produced an affirmative three-mechanism assessment under unchanged development criteria. Assessment artifact `sha256:25913b26fa81fa15177774fbdcf9c0d1ef244ad13910bc664bfde4ea8c2e43f8`, identity `sha256:0446fef49598ef425c883774adb23159ade4b1e44f630463a72562777a9ecea1`, threshold `sha256:f6098c9e14ed868e162a9374557e518678996b619f3f8912fb8723113328fa72`. Exact read-only reopening passed with the identical result, unchanged48-entry ledger and zero extra Matches. Source68b01431 is independently clean; validation/evaluation/security checks pass within private development scope. Finish08summary/UAT and independent phase verification, then continuePhase265 research/plan/execute without another routine approval. Preserve both author failures, both assessor failures, original unresolved pre-pairing terminals and closed fourth author slot. No competitive-strength claim, formation, holdout or production authority follows from this calibration. All following dispatch snapshots are history, not commands to resume consumed work.
 
 **Current final reader correction:** First correction reached source scoring, then rejected internally derived703–4585character literals under its generic256token cap. Failure `sha256:5d49827ed68a23a5d0b836ed030c451d80e6f2d2d92cd178bc82391fc2415fac` remains immutable. Ordinary source-domain repair68b01431 preserves exact tokens/Jaccard/counts/weights/thresholds and external256limits, admitting only internally parsed tokens under the unchanged65,536source bound plus prefix. Independent review is clean;31focusedtests,labbuild,strict types and1296boundaryfiles pass. New correction `sha256:380308f4b8c2aee5a3920466daa5327bf81d5d4159de65661f990ad002a3d807` is prepared. Main is assessing via `/private/tmp/cg-264-task04-approved-Un1gVC/reassess-retained-v2.mts assess`; follow with `verify` only after corrected-assessment-result-v2.json exists. No extra author/teacher/workload, no selection or changed thresholds. Earlier first-correction helper and snapshots remain history.
 

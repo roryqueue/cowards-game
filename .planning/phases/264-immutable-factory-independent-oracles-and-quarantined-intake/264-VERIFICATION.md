@@ -1,142 +1,117 @@
 ---
 phase: 264-immutable-factory-independent-oracles-and-quarantined-intake
-verified: 2026-09-14
-status: human_needed
-score: 4/5 must-haves verified
+verified: 2026-09-15T01:27:30Z
+status: passed
+score: 5/5 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
-re_verification: false
-human_verification:
-  - test: "After final source review of the client prompt-echo and response-size repairs, approve continuation of at most the two unused authoring attempts before further authoring."
-    expected: "No failed slot, workload, or unavailable usage is silently reused; any renewed route is separately authorized and remains bounded."
-    why_human: "The updated client supports the chosen model, but the agreed stop-on-system-failure rule requires renewed operator continuation."
+re_verification:
+  previous_status: human_needed
+  previous_score: 4/5
+  gaps_closed:
+    - "The stopped route now has a retained valid authoring attempt and all 48 approved workloads."
+    - "The formerly absent assessment/threshold is a root-bound affirmative assessment with exact read-only reopening."
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake Verification
+# Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake Verification Report
 
 **Phase Goal:** Researchers can produce immutable, diverse Strategy candidates through genuinely independent automated and human response channels without weakening hostile-source or production boundaries.
 
-**Verified:** 2026-09-14
-
-**Status:** human_needed — The client update resolved Sol support; a fresh provider turn completed but our local checker rejected its prompt echo. This second charged attempt remains a system failure. No teacher search, workload, threshold or independence result followed. Final compatibility source `f2f14864` is independently clean with 77/77 main tests, strict types, builds and boundary checks passing. The agreed terminal-stop rule requires renewed operator continuation before another authoring turn; no client setup or source-review blocker remains.
-
-**Re-verification:** Current Task04 addendum below; the original source/mechanics review is retained verbatim as historical context.
-
-## Current client-update outcome
-
-Final source review and outcome-accounting audit are both clean. `264-CLIENT-ECHO-REVIEW.md` records all original source findings and their verified closure at `f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755`. This is source verification only, not a revised terminal, admitted Strategy, real independence result or Phase 264 completion.
-
-The exact-source reviewed continuation used Codex0.154.0 and the unchanged selected Sol model. One fresh attempt (cumulative2) consumed9,767tokens over54,751ms, retained its complete raw response and completed SIGTERM cleanup. A normal `userMessage` was rejected by the item whitelist; the terminal is not reclassified from `system_failure`. Outcome `sha256:3f624715ffff0c569b02b4123705e777c864b34830e94af5b5db3b2dd3a8c9bf` preserves the previous failure and exact two-chunk raw reconstruction. Two authoring slots and48workloads remain unused. See264-CLIENT-CONTINUATION-OUTCOME.md for details and repair status. Current score remains4/5; actual three-mechanism independence is unverified and Phase265 remains ineligible.
-
-## Historical first Task04 Addendum — Retained Bounded Failure
-
-The actual bounded route prepared frozen roots and then charged exactly one authoring attempt. A-01 terminalized `system_failure` after the selected model/client combination was unavailable. The immutable corrected outcome root is `sha256:86afd06a8e66f8d54dbee6f2484e67d7573435e0869f000e6f9aaef5097281a6`, which additively preserves predecessor `sha256:e76142f8e3c9e612d9f9829d5c7a70f0a953ae5f751d2ebf0ab68a24575fc19c`.
-
-| Current fact | Retained disposition |
-|---|---|
-| Authoring | One A-01 start/terminal/cleanup; three slots unused and not automatically reusable. |
-| Usage/protocol | `unavailable`, not zero; the retained response is zero bytes and is explicitly incomplete provider evidence. `reportedThreadModel` is `null` and effective negotiation evidence is unavailable. |
-| Source/bundle | No valid source or frozen bundle. |
-| Human/external intake | Unused; no participant, submission, or external provenance was opened. |
-| Teacher/tactical/workloads | 0 teacher searches, 0 tactical emissions, 0 workloads started/completed. |
-| Assessment/readiness | Actual blocked readiness is retained: no threshold or assessment root; independence remains `unresolved`; no counted/public/production/formation/holdout authority. |
-| Cleanup | Retained SIGTERM cleanup completed. |
-
-The local diagnostic roots the requested-model/client incompatibility, but lost raw protocol capture means it does **not** establish a successful thread-start identity, measured provider-turn duration, or provider token usage. The failed record is retained as a failure, not backfilled or reclassified. Current score is **4/5**: Truths 1–3 remain source/mechanics-verified and Truth 5 has a retained actual-or-blocked readiness plus unused intake disposition; Truth 4, actual three-mechanism independence, remains unresolved. RUN-01 (advertised-model precheck) and RUN-02 (failure protocol/elapsed retention) received a clean exact-source recheck at `f9f0cd63adeabc9c29ac3defbb259b4c3a318ab0`; the route remains stopped pending the separately required operator-only stop/model decision.
-
-## Historical Verification (Pre-Task04)
+**Verified:** 2026-09-15T01:27:30Z
+**Status:** passed
+**Re-verification:** Yes — the previous `human_needed` report predates the valid retained calibration and is historical only.
 
 ## Goal Achievement
 
 ### Observable Truths
 
 | # | Truth | Status | Evidence |
-|---|---|---|---|
-| 1 | Every emitted source is hostile and can reach execution only through the existing supervised boundary, with explicit success/player-violation/system-failure handling and no coordinator/web/API/Go fallback. | ✓ VERIFIED (bounded implementation) | Factory admission accepts source as data, the runner uses `runCanonicalLabMatch`/the selected supervised adapter, and the boundary monitor covers recursive private/production edges. Factory/runtime, admission, and boundary tests cover invalid lanes, source/identity drift, failure classification, cleanup, and no fallback. No generated source was executed in this verification, so this is a code-contract result rather than a live-run claim. |
-| 2 | Candidate and attempt artifacts are immutable, root-bound, and charged/retained across accepted, rejected, invalid, duplicate, weak, retried, player-violation, and system-failed outcomes. | ✓ VERIFIED | Factory contracts/identity, repository, ledger, supervision-artifact, intake, preparation, and runner source form the packet → proposal → validation → supervision → fingerprint → candidate chain. Charge/start occurs before work and terminal publication precedes pairing; storage/reopen preserves ordered private records without renewing execution authority. Recorded final evidence is 156/156 focused/injected tests, four private-package builds, and the independent storage/workload reviews. |
-| 3 | Six source/lineage/dependency/legal-input/Chronicle-behavior/matchup-response dimensions are rederived and cosmetic/correlated variants remain unresolved rather than being accepted from labels or hashes. | ✓ VERIFIED (mechanics) | `deriveFactoryFingerprints` rederives dimensions from retained artifacts; the concrete six-case corpus derives agreement from paired records and marks every observation `mechanics_only`/`unresolved`; exact pairing now includes both optional graph roots. Candidate independence remains quarantined when thresholds or evidence are missing. |
-| 4 | At least three materially independent automated mechanisms pass the audited shared-helper, authorship, behavior, correlation/clone, and failure-mode gates as an actual independence result. | ⚠️ UNCERTAIN — human/external decision required | Tactical, teacher, and frozen-model packages have separate strategic cores, strict closure checks, source manifests, and boundary reviews. However, all current fixtures/receipts are mechanics-only or unresolved, clone/correlation thresholds are null, and no fresh provider/model bundle or supervised candidate corpus exists. Source review proves implementation boundaries, not the required genuine independence result. |
-| 5 | Human/external submissions enter through the frozen quarantined channel and the phase has a truthful readiness result for real inputs, without invented provenance or empirical acceptance. | ⚠️ UNCERTAIN — late decision required | Intake code implements explicit participant/reviewer identifiers, disclosure/provenance/conflict/acceptance budgets, pre-validation charging, retained failure dispositions, and roots-only reviewer projection. The channel may truthfully be unused/blocked; actual human participation is not required merely to implement it. However, no `264-READINESS-DECISION.md`, fresh calibration manifest/allocation, genuine participant/external submission, or `264-CALIBRATION-READINESS.md` exists. The runner intentionally remains `not_ready` with `calibration_thresholds_not_frozen`. |
+| --- | --- | --- | --- |
+| 1 | Every source is hostile and executes only through the existing supervised boundary with exact success/player-violation/system-failure semantics and no coordinator/web/API/Go fallback. | ✓ VERIFIED | `admitFactory` treats source as bytes and never evaluates it (`admission.ts:36-47`); only `superviseFactory` reaches `runCanonicalLabMatch` (`:203-230`); the three outcomes are preserved (`:195-201`). The 48 retained supervised workloads have no system or player failure. |
+| 2 | Candidates and attempts are immutable, fully bound, and every disposition is charged and retained. | ✓ VERIFIED | Content-addressed publish-once reads verify digest; starts precede terminals; resume rejects uncertain coverage (`repository.ts:59-77`). The retained reopening confirms ledger `sha256:bf42…9f575`, 48 workload entries, and zero extra Matches. |
+| 3 | Six source/lineage/dependency/legal-input/Chronicle/matchup fingerprints detect cosmetic/correlated variants without accepting labels or hashes as diversity evidence. | ✓ VERIFIED | The assessor derives receipt-backed observations, freezes controls before base-edge calculation, and returns unresolved on incomplete evidence (`assess-v1-38-factory-independence.ts:163-202`). Assessment `sha256:25913…e43f8` has six informative dimensions per comparison: three cosmetic controls correlated, latent divergence distinct, both borderlines unresolved, and three base edges distinct. |
+| 4 | Tactical optimizer, teacher/distiller, and frozen-bundle model synthesizer are materially independent mechanisms under helper/dependency/authorship/behavior/correlation/clone/failure-mode review. | ✓ VERIFIED | Separate leaf emitters produce only `FactoryOraclePacket` data. The recursive monitor rejects oracle cross-routes, factory-to-oracle reachability, unresolved loaders, hostile execution, and undeclared manifests (`check-v1-38-factory-boundaries.ts:159-227`). The current assessment reports zero strategic-sharing violations and distinct S01/S03, S01/S05, and S03/S05 edges. |
+| 5 | Human/external source can enter only by a quarantined frozen-disclosure/provenance/budget/reviewer channel; failed/rejected work remains private evidence and only validated deterministic source reaches common admission. | ✓ VERIFIED | Intake charges before validation, checks provenance/source/budgets/conflict/review, then uses common admission only after acceptance (`intake.ts:195-240`); reopen requires one retained accepted ledger record and creates no second allocation (`:243-259`). The approved experiment allocated human/external effort as explicit zero—truthful unused channel, not fabricated participation. |
 
-**Score:** 3/5 truths verified (2 present but awaiting human/external evidence and authority; 0 behavior-unverified code truths).
-
-## Deferred / Pending Late Gate
-
-The following are explicit Phase 264 Plan 07/08 work, not missing implementation in Plans 01–06:
-
-| Item | Addressed by | Current evidence |
-|---|---|---|
-| Fresh provider/model/version/settings bundle, authorized human/external protocol, and finite development allocation | Plan 07 | No readiness decision or fresh roots are present. Phase context explicitly requires an operator decision and prohibits inventing or reusing Phase 263 resources. |
-| Actual or explicitly blocked calibration readiness, retained roots, and frozen thresholds | Plan 08 | No calibration-readiness artifact is present. Existing calibration source returns `authorization_required`; runner readiness remains `not_ready`, and all synthetic corpus observations remain mechanics-only/unresolved. |
-
-These are not silently treated as passed. They require the human/operator decision described above before the automated Plan 08 follow-on can run and before Phase 264 can become phase-complete or authorize later empirical work. The separately controlled human/external channel may remain unused; that is a truthful blocked/unused disposition, not a requirement to invent or obtain human participation for implementation closure.
+**Score:** 5/5 truths verified (0 present-but-behavior-unverified).
 
 ## Required Artifacts
 
 | Artifact | Expected | Status | Details |
-|---|---|---|---|
-| `packages/strategy-lab/src/factory/{contracts,identity,ledger,repository,admission}.ts` | Immutable private roots, charged ledger, hostile admission | ✓ VERIFIED | Substantive and wired through the private factory subpath; focused tests/builds and foundation review pass. |
-| `packages/strategy-oracle-tactical/src/*` | Independent tactical selector/scoring/search and packet emitter | ✓ VERIFIED (mechanics) | Owned strategic core, static exact-controller bundle, closure checks, and packet root tests. |
-| `packages/strategy-oracle-teacher/src/*` | Canonical counterfactual search, legal distillation, same tested emitted controller | ✓ VERIFIED (mechanics) | Repaired teacher readiness review reports 7/7 focused tests and package build; no generated-source execution. |
-| `packages/strategy-oracle-model/src/*` | Frozen bundle admission and exact data-only model packet | ✓ VERIFIED (mechanics) | Repaired model review reports 7/7 tests; companion binds complete bundle provenance, with no provider call. |
-| `scripts/{prepare-v1-38-factory-calibration.ts,run-v1-38-factory-calibration.ts}` | Fresh-root preparation and terminal-retaining private runner | ✓ VERIFIED (mechanics) | Workload closure recheck at `f7395d8a` passed 6/6 focused tests; pair graph roots and canonical outcome mapping are fail-closed. |
-| `packages/strategy-lab/src/factory/{fingerprint,calibration,intake,intake-protocol}.ts` | Six dimensions, bounded corpus, quarantined intake | ✓ VERIFIED (mechanics) | Independent fingerprint/corpus/intake reviews pass; evidence remains unresolved until real late inputs. |
-| `264-READINESS-DECISION.md` | One fresh authorization or explicit blocked decision | ⚠️ MISSING — pending Plan 07 | The plan intentionally requires operator/external input; absence prevents a genuine readiness claim. |
-| `264-CALIBRATION-READINESS.md` | Actual or blocked Plan 08 readiness report | ⚠️ MISSING — pending Plan 08 | No empirical run or explicit blocked report has been created yet. |
+| --- | --- | --- | --- |
+| `packages/strategy-lab/src/factory/{contracts,identity,ledger,repository,admission}.ts` | Immutable factory, charged ledger, supervised-only admission | ✓ VERIFIED | Substantive and wired; current private API reads verified corrected assessment/threshold roots by digest. |
+| `packages/strategy-oracle-tactical/src/{selector,scoring,search,emit}.ts` | Owned tactical selector/scoring/search and legal deterministic emission | ✓ VERIFIED | Separate packet-producing leaf; boundary monitor denies cross-oracle strategic imports. |
+| `packages/strategy-oracle-teacher/src/{teacher,distill,emit}.ts` | Offline canonical teacher and legal-information student | ✓ VERIFIED | Retained evidence records one bounded 70-node/depth-3 search and one distillation. |
+| `packages/strategy-oracle-model/src/{bundle,emit}.ts` and author command | Frozen provider-neutral bundle and isolated capture | ✓ VERIFIED | Two immutable historical failures plus one valid third attempt; request/response/identity/settings/usage/source are private and root-bound. |
+| `packages/strategy-lab/src/factory/{fingerprint,calibration,intake,intake-protocol}.ts` | Six-dimension evidence/calibration and quarantined intake | ✓ VERIFIED | Assessment and threshold are current content-addressed records; intake is wired to `admitFactory`. |
+| `scripts/{prepare,run,assess}-v1-38-factory-*.ts` | 48-cell preparation, terminal/pair/candidate retention, root-matched assessment | ✓ VERIFIED | Manifest `sha256:a1b808…8cfde` is `factory-calibration-manifest-v1` with 48 workloads; assessment validates its matching manifest/evidence/ledger. |
 
 ## Key Link Verification
 
 | From | To | Via | Status | Details |
-|---|---|---|---|---|
-| Oracle leaf emitters | Factory ingestion | Named `emitTacticalFactoryPacket`, `emitTeacherFactoryPacket`, `emitModelFactoryPacket` APIs and strict packet schema | ✓ WIRED | Leaf tests exercise packet emitters; ingestion/manifest code binds producer identity, source root, native lane, and provenance. |
-| Factory admission | Supervised runtime | `admitFactory` → issued supervision → `runCanonicalLabMatch` / selected adapter | ✓ WIRED (mechanics) | Source is data-only until the supervised seam; runtime and runner tests cover identity/lane/budget/failure checks. |
-| Runner | Evidence/fingerprint/candidate | terminal publication → pairing → `deriveFactoryFingerprints` → unresolved candidate finalization | ✓ WIRED | Runner publishes terminals before pairing and never promotes unresolved/mechanics-only evidence to ready. |
-| Plan 07 decision | Plan 08 preparation/runner | fresh protocol/allocation/provider/participant roots | ⚠️ NOT WIRED — artifact absent | No decision record or fresh manifest exists, so the late empirical path is intentionally unopened. |
+| --- | --- | --- | --- |
+| Oracle leaf emitters | Factory packet/admission | `FactoryOraclePacket` data contract | ✓ WIRED | Exact bytes and packet roots are validated before supervised admission. |
+| Factory admission | Existing supervised runtime | `superviseFactory` → `runCanonicalLabMatch` | ✓ WIRED | Documented sole execution seam binds provider identity before and after invocation. |
+| Preparation | Runner | Immutable manifest and workload references | ✓ WIRED | Read-only API opened the manifest artifact and confirmed all 48 references. |
+| Runner | Fingerprints/candidates | terminal → pair → receipt-derived fingerprints → publication | ✓ WIRED | Runner persists terminals before pairing and compares both graph roots in pair equality; assessor requires 24 pairs and 48 candidate receipts. |
+| Assessor | Frozen controls/readiness | Root-matched threshold/assessment | ✓ WIRED | Controls freeze before base comparisons; `verifyRetainedFactoryAssessment` recomputes the assessment identity without persistence (`assess…ts:187-212`). |
+| Quarantined intake | Common hostile admission | explicit deterministic source → `admitFactory` | ✓ WIRED | Invalid/rejected/weak/retried records terminalize privately; only acceptance reaches common admission. |
 
-## Data-Flow Trace
+## Data-Flow Trace (Level 4)
 
-| Artifact | Data source | Produces real data | Status |
-|---|---|---|---|
-| Factory candidate/fingerprint descriptors | Retained packet, validation, supervision, graph, and corpus projections | No genuine provider/human/candidate data currently; synthetic/injected inputs are explicitly labeled | ⚠️ QUARANTINED, truthful |
-| Calibration readiness | Fresh Plan 07 decision and Plan 08 retained run | None currently | ⚠️ DISCONNECTED BY DESIGN until authority exists |
+| Artifact | Data variable | Source | Produces Real Data | Status |
+| --- | --- | --- | --- | --- |
+| Calibration manifest | 12 slots / 48 workloads | retained manifest root `sha256:a1b808…8cfde` | Yes — 12 source slots, 48 immutable workload refs | ✓ FLOWING |
+| Assessment + threshold | controls/base edges/six dimensions | retained replay/receipt/ledger observations | Yes — assessment `sha256:25913…e43f8`, identity `sha256:0446…ecea1`, threshold `sha256:f609…8fa72` | ✓ FLOWING |
+| Candidate/replay inspection | 48 supervision/replay chains | immutable private artifact store | Yes — 1,768 reopened artifacts / 164,389,603 bytes; 16 ACTIVE initial Soldiers per board; zero reported integrity/board violations | ✓ FLOWING |
 
-## Behavioral / Source Checks
+## Behavioral Spot-Checks
 
-| Check | Result |
-|---|---|
-| Final workload closure test | PASS — exact two-file Vitest command, 2 files / 6 tests, including graph-root pairing, paired-but-borderline correlation, WIN/DRAW/unknown mapping. |
-| Recorded final bounded regression | PASS — 156/156 tests, four private package builds, 1,271-file source-only boundary scan with zero violations, and four script type checks as recorded in `264-05-SUMMARY.md`; no guest/provider/network execution. |
-| CLI help paths | PASS — recorded real `ingest`, `prepare`, and `run` help paths; no experiment effects. |
-| Empirical calibration/provider/human channel | NOT RUN / NOT AVAILABLE — correctly not substituted with fixtures. |
+| Behavior | Command / evidence | Result | Status |
+| --- | --- | --- | --- |
+| Corrected assessment is retained evidence, not narrative | Read-only current factory repository API opened assessment and threshold roots | `factory-independence-assessment-v2`, `affirmed`, no reasons; threshold root-bound | ✓ PASS |
+| Exact reopening does not add execution | `corrected-assessment-reopened-v2.json` | Identical affirmed identity/threshold; unchanged 48-entry ledger; `extraMatches: 0` | ✓ PASS |
+| Actual replay/board validity | retained inspection result | 48 chains / 1,768 artifacts; zero byte-root, transition, reconstruction, or board violations | ✓ PASS |
+
+No broad test suite, provider, install, old selector, or empirical command was run during this verification. Retained source evidence in `264-VALIDATION.md` records 231/231 pre-correction tests, 31/31 correction tests, 4 equality tests, types/builds, and the 1,296-file clean boundary monitor.
 
 ## Requirements Coverage
 
-| Requirement | Status | Evidence / limitation |
-|---|---|---|
-| FACT-05 | PARTIAL — mechanics verified | Immutable candidate/source/lane/lineage/fingerprint artifacts exist; actual candidate completion remains unresolved. |
-| FACT-06 | VERIFIED — bounded implementation | Charged append-only ledger and all declared dispositions are retained by source/tests; no live attempt claimed. |
-| FACT-07 | VERIFIED — bounded implementation | Hostile source is admitted only toward selected supervision; three-way failure semantics and boundary checks are present; no generated source execution claimed. |
-| FACT-08 | PARTIAL — mechanics verified | Six dimensions and quarantine are implemented; thresholds and genuine calibration are absent. |
-| ORCL-01 | UNCERTAIN | Three source-separated automated leaves and the separately controlled intake exist. The channel may be unused, but genuine materially independent automated evidence and any human/external evidence remain unresolved. |
-| ORCL-02 | VERIFIED — mechanics | Tactical owned selector/scoring/search and packet source-closure tests pass; no candidate-strength claim. |
-| ORCL-03 | VERIFIED — mechanics | Canonical bounded search, legal distillation, and shared emitted controller pass source/mechanics review; no empirical quality claim. |
-| ORCL-04 | UNCERTAIN | Frozen-bundle schema/emitter is verified, but no genuine provider/model bundle exists. |
-| ORCL-05 | UNCERTAIN | Quarantined intake mechanics are verified, but no actual authorized human/external protocol/submission exists. |
-| ORCL-06 | VERIFIED — source boundary | Audited shared-helper policy and recursive boundary checks pass; this is not runtime sandbox certification. |
-| ORCL-07 | UNCERTAIN | Evidence structures and mechanics corpus exist, but all current independence receipts remain unresolved and no thresholds are frozen. |
+| Requirement | Status | Evidence |
+| --- | --- | --- |
+| FACT-05 | ✓ SATISFIED | Root-bound candidate/source/lane/lineage/fingerprint contracts plus 48 retained candidate publications. |
+| FACT-06 | ✓ SATISFIED | Charge-first immutable ledger and exact retained 48-entry reopen. |
+| FACT-07 | ✓ SATISFIED | Hostile bytes reach only selected supervision with three-way failure semantics and no fallback. |
+| FACT-08 | ✓ SATISFIED | Six receipt-derived signals and frozen control threshold; labels/hashes alone are insufficient. |
+| ORCL-01 | ✓ SATISFIED | Three retained automated mechanisms pass the development assessment; separately controlled intake exists and is explicitly unused. |
+| ORCL-02 | ✓ SATISFIED | Tactical owned selector/scoring/search emitted retained legal deterministic source. |
+| ORCL-03 | ✓ SATISFIED | Teacher ran once within 70-node/depth-3 bound and emitted distilled legal-information student. |
+| ORCL-04 | ✓ SATISFIED | Frozen model provenance records requested/reported IDs, settings, usage, response/source, and unavailable snapshot. |
+| ORCL-05 | ✓ SATISFIED | Quarantined protocol/admission/ledger path is complete; no imaginary participant or submission was created. |
+| ORCL-06 | ✓ SATISFIED | Recursive audited allowlist/boundary monitor reports 1,296 files and zero violations. |
+| ORCL-07 | ✓ SATISFIED | Retained authorship/source/dependency/legal-input/Chronicle/matchup/counterfactual/clone/failure evidence supports all automated mechanisms; historical failures remain preserved. |
 
-## Anti-Patterns / Integrity Notes
+## Anti-Patterns Found
 
-No unresolved source `TODO`/`FIXME`/`XXX` blocker was found in the reviewed Phase 264 implementation paths. The important anti-pattern risk—promoting synthetic or injected fixtures into genuine evidence—is explicitly prevented by `mechanics_only`, `unresolved`, `not_ready`, and `calibration_thresholds_not_frozen` states. Historical initial review findings are retained in their plan-specific reports and were rechecked as resolved where applicable.
+| File | Line | Pattern | Severity | Impact |
+| --- | --- | --- | --- | --- |
+| — | — | No current `TBD`, `FIXME`, `XXX`, placeholder, empty-data, or direct-source-execution marker in reviewed Phase 264 paths | — | No blocker |
 
-## Human Verification Required
+## Historical Review Disposition
 
-1. Capture the single late Plan 07 decision with either exact fresh roots/limits or an explicit blocked/unavailable disposition.
-2. After that decision, let the automated Plan 08 path run only from a fresh manifest and inspect retained private roots and all terminal dispositions; if blocked, publish the blocked readiness report without launching.
-3. Document the human/external channel as available, unused, or blocked. An unused channel is allowed for implementation closure, but it is not human participation and cannot support a genuine human/external evidence claim.
+Earlier workload/factory integration reviews correctly identified then-current graph-pair and empirical-input gaps. They are not current blockers: the runner now compares both graph roots; the retained manifest contains all 48 source-backed cells; and the corrected assessment reopens the unchanged ledger. Those reports and both authoring/assessment failures remain preserved history.
+
+## Scope Boundary
+
+This is private, fixed-opponent, one-Phase, two geometry/side-block development calibration. Arena and side are deliberately confounded; mean agreement is neither win rate nor confidence. It is not competitive proof, causal arena/side evidence, production readiness, certification, or authorization to execute Phase 265. Phase 265, holdout, formation, counted/public/production behavior, and rules changes remain gated.
 
 ## Gaps Summary
 
-The implementation goal for Plans 01–06 is achieved at the private infrastructure and source/mechanics boundary. The overall Phase 264 goal is not yet fully verified because the repository contains neither the required late readiness decision nor actual provider/human/external calibration evidence. This is an Escalation Gate, not a source defect: no authority, allocation, provider, participant, or empirical result should be inferred or fabricated. Phase 265/formation/holdout/production authority remains blocked.
+No Phase 264 goal gap remains. The prior human continuation gate was consumed within approved bounds, and retained evidence proves all five roadmap truths. No human verification remains for this private offline phase.
 
-_Verified by independent bounded source review; no source edits, guests, providers, network, installation, historical selectors, or empirical calibration run._
+---
+
+_Verified: 2026-09-15T01:27:30Z_
+_Verifier: the agent (gsd-verifier)_
