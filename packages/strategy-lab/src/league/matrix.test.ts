@@ -25,12 +25,13 @@ import {
 } from "./matrix.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
+const hex = (ordinal: number): string => "0123456789abcdef"[ordinal]!
 
 const admission = (ordinal: number) => {
   const proposal = factoryProposalFromPacket(factoryOraclePacketFixture())
-  const candidate = factoryCandidateFixture(proposal, factoryValidationFixture(proposal))
+  const candidate = factoryCandidateFixture(proposal, factoryValidationFixture(proposal), root(hex(ordinal)))
   const start = createFactoryAttemptStart({
-    taskRoot: root(`${ordinal}`),
+    taskRoot: root(hex(ordinal + 1)),
     budgetRoot: root("b"),
     candidateRoot: candidate.root,
     authoringMechanism: "automated-oracle",
@@ -147,11 +148,11 @@ describe("complete semantic empirical-game matrix", () => {
     const variations = [
       complete.slice(1),
       [...complete, complete[0]!],
-      [...complete.slice(0, -1), createLeagueCellTerminal({ ...complete.at(-1)!, evidenceRoot: root("6") })],
+      [...complete, { ...complete[0]!, evidenceRoot: root("6") }],
       [...complete.slice(0, -1), createLeagueCellTerminal({ cellRoot: complete.at(-1)!.cellRoot, disposition: "invalid", processValidity: "process_invalid", evidenceRoot: root("7"), projection: null })],
       [...complete.slice(0, -1), createLeagueCellTerminal({ cellRoot: complete.at(-1)!.cellRoot, disposition: "player_violation", processValidity: "process_invalid", evidenceRoot: root("8"), projection: null })],
       [...complete.slice(0, -1), createLeagueCellTerminal({ cellRoot: complete.at(-1)!.cellRoot, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: root("9"), projection: null })],
-      [...complete.slice(0, -1), createLeagueCellTerminal({ cellRoot: root("a"), disposition: "success", processValidity: "process_valid", evidenceRoot: root("b"), projection: complete.at(-1)!.projection })],
+      [...complete.slice(0, -1), { ...complete.at(-1)!, cellRoot: root("a") }],
     ]
     for (const terminals of variations) {
       const admitted = admitCompletePayoffSnapshot(matrix, terminals)
@@ -162,14 +163,11 @@ describe("complete semantic empirical-game matrix", () => {
 
   it("keeps canonical entrant half-points across mirrored sides and initiatives, including draws", () => {
     const matrix = enumerateLeagueCells(input(2))
-    const entrantWins = matrix.cells
-      .filter((entry) => entry.cell.entrantCandidateRoot === matrix.cells[0]!.cell.entrantCandidateRoot)
-      .map((entry) => successTerminal(entry, "entrant"))
-    const opponentWins = matrix.cells
-      .filter((entry) => entry.cell.entrantCandidateRoot !== matrix.cells[0]!.cell.entrantCandidateRoot)
-      .map((entry) => successTerminal(entry, "opponent"))
+    const decisive = matrix.cells.map((entry, ordinal) =>
+      successTerminal(entry, ordinal % 2 === 0 ? "entrant" : "opponent"),
+    )
     const draws = matrix.cells.map((entry) => successTerminal(entry, "DRAW"))
-    const winners = admitCompletePayoffSnapshot(matrix, [...entrantWins, ...opponentWins])
+    const winners = admitCompletePayoffSnapshot(matrix, decisive)
     expect(winners.kind).toBe("complete")
     if (winners.kind === "complete") expect([...winners.halfPoints]).toEqual(expect.arrayContaining([2, 0]))
     const drawn = admitCompletePayoffSnapshot(matrix, draws)
