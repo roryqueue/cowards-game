@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
-import { admitCanonicalJsonBytes } from "@cowards/spec"
+import { admitCanonicalJsonBytes, defaultRuntimeMetadata } from "@cowards/spec"
+import { buildStrategyRevision } from "@cowards/runtime-js"
 import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { admitFactory, authorizeFactorySupervision, type FactoryAdmission, type FactorySupervisionProvider } from "../factory/admission.js"
 import { FactoryCandidateSchema, FactoryOraclePacketSchema, FactoryProposalSchema, FactoryValidationEvidenceSchema, type FactoryCandidate } from "../factory/contracts.js"
@@ -48,6 +49,7 @@ export interface LeagueIssuedProvider {
   readonly allocationRoot: LabRoot
   readonly cellRoot: LabRoot
   readonly identity: FactorySupervisionProvider["identity"]
+  readonly producerBuildRoot: LabRoot
 }
 
 const issuedProviders = new WeakSet<object>()
@@ -86,10 +88,14 @@ export const issueLeagueProviderFromFactoryCandidate = (input: FactoryCandidateC
   if (cell.tupleRoot !== closure.candidate.proposal.build.compatibilityTupleRoot || cell.runtimeRoot !== closure.candidate.proposal.nativeLane.runtimeProfileRoot) return fail("CELL_RUNTIME")
   const sourceAdmission = admitFactory({ packet: closure.packet, proposal: closure.proposal, sourceBytes: closure.sourceBytes, repository: input.factoryRepository })
   const admission = authorizeFactorySupervision({ sourceAdmission, validation: closure.validation, repository: input.factoryRepository })
-  const provider = input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: input.start.root, budgetRoot: input.allocationRoot, executableRoot: closure.candidate.proposal.build.buildRoot })
+  const defaults = defaultRuntimeMetadata("typescript")
+  const revision = buildStrategyRevision({ source: new TextDecoder("utf-8", { fatal: true }).decode(closure.sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+  if (!revision.validation.valid || !revision.metadata.sourceArtifact || revision.sourceHash !== admission.sourceRoot.slice(7)) return fail("EXECUTABLE_BUILD")
+  const executableRoot = `sha256:${revision.metadata.sourceArtifact.hash}` as LabRoot
+  const provider = input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: input.start.root, budgetRoot: input.allocationRoot, executableRoot })
   const identity = provider?.identity
-  if (!identity || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.attemptRoot !== input.start.root || identity.budgetRoot !== input.allocationRoot || identity.executableRoot !== closure.candidate.proposal.build.buildRoot) return fail("PROVIDER_IDENTITY")
-  const issued = freezeLabValue({ candidateRoot: closure.candidate.root, startRoot: input.start.root, allocationRoot: input.allocationRoot, cellRoot: cell.root, identity: structuredClone(identity) }) as LeagueIssuedProvider
+  if (!identity || identity.revisionId !== revision.id || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.attemptRoot !== input.start.root || identity.budgetRoot !== input.allocationRoot || identity.executableRoot !== executableRoot) { provider?.close(); return fail("PROVIDER_IDENTITY") }
+  const issued = freezeLabValue({ candidateRoot: closure.candidate.root, startRoot: input.start.root, allocationRoot: input.allocationRoot, cellRoot: cell.root, producerBuildRoot: closure.candidate.proposal.build.buildRoot, identity: structuredClone(identity) }) as LeagueIssuedProvider
   issuedProviders.add(issued); privateProviders.set(issued, provider); issueBindings.set(issued, freezeLabValue({ admission, candidate: closure.candidate }))
   return issued
 }

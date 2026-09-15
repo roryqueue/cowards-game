@@ -2,7 +2,8 @@ import { createHash } from "node:crypto"
 import { mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, defaultRuntimeMetadata } from "@cowards/spec"
+import { buildStrategyRevision } from "@cowards/runtime-js"
 import { afterEach, describe, expect, it } from "vitest"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../factory/contracts.js"
@@ -29,7 +30,7 @@ afterEach(() => { for (const directory of directories.splice(0)) rmSync(director
 
 const fixture = (name: string) => {
   const factoryRepository = createFactoryRepository(temporary("factory-league-test-"))
-  const sourceBytes = new TextEncoder().encode(`export default ${JSON.stringify(name)}`)
+  const sourceBytes = new TextEncoder().encode(`// ${name}\nexport default { selectActivations(input) { return { activationOrders: [], strategyMemory: {} }; }, soldierBrain() { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: {} }; } }`)
   const sourceRoot = `sha256:${createHash("sha256").update(sourceBytes).digest("hex")}` as LabRoot
   const base = factoryOraclePacketFixture()
   const draft = { ...base, source: { ...base.source, root: sourceRoot, sha256: sourceRoot, byteLength: sourceBytes.byteLength } }
@@ -49,9 +50,11 @@ const fixture = (name: string) => {
 }
 
 const providerHost = (): FactorySupervisedRuntimeHost => ({
-  createFactorySupervisedRuntime({ admission, attemptRoot, budgetRoot, executableRoot }) {
+  createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot, budgetRoot, executableRoot }) {
+    const defaults = defaultRuntimeMetadata("typescript")
+    const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
     const identity = {
-      revisionId: `revision-${admission.sourceRoot.slice(7, 15)}`,
+      revisionId: revision.id,
       sourceRoot: admission.sourceRoot,
       executableRoot,
       tupleId: "candidate-kernel-v1.19",
@@ -75,6 +78,9 @@ describe("host-issued connected league runner", () => {
     const start: LeagueCellStart = { root: labRoot("league-cell-start-v1", { cellRoot: cell.root, allocationRoot: root("allocation") }), cellRoot: cell.root, allocationRoot: root("allocation") }
     const issue = (value: ReturnType<typeof fixture>) => issueLeagueProviderFromFactoryCandidate({ ...value, host: providerHost(), cell, start, allocationRoot: start.allocationRoot })
     const issuedBottom = issue(bottom), issuedTop = issue(top)
+    expect(issuedBottom.producerBuildRoot).toBe(bottom.candidate.proposal.build.buildRoot)
+    expect(issuedBottom.identity.executableRoot).not.toBe(issuedBottom.producerBuildRoot)
+    expect(() => issueLeagueProviderFromFactoryCandidate({ ...bottom, host: { createFactorySupervisedRuntime(input) { const provider = providerHost().createFactorySupervisedRuntime(input); return { ...provider, identity: { ...provider.identity, executableRoot: bottom.candidate.proposal.build.buildRoot } } } }, cell, start, allocationRoot: start.allocationRoot })).toThrow("PROVIDER_IDENTITY")
     const result = await runLeagueCell({ repository: leagueRepository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match: { matchId: "safe-fixture", seed: "safe-seed", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, initialInitiativePlayerId: "bottom", bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }, runCanonicalLabMatch: async () => ({ kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } }) as never })
     expect(result).toMatchObject({ disposition: "success", processValidity: "process_valid", cellRoot: cell.root })
   })
