@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
 import { createLeagueMixture } from "./contracts.js"
-import { deriveLeaguePortfolio, selectRobustPure } from "./selection.js"
+import { deriveLeaguePortfolio, selectRobustPure, type RobustPureGateId } from "./selection.js"
 
 const root = (label: string): LabRoot => labRoot("selection-test-root-v1", { label })
 const candidate = (label: string, overrides: Record<string, unknown> = {}) => ({
@@ -25,10 +25,10 @@ const candidate = (label: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 const mixture = () => createLeagueMixture({ solverOutputRoot: root("solver"), weightRoot: root("weights"), snapshotRoot: root("snapshot") })
-const gates = (failed: readonly string[] = []) => [
+const gates = (failed: readonly RobustPureGateId[] = []) => ([
   "distinct_finalist_count", "consecutive_response_count", "response_set_score", "independent_probe_set_score", "fresh_red_team_set_score",
   "maximin_oracle_relative_pure", "mixture_performance", "strongest_pure_targets", "accepted_counters", "invariance", "legality", "privacy", "runtime", "diversity",
-].map((gateId) => ({ gateId, status: failed.includes(gateId) ? "failed" as const : "passed" as const, proofRoot: root(`gate:${gateId}`) }))
+] as const).map((gateId) => ({ gateId, status: failed.includes(gateId) ? "failed" as const : "passed" as const, proofRoot: root(`gate:${gateId}`) }))
 
 describe("receipt-derived portfolio and robust-pure selection", () => {
   it("keeps a diagnostic mixture separate and rejects cosmetic, correlated, incomplete, and cloned diversity evidence", () => {
@@ -42,7 +42,7 @@ describe("receipt-derived portfolio and robust-pure selection", () => {
     ] })
     expect(outcome.portfolio.mixtureRoot).toBe(diagnostic.root)
     expect(outcome.portfolio.candidateAdmissionRoots).toEqual([root("candidate:a")])
-    expect(outcome.rejections.map((entry) => entry.reason)).toEqual(["structural_family_duplicate", "correlated_candidate", "missing_behavioral_evidence", "clone_decision_incomplete"])
+    expect(outcome.rejections.map((entry) => entry.reason).sort()).toEqual(["clone_decision_incomplete", "correlated_candidate", "missing_behavioral_evidence", "structural_family_duplicate"])
     expect(JSON.stringify(outcome)).not.toContain("sourceHash")
   })
 
