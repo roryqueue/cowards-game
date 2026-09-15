@@ -179,8 +179,15 @@ export class LeagueConnectedSession {
   async execute(cell: LeagueCell, bottom: LeagueCandidateInput, top: LeagueCandidateInput, seed: string, options: { baseCell?: LeagueCell; order?: "forward" | "reverse"; transform?: LeagueProbeFamily; arenaAlias?: boolean } = {}) {
     if (this.cells.length + this.responseMatchCharges >= this.allocation.opportunities.matches || Date.now() - this.startTime >= this.allocation.operations.wallClockMilliseconds) return fail("EXECUTION_BUDGET")
     const startValue = { cellRoot: cell.root, allocationRoot: this.allocation.root }, start = { ...startValue, root: labRoot("league-cell-start-v1", startValue) }
+    const startRecordValue = { start, cell, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }
+    if (this.budget) {
+      // Check the journal pair AND its graph publication before making a
+      // durable charge. Chunk envelopes/descriptor retain the existing cap.
+      const graphBytes = encode(startRecordValue).length, chunks = Math.ceil(graphBytes / 131072)
+      this.budget.checkCapacity(encode(start).length + graphBytes + (chunks + 2) * 262144, 2 * chunks + 3)
+    }
     recordLeagueCellStart(this.input.repository, start)
-    const startRecord = this.graph.append("cell-start", { start, cell, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options })
+    const startRecord = this.graph.append("cell-start", startRecordValue)
     const runtimeRecords: LabRoot[] = [], opened: FactorySupervisionProvider[] = []
     const condition = conditionFor(options.baseCell ?? cell, seed), arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.semanticGeometryHash === cell.semanticGeometryHash && arena.status === "active") ?? fail("ARENA")
     const matchBase = { matchId: `league-${start.root.slice(7, 31)}`, seed: condition.baseSeed, arenaVariant: options.arenaAlias ? { ...arena, id: `alias-${arena.id}`, name: `alias-${arena.name}` } : arena, bottomPlayerId: leaguePlayerId(bottom.admission.candidate.root), topPlayerId: leaguePlayerId(top.admission.candidate.root), initialInitiativePlayerId: condition.initialInitiativePlayerId }

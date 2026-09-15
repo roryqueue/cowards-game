@@ -41,6 +41,18 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
 } }
 
 describe("complete private league command", () => {
+  it("preflights the journal-start and graph-start boundary before any provider work", async () => {
+    const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
+    // Marker + run-start consume four records, leaving exactly two ordinary
+    // records: enough for a journal pair, but not its three-record graph node.
+    const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, operations: { ...base.operations, terminalReserveRecords: 24, maxArtifactRecords: 30, wallClockMilliseconds: 60000 } })
+    let providers = 0
+    const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture: { candidates, host: { createFactorySupervisedRuntime() { providers++; throw new Error("no dispatch capacity") } }, run: async () => { throw new Error("no execution capacity") } } })
+    expect(providers).toBe(0)
+    expect(result.processValidity).toBe("process_invalid")
+    expect(verifyRetainedSeriousLeague({ repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates })).toMatchObject({ issued: false, processValidity: "process_invalid" })
+    expect(readdirSync(repository.directory).filter((name) => name.endsWith(".started.json"))).toHaveLength(0)
+  }, 60000)
   it("reopens charged player and system failures with no fabricated payoff and rejects tampered failure evidence", async () => {
     for (const classification of ["player_violation", "system_failure"] as const) {
       const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
@@ -132,7 +144,8 @@ describe("complete private league command", () => {
       publishLeagueCellTerminal(repository, start, createLeagueCellTerminal({ cellRoot, disposition: "success", processValidity: "process_valid", evidenceRoot: r("evidence"), projection }))
       const factoryStart = createFactoryAttemptStart({ taskRoot: r(ordinal), budgetRoot: allocation.root, candidateRoot: r("candidate"), authoringMechanism: "automated-oracle", inputRoot: r("input"), resourceAccountingRoot: r("resources"), retryParentRoot: null })
       recordFactoryAttemptStart(factory, factoryStart)
-      publishFactoryAttemptTerminal(factory, factoryStart, createFactoryAttemptTerminal({ startRoot: factoryStart.root, disposition: "accepted", outputRoot: r("output"), validationRoot: r("validation"), duplicateEvidenceRoot: r("duplicate"), finalEvidenceRoot: r("final") }))
+      const disposition = (["accepted", "rejected", "duplicate", "legal_but_weak", "unresolved"] as const)[ordinal % 5]!
+      publishFactoryAttemptTerminal(factory, factoryStart, createFactoryAttemptTerminal({ startRoot: factoryStart.root, disposition, outputRoot: r("output"), validationRoot: r("validation"), duplicateEvidenceRoot: r("duplicate"), finalEvidenceRoot: r("final") }))
     }
     expect(budget.usage).toMatchObject({ workRecords: 160, terminalBytes: 0, terminalRecords: 0, exhausted: false })
     const pendingBody = { cellRoot: r("pending"), allocationRoot: allocation.root }, pending = { ...pendingBody, root: labRoot("league-cell-start-v1", pendingBody) }
