@@ -1,7 +1,7 @@
 ---
 phase: 264
 plan: "08"
-status: workloads_running
+status: completed_workloads_assessment_correction
 source_commit: f2f1486428e6e237e5a9ed5c01c2ac7fbf8ea755
 privacy: private_offline
 independence: pending
@@ -17,7 +17,7 @@ The operator's “yes” resumed at most two unused authoring slots without rese
 - Actual authoring:37,263ms;7,405input +1,622output =9,027tokens, zero cached input. Prior known9,767tokens plus50,000reserved unavailable tokens remain charged:68,794accounted cumulatively. Process cleanup completed via SIGTERM.
 - Three real base mechanisms and nine prescribed calibration-only controls materialized. Teacher search ran once:70nodes, depth3, three alternatives, within128nodes/depth3. One distillation and one tactical emission. No human/external submission or effort.
 - Exactly48workloads were prepared:12sources × two fixed geometry/side blocks × two initiatives, one Phase, same fixed-mechanics opponent and seed. The unchanged256invocation/120,000ms/1s-method ceilings and90-minute workload window apply.
-- Reviewed code stayed unchanged during preparation and execution. The fresh composition recheck is in264-CLIENT-ECHO-REVIEW.md. Source-only regression remains77/77 tests plus strict types, affected builds and1,292boundary files; it is not empirical evidence.
+- Reviewed code stayed unchanged during preparation and execution. The fresh composition recheck is in264-CLIENT-ECHO-REVIEW.md. The completed source-only regression passed231/231 tests across30files, strict types, all four private-package builds and1,292boundary files; it is not empirical evidence.
 
 ## Retained private roots
 
@@ -41,7 +41,13 @@ Private content-addressed store: `.strategy-lab/factory-264-fresh-20260914-appro
 
 ## Current empirical status
 
-Workloads are running. Do not infer completion, a frozen threshold, independence, or a competitive result from preparation or individual retained terminals. Final assessment, byte-root reopening and every-cell read-only replay/board inspection follow the bounded run. Never resume the runner blindly after an interruption; charged and uncertain starts retain their existing failure/accounting semantics.
+All48supervised workloads completed, with24pairs and48candidate publications retained. All workload terminals remain their original `unresolved` (written before pairing); there were zero pairing failures, system failures or player violations. All owned workload containers closed. Authoring/materialization/workloads must not be rerun.
+
+The original final assessor then threw `LAB_CANONICAL_VALUE`: comparing the merged positive-control observation maps exceeded the262,144-byte canonical-manifest envelope. This is a post-gameplay software error, not an empirical independence verdict. Immutable failure/inventory artifact `sha256:0ac92d697b9f79a5b639a0abc786ba2ddb2697ce08e58f0aa1726d5c66e8d0e2` preserves all input roots, absent assessment/threshold/readiness and the original failure. Ledger root is `sha256:bf42aef97fabcb571d46a1612692e2d49a3147ae8f8943f1dabf425574b9f575`.
+
+Read-only inspection reopened1,768artifacts/164,389,603bytes and all48receipts, transition hashes, Chronicle reconstruction, final states and board bounds. Every initial board had16ACTIVE Soldiers at the canonical edge positions. Zero violations. Inspection artifact: `sha256:2f40cb879203aa5fb6632033d6d373f769b214ec1b90fb5abd133400b0e0b3be`. No browser validation is applicable to this private, no-UI path.
+
+Same-data reader correction is independently clean at `33b1bdc646cf5e929fe2bbd2b1a7d7bad5db5f75`, current implementation `sha256:c6417231bcff712918627e973d79354b2e6e518b0c088eb396c02f24736b5d38`. It replaces only large-map equality and creates separately rooted v2 derived assessments bound to the unchanged historical execution snapshot. The current full snapshot differs only in five reviewed reader files; observations, metrics, thresholds, generators, gameplay and workload inputs are unchanged. New pure/injected tests cover exact oversized-map comparison, old-source/current-reader linkage, stale/tampered rejection, strict fresh-run guard, and v2 read-only reopening. See264-ASSESSMENT-CORRECTION-REVIEW.md. Corrected empirical assessment/reopening are next; no extra model attempt, teacher search, Match, allocation or threshold change is authorized or needed by this repair.
 
 The design deliberately confounds arena and side and uses a fixed opponent for only one Phase. It is a development instrument, not an arena/side causal comparison or serious-league strength result. No holdout opening, formation materialization, public/counted/production action, rules change or downstream phase authority follows here.
 

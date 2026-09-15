@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 status: executing
-stopped_at: Phase264 Plan08 Task4 supervised48workload run in progress; first fresh Sol attempt valid; do not rerun or reset charged allocation
-last_updated: "2026-09-14T23:06:00Z"
+stopped_at: Phase264 Plan08 Task4 all48workloads retained; reviewed same-data assessor correction ready; no new execution
+last_updated: "2026-09-15T00:51:00Z"
 last_activity: 2026-09-14
-last_activity_desc: Valid cumulative author attempt3 used9027tokens;12sources prepared, one70node teacher search,48workload run active; assessment pending
+last_activity_desc: All48workloads and24pairs complete; all byte roots and board/replay checks pass; corrected final assessment pending
 progress:
   total_phases: 9
   completed_phases: 2
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current same-data correction:** All48workloads completed with24pairs/48publications, zero pairing/runtime failures, and closed containers. Original assessor failed on oversized map equality after gameplay; failure `sha256:0ac92d697b9f79a5b639a0abc786ba2ddb2697ce08e58f0aa1726d5c66e8d0e2` remains immutable. All1,768artifacts/164,389,603bytes and48board/replay chains reopened with zero violations, inspection `sha256:2f40cb879203aa5fb6632033d6d373f769b214ec1b90fb5abd133400b0e0b3be`. Narrow data-only correction33b1bdc6 is independently clean and binds old sourcef2f14864 to current reviewed reader without changing execution, observations, metrics or thresholds. Continue `/private/tmp/cg-264-task04-approved-Un1gVC/reassess-retained.mts` preparation/assessment/verification only. Do not rerun dispatch author/materialize/run. Current source regression231tests plus correction tests/types/boundary pass. Independence/Phase265 remain gated until actual assessment. All following snapshots are historical.
 
 **Live Task4 run:** First approved fresh author A-01 is valid:37,263ms/9,027tokens, exact Sol, cleanup complete. This is cumulative attempt3; authoring stopped on first valid, preserving both earlier failures. All12sources materialized, teacher search70nodes/depth3/3alternatives within128nodes, and the48workload runner is active. Store `.strategy-lab/factory-264-fresh-20260914-approved-two`, control `/private/tmp/cg-264-task04-approved-Un1gVC`, main terminal session39246. Do not rerun author/materialize/run commands or reset charged capacity after interruption. Assess and reopen the retained result once the current process completes; no threshold, independence, or Phase265 eligibility is yet claimed. See264-FRESH-CALIBRATION-OUTCOME.md for exact roots and accounting. All following snapshots are historical.
 
