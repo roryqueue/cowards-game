@@ -10,11 +10,10 @@ import {
   LeagueSolverOutputSchema,
   type LeagueReportDescriptor,
 } from "./contracts.js"
-import { publishLeagueArtifact, readLeagueArtifact, type LeagueRepository, type ReopenedLeagueEvidence } from "./repository.js"
+import { publishLeagueComposedArtifact, readLeagueComposedArtifact, type LeagueRepository, type ReopenedLeagueEvidence } from "./repository.js"
 import { requireIssuedRobustPureDisposition } from "./selection.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
-const CAP = 262144
 const fail = (code: string): never => { throw new TypeError(`LEAGUE_REPORT_${code}`) }
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
 const exact = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => exactLabKeys(value, keys)
@@ -91,8 +90,8 @@ export const publishLeagueReport = (input: {
     projection,
   }
   const encoded = admitCanonicalJsonValue(report, { profile: "canonical-manifest" })
-  if (!encoded.ok || encoded.canonicalByteLength < 1 || encoded.canonicalByteLength > CAP) return fail("REPORT_BYTES")
-  const reportRoot = publishLeagueArtifact(input.repository, encoded.canonicalBytes)
+  if (!encoded.ok || encoded.canonicalByteLength < 1) return fail("REPORT_BYTES")
+  const reportRoot = publishLeagueComposedArtifact(input.repository, encoded.canonicalBytes)
   const descriptor = createLeagueReportDescriptor({ snapshotRoot: snapshot.root, solverOutputRoot: solver.root, redTeamRoot: input.redTeamRoot, portfolioRoot: portfolio.root, finalistDispositionRoot: finalist.root, reportChunkRoots: [reportRoot] })
   return freezeLabValue({ descriptor, reportRoot }) as PublishedLeagueReport
 }
@@ -110,7 +109,7 @@ export const reopenLeagueReport = (input: { readonly repository: LeagueRepositor
   if (descriptor.reportChunkRoots.length > input.maxRecords) return fail("READ_LIMIT")
   let bytes = 0
   const chunks = descriptor.reportChunkRoots.map((root) => {
-    const raw = readLeagueArtifact(input.repository, root)
+    const raw = readLeagueComposedArtifact(input.repository, root, { maxBytes: input.maxBytes - bytes, maxRecords: input.maxRecords })
     bytes += raw.byteLength
     if (bytes > input.maxBytes) return fail("READ_LIMIT")
     const parsed = admitCanonicalJsonBytes(raw, { profile: "canonical-manifest", operation: "require-canonical" })

@@ -4,6 +4,7 @@ import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { createLeagueCellTerminal, LeagueCellTerminalSchema, type LeagueCellTerminal } from "./contracts.js"
+import { createLeagueByteStream, readLeagueByteStream, LEAGUE_MAX_COMPOSED_BYTES, type LeagueByteStreamDescriptor } from "./matrix.js"
 
 const CAP = 262144
 const ROOT = /^sha256:[0-9a-f]{64}$/u
@@ -100,6 +101,20 @@ export const readLeagueArtifact = (repository: LeagueRepository, root: LabRoot):
   const bytes = boundedRead(join(safeDirectory(repository.directory), artifactName(root)))
   if (bytesRoot(bytes) !== root) return fail("ARTIFACT_DIGEST")
   return new Uint8Array(bytes)
+}
+export const publishLeagueComposedArtifact = (repository: LeagueRepository, bytes: Uint8Array): LabRoot => {
+  if (bytes.length <= CAP) return publishLeagueArtifact(repository, bytes)
+  const stream = createLeagueByteStream(bytes)
+  for (const chunk of stream.chunks) publishLeagueArtifact(repository, chunk)
+  return publishLeagueArtifact(repository, canonicalBytes(stream.descriptor))
+}
+export const readLeagueComposedArtifact = (repository: LeagueRepository, root: LabRoot, limits: { maxBytes: number; maxRecords: number }): Uint8Array => {
+  const raw = readLeagueArtifact(repository, root), value = parse(raw) as Partial<LeagueByteStreamDescriptor>
+  if (raw.length > limits.maxBytes || limits.maxRecords < 1) return fail("READ_LIMIT")
+  if (value.schemaVersion !== "league-bounded-byte-stream-v1") return raw
+  if (!Array.isArray(value.chunks) || value.chunks.length + 1 > limits.maxRecords || !Number.isSafeInteger(value.byteLength) || value.byteLength! < 1 || value.byteLength! > LEAGUE_MAX_COMPOSED_BYTES || value.chunks.length !== Math.ceil(value.byteLength! / CAP) || value.byteLength! + raw.length > limits.maxBytes) return fail("READ_LIMIT")
+  const chunks = value.chunks.map((chunk) => readLeagueArtifact(repository, chunk.bytesRoot))
+  return readLeagueByteStream({ descriptor: value as LeagueByteStreamDescriptor, chunks }, limits.maxBytes - raw.length)
 }
 export const recordLeagueCellStart = (repository: LeagueRepository, start: LeagueCellStart): void => {
   const charged = validateStart(start); atomic(repository, startName(charged.root), canonicalBytes(charged))

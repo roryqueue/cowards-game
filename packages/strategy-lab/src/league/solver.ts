@@ -1,5 +1,6 @@
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
+import { readLeagueByteStream, type LeagueByteStream } from "./matrix.js"
 import {
   CompletePayoffSnapshotSchema,
   createLeagueSolverManifest,
@@ -86,8 +87,9 @@ const parseSnapshot = (snapshotValue: unknown, transport: unknown): ParsedSnapsh
   if (!raw || raw.completedCellCount !== raw.expectedCellCount) return "SNAPSHOT_INCOMPLETE"
   let snapshot: Readonly<CompletePayoffSnapshot>
   try { snapshot = CompletePayoffSnapshotSchema.parse(snapshotValue) } catch { return "SNAPSHOT_INCOMPLETE" }
-  if (!bytes(transport)) return "PAYOFF_TRANSPORT_INVALID"
-  const copy = new Uint8Array(transport)
+  let copy: Uint8Array
+  try { copy = bytes(transport) ? new Uint8Array(transport) : readLeagueByteStream(transport as LeagueByteStream) }
+  catch { return "PAYOFF_TRANSPORT_INVALID" }
   const admitted = admitCanonicalJsonBytes(copy, { profile: "canonical-manifest", operation: "require-canonical" })
   if (!admitted.ok || !Array.isArray(admitted.value)) return "PAYOFF_TRANSPORT_INVALID"
   const projections = admitted.value.map(validateProjection)

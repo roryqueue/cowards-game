@@ -4,9 +4,10 @@ import {
   createSetScenarioV137,
   parseArenaCatalogV137,
   admitCanonicalJsonValue,
+  CANONICAL_JSON_V1_LIMITS,
   type ArenaCatalogV137,
 } from "@cowards/spec"
-import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
+import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import {
   CompletePayoffSnapshotSchema,
   createCompletePayoffSnapshot,
@@ -41,6 +42,50 @@ const canonicalBytes = (value: unknown): Uint8Array => {
 
 const hashBytes = (bytes: Uint8Array): LabRoot =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}` as LabRoot
+
+export interface LeagueByteStreamDescriptor {
+  readonly schemaVersion: "league-bounded-byte-stream-v1"
+  readonly root: LabRoot
+  readonly byteLength: number
+  readonly bytesRoot: LabRoot
+  readonly chunks: readonly Readonly<{ ordinal: number; bytesRoot: LabRoot; byteLength: number }>[]
+}
+export interface LeagueByteStream {
+  readonly descriptor: LeagueByteStreamDescriptor
+  readonly chunks: readonly Uint8Array[]
+}
+export const LEAGUE_MAX_COMPOSED_BYTES = CANONICAL_JSON_V1_LIMITS.rawUtf8Bytes
+
+/** The same bounded composition is used for payoff and report payloads. */
+export const createLeagueByteStream = (bytes: Uint8Array, maximumBytes = LEAGUE_MAX_COMPOSED_BYTES): LeagueByteStream => {
+  if (!(bytes instanceof Uint8Array) || !Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || bytes.length < 1 || bytes.length > Math.min(maximumBytes, LEAGUE_MAX_COMPOSED_BYTES)) return fail("STREAM_CAPACITY")
+  const chunks = Array.from({ length: Math.ceil(bytes.length / MAX_CHUNK_BYTES) }, (_, ordinal) => bytes.slice(ordinal * MAX_CHUNK_BYTES, (ordinal + 1) * MAX_CHUNK_BYTES))
+  const body = { schemaVersion: "league-bounded-byte-stream-v1" as const, byteLength: bytes.length, bytesRoot: hashBytes(bytes), chunks: chunks.map((chunk, ordinal) => ({ ordinal, bytesRoot: hashBytes(chunk), byteLength: chunk.length })) }
+  return { descriptor: freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) }), chunks }
+}
+export const readLeagueByteStream = (value: LeagueByteStream, maximumBytes = LEAGUE_MAX_COMPOSED_BYTES): Uint8Array => {
+  const descriptor = value?.descriptor
+  if (!descriptor || !exactLabKeys(descriptor, ["schemaVersion", "root", "byteLength", "bytesRoot", "chunks"]) || descriptor.schemaVersion !== "league-bounded-byte-stream-v1" || !Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || !Number.isSafeInteger(descriptor.byteLength) || descriptor.byteLength < 1 || descriptor.byteLength > Math.min(maximumBytes, LEAGUE_MAX_COMPOSED_BYTES) || !Array.isArray(descriptor.chunks) || !Array.isArray(value.chunks) || descriptor.chunks.length !== Math.ceil(descriptor.byteLength / MAX_CHUNK_BYTES) || value.chunks.length !== descriptor.chunks.length) return fail("STREAM_DESCRIPTOR")
+  const { root: descriptorRoot, ...body } = descriptor
+  if (descriptorRoot !== labRoot("league-bounded-byte-stream-v1", body)) return fail("STREAM_ROOT")
+  const bytes = new Uint8Array(descriptor.byteLength)
+  for (const [ordinal, chunk] of value.chunks.entries()) {
+    const declared = descriptor.chunks[ordinal]!, expectedLength = Math.min(MAX_CHUNK_BYTES, bytes.length - ordinal * MAX_CHUNK_BYTES)
+    if (!exactLabKeys(declared, ["ordinal", "bytesRoot", "byteLength"]) || !(chunk instanceof Uint8Array) || chunk.length !== expectedLength || declared.ordinal !== ordinal || declared.byteLength !== expectedLength || declared.bytesRoot !== hashBytes(chunk)) return fail("STREAM_CHUNK")
+    bytes.set(chunk, ordinal * MAX_CHUNK_BYTES)
+  }
+  if (hashBytes(bytes) !== descriptor.bytesRoot) return fail("STREAM_BYTES_ROOT")
+  return bytes
+}
+
+/** Fixed-width projection roots make the remaining canonical ceiling knowable
+ * before any durable charge. The root envelope is included, not just its array. */
+export const assertLeaguePayoffCapacity = (maximumPopulation: number, maximumBytes = LEAGUE_MAX_COMPOSED_BYTES): void => {
+  const placeholder = `sha256:${"0".repeat(64)}`, projection = { entrantCandidateRoot: placeholder, opponentCandidateRoot: placeholder, projectionRoot: placeholder, halfPoints: 1 }
+  const count = 4 * maximumPopulation * (maximumPopulation - 1), recordBytes = canonicalBytes(projection).length + 1
+  const envelopeBytes = canonicalBytes(["cowards:strategy-lab:v1", "league-solver-payoffs-v1", []]).length
+  if (!Number.isSafeInteger(maximumPopulation) || maximumPopulation < 2 || !Number.isSafeInteger(count) || count > CANONICAL_JSON_V1_LIMITS.arrayEntries || 5 * count + 4 > CANONICAL_JSON_V1_LIMITS.nodes || recordBytes * count + envelopeBytes > Math.min(maximumBytes, LEAGUE_MAX_COMPOSED_BYTES)) return fail("DECLARED_PAYOFF_CAPACITY")
+}
 
 /** A bounded, content-addressed sequence; descriptors never retain raw cells. */
 export interface LeagueCellStreamChunkDescriptor {
@@ -277,6 +322,7 @@ export type LeagueSnapshotAdmission =
       readonly kind: "complete"
       readonly snapshot: Readonly<CompletePayoffSnapshot>
       readonly solverPayoffBytes: Uint8Array
+      readonly solverPayoffTransport: LeagueByteStream
       readonly halfPoints: readonly (0 | 1 | 2)[]
       readonly cellStream: Readonly<LeagueCellStreamDescriptor>
       readonly processEvidence: readonly LeagueCellTerminal[]
@@ -406,6 +452,7 @@ export const admitCompletePayoffSnapshot = (
     kind: "complete" as const,
     snapshot: CompletePayoffSnapshotSchema.parse(snapshot),
     solverPayoffBytes,
+    solverPayoffTransport: createLeagueByteStream(solverPayoffBytes),
     halfPoints: projections.map((projection) => projection.halfPoints),
     cellStream,
     processEvidence: ordered.map((entry) => terminals.get(entry.cell.root)!),

@@ -7,8 +7,8 @@ import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATAL
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocation } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
-import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository } from "../packages/strategy-lab/src/league/repository.js"
-import { enumerateLeagueCells, admitCompletePayoffSnapshot, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
+import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository } from "../packages/strategy-lab/src/league/repository.js"
+import { enumerateLeagueCells, admitCompletePayoffSnapshot, assertLeaguePayoffCapacity, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
 import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagueCell, deriveLeagueMatchExecutionTerminal, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { solveLeagueSnapshot } from "../packages/strategy-lab/src/league/solver.js"
 import { declareLeagueRound, advanceLeagueRound, type DeclaredLeagueRound, type LeagueResponseRow } from "../packages/strategy-lab/src/league/psro.js"
@@ -225,9 +225,10 @@ export class LeagueConnectedSession {
     for (const entry of matrix.cells) results.push(await this.execute(entry.cell, byRoot.get(entry.bottomCandidateRoot)!, byRoot.get(entry.topCandidateRoot)!, seed))
     const admitted = admitCompletePayoffSnapshot(matrix, results.map((result) => result.terminal))
     if (admitted.kind !== "complete") return fail("MATRIX_INCOMPLETE")
-    const solver = solveLeagueSnapshot({ snapshot: admitted.snapshot, solverPayoffBytes: admitted.solverPayoffBytes })
+    const solver = solveLeagueSnapshot({ snapshot: admitted.snapshot, solverPayoffBytes: admitted.solverPayoffTransport })
     if (solver.status !== "solved") return fail("SOLVER")
-    const recordRoot = this.graph.append("complete-matrix", { population, matrix, terminals: results.map((result) => result.terminal), snapshot: admitted.snapshot, solverPayoffBytes: new TextDecoder().decode(admitted.solverPayoffBytes), solver: { ...solver, canonicalBytes: new TextDecoder().decode(solver.canonicalBytes) } }, results.map((result) => result.recordRoot))
+    const solverPayoffArtifactRoot = publishLeagueComposedArtifact(this.input.repository, admitted.solverPayoffBytes)
+    const recordRoot = this.graph.append("complete-matrix", { schemaVersion: "league-retained-matrix-v2", population, matrix: { ...matrix, cells: results.map((result) => result.recordRoot) }, snapshot: admitted.snapshot, solverPayoffArtifactRoot, solver: { ...solver, canonicalBytes: new TextDecoder().decode(solver.canonicalBytes) } }, results.map((result) => result.recordRoot))
     return { population, matrix, admitted, solver, results, recordRoot }
   }
 }
@@ -255,7 +256,7 @@ const runRoundProbes = async (session: LeagueConnectedSession, matrix: CompleteM
         if (["source_order", "worker_shard_completion"].includes(policy.family)) {
           const reversed = arm === "right", completionOrder = reversed ? [...matrix.results].reverse() : matrix.results, replay = admitCompletePayoffSnapshot(matrix.matrix, completionOrder.map((row) => row.terminal))
           if (replay.kind !== "complete" || !same(replay.snapshot, matrix.admitted.snapshot) || !same(Array.from(replay.solverPayoffBytes), Array.from(matrix.admitted.solverPayoffBytes))) return fail("LAYOUT_MATRIX_IDENTITY")
-          const solved = solveLeagueSnapshot({ snapshot: replay.snapshot, solverPayoffBytes: replay.solverPayoffBytes, workerCount: reversed ? 3 : 1, shardOrder: reversed ? [2, 0, 1] : [0], restart: reversed ? 1 : 0 })
+          const solved = solveLeagueSnapshot({ snapshot: replay.snapshot, solverPayoffBytes: replay.solverPayoffTransport, workerCount: reversed ? 3 : 1, shardOrder: reversed ? [2, 0, 1] : [0], restart: reversed ? 1 : 0 })
           if (solved.status !== "solved" || !same(solved.output, matrix.solver.output) || !same(Array.from(solved.canonicalBytes), Array.from(matrix.solver.canonicalBytes))) return fail("LAYOUT_SOLVER_IDENTITY")
           roots.push(session.graph.append("layout-verification", { roundRoot: round.round.root, family: policy.family, arm, cellResultRoot: result.recordRoot, matrixRoot: matrix.recordRoot, completionOrder: completionOrder.map((row) => row.terminal.root), snapshotRoot: replay.snapshot.root, payoffBytesRoot: bytesRoot(replay.solverPayoffBytes), solverBytesRoot: bytesRoot(solved.canonicalBytes), workerCount: reversed ? 3 : 1, shardOrder: reversed ? [2, 0, 1] : [0], restart: reversed ? 1 : 0 }, [result.recordRoot, matrix.recordRoot]))
         }
@@ -365,6 +366,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
   const allocation = admitLeagueExecutionAllocation(input.allocation)
   if (allocation.root !== input.allocationRoot || allocation.implementationRoot !== factoryAssessmentImplementationRoot() || input.fixture && allocation.evidenceClass !== "injected_fixture" || !input.fixture && allocation.evidenceClass !== "empirical") return fail("RUN_AUTHORITY")
   if (allocation.outputDirectories.league !== input.repository.directory || allocation.outputDirectories.responseFactory !== (input.responseFactoryRepository?.directory ?? null)) return fail("OUTPUT_BINDING")
+  assertLeaguePayoffCapacity(allocation.operations.maxPopulation, allocation.operations.maxArtifactBytes)
   let candidates = [...(input.fixture?.candidates ?? readLeagueInitialCandidates(input.factoryRepository, allocation))]
   if (!same(candidates.map((candidate) => candidate.publicationRoot).sort(), allocation.initialCandidatePublicationRoots) || new Set(candidates.map((candidate) => candidate.admission.candidate.root)).size !== candidates.length) return fail("INITIAL_POPULATION")
   for (const candidate of candidates) { LeagueCandidateAdmissionSchema.parse(candidate.admission); if (readCandidateClosure(candidate.closure).candidate.root !== candidate.admission.candidate.root) return fail("INITIAL_CLOSURE") }
@@ -641,12 +643,16 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   }
   const matrices = new Map<LabRoot, CompleteMatrix>()
   for (const [recordRoot, node] of rows("complete-matrix")) {
-    const value = node.value, admissions = value.population.candidateAdmissionRoots.map((root: LabRoot) => candidateAdmissions.get(root) ?? fail("RETAINED_POPULATION")), firstCell = cellByRoot.get(value.matrix.cells[0]?.cell.root) ?? fail("RETAINED_MATRIX_CELLS")
+    const value = node.value, compact = value.schemaVersion === "league-retained-matrix-v2"
+    const references = compact ? value.matrix.cells.map((root: LabRoot) => { const record = graph.get(root); if (!record || record.kind !== "cell-result" || !node.links.includes(root)) return fail("RETAINED_MATRIX_REFERENCE"); return record.value }) : null
+    const admissions = value.population.candidateAdmissionRoots.map((root: LabRoot) => candidateAdmissions.get(root) ?? fail("RETAINED_POPULATION")), firstCell = compact ? references[0] : cellByRoot.get(value.matrix.cells[0]?.cell.root)
+    if (!firstCell) return fail("RETAINED_MATRIX_CELLS")
     const matrix = enumerateLeagueCells({ population: value.population, candidateAdmissions: admissions, tupleRoot: allocation.tupleRoot, runtimeRoot: allocation.runtimeRoot, baseSeed: firstCell.seed })
-    if (!same(matrix, value.matrix)) return fail("RETAINED_MATRIX_ENUMERATION")
+    if (compact ? !same({ ...matrix, cells: matrix.cells.map((entry) => cellByRoot.get(entry.cell.root)?.recordRoot) }, value.matrix) : !same(matrix, value.matrix)) return fail("RETAINED_MATRIX_ENUMERATION")
     const results = matrix.cells.map((row) => cellByRoot.get(row.cell.root) ?? fail("RETAINED_MATRIX_MISSING")), terminals = results.map((row) => row.terminal), admitted = admitCompletePayoffSnapshot(matrix, terminals)
-    if (admitted.kind !== "complete" || !same(terminals, value.terminals) || !same(admitted.snapshot, value.snapshot) || new TextDecoder().decode(admitted.solverPayoffBytes) !== value.solverPayoffBytes) return fail("RETAINED_MATRIX_TRANSPORT")
-    const solver = solveLeagueSnapshot({ snapshot: admitted.snapshot, solverPayoffBytes: admitted.solverPayoffBytes, workerCount: 3, shardOrder: [2, 0, 1], restart: 1 })
+    const retainedPayoffs = compact ? readLeagueComposedArtifact(input.repository, value.solverPayoffArtifactRoot, { maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords }) : new TextEncoder().encode(value.solverPayoffBytes)
+    if (admitted.kind !== "complete" || !compact && !same(terminals, value.terminals) || !same(admitted.snapshot, value.snapshot) || bytesRoot(admitted.solverPayoffBytes) !== bytesRoot(retainedPayoffs)) return fail("RETAINED_MATRIX_TRANSPORT")
+    const solver = solveLeagueSnapshot({ snapshot: admitted.snapshot, solverPayoffBytes: admitted.solverPayoffTransport, workerCount: 3, shardOrder: [2, 0, 1], restart: 1 })
     if (solver.status !== "solved" || !same({ ...solver, canonicalBytes: new TextDecoder().decode(solver.canonicalBytes) }, value.solver)) return fail("RETAINED_SOLVER")
     matrices.set(recordRoot, { population: value.population, matrix, admitted, solver, results, recordRoot })
   }
@@ -661,7 +667,7 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   for (const [, node] of rows("layout-verification")) {
     const value = node.value, matrix = matrices.get(value.matrixRoot) ?? fail("RETAINED_LAYOUT_MATRIX"), results = value.completionOrder.map((root: LabRoot) => matrix.results.find((row) => row.terminal.root === root) ?? fail("RETAINED_LAYOUT_ORDER")), replay = admitCompletePayoffSnapshot(matrix.matrix, results.map((row: CompleteMatrix["results"][number]) => row.terminal))
     if (replay.kind !== "complete") return fail("RETAINED_LAYOUT_COVERAGE")
-    const solved = solveLeagueSnapshot({ snapshot: replay.snapshot, solverPayoffBytes: replay.solverPayoffBytes, workerCount: value.workerCount, shardOrder: value.shardOrder, restart: value.restart })
+    const solved = solveLeagueSnapshot({ snapshot: replay.snapshot, solverPayoffBytes: replay.solverPayoffTransport, workerCount: value.workerCount, shardOrder: value.shardOrder, restart: value.restart })
     if (solved.status !== "solved" || value.snapshotRoot !== replay.snapshot.root || value.payoffBytesRoot !== bytesRoot(replay.solverPayoffBytes) || value.solverBytesRoot !== bytesRoot(solved.canonicalBytes) || !same(solved.output, matrix.solver.output)) return fail("RETAINED_LAYOUT_IDENTITY")
   }
   const complete = head.kind === "run-complete"

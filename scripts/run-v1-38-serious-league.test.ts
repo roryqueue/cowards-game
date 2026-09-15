@@ -235,6 +235,12 @@ describe("complete private league command", () => {
     expect(verifyRetainedSeriousLeague(verifyInput)).toMatchObject({ issued: false, processValidity: "process_valid", empiricalRequirementsComplete: false })
     expect(readdirSync(repository.directory).sort()).toEqual(names)
     expect(names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))).toEqual(bytes)
+    const retainedMatrix = [...graph.values()].find((node) => node.kind === "complete-matrix")!
+    for (const cells of [retainedMatrix.value.matrix.cells.slice(1), [...retainedMatrix.value.matrix.cells].reverse(), [...retainedMatrix.value.matrix.cells, retainedMatrix.value.matrix.cells[0]], [result.headRoot, ...retainedMatrix.value.matrix.cells.slice(1)]]) {
+      const altered = new LeagueRecordGraph(repository, allocation.operations), matrixRoot = altered.append("complete-matrix", { ...retainedMatrix.value, matrix: { ...retainedMatrix.value.matrix, cells } }, [result.headRoot, ...retainedMatrix.links])
+      const headRoot = altered.append("run-complete", graph.get(result.headRoot)!.value, [matrixRoot])
+      expect(() => verifyRetainedSeriousLeague({ ...verifyInput, headRoot })).toThrow("RETAINED_MATRIX_")
+    }
     const copiedLeague = createLeagueRepository(temporary()); cpSync(repository.directory, copiedLeague.directory, { recursive: true })
     const copiedCandidates = candidates.map((row) => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-readonly-copy-test-"))); directories.push(directory); cpSync(row.factoryRepository.directory, directory, { recursive: true }); const factoryRepository = createFactoryRepository(directory); return { ...row, factoryRepository, closure: { ...row.closure, factoryRepository } } })
     expect(verifyRetainedSeriousLeague({ ...verifyInput, repository: copiedLeague, factoryRepository: copiedCandidates[0]!.factoryRepository, fixtureCandidates: copiedCandidates })).toMatchObject({ issued: false, processValidity: "process_valid" })
@@ -251,5 +257,10 @@ describe("complete private league command", () => {
     expect(readdirSync(repository.directory)).toEqual([])
     expect(await seriousLeagueMain(["--help"])).toContain("verify-retained is read-only")
     await expect(seriousLeagueMain(["run", "--provider", "caller-provider"])).rejects.toThrow("ARGUMENTS")
+  })
+  it("rejects unrepresentable declared population before any durable charge", async () => {
+    const repository = createLeagueRepository(temporary()), base = allocationFixture(), allocation = createLeagueExecutionAllocation({ ...base, implementationRoot: factoryAssessmentImplementationRoot(), outputDirectories: { league: repository.directory, responseFactory: null }, operations: { ...base.operations, maxPopulation: 84 }, opportunities: { ...base.opportunities, matches: 1000000 } })
+    await expect(runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: { directory: "/never-opened" } as never, responseFactoryRepository: null, fixture: { candidates: [], host, run: async () => { throw new Error("must not run") } } })).rejects.toThrow("DECLARED_PAYOFF_CAPACITY")
+    expect(readdirSync(repository.directory)).toEqual([])
   })
 })

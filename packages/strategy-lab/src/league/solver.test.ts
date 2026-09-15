@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
 import { createCompletePayoffSnapshot } from "./contracts.js"
 import { runExactRestrictedGameCandidate, runLeagueSolverSpike, solveLeagueSnapshot } from "./solver.js"
+import { createLeagueByteStream, readLeagueByteStream, assertLeaguePayoffCapacity } from "./matrix.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 
@@ -68,6 +69,18 @@ const asymmetricTwelveSnapshot = () => {
 }
 
 describe("frozen empirical-game solver", () => {
+  it.each([16, 83])("solves allocated multi-artifact transport at population %s and rejects chunk faults", (population) => {
+    assertLeaguePayoffCapacity(population)
+    const value = snapshotFromMatrix(Array.from({ length: population }, () => Array(population).fill(0))), transport = createLeagueByteStream(value.transport)
+    expect(value.transport.byteLength).toBeGreaterThan(262144)
+    expect(transport.chunks.every((chunk) => chunk.length <= 262144)).toBe(true)
+    expect(readLeagueByteStream(transport)).toEqual(value.transport)
+    expect(solveLeagueSnapshot({ snapshot: value.snapshot, solverPayoffBytes: transport })).toMatchObject({ status: "solved", securityResidual: { numerator: "0", denominator: "1" } })
+    const altered = transport.chunks.map((chunk) => new Uint8Array(chunk)); altered[0]![0] = altered[0]![0]! ^ 1
+    for (const chunks of [transport.chunks.slice(1), [...transport.chunks, transport.chunks[0]!], [...transport.chunks].reverse(), altered]) expect(solveLeagueSnapshot({ snapshot: value.snapshot, solverPayoffBytes: { ...transport, chunks } })).toMatchObject({ status: "failed", failureCode: "PAYOFF_TRANSPORT_INVALID" })
+    expect(() => readLeagueByteStream(transport, value.transport.length - 1)).toThrow("STREAM_DESCRIPTOR")
+    expect(() => assertLeaguePayoffCapacity(84)).toThrow("DECLARED_PAYOFF_CAPACITY")
+  }, 120000)
   it("selects only a decisive exact synthetic candidate with committed golden and boundary evidence", () => {
     const spike = runLeagueSolverSpike()
     expect(spike.status).toBe("selected")

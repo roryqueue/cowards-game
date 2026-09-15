@@ -7,7 +7,7 @@ import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFro
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
 import { createLeagueCandidateAdmission, createLeagueCellTerminal, createLeaguePopulation, projectCanonicalKernelOutcomeToEntrantHalfPoints } from "./contracts.js"
 import { admitCompletePayoffSnapshot, enumerateLeagueCells, leaguePlayerId } from "./matrix.js"
-import { createLeagueRepository, publishLeagueCellTerminal, recordLeagueCellStart, reopenLeagueEvidence } from "./repository.js"
+import { createLeagueRepository, publishLeagueCellTerminal, recordLeagueCellStart, reopenLeagueEvidence, publishLeagueComposedArtifact, readLeagueComposedArtifact } from "./repository.js"
 import { solveLeagueSnapshot } from "./solver.js"
 
 const directories: string[] = []
@@ -28,6 +28,19 @@ const successTerminal = (entry: ReturnType<typeof enumerateLeagueCells>["cells"]
 }
 
 describe("injected league integration boundary", () => {
+  it("joins sixteen entrants through complete matrix transport, bounded retention and read-only reconstruction", () => {
+    const candidates = Array.from({ length: 16 }, (_, ordinal) => admission(ordinal)), population = createLeaguePopulation({ candidateAdmissionRoots: candidates.map((candidate) => candidate.root).sort(), studyPolicyRoot: root("4"), measurementPolicyRoot: root("5") })
+    const matrix = enumerateLeagueCells({ population, candidateAdmissions: candidates, tupleRoot: candidates[0]!.tupleRoot, runtimeRoot: candidates[0]!.runtimeRoot, baseSeed: "sixteen-entrant-injected" }), terminals = matrix.cells.map(successTerminal), complete = admitCompletePayoffSnapshot(matrix, terminals)
+    expect(matrix.cells).toHaveLength(960)
+    if (complete.kind !== "complete") throw new Error("matrix blocked")
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-integration-sixteen-"))); directories.push(directory)
+    const repository = createLeagueRepository(directory), artifactRoot = publishLeagueComposedArtifact(repository, complete.solverPayoffBytes)
+    expect(readLeagueComposedArtifact(repository, artifactRoot, { maxBytes: 1000000, maxRecords: 10 })).toEqual(complete.solverPayoffBytes)
+    expect(solveLeagueSnapshot({ snapshot: complete.snapshot, solverPayoffBytes: complete.solverPayoffTransport })).toMatchObject({ status: "solved" })
+    const reopened = admitCompletePayoffSnapshot(matrix, [...terminals].reverse())
+    expect(reopened.kind === "complete" && reopened.snapshot.root).toBe(complete.snapshot.root)
+    expect(() => readLeagueComposedArtifact(repository, artifactRoot, { maxBytes: 262144, maxRecords: 10 })).toThrow("READ_LIMIT")
+  }, 120000)
   it("joins an eight-cell matrix to the actual solver, durable terminals, and issued-false nonempty reopening", () => {
     const candidates = [admission(3), admission(4)]
     const matrix = enumerateLeagueCells({ population: createLeaguePopulation({ candidateAdmissionRoots: candidates.map((candidate) => candidate.root).sort(), studyPolicyRoot: root("4"), measurementPolicyRoot: root("5") }), candidateAdmissions: candidates, tupleRoot: candidates[0]!.tupleRoot, runtimeRoot: candidates[0]!.runtimeRoot, baseSeed: "phase-265-injected-integration" })

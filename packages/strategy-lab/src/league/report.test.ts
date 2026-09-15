@@ -4,7 +4,9 @@ import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
 import { createCompletePayoffSnapshot, createLeagueMixture, createLeaguePortfolio, createLeagueSolverManifest, createLeagueSolverOutput } from "./contracts.js"
-import { createLeagueRepository } from "./repository.js"
+import { createLeagueRepository, readLeagueArtifact, publishLeagueArtifact } from "./repository.js"
+import { admitCanonicalJsonValue } from "@cowards/spec"
+import { createLeagueReportDescriptor } from "./contracts.js"
 import { publishLeagueReport, reopenLeagueReport } from "./report.js"
 import { selectRobustPure } from "./selection.js"
 
@@ -37,6 +39,20 @@ const reportInput = (repo = repository(), unsafe: Record<string, unknown> = {}) 
 }
 
 describe("private complete league reports", () => {
+  it("reopens composed reports beyond one artifact and rejects reordered or missing fragments", () => {
+    const input = reportInput(undefined, { conditions: Array.from({ length: 5000 }, (_, ordinal) => root(`condition-${ordinal}`)) }), published = publishLeagueReport(input)
+    const descriptor = JSON.parse(new TextDecoder().decode(readLeagueArtifact(input.repository, published.reportRoot)))
+    expect(descriptor.schemaVersion).toBe("league-bounded-byte-stream-v1")
+    expect(descriptor.chunks.length).toBeGreaterThan(1)
+    const reopened = reopenLeagueReport({ repository: input.repository, descriptor: published.descriptor, maxBytes: 1000000, maxRecords: 10 })
+    expect(reopened.chunks[0]!.report.projection).toEqual(input.projection)
+    for (const chunks of [descriptor.chunks.slice(1), [...descriptor.chunks].reverse(), [...descriptor.chunks, descriptor.chunks[0]]]) {
+      const { root: _root, ...body } = descriptor, changed = { ...body, chunks }, encoded = admitCanonicalJsonValue({ ...changed, root: labRoot("league-bounded-byte-stream-v1", changed) }, { profile: "canonical-manifest" })
+      if (!encoded.ok) throw new Error("test descriptor")
+      const artifactRoot = publishLeagueArtifact(input.repository, encoded.canonicalBytes), retained = createLeagueReportDescriptor({ ...published.descriptor, reportChunkRoots: [artifactRoot] })
+      expect(() => reopenLeagueReport({ repository: input.repository, descriptor: retained, maxBytes: 1000000, maxRecords: 10 })).toThrow()
+    }
+  })
   it("publishes one rooted complete private projection and reopens bounded immutable chunks as data only", () => {
     const input = reportInput(), published = publishLeagueReport(input)
     expect(published.descriptor.snapshotRoot).toBe(input.snapshot.root)
