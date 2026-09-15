@@ -2,13 +2,13 @@
 phase: 265
 plan: "07"
 task: 1
-status: source-proof-repaired-awaiting-final-gate-and-independent-review
+status: source-gate-passed-awaiting-independent-review
 empirical_authority: false
 ---
 
 # Phase 265 Plan 07 Task 1 source-proof handoff
 
-Task 1 source work is repaired and awaiting its final unchanged-byte gate. This is not a complete Plan 07 summary: Task 2
+Task 1 source work passes its final unchanged-byte gate and awaits independent review. This is not a complete Plan 07 summary: Task 2
 remains the main-owned human allocation/participant decision, and Task 3 remains
 the conditional, main-owned real execution and retained verification branch.
 
@@ -33,8 +33,8 @@ the conditional, main-owned real execution and retained verification branch.
   resolved AST/import graph for league/barrel/CLI/manifests, restricted historic
   readers, and public/deployment roots. Its tests deny multi-hop innocent
   barrels, dynamic loaders, manifest aliases, public/deployment roots, direct
-  source execution, and forbidden report payload fields while allowing only the
-  reviewed factory/kernel bridge.
+  source execution while allowing the reviewed factory/kernel bridge. Sensitive
+  report-field rejection is tested separately in the actual report reducer.
 - Main rejected the attempted local-method loader exception after three new
   regressions showed that unknown property loaders and `module.require` could
   be suppressed. The CLI's local budget method is now named `checkCapacity`;
@@ -59,8 +59,15 @@ and is expressly not claimed as a pass. The repaired focused five-suite run pass
 83 tests in 10.09 seconds; package and strict named-script type checks pass;
 and `check-v1-38-lab-boundaries.ts`, `check-v1-38-factory-boundaries.ts`, and
 `check-v1-38-serious-league-boundaries.ts` each pass over 1,329 source files.
-Main must run the exact fresh 29-suite CI command plus service-boundary check
-against the unchanged repaired bytes before independent review accepts Task 1.
+Main subsequently ran the exact final 29-suite CI gate at source
+`9394176caed71cfef4f9ceb4a3a81456baf356c7`, preserving the direct resumable
+terminal result: **29/29 suites, 250/250 tests, 581.87 seconds**, followed by
+the package build, strict named-script types, serious/lab/factory checks
+(1,329 files each, zero violations), and service-boundary check (zero strict,
+zero ownership, 19 pre-existing report-only entries). The complete command
+exited zero. No source byte changed while that gate ran. Independent review,
+security/evaluation/validation and the actual read-only historical import check
+remain; this is not empirical Phase 265 completion.
 The CI step has a 30-minute source-only timeout to accommodate the measured
 roughly ten-minute test run plus types/graph checks on different runner hardware;
 this does not change any empirical, guest, Match, or authoring allocation.
@@ -87,6 +94,9 @@ check before presenting the one late allocation decision.
 - `b283b886` — shared lab-graph retained-budget loader correction.
 - `c508267d` — connected matrix/solver/persistence/reopen proof and transitive
   graph/fixture corrections.
+- `3df7c5b2` — main RED regressions exposing unresolved loader suppression.
+- `9394176c` — restored conservative loader policy, local budget-method rename,
+  synchronized final gate and source-only CI timeout.
 
 No known source stub blocks Task 1. The rejected direct CLI package import was
 reverted because it violates `@cowards/strategy-lab`'s `rootDir`; the final

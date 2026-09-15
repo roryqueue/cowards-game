@@ -943,7 +943,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
   4. Structural and behavioral diversity gates yield a diverse pure portfolio kept separate from the diagnostic mixture, and a precommitted rule either selects a deployable robust pure finalist from mixture, pure, counter, probe, invariance, legality, privacy, and runtime evidence or records `no robust pure finalist found`.
   5. Provisional leaders receive the full frozen automated, model, human, and external development-red-team budget; successful counters enter the declared response loop, failed attacks remain charged evidence, and no leader may depend materially on side, initiative, duplicate arenas, opaque identities, source or Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-**Plans:** 6/7 source-complete; the connected private command, all-channel charging, nine probes, native authoring and three-arm response loop now join the contracts, complete matrices, retention/runtime, solver and evidence-backed selection/report. The frozen-source integration gate passes 122 tests across 16 suites plus package build and strict affected script types. All seven plans are independently checked, with all 9 requirements and 21 decisions covered. Plan 07 Task 1 fixtures/CI/boundary proof and independent source review/validation precede the single late live-allocation/participant checkpoint; actual phase completion requires the conditional real run and retained verification, not synthetic fixtures.
+**Plans:** 6/7 complete, with Plan 07 Task 1 source gate now passing 250 tests across 29 suites, package/strict script types, three private graph checks and service boundaries. The connected private command, all-channel charging, nine probes, native authoring, three-arm response loop and concrete retained-result proof are implemented. Independent code review/fix, security/evaluation/validation and the actual read-only historical import check precede the single late live-allocation/participant checkpoint. Actual phase completion still requires the conditional real run and retained verification, not synthetic fixtures.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.
@@ -1054,7 +1054,7 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 8/8 | Complete — 5/5 truths,11/11 requirements,7/7 private UAT | 2026-09-14 |
-| 265. Serious Current-Rules League and Development Red Team | 6/7 | Connected private command source complete; final fixture/CI/boundary gate next | - |
+| 265. Serious Current-Rules League and Development Red Team | 6/7 | Final source gate passes 250 tests; independent reviews next | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
 | 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; awaits Phase267 | - |
