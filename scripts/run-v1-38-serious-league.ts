@@ -48,8 +48,11 @@ export class LeagueRetentionBudget {
     const terminal = value.terminal || this.terminalMode
     if (this.charged.has(value.target)) return fail("UNCERTAIN_REPUBLICATION")
     if (value.target.endsWith(".started.json")) {
-      this.checkCapacity(6 * 262144, 24, true)
       if (this.exhausted || this.terminalMode) return fail("RETENTION_DISPATCH_STOP")
+      this.checkCapacity(6 * 262144, 24, true)
+      // A start and its ordinary terminal must fit the work pool before work.
+      // Failure/cleanup headroom remains entirely separate and untouched.
+      this.checkCapacity(value.byteLength + 262144, 2, false)
     }
     this.checkCapacity(value.byteLength, 1, terminal); this.charged.add(value.target)
     if (terminal) { this.terminalBytes += value.byteLength; this.terminalRecords++ } else { this.workBytes += value.byteLength; this.workRecords++ }

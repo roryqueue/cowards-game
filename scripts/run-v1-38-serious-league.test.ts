@@ -9,11 +9,12 @@ import { allocationFixture } from "../packages/strategy-lab/src/league/allocatio
 import { importedCandidateFixture } from "../packages/strategy-lab/src/league/contracts.test.js"
 import { createLeagueExecutionAllocation } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTerminal, publishLeagueArtifact } from "../packages/strategy-lab/src/league/repository.js"
-import { createLeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
+import { createLeagueCellTerminal, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
 import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, LeagueRecordGraph, LeagueRetentionBudget, seriousLeagueMain, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
-import { createFactoryRepository, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
+import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
+import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { produceLeagueResponse } from "./lib/v1-38-league-response-runtime.js"
 import { positiveResponseFixture } from "./lib/v1-38-league-response-runtime.test.js"
 
@@ -35,6 +36,31 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
 } }
 
 describe("complete private league command", () => {
+  it("retains many successful journals in both fresh stores with the minimum emergency reserve", () => {
+    const base = allocationFixture(), allocation = createLeagueExecutionAllocation({ ...base, operations: { ...base.operations, terminalReserveBytes: 6 * 262144, terminalReserveRecords: 24 } }), budget = new LeagueRetentionBudget(allocation)
+    const repository = createLeagueRepository(temporary(), { beforePublication: budget.beforePublication }), directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retention-test-"))); directories.push(directory)
+    const factory = createFactoryRepository(directory, { beforePublication: budget.beforePublication }), r = (value: unknown) => labRoot("journal-success-test", value)
+    for (let ordinal = 0; ordinal < 40; ordinal++) {
+      const cellRoot = r(ordinal), body = { cellRoot, allocationRoot: allocation.root }, start = { ...body, root: labRoot("league-cell-start-v1", body) }
+      recordLeagueCellStart(repository, start)
+      const projectionBody = { schemaVersion: "league-payoff-projection-v1", privacy: "private_offline", cellRoot, outcomeRoot: r("outcome"), resultEventRoot: r("event"), entrantCandidateRoot: r("entrant"), conditionRoot: r("condition"), semanticGeometryHash: r("arena"), halfPoints: 1 }
+      const projection = LeaguePayoffProjectionSchema.parse({ ...projectionBody, root: labRoot("league-payoff-projection-v1", projectionBody) })
+      publishLeagueCellTerminal(repository, start, createLeagueCellTerminal({ cellRoot, disposition: "success", processValidity: "process_valid", evidenceRoot: r("evidence"), projection }))
+      const factoryStart = createFactoryAttemptStart({ taskRoot: r(ordinal), budgetRoot: allocation.root, candidateRoot: r("candidate"), authoringMechanism: "automated-oracle", inputRoot: r("input"), resourceAccountingRoot: r("resources"), retryParentRoot: null })
+      recordFactoryAttemptStart(factory, factoryStart)
+      publishFactoryAttemptTerminal(factory, factoryStart, createFactoryAttemptTerminal({ startRoot: factoryStart.root, disposition: "accepted", outputRoot: r("output"), validationRoot: r("validation"), duplicateEvidenceRoot: r("duplicate"), finalEvidenceRoot: r("final") }))
+    }
+    expect(budget.usage).toMatchObject({ workRecords: 160, terminalBytes: 0, terminalRecords: 0, exhausted: false })
+    const pendingBody = { cellRoot: r("pending"), allocationRoot: allocation.root }, pending = { ...pendingBody, root: labRoot("league-cell-start-v1", pendingBody) }
+    const factoryPending = createFactoryAttemptStart({ taskRoot: r("pending"), budgetRoot: allocation.root, candidateRoot: r("candidate"), authoringMechanism: "automated-oracle", inputRoot: r("input"), resourceAccountingRoot: r("resources"), retryParentRoot: null })
+    recordLeagueCellStart(repository, pending); recordFactoryAttemptStart(factory, factoryPending)
+    expect(() => budget.checkCapacity(allocation.operations.maxArtifactBytes, 1)).toThrow("RETENTION_BUDGET")
+    const failure = new LeagueRecordGraph(repository, allocation.operations, budget).append("run-failure", { processValidity: "process_invalid" })
+    publishLeagueCellTerminal(repository, pending, createLeagueCellTerminal({ cellRoot: pending.cellRoot, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: failure, projection: null }))
+    publishFactoryAttemptTerminal(factory, factoryPending, createFactoryAttemptTerminal({ startRoot: factoryPending.root, disposition: "system_failure", outputRoot: null, validationRoot: r("validation"), duplicateEvidenceRoot: r("duplicate"), finalEvidenceRoot: failure }))
+    expect(readLeagueRecordGraph(repository, failure, allocation.operations).get(failure)!.kind).toBe("run-failure")
+    expect(budget.usage).toMatchObject({ workRecords: 162, terminalRecords: 5, exhausted: true })
+  }, 60000)
   it("re-enters a measured positive response into a fresh complete three-candidate matrix and reopens the whole loop", async () => {
     const candidates = [await candidate(1), await candidate(3)], repository = createLeagueRepository(temporary()), responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-positive-league-test-"))); directories.push(responseDirectory)
     const responseFactoryRepository = createFactoryRepository(responseDirectory), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("fixture encode"); return publishFactoryArtifact(responseFactoryRepository, encoded.canonicalBytes) }, r = (label: string) => labRoot("positive-league-fixture", label), base = allocationFixture()
@@ -59,12 +85,12 @@ describe("complete private league command", () => {
   }, 60000)
   it("keeps reserved failure capacity after normal byte or record exhaustion and forbids new charges", () => {
     for (const mode of ["bytes", "records"] as const) {
-      const base = allocationFixture(), allocation = createLeagueExecutionAllocation({ ...base, operations: { ...base.operations, ...(mode === "bytes" ? { maxArtifactBytes: 2001000 } : { maxArtifactRecords: 2002 }) } }), budget = new LeagueRetentionBudget(allocation), repository = createLeagueRepository(temporary(), { beforePublication: budget.beforePublication }), cellRoot = labRoot("retention-cell", mode), body = { cellRoot, allocationRoot: allocation.root }, start = { ...body, root: labRoot("league-cell-start-v1", body) }
+      const base = allocationFixture(), allocation = createLeagueExecutionAllocation({ ...base, operations: { ...base.operations, ...(mode === "bytes" ? { maxArtifactBytes: 2263144 } : { maxArtifactRecords: 2002 }) } }), budget = new LeagueRetentionBudget(allocation), repository = createLeagueRepository(temporary(), { beforePublication: budget.beforePublication }), cellRoot = labRoot("retention-cell", mode), body = { cellRoot, allocationRoot: allocation.root }, start = { ...body, root: labRoot("league-cell-start-v1", body) }
       recordLeagueCellStart(repository, start)
-      const bytes = new Uint8Array(mode === "bytes" ? 600 : 1).fill(65), first = publishLeagueArtifact(repository, bytes), usage = budget.usage
+      const bytes = new Uint8Array(mode === "bytes" ? 262144 : 1).fill(65), first = publishLeagueArtifact(repository, bytes), usage = budget.usage
       expect(publishLeagueArtifact(repository, bytes)).toBe(first); expect(budget.usage).toEqual(usage)
       const names = readdirSync(repository.directory).sort()
-      expect(() => publishLeagueArtifact(repository, new Uint8Array(600).fill(66))).toThrow("RETENTION_BUDGET")
+      expect(() => publishLeagueArtifact(repository, new Uint8Array(1024).fill(66))).toThrow("RETENTION_BUDGET")
       expect(readdirSync(repository.directory).sort()).toEqual(names)
       const failure = new LeagueRecordGraph(repository, allocation.operations, budget).append("run-failure", { startRoot: start.root, processValidity: "process_invalid" })
       publishLeagueCellTerminal(repository, start, createLeagueCellTerminal({ cellRoot, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: failure, projection: null }))

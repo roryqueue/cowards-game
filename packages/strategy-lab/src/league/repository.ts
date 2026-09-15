@@ -44,6 +44,7 @@ export interface LeagueRepository {
   readonly directory: string
   readonly durability: Readonly<{ syncDirectory(directory: string): void }>
   readonly temporaryName: (target: string) => string
+  /** terminal means an explicit failed terminal, not any terminal filename. */
   readonly beforePublication?: (publication: { target: string; byteLength: number; terminal: boolean }) => void
 }
 
@@ -70,7 +71,7 @@ const validateStart = (value: unknown): Readonly<LeagueCellStart> => {
   return freezeLabValue({ root: item.root, cellRoot: item.cellRoot, allocationRoot: item.allocationRoot }) as LeagueCellStart
 }
 
-const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array): void => {
+const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array, terminal = false): void => {
   const directory = safeDirectory(repository.directory), target = join(directory, name)
   const existing = lstatSafe(target)
   if (existing) {
@@ -78,7 +79,7 @@ const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array): 
     repository.durability.syncDirectory(directory)
     return
   }
-  repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal: name.endsWith(".terminal.json") })
+  repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal })
   const temporary = repository.temporaryName(target)
   if (!temporary.startsWith(`${target}.tmp-`) || basename(temporary) !== temporary.slice(directory.length + 1)) return fail("TEMPORARY")
   const descriptor = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
@@ -108,7 +109,7 @@ export const publishLeagueCellTerminal = (repository: LeagueRepository, start: L
   const charged = readStart(repository, validateStart(start).root)
   const final = LeagueCellTerminalSchema.parse(terminal)
   if (final.cellRoot !== charged.cellRoot) return fail("TERMINAL_BINDING")
-  atomic(repository, terminalName(charged.root), canonicalBytes(final))
+  atomic(repository, terminalName(charged.root), canonicalBytes(final), final.processValidity === "process_invalid")
 }
 
 /** Inspection derives a failure projection but never materializes, repairs, or refunds a charge. */

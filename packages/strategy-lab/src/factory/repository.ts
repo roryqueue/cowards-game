@@ -32,14 +32,14 @@ const recoverTemporaryArtifacts = (repository: FactoryRepository) => {
     repository.durability.syncDirectory(directory)
   }
 }
-const atomic = (repository: FactoryRepository, name: string, bytes: Uint8Array) => {
+const atomic = (repository: FactoryRepository, name: string, bytes: Uint8Array, terminal = false) => {
   const directory = safeDirectory(repository.directory), target = join(directory, name)
   if (lstatSafe(target)) {
     if (root(boundedRead(target)) !== root(bytes)) return fail("OVERWRITE")
     repository.durability.syncDirectory(directory)
     return
   }
-  repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal: name.endsWith(".terminal.json") })
+  repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal })
   const temporary = repository.temporaryName(target)
   if (!temporary.startsWith(`${target}.tmp-`) || basename(temporary) !== temporary.slice(directory.length + 1)) return fail("TEMPORARY")
   const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
@@ -54,7 +54,7 @@ export interface FactoryRepository {
   /** Injected only to make the charge-before-validation durability boundary testable. */
   readonly durability: Readonly<{ syncDirectory(directory: string): void }>
   readonly temporaryName: (target: string) => string
-  /** Optional fresh-store resource gate; called before any new file is opened. */
+  /** Optional fresh-store gate; terminal is explicit process failure, never ordinary completion. */
   readonly beforePublication?: (publication: { target: string; byteLength: number; terminal: boolean }) => void
 }
 export const createFactoryRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string; readonly beforePublication?: FactoryRepository["beforePublication"] } = {}): Readonly<FactoryRepository> =>
@@ -63,7 +63,7 @@ export const publishFactoryArtifact = (repository: FactoryRepository, bytes: Uin
 export const readFactoryArtifact = (repository: FactoryRepository, id: LabRoot): Uint8Array => { const bytes = boundedRead(join(safeDirectory(repository.directory), artifactName(id))); if (root(bytes) !== id) return fail("ARTIFACT_DIGEST"); return new Uint8Array(bytes) }
 export const recordFactoryAttemptStart = (repository: FactoryRepository, start: FactoryAttemptStart): void => { const charged = validateFactoryAttemptStart(start); atomic(repository, startName(charged.root), canonicalBytes(charged)) }
 const readStart = (repository: FactoryRepository, id: LabRoot) => validateFactoryAttemptStart(parse(boundedRead(join(safeDirectory(repository.directory), startName(id)))))
-export const publishFactoryAttemptTerminal = (repository: FactoryRepository, start: FactoryAttemptStart, terminal: FactoryAttemptTerminal): void => { const charged = readStart(repository, validateFactoryAttemptStart(start).root); const final = validateFactoryAttemptLedger(charged, terminal); atomic(repository, terminalName(charged.root), canonicalBytes(final)) }
+export const publishFactoryAttemptTerminal = (repository: FactoryRepository, start: FactoryAttemptStart, terminal: FactoryAttemptTerminal): void => { const charged = readStart(repository, validateFactoryAttemptStart(start).root); const final = validateFactoryAttemptLedger(charged, terminal); atomic(repository, terminalName(charged.root), canonicalBytes(final), ["player_violation", "system_failure"].includes(final.disposition)) }
 export const resumeFactoryAttemptInventory = (repository: FactoryRepository) => {
   recoverTemporaryArtifacts(repository)
   const names = readdirSync(safeDirectory(repository.directory)).sort(), started: LabRoot[] = [], completed: LabRoot[] = []
