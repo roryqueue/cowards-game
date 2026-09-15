@@ -2,7 +2,7 @@ import { admitCanonicalJsonValue } from "@cowards/spec"
 import { describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
 import { createCompletePayoffSnapshot } from "./contracts.js"
-import { runLeagueSolverSpike, solveLeagueSnapshot } from "./solver.js"
+import { runExactRestrictedGameCandidate, runLeagueSolverSpike, solveLeagueSnapshot } from "./solver.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 
@@ -40,6 +40,19 @@ const snapshotFor = (pairs: readonly Pair[], options: { readonly reverse?: boole
 const matchingPennies: readonly Pair[] = [
   [root("a"), root("b"), 2],
 ]
+
+const cyclicMatrix = (size: number): number[][] => Array.from({ length: size }, (_, row) =>
+  Array.from({ length: size }, (_, column) => column === (row + 1) % size ? 1 : column === (row + size - 1) % size ? -1 : 0),
+)
+const snapshotFromMatrix = (matrix: readonly (readonly number[])[], reverse = false) => {
+  const candidates = matrix.map((_, ordinal) => labRoot("solver-test-candidate-v1", { ordinal }))
+  const projections = matrix.flatMap((row, left) => row.flatMap((payoff, right) => left < right
+    ? Array.from({ length: 8 }, (_, conditionOrdinal) => ({ entrantCandidateRoot: candidates[left]!, opponentCandidateRoot: candidates[right]!, projectionRoot: labRoot("solver-test-projection-v1", { left, right, conditionOrdinal }), halfPoints: (payoff + 1) as 0 | 1 | 2 }))
+    : []))
+  const ordered = [...projections].sort((left, right) => `${left.entrantCandidateRoot}:${left.opponentCandidateRoot}:${left.projectionRoot}`.localeCompare(`${right.entrantCandidateRoot}:${right.opponentCandidateRoot}:${right.projectionRoot}`))
+  const snapshot = createCompletePayoffSnapshot({ populationRoot: root("d"), cellChunkRoots: [root("e")], solverPayoffRoot: labRoot("league-solver-payoffs-v1", ordered), expectedCellCount: ordered.length, completedCellCount: ordered.length })
+  return { snapshot, transport: canonical(reverse ? [...projections].reverse() : projections), candidates }
+}
 
 describe("frozen empirical-game solver", () => {
   it("selects only a decisive exact synthetic candidate with committed golden and boundary evidence", () => {
@@ -80,5 +93,21 @@ describe("frozen empirical-game solver", () => {
     if (incompleteResult.status !== "failed" || changedResult.status !== "failed") throw new TypeError("TEST_SOLVER_SUCCESS")
     expect(incompleteResult.failureCode).toBe("SNAPSHOT_INCOMPLETE")
     expect(changedResult.failureCode).toBe("PAYOFF_TRANSPORT_INVALID")
+  })
+
+  it("solves 3x3 RPS and a full 12-entrant cyclic snapshot with exact normalized rational weights", () => {
+    const rps = snapshotFromMatrix([[0, 1, -1], [-1, 0, 1], [1, -1, 0]])
+    const twelve = snapshotFromMatrix(cyclicMatrix(12), true)
+    const rpsResult = solveLeagueSnapshot({ snapshot: rps.snapshot, solverPayoffBytes: rps.transport })
+    const twelveResult = solveLeagueSnapshot({ snapshot: twelve.snapshot, solverPayoffBytes: twelve.transport })
+    if (rpsResult.status !== "solved" || twelveResult.status !== "solved") throw new TypeError("TEST_FULL_RESTRICTED_SOLVER")
+    expect(rpsResult.weights).toEqual(rps.candidates.map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "3" })))
+    expect(twelveResult.weights).toEqual(twelve.candidates.map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "12" })))
+    expect(twelveResult.canonicalBytes).toEqual(solveLeagueSnapshot({ snapshot: twelve.snapshot, solverPayoffBytes: twelve.transport, workerCount: 12, shardOrder: [11, 0, 4], restart: 3 }).canonicalBytes)
+  })
+
+  it("reports a real exhausted pivot budget separately from malformed or incomplete matrix evidence", () => {
+    const exhausted = runExactRestrictedGameCandidate({ matrix: [[0, 1, -1], [-1, 0, 1], [1, -1, 0]], pivotBudget: 0 })
+    expect(exhausted.status).toBe("resource_exhausted")
   })
 })
