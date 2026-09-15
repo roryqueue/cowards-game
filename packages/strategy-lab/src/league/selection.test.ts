@@ -10,7 +10,7 @@ import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "../fa
 import { createFactoryRepository, publishFactoryArtifact } from "../factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
 import { createLeagueCandidateAdmission, createLeagueMixture, createLeaguePopulation, LeagueCandidateAdmissionSchema } from "./contracts.js"
-import { deriveLeaguePortfolio, selectRobustPure } from "./selection.js"
+import { deriveLeaguePortfolio, selectRobustPure, countLinkedResponseIterations, type LeagueLinkedResponseIteration } from "./selection.js"
 import { importedCandidateFixture } from "./contracts.test.js"
 
 const dirs: string[] = []
@@ -41,6 +41,14 @@ const selectionEvidence = (snapshotRoot: LabRoot, populationRoot: LabRoot, solve
 }
 
 describe("source-bound portfolio and robust-pure selection", () => {
+  it("requires distinct consecutive accepted responses linked through the updated pre-response population", () => {
+    const allocationRoot = root("linked-allocation"), a = root("response-a"), b = root("response-b"), unrelated = root("unrelated")
+    const row = (ordinal: number, candidateAdmissionRoot: LabRoot, targetCandidateAdmissionRoots: LabRoot[]): LeagueLinkedResponseIteration => ({ candidateAdmissionRoot, ordinal, allocationRoot, jobId: `job-${ordinal}`, startRoot: root(`start-${ordinal}`), productionRoot: root(`production-${ordinal}`), reentryRoot: root(`reentry-${ordinal}`), responseTerminals: [{ root: root(`terminal-${ordinal}`), disposition: "success", processValidity: "process_valid" }], blocks: [{ seed: "seed", roundRoot: root(`round-${ordinal}`), targetRoot: root(`target-${ordinal}`), snapshotRoot: root(`snapshot-${ordinal}`), nextSnapshotRoot: root(`snapshot-${ordinal + 1}`), targetCandidateAdmissionRoots, nextCandidateAdmissionRoots: [...targetCandidateAdmissionRoots, candidateAdmissionRoot].sort(), conditionRoots: [root(`condition-${ordinal}`)], terminalRoots: [root(`measurement-${ordinal}`)], numerator: 1, denominator: 1 }] })
+    const first = row(0, a, [unrelated]), second = row(1, b, [unrelated, a].sort()), evidence = { allocationRoot, seedBlocks: ["seed"], iterations: [first, second] }
+    expect(countLinkedResponseIterations(evidence, b)).toBe(2)
+    expect(countLinkedResponseIterations(evidence, unrelated)).toBe(0)
+    for (const changed of [{ ...second, ordinal: 2 }, { ...second, startRoot: first.startRoot }, { ...second, productionRoot: first.productionRoot }, { ...second, responseTerminals: first.responseTerminals }, { ...second, blocks: [{ ...second.blocks[0]!, snapshotRoot: root("contemporaneous") }] }, { ...second, blocks: [{ ...second.blocks[0]!, terminalRoots: first.blocks[0]!.terminalRoots }] }, { ...second, blocks: [{ ...second.blocks[0]!, targetCandidateAdmissionRoots: [unrelated] }] }, { ...second, blocks: [{ ...second.blocks[0]!, numerator: 55, denominator: 100 }] }]) expect(countLinkedResponseIterations({ ...evidence, iterations: [first, changed] }, b)).toBeLessThan(2)
+  })
   it("does not turn twelve novel labels or fingerprint roots into six behavioral families or five independent cores", () => {
     const entries = Array.from({ length: 12 }, (_, ordinal) => candidate(`inventory-${ordinal}`)), population = createLeaguePopulation({ candidateAdmissionRoots: entries.map((row) => row.candidateAdmission.root).sort(), studyPolicyRoot: root("study"), measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" }), snapshotRoot = root("inventory-snapshot"), mixture = createLeagueMixture({ snapshotRoot, solverOutputRoot: root("inventory-solver"), weightRoot: root("weights") }), portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = entries[0]!.candidateAdmission.root
     const { root: _root, schemaVersion: _schema, ...base } = selectionEvidence(snapshotRoot, population.root, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected), allocationRoot = root("allocation"), body = { ...base, schemaVersion: "league-selection-evidence-v4", allocationRoot, seedBlocks: ["seed"], iterations: [] }, input = { snapshotRoot, populationRoot: population.root, mixture, portfolio, candidateAdmissionRoot: selected, population, populationCandidates: entries, evidence: { ...body, root: labRoot(body.schemaVersion, body) } }

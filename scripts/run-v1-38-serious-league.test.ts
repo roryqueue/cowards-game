@@ -1,4 +1,5 @@
-import { mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync } from "node:fs"
+import { mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -17,6 +18,8 @@ import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptSt
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { produceLeagueResponse } from "./lib/v1-38-league-response-runtime.js"
 import { positiveResponseFixture } from "./lib/v1-38-league-response-runtime.test.js"
+import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
+import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 
 const directories: string[] = []
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -36,6 +39,59 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
 } }
 
 describe("complete private league command", () => {
+  it("retains two distinct consecutive responses beating their own preceding frozen targets", async () => {
+    const candidates = [await candidate(1), await candidate(3)], repository = createLeagueRepository(temporary()), responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-two-response-test-"))); directories.push(responseDirectory)
+    const responseFactoryRepository = createFactoryRepository(responseDirectory), base = allocationFixture(), r = (value: unknown) => labRoot("two-response-fixture", value)
+    const put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("fixture encoding"); return publishFactoryArtifact(responseFactoryRepository, encoded.canonicalBytes) }
+    const auth = join(responseDirectory, "inert-auth.json")
+    writeFileSync(auth, "{}", { flag: "wx" }) // Inert local fixture: no credential access or transport process.
+    const reservation = { ...base.channels[0]!.perAttempt, matches: 96, modelTokens: 30, effortMilliseconds: 360000 }
+    const jobs = [0, 1].map((ordinal) => {
+      const sourceMessage = `Return explicit TypeScript source only. Inert fixture ${ordinal}.`
+      const producerInput = {
+        authoring: { sourceMessage, codexExecutable: process.execPath, clientVersion: "injected-test", stateDirectory: join(responseDirectory, `state-${ordinal}`), disclosedDirectory: join(responseDirectory, `disclosed-${ordinal}`), existingAuthFile: auth, requestedModel: "fixture-model", requestedProvider: "fixture-provider", path: "/usr/bin:/bin", settingsRoot: r("settings"), promptRoot: `sha256:${createHash("sha256").update(sourceMessage).digest("hex")}`, contextRoot: labRoot("league-disclosed-context-v1", { dependencyArtifactRoots: [] }) },
+        request: { split: "development", doctrineFamily: `inert-response-${ordinal}`, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } },
+      }
+      const producerRequestArtifactRoot = put({ producerIdentity: "emitModelFactoryPacket", origin: "model-oracle", evidenceClass: "real_producer", producerInput })
+      const disclosureArtifactRoot = put({ participantId: "author", requestArtifactRoot: producerRequestArtifactRoot, sourceAndBuildDisclosed: true, dependencyArtifactRoots: [] }), provenanceArtifactRoot = put({ participantId: "author", priorExposure: "none", conflicts: "none", origin: "model-oracle", deterministicDataOnly: true }), reviewArtifactRoot = put({ reviewerId: "reviewer", participantId: "author", disclosureArtifactRoot, provenanceArtifactRoot, disposition: "accepted", reviewMilliseconds: 0 })
+      return { id: `response-${ordinal}`, channel: "model" as const, evaluationRole: "development_response" as const, operation: "produce" as const, producerRequestArtifactRoot, disclosureArtifactRoot, provenanceArtifactRoot, reviewArtifactRoot, participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }
+    })
+    const ceilings = Object.fromEntries(Object.entries(reservation).map(([key, value]) => [key, value * 2])) as typeof reservation
+    const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: responseDirectory }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, opportunities: { ...base.opportunities, attemptedCandidates: 2, acceptedResponseSlots: 2, responseRounds: 3, modelAttempts: 2, modelTokens: 60, matches: 1000 }, operations: { ...base.operations, maxPopulation: 4, perAttemptMilliseconds: 360000, wallClockMilliseconds: 600000, maxArtifactBytes: 400000000, maxArtifactRecords: 300000 }, channels: base.channels.map((channel) => channel.channel === "model" ? { ...channel, disposition: "allocated", opportunities: 2, ceilings, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel), rounds: [{ ordinal: 0, acceptedSlots: 1, jobs: [jobs[0]!] }, { ordinal: 1, acceptedSlots: 1, jobs: [jobs[1]!] }, { ordinal: 2, acceptedSlots: 0, jobs: [] }] })
+    let authorCalls = 0
+    const fixture: LeagueFixtureSeams = {
+      candidates, host,
+      run: async ({ match, providers }) => { const state = MATCH_KERNEL.createMachineV119(match).initialState; for (const provider of Object.values(providers)) provider.close(); return { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never },
+      produce: (input) => {
+        const injected = positiveResponseFixture(new Set(input.opponents.map((row) => row.closure.sourceArtifactRoot)))
+        return produceLeagueResponse({ ...input, fixture: { ...injected, author: (authorInput) => executeLeagueAuthoring({ ...authorInput, clock: () => 0, transportFactory: async (options) => {
+          const ordinal = authorCalls++, coefficients = Array.from({ length: 80 }, (_, index) => index + 100 * ordinal + 1)
+          const sourceMessage = JSON.stringify({ source: `const coefficients = [${coefficients.join(",")}]; export default { selectActivations(input) { return { activationOrders: [], strategyMemory: { score: coefficients.reduce((sum, weight) => sum + weight, 0) } }; }, soldierBrain(input) { return { action: { type: "WAIT" }, soldierMemory: null }; } };` })
+          const usage = { inputTokens: 2, cachedInputTokens: 0, outputTokens: 1, reasoningOutputTokens: 0, totalTokens: 3 }
+          const messages = [{ result: { thread: { id: `thread-${ordinal}` }, model: "fixture-model", modelProvider: "fixture-provider", cwd: options.cwd, sandbox: { type: "readOnly", networkAccess: false }, approvalPolicy: "never", instructionSources: [] } }, { result: { turn: { id: `turn-${ordinal}` } } }, { method: "item/completed", params: { turnId: `turn-${ordinal}`, item: { type: "agentMessage", text: sourceMessage } } }, { method: "thread/tokenUsage/updated", params: { turnId: `turn-${ordinal}`, tokenUsage: { total: usage } } }, { method: "turn/completed", params: { turn: { id: `turn-${ordinal}`, status: "completed" } } }]
+          return { threadId: `thread-${ordinal}`, reportedModel: "fixture-model", async startTurn() { return { sourceMessage, usage, reportedModel: "fixture-model", rawJsonl: new TextEncoder().encode(messages.map((row) => JSON.stringify(row)).join("\n") + "\n") } }, async close() { return "sigterm" } }
+        } }) } }).then((produced) => { expect(produced.comparisons.map((row) => row.relation), JSON.stringify(produced.comparisons)).toEqual(input.opponents.map(() => "distinct")); return produced })
+      },
+    }
+    const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, fixture })
+    const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), head = graph.get(result.headRoot)!
+    expect(head.value, JSON.stringify(head.value)).toMatchObject({ processValidity: "process_valid", completedJobs: jobs.map((row) => row.id) })
+    expect(authorCalls).toBe(2)
+    const evidence = [...graph.values()].find((row) => row.kind === "selection")!.value.evidence
+    expect(evidence.iterations, JSON.stringify([...graph.values()].filter((row) => row.kind === "red-team-assessment").map((row) => row.value))).toHaveLength(2)
+    expect(evidence.iterations.map((row: any) => row.blocks[0].numerator / row.blocks[0].denominator)).toEqual([1, 1])
+    expect(countLinkedResponseIterations(evidence, evidence.iterations[1].candidateAdmissionRoot)).toBe(2)
+    expect(countLinkedResponseIterations(evidence, candidates[0]!.admission.root)).toBe(0)
+    const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
+    expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_valid", empiricalRequirementsComplete: false })
+    const selection = [...graph.values()].find((row) => row.kind === "selection")!.value
+    const { root: _evidenceRoot, ...originalEvidence } = evidence
+    const contemporaneous = { ...originalEvidence, iterations: evidence.iterations.map((row: any) => ({ ...row, blocks: row.blocks.map((block: any) => ({ ...block, snapshotRoot: block.nextSnapshotRoot })) })) }
+    const changed = new LeagueRecordGraph(repository, allocation.operations)
+    const changedSelection = changed.append("selection", { ...selection, evidence: { ...contemporaneous, root: labRoot("league-selection-evidence-v5", contemporaneous) } }, [result.headRoot])
+    const changedHead = changed.append("run-complete", head.value, [changedSelection])
+    expect(() => verifyRetainedSeriousLeague({ ...verify, headRoot: changedHead })).toThrow("RETAINED_SELECTION")
+  }, 600000)
   it("retains many successful journals in both fresh stores with the minimum emergency reserve", () => {
     const base = allocationFixture(), allocation = createLeagueExecutionAllocation({ ...base, operations: { ...base.operations, terminalReserveBytes: 6 * 262144, terminalReserveRecords: 24 } }), budget = new LeagueRetentionBudget(allocation)
     const repository = createLeagueRepository(temporary(), { beforePublication: budget.beforePublication }), directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-retention-test-"))); directories.push(directory)

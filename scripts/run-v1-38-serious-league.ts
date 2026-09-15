@@ -13,7 +13,7 @@ import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagu
 import { solveLeagueSnapshot } from "../packages/strategy-lab/src/league/solver.js"
 import { declareLeagueRound, advanceLeagueRound, type DeclaredLeagueRound, type LeagueResponseRow } from "../packages/strategy-lab/src/league/psro.js"
 import { declareRedTeamAllocation, startRedTeamAttempt, terminalizeRedTeamAttempt, reenterAcceptedCounter, recordLeagueProbe, closeRedTeamLedger, LEAGUE_PROBES, type LeagueProbeFamily, type RedTeamLedger, type RedTeamResources } from "../packages/strategy-lab/src/league/red-team.js"
-import { deriveLeaguePortfolio, selectRobustPure, type LeaguePortfolioCandidate } from "../packages/strategy-lab/src/league/selection.js"
+import { deriveLeaguePortfolio, selectRobustPure, type LeaguePortfolioCandidate, type LeagueLinkedResponseIteration } from "../packages/strategy-lab/src/league/selection.js"
 import { publishLeagueReport, reopenLeagueReport } from "../packages/strategy-lab/src/league/report.js"
 import { createFactoryRepository, readFactoryArtifact, publishFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
@@ -23,7 +23,7 @@ import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementat
 import { verifyHistoricalFactoryAssessmentForLeague, readRetainedFactoryLedger } from "./assess-v1-38-factory-independence.js"
 import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
-import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations } from "./lib/v1-38-league-response-runtime.js"
+import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions } from "./lib/v1-38-league-response-runtime.js"
 
 const fail = (code: string): never => { throw new TypeError(`SERIOUS_LEAGUE_${code}`) }
 const bytesRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -226,13 +226,6 @@ const scoreAgainst = (matrix: CompleteMatrix, candidateRoot: LabRoot, opponentRo
   if (rows.length !== 8) return fail("SCORE_COVERAGE")
   return { numerator: rows.reduce((sum, row) => sum + (row.cell.entrantCandidateRoot === candidateRoot ? row.terminal.projection!.halfPoints : 2 - row.terminal.projection!.halfPoints), 0), denominator: rows.length * 2 }
 }
-const mixtureScore = (matrix: CompleteMatrix, candidateRoot: LabRoot) => {
-  let numerator = 0n, denominator = 1n
-  const gcd = (a: bigint, b: bigint): bigint => b === 0n ? a : gcd(b, a % b)
-  for (const weight of matrix.solver.weights) { const score = scoreAgainst(matrix, candidateRoot, weight.candidateRoot), n = BigInt(score.numerator) * BigInt(weight.numerator), d = BigInt(score.denominator) * BigInt(weight.denominator); numerator = numerator * d + n * denominator; denominator *= d; const g = gcd(numerator, denominator); numerator /= g; denominator /= g }
-  if (numerator > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) return fail("SCORE_NUMERIC_RANGE")
-  return { numerator: Number(numerator), denominator: Number(denominator) }
-}
 const runRoundProbes = async (session: LeagueConnectedSession, matrix: CompleteMatrix, candidates: readonly LeagueCandidateInput[], round: DeclaredLeagueRound, seed: string, initial: RedTeamLedger) => {
   let ledger = initial
   const byRoot = new Map(candidates.map((candidate) => [candidate.admission.candidate.root, candidate])), roots: LabRoot[] = []
@@ -300,6 +293,42 @@ const responseScores = (produced: Awaited<ReturnType<typeof produceLeagueRespons
   const rows = [{ targetRoot: block.round.target.mixtureRoot, ...mixture }, { targetRoot: block.round.target.strongestPureCandidateRoot, ...score(block.round.target.strongestPureCandidateRoot) }, { targetRoot: block.round.target.vulnerablePureCandidateRoot, ...score(block.round.target.vulnerablePureCandidateRoot) }]
   return [...new Map(rows.map((row) => [row.targetRoot, { targetRoot: row.targetRoot, numerator: row.numerator, denominator: row.denominator, evidenceRoot: produced.recordRoot }])).values()]
 }
+const responseIterations = (blocks: readonly RoundBlock[], ledger: RedTeamLedger, production: readonly Awaited<ReturnType<typeof produceLeagueResponse>>[], allocation: LeagueExecutionAllocation): LeagueLinkedResponseIteration[] => {
+  const accepted = production.filter((row) => row.evaluationRole === "development_response" && ledger.terminals.some((terminal) => terminal.startRoot === row.author.startRoot && terminal.disposition === "success" && terminal.candidateAdmissionRoot === row.admission.root))
+  return accepted.flatMap((produced) => {
+    const start = ledger.starts.find((start) => start.root === produced.author.startRoot) ?? fail("ITERATION_START")
+    const primary = blocks.find((block) => block.round.round.root === start.roundRoot) ?? fail("ITERATION_ROUND")
+    const ordinal = primary.round.roundOrdinal, schedule = allocation.rounds[ordinal]!
+    const job = schedule.jobs.find((job) => job.producerRequestArtifactRoot === start.inputRoot && job.participantId === start.participantId) ?? fail("ITERATION_JOB")
+    const selected = blocks.filter((block) => block.round.roundOrdinal === ordinal)
+    const following = blocks.filter((block) => block.round.roundOrdinal === ordinal + 1)
+    if (following.length !== allocation.seedBlocks.length) return [] // no closed continuation, never invented proof
+    const terminal = ledger.terminals.find((terminal) => terminal.startRoot === start.root)!
+    const roundAccepted = accepted.filter((row) => ledger.starts.find((start) => start.root === row.author.startRoot)?.roundRoot === primary.round.round.root)
+    const conditions = enumerateLeagueResponseConditions(allocation, primary.candidateRoots).filter((row) => row.purpose === "score")
+    const measurements = selected.map((block) => {
+      const next = following.find((entry) => entry.seed === block.seed) ?? fail("ITERATION_NEXT_SEED")
+      const targetCandidateAdmissionRoots = block.matrix.population.candidateAdmissionRoots
+      const expectedNext = [...targetCandidateAdmissionRoots, ...roundAccepted.map((row) => row.admission.root)].sort()
+      if (block.candidateRoots.includes(produced.admission.candidate.root) || !same(expectedNext, next.matrix.population.candidateAdmissionRoots)) return fail("ITERATION_POPULATION_EVOLUTION")
+      const scoreRows = produced.scores.filter((row) => row.seed === block.seed)
+      const conditionRows = conditions.filter((row) => row.seed === block.seed)
+      if (!same(scoreRows.map((row) => row.opponentRoot), block.candidateRoots) || scoreRows.some((row) => row.evidenceRoots.length !== 8) || conditionRows.length !== scoreRows.length * 8) return fail("ITERATION_MEASUREMENT_COVERAGE")
+      const mixtureScore = responseScores(produced, block)[0]!
+      return {
+        seed: block.seed, roundRoot: block.round.round.root, targetRoot: block.round.target.root,
+        snapshotRoot: block.matrix.admitted.snapshot.root, nextSnapshotRoot: next.matrix.admitted.snapshot.root,
+        targetCandidateAdmissionRoots, nextCandidateAdmissionRoots: next.matrix.population.candidateAdmissionRoots,
+        conditionRoots: conditionRows.map((condition) => labRoot("league-response-measurement-condition-v1", { parentStartRoot: produced.admission.attemptStart.root, condition })),
+        terminalRoots: scoreRows.flatMap((row) => row.evidenceRoots),
+        numerator: mixtureScore.numerator, denominator: mixtureScore.denominator,
+      }
+    })
+    const assessment = { targetRoot: primary.round.target.root, fingerprintEvidenceRoot: produced.fingerprintArtifactRoot, independentCounterfactualRelations: produced.comparisons.map((row) => row.relation === "unresolved" ? "borderline" : row.relation), existingCandidateRoots: primary.candidateRoots, completeTargetScores: responseScores(produced, primary) }
+    const reentry = reenterAcceptedCounter({ ledger, startRoot: start.root, round: primary.round, candidateAdmission: produced.admission, assessment })
+    return [{ candidateAdmissionRoot: produced.admission.root, ordinal, allocationRoot: allocation.root, jobId: job.id, startRoot: start.root, productionRoot: produced.recordRoot, reentryRoot: reentry.root, blocks: measurements, responseTerminals: [{ root: terminal.root, disposition: terminal.disposition, processValidity: terminal.processValidity }] }]
+  })
+}
 const selectionFor = (matrix: CompleteMatrix, candidates: readonly LeagueCandidateInput[], blocks: readonly RoundBlock[], ledger: RedTeamLedger, production: readonly Awaited<ReturnType<typeof produceLeagueResponse>>[], allocation: LeagueExecutionAllocation) => {
   const mixture = createLeagueMixture({ snapshotRoot: matrix.admitted.snapshot.root, solverOutputRoot: matrix.solver.output.root, weightRoot: matrix.solver.output.distributionRoot }), portfolio = deriveLeaguePortfolio({ snapshotRoot: matrix.admitted.snapshot.root, mixture, candidates })
   const byCandidate = new Map(candidates.map((candidate) => [candidate.admission.candidate.root, candidate])), byAdmission = new Map(candidates.map((candidate) => [candidate.admission.root, candidate]))
@@ -309,11 +338,8 @@ const selectionFor = (matrix: CompleteMatrix, candidates: readonly LeagueCandida
   const invarianceRows = ledger.probes.filter((probe) => !["semantic_arena_identity", "worker_shard_completion"].includes(probe.family)).map((probe) => ({ candidateAdmissionRoot: byCandidate.get(probe.candidateRoot)!.admission.root, probe: probe.family === "horizontal_symmetry" ? "symmetry" : probe.family === "repeat_restart" ? "repeat" : probe.family, observations: probe.pairs.length, mismatches: probe.passed ? 0 : 1, evidenceRoot: probe.root }))
   const terminalRows = candidates.flatMap((candidate) => ["legality", "privacy", "runtime"].map((boundary) => ({ candidateAdmissionRoot: candidate.admission.root, boundary, disposition: "success", processValidity: "process_valid", evidenceRoot: matrix.recordRoot })))
   const worstCases = portfolio.portfolio.candidateAdmissionRoots.flatMap((candidate) => portfolio.portfolio.candidateAdmissionRoots.map((opponent) => ({ candidateAdmissionRoot: candidate, opponentAdmissionRoot: opponent, ...scoreAgainst(matrix, byAdmission.get(candidate)!.admission.candidate.root, byAdmission.get(opponent)!.admission.candidate.root), evidenceRoot: matrix.recordRoot })))
-  const iterations = candidates.flatMap((candidate) => allocation.rounds.map((schedule) => {
-    const selected = blocks.filter((block) => block.round.roundOrdinal === schedule.ordinal && block.candidateRoots.includes(candidate.admission.candidate.root)), roundRoots = selected.map((block) => block.round.round.root), starts = ledger.starts.filter((start) => roundRoots.includes(start.roundRoot))
-    return { candidateAdmissionRoot: candidate.admission.root, ordinal: schedule.ordinal, allocationRoot: allocation.root, blocks: selected.map((block) => ({ seed: block.seed, roundRoot: block.round.round.root, targetRoot: block.round.target.root, snapshotRoot: block.matrix.admitted.snapshot.root, conditionRoots: block.matrix.matrix.cells.map((entry) => entry.cell.conditionRoot), terminalRoots: block.matrix.results.map((row) => row.terminal.root), ...mixtureScore(block.matrix, candidate.admission.candidate.root) })), responseTerminals: ledger.terminals.filter((terminal) => starts.some((start) => start.root === terminal.startRoot)).map((terminal) => ({ root: terminal.root, disposition: terminal.disposition, processValidity: terminal.processValidity })) }
-  }))
-  const evidence = rooted("league-selection-evidence-v4", { snapshotRoot: matrix.admitted.snapshot.root, populationRoot: matrix.population.root, policyRoot: LAB_ADMITTED_ROOTS.measurementPolicyRoot, solverOutputRoot: matrix.solver.output.root, allocationRoot: allocation.root, seedBlocks: allocation.seedBlocks, iterations, responseRows, probeRows, redTeamRows, invarianceRows, terminalRows, worstCases })
+  const iterations = responseIterations(blocks, ledger, production, allocation)
+  const evidence = rooted("league-selection-evidence-v5", { snapshotRoot: matrix.admitted.snapshot.root, populationRoot: matrix.population.root, policyRoot: LAB_ADMITTED_ROOTS.measurementPolicyRoot, solverOutputRoot: matrix.solver.output.root, allocationRoot: allocation.root, seedBlocks: allocation.seedBlocks, iterations, responseRows, probeRows, redTeamRows, invarianceRows, terminalRows, worstCases })
   const dispositions = portfolio.portfolio.candidateAdmissionRoots.map((candidateAdmissionRoot) => selectRobustPure({ snapshotRoot: matrix.admitted.snapshot.root, populationRoot: matrix.population.root, mixture, portfolio: portfolio.portfolio, candidateAdmissionRoot, evidence, population: matrix.population, populationCandidates: candidates }))
   return { mixture, portfolio, evidence, dispositions, finalist: dispositions.find((row) => row.kind === "robust_pure_finalist") ?? dispositions[0]! }
 }
@@ -533,6 +559,8 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     }
     const start = ledger.starts.find((start) => start.root === produced.author.startRoot) ?? fail("RETAINED_RESPONSE_START"), block = blocks.find((block) => block.round.round.root === start.roundRoot) ?? fail("RETAINED_RESPONSE_ROUND"), schedule = allocation.rounds[block.round.roundOrdinal]!, candidates = block.candidateRoots.map((root) => finalCandidates.find((candidate: LeagueCandidateInput) => candidate.admission.candidate.root === root) ?? fail("RETAINED_RESPONSE_OPPONENT")), imported = candidates.find((candidate: LeagueCandidateInput) => candidate.admission.importEvidence), roundBlocks = blocks.filter((entry) => entry.round.roundOrdinal === block.round.roundOrdinal), job = schedule.jobs.find((job) => job.producerRequestArtifactRoot === start.inputRoot && job.participantId === start.participantId) ?? fail("RETAINED_RESPONSE_JOB")
     if (!input.responseFactoryRepository || !imported) return fail("RETAINED_RESPONSE_REPOSITORY")
+    const targetPacket = parse(readFactoryArtifact(input.responseFactoryRepository, produced.targetArtifactRoot))
+    if (!same(targetPacket.targets, roundBlocks.map((entry) => ({ seed: entry.seed, target: entry.round.target, weights: entry.matrix.solver.weights })))) return fail("RETAINED_PRE_RESPONSE_TARGET")
     verifyRetainedLeagueResponse({ allocation, repository: input.responseFactoryRepository, produced, opponents: candidates.map((candidate: LeagueCandidateInput) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold: { repository: imported.factoryRepository, artifactRoot: imported.admission.importEvidence!.thresholdArtifactRoot }, records: graph })
     const accepted = acceptedByRound.get(schedule.ordinal) ?? [], duplicate = [...candidates, ...accepted].some((candidate: LeagueCandidateInput) => candidate.admission.candidate.proposal.source.root === produced.admission.candidate.proposal.source.root), independent = produced.comparisons.length === candidates.length && produced.comparisons.every((row: any) => row.relation === "distinct"), scores = roundBlocks.map((entry) => responseScores(produced, entry)), positive = scores.every((rows) => rows.every((score) => BigInt(score.numerator) * 100n > BigInt(score.denominator) * 55n)), eligible = !duplicate && independent && positive && accepted.length < schedule.acceptedSlots
     const assessment = { targetRoot: block.round.target.root, fingerprintEvidenceRoot: produced.fingerprintArtifactRoot, independentCounterfactualRelations: produced.comparisons.map((row: any) => row.relation === "unresolved" ? "borderline" : row.relation), existingCandidateRoots: block.candidateRoots, completeTargetScores: scores[0]! }, expected = { jobId: job.id, startRoot: start.root, producedRoot: produced.recordRoot, scores, duplicate, independent, positive, eligible, assessment }, retained = rows("red-team-assessment").filter(([, row]) => row.value.startRoot === start.root)

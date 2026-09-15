@@ -83,7 +83,7 @@ export const deriveLeaguePortfolio = (input: { readonly snapshotRoot: LabRoot; r
 
 type ScoreRow = Readonly<{ candidateAdmissionRoot: LabRoot; conditionRoot: LabRoot; numerator: number; denominator: number; evidenceRoot: LabRoot }>
 interface SelectionEvidence {
-  readonly schemaVersion: "league-selection-evidence-v2" | "league-selection-evidence-v3" | "league-selection-evidence-v4"; readonly privacy: "private_offline"; readonly root: LabRoot; readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly policyRoot: LabRoot; readonly solverOutputRoot: LabRoot
+  readonly schemaVersion: "league-selection-evidence-v2" | "league-selection-evidence-v3" | "league-selection-evidence-v4" | "league-selection-evidence-v5"; readonly privacy: "private_offline"; readonly root: LabRoot; readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly policyRoot: LabRoot; readonly solverOutputRoot: LabRoot
   readonly responseRows: readonly ScoreRow[]; readonly probeRows: readonly ScoreRow[]; readonly redTeamRows: readonly ScoreRow[]
   readonly invarianceRows: readonly Readonly<{ candidateAdmissionRoot: LabRoot; probe: "side" | "initiative" | "symmetry" | "opaque_ids" | "soldier_order" | "source_order" | "repeat"; observations: number; mismatches: number; evidenceRoot: LabRoot }>[]
   readonly terminalRows: readonly Readonly<{ candidateAdmissionRoot: LabRoot; boundary: "legality" | "privacy" | "runtime"; disposition: "success" | "player_violation" | "system_failure"; processValidity: "process_valid" | "process_invalid"; evidenceRoot: LabRoot }>[]
@@ -94,6 +94,55 @@ export interface LeagueSelectionIteration {
   readonly candidateAdmissionRoot: LabRoot; readonly ordinal: number; readonly allocationRoot: LabRoot
   readonly blocks: readonly Readonly<{ seed: string; roundRoot: LabRoot; targetRoot: LabRoot; snapshotRoot: LabRoot; conditionRoots: readonly LabRoot[]; terminalRoots: readonly LabRoot[]; numerator: number; denominator: number }>[]
   readonly responseTerminals: readonly Readonly<{ root: LabRoot; disposition: string; processValidity: string }>[]
+}
+export interface LeagueLinkedResponseIteration extends LeagueSelectionIteration {
+  readonly jobId: string
+  readonly startRoot: LabRoot
+  readonly productionRoot: LabRoot
+  readonly reentryRoot: LabRoot
+  readonly blocks: readonly (LeagueSelectionIteration["blocks"][number] & {
+    readonly nextSnapshotRoot: LabRoot
+    readonly targetCandidateAdmissionRoots: readonly LabRoot[]
+    readonly nextCandidateAdmissionRoots: readonly LabRoot[]
+  })[]
+}
+
+/** Version 5 counts actual response revisions, ending at this exact candidate.
+ * The connected reader must reconstruct these rows from authenticated production,
+ * re-entry and complete snapshot evidence; metadata alone is not a measurement. */
+export const countLinkedResponseIterations = (evidence: Pick<SelectionEvidence, "allocationRoot" | "seedBlocks" | "iterations">, candidate: LabRoot): number => {
+  if (!isRoot(evidence.allocationRoot) || !Array.isArray(evidence.seedBlocks) || !evidence.seedBlocks.length || new Set(evidence.seedBlocks).size !== evidence.seedBlocks.length || !Array.isArray(evidence.iterations)) return fail("ITERATION_EVIDENCE")
+  const rows = evidence.iterations as readonly LeagueLinkedResponseIteration[]
+  const roots = (values: readonly LabRoot[]) => Array.isArray(values) && values.length > 0 && values.every(isRoot) && new Set(values).size === values.length
+  const valid = (row: LeagueLinkedResponseIteration) => {
+    if (!row || row.allocationRoot !== evidence.allocationRoot || !Number.isSafeInteger(row.ordinal) || row.ordinal < 0 || typeof row.jobId !== "string" || !row.jobId.length) return false
+    if (![row.candidateAdmissionRoot, row.startRoot, row.productionRoot, row.reentryRoot].every(isRoot)) return false
+    if (!Array.isArray(row.responseTerminals) || row.responseTerminals.length !== 1 || row.responseTerminals.some((terminal) => !terminal || !isRoot(terminal.root) || terminal.disposition !== "success" || terminal.processValidity !== "process_valid")) return false
+    if (!Array.isArray(row.blocks) || row.blocks.length !== evidence.seedBlocks!.length || new Set(row.blocks.map((block) => block.seed)).size !== row.blocks.length) return false
+    return row.blocks.every((block) => {
+      if (!evidence.seedBlocks!.includes(block.seed) || ![block.roundRoot, block.targetRoot, block.snapshotRoot, block.nextSnapshotRoot].every(isRoot) || block.snapshotRoot === block.nextSnapshotRoot) return false
+      if (!roots(block.targetCandidateAdmissionRoots) || !roots(block.nextCandidateAdmissionRoots)) return false
+      if (block.targetCandidateAdmissionRoots.includes(row.candidateAdmissionRoot) || !block.nextCandidateAdmissionRoots.includes(row.candidateAdmissionRoot) || !block.targetCandidateAdmissionRoots.every((root: LabRoot) => block.nextCandidateAdmissionRoots.includes(root))) return false
+      return roots(block.conditionRoots) && roots(block.terminalRoots) && block.conditionRoots.length === block.terminalRoots.length && positive(block.numerator, block.denominator) && scorePasses(block, "gt55")
+    })
+  }
+  let maximum = 0
+  for (const later of rows.filter((row) => row.candidateAdmissionRoot === candidate && valid(row))) {
+    maximum = Math.max(maximum, 1)
+    for (const prior of rows.filter((row) => row.ordinal + 1 === later.ordinal && valid(row))) {
+      if (prior.candidateAdmissionRoot === later.candidateAdmissionRoot || prior.jobId === later.jobId || prior.startRoot === later.startRoot || prior.productionRoot === later.productionRoot || prior.reentryRoot === later.reentryRoot || prior.responseTerminals[0]!.root === later.responseTerminals[0]!.root) continue
+      const oldMeasurements = new Set(prior.blocks.flatMap((block) => block.terminalRoots))
+      if (later.blocks.some((block) => block.terminalRoots.some((root) => oldMeasurements.has(root)))) continue
+      const connected = later.blocks.every((block) => {
+        const preceding = prior.blocks.find((old) => old.seed === block.seed)!
+        return preceding.nextSnapshotRoot === block.snapshotRoot && preceding.targetRoot !== block.targetRoot && preceding.roundRoot !== block.roundRoot
+          && block.targetCandidateAdmissionRoots.includes(prior.candidateAdmissionRoot)
+          && [...preceding.nextCandidateAdmissionRoots].sort().join() === [...block.targetCandidateAdmissionRoots].sort().join()
+      })
+      if (connected) maximum = 2
+    }
+  }
+  return maximum
 }
 const positive = (numerator: unknown, denominator: unknown): numerator is number => Number.isSafeInteger(numerator) && Number.isSafeInteger(denominator) && (numerator as number) >= 0 && (denominator as number) > 0 && (numerator as number) <= (denominator as number)
 const scorePasses = (row: Pick<ScoreRow, "numerator" | "denominator">, comparator: "gt55" | "gt60" | "lt60") => comparator === "gt55" ? BigInt(row.numerator) * 100n > BigInt(row.denominator) * 55n : comparator === "gt60" ? BigInt(row.numerator) * 100n > BigInt(row.denominator) * 60n : BigInt(row.numerator) * 100n < BigInt(row.denominator) * 60n
@@ -125,10 +174,11 @@ export const requireIssuedRobustPureDisposition = (value: unknown): Readonly<Rob
 export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly mixture: unknown; readonly portfolio: unknown; readonly candidateAdmissionRoot: LabRoot; readonly evidence: unknown; readonly population?: unknown; readonly populationCandidates?: readonly LeaguePortfolioCandidate[] }): Readonly<RobustPureDisposition> => {
   const mixture = LeagueMixtureSchema.parse(input.mixture), portfolio = LeaguePortfolioSchema.parse(input.portfolio)
   if (!isRoot(input.snapshotRoot) || !isRoot(input.populationRoot) || !isRoot(input.candidateAdmissionRoot) || mixture.snapshotRoot !== input.snapshotRoot || portfolio.mixtureRoot !== mixture.root || !portfolio.candidateAdmissionRoots.includes(input.candidateAdmissionRoot)) return fail("FINALIST_BINDING")
-  const serious = (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v4", current = serious || (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v3"
+  const linked = (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v5"
+  const serious = linked || (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v4", current = serious || (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v3"
   if (!exact(input.evidence, ["schemaVersion", "privacy", "root", "snapshotRoot", "populationRoot", "policyRoot", "solverOutputRoot", "responseRows", "probeRows", "redTeamRows", "invarianceRows", "terminalRows", "worstCases", ...(current ? ["allocationRoot", "seedBlocks", "iterations"] : [])])) return fail("EVIDENCE")
   const evidence = input.evidence as unknown as SelectionEvidence, { root, ...body } = evidence
-  if (!["league-selection-evidence-v2", "league-selection-evidence-v3", "league-selection-evidence-v4"].includes(evidence.schemaVersion) || evidence.privacy !== "private_offline" || root !== labRoot(evidence.schemaVersion, body) || evidence.snapshotRoot !== input.snapshotRoot || evidence.populationRoot !== input.populationRoot || evidence.policyRoot !== FROZEN_POLICY_ROOT || evidence.solverOutputRoot !== mixture.solverOutputRoot || ![evidence.responseRows, evidence.probeRows, evidence.redTeamRows, evidence.invarianceRows, evidence.terminalRows, evidence.worstCases].every(Array.isArray)) return fail("EVIDENCE_BINDING")
+  if (!["league-selection-evidence-v2", "league-selection-evidence-v3", "league-selection-evidence-v4", "league-selection-evidence-v5"].includes(evidence.schemaVersion) || evidence.privacy !== "private_offline" || root !== labRoot(evidence.schemaVersion, body) || evidence.snapshotRoot !== input.snapshotRoot || evidence.populationRoot !== input.populationRoot || evidence.policyRoot !== FROZEN_POLICY_ROOT || evidence.solverOutputRoot !== mixture.solverOutputRoot || ![evidence.responseRows, evidence.probeRows, evidence.redTeamRows, evidence.invarianceRows, evidence.terminalRows, evidence.worstCases].every(Array.isArray)) return fail("EVIDENCE_BINDING")
   const inventory = serious ? (() => {
     const population = LeaguePopulationSchema.parse(input.population)
     if (population.root !== input.populationRoot || !Array.isArray(input.populationCandidates)) return fail("INVENTORY_BINDING")
@@ -164,7 +214,7 @@ export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readon
   const boundary = (name: "legality" | "privacy" | "runtime") => evidence.terminalRows.some((row) => row.candidateAdmissionRoot === input.candidateAdmissionRoot && row.boundary === name && row.disposition === "success" && row.processValidity === "process_valid" && isRoot(row.evidenceRoot))
   const gates = [
     ...(inventory ? [["league_strategy_count", inventory.candidateAdmissionRoots.length >= 12, inventory.candidateAdmissionRoots] as const, ["behavioral_family_count", inventory.behavioralFamilyRepresentatives.length >= 6, inventory.behavioralFamilyRepresentatives] as const, ["independent_planner_core_count", inventory.independentCoreRepresentatives.length >= 5, inventory.independentCoreRepresentatives] as const] : []),
-    ["distinct_finalist_count", population.length >= 3, population], ["consecutive_response_count", current ? consecutiveIterations(evidence, input.candidateAdmissionRoot) >= 2 : response.length >= 2 && response.every((row) => scorePasses(row, "gt55")), current ? evidence.iterations : response], ["response_set_score", response.length > 0 && response.every((row) => scorePasses(row, "gt55")), response],
+    ["distinct_finalist_count", population.length >= 3, population], ["consecutive_response_count", linked ? countLinkedResponseIterations(evidence, input.candidateAdmissionRoot) >= 2 : current ? consecutiveIterations(evidence, input.candidateAdmissionRoot) >= 2 : response.length >= 2 && response.every((row) => scorePasses(row, "gt55")), current ? evidence.iterations : response], ["response_set_score", response.length > 0 && response.every((row) => scorePasses(row, "gt55")), response],
     ["independent_probe_set_score", probe.length > 0 && probe.every((row) => scorePasses(row, "gt60")), probe], ["fresh_red_team_set_score", redTeam.length > 0 && redTeam.every((row) => scorePasses(row, "lt60")), redTeam], ["maximin_oracle_relative_pure", maximin, evidence.worstCases.filter((row) => row.candidateAdmissionRoot === input.candidateAdmissionRoot)],
     ["invariance", invariant, evidence.invarianceRows], ["legality", boundary("legality"), evidence.terminalRows], ["privacy", boundary("privacy"), evidence.terminalRows], ["runtime", boundary("runtime"), evidence.terminalRows],
   ] as const
