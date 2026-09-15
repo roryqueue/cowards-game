@@ -26,6 +26,8 @@ describe("Phase 265 resolved league import/privacy boundary", () => {
     ["deployment root", { "deploy/service.ts": 'export * from "../packages/strategy-lab/src/league/repository.js"' }],
     ["restricted historical reader", { "apps/web/app/page.ts": 'import "../../../scripts/assess-v1-38-factory-independence.js"' }],
     ["private unresolved loader", { "scripts/lib/v1-38-league-authoring.ts": "void import(loader)" }],
+    ["private unresolved module loader", { "scripts/lib/v1-38-league-authoring.ts": "module.require(target)" }],
+    ["private unresolved property loader", { "scripts/lib/v1-38-league-authoring.ts": "loader.require(target)" }],
     ["private source execution", { "packages/strategy-lab/src/league/unsafe.ts": "const execute = new Function('return 1')" }],
   ])("rejects %s", (_name, files) => {
     const result = checkSeriousLeagueBoundaries({ files: { ...base, ...files } })

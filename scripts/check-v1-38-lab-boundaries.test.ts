@@ -64,6 +64,7 @@ describe("one-way lab boundary monitor", () => {
   it.each([
     "class RetainedBudget { require(value: unknown) { return value } replace(loader: unknown) { this.require = loader as never; return this.require(loader) } }",
     "const module = { require(value: unknown) { return value } }; declare const loader: unknown; module.require(loader)",
+    "declare const loader: { require(value: unknown): unknown }; declare const target: unknown; loader.require(target)",
   ])("keeps assigned and non-local require property calls conservative: %s", (source) => {
     const files = { ...lab, "packages/strategy-lab/src/league/loader.ts": source }
     expect(checkLabBoundaries({ files }).violations).toContainEqual({ code: "UNRESOLVED_LAB_EDGE", file: "packages/strategy-lab/src/league/loader.ts" })
