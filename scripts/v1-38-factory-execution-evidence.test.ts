@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { decodeChargedAuthorTranscript, deriveFactoryNegativeWitness, deriveFactorySharedHelperAudit, readFactoryExecutionEvidence, verifyFactoryAuthoringRecords } from "./v1-38-factory-execution-evidence.js"
+import { decodeChargedAuthorTranscript, deriveFactoryNegativeWitness, deriveFactorySharedHelperAudit, readFactoryExecutionEvidence, readHistoricalFactoryExecutionEvidence, verifyFactoryAuthoringRecords } from "./v1-38-factory-execution-evidence.js"
+import { readFactoryHistoricalImportContext } from "./v1-38-factory-assessment-correction.js"
 import { emitTacticalFactoryPacket, emitTacticalSource } from "../packages/strategy-oracle-tactical/src/emit.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createFactoryExecutionEvidenceFixture } from "./fixtures/factory-execution-evidence-fixture.js"
@@ -12,6 +13,16 @@ const packet = emitTacticalFactoryPacket({ split: "development", doctrineFamily:
 const record = { packet, sourceUtf8: emitTacticalSource(), sourceRoot: packet.source.root, packetRoot: packet.root, root } as never
 
 describe("factory empirical authorship prerequisite", () => {
+  it("accepts only a retained subject-bound historical context, not a serialized identity waiver", async () => {
+    const fixture = await createFactoryExecutionEvidenceFixture(), repository = fixture.repository
+    const publish = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("test"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }
+    const body = { schemaVersion: "factory-independence-assessment-v1", input: { executionEvidenceArtifactRoot: fixture.executionEvidenceArtifactRoot }, implementationRoot: factoryAssessmentImplementationManifest().root }
+    const artifact = publish({ ...body, root: labRoot("factory-independence-assessment-v1", body) })
+    const context = readFactoryHistoricalImportContext(repository, artifact)
+    expect(readHistoricalFactoryExecutionEvidence(repository, fixture.executionEvidenceArtifactRoot, fixture.fresh, context)).toMatchObject({ issued: false, evidence: { root: labRoot("factory-calibration-execution-evidence-v1", fixture.values.executionValue) } })
+    expect(() => readHistoricalFactoryExecutionEvidence(repository, fixture.executionEvidenceArtifactRoot, fixture.fresh, { ...context })).toThrow("IMPORT_CONTEXT")
+    expect(() => readHistoricalFactoryExecutionEvidence(repository, root, fixture.fresh, context)).toThrow("IMPORT_CONTEXT")
+  })
   it("permanently rejects a relevant error before a later successful completion", () => {
     const request = { requestedModel: "model", cwd: "/isolated", cwdClass: "fresh-disclosed-packet-only-outside-repository", frozenSettings: { providerId: "provider" }, clientSettings: ["--stdio", "--strict-config", ...["shell_tool", "unified_exec", "browser_use", "browser_use_external", "apps", "plugins", "computer_use", "image_generation", "imagegenext", "standalone_web_search", "multi_agent"].flatMap((feature) => ["--disable", feature])], launchEnvironment: { PATH: "/bin", LANG: "C.UTF-8", LC_ALL: "C.UTF-8" } }
     const events = [

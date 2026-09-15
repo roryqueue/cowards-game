@@ -2,7 +2,8 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { assessFactoryIndependence, decideFactoryIndependence, factoryWorkloadResourceViolations, readRetainedFactoryLedger, verifyRetainedFactoryAssessment } from "./assess-v1-38-factory-independence.js"
+import { assessFactoryIndependence, decideFactoryIndependence, factoryWorkloadResourceViolations, readRetainedFactoryLedger, verifyRetainedFactoryAssessment, verifyHistoricalFactoryAssessmentForLeague } from "./assess-v1-38-factory-independence.js"
+import { readFactoryCanonicalRecord } from "./v1-38-factory-fresh-evidence.js"
 import { NUMERIC_DIMENSIONS, type NumericComparison, type NumericControlTable } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { createFactoryRepository, recordFactoryAttemptStart, publishFactoryAttemptTerminal, publishFactoryArtifact, resumeFactoryAttemptInventory } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
@@ -50,6 +51,16 @@ describe("finite factory independence decision", () => {
     const rooted=(schemaVersion:string,value:Record<string,unknown>)=>{const body={schemaVersion,...value};return publish({...body,root:labRoot(schemaVersion,body)})}
     const oldReview=rooted("factory-source-review-v1",{...fixture.values.reviewValue,implementationRoot:historical.root})
     const oldExecution=rooted("factory-calibration-execution-evidence-v1",{...execution,sourceReviewArtifactRoot:oldReview})
+    const savedAssessment = readFactoryCanonicalRecord(repository, result.assessmentArtifactRoot!)
+    const { root: _savedRoot, ...savedBody } = savedAssessment
+    const historicalAssessmentBody = { ...savedBody, implementationRoot: historical.root, executionEvidenceRoot: readFactoryCanonicalRecord(repository, oldExecution).root, input: { ...input, executionEvidenceArtifactRoot: oldExecution, windowTerminalArtifactRoot: null } }
+    const historicalAssessment = publish({ ...historicalAssessmentBody, root: labRoot("factory-independence-assessment-v1", historicalAssessmentBody) })
+    expect(() => verifyRetainedFactoryAssessment(repository, historicalAssessment)).toThrow("FACTORY_EXECUTION_REVIEW")
+    expect(verifyHistoricalFactoryAssessmentForLeague(repository, historicalAssessment)).toMatchObject({ issued: false, status: "unresolved", historicalProducerImplementationRoot: historical.root, historicalAssessmentImplementationRoot: historical.root, currentReaderImplementationRoot: current.root })
+    const changedDecision = { ...historicalAssessmentBody, status: "affirmed", reasons: [] }
+    expect(() => verifyHistoricalFactoryAssessmentForLeague(repository, publish({ ...changedDecision, root: labRoot("factory-independence-assessment-v1", changedDecision) }))).toThrow("IMPORT_ASSESSMENT_REOPEN")
+    const changedMetric = { ...historicalAssessmentBody, completePairs: 24 }
+    expect(() => verifyHistoricalFactoryAssessmentForLeague(repository, publish({ ...changedMetric, root: labRoot("factory-independence-assessment-v1", changedMetric) }))).toThrow("IMPORT_ASSESSMENT_REOPEN")
     const correctedInput={...input,executionEvidenceArtifactRoot:oldExecution,windowTerminalArtifactRoot:null}
     const currentReview=rooted("factory-source-review-v1",{...fixture.values.reviewValue,sourceCommit:"b".repeat(40),implementationRoot:current.root,reportArtifactRoot:publishFactoryArtifact(repository,new TextEncoder().encode(`${"b".repeat(40)}\n${current.root}`))})
     const failure=rooted("factory-264-assessment-failure-v1",{sourceCommit:execution.sourceCommit,implementationRoot:historical.root,input:correctedInput,error:"LAB_CANONICAL_VALUE",stage:"positive-control-merged-observation-equality",assessmentArtifactRoot:null,thresholdArtifactRoot:null})

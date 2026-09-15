@@ -6,7 +6,7 @@ import { admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createFactoryRepository, publishFactoryArtifact } from "../packages/strategy-lab/src/factory/repository.js"
 import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
-import { correctedFactoryExecutionImplementationRoot, factoryAssessmentCorrectionDiff, readFactoryAssessmentCorrection } from "./v1-38-factory-assessment-correction.js"
+import { correctedFactoryExecutionImplementationRoot, factoryAssessmentCorrectionDiff, readFactoryAssessmentCorrection, readFactoryHistoricalImportContext, requireFactoryHistoricalImportContext } from "./v1-38-factory-assessment-correction.js"
 
 const directories:string[]=[]
 afterEach(()=>{for(const dir of directories.splice(0))rmSync(dir,{recursive:true,force:true})})
@@ -27,6 +27,19 @@ const fixture=()=>{
   return {repository,publish,rooted,review,current,historical,execution,input,failureBody,body,correction}
 }
 describe("read-only assessment correction binding",()=>{
+  it("binds historical import to the exact original correction and never issues current execution correction authority", () => {
+    const f = fixture(), correctionArtifactRoot = f.correction()
+    const assessmentArtifactRoot = f.rooted("factory-independence-assessment-v2", { input: f.input, implementationRoot: f.current.root, correctionArtifactRoot })
+    const context = readFactoryHistoricalImportContext(f.repository, assessmentArtifactRoot)
+    expect(context).toMatchObject({ issued: false, historicalProducerImplementationRoot: f.historical.root, historicalAssessmentImplementationRoot: f.current.root, currentReaderImplementationRoot: f.current.root })
+    expect(requireFactoryHistoricalImportContext(context, f.repository, f.execution)).toBe(context)
+    expect(() => requireFactoryHistoricalImportContext({ ...context }, f.repository, f.execution)).toThrow("IMPORT_CONTEXT")
+    expect(() => correctedFactoryExecutionImplementationRoot(context as never, f.repository, f.execution, f.current.root)).toThrow("CONTEXT")
+    const foreign = f.rooted("factory-independence-assessment-v2", { input: { ...f.input, windowTerminalArtifactRoot: labRoot("fixture", "foreign") }, implementationRoot: f.current.root, correctionArtifactRoot })
+    expect(() => readFactoryHistoricalImportContext(f.repository, foreign)).toThrow("IMPORT_CORRECTION")
+    const missingLineage = f.correction({ historicalManifestArtifactRoot: labRoot("fixture", "missing") })
+    expect(() => readFactoryHistoricalImportContext(f.repository, f.rooted("factory-independence-assessment-v2", { input: f.input, implementationRoot: f.current.root, correctionArtifactRoot: missingLineage }))).toThrow()
+  })
   it("permits only explicitly reviewed reader deltas and rejects gameplay, generator, token or threshold changes",()=>{
     const entry=(path:string,version:string)=>({path,root:labRoot("fixture",version)})
     const reader="scripts/assess-v1-38-factory-independence.ts"

@@ -89,3 +89,52 @@ export const correctedFactoryExecutionImplementationRoot = (context: FactoryAsse
   if (!issued.has(context) || context.repositoryDirectory!==repository.directory || context.executionEvidenceArtifactRoot!==artifactRoot || context.currentImplementationRoot!==currentRoot) return fail("CONTEXT")
   return context.historicalImplementationRoot
 }
+
+export interface FactoryHistoricalImportContext {
+  readonly issued: false
+  readonly assessmentArtifactRoot: LabRoot
+  readonly assessmentRoot: LabRoot
+  readonly executionEvidenceArtifactRoot: LabRoot
+  readonly historicalProducerImplementationRoot: LabRoot
+  readonly historicalAssessmentImplementationRoot: LabRoot
+  readonly currentReaderImplementationRoot: LabRoot
+  readonly repositoryDirectory: string
+}
+const historicalImports = new WeakSet<object>()
+/** Measurement-only lineage reader. It does not issue the normal correction capability. */
+export const readFactoryHistoricalImportContext = (repository: FactoryRepository, assessmentArtifactRoot: LabRoot): Readonly<FactoryHistoricalImportContext> => {
+  const assessment = readFactoryCanonicalRecord(repository, assessmentArtifactRoot)
+  if (!["factory-independence-assessment-v1", "factory-independence-assessment-v2"].includes(String(assessment.schemaVersion))) return fail("IMPORT_ASSESSMENT")
+  requireFactoryRecordRoot(assessment, String(assessment.schemaVersion))
+  const input = assessment.input as Record<string, unknown>, executionEvidenceArtifactRoot = asRoot(input?.executionEvidenceArtifactRoot), execution = readFactoryCanonicalRecord(repository, executionEvidenceArtifactRoot)
+  requireFactoryRecordRoot(execution, "factory-calibration-execution-evidence-v1")
+  const oldReview = readPassedReview(repository, asRoot(execution.sourceReviewArtifactRoot))
+  if (oldReview.sourceCommit !== execution.sourceCommit) return fail("IMPORT_SOURCE")
+  const historicalAssessmentImplementationRoot = asRoot(assessment.implementationRoot)
+  if (assessment.schemaVersion === "factory-independence-assessment-v2") {
+    const correction = readFactoryCanonicalRecord(repository, asRoot(assessment.correctionArtifactRoot))
+    requireFactoryRecordRoot(correction, "factory-assessment-correction-v1")
+    if (correction.inputRoot !== labRoot("factory-assessment-correction-input-v1", input) || correction.executionEvidenceArtifactRoot !== executionEvidenceArtifactRoot || !["positive-control-observation-equality-envelope", "positive-control-map-and-source-token-envelope"].includes(String(correction.reason))) return fail("IMPORT_CORRECTION")
+    const historical = readFactoryCanonicalRecord(repository, asRoot(correction.historicalManifestArtifactRoot)), correctedReview = readPassedReview(repository, asRoot(correction.assessorReviewArtifactRoot), true)
+    if (!exactLabKeys(historical, ["entries", "root"]) || labRoot("factory-reviewed-implementation-v2", entries(historical.entries)) !== historical.root || historical.root !== oldReview.implementationRoot || correctedReview.implementationRoot !== historicalAssessmentImplementationRoot || correctedReview.sourceCommit === oldReview.sourceCommit) return fail("IMPORT_LINEAGE")
+    const failure = readFactoryCanonicalRecord(repository, asRoot(correction.failureArtifactRoot))
+    requireFactoryRecordRoot(failure, "factory-264-assessment-failure-v1")
+    if (failure.sourceCommit !== oldReview.sourceCommit || failure.implementationRoot !== oldReview.implementationRoot || labRoot("factory-assessment-correction-input-v1", failure.input) !== correction.inputRoot || failure.error !== "LAB_CANONICAL_VALUE" || failure.stage !== "positive-control-merged-observation-equality" || failure.assessmentArtifactRoot !== null || failure.thresholdArtifactRoot !== null) return fail("IMPORT_FAILURE_LINEAGE")
+    if (correction.reason === "positive-control-map-and-source-token-envelope") {
+      const prior = readFactoryCanonicalRecord(repository, asRoot(correction.priorCorrectionFailureArtifactRoot))
+      requireFactoryRecordRoot(prior, "factory-264-assessment-correction-failure-v1")
+      if (prior.originalFailureArtifactRoot !== correction.failureArtifactRoot || prior.error !== "NUMERIC_CALIBRATION_EVIDENCE" || prior.stage !== "source-structure-token-domain" || prior.assessmentArtifactRoot !== null || prior.thresholdArtifactRoot !== null || prior.extraMatches !== 0 || prior.metricOrThresholdChanged !== false) return fail("IMPORT_PRIOR_FAILURE")
+      const previous = readFactoryCanonicalRecord(repository, asRoot(prior.correctionArtifactRoot))
+      requireFactoryRecordRoot(previous, "factory-assessment-correction-v1")
+      const priorReview = readPassedReview(repository, asRoot(previous.assessorReviewArtifactRoot), true)
+      if (previous.reason !== "positive-control-observation-equality-envelope" || previous.inputRoot !== correction.inputRoot || previous.executionEvidenceArtifactRoot !== executionEvidenceArtifactRoot || previous.failureArtifactRoot !== correction.failureArtifactRoot || priorReview.sourceCommit !== prior.sourceCommit || priorReview.implementationRoot !== prior.implementationRoot) return fail("IMPORT_PRIOR_LINEAGE")
+    }
+  } else if (historicalAssessmentImplementationRoot !== oldReview.implementationRoot) return fail("IMPORT_READER_LINEAGE")
+  const context = Object.freeze({ issued: false as const, assessmentArtifactRoot, assessmentRoot: asRoot(assessment.root), executionEvidenceArtifactRoot, historicalProducerImplementationRoot: asRoot(oldReview.implementationRoot), historicalAssessmentImplementationRoot, currentReaderImplementationRoot: factoryAssessmentImplementationManifest().root, repositoryDirectory: repository.directory })
+  historicalImports.add(context)
+  return context
+}
+export const requireFactoryHistoricalImportContext = (context: FactoryHistoricalImportContext, repository: FactoryRepository, executionEvidenceArtifactRoot: LabRoot): Readonly<FactoryHistoricalImportContext> => {
+  if (!historicalImports.has(context) || context.repositoryDirectory !== repository.directory || context.executionEvidenceArtifactRoot !== executionEvidenceArtifactRoot || context.currentReaderImplementationRoot !== factoryAssessmentImplementationManifest().root) return fail("IMPORT_CONTEXT")
+  return context
+}

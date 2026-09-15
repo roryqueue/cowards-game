@@ -12,7 +12,7 @@ import { factoryProposalFromPacket } from "../packages/strategy-lab/src/factory/
 import { distillLegalStudent, projectTeacherSearchToLegalTraining } from "../packages/strategy-oracle-teacher/src/distill.js"
 import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
-import { correctedFactoryExecutionImplementationRoot, type FactoryAssessmentCorrection } from "./v1-38-factory-assessment-correction.js"
+import { correctedFactoryExecutionImplementationRoot, requireFactoryHistoricalImportContext, type FactoryAssessmentCorrection, type FactoryHistoricalImportContext } from "./v1-38-factory-assessment-correction.js"
 
 export interface FactoryAuthoringRecordRefs {
   readonly start: LabRoot; readonly request: LabRoot; readonly stdin: LabRoot; readonly response: LabRoot
@@ -46,7 +46,7 @@ export const deriveFactorySharedHelperAudit = (records: Readonly<Record<"S01" | 
   return { ...value, root: labRoot("factory-shared-helper-audit-v1", value) }
 }
 /** Reopens local evidence only. A clean source review is not a custody attestation. */
-export const readFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>, correction?: FactoryAssessmentCorrection): FactoryExecutionEvidence => {
+const readBoundFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>, correction?: FactoryAssessmentCorrection, historicalImport?: FactoryHistoricalImportContext): FactoryExecutionEvidence => {
   const raw = readFactoryCanonicalRecord(repository, artifactRoot)
   if (!exactLabKeys(raw, ["schemaVersion", "root", "manifestRoot", "sourceCommit", "sourceReviewArtifactRoot", "authoring", "teacherSearchArtifactRoot", "teacherTrainingArtifactRoot", "sharedHelperAuditArtifactRoot", "negativeWitnessArtifactRoots"]) || raw.schemaVersion !== "factory-calibration-execution-evidence-v1" || raw.manifestRoot !== fresh.manifest.root || typeof raw.sourceCommit !== "string" || !/^[a-f0-9]{40}$/u.test(raw.sourceCommit)) return fail("INDEX")
   requireFactoryRecordRoot(raw, "factory-calibration-execution-evidence-v1")
@@ -54,7 +54,7 @@ export const readFactoryExecutionEvidence = (repository: FactoryRepository, arti
   const review = readFactoryCanonicalRecord(repository, value.sourceReviewArtifactRoot)
   requireFactoryRecordRoot(review, "factory-source-review-v1")
   const currentRoot = factoryAssessmentImplementationRoot()
-  const expectedRoot = correction ? correctedFactoryExecutionImplementationRoot(correction,repository,artifactRoot,currentRoot) : currentRoot
+  const expectedRoot = historicalImport ? requireFactoryHistoricalImportContext(historicalImport, repository, artifactRoot).historicalProducerImplementationRoot : correction ? correctedFactoryExecutionImplementationRoot(correction,repository,artifactRoot,currentRoot) : currentRoot
   if (!exactLabKeys(review, ["schemaVersion", "sourceCommit", "implementationRoot", "reviewerId", "authorIds", "status", "unresolvedFindings", "reportArtifactRoot", "root"]) || review.schemaVersion !== "factory-source-review-v1" || review.sourceCommit !== value.sourceCommit || review.implementationRoot !== expectedRoot || review.status !== "passed" || review.unresolvedFindings !== 0 || typeof review.reviewerId !== "string" || !Array.isArray(review.authorIds) || review.authorIds.length === 0 || review.authorIds.includes(review.reviewerId)) return fail("REVIEW")
   const report = new TextDecoder("utf-8", { fatal: true }).decode(readFactoryArtifact(repository, review.reportArtifactRoot as LabRoot))
   if (!report.includes(value.sourceCommit)) return fail("REVIEW_SOURCE")
@@ -81,6 +81,11 @@ export const readFactoryExecutionEvidence = (repository: FactoryRepository, arti
   if (!exactLabKeys(value.negativeWitnessArtifactRoots, ["S01", "S03", "S05"])) return fail("NEGATIVE_WITNESSES")
   for (const slot of ["S01", "S03", "S05"] as const) if (!same(readFactoryCanonicalRecord(repository, value.negativeWitnessArtifactRoots[slot]), deriveFactoryNegativeWitness(fresh.ingestions[slot]))) return fail("NEGATIVE_WITNESS")
   return value
+}
+export const readFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>, correction?: FactoryAssessmentCorrection): FactoryExecutionEvidence => readBoundFactoryExecutionEvidence(repository, artifactRoot, fresh, correction)
+export const readHistoricalFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>, context: FactoryHistoricalImportContext): Readonly<{ issued: false; evidence: FactoryExecutionEvidence; historicalProducerImplementationRoot: LabRoot; currentReaderImplementationRoot: LabRoot }> => {
+  requireFactoryHistoricalImportContext(context, repository, artifactRoot)
+  return Object.freeze({ issued: false as const, evidence: readBoundFactoryExecutionEvidence(repository, artifactRoot, fresh, undefined, context), historicalProducerImplementationRoot: context.historicalProducerImplementationRoot, currentReaderImplementationRoot: context.currentReaderImplementationRoot })
 }
 const fail = (code: string): never => { throw new TypeError(`FACTORY_EXECUTION_${code}`) }
 const same = (left: unknown, right: unknown) => labRoot("factory-execution-equality-v1", left) === labRoot("factory-execution-equality-v1", right)

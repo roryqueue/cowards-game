@@ -11,14 +11,14 @@ import { FactoryCandidateSchema } from "../packages/strategy-lab/src/factory/con
 import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { compareNumericEvidence, freezeNumericCalibrationThreshold, classifyNumericComparison, type NumericCalibrationEvidence, type NumericComparison, type NumericControlTable, type NumericControlId } from "../packages/strategy-lab/src/factory/numeric-calibration.js"
 import { readFactoryCanonicalRecord, readFreshFactoryCalibration, requireFactoryRecordRoot, remainingFreshWorkloadLifetime } from "./v1-38-factory-fresh-evidence.js"
-import { deriveFactorySharedHelperAudit, factoryEvidenceByteRoot, readFactoryExecutionEvidence } from "./v1-38-factory-execution-evidence.js"
+import { deriveFactorySharedHelperAudit, factoryEvidenceByteRoot, readFactoryExecutionEvidence, readHistoricalFactoryExecutionEvidence } from "./v1-38-factory-execution-evidence.js"
 import { createNumericObservationFromVerifiedCell, type VerifiedFactoryCellObservation } from "./v1-38-factory-observations.js"
 import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 import type { FactorySourceSlot } from "./v1-38-factory-allocation.js"
 import { factoryAssessmentImplementationRoot as implementationRoot } from "./v1-38-factory-implementation.js"
 import { equalFactoryObservationMaps } from "./v1-38-factory-observation-equality.js"
-import { readFactoryAssessmentCorrection } from "./v1-38-factory-assessment-correction.js"
+import { readFactoryAssessmentCorrection, readFactoryHistoricalImportContext, requireFactoryHistoricalImportContext, type FactoryHistoricalImportContext } from "./v1-38-factory-assessment-correction.js"
 
 const BASE_EDGES = ["S01/S03", "S01/S05", "S03/S05"] as const
 const CONTROL_IDS: readonly NumericControlId[] = ["S01/S02", "S03/S04", "S05/S06", "S01/S07", "S01/S08", "S11/S12"]
@@ -76,14 +76,16 @@ export interface FactoryAssessmentResult {
 const rooted = (schemaVersion:string, value:Record<string,unknown>) => { const body = {schemaVersion,...value}; return {...body,root:labRoot(schemaVersion,body)} }
 const artifactIdentity = (value:unknown) => factoryEvidenceByteRoot(encode(value))
 
-export const assessFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}): FactoryAssessmentResult => {
+const assessBoundFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}, historicalImport?: FactoryHistoricalImportContext): FactoryAssessmentResult => {
   const persist = options.persist !== false, reasons:string[] = []
+  if (historicalImport && persist) return fail("IMPORT_READ_ONLY")
+  const measurementImplementationRoot = historicalImport ? requireFactoryHistoricalImportContext(historicalImport, repository, input.executionEvidenceArtifactRoot).historicalAssessmentImplementationRoot : implementationRoot()
   const manifest = admitFactoryCalibrationManifest(readFactoryCanonicalRecord(repository,input.manifestArtifactRoot))
   const opponentIdentityRoot = labRoot("factory-fixed-mechanics-opponent-identity-v1",{opponentId:"factory-fixed-mechanics-v1",tupleId:MATCH_KERNEL.tupleId,tupleRoot:LAB_ADMITTED_ROOTS.tupleRoot,image:LAB_ADMITTED_ROOTS.image,runtimeLimitsRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot})
   const fresh = readFreshFactoryCalibration(repository,manifest,opponentIdentityRoot)
-  const correction = options.correctionArtifactRoot ? readFactoryAssessmentCorrection(repository,options.correctionArtifactRoot,{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null}) : undefined
-  const evidence = readFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh,correction)
-  const correctionBinding = correction ? {correctionArtifactRoot:correction.artifactRoot} : {}
+  const correction = options.correctionArtifactRoot && !historicalImport ? readFactoryAssessmentCorrection(repository,options.correctionArtifactRoot,{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null}) : undefined
+  const evidence = historicalImport ? readHistoricalFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh,historicalImport).evidence : readFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh,correction)
+  const correctionBinding = options.correctionArtifactRoot ? {correctionArtifactRoot:options.correctionArtifactRoot} : {}
   const ledger = readRetainedFactoryLedger(repository)
   if (ledger.ledgerRoot !== input.ledgerRoot) return fail("LEDGER_ROOT")
   if (ledger.entries.length > 48) return fail("EXTRA_ATTEMPTS")
@@ -186,7 +188,7 @@ export const assessFactoryIndependence = (repository: FactoryRepository, input: 
     controls = Object.fromEntries(CONTROL_IDS.map((id) => [id,comparison(id)])) as unknown as NumericControlTable
     const fit = freezeNumericCalibrationThreshold(controls)
     if (fit.status === "frozen" && reasons.length === 0 && groundTruth.length === 0) {
-      const threshold = rooted(correction ? "factory-numeric-threshold-v2" : "factory-numeric-threshold-v1",{...correctionBinding,manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,sourceRoots:fresh.allocation.sourceSlots.map((slot) => fresh.ingestions[slot].sourceRoot),receiptRoots:observedSupervision,implementationRoot:implementationRoot(),studyPolicyRoot:manifest.studyPolicyRoot,measurementPolicyRoot:manifest.measurementPolicyRoot,controls,threshold:fit.threshold})
+      const threshold = rooted(options.correctionArtifactRoot ? "factory-numeric-threshold-v2" : "factory-numeric-threshold-v1",{...correctionBinding,manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,sourceRoots:fresh.allocation.sourceSlots.map((slot) => fresh.ingestions[slot].sourceRoot),receiptRoots:observedSupervision,implementationRoot:measurementImplementationRoot,studyPolicyRoot:manifest.studyPolicyRoot,measurementPolicyRoot:manifest.measurementPolicyRoot,controls,threshold:fit.threshold})
       thresholdArtifactRoot = artifactIdentity(threshold)
       if (persist) publishFactoryArtifact(repository,encode(threshold))
       else if (!same(readFactoryCanonicalRecord(repository,thresholdArtifactRoot),threshold)) return fail("THRESHOLD_REOPEN")
@@ -197,9 +199,17 @@ export const assessFactoryIndependence = (repository: FactoryRepository, input: 
   reasons.push(...groundTruth)
   const sharing = Number(deriveFactorySharedHelperAudit(fresh.ingestions).strategicSharingViolations)
   const decision = controls ? decideFactoryIndependence(controls,baseEdges,reasons,sharing) : {status:"unresolved" as const,reasons:[...new Set([...reasons,"incomplete_controls"])]}
-  const assessment = rooted(correction ? "factory-independence-assessment-v2" : "factory-independence-assessment-v1",{...correctionBinding,privacy:"private_offline",input:{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null},manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,implementationRoot:implementationRoot(),executionEvidenceRoot:evidence.root,status:decision.status,reasons:decision.reasons,thresholdArtifactRoot,controls,baseEdges,strategicSharingViolations:sharing,completedCells:ordered.length,completePairs:pairs.size,scope:"two_geometry_side_confounded_fixed_opponent_one_phase_development",competitiveClaim:"none",publicAuthority:false,holdoutOpened:false,formationMaterialized:false})
+  const assessment = rooted(options.correctionArtifactRoot ? "factory-independence-assessment-v2" : "factory-independence-assessment-v1",{...correctionBinding,privacy:"private_offline",input:{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null},manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,implementationRoot:measurementImplementationRoot,executionEvidenceRoot:evidence.root,status:decision.status,reasons:decision.reasons,thresholdArtifactRoot,controls,baseEdges,strategicSharingViolations:sharing,completedCells:ordered.length,completePairs:pairs.size,scope:"two_geometry_side_confounded_fixed_opponent_one_phase_development",competitiveClaim:"none",publicAuthority:false,holdoutOpened:false,formationMaterialized:false})
   const assessmentArtifactRoot = persist ? publishFactoryArtifact(repository,encode(assessment)) : null
   return {status:decision.status,reasons:decision.reasons,assessmentRoot:assessment.root,assessmentArtifactRoot,thresholdArtifactRoot,manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot}
+}
+export const assessFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}): FactoryAssessmentResult => assessBoundFactoryIndependence(repository, input, options)
+/** Original measurement and current reader identities remain distinct. No new execution authority. */
+export const verifyHistoricalFactoryAssessmentForLeague = (repository: FactoryRepository, artifactRoot: LabRoot): FactoryAssessmentResult & { issued: false; historicalProducerImplementationRoot: LabRoot; historicalAssessmentImplementationRoot: LabRoot; currentReaderImplementationRoot: LabRoot } => {
+  const context = readFactoryHistoricalImportContext(repository, artifactRoot), saved = readFactoryCanonicalRecord(repository, artifactRoot)
+  const result = assessBoundFactoryIndependence(repository, saved.input as unknown as FactoryAssessmentInput, { persist: false, ...(saved.schemaVersion === "factory-independence-assessment-v2" ? { correctionArtifactRoot: saved.correctionArtifactRoot as LabRoot } : {}) }, context)
+  if (result.assessmentRoot !== context.assessmentRoot) return fail("IMPORT_ASSESSMENT_REOPEN")
+  return Object.freeze({ ...result, issued: false as const, historicalProducerImplementationRoot: context.historicalProducerImplementationRoot, historicalAssessmentImplementationRoot: context.historicalAssessmentImplementationRoot, currentReaderImplementationRoot: context.currentReaderImplementationRoot })
 }
 
 export const verifyRetainedFactoryAssessment = (repository:FactoryRepository,artifactRoot:LabRoot):FactoryAssessmentResult => {
