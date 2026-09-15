@@ -55,6 +55,19 @@ describe("one-way lab boundary monitor", () => {
   it("allows TypeScript only in the reviewed factory fingerprint collector", () => {
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/factory/fingerprint.ts": 'import ts from "typescript"; export { ts }' } }).ok).toBe(true)
   })
+  it("allows a declared, unassigned local retained-budget require method", () => {
+    const files = { ...lab,
+      "packages/strategy-lab/src/league/budget.ts": "class RetainedBudget { require(value: number) { return value } publish(value: number) { return this.require(value) } }",
+    }
+    expect(checkLabBoundaries({ files })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
+  })
+  it.each([
+    "class RetainedBudget { require(value: unknown) { return value } replace(loader: unknown) { this.require = loader as never; return this.require(loader) } }",
+    "const module = { require(value: unknown) { return value } }; declare const loader: unknown; module.require(loader)",
+  ])("keeps assigned and non-local require property calls conservative: %s", (source) => {
+    const files = { ...lab, "packages/strategy-lab/src/league/loader.ts": source }
+    expect(checkLabBoundaries({ files }).violations).toContainEqual({ code: "UNRESOLVED_LAB_EDGE", file: "packages/strategy-lab/src/league/loader.ts" })
+  })
   it("recognizes private oracle leaves without treating their contract import as production", () => {
     const files = { ...lab,
       "packages/strategy-oracle-tactical/src/index.ts": 'import type { Packet } from "@cowards/strategy-lab/factory"',
