@@ -12,6 +12,7 @@ import { factoryProposalFromPacket } from "../packages/strategy-lab/src/factory/
 import { distillLegalStudent, projectTeacherSearchToLegalTraining } from "../packages/strategy-oracle-teacher/src/distill.js"
 import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
+import { correctedFactoryExecutionImplementationRoot, type FactoryAssessmentCorrection } from "./v1-38-factory-assessment-correction.js"
 
 export interface FactoryAuthoringRecordRefs {
   readonly start: LabRoot; readonly request: LabRoot; readonly stdin: LabRoot; readonly response: LabRoot
@@ -45,14 +46,16 @@ export const deriveFactorySharedHelperAudit = (records: Readonly<Record<"S01" | 
   return { ...value, root: labRoot("factory-shared-helper-audit-v1", value) }
 }
 /** Reopens local evidence only. A clean source review is not a custody attestation. */
-export const readFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>): FactoryExecutionEvidence => {
+export const readFactoryExecutionEvidence = (repository: FactoryRepository, artifactRoot: LabRoot, fresh: ReturnType<typeof readFreshFactoryCalibration>, correction?: FactoryAssessmentCorrection): FactoryExecutionEvidence => {
   const raw = readFactoryCanonicalRecord(repository, artifactRoot)
   if (!exactLabKeys(raw, ["schemaVersion", "root", "manifestRoot", "sourceCommit", "sourceReviewArtifactRoot", "authoring", "teacherSearchArtifactRoot", "teacherTrainingArtifactRoot", "sharedHelperAuditArtifactRoot", "negativeWitnessArtifactRoots"]) || raw.schemaVersion !== "factory-calibration-execution-evidence-v1" || raw.manifestRoot !== fresh.manifest.root || typeof raw.sourceCommit !== "string" || !/^[a-f0-9]{40}$/u.test(raw.sourceCommit)) return fail("INDEX")
   requireFactoryRecordRoot(raw, "factory-calibration-execution-evidence-v1")
   const value = raw as unknown as FactoryExecutionEvidence
   const review = readFactoryCanonicalRecord(repository, value.sourceReviewArtifactRoot)
   requireFactoryRecordRoot(review, "factory-source-review-v1")
-  if (!exactLabKeys(review, ["schemaVersion", "sourceCommit", "implementationRoot", "reviewerId", "authorIds", "status", "unresolvedFindings", "reportArtifactRoot", "root"]) || review.schemaVersion !== "factory-source-review-v1" || review.sourceCommit !== value.sourceCommit || review.implementationRoot !== factoryAssessmentImplementationRoot() || review.status !== "passed" || review.unresolvedFindings !== 0 || typeof review.reviewerId !== "string" || !Array.isArray(review.authorIds) || review.authorIds.length === 0 || review.authorIds.includes(review.reviewerId)) return fail("REVIEW")
+  const currentRoot = factoryAssessmentImplementationRoot()
+  const expectedRoot = correction ? correctedFactoryExecutionImplementationRoot(correction,repository,artifactRoot,currentRoot) : currentRoot
+  if (!exactLabKeys(review, ["schemaVersion", "sourceCommit", "implementationRoot", "reviewerId", "authorIds", "status", "unresolvedFindings", "reportArtifactRoot", "root"]) || review.schemaVersion !== "factory-source-review-v1" || review.sourceCommit !== value.sourceCommit || review.implementationRoot !== expectedRoot || review.status !== "passed" || review.unresolvedFindings !== 0 || typeof review.reviewerId !== "string" || !Array.isArray(review.authorIds) || review.authorIds.length === 0 || review.authorIds.includes(review.reviewerId)) return fail("REVIEW")
   const report = new TextDecoder("utf-8", { fatal: true }).decode(readFactoryArtifact(repository, review.reportArtifactRoot as LabRoot))
   if (!report.includes(value.sourceCommit)) return fail("REVIEW_SOURCE")
   const model = fresh.ingestions.S05.modelCompanion

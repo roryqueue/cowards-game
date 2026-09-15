@@ -8,8 +8,8 @@ import { loadLabBoundaryFiles } from "./check-v1-38-lab-boundaries.js"
  * excludes .planning, .strategy-lab, dependencies and generated output; this
  * never opens private experimental evidence or asks for external attestation.
  */
-export const factoryAssessmentImplementationManifest = () => {
-  const files=loadLabBoundaryFiles(resolve(dirname(fileURLToPath(import.meta.url)),".."))
+export const factoryAssessmentImplementationManifest = (inventoryRoot = resolve(dirname(fileURLToPath(import.meta.url)),"..")) => {
+  const files=loadLabBoundaryFiles(inventoryRoot)
   const entries=Object.keys(files).filter(path=>!/(?:\.test|\.spec)\.[cm]?[jt]sx?$/u.test(path)&&!/(?:^|\/)(?:test|__tests__|testdata)\//u.test(path)&&!path.startsWith("scripts/fixtures/")).sort().map(path=>({path,root:`sha256:${createHash("sha256").update(files[path]!).digest("hex")}`}))
   return {entries,root:labRoot("factory-reviewed-implementation-v2",entries)}
 }

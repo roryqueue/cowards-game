@@ -14,6 +14,7 @@ import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-
 import { ingestNamedFactoryPacket } from "./ingest-v1-38-factory-packet.js"
 import { prepareFreshFactoryCalibration } from "./prepare-v1-38-factory-calibration.js"
 import { deriveFixedMechanicsOpponentIdentityRoot } from "./run-v1-38-factory-calibration.js"
+import { factoryAssessmentImplementationManifest } from "./v1-38-factory-implementation.js"
 const directories:string[]=[]
 afterEach(() => { for(const directory of directories.splice(0)) rmSync(directory,{recursive:true,force:true}) })
 const store=()=>{const directory=realpathSync(mkdtempSync(join(tmpdir(),"factory-assessor-test-")));directories.push(directory);return createFactoryRepository(directory)}
@@ -41,7 +42,25 @@ describe("finite factory independence decision", () => {
     expect(result.status).toBe("unresolved");expect(result.reasons).toContain("incomplete_48_cells");expect(result.thresholdArtifactRoot).toBe(null)
     expect(verifyRetainedFactoryAssessment(repository,result.assessmentArtifactRoot!)).toMatchObject({status:"unresolved",assessmentRoot:result.assessmentRoot})
     expect(()=>assessFactoryIndependence(repository,{...input,terminalRoots:[labRoot("fixture","invented")]})).toThrow("TERMINAL_ROOTS")
-  },30000)
+    // Reopen an explicitly versioned reader correction against immutable old
+    // execution evidence. The ordinary (fresh-run) source guard remains strict.
+    const current=factoryAssessmentImplementationManifest()
+    const oldEntries=current.entries.map(entry=>entry.path==="scripts/assess-v1-38-factory-independence.ts"?{...entry,root:labRoot("fixture","old-reader")}:entry)
+    const historical={entries:oldEntries,root:labRoot("factory-reviewed-implementation-v2",oldEntries)}
+    const rooted=(schemaVersion:string,value:Record<string,unknown>)=>{const body={schemaVersion,...value};return publish({...body,root:labRoot(schemaVersion,body)})}
+    const oldReview=rooted("factory-source-review-v1",{...fixture.values.reviewValue,implementationRoot:historical.root})
+    const oldExecution=rooted("factory-calibration-execution-evidence-v1",{...execution,sourceReviewArtifactRoot:oldReview})
+    const correctedInput={...input,executionEvidenceArtifactRoot:oldExecution,windowTerminalArtifactRoot:null}
+    const currentReview=rooted("factory-source-review-v1",{...fixture.values.reviewValue,sourceCommit:"b".repeat(40),implementationRoot:current.root,reportArtifactRoot:publishFactoryArtifact(repository,new TextEncoder().encode(`${"b".repeat(40)}\n${current.root}`))})
+    const failure=rooted("factory-264-assessment-failure-v1",{sourceCommit:execution.sourceCommit,implementationRoot:historical.root,input:correctedInput,error:"LAB_CANONICAL_VALUE",stage:"positive-control-merged-observation-equality",assessmentArtifactRoot:null,thresholdArtifactRoot:null})
+    const correction=rooted("factory-assessment-correction-v1",{reason:"positive-control-observation-equality-envelope",executionEvidenceArtifactRoot:oldExecution,historicalManifestArtifactRoot:publish(historical),assessorReviewArtifactRoot:currentReview,failureArtifactRoot:failure,inputRoot:labRoot("factory-assessment-correction-input-v1",correctedInput)})
+    expect(()=>assessFactoryIndependence(repository,correctedInput)).toThrow("FACTORY_EXECUTION_REVIEW")
+    const corrected=assessFactoryIndependence(repository,correctedInput,{correctionArtifactRoot:correction})
+    expect(corrected.status).toBe("unresolved")
+    expect(corrected.reasons).toContain("incomplete_48_cells")
+    expect(corrected.thresholdArtifactRoot).toBe(null)
+    expect(verifyRetainedFactoryAssessment(repository,corrected.assessmentArtifactRoot!)).toMatchObject({status:"unresolved",assessmentRoot:corrected.assessmentRoot})
+  },60000)
   it("rejects actual per-cell overruns even within the outer window",()=>{
     expect(factoryWorkloadResourceViolations(1000,121000,256,120000)).toEqual([])
     expect(factoryWorkloadResourceViolations(1000,121001,256,120000)).toContain("lifetime_exceeded")

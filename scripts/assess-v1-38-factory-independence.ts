@@ -17,6 +17,8 @@ import { auditFactorySource } from "./v1-38-factory-source-audit.js"
 import { FACTORY_CONTROL_BASES, type FactoryControlSlot } from "./v1-38-factory-controls.js"
 import type { FactorySourceSlot } from "./v1-38-factory-allocation.js"
 import { factoryAssessmentImplementationRoot as implementationRoot } from "./v1-38-factory-implementation.js"
+import { equalFactoryObservationMaps } from "./v1-38-factory-observation-equality.js"
+import { readFactoryAssessmentCorrection } from "./v1-38-factory-assessment-correction.js"
 
 const BASE_EDGES = ["S01/S03", "S01/S05", "S03/S05"] as const
 const CONTROL_IDS: readonly NumericControlId[] = ["S01/S02", "S03/S04", "S05/S06", "S01/S07", "S01/S08", "S11/S12"]
@@ -74,12 +76,14 @@ export interface FactoryAssessmentResult {
 const rooted = (schemaVersion:string, value:Record<string,unknown>) => { const body = {schemaVersion,...value}; return {...body,root:labRoot(schemaVersion,body)} }
 const artifactIdentity = (value:unknown) => factoryEvidenceByteRoot(encode(value))
 
-export const assessFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean} = {}): FactoryAssessmentResult => {
+export const assessFactoryIndependence = (repository: FactoryRepository, input: FactoryAssessmentInput, options: {persist?: boolean; correctionArtifactRoot?: LabRoot} = {}): FactoryAssessmentResult => {
   const persist = options.persist !== false, reasons:string[] = []
   const manifest = admitFactoryCalibrationManifest(readFactoryCanonicalRecord(repository,input.manifestArtifactRoot))
   const opponentIdentityRoot = labRoot("factory-fixed-mechanics-opponent-identity-v1",{opponentId:"factory-fixed-mechanics-v1",tupleId:MATCH_KERNEL.tupleId,tupleRoot:LAB_ADMITTED_ROOTS.tupleRoot,image:LAB_ADMITTED_ROOTS.image,runtimeLimitsRoot:LAB_ADMITTED_ROOTS.runtimeLimitsRoot})
   const fresh = readFreshFactoryCalibration(repository,manifest,opponentIdentityRoot)
-  const evidence = readFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh)
+  const correction = options.correctionArtifactRoot ? readFactoryAssessmentCorrection(repository,options.correctionArtifactRoot,{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null}) : undefined
+  const evidence = readFactoryExecutionEvidence(repository,input.executionEvidenceArtifactRoot,fresh,correction)
+  const correctionBinding = correction ? {correctionArtifactRoot:correction.artifactRoot} : {}
   const ledger = readRetainedFactoryLedger(repository)
   if (ledger.ledgerRoot !== input.ledgerRoot) return fail("LEDGER_ROOT")
   if (ledger.entries.length > 48) return fail("EXTRA_ATTEMPTS")
@@ -170,7 +174,7 @@ export const assessFactoryIndependence = (repository: FactoryRepository, input: 
   if (Object.keys(merged).length === 12) {
     for (const pair of ["S01/S02","S03/S04","S05/S06"]) {
       const [left,right] = pair.split("/") as [FactorySourceSlot,FactorySourceSlot]
-      if (!same(merged[left].legalInputSamples,merged[right].legalInputSamples) || !same(merged[left].chronicleSamples,merged[right].chronicleSamples)) groundTruth.push(`positive_behavior:${pair}`)
+      if (!equalFactoryObservationMaps(merged[left].legalInputSamples,merged[right].legalInputSamples) || !equalFactoryObservationMaps(merged[left].chronicleSamples,merged[right].chronicleSamples)) groundTruth.push(`positive_behavior:${pair}`)
     }
     const divergentStone = (left:FactorySourceSlot,right:FactorySourceSlot,xOnly:boolean) => Object.entries(merged[left].legalInputSamples).some(([key,tokens]) => {
       const other = merged[right].legalInputSamples[key]
@@ -182,7 +186,7 @@ export const assessFactoryIndependence = (repository: FactoryRepository, input: 
     controls = Object.fromEntries(CONTROL_IDS.map((id) => [id,comparison(id)])) as unknown as NumericControlTable
     const fit = freezeNumericCalibrationThreshold(controls)
     if (fit.status === "frozen" && reasons.length === 0 && groundTruth.length === 0) {
-      const threshold = rooted("factory-numeric-threshold-v1",{manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,sourceRoots:fresh.allocation.sourceSlots.map((slot) => fresh.ingestions[slot].sourceRoot),receiptRoots:observedSupervision,implementationRoot:implementationRoot(),studyPolicyRoot:manifest.studyPolicyRoot,measurementPolicyRoot:manifest.measurementPolicyRoot,controls,threshold:fit.threshold})
+      const threshold = rooted(correction ? "factory-numeric-threshold-v2" : "factory-numeric-threshold-v1",{...correctionBinding,manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,sourceRoots:fresh.allocation.sourceSlots.map((slot) => fresh.ingestions[slot].sourceRoot),receiptRoots:observedSupervision,implementationRoot:implementationRoot(),studyPolicyRoot:manifest.studyPolicyRoot,measurementPolicyRoot:manifest.measurementPolicyRoot,controls,threshold:fit.threshold})
       thresholdArtifactRoot = artifactIdentity(threshold)
       if (persist) publishFactoryArtifact(repository,encode(threshold))
       else if (!same(readFactoryCanonicalRecord(repository,thresholdArtifactRoot),threshold)) return fail("THRESHOLD_REOPEN")
@@ -193,14 +197,17 @@ export const assessFactoryIndependence = (repository: FactoryRepository, input: 
   reasons.push(...groundTruth)
   const sharing = Number(deriveFactorySharedHelperAudit(fresh.ingestions).strategicSharingViolations)
   const decision = controls ? decideFactoryIndependence(controls,baseEdges,reasons,sharing) : {status:"unresolved" as const,reasons:[...new Set([...reasons,"incomplete_controls"])]}
-  const assessment = rooted("factory-independence-assessment-v1",{privacy:"private_offline",input:{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null},manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,implementationRoot:implementationRoot(),executionEvidenceRoot:evidence.root,status:decision.status,reasons:decision.reasons,thresholdArtifactRoot,controls,baseEdges,strategicSharingViolations:sharing,completedCells:ordered.length,completePairs:pairs.size,scope:"two_geometry_side_confounded_fixed_opponent_one_phase_development",competitiveClaim:"none",publicAuthority:false,holdoutOpened:false,formationMaterialized:false})
+  const assessment = rooted(correction ? "factory-independence-assessment-v2" : "factory-independence-assessment-v1",{...correctionBinding,privacy:"private_offline",input:{...input,windowTerminalArtifactRoot:input.windowTerminalArtifactRoot??null},manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot,implementationRoot:implementationRoot(),executionEvidenceRoot:evidence.root,status:decision.status,reasons:decision.reasons,thresholdArtifactRoot,controls,baseEdges,strategicSharingViolations:sharing,completedCells:ordered.length,completePairs:pairs.size,scope:"two_geometry_side_confounded_fixed_opponent_one_phase_development",competitiveClaim:"none",publicAuthority:false,holdoutOpened:false,formationMaterialized:false})
   const assessmentArtifactRoot = persist ? publishFactoryArtifact(repository,encode(assessment)) : null
   return {status:decision.status,reasons:decision.reasons,assessmentRoot:assessment.root,assessmentArtifactRoot,thresholdArtifactRoot,manifestRoot:manifest.root,allocationRoot:manifest.allocationRoot}
 }
 
 export const verifyRetainedFactoryAssessment = (repository:FactoryRepository,artifactRoot:LabRoot):FactoryAssessmentResult => {
-  const saved = readFactoryCanonicalRecord(repository,artifactRoot); requireFactoryRecordRoot(saved,"factory-independence-assessment-v1")
-  const result = assessFactoryIndependence(repository,saved.input as unknown as FactoryAssessmentInput,{persist:false})
+  const saved = readFactoryCanonicalRecord(repository,artifactRoot)
+  if (saved.schemaVersion!=="factory-independence-assessment-v1" && saved.schemaVersion!=="factory-independence-assessment-v2") return fail("SCHEMA")
+  requireFactoryRecordRoot(saved,saved.schemaVersion)
+  if (saved.schemaVersion==="factory-independence-assessment-v2" && (typeof saved.correctionArtifactRoot!=="string" || !/^sha256:[a-f0-9]{64}$/u.test(saved.correctionArtifactRoot))) return fail("CORRECTION_ROOT")
+  const result = assessFactoryIndependence(repository,saved.input as unknown as FactoryAssessmentInput,{persist:false,...(saved.schemaVersion==="factory-independence-assessment-v2"?{correctionArtifactRoot:saved.correctionArtifactRoot as LabRoot}:{})})
   if (result.assessmentRoot !== saved.root) return fail("ASSESSMENT_REOPEN")
   return result
 }
