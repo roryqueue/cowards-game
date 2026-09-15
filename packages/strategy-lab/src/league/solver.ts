@@ -253,6 +253,16 @@ const corpus = Object.freeze([
   { id: "boundary", matrix: [[1n, -1n], [-1n, 0n]], expected: [rational(1n, 3n), rational(2n, 3n)] },
   { id: "rps", matrix: [[0n, 1n, -1n], [-1n, 0n, 1n], [1n, -1n, 0n]], expected: [rational(1n, 3n), rational(1n, 3n), rational(1n, 3n)] },
   { id: "cyclic12", matrix: Array.from({ length: 12 }, (_, row) => Array.from({ length: 12 }, (_, column) => BigInt(column === (row + 1) % 12 ? 1 : column === (row + 11) % 12 ? -1 : 0))), expected: Array.from({ length: 12 }, () => rational(1n, 12n)) },
+  { id: "asymmetric12", matrix: Array.from({ length: 12 }, (_, row) => Array.from({ length: 12 }, (_, column) => {
+    if (row === column) return 0n
+    const core = new Map([ ["0:1", 8n], ["1:2", 4n], ["2:0", 2n] ])
+    const direct = core.get(`${row}:${column}`), reverse = core.get(`${column}:${row}`)
+    if (direct !== undefined) return direct
+    if (reverse !== undefined) return -reverse
+    if (row < 3 && column >= 3) return 8n
+    if (column < 3 && row >= 3) return -8n
+    return 0n
+  })), expected: [rational(2n, 7n), rational(1n, 7n), rational(4n, 7n), ...Array.from({ length: 9 }, () => zero)] },
 ])
 const matrixFromCorpus = (values: readonly (readonly bigint[])[]): Matrix => Object.freeze(values.map((row) => Object.freeze(row.map((value) => rational(value)))))
 const candidateWeights = (result: readonly Rational[] | RestrictedResult | null): readonly Rational[] | null => {
