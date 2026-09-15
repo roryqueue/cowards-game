@@ -9,7 +9,10 @@ import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommit
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "./repository.js"
-import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
+import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, createLeagueAuthorizedFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
+import { allocationFixture } from "../league/allocation.test.js"
+import { createLeagueExecutionAllocation } from "../league/allocation.js"
+import { declareRedTeamAllocation, startRedTeamAttempt } from "../league/red-team.js"
 
 const dirs: string[] = []
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
@@ -33,11 +36,12 @@ const admitted = () => {
   const admission = authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes: source, repository: repo }), validation, repository: repo })
   return { repo, packet, proposal, validation, admission }
 }
-const providerFor = (admission: FactoryAdmission): FactorySupervisionProvider => {
+const providerFor = (admission: FactoryAdmission, bindings?: { attemptRoot: LabRoot; budgetRoot: LabRoot }): FactorySupervisionProvider => {
   const identity = {
     revisionId: "candidate", sourceRoot: admission.sourceRoot, executableRoot: sourceRoot, tupleId: "tuple", tupleRoot: root("1"),
     image: "image", harnessRoot: root("2"), budgetRoot: root("3"), attemptRoot: root("4"), runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot,
     nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot,
+    ...bindings,
   }
   return {
     identity,
@@ -51,9 +55,9 @@ const providerFor = (admission: FactoryAdmission): FactorySupervisionProvider =>
     verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } },
   }
 }
-const supervision = async (admission: FactoryAdmission) => superviseFactory(admission, "candidate", {
+const supervision = async (admission: FactoryAdmission, bindings?: { attemptRoot: LabRoot; budgetRoot: LabRoot }) => superviseFactory(admission, "candidate", {
   match: { bottomPlayerId: "candidate", topPlayerId: "opponent" } as never,
-  providers: { candidate: providerFor(admission) },
+  providers: { candidate: providerFor(admission, bindings) },
 }, async ({ providers }) => {
   const request = {
     kind: "selectActivations", requestId: "factory:1", semanticTupleId: "tuple",
@@ -112,6 +116,32 @@ const evidenceArtifact = (repo: ReturnType<typeof repository>, values: { proposa
 }
 
 describe("six derived factory fingerprints", () => {
+  it("issues a separate prospective league producer branch only for the exact charged source and fresh receipt", async () => {
+    const { repo, packet, proposal, validation, admission } = admitted()
+    const put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("test encoding"); return publishFactoryArtifact(repo, encoded.canonicalBytes) }
+    const fixture = allocationFixture(), reservation = { ...fixture.channels[0]!.perAttempt, effortMilliseconds: 1 }
+    const requestArtifactRoot = put({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: {} })
+    const job = { id: "tactical-one", channel: "automated" as const, operation: "produce" as const, producerRequestArtifactRoot: requestArtifactRoot, disclosureArtifactRoot: root("b"), provenanceArtifactRoot: root("c"), reviewArtifactRoot: root("d"), participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }
+    const allocation = createLeagueExecutionAllocation({ ...fixture, opportunities: { ...fixture.opportunities, attemptedCandidates: 1 }, channels: fixture.channels.map((channel) => channel.channel === "automated" ? { ...channel, disposition: "allocated", opportunities: 1, ceilings: reservation, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel), rounds: [{ ordinal: 0, acceptedSlots: 0, jobs: [job] }, fixture.rounds[1]!] })
+    const ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
+    const started = startRedTeamAttempt({ ledger, channel: "automated", roundRoot: root("e"), candidateRoot: root("f"), participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: null, reservation })
+    const start = started.starts[0]!, receipt = await supervision(admission, { attemptRoot: start.root, budgetRoot: allocation.root })
+    const producerValue = { schemaVersion: "factory-ingestion-v1", privacy: "private_offline", producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", packetRoot: packet.root, sourceRoot, runtimeProfileRoot: packet.nativeLane.runtimeProfileRoot, nativeLane: packet.nativeLane, packet, sourceUtf8: sourceText, producerInput: {}, modelCompanion: null }
+    const producerArtifactRoot = put({ ...producerValue, root: labRoot("factory-ingestion-v1", producerValue) })
+    const base = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt }).evidence
+    const { schemaVersion: _schema, privacy: _privacy, root: _root, ...value } = base
+    const input = { repository: repo, allocationArtifactRoot: put(allocation), startArtifactRoot: put(start), supervisionReceipt: receipt, value: { ...value, evidenceClass: "real_producer" as const, producerArtifactRoot } }
+    const evidence = createLeagueAuthorizedFactoryFingerprintEvidence(input)
+    const derived = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence, evidenceArtifactRoot: put(evidence) })
+    expect(derived.status).toBe("unresolved")
+    expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, supervisionReceipt: { ...receipt } })).toThrow("LEAGUE_SUPERVISION")
+    const other = createLeagueExecutionAllocation({ ...fixture, operatorDecision: "foreign" })
+    expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, allocationArtifactRoot: put(other) })).toThrow("LEAGUE_CHARGE")
+    expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, allocationArtifactRoot: put({ ...allocation, tupleRoot: root("a") }) })).toThrow()
+    const changedProducer = { ...producerValue, sourceUtf8: `${sourceText}\n// changed` }
+    expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, value: { ...input.value, producerArtifactRoot: put({ ...changedProducer, root: labRoot("factory-ingestion-v1", changedProducer) }) } })).toThrow("LEAGUE_PRODUCER")
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: { ...evidence }, evidenceArtifactRoot: put(evidence) })).toThrow("UNISSUED_EVIDENCE")
+  })
   it("accepts an exact fresh-v2 producer authorization and rejects a coherently rerooted slot substitution", () => {
     const producerArtifactRoot = root("a")
     const value = { schemaVersion: "factory-calibration-authorization-v2", status: "authorized", allocationRoot: root("b"), sourceSlots: ["S01"], slotIngestionArtifactRoots: { S01: producerArtifactRoot }, cellRoots: [root("c")], workloadArtifactRoots: [root("d")], geometryDesign: "two_geometry_side_confounded_pilot", competitiveClaim: "none" }

@@ -14,6 +14,8 @@ import {
 } from "./contracts.js"
 import { admitFactoryCalibrationManifest } from "./calibration.js"
 import { publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "./repository.js"
+import { admitLeagueExecutionAllocation } from "../league/allocation.js"
+import { declareRedTeamAllocation, type RedTeamAttemptStart } from "../league/red-team.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const NAME = /^[a-z][a-zA-Z0-9._:-]{0,127}$/u
@@ -57,6 +59,7 @@ const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdent
 }
 const issuedEvidence = new WeakSet<object>()
 const authorizedProducerEvidence = new WeakMap<object, LabRoot>()
+const leagueProducerEvidence = new WeakMap<object, Readonly<{ allocationArtifactRoot: LabRoot; startArtifactRoot: LabRoot }>>()
 const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"]
 export const isFactoryProducerAuthorized = (authorization: Record<string, unknown>, manifestAuthorizationRoot: LabRoot, producerArtifactRoot: LabRoot): boolean => {
   const { root: authorizationRoot, ...authorizationValue } = authorization
@@ -142,6 +145,36 @@ export const createAuthorizedFactoryFingerprintEvidence = (input: { readonly rep
   const draft = { schemaVersion: "factory-fingerprint-evidence-v1" as const, privacy: "private_offline" as const, ...input.value }
   const evidence = validateEvidence({ ...draft, root: labRoot("factory-fingerprint-evidence-v1", draft) })
   issuedEvidence.add(evidence); authorizedProducerEvidence.set(evidence, input.calibrationManifestArtifactRoot)
+  return evidence
+}
+
+/** A distinct Phase 265 authority path. It cannot reinterpret a calibration authorization. */
+const verifyLeagueProducer = (input: { readonly repository: FactoryRepository; readonly allocationArtifactRoot: LabRoot; readonly startArtifactRoot: LabRoot; readonly value: Pick<FactoryFingerprintEvidence, "producerIdentity" | "origin" | "producerArtifactRoot" | "proposalRoot" | "validationRoot" | "supervisionReceiptRoot">; readonly receipt?: FactorySupervisionReceipt }) => {
+  const read = (root: LabRoot) => { const parsed = admitCanonicalJsonBytes(readFactoryArtifact(input.repository, root), { profile: "canonical-manifest", operation: "require-canonical" }); if (!parsed.ok) return fail("LEAGUE_ARTIFACT"); return parsed.value }
+  const allocation = admitLeagueExecutionAllocation(read(input.allocationArtifactRoot)), start = read(input.startArtifactRoot) as unknown as RedTeamAttemptStart
+  const redTeam = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes }).allocation
+  if (!exact(start, ["root", "allocationRoot", "channel", "ordinal", "roundRoot", "candidateRoot", "participantId", "reviewerId", "disclosureRoot", "provenanceRoot", "inputRoot", "retryParentRoot", "reservation"]) || start.root !== labRoot("league-red-team-start-v1", withoutRoot(start)) || start.allocationRoot !== redTeam.root) return fail("LEAGUE_CHARGE")
+  const jobs = allocation.rounds.flatMap((round) => round.jobs).filter((job) => job.channel === start.channel)
+  const job = jobs[start.ordinal]
+  if (!job || job.operation !== "produce" || job.producerRequestArtifactRoot !== start.inputRoot || job.disclosureArtifactRoot !== start.disclosureRoot || job.provenanceArtifactRoot !== start.provenanceRoot || job.participantId !== start.participantId || job.reviewerId !== start.reviewerId || labRoot("league-reservation", job.reservation) !== labRoot("league-reservation", start.reservation)) return fail("LEAGUE_JOB")
+  if (!input.value.producerArtifactRoot) return fail("LEAGUE_PRODUCER")
+  const producer = read(input.value.producerArtifactRoot) as Record<string, unknown>
+  if (!exact(producer, ["schemaVersion", "privacy", "root", "producerIdentity", "origin", "evidenceClass", "packetRoot", "sourceRoot", "runtimeProfileRoot", "nativeLane", "packet", "sourceUtf8", "producerInput", "modelCompanion"]) || producer.schemaVersion !== "factory-ingestion-v1" || producer.privacy !== "private_offline" || producer.evidenceClass !== "real_producer" || producer.root !== labRoot("factory-ingestion-v1", withoutRoot(producer)) || producer.producerIdentity !== input.value.producerIdentity || producer.origin !== input.value.origin || typeof producer.sourceUtf8 !== "string" || byteRoot(new TextEncoder().encode(producer.sourceUtf8)) !== producer.sourceRoot) return fail("LEAGUE_PRODUCER")
+  const packet = FactoryOraclePacketSchema.parse(producer.packet)
+  const request = read(job.producerRequestArtifactRoot) as Record<string, unknown>
+  if (!exact(request, ["producerIdentity", "origin", "evidenceClass", "producerInput"]) || request.producerIdentity !== producer.producerIdentity || request.origin !== producer.origin || request.evidenceClass !== "real_producer") return fail("LEAGUE_PRODUCER_REQUEST")
+  if (producer.producerIdentity !== "emitModelFactoryPacket" && producer.producerIdentity !== "admitQuarantinedIntakePacket" && labRoot("league-producer-input-v1", request.producerInput) !== labRoot("league-producer-input-v1", producer.producerInput)) return fail("LEAGUE_PRODUCER_REQUEST")
+  if (producer.packetRoot !== packet.root || packet.source.root !== producer.sourceRoot || factoryProposalFromPacket(packet).root !== input.value.proposalRoot || packet.build.compatibilityTupleRoot !== allocation.tupleRoot || packet.nativeLane.runtimeProfileRoot !== allocation.runtimeRoot || producer.runtimeProfileRoot !== allocation.runtimeRoot || labRoot("league-native-lane-v1", producer.nativeLane) !== labRoot("league-native-lane-v1", packet.nativeLane)) return fail("LEAGUE_PRODUCER_BINDING")
+  if (input.receipt && (!isIssuedFactorySupervisionReceipt(input.receipt) || input.receipt.root !== input.value.supervisionReceiptRoot || input.receipt.admission.proposalRoot !== input.value.proposalRoot || input.receipt.admission.validationRoot !== input.value.validationRoot || input.receipt.admission.sourceRoot !== producer.sourceRoot || input.receipt.candidateIdentity.attemptRoot !== start.root || input.receipt.candidateIdentity.budgetRoot !== allocation.root || input.receipt.execution.kind !== "completed")) return fail("LEAGUE_SUPERVISION")
+}
+
+export const createLeagueAuthorizedFactoryFingerprintEvidence = (input: { readonly repository: FactoryRepository; readonly allocationArtifactRoot: LabRoot; readonly startArtifactRoot: LabRoot; readonly supervisionReceipt: FactorySupervisionReceipt; readonly value: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root"> }): Readonly<FactoryFingerprintEvidence> => {
+  if (input.value.evidenceClass !== "real_producer" || input.value.producerArtifactRoot === null) return fail("LEAGUE_PRODUCER")
+  verifyLeagueProducer({ ...input, receipt: input.supervisionReceipt })
+  const draft = { schemaVersion: "factory-fingerprint-evidence-v1" as const, privacy: "private_offline" as const, ...input.value }
+  const evidence = validateEvidence({ ...draft, root: labRoot("factory-fingerprint-evidence-v1", draft) })
+  issuedEvidence.add(evidence)
+  leagueProducerEvidence.set(evidence, { allocationArtifactRoot: input.allocationArtifactRoot, startArtifactRoot: input.startArtifactRoot })
   return evidence
 }
 
@@ -357,9 +390,13 @@ export const deriveFactoryFingerprints = (input: {
   if (!issuedEvidence.has(input.evidence) || input.evidence.root !== evidence.root || labRoot("factory-evidence-instance-v1", input.evidence) !== labRoot("factory-evidence-instance-v1", evidence)) return fail("UNISSUED_EVIDENCE")
   if (evidence.proposalRoot !== proposal.root || evidence.validationRoot !== validation.root || evidence.supervisionReceiptRoot !== receipt.root) return fail("EVIDENCE_BINDING")
   if (evidence.evidenceClass === "real_producer") {
-    const manifestArtifactRoot = authorizedProducerEvidence.get(input.evidence)
-    if (!manifestArtifactRoot) return fail("REAL_PRODUCER_EVIDENCE_UNVERIFIED")
-    verifyAuthorizedProducer(input.repository, manifestArtifactRoot, evidence)
+    const league = leagueProducerEvidence.get(input.evidence)
+    if (league) verifyLeagueProducer({ repository: input.repository, ...league, value: evidence, receipt })
+    else {
+      const manifestArtifactRoot = authorizedProducerEvidence.get(input.evidence)
+      if (!manifestArtifactRoot) return fail("REAL_PRODUCER_EVIDENCE_UNVERIFIED")
+      verifyAuthorizedProducer(input.repository, manifestArtifactRoot, evidence)
+    }
   }
   validateGraphArtifacts(input.repository, evidence.lineageNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.parents })), "lineage")
   validateGraphArtifacts(input.repository, evidence.dependencyNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.dependencies })), "dependency")
