@@ -71,7 +71,9 @@ describe("factory empirical authorship prerequisite", () => {
     const changedWitness = rooted("factory-negative-admission-witness-v1", { ...witnessBody, runtimeExecuted: true })
     const body = { ...fixture.values.executionValue, negativeWitnessArtifactRoots: { ...fixture.values.executionValue.negativeWitnessArtifactRoots, S01: changedWitness } }
     expect(() => readFactoryExecutionEvidence(fixture.repository, rooted("factory-calibration-execution-evidence-v1", body), fixture.fresh)).toThrow("NEGATIVE_WITNESS")
-  })
+    // Repeated full-source inventories and disk-backed negative reopens may
+    // exceed Vitest's5s default. This is not a guest/Match runtime limit.
+  },15000)
   it("derives a charged negative witness from actual source and packet without runtime", () => {
     expect(deriveFactoryNegativeWitness(record)).toMatchObject({ sourceRoot: packet.source.root, packetRoot: packet.root, charged: true, allocation: "none", runtimeExecuted: false, disposition: "rejected", mutation: "append-newline-source-mismatch" })
   })

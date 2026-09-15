@@ -26,11 +26,11 @@ const entries = (value: unknown): Entry[] => {
     return {path:item.path,root:asRoot(item.root)}
   })
 }
-export const factoryAssessmentCorrectionDiff = (historical: unknown, current: unknown): readonly string[] => {
+export const factoryAssessmentCorrectionDiff = (historical: unknown, current: unknown, sourceTokenDomainCorrection = false): readonly string[] => {
   const before = new Map(entries(historical).map(entry=>[entry.path,entry.root]))
   const after = new Map(entries(current).map(entry=>[entry.path,entry.root]))
   const changed = [...new Set([...before.keys(),...after.keys()])].filter(path=>before.get(path)!==after.get(path)).sort()
-  if (changed.length === 0 || changed.some(path=>!READER_FILES.has(path))) return fail("EXECUTION_SOURCE_CHANGED")
+  if (changed.length === 0 || changed.some(path=>!READER_FILES.has(path) && !(sourceTokenDomainCorrection && path==="packages/strategy-lab/src/factory/numeric-calibration.ts"))) return fail("EXECUTION_SOURCE_CHANGED")
   return changed
 }
 const readPassedReview = (repository: FactoryRepository, root: LabRoot, corrected = false) => {
@@ -54,7 +54,8 @@ const issued = new WeakSet<FactoryAssessmentCorrection>()
 export const readFactoryAssessmentCorrection = (repository: FactoryRepository, artifactRoot: LabRoot, input: unknown): FactoryAssessmentCorrection => {
   const correction = readFactoryCanonicalRecord(repository,artifactRoot)
   requireFactoryRecordRoot(correction,"factory-assessment-correction-v1")
-  if (!exactLabKeys(correction,["schemaVersion","reason","executionEvidenceArtifactRoot","historicalManifestArtifactRoot","assessorReviewArtifactRoot","failureArtifactRoot","inputRoot","root"]) || correction.schemaVersion!=="factory-assessment-correction-v1" || correction.reason!=="positive-control-observation-equality-envelope" || correction.inputRoot!==labRoot("factory-assessment-correction-input-v1",input)) return fail("BINDING")
+  const sourceTokenDomainCorrection = correction.reason==="positive-control-map-and-source-token-envelope"
+  if (!exactLabKeys(correction,["schemaVersion","reason","executionEvidenceArtifactRoot","historicalManifestArtifactRoot","assessorReviewArtifactRoot","failureArtifactRoot","inputRoot","root",...(sourceTokenDomainCorrection?["priorCorrectionFailureArtifactRoot"]:[])]) || correction.schemaVersion!=="factory-assessment-correction-v1" || (!sourceTokenDomainCorrection && correction.reason!=="positive-control-observation-equality-envelope") || correction.inputRoot!==labRoot("factory-assessment-correction-input-v1",input)) return fail("BINDING")
   const executionRoot = asRoot(correction.executionEvidenceArtifactRoot)
   const execution = readFactoryCanonicalRecord(repository,executionRoot)
   requireFactoryRecordRoot(execution,"factory-calibration-execution-evidence-v1")
@@ -64,12 +65,22 @@ export const readFactoryAssessmentCorrection = (repository: FactoryRepository, a
   const historical = readFactoryCanonicalRecord(repository,asRoot(correction.historicalManifestArtifactRoot))
   if (!exactLabKeys(historical,["entries","root"]) || labRoot("factory-reviewed-implementation-v2",entries(historical.entries))!==historical.root || historical.root!==oldReview.implementationRoot) return fail("HISTORICAL_MANIFEST")
   const current = factoryAssessmentImplementationManifest()
-  factoryAssessmentCorrectionDiff(historical.entries,current.entries)
+  factoryAssessmentCorrectionDiff(historical.entries,current.entries,sourceTokenDomainCorrection)
   const newReview = readPassedReview(repository,asRoot(correction.assessorReviewArtifactRoot),true)
   if (newReview.implementationRoot!==current.root || newReview.sourceCommit===oldReview.sourceCommit) return fail("CURRENT_REVIEW")
   const failure = readFactoryCanonicalRecord(repository,asRoot(correction.failureArtifactRoot))
   requireFactoryRecordRoot(failure,"factory-264-assessment-failure-v1")
   if (failure.schemaVersion!=="factory-264-assessment-failure-v1" || failure.sourceCommit!==oldReview.sourceCommit || failure.implementationRoot!==oldReview.implementationRoot || labRoot("factory-assessment-correction-input-v1",failure.input)!==correction.inputRoot || failure.error!=="LAB_CANONICAL_VALUE" || failure.stage!=="positive-control-merged-observation-equality" || failure.assessmentArtifactRoot!==null || failure.thresholdArtifactRoot!==null) return fail("ORIGINAL_FAILURE")
+  if (sourceTokenDomainCorrection) {
+    const prior = readFactoryCanonicalRecord(repository,asRoot(correction.priorCorrectionFailureArtifactRoot))
+    requireFactoryRecordRoot(prior,"factory-264-assessment-correction-failure-v1")
+    if (prior.schemaVersion!=="factory-264-assessment-correction-failure-v1" || prior.originalFailureArtifactRoot!==correction.failureArtifactRoot || prior.error!=="NUMERIC_CALIBRATION_EVIDENCE" || prior.stage!=="source-structure-token-domain" || prior.assessmentArtifactRoot!==null || prior.thresholdArtifactRoot!==null || prior.extraMatches!==0 || prior.metricOrThresholdChanged!==false) return fail("PRIOR_CORRECTION_FAILURE")
+    const previous = readFactoryCanonicalRecord(repository,asRoot(prior.correctionArtifactRoot))
+    requireFactoryRecordRoot(previous,"factory-assessment-correction-v1")
+    if (previous.schemaVersion!=="factory-assessment-correction-v1" || previous.reason!=="positive-control-observation-equality-envelope" || previous.inputRoot!==correction.inputRoot || previous.executionEvidenceArtifactRoot!==executionRoot || previous.failureArtifactRoot!==correction.failureArtifactRoot) return fail("PRIOR_CORRECTION")
+    const priorReview = readPassedReview(repository,asRoot(previous.assessorReviewArtifactRoot),true)
+    if (priorReview.sourceCommit!==prior.sourceCommit || priorReview.implementationRoot!==prior.implementationRoot) return fail("PRIOR_REVIEW")
+  }
   const context = Object.freeze({artifactRoot,historicalImplementationRoot:asRoot(historical.root),currentImplementationRoot:current.root,executionEvidenceArtifactRoot:executionRoot,repositoryDirectory:repository.directory})
   issued.add(context)
   return context

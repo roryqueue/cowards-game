@@ -33,8 +33,12 @@ export type NumericThresholdFit =
 const fail = (): never => { throw new TypeError("NUMERIC_CALIBRATION_EVIDENCE") }
 const HASH = /^sha256:[0-9a-f]{64}$/u
 const finiteScore = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
-const tokens = (value: readonly string[]): ReadonlySet<string> => {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string" || entry.length === 0 || entry.length > 256)) return fail()
+const SOURCE_STRUCTURE_SOURCE_MAX = 65_536
+// Only tokens derived inside this module from bounded source may contain long
+// literals. Keep their exact bytes; externally supplied tokens still cap at256.
+const SOURCE_STRUCTURE_TOKEN_MAX = SOURCE_STRUCTURE_SOURCE_MAX + "property:".length
+const tokens = (value: readonly string[], maximumLength = 256): ReadonlySet<string> => {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string" || entry.length === 0 || entry.length > maximumLength)) return fail()
   return new Set(value)
 }
 const jaccard = (left: ReadonlySet<string>, right: ReadonlySet<string>): number => {
@@ -42,8 +46,8 @@ const jaccard = (left: ReadonlySet<string>, right: ReadonlySet<string>): number 
   let shared = 0; for (const token of left) if (right.has(token)) shared += 1
   return shared / union.size
 }
-const tokenDimension = (leftValue: readonly string[], rightValue: readonly string[]): NumericDimensionComparison => {
-  const left = tokens(leftValue), right = tokens(rightValue)
+const tokenDimension = (leftValue: readonly string[], rightValue: readonly string[], maximumTokenLength = 256): NumericDimensionComparison => {
+  const left = tokens(leftValue, maximumTokenLength), right = tokens(rightValue, maximumTokenLength)
   if (left.size === 0 || right.size === 0) return Object.freeze({ score: null, informativeCount: 0 })
   return Object.freeze({ score: jaccard(left, right), informativeCount: new Set([...left, ...right]).size })
 }
@@ -71,7 +75,7 @@ const summarize = (dimensions: Record<NumericDimension, NumericDimensionComparis
 }
 
 export const compareNumericEvidence = (left: NumericCalibrationEvidence, right: NumericCalibrationEvidence): Readonly<NumericComparison> => summarize({
-  sourceStructure: tokenDimension(extractSourceStructureTokens(left.sourceUtf8), extractSourceStructureTokens(right.sourceUtf8)),
+  sourceStructure: tokenDimension(extractSourceStructureTokens(left.sourceUtf8), extractSourceStructureTokens(right.sourceUtf8), SOURCE_STRUCTURE_TOKEN_MAX),
   lineage: tokenDimension(edges(left.lineageEdgeTokens), edges(right.lineageEdgeTokens)),
   dependency: tokenDimension(edges(left.dependencyEdgeTokens), edges(right.dependencyEdgeTokens)),
   legalInput: sampleDimension(left.legalInputSamples, right.legalInputSamples),
@@ -81,7 +85,7 @@ export const compareNumericEvidence = (left: NumericCalibrationEvidence, right: 
 
 /** Parses inert TypeScript as data and normalizes local binding names while retaining operators, literals and property names. */
 export const extractSourceStructureTokens = (source: string): readonly string[] => {
-  if (typeof source !== "string" || source.length === 0 || source.length > 65_536) return fail()
+  if (typeof source !== "string" || source.length === 0 || source.length > SOURCE_STRUCTURE_SOURCE_MAX) return fail()
   const ast = ts.createSourceFile("factory-calibration-source.ts", source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS)
   if (((ast as unknown as { readonly parseDiagnostics?: readonly unknown[] }).parseDiagnostics?.length ?? 0) > 0) return fail()
   const properties = new Set<string>()

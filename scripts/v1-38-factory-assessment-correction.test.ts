@@ -35,6 +35,9 @@ describe("read-only assessment correction binding",()=>{
       expect(()=>factoryAssessmentCorrectionDiff([entry(path,"old")],[entry(path,"new")])).toThrow("EXECUTION_SOURCE_CHANGED")
     expect(()=>factoryAssessmentCorrectionDiff([entry(reader,"old")],[entry(reader,"old")])).toThrow()
     expect(()=>factoryAssessmentCorrectionDiff([entry(reader,"old"),entry(reader,"old")],[entry(reader,"new")])).toThrow("MANIFEST")
+    const numeric="packages/strategy-lab/src/factory/numeric-calibration.ts"
+    expect(factoryAssessmentCorrectionDiff([entry(numeric,"old")],[entry(numeric,"new")],true)).toEqual([numeric])
+    expect(()=>factoryAssessmentCorrectionDiff([entry("scripts/v1-38-factory-observations.ts","old")],[entry("scripts/v1-38-factory-observations.ts","new")],true)).toThrow("EXECUTION_SOURCE_CHANGED")
   })
   it("issues a source- and input-bound context without mutating the old evidence",()=>{
     const f=fixture(), root=f.correction(), context=readFactoryAssessmentCorrection(f.repository,root,f.input)
@@ -57,6 +60,17 @@ describe("read-only assessment correction binding",()=>{
     for(const extra of [{assessmentArtifactRoot:labRoot("fixture","already-assessed")},{error:"different-failure"},{input:{changed:true}}]){
       const failure=f.rooted("factory-264-assessment-failure-v1",{...f.failureBody,...extra})
       expect(()=>readFactoryAssessmentCorrection(f.repository,f.correction({failureArtifactRoot:failure}),f.input)).toThrow("ORIGINAL_FAILURE")
+    }
+  })
+  it("requires immutable first-correction failure and its original reviewed source for the token-domain repair",()=>{
+    const f=fixture(), previous=f.correction()
+    const failureBody={originalFailureArtifactRoot:f.body.failureArtifactRoot,correctionArtifactRoot:previous,sourceCommit:"b".repeat(40),implementationRoot:f.current.root,error:"NUMERIC_CALIBRATION_EVIDENCE",stage:"source-structure-token-domain",assessmentArtifactRoot:null,thresholdArtifactRoot:null,extraMatches:0,metricOrThresholdChanged:false}
+    const failure=f.rooted("factory-264-assessment-correction-failure-v1",failureBody)
+    const root=f.correction({reason:"positive-control-map-and-source-token-envelope",priorCorrectionFailureArtifactRoot:failure})
+    expect(readFactoryAssessmentCorrection(f.repository,root,f.input).artifactRoot).toBe(root)
+    for(const extra of [{extraMatches:1},{sourceCommit:"c".repeat(40)},{originalFailureArtifactRoot:labRoot("fixture","other")}]){
+      const bad=f.rooted("factory-264-assessment-correction-failure-v1",{...failureBody,...extra})
+      expect(()=>readFactoryAssessmentCorrection(f.repository,f.correction({reason:"positive-control-map-and-source-token-envelope",priorCorrectionFailureArtifactRoot:bad}),f.input)).toThrow()
     }
   })
 })

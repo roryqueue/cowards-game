@@ -38,6 +38,17 @@ describe("numeric factory calibration", () => {
     expect(left).toContain("property:soldierBrain")
   })
 
+  it("allows long source literals only in source provenance and compares their exact tokens", () => {
+    const sourceFor = (literal: string) => `export default { soldierBrain() { return ${JSON.stringify(literal)} } }`
+    const shared = "a".repeat(257), leftSource = sourceFor(shared), rightSource = sourceFor(shared)
+    expect(compareNumericEvidence({ ...evidence("left"), sourceUtf8: leftSource }, { ...evidence("right"), sourceUtf8: rightSource }).dimensions.sourceStructure).toEqual({ score: 1, informativeCount: new Set(extractSourceStructureTokens(leftSource)).size })
+    const distinct = sourceFor(`${"a".repeat(256)}b`), leftTokens = new Set(extractSourceStructureTokens(leftSource)), rightTokens = new Set(extractSourceStructureTokens(distinct)), expected = [...leftTokens, ...rightTokens].filter((token, index, all) => all.indexOf(token) === index && leftTokens.has(token) && rightTokens.has(token)).length / new Set([...leftTokens, ...rightTokens]).size
+    expect(compareNumericEvidence({ ...evidence("left"), sourceUtf8: leftSource }, { ...evidence("right"), sourceUtf8: distinct }).dimensions.sourceStructure.score).toBe(expected)
+    expect(() => compareNumericEvidence({ ...evidence("left"), sourceUtf8: sourceFor("x".repeat(65_536)) }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
+    expect(() => compareNumericEvidence({ ...evidence("left"), legalInputSamples: { select: ["x".repeat(257)] } }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
+    expect(() => compareNumericEvidence({ ...evidence("left"), lineageEdgeTokens: [{ label: "x".repeat(257), from: "from", to: "to" }] }, evidence("right"))).toThrow("NUMERIC_CALIBRATION_EVIDENCE")
+  })
+
   it("treats absent edges and unmatched behavioral sample keys as noninformative", () => {
     const left = evidence("left"), right = { ...evidence("right"), lineageEdgeTokens: [], dependencyEdgeTokens: [], legalInputSamples: { other: ["same"] }, chronicleSamples: {}, matchupSamples: {} }
     const result = compareNumericEvidence(left, right)
