@@ -229,7 +229,7 @@ export class LeagueConnectedSession {
     if (solver.status !== "solved") return fail("SOLVER")
     const solverPayoffArtifactRoot = publishLeagueComposedArtifact(this.input.repository, admitted.solverPayoffBytes)
     const recordRoot = this.graph.append("complete-matrix", { schemaVersion: "league-retained-matrix-v2", population, matrix: { ...matrix, cells: results.map((result) => result.recordRoot) }, snapshot: admitted.snapshot, solverPayoffArtifactRoot, solver: { ...solver, canonicalBytes: new TextDecoder().decode(solver.canonicalBytes) } }, results.map((result) => result.recordRoot))
-    return { population, matrix, admitted, solver, results, recordRoot }
+    return { population, matrix, admitted, solver, results, recordRoot, seed }
   }
 }
 type CompleteMatrix = Awaited<ReturnType<LeagueConnectedSession["matrix"]>>
@@ -380,10 +380,11 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
   roots.push(session.graph.append("run-start", { allocation, markerRoot, candidates: candidates.map(candidateRecord), factoryDirectory: input.factoryRepository.directory, responseFactoryDirectory: input.responseFactoryRepository?.directory ?? null }))
   let ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
   const startsByJob = new Map<string, LabRoot>(), completedJobs: string[] = []
+  let currentMatrices: CompleteMatrix[] = [], terminalAdvance: ReturnType<typeof advanceLeagueRound> | null = null
   try {
     const initial: CompleteMatrix[] = []
     for (const seed of allocation.seedBlocks) { const matrix = await session.matrix(candidates, seed); initial.push(matrix); roots.push(matrix.recordRoot) }
-    let currentMatrices = initial
+    currentMatrices = initial
     for (const schedule of allocation.rounds) {
       const roundBlocks = currentMatrices.map((matrix, i) => ({ seed: allocation.seedBlocks[i]!, matrix, round: declareLeagueRound({ snapshot: matrix.admitted.snapshot, solver: matrix.solver, responseAllocationRoot: labRoot("league-round-allocation-v1", { allocationRoot: allocation.root, ordinal: schedule.ordinal, seed: allocation.seedBlocks[i] }), roundOrdinal: schedule.ordinal, maximumRounds: allocation.rounds.length, closureRule: "bounded-no-accepted-counter-v1" }), candidateRoots: candidates.map((candidate) => candidate.admission.candidate.root) }))
       const primary = roundBlocks[0]!, accepted: LeagueCandidateInput[] = [], roundReentries: LeagueResponseRow[] = []
@@ -419,8 +420,14 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
       if (accepted.length) {
         candidates = [...candidates, ...accepted]; currentMatrices = []
         for (const seed of allocation.seedBlocks) { const fresh = await session.matrix(candidates, seed); currentMatrices.push(fresh); roots.push(fresh.recordRoot) }
-        const advanced = advanceLeagueRound({ round: primary.round, admissions: roundReentries, requestClosure: false, nextPopulationRoot: currentMatrices[0]!.population.root, nextSnapshot: currentMatrices[0]!.admitted.snapshot }); roots.push(session.graph.append("round-advance", { round: primary.round, admissions: roundReentries, requestClosure: false, nextPopulationRoot: currentMatrices[0]!.population.root, nextSnapshot: currentMatrices[0]!.admitted.snapshot, advanced }))
-      } else { const advanced = advanceLeagueRound({ round: primary.round, admissions: [], requestClosure: schedule.ordinal === allocation.rounds.length - 1 }); roots.push(session.graph.append("round-advance", { round: primary.round, admissions: [], requestClosure: schedule.ordinal === allocation.rounds.length - 1, advanced })) }
+        const advanced = advanceLeagueRound({ round: primary.round, admissions: roundReentries, requestClosure: false, nextPopulationRoot: currentMatrices[0]!.population.root, nextSnapshot: currentMatrices[0]!.admitted.snapshot }); terminalAdvance = advanced; roots.push(session.graph.append("round-advance", { round: primary.round, admissions: roundReentries, requestClosure: false, nextPopulationRoot: currentMatrices[0]!.population.root, nextSnapshot: currentMatrices[0]!.admitted.snapshot, advanced }))
+      } else { const advanced = advanceLeagueRound({ round: primary.round, admissions: [], requestClosure: schedule.ordinal === allocation.rounds.length - 1 }); terminalAdvance = advanced; roots.push(session.graph.append("round-advance", { round: primary.round, admissions: [], requestClosure: schedule.ordinal === allocation.rounds.length - 1, advanced })) }
+    }
+    if (terminalAdvance?.kind !== "closed") {
+      if (terminalAdvance?.kind !== "fresh_snapshot_required") return fail("ROUND_CLOSURE")
+      const value = { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_valid" as const, result: "response_round_budget_exhausted" as const, closure: "not_closed" as const, closureRoot: roots.at(-1)!, candidates: candidates.map(candidateRecord), matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), completedJobs, undispatchedJobIds: jobs.filter((job) => !completedJobs.includes(job.id)).map((job) => job.id), ledgerRoot: ledger.root, executedCells: session.cells.length, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0) }
+      const headRoot = session.graph.append("run-budget-exhausted", value, roots)
+      return { ...value, headRoot, empiricalRequirementsComplete: false }
     }
     // These independently frozen packets are authored without any development
     // target, trace, mixture or probe feedback. Only the coordinator measures
@@ -465,7 +472,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
       const evidenceRoot = session.graph.append("red-team-process-failure", { startRoot: start.root, error: error instanceof Error ? error.message : "unknown" }); roots.push(evidenceRoot)
       ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); roots.push(session.graph.append("red-team-terminal", { startRoot: start.root, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
     }
-    const headRoot = session.graph.append("run-failure", { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid", completedJobs, ledgerRoot: ledger.root, error: error instanceof Error ? error.message.slice(0, 512) : "unknown", executedCells: session.cells.length, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0), retentionUsage: budget.usage })
+    const headRoot = session.graph.append("run-failure", { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid", completedJobs, ledgerRoot: ledger.root, matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), error: error instanceof Error ? error.message.slice(0, 512) : "unknown", executedCells: session.cells.length, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0), retentionUsage: budget.usage })
     return { headRoot, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, empiricalRequirementsComplete: false }
   }
 }
@@ -581,10 +588,51 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
   }
 }
 
+/** Recompute the state-machine path, including every intervening population.
+ * A locally valid advance is insufficient if it omits a counter or a round. */
+const verifyRetainedRoundPath = (allocation: LeagueExecutionAllocation, graph: ReturnType<typeof readLeagueRecordGraph>, blocks: readonly RoundBlock[], matrices: ReadonlyMap<LabRoot, CompleteMatrix>, reentries: readonly LeagueResponseRow[], initialRoots: readonly LabRoot[], finalRoots: readonly LabRoot[], head: { kind: string; value: any }) => {
+  const advances = [...graph.entries()].filter(([, node]) => node.kind === "round-advance")
+  if (new Set(advances.map(([, node]) => node.value.round.roundOrdinal)).size !== advances.length) return fail("RETAINED_ADVANCE_CHAIN")
+  let population = [...initialRoots].sort(), last: typeof advances[number] | undefined
+  const allowedPopulations = new Set([population.join()])
+  const matrixFor = (roots: readonly LabRoot[], seed: string) => [...matrices.values()].find((matrix) => same(matrix.population.candidateAdmissionRoots, roots) && matrix.seed === seed)
+  for (let ordinal = 0; ordinal < allocation.rounds.length; ordinal++) {
+    const roundBlocks = blocks.filter((block) => block.round.roundOrdinal === ordinal), advance = advances.find(([, node]) => node.value.round.roundOrdinal === ordinal)
+    if (!roundBlocks.length) {
+      if (advance || blocks.some((block) => block.round.roundOrdinal > ordinal)) return fail("RETAINED_ADVANCE_CHAIN")
+      break
+    }
+    if (!same(roundBlocks.map((block) => block.seed), allocation.seedBlocks.slice(0, roundBlocks.length)) || roundBlocks.some((block) => !same(block.matrix.population.candidateAdmissionRoots, population) || block.matrix.seed !== block.seed)) return fail("RETAINED_POPULATION_EVOLUTION")
+    const round = roundBlocks[0]!.round, admissions = reentries.filter((entry) => entry.roundRoot === round.round.root), nextPopulation = [...population, ...admissions.map((entry) => entry.candidateAdmissionRoot)].sort()
+    if (new Set(nextPopulation).size !== nextPopulation.length) return fail("RETAINED_POPULATION_EVOLUTION")
+    allowedPopulations.add(nextPopulation.join())
+    if (!advance) {
+      if (head.kind !== "run-failure" || blocks.some((block) => block.round.roundOrdinal > ordinal)) return fail("RETAINED_ADVANCE_CHAIN")
+      population = nextPopulation; break
+    }
+    if (roundBlocks.length !== allocation.seedBlocks.length) return fail("RETAINED_ADVANCE_CHAIN")
+    const next = admissions.length ? matrixFor(nextPopulation, allocation.seedBlocks[0]!) : undefined
+    if (admissions.length && (!next || allocation.seedBlocks.some((seed) => !matrixFor(nextPopulation, seed)))) return fail("RETAINED_FRESH_SNAPSHOT")
+    const request = { round, admissions, requestClosure: !admissions.length && ordinal === allocation.rounds.length - 1, ...(next ? { nextPopulationRoot: next.population.root, nextSnapshot: next.admitted.snapshot } : {}) }
+    if (!same(advance[1].value, { ...request, advanced: advanceLeagueRound(request) })) return fail("RETAINED_ADVANCE_CHAIN")
+    population = nextPopulation; last = advance
+  }
+  const matrixKeys = [...matrices.values()].map((matrix) => {
+    const seed = matrix.seed
+    if (!allowedPopulations.has(matrix.population.candidateAdmissionRoots.join()) || !allocation.seedBlocks.includes(seed)) return fail("RETAINED_POPULATION_EVOLUTION")
+    return `${matrix.population.root}:${seed}`
+  })
+  if (new Set(matrixKeys).size !== matrixKeys.length || !same([...finalRoots].sort(), population)) return fail("RETAINED_POPULATION_EVOLUTION")
+  if (head.kind === "run-failure") return
+  if (advances.length !== allocation.rounds.length || !last) return fail("RETAINED_ADVANCE_CHAIN")
+  const expected = head.kind === "run-complete" ? "closed" : "fresh_snapshot_required"
+  if (last[1].value.advanced.kind !== expected || head.kind === "run-budget-exhausted" && head.value.closureRoot !== last[0]) return fail("RETAINED_CLOSURE")
+}
+
 export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepository; factoryRepository: FactoryRepository; responseFactoryRepository: FactoryRepository | null; headRoot: LabRoot; allocationRoot: LabRoot; limits: { maxArtifactBytes: number; maxArtifactRecords: number }; fixtureCandidates?: readonly LeagueCandidateInput[] }) => {
   const graph = readLeagueRecordGraph(input.repository, input.headRoot, input.limits), head = graph.get(input.headRoot) ?? fail("HEAD"), nodes = [...graph.entries()], rows = (kind: string) => nodes.filter(([, node]) => node.kind === kind)
   const starts = rows("run-start")
-  if (starts.length !== 1 || !["run-complete", "run-failure"].includes(head.kind)) return fail("RUN_GRAPH")
+  if (starts.length !== 1 || !["run-complete", "run-failure", "run-budget-exhausted"].includes(head.kind)) return fail("RUN_GRAPH")
   const initial = starts[0]![1].value, allocation = admitLeagueExecutionAllocation(initial.allocation), marker = parse(readLeagueArtifact(input.repository, initial.markerRoot))
   if (allocation.root !== input.allocationRoot || head.value.allocationRoot !== allocation.root || head.value.evidenceClass !== allocation.evidenceClass || allocation.operations.maxArtifactBytes > input.limits.maxArtifactBytes || allocation.operations.maxArtifactRecords > input.limits.maxArtifactRecords || input.fixtureCandidates && allocation.evidenceClass !== "injected_fixture" || !same(marker, rooted("league-allocation-start-v1", { allocation }))) return fail("RETAINED_ALLOCATION")
   const imported = input.fixtureCandidates ?? readLeagueInitialCandidates(input.factoryRepository, allocation), importedMap = new Map(imported.map((candidate) => [candidate.admission.root, candidate]))
@@ -607,7 +655,7 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   })
   // Growth is provisional until the production, assessment and re-entry joins
   // below have all been recomputed. Failure is not permission to skip them.
-  const finalCandidates = (head.kind === "run-complete" ? head.value.candidates : [...initial.candidates, ...retainedGrowth]).map(restoreCandidate), candidateAdmissions = new Map(finalCandidates.map((candidate: LeagueCandidateInput) => [candidate.admission.root, candidate.admission]))
+  const finalCandidates = (head.kind !== "run-failure" ? head.value.candidates : [...initial.candidates, ...retainedGrowth]).map(restoreCandidate), candidateAdmissions = new Map(finalCandidates.map((candidate: LeagueCandidateInput) => [candidate.admission.root, candidate.admission]))
   const reopened = reopenLeagueEvidence(input.repository, { maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords }), cellResults = rows("cell-result"), cellByRoot = new Map(cellResults.map(([recordRoot, node]) => [node.value.cell.root, { recordRoot, ...node.value }]))
   if (reopened.remnants.length || cellResults.length !== head.value.executedCells || cellByRoot.size !== cellResults.length || rows("cell-start").length !== reopened.records.length) return fail("RETAINED_JOURNAL_COVERAGE")
   for (const journal of reopened.records) {
@@ -654,7 +702,7 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     if (admitted.kind !== "complete" || !compact && !same(terminals, value.terminals) || !same(admitted.snapshot, value.snapshot) || bytesRoot(admitted.solverPayoffBytes) !== bytesRoot(retainedPayoffs)) return fail("RETAINED_MATRIX_TRANSPORT")
     const solver = solveLeagueSnapshot({ snapshot: admitted.snapshot, solverPayoffBytes: admitted.solverPayoffTransport, workerCount: 3, shardOrder: [2, 0, 1], restart: 1 })
     if (solver.status !== "solved" || !same({ ...solver, canonicalBytes: new TextDecoder().decode(solver.canonicalBytes) }, value.solver)) return fail("RETAINED_SOLVER")
-    matrices.set(recordRoot, { population: value.population, matrix, admitted, solver, results, recordRoot })
+    matrices.set(recordRoot, { population: value.population, matrix, admitted, solver, results, recordRoot, seed: firstCell.seed })
   }
   const blocks: RoundBlock[] = []
   for (const [, node] of rows("declared-round")) {
@@ -670,8 +718,8 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     const solved = solveLeagueSnapshot({ snapshot: replay.snapshot, solverPayoffBytes: replay.solverPayoffTransport, workerCount: value.workerCount, shardOrder: value.shardOrder, restart: value.restart })
     if (solved.status !== "solved" || value.snapshotRoot !== replay.snapshot.root || value.payoffBytesRoot !== bytesRoot(replay.solverPayoffBytes) || value.solverBytesRoot !== bytesRoot(solved.canonicalBytes) || !same(solved.output, matrix.solver.output)) return fail("RETAINED_LAYOUT_IDENTITY")
   }
-  const complete = head.kind === "run-complete"
-  if (complete && (blocks.length !== allocation.seedBlocks.length * allocation.rounds.length || allocation.rounds.some((round) => allocation.seedBlocks.some((seed) => blocks.filter((block) => block.seed === seed && block.round.roundOrdinal === round.ordinal).length !== 1)))) return fail("RETAINED_ROUND_COVERAGE")
+  const complete = head.kind === "run-complete", budgetExhausted = head.kind === "run-budget-exhausted"
+  if ((complete || budgetExhausted) && (blocks.length !== allocation.seedBlocks.length * allocation.rounds.length || allocation.rounds.some((round) => allocation.seedBlocks.some((seed) => blocks.filter((block) => block.seed === seed && block.round.roundOrdinal === round.ordinal).length !== 1)))) return fail("RETAINED_ROUND_COVERAGE")
   const closings = rows("red-team-close")
   if (complete && (closings.length !== 1 || closings[0]![0] !== head.value.ledgerRoot)) return fail("RETAINED_CLOSE")
   const close = closings[0]?.[1].value
@@ -729,11 +777,17 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   const requiredTargets = blocks.flatMap((block) => block.candidateRoots.map((candidateRoot) => ({ roundRoot: block.round.round.root, candidateRoot })))
   if (ledger.terminals.filter((terminal) => terminal.disposition === "success").some((terminal) => reentries.filter((entry) => entry.candidateAdmissionRoot === terminal.candidateAdmissionRoot).length !== 1)) return fail("RETAINED_COUNTER_REENTRY_COVERAGE")
   if (complete ? !same(ledger, close.ledger) : ledger.root !== head.value.ledgerRoot) return fail("RETAINED_RED_TEAM_CLOSE")
-  for (const [, node] of rows("round-advance")) { const { advanced, ...request } = node.value; if (!same(advanceLeagueRound(request), advanced)) return fail("RETAINED_ADVANCE") }
+  verifyRetainedRoundPath(allocation, graph, blocks, matrices, reentries, imported.map((candidate) => candidate.admission.root), finalCandidates.map((candidate: LeagueCandidateInput) => candidate.admission.root), head)
   verifyRetainedProductionFailures(input.responseFactoryRepository, allocation, graph, ledger, blocks, finalCandidates)
   const failedProductionRoots = new Set(rows("response-production-failure").map(([, node]) => node.value.start.root))
   for (const [, node] of rows("response-match-result")) if (!failedProductionRoots.has(node.value.matchCharge.parentStartRoot)) replayRetainedKernel(node.value.match, node.value.execution, allocation.evidenceClass === "empirical")
   if (!complete) {
+    if (budgetExhausted) {
+      const expectedJobs = scheduled.filter((job) => job.evaluationRole === "development_response").map((job) => job.id), undispatched = scheduled.filter((job) => job.evaluationRole !== "development_response").map((job) => job.id)
+      if (head.value.processValidity !== "process_valid" || head.value.result !== "response_round_budget_exhausted" || head.value.closure !== "not_closed" || !same(head.value.completedJobs, expectedJobs) || !same(head.value.undispatchedJobIds, undispatched) || retainedStarts.length !== expectedJobs.length || rows("selection").length || rows("report").length || rows("independent-evaluation").length || closings.length || ledger.terminals.some((terminal) => terminal.processValidity !== "process_valid")) return fail("RETAINED_NONCLOSED_DISPOSITION")
+      if (!same(head.value.matrixRoots, allocation.seedBlocks.map((seed) => [...matrices.values()].find((matrix) => same(matrix.population.candidateAdmissionRoots, [...candidateAdmissions.keys()].sort()) && matrix.seed === seed)?.recordRoot))) return fail("RETAINED_NONCLOSED_MATRICES")
+      return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_valid" as const, result: "response_round_budget_exhausted" as const, closure: "not_closed" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
+    }
     if (head.value.processValidity !== "process_invalid" || rows("selection").length || rows("report").length) return fail("RETAINED_FAILURE_DISPOSITION")
     return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
   }
