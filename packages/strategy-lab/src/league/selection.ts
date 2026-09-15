@@ -78,6 +78,13 @@ interface SelectionEvidence {
 const positive = (numerator: unknown, denominator: unknown): numerator is number => Number.isSafeInteger(numerator) && Number.isSafeInteger(denominator) && (numerator as number) >= 0 && (denominator as number) > 0 && (numerator as number) <= (denominator as number)
 const scorePasses = (row: ScoreRow, comparator: "gt55" | "gt60" | "lt60") => comparator === "gt55" ? row.numerator * 100 > row.denominator * 55 : comparator === "gt60" ? row.numerator * 100 > row.denominator * 60 : row.numerator * 100 < row.denominator * 60
 const gateRoot = (id: string, value: unknown) => labRoot("league-robust-pure-gate-v2", { id, value })
+const issuedDispositions = new WeakSet<object>()
+/** A report may consume only a disposition emitted by this re-admitting reducer, never a caller-constructed root. */
+export const requireIssuedRobustPureDisposition = (value: unknown): Readonly<RobustPureDisposition> => {
+  const disposition = value as RobustPureDisposition
+  if (!disposition || !issuedDispositions.has(disposition)) return fail("UNISSUED_DISPOSITION")
+  return disposition
+}
 
 /** Recompute frozen .55/.60 comparisons and complete oracle-relative maximin from raw evidence rows, never pass flags. */
 export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly mixture: unknown; readonly portfolio: unknown; readonly candidateAdmissionRoot: LabRoot; readonly evidence: unknown }): Readonly<RobustPureDisposition> => {
@@ -104,5 +111,7 @@ export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readon
   ] as const
   const failed = gates.filter(([, passed]) => !passed).map(([id, , payload]) => gateRoot(id, payload))
   const value = failed.length ? { schemaVersion: "league-robust-pure-disposition-v1" as const, privacy: "private_offline" as const, portfolioRoot: portfolio.root, kind: "no_robust_pure_finalist_found" as const, candidateAdmissionRoot: null, gateReceiptRoots: failed } : { schemaVersion: "league-robust-pure-disposition-v1" as const, privacy: "private_offline" as const, portfolioRoot: portfolio.root, kind: "robust_pure_finalist" as const, candidateAdmissionRoot: input.candidateAdmissionRoot, gateReceiptRoots: gates.map(([id, , payload]) => gateRoot(id, payload)) }
-  return freezeLabValue({ ...value, root: labRoot("league-robust-pure-disposition-v1", value) }) as RobustPureDisposition
+  const disposition = freezeLabValue({ ...value, root: labRoot("league-robust-pure-disposition-v1", value) }) as RobustPureDisposition
+  issuedDispositions.add(disposition)
+  return disposition
 }

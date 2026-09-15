@@ -3,9 +3,10 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
-import { createCompletePayoffSnapshot, createLeagueMixture, createLeaguePortfolio, createLeagueSolverManifest, createLeagueSolverOutput, createRobustPureDisposition } from "./contracts.js"
+import { createCompletePayoffSnapshot, createLeagueMixture, createLeaguePortfolio, createLeagueSolverManifest, createLeagueSolverOutput } from "./contracts.js"
 import { createLeagueRepository } from "./repository.js"
 import { publishLeagueReport, reopenLeagueReport } from "./report.js"
+import { selectRobustPure } from "./selection.js"
 
 const directories: string[] = []
 const root = (label: string): LabRoot => labRoot("report-test-root-v1", { label })
@@ -22,9 +23,11 @@ const reportInput = (repo = repository(), unsafe: Record<string, unknown> = {}) 
   const solver = createLeagueSolverOutput({ manifestRoot: manifest.root, snapshotRoot: snapshot.root, distributionRoot: root("distribution"), diagnosticsRoot: root("solver-diagnostics") })
   const mixture = createLeagueMixture({ solverOutputRoot: solver.root, weightRoot: root("weights"), snapshotRoot: snapshot.root })
   const portfolio = createLeaguePortfolio({ candidateAdmissionRoots: [root("candidate")], diversityReceiptRoot: root("diversity"), mixtureRoot: mixture.root })
+  const selectionValue = { schemaVersion: "league-selection-evidence-v2" as const, privacy: "private_offline" as const, snapshotRoot: snapshot.root, populationRoot: snapshot.populationRoot, policyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" as LabRoot, solverOutputRoot: solver.root, responseRows: [], probeRows: [], redTeamRows: [], invarianceRows: [], terminalRows: [], worstCases: [] }
+  const finalistDisposition = selectRobustPure({ snapshotRoot: snapshot.root, populationRoot: snapshot.populationRoot, mixture, portfolio, candidateAdmissionRoot: root("candidate"), evidence: { ...selectionValue, root: labRoot("league-selection-evidence-v2", selectionValue) } })
   return {
     repository: repo, snapshot, solverManifest: manifest, solver, mixture, portfolio,
-    redTeamRoot: root("red-team"), finalistDisposition: createRobustPureDisposition({ portfolioRoot: portfolio.root, kind: "no_robust_pure_finalist_found", candidateAdmissionRoot: null, gateReceiptRoots: [root("finalist-gate")] }),
+    redTeamRoot: root("red-team"), finalistDisposition,
     reopen: { issued: false as const, records: [{ terminalProvenance: "persisted" as const, start: { root: root("start"), cellRoot: root("cell"), allocationRoot: root("allocation") }, terminal: { disposition: "success", processValidity: "process_valid", cellRoot: root("cell") } }], remnants: [] },
     projection: {
       population: { root: root("population") }, conditions: [{ root: root("condition") }], semanticArenas: [{ root: root("arena") }], oracleFamilies: [{ root: root("oracle") }],
@@ -47,6 +50,7 @@ describe("private complete league reports", () => {
   it("fails closed for stale/incomplete repository state, unsupported claims, and sensitive projection fields", () => {
     const derived = reportInput()
     expect(() => publishLeagueReport({ ...derived, reopen: { ...derived.reopen, records: [{ ...derived.reopen.records[0]!, terminalProvenance: "derived_unterminated_start" as const }] } })).toThrow("LEAGUE_REPORT_REOPEN_INCOMPLETE")
+    expect(() => publishLeagueReport({ ...reportInput(), finalistDisposition: { root: root("forged-finalist") } })).toThrow("LEAGUE_SELECTION_UNISSUED_DISPOSITION")
     expect(() => publishLeagueReport(reportInput(undefined, { claim: "Nash optimal solved permanent balance" }))).toThrow("LEAGUE_REPORT_CLAIM")
     expect(() => publishLeagueReport(reportInput(undefined, { strategyMemory: { secret: true } }))).toThrow("LEAGUE_REPORT_PROJECTION_DENIED")
   })

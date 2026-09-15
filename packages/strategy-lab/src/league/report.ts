@@ -6,12 +6,12 @@ import {
   LeagueMixtureSchema,
   LeaguePortfolioSchema,
   LeagueReportDescriptorSchema,
-  RobustPureDispositionSchema,
   LeagueSolverManifestSchema,
   LeagueSolverOutputSchema,
   type LeagueReportDescriptor,
 } from "./contracts.js"
 import { publishLeagueArtifact, readLeagueArtifact, type LeagueRepository, type ReopenedLeagueEvidence } from "./repository.js"
+import { requireIssuedRobustPureDisposition } from "./selection.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const CAP = 262144
@@ -69,7 +69,7 @@ export const publishLeagueReport = (input: {
   const solver = LeagueSolverOutputSchema.parse(input.solver)
   const mixture = LeagueMixtureSchema.parse(input.mixture)
   const portfolio = LeaguePortfolioSchema.parse(input.portfolio)
-  const finalist = RobustPureDispositionSchema.parse(input.finalistDisposition)
+  const finalist = requireIssuedRobustPureDisposition(input.finalistDisposition)
   if (manifest.snapshotRoot !== snapshot.root || solver.manifestRoot !== manifest.root || solver.snapshotRoot !== snapshot.root || mixture.snapshotRoot !== snapshot.root || mixture.solverOutputRoot !== solver.root || portfolio.mixtureRoot !== mixture.root || finalist.portfolioRoot !== portfolio.root) return fail("GRAPH_STALE")
   const reopened = admitReopen(input.reopen, snapshot.expectedCellCount)
   auditProjection(input.projection)
