@@ -7,7 +7,7 @@ import { admitCanonicalJsonValue } from "@cowards/spec"
 import { labRoot, type LabRoot } from "../contracts.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../factory/contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "../factory/identity.js"
-import { createFactoryRepository, publishFactoryArtifact } from "../factory/repository.js"
+import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact } from "../factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
 import { createLeagueCandidateAdmission, createLeagueMixture, createLeaguePopulation, LeagueCandidateAdmissionSchema } from "./contracts.js"
 import { deriveLeaguePortfolio, selectRobustPure, countLinkedResponseIterations, type LeagueLinkedResponseIteration } from "./selection.js"
@@ -41,6 +41,32 @@ const selectionEvidence = (snapshotRoot: LabRoot, populationRoot: LabRoot, solve
 }
 
 describe("source-bound portfolio and robust-pure selection", () => {
+  it("keeps the authentic three-base nine-control population comparison-only while fresh producers grow the inventory", async () => {
+    const imported = await Promise.all(Array.from({ length: 12 }, (_, index) => importedCandidateFixture(index + 1)))
+    const controls = imported.filter((row) => row.candidateAdmission.importEvidence!.qualification === "control_or_unresolved")
+    expect(controls).toHaveLength(9)
+    expect(controls.every((row) => row.fingerprint.evidenceClass === "mechanics_only" && row.fingerprint.producerArtifactRoot === null)).toBe(true)
+    const retainedBytes = imported.map((row) => readFactoryArtifact(row.factoryRepository, row.fingerprintArtifactRoot))
+    const snapshotRoot = root("actual-control-snapshot"), mixture = createLeagueMixture({ snapshotRoot, solverOutputRoot: root("control-solver"), weightRoot: root("control-weights") })
+    for (const fresh of [[], Array.from({ length: 9 }, (_, index) => candidate(`fresh-inventory-${index}`))]) {
+      const entries = [...imported, ...fresh], portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = portfolio.candidateAdmissionRoots[0]!
+      expect(portfolio.candidateAdmissionRoots).toHaveLength(3 + fresh.length)
+      expect(controls.every((row) => !portfolio.candidateAdmissionRoots.includes(row.candidateAdmission.root))).toBe(true)
+      const population = createLeaguePopulation({ candidateAdmissionRoots: entries.map((row) => row.candidateAdmission.root).sort(), studyPolicyRoot: root("control-study"), measurementPolicyRoot: root("control-policy") })
+      const { root: _root, schemaVersion: _schema, ...base } = selectionEvidence(snapshotRoot, population.root, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected), body = { ...base, schemaVersion: "league-selection-evidence-v5", allocationRoot: root("control-allocation"), seedBlocks: ["seed"], iterations: [] }
+      const result = selectRobustPure({ snapshotRoot, populationRoot: population.root, mixture, portfolio, candidateAdmissionRoot: selected, population, populationCandidates: entries, evidence: { ...body, root: labRoot(body.schemaVersion, body) } })
+      const real = entries.filter((row) => !row.candidateAdmission.importEvidence || row.candidateAdmission.importEvidence.qualification === "base_distinct").map((row) => row.candidateAdmission.root).sort()
+      const countGate = labRoot("league-robust-pure-gate-v2", { id: "league_strategy_count", value: real })
+      if (fresh.length) expect(result.gateReceiptRoots).not.toContain(countGate)
+      else expect(result.gateReceiptRoots).toContain(countGate)
+      expect(real).toHaveLength(3 + fresh.length)
+      expect(result.kind).toBe("no_robust_pure_finalist_found")
+    }
+    expect(imported.map((row) => readFactoryArtifact(row.factoryRepository, row.fingerprintArtifactRoot))).toEqual(retainedBytes)
+    const control = controls[0]!, { root: _root, ...fingerprint } = control.fingerprint
+    const forged = { ...fingerprint, evidenceClass: "real_producer", producerArtifactRoot: root("forged-control-producer") }
+    expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [{ ...control, fingerprintArtifactRoot: control.put({ ...forged, root: labRoot("factory-fingerprint-evidence-v1", forged) }) }] })).toThrow("IMPORTED_FINGERPRINT_REWRITE")
+  }, 60000)
   it("requires distinct consecutive accepted responses linked through the updated pre-response population", () => {
     const allocationRoot = root("linked-allocation"), a = root("response-a"), b = root("response-b"), unrelated = root("unrelated")
     const row = (ordinal: number, candidateAdmissionRoot: LabRoot, targetCandidateAdmissionRoots: LabRoot[]): LeagueLinkedResponseIteration => ({ candidateAdmissionRoot, ordinal, allocationRoot, jobId: `job-${ordinal}`, startRoot: root(`start-${ordinal}`), productionRoot: root(`production-${ordinal}`), reentryRoot: root(`reentry-${ordinal}`), responseTerminals: [{ root: root(`terminal-${ordinal}`), disposition: "success", processValidity: "process_valid" }], blocks: [{ seed: "seed", roundRoot: root(`round-${ordinal}`), targetRoot: root(`target-${ordinal}`), snapshotRoot: root(`snapshot-${ordinal}`), nextSnapshotRoot: root(`snapshot-${ordinal + 1}`), targetCandidateAdmissionRoots, nextCandidateAdmissionRoots: [...targetCandidateAdmissionRoots, candidateAdmissionRoot].sort(), conditionRoots: [root(`condition-${ordinal}`)], terminalRoots: [root(`measurement-${ordinal}`)], numerator: 1, denominator: 1 }] })

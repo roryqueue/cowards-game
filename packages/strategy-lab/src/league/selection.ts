@@ -17,7 +17,7 @@ export interface LeaguePortfolioCandidate {
   readonly fingerprintArtifactRoot: LabRoot
   readonly importedAssessment?: Pick<Parameters<typeof importAssessedFactoryCandidate>[0], "maxBytes" | "maxRecords" | "verifyRetainedAssessment">
 }
-interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly correlationFree: boolean; readonly distinctPeerProposals: readonly LabRoot[] }
+interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly realProducer: boolean; readonly correlationFree: boolean; readonly distinctPeerProposals: readonly LabRoot[] }
 type PortfolioReason = "factory_evidence_incomplete" | "clone_or_correlation" | "structural_family_duplicate" | "strategic_core_duplicate" | "lineage_duplicate" | "behavior_duplicate" | "response_duplicate"
 export interface LeaguePortfolioDerivation { readonly portfolio: LeaguePortfolio; readonly rejections: readonly Readonly<{ candidateAdmissionRoot: LabRoot; reason: PortfolioReason; receiptRoot: LabRoot }>[] }
 
@@ -40,16 +40,21 @@ const admitBoundCandidate = (value: LeaguePortfolioCandidate): Readonly<BoundCan
     const independence = publication.ok ? (publication.value as { independenceReceipt?: { evidenceRoot?: unknown; evidenceArtifactRoot?: unknown } }).independenceReceipt : undefined
     if (!independence || independence.evidenceRoot !== root || independence.evidenceArtifactRoot !== value.fingerprintArtifactRoot) return fail("IMPORTED_FINGERPRINT_REWRITE")
   }
-  if (evidence.schemaVersion !== "factory-fingerprint-evidence-v1" || evidence.privacy !== "private_offline" || !isRoot(root) || root !== labRoot("factory-fingerprint-evidence-v1", evidenceValue) || evidence.proposalRoot !== admission.candidate.proposal.root || evidence.validationRoot !== admission.candidate.validation.root || evidence.supervisionReceiptRoot !== admission.supervisionReceiptRoot || evidence.evidenceClass !== "real_producer" || !isRoot(evidence.producerArtifactRoot) || !Array.isArray(evidence.lineageNodes) || !Array.isArray(evidence.dependencyNodes) || !Array.isArray(evidence.matchupResponses) || !Array.isArray(evidence.counterfactualPairs) || !Array.isArray(evidence.failureModes) || !evidence.lineageNodes.length || !evidence.dependencyNodes.length || evidence.matchupResponses.length < (importedQualification ? 1 : 2) || !evidence.counterfactualPairs.length || !evidence.failureModes.includes("accepted")) return fail("FINGERPRINT_BINDING")
-  const producerParsed = admitCanonicalJsonBytes(readFactoryArtifact(value.factoryRepository, evidence.producerArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
-  if (!producerParsed.ok || !exact(producerParsed.value, ["schemaVersion", "privacy", "root", "producerIdentity", "origin", "evidenceClass", "packetRoot", "sourceRoot", "runtimeProfileRoot", "nativeLane", "packet", "sourceUtf8", "producerInput", "modelCompanion"])) return fail("PRODUCER_BYTES")
-  const producer = producerParsed.value, { root: producerRoot, ...producerValue } = producer
-  if (producer.schemaVersion !== "factory-ingestion-v1" || producer.privacy !== "private_offline" || producerRoot !== labRoot("factory-ingestion-v1", producerValue) || producer.evidenceClass !== "real_producer" || producer.producerIdentity !== evidence.producerIdentity || producer.origin !== evidence.origin || producer.sourceRoot !== admission.candidate.proposal.source.root || typeof producer.sourceUtf8 !== "string" || byteRoot(new TextEncoder().encode(producer.sourceUtf8)) !== producer.sourceRoot) return fail("PRODUCER_BINDING")
+  const comparisonOnly = importedQualification === "control_or_unresolved" && evidence.evidenceClass === "mechanics_only" && evidence.producerArtifactRoot === null
+  const producerBacked = evidence.evidenceClass === "real_producer" && isRoot(evidence.producerArtifactRoot)
+  if (evidence.schemaVersion !== "factory-fingerprint-evidence-v1" || evidence.privacy !== "private_offline" || !isRoot(root) || root !== labRoot("factory-fingerprint-evidence-v1", evidenceValue) || evidence.proposalRoot !== admission.candidate.proposal.root || evidence.validationRoot !== admission.candidate.validation.root || evidence.supervisionReceiptRoot !== admission.supervisionReceiptRoot || !comparisonOnly && !producerBacked || !Array.isArray(evidence.lineageNodes) || !Array.isArray(evidence.dependencyNodes) || !Array.isArray(evidence.matchupResponses) || !Array.isArray(evidence.counterfactualPairs) || !Array.isArray(evidence.failureModes) || !evidence.lineageNodes.length || !evidence.dependencyNodes.length || evidence.matchupResponses.length < (importedQualification ? 1 : 2) || !evidence.counterfactualPairs.length || !evidence.failureModes.includes("accepted")) return fail("FINGERPRINT_BINDING")
+  if (producerBacked) {
+    const producerParsed = admitCanonicalJsonBytes(readFactoryArtifact(value.factoryRepository, evidence.producerArtifactRoot as LabRoot), { profile: "canonical-manifest", operation: "require-canonical" })
+    if (!producerParsed.ok || !exact(producerParsed.value, ["schemaVersion", "privacy", "root", "producerIdentity", "origin", "evidenceClass", "packetRoot", "sourceRoot", "runtimeProfileRoot", "nativeLane", "packet", "sourceUtf8", "producerInput", "modelCompanion"])) return fail("PRODUCER_BYTES")
+    const producer = producerParsed.value, { root: producerRoot, ...producerValue } = producer
+    if (producer.schemaVersion !== "factory-ingestion-v1" || producer.privacy !== "private_offline" || producerRoot !== labRoot("factory-ingestion-v1", producerValue) || producer.evidenceClass !== "real_producer" || producer.producerIdentity !== evidence.producerIdentity || producer.origin !== evidence.origin || producer.sourceRoot !== admission.candidate.proposal.source.root || typeof producer.sourceUtf8 !== "string" || byteRoot(new TextEncoder().encode(producer.sourceUtf8)) !== producer.sourceRoot) return fail("PRODUCER_BINDING")
+  }
   const pairs = evidence.counterfactualPairs as readonly Readonly<{ relation?: unknown }>[]
   if (pairs.some((pair) => !pair || !["distinct", "correlated", "borderline"].includes(String(pair.relation))) || (evidence.matchupResponses as readonly Readonly<{ outcome?: unknown }>[]).some((row) => !row || row.outcome === "failure")) return fail("FINGERPRINT_INCOMPLETE")
   const fingerprints = admission.candidate.fingerprints
   return freezeLabValue({
     admission,
+    realProducer: producerBacked && importedQualification !== "control_or_unresolved",
     familyRoot: labRoot("league-structural-family-v1", { doctrineFamily: admission.candidate.proposal.doctrineFamily, sourceStructureRoot: fingerprints.sourceStructureRoot }),
     coreRoot: labRoot("league-strategic-core-v1", { sourceStructureRoot: fingerprints.sourceStructureRoot, dependencyRoot: fingerprints.dependencyRoot, legalInputDecisionRoot: fingerprints.legalInputDecisionRoot }),
     cloneRoot: labRoot("league-clone-decision-v1", { evidenceRoot: root, counterfactualPairs: pairs, ...(admission.importEvidence ? { assessmentRoot: admission.importEvidence.assessmentRoot, sourceSlot: admission.importEvidence.sourceSlot, qualification: importedQualification } : {}) }),
@@ -199,7 +204,7 @@ export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readon
       })) selected.push(entry)
       return selected.map((entry) => entry.admission.root)
     }
-    return { candidateAdmissionRoots: roots, behavioralFamilyRepresentatives: groups("behavior"), independentCoreRepresentatives: groups("core") }
+    return { candidateAdmissionRoots: bound.filter((row) => row.realProducer).map((row) => row.admission.root).sort(), behavioralFamilyRepresentatives: groups("behavior"), independentCoreRepresentatives: groups("core") }
   })() : null
   const rows = [...evidence.responseRows, ...evidence.probeRows, ...evidence.redTeamRows]
   if (rows.some((row) => !row || !isRoot(row.candidateAdmissionRoot) || !isRoot(row.conditionRoot) || !isRoot(row.evidenceRoot) || !positive(row.numerator, row.denominator)) || evidence.worstCases.some((row) => !row || !isRoot(row.candidateAdmissionRoot) || !isRoot(row.opponentAdmissionRoot) || !isRoot(row.evidenceRoot) || !positive(row.numerator, row.denominator))) return fail("EVIDENCE_ROWS")
