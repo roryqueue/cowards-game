@@ -53,13 +53,26 @@ const snapshotFromMatrix = (matrix: readonly (readonly number[])[], reverse = fa
   const snapshot = createCompletePayoffSnapshot({ populationRoot: root("d"), cellChunkRoots: [root("e")], solverPayoffRoot: labRoot("league-solver-payoffs-v1", ordered), expectedCellCount: ordered.length, completedCellCount: ordered.length })
   return { snapshot, transport: canonical(reverse ? [...projections].reverse() : projections), candidates }
 }
+const asymmetricTwelveSnapshot = () => {
+  const candidates = Array.from({ length: 12 }, (_, ordinal) => root("0123456789ab"[ordinal]!))
+  const units = Array.from({ length: 12 }, () => Array(12).fill(0))
+  const set = (left: number, right: number, value: number) => { units[left]![right] = value; units[right]![left] = -value }
+  set(0, 1, 8); set(1, 2, 4); set(2, 0, 2) // exact core weights: 2/7, 1/7, 4/7
+  for (let extra = 3; extra < 12; extra += 1) for (let core = 0; core < 3; core += 1) set(core, extra, 8)
+  const projections = units.flatMap((row, left) => row.flatMap((value, right) => left < right
+    ? Array.from({ length: 8 }, (_, conditionOrdinal) => ({ entrantCandidateRoot: candidates[left]!, opponentCandidateRoot: candidates[right]!, projectionRoot: labRoot("solver-test-asymmetric-projection-v1", { left, right, conditionOrdinal }), halfPoints: (conditionOrdinal < Math.abs(value) ? value > 0 ? 2 : 0 : 1) as 0 | 1 | 2 }))
+    : []))
+  const ordered = [...projections].sort((left, right) => `${left.entrantCandidateRoot}:${left.opponentCandidateRoot}:${left.projectionRoot}`.localeCompare(`${right.entrantCandidateRoot}:${right.opponentCandidateRoot}:${right.projectionRoot}`))
+  const snapshot = createCompletePayoffSnapshot({ populationRoot: root("c"), cellChunkRoots: [root("d")], solverPayoffRoot: labRoot("league-solver-payoffs-v1", ordered), expectedCellCount: ordered.length, completedCellCount: ordered.length })
+  return { snapshot, transport: canonical([...projections].reverse()), candidates }
+}
 
 describe("frozen empirical-game solver", () => {
   it("selects only a decisive exact synthetic candidate with committed golden and boundary evidence", () => {
     const spike = runLeagueSolverSpike()
     expect(spike.status).toBe("selected")
     if (spike.status === "selected") {
-      expect(spike.selection.algorithm).toBe("exact-rational-pivoted-restricted-v1")
+      expect(spike.selection.algorithm).toBe("exact-rational-pivoted-restricted-v2")
       expect(spike.selection.representation).toBe("bigint-rational-half-points-v1")
       expect(spike.comparisons).toHaveLength(2)
       expect(spike.comparisons.some((comparison) => comparison.candidate === spike.selection.algorithm && comparison.golden && comparison.permutation && comparison.boundary)).toBe(true)
@@ -115,5 +128,17 @@ describe("frozen empirical-game solver", () => {
   it("reports a real exhausted pivot budget separately from malformed or incomplete matrix evidence", () => {
     const exhausted = runExactRestrictedGameCandidate({ matrix: [[0, 1, -1], [-1, 0, 1], [1, -1, 0]], pivotBudget: 0 })
     expect(exhausted.status).toBe("resource_exhausted")
+  })
+
+  it("solves an asymmetric 12-policy no-saddle game through a non-uniform three-policy support", () => {
+    const asymmetric = asymmetricTwelveSnapshot()
+    const result = solveLeagueSnapshot({ snapshot: asymmetric.snapshot, solverPayoffBytes: asymmetric.transport })
+    if (result.status !== "solved") throw new TypeError(`TEST_ASYMMETRIC_RESTRICTED_SOLVER:${result.failureCode}`)
+    const expected = new Map([[asymmetric.candidates[0]!, "2/7"], [asymmetric.candidates[1]!, "1/7"], [asymmetric.candidates[2]!, "4/7"]])
+    expect(result.weights).toEqual([...asymmetric.candidates].sort().map((candidateRoot) => {
+      const weight = expected.get(candidateRoot) ?? "0/1", [numerator, denominator] = weight.split("/")
+      return { candidateRoot, numerator, denominator }
+    }))
+    expect(result.securityResidual).toEqual({ numerator: "0", denominator: "1" })
   })
 })
