@@ -1,115 +1,74 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
-import path from "node:path"
+import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
+import { checkLabBoundaries, collectLabBoundaryGraph } from "./check-v1-38-lab-boundaries.js"
 
-export interface SeriousLeagueBoundaryViolation {
-  readonly path: string
-  readonly line: number
-  readonly rule: string
-}
+export interface SeriousLeagueBoundaryViolation { readonly path: string; readonly line: number; readonly rule: string }
+export interface SeriousLeagueBoundaryResult { readonly ok: boolean; readonly violations: readonly SeriousLeagueBoundaryViolation[]; readonly scannedFiles: number }
+export interface SeriousLeagueBoundaryOptions { readonly files?: Readonly<Record<string, string>> }
 
-export interface SeriousLeagueBoundaryResult {
-  readonly ok: boolean
-  readonly violations: readonly SeriousLeagueBoundaryViolation[]
-}
+const source = /\.[cm]?[jt]sx?$/u
+const test = /(?:\.test|\.spec)\.[cm]?[jt]sx?$/u
+const restricted = (file: string) => file === "packages/strategy-lab/src/index.ts" || file.startsWith("packages/strategy-lab/src/league/") || ["scripts/run-v1-38-serious-league.ts", "scripts/lib/v1-38-league-authoring.ts", "scripts/lib/v1-38-league-response-runtime.ts", "scripts/assess-v1-38-factory-independence.ts", "scripts/v1-38-factory-execution-evidence.ts", "scripts/v1-38-factory-assessment-correction.ts"].includes(file)
+const publicOrDeployment = (file: string) => (/^(?:apps|packages)\//u.test(file) && !file.startsWith("packages/strategy-lab/") && !test.test(file)) || /(?:^|\/)(?:public|generated|deploy|deployment|artifacts)\//u.test(file) || /(?:^|\/)(?:Dockerfile[^/]*|[^/]*docker[^/]*|compose[^/]*)(?:\/|$)/iu.test(file)
+const allowedUnresolved = new Set(["node:buffer", "node:crypto", "node:fs", "node:fs/promises", "node:os", "node:path", "node:url", "node:worker_threads"])
 
-export interface SeriousLeagueBoundaryOptions {
-  readonly repoRoot?: string
-  readonly files?: Readonly<Record<string, string>>
-}
-
-const sourceExtension = /\.(?:[cm]?[jt]sx?)$/u
-const privateLeaguePath = (file: string) =>
-  file === "packages/strategy-lab/src/index.ts" ||
-  file.startsWith("packages/strategy-lab/src/league/") ||
-  file === "scripts/run-v1-38-serious-league.ts" ||
-  file === "packages/strategy-lab/package.json"
-const publicPath = (file: string) =>
-  file.startsWith("apps/") ||
-  /(?:^|\/)(?:public|generated|deploy|deployment|artifacts)\//u.test(file)
-
-const walk = (repoRoot: string, root: string): Readonly<Record<string, string>> => {
-  const output: Record<string, string> = {}
-  const visit = (absolute: string) => {
-    if (!existsSync(absolute)) return
-    const stat = statSync(absolute)
-    if (stat.isDirectory()) {
-      for (const entry of readdirSync(absolute)) {
-        if (["node_modules", "dist", "coverage", ".turbo", ".next"].includes(entry)) continue
-        visit(path.join(absolute, entry))
-      }
-      return
-    }
-    const relative = path.relative(repoRoot, absolute).split(path.sep).join("/")
-    if (sourceExtension.test(relative) || relative.endsWith("package.json")) output[relative] = readFileSync(absolute, "utf8")
+const hostileExecution = (text: string, file: string): boolean => {
+  const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true); let found = false
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ["eval", "Function"].includes(node.expression.text)) found = true
+    if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "Function") found = true
+    if (ts.isPropertyAccessExpression(node) && node.name.text === "runInNewContext") found = true
+    ts.forEachChild(node, visit)
   }
-  visit(path.join(repoRoot, "packages/strategy-lab/src/league"))
-  visit(path.join(repoRoot, "packages/strategy-lab/src/index.ts"))
-  visit(path.join(repoRoot, "packages/strategy-lab/package.json"))
-  visit(path.join(repoRoot, "scripts/run-v1-38-serious-league.ts"))
-  visit(path.join(repoRoot, "apps"))
-  return output
+  visit(ast); return found
 }
 
-const lineAt = (sourceFile: ts.SourceFile, node: ts.Node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
-const imports = (sourceFile: ts.SourceFile, visit: (value: string, node: ts.Node) => void) => {
-  const walkNode = (node: ts.Node) => {
-    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) visit(node.moduleSpecifier.text, node)
-    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-      if (node.arguments.length !== 1 || !ts.isStringLiteral(node.arguments[0]!)) visit("<dynamic>", node)
-      else visit(node.arguments[0]!.text, node)
+/** The shared collector conservatively records `.require(...)` method calls as
+ * unresolved. Keep its result, but only treat an undefined edge as a loader
+ * when the AST confirms an import()/bare require() expression. */
+const hasUnresolvedLoader = (text: string, file: string): boolean => {
+  const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true); let found = false
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && node.arguments[0] && !ts.isStringLiteralLike(node.arguments[0]!)) {
+      if (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") found = true
     }
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "require") {
-      if (node.arguments.length !== 1 || !ts.isStringLiteral(node.arguments[0]!)) visit("<dynamic>", node)
-      else visit(node.arguments[0]!.text, node)
-    }
-    ts.forEachChild(node, walkNode)
+    ts.forEachChild(node, visit)
   }
-  walkNode(sourceFile)
+  visit(ast); return found
 }
 
-/** AST/import-graph guard for the private Phase 265 source lane. */
+/** Phase-265 policy over the shared AST/module-resolution graph, not a runtime sandbox. */
 export const checkSeriousLeagueBoundaries = (options: SeriousLeagueBoundaryOptions = {}): SeriousLeagueBoundaryResult => {
-  const repoRoot = options.repoRoot ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-  const files = options.files ?? walk(repoRoot, ".")
-  const violations: SeriousLeagueBoundaryViolation[] = []
-  const add = (file: string, node: ts.Node, sourceFile: ts.SourceFile, rule: string) => violations.push({ path: file, line: lineAt(sourceFile, node), rule })
-  for (const [file, text] of Object.entries(files)) {
-    if ((!privateLeaguePath(file) && !publicPath(file)) || /\.test\.[cm]?[jt]sx?$/u.test(file)) continue
-    if (file.endsWith("package.json")) {
-      try {
-        const manifest = JSON.parse(text) as { private?: unknown; exports?: unknown }
-        if (file === "packages/strategy-lab/package.json" && manifest.private !== true) violations.push({ path: file, line: 1, rule: "league-package-must-stay-private" })
-        if (file === "packages/strategy-lab/package.json" && JSON.stringify(manifest.exports).includes("league/")) violations.push({ path: file, line: 1, rule: "no-league-subpath-export" })
-      } catch { violations.push({ path: file, line: 1, rule: "manifest-json" }) }
-      continue
-    }
-    if (!sourceExtension.test(file)) continue
-    const sourceFile = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
-    imports(sourceFile, (specifier, node) => {
-      if (privateLeaguePath(file) && specifier === "<dynamic>") add(file, node, sourceFile, "dynamic-loader")
-      if (publicPath(file) && (specifier.includes("strategy-lab") || specifier.includes("serious-league") || specifier.includes("/league/"))) add(file, node, sourceFile, "private-league-reachable-from-public-root")
-      if (privateLeaguePath(file) && /(?:runtime-js\/src\/revision|strategy-selector|runCanonicalLabMatch)/u.test(specifier)) add(file, node, sourceFile, "direct-strategy-or-match-execution")
-    })
-    if (privateLeaguePath(file)) {
-      const visit = (node: ts.Node) => {
-        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "eval") add(file, node, sourceFile, "direct-source-execution:eval")
-        if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "Function") add(file, node, sourceFile, "direct-source-execution:new-function")
-        if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && ["StrategyMemory", "SoldierMemory", "objectivePayload", "holdout", "formation"].includes(node.name.text)) add(file, node, sourceFile, `prohibited-report-payload:${node.name.text}`)
-        ts.forEachChild(node, visit)
-      }
-      visit(sourceFile)
-    }
+  const shared = collectLabBoundaryGraph({ files: options.files }), violations: SeriousLeagueBoundaryViolation[] = []
+  const add = (rule: string, path: string) => { if (!violations.some((entry) => entry.rule === rule && entry.path === path)) violations.push({ path, line: 1, rule }) }
+  for (const violation of checkLabBoundaries({ files: shared.files }).violations) {
+    if (violation.code === "UNRESOLVED_LAB_EDGE" && !hasUnresolvedLoader(shared.files[violation.file] ?? "", violation.file)) continue
+    add(`lab:${violation.code}`, violation.file)
   }
-  return { ok: violations.length === 0, violations }
+  const visit = (origin: string, predicate: (path: string) => void) => {
+    const visited = new Set<string>()
+    const walk = (path: string) => { if (visited.has(path)) return; visited.add(path); predicate(path); for (const next of shared.graph.get(path) ?? []) walk(next) }
+    walk(origin)
+  }
+  for (const origin of shared.graph.keys()) {
+    if (restricted(origin)) visit(origin, (path) => {
+      if (path !== origin && restricted(path) && test.test(path)) add("restricted-test-reachable", origin)
+      if (source.test(path) && hostileExecution(shared.files[path] ?? "", path)) add("hostile-source-execution", origin)
+      if (!restricted(path)) return
+      for (const specifier of shared.unresolved.get(path) ?? []) {
+        if (specifier === undefined && !hasUnresolvedLoader(shared.files[path] ?? "", path)) continue
+        if (specifier === undefined || !allowedUnresolved.has(specifier)) add("unresolved-private-loader", origin)
+      }
+    })
+    if (publicOrDeployment(origin)) visit(origin, (path) => { if (restricted(path)) add("public-or-deployment-reaches-private-league", origin) })
+  }
+  violations.sort((left, right) => left.path === right.path ? left.rule.localeCompare(right.rule) : left.path.localeCompare(right.path))
+  return { ok: violations.length === 0, violations, scannedFiles: Object.keys(shared.files).length }
 }
 
-const invokedAsScript = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href
-if (invokedAsScript) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const result = checkSeriousLeagueBoundaries()
-  if (!result.ok) {
-    process.stderr.write(`${JSON.stringify(result.violations, null, 2)}\n`)
-    process.exitCode = 1
-  }
+  process.stdout.write(`${JSON.stringify(result)}\n`)
+  if (!result.ok) process.exitCode = 1
 }

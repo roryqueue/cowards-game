@@ -23,7 +23,7 @@ const admission = (ordinal: number) => {
 
 const successTerminal = (entry: ReturnType<typeof enumerateLeagueCells>["cells"][number]) => {
   const events = [{ type: "MATCH_ENDED", payload: { type: "DRAW" as const } }]
-  const projection = projectCanonicalKernelOutcomeToEntrantHalfPoints({ execution: { kind: "completed", privacy: "private_offline", result: { state: { outcome: { type: "DRAW" } }, events }, transitions: [], accounting: [] } as never, entrantCandidateRoot: entry.cell.entrantCandidateRoot, bottomCandidateRoot: entry.bottomCandidateRoot, topCandidateRoot: entry.topCandidateRoot, bottomPlayerId: leaguePlayerId(entry.bottomCandidateRoot), topPlayerId: leaguePlayerId(entry.topCandidateRoot), cellRoot: entry.cell.root, conditionRoot: entry.cell.conditionRoot, semanticGeometryHash: entry.cell.semanticGeometryHash, resultEventRoot: labRoot("phase-265-injected-result-events", events) })
+  const projection = projectCanonicalKernelOutcomeToEntrantHalfPoints({ execution: { kind: "completed", privacy: "private_offline", result: { state: { outcome: { type: "DRAW" } }, events }, transitions: [], accounting: [] } as never, entrantCandidateRoot: entry.cell.entrantCandidateRoot, bottomCandidateRoot: entry.bottomCandidateRoot, topCandidateRoot: entry.topCandidateRoot, bottomPlayerId: leaguePlayerId(entry.bottomCandidateRoot), topPlayerId: leaguePlayerId(entry.topCandidateRoot), cellRoot: entry.cell.root, conditionRoot: entry.cell.conditionRoot, semanticGeometryHash: entry.cell.semanticGeometryHash, resultEventRoot: labRoot("league-result-events-v1", events) })
   return createLeagueCellTerminal({ cellRoot: entry.cell.root, disposition: "success", processValidity: "process_valid", evidenceRoot: root("3"), projection })
 }
 
