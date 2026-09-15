@@ -1,8 +1,11 @@
-import { admitCanonicalJsonValue } from "@cowards/spec"
+import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { FactoryCandidateSchema, type FactoryCandidate } from "../factory/contracts.js"
 import { validateFactoryAttemptLedger, type FactoryAttemptStart, type FactoryAttemptTerminal } from "../factory/ledger.js"
 import type { LabMatchExecution } from "../runtime-bridge.js"
+import { readFactoryArtifact, type FactoryRepository } from "../factory/repository.js"
+import { readFactorySupervisionArtifactRecords } from "../factory/supervision-artifacts.js"
+import { classifyNumericComparison, freezeNumericCalibrationThreshold, type NumericComparison, type NumericControlTable } from "../factory/numeric-calibration.js"
 
 type RecordValue = Record<string, unknown>
 const ROOT = /^sha256:[0-9a-f]{64}$/u
@@ -46,14 +49,49 @@ export type LeagueTerminalDisposition = "success" | "player_violation" | "system
 export type LeagueProcessValidity = "process_valid" | "process_invalid"
 const TERMINALS: readonly LeagueTerminalDisposition[] = ["success", "player_violation", "system_failure", "rejected", "duplicate", "legal_but_weak", "invalid", "retried", "unresolved", "unfilled", "unused"]
 export interface LeagueCandidateIssuer { /** Host-owned issuance/repository validation, never a serialized `issued` claim. */ verifyCandidate(candidate: FactoryCandidate): boolean }
-export interface LeagueCandidateAdmission { schemaVersion: "league-candidate-admission-v1"; privacy: "private_offline"; root: LabRoot; candidate: FactoryCandidate; supervisionReceiptRoot: LabRoot; fingerprintRoot: LabRoot; lineageRoot: LabRoot; tupleRoot: LabRoot; runtimeRoot: LabRoot; provenanceRoot: LabRoot; attemptStart: FactoryAttemptStart; attemptTerminal: FactoryAttemptTerminal }
+export interface LeagueImportEvidence { sourcePhase: 264; publicationArtifactRoot: LabRoot; supervisionArtifactRoot: LabRoot; assessmentArtifactRoot: LabRoot; assessmentRoot: LabRoot; thresholdArtifactRoot: LabRoot; sourceSlot: string; qualification: "base_distinct" | "control_or_unresolved" }
+export interface LeagueCandidateAdmission { schemaVersion: "league-candidate-admission-v1" | "league-candidate-import-v1"; privacy: "private_offline"; root: LabRoot; candidate: FactoryCandidate; supervisionReceiptRoot: LabRoot; fingerprintRoot: LabRoot; lineageRoot: LabRoot; tupleRoot: LabRoot; runtimeRoot: LabRoot; provenanceRoot: LabRoot; attemptStart: FactoryAttemptStart; attemptTerminal: FactoryAttemptTerminal; importEvidence?: LeagueImportEvidence }
 const candidateKeys = ["schemaVersion", "privacy", "root", "candidate", "supervisionReceiptRoot", "fingerprintRoot", "lineageRoot", "tupleRoot", "runtimeRoot", "provenanceRoot", "attemptStart", "attemptTerminal"] as const
-export const LeagueCandidateAdmissionSchema = rootedSchema<LeagueCandidateAdmission>("league-candidate-admission-v1", candidateKeys, (v) => {
+const LegacyLeagueCandidateAdmissionSchema = rootedSchema<LeagueCandidateAdmission>("league-candidate-admission-v1", candidateKeys, (v) => {
   if (v.schemaVersion !== "league-candidate-admission-v1" || v.privacy !== "private_offline" || ![v.supervisionReceiptRoot, v.fingerprintRoot, v.lineageRoot, v.tupleRoot, v.runtimeRoot, v.provenanceRoot].every(root)) fail("CANDIDATE_EVIDENCE")
   const candidate = FactoryCandidateSchema.parse(v.candidate), start = v.attemptStart as FactoryAttemptStart, terminal = validateFactoryAttemptLedger(start, v.attemptTerminal)
   if (terminal.disposition !== "accepted" || start.candidateRoot !== candidate.root || candidate.supervisionReceiptRoot !== v.supervisionReceiptRoot || v.fingerprintRoot !== labRoot("factory-fingerprint-roots-v1", candidate.fingerprints) || v.lineageRoot !== labRoot("factory-lineage-v1", candidate.lineage) || v.tupleRoot !== candidate.proposal.build.compatibilityTupleRoot || v.runtimeRoot !== candidate.proposal.nativeLane.runtimeProfileRoot) fail("CANDIDATE_EVIDENCE")
   return v as unknown as LeagueCandidateAdmission
 })
+const ImportedLeagueCandidateAdmissionSchema = rootedSchema<LeagueCandidateAdmission>("league-candidate-import-v1", [...candidateKeys, "importEvidence"], (v) => {
+  const candidate = FactoryCandidateSchema.parse(v.candidate), start = v.attemptStart as FactoryAttemptStart, terminal = validateFactoryAttemptLedger(start, v.attemptTerminal), evidence = v.importEvidence as LeagueImportEvidence
+  if (v.schemaVersion !== "league-candidate-import-v1" || v.privacy !== "private_offline" || !exact(evidence, ["sourcePhase", "publicationArtifactRoot", "supervisionArtifactRoot", "assessmentArtifactRoot", "assessmentRoot", "thresholdArtifactRoot", "sourceSlot", "qualification"]) || evidence.sourcePhase !== 264 || ![evidence.publicationArtifactRoot, evidence.supervisionArtifactRoot, evidence.assessmentArtifactRoot, evidence.assessmentRoot, evidence.thresholdArtifactRoot, v.provenanceRoot].every(root) || !/^S(?:0[1-9]|1[0-2])$/u.test(evidence.sourceSlot) || !["base_distinct", "control_or_unresolved"].includes(evidence.qualification) || !["accepted", "unresolved"].includes(terminal.disposition) || terminal.outputRoot !== evidence.supervisionArtifactRoot || start.candidateRoot !== candidate.proposal.packetRoot || candidate.supervisionReceiptRoot !== v.supervisionReceiptRoot || v.fingerprintRoot !== labRoot("factory-fingerprint-roots-v1", candidate.fingerprints) || v.lineageRoot !== labRoot("factory-lineage-v1", candidate.lineage) || v.tupleRoot !== candidate.proposal.build.compatibilityTupleRoot || v.runtimeRoot !== candidate.proposal.nativeLane.runtimeProfileRoot) fail("IMPORT_EVIDENCE")
+  return v as unknown as LeagueCandidateAdmission
+})
+export const LeagueCandidateAdmissionSchema = Object.freeze({
+  parse(value: unknown): Readonly<LeagueCandidateAdmission> { return value && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === "league-candidate-import-v1" ? ImportedLeagueCandidateAdmissionSchema.parse(value) : LegacyLeagueCandidateAdmissionSchema.parse(value) },
+  safeParse(value: unknown) { try { return { success: true as const, data: this.parse(value) } } catch { return { success: false as const, error: new TypeError("LEAGUE_CANDIDATE_EVIDENCE") } } },
+})
+
+/** Historical evidence import is deliberately separate from Phase 265 execution authority.
+ * The host verifier must replay the complete retained assessment without writes or dispatch. */
+export const importAssessedFactoryCandidate = (input: { repository: FactoryRepository; publicationArtifactRoot: LabRoot; supervisionArtifactRoot: LabRoot; assessmentArtifactRoot: LabRoot; attemptStart: FactoryAttemptStart; attemptTerminal: FactoryAttemptTerminal; maxBytes: number; maxRecords: number; verifyRetainedAssessment: (repository: FactoryRepository, artifactRoot: LabRoot) => { status: string; assessmentRoot: LabRoot; thresholdArtifactRoot: LabRoot | null } }): Readonly<LeagueCandidateAdmission> => {
+  const read = (artifact: LabRoot): RecordValue => { const parsed = admitCanonicalJsonBytes(readFactoryArtifact(input.repository, artifact), { profile: "canonical-manifest", operation: "require-canonical" }); if (!parsed.ok || !parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) return fail("IMPORT_BYTES"); return parsed.value as RecordValue }
+  const verified = input.verifyRetainedAssessment(input.repository, input.assessmentArtifactRoot), assessment = read(input.assessmentArtifactRoot)
+  if (verified.status !== "affirmed" || !verified.thresholdArtifactRoot || verified.assessmentRoot !== assessment.root || assessment.root !== labRoot(String(assessment.schemaVersion), withoutRoot(assessment)) || assessment.status !== "affirmed" || assessment.thresholdArtifactRoot !== verified.thresholdArtifactRoot || !Array.isArray(assessment.reasons) || assessment.reasons.length) return fail("IMPORT_ASSESSMENT")
+  const assessmentInput = assessment.input as { candidateArtifactRoots?: unknown; supervisionArtifactRoots?: unknown; terminalRoots?: unknown }
+  if (!Array.isArray(assessmentInput?.candidateArtifactRoots) || !assessmentInput.candidateArtifactRoots.includes(input.publicationArtifactRoot) || !Array.isArray(assessmentInput.supervisionArtifactRoots) || !assessmentInput.supervisionArtifactRoots.includes(input.supervisionArtifactRoot) || !Array.isArray(assessmentInput.terminalRoots) || !assessmentInput.terminalRoots.includes(input.attemptTerminal.root)) return fail("IMPORT_MEMBERSHIP")
+  const publication = read(input.publicationArtifactRoot), candidate = FactoryCandidateSchema.parse(publication.candidate)
+  if (publication.schemaVersion !== "factory-candidate-publication-v1" || publication.root !== labRoot("factory-candidate-publication-v1", withoutRoot(publication)) || publication.supervisionReceiptRoot !== candidate.supervisionReceiptRoot) return fail("IMPORT_PUBLICATION")
+  const retained = readFactorySupervisionArtifactRecords(input.repository, input.supervisionArtifactRoot, { maxBytes: input.maxBytes, maxRecords: input.maxRecords }), metadata = retained.records.find((entry) => entry.kind === "receipt")!.value as RecordValue, identity = metadata.candidateIdentity as RecordValue, admission = metadata.admission as RecordValue
+  if (retained.descriptor.receiptRoot !== candidate.supervisionReceiptRoot || identity.sourceRoot !== candidate.proposal.source.root || identity.attemptRoot !== input.attemptStart.root || identity.budgetRoot !== input.attemptStart.budgetRoot || admission.sourceRoot !== candidate.proposal.source.root || admission.proposalRoot !== candidate.proposal.root || admission.validationRoot !== candidate.validation.root || admission.packetRoot !== candidate.proposal.packetRoot || retained.records.find((entry) => entry.kind === "execution")?.value && (retained.records.find((entry) => entry.kind === "execution")!.value as RecordValue).kind !== "completed") return fail("IMPORT_SUPERVISION")
+  const threshold = read(verified.thresholdArtifactRoot), sources = threshold.sourceRoots
+  if (threshold.root !== labRoot(String(threshold.schemaVersion), withoutRoot(threshold)) || threshold.manifestRoot !== assessment.manifestRoot || threshold.allocationRoot !== assessment.allocationRoot || !Array.isArray(sources) || sources.length !== 12) return fail("IMPORT_THRESHOLD")
+  const sourceIndex = sources.indexOf(candidate.proposal.source.root)
+  if (sourceIndex < 0 || sources.lastIndexOf(candidate.proposal.source.root) !== sourceIndex) return fail("IMPORT_SOURCE")
+  const sourceSlot = `S${String(sourceIndex + 1).padStart(2, "0")}`, fit = freezeNumericCalibrationThreshold(threshold.controls as NumericControlTable)
+  if (fit.status !== "frozen" || labRoot("league-threshold-compare-v1", fit.threshold) !== labRoot("league-threshold-compare-v1", threshold.threshold)) return fail("IMPORT_THRESHOLD")
+  const edges = assessment.baseEdges as Record<string, NumericComparison>, required = ["S01/S03", "S01/S05", "S03/S05"].filter((edge) => edge.split("/").includes(sourceSlot))
+  const qualification = required.length === 2 && required.every((edge) => edges[edge] && classifyNumericComparison(edges[edge]!, fit.threshold) === "distinct") ? "base_distinct" as const : "control_or_unresolved" as const
+  const importEvidence: LeagueImportEvidence = { sourcePhase: 264, publicationArtifactRoot: input.publicationArtifactRoot, supervisionArtifactRoot: input.supervisionArtifactRoot, assessmentArtifactRoot: input.assessmentArtifactRoot, assessmentRoot: verified.assessmentRoot, thresholdArtifactRoot: verified.thresholdArtifactRoot, sourceSlot, qualification }
+  const value = { schemaVersion: "league-candidate-import-v1" as const, privacy: "private_offline" as const, candidate, supervisionReceiptRoot: candidate.supervisionReceiptRoot, fingerprintRoot: labRoot("factory-fingerprint-roots-v1", candidate.fingerprints), lineageRoot: labRoot("factory-lineage-v1", candidate.lineage), tupleRoot: candidate.proposal.build.compatibilityTupleRoot, runtimeRoot: candidate.proposal.nativeLane.runtimeProfileRoot, provenanceRoot: labRoot("league-import-provenance-v1", importEvidence), attemptStart: input.attemptStart, attemptTerminal: input.attemptTerminal, importEvidence }
+  return ImportedLeagueCandidateAdmissionSchema.parse({ ...value, root: labRoot("league-candidate-import-v1", value) })
+}
 export const admitLeagueCandidate = (issuer: LeagueCandidateIssuer, value: unknown): Readonly<LeagueCandidateAdmission> => {
   if (!issuer || typeof issuer.verifyCandidate !== "function") fail("CANDIDATE_ISSUER")
   const admitted = LeagueCandidateAdmissionSchema.parse(value)

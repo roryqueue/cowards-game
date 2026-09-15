@@ -11,6 +11,7 @@ import { createFactoryRepository, publishFactoryArtifact } from "../factory/repo
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
 import { createLeagueCandidateAdmission, createLeagueMixture, LeagueCandidateAdmissionSchema } from "./contracts.js"
 import { deriveLeaguePortfolio, selectRobustPure } from "./selection.js"
+import { importedCandidateFixture } from "./contracts.test.js"
 
 const dirs: string[] = []
 const root = (label: string): LabRoot => labRoot("selection-test-root-v2", { label })
@@ -40,6 +41,18 @@ const selectionEvidence = (snapshotRoot: LabRoot, populationRoot: LabRoot, solve
 }
 
 describe("source-bound portfolio and robust-pure selection", () => {
+  it("uses candidate-specific assessed base edges without laundering an affirmative calibration's cosmetic controls", async () => {
+    const entries = await Promise.all([1, 3, 5, 2].map(importedCandidateFixture)), snapshotRoot = root("import-snapshot"), mixture = createLeagueMixture({ solverOutputRoot: root("solver"), weightRoot: root("weights"), snapshotRoot })
+    const result = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries })
+    expect(result.portfolio.candidateAdmissionRoots).toEqual(entries.slice(0, 3).map((entry) => entry.candidateAdmission.root).sort())
+    expect(result.rejections).toMatchObject([{ candidateAdmissionRoot: entries[3]!.candidateAdmission.root, reason: "clone_or_correlation" }])
+    const first = entries[0]!
+    const { importedAssessment: _assessment, ...withoutAssessment } = first
+    expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [withoutAssessment] })).toThrow("IMPORTED_ASSESSMENT_MISSING")
+    const { root: _root, ...body } = first.fingerprint, changed = { ...body, counterfactualPairs: [{ leftRoot: root("stale"), rightRoot: root("other"), relation: "distinct" }] }
+    expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [{ ...first, fingerprintArtifactRoot: first.put({ ...changed, root: labRoot("factory-fingerprint-evidence-v1", changed) }) }] })).toThrow("IMPORTED_FINGERPRINT_REWRITE")
+    expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [{ ...first, importedAssessment: { ...first.importedAssessment, verifyRetainedAssessment: entries[1]!.importedAssessment.verifyRetainedAssessment } }] })).toThrow("IMPORT_ASSESSMENT")
+  })
   it("rejects arbitrary roots and independent labels, while only retained source-backed FactoryFingerprintEvidence can create a portfolio", () => {
     const snapshotRoot = root("snapshot"), mixture = createLeagueMixture({ solverOutputRoot: root("solver"), weightRoot: root("weights"), snapshotRoot })
     expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [{ candidateAdmission: { root: root("fake") }, factoryRepository: {} as never, fingerprintArtifactRoot: root("fake-evidence") }] })).toThrow("LEAGUE_")

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { admitCanonicalJsonBytes } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { readFactoryArtifact, type FactoryRepository } from "../factory/repository.js"
-import { createLeaguePortfolio, LeagueCandidateAdmissionSchema, LeagueMixtureSchema, LeaguePortfolioSchema, type LeagueCandidateAdmission, type LeaguePortfolio, type RobustPureDisposition } from "./contracts.js"
+import { createLeaguePortfolio, importAssessedFactoryCandidate, LeagueCandidateAdmissionSchema, LeagueMixtureSchema, LeaguePortfolioSchema, type LeagueCandidateAdmission, type LeaguePortfolio, type RobustPureDisposition } from "./contracts.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const FROZEN_POLICY_ROOT = "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" as LabRoot
@@ -15,6 +15,7 @@ export interface LeaguePortfolioCandidate {
   readonly candidateAdmission: unknown
   readonly factoryRepository: FactoryRepository
   readonly fingerprintArtifactRoot: LabRoot
+  readonly importedAssessment?: Pick<Parameters<typeof importAssessedFactoryCandidate>[0], "maxBytes" | "maxRecords" | "verifyRetainedAssessment">
 }
 interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly correlationFree: boolean }
 type PortfolioReason = "factory_evidence_incomplete" | "clone_or_correlation" | "structural_family_duplicate" | "strategic_core_duplicate" | "lineage_duplicate" | "behavior_duplicate" | "response_duplicate"
@@ -24,10 +25,22 @@ export interface LeaguePortfolioDerivation { readonly portfolio: LeaguePortfolio
 const admitBoundCandidate = (value: LeaguePortfolioCandidate): Readonly<BoundCandidate> => {
   if (!value?.factoryRepository || !isRoot(value.fingerprintArtifactRoot)) return fail("CANDIDATE_INPUT")
   const admission = LeagueCandidateAdmissionSchema.parse(value.candidateAdmission)
+  let importedQualification: "base_distinct" | "control_or_unresolved" | undefined
+  if (admission.importEvidence) {
+    if (!value.importedAssessment) return fail("IMPORTED_ASSESSMENT_MISSING")
+    const imported = importAssessedFactoryCandidate({ repository: value.factoryRepository, ...admission.importEvidence, ...value.importedAssessment, attemptStart: admission.attemptStart, attemptTerminal: admission.attemptTerminal })
+    if (imported.root !== admission.root) return fail("IMPORTED_ASSESSMENT_BINDING")
+    importedQualification = imported.importEvidence!.qualification
+  }
   const parsed = admitCanonicalJsonBytes(readFactoryArtifact(value.factoryRepository, value.fingerprintArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
   if (!parsed.ok || !exact(parsed.value, ["schemaVersion", "privacy", "root", "proposalRoot", "validationRoot", "supervisionReceiptRoot", "producerIdentity", "origin", "evidenceClass", "producerArtifactRoot", "authorshipRoots", "lineageNodes", "dependencyNodes", "matchupResponses", "counterfactualPairs", "failureModes"])) return fail("FINGERPRINT_BYTES")
   const evidence = parsed.value, { root, ...evidenceValue } = evidence
-  if (evidence.schemaVersion !== "factory-fingerprint-evidence-v1" || evidence.privacy !== "private_offline" || !isRoot(root) || root !== labRoot("factory-fingerprint-evidence-v1", evidenceValue) || evidence.proposalRoot !== admission.candidate.proposal.root || evidence.validationRoot !== admission.candidate.validation.root || evidence.supervisionReceiptRoot !== admission.supervisionReceiptRoot || evidence.evidenceClass !== "real_producer" || !isRoot(evidence.producerArtifactRoot) || !Array.isArray(evidence.lineageNodes) || !Array.isArray(evidence.dependencyNodes) || !Array.isArray(evidence.matchupResponses) || !Array.isArray(evidence.counterfactualPairs) || !Array.isArray(evidence.failureModes) || !evidence.lineageNodes.length || !evidence.dependencyNodes.length || evidence.matchupResponses.length < 2 || !evidence.counterfactualPairs.length || !evidence.failureModes.includes("accepted")) return fail("FINGERPRINT_BINDING")
+  if (admission.importEvidence) {
+    const publication = admitCanonicalJsonBytes(readFactoryArtifact(value.factoryRepository, admission.importEvidence.publicationArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
+    const independence = publication.ok ? (publication.value as { independenceReceipt?: { evidenceRoot?: unknown; evidenceArtifactRoot?: unknown } }).independenceReceipt : undefined
+    if (!independence || independence.evidenceRoot !== root || independence.evidenceArtifactRoot !== value.fingerprintArtifactRoot) return fail("IMPORTED_FINGERPRINT_REWRITE")
+  }
+  if (evidence.schemaVersion !== "factory-fingerprint-evidence-v1" || evidence.privacy !== "private_offline" || !isRoot(root) || root !== labRoot("factory-fingerprint-evidence-v1", evidenceValue) || evidence.proposalRoot !== admission.candidate.proposal.root || evidence.validationRoot !== admission.candidate.validation.root || evidence.supervisionReceiptRoot !== admission.supervisionReceiptRoot || evidence.evidenceClass !== "real_producer" || !isRoot(evidence.producerArtifactRoot) || !Array.isArray(evidence.lineageNodes) || !Array.isArray(evidence.dependencyNodes) || !Array.isArray(evidence.matchupResponses) || !Array.isArray(evidence.counterfactualPairs) || !Array.isArray(evidence.failureModes) || !evidence.lineageNodes.length || !evidence.dependencyNodes.length || evidence.matchupResponses.length < (importedQualification ? 1 : 2) || !evidence.counterfactualPairs.length || !evidence.failureModes.includes("accepted")) return fail("FINGERPRINT_BINDING")
   const producerParsed = admitCanonicalJsonBytes(readFactoryArtifact(value.factoryRepository, evidence.producerArtifactRoot), { profile: "canonical-manifest", operation: "require-canonical" })
   if (!producerParsed.ok || !exact(producerParsed.value, ["schemaVersion", "privacy", "root", "producerIdentity", "origin", "evidenceClass", "packetRoot", "sourceRoot", "runtimeProfileRoot", "nativeLane", "packet", "sourceUtf8", "producerInput", "modelCompanion"])) return fail("PRODUCER_BYTES")
   const producer = producerParsed.value, { root: producerRoot, ...producerValue } = producer
@@ -39,8 +52,8 @@ const admitBoundCandidate = (value: LeaguePortfolioCandidate): Readonly<BoundCan
     admission,
     familyRoot: labRoot("league-structural-family-v1", { doctrineFamily: admission.candidate.proposal.doctrineFamily, sourceStructureRoot: fingerprints.sourceStructureRoot }),
     coreRoot: labRoot("league-strategic-core-v1", { sourceStructureRoot: fingerprints.sourceStructureRoot, dependencyRoot: fingerprints.dependencyRoot, legalInputDecisionRoot: fingerprints.legalInputDecisionRoot }),
-    cloneRoot: labRoot("league-clone-decision-v1", { evidenceRoot: root, counterfactualPairs: pairs }),
-    correlationFree: pairs.every((pair) => pair.relation === "distinct"),
+    cloneRoot: labRoot("league-clone-decision-v1", { evidenceRoot: root, counterfactualPairs: pairs, ...(admission.importEvidence ? { assessmentRoot: admission.importEvidence.assessmentRoot, sourceSlot: admission.importEvidence.sourceSlot, qualification: importedQualification } : {}) }),
+    correlationFree: importedQualification ? importedQualification === "base_distinct" : pairs.every((pair) => pair.relation === "distinct"),
   }) as BoundCandidate
 }
 
