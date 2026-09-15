@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../factory/contracts.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
-import { admitLeagueCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints } from "./contracts.js"
+import { admitLeagueCandidate, createLeagueCandidateAdmission, projectCanonicalKernelOutcomeToEntrantHalfPoints } from "./contracts.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 const candidate = () => {
@@ -13,7 +13,12 @@ const admission = () => {
   const value = candidate()
   const start = createFactoryAttemptStart({ taskRoot: root("1"), budgetRoot: root("2"), candidateRoot: value.root, authoringMechanism: "automated-oracle", inputRoot: root("3"), resourceAccountingRoot: root("4"), retryParentRoot: null })
   const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "accepted", outputRoot: root("5"), validationRoot: root("6"), duplicateEvidenceRoot: root("7"), finalEvidenceRoot: root("8") })
-  return { candidate: value, start, terminal }
+  return { candidate: value, start, terminal, league: createLeagueCandidateAdmission({
+    candidate: value, supervisionReceiptRoot: value.supervisionReceiptRoot,
+    fingerprintRoot: labRoot("factory-fingerprint-roots-v1", value.fingerprints), lineageRoot: labRoot("factory-lineage-v1", value.lineage),
+    tupleRoot: value.proposal.build.compatibilityTupleRoot, runtimeRoot: value.proposal.nativeLane.runtimeProfileRoot,
+    provenanceRoot: root("9"), attemptStart: start, attemptTerminal: terminal,
+  }) }
 }
 const completed = (winner: "bottom" | "top" | "DRAW") => {
   const outcome = winner === "DRAW" ? { type: "DRAW" as const } : { type: "WIN" as const, winnerPlayerId: winner }
@@ -32,9 +37,9 @@ describe("private league contracts", () => {
   it("admits a factory candidate only through revalidated issued evidence, never a claimed boolean", () => {
     const evidence = admission()
     const issuer = { verifyCandidate: (value: typeof evidence.candidate) => value.root === evidence.candidate.root }
-    expect(admitLeagueCandidate(issuer, { ...evidence, issued: true })).toMatchObject({ candidate: { root: evidence.candidate.root } })
-    expect(() => admitLeagueCandidate({ verifyCandidate: () => false }, evidence)).toThrow()
-    expect(() => admitLeagueCandidate(issuer, { candidate: evidence.candidate, issued: true })).toThrow()
+    expect(admitLeagueCandidate(issuer, evidence.league)).toMatchObject({ candidate: { root: evidence.candidate.root } })
+    expect(() => admitLeagueCandidate({ verifyCandidate: () => false }, evidence.league)).toThrow()
+    expect(() => admitLeagueCandidate(issuer, { ...evidence.league, issued: true })).toThrow()
   })
 
   it("projects one completed canonical outcome by entrant, not by bottom/top score", () => {
