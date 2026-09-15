@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { labRoot } from "../contracts.js"
+import { admitCanonicalJsonValue } from "@cowards/spec"
+import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../factory/contracts.js"
+import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
+import { createCompletePayoffSnapshot, createLeagueCandidateAdmission } from "./contracts.js"
+import { declareLeagueRound, advanceLeagueRound } from "./psro.js"
+import { solveLeagueSnapshot } from "./solver.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES, declareRedTeamAllocation, startRedTeamAttempt, terminalizeRedTeamAttempt, recordLeagueProbe, closeRedTeamLedger, reenterAcceptedCounter, type RedTeamAllocationInput, type RedTeamLedger } from "./red-team.js"
 
 const root = (value: string) => labRoot("red-team-test", value)
@@ -73,5 +79,23 @@ describe("all-channel development red team", () => {
     expect(() => declareRedTeamAllocation({ ...input, probes: input.probes.map((probe) => ({ ...probe, maximumAbsoluteMeanDelta: null })) })).toThrow()
     expect(() => closeRedTeamLedger({ ledger: declareRedTeamAllocation(input), requiredTargets: [target], reentries: [] })).toThrow()
     expect(() => reenterAcceptedCounter({ ledger: finish(start(declareRedTeamAllocation(input))), startRoot: root("missing"), round: {} as never, candidateAdmission: {} as never, assessment: {} as never })).toThrow()
+  })
+
+  it("returns a positive counter to actual PSRO and cannot close while that counter is omitted", () => {
+    const projections = Array.from({ length: 8 }, (_, ordinal) => ({ entrantCandidateRoot: root("a"), opponentCandidateRoot: root("b"), projectionRoot: root(String(ordinal)), halfPoints: 1 }))
+    const snapshot = createCompletePayoffSnapshot({ populationRoot: root("population"), cellChunkRoots: [root("chunk")], solverPayoffRoot: labRoot("league-solver-payoffs-v1", projections), expectedCellCount: 8, completedCellCount: 8 })
+    const encoded = admitCanonicalJsonValue(projections, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture")
+    const solver = solveLeagueSnapshot({ snapshot, solverPayoffBytes: encoded.canonicalBytes })
+    const round = declareLeagueRound({ snapshot, solver, responseAllocationRoot: root("response-allocation"), roundOrdinal: 0, maximumRounds: 2, closureRule: "bounded-no-accepted-counter-v1" })
+    const proposal = factoryProposalFromPacket(factoryOraclePacketFixture()), candidate = factoryCandidateFixture(proposal, factoryValidationFixture(proposal), root("receipt"))
+    const factoryStart = createFactoryAttemptStart({ taskRoot: root("t"), budgetRoot: root("b"), candidateRoot: candidate.root, authoringMechanism: "automated-oracle", inputRoot: root("i"), resourceAccountingRoot: root("r"), retryParentRoot: null })
+    const admission = createLeagueCandidateAdmission({ candidate, supervisionReceiptRoot: candidate.supervisionReceiptRoot, fingerprintRoot: labRoot("factory-fingerprint-roots-v1", candidate.fingerprints), lineageRoot: labRoot("factory-lineage-v1", candidate.lineage), tupleRoot: candidate.proposal.build.compatibilityTupleRoot, runtimeRoot: candidate.proposal.nativeLane.runtimeProfileRoot, provenanceRoot: root("p"), attemptStart: factoryStart, attemptTerminal: createFactoryAttemptTerminal({ startRoot: factoryStart.root, disposition: "accepted", outputRoot: root("o"), validationRoot: root("v"), duplicateEvidenceRoot: root("d"), finalEvidenceRoot: root("f") }) })
+    const charged = startRedTeamAttempt({ ledger: declareRedTeamAllocation(redTeamAllocationFixture()), channel: "automated", ...target, roundRoot: round.round.root, reservation: resources(10) })
+    const done = terminalizeRedTeamAttempt({ ledger: charged, startRoot: charged.starts[0]!.root, disposition: "success", usage: resources(1), evidenceRoots: [root("result")], candidateAdmissionRoot: admission.root })
+    const assessment = { targetRoot: round.target.root, fingerprintEvidenceRoot: root("fingerprint"), independentCounterfactualRelations: ["distinct" as const], existingCandidateRoots: [root("a"), root("b")], completeTargetScores: [...new Set([round.target.mixtureRoot, round.target.strongestPureCandidateRoot, round.target.vulnerablePureCandidateRoot])].map((targetRoot) => ({ targetRoot, numerator: 3, denominator: 4, evidenceRoot: root("set") })) }
+    const reentry = reenterAcceptedCounter({ ledger: done, startRoot: charged.starts[0]!.root, round, candidateAdmission: admission, assessment })
+    expect(reentry).toMatchObject({ disposition: "success", roundRoot: round.round.root, candidateAdmissionRoot: admission.root })
+    expect(() => advanceLeagueRound({ round, admissions: [reentry], requestClosure: true })).toThrow("EARLY_CLOSURE")
+    expect(() => reenterAcceptedCounter({ ledger: done, startRoot: charged.starts[0]!.root, round, candidateAdmission: admission, assessment: { ...assessment, completeTargetScores: assessment.completeTargetScores.slice(1) } })).toThrow("TARGET_COVERAGE")
   })
 })
