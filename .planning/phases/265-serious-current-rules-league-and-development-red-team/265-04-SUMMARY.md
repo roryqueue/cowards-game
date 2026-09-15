@@ -25,13 +25,14 @@ key-files:
     - packages/strategy-lab/src/league/psro.test.ts
   modified: []
 key-decisions:
-  - "The bounded synthetic corpus uniquely selected exact-rational-pivoted-restricted-v1 over bounded fictitious play; no Nash, convergence, or optimality claim is made."
+  - "The representative bounded synthetic corpus uniquely selected exact-rational-pivoted-restricted-v2 over bounded fictitious play; no Nash, convergence, or optimality claim is made."
   - "Solver input is canonical-byte re-admitted and copied before use because frozen objects do not make Uint8Array elements immutable."
   - "A successful counter requires a separately complete next snapshot and can never close its historical round."
 patterns-established:
   - "Solver results ignore worker, shard, and restart operational layout and emit canonical semantic bytes only."
   - "PSRO admission derives one charge and terminal root from receipt fields rather than accepting caller-provided gate booleans."
-requirements-completed: [LEAG-03, LEAG-04]
+requirements-covered-source: [LEAG-03, LEAG-04]
+source_only_not_empirically_complete: true
 coverage:
   - id: D1
     description: Measured exact-rational solver selection with canonical output invariance and explicit input/failure checks.
@@ -55,18 +56,18 @@ coverage:
         ref: ./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json --pretty false
         status: pass
     human_judgment: false
-duration: 7min
+duration: 18min
 completed: 2026-09-15
 status: complete
 ---
 
 # Phase 265 Plan 04: Frozen Exact Solver and Response Loop Summary
 
-**A measured exact bigint-rational restricted-game solver and immutable PSRO response lifecycle now keep private league analysis reproducible, bounded, and counter-complete.**
+**A measured bounded exact bigint-rational restricted-game solver and immutable PSRO response lifecycle now keep private league analysis reproducible, population-scalable, and counter-complete.**
 
 ## Performance
 
-- **Duration:** 7 min
+- **Duration:** 18 min
 - **Started:** 2026-09-15T03:00:32Z
 - **Completed:** 2026-09-15T03:06:59Z
 - **Tasks:** 2/2
@@ -74,13 +75,13 @@ status: complete
 
 ## Accomplishments
 
-- Compared bounded exact-rational fictitious play against exact-rational pivoted restricted solving over degenerate, tie, permutation, and numeric-boundary vectors; the corpus uniquely selected `exact-rational-pivoted-restricted-v1`.
-- Re-admitted canonical payoff transport, copied mutable `Uint8Array` bytes before parsing, normalized entrant order and half-point weights, and returned explicit bounded failures instead of an unqualified solve claim.
+- Compared bounded exact-rational fictitious play against exact-rational pivoted restricted solving over degenerate, tie, permutation, numeric-boundary, RPS, cyclic 12-policy, and asymmetric 12-policy vectors; the corpus uniquely selected `exact-rational-pivoted-restricted-v2`.
+- Re-admitted canonical payoff transport, copied mutable `Uint8Array` bytes before parsing, enforced full `8 × C(n,2)` coverage, normalized entrant order and half-point weights, and returned explicit pivot-budget exhaustion instead of an unqualified solve claim.
 - Declared immutable solver/mixture/strongest-pure/vulnerable-pure targets, charged every response before work, retained all terminal dispositions, and required accepted late counters to re-enter through a complete new snapshot.
 
 ## Task Commits
 
-1. **Task 1: Compare and freeze the deterministic empirical-game solver** - `8aed5de8` (RED), `d22f4403` (GREEN)
+1. **Task 1: Compare and freeze the deterministic empirical-game solver** - `8aed5de8` (RED), `d22f4403` (initial GREEN), `49d6e928` (full-population RED), `8eb9eb21` and `e2bc9227` (general-solver corrections), `07388bfb` (asymmetric population corpus)
 2. **Task 2: Implement immutable PSRO target, admission, and re-entry transitions** - `0cf0e94b` (RED), `df90cc80` (GREEN), `6e2342c0` (critical correction)
 
 ## Files Created/Modified
@@ -93,7 +94,8 @@ status: complete
 ## Decisions Made
 
 - Chose the exact pivoted restricted candidate only because it uniquely passed the committed synthetic corpus; bounded fictitious play did not satisfy all exact boundary vectors.
-- Restrict non-pure solving to the tested 2×2 exact pivot and return `RESOURCE_BOUND` outside its frozen support instead of claiming general convergence.
+- Use exact rational support-pivot security solves for both players after strictly mutual dominance reduction, with an exact uniform-symmetry path. The fixed pivot-operation budget bounds fallback work; no entrant-count policy rejects a population.
+- Prove exact non-negative normalized mixtures for RPS, cyclic 12/13-policy populations, and an asymmetric 12-policy no-saddle game with a 3-policy non-uniform support. A separately recomputed security residual is exactly zero in each fixture.
 - Require a parsed `CompletePayoffSnapshot` for response re-entry, not merely a caller-provided future root.
 
 ## Deviations from Plan
@@ -108,10 +110,18 @@ status: complete
 - **Verification:** Focused solver/PSRO tests and strategy-lab TypeScript build pass.
 - **Committed in:** `6e2342c0`
 
+**2. [Rule 1 - Functional scope bug] Replace two-policy-only non-pure pivot with a bounded full restricted-game solver**
+- **Found during:** Plan completion review
+- **Issue:** The initial non-pure pivot returned `RESOURCE_BOUND` for every game above two entrants, which contradicted the Phase 265 12-policy empirical-game scope.
+- **Fix:** Added exact rational support pivots for both security problems, exact mutual-dominance elimination, full snapshot-cardinality validation, 3/12/13-policy cyclic fixtures, an asymmetric 12-policy non-uniform-support fixture, an independent security residual, and genuine pivot-budget exhaustion coverage. The frozen algorithm is versioned `v2`.
+- **Files modified:** `packages/strategy-lab/src/league/solver.ts`, `packages/strategy-lab/src/league/solver.test.ts`
+- **Verification:** Focused solver/PSRO tests and strategy-lab TypeScript build pass.
+- **Committed in:** `8eb9eb21`, `e2bc9227`, `07388bfb`
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 Rule 2 missing critical functionality).
-**Impact on plan:** The correction preserves D-13 through D-15 by making counter re-entry explicitly complete-snapshot-backed.
+**Total deviations:** 2 auto-fixed (1 Rule 1 functional scope bug, 1 Rule 2 missing critical functionality).
+**Impact on plan:** The corrections preserve full current-league solver scope and make counter re-entry explicitly complete-snapshot-backed.
 
 ## Known Stubs
 
@@ -133,8 +143,8 @@ None - no external service, package installation, provider, candidate, Match, or
 ## Self-Check: PASSED
 
 - All four plan-owned source/test files exist.
-- Task commits `8aed5de8`, `d22f4403`, `0cf0e94b`, `df90cc80`, and `6e2342c0` exist on `main`.
-- Focused source-only Vitest suite passed 6/6 tests; the strategy-lab TypeScript build passed.
+- Task commits `8aed5de8`, `d22f4403`, `0cf0e94b`, `df90cc80`, `6e2342c0`, `49d6e928`, `8eb9eb21`, `e2bc9227`, and `07388bfb` exist on `main`.
+- Focused source-only Vitest suite passed 9/9 tests; the strategy-lab TypeScript build passed.
 
 ---
 *Phase: 265-serious-current-rules-league-and-development-red-team*
