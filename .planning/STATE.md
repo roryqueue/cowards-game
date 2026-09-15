@@ -5,8 +5,8 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 264
 current_phase_name: immutable-factory-independent-oracles-and-quarantined-intake
 status: executing
-stopped_at: Phase264 Plan08 Task4 all48workloads retained; reviewed same-data assessor correction ready; no new execution
-last_updated: "2026-09-15T00:51:00Z"
+stopped_at: Phase264 Plan08 Task4 all48workloads retained; final reviewed source-token correction assessing same data; no new execution
+last_updated: "2026-09-15T01:08:48Z"
 last_activity: 2026-09-14
 last_activity_desc: All48workloads and24pairs complete; all byte roots and board/replay checks pass; corrected final assessment pending
 progress:
@@ -22,6 +22,8 @@ total_plans_in_phase: 8
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current final reader correction:** First correction reached source scoring, then rejected internally derived703–4585character literals under its generic256token cap. Failure `sha256:5d49827ed68a23a5d0b836ed030c451d80e6f2d2d92cd178bc82391fc2415fac` remains immutable. Ordinary source-domain repair68b01431 preserves exact tokens/Jaccard/counts/weights/thresholds and external256limits, admitting only internally parsed tokens under the unchanged65,536source bound plus prefix. Independent review is clean;31focusedtests,labbuild,strict types and1296boundaryfiles pass. New correction `sha256:380308f4b8c2aee5a3920466daa5327bf81d5d4159de65661f990ad002a3d807` is prepared. Main is assessing via `/private/tmp/cg-264-task04-approved-Un1gVC/reassess-retained-v2.mts assess`; follow with `verify` only after corrected-assessment-result-v2.json exists. No extra author/teacher/workload, no selection or changed thresholds. Earlier first-correction helper and snapshots remain history.
 
 **Current same-data correction:** All48workloads completed with24pairs/48publications, zero pairing/runtime failures, and closed containers. Original assessor failed on oversized map equality after gameplay; failure `sha256:0ac92d697b9f79a5b639a0abc786ba2ddb2697ce08e58f0aa1726d5c66e8d0e2` remains immutable. All1,768artifacts/164,389,603bytes and48board/replay chains reopened with zero violations, inspection `sha256:2f40cb879203aa5fb6632033d6d373f769b214ec1b90fb5abd133400b0e0b3be`. Narrow data-only correction33b1bdc6 is independently clean and binds old sourcef2f14864 to current reviewed reader without changing execution, observations, metrics or thresholds. Continue `/private/tmp/cg-264-task04-approved-Un1gVC/reassess-retained.mts` preparation/assessment/verification only. Do not rerun dispatch author/materialize/run. Current source regression231tests plus correction tests/types/boundary pass. Independence/Phase265 remain gated until actual assessment. All following snapshots are historical.
 
