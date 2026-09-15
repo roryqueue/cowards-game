@@ -23,6 +23,7 @@ import {
   enumerateLeagueCells,
   leaguePlayerId,
 } from "./matrix.js"
+import { solveLeagueSnapshot } from "./solver.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 const hex = (ordinal: number): string => "0123456789abcdef"[ordinal]!
@@ -123,6 +124,17 @@ const successTerminal = (
 }
 
 describe("complete semantic empirical-game matrix", () => {
+  it("feeds a complete multi-entrant snapshot directly into the solver across reversed completion layouts", () => {
+    const matrix = enumerateLeagueCells(input(3))
+    const terminals = matrix.cells.map((cell) => successTerminal(cell, "DRAW"))
+    const forward = admitCompletePayoffSnapshot(matrix, terminals), reverse = admitCompletePayoffSnapshot(matrix, [...terminals].reverse())
+    expect(forward.kind).toBe("complete"); expect(reverse.kind).toBe("complete")
+    if (forward.kind !== "complete" || reverse.kind !== "complete") throw Error("fixture matrix")
+    const solved = solveLeagueSnapshot({ snapshot: forward.snapshot, solverPayoffBytes: forward.solverPayoffBytes })
+    expect(solved.status).toBe("solved")
+    expect(solveLeagueSnapshot({ snapshot: reverse.snapshot, solverPayoffBytes: reverse.solverPayoffBytes })).toEqual(solved)
+    expect(reverse.cellStream).toEqual(forward.cellStream)
+  })
   it("enumerates exactly eight cells per unordered immutable candidate pair in stable semantic order", () => {
     const matrix = enumerateLeagueCells(input())
     expect(matrix.cells).toHaveLength(8 * 3)
