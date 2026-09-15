@@ -21,17 +21,16 @@ const repository = () => {
   directories.push(directory)
   return createLeagueRepository(directory)
 }
-const start = (): LeagueCellStart => ({
-  root: labRoot("league-cell-start-v1", { cellRoot: root("cell"), allocationRoot: root("allocation") }),
-  cellRoot: root("cell"),
-  allocationRoot: root("allocation"),
-})
-const terminal = (charged: LeagueCellStart, disposition: "success" | "system_failure" = "system_failure") =>
+const start = (marker = "cell"): LeagueCellStart => {
+  const cellRoot = root(marker), allocationRoot = root("allocation")
+  return { root: labRoot("league-cell-start-v1", { cellRoot, allocationRoot }), cellRoot, allocationRoot }
+}
+const terminal = (charged: LeagueCellStart, marker = "first") =>
   createLeagueCellTerminal({
     cellRoot: charged.cellRoot,
-    disposition,
-    processValidity: disposition === "success" ? "process_valid" : "process_invalid",
-    evidenceRoot: root(`evidence:${disposition}`),
+    disposition: "system_failure",
+    processValidity: "process_invalid",
+    evidenceRoot: root(`evidence:${marker}`),
     projection: null,
   })
 
@@ -51,12 +50,12 @@ describe("immutable private league evidence", () => {
     const repo = repository(), charged = start()
     recordLeagueCellStart(repo, charged)
     publishLeagueCellTerminal(repo, charged, terminal(charged))
-    expect(() => publishLeagueCellTerminal(repo, charged, terminal(charged, "success"))).toThrow("LEAGUE_REPOSITORY_OVERWRITE")
+    expect(() => publishLeagueCellTerminal(repo, charged, terminal(charged, "replacement"))).toThrow("LEAGUE_REPOSITORY_OVERWRITE")
     expect(() => publishLeagueCellTerminal(repo, { ...charged, root: root("other-start") }, terminal(charged))).toThrow()
   })
 
   it("reopens bounded root-only records and terminalizes an uncertain start as charged process failure", () => {
-    const repo = repository(), closed = start(), uncertain = { ...start(), root: root("uncertain-start"), cellRoot: root("uncertain-cell") }
+    const repo = repository(), closed = start(), uncertain = start("uncertain-cell")
     recordLeagueCellStart(repo, closed)
     publishLeagueCellTerminal(repo, closed, terminal(closed))
     recordLeagueCellStart(repo, uncertain)
