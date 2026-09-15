@@ -304,9 +304,9 @@ No source change is blocked. Before any real Phase-265 candidate or empirical ex
 2. complete matrix/Match allocation per snapshot, validation/probe/red-team splits, root-seed blocks, and replay-review allocation;
 3. automated, model, human, and external red-team attempts/effort/submission budgets, participation/provenance handling, and retry dispositions;
 4. search/teacher/distillation ceilings, hardware/runtime constraints, cache policy, and total wall-clock operational limits; and
-5. exact solver choice resulting from the committed synthetic numerical spike.
+The exact solver choice resulting from the committed synthetic numerical spike is an engineering decision delegated by D-11, not a separate human checkpoint. Freeze and independently verify it before live work. Do not add a literal-authorization or external-certification chain for this technical choice.
 
-These are genuine product/scientific allocation decisions, not implementation defaults; Phase 264's local waiver does not authorize them. [VERIFIED: D-05, D-11, D-15, D-20; Phase 264 approved route scope]
+Items1–4 are genuine product/scientific allocation decisions, not implementation defaults; Phase264's local waiver does not authorize them. [VERIFIED: D-05, D-15, D-20; Phase264 approved route scope] The conceptual `frozenPureFloor` in the example above is not an existing numeric policy value: source planning must use the actual `maximin_oracle_relative_pure` selection and existing hard gates, or explicitly identify any proposed additional numeric gate before outputs. It must not invent a threshold.
 
 ## Environment Availability
 
