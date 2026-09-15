@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { admitCanonicalJsonBytes } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { readFactoryArtifact, type FactoryRepository } from "../factory/repository.js"
-import { createLeaguePortfolio, importAssessedFactoryCandidate, LeagueCandidateAdmissionSchema, LeagueMixtureSchema, LeaguePortfolioSchema, type LeagueCandidateAdmission, type LeaguePortfolio, type RobustPureDisposition } from "./contracts.js"
+import { createLeaguePortfolio, importAssessedFactoryCandidate, LeagueCandidateAdmissionSchema, LeagueMixtureSchema, LeaguePortfolioSchema, LeaguePopulationSchema, type LeagueCandidateAdmission, type LeaguePortfolio, type RobustPureDisposition } from "./contracts.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const FROZEN_POLICY_ROOT = "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" as LabRoot
@@ -17,7 +17,7 @@ export interface LeaguePortfolioCandidate {
   readonly fingerprintArtifactRoot: LabRoot
   readonly importedAssessment?: Pick<Parameters<typeof importAssessedFactoryCandidate>[0], "maxBytes" | "maxRecords" | "verifyRetainedAssessment">
 }
-interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly correlationFree: boolean }
+interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly correlationFree: boolean; readonly distinctPeerProposals: readonly LabRoot[] }
 type PortfolioReason = "factory_evidence_incomplete" | "clone_or_correlation" | "structural_family_duplicate" | "strategic_core_duplicate" | "lineage_duplicate" | "behavior_duplicate" | "response_duplicate"
 export interface LeaguePortfolioDerivation { readonly portfolio: LeaguePortfolio; readonly rejections: readonly Readonly<{ candidateAdmissionRoot: LabRoot; reason: PortfolioReason; receiptRoot: LabRoot }>[] }
 
@@ -54,6 +54,7 @@ const admitBoundCandidate = (value: LeaguePortfolioCandidate): Readonly<BoundCan
     coreRoot: labRoot("league-strategic-core-v1", { sourceStructureRoot: fingerprints.sourceStructureRoot, dependencyRoot: fingerprints.dependencyRoot, legalInputDecisionRoot: fingerprints.legalInputDecisionRoot }),
     cloneRoot: labRoot("league-clone-decision-v1", { evidenceRoot: root, counterfactualPairs: pairs, ...(admission.importEvidence ? { assessmentRoot: admission.importEvidence.assessmentRoot, sourceSlot: admission.importEvidence.sourceSlot, qualification: importedQualification } : {}) }),
     correlationFree: importedQualification ? importedQualification === "base_distinct" : pairs.every((pair) => pair.relation === "distinct"),
+    distinctPeerProposals: (evidence.counterfactualPairs as unknown as readonly { leftRoot: LabRoot; rightRoot: LabRoot; relation: string }[]).filter((pair) => pair.relation === "distinct" && pair.leftRoot === admission.candidate.proposal.root && isRoot(pair.rightRoot)).map((pair) => pair.rightRoot),
   }) as BoundCandidate
 }
 
@@ -82,7 +83,7 @@ export const deriveLeaguePortfolio = (input: { readonly snapshotRoot: LabRoot; r
 
 type ScoreRow = Readonly<{ candidateAdmissionRoot: LabRoot; conditionRoot: LabRoot; numerator: number; denominator: number; evidenceRoot: LabRoot }>
 interface SelectionEvidence {
-  readonly schemaVersion: "league-selection-evidence-v2" | "league-selection-evidence-v3"; readonly privacy: "private_offline"; readonly root: LabRoot; readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly policyRoot: LabRoot; readonly solverOutputRoot: LabRoot
+  readonly schemaVersion: "league-selection-evidence-v2" | "league-selection-evidence-v3" | "league-selection-evidence-v4"; readonly privacy: "private_offline"; readonly root: LabRoot; readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly policyRoot: LabRoot; readonly solverOutputRoot: LabRoot
   readonly responseRows: readonly ScoreRow[]; readonly probeRows: readonly ScoreRow[]; readonly redTeamRows: readonly ScoreRow[]
   readonly invarianceRows: readonly Readonly<{ candidateAdmissionRoot: LabRoot; probe: "side" | "initiative" | "symmetry" | "opaque_ids" | "soldier_order" | "source_order" | "repeat"; observations: number; mismatches: number; evidenceRoot: LabRoot }>[]
   readonly terminalRows: readonly Readonly<{ candidateAdmissionRoot: LabRoot; boundary: "legality" | "privacy" | "runtime"; disposition: "success" | "player_violation" | "system_failure"; processValidity: "process_valid" | "process_invalid"; evidenceRoot: LabRoot }>[]
@@ -121,13 +122,35 @@ export const requireIssuedRobustPureDisposition = (value: unknown): Readonly<Rob
 }
 
 /** Recompute frozen .55/.60 comparisons and complete oracle-relative maximin from raw evidence rows, never pass flags. */
-export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly mixture: unknown; readonly portfolio: unknown; readonly candidateAdmissionRoot: LabRoot; readonly evidence: unknown }): Readonly<RobustPureDisposition> => {
+export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readonly populationRoot: LabRoot; readonly mixture: unknown; readonly portfolio: unknown; readonly candidateAdmissionRoot: LabRoot; readonly evidence: unknown; readonly population?: unknown; readonly populationCandidates?: readonly LeaguePortfolioCandidate[] }): Readonly<RobustPureDisposition> => {
   const mixture = LeagueMixtureSchema.parse(input.mixture), portfolio = LeaguePortfolioSchema.parse(input.portfolio)
   if (!isRoot(input.snapshotRoot) || !isRoot(input.populationRoot) || !isRoot(input.candidateAdmissionRoot) || mixture.snapshotRoot !== input.snapshotRoot || portfolio.mixtureRoot !== mixture.root || !portfolio.candidateAdmissionRoots.includes(input.candidateAdmissionRoot)) return fail("FINALIST_BINDING")
-  const current = (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v3"
+  const serious = (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v4", current = serious || (input.evidence as SelectionEvidence)?.schemaVersion === "league-selection-evidence-v3"
   if (!exact(input.evidence, ["schemaVersion", "privacy", "root", "snapshotRoot", "populationRoot", "policyRoot", "solverOutputRoot", "responseRows", "probeRows", "redTeamRows", "invarianceRows", "terminalRows", "worstCases", ...(current ? ["allocationRoot", "seedBlocks", "iterations"] : [])])) return fail("EVIDENCE")
   const evidence = input.evidence as unknown as SelectionEvidence, { root, ...body } = evidence
-  if (!["league-selection-evidence-v2", "league-selection-evidence-v3"].includes(evidence.schemaVersion) || evidence.privacy !== "private_offline" || root !== labRoot(evidence.schemaVersion, body) || evidence.snapshotRoot !== input.snapshotRoot || evidence.populationRoot !== input.populationRoot || evidence.policyRoot !== FROZEN_POLICY_ROOT || evidence.solverOutputRoot !== mixture.solverOutputRoot || ![evidence.responseRows, evidence.probeRows, evidence.redTeamRows, evidence.invarianceRows, evidence.terminalRows, evidence.worstCases].every(Array.isArray)) return fail("EVIDENCE_BINDING")
+  if (!["league-selection-evidence-v2", "league-selection-evidence-v3", "league-selection-evidence-v4"].includes(evidence.schemaVersion) || evidence.privacy !== "private_offline" || root !== labRoot(evidence.schemaVersion, body) || evidence.snapshotRoot !== input.snapshotRoot || evidence.populationRoot !== input.populationRoot || evidence.policyRoot !== FROZEN_POLICY_ROOT || evidence.solverOutputRoot !== mixture.solverOutputRoot || ![evidence.responseRows, evidence.probeRows, evidence.redTeamRows, evidence.invarianceRows, evidence.terminalRows, evidence.worstCases].every(Array.isArray)) return fail("EVIDENCE_BINDING")
+  const inventory = serious ? (() => {
+    const population = LeaguePopulationSchema.parse(input.population)
+    if (population.root !== input.populationRoot || !Array.isArray(input.populationCandidates)) return fail("INVENTORY_BINDING")
+    const bound = input.populationCandidates.map(admitBoundCandidate), roots = bound.map((row) => row.admission.root).sort()
+    if (new Set(roots).size !== roots.length || roots.join("\0") !== population.candidateAdmissionRoots.join("\0")) return fail("INVENTORY_COVERAGE")
+    const independent = bound.filter((row) => row.correlationFree).sort((a, b) => a.admission.root.localeCompare(b.admission.root))
+    const paired = (left: BoundCandidate, right: BoundCandidate) => {
+      const a = left.admission.importEvidence, b = right.admission.importEvidence
+      return a && b && a.assessmentRoot === b.assessmentRoot && a.sourceSlot !== b.sourceSlot && a.qualification === "base_distinct" && b.qualification === "base_distinct" || left.distinctPeerProposals.includes(right.admission.candidate.proposal.root) || right.distinctPeerProposals.includes(left.admission.candidate.proposal.root)
+    }
+    // Conservative, canonical representatives with explicit pairwise separation.
+    // Unknown joins do not become new families/cores from labels or root novelty.
+    const groups = (kind: "behavior" | "core") => {
+      const selected: BoundCandidate[] = []
+      for (const entry of independent) if (selected.every((prior) => {
+        const a = entry.admission.candidate.fingerprints, b = prior.admission.candidate.fingerprints
+        return paired(entry, prior) && (kind === "behavior" ? a.legalInputDecisionRoot !== b.legalInputDecisionRoot && a.chronicleBehaviorRoot !== b.chronicleBehaviorRoot : a.sourceStructureRoot !== b.sourceStructureRoot && entry.coreRoot !== prior.coreRoot)
+      })) selected.push(entry)
+      return selected.map((entry) => entry.admission.root)
+    }
+    return { candidateAdmissionRoots: roots, behavioralFamilyRepresentatives: groups("behavior"), independentCoreRepresentatives: groups("core") }
+  })() : null
   const rows = [...evidence.responseRows, ...evidence.probeRows, ...evidence.redTeamRows]
   if (rows.some((row) => !row || !isRoot(row.candidateAdmissionRoot) || !isRoot(row.conditionRoot) || !isRoot(row.evidenceRoot) || !positive(row.numerator, row.denominator)) || evidence.worstCases.some((row) => !row || !isRoot(row.candidateAdmissionRoot) || !isRoot(row.opponentAdmissionRoot) || !isRoot(row.evidenceRoot) || !positive(row.numerator, row.denominator))) return fail("EVIDENCE_ROWS")
   const only = (rowsFor: readonly ScoreRow[]) => rowsFor.filter((row) => row.candidateAdmissionRoot === input.candidateAdmissionRoot)
@@ -140,6 +163,7 @@ export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readon
   const invariant = probes.every((probeName) => evidence.invarianceRows.some((row) => row.candidateAdmissionRoot === input.candidateAdmissionRoot && row.probe === probeName && Number.isSafeInteger(row.observations) && row.observations > 0 && row.mismatches === 0 && isRoot(row.evidenceRoot)))
   const boundary = (name: "legality" | "privacy" | "runtime") => evidence.terminalRows.some((row) => row.candidateAdmissionRoot === input.candidateAdmissionRoot && row.boundary === name && row.disposition === "success" && row.processValidity === "process_valid" && isRoot(row.evidenceRoot))
   const gates = [
+    ...(inventory ? [["league_strategy_count", inventory.candidateAdmissionRoots.length >= 12, inventory.candidateAdmissionRoots] as const, ["behavioral_family_count", inventory.behavioralFamilyRepresentatives.length >= 6, inventory.behavioralFamilyRepresentatives] as const, ["independent_planner_core_count", inventory.independentCoreRepresentatives.length >= 5, inventory.independentCoreRepresentatives] as const] : []),
     ["distinct_finalist_count", population.length >= 3, population], ["consecutive_response_count", current ? consecutiveIterations(evidence, input.candidateAdmissionRoot) >= 2 : response.length >= 2 && response.every((row) => scorePasses(row, "gt55")), current ? evidence.iterations : response], ["response_set_score", response.length > 0 && response.every((row) => scorePasses(row, "gt55")), response],
     ["independent_probe_set_score", probe.length > 0 && probe.every((row) => scorePasses(row, "gt60")), probe], ["fresh_red_team_set_score", redTeam.length > 0 && redTeam.every((row) => scorePasses(row, "lt60")), redTeam], ["maximin_oracle_relative_pure", maximin, evidence.worstCases.filter((row) => row.candidateAdmissionRoot === input.candidateAdmissionRoot)],
     ["invariance", invariant, evidence.invarianceRows], ["legality", boundary("legality"), evidence.terminalRows], ["privacy", boundary("privacy"), evidence.terminalRows], ["runtime", boundary("runtime"), evidence.terminalRows],

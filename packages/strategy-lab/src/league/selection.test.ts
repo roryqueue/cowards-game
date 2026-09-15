@@ -9,7 +9,7 @@ import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFro
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "../factory/identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "../factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
-import { createLeagueCandidateAdmission, createLeagueMixture, LeagueCandidateAdmissionSchema } from "./contracts.js"
+import { createLeagueCandidateAdmission, createLeagueMixture, createLeaguePopulation, LeagueCandidateAdmissionSchema } from "./contracts.js"
 import { deriveLeaguePortfolio, selectRobustPure } from "./selection.js"
 import { importedCandidateFixture } from "./contracts.test.js"
 
@@ -41,6 +41,16 @@ const selectionEvidence = (snapshotRoot: LabRoot, populationRoot: LabRoot, solve
 }
 
 describe("source-bound portfolio and robust-pure selection", () => {
+  it("does not turn twelve novel labels or fingerprint roots into six behavioral families or five independent cores", () => {
+    const entries = Array.from({ length: 12 }, (_, ordinal) => candidate(`inventory-${ordinal}`)), population = createLeaguePopulation({ candidateAdmissionRoots: entries.map((row) => row.candidateAdmission.root).sort(), studyPolicyRoot: root("study"), measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" }), snapshotRoot = root("inventory-snapshot"), mixture = createLeagueMixture({ snapshotRoot, solverOutputRoot: root("inventory-solver"), weightRoot: root("weights") }), portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = entries[0]!.candidateAdmission.root
+    const { root: _root, schemaVersion: _schema, ...base } = selectionEvidence(snapshotRoot, population.root, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected), allocationRoot = root("allocation"), body = { ...base, schemaVersion: "league-selection-evidence-v4", allocationRoot, seedBlocks: ["seed"], iterations: [] }, input = { snapshotRoot, populationRoot: population.root, mixture, portfolio, candidateAdmissionRoot: selected, population, populationCandidates: entries, evidence: { ...body, root: labRoot(body.schemaVersion, body) } }
+    const result = selectRobustPure(input)
+    expect(result.kind).toBe("no_robust_pure_finalist_found")
+    const representative = [entries.map((row) => row.candidateAdmission.root).sort()[0]!]
+    expect(result.gateReceiptRoots).toContain(labRoot("league-robust-pure-gate-v2", { id: "behavioral_family_count", value: representative }))
+    expect(result.gateReceiptRoots).toContain(labRoot("league-robust-pure-gate-v2", { id: "independent_planner_core_count", value: representative }))
+    expect(() => selectRobustPure({ ...input, populationCandidates: entries.slice(1) })).toThrow("INVENTORY_COVERAGE")
+  })
   it("counts genuine consecutive iterations, never duplicate blocks or several jobs in one round", () => {
     const snapshotRoot = root("iteration-snapshot"), populationRoot = root("iteration-population"), mixture = createLeagueMixture({ solverOutputRoot: root("iteration-solver"), weightRoot: root("iteration-weights"), snapshotRoot }), entries = [candidate("iteration-one"), candidate("iteration-two"), candidate("iteration-three")], portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = entries[0]!.candidateAdmission.root, allocationRoot = root("iteration-allocation"), seedBlocks = ["seed-one", "seed-two"]
     const iteration = (ordinal: number) => ({ candidateAdmissionRoot: selected, ordinal, allocationRoot, blocks: seedBlocks.map((seed) => ({ seed, roundRoot: root(`round:${ordinal}:${seed}`), targetRoot: root(`target:${ordinal}:${seed}`), snapshotRoot: root(`snapshot:${ordinal}:${seed}`), conditionRoots: [root(`condition:${ordinal}:${seed}`)], terminalRoots: [root(`terminal:${ordinal}:${seed}`)], numerator: 56, denominator: 100 })), responseTerminals: [0, 1].map((job) => ({ root: root(`response:${ordinal}:${job}`), disposition: "legal_but_weak", processValidity: "process_valid" })) })
