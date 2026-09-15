@@ -35,11 +35,12 @@ the conditional, main-owned real execution and retained verification branch.
   barrels, dynamic loaders, manifest aliases, public/deployment roots, direct
   source execution, and forbidden report payload fields while allowing only the
   reviewed factory/kernel bridge.
-- `scripts/check-v1-38-lab-boundaries.ts` now distinguishes a statically
-  declared, unassigned local retention-budget `this.require` method from a
-  loader, while still rejecting assigned `this.require`, `module.require`, bare
-  unresolved import/require, and dynamic loader paths. The shared factory
-  boundary monitor remains green after the private barrel changes.
+- Main rejected the attempted local-method loader exception after three new
+  regressions showed that unknown property loaders and `module.require` could
+  be suppressed. The CLI's local budget method is now named `checkCapacity`;
+  its arithmetic and callers are unchanged. The shared collector retains its
+  original conservative property-loader handling, and the serious checker no
+  longer discards unresolved-edge findings. No local exemption is needed.
 - `265-EVAL-REFERENCE.md` maps each group to assertions, requirements,
   decisions, and relevant threat dispositions.
 - CI now runs the exact named 29-suite Wave-5 source gate before any allocation
@@ -60,6 +61,9 @@ and `check-v1-38-lab-boundaries.ts`, `check-v1-38-factory-boundaries.ts`, and
 `check-v1-38-serious-league-boundaries.ts` each pass over 1,329 source files.
 Main must run the exact fresh 29-suite CI command plus service-boundary check
 against the unchanged repaired bytes before independent review accepts Task 1.
+The CI step has a 30-minute source-only timeout to accommodate the measured
+roughly ten-minute test run plus types/graph checks on different runner hardware;
+this does not change any empirical, guest, Match, or authoring allocation.
 
 ## Review pointers and boundaries
 

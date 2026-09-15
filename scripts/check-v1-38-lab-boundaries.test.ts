@@ -55,9 +55,9 @@ describe("one-way lab boundary monitor", () => {
   it("allows TypeScript only in the reviewed factory fingerprint collector", () => {
     expect(checkLabBoundaries({ files: { ...lab, "packages/strategy-lab/src/factory/fingerprint.ts": 'import ts from "typescript"; export { ts }' } }).ok).toBe(true)
   })
-  it("allows a declared, unassigned local retained-budget require method", () => {
+  it("allows an unambiguously named local retained-budget capacity check", () => {
     const files = { ...lab,
-      "packages/strategy-lab/src/league/budget.ts": "class RetainedBudget { require(value: number) { return value } publish(value: number) { return this.require(value) } }",
+      "packages/strategy-lab/src/league/budget.ts": "class RetainedBudget { checkCapacity(value: number) { return value } publish(value: number) { return this.checkCapacity(value) } }",
     }
     expect(checkLabBoundaries({ files })).toEqual(expect.objectContaining({ ok: true, violations: [] }))
   })

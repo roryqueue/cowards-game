@@ -39,7 +39,7 @@ export class LeagueRetentionBudget {
   private readonly charged = new Set<string>()
   exhausted = false
   constructor(readonly allocation: LeagueExecutionAllocation) { admitLeagueExecutionAllocation(allocation) }
-  require(byteLength: number, records: number, terminal = this.terminalMode) {
+  checkCapacity(byteLength: number, records: number, terminal = this.terminalMode) {
     const limits = this.allocation.operations
     if (!terminal && (this.exhausted || this.workBytes + byteLength > limits.maxArtifactBytes - limits.terminalReserveBytes || this.workRecords + records > limits.maxArtifactRecords - limits.terminalReserveRecords)) { this.exhausted = true; return fail("RETENTION_BUDGET") }
     if (terminal && (this.terminalBytes + byteLength > limits.terminalReserveBytes || this.terminalRecords + records > limits.terminalReserveRecords)) return fail("TERMINAL_RETENTION_BUDGET")
@@ -48,10 +48,10 @@ export class LeagueRetentionBudget {
     const terminal = value.terminal || this.terminalMode
     if (this.charged.has(value.target)) return fail("UNCERTAIN_REPUBLICATION")
     if (value.target.endsWith(".started.json")) {
-      this.require(6 * 262144, 24, true)
+      this.checkCapacity(6 * 262144, 24, true)
       if (this.exhausted || this.terminalMode) return fail("RETENTION_DISPATCH_STOP")
     }
-    this.require(value.byteLength, 1, terminal); this.charged.add(value.target)
+    this.checkCapacity(value.byteLength, 1, terminal); this.charged.add(value.target)
     if (terminal) { this.terminalBytes += value.byteLength; this.terminalRecords++ } else { this.workBytes += value.byteLength; this.workRecords++ }
   }
   terminal<T>(action: () => T): T { const prior = this.terminalMode; this.terminalMode = true; try { return action() } finally { this.terminalMode = prior } }
@@ -70,7 +70,7 @@ export class LeagueRecordGraph {
     // JSON escaping, fit before the guest is called. The final envelope and
     // chunk records are included; this is capacity, not an extra execution cap.
     const bytes = encode(request).length * 4 + this.budget.allocation.operations.outputLimitBytes * 12 + 262144
-    this.budget.require(bytes, 2 * Math.ceil(bytes / 131072) + 1)
+    this.budget.checkCapacity(bytes, 2 * Math.ceil(bytes / 131072) + 1)
   }
   append(kind: string, value: unknown, links: readonly LabRoot[] = []): LabRoot {
     if (this.budget?.exhausted && ["run-failure", "red-team-terminal", "red-team-process-failure", "response-production-failure", "response-runtime-cleanup", "runtime-cleanup", "runtime-cleanup-failure", "cell-issuance-failure"].includes(kind)) return this.budget.terminal(() => this.publish(kind, value, [], true))
@@ -86,7 +86,7 @@ export class LeagueRecordGraph {
     const size = pending.reduce((sum, bytes) => sum + bytes.length, 0)
     if (this.budget) {
       const fresh = pending.filter((bytes) => { try { lstatSync(resolve(this.repository.directory, `league-artifact-${bytesRoot(bytes).slice(7)}.bin`)); return false } catch { return true } })
-      this.budget.require(fresh.reduce((sum, bytes) => sum + bytes.length, 0), fresh.length, terminal)
+      this.budget.checkCapacity(fresh.reduce((sum, bytes) => sum + bytes.length, 0), fresh.length, terminal)
     }
     else if (this.writtenBytes + size > this.limits.maxArtifactBytes || this.records + pending.length > this.limits.maxArtifactRecords) return fail("RETENTION_BUDGET")
     this.writtenBytes += size; this.records += pending.length

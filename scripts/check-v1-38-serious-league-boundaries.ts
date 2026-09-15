@@ -24,26 +24,11 @@ const hostileExecution = (text: string, file: string): boolean => {
   visit(ast); return found
 }
 
-/** The shared collector conservatively records `.require(...)` method calls as
- * unresolved. Keep its result, but only treat an undefined edge as a loader
- * when the AST confirms an import()/bare require() expression. */
-const hasUnresolvedLoader = (text: string, file: string): boolean => {
-  const ast = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true); let found = false
-  const visit = (node: ts.Node): void => {
-    if (ts.isCallExpression(node) && node.arguments[0] && !ts.isStringLiteralLike(node.arguments[0]!)) {
-      if (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") found = true
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(ast); return found
-}
-
 /** Phase-265 policy over the shared AST/module-resolution graph, not a runtime sandbox. */
 export const checkSeriousLeagueBoundaries = (options: SeriousLeagueBoundaryOptions = {}): SeriousLeagueBoundaryResult => {
   const shared = collectLabBoundaryGraph({ files: options.files }), violations: SeriousLeagueBoundaryViolation[] = []
   const add = (rule: string, path: string) => { if (!violations.some((entry) => entry.rule === rule && entry.path === path)) violations.push({ path, line: 1, rule }) }
   for (const violation of checkLabBoundaries({ files: shared.files }).violations) {
-    if (violation.code === "UNRESOLVED_LAB_EDGE" && !hasUnresolvedLoader(shared.files[violation.file] ?? "", violation.file)) continue
     add(`lab:${violation.code}`, violation.file)
   }
   const visit = (origin: string, predicate: (path: string) => void) => {
@@ -57,7 +42,6 @@ export const checkSeriousLeagueBoundaries = (options: SeriousLeagueBoundaryOptio
       if (source.test(path) && hostileExecution(shared.files[path] ?? "", path)) add("hostile-source-execution", origin)
       if (!restricted(path)) return
       for (const specifier of shared.unresolved.get(path) ?? []) {
-        if (specifier === undefined && !hasUnresolvedLoader(shared.files[path] ?? "", path)) continue
         if (specifier === undefined || !allowedUnresolved.has(specifier)) add("unresolved-private-loader", origin)
       }
     })

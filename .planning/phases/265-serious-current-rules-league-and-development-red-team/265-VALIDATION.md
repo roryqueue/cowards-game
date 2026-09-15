@@ -57,6 +57,8 @@ Run after Wave5 and before the allocation checkpoint:
   packages/strategy-lab/src/league/integration.test.ts \
   scripts/run-v1-38-serious-league.test.ts \
   scripts/check-v1-38-serious-league-boundaries.test.ts \
+  scripts/check-v1-38-lab-boundaries.test.ts \
+  scripts/check-v1-38-factory-boundaries.test.ts \
   packages/strategy-lab/src/runtime-bridge.test.ts \
   packages/strategy-lab/src/runner-invariance.test.ts \
   packages/strategy-lab/src/factory/repository.test.ts \
@@ -73,6 +75,8 @@ Run after Wave5 and before the allocation checkpoint:
 ./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json --pretty false
 ./node_modules/.bin/tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --types node --skipLibCheck scripts/run-v1-38-serious-league.ts scripts/run-v1-38-serious-league.test.ts scripts/lib/v1-38-league-authoring.ts scripts/lib/v1-38-league-authoring.test.ts scripts/lib/v1-38-league-response-runtime.ts scripts/lib/v1-38-league-response-runtime.test.ts scripts/assess-v1-38-factory-independence.ts scripts/assess-v1-38-factory-independence.test.ts scripts/v1-38-factory-execution-evidence.ts scripts/v1-38-factory-execution-evidence.test.ts scripts/v1-38-factory-assessment-correction.ts scripts/v1-38-factory-assessment-correction.test.ts scripts/check-v1-38-serious-league-boundaries.ts scripts/check-v1-38-serious-league-boundaries.test.ts
 ./node_modules/.bin/tsx scripts/check-v1-38-serious-league-boundaries.ts
+./node_modules/.bin/tsx scripts/check-v1-38-lab-boundaries.ts
+./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts
 pnpm exec tsx scripts/check-service-boundary-imports.ts
 ```
 

@@ -110,26 +110,7 @@ export const collectLabBoundaryGraph = (options: { files?: Readonly<Record<strin
       const constant = (node: ts.Expression, depth = 0): (string | undefined)[] => { if (depth > 8) return [undefined]; if (ts.isStringLiteralLike(node)) return [node.text]; if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isNonNullExpression(node)) return constant(node.expression, depth + 1); if (ts.isIdentifier(node)) { const symbol = checker.getSymbolAtLocation(node), values = symbol && bindings.get(symbol), candidates = values ? values.flatMap(value => constant(value, depth + 1)) : [undefined]; return symbol && uncertain.has(symbol) ? [...candidates, undefined] : candidates }; if (ts.isConditionalExpression(node)) return [...constant(node.whenTrue, depth + 1), ...constant(node.whenFalse, depth + 1)]; if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) { const left = constant(node.left, depth + 1), right = constant(node.right, depth + 1); return left.length * right.length > 64 ? [undefined] : left.flatMap(a => right.map(b => a !== undefined && b !== undefined ? a + b : undefined)) }; return [undefined] }
       const inspect = (expression: ts.Expression) => forEach(constant(expression), specifier => { if (specifier === undefined) { missing.push(undefined); return }; const targets = resolveSpecifier(path, specifier); if (targets.length) targets.forEach(target => edges.add(target)); else missing.push(specifier) })
       const forEach = <T>(values: readonly T[], action: (value: T) => void) => values.forEach(action)
-      const localMethod = (call: ts.CallExpression) => {
-        if (!ts.isPropertyAccessExpression(call.expression) || call.expression.expression.kind !== ts.SyntaxKind.ThisKeyword || call.expression.name.text !== "require") return false
-        let current: ts.Node | undefined = call
-        while (current && !ts.isClassLike(current)) current = current.parent
-        if (!current || !ts.isClassLike(current)) return false
-        const declared = current.members.some(member => ts.isMethodDeclaration(member) && ts.isIdentifier(member.name) && member.name.text === "require")
-        let assigned = false
-        const findAssignment = (node: ts.Node): void => {
-          if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment && ts.isPropertyAccessExpression(node.left) && node.left.expression.kind === ts.SyntaxKind.ThisKeyword && node.left.name.text === "require") assigned = true
-          ts.forEachChild(node, findAssignment)
-        }
-        findAssignment(current)
-        return declared && !assigned
-      }
-      const propertyLoader = (call: ts.CallExpression) => {
-        if (!ts.isPropertyAccessExpression(call.expression) || call.expression.name.text !== "require") return false
-        if (call.expression.expression.kind === ts.SyntaxKind.ThisKeyword) return !localMethod(call)
-        return ts.isIdentifier(call.expression.expression) && call.expression.expression.text === "module"
-      }
-      const visit = (node: ts.Node): void => { if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) inspect(node.moduleSpecifier as ts.Expression); if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) inspect(node.moduleReference.expression); if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === "require") || propertyLoader(node)) && node.arguments[0]) inspect(node.arguments[0]); ts.forEachChild(node, visit) }
+      const visit = (node: ts.Node): void => { if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) inspect(node.moduleSpecifier as ts.Expression); if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) inspect(node.moduleReference.expression); if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === "require") || (ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "require")) && node.arguments[0]) inspect(node.arguments[0]); ts.forEachChild(node, visit) }
       visit(ast)
     }
     if (path.endsWith("/package.json")) try {
