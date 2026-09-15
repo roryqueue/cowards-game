@@ -943,14 +943,14 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
   4. Structural and behavioral diversity gates yield a diverse pure portfolio kept separate from the diagnostic mixture, and a precommitted rule either selects a deployable robust pure finalist from mixture, pure, counter, probe, invariance, legality, privacy, and runtime evidence or records `no robust pure finalist found`.
   5. Provisional leaders receive the full frozen automated, model, human, and external development-red-team budget; successful counters enter the declared response loop, failed attacks remain charged evidence, and no leader may depend materially on side, initiative, duplicate arenas, opaque identities, source or Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-**Plans:** 2/7 complete; contracts/identities and complete semantic matrix admission each pass six focused tests, with the lab build passing. All seven plans are independently checked, with all 9 requirements and 21 decisions covered. Research, pattern map, AI evaluation contract and validation strategy are complete. Safe source work proceeds before the single late live-allocation/participant checkpoint in 265-07; actual phase completion requires the conditional real run and retained verification, not synthetic fixtures.
+**Plans:** 3/7 complete; contracts/identities, complete semantic matrix admission, private retention and host-issued runtime handoff are implemented. Plan 03's 33-test regression and lab build pass, including corrected strictly read-only reopening. All seven plans are independently checked, with all 9 requirements and 21 decisions covered. Research, pattern map, AI evaluation contract and validation strategy are complete. Safe source work proceeds before the single late live-allocation/participant checkpoint in 265-07; actual phase completion requires the conditional real run and retained verification, not synthetic fixtures.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.
 
 **Wave2 — matrix and runtime, blocked on Wave1**
 - [x] 265-02-PLAN.md — Complete semantic condition-balanced matrices with bounded chunks.
-- [ ] 265-03-PLAN.md — Immutable retention and real trusted-host supervised handoff.
+- [x] 265-03-PLAN.md — Immutable retention and real trusted-host supervised handoff.
 
 **Wave3 — analysis and response, blocked on Wave2**
 - [ ] 265-04-PLAN.md — Synthetic numeric solver spike, frozen exact solver and PSRO loop.
@@ -1054,7 +1054,7 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 8/8 | Complete — 5/5 truths,11/11 requirements,7/7 private UAT | 2026-09-14 |
-| 265. Serious Current-Rules League and Development Red Team | 2/7 | Matrix complete; private retention and runtime handoff next | - |
+| 265. Serious Current-Rules League and Development Red Team | 3/7 | Retention/runtime source complete; solver and response loop next | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
 | 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; awaits Phase267 | - |
