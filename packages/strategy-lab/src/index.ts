@@ -1,2 +1,7 @@
 export { LabManifestSchema, LabAttemptSchema, LabSemanticRecordSchema, LabOperationalRecordSchema, admitLabManifest } from "./contracts.js"
 export type { LabManifest, LabAttempt, LabSemanticRecord, LabOperationalRecord } from "./contracts.js"
+export { LEAGUE_EVALUATION_FIXTURES } from "./league/fixtures.js"
+export type { LeagueEvaluationFixture } from "./league/fixtures.js"
+export { createLeagueRepository, reopenLeagueEvidence } from "./league/repository.js"
+export { issueLeagueProviderFromFactoryCandidate, runLeagueCell } from "./league/connected-runner.js"
+export { publishLeagueReport, reopenLeagueReport } from "./league/report.js"
