@@ -9,13 +9,15 @@ import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type L
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
 import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository } from "../packages/strategy-lab/src/league/repository.js"
 import { enumerateLeagueCells, admitCompletePayoffSnapshot, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
-import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagueCell, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
+import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagueCell, deriveLeagueMatchExecutionTerminal, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { solveLeagueSnapshot } from "../packages/strategy-lab/src/league/solver.js"
 import { declareLeagueRound, advanceLeagueRound, type DeclaredLeagueRound, type LeagueResponseRow } from "../packages/strategy-lab/src/league/psro.js"
 import { declareRedTeamAllocation, startRedTeamAttempt, terminalizeRedTeamAttempt, reenterAcceptedCounter, recordLeagueProbe, closeRedTeamLedger, LEAGUE_PROBES, type LeagueProbeFamily, type RedTeamLedger, type RedTeamResources } from "../packages/strategy-lab/src/league/red-team.js"
 import { deriveLeaguePortfolio, selectRobustPure, type LeaguePortfolioCandidate, type LeagueLinkedResponseIteration } from "../packages/strategy-lab/src/league/selection.js"
 import { publishLeagueReport, reopenLeagueReport } from "../packages/strategy-lab/src/league/report.js"
 import { createFactoryRepository, readFactoryArtifact, publishFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
+import { validateFactoryAttemptStart, validateFactoryAttemptLedger } from "../packages/strategy-lab/src/factory/ledger.js"
+import { deriveFactoryExecutionCommitment } from "../packages/strategy-lab/src/factory/admission.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
 import type { FactorySupervisionProvider } from "../packages/strategy-lab/src/factory/admission.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
@@ -76,7 +78,7 @@ export class LeagueRecordGraph {
     this.budget.checkCapacity(bytes, 2 * Math.ceil(bytes / 131072) + 1)
   }
   append(kind: string, value: unknown, links: readonly LabRoot[] = []): LabRoot {
-    if (this.budget?.exhausted && ["run-failure", "red-team-terminal", "red-team-process-failure", "response-production-failure", "response-runtime-cleanup", "runtime-cleanup", "runtime-cleanup-failure", "cell-issuance-failure"].includes(kind)) return this.budget.terminal(() => this.publish(kind, value, [], true))
+    if (this.budget?.exhausted && ["run-failure", "red-team-terminal", "red-team-process-failure", "response-production-failure", "response-runtime-cleanup", "response-runtime-invocation-failure", "response-match-execution-failure", "runtime-cleanup", "runtime-cleanup-failure", "runtime-invocation-failure", "cell-issuance-failure"].includes(kind)) return this.budget.terminal(() => this.publish(kind, value, [], true))
     return this.publish(kind, value, links, false)
   }
   private publish(kind: string, value: unknown, links: readonly LabRoot[], terminal: boolean): LabRoot {
@@ -189,7 +191,17 @@ export class LeagueConnectedSession {
         const provider = this.input.fixture ? this.input.fixture.host.createFactorySupervisedRuntime(request) : createFactorySupervisedRuntime({ ...runtimeInput, matchId: matchBase.matchId, containerName: `league-${start.root.slice(7, 25)}-${opened.length}`, ownershipLabel: `league-${this.allocation.root.slice(7, 25)}`, image: this.allocation.operations.image, invocationLimit: this.allocation.operations.perProviderInvocations, factoryLifetimeMs: this.allocation.operations.perMatchMilliseconds })
         opened.push(provider)
         const wrapped = wrapLeagueProbeProvider(provider, options.transform, arena.initialBounds, (value) => { runtimeRecords.push(this.graph.append("runtime-invocation", value, [startRecord])) }, (request) => this.graph.beforeInvocation(request))
-        return { ...wrapped, close: () => { const closed = wrapped.close(); runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed }, [startRecord])); return closed } }
+        return {
+          ...wrapped,
+          invoke: async (request, identity) => {
+            try { return await wrapped.invoke(request, identity) }
+            catch (error) {
+              runtimeRecords.push(this.graph.append("runtime-invocation-failure", { identity: provider.identity, request, error: error instanceof Error ? error.name : "unknown" }, [startRecord]))
+              throw error
+            }
+          },
+          close: () => { const closed = wrapped.close(); runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed }, [startRecord])); return closed },
+        }
       } }
       const issue = (candidate: LeagueCandidateInput) => issueLeagueProviderFromFactoryCandidate({ ...candidate.closure, host, cell, start, allocationRoot: this.allocation.root })
       const [issuedBottom, issuedTop] = options.order === "reverse" ? (() => { const t = issue(top), b = issue(bottom); return [b, t] as const })() : [issue(bottom), issue(top)] as const
@@ -385,7 +397,13 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
           const imported = candidates.find((candidate) => candidate.admission.importEvidence) ?? fail("NUMERIC_MEASUREMENT_REQUIRED"), threshold = { repository: imported.factoryRepository, artifactRoot: imported.admission.importEvidence!.thresholdArtifactRoot }
           session.responseMatchCharges += job.reservation.matches
           let produced: Awaited<ReturnType<typeof produceLeagueResponse>>
-          try { produced = await (input.fixture?.produce ?? produceLeagueResponse)({ allocation, job, start, startArtifactRoot, repository, targetArtifactRoot, remainingWallMilliseconds: allocation.operations.wallClockMilliseconds - (Date.now() - session.startTime), opponents: candidates.map((candidate) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold, retention: session.graph }) } catch (error) { const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot); ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); throw error }
+          try { produced = await (input.fixture?.produce ?? produceLeagueResponse)({ allocation, job, start, startArtifactRoot, repository, targetArtifactRoot, remainingWallMilliseconds: allocation.operations.wallClockMilliseconds - (Date.now() - session.startTime), opponents: candidates.map((candidate) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold, retention: session.graph }) }
+          catch (error) {
+            const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
+            ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
+            roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+            throw error
+          }
           roots.push(produced.recordRoot); production.push(produced)
           const duplicate = [...candidates, ...accepted].some((candidate) => candidate.admission.candidate.proposal.source.root === produced.admission.candidate.proposal.source.root), independent = produced.comparisons.length === candidates.length && produced.comparisons.every((row) => row.relation === "distinct"), scores = roundBlocks.map((block) => responseScores(produced, block)), positive = scores.every((rows) => rows.every((score) => BigInt(score.numerator) * 100n > BigInt(score.denominator) * 55n)), eligible = !duplicate && independent && positive && accepted.length < schedule.acceptedSlots
           const assessment = { targetRoot: primary.round.target.root, fingerprintEvidenceRoot: produced.fingerprintArtifactRoot, independentCounterfactualRelations: produced.comparisons.map((row) => row.relation === "unresolved" ? "borderline" : row.relation), existingCandidateRoots: candidates.map((candidate) => candidate.admission.candidate.root), completeTargetScores: scores[0]! }
@@ -418,7 +436,12 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
           production.push(produced); roots.push(produced.recordRoot)
           const evidenceRoot = session.graph.append("independent-evaluation", { jobId: job.id, startRoot: start.root, evaluationRole: job.evaluationRole, producedRoot: produced.recordRoot, matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), authoredFromFrozenPacketOnly: true }, [produced.recordRoot, ...currentMatrices.map((matrix) => matrix.recordRoot)]); roots.push(evidenceRoot)
           ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "accepted", usage: { ...zeroUsage(), matches: produced.matchCount, modelTokens: produced.author.modelTokens ?? 0, effortMilliseconds: Math.max(0, Date.now() - before), reviewMilliseconds: job.reservation.reviewMilliseconds, searchNodes: job.reservation.searchNodes, teacherNodes: job.reservation.teacherNodes, distillationUnits: job.reservation.distillationUnits }, evidenceRoots: [produced.recordRoot, evidenceRoot], candidateAdmissionRoot: null })
-        } catch (error) { const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot); ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); throw error }
+        } catch (error) {
+          const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
+          ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
+          roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
+          throw error
+        }
       }
       completedJobs.push(job.id); roots.push(session.graph.append("red-team-terminal", { jobId: job.id, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }))
     }
@@ -432,7 +455,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
       const projection = reportProjection(matrix, candidates, blocks, ledger, closed, reentries, selection, allocation)
       const report = publishLeagueReport({ repository: input.repository, snapshot: matrix.admitted.snapshot, solverManifest: matrix.solver.manifest, solver: matrix.solver.output, mixture: selection.mixture, portfolio: selection.portfolio.portfolio, redTeamRoot: closed.root, finalistDisposition: selection.finalist, reopen: reopened, projection }); reports.push(report); roots.push(session.graph.append("report", { report, matrixRoot: matrix.recordRoot, selectionRoot, projection }, [matrix.recordRoot, selectionRoot, ledgerRoot]))
     }
-    const value = { evidenceClass: allocation.evidenceClass, allocationRoot: allocation.root, completedJobs, processValidity: "process_valid", result: reports.length ? "bounded_league_complete" : "process_failure", candidates: candidates.map(candidateRecord), matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), reports, ledgerRoot, executedCells: session.cells.length, reservedResponseMatches: session.responseMatchCharges }
+    const value = { evidenceClass: allocation.evidenceClass, allocationRoot: allocation.root, completedJobs, processValidity: "process_valid", result: reports.length ? "bounded_league_complete" : "process_failure", candidates: candidates.map(candidateRecord), matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), reports, ledgerRoot, executedCells: session.cells.length, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0) }
     const headRoot = session.graph.append("run-complete", value, roots)
     return { ...value, headRoot, empiricalRequirementsComplete: false }
   } catch (error) {
@@ -440,32 +463,120 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
       const evidenceRoot = session.graph.append("red-team-process-failure", { startRoot: start.root, error: error instanceof Error ? error.message : "unknown" }); roots.push(evidenceRoot)
       ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }); roots.push(session.graph.append("red-team-terminal", { startRoot: start.root, terminal: ledger.terminals.at(-1), ledgerRoot: ledger.root }, [evidenceRoot]))
     }
-    const headRoot = session.graph.append("run-failure", { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid", completedJobs, ledgerRoot: ledger.root, error: error instanceof Error ? error.message.slice(0, 512) : "unknown", executedCells: session.cells.length, retentionUsage: budget.usage })
+    const headRoot = session.graph.append("run-failure", { allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid", completedJobs, ledgerRoot: ledger.root, error: error instanceof Error ? error.message.slice(0, 512) : "unknown", executedCells: session.cells.length, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0), retentionUsage: budget.usage })
     return { headRoot, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, empiricalRequirementsComplete: false }
   }
 }
 
 /** Replay retained responses through the pure canonical kernel. This performs
  * no Strategy invocation, creates no runtime capability and writes no files. */
-const replayRetainedKernel = (match: MatchInput, execution: LabMatchExecution, empirical: boolean) => {
-  if (execution.kind !== "completed" || "maxPhases" in match || execution.accounting.some((entry) => !entry.result.ok)) return fail("RETAINED_EXECUTION")
+const replayRetainedKernel = (match: MatchInput, execution: LabMatchExecution, empirical: boolean, context: { invocationFailures: readonly any[]; cleanupIncomplete: boolean } = { invocationFailures: [], cleanupIncomplete: false }) => {
+  if (!["completed", "failure"].includes(execution.kind) || "maxPhases" in match || execution.privacy !== "private_offline" || !Array.isArray(execution.accounting) || !Array.isArray(execution.transitions)) return fail("RETAINED_EXECUTION")
   let machine = MATCH_KERNEL.createMachineV119(match)
   if (machine.initialState.soldiers.length !== 16) return fail("CANONICAL_START")
-  if (!empirical) return
-  if (!execution.transitions.length || !execution.accounting.length || execution.transitions.length > 1010000) return fail("EMPIRICAL_KERNEL_COVERAGE")
-  let invocation = 0, completed = false
-  for (let ordinal = 0; ordinal < execution.transitions.length; ordinal++) {
+  if (!empirical && execution.kind === "completed" && execution.accounting.every((entry) => entry.result.ok)) return
+  if (execution.transitions.length > 1010000 || execution.kind === "failure" && (execution.transitions.length || !same(execution.unchangedState, machine.initialState) || execution.failure.classification !== "system_failure")) return fail("RETAINED_FAILURE_STATE")
+  let invocation = 0, completed = false, failureCode: string | null = null, transitionCount = 0
+  const transitions = [], consumed = new Set<LabRoot>(), ordinals = new Map<string, number>()
+  for (let ordinal = 0; ordinal < 1010000; ordinal++) {
     let next = MATCH_KERNEL.stepMatch(machine, { kind: "advance" })
     if (next.kind === "effect") {
-      const evidence = execution.accounting[invocation++], request = next.request
-      if (!evidence || evidence.requestId !== request.requestId || evidence.method !== request.kind || evidence.inputRoot !== labRoot("runtime-input", request.input) || !evidence.completed || !evidence.charged || !evidence.result.ok) return fail("RETAINED_INVOCATION")
-      next = MATCH_KERNEL.stepMatch(next.machine, { kind: "runtime_resume", requestId: request.requestId, effectKind: request.kind, classification: "success", value: evidence.result.value })
+      const request = next.request, evidence = execution.accounting[invocation]
+      if (!evidence) {
+        if (execution.kind !== "failure" || context.invocationFailures.length !== 1 || !same(context.invocationFailures[0].request, request)) return fail("RETAINED_INVOCATION")
+        failureCode = "LAB_SUPERVISOR_FAILURE"; break
+      }
+      invocation++
+      const identity = labRoot("retained-runtime-identity", evidence.identity), expectedOrdinal = ordinals.get(identity) ?? 0
+      if (evidence.requestId !== request.requestId || evidence.method !== request.kind || evidence.inputRoot !== labRoot("runtime-input", request.input) || !evidence.completed || !evidence.charged || evidence.ordinal !== expectedOrdinal || !Number.isSafeInteger(evidence.outputBytes) || evidence.outputBytes < 0 || evidence.outputBytes > 262144 || consumed.has(evidence.invocationRoot)) return fail("RETAINED_INVOCATION")
+      consumed.add(evidence.invocationRoot); ordinals.set(identity, expectedOrdinal + 1)
+      const base = { kind: "runtime_resume" as const, requestId: request.requestId, effectKind: request.kind }, result = evidence.result
+      next = MATCH_KERNEL.stepMatch(next.machine, result.ok ? { ...base, classification: "success", value: result.value } : "systemFailure" in result ? { ...base, classification: "system_failure", failure: result.systemFailure } : { ...base, classification: "player_violation", violation: result.violation })
     }
-    if (next.kind === "effect" || next.kind === "failure" || !same(next.record, execution.transitions[ordinal])) return fail("RETAINED_TRANSITION")
-    machine = next.machine
-    if (next.kind === "completed") { if (ordinal !== execution.transitions.length - 1) return fail("RETAINED_TRAILING_TRANSITIONS"); completed = true }
+    if (next.kind === "failure") { failureCode = next.failure.code; break }
+    if (next.kind === "effect") return fail("RETAINED_TRANSITION")
+    if (execution.kind === "completed" && !same(next.record, execution.transitions[ordinal])) return fail("RETAINED_TRANSITION")
+    transitions.push(next.record); transitionCount++; machine = next.machine
+    if (next.kind === "completed") { completed = true; break }
   }
-  if (!completed || invocation !== execution.accounting.length || !same({ state: machine.state, events: execution.transitions.flatMap((transition) => transition.events) }, execution.result)) return fail("RETAINED_COMPLETION")
+  if (invocation !== execution.accounting.length) return fail("RETAINED_TRAILING_INVOCATIONS")
+  if (execution.kind === "failure") {
+    const expected = context.cleanupIncomplete ? "LAB_CLEANUP_INCOMPLETE" : failureCode ?? (!completed && transitionCount === 1010000 ? "LAB_KERNEL_STEP_BOUND" : null)
+    if (expected === null || execution.failure.code !== expected) return fail("RETAINED_FAILURE_CAUSE")
+  } else {
+    if (!completed || context.cleanupIncomplete || context.invocationFailures.length || transitionCount !== execution.transitions.length || !same({ state: machine.state, events: transitions.flatMap((transition) => transition.events) }, execution.result)) return fail("RETAINED_COMPLETION")
+  }
+}
+
+/** Failed production retains a charged prefix, not a pretend complete payoff. */
+const verifyRetainedProductionFailures = (repository: FactoryRepository | null, allocation: LeagueExecutionAllocation, graph: ReturnType<typeof readLeagueRecordGraph>, ledger: RedTeamLedger, blocks: readonly RoundBlock[], candidates: readonly LeagueCandidateInput[]) => {
+  const nodes = [...graph.entries()], rows = (kind: string) => nodes.filter(([, node]) => node.kind === kind)
+  const starts = rows("response-production-start"), failures = rows("response-production-failure")
+  if (!repository && starts.length) return fail("RETAINED_RESPONSE_REPOSITORY")
+  for (const [, node] of rows("response-match-start")) if (starts.filter(([, start]) => start.value.start.root === node.value.parentStartRoot).length !== 1) return fail("RETAINED_RESPONSE_CHARGE_PARENT")
+  for (const [, node] of nodes.filter(([, node]) => ["response-runtime-invocation", "response-runtime-invocation-failure", "response-runtime-cleanup"].includes(node.kind))) {
+    if (rows("response-match-start").filter(([root]) => node.links.includes(root)).length !== 1) return fail("RETAINED_RESPONSE_RUNTIME_CHARGE")
+  }
+  for (const [failureRoot, failureNode] of failures) {
+    const failure = failureNode.value, start = validateFactoryAttemptStart(failure.start)
+    const matching = starts.filter(([, node]) => node.value.start.root === start.root)
+    if (matching.length !== 1 || failures.filter(([, node]) => node.value.start.root === start.root).length !== 1) return fail("RETAINED_RESPONSE_FAILURE_START")
+    const production = matching[0]![1].value, redTeamStart = ledger.starts.find((row) => row.root === start.resourceAccountingRoot)
+    const job = allocation.rounds.flatMap((round) => round.jobs).find((job) => job.id === production.job.id)
+    if (!job || !redTeamStart || !same(production.start, start) || !same(production.redTeamStart, redTeamStart) || !same(production.job, job) || start.taskRoot !== allocation.root || start.budgetRoot !== allocation.root || start.candidateRoot !== job.producerRequestArtifactRoot || start.inputRoot !== job.producerRequestArtifactRoot || ledger.terminals.find((row) => row.startRoot === redTeamStart.root)?.disposition !== "system_failure") return fail("RETAINED_RESPONSE_FAILURE_AUTHORITY")
+    const journal = (suffix: string) => {
+      const path = resolve(repository!.directory, `factory-attempt-${start.root.slice(7)}.${suffix}.json`), stat = lstatSync(path)
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 262144) return fail("RETAINED_RESPONSE_JOURNAL")
+      return parse(readFileSync(path))
+    }
+    if (!same(journal("started"), start)) return fail("RETAINED_RESPONSE_JOURNAL")
+    const terminal = validateFactoryAttemptLedger(start, journal("terminal"))
+    if (terminal.disposition !== "system_failure" || terminal.outputRoot !== null || [terminal.validationRoot, terminal.duplicateEvidenceRoot, terminal.finalEvidenceRoot].some((root) => root !== failureRoot)) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
+    const target = parse(readFactoryArtifact(repository!, production.targetArtifactRoot))
+    for (const row of target.candidates) {
+      const candidate = candidates.find((candidate) => candidate.admission.candidate.root === row.candidateRoot)
+      if (!candidate || candidate.closure.sourceArtifactRoot !== row.sourceArtifactRoot || row.byteLength !== readFactoryArtifact(repository!, row.sourceArtifactRoot).length) return fail("RETAINED_FAILED_TARGET_SOURCE")
+    }
+    const roundBlocks = blocks.filter((block) => block.round.round.root === redTeamStart.roundRoot || block.round.roundOrdinal === blocks.find((row) => row.round.round.root === redTeamStart.roundRoot)?.round.roundOrdinal)
+    if (target.roundRoot !== redTeamStart.roundRoot || target.candidateRoot !== redTeamStart.candidateRoot || job.evaluationRole === "development_response" && (!roundBlocks.length || !same(target.targets, roundBlocks.map((block) => ({ seed: block.seed, target: block.round.target, weights: block.matrix.solver.weights }))) || !same(target.candidates.map((row: any) => row.candidateRoot), roundBlocks[0]!.candidateRoots))) return fail("RETAINED_RESPONSE_FAILURE_TARGET")
+    let authoredSource: LabRoot | null = null
+    if (failure.author) {
+      const author = failure.author, retained = parse(readFactoryArtifact(repository!, author.evidenceArtifactRoot)), { root, ...body } = retained
+      if (root !== labRoot("league-authoring-result-v1", body) || retained.allocationRoot !== allocation.root || retained.startRoot !== redTeamStart.root || retained.jobId !== job.id || !same(author, { disposition: retained.disposition, startRoot: retained.startRoot, ingestionArtifactRoot: retained.ingestionArtifactRoot, evidenceArtifactRoot: author.evidenceArtifactRoot, modelTokens: retained.modelTokens, elapsedMilliseconds: retained.elapsedMilliseconds })) return fail("RETAINED_FAILED_AUTHOR")
+      if (author.disposition === "produced") authoredSource = verifyRetainedLeagueAuthoring(repository!, allocation, author.evidenceArtifactRoot).ingestion.packet.source.root
+    }
+    const conditions = enumerateLeagueResponseConditions(allocation, target.candidates.map((row: any) => row.candidateRoot))
+    const charges = rows("response-match-start").filter(([, node]) => node.value.parentStartRoot === start.root).sort((a, b) => a[1].value.ordinal - b[1].value.ordinal)
+    const results = rows("response-match-result").filter(([, node]) => node.value.matchCharge.parentStartRoot === start.root)
+    if (charges.length !== failure.matchCount || charges.length > conditions.length || charges.length > job.reservation.matches || results.length < charges.length - 1 || results.length > charges.length || charges.length && !authoredSource) return fail("RETAINED_FAILED_RESPONSE_COVERAGE")
+    for (const [ordinal, [chargeRoot, charge]] of charges.entries()) {
+      const { arenaIndex, ...condition } = conditions[ordinal]!
+      if (!same(charge.value, { parentStartRoot: start.root, ...condition })) return fail("RETAINED_FAILED_RESPONSE_CONDITION")
+      const matched = results.filter(([, node]) => node.links.includes(chargeRoot)), cleanup = rows("response-runtime-cleanup").filter(([, node]) => node.links.includes(chargeRoot))
+      if (matched.length > 1 || matched.length === 0 && ordinal !== charges.length - 1) return fail("RETAINED_FAILED_RESPONSE_PREFIX")
+      const failedExecutions = rows("response-match-execution-failure").filter(([, node]) => node.links.includes(chargeRoot))
+      if (failedExecutions.length > 1 || !matched.length && !failedExecutions.length && rows("response-runtime-invocation-failure").some(([, node]) => node.links.includes(chargeRoot))) return fail("RETAINED_FAILED_EXECUTION_MISSING")
+      if (!matched.length && !failedExecutions.length) continue // Charged issuance failed before a Match executed.
+      const value = (matched[0] ?? failedExecutions[0])![1].value, arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter((arena) => arena.status === "active" && arena.schedulable)[arenaIndex]!
+      if (failedExecutions.length && (failedExecutions[0]![1].value.execution.kind !== "failure" || !same(failedExecutions[0]![1].value.execution, value.execution))) return fail("RETAINED_FAILED_EXECUTION_CONFLICT")
+      if (!same(value.matchCharge, charge.value) || !same(value.match.arenaVariant, arena)) return fail("RETAINED_FAILED_RESPONSE_MATCH")
+      const raw = rows("response-runtime-invocation").filter(([, node]) => node.links.includes(chargeRoot)), thrown = rows("response-runtime-invocation-failure").filter(([, node]) => node.links.includes(chargeRoot))
+      if ([...raw.map(([, node]) => node.value.originalEvidence.identity), ...thrown.map(([, node]) => node.value.identity)].some((identity) => !cleanup.some(([, node]) => same(node.value.identity, identity)))) return fail("RETAINED_FAILED_RUNTIME_IDENTITY")
+      verifyRetainedLeagueProbeInvocations(raw.map(([, node]) => node.value), value.execution.accounting, undefined, arena.initialBounds)
+      replayRetainedKernel(value.match, value.execution, allocation.evidenceClass === "empirical", { invocationFailures: thrown.map(([, node]) => node.value), cleanupIncomplete: cleanup.some(([, node]) => !node.value.cleanup.cleanupComplete || node.value.cleanup.orphanedChild) })
+      const opponent = target.candidates.find((row: any) => row.candidateRoot === condition.opponentRoot)
+      const reference = candidates.find((candidate) => candidate.publicationRoot === allocation.independenceReferencePublicationRoot)
+      const measuredSource = condition.purpose === "independence_right" ? opponent.sourceArtifactRoot : authoredSource
+      for (const [artifactRoot, playerId, sourceRoot, attemptRoot] of [[value.candidateReceiptArtifactRoot, "league-response-candidate", measuredSource, redTeamStart.root], [value.opponentReceiptArtifactRoot, "league-response-opponent", condition.purpose === "score" ? opponent.sourceArtifactRoot : reference?.closure.sourceArtifactRoot, chargeRoot]] as const) {
+        const cleanupRows = cleanup.filter(([, node]) => node.value.identity.sourceRoot === sourceRoot && node.value.identity.attemptRoot === attemptRoot)
+        const side = (condition.side === "bottom") === (playerId === "league-response-candidate") ? "bottom" : "top"
+        if (!sourceRoot || cleanupRows.length !== 1 || cleanupRows[0]![1].value.identity.budgetRoot !== allocation.root || cleanupRows[0]![1].value.identity.revisionId !== (side === "bottom" ? value.match.bottomStrategyRevisionId : value.match.topStrategyRevisionId)) return fail("RETAINED_FAILED_RESPONSE_IDENTITY")
+        if (!matched.length) continue // Honest failed execution, never an issued supervision receipt.
+        const stored = readFactorySupervisionArtifactRecords(repository!, artifactRoot, { maxBytes: allocation.operations.maxArtifactBytes, maxRecords: allocation.operations.maxArtifactRecords }), metadata = stored.records.find((row) => row.kind === "receipt")!.value as any
+        if (!sourceRoot || metadata.candidatePlayerId !== playerId || metadata.admission.sourceRoot !== sourceRoot || metadata.candidateIdentity.attemptRoot !== attemptRoot || metadata.candidateIdentity.budgetRoot !== allocation.root || stored.descriptor.executionRoot !== labRoot("factory-stored-execution-v1", deriveFactoryExecutionCommitment(value.execution)) || cleanup.filter(([, node]) => same(node.value.identity, metadata.candidateIdentity)).length !== 1) return fail("RETAINED_FAILED_RESPONSE_SUPERVISION")
+      }
+    }
+  }
 }
 
 export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepository; factoryRepository: FactoryRepository; responseFactoryRepository: FactoryRepository | null; headRoot: LabRoot; allocationRoot: LabRoot; limits: { maxArtifactBytes: number; maxArtifactRecords: number }; fixtureCandidates?: readonly LeagueCandidateInput[] }) => {
@@ -487,18 +598,46 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     return candidate
   }
   if (!same(initial.candidates.map(candidateContent), imported.map(candidateRecord).map(candidateContent))) return fail("RETAINED_INITIAL_POPULATION")
-  const finalCandidates = (head.kind === "run-complete" ? head.value.candidates : initial.candidates).map(restoreCandidate), candidateAdmissions = new Map(finalCandidates.map((candidate: LeagueCandidateInput) => [candidate.admission.root, candidate.admission]))
+  const acceptedRoots = new Set(rows("counter-reentry").map(([, node]) => node.value.candidateAdmission.root))
+  const retainedGrowth = rows("response-production-result").filter(([, node]) => acceptedRoots.has(node.value.admission.root)).map(([, node]) => {
+    const value = node.value
+    return { admission: value.admission, publicationRoot: value.publicationRoot, fingerprintArtifactRoot: value.fingerprintArtifactRoot, factoryDirectory: value.factoryRepository, closure: value.closure }
+  })
+  // Growth is provisional until the production, assessment and re-entry joins
+  // below have all been recomputed. Failure is not permission to skip them.
+  const finalCandidates = (head.kind === "run-complete" ? head.value.candidates : [...initial.candidates, ...retainedGrowth]).map(restoreCandidate), candidateAdmissions = new Map(finalCandidates.map((candidate: LeagueCandidateInput) => [candidate.admission.root, candidate.admission]))
   const reopened = reopenLeagueEvidence(input.repository, { maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords }), cellResults = rows("cell-result"), cellByRoot = new Map(cellResults.map(([recordRoot, node]) => [node.value.cell.root, { recordRoot, ...node.value }]))
-  if (reopened.remnants.length || head.kind === "run-complete" && (reopened.records.length !== cellResults.length || cellResults.length !== head.value.executedCells)) return fail("RETAINED_JOURNAL_COVERAGE")
+  if (reopened.remnants.length || cellResults.length !== head.value.executedCells || cellByRoot.size !== cellResults.length || rows("cell-start").length !== reopened.records.length) return fail("RETAINED_JOURNAL_COVERAGE")
+  for (const journal of reopened.records) {
+    const charged = rows("cell-start").filter(([, node]) => node.value.start.root === journal.start.root)
+    if (charged.length !== 1 || !same(charged[0]![1].value.start, journal.start) || journal.start.allocationRoot !== allocation.root || journal.terminalProvenance !== "persisted") return fail("RETAINED_CHARGE")
+    if (!cellByRoot.has(journal.start.cellRoot)) {
+      const failures = rows("cell-issuance-failure").filter(([, node]) => node.value.start.root === journal.start.root)
+      if (head.kind === "run-complete" || failures.length !== 1 || failures[0]![0] !== journal.terminal.evidenceRoot || !same(failures[0]![1].value.cell, charged[0]![1].value.cell) || journal.terminal.disposition !== "system_failure" || journal.terminal.projection !== null) return fail("RETAINED_ISSUANCE_FAILURE")
+    }
+  }
   for (const [recordRoot, node] of cellResults) {
     const value = node.value, journal = reopened.records.find((row) => row.start.root === value.start.root)
     if (!journal || journal.terminalProvenance !== "persisted" || !same(journal.start, value.start) || !same(journal.terminal, value.terminal) || value.start.allocationRoot !== allocation.root || !node.links.some((link) => graph.get(link)?.kind === "cell-start")) return fail("RETAINED_CELL_JOURNAL")
-    replayRetainedKernel(value.match, value.execution, allocation.evidenceClass === "empirical")
-    const projection = projectCanonicalKernelOutcomeToEntrantHalfPoints({ execution: value.execution, entrantCandidateRoot: value.cell.entrantCandidateRoot, bottomCandidateRoot: value.bottomCandidateRoot, topCandidateRoot: value.topCandidateRoot, bottomPlayerId: value.match.bottomPlayerId, topPlayerId: value.match.topPlayerId, cellRoot: value.cell.root, conditionRoot: value.cell.conditionRoot, semanticGeometryHash: value.cell.semanticGeometryHash, resultEventRoot: labRoot("league-result-events-v1", value.execution.result.events) })
-    if (!same(projection, value.terminal.projection) || value.terminal.disposition !== "success") return fail("RETAINED_PAYOFF")
+    const cleanup = rows("runtime-cleanup").filter(([, row]) => row.value.identity.attemptRoot === value.start.root), cleanupFailures = rows("runtime-cleanup-failure").filter(([, row]) => row.value.identity.attemptRoot === value.start.root)
+    const invocationFailures = rows("runtime-invocation-failure").filter(([, row]) => row.value.identity.attemptRoot === value.start.root)
+    const identities = [...cleanup, ...cleanupFailures].map(([, row]) => row.value.identity)
+    for (const [candidateRoot, revisionId] of [[value.bottomCandidateRoot, value.match.bottomStrategyRevisionId], [value.topCandidateRoot, value.match.topStrategyRevisionId]]) {
+      const candidate = finalCandidates.find((row: LeagueCandidateInput) => row.admission.candidate.root === candidateRoot)
+      if (!candidate || !identities.some((identity) => identity.sourceRoot === candidate.admission.candidate.proposal.source.root && identity.revisionId === revisionId && identity.budgetRoot === allocation.root && identity.runtimeLimitsRoot === allocation.runtimeRoot && identity.tupleRoot === allocation.tupleRoot)) return fail("RETAINED_CLEANUP_COVERAGE")
+    }
+    const cleanupIncomplete = cleanupFailures.length > 0 || cleanup.some(([, row]) => !row.value.closed.cleanupComplete || row.value.closed.orphanedChild)
+    replayRetainedKernel(value.match, value.execution, allocation.evidenceClass === "empirical", { invocationFailures: invocationFailures.map(([, row]) => row.value), cleanupIncomplete })
+    const terminal = deriveLeagueMatchExecutionTerminal(value.execution, value.cell, value.start, { candidateRoot: value.bottomCandidateRoot }, { candidateRoot: value.topCandidateRoot }, value.match)
+    if (!same(terminal, value.terminal) || head.kind === "run-complete" && terminal.disposition !== "success") return fail("RETAINED_PAYOFF")
     const invocations = rows("runtime-invocation").filter(([, invocation]) => invocation.value.originalEvidence?.identity?.attemptRoot === value.start.root)
     verifyRetainedLeagueProbeInvocations(invocations.map(([, row]) => row.value), value.execution.accounting, value.options.transform, value.match.arenaVariant.initialBounds)
     void recordRoot
+  }
+  for (const [, node] of nodes.filter(([, node]) => ["runtime-invocation", "runtime-invocation-failure", "runtime-cleanup", "runtime-cleanup-failure"].includes(node.kind))) {
+    const identity = node.value.identity ?? node.value.originalEvidence?.identity
+    const start = rows("cell-start").find(([, row]) => row.value.start.root === identity?.attemptRoot)
+    if (!start || !node.links.includes(start[0]) || identity.budgetRoot !== allocation.root) return fail("RETAINED_RUNTIME_CHARGE")
   }
   const matrices = new Map<LabRoot, CompleteMatrix>()
   for (const [recordRoot, node] of rows("complete-matrix")) {
@@ -525,29 +664,42 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     const solved = solveLeagueSnapshot({ snapshot: replay.snapshot, solverPayoffBytes: replay.solverPayoffBytes, workerCount: value.workerCount, shardOrder: value.shardOrder, restart: value.restart })
     if (solved.status !== "solved" || value.snapshotRoot !== replay.snapshot.root || value.payoffBytesRoot !== bytesRoot(replay.solverPayoffBytes) || value.solverBytesRoot !== bytesRoot(solved.canonicalBytes) || !same(solved.output, matrix.solver.output)) return fail("RETAINED_LAYOUT_IDENTITY")
   }
-  if (head.kind === "run-failure") return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
-  if (blocks.length !== allocation.seedBlocks.length * allocation.rounds.length || allocation.rounds.some((round) => allocation.seedBlocks.some((seed) => blocks.filter((block) => block.seed === seed && block.round.roundOrdinal === round.ordinal).length !== 1))) return fail("RETAINED_ROUND_COVERAGE")
+  const complete = head.kind === "run-complete"
+  if (complete && (blocks.length !== allocation.seedBlocks.length * allocation.rounds.length || allocation.rounds.some((round) => allocation.seedBlocks.some((seed) => blocks.filter((block) => block.seed === seed && block.round.roundOrdinal === round.ordinal).length !== 1)))) return fail("RETAINED_ROUND_COVERAGE")
   const closings = rows("red-team-close")
-  if (closings.length !== 1 || closings[0]![0] !== head.value.ledgerRoot) return fail("RETAINED_CLOSE")
-  const close = closings[0]![1].value
+  if (complete && (closings.length !== 1 || closings[0]![0] !== head.value.ledgerRoot)) return fail("RETAINED_CLOSE")
+  const close = closings[0]?.[1].value
   let ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
   const scheduled = allocation.rounds.flatMap((round) => round.jobs)
-  if (!same(head.value.completedJobs, scheduled.map((job) => job.id)) || close.ledger.starts.length !== scheduled.length) return fail("RETAINED_JOB_COVERAGE")
-  for (const [index, start] of close.ledger.starts.entries()) {
+  const retainedStarts = rows("red-team-start").sort(([, a], [, b]) => scheduled.findIndex((job) => job.id === a.value.jobId) - scheduled.findIndex((job) => job.id === b.value.jobId)).map(([, node]) => node.value.start)
+  const retainedTerminals = rows("red-team-terminal").map(([, node]) => node.value.terminal)
+  const probeLedgers = rows("probe-ledger").map(([, node]) => node.value).sort((a, b) => a.probes.length - b.probes.length)
+  const retainedProbes = probeLedgers.at(-1)?.probes ?? []
+  if (new Set(retainedStarts.map((start) => start.root)).size !== retainedStarts.length || retainedStarts.length !== retainedTerminals.length || complete && retainedStarts.length !== scheduled.length) return fail("RETAINED_JOB_COVERAGE")
+  const completedJobs = retainedStarts.flatMap((start, index) => retainedTerminals.find((terminal) => terminal.startRoot === start.root)?.disposition === "system_failure" ? [] : [scheduled[index]!.id])
+  if (!same(completedJobs, head.value.completedJobs)) return fail("RETAINED_JOB_COVERAGE")
+  const reservedMatches = retainedStarts.reduce((sum, start) => sum + start.reservation.matches, 0)
+  if (reservedMatches !== head.value.reservedResponseMatches || reservedMatches + reopened.records.length > allocation.opportunities.matches) return fail("RETAINED_MATCH_CHARGES")
+  for (const [index, start] of retainedStarts.entries()) {
     const { root: _root, allocationRoot: _allocationRoot, ordinal: _ordinal, ...body } = start, job = scheduled[index]
     if (!job || job.id !== rows("red-team-start").find(([, node]) => node.value.start.root === start.root)?.[1].value.jobId || job.producerRequestArtifactRoot !== start.inputRoot || !same(job.reservation, start.reservation)) return fail("RETAINED_JOB_BINDING")
     ledger = startRedTeamAttempt({ ledger, ...body }); if (!same(ledger.starts.at(-1), start)) return fail("RETAINED_START")
-    const terminal = close.ledger.terminals.find((row: any) => row.startRoot === start.root) ?? fail("RETAINED_TERMINAL"), { root: _terminalRoot, charge: _charge, processValidity: _processValidity, ...terminalBody } = terminal
+    const terminal = retainedTerminals.find((row: any) => row.startRoot === start.root) ?? fail("RETAINED_TERMINAL"), { root: _terminalRoot, charge: _charge, processValidity: _processValidity, ...terminalBody } = terminal
+    if (!terminal.evidenceRoots.every((root: LabRoot) => graph.has(root))) return fail("RETAINED_TERMINAL_EVIDENCE")
     ledger = terminalizeRedTeamAttempt({ ledger, ...terminalBody }); if (!same(ledger.terminals.at(-1), terminal)) return fail("RETAINED_TERMINAL")
   }
-  for (const probe of close.ledger.probes) {
+  for (const retained of probeLedgers) {
+    const { root, ...body } = retained
+    if (root !== labRoot("league-red-team-ledger-v1", body) || !same(retained.probes, retainedProbes.slice(0, retained.probes.length)) || retained.starts.some((start: any) => !retainedStarts.some((row) => same(start, row))) || retained.terminals.some((terminal: any) => !retainedTerminals.some((row) => same(terminal, row)))) return fail("RETAINED_PROBE_LEDGER")
+  }
+  for (const probe of retainedProbes) {
     if (["source_order", "worker_shard_completion"].includes(probe.family)) for (const pair of probe.pairs) for (const arm of ["left", "right"] as const) if (rows("layout-verification").filter(([, node]) => node.value.roundRoot === probe.roundRoot && node.value.family === probe.family && node.value.arm === arm && node.value.cellResultRoot === pair[arm].evidenceRoot).length !== 1) return fail("RETAINED_LAYOUT_PROBE_COVERAGE")
     const pairs = probe.pairs.map((pair: any) => Object.fromEntries(["left", "right"].map((arm) => { const observed = pair[arm], node = graph.get(observed.evidenceRoot); if (!node || node.kind !== "cell-result") return fail("RETAINED_PROBE_CELL"); const value = node.value, halfPoints = value.cell.entrantCandidateRoot === probe.candidateRoot ? value.terminal.projection.halfPoints : 2 - value.terminal.projection.halfPoints, conditionRoot = ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"].includes(probe.family) ? value.options.baseCell.conditionRoot : value.cell.conditionRoot; return [arm, { canonicalBytes: bytesRoot(encode(normalizedGameplay(value.execution))), halfPoints, conditionRoot, evidenceRoot: observed.evidenceRoot }] })))
     if (!same(pairs, probe.pairs)) return fail("RETAINED_PROBE_OBSERVATION")
     ledger = recordLeagueProbe({ ledger, family: probe.family, roundRoot: probe.roundRoot, candidateRoot: probe.candidateRoot, pairs }); if (!same(ledger.probes.at(-1), probe)) return fail("RETAINED_PROBE")
   }
   const production = rows("response-production-result").map(([recordRoot, node]) => ({ ...node.value, recordRoot })).sort((a, b) => ledger.starts.findIndex((start) => start.root === a.author.startRoot) - ledger.starts.findIndex((start) => start.root === b.author.startRoot)), verifiedAssessments = new Map<LabRoot, any>(), acceptedByRound = new Map<number, typeof production>()
-  if (production.length !== scheduled.filter((job) => job.operation === "produce").length) return fail("RETAINED_PRODUCTION_COVERAGE")
+  if (complete && production.length !== scheduled.filter((job) => job.operation === "produce").length) return fail("RETAINED_PRODUCTION_COVERAGE")
   for (const produced of production) {
     if (produced.evaluationRole !== "development_response") {
       const start = ledger.starts.find((start) => start.root === produced.author.startRoot) ?? fail("RETAINED_EVALUATION_START"), job = scheduled.filter((job) => job.channel === start.channel)[start.ordinal], imported = finalCandidates.find((candidate: LeagueCandidateInput) => candidate.admission.importEvidence), finalMatrices = head.value.matrixRoots.map((root: LabRoot) => matrices.get(root) ?? fail("RETAINED_EVALUATION_MATRIX"))
@@ -568,10 +720,19 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     if (eligible) { accepted.push(produced); acceptedByRound.set(schedule.ordinal, accepted); verifiedAssessments.set(start.root, assessment) }
   }
   const reentries = rows("counter-reentry").map(([, node]) => { const row = node.value; if (!same(row.assessment, verifiedAssessments.get(row.startRoot))) return fail("RETAINED_REENTRY_ASSESSMENT"); const admission = reenterAcceptedCounter({ ledger, startRoot: row.startRoot, round: row.round, candidateAdmission: row.candidateAdmission, assessment: row.assessment }); if (!same(admission, row.reentry)) return fail("RETAINED_REENTRY"); return admission })
-  const requiredTargets = blocks.flatMap((block) => block.candidateRoots.map((candidateRoot) => ({ roundRoot: block.round.round.root, candidateRoot }))), closed = closeRedTeamLedger({ ledger, requiredTargets, reentries })
-  if (!same(ledger, close.ledger) || !same(closed, close.closed) || closed.processValidity !== "process_valid") return fail("RETAINED_RED_TEAM_CLOSE")
+  const requiredTargets = blocks.flatMap((block) => block.candidateRoots.map((candidateRoot) => ({ roundRoot: block.round.round.root, candidateRoot })))
+  if (ledger.terminals.filter((terminal) => terminal.disposition === "success").some((terminal) => reentries.filter((entry) => entry.candidateAdmissionRoot === terminal.candidateAdmissionRoot).length !== 1)) return fail("RETAINED_COUNTER_REENTRY_COVERAGE")
+  if (complete ? !same(ledger, close.ledger) : ledger.root !== head.value.ledgerRoot) return fail("RETAINED_RED_TEAM_CLOSE")
   for (const [, node] of rows("round-advance")) { const { advanced, ...request } = node.value; if (!same(advanceLeagueRound(request), advanced)) return fail("RETAINED_ADVANCE") }
-  for (const [, node] of rows("response-match-result")) replayRetainedKernel(node.value.match, node.value.execution, allocation.evidenceClass === "empirical")
+  verifyRetainedProductionFailures(input.responseFactoryRepository, allocation, graph, ledger, blocks, finalCandidates)
+  const failedProductionRoots = new Set(rows("response-production-failure").map(([, node]) => node.value.start.root))
+  for (const [, node] of rows("response-match-result")) if (!failedProductionRoots.has(node.value.matchCharge.parentStartRoot)) replayRetainedKernel(node.value.match, node.value.execution, allocation.evidenceClass === "empirical")
+  if (!complete) {
+    if (head.value.processValidity !== "process_invalid" || rows("selection").length || rows("report").length) return fail("RETAINED_FAILURE_DISPOSITION")
+    return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
+  }
+  const closed = closeRedTeamLedger({ ledger, requiredTargets, reentries })
+  if (!same(closed, close.closed) || closed.processValidity !== "process_valid") return fail("RETAINED_RED_TEAM_CLOSE")
   for (const [, node] of rows("selection")) {
     const value = node.value, matrix = [...matrices.values()].find((matrix) => matrix.admitted.snapshot.root === value.mixture.snapshotRoot) ?? fail("RETAINED_SELECTION_MATRIX"), selected = selectionFor(matrix, finalCandidates, blocks, ledger, production, allocation)
     const { candidates: _candidates, ...prior } = value

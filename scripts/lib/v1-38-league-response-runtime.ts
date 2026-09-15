@@ -179,13 +179,26 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
             const provider = input.fixture ? input.fixture.host.createFactorySupervisedRuntime(request) : createFactorySupervisedRuntime({ admission: bound, sourceBytes: bytes, attemptRoot, budgetRoot: allocation.root, matchId, containerName: `${matchId}-${opened.length}`, ownershipLabel: `league-${allocation.root.slice(7, 25)}`, image: allocation.operations.image, invocationLimit: allocation.operations.perProviderInvocations, factoryLifetimeMs: allocation.operations.perMatchMilliseconds })
             opened.push(provider)
             if (provider.identity.executableRoot !== request.executableRoot || provider.identity.sourceRoot !== bound.sourceRoot || provider.identity.factoryProposalRoot !== bound.proposalRoot || provider.identity.attemptRoot !== attemptRoot || provider.identity.budgetRoot !== allocation.root) return fail("RESPONSE_PROVIDER")
-            return wrapLeagueProbeProvider(provider, undefined, arena.initialBounds, (value) => { invocationRecords.push(input.retention.append("response-runtime-invocation", value, [chargeRoot])) }, (request) => input.retention.beforeInvocation(request))
+            const wrapped = wrapLeagueProbeProvider(provider, undefined, arena.initialBounds, (value) => { invocationRecords.push(input.retention.append("response-runtime-invocation", value, [chargeRoot])) }, (request) => input.retention.beforeInvocation(request))
+            return { ...wrapped, invoke: async (request, identity) => {
+              try { return await wrapped.invoke(request, identity) } catch (error) {
+                invocationRecords.push(input.retention.append("response-runtime-invocation-failure", { identity: provider.identity, request, error: error instanceof Error ? error.name : "unknown" }, [chargeRoot]))
+                throw error
+              }
+            } } satisfies FactorySupervisionProvider
           }
           try {
             const candidateProvider = create(measuredAdmission, measuredBytes), otherProvider = create(otherAdmission, opposing.sourceBytes)
             const match = { matchId, seed, arenaVariant: arena, bottomPlayerId: side === "bottom" ? candidatePlayerId : opponentPlayerId, topPlayerId: side === "top" ? candidatePlayerId : opponentPlayerId, bottomStrategyRevisionId: side === "bottom" ? candidateProvider.identity.revisionId : otherProvider.identity.revisionId, topStrategyRevisionId: side === "top" ? candidateProvider.identity.revisionId : otherProvider.identity.revisionId, initialInitiativePlayerId: initial === "candidate" ? candidatePlayerId : opponentPlayerId }
             let otherReceipt: FactorySupervisionReceipt | undefined
-            const receipt = await superviseFactory(measuredAdmission, candidatePlayerId, { match, providers: { [candidatePlayerId]: candidateProvider, [opponentPlayerId]: otherProvider } }, async (request) => { otherReceipt = await superviseFactory(otherAdmission, opponentPlayerId, request, input.fixture?.run ?? runCanonicalLabMatch); return otherReceipt.execution })
+            const receipt = await superviseFactory(measuredAdmission, candidatePlayerId, { match, providers: { [candidatePlayerId]: candidateProvider, [opponentPlayerId]: otherProvider } }, async (request) => {
+              otherReceipt = await superviseFactory(otherAdmission, opponentPlayerId, request, async (runtimeRequest) => {
+                const execution = await (input.fixture?.run ?? runCanonicalLabMatch)(runtimeRequest)
+                if (execution.kind === "failure") records.push(input.retention.append("response-match-execution-failure", { matchCharge, match, execution }, [chargeRoot, ...invocationRecords]))
+                return execution
+              })
+              return otherReceipt.execution
+            })
             if (!otherReceipt) return fail("RESPONSE_OTHER_RECEIPT")
             const stored = publishFactorySupervisionArtifacts(input.repository, receipt), otherStored = publishFactorySupervisionArtifacts(input.repository, otherReceipt)
             const resultRoot = input.retention.append("response-match-result", { matchCharge, match, candidateReceiptArtifactRoot: stored.artifactRoot, opponentReceiptArtifactRoot: otherStored.artifactRoot, execution: receipt.execution }, [chargeRoot, ...invocationRecords]); records.push(resultRoot)

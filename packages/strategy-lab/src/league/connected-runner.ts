@@ -107,7 +107,8 @@ const requireIssued = (value: LeagueIssuedProvider, cell: LeagueCell, start: Lea
   return provider
 }
 const failureTerminal = (cell: LeagueCell, start: LeagueCellStart, code: string): LeagueCellTerminal => createLeagueCellTerminal({ cellRoot: cell.root, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: labRoot("league-cell-failure-v1", { startRoot: start.root, cellRoot: cell.root, code }), projection: null })
-const matchExecutionTerminal = (execution: LabMatchExecution, cell: LeagueCell, start: LeagueCellStart, bottom: LeagueIssuedProvider, top: LeagueIssuedProvider, match: { bottomPlayerId: string; topPlayerId: string }): LeagueCellTerminal => {
+/** Shared data-only reduction for live publication and authenticated reopening. */
+export const deriveLeagueMatchExecutionTerminal = (execution: LabMatchExecution, cell: LeagueCell, start: LeagueCellStart, bottom: Pick<LeagueIssuedProvider, "candidateRoot">, top: Pick<LeagueIssuedProvider, "candidateRoot">, match: { bottomPlayerId: string; topPlayerId: string }): LeagueCellTerminal => {
   const evidenceRoot = labRoot("league-cell-execution-v1", { startRoot: start.root, cellRoot: cell.root, bottomCandidateRoot: bottom.candidateRoot, topCandidateRoot: top.candidateRoot, executionKind: execution.kind, transitionCount: execution.transitions.length, accountingCount: execution.accounting.length })
   if (execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result)) return createLeagueCellTerminal({ cellRoot: cell.root, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot, projection: null })
   if (execution.accounting.some((entry) => !entry.result.ok)) return createLeagueCellTerminal({ cellRoot: cell.root, disposition: "player_violation", processValidity: "process_invalid", evidenceRoot, projection: null })
@@ -127,7 +128,7 @@ export const runLeagueCell = async (input: Readonly<{ repository: LeagueReposito
     if (input.bottom.candidateRoot === input.top.candidateRoot || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomStrategyRevisionId !== input.bottom.identity.revisionId || input.match.topStrategyRevisionId !== input.top.identity.revisionId) return fail("MATCH_BINDING")
     const run = input.runCanonicalLabMatch ?? runCanonicalLabMatch
     const execution = await run({ match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top } })
-    terminal = matchExecutionTerminal(execution, cell, input.start, input.bottom, input.top, input.match)
+    terminal = deriveLeagueMatchExecutionTerminal(execution, cell, input.start, input.bottom, input.top, input.match)
   } catch (error) {
     terminal = failureTerminal(cell, input.start, error instanceof Error ? error.name : "UNKNOWN")
   }

@@ -20,6 +20,7 @@ import { produceLeagueResponse } from "./lib/v1-38-league-response-runtime.js"
 import { positiveResponseFixture } from "./lib/v1-38-league-response-runtime.test.js"
 import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
+import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 
 const directories: string[] = []
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -39,6 +40,32 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
 } }
 
 describe("complete private league command", () => {
+  it("reopens charged player and system failures with no fabricated payoff and rejects tampered failure evidence", async () => {
+    for (const classification of ["player_violation", "system_failure"] as const) {
+      const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
+      const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, operations: { ...base.operations, wallClockMilliseconds: 60000 } })
+      const failingHost: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime(request) {
+        const provider = host.createFactorySupervisedRuntime(request), identity = { ...provider.identity, tupleId: MATCH_KERNEL.tupleId }, issued = new WeakSet<object>()
+        let ordinal = 0
+        return { ...provider, identity, invoke(request) {
+          const evidence = { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: ordinal++, invocationRoot: labRoot("failure-fixture-invocation", request), charged: true, completed: true, outputBytes: 0, result: classification === "player_violation" ? { ok: false, violation: { type: "INVALID_OUTPUT", message: "inert fixture" } } : { ok: false, systemFailure: { code: "FIXTURE_SYSTEM_FAILURE", message: "inert fixture" } } } as LabRuntimeEvidence
+          issued.add(evidence); return evidence
+        }, verify(evidence) { return issued.has(evidence) } }
+      } }
+      const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture: { candidates, host: failingHost, run: runCanonicalLabMatch } })
+      const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), failed = [...graph.values()].find((row) => row.kind === "cell-result")!
+      expect(result).toMatchObject({ processValidity: "process_invalid", empiricalRequirementsComplete: false })
+      expect(failed.value.terminal, JSON.stringify(failed.value.execution)).toMatchObject({ disposition: classification, projection: null })
+      expect([...graph.values()].filter((row) => row.kind === "runtime-invocation")).not.toHaveLength(0)
+      expect([...graph.values()].filter((row) => row.kind === "runtime-cleanup").length).toBeGreaterThanOrEqual(2)
+      const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
+      expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_invalid" })
+      const changed = new LeagueRecordGraph(repository, allocation.operations)
+      const wrong = changed.append("cell-result", { ...failed.value, execution: { ...failed.value.execution, accounting: [] } }, [result.headRoot])
+      const headRoot = changed.append("run-failure", graph.get(result.headRoot)!.value, [wrong])
+      expect(() => verifyRetainedSeriousLeague({ ...verify, headRoot })).toThrow()
+    }
+  }, 120000)
   it("retains two distinct consecutive responses beating their own preceding frozen targets", async () => {
     const candidates = [await candidate(1), await candidate(3)], repository = createLeagueRepository(temporary()), responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-two-response-test-"))); directories.push(responseDirectory)
     const responseFactoryRepository = createFactoryRepository(responseDirectory), base = allocationFixture(), r = (value: unknown) => labRoot("two-response-fixture", value)
@@ -117,14 +144,43 @@ describe("complete private league command", () => {
     expect(readLeagueRecordGraph(repository, failure, allocation.operations).get(failure)!.kind).toBe("run-failure")
     expect(budget.usage).toMatchObject({ workRecords: 162, terminalRecords: 5, exhausted: true })
   }, 60000)
-  it("re-enters a measured positive response into a fresh complete three-candidate matrix and reopens the whole loop", async () => {
+  it.each([false, true, "response-provider"])("re-enters a measured positive response and reopens the whole loop (failure after accepted population growth: %s)", async (failAfterGrowth) => {
     const candidates = [await candidate(1), await candidate(3)], repository = createLeagueRepository(temporary()), responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-positive-league-test-"))); directories.push(responseDirectory)
     const responseFactoryRepository = createFactoryRepository(responseDirectory), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("fixture encode"); return publishFactoryArtifact(responseFactoryRepository, encoded.canonicalBytes) }, r = (label: string) => labRoot("positive-league-fixture", label), base = allocationFixture()
     const producerInput = { split: "development", doctrineFamily: "source-only-positive-response", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } }, producerRequestArtifactRoot = put({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput }), disclosureArtifactRoot = put({ participantId: "author", requestArtifactRoot: producerRequestArtifactRoot, sourceAndBuildDisclosed: true, dependencyArtifactRoots: [] }), provenanceArtifactRoot = put({ participantId: "author", priorExposure: "none", conflicts: "none", origin: "tactical-oracle", deterministicDataOnly: true }), reviewArtifactRoot = put({ reviewerId: "reviewer", participantId: "author", disclosureArtifactRoot, provenanceArtifactRoot, disposition: "accepted", reviewMilliseconds: 0 }), reservation = { ...base.channels[0]!.perAttempt, matches: 72, effortMilliseconds: 360000 }, job = { id: "positive-response", channel: "automated" as const, evaluationRole: "development_response" as const, operation: "produce" as const, producerRequestArtifactRoot, disclosureArtifactRoot, provenanceArtifactRoot, reviewArtifactRoot, participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }
     const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: responseDirectory }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, opportunities: { ...base.opportunities, attemptedCandidates: 1, acceptedResponseSlots: 1, matches: 500 }, operations: { ...base.operations, maxPopulation: 3, perAttemptMilliseconds: 360000, wallClockMilliseconds: 600000, maxArtifactBytes: 250000000, maxArtifactRecords: 200000 }, channels: base.channels.map((channel) => channel.channel === "automated" ? { ...channel, disposition: "allocated", opportunities: 1, ceilings: reservation, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel), rounds: [{ ordinal: 0, acceptedSlots: 1, jobs: [job] }, base.rounds[1]!] }), productionFixture = positiveResponseFixture(new Set(candidates.map((row) => row.admission.candidate.proposal.source.root)))
     let cells = 0, responseMatches = 0
-    const fixture: LeagueFixtureSeams = { candidates, host, run: async ({ match, providers }) => { cells++; const state = MATCH_KERNEL.createMachineV119(match).initialState; expect(state.soldiers).toHaveLength(16); for (const provider of Object.values(providers)) provider.close(); return { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never }, produce: (input) => produceLeagueResponse({ ...input, fixture: { ...productionFixture, run: (request) => { responseMatches++; return productionFixture.run(request) } } }) }
+    const fixture: LeagueFixtureSeams = { candidates, host: { createFactorySupervisedRuntime(request) { const provider = host.createFactorySupervisedRuntime(request); return { ...provider, identity: { ...provider.identity, tupleId: MATCH_KERNEL.tupleId } } } }, run: async ({ match, providers }) => { cells++; if (failAfterGrowth === true && cells === 69) return runCanonicalLabMatch({ match, providers }); const state = MATCH_KERNEL.createMachineV119(match).initialState; expect(state.soldiers).toHaveLength(16); for (const provider of Object.values(providers)) provider.close(); return { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never }, produce: (input) => produceLeagueResponse({ ...input, fixture: { ...productionFixture,
+      host: { createFactorySupervisedRuntime(request) {
+        const provider = productionFixture.host.createFactorySupervisedRuntime(request)
+        return failAfterGrowth === "response-provider" ? { ...provider, identity: { ...provider.identity, tupleId: MATCH_KERNEL.tupleId }, invoke() { throw new Error("inert provider failure") } } : provider
+      } },
+      run: (request) => { responseMatches++; return failAfterGrowth === "response-provider" ? runCanonicalLabMatch(request) : productionFixture.run(request) }
+    } }) }
     const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, fixture }), graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), head = graph.get(result.headRoot)!.value
+    if (failAfterGrowth === "response-provider") {
+      expect(head, JSON.stringify(head)).toMatchObject({ processValidity: "process_invalid", executedCells: 44, reservedResponseMatches: 72, completedJobs: [] })
+      expect([...graph.values()].filter((row) => row.kind === "response-runtime-invocation-failure")).toHaveLength(1)
+      expect([...graph.values()].filter((row) => row.kind === "response-runtime-cleanup")).toHaveLength(2)
+      const failed = [...graph.values()].find((row) => row.kind === "response-match-execution-failure")!
+      expect(failed.value.execution).toMatchObject({ kind: "failure", accounting: [], failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } })
+      const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
+      expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_invalid" })
+      const wrong = new LeagueRecordGraph(repository, allocation.operations)
+      const altered = wrong.append("response-production-failure", { ...[...graph.values()].find((row) => row.kind === "response-production-failure")!.value, matchCount: 0 }, [result.headRoot])
+      expect(() => verifyRetainedSeriousLeague({ ...verify, headRoot: wrong.append("run-failure", head, [altered]) })).toThrow("RETAINED_RESPONSE_FAILURE_START")
+      return
+    }
+    if (failAfterGrowth === true) {
+      expect(head).toMatchObject({ processValidity: "process_invalid", executedCells: 69, completedJobs: [job.id] })
+      expect([...graph.values()].filter((row) => row.kind === "counter-reentry")).toHaveLength(1)
+      expect([...graph.values()].filter((row) => row.kind === "complete-matrix").map((row) => row.value.population.candidateAdmissionRoots.length).sort()).toEqual([2, 3])
+      const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
+      expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_invalid", empiricalRequirementsComplete: false })
+      const wrong = new LeagueRecordGraph(repository, allocation.operations).append("run-failure", { ...head, ledgerRoot: r("tampered-failure-ledger") }, [result.headRoot])
+      expect(() => verifyRetainedSeriousLeague({ ...verify, headRoot: wrong })).toThrow("RETAINED_RED_TEAM_CLOSE")
+      return
+    }
     expect(head, JSON.stringify(head)).toMatchObject({ processValidity: "process_valid", executedCells: 122, completedJobs: [job.id] })
     expect(cells).toBe(122); expect(responseMatches).toBe(48)
     expect([...graph.values()].filter((row) => row.kind === "counter-reentry")).toHaveLength(1)
