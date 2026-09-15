@@ -383,8 +383,13 @@ export const admitCompletePayoffSnapshot = (
       halfPoints: projection.halfPoints,
     }
   })
-  const solverPayoffBytes = canonicalBytes(projections)
-  const solverPayoffRoot = labRoot("league-solver-payoffs-v1", projections)
+  // The solver canonicalizes its transport by entrant/opponent/projection identity,
+  // independently of the cell ordinal stream retained below.
+  const solverProjections = [...projections].sort((left, right) =>
+    `${left.entrantCandidateRoot}:${left.opponentCandidateRoot}:${left.projectionRoot}`.localeCompare(`${right.entrantCandidateRoot}:${right.opponentCandidateRoot}:${right.projectionRoot}`),
+  )
+  const solverPayoffBytes = canonicalBytes(solverProjections)
+  const solverPayoffRoot = labRoot("league-solver-payoffs-v1", solverProjections)
   const cellStream = describeLeagueCellStream(
     ordered.map((entry) => encoder.encode(`${entry.cell.root}\n`)),
   )
