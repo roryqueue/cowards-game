@@ -31,7 +31,7 @@ describe("factory empirical authorship prerequisite", () => {
       { method: "error", params: { turnId: "other-turn", message: "failed" } },
       { method: "thread/tokenUsage/updated", params: { turnId: "turn", tokenUsage: { total: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, totalTokens: 2 } } } },
       { method: "turn/completed", params: { turn: { id: "turn", status: "completed" } } },
-    ].map(JSON.stringify).join("\n")
+    ].map((value) => JSON.stringify(value)).join("\n")
     expect(() => decodeChargedAuthorTranscript(events, request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
   })
   it("accepts a compact exact user-echo transcript through retained-evidence decoding", () => {
@@ -46,12 +46,12 @@ describe("factory empirical authorship prerequisite", () => {
       { method: "thread/tokenUsage/updated", params: { turnId: "turn", tokenUsage: { total: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, totalTokens: 2 } } } },
       { method: "turn/completed", params: { turn: { id: "turn", status: "completed" } } },
     ]
-    const events = eventValues.map(JSON.stringify).join("\n")
+    const events = eventValues.map((value) => JSON.stringify(value)).join("\n")
     expect(decodeChargedAuthorTranscript(events, request).returnedUsage).toMatchObject({ inputTokens: 1, outputTokens: 1 })
-    const duplicate = [...eventValues.slice(0, 4), { method: "item/completed", params: { threadId: "thread", turnId: "turn", item: { id: "user-2", type: "userMessage", content: [{ type: "text", text: context }] } } }, ...eventValues.slice(4)].map(JSON.stringify).join("\n")
+    const duplicate = [...eventValues.slice(0, 4), { method: "item/completed", params: { threadId: "thread", turnId: "turn", item: { id: "user-2", type: "userMessage", content: [{ type: "text", text: context }] } } }, ...eventValues.slice(4)].map((value) => JSON.stringify(value)).join("\n")
     expect(() => decodeChargedAuthorTranscript(duplicate, request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
-    const emptyId = structuredClone(eventValues); emptyId[2]!.params.item.id = ""
-    expect(() => decodeChargedAuthorTranscript(emptyId.map(JSON.stringify).join("\n"), request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
+    const emptyId = structuredClone(eventValues); emptyId[2]!.params!.item!.id = ""
+    expect(() => decodeChargedAuthorTranscript(emptyId.map((value) => JSON.stringify(value)).join("\n"), request)).toThrow("FACTORY_EXECUTION_AUTHOR_PROTOCOL")
   })
   it("covers admission, ledger and identity dependencies in the reviewed source snapshot",()=>{
     const paths=factoryAssessmentImplementationManifest().entries.map(entry=>entry.path)

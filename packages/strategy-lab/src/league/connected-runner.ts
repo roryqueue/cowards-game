@@ -56,7 +56,7 @@ const issuedProviders = new WeakSet<object>()
 const privateProviders = new WeakMap<object, FactorySupervisionProvider>()
 const issueBindings = new WeakMap<object, Readonly<{ admission: FactoryAdmission; candidate: FactoryCandidate }>>()
 
-const readCandidateClosure = (closure: FactoryCandidateClosure): Readonly<{ candidate: FactoryCandidate; packet: ReturnType<typeof FactoryOraclePacketSchema.parse>; proposal: ReturnType<typeof FactoryProposalSchema.parse>; validation: ReturnType<typeof FactoryValidationEvidenceSchema.parse>; sourceBytes: Uint8Array }> => {
+export const readCandidateClosure = (closure: FactoryCandidateClosure): Readonly<{ candidate: FactoryCandidate; packet: ReturnType<typeof FactoryOraclePacketSchema.parse>; proposal: ReturnType<typeof FactoryProposalSchema.parse>; validation: ReturnType<typeof FactoryValidationEvidenceSchema.parse>; sourceBytes: Uint8Array }> => {
   if (![closure.candidatePublicationArtifactRoot, closure.sourceArtifactRoot, closure.packetArtifactRoot, closure.proposalArtifactRoot, closure.validationArtifactRoot].every(isRoot)) return fail("CLOSURE_ROOT")
   const descriptor = parse(readFactoryArtifact(closure.factoryRepository, closure.candidatePublicationArtifactRoot))
   if (!exact(descriptor, ["schemaVersion", "privacy", "root", "candidate", "independenceReceipt", "supervisionReceiptRoot", "independenceStatus"])) return fail("PUBLICATION_DESCRIPTOR")
