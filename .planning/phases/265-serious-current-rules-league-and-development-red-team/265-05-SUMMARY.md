@@ -61,7 +61,7 @@ status: complete
 
 # Phase 265 Plan 05: Pure Selection and Private Report Summary
 
-**Receipt-derived pure portfolios, robust-pure/no-finalist proof reduction, and bounded private league reports now preserve qualified evidence without mixture promotion, leakage, or overclaiming.**
+**Source-backed pure portfolios, recomputed robust-pure/no-finalist selection, and bounded private league reports now preserve qualified evidence without mixture promotion, claim laundering, leakage, or overclaiming.**
 
 ## Performance
 
@@ -72,9 +72,9 @@ status: complete
 
 ## Accomplishments
 
-- Added a pure-only portfolio reducer that retains the diagnostic mixture as a separate root, rejects labels/cosmetics implicitly by requiring six receipt-derived dimensions, and records clone, correlation, missing behavior, incomplete response, and duplicate evidence failures.
-- Added a robust-pure reducer that accepts only a portfolio candidate with every frozen proof gate, including `maximin_oracle_relative_pure`; any failed proof produces rooted `no_robust_pure_finalist_found` rather than a softened result.
-- Added complete private report publication and bounded data-only reopening. Reports bind the snapshot, solver manifest/output, mixture, portfolio, red-team and finalist roots; expose required aggregate curves, matrices, distributions, graphs, allocations, attempts, worst cases, and gaps; and reject unsafe fields, unsupported claims, stale graphs, derived unterminated terminals, and invalid remnants.
+- Replaced the initial root-and-enum selection input with re-admitted canonical `FactoryFingerprintEvidence` and persisted factory producer bytes joined to the immutable candidate admission, proposal, validation, supervision receipt, and source digest. Cosmetic labels, arbitrary roots, correlation, and incomplete evidence fail closed.
+- Recomputed frozen strict `> .55`, `> .60`, and `< .60` comparisons from qualified score rows, and selected `maximin_oracle_relative_pure` only by complete pure-worst-case comparison, with no caller pass flag or added numeric floor. Any missing/weak/process-invalid evidence produces rooted `no_robust_pure_finalist_found`.
+- Added complete private report publication and bounded data-only reopening. Reports bind the snapshot, solver manifest/output, mixture, portfolio, red-team and issued reducer disposition; expose required aggregate curves, matrices, distributions, graphs, allocations, attempts, worst cases, and gaps; and reject unsafe fields, unsupported claims, stale graphs, forged dispositions, derived unterminated terminals, and invalid remnants.
 
 ## Task Commits
 
@@ -82,6 +82,7 @@ status: complete
 2. **Task 1 GREEN:** `b96d8fb4` — receipt-derived portfolio and robust-pure disposition.
 3. **Task 2 RED:** `c3c53d15` — failing private-report coverage.
 4. **Task 2 GREEN:** `73dcb6a0` — rooted private report publication and bounded reopening.
+5. **Acceptance correction:** `1621b124`, `971c4ee5` — content-validated source/fingerprint admission, recomputed thresholds/maximin, and report disposition capability binding.
 
 ## Files Created/Modified
 
@@ -92,13 +93,22 @@ status: complete
 
 ## Decisions Made
 
-- The frozen proof-gate reducer does not consume aggregate win rate, source labels, source hashes, or mixture weights as a substitute for pure evidence.
-- `maximin_oracle_relative_pure` is a named proof gate only; no numeric floor was added or softened.
+- The rejected initial v1 selection shape accepted caller-provided roots and enums. The final reducer uses canonical factory artifacts and recomputed evidence rows instead; this was an acceptance correction, not empirical work.
+- The frozen reducer does not consume aggregate win rate, source labels, source hashes, mixture weights, pass flags, or proof-root claims as substitutes for pure evidence.
+- `maximin_oracle_relative_pure` is derived from complete qualified pure worst cases; no numeric floor was added or softened.
 - Reopened `derived_unterminated_start` records and invalid partial-file remnants are process-invalid evidence, never persisted empirical success.
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Evidence integrity] Replaced caller-asserted selection and finalist proof shapes**
+- **Found during:** Plan acceptance review.
+- **Issue:** The initial selection reducer accepted arbitrary roots plus `independence`/`status` enum claims, allowing a fabricated portfolio or finalist.
+- **Fix:** Re-admit canonical factory fingerprint/producer artifacts and candidate joins, derive clone/correlation and diversity from retained records, recompute frozen strict-score and maximin gates, and make reports accept only a disposition emitted by that reducer.
+- **Files modified:** `packages/strategy-lab/src/league/selection.ts`, `packages/strategy-lab/src/league/selection.test.ts`, `packages/strategy-lab/src/league/report.ts`, `packages/strategy-lab/src/league/report.test.ts`.
+- **Verification:** Exact focused suite passed 15/15 and strategy-lab typecheck passed.
+- **Committed in:** `1621b124`, `971c4ee5`.
 
 ## Known Stubs
 
@@ -115,7 +125,7 @@ Plan 06 can compose the existing trusted runtime constructor and Plan 07 can pro
 ## Self-Check: PASSED
 
 - All four owned source/test files and this summary exist.
-- Task commits `09f52b72`, `b96d8fb4`, `c3c53d15`, and `73dcb6a0` exist on `main`.
+- Task/correction commits `09f52b72`, `b96d8fb4`, `c3c53d15`, `73dcb6a0`, `1621b124`, and `971c4ee5` exist on `main`.
 - No task commit deletes tracked files.
 - Focused selection/fingerprint/report/repository suite passed 15/15 tests; strategy-lab typecheck passed.
 
