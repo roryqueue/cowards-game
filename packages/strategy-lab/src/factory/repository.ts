@@ -39,6 +39,7 @@ const atomic = (repository: FactoryRepository, name: string, bytes: Uint8Array) 
     repository.durability.syncDirectory(directory)
     return
   }
+  repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal: name.endsWith(".terminal.json") })
   const temporary = repository.temporaryName(target)
   if (!temporary.startsWith(`${target}.tmp-`) || basename(temporary) !== temporary.slice(directory.length + 1)) return fail("TEMPORARY")
   const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
@@ -53,9 +54,11 @@ export interface FactoryRepository {
   /** Injected only to make the charge-before-validation durability boundary testable. */
   readonly durability: Readonly<{ syncDirectory(directory: string): void }>
   readonly temporaryName: (target: string) => string
+  /** Optional fresh-store resource gate; called before any new file is opened. */
+  readonly beforePublication?: (publication: { target: string; byteLength: number; terminal: boolean }) => void
 }
-export const createFactoryRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string } = {}): Readonly<FactoryRepository> =>
-  freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory }, temporaryName: options.temporaryName ?? temporaryName })
+export const createFactoryRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string; readonly beforePublication?: FactoryRepository["beforePublication"] } = {}): Readonly<FactoryRepository> =>
+  freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory }, temporaryName: options.temporaryName ?? temporaryName, ...(options.beforePublication ? { beforePublication: options.beforePublication } : {}) })
 export const publishFactoryArtifact = (repository: FactoryRepository, bytes: Uint8Array): LabRoot => { if (!(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > CAP) return fail("ARTIFACT"); const id = root(bytes); atomic(repository, artifactName(id), bytes); return id }
 export const readFactoryArtifact = (repository: FactoryRepository, id: LabRoot): Uint8Array => { const bytes = boundedRead(join(safeDirectory(repository.directory), artifactName(id))); if (root(bytes) !== id) return fail("ARTIFACT_DIGEST"); return new Uint8Array(bytes) }
 export const recordFactoryAttemptStart = (repository: FactoryRepository, start: FactoryAttemptStart): void => { const charged = validateFactoryAttemptStart(start); atomic(repository, startName(charged.root), canonicalBytes(charged)) }

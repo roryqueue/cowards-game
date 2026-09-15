@@ -38,6 +38,17 @@ const terminal = (charged: LeagueCellStart, marker = "first") =>
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 
 describe("immutable private league evidence", () => {
+  it("gates journal writes before publication and leaves idempotent starts uncharged twice", () => {
+    const prior = repository(), charged = start(); let calls = 0, stopped = false
+    const repo = createLeagueRepository(prior.directory, { beforePublication(value) { calls++; if (stopped && !value.terminal) throw new Error("allocation-exhausted") } })
+    recordLeagueCellStart(repo, charged); recordLeagueCellStart(repo, charged)
+    expect(calls).toBe(1); stopped = true
+    const snapshot = directorySnapshot(repo.directory)
+    expect(() => recordLeagueCellStart(repo, start("other"))).toThrow("allocation-exhausted")
+    expect(directorySnapshot(repo.directory)).toEqual(snapshot)
+    publishLeagueCellTerminal(repo, charged, terminal(charged))
+    expect(reopenLeagueEvidence(prior, { maxBytes: 1000000, maxRecords: 1000 }).records[0]!.terminalProvenance).toBe("persisted")
+  })
   it("publishes matching bytes idempotently and rejects a descriptor digest mismatch", () => {
     const repo = repository(), bytes = new TextEncoder().encode("root-only league artifact")
     const artifactRoot = publishLeagueArtifact(repo, bytes)

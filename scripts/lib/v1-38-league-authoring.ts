@@ -28,6 +28,7 @@ export interface LeagueAuthoringPreflight { allocation: LeagueExecutionAllocatio
 /** Validate the entire explicit job before creating directories, intake records or a model process. */
 export const preflightLeagueAuthoring = (input: { allocation: unknown; jobId: string; repository: FactoryRepository }): Readonly<LeagueAuthoringPreflight> => {
   const allocation = admitLeagueExecutionAllocation(input.allocation), job = allocation.rounds.flatMap((round) => round.jobs).find((job) => job.id === input.jobId) ?? fail("JOB")
+  if (allocation.outputDirectories.responseFactory !== input.repository.directory) return fail("OUTPUT_BINDING")
   const request = read(input.repository, job.producerRequestArtifactRoot)
   if (!exact(request, ["producerIdentity", "origin", "evidenceClass", "producerInput"]) || request.evidenceClass !== "real_producer") return fail("REQUEST")
   const disclosure = read(input.repository, job.disclosureArtifactRoot), provenance = read(input.repository, job.provenanceArtifactRoot), review = read(input.repository, job.reviewArtifactRoot)
@@ -100,6 +101,11 @@ export const executeLeagueAuthoring = async (input: { repository: FactoryReposit
         const model = { ...template, sourceMessage, promptRoot: byteRoot(new TextEncoder().encode(sourceMessage)), contextRoot: target === null ? template.contextRoot : labRoot("league-response-context-v1", { templateContextRoot: template.contextRoot, targetArtifactRoot: input.targetArtifactRoot }) }
         mkdirSync(model.stateDirectory, { mode: 0o700 }); mkdirSync(model.disclosedDirectory, { mode: 0o700 })
         if (readdirSync(model.stateDirectory).length || readdirSync(model.disclosedDirectory).length) return fail("MODEL_DIRECTORY")
+        if (target !== null) for (const candidate of (target as any).candidates ?? []) {
+          const bytes = readFactoryArtifact(input.repository, candidate.sourceArtifactRoot)
+          if (bytes.length !== candidate.byteLength || bytes.length > allocation.operations.sourceLimitBytes || candidate.disclosedFile !== `candidate-${candidate.sourceArtifactRoot.slice(7)}.ts`) return fail("TARGET_SOURCE")
+          writeFileSync(join(model.disclosedDirectory, candidate.disclosedFile), bytes, { flag: "wx", mode: 0o600 })
+        }
         writeFileSync(join(model.stateDirectory, "config.toml"), `model = ${JSON.stringify(model.requestedModel)}\napproval_policy = "never"\nsandbox_mode = "read-only"\n`, { flag: "wx", mode: 0o600 })
         symlinkSync(realpathSync(model.existingAuthFile), join(model.stateDirectory, "auth.json"))
         modelTokens = null
@@ -129,7 +135,7 @@ export const executeLeagueAuthoring = async (input: { repository: FactoryReposit
         request = { ...request, producerInput: { ...packet, sourceBytes: new TextEncoder().encode(sourceUtf8) } }
       } else if (request.producerIdentity === "emitTeacherFactoryPacket") {
         const teacher = request.producerInput as { searches: TeacherSearchRequest[]; request: unknown }, receipts = []
-        for (const search of teacher.searches) { if (clock() - before >= job.reservation.effortMilliseconds) return fail("TEACHER_TIMEBOX"); const receipt = searchCanonicalCounterfactual(search); teacherArtifactRoots.push(publishFactoryArtifact(input.repository, encode({ schemaVersion: "league-teacher-search-v1", startRoot, requestRoot: labRoot("league-teacher-search-request-v1", search), receipt }))); receipts.push(receipt) }
+        for (const search of teacher.searches) { if (clock() - before >= job.reservation.effortMilliseconds) return fail("TEACHER_TIMEBOX"); const receipt = searchCanonicalCounterfactual(search); teacherArtifactRoots.push(retainRaw(input.repository, encode({ schemaVersion: "league-teacher-search-v1", startRoot, requestRoot: labRoot("league-teacher-search-request-v1", search), receipt }), allocation.operations.maxArtifactBytes)); receipts.push(receipt) }
         const student = distillLegalStudent(receipts.flatMap(projectTeacherSearchToLegalTraining))
         request = { ...request, producerInput: { student, request: teacher.request } }
       }
@@ -168,7 +174,7 @@ export const verifyRetainedLeagueAuthoring = (repository: FactoryRepository, all
   if (ingestion.producerIdentity === "emitTeacherFactoryPacket") {
     const searches = request.producerInput.searches as TeacherSearchRequest[]
     if (result.teacherArtifactRoots.length !== searches.length) return fail("RETAINED_TEACHER_COVERAGE")
-    const receipts = result.teacherArtifactRoots.map((root: LabRoot, ordinal: number) => { const row = read(repository, root) as any, search = searches[ordinal]!; if (row.startRoot !== result.startRoot || row.requestRoot !== labRoot("league-teacher-search-request-v1", search) || row.receipt.nodesVisited > Number(search.maxNodes) || row.receipt.depthReached > Number(search.maxDepth)) return fail("RETAINED_TEACHER_BINDING"); return row.receipt })
+    const receipts = result.teacherArtifactRoots.map((root: LabRoot, ordinal: number) => { const bytes = readRetainedLeagueAuthorRaw(repository, root, allocation.operations.maxArtifactBytes), parsed = admitCanonicalJsonBytes(bytes, { profile: "canonical-manifest", operation: "require-canonical" }); if (!parsed.ok) return fail("RETAINED_TEACHER_BYTES"); const row = parsed.value as any, search = searches[ordinal]!; if (row.schemaVersion !== "league-teacher-search-v1" || row.startRoot !== result.startRoot || row.requestRoot !== labRoot("league-teacher-search-request-v1", search) || row.receipt.nodesVisited > Number(search.maxNodes) || row.receipt.depthReached > Number(search.maxDepth)) return fail("RETAINED_TEACHER_BINDING"); return row.receipt })
     const student = distillLegalStudent(receipts.flatMap(projectTeacherSearchToLegalTraining)), actual = ingestion.producerInput as any
     if (labRoot("league-student-binding", student) !== labRoot("league-student-binding", actual.student) || labRoot("league-teacher-request-binding", request.producerInput.request) !== labRoot("league-teacher-request-binding", actual.request)) return fail("RETAINED_STUDENT")
   }

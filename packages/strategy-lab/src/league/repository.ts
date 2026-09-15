@@ -44,6 +44,7 @@ export interface LeagueRepository {
   readonly directory: string
   readonly durability: Readonly<{ syncDirectory(directory: string): void }>
   readonly temporaryName: (target: string) => string
+  readonly beforePublication?: (publication: { target: string; byteLength: number; terminal: boolean }) => void
 }
 
 /** Root-only durable pre-dispatch evidence. It deliberately contains no source, memory, or objective payload. */
@@ -77,6 +78,7 @@ const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array): 
     repository.durability.syncDirectory(directory)
     return
   }
+  repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal: name.endsWith(".terminal.json") })
   const temporary = repository.temporaryName(target)
   if (!temporary.startsWith(`${target}.tmp-`) || basename(temporary) !== temporary.slice(directory.length + 1)) return fail("TEMPORARY")
   const descriptor = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
@@ -85,8 +87,8 @@ const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array): 
   repository.durability.syncDirectory(directory)
 }
 
-export const createLeagueRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string } = {}): Readonly<LeagueRepository> =>
-  freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory }, temporaryName: options.temporaryName ?? ((target) => `${target}.tmp-${randomUUID()}`) }) as LeagueRepository
+export const createLeagueRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string; readonly beforePublication?: LeagueRepository["beforePublication"] } = {}): Readonly<LeagueRepository> =>
+  freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory }, temporaryName: options.temporaryName ?? ((target) => `${target}.tmp-${randomUUID()}`), ...(options.beforePublication ? { beforePublication: options.beforePublication } : {}) }) as LeagueRepository
 
 /** Raw private artifact identity is content-addressed; safe projections retain only its root. */
 export const publishLeagueArtifact = (repository: LeagueRepository, bytes: Uint8Array): LabRoot => {

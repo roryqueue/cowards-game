@@ -12,6 +12,18 @@ const start = () => createFactoryAttemptStart({ taskRoot: r, budgetRoot: r, cand
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }) })
 
 describe("content-addressed private factory repository", () => {
+  it("gates new bytes and records before publication while identical artifacts remain idempotent", () => {
+    const original = repository(); let bytes = 0, records = 0, byteLimit = 6
+    const repo = createFactoryRepository(original.directory, { beforePublication(value) { if (bytes + value.byteLength > byteLimit || records + 1 > 2) throw new Error("allocation-retention-limit"); bytes += value.byteLength; records++ } })
+    const first = publishFactoryArtifact(repo, new TextEncoder().encode("abc"))
+    expect(publishFactoryArtifact(repo, new TextEncoder().encode("abc"))).toBe(first)
+    expect([bytes, records]).toEqual([3, 1])
+    expect(() => publishFactoryArtifact(repo, new TextEncoder().encode("four"))).toThrow("allocation-retention-limit")
+    publishFactoryArtifact(repo, new TextEncoder().encode("def"))
+    byteLimit = 100
+    expect(() => publishFactoryArtifact(repo, new TextEncoder().encode("x"))).toThrow("allocation-retention-limit")
+    expect(readFactoryArtifact(original, first)).toEqual(new TextEncoder().encode("abc"))
+  })
   it("publishes bytes once, charges before terminal publication, and resumes conservatively", () => {
     const repo = repository(), bytes = new TextEncoder().encode("private-candidate")
     const root = publishFactoryArtifact(repo, bytes)
