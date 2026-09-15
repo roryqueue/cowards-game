@@ -9,7 +9,7 @@ import { publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } f
 import { admitFrozenModelBundle, deriveFrozenModelBundleRoot, deriveFrozenModelRequestRecordRoot, deriveFrozenModelRawResponseRecordRoot, deriveFrozenModelResponseRoot } from "../../packages/strategy-oracle-model/src/bundle.js"
 import { assertModelSourceClosure } from "../../packages/strategy-oracle-model/src/emit.js"
 import { searchCanonicalCounterfactual, type TeacherSearchRequest } from "../../packages/strategy-oracle-teacher/src/teacher.js"
-import { distillLegalStudent } from "../../packages/strategy-oracle-teacher/src/distill.js"
+import { distillLegalStudent, projectTeacherSearchToLegalTraining } from "../../packages/strategy-oracle-teacher/src/distill.js"
 import { admitFrozenIntakeProtocol } from "../../packages/strategy-lab/src/factory/intake-protocol.js"
 import { ingestNamedFactoryPacket, readFactoryIngestion, type FactoryIngestionRequest } from "../ingest-v1-38-factory-packet.js"
 import { createFactoryAppServerTransport, FactoryAppServerTurnFailure, type FactoryAppServerTransport, type FactoryAppServerTransportOptions, type FactoryAppServerTurnResult } from "../v1-38-factory-app-server-transport.js"
@@ -110,7 +110,7 @@ export const executeLeagueAuthoring = async (input: { repository: FactoryReposit
       } else if (request.producerIdentity === "emitTeacherFactoryPacket") {
         const teacher = request.producerInput as { searches: TeacherSearchRequest[]; request: unknown }, receipts = []
         for (const search of teacher.searches) { if (clock() - before >= job.reservation.effortMilliseconds) return fail("TEACHER_TIMEBOX"); const receipt = searchCanonicalCounterfactual(search); publishFactoryArtifact(input.repository, encode({ schemaVersion: "league-teacher-search-v1", startRoot, receipt })); receipts.push(receipt) }
-        const student = distillLegalStudent(receipts)
+        const student = distillLegalStudent(receipts.flatMap(projectTeacherSearchToLegalTraining))
         request = { ...request, producerInput: { student, request: teacher.request } }
       }
       const produced = await ingestNamedFactoryPacket(request, input.repository)

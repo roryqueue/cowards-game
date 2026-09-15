@@ -12,7 +12,7 @@ import { NUMERIC_DIMENSIONS, freezeNumericCalibrationThreshold, type NumericComp
 import { labRoot, type LabRoot } from "../contracts.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../factory/contracts.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../factory/ledger.js"
-import { admitLeagueCandidate, createLeagueCandidateAdmission, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints } from "./contracts.js"
+import { admitLeagueCandidate, createLeagueCandidateAdmission, createLeagueProducedCandidateAdmission, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints } from "./contracts.js"
 
 const directories: string[] = []
 afterEach(() => { for (const path of directories.splice(0)) rmSync(path, { recursive: true, force: true }) })
@@ -80,6 +80,19 @@ const projection = (winner: "bottom" | "top" | "DRAW", entrant: "bottom" | "top"
 }
 
 describe("private league contracts", () => {
+  it("joins a fresh pre-work reservation to the final candidate without changing legacy admission", () => {
+    const prior = admission(), allocationRoot = root("a"), redTeamStartRoot = root("b"), authoringArtifactRoot = root("c")
+    const start = createFactoryAttemptStart({ taskRoot: allocationRoot, budgetRoot: allocationRoot, candidateRoot: root("d"), inputRoot: root("d"), resourceAccountingRoot: redTeamStartRoot, authoringMechanism: "automated-oracle", retryParentRoot: null })
+    const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "accepted", outputRoot: prior.candidate.root, validationRoot: prior.candidate.validation.root, duplicateEvidenceRoot: root("e"), finalEvidenceRoot: authoringArtifactRoot })
+    const { schemaVersion: _schema, privacy: _privacy, root: _root, ...fields } = prior.league
+    const input = { ...fields, attemptStart: start, attemptTerminal: terminal, productionEvidence: { allocationRoot, redTeamStartRoot, authoringArtifactRoot } }
+    expect(createLeagueProducedCandidateAdmission(input).attemptStart.candidateRoot).not.toBe(prior.candidate.root)
+    expect(() => createLeagueCandidateAdmission({ ...fields, attemptStart: start, attemptTerminal: terminal })).toThrow("CANDIDATE_EVIDENCE")
+    for (const patch of [{ outputRoot: root("f") }, { validationRoot: root("f") }, { finalEvidenceRoot: root("f") }, { disposition: "unresolved" as const }]) {
+      expect(() => createLeagueProducedCandidateAdmission({ ...input, attemptTerminal: createFactoryAttemptTerminal({ ...terminal, ...patch }) })).toThrow("PRODUCTION_EVIDENCE")
+    }
+    expect(() => createLeagueProducedCandidateAdmission({ ...input, productionEvidence: { ...input.productionEvidence, allocationRoot: root("f") } })).toThrow("PRODUCTION_EVIDENCE")
+  })
   it("imports finalized packet-reserved evidence without rewriting unresolved historical terminals", async () => {
     const fixture = await importedCandidateFixture(1), original = JSON.stringify(fixture.input.attemptTerminal)
     expect(fixture.candidateAdmission.importEvidence).toMatchObject({ sourceSlot: "S01", qualification: "base_distinct" })
