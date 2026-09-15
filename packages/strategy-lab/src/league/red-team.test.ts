@@ -82,7 +82,8 @@ describe("all-channel development red team", () => {
   })
 
   it("returns a positive counter to actual PSRO and cannot close while that counter is omitted", () => {
-    const projections = Array.from({ length: 8 }, (_, ordinal) => ({ entrantCandidateRoot: root("a"), opponentCandidateRoot: root("b"), projectionRoot: root(String(ordinal)), halfPoints: 1 }))
+    const [entrantCandidateRoot, opponentCandidateRoot] = [root("a"), root("b")].sort()
+    const projections = Array.from({ length: 8 }, (_, ordinal) => ({ entrantCandidateRoot, opponentCandidateRoot, projectionRoot: root(String(ordinal)), halfPoints: 1 })).sort((left, right) => left.projectionRoot.localeCompare(right.projectionRoot))
     const snapshot = createCompletePayoffSnapshot({ populationRoot: root("population"), cellChunkRoots: [root("chunk")], solverPayoffRoot: labRoot("league-solver-payoffs-v1", projections), expectedCellCount: 8, completedCellCount: 8 })
     const encoded = admitCanonicalJsonValue(projections, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture")
     const solver = solveLeagueSnapshot({ snapshot, solverPayoffBytes: encoded.canonicalBytes })
