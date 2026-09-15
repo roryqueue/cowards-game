@@ -5,17 +5,17 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 Plans 01 through 04 complete; execute Plan 05 private selection and reports
-last_updated: "2026-09-15T03:19:24Z"
+stopped_at: Phase 265 Plans 01 through 05 complete; execute Plan 06 red-team and connected private CLI
+last_updated: "2026-09-15T03:40:27Z"
 last_activity: 2026-09-15
-last_activity_desc: Phase 265 solver corrected for full populations; nine solver/response tests and lab build pass; private selection and reports next
+last_activity_desc: Phase 265 selection corrected to source-backed evidence and recomputed thresholds; 15 tests and lab build pass; CLI integration next
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 33
-current_plan: 5
+current_plan: 6
 total_plans_in_phase: 7
 ---
 
@@ -23,7 +23,7 @@ total_plans_in_phase: 7
 
 ## Session Continuity — 2026-09-14
 
-**Latest completed source work — 2026-09-15:** Plans 265-01 through 265-04 are complete through `9e43e405`. Exact solver `exact-rational-pivoted-restricted-v2` and immutable response transitions pass nine focused tests and the lab build. Main rejected the initial 2-by-2-only restriction; same-plan corrections now cover cyclic 3/12/13 populations and asymmetric 12-entrant non-uniform support with independently calculated zero security residual. The general exact support-pivot fallback has an explicit one-million-operation bound; these synthetic checks are not live league evidence or a universal convergence claim. Continue Plan 05 on shared main. Plan 06 must wire the host constructor to existing `createFactorySupervisedRuntime`; reopened records remain strictly read-only and non-authorizing. The remaining source workflow and sole late allocation checkpoint below are unchanged. No Phase 265 Match, model generation, or empirical allocation has occurred.
+**Latest completed source work — 2026-09-15:** Plans 265-01 through 265-05 are complete through `89ddd0b2`. Selection and private reports pass 15 focused regressions and the lab build. Main rejected the initial caller-asserted pass flags/root bags; corrected selection re-admits canonical factory fingerprint/producer/source joins and recomputes strict score thresholds and maximin. Reports reject forged finalist dispositions. Earlier same-plan corrections retain read-only reopening and general bounded solver v2 with representative 12/13-entrant tests. Continue Plan 06 on shared main, wiring the real existing `createFactorySupervisedRuntime` host adapter, all four red-team channels and all nine probe families. Plan 07 Task 1 and independent review/fix/validation follow before the sole late allocation checkpoint. No Phase 265 Match, model generation, or empirical allocation has occurred; Phase 264 budgets and waivers cannot carry over.
 
 **Current Phase265 execution:** Seven plans acrossfivewaves are independently checked; all9LEAGrequirements and21decisions covered. Research, AI-SPEC, pattern map and validation strategy are committed. Execute01→02/03→04/05→06→07Task1 source/fixture/CI proof, then one consolidated late allocation/participant checkpoint. Plan07Task3 is the conditional full live run/reopen, not silently omitted. No Phase265 empirical budget exists and no old envelope or Phase264 zero-intake waiver carries over. All source work can proceed without another routine approval. Main owns lifecycle/pushes and eventual live work; agents own explicit plan source/summary only. Four planning findings—post-checkpoint run, trusted-provider handoff, canonical entrant payoff, exact CI gate—are closed. Do not reopen historical dispatch instructions below.
 
