@@ -63,13 +63,22 @@ Run after Wave5 and before the allocation checkpoint:
   packages/strategy-lab/src/factory/fingerprint.test.ts \
   packages/strategy-lab/src/factory/admission.test.ts \
   packages/strategy-lab/src/factory/supervision-artifacts.test.ts \
-  scripts/lib/v1-38-factory-supervised-runtime.test.ts
+  scripts/lib/v1-38-factory-supervised-runtime.test.ts \
+  packages/strategy-lab/src/league/allocation.test.ts \
+  scripts/lib/v1-38-league-authoring.test.ts \
+  scripts/lib/v1-38-league-response-runtime.test.ts \
+  scripts/assess-v1-38-factory-independence.test.ts \
+  scripts/v1-38-factory-execution-evidence.test.ts \
+  scripts/v1-38-factory-assessment-correction.test.ts
 ./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json --pretty false
+./node_modules/.bin/tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --types node --skipLibCheck scripts/run-v1-38-serious-league.ts scripts/run-v1-38-serious-league.test.ts scripts/lib/v1-38-league-authoring.ts scripts/lib/v1-38-league-authoring.test.ts scripts/lib/v1-38-league-response-runtime.ts scripts/lib/v1-38-league-response-runtime.test.ts scripts/assess-v1-38-factory-independence.ts scripts/assess-v1-38-factory-independence.test.ts scripts/v1-38-factory-execution-evidence.ts scripts/v1-38-factory-execution-evidence.test.ts scripts/v1-38-factory-assessment-correction.ts scripts/v1-38-factory-assessment-correction.test.ts scripts/check-v1-38-serious-league-boundaries.ts scripts/check-v1-38-serious-league-boundaries.test.ts
 ./node_modules/.bin/tsx scripts/check-v1-38-serious-league-boundaries.ts
 pnpm exec tsx scripts/check-service-boundary-imports.ts
 ```
 
 ## Manual-Only Verification
+
+Plan 265-06 expanded the gate to include allocation accounting, native authoring, the three-arm response runtime, historical assessment/execution/correction import readers, and their strict script types. Its frozen-source 16-suite gate passed 122 tests in 412.45 seconds; the complete Wave-5 gate above retains every original suite and adds these dependencies. Do not edit implementation sources during identity-bound tests. The final source gate is not a real-data compatibility or empirical pass: after independent review, main will separately read the exact retained Phase 264 assessment through `verifyHistoricalFactoryAssessmentForLeague`, without dispatch or artifact mutation.
 
 Before real candidate/Match/model/human/external work, 265-07 Task2 is the one consolidated decision that must supply exact opportunity, operational/review, resource/retry-burn, material-dependence, and participant/provenance values in a Phase265 allocation root. Research established no current allocation exists. The exact combined source gate above must pass and be installed in CI before this checkpoint; no Phase264 timing waiver or zero-intake disposition carries forward. On `approve-allocation`, Task3 runs all allocated full Matches (not a Phase264 one-Phase fixture), retains all outcomes/failures/unfilled capacity, and then invokes `verify-retained`; synthetic tests cannot mark these empirical facts green. On `do-not-allocate`, Phase265 remains pending authorization, not complete. There is no UI in this private phase.
 
