@@ -55,7 +55,9 @@ export interface LeagueCellStart {
 
 export interface ReopenedLeagueEvidence {
   readonly issued: false
-  readonly records: readonly Readonly<{ start: LeagueCellStart; terminal: LeagueCellTerminal }>[]
+  readonly records: readonly Readonly<{ start: LeagueCellStart; terminal: LeagueCellTerminal; terminalProvenance: "persisted" | "derived_unterminated_start" }>[]
+  /** Incomplete publication files are inspection evidence only; reopening never repairs or removes them. */
+  readonly remnants: readonly Readonly<{ name: string; byteLength: number; disposition: "invalid"; persisted: false }>[]
 }
 
 const validateStart = (value: unknown): Readonly<LeagueCellStart> => {
@@ -83,17 +85,6 @@ const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array): 
   repository.durability.syncDirectory(directory)
 }
 
-const recoverTemporaryArtifacts = (repository: LeagueRepository): void => {
-  const directory = safeDirectory(repository.directory)
-  const pattern = /^league-(?:artifact-[a-f0-9]{64}\.bin|cell-[a-f0-9]{64}\.(?:started|terminal)\.json)\.tmp-[a-f0-9-]{36}$/u
-  for (const name of readdirSync(directory)) {
-    if (!name.includes(".tmp")) continue
-    const stat = lstatSafe(join(directory, name))
-    if (!pattern.test(name) || !stat?.isFile() || stat.nlink !== 1 || stat.size > CAP) return fail("UNCERTAIN_TEMPORARY")
-    unlinkSync(join(directory, name)); repository.durability.syncDirectory(directory)
-  }
-}
-
 export const createLeagueRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string } = {}): Readonly<LeagueRepository> =>
   freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory }, temporaryName: options.temporaryName ?? ((target) => `${target}.tmp-${randomUUID()}`) }) as LeagueRepository
 
@@ -118,26 +109,32 @@ export const publishLeagueCellTerminal = (repository: LeagueRepository, start: L
   atomic(repository, terminalName(charged.root), canonicalBytes(final))
 }
 
-/** A crash after charging is conservatively terminalized, never erased or refunded. */
-const recoverUncertainStart = (repository: LeagueRepository, start: LeagueCellStart): LeagueCellTerminal => {
-  const terminal = createLeagueCellTerminal({
+/** Inspection derives a failure projection but never materializes, repairs, or refunds a charge. */
+const deriveUnterminatedStart = (start: LeagueCellStart): LeagueCellTerminal => {
+  return createLeagueCellTerminal({
     cellRoot: start.cellRoot,
     disposition: "system_failure",
     processValidity: "process_invalid",
     evidenceRoot: labRoot("league-unresolved-charge-v1", { startRoot: start.root, allocationRoot: start.allocationRoot }),
     projection: null,
   })
-  publishLeagueCellTerminal(repository, start, terminal)
-  return terminal
 }
 
-/** Bounded inspection returns frozen data records and a literal non-authority marker. */
+/** Bounded inspection is strictly read-only and returns a literal non-authority marker. */
 export const reopenLeagueEvidence = (repository: LeagueRepository, limits: { readonly maxBytes: number; readonly maxRecords: number }): Readonly<ReopenedLeagueEvidence> => {
   if (!Number.isSafeInteger(limits.maxBytes) || !Number.isSafeInteger(limits.maxRecords) || limits.maxBytes < 1 || limits.maxRecords < 1) return fail("READ_LIMITS")
-  recoverTemporaryArtifacts(repository)
-  const directory = safeDirectory(repository.directory), starts: LeagueCellStart[] = [], terminals = new Map<LabRoot, LeagueCellTerminal>()
+  const directory = safeDirectory(repository.directory), starts: LeagueCellStart[] = [], terminals = new Map<LabRoot, LeagueCellTerminal>(), remnants: Array<ReopenedLeagueEvidence["remnants"][number]> = []
+  const temporaryPattern = /^league-(?:artifact-[a-f0-9]{64}\.bin|cell-[a-f0-9]{64}\.(?:started|terminal)\.json)\.tmp-[a-f0-9-]{36}$/u
   let bytes = 0
   for (const name of readdirSync(directory).sort()) {
+    if (name.includes(".tmp")) {
+      const stat = lstatSafe(join(directory, name))
+      if (!temporaryPattern.test(name) || !stat?.isFile() || stat.nlink !== 1 || stat.size < 1 || stat.size > CAP) return fail("UNCERTAIN_TEMPORARY")
+      bytes += stat.size
+      if (bytes > limits.maxBytes) return fail("READ_LIMIT")
+      remnants.push(freezeLabValue({ name, byteLength: stat.size, disposition: "invalid" as const, persisted: false as const }) as ReopenedLeagueEvidence["remnants"][number])
+      continue
+    }
     const match = /^league-cell-([a-f0-9]{64})\.(started|terminal)\.json$/u.exec(name)
     if (!match) { if (!/^league-artifact-[a-f0-9]{64}\.bin$/u.test(name)) return fail("UNKNOWN_ARTIFACT"); continue }
     const raw = boundedRead(join(directory, name)); bytes += raw.byteLength
@@ -146,11 +143,12 @@ export const reopenLeagueEvidence = (repository: LeagueRepository, limits: { rea
     if (match[2] === "started") { const start = validateStart(parse(raw)); if (start.root !== root) return fail("START_FILE"); starts.push(start); continue }
     const terminal = LeagueCellTerminalSchema.parse(parse(raw)); if (terminals.has(root)) return fail("DUPLICATE_TERMINAL"); terminals.set(root, terminal)
   }
-  if (starts.length > limits.maxRecords || new Set(starts.map((start) => start.root)).size !== starts.length || [...terminals.keys()].some((root) => !starts.some((start) => start.root === root))) return fail("INVENTORY")
+  if (starts.length + remnants.length > limits.maxRecords || new Set(starts.map((start) => start.root)).size !== starts.length || [...terminals.keys()].some((root) => !starts.some((start) => start.root === root))) return fail("INVENTORY")
   const records = starts.sort((left, right) => left.root.localeCompare(right.root)).map((start) => {
-    const terminal = terminals.get(start.root) ?? recoverUncertainStart(repository, start)
+    const persisted = terminals.get(start.root)
+    const terminal = persisted ?? deriveUnterminatedStart(start)
     if (terminal.cellRoot !== start.cellRoot) return fail("TERMINAL_BINDING")
-    return freezeLabValue({ start, terminal }) as Readonly<{ start: LeagueCellStart; terminal: LeagueCellTerminal }>
+    return freezeLabValue({ start, terminal, terminalProvenance: persisted ? "persisted" as const : "derived_unterminated_start" as const }) as ReopenedLeagueEvidence["records"][number]
   })
-  return freezeLabValue({ issued: false as const, records }) as ReopenedLeagueEvidence
+  return freezeLabValue({ issued: false as const, records, remnants }) as ReopenedLeagueEvidence
 }
