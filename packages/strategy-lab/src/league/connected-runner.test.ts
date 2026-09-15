@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { admitCanonicalJsonValue } from "@cowards/spec"
+import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { afterEach, describe, expect, it } from "vitest"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../factory/contracts.js"
@@ -49,11 +49,11 @@ const fixture = (name: string) => {
 }
 
 const providerHost = (): FactorySupervisedRuntimeHost => ({
-  createFactorySupervisedRuntime({ admission, attemptRoot, budgetRoot }) {
+  createFactorySupervisedRuntime({ admission, attemptRoot, budgetRoot, executableRoot }) {
     const identity = {
       revisionId: `revision-${admission.sourceRoot.slice(7, 15)}`,
       sourceRoot: admission.sourceRoot,
-      executableRoot: root(`executable:${admission.sourceRoot}`),
+      executableRoot,
       tupleId: "candidate-kernel-v1.19",
       tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot,
       image: LAB_ADMITTED_ROOTS.image,
@@ -75,7 +75,7 @@ describe("host-issued connected league runner", () => {
     const start: LeagueCellStart = { root: labRoot("league-cell-start-v1", { cellRoot: cell.root, allocationRoot: root("allocation") }), cellRoot: cell.root, allocationRoot: root("allocation") }
     const issue = (value: ReturnType<typeof fixture>) => issueLeagueProviderFromFactoryCandidate({ ...value, host: providerHost(), cell, start, allocationRoot: start.allocationRoot })
     const issuedBottom = issue(bottom), issuedTop = issue(top)
-    const result = await runLeagueCell({ repository: leagueRepository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match: { bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }, runCanonicalLabMatch: async () => ({ kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { fixture: true }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } }) as never })
+    const result = await runLeagueCell({ repository: leagueRepository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match: { matchId: "safe-fixture", seed: "safe-seed", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, initialInitiativePlayerId: "bottom", bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }, runCanonicalLabMatch: async () => ({ kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } }) as never })
     expect(result).toMatchObject({ disposition: "success", processValidity: "process_valid", cellRoot: cell.root })
   })
 
@@ -86,7 +86,7 @@ describe("host-issued connected league runner", () => {
     expect(() => issueLeagueProviderFromFactoryCandidate({ ...bottom, packetArtifactRoot: bottom.proposalArtifactRoot, host: providerHost(), cell, start, allocationRoot: start.allocationRoot })).toThrow()
     const issue = (value: ReturnType<typeof fixture>) => issueLeagueProviderFromFactoryCandidate({ ...value, host: providerHost(), cell, start, allocationRoot: start.allocationRoot })
     const issuedBottom = issue(bottom), issuedTop = issue(top)
-    const result = await runLeagueCell({ repository: leagueRepository, start, cell, bottom: { ...issuedBottom } as never, top: issuedTop, requestRoot: cell.requestRoot, match: { bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }, runCanonicalLabMatch: async () => ({ kind: "failure", privacy: "private_offline", transitions: [], accounting: [], unchangedState: null, failure: { classification: "system_failure", code: "LAB_CLEANUP_INCOMPLETE" } }) })
+    const result = await runLeagueCell({ repository: leagueRepository, start, cell, bottom: { ...issuedBottom } as never, top: issuedTop, requestRoot: cell.requestRoot, match: { matchId: "safe-fixture-2", seed: "safe-seed-2", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, initialInitiativePlayerId: "bottom", bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }, runCanonicalLabMatch: async () => ({ kind: "failure", privacy: "private_offline", transitions: [], accounting: [], unchangedState: null, failure: { classification: "system_failure", code: "LAB_CLEANUP_INCOMPLETE" } }) })
     expect(result).toMatchObject({ disposition: "system_failure", processValidity: "process_invalid" })
   })
 })
