@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 final source gate passes 250 tests; independent review, security and evaluation audit next
+stopped_at: Phase 265 independent review found six connected source blockers; same-plan GSD repair pass next
 last_updated: "2026-09-15T07:43:45Z"
 last_activity: 2026-09-15
-last_activity_desc: Phase 265 Plan 07 Task 1 corrected and 29-suite source gate passed; review and data-only compatibility precede live allocation
+last_activity_desc: Phase 265 review found retention, scoring, failed-reopen, scale, control-import and late-closure defects; repair all before allocation
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current independent-review handoff — 2026-09-15:** Deep 46-file code review of `9394176c` found six BLOCKER issues: ordinary terminals consume emergency reserve; contemporaneous-equilibrium iteration scores can never exceed the required 55%; valid failure/expanded-population graphs cannot reopen; 16-entrant payoff transport exceeds its 256KiB parser cap; authentic mechanics-only controls abort portfolio selection; a last-round accepted counter can be reported complete while closure is still required. The passing 250-test source gate missed these connected cases. Execute the existing GSD code-review/fix loop on CR-01 through CR-06 without new plans, thresholds, empirical authority or historical rewrites; then independent re-review and final validation. Evaluation's absent-real-data score is expected pending the later allocation, not a source-completion claim. Security reconciliation keeps planned T-265-12 open until actual connected closure is enforced. The conservative command-level `empiricalRequirementsComplete: false` flag is not a defect. Actual read-only historical compatibility remains main-owned and has not run. No human input is needed for these source repairs.
 
 **Current source-proof handoff — 2026-09-15:** Plan 265-07 Task 1 passes the exact 29-suite source gate at `9394176c`: 250 tests in 581.87 seconds, package/strict script types, three private graph checks over 1,329 files and service checks (zero strict/ownership; 19 pre-existing report-only). Main rejected metadata-only fixture proof and a non-transitive monitor, then removed an overbroad loader exception with three RED regressions; the local budget method is renamed without changing its arithmetic. Independent code review/fix, security/evaluation/validation and main's actual read-only historical calibration import check are next. Plan 07 remains incomplete because Tasks 2/3 require a separate complete live allocation and conditional real run. No Phase 265 empirical capacity is allocated or consumed. The following completed-source and earlier handoff paragraphs are history, not additional dispatch authority.
 
