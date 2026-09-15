@@ -9,7 +9,8 @@ import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommit
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "./repository.js"
-import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, createLeagueAuthorizedFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, requireIssuedFactoryIndependenceReceipt } from "./fingerprint.js"
+import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, createLeagueAuthorizedFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, requireIssuedFactoryIndependenceReceipt, verifyRetainedLeagueFactoryFingerprints } from "./fingerprint.js"
+import { publishFactorySupervisionArtifacts } from "./supervision-artifacts.js"
 import { allocationFixture } from "../league/allocation.test.js"
 import { createLeagueExecutionAllocation } from "../league/allocation.js"
 import { declareRedTeamAllocation, startRedTeamAttempt } from "../league/red-team.js"
@@ -119,9 +120,9 @@ describe("six derived factory fingerprints", () => {
   it("issues a separate prospective league producer branch only for the exact charged source and fresh receipt", async () => {
     const { repo, packet, proposal, validation, admission } = admitted()
     const put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("test encoding"); return publishFactoryArtifact(repo, encoded.canonicalBytes) }
-    const fixture = allocationFixture(), reservation = { ...fixture.channels[0]!.perAttempt, effortMilliseconds: 1 }
+    const fixture = allocationFixture(), reservation = { ...fixture.channels[0]!.perAttempt, matches: 48, effortMilliseconds: 1 }
     const requestArtifactRoot = put({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: {} })
-    const job = { id: "tactical-one", channel: "automated" as const, operation: "produce" as const, producerRequestArtifactRoot: requestArtifactRoot, disclosureArtifactRoot: root("b"), provenanceArtifactRoot: root("c"), reviewArtifactRoot: root("d"), participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }
+    const job = { id: "tactical-one", channel: "automated" as const, evaluationRole: "development_response" as const, operation: "produce" as const, producerRequestArtifactRoot: requestArtifactRoot, disclosureArtifactRoot: root("b"), provenanceArtifactRoot: root("c"), reviewArtifactRoot: root("d"), participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }
     const allocation = createLeagueExecutionAllocation({ ...fixture, opportunities: { ...fixture.opportunities, attemptedCandidates: 1 }, channels: fixture.channels.map((channel) => channel.channel === "automated" ? { ...channel, disposition: "allocated", opportunities: 1, ceilings: reservation, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel), rounds: [{ ordinal: 0, acceptedSlots: 0, jobs: [job] }, fixture.rounds[1]!] })
     const ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes })
     const started = startRedTeamAttempt({ ledger, channel: "automated", roundRoot: root("e"), candidateRoot: root("f"), participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: null, reservation })
@@ -134,6 +135,11 @@ describe("six derived factory fingerprints", () => {
     const evidence = createLeagueAuthorizedFactoryFingerprintEvidence(input)
     const derived = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence, evidenceArtifactRoot: put(evidence) })
     expect(derived.status).toBe("unresolved")
+    const candidateValue = { ...factoryCandidateFixture(proposal, validation, receipt.root), fingerprints: derived.fingerprints }, candidate = { ...candidateValue, root: deriveFactoryCandidateRoot(candidateValue) }, retained = { repository: repo, allocationArtifactRoot: input.allocationArtifactRoot, startArtifactRoot: input.startArtifactRoot, authoringArtifactRoot: put({ fixture: "source-only-authoring" }), evidenceArtifactRoot: put(evidence), candidate, scoreSupervisionArtifactRoots: [publishFactorySupervisionArtifacts(repo, receipt).artifactRoot], counterfactualPairs: evidence.counterfactualPairs, maxBytes: 1000000, maxRecords: 1000 }
+    expect(verifyRetainedLeagueFactoryFingerprints(retained)).toMatchObject({ issued: false, fingerprints: derived.fingerprints })
+    const rewrittenValue = { ...candidateValue, fingerprints: { ...candidateValue.fingerprints, legalInputDecisionRoot: root("f") } }
+    expect(() => verifyRetainedLeagueFactoryFingerprints({ ...retained, candidate: { ...rewrittenValue, root: deriveFactoryCandidateRoot(rewrittenValue) } })).toThrow("RETAINED_FINGERPRINT_MISMATCH")
+    expect(() => verifyRetainedLeagueFactoryFingerprints({ ...retained, counterfactualPairs: [] })).toThrow("RETAINED_EVIDENCE_BINDING")
     expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, supervisionReceipt: { ...receipt } })).toThrow("LEAGUE_SUPERVISION")
     const other = createLeagueExecutionAllocation({ ...fixture, operatorDecision: "foreign" })
     expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, allocationArtifactRoot: put(other) })).toThrow("LEAGUE_CHARGE")

@@ -10,8 +10,8 @@ export type LeagueProbeFamily = typeof LEAGUE_PROBES[number]
 const IDENTITIES: readonly LeagueProbeFamily[] = ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"]
 const RESOURCE_KEYS = ["matches", "modelTokens", "effortMilliseconds", "reviewMilliseconds", "searchNodes", "teacherNodes", "distillationUnits"] as const
 export type RedTeamResources = Readonly<Record<typeof RESOURCE_KEYS[number], number>>
-export type RedTeamDisposition = "success" | "rejected" | "legal_but_weak" | "invalid" | "duplicate" | "player_violation" | "system_failure" | "retried" | "unfilled" | "unused"
-const DISPOSITIONS: readonly RedTeamDisposition[] = ["success", "rejected", "legal_but_weak", "invalid", "duplicate", "player_violation", "system_failure", "retried", "unfilled", "unused"]
+export type RedTeamDisposition = "success" | "accepted" | "rejected" | "legal_but_weak" | "invalid" | "duplicate" | "player_violation" | "system_failure" | "retried" | "unfilled" | "unused"
+const DISPOSITIONS: readonly RedTeamDisposition[] = ["success", "accepted", "rejected", "legal_but_weak", "invalid", "duplicate", "player_violation", "system_failure", "retried", "unfilled", "unused"]
 function fail(code: string): never { throw new TypeError(`LEAGUE_RED_TEAM_${code}`) }
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && /^sha256:[a-f0-9]{64}$/u.test(value)
 const integer = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0
@@ -51,7 +51,13 @@ export interface LeagueProbeObservation { readonly canonicalBytes: string; reado
 export interface LeagueProbePair { readonly left: LeagueProbeObservation; readonly right: LeagueProbeObservation }
 export interface LeagueProbeReceipt extends Target { readonly root: LabRoot; readonly allocationRoot: LabRoot; readonly family: LeagueProbeFamily; readonly criterion: "byte_identity" | "paired_contrast"; readonly pairs: readonly LeagueProbePair[]; readonly passed: boolean; readonly processValidity: LeagueProcessValidity }
 export interface RedTeamLedger { readonly root: LabRoot; readonly allocation: RedTeamAllocation; readonly starts: readonly RedTeamAttemptStart[]; readonly terminals: readonly RedTeamAttemptTerminal[]; readonly probes: readonly LeagueProbeReceipt[] }
-const ledger = (allocation: RedTeamAllocation, starts: readonly RedTeamAttemptStart[], terminals: readonly RedTeamAttemptTerminal[], probes: readonly LeagueProbeReceipt[]): RedTeamLedger => rooted("league-red-team-ledger-v1", { allocation, starts, terminals, probes })
+// Individual receipts retain the canonical-envelope cap. The logical ledger is
+// an aggregate retained by the command's bounded chunk graph, not one artifact.
+const ledger = (allocation: RedTeamAllocation, starts: readonly RedTeamAttemptStart[], terminals: readonly RedTeamAttemptTerminal[], probes: readonly LeagueProbeReceipt[]): RedTeamLedger => {
+  const body = { allocation, starts, terminals, probes }, admitted = admitCanonicalJsonValue(body, { profile: "canonical-manifest" })
+  if (!admitted.ok) return fail("CANONICAL")
+  return freezeLabValue({ ...body, root: labRoot("league-red-team-ledger-v1", body) })
+}
 const verifyLedger = (value: RedTeamLedger): void => {
   if (!value || !exact(value, ["root", "allocation", "starts", "terminals", "probes"])) fail("LEDGER")
   const { root, ...body } = value

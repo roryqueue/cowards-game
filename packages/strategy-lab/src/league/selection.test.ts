@@ -41,6 +41,20 @@ const selectionEvidence = (snapshotRoot: LabRoot, populationRoot: LabRoot, solve
 }
 
 describe("source-bound portfolio and robust-pure selection", () => {
+  it("counts genuine consecutive iterations, never duplicate blocks or several jobs in one round", () => {
+    const snapshotRoot = root("iteration-snapshot"), populationRoot = root("iteration-population"), mixture = createLeagueMixture({ solverOutputRoot: root("iteration-solver"), weightRoot: root("iteration-weights"), snapshotRoot }), entries = [candidate("iteration-one"), candidate("iteration-two"), candidate("iteration-three")], portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = entries[0]!.candidateAdmission.root, allocationRoot = root("iteration-allocation"), seedBlocks = ["seed-one", "seed-two"]
+    const iteration = (ordinal: number) => ({ candidateAdmissionRoot: selected, ordinal, allocationRoot, blocks: seedBlocks.map((seed) => ({ seed, roundRoot: root(`round:${ordinal}:${seed}`), targetRoot: root(`target:${ordinal}:${seed}`), snapshotRoot: root(`snapshot:${ordinal}:${seed}`), conditionRoots: [root(`condition:${ordinal}:${seed}`)], terminalRoots: [root(`terminal:${ordinal}:${seed}`)], numerator: 56, denominator: 100 })), responseTerminals: [0, 1].map((job) => ({ root: root(`response:${ordinal}:${job}`), disposition: "legal_but_weak", processValidity: "process_valid" })) })
+    const run = (iterations: ReturnType<typeof iteration>[]) => {
+      const { root: _root, schemaVersion: _schema, ...base } = selectionEvidence(snapshotRoot, populationRoot, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected), body = { ...base, schemaVersion: "league-selection-evidence-v3", allocationRoot, seedBlocks, iterations }
+      return selectRobustPure({ snapshotRoot, populationRoot, mixture, portfolio, candidateAdmissionRoot: selected, evidence: { ...body, root: labRoot("league-selection-evidence-v3", body) } }).kind
+    }
+    expect(run([iteration(0), iteration(1)])).toBe("robust_pure_finalist")
+    expect(run([iteration(0), iteration(0)])).toBe("no_robust_pure_finalist_found")
+    expect(run([iteration(0)])).toBe("no_robust_pure_finalist_found")
+    expect(run([iteration(0), iteration(2)])).toBe("no_robust_pure_finalist_found")
+    expect(run([iteration(0), { ...iteration(1), blocks: [iteration(1).blocks[0]!, iteration(1).blocks[0]!] }])).toBe("no_robust_pure_finalist_found")
+    expect(run([iteration(0), { ...iteration(1), responseTerminals: [{ root: root("failed"), disposition: "system_failure", processValidity: "process_invalid" }] }])).toBe("no_robust_pure_finalist_found")
+  })
   it("uses candidate-specific assessed base edges without laundering an affirmative calibration's cosmetic controls", async () => {
     const entries = await Promise.all([1, 3, 5, 2].map(importedCandidateFixture)), snapshotRoot = root("import-snapshot"), mixture = createLeagueMixture({ solverOutputRoot: root("solver"), weightRoot: root("weights"), snapshotRoot })
     const result = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries })

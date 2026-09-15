@@ -16,6 +16,7 @@ import { admitFactoryCalibrationManifest } from "./calibration.js"
 import { publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "./repository.js"
 import { admitLeagueExecutionAllocation } from "../league/allocation.js"
 import { declareRedTeamAllocation, type RedTeamAttemptStart } from "../league/red-team.js"
+import { readFactorySupervisionArtifactRecords } from "./supervision-artifacts.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const NAME = /^[a-z][a-zA-Z0-9._:-]{0,127}$/u
@@ -59,7 +60,7 @@ const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdent
 }
 const issuedEvidence = new WeakSet<object>()
 const authorizedProducerEvidence = new WeakMap<object, LabRoot>()
-const leagueProducerEvidence = new WeakMap<object, Readonly<{ allocationArtifactRoot: LabRoot; startArtifactRoot: LabRoot }>>()
+const leagueProducerEvidence = new WeakMap<object, Readonly<{ allocationArtifactRoot: LabRoot; startArtifactRoot: LabRoot; authoringArtifactRoot?: LabRoot }>>()
 const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"]
 export const isFactoryProducerAuthorized = (authorization: Record<string, unknown>, manifestAuthorizationRoot: LabRoot, producerArtifactRoot: LabRoot): boolean => {
   const { root: authorizationRoot, ...authorizationValue } = authorization
@@ -149,7 +150,7 @@ export const createAuthorizedFactoryFingerprintEvidence = (input: { readonly rep
 }
 
 /** A distinct Phase 265 authority path. It cannot reinterpret a calibration authorization. */
-const verifyLeagueProducer = (input: { readonly repository: FactoryRepository; readonly allocationArtifactRoot: LabRoot; readonly startArtifactRoot: LabRoot; readonly value: Pick<FactoryFingerprintEvidence, "producerIdentity" | "origin" | "producerArtifactRoot" | "proposalRoot" | "validationRoot" | "supervisionReceiptRoot">; readonly receipt?: FactorySupervisionReceipt }) => {
+const verifyLeagueProducer = (input: { readonly repository: FactoryRepository; readonly allocationArtifactRoot: LabRoot; readonly startArtifactRoot: LabRoot; readonly authoringArtifactRoot?: LabRoot; readonly value: Pick<FactoryFingerprintEvidence, "producerIdentity" | "origin" | "producerArtifactRoot" | "proposalRoot" | "validationRoot" | "supervisionReceiptRoot">; readonly receipt?: FactorySupervisionReceipt }) => {
   const read = (root: LabRoot) => { const parsed = admitCanonicalJsonBytes(readFactoryArtifact(input.repository, root), { profile: "canonical-manifest", operation: "require-canonical" }); if (!parsed.ok) return fail("LEAGUE_ARTIFACT"); return parsed.value }
   const allocation = admitLeagueExecutionAllocation(read(input.allocationArtifactRoot)), start = read(input.startArtifactRoot) as unknown as RedTeamAttemptStart
   const redTeam = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes }).allocation
@@ -163,18 +164,24 @@ const verifyLeagueProducer = (input: { readonly repository: FactoryRepository; r
   const packet = FactoryOraclePacketSchema.parse(producer.packet)
   const request = read(job.producerRequestArtifactRoot) as Record<string, unknown>
   if (!exact(request, ["producerIdentity", "origin", "evidenceClass", "producerInput"]) || request.producerIdentity !== producer.producerIdentity || request.origin !== producer.origin || request.evidenceClass !== "real_producer") return fail("LEAGUE_PRODUCER_REQUEST")
-  if (producer.producerIdentity !== "emitModelFactoryPacket" && producer.producerIdentity !== "admitQuarantinedIntakePacket" && labRoot("league-producer-input-v1", request.producerInput) !== labRoot("league-producer-input-v1", producer.producerInput)) return fail("LEAGUE_PRODUCER_REQUEST")
+  if (allocation.evidenceClass === "empirical" || producer.producerIdentity === "emitTeacherFactoryPacket") {
+    if (!input.authoringArtifactRoot) return fail("LEAGUE_AUTHORING")
+    const authored = read(input.authoringArtifactRoot) as Record<string, unknown>
+    if (authored.schemaVersion !== "league-authoring-result-v1" || authored.root !== labRoot("league-authoring-result-v1", withoutRoot(authored)) || authored.allocationRoot !== allocation.root || authored.startRoot !== start.root || authored.jobId !== job.id || authored.ingestionArtifactRoot !== input.value.producerArtifactRoot || authored.disposition !== "produced") return fail("LEAGUE_AUTHORING")
+    if (producer.producerIdentity === "emitTeacherFactoryPacket" && (!Array.isArray(authored.teacherArtifactRoots) || !authored.teacherArtifactRoots.length || authored.teacherArtifactRoots.length !== (request.producerInput as { searches: unknown[] }).searches.length || labRoot("league-teacher-request-binding", (request.producerInput as { request: unknown }).request) !== labRoot("league-teacher-request-binding", (producer.producerInput as { request: unknown }).request))) return fail("LEAGUE_TEACHER_AUTHORING")
+  }
+  if (producer.producerIdentity === "emitTacticalFactoryPacket" && labRoot("league-producer-input-v1", request.producerInput) !== labRoot("league-producer-input-v1", producer.producerInput)) return fail("LEAGUE_PRODUCER_REQUEST")
   if (producer.packetRoot !== packet.root || packet.source.root !== producer.sourceRoot || factoryProposalFromPacket(packet).root !== input.value.proposalRoot || packet.build.compatibilityTupleRoot !== allocation.tupleRoot || packet.nativeLane.runtimeProfileRoot !== allocation.runtimeRoot || producer.runtimeProfileRoot !== allocation.runtimeRoot || labRoot("league-native-lane-v1", producer.nativeLane) !== labRoot("league-native-lane-v1", packet.nativeLane)) return fail("LEAGUE_PRODUCER_BINDING")
   if (input.receipt && (!isIssuedFactorySupervisionReceipt(input.receipt) || input.receipt.root !== input.value.supervisionReceiptRoot || input.receipt.admission.proposalRoot !== input.value.proposalRoot || input.receipt.admission.validationRoot !== input.value.validationRoot || input.receipt.admission.sourceRoot !== producer.sourceRoot || input.receipt.candidateIdentity.attemptRoot !== start.root || input.receipt.candidateIdentity.budgetRoot !== allocation.root || input.receipt.execution.kind !== "completed")) return fail("LEAGUE_SUPERVISION")
 }
 
-export const createLeagueAuthorizedFactoryFingerprintEvidence = (input: { readonly repository: FactoryRepository; readonly allocationArtifactRoot: LabRoot; readonly startArtifactRoot: LabRoot; readonly supervisionReceipt: FactorySupervisionReceipt; readonly value: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root"> }): Readonly<FactoryFingerprintEvidence> => {
+export const createLeagueAuthorizedFactoryFingerprintEvidence = (input: { readonly repository: FactoryRepository; readonly allocationArtifactRoot: LabRoot; readonly startArtifactRoot: LabRoot; readonly authoringArtifactRoot?: LabRoot; readonly supervisionReceipt: FactorySupervisionReceipt; readonly value: Omit<FactoryFingerprintEvidence, "schemaVersion" | "privacy" | "root"> }): Readonly<FactoryFingerprintEvidence> => {
   if (input.value.evidenceClass !== "real_producer" || input.value.producerArtifactRoot === null) return fail("LEAGUE_PRODUCER")
   verifyLeagueProducer({ ...input, receipt: input.supervisionReceipt })
   const draft = { schemaVersion: "factory-fingerprint-evidence-v1" as const, privacy: "private_offline" as const, ...input.value }
   const evidence = validateEvidence({ ...draft, root: labRoot("factory-fingerprint-evidence-v1", draft) })
   issuedEvidence.add(evidence)
-  leagueProducerEvidence.set(evidence, { allocationArtifactRoot: input.allocationArtifactRoot, startArtifactRoot: input.startArtifactRoot })
+  leagueProducerEvidence.set(evidence, { allocationArtifactRoot: input.allocationArtifactRoot, startArtifactRoot: input.startArtifactRoot, ...(input.authoringArtifactRoot ? { authoringArtifactRoot: input.authoringArtifactRoot } : {}) })
   return evidence
 }
 
@@ -446,4 +453,38 @@ export const deriveFactoryFingerprints = (input: {
   const result = freezeLabValue({ ...value, root: deriveReceiptRoot(value) })
   issuedReceipts.add(result)
   return result
+}
+
+/** Data-only Phase 265 fingerprint verification. Reopening a receipt never adds
+ * it to the live supervision or independence capability sets. */
+export const verifyRetainedLeagueFactoryFingerprints = (input: {
+  repository: FactoryRepository; allocationArtifactRoot: LabRoot; startArtifactRoot: LabRoot; authoringArtifactRoot: LabRoot
+  evidenceArtifactRoot: LabRoot; candidate: unknown; scoreSupervisionArtifactRoots: readonly LabRoot[]
+  counterfactualPairs: FactoryFingerprintEvidence["counterfactualPairs"]; maxBytes: number; maxRecords: number
+}) => {
+  const parse = (root: LabRoot) => { const parsed = admitCanonicalJsonBytes(readFactoryArtifact(input.repository, root), { profile: "canonical-manifest", operation: "require-canonical" }); return parsed.ok ? parsed.value : fail("RETAINED_BYTES") }
+  const candidate = FactoryCandidateSchema.parse(input.candidate), evidence = validateEvidence(parse(input.evidenceArtifactRoot))
+  verifyLeagueProducer({ ...input, value: evidence })
+  const receipts = input.scoreSupervisionArtifactRoots.map((artifactRoot) => {
+    const stored = readFactorySupervisionArtifactRecords(input.repository, artifactRoot, input), values = (kind: string) => stored.records.filter((row) => row.kind === kind).map((row) => row.value)
+    const metadata = values("receipt")[0] as Omit<FactorySupervisionReceipt, "execution" | "traces">, header = values("execution")[0] as any
+    if (header.kind !== "completed" || metadata.admission.proposalRoot !== candidate.proposal.root || metadata.admission.validationRoot !== candidate.validation.root || metadata.admission.sourceRoot !== candidate.proposal.source.root) return fail("RETAINED_SUPERVISION_BINDING")
+    const { resultMetadata, ...rest } = header
+    const execution = { ...rest, transitions: values("transition"), accounting: values("accounting"), result: { ...resultMetadata, state: values("result-state")[0], events: values("result-event") } } as FactorySupervisionReceipt["execution"]
+    return { ...metadata, execution, traces: values("trace") as FactorySupervisionReceipt["traces"] }
+  })
+  const receipt = receipts[0] ?? fail("RETAINED_SUPERVISION_EMPTY"), source = readFactoryArtifact(input.repository, receipt.admission.artifacts.source), proposal = candidate.proposal
+  if (byteRoot(source) !== proposal.source.root || receipt.root !== candidate.supervisionReceiptRoot || evidence.supervisionReceiptRoot !== receipt.root || new Set(receipts.map((row) => row.root)).size !== receipts.length || labRoot("league-counterfactual-binding", evidence.counterfactualPairs) !== labRoot("league-counterfactual-binding", input.counterfactualPairs)) return fail("RETAINED_EVIDENCE_BINDING")
+  validateGraphArtifacts(input.repository, evidence.lineageNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.parents })), "lineage")
+  validateGraphArtifacts(input.repository, evidence.dependencyNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.dependencies })), "dependency")
+  const fingerprints = {
+    sourceStructureRoot: deriveFactorySourceStructureRoot(source),
+    lineageRoot: labRoot("factory-lineage-fingerprint-v1", { packetLineage: proposal.lineage, predecessorArtifacts: "unverified" }),
+    dependencyRoot: labRoot("factory-dependency-fingerprint-v1", { sourceRoot: proposal.source.root, build: proposal.build, recursiveLockedManifest: "unverified" }),
+    legalInputDecisionRoot: deriveFactoryOrderedRecordDescriptor("factory-legal-input-decision-fingerprint", receipt.traces.map((trace) => ({ invocationRoot: trace.invocationRoot, inputRoot: trace.inputRoot, method: trace.method, ordinal: trace.ordinal, request: safeProjection(trace.requestProjection), decision: safeProjection(trace.decisionProjection), classification: trace.classification }))).root,
+    chronicleBehaviorRoot: deriveFactoryOrderedRecordDescriptor("factory-chronicle-behavior-fingerprint", receipt.execution.transitions.map((transition) => safeProjection({ transitionKind: transition.transitionKind, coordinates: transition.coordinates, classification: transition.classification, events: transition.events, beforeState: transition.beforeState, afterState: transition.afterState, terminalStatus: transition.terminalStatus }))).root,
+    matchupResponseRoot: deriveFactoryOrderedRecordDescriptor("factory-matchup-response-fingerprint", receipts.map((row) => ({ supervisionReceiptRoot: row.root, matchup: row.matchup, execution: deriveFactoryExecutionCommitment(row.execution) }))).root,
+  }
+  if (Object.entries(fingerprints).some(([key, root]) => candidate.fingerprints[key as keyof FactoryFingerprintRoots] !== root)) return fail("RETAINED_FINGERPRINT_MISMATCH")
+  return freezeLabValue({ issued: false as const, fingerprints, evidenceRoot: evidence.root })
 }

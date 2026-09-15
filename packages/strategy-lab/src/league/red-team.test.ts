@@ -21,6 +21,17 @@ const start = (ledger: RedTeamLedger, channel = "automated" as const) => startRe
 const finish = (ledger: RedTeamLedger, disposition = "legal_but_weak" as const) => terminalizeRedTeamAttempt({ ledger, startRoot: ledger.starts.at(-1)!.root, disposition, usage: resources(1), evidenceRoots: [root("raw-evidence")], candidateAdmissionRoot: null })
 
 describe("all-channel development red team", () => {
+  it("retains a full twelve-candidate multi-round ledger beyond one artifact envelope", () => {
+    const allocation = redTeamAllocationFixture(); let ledger = declareRedTeamAllocation({ ...allocation, probes: allocation.probes.map((row) => ({ ...row, pairs: 2 })) })
+    const targets = []
+    for (let round = 0; round < 2; round++) for (let candidate = 0; candidate < 12; candidate++) {
+      const target = { roundRoot: root(`round-${round}`), candidateRoot: root(`candidate-${candidate}`) }; targets.push(target)
+      for (const family of LEAGUE_PROBES) { const identity = ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"].includes(family); ledger = recordLeagueProbe({ ledger, ...target, family, pairs: [0, 1].map((pair) => ({ left: { canonicalBytes: "same", halfPoints: 1, conditionRoot: root(`left-${pair}`), evidenceRoot: root(`e-left-${pair}`) }, right: { canonicalBytes: "same", halfPoints: 1, conditionRoot: root(`${identity ? "left" : "right"}-${pair}`), evidenceRoot: root(`e-right-${pair}`) } })) }) }
+    }
+    const encoded = admitCanonicalJsonValue(ledger, { profile: "canonical-manifest" })
+    expect(encoded.ok && encoded.canonicalByteLength).toBeGreaterThan(262144)
+    expect(closeRedTeamLedger({ ledger, requiredTargets: targets, reentries: [] }).processValidity).toBe("process_valid")
+  }, 60000)
   it("requires all four explicitly allocated channels and never inherits an absent or zero row", () => {
     const input = redTeamAllocationFixture()
     expect(declareRedTeamAllocation(input).allocation.channels.map((row) => row.channel)).toEqual(RED_TEAM_CHANNELS)
