@@ -8,7 +8,7 @@ export interface LeagueEvaluationFixture {
   readonly id: string
   readonly evidenceClass: "injected_fixture"
   readonly expectedDisposition: string
-  readonly coverage: Readonly<{ testFile: string; testName: string; assertion: string }>
+  readonly coverage: Readonly<{ testFile: string; testName: string; assertion: string; assertionId: string }>
   readonly prohibitedActions: readonly string[]
   readonly empiricalRequirementsComplete: false
 }
@@ -21,12 +21,12 @@ const prohibitedActions = Object.freeze([
   "participant_or_holdout_access",
 ] as const)
 
-const fixture = (id: string, expectedDisposition: string, coverage: LeagueEvaluationFixture["coverage"]): Readonly<LeagueEvaluationFixture> =>
+const fixture = (id: string, expectedDisposition: string, coverage: Omit<LeagueEvaluationFixture["coverage"], "assertionId">): Readonly<LeagueEvaluationFixture> =>
   freezeLabValue({
     id,
     evidenceClass: "injected_fixture" as const,
     expectedDisposition,
-    coverage,
+    coverage: { ...coverage, assertionId: `league-eval:${id}` },
     prohibitedActions,
     empiricalRequirementsComplete: false as const,
   })

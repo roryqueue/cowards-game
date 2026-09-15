@@ -93,6 +93,6 @@ describe("host-issued connected league runner", () => {
     const issue = (value: ReturnType<typeof fixture>) => issueLeagueProviderFromFactoryCandidate({ ...value, host: providerHost(), cell, start, allocationRoot: start.allocationRoot })
     const issuedBottom = issue(bottom), issuedTop = issue(top)
     const result = await runLeagueCell({ repository: leagueRepository, start, cell, bottom: { ...issuedBottom } as never, top: issuedTop, requestRoot: cell.requestRoot, match: { matchId: "safe-fixture-2", seed: "safe-seed-2", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas[0]!, initialInitiativePlayerId: "bottom", bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }, runCanonicalLabMatch: async () => ({ kind: "failure", privacy: "private_offline", transitions: [], accounting: [], unchangedState: null, failure: { classification: "system_failure", code: "LAB_CLEANUP_INCOMPLETE" } }) })
-    expect(result).toMatchObject({ disposition: "system_failure", processValidity: "process_invalid" })
+    expect(result, "league-eval:hostile-runtime").toMatchObject({ disposition: "system_failure", processValidity: "process_invalid" })
   })
 })

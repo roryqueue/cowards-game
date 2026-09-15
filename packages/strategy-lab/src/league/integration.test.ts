@@ -47,7 +47,7 @@ describe("injected league integration boundary", () => {
     expect(matrix.cells).toHaveLength(8)
     const terminals = matrix.cells.map(successTerminal)
     const complete = admitCompletePayoffSnapshot(matrix, terminals)
-    expect(complete.kind).toBe("complete")
+    expect(complete.kind, "league-eval:complete-alias-aware-matrix").toBe("complete")
     if (complete.kind !== "complete") throw new Error("injected matrix unexpectedly blocked")
     expect(solveLeagueSnapshot({ snapshot: complete.snapshot, solverPayoffBytes: complete.solverPayoffBytes })).toMatchObject({ status: "solved" })
 

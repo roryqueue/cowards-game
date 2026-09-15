@@ -68,6 +68,6 @@ describe("private complete league reports", () => {
     expect(() => publishLeagueReport({ ...derived, reopen: { ...derived.reopen, records: [{ ...derived.reopen.records[0]!, terminalProvenance: "derived_unterminated_start" as const }] } })).toThrow("LEAGUE_REPORT_REOPEN_INCOMPLETE")
     expect(() => publishLeagueReport({ ...reportInput(), finalistDisposition: { root: root("forged-finalist") } })).toThrow("LEAGUE_SELECTION_UNISSUED_DISPOSITION")
     expect(() => publishLeagueReport(reportInput(undefined, { claim: "Nash optimal solved permanent balance" }))).toThrow("LEAGUE_REPORT_CLAIM")
-    expect(() => publishLeagueReport(reportInput(undefined, { strategyMemory: { secret: true } }))).toThrow("LEAGUE_REPORT_PROJECTION_DENIED")
+    expect(() => publishLeagueReport(reportInput(undefined, { strategyMemory: { secret: true } })), "league-eval:safe-projection-denial").toThrow("LEAGUE_REPORT_PROJECTION_DENIED")
   })
 })

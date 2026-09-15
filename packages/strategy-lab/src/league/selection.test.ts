@@ -79,7 +79,7 @@ describe("source-bound portfolio and robust-pure selection", () => {
     const entries = Array.from({ length: 12 }, (_, ordinal) => candidate(`inventory-${ordinal}`)), population = createLeaguePopulation({ candidateAdmissionRoots: entries.map((row) => row.candidateAdmission.root).sort(), studyPolicyRoot: root("study"), measurementPolicyRoot: "sha256:7c0df85ac1dc0f983619fb93066c70ee4cd7eab727e730e8a25bb3f61b9a8e95" }), snapshotRoot = root("inventory-snapshot"), mixture = createLeagueMixture({ snapshotRoot, solverOutputRoot: root("inventory-solver"), weightRoot: root("weights") }), portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = entries[0]!.candidateAdmission.root
     const { root: _root, schemaVersion: _schema, ...base } = selectionEvidence(snapshotRoot, population.root, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected), allocationRoot = root("allocation"), body = { ...base, schemaVersion: "league-selection-evidence-v4", allocationRoot, seedBlocks: ["seed"], iterations: [] }, input = { snapshotRoot, populationRoot: population.root, mixture, portfolio, candidateAdmissionRoot: selected, population, populationCandidates: entries, evidence: { ...body, root: labRoot(body.schemaVersion, body) } }
     const result = selectRobustPure(input)
-    expect(result.kind).toBe("no_robust_pure_finalist_found")
+    expect(result.kind, "league-eval:no-finalist").toBe("no_robust_pure_finalist_found")
     const representative = [entries.map((row) => row.candidateAdmission.root).sort()[0]!]
     expect(result.gateReceiptRoots).toContain(labRoot("league-robust-pure-gate-v2", { id: "behavioral_family_count", value: representative }))
     expect(result.gateReceiptRoots).toContain(labRoot("league-robust-pure-gate-v2", { id: "independent_planner_core_count", value: representative }))
@@ -102,7 +102,7 @@ describe("source-bound portfolio and robust-pure selection", () => {
   it("uses candidate-specific assessed base edges without laundering an affirmative calibration's cosmetic controls", async () => {
     const entries = await Promise.all([1, 3, 5, 2].map(importedCandidateFixture)), snapshotRoot = root("import-snapshot"), mixture = createLeagueMixture({ solverOutputRoot: root("solver"), weightRoot: root("weights"), snapshotRoot })
     const result = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries })
-    expect(result.portfolio.candidateAdmissionRoots).toEqual(entries.slice(0, 3).map((entry) => entry.candidateAdmission.root).sort())
+    expect(result.portfolio.candidateAdmissionRoots, "league-eval:clone-and-novelty").toEqual(entries.slice(0, 3).map((entry) => entry.candidateAdmission.root).sort())
     expect(result.rejections).toMatchObject([{ candidateAdmissionRoot: entries[3]!.candidateAdmission.root, reason: "clone_or_correlation" }])
     const first = entries[0]!
     const { importedAssessment: _assessment, ...withoutAssessment } = first
@@ -116,7 +116,7 @@ describe("source-bound portfolio and robust-pure selection", () => {
     expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [{ candidateAdmission: { root: root("fake") }, factoryRepository: {} as never, fingerprintArtifactRoot: root("fake-evidence") }] })).toThrow("LEAGUE_")
     const first = candidate("first"), second = candidate("second", true), third = candidate("third")
     const portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: [first, second, third] })
-    expect(portfolio.portfolio.candidateAdmissionRoots).toEqual([first.candidateAdmission.root, third.candidateAdmission.root].sort())
+    expect(portfolio.portfolio.candidateAdmissionRoots, "league-eval:mixture-and-portfolio").toEqual([first.candidateAdmission.root, third.candidateAdmission.root].sort())
     expect(portfolio.rejections).toMatchObject([{ candidateAdmissionRoot: second.candidateAdmission.root, reason: "clone_or_correlation" }])
   })
 
@@ -124,7 +124,7 @@ describe("source-bound portfolio and robust-pure selection", () => {
     const snapshotRoot = root("snapshot"), populationRoot = root("population"), mixture = createLeagueMixture({ solverOutputRoot: root("solver"), weightRoot: root("weights"), snapshotRoot })
     const entries = [candidate("one"), candidate("two"), candidate("three")], portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries }).portfolio, selected = entries[0]!.candidateAdmission.root
     const evidence = selectionEvidence(snapshotRoot, populationRoot, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected)
-    expect(selectRobustPure({ snapshotRoot, populationRoot, mixture, portfolio, candidateAdmissionRoot: selected, evidence })).toMatchObject({ kind: "robust_pure_finalist", candidateAdmissionRoot: selected })
+    expect(selectRobustPure({ snapshotRoot, populationRoot, mixture, portfolio, candidateAdmissionRoot: selected, evidence }), "league-eval:robust-pure-pass").toMatchObject({ kind: "robust_pure_finalist", candidateAdmissionRoot: selected })
     expect(selectRobustPure({ snapshotRoot, populationRoot, mixture, portfolio, candidateAdmissionRoot: selected, evidence: selectionEvidence(snapshotRoot, populationRoot, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected, 55) })).toMatchObject({ kind: "no_robust_pure_finalist_found" })
     expect(selectRobustPure({ snapshotRoot, populationRoot, mixture, portfolio, candidateAdmissionRoot: selected, evidence: selectionEvidence(snapshotRoot, populationRoot, mixture.solverOutputRoot, portfolio.candidateAdmissionRoots, selected, 56, 60) })).toMatchObject({ kind: "no_robust_pure_finalist_found" })
     const stale = { ...evidence, responseRows: evidence.responseRows.map((row) => ({ ...row, candidateAdmissionRoot: entries[1]!.candidateAdmission.root })) }; const rerooted = { ...stale, root: labRoot("league-selection-evidence-v2", (() => { const { root: _root, ...body } = stale; return body })()) }

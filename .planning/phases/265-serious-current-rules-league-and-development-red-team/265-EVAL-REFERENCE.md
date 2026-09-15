@@ -31,18 +31,26 @@ external submission, holdout read, or empirical result. Every row carries
 | hostile-runtime | `connected-runner.test.ts` — forged closure/caller provider rejected; cleanup failure is charged evidence | LEAG-02, LEAG-09 | hostile source/runtime boundary |
 | safe-projection-denial | `report.test.ts` — stale/incomplete state and sensitive fields fail closed | LEAG-05 | D-21; privacy/public-claim boundary |
 
-The fixture index machine-checks all sixteen exact file/test-name references, and
-the named source gate executes them. `integration.test.ts` is deliberately the
-minimal package-owned path only: it proves two injected admissions, an eight-cell
-matrix, the actual solver, durable terminal persistence, and a nonempty read-only
-reopen. It does not import or purport to exercise the CLI.
+The fixture index parses all sixteen file/test callbacks and requires an invoked
+matcher whose `expect` message is the row's `league-eval:<id>` marker. Comments,
+standalone strings, bare `expect` calls, and markers in another test do not link.
+This only checks assertion linkage: neither the index nor its descriptions prove
+behavior. Executed behavioral tests and captured outputs remain the evidence.
+`integration.test.ts` covers the minimal eight-cell package path and the expanded
+sixteen-entrant/960-cell matrix, solver, bounded transport and read-only
+reconstruction. It does not import or purport to execute the CLI.
 
 The separate, larger source-only CLI evidence remains in
 `scripts/run-v1-38-serious-league.test.ts`: `runs all cells, both rounds and all
 nine probes through fresh host issuance without empirical work` covers the
-80-cell/two-round/nine-probe loop, and `re-enters a measured positive response
-into a fresh complete three-candidate matrix and reopens the whole loop` covers
-the 122 ordinary plus 48 response actual-PSRO matrix growth/reopen path.
+80-cell/two-round/nine-probe loop. The parameterized `re-enters a measured positive
+response and reopens the whole loop` covers successful growth, failure after
+growth, a thrown response provider, and honest last-round nonclosure.
+`retains two distinct consecutive responses beating their own preceding frozen
+targets` covers connected iteration measurements and contemporaneous-target
+tamper denial. These are trusted injected source checks, not empirical runs;
+the repair report distinguishes captured focused runs from pending integrated
+gate execution.
 
 `scripts/check-v1-38-serious-league-boundaries.test.ts` uses the shared resolved
 AST/import graph for innocent-package/barrel, dynamic-loader, manifest-alias,

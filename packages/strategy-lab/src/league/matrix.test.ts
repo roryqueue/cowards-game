@@ -168,7 +168,8 @@ describe("complete semantic empirical-game matrix", () => {
     ]
     for (const terminals of variations) {
       const admitted = admitCompletePayoffSnapshot(matrix, terminals)
-      expect(admitted.kind).toBe("blocked")
+      expect(admitted.kind, "league-eval:matrix-fault-families").toBe("blocked")
+      if (terminals.some((terminal) => terminal.processValidity === "process_invalid")) expect(admitted.kind, "league-eval:invalid-and-system-terminals").toBe("blocked")
       expect(admitted.processEvidence).toHaveLength(terminals.length)
     }
   })
@@ -200,7 +201,7 @@ describe("complete semantic empirical-game matrix", () => {
     expect(reverse.kind).toBe("complete")
     if (forward.kind === "complete" && reverse.kind === "complete") {
       expect(reverse.snapshot.root).toBe(forward.snapshot.root)
-      expect(reverse.solverPayoffBytes).toEqual(forward.solverPayoffBytes)
+      expect(reverse.solverPayoffBytes, "league-eval:repeat-layout-and-replay").toEqual(forward.solverPayoffBytes)
     }
   })
 

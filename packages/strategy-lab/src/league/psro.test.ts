@@ -37,7 +37,7 @@ const declared = () => {
 describe("immutable PSRO response lifecycle", () => {
   it("roots a frozen mixture plus strongest and vulnerable pure targets and charges before response work", () => {
     const round = declared()
-    expect(round.round.priorSnapshotRoot).toBe(round.snapshotRoot)
+    expect(round.round.priorSnapshotRoot, "league-eval:round-targets").toBe(round.snapshotRoot)
     expect(round.target.mixtureRoot).toMatch(/^sha256:/)
     expect(round.target.strongestPureCandidateRoot).toMatch(/^sha256:/)
     expect(round.target.vulnerablePureCandidateRoot).toMatch(/^sha256:/)

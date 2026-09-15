@@ -51,7 +51,7 @@ describe("all-channel development red team", () => {
       expect(charged.starts).toHaveLength(1)
       expect(() => terminalizeRedTeamAttempt({ ledger: initial, startRoot: charged.starts[0]!.root, disposition, usage: resources(0), evidenceRoots: [root("raw")], candidateAdmissionRoot: null })).toThrow()
       const terminal = terminalizeRedTeamAttempt({ ledger: charged, startRoot: charged.starts[0]!.root, disposition, usage: disposition === "system_failure" ? null : resources(0), evidenceRoots: [root("raw")], candidateAdmissionRoot: disposition === "success" ? root("counter") : null })
-      expect(terminal.terminals[0]!.charge).toEqual(resources(10))
+      expect(terminal.terminals[0]!.charge, "league-eval:charged-outcomes").toEqual(resources(10))
       expect(terminal.terminals[0]!.processValidity).toBe(["system_failure", "player_violation", "invalid"].includes(disposition) ? "process_invalid" : "process_valid")
       expect(() => terminalizeRedTeamAttempt({ ledger: terminal, startRoot: charged.starts[0]!.root, disposition, usage: resources(0), evidenceRoots: [root("raw")], candidateAdmissionRoot: null })).toThrow()
       const twice = finish(start(terminal))
@@ -77,7 +77,7 @@ describe("all-channel development red team", () => {
       const exact = ["repeat_restart", "worker_shard_completion", "semantic_arena_identity"].includes(family)
       ledger = recordLeagueProbe({ ledger, family, ...target, pairs: [{ left: { canonicalBytes: "same", halfPoints: 2, conditionRoot: root("condition-left"), evidenceRoot: root("left") }, right: { canonicalBytes: exact ? "same" : "different-valid-condition", halfPoints: 2, conditionRoot: exact ? root("condition-left") : root("condition-right"), evidenceRoot: root("right") } }] })
     }
-    expect(ledger.probes).toHaveLength(9)
+    expect(ledger.probes, "league-eval:nine-probes").toHaveLength(9)
     expect(ledger.probes.every((row) => row.passed)).toBe(true)
     const unequal = recordLeagueProbe({ ledger: declareRedTeamAllocation(redTeamAllocationFixture()), family: "repeat_restart", ...target, pairs: [{ left: { canonicalBytes: "x", halfPoints: 2, conditionRoot: root("c"), evidenceRoot: root("l") }, right: { canonicalBytes: "y", halfPoints: 2, conditionRoot: root("c"), evidenceRoot: root("r") } }] })
     expect(unequal.probes[0]).toMatchObject({ passed: false, processValidity: "process_invalid" })
@@ -107,7 +107,7 @@ describe("all-channel development red team", () => {
     const assessment = { targetRoot: round.target.root, fingerprintEvidenceRoot: root("fingerprint"), independentCounterfactualRelations: ["distinct" as const], existingCandidateRoots: [root("a"), root("b")], completeTargetScores: [...new Set([round.target.mixtureRoot, round.target.strongestPureCandidateRoot, round.target.vulnerablePureCandidateRoot])].map((targetRoot) => ({ targetRoot, numerator: 3, denominator: 4, evidenceRoot: root("set") })) }
     const reentry = reenterAcceptedCounter({ ledger: done, startRoot: charged.starts[0]!.root, round, candidateAdmission: admission, assessment })
     expect(reentry).toMatchObject({ disposition: "success", roundRoot: round.round.root, candidateAdmissionRoot: admission.root })
-    expect(() => advanceLeagueRound({ round, admissions: [reentry], requestClosure: true })).toThrow("EARLY_CLOSURE")
+    expect(() => advanceLeagueRound({ round, admissions: [reentry], requestClosure: true }), "league-eval:accepted-counter-reentry").toThrow("EARLY_CLOSURE")
     expect(() => reenterAcceptedCounter({ ledger: done, startRoot: charged.starts[0]!.root, round, candidateAdmission: admission, assessment: { ...assessment, completeTargetScores: assessment.completeTargetScores.slice(1) } })).toThrow("TARGET_COVERAGE")
   })
 })

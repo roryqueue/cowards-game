@@ -83,7 +83,7 @@ describe("frozen empirical-game solver", () => {
   }, 120000)
   it("selects only a decisive exact synthetic candidate with committed golden and boundary evidence", () => {
     const spike = runLeagueSolverSpike()
-    expect(spike.status).toBe("selected")
+    expect(spike.status, "league-eval:degenerate-solver").toBe("selected")
     if (spike.status === "selected") {
       expect(spike.selection.algorithm).toBe("exact-rational-pivoted-restricted-v2")
       expect(spike.selection.representation).toBe("bigint-rational-half-points-v1")
@@ -102,7 +102,7 @@ describe("frozen empirical-game solver", () => {
     ]
     expect(outputs.map((entry) => entry.status === "solved" ? entry.status : entry.failureCode)).toEqual(["solved", "solved", "solved"])
     const bytes = outputs.map((entry) => entry.canonicalBytes)
-    expect(bytes[1]).toEqual(bytes[0])
+    expect(bytes[1], "league-eval:permutation-and-numeric-boundary").toEqual(bytes[0])
     expect(bytes[2]).toEqual(bytes[0])
     const solved = outputs[0]
     if (!solved || solved.status !== "solved") throw new TypeError("TEST_SOLVER_FAILURE")
