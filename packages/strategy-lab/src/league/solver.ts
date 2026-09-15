@@ -10,8 +10,8 @@ import {
 } from "./contracts.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
-const MAX_ENTRANTS = 16
 const FP_ITERATIONS = 17
+const MAX_PIVOT_OPERATIONS = 1_000_000
 
 type Rational = Readonly<{ numerator: bigint; denominator: bigint }>
 type Matrix = readonly (readonly Rational[])[]
@@ -96,8 +96,7 @@ const parseSnapshot = (snapshotValue: unknown, transport: unknown): ParsedSnapsh
   if (new Set(ordered.map((entry) => entry.projectionRoot)).size !== ordered.length) return "PAYOFF_TRANSPORT_INVALID"
   if (labRoot("league-solver-payoffs-v1", ordered) !== snapshot.solverPayoffRoot) return "PAYOFF_TRANSPORT_MISMATCH"
   const candidates = [...new Set(ordered.flatMap((entry) => [entry.entrantCandidateRoot, entry.opponentCandidateRoot]))].sort()
-  if (candidates.length < 2) return "MATRIX_INCOMPLETE"
-  if (candidates.length > MAX_ENTRANTS) return "RESOURCE_BOUND"
+  if (candidates.length < 2 || ordered.length !== snapshot.expectedCellCount || snapshot.expectedCellCount !== 8 * ((candidates.length * (candidates.length - 1)) / 2)) return "MATRIX_INCOMPLETE"
   const index = new Map(candidates.map((candidate, ordinal) => [candidate, ordinal]))
   const matrix = Array.from({ length: candidates.length }, () => Array.from({ length: candidates.length }, () => zero))
   for (let left = 0; left < candidates.length - 1; left += 1) for (let right = left + 1; right < candidates.length; right += 1) {
@@ -121,17 +120,92 @@ const pureSolution = (matrix: Matrix): readonly Rational[] | null => {
   const chosen = rowMins.findIndex((entry) => compare(entry, value) === 0)
   return matrix.map((_, ordinal) => ordinal === chosen ? one : zero)
 }
-/** Exact 2x2 support pivot. Larger restricted games fail explicitly rather than manufacturing a convergence claim. */
-const pivotedRestricted = (matrix: Matrix): readonly Rational[] | null => {
+interface SecuritySolution { readonly weights: readonly Rational[]; readonly value: Rational; readonly operations: number }
+type RestrictedResult = Readonly<{ status: "solved"; weights: readonly Rational[]; securityResidual: Rational; operations: number }> | Readonly<{ status: "resource_exhausted"; operations: number }> | Readonly<{ status: "unsupported"; operations: number }>
+
+const solveLinear = (equations: readonly (readonly Rational[])[]): readonly Rational[] | null => {
+  const dimension = equations.length
+  if (!dimension || equations.some((row) => row.length !== dimension + 1)) return null
+  const table = equations.map((row) => [...row])
+  for (let column = 0; column < dimension; column += 1) {
+    const pivot = table.findIndex((row, index) => index >= column && compare(row[column]!, zero) !== 0)
+    if (pivot < 0) return null
+    ;[table[column], table[pivot]] = [table[pivot]!, table[column]!]
+    const divisor = table[column]![column]!
+    table[column] = table[column]!.map((value) => rational(value.numerator * divisor.denominator, value.denominator * divisor.numerator))
+    for (let row = 0; row < dimension; row += 1) if (row !== column) {
+      const factor = table[row]![column]!
+      if (compare(factor, zero) !== 0) table[row] = table[row]!.map((value, index) => subtract(value, multiply(factor, table[column]![index]!)))
+    }
+  }
+  return table.map((row) => row[dimension]!)
+}
+const combinations = function* (size: number, count: number, start = 0, chosen: number[] = []): Generator<readonly number[]> {
+  if (chosen.length === count) { yield chosen; return }
+  for (let next = start; next <= size - (count - chosen.length); next += 1) yield* combinations(size, count, next + 1, [...chosen, next])
+}
+const supportCost = (count: number) => (count + 1) ** 3
+const supportSolution = (matrix: Matrix, rows: readonly number[], columns: readonly number[]): SecuritySolution | null => {
+  if (rows.length !== columns.length) return null
+  const equations: Rational[][] = columns.map((column) => [...rows.map((row) => matrix[row]![column]!), rational(-1n), zero])
+  equations.push([...rows.map(() => one), zero, one])
+  const solved = solveLinear(equations)
+  if (!solved) return null
+  const values = solved.slice(0, -1), value = solved.at(-1)!
+  if (values.some((entry) => compare(entry, zero) < 0)) return null
+  const full = matrix.map(() => zero)
+  for (const [ordinal, row] of rows.entries()) full[row] = values[ordinal]!
+  const columnValues = matrix[0]!.map((_, column) => sum(full.map((weight, row) => multiply(weight, matrix[row]![column]!))))
+  if (columnValues.some((entry) => compare(entry, value) < 0)) return null
+  return Object.freeze({ weights: Object.freeze(full), value, operations: supportCost(rows.length) })
+}
+const solveSecurity = (matrix: Matrix, budget: { readonly maximum: number; used: number }): SecuritySolution | "resource_exhausted" | null => {
   const pure = pureSolution(matrix)
-  if (pure) return pure
-  if (matrix.length !== 2 || matrix.some((row) => row.length !== 2)) return null
-  const [[a, b], [c, d]] = matrix as [[Rational, Rational], [Rational, Rational]]
-  const denominator = add(subtract(a, b), subtract(d, c))
-  if (compare(denominator, zero) === 0) return null
-  const first = rational(subtract(d, c).numerator * denominator.denominator, subtract(d, c).denominator * denominator.numerator)
-  if (!nonNegativeUnit(first)) return null
-  return Object.freeze([first, subtract(one, first)])
+  if (pure) {
+    const value = matrix[pure.findIndex((entry) => compare(entry, one) === 0)]!.reduce((minimum, entry) => compare(entry, minimum) < 0 ? entry : minimum)
+    return Object.freeze({ weights: pure, value, operations: 0 })
+  }
+  const trySupport = (rows: readonly number[], columns: readonly number[]) => {
+    const cost = supportCost(rows.length)
+    if (budget.used + cost > budget.maximum) return "resource_exhausted" as const
+    budget.used += cost
+    return supportSolution(matrix, rows, columns)
+  }
+  const all = Array.from({ length: matrix.length }, (_, ordinal) => ordinal)
+  const full = trySupport(all, all)
+  if (full === "resource_exhausted" || full) return full
+  let best: SecuritySolution | null = null
+  for (let count = 1; count < matrix.length; count += 1) for (const rows of combinations(matrix.length, count)) for (const columns of combinations(matrix.length, count)) {
+    const candidate = trySupport(rows, columns)
+    if (candidate === "resource_exhausted") return candidate
+    if (candidate && (!best || compare(candidate.value, best.value) > 0)) best = candidate
+  }
+  return best
+}
+const negativeTranspose = (matrix: Matrix): Matrix => Object.freeze(matrix[0]!.map((_, row) => Object.freeze(matrix.map((column) => rational(-column[row]!.numerator, column[row]!.denominator)))))
+/** Bounded exact rational support pivots solve both security LPs; failure is an explicit budget result, never an optimality claim. */
+const pivotedRestricted = (matrix: Matrix, maximum = MAX_PIVOT_OPERATIONS): RestrictedResult => {
+  if (!Number.isSafeInteger(maximum) || maximum < 0 || !matrix.length || matrix.some((row) => row.length !== matrix.length)) return Object.freeze({ status: "unsupported" as const, operations: 0 })
+  const pure = pureSolution(matrix)
+  if (pure) return Object.freeze({ status: "solved" as const, weights: pure, securityResidual: zero, operations: 0 })
+  const uniformCost = matrix.length ** 2
+  if (maximum < uniformCost) return Object.freeze({ status: "resource_exhausted" as const, operations: 0 })
+  const rowTotals = matrix.map(sum), columnTotals = matrix[0]!.map((_, column) => sum(matrix.map((row) => row[column]!)))
+  if (rowTotals.every((value) => compare(value, rowTotals[0]!) === 0) && columnTotals.every((value) => compare(value, columnTotals[0]!) === 0) && compare(rowTotals[0]!, columnTotals[0]!) === 0) {
+    return Object.freeze({ status: "solved" as const, weights: Object.freeze(matrix.map(() => rational(1n, BigInt(matrix.length)))), securityResidual: zero, operations: uniformCost })
+  }
+  const budget = { maximum, used: 0 }
+  const row = solveSecurity(matrix, budget)
+  if (row === "resource_exhausted") return Object.freeze({ status: "resource_exhausted" as const, operations: budget.used })
+  const column = solveSecurity(negativeTranspose(matrix), budget)
+  if (column === "resource_exhausted") return Object.freeze({ status: "resource_exhausted" as const, operations: budget.used })
+  if (!row || !column || compare(row.value, rational(-column.value.numerator, column.value.denominator)) !== 0) return Object.freeze({ status: "unsupported" as const, operations: budget.used })
+  const minimum = matrix[0]!.map((_, columnIndex) => sum(row.weights.map((weight, rowIndex) => multiply(weight, matrix[rowIndex]![columnIndex]!)))).reduce((current, value) => compare(value, current) < 0 ? value : current, matrix[0]![0]!)
+  return Object.freeze({ status: "solved" as const, weights: row.weights, securityResidual: subtract(row.value, minimum), operations: budget.used })
+}
+export const runExactRestrictedGameCandidate = (input: { readonly matrix: readonly (readonly number[])[]; readonly pivotBudget: number }): RestrictedResult => {
+  if (!Array.isArray(input.matrix) || input.matrix.length < 2 || input.matrix.some((row) => !Array.isArray(row) || row.length !== input.matrix.length || row.some((value) => !Number.isSafeInteger(value) || value < -1 || value > 1))) return Object.freeze({ status: "unsupported" as const, operations: 0 })
+  return pivotedRestricted(matrixFromCorpus(input.matrix.map((row) => row.map(BigInt))), input.pivotBudget)
 }
 const boundedFictitiousPlay = (matrix: Matrix): readonly Rational[] | null => {
   if (matrix.length !== 2 || matrix.some((row) => row.length !== 2)) return null
@@ -154,19 +228,29 @@ const corpus = Object.freeze([
   { id: "degenerate", matrix: [[0n, 0n], [0n, 0n]], expected: [rational(1n), rational(0n)] },
   { id: "tie", matrix: [[1n, -1n], [-1n, 1n]], expected: [rational(1n, 2n), rational(1n, 2n)] },
   { id: "boundary", matrix: [[1n, -1n], [-1n, 0n]], expected: [rational(1n, 3n), rational(2n, 3n)] },
+  { id: "rps", matrix: [[0n, 1n, -1n], [-1n, 0n, 1n], [1n, -1n, 0n]], expected: [rational(1n, 3n), rational(1n, 3n), rational(1n, 3n)] },
+  { id: "cyclic12", matrix: Array.from({ length: 12 }, (_, row) => Array.from({ length: 12 }, (_, column) => BigInt(column === (row + 1) % 12 ? 1 : column === (row + 11) % 12 ? -1 : 0))), expected: Array.from({ length: 12 }, () => rational(1n, 12n)) },
 ])
 const matrixFromCorpus = (values: readonly (readonly bigint[])[]): Matrix => Object.freeze(values.map((row) => Object.freeze(row.map((value) => rational(value)))))
+const candidateWeights = (result: readonly Rational[] | RestrictedResult | null): readonly Rational[] | null => {
+  if (result === null) return null
+  if (Array.isArray(result)) return result as readonly Rational[]
+  const restricted = result as RestrictedResult
+  return restricted.status === "solved" ? restricted.weights : null
+}
 const testCandidate = (candidate: SolverName): SolverComparison => {
   const solve = candidate === "exact-rational-pivoted-restricted-v1" ? pivotedRestricted : boundedFictitiousPlay
   const observed = corpus.map(({ id, matrix, expected }) => {
-    const result = solve(matrixFromCorpus(matrix))
-    return `${id}:${result !== null && result.length === expected.length && result.every((value, ordinal) => compare(value, expected[ordinal]!) === 0) ? "pass" : "fail"}`
+    const result = candidate === "exact-rational-pivoted-restricted-v1" ? pivotedRestricted(matrixFromCorpus(matrix)) : solve(matrixFromCorpus(matrix))
+    const weights = candidateWeights(result)
+    return `${id}:${weights !== null && weights.length === expected.length && weights.every((value, ordinal) => compare(value, expected[ordinal]!) === 0) ? "pass" : "fail"}`
   })
   const golden = observed.every((entry) => entry.endsWith(":pass"))
   const permutation = corpus.filter(({ id }) => id !== "degenerate").every(({ matrix, expected }) => {
     const reversed = matrix.map((row) => [...row].reverse()).reverse()
-    const result = solve(matrixFromCorpus(reversed))
-    return result !== null && result.every((value, ordinal) => compare(value, expected[expected.length - ordinal - 1]!) === 0)
+    const result = candidate === "exact-rational-pivoted-restricted-v1" ? pivotedRestricted(matrixFromCorpus(reversed)) : solve(matrixFromCorpus(reversed))
+    const weights = candidateWeights(result)
+    return weights !== null && weights.every((value, ordinal) => compare(value, expected[expected.length - ordinal - 1]!) === 0)
   })
   const boundary = observed.find((entry) => entry.startsWith("boundary:"))?.endsWith(":pass") === true
   return Object.freeze({ candidate, golden, permutation, boundary, observed: Object.freeze(observed) })
@@ -193,7 +277,7 @@ export const runLeagueSolverSpike = (): LeagueSolverSpike => {
 }
 
 export type LeagueSolverResult =
-  | Readonly<{ status: "solved"; manifest: Readonly<LeagueSolverManifest>; output: Readonly<LeagueSolverOutput>; weights: readonly ExactWeight[]; strongestPureCandidateRoot: LabRoot; vulnerablePureCandidateRoot: LabRoot; canonicalBytes: Uint8Array }>
+  | Readonly<{ status: "solved"; manifest: Readonly<LeagueSolverManifest>; output: Readonly<LeagueSolverOutput>; weights: readonly ExactWeight[]; securityResidual: Readonly<{ numerator: string; denominator: string }>; strongestPureCandidateRoot: LabRoot; vulnerablePureCandidateRoot: LabRoot; canonicalBytes: Uint8Array }>
   | Readonly<{ status: "failed"; failureCode: LeagueSolverFailureCode; canonicalBytes: Uint8Array }>
 
 const failed = (failureCode: LeagueSolverFailureCode): LeagueSolverResult => Object.freeze({ status: "failed" as const, failureCode, canonicalBytes: outputBytes({ status: "failed", failureCode }) }) as LeagueSolverResult
@@ -204,8 +288,9 @@ export const solveLeagueSnapshot = (input: { readonly snapshot: unknown; readonl
   if (typeof parsed === "string") return failed(parsed)
   const spike = runLeagueSolverSpike()
   if (spike.status !== "selected") return failed("SOLVER_SELECTION_FAILED")
-  const values = pivotedRestricted(parsed.matrix)
-  if (!values) return failed("RESOURCE_BOUND")
+  const restricted = pivotedRestricted(parsed.matrix)
+  if (restricted.status !== "solved") return failed("RESOURCE_BOUND")
+  const values = restricted.weights
   if (values.some((value) => !nonNegativeUnit(value)) || compare(sum(values), one) !== 0) return failed("RESOURCE_BOUND")
   const weights = weightsFor(parsed.candidates, values)
   const strongest = weights.filter((weight) => weight.numerator !== "0").sort((left, right) => left.candidateRoot.localeCompare(right.candidateRoot))[0]?.candidateRoot
@@ -213,11 +298,12 @@ export const solveLeagueSnapshot = (input: { readonly snapshot: unknown; readonl
   if (!strongest || !vulnerable) return failed("RESOURCE_BOUND")
   const algorithmRoot = labRoot("league-solver-algorithm-v1", spike.selection)
   const numericPolicyRoot = labRoot("league-solver-numeric-policy-v1", { representation: spike.selection.representation, normalization: spike.selection.normalization, halfPointEncoding: [-1, 0, 1] })
-  const resourcePolicyRoot = labRoot("league-solver-resource-policy-v1", { maxEntrants: MAX_ENTRANTS, schedule: spike.selection.schedule, failureCodes: spike.selection.failureCodes })
+  const resourcePolicyRoot = labRoot("league-solver-resource-policy-v1", { maximumPivotOperations: MAX_PIVOT_OPERATIONS, schedule: spike.selection.schedule, failureCodes: spike.selection.failureCodes })
   const manifest = createLeagueSolverManifest({ snapshotRoot: parsed.snapshot.root, algorithmRoot, numericPolicyRoot, resourcePolicyRoot })
   const distributionRoot = labRoot("league-solver-distribution-v1", { snapshotRoot: parsed.snapshot.root, weights })
   const diagnosticsRoot = labRoot("league-solver-diagnostics-v1", { spikeRoot: spike.root, strongest, vulnerable, tieBreak: spike.selection.tieBreak })
   const output = createLeagueSolverOutput({ manifestRoot: manifest.root, snapshotRoot: parsed.snapshot.root, distributionRoot, diagnosticsRoot })
-  const canonicalResult = { algorithm: spike.selection.algorithm, representation: spike.selection.representation, normalization: spike.selection.normalization, tieBreak: spike.selection.tieBreak, schedule: spike.selection.schedule, weights, strongestPureCandidateRoot: strongest, vulnerablePureCandidateRoot: vulnerable }
-  return Object.freeze({ status: "solved" as const, manifest, output, weights, strongestPureCandidateRoot: strongest, vulnerablePureCandidateRoot: vulnerable, canonicalBytes: outputBytes(canonicalResult) }) as LeagueSolverResult
+  const securityResidual = { numerator: restricted.securityResidual.numerator.toString(), denominator: restricted.securityResidual.denominator.toString() }
+  const canonicalResult = { algorithm: spike.selection.algorithm, representation: spike.selection.representation, normalization: spike.selection.normalization, tieBreak: spike.selection.tieBreak, schedule: spike.selection.schedule, weights, securityResidual, strongestPureCandidateRoot: strongest, vulnerablePureCandidateRoot: vulnerable }
+  return Object.freeze({ status: "solved" as const, manifest, output, weights, securityResidual, strongestPureCandidateRoot: strongest, vulnerablePureCandidateRoot: vulnerable, canonicalBytes: outputBytes(canonicalResult) }) as LeagueSolverResult
 }

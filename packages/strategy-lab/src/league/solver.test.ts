@@ -95,14 +95,20 @@ describe("frozen empirical-game solver", () => {
     expect(changedResult.failureCode).toBe("PAYOFF_TRANSPORT_INVALID")
   })
 
-  it("solves 3x3 RPS and a full 12-entrant cyclic snapshot with exact normalized rational weights", () => {
+  it("solves 3x3 RPS and full 12/13-entrant cyclic snapshots with exact normalized rational weights", () => {
     const rps = snapshotFromMatrix([[0, 1, -1], [-1, 0, 1], [1, -1, 0]])
     const twelve = snapshotFromMatrix(cyclicMatrix(12), true)
+    const thirteen = snapshotFromMatrix(cyclicMatrix(13))
     const rpsResult = solveLeagueSnapshot({ snapshot: rps.snapshot, solverPayoffBytes: rps.transport })
     const twelveResult = solveLeagueSnapshot({ snapshot: twelve.snapshot, solverPayoffBytes: twelve.transport })
-    if (rpsResult.status !== "solved" || twelveResult.status !== "solved") throw new TypeError("TEST_FULL_RESTRICTED_SOLVER")
-    expect(rpsResult.weights).toEqual(rps.candidates.map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "3" })))
-    expect(twelveResult.weights).toEqual(twelve.candidates.map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "12" })))
+    const thirteenResult = solveLeagueSnapshot({ snapshot: thirteen.snapshot, solverPayoffBytes: thirteen.transport })
+    if (rpsResult.status !== "solved" || twelveResult.status !== "solved" || thirteenResult.status !== "solved") throw new TypeError("TEST_FULL_RESTRICTED_SOLVER")
+    expect(rpsResult.weights).toEqual([...rps.candidates].sort().map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "3" })))
+    expect(twelveResult.weights).toEqual([...twelve.candidates].sort().map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "12" })))
+    expect(thirteenResult.weights).toEqual([...thirteen.candidates].sort().map((candidateRoot) => ({ candidateRoot, numerator: "1", denominator: "13" })))
+    expect(rpsResult.securityResidual).toEqual({ numerator: "0", denominator: "1" })
+    expect(twelveResult.securityResidual).toEqual({ numerator: "0", denominator: "1" })
+    expect(thirteenResult.securityResidual).toEqual({ numerator: "0", denominator: "1" })
     expect(twelveResult.canonicalBytes).toEqual(solveLeagueSnapshot({ snapshot: twelve.snapshot, solverPayoffBytes: twelve.transport, workerCount: 12, shardOrder: [11, 0, 4], restart: 3 }).canonicalBytes)
   })
 
