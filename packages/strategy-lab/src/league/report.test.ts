@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { labRoot, type LabRoot } from "../contracts.js"
-import { createCompletePayoffSnapshot, createLeagueMixture, createLeaguePortfolio, createLeagueSolverManifest, createLeagueSolverOutput } from "./contracts.js"
+import { createCompletePayoffSnapshot, createLeagueMixture, createLeaguePortfolio, createLeagueSolverManifest, createLeagueSolverOutput, createRobustPureDisposition } from "./contracts.js"
 import { createLeagueRepository } from "./repository.js"
 import { publishLeagueReport, reopenLeagueReport } from "./report.js"
 
@@ -24,7 +24,7 @@ const reportInput = (repo = repository(), unsafe: Record<string, unknown> = {}) 
   const portfolio = createLeaguePortfolio({ candidateAdmissionRoots: [root("candidate")], diversityReceiptRoot: root("diversity"), mixtureRoot: mixture.root })
   return {
     repository: repo, snapshot, solverManifest: manifest, solver, mixture, portfolio,
-    redTeamRoot: root("red-team"), finalistDispositionRoot: root("finalist"),
+    redTeamRoot: root("red-team"), finalistDisposition: createRobustPureDisposition({ portfolioRoot: portfolio.root, kind: "no_robust_pure_finalist_found", candidateAdmissionRoot: null, gateReceiptRoots: [root("finalist-gate")] }),
     reopen: { issued: false as const, records: [{ terminalProvenance: "persisted" as const, start: { root: root("start"), cellRoot: root("cell"), allocationRoot: root("allocation") }, terminal: { disposition: "success", processValidity: "process_valid", cellRoot: root("cell") } }], remnants: [] },
     projection: {
       population: { root: root("population") }, conditions: [{ root: root("condition") }], semanticArenas: [{ root: root("arena") }], oracleFamilies: [{ root: root("oracle") }],

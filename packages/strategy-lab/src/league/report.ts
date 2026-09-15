@@ -6,6 +6,7 @@ import {
   LeagueMixtureSchema,
   LeaguePortfolioSchema,
   LeagueReportDescriptorSchema,
+  RobustPureDispositionSchema,
   LeagueSolverManifestSchema,
   LeagueSolverOutputSchema,
   type LeagueReportDescriptor,
@@ -58,17 +59,18 @@ export const publishLeagueReport = (input: {
   readonly mixture: unknown
   readonly portfolio: unknown
   readonly redTeamRoot: LabRoot
-  readonly finalistDispositionRoot: LabRoot
+  readonly finalistDisposition: unknown
   readonly reopen: unknown
   readonly projection: unknown
 }): Readonly<PublishedLeagueReport> => {
-  if (!input.repository || !isRoot(input.redTeamRoot) || !isRoot(input.finalistDispositionRoot)) return fail("INPUT")
+  if (!input.repository || !isRoot(input.redTeamRoot)) return fail("INPUT")
   const snapshot = CompletePayoffSnapshotSchema.parse(input.snapshot)
   const manifest = LeagueSolverManifestSchema.parse(input.solverManifest)
   const solver = LeagueSolverOutputSchema.parse(input.solver)
   const mixture = LeagueMixtureSchema.parse(input.mixture)
   const portfolio = LeaguePortfolioSchema.parse(input.portfolio)
-  if (manifest.snapshotRoot !== snapshot.root || solver.manifestRoot !== manifest.root || solver.snapshotRoot !== snapshot.root || mixture.snapshotRoot !== snapshot.root || mixture.solverOutputRoot !== solver.root || portfolio.mixtureRoot !== mixture.root) return fail("GRAPH_STALE")
+  const finalist = RobustPureDispositionSchema.parse(input.finalistDisposition)
+  if (manifest.snapshotRoot !== snapshot.root || solver.manifestRoot !== manifest.root || solver.snapshotRoot !== snapshot.root || mixture.snapshotRoot !== snapshot.root || mixture.solverOutputRoot !== solver.root || portfolio.mixtureRoot !== mixture.root || finalist.portfolioRoot !== portfolio.root) return fail("GRAPH_STALE")
   const reopened = admitReopen(input.reopen, snapshot.expectedCellCount)
   auditProjection(input.projection)
   const arraySections = projectionKeys.filter((key) => !["population", "tupleRoot", "runtimeRoot", "policyRoots"].includes(key))
@@ -84,14 +86,14 @@ export const publishLeagueReport = (input: {
     mixtureRoot: mixture.root,
     portfolioRoot: portfolio.root,
     redTeamRoot: input.redTeamRoot,
-    finalistDispositionRoot: input.finalistDispositionRoot,
+    finalistDispositionRoot: finalist.root,
     reopenedRecordRoots: reopened.records.map((record) => record.start.root).sort(),
     projection,
   }
   const encoded = admitCanonicalJsonValue(report, { profile: "canonical-manifest" })
   if (!encoded.ok || encoded.canonicalByteLength < 1 || encoded.canonicalByteLength > CAP) return fail("REPORT_BYTES")
   const reportRoot = publishLeagueArtifact(input.repository, encoded.canonicalBytes)
-  const descriptor = createLeagueReportDescriptor({ snapshotRoot: snapshot.root, solverOutputRoot: solver.root, redTeamRoot: input.redTeamRoot, portfolioRoot: portfolio.root, finalistDispositionRoot: input.finalistDispositionRoot, reportChunkRoots: [reportRoot] })
+  const descriptor = createLeagueReportDescriptor({ snapshotRoot: snapshot.root, solverOutputRoot: solver.root, redTeamRoot: input.redTeamRoot, portfolioRoot: portfolio.root, finalistDispositionRoot: finalist.root, reportChunkRoots: [reportRoot] })
   return freezeLabValue({ descriptor, reportRoot }) as PublishedLeagueReport
 }
 
