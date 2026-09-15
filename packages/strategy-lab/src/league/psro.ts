@@ -101,15 +101,18 @@ export type LeagueRoundAdvance =
   | Readonly<{ kind: "closed"; priorRoundRoot: LabRoot; retainedTerminalRoots: readonly LabRoot[] }>
 
 /** A successful late counter always creates a new population/snapshot branch and cannot close the historical round. */
-export const advanceLeagueRound = (input: { readonly round: DeclaredLeagueRound; readonly admissions: readonly LeagueResponseRow[]; readonly requestClosure: boolean; readonly nextPopulationRoot?: LabRoot; readonly nextSnapshotRoot?: LabRoot }): LeagueRoundAdvance => {
+export const advanceLeagueRound = (input: { readonly round: DeclaredLeagueRound; readonly admissions: readonly LeagueResponseRow[]; readonly requestClosure: boolean; readonly nextPopulationRoot?: LabRoot; readonly nextSnapshot?: unknown }): LeagueRoundAdvance => {
   const round = input.round
   if (!round || !Array.isArray(input.admissions) || new Set(input.admissions.map((entry) => entry.root)).size !== input.admissions.length || input.admissions.some((entry) => entry.roundRoot !== round.round.root || !root(entry.chargeStartRoot) || !root(entry.terminalRoot))) return fail("ADVANCE_INPUT")
   const retainedTerminalRoots = Object.freeze(input.admissions.map((entry) => entry.terminalRoot).sort())
   const accepted = input.admissions.filter((entry) => entry.disposition === "success").map((entry) => entry.candidateAdmissionRoot).sort()
   if (accepted.length) {
     if (input.requestClosure) return fail("EARLY_CLOSURE")
-    if (!root(input.nextPopulationRoot) || !root(input.nextSnapshotRoot) || input.nextSnapshotRoot === round.snapshotRoot) return fail("FRESH_SNAPSHOT")
-    return freezeLabValue({ kind: "fresh_snapshot_required" as const, priorRoundRoot: round.round.root, nextPopulationRoot: input.nextPopulationRoot, nextSnapshotRoot: input.nextSnapshotRoot, acceptedCandidateAdmissionRoots: Object.freeze(accepted), retainedTerminalRoots }) as LeagueRoundAdvance
+    if (!root(input.nextPopulationRoot)) return fail("FRESH_SNAPSHOT")
+    let nextSnapshot: LabRoot
+    try { nextSnapshot = CompletePayoffSnapshotSchema.parse(input.nextSnapshot).root } catch { return fail("FRESH_SNAPSHOT") }
+    if (nextSnapshot === round.snapshotRoot) return fail("FRESH_SNAPSHOT")
+    return freezeLabValue({ kind: "fresh_snapshot_required" as const, priorRoundRoot: round.round.root, nextPopulationRoot: input.nextPopulationRoot, nextSnapshotRoot: nextSnapshot, acceptedCandidateAdmissionRoots: Object.freeze(accepted), retainedTerminalRoots }) as LeagueRoundAdvance
   }
   if (input.requestClosure && round.roundOrdinal + 1 < round.maximumRounds) return fail("EARLY_CLOSURE")
   return freezeLabValue(input.requestClosure

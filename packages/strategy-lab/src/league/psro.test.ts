@@ -46,7 +46,7 @@ describe("immutable PSRO response lifecycle", () => {
 
   it("retains every failed, weak, duplicate, retry, and unfilled disposition as charged terminal evidence", () => {
     const round = declared(), candidate = candidateAdmission()
-    const dispositions = ["invalid", "duplicate", "legal_but_weak", "retried", "unfilled", "unused"] as const
+    const dispositions = ["invalid", "duplicate", "legal_but_weak", "retried", "unfilled", "unused", "rejected", "player_violation", "system_failure"] as const
     const rows = dispositions.map((disposition, ordinal) => admitLeagueResponse({ round, candidateAdmission: candidate, ordinal, terminal: { disposition, legal: disposition === "invalid" ? "invalid" : "verified", runtime: "accepted", provenance: "verified", independence: disposition === "duplicate" ? "clone" : "independent", novelty: disposition === "duplicate" ? "duplicate" : disposition === "legal_but_weak" ? "weak" : "novel", positive: disposition === "legal_but_weak" ? "weak" : "positive", evidenceRoot: root("0123456789abcdef"[ordinal]!) } }))
     expect(rows.map((row) => row.disposition)).toEqual(dispositions)
     expect(rows.every((row) => row.chargeStartRoot !== null && row.terminalRoot !== null)).toBe(true)
@@ -57,11 +57,12 @@ describe("immutable PSRO response lifecycle", () => {
     const accepted = admitLeagueResponse({ round, candidateAdmission: candidate, ordinal: 0, terminal: { disposition: "success", legal: "verified", runtime: "accepted", provenance: "verified", independence: "independent", novelty: "novel", positive: "positive", evidenceRoot: root("9") } })
     expect(accepted.disposition).toBe("success")
     expect(() => advanceLeagueRound({ round, admissions: [accepted], requestClosure: true })).toThrow("LEAGUE_PSRO_EARLY_CLOSURE")
-    const advanced = advanceLeagueRound({ round, admissions: [accepted], requestClosure: false, nextPopulationRoot: root("a"), nextSnapshotRoot: root("b") })
+    const nextSnapshot = createCompletePayoffSnapshot({ populationRoot: root("0"), cellChunkRoots: [root("1")], solverPayoffRoot: root("2"), expectedCellCount: 8, completedCellCount: 8 })
+    const advanced = advanceLeagueRound({ round, admissions: [accepted], requestClosure: false, nextPopulationRoot: root("a"), nextSnapshot })
     expect(advanced.kind).toBe("fresh_snapshot_required")
     if (advanced.kind === "fresh_snapshot_required") {
       expect(advanced.acceptedCandidateAdmissionRoots).toEqual([candidate.root])
-      expect(advanced.nextSnapshotRoot).toBe(root("b"))
+      expect(advanced.nextSnapshotRoot).toBe(nextSnapshot.root)
     }
   })
 })
