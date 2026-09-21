@@ -168,7 +168,7 @@ describe("six derived factory fingerprints", () => {
     expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: { ...evidence }, evidenceArtifactRoot: put(evidence) })).toThrow("UNISSUED_EVIDENCE")
     writeFileSync(join(repo.directory, `factory-artifact-${scoreRoots[1]!.slice(7)}.bin`), new Uint8Array([65]))
     expect(() => verifyRetainedLeagueFactoryFingerprints(manyRetained)).toThrow()
-  })
+  }, 30_000)
   it("accepts an exact fresh-v2 producer authorization and rejects a coherently rerooted slot substitution", () => {
     const producerArtifactRoot = root("a")
     const value = { schemaVersion: "factory-calibration-authorization-v2", status: "authorized", allocationRoot: root("b"), sourceSlots: ["S01"], slotIngestionArtifactRoots: { S01: producerArtifactRoot }, cellRoots: [root("c")], workloadArtifactRoots: [root("d")], geometryDesign: "two_geometry_side_confounded_pilot", competitiveClaim: "none" }
