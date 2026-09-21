@@ -267,6 +267,37 @@ describe("complete private league command", () => {
       expect(budget.usage.workBytes).toBe(usage.workBytes)
     }
   })
+  it("reopens an authenticated first-seed report when second-seed publication exhausts retention", async () => {
+    const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
+    const seeds = ["first-seed", "second-seed"]
+    const allocation = createLeagueExecutionAllocation({ ...base, seedBlocks: seeds, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, opportunities: { ...base.opportunities, matches: 320 }, operations: { ...base.operations, wallClockMilliseconds: 300000, maxArtifactBytes: 120000000, maxArtifactRecords: 60000 } })
+    let calls = 0, publicationChecks = 0
+    const fixture: LeagueFixtureSeams = { candidates, host, run: async ({ match, providers }) => {
+      calls++
+      const state = MATCH_KERNEL.createMachineV119(match).initialState
+      for (const provider of Object.values(providers)) provider.close()
+      return { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never
+    }, beforeReportPublication(seed, budget) {
+      publicationChecks++
+      if (seed === seeds[1]) expect(() => budget.checkCapacity(allocation.operations.maxArtifactBytes, 1)).toThrow("RETENTION_BUDGET")
+    } }
+    const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture })
+    const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), head = graph.get(result.headRoot)!.value
+    const reports = [...graph.values()].filter((node) => node.kind === "report"), selections = [...graph.values()].filter((node) => node.kind === "selection")
+    expect(calls).toBe(160); expect(publicationChecks).toBe(2)
+    expect(result).toMatchObject({ processValidity: "process_invalid", empiricalRequirementsComplete: false })
+    expect(reports).toHaveLength(1); expect(selections).toHaveLength(2)
+    expect(head).toMatchObject({ processValidity: "process_invalid", executedCells: 160, completedJobs: [], retentionUsage: { exhausted: true } })
+    const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
+    expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_invalid", empiricalRequirementsComplete: false })
+    const first = reports[0]!.value, initial = [...graph.values()].find((node) => node.kind === "run-start")!.value
+    const closedRoot = [...graph.entries()].find(([, node]) => node.kind === "red-team-close")![0]
+    const forgedComplete = new LeagueRecordGraph(repository, allocation.operations).append("run-complete", { ...head, processValidity: "process_valid", result: "bounded_league_complete", ledgerRoot: closedRoot, candidates: initial.candidates, reports: [first.report] }, [result.headRoot])
+    expect(() => verifyRetainedSeriousLeague({ ...verify, headRoot: forgedComplete })).toThrow("RETAINED_REPORT_COVERAGE")
+    const reportPath = join(repository.directory, `league-artifact-${first.report.reportRoot.slice(7)}.bin`)
+    writeFileSync(reportPath, new Uint8Array([65]))
+    expect(() => verifyRetainedSeriousLeague(verify)).toThrow("ARTIFACT_DIGEST")
+  }, 300000)
   it("runs all cells, both rounds and all nine probes through fresh host issuance without empirical work", async () => {
     const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary()), allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((candidate) => candidate.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, operations: { ...base.operations, wallClockMilliseconds: 120000, maxArtifactRecords: 30000, maxArtifactBytes: 60000000 } })
     let calls = 0

@@ -158,7 +158,7 @@ export const prepareSeriousLeague = (input: unknown) => {
   if (allocation.implementationRoot !== factoryAssessmentImplementationRoot()) return fail("STALE_IMPLEMENTATION")
   return allocation
 }
-export interface LeagueFixtureSeams { readonly candidates: readonly LeagueCandidateInput[]; readonly host: FactorySupervisedRuntimeHost; readonly run: typeof runCanonicalLabMatch; readonly produce?: typeof produceLeagueResponse }
+export interface LeagueFixtureSeams { readonly candidates: readonly LeagueCandidateInput[]; readonly host: FactorySupervisedRuntimeHost; readonly run: typeof runCanonicalLabMatch; readonly produce?: typeof produceLeagueResponse; readonly beforeReportPublication?: (seed: string, budget: LeagueRetentionBudget) => void }
 export interface LeagueRunInput { readonly allocation: unknown; readonly allocationRoot: LabRoot; readonly repository: LeagueRepository; readonly factoryRepository: FactoryRepository; readonly responseFactoryRepository: FactoryRepository | null; readonly fixture?: LeagueFixtureSeams }
 type MatchInput = Parameters<typeof runCanonicalLabMatch>[0]["match"]
 const normalizedGameplay = (execution: LabMatchExecution): unknown => {
@@ -469,6 +469,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
       const selection = selectionFor(matrix, candidates, blocks, ledger, production, allocation), selectionRoot = session.graph.append("selection", { ...selection, candidates: candidates.map(candidateRecord) }, [matrix.recordRoot, ledgerRoot]); roots.push(selectionRoot)
       const all = reopenLeagueEvidence(input.repository, { maxBytes: allocation.operations.maxArtifactBytes, maxRecords: allocation.operations.maxArtifactRecords }), cellRoots = new Set(matrix.matrix.cells.map((row) => row.cell.root)), reopened = { ...all, records: all.records.filter((row) => cellRoots.has(row.start.cellRoot)) }
       const projection = reportProjection(matrix, candidates, blocks, ledger, closed, reentries, selection, allocation)
+      input.fixture?.beforeReportPublication?.(matrix.seed, budget)
       const report = publishLeagueReport({ repository: input.repository, snapshot: matrix.admitted.snapshot, solverManifest: matrix.solver.manifest, solver: matrix.solver.output, mixture: selection.mixture, portfolio: selection.portfolio.portfolio, redTeamRoot: closed.root, finalistDisposition: selection.finalist, reopen: reopened, projection }); reports.push(report); roots.push(session.graph.append("report", { report, matrixRoot: matrix.recordRoot, selectionRoot, projection }, [matrix.recordRoot, selectionRoot, ledgerRoot]))
     }
     const value = { evidenceClass: allocation.evidenceClass, allocationRoot: allocation.root, completedJobs, processValidity: "process_valid", result: reports.length ? "bounded_league_complete" : "process_failure", candidates: candidates.map(candidateRecord), matrixRoots: currentMatrices.map((matrix) => matrix.recordRoot), reports, ledgerRoot, executedCells: session.cells.length, reservedResponseMatches: ledger.starts.reduce((sum, start) => sum + start.reservation.matches, 0) }
@@ -802,6 +803,44 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   verifyRetainedProductionFailures(input.responseFactoryRepository, allocation, graph, ledger, blocks, finalCandidates)
   const failedProductionRoots = new Set(rows("response-production-failure").map(([, node]) => node.value.start.root))
   for (const [, node] of rows("response-match-result")) if (!failedProductionRoots.has(node.value.matchCharge.parentStartRoot)) replayRetainedKernel(node.value.match, node.value.execution, allocation.evidenceClass === "empirical")
+  const verifyPublishedSeedPrefix = (requireComplete: boolean) => {
+    const selections = rows("selection"), reports = rows("report")
+    if (!requireComplete && !selections.length && !reports.length) return
+    if (closings.length !== 1 || !close || !same(close.ledger, ledger)) return fail("RETAINED_REPORT_CLOSE")
+    const closed = closeRedTeamLedger({ ledger, requiredTargets, reentries })
+    if (!same(closed, close.closed) || closed.processValidity !== "process_valid") return fail("RETAINED_RED_TEAM_CLOSE")
+    const orderedMatrices = head.value.matrixRoots.map((root: LabRoot, index: number) => {
+      const matrix = matrices.get(root)
+      if (!matrix || matrix.seed !== allocation.seedBlocks[index]) return fail("RETAINED_REPORT_MATRIX")
+      return matrix
+    }) as CompleteMatrix[]
+    if (orderedMatrices.length !== allocation.seedBlocks.length) return fail("RETAINED_REPORT_MATRIX")
+    const selectionBySeed = new Map<number, typeof selections[number]>()
+    for (const entry of selections) {
+      const [selectionRoot, node] = entry, index = orderedMatrices.findIndex((matrix) => matrix.admitted.snapshot.root === node.value.mixture.snapshotRoot)
+      if (index < 0 || selectionBySeed.has(index)) return fail("RETAINED_SELECTION_MATRIX")
+      const { candidates: _candidates, ...prior } = node.value
+      if (!same(selectionFor(orderedMatrices[index]!, finalCandidates, blocks, ledger, production, allocation), prior)) return fail("RETAINED_SELECTION")
+      selectionBySeed.set(index, [selectionRoot, node])
+    }
+    if (selections.length > allocation.seedBlocks.length || reports.length > selections.length || reports.length < selections.length - 1 || requireComplete && (selections.length !== allocation.seedBlocks.length || reports.length !== selections.length)) return fail("RETAINED_REPORT_COVERAGE")
+    const reportBySeed = new Map<number, typeof reports[number]>()
+    for (const entry of reports) {
+      const [reportRoot, node] = entry, index = orderedMatrices.findIndex((matrix) => matrix.recordRoot === node.value.matrixRoot)
+      if (index < 0 || reportBySeed.has(index) || node.value.selectionRoot !== selectionBySeed.get(index)?.[0] || !node.links.includes(node.value.selectionRoot)) return fail("RETAINED_REPORT_COVERAGE")
+      const matrix = orderedMatrices[index]!, selection = selectionBySeed.get(index)![1].value
+      const reopened = reopenLeagueReport({ repository: input.repository, descriptor: node.value.report.descriptor, maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords })
+      const projection = reportProjection(matrix, finalCandidates, blocks, ledger, closed, reentries, selection, allocation)
+      if (!same(matrix.population.candidateAdmissionRoots, finalCandidates.map((candidate: LeagueCandidateInput) => candidate.admission.root).sort()) || !same(node.value.projection, projection) || node.value.report.descriptor.finalistDispositionRoot !== selection.finalist.root || reopened.chunks.length !== 1 || reopened.chunks[0]!.root !== node.value.report.reportRoot || !same(reopened.chunks[0]!.report.projection, projection)) return fail("RETAINED_REPORT")
+      reportBySeed.set(index, [reportRoot, node])
+    }
+    for (let index = 0; index < selections.length; index++) {
+      const selection = selectionBySeed.get(index), previousReport = reportBySeed.get(index - 1)
+      if (!selection || index > 0 && (!previousReport || !selection[1].links.includes(previousReport[0]))) return fail("RETAINED_REPORT_ORDER")
+    }
+    for (let index = 0; index < reports.length; index++) if (!reportBySeed.has(index)) return fail("RETAINED_REPORT_ORDER")
+    if (requireComplete && !same(allocation.seedBlocks.map((_, index) => reportBySeed.get(index)![1].value.report), head.value.reports)) return fail("RETAINED_REPORT_COVERAGE")
+  }
   if (!complete) {
     if (budgetExhausted) {
       const expectedJobs = scheduled.filter((job) => job.evaluationRole === "development_response").map((job) => job.id), undispatched = scheduled.filter((job) => job.evaluationRole !== "development_response").map((job) => job.id)
@@ -809,24 +848,11 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
       if (!same(head.value.matrixRoots, allocation.seedBlocks.map((seed) => [...matrices.values()].find((matrix) => same(matrix.population.candidateAdmissionRoots, [...candidateAdmissions.keys()].sort()) && matrix.seed === seed)?.recordRoot))) return fail("RETAINED_NONCLOSED_MATRICES")
       return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_valid" as const, result: "response_round_budget_exhausted" as const, closure: "not_closed" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
     }
-    if (head.value.processValidity !== "process_invalid" || rows("selection").length || rows("report").length) return fail("RETAINED_FAILURE_DISPOSITION")
+    if (head.value.processValidity !== "process_invalid" || Object.hasOwn(head.value, "reports") || Object.hasOwn(head.value, "result")) return fail("RETAINED_FAILURE_DISPOSITION")
+    verifyPublishedSeedPrefix(false)
     return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_invalid" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
   }
-  const closed = closeRedTeamLedger({ ledger, requiredTargets, reentries })
-  if (!same(closed, close.closed) || closed.processValidity !== "process_valid") return fail("RETAINED_RED_TEAM_CLOSE")
-  for (const [, node] of rows("selection")) {
-    const value = node.value, matrix = [...matrices.values()].find((matrix) => matrix.admitted.snapshot.root === value.mixture.snapshotRoot) ?? fail("RETAINED_SELECTION_MATRIX"), selected = selectionFor(matrix, finalCandidates, blocks, ledger, production, allocation)
-    const { candidates: _candidates, ...prior } = value
-    if (!same(selected, prior)) return fail("RETAINED_SELECTION")
-  }
-  const reportSeed = (value: any) => cellByRoot.get(matrices.get(value.matrixRoot)!.matrix.cells[0]!.cell.root)?.seed
-  const reports = rows("report").sort(([, a], [, b]) => allocation.seedBlocks.indexOf(reportSeed(a.value)) - allocation.seedBlocks.indexOf(reportSeed(b.value)))
-  if (reports.length !== allocation.seedBlocks.length || !same(reports.map(([, node]) => node.value.report), head.value.reports) || !same(reports.map(([, node]) => node.value.matrixRoot), head.value.matrixRoots) || !same(reports.map(([, node]) => reportSeed(node.value)), allocation.seedBlocks) || rows("selection").length !== reports.length) return fail("RETAINED_REPORT_COVERAGE")
-  for (const [, node] of reports) {
-    const value = node.value, reopenedReport = reopenLeagueReport({ repository: input.repository, descriptor: value.report.descriptor, maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords }), selection = graph.get(value.selectionRoot)?.value
-    const matrix = matrices.get(value.matrixRoot)
-    if (!matrix || !selection || !same(matrix.population.candidateAdmissionRoots, finalCandidates.map((candidate: LeagueCandidateInput) => candidate.admission.root).sort()) || !same(value.projection, reportProjection(matrix, finalCandidates, blocks, ledger, closed, reentries, selection, allocation)) || value.report.descriptor.finalistDispositionRoot !== selection.finalist.root || reopenedReport.chunks.length !== 1 || reopenedReport.chunks[0]!.root !== value.report.reportRoot || !same(reopenedReport.chunks[0]!.report.projection, value.projection)) return fail("RETAINED_REPORT")
-  }
+  verifyPublishedSeedPrefix(true)
   return { issued: false as const, allocationRoot: allocation.root, evidenceClass: allocation.evidenceClass, processValidity: "process_valid" as const, headRoot: input.headRoot, empiricalRequirementsComplete: false }
 }
 
