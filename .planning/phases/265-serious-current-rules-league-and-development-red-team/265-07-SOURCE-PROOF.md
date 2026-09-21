@@ -2,15 +2,69 @@
 phase: 265
 plan: "07"
 task: 1
-status: source-gate-passed-awaiting-independent-review
+status: same-plan-memory-scale-repair-required
+reviewed_source: 5d55492009a6cd8fe031522fceb4543719edfc24
+updated: 2026-09-21
 empirical_authority: false
 ---
 
 # Phase 265 Plan 07 Task 1 source-proof handoff
 
-Task 1 source work passes its final unchanged-byte gate and awaits independent review. This is not a complete Plan 07 summary: Task 2
+Task 1 closed its original deep-review findings after two repair passes, but a
+subsequent independent memory-scale check found full Match payloads accumulating
+in execution and retained verification. A third same-plan repair is required;
+the unchanged-source baseline passed 29 suites / 267 tests. This is not a complete Plan 07 summary: Task 2
 remains the main-owned human allocation/participant decision, and Task 3 remains
 the conditional, main-owned real execution and retained verification branch.
+
+## Current repair closeout — 2026-09-21
+
+**Captured baseline:** the exact combined command at `5d554920` exited zero:
+29/29 suites, 267/267 tests in1652.36seconds, lab build, strict affected script
+types, three clean 1,329-file private boundary scans, and service checks with
+zero strict/ownership offenses and19 pre-existing report-only entries. No source
+or HEAD changed while it ran. This is the repaired functional baseline, not a
+memory-scale pass or a result for future repaired bytes.
+
+**Latest amendment:** current `265-REVIEW.md` CR-01 documents the confirmed
+memory-scale gap, its compact-receipt/bounded-reader repair and synthetic test
+seams. No full-size OOM was run or claimed. The clean review described next is
+preserved unchanged as `265-REVIEW.iter4.md`; it predates this additional finding.
+
+Independent re-review at `5d55492009a6cd8fe031522fceb4543719edfc24`
+reports zero findings across the same 46 source/test/CI files. The original six
+findings and two subsequently discovered publication-prefix defects are closed:
+
+- Ordinary journals no longer consume emergency failure reserves; connected
+  start publication is capacity-checked before durable charge.
+- Two consecutive successful responses are distinct accepted candidates, each
+  scored against its own preceding frozen target and linked through complete
+  intervening populations. A contemporaneous equilibrium is not an improvement
+  benchmark for itself.
+- Honest player/system/provider failures and failure after population growth
+  reopen as authenticated, charged, non-scorable evidence.
+- Bounded composed payoff/report transport supports 16 entrants and the actual
+  83-entrant canonical capacity boundary; 84 entrants fail before charge. The
+  per-artifact 256 KiB and aggregate canonical 8 MiB bounds are unchanged.
+- The historical three-base/nine-control population remains admissible for
+  comparison without inflating genuine producer/diversity counts.
+- A last-round accepted counter is retained as `not_closed`, never a complete
+  league; independent evaluation is not dispatched from that state.
+- An accepted immutable Factory terminal followed by result-publication failure,
+  and a valid report prefix followed by later publication failure, reopen without
+  rewriting success or inventing completed coverage. Forged terminals, report
+  bytes and complete heads remain rejected.
+- The sixteen-group index requires AST-linked matcher assertions, rejecting
+  comments, strings, bare `expect` calls and unrelated tests as substitutes.
+
+Focused RED/GREEN results and exact commits are retained in
+`265-REVIEW-FIX.iter2.md`, `265-REVIEW-FIX.iter3.md` and `265-REVIEW-FIX.md`;
+the final independent disposition is `265-REVIEW.md`. Main's ASVS-L1 planned
+mitigation reclassification closes all 22 entries without accepting risk.
+Outcome evaluation remains pending real work, not a source-evaluation defect.
+The older 250-test pass below is baseline history only, not a pass for these
+repaired source bytes. The final gate and the single actual, read-only historical
+compatibility check must be captured before Task 2.
 
 ## Delivered source proof
 
@@ -48,7 +102,7 @@ the conditional, main-owned real execution and retained verification branch.
   regressions, followed by all three private graph commands. It does not
   discover broad tests, configure a provider, or run an empirical selector.
 
-## Verification status
+## Earlier verification history — 2026-09-15
 
 The pre-review final source bytes passed the then-exact gate at 27 suites / 173
 tests in 575.54 seconds. That result is superseded by these review repairs and
@@ -81,9 +135,9 @@ treated as real candidates, Matches, participants, model calls, external work,
 formation, holdout access, public output, or counted/production evidence.
 
 No Phase 265 allocation artifact or run result was created, no live source was
-executed, and no Phase 264 waiver or selector was used. Main must perform the
-separate independent source review and retained-history read-only compatibility
-check before presenting the one late allocation decision.
+executed, and no Phase 264 waiver or selector was used. Independent source review
+is now clean; main must finish the current source gate and retained-history
+read-only compatibility check before presenting the one late allocation decision.
 
 ## Task commits
 

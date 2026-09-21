@@ -1,10 +1,14 @@
 ---
 phase: 265
 slug: serious-current-rules-league-and-development-red-team
-status: draft
+status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
+updated: 2026-09-21
+source_reviewed: 5d55492009a6cd8fe031522fceb4543719edfc24
+source_gate: passed-before-memory-repair
+empirical_validation: pending-allocation-and-real-run
 ---
 
 # Phase265 — Validation Strategy
@@ -36,6 +40,47 @@ Run exact task tests after each source task, the explicit combined suite at each
 - Plan 265-03/06 require the persisted-candidate-to-host-issued-provider handoff through existing factory admission and `scripts/lib/v1-38-factory-supervised-runtime.ts`; a reopened `issued: false` factory record is data only and cannot become a provider.
 - Plan 265-07 adds the connected pure/injected runner/retention/reopen fixture and the exact Wave-5 source gate; individual helper tests alone do not prove an executable league path.
 - After approved allocation only, Plan 265-07 runs complete full Matches and `verify-retained`; before approval, source checks remain source-only and do not satisfy the empirical phase goal.
+
+## Per-Task Coverage Audit — 2026-09-21
+
+All seven plans and all six completed source summaries were read. There are 15
+tasks: 13 implemented source tasks, one human-only allocation decision, and one
+conditional empirical task. Every source task names executable automated checks;
+none relies only on a fixture label or summary assertion. The exact baseline gate
+below passed at reviewed source `5d554920`: 29 suites, 267 tests, 1652.36 seconds.
+Source and HEAD stayed unchanged; only planning documents were edited. The
+pending memory repair requires its own regression and post-repair gate.
+
+| Task | Wave | Requirements | Executable verification | Current status |
+|---|---:|---|---|---|
+| 265-01 T1 | 1 | LEAG-01/02 | `league/contracts.test.ts` | Source implemented; final gate pending |
+| 265-01 T2 | 1 | LEAG-01/02 | `league/identity.test.ts` | Source implemented; final gate pending |
+| 265-02 T1 | 2 | LEAG-01/02 | `league/matrix.test.ts` RED→GREEN and fault families | Source implemented; final gate pending |
+| 265-02 T2 | 2 | LEAG-01/02 | `league/matrix.test.ts`, direct solver transport | Source implemented; final gate pending |
+| 265-03 T1 | 2 | LEAG-01/02/09 | `league/repository.test.ts`, immutable/read-only byte snapshots | Source implemented; final gate pending |
+| 265-03 T2 | 2 | LEAG-01/02/09 | `league/connected-runner.test.ts`, runtime/admission/supervision regressions | Source implemented; final gate pending |
+| 265-04 T1 | 3 | LEAG-03 | `league/solver.test.ts`, exact golden/residual/capacity vectors | Source implemented; final gate pending |
+| 265-04 T2 | 3 | LEAG-04 | `league/psro.test.ts`, connected response/late-counter tests | Source implemented; final gate pending |
+| 265-05 T1 | 3 | LEAG-06/07/08 | `league/selection.test.ts`, authentic controls and linked-response gates | Source implemented; final gate pending |
+| 265-05 T2 | 3 | LEAG-05 | `league/report.test.ts`, bounded composed report/privacy/reopen | Source implemented; final gate pending |
+| 265-06 T1 | 4 | LEAG-04/09 | `league/red-team.test.ts`, four-channel accounting/nine probes | Source implemented; final gate pending |
+| 265-06 T2 | 4 | LEAG-04/09 | `scripts/run-v1-38-serious-league.test.ts`, allocation, authoring, response-runtime and historical-reader tests | Source implemented; final gate pending |
+| 265-07 T1 | 5 | LEAG-01–09 | Sixteen AST-linked assertions, package/CLI integration, all 29 suites/types/boundary scans below | Source implemented and independently reviewed; final gate pending |
+| 265-07 T2 | 5 | LEAG-01–09 | CLI `--help`; human inspection of exact prospective allocation and participant policy | Pending genuine human decision; no allocation written |
+| 265-07 T3 | 5 | LEAG-01–09 | Full allocated real run followed by exact bounded `verify-retained` | Conditional, not run; injected tests are not completion |
+
+Paths beginning `league/` are under `packages/strategy-lab/src/`. The longest
+automatic feedback now comes from complete connected failure/recovery scenarios;
+they retain their full coverage rather than replacing real graph joins with
+helper-only assertions. No three consecutive tasks lack automated verification.
+
+The two original repair passes have focused test seams. A subsequent independent
+data-flow check found that their small injected traces do not cover full-run
+memory residency: execution and retained verification keep complete Match
+payloads. Current `265-REVIEW.md` CR-01 requires compact receipts and bounded
+on-demand verification with large synthetic payload regressions before a final
+source gate. Overall phase validation also remains partial until the separate
+real evidence exists; neither review nor test-index linkage clears that requirement.
 
 ## Exact Combined Source Gate
 
@@ -81,6 +126,22 @@ pnpm exec tsx scripts/check-service-boundary-imports.ts
 ```
 
 ## Manual-Only Verification
+
+### Captured repaired baseline gate — 2026-09-21
+
+At `5d55492009a6cd8fe031522fceb4543719edfc24`, main captured the exact full
+command's zero exit and **29/29 suites, 267/267 tests in 1652.36 seconds**
+(27.54 minutes; test time 1625.41 seconds). The lab build and strict affected
+script types passed. Serious/lab/factory graph checks each passed 1,329 files
+with no violations; service checks reported zero strict/ownership offenses and
+the same 19 pre-existing report-only entries. This validates the original two
+repair passes, including the newly executed contemporaneous-target tamper test.
+It does not close the separately confirmed full-run memory-residency gap.
+
+All thirteen source-task commands in the map above passed in this baseline;
+their “final gate pending” wording now refers to the necessary post-memory-repair
+gate, not an unknown outcome of this captured run. CLI help and the actual
+historical compatibility check remain to be captured after source repair.
 
 ### Captured final source gate — 2026-09-15
 

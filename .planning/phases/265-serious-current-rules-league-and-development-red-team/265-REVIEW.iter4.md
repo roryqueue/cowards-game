@@ -54,12 +54,11 @@ files_reviewed_list:
   - scripts/v1-38-factory-execution-evidence.test.ts
   - scripts/v1-38-factory-execution-evidence.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: findings_found
-reconciled: 2026-09-21
+  total: 0
+status: clean
 ---
 
 # Phase 265: Code Review Report
@@ -67,68 +66,11 @@ reconciled: 2026-09-21
 **Reviewed:** 2026-09-21T22:34:36Z
 **Depth:** deep
 **Files Reviewed:** 46
-**Status:** one subsequently confirmed scalability blocker
+**Status:** clean
 
 ## Summary
 
-The original independent deep review closed all eight supported defects at
-`5d55492009a6cd8fe031522fceb4543719edfc24`; its unchanged clean report is
-preserved in `265-REVIEW.iter4.md`. Main's subsequent execution-realism check,
-independently traced by `/root/265_memory_scale_check`, confirms the additional
-scalability blocker below. This is an explicit amendment, not a claim that the
-earlier reviewer found it. The ongoing combined gate is a baseline for these
-bytes, not proof of full-size memory feasibility. No empirical allocation exists.
-
-## Current finding
-
-### CR-01 — Complete Match payloads accumulate without a memory bound (BLOCKER)
-
-**Severity:** critical for the intended full private league and retained verification.
-**Source:** main realism inspection plus independent read-only data-flow check.
-**Files:** `scripts/run-v1-38-serious-league.ts`,
-`scripts/lib/v1-38-league-response-runtime.ts`, and the paired-fingerprint issuer
-in `packages/strategy-lab/src/factory/fingerprint.ts`.
-
-- `LeagueConnectedSession.cells` keeps every result's complete `execution`
-  (`run-v1-38-serious-league.ts:175,218`); `matrix().results`, current matrices and
-  round blocks retain the same payload references (`:231`). Probe executions
-  enter the same permanent array. Most consumers need only roots, terminals and
-  candidate/condition identities, or one transient execution for a probe digest.
-- Response production retains full score receipts and their executions in
-  `receipts[]` (`v1-38-league-response-runtime.ts:155,207`) until fingerprinting.
-- `readLeagueRecordGraph` eagerly decodes all linked values into a Map
-  (`run-v1-38-serious-league.ts:103`). Full verification and production-failure
-  verification materialize entries; cell/matrix maps and the response reader
-  then retain full executions. Merely wrapping that Map in lazy getters without
-  changing materializing callers is insufficient.
-
-**Impact:** peak live payload scales with the entire retained run instead of one
-Match or a bounded working set. The actual host has 16 GiB RAM. Historical Phase
-263 retained 187,807,888 trace bytes for 24 full Matches (about 7.83 MB per Match).
-At 21 candidates a single matrix has 1,680 Matches; two seeds have 3,360. Applying
-that historical serialized-size reference gives about 26.3 GB before probes or
-responses. This is an illustrative scale comparison, NOT a measured Phase 265
-heap/OOM result; JavaScript representation and traces differ. Shallow maps/arrays
-share objects and are not alleged to duplicate all payload bytes. Disk/record
-ceilings and bounded solver-payoff transport do not bound the persistent heap.
-
-**Required same-plan repair:** retain scalar executed counts and compact rooted
-cell/matrix receipts; derive normalized probe evidence while one execution is
-transient. Index/authenticate graph descriptors and links without retaining every
-decoded payload, and provide bounded on-demand reads throughout all retained
-verification paths. Compact response paired commitments must preserve actual
-host-issued fingerprint provenance and exact roots; never replace issued receipt
-checks with a serializable trust flag. Preserve all disk evidence, replay/tamper
-checks, counters, failures, runtime bounds and historical identities.
-
-**Regression:** use trusted synthetic large payloads and injected callbacks to
-prove bounded decoded-value residency and compact runner/response retention,
-unchanged semantic/fingerprint roots, and rejection of forged compact evidence,
-missing/tampered/cyclic graphs and over-budget reads. No real Match, authoring,
-provider, historical-store mutation or live allocation is needed for this repair.
-
-This is the third same-plan fix pass, not a new phase, numbered plan, rules
-decision, external-custody requirement or user checkpoint.
+No independently supported source defect remains in the same 46-path Phase 265 review scope at frozen source `5d55492009a6cd8fe031522fceb4543719edfc24`. This is a source-review disposition, not an empirical league result or phase-completion claim. The orchestrator's combined source gate and any separately authorized empirical allocation remain pending.
 
 ## Narrative Findings (AI reviewer)
 

@@ -3,21 +3,32 @@ phase: 265
 slug: serious-current-rules-league-and-development-red-team
 status: source-audited
 # Blocking OPEN threats only: severity >= workflow.security_block_on (high).
-threats_open: 1
+threats_open: 0
 asvs_level: 1
 block_on: high
 register_authored_at_plan_time: true
-audited_source: 9394176caed71cfef4f9ceb4a3a81456baf356c7
+audited_source: 5d55492009a6cd8fe031522fceb4543719edfc24
 created: 2026-09-15
+updated: 2026-09-21
 ---
 
 # Phase 265 — Security
 
-Source-only mitigation audit against frozen source `9394176c`. This verifies the
+Source-only mitigation audit against reviewed source `5d554920`. This verifies the
 22 declared threat-register entries, not empirical league completion. No Phase 265
 allocation, real run result, provider/model/human/external activity, or retained
 empirical result exists; those later run-dependent checks remain pending and are
 not represented as closed here.
+
+The original row-level line references below identify the initial `9394176c`
+audit, not shifted lines at the repaired tip. The two repaired rows and the
+repair addendum cite current `5d554920` source. Main reclassified the planned
+register at ASVS L1 after the independent deep review closed all eight supported
+findings. A subsequent execution-realism check reopened T-265-06 for unbounded
+in-memory trace retention; this medium register entry is a functional blocker
+for full-size execution despite remaining below the configured high security
+threshold. No risk was waived. The combined test gate is recorded separately
+in `265-VALIDATION.md` and does not prove full-size heap feasibility.
 
 ## Trust Boundaries
 
@@ -39,13 +50,13 @@ not represented as closed here.
 | T-265-03 | Elevation | candidate provenance | high | mitigate | Authenticated Phase 264 candidate/supervision evidence, not a boolean/source claim | **closed** — import admission checks Phase 264, canonical publication/assessment/supervision joins in `packages/strategy-lab/src/league/contracts.ts:62-99`, then requires a host issuer verdict in `packages/strategy-lab/src/league/contracts.ts:101-105`. |
 | T-265-04 | Tampering | cell-to-snapshot joins | high | mitigate | Exact joins, one-cell coverage, canonical reduction, fault fixtures | **closed** — reducer rejects invalid matrix coverage, stale/duplicate terminals, process-invalid terminals, and projection join mismatch before emitting bytes in `packages/strategy-lab/src/league/matrix.ts:296-391`; fault cases are asserted in `packages/strategy-lab/src/league/matrix.test.ts:157-173`. |
 | T-265-05 | Integrity | arena and condition enumeration | high | mitigate | Active semantic hashes and explicit v1.37 condition rows | **closed** — only two distinct active schedulable semantic hashes are admitted in `packages/strategy-lab/src/league/matrix.ts:136-145`; `createSetScenarioV137` generates the four conditions and cardinality must equal `8 × C(n,2)` in `packages/strategy-lab/src/league/matrix.ts:181-260`; alias/duplicate regression is in `packages/strategy-lab/src/league/matrix.test.ts:138-155`. |
-| T-265-06 | Denial of service | full-scale manifest retention | medium | mitigate | Bounded chunk descriptors and maximum-shape test | **open — below high threshold (non-blocking)** — chunk descriptors and a 528-cell/262144-byte test are present (`packages/strategy-lab/src/league/matrix.ts:46-105`, `packages/strategy-lab/src/league/matrix.test.ts:207-215`), but two independent source-review findings remain pending main-owned repair: (1) ordinary terminal publication charges terminal reserve (`scripts/run-v1-38-serious-league.ts:47-55`) while the next start again requires the full `6 × 262144`/24 terminal headroom (`scripts/run-v1-38-serious-league.ts:50-53`), although allocation accepts that exact minimum (`packages/strategy-lab/src/league/allocation.ts:44-46`); (2) matrix size is unbounded above the cardinality formula (`packages/strategy-lab/src/league/matrix.ts:258-260`) while solver transport admits at most 262144 bytes (`packages/strategy-lab/src/league/solver.ts:40-45`), so the reported 16-candidate/960-cell synthetic transport is rejected even though allocation permits that population. The source test only covers 12 candidates/528 cells and one descriptor (`packages/strategy-lab/src/league/matrix.test.ts:207-215`), not either boundary. Pending focused regressions; neither finding was independently reproduced by this audit. |
+| T-265-06 | Denial of service | full-scale manifest retention | medium | mitigate | Bounded chunk descriptors and maximum-shape test | **closed** — `LeagueRetentionBudget` separates ordinary journals from emergency failure capacity and checks start/terminal capacity before charge (`scripts/run-v1-38-serious-league.ts:39`); connected graph-start capacity is checked before the durable start (`:187`). `createLeagueByteStream`/`readLeagueByteStream` authenticate ordered bounded chunks (`packages/strategy-lab/src/league/matrix.ts:60`), and `assertLeaguePayoffCapacity` rejects an unrepresentable declared population before any charge (`:83`; CLI `:376`). Regressions cover 40 normal journals in each store with the minimum untouched emergency reserve, actual exhaustion/failure retention, 16-entrant matrix→solver→retention→reopen, 83 entrants/27,224 cells at the canonical aggregate boundary, 84-entrant precharge refusal, and missing/reordered/tampered fragments. The individual 256 KiB and aggregate canonical 8 MiB bounds are unchanged. |
 | T-265-07 | Elevation | connected runner | high | mitigate | Factory issuer, WeakSet capability, source closure, provider identity, reopen denial | **closed** — persisted closure root/hash joins and fresh factory admission occur before host construction in `packages/strategy-lab/src/league/connected-runner.ts:59-100`; `WeakSet`/`WeakMap` issuance is required at the execution boundary in `packages/strategy-lab/src/league/connected-runner.ts:103-135`; forged caller-provider coverage is in `packages/strategy-lab/src/league/connected-runner.test.ts:88-96`. |
 | T-265-08 | Tampering | retained terminals | high | mitigate | Charge-first roots, immutable publication, digest verification, tamper/reopen checks | **closed** — content-addressed atomic writes reject differing overwrite bytes in `packages/strategy-lab/src/league/repository.ts:73-83`; terminal publication requires its already-recorded start and matching cell in `packages/strategy-lab/src/league/repository.ts:103-111`; digest check is enforced in `packages/strategy-lab/src/league/repository.ts:94-101`. |
 | T-265-09 | Information disclosure | reopen projection | high | mitigate | Bounded data-only reopen with root-only private links | **closed** — reopen validates byte/record limits and returns `issued: false` inspection evidence only in `packages/strategy-lab/src/league/repository.ts:114-155`; no execution provider is exposed. Non-authorizing reopening is also asserted in `packages/strategy-lab/src/league/repository.test.ts:69-88`. |
 | T-265-10 | Tampering | solver selection/output | high | mitigate | Synthetic comparator, rooted manifest, exact arithmetic, byte-golden invariance | **closed** — exact `bigint` rational operations and canonical byte admission are implemented in `packages/strategy-lab/src/league/solver.ts:16-47`; the sole synthetic selection requires golden/permutation/boundary success in `packages/strategy-lab/src/league/solver.ts:292-309`; canonical-layout and tamper regressions are in `packages/strategy-lab/src/league/solver.test.ts:70-125`. |
 | T-265-11 | Repudiation | response loop | high | mitigate | Round/target/admission roots and charge-first terminals retain all outcomes | **closed** — round target, mixture, and charge are rooted before admission in `packages/strategy-lab/src/league/psro.ts:63-77`; response terminal receipts derive both charge and terminal roots, never caller success flags, in `packages/strategy-lab/src/league/psro.ts:80-95`. |
-| T-265-12 | Integrity | counter re-entry | high | mitigate | Reject early closure and require fresh population/snapshot | **open** — main reconciled the independent deep review CR-06: the pure state machine correctly returns `fresh_snapshot_required`, but the last-round connected CLI can still emit `bounded_league_complete` and its retained verifier does not require a closed terminal state. The helper's existence and local test do not close the end-to-end mitigation. See `265-REVIEW.md`, CR-06; repair and final-round acceptance/reopen regressions are required. |
+| T-265-12 | Integrity | counter re-entry | high | mitigate | Reject early closure and require fresh population/snapshot | **closed** — a last-round accepted counter retains the enlarged complete matrix and returns `response_round_budget_exhausted` / `not_closed`, without independent-evaluation dispatch or a completion/finalist claim (`scripts/run-v1-38-serious-league.ts:433`). `verifyRetainedRoundPath` rederives each population, complete snapshot and advance, and requires the terminal state appropriate to the retained head (`:615`). The connected final-round regression retains 104 ordinary plus 48 response cells; reopening and forged-closure negatives cover the assembled path, not only the pure state machine. |
 | T-265-13 | Spoofing | diversity/finalist evidence | high | mitigate | Receipt-derived dimensions, conjunctive gates, no-finalist reduction | **closed** — fingerprint bytes are re-admitted and bound to retained evidence in `packages/strategy-lab/src/league/selection.ts:24-43`; final selection recomputes rooted evidence gates and emits `no_robust_pure_finalist_found` whenever any gate fails in `packages/strategy-lab/src/league/selection.ts:124-175`. |
 | T-265-14 | Information disclosure | report projection | high | mitigate | Explicit safe projection, schema/key denial, bounded reopening | **closed** — recursive report projection rejects source/memory/objective/holdout/formation/public/deployment keys and forbidden claims in `packages/strategy-lab/src/league/report.ts:21-37`; publication enforces exact projection keys in `packages/strategy-lab/src/league/report.ts:53-97`; denial tests are at `packages/strategy-lab/src/league/report.test.ts:45-56`. |
 | T-265-15 | Repudiation | qualified claims | medium | mitigate | Report binds policy/solver/population/allocation roots and claim vocabulary | **closed** — report publication joins snapshot, manifest, solver, mixture, portfolio, issued finalist, reopen inventory, and red-team root in `packages/strategy-lab/src/league/report.ts:66-96`; reopen revalidates descriptor/chunk root bindings in `packages/strategy-lab/src/league/report.ts:106-123`. |
@@ -55,10 +66,18 @@ not represented as closed here.
 | T-265-19 | Spoofing | fixture evidence | high | mitigate | Fixture labels/roots/dispositions, integration, allocation-gated command | **closed** — all 16 fixture groups are labeled `injected_fixture`, prohibit dispatch, and set `empiricalRequirementsComplete: false` in `packages/strategy-lab/src/league/fixtures.ts:3-52`; CLI only accepts empirical allocations for `run` and makes `verify-retained` read-only in `scripts/run-v1-38-serious-league.ts:560-577`. |
 | T-265-20 | Elevation | imports/exports/CI | high | mitigate | AST graph scan, injected closure tests, explicit source-only CI gate | **closed** — graph checker traverses private/restricted imports, detects hostile execution/unresolved private loaders, and denies public/deployment reachability in `scripts/check-v1-38-serious-league-boundaries.ts:12-51`; named source-only CI gate is installed in `.github/workflows/ci.yml:34-40`. |
 | T-265-21 | Tampering | allocation approval | high | mitigate | Complete immutable root; reject partial/default/inherited values; bounded reopen | **closed** — allocation construction requires every named policy, opportunity, operation, burn, participant, channel, probe, and schedule field before deriving its root in `packages/strategy-lab/src/league/allocation.ts:33-82`; re-admission rederives and compares that root in `packages/strategy-lab/src/league/allocation.ts:85-90`; command test rejects partial/stale input before repository effects at `scripts/run-v1-38-serious-league.test.ts:109-116`. |
-| T-265-SC | Tampering | package installs | high | mitigate | Preserve lockfile and workspace-only stack | **closed** — the Phase 265 source interval `363e993a^..9394176c` has no change to `package.json`, package manifests, or `pnpm-lock.yaml`; the lab manifest uses only workspace dependencies in `packages/strategy-lab/package.json:10`. |
+| T-265-SC | Tampering | package installs | high | mitigate | Preserve lockfile and workspace-only stack | **closed** — the complete Phase 265 source interval `98e4392e..5d554920` has no change to `package.json`, package manifests, or `pnpm-lock.yaml`; the existing workspace dependency stack is unchanged. |
 
 *Status: open · closed · open — below high threshold (non-blocking).*  
 *Severity: critical > high > medium > low. Only OPEN entries at or above `block_on: high` contribute to `threats_open`.*
+
+**Current T-265-06 amendment:** the disk/chunk/emergency-reserve defects in its
+row are closed, but its full-scale mitigation is **OPEN** for the persistent
+complete-execution payloads and eager retained graph described in current
+`265-REVIEW.md` CR-01. A compact-receipt/bounded-reader repair and regression are
+required before live allocation. This explicit amendment supersedes the row's
+earlier closed disposition until that third same-plan repair is independently
+reviewed; it does not accept the risk or change its planned medium severity.
 
 ## Unregistered Flags
 
@@ -74,12 +93,39 @@ No accepted risks. No disposition in the Phase 265 planned register is `accept` 
 |---|---|---:|---:|---:|---:|---|
 | 2026-09-15 | `9394176caed71cfef4f9ceb4a3a81456baf356c7` | 22 | 21 | 0 | 1 | gsd-security-auditor |
 | 2026-09-15 | `9394176caed71cfef4f9ceb4a3a81456baf356c7` | 22 | 20 | 1 | 1 | main reconciliation with independent CR-06 |
+| 2026-09-21 | `5d55492009a6cd8fe031522fceb4543719edfc24` | 22 | 22 | 0 | 0 | main L1 register reclassification after independent deep review |
+| 2026-09-21 | `5d55492009a6cd8fe031522fceb4543719edfc24` | 22 | 21 | 0 | 1 | main + independent memory-scale data-flow check; T-265-06 reopened |
+
+### Repair addendum
+
+- T-265-08/09: failed runs now reopen their authenticated charged prefixes,
+  including actual player/system failures, expanded populations, an immutable
+  accepted Factory terminal followed by result-publication failure, and a valid
+  first-seed report followed by later report-publication failure. The accepted
+  terminal is never rewritten; copied/forged terminal and report evidence is
+  rejected. `verifyPublishedSeedPrefix` (`scripts/run-v1-38-serious-league.ts:806`)
+  validates selections, report digests and ordered coverage for both complete
+  and partial heads. A failure head remains process-invalid and non-scorable.
+- T-265-13: authenticated historical mechanics controls remain comparison-only;
+  current inventory must grow through actual independent producers. The two
+  consecutive-response criterion binds distinct accepted responses to their own
+  preceding frozen targets and subsequent complete population changes, not to
+  contemporaneous equilibrium scores.
+- T-265-19: the sixteen-row fixture index now requires AST-linked executable
+  matcher assertions; comment/string/bare-expect/unrelated-test substitutes are
+  rejected. This proves linkage, not empirical performance.
+- The clean independent 46-file review is `265-REVIEW.md`; both repair histories
+  are retained in `265-REVIEW-FIX.iter2.md` and `265-REVIEW-FIX.md`. No human,
+  external custody, accepted-risk, rules, threshold or resource waiver was used.
 
 ## Sign-Off
 
 - [x] All 22 plan-authored threats have a disposition and source-audit status.
-- [ ] `threats_open: 0` for the configured `block_on: high` gate; T-265-12 remains open after connected-review reconciliation.
-- [ ] T-265-06 retention-reservation repair and focused regression are pending; it is medium severity and non-blocking, not accepted.
-- [ ] Source-only audit is not empirical Phase 265 completion, allocation approval, production readiness, or milestone sign-off.
+- [x] `threats_open: 0` for the configured `block_on: high` gate; T-265-12 is closed by the connected path and retained verifier.
+- [x] T-265-06 retention-reservation and composed-capacity repairs have focused regression evidence and independent review; no risk acceptance.
+- [x] Source-only audit is not empirical Phase 265 completion, allocation approval, production readiness, or milestone sign-off.
 
-**Approval:** pending independent-review closeout and the separate allocation decision.
+**Security threshold:** no high-or-higher open register entry. **Full-size source
+readiness is blocked** by the T-265-06 memory amendment until repaired. Final
+source validation and the separate allocation/participant decision are distinct
+gates; no live work is authorized by this report.

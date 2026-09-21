@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 independent re-review closes original six defects; second fix pass repairs two partial-publication failure reopen cases
-last_updated: "2026-09-21T22:00:54Z"
+stopped_at: Phase 265 original eight findings closed; independent execution-realism check requires bounded-memory same-plan repair before allocation
+last_updated: "2026-09-21T22:58:35Z"
 last_activity: 2026-09-21
-last_activity_desc: Re-review confirms two remaining partial-publication failure gaps; same-plan fix pass2 before final source gate
+last_activity_desc: Reviewed baseline267tests/29suites passed; third same-plan fix targets full-trace memory accumulation in execution and retained verification
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,25 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current memory-scale repair — 2026-09-21:** The original six defects and two
+partial-publication failure cases are fixed through `5d554920`; independent
+46-file deep review returned clean and is preserved as `265-REVIEW.iter4.md`.
+Main's subsequent realism check and independent `/root/265_memory_scale_check`
+found a genuine remaining full-size blocker: session/matrix/probe and response
+receipts retain complete Match executions, while retained graph verification
+eagerly keeps every decoded value. Actual host RAM is16GiB; historical full-Match
+trace size makes thousands of these payloads implausible to retain together.
+No empirical OOM was run or claimed. Current `265-REVIEW.md` CR-01 specifies
+compact receipts and bounded on-demand authenticated reading, preserving all
+disk evidence and roots. The unchanged-source/HEAD baseline gate passed267tests
+across29suites in1652.36seconds, plus package/strict types and all boundary checks
+(zero strict/ownership;19 old report-only entries). Continue the third same-plan
+GSD fix pass, independent review, final
+validation and one actual read-only Phase264 compatibility check. No new plan,
+authority literal, rules decision, live allocation or human input is needed for
+this repair. Completed review/fix reports and all unrelated historical files are
+preserved. The allocation recommendation is not yet approved or materialized.
 
 **Current repair pass2 — 2026-09-21:** The independent 46-path re-review closes the original six defects on source trace and confirms two remaining failures: an accepted immutable Factory terminal followed by response-result publication failure, and a valid selection/report prefix followed by later publication failure. Both must reopen as authenticated process-invalid prefixes without rewriting successes, deleting evidence, refunding charges, or implying completion. A proposed third finding was removed after main and reviewer verified the actual short-circuit grouping. Continue the same-plan GSD fix pass2, then independent re-review and the final combined gate; no new allocation or human decision is needed for these fixes.
 
