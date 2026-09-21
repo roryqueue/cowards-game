@@ -107,6 +107,16 @@ it("runs the complete source-only three-arm production closure and reopens numer
     expect(produced.scores.every((score) => score.numerator === 8 && score.denominator === 16 && score.evidenceRoots.length === 8)).toBe(true)
     const names = readdirSync(directory).sort(), bytes = names.map((name) => readFileSync(join(directory, name)).toString("hex")), verify = { allocation, repository, produced, opponents, threshold: { repository: initial[0]!.factoryRepository, artifactRoot: initial[0]!.candidateAdmission.importEvidence!.thresholdArtifactRoot }, records }
     expect(verifyRetainedLeagueResponse(verify)).toMatchObject({ issued: false, matchCount: 48 })
+    const indexedRecords = {
+      get: (root: LabRoot) => records.get(root), entries: () => records.entries(),
+      linked: (kind: string, root: LabRoot) => [...records].filter(([, row]) => row.kind === kind && row.links.includes(root)).map(([id]) => id),
+      matches: (kind: "response-match-start" | "response-match-result", parentStartRoot: LabRoot) => [...records].flatMap(([root, row]) => {
+        if (row.kind !== kind) return []
+        const charge = kind === "response-match-result" ? row.value.matchCharge : row.value
+        return charge.parentStartRoot === parentStartRoot ? [{ root, ordinal: charge.ordinal as number }] : []
+      }),
+    }
+    expect(verifyRetainedLeagueResponse({ ...verify, records: indexedRecords })).toMatchObject({ issued: false, matchCount: 48 })
     expect(names.map((name) => readFileSync(join(directory, name)).toString("hex"))).toEqual(bytes); expect(readdirSync(directory).sort()).toEqual(names)
     expect(() => verifyRetainedLeagueResponse({ ...verify, produced: { ...produced, scores: produced.scores.map((row) => ({ ...row, numerator: 16 })) } })).toThrow("RETAINED_RESPONSE_DECISIONS")
     const missing = new Map(records); missing.delete([...missing.entries()].find(([, row]) => row.kind === "response-match-result")![0])

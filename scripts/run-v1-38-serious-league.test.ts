@@ -13,7 +13,7 @@ import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTermina
 import { createLeagueCellTerminal, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
-import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, LeagueRecordGraph, LeagueRetentionBudget, seriousLeagueMain, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
+import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, seriousLeagueMain, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { produceLeagueResponse } from "./lib/v1-38-league-response-runtime.js"
@@ -249,6 +249,43 @@ describe("complete private league command", () => {
     const head = graph.append("grouped", { count: links.length }, [...links].reverse()), nodes = readLeagueRecordGraph(repository, head, { maxArtifactBytes: 4000000, maxArtifactRecords: 2000 })
     expect(links.every((root) => nodes.has(root))).toBe(true)
     expect(nodes.get(head)?.value).toEqual({ count: 130 })
+  }, 60000)
+  it("indexes multiple large authenticated payloads without retaining decoded values", () => {
+    const repository = createLeagueRepository(temporary()), limits = { maxArtifactBytes: 8000000, maxArtifactRecords: 1000 }, writer = new LeagueRecordGraph(repository, limits)
+    const roots = Array.from({ length: 8 }, (_, ordinal) => writer.append("synthetic-execution", { ordinal, execution: String.fromCharCode(65 + ordinal).repeat(350000) + ordinal }))
+    const parentStartRoot = labRoot("synthetic-response-parent", 1)
+    const matchRoots = Array.from({ length: 4 }, (_, ordinal) => writer.append("response-match-result", { matchCharge: { parentStartRoot, ordinal }, execution: String.fromCharCode(75 + ordinal).repeat(250000) }))
+    const graph = readLeagueRecordGraph(repository, matchRoots.at(-1)!, limits)
+    expect(graph.roots("synthetic-execution")).toHaveLength(8)
+    expect(graph.matches("response-match-result", parentStartRoot)).toEqual(matchRoots.map((root, ordinal) => ({ root, ordinal })))
+    expect(JSON.stringify(graph.matches("response-match-result", parentStartRoot))).not.toContain("execution")
+    for (const root of roots) {
+      const node = graph.get(root)!, descriptor = Object.getOwnPropertyDescriptor(node, "value")
+      expect(typeof descriptor?.get).toBe("function")
+      expect(descriptor?.value).toBeUndefined()
+      expect(node.value.execution).toHaveLength(350001)
+      expect(node.value).not.toBe(node.value) // Every read decodes afresh; the index has no payload cache.
+    }
+    expect(() => readLeagueRecordGraph(repository, matchRoots.at(-1)!, { maxArtifactBytes: 1000000, maxArtifactRecords: 1000 })).toThrow("GRAPH_READ_BUDGET")
+  }, 60000)
+  it("keeps only compact matrix receipts after each trusted synthetic Match", async () => {
+    const candidates = [await candidate(1), await candidate(3)], repository = createLeagueRepository(temporary()), base = allocationFixture()
+    const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, operations: { ...base.operations, wallClockMilliseconds: 60000 } })
+    const fixture: LeagueFixtureSeams = { candidates, host, run: async ({ match, providers }) => {
+      const state = MATCH_KERNEL.createMachineV119(match).initialState
+      for (const provider of Object.values(providers)) provider.close()
+      return { kind: "completed", privacy: "private_offline", transitions: [{ syntheticPayload: "L".repeat(150000) }], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never
+    } }
+    const session = new LeagueConnectedSession({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture }, allocation)
+    const matrix = await session.matrix(candidates, allocation.seedBlocks[0]!)
+    expect(matrix.results).toHaveLength(8)
+    expect(session.executedCells).toBe(8)
+    expect("cells" in session).toBe(false)
+    expect(matrix.results.every((row) => !("execution" in row))).toBe(true)
+    expect(matrix.results[0]!.terminal.disposition).toBe("success")
+    const graph = readLeagueRecordGraph(repository, matrix.recordRoot, allocation.operations)
+    expect(graph.roots("cell-result")).toHaveLength(8)
+    expect(graph.get(matrix.results[0]!.recordRoot)!.value.execution.transitions[0].syntheticPayload).toHaveLength(150000)
   }, 60000)
   it("keeps reserved failure capacity after normal byte or record exhaustion and forbids new charges", () => {
     for (const mode of ["bytes", "records"] as const) {

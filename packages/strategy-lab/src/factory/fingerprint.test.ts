@@ -9,7 +9,7 @@ import { admitFactory, authorizeFactorySupervision, deriveFactoryExecutionCommit
 import { factoryCandidateFixture, factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "./contracts.js"
 import { deriveFactoryCandidateRoot, deriveFactoryOraclePacketRoot } from "./identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "./repository.js"
-import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, createLeagueAuthorizedFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, requireIssuedFactoryIndependenceReceipt, verifyRetainedLeagueFactoryFingerprints } from "./fingerprint.js"
+import { createFactoryFingerprintEvidence, createFactoryGraphNodeArtifact, createLeagueAuthorizedFactoryFingerprintEvidence, deriveFactoryFingerprints, deriveFactorySourceStructureRoot, isFactoryProducerAuthorized, issueFactoryPairedCommitment, requireIssuedFactoryIndependenceReceipt, verifyRetainedLeagueFactoryFingerprints } from "./fingerprint.js"
 import { publishFactorySupervisionArtifacts } from "./supervision-artifacts.js"
 import { allocationFixture } from "../league/allocation.test.js"
 import { createLeagueExecutionAllocation } from "../league/allocation.js"
@@ -221,6 +221,13 @@ describe("six derived factory fingerprints", () => {
     const artifact = evidenceArtifact(repo, { proposalRoot: proposal.root, validationRoot: validation.root, receipt: first })
     const single = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })
     const paired = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, pairedSupervisionReceipts: [first, second], evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })
+    const compact = [issueFactoryPairedCommitment(first), issueFactoryPairedCommitment(second)]
+    const compactPaired = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, pairedCommitments: compact, evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })
+    expect(compactPaired.fingerprints).toEqual(paired.fingerprints)
+    expect(compactPaired.root).toBe(paired.root)
+    expect("transitions" in compact[0]!.execution).toBe(true)
+    expect("execution" in compact[0]!.execution).toBe(false)
+    expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, pairedCommitments: [{ ...compact[0]! }, compact[1]!], evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })).toThrow("FACTORY_FINGERPRINT_PAIRED_RECEIPT")
     expect(paired.fingerprints.matchupResponseRoot).not.toBe(single.fingerprints.matchupResponseRoot)
     expect(paired.reasons).not.toContain("paired_counterfactual_unavailable")
     expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: first, pairedSupervisionReceipts: [first, first], evidence: artifact.evidence, evidenceArtifactRoot: artifact.artifactRoot })).toThrow("FACTORY_FINGERPRINT_PAIRED_RECEIPT_DUPLICATE")

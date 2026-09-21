@@ -362,6 +362,20 @@ export interface FactoryIndependenceReceipt {
   readonly reasons: readonly string[]
 }
 const issuedReceipts = new WeakSet<object>()
+const issuedPairedCommitments = new WeakSet<object>()
+/** Compact, host-issued pairing. The WeakSet is intentionally not serializable:
+ * a caller cannot turn a claimed digest into live fingerprint authority. */
+export const issueFactoryPairedCommitment = (receipt: FactorySupervisionReceipt) => {
+  if (!isIssuedFactorySupervisionReceipt(receipt)) return fail("PAIRED_RECEIPT")
+  const side = receipt.matchup.status === "verified" ? receipt.matchup.side : null
+  const outcome = receipt.execution.kind === "completed" && receipt.execution.result.state.outcome?.type === "DRAW" ? "draw" as const
+    : side && receipt.execution.kind === "completed" && receipt.execution.result.state.outcome?.type === "WIN" ? (receipt.execution.result.state.outcome.winnerPlayerId === receipt.candidatePlayerId ? side : side === "bottom" ? "top" as const : "bottom" as const)
+    : "failure" as const
+  const commitment = freezeLabValue({ supervisionReceiptRoot: receipt.root, matchup: receipt.matchup, execution: deriveFactoryExecutionCommitment(receipt.execution), outcome })
+  issuedPairedCommitments.add(commitment)
+  return commitment
+}
+export type IssuedFactoryPairedCommitment = ReturnType<typeof issueFactoryPairedCommitment>
 const deriveReceiptRoot = (value: Omit<FactoryIndependenceReceipt, "root">): LabRoot => labRoot("factory-independence-receipt-v1", value)
 export const requireIssuedFactoryIndependenceReceipt = (receipt: FactoryIndependenceReceipt): Readonly<FactoryIndependenceReceipt> => {
   if (!issuedReceipts.has(receipt) || receipt.root !== deriveReceiptRoot(withoutRoot(receipt) as Omit<FactoryIndependenceReceipt, "root">)) return fail("UNISSUED_RECEIPT")
@@ -372,6 +386,7 @@ export const deriveFactoryFingerprints = (input: {
   readonly repository: FactoryRepository
   readonly supervisionReceipt: FactorySupervisionReceipt
   readonly pairedSupervisionReceipts?: readonly FactorySupervisionReceipt[]
+  readonly pairedCommitments?: readonly IssuedFactoryPairedCommitment[]
   readonly evidence: FactoryFingerprintEvidence
   readonly evidenceArtifactRoot: LabRoot
   readonly lineageManifestArtifactRoot?: LabRoot
@@ -408,7 +423,11 @@ export const deriveFactoryFingerprints = (input: {
   }
   validateGraphArtifacts(input.repository, evidence.lineageNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.parents })), "lineage")
   validateGraphArtifacts(input.repository, evidence.dependencyNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.dependencies })), "dependency")
-  const pairedCommitments = (input.pairedSupervisionReceipts ?? [receipt]).map((entry) => {
+  if (input.pairedSupervisionReceipts && input.pairedCommitments) return fail("PAIRED_RECEIPT_MODE")
+  const pairedCommitments = input.pairedCommitments ? input.pairedCommitments.map((entry) => {
+    if (!issuedPairedCommitments.has(entry)) return fail("PAIRED_RECEIPT")
+    return { supervisionReceiptRoot: entry.supervisionReceiptRoot, matchup: entry.matchup, execution: entry.execution }
+  }) : (input.pairedSupervisionReceipts ?? [receipt]).map((entry) => {
     if (!isIssuedFactorySupervisionReceipt(entry)) return fail("PAIRED_RECEIPT")
     return { supervisionReceiptRoot: entry.root, matchup: entry.matchup, execution: deriveFactoryExecutionCommitment(entry.execution) }
   })
