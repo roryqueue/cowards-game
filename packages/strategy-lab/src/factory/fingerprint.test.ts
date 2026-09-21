@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -56,7 +56,7 @@ const providerFor = (admission: FactoryAdmission, bindings?: { attemptRoot: LabR
     verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } },
   }
 }
-const supervision = async (admission: FactoryAdmission, bindings?: { attemptRoot: LabRoot; budgetRoot: LabRoot }) => superviseFactory(admission, "candidate", {
+const supervision = async (admission: FactoryAdmission, bindings?: { attemptRoot: LabRoot; budgetRoot: LabRoot }, syntheticOrdinal?: number) => superviseFactory(admission, "candidate", {
   match: { bottomPlayerId: "candidate", topPlayerId: "opponent" } as never,
   providers: { candidate: providerFor(admission, bindings) },
 }, async ({ providers }) => {
@@ -77,7 +77,7 @@ const supervision = async (admission: FactoryAdmission, bindings?: { attemptRoot
     transitions: [{
       transitionKind: "runtime_resume", semanticTupleId: "tuple", semanticTuple: {},
       coordinates: request.coordinates, classification: "success",
-      events: [{ type: "ROUND_STARTED", sequence: 1, payload: { roundNumber: 1 }, privatePayload: { objective: "strip-me" } }],
+      events: [{ type: "ROUND_STARTED", sequence: 1, payload: { roundNumber: 1 }, privatePayload: { objective: "strip-me", ...(syntheticOrdinal === undefined ? {} : { synthetic: String.fromCharCode(65 + syntheticOrdinal).repeat(100000) }) } }],
       beforeState: { phaseNumber: 1 }, afterState: { phaseNumber: 1 }, beforeStateHash: root("6"), afterStateHash: root("7"),
       beforeMachineHash: root("8"), afterMachineHash: root("9"), terminalStatus: null, failureStatus: null,
     }],
@@ -137,6 +137,25 @@ describe("six derived factory fingerprints", () => {
     expect(derived.status).toBe("unresolved")
     const candidateValue = { ...factoryCandidateFixture(proposal, validation, receipt.root), fingerprints: derived.fingerprints }, candidate = { ...candidateValue, root: deriveFactoryCandidateRoot(candidateValue) }, retained = { repository: repo, allocationArtifactRoot: input.allocationArtifactRoot, startArtifactRoot: input.startArtifactRoot, authoringArtifactRoot: put({ fixture: "source-only-authoring" }), evidenceArtifactRoot: put(evidence), candidate, scoreSupervisionArtifactRoots: [publishFactorySupervisionArtifacts(repo, receipt).artifactRoot], counterfactualPairs: evidence.counterfactualPairs, maxBytes: 1000000, maxRecords: 1000 }
     expect(verifyRetainedLeagueFactoryFingerprints(retained)).toMatchObject({ issued: false, fingerprints: derived.fingerprints })
+    // Each extra score carries a distinct large private payload. Keep only artifact
+    // roots and host-issued compact commitments in this test, as the retained
+    // reader must do; neither path needs an array of full executions.
+    const scoreRoots = [...retained.scoreSupervisionArtifactRoots]
+    const pairedCommitments = [issueFactoryPairedCommitment(receipt)]
+    for (let ordinal = 0; ordinal < 12; ordinal += 1) {
+      const score = await supervision(admission, { attemptRoot: start.root, budgetRoot: allocation.root }, ordinal)
+      pairedCommitments.push(issueFactoryPairedCommitment(score))
+      scoreRoots.push(publishFactorySupervisionArtifacts(repo, score).artifactRoot)
+    }
+    const many = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, pairedCommitments, evidence, evidenceArtifactRoot: retained.evidenceArtifactRoot })
+    const manyValue = { ...candidateValue, fingerprints: many.fingerprints }
+    const manyRetained = { ...retained, candidate: { ...manyValue, root: deriveFactoryCandidateRoot(manyValue) }, scoreSupervisionArtifactRoots: scoreRoots }
+    const reopened = verifyRetainedLeagueFactoryFingerprints(manyRetained)
+    expect(reopened).toMatchObject({ issued: false, fingerprints: many.fingerprints })
+    expect(() => requireIssuedFactoryIndependenceReceipt(reopened as never)).toThrow("UNISSUED_RECEIPT")
+    expect(() => verifyRetainedLeagueFactoryFingerprints({ ...manyRetained, scoreSupervisionArtifactRoots: [...scoreRoots, scoreRoots[1]!] })).toThrow("RETAINED_EVIDENCE_BINDING")
+    expect(() => verifyRetainedLeagueFactoryFingerprints({ ...manyRetained, scoreSupervisionArtifactRoots: [...scoreRoots].reverse() })).toThrow("RETAINED_EVIDENCE_BINDING")
+    expect(() => verifyRetainedLeagueFactoryFingerprints({ ...manyRetained, candidate })).toThrow("RETAINED_FINGERPRINT_MISMATCH")
     const rewrittenValue = { ...candidateValue, fingerprints: { ...candidateValue.fingerprints, legalInputDecisionRoot: root("f") } }
     expect(() => verifyRetainedLeagueFactoryFingerprints({ ...retained, candidate: { ...rewrittenValue, root: deriveFactoryCandidateRoot(rewrittenValue) } })).toThrow("RETAINED_FINGERPRINT_MISMATCH")
     expect(() => verifyRetainedLeagueFactoryFingerprints({ ...retained, counterfactualPairs: [] })).toThrow("RETAINED_EVIDENCE_BINDING")
@@ -147,6 +166,8 @@ describe("six derived factory fingerprints", () => {
     const changedProducer = { ...producerValue, sourceUtf8: `${sourceText}\n// changed` }
     expect(() => createLeagueAuthorizedFactoryFingerprintEvidence({ ...input, value: { ...input.value, producerArtifactRoot: put({ ...changedProducer, root: labRoot("factory-ingestion-v1", changedProducer) }) } })).toThrow("LEAGUE_PRODUCER")
     expect(() => deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: { ...evidence }, evidenceArtifactRoot: put(evidence) })).toThrow("UNISSUED_EVIDENCE")
+    writeFileSync(join(repo.directory, `factory-artifact-${scoreRoots[1]!.slice(7)}.bin`), new Uint8Array([65]))
+    expect(() => verifyRetainedLeagueFactoryFingerprints(manyRetained)).toThrow()
   })
   it("accepts an exact fresh-v2 producer authorization and rejects a coherently rerooted slot substitution", () => {
     const producerArtifactRoot = root("a")

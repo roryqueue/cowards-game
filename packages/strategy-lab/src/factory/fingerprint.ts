@@ -485,16 +485,23 @@ export const verifyRetainedLeagueFactoryFingerprints = (input: {
   const parse = (root: LabRoot) => { const parsed = admitCanonicalJsonBytes(readFactoryArtifact(input.repository, root), { profile: "canonical-manifest", operation: "require-canonical" }); return parsed.ok ? parsed.value : fail("RETAINED_BYTES") }
   const candidate = FactoryCandidateSchema.parse(input.candidate), evidence = validateEvidence(parse(input.evidenceArtifactRoot))
   verifyLeagueProducer({ ...input, value: evidence })
-  const receipts = input.scoreSupervisionArtifactRoots.map((artifactRoot) => {
+  let receipt: FactorySupervisionReceipt | null = null
+  const pairedCommitments: Array<{ supervisionReceiptRoot: LabRoot; matchup: FactorySupervisionReceipt["matchup"]; execution: ReturnType<typeof deriveFactoryExecutionCommitment> }> = []
+  const receiptRoots = new Set<LabRoot>()
+  for (const artifactRoot of input.scoreSupervisionArtifactRoots) {
     const stored = readFactorySupervisionArtifactRecords(input.repository, artifactRoot, input), values = (kind: string) => stored.records.filter((row) => row.kind === kind).map((row) => row.value)
     const metadata = values("receipt")[0] as Omit<FactorySupervisionReceipt, "execution" | "traces">, header = values("execution")[0] as any
     if (header.kind !== "completed" || metadata.admission.proposalRoot !== candidate.proposal.root || metadata.admission.validationRoot !== candidate.validation.root || metadata.admission.sourceRoot !== candidate.proposal.source.root) return fail("RETAINED_SUPERVISION_BINDING")
     const { resultMetadata, ...rest } = header
     const execution = { ...rest, transitions: values("transition"), accounting: values("accounting"), result: { ...resultMetadata, state: values("result-state")[0], events: values("result-event") } } as FactorySupervisionReceipt["execution"]
-    return { ...metadata, execution, traces: values("trace") as FactorySupervisionReceipt["traces"] }
-  })
-  const receipt = receipts[0] ?? fail("RETAINED_SUPERVISION_EMPTY"), source = readFactoryArtifact(input.repository, receipt.admission.artifacts.source), proposal = candidate.proposal
-  if (byteRoot(source) !== proposal.source.root || receipt.root !== candidate.supervisionReceiptRoot || evidence.supervisionReceiptRoot !== receipt.root || new Set(receipts.map((row) => row.root)).size !== receipts.length || labRoot("league-counterfactual-binding", evidence.counterfactualPairs) !== labRoot("league-counterfactual-binding", input.counterfactualPairs)) return fail("RETAINED_EVIDENCE_BINDING")
+    if (receiptRoots.has(metadata.root)) return fail("RETAINED_EVIDENCE_BINDING")
+    receiptRoots.add(metadata.root)
+    pairedCommitments.push({ supervisionReceiptRoot: metadata.root, matchup: metadata.matchup, execution: deriveFactoryExecutionCommitment(execution) })
+    if (!receipt) receipt = { ...metadata, execution, traces: values("trace") as FactorySupervisionReceipt["traces"] }
+  }
+  if (!receipt) return fail("RETAINED_SUPERVISION_EMPTY")
+  const source = readFactoryArtifact(input.repository, receipt.admission.artifacts.source), proposal = candidate.proposal
+  if (byteRoot(source) !== proposal.source.root || receipt.root !== candidate.supervisionReceiptRoot || evidence.supervisionReceiptRoot !== receipt.root || labRoot("league-counterfactual-binding", evidence.counterfactualPairs) !== labRoot("league-counterfactual-binding", input.counterfactualPairs)) return fail("RETAINED_EVIDENCE_BINDING")
   validateGraphArtifacts(input.repository, evidence.lineageNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.parents })), "lineage")
   validateGraphArtifacts(input.repository, evidence.dependencyNodes.map((node) => ({ root: node.root, artifactRoot: node.artifactRoot, links: node.dependencies })), "dependency")
   const fingerprints = {
@@ -503,7 +510,7 @@ export const verifyRetainedLeagueFactoryFingerprints = (input: {
     dependencyRoot: labRoot("factory-dependency-fingerprint-v1", { sourceRoot: proposal.source.root, build: proposal.build, recursiveLockedManifest: "unverified" }),
     legalInputDecisionRoot: deriveFactoryOrderedRecordDescriptor("factory-legal-input-decision-fingerprint", receipt.traces.map((trace) => ({ invocationRoot: trace.invocationRoot, inputRoot: trace.inputRoot, method: trace.method, ordinal: trace.ordinal, request: safeProjection(trace.requestProjection), decision: safeProjection(trace.decisionProjection), classification: trace.classification }))).root,
     chronicleBehaviorRoot: deriveFactoryOrderedRecordDescriptor("factory-chronicle-behavior-fingerprint", receipt.execution.transitions.map((transition) => safeProjection({ transitionKind: transition.transitionKind, coordinates: transition.coordinates, classification: transition.classification, events: transition.events, beforeState: transition.beforeState, afterState: transition.afterState, terminalStatus: transition.terminalStatus }))).root,
-    matchupResponseRoot: deriveFactoryOrderedRecordDescriptor("factory-matchup-response-fingerprint", receipts.map((row) => ({ supervisionReceiptRoot: row.root, matchup: row.matchup, execution: deriveFactoryExecutionCommitment(row.execution) }))).root,
+    matchupResponseRoot: deriveFactoryOrderedRecordDescriptor("factory-matchup-response-fingerprint", pairedCommitments).root,
   }
   if (Object.entries(fingerprints).some(([key, root]) => candidate.fingerprints[key as keyof FactoryFingerprintRoots] !== root)) return fail("RETAINED_FINGERPRINT_MISMATCH")
   return freezeLabValue({ issued: false as const, fingerprints, evidenceRoot: evidence.root })
