@@ -1,9 +1,9 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
-reviewed: 2026-09-21T23:40:32Z
+reviewed: 2026-09-21T22:34:36Z
 depth: deep
-reviewed_head: 67bcde10b7da758354d672ae8c547167914572d4
-reviewed_source: 67bcde10b7da758354d672ae8c547167914572d4
+reviewed_head: 5d55492009a6cd8fe031522fceb4543719edfc24
+reviewed_source: 5d55492009a6cd8fe031522fceb4543719edfc24
 diff_base: 98e4392e
 files_reviewed: 46
 files_reviewed_list:
@@ -58,82 +58,81 @@ findings:
   warning: 0
   info: 0
   total: 1
-status: issues_found
+status: findings_found
+reconciled: 2026-09-21
 ---
 
 # Phase 265: Code Review Report
 
-**Reviewed:** 2026-09-21T23:40:32Z
+**Reviewed:** 2026-09-21T22:34:36Z
 **Depth:** deep
 **Files Reviewed:** 46
-**Status:** one BLOCKER remains
+**Status:** one subsequently confirmed scalability blocker
 
 ## Summary
 
-The current fix at `0e4999d0` bounds live Match-payload retention and indexes the
-authenticated record graph without caching decoded values. One retained-reader
-path still reconstructs and simultaneously retains every full score Match
-execution for a response. This is a source-traced memory finding, not an
-observed Phase 265 heap/OOM measurement. The prior eight-defect closure is
-preserved below. No empirical allocation exists; source-gate results do not
-establish full-size memory feasibility.
+The original independent deep review closed all eight supported defects at
+`5d55492009a6cd8fe031522fceb4543719edfc24`; its unchanged clean report is
+preserved in `265-REVIEW.iter4.md`. Main's subsequent execution-realism check,
+independently traced by `/root/265_memory_scale_check`, confirms the additional
+scalability blocker below. This is an explicit amendment, not a claim that the
+earlier reviewer found it. The ongoing combined gate is a baseline for these
+bytes, not proof of full-size memory feasibility. No empirical allocation exists.
 
-## Critical Issues
+## Current finding
 
-### CR-01 — Retained fingerprint verification rematerializes all score Matches (BLOCKER)
+### CR-01 — Complete Match payloads accumulate without a memory bound (BLOCKER)
 
-**File:** `packages/strategy-lab/src/factory/fingerprint.ts:488-506` (caller:
-`scripts/lib/v1-38-league-response-runtime.ts:313-325`)
+**Severity:** critical for the intended full private league and retained verification.
+**Source:** main realism inspection plus independent read-only data-flow check.
+**Files:** `scripts/run-v1-38-serious-league.ts`,
+`scripts/lib/v1-38-league-response-runtime.ts`, and the paired-fingerprint issuer
+in `packages/strategy-lab/src/factory/fingerprint.ts`.
 
-**Issue:** `verifyRetainedLeagueResponse` accumulates every score supervision
-artifact root, then invokes `verifyRetainedLeagueFactoryFingerprints`. Its
-`scoreSupervisionArtifactRoots.map(...)` eagerly reads each entire artifact,
-rebuilds full `execution` objects containing transitions, accounting, result
-state/events, and traces, and retains all of them in `receipts` until the final
-ordered matchup fingerprint is derived. The saved primary receipt is also used
-for legal-input and Chronicle fingerprints, but every *other* full execution
-needs only its compact execution commitment, receipt root, and matchup metadata.
-Thus retained verification reintroduces full response-payload residency after
-the live path removed it. For a 21-opponent, two-seed response schedule this is
-336 score Matches (`8 × 21 × 2`) in one array, before reader/graph working data;
-that count illustrates the configured schedule shape, not a measured heap size.
+- `LeagueConnectedSession.cells` keeps every result's complete `execution`
+  (`run-v1-38-serious-league.ts:175,218`); `matrix().results`, current matrices and
+  round blocks retain the same payload references (`:231`). Probe executions
+  enter the same permanent array. Most consumers need only roots, terminals and
+  candidate/condition identities, or one transient execution for a probe digest.
+- Response production retains full score receipts and their executions in
+  `receipts[]` (`v1-38-league-response-runtime.ts:155,207`) until fingerprinting.
+- `readLeagueRecordGraph` eagerly decodes all linked values into a Map
+  (`run-v1-38-serious-league.ts:103`). Full verification and production-failure
+  verification materialize entries; cell/matrix maps and the response reader
+  then retain full executions. Merely wrapping that Map in lazy getters without
+  changing materializing callers is insufficient.
 
-**Fix:** Iterate authenticated score supervision artifacts one at a time. Keep
-the first full receipt only for its legal-input/Chronicle fingerprints; immediately
-derive and append a compact `{ supervisionReceiptRoot, matchup, execution:
-deriveFactoryExecutionCommitment(execution) }` from each verified receipt, then
-discard its full execution before reading the next. Derive the same ordered
-matchup root from those compact rows and retain exact root/binding/duplicate
-checks. Reopening must remain data-only (`issued: false`): do not add retained
-receipts to the live WeakSet or treat a serialized commitment as host-issued.
-Add a trusted large-synthetic retained-reader regression that checks bounded
-full-execution residency, exact existing fingerprint roots, and tamper rejection.
+**Impact:** peak live payload scales with the entire retained run instead of one
+Match or a bounded working set. The actual host has 16 GiB RAM. Historical Phase
+263 retained 187,807,888 trace bytes for 24 full Matches (about 7.83 MB per Match).
+At 21 candidates a single matrix has 1,680 Matches; two seeds have 3,360. Applying
+that historical serialized-size reference gives about 26.3 GB before probes or
+responses. This is an illustrative scale comparison, NOT a measured Phase 265
+heap/OOM result; JavaScript representation and traces differ. Shallow maps/arrays
+share objects and are not alleged to duplicate all payload bytes. Disk/record
+ceilings and bounded solver-payoff transport do not bound the persistent heap.
 
-The loop-level retained response verifier and the global replay each decode a
-response result transiently; the reported accumulation is specifically the
-`receipts` array above. This repair stays within the existing Phase 265 plan and
-requires no empirical allocation or new rules decision.
+**Required same-plan repair:** retain scalar executed counts and compact rooted
+cell/matrix receipts; derive normalized probe evidence while one execution is
+transient. Index/authenticate graph descriptors and links without retaining every
+decoded payload, and provide bounded on-demand reads throughout all retained
+verification paths. Compact response paired commitments must preserve actual
+host-issued fingerprint provenance and exact roots; never replace issued receipt
+checks with a serializable trust flag. Preserve all disk evidence, replay/tamper
+checks, counters, failures, runtime bounds and historical identities.
+
+**Regression:** use trusted synthetic large payloads and injected callbacks to
+prove bounded decoded-value residency and compact runner/response retention,
+unchanged semantic/fingerprint roots, and rejection of forged compact evidence,
+missing/tampered/cyclic graphs and over-budget reads. No real Match, authoring,
+provider, historical-store mutation or live allocation is needed for this repair.
+
+This is the third same-plan fix pass, not a new phase, numbered plan, rules
+decision, external-custody requirement or user checkpoint.
 
 ## Narrative Findings (AI reviewer)
 
-No additional BLOCKER, WARNING, or INFO finding is established by this re-review.
-The earlier unsupported independent-round dereference allegation remains removed:
-TypeScript groups the whole development-target comparison, including
-`roundBlocks[0]`, under the `evaluationRole === "development_response"` short circuit.
-
-### Current memory-fix trace
-
-`LeagueConnectedSession` now retains a scalar executed count, compact cell
-receipts, and compact matrix roots; probe normalization occurs while its one
-execution is transient. `readLeagueRecordGraph` authenticates bounded canonical
-descriptors, chunks, links, cycles, and aggregate read budgets in one traversal,
-then exposes indexed lazy values rather than a persistent decoded-value Map.
-Callers build compact cell/journal/matrix maps and retrieve response charges by
-parent-start index; failed-prefix and published-seed verification still traverse
-rooted records. Response production retains one full primary receipt and
-WeakSet-issued compact pairings, with the same saved matchup root. The remaining
-reader defect is the eager full `receipts` array above; the source trace does not
-claim that the graph's shallow metadata or matrix maps duplicate all payloads.
+No BLOCKER, WARNING, or INFO finding is established by this re-review. The earlier unsupported independent-round dereference allegation remains removed: TypeScript groups the whole development-target comparison, including `roundBlocks[0]`, under the `evaluationRole === "development_response"` short circuit.
 
 ### Closure map
 
@@ -150,9 +149,9 @@ claim that the graph's shallow metadata or matrix maps duplicate all payloads.
 
 The removed equality check on each selection record's auxiliary serialized `candidates` field does not weaken scoring or source admission: initial candidate records are compared with imported content, produced candidate admissions and closures are revalidated, and each retained selection/report is recomputed from authenticated final candidates, matrix, ledger, and projection. The test-only `beforeReportPublication` seam is nested under `LeagueFixtureSeams`; `runSeriousLeague` admits a fixture only for an `injected_fixture` allocation, and the CLI does not accept a fixture or provider input. The new path therefore does not authorize empirical injection.
 
-This review made no private-store read, Strategy/Match execution, author/model/provider call, teacher search, allocation, or authority mutation. It did not repeat the long connected tests or the full 29-suite gate. `empiricalRequirementsComplete: false` remains intentionally unchanged. CI `67bcde10` raises only the named source-gate timeout from 30 to 45 minutes.
+This review made no private-store read, Strategy/Match execution, author/model/provider call, teacher search, allocation, or authority mutation. It did not repeat the long connected tests or the full 29-suite gate. `empiricalRequirementsComplete: false` remains intentionally unchanged.
 
 ---
 
-_Reviewed: 2026-09-21T23:40:32Z_
+_Reviewed: 2026-09-21T22:34:36Z_
 _Reviewer: gsd-code-reviewer; depth: deep; source-only._
