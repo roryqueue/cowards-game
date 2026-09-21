@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 six-finding repair pass integrated at 244e6a2a; resume interrupted independent code review, then final combined validation
-last_updated: "2026-09-21T21:52:13Z"
+stopped_at: Phase 265 independent re-review closes original six defects; second fix pass repairs two partial-publication failure reopen cases
+last_updated: "2026-09-21T22:00:54Z"
 last_activity: 2026-09-21
-last_activity_desc: Resumed after usage interruption; all six source repairs committed, evaluation re-review has no source blockers, code re-review and final gate pending
+last_activity_desc: Re-review confirms two remaining partial-publication failure gaps; same-plan fix pass2 before final source gate
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,8 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current repair pass2 — 2026-09-21:** The independent 46-path re-review closes the original six defects on source trace and confirms two remaining failures: an accepted immutable Factory terminal followed by response-result publication failure, and a valid selection/report prefix followed by later publication failure. Both must reopen as authenticated process-invalid prefixes without rewriting successes, deleting evidence, refunding charges, or implying completion. A proposed third finding was removed after main and reviewer verified the actual short-circuit grouping. Continue the same-plan GSD fix pass2, then independent re-review and the final combined gate; no new allocation or human decision is needed for these fixes.
 
 **Current resumed handoff — 2026-09-21:** All six reviewed defects are repaired in eight commits through `244e6a2a`, with captured focused RED/GREEN tests, type checks, and boundary checks. The repair report and iteration backups are retained; the exact combined 29-suite gate has not run on this tip. Evaluation re-review found no remaining source-evaluation blocker and correctly leaves actual competitive evidence unimplemented. Independent code re-review was interrupted by the account usage limit before producing a new report; restart that review at the same source, then reconcile security, run final validation, and perform main's one read-only historical Phase264 compatibility check. No empirical allocation, authoring, Strategy execution or Match occurred. No previous authorization or historical artifact is reused. The earlier review findings below are history pending independent closure, not a reason to repeat completed repairs.
 
