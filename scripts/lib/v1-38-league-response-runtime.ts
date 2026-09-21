@@ -140,7 +140,8 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
   const start = createFactoryAttemptStart({ taskRoot: allocation.root, budgetRoot: allocation.root, candidateRoot: job.producerRequestArtifactRoot, inputRoot: job.producerRequestArtifactRoot, resourceAccountingRoot: input.start.root, retryParentRoot: null, authoringMechanism: job.channel === "human" ? "human-submission" : job.channel === "external" ? "external-submission" : "automated-oracle" })
   recordFactoryAttemptStart(input.repository, start)
   const before = Date.now(), records: LabRoot[] = [input.retention.append("response-production-start", { start, redTeamStart: input.start, job, targetArtifactRoot: input.targetArtifactRoot })]
-  let author: LeagueAuthoringResult | null = null, matchCount = 0, terminalPublished = false
+  let author: LeagueAuthoringResult | null = null, matchCount = 0
+  let accepted: { terminal: ReturnType<typeof createFactoryAttemptTerminal>; closure: Omit<FactoryCandidateClosure, "factoryRepository"> } | null = null
   try {
     author = await (input.fixture?.author ?? executeLeagueAuthoring)({ repository: input.repository, allocation, jobId: job.id, startArtifactRoot: input.startArtifactRoot, ...(job.evaluationRole === "development_response" ? { targetArtifactRoot: input.targetArtifactRoot } : {}) })
     records.push(input.retention.append("response-authoring", author, records.slice(-1)))
@@ -233,15 +234,16 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
     const candidateValue = { schemaVersion: "factory-candidate-v1" as const, privacy: "private_offline" as const, proposal, validation, supervisionReceiptRoot: receipt.root, fingerprints: independence.fingerprints, lineage: proposal.lineage }, candidate = FactoryCandidateSchema.parse({ ...candidateValue, root: deriveFactoryCandidateRoot(candidateValue) })
     const publication = finalizeFactoryCandidate({ receipt, independenceReceipt: independence, candidate, repository: input.repository })
     const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "accepted", outputRoot: candidate.root, validationRoot: validation.root, duplicateEvidenceRoot: input.retention.append("response-independence", { comparisons, scores, thresholdArtifactRoot: input.threshold.artifactRoot }, records), finalEvidenceRoot: author.evidenceArtifactRoot }); publishFactoryAttemptTerminal(input.repository, start, terminal)
-    terminalPublished = true
-    const candidateAdmission = createLeagueProducedCandidateAdmission({ candidate, supervisionReceiptRoot: receipt.root, fingerprintRoot: labRoot("factory-fingerprint-roots-v1", candidate.fingerprints), lineageRoot: labRoot("factory-lineage-v1", candidate.lineage), tupleRoot: allocation.tupleRoot, runtimeRoot: allocation.runtimeRoot, provenanceRoot: input.start.provenanceRoot, attemptStart: start, attemptTerminal: terminal, productionEvidence: { allocationRoot: allocation.root, redTeamStartRoot: input.start.root, authoringArtifactRoot: author.evidenceArtifactRoot } })
     const closure = { factoryRepository: input.repository, candidatePublicationArtifactRoot: publication.artifactRoot, sourceArtifactRoot: admission.artifacts.source, packetArtifactRoot: admission.artifacts.packet, proposalArtifactRoot: admission.artifacts.proposal, validationArtifactRoot: admission.artifacts.validation }
+    const { factoryRepository: _repository, ...retainedClosure } = closure
+    accepted = { terminal, closure: retainedClosure }
+    const candidateAdmission = createLeagueProducedCandidateAdmission({ candidate, supervisionReceiptRoot: receipt.root, fingerprintRoot: labRoot("factory-fingerprint-roots-v1", candidate.fingerprints), lineageRoot: labRoot("factory-lineage-v1", candidate.lineage), tupleRoot: allocation.tupleRoot, runtimeRoot: allocation.runtimeRoot, provenanceRoot: input.start.provenanceRoot, attemptStart: start, attemptTerminal: terminal, productionEvidence: { allocationRoot: allocation.root, redTeamStartRoot: input.start.root, authoringArtifactRoot: author.evidenceArtifactRoot } })
     const result = { disposition: "produced" as const, evaluationRole: job.evaluationRole, admission: candidateAdmission, candidateAdmission, closure, publicationRoot: publication.artifactRoot, factoryRepository: input.repository, allocationArtifactRoot, startArtifactRoot: input.startArtifactRoot, targetArtifactRoot: input.targetArtifactRoot, fingerprintArtifactRoot, comparisons, scores, author, matchCount }
     const recordRoot = input.retention.append("response-production-result", { ...result, factoryRepository: input.repository.directory, closure: { ...closure, factoryRepository: input.repository.directory } }, records)
     return { ...result, recordRoot }
   } catch (error) {
-    const evidenceRoot = input.retention.append("response-production-failure", { start, author, matchCount, error: error instanceof Error ? error.message : "unknown" }, records)
-    if (!terminalPublished) { const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "system_failure", outputRoot: null, validationRoot: evidenceRoot, duplicateEvidenceRoot: evidenceRoot, finalEvidenceRoot: evidenceRoot }); publishFactoryAttemptTerminal(input.repository, start, terminal) }
+    const evidenceRoot = input.retention.append("response-production-failure", { start, author, matchCount, accepted, error: error instanceof Error ? error.message : "unknown" }, records)
+    if (!accepted) { const terminal = createFactoryAttemptTerminal({ startRoot: start.root, disposition: "system_failure", outputRoot: null, validationRoot: evidenceRoot, duplicateEvidenceRoot: evidenceRoot, finalEvidenceRoot: evidenceRoot }); publishFactoryAttemptTerminal(input.repository, start, terminal) }
     throw error
   }
 }

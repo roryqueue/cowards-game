@@ -547,7 +547,20 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
     }
     if (!same(journal("started"), start)) return fail("RETAINED_RESPONSE_JOURNAL")
     const terminal = validateFactoryAttemptLedger(start, journal("terminal"))
-    if (terminal.disposition !== "system_failure" || terminal.outputRoot !== null || [terminal.validationRoot, terminal.duplicateEvidenceRoot, terminal.finalEvidenceRoot].some((root) => root !== failureRoot)) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
+    if (failure.accepted === null) {
+      if (terminal.disposition !== "system_failure" || terminal.outputRoot !== null || [terminal.validationRoot, terminal.duplicateEvidenceRoot, terminal.finalEvidenceRoot].some((root) => root !== failureRoot)) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
+    } else {
+      const accepted = failure.accepted
+      const resultPublished = rows("response-production-result").some(([, row]) => row.value.author.startRoot === redTeamStart.root)
+      if (!accepted || !same(Object.keys(accepted).sort(), ["terminal", "closure"].sort()) || !same(terminal, accepted.terminal) || terminal.disposition !== "accepted" || resultPublished) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
+      const closure = readCandidateClosure({ ...accepted.closure, factoryRepository: repository! })
+      const independence = graph.get(terminal.duplicateEvidenceRoot), validation = graph.get(closure.validation.evidenceRoot)
+      const expectedThreshold = candidates.find((candidate) => candidate.admission.importEvidence)?.admission.importEvidence?.thresholdArtifactRoot
+      const candidateBound = terminal.outputRoot === closure.candidate.root && terminal.validationRoot === closure.validation.root && terminal.finalEvidenceRoot === failure.author?.evidenceArtifactRoot
+      const validationBound = validation?.kind === "response-validation" && validation.value.proposalRoot === closure.proposal.root && validation.value.sourceRoot === closure.proposal.source.root
+      const independenceBound = independence?.kind === "response-independence" && independence.value.thresholdArtifactRoot === expectedThreshold
+      if (!candidateBound || !validationBound || !independenceBound) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
+    }
     const target = parse(readFactoryArtifact(repository!, production.targetArtifactRoot))
     for (const row of target.candidates) {
       const candidate = candidates.find((candidate) => candidate.admission.candidate.root === row.candidateRoot)
@@ -564,6 +577,7 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
     const conditions = enumerateLeagueResponseConditions(allocation, target.candidates.map((row: any) => row.candidateRoot))
     const charges = rows("response-match-start").filter(([, node]) => node.value.parentStartRoot === start.root).sort((a, b) => a[1].value.ordinal - b[1].value.ordinal)
     const results = rows("response-match-result").filter(([, node]) => node.value.matchCharge.parentStartRoot === start.root)
+    if (failure.accepted && (failure.matchCount !== conditions.length || results.length !== conditions.length)) return fail("RETAINED_RESPONSE_FAILURE_TERMINAL")
     if (charges.length !== failure.matchCount || charges.length > conditions.length || charges.length > job.reservation.matches || results.length < charges.length - 1 || results.length > charges.length || charges.length && !authoredSource) return fail("RETAINED_FAILED_RESPONSE_COVERAGE")
     for (const [ordinal, [chargeRoot, charge]] of charges.entries()) {
       const { arenaIndex, ...condition } = conditions[ordinal]!
