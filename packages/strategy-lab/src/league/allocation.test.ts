@@ -48,7 +48,7 @@ export const capacityFixture = (allocation = createProspectiveLeagueExecutionAll
   measuredAtMilliseconds: 1000, expiresAtMilliseconds: 301000, filesystemDevice: "fixture-device", freeFilesystemBytes: 210 * 2 ** 30, availableMemoryBytes: 4 * 2 ** 30, processHeadroomBytes: 2 ** 30,
   scale: { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 },
   costs: ["invocation", "execution", "factory_supervision", "descriptor", "journal", "filesystem"].map((category, index) => {
-    const units = [4632, 4632, 3744, 1, 1, 1][index]!, measurement = { sourceRoot: allocation.amendment.sourceRoot, witnessRoots: [root(`witness-${category}`)], sampleUnits: units, measuredBytes: 10 * 2 ** 30, measuredRecords: 1000000, projectedUnits: units }
+    const units = [4632, 4632, 3744, 1, 1, 1][index]!, measurement = { sourceRoot: allocation.amendment.sourceRoot, witnessRoots: [root(`witness-${category}`)], sampleUnits: units, measuredBytes: 10 * 2 ** 30, measuredRecords: category === "filesystem" ? 0 : 1000000, projectedUnits: units }
     return { category: category as LeagueCapacityReceiptInput["costs"][number]["category"], projectedBytes: measurement.measuredBytes, projectedRecords: measurement.measuredRecords, measurement, measurementRoot: labRoot("league-data-only-capacity-measurement-v1", { category, ...measurement }) }
   }),
   assumptions: ["Injected format measurements only; not future worst-case proof."],
@@ -110,7 +110,7 @@ describe("approved prospective three-base admission", () => {
     expect(() => admitLeagueCapacityReceipt(undefined, allocation, context)).toThrow()
     for (const category of input.costs) expect(() => createLeagueCapacityReceipt({ ...input, costs: input.costs.filter((row) => row !== category) }, allocation)).toThrow()
     for (const field of ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot"] as const) expect(() => createLeagueCapacityReceipt({ ...input, [field]: root("wrong") }, allocation)).toThrow()
-    for (const [field, value] of [["projectedBytes", 120 * 2 ** 30 + 1 - 50 * 2 ** 30], ["projectedRecords", 8300001 - 5000000]] as const) {
+    for (const [field, value] of [["projectedBytes", 120 * 2 ** 30 + 1 - 40 * 2 ** 30], ["projectedRecords", 8300001 - 4000000]] as const) {
       const costs = input.costs.map((row, index) => { if (index) return row; const measurement = { ...row.measurement, [field === "projectedBytes" ? "measuredBytes" : "measuredRecords"]: value }; return { ...row, [field]: value, measurement, measurementRoot: labRoot("league-data-only-capacity-measurement-v1", { category: row.category, ...measurement }) } })
       expect(() => createLeagueCapacityReceipt({ ...input, costs }, allocation)).toThrow("CAPACITY_MARGIN")
     }
@@ -123,6 +123,37 @@ describe("approved prospective three-base admission", () => {
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, freeFilesystemBytes: 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, availableMemoryBytes: 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, sourceRoot: root("stale") })).toThrow()
+  })
+  it("separates logical artifact margins from physical filesystem slack without raising either ceiling", () => {
+    const allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), base = capacityFixture(allocation), GiB = 2 ** 30
+    const cost = (row: LeagueCapacityReceiptInput["costs"][number], bytes: number, records: number) => {
+      const measurement = { ...row.measurement, measuredBytes: bytes, measuredRecords: records }
+      return { ...row, projectedBytes: bytes, projectedRecords: records, measurement, measurementRoot: labRoot("league-data-only-capacity-measurement-v1", { category: row.category, ...measurement }) }
+    }
+    // Injected representative arithmetic only, not measured capacity evidence.
+    const logicalBytes = Math.ceil(114632 * GiB / 1000), filesystemBytes = Math.ceil(1234 * GiB / 100)
+    const costs = base.costs.map((row, index) => cost(row, index < 4 ? 20 * GiB : index === 4 ? logicalBytes - 80 * GiB : filesystemBytes, index < 4 ? 1000000 : index === 4 ? 3156000 : 0))
+    const physicalBytes = logicalBytes + filesystemBytes
+    expect(logicalBytes).toBeLessThan(120 * GiB)
+    expect(physicalBytes).toBeGreaterThan(120 * GiB)
+    const input = { ...base, costs, freeFilesystemBytes: physicalBytes + 40 * GiB }, receipt = createLeagueCapacityReceipt(input, allocation)
+    const context = { nowMilliseconds: 1001, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, filesystemDevice: input.filesystemDevice, freeFilesystemBytes: input.freeFilesystemBytes, availableMemoryBytes: input.availableMemoryBytes }
+    expect(admitLeagueCapacityReceipt(receipt, allocation, context)).toEqual(receipt)
+    expect(costs.slice(0, 5).reduce((sum, row) => sum + row.projectedRecords, 0)).toBe(7156000)
+    for (const [bytes, records] of [[120 * GiB, 8300000], [120 * GiB + 1, 8300000], [120 * GiB, 8300001]] as const) {
+      const edge = { ...base, costs: costs.map((row, index) => index === 4 ? cost(row, bytes - 80 * GiB, records - 4000000) : row) }
+      if (bytes === 120 * GiB && records === 8300000) expect(() => createLeagueCapacityReceipt(edge, allocation)).not.toThrow()
+      else expect(() => createLeagueCapacityReceipt(edge, allocation)).toThrow("CAPACITY_MARGIN")
+    }
+    expect(() => createLeagueCapacityReceipt({ ...input, freeFilesystemBytes: input.freeFilesystemBytes - 1 }, allocation)).toThrow("CAPACITY_MARGIN")
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, freeFilesystemBytes: context.freeFilesystemBytes - 1 })).toThrow("CAPACITY_STALE")
+    expect(() => createLeagueCapacityReceipt({ ...input, costs: costs.map((row) => row.category === "filesystem" ? cost(row, filesystemBytes + 1, 0) : row) }, allocation)).toThrow("CAPACITY_MARGIN")
+    for (const records of [1, -1, 0.5]) expect(() => createLeagueCapacityReceipt({ ...base, costs: costs.map((row) => row.category === "filesystem" ? cost(row, filesystemBytes, records) : row) }, allocation)).toThrow("CAPACITY_CATEGORIES")
+    const filesystem = costs[5]!, measuredRecords = { ...filesystem.measurement, measuredRecords: 1 }
+    expect(() => createLeagueCapacityReceipt({ ...base, costs: [...costs.slice(0, 5), { ...filesystem, measurement: measuredRecords, measurementRoot: labRoot("league-data-only-capacity-measurement-v1", { category: "filesystem", ...measuredRecords }) }] }, allocation)).toThrow("CAPACITY_MEASUREMENT")
+    for (const category of costs.slice(0, 5)) expect(() => createLeagueCapacityReceipt({ ...base, costs: costs.map((row) => row === category ? cost(row, row.projectedBytes, 0) : row) }, allocation)).toThrow("CAPACITY_CATEGORIES")
+    expect(() => createLeagueCapacityReceipt({ ...base, costs: [...costs.slice(0, 5), cost(filesystem, 0, 0)] }, allocation)).toThrow("CAPACITY_CATEGORIES")
+    expect(() => createLeagueCapacityReceipt({ ...base, costs: [...costs.slice(0, 5), { ...filesystem, measurement: { ...filesystem.measurement, witnessRoots: [] } }] }, allocation)).toThrow("CAPACITY_MEASUREMENT")
   })
   it("binds each downstream producer and exact Sol model before authoring or retained interpretation", () => {
     const allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), jobs = allocation.rounds.flatMap((round) => round.jobs)

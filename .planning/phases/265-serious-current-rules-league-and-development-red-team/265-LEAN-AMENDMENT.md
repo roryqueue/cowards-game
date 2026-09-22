@@ -83,6 +83,15 @@ an inline measurement (current source root, nonempty retained witness roots,
 sample units, measured bytes/records, projected units) and its recomputed
 `league-data-only-capacity-measurement-v1` root. Projected bytes and records are
 the exact integer ceiling of measured quantity × projected units / sample units.
+The first five categories count logical artifact bytes and artifact records;
+their totals must fit 120 GiB and 8,300,000 records after the ordinary-pool
+margins. The filesystem category measures additional physical block slack:
+its measured/projected bytes are strictly positive and its measured/projected
+artifact records are exactly zero. It retains the same rooted witness and
+ceiling-scaling requirements but does not consume the logical artifact pool.
+The host projection subtracts all six categories' bytes plus the unchanged
+20 GiB terminal reserve and must still leave 20 GiB free. This distinction
+does not raise any approved limit or alter the live remaining-capacity guard.
 Projected units are 4,632 for invocation and execution, 3,744 for the two retained
 factory-supervision copies of 1,872 response Matches, and one complete-run
 estimate each for descriptor, journal, and filesystem costs. These are the
