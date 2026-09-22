@@ -1,5 +1,5 @@
 import { mkdtempSync, realpathSync, readdirSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs"
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
@@ -10,10 +10,11 @@ import { allocationFixture } from "../packages/strategy-lab/src/league/allocatio
 import { importedCandidateFixture } from "../packages/strategy-lab/src/league/contracts.test.js"
 import { createLeagueExecutionAllocation } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTerminal, publishLeagueArtifact } from "../packages/strategy-lab/src/league/repository.js"
-import { createLeagueCellTerminal, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
+import { createLeagueCellTerminal, deriveLeagueResultEventRoot, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
-import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, seriousLeagueMain, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
+import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
+import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
 import { produceLeagueResponse } from "./lib/v1-38-league-response-runtime.js"
@@ -41,6 +42,101 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
 } }
 
 describe("complete private league command", () => {
+  it("streams over-node and over-byte private executions while preserving the exact small v1 root", () => {
+    const repository = createLeagueRepository(temporary()), limits = { maxArtifactBytes: 50000000, maxArtifactRecords: 10000 }, graph = new LeagueRecordGraph(repository, limits)
+    const digest = (bytes: Uint8Array) => `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const
+    const canonical = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok) throw Error("test canonical"); return admitted.canonicalBytes }
+    const smallExecution = { kind: "completed", privacy: "private_offline", result: { state: { outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] }, transitions: [], accounting: [] }
+    const smallValue = { execution: smallExecution }, smallBytes = canonical(smallValue), smallChunk = { schemaVersion: "league-record-chunk-v1", ordinal: 0, previousRoot: null, bytesRoot: digest(smallBytes), byteLength: smallBytes.length }, smallNode = canonical(smallChunk)
+    const body = { schemaVersion: "league-record-v1", privacy: "private_offline", kind: "cell-result", byteLength: smallBytes.length, recordRoot: digest(smallBytes), chunkCount: 1, tailRoot: digest(smallNode), links: [] }
+    const smallRoot = graph.append("cell-result", smallValue)
+    expect(smallRoot).toBe(digest(canonical({ ...body, root: labRoot("league-record-v1", body) })))
+    const nodes = Array.from({ length: 550 }, (_, ordinal) => ({ ordinal, afterState: { soldiers: Array.from({ length: 300 }, (_, index) => ({ id: index })) } }))
+    const overNodes = { ...smallExecution, transitions: nodes }
+    expect(admitCanonicalJsonValue({ execution: overNodes }, { profile: "canonical-manifest" })).toMatchObject({ ok: false, error: { code: "MAX_NODES_EXCEEDED" } })
+    const nodeRoot = graph.append("cell-result", { execution: overNodes })
+    const events = Array.from({ length: 80 }, (_, ordinal) => ({ type: "ROUND_STARTED", ordinal, payload: { text: String.fromCharCode(65 + ordinal % 26).repeat(115000) } }))
+    const overBytes = { ...smallExecution, result: { ...smallExecution.result, events } }
+    expect(admitCanonicalJsonValue({ execution: overBytes }, { profile: "canonical-manifest" })).toMatchObject({ ok: false, error: { code: "MAX_RAW_UTF8_BYTES_EXCEEDED" } })
+    const responseRoot = graph.append("response-match-result", { matchCharge: { parentStartRoot: labRoot("fixture-start", 1), ordinal: 0 }, execution: overBytes })
+    const failed = { kind: "failure", privacy: "private_offline", unchangedState: {}, failure: { classification: "system_failure", code: "INJECTED" }, transitions: [], accounting: events }
+    const failureRoot = graph.append("response-match-execution-failure", { execution: failed })
+    const read = readLeagueRecordGraph(repository, failureRoot, limits)
+    expect(read.get(smallRoot)?.value.execution).toEqual(smallExecution)
+    expect(read.get(nodeRoot)?.value.execution.transitions).toHaveLength(550)
+    expect(read.get(responseRoot)?.value.execution.result.events[79]).toEqual(events[79])
+    expect(read.get(failureRoot)?.value.execution.accounting[79]).toEqual(events[79])
+    expect(normalizedGameplayRoot(overBytes as never)).toMatch(/^sha256:[a-f0-9]{64}$/u)
+    expect(normalizedGameplayRoot(overBytes as never)).not.toBe(normalizedGameplayRoot({ ...overBytes, result: { ...overBytes.result, events: [...events.slice(0, -1), { ...events[79]!, ordinal: 999 }] } } as never))
+    expect(deriveLeagueResultEventRoot(smallExecution.result.events)).toBe(labRoot("league-result-events-v1", smallExecution.result.events))
+    expect(deriveLeagueResultEventRoot(events)).toMatch(/^sha256:[a-f0-9]{64}$/u)
+    expect(sameLargeResult(overBytes.result, read.get(responseRoot)!.value.execution.result)).toBe(true)
+    expect(sameLargeResult(overBytes.result, { ...overBytes.result, events: events.slice(1) })).toBe(false)
+    expect(sameLargeExecution(failed as never, read.get(failureRoot)!.value.execution)).toBe(true)
+    const diagnostic = diagnoseLeagueExecutionStorage(createLeagueRepository(temporary()), overBytes as never, limits)
+    expect(diagnostic).toMatchObject({ headRoot: expect.stringMatching(/^sha256:/u), artifactRecords: expect.any(Number) })
+    expect(diagnostic.storedBytes).toBeGreaterThan(diagnostic.inputJsonBytes)
+    const exhausted = new LeagueRecordGraph(createLeagueRepository(temporary()), { maxArtifactBytes: 1000000, maxArtifactRecords: 10000 })
+    expect(() => exhausted.append("cell-result", { execution: overBytes })).toThrow("RETENTION_BUDGET")
+  }, 120000)
+
+  it("rejects missing, changed, reordered and falsely declared private stream records", () => {
+    const execution = { kind: "completed", privacy: "private_offline", result: { state: {}, events: [{ type: "one" }, { type: "two" }] }, transitions: [], accounting: [] } as never
+    const prepared = prepareLeagueExecutionStream(execution), digest = (bytes: Uint8Array) => `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const
+    const canonical = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!admitted.ok) throw Error("test canonical"); return admitted.canonicalBytes }
+    const artifacts = new Map(prepared.artifacts.map((bytes) => [digest(bytes), bytes])), limits = { maxArtifactBytes: 1000000, maxArtifactRecords: 100 }
+    const read = (root: `sha256:${string}`) => artifacts.get(root) ?? (() => { throw Error("missing artifact") })()
+    expect(readLeagueExecutionStream(prepared.reference, read, limits)).toEqual(execution)
+    const chunkRoot = digest(prepared.artifacts[0]!), original = prepared.artifacts[0]!
+    artifacts.delete(chunkRoot); expect(() => readLeagueExecutionStream(prepared.reference, read, limits)).toThrow("missing artifact"); artifacts.set(chunkRoot, original)
+    artifacts.set(chunkRoot, new TextEncoder().encode("changed")); expect(() => readLeagueExecutionStream(prepared.reference, read, limits)).toThrow("ARTIFACT_ROOT"); artifacts.set(chunkRoot, original)
+    const descriptor = JSON.parse(new TextDecoder().decode(prepared.artifacts.at(-1)!))
+    const forged = (changes: Record<string, unknown>) => { const { root: _root, ...body } = { ...descriptor, ...changes }, bytes = canonical({ ...body, root: labRoot("league-execution-stream-v2", body) }), artifactRoot = digest(bytes); artifacts.set(artifactRoot, bytes); return { schemaVersion: "league-execution-ref-v2" as const, artifactRoot } }
+    expect(() => readLeagueExecutionStream(forged({ counts: { ...descriptor.counts, resultEvents: 3 } }), read, limits)).toThrow("DESCRIPTOR")
+    expect(() => readLeagueExecutionStream(forged({ chainRoot: labRoot("wrong-chain", 1) }), read, limits)).toThrow("RECORD_COUNT")
+    expect(() => readLeagueExecutionStream(forged({ executionRoot: labRoot("wrong-execution", 1) }), read, limits)).toThrow("EXECUTION_COMMITMENT")
+    const node = JSON.parse(new TextDecoder().decode(prepared.artifacts[1]!)), badNode = canonical({ ...node, ordinal: 1 }), badNodeRoot = digest(badNode); artifacts.set(badNodeRoot, badNode)
+    expect(() => readLeagueExecutionStream(forged({ tailRoot: badNodeRoot }), read, limits)).toThrow("CHUNK")
+    const lines = new TextDecoder().decode(original).trimEnd().split("\n"), swapped = [...lines]; [swapped[2], swapped[3]] = [swapped[3]!, swapped[2]!]
+    const reordered = new TextEncoder().encode(swapped.join("\n") + "\n"), reorderedRoot = digest(reordered), reorderedNode = canonical({ ...node, bytesRoot: reorderedRoot, byteLength: reordered.length }), reorderedNodeRoot = digest(reorderedNode)
+    artifacts.set(reorderedRoot, reordered); artifacts.set(reorderedNodeRoot, reorderedNode)
+    expect(() => readLeagueExecutionStream(forged({ tailRoot: reorderedNodeRoot }), read, limits)).toThrow("RECORD_ORDER")
+    const multi = prepareLeagueExecutionStream({ kind: "completed", privacy: "private_offline", result: { state: {}, events: [{ type: "large", text: "A".repeat(150000) }] }, transitions: [], accounting: [] } as never)
+    const multiArtifacts = new Map(multi.artifacts.map((bytes) => [digest(bytes), bytes]))
+    const multiRead = (root: `sha256:${string}`) => multiArtifacts.get(root) ?? (() => { throw Error("missing artifact") })()
+    expect(readLeagueExecutionStream(multi.reference, multiRead, limits).kind).toBe("completed")
+    const firstChunkRoot = digest(multi.artifacts[0]!), secondChunkRoot = digest(multi.artifacts[2]!)
+    multiArtifacts.set(firstChunkRoot, multi.artifacts[2]!); multiArtifacts.set(secondChunkRoot, multi.artifacts[0]!)
+    expect(() => readLeagueExecutionStream(multi.reference, multiRead, limits)).toThrow("ARTIFACT_ROOT")
+    expect(() => readLeagueExecutionStream(multi.reference, multiRead, { ...limits, maxArtifactRecords: 4 })).toThrow("DESCRIPTOR")
+  }, 30000)
+
+  it("reopens charged prefixes when execution, large graph retention or later terminal publication fails", async () => {
+    for (const stage of ["execution", "graph", "terminal"] as const) {
+      const candidates = [await candidate(1), await candidate(3)], base = allocationFixture()
+      let rejectTerminal = stage === "terminal"
+      const repository = createLeagueRepository(temporary(), { temporaryName(target) {
+        if (target.endsWith(".terminal.json") && rejectTerminal) { rejectTerminal = false; throw Error("INJECTED_TERMINAL_IO") }
+        return `${target}.tmp-${randomUUID()}`
+      } })
+      const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, operations: { ...base.operations, maxArtifactBytes: stage === "graph" ? 5000000 : 20000000, terminalReserveBytes: 2000000, wallClockMilliseconds: 60000 } })
+      const fixture: LeagueFixtureSeams = { candidates, host, run: async ({ match, providers }) => {
+        if (stage === "execution") throw Error("INJECTED_EXECUTION_FAILURE")
+        const state = MATCH_KERNEL.createMachineV119(match).initialState
+        for (const provider of Object.values(providers)) provider.close()
+        const events = stage === "graph" ? Array.from({ length: 80 }, (_, ordinal) => ({ type: "ROUND_STARTED", payload: { ordinal, synthetic: "A".repeat(115000) } })) : []
+        return { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { ...state, outcome: { type: "DRAW" } }, events: [...events, { type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never
+      } }
+      const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture })
+      const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), journals = readdirSync(repository.directory).filter((name) => name.endsWith(".started.json"))
+      expect(result).toMatchObject({ processValidity: "process_invalid" })
+      expect(graph.get(result.headRoot)?.value.executedCells).toBe(stage === "terminal" ? 1 : 0)
+      expect(journals).toHaveLength(1)
+      expect(graph.roots("cell-result")).toHaveLength(stage === "terminal" ? 1 : 0)
+      expect(graph.roots("cell-issuance-failure")).toHaveLength(1)
+      expect(verifyRetainedSeriousLeague({ repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates })).toMatchObject({ issued: false, processValidity: "process_invalid", empiricalRequirementsComplete: false })
+    }
+  }, 120000)
   it("preflights the journal-start and graph-start boundary before any provider work", async () => {
     const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
     // Marker + run-start consume four records, leaving exactly two ordinary

@@ -6,7 +6,7 @@ import { admitFactory, authorizeFactorySupervision, type FactoryAdmission, type 
 import { FactoryCandidateSchema, FactoryOraclePacketSchema, FactoryProposalSchema, FactoryValidationEvidenceSchema, type FactoryCandidate } from "../factory/contracts.js"
 import { readFactoryArtifact, type FactoryRepository } from "../factory/repository.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
-import { createLeagueCellTerminal, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCellSchema, type LeagueCell, type LeagueCellTerminal } from "./contracts.js"
+import { createLeagueCellTerminal, deriveLeagueResultEventRoot, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCellSchema, type LeagueCell, type LeagueCellTerminal } from "./contracts.js"
 import { publishLeagueCellTerminal, recordLeagueCellStart, type LeagueCellStart, type LeagueRepository } from "./repository.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
@@ -112,26 +112,34 @@ export const deriveLeagueMatchExecutionTerminal = (execution: LabMatchExecution,
   const evidenceRoot = labRoot("league-cell-execution-v1", { startRoot: start.root, cellRoot: cell.root, bottomCandidateRoot: bottom.candidateRoot, topCandidateRoot: top.candidateRoot, executionKind: execution.kind, transitionCount: execution.transitions.length, accountingCount: execution.accounting.length })
   if (execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result)) return createLeagueCellTerminal({ cellRoot: cell.root, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot, projection: null })
   if (execution.accounting.some((entry) => !entry.result.ok)) return createLeagueCellTerminal({ cellRoot: cell.root, disposition: "player_violation", processValidity: "process_invalid", evidenceRoot, projection: null })
-  const resultEventRoot = labRoot("league-result-events-v1", execution.result.events)
+  const resultEventRoot = deriveLeagueResultEventRoot(execution.result.events)
   const projection = projectCanonicalKernelOutcomeToEntrantHalfPoints({ execution, entrantCandidateRoot: cell.entrantCandidateRoot, bottomCandidateRoot: bottom.candidateRoot, topCandidateRoot: top.candidateRoot, bottomPlayerId: match.bottomPlayerId, topPlayerId: match.topPlayerId, cellRoot: cell.root, conditionRoot: cell.conditionRoot, semanticGeometryHash: cell.semanticGeometryHash, resultEventRoot })
   return createLeagueCellTerminal({ cellRoot: cell.root, disposition: "success", processValidity: "process_valid", evidenceRoot, projection })
 }
 
 /** Charges first, runs only the canonical bridge, and never turns runtime failure into payoff. */
-export const runLeagueCell = async (input: Readonly<{ repository: LeagueRepository; start: LeagueCellStart; cell: LeagueCell; bottom: LeagueIssuedProvider; top: LeagueIssuedProvider; requestRoot: LabRoot; match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; runCanonicalLabMatch?: typeof runCanonicalLabMatch }>): Promise<Readonly<LeagueCellTerminal>> => {
+export const runLeagueCell = async (input: Readonly<{ repository: LeagueRepository; start: LeagueCellStart; cell: LeagueCell; bottom: LeagueIssuedProvider; top: LeagueIssuedProvider; requestRoot: LabRoot; match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; runCanonicalLabMatch?: typeof runCanonicalLabMatch; beforeTerminal?: (execution: LabMatchExecution, terminal: LeagueCellTerminal) => void }>): Promise<Readonly<LeagueCellTerminal>> => {
   recordLeagueCellStart(input.repository, input.start)
   const cell = LeagueCellSchema.parse(input.cell)
   let terminal: LeagueCellTerminal
+  let execution: LabMatchExecution | null = null, derived = false
   try {
     if (!isRoot(input.requestRoot) || input.requestRoot !== cell.requestRoot) return fail("REQUEST_BINDING")
     const bottom = requireIssued(input.bottom, cell, input.start), top = requireIssued(input.top, cell, input.start)
     if (input.bottom.candidateRoot === input.top.candidateRoot || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomStrategyRevisionId !== input.bottom.identity.revisionId || input.match.topStrategyRevisionId !== input.top.identity.revisionId) return fail("MATCH_BINDING")
     const run = input.runCanonicalLabMatch ?? runCanonicalLabMatch
-    const execution = await run({ match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top } })
+    execution = await run({ match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top } })
     terminal = deriveLeagueMatchExecutionTerminal(execution, cell, input.start, input.bottom, input.top, input.match)
+    derived = true
   } catch (error) {
+    // The connected caller owns an anchored issuance-failure graph record and
+    // terminal when execution or terminal derivation itself fails.
+    if (input.beforeTerminal) throw error
     terminal = failureTerminal(cell, input.start, error instanceof Error ? error.name : "UNKNOWN")
   }
+  // The connected retention callback is deliberately outside the catch: a
+  // failed graph publication must not leave an immutable success terminal.
+  if (derived && execution) input.beforeTerminal?.(execution, terminal)
   publishLeagueCellTerminal(input.repository, input.start, terminal)
   return terminal
 }

@@ -17,7 +17,7 @@ import { deriveLeaguePortfolio, selectRobustPure, type LeaguePortfolioCandidate,
 import { publishLeagueReport, reopenLeagueReport } from "../packages/strategy-lab/src/league/report.js"
 import { createFactoryRepository, readFactoryArtifact, publishFactoryArtifact, type FactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { validateFactoryAttemptStart, validateFactoryAttemptLedger } from "../packages/strategy-lab/src/factory/ledger.js"
-import { deriveFactoryExecutionCommitment } from "../packages/strategy-lab/src/factory/admission.js"
+import { deriveFactoryExecutionCommitment, deriveFactoryOrderedRecordDescriptor } from "../packages/strategy-lab/src/factory/admission.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
 import type { FactorySupervisionProvider } from "../packages/strategy-lab/src/factory/admission.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
@@ -26,6 +26,7 @@ import { verifyHistoricalFactoryAssessmentForLeague, readRetainedFactoryLedger }
 import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/src/factory/supervision-artifacts.js"
 import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions } from "./lib/v1-38-league-response-runtime.js"
+import { isLeagueExecutionStreamReference, prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 
 const fail = (code: string): never => { throw new TypeError(`SERIOUS_LEAGUE_${code}`) }
 const bytesRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -77,23 +78,37 @@ export class LeagueRecordGraph {
     const bytes = encode(request).length * 4 + this.budget.allocation.operations.outputLimitBytes * 12 + 262144
     this.budget.checkCapacity(bytes, 2 * Math.ceil(bytes / 131072) + 1)
   }
-  append(kind: string, value: unknown, links: readonly LabRoot[] = []): LabRoot {
-    if (this.budget?.exhausted && ["run-failure", "red-team-terminal", "red-team-process-failure", "response-production-failure", "response-runtime-cleanup", "response-runtime-invocation-failure", "response-match-execution-failure", "runtime-cleanup", "runtime-cleanup-failure", "runtime-invocation-failure", "cell-issuance-failure"].includes(kind)) return this.budget.terminal(() => this.publish(kind, value, [], true))
-    return this.publish(kind, value, links, false)
+  append(kind: string, value: unknown, links: readonly LabRoot[] = [], reserve: { bytes: number; records: number } = { bytes: 0, records: 0 }): LabRoot {
+    if (this.budget?.exhausted && ["run-failure", "red-team-terminal", "red-team-process-failure", "response-production-failure", "response-runtime-cleanup", "response-runtime-invocation-failure", "response-match-execution-failure", "runtime-cleanup", "runtime-cleanup-failure", "runtime-invocation-failure", "cell-issuance-failure"].includes(kind)) {
+      const preserveChargeLinks = ["cell-issuance-failure", "runtime-cleanup", "runtime-cleanup-failure", "runtime-invocation-failure"].includes(kind)
+      return this.budget.terminal(() => this.publish(kind, value, preserveChargeLinks ? links : [], true))
+    }
+    return this.publish(kind, value, links, false, reserve)
   }
-  private publish(kind: string, value: unknown, links: readonly LabRoot[], terminal: boolean): LabRoot {
+  private publish(kind: string, value: unknown, links: readonly LabRoot[], terminal: boolean, reserve: { bytes: number; records: number } = { bytes: 0, records: 0 }): LabRoot {
     let dependencies = [...new Set([...links, ...(this.latestRoot ? [this.latestRoot] : [])])].sort()
     while (dependencies.length > 128) { const groups: LabRoot[] = []; for (let i = 0; i < dependencies.length; i += 127) { const rows = dependencies.slice(i, i + 127); groups.push(this.publish("record-links", { count: rows.length }, rows, terminal)) }; dependencies = [...new Set(groups)].sort() }
-    const bytes = encode(value), pending: Uint8Array[] = []
+    const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
+    const carriesExecution = ["cell-result", "response-match-result", "response-match-execution-failure"].includes(kind)
+    let streamArtifacts: readonly Uint8Array[] = []
+    let bytes: Uint8Array
+    if (admitted.ok) bytes = admitted.canonicalBytes
+    else if (carriesExecution && ["MAX_NODES_EXCEEDED", "MAX_RAW_UTF8_BYTES_EXCEEDED"].includes(admitted.error.code) && value && typeof value === "object" && !Array.isArray(value) && "execution" in value) {
+      const { execution, ...rest } = value as Record<string, any>
+      const stream = prepareLeagueExecutionStream(execution as LabMatchExecution)
+      streamArtifacts = stream.artifacts
+      bytes = encode({ ...rest, execution: stream.reference })
+    } else return fail("CANONICAL")
+    const pending: Uint8Array[] = [...streamArtifacts]
     let tailRoot: LabRoot | null = null, ordinal = 0
     for (let offset = 0; offset < bytes.length; offset += 131072) { const chunk = bytes.subarray(offset, offset + 131072), chunkRoot = bytesRoot(chunk); pending.push(chunk); const node = encode({ schemaVersion: "league-record-chunk-v1", ordinal: ordinal++, previousRoot: tailRoot, bytesRoot: chunkRoot, byteLength: chunk.length }); pending.push(node); tailRoot = bytesRoot(node) }
     const descriptor = encode(rooted("league-record-v1", { kind, byteLength: bytes.length, recordRoot: bytesRoot(bytes), chunkCount: ordinal, tailRoot, links: dependencies })); pending.push(descriptor)
     const size = pending.reduce((sum, bytes) => sum + bytes.length, 0)
     if (this.budget) {
       const fresh = pending.filter((bytes) => { try { lstatSync(resolve(this.repository.directory, `league-artifact-${bytesRoot(bytes).slice(7)}.bin`)); return false } catch { return true } })
-      this.budget.checkCapacity(fresh.reduce((sum, bytes) => sum + bytes.length, 0), fresh.length, terminal)
+      this.budget.checkCapacity(fresh.reduce((sum, bytes) => sum + bytes.length, 0) + reserve.bytes, fresh.length + reserve.records, terminal)
     }
-    else if (this.writtenBytes + size > this.limits.maxArtifactBytes || this.records + pending.length > this.limits.maxArtifactRecords) return fail("RETENTION_BUDGET")
+    else if (this.writtenBytes + size + reserve.bytes > this.limits.maxArtifactBytes || this.records + pending.length + reserve.records > this.limits.maxArtifactRecords) return fail("RETENTION_BUDGET")
     this.writtenBytes += size; this.records += pending.length
     for (const artifact of pending) publishLeagueArtifact(this.repository, artifact)
     this.latestRoot = bytesRoot(descriptor)
@@ -106,7 +121,18 @@ export const readLeagueRecordGraph = (repository: LeagueRepository, head: LabRoo
   const matchIndex = new Map<string, Map<LabRoot, Array<{ root: LabRoot; ordinal: number }>>>()
   let consumed = 0
   const read = (root: LabRoot) => { const bytes = readLeagueArtifact(repository, root); if (!seenArtifacts.has(root)) { seenArtifacts.add(root); consumed += bytes.length; if (consumed > limits.maxArtifactBytes || seenArtifacts.size > limits.maxArtifactRecords) return fail("GRAPH_READ_BUDGET") }; return bytes }
-  const decode = (entry: Indexed) => { const bytes = new Uint8Array(entry.byteLength); let offset = 0; for (const chunkRoot of entry.chunks) { const chunk = read(chunkRoot); bytes.set(chunk, offset); offset += chunk.length } if (offset !== bytes.length || bytesRoot(bytes) !== entry.recordRoot) return fail("GRAPH_BYTES"); return parse(bytes) }
+  const decode = (entry: Indexed, hydrate = true) => {
+    const bytes = new Uint8Array(entry.byteLength); let offset = 0
+    for (const chunkRoot of entry.chunks) { const chunk = read(chunkRoot); bytes.set(chunk, offset); offset += chunk.length }
+    if (offset !== bytes.length || bytesRoot(bytes) !== entry.recordRoot) return fail("GRAPH_BYTES")
+    const value = parse(bytes)
+    if (value && typeof value === "object" && value.execution?.schemaVersion === "league-execution-ref-v2") {
+      if (!["cell-result", "response-match-result", "response-match-execution-failure"].includes(entry.kind) || !isLeagueExecutionStreamReference(value.execution)) return fail("GRAPH_EXECUTION_REFERENCE")
+      const execution = readLeagueExecutionStream(value.execution, read, limits)
+      if (hydrate) return { ...value, execution }
+    }
+    return value
+  }
   const pending: Array<{ root: LabRoot; completed?: Indexed }> = [{ root: head }]
   while (pending.length) {
     const { root, completed } = pending.pop()!
@@ -120,7 +146,7 @@ export const readLeagueRecordGraph = (repository: LeagueRepository, head: LabRoo
     for (let ordinal = descriptor.chunkCount - 1; ordinal >= 0; ordinal--) { const node = parse(read(tail)); if (node.schemaVersion !== "league-record-chunk-v1" || node.ordinal !== ordinal || !same(Object.keys(node).sort(), ["schemaVersion", "ordinal", "previousRoot", "bytesRoot", "byteLength"].sort())) return fail("GRAPH_CHUNK"); const chunk = read(node.bytesRoot); if (chunk.length !== node.byteLength || chunk.length !== (ordinal === descriptor.chunkCount - 1 ? descriptor.byteLength - ordinal * 131072 : 131072)) return fail("GRAPH_CHUNK_SIZE"); chunks[ordinal] = node.bytesRoot; tail = node.previousRoot }
     if (tail !== null) return fail("GRAPH_BYTES")
     const indexed = { kind: descriptor.kind, links: descriptor.links, recordRoot: descriptor.recordRoot, byteLength: descriptor.byteLength, chunks }
-    const value = decode(indexed) // Authenticate canonical bytes now, without retaining the decoded value.
+    const value = decode(indexed, false) // Authenticate canonical bytes and any execution stream now, without retaining decoded payloads.
     if (indexed.kind === "response-match-start" || indexed.kind === "response-match-result") {
       const charge = indexed.kind === "response-match-start" ? value : value.matchCharge
       if (charge && typeof charge.parentStartRoot === "string" && Number.isSafeInteger(charge.ordinal)) {
@@ -193,6 +219,38 @@ const normalizedGameplay = (execution: LabMatchExecution): unknown => {
   const scrub = (value: unknown, parent = ""): unknown => Array.isArray(value) ? value.map((item) => scrub(item, parent)) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([key]) => !/(?:memory|objective|private|matchId|revision|arenaId|arenaName)/iu.test(key) && !(parent === "arenaVariant" && ["id", "name"].includes(key))).map(([key, item]) => [key, scrub(item, key)])) : value
   return scrub({ state: execution.result.state, events: execution.result.events })
 }
+const oversized = (code: string) => ["MAX_NODES_EXCEEDED", "MAX_RAW_UTF8_BYTES_EXCEEDED"].includes(code)
+export const normalizedGameplayRoot = (execution: LabMatchExecution): LabRoot => {
+  const value = normalizedGameplay(execution) as { state: unknown; events: readonly unknown[] }
+  const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
+  if (admitted.ok) return bytesRoot(admitted.canonicalBytes)
+  if (!oversized(admitted.error.code)) return fail("GAMEPLAY_CANONICAL")
+  return labRoot("league-normalized-gameplay-v2", { stateRoot: labRoot("league-normalized-state-v2", value.state), events: deriveFactoryOrderedRecordDescriptor("league-normalized-event-v2", value.events) })
+}
+export const sameLargeExecution = (left: LabMatchExecution, right: LabMatchExecution): boolean => {
+  const a = admitCanonicalJsonValue(left, { profile: "canonical-manifest" }), b = admitCanonicalJsonValue(right, { profile: "canonical-manifest" })
+  if (a.ok && b.ok) return bytesRoot(a.canonicalBytes) === bytesRoot(b.canonicalBytes)
+  if ((!a.ok && !oversized(a.error.code)) || (!b.ok && !oversized(b.error.code))) return false
+  return left.kind === right.kind && left.privacy === right.privacy && same(deriveFactoryExecutionCommitment(left), deriveFactoryExecutionCommitment(right))
+}
+/** Data-only diagnostic for an already-retained execution. The caller must
+ * supply a fresh empty league repository; this never runs a Match or provider. */
+export const diagnoseLeagueExecutionStorage = (repository: LeagueRepository, execution: LabMatchExecution, limits: { maxArtifactBytes: number; maxArtifactRecords: number }) => {
+  if (readdirSync(repository.directory).length) return fail("DIAGNOSTIC_NONEMPTY_REPOSITORY")
+  const graph = new LeagueRecordGraph(repository, limits), headRoot = graph.append("cell-result", { execution })
+  const reopened = readLeagueRecordGraph(repository, headRoot, limits).get(headRoot)?.value.execution as LabMatchExecution | undefined
+  if (!reopened || !sameLargeExecution(execution, reopened)) return fail("DIAGNOSTIC_ROUND_TRIP")
+  const names = readdirSync(repository.directory).filter((name) => /^league-artifact-[a-f0-9]{64}\.bin$/u.test(name))
+  const storedBytes = names.reduce((sum, name) => sum + lstatSync(resolve(repository.directory, name)).size, 0)
+  const inputJsonBytes = Buffer.byteLength(JSON.stringify(execution), "utf8")
+  return { headRoot, inputJsonBytes, storedBytes, overheadBytes: storedBytes - inputJsonBytes, artifactRecords: names.length }
+}
+export const sameLargeResult = (left: { state: unknown; events: readonly unknown[] }, right: { state: unknown; events: readonly unknown[] }): boolean => {
+  const a = admitCanonicalJsonValue(left, { profile: "canonical-manifest" }), b = admitCanonicalJsonValue(right, { profile: "canonical-manifest" })
+  if (a.ok && b.ok) return bytesRoot(a.canonicalBytes) === bytesRoot(b.canonicalBytes)
+  if ((!a.ok && !oversized(a.error.code)) || (!b.ok && !oversized(b.error.code))) return false
+  return same(left.state, right.state) && same(deriveFactoryOrderedRecordDescriptor("league-result-compare-v2", left.events), deriveFactoryOrderedRecordDescriptor("league-result-compare-v2", right.events))
+}
 const conditionFor = (cell: LeagueCell, seed: string) => {
   const scenario = createSetScenarioV137({ arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion, arenaSemanticGeometryHash: cell.semanticGeometryHash, entrantA: { entrantKey: cell.entrantCandidateRoot, playerId: leaguePlayerId(cell.entrantCandidateRoot) }, entrantB: { entrantKey: cell.opponentCandidateRoot, playerId: leaguePlayerId(cell.opponentCandidateRoot) }, baseSeed: seed })
   return scenario.conditions.find((condition) => labRoot("league-condition-v1", { scenarioId: scenario.scenarioId, conditionId: condition.conditionId, requestIdentity: condition.requestIdentity, ordinal: condition.ordinal }) === cell.conditionRoot) ?? fail("CONDITION")
@@ -219,6 +277,8 @@ export class LeagueConnectedSession {
     const condition = conditionFor(options.baseCell ?? cell, seed), arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.semanticGeometryHash === cell.semanticGeometryHash && arena.status === "active") ?? fail("ARENA")
     const matchBase = { matchId: `league-${start.root.slice(7, 31)}`, seed: condition.baseSeed, arenaVariant: options.arenaAlias ? { ...arena, id: `alias-${arena.id}`, name: `alias-${arena.name}` } : arena, bottomPlayerId: leaguePlayerId(bottom.admission.candidate.root), topPlayerId: leaguePlayerId(top.admission.candidate.root), initialInitiativePlayerId: condition.initialInitiativePlayerId }
     let actual: LabMatchExecution | null = null
+    let recordRoot: LabRoot | null = null
+    const publishedResultRoot = (): LabRoot | null => recordRoot
     try {
       const host: FactorySupervisedRuntimeHost = { createFactorySupervisedRuntime: (request) => {
         const { executableRoot: _executableRoot, ...runtimeInput } = request
@@ -240,15 +300,16 @@ export class LeagueConnectedSession {
       const issue = (candidate: LeagueCandidateInput) => issueLeagueProviderFromFactoryCandidate({ ...candidate.closure, host, cell, start, allocationRoot: this.allocation.root })
       const [issuedBottom, issuedTop] = options.order === "reverse" ? (() => { const t = issue(top), b = issue(bottom); return [b, t] as const })() : [issue(bottom), issue(top)] as const
       const match: MatchInput = { ...matchBase, bottomStrategyRevisionId: issuedBottom.identity.revisionId, topStrategyRevisionId: issuedTop.identity.revisionId }
-      const terminal = await runLeagueCell({ repository: this.input.repository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match, runCanonicalLabMatch: async (request) => { actual = await (this.input.fixture?.run ?? runCanonicalLabMatch)(request); return actual } })
+      const retainResult = (execution: LabMatchExecution, terminal: LeagueCellTerminal) => { recordRoot = this.graph.append("cell-result", { start, cell, match, terminal, execution, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }, [startRecord, ...runtimeRecords], { bytes: 262144, records: 1 }); this.executedCells++ }
+      const terminal = await runLeagueCell({ repository: this.input.repository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match, runCanonicalLabMatch: async (request) => { actual = await (this.input.fixture?.run ?? runCanonicalLabMatch)(request); return actual }, beforeTerminal: retainResult })
       if (!actual) return fail("MISSING_EXECUTION")
-      const recordRoot = this.graph.append("cell-result", { start, cell, match, terminal, execution: actual, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }, [startRecord, ...runtimeRecords])
-      this.executedCells++
+      const completedRecordRoot = publishedResultRoot() ?? fail("MISSING_RESULT_RECORD")
       if (terminal.disposition !== "success") return fail("PROCESS_INVALID")
-      return { cell, startRoot: start.root, terminal, recordRoot, ...(options.baseCell ? { canonicalBytes: bytesRoot(encode(normalizedGameplay(actual))) } : {}), bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root }
+      return { cell, startRoot: start.root, terminal, recordRoot: completedRecordRoot, ...(options.baseCell ? { canonicalBytes: normalizedGameplayRoot(actual) } : {}), bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root }
     } catch (error) {
       for (const provider of opened) { try { runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed: provider.close() }, [startRecord])) } catch (error) { runtimeRecords.push(this.graph.append("runtime-cleanup-failure", { identity: provider.identity, error: error instanceof Error ? error.name : "unknown" }, [startRecord])) } }
-      const evidenceRoot = this.graph.append("cell-issuance-failure", { start, cell, failure: error instanceof Error ? error.name : "unknown" }, [startRecord, ...runtimeRecords])
+      const attachedRoot = publishedResultRoot()
+      const evidenceRoot = this.graph.append("cell-issuance-failure", { start, cell, failure: error instanceof Error ? error.name : "unknown" }, [startRecord, ...(this.budget?.exhausted ? [] : runtimeRecords), ...(attachedRoot ? [attachedRoot] : [])])
       const existing = reopenLeagueEvidence(this.input.repository, { maxBytes: this.allocation.operations.maxArtifactBytes, maxRecords: this.allocation.operations.maxArtifactRecords }).records.find((entry) => entry.start.root === start.root)
       if (existing?.terminalProvenance === "derived_unterminated_start") publishLeagueCellTerminal(this.input.repository, start, createLeagueCellTerminal({ cellRoot: cell.root, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot, projection: null }))
       throw error
@@ -548,7 +609,7 @@ const replayRetainedKernel = (match: MatchInput, execution: LabMatchExecution, e
     const expected = context.cleanupIncomplete ? "LAB_CLEANUP_INCOMPLETE" : failureCode ?? (!completed && transitionCount === 1010000 ? "LAB_KERNEL_STEP_BOUND" : null)
     if (expected === null || execution.failure.code !== expected) return fail("RETAINED_FAILURE_CAUSE")
   } else {
-    if (!completed || context.cleanupIncomplete || context.invocationFailures.length || transitionCount !== execution.transitions.length || !same({ state: machine.state, events: transitions.flatMap((transition) => transition.events) }, execution.result)) return fail("RETAINED_COMPLETION")
+    if (!completed || context.cleanupIncomplete || context.invocationFailures.length || transitionCount !== execution.transitions.length || !sameLargeResult({ state: machine.state, events: transitions.flatMap((transition) => transition.events) }, execution.result)) return fail("RETAINED_COMPLETION")
   }
 }
 
@@ -616,7 +677,7 @@ const verifyRetainedProductionFailures = (repository: FactoryRepository | null, 
       if (failedExecutions.length > 1 || !matched.length && !failedExecutions.length && rows("response-runtime-invocation-failure").some(([, node]) => node.links.includes(chargeRoot))) return fail("RETAINED_FAILED_EXECUTION_MISSING")
       if (!matched.length && !failedExecutions.length) continue // Charged issuance failed before a Match executed.
       const value = (matched[0] ?? failedExecutions[0])![1].value, arena = CANONICAL_ARENA_CATALOG_V1_37.arenas.filter((arena) => arena.status === "active" && arena.schedulable)[arenaIndex]!
-      if (failedExecutions.length && (failedExecutions[0]![1].value.execution.kind !== "failure" || !same(failedExecutions[0]![1].value.execution, value.execution))) return fail("RETAINED_FAILED_EXECUTION_CONFLICT")
+      if (failedExecutions.length && (failedExecutions[0]![1].value.execution.kind !== "failure" || !sameLargeExecution(failedExecutions[0]![1].value.execution, value.execution))) return fail("RETAINED_FAILED_EXECUTION_CONFLICT")
       if (!same(value.matchCharge, charge.value) || !same(value.match.arenaVariant, arena)) return fail("RETAINED_FAILED_RESPONSE_MATCH")
       const raw = rows("response-runtime-invocation").filter(([, node]) => node.links.includes(chargeRoot)), thrown = rows("response-runtime-invocation-failure").filter(([, node]) => node.links.includes(chargeRoot))
       if ([...raw.map(([, node]) => node.value.originalEvidence.identity), ...thrown.map(([, node]) => node.value.identity)].some((identity) => !cleanup.some(([, node]) => same(node.value.identity, identity)))) return fail("RETAINED_FAILED_RUNTIME_IDENTITY")
@@ -710,15 +771,18 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   if (reopened.remnants.length || journals.size !== reopened.records.length || cellResults.length !== head.value.executedCells || cellByRoot.size !== cellResults.length || cellStarts.length !== reopened.records.length || startByRoot.size !== cellStarts.length) return fail("RETAINED_JOURNAL_COVERAGE")
   for (const journal of reopened.records) {
     const charged = startByRoot.get(journal.start.root)
-    if (!charged || !same(charged[1].value.start, journal.start) || journal.start.allocationRoot !== allocation.root || journal.terminalProvenance !== "persisted") return fail("RETAINED_CHARGE")
+    if (!charged || !same(charged[1].value.start, journal.start) || journal.start.allocationRoot !== allocation.root) return fail("RETAINED_CHARGE")
+    const linkedFailures = graph.linked("cell-issuance-failure", charged[0])
+    if (journal.terminalProvenance !== "persisted" && !(head.kind === "run-failure" && linkedFailures.length === 1 && journal.terminal.disposition === "system_failure" && journal.terminal.processValidity === "process_invalid" && journal.terminal.projection === null)) return fail("RETAINED_CHARGE")
     if (!cellByRoot.has(journal.start.cellRoot)) {
-      const failures = graph.linked("cell-issuance-failure", charged[0])
-      if (head.kind === "run-complete" || failures.length !== 1 || failures[0] !== journal.terminal.evidenceRoot || !same(graph.get(failures[0]!)!.value.cell, charged[1].value.cell) || journal.terminal.disposition !== "system_failure" || journal.terminal.projection !== null) return fail("RETAINED_ISSUANCE_FAILURE")
+      if (head.kind === "run-complete" || linkedFailures.length !== 1 || journal.terminalProvenance === "persisted" && linkedFailures[0] !== journal.terminal.evidenceRoot || !same(graph.get(linkedFailures[0]!)!.value.cell, charged[1].value.cell) || journal.terminal.disposition !== "system_failure" || journal.terminal.projection !== null) return fail("RETAINED_ISSUANCE_FAILURE")
     }
   }
   for (const [recordRoot, node] of cellResults) {
     const value = node.value, journal = journals.get(value.start.root), startRecordRoot = startByRoot.get(value.start.root)?.[0] ?? fail("RETAINED_CELL_JOURNAL")
-    if (!journal || journal.terminalProvenance !== "persisted" || !same(journal.start, value.start) || !same(journal.terminal, value.terminal) || value.start.allocationRoot !== allocation.root || !node.links.some((link) => graph.get(link)?.kind === "cell-start")) return fail("RETAINED_CELL_JOURNAL")
+    const postResultFailures = graph.linked("cell-issuance-failure", recordRoot)
+    const postResultFailure = head.kind === "run-failure" && postResultFailures.length === 1 && graph.get(postResultFailures[0]!)?.links.includes(startRecordRoot) && graph.get(postResultFailures[0]!)?.value.start.root === value.start.root && journal?.terminal.disposition === "system_failure" && journal.terminal.processValidity === "process_invalid" && journal.terminal.projection === null && (journal.terminalProvenance === "derived_unterminated_start" || journal.terminal.evidenceRoot === postResultFailures[0])
+    if (!journal || !same(journal.start, value.start) || !(journal.terminalProvenance === "persisted" && same(journal.terminal, value.terminal) || postResultFailure) || value.start.allocationRoot !== allocation.root || !node.links.some((link) => graph.get(link)?.kind === "cell-start")) return fail("RETAINED_CELL_JOURNAL")
     const linked = (kind: string) => graph.linked(kind, startRecordRoot).map((root) => [root, graph.get(root)!] as const)
     const cleanup = linked("runtime-cleanup"), cleanupFailures = linked("runtime-cleanup-failure")
     const invocationFailures = linked("runtime-invocation-failure")
@@ -799,7 +863,7 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   }
   for (const probe of retainedProbes) {
     if (["source_order", "worker_shard_completion"].includes(probe.family)) for (const pair of probe.pairs) for (const arm of ["left", "right"] as const) if (rows("layout-verification").filter(([, node]) => node.value.roundRoot === probe.roundRoot && node.value.family === probe.family && node.value.arm === arm && node.value.cellResultRoot === pair[arm].evidenceRoot).length !== 1) return fail("RETAINED_LAYOUT_PROBE_COVERAGE")
-    const pairs = probe.pairs.map((pair: any) => Object.fromEntries(["left", "right"].map((arm) => { const observed = pair[arm], node = graph.get(observed.evidenceRoot); if (!node || node.kind !== "cell-result") return fail("RETAINED_PROBE_CELL"); const value = node.value, halfPoints = value.cell.entrantCandidateRoot === probe.candidateRoot ? value.terminal.projection.halfPoints : 2 - value.terminal.projection.halfPoints, conditionRoot = ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"].includes(probe.family) ? value.options.baseCell.conditionRoot : value.cell.conditionRoot; return [arm, { canonicalBytes: bytesRoot(encode(normalizedGameplay(value.execution))), halfPoints, conditionRoot, evidenceRoot: observed.evidenceRoot }] })))
+    const pairs = probe.pairs.map((pair: any) => Object.fromEntries(["left", "right"].map((arm) => { const observed = pair[arm], node = graph.get(observed.evidenceRoot); if (!node || node.kind !== "cell-result") return fail("RETAINED_PROBE_CELL"); const value = node.value, halfPoints = value.cell.entrantCandidateRoot === probe.candidateRoot ? value.terminal.projection.halfPoints : 2 - value.terminal.projection.halfPoints, conditionRoot = ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"].includes(probe.family) ? value.options.baseCell.conditionRoot : value.cell.conditionRoot; return [arm, { canonicalBytes: normalizedGameplayRoot(value.execution), halfPoints, conditionRoot, evidenceRoot: observed.evidenceRoot }] })))
     if (!same(pairs, probe.pairs)) return fail("RETAINED_PROBE_OBSERVATION")
     ledger = recordLeagueProbe({ ledger, family: probe.family, roundRoot: probe.roundRoot, candidateRoot: probe.candidateRoot, pairs }); if (!same(ledger.probes.at(-1), probe)) return fail("RETAINED_PROBE")
   }

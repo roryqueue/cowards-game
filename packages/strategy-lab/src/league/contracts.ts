@@ -5,6 +5,7 @@ import { validateFactoryAttemptLedger, type FactoryAttemptStart, type FactoryAtt
 import type { LabMatchExecution } from "../runtime-bridge.js"
 import { readFactoryArtifact, type FactoryRepository } from "../factory/repository.js"
 import { readFactorySupervisionArtifactRecords } from "../factory/supervision-artifacts.js"
+import { deriveFactoryOrderedRecordDescriptor } from "../factory/admission.js"
 import { classifyNumericComparison, freezeNumericCalibrationThreshold, type NumericComparison, type NumericControlTable } from "../factory/numeric-calibration.js"
 
 type RecordValue = Record<string, unknown>
@@ -14,6 +15,14 @@ const root = (value: unknown): value is LabRoot => typeof value === "string" && 
 const exact = (value: unknown, keys: readonly string[]): value is RecordValue => exactLabKeys(value, keys)
 const text = (value: unknown, max = 128): value is string => typeof value === "string" && value.length > 0 && value.length <= max
 const nonNegative = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0
+/** Keep the historical root for admissible arrays. Only oversized private
+ * aggregates use an ordinal-bound, domain-separated commitment. */
+export const deriveLeagueResultEventRoot = (events: readonly unknown[]): LabRoot => {
+  const admitted = admitCanonicalJsonValue(["cowards:strategy-lab:v1", "league-result-events-v1", events], { profile: "canonical-manifest" })
+  if (admitted.ok) return labRoot("league-result-events-v1", events)
+  if (!["MAX_NODES_EXCEEDED", "MAX_RAW_UTF8_BYTES_EXCEEDED"].includes(admitted.error.code)) return fail("RESULT_EVENTS")
+  return deriveFactoryOrderedRecordDescriptor("league-result-events-v2", events).root
+}
 const withoutRoot = (value: unknown): unknown => {
   if (value === null || typeof value !== "object" || Array.isArray(value) || !("root" in value)) fail("ROOTED_VALUE")
   const { root: _root, ...rest } = value as RecordValue
@@ -130,8 +139,8 @@ const outcomeFromExecution = (execution: LabMatchExecution, bottomPlayerId: stri
   const outcome = state?.outcome
   if (!outcome || typeof outcome !== "object" || Array.isArray(outcome) || labRoot("league-canonical-outcome-v1", outcome) !== labRoot("league-canonical-outcome-v1", payload)) fail("OUTCOME_STATE")
   const value = outcome as RecordValue
-  if (value.type === "DRAW" && exact(value, ["type"])) return { outcomeRoot: labRoot("league-canonical-outcome-v1", value), resultEventRoot: labRoot("league-result-events-v1", events), winner: null as string | null }
-  if (value.type === "WIN" && exact(value, ["type", "winnerPlayerId"]) && typeof value.winnerPlayerId === "string" && (value.winnerPlayerId === bottomPlayerId || value.winnerPlayerId === topPlayerId)) return { outcomeRoot: labRoot("league-canonical-outcome-v1", value), resultEventRoot: labRoot("league-result-events-v1", events), winner: value.winnerPlayerId }
+  if (value.type === "DRAW" && exact(value, ["type"])) return { outcomeRoot: labRoot("league-canonical-outcome-v1", value), resultEventRoot: deriveLeagueResultEventRoot(events), winner: null as string | null }
+  if (value.type === "WIN" && exact(value, ["type", "winnerPlayerId"]) && typeof value.winnerPlayerId === "string" && (value.winnerPlayerId === bottomPlayerId || value.winnerPlayerId === topPlayerId)) return { outcomeRoot: labRoot("league-canonical-outcome-v1", value), resultEventRoot: deriveLeagueResultEventRoot(events), winner: value.winnerPlayerId }
   return fail("OUTCOME_PAYLOAD")
 }
 export const projectCanonicalKernelOutcomeToEntrantHalfPoints = (v: { execution: LabMatchExecution; entrantCandidateRoot: LabRoot; bottomCandidateRoot: LabRoot; topCandidateRoot: LabRoot; bottomPlayerId: string; topPlayerId: string; cellRoot: LabRoot; conditionRoot: LabRoot; semanticGeometryHash: LabRoot; resultEventRoot: LabRoot }): Readonly<LeaguePayoffProjection> => {
