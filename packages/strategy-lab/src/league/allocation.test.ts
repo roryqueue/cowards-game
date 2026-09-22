@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocationInput } from "./allocation.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES } from "./red-team.js"
+import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, LEAGUE_APPROVED_PROSPECTIVE_POLICY, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
 
 const root = (text: string) => labRoot("allocation-test", text)
 const zero = { matches: 0, modelTokens: 0, effortMilliseconds: 0, reviewMilliseconds: 0, searchNodes: 0, teacherNodes: 0, distillationUnits: 0 }
@@ -16,6 +17,89 @@ export const allocationFixture = (): LeagueExecutionAllocationInput => ({
   probes: LEAGUE_PROBES.map((family) => ({ family, pairs: 1, maximumAbsoluteMeanDelta: ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"].includes(family) ? null : { numerator: 1, denominator: 4 } })),
   rounds: [{ ordinal: 0, acceptedSlots: 0, jobs: [] }, { ordinal: 1, acceptedSlots: 0, jobs: [] }],
   participantPolicy: { disclosure: "complete-source-build-and-dependencies", review: "distinct-reviewer", priorExposure: "declared", conflicts: "reject", unfilled: "retain", modelInternalSnapshot: "record-unavailable-no-substitute" },
+})
+
+export const prospectiveFixture = (): ProspectiveLeagueExecutionAllocationInput => {
+  const base = allocationFixture(), policy = structuredClone(LEAGUE_APPROVED_PROSPECTIVE_POLICY)
+  const historicalAssessment = { artifactRoot: root("assessment-artifact"), assessmentRoot: root("assessment"), thresholdArtifactRoot: root("threshold"), producerImplementationRoot: root("historical-producer"), assessmentImplementationRoot: root("historical-assessor") }
+  const amendmentInput: LeagueProspectiveAmendmentInput = {
+    phase: 265, privacy: "private_offline", evidenceClass: "injected_fixture", approvalCommit: "06cdb050", implementationRoot: base.implementationRoot, sourceRoot: root("source"), historicalAssessment,
+    bases: ["S01", "S03", "S05"].map((sourceSlot) => ({ sourceSlot: sourceSlot as "S01" | "S03" | "S05", publicationArtifactRoot: root(sourceSlot), candidateAdmissionRoot: root(`admission-${sourceSlot}`), sourceRoot: root(`source-${sourceSlot}`), supervisionArtifactRoot: root(`supervision-${sourceSlot}`) })),
+    controls: "comparison-only-excluded", policy,
+  }
+  const amendment = createLeagueProspectiveAmendment(amendmentInput)
+  const rounds = policy.schedule.map((producers, ordinal) => ({ ordinal, acceptedSlots: policy.acceptedSlots[ordinal]!, jobs: producers.map((producer, index) => {
+    const id = `round-${ordinal}-${producer}-${index}`
+    return { id, channel: producer === "model" ? "model" as const : "automated" as const, operation: "produce" as const, evaluationRole: ordinal < 3 ? "development_response" as const : producer === "teacher" ? "validation_opponent" as const : "independent_probe_opponent" as const, producerRequestArtifactRoot: root(`${id}-request`), disclosureArtifactRoot: root(`${id}-disclosure`), provenanceArtifactRoot: root(`${id}-provenance`), reviewArtifactRoot: root(`${id}-review`), participantId: `${id}-author`, reviewerId: `${id}-reviewer`, reservation: { matches: 288, modelTokens: producer === "model" ? 48000 : 0, effortMilliseconds: 64800000, reviewMilliseconds: 900000, searchNodes: producer === "tactical" ? 100 : 0, teacherNodes: producer === "teacher" ? 100 : 0, distillationUnits: producer === "teacher" ? 2 : 0 }, retryParentJobId: null }
+  }) }))
+  const jobs = rounds.flatMap((round) => round.jobs)
+  return { ...base, initialCandidatePublicationRoots: amendment.bases.map((row) => row.publicationArtifactRoot).sort(), independenceReferencePublicationRoot: amendment.bases[0]!.publicationArtifactRoot, factoryAssessmentArtifactRoots: [historicalAssessment.artifactRoot], seedBlocks: ["prospective-test"], outputDirectories: { league: "/fixture/league-prospective", responseFactory: "/fixture/factory-prospective" }, opportunities: policy.opportunities, operations: policy.operations, probes: policy.probes, rounds, amendment,
+    participantRoles: jobs.map((job, index) => ({ jobId: job.id, producer: policy.schedule.flat()[index]!, authorAgentId: `injected-author-${index}`, reviewerAgentId: `injected-reviewer-${index}` })),
+    channels: base.channels.map((channel) => {
+      const rows = jobs.filter((job) => job.channel === channel.channel)
+      return rows.length ? { ...channel, disposition: "allocated", opportunities: rows.length, participants: rows.map((job) => job.participantId).sort(), reviewers: rows.map((job) => job.reviewerId).sort(), perAttempt: Object.fromEntries(Object.keys(zero).map((key) => [key, Math.max(...rows.map((job) => job.reservation[key as keyof typeof zero]))])) as typeof zero, ceilings: Object.fromEntries(Object.keys(zero).map((key) => [key, rows.reduce((sum, job) => sum + job.reservation[key as keyof typeof zero], 0)])) as typeof zero } : channel
+    }),
+  }
+}
+export const capacityFixture = (allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture())): LeagueCapacityReceiptInput => ({
+  allocationRoot: allocation.root, amendmentRoot: allocation.amendment.root, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, historicalAssessmentRoot: allocation.amendment.historicalAssessment.assessmentRoot,
+  measuredAtMilliseconds: 1000, expiresAtMilliseconds: 301000, filesystemDevice: "fixture-device", freeFilesystemBytes: 210 * 2 ** 30, availableMemoryBytes: 4 * 2 ** 30, processHeadroomBytes: 2 ** 30,
+  scale: { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 },
+  costs: ["invocation", "execution", "factory_supervision", "descriptor", "journal", "filesystem"].map((category) => ({ category: category as LeagueCapacityReceiptInput["costs"][number]["category"], projectedBytes: 10 * 2 ** 30, projectedRecords: 1000000, measurementRoot: root(`measurement-${category}`) })),
+  assumptions: ["Injected format measurements only; not future worst-case proof."],
+})
+describe("approved prospective three-base admission", () => {
+  it("roots a distinct amendment/allocation DAG without changing legacy v1 or its twelve-import guard", () => {
+    const input = prospectiveFixture(), allocation = createProspectiveLeagueExecutionAllocation(input)
+    expect(admitProspectiveLeagueExecutionAllocation(allocation)).toEqual(allocation)
+    expect(admitLeagueProspectiveAmendment(input.amendment)).toEqual(input.amendment)
+    expect(allocation.schemaVersion).toBe("league-prospective-execution-allocation-v1")
+    expect(() => admitLeagueExecutionAllocation(allocation)).toThrow()
+    const { amendment, participantRoles, ...legacy } = input
+    expect(() => createLeagueExecutionAllocation({ ...legacy, evidenceClass: "empirical" })).toThrow("POPULATION_SEEDS")
+    expect(createLeagueExecutionAllocation(allocationFixture()).root).toBe(labRoot("league-execution-allocation-v1", { schemaVersion: "league-execution-allocation-v1", ...allocationFixture() }))
+    expect(() => createLeagueProspectiveAmendment({ ...amendment, capacityReceiptRoot: root("cycle") } as never)).toThrow()
+    expect(participantRoles).toHaveLength(11)
+  })
+  it("rejects every missing or changed approved bound, control, substitute, role, probe and channel", () => {
+    for (const section of ["opportunities", "operations"] as const) for (const key of Object.keys(prospectiveFixture()[section])) {
+      const input = structuredClone(prospectiveFixture()) as any
+      delete input[section][key]
+      expect(() => createProspectiveLeagueExecutionAllocation(input), `${section}.${key} missing`).toThrow()
+      const changed = structuredClone(prospectiveFixture()) as any
+      changed[section][key] = typeof changed[section][key] === "number" ? changed[section][key] + 1 : "changed"
+      expect(() => createProspectiveLeagueExecutionAllocation(changed), `${section}.${key} changed`).toThrow()
+    }
+    const mutations = [
+      (v: any) => v.initialCandidatePublicationRoots[0] = root("control"),
+      (v: any) => v.initialCandidatePublicationRoots[1] = v.initialCandidatePublicationRoots[0],
+      (v: any) => v.participantRoles[0].reviewerAgentId = v.participantRoles[0].authorAgentId,
+      (v: any) => v.participantRoles.pop(),
+      (v: any) => v.probes[0].pairs = 3,
+      (v: any) => v.channels[0].ceilings.matches--,
+      (v: any) => v.rounds[0].jobs[0].reservation.searchNodes = 99,
+      (v: any) => v.rounds[3].jobs[0].evaluationRole = "development_response",
+      (v: any) => v.factoryAssessmentArtifactRoots = [root("substitute")],
+    ]
+    for (const mutate of mutations) { const value = structuredClone(prospectiveFixture()); mutate(value); expect(() => createProspectiveLeagueExecutionAllocation(value)).toThrow() }
+    const { root: _root, schemaVersion: _schema, ...body } = prospectiveFixture().amendment
+    for (const mutate of [(v: any) => v.bases[1].sourceSlot = "S02", (v: any) => v.approvalCommit = "old", (v: any) => v.policy.finalGates.independentCores = 4]) { const value = structuredClone(body); mutate(value); expect(() => createLeagueProspectiveAmendment(value)).toThrow() }
+  })
+  it("requires all six capacity categories and exact byte, record, filesystem and freshness margins", () => {
+    const allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), input = capacityFixture(allocation)
+    const receipt = createLeagueCapacityReceipt(input, allocation)
+    const context = { nowMilliseconds: 1001, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, filesystemDevice: input.filesystemDevice, freeFilesystemBytes: input.freeFilesystemBytes, availableMemoryBytes: input.availableMemoryBytes }
+    expect(admitLeagueCapacityReceipt(receipt, allocation, context)).toEqual(receipt)
+    expect(() => admitLeagueCapacityReceipt(undefined, allocation, context)).toThrow()
+    for (const category of input.costs) expect(() => createLeagueCapacityReceipt({ ...input, costs: input.costs.filter((row) => row !== category) }, allocation)).toThrow()
+    for (const field of ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot"] as const) expect(() => createLeagueCapacityReceipt({ ...input, [field]: root("wrong") }, allocation)).toThrow()
+    for (const [field, value] of [["projectedBytes", 120 * 2 ** 30 + 1 - 50 * 2 ** 30], ["projectedRecords", 8300001 - 5000000]] as const) expect(() => createLeagueCapacityReceipt({ ...input, costs: input.costs.map((row, index) => index ? row : { ...row, [field]: value }) }, allocation)).toThrow()
+    expect(() => createLeagueCapacityReceipt({ ...input, freeFilesystemBytes: 100 * 2 ** 30 - 1 }, allocation)).toThrow()
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, nowMilliseconds: input.expiresAtMilliseconds + 1 })).toThrow()
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, freeFilesystemBytes: 1 })).toThrow()
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, availableMemoryBytes: 1 })).toThrow()
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, sourceRoot: root("stale") })).toThrow()
+  })
 })
 describe("prospective complete Phase 265 execution allocation", () => {
   it("roots and re-admits the exact whole vector without authorizing an injected fixture", () => {
