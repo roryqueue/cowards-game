@@ -67,6 +67,68 @@ and invariance gates are unchanged. The matrix, response, probe, source-order,
 opaque-ID, Soldier-order, symmetry, repeat/restart, worker/shard/completion,
 and complete charged-failure requirements retain their current semantics.
 
+## Tactical adaptation within the approved tactical reservation
+
+Only the three prospective tactical `development_response` jobs at flattened
+schedule ordinals 0, 3, and 6 use this repair. Teacher authoring is unchanged;
+teacher and model independent evaluation remain target-free. Each tactical job
+still consumes exactly 100 already-approved `searchNodes`, with no extra Match,
+provider/runtime, Strategy execution, retry, model, teacher, or rule budget.
+
+After the current R0/R1/R2 complete matrix and solver target exist, construct a
+private rooted `tactical-adaptation-corpus-v1` from its retained `cell-result`
+executions only. Consolidate roles by candidate: positive mixture members keep
+their exact weights in candidate-root order, while named strongest/vulnerable
+pure roles remain attached even when they overlap that support. First reserve
+the earliest eligible observation for each distinct named pure candidate, then
+fill to four distinct cell-result roots from mixture order. Each observation
+binds cell-result, canonical match/execution, current round, target/role/weight,
+accounting ordinal/invocation, select request/input, selected Soldier, and
+soldier-brain request/input/invocation/output roots. Rehydrate by replaying that
+stored match/execution only through `MATCH_KERNEL` and checking every pointer;
+retain the normalized selected Soldier ID and legal Action type/direction, not
+source text, source-hash entropy, source label, synthetic state, or public
+payload. Corpus, selection, and derived envelope records are canonical and each
+at most 262,144 bytes.
+
+If four reachable observations, named-pure coverage, or any replay/accounting/
+target/ordering/size binding cannot be rebuilt from the current round, fail the
+charged attempt as `system_failure` before ingestion. There is no terminal-board,
+duplicate, later-round, synthetic-corpus, roots-only, or alternate-kernel
+fallback.
+
+The fixed private profile grid is `p:q` for `p,q ∈ {-2,-1,0,1,2}`. It declares
+posture weights `{press:p, screen:q, recover:-p-q}` and Action weights
+`{MOVE:q, TURN:-p, TURN_TO_STONE:p-q}`. For each profile/observation, rank the
+nine legal Actions directly with `scoreTacticalAction`: existing hard rank,
+then existing soft rank plus its Action weight, then Action key. Do not import
+or call `expandTacticalSearch` or `selectTacticalSearchNode`. Score the selected
+Action with profile-independent `nodeValue=(hard0,hard1,counter,soft,key)`,
+where `counter` sums retained target Action counts against this fixed table:
+MOVE→{MOVE:-1,TURN:1,TURN_TO_STONE:2}; TURN→{MOVE:1,TURN:0,TURN_TO_STONE:-1};
+TURN_TO_STONE→{MOVE:2,TURN:-1,TURN_TO_STONE:-2}. Sum the first four fields over
+four observations and choose the lexicographic maximum, then profile ID. Thus
+the profile selects a legal Action, but its coefficient cannot raise the value
+directly; changed retained target Actions can change selection. The resulting
+25 × 4 rows are exactly 100 one-unit evaluations, with no nested planning,
+simulation, or target execution. Root corpus, grid, rows, selection, and
+tie-break. This is an offline heuristic, not a best-response, value, win-rate,
+family/core, independence, or finalist claim.
+
+Preserve `emitTacticalSource()`, `emitTacticalFactoryPacket(legacyRequest)`,
+`tacticalSourceManifest()`, and legacy reload bytes exactly. The profile uses a
+separate prospective closed-controller/template emitter, not an optional branch
+inside a legacy embedded module. Only tactical development ordinals 0/3/6 may
+use `emitProfiledTacticalFactoryPacket` with the complete derived envelope;
+legacy tactical retains its identity/bytes, teacher/model reject that envelope,
+and teacher development retains its existing target binding. The profiled
+controller embeds constants in admitted bounded activation/action ranking before
+the existing deterministic tie-break and must produce a different legal
+activation or Action on a deterministic fixture. The authoring result retains
+immutable original request plus target, corpus, selection, derived input,
+profile, and emitted-source roots; retained authoring and whole-run verification
+rederive every one. Profile variants never establish family/core independence.
+
 ## Capacity receipt and dispatch condition
 
 The prospective preflight is data-only and roots its inputs/measurement output.
@@ -138,10 +200,15 @@ old authority and may expire during the retained reader.
 These commands are interfaces only here; no empirical preparation, preflight,
 receipt, or dispatch has been performed by the source-only implementation task.
 
-The current parallel high representative accounting is 114.632 GiB and about
-7.156 million files. Remaining metadata and physical filesystem checks are
-pending; this observation is neither a passing receipt nor a refusal. The stated
-study bounds and required preflight margins remain unchanged.
+The current data-only representative accounting is 118.804587 GiB and
+7,237,110 records. It predates the tactical profile corpus/selection/derived
+input/source retention and cannot be used unchanged. Before constructing the
+capacity plan, measure those final-rooted records in descriptor/journal samples,
+recompute ceiling-scaled bytes/records and all margins, then bind that
+reconciliation to the data-only capacity input. Remaining metadata and physical
+filesystem checks are pending; this observation is neither a passing receipt nor
+a refusal. The stated study bounds and required preflight margins remain
+unchanged.
 
 `prepare`, `run`, and `verify-retained` keep their legacy V1 behavior.
 Prospective `run` additionally requires the valid receipt, either freshly
@@ -164,6 +231,16 @@ substitution is permitted.
    provider issuance, static work longer than five minutes precedes fresh host
    observation, old receipts are not refreshed, reservation remains once-only,
    live capacity drops stop issuance, and retained verification does not dispatch.
+5. Tests prove zero-argument tactical emission/manifest/packet/reload bytes
+   remain exact; only the three declared tactical jobs use the profiled identity
+   and envelope, with four current-round observations covering mixture and named
+   pure roles, exact rehydration, no beam search, exactly 100 evaluations, a
+   profile-independent target-dependent value, and observable legal behavior
+   change. Corrupt role/weight, cell/match/execution, request/input, accounting
+   output, order, count, profile, derived input, source, or record size fails
+   closed. Teacher development retains target binding but rejects tactical
+   profile input; independent jobs reject targets/profile input; capacity input
+   rejects unreconciled profile-retention measurements.
 
 Task 3's one-process command remains unavailable until these source checks,
 independent review and the complete validation gate pass. Within that command,

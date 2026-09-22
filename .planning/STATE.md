@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 Task2 source implemented and independently reviewed at b7f5b5d2; final full validation and data-only preparation in progress
+stopped_at: Phase265 Plan07 Task2 tactical-producer repair planned and independently checked; source implementation next
 last_updated: "2026-09-22"
 last_activity: 2026-09-22
-last_activity_desc: Lean amendment implemented; four review findings repaired and independently checked; final validation and capacity measurements precede conditional run
+last_activity_desc: Same-plan tactical adaptation research and revised plan pass independent check; three-base historical import passes; source implementation next
 progress:
   total_phases: 9
   completed_phases: 3
@@ -23,18 +23,42 @@ total_plans_in_phase: 7
 
 ## Current Session Continuity — 2026-09-22
 
-The approved source amendment is implemented. Initial independent review found
-three issues (import order, refreshable reservation, response capacity ordering);
-all were repaired and re-reviewed clean at86650982. Data-only preparation then
-identified logical/physical storage double-counting; fixb7f5b5d2 retains every
-approved bound and independently passes. See265-LEAN-REVIEW.iter2.md and
-265-LEAN-CAPACITY-REVIEW.iter2.md. Full gate17031 was deliberately interrupted
-exit130 before completion for this correction and is NOT a passed gate. The
-final fail-fast29-suite gate is next. Actual historical readsession54586 affirmed
-the unchanged assessment with issued:false, readerrootd268eb9c, and identical
-1,875files/164,632,160bytes/tree082271cc before/after; refresh finalsource before
-preparation. Capacity witnesses and actual author/reviewer packets remain data-only
-technical preparation. No allocation, real preflight or empirical run exists.
+The approved lean amendment and five source-review fixes are implemented and
+independently reviewed through d35e58d2. Initial fixes cover import order,
+allocation-only reservation and before-charge capacity ordering; subsequent
+fixes separate logical storage from physical filesystem overhead and validate
+static inputs before observing a fresh host receipt. See the three
+265-LEAN-*-REVIEW.iter2.md reports. Focused tests/build/type/boundary checks pass;
+the post-amendment full gate is not yet complete. Sessions17031,96057 and49223
+were deliberately interrupted with exit130 for newly discovered corrections,
+not passes. Completed work through cbdcad76 is pushed to origin/main.
+
+A further source-only realism check found all three tactical development jobs
+would emit the exact historical S01 source. The approved schedule could then
+reach at most nine unique entrants, below the unchanged twelve-Strategy final
+gate. Bounded research is repairing this implementation defect within the same
+Plan265-07 and existing three-job/100-evaluations-per-job envelope, preserving
+historical producer behavior and honest duplicate/independence accounting.
+No new numbered plan, extra attempt or weakened gate is authorized. Research
+must identify a genuinely new product/rules/budget decision if one is necessary;
+ordinary technical repair proceeds under the standing autonomous instruction.
+
+The repair research and revised Task2 now pass independent plan check after six
+concrete corrections. See265-TACTICAL-ADAPTATION-RESEARCH.md and
+265-TACTICAL-ADAPTATION-PLAN-CHECK.iter2.md. The source-only implementation
+uses four retained reachable observations and25profiles/100direct evaluations,
+with profile-independent target scoring, named-pure coverage, strict rehydration,
+separate legacy-preserving emission and retained proof. It promises no response
+strength, family/core independence or acceptance. Full review and source proof
+remain mandatory before allocation.
+
+Historical read sessions54586 and79872 affirmed the unchanged assessment with
+issued:false and the same 1,875files/164,632,160bytes/tree082271cc. Data-only
+three-base import session13149 passed at source d35e58d2 in1394.27seconds:
+S01/S03/S05 allbase_distinct, dispatch:false, implementation root791e33c5,
+source roota7a75802. No identity-bound process remains active.
+Capacity witnesses and author/reviewer packets are still technical preparation.
+No allocation, real preflight, candidate generation or empirical run exists.
 
 The operator approved the complete265-LEAN-RUN-DECISION.md proposal with “yes”.
 Proceed autonomously within the same Plan265-07: prospectively amend the initial
