@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it } from "vitest"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { defaultRuntimeMetadata, admitCanonicalJsonValue } from "@cowards/spec"
 import { buildStrategyRevision } from "../packages/runtime-js/src/revision.js"
-import { allocationFixture } from "../packages/strategy-lab/src/league/allocation.test.js"
+import { allocationFixture, prospectiveFixture, capacityFixture } from "../packages/strategy-lab/src/league/allocation.test.js"
 import { importedCandidateFixture } from "../packages/strategy-lab/src/league/contracts.test.js"
-import { createLeagueExecutionAllocation } from "../packages/strategy-lab/src/league/allocation.js"
+import { createLeagueExecutionAllocation, createLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTerminal, publishLeagueArtifact } from "../packages/strategy-lab/src/league/repository.js"
 import { createLeagueCellTerminal, deriveLeagueResultEventRoot, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
@@ -23,6 +23,7 @@ import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
+import { prepareProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -40,6 +41,46 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
   testRevisions.set(admission.sourceRoot, revision)
   return { identity: { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: labRoot("test-harness", 1), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }, invoke() { throw new Error("No guest or source execution is allowed in the injected command test") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } } }
 } }
+
+describe("prospective CLI source-only gates", () => {
+  const inputWithCurrentSource = () => {
+    const input = prospectiveFixture(), { root: _root, schemaVersion: _schema, ...body } = input.amendment, source = leagueCurrentSourceIdentity()
+    return { ...input, implementationRoot: source.implementationRoot, amendment: createLeagueProspectiveAmendment({ ...body, ...source }) }
+  }
+  const importedRows = (input: ReturnType<typeof prospectiveFixture>) => input.amendment.bases.map((base) => ({ publicationRoot: base.publicationArtifactRoot, admission: { root: base.candidateAdmissionRoot, schemaVersion: "league-candidate-import-v1", candidate: { proposal: { source: { root: base.sourceRoot } } }, importEvidence: { sourcePhase: 264, sourceSlot: base.sourceSlot, qualification: "base_distinct", publicationArtifactRoot: base.publicationArtifactRoot, supervisionArtifactRoot: base.supervisionArtifactRoot, assessmentArtifactRoot: input.amendment.historicalAssessment.artifactRoot, assessmentRoot: input.amendment.historicalAssessment.assessmentRoot, thresholdArtifactRoot: input.amendment.historicalAssessment.thresholdArtifactRoot } } })) as unknown as LeagueCandidateInput[]
+  it("requires exactly data-reader-qualified S01/S03/S05 before prospective preparation returns", () => {
+    const input = inputWithCurrentSource(), rows = importedRows(input), factoryRepository = { directory: "/never-opened" } as never
+    let reads = 0
+    const prepared = prepareProspectiveSeriousLeague(input, { factoryRepository, fixture: { readCandidates: () => { reads++; return rows } } })
+    expect(reads).toBe(1)
+    expect(prepared.schemaVersion).toBe("league-prospective-execution-allocation-v1")
+    for (const mutate of [(v: any[]) => v.pop(), (v: any[]) => v[1].admission.importEvidence.sourceSlot = "S02", (v: any[]) => v[1].admission.importEvidence.qualification = "control_or_unresolved", (v: any[]) => v[0].publicationRoot = v[1].publicationRoot, (v: any[]) => v[0].admission.importEvidence.assessmentRoot = labRoot("substitute", 1)]) {
+      const changed = structuredClone(rows); mutate(changed)
+      expect(() => prepareProspectiveSeriousLeague(input, { factoryRepository, fixture: { readCandidates: () => changed } })).toThrow("PROSPECTIVE_BASE")
+    }
+    expect(() => validateProspectiveLeagueInitialCandidates(prepared, rows)).not.toThrow()
+    expect(() => prepareProspectiveSeriousLeague(prospectiveFixture(), { factoryRepository, fixture: { readCandidates: () => { throw Error("must reject source before reader") } } })).toThrow("STALE_IMPLEMENTATION")
+  })
+  it("rejects absent, mismatched and stale receipts before provider issuance or durable run effects", async () => {
+    const input = inputWithCurrentSource(), repository = createLeagueRepository(temporary()), responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-prospective-test-"))); directories.push(responseDirectory)
+    const allocation = createProspectiveLeagueExecutionAllocation({ ...input, outputDirectories: { league: repository.directory, responseFactory: responseDirectory } }), capacity = capacityFixture(allocation), receipt = createLeagueCapacityReceipt(capacity, allocation)
+    let providers = 0
+    const request = { allocation, allocationRoot: allocation.root, repository, factoryRepository: { directory: "/never-opened" } as never, responseFactoryRepository: createFactoryRepository(responseDirectory), fixture: { candidates: [], host: { createFactorySupervisedRuntime() { providers++; throw Error("never") } }, run: async () => { throw Error("never") } } }
+    for (const capacityReceipt of [undefined, { ...receipt, allocationRoot: labRoot("wrong-allocation", 1) }, receipt]) await expect(runSeriousLeague({ ...request, capacityReceipt })).rejects.toThrow(/CAPACITY/u)
+    expect(providers).toBe(0); expect(readdirSync(repository.directory)).toEqual([]); expect(readdirSync(responseDirectory)).toEqual([])
+  })
+  it("advertises only the exact prospective admission and rejects legacy prepare reinterpretation", async () => {
+    const help = await seriousLeagueMain(["--help"])
+    expect(help).toContain("prepare-prospective")
+    expect(help).toContain("--capacity-receipt")
+    expect(help).toContain("verify-retained is read-only")
+    const path = join(temporary(), "input.json"), input = inputWithCurrentSource(), canonical = admitCanonicalJsonValue(input, { profile: "canonical-manifest" })
+    if (!canonical.ok) throw Error("fixture canonical")
+    writeFileSync(path, canonical.canonicalBytes)
+    await expect(seriousLeagueMain(["prepare", "--allocation", path])).rejects.toThrow("DOCUMENT")
+    await expect(seriousLeagueMain(["prepare-lean", "--allocation", path])).rejects.toThrow("ARGUMENTS")
+  })
+})
 
 describe("complete private league command", () => {
   it("streams over-node and over-byte private executions while preserving the exact small v1 root", () => {
