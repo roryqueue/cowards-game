@@ -2,9 +2,10 @@ import { admitCanonicalJsonValue } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { LeagueCandidateAdmissionSchema, type LeagueProcessValidity } from "./contracts.js"
 import { admitLeagueResponse, type DeclaredLeagueRound, type LeagueResponseRow } from "./psro.js"
+import { LEAGUE_PROBES } from "./probes.js"
+export { LEAGUE_PROBES } from "./probes.js"
 
 export const RED_TEAM_CHANNELS = ["automated", "model", "human", "external"] as const
-export const LEAGUE_PROBES = ["side", "initiative", "horizontal_symmetry", "opaque_ids", "soldier_order", "source_order", "semantic_arena_identity", "repeat_restart", "worker_shard_completion"] as const
 export type RedTeamChannel = typeof RED_TEAM_CHANNELS[number]
 export type LeagueProbeFamily = typeof LEAGUE_PROBES[number]
 const IDENTITIES: readonly LeagueProbeFamily[] = ["semantic_arena_identity", "repeat_restart", "worker_shard_completion"]

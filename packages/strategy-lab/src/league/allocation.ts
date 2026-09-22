@@ -1,6 +1,7 @@
 import { admitCanonicalJsonValue, DEFAULT_RUNTIME_LIMITS } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, exactLabKeys, freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
-import { declareRedTeamAllocation, LEAGUE_PROBES, type RedTeamAllocationInput, type RedTeamChannel, type RedTeamResources } from "./red-team.js"
+import { declareRedTeamAllocation, type RedTeamAllocationInput, type RedTeamChannel, type RedTeamResources } from "./red-team.js"
+import { LEAGUE_PROBES } from "./probes.js"
 
 export interface LeagueResponseJob {
   readonly id: string; readonly channel: RedTeamChannel; readonly operation: "produce" | "unfilled" | "unused"

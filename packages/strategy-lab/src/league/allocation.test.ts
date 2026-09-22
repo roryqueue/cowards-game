@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { execFileSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocationInput } from "./allocation.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES } from "./red-team.js"
@@ -52,6 +54,18 @@ export const capacityFixture = (allocation = createProspectiveLeagueExecutionAll
   assumptions: ["Injected format measurements only; not future worst-case proof."],
 })
 describe("approved prospective three-base admission", () => {
+  it.each(["red-team", "allocation"])("initializes both policy APIs from a fresh %s-first process", (first) => {
+    const second = first === "red-team" ? "allocation" : "red-team"
+    const moduleUrl = (name: string) => new URL(`./${name}.ts`, import.meta.url).href
+    const output = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
+      await import(${JSON.stringify(moduleUrl(first))});
+      await import(${JSON.stringify(moduleUrl(second))});
+      const { LEAGUE_PROBES } = await import(${JSON.stringify(moduleUrl("red-team"))});
+      const { LEAGUE_APPROVED_PROSPECTIVE_POLICY } = await import(${JSON.stringify(moduleUrl("allocation"))});
+      console.log(JSON.stringify({ probes: LEAGUE_PROBES, policy: LEAGUE_APPROVED_PROSPECTIVE_POLICY.probes }));
+    `], { cwd: fileURLToPath(new URL("../../../../", import.meta.url)), encoding: "utf8", timeout: 20000 })
+    expect(JSON.parse(output)).toEqual({ probes: LEAGUE_PROBES, policy: LEAGUE_APPROVED_PROSPECTIVE_POLICY.probes })
+  })
   it("roots a distinct amendment/allocation DAG without changing legacy v1 or its twelve-import guard", () => {
     const input = prospectiveFixture(), allocation = createProspectiveLeagueExecutionAllocation(input)
     expect(admitProspectiveLeagueExecutionAllocation(allocation)).toEqual(allocation)
