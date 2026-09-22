@@ -1,9 +1,9 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
-reviewed: 2026-09-22T00:29:46Z
+reviewed: 2026-09-21T23:53:08Z
 depth: deep
-reviewed_head: 9c910d828776d9f1497493f72f6be775d09acc67
-reviewed_source: 9c910d828776d9f1497493f72f6be775d09acc67
+reviewed_head: 967742cb4c3b4b47a170a337735736243301bc52
+reviewed_source: 967742cb4c3b4b47a170a337735736243301bc52
 diff_base: 98e4392e
 files_reviewed: 46
 files_reviewed_list:
@@ -54,75 +54,30 @@ files_reviewed_list:
   - scripts/v1-38-factory-execution-evidence.test.ts
   - scripts/v1-38-factory-execution-evidence.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: source-realism-gap-confirmed
+  total: 0
+status: clean
 ---
 
 # Phase 265: Code Review Report
 
-**Reviewed:** 2026-09-22T00:29:46Z
+**Reviewed:** 2026-09-21T23:53:08Z
 **Depth:** deep
 **Files Reviewed:** 46
-**Status:** one confirmed full-Match storage blocker; preceding clean review preserved in `265-REVIEW.iter8.md`.
-
-## Main amendment after retained-data realism check
-
-### CR-01 — full executions exceed canonical admission before chunking
-
-**Severity:** Critical (source readiness, not a new empirical outcome).
-**Confirmed by:** main's read-only retained Phase263 witness and independent
-`/root/265_memory_scale_check` source review at the same9c910d82 source.
-
-`LeagueRecordGraph.publish` first canonicalizes a whole value, then chunks it.
-The `cell-result`, `response-match-result`, and
-`response-match-execution-failure` values embed complete executions. A real
-11,981,860-byte old execution fails MAX_NODES_EXCEEDED at transition469. Current
-canonical limits remain8MiB and262,144nodes; the existing composed-byte helper
-also limits one logical value to8MiB and cannot solve this by itself.
-
-Implement bounded, versioned private execution-record composition while keeping
-the exact v1 encoding/root path for admissible small records. Use individually
-admitted, ordered header/state/event/transition/accounting records; authenticate
-chunks, counts, order, commitments and existing graph links within allocation
-byte/record budgets. Reconstruct at most one execution on demand. Preserve
-canonical limits, evidence completeness, live issuance, runtime and game rules.
-Check adjacent whole-events/gameplay hash and replay equality sites; preserve
-small-value roots and domain-separate any necessary large aggregate fallback.
-
-Also fix the connected publication-order seam: runLeagueCell currently persists
-a success terminal before cell-result graph retention. If retention fails, the
-immutable success terminal can lack the result required by retained coverage.
-Retain/preflight before success, or authenticate an honest post-terminal
-retention-failure disposition; never rewrite a terminal or count an unpublished
-result. Keep all charge/failure evidence and fail-closed process status.
-
-Regressions: synthetic executions independently exceeding node and byte caps,
-all three result-bearing kinds, exact small-root compatibility, missing/changed/
-reordered chunks and records, bad counts/ordinals/commitment, resource exhaustion,
-oversized aggregate roots/comparisons, and charged failure-prefix reopening.
-No empirical allocation or new product decision is required for this source fix.
-See `265-REALISM-CHECK.md` for the actual read-only witness and nonclaims.
-
-The clean incremental review below predates this new discovery and is retained
-as history; its 'no supported finding' statement does not close CR-01 above.
+**Status:** clean (source-only)
 
 ## Summary
 
-No supported BLOCKER, WARNING, or INFO finding remains at the stated HEAD. This
-is an incremental recheck of the four-line correction after the prior deep
-46-file clean review, not a new discovery pass. The retained fingerprint reader
-repairs the one finding preserved in
+No supported BLOCKER, WARNING, or INFO finding remains at the stated HEAD. The
+new retained fingerprint reader repairs the one finding preserved in
 `265-REVIEW.iter6.md`: it authenticates each score supervision artifact in
 sequence, keeps one primary full receipt for legal-input/Chronicle roots, and
 retains only compact ordered execution commitments for the matchup root. The
 earlier eight-defect closure remains below. This is source-review closure, not
 a measured full-league heap/OOM result or an empirical Phase 265 outcome. No
-empirical allocation exists. The full 29-suite gate on the preceding source
-reported one failed injected probe-count assertion (268/269 tests); the focused
-correction passed, and the final full-gate rerun remains main's task.
+empirical allocation exists; the full 29-suite source gate remains main's task.
 
 ## Narrative Findings (AI reviewer)
 
@@ -130,21 +85,6 @@ No BLOCKER, WARNING, or INFO finding is established by this re-review.
 The earlier unsupported independent-round dereference allegation remains removed:
 TypeScript groups the whole development-target comparison, including
 `roundBlocks[0]`, under the `evaluationRole === "development_response"` short circuit.
-
-### Post-gate count correction
-
-At `scripts/run-v1-38-serious-league.ts:245-248`, the scalar `executedCells`
-increments immediately after the durable `cell-result` append. A non-success
-terminal is rejected next, before the success-only normalized probe digest is
-constructed. Previously that digest was evaluated inside the return object
-before the increment, so a failed probe could persist a `cell-result` without
-being included in the run head's count. The new order matches retained
-verification's exact `cellResults.length === head.value.executedCells` check,
-including failed probes, while an append failure still leaves the count
-unchanged because no cell-result was saved. Existing failure-prefix and success
-digest paths are otherwise unchanged. The previously failing injected test
-passed 1/1 on the new source per `265-VERIFICATION-FIX.md`; this review did not
-repeat that test or the full gate.
 
 ### Current memory-fix trace
 
@@ -190,5 +130,5 @@ This review made no private-store read, Strategy/Match execution, author/model/p
 
 ---
 
-_Reviewed: 2026-09-22T00:29:46Z_
+_Reviewed: 2026-09-21T23:53:08Z_
 _Reviewer: gsd-code-reviewer; depth: deep; source-only._

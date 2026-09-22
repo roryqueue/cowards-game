@@ -2,21 +2,38 @@
 phase: 265
 plan: "07"
 task: 1
-status: independently-reviewed-final-source-gate-running
-reviewed_source: 967742cb4c3b4b47a170a337735736243301bc52
+status: full-match-storage-repair-required
+reviewed_source: 9c910d828776d9f1497493f72f6be775d09acc67
 updated: 2026-09-21
 empirical_authority: false
 ---
 
 # Phase 265 Plan 07 Task 1 source-proof handoff
 
-Task 1's original findings and subsequent memory-scale defects are repaired and
-independently reviewed at `967742cb`; the final exact source gate is running.
+**Current blocker:** the actual retained full-Match realism check found that
+whole-execution canonical admission fails before chunking at9c910d82. Independent
+source exploration confirmed it and the associated success-terminal/publication
+failure seam. See265-REALISM-CHECK.md and current265-REVIEW.md CR-01. The running
+gate is regression evidence only; even a pass cannot close this new finding.
+Fix within this same source task, preserving limits, small roots and all evidence.
+The earlier clean reviews below predate this discovery.
+
+Task 1's original findings, memory-scale defects and subsequent failed-probe
+accounting regression are repaired and independently reviewed at `9c910d82`;
+the corrected exact source gate is running.
 The earlier unchanged-source baseline passed 29 suites / 267 tests. This is not a complete Plan 07 summary: Task 2
 remains the main-owned human allocation/participant decision, and Task 3 remains
 the conditional, main-owned real execution and retained verification branch.
 
 ## Current bounded-memory closeout — 2026-09-21
+
+The complete gate at967742cb found one regression (268/269passed): a failed
+probe's saved result was not counted because success-only normalization threw
+first. Source9c910d82 moves the count before failure rejection and normalization.
+The original expected69 assertion passes unchanged, and independent recheck is
+clean. The final full gate is running; no earlier partial result is called a pass.
+See265-VERIFICATION-FIX.md. Actual Phase264 compatibility separately passed with
+identical store bytes; final conservative reader identity is checked separately.
 
 Source `0e4999d0` replaces persistent full Match payloads with compact receipts,
 on-demand authenticated graph reading and compact host-issued response

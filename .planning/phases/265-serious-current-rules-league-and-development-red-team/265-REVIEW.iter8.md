@@ -54,11 +54,11 @@ files_reviewed_list:
   - scripts/v1-38-factory-execution-evidence.test.ts
   - scripts/v1-38-factory-execution-evidence.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: source-realism-gap-confirmed
+  total: 0
+status: clean
 ---
 
 # Phase 265: Code Review Report
@@ -66,48 +66,7 @@ status: source-realism-gap-confirmed
 **Reviewed:** 2026-09-22T00:29:46Z
 **Depth:** deep
 **Files Reviewed:** 46
-**Status:** one confirmed full-Match storage blocker; preceding clean review preserved in `265-REVIEW.iter8.md`.
-
-## Main amendment after retained-data realism check
-
-### CR-01 — full executions exceed canonical admission before chunking
-
-**Severity:** Critical (source readiness, not a new empirical outcome).
-**Confirmed by:** main's read-only retained Phase263 witness and independent
-`/root/265_memory_scale_check` source review at the same9c910d82 source.
-
-`LeagueRecordGraph.publish` first canonicalizes a whole value, then chunks it.
-The `cell-result`, `response-match-result`, and
-`response-match-execution-failure` values embed complete executions. A real
-11,981,860-byte old execution fails MAX_NODES_EXCEEDED at transition469. Current
-canonical limits remain8MiB and262,144nodes; the existing composed-byte helper
-also limits one logical value to8MiB and cannot solve this by itself.
-
-Implement bounded, versioned private execution-record composition while keeping
-the exact v1 encoding/root path for admissible small records. Use individually
-admitted, ordered header/state/event/transition/accounting records; authenticate
-chunks, counts, order, commitments and existing graph links within allocation
-byte/record budgets. Reconstruct at most one execution on demand. Preserve
-canonical limits, evidence completeness, live issuance, runtime and game rules.
-Check adjacent whole-events/gameplay hash and replay equality sites; preserve
-small-value roots and domain-separate any necessary large aggregate fallback.
-
-Also fix the connected publication-order seam: runLeagueCell currently persists
-a success terminal before cell-result graph retention. If retention fails, the
-immutable success terminal can lack the result required by retained coverage.
-Retain/preflight before success, or authenticate an honest post-terminal
-retention-failure disposition; never rewrite a terminal or count an unpublished
-result. Keep all charge/failure evidence and fail-closed process status.
-
-Regressions: synthetic executions independently exceeding node and byte caps,
-all three result-bearing kinds, exact small-root compatibility, missing/changed/
-reordered chunks and records, bad counts/ordinals/commitment, resource exhaustion,
-oversized aggregate roots/comparisons, and charged failure-prefix reopening.
-No empirical allocation or new product decision is required for this source fix.
-See `265-REALISM-CHECK.md` for the actual read-only witness and nonclaims.
-
-The clean incremental review below predates this new discovery and is retained
-as history; its 'no supported finding' statement does not close CR-01 above.
+**Status:** clean (source-only)
 
 ## Summary
 

@@ -1,20 +1,33 @@
 ---
 phase: 265
 slug: serious-current-rules-league-and-development-red-team
-status: source-audited
+status: source-storage-gap-open
 # Blocking OPEN threats only: severity >= workflow.security_block_on (high).
 threats_open: 0
+threats_open_all_severities: 1
 asvs_level: 1
 block_on: high
 register_authored_at_plan_time: true
-audited_source: 967742cb4c3b4b47a170a337735736243301bc52
+audited_source: 9c910d828776d9f1497493f72f6be775d09acc67
 created: 2026-09-15
 updated: 2026-09-21
 ---
 
 # Phase 265 — Security
 
-Source-only mitigation audit against reviewed source `967742cb`. This verifies the
+## Latest amendment — retained full-Match storage
+
+**T-265-06 is OPEN again (medium), with a source-readiness blocker.** A real
+retained Phase263 execution fails canonical node admission before the graph can
+chunk it. The related post-success-terminal result-publication failure must
+retain honest charged evidence without rewriting that terminal. Main and an
+independent source explorer confirmed this at9c910d82; see265-REALISM-CHECK.md and
+current265-REVIEW.md CR-01. No risk waiver is applied. Earlier closed row/memory
+dispositions below are historical, not closure of this newly discovered gap.
+The high-severity-open count remains0 because the declared T-265-06 severity is
+medium; that count does not permit live work while the source blocker remains.
+
+Source-only mitigation audit against reviewed source `9c910d82`. This verifies the
 22 declared threat-register entries, not empirical league completion. No Phase 265
 allocation, real run result, provider/model/human/external activity, or retained
 empirical result exists; those later run-dependent checks remain pending and are
@@ -105,6 +118,11 @@ No accepted risks. No disposition in the Phase 265 planned register is `accept` 
 
 ### Repair addendum
 
+- Final verification regression: `9c910d82` counts a durably retained cell result
+  before rejecting its failed terminal or computing a success-only probe digest.
+  The failed-probe-after-growth test keeps its original69 expectation and passes;
+  independent incremental review is clean. No failed work is omitted/refunded.
+  The corrected complete gate remains separate from this source disposition.
 - T-265-08/09: failed runs now reopen their authenticated charged prefixes,
   including actual player/system failures, expanded populations, an immutable
   accepted Factory terminal followed by result-publication failure, and a valid

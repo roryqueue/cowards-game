@@ -1,7 +1,7 @@
 ---
 phase: 265
 status: passed-read-only
-source: 967742cb4c3b4b47a170a337735736243301bc52
+source: 9c910d828776d9f1497493f72f6be775d09acc67
 date: 2026-09-21
 issued: false
 empirical_authority: false
@@ -9,7 +9,7 @@ empirical_authority: false
 
 # Actual retained Phase 264 compatibility
 
-Main invoked the current `verifyHistoricalFactoryAssessmentForLeague` once on
+Main invoked the current `verifyHistoricalFactoryAssessmentForLeague` on
 the existing store `.strategy-lab/factory-264-fresh-20260914-approved-two` and
 assessment artifact
 `sha256:25913b26fa81fa15177774fbdcf9c0d1ef244ad13910bc664bfde4ea8c2e43f8`.
@@ -26,13 +26,21 @@ The command exited **0** and returned:
 | Threshold artifact | `sha256:f6098c9e14ed868e162a9374557e518678996b619f3f8912fb8723113328fa72` |
 | Historical producer implementation | `sha256:5baaeb677327a6102fd3dc719543686b14448122a91a4bca320cd0836cf5040b` |
 | Historical assessment implementation | `sha256:6a6094089e6714def26c427f60dfc0fae15e534cc685ad7a76dc883c4911b97c` |
-| Current reader implementation | `sha256:d7e8d58add65717ff8d681782fa01b0105fd899ea8ebac0a1f413529f93a0770` |
+| Current reader implementation | `sha256:0e662c7eec3b8074d7e7337990206b057e9a8d020a3d2e98e7949c821b842cf3` |
 
 Historical producer, historical assessment and current reader identities remain
 separate. The old assessment/threshold identities exactly match Phase 264's
 recorded result. This does not promote its nine mechanics controls into real
 independent producers, establish current competitive strength or satisfy a
 Phase 265 empirical requirement.
+
+The first read passed at `967742cb`, reader implementation
+`sha256:d7e8d58add65717ff8d681782fa01b0105fd899ea8ebac0a1f413529f93a0770`.
+The failed-probe accounting repair changed the conservative whole-source
+fingerprint even though it did not alter the historical assessor. Main therefore
+refreshed this data-only check at `9c910d82`; it again exited0 with the same
+historical identities, assessment and threshold. This is two read-only checks,
+not two empirical attempts or repeated allocation consumption.
 
 ## Nonmutation check
 

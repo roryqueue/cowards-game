@@ -2,12 +2,19 @@
 phase: 265
 plan: "07"
 task: 2
-status: proposal-not-approved
+status: draft-resource-envelope-withdrawn-for-correction
 empirical_authority: false
 created: 2026-09-21
 ---
 
 # Proposed bounded Phase 265 run — decision still required
+
+**Not ready for approval.** Independent capacity review found that the draft
+1,500,000-record ceiling is inherently too small for full coverage, and160GiB is
+not a supported byte envelope. Those resource figures below are preserved as the
+withdrawn draft, not an approvable recommendation. Finish the bounded execution
+storage repair and calculate its actual retention footprint before proposing
+replacement limits or asking for a resource/scope decision. No authority exists.
 
 This is a recommendation, not an allocation or permission to run. No canonical
 allocation, source packet, model request, response candidate or Match is created
@@ -23,7 +30,7 @@ enter the population, then evaluate against two separately frozen opponents.
 Keep the existing scientific gates: unsuccessful or correlated challengers must
 remain unsuccessful, and a genuine no-finalist result is acceptable.
 
-Suggested hard stop: **96 hours, 160 GiB of new evidence, and five Sol authoring
+Withdrawn draft hard stop: **96 hours, 160 GiB of new evidence, and five Sol authoring
 calls totaling at most 240,000 tokens**. These are stop limits, not a completion
 estimate. The earlier measured run does not establish Phase 265 throughput or
 per-Match storage. A resource/integrity failure would remain incomplete; it would
@@ -92,6 +99,9 @@ source-reviewed, not a full-size live memory measurement.
 
 ## Proposed operational and participant rules
 
+The retention figures in this section are withdrawn pending the capacity
+correction below; the other figures remain unapproved draft choices.
+
 - Overall wall-clock ceiling 345,600,000 ms (96 h), including live work; each
   producing attempt at most 64,800,000 ms (18 h), also bounded by remaining
   overall time. Authoring and evaluation share each attempt's reservation.
@@ -127,6 +137,34 @@ completion follows automatically from approval or a run result.
 
 ## Decision
 
-Pending: approve this complete budget/channel proposal, revise it prospectively,
-or leave Phase 265 source-complete but empirically unallocated. A normal clear
+Pending after source and capacity correction: approve a corrected complete
+budget/channel proposal, revise it prospectively, or leave Phase265 unallocated.
+The current source-storage finding is not yet closed. A normal clear
 approval is sufficient; no new authorization literal or custody chain is needed.
+
+## Capacity correction — 2026-09-21
+
+Independent `/root/265_allocation_recommendation` read-only source assessment
+traced one graph value per runtime invocation, at least three artifacts each
+(raw chunk, chunk descriptor, graph descriptor). The smallest of24existing
+Phase263 traces has192invocations. At12,480actual Matches this historical-low
+envelope already yields `12,480 × 192 × 3 = 7,188,480` artifacts, before starts,
+terminals, cleanup, link groups, matrices, authoring/factory evidence and reports.
+The old whole-value chunk formula at5,740,335bytes adds89artifacts per execution,
+or1,110,720more, totalling8,299,200before ordinary overhead. This is a historical
+sample-derived counterexample to the draft ceiling, not an engine-wide minimum
+or a forecast for the pending new execution-stream format.
+
+The same historical5,740,335..11,981,860execution bytes imply66.72..139.26GiB for
+12,480executions alone. The old draft has only140GiB ordinary space after its
+20GiB reserve; the observed high end plus required raw invocation/graph/factory
+evidence cannot fit. Filesystem allocation/inode overhead is additional to
+logical encoded bytes.13,776charged equivalents include1,296reservations and are
+not all executed storage payloads. Failures require evidence rather than freeing
+storage. The current212GiB-free host therefore cannot be presented as sufficient.
+
+Do not invent new byte/record ceilings before the repair's exact encoding costs
+are known, delete historical evidence, drop invocation or transition records,
+silently reduce full coverage, or relax result-validity gates. A genuinely new
+storage/resource or scientific-scope choice belongs to the operator after safe
+source work is finished.96hours remains a stop budget, not a completion promise.

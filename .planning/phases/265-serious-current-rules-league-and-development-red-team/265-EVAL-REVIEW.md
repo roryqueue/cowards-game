@@ -1,14 +1,16 @@
 # EVAL-REVIEW — Phase 265: Serious Current-Rules League and Development Red Team
 
 **Audit Date:** 2026-09-21
-**Audit basis:** State A — `265-AI-SPEC.md`; original evaluation re-audit at `244e6a2a` reconciled by main with independent source review at `967742cb4c3b4b47a170a337735736243301bc52`.
+**Audit basis:** State A — `265-AI-SPEC.md`; original evaluation re-audit at `244e6a2a` reconciled by main with independent source review at `9c910d828776d9f1497493f72f6be775d09acc67`.
 **AI-SPEC Present:** Yes
 **Overall Score:** 24/100
 **Verdict:** NOT IMPLEMENTED — empirical evaluation evidence only
 
 This is an outcome audit, not a source-gate score. The captured repaired baseline
 (29/29 suites, 267/267 tests, 1652.36 s at `5d554920`) predates the final bounded-memory
-repairs; the current complete gate at `967742cb` is running. Independent source
+repairs. The gate at `967742cb` passed268/269 and exposed a failed-probe count
+regression; the original test now passes on reviewed repair `9c910d82`, whose
+complete gate is running. Independent source
 review closes the preceding-target linkage, AST matcher linkage, charged/partial
 failure paths, and final retained-memory defect. No Phase 265 allocation root,
 real candidate/Match/model/human/external record, retained empirical result, or
@@ -17,6 +19,12 @@ therefore has not been delivered. It is pending the one Task 2 allocation/
 participant decision; this expected absence is not a source or rules defect.
 
 ## Dimension Coverage
+
+**Latest source-readiness amendment:** the current265-REVIEW.md CR-01 confirms
+full-Match encode-before-chunk failure using read-only old execution data.
+Synthetic small fixtures did not expose this. Bounded storage and associated
+failure-prefix repair remain required before the allocation checkpoint. This
+does not change the24/100 empirical score or grant any empirical authority.
 
 | Dimension | Status | Measurement | Finding |
 |-----------|--------|-------------|---------|

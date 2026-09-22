@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 final source gate found one failed-probe accounting regression; same-plan repair required before allocation
-last_updated: "2026-09-21T22:58:35Z"
+stopped_at: Phase 265 oversized execution repair65b5cf63 implemented; independent review and final full gate next
+last_updated: "2026-09-22T01:30:00Z"
 last_activity: 2026-09-21
-last_activity_desc: Gate268of269passed; historicalcompatibility affirmed with unchanged1875files; fix scalar count before success-only probe normalization
+last_activity_desc: Baseline269tests29suites passed; storage repair65b5cf63 focused tests passed; review pending; draft resource envelope withdrawn
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,58 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current review handoff — 2026-09-21:** Source65b5cf63662f46151b8ddcb014d5799594e4c0de
+implements the bounded full-execution stream, aggregate roots and charged
+publication-failure disposition. Fixer focused storage3/3(80.50s), final tamper
+1/1, connected/contracts7/7, package and strict types pass. Report265-REVIEW-FIX.md
+is current; independent source review is next. Real old-trace data-only storage
+diagnostic and final full gate remain main-owned. Baseline gate97524 FINISHED
+at9c910d82:29/29suites269/269tests1677.98seconds, package/strict types, three
+1329-file boundary scans and service0strict/ownership(19oldreport-only), exit0.
+It does not validate new source65b5cf63. No active old gate remains. Isolated
+worktree/branch/new sentinel were normally removed. Source review CR-01 is
+preserved in265-REVIEW.iter9.md before re-review. No empirical allocation exists;
+the draft1.5m-record/160GiB envelope is withdrawn as unviable, not approved.
+All prior snapshots below are history.
+
+**Current source repair handoff — 2026-09-21:** `/root/fix_265_memory` owns the
+new confirmed full-Match storage CR-01 in an isolated checkout from9c910d82.
+Main source/HEAD must stay unchanged until gate97524 completes. Fixer must not
+integrate before main confirms that completion. Main waits while typed fixer
+is active; no duplicate code/test work. Prior fix report is preserved in
+265-REVIEW-FIX.iter5.md; current review carries the new finding. No empirical
+allocation or real work is authorized. Independent capacity review also proved
+the draft1.5m-record/160GiB recommendation unsound; it is explicitly withdrawn
+pending source repair and corrected footprint, not a new authority checkpoint.
+
+**Current full-Match realism finding — 2026-09-21:** Main's data-only check of
+an actual retained Phase263 full execution (11,981,860bytes) fails the league's
+whole-value canonical encoder with MAX_NODES_EXCEEDED at transition469, before
+the graph can chunk bytes. Eight of24oldtracefiles exceed8MiB; this is not a new
+empirical run. Source9c910d82 still encodes entire cell/response executions before
+chunking. Independent read-only source check `/root/265_memory_scale_check`
+confirmed the gap, bounded private record-stream repair and related success-terminal
+retention failure seam. Current265-REVIEW.md CR-01 records the fix scope; clean9c
+review is preserved in265-REVIEW.iter8.md. See265-REALISM-CHECK.md. Corrected gate97524 continues unchanged as useful
+baseline evidence; do not duplicate or mutate source during it, and do not call
+the new storage gap closed merely if tests pass. Final9c historical assessment
+check passedaffirmed/issuedfalse with unchanged1875-file digest; source reader
+root0e662c7e. Repair the storage composition within this same plan, preserving
+canonical byte/node limits and all history/semantics; no new authority or human
+decision has yet been established. Earlier snapshots below are history.
+
+**Current final corrected gate — 2026-09-21:** `9c910d828776d9f1497493f72f6be775d09acc67`
+fixes the one full-suite accounting regression without changing the test: count
+after durable cell-result, reject failure, then compute successful probe summary.
+Exact existing case passes1/1 in134.62seconds; types pass; independent source
+recheck is clean. Main's complete29suite gate is now running in session97524.
+Do not duplicate it or change implementation/HEAD while identity-bound checks
+run. Prior session22815 FINISHED with268/269; it is not resumable or a pass.
+See265-VERIFICATION-FIX.md. Historical actual reader check at967742cb passed;
+check final reader identity and refresh data-only proof if the conservative
+implementation root changed. Then finish independent phase verification/private
+UAT, commit/push and request only the genuine unapproved Task2 budget decision.
 
 **Current verification repair — 2026-09-21:** Full gate at `967742cb` finished
 exit1:268/269tests and28/29suites passed in1682.17seconds. The single failing

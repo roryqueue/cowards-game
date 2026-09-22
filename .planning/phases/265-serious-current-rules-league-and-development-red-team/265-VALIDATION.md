@@ -6,12 +6,33 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-09-21
-source_reviewed: 967742cb4c3b4b47a170a337735736243301bc52
-source_gate: failed-one-probe-accounting-regression
+source_reviewed: 9c910d828776d9f1497493f72f6be775d09acc67
+source_gate: baseline269-passed-storage-repair-focused-passed-review-pending
 empirical_validation: pending-allocation-and-real-run
 ---
 
 # Phase265 — Validation Strategy
+
+## Latest captured results
+
+Main gate97524 at unchanged9c910d82 finished exit0:29/29suites,269/269tests,
+1677.98seconds; chained package/strict types and three1329-file boundary scans
+passed. Service boundary has0strict/ownership and19pre-existing report-only
+offenses. This is the completed baseline, not new-storage-source closure.
+
+Source65b5cf63 implements oversized execution composition and failure handling.
+Fixer reports focused storage3/3in80.50s, final tamper1/1in3.35s, runner/contracts
+7/7in5.61s, package and strict types passed. Independent re-review, main actual
+old-trace diagnostic and full final gate remain; see265-REVIEW-FIX.md. No live
+allocation or empirical evidence was produced. Older 'running' statements below
+refer to historical snapshots, not a currently active baseline process.
+
+Latest realism finding: an actual retained Phase263 full-Match execution exceeds
+canonical node admission before graph chunking. Current265-REVIEW.md CR-01 is
+open; the9c910d82 gate cannot close it merely by passing existing small fixtures.
+Add synthetic over-node/byte-limit execution retention/reopen, ordering/tamper/
+budget rejection, exact small roots, and post-terminal retention-failure coverage
+as part of the same Task1 repair. This is source-only, not a new empirical run.
 
 ## Test Infrastructure
 
@@ -50,7 +71,10 @@ none relies only on a fixture label or summary assertion. The exact baseline gat
 below passed at reviewed source `5d554920`: 29 suites, 267 tests, 1652.36 seconds.
 Source and HEAD stayed unchanged; only planning documents were edited. The
 memory repair has focused regression evidence and clean independent review at
-`967742cb`; its exact post-repair gate is running with source and HEAD unchanged.
+`967742cb`; that exact post-repair gate found one accounting-order regression
+(captured below). Source `9c910d82` repairs it; the unchanged existing case passes
+and independent incremental review is clean. The corrected complete gate is
+running with source and HEAD unchanged.
 
 | Task | Wave | Requirements | Executable verification | Current status |
 |---|---:|---|---|---|
