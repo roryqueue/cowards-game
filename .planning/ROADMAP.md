@@ -2,7 +2,7 @@
 
 ## Current verified progress — Phases262–264 complete
 
-Phase264 is independently complete: 5/5 truths, all11 requirements, 7/7 private acceptance checks, complete validation/security/evaluation coverage and exact retained affirmative assessment reopening. All48workloads/24pairs completed; this proves the frozen development-independence criterion, not competitive strength. ContinuePhase265 research and the normal staged flow autonomously. Phases262/263 stay complete; old failures, consumed allocations and36locks remain unchanged. Formation still requiresPhase266 freeze. All older dispatch sections below are historical.
+Phase264 is independently complete: 5/5 truths, all11 requirements, 7/7 private acceptance checks, complete validation/security/evaluation coverage and exact retained affirmative assessment reopening. All48workloads/24pairs completed; this proves the frozen development-independence criterion, not competitive strength. Phase265 has6/7 plans complete; its Task1 source proof passed and the operator approved the prospective lean envelope on2026-09-22. Continue existing Plan265-07 Task2 source amendment, independent review, full validation and data-only capacity preflight before its one conditional live run. Phases262/263 stay complete; old failures, consumed allocations and36locks remain unchanged. Formation still requiresPhase266 freeze. All older dispatch sections below are historical.
 
 ## Current D-34L.2 consolidated closeout outcome — 2026-09-09
 
@@ -943,7 +943,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
   4. Structural and behavioral diversity gates yield a diverse pure portfolio kept separate from the diagnostic mixture, and a precommitted rule either selects a deployable robust pure finalist from mixture, pure, counter, probe, invariance, legality, privacy, and runtime evidence or records `no robust pure finalist found`.
   5. Provisional leaders receive the full frozen automated, model, human, and external development-red-team budget; successful counters enter the declared response loop, failed attacks remain charged evidence, and no leader may depend materially on side, initiative, duplicate arenas, opaque identities, source or Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-**Plans:** 6/7 complete; Plan07 Task1 is complete at reviewed source `3d25b37e6ad2eb3edbfb298615d85128c98360e1`. All memory, accounting, full-Match storage and frame/file findings are repaired. Final proof passed29/29 suites and273/273 tests in1773.05seconds; a separate explicit fail-fast build/type/boundary chain passed. Actual old-trace storage/reopen and Phase264 historical import compatibility passed with unchanged old evidence. Private UAT has8source cases passed and1actual-run case blocked. Task2 awaits the material scope/resource/participant decision proposed in265-LEAN-RUN-DECISION.md (three genuine bases toward twelve, not an approved contract). Conditional Task3 has not run. No Phase265 allocation or empirical result exists; independent goal verification remains partial, allLEAG requirements unchecked, and Phase266 remains blocked.
+**Plans:** 6/7 complete; Plan07 Task1 is complete at reviewed source `3d25b37e6ad2eb3edbfb298615d85128c98360e1`. All memory, accounting, full-Match storage and frame/file findings are repaired. Final proof passed29/29 suites and273/273 tests in1773.05seconds; a separate explicit fail-fast build/type/boundary chain passed. Actual old-trace storage/reopen and Phase264 historical import compatibility passed with unchanged old evidence. Private UAT has8source cases passed and1actual-run case blocked. The operator approved the complete265-LEAN-RUN-DECISION.md proposal on2026-09-22 (commit06cdb050): exactly three assessed bases toward twelve, eleven attempts and zero retries, with unchanged final gates. Task2 source amendment, independent review, full validation and the capacity receipt remain pending. Conditional Task3 has not run. No Phase265 allocation or empirical result exists; independent goal verification remains partial, allLEAG requirements unchecked, and Phase266 remains blocked.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.
@@ -959,8 +959,8 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 **Wave4 — connected league, blocked on Wave3**
 - [x] 265-06-PLAN.md — All-channel red-team/invariance and allocation-gated private CLI.
 
-**Wave5 — source proof complete; live scope/resource/participant decision pending**
-- [ ] 265-07-PLAN.md — Exact combined source/CI proof; one allocation checkpoint; conditional complete real run and retained verification.
+**Wave5 — source proof complete; lean amendment approved, technical gates pending**
+- [ ] 265-07-PLAN.md — Exact combined source/CI proof; approved prospective amendment, source review/validation and capacity preflight; one conditional complete real run and retained verification.
 
 Cross-cutting constraints: canonical unchanged kernel and supervised hostile-source execution only; private immutable evidence with complete charged accounting; no Phase264 allocation/waiver reuse; no sparse payoff imputation; no formation, holdout opening, public/counting, production or rules changes. Mixtures remain diagnostic, pure finalists remain separately selected, and honest metagame/no-finalist failure is distinct from process failure.
 
@@ -1054,7 +1054,7 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 8/8 | Complete — 5/5 truths,11/11 requirements,7/7 private UAT | 2026-09-14 |
-| 265. Serious Current-Rules League and Development Red Team | 6/7 | Independent review found six connected defects; same-plan repairs active | - |
+| 265. Serious Current-Rules League and Development Red Team | 6/7 | Source proof passed; approved lean amendment and technical gates active | - |
 | 266. Content-Addressed Current-League Freeze | 0/TBD | Discussion complete; awaits Phase265 | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
 | 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; awaits Phase267 | - |

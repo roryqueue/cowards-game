@@ -1,5 +1,9 @@
 # Phase 265: Serious Current-Rules League and Development Red Team - Context
 
+## Approved prospective Phase 265 amendment — 2026-09-22
+
+The operator approved the complete `265-LEAN-RUN-DECISION.md` proposal, recorded in commit `06cdb050`. Existing Plan 265-07 now implements that prospective amendment: start with exactly the three genuinely assessed S01/S03/S05 bases, exclude nine mechanics controls, and grow toward twelve through slots 3,3,3,0. The final twelve-Strategy, six-family, five-independent-core and three-distinct-finalist gates are unchanged. The exact eleven-attempt, zero-retry resource vector and new human/external `authorized_zero` dispositions are in `265-LEAN-RUN-DECISION.md` and `265-LEAN-AMENDMENT.md`. One live run is conditional on independent source review, full validation and a passing data-only capacity receipt; approval alone dispatches nothing. Legacy policies, prior evidence, canonical rules/runtime/privacy, the current-league-before-formation sequence, unopened holdout, equal-profile budgets and audit/archive/tag requirements remain unchanged. Earlier contradictory routing below is historical, not active authority.
+
 **Gathered:** 2026-07-27
 **Status:** Discussion complete; Phase262–264 prerequisites independently complete2026-09-14; research/planning active. Actual league execution still requires its own complete reviewed plans and frozen bounds, without reusing predecessor allocations.
 

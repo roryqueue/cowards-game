@@ -1,5 +1,9 @@
 # Competitive Strategy Factory and Adversarial League
 
+## Approved prospective Phase 265 amendment — 2026-09-22
+
+The operator approved the complete `265-LEAN-RUN-DECISION.md` proposal, recorded in commit `06cdb050`. Existing Plan 265-07 now implements that prospective amendment: start with exactly the three genuinely assessed S01/S03/S05 bases, exclude nine mechanics controls, and grow toward twelve through slots 3,3,3,0. The final twelve-Strategy, six-family, five-independent-core and three-distinct-finalist gates are unchanged. The exact eleven-attempt, zero-retry resource vector and new human/external `authorized_zero` dispositions are in `265-LEAN-RUN-DECISION.md` and `265-LEAN-AMENDMENT.md`. One live run is conditional on independent source review, full validation and a passing data-only capacity receipt; approval alone dispatches nothing. Legacy policies, prior evidence, canonical rules/runtime/privacy, the current-league-before-formation sequence, unopened holdout, equal-profile budgets and audit/archive/tag requirements remain unchanged. Earlier contradictory routing below is historical, not active authority.
+
 ## Approved Phase264 input revision — 2026-09-14
 
 The operator approved the bounded fresh-generation route in264-READINESS-DECISION.md:4authoring attempts/30minutes,48supervised development workloads/90minutes, exact pre-output allocations, three automated mechanisms, Phase264 human/external intake unused/zero, and exact exposed model/client/prompt/source/usage provenance with an undisclosed internal serving snapshot explicitly unavailable. Real assessment/freeze implementation and independent review precede consumption. Prior evidence and later league/red-team/equal-profile/holdout/formation/release requirements are unchanged. This supersedes older exact-internal-version assumptions only for the prospective approved route; no current readiness pass is asserted.

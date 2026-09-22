@@ -1,5 +1,9 @@
 # Project Research Summary
 
+## Approved prospective Phase 265 amendment — 2026-09-22
+
+The operator approved the complete `265-LEAN-RUN-DECISION.md` proposal, recorded in commit `06cdb050`. Existing Plan 265-07 now implements that prospective amendment: start with exactly the three genuinely assessed S01/S03/S05 bases, exclude nine mechanics controls, and grow toward twelve through slots 3,3,3,0. The final twelve-Strategy, six-family, five-independent-core and three-distinct-finalist gates are unchanged. The exact eleven-attempt, zero-retry resource vector and new human/external `authorized_zero` dispositions are in `265-LEAN-RUN-DECISION.md` and `265-LEAN-AMENDMENT.md`. One live run is conditional on independent source review, full validation and a passing data-only capacity receipt; approval alone dispatches nothing. Legacy policies, prior evidence, canonical rules/runtime/privacy, the current-league-before-formation sequence, unopened holdout, equal-profile budgets and audit/archive/tag requirements remain unchanged. Earlier contradictory routing below is historical, not active authority.
+
 ## Current pre-search calibration — 2026-09-13
 
 Phase262 subsequently passed its approved Plan203 continuation; older admission snapshots below are historical. Phase263's four historical runs (one original and three envelope attempts) remain non-pass. The operator now approves selection p99<20ms and unchanged SoldierBrain<5ms, preserving every other bound, followed by exactly one fresh bounded attempt with Matches only after validation/timing pass. See263-TIMING-CALIBRATION.md. This is a prospective pre-search decision, not retroactive evidence or authorization for factory/league scale, formations, holdout, public/counting or production.
