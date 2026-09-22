@@ -1,12 +1,20 @@
 # EVAL-REVIEW — Phase 265: Serious Current-Rules League and Development Red Team
 
-**Audit Date:** 2026-09-15
-**Audit basis:** State A — `265-AI-SPEC.md` and the implemented source frozen at `244e6a2a607f97125ccf150ece77562f100c0225`.
+**Audit Date:** 2026-09-21
+**Audit basis:** State A — `265-AI-SPEC.md`; original evaluation re-audit at `244e6a2a` reconciled by main with independent source review at `967742cb4c3b4b47a170a337735736243301bc52`.
 **AI-SPEC Present:** Yes
 **Overall Score:** 24/100
 **Verdict:** NOT IMPLEMENTED — empirical evaluation evidence only
 
-This is an outcome audit, not a source-gate score. The prior source gate (29/29 suites, 250/250 tests, 581.87 s) predates the reviewed fix pass and is baseline only; the current full gate remains pending. Targeted static re-review confirms the repaired preceding-target linkage and AST matcher linkage, but no Phase 265 allocation root, real candidate/Match/model/human/external record, retained empirical result, or independent retained verification exists. The planned empirical evaluation therefore has not been delivered. It is intentionally pending the one Task 2 allocation/participant checkpoint; that expected absence is not itself evidence of a policy or rules defect.
+This is an outcome audit, not a source-gate score. The captured repaired baseline
+(29/29 suites, 267/267 tests, 1652.36 s at `5d554920`) predates the final bounded-memory
+repairs; the current complete gate at `967742cb` is running. Independent source
+review closes the preceding-target linkage, AST matcher linkage, charged/partial
+failure paths, and final retained-memory defect. No Phase 265 allocation root,
+real candidate/Match/model/human/external record, retained empirical result, or
+independent retained-run verification exists. The planned empirical evaluation
+therefore has not been delivered. It is pending the one Task 2 allocation/
+participant decision; this expected absence is not a source or rules defect.
 
 ## Dimension Coverage
 
@@ -31,7 +39,7 @@ All eight dimensions have substantive source mechanisms: matrix, solver, PSRO/le
 
 | Component | Status | Finding |
 |-----------|--------|---------|
-| Eval tooling (Vitest + TypeScript/private trace store) | Configured / pending current run | The CI workflow has an explicit Phase 265 29-suite source-only gate. The captured 250-test pass predates `244e6a2`; the current exact gate is deliberately pending main's single final run and does not execute an empirical selector. |
+| Eval tooling (Vitest + TypeScript/private trace store) | Configured / current run in progress | CI has the exact Phase 265 29-suite source-only gate, with a 45-minute test-step allowance after the measured 27.54-minute baseline. The captured 267-test baseline predates the final memory fix. Main's current exact gate does not execute an empirical selector. |
 | Reference dataset | Partial | All 16 specified injected fixture groups are present and source-gated. They are explicitly nonempirical; no allocated empirical reference population, candidate outcomes, or real red-team rows exist. |
 | CI/CD integration | Present | `.github/workflows/ci.yml` runs the exact named Phase 265 gate, package/strict type checks, and boundary scans before allocation. |
 | Online guardrails | Partial | Complete-cell, issuance/runtime, frozen allocation, charge, and projection guards exist in the request path, but have only injected coverage and have not guarded an actual empirical run. |

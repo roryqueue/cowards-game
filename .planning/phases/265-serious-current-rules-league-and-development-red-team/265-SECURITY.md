@@ -7,28 +7,28 @@ threats_open: 0
 asvs_level: 1
 block_on: high
 register_authored_at_plan_time: true
-audited_source: 5d55492009a6cd8fe031522fceb4543719edfc24
+audited_source: 967742cb4c3b4b47a170a337735736243301bc52
 created: 2026-09-15
 updated: 2026-09-21
 ---
 
 # Phase 265 — Security
 
-Source-only mitigation audit against reviewed source `5d554920`. This verifies the
+Source-only mitigation audit against reviewed source `967742cb`. This verifies the
 22 declared threat-register entries, not empirical league completion. No Phase 265
 allocation, real run result, provider/model/human/external activity, or retained
 empirical result exists; those later run-dependent checks remain pending and are
 not represented as closed here.
 
 The original row-level line references below identify the initial `9394176c`
-audit, not shifted lines at the repaired tip. The two repaired rows and the
-repair addendum cite current `5d554920` source. Main reclassified the planned
-register at ASVS L1 after the independent deep review closed all eight supported
-findings. A subsequent execution-realism check reopened T-265-06 for unbounded
-in-memory trace retention; this medium register entry is a functional blocker
-for full-size execution despite remaining below the configured high security
-threshold. No risk was waived. The combined test gate is recorded separately
-in `265-VALIDATION.md` and does not prove full-size heap feasibility.
+audit; the earlier repaired rows/addendum cite `5d554920`, not shifted lines at
+the final tip. Main reconciled the planned register at ASVS L1 after independent
+deep review. T-265-06 was subsequently reopened for unbounded full-Match memory
+retention. Source fixes `0e4999d0` and `ea1b8a84`, and independent final review at
+`967742cb`, close that defect without a risk waiver. The memory amendment below
+is the current disposition. The complete post-repair gate is recorded separately
+in `265-VALIDATION.md`; neither synthetic tests nor source review are a measured
+full-league heap/OOM result.
 
 ## Trust Boundaries
 
@@ -71,13 +71,19 @@ in `265-VALIDATION.md` and does not prove full-size heap feasibility.
 *Status: open · closed · open — below high threshold (non-blocking).*  
 *Severity: critical > high > medium > low. Only OPEN entries at or above `block_on: high` contribute to `threats_open`.*
 
-**Current T-265-06 amendment:** the disk/chunk/emergency-reserve defects in its
-row are closed, but its full-scale mitigation is **OPEN** for the persistent
-complete-execution payloads and eager retained graph described in current
-`265-REVIEW.md` CR-01. A compact-receipt/bounded-reader repair and regression are
-required before live allocation. This explicit amendment supersedes the row's
-earlier closed disposition until that third same-plan repair is independently
-reviewed; it does not accept the risk or change its planned medium severity.
+**Current T-265-06 amendment — CLOSED at source level:** the live runner retains
+compact cell/matrix receipts and a scalar count. Retained graph reading validates
+descriptors, chunks, links/cycles and aggregate budgets in one scan, then decodes
+payloads on demand without a persistent payload cache. Response production keeps
+one primary full receipt and host-issued compact commitments; retained fingerprint
+verification similarly streams score artifacts into data-only compact commitments
+without granting issuance. Both paths preserve ordered fingerprint roots. The
+independent review caught and then verified the final retained-reader correction.
+Large synthetic payload, compact-retention, root-parity, forgery, duplicate,
+reordering and tamper regressions passed focused checks. This bounds payload
+residency structurally, not measured full-run RAM or guaranteed run completion;
+compact indices still scale with the allocated record/Match ceilings. No threshold,
+runtime limit, disk evidence, charge, policy or risk disposition was relaxed.
 
 ## Unregistered Flags
 
@@ -95,6 +101,7 @@ No accepted risks. No disposition in the Phase 265 planned register is `accept` 
 | 2026-09-15 | `9394176caed71cfef4f9ceb4a3a81456baf356c7` | 22 | 20 | 1 | 1 | main reconciliation with independent CR-06 |
 | 2026-09-21 | `5d55492009a6cd8fe031522fceb4543719edfc24` | 22 | 22 | 0 | 0 | main L1 register reclassification after independent deep review |
 | 2026-09-21 | `5d55492009a6cd8fe031522fceb4543719edfc24` | 22 | 21 | 0 | 1 | main + independent memory-scale data-flow check; T-265-06 reopened |
+| 2026-09-21 | `967742cb4c3b4b47a170a337735736243301bc52` | 22 | 22 | 0 | 0 | main reconciliation after independent 46-file final source review; bounded residency repair closed |
 
 ### Repair addendum
 
@@ -114,8 +121,9 @@ No accepted risks. No disposition in the Phase 265 planned register is `accept` 
 - T-265-19: the sixteen-row fixture index now requires AST-linked executable
   matcher assertions; comment/string/bare-expect/unrelated-test substitutes are
   rejected. This proves linkage, not empirical performance.
-- The clean independent 46-file review is `265-REVIEW.md`; both repair histories
-  are retained in `265-REVIEW-FIX.iter2.md` and `265-REVIEW-FIX.md`. No human,
+- The clean independent 46-file review is `265-REVIEW.md`; repair histories
+  are retained in `265-REVIEW-FIX.iter2.md` through `265-REVIEW-FIX.iter4.md`
+  and the final `265-REVIEW-FIX.md`. No human,
   external custody, accepted-risk, rules, threshold or resource waiver was used.
 
 ## Sign-Off
@@ -125,7 +133,7 @@ No accepted risks. No disposition in the Phase 265 planned register is `accept` 
 - [x] T-265-06 retention-reservation and composed-capacity repairs have focused regression evidence and independent review; no risk acceptance.
 - [x] Source-only audit is not empirical Phase 265 completion, allocation approval, production readiness, or milestone sign-off.
 
-**Security threshold:** no high-or-higher open register entry. **Full-size source
-readiness is blocked** by the T-265-06 memory amendment until repaired. Final
-source validation and the separate allocation/participant decision are distinct
-gates; no live work is authorized by this report.
+**Security threshold:** no open register entry; no accepted risk. Full-size
+payload accumulation is repaired and independently source-reviewed. Final source
+validation, actual retained-history compatibility and the separate allocation/
+participant decision are distinct gates; no live work is authorized by this report.

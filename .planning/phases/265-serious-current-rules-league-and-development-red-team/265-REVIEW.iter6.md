@@ -1,9 +1,9 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
-reviewed: 2026-09-21T23:53:08Z
+reviewed: 2026-09-21T23:40:32Z
 depth: deep
-reviewed_head: 967742cb4c3b4b47a170a337735736243301bc52
-reviewed_source: 967742cb4c3b4b47a170a337735736243301bc52
+reviewed_head: 67bcde10b7da758354d672ae8c547167914572d4
+reviewed_source: 67bcde10b7da758354d672ae8c547167914572d4
 diff_base: 98e4392e
 files_reviewed: 46
 files_reviewed_list:
@@ -54,34 +54,69 @@ files_reviewed_list:
   - scripts/v1-38-factory-execution-evidence.test.ts
   - scripts/v1-38-factory-execution-evidence.ts
 findings:
-  critical: 0
+  critical: 1
   warning: 0
   info: 0
-  total: 0
-status: clean
+  total: 1
+status: issues_found
 ---
 
 # Phase 265: Code Review Report
 
-**Reviewed:** 2026-09-21T23:53:08Z
+**Reviewed:** 2026-09-21T23:40:32Z
 **Depth:** deep
 **Files Reviewed:** 46
-**Status:** clean (source-only)
+**Status:** one BLOCKER remains
 
 ## Summary
 
-No supported BLOCKER, WARNING, or INFO finding remains at the stated HEAD. The
-new retained fingerprint reader repairs the one finding preserved in
-`265-REVIEW.iter6.md`: it authenticates each score supervision artifact in
-sequence, keeps one primary full receipt for legal-input/Chronicle roots, and
-retains only compact ordered execution commitments for the matchup root. The
-earlier eight-defect closure remains below. This is source-review closure, not
-a measured full-league heap/OOM result or an empirical Phase 265 outcome. No
-empirical allocation exists; the full 29-suite source gate remains main's task.
+The current fix at `0e4999d0` bounds live Match-payload retention and indexes the
+authenticated record graph without caching decoded values. One retained-reader
+path still reconstructs and simultaneously retains every full score Match
+execution for a response. This is a source-traced memory finding, not an
+observed Phase 265 heap/OOM measurement. The prior eight-defect closure is
+preserved below. No empirical allocation exists; source-gate results do not
+establish full-size memory feasibility.
+
+## Critical Issues
+
+### CR-01 — Retained fingerprint verification rematerializes all score Matches (BLOCKER)
+
+**File:** `packages/strategy-lab/src/factory/fingerprint.ts:488-506` (caller:
+`scripts/lib/v1-38-league-response-runtime.ts:313-325`)
+
+**Issue:** `verifyRetainedLeagueResponse` accumulates every score supervision
+artifact root, then invokes `verifyRetainedLeagueFactoryFingerprints`. Its
+`scoreSupervisionArtifactRoots.map(...)` eagerly reads each entire artifact,
+rebuilds full `execution` objects containing transitions, accounting, result
+state/events, and traces, and retains all of them in `receipts` until the final
+ordered matchup fingerprint is derived. The saved primary receipt is also used
+for legal-input and Chronicle fingerprints, but every *other* full execution
+needs only its compact execution commitment, receipt root, and matchup metadata.
+Thus retained verification reintroduces full response-payload residency after
+the live path removed it. For a 21-opponent, two-seed response schedule this is
+336 score Matches (`8 × 21 × 2`) in one array, before reader/graph working data;
+that count illustrates the configured schedule shape, not a measured heap size.
+
+**Fix:** Iterate authenticated score supervision artifacts one at a time. Keep
+the first full receipt only for its legal-input/Chronicle fingerprints; immediately
+derive and append a compact `{ supervisionReceiptRoot, matchup, execution:
+deriveFactoryExecutionCommitment(execution) }` from each verified receipt, then
+discard its full execution before reading the next. Derive the same ordered
+matchup root from those compact rows and retain exact root/binding/duplicate
+checks. Reopening must remain data-only (`issued: false`): do not add retained
+receipts to the live WeakSet or treat a serialized commitment as host-issued.
+Add a trusted large-synthetic retained-reader regression that checks bounded
+full-execution residency, exact existing fingerprint roots, and tamper rejection.
+
+The loop-level retained response verifier and the global replay each decode a
+response result transiently; the reported accumulation is specifically the
+`receipts` array above. This repair stays within the existing Phase 265 plan and
+requires no empirical allocation or new rules decision.
 
 ## Narrative Findings (AI reviewer)
 
-No BLOCKER, WARNING, or INFO finding is established by this re-review.
+No additional BLOCKER, WARNING, or INFO finding is established by this re-review.
 The earlier unsupported independent-round dereference allegation remains removed:
 TypeScript groups the whole development-target comparison, including
 `roundBlocks[0]`, under the `evaluationRole === "development_response"` short circuit.
@@ -96,20 +131,9 @@ then exposes indexed lazy values rather than a persistent decoded-value Map.
 Callers build compact cell/journal/matrix maps and retrieve response charges by
 parent-start index; failed-prefix and published-seed verification still traverse
 rooted records. Response production retains one full primary receipt and
-WeakSet-issued compact pairings. At `fingerprint.ts:488-515`, retained fingerprint
-verification now reads each authenticated score artifact transiently, rejecting
-duplicate receipt roots while appending only its compact execution commitment.
-The first full receipt remains for legal-input and Chronicle roots; ordered
-commitments derive the exact existing matchup root. The underlying artifact
-reader recomputes each receipt/execution/traces root and enforces the per-read
-bounds before returning records. Reopening still returns `issued: false` and
-never enters the live WeakSet. The enlarged test compares against host-issued
-compact root parity across 13 score artifacts, and rejects duplicate/reordered
-roots, forged candidate fingerprints, retained-to-live issuance, and artifact
-tampering. It is a meaningful synthetic identity/tamper regression, not a
-quantitative heap-bound measurement; bounded residency follows from the source
-loop's one-at-a-time ownership. The source trace does not claim that shallow
-graph metadata or matrix maps duplicate all payloads.
+WeakSet-issued compact pairings, with the same saved matchup root. The remaining
+reader defect is the eager full `receipts` array above; the source trace does not
+claim that the graph's shallow metadata or matrix maps duplicate all payloads.
 
 ### Closure map
 
@@ -126,9 +150,9 @@ graph metadata or matrix maps duplicate all payloads.
 
 The removed equality check on each selection record's auxiliary serialized `candidates` field does not weaken scoring or source admission: initial candidate records are compared with imported content, produced candidate admissions and closures are revalidated, and each retained selection/report is recomputed from authenticated final candidates, matrix, ledger, and projection. The test-only `beforeReportPublication` seam is nested under `LeagueFixtureSeams`; `runSeriousLeague` admits a fixture only for an `injected_fixture` allocation, and the CLI does not accept a fixture or provider input. The new path therefore does not authorize empirical injection.
 
-This review made no private-store read, Strategy/Match execution, author/model/provider call, teacher search, allocation, or authority mutation. It did not repeat the long connected tests or the full 29-suite gate. `empiricalRequirementsComplete: false` remains intentionally unchanged. CI `67bcde10` raises only the named source-gate timeout from 30 to 45 minutes; `967742cb` gives the larger fingerprint fixture a per-test 30-second bound.
+This review made no private-store read, Strategy/Match execution, author/model/provider call, teacher search, allocation, or authority mutation. It did not repeat the long connected tests or the full 29-suite gate. `empiricalRequirementsComplete: false` remains intentionally unchanged. CI `67bcde10` raises only the named source-gate timeout from 30 to 45 minutes.
 
 ---
 
-_Reviewed: 2026-09-21T23:53:08Z_
+_Reviewed: 2026-09-21T23:40:32Z_
 _Reviewer: gsd-code-reviewer; depth: deep; source-only._

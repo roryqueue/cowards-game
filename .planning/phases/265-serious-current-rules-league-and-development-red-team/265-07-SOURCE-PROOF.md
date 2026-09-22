@@ -2,22 +2,39 @@
 phase: 265
 plan: "07"
 task: 1
-status: same-plan-memory-scale-repair-required
-reviewed_source: 5d55492009a6cd8fe031522fceb4543719edfc24
+status: independently-reviewed-final-source-gate-running
+reviewed_source: 967742cb4c3b4b47a170a337735736243301bc52
 updated: 2026-09-21
 empirical_authority: false
 ---
 
 # Phase 265 Plan 07 Task 1 source-proof handoff
 
-Task 1 closed its original deep-review findings after two repair passes, but a
-subsequent independent memory-scale check found full Match payloads accumulating
-in execution and retained verification. A third same-plan repair is required;
-the unchanged-source baseline passed 29 suites / 267 tests. This is not a complete Plan 07 summary: Task 2
+Task 1's original findings and subsequent memory-scale defects are repaired and
+independently reviewed at `967742cb`; the final exact source gate is running.
+The earlier unchanged-source baseline passed 29 suites / 267 tests. This is not a complete Plan 07 summary: Task 2
 remains the main-owned human allocation/participant decision, and Task 3 remains
 the conditional, main-owned real execution and retained verification branch.
 
-## Current repair closeout — 2026-09-21
+## Current bounded-memory closeout — 2026-09-21
+
+Source `0e4999d0` replaces persistent full Match payloads with compact receipts,
+on-demand authenticated graph reading and compact host-issued response
+commitments. Independent review caught a remaining eager retained-fingerprint
+array; `ea1b8a84` streams that path while preserving exact ordered roots and
+`issued: false`. `967742cb` adds the larger synthetic test's explicit timeout.
+The independent final 46-file review is clean. Focused graph/connected/partial
+failure/response/fingerprint tests and types passed; the whole 29-suite gate is
+running at that exact source. These are structural scale checks, not a measured
+full-league memory/OOM result. No empirical allocation or result exists.
+
+CI now allows 45 minutes for this source-only gate, after the measured 27.54-minute
+baseline. This changes no empirical, guest, Match, authoring or runtime bound.
+Final source validation and the one actual read-only Phase 264 compatibility
+check remain before the consolidated Task 2 decision. Earlier repair history
+below is retained as history, not the current finding state.
+
+## Earlier repair closeout — 2026-09-21
 
 **Captured baseline:** the exact combined command at `5d554920` exited zero:
 29/29 suites, 267/267 tests in1652.36seconds, lab build, strict affected script
@@ -26,7 +43,7 @@ zero strict/ownership offenses and19 pre-existing report-only entries. No source
 or HEAD changed while it ran. This is the repaired functional baseline, not a
 memory-scale pass or a result for future repaired bytes.
 
-**Latest amendment:** current `265-REVIEW.md` CR-01 documents the confirmed
+**Then-current amendment:** `265-REVIEW.iter5.md` CR-01 documents the confirmed
 memory-scale gap, its compact-receipt/bounded-reader repair and synthetic test
 seams. No full-size OOM was run or claimed. The clean review described next is
 preserved unchanged as `265-REVIEW.iter4.md`; it predates this additional finding.

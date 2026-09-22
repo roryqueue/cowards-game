@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 original eight findings closed; independent execution-realism check requires bounded-memory same-plan repair before allocation
+stopped_at: Phase 265 final source gate found one failed-probe accounting regression; same-plan repair required before allocation
 last_updated: "2026-09-21T22:58:35Z"
 last_activity: 2026-09-21
-last_activity_desc: Reviewed baseline267tests/29suites passed; third same-plan fix targets full-trace memory accumulation in execution and retained verification
+last_activity_desc: Gate268of269passed; historicalcompatibility affirmed with unchanged1875files; fix scalar count before success-only probe normalization
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,33 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current verification repair — 2026-09-21:** Full gate at `967742cb` finished
+exit1:268/269tests and28/29suites passed in1682.17seconds. The single failing
+connected case is the failed probe after accepted population growth: retained
+head counted68 rather than69cell results. The compact-result change computes
+success-only normalized gameplay before incrementing the count. Fix the order
+after durable result retention, keep process-invalid failures charged, rerun
+the exact failing case, independent source recheck, then final source gate.
+Do not weaken the assertion or claim the remaining chained types/boundaries ran.
+Main's actual Phase264 compatibility check DID pass (`affirmed`, `issued:false`)
+with identical before/after1875files/164632160bytes. Exact roots in
+`265-HISTORICAL-COMPATIBILITY.md`. Allocation recommendation is unapproved.
+No human input, new plan, authority or empirical retry is needed for this fix.
+
+**Current final source gate — 2026-09-21:** All source findings, including the
+full-run memory defect and its retained-fingerprint follow-up, are repaired
+through `967742cb4c3b4b47a170a337735736243301bc52`. Independent 46-file review is
+clean. Main's exact 29-suite gate is running in resumable terminal session22815;
+do not launch a duplicate, change source/HEAD or infer success without captured
+completion. Focused repairs pass, but the267-test/27.54-minute full pass at
+`5d554920` remains a baseline only. After this gate, run the one main-owned
+data-only Phase264 historical assessment compatibility check, reconcile private
+UAT and independent goal verification, commit/push completed source work, then
+present only the consolidated Task2 allocation/participant decision. No Phase265
+empirical allocation exists. Historical facts/waivers/budgets do not carry over.
+The following memory/repair snapshots are historical, not instructions to repeat
+completed work. No new phase, numbered plan or literal checkpoint is required.
 
 **Current memory-scale repair — 2026-09-21:** The original six defects and two
 partial-publication failure cases are fixed through `5d554920`; independent

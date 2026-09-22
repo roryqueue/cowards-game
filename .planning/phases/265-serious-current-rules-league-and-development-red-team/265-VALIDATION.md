@@ -6,8 +6,8 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-09-21
-source_reviewed: 5d55492009a6cd8fe031522fceb4543719edfc24
-source_gate: passed-before-memory-repair
+source_reviewed: 967742cb4c3b4b47a170a337735736243301bc52
+source_gate: failed-one-probe-accounting-regression
 empirical_validation: pending-allocation-and-real-run
 ---
 
@@ -49,7 +49,8 @@ conditional empirical task. Every source task names executable automated checks;
 none relies only on a fixture label or summary assertion. The exact baseline gate
 below passed at reviewed source `5d554920`: 29 suites, 267 tests, 1652.36 seconds.
 Source and HEAD stayed unchanged; only planning documents were edited. The
-pending memory repair requires its own regression and post-repair gate.
+memory repair has focused regression evidence and clean independent review at
+`967742cb`; its exact post-repair gate is running with source and HEAD unchanged.
 
 | Task | Wave | Requirements | Executable verification | Current status |
 |---|---:|---|---|---|
@@ -74,13 +75,16 @@ automatic feedback now comes from complete connected failure/recovery scenarios;
 they retain their full coverage rather than replacing real graph joins with
 helper-only assertions. No three consecutive tasks lack automated verification.
 
-The two original repair passes have focused test seams. A subsequent independent
-data-flow check found that their small injected traces do not cover full-run
-memory residency: execution and retained verification keep complete Match
-payloads. Current `265-REVIEW.md` CR-01 requires compact receipts and bounded
-on-demand verification with large synthetic payload regressions before a final
-source gate. Overall phase validation also remains partial until the separate
-real evidence exists; neither review nor test-index linkage clears that requirement.
+The original repair passes have focused test seams. A subsequent independent
+data-flow check exposed full-run payload accumulation. Source `0e4999d0` fixes
+live receipt retention and graph/response reading; `ea1b8a84` also streams the
+retained fingerprint path that independent review caught. The final review at
+`967742cb` is clean. New large synthetic graph, compact receipt, exact fingerprint,
+forgery and tamper tests complement source-traced bounded residency; they are not
+a measured full-league heap test. The final fingerprint fixture has its own
+30-second timeout and passed the normal named command without a global override.
+Overall phase validation remains partial until separate real evidence exists;
+neither source review nor test-index linkage clears that requirement.
 
 ## Exact Combined Source Gate
 
@@ -126,6 +130,19 @@ pnpm exec tsx scripts/check-service-boundary-imports.ts
 ```
 
 ## Manual-Only Verification
+
+### Captured post-memory gate — 2026-09-21
+
+At `967742cb4c3b4b47a170a337735736243301bc52`, the exact command completed
+**28/29 suites, 268/269 tests passed; exit 1 in 1682.17 seconds**. The type and
+boundary commands after Vitest did not run because the shell used `set -e`.
+The failed connected case was `failure after accepted population growth: true`:
+head `executedCells` reported68 rather than69. Source trace shows probe
+`normalizedGameplay(actual)` rejecting a failure before the new scalar count
+increments, although its `cell-result` is already retained. This is a same-plan
+verification regression to repair; do not lower the expected count or discard
+the failed Match. The actual historical check separately passed unchanged
+store bytes (see `265-HISTORICAL-COMPATIBILITY.md`).
 
 ### Captured repaired baseline gate — 2026-09-21
 
