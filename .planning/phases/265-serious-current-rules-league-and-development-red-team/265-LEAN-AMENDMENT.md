@@ -99,21 +99,42 @@ approved full-growth representative path, not a worst-case capacity guarantee;
 the immutable receipt must state its nonempty assumptions explicitly. Data-only
 technical preparation must substantiate the supplied measurements and witnesses.
 
-The receipt expires at an explicitly supplied time no more than five minutes
-after measurement. Admission checks current source, time, filesystem device,
-free bytes, and available memory against explicit positive process headroom.
-Both already-existing fresh output directories must be on the same filesystem,
-so free space is not double-counted. Admission is repeated before the durable
-run reservation, and host free-space/memory stops remain active before charged
-dispatch and runtime invocation. Retained verification checks the receipt
-against its recorded start observation, not today's time, and never dispatches.
+The data-only `LeagueCapacityPlanInput` contains exactly `allocationRoot`,
+`amendmentRoot`, `implementationRoot`, `sourceRoot`, `historicalAssessmentRoot`,
+`processHeadroomBytes`, `scale`, `costs`, and `assumptions`. Its six inline cost
+measurements retain their witness/source roots. It contains no receipt root,
+schema version, host device/free-memory/free-space values, or timestamps; old
+receipt documents are rejected as plan inputs, never relabeled as observations.
+
+The one-process run first checks allocation/source, the complete retained
+historical reader/imports, candidate closures, authoring packets, output-directory
+bindings and the empty run journal. Only then does it observe actual host time,
+filesystem device/free bytes and available memory, construct a receipt expiring
+300,000 ms after that observation, admit it, and durably reserve the allocation.
+Candidates remain in local memory only; there is no persisted verification or
+provider cache and no second historical reopen inside receipt freshness. Both
+already-existing fresh output directories must be on the same filesystem, so
+free space is not double-counted. Admission is repeated before reservation;
+`run-start` retains the exact receipt and observation. The exclusive reservation
+key depends only on the allocation, so even a pre-cell crash cannot be retried
+with fresh host measurements. Live free-space/memory stops remain active before
+charged dispatch and invocation. Retained verification checks the saved start
+observation, not today's time, and never dispatches.
 
 `prepare-prospective --allocation <complete-prospective-input.json>
 --factory-repository <historical-factory-directory>` is the exact new preparation
 branch. `preflight --allocation <rooted-prospective-allocation.json>
 --allocation-root <root> --capacity-input <data-only-measurements.json>
---factory-repository <historical-factory-directory>` returns the rooted receipt.
-Prospective `run` additionally requires `--capacity-receipt <rooted-receipt.json>`.
+--factory-repository <historical-factory-directory>` performs the same static
+checks (including response packets in the allocation's output directory), then
+observes the host and returns a rooted receipt without reservation. Task 3 uses
+prospective `run --capacity-input <data-only-measurements.json>` to perform
+static verification, fresh measurement, receipt admission and reservation in
+one process. It does not require a separately emitted receipt to survive another
+complete historical reopen. The optional alternative
+`--capacity-receipt <rooted-receipt.json>` is mutually exclusive and remains
+strictly checked before and after static validation; it never auto-refreshes
+old authority and may expire during the retained reader.
 These commands are interfaces only here; no empirical preparation, preflight,
 receipt, or dispatch has been performed by the source-only implementation task.
 
@@ -123,7 +144,9 @@ pending; this observation is neither a passing receipt nor a refusal. The stated
 study bounds and required preflight margins remain unchanged.
 
 `prepare`, `run`, and `verify-retained` keep their legacy V1 behavior.
-Prospective `run` additionally requires the valid receipt. `verify-retained`
+Prospective `run` additionally requires the valid receipt, either freshly
+constructed after static checks from its data-only plan or explicitly supplied
+and still valid. `verify-retained`
 remains read-only. No retry, cap increase, evidence deletion, gate reduction,
 Phase 264 waiver reuse, engine/rule change, formation materialization, sealed
 holdout access, public/counting/production operation, or silent model
@@ -137,9 +160,13 @@ substitution is permitted.
    before durable or runtime effects.
 3. Tests prove every listed numeric/channel/retry/runtime limit and the two
    ordinary-pool plus filesystem margins are required.
-4. Tests prove absent or mismatched receipt rejects before provider issuance and
-   retained verification does not dispatch.
+4. Tests prove absent or mismatched capacity input/receipt rejects before
+   provider issuance, static work longer than five minutes precedes fresh host
+   observation, old receipts are not refreshed, reservation remains once-only,
+   live capacity drops stop issuance, and retained verification does not dispatch.
 
-Task 3 remains unrun until these checks, independent source review, the complete
-validation gate, and an actual successful capacity receipt exist. A failed
-condition leaves Phase 265 incomplete; it does not create a replacement scope.
+Task 3's one-process command remains unavailable until these source checks,
+independent review and the complete validation gate pass. Within that command,
+dispatch remains unavailable until static validation finishes and the actual
+fresh host receipt passes. A failed condition leaves Phase 265 incomplete;
+it does not create a replacement scope.

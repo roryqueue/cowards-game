@@ -191,13 +191,31 @@ export interface LeagueCapacityReceiptInput {
   readonly assumptions: readonly string[]
 }
 export type LeagueCapacityReceipt = Readonly<LeagueCapacityReceiptInput & { schemaVersion: "league-capacity-receipt-v1"; root: LabRoot }>
+/** Data-only estimates, never host measurements or dispatch authority. */
+export type LeagueCapacityPlanInput = Omit<LeagueCapacityReceiptInput, "measuredAtMilliseconds" | "expiresAtMilliseconds" | "filesystemDevice" | "freeFilesystemBytes" | "availableMemoryBytes">
 export interface LeagueCapacityContext { readonly nowMilliseconds: number; readonly implementationRoot: LabRoot; readonly sourceRoot: LabRoot; readonly filesystemDevice: string; readonly freeFilesystemBytes: number; readonly availableMemoryBytes: number }
 const capacityKeys = ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot", "measuredAtMilliseconds", "expiresAtMilliseconds", "filesystemDevice", "freeFilesystemBytes", "availableMemoryBytes", "processHeadroomBytes", "scale", "costs", "assumptions"] as const
+const capacityPlanKeys = ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot", "processHeadroomBytes", "scale", "costs", "assumptions"] as const
+export const admitLeagueCapacityPlanInput = (value: unknown, allocationValue: ProspectiveLeagueExecutionAllocation): LeagueCapacityPlanInput => {
+  const allocation = admitProspectiveLeagueExecutionAllocation(allocationValue), amendment = allocation.amendment
+  boundedDocument(value, capacityPlanKeys)
+  const input = value as LeagueCapacityPlanInput
+  if (input.allocationRoot !== allocation.root || input.amendmentRoot !== amendment.root || input.implementationRoot !== allocation.implementationRoot || input.sourceRoot !== amendment.sourceRoot || input.historicalAssessmentRoot !== amendment.historicalAssessment.assessmentRoot) fail("CAPACITY_BINDING")
+  if (!int(input.processHeadroomBytes) || input.processHeadroomBytes < 1) fail("CAPACITY_OBSERVATION")
+  validateCapacityCosts(input, allocation)
+  return freezeLabValue(input)
+}
 export const createLeagueCapacityReceipt = (input: LeagueCapacityReceiptInput, value: ProspectiveLeagueExecutionAllocation): LeagueCapacityReceipt => {
   const allocation = admitProspectiveLeagueExecutionAllocation(value), amendment = allocation.amendment
   boundedDocument(input, capacityKeys)
-  if (input.allocationRoot !== allocation.root || input.amendmentRoot !== amendment.root || input.implementationRoot !== allocation.implementationRoot || input.sourceRoot !== amendment.sourceRoot || input.historicalAssessmentRoot !== amendment.historicalAssessment.assessmentRoot) fail("CAPACITY_BINDING")
+  const { measuredAtMilliseconds: _measured, expiresAtMilliseconds: _expires, filesystemDevice: _device, freeFilesystemBytes: _free, availableMemoryBytes: _memory, ...plan } = input
+  admitLeagueCapacityPlanInput(plan, allocation)
   if (![input.measuredAtMilliseconds, input.expiresAtMilliseconds, input.freeFilesystemBytes, input.availableMemoryBytes, input.processHeadroomBytes].every(int) || input.processHeadroomBytes < 1 || input.processHeadroomBytes > input.availableMemoryBytes || input.expiresAtMilliseconds <= input.measuredAtMilliseconds || input.expiresAtMilliseconds - input.measuredAtMilliseconds > amendment.policy.capacity.maximumReceiptAgeMilliseconds || typeof input.filesystemDevice !== "string" || !input.filesystemDevice.length || input.filesystemDevice.length > 256) fail("CAPACITY_OBSERVATION")
+  if (input.freeFilesystemBytes - input.costs.reduce((sum, row) => sum + row.projectedBytes, 0) - allocation.operations.terminalReserveBytes < amendment.policy.capacity.freeFilesystemMarginBytes) fail("CAPACITY_MARGIN")
+  const body = { schemaVersion: "league-capacity-receipt-v1" as const, ...input }
+  return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
+}
+function validateCapacityCosts(input: LeagueCapacityPlanInput, allocation: ProspectiveLeagueExecutionAllocation): void {
   if (!equal(input.scale, { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 }) || !Array.isArray(input.assumptions) || !input.assumptions.length || input.assumptions.some((row) => typeof row !== "string" || !row.trim().length || row.length > 4096)) fail("CAPACITY_SCALE")
   if (!Array.isArray(input.costs) || input.costs.length !== 6 || input.costs.some((row, index) => !exact(row, ["category", "projectedBytes", "projectedRecords", "measurementRoot", "measurement"]) || row.category !== LEAGUE_CAPACITY_CATEGORIES[index] || !int(row.projectedBytes) || row.projectedBytes < 1 || !int(row.projectedRecords) || (row.category === "filesystem" ? row.projectedRecords !== 0 : row.projectedRecords < 1) || !isRoot(row.measurementRoot))) fail("CAPACITY_CATEGORIES")
   for (const [index, row] of input.costs.entries()) {
@@ -212,10 +230,8 @@ export const createLeagueCapacityReceipt = (input: LeagueCapacityReceiptInput, v
   // Filesystem block slack consumes disk, not logical artifact bytes or records.
   const logicalCosts = input.costs.filter((row) => row.category !== "filesystem")
   const logicalBytes = logicalCosts.reduce((sum, row) => sum + row.projectedBytes, 0), records = logicalCosts.reduce((sum, row) => sum + row.projectedRecords, 0)
-  const physicalBytes = input.costs.reduce((sum, row) => sum + row.projectedBytes, 0), limits = allocation.operations, margins = amendment.policy.capacity
-  if (!int(logicalBytes) || !int(records) || !int(physicalBytes) || logicalBytes + margins.ordinaryMarginBytes > limits.maxArtifactBytes - limits.terminalReserveBytes || records + margins.ordinaryMarginRecords > limits.maxArtifactRecords - limits.terminalReserveRecords || input.freeFilesystemBytes - physicalBytes - limits.terminalReserveBytes < margins.freeFilesystemMarginBytes) fail("CAPACITY_MARGIN")
-  const body = { schemaVersion: "league-capacity-receipt-v1" as const, ...input }
-  return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
+  const physicalBytes = input.costs.reduce((sum, row) => sum + row.projectedBytes, 0), limits = allocation.operations, margins = allocation.amendment.policy.capacity
+  if (!int(logicalBytes) || !int(records) || !int(physicalBytes) || logicalBytes + margins.ordinaryMarginBytes > limits.maxArtifactBytes - limits.terminalReserveBytes || records + margins.ordinaryMarginRecords > limits.maxArtifactRecords - limits.terminalReserveRecords) fail("CAPACITY_MARGIN")
 }
 export const admitLeagueCapacityReceipt = (value: unknown, allocation: ProspectiveLeagueExecutionAllocation, current: LeagueCapacityContext): LeagueCapacityReceipt => {
   boundedDocument(value, ["schemaVersion", "root", ...capacityKeys])

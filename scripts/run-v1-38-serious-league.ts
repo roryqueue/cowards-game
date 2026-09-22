@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceiptInput, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
+import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
 import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository } from "../packages/strategy-lab/src/league/repository.js"
 import { enumerateLeagueCells, admitCompletePayoffSnapshot, assertLeaguePayoffCapacity, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
@@ -256,14 +256,20 @@ const capacityHostObservation = (allocation: ProspectiveLeagueExecutionAllocatio
   if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY_FILESYSTEM_RANGE")
   return { nowMilliseconds: Date.now(), filesystemDevice: stats[0]!.device, freeFilesystemBytes: Number(free), availableMemoryBytes: freemem() }
 }
-export const preflightProspectiveSeriousLeague = (input: { allocation: unknown; capacity: unknown; factoryRepository: FactoryRepository }) => {
+export const preflightProspectiveSeriousLeague = (input: { allocation: unknown; capacity: unknown; factoryRepository: FactoryRepository; fixture?: LeagueFixtureSeams }) => {
   const allocation = admitLeagueExecutionAllocation(input.allocation)
-  if (allocation.schemaVersion !== "league-prospective-execution-allocation-v1" || allocation.evidenceClass !== "empirical") return fail("CAPACITY_AUTHORITY")
-  const source = leagueCurrentSourceIdentity()
-  if (source.implementationRoot !== allocation.implementationRoot || source.sourceRoot !== allocation.amendment.sourceRoot) return fail("STALE_IMPLEMENTATION")
-  readLeagueInitialCandidates(input.factoryRepository, allocation)
-  const receipt = createLeagueCapacityReceipt(input.capacity as LeagueCapacityReceiptInput, allocation)
-  return admitLeagueCapacityReceipt(receipt, allocation, { ...source, ...capacityHostObservation(allocation) })
+  if (allocation.schemaVersion !== "league-prospective-execution-allocation-v1") return fail("CAPACITY_AUTHORITY")
+  const request: LeagueRunInput = { allocation, allocationRoot: allocation.root, capacityInput: input.capacity, factoryRepository: input.factoryRepository, repository: createLeagueRepository(allocation.outputDirectories.league), responseFactoryRepository: createFactoryRepository(allocation.outputDirectories.responseFactory!), ...(input.fixture ? { fixture: input.fixture } : {}) }
+  prepareLeagueRunInputs(request)
+  return measureProspectiveCapacity(request, allocation).receipt
+}
+const observeProspectiveCapacity = (input: LeagueRunInput, allocation: ProspectiveLeagueExecutionAllocation) => input.fixture?.observeCapacity?.() ?? input.fixture?.capacityContext ?? capacityHostObservation(allocation)
+/** Called only after complete static verification in this same process. Never
+ * refresh a supplied receipt or accept its old host values as new observations. */
+const measureProspectiveCapacity = (input: LeagueRunInput, allocation: ProspectiveLeagueExecutionAllocation) => {
+  const plan = admitLeagueCapacityPlanInput(input.capacityInput, allocation), observation = { ...leagueCurrentSourceIdentity(), ...observeProspectiveCapacity(input, allocation) }
+  const receipt = createLeagueCapacityReceipt({ ...plan, measuredAtMilliseconds: observation.nowMilliseconds, expiresAtMilliseconds: observation.nowMilliseconds + allocation.amendment.policy.capacity.maximumReceiptAgeMilliseconds, filesystemDevice: observation.filesystemDevice, freeFilesystemBytes: observation.freeFilesystemBytes, availableMemoryBytes: observation.availableMemoryBytes }, allocation)
+  return { receipt: admitLeagueCapacityReceipt(receipt, allocation, observation), observation }
 }
 const prospectiveRunCapacity = (input: LeagueRunInput, allocation: ProspectiveLeagueExecutionAllocation) => {
   if (input.fixture && allocation.evidenceClass !== "injected_fixture" || !input.fixture && allocation.evidenceClass !== "empirical") return fail("PROSPECTIVE_FIXTURE_AUTHORITY")
@@ -274,7 +280,7 @@ const prospectiveRunCapacity = (input: LeagueRunInput, allocation: ProspectiveLe
   const source = leagueCurrentSourceIdentity()
   const declared = { ...source, nowMilliseconds: input.fixture?.capacityContext?.nowMilliseconds ?? Date.now(), filesystemDevice: receipt.filesystemDevice, freeFilesystemBytes: receipt.freeFilesystemBytes, availableMemoryBytes: receipt.availableMemoryBytes }
   admitLeagueCapacityReceipt(receipt, allocation, declared)
-  const observation = input.fixture?.capacityContext ?? { ...source, ...capacityHostObservation(allocation) }
+  const observation = { ...source, ...observeProspectiveCapacity(input, allocation) }
   return { receipt: admitLeagueCapacityReceipt(receipt, allocation, observation), observation }
 }
 
@@ -283,8 +289,8 @@ export const prepareSeriousLeague = (input: unknown) => {
   if (allocation.implementationRoot !== factoryAssessmentImplementationRoot()) return fail("STALE_IMPLEMENTATION")
   return allocation
 }
-export interface LeagueFixtureSeams { readonly candidates: readonly LeagueCandidateInput[]; readonly host: FactorySupervisedRuntimeHost; readonly run: typeof runCanonicalLabMatch; readonly produce?: typeof produceLeagueResponse; readonly beforeReportPublication?: (seed: string, budget: LeagueRetentionBudget) => void; readonly capacityContext?: LeagueCapacityContext }
-export interface LeagueRunInput { readonly allocation: unknown; readonly allocationRoot: LabRoot; readonly repository: LeagueRepository; readonly factoryRepository: FactoryRepository; readonly responseFactoryRepository: FactoryRepository | null; readonly fixture?: LeagueFixtureSeams; readonly capacityReceipt?: unknown }
+export interface LeagueFixtureSeams { readonly candidates: readonly LeagueCandidateInput[]; readonly readCandidates?: () => readonly LeagueCandidateInput[]; readonly host: FactorySupervisedRuntimeHost; readonly run: typeof runCanonicalLabMatch; readonly produce?: typeof produceLeagueResponse; readonly beforeReportPublication?: (seed: string, budget: LeagueRetentionBudget) => void; readonly capacityContext?: LeagueCapacityContext; readonly observeCapacity?: () => LeagueCapacityContext }
+export interface LeagueRunInput { readonly allocation: unknown; readonly allocationRoot: LabRoot; readonly repository: LeagueRepository; readonly factoryRepository: FactoryRepository; readonly responseFactoryRepository: FactoryRepository | null; readonly fixture?: LeagueFixtureSeams; readonly capacityReceipt?: unknown; readonly capacityInput?: unknown }
 type MatchInput = Parameters<typeof runCanonicalLabMatch>[0]["match"]
 const normalizedGameplay = (execution: LabMatchExecution): unknown => {
   if (execution.kind !== "completed") return fail("PROCESS_INVALID")
@@ -536,15 +542,20 @@ const reportProjection = (matrix: CompleteMatrix, candidates: readonly LeagueCan
   population: { root: matrix.population.root, candidates: candidates.map((candidate) => candidate.admission.root), evidenceClass: allocation.evidenceClass }, conditions: matrix.matrix.cells.map((row) => row.cell.conditionRoot), semanticArenas: [...new Set(matrix.matrix.cells.map((row) => row.cell.semanticGeometryHash))], oracleFamilies: [...new Set(candidates.map((candidate) => candidate.admission.candidate.proposal.oracleFamily))], policyRoots: [allocation.studyPolicyRoot, allocation.measurementPolicyRoot], tupleRoot: allocation.tupleRoot, runtimeRoot: allocation.runtimeRoot, allocationLedger: closed.capacity, iterationCurves: blocks.map((block) => ({ round: block.round.roundOrdinal, population: block.candidateRoots.length, snapshot: block.matrix.admitted.snapshot.root })), payoffMatrix: [matrix.recordRoot], distributions: matrix.solver.weights, bestResponseGraph: reentries.map((row) => ({ round: row.roundRoot, candidate: row.candidateAdmissionRoot, disposition: row.disposition })), pureWorstCases: selection.evidence.worstCases, responseGaps: selection.evidence.responseRows, attempts: ledger.terminals.map((terminal) => ({ root: terminal.root, disposition: terminal.disposition, charge: terminal.charge })),
 })
 
-/** Complete source composition. The only execution seams are explicitly marked
- * injected fixtures; the command-line path never accepts a runtime provider. */
-export const runSeriousLeague = async (input: LeagueRunInput) => {
+/** Static authority stays local to this call. No candidate/verification cache
+ * is serialized or accepted by the empirical command-line path. */
+const prepareLeagueRunInputs = (input: LeagueRunInput) => {
   const allocation = admitLeagueExecutionAllocation(input.allocation)
   if (allocation.root !== input.allocationRoot || allocation.implementationRoot !== factoryAssessmentImplementationRoot() || input.fixture && allocation.evidenceClass !== "injected_fixture" || !input.fixture && allocation.evidenceClass !== "empirical") return fail("RUN_AUTHORITY")
-  const capacity = allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? prospectiveRunCapacity(input, allocation) : undefined
+  if (allocation.schemaVersion === "league-prospective-execution-allocation-v1") {
+    if (input.capacityInput !== undefined && input.capacityReceipt !== undefined) return fail("CAPACITY_INPUT_EXCLUSIVE")
+    if (allocation.amendment.sourceRoot !== leagueCurrentSourceIdentity().sourceRoot) return fail("STALE_IMPLEMENTATION")
+    if (input.capacityInput !== undefined) admitLeagueCapacityPlanInput(input.capacityInput, allocation)
+    else prospectiveRunCapacity(input, allocation)
+  }
   if (allocation.outputDirectories.league !== input.repository.directory || allocation.outputDirectories.responseFactory !== (input.responseFactoryRepository?.directory ?? null)) return fail("OUTPUT_BINDING")
   assertLeaguePayoffCapacity(allocation.operations.maxPopulation, allocation.operations.maxArtifactBytes)
-  let candidates = [...(input.fixture?.candidates ?? readLeagueInitialCandidates(input.factoryRepository, allocation))]
+  const candidates = [...(input.fixture?.readCandidates?.() ?? input.fixture?.candidates ?? readLeagueInitialCandidates(input.factoryRepository, allocation))]
   if (allocation.schemaVersion === "league-prospective-execution-allocation-v1") validateProspectiveLeagueInitialCandidates(allocation, candidates)
   if (!same(candidates.map((candidate) => candidate.publicationRoot).sort(), allocation.initialCandidatePublicationRoots) || new Set(candidates.map((candidate) => candidate.admission.candidate.root)).size !== candidates.length) return fail("INITIAL_POPULATION")
   for (const candidate of candidates) { LeagueCandidateAdmissionSchema.parse(candidate.admission); if (readCandidateClosure(candidate.closure).candidate.root !== candidate.admission.candidate.root) return fail("INITIAL_CLOSURE") }
@@ -552,14 +563,21 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
   if (jobs.length && (!input.responseFactoryRepository || input.responseFactoryRepository.directory === input.factoryRepository.directory || candidates.some((candidate) => candidate.factoryRepository.directory === input.responseFactoryRepository!.directory))) return fail("SEPARATE_RESPONSE_REPOSITORY")
   for (const job of jobs) { preflightLeagueAuthoring({ allocation, jobId: job.id, repository: input.responseFactoryRepository! }); if (job.operation === "produce" && job.reservation.matches < allocation.seedBlocks.length * allocation.operations.maxPopulation * 24) return fail("RESPONSE_MATCH_COVERAGE") }
   if (reopenLeagueEvidence(input.repository, { maxBytes: allocation.operations.maxArtifactBytes, maxRecords: allocation.operations.maxArtifactRecords }).records.length) return fail("NONEMPTY_RUN_REPOSITORY")
-  if (allocation.schemaVersion === "league-prospective-execution-allocation-v1") prospectiveRunCapacity(input, allocation)
+  return { allocation, candidates, jobs }
+}
+/** Complete source composition. The only execution seams are explicitly marked
+ * injected fixtures; the command-line path never accepts a runtime provider. */
+export const runSeriousLeague = async (input: LeagueRunInput) => {
+  const prepared = prepareLeagueRunInputs(input), { allocation, jobs } = prepared
+  let candidates = prepared.candidates
+  const capacity = allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? input.capacityInput !== undefined ? measureProspectiveCapacity(input, allocation) : prospectiveRunCapacity(input, allocation) : undefined
   const capacityGuard = allocation.schemaVersion === "league-prospective-execution-allocation-v1" && capacity ? () => {
-    const current = input.fixture?.capacityContext ?? capacityHostObservation(allocation)
+    const current = observeProspectiveCapacity(input, allocation)
     if (current.filesystemDevice !== capacity.receipt.filesystemDevice || current.freeFilesystemBytes < allocation.operations.terminalReserveBytes + allocation.amendment.policy.capacity.freeFilesystemMarginBytes || current.availableMemoryBytes < capacity.receipt.processHeadroomBytes) return fail("CAPACITY_DISPATCH_STOP")
   } : undefined
   capacityGuard?.()
   const budget = new LeagueRetentionBudget(allocation, capacityGuard)
-  input = { ...input, repository: { ...input.repository, beforePublication: budget.beforePublication }, responseFactoryRepository: input.responseFactoryRepository ? { ...input.responseFactoryRepository, beforePublication: budget.beforePublication } : null }
+  input = { ...input, ...(capacity ? { capacityInput: undefined, capacityReceipt: capacity.receipt } : {}), repository: { ...input.repository, beforePublication: budget.beforePublication }, responseFactoryRepository: input.responseFactoryRepository ? { ...input.responseFactoryRepository, beforePublication: budget.beforePublication } : null }
   const session = new LeagueConnectedSession(input, allocation, budget)
   const markerRoot = reserveRun(input.repository, allocation, capacity?.receipt), roots: LabRoot[] = [], blocks: RoundBlock[] = [], reentries: LeagueResponseRow[] = [], production: Array<Awaited<ReturnType<typeof produceLeagueResponse>>> = [], requiredTargets: Array<{ roundRoot: LabRoot; candidateRoot: LabRoot }> = []
   roots.push(session.graph.append("run-start", { allocation, markerRoot, candidates: candidates.map(candidateRecord), factoryDirectory: input.factoryRepository.directory, responseFactoryDirectory: input.responseFactoryRepository?.directory ?? null, ...(capacity ? { capacityReceipt: capacity.receipt, capacityAtStart: capacity.observation } : {}) }))
@@ -1049,18 +1067,21 @@ export const seriousLeagueHelp = `Usage:
   run-v1-38-serious-league prepare --allocation <complete-canonical-input.json>
   run-v1-38-serious-league prepare-prospective --allocation <complete-prospective-input.json> --factory-repository <historical-factory-directory>
   run-v1-38-serious-league preflight --allocation <rooted-prospective-allocation.json> --allocation-root <sha256:...> --capacity-input <data-only-measurements.json> --factory-repository <historical-factory-directory>
-  run-v1-38-serious-league run --allocation <rooted-canonical-allocation.json> --allocation-root <sha256:...> --repository <league-directory> --factory-repository <factory-directory> [--response-factory-repository <factory-directory>] [--capacity-receipt <rooted-receipt.json>]
+  run-v1-38-serious-league run --allocation <rooted-canonical-allocation.json> --allocation-root <sha256:...> --repository <league-directory> --factory-repository <factory-directory> [--response-factory-repository <factory-directory>] [--capacity-input <data-only-measurements.json> | --capacity-receipt <rooted-receipt.json>]
   run-v1-38-serious-league verify-retained --allocation <rooted-canonical-allocation.json> --allocation-root <sha256:...> --repository <league-directory> --factory-repository <factory-directory> [--response-factory-repository <factory-directory>] --head-root <sha256:...>
 Private current-rules league only. No allocation, participant, provider, or resource defaults.
 prepare prints the immutable allocation but never dispatches. run accepts empirical allocations only.
 prepare-prospective alone creates the distinct prospective allocation after data-only S01/S03/S05 verification.
-preflight is data-only; prospective run requires its fresh matching capacity receipt. All output directories must already exist. No command creates a default allocation or raises a bound.
+preflight is data-only: all static checks precede a fresh host observation and receipt. It does not reserve a run.
+prospective run --capacity-input performs static verification, fresh host measurement, receipt admission and once-only reservation in one process. The data-only input contains no host observations or timestamps.
+--capacity-receipt is mutually exclusive and strictly admitted before and after static checks; old receipt authority is never refreshed. All output directories must already exist. No command creates a default allocation or raises a bound.
 verify-retained is read-only and never invokes a Strategy, producer, model or runtime.`
 export const seriousLeagueMain = async (args: readonly string[]) => {
   if (args.length === 1 && args[0] === "--help") return seriousLeagueHelp
   const [mode, ...rest] = args, options = new Map<string, string>(), allowed = new Set(["--allocation", "--allocation-root", "--repository", "--factory-repository", "--response-factory-repository", "--head-root", "--capacity-input", "--capacity-receipt"])
   if (!["prepare", "prepare-prospective", "preflight", "run", "verify-retained"].includes(String(mode)) || rest.length % 2) return fail("ARGUMENTS")
   for (let i = 0; i < rest.length; i += 2) { const name = rest[i]!, value = rest[i + 1]!; if (!allowed.has(name) || options.has(name) || !value || value.startsWith("--")) return fail("ARGUMENTS"); options.set(name, value) }
+  if (options.has("--capacity-input") && options.has("--capacity-receipt")) return fail("ARGUMENTS")
   const required = (name: string) => options.get(name) ?? fail("ARGUMENTS"), value = parse(readFileSync(resolve(required("--allocation"))))
   if (mode === "prepare") { if (options.size !== 1) return fail("ARGUMENTS"); return new TextDecoder().decode(encode(prepareSeriousLeague(value))) }
   if (mode === "prepare-prospective") {
@@ -1073,10 +1094,12 @@ export const seriousLeagueMain = async (args: readonly string[]) => {
     if (options.size !== 4) return fail("ARGUMENTS")
     return new TextDecoder().decode(encode(preflightProspectiveSeriousLeague({ allocation, capacity: parse(readFileSync(resolve(required("--capacity-input")))), factoryRepository: createFactoryRepository(resolve(required("--factory-repository"))) })))
   }
-  if (options.has("--capacity-input") || mode === "verify-retained" && options.has("--capacity-receipt") || allocation.schemaVersion === "league-execution-allocation-v1" && options.has("--capacity-receipt")) return fail("ARGUMENTS")
-  const capacityReceipt = allocation.schemaVersion === "league-prospective-execution-allocation-v1" && mode === "run" ? parse(readFileSync(resolve(required("--capacity-receipt")))) : undefined
+  if ((mode === "verify-retained" || allocation.schemaVersion === "league-execution-allocation-v1") && (options.has("--capacity-input") || options.has("--capacity-receipt"))) return fail("ARGUMENTS")
+  const prospectiveRun = allocation.schemaVersion === "league-prospective-execution-allocation-v1" && mode === "run"
+  const capacityInput = prospectiveRun && options.has("--capacity-input") ? parse(readFileSync(resolve(required("--capacity-input")))) : undefined
+  const capacityReceipt = prospectiveRun && !options.has("--capacity-input") ? parse(readFileSync(resolve(required("--capacity-receipt")))) : undefined
   const repository = createLeagueRepository(resolve(required("--repository"))), factoryRepository = createFactoryRepository(resolve(required("--factory-repository"))), responseFactoryRepository = options.has("--response-factory-repository") ? createFactoryRepository(resolve(required("--response-factory-repository"))) : null
-  const result = mode === "run" ? await runSeriousLeague({ allocation, allocationRoot, repository, factoryRepository, responseFactoryRepository, ...(capacityReceipt ? { capacityReceipt } : {}) }) : verifyRetainedSeriousLeague({ allocationRoot, repository, factoryRepository, responseFactoryRepository, headRoot: required("--head-root") as LabRoot, limits: allocation.operations })
+  const result = mode === "run" ? await runSeriousLeague({ allocation, allocationRoot, repository, factoryRepository, responseFactoryRepository, ...(capacityReceipt !== undefined ? { capacityReceipt } : {}), ...(capacityInput !== undefined ? { capacityInput } : {}) }) : verifyRetainedSeriousLeague({ allocationRoot, repository, factoryRepository, responseFactoryRepository, headRoot: required("--head-root") as LabRoot, limits: allocation.operations })
   return JSON.stringify(result)
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) void seriousLeagueMain(process.argv.slice(2)).then((result) => process.stdout.write(`${result}\n`)).catch((error) => { process.stderr.write(`${error instanceof Error ? error.message : "SERIOUS_LEAGUE_FAILURE"}\n`); process.exitCode = 1 })

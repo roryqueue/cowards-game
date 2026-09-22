@@ -23,7 +23,7 @@ import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
-import { prepareProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity } from "./run-v1-38-serious-league.js"
+import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -73,14 +73,17 @@ describe("prospective CLI source-only gates", () => {
     const help = await seriousLeagueMain(["--help"])
     expect(help).toContain("prepare-prospective")
     expect(help).toContain("--capacity-receipt")
+    expect(help).toContain("run --capacity-input performs static verification")
+    expect(help).toContain("old receipt authority is never refreshed")
     expect(help).toContain("verify-retained is read-only")
     const path = join(temporary(), "input.json"), input = inputWithCurrentSource(), canonical = admitCanonicalJsonValue(input, { profile: "canonical-manifest" })
     if (!canonical.ok) throw Error("fixture canonical")
     writeFileSync(path, canonical.canonicalBytes)
     await expect(seriousLeagueMain(["prepare", "--allocation", path])).rejects.toThrow("DOCUMENT")
     await expect(seriousLeagueMain(["prepare-lean", "--allocation", path])).rejects.toThrow("ARGUMENTS")
+    await expect(seriousLeagueMain(["run", "--allocation", path, "--capacity-input", "never-open-plan", "--capacity-receipt", "never-open-receipt"])).rejects.toThrow("ARGUMENTS")
   })
-  it.each(["charged failure", "reserved crash", "partial reservation"] as const)("retains the receipt or consumed allocation after an injected %s without redispatch", async (failure) => {
+  it.each(["charged failure", "reserved crash", "partial reservation", "fresh plan", "stale after static", "static reader failure", "static closure failure", "static authoring failure", "insufficient host", "unavailable host", "live disk drop", "live memory drop", "fresh preflight", "fresh reservation crash"] as const)("retains the receipt or consumed allocation after an injected %s without redispatch", async (failure) => {
     const rows = [await candidate(1), await candidate(3), await candidate(5)], input = inputWithCurrentSource()
     const history = input.amendment.historicalAssessment
     const candidates = rows.map((row, index) => {
@@ -108,6 +111,82 @@ describe("prospective CLI source-only gates", () => {
     const capacityContext = { ...leagueCurrentSourceIdentity(), nowMilliseconds: 1001, filesystemDevice: capacity.filesystemDevice, freeFilesystemBytes: capacity.freeFilesystemBytes, availableMemoryBytes: capacity.availableMemoryBytes }
     const fixture: LeagueFixtureSeams = { candidates, capacityContext, host: { createFactorySupervisedRuntime() { providerCalls++; throw Error("injected issuance failure, no guest") } }, run: async () => { throw Error("no Match") } }
     const request = { allocation, allocationRoot: allocation.root, capacityReceipt, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, fixture }
+    if (!["charged failure", "reserved crash", "partial reservation"].includes(failure)) {
+      const { measuredAtMilliseconds: _measured, expiresAtMilliseconds: _expires, filesystemDevice: _device, freeFilesystemBytes: _free, availableMemoryBytes: _memory, ...capacityInput } = capacity
+      // New host observations deliberately differ from the old receipt: none
+      // of its device/free-space/memory values may be relabeled as current.
+      const freshContext = failure === "stale after static" ? capacityContext : { ...capacityContext, filesystemDevice: "fresh-observed-device", freeFilesystemBytes: capacity.freeFilesystemBytes - 1024, availableMemoryBytes: capacity.availableMemoryBytes - 1024 }
+      let now = 1001, staticReads = 0, observations = 0
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      const timedFixture: LeagueFixtureSeams = { ...fixture, capacityContext: undefined, readCandidates() {
+        staticReads++; now += 300001
+        if (failure === "static reader failure") throw Error("injected static reader failure")
+        if (failure === "static closure failure") return candidates.map((row, index) => index ? row : { ...row, closure: candidates[1]!.closure })
+        return candidates
+      }, observeCapacity() {
+        observations++
+        if (failure === "unavailable host") throw Error("injected unavailable host observation")
+        const reserved = readdirSync(repository.directory).length > 0
+        return { ...freshContext, nowMilliseconds: now, freeFilesystemBytes: failure === "insufficient host" || failure === "live disk drop" && reserved ? 1 : freshContext.freeFilesystemBytes, availableMemoryBytes: failure === "live memory drop" && reserved ? 1 : freshContext.availableMemoryBytes }
+      } }
+      const timedRequest = { ...request, capacityReceipt: undefined, capacityInput, fixture: timedFixture }
+      if (failure === "fresh plan") {
+        await expect(runSeriousLeague({ ...timedRequest, capacityReceipt })).rejects.toThrow("CAPACITY_INPUT_EXCLUSIVE")
+        await expect(runSeriousLeague({ ...timedRequest, capacityInput: capacityReceipt })).rejects.toThrow("DOCUMENT")
+        expect(staticReads).toBe(0); expect(observations).toBe(0); expect(providerCalls).toBe(0); expect(readdirSync(repository.directory)).toEqual([])
+      }
+      if (failure === "static authoring failure") writeFileSync(join(responseDirectory, `factory-artifact-${allocation.rounds[0]!.jobs[0]!.producerRequestArtifactRoot.slice(7)}.bin`), "corrupt injected packet")
+      if (failure.startsWith("static ")) {
+        await expect(runSeriousLeague(timedRequest)).rejects.toThrow()
+        expect(staticReads).toBe(1); expect(observations).toBe(0); expect(providerCalls).toBe(0); expect(readdirSync(repository.directory)).toEqual([])
+        return
+      }
+      if (failure === "stale after static") {
+        await expect(runSeriousLeague({ ...timedRequest, capacityInput: undefined, capacityReceipt })).rejects.toThrow("CAPACITY_STALE")
+        expect(staticReads).toBe(1); expect(now).toBeGreaterThan(capacityReceipt.expiresAtMilliseconds)
+        expect(providerCalls).toBe(0); expect(readdirSync(repository.directory)).toEqual([])
+        return
+      }
+      if (failure === "insufficient host" || failure === "unavailable host") {
+        await expect(runSeriousLeague(timedRequest)).rejects.toThrow(failure === "insufficient host" ? "CAPACITY_MARGIN" : "unavailable host observation")
+        expect(staticReads).toBe(1); expect(observations).toBe(1); expect(providerCalls).toBe(0); expect(readdirSync(repository.directory)).toEqual([])
+        return
+      }
+      if (failure === "fresh preflight") {
+        const receipt = preflightProspectiveSeriousLeague({ allocation, capacity: capacityInput, factoryRepository: request.factoryRepository, fixture: timedFixture })
+        expect(staticReads).toBe(1); expect(observations).toBe(1)
+        expect(receipt).toEqual(createLeagueCapacityReceipt({ ...capacityInput, measuredAtMilliseconds: now, expiresAtMilliseconds: now + 300000, filesystemDevice: freshContext.filesystemDevice, freeFilesystemBytes: freshContext.freeFilesystemBytes, availableMemoryBytes: freshContext.availableMemoryBytes }, allocation))
+        expect(receipt.measuredAtMilliseconds).toBeGreaterThan(capacityReceipt.expiresAtMilliseconds)
+        expect(providerCalls).toBe(0); expect(readdirSync(repository.directory)).toEqual([])
+        return
+      }
+      if (failure === "fresh reservation crash") {
+        const interruptedRepository = createLeagueRepository(repository.directory, { syncDirectory() { throw Error("injected fresh reservation crash") } })
+        await expect(runSeriousLeague({ ...timedRequest, repository: interruptedRepository })).rejects.toThrow("fresh reservation crash")
+        const names = readdirSync(repository.directory), before = names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))
+        expect(names).toHaveLength(1)
+        await expect(runSeriousLeague(timedRequest)).rejects.toThrow("EEXIST")
+        expect(staticReads).toBe(2); expect(now).toBe(601003); expect(providerCalls).toBe(0)
+        expect(readdirSync(repository.directory)).toEqual(names); expect(names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))).toEqual(before)
+        return
+      }
+      const result = await runSeriousLeague(timedRequest), graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), initial = graph.get(graph.roots("run-start")[0]!)!.value
+      expect(staticReads).toBe(1); expect(now).toBe(301002)
+      expect(initial.capacityAtStart).toEqual({ ...freshContext, nowMilliseconds: now })
+      expect(initial.capacityReceipt).toEqual(createLeagueCapacityReceipt({ ...capacityInput, measuredAtMilliseconds: now, expiresAtMilliseconds: now + 300000, filesystemDevice: freshContext.filesystemDevice, freeFilesystemBytes: freshContext.freeFilesystemBytes, availableMemoryBytes: freshContext.availableMemoryBytes }, allocation))
+      expect(initial.capacityReceipt.root).not.toBe(capacityReceipt.root)
+      expect(initial.capacityReceipt.costs).toEqual(capacityInput.costs)
+      expect(result.processValidity).toBe("process_invalid")
+      expect(providerCalls).toBe(failure === "fresh plan" ? 1 : 0)
+      expect(graph.roots("cell-start")).toHaveLength(failure === "fresh plan" ? 1 : 0)
+      expect(graph.get(result.headRoot)!.value.error).toContain(failure === "fresh plan" ? "injected issuance failure" : "CAPACITY_DISPATCH_STOP")
+      if (failure === "fresh plan") {
+        const names = readdirSync(repository.directory).sort()
+        await expect(runSeriousLeague(timedRequest)).rejects.toThrow("NONEMPTY_RUN_REPOSITORY")
+        expect(providerCalls).toBe(1); expect(readdirSync(repository.directory).sort()).toEqual(names)
+      }
+      return
+    }
     if (failure !== "charged failure") {
       const interruptedRepository = createLeagueRepository(repository.directory, { syncDirectory() { throw Error("injected crash immediately after reservation") } })
       await expect(runSeriousLeague({ ...request, repository: interruptedRepository })).rejects.toThrow("immediately after reservation")

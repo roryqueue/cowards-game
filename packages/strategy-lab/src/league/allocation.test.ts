@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocationInput } from "./allocation.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES } from "./red-team.js"
-import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
+import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
 
 const root = (text: string) => labRoot("allocation-test", text)
 const zero = { matches: 0, modelTokens: 0, effortMilliseconds: 0, reviewMilliseconds: 0, searchNodes: 0, teacherNodes: 0, distillationUnits: 0 }
@@ -123,6 +123,19 @@ describe("approved prospective three-base admission", () => {
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, freeFilesystemBytes: 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, availableMemoryBytes: 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, sourceRoot: root("stale") })).toThrow()
+  })
+  it("distinguishes rooted data-only capacity costs from host observations and receipt authority", () => {
+    const allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), input = capacityFixture(allocation)
+    const { measuredAtMilliseconds: _measured, expiresAtMilliseconds: _expires, filesystemDevice: _device, freeFilesystemBytes: _free, availableMemoryBytes: _memory, ...plan } = input
+    expect(admitLeagueCapacityPlanInput(plan, allocation)).toEqual(plan)
+    for (const field of ["measuredAtMilliseconds", "expiresAtMilliseconds", "filesystemDevice", "freeFilesystemBytes", "availableMemoryBytes"] as const) expect(() => admitLeagueCapacityPlanInput({ ...plan, [field]: input[field] }, allocation)).toThrow("DOCUMENT")
+    const receipt = createLeagueCapacityReceipt(input, allocation)
+    expect(receipt.root).toBe(labRoot("league-capacity-receipt-v1", { schemaVersion: "league-capacity-receipt-v1", ...input }))
+    expect(() => admitLeagueCapacityPlanInput(receipt, allocation)).toThrow("DOCUMENT")
+    for (const field of ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot"] as const) expect(() => admitLeagueCapacityPlanInput({ ...plan, [field]: root("substitute") }, allocation)).toThrow("CAPACITY_BINDING")
+    expect(() => admitLeagueCapacityPlanInput({ ...plan, processHeadroomBytes: 0 }, allocation)).toThrow("CAPACITY_OBSERVATION")
+    for (const row of plan.costs) expect(() => admitLeagueCapacityPlanInput({ ...plan, costs: plan.costs.filter((cost) => cost !== row) }, allocation)).toThrow("CAPACITY_CATEGORIES")
+    expect(() => admitLeagueCapacityPlanInput({ ...plan, costs: plan.costs.map((row, index) => index ? row : { ...row, measurementRoot: root("substitute") }) }, allocation)).toThrow("CAPACITY_MEASUREMENT")
   })
   it("separates logical artifact margins from physical filesystem slack without raising either ceiling", () => {
     const allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), base = capacityFixture(allocation), GiB = 2 ** 30

@@ -34,6 +34,9 @@ The operator's approval remains conditional on the remaining technical gates.
 - `createLeagueCapacityReceipt(input, allocation)` and
   `admitLeagueCapacityReceipt(value, allocation, currentObservation)` for
   `league-capacity-receipt-v1`.
+- `admitLeagueCapacityPlanInput(value, allocation)` validates the distinct
+  data-only `LeagueCapacityPlanInput`, with no timestamps or host observations;
+  this is not a receipt or dispatch authority.
 - `LEAGUE_APPROVED_PROSPECTIVE_POLICY` supplies exact validation constraints,
   never missing-input defaults. `admitAnyLeagueExecutionAllocation` is a private
   consumer union reader; the existing V1 admission still accepts only V1.
@@ -70,7 +73,7 @@ The CLI prints its result and does not invent or persist a default allocation.
 ```text
 ./node_modules/.bin/tsx scripts/run-v1-38-serious-league.ts prepare-prospective --allocation <complete-prospective-input.json> --factory-repository <historical-factory-directory>
 ./node_modules/.bin/tsx scripts/run-v1-38-serious-league.ts preflight --allocation <rooted-prospective-allocation.json> --allocation-root <root> --capacity-input <data-only-measurements.json> --factory-repository <historical-factory-directory>
-./node_modules/.bin/tsx scripts/run-v1-38-serious-league.ts run --allocation <rooted-prospective-allocation.json> --allocation-root <root> --repository <fresh-league-directory> --factory-repository <historical-factory-directory> --response-factory-repository <fresh-response-factory-directory> --capacity-receipt <rooted-capacity-receipt.json>
+./node_modules/.bin/tsx scripts/run-v1-38-serious-league.ts run --allocation <rooted-prospective-allocation.json> --allocation-root <root> --repository <fresh-league-directory> --factory-repository <historical-factory-directory> --response-factory-repository <fresh-response-factory-directory> --capacity-input <data-only-measurements.json>
 ./node_modules/.bin/tsx scripts/run-v1-38-serious-league.ts verify-retained --allocation <rooted-prospective-allocation.json> --allocation-root <root> --repository <league-directory> --factory-repository <historical-factory-directory> --response-factory-repository <response-factory-directory> --head-root <retained-head-root>
 ```
 
@@ -87,6 +90,31 @@ Derive actual source/implementation roots only after final independent source
 review. Then derive amendment → allocation → capacity receipt → run. Existing
 V1 schema, root construction, empirical twelve-root guard, and legacy command
 semantics remain intact; legacy `prepare` rejects prospective inputs.
+
+For Task 3, use the one-process `run --capacity-input` interface above only after
+independent source review, the complete source gate and truthful technical
+preparation. The capacity JSON has exactly `allocationRoot`, `amendmentRoot`,
+`implementationRoot`, `sourceRoot`, `historicalAssessmentRoot`,
+`processHeadroomBytes`, `scale`, `costs`, and `assumptions`. The six cost rows
+include their full measured data and witness/source-bound `measurementRoot`.
+Do not include `schemaVersion`, `root`, measurement/expiry times, filesystem
+device, free bytes or available memory. The CLI obtains those host values itself
+only after its complete historical/import, closure, authoring-packet,
+output-binding and empty-journal checks. It then constructs/admit-checks the
+immutable receipt, reserves the allocation once and retains receipt/observation
+in `run-start`, without repeating the historical reader between measurement
+and reservation. Static/capacity rejection means zero reservation or providers.
+
+Standalone `preflight` remains optional and read-only: it runs these static
+checks, including the complete authoring packets in the allocation's response
+directory, before fresh host measurement and returns a receipt without
+reservation. Do not require its receipt to survive a second full retained
+reader for Task 3. The alternative `run --capacity-receipt` is mutually
+exclusive with `--capacity-input`; it admits the unmodified receipt both before
+and after static validation, never refreshes it, and can fail if it expires
+during validation. A consumed allocation is never retried, including after a
+pre-cell crash or with freshly observed capacity. These interfaces add no new
+allocation authority, resource default, persistent result cache or provider cache.
 
 ## Receipt precision and limitations
 
