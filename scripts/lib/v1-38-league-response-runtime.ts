@@ -70,7 +70,7 @@ export const verifyRetainedLeagueProbeInvocations = (values: readonly any[], acc
 }
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
 import { CANONICAL_ARENA_CATALOG_V1_37, defaultRuntimeMetadata, admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
-import { admitLeagueExecutionAllocation, type LeagueExecutionAllocation, type LeagueResponseJob } from "../../packages/strategy-lab/src/league/allocation.js"
+import { admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type LeagueResponseJob } from "../../packages/strategy-lab/src/league/allocation.js"
 import { readCandidateClosure, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../../packages/strategy-lab/src/league/connected-runner.js"
 import { createLeagueProducedCandidateAdmission } from "../../packages/strategy-lab/src/league/contracts.js"
 import { admitFactory, authorizeFactorySupervision, superviseFactory, mapFactorySupervision, finalizeFactoryCandidate, deriveFactoryExecutionCommitment, type FactorySupervisionReceipt } from "../../packages/strategy-lab/src/factory/admission.js"

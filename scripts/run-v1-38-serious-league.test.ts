@@ -80,6 +80,49 @@ describe("prospective CLI source-only gates", () => {
     await expect(seriousLeagueMain(["prepare", "--allocation", path])).rejects.toThrow("DOCUMENT")
     await expect(seriousLeagueMain(["prepare-lean", "--allocation", path])).rejects.toThrow("ARGUMENTS")
   })
+  it("retains the receipt on an injected charged failure and reopens it without dispatch", async () => {
+    const rows = [await candidate(1), await candidate(3), await candidate(5)], input = inputWithCurrentSource()
+    const history = input.amendment.historicalAssessment
+    const candidates = rows.map((row, index) => {
+      const importEvidence = { ...row.admission.importEvidence!, sourceSlot: ["S01", "S03", "S05"][index]!, qualification: "base_distinct" as const, assessmentArtifactRoot: history.artifactRoot, assessmentRoot: history.assessmentRoot, thresholdArtifactRoot: history.thresholdArtifactRoot }
+      const { root: _root, ...body } = row.admission, value = { ...body, importEvidence, provenanceRoot: labRoot("league-import-provenance-v1", importEvidence) }, admission = { ...value, root: labRoot("league-candidate-import-v1", value) }
+      return { ...row, admission, candidateAdmission: admission }
+    })
+    const { root: _amendmentRoot, schemaVersion: _schema, ...body } = input.amendment
+    const amendment = createLeagueProspectiveAmendment({ ...body, bases: candidates.map((row, index) => ({ sourceSlot: ["S01", "S03", "S05"][index] as "S01" | "S03" | "S05", publicationArtifactRoot: row.publicationRoot, candidateAdmissionRoot: row.admission.root, sourceRoot: row.admission.candidate.proposal.source.root, supervisionArtifactRoot: row.admission.importEvidence!.supervisionArtifactRoot })) })
+    const repository = createLeagueRepository(temporary()), responseDirectory = realpathSync(mkdtempSync(join(tmpdir(), "factory-prospective-retained-test-"))); directories.push(responseDirectory)
+    const responseFactoryRepository = createFactoryRepository(responseDirectory)
+    let providerCalls = 0
+    // The complete allocation is preserved. Explicit preflight packet records
+    // below are inert and never consumed by a producer or model.
+    const encodeFixture = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw Error("fixture canonical"); return encoded.canonicalBytes }
+    const put = (value: unknown) => publishFactoryArtifact(responseFactoryRepository, encodeFixture(value))
+    const auth = join(temporary(), "inert-auth.json"); writeFileSync(auth, "{}")
+    const rounds = input.rounds.map((round) => ({ ...round, jobs: round.jobs.map((job) => {
+      const role = input.participantRoles.find((role) => role.jobId === job.id)!, producerIdentity = { tactical: "emitTacticalFactoryPacket", teacher: "emitTeacherFactoryPacket", model: "emitModelFactoryPacket" }[role.producer], origin = `${role.producer}-oracle`, sourceMessage = "Inert source-only fixture; never dispatch.", dependencyArtifactRoots: never[] = []
+      const producerInput = role.producer === "model" ? { authoring: { sourceMessage, codexExecutable: process.execPath, clientVersion: "injected", stateDirectory: join(responseDirectory, `${job.id}-state`), disclosedDirectory: join(responseDirectory, `${job.id}-disclosed`), existingAuthFile: auth, requestedModel: "gpt-5.6-sol", requestedProvider: "injected", path: "/usr/bin:/bin", settingsRoot: labRoot("inert-settings", 1), promptRoot: `sha256:${createHash("sha256").update(sourceMessage).digest("hex")}`, contextRoot: labRoot("league-disclosed-context-v1", { dependencyArtifactRoots }) }, request: {} } : role.producer === "teacher" ? { searches: [{ maxNodes: 50, maxDepth: 1 }, { maxNodes: 50, maxDepth: 1 }], request: {} } : {}
+      const producerRequestArtifactRoot = put({ producerIdentity, origin, evidenceClass: "real_producer", producerInput }), disclosureArtifactRoot = put({ participantId: job.participantId, requestArtifactRoot: producerRequestArtifactRoot, sourceAndBuildDisclosed: true, dependencyArtifactRoots }), provenanceArtifactRoot = put({ participantId: job.participantId, priorExposure: "none", conflicts: "none", origin, deterministicDataOnly: true }), reviewArtifactRoot = put({ reviewerId: job.reviewerId, participantId: job.participantId, disclosureArtifactRoot, provenanceArtifactRoot, disposition: "accepted", reviewMilliseconds: 900000 })
+      return { ...job, producerRequestArtifactRoot, disclosureArtifactRoot, provenanceArtifactRoot, reviewArtifactRoot }
+    }) }))
+    const allocation = createProspectiveLeagueExecutionAllocation({ ...input, amendment, rounds, initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, outputDirectories: { league: repository.directory, responseFactory: responseDirectory } }), capacity = capacityFixture(allocation), capacityReceipt = createLeagueCapacityReceipt(capacity, allocation)
+    const capacityContext = { ...leagueCurrentSourceIdentity(), nowMilliseconds: 1001, filesystemDevice: capacity.filesystemDevice, freeFilesystemBytes: capacity.freeFilesystemBytes, availableMemoryBytes: capacity.availableMemoryBytes }
+    const fixture: LeagueFixtureSeams = { candidates, capacityContext, host: { createFactorySupervisedRuntime() { providerCalls++; throw Error("injected issuance failure, no guest") } }, run: async () => { throw Error("no Match") } }
+    const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, capacityReceipt, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, fixture })
+    expect(providerCalls).toBe(1)
+    expect(result.processValidity).toBe("process_invalid")
+    const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), initial = graph.get(graph.roots("run-start")[0]!)!.value
+    expect(initial.capacityReceipt).toEqual(capacityReceipt)
+    const names = readdirSync(repository.directory).sort(), before = names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))
+    const verified = verifyRetainedSeriousLeague({ repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates })
+    expect(verified).toMatchObject({ issued: false, processValidity: "process_invalid" })
+    expect(providerCalls).toBe(1)
+    expect(readdirSync(repository.directory).sort()).toEqual(names)
+    expect(names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))).toEqual(before)
+    const bad = new LeagueRecordGraph(createLeagueRepository(temporary()), allocation.operations)
+    const missingReceipt = bad.append("run-start", { ...initial, capacityReceipt: null })
+    const headRoot = bad.append("run-failure", graph.get(result.headRoot)!.value, [missingReceipt])
+    expect(() => verifyRetainedSeriousLeague({ repository: bad.repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates })).toThrow("PROSPECTIVE_DOCUMENT")
+  }, 60000)
 })
 
 describe("complete private league command", () => {

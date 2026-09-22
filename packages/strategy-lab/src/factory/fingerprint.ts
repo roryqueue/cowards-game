@@ -14,7 +14,7 @@ import {
 } from "./contracts.js"
 import { admitFactoryCalibrationManifest } from "./calibration.js"
 import { publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "./repository.js"
-import { admitLeagueExecutionAllocation } from "../league/allocation.js"
+import { admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, assertProspectiveLeagueProducerRequest } from "../league/allocation.js"
 import { declareRedTeamAllocation, type RedTeamAttemptStart } from "../league/red-team.js"
 import { readFactorySupervisionArtifactRecords } from "./supervision-artifacts.js"
 
@@ -164,6 +164,7 @@ const verifyLeagueProducer = (input: { readonly repository: FactoryRepository; r
   if (!exact(producer, ["schemaVersion", "privacy", "root", "producerIdentity", "origin", "evidenceClass", "packetRoot", "sourceRoot", "runtimeProfileRoot", "nativeLane", "packet", "sourceUtf8", "producerInput", "modelCompanion"]) || producer.schemaVersion !== "factory-ingestion-v1" || producer.privacy !== "private_offline" || producer.evidenceClass !== "real_producer" || producer.root !== labRoot("factory-ingestion-v1", withoutRoot(producer)) || producer.producerIdentity !== input.value.producerIdentity || producer.origin !== input.value.origin || typeof producer.sourceUtf8 !== "string" || byteRoot(new TextEncoder().encode(producer.sourceUtf8)) !== producer.sourceRoot) return fail("LEAGUE_PRODUCER")
   const packet = FactoryOraclePacketSchema.parse(producer.packet)
   const request = read(job.producerRequestArtifactRoot) as Record<string, unknown>
+  assertProspectiveLeagueProducerRequest(allocation, job, request)
   if (!exact(request, ["producerIdentity", "origin", "evidenceClass", "producerInput"]) || request.producerIdentity !== producer.producerIdentity || request.origin !== producer.origin || request.evidenceClass !== "real_producer") return fail("LEAGUE_PRODUCER_REQUEST")
   if (allocation.evidenceClass === "empirical" || producer.producerIdentity === "emitTeacherFactoryPacket") {
     if (!input.authoringArtifactRoot) return fail("LEAGUE_AUTHORING")

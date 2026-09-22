@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocationInput } from "./allocation.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES } from "./red-team.js"
-import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, LEAGUE_APPROVED_PROSPECTIVE_POLICY, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
+import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
 
 const root = (text: string) => labRoot("allocation-test", text)
 const zero = { matches: 0, modelTokens: 0, effortMilliseconds: 0, reviewMilliseconds: 0, searchNodes: 0, teacherNodes: 0, distillationUnits: 0 }
@@ -45,7 +45,10 @@ export const capacityFixture = (allocation = createProspectiveLeagueExecutionAll
   allocationRoot: allocation.root, amendmentRoot: allocation.amendment.root, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, historicalAssessmentRoot: allocation.amendment.historicalAssessment.assessmentRoot,
   measuredAtMilliseconds: 1000, expiresAtMilliseconds: 301000, filesystemDevice: "fixture-device", freeFilesystemBytes: 210 * 2 ** 30, availableMemoryBytes: 4 * 2 ** 30, processHeadroomBytes: 2 ** 30,
   scale: { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 },
-  costs: ["invocation", "execution", "factory_supervision", "descriptor", "journal", "filesystem"].map((category) => ({ category: category as LeagueCapacityReceiptInput["costs"][number]["category"], projectedBytes: 10 * 2 ** 30, projectedRecords: 1000000, measurementRoot: root(`measurement-${category}`) })),
+  costs: ["invocation", "execution", "factory_supervision", "descriptor", "journal", "filesystem"].map((category, index) => {
+    const units = [4632, 4632, 3744, 1, 1, 1][index]!, measurement = { sourceRoot: allocation.amendment.sourceRoot, witnessRoots: [root(`witness-${category}`)], sampleUnits: units, measuredBytes: 10 * 2 ** 30, measuredRecords: 1000000, projectedUnits: units }
+    return { category: category as LeagueCapacityReceiptInput["costs"][number]["category"], projectedBytes: measurement.measuredBytes, projectedRecords: measurement.measuredRecords, measurement, measurementRoot: labRoot("league-data-only-capacity-measurement-v1", { category, ...measurement }) }
+  }),
   assumptions: ["Injected format measurements only; not future worst-case proof."],
 })
 describe("approved prospective three-base admission", () => {
@@ -93,12 +96,28 @@ describe("approved prospective three-base admission", () => {
     expect(() => admitLeagueCapacityReceipt(undefined, allocation, context)).toThrow()
     for (const category of input.costs) expect(() => createLeagueCapacityReceipt({ ...input, costs: input.costs.filter((row) => row !== category) }, allocation)).toThrow()
     for (const field of ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot"] as const) expect(() => createLeagueCapacityReceipt({ ...input, [field]: root("wrong") }, allocation)).toThrow()
-    for (const [field, value] of [["projectedBytes", 120 * 2 ** 30 + 1 - 50 * 2 ** 30], ["projectedRecords", 8300001 - 5000000]] as const) expect(() => createLeagueCapacityReceipt({ ...input, costs: input.costs.map((row, index) => index ? row : { ...row, [field]: value }) }, allocation)).toThrow()
+    for (const [field, value] of [["projectedBytes", 120 * 2 ** 30 + 1 - 50 * 2 ** 30], ["projectedRecords", 8300001 - 5000000]] as const) {
+      const costs = input.costs.map((row, index) => { if (index) return row; const measurement = { ...row.measurement, [field === "projectedBytes" ? "measuredBytes" : "measuredRecords"]: value }; return { ...row, [field]: value, measurement, measurementRoot: labRoot("league-data-only-capacity-measurement-v1", { category: row.category, ...measurement }) } })
+      expect(() => createLeagueCapacityReceipt({ ...input, costs }, allocation)).toThrow("CAPACITY_MARGIN")
+    }
+    const incomplete = structuredClone(input) as any
+    delete incomplete.costs[0].measurement
+    expect(() => createLeagueCapacityReceipt(incomplete, allocation)).toThrow("CAPACITY_CATEGORIES")
+    expect(() => createLeagueCapacityReceipt({ ...input, costs: input.costs.map((row, index) => index ? row : { ...row, projectedBytes: row.projectedBytes + 1 }) }, allocation)).toThrow("CAPACITY_ESTIMATE")
     expect(() => createLeagueCapacityReceipt({ ...input, freeFilesystemBytes: 100 * 2 ** 30 - 1 }, allocation)).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, nowMilliseconds: input.expiresAtMilliseconds + 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, freeFilesystemBytes: 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, availableMemoryBytes: 1 })).toThrow()
     expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, sourceRoot: root("stale") })).toThrow()
+  })
+  it("binds each downstream producer and exact Sol model before authoring or retained interpretation", () => {
+    const allocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), jobs = allocation.rounds.flatMap((round) => round.jobs)
+    for (const role of allocation.participantRoles) {
+      const job = jobs.find((job) => job.id === role.jobId)!, request = { producerIdentity: { tactical: "emitTacticalFactoryPacket", teacher: "emitTeacherFactoryPacket", model: "emitModelFactoryPacket" }[role.producer], producerInput: role.producer === "model" ? { authoring: { requestedModel: "gpt-5.6-sol" } } : {} }
+      expect(() => assertProspectiveLeagueProducerRequest(allocation, job, request)).not.toThrow()
+      expect(() => assertProspectiveLeagueProducerRequest(allocation, job, { ...request, producerIdentity: "substitute" })).toThrow("PROSPECTIVE_PRODUCER")
+      if (role.producer === "model") expect(() => assertProspectiveLeagueProducerRequest(allocation, job, { ...request, producerInput: { authoring: { requestedModel: "cheaper-substitute" } } })).toThrow("PROSPECTIVE_MODEL")
+    }
   })
 })
 describe("prospective complete Phase 265 execution allocation", () => {
