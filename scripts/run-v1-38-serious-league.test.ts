@@ -80,6 +80,17 @@ describe("complete private league command", () => {
     expect(() => exhausted.append("cell-result", { execution: overBytes })).toThrow("RETENTION_BUDGET")
   }, 120000)
 
+  it("reopens more execution frames than the physical artifact record cap", () => {
+    const repository = createLeagueRepository(temporary()), limits = { maxArtifactBytes: 50000000, maxArtifactRecords: 100 }
+    const execution = { kind: "completed", privacy: "private_offline", result: { state: {}, events: [] }, transitions: Array.from({ length: 550 }, (_, ordinal) => ({ ordinal, afterState: { soldiers: Array.from({ length: 300 }, (_, id) => ({ id })) } })), accounting: [] }
+    expect(admitCanonicalJsonValue({ execution }, { profile: "canonical-manifest" })).toMatchObject({ ok: false, error: { code: "MAX_NODES_EXCEEDED" } })
+    const root = new LeagueRecordGraph(repository, limits).append("cell-result", { execution })
+    const artifacts = readdirSync(repository.directory).filter((name) => name.startsWith("league-artifact-")).length
+    expect(execution.transitions.length + 2).toBeGreaterThan(limits.maxArtifactRecords)
+    expect(artifacts).toBeLessThan(limits.maxArtifactRecords)
+    expect(readLeagueRecordGraph(repository, root, limits).get(root)?.value.execution).toEqual(execution)
+  }, 120000)
+
   it("rejects missing, changed, reordered and falsely declared private stream records", () => {
     const execution = { kind: "completed", privacy: "private_offline", result: { state: {}, events: [{ type: "one" }, { type: "two" }] }, transitions: [], accounting: [] } as never
     const prepared = prepareLeagueExecutionStream(execution), digest = (bytes: Uint8Array) => `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const

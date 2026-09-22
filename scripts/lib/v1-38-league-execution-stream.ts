@@ -5,6 +5,10 @@ import { deriveFactoryExecutionCommitment } from "../../packages/strategy-lab/sr
 import type { LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
 
 const CAP = 131072
+// Every canonical frame contains these three required keys and at least the
+// shortest kind, ordinal and value. Bound logical frames by authenticated
+// stream bytes, not by the budget for physical artifact files.
+const MIN_FRAME_BYTES = '{"kind":"header","ordinal":0,"value":null}\n'.length
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`LEAGUE_EXECUTION_STREAM_${code}`) }
 const root = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
@@ -66,7 +70,7 @@ export const readLeagueExecutionStream = (reference: LeagueExecutionStreamRefere
   if (!isLeagueExecutionStreamReference(reference)) return fail("REFERENCE")
   const checkedRead = (artifactRoot: LabRoot) => { const bytes = read(artifactRoot); if (bytesRoot(bytes) !== artifactRoot) return fail("ARTIFACT_ROOT"); return bytes }
   const descriptor = parse(checkedRead(reference.artifactRoot))
-  if (!exact(descriptor, ["schemaVersion", "privacy", "kind", "counts", "recordCount", "byteLength", "chunkCount", "tailRoot", "chainRoot", "executionRoot", "root"]) || descriptor.schemaVersion !== "league-execution-stream-v2" || descriptor.privacy !== "private_offline" || !["completed", "failure"].includes(descriptor.kind) || !exact(descriptor.counts, ["resultEvents", "transitions", "accounting"]) || !Object.values(descriptor.counts).every(natural) || ![descriptor.recordCount, descriptor.byteLength, descriptor.chunkCount].every(natural) || ![descriptor.tailRoot, descriptor.chainRoot, descriptor.executionRoot, descriptor.root].every(root) || descriptor.recordCount !== 2 + descriptor.counts.resultEvents + descriptor.counts.transitions + descriptor.counts.accounting || descriptor.kind === "failure" && (descriptor.counts.resultEvents || descriptor.counts.transitions) || descriptor.byteLength < 1 || descriptor.byteLength > limits.maxArtifactBytes || descriptor.recordCount > limits.maxArtifactRecords || descriptor.chunkCount * 2 + 1 > limits.maxArtifactRecords || descriptor.chunkCount !== Math.ceil(descriptor.byteLength / CAP)) return fail("DESCRIPTOR")
+  if (!exact(descriptor, ["schemaVersion", "privacy", "kind", "counts", "recordCount", "byteLength", "chunkCount", "tailRoot", "chainRoot", "executionRoot", "root"]) || descriptor.schemaVersion !== "league-execution-stream-v2" || descriptor.privacy !== "private_offline" || !["completed", "failure"].includes(descriptor.kind) || !exact(descriptor.counts, ["resultEvents", "transitions", "accounting"]) || !Object.values(descriptor.counts).every(natural) || ![descriptor.recordCount, descriptor.byteLength, descriptor.chunkCount].every(natural) || ![descriptor.tailRoot, descriptor.chainRoot, descriptor.executionRoot, descriptor.root].every(root) || descriptor.recordCount !== 2 + descriptor.counts.resultEvents + descriptor.counts.transitions + descriptor.counts.accounting || descriptor.kind === "failure" && (descriptor.counts.resultEvents || descriptor.counts.transitions) || descriptor.byteLength < 1 || descriptor.byteLength > limits.maxArtifactBytes || descriptor.recordCount > Math.floor(descriptor.byteLength / MIN_FRAME_BYTES) || descriptor.chunkCount * 2 + 1 > limits.maxArtifactRecords || descriptor.chunkCount !== Math.ceil(descriptor.byteLength / CAP)) return fail("DESCRIPTOR")
   const { root: claimedRoot, ...body } = descriptor
   if (claimedRoot !== labRoot("league-execution-stream-v2", body)) return fail("DESCRIPTOR_ROOT")
   const chunks = Array<LabRoot>(descriptor.chunkCount)
@@ -91,7 +95,7 @@ export const readLeagueExecutionStream = (reference: LeagueExecutionStreamRefere
     counts.set(frame.kind, frame.ordinal + 1)
     const recordRoot = labRoot("league-execution-record-v2", frame)
     chainRoot = labRoot("league-execution-record-link-v2", { ordinal: recordCount, previousRoot: chainRoot, recordRoot }); recordCount++
-    if (recordCount > limits.maxArtifactRecords) return fail("RECORD_LIMIT")
+    if (recordCount > descriptor.recordCount) return fail("RECORD_LIMIT")
     if (frame.kind === "header") header = frame.value
     else if (frame.kind === "result-state" || frame.kind === "unchanged-state") state = frame.value
     else if (frame.kind === "result-event") events.push(frame.value)
