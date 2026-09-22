@@ -80,7 +80,7 @@ describe("prospective CLI source-only gates", () => {
     await expect(seriousLeagueMain(["prepare", "--allocation", path])).rejects.toThrow("DOCUMENT")
     await expect(seriousLeagueMain(["prepare-lean", "--allocation", path])).rejects.toThrow("ARGUMENTS")
   })
-  it("retains the receipt on an injected charged failure and reopens it without dispatch", async () => {
+  it.each(["charged failure", "reserved crash", "partial reservation"] as const)("retains the receipt or consumed allocation after an injected %s without redispatch", async (failure) => {
     const rows = [await candidate(1), await candidate(3), await candidate(5)], input = inputWithCurrentSource()
     const history = input.amendment.historicalAssessment
     const candidates = rows.map((row, index) => {
@@ -107,7 +107,26 @@ describe("prospective CLI source-only gates", () => {
     const allocation = createProspectiveLeagueExecutionAllocation({ ...input, amendment, rounds, initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, outputDirectories: { league: repository.directory, responseFactory: responseDirectory } }), capacity = capacityFixture(allocation), capacityReceipt = createLeagueCapacityReceipt(capacity, allocation)
     const capacityContext = { ...leagueCurrentSourceIdentity(), nowMilliseconds: 1001, filesystemDevice: capacity.filesystemDevice, freeFilesystemBytes: capacity.freeFilesystemBytes, availableMemoryBytes: capacity.availableMemoryBytes }
     const fixture: LeagueFixtureSeams = { candidates, capacityContext, host: { createFactorySupervisedRuntime() { providerCalls++; throw Error("injected issuance failure, no guest") } }, run: async () => { throw Error("no Match") } }
-    const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, capacityReceipt, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, fixture })
+    const request = { allocation, allocationRoot: allocation.root, capacityReceipt, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository, fixture }
+    if (failure !== "charged failure") {
+      const interruptedRepository = createLeagueRepository(repository.directory, { syncDirectory() { throw Error("injected crash immediately after reservation") } })
+      await expect(runSeriousLeague({ ...request, repository: interruptedRepository })).rejects.toThrow("immediately after reservation")
+      const names = readdirSync(repository.directory).sort()
+      expect(names).toHaveLength(1)
+      expect(names[0]).toMatch(/^league-artifact-.*\.bin$/u)
+      const reservation = JSON.parse(readFileSync(join(repository.directory, names[0]!), "utf8"))
+      expect(reservation).toMatchObject({ schemaVersion: "league-prospective-allocation-reservation-v1", allocationRoot: allocation.root })
+      if (failure === "partial reservation") writeFileSync(join(repository.directory, names[0]!), "")
+      const before = names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))
+      const refreshed = createLeagueCapacityReceipt({ ...capacity, measuredAtMilliseconds: 400000, expiresAtMilliseconds: 700000 }, allocation)
+      expect(refreshed.root).not.toBe(capacityReceipt.root)
+      await expect(runSeriousLeague({ ...request, capacityReceipt: refreshed, fixture: { ...fixture, capacityContext: { ...capacityContext, nowMilliseconds: 400001 } } })).rejects.toThrow("EEXIST")
+      expect(providerCalls).toBe(0)
+      expect(readdirSync(repository.directory).sort()).toEqual(names)
+      expect(names.map((name) => readFileSync(join(repository.directory, name)).toString("hex"))).toEqual(before)
+      return
+    }
+    const result = await runSeriousLeague(request)
     expect(providerCalls).toBe(1)
     expect(result.processValidity).toBe("process_invalid")
     const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), initial = graph.get(graph.roots("run-start")[0]!)!.value

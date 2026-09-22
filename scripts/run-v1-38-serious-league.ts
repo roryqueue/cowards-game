@@ -448,16 +448,20 @@ const targetSources = (repository: FactoryRepository, candidates: readonly Leagu
   return { candidateRoot: candidate.admission.candidate.root, sourceArtifactRoot, byteLength: bytes.length, disclosedFile: `candidate-${sourceArtifactRoot.slice(7)}.ts` }
 })
 const zeroUsage = (): RedTeamResources => ({ matches: 0, modelTokens: 0, effortMilliseconds: 0, reviewMilliseconds: 0, searchNodes: 0, teacherNodes: 0, distillationUnits: 0 })
-const runMarker = (allocation: LeagueExecutionAllocation, capacityReceipt?: LeagueCapacityReceipt) => allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? rooted("league-prospective-allocation-start-v1", { allocation, capacityReceiptRoot: capacityReceipt?.root ?? fail("CAPACITY_RECEIPT_REQUIRED") }) : rooted("league-allocation-start-v1", { allocation })
+const runReservation = (allocation: LeagueExecutionAllocation) => rooted("league-prospective-allocation-reservation-v1", { allocationRoot: allocation.root })
+const runMarker = (allocation: LeagueExecutionAllocation, capacityReceipt?: LeagueCapacityReceipt) => allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? rooted("league-prospective-allocation-start-v1", { allocation, reservationRoot: bytesRoot(encode(runReservation(allocation))), capacityReceiptRoot: capacityReceipt?.root ?? fail("CAPACITY_RECEIPT_REQUIRED") }) : rooted("league-allocation-start-v1", { allocation })
 const reserveRun = (repository: LeagueRepository, allocation: LeagueExecutionAllocation, capacityReceipt?: LeagueCapacityReceipt) => {
-  const bytes = encode(runMarker(allocation, capacityReceipt)), artifactRoot = bytesRoot(bytes)
+  const markerBytes = encode(runMarker(allocation, capacityReceipt))
+  const bytes = allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? encode(runReservation(allocation)) : markerBytes, artifactRoot = bytesRoot(bytes)
   repository.beforePublication?.({ target: resolve(repository.directory, `league-artifact-${artifactRoot.slice(7)}.bin`), byteLength: bytes.length, terminal: false })
-  // A durable exclusive content-addressed marker consumes this allocation once.
+  // The prospective exclusive key depends on allocation alone, never the
+  // refreshable receipt. Its authenticated run marker separately binds both.
+  // Legacy V1 retains its original marker bytes and exclusive filename.
   // A crash or a partial marker never creates permission to rerun it.
   const descriptor = openSync(resolve(repository.directory, `league-artifact-${artifactRoot.slice(7)}.bin`), "wx", 0o600)
   try { let offset = 0; while (offset < bytes.length) offset += writeSync(descriptor, bytes, offset, bytes.length - offset); fsyncSync(descriptor) } finally { closeSync(descriptor) }
   repository.durability.syncDirectory(repository.directory)
-  return artifactRoot
+  return allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? publishLeagueArtifact(repository, markerBytes) : artifactRoot
 }
 const addFractions = (rows: readonly { numerator: number; denominator: number; weightNumerator: string; weightDenominator: string }[]) => {
   let numerator = 0n, denominator = 1n
@@ -828,6 +832,7 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   const capacity = allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? admitLeagueCapacityReceipt(initial.capacityReceipt, allocation, initial.capacityAtStart) : undefined
   const marker = parse(readLeagueArtifact(input.repository, initial.markerRoot))
   if (allocation.root !== input.allocationRoot || head.value.allocationRoot !== allocation.root || head.value.evidenceClass !== allocation.evidenceClass || allocation.operations.maxArtifactBytes > input.limits.maxArtifactBytes || allocation.operations.maxArtifactRecords > input.limits.maxArtifactRecords || input.fixtureCandidates && allocation.evidenceClass !== "injected_fixture" || !same(marker, runMarker(allocation, capacity))) return fail("RETAINED_ALLOCATION")
+  if (allocation.schemaVersion === "league-prospective-execution-allocation-v1" && !same(parse(readLeagueArtifact(input.repository, marker.reservationRoot)), runReservation(allocation))) return fail("RETAINED_RESERVATION")
   const imported = input.fixtureCandidates ?? readLeagueInitialCandidates(input.factoryRepository, allocation), importedMap = new Map(imported.map((candidate) => [candidate.admission.root, candidate]))
   if (allocation.schemaVersion === "league-prospective-execution-allocation-v1") validateProspectiveLeagueInitialCandidates(allocation, imported)
   const restoreCandidate = (record: any): LeagueCandidateInput => {
