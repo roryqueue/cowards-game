@@ -13,6 +13,12 @@ const fixture = () => {
   return { provider, seen }
 }
 describe("host-bound league behavioral probes", () => {
+  it("retains the invocation-time capacity guard before calling the provider", async () => {
+    const { provider, seen } = fixture(), retained: unknown[] = []
+    const wrapped = wrapLeagueProbeProvider(provider, undefined, { minX: 0, maxX: 11 }, (value) => retained.push(value), () => { throw Error("injected invocation capacity stop") })
+    await expect(wrapped.invoke(request as never, provider.identity)).rejects.toThrow("invocation capacity stop")
+    expect(seen).toEqual([]); expect(retained).toEqual([])
+  })
   it("reflects public geometry and facing while preserving opaque Strategy state and original evidence", async () => {
     const { provider, seen } = fixture(), retained: any[] = [], wrapper = wrapLeagueProbeProvider(provider, "horizontal_symmetry", { minX: 0, maxX: 11 }, (value) => retained.push(value))
     const evidence = await wrapper.invoke(request as never, provider.identity)
@@ -82,15 +88,18 @@ it("charges separate common-reference counterfactual cells on the entire multi-s
   expect(() => createLeagueExecutionAllocation({ ...base, independenceReferencePublicationRoot: labRoot("foreign-reference", 1) })).toThrow("INDEPENDENCE_REFERENCE")
 })
 
-it("runs the complete source-only three-arm production closure and reopens numeric evidence without executing Strategies", async () => {
+it.each(["complete", "capacity after authoring", "capacity between Matches"] as const)("runs source-only three-arm production (%s) without executing Strategies", async (scenario) => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-response-injected-test-")))
   try {
     const repository = createFactoryRepository(directory), put = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("fixture encoding"); return publishFactoryArtifact(repository, encoded.canonicalBytes) }, initial = [await importedCandidateFixture(1), await importedCandidateFixture(3)], opponents = initial.map((entry) => ({ candidateRoot: entry.candidateAdmission.candidate.root, closure: entry.closure })), base = allocationFixture(), r = (text: string) => labRoot("response-fixture", text)
     const producerInput = { split: "development", doctrineFamily: "source-only-response", provider: { providerId: "source-fixture", modelId: "local", modelVersion: "test", settingsRoot: r("settings"), promptRoot: r("prompt"), contextRoot: r("context") }, build: { buildRoot: r("build"), toolchainRoot: r("toolchain") }, lineage: { predecessorRoot: LAB_ADMITTED_ROOTS.currentStartRoot, correctionRoot: null, retryParentRoot: null } }, producerRequestArtifactRoot = put({ producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput }), disclosureArtifactRoot = put({ participantId: "author", requestArtifactRoot: producerRequestArtifactRoot, sourceAndBuildDisclosed: true, dependencyArtifactRoots: [] }), provenanceArtifactRoot = put({ participantId: "author", priorExposure: "none", conflicts: "none", origin: "tactical-oracle", deterministicDataOnly: true }), reviewArtifactRoot = put({ reviewerId: "reviewer", participantId: "author", disclosureArtifactRoot, provenanceArtifactRoot, disposition: "accepted", reviewMilliseconds: 0 }), reservation = { ...base.channels[0]!.perAttempt, matches: 48, effortMilliseconds: 180000 }
     const job = { id: "source-response", channel: "automated" as const, evaluationRole: "development_response" as const, operation: "produce" as const, producerRequestArtifactRoot, disclosureArtifactRoot, provenanceArtifactRoot, reviewArtifactRoot, participantId: "author", reviewerId: "reviewer", reservation, retryParentJobId: null }, allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: "/fixture/league-response", responseFactory: directory }, initialCandidatePublicationRoots: initial.map((entry) => entry.input.publicationArtifactRoot).sort(), independenceReferencePublicationRoot: initial[0]!.input.publicationArtifactRoot, opportunities: { ...base.opportunities, attemptedCandidates: 1, matches: 200 }, operations: { ...base.operations, perAttemptMilliseconds: 180000, wallClockMilliseconds: 240000, maxArtifactBytes: 160000000, maxArtifactRecords: 100000 }, channels: base.channels.map((channel) => channel.channel === "automated" ? { ...channel, disposition: "allocated", opportunities: 1, ceilings: reservation, perAttempt: reservation, participants: ["author"], reviewers: ["reviewer"] } : channel), rounds: [{ ordinal: 0, acceptedSlots: 0, jobs: [job] }, base.rounds[1]!] }), ledger = declareRedTeamAllocation({ phase: 265, evidenceClass: allocation.evidenceClass, authorityRoot: allocation.root, channels: allocation.channels, probes: allocation.probes }), start = startRedTeamAttempt({ ledger, channel: "automated", roundRoot: r("round"), candidateRoot: opponents[0]!.candidateRoot, participantId: "author", reviewerId: "reviewer", disclosureRoot: disclosureArtifactRoot, provenanceRoot: provenanceArtifactRoot, inputRoot: producerRequestArtifactRoot, retryParentRoot: null, reservation }).starts[0]!, startArtifactRoot = put(start), targetArtifactRoot = put({ roundRoot: start.roundRoot, candidateRoot: start.candidateRoot, candidates: initial.map((entry) => { const bytes = readFactoryArtifact(entry.factoryRepository, entry.closure.sourceArtifactRoot), sourceArtifactRoot = publishFactoryArtifact(repository, bytes); return { candidateRoot: entry.candidateAdmission.candidate.root, sourceArtifactRoot, byteLength: bytes.length, disclosedFile: `candidate-${sourceArtifactRoot.slice(7)}.ts` } }) })
-    const records = new Map<LabRoot, { kind: string; value: any; links: readonly LabRoot[] }>(), retention = { append(kind: string, value: unknown, links: readonly LabRoot[] = []) { const root = labRoot("response-fixture-record", { kind, value, links }); records.set(root, { kind, value, links }); return root }, beforeInvocation() {} }, revisions = new Map<string, ReturnType<typeof buildStrategyRevision>>()
-    let calls = 0
-    const produced = await produceLeagueResponse({ allocation, job, start, startArtifactRoot, targetArtifactRoot, remainingWallMilliseconds: 240000, repository, opponents, threshold: { repository: initial[0]!.factoryRepository, artifactRoot: initial[0]!.candidateAdmission.importEvidence!.thresholdArtifactRoot }, retention, fixture: { author: async (input) => executeLeagueAuthoring({ ...input, clock: () => 0 }), host: { createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot, budgetRoot, executableRoot }) {
+    let calls = 0, providers = 0, authoringFinished = false, invocationChecks = 0
+    const completedBeforeStop = scenario === "capacity after authoring" ? 0 : 1
+    const checkCapacity = () => { if (scenario !== "complete" && authoringFinished && calls >= completedBeforeStop) throw Error("injected live capacity stop") }
+    const records = new Map<LabRoot, { kind: string; value: any; links: readonly LabRoot[] }>(), retention = { append(kind: string, value: unknown, links: readonly LabRoot[] = []) { const root = labRoot("response-fixture-record", { kind, value, links }); records.set(root, { kind, value, links }); return root }, beforeDispatch: checkCapacity, beforeInvocation() { invocationChecks++ } }, revisions = new Map<string, ReturnType<typeof buildStrategyRevision>>()
+    const pending = produceLeagueResponse({ allocation, job, start, startArtifactRoot, targetArtifactRoot, remainingWallMilliseconds: 240000, repository, opponents, threshold: { repository: initial[0]!.factoryRepository, artifactRoot: initial[0]!.candidateAdmission.importEvidence!.thresholdArtifactRoot }, retention, fixture: { author: async (input) => { const result = await executeLeagueAuthoring({ ...input, clock: () => 0 }); authoringFinished = true; return result }, host: { createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot, budgetRoot, executableRoot }) {
+      providers++
       const defaults = defaultRuntimeMetadata("typescript"), revision = revisions.get(admission.sourceRoot) ?? buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } }); revisions.set(admission.sourceRoot, revision)
       const issued = new WeakSet<object>(), identity = { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: r("harness"), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }
       return { identity, invoke(request) { const evidence = { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: 0, invocationRoot: labRoot("response-fixture-invocation", { identity, request }), charged: true, completed: true, outputBytes: 2, result: { ok: true as const, value: { activationOrders: [], strategyMemory: {} } } }; issued.add(evidence); return evidence }, verify(value) { return issued.has(value) }, close() { return { cleanupComplete: true, orphanedChild: false } } }
@@ -103,6 +112,24 @@ it("runs the complete source-only three-arm production closure and reopens numer
       }
       return { kind: "completed", privacy: "private_offline", transitions: [], accounting, result: { state: { ...state, outcome: { type: "DRAW" } }, events: [{ type: "MATCH_ENDED", payload: { type: "DRAW" } }] } } as never
     } } })
+    if (scenario !== "complete") {
+      await expect(pending).rejects.toThrow("injected live capacity stop")
+      expect(authoringFinished).toBe(true)
+      expect(calls).toBe(completedBeforeStop)
+      expect(providers).toBe(2 * completedBeforeStop)
+      expect(invocationChecks).toBe(2 * completedBeforeStop)
+      const rows = [...records.values()], failed = rows.filter((row) => row.kind === "response-production-failure")
+      expect(rows.filter((row) => row.kind === "response-match-start")).toHaveLength(completedBeforeStop)
+      expect(rows.filter((row) => row.kind === "response-runtime-cleanup")).toHaveLength(2 * completedBeforeStop)
+      expect(failed).toHaveLength(1)
+      expect(failed[0]!.value).toMatchObject({ matchCount: completedBeforeStop, author: { disposition: "produced" }, error: "injected live capacity stop" })
+      const factoryStart = failed[0]!.value.start
+      expect(factoryStart.resourceAccountingRoot).toBe(start.root)
+      expect(JSON.parse(readFileSync(join(directory, `factory-attempt-${factoryStart.root.slice(7)}.started.json`), "utf8"))).toEqual(factoryStart)
+      expect(JSON.parse(readFileSync(join(directory, `factory-attempt-${factoryStart.root.slice(7)}.terminal.json`), "utf8"))).toMatchObject({ startRoot: factoryStart.root, disposition: "system_failure" })
+      return
+    }
+    const produced = await pending
     expect(calls).toBe(48); expect(produced.matchCount).toBe(48)
     expect(produced.scores.every((score) => score.numerator === 8 && score.denominator === 16 && score.evidenceRoots.length === 8)).toBe(true)
     const names = readdirSync(directory).sort(), bytes = names.map((name) => readFileSync(join(directory, name)).toString("hex")), verify = { allocation, repository, produced, opponents, threshold: { repository: initial[0]!.factoryRepository, artifactRoot: initial[0]!.candidateAdmission.importEvidence!.thresholdArtifactRoot }, records }

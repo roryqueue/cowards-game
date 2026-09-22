@@ -43,6 +43,10 @@ export class LeagueRetentionBudget {
   private readonly charged = new Set<string>()
   exhausted = false
   constructor(readonly allocation: LeagueExecutionAllocation, readonly checkDispatchCapacity?: () => void) { admitLeagueExecutionAllocation(allocation) }
+  beforeDispatch() {
+    if (this.exhausted || this.terminalMode) return fail("RETENTION_DISPATCH_STOP")
+    try { this.checkDispatchCapacity?.() } catch (error) { this.exhausted = true; throw error }
+  }
   checkCapacity(byteLength: number, records: number, terminal = this.terminalMode) {
     const limits = this.allocation.operations
     if (!terminal && (this.exhausted || this.workBytes + byteLength > limits.maxArtifactBytes - limits.terminalReserveBytes || this.workRecords + records > limits.maxArtifactRecords - limits.terminalReserveRecords)) { this.exhausted = true; return fail("RETENTION_BUDGET") }
@@ -52,7 +56,7 @@ export class LeagueRetentionBudget {
     const terminal = value.terminal || this.terminalMode
     if (this.charged.has(value.target)) return fail("UNCERTAIN_REPUBLICATION")
     if (value.target.endsWith(".started.json")) {
-      this.checkDispatchCapacity?.()
+      this.beforeDispatch()
       if (this.exhausted || this.terminalMode) return fail("RETENTION_DISPATCH_STOP")
       this.checkCapacity(6 * 262144, 24, true)
       // A start and its ordinary terminal must fit the work pool before work.
@@ -72,9 +76,10 @@ export class LeagueRecordGraph {
   private records = 0
   latestRoot: LabRoot | null = null
   constructor(readonly repository: LeagueRepository, readonly limits: { maxArtifactBytes: number; maxArtifactRecords: number }, readonly budget?: LeagueRetentionBudget) {}
+  beforeDispatch() { this.budget?.beforeDispatch() }
   beforeInvocation(request: unknown) {
     if (!this.budget) return
-    this.budget.checkDispatchCapacity?.()
+    this.beforeDispatch()
     // Two request projections and two result projections, including worst-case
     // JSON escaping, fit before the guest is called. The final envelope and
     // chunk records are included; this is capacity, not an extra execution cap.
@@ -332,7 +337,7 @@ export class LeagueConnectedSession {
     this.graph = new LeagueRecordGraph(input.repository, allocation.operations, budget)
   }
   async execute(cell: LeagueCell, bottom: LeagueCandidateInput, top: LeagueCandidateInput, seed: string, options: { baseCell?: LeagueCell; order?: "forward" | "reverse"; transform?: LeagueProbeFamily; arenaAlias?: boolean } = {}) {
-    this.budget?.checkDispatchCapacity?.()
+    this.budget?.beforeDispatch()
     if (this.executedCells + this.responseMatchCharges >= this.allocation.opportunities.matches || Date.now() - this.startTime >= this.allocation.operations.wallClockMilliseconds) return fail("EXECUTION_BUDGET")
     const startValue = { cellRoot: cell.root, allocationRoot: this.allocation.root }, start = { ...startValue, root: labRoot("league-cell-start-v1", startValue) }
     const startRecordValue = { start, cell, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }
@@ -571,6 +576,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
       for (const block of roundBlocks) { blocks.push(block); roots.push(session.graph.append("declared-round", { seed: block.seed, round: block.round, candidateRoots: block.candidateRoots }, [block.matrix.recordRoot])); const probe = await runRoundProbes(session, block.matrix, candidates, block.round, block.seed, ledger); ledger = probe.ledger; roots.push(...probe.roots); requiredTargets.push(...candidates.map((candidate) => ({ roundRoot: block.round.round.root, candidateRoot: candidate.admission.candidate.root }))) }
       for (const job of schedule.jobs.filter((job) => job.evaluationRole === "development_response")) {
         const repository = input.responseFactoryRepository!, before = Date.now()
+        session.graph.beforeDispatch()
         ledger = startRedTeamAttempt({ ledger, channel: job.channel, roundRoot: primary.round.round.root, candidateRoot: primary.round.target.strongestPureCandidateRoot, participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: job.retryParentJobId === null ? null : startsByJob.get(job.retryParentJobId) ?? fail("RETRY_PARENT"), reservation: job.reservation })
         const start = ledger.starts.at(-1)!, startArtifactRoot = publishFactoryArtifact(repository, encode(start)); startsByJob.set(job.id, start.root)
         roots.push(session.graph.append("red-team-start", { jobId: job.id, start, startArtifactRoot, ledgerRoot: ledger.root }))
@@ -614,6 +620,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
     // them against the now-final population, after all adaptation has ended.
     for (const job of jobs.filter((job) => job.evaluationRole !== "development_response")) {
       const repository = input.responseFactoryRepository!, before = Date.now(), roundRoot = labRoot("league-independent-evaluation-v1", { allocationRoot: allocation.root, role: job.evaluationRole, snapshotRoots: currentMatrices.map((matrix) => matrix.admitted.snapshot.root) })
+      session.graph.beforeDispatch()
       ledger = startRedTeamAttempt({ ledger, channel: job.channel, roundRoot, candidateRoot: candidates[0]!.admission.candidate.root, participantId: job.participantId, reviewerId: job.reviewerId, disclosureRoot: job.disclosureArtifactRoot, provenanceRoot: job.provenanceArtifactRoot, inputRoot: job.producerRequestArtifactRoot, retryParentRoot: job.retryParentJobId === null ? null : startsByJob.get(job.retryParentJobId) ?? fail("RETRY_PARENT"), reservation: job.reservation })
       const start = ledger.starts.at(-1)!, startArtifactRoot = publishFactoryArtifact(repository, encode(start)); startsByJob.set(job.id, start.root); roots.push(session.graph.append("red-team-start", { jobId: job.id, start, startArtifactRoot, ledgerRoot: ledger.root }))
       if (job.operation !== "produce") { const evidenceRoot = session.graph.append("red-team-unfilled", { jobId: job.id, operation: job.operation, reason: "prospectively_allocated_disposition" }); roots.push(evidenceRoot); ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: job.operation, usage: zeroUsage(), evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }) }

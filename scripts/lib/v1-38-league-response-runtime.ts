@@ -93,7 +93,7 @@ import { resolve } from "node:path"
 const encode = (value: unknown) => { const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); return admitted.ok ? admitted.canonicalBytes : fail("CANONICAL") }
 const read = (repository: FactoryRepository, artifactRoot: LabRoot): any => { const admitted = admitCanonicalJsonBytes(readFactoryArtifact(repository, artifactRoot), { profile: "canonical-manifest", operation: "require-canonical" }); return admitted.ok ? admitted.value : fail("ARTIFACT") }
 export interface LeagueResponseOpponent { readonly candidateRoot: LabRoot; readonly closure: FactoryCandidateClosure }
-export interface LeagueResponseRetention { append(kind: string, value: unknown, links?: readonly LabRoot[]): LabRoot; beforeInvocation(request: unknown): void }
+export interface LeagueResponseRetention { append(kind: string, value: unknown, links?: readonly LabRoot[]): LabRoot; beforeDispatch(): void; beforeInvocation(request: unknown): void }
 export const enumerateLeagueResponseConditions = (allocation: LeagueExecutionAllocation, opponentRoots: readonly LabRoot[]) => {
   admitLeagueExecutionAllocation(allocation)
   if (!opponentRoots.length || new Set(opponentRoots).size !== opponentRoots.length) return fail("RESPONSE_OPPONENTS")
@@ -163,6 +163,9 @@ export const produceLeagueResponse = async (input: LeagueResponseProductionInput
         for (const condition of conditions.filter((row) => row.opponentRoot === opponent.candidateRoot && row.seed === seed)) {
           const { arenaIndex, side, initial, purpose } = condition, arena = arenas[arenaIndex]!
           if (Date.now() - before >= Math.min(input.remainingWallMilliseconds, allocation.operations.perAttemptMilliseconds, job.reservation.effortMilliseconds) || matchCount >= job.reservation.matches) return fail("RESPONSE_BUDGET")
+          // Authoring and each preceding Match can consume host headroom. Check
+          // afresh before charging this Match or constructing either provider.
+          input.retention.beforeDispatch()
           const matchCharge = { parentStartRoot: start.root, ordinal: matchCount++, seed, opponentRoot: opponent.candidateRoot, arena: arena.semanticGeometryHash, side, initial, purpose, referencePublicationRoot: reference.closure.candidatePublicationArtifactRoot }, chargeRoot = input.retention.append("response-match-start", matchCharge, records.slice(0, 1)); records.push(chargeRoot)
           const matchId = `league-response-${chargeRoot.slice(7, 31)}`, candidatePlayerId = "league-response-candidate", opponentPlayerId = "league-response-opponent"
           const opposing = purpose === "score" ? opponent : reference
