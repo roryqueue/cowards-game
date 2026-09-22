@@ -6,6 +6,8 @@ import {
   assertTacticalSourceClosure,
   compileTacticalSourceModules,
   emitTacticalFactoryPacket,
+  emitProfiledTacticalFactoryPacket,
+  deriveTacticalAdaptationProfile,
   emitTacticalSource,
   expandTacticalSearch,
   loadTacticalSourceModules,
@@ -47,6 +49,27 @@ const packetRequest = () => ({
 })
 
 describe("tactical oracle", () => {
+  it("derives an exact 25 by 4 target-conditioned profile and keeps profiled bytes separate", () => {
+    const brain = SoldierBrainInputV119Schema.parse({
+      self: soldier("self:a", "self", 1, 1),
+      awarenessGrid: { cells: Array.from({ length: 25 }, (_, index) => ({ dx: index % 5 - 2, dy: Math.floor(index / 5) - 2, absoluteX: index % 5 - 1, absoluteY: Math.floor(index / 5) - 1, contents: index === 13 ? "ENEMY_ACTIVE" as const : "EMPTY" as const, ...(index === 13 ? { facing: "LEFT" as const } : {}) })) },
+      cycleIndex: 1, maxCycles: 12 as const, objective: null, soldierMemory: {}, hasAdvancedThisActivation: false,
+    }) as unknown as SoldierBrainInputV119
+    const observation = (suffix: string) => ({
+      cellResultRoot: root(`cell:${suffix}`), matchRoot: root(`match:${suffix}`), executionRoot: root(`execution:${suffix}`), roundRoot: root("round"),
+      targetCandidateRoot: root(`target:${suffix}`), roles: [{ role: suffix === "a" ? "strongest_pure" as const : suffix === "b" ? "vulnerable_pure" as const : "mixture" as const, weight: suffix === "c" || suffix === "d" ? 1 : null }],
+      accountingOrdinal: 0, invocationRoot: root(`invocation:${suffix}`), selectRequestRoot: root(`select-request:${suffix}`), selectInputRoot: root(`select-input:${suffix}`), selectedSoldierId: "self:a",
+      soldierBrainRequestRoot: root(`brain-request:${suffix}`), soldierBrainInputRoot: root(`brain-input:${suffix}`), soldierBrainInvocationRoot: root(`brain-invocation:${suffix}`), soldierBrainOutputRoot: root(`brain-output:${suffix}`),
+      targetActionSummary: { MOVE: suffix === "a" ? 3 : 0, TURN: suffix === "b" ? 3 : 0, TURN_TO_STONE: suffix === "c" ? 3 : 0 },
+    })
+    const corpus = { schemaVersion: "tactical-adaptation-corpus-v1" as const, observations: [observation("a"), observation("b"), observation("c"), observation("d")] }
+    const derived = deriveTacticalAdaptationProfile(corpus, [brain, brain, brain, brain])
+    expect(derived.rows).toHaveLength(100)
+    expect(derived.profile.id).toMatch(/^-?[0-2]:-?[0-2]$/u)
+    expect(() => deriveTacticalAdaptationProfile({ ...corpus, observations: corpus.observations.slice(0, 3) }, [brain, brain, brain])).toThrow("TACTICAL_ADAPTATION")
+    const profiled = emitProfiledTacticalFactoryPacket({ request: packetRequest(), profile: derived.profile })
+    expect(profiled.source.root).not.toBe(emitTacticalFactoryPacket(packetRequest()).source.root)
+  })
   it("exports the exact data-only packet emitter with source and provenance roots", () => {
     expect(typeof emitTacticalFactoryPacket).toBe("function")
     const packet = emitTacticalFactoryPacket(packetRequest())
