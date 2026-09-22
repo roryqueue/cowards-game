@@ -2,12 +2,17 @@
 phase: 265
 plan: "07"
 task: 2
-status: draft-resource-envelope-withdrawn-for-correction
+status: withdrawn-superseded-by-unapproved-lean-run-proposal
 empirical_authority: false
 created: 2026-09-21
 ---
 
 # Proposed bounded Phase 265 run — decision still required
+
+**Current proposal:**265-LEAN-RUN-DECISION.md replaces this withdrawn draft with
+a prospective three-real-base starting contract and explicit bounded envelope.
+It remains unapproved. Source/storage proof at3d25b37e is complete; do not follow
+this historical draft's repair instructions or treat either proposal as authority.
 
 **Not ready for approval.** Independent capacity review found that the draft
 1,500,000-record ceiling is inherently too small for full coverage, and160GiB is
@@ -143,6 +148,37 @@ The current source-storage finding is not yet closed. A normal clear
 approval is sufficient; no new authorization literal or custody chain is needed.
 
 ## Capacity correction — 2026-09-21
+
+Main's additional read-only replay authenticated all417old request roots and
+1,286transitions from the largest saved execution, without running any Strategy
+or provider. Its exact ordinary invocation wrappers total3,651,614canonical
+payload bytes (7,810..19,222each) and imply1,251graph artifacts before dedup.
+These exclude descriptors/filesystem overhead/cleanup/journals; response
+supervision remains additional. See265-REALISM-CHECK.md for method and nonclaims.
+Do not present this one old `maxPhases:100` witness as a future full-league bound.
+
+Updated measured format result: the actual old11,981,860-byte execution now stores
+and reopens in190artifacts/12,183,083bytes (+201,223, ~1.68%) at3d25b37e. This is
+stronger than the synthetic ratio but still excludes runtime invocation wrappers,
+journals, reports and duplicated response supervision. The wrapper retains
+`{family, request, dispatched, originalEvidence, admittedEvidence}` for every
+invocation. At the historical min/mean/max invocation counts,12,480Matches imply
+2,396,160/3,378,960/5,204,160wrappers, requiring at least
+7,188,480/10,136,880/15,612,480graph artifacts if each fits one chunk. The4,248
+response Matches also retain two factory supervision streams each; no assumption
+of chunk deduplication can be counted as guaranteed capacity.
+
+Independent source/contract review found the nine historical controls are not
+required as independent candidates/finalists or mandatory head-to-head science.
+However, the reviewed empirical allocation and MEAS-06 starting-population
+contract require12initial publication roots, and current initial imports must
+be Phase264 artifacts. Simply dropping controls is NOT authorized or accepted
+by the current source. A prospective three-real-base bootstrap growing to12real
+Strategies could preserve final12/6-family/5-core gates and reduce the hypothetical
+all-nine-accepted schedule to4,632Matches (960matrix +1,800probe +1,872response).
+It still exceeds the withdrawn1.5martifact budget and requires an explicit human
+measurement-contract/scope decision plus new source/plan work before allocation.
+It is an option for a later decision, not an applied or authorized shortcut.
 
 Independent `/root/265_allocation_recommendation` read-only source assessment
 traced one graph value per runtime invocation, at least three artifacts each

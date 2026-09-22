@@ -1,12 +1,80 @@
 ---
 phase: 265
-status: source-repair-focused-passed-independent-review-pending
-source: 9c910d828776d9f1497493f72f6be775d09acc67
+status: actual-retained-json-round-trip-and-source-gate-passed
+source: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
 date: 2026-09-21
 empirical_authority: false
 ---
 
 # Full-Match storage realism check
+
+## Actual saved-execution result at final reviewed source
+
+Main's data-only diagnostic at3d25b37e passed after source repair and independent
+re-review. The actual11,981,860-byte old execution was published to a fresh
+private temporary diagnostic repository and reopened. All JSON values compare
+exactly, and the original file SHA-256 is unchanged. No Match, provider, replay,
+model, authoring, allocation or canonical evidence publication ran.
+
+- Witness SHA-256: `7d31687cbc7b681ed7dee3bc8e167aaeac44d6f8448525f2995661926835da02`.
+- Diagnostic root: `sha256:38139037bde20dc49d060bd15a771dacb01302a3d0e33262d03b8c83a9dc8647`.
+- Input JSON:11,981,860bytes; stored:12,183,083bytes; overhead:201,223bytes (~1.68%).
+- Physical artifacts:190, within diagnostic-only64MiB/1,024-file limits.
+- Diagnostic directory: `/private/var/folders/y0/jbhcmp0j0d3gvpc40xtm0r3w0000gn/T/league-265-storage-kxn1ay`.
+- `jsonDataEqual:true`, `canonicalNullPrototype:true`,
+  `historicalBytesUnchanged:true`, `issued:false`, `empiricalAuthority:false`.
+
+The first additional `isDeepStrictEqual` check returned false because the
+canonical parser intentionally builds prototype-free objects while JSON.parse
+creates ordinary objects (`packages/spec/src/canonical-json-parse.ts:102`).
+That diagnostic exited1 and is not called a pass. A separate read-only reopen
+compared JSON data independently after removing that host-prototype distinction;
+it exited0, with every key/value intact and unchanged historical bytes. No code,
+evidence, assertion about JSON data, or canonical limit was changed to get a pass.
+
+This is storage compatibility evidence, not new competitive evidence or an
+empirical-budget forecast. Measured real-trace overhead1.68% differs from the
+earlier synthetic0.247%; do not extrapolate one synthetic ratio as a guarantee.
+Final source gate96544 completed: 29/29 suites,273/273 tests,1773.05seconds.
+The separate explicit fail-fast build/type/boundary chain84943 also passed at
+unchanged3d25b37e. These source proofs do not establish a future run's capacity.
+
+## Earlier discovery and repair history
+
+## Additional invocation-size diagnostic — read-only recorded-action replay
+
+Main used the same pure-kernel replay pattern as the retained verifier, with
+the saved Phase263 attempt19 metadata, frozen feasibility cell, revision IDs,
+recorded runtime results and original `maxPhases:100`. No Strategy, provider,
+container, model, author or new empirical action ran; no file was written.
+Each request ID, method, input root, charge/completion flag, invocation ordinal
+and unique invocation root was checked before consuming a saved result. Every
+canonical transition and the final state/events matched the saved execution.
+
+Captured at3d25b37e, exit0:
+
+-417recorded invocations;1,286transitions; all request roots/transitions/final
+  state/events match; original SHA-256 unchanged.
+- Exact untransformed wrapper payloads total3,651,614canonical bytes.
+- Individual wrappers:7,810..19,222bytes; mean8,756.868bytes.
+- The current chunking formula yields1,251graph artifacts before deduplication
+  (three per wrapper). This excludes cleanup, journals, result, report and
+  factory-supervision artifacts; payload bytes exclude chunk/graph descriptor
+  bytes and filesystem allocation overhead.
+
+An initial diagnostic correctly stopped before replay when it compared raw
+internal initial state with a canonical transition projection. The latter sorts
+terrain and excludes private memories (`kernel/validate.ts`), so those are not
+the same representation. The corrected diagnostic uses the engine's existing
+`projectCanonicalStateForRecording` for that check, then compares every recorded
+transition exactly. No engine, data, equality requirement, or historical policy
+was changed. The original interrupted diagnostic is not claimed as a pass.
+
+This measurement describes one authenticated old witness, not the future
+Phase265 candidate population or its resource ceiling. In particular the old
+100-Phase bound is historical and must never be adopted for the new full league.
+
+## Original discovery
 
 Latest: source65b5cf63662f46151b8ddcb014d5799594e4c0de implements a versioned bounded
 execution stream preserving small v1 roots and charged publication failures.

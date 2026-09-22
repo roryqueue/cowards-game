@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 stream reviewer found logical-frame versus artifact-file budget mismatch; narrow correction next
-last_updated: "2026-09-22T01:30:46Z"
+stopped_at: Phase265 Plan07 Task1 complete; Task2 requires the unapproved lean scope/resource/participant decision; no active tests or empirical run
+last_updated: "2026-09-22T02:18:25Z"
 last_activity: 2026-09-21
-last_activity_desc: Baseline269tests29suites passed; storage repair65b5cf63 focused tests passed; review pending; draft resource envelope withdrawn
+last_activity_desc: Final source3d25b37e passed273tests29suites plus fail-fast types/boundaries; old evidence checks unchanged; lean run proposal awaits operator choice
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,69 @@ total_plans_in_phase: 7
 
 # State: Coward's Game
 
-## Session Continuity — 2026-09-14
+## Current Session Continuity — 2026-09-21
+
+**Plan265-07Task1 COMPLETE at source3d25b37e6ad2eb3edbfb298615d85128c98360e1.**
+Independent47-file incremental review is clean. Main final session96544 passed
+29/29suites,273/273tests in1773.05seconds. Because that shell did not fail fast,
+main separately captured explicit fail-fast build/type/boundary session84943,
+exit0 at the same source: lab build, strict affected script types, three clean
+1,330-file private scans, service zero strict/ownership offenses and19 old
+report-only entries. All tests/diagnostics and agents are finished; do not rerun
+this gate or mistake old running statements below for current process state.
+
+Actual old263execution storage/reopen preserves all JSON data and the original
+hash (11,981,860inputbytes,12,183,083storedbytes,190artifacts). Data-only recorded
+action replay matched417request roots and1,286transitions, measuring3,651,614
+invocation-wrapper bytes/1,251graph artifacts before descriptors. Final264reader
+check63882 passedaffirmed/issuedfalse with unchanged1,875-file store digest and
+readerroot89cadffb. No new empirical Match, Strategy/provider/model, authoring or
+allocation ran. See265-REALISM-CHECK.md and265-HISTORICAL-COMPATIBILITY.md.
+
+**Next is genuinely human-only Task2:**265-LEAN-RUN-DECISION.md proposes a
+prospective3-real-base starting league growing toward12, with unchanged final
+quality/rules/coverage gates and one complete bounded resource/participant
+envelope. Current source still requires12initialimports; approval must precede
+same-plan prospective contract/source amendment and conditional execution. The
+old1.5m-record/160GiB proposal is withdrawn, not approved. A normal approval of
+the complete new proposal suffices; no new literal/custody chain. Do not interpret
+standing autonomy as approval of this material measurement/resource choice.
+
+Plan07 remains6/7 at phase level:Task2unapproved,Task3unrun. Private UAT8source
+pass/1real-runblocked; independent verification0/5empiricaltruths,LEAG01–09
+unchecked,eval24/100because actual outcomes are absent. No final Plan07SUMMARY,
+Phase266freeze, formation, holdout/public/counting/production, milestone archive
+or tag is authorized. Commit and push completed source/planning work only.
+
+## Historical Session Continuity Snapshots
+
+All earlier current/running/pending handoffs below are historical and superseded
+by the current captured completion above; retain them without reactivating work.
+
+**Current verification handoff:** `/root/verify_265_source_readiness` is assigned
+independent goal-backward verification of the partial phase, source3d25b37e.
+Main waits while it is active except polling existing processes. No source/HEAD
+changes until gate96544 ends. Actual old263storage check completed: JSON data
+exact, original hash unchanged,190artifacts/12,183,083bytes from11,981,860input.
+See265-REALISM-CHECK.md. Strict host-object equality's prototype-only mismatch is
+explicitly recorded, not concealed; data-only normalized check passed. Historical
+264current-reader refresh63882 still runs (beforehash matches); gate96544 runs.
+Task2allocation/scope and Task3empirical work remain unapproved/unrun; verifier
+must not mark phase complete or permit Phase266freeze. No new literal/custody.
+
+**Current final validation — 2026-09-21:** Source3d25b37e6ad2eb3edbfb298615d85128c98360e1
+fixes the frame/file mismatch with captured RED then GREEN; independent47-file
+incremental review is now clean. Main final29-suite run is session96544 at
+unchanged source/HEAD3d25b37e. Do not duplicate or change source/HEAD while it runs.
+This invocation lacks shell fail-fast, so retain the actual test summary and
+separately require an explicit fail-fast type/boundary check before claiming the
+combined gate. Actual old263large-trace diagnostic is session72281: writes only
+a fresh temporary league diagnostic store, verifies round-trip and unchanged
+original bytes; no Match/provider/replay/authoring runs. No result yet inferred.
+Main CLIhelp also passed at3d25b37e. Prior baseline97524 finished269/269 at9c.
+The source fix and independent review are complete; full validation and actual
+data checks remain. Resource recommendation is unapproved and being corrected;
+the former1.5m-record/160GiB figures are withdrawn. Older snapshots are history.
 
 **Current narrow correction — 2026-09-21:** Independent47-file incremental
 review of65b5cf63 found one supported CR-01: v2 read compares logical frame count

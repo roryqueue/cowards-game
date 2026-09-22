@@ -943,7 +943,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
   4. Structural and behavioral diversity gates yield a diverse pure portfolio kept separate from the diagnostic mixture, and a precommitted rule either selects a deployable robust pure finalist from mixture, pure, counter, probe, invariance, legality, privacy, and runtime evidence or records `no robust pure finalist found`.
   5. Provisional leaders receive the full frozen automated, model, human, and external development-red-team budget; successful counters enter the declared response loop, failed attacks remain charged evidence, and no leader may depend materially on side, initiative, duplicate arenas, opaque identities, source or Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-**Plans:** 6/7 complete. Plan07 Task1 remains in source proof: after memory and probe-accounting repairs at `9c910d82`, the exact29-suite gate is running, but an actual read-only old full-Match trace exposed a new encode-before-chunk storage blocker independently confirmed in265-REALISM-CHECK.md. Repair bounded execution composition and its charged failure-prefix seam without changing limits or game rules. Actual Phase264 historical import compatibility passed at9c910d82 with unchanged store bytes. Final source validation/private UAT precede the single late live-allocation/participant decision. No Phase265 allocation or empirical result exists; synthetic fixtures do not complete this phase.
+**Plans:** 6/7 complete; Plan07 Task1 is complete at reviewed source `3d25b37e6ad2eb3edbfb298615d85128c98360e1`. All memory, accounting, full-Match storage and frame/file findings are repaired. Final proof passed29/29 suites and273/273 tests in1773.05seconds; a separate explicit fail-fast build/type/boundary chain passed. Actual old-trace storage/reopen and Phase264 historical import compatibility passed with unchanged old evidence. Private UAT has8source cases passed and1actual-run case blocked. Task2 awaits the material scope/resource/participant decision proposed in265-LEAN-RUN-DECISION.md (three genuine bases toward twelve, not an approved contract). Conditional Task3 has not run. No Phase265 allocation or empirical result exists; independent goal verification remains partial, allLEAG requirements unchecked, and Phase266 remains blocked.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.
@@ -959,7 +959,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 **Wave4 — connected league, blocked on Wave3**
 - [x] 265-06-PLAN.md — All-channel red-team/invariance and allocation-gated private CLI.
 
-**Wave5 — proof and live decision, blocked on Wave4**
+**Wave5 — source proof complete; live scope/resource/participant decision pending**
 - [ ] 265-07-PLAN.md — Exact combined source/CI proof; one allocation checkpoint; conditional complete real run and retained verification.
 
 Cross-cutting constraints: canonical unchanged kernel and supervised hostile-source execution only; private immutable evidence with complete charged accounting; no Phase264 allocation/waiver reuse; no sparse payoff imputation; no formation, holdout opening, public/counting, production or rules changes. Mixtures remain diagnostic, pure finalists remain separately selected, and honest metagame/no-finalist failure is distinct from process failure.

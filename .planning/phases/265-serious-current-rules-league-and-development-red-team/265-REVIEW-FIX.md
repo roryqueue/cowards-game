@@ -1,8 +1,8 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
-fixed_at: 2026-09-22T01:19:31Z
+fixed_at: 2026-09-22T01:35:25Z
 review_path: .planning/phases/265-serious-current-rules-league-and-development-red-team/265-REVIEW.md
-iteration: 6
+iteration: 7
 findings_in_scope: 1
 fixed: 1
 skipped: 0
@@ -11,34 +11,32 @@ status: all_fixed
 
 # Phase 265: Code Review Fix Report
 
-**Source review:** current CR-01 realism amendment at main source `9c910d828776d9f1497493f72f6be775d09acc67`.
-**Source fix:** `65b5cf63662f46151b8ddcb014d5799594e4c0de` (`fix(265): CR-01 stream oversized private executions`).
+**Source review:** current independent incremental CR-01 review at base `90010c25dc88903b25b014a1eea8d0ac05b93180`.
+**Source fix:** `3d25b37e6ad2eb3edbfb298615d85128c98360e1` (`fix(265): CR-01 bound stream frames by bytes`).
 
-## CR-01: full executions exceed canonical admission before chunking
+## CR-01: v2 reader rejects a stream admitted within artifact limits
 
-**Status:** fixed in source; requires independent review and final combined gate. The historical retained execution was not read or run by this fixer.
+**Status:** fixed in source; parent will perform independent recheck and final combined gate.
 
-**Files modified:** `scripts/lib/v1-38-league-execution-stream.ts` (new), `scripts/run-v1-38-serious-league.ts`, `scripts/run-v1-38-serious-league.test.ts`, `packages/strategy-lab/src/league/connected-runner.ts`, `packages/strategy-lab/src/league/contracts.ts`.
+**Main closeout:** independent recheck is clean at3d25b37e. The subsequent exact
+29-suite gate passed273/273 tests, and the separate explicit fail-fast build/type/
+boundary chain passed at the same source. This closes the source finding only;
+the fixer's focused evidence and no-empirical-work statement below remain intact.
 
-Small admissible graph values retain their exact v1 bytes and roots. Oversized executions in the three affected graph kinds now use a private v2 execution reference whose header, state, result events, transitions, and accounting are individually canonicalized and ordinal-bound, packed into 128 KiB chunks, and committed through chunk roots, a chain root, counts, lengths, an execution commitment, and the existing parent graph links. The graph reader authenticates streams on traversal, retains only compact index metadata, and reconstructs one requested execution on demand. Aggregate read/write bytes and artifact records remain charged to the declared limits; no canonical profile limit changed. Oversized result-event and normalized-gameplay aggregates use domain-separated ordered-record roots, while small roots remain v1. Replay comparisons use the same bounded ordered commitments.
+**Files modified:** `scripts/lib/v1-38-league-execution-stream.ts`, `scripts/run-v1-38-serious-league.test.ts`.
 
-The connected runner publishes the cell-result before its immutable journal terminal and reserves terminal headroom. If retention or later terminal publication fails, it records an anchored issuance-failure/charged process-invalid prefix rather than a scored result. The retained verifier recognizes only that authenticated failure disposition. No rules, runtime, live issuance, or scoring policy was changed.
+The reader no longer compares logical frame count to `maxArtifactRecords`, which caps physical artifacts. It bounds logical frames by authenticated stream `byteLength` and the minimum possible canonical frame size, while still requiring exact descriptor counts, ordinals, chain and execution commitments. On parsing, an extra frame fails as soon as it exceeds the authenticated declared count. The existing `2 * chunkCount + 1 <= maxArtifactRecords` physical-artifact check, graph unique-artifact read budget, writer preflight, canonical per-record admission, and all tamper/order checks remain. No allocation field or value changed.
 
-### Verification actually run
+### Focused evidence
 
-- Focused serious-league selector (new stream, tamper/order, charged failure-prefix tests): **3 passed, 30 skipped**, 80.50 s.
-- Retest of the final tamper/order regression after a test-only type correction: **1 passed, 32 skipped**, 3.35 s.
-- Connected-runner and contracts tests: **7 passed**, 5.61 s.
+A new actual graph regression uses 550 transitions with 300 nested entries, forcing `MAX_NODES_EXCEEDED` for whole-value admission. It verifies 552 logical frames exceed the 100-artifact allocation, the writer stores fewer than 100 physical artifact files, and `readLeagueRecordGraph` reopens the exact execution.
+
+- **RED at original 90010c25 source:** selected regression failed with `LEAGUE_EXECUTION_STREAM_DESCRIPTOR`; 1 failed, 33 skipped, 15.21 s. An initial import-only attempt failed because the isolated checkout lacked package dependency symlinks and was not counted as RED; those symlinks were added without installing packages.
+- **GREEN:** new regression plus existing missing/changed/reordered/bad-count/physical-overbudget test: 2 passed, 32 skipped, 29.46 s. A final tightened physical-count assertion rerun passed: 1 passed, 33 skipped, 30.52 s.
 - `./node_modules/.bin/tsc -b packages/strategy-lab`: exit 0.
-- Strict scripts/test/helper type check with `tsc --ignoreConfig --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext --skipLibCheck --types node,vitest/globals --esModuleInterop` on the three changed script files: exit 0.
+- Strict scripts/test/helper type check with `tsc --ignoreConfig --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext --skipLibCheck --types node,vitest/globals --esModuleInterop`: exit 0.
 - `git diff --check`: exit 0.
 
-The original 9c baseline combined gate was run by the parent (29 suites/269 tests passed); it is not evidence that this new source has passed that full gate. No full CLI suite or real Match was run here. The pre-fix storage failure is the read-only historical witness in the amended review; the new tests were not claimed as pre-fix RED/TDD.
+No full 29-suite gate, real Match, Strategy, provider, model, historical private read, or empirical allocation occurred in this repair.
 
-### Data-only diagnostic and format overhead
-
-`diagnoseLeagueExecutionStorage(createLeagueRepository(freshEmptyLeagueDirectory), alreadyRetainedExecution, declaredLimits)` is an exported data-only entry point. It refuses a nonempty repository, writes and reopens one graph record, compares the complete execution, and returns `headRoot`, input/stored bytes, overhead, and artifact count. The fresh directory must be a realpath whose basename starts `league-`. It does not dispatch a Match, provider, model, or replay. The parent may call it on an already-retained old execution in a separate fresh temporary repository; no historical artifact was read by this fixer.
-
-A synthetic 9,204,904-byte execution generated solely for this check packed into **71 stream chunks/143 stream artifacts**; stream artifacts totaled 9,226,946 bytes (**+22,042 bytes, 0.24%** over ordinary JSON input). The full fresh graph diagnostic reported **146 artifacts, 9,227,650 stored bytes, +22,746 bytes** (0.247%) including parent graph. This is format overhead for this synthetic shape, not a measured old-trace count, heap bound, OOM claim, or allocation approval. Resource proposals must account for two artifacts per 128 KiB stream chunk, one stream descriptor, and three parent graph artifacts for a small parent.
-
-_Fixer: gsd-code-fixer; iteration 6. Report intentionally uncommitted for parent lifecycle handling._
+_Fixer: gsd-code-fixer; iteration 7. Report intentionally left uncommitted for parent lifecycle handling._

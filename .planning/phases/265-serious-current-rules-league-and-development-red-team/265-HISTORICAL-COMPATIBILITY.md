@@ -1,7 +1,7 @@
 ---
 phase: 265
 status: passed-read-only
-source: 9c910d828776d9f1497493f72f6be775d09acc67
+source: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
 date: 2026-09-21
 issued: false
 empirical_authority: false
@@ -26,7 +26,7 @@ The command exited **0** and returned:
 | Threshold artifact | `sha256:f6098c9e14ed868e162a9374557e518678996b619f3f8912fb8723113328fa72` |
 | Historical producer implementation | `sha256:5baaeb677327a6102fd3dc719543686b14448122a91a4bca320cd0836cf5040b` |
 | Historical assessment implementation | `sha256:6a6094089e6714def26c427f60dfc0fae15e534cc685ad7a76dc883c4911b97c` |
-| Current reader implementation | `sha256:0e662c7eec3b8074d7e7337990206b057e9a8d020a3d2e98e7949c821b842cf3` |
+| Current reader implementation | `sha256:89cadffbf8714fc63fb3f72fa38c754e09f4f5c75c3ab38df8fde8c86256cb3f` |
 
 Historical producer, historical assessment and current reader identities remain
 separate. The old assessment/threshold identities exactly match Phase 264's
@@ -40,7 +40,14 @@ The failed-probe accounting repair changed the conservative whole-source
 fingerprint even though it did not alter the historical assessor. Main therefore
 refreshed this data-only check at `9c910d82`; it again exited0 with the same
 historical identities, assessment and threshold. This is two read-only checks,
-not two empirical attempts or repeated allocation consumption.
+not two empirical attempts or repeated allocation consumption. The9c reader was
+`sha256:0e662c7eec3b8074d7e7337990206b057e9a8d020a3d2e98e7949c821b842cf3`.
+
+After the full-Match stream and frame/file fixes, main repeated this data-only
+read at final reviewed source3d25b37e (session63882, exit0). The current reader
+root is the89cadffb value above; all historical assessment/threshold/producer
+identities are unchanged. The before and after whole-store digests again match
+exactly. This third compatibility read creates no empirical attempt or authority.
 
 ## Nonmutation check
 
@@ -64,6 +71,8 @@ write-capable assessment command ran. No source or HEAD changed during the check
 ./node_modules/.bin/tsx --eval 'import { createFactoryRepository } from "./packages/strategy-lab/src/factory/repository.ts"; import { verifyHistoricalFactoryAssessmentForLeague } from "./scripts/assess-v1-38-factory-independence.ts"; const r = verifyHistoricalFactoryAssessmentForLeague(createFactoryRepository("/Users/roryquinlan/runtime/cowards-game/.strategy-lab/factory-264-fresh-20260914-approved-two"), "sha256:25913b26fa81fa15177774fbdcf9c0d1ef244ad13910bc664bfde4ea8c2e43f8"); console.log(JSON.stringify({ issued: r.issued, status: r.status, assessmentRoot: r.assessmentRoot, thresholdArtifactRoot: r.thresholdArtifactRoot, historicalProducerImplementationRoot: r.historicalProducerImplementationRoot, historicalAssessmentImplementationRoot: r.historicalAssessmentImplementationRoot, currentReaderImplementationRoot: r.currentReaderImplementationRoot }, null, 2))'
 ```
 
-Read-only compatibility is complete. The final source gate and independent
-goal verification remain separate; actual league execution still requires
-Plan 265-07 Task 2's unapproved allocation and participant decision.
+Read-only compatibility is complete. The separate final source gate passed
+273/273 tests, types and boundaries at the same3d25b37e source. Independent goal
+verification correctly remains partial because no real Phase265 league exists.
+Actual league execution still requires Plan265-07 Task2's unapproved scope,
+allocation and participant decision in265-LEAN-RUN-DECISION.md.

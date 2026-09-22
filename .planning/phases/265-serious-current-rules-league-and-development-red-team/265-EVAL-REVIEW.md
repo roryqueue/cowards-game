@@ -1,18 +1,18 @@
 # EVAL-REVIEW — Phase 265: Serious Current-Rules League and Development Red Team
 
 **Audit Date:** 2026-09-21
-**Audit basis:** State A — `265-AI-SPEC.md`; original evaluation re-audit at `244e6a2a` reconciled by main with independent source review at `9c910d828776d9f1497493f72f6be775d09acc67`.
+**Audit basis:** State A — `265-AI-SPEC.md`; original evaluation re-audit at `244e6a2a`, reconciled by main with independent review and captured source proof at `3d25b37e6ad2eb3edbfb298615d85128c98360e1`.
 **AI-SPEC Present:** Yes
 **Overall Score:** 24/100
 **Verdict:** NOT IMPLEMENTED — empirical evaluation evidence only
 
-This is an outcome audit, not a source-gate score. The captured repaired baseline
-(29/29 suites, 267/267 tests, 1652.36 s at `5d554920`) predates the final bounded-memory
-repairs. The gate at `967742cb` passed268/269 and exposed a failed-probe count
-regression; the original test now passes on reviewed repair `9c910d82`, whose
-complete gate is running. Independent source
-review closes the preceding-target linkage, AST matcher linkage, charged/partial
-failure paths, and final retained-memory defect. No Phase 265 allocation root,
+This is an outcome audit, not a source-gate score. Final reviewed source
+`3d25b37e` passed29/29 suites and273/273 tests in1773.05seconds; a separate explicit
+fail-fast build/type/boundary chain passed at the same source. Independent review
+closes preceding-target linkage, AST matcher linkage, charged/partial failure,
+retained-memory, full-Match storage and frame/file-limit defects. Actual old-trace
+round-trip and historical current-reader checks also passed without changing old
+evidence. No Phase 265 allocation root,
 real candidate/Match/model/human/external record, retained empirical result, or
 independent retained-run verification exists. The planned empirical evaluation
 therefore has not been delivered. It is pending the one Task 2 allocation/
@@ -20,11 +20,11 @@ participant decision; this expected absence is not a source or rules defect.
 
 ## Dimension Coverage
 
-**Latest source-readiness amendment:** the current265-REVIEW.md CR-01 confirms
-full-Match encode-before-chunk failure using read-only old execution data.
-Synthetic small fixtures did not expose this. Bounded storage and associated
-failure-prefix repair remain required before the allocation checkpoint. This
-does not change the24/100 empirical score or grant any empirical authority.
+**Latest source-readiness amendment:** the actual old full-Match trace exposed
+an encode-before-chunk failure that small fixtures missed. Bounded storage,
+associated failure-prefix handling and frame/file-limit repair are now reviewed
+and validated at3d25b37e. This closes the source blocker, not the missing empirical
+outcomes; it does not change the24/100 score or grant empirical authority.
 
 | Dimension | Status | Measurement | Finding |
 |-----------|--------|-------------|---------|
@@ -41,13 +41,13 @@ does not change the24/100 empirical score or grant any empirical authority.
 
 ### Source-readiness distinction
 
-All eight dimensions have substantive source mechanisms: matrix, solver, PSRO/ledger, diversity, selection, probe/runtime, privacy projection, and completion retention. Re-audit found **zero remaining source-evaluation blockers** in the two previously disputed links: v5 response-history measurement uses preceding frozen targets, and the 16-row index uses AST-verified matcher markers. This does **not** change any MISSING outcome above, and the current exact source gate remains pending; it is not a deployment assessment.
+All eight dimensions have substantive source mechanisms: matrix, solver, PSRO/ledger, diversity, selection, probe/runtime, privacy projection, and completion retention. Re-audit found **zero remaining source-evaluation blockers** in the two previously disputed links: v5 response-history measurement uses preceding frozen targets, and the16-row index uses AST-verified matcher markers. The exact source gate has passed. This does **not** change any MISSING outcome above; it is not a deployment assessment.
 
 ## Infrastructure Audit
 
 | Component | Status | Finding |
 |-----------|--------|---------|
-| Eval tooling (Vitest + TypeScript/private trace store) | Configured / current run in progress | CI has the exact Phase 265 29-suite source-only gate, with a 45-minute test-step allowance after the measured 27.54-minute baseline. The captured 267-test baseline predates the final memory fix. Main's current exact gate does not execute an empirical selector. |
+| Eval tooling (Vitest + TypeScript/private trace store) | Configured / source gate passed | CI has the exact Phase26529-suite source-only gate and45-minute test-step allowance. Final3d25b37e passed273tests in29.55minutes plus build/types/boundaries. This did not execute an empirical selector. |
 | Reference dataset | Partial | All 16 specified injected fixture groups are present and source-gated. They are explicitly nonempirical; no allocated empirical reference population, candidate outcomes, or real red-team rows exist. |
 | CI/CD integration | Present | `.github/workflows/ci.yml` runs the exact named Phase 265 gate, package/strict type checks, and boundary scans before allocation. |
 | Online guardrails | Partial | Complete-cell, issuance/runtime, frozen allocation, charge, and projection guards exist in the request path, but have only injected coverage and have not guarded an actual empirical run. |
@@ -59,13 +59,13 @@ All eight dimensions have substantive source mechanisms: matrix, solver, PSRO/le
 
 - **BLOCKER — no empirical evaluation evidence.** Every planned dimension lacks its required Phase 265 allocation-backed inputs and retained real outputs. Task 2 approval and Task 3 are pending by design; source fixtures cannot substitute.
 
-No additional source-evaluation blocker was found in this re-audit. The AST index intentionally establishes matcher linkage, not semantic adequacy or runtime execution; the named tests and pending exact gate provide those separate layers.
+No additional source-evaluation blocker was found in this re-audit. The AST index intentionally establishes matcher linkage, not semantic adequacy or runtime execution; the named tests and captured exact gate provide those separate layers.
 
 ## Remediation Plan
 
-### Must complete before the allocation/participant checkpoint:
+### Completed before the allocation/participant checkpoint:
 
-1. Run the exact current 29-suite source gate, affected type checks, and boundary scans once at the reviewed source root. This re-audit does not treat fix-report focused results as substitute evidence.
+1. Exact current29-suite source gate, affected types and boundary scans passed at3d25b37e. Focused fix-report results were not substituted for the full gate. The one remaining human scope/resource/participant proposal is265-LEAN-RUN-DECISION.md; it is not approved.
 
 ### Must complete after explicit allocation approval:
 

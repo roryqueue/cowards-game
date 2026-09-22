@@ -1,9 +1,9 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
-reviewed: 2026-09-22T01:28:05Z
+reviewed: 2026-09-22T01:37:26Z
 depth: deep
-reviewed_head: 9fb22f92c09a1f4f2480101063b6df76f44f8a81
-reviewed_source: 65b5cf63662f46151b8ddcb014d5799594e4c0de
+reviewed_head: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
+reviewed_source: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
 diff_base: 98e4392e
 files_reviewed: 47
 files_reviewed_list:
@@ -55,76 +55,61 @@ files_reviewed_list:
   - scripts/v1-38-factory-execution-evidence.test.ts
   - scripts/v1-38-factory-execution-evidence.ts
 findings:
-  critical: 1
+  critical: 0
   warning: 0
   info: 0
-  total: 1
-status: issues_found
+  total: 0
+status: clean
 ---
 
 # Phase 265: Code Review Report
 
-**Reviewed:** 2026-09-22T01:28:05Z
+**Reviewed:** 2026-09-22T01:37:26Z
 **Depth:** deep
 **Files Reviewed:** 47
-**Status:** one BLOCKER in the new execution-stream reader
+**Status:** clean incremental source recheck
 
 ## Summary
 
-Commit `65b5cf63` repairs whole-execution canonical admission and the
-result-before-journal publication order, while retaining the original small
-v1 graph roots. This independent incremental deep trace found one writer/reader
-limit mismatch in the new v2 format. The baseline 29-suite/269-test gate passed
-on preceding source `9c910d82`; only focused tests and types are reported for
-the new source. No Phase 265 empirical allocation or live run exists.
+The sole finding in the preceding review, preserved in `265-REVIEW.iter10.md`,
+is closed on source trace at `3d25b37e`. This is a narrow incremental recheck
+of that two-file change against the inherited 47-file review scope, not a fresh
+47-file discovery pass. The prior full 29-suite/269-test pass belongs to source
+`9c910d82`, before the new execution-stream implementation; the new source has
+focused test and type-check evidence in `265-REVIEW-FIX.md`, not a full gate.
+No Phase 265 empirical allocation or live run exists.
 
-## Critical Issues
-
-### CR-01 — v2 reader rejects a stream admitted within artifact limits (BLOCKER)
-
-**File:** `scripts/lib/v1-38-league-execution-stream.ts:69,94`; writer:
-`scripts/run-v1-38-serious-league.ts:102-115`.
-
-**Issue:** `maxArtifactRecords` is the cap on stored artifact files. The writer
-preflights and charges the stream's chunks, chunk nodes, stream descriptor and
-parent graph artifacts against that cap. The reader additionally rejects when
-`descriptor.recordCount`—the number of logical header/state/event/transition/
-accounting *frames*—exceeds `maxArtifactRecords`. Those are different units.
-The new oversized path is reachable: the focused test's 550 transitions with
-300 small nested Soldier-like entries each exceed the canonical node limit,
-forcing v2, but serialize into far fewer than 100 chunk/node/descriptor files.
-With `maxArtifactRecords: 100` and adequate bytes, `LeagueRecordGraph.append`
-can persist that result, while `readLeagueRecordGraph` calls the stream reader
-and fails at its frame-count check (`recordCount` is at least 552). A durable
-cell-result—and potentially an immutable success terminal—then cannot pass
-retained verification despite staying within the declared artifact budget.
-The existing test uses 10,000 records, masking this mismatch. No real Match or
-historical artifact was executed or rewritten to establish this finding.
-
-**Fix:** Keep `maxArtifactRecords` for actual artifacts (the graph reader's
-unique-artifact inventory and the stream's `2 * chunkCount + 1` check). Validate
-logical frame count and ordinals against authenticated `byteLength`, exact
-descriptor counts, and a separate bounded frame rule derived from those bytes;
-do not charge logical frames as artifact files or require a new allocation
-field. Add a v2 regression that forces oversized admission with frame count
-greater than the artifact cap but physical artifacts within it, then verifies
-round-trip/reopen. Keep over-budget physical artifact, missing/reordered frame,
-and bad-count rejection tests.
-
-This is a format/readability defect in the same source plan, not an empirical
-result or a request for more work authority.
+**Main follow-up after this independent review:** the final gate at the same
+3d25b37e source subsequently passed29/29 suites,273/273 tests in1773.05seconds.
+Separate explicit fail-fast build/type/boundary chain84943 passed; actual old-trace
+storage and historical-reader checks preserved old evidence. These are main's
+captured validation results, not additional checks claimed by this reviewer.
+See265-VALIDATION.md and265-07-SOURCE-PROOF.md. No empirical result is implied.
 
 ## Narrative Findings (AI reviewer)
 
-The only new supported finding is CR-01 above. The v2 writer preserves the
-execution's required shape, including every event, transition, accounting
-record, failure classification and code. Individual frames are canonicalized;
-chunk bytes, ordered chunk links, ordered frame commitments, declared counts,
-and reconstructed execution commitment are checked on read. A small execution
-still uses its exact v1 graph bytes/root. Oversized events and whole-execution
-values reach the v2 branch through the actual graph writer, including cell and
-response results/failures. The defect is the extra frame-versus-file comparison,
-not a failure to hash or order those records.
+No supported BLOCKER or WARNING remains from the changed source. At
+`scripts/lib/v1-38-league-execution-stream.ts:73`, the authenticated descriptor
+limits logical `recordCount` by `byteLength / MIN_FRAME_BYTES`, rather than by
+the physical artifact-file allocation. `MIN_FRAME_BYTES` is a conservative
+lower bound for valid canonical frames: a header's required live value is an
+object, and the other frame-kind names are longer. The descriptor's exact
+component counts still sum to `recordCount`; the parser at line 98 rejects an
+extra frame immediately, requires exact ordinals and frame order, and later
+checks final counts, chain root, and reconstructed execution commitment. The
+physical `2 * chunkCount + 1` descriptor check, graph unique-artifact read
+budget, and writer preflight remain unchanged. No new allocation field is
+needed. Existing missing, changed, reordered, bad-count, and physical-budget
+rejection paths are retained.
+
+The new regression at `scripts/run-v1-38-serious-league.test.ts:83-93` forces
+the *actual* graph writer's oversized-v2 branch with 550 transitions and 300
+nested entries per transition. It asserts whole-value canonical node failure,
+552 logical frames greater than the 100-artifact cap, fewer than 100 physical
+artifact files after publication, and exact graph-reader round-trip. The fix
+report documents RED `DESCRIPTOR` on old source, GREEN 2/2 selected cases plus
+the tightened count case, and passing build/strict type checks. Those results
+were not rerun in this review.
 
 The graph still preflights the pending physical bytes and records before
 publication and authenticates roots, links, cycles, and aggregate read budgets.
@@ -135,8 +120,8 @@ persisted terminal without rewriting it. If no terminal was installed, the
 failure prefix stays non-scorable. The preceding `executedCells` correction
 counts a saved cell result even when the subsequent terminal is non-success.
 These are source traces, not a filesystem fault-injection or full-suite result
-for this new commit; a bounded after-link-sync failure regression would be
-useful.
+for this new commit. A bounded after-link-sync failure regression remains an
+optional hardening test, not a review finding.
 
 The previous deep 46-file review's eight original defects remain closed on
 incremental source trace: ordinary-vs-emergency journal accounting;
@@ -158,5 +143,5 @@ empirical run. `empiricalRequirementsComplete: false` remains intentional.
 
 ---
 
-_Reviewed: 2026-09-22T01:28:05Z_
+_Reviewed: 2026-09-22T01:37:26Z_
 _Reviewer: gsd-code-reviewer; depth: deep; source-only._

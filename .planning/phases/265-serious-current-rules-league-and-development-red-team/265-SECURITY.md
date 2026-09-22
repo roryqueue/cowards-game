@@ -1,14 +1,14 @@
 ---
 phase: 265
 slug: serious-current-rules-league-and-development-red-team
-status: source-storage-gap-open
+status: source-audited-and-source-gate-passed
 # Blocking OPEN threats only: severity >= workflow.security_block_on (high).
 threats_open: 0
-threats_open_all_severities: 1
+threats_open_all_severities: 0
 asvs_level: 1
 block_on: high
 register_authored_at_plan_time: true
-audited_source: 9c910d828776d9f1497493f72f6be775d09acc67
+audited_source: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
 created: 2026-09-15
 updated: 2026-09-21
 ---
@@ -17,15 +17,20 @@ updated: 2026-09-21
 
 ## Latest amendment — retained full-Match storage
 
-**T-265-06 is OPEN again (medium), with a source-readiness blocker.** A real
-retained Phase263 execution fails canonical node admission before the graph can
-chunk it. The related post-success-terminal result-publication failure must
-retain honest charged evidence without rewriting that terminal. Main and an
-independent source explorer confirmed this at9c910d82; see265-REALISM-CHECK.md and
-current265-REVIEW.md CR-01. No risk waiver is applied. Earlier closed row/memory
-dispositions below are historical, not closure of this newly discovered gap.
-The high-severity-open count remains0 because the declared T-265-06 severity is
-medium; that count does not permit live work while the source blocker remains.
+**T-265-06 is CLOSED at source3d25b37e after repair, without a risk waiver.**
+The actual old full-Match canonical node-limit failure is repaired by bounded
+versioned execution streams, with exact small v1 roots and independently admitted
+frames. Physical artifact limits stay separate from authenticated logical-frame
+counts; the follow-up mismatch has a captured RED/GREEN regression. Charged
+publication failure on either side of the result/terminal ordering reopens
+without rewriting terminal bytes or claiming a score. Independent47-file
+incremental review is clean. Main's actual11.98MBoldtrace round-trip preserves
+all JSON data and its original hash; it stores190artifacts/12.18MB. Historical
+264reader compatibility at this source also passed with unchanged whole-store
+hash. Final source gate96544 passed273/273 tests across29 suites, and the separate
+explicit fail-fast build/type/boundary chain84943 passed at the same source.
+These are source/data-read checks, not empirical league completion or an
+allocation waiver. No declared source threat remains open.
 
 Source-only mitigation audit against reviewed source `9c910d82`. This verifies the
 22 declared threat-register entries, not empirical league completion. No Phase 265

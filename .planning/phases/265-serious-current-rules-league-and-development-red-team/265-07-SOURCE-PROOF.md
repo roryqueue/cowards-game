@@ -2,15 +2,41 @@
 phase: 265
 plan: "07"
 task: 1
-status: full-match-storage-repair-required
-reviewed_source: 9c910d828776d9f1497493f72f6be775d09acc67
+status: task-1-complete-awaiting-task-2-decision
+reviewed_source: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
 updated: 2026-09-21
 empirical_authority: false
 ---
 
 # Phase 265 Plan 07 Task 1 source-proof handoff
 
-**Current blocker:** the actual retained full-Match realism check found that
+**Task 1 complete:** all source findings are repaired through
+`3d25b37e6ad2eb3edbfb298615d85128c98360e1`, with a clean independent 47-file
+incremental review. Main captured 29/29 suites and 273/273 tests passing in
+1773.05 seconds (session96544). Because that shell did not fail fast, main also
+captured a separate explicit fail-fast build/type/boundary chain (session84943,
+exit0) at the same source: lab build, strict affected script types, three clean
+1,330-file private boundary scans, and service checks with zero strict/ownership
+offenses and19 pre-existing report-only entries. No source changed during proof.
+
+Actual old11.98MBtrace storage/reopen preserves exact JSON data and its original
+hash; historical current-reader compatibility also passed with unchanged
+1,875-file store hash and readerroot89cadffb. See265-REALISM-CHECK.md and
+265-HISTORICAL-COMPATIBILITY.md. Private UAT has eight source cases passed and
+one real-run case blocked. Independent goal verification remains correctly
+`gaps_found`: source proof is not an empirical league outcome.
+
+Task 2 is the genuine scope/resource/participant decision in
+265-LEAN-RUN-DECISION.md, proposed but not authorized. Task 3 has not run.
+No allocation, real league result, Phase266 freeze, formation or milestone
+completion is claimed. Plan07 remains incomplete; no final SUMMARY is created.
+
+## Historical source-proof snapshots
+
+All running/pending/finding statements below describe earlier snapshots,
+superseded by the captured completion above; no process is still running.
+
+**Earlier blocker:** the actual retained full-Match realism check found that
 whole-execution canonical admission fails before chunking at9c910d82. Independent
 source exploration confirmed it and the associated success-terminal/publication
 failure seam. See265-REALISM-CHECK.md and current265-REVIEW.md CR-01. The running

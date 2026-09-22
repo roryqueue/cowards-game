@@ -6,14 +6,38 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-09-21
-source_reviewed: 9c910d828776d9f1497493f72f6be775d09acc67
-source_gate: baseline269-passed-storage-repair-focused-passed-review-pending
+source_reviewed: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
+source_gate: passed-273-tests-build-types-boundaries-at-3d25b37e
 empirical_validation: pending-allocation-and-real-run
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+Final reviewed source `3d25b37e6ad2eb3edbfb298615d85128c98360e1` passed
+**29/29 suites,273/273 tests in1773.05seconds** (session96544). Its shell did not
+fail fast, so main separately ran an explicit fail-fast package/type/boundary
+chain (session84943,exit0), printing the same source identity first. Lab build
+and strict affected script types passed; serious/lab/factory scans each covered
+1,330files with zero violations; service checks had zero strict/ownership
+offenses and19 pre-existing report-only entries. Source/HEAD remained unchanged
+during proof. Neither the last shell exit nor focused tests substitute for the
+captured full test summary. All validation processes are finished.
+
+Independent47-file incremental review is clean. Main's actual old11.98MBexecution
+stores/reopens with exact JSON data and original hash,190artifacts/12.18MB.
+Current264 historical reader check passedaffirmed/issuedfalse with unchanged
+1,875-file store hash and readerroot89cadffb. Private UAT has8source cases passed,
+1actual-run case blocked. Plan07Task1 is complete; Task2's proposed material
+scope/resource/participant decision and Task3's real run remain outstanding.
+The phase-level partial/Nyquist status is not promoted from source-only evidence.
+No empirical authority is created.
+
+### Earlier validation snapshots
+
+The following findings and running statements record prior source states;
+the final captured results above supersede their pending status.
 
 Main gate97524 at unchanged9c910d82 finished exit0:29/29suites,269/269tests,
 1677.98seconds; chained package/strict types and three1329-file boundary scans
@@ -73,24 +97,24 @@ Source and HEAD stayed unchanged; only planning documents were edited. The
 memory repair has focused regression evidence and clean independent review at
 `967742cb`; that exact post-repair gate found one accounting-order regression
 (captured below). Source `9c910d82` repairs it; the unchanged existing case passes
-and independent incremental review is clean. The corrected complete gate is
-running with source and HEAD unchanged.
+and independent incremental review is clean. That269-test baseline passed;
+the final stream/frame repair at3d25b37e then passed the273-test gate above.
 
 | Task | Wave | Requirements | Executable verification | Current status |
 |---|---:|---|---|---|
-| 265-01 T1 | 1 | LEAG-01/02 | `league/contracts.test.ts` | Source implemented; final gate pending |
-| 265-01 T2 | 1 | LEAG-01/02 | `league/identity.test.ts` | Source implemented; final gate pending |
-| 265-02 T1 | 2 | LEAG-01/02 | `league/matrix.test.ts` RED→GREEN and fault families | Source implemented; final gate pending |
-| 265-02 T2 | 2 | LEAG-01/02 | `league/matrix.test.ts`, direct solver transport | Source implemented; final gate pending |
-| 265-03 T1 | 2 | LEAG-01/02/09 | `league/repository.test.ts`, immutable/read-only byte snapshots | Source implemented; final gate pending |
-| 265-03 T2 | 2 | LEAG-01/02/09 | `league/connected-runner.test.ts`, runtime/admission/supervision regressions | Source implemented; final gate pending |
-| 265-04 T1 | 3 | LEAG-03 | `league/solver.test.ts`, exact golden/residual/capacity vectors | Source implemented; final gate pending |
-| 265-04 T2 | 3 | LEAG-04 | `league/psro.test.ts`, connected response/late-counter tests | Source implemented; final gate pending |
-| 265-05 T1 | 3 | LEAG-06/07/08 | `league/selection.test.ts`, authentic controls and linked-response gates | Source implemented; final gate pending |
-| 265-05 T2 | 3 | LEAG-05 | `league/report.test.ts`, bounded composed report/privacy/reopen | Source implemented; final gate pending |
-| 265-06 T1 | 4 | LEAG-04/09 | `league/red-team.test.ts`, four-channel accounting/nine probes | Source implemented; final gate pending |
-| 265-06 T2 | 4 | LEAG-04/09 | `scripts/run-v1-38-serious-league.test.ts`, allocation, authoring, response-runtime and historical-reader tests | Source implemented; final gate pending |
-| 265-07 T1 | 5 | LEAG-01–09 | Sixteen AST-linked assertions, package/CLI integration, all 29 suites/types/boundary scans below | Source implemented and independently reviewed; final gate pending |
+| 265-01 T1 | 1 | LEAG-01/02 | `league/contracts.test.ts` | Source gate passed at3d25b37e |
+| 265-01 T2 | 1 | LEAG-01/02 | `league/identity.test.ts` | Source gate passed at3d25b37e |
+| 265-02 T1 | 2 | LEAG-01/02 | `league/matrix.test.ts` RED→GREEN and fault families | Source gate passed at3d25b37e |
+| 265-02 T2 | 2 | LEAG-01/02 | `league/matrix.test.ts`, direct solver transport | Source gate passed at3d25b37e |
+| 265-03 T1 | 2 | LEAG-01/02/09 | `league/repository.test.ts`, immutable/read-only byte snapshots | Source gate passed at3d25b37e |
+| 265-03 T2 | 2 | LEAG-01/02/09 | `league/connected-runner.test.ts`, runtime/admission/supervision regressions | Source gate passed at3d25b37e |
+| 265-04 T1 | 3 | LEAG-03 | `league/solver.test.ts`, exact golden/residual/capacity vectors | Source gate passed at3d25b37e |
+| 265-04 T2 | 3 | LEAG-04 | `league/psro.test.ts`, connected response/late-counter tests | Source gate passed at3d25b37e |
+| 265-05 T1 | 3 | LEAG-06/07/08 | `league/selection.test.ts`, authentic controls and linked-response gates | Source gate passed at3d25b37e |
+| 265-05 T2 | 3 | LEAG-05 | `league/report.test.ts`, bounded composed report/privacy/reopen | Source gate passed at3d25b37e |
+| 265-06 T1 | 4 | LEAG-04/09 | `league/red-team.test.ts`, four-channel accounting/nine probes | Source gate passed at3d25b37e |
+| 265-06 T2 | 4 | LEAG-04/09 | `scripts/run-v1-38-serious-league.test.ts`, allocation, authoring, response-runtime and historical-reader tests | Source gate passed at3d25b37e |
+| 265-07 T1 | 5 | LEAG-01–09 | Sixteen AST-linked assertions, package/CLI integration, all 29 suites/types/boundary scans below | Complete; independent review and source gate passed |
 | 265-07 T2 | 5 | LEAG-01–09 | CLI `--help`; human inspection of exact prospective allocation and participant policy | Pending genuine human decision; no allocation written |
 | 265-07 T3 | 5 | LEAG-01–09 | Full allocated real run followed by exact bounded `verify-retained` | Conditional, not run; injected tests are not completion |
 
@@ -115,6 +139,7 @@ neither source review nor test-index linkage clears that requirement.
 Run after Wave5 and before the allocation checkpoint:
 
 ```sh
+set -e
 ./node_modules/.bin/vitest run --maxWorkers=1 \
   packages/strategy-lab/src/league/contracts.test.ts \
   packages/strategy-lab/src/league/identity.test.ts \
@@ -194,12 +219,12 @@ Before real candidate/Match/model/human/external work, 265-07 Task2 is the one c
 
 ## Validation Sign-Off
 
-- [ ] All tasks have exact automated checks or preceding Wave0 dependencies.
-- [ ] No three consecutive tasks lack automated verification.
-- [ ] All referenced tests exist and pass; measured runtimes recorded.
-- [ ] Synthetic/source coverage and actual empirical evidence remain distinct; source-gate pass is not empirical completion.
+- [x] All source tasks have exact automated checks; Task2 is explicitly human and Task3 is allocation-conditional.
+- [x] No three consecutive tasks lack automated verification.
+- [x] All referenced source tests exist and pass; measured runtimes recorded.
+- [x] Synthetic/source coverage and actual empirical evidence remain distinct; source-gate pass is not empirical completion.
 - [ ] The approved branch retains the full league result and passes bounded `verify-retained`; the declined branch remains pending authorization.
-- [ ] Private/runtime/engine boundaries pass.
+- [x] Private/runtime/engine boundaries pass.
 - [ ] Independent verification and private UAT complete.
 
 Approval: standing autonomous implementation instruction covers in-scope source work. This strategy does not invent a live allocation or change frozen rules, thresholds or formation/holdout gates.
