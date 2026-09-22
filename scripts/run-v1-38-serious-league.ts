@@ -243,9 +243,9 @@ export class LeagueConnectedSession {
       const terminal = await runLeagueCell({ repository: this.input.repository, start, cell, bottom: issuedBottom, top: issuedTop, requestRoot: cell.requestRoot, match, runCanonicalLabMatch: async (request) => { actual = await (this.input.fixture?.run ?? runCanonicalLabMatch)(request); return actual } })
       if (!actual) return fail("MISSING_EXECUTION")
       const recordRoot = this.graph.append("cell-result", { start, cell, match, terminal, execution: actual, bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root, seed, options }, [startRecord, ...runtimeRecords])
-      const result = { cell, startRoot: start.root, terminal, recordRoot, ...(options.baseCell ? { canonicalBytes: bytesRoot(encode(normalizedGameplay(actual))) } : {}), bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root }; this.executedCells++
+      this.executedCells++
       if (terminal.disposition !== "success") return fail("PROCESS_INVALID")
-      return result
+      return { cell, startRoot: start.root, terminal, recordRoot, ...(options.baseCell ? { canonicalBytes: bytesRoot(encode(normalizedGameplay(actual))) } : {}), bottomCandidateRoot: bottom.admission.candidate.root, topCandidateRoot: top.admission.candidate.root }
     } catch (error) {
       for (const provider of opened) { try { runtimeRecords.push(this.graph.append("runtime-cleanup", { identity: provider.identity, closed: provider.close() }, [startRecord])) } catch (error) { runtimeRecords.push(this.graph.append("runtime-cleanup-failure", { identity: provider.identity, error: error instanceof Error ? error.name : "unknown" }, [startRecord])) } }
       const evidenceRoot = this.graph.append("cell-issuance-failure", { start, cell, failure: error instanceof Error ? error.name : "unknown" }, [startRecord, ...runtimeRecords])
