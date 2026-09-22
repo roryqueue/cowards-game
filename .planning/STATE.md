@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 Task1 complete; Task2 requires the unapproved lean scope/resource/participant decision; no active tests or empirical run
-last_updated: "2026-09-22T02:18:25Z"
-last_activity: 2026-09-21
-last_activity_desc: Final source3d25b37e passed273tests29suites plus fail-fast types/boundaries; old evidence checks unchanged; lean run proposal awaits operator choice
+stopped_at: Phase265 Plan07 Task2 approved; prospective lean-contract amendment and conditional resource preflight now in progress
+last_updated: "2026-09-22"
+last_activity: 2026-09-22
+last_activity_desc: Operator approved complete lean-run proposal; source validation and resource preflight required before one bounded live run
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,21 @@ total_plans_in_phase: 7
 
 # State: Coward's Game
 
-## Current Session Continuity — 2026-09-21
+## Current Session Continuity — 2026-09-22
+
+The operator approved the complete265-LEAN-RUN-DECISION.md proposal with “yes”.
+Proceed autonomously within the same Plan265-07: prospectively amend the initial
+league contract from12imports to3genuineassessedbases, preserve final12/6/5
+diversity and every other frozen gate, validate/review the source change, then
+prepare and run exactly one bounded allocation only if the stated preflight
+margins pass. No new numbered plan, repeated literal, old authorization reuse,
+formation/holdout/public/counting/production or rules change is approved.
+The exact96hour/150GiB/9million-record/five-model-call envelope and zero human/
+external channels are in the approved decision. No new empirical work has run.
+The273-test source proof below is the preserved pre-amendment baseline, not
+proof of future code. Keep all historical private evidence and unrelated files.
+
+## Prior completed source proof — 2026-09-21
 
 **Plan265-07Task1 COMPLETE at source3d25b37e6ad2eb3edbfb298615d85128c98360e1.**
 Independent47-file incremental review is clean. Main final session96544 passed

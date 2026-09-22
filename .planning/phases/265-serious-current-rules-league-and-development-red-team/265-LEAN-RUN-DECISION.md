@@ -2,12 +2,29 @@
 phase: 265
 plan: "07"
 task: 2
-status: proposed-not-authorized
+status: operator-approved-conditional-on-amendment-validation-and-preflight
 empirical_authority: false
+operator_approved: 2026-09-22
+conditional_live_authority: true
 source_basis: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
 ---
 
 # One proposed decision: a smaller starting league, unchanged final gates
+
+## Approval — 2026-09-22
+
+The repository operator replied **“yes”** to the complete proposal after the
+source-proof push at`c503960789635acf5b5ff30a7f5ac41e0203f63e`. This approves
+the prospective contract/source update and one bounded run exactly as described
+below, conditional on independent review, complete validation and the stated
+resource preflight. It also approves the new zero human/external dispositions;
+no Phase264 waiver is reused. No repeat authorization literal is required.
+
+This record is not the prepared allocation and does not itself satisfy the
+pre-dispatch gates. `empirical_authority:false` means immediate dispatch remains
+ineligible until those conditions pass; it does not withdraw the user's
+conditional approval. Preserve all numerical bounds and original proposal text
+below. The final pending-decision paragraph is the pre-approval historical state.
 
 ## Recommendation
 
