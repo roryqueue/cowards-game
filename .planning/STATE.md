@@ -5,8 +5,8 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase 265 oversized execution repair65b5cf63 implemented; independent review and final full gate next
-last_updated: "2026-09-22T01:30:00Z"
+stopped_at: Phase 265 stream reviewer found logical-frame versus artifact-file budget mismatch; narrow correction next
+last_updated: "2026-09-22T01:30:46Z"
 last_activity: 2026-09-21
 last_activity_desc: Baseline269tests29suites passed; storage repair65b5cf63 focused tests passed; review pending; draft resource envelope withdrawn
 progress:
@@ -22,6 +22,18 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Session Continuity — 2026-09-14
+
+**Current narrow correction — 2026-09-21:** Independent47-file incremental
+review of65b5cf63 found one supported CR-01: v2 read compares logical frame count
+with the physical artifact-file ceiling. Actual oversized values can fit their
+physical budget but fail reopen. Bound frames by authenticated byte length and
+exact counts, preserving separate artifact limits; add an actual writer-selected
+over-node/low-artifact-cap round-trip regression. No new allocation or policy is
+needed. Current review is preserved in265-REVIEW.iter10.md, stream fix report in
+265-REVIEW-FIX.iter6.md. `/root/fix_265_memory` owns narrow isolated correction;
+main waits. The review dismissed its initial after-link-sync concern after
+tracing exact existing result/terminal equality. Baseline269-test pass is final;
+the new source full gate and actual old-trace diagnostic remain unrun.
 
 **Current review handoff — 2026-09-21:** Source65b5cf63662f46151b8ddcb014d5799594e4c0de
 implements the bounded full-execution stream, aggregate roots and charged
