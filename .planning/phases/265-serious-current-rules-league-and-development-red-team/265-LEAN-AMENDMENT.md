@@ -78,6 +78,36 @@ filesystem space. The receipt must bind the amendment, allocation, source, and
 historical-assessment roots; a missing, stale, mismatched, incomplete, or
 insufficient receipt prevents `run` before a provider is issued.
 
+The implemented input names all six categories in the order above. Each carries
+an inline measurement (current source root, nonempty retained witness roots,
+sample units, measured bytes/records, projected units) and its recomputed
+`league-data-only-capacity-measurement-v1` root. Projected bytes and records are
+the exact integer ceiling of measured quantity × projected units / sample units.
+Projected units are 4,632 for invocation and execution, 3,744 for the two retained
+factory-supervision copies of 1,872 response Matches, and one complete-run
+estimate each for descriptor, journal, and filesystem costs. These are the
+approved full-growth representative path, not a worst-case capacity guarantee;
+the immutable receipt must state its nonempty assumptions explicitly. Data-only
+technical preparation must substantiate the supplied measurements and witnesses.
+
+The receipt expires at an explicitly supplied time no more than five minutes
+after measurement. Admission checks current source, time, filesystem device,
+free bytes, and available memory against explicit positive process headroom.
+Both already-existing fresh output directories must be on the same filesystem,
+so free space is not double-counted. Admission is repeated before the durable
+run reservation, and host free-space/memory stops remain active before charged
+dispatch and runtime invocation. Retained verification checks the receipt
+against its recorded start observation, not today's time, and never dispatches.
+
+`prepare-prospective --allocation <complete-prospective-input.json>
+--factory-repository <historical-factory-directory>` is the exact new preparation
+branch. `preflight --allocation <rooted-prospective-allocation.json>
+--allocation-root <root> --capacity-input <data-only-measurements.json>
+--factory-repository <historical-factory-directory>` returns the rooted receipt.
+Prospective `run` additionally requires `--capacity-receipt <rooted-receipt.json>`.
+These commands are interfaces only here; no empirical preparation, preflight,
+receipt, or dispatch has been performed by the source-only implementation task.
+
 The current parallel high representative accounting is 114.632 GiB and about
 7.156 million files. Remaining metadata and physical filesystem checks are
 pending; this observation is neither a passing receipt nor a refusal. The stated
