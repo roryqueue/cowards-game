@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 Task2 approved; prospective lean-contract amendment and conditional resource preflight now in progress
+stopped_at: Phase265 Plan07 Task2 source implemented and independently reviewed at b7f5b5d2; final full validation and data-only preparation in progress
 last_updated: "2026-09-22"
 last_activity: 2026-09-22
-last_activity_desc: Operator approved complete lean-run proposal; source validation and resource preflight required before one bounded live run
+last_activity_desc: Lean amendment implemented; four review findings repaired and independently checked; final validation and capacity measurements precede conditional run
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,19 @@ total_plans_in_phase: 7
 # State: Coward's Game
 
 ## Current Session Continuity — 2026-09-22
+
+The approved source amendment is implemented. Initial independent review found
+three issues (import order, refreshable reservation, response capacity ordering);
+all were repaired and re-reviewed clean at86650982. Data-only preparation then
+identified logical/physical storage double-counting; fixb7f5b5d2 retains every
+approved bound and independently passes. See265-LEAN-REVIEW.iter2.md and
+265-LEAN-CAPACITY-REVIEW.iter2.md. Full gate17031 was deliberately interrupted
+exit130 before completion for this correction and is NOT a passed gate. The
+final fail-fast29-suite gate is next. Actual historical readsession54586 affirmed
+the unchanged assessment with issued:false, readerrootd268eb9c, and identical
+1,875files/164,632,160bytes/tree082271cc before/after; refresh finalsource before
+preparation. Capacity witnesses and actual author/reviewer packets remain data-only
+technical preparation. No allocation, real preflight or empirical run exists.
 
 The operator approved the complete265-LEAN-RUN-DECISION.md proposal with “yes”.
 Proceed autonomously within the same Plan265-07: prospectively amend the initial
