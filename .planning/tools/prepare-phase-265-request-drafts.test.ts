@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -8,7 +8,7 @@ import * as ts from "typescript"
 import { createFactoryRepository, publishFactoryArtifact } from "../../packages/strategy-lab/src/factory/repository.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAGUE_APPROVED_PROSPECTIVE_POLICY } from "../../packages/strategy-lab/src/league/allocation.js"
-import { assertNoCredentialInventoryPaths, createPhase265RequestDrafts, createPhase265SourceBuildDisclosure, parsePhase265DisclosureArguments, publishPhase265SourceBuildDisclosure, writePhase265RequestDraftsExclusive } from "./prepare-phase-265-request-drafts.js"
+import { assertNoCredentialInventoryPaths, assertPhase265ResponseFactoryPath, createPhase265RequestDrafts, createPhase265SourceBuildDisclosure, parsePhase265DisclosureArguments, publishPhase265SourceBuildDisclosure, writePhase265RequestDraftsExclusive } from "./prepare-phase-265-request-drafts.js"
 import { factoryAssessmentImplementationManifest } from "../../scripts/v1-38-factory-implementation.js"
 
 const canonical = (value: unknown) => {
@@ -49,10 +49,15 @@ describe("Phase 265 request drafts", () => {
     const parent = mkdtempSync(join(tmpdir(), "phase265-source-inventory-")), nested = join(parent, "scripts")
     try {
       mkdirSync(nested)
-      const secret = join(nested, "auth.json")
-      writeFileSync(secret, "sentinel-never-opened")
-      expect(() => assertNoCredentialInventoryPaths(parent)).toThrow("CREDENTIAL_IN_SOURCE_INVENTORY")
-      expect(readFileSync(secret, "utf8")).toBe("sentinel-never-opened")
+      for (const name of ["auth.json", "auth.yaml", "credentials.toml", "auth.local.json"]) {
+        const secret = join(nested, name)
+        writeFileSync(secret, "sentinel-never-opened")
+        expect(() => assertNoCredentialInventoryPaths(parent, new Set([`scripts/${name}`]))).toThrow("CREDENTIAL_IN_SOURCE_INVENTORY")
+        expect(readFileSync(secret, "utf8")).toBe("sentinel-never-opened")
+        rmSync(secret)
+      }
+      writeFileSync(join(nested, "unexpected.json"), "unreviewed-private-input")
+      expect(() => assertNoCredentialInventoryPaths(parent, new Set())).toThrow("UNREVIEWED_SOURCE_PATH")
     } finally { rmSync(parent, { recursive: true, force: true }) }
   })
   it("rejects malformed disclosure mode and a historical repository before publication", () => {
@@ -66,6 +71,20 @@ describe("Phase 265 request drafts", () => {
       const repository = createFactoryRepository(realpathSync(historical))
       expect(() => publishPhase265SourceBuildDisclosure(repository, "openai", settingsRoot())).toThrow("RESPONSE_FACTORY_PATH")
       expect(readdirSync(historical)).toEqual([])
+    } finally { rmSync(parent, { recursive: true, force: true }) }
+  })
+  it("requires a real named response directory and preserves idempotent content-addressed bytes", () => {
+    const parent = realpathSync(mkdtempSync(join(tmpdir(), "phase265-disclosure-target-"))), responsePath = join(parent, "factory-response"), historicalPath = join(parent, "factory-historical"), aliasPath = join(parent, "factory-response-alias")
+    try {
+      mkdirSync(responsePath); mkdirSync(historicalPath); symlinkSync(historicalPath, aliasPath)
+      const response = createFactoryRepository(realpathSync(responsePath)), historical = createFactoryRepository(realpathSync(historicalPath))
+      expect(() => assertPhase265ResponseFactoryPath(response, responsePath)).not.toThrow()
+      expect(() => assertPhase265ResponseFactoryPath(historical, aliasPath)).toThrow("RESPONSE_FACTORY_PATH")
+      expect(readdirSync(historicalPath)).toEqual([])
+      const value = canonical(createPhase265SourceBuildDisclosure("openai", settingsRoot()))
+      const first = publishFactoryArtifact(response, value), retained = readFileSync(join(responsePath, `factory-artifact-${first.slice(7)}.bin`))
+      expect(publishFactoryArtifact(response, value)).toBe(first)
+      expect(readFileSync(join(responsePath, `factory-artifact-${first.slice(7)}.bin`))).toEqual(retained)
     } finally { rmSync(parent, { recursive: true, force: true }) }
   })
   it("creates 11 target-free unsigned drafts matching the approved schedule and provenance boundaries", () => {

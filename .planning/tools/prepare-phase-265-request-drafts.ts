@@ -1,5 +1,6 @@
 import { closeSync, constants, existsSync, fsyncSync, lstatSync, linkSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync } from "node:fs"
-import { basename, dirname, isAbsolute, join, resolve } from "node:path"
+import { execFileSync } from "node:child_process"
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { createHash } from "node:crypto"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
@@ -68,22 +69,29 @@ const validateBaseManifest = (value: unknown, repository: FactoryRepository) => 
 
 /** Mirror the source inventory's directory exclusions before it opens bytes.
  * A credential-shaped file in a scanned tree must fail before any read. */
-export const assertNoCredentialInventoryPaths = (inventoryRoot: string): void => {
+export const assertNoCredentialInventoryPaths = (inventoryRoot: string, reviewedPaths: ReadonlySet<string>): void => {
   const ignored = new Set(["node_modules", ".git", ".planning", "dist", ".next", ".turbo", "coverage", "vendor", "test-results", ".cache"])
+  const inventoried = (name: string) => /\.[cm]?[jt]sx?$/u.test(name) || /\.(?:json|ya?ml|toml|go|sh)$/u.test(name) || /dockerfile|dockerignore/iu.test(name)
   const walk = (directory: string) => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       if (entry.isSymbolicLink()) continue
       const path = resolve(directory, entry.name)
       if (entry.isDirectory()) {
         if (!ignored.has(entry.name) && path !== resolve(inventoryRoot, ".strategy-lab")) walk(path)
-      } else if (/^(?:auth|credentials?|secrets?)\.json$/iu.test(entry.name)) return fail("CREDENTIAL_IN_SOURCE_INVENTORY")
+      } else if (inventoried(entry.name)) {
+        if (/(?:^|[._-])(?:auth|credentials?|secrets?)(?:[._-]|$)/iu.test(entry.name.replace(/\.(?:json|ya?ml|toml)$/iu, "")) && /\.(?:json|ya?ml|toml)$/iu.test(entry.name)) return fail("CREDENTIAL_IN_SOURCE_INVENTORY")
+        if (!reviewedPaths.has(relative(inventoryRoot, path).replaceAll("\\", "/"))) return fail("UNREVIEWED_SOURCE_PATH")
+      }
     }
   }
   walk(inventoryRoot)
 }
 
 const currentRoots = () => {
-  assertNoCredentialInventoryPaths(REPOSITORY_ROOT)
+  let reviewedPaths: ReadonlySet<string>
+  try { reviewedPaths = new Set(execFileSync("/usr/bin/git", ["-C", REPOSITORY_ROOT, "ls-tree", "-r", "--name-only", REVIEWED_SOURCE_COMMIT], { encoding: "utf8", timeout: 5000, maxBuffer: 2_000_000 }).trimEnd().split("\n")) }
+  catch { return fail("REVIEWED_PATH_INVENTORY") }
+  assertNoCredentialInventoryPaths(REPOSITORY_ROOT, reviewedPaths)
   const source = factoryAssessmentImplementationManifest(REPOSITORY_ROOT)
   const sourceRoot = labRoot("league-reviewed-source-bytes-v1", source.entries)
   const lockBytes = readFileSync(resolve(REPOSITORY_ROOT, "pnpm-lock.yaml"))
@@ -114,9 +122,12 @@ export const createPhase265SourceBuildDisclosure = (providerId: string, settings
   }
 }
 export const publishPhase265SourceBuildDisclosure = (repository: FactoryRepository, providerId: string, settingsRoot: LabRoot): LabRoot => {
-  const expected = existsSync(RESPONSE_FACTORY_PATH) ? realpathSync(RESPONSE_FACTORY_PATH) : RESPONSE_FACTORY_PATH
-  if (realpathSync(repository.directory) !== expected) return fail("RESPONSE_FACTORY_PATH")
+  assertPhase265ResponseFactoryPath(repository, RESPONSE_FACTORY_PATH)
   return publishFactoryArtifact(repository, canonical(createPhase265SourceBuildDisclosure(providerId, settingsRoot)))
+}
+
+export const assertPhase265ResponseFactoryPath = (repository: FactoryRepository, expectedPath: string): void => {
+  if (!existsSync(expectedPath) || lstatSync(expectedPath).isSymbolicLink() || !lstatSync(expectedPath).isDirectory() || realpathSync(expectedPath) !== expectedPath || repository.directory !== expectedPath) return fail("RESPONSE_FACTORY_PATH")
 }
 
 export const parsePhase265DisclosureArguments = (argv: readonly string[]) => {
