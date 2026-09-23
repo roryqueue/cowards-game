@@ -30,6 +30,18 @@ distribution of future Match times. Earlier Phase 263 completed 24 Matches in
 22.18 minutes including validation/benchmark work, but used a different
 candidate/opponent and cannot validate Phase 265 throughput.
 
+Source inspection locates a persistent Docker stream per provider, not a new
+Docker process for every Strategy invocation. It also finds synchronous
+canonical-record publication and file/directory fsync for each new graph
+artifact, and serial matrix/probe dispatch. No measured breakdown attributes
+the observed delay to Docker, evidence I/O, or Strategy work. Memoizing an
+already durable duplicate artifact might be a narrow source-only improvement,
+but unique invocation records dominate and the benefit is unmeasured. Bounded
+concurrent cells would have greater possible wall-time leverage, but changes
+dispatch/completion order, host contention, and failure prefixes; it needs a
+separate prospective policy and integrity review, not an in-place optimization
+under the consumed allocation.
+
 ## Recommended prospective path
 
 1. Finish read-only verification of the retained failed evidence and keep its
