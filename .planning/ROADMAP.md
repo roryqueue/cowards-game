@@ -978,7 +978,7 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
   3. Frozen current finalists pass preliminary legal-information, deterministic-repeat, bounded-data, runtime-profile, replay-review, and compatibility proof, and the exact-source ordinary-promotion design freezes while the common sealed holdout remains unopened.
   4. A process-valid current-rules metagame failure can be frozen and reported honestly and may unlock the contracted formation study, while any integrity, provenance, completeness, contamination, or reproducibility failure prevents a valid root and blocks formation materialization.
 
-**Plans:** TBD
+**Plans:** 5 plans across 4 waves; independently checked. Source-only mechanics may be built after Phase 265, but real freeze publication remains gated on its complete independently verified empirical head and the original unopened operator-local seal.
 **Research flag:** Reuse the content-addressed identity, runtime, replay, privacy, and release-evidence patterns proved through v1.37; no new technology spike should bypass the exact acceptance gate.
 
 ### Phase 267: Post-Freeze Formation Boundary and Production Unreachability
