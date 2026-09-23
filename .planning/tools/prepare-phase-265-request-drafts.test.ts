@@ -8,7 +8,7 @@ import * as ts from "typescript"
 import { createFactoryRepository, publishFactoryArtifact } from "../../packages/strategy-lab/src/factory/repository.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAGUE_APPROVED_PROSPECTIVE_POLICY } from "../../packages/strategy-lab/src/league/allocation.js"
-import { createPhase265RequestDrafts, writePhase265RequestDraftsExclusive } from "./prepare-phase-265-request-drafts.js"
+import { createPhase265RequestDrafts, publishPhase265SourceBuildDisclosure, writePhase265RequestDraftsExclusive } from "./prepare-phase-265-request-drafts.js"
 import { factoryAssessmentImplementationManifest } from "../../scripts/v1-38-factory-implementation.js"
 
 const canonical = (value: unknown) => {
@@ -25,8 +25,8 @@ const sourceBuildDisclosure = (settingsRoot: LabRoot, providerId: string, client
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { packageManager: string }
   const toolchainPreimage = { node: process.version, v8: process.versions.v8, openssl: process.versions.openssl, packageManager: pkg.packageManager, typescriptVersion: ts.version, lockfileRoot: bytesRoot(readFileSync("pnpm-lock.yaml")), platform: process.platform, architecture: process.arch }
   return {
-    schemaVersion: "phase265-source-build-disclosure-v3", privacy: "private_offline", sourceCommit: "25ba6a10cb11ca74bf53738aca5e2396fd974a24",
-    implementationRoot: "sha256:67d8f60e2691582d2d4e7f8d5f7ba52deb5a1ec65784111161f3adeb85ba7049", sourceRoot: "sha256:32465649b2c9727c116a6bb2e661315f0e7eea256db58b7afa421a4acf836fe9",
+    schemaVersion: "phase265-source-build-disclosure-v3", privacy: "private_offline", sourceCommit: "4eb48e4d0070551cde3e0f7cb86ba7b46c0ed53a",
+    implementationRoot: "sha256:92b40fc585ac087928a477924fa1bc560d309bda29e5fe762151a5a0152bf564", sourceRoot: "sha256:945321708ba5e15489fd3de0e2fb90d80425e7b8ba8e89d1ef61569ee99fb3e4",
     entries: manifest.entries,
     toolchain: { preimage: toolchainPreimage, root: labRoot("phase265-request-toolchain-v1", toolchainPreimage) },
     modelSettings: { settingsRoot, configTemplateUtf8: configTemplate, requestedProvider: providerId, requestedModel: "gpt-5.6-sol", strictConfig: true, toolUseDisabled: true },
@@ -42,7 +42,8 @@ describe("Phase 265 request drafts", () => {
     const executable = join(parent, "codex"), authFile = join(parent, "auth.json"), outputPath = join(parent, "drafts.json")
     writeFileSync(executable, "fixture executable", { mode: 0o700 }); chmodSync(executable, 0o700)
     writeFileSync(authFile, "never read or copied")
-    const dependency = publishFactoryArtifact(repository, canonical(sourceBuildDisclosure(settingsRoot(), "fixture-provider", "0.154.0")))
+    const dependency = publishPhase265SourceBuildDisclosure(repository, "fixture-provider", settingsRoot())
+    expect(dependency).toBe(publishFactoryArtifact(repository, canonical(sourceBuildDisclosure(settingsRoot(), "fixture-provider", "0.154.0"))))
     const bases = ["S01", "S03", "S05"].map((sourceSlot, i) => {
       let artifactIndex = 0
       const reference = () => publishFactoryArtifact(historicalFactoryRepository, canonical({ sourceSlot, i, artifactIndex: artifactIndex++ }))

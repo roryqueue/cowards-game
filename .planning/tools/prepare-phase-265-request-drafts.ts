@@ -6,14 +6,14 @@ import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATAL
 import * as ts from "typescript"
 import { labRoot, LAB_ADMITTED_ROOTS, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAGUE_APPROVED_PROSPECTIVE_POLICY } from "../../packages/strategy-lab/src/league/allocation.js"
-import { createFactoryRepository, readFactoryArtifact, type FactoryRepository } from "../../packages/strategy-lab/src/factory/repository.js"
+import { createFactoryRepository, publishFactoryArtifact, readFactoryArtifact, type FactoryRepository } from "../../packages/strategy-lab/src/factory/repository.js"
 import { factoryAssessmentImplementationManifest } from "../../scripts/v1-38-factory-implementation.js"
 
 const fail = (code: string): never => { throw new TypeError(`PHASE265_REQUEST_DRAFT_${code}`) }
 const ROOT = /^sha256:[0-9a-f]{64}$/u
-const REVIEWED_SOURCE_COMMIT = "25ba6a10cb11ca74bf53738aca5e2396fd974a24"
-const REVIEWED_IMPLEMENTATION_ROOT = "sha256:67d8f60e2691582d2d4e7f8d5f7ba52deb5a1ec65784111161f3adeb85ba7049" as LabRoot
-const REVIEWED_SOURCE_ROOT = "sha256:32465649b2c9727c116a6bb2e661315f0e7eea256db58b7afa421a4acf836fe9" as LabRoot
+const REVIEWED_SOURCE_COMMIT = "4eb48e4d0070551cde3e0f7cb86ba7b46c0ed53a"
+const REVIEWED_IMPLEMENTATION_ROOT = "sha256:92b40fc585ac087928a477924fa1bc560d309bda29e5fe762151a5a0152bf564" as LabRoot
+const REVIEWED_SOURCE_ROOT = "sha256:945321708ba5e15489fd3de0e2fb90d80425e7b8ba8e89d1ef61569ee99fb3e4" as LabRoot
 const MODEL_CONFIG_TEMPLATE = 'model = "gpt-5.6-sol"\napproval_policy = "never"\nsandbox_mode = "read-only"\n'
 const exact = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join() === [...keys].sort().join()
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
@@ -77,6 +77,21 @@ const currentRoots = () => {
   }
   const toolchainRoot = labRoot("phase265-request-toolchain-v1", toolchainPreimage)
   return { buildRoot: sourceRoot, implementationRoot: source.root, sourceRoot, toolchainRoot, toolchainPreimage, entries: source.entries, typescriptVersion }
+}
+
+/** Publish a new reviewed source/build dependency without relabeling the
+ * historical content-addressed disclosure. */
+export const publishPhase265SourceBuildDisclosure = (repository: FactoryRepository, providerId: string, settingsRoot: LabRoot): LabRoot => {
+  const roots = currentRoots()
+  if (roots.implementationRoot !== REVIEWED_IMPLEMENTATION_ROOT || roots.sourceRoot !== REVIEWED_SOURCE_ROOT || !text(providerId, 256) || !isRoot(settingsRoot) || rootBytes(new TextEncoder().encode(MODEL_CONFIG_TEMPLATE)) !== settingsRoot) return fail("DISCLOSURE_BINDING")
+  const value = {
+    schemaVersion: "phase265-source-build-disclosure-v3", privacy: "private_offline", sourceCommit: REVIEWED_SOURCE_COMMIT,
+    implementationRoot: roots.implementationRoot, sourceRoot: roots.sourceRoot, entries: roots.entries,
+    toolchain: { preimage: roots.toolchainPreimage, root: roots.toolchainRoot },
+    modelSettings: { settingsRoot, configTemplateUtf8: MODEL_CONFIG_TEMPLATE, requestedProvider: providerId, requestedModel: LEAGUE_APPROVED_PROSPECTIVE_POLICY.model, strictConfig: true, toolUseDisabled: true },
+    scope: "Reviewed current source/build inputs and exact local authoring configuration.",
+  }
+  return publishFactoryArtifact(repository, canonical(value))
 }
 
 const validateSourceBuildDisclosure = (repository: FactoryRepository, dependencyRoot: LabRoot, roots: ReturnType<typeof currentRoots>, input: Phase265RequestDraftOptions) => {
@@ -257,6 +272,13 @@ export const writePhase265RequestDraftsExclusive = (outputPath: string, value: u
 
 const main = () => {
   const arg = (name: string) => { const i = process.argv.indexOf(name); return i < 0 ? undefined : process.argv[i + 1] }
+  if (process.argv.includes("--publish-disclosure")) {
+    const repositoryPath = arg("--response-factory"), providerId = arg("--provider-id"), settingsRoot = arg("--settings-root")
+    if (!repositoryPath || !providerId || !settingsRoot || !isRoot(settingsRoot)) return fail("USAGE: --publish-disclosure --response-factory <existing-dir> --provider-id <provider> --settings-root <sha256-root>")
+    const root = publishPhase265SourceBuildDisclosure(createFactoryRepository(resolve(repositoryPath)), providerId, settingsRoot)
+    process.stdout.write(`${JSON.stringify({ sourceCommit: REVIEWED_SOURCE_COMMIT, implementationRoot: REVIEWED_IMPLEMENTATION_ROOT, sourceRoot: REVIEWED_SOURCE_ROOT, disclosureArtifactRoot: root })}\n`)
+    return
+  }
   const basesPath = arg("--bases"), repositoryPath = arg("--response-factory"), historicalFactoryPath = arg("--historical-factory"), dependencyRoot = arg("--response-factory-dependency-root"), codexExecutable = arg("--codex-executable"), authFile = arg("--auth-file"), clientVersion = arg("--client-version"), providerId = arg("--provider-id"), settingsRoot = arg("--settings-root"), path = arg("--path"), priorExposure = arg("--prior-exposure"), outputPath = arg("--output")
   if (!basesPath || !repositoryPath || !historicalFactoryPath || !dependencyRoot || !codexExecutable || !authFile || !clientVersion || !providerId || !settingsRoot || !path || !priorExposure || !outputPath || !isRoot(dependencyRoot) || !isRoot(settingsRoot)) return fail("USAGE: --bases <canonical-verified-manifest> --historical-factory <existing-dir> --response-factory <existing-dir> --response-factory-dependency-root <sha256-root> --codex-executable <absolute-file> --auth-file <absolute-file> --client-version <actual-version> --provider-id <actual-provider> --settings-root <sha256-root> --path <PATH> --prior-exposure <operator-declaration> --output <new-json-file>")
   const parsed = admitCanonicalJsonBytes(readFileSync(resolve(basesPath)), { profile: "canonical-manifest", operation: "require-canonical" })
