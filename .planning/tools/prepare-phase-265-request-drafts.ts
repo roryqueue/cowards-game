@@ -1,6 +1,6 @@
-import { closeSync, constants, existsSync, fsyncSync, lstatSync, linkSync, openSync, readFileSync, realpathSync, unlinkSync, writeSync } from "node:fs"
+import { closeSync, constants, existsSync, fsyncSync, lstatSync, linkSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync } from "node:fs"
 import { basename, dirname, isAbsolute, join, resolve } from "node:path"
-import { pathToFileURL } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { createHash } from "node:crypto"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import * as ts from "typescript"
@@ -14,6 +14,8 @@ const ROOT = /^sha256:[0-9a-f]{64}$/u
 const REVIEWED_SOURCE_COMMIT = "4eb48e4d0070551cde3e0f7cb86ba7b46c0ed53a"
 const REVIEWED_IMPLEMENTATION_ROOT = "sha256:92b40fc585ac087928a477924fa1bc560d309bda29e5fe762151a5a0152bf564" as LabRoot
 const REVIEWED_SOURCE_ROOT = "sha256:945321708ba5e15489fd3de0e2fb90d80425e7b8ba8e89d1ef61569ee99fb3e4" as LabRoot
+const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
+const RESPONSE_FACTORY_PATH = resolve(REPOSITORY_ROOT, ".strategy-lab/factory-265-current-rules-20260922")
 const MODEL_CONFIG_TEMPLATE = 'model = "gpt-5.6-sol"\napproval_policy = "never"\nsandbox_mode = "read-only"\n'
 const exact = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join() === [...keys].sort().join()
 const isRoot = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
@@ -64,11 +66,30 @@ const validateBaseManifest = (value: unknown, repository: FactoryRepository) => 
   return bases
 }
 
+/** Mirror the source inventory's directory exclusions before it opens bytes.
+ * A credential-shaped file in a scanned tree must fail before any read. */
+export const assertNoCredentialInventoryPaths = (inventoryRoot: string): void => {
+  const ignored = new Set(["node_modules", ".git", ".planning", "dist", ".next", ".turbo", "coverage", "vendor", "test-results", ".cache"])
+  const walk = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) continue
+      const path = resolve(directory, entry.name)
+      if (entry.isDirectory()) {
+        if (!ignored.has(entry.name) && path !== resolve(inventoryRoot, ".strategy-lab")) walk(path)
+      } else if (/^(?:auth|credentials?|secrets?)\.json$/iu.test(entry.name)) return fail("CREDENTIAL_IN_SOURCE_INVENTORY")
+    }
+  }
+  walk(inventoryRoot)
+}
+
 const currentRoots = () => {
-  const source = factoryAssessmentImplementationManifest()
+  assertNoCredentialInventoryPaths(REPOSITORY_ROOT)
+  const source = factoryAssessmentImplementationManifest(REPOSITORY_ROOT)
   const sourceRoot = labRoot("league-reviewed-source-bytes-v1", source.entries)
-  const lockBytes = readFileSync(resolve("pnpm-lock.yaml"))
-  const pkg = JSON.parse(readFileSync(resolve("package.json"), "utf8")) as { packageManager?: unknown }
+  const lockBytes = readFileSync(resolve(REPOSITORY_ROOT, "pnpm-lock.yaml"))
+  const packageBytes = readFileSync(resolve(REPOSITORY_ROOT, "package.json"))
+  if (source.entries.find((entry) => entry.path === "pnpm-lock.yaml")?.root !== rootBytes(lockBytes) || source.entries.find((entry) => entry.path === "package.json")?.root !== rootBytes(packageBytes)) return fail("TOOLCHAIN_SOURCE_MISMATCH")
+  const pkg = JSON.parse(packageBytes.toString("utf8")) as { packageManager?: unknown }
   if (typeof pkg.packageManager !== "string") return fail("PACKAGE_MANAGER")
   const typescriptVersion = ts.version
   const toolchainPreimage = {
@@ -81,17 +102,36 @@ const currentRoots = () => {
 
 /** Publish a new reviewed source/build dependency without relabeling the
  * historical content-addressed disclosure. */
-export const publishPhase265SourceBuildDisclosure = (repository: FactoryRepository, providerId: string, settingsRoot: LabRoot): LabRoot => {
+export const createPhase265SourceBuildDisclosure = (providerId: string, settingsRoot: LabRoot) => {
   const roots = currentRoots()
-  if (roots.implementationRoot !== REVIEWED_IMPLEMENTATION_ROOT || roots.sourceRoot !== REVIEWED_SOURCE_ROOT || !text(providerId, 256) || !isRoot(settingsRoot) || rootBytes(new TextEncoder().encode(MODEL_CONFIG_TEMPLATE)) !== settingsRoot) return fail("DISCLOSURE_BINDING")
-  const value = {
+  if (roots.implementationRoot !== REVIEWED_IMPLEMENTATION_ROOT || roots.sourceRoot !== REVIEWED_SOURCE_ROOT || !/^[a-z][a-z0-9-]{0,63}$/u.test(providerId) || !isRoot(settingsRoot) || rootBytes(new TextEncoder().encode(MODEL_CONFIG_TEMPLATE)) !== settingsRoot) return fail("DISCLOSURE_BINDING")
+  return {
     schemaVersion: "phase265-source-build-disclosure-v3", privacy: "private_offline", sourceCommit: REVIEWED_SOURCE_COMMIT,
     implementationRoot: roots.implementationRoot, sourceRoot: roots.sourceRoot, entries: roots.entries,
     toolchain: { preimage: roots.toolchainPreimage, root: roots.toolchainRoot },
     modelSettings: { settingsRoot, configTemplateUtf8: MODEL_CONFIG_TEMPLATE, requestedProvider: providerId, requestedModel: LEAGUE_APPROVED_PROSPECTIVE_POLICY.model, strictConfig: true, toolUseDisabled: true },
     scope: "Reviewed current source/build inputs and exact local authoring configuration.",
   }
-  return publishFactoryArtifact(repository, canonical(value))
+}
+export const publishPhase265SourceBuildDisclosure = (repository: FactoryRepository, providerId: string, settingsRoot: LabRoot): LabRoot => {
+  const expected = existsSync(RESPONSE_FACTORY_PATH) ? realpathSync(RESPONSE_FACTORY_PATH) : RESPONSE_FACTORY_PATH
+  if (realpathSync(repository.directory) !== expected) return fail("RESPONSE_FACTORY_PATH")
+  return publishFactoryArtifact(repository, canonical(createPhase265SourceBuildDisclosure(providerId, settingsRoot)))
+}
+
+export const parsePhase265DisclosureArguments = (argv: readonly string[]) => {
+  const permitted = new Set(["--response-factory", "--provider-id", "--settings-root"])
+  if (argv.length !== 7 || argv[0] !== "--publish-disclosure") return fail("DISCLOSURE_ARGUMENTS")
+  const values = new Map<string, string>()
+  for (let index = 1; index < argv.length; index += 2) {
+    const flag = argv[index]!, value = argv[index + 1]!
+    if (!permitted.has(flag) || values.has(flag) || !value || value.startsWith("--")) return fail("DISCLOSURE_ARGUMENTS")
+    values.set(flag, value)
+  }
+  if (values.size !== 3) return fail("DISCLOSURE_ARGUMENTS")
+  const repositoryPath = values.get("--response-factory")!, providerId = values.get("--provider-id")!, settingsRoot = values.get("--settings-root")!
+  if (!isRoot(settingsRoot) || !/^[a-z][a-z0-9-]{0,63}$/u.test(providerId)) return fail("DISCLOSURE_ARGUMENTS")
+  return { repositoryPath, providerId, settingsRoot }
 }
 
 const validateSourceBuildDisclosure = (repository: FactoryRepository, dependencyRoot: LabRoot, roots: ReturnType<typeof currentRoots>, input: Phase265RequestDraftOptions) => {
@@ -273,8 +313,7 @@ export const writePhase265RequestDraftsExclusive = (outputPath: string, value: u
 const main = () => {
   const arg = (name: string) => { const i = process.argv.indexOf(name); return i < 0 ? undefined : process.argv[i + 1] }
   if (process.argv.includes("--publish-disclosure")) {
-    const repositoryPath = arg("--response-factory"), providerId = arg("--provider-id"), settingsRoot = arg("--settings-root")
-    if (!repositoryPath || !providerId || !settingsRoot || !isRoot(settingsRoot)) return fail("USAGE: --publish-disclosure --response-factory <existing-dir> --provider-id <provider> --settings-root <sha256-root>")
+    const { repositoryPath, providerId, settingsRoot } = parsePhase265DisclosureArguments(process.argv.slice(2))
     const root = publishPhase265SourceBuildDisclosure(createFactoryRepository(resolve(repositoryPath)), providerId, settingsRoot)
     process.stdout.write(`${JSON.stringify({ sourceCommit: REVIEWED_SOURCE_COMMIT, implementationRoot: REVIEWED_IMPLEMENTATION_ROOT, sourceRoot: REVIEWED_SOURCE_ROOT, disclosureArtifactRoot: root })}\n`)
     return

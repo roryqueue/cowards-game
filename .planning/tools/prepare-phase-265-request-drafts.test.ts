@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -8,7 +8,7 @@ import * as ts from "typescript"
 import { createFactoryRepository, publishFactoryArtifact } from "../../packages/strategy-lab/src/factory/repository.js"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { LEAGUE_APPROVED_PROSPECTIVE_POLICY } from "../../packages/strategy-lab/src/league/allocation.js"
-import { createPhase265RequestDrafts, publishPhase265SourceBuildDisclosure, writePhase265RequestDraftsExclusive } from "./prepare-phase-265-request-drafts.js"
+import { assertNoCredentialInventoryPaths, createPhase265RequestDrafts, createPhase265SourceBuildDisclosure, parsePhase265DisclosureArguments, publishPhase265SourceBuildDisclosure, writePhase265RequestDraftsExclusive } from "./prepare-phase-265-request-drafts.js"
 import { factoryAssessmentImplementationManifest } from "../../scripts/v1-38-factory-implementation.js"
 
 const canonical = (value: unknown) => {
@@ -35,6 +35,39 @@ const sourceBuildDisclosure = (settingsRoot: LabRoot, providerId: string, client
 }
 
 describe("Phase 265 request drafts", () => {
+  it("keeps reviewed source and toolchain in one repository regardless of caller cwd", () => {
+    const original = process.cwd(), foreign = mkdtempSync(join(tmpdir(), "phase265-foreign-build-"))
+    const expected = sourceBuildDisclosure(settingsRoot(), "openai", "0.154.0")
+    try {
+      writeFileSync(join(foreign, "package.json"), '{"packageManager":"other@0"}')
+      writeFileSync(join(foreign, "pnpm-lock.yaml"), "unrelated-lockfile")
+      process.chdir(foreign)
+      expect(createPhase265SourceBuildDisclosure("openai", settingsRoot())).toEqual(expected)
+    } finally { process.chdir(original); rmSync(foreign, { recursive: true, force: true }) }
+  })
+  it("rejects credential-shaped inventory paths before opening any source bytes", () => {
+    const parent = mkdtempSync(join(tmpdir(), "phase265-source-inventory-")), nested = join(parent, "scripts")
+    try {
+      mkdirSync(nested)
+      const secret = join(nested, "auth.json")
+      writeFileSync(secret, "sentinel-never-opened")
+      expect(() => assertNoCredentialInventoryPaths(parent)).toThrow("CREDENTIAL_IN_SOURCE_INVENTORY")
+      expect(readFileSync(secret, "utf8")).toBe("sentinel-never-opened")
+    } finally { rmSync(parent, { recursive: true, force: true }) }
+  })
+  it("rejects malformed disclosure mode and a historical repository before publication", () => {
+    const parent = mkdtempSync(join(tmpdir(), "phase265-disclosure-negative-"))
+    try {
+      const historical = join(parent, "factory-historical"); mkdirSync(historical)
+      const valid = ["--publish-disclosure", "--response-factory", parent, "--provider-id", "openai", "--settings-root", settingsRoot()]
+      expect(parsePhase265DisclosureArguments(valid)).toEqual({ repositoryPath: parent, providerId: "openai", settingsRoot: settingsRoot() })
+      for (const malformed of [valid.slice(0, 5).concat(["--settings-root", settingsRoot(), "--extra", "x"]), [...valid, "--provider-id", "other"], ["--publish-disclosure", "--response-factory", parent, "--provider-id", "--settings-root", settingsRoot()], ["--publish-disclosure", "--bases", "historical", ...valid.slice(1)]]) expect(() => parsePhase265DisclosureArguments(malformed)).toThrow("DISCLOSURE_ARGUMENTS")
+      expect(() => createPhase265SourceBuildDisclosure("--settings-root", settingsRoot())).toThrow("DISCLOSURE_BINDING")
+      const repository = createFactoryRepository(realpathSync(historical))
+      expect(() => publishPhase265SourceBuildDisclosure(repository, "openai", settingsRoot())).toThrow("RESPONSE_FACTORY_PATH")
+      expect(readdirSync(historical)).toEqual([])
+    } finally { rmSync(parent, { recursive: true, force: true }) }
+  })
   it("creates 11 target-free unsigned drafts matching the approved schedule and provenance boundaries", () => {
     const parent = mkdtempSync(join(tmpdir(), "phase265-drafts-")), repositoryPath = join(parent, "factory-response"), historicalPath = join(parent, "factory-history")
     mkdirSync(repositoryPath); mkdirSync(historicalPath)
@@ -42,8 +75,9 @@ describe("Phase 265 request drafts", () => {
     const executable = join(parent, "codex"), authFile = join(parent, "auth.json"), outputPath = join(parent, "drafts.json")
     writeFileSync(executable, "fixture executable", { mode: 0o700 }); chmodSync(executable, 0o700)
     writeFileSync(authFile, "never read or copied")
-    const dependency = publishPhase265SourceBuildDisclosure(repository, "fixture-provider", settingsRoot())
-    expect(dependency).toBe(publishFactoryArtifact(repository, canonical(sourceBuildDisclosure(settingsRoot(), "fixture-provider", "0.154.0"))))
+    const generated = createPhase265SourceBuildDisclosure("fixture-provider", settingsRoot())
+    expect(generated).toEqual(sourceBuildDisclosure(settingsRoot(), "fixture-provider", "0.154.0"))
+    const dependency = publishFactoryArtifact(repository, canonical(generated))
     const bases = ["S01", "S03", "S05"].map((sourceSlot, i) => {
       let artifactIndex = 0
       const reference = () => publishFactoryArtifact(historicalFactoryRepository, canonical({ sourceSlot, i, artifactIndex: artifactIndex++ }))
