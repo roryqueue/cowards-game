@@ -1,7 +1,7 @@
 # Phase 266: Content-Addressed Current-League Freeze - Context
 
 **Gathered:** 2026-07-27
-**Status:** Discussion complete; planning and execution denied pending Phase 262 ADMIT-03
+**Status:** Discussion complete; research and planning may proceed. Actual freeze publication remains gated on a process-valid, completely retained and verified Phase 265 current-rules league result. Phase 262 ADMIT-03 was completed earlier; this status correction changes no locked decision or formation/holdout authority.
 
 <domain>
 ## Phase Boundary
