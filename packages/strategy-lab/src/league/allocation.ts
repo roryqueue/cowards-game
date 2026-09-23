@@ -174,15 +174,43 @@ export const admitProspectiveLeagueExecutionAllocation = (value: unknown): Prosp
 /** Union reader for private consumers; the legacy exported admission stays V1-only. */
 export const admitAnyLeagueExecutionAllocation = (value: unknown): AdmittedLeagueExecutionAllocation => value && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === "league-prospective-execution-allocation-v1" ? admitProspectiveLeagueExecutionAllocation(value) : admitLeagueExecutionAllocation(value)
 
+export interface ProspectiveTacticalProducerEnvelope {
+  readonly originalRequestArtifactRoot: LabRoot; readonly targetArtifactRoot: LabRoot; readonly corpusArtifactRoot: LabRoot
+  readonly selectionArtifactRoot: LabRoot; readonly profileRoot: LabRoot; readonly sourceRoot: LabRoot
+}
+const isProfiledTacticalInput = (value: unknown): value is Readonly<{ request: Record<string, unknown>; profile: Record<string, unknown>; envelope: ProspectiveTacticalProducerEnvelope }> => {
+  if (!exact(value, ["request", "profile", "envelope"])) return false
+  const input = value as Record<string, unknown>
+  if (!input.request || typeof input.request !== "object" || Array.isArray(input.request) || !input.profile || typeof input.profile !== "object" || Array.isArray(input.profile) || !exact(input.envelope, ["originalRequestArtifactRoot", "targetArtifactRoot", "corpusArtifactRoot", "selectionArtifactRoot", "profileRoot", "sourceRoot"])) return false
+  return Object.values(input.envelope as Record<string, unknown>).every(isRoot)
+}
 /** Reused by preflight and retained producer readers; no source or provider is executed. */
 export const assertProspectiveLeagueProducerRequest = (allocation: AdmittedLeagueExecutionAllocation, job: LeagueResponseJob, request: { producerIdentity?: unknown; producerInput?: unknown }) => {
   if (allocation.schemaVersion !== "league-prospective-execution-allocation-v1") return
   const role = allocation.participantRoles.find((role) => role.jobId === job.id) ?? fail("PROSPECTIVE_JOB")
+  const ordinal = allocation.rounds.flatMap((round) => round.jobs).findIndex((candidate) => candidate.id === job.id)
+  const profiled = role.producer === "tactical" && job.evaluationRole === "development_response" && [0, 3, 6].includes(ordinal)
+  if (profiled) {
+    // Preflight opens the immutable base request. Its derived sibling is only
+    // accepted after the tactical package has formed the profile/envelope.
+    if (request.producerIdentity === "emitTacticalFactoryPacket") return
+    if (request.producerIdentity !== "emitProfiledTacticalFactoryPacket") fail("PROSPECTIVE_PRODUCER")
+    if (!isProfiledTacticalInput(request.producerInput)) fail("PROSPECTIVE_TACTICAL_ENVELOPE")
+    return
+  }
   if (request.producerIdentity !== { tactical: "emitTacticalFactoryPacket", teacher: "emitTeacherFactoryPacket", model: "emitModelFactoryPacket" }[role.producer]) fail("PROSPECTIVE_PRODUCER")
   if (role.producer === "model" && (request.producerInput as { authoring?: { requestedModel?: unknown } } | undefined)?.authoring?.requestedModel !== allocation.amendment.policy.model) fail("PROSPECTIVE_MODEL")
 }
 
 export const LEAGUE_CAPACITY_CATEGORIES = ["invocation", "execution", "factory_supervision", "descriptor", "journal", "filesystem"] as const
+// The representative pre-tactical witness is a conservative floor, not a
+// substitute for a current source-root measurement. The incremental reserve
+// covers target-dependent tactical artifacts that cannot exist before run.
+export const LEAGUE_TACTICAL_CAPACITY_FLOORS = Object.freeze({
+  descriptorBytes: 4_476_245_864 + 16_777_216,
+  descriptorRecords: 178_712 + 64,
+  filesystemBytes: 39_835_549_542 + 1_048_576,
+})
 export interface LeagueCapacityReceiptInput {
   readonly allocationRoot: LabRoot; readonly amendmentRoot: LabRoot; readonly implementationRoot: LabRoot; readonly sourceRoot: LabRoot; readonly historicalAssessmentRoot: LabRoot
   readonly measuredAtMilliseconds: number; readonly expiresAtMilliseconds: number; readonly filesystemDevice: string; readonly freeFilesystemBytes: number; readonly availableMemoryBytes: number; readonly processHeadroomBytes: number
@@ -227,6 +255,8 @@ function validateCapacityCosts(input: LeagueCapacityPlanInput, allocation: Prosp
     const scaled = (value: number) => (BigInt(value) * BigInt(m.projectedUnits) + BigInt(m.sampleUnits) - 1n) / BigInt(m.sampleUnits)
     if (BigInt(row.projectedBytes) !== scaled(m.measuredBytes) || BigInt(row.projectedRecords) !== scaled(m.measuredRecords)) fail("CAPACITY_ESTIMATE")
   }
+  const descriptor = input.costs[3]!, filesystem = input.costs[5]!
+  if (descriptor.projectedBytes < LEAGUE_TACTICAL_CAPACITY_FLOORS.descriptorBytes || descriptor.projectedRecords < LEAGUE_TACTICAL_CAPACITY_FLOORS.descriptorRecords || filesystem.projectedBytes < LEAGUE_TACTICAL_CAPACITY_FLOORS.filesystemBytes) fail("CAPACITY_TACTICAL_RESERVE")
   // Filesystem block slack consumes disk, not logical artifact bytes or records.
   const logicalCosts = input.costs.filter((row) => row.category !== "filesystem")
   const logicalBytes = logicalCosts.reduce((sum, row) => sum + row.projectedBytes, 0), records = logicalCosts.reduce((sum, row) => sum + row.projectedRecords, 0)

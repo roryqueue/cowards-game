@@ -12,3 +12,7 @@ export {
   tacticalSourceManifest,
 } from "./emit.js"
 export type { TacticalFactoryRequest, TacticalSourceManifest, TacticalSourceModule } from "./emit.js"
+export { admitTacticalAdaptationCorpus, admitTacticalAdaptationProfile, createTacticalAdaptationCorpus, deriveTacticalAdaptationProfile, TACTICAL_ADAPTATION_PROFILES } from "./adaptation.js"
+export type { TacticalAdaptationCorpus, TacticalAdaptationCorpusDraft, TacticalAdaptationObservation, TacticalAdaptationProfile, TacticalAdaptationRow, TacticalAdaptationSelection } from "./adaptation.js"
+export { compileProfiledTacticalTemplate } from "./profiled-template.js"
+export { emitProfiledTacticalFactoryPacket, emitProfiledTacticalSource } from "./emit-profiled.js"

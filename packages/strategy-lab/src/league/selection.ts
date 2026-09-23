@@ -17,7 +17,7 @@ export interface LeaguePortfolioCandidate {
   readonly fingerprintArtifactRoot: LabRoot
   readonly importedAssessment?: Pick<Parameters<typeof importAssessedFactoryCandidate>[0], "maxBytes" | "maxRecords" | "verifyRetainedAssessment">
 }
-interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly realProducer: boolean; readonly correlationFree: boolean; readonly distinctPeerProposals: readonly LabRoot[] }
+interface BoundCandidate { readonly admission: LeagueCandidateAdmission; readonly familyRoot: LabRoot; readonly coreRoot: LabRoot; readonly cloneRoot: LabRoot; readonly realProducer: boolean; readonly correlationFree: boolean; readonly profiledTactical: boolean; readonly distinctPeerProposals: readonly LabRoot[] }
 type PortfolioReason = "factory_evidence_incomplete" | "clone_or_correlation" | "structural_family_duplicate" | "strategic_core_duplicate" | "lineage_duplicate" | "behavior_duplicate" | "response_duplicate"
 export interface LeaguePortfolioDerivation { readonly portfolio: LeaguePortfolio; readonly rejections: readonly Readonly<{ candidateAdmissionRoot: LabRoot; reason: PortfolioReason; receiptRoot: LabRoot }>[] }
 
@@ -55,6 +55,7 @@ const admitBoundCandidate = (value: LeaguePortfolioCandidate): Readonly<BoundCan
   return freezeLabValue({
     admission,
     realProducer: producerBacked && importedQualification !== "control_or_unresolved",
+    profiledTactical: evidence.producerIdentity === "emitProfiledTacticalFactoryPacket",
     familyRoot: labRoot("league-structural-family-v1", { doctrineFamily: admission.candidate.proposal.doctrineFamily, sourceStructureRoot: fingerprints.sourceStructureRoot }),
     coreRoot: labRoot("league-strategic-core-v1", { sourceStructureRoot: fingerprints.sourceStructureRoot, dependencyRoot: fingerprints.dependencyRoot, legalInputDecisionRoot: fingerprints.legalInputDecisionRoot }),
     cloneRoot: labRoot("league-clone-decision-v1", { evidenceRoot: root, counterfactualPairs: pairs, ...(admission.importEvidence ? { assessmentRoot: admission.importEvidence.assessmentRoot, sourceSlot: admission.importEvidence.sourceSlot, qualification: importedQualification } : {}) }),
@@ -63,14 +64,23 @@ const admitBoundCandidate = (value: LeaguePortfolioCandidate): Readonly<BoundCan
   }) as BoundCandidate
 }
 
+/** Tactical parameter variants inherit S01's planner family/core for diversity accounting. */
+const bindTacticalDiversity = (candidates: readonly BoundCandidate[]): readonly BoundCandidate[] => {
+  if (!candidates.some((candidate) => candidate.profiledTactical)) return candidates
+  const base = candidates.find((candidate) => candidate.admission.importEvidence?.sourceSlot === "S01" && candidate.admission.importEvidence.qualification === "base_distinct" && candidate.realProducer)
+  if (!base) return fail("TACTICAL_BASE_MISSING")
+  return candidates.map((candidate) => candidate.profiledTactical ? { ...candidate, familyRoot: base.familyRoot, coreRoot: base.coreRoot } : candidate)
+}
+
 /** A diagnostic mixture stays separate; portfolios contain only re-admitted, source-backed pure candidates. */
 export const deriveLeaguePortfolio = (input: { readonly snapshotRoot: LabRoot; readonly mixture: unknown; readonly candidates: readonly LeaguePortfolioCandidate[] }): Readonly<LeaguePortfolioDerivation> => {
   if (!isRoot(input.snapshotRoot) || !Array.isArray(input.candidates) || !input.candidates.length) return fail("PORTFOLIO_INPUT")
   const mixture = LeagueMixtureSchema.parse(input.mixture)
   if (mixture.snapshotRoot !== input.snapshotRoot) return fail("MIXTURE_BINDING")
-  const bound = input.candidates.map(admitBoundCandidate).sort((left, right) => left.admission.root.localeCompare(right.admission.root))
+  // The assessed S01 base represents its family/core before any derived tactical profile.
+  const bound = [...bindTacticalDiversity(input.candidates.map(admitBoundCandidate))].sort((left, right) => Number(left.profiledTactical) - Number(right.profiledTactical) || left.admission.root.localeCompare(right.admission.root))
   if (new Set(bound.map((entry) => entry.admission.root)).size !== bound.length) return fail("CANDIDATE_DUPLICATE")
-  const family = new Set<LabRoot>(), core = new Set<LabRoot>(), lineage = new Set<LabRoot>(), behavior = new Set<LabRoot>(), response = new Set<LabRoot>(), accepted: LabRoot[] = [], receipts: LabRoot[] = [], rejections: LeaguePortfolioDerivation["rejections"][number][] = []
+  const family = new Set<LabRoot>(), core = new Set<LabRoot>(), lineage = new Set<LabRoot>(), behavior = new Set<LabRoot>(), response = new Set<LabRoot>(), accepted: { root: LabRoot; receipt: LabRoot }[] = [], rejections: LeaguePortfolioDerivation["rejections"][number][] = []
   for (const entry of bound) {
     const fingerprints = entry.admission.candidate.fingerprints, root = entry.admission.root
     const reject = (reason: PortfolioReason) => rejections.push(freezeLabValue({ candidateAdmissionRoot: root, reason, receiptRoot: entry.cloneRoot }))
@@ -80,10 +90,12 @@ export const deriveLeaguePortfolio = (input: { readonly snapshotRoot: LabRoot; r
     if (lineage.has(fingerprints.lineageRoot)) { reject("lineage_duplicate"); continue }
     if (behavior.has(fingerprints.chronicleBehaviorRoot)) { reject("behavior_duplicate"); continue }
     if (response.has(fingerprints.matchupResponseRoot)) { reject("response_duplicate"); continue }
-    family.add(entry.familyRoot); core.add(entry.coreRoot); lineage.add(fingerprints.lineageRoot); behavior.add(fingerprints.chronicleBehaviorRoot); response.add(fingerprints.matchupResponseRoot); accepted.push(root); receipts.push(entry.cloneRoot)
+    family.add(entry.familyRoot); core.add(entry.coreRoot); lineage.add(fingerprints.lineageRoot); behavior.add(fingerprints.chronicleBehaviorRoot); response.add(fingerprints.matchupResponseRoot); accepted.push({ root, receipt: entry.cloneRoot })
   }
   if (!accepted.length) return fail("NO_DIVERSE_PURE")
-  return freezeLabValue({ portfolio: createLeaguePortfolio({ candidateAdmissionRoots: accepted, diversityReceiptRoot: labRoot("league-portfolio-diversity-v2", { snapshotRoot: input.snapshotRoot, mixtureRoot: mixture.root, candidateAdmissionRoots: accepted, receipts, rejections }), mixtureRoot: mixture.root }), rejections }) as LeaguePortfolioDerivation
+  accepted.sort((left, right) => left.root.localeCompare(right.root))
+  const candidateAdmissionRoots = accepted.map((entry) => entry.root), receipts = accepted.map((entry) => entry.receipt)
+  return freezeLabValue({ portfolio: createLeaguePortfolio({ candidateAdmissionRoots, diversityReceiptRoot: labRoot("league-portfolio-diversity-v2", { snapshotRoot: input.snapshotRoot, mixtureRoot: mixture.root, candidateAdmissionRoots, receipts, rejections }), mixtureRoot: mixture.root }), rejections }) as LeaguePortfolioDerivation
 }
 
 type ScoreRow = Readonly<{ candidateAdmissionRoot: LabRoot; conditionRoot: LabRoot; numerator: number; denominator: number; evidenceRoot: LabRoot }>
@@ -187,9 +199,9 @@ export const selectRobustPure = (input: { readonly snapshotRoot: LabRoot; readon
   const inventory = serious ? (() => {
     const population = LeaguePopulationSchema.parse(input.population)
     if (population.root !== input.populationRoot || !Array.isArray(input.populationCandidates)) return fail("INVENTORY_BINDING")
-    const bound = input.populationCandidates.map(admitBoundCandidate), roots = bound.map((row) => row.admission.root).sort()
+    const bound = bindTacticalDiversity(input.populationCandidates.map(admitBoundCandidate)), roots = bound.map((row) => row.admission.root).sort()
     if (new Set(roots).size !== roots.length || roots.join("\0") !== population.candidateAdmissionRoots.join("\0")) return fail("INVENTORY_COVERAGE")
-    const independent = bound.filter((row) => row.correlationFree).sort((a, b) => a.admission.root.localeCompare(b.admission.root))
+    const independent = bound.filter((row) => row.correlationFree && !row.profiledTactical).sort((a, b) => a.admission.root.localeCompare(b.admission.root))
     const paired = (left: BoundCandidate, right: BoundCandidate) => {
       const a = left.admission.importEvidence, b = right.admission.importEvidence
       return a && b && a.assessmentRoot === b.assessmentRoot && a.sourceSlot !== b.sourceSlot && a.qualification === "base_distinct" && b.qualification === "base_distinct" || left.distinctPeerProposals.includes(right.admission.candidate.proposal.root) || right.distinctPeerProposals.includes(left.admission.candidate.proposal.root)

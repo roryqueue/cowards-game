@@ -36,7 +36,7 @@ export interface FactoryFingerprintEvidence {
   readonly proposalRoot: LabRoot
   readonly validationRoot: LabRoot
   readonly supervisionReceiptRoot: LabRoot
-  readonly producerIdentity: "emitTacticalFactoryPacket" | "emitTeacherFactoryPacket" | "emitModelFactoryPacket" | "admitQuarantinedIntakePacket" | "materializeFactoryCalibrationControl"
+  readonly producerIdentity: "emitTacticalFactoryPacket" | "emitProfiledTacticalFactoryPacket" | "emitTeacherFactoryPacket" | "emitModelFactoryPacket" | "admitQuarantinedIntakePacket" | "materializeFactoryCalibrationControl"
   readonly origin: "tactical-oracle" | "teacher-oracle" | "model-oracle" | "human-external-intake" | "calibration-control"
   readonly evidenceClass: "real_producer" | "mechanics_only"
   readonly producerArtifactRoot: LabRoot | null
@@ -53,6 +53,7 @@ export interface FactoryFingerprintEvidence {
 
 const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdentity"], FactoryFingerprintEvidence["origin"]>> = {
   emitTacticalFactoryPacket: "tactical-oracle",
+  emitProfiledTacticalFactoryPacket: "tactical-oracle",
   emitTeacherFactoryPacket: "teacher-oracle",
   emitModelFactoryPacket: "model-oracle",
   admitQuarantinedIntakePacket: "human-external-intake",
@@ -61,6 +62,12 @@ const producerOrigins: Readonly<Record<FactoryFingerprintEvidence["producerIdent
 const issuedEvidence = new WeakSet<object>()
 const authorizedProducerEvidence = new WeakMap<object, LabRoot>()
 const leagueProducerEvidence = new WeakMap<object, Readonly<{ allocationArtifactRoot: LabRoot; startArtifactRoot: LabRoot; authoringArtifactRoot?: LabRoot }>>()
+const profiledTacticalInput = (value: unknown): Readonly<{ request: Record<string, unknown>; profile: Record<string, unknown>; envelope: { originalRequestArtifactRoot: LabRoot; targetArtifactRoot: LabRoot; corpusArtifactRoot: LabRoot; selectionArtifactRoot: LabRoot; profileRoot: LabRoot; sourceRoot: LabRoot } }> | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !exact(value, ["request", "profile", "envelope"])) return null
+  const input = value as Record<string, unknown>, envelope = input.envelope
+  if (!input.request || typeof input.request !== "object" || Array.isArray(input.request) || !input.profile || typeof input.profile !== "object" || Array.isArray(input.profile) || !envelope || typeof envelope !== "object" || Array.isArray(envelope) || !exact(envelope, ["originalRequestArtifactRoot", "targetArtifactRoot", "corpusArtifactRoot", "selectionArtifactRoot", "profileRoot", "sourceRoot"]) || !Object.values(envelope).every(isRoot)) return null
+  return input as Readonly<{ request: Record<string, unknown>; profile: Record<string, unknown>; envelope: { originalRequestArtifactRoot: LabRoot; targetArtifactRoot: LabRoot; corpusArtifactRoot: LabRoot; selectionArtifactRoot: LabRoot; profileRoot: LabRoot; sourceRoot: LabRoot } }>
+}
 const dispositions: readonly FactoryDisposition[] = ["accepted", "rejected", "invalid", "duplicate", "legal_but_weak", "retried", "unresolved", "player_violation", "system_failure"]
 export const isFactoryProducerAuthorized = (authorization: Record<string, unknown>, manifestAuthorizationRoot: LabRoot, producerArtifactRoot: LabRoot): boolean => {
   const { root: authorizationRoot, ...authorizationValue } = authorization
@@ -165,14 +172,22 @@ const verifyLeagueProducer = (input: { readonly repository: FactoryRepository; r
   const packet = FactoryOraclePacketSchema.parse(producer.packet)
   const request = read(job.producerRequestArtifactRoot) as Record<string, unknown>
   assertProspectiveLeagueProducerRequest(allocation, job, request)
-  if (!exact(request, ["producerIdentity", "origin", "evidenceClass", "producerInput"]) || request.producerIdentity !== producer.producerIdentity || request.origin !== producer.origin || request.evidenceClass !== "real_producer") return fail("LEAGUE_PRODUCER_REQUEST")
-  if (allocation.evidenceClass === "empirical" || producer.producerIdentity === "emitTeacherFactoryPacket") {
+  const profiled = producer.producerIdentity === "emitProfiledTacticalFactoryPacket"
+  if (!exact(request, ["producerIdentity", "origin", "evidenceClass", "producerInput"]) || request.evidenceClass !== "real_producer" || (profiled ? (request.producerIdentity !== "emitTacticalFactoryPacket" || request.origin !== "tactical-oracle") : (request.producerIdentity !== producer.producerIdentity || request.origin !== producer.origin))) return fail("LEAGUE_PRODUCER_REQUEST")
+  let authored: Record<string, unknown> | null = null
+  if (allocation.evidenceClass === "empirical" || producer.producerIdentity === "emitTeacherFactoryPacket" || profiled) {
     if (!input.authoringArtifactRoot) return fail("LEAGUE_AUTHORING")
-    const authored = read(input.authoringArtifactRoot) as Record<string, unknown>
+    authored = read(input.authoringArtifactRoot) as Record<string, unknown>
     if (authored.schemaVersion !== "league-authoring-result-v1" || authored.root !== labRoot("league-authoring-result-v1", withoutRoot(authored)) || authored.allocationRoot !== allocation.root || authored.startRoot !== start.root || authored.jobId !== job.id || authored.ingestionArtifactRoot !== input.value.producerArtifactRoot || authored.disposition !== "produced") return fail("LEAGUE_AUTHORING")
     if (producer.producerIdentity === "emitTeacherFactoryPacket" && (!Array.isArray(authored.teacherArtifactRoots) || !authored.teacherArtifactRoots.length || authored.teacherArtifactRoots.length !== (request.producerInput as { searches: unknown[] }).searches.length || labRoot("league-teacher-request-binding", (request.producerInput as { request: unknown }).request) !== labRoot("league-teacher-request-binding", (producer.producerInput as { request: unknown }).request))) return fail("LEAGUE_TEACHER_AUTHORING")
   }
   if (producer.producerIdentity === "emitTacticalFactoryPacket" && labRoot("league-producer-input-v1", request.producerInput) !== labRoot("league-producer-input-v1", producer.producerInput)) return fail("LEAGUE_PRODUCER_REQUEST")
+  if (profiled) {
+    const derived = profiledTacticalInput(producer.producerInput)
+    if (!derived || !authored || labRoot("league-profiled-tactical-original-request-v1", request.producerInput) !== labRoot("league-profiled-tactical-original-request-v1", derived.request) || derived.envelope.originalRequestArtifactRoot !== job.producerRequestArtifactRoot || derived.envelope.sourceRoot !== producer.sourceRoot || authored.targetArtifactRoot !== derived.envelope.targetArtifactRoot || !isRoot(authored.tacticalEnvelopeArtifactRoot) || labRoot("league-profiled-tactical-envelope-v1", read(authored.tacticalEnvelopeArtifactRoot)) !== labRoot("league-profiled-tactical-envelope-v1", derived.envelope)) return fail("LEAGUE_PROFILED_TACTICAL_ENVELOPE")
+    const selection = read(derived.envelope.selectionArtifactRoot) as Record<string, unknown>, corpus = read(derived.envelope.corpusArtifactRoot) as Record<string, unknown>
+    if (!selection || typeof selection !== "object" || Array.isArray(selection) || !corpus || typeof corpus !== "object" || Array.isArray(corpus) || labRoot("league-profiled-tactical-profile-v1", selection.profile) !== labRoot("league-profiled-tactical-profile-v1", derived.profile) || selection.corpusRoot !== corpus.root || (selection.profile as { root?: unknown } | undefined)?.root !== derived.envelope.profileRoot) fail("LEAGUE_PROFILED_TACTICAL_SELECTION")
+  }
   if (producer.packetRoot !== packet.root || packet.source.root !== producer.sourceRoot || factoryProposalFromPacket(packet).root !== input.value.proposalRoot || packet.build.compatibilityTupleRoot !== allocation.tupleRoot || packet.nativeLane.runtimeProfileRoot !== allocation.runtimeRoot || producer.runtimeProfileRoot !== allocation.runtimeRoot || labRoot("league-native-lane-v1", producer.nativeLane) !== labRoot("league-native-lane-v1", packet.nativeLane)) return fail("LEAGUE_PRODUCER_BINDING")
   if (input.receipt && (!isIssuedFactorySupervisionReceipt(input.receipt) || input.receipt.root !== input.value.supervisionReceiptRoot || input.receipt.admission.proposalRoot !== input.value.proposalRoot || input.receipt.admission.validationRoot !== input.value.validationRoot || input.receipt.admission.sourceRoot !== producer.sourceRoot || input.receipt.candidateIdentity.attemptRoot !== start.root || input.receipt.candidateIdentity.budgetRoot !== allocation.root || input.receipt.execution.kind !== "completed")) return fail("LEAGUE_SUPERVISION")
 }

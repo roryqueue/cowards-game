@@ -19,7 +19,7 @@ const sourceRoot = (source: string): LabRoot => `sha256:${createHash("sha256").u
 const repo = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "factory-selection-test-"))); dirs.push(directory); return createFactoryRepository(directory) }
 afterEach(() => { for (const directory of dirs.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 
-const candidate = (label: string, correlated = false) => {
+const candidate = (label: string, correlated = false, producerIdentity: "emitTacticalFactoryPacket" | "emitProfiledTacticalFactoryPacket" = "emitTacticalFactoryPacket") => {
   const repository = repo(), sourceUtf8 = `export default { selectActivations(){ return { activationOrders: [], strategyMemory: {} } }, soldierBrain(){ return { action: { type: "TURN_TO_STONE" }, soldierMemory: {} } } }; // ${label}`, source = sourceRoot(sourceUtf8)
   const fixture = factoryOraclePacketFixture(), packetValue = { ...fixture, source: { ...fixture.source, root: source, sha256: source, byteLength: sourceUtf8.length } }, packet = { ...packetValue, root: deriveFactoryOraclePacketRoot(packetValue) }, proposal = factoryProposalFromPacket(packet), validation = factoryValidationFixture(proposal)
   const original = factoryCandidateFixture(proposal, validation, root(`supervision:${label}`)), candidateValue = { ...original, fingerprints: { sourceStructureRoot: root(`structure:${label}`), lineageRoot: root(`lineage:${label}`), dependencyRoot: root(`dependency:${label}`), legalInputDecisionRoot: root(`legal:${label}`), chronicleBehaviorRoot: root(`behavior:${label}`), matchupResponseRoot: root(`response:${label}`) } }
@@ -27,9 +27,9 @@ const candidate = (label: string, correlated = false) => {
   const start = createFactoryAttemptStart({ taskRoot: root(`task:${label}`), budgetRoot: root(`budget:${label}`), candidateRoot: admittedCandidate.root, authoringMechanism: "automated-oracle", inputRoot: root(`input:${label}`), resourceAccountingRoot: root(`accounting:${label}`), retryParentRoot: null })
   const admission = createLeagueCandidateAdmission({ candidate: admittedCandidate, supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, fingerprintRoot: labRoot("factory-fingerprint-roots-v1", admittedCandidate.fingerprints), lineageRoot: labRoot("factory-lineage-v1", admittedCandidate.lineage), tupleRoot: proposal.build.compatibilityTupleRoot, runtimeRoot: proposal.nativeLane.runtimeProfileRoot, provenanceRoot: root(`provenance:${label}`), attemptStart: start, attemptTerminal: createFactoryAttemptTerminal({ startRoot: start.root, disposition: "accepted", outputRoot: root(`output:${label}`), validationRoot: root(`attempt-validation:${label}`), duplicateEvidenceRoot: root(`duplicate:${label}`), finalEvidenceRoot: root(`final:${label}`) }) })
   LeagueCandidateAdmissionSchema.parse(admission)
-  const producerValue = { schemaVersion: "factory-ingestion-v1", privacy: "private_offline", producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", packetRoot: packet.root, sourceRoot: source, runtimeProfileRoot: proposal.nativeLane.runtimeProfileRoot, nativeLane: proposal.nativeLane, packet, sourceUtf8, producerInput: {}, modelCompanion: null }
+  const producerValue = { schemaVersion: "factory-ingestion-v1", privacy: "private_offline", producerIdentity, origin: "tactical-oracle", evidenceClass: "real_producer", packetRoot: packet.root, sourceRoot: source, runtimeProfileRoot: proposal.nativeLane.runtimeProfileRoot, nativeLane: proposal.nativeLane, packet, sourceUtf8, producerInput: {}, modelCompanion: null }
   const producer = { ...producerValue, root: labRoot("factory-ingestion-v1", producerValue) }, producerEncoded = admitCanonicalJsonValue(producer, { profile: "canonical-manifest" }); if (!producerEncoded.ok) throw new Error("producer"); const producerRoot = publishFactoryArtifact(repository, producerEncoded.canonicalBytes)
-  const evidenceValue = { schemaVersion: "factory-fingerprint-evidence-v1", privacy: "private_offline", proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, producerIdentity: "emitTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerArtifactRoot: producerRoot, authorshipRoots: [root(`author:${label}`)], lineageNodes: [{ root: root(`lineage-node:${label}`), artifactRoot: root(`lineage-artifact:${label}`), parents: [] }], dependencyNodes: [{ root: root(`dependency-node:${label}`), artifactRoot: root(`dependency-artifact:${label}`), dependencies: [] }], matchupResponses: [{ supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, conditionRoot: root(`condition-one:${label}`), opponentRoot: root(`opponent-one:${label}`), side: "bottom", initialInitiative: true, outcome: "draw", responseRoot: root(`matchup-one:${label}`) }, { supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, conditionRoot: root(`condition-two:${label}`), opponentRoot: root(`opponent-two:${label}`), side: "top", initialInitiative: false, outcome: "bottom", responseRoot: root(`matchup-two:${label}`) }], counterfactualPairs: [{ leftRoot: root(`pair-left:${label}`), rightRoot: root(`pair-right:${label}`), relation: correlated ? "correlated" : "distinct" }], failureModes: ["accepted"] }
+  const evidenceValue = { schemaVersion: "factory-fingerprint-evidence-v1", privacy: "private_offline", proposalRoot: proposal.root, validationRoot: validation.root, supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, producerIdentity, origin: "tactical-oracle", evidenceClass: "real_producer", producerArtifactRoot: producerRoot, authorshipRoots: [root(`author:${label}`)], lineageNodes: [{ root: root(`lineage-node:${label}`), artifactRoot: root(`lineage-artifact:${label}`), parents: [] }], dependencyNodes: [{ root: root(`dependency-node:${label}`), artifactRoot: root(`dependency-artifact:${label}`), dependencies: [] }], matchupResponses: [{ supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, conditionRoot: root(`condition-one:${label}`), opponentRoot: root(`opponent-one:${label}`), side: "bottom", initialInitiative: true, outcome: "draw", responseRoot: root(`matchup-one:${label}`) }, { supervisionReceiptRoot: admittedCandidate.supervisionReceiptRoot, conditionRoot: root(`condition-two:${label}`), opponentRoot: root(`opponent-two:${label}`), side: "top", initialInitiative: false, outcome: "bottom", responseRoot: root(`matchup-two:${label}`) }], counterfactualPairs: [{ leftRoot: root(`pair-left:${label}`), rightRoot: root(`pair-right:${label}`), relation: correlated ? "correlated" : "distinct" }], failureModes: ["accepted"] }
   const evidence = { ...evidenceValue, root: labRoot("factory-fingerprint-evidence-v1", evidenceValue) }, encoded = admitCanonicalJsonValue(evidence, { profile: "canonical-manifest" }); if (!encoded.ok) throw new Error("evidence")
   return { candidateAdmission: admission, factoryRepository: repository, fingerprintArtifactRoot: publishFactoryArtifact(repository, encoded.canonicalBytes) }
 }
@@ -41,6 +41,42 @@ const selectionEvidence = (snapshotRoot: LabRoot, populationRoot: LabRoot, solve
 }
 
 describe("source-bound portfolio and robust-pure selection", () => {
+  it("keeps profiled tactical responses in S01's family and out of independent family and core counts", async () => {
+    const base = await importedCandidateFixture(1)
+    const variants = [candidate("profile-a", false, "emitProfiledTacticalFactoryPacket"), candidate("profile-b", false, "emitProfiledTacticalFactoryPacket")]
+    const snapshotRoot = root("profile-snapshot"), mixture = createLeagueMixture({ snapshotRoot, solverOutputRoot: root("profile-solver"), weightRoot: root("profile-weights") })
+    const entries = [base, ...variants], portfolio = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries })
+    expect(portfolio.portfolio.candidateAdmissionRoots).toHaveLength(1)
+    expect(portfolio.portfolio.candidateAdmissionRoots).toEqual([base.candidateAdmission.root])
+    expect(portfolio.rejections).toHaveLength(2)
+    expect(() => deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: variants })).toThrow("TACTICAL_BASE_MISSING")
+    const population = createLeaguePopulation({ candidateAdmissionRoots: entries.map((entry) => entry.candidateAdmission.root).sort(), studyPolicyRoot: root("profile-study"), measurementPolicyRoot: root("profile-policy") })
+    const selected = portfolio.portfolio.candidateAdmissionRoots[0]!
+    const { root: _root, schemaVersion: _schema, ...baseEvidence } = selectionEvidence(snapshotRoot, population.root, mixture.solverOutputRoot, portfolio.portfolio.candidateAdmissionRoots, selected)
+    const body = { ...baseEvidence, schemaVersion: "league-selection-evidence-v5", allocationRoot: root("profile-allocation"), seedBlocks: ["seed"], iterations: [] }
+    const outcome = selectRobustPure({ snapshotRoot, populationRoot: population.root, mixture, portfolio: portfolio.portfolio, candidateAdmissionRoot: selected, population, populationCandidates: entries, evidence: { ...body, root: labRoot(body.schemaVersion, body) } })
+    const representatives = [base.candidateAdmission.root]
+    for (const id of ["behavioral_family_count", "independent_planner_core_count"]) {
+      expect(outcome.gateReceiptRoots).toContain(labRoot("league-robust-pure-gate-v2", { id, value: representatives }))
+    }
+  }, 60000)
+  it("keeps assessed S01 ahead of profile variants on both sides of its admission-root order", async () => {
+    const base = await importedCandidateFixture(1), baseRoot = base.candidateAdmission.root
+    let lower: ReturnType<typeof candidate> | undefined, higher: ReturnType<typeof candidate> | undefined
+    for (let ordinal = 0; ordinal < 64 && (!lower || !higher); ordinal++) {
+      const variant = candidate(`profile-root-order-${ordinal}`, false, "emitProfiledTacticalFactoryPacket")
+      if (variant.candidateAdmission.root < baseRoot) lower ??= variant
+      else higher ??= variant
+    }
+    expect(lower).toBeDefined(); expect(higher).toBeDefined()
+    const snapshotRoot = root("profile-root-order-snapshot"), mixture = createLeagueMixture({ snapshotRoot, solverOutputRoot: root("profile-root-order-solver"), weightRoot: root("profile-root-order-weights") })
+    for (const entries of [[higher!, base, lower!], [lower!, base, higher!]]) {
+      const result = deriveLeaguePortfolio({ snapshotRoot, mixture, candidates: entries })
+      expect(result.portfolio.candidateAdmissionRoots).toEqual([baseRoot])
+      expect(result.rejections.map((row) => row.candidateAdmissionRoot).sort()).toEqual([lower!.candidateAdmission.root, higher!.candidateAdmission.root].sort())
+      expect(result.rejections.every((row) => row.reason === "structural_family_duplicate")).toBe(true)
+    }
+  }, 60000)
   it("keeps the authentic three-base nine-control population comparison-only while fresh producers grow the inventory", async () => {
     const imported = await Promise.all(Array.from({ length: 12 }, (_, index) => importedCandidateFixture(index + 1)))
     const controls = imported.filter((row) => row.candidateAdmission.importEvidence!.qualification === "control_or_unresolved")

@@ -12,12 +12,17 @@ import { searchCanonicalCounterfactual, type TeacherSearchRequest } from "../../
 import { distillLegalStudent, projectTeacherSearchToLegalTraining } from "../../packages/strategy-oracle-teacher/src/distill.js"
 import { admitFrozenIntakeProtocol } from "../../packages/strategy-lab/src/factory/intake-protocol.js"
 import { ingestNamedFactoryPacket, readFactoryIngestion, type FactoryIngestionRequest } from "../ingest-v1-38-factory-packet.js"
+import { deriveTacticalAdaptationProfile } from "../../packages/strategy-oracle-tactical/src/adaptation.js"
+import { emitProfiledTacticalFactoryPacket } from "../../packages/strategy-oracle-tactical/src/emit-profiled.js"
+import type { TacticalFactoryRequest } from "../../packages/strategy-oracle-tactical/src/emit.js"
+import { isProspectiveTacticalJob, readRetainedTacticalAuthoringContext } from "./v1-38-league-tactical-corpus.js"
 import { createFactoryAppServerTransport, FactoryAppServerTurnFailure, type FactoryAppServerTransport, type FactoryAppServerTransportOptions, type FactoryAppServerTurnResult } from "../v1-38-factory-app-server-transport.js"
 
 const fail = (code: string): never => { throw new TypeError(`LEAGUE_AUTHOR_${code}`) }
 const exact = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join() === [...keys].sort().join()
 const byteRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 const encode = (value: unknown) => { const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); return encoded.ok ? encoded.canonicalBytes : fail("CANONICAL") }
+const compact = (value: unknown) => { const bytes = encode(value); return bytes.length <= 262144 ? bytes : fail("COMPACT_SIZE") }
 const read = (repository: FactoryRepository, root: LabRoot): unknown => { const result = admitCanonicalJsonBytes(readFactoryArtifact(repository, root), { profile: "canonical-manifest", operation: "require-canonical" }); return result.ok ? result.value : fail("ARTIFACT") }
 interface ModelAuthoring {
   sourceMessage: string; codexExecutable: string; clientVersion: string; stateDirectory: string; disclosedDirectory: string; existingAuthFile: string;
@@ -93,11 +98,20 @@ export const executeLeagueAuthoring = async (input: { repository: FactoryReposit
   const clock = input.clock ?? Date.now, before = clock()
   let ingestionArtifactRoot: LabRoot | null = null, disposition: LeagueAuthoringResult["disposition"] = "invalid", modelTokens: number | null = 0, rawRoot: LabRoot | null = null, cleanup = "not_started", failure: string | null = null, transport: FactoryAppServerTransport | null = null
   const teacherArtifactRoots: LabRoot[] = []
+  let tacticalEnvelopeArtifactRoot: LabRoot | null = null
   try {
     if (job.operation !== "produce") disposition = job.operation
     else {
       let request = preflight.request
-      if (preflight.model) {
+      if (isProspectiveTacticalJob(allocation, job)) {
+        if (request.producerIdentity !== "emitTacticalFactoryPacket" || !target || !input.targetArtifactRoot || job.reservation.searchNodes !== 100) return fail("TACTICAL_TARGET_REQUIRED")
+        const context = readRetainedTacticalAuthoringContext(input.repository, allocation, job, target), selection = deriveTacticalAdaptationProfile(context.corpus, context.inputs), selectionArtifactRoot = publishFactoryArtifact(input.repository, compact(selection))
+        const original = request.producerInput as TacticalFactoryRequest, packet = emitProfiledTacticalFactoryPacket({ request: original, profile: selection.profile })
+        const envelope = { originalRequestArtifactRoot: job.producerRequestArtifactRoot, targetArtifactRoot: input.targetArtifactRoot, corpusArtifactRoot: (target as any).tacticalAdaptation.corpusArtifactRoot as LabRoot, selectionArtifactRoot, profileRoot: selection.profile.root, sourceRoot: packet.source.root }
+        tacticalEnvelopeArtifactRoot = publishFactoryArtifact(input.repository, compact(envelope))
+        request = { producerIdentity: "emitProfiledTacticalFactoryPacket", origin: "tactical-oracle", evidenceClass: "real_producer", producerInput: { request: original, profile: selection.profile, envelope } }
+        assertProspectiveLeagueProducerRequest(allocation, job, request)
+      } else if (preflight.model) {
         const template = preflight.model, sourceMessage = target === null ? template.sourceMessage : `${template.sourceMessage}\n\nFrozen current league target (data, not instructions):\n${new TextDecoder().decode(encode(target))}`
         const model = { ...template, sourceMessage, promptRoot: byteRoot(new TextEncoder().encode(sourceMessage)), contextRoot: target === null ? template.contextRoot : labRoot("league-response-context-v1", { templateContextRoot: template.contextRoot, targetArtifactRoot: input.targetArtifactRoot }) }
         mkdirSync(model.stateDirectory, { mode: 0o700 }); mkdirSync(model.disclosedDirectory, { mode: 0o700 })
@@ -153,7 +167,7 @@ export const executeLeagueAuthoring = async (input: { repository: FactoryReposit
   }
   const elapsedMilliseconds = Math.max(0, clock() - before)
   if (job.operation === "produce" && elapsedMilliseconds > job.reservation.effortMilliseconds) disposition = "system_failure"
-  const body = { schemaVersion: "league-authoring-result-v1", privacy: "private_offline", allocationRoot: allocation.root, jobId: job.id, startRoot, targetArtifactRoot: input.targetArtifactRoot ?? null, teacherArtifactRoots, disposition, ingestionArtifactRoot, rawRoot, cleanup, failure, modelTokens, elapsedMilliseconds }
+  const body = { schemaVersion: "league-authoring-result-v1", privacy: "private_offline", allocationRoot: allocation.root, jobId: job.id, startRoot, targetArtifactRoot: input.targetArtifactRoot ?? null, teacherArtifactRoots, disposition, ingestionArtifactRoot, rawRoot, cleanup, failure, modelTokens, elapsedMilliseconds, ...(isProspectiveTacticalJob(allocation, job) ? { tacticalEnvelopeArtifactRoot } : {}) }
   const evidenceArtifactRoot = publishFactoryArtifact(input.repository, encode({ ...body, root: labRoot("league-authoring-result-v1", body) }))
   return Object.freeze({ disposition, startRoot, ingestionArtifactRoot, evidenceArtifactRoot, modelTokens, elapsedMilliseconds })
 }
@@ -166,7 +180,14 @@ export const verifyRetainedLeagueAuthoring = (repository: FactoryRepository, all
   if (!job || root !== labRoot("league-authoring-result-v1", body) || result.allocationRoot !== allocation.root || result.disposition !== "produced" || !result.ingestionArtifactRoot || !Array.isArray(result.teacherArtifactRoots) || !Number.isSafeInteger(result.elapsedMilliseconds) || result.elapsedMilliseconds < 0 || result.elapsedMilliseconds > job.reservation.effortMilliseconds) return fail("RETAINED_RESULT")
   const ingestion = readFactoryIngestion(repository, result.ingestionArtifactRoot), request = read(repository, job.producerRequestArtifactRoot) as any
   assertProspectiveLeagueProducerRequest(allocation, job, request)
-  if (ingestion.producerIdentity !== request.producerIdentity || ingestion.origin !== request.origin) return fail("RETAINED_PRODUCER")
+  if (isProspectiveTacticalJob(allocation, job)) {
+    const producer = ingestion.producerInput as any, target = result.targetArtifactRoot === null ? null : read(repository, result.targetArtifactRoot) as any
+    if (ingestion.producerIdentity !== "emitProfiledTacticalFactoryPacket" || request.producerIdentity !== "emitTacticalFactoryPacket" || !target || !result.tacticalEnvelopeArtifactRoot || !producer.envelope || producer.envelope.originalRequestArtifactRoot !== job.producerRequestArtifactRoot || producer.envelope.targetArtifactRoot !== result.targetArtifactRoot || labRoot("tactical-envelope-binding", read(repository, result.tacticalEnvelopeArtifactRoot)) !== labRoot("tactical-envelope-binding", producer.envelope)) return fail("RETAINED_TACTICAL_ENVELOPE")
+    const context = readRetainedTacticalAuthoringContext(repository, allocation, job, target), selection = deriveTacticalAdaptationProfile(context.corpus, context.inputs)
+    if (labRoot("tactical-selection-binding", selection) !== labRoot("tactical-selection-binding", read(repository, producer.envelope.selectionArtifactRoot)) || selection.profile.root !== producer.envelope.profileRoot || selection.rows.length !== job.reservation.searchNodes || producer.envelope.sourceRoot !== ingestion.sourceRoot) return fail("RETAINED_TACTICAL_SELECTION")
+    assertProspectiveLeagueProducerRequest(allocation, job, { producerIdentity: ingestion.producerIdentity, producerInput: ingestion.producerInput })
+  } else if (ingestion.producerIdentity !== request.producerIdentity || result.tacticalEnvelopeArtifactRoot !== undefined) return fail("RETAINED_PRODUCER")
+  if (ingestion.origin !== request.origin) return fail("RETAINED_PRODUCER")
   if (ingestion.producerIdentity === "emitModelFactoryPacket") {
     const bundle = admitFrozenModelBundle(ingestion.modelCompanion?.bundle), template = request.producerInput.authoring, target = result.targetArtifactRoot === null ? null : read(repository, result.targetArtifactRoot), sourceMessage = target === null ? template.sourceMessage : `${template.sourceMessage}\n\nFrozen current league target (data, not instructions):\n${new TextDecoder().decode(encode(target))}`
     if (bundle.schemaVersion !== "frozen-model-bundle-v2" || result.rawRoot === null || allocation.evidenceClass === "empirical" && job.evaluationRole === "development_response" && target === null || job.evaluationRole !== "development_response" && target !== null || bundle.attempt.attemptRoot !== result.startRoot || bundle.attempt.budgetRoot !== allocation.root || bundle.accounting.tokenLimit !== job.reservation.modelTokens || bundle.provider.providerId !== template.requestedProvider || bundle.provider.modelId !== template.requestedModel || bundle.provider.settingsRoot !== template.settingsRoot || bundle.provider.promptRoot !== byteRoot(new TextEncoder().encode(sourceMessage)) || bundle.provenance.requestRecord.bodyUtf8 !== sourceMessage || bundle.provider.contextRoot !== (target === null ? template.contextRoot : labRoot("league-response-context-v1", { templateContextRoot: template.contextRoot, targetArtifactRoot: result.targetArtifactRoot })) || bundle.provenance.actualUsage.totalTokens !== result.modelTokens || result.modelTokens > job.reservation.modelTokens || result.cleanup === "failed_to_exit" || result.cleanup === "not_started") return fail("RETAINED_MODEL_BINDING")

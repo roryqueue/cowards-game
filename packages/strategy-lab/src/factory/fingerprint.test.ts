@@ -188,6 +188,15 @@ describe("six derived factory fingerprints", () => {
     expect(derived.reasons).toContain("calibration_thresholds_not_frozen")
     expect(JSON.stringify(derived)).not.toMatch(/strip-me|strategyMemory|privatePayload|objective/u)
     expect(requireIssuedFactoryIndependenceReceipt(derived)).toBe(derived)
+
+    const { root: _root, schemaVersion: _schema, privacy: _privacy, ...profiledValue } = evidence.evidence
+    const profiled = createFactoryFingerprintEvidence({ ...profiledValue, producerIdentity: "emitProfiledTacticalFactoryPacket", origin: "tactical-oracle" })
+    const encoded = admitCanonicalJsonValue(profiled, { profile: "canonical-manifest" })
+    if (!encoded.ok) throw new Error("profiled evidence encoding")
+    const profiledDerived = deriveFactoryFingerprints({ repository: repo, supervisionReceipt: receipt, evidence: profiled, evidenceArtifactRoot: publishFactoryArtifact(repo, encoded.canonicalBytes) })
+    // A tactical-profile label is provenance only: it cannot mint a new
+    // structural planner identity from unchanged source/evidence.
+    expect(profiledDerived.fingerprints.sourceStructureRoot).toBe(derived.fingerprints.sourceStructureRoot)
   })
 
   it("normalizes comments, whitespace and local identifier renames but never promotes a label or borderline evidence", async () => {

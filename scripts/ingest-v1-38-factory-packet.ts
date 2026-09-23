@@ -4,6 +4,10 @@ import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { emitTacticalFactoryPacket, emitTacticalSource, type TacticalFactoryRequest } from "../packages/strategy-oracle-tactical/src/emit.js"
+import { deriveTacticalAdaptationProfile, type TacticalAdaptationProfile } from "../packages/strategy-oracle-tactical/src/adaptation.js"
+import { emitProfiledTacticalFactoryPacket, emitProfiledTacticalSource } from "../packages/strategy-oracle-tactical/src/emit-profiled.js"
+import { admitAnyLeagueExecutionAllocation, assertProspectiveLeagueProducerRequest } from "../packages/strategy-lab/src/league/allocation.js"
+import { readRetainedTacticalAuthoringContext } from "./lib/v1-38-league-tactical-corpus.js"
 import { emitTeacherFactoryPacket, emitTeacherSource, type TeacherFactoryRequest } from "../packages/strategy-oracle-teacher/src/emit.js"
 import type { DistilledLegalStudent } from "../packages/strategy-oracle-teacher/src/distill.js"
 import { admitFrozenModelBundle, type FrozenModelBundle } from "../packages/strategy-oracle-model/src/bundle.js"
@@ -18,6 +22,7 @@ const fail = (code: string): never => { throw new TypeError(`FACTORY_INGEST_${co
 const byteRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 const producerOrigins = {
   emitTacticalFactoryPacket: "tactical-oracle",
+  emitProfiledTacticalFactoryPacket: "tactical-oracle",
   emitTeacherFactoryPacket: "teacher-oracle",
   emitModelFactoryPacket: "model-oracle",
   admitQuarantinedIntakePacket: "human-external-intake",
@@ -60,8 +65,32 @@ const recordRoot = (record: Omit<FactoryIngestionRecord, "root">): LabRoot => la
 const sourceBytes = (source: string): Uint8Array => new TextEncoder().encode(source)
 
 type MaterializedPacket = { packet: FactoryOraclePacket; source: string; companion: ModelFactoryPacketProvenance | null; storedInput?: unknown }
+export interface ProfiledTacticalProducerInput {
+  request: TacticalFactoryRequest; profile: TacticalAdaptationProfile
+  envelope: { originalRequestArtifactRoot: LabRoot; targetArtifactRoot: LabRoot; corpusArtifactRoot: LabRoot; selectionArtifactRoot: LabRoot; profileRoot: LabRoot; sourceRoot: LabRoot }
+}
+/** Every prospective reload replays retained data, never emitted Strategy source. */
+export const verifyRetainedProfiledTacticalInput = (repository: FactoryRepository, value: unknown): ProfiledTacticalProducerInput => {
+  if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join() !== "envelope,profile,request") return fail("PROFILED_INPUT")
+  const input = value as ProfiledTacticalProducerInput
+  if (!input.envelope || Object.keys(input.envelope).sort().join() !== ["originalRequestArtifactRoot", "targetArtifactRoot", "corpusArtifactRoot", "selectionArtifactRoot", "profileRoot", "sourceRoot"].sort().join()) return fail("PROFILED_ENVELOPE")
+  encode(input.envelope)
+  const read = (root: LabRoot): any => { const parsed = admitCanonicalJsonBytes(readFactoryArtifact(repository, root), { profile: "canonical-manifest", operation: "require-canonical" }); return parsed.ok ? parsed.value : fail("PROFILED_ARTIFACT") }
+  const original = read(input.envelope.originalRequestArtifactRoot), target = read(input.envelope.targetArtifactRoot)
+  if (!target.tacticalAdaptation) return fail("PROFILED_TARGET")
+  const allocation = admitAnyLeagueExecutionAllocation(read(target.tacticalAdaptation.allocationArtifactRoot)), job = allocation.rounds.flatMap((round) => round.jobs).find((job) => job.producerRequestArtifactRoot === input.envelope.originalRequestArtifactRoot) ?? fail("PROFILED_JOB")
+  if (allocation.outputDirectories.responseFactory !== repository.directory || original.producerIdentity !== "emitTacticalFactoryPacket" || original.origin !== "tactical-oracle" || original.evidenceClass !== "real_producer" || labRoot("tactical-original-request", original.producerInput) !== labRoot("tactical-original-request", input.request) || target.tacticalAdaptation.corpusArtifactRoot !== input.envelope.corpusArtifactRoot) return fail("PROFILED_ORIGINAL")
+  const context = readRetainedTacticalAuthoringContext(repository, allocation, job, target), selection = deriveTacticalAdaptationProfile(context.corpus, context.inputs)
+  if (labRoot("tactical-selection-binding", read(input.envelope.selectionArtifactRoot)) !== labRoot("tactical-selection-binding", selection) || labRoot("tactical-profile-binding", input.profile) !== labRoot("tactical-profile-binding", selection.profile) || input.envelope.profileRoot !== selection.profile.root || emitProfiledTacticalFactoryPacket({ request: input.request, profile: selection.profile }).source.root !== input.envelope.sourceRoot) return fail("PROFILED_REDERIVATION")
+  assertProspectiveLeagueProducerRequest(allocation, job, { producerIdentity: "emitProfiledTacticalFactoryPacket", producerInput: input })
+  return input
+}
 const materialize = async (request: FactoryIngestionRequest, repository: FactoryRepository): Promise<MaterializedPacket | Extract<QuarantinedIntakeResult, { disposition: "blocked_configuration" }>> => {
   switch (request.producerIdentity) {
+    case "emitProfiledTacticalFactoryPacket": {
+      const input = verifyRetainedProfiledTacticalInput(repository, request.producerInput)
+      return { packet: emitProfiledTacticalFactoryPacket(input), source: emitProfiledTacticalSource(input.profile), companion: null }
+    }
     case "materializeFactoryCalibrationControl": {
       const input = request.producerInput as { slot: FactoryControlSlot; baseIngestionArtifactRoot: LabRoot }
       const base = readFactoryIngestion(repository, input.baseIngestionArtifactRoot)
@@ -145,6 +174,9 @@ export const readFactoryIngestion = (repository: FactoryRepository, artifactRoot
     if (!stored.modelCompanion) return fail("RELOAD_MODEL")
     const bundle = admitFrozenModelBundle(stored.modelCompanion.bundle), replayed = emitModelFactoryPacket(bundle, input.request), companion = getIssuedModelFactoryPacketProvenance(replayed)
     if (replayed.root !== packet.root || stored.modelCompanion === null || labRoot("factory-model-companion-compare-v1", companion) !== labRoot("factory-model-companion-compare-v1", stored.modelCompanion)) return fail("RELOAD_MODEL")
+  } else if (stored.producerIdentity === "emitProfiledTacticalFactoryPacket") {
+    const input = verifyRetainedProfiledTacticalInput(repository, stored.producerInput)
+    if (stored.modelCompanion !== null || emitProfiledTacticalFactoryPacket(input).root !== packet.root || emitProfiledTacticalSource(input.profile) !== stored.sourceUtf8) return fail("RELOAD_PROFILED_TACTICAL")
   } else if (stored.producerIdentity === "emitTacticalFactoryPacket") {
     if (emitTacticalFactoryPacket(stored.producerInput as TacticalFactoryRequest).root !== packet.root || emitTacticalSource() !== stored.sourceUtf8) return fail("RELOAD_TACTICAL")
   } else if (stored.producerIdentity === "emitTeacherFactoryPacket") {

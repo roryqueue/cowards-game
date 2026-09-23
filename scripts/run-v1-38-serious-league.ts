@@ -28,6 +28,7 @@ import { readFactorySupervisionArtifactRecords } from "../packages/strategy-lab/
 import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions } from "./lib/v1-38-league-response-runtime.js"
 import { isLeagueExecutionStreamReference, prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
+import { buildLeagueTacticalCorpus, isProspectiveTacticalJob, readRetainedTacticalAuthoringContext, readTacticalLeagueRecord } from "./lib/v1-38-league-tactical-corpus.js"
 
 const fail = (code: string): never => { throw new TypeError(`SERIOUS_LEAGUE_${code}`) }
 const bytesRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -600,11 +601,20 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
         roots.push(session.graph.append("red-team-start", { jobId: job.id, start, startArtifactRoot, ledgerRoot: ledger.root }))
         if (job.operation !== "produce") { const evidenceRoot = session.graph.append("red-team-unfilled", { jobId: job.id, operation: job.operation, reason: "prospectively_allocated_disposition" }); roots.push(evidenceRoot); ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: job.operation, usage: zeroUsage(), evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null }) }
         else {
-          const targetArtifactRoot = publishFactoryArtifact(repository, encode({ roundRoot: start.roundRoot, candidateRoot: start.candidateRoot, targets: roundBlocks.map((block) => ({ seed: block.seed, target: block.round.target, weights: block.matrix.solver.weights })), candidates: targetSources(repository, candidates) }))
           const imported = candidates.find((candidate) => candidate.admission.importEvidence) ?? fail("NUMERIC_MEASUREMENT_REQUIRED"), threshold = { repository: imported.factoryRepository, artifactRoot: imported.admission.importEvidence!.thresholdArtifactRoot }
           session.responseMatchCharges += job.reservation.matches
           let produced: Awaited<ReturnType<typeof produceLeagueResponse>>
-          try { produced = await (input.fixture?.produce ?? produceLeagueResponse)({ allocation, job, start, startArtifactRoot, repository, targetArtifactRoot, remainingWallMilliseconds: allocation.operations.wallClockMilliseconds - (Date.now() - session.startTime), opponents: candidates.map((candidate) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold, retention: session.graph }) }
+          try {
+            let tacticalAdaptation: { allocationArtifactRoot: LabRoot; matrixRecordRoot: LabRoot; corpusArtifactRoot: LabRoot } | undefined
+            if (isProspectiveTacticalJob(allocation, job)) {
+              const built = buildLeagueTacticalCorpus({ roundRoot: start.roundRoot, strongestPureCandidateRoot: primary.round.target.strongestPureCandidateRoot, vulnerablePureCandidateRoot: primary.round.target.vulnerablePureCandidateRoot, weights: primary.matrix.solver.weights, cellResultRoots: primary.matrix.results.map((row) => row.recordRoot), readCell: (root) => readTacticalLeagueRecord(input.repository, root, allocation.operations) })
+              const corpusArtifactRoot = publishFactoryArtifact(repository, encode(built.corpus))
+              tacticalAdaptation = { allocationArtifactRoot: publishFactoryArtifact(repository, encode(allocation)), matrixRecordRoot: primary.matrix.recordRoot, corpusArtifactRoot }
+              roots.push(session.graph.append("tactical-adaptation-corpus", { jobId: job.id, roundRoot: start.roundRoot, corpusArtifactRoot, corpusRoot: built.corpus.root, matrixRecordRoot: primary.matrix.recordRoot }, [primary.matrix.recordRoot, ...built.corpus.observations.map((row) => row.cellResultRoot)]))
+            }
+            const targetArtifactRoot = publishFactoryArtifact(repository, encode({ roundRoot: start.roundRoot, candidateRoot: start.candidateRoot, targets: roundBlocks.map((block) => ({ seed: block.seed, target: block.round.target, weights: block.matrix.solver.weights })), candidates: targetSources(repository, candidates), ...(tacticalAdaptation ? { tacticalAdaptation } : {}) }))
+            produced = await (input.fixture?.produce ?? produceLeagueResponse)({ allocation, job, start, startArtifactRoot, repository, targetArtifactRoot, remainingWallMilliseconds: allocation.operations.wallClockMilliseconds - (Date.now() - session.startTime), opponents: candidates.map((candidate) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold, retention: session.graph })
+          }
           catch (error) {
             const evidenceRoot = session.graph.append("red-team-process-failure", { jobId: job.id, startRoot: start.root }); roots.push(evidenceRoot)
             ledger = terminalizeRedTeamAttempt({ ledger, startRoot: start.root, disposition: "system_failure", usage: null, evidenceRoots: [evidenceRoot], candidateAdmissionRoot: null })
@@ -996,6 +1006,11 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     if (!input.responseFactoryRepository || !imported) return fail("RETAINED_RESPONSE_REPOSITORY")
     const targetPacket = parse(readFactoryArtifact(input.responseFactoryRepository, produced.targetArtifactRoot))
     if (!same(targetPacket.targets, roundBlocks.map((entry) => ({ seed: entry.seed, target: entry.round.target, weights: entry.matrix.solver.weights })))) return fail("RETAINED_PRE_RESPONSE_TARGET")
+    if (isProspectiveTacticalJob(allocation, job)) {
+      if (targetPacket.tacticalAdaptation?.matrixRecordRoot !== block.matrix.recordRoot) return fail("RETAINED_TACTICAL_MATRIX")
+      const context = readRetainedTacticalAuthoringContext(input.responseFactoryRepository, allocation, job, targetPacket), retained = rows("tactical-adaptation-corpus").filter(([, node]) => node.value.jobId === job.id)
+      if (retained.length !== 1 || !same(retained[0]![1].value, { jobId: job.id, roundRoot: start.roundRoot, corpusArtifactRoot: targetPacket.tacticalAdaptation.corpusArtifactRoot, corpusRoot: context.corpus.root, matrixRecordRoot: block.matrix.recordRoot })) return fail("RETAINED_TACTICAL_CORPUS")
+    } else if (targetPacket.tacticalAdaptation !== undefined) return fail("RETAINED_TACTICAL_SCOPE")
     verifyRetainedLeagueResponse({ allocation, repository: input.responseFactoryRepository, produced, opponents: candidates.map((candidate: LeagueCandidateInput) => ({ candidateRoot: candidate.admission.candidate.root, closure: candidate.closure })), threshold: { repository: imported.factoryRepository, artifactRoot: imported.admission.importEvidence!.thresholdArtifactRoot }, records: graph })
     const accepted = acceptedByRound.get(schedule.ordinal) ?? [], duplicate = [...candidates, ...accepted].some((candidate: LeagueCandidateInput) => candidate.admission.candidate.proposal.source.root === produced.admission.candidate.proposal.source.root), independent = produced.comparisons.length === candidates.length && produced.comparisons.every((row: any) => row.relation === "distinct"), scores = roundBlocks.map((entry) => responseScores(produced, entry)), positive = scores.every((rows) => rows.every((score) => BigInt(score.numerator) * 100n > BigInt(score.denominator) * 55n)), eligible = !duplicate && independent && positive && accepted.length < schedule.acceptedSlots
     const assessment = { targetRoot: block.round.target.root, fingerprintEvidenceRoot: produced.fingerprintArtifactRoot, independentCounterfactualRelations: produced.comparisons.map((row: any) => row.relation === "unresolved" ? "borderline" : row.relation), existingCandidateRoots: block.candidateRoots, completeTargetScores: scores[0]! }, expected = { jobId: job.id, startRoot: start.root, producedRoot: produced.recordRoot, scores, duplicate, independent, positive, eligible, assessment }, retained = rows("red-team-assessment").filter(([, row]) => row.value.startRoot === start.root)
