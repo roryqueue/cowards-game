@@ -57,9 +57,20 @@ The first read-only retained verification returned
 `SERIOUS_LEAGUE_RETAINED_CELL_JOURNAL`. A focused read-only predicate check
 found matching persisted journal start and terminal, but the `cell-result`
 contains no *direct* `cell-start` link: `LeagueRecordGraph.publish` folds more
-than 128 dependencies into authenticated `record-links` nodes, while this
-verifier predicate does not follow those grouped links. This is a verifier
-source gap, not permission to repair historical evidence. A bounded source-only
-repair and independent recheck are pending; no independent verification pass
-is claimed. Even a repaired verifier can validate only the integrity of the
-failed evidence, not turn it into a complete league.
+than 128 dependencies into authenticated `record-links` nodes. Those records
+hash an unlabeled union of explicit dependencies and the automatic ordering
+predecessor; historical bytes cannot always distinguish the two. The
+independently reviewed source repair at main commit `36c49041` therefore
+checks an exact journal/start/result bijection, retained runtime evidence,
+terminal recomputation and canonical replay without claiming an explicit
+grouped charge edge or independent proof of live execution.
+
+The repaired `verify-retained` command then exited 0 over the original
+allocation, league/factory repositories and head. It returned `issued:false`,
+`evidenceClass:empirical`, `processValidity:process_invalid`, and
+`empiricalRequirementsComplete:false` at the unchanged allocation/head roots.
+The checked runner/test source bytes in the isolated verification worktree
+were byte-identical to main's reviewed source. The canonical run-result file
+remains SHA-256 `c7475bbe9858d5179e176f636280042bb4d545e2f38482cbf03bf55e3f7da969`.
+This validates retained consistency of the failed evidence only. It does not
+turn the cell into a completed Match, a payoff, a league, or a freeze.
