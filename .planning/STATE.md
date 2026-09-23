@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 Task3 final-source allocation v2 prepared; read-only host preflight running; no durable reservation
+stopped_at: Phase265 Plan07 Task3 once-only run active; result path reserved; same-process static checks in progress
 last_updated: "2026-09-23"
 last_activity: 2026-09-23
-last_activity_desc: Final reviewed source 4eb48e4 passed 29 suites/350 tests; two historical preparation paths matched allocation v2 root 5ac79432; capacity projection is data-only
+last_activity_desc: Read-only prospective preflight passed at allocation v2 root 5ac79432; once-only run reserved its result path and is repeating static checks before fresh host admission or dispatch
 progress:
   total_phases: 9
   completed_phases: 3
@@ -35,14 +35,21 @@ returned byte-identical allocation v2, root
 `sha256:5ac794324ed031ced8ff3a2c09b6389daa65029ed126ee595c37cda433d2585b`.
 It is committed at `.planning/artifacts/v1.38-phase-265-allocation-v2.json`;
 the unversioned allocation is stale immutable history. The v6 capacity plan
-projects 167,418,829,480 physical bytes and 7,237,174 records but is not a
-host observation or execution receipt. A separate read-only prospective
-`preflight` is active. If it refuses, do not reserve or dispatch; if it passes,
-the once-only `run-phase-265-once.ts` wrapper remains the next conditional gate.
-No allocation has been durably reserved and no Phase 265 Match has run.
+projects 167,418,829,480 physical bytes and 7,237,174 records. The separate
+read-only `preflight` passed with measured host capacity but granted no durable
+run authority. The once-only `run-phase-265-once.ts` wrapper then reserved the
+zero-byte `.planning/artifacts/v1.38-phase-265-run-result.json` path and began
+its own complete static recheck. At this update the league repository remains
+empty, so no Phase 265 Match has run. The wrapper must freshly measure and
+admit capacity in that same process before provider/Match work; a failure
+consumes the one-shot result path and must not be retried or reported as a
+league outcome.
 
 Phase 266 research, patterns, validation strategy, five plans, and an
-independent passing plan check are committed and pushed. Phase 266 execution,
+independent passing plan check for the corrected source-only/empirical-adapter
+split are committed and pushed. Isolated Plan 01/02/03 source-only branches
+are under review and are not merged into the frozen Phase 265 producer source.
+Phase 266 execution,
 valid freeze publication, formation materialization, and holdout opening remain
 blocked on the completed independently verified Phase 265 empirical result
 and the original unopened operator-local seal. The actual seal-store path is
