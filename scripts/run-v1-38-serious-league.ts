@@ -8,7 +8,7 @@ import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATAL
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
-import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository } from "../packages/strategy-lab/src/league/repository.js"
+import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository, type ReopenedLeagueEvidence } from "../packages/strategy-lab/src/league/repository.js"
 import { enumerateLeagueCells, admitCompletePayoffSnapshot, assertLeaguePayoffCapacity, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
 import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagueCell, deriveLeagueMatchExecutionTerminal, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { solveLeagueSnapshot } from "../packages/strategy-lab/src/league/solver.js"
@@ -32,6 +32,17 @@ import { buildLeagueTacticalCorpus, isProspectiveTacticalJob, readRetainedTactic
 import { MEMORY_PRESSURE_Q_REQUEST, parseMemoryPressureQ, type MemoryPressureQCommandResult } from "./lib/v1-38-darwin-headroom.js"
 
 const fail = (code: string): never => { throw new TypeError(`SERIOUS_LEAGUE_${code}`) }
+/** Diagnostic only: exact supervisor-owned codes, never a free-form message.
+ * This does not change the Match/system-failure classification or authorize a
+ * retry. Adding a code requires reviewing its producer and privacy boundary. */
+const SUPERVISOR_FAILURE_CODES = new Set([
+  "FACTORY_RUNTIME_LIFETIME_EXHAUSTED", "FACTORY_RUNTIME_REQUEST_IDENTITY", "FACTORY_RUNTIME_EVIDENCE_IDENTITY",
+  "LAB_RUNTIME_STOPPED", "LAB_REQUEST_BINDING", "LAB_INPUT_INVALID", "LAB_INPUT_BINDING",
+])
+export const retainedSupervisorFailureDiagnostic = (error: unknown): Readonly<{ error: "TypeError" | "Error" | "unknown"; supervisorCode: string | null }> => ({
+  error: error instanceof TypeError ? "TypeError" : error instanceof Error ? "Error" : "unknown",
+  supervisorCode: error instanceof TypeError && SUPERVISOR_FAILURE_CODES.has(error.message) ? error.message : null,
+})
 const bytesRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
 const encode = (value: unknown): Uint8Array => { const result = admitCanonicalJsonValue(value, { profile: "canonical-manifest" }); return result.ok ? result.canonicalBytes : fail("CANONICAL") }
 const parse = (bytes: Uint8Array): any => { const result = admitCanonicalJsonBytes(bytes, { profile: "canonical-manifest", operation: "require-canonical" }); return result.ok ? result.value : fail("CANONICAL_BYTES") }
@@ -182,6 +193,34 @@ export const readLeagueRecordGraph = (repository: LeagueRepository, head: LabRoo
     linked: (kind: string, root: LabRoot) => byLink.get(root)?.get(kind) ?? [],
     matches: (kind: "response-match-start" | "response-match-result", parentStartRoot: LabRoot) => matchIndex.get(kind)?.get(parentStartRoot) ?? [],
   }
+}
+
+/** Historical links are an unlabeled union of caller dependencies and the
+ * publisher's latestRoot. Even authenticated record-links cannot prove which
+ * grouped edge was explicit. Charge is established by the independent durable
+ * journal plus exact, one-to-one start/result value joins, not link expansion.
+ * This is retained consistency verification, not proof of live execution. */
+export const verifyRetainedCellJournalBijection = (input: {
+  reopened: ReopenedLeagueEvidence
+  cellStarts: readonly (readonly [LabRoot, { readonly value: any }])[]
+  cellResults: readonly (readonly [LabRoot, { readonly value: any }])[]
+  allocationRoot: LabRoot
+  executedCells: number
+}) => {
+  const { reopened, cellStarts, cellResults, allocationRoot, executedCells } = input
+  const journals = new Map(reopened.records.map((row) => [row.start.root, row]))
+  const startByRoot = new Map(cellStarts.map(([root, node]) => [node.value.start.root as LabRoot, [root, node] as const]))
+  const resultByStartRoot = new Map(cellResults.map(([root, node]) => [node.value.start.root as LabRoot, [root, node] as const]))
+  const cellByRoot = new Map(cellResults.map(([recordRoot, node]) => { const value = node.value; return [value.cell.root as LabRoot, { recordRoot, cell: value.cell as LeagueCell, startRoot: value.start.root as LabRoot, terminal: value.terminal as LeagueCellTerminal, seed: value.seed as string, bottomCandidateRoot: value.bottomCandidateRoot as LabRoot, topCandidateRoot: value.topCandidateRoot as LabRoot }] as const }))
+  if (reopened.remnants.length || journals.size !== reopened.records.length || cellStarts.length !== reopened.records.length || startByRoot.size !== cellStarts.length || cellResults.length !== executedCells || resultByStartRoot.size !== cellResults.length || cellByRoot.size !== cellResults.length) return fail("RETAINED_JOURNAL_COVERAGE")
+  for (const journal of reopened.records) {
+    const start = startByRoot.get(journal.start.root)?.[1]?.value
+    if (!start || !same(start.start, journal.start) || journal.start.allocationRoot !== allocationRoot || start.cell?.root !== journal.start.cellRoot || journal.terminal.cellRoot !== journal.start.cellRoot) return fail("RETAINED_CHARGE")
+    const result = resultByStartRoot.get(journal.start.root)?.[1]?.value
+    if (result && (result.start?.cellRoot !== result.cell?.root || !same(result.start, journal.start) || !same(start.cell, result.cell) || start.bottomCandidateRoot !== result.bottomCandidateRoot || start.topCandidateRoot !== result.topCandidateRoot || start.seed !== result.seed || !same(start.options, result.options))) return fail("RETAINED_CELL_JOURNAL")
+  }
+  for (const [, node] of cellResults) if (!journals.has(node.value.start.root)) return fail("RETAINED_CELL_JOURNAL")
+  return { journals, startByRoot, resultByStartRoot, cellByRoot }
 }
 
 export interface LeagueCandidateInput extends LeaguePortfolioCandidate { readonly admission: LeagueCandidateAdmission; readonly closure: FactoryCandidateClosure; readonly publicationRoot: LabRoot }
@@ -396,7 +435,7 @@ export class LeagueConnectedSession {
           invoke: async (request, identity) => {
             try { return await wrapped.invoke(request, identity) }
             catch (error) {
-              runtimeRecords.push(this.graph.append("runtime-invocation-failure", { identity: provider.identity, request, error: error instanceof Error ? error.name : "unknown" }, [startRecord]))
+              runtimeRecords.push(this.graph.append("runtime-invocation-failure", { identity: provider.identity, request, ...retainedSupervisorFailureDiagnostic(error) }, [startRecord]))
               throw error
             }
           },
@@ -913,9 +952,8 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
   // Growth is provisional until the production, assessment and re-entry joins
   // below have all been recomputed. Failure is not permission to skip them.
   const finalCandidates = (head.kind !== "run-failure" ? head.value.candidates : [...initial.candidates, ...retainedGrowth]).map(restoreCandidate), candidateAdmissions = new Map(finalCandidates.map((candidate: LeagueCandidateInput) => [candidate.admission.root, candidate.admission]))
-  const reopened = reopenLeagueEvidence(input.repository, { maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords }), journals = new Map(reopened.records.map((row) => [row.start.root, row])), cellResults = rows("cell-result"), cellByRoot = new Map(cellResults.map(([recordRoot, node]) => { const value = node.value; return [value.cell.root as LabRoot, { recordRoot, cell: value.cell as LeagueCell, startRoot: value.start.root as LabRoot, terminal: value.terminal as LeagueCellTerminal, seed: value.seed as string, bottomCandidateRoot: value.bottomCandidateRoot as LabRoot, topCandidateRoot: value.topCandidateRoot as LabRoot }] as const }))
-  const cellStarts = rows("cell-start"), startByRoot = new Map(cellStarts.map(([root, node]) => [node.value.start.root as LabRoot, [root, node] as const]))
-  if (reopened.remnants.length || journals.size !== reopened.records.length || cellResults.length !== head.value.executedCells || cellByRoot.size !== cellResults.length || cellStarts.length !== reopened.records.length || startByRoot.size !== cellStarts.length) return fail("RETAINED_JOURNAL_COVERAGE")
+  const reopened = reopenLeagueEvidence(input.repository, { maxBytes: input.limits.maxArtifactBytes, maxRecords: input.limits.maxArtifactRecords }), cellResults = rows("cell-result"), cellStarts = rows("cell-start")
+  const { journals, startByRoot, cellByRoot } = verifyRetainedCellJournalBijection({ reopened, cellStarts, cellResults, allocationRoot: allocation.root, executedCells: head.value.executedCells })
   for (const journal of reopened.records) {
     const charged = startByRoot.get(journal.start.root)
     if (!charged || !same(charged[1].value.start, journal.start) || journal.start.allocationRoot !== allocation.root) return fail("RETAINED_CHARGE")
@@ -929,7 +967,7 @@ export const verifyRetainedSeriousLeague = (input: { repository: LeagueRepositor
     const value = node.value, journal = journals.get(value.start.root), startRecordRoot = startByRoot.get(value.start.root)?.[0] ?? fail("RETAINED_CELL_JOURNAL")
     const postResultFailures = graph.linked("cell-issuance-failure", recordRoot)
     const postResultFailure = head.kind === "run-failure" && postResultFailures.length === 1 && graph.get(postResultFailures[0]!)?.links.includes(startRecordRoot) && graph.get(postResultFailures[0]!)?.value.start.root === value.start.root && journal?.terminal.disposition === "system_failure" && journal.terminal.processValidity === "process_invalid" && journal.terminal.projection === null && (journal.terminalProvenance === "derived_unterminated_start" || journal.terminal.evidenceRoot === postResultFailures[0])
-    if (!journal || !same(journal.start, value.start) || !(journal.terminalProvenance === "persisted" && same(journal.terminal, value.terminal) || postResultFailure) || value.start.allocationRoot !== allocation.root || !node.links.some((link) => graph.get(link)?.kind === "cell-start")) return fail("RETAINED_CELL_JOURNAL")
+    if (!journal || !same(journal.start, value.start) || !(journal.terminalProvenance === "persisted" && same(journal.terminal, value.terminal) || postResultFailure) || value.start.allocationRoot !== allocation.root) return fail("RETAINED_CELL_JOURNAL")
     const linked = (kind: string) => graph.linked(kind, startRecordRoot).map((root) => [root, graph.get(root)!] as const)
     const cleanup = linked("runtime-cleanup"), cleanupFailures = linked("runtime-cleanup-failure")
     const invocationFailures = linked("runtime-invocation-failure")

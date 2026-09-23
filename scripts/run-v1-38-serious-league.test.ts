@@ -13,7 +13,7 @@ import { createLeagueRepository, recordLeagueCellStart, publishLeagueCellTermina
 import { createLeagueCellTerminal, deriveLeagueResultEventRoot, LeaguePayoffProjectionSchema } from "../packages/strategy-lab/src/league/contracts.js"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { factoryAssessmentImplementationRoot } from "./v1-38-factory-implementation.js"
-import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
+import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRetainedSeriousLeague, verifyRetainedCellJournalBijection, LeagueConnectedSession, LeagueRecordGraph, LeagueRetentionBudget, normalizedGameplayRoot, sameLargeExecution, sameLargeResult, diagnoseLeagueExecutionStorage, seriousLeagueMain, retainedSupervisorFailureDiagnostic, type LeagueCandidateInput, type LeagueFixtureSeams } from "./run-v1-38-serious-league.js"
 import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
@@ -28,6 +28,84 @@ import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, val
 const directories: string[] = []
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+describe("retained supervisor diagnostics", () => {
+  it("retains only an exact reviewed runtime failure code", () => {
+    expect(retainedSupervisorFailureDiagnostic(new TypeError("FACTORY_RUNTIME_REQUEST_IDENTITY"))).toEqual({ error: "TypeError", supervisorCode: "FACTORY_RUNTIME_REQUEST_IDENTITY" })
+    expect(retainedSupervisorFailureDiagnostic(new TypeError("LAB_RUNTIME_STOPPED"))).toEqual({ error: "TypeError", supervisorCode: "LAB_RUNTIME_STOPPED" })
+  })
+  it("drops unknown and sensitive messages, custom names, stacks and payloads", () => {
+    const secret = "source=private strategyMemory=secret stack=/private/path"
+    const cases: unknown[] = [new TypeError(`FACTORY_RUNTIME_REQUEST_IDENTITY ${secret}`), new TypeError(`LAB_UNREVIEWED_${secret}`), new Error("LAB_RUNTIME_STOPPED"), { message: "LAB_RUNTIME_STOPPED", source: secret }, secret]
+    const named = new Error(secret); named.name = secret; cases.push(named)
+    for (const error of cases) {
+      const diagnostic = retainedSupervisorFailureDiagnostic(error)
+      expect(diagnostic.supervisorCode).toBeNull()
+      expect(JSON.stringify(diagnostic)).not.toContain(secret)
+      expect(Object.keys(diagnostic).sort()).toEqual(["error", "supervisorCode"])
+    }
+  })
+  it("reopens coded and historical uncoded failure records without private messages", () => {
+    const repository = createLeagueRepository(temporary()), limits = { maxArtifactBytes: 1000000, maxArtifactRecords: 100 }
+    const writer = new LeagueRecordGraph(repository, limits)
+    const historical = writer.append("runtime-invocation-failure", { error: "TypeError" })
+    const current = writer.append("runtime-invocation-failure", retainedSupervisorFailureDiagnostic(new TypeError("FACTORY_RUNTIME_LIFETIME_EXHAUSTED")), [historical])
+    const reopened = readLeagueRecordGraph(repository, current, limits)
+    expect(reopened.get(historical)?.value).toEqual({ error: "TypeError" })
+    expect(reopened.get(current)?.value).toEqual({ error: "TypeError", supervisorCode: "FACTORY_RUNTIME_LIFETIME_EXHAUSTED" })
+  })
+})
+describe("retained cell journal bijection", () => {
+  const fixture = () => {
+    const allocationRoot = labRoot("join", "allocation"), cellRoot = labRoot("join", "cell"), start = { root: labRoot("join", "start"), cellRoot, allocationRoot }
+    const cell = { root: cellRoot }, terminal = createLeagueCellTerminal({ cellRoot, disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: labRoot("join", "evidence"), projection: null })
+    const fields = { start, cell, bottomCandidateRoot: labRoot("join", "bottom"), topCandidateRoot: labRoot("join", "top"), seed: "seed", options: {} }
+    const startRoot = labRoot("join", "start-record"), resultRoot = labRoot("join", "result-record")
+    const reopened = { issued: false as const, remnants: [], records: [{ start, terminal, terminalProvenance: "persisted" as const }] }
+    const cellStarts = [[startRoot, { value: fields }]] as const, cellResults = [[resultRoot, { value: { ...fields, terminal } }]] as const
+    return { reopened, cellStarts, cellResults, allocationRoot, executedCells: 1 }
+  }
+  it("joins journal, unique start and result values without inferring an explicit grouped edge", () => {
+    const input = fixture(), repository = createLeagueRepository(temporary()), limits = { maxArtifactBytes: 1024 * 1024, maxArtifactRecords: 100 }
+    const writer = new LeagueRecordGraph(repository, limits)
+    const startRecord = writer.append("cell-start", input.cellStarts[0][1].value)
+    const implicit = writer.append("record-links", { count: 1 }, []) // latestRoot is an unlabeled, implicit edge to start.
+    const nested = writer.append("record-links", { count: 1 }, [implicit])
+    const resultRoot = writer.append("cell-result", input.cellResults[0][1].value, [nested])
+    const graph = readLeagueRecordGraph(repository, resultRoot, limits)
+    expect(graph.get(resultRoot)?.links).not.toContain(startRecord)
+    expect(graph.get(implicit)?.links).toContain(startRecord)
+    expect(graph.get(nested)?.links).toContain(implicit)
+    const joined = verifyRetainedCellJournalBijection({ ...input, cellStarts: [[startRecord, graph.get(startRecord)!]], cellResults: [[resultRoot, graph.get(resultRoot)!]] })
+    expect(joined.resultByStartRoot.size).toBe(1)
+  })
+  it("rejects missing starts, duplicate result starts, journal tampering and mismatched start/result values", () => {
+    const input = fixture(), wrongRoot = labRoot("join", "wrong")
+    expect(() => verifyRetainedCellJournalBijection({ ...input, cellStarts: [] })).toThrow("RETAINED_JOURNAL_COVERAGE")
+    expect(() => verifyRetainedCellJournalBijection({ ...input, executedCells: 2, cellResults: [...input.cellResults, [wrongRoot, input.cellResults[0][1]]] })).toThrow("RETAINED_JOURNAL_COVERAGE")
+    expect(() => verifyRetainedCellJournalBijection({ ...input, reopened: { ...input.reopened, records: [{ ...input.reopened.records[0]!, start: { ...input.reopened.records[0]!.start, cellRoot: wrongRoot } }] } })).toThrow("RETAINED_CHARGE")
+    expect(() => verifyRetainedCellJournalBijection({ ...input, cellResults: [[input.cellResults[0][0], { value: { ...input.cellResults[0][1].value, seed: "tampered" } }]] })).toThrow("RETAINED_CELL_JOURNAL")
+    expect(() => verifyRetainedCellJournalBijection({ ...input, cellResults: [[input.cellResults[0][0], { value: { ...input.cellResults[0][1].value, bottomCandidateRoot: wrongRoot } }]] })).toThrow("RETAINED_CELL_JOURNAL")
+  })
+  it("keeps a persisted no-result failure charge paired to its start, without inventing a result", () => {
+    const input = fixture(), noResult = { ...input, cellResults: [], executedCells: 0 }
+    const joined = verifyRetainedCellJournalBijection(noResult)
+    expect(joined.journals.size).toBe(1)
+    expect(joined.startByRoot.size).toBe(1)
+    expect(joined.resultByStartRoot.size).toBe(0)
+    // The enclosing verifier still requires the linked issuance-failure and
+    // process-invalid terminal; this join never authorizes their absence.
+    expect(() => verifyRetainedCellJournalBijection({ ...noResult, cellStarts: [] })).toThrow("RETAINED_JOURNAL_COVERAGE")
+    expect(() => verifyRetainedCellJournalBijection({ ...noResult, reopened: { ...input.reopened, records: [{ ...input.reopened.records[0]!, terminal: { ...input.reopened.records[0]!.terminal, cellRoot: labRoot("join", "wrong-cell") } }] } })).toThrow("RETAINED_CHARGE")
+  })
+  it("rejects top-candidate, options and cell value mismatches despite matching roots elsewhere", () => {
+    const input = fixture(), [resultRoot, result] = input.cellResults[0]!, wrongRoot = labRoot("join", "wrong")
+    const changed = (value: unknown) => verifyRetainedCellJournalBijection({ ...input, cellResults: [[resultRoot, { value }]] })
+    expect(() => changed({ ...result.value, topCandidateRoot: wrongRoot })).toThrow("RETAINED_CELL_JOURNAL")
+    expect(() => changed({ ...result.value, options: { transform: "tampered" } })).toThrow("RETAINED_CELL_JOURNAL")
+    expect(() => changed({ ...result.value, cell: { root: wrongRoot } })).toThrow("RETAINED_CELL_JOURNAL")
+    expect(() => changed({ ...result.value, cell: { ...result.value.cell, extra: "tampered" } })).toThrow("RETAINED_CELL_JOURNAL")
+  })
+})
 const candidate = async (slot: number): Promise<LeagueCandidateInput> => {
   const fixture = await importedCandidateFixture(slot), admission = fixture.candidateAdmission, packet = admission.candidate.proposal
   const closure = { factoryRepository: fixture.factoryRepository, candidatePublicationArtifactRoot: fixture.input.publicationArtifactRoot, sourceArtifactRoot: packet.source.root, packetArtifactRoot: packet.packetRoot, proposalArtifactRoot: fixture.put(packet), validationArtifactRoot: fixture.put(admission.candidate.validation) }
