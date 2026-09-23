@@ -8,11 +8,11 @@ import { writePhase265PacketSummaryExclusive } from "./prepare-phase-265-packets
 
 const fail = (code: string): never => { throw new TypeError(`PHASE265_REVIEWED_INPUT_${code}`) }
 const exact = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join() === [...keys].sort().join()
-const acceptedDraftSha256 = "6eae8d888e70e350d5e1f425b00a1a159aae65b2e1d99252b4350ca2a966519b"
-const acceptedReviewSha256 = "e3961a20331271c0c0da928dc89466de7501777b1362e05b9006177d40dcd2ba"
-const acceptedReviewPath = resolve(dirname(fileURLToPath(import.meta.url)), "../phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v5.md")
+const acceptedDraftSha256 = "e1ad6901ad8dc4b00554a430d2b94e7e47e79e8f95f2e2150fba006bea35a3a2"
+const acceptedReviewSha256 = "f4c1e2353f6c91804aed49274696fd8620fe07b63f430d50dff7ddae65a3d586"
+const acceptedReviewPath = resolve(dirname(fileURLToPath(import.meta.url)), "../phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v6.md")
 
-/** Single-operator local binding to the committed e12fee1c review bytes.
+/** Single-operator local binding to the committed f19b4190 review bytes.
  * This does not assert external custody or cryptographic reviewer identity. */
 export const assertPhase265LocalReviewLog = (path: string, bytes: Uint8Array): void => {
   if (resolve(path) !== acceptedReviewPath || createHash("sha256").update(bytes).digest("hex") !== acceptedReviewSha256) return fail("LOCAL_REVIEW_LOG")
@@ -28,7 +28,7 @@ const compilePhase265ReviewedInput = (draftBytes: Uint8Array, reviewMarkdown: st
     try { return JSON.parse(match[1]!) as unknown } catch { return null }
   })
   const review = candidates.find((candidate) => exact(candidate, ["draftSha256", "reviewerAgentId", "jobs"]) && candidate.draftSha256 === digest)
-  if (!review || !exact(review, ["draftSha256", "reviewerAgentId", "jobs"]) || review.reviewerAgentId !== "/root/265_draft_reviewer" || !Array.isArray(review.jobs) || review.jobs.length !== 11) return fail("REVIEW_OR_HASH")
+  if (!review || !exact(review, ["draftSha256", "reviewerAgentId", "jobs"]) || review.reviewerAgentId !== "/root/v6_draft_reviewer" || !Array.isArray(review.jobs) || review.jobs.length !== 11) return fail("REVIEW_OR_HASH")
   const reviewed = review.jobs as unknown[]
   const schedule = LEAGUE_APPROVED_PROSPECTIVE_POLICY.schedule.flat()
   const jobs = parsed.value.jobs.map((raw, index) => {
@@ -51,7 +51,7 @@ const compilePhase265ReviewedInput = (draftBytes: Uint8Array, reviewMarkdown: st
   })
   return {
     packetInput: { schemaVersion: "phase265-response-packets-v1", repositoryDirectory, jobs },
-    participantRoles: jobs.map((job, index) => ({ jobId: job.id, producer: schedule[index], authorAgentId: "codex:root", reviewerAgentId: "codex:265_draft_reviewer" })),
+    participantRoles: jobs.map((job, index) => ({ jobId: job.id, producer: schedule[index], authorAgentId: "codex:root", reviewerAgentId: "codex:v6_draft_reviewer" })),
     draftSha256: digest,
   }
 }
@@ -61,7 +61,7 @@ export const preparePhase265ReviewedInput = (draftBytes: Uint8Array, reviewPath:
   const reviewBytes = readFileSync(resolve(reviewPath))
   assertPhase265LocalReviewLog(reviewPath, reviewBytes)
   const result = compilePhase265ReviewedInput(draftBytes, new TextDecoder().decode(reviewBytes), repositoryDirectory)
-  if (result.draftSha256 !== acceptedDraftSha256) return fail("DRAFT_NOT_ACCEPTED_V5")
+  if (result.draftSha256 !== acceptedDraftSha256) return fail("DRAFT_NOT_ACCEPTED_V6")
   return result
 }
 

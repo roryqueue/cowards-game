@@ -18,8 +18,8 @@ const fixture = () => {
 }
 
 describe("source-only Phase 265 reviewed-input bridge", () => {
-  it("binds the CLI review path to the committed single-operator v5 log bytes", () => {
-    const path = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v5.md")
+  it("binds the CLI review path to the committed single-operator v6 log bytes", () => {
+    const path = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v6.md")
     const bytes = readFileSync(path)
     expect(() => assertPhase265LocalReviewLog(path, bytes)).not.toThrow()
     expect(() => assertPhase265LocalReviewLog(path, new TextEncoder().encode("fabricated review"))).toThrow("LOCAL_REVIEW_LOG")
@@ -27,7 +27,7 @@ describe("source-only Phase 265 reviewed-input bridge", () => {
   })
 
   it("rejects fabricated drafts even when paired with the exact committed reviewer log", () => {
-    const path = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v5.md")
+    const path = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v6.md")
     expect(() => preparePhase265ReviewedInput(fixture(), path, "/private/response")).toThrow("REVIEW_OR_HASH")
     expect(() => preparePhase265ReviewedInput(fixture(), resolve(".planning/other.md"), "/private/response")).toThrow()
   })
