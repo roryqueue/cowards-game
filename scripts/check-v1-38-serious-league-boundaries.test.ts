@@ -24,6 +24,8 @@ describe("Phase 265 resolved league import/privacy boundary", () => {
     expect(checkSeriousLeagueBoundaries({ files: allowed }).ok).toBe(true)
     const denied = { ...allowed, "scripts/lib/v1-38-league-authoring.ts": 'import { spawnSync } from "node:child_process"; void spawnSync' }
     expect(checkSeriousLeagueBoundaries({ files: denied }).violations).toContainEqual(expect.objectContaining({ path: "scripts/lib/v1-38-league-authoring.ts", rule: "unresolved-private-loader" }))
+    const transitive = { ...allowed, "scripts/lib/v1-38-league-authoring.ts": 'import { observeLeagueAvailableMemoryBytes } from "../run-v1-38-serious-league.js"; void observeLeagueAvailableMemoryBytes' }
+    expect(checkSeriousLeagueBoundaries({ files: transitive }).violations).toContainEqual(expect.objectContaining({ path: "scripts/lib/v1-38-league-authoring.ts", rule: "unresolved-private-loader" }))
   })
   it.each([
     ["multi-hop innocent package barrel", { "apps/web/app/page.ts": 'import "@cowards/innocent-package"', "packages/innocent-package/package.json": JSON.stringify({ name: "@cowards/innocent-package", exports: "./src/index.ts" }), "packages/innocent-package/src/index.ts": 'export * from "./middle.js"', "packages/innocent-package/src/middle.ts": 'export * from "../../strategy-lab/src/league/repository.js"' }],
