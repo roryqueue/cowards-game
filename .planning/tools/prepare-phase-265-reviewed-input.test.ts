@@ -1,8 +1,9 @@
-import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { admitCanonicalJsonValue } from "@cowards/spec"
 import { LEAGUE_APPROVED_PROSPECTIVE_POLICY } from "../../packages/strategy-lab/src/league/allocation.js"
-import { preparePhase265ReviewedInput } from "./prepare-phase-265-reviewed-input.js"
+import { assertPhase265LocalReviewLog, preparePhase265ReviewedInput } from "./prepare-phase-265-reviewed-input.js"
 
 const fixture = () => {
   const jobs = LEAGUE_APPROVED_PROSPECTIVE_POLICY.schedule.flat().map((producer, index) => ({
@@ -13,20 +14,21 @@ const fixture = () => {
   }))
   const admitted = admitCanonicalJsonValue({ schemaVersion: "phase265-request-drafts-v1", privacy: "private_offline", implementationRoot: "sha256:" + "b".repeat(64), sourceRoot: "sha256:" + "c".repeat(64), toolchainRoot: "sha256:" + "d".repeat(64), responseFactoryDependencyRoot: "sha256:" + "a".repeat(64), jobs }, { profile: "canonical-manifest" })
   if (!admitted.ok) throw new Error("fixture canonicalization failed")
-  const bytes = admitted.canonicalBytes, digest = createHash("sha256").update(bytes).digest("hex")
-  const review = { draftSha256: digest, reviewerAgentId: "/root/265_draft_reviewer", jobs: jobs.map((job) => ({ id: job.id, disposition: "accepted", reviewMilliseconds: 2000, startUtc: "2026-09-23 03:27:40 UTC", endUtc: "2026-09-23 03:27:41 UTC", reason: "Source-only fixture review" })) }
-  return { bytes, review, markdown: `\`\`\`json\n${JSON.stringify(review)}\n\`\`\`` }
+  return admitted.canonicalBytes
 }
 
 describe("source-only Phase 265 reviewed-input bridge", () => {
-  it("requires an exact review of every draft job and preserves distinct roles", () => {
-    const data = fixture(), result = preparePhase265ReviewedInput(data.bytes, data.markdown, "/private/response")
-    expect(result.packetInput.jobs).toHaveLength(11)
-    expect(result.participantRoles).toHaveLength(11)
-    expect(result.participantRoles.every((row) => row.authorAgentId !== row.reviewerAgentId)).toBe(true)
-    expect(result.packetInput.jobs.every((row) => row.review.reviewMilliseconds === 2000)).toBe(true)
-    expect(() => preparePhase265ReviewedInput(data.bytes, data.markdown.replace(data.review.draftSha256, "0".repeat(64)), "/private/response")).toThrow("REVIEW_OR_HASH")
-    const rejected = { ...data.review, jobs: data.review.jobs.map((row, index) => index === 4 ? { ...row, disposition: "rejected" } : row) }
-    expect(() => preparePhase265ReviewedInput(data.bytes, `\`\`\`json\n${JSON.stringify(rejected)}\n\`\`\``, "/private/response")).toThrow("REVIEW_JOB")
+  it("binds the CLI review path to the committed single-operator v5 log bytes", () => {
+    const path = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v5.md")
+    const bytes = readFileSync(path)
+    expect(() => assertPhase265LocalReviewLog(path, bytes)).not.toThrow()
+    expect(() => assertPhase265LocalReviewLog(path, new TextEncoder().encode("fabricated review"))).toThrow("LOCAL_REVIEW_LOG")
+    expect(() => assertPhase265LocalReviewLog(resolve(".planning/other.md"), bytes)).toThrow("LOCAL_REVIEW_LOG")
+  })
+
+  it("rejects fabricated drafts even when paired with the exact committed reviewer log", () => {
+    const path = resolve(".planning/phases/265-serious-current-rules-league-and-development-red-team/265-07-PACKET-REVIEW-v5.md")
+    expect(() => preparePhase265ReviewedInput(fixture(), path, "/private/response")).toThrow("REVIEW_OR_HASH")
+    expect(() => preparePhase265ReviewedInput(fixture(), resolve(".planning/other.md"), "/private/response")).toThrow()
   })
 })
