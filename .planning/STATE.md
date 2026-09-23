@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 Task2 source/review/validation complete; Task3 data-only empirical preparation pending
-last_updated: "2026-09-22"
-last_activity: 2026-09-22
-last_activity_desc: Tactical source at 25ba6a10 passes 29 suites/346 tests, focused regressions, types and boundaries; preparing conditional Task3
+stopped_at: Phase265 Plan07 Task3 final-source allocation v2 prepared; read-only host preflight running; no durable reservation
+last_updated: "2026-09-23"
+last_activity: 2026-09-23
+last_activity_desc: Final reviewed source 4eb48e4 passed 29 suites/350 tests; two historical preparation paths matched allocation v2 root 5ac79432; capacity projection is data-only
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,33 @@ total_plans_in_phase: 7
 ---
 
 # State: Coward's Game
+
+## Current Session Continuity — 2026-09-23
+
+Plan 265-07 Task 2 source is final at `4eb48e4d` (implementation root
+`sha256:92b40fc585ac087928a477924fa1bc560d309bda29e5fe762151a5a0152bf564`,
+source root `sha256:945321708ba5e15489fd3de0e2fb90d80425e7b8ba8e89d1ef61569ee99fb3e4`).
+The complete named source gate passed 29 files/350 tests, strict TypeScript,
+package build and private/public import boundaries. Independently reviewed
+v6 packet preparation created no producer, Strategy execution, or Match.
+
+The data-only builder and normal `prepare-prospective` historical traversals
+returned byte-identical allocation v2, root
+`sha256:5ac794324ed031ced8ff3a2c09b6389daa65029ed126ee595c37cda433d2585b`.
+It is committed at `.planning/artifacts/v1.38-phase-265-allocation-v2.json`;
+the unversioned allocation is stale immutable history. The v6 capacity plan
+projects 167,418,829,480 physical bytes and 7,237,174 records but is not a
+host observation or execution receipt. A separate read-only prospective
+`preflight` is active. If it refuses, do not reserve or dispatch; if it passes,
+the once-only `run-phase-265-once.ts` wrapper remains the next conditional gate.
+No allocation has been durably reserved and no Phase 265 Match has run.
+
+Phase 266 research, patterns, validation strategy, five plans, and an
+independent passing plan check are committed and pushed. Phase 266 execution,
+valid freeze publication, formation materialization, and holdout opening remain
+blocked on the completed independently verified Phase 265 empirical result
+and the original unopened operator-local seal. The actual seal-store path is
+not yet identified; the checked-in protocol-v2 file is mechanics-only.
 
 ## Current Session Continuity — 2026-09-22
 
