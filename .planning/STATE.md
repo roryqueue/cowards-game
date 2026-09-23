@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: executing
-stopped_at: Phase265 Plan07 Task3 once-only run active; fresh gate passed and first actual cell started
+status: blocked
+stopped_at: Phase265 Plan07 Task3 once-only run terminated process-invalid after first charged cell; no retry authority
 last_updated: "2026-09-23"
 last_activity: 2026-09-23
-last_activity_desc: Once-only Phase265 run passed same-process static and fresh host admission; first private current-rules cell has started with no terminal result yet
+last_activity_desc: Once-only Phase265 run returned process-invalid after one charged cell and a retained runtime TypeError; read-only verification and diagnosis are underway
 progress:
   total_phases: 9
   completed_phases: 3
@@ -38,20 +38,28 @@ the unversioned allocation is stale immutable history. The v6 capacity plan
 projects 167,418,829,480 physical bytes and 7,237,174 records. The separate
 read-only `preflight` passed with measured host capacity but granted no durable
 run authority. The once-only `run-phase-265-once.ts` wrapper reserved the
-zero-byte `.planning/artifacts/v1.38-phase-265-run-result.json` path, completed
-its own static recheck, passed same-process fresh host admission, and began the
-actual private current-rules league. At this update one cell-start record
-exists but no terminal result or phase outcome is known. The unchanged one-shot
-route must not be retried, and a started cell is not evidence of a complete
-matrix, portfolio, or valid freeze.
+canonical result path, completed its own static recheck, passed same-process
+fresh host admission, and began the actual private current-rules league. It
+returned `processValidity: process_invalid`,
+`empiricalRequirementsComplete: false`, and head root
+`sha256:67d9b53e300a95893931b8457678bf500a6724b713334e823ee5fa0b36594534`.
+The graph records exactly one charged cell, a system-failure terminal, and a
+supervised runtime invocation that threw `TypeError` after 452 recorded
+invocations. The result is retained at
+`.planning/artifacts/v1.38-phase-265-run-result.json`; the read-only verifier
+and source diagnosis are in progress. The one-shot route is consumed and must
+not be retried, refunded, reinterpreted, or promoted into a complete matrix,
+portfolio, or valid freeze. No formation, holdout, counted, or public operation
+is authorized by this result.
 
 Phase 266 research, patterns, validation strategy, five plans, and independent
 passing plan checks for the corrected source-only/empirical-adapter split are
 committed and pushed. Isolated Plan 01/02/03 source-only branches and partial
 Plan 04 mechanics are under review, not merged into the frozen Phase 265
-producer source and not authorization to publish a real freeze. Phase 266 execution,
-valid freeze publication, formation materialization, and holdout opening remain
-blocked on the completed independently verified Phase 265 empirical result
+producer source and not authorization to publish a real freeze. Phase 266
+source-only work remains isolated; valid freeze publication, formation
+materialization, and holdout opening remain blocked on an independently verified
+process-valid Phase 265 empirical result
 and the original unopened operator-local seal. The actual seal-store path is
 not yet identified; the checked-in protocol-v2 file is mechanics-only.
 
