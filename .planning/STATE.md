@@ -8,7 +8,7 @@ status: blocked
 stopped_at: Phase265 Plan07 Task3 once-only run terminated process-invalid after first charged cell; no retry authority
 last_updated: "2026-09-23"
 last_activity: 2026-09-23
-last_activity_desc: Once-only Phase265 run returned process-invalid after one charged cell and a retained runtime TypeError; read-only verification and diagnosis are underway
+last_activity_desc: Once-only Phase265 run returned process-invalid; read-only verifier exposed a grouped-link journal check defect now under source-only repair
 progress:
   total_phases: 9
   completed_phases: 3
@@ -46,8 +46,13 @@ returned `processValidity: process_invalid`,
 The graph records exactly one charged cell, a system-failure terminal, and a
 supervised runtime invocation that threw `TypeError` after 452 recorded
 invocations. The result is retained at
-`.planning/artifacts/v1.38-phase-265-run-result.json`; the read-only verifier
-and source diagnosis are in progress. The one-shot route is consumed and must
+`.planning/artifacts/v1.38-phase-265-run-result.json`. The read-only verifier
+returned `SERIOUS_LEAGUE_RETAINED_CELL_JOURNAL` after traversing historical
+evidence: the persisted start and terminal match the cell-result, but the
+cell-result's >128 links are stored through `record-links` while the verifier
+requires a direct `cell-start` link. A source-only, fail-closed verifier repair
+is under review; no independent verification pass is claimed. The one-shot
+route is consumed and must
 not be retried, refunded, reinterpreted, or promoted into a complete matrix,
 portfolio, or valid freeze. No formation, holdout, counted, or public operation
 is authorized by this result.

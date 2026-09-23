@@ -13,6 +13,13 @@ retry. The canonical result is
 - Exactly one cell was charged and started. Its terminal is `system_failure` / `process_invalid`, with no projection. The head reports one executed cell and no completed jobs.
 - The head-reachable graph has 452 successful runtime-invocation records, one `runtime-invocation-failure` with error name `TypeError`, and one cell-issuance failure. The failed request is a schema-valid `soldierBrain` request. No retained record identifies an invalid guest output.
 
+A read-only replay through the unchanged pure `MATCH_KERNEL.stepMatch` matched
+all 452 successful effects as one contiguous canonical prefix, then matched
+the next kernel effect to the failed 453rd request. Immediately before it, the
+state was in Phase 3, Round 1, cycle 1 with three ACTIVE Soldiers (one bottom,
+two top). There was no terminal outcome. This replay invoked no Strategy,
+provider, or fresh Match and does not estimate the remaining Match duration.
+
 The failure record stores only the error name; it discards the message and
 stack. The precise supervisor error code therefore cannot be recovered from
 this graph. A source-only, privacy-bounded diagnostic improvement is under
@@ -30,6 +37,15 @@ content-addressed proof; they strongly suggest the supervisor lifetime expired.
 `FACTORY_RUNTIME_LIFETIME_EXHAUSTED` and `LAB_RUNTIME_STOPPED` are plausible
 paths, but the retained evidence cannot distinguish them from another TypeError.
 
+The approved lean schedule expected 4,632 actual Matches on its fully
+qualified path and reserved up to 11,328. Its 96-hour wall stop allows only
+about 74.6 seconds per Match for 4,632 serial Matches, even before authoring,
+review, probes, and storage work; the current `matrix` path dispatches cells
+sequentially. That arithmetic is a realism warning, not a prediction that
+every Match will resemble this failed first cell. Merely raising the 120-second
+per-Match limit without a new throughput/resource analysis would not establish
+that the complete league fits the unchanged 96-hour envelope.
+
 Do not reclassify this as a player loss or count its payoff. The one-shot route
 is consumed: no restart, refund, replacement result, or use of its partial
 records to satisfy LEAG-01–09. A new empirical attempt would require a fresh
@@ -37,5 +53,13 @@ prospective, independently reviewed and explicitly approved route, including
 any resource-policy change. No formation, sealed-holdout opening, public,
 production, or counted operation follows from this result.
 
-Read-only retained verification is pending at this writing. It can validate
-integrity of the failed evidence, not turn it into a complete league.
+The first read-only retained verification returned
+`SERIOUS_LEAGUE_RETAINED_CELL_JOURNAL`. A focused read-only predicate check
+found matching persisted journal start and terminal, but the `cell-result`
+contains no *direct* `cell-start` link: `LeagueRecordGraph.publish` folds more
+than 128 dependencies into authenticated `record-links` nodes, while this
+verifier predicate does not follow those grouped links. This is a verifier
+source gap, not permission to repair historical evidence. A bounded source-only
+repair and independent recheck are pending; no independent verification pass
+is claimed. Even a repaired verifier can validate only the integrity of the
+failed evidence, not turn it into a complete league.
