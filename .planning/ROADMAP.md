@@ -2,7 +2,7 @@
 
 ## Current verified progress — Phases262–264 complete
 
-Phase264 is independently complete: 5/5 truths, all11 requirements, 7/7 private acceptance checks, complete validation/security/evaluation coverage and exact retained affirmative assessment reopening. All48workloads/24pairs completed; this proves the frozen development-independence criterion, not competitive strength. Phase265 has6/7 plans complete; its Task1 source proof passed and the operator approved the prospective lean envelope on2026-09-22. Continue existing Plan265-07 Task2 source amendment, independent review, full validation and data-only capacity preflight before its one conditional live run. Phases262/263 stay complete; old failures, consumed allocations and36locks remain unchanged. Formation still requiresPhase266 freeze. All older dispatch sections below are historical.
+Phase264 is independently complete: 5/5 truths, all11 requirements, 7/7 private acceptance checks, complete validation/security/evaluation coverage and exact retained affirmative assessment reopening. All48workloads/24pairs completed; this proves the frozen development-independence criterion, not competitive strength. Phase265 has6/9 plans complete: Plan265-07's sole live allocation was consumed and independently reopened as `process_invalid` after one charged cell, so its complete-league empirical gate remains unmet and that route cannot run again. Plans265-08/09 are a separately approved, diagnostic-only source gate and conditional pilot under planning review; they cannot satisfy LEAG-01–09 or unlock Phase266. Phases262/263 stay complete; old failures, consumed allocations and36locks remain unchanged. Formation still requiresPhase266 freeze. All older dispatch sections below are historical.
 
 ## Current D-34L.2 consolidated closeout outcome — 2026-09-09
 
@@ -39,7 +39,7 @@ Current inventory: 153 phase plan files, 141 completed plans, 8 active pending, 
 - **v1.35 Runtime, Account Ownership, Sandbox, and Package Policy Cleanup** - Phases 243-248, shipped 2026-06-15 ([archive](milestones/v1.35-ROADMAP.md))
 - **v1.36 Competition Maturity** - Phases 249-255, shipped 2026-07-12 ([archive](milestones/v1.36-ROADMAP.md))
 - **v1.37 Rules Integrity and Strategy Evaluation Foundations** - Phases 256-261, shipped 2026-07-22 ([archive](milestones/v1.37-ROADMAP.md))
-- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, active at Phase 264; Phases 262 and 263 independently verified complete
+- **v1.38 Competitive Strategy Factory and Adversarial League** - Phases 262-270, active at Phase 265; Phases 262-264 independently verified complete
 
 ## v1.38 Competitive Strategy Factory and Adversarial League
 
@@ -61,7 +61,7 @@ v1.38 builds a private, content-addressed research control plane beside Coward's
 
 - [x] **Phase 262: Foundation Admission, Measurement, Local Seal, and Containment Contract** - Admit the exact v1.37 authority and freeze every estimand, budget, gate, claim, honest local-seal rule, and non-materialization boundary before candidate search. Verified complete2026-09-09.
 - [x] **Phase 263: Legal Planner and Deterministic Runner Feasibility** - Prove the deployable hierarchical planner and canonical-kernel runner are legal, bounded, deterministic, and reproducible before scale. Independently verified complete2026-09-13.
-- [ ] **Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake** - Produce immutable candidates through materially independent response channels while preserving hostile-source isolation, provenance, diversity evidence, and failed attempts.
+- [x] **Phase 264: Immutable Factory, Independent Oracles, and Quarantined Intake** - Produce immutable candidates through materially independent response channels while preserving hostile-source isolation, provenance, diversity evidence, and failed attempts.
 - [ ] **Phase 265: Serious Current-Rules League and Development Red Team** - Complete the current-rules empirical game, response loop, portfolio, pure-finalist decision, and full precommitted development attack budget.
 - [ ] **Phase 266: Content-Addressed Current-League Freeze** - Freeze the complete current-rules evidence root and enforce the one-way gate that alone can unlock formation materialization.
 - [ ] **Phase 267: Post-Freeze Formation Boundary and Production Unreachability** - Materialize exactly three position-only lab profiles and prove that every experimental artifact is unreachable from canonical and public product paths.
@@ -943,7 +943,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
   4. Structural and behavioral diversity gates yield a diverse pure portfolio kept separate from the diagnostic mixture, and a precommitted rule either selects a deployable robust pure finalist from mixture, pure, counter, probe, invariance, legality, privacy, and runtime evidence or records `no robust pure finalist found`.
   5. Provisional leaders receive the full frozen automated, model, human, and external development-red-team budget; successful counters enter the declared response loop, failed attacks remain charged evidence, and no leader may depend materially on side, initiative, duplicate arenas, opaque identities, source or Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-**Plans:** 6/7 complete; Plan07 Task1 is complete at reviewed source `3d25b37e6ad2eb3edbfb298615d85128c98360e1`. All memory, accounting, full-Match storage and frame/file findings are repaired. Final proof passed29/29 suites and273/273 tests in1773.05seconds; a separate explicit fail-fast build/type/boundary chain passed. Actual old-trace storage/reopen and Phase264 historical import compatibility passed with unchanged old evidence. Private UAT has8source cases passed and1actual-run case blocked. The operator approved the complete265-LEAN-RUN-DECISION.md proposal on2026-09-22 (commit06cdb050): exactly three assessed bases toward twelve, eleven attempts and zero retries, with unchanged final gates. Task2 source amendment, independent review, full validation and the capacity receipt remain pending. Conditional Task3 has not run. No Phase265 allocation or empirical result exists; independent goal verification remains partial, allLEAG requirements unchecked, and Phase266 remains blocked.
+**Plans:** 6/9 complete. Plan265-07's source, independent review, full validation, retained allocation-v2 and fresh host admission were completed, but its once-only conditional run terminated `process_invalid` after one charged cell and no completed payoff. The read-only retained verifier confirms the old result consistently remains invalid; it does not authorize a retry or claim LEAG-01–09. The operator separately approved a diagnostic-only pilot of at most four private current-rules Matches, 240 seconds each, 30 minutes overall and zero retries. Plan265-08 gates source/review and Plan265-09 carries the single conditional pilot allocation/run; both are under independent plan review and cannot replace Plan07 or satisfy a LEAG requirement. Independent goal verification remains partial, allLEAG requirements unchecked, and Phase266 remains blocked.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.
@@ -959,8 +959,12 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 **Wave4 — connected league, blocked on Wave3**
 - [x] 265-06-PLAN.md — All-channel red-team/invariance and allocation-gated private CLI.
 
-**Wave5 — source proof complete; lean amendment approved, technical gates pending**
-- [ ] 265-07-PLAN.md — Exact combined source/CI proof; approved prospective amendment, source review/validation and capacity preflight; one conditional complete real run and retained verification.
+**Wave5 — complete-league route consumed; diagnostic source gate**
+- [ ] 265-07-PLAN.md — Source/CI proof, approved lean amendment and one conditional full-league allocation; the one run was consumed `process_invalid` after one charged cell. No retry or LEAG completion is available from this plan.
+- [ ] 265-08-PLAN.md — New diagnostic-only source/test/review gate; no allocation, Strategy, provider or Match in this plan.
+
+**Wave6 — conditional diagnostic pilot, blocked on Wave5 source gate**
+- [ ] 265-09-PLAN.md — One distinct allocation and at most one pilot run, capped at four private Matches/240 seconds each/30 minutes overall/zero retries. No LEAG, freeze, formation, holdout, counted or public authority.
 
 Cross-cutting constraints: canonical unchanged kernel and supervised hostile-source execution only; private immutable evidence with complete charged accounting; no Phase264 allocation/waiver reuse; no sparse payoff imputation; no formation, holdout opening, public/counting, production or rules changes. Mixtures remain diagnostic, pure finalists remain separately selected, and honest metagame/no-finalist failure is distinct from process failure.
 

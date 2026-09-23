@@ -4,22 +4,40 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Phase265 Plan07 Task3 once-only run terminated process-invalid after first charged cell; no retry authority
+status: in_progress
+stopped_at: Phase265 Plan08 source-only diagnostic implementation; Plan07 full-league run consumed process-invalid with no retry authority
 last_updated: "2026-09-23"
 last_activity: 2026-09-23
-last_activity_desc: Repaired Phase265 retained verifier and 76-test runner suite passed; empirical one-shot remains process-invalid
+last_activity_desc: Approved diagnostic pilot researched and Plans265-08/09 independently checked; no new allocation or Match has run
 progress:
   total_phases: 9
   completed_phases: 3
-  total_plans: 7
+  total_plans: 9
   completed_plans: 6
   percent: 33
-current_plan: 7
-total_plans_in_phase: 7
+current_plan: 8
+total_plans_in_phase: 9
 ---
 
 # State: Coward's Game
+
+## Current Session Continuity — 2026-09-23 diagnostic supplement
+
+The Phase265 Plan07 allocation-v2 is consumed and its single charged cell remains
+independently reopened `process_invalid`; the old allocation, result and private
+repositories are immutable history. The operator separately approved a
+diagnostic-only pilot of at most four private current-rules Matches, at most
+240 seconds per Match, at most 30 minutes from the new `run` command entry and
+zero retries. Research is committed in `265-08-DIAGNOSTIC-RESEARCH.md`. Plans
+265-08 (source/test/independent review/gate only) and 265-09 (one distinct
+allocation and at most one conditional pilot run) passed an independent
+iteration-3 plan check after correcting the targeted reader, private provider
+issuer, preemptive watchdog and executable source-review gate. Plan08 source
+implementation is next; no new allocation, provider, Strategy, model, Match,
+formation or holdout operation has occurred. A diagnostic prefix cannot satisfy
+LEAG-01–09 or authorize Phase266 freeze, counted or public play. Phase265's
+complete-league empirical gate remains blocked notwithstanding active source
+work.
 
 ## Current Session Continuity — 2026-09-23
 
