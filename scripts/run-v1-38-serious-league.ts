@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
+import { spawnSync } from "node:child_process"
 import { closeSync, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, statfsSync, writeSync } from "node:fs"
-import { freemem } from "node:os"
 import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
@@ -29,6 +29,7 @@ import { preflightLeagueAuthoring, verifyRetainedLeagueAuthoring } from "./lib/v
 import { wrapLeagueProbeProvider, produceLeagueResponse, verifyRetainedLeagueResponse, verifyRetainedLeagueProbeInvocations, enumerateLeagueResponseConditions } from "./lib/v1-38-league-response-runtime.js"
 import { isLeagueExecutionStreamReference, prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { buildLeagueTacticalCorpus, isProspectiveTacticalJob, readRetainedTacticalAuthoringContext, readTacticalLeagueRecord } from "./lib/v1-38-league-tactical-corpus.js"
+import { MEMORY_PRESSURE_Q_REQUEST, parseMemoryPressureQ, type MemoryPressureQCommandResult } from "./lib/v1-38-darwin-headroom.js"
 
 const fail = (code: string): never => { throw new TypeError(`SERIOUS_LEAGUE_${code}`) }
 const bytesRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -249,13 +250,35 @@ export const prepareProspectiveSeriousLeague = (input: unknown, options: { facto
   return allocation
 }
 
+/** Darwin's immediately free pages are not its reclaimable available memory.
+ * The strict C-locale memorystatus reader is the previously reviewed host
+ * metric; only its conservative byte estimate is used here, not its separate
+ * Phase 262 percentage admission threshold. */
+export const leagueEffectiveAvailableMemoryBytes = (result: Readonly<MemoryPressureQCommandResult>): number => {
+  const parsed = parseMemoryPressureQ(result)
+  if (!parsed.ok) return fail("CAPACITY_MEMORY_MEASUREMENT")
+  const bytes = Math.floor(parsed.observation.totalBytes * parsed.observation.percentage / 100)
+  if (!Number.isSafeInteger(bytes) || bytes < 0) return fail("CAPACITY_MEMORY_MEASUREMENT")
+  return bytes
+}
+const observeLeagueAvailableMemoryBytes = () => {
+  const request = MEMORY_PRESSURE_Q_REQUEST
+  const result = spawnSync(request.executable, [...request.args], { env: { ...request.env }, stdio: ["ignore", "pipe", "pipe"], timeout: request.timeoutMilliseconds, maxBuffer: request.maximumOutputBytes, shell: request.shell })
+  try {
+    if (result.error || !(result.stdout instanceof Uint8Array) || !(result.stderr instanceof Uint8Array)) return fail("CAPACITY_MEMORY_MEASUREMENT")
+    return leagueEffectiveAvailableMemoryBytes({ stdout: result.stdout, stderr: result.stderr, exitCode: result.status, signal: result.signal, timedOut: false })
+  } finally {
+    if (result.stdout instanceof Uint8Array) result.stdout.fill(0)
+    if (result.stderr instanceof Uint8Array) result.stderr.fill(0)
+  }
+}
 const capacityHostObservation = (allocation: ProspectiveLeagueExecutionAllocation) => {
   const directories = [allocation.outputDirectories.league, allocation.outputDirectories.responseFactory!]
   const stats = directories.map((directory) => ({ device: String(lstatSync(directory).dev), fs: statfsSync(directory, { bigint: true }) }))
   if (stats[0]!.device !== stats[1]!.device) return fail("CAPACITY_FILESYSTEM_SPLIT")
   const free = stats.map(({ fs }) => fs.bavail * fs.bsize).reduce((a, b) => a < b ? a : b)
   if (free > BigInt(Number.MAX_SAFE_INTEGER)) return fail("CAPACITY_FILESYSTEM_RANGE")
-  return { nowMilliseconds: Date.now(), filesystemDevice: stats[0]!.device, freeFilesystemBytes: Number(free), availableMemoryBytes: freemem() }
+  return { nowMilliseconds: Date.now(), filesystemDevice: stats[0]!.device, freeFilesystemBytes: Number(free), availableMemoryBytes: observeLeagueAvailableMemoryBytes() }
 }
 export const preflightProspectiveSeriousLeague = (input: { allocation: unknown; capacity: unknown; factoryRepository: FactoryRepository; fixture?: LeagueFixtureSeams }) => {
   const allocation = admitLeagueExecutionAllocation(input.allocation)

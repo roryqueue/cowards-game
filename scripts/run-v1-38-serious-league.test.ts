@@ -23,7 +23,7 @@ import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
-import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity } from "./run-v1-38-serious-league.js"
+import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -41,6 +41,21 @@ const host: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime({ admi
   testRevisions.set(admission.sourceRoot, revision)
   return { identity: { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: labRoot("test-harness", 1), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }, invoke() { throw new Error("No guest or source execution is allowed in the injected command test") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } } }
 } }
+
+describe("Darwin league available-memory observation", () => {
+  const result = (percentage: number) => ({ stdout: new TextEncoder().encode(`The system has 17179869184 (4194304 pages with a page size of 4096).\nSystem-wide memory free percentage: ${percentage}%\n`), stderr: new Uint8Array(), exitCode: 0, signal: null, timedOut: false })
+  it("derives conservative bytes without importing the separate Phase 262 percentage gate", () => {
+    expect(leagueEffectiveAvailableMemoryBytes(result(75))).toBe(12 * 2 ** 30)
+    expect(leagueEffectiveAvailableMemoryBytes(result(10))).toBe(Math.floor(17179869184 / 10))
+    expect(leagueEffectiveAvailableMemoryBytes(result(0))).toBe(0)
+  })
+  it("fails closed on command, grammar, and output errors", () => {
+    expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), exitCode: 1 })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
+    expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), timedOut: true })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
+    expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), stderr: new TextEncoder().encode("unexpected") })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
+    expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), stdout: new TextEncoder().encode("75%") })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
+  })
+})
 
 describe("prospective CLI source-only gates", () => {
   const inputWithCurrentSource = () => {
