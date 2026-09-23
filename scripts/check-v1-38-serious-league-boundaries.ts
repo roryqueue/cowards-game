@@ -42,6 +42,10 @@ export const checkSeriousLeagueBoundaries = (options: SeriousLeagueBoundaryOptio
       if (source.test(path) && hostileExecution(shared.files[path] ?? "", path)) add("hostile-source-execution", origin)
       if (!restricted(path)) return
       for (const specifier of shared.unresolved.get(path) ?? []) {
+        // The current-league CLI alone may invoke the bounded Darwin host
+        // memory probe. This does not grant process-spawn reachability to the
+        // league package, authoring helpers, web, API, or worker paths.
+        if (path === "scripts/run-v1-38-serious-league.ts" && specifier === "node:child_process") continue
         if (specifier === undefined || !allowedUnresolved.has(specifier)) add("unresolved-private-loader", origin)
       }
     })
