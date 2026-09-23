@@ -58,6 +58,17 @@ gaps:
 
 **Verdict:** `gaps_found` — 0/5 roadmap success criteria are empirically verified. This is an incomplete, allocation-gated phase, not a finding that the present source mechanisms are stubs. At independent verification time, Plan265-07Task1's final source proof was still running; main's captured follow-up below closes that source task only. Task2 is the single genuine human allocation/participant/scope decision; conditional Task3 has not run. No Phase265 empirical allocation, candidate/Match/model/human/external work, run result, freeze, formation, holdout, public/counting, production, or milestone-close authority is established.
 
+**Post-run status, 2026-09-23:** The preceding verdict and absence statements
+are a historical independent snapshot, not current inventory. An approved
+allocation-v2 and one-shot empirical result now exist, but the only started
+cell terminated `system_failure` / `process_invalid`; there is no complete
+matrix, solver, red team, portfolio, or finalist. A repaired, independently
+reviewed read-only verifier passed over the unchanged failed evidence and
+returned `empiricalRequirementsComplete:false`. The 0/5 empirical gap verdict
+therefore still holds. The one-shot cannot be retried; a materially new,
+prospectively reviewed and explicitly approved route is required for further
+Matches. See `265-07-PROCESS-INVALID.md` and `265-07-POSTFAILURE-ROUTE-ASSESSMENT.md`.
+
 ## Goal-backward truths
 
 **Main follow-up after the independent report:** The current-reader refresh

@@ -8,7 +8,7 @@ status: blocked
 stopped_at: Phase265 Plan07 Task3 once-only run terminated process-invalid after first charged cell; no retry authority
 last_updated: "2026-09-23"
 last_activity: 2026-09-23
-last_activity_desc: Repaired Phase265 read-only retained verifier passed over unchanged process-invalid evidence; full regression suite running
+last_activity_desc: Repaired Phase265 retained verifier and 76-test runner suite passed; empirical one-shot remains process-invalid
 progress:
   total_phases: 9
   completed_phases: 3
@@ -58,10 +58,12 @@ full read-only retained verification exited 0 and returned the same
 `process_invalid`, `empiricalRequirementsComplete:false` result at unchanged
 allocation/head roots; the canonical result file SHA-256 is unchanged. This
 verifies retained consistency, not a completed Match or live-execution
-attestation. The broader source regression suite is still running. The
-one-shot route is consumed and must not be retried, refunded, reinterpreted,
-or promoted into a complete matrix, portfolio, or valid freeze. No formation,
-holdout, counted, or public operation is authorized by this result.
+attestation. The full runner regression file passed 76/76 tests and strict
+TypeScript passed at the reviewed repair source; these are source checks, not
+LEAG-01–09 evidence. The one-shot route is consumed and must not be retried,
+refunded, reinterpreted, or promoted into a complete matrix, portfolio, or
+valid freeze. No formation, holdout, counted, or public operation is authorized
+by this result.
 
 Phase 266 research, patterns, validation strategy, five plans, and independent
 passing plan checks for the corrected source-only/empirical-adapter split are

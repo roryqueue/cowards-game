@@ -5,15 +5,34 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-09-22
-source_reviewed: 25ba6a10cb11ca74bf53738aca5e2396fd974a24
-source_gate: passed-346-tests-build-types-boundaries-at-25ba6a10
-empirical_validation: pending-allocation-and-real-run
+updated: 2026-09-23
+source_reviewed: 36c49041
+source_gate: runner-76-tests-and-strict-types-pass-at-36c49041-full-phase-gate-not-repeated
+empirical_validation: one-shot-consumed-process-invalid-independent-retained-check-passed
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Post-run retained verification and source repair — 2026-09-23
+
+The approved allocation-v2 one-shot produced one charged cell, a persisted
+`system_failure` terminal, and an immutable `process_invalid` result; it did
+not satisfy any complete-league empirical requirement. The repaired, read-only
+`verify-retained` command exited 0 over the original repositories and returned
+`empiricalRequirementsComplete:false` at the unchanged allocation/head roots.
+The canonical result SHA-256 remains
+`c7475bbe9858d5179e176f636280042bb4d545e2f38482cbf03bf55e3f7da969`.
+
+At reviewed main source commit `36c49041`, focused journal/supervisor tests
+passed 7/7, strict TypeScript passed, and the full runner test file passed
+76/76 in 1,592.39 seconds. This is source validation and retained failure
+integrity, not an empirical Match/payoff, complete Phase265 source gate, or
+Nyquist compliance. The route is consumed with no retry authority; see
+`265-07-PROCESS-INVALID.md` and `265-07-POSTFAILURE-ROUTE-ASSESSMENT.md`.
+
+### Earlier Task2 source gate — 2026-09-22
 
 The final Task2 source commit `25ba6a10` passed the complete Phase265 named
 gate: **29/29 suites, 346/346 tests in 2073.19 seconds**. A separate affected
