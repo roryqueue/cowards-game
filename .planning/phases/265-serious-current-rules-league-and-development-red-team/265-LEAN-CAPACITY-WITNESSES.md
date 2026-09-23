@@ -92,6 +92,46 @@ raw witness was 117,467 bytes, below one chunk. A longer raw stream or changed
 retained adaptation payload must be measured and reconciled by the future
 capacity plan/receipt; it cannot inherit this allowance silently.
 
+## Post-repair pre-run tactical retention bound
+
+The final tactical response records depend on current-round Matches and do not
+exist before the allocation's first run. They cannot truthfully be described as
+measured retained samples at preflight. The source instead provides a
+conservative, data-only incremental bound for all three tactical jobs:
+
+- Per job, one corpus, one selection, and one derived envelope are each capped
+  at 262,144 canonical bytes; one new `tactical-adaptation-corpus` graph node
+  has at most two 131,072-byte chunks, two chunk descriptors, and one graph
+  descriptor (five artifacts, each at most 262,144 bytes). Its five declared
+  links plus the previous head do not require a link-group record.
+- The profiled source is capped at 65,536 bytes. Counting it again is
+  conservative because the original producer envelope already reserved a
+  source slot. Thus `3 × (8 × 262,144 + 65,536) = 6,488,064` additional bytes
+  and at most 27 new artifacts are source-bounded. Reserve **16,777,216 bytes
+  and 64 artifacts** in the descriptor row, leaving more than 2.5 times the
+  bounded bytes and over twice the artifact count. Existing attempt-start and
+  terminal journals are already counted; the repair adds no journal event.
+- Reserve a further **1,048,576 bytes** of physical filesystem block slack for
+  these at-most-64 artifacts. It belongs only in the filesystem row, not the
+  logical artifact pool.
+
+Admission enforces the representative baseline plus that incremental reserve
+as absolute conservative floors: descriptor **4,493,023,080 bytes / 178,776
+records**, filesystem **39,836,598,118 bytes**. A self-consistent measurement
+root below any floor rejects as `CAPACITY_TACTICAL_RESERVE`; current-source
+measurements may exceed the floors but cannot substitute away the new bound.
+The floors do not raise any overall ceiling or claim that these rows were
+observed in the current round.
+
+Applied to the representative rows above, this yields **127,582,231,362
+logical bytes / 7,237,174 records**, leaving **1,266,787,518 bytes /
+1,062,826 records** under the unchanged ordinary ceilings. The corresponding
+physical projection is **167,418,829,480 bytes** before the separate 20 GiB
+terminal and 20 GiB free-filesystem margins. These are source-bound planning
+figures with explicit old-trace shape assumptions, not empirical measurements,
+a passing capacity receipt, or a promise of future full-Match storage. A fresh
+same-process host measurement and the live capacity stops remain mandatory.
+
 The physical filesystem row is the corrected nonlogical block-extra expression:
 
 ```text

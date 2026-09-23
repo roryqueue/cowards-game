@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 Task2 tactical-producer repair planned and independently checked; source implementation next
+stopped_at: Phase265 Plan07 Task2 source/review/validation complete; Task3 data-only empirical preparation pending
 last_updated: "2026-09-22"
 last_activity: 2026-09-22
-last_activity_desc: Same-plan tactical adaptation research and revised plan pass independent check; three-base historical import passes; source implementation next
+last_activity_desc: Tactical source at 25ba6a10 passes 29 suites/346 tests, focused regressions, types and boundaries; preparing conditional Task3
 progress:
   total_phases: 9
   completed_phases: 3
@@ -23,13 +23,29 @@ total_plans_in_phase: 7
 
 ## Current Session Continuity — 2026-09-22
 
+Task2 tactical adaptation is implemented without changing the historical
+zero-argument emitter. The first independent review found candidate-grouped
+mixture fill, possible S01 displacement by a profile variant, and a missing
+emitted-controller behavior assertion; all three are repaired. A further
+capacity-admission review found and closed a self-consistent omission path for
+target-dependent tactical retention. Re-review records zero actionable findings
+at source root `sha256:32465649b2c9727c116a6bb2e661315f0e7eea256db58b7afa421a4acf836fe9`.
+Commit `25ba6a10` passed 29/29 suites and 346/346 tests in 2,073.19 seconds;
+the affected 8-file/148-test suite, strict TypeScript checks, package build,
+and serious/lab/factory/service boundaries also pass. Source Task2 is complete;
+Task3 still requires verified packet, capacity, and host evidence before any
+allocation reservation or Match. No empirical packet, capacity receipt,
+reservation, provider, Match, model authoring, formation, or holdout operation
+has occurred in this repair.
+
 The approved lean amendment and five source-review fixes are implemented and
 independently reviewed through d35e58d2. Initial fixes cover import order,
 allocation-only reservation and before-charge capacity ordering; subsequent
 fixes separate logical storage from physical filesystem overhead and validate
 static inputs before observing a fresh host receipt. See the three
-265-LEAN-*-REVIEW.iter2.md reports. Focused tests/build/type/boundary checks pass;
-the post-amendment full gate is not yet complete. Sessions17031,96057 and49223
+265-LEAN-*-REVIEW.iter2.md reports. Focused tests/build/type/boundary checks
+passed at that source; the post-amendment full gate was not yet complete at
+that point. Sessions17031,96057 and49223
 were deliberately interrupted with exit130 for newly discovered corrections,
 not passes. Completed work through cbdcad76 is pushed to origin/main.
 

@@ -5,15 +5,35 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-09-21
-source_reviewed: 3d25b37e6ad2eb3edbfb298615d85128c98360e1
-source_gate: passed-273-tests-build-types-boundaries-at-3d25b37e
+updated: 2026-09-22
+source_reviewed: 25ba6a10cb11ca74bf53738aca5e2396fd974a24
+source_gate: passed-346-tests-build-types-boundaries-at-25ba6a10
 empirical_validation: pending-allocation-and-real-run
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+The final Task2 source commit `25ba6a10` passed the complete Phase265 named
+gate: **29/29 suites, 346/346 tests in 2073.19 seconds**. A separate affected
+8-file suite passed 148/148 tests in 1857.75 seconds, including the retained
+tactical corpus regression. Package build and strict changed/broad script
+types passed. Serious/lab/factory boundary scans each passed 1,336 files with
+zero violations; service import checks reported zero strict/ownership offenses
+and the same 19 pre-existing report-only entries. `leagueCurrentSourceIdentity()`
+after commit matched independent review: implementation root
+`sha256:67d8f60e2691582d2d4e7f8d5f7ba52deb5a1ec65784111161f3adeb85ba7049`,
+source root `sha256:32465649b2c9727c116a6bb2e661315f0e7eea256db58b7afa421a4acf836fe9`.
+The independent tactical/code and capacity-plan re-reviews found zero
+actionable defects after the hard reserve floors were enforced. All of these
+are source-only results, not candidate, provider, Match, or finalist evidence.
+
+Task3 empirical allocation, current-source capacity evidence and the once-only
+run remain pending; phase validation therefore remains partial/Nyquist false.
+The older captured results below document previous source states only.
+
+### Superseded source snapshots
 
 Final reviewed source `3d25b37e6ad2eb3edbfb298615d85128c98360e1` passed
 **29/29 suites,273/273 tests in1773.05seconds** (session96544). Its shell did not
@@ -115,7 +135,7 @@ the final stream/frame repair at3d25b37e then passed the273-test gate above.
 | 265-06 T1 | 4 | LEAG-04/09 | `league/red-team.test.ts`, four-channel accounting/nine probes | Source gate passed at3d25b37e |
 | 265-06 T2 | 4 | LEAG-04/09 | `scripts/run-v1-38-serious-league.test.ts`, allocation, authoring, response-runtime and historical-reader tests | Source gate passed at3d25b37e |
 | 265-07 T1 | 5 | LEAG-01–09 | Sixteen AST-linked assertions, package/CLI integration, all 29 suites/types/boundary scans below | Complete; independent review and source gate passed |
-| 265-07 T2 | 5 | LEAG-01–09 | CLI `--help`; human inspection of exact prospective allocation and participant policy | Pending genuine human decision; no allocation written |
+| 265-07 T2 | 5 | LEAG-01–09 | Prospective contract/producer tests, independent review, full 346-test source gate, type and boundary checks | Approved lean decision implemented and source-complete at 25ba6a10; no allocation written |
 | 265-07 T3 | 5 | LEAG-01–09 | Full allocated real run followed by exact bounded `verify-retained` | Conditional, not run; injected tests are not completion |
 
 Paths beginning `league/` are under `packages/strategy-lab/src/`. The longest

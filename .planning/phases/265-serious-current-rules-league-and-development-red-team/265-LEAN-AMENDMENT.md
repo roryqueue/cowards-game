@@ -160,6 +160,12 @@ estimate each for descriptor, journal, and filesystem costs. These are the
 approved full-growth representative path, not a worst-case capacity guarantee;
 the immutable receipt must state its nonempty assumptions explicitly. Data-only
 technical preparation must substantiate the supplied measurements and witnesses.
+For the source-bound tactical retention that cannot be sampled pre-run, the
+validator additionally requires descriptor at least 4,493,023,080 bytes and
+178,776 records and filesystem slack at least 39,836,598,118 bytes. These are
+the conservative representative row floors plus the incremental bound in
+`265-LEAN-CAPACITY-WITNESSES.md`; a self-consistent lower cost still rejects.
+They do not increase the approved aggregate ceilings.
 
 The data-only `LeagueCapacityPlanInput` contains exactly `allocationRoot`,
 `amendmentRoot`, `implementationRoot`, `sourceRoot`, `historicalAssessmentRoot`,
@@ -200,15 +206,22 @@ old authority and may expire during the retained reader.
 These commands are interfaces only here; no empirical preparation, preflight,
 receipt, or dispatch has been performed by the source-only implementation task.
 
-The current data-only representative accounting is 118.804587 GiB and
+The original data-only representative accounting is 118.804587 GiB and
 7,237,110 records. It predates the tactical profile corpus/selection/derived
-input/source retention and cannot be used unchanged. Before constructing the
-capacity plan, measure those final-rooted records in descriptor/journal samples,
-recompute ceiling-scaled bytes/records and all margins, then bind that
-reconciliation to the data-only capacity input. Remaining metadata and physical
-filesystem checks are pending; this observation is neither a passing receipt nor
-a refusal. The stated study bounds and required preflight margins remain
-unchanged.
+input/source retention and cannot be used unchanged. The target-dependent
+records do not exist before the run, so they cannot be represented as observed
+pre-run samples. Reconcile the descriptor and journal categories using actual
+retained format samples where available and the explicit source-enforced upper
+envelope in `265-LEAN-CAPACITY-WITNESSES.md` for the incremental tactical
+records. A bound-based measurement row uses final committed source-cap roots as
+its witnesses, `sampleUnits:1` and `projectedUnits:1`, and names the bound and
+old-trace shape assumptions; it must not claim a synthetic or empirical
+current-round corpus was measured. Recompute ceiling-scaled bytes/records and
+all margins before a receipt is admitted, then compare the bound with actual
+retained artifacts after execution. This refinement raises no numerical limit
+and weakens no preflight or live stop. Remaining metadata and physical
+filesystem checks are pending; the planning envelope is neither a passing
+receipt nor a refusal.
 
 `prepare`, `run`, and `verify-retained` keep their legacy V1 behavior.
 Prospective `run` additionally requires the valid receipt, either freshly
