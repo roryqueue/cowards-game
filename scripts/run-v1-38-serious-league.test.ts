@@ -23,7 +23,7 @@ import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
-import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
+import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes, observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
@@ -54,6 +54,17 @@ describe("Darwin league available-memory observation", () => {
     expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), timedOut: true })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
     expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), stderr: new TextEncoder().encode("unexpected") })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
     expect(() => leagueEffectiveAvailableMemoryBytes({ ...result(75), stdout: new TextEncoder().encode("75%") })).toThrow("CAPACITY_MEMORY_MEASUREMENT")
+  })
+  it("uses the bounded no-shell C-locale command and wipes owned output", () => {
+    const stdout = Buffer.from(result(75).stdout), stderr = Buffer.alloc(0)
+    const execute = vi.fn(() => ({ stdout, stderr, status: 0, signal: null, error: undefined }))
+    expect(observeLeagueAvailableMemoryBytes(execute as unknown as typeof import("node:child_process").spawnSync)).toBe(12 * 2 ** 30)
+    expect(execute).toHaveBeenCalledWith("/usr/bin/memory_pressure", ["-Q"], expect.objectContaining({ env: { LC_ALL: "C", LANG: "C", PATH: "/usr/bin:/bin:/usr/sbin:/sbin" }, stdio: ["ignore", "pipe", "pipe"], timeout: 200, killSignal: "SIGKILL", maxBuffer: 4096, shell: false }))
+    expect([...stdout].every((byte) => byte === 0)).toBe(true)
+    const failedStdout = Buffer.from(result(75).stdout), failedStderr = Buffer.alloc(0)
+    const timeout = vi.fn(() => ({ stdout: failedStdout, stderr: failedStderr, status: null, signal: "SIGKILL", error: new Error("timed out") }))
+    expect(() => observeLeagueAvailableMemoryBytes(timeout as unknown as typeof import("node:child_process").spawnSync)).toThrow("CAPACITY_MEMORY_MEASUREMENT")
+    expect([...failedStdout].every((byte) => byte === 0)).toBe(true)
   })
 })
 

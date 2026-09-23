@@ -222,6 +222,9 @@ export type LeagueCapacityReceipt = Readonly<LeagueCapacityReceiptInput & { sche
 /** Data-only estimates, never host measurements or dispatch authority. */
 export type LeagueCapacityPlanInput = Omit<LeagueCapacityReceiptInput, "measuredAtMilliseconds" | "expiresAtMilliseconds" | "filesystemDevice" | "freeFilesystemBytes" | "availableMemoryBytes">
 export interface LeagueCapacityContext { readonly nowMilliseconds: number; readonly implementationRoot: LabRoot; readonly sourceRoot: LabRoot; readonly filesystemDevice: string; readonly freeFilesystemBytes: number; readonly availableMemoryBytes: number }
+/** Conservative current-league host guard selected for the prospective run.
+ * A data-only plan may raise this value but cannot weaken it. */
+export const LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES = 2 ** 30
 const capacityKeys = ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot", "measuredAtMilliseconds", "expiresAtMilliseconds", "filesystemDevice", "freeFilesystemBytes", "availableMemoryBytes", "processHeadroomBytes", "scale", "costs", "assumptions"] as const
 const capacityPlanKeys = ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot", "processHeadroomBytes", "scale", "costs", "assumptions"] as const
 export const admitLeagueCapacityPlanInput = (value: unknown, allocationValue: ProspectiveLeagueExecutionAllocation): LeagueCapacityPlanInput => {
@@ -229,7 +232,7 @@ export const admitLeagueCapacityPlanInput = (value: unknown, allocationValue: Pr
   boundedDocument(value, capacityPlanKeys)
   const input = value as LeagueCapacityPlanInput
   if (input.allocationRoot !== allocation.root || input.amendmentRoot !== amendment.root || input.implementationRoot !== allocation.implementationRoot || input.sourceRoot !== amendment.sourceRoot || input.historicalAssessmentRoot !== amendment.historicalAssessment.assessmentRoot) fail("CAPACITY_BINDING")
-  if (!int(input.processHeadroomBytes) || input.processHeadroomBytes < 1) fail("CAPACITY_OBSERVATION")
+  if (!int(input.processHeadroomBytes) || input.processHeadroomBytes < LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES) fail("CAPACITY_OBSERVATION")
   validateCapacityCosts(input, allocation)
   return freezeLabValue(input)
 }
@@ -238,7 +241,7 @@ export const createLeagueCapacityReceipt = (input: LeagueCapacityReceiptInput, v
   boundedDocument(input, capacityKeys)
   const { measuredAtMilliseconds: _measured, expiresAtMilliseconds: _expires, filesystemDevice: _device, freeFilesystemBytes: _free, availableMemoryBytes: _memory, ...plan } = input
   admitLeagueCapacityPlanInput(plan, allocation)
-  if (![input.measuredAtMilliseconds, input.expiresAtMilliseconds, input.freeFilesystemBytes, input.availableMemoryBytes, input.processHeadroomBytes].every(int) || input.processHeadroomBytes < 1 || input.processHeadroomBytes > input.availableMemoryBytes || input.expiresAtMilliseconds <= input.measuredAtMilliseconds || input.expiresAtMilliseconds - input.measuredAtMilliseconds > amendment.policy.capacity.maximumReceiptAgeMilliseconds || typeof input.filesystemDevice !== "string" || !input.filesystemDevice.length || input.filesystemDevice.length > 256) fail("CAPACITY_OBSERVATION")
+  if (![input.measuredAtMilliseconds, input.expiresAtMilliseconds, input.freeFilesystemBytes, input.availableMemoryBytes, input.processHeadroomBytes].every(int) || input.processHeadroomBytes < LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES || input.processHeadroomBytes > input.availableMemoryBytes || input.expiresAtMilliseconds <= input.measuredAtMilliseconds || input.expiresAtMilliseconds - input.measuredAtMilliseconds > amendment.policy.capacity.maximumReceiptAgeMilliseconds || typeof input.filesystemDevice !== "string" || !input.filesystemDevice.length || input.filesystemDevice.length > 256) fail("CAPACITY_OBSERVATION")
   if (input.freeFilesystemBytes - input.costs.reduce((sum, row) => sum + row.projectedBytes, 0) - allocation.operations.terminalReserveBytes < amendment.policy.capacity.freeFilesystemMarginBytes) fail("CAPACITY_MARGIN")
   const body = { schemaVersion: "league-capacity-receipt-v1" as const, ...input }
   return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
@@ -267,6 +270,6 @@ export const admitLeagueCapacityReceipt = (value: unknown, allocation: Prospecti
   boundedDocument(value, ["schemaVersion", "root", ...capacityKeys])
   const { root, schemaVersion, ...body } = value as LeagueCapacityReceipt, receipt = createLeagueCapacityReceipt(body, allocation)
   if (receipt.root !== root || receipt.schemaVersion !== schemaVersion) fail("CAPACITY_IDENTITY")
-  if (!exact(current, ["nowMilliseconds", "implementationRoot", "sourceRoot", "filesystemDevice", "freeFilesystemBytes", "availableMemoryBytes"]) || !int(current.nowMilliseconds) || current.nowMilliseconds < receipt.measuredAtMilliseconds || current.nowMilliseconds > receipt.expiresAtMilliseconds || current.implementationRoot !== receipt.implementationRoot || current.sourceRoot !== receipt.sourceRoot || current.filesystemDevice !== receipt.filesystemDevice || !int(current.freeFilesystemBytes) || current.freeFilesystemBytes - receipt.costs.reduce((sum, row) => sum + row.projectedBytes, 0) - allocation.operations.terminalReserveBytes < allocation.amendment.policy.capacity.freeFilesystemMarginBytes || !int(current.availableMemoryBytes) || current.availableMemoryBytes < receipt.processHeadroomBytes) fail("CAPACITY_STALE")
+  if (!exact(current, ["nowMilliseconds", "implementationRoot", "sourceRoot", "filesystemDevice", "freeFilesystemBytes", "availableMemoryBytes"]) || !int(current.nowMilliseconds) || current.nowMilliseconds < receipt.measuredAtMilliseconds || current.nowMilliseconds > receipt.expiresAtMilliseconds || current.implementationRoot !== receipt.implementationRoot || current.sourceRoot !== receipt.sourceRoot || current.filesystemDevice !== receipt.filesystemDevice || !int(current.freeFilesystemBytes) || current.freeFilesystemBytes - receipt.costs.reduce((sum, row) => sum + row.projectedBytes, 0) - allocation.operations.terminalReserveBytes < allocation.amendment.policy.capacity.freeFilesystemMarginBytes || !int(current.availableMemoryBytes) || current.availableMemoryBytes < Math.max(receipt.processHeadroomBytes, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES)) fail("CAPACITY_STALE")
   return receipt
 }

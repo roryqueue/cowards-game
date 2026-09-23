@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url"
 import { MATCH_KERNEL } from "../packages/engine/src/index.js"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
-import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
+import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
 import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository } from "../packages/strategy-lab/src/league/repository.js"
 import { enumerateLeagueCells, admitCompletePayoffSnapshot, assertLeaguePayoffCapacity, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
@@ -261,9 +261,9 @@ export const leagueEffectiveAvailableMemoryBytes = (result: Readonly<MemoryPress
   if (!Number.isSafeInteger(bytes) || bytes < 0) return fail("CAPACITY_MEMORY_MEASUREMENT")
   return bytes
 }
-const observeLeagueAvailableMemoryBytes = () => {
+export const observeLeagueAvailableMemoryBytes = (execute: typeof spawnSync = spawnSync) => {
   const request = MEMORY_PRESSURE_Q_REQUEST
-  const result = spawnSync(request.executable, [...request.args], { env: { ...request.env }, stdio: ["ignore", "pipe", "pipe"], timeout: request.timeoutMilliseconds, maxBuffer: request.maximumOutputBytes, shell: request.shell })
+  const result = execute(request.executable, [...request.args], { env: { ...request.env }, stdio: ["ignore", "pipe", "pipe"], timeout: request.timeoutMilliseconds, killSignal: "SIGKILL", maxBuffer: request.maximumOutputBytes, shell: request.shell })
   try {
     if (result.error || !(result.stdout instanceof Uint8Array) || !(result.stderr instanceof Uint8Array)) return fail("CAPACITY_MEMORY_MEASUREMENT")
     return leagueEffectiveAvailableMemoryBytes({ stdout: result.stdout, stderr: result.stderr, exitCode: result.status, signal: result.signal, timedOut: false })
@@ -597,7 +597,7 @@ export const runSeriousLeague = async (input: LeagueRunInput) => {
   const capacity = allocation.schemaVersion === "league-prospective-execution-allocation-v1" ? input.capacityInput !== undefined ? measureProspectiveCapacity(input, allocation) : prospectiveRunCapacity(input, allocation) : undefined
   const capacityGuard = allocation.schemaVersion === "league-prospective-execution-allocation-v1" && capacity ? () => {
     const current = observeProspectiveCapacity(input, allocation)
-    if (current.filesystemDevice !== capacity.receipt.filesystemDevice || current.freeFilesystemBytes < allocation.operations.terminalReserveBytes + allocation.amendment.policy.capacity.freeFilesystemMarginBytes || current.availableMemoryBytes < capacity.receipt.processHeadroomBytes) return fail("CAPACITY_DISPATCH_STOP")
+    if (current.filesystemDevice !== capacity.receipt.filesystemDevice || current.freeFilesystemBytes < allocation.operations.terminalReserveBytes + allocation.amendment.policy.capacity.freeFilesystemMarginBytes || current.availableMemoryBytes < Math.max(capacity.receipt.processHeadroomBytes, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES)) return fail("CAPACITY_DISPATCH_STOP")
   } : undefined
   capacityGuard?.()
   const budget = new LeagueRetentionBudget(allocation, capacityGuard)

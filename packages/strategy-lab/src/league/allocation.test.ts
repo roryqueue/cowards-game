@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocationInput } from "./allocation.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES } from "./red-team.js"
-import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, LEAGUE_TACTICAL_CAPACITY_FLOORS, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
+import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, LEAGUE_TACTICAL_CAPACITY_FLOORS, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
 
 const root = (text: string) => labRoot("allocation-test", text)
 const zero = { matches: 0, modelTokens: 0, effortMilliseconds: 0, reviewMilliseconds: 0, searchNodes: 0, teacherNodes: 0, distillationUnits: 0 }
@@ -134,6 +134,10 @@ describe("approved prospective three-base admission", () => {
     expect(() => admitLeagueCapacityPlanInput(receipt, allocation)).toThrow("DOCUMENT")
     for (const field of ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot"] as const) expect(() => admitLeagueCapacityPlanInput({ ...plan, [field]: root("substitute") }, allocation)).toThrow("CAPACITY_BINDING")
     expect(() => admitLeagueCapacityPlanInput({ ...plan, processHeadroomBytes: 0 }, allocation)).toThrow("CAPACITY_OBSERVATION")
+    expect(() => admitLeagueCapacityPlanInput({ ...plan, processHeadroomBytes: LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES - 1 }, allocation)).toThrow("CAPACITY_OBSERVATION")
+    expect(() => admitLeagueCapacityPlanInput({ ...plan, processHeadroomBytes: LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES }, allocation)).not.toThrow()
+    expect(() => createLeagueCapacityReceipt({ ...input, processHeadroomBytes: LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES - 1 }, allocation)).toThrow("CAPACITY_OBSERVATION")
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { nowMilliseconds: 1001, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, filesystemDevice: input.filesystemDevice, freeFilesystemBytes: input.freeFilesystemBytes, availableMemoryBytes: LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES - 1 })).toThrow("CAPACITY_STALE")
     expect(() => admitLeagueCapacityPlanInput({ ...plan, tacticalRetention: { sourceRoot: allocation.amendment.sourceRoot } }, allocation)).toThrow("DOCUMENT")
     for (const row of plan.costs) expect(() => admitLeagueCapacityPlanInput({ ...plan, costs: plan.costs.filter((cost) => cost !== row) }, allocation)).toThrow("CAPACITY_CATEGORIES")
     expect(() => admitLeagueCapacityPlanInput({ ...plan, costs: plan.costs.map((row, index) => index ? row : { ...row, measurementRoot: root("substitute") }) }, allocation)).toThrow("CAPACITY_MEASUREMENT")
