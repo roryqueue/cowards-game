@@ -36,6 +36,19 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   pilotLifetimeGrant?: DiagnosticPilotLifetimeGrant;
 }
 
+/** Pure bound used before any container construction; testable with an inert
+ * durable pilot grant without creating a provider or Match. */
+export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">, invocationLimit: number): number => {
+  if ((options.pilotLifetimeGrant === undefined) !== (options.pilotLifetimeMs === undefined)) throw new TypeError("LAB_RUNTIME_PILOT_GRANT")
+  if (options.pilotLifetimeGrant !== undefined) {
+    if (options.benchmarkLifetimeMs !== undefined || options.observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_PILOT_MODE")
+    requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.pilotLifetimeMs! })
+  }
+  const lifetime = options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120_000
+  if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3_600_000 || (options.benchmarkLifetimeMs !== undefined && (!options.observerHarness || invocationLimit !== 2_200))) throw new TypeError("LAB_RUNTIME_LIFETIME")
+  return lifetime
+}
+
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
   const observerHarness = options.observerHarness && freezeLabValue({ ...options.observerHarness })
   const provenance = options.transport || options.streamFactory ? "synthetic_transport" as const : "supervised_container" as const
@@ -55,13 +68,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   let stopped = false; let pending: LeanTimingBinding | undefined; let observed: LeanTimingObservation | undefined; let observedTransportMs = 0
   const began = performance.now()
   const limit = options.invocationLimit ?? 24800
-  if ((options.pilotLifetimeGrant === undefined) !== (options.pilotLifetimeMs === undefined)) throw new TypeError("LAB_RUNTIME_PILOT_GRANT")
-  if (options.pilotLifetimeGrant !== undefined) {
-    if (options.benchmarkLifetimeMs !== undefined || observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_PILOT_MODE")
-    requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.pilotLifetimeMs! })
-  }
-  const lifetime = options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120000
-  if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3600000 || (options.benchmarkLifetimeMs !== undefined && (!observerHarness || limit !== 2200))) throw new TypeError("LAB_RUNTIME_LIFETIME")
+  const lifetime = admitPlannerSupervisorLifetime(options, limit)
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
   const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
     harnessSource: harness,

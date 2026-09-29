@@ -21,6 +21,16 @@ export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedR
   readonly createRuntime?: (options: PlannerSupervisedRuntimeOptions) => PlannerSupervisedRuntime
 }
 
+/** Pure lifetime admission shared by real construction and injected tests. */
+export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRuntimeOptions, "factoryLifetimeMs" | "pilotLifetimeGrant" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">): number => {
+  const factoryLifetimeMs = options.factoryLifetimeMs ?? 120_000
+  if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > (options.pilotLifetimeGrant ? 240_000 : 120_000)) return fail("LIFETIME")
+  if (options.pilotLifetimeGrant !== undefined) {
+    requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: factoryLifetimeMs })
+  }
+  return factoryLifetimeMs
+}
+
 /**
  * Turns admitted authored TypeScript bytes into the one selected container
  * revision. The packet provider id remains producer provenance and is never
@@ -40,11 +50,7 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   const revision = buildStrategyRevision({ source, runtime: runtimeMetadata })
   if (!revision.validation.valid || revision.sourceHash !== admission.sourceRoot.slice(7) || revision.sourceBytes !== options.sourceBytes.byteLength || revision.runtime.language.id !== "typescript" || revision.runtime.abiVersion !== admission.nativeLane.runtimeAbi || revision.runtime.adapter.id !== "runtime-js-container-subprocess") return fail("REVISION_BINDING")
   const createRuntime = options.createRuntime ?? createPlannerSupervisedRuntime
-  const factoryLifetimeMs = options.factoryLifetimeMs ?? 120_000
-  if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > (options.pilotLifetimeGrant ? 240_000 : 120_000)) return fail("LIFETIME")
-  if (options.pilotLifetimeGrant !== undefined) {
-    requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: factoryLifetimeMs })
-  }
+  const factoryLifetimeMs = admitFactorySupervisorLifetime(options)
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options
   const selected = createRuntime({ ...runtimeOptions, ...(options.pilotLifetimeGrant === undefined ? {} : { pilotLifetimeMs: factoryLifetimeMs }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })

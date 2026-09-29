@@ -67,7 +67,16 @@ const CONDITION_IDS = [
   "set-condition:sha256:6da20d83323911acf4891eb6736ebd372138364762905268e340852f364cbf68",
   "set-condition:sha256:bbec91404c09ac50622b0bc25b09fd8d20dbcd037d62e2fdd2c07f7ff17be7af",
 ] as const
-const allocationFields = ["evidenceClass", "privacy", "phase", "seed", "scenarioId", "semanticGeometryHash", "candidateRoots", "candidateAdmissionRoots", "tupleRoot", "runtimeRoot", "image", "perMatchMilliseconds", "overallMilliseconds", "retryCount", "cells", "sourceClosureRoot", "implementationRoot", "gateRoot", "leagueRequirementsEvidence", "formationAuthorized", "counted", "public"] as const
+const allocationFields = ["evidenceClass", "privacy", "phase", "seed", "scenarioId", "semanticGeometryHash", "candidateRoots", "candidateAdmissionRoots", "tupleRoot", "runtimeRoot", "image", "perMatchMilliseconds", "overallMilliseconds", "retryCount", "cells", "sourceClosureRoot", "implementationRoot", "gateRoot", "oldEvidenceBaseline", "artifactCeiling", "leagueRequirementsEvidence", "formationAuthorized", "counted", "public"] as const
+
+export interface DiagnosticPilotOldEvidenceBaseline {
+  readonly oldAllocationV2: LabRoot
+  readonly oldAllocationUnversioned: LabRoot
+  readonly oldResult: LabRoot
+  readonly oldLeagueTree: LabRoot
+  readonly oldFactoryTree: LabRoot
+}
+const baselineKeys = ["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"] as const
 
 export interface DiagnosticPilotAllocation {
   readonly schemaVersion: "diagnostic-pilot-allocation-v1"; readonly root: LabRoot; readonly evidenceClass: "diagnostic_only"; readonly privacy: "private_offline"; readonly phase: 265
@@ -76,13 +85,14 @@ export interface DiagnosticPilotAllocation {
   readonly tupleRoot: LabRoot; readonly runtimeRoot: LabRoot; readonly image: string; readonly perMatchMilliseconds: 240000; readonly overallMilliseconds: 1800000; readonly retryCount: 0
   readonly cells: readonly Readonly<{ ordinal: number; conditionId: string; requestIdentity: string; bottomCandidateRoot: LabRoot; topCandidateRoot: LabRoot; initialInitiativeCandidateRoot: LabRoot }>[]
   readonly sourceClosureRoot: LabRoot; readonly implementationRoot: LabRoot; readonly gateRoot: LabRoot
+  readonly oldEvidenceBaseline: DiagnosticPilotOldEvidenceBaseline; readonly artifactCeiling: typeof DIAGNOSTIC_PILOT_ARTIFACT_CEILING
   readonly leagueRequirementsEvidence: false; readonly formationAuthorized: false; readonly counted: false; readonly public: false
 }
-export const createDiagnosticPilotAllocation = (identity: { readonly sourceClosureRoot: LabRoot; readonly implementationRoot: LabRoot; readonly gateRoot: LabRoot }): Readonly<DiagnosticPilotAllocation> => {
-  if (!Object.values(identity).every(root) || !exactLabKeys(identity, ["sourceClosureRoot", "implementationRoot", "gateRoot"])) return fail("ALLOCATION_SOURCE")
+export const createDiagnosticPilotAllocation = (identity: { readonly sourceClosureRoot: LabRoot; readonly implementationRoot: LabRoot; readonly gateRoot: LabRoot; readonly oldEvidenceBaseline: DiagnosticPilotOldEvidenceBaseline }): Readonly<DiagnosticPilotAllocation> => {
+  if (!exactLabKeys(identity, ["sourceClosureRoot", "implementationRoot", "gateRoot", "oldEvidenceBaseline"]) || ![identity.sourceClosureRoot, identity.implementationRoot, identity.gateRoot].every(root) || !exactLabKeys(identity.oldEvidenceBaseline, baselineKeys) || !Object.values(identity.oldEvidenceBaseline).every(root)) return fail("ALLOCATION_SOURCE")
   const source = scenario()
   if (source.scenarioId !== "set-scenario:sha256:e0f70e74ccd4229ba6c78ddca08079dcf23a8c3d970acab1f001007fb7f842f1" || source.conditions.some((row, index) => row.conditionId !== CONDITION_IDS[index])) return fail("CANONICAL_CONDITIONS")
-  const fields = { evidenceClass: "diagnostic_only" as const, privacy: "private_offline" as const, phase: 265 as const, seed: DIAGNOSTIC_PILOT_SEED, scenarioId: source.scenarioId, semanticGeometryHash: DIAGNOSTIC_PILOT_GEOMETRY, candidateRoots: [DIAGNOSTIC_PILOT_BASES[0].candidateRoot, DIAGNOSTIC_PILOT_BASES[1].candidateRoot] as const, candidateAdmissionRoots: [DIAGNOSTIC_PILOT_BASES[0].admissionRoot, DIAGNOSTIC_PILOT_BASES[1].admissionRoot] as const, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image, perMatchMilliseconds: 240_000 as const, overallMilliseconds: 1_800_000 as const, retryCount: 0 as const, cells: source.conditions.map((condition) => ({ ordinal: condition.ordinal, conditionId: condition.conditionId, requestIdentity: condition.requestIdentity, bottomCandidateRoot: condition.bottomEntrantKey as LabRoot, topCandidateRoot: condition.topEntrantKey as LabRoot, initialInitiativeCandidateRoot: condition.initialInitiativeEntrantKey as LabRoot })), sourceClosureRoot: identity.sourceClosureRoot, implementationRoot: identity.implementationRoot, gateRoot: identity.gateRoot, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, counted: false as const, public: false as const }
+  const fields = { evidenceClass: "diagnostic_only" as const, privacy: "private_offline" as const, phase: 265 as const, seed: DIAGNOSTIC_PILOT_SEED, scenarioId: source.scenarioId, semanticGeometryHash: DIAGNOSTIC_PILOT_GEOMETRY, candidateRoots: [DIAGNOSTIC_PILOT_BASES[0].candidateRoot, DIAGNOSTIC_PILOT_BASES[1].candidateRoot] as const, candidateAdmissionRoots: [DIAGNOSTIC_PILOT_BASES[0].admissionRoot, DIAGNOSTIC_PILOT_BASES[1].admissionRoot] as const, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image, perMatchMilliseconds: 240_000 as const, overallMilliseconds: 1_800_000 as const, retryCount: 0 as const, cells: source.conditions.map((condition) => ({ ordinal: condition.ordinal, conditionId: condition.conditionId, requestIdentity: condition.requestIdentity, bottomCandidateRoot: condition.bottomEntrantKey as LabRoot, topCandidateRoot: condition.topEntrantKey as LabRoot, initialInitiativeCandidateRoot: condition.initialInitiativeEntrantKey as LabRoot })), sourceClosureRoot: identity.sourceClosureRoot, implementationRoot: identity.implementationRoot, gateRoot: identity.gateRoot, oldEvidenceBaseline: identity.oldEvidenceBaseline, artifactCeiling: DIAGNOSTIC_PILOT_ARTIFACT_CEILING, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, counted: false as const, public: false as const }
   const value = { schemaVersion: "diagnostic-pilot-allocation-v1" as const, ...fields, root: labRoot("diagnostic-pilot-allocation-v1", { schemaVersion: "diagnostic-pilot-allocation-v1", ...fields }) }
   return freezeLabValue(value) as DiagnosticPilotAllocation
 }
@@ -90,7 +100,7 @@ export const admitDiagnosticPilotAllocation = (value: unknown): Readonly<Diagnos
   if (!exactLabKeys(value, [...allocationFields, "schemaVersion", "root"])) return fail("ALLOCATION_KEYS")
   const candidate = value as unknown as DiagnosticPilotAllocation
   if (candidate.schemaVersion !== "diagnostic-pilot-allocation-v1" || !root(candidate.root) || ![candidate.sourceClosureRoot, candidate.implementationRoot, candidate.gateRoot].every(root)) return fail("ALLOCATION_IDENTITY")
-  const expected = createDiagnosticPilotAllocation({ sourceClosureRoot: candidate.sourceClosureRoot, implementationRoot: candidate.implementationRoot, gateRoot: candidate.gateRoot })
+  const expected = createDiagnosticPilotAllocation({ sourceClosureRoot: candidate.sourceClosureRoot, implementationRoot: candidate.implementationRoot, gateRoot: candidate.gateRoot, oldEvidenceBaseline: candidate.oldEvidenceBaseline })
   if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("ALLOCATION_MISMATCH")
   return expected
 }
@@ -170,12 +180,21 @@ export interface DiagnosticPilotLedger {
   readonly readEvidence?: (startRoot: LabRoot, evidenceRoot: LabRoot) => Uint8Array
 }
 const openedLedgers = new WeakSet<object>()
-const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation): void => {
+const TEMPORARY = /^diagnostic-pilot-([a-f0-9]{64})\.(?:(?:started|terminal)\.json|evidence-[a-f0-9]{64}\.bin)\.tmp-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
+const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation, allowTemporary = false): boolean => {
   const allowed = allocation.cells.map((_, ordinal) => createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal)).root)
   const names = ledger.listNames()
   if (names.length > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes || new Set(names).size !== names.length) return fail("LEDGER_INVENTORY")
   const present: number[] = []
+  let uncertain = false
   for (const name of names) {
+    const temporary = TEMPORARY.exec(name)
+    if (temporary) {
+      if (!allowed.includes(`sha256:${temporary[1]}` as LabRoot)) return fail("LEDGER_FOREIGN_TEMPORARY")
+      if (!allowTemporary) return fail("LEDGER_UNCERTAIN_TEMPORARY")
+      uncertain = true
+      continue
+    }
     const evidence = /^diagnostic-pilot-([a-f0-9]{64})\.evidence-([a-f0-9]{64})\.bin$/u.exec(name)
     if (evidence) {
       if (!allowed.includes(`sha256:${evidence[1]}` as LabRoot) || !ledger.readStart(`sha256:${evidence[1]}` as LabRoot) || !ledger.readEvidence) return fail("LEDGER_FOREIGN_EVIDENCE")
@@ -197,6 +216,7 @@ const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocati
     const raw = ledger.readTerminal(start.root), terminal = raw === null ? null : admitDiagnosticPilotTerminal(start, raw)
     if (!terminal || terminal.disposition !== "success" || terminal.processValidity !== "process_valid") return fail("LEDGER_PRIOR_NONPASS")
   }
+  return uncertain
 }
 export const verifyDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, start: DiagnosticPilotStart): Readonly<DiagnosticPilotStart> => {
   if (!openedLedgers.has(ledger) || (ledger as DiagnosticPilotLedger).directory !== resolve(DIAGNOSTIC_PILOT_STORE)) return fail("UNTRUSTED_LEDGER")
@@ -232,9 +252,9 @@ export const requireDiagnosticPilotLifetimeGrant = (value: unknown, binding: { r
   if (grant.allocationRoot !== binding.allocationRoot || grant.cellRoot !== binding.cellRoot || grant.startRoot !== binding.startRoot || grant.seat !== binding.seat || grant.containerName !== binding.containerName || grant.ownershipLabel !== binding.ownershipLabel || grant.ceilingMilliseconds !== 240_000 || !Number.isSafeInteger(binding.lifetimeMilliseconds) || binding.lifetimeMilliseconds < 1 || binding.lifetimeMilliseconds > grant.ceilingMilliseconds) return fail("GRANT_BINDING")
   return grant
 }
-export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation): Readonly<{ issued: false; records: readonly { start: DiagnosticPilotStart; terminal: DiagnosticPilotTerminal | null; processValidity: "process_invalid" | "process_valid" }[] }> => {
+export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation): Readonly<{ issued: false; retentionUncertain: boolean; records: readonly { start: DiagnosticPilotStart; terminal: DiagnosticPilotTerminal | null; processValidity: "process_invalid" | "process_valid" }[] }> => {
   if (!openedLedgers.has(ledger) || (ledger as DiagnosticPilotLedger).directory !== resolve(DIAGNOSTIC_PILOT_STORE)) return fail("UNTRUSTED_LEDGER")
-  inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation))
+  const retentionUncertain = inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation), true)
   const records = allocation.cells.map((_, ordinal) => {
     const cell = createDiagnosticPilotCell(allocation, ordinal), start = createDiagnosticPilotStart(allocation, cell), raw = ledger.readStart(start.root)
     if (!raw) return null
@@ -247,10 +267,10 @@ export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, 
       if (!reader) return fail("EVIDENCE_READER")
       reader(start.root, terminal.evidenceRoot)
     }
-    return { start, terminal, processValidity: terminal.processValidity }
+    return { start, terminal, processValidity: retentionUncertain ? "process_invalid" as const : terminal.processValidity }
   }).filter((entry): entry is NonNullable<typeof entry> => entry !== null)
   if (records.some((entry, index) => entry.start.ordinal !== index)) return fail("NONPREFIX_LEDGER")
-  return freezeLabValue({ issued: false as const, records })
+  return freezeLabValue({ issued: false as const, retentionUncertain, records })
 }
 
 /** Real repository adapter is defined here, but Plan 08 never creates or opens
@@ -279,9 +299,10 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
   let retainedBytes = 0, retainedRecords = 0
   const perStart = new Map<LabRoot, { bytes: number; records: number }>()
   for (const name of readdirSync(path)) {
-    if (!/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal)\.json$/u.test(name) && !/^diagnostic-pilot-[a-f0-9]{64}\.evidence-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
+    const temporary = TEMPORARY.test(name)
+    if (!temporary && !/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal)\.json$/u.test(name) && !/^diagnostic-pilot-[a-f0-9]{64}\.evidence-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
     const entry = lstatSync(join(path, name))
-    if (!entry.isFile() || entry.nlink !== 1 || entry.size < 1 || entry.size > 262_144) return fail("LEDGER_FILE")
+    if (!entry.isFile() || entry.nlink !== 1 || (!temporary && entry.size < 1) || entry.size > 262_144 || (temporary && (entry.mode & 0o777) !== 0o600)) return fail("LEDGER_FILE")
     retainedBytes += entry.size; retainedRecords++
     const evidence = /^diagnostic-pilot-([a-f0-9]{64})\.evidence-[a-f0-9]{64}\.bin$/u.exec(name)
     if (evidence) { const id = `sha256:${evidence[1]}` as LabRoot, prior = perStart.get(id) ?? { bytes: 0, records: 0 }; prior.bytes += entry.size; prior.records++; perStart.set(id, prior) }

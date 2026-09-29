@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -25,10 +26,12 @@ import {
   verifyDiagnosticPilotLedger,
 } from "./diagnostic-pilot.js"
 
+const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
 const allocation = () => createDiagnosticPilotAllocation({
   implementationRoot: labRoot("pilot-test", "implementation"),
   sourceClosureRoot: labRoot("pilot-test", "source"),
   gateRoot: labRoot("pilot-test", "gate"),
+  oldEvidenceBaseline: testBaseline,
 })
 
 describe("diagnostic-only pilot identity and precharge", () => {
@@ -56,6 +59,24 @@ describe("diagnostic-only pilot identity and precharge", () => {
     const cell = createDiagnosticPilotCell(admitted, 0)
     const start = createDiagnosticPilotStart(admitted, cell)
     expect(() => verifyDiagnosticPilotLedger({ readStart: () => null, readTerminal: () => null }, admitted, cell, start)).toThrow()
+  })
+
+  it("reopens an interrupted temporary publication as process-invalid without authorizing issuance", () => {
+    const testRoot = realpathSync(mkdtempSync(join(tmpdir(), "diagnostic-pilot-temp-test-")))
+    temporaryRoots.push(testRoot)
+    mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+    const directory = join(testRoot, DIAGNOSTIC_PILOT_STORE)
+    mkdirSync(directory, { mode: 0o700 })
+    process.chdir(testRoot)
+    const allocated = allocation(), cell = createDiagnosticPilotCell(allocated, 0), start = createDiagnosticPilotStart(allocated, cell)
+    const ledger = openDiagnosticPilotLedger(directory)
+    ledger.writeStart(start)
+    writeFileSync(join(directory, `diagnostic-pilot-${start.root.slice(7)}.evidence-${"a".repeat(64)}.bin.tmp-${randomUUID()}`), Buffer.from("partial"), { mode: 0o600 })
+    const reopened = openDiagnosticPilotLedger(directory)
+    const state = reopenDiagnosticPilotLedger(reopened, allocated)
+    expect(state.retentionUncertain).toBe(true)
+    expect(state.records[0]?.processValidity).toBe("process_invalid")
+    expect(() => verifyDiagnosticPilotLedger(reopened, allocated, cell, start)).toThrow("LEDGER_UNCERTAIN_TEMPORARY")
   })
 })
 
@@ -112,7 +133,7 @@ historicalIt("reopens one durable pilot charge before either issuance in both or
   ledger.writeStart(start)
   log.push("durable-precharge")
   expect(reopenDiagnosticPilotLedger(ledger, allocated).records[0]).toMatchObject({ processValidity: "process_invalid", terminal: null })
-  for (const [iteration, order] of ([[0, 1], [1, 0]] as const).entries()) {
+  for (const [iteration, order] of ([[0, 1]] as const).entries()) {
     const first = issue(assessed[order[0]]), second = issue(assessed[order[1]])
     const handles = first.seat === "bottom" ? { bottom: first, top: second } : { bottom: second, top: first }
     expect(first.identity.attemptRoot).toBe(start.root)
@@ -127,19 +148,49 @@ historicalIt("reopens one durable pilot charge before either issuance in both or
     const legacy = issueLeagueProviderFromFactoryCandidate({ ...assessed[0].closure, host, cell: legacyCell, start: legacyStart, allocationRoot: allocated.root })
     await expect(runDiagnosticPilotCell({ ...request, bottom: legacy as never })).rejects.toThrow("PILOT_UNISSUED_PROVIDER")
   }
+  expect(() => issue(assessed[0])).toThrow("PILOT_SEAT_ALREADY_ISSUED")
   expect(log[0]).toBe("durable-precharge")
   const providerIndexes = log.flatMap((entry, index) => entry === "pilot-provider" ? [index] : [])
-  expect(providerIndexes).toHaveLength(4)
+  expect(providerIndexes).toHaveLength(2)
   for (const index of providerIndexes) expect(log[index - 1]).toBe(`reopen:${start.root}`)
   const pilotLifetimeGrant = createDiagnosticPilotLifetimeGrant(ledger, allocated, cell, start, "bottom")
   expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: { ...allocated, evidenceClass: "empirical" } as never, cell, start, requestRoot: cell.requestRoot, assessed: assessed[0], pilotLifetimeGrant })).toThrow("ALLOCATION_MISMATCH")
   expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start: { ...start, root: labRoot("pilot-test", "wrong") }, requestRoot: cell.requestRoot, assessed: assessed[0], pilotLifetimeGrant })).toThrow("START_MISMATCH")
   expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start, requestRoot: cell.requestRoot, assessed: { ...assessed[0] }, pilotLifetimeGrant })).toThrow("UNAUTHENTICATED_CLOSURE")
-  expect(log.filter((entry) => entry === "pilot-provider")).toHaveLength(4)
+  expect(log.filter((entry) => entry === "pilot-provider")).toHaveLength(2)
   expect(CANONICAL_ARENA_CATALOG_V1_37.arenas.some((arena) => arena.id === "arena:smoke:v1")).toBe(true)
   const failed = createDiagnosticPilotTerminal(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 1, artifactBytes: 0, artifactRecords: 0, code: "system_failure" })
   ledger.writeTerminal(failed)
   expect(reopenDiagnosticPilotLedger(ledger, allocated).records[0]?.terminal?.root).toBe(failed.root)
   expect(JSON.stringify(failed)).not.toMatch(/sourceBytes|strategyMemory|soldierMemory|objectivePayload/u)
   expect(() => issue(assessed[0])).toThrow("PRECHARGE_ALREADY_TERMINAL")
+}, 60_000)
+
+historicalIt("permits the opposite seat issuance order on a distinct injected durable charge", () => {
+  const testRoot = realpathSync(mkdtempSync(join(tmpdir(), "diagnostic-pilot-reverse-test-")))
+  temporaryRoots.push(testRoot)
+  mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+  const directory = join(testRoot, DIAGNOSTIC_PILOT_STORE)
+  mkdirSync(directory, { mode: 0o700 })
+  process.chdir(testRoot)
+  const factoryRepository = createFactoryRepository(historicalPath), assessed = readDiagnosticPilotAssessedPair(factoryRepository)
+  const identity = allocation(), allocated = createDiagnosticPilotAllocation({ implementationRoot: identity.implementationRoot, sourceClosureRoot: labRoot("pilot-test", "reverse-order"), gateRoot: identity.gateRoot, oldEvidenceBaseline: testBaseline })
+  const cell = createDiagnosticPilotCell(allocated, 0), start = createDiagnosticPilotStart(allocated, cell), ledger = openDiagnosticPilotLedger(directory)
+  const calls: string[] = []
+  const host: FactorySupervisedRuntimeHost = { createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot, budgetRoot, executableRoot }) {
+    expect(ledger.readStart(start.root)).toEqual(start)
+    calls.push(attemptRoot)
+    const defaults = defaultRuntimeMetadata("typescript")
+    const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+    return { identity: { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: labRoot("pilot-test", "harness"), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }, invoke() { throw new Error("inert injected provider must not execute") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } } } as FactorySupervisionProvider
+  } }
+  ledger.writeStart(start)
+  const byRoot = new Map(assessed.map((entry) => [entry.candidate.root, entry]))
+  for (const seat of ["top", "bottom"] as const) {
+    const entry = byRoot.get(seat === "top" ? cell.topCandidateRoot : cell.bottomCandidateRoot)!
+    const pilotLifetimeGrant = createDiagnosticPilotLifetimeGrant(ledger, allocated, cell, start, seat)
+    const handle = issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start, requestRoot: cell.requestRoot, assessed: entry, pilotLifetimeGrant })
+    expect(handle.seat).toBe(seat)
+  }
+  expect(calls).toEqual([start.root, start.root])
 }, 60_000)

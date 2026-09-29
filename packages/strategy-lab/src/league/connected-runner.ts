@@ -59,6 +59,7 @@ const privateProviders = new WeakMap<object, FactorySupervisionProvider>()
 const issueBindings = new WeakMap<object, Readonly<{ admission: FactoryAdmission; candidate: FactoryCandidate }>>()
 const pilotIssuedProviders = new WeakSet<object>()
 const pilotIssueBindings = new WeakMap<object, Readonly<{ admission: FactoryAdmission; candidate: FactoryCandidate; seat: "bottom" | "top"; allocationRoot: LabRoot; cellRoot: LabRoot; startRoot: LabRoot; requestRoot: LabRoot }>>()
+const consumedPilotIssuances = new Map<LabRoot, Set<"bottom" | "top">>()
 const pilotHandleSymbol = Symbol("diagnostic-pilot-issued-provider")
 
 export const readCandidateClosure = (closure: FactoryCandidateClosure): Readonly<{ candidate: FactoryCandidate; packet: ReturnType<typeof FactoryOraclePacketSchema.parse>; proposal: ReturnType<typeof FactoryProposalSchema.parse>; validation: ReturnType<typeof FactoryValidationEvidenceSchema.parse>; sourceBytes: Uint8Array }> => {
@@ -150,6 +151,11 @@ export const issueDiagnosticPilotProviderFromFactoryCandidate = (input: Readonly
   const revision = buildStrategyRevision({ source: new TextDecoder("utf-8", { fatal: true }).decode(closure.sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
   if (!revision.validation.valid || !revision.metadata.sourceArtifact || revision.sourceHash !== admission.sourceRoot.slice(7)) return fail("PILOT_EXECUTABLE_BUILD")
   const executableRoot = `sha256:${revision.metadata.sourceArtifact.hash}` as LabRoot
+  // Burn the single seat issuance before the opaque host boundary. A failed or
+  // uncertain create cannot be retried under the same durable charge.
+  const consumed = consumedPilotIssuances.get(start.root) ?? new Set<"bottom" | "top">()
+  if (consumed.has(seat)) return fail("PILOT_SEAT_ALREADY_ISSUED")
+  consumed.add(seat); consumedPilotIssuances.set(start.root, consumed)
   const provider = input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, executableRoot, pilotLifetimeGrant: input.pilotLifetimeGrant })
   const identity = provider?.identity
   if (!identity || identity.revisionId !== revision.id || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.attemptRoot !== start.root || identity.budgetRoot !== allocation.root || identity.executableRoot !== executableRoot) { provider?.close(); return fail("PILOT_PROVIDER_IDENTITY") }
