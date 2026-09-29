@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto"
-import { mkdtempSync, realpathSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
 import { afterEach, describe, expect, it } from "vitest"
@@ -11,10 +12,13 @@ import { deriveFactoryOraclePacketRoot } from "../factory/identity.js"
 import { createFactoryRepository, publishFactoryArtifact } from "../factory/repository.js"
 import type { FactorySupervisionProvider } from "../factory/admission.js"
 import { createLeagueCell } from "./contracts.js"
-import { issueLeagueProviderFromFactoryCandidate, runLeagueCell, type FactorySupervisedRuntimeHost } from "./connected-runner.js"
+import { issueDiagnosticOneCellProviderFromFactoryCandidate, issueDiagnosticPilotProviderFromFactoryCandidate, issueLeagueProviderFromFactoryCandidate, runDiagnosticOneCellCell, runLeagueCell, type FactorySupervisedRuntimeHost } from "./connected-runner.js"
+import { DIAGNOSTIC_ONE_CELL_STORE, createDiagnosticOneCellAllocation, createDiagnosticOneCellCell, createDiagnosticOneCellStart, createDiagnosticOneCellLifetimeGrant, openDiagnosticOneCellLedger } from "./diagnostic-one-cell.js"
+import { DIAGNOSTIC_PILOT_PHASE264_STORE, createDiagnosticPilotAllocation, readDiagnosticPilotAssessedPair } from "./diagnostic-pilot.js"
 import { createLeagueRepository, type LeagueCellStart } from "./repository.js"
 
 const directories: string[] = []
+const originalCwd = process.cwd()
 const root = (value: string): LabRoot => labRoot("connected-runner-test-v1", value)
 const canonical = (value: unknown) => {
   const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
@@ -26,7 +30,7 @@ const temporary = (prefix: string) => {
   directories.push(directory)
   return directory
 }
-afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+afterEach(() => { process.chdir(originalCwd); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 
 const fixture = (name: string) => {
   const factoryRepository = createFactoryRepository(temporary("factory-league-test-"))
@@ -96,3 +100,41 @@ describe("host-issued connected league runner", () => {
     expect(result, "league-eval:hostile-runtime").toMatchObject({ disposition: "system_failure", processValidity: "process_invalid" })
   })
 })
+
+const historicalPath = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../", DIAGNOSTIC_PILOT_PHASE264_STORE)
+const historicalIt = existsSync(historicalPath) ? it : it.skip
+historicalIt("binds a distinct v3 precharge and opaque handles; rejects both old pilot admission directions", async () => {
+  const testRoot = temporary("one-cell-connected-test-")
+  mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+  mkdirSync(join(testRoot, DIAGNOSTIC_ONE_CELL_STORE), { mode: 0o700 })
+  process.chdir(testRoot)
+  const baseline = { oldAllocationV2: root("old-v2"), oldAllocationUnversioned: root("old-v1"), oldResult: root("old-result"), oldLeagueTree: root("old-league"), oldFactoryTree: root("old-factory") }
+  const allocation = createDiagnosticOneCellAllocation({ sourceClosureRoot: root("one-source"), implementationRoot: root("one-implementation"), gateRoot: root("one-gate"), oldEvidenceBaseline: baseline })
+  const cell = createDiagnosticOneCellCell(allocation, 0), start = createDiagnosticOneCellStart(allocation, cell), ledger = openDiagnosticOneCellLedger(DIAGNOSTIC_ONE_CELL_STORE)
+  const repository = createFactoryRepository(historicalPath), pair = readDiagnosticPilotAssessedPair(repository)
+  const called: string[] = []
+  const host: FactorySupervisedRuntimeHost = { createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot, budgetRoot, executableRoot, oneCellLifetimeGrant }) {
+    expect(ledger.readStart(start.root)).toEqual(start)
+    expect(oneCellLifetimeGrant?.startRoot).toBe(start.root)
+    called.push(attemptRoot)
+    const defaults = defaultRuntimeMetadata("typescript")
+    const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+    return { identity: { revisionId: revision.id, sourceRoot: admission.sourceRoot, executableRoot, tupleId: "candidate-kernel-v1.19", tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, image: LAB_ADMITTED_ROOTS.image, harnessRoot: root("inert-harness"), budgetRoot, attemptRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, nativeLane: admission.nativeLane, factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot }, invoke() { throw new Error("inert identity only") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } } } as FactorySupervisionProvider
+  } }
+  const issue = (entry: typeof pair[number]) => { const seat = entry.candidate.root === cell.bottomCandidateRoot ? "bottom" : "top"; const oneCellLifetimeGrant = createDiagnosticOneCellLifetimeGrant(ledger, allocation, cell, start, seat); return issueDiagnosticOneCellProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation, cell, start, requestRoot: cell.requestRoot, assessed: entry, oneCellLifetimeGrant }) }
+  expect(() => issue(pair[0])).toThrow("PRECHARGE_ABSENT")
+  expect(called).toHaveLength(0)
+  ledger.writeStart(start)
+  const bottom = issue(pair[0]), top = issue(pair[1])
+  expect(called).toEqual([start.root, start.root])
+  expect(bottom.identity.attemptRoot).toBe(start.root)
+  expect(top.identity.budgetRoot).toBe(allocation.root)
+  expect(() => JSON.stringify(bottom)).toThrow("NON_SERIALIZABLE")
+  const request = { ledger, allocation, cell, start, requestRoot: cell.requestRoot, bottom, top, match: {} as never }
+  await expect(runDiagnosticOneCellCell({ ...request, bottom: { ...bottom } as never })).rejects.toThrow("UNISSUED_PROVIDER")
+  await expect(runDiagnosticOneCellCell({ ...request, bottom: top as never })).rejects.toThrow("ONE_CELL_MATCH_REQUEST")
+  const old = createDiagnosticPilotAllocation({ sourceClosureRoot: root("old-source"), implementationRoot: root("old-implementation"), gateRoot: root("old-gate"), oldEvidenceBaseline: baseline })
+  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger: ledger as never, allocation: allocation as never, cell: cell as never, start: start as never, requestRoot: cell.requestRoot, assessed: pair[0], pilotLifetimeGrant: {} as never })).toThrow()
+  expect(() => issueDiagnosticOneCellProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation: old as never, cell, start, requestRoot: cell.requestRoot, assessed: pair[0], oneCellLifetimeGrant: {} as never })).toThrow()
+  expect(() => issue(pair[0])).toThrow("ALREADY_ISSUED")
+}, 60_000)

@@ -2,6 +2,8 @@ import { mkdtempSync, mkdirSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
+import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { MATCH_KERNEL } from "@cowards/engine"
 import { labRoot, type LabRoot } from "../contracts.js"
 import {
   DIAGNOSTIC_ONE_CELL_STORE,
@@ -17,6 +19,9 @@ import {
   createDiagnosticOneCellTerminal,
   openDiagnosticOneCellLedger,
   reopenDiagnosticOneCellLedger,
+  retainDiagnosticOneCellExecution,
+  verifyRetainedDiagnosticOneCellExecution,
+  createDiagnosticOneCellResult,
 } from "./diagnostic-one-cell.js"
 import { createDiagnosticPilotAllocation } from "./diagnostic-pilot.js"
 
@@ -36,6 +41,19 @@ const store = () => {
 }
 
 describe("version-disjoint one-cell diagnostic", () => {
+  it("uses a plausible current-edge Smoke start with all Soldiers and terrain inside the declared board", () => {
+    const value = allocation(), cell = createDiagnosticOneCellCell(value, 0)
+    const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")!
+    const bottomPlayerId = `league-${cell.bottomCandidateRoot.slice(7)}`, topPlayerId = `league-${cell.topCandidateRoot.slice(7)}`
+    const machine = MATCH_KERNEL.createMachineV119({ matchId: "source-only-board-fixture", seed: value.seed, arenaVariant: smoke, bottomPlayerId, topPlayerId, initialInitiativePlayerId: bottomPlayerId, bottomStrategyRevisionId: "source-only-bottom", topStrategyRevisionId: "source-only-top" })
+    const initial = machine.initialState
+    expect(initial.soldiers).toHaveLength(16)
+    const inside = ({ x, y }: { x: number; y: number }) => x >= initial.bounds.minX && x <= initial.bounds.maxX && y >= initial.bounds.minY && y <= initial.bounds.maxY
+    expect(initial.soldiers.every((soldier) => soldier.position && inside(soldier.position))).toBe(true)
+    expect(initial.terrainStones.every(inside)).toBe(true)
+    expect(initial.soldiers.filter((soldier) => soldier.ownerPlayerId === bottomPlayerId).map((soldier) => soldier.position?.y)).toEqual(Array(8).fill(11))
+    expect(initial.soldiers.filter((soldier) => soldier.ownerPlayerId === topPlayerId).map((soldier) => soldier.position?.y)).toEqual(Array(8).fill(0))
+  })
   it("derives exactly one fresh S01/S03 Smoke condition and rejects old or extra cells", () => {
     const value = allocation()
     expect(value.schemaVersion).toBe("diagnostic-one-cell-allocation-v3")
@@ -72,5 +90,18 @@ describe("version-disjoint one-cell diagnostic", () => {
     const reopened = reopenDiagnosticOneCellLedger(openDiagnosticOneCellLedger(directory), value)
     expect(reopened.records).toHaveLength(1)
     expect(reopened.records[0]).toMatchObject({ start, terminal: null, processValidity: "process_invalid" })
+  })
+
+  it("requires a complete reopened execution manifest for any diagnostic-only positive", () => {
+    const directory = store(), value = allocation(), cell = createDiagnosticOneCellCell(value, 0), start = createDiagnosticOneCellStart(value, cell), ledger = openDiagnosticOneCellLedger(directory)
+    ledger.writeStart(start)
+    const execution = { kind: "completed", privacy: "private_offline", transitions: [], accounting: [], result: { state: { outcome: { type: "DRAW" } }, events: [] } } as never
+    const retained = retainDiagnosticOneCellExecution(ledger, value, cell, start, execution)
+    expect(verifyRetainedDiagnosticOneCellExecution(ledger, value, cell, start, retained.evidenceRoot)).toMatchObject({ disposition: "success", artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords })
+    for (let ordinal = 0; ordinal < 6; ordinal++) ledger.writeStage(createDiagnosticOneCellStage(start, ordinal, ["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write", "terminal_publication"][ordinal] as never))
+    const terminal = createDiagnosticOneCellTerminal(start, { disposition: "success", processValidity: "process_valid", evidenceRoot: retained.evidenceRoot, cleanupComplete: true, elapsedMilliseconds: 20, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords, code: "completed", lastEnteredStage: "terminal_publication", failureStage: "unknown", cause: "unknown_internal" })
+    ledger.writeTerminal(terminal)
+    expect(createDiagnosticOneCellResult(value, ledger, 21, true)).toMatchObject({ processValidity: "process_valid", leagueRequirementsEvidence: false, freezeAuthorized: false, counted: false, public: false })
+    expect(() => createDiagnosticOneCellResult(value, ledger, 21, false)).toThrow()
   })
 })

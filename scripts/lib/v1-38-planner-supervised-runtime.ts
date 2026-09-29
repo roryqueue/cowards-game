@@ -7,6 +7,7 @@ import { createSelectedCurrentRuntimeFromRevisionV119 } from "../../packages/run
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
+import { requireDiagnosticOneCellLifetimeGrant, type DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
 import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
 
@@ -34,17 +35,25 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   /** A distinct, durable-precharge-bound pilot exception; never benchmark mode. */
   pilotLifetimeMs?: number;
   pilotLifetimeGrant?: DiagnosticPilotLifetimeGrant;
+  /** Distinct v3 diagnostic exception, never the consumed pilot capability. */
+  oneCellLifetimeMs?: number;
+  oneCellLifetimeGrant?: DiagnosticOneCellLifetimeGrant;
 }
 
 /** Pure bound used before any container construction; testable with an inert
  * durable pilot grant without creating a provider or Match. */
-export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">, invocationLimit: number): number => {
+export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "oneCellLifetimeGrant" | "oneCellLifetimeMs" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">, invocationLimit: number): number => {
   if ((options.pilotLifetimeGrant === undefined) !== (options.pilotLifetimeMs === undefined)) throw new TypeError("LAB_RUNTIME_PILOT_GRANT")
+  if ((options.oneCellLifetimeGrant === undefined) !== (options.oneCellLifetimeMs === undefined) || options.pilotLifetimeGrant && options.oneCellLifetimeGrant) throw new TypeError("LAB_RUNTIME_ONE_CELL_GRANT")
   if (options.pilotLifetimeGrant !== undefined) {
     if (options.benchmarkLifetimeMs !== undefined || options.observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_PILOT_MODE")
     requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.pilotLifetimeMs! })
   }
-  const lifetime = options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120_000
+  if (options.oneCellLifetimeGrant !== undefined) {
+    if (options.benchmarkLifetimeMs !== undefined || options.observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_ONE_CELL_MODE")
+    requireDiagnosticOneCellLifetimeGrant(options.oneCellLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.oneCellLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.oneCellLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.oneCellLifetimeMs! })
+  }
+  const lifetime = options.oneCellLifetimeMs ?? options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120_000
   if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3_600_000 || (options.benchmarkLifetimeMs !== undefined && (!options.observerHarness || invocationLimit !== 2_200))) throw new TypeError("LAB_RUNTIME_LIFETIME")
   return lifetime
 }
