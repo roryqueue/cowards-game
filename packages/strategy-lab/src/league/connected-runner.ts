@@ -272,6 +272,17 @@ const requireOneCellIssued = (value: DiagnosticOneCellIssuedProvider, allocation
   if (!provider || !binding || binding.seat !== seat || binding.allocationRoot !== allocation.root || binding.cellRoot !== cell.root || binding.startRoot !== start.root || binding.requestRoot !== cell.requestRoot || binding.candidate.root !== value.candidateRoot || labRoot("diagnostic-one-cell-provider-identity-v3", provider.identity) !== labRoot("diagnostic-one-cell-provider-identity-v3", value.identity)) return fail("ONE_CELL_ISSUED_BINDING")
   return provider
 }
+/** Rechecked by the evidence producer itself, so a direct call cannot supply
+ * raw self-verifying providers or a different current-rules condition. */
+export const requireDiagnosticOneCellOpaquePair = (input: { readonly allocation: DiagnosticOneCellAllocation; readonly cell: DiagnosticOneCellCell; readonly start: DiagnosticOneCellStart; readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; readonly bottom: DiagnosticOneCellIssuedProvider; readonly top: DiagnosticOneCellIssuedProvider }) => {
+  const allocation = admitDiagnosticOneCellAllocation(input.allocation), cell = admitDiagnosticOneCellCell(allocation, input.cell)
+  const start = createDiagnosticOneCellStart(allocation, cell)
+  if (input.start.root !== start.root || input.bottom === input.top) return fail("ONE_CELL_MATCH_REQUEST")
+  const bottom = requireOneCellIssued(input.bottom, allocation, cell, start, "bottom"), top = requireOneCellIssued(input.top, allocation, cell, start, "top")
+  const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
+  if (!smoke || input.match.seed !== allocation.seed || labRoot("diagnostic-one-cell-arena-v3", input.match.arenaVariant) !== labRoot("diagnostic-one-cell-arena-v3", smoke) || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || input.match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || input.match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || input.match.bottomStrategyRevisionId !== bottom.identity.revisionId || input.match.topStrategyRevisionId !== top.identity.revisionId) return fail("ONE_CELL_MATCH_BINDING")
+  return Object.freeze({ bottom, top })
+}
 export const closeDiagnosticOneCellIssuedProvider = (value: DiagnosticOneCellIssuedProvider): boolean => {
   if (!value || !oneCellIssuedProviders.has(value)) return fail("ONE_CELL_UNISSUED_PROVIDER")
   const provider = privateProviders.get(value)
@@ -295,11 +306,9 @@ export const runDiagnosticOneCellCell = async (input: Readonly<{
   const allocation = admitDiagnosticOneCellAllocation(input.allocation), cell = admitDiagnosticOneCellCell(allocation, input.cell)
   const start = verifyDiagnosticOneCellLedger(input.ledger, allocation, cell, input.start)
   if (input.requestRoot !== cell.requestRoot || input.bottom === input.top) return fail("ONE_CELL_MATCH_REQUEST")
-  const bottom = requireOneCellIssued(input.bottom, allocation, cell, start, "bottom"), top = requireOneCellIssued(input.top, allocation, cell, start, "top")
-  const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
-  if (!smoke || input.match.seed !== allocation.seed || labRoot("diagnostic-one-cell-arena-v3", input.match.arenaVariant) !== labRoot("diagnostic-one-cell-arena-v3", smoke) || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || input.match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || input.match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || input.match.bottomStrategyRevisionId !== bottom.identity.revisionId || input.match.topStrategyRevisionId !== top.identity.revisionId) return fail("ONE_CELL_MATCH_BINDING")
+  requireDiagnosticOneCellOpaquePair({ allocation, cell, start, match: input.match, bottom: input.bottom, top: input.top })
   const runPermit = input.ledger.writeRunAttempt(start)
-  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top }, onKernelEntry: input.onKernelEntry, onEvidenceStart: input.onEvidenceStart })
+  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, match: input.match, bottom: input.bottom, top: input.top, onKernelEntry: input.onKernelEntry, onEvidenceStart: input.onEvidenceStart })
   return Object.freeze({ disposition: retained.disposition, processValidity: retained.processValidity, evidenceRoot: retained.evidenceRoot, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords, transitionCount: retained.transitionCount, accountingCount: retained.accountingCount, cleanupComplete: retained.cleanupComplete })
 }
 

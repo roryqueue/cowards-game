@@ -81,6 +81,15 @@ describe("version-disjoint one-cell diagnostic", () => {
     expect(() => createDiagnosticOneCellTerminal(start, { ...terminal, disposition: "success", processValidity: "process_valid", code: "completed" })).toThrow()
   })
 
+  it("refuses a failure terminal that claims an unentered checkpoint", () => {
+    const directory = store(), value = allocation(), cell = createDiagnosticOneCellCell(value, 0), start = createDiagnosticOneCellStart(value, cell), ledger = openDiagnosticOneCellLedger(directory)
+    ledger.writeStart(start)
+    ledger.writeStage(createDiagnosticOneCellStage(start, 0, "bottom_issuance"))
+    ledger.writeStage(createDiagnosticOneCellStage(start, 5, "terminal_publication"))
+    ledger.writeTerminal(createDiagnosticOneCellTerminal(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 1, artifactBytes: 0, artifactRecords: 0, code: "system_failure", lastEnteredStage: "terminal_publication", failureStage: "kernel_or_callback", cause: "unknown_internal" }))
+    expect(() => reopenDiagnosticOneCellLedger(ledger, value)).toThrow("TERMINAL_STAGE")
+  })
+
   it("opens only the new 0700 store and retains one charge without manufacturing payoff", () => {
     const directory = store(), value = allocation(), cell = createDiagnosticOneCellCell(value, 0), start = createDiagnosticOneCellStart(value, cell)
     expect(() => openDiagnosticOneCellLedger(".strategy-lab/league-265-diagnostic-pilot-20260923-a")).toThrow()
@@ -99,8 +108,8 @@ describe("version-disjoint one-cell diagnostic", () => {
     for (let ordinal = 0; ordinal < 3; ordinal++) first.writeStage(createDiagnosticOneCellStage(start, ordinal, ["bottom_issuance", "top_issuance", "pre_kernel_binding"][ordinal] as never))
     const permit = first.writeRunAttempt(start)
     expect(() => first.writeRunAttempt(start)).toThrow("RUN_ATTEMPT_PRECONDITION")
-    const neverMatch = { ledger: first, allocation: value, cell, start, runPermit: permit, match: {} as never, providers: {}, onKernelEntry: () => { throw new Error("source-only injected callback failure") }, onEvidenceStart: () => {} }
-    await expect(runAndRetainCanonicalDiagnosticOneCell(neverMatch)).rejects.toThrow("source-only injected callback failure")
+    const neverMatch = { ledger: first, allocation: value, cell, start, runPermit: permit, match: {} as never, bottom: {} as never, top: {} as never, onKernelEntry: () => { throw new Error("source-only injected callback failure") }, onEvidenceStart: () => {} }
+    await expect(runAndRetainCanonicalDiagnosticOneCell(neverMatch)).rejects.toThrow("ONE_CELL_UNISSUED_PROVIDER")
     await expect(runAndRetainCanonicalDiagnosticOneCell(neverMatch)).rejects.toThrow("RUN_PERMIT")
     const restarted = openDiagnosticOneCellLedger(directory)
     expect(restarted.readRunAttempt(start.root)).toMatchObject({ startRoot: start.root, consumed: true })
@@ -111,7 +120,7 @@ describe("version-disjoint one-cell diagnostic", () => {
   it("rejects synthetic positives and requires a durable run attempt before canonical retention", async () => {
     const directory = store(), value = allocation(), cell = createDiagnosticOneCellCell(value, 0), start = createDiagnosticOneCellStart(value, cell), ledger = openDiagnosticOneCellLedger(directory)
     ledger.writeStart(start)
-    await expect(runAndRetainCanonicalDiagnosticOneCell({ ledger, allocation: value, cell, start, runPermit: {} as never, match: {} as never, providers: {}, onKernelEntry: () => {}, onEvidenceStart: () => {} })).rejects.toThrow("RUN_PERMIT")
+    await expect(runAndRetainCanonicalDiagnosticOneCell({ ledger, allocation: value, cell, start, runPermit: {} as never, match: {} as never, bottom: {} as never, top: {} as never, onKernelEntry: () => {}, onEvidenceStart: () => {} })).rejects.toThrow("RUN_PERMIT")
     expect(createDiagnosticOneCellResult(value, ledger, 21, "process_invalid", true)).toMatchObject({ processValidity: "process_invalid", chargedCount: 1, evidenceRoot: null, leagueRequirementsEvidence: false, freezeAuthorized: false, counted: false, public: false })
     expect(() => createDiagnosticOneCellResult(value, ledger, 21, "process_valid", true)).not.toThrow()
   })

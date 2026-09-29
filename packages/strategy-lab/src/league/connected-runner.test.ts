@@ -13,7 +13,7 @@ import { createFactoryRepository, publishFactoryArtifact } from "../factory/repo
 import type { FactorySupervisionProvider } from "../factory/admission.js"
 import { createLeagueCell } from "./contracts.js"
 import { issueDiagnosticOneCellProviderFromFactoryCandidate, issueDiagnosticPilotProviderFromFactoryCandidate, issueLeagueProviderFromFactoryCandidate, runDiagnosticOneCellCell, runLeagueCell, type FactorySupervisedRuntimeHost } from "./connected-runner.js"
-import { DIAGNOSTIC_ONE_CELL_STORE, createDiagnosticOneCellAllocation, createDiagnosticOneCellCell, createDiagnosticOneCellStart, createDiagnosticOneCellLifetimeGrant, openDiagnosticOneCellLedger } from "./diagnostic-one-cell.js"
+import { DIAGNOSTIC_ONE_CELL_STORE, createDiagnosticOneCellAllocation, createDiagnosticOneCellCell, createDiagnosticOneCellStart, createDiagnosticOneCellStage, createDiagnosticOneCellLifetimeGrant, openDiagnosticOneCellLedger, runAndRetainCanonicalDiagnosticOneCell } from "./diagnostic-one-cell.js"
 import { DIAGNOSTIC_PILOT_PHASE264_STORE, createDiagnosticPilotAllocation, readDiagnosticPilotAssessedPair } from "./diagnostic-pilot.js"
 import { createLeagueRepository, type LeagueCellStart } from "./repository.js"
 
@@ -137,4 +137,9 @@ historicalIt("binds a distinct v3 precharge and opaque handles; rejects both old
   expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger: ledger as never, allocation: allocation as never, cell: cell as never, start: start as never, requestRoot: cell.requestRoot, assessed: pair[0], pilotLifetimeGrant: {} as never })).toThrow()
   expect(() => issueDiagnosticOneCellProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation: old as never, cell, start, requestRoot: cell.requestRoot, assessed: pair[0], oneCellLifetimeGrant: {} as never })).toThrow()
   expect(() => issue(pair[0])).toThrow("ALREADY_ISSUED")
+  for (let ordinal = 0; ordinal < 3; ordinal++) ledger.writeStage(createDiagnosticOneCellStage(start, ordinal, ["bottom_issuance", "top_issuance", "pre_kernel_binding"][ordinal] as never))
+  const runPermit = ledger.writeRunAttempt(start)
+  const wrongSeed = { matchId: "source-only-wrong-seed", seed: "wrong", arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas.find((entry) => entry.id === "arena:smoke:v1")!, bottomPlayerId: `league-${cell.bottomCandidateRoot.slice(7)}`, topPlayerId: `league-${cell.topCandidateRoot.slice(7)}`, initialInitiativePlayerId: `league-${cell.initialInitiativeCandidateRoot.slice(7)}`, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }
+  await expect(runAndRetainCanonicalDiagnosticOneCell({ ledger, allocation, cell, start, runPermit, match: wrongSeed, bottom, top, onKernelEntry: () => { throw new Error("must not enter kernel") }, onEvidenceStart: () => {} })).rejects.toThrow("ONE_CELL_MATCH_BINDING")
+  await expect(runAndRetainCanonicalDiagnosticOneCell({ ledger, allocation, cell, start, runPermit, match: wrongSeed, bottom, top, onKernelEntry: () => {}, onEvidenceStart: () => {} })).rejects.toThrow("RUN_PERMIT")
 }, 60_000)

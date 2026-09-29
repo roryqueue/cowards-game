@@ -4,6 +4,7 @@ import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
+import { requireDiagnosticOneCellOpaquePair, type DiagnosticOneCellIssuedProvider } from "./connected-runner.js"
 import {
   DIAGNOSTIC_PILOT_BASES,
   DIAGNOSTIC_PILOT_GEOMETRY,
@@ -345,13 +346,16 @@ export const reopenDiagnosticOneCellLedger = (ledger: DiagnosticOneCellLedger, a
     const fields = { schemaVersion: "diagnostic-one-cell-run-attempt-v3" as const, startRoot: start.root, cellRoot: start.cellRoot, allocationRoot: start.allocationRoot, ordinal: 0 as const, consumed: true as const }
     if (!exact(attempt, ["schemaVersion", "startRoot", "cellRoot", "allocationRoot", "ordinal", "consumed", "root"]) || !same(attempt, { ...fields, root: labRoot("diagnostic-one-cell-run-attempt-v3", fields) })) return fail("LEDGER_RUN_ATTEMPT_MISMATCH")
   }
+  const enteredStages: number[] = []
   for (let ordinal = 0; ordinal < 6; ordinal++) {
     const checkpoint = ledger.readStage(start.root, ordinal)
-    if (checkpoint !== null) admitDiagnosticOneCellStage(start, checkpoint, ordinal)
+    if (checkpoint !== null) { admitDiagnosticOneCellStage(start, checkpoint, ordinal); enteredStages.push(ordinal) }
   }
   const terminalRaw = ledger.readTerminal(start.root)
   const terminal = terminalRaw === null ? null : admitDiagnosticOneCellTerminal(start, terminalRaw)
-  if (terminal && ledger.readStage(start.root, 5) === null) return fail("LEDGER_TERMINAL_STAGE")
+  if (terminal) {
+    if (enteredStages.at(-1) !== 5 || terminal.lastEnteredStage !== "unknown" && terminal.lastEnteredStage !== DIAGNOSTIC_ONE_CELL_STAGES[enteredStages.at(-1)!] || terminal.failureStage !== "unknown" && !enteredStages.some((ordinal) => DIAGNOSTIC_ONE_CELL_STAGES[ordinal] === terminal.failureStage) || terminal.disposition === "success" && enteredStages.length !== 6) return fail("LEDGER_TERMINAL_STAGE")
+  }
   return freezeLabValue({ retentionUncertain: uncertain, records: [{ start, terminal, processValidity: uncertain || !terminal ? "process_invalid" as const : terminal.processValidity }] })
 }
 
@@ -402,15 +406,17 @@ export const runAndRetainCanonicalDiagnosticOneCell = async (input: {
   readonly start: DiagnosticOneCellStart
   readonly runPermit: DiagnosticOneCellRunPermit
   readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]
-  readonly providers: Parameters<typeof runCanonicalLabMatch>[0]["providers"]
+  readonly bottom: DiagnosticOneCellIssuedProvider
+  readonly top: DiagnosticOneCellIssuedProvider
   readonly onKernelEntry: () => void
   readonly onEvidenceStart: () => void
 }) => {
   const permit = runPermits.get(input.runPermit)
   if (!permit || permit.ledger !== input.ledger || permit.startRoot !== input.start.root || permit.consumed || input.ledger.readRunAttempt(input.start.root) === null) return fail("CANONICAL_RUN_PERMIT")
   permit.consumed = true
+  const providers = requireDiagnosticOneCellOpaquePair(input)
   input.onKernelEntry()
-  const execution = await runCanonicalLabMatch({ match: input.match, providers: input.providers })
+  const execution = await runCanonicalLabMatch({ match: input.match, providers: { [input.match.bottomPlayerId]: providers.bottom, [input.match.topPlayerId]: providers.top } })
   input.onEvidenceStart()
   const retained = retainDiagnosticOneCellExecution(input.ledger, input.allocation, input.cell, input.start, execution)
   const disposition = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result) ? "system_failure" as const : execution.accounting.some((entry) => !entry.result.ok) ? "player_violation" as const : "success" as const
