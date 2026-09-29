@@ -24,6 +24,13 @@ import {
   readDiagnosticPilotAssessedPair,
   reopenDiagnosticPilotLedger,
   verifyDiagnosticPilotLedger,
+  DIAGNOSTIC_PILOT_STAGES,
+  createDiagnosticPilotStageCheckpoint,
+  admitDiagnosticPilotStageCheckpoint,
+  createDiagnosticPilotTerminalV2,
+  admitDiagnosticPilotTerminalV2,
+  safeDiagnosticPilotCause,
+  admitDiagnosticPilotProspectiveCapacity,
 } from "./diagnostic-pilot.js"
 
 const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
@@ -35,6 +42,31 @@ const allocation = () => createDiagnosticPilotAllocation({
 })
 
 describe("diagnostic-only pilot identity and precharge", () => {
+  it("roots only monotone, bounded stage markers and safe exact-code causes in a disjoint version", () => {
+    const admitted = allocation(), start = createDiagnosticPilotStart(admitted, createDiagnosticPilotCell(admitted, 0))
+    const checkpoints = DIAGNOSTIC_PILOT_STAGES.map((stage, ordinal) => createDiagnosticPilotStageCheckpoint(start, ordinal, stage))
+    for (const [ordinal, checkpoint] of checkpoints.entries()) {
+      expect(admitDiagnosticPilotStageCheckpoint(start, checkpoint, ordinal)).toEqual(checkpoint)
+      expect(() => admitDiagnosticPilotStageCheckpoint(start, { ...checkpoint, source: "secret" }, ordinal)).toThrow()
+      expect(() => admitDiagnosticPilotStageCheckpoint(start, { ...checkpoint, stage: "forged" }, ordinal)).toThrow()
+    }
+    expect(safeDiagnosticPilotCause(new TypeError("DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE"))).toBe("worker_candidate")
+    expect(safeDiagnosticPilotCause(new Error("DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE /private/secret"))).toBe("unknown_internal")
+    expect(safeDiagnosticPilotCause({ message: "DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE", source: "secret" })).toBe("unknown_internal")
+    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 10, artifactBytes: 0, artifactRecords: 0, code: "system_failure", lastEnteredStage: "top_issuance", cause: "worker_candidate" })
+    expect(admitDiagnosticPilotTerminalV2(start, terminal)).toEqual(terminal)
+    expect(() => admitDiagnosticPilotTerminalV2(start, { ...terminal, stack: "private" })).toThrow()
+    expect(() => admitDiagnosticPilotTerminalV2(start, { ...terminal, cause: "raw private error" })).toThrow()
+    expect(() => admitDiagnosticPilotTerminalV2(start, { ...terminal, lastEnteredStage: "terminal_publication" })).toThrow()
+    expect(() => admitDiagnosticPilotTerminalV2(start, { ...terminal, schemaVersion: "diagnostic-pilot-terminal-v1" })).toThrow()
+  })
+
+  it("keeps six checkpoint, atomic-link, emergency-terminal and diagnosis reserves inside unchanged caps", () => {
+    const cap = 1_000_000
+    expect(admitDiagnosticPilotProspectiveCapacity({ retainedBytes: cap - 600_000, retainedRecords: 20, retainedInodes: 20, incomingBytes: 128, completedStages: 0, maxBytes: cap, maxRecords: 100, maxInodes: 100 })).toBe(true)
+    expect(() => admitDiagnosticPilotProspectiveCapacity({ retainedBytes: cap - 300_000, retainedRecords: 20, retainedInodes: 20, incomingBytes: 128, completedStages: 0, maxBytes: cap, maxRecords: 100, maxInodes: 100 })).toThrow()
+    expect(() => admitDiagnosticPilotProspectiveCapacity({ retainedBytes: 0, retainedRecords: 90, retainedInodes: 90, incomingBytes: 128, completedStages: 0, maxBytes: cap, maxRecords: 100, maxInodes: 100 })).toThrow()
+  })
   it("admits exactly four canonical S01/S03 Smoke conditions under a distinct root", () => {
     const admitted = admitDiagnosticPilotAllocation(allocation())
     expect(admitted.evidenceClass).toBe("diagnostic_only")
