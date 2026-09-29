@@ -5,21 +5,27 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 Plan08 source-only diagnostic implementation; Plan07 full-league run consumed process-invalid with no retry authority
-last_updated: "2026-09-23"
-last_activity: 2026-09-23
-last_activity_desc: Approved diagnostic pilot researched and Plans265-08/09 independently checked; no new allocation or Match has run
+stopped_at: Phase265 Plan08 source-only gate complete; Plan09 conditional diagnostic pilot pending, with no new allocation or Match yet
+last_updated: "2026-09-29"
+last_activity: 2026-09-29
+last_activity_desc: Plan265-08 exact-source diagnostic route independently reviewed and signed; no pilot allocation or Match created
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 33
-current_plan: 8
+current_plan: 9
 total_plans_in_phase: 9
 ---
 
 # State: Coward's Game
+
+## Current Session Continuity — 2026-09-29 Plan265-08 source-only closeout
+
+Plan265-08 is complete as a source-only diagnostic route. Its eight source/test/boundary files and lockfile/CI definition form exact closure `sha256:86d157dd8ca42de29a55e966e223263f9bf96eac21afa531489fe7d82c543059`; an independent zero-actionable review and all 11 passing source-gate commands are bound by signed gate root `sha256:a6848166b539d9885aed10825a1c3f36731b7fc32474abf0dea2a38eef5e5a76`. The receipt explicitly has `empiricalAuthority:false`. Three source-only targeted-reader samples were 14,739, 14,013 and 14,057 ms, with a 44,739-ms maximum-plus-margin ceiling. Neither Plan08 nor its tests created a pilot allocation, repository reservation, provider, Strategy, model, Match or result; the old allocation-v2, process-invalid result and repositories remain immutable.
+
+Plan265-09 is the current conditional pilot plan, not an automatic dispatch. The consumed Plan265-07 full-league route remains process-invalid and non-retryable. Phase265 remains incomplete; LEAG-01–09 are unmet, and no Phase266 freeze, formation, holdout, counted, public or production authority follows from Plan08.
 
 ## Current Session Continuity — 2026-09-23 diagnostic supplement
 
@@ -802,6 +808,8 @@ Progress: [██░░░░░░░░] 22% (2 of 9 milestone phases complete
 
 ## Performance Metrics
 
+**Plan265-08 source-only closeout (3 tasks, 10 changed deliverable files, 6d 9h 35m elapsed across paused sessions):** Focused 5-file/40-test, full Phase265 29-file/357-test, and privacy-marker 4-file/101-test commands passed. Strict TypeScript/build and all five boundary commands passed; signed gate root `sha256:a6848166b539d9885aed10825a1c3f36731b7fc32474abf0dea2a38eef5e5a76` has no empirical authority. No pilot allocation, reservation or Match exists.
+
 **Plan-144 source-only closeout:** Final source80936682 passed23/23 tests in592.22s, including the472.395s six-mode/two-root/two-process proof with zero producer guards. Independent V3 review is clean; summary8bb3dbb8 is one addition after reports0ac4c15d. Source/test/runtime byte identity permits full-proof reuse only with fresh later-descendant source-only, absence, ancestry and focused predicate/stage checks. Targeted tsc exits2 on406 unchanged baseline diagnostics, zero new. No requirement, v10 publication or execution authority is created.
 
 **Plan-130 closeout corrected (2 tasks plus three review corrections, 2 files):** Five focused tests passed across six genuine linked-worktree custody derivations and two file-backed guarded no-effect modes. Review V3 `bd82289b` is corrected at `6515ea1a` by requiring the complete live-v13 bytes to match immutable blob `0d299dc9` and SHA-256 `059fe04c` before semantic analysis. Root-relative native custody and prior whitelist corrections remain defense in depth. Plan110 remains ineligible; Plan131 alone is next and owns fresh independent v4 review/publication.
@@ -937,6 +945,8 @@ Progress: [██░░░░░░░░] 22% (2 of 9 milestone phases complete
 The entries below are a chronological decision ledger. Earlier route eligibility and next-action statements describe their historical point in time; lifecycle-v2 and correction-v10 at the top of this file supersede them for current status and authority.
 
 Decisions are logged in `.planning/PROJECT.md`. Current milestone decisions:
+
+- [Phase 265 Plan 08]: Preserve the independently signed source-only pilot gate without empirical authority; only Plan265-09 may conditionally prepare one separate diagnostic allocation, and the consumed process-invalid full-league route remains non-retryable.
 
 - [Phase 262]: Preserve Plan117/118 v1 as immutable non-current history; live-v12 admits only exact correction 0f8258d8.
 - [Phase 262]: Plan119 remains producer-incapable; only literal-zero Plan120 v2 may make revised Plan110 eligible.
@@ -1246,9 +1256,9 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-14T12:23:39.513Z
-Stopped at: Phase264 operator reports no usable current-rule model submissions; bounded fresh-generation recommendation pending
-Resume file: .planning/phases/264-immutable-factory-independent-oracles-and-quarantined-intake/264-CONTEXT.md
+Last session: 2026-09-29T19:35:20Z
+Stopped at: Completed Plan265-08 source-only diagnostic route; Plan265-09 conditional pilot remains pending
+Resume file: .planning/phases/265-serious-current-rules-league-and-development-red-team/265-09-PLAN.md
 
 ### Blockers
 
