@@ -274,7 +274,7 @@ const requireOneCellIssued = (value: DiagnosticOneCellIssuedProvider, allocation
 }
 /** Rechecked by the evidence producer itself, so a direct call cannot supply
  * raw self-verifying providers or a different current-rules condition. */
-export const requireDiagnosticOneCellOpaquePair = (input: { readonly allocation: DiagnosticOneCellAllocation; readonly cell: DiagnosticOneCellCell; readonly start: DiagnosticOneCellStart; readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; readonly bottom: DiagnosticOneCellIssuedProvider; readonly top: DiagnosticOneCellIssuedProvider }) => {
+const requireDiagnosticOneCellOpaquePair = (input: { readonly allocation: DiagnosticOneCellAllocation; readonly cell: DiagnosticOneCellCell; readonly start: DiagnosticOneCellStart; readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; readonly bottom: DiagnosticOneCellIssuedProvider; readonly top: DiagnosticOneCellIssuedProvider }) => {
   const allocation = admitDiagnosticOneCellAllocation(input.allocation), cell = admitDiagnosticOneCellCell(allocation, input.cell)
   const start = createDiagnosticOneCellStart(allocation, cell)
   if (input.start.root !== start.root || input.bottom === input.top) return fail("ONE_CELL_MATCH_REQUEST")
@@ -282,6 +282,16 @@ export const requireDiagnosticOneCellOpaquePair = (input: { readonly allocation:
   const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
   if (!smoke || input.match.seed !== allocation.seed || labRoot("diagnostic-one-cell-arena-v3", input.match.arenaVariant) !== labRoot("diagnostic-one-cell-arena-v3", smoke) || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || input.match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || input.match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || input.match.bottomStrategyRevisionId !== bottom.identity.revisionId || input.match.topStrategyRevisionId !== top.identity.revisionId) return fail("ONE_CELL_MATCH_BINDING")
   return Object.freeze({ bottom, top })
+}
+const oneCellBridgePermits = new WeakMap<object, { readonly bottom: FactorySupervisionProvider; readonly top: FactorySupervisionProvider; readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; consumed: boolean }>()
+export interface DiagnosticOneCellBridgePermit { readonly schemaVersion: "diagnostic-one-cell-bridge-permit-v3"; toJSON(): never }
+/** The bridge does not return unwrapped providers. This one-shot operation is
+ * callable only with a token created inside runDiagnosticOneCellCell. */
+export const runDiagnosticOneCellCanonicalFromBridge = async (value: DiagnosticOneCellBridgePermit): Promise<LabMatchExecution> => {
+  const binding = value && oneCellBridgePermits.get(value)
+  if (!binding || binding.consumed) return fail("ONE_CELL_BRIDGE_PERMIT")
+  binding.consumed = true
+  return runCanonicalLabMatch({ match: binding.match, providers: { [binding.match.bottomPlayerId]: binding.bottom, [binding.match.topPlayerId]: binding.top } })
 }
 export const closeDiagnosticOneCellIssuedProvider = (value: DiagnosticOneCellIssuedProvider): boolean => {
   if (!value || !oneCellIssuedProviders.has(value)) return fail("ONE_CELL_UNISSUED_PROVIDER")
@@ -306,9 +316,11 @@ export const runDiagnosticOneCellCell = async (input: Readonly<{
   const allocation = admitDiagnosticOneCellAllocation(input.allocation), cell = admitDiagnosticOneCellCell(allocation, input.cell)
   const start = verifyDiagnosticOneCellLedger(input.ledger, allocation, cell, input.start)
   if (input.requestRoot !== cell.requestRoot || input.bottom === input.top) return fail("ONE_CELL_MATCH_REQUEST")
-  requireDiagnosticOneCellOpaquePair({ allocation, cell, start, match: input.match, bottom: input.bottom, top: input.top })
+  const providers = requireDiagnosticOneCellOpaquePair({ allocation, cell, start, match: input.match, bottom: input.bottom, top: input.top })
   const runPermit = input.ledger.writeRunAttempt(start)
-  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, match: input.match, bottom: input.bottom, top: input.top, onKernelEntry: input.onKernelEntry, onEvidenceStart: input.onEvidenceStart })
+  const bridgePermit = Object.freeze({ schemaVersion: "diagnostic-one-cell-bridge-permit-v3" as const, toJSON(): never { return fail("ONE_CELL_BRIDGE_PERMIT_NON_SERIALIZABLE") } })
+  oneCellBridgePermits.set(bridgePermit, { ...providers, match: input.match, consumed: false })
+  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, bridgePermit, onKernelEntry: input.onKernelEntry, onEvidenceStart: input.onEvidenceStart })
   return Object.freeze({ disposition: retained.disposition, processValidity: retained.processValidity, evidenceRoot: retained.evidenceRoot, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords, transitionCount: retained.transitionCount, accountingCount: retained.accountingCount, cleanupComplete: retained.cleanupComplete })
 }
 

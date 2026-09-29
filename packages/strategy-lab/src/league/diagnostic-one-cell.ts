@@ -4,7 +4,7 @@ import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
-import { requireDiagnosticOneCellOpaquePair, type DiagnosticOneCellIssuedProvider } from "./connected-runner.js"
+import { runDiagnosticOneCellCanonicalFromBridge, type DiagnosticOneCellBridgePermit } from "./connected-runner.js"
 import {
   DIAGNOSTIC_PILOT_BASES,
   DIAGNOSTIC_PILOT_GEOMETRY,
@@ -405,18 +405,15 @@ export const runAndRetainCanonicalDiagnosticOneCell = async (input: {
   readonly cell: DiagnosticOneCellCell
   readonly start: DiagnosticOneCellStart
   readonly runPermit: DiagnosticOneCellRunPermit
-  readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]
-  readonly bottom: DiagnosticOneCellIssuedProvider
-  readonly top: DiagnosticOneCellIssuedProvider
+  readonly bridgePermit: DiagnosticOneCellBridgePermit
   readonly onKernelEntry: () => void
   readonly onEvidenceStart: () => void
 }) => {
   const permit = runPermits.get(input.runPermit)
   if (!permit || permit.ledger !== input.ledger || permit.startRoot !== input.start.root || permit.consumed || input.ledger.readRunAttempt(input.start.root) === null) return fail("CANONICAL_RUN_PERMIT")
   permit.consumed = true
-  const providers = requireDiagnosticOneCellOpaquePair(input)
   input.onKernelEntry()
-  const execution = await runCanonicalLabMatch({ match: input.match, providers: { [input.match.bottomPlayerId]: providers.bottom, [input.match.topPlayerId]: providers.top } })
+  const execution = await runDiagnosticOneCellCanonicalFromBridge(input.bridgePermit)
   input.onEvidenceStart()
   const retained = retainDiagnosticOneCellExecution(input.ledger, input.allocation, input.cell, input.start, execution)
   const disposition = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result) ? "system_failure" as const : execution.accounting.some((entry) => !entry.result.ok) ? "player_violation" as const : "success" as const
