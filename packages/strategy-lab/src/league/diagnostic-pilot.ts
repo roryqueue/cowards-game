@@ -1,0 +1,311 @@
+import { createHash, randomUUID } from "node:crypto"
+import { closeSync, constants, fsyncSync, linkSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync } from "node:fs"
+import { basename, join, resolve } from "node:path"
+import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
+import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
+import { FactoryCandidateSchema, FactoryOraclePacketSchema, FactoryProposalSchema, FactoryValidationEvidenceSchema, type FactoryCandidate } from "../factory/contracts.js"
+import { validateFactoryAttemptLedger, validateFactoryAttemptStart, validateFactoryAttemptTerminal } from "../factory/ledger.js"
+import { readFactoryArtifact, type FactoryRepository } from "../factory/repository.js"
+import { readFactorySupervisionArtifactRecords } from "../factory/supervision-artifacts.js"
+import { classifyNumericComparison, freezeNumericCalibrationThreshold, type NumericComparison, type NumericControlTable } from "../factory/numeric-calibration.js"
+import { LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission } from "./contracts.js"
+import { leaguePlayerId } from "./matrix.js"
+import type { FactoryCandidateClosure } from "./connected-runner.js"
+
+const fail = (code: string): never => { throw new TypeError(`DIAGNOSTIC_PILOT_${code}`) }
+const ROOT = /^sha256:[0-9a-f]{64}$/u
+const root = (value: unknown): value is LabRoot => typeof value === "string" && ROOT.test(value)
+const byteRoot = (bytes: Uint8Array): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+const canonicalBytes = (value: unknown): Uint8Array => {
+  const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
+  if (!admitted.ok || admitted.canonicalByteLength < 1 || admitted.canonicalByteLength > 262_144) return fail("CANONICAL_BYTES")
+  return admitted.canonicalBytes
+}
+const parse = (bytes: Uint8Array): Record<string, unknown> => {
+  const admitted = admitCanonicalJsonBytes(bytes, { profile: "canonical-manifest", operation: "require-canonical" })
+  if (!admitted.ok || admitted.value === null || typeof admitted.value !== "object" || Array.isArray(admitted.value)) return fail("CANONICAL_RECORD")
+  return admitted.value as Record<string, unknown>
+}
+const record = (domain: string, value: Record<string, unknown>, keys: readonly string[]) => {
+  if (!exactLabKeys(value, [...keys, "schemaVersion", "root"]) || value.schemaVersion !== domain || !root(value.root)) return fail("RECORD_SCHEMA")
+  const { root: identity, ...fields } = value
+  if (identity !== labRoot(domain, fields)) return fail("RECORD_ROOT")
+  return value
+}
+
+export const DIAGNOSTIC_PILOT_STORE = ".strategy-lab/league-265-diagnostic-pilot-20260923-a" as const
+export const DIAGNOSTIC_PILOT_RESULT = ".planning/artifacts/v1.38-phase-265-diagnostic-pilot-result.json" as const
+export const DIAGNOSTIC_PILOT_SEED = "league-265-postfailure-pilot-20260923-a" as const
+export const DIAGNOSTIC_PILOT_GEOMETRY = "sha256:39aecc22c184660c1c08ab810fbfa3066da1a650b20e91d72a838ed7fb70a0e1" as LabRoot
+export const DIAGNOSTIC_PILOT_PHASE264_STORE = ".strategy-lab/factory-264-fresh-20260914-approved-two" as const
+export const DIAGNOSTIC_PILOT_ASSESSMENT = freezeLabValue({
+  artifactRoot: "sha256:25913b26fa81fa15177774fbdcf9c0d1ef244ad13910bc664bfde4ea8c2e43f8" as LabRoot,
+  assessmentRoot: "sha256:0446fef49598ef425c883774adb23159ade4b1e44f630463a72562777a9ecea1" as LabRoot,
+  thresholdArtifactRoot: "sha256:f6098c9e14ed868e162a9374557e518678996b619f3f8912fb8723113328fa72" as LabRoot,
+  producerImplementationRoot: "sha256:5baaeb677327a6102fd3dc719543686b14448122a91a4bca320cd0836cf5040b" as LabRoot,
+  assessmentImplementationRoot: "sha256:6a6094089e6714def26c427f60dfc0fae15e534cc685ad7a76dc883c4911b97c" as LabRoot,
+  executionArtifactRoot: "sha256:5cc42a1a59fe81a49824cca263ed92cb4619b0de816ee341927cbb1d297ad989" as LabRoot,
+  producerReviewArtifactRoot: "sha256:cf5caeeff3154a16f901b262815892e0fdbf40ec3d60f693407b37323814decd" as LabRoot,
+  assessorReviewArtifactRoot: "sha256:cfda2e1901a0e7ff94a86e3ea167718c73f2baf4f10a0133903426fdf7209735" as LabRoot,
+  correctionArtifactRoot: "sha256:380308f4b8c2aee5a3920466daa5327bf81d5d4159de65661f990ad002a3d807" as LabRoot,
+})
+export const DIAGNOSTIC_PILOT_BASES = freezeLabValue([
+  { slot: "S01", candidateRoot: "sha256:58a001abf66ad174ab43804cde6b051591b110509b3f0835ec2a4fa61e481def", admissionRoot: "sha256:850d8c03d00b6dd8791a68403801e55c37fcaf6f6f2f9c31105b782cbf9f26f5", publication: "sha256:248a48e285a6f15da53ade90b1d8a66200fd35a33c46ce716017209eefd0ea9b", source: "sha256:3a49f15d3b0164e25106e44bd27f1e33c11a13bf0bfd6410c85e494dead823e2", supervision: "sha256:80d17a2c7beebb758bb14eacd2dc9318d7d7b884363754e67510823bdda9ecf7", supervisionBytes: 3_701_815, supervisionRecords: 1_155, packet: "sha256:ec8efeae5c37bfe5faf426dc02f04804a7f793148ddd55c45071f9edc74b6aa2", proposal: "sha256:1457f102aa1c0c724ff095397d11e7d566aed85e0b49dff8d87407b4afbde305", validation: "sha256:5f3d9d3868ffe17dd0cc75fe9ac132bb9b9ff608d508ffaf10211806f02a341c", start: "sha256:3fd1884a7c9a06f60cfce5d650890d97fcadcc502581cab2abf2b506cba98cb5", terminal: "sha256:d05e72e01e96c050d346042b234f8b2b8c77b54ba09d69a80a359c4d438667a1" },
+  { slot: "S03", candidateRoot: "sha256:b0f982dbf499b9c76d14b47de35d17b1698999b366571f48a04655d139639289", admissionRoot: "sha256:f5cd002a1cece02fb4f9a63ea1d952354dd57558307be2304326cd806274a774", publication: "sha256:b53b00a5e92f0f696f40b20453a2821596f65be6fdc561d2b8bc44f351cf8de8", source: "sha256:19126911caf193808c53de111576986e80b26d9c2109dcb3d04edd3344b5e39f", supervision: "sha256:de70fc054600a04d26f7278811f8996d666d36a0b51233b19d7535137198abd6", supervisionBytes: 3_997_990, supervisionRecords: 1_276, packet: "sha256:0fd00718595ddd325aa622a02ad5cc0a28d59735b9e8e0f9fc1f2ef78b6a760e", proposal: "sha256:d749328e2d42c9020725d5d0af191dead719a2c03e10371080bfc06eaf210513", validation: "sha256:4b89fea76498adafd18b1cf032099d94879dfdce371803bddda6c032f03b8c9a", start: "sha256:eab3be22248697ea9ad5721184289fc2bb8ed8ff63fe51a1e8e323c14f88be22", terminal: "sha256:72b7d680827447a4ec3f761980dc7714976cdda0751df234510d66a5b0a9c5e6" },
+] as const)
+
+const scenario = () => createSetScenarioV137({
+  arenaCatalogVersion: CANONICAL_ARENA_CATALOG_V1_37.catalogVersion,
+  arenaSemanticGeometryHash: DIAGNOSTIC_PILOT_GEOMETRY,
+  entrantA: { entrantKey: DIAGNOSTIC_PILOT_BASES[0].candidateRoot, playerId: leaguePlayerId(DIAGNOSTIC_PILOT_BASES[0].candidateRoot) },
+  entrantB: { entrantKey: DIAGNOSTIC_PILOT_BASES[1].candidateRoot, playerId: leaguePlayerId(DIAGNOSTIC_PILOT_BASES[1].candidateRoot) },
+  baseSeed: DIAGNOSTIC_PILOT_SEED,
+})
+const CONDITION_IDS = [
+  "set-condition:sha256:8c78a3488ff1b3bfe21231e8183fabdfb1428b3c40e8be0466cca17e51036bad",
+  "set-condition:sha256:51ded4d1bb28d7de00b00059b3fc0b66598785037ac907bb772f6aeecaf49aa5",
+  "set-condition:sha256:6da20d83323911acf4891eb6736ebd372138364762905268e340852f364cbf68",
+  "set-condition:sha256:bbec91404c09ac50622b0bc25b09fd8d20dbcd037d62e2fdd2c07f7ff17be7af",
+] as const
+const allocationFields = ["evidenceClass", "privacy", "phase", "seed", "scenarioId", "semanticGeometryHash", "candidateRoots", "candidateAdmissionRoots", "tupleRoot", "runtimeRoot", "image", "perMatchMilliseconds", "overallMilliseconds", "retryCount", "cells", "sourceClosureRoot", "implementationRoot", "gateRoot", "leagueRequirementsEvidence", "formationAuthorized", "counted", "public"] as const
+
+export interface DiagnosticPilotAllocation {
+  readonly schemaVersion: "diagnostic-pilot-allocation-v1"; readonly root: LabRoot; readonly evidenceClass: "diagnostic_only"; readonly privacy: "private_offline"; readonly phase: 265
+  readonly seed: typeof DIAGNOSTIC_PILOT_SEED; readonly scenarioId: string; readonly semanticGeometryHash: LabRoot
+  readonly candidateRoots: readonly [LabRoot, LabRoot]; readonly candidateAdmissionRoots: readonly [LabRoot, LabRoot]
+  readonly tupleRoot: LabRoot; readonly runtimeRoot: LabRoot; readonly image: string; readonly perMatchMilliseconds: 240000; readonly overallMilliseconds: 1800000; readonly retryCount: 0
+  readonly cells: readonly Readonly<{ ordinal: number; conditionId: string; requestIdentity: string; bottomCandidateRoot: LabRoot; topCandidateRoot: LabRoot; initialInitiativeCandidateRoot: LabRoot }>[]
+  readonly sourceClosureRoot: LabRoot; readonly implementationRoot: LabRoot; readonly gateRoot: LabRoot
+  readonly leagueRequirementsEvidence: false; readonly formationAuthorized: false; readonly counted: false; readonly public: false
+}
+export const createDiagnosticPilotAllocation = (identity: { readonly sourceClosureRoot: LabRoot; readonly implementationRoot: LabRoot; readonly gateRoot: LabRoot }): Readonly<DiagnosticPilotAllocation> => {
+  if (!Object.values(identity).every(root) || !exactLabKeys(identity, ["sourceClosureRoot", "implementationRoot", "gateRoot"])) return fail("ALLOCATION_SOURCE")
+  const source = scenario()
+  if (source.scenarioId !== "set-scenario:sha256:e0f70e74ccd4229ba6c78ddca08079dcf23a8c3d970acab1f001007fb7f842f1" || source.conditions.some((row, index) => row.conditionId !== CONDITION_IDS[index])) return fail("CANONICAL_CONDITIONS")
+  const fields = { evidenceClass: "diagnostic_only" as const, privacy: "private_offline" as const, phase: 265 as const, seed: DIAGNOSTIC_PILOT_SEED, scenarioId: source.scenarioId, semanticGeometryHash: DIAGNOSTIC_PILOT_GEOMETRY, candidateRoots: [DIAGNOSTIC_PILOT_BASES[0].candidateRoot, DIAGNOSTIC_PILOT_BASES[1].candidateRoot] as const, candidateAdmissionRoots: [DIAGNOSTIC_PILOT_BASES[0].admissionRoot, DIAGNOSTIC_PILOT_BASES[1].admissionRoot] as const, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: LAB_ADMITTED_ROOTS.image, perMatchMilliseconds: 240_000 as const, overallMilliseconds: 1_800_000 as const, retryCount: 0 as const, cells: source.conditions.map((condition) => ({ ordinal: condition.ordinal, conditionId: condition.conditionId, requestIdentity: condition.requestIdentity, bottomCandidateRoot: condition.bottomEntrantKey as LabRoot, topCandidateRoot: condition.topEntrantKey as LabRoot, initialInitiativeCandidateRoot: condition.initialInitiativeEntrantKey as LabRoot })), sourceClosureRoot: identity.sourceClosureRoot, implementationRoot: identity.implementationRoot, gateRoot: identity.gateRoot, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, counted: false as const, public: false as const }
+  const value = { schemaVersion: "diagnostic-pilot-allocation-v1" as const, ...fields, root: labRoot("diagnostic-pilot-allocation-v1", { schemaVersion: "diagnostic-pilot-allocation-v1", ...fields }) }
+  return freezeLabValue(value) as DiagnosticPilotAllocation
+}
+export const admitDiagnosticPilotAllocation = (value: unknown): Readonly<DiagnosticPilotAllocation> => {
+  if (!exactLabKeys(value, [...allocationFields, "schemaVersion", "root"])) return fail("ALLOCATION_KEYS")
+  const candidate = value as unknown as DiagnosticPilotAllocation
+  if (candidate.schemaVersion !== "diagnostic-pilot-allocation-v1" || !root(candidate.root) || ![candidate.sourceClosureRoot, candidate.implementationRoot, candidate.gateRoot].every(root)) return fail("ALLOCATION_IDENTITY")
+  const expected = createDiagnosticPilotAllocation({ sourceClosureRoot: candidate.sourceClosureRoot, implementationRoot: candidate.implementationRoot, gateRoot: candidate.gateRoot })
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("ALLOCATION_MISMATCH")
+  return expected
+}
+
+export interface DiagnosticPilotCell { readonly schemaVersion: "diagnostic-pilot-cell-v1"; readonly root: LabRoot; readonly allocationRoot: LabRoot; readonly ordinal: number; readonly conditionId: string; readonly requestIdentity: string; readonly requestRoot: LabRoot; readonly bottomCandidateRoot: LabRoot; readonly topCandidateRoot: LabRoot; readonly initialInitiativeCandidateRoot: LabRoot; readonly semanticGeometryHash: LabRoot; readonly tupleRoot: LabRoot; readonly runtimeRoot: LabRoot }
+export const createDiagnosticPilotCell = (allocation: DiagnosticPilotAllocation, ordinal: number): Readonly<DiagnosticPilotCell> => {
+  const admitted = admitDiagnosticPilotAllocation(allocation), condition = admitted.cells[ordinal]
+  if (!Number.isSafeInteger(ordinal) || !condition || condition.ordinal !== ordinal) return fail("CELL_ORDINAL")
+  const fields = { allocationRoot: admitted.root, ordinal, conditionId: condition.conditionId, requestIdentity: condition.requestIdentity, requestRoot: labRoot("diagnostic-pilot-request-v1", { allocationRoot: admitted.root, ordinal, requestIdentity: condition.requestIdentity }), bottomCandidateRoot: condition.bottomCandidateRoot, topCandidateRoot: condition.topCandidateRoot, initialInitiativeCandidateRoot: condition.initialInitiativeCandidateRoot, semanticGeometryHash: admitted.semanticGeometryHash, tupleRoot: admitted.tupleRoot, runtimeRoot: admitted.runtimeRoot }
+  const base = { schemaVersion: "diagnostic-pilot-cell-v1" as const, ...fields }
+  return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-cell-v1", base) })
+}
+export const admitDiagnosticPilotCell = (allocation: DiagnosticPilotAllocation, value: unknown): Readonly<DiagnosticPilotCell> => {
+  if (!exactLabKeys(value, ["schemaVersion", "root", "allocationRoot", "ordinal", "conditionId", "requestIdentity", "requestRoot", "bottomCandidateRoot", "topCandidateRoot", "initialInitiativeCandidateRoot", "semanticGeometryHash", "tupleRoot", "runtimeRoot"])) return fail("CELL_KEYS")
+  const expected = createDiagnosticPilotCell(allocation, (value as unknown as DiagnosticPilotCell).ordinal)
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("CELL_MISMATCH")
+  return expected
+}
+export const diagnosticPilotContainerIdentity = (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, seat: "bottom" | "top") => {
+  const admitted = admitDiagnosticPilotCell(allocation, cell)
+  if (!["bottom", "top"].includes(seat)) return fail("CONTAINER_IDENTITY")
+  const suffix = admitted.root.slice(7, 27)
+  return freezeLabValue({ containerName: `cg-v138-pilot-${suffix}-${seat}`, ownershipLabel: `diagnostic-pilot-${admitted.root.slice(7)}` })
+}
+
+export interface DiagnosticPilotStart { readonly schemaVersion: "diagnostic-pilot-start-v1"; readonly root: LabRoot; readonly allocationRoot: LabRoot; readonly cellRoot: LabRoot; readonly ordinal: number; readonly requestRoot: LabRoot }
+export const createDiagnosticPilotStart = (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell): Readonly<DiagnosticPilotStart> => {
+  const admitted = admitDiagnosticPilotCell(allocation, cell)
+  const base = { schemaVersion: "diagnostic-pilot-start-v1" as const, allocationRoot: admitted.allocationRoot, cellRoot: admitted.root, ordinal: admitted.ordinal, requestRoot: admitted.requestRoot }
+  return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-start-v1", base) })
+}
+export const admitDiagnosticPilotStart = (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, value: unknown): Readonly<DiagnosticPilotStart> => {
+  if (!exactLabKeys(value, ["schemaVersion", "root", "allocationRoot", "cellRoot", "ordinal", "requestRoot"])) return fail("START_KEYS")
+  const expected = createDiagnosticPilotStart(allocation, cell)
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("START_MISMATCH")
+  return expected
+}
+export type DiagnosticPilotDisposition = "success" | "system_failure" | "player_violation" | "timeout" | "uncertain"
+export interface DiagnosticPilotTerminal { readonly schemaVersion: "diagnostic-pilot-terminal-v1"; readonly root: LabRoot; readonly startRoot: LabRoot; readonly disposition: DiagnosticPilotDisposition; readonly processValidity: "process_valid" | "process_invalid"; readonly evidenceRoot: LabRoot | null; readonly cleanupComplete: boolean; readonly elapsedMilliseconds: number; readonly artifactBytes: number; readonly artifactRecords: number; readonly code: "completed" | "system_failure" | "player_violation" | "cell_deadline" | "overall_deadline" | "cleanup_incomplete" | "publication_uncertain" }
+export const createDiagnosticPilotTerminal = (start: DiagnosticPilotStart, fields: Omit<DiagnosticPilotTerminal, "schemaVersion" | "root" | "startRoot">): Readonly<DiagnosticPilotTerminal> => {
+  const valid = ["success", "system_failure", "player_violation", "timeout", "uncertain"].includes(fields.disposition) && ["completed", "system_failure", "player_violation", "cell_deadline", "overall_deadline", "cleanup_incomplete", "publication_uncertain"].includes(fields.code) && [fields.elapsedMilliseconds, fields.artifactBytes, fields.artifactRecords].every((n) => Number.isSafeInteger(n) && n >= 0) && fields.elapsedMilliseconds <= 240_000 && fields.artifactBytes <= DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes && fields.artifactRecords <= DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords && (fields.evidenceRoot === null || root(fields.evidenceRoot)) && (fields.disposition === "success" ? fields.processValidity === "process_valid" && fields.cleanupComplete && fields.evidenceRoot !== null && fields.code === "completed" : fields.processValidity === "process_invalid")
+  if (!valid || !root(start.root)) return fail("TERMINAL_FIELDS")
+  const base = { schemaVersion: "diagnostic-pilot-terminal-v1" as const, startRoot: start.root, ...fields }
+  return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-terminal-v1", base) })
+}
+export const admitDiagnosticPilotTerminal = (start: DiagnosticPilotStart, value: unknown): Readonly<DiagnosticPilotTerminal> => {
+  if (!exactLabKeys(value, ["schemaVersion", "root", "startRoot", "disposition", "processValidity", "evidenceRoot", "cleanupComplete", "elapsedMilliseconds", "artifactBytes", "artifactRecords", "code"])) return fail("TERMINAL_KEYS")
+  const terminal = value as unknown as DiagnosticPilotTerminal
+  if (terminal.schemaVersion !== "diagnostic-pilot-terminal-v1" || terminal.startRoot !== start.root) return fail("TERMINAL_START")
+  const { root: identity, schemaVersion: _schema, startRoot: _start, ...fields } = terminal
+  const expected = createDiagnosticPilotTerminal(start, fields)
+  if (identity !== expected.root) return fail("TERMINAL_MISMATCH")
+  return expected
+}
+
+/** Per provider: 24,800 output envelopes of <=262,144 bytes; two providers,
+ * canonical transition/descriptor overhead and atomic temporary files are
+ * separately reserved. A local failure cap prevents an unbounded diagnostic. */
+export const DIAGNOSTIC_PILOT_ARTIFACT_CEILING = freezeLabValue({
+  version: "diagnostic-pilot-capacity-v1",
+  maxBytes: 2 * 24_800 * (262_144 + 8_192) + 1_010_000 * 8_192 + 16 * 262_144,
+  maxRecords: 2 * 24_800 * 4 + 1_010_000 * 2 + 128,
+  maxInodes: 2 * (2 * 24_800 * 4 + 1_010_000 * 2 + 128) + 128,
+  terminalReserveBytes: 2 * 262_144,
+  terminalReserveInodes: 8,
+  maxFailureBytes: 262_144,
+})
+
+export interface DiagnosticPilotLedger {
+  readonly directory: string
+  readonly writeStart: (start: DiagnosticPilotStart) => void
+  readonly readStart: (startRoot: LabRoot) => unknown | null
+  readonly writeTerminal: (terminal: DiagnosticPilotTerminal) => void
+  readonly readTerminal: (startRoot: LabRoot) => unknown | null
+  readonly listNames: () => readonly string[]
+}
+const openedLedgers = new WeakSet<object>()
+const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation): void => {
+  const allowed = allocation.cells.map((_, ordinal) => createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal)).root)
+  const names = ledger.listNames()
+  if (names.length > allowed.length * 2 || new Set(names).size !== names.length) return fail("LEDGER_INVENTORY")
+  const present: number[] = []
+  for (const name of names) {
+    const match = /^diagnostic-pilot-([a-f0-9]{64})\.(started|terminal)\.json$/u.exec(name)
+    if (!match) return fail("LEDGER_UNKNOWN_FILE")
+    const ordinal = allowed.indexOf(`sha256:${match[1]}` as LabRoot)
+    if (ordinal < 0) return fail("LEDGER_FOREIGN_START")
+    const id = allowed[ordinal]!
+    if (match[2] === "started") { present.push(ordinal); continue }
+    if (!ledger.readStart(id)) return fail("LEDGER_UNCHARGED_TERMINAL")
+  }
+  present.sort((left, right) => left - right)
+  if (present.some((ordinal, index) => ordinal !== index)) return fail("LEDGER_NONPREFIX")
+  for (const ordinal of present.slice(0, -1)) {
+    const cell = createDiagnosticPilotCell(allocation, ordinal), start = createDiagnosticPilotStart(allocation, cell)
+    const raw = ledger.readTerminal(start.root), terminal = raw === null ? null : admitDiagnosticPilotTerminal(start, raw)
+    if (!terminal || terminal.disposition !== "success" || terminal.processValidity !== "process_valid") return fail("LEDGER_PRIOR_NONPASS")
+  }
+}
+export const verifyDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, start: DiagnosticPilotStart): Readonly<DiagnosticPilotStart> => {
+  if (!openedLedgers.has(ledger) || (ledger as DiagnosticPilotLedger).directory !== resolve(DIAGNOSTIC_PILOT_STORE)) return fail("UNTRUSTED_LEDGER")
+  inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation))
+  const expected = admitDiagnosticPilotStart(allocation, cell, start)
+  const persisted = ledger.readStart(expected.root)
+  if (!persisted) return fail("PRECHARGE_ABSENT")
+  admitDiagnosticPilotStart(allocation, cell, persisted)
+  if (ledger.readTerminal(expected.root) !== null) return fail("PRECHARGE_ALREADY_TERMINAL")
+  return expected
+}
+export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation): Readonly<{ issued: false; records: readonly { start: DiagnosticPilotStart; terminal: DiagnosticPilotTerminal | null; processValidity: "process_invalid" | "process_valid" }[] }> => {
+  if (!openedLedgers.has(ledger) || (ledger as DiagnosticPilotLedger).directory !== resolve(DIAGNOSTIC_PILOT_STORE)) return fail("UNTRUSTED_LEDGER")
+  inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation))
+  const records = allocation.cells.map((_, ordinal) => {
+    const cell = createDiagnosticPilotCell(allocation, ordinal), start = createDiagnosticPilotStart(allocation, cell), raw = ledger.readStart(start.root)
+    if (!raw) return null
+    admitDiagnosticPilotStart(allocation, cell, raw)
+    const terminalRaw = ledger.readTerminal(start.root)
+    if (terminalRaw === null) return { start, terminal: null, processValidity: "process_invalid" as const }
+    const terminal = admitDiagnosticPilotTerminal(start, terminalRaw)
+    return { start, terminal, processValidity: terminal.processValidity }
+  }).filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+  if (records.some((entry, index) => entry.start.ordinal !== index)) return fail("NONPREFIX_LEDGER")
+  return freezeLabValue({ issued: false as const, records })
+}
+
+/** Real repository adapter is defined here, but Plan 08 never creates or opens
+ * the reserved pilot directory. Tests inject DiagnosticPilotLedger fakes. */
+export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLedger => {
+  const path = resolve(directory), stat = lstatSync(path)
+  if (path !== resolve(DIAGNOSTIC_PILOT_STORE) || basename(path) !== "league-265-diagnostic-pilot-20260923-a" || realpathSync(path) !== path || !stat.isDirectory() || (stat.mode & 0o777) !== 0o700) return fail("LEDGER_DIRECTORY")
+  const filename = (kind: "started" | "terminal", id: LabRoot) => join(path, `diagnostic-pilot-${id.slice(7)}.${kind}.json`)
+  const read = (kind: "started" | "terminal", id: LabRoot) => {
+    if (!root(id)) return fail("LEDGER_ROOT")
+    const file = filename(kind, id)
+    let stat
+    try { stat = lstatSync(file) } catch { return null }
+    if (!stat.isFile() || stat.nlink !== 1 || stat.size < 1 || stat.size > 262_144) return fail("LEDGER_FILE")
+    return parse(readFileSync(file))
+  }
+  const write = (kind: "started" | "terminal", id: LabRoot, value: unknown) => {
+    const data = canonicalBytes(value), target = filename(kind, id)
+    if (read(kind, id) !== null) return fail("LEDGER_OVERWRITE")
+    const temporary = `${target}.tmp-${randomUUID()}`
+    const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
+    try { let written = 0; while (written < data.length) written += writeSync(fd, data, written, data.length - written); fsyncSync(fd) } finally { closeSync(fd) }
+    try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
+    const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd) } finally { closeSync(dirFd) }
+  }
+  for (const name of readdirSync(path)) if (!/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal)\.json$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
+  const ledger = Object.freeze({ directory: path, writeStart(start: DiagnosticPilotStart) { write("started", start.root, start) }, readStart(id: LabRoot) { return read("started", id) }, writeTerminal(terminal: DiagnosticPilotTerminal) { if (!read("started", terminal.startRoot)) return fail("TERMINAL_UNCHARGED"); write("terminal", terminal.startRoot, terminal) }, readTerminal(id: LabRoot) { return read("terminal", id) }, listNames() { return readdirSync(path).sort() } })
+  openedLedgers.add(ledger)
+  return ledger
+}
+
+export interface DiagnosticPilotAssessedCandidate { readonly slot: "S01" | "S03"; readonly candidate: FactoryCandidate; readonly admission: LeagueCandidateAdmission; readonly closure: FactoryCandidateClosure; readonly historicalStore: string }
+const assessed = new WeakSet<object>()
+export const requireDiagnosticPilotAssessedCandidate = (value: DiagnosticPilotAssessedCandidate, repository: FactoryRepository): DiagnosticPilotAssessedCandidate => {
+  const pin = DIAGNOSTIC_PILOT_BASES.find((row) => row.slot === value?.slot)
+  if (!pin || !assessed.has(value) || value.historicalStore !== repository.directory || value.candidate.root !== pin.candidateRoot || value.admission.root !== pin.admissionRoot || value.closure.factoryRepository.directory !== repository.directory) return fail("UNAUTHENTICATED_CLOSURE")
+  return value
+}
+const readAttempt = (repository: FactoryRepository, id: LabRoot, kind: "started" | "terminal") => {
+  const path = join(repository.directory, `factory-attempt-${id.slice(7)}.${kind}.json`), stat = lstatSync(path)
+  if (!stat.isFile() || stat.nlink !== 1 || stat.size < 1 || stat.size > 262_144) return fail("HISTORICAL_ATTEMPT_FILE")
+  return parse(readFileSync(path))
+}
+const readArtifactRecord = (repository: FactoryRepository, artifactRoot: LabRoot, domain: string, keys: readonly string[]) => record(domain, parse(readFactoryArtifact(repository, artifactRoot)), keys)
+
+/** Exact-root historical reopening. No indexFactory, whole-store ledger or
+ * 48-workload assessment replay occurs, and no execution capability is issued. */
+export const readDiagnosticPilotAssessedPair = (repository: FactoryRepository): readonly [DiagnosticPilotAssessedCandidate, DiagnosticPilotAssessedCandidate] => {
+  if (basename(repository.directory) !== "factory-264-fresh-20260914-approved-two") return fail("HISTORICAL_STORE")
+  const pin = DIAGNOSTIC_PILOT_ASSESSMENT
+  const assessment = readArtifactRecord(repository, pin.artifactRoot, "factory-independence-assessment-v2", ["privacy", "input", "manifestRoot", "allocationRoot", "implementationRoot", "executionEvidenceRoot", "status", "reasons", "thresholdArtifactRoot", "controls", "baseEdges", "strategicSharingViolations", "completedCells", "completePairs", "scope", "competitiveClaim", "publicAuthority", "holdoutOpened", "formationMaterialized", "correctionArtifactRoot"])
+  if (assessment.root !== pin.assessmentRoot || assessment.privacy !== "private_offline" || assessment.status !== "affirmed" || !Array.isArray(assessment.reasons) || assessment.reasons.length !== 0 || assessment.thresholdArtifactRoot !== pin.thresholdArtifactRoot || assessment.implementationRoot !== pin.assessmentImplementationRoot || assessment.correctionArtifactRoot !== pin.correctionArtifactRoot || assessment.competitiveClaim !== "none" || assessment.publicAuthority !== false || assessment.holdoutOpened !== false || assessment.formationMaterialized !== false) return fail("ASSESSMENT")
+  const input = assessment.input as Record<string, unknown>
+  if (!input || input.executionEvidenceArtifactRoot !== pin.executionArtifactRoot || !Array.isArray(input.candidateArtifactRoots) || !Array.isArray(input.supervisionArtifactRoots) || !Array.isArray(input.terminalRoots) || input.candidateArtifactRoots.length !== 48 || input.supervisionArtifactRoots.length !== 48 || input.terminalRoots.length !== 48) return fail("ASSESSMENT_INPUT")
+  const threshold = readArtifactRecord(repository, pin.thresholdArtifactRoot, "factory-numeric-threshold-v2", ["allocationRoot", "controls", "correctionArtifactRoot", "implementationRoot", "manifestRoot", "measurementPolicyRoot", "receiptRoots", "sourceRoots", "studyPolicyRoot", "threshold"])
+  if (threshold.manifestRoot !== assessment.manifestRoot || threshold.allocationRoot !== assessment.allocationRoot || threshold.correctionArtifactRoot !== pin.correctionArtifactRoot || threshold.implementationRoot !== pin.assessmentImplementationRoot || !Array.isArray(threshold.sourceRoots) || threshold.sourceRoots.length !== 12) return fail("THRESHOLD")
+  const fit = freezeNumericCalibrationThreshold(threshold.controls as NumericControlTable)
+  if (fit.status !== "frozen" || labRoot("league-threshold-compare-v1", fit.threshold) !== labRoot("league-threshold-compare-v1", threshold.threshold)) return fail("THRESHOLD_NUMERIC")
+  const execution = readArtifactRecord(repository, pin.executionArtifactRoot, "factory-calibration-execution-evidence-v1", ["authoring", "manifestRoot", "negativeWitnessArtifactRoots", "sharedHelperAuditArtifactRoot", "sourceCommit", "sourceReviewArtifactRoot", "teacherSearchArtifactRoot", "teacherTrainingArtifactRoot"])
+  const producerReview = readArtifactRecord(repository, pin.producerReviewArtifactRoot, "factory-source-review-v1", ["authorIds", "implementationRoot", "reviewerId", "sourceCommit", "status", "unresolvedFindings", "reportArtifactRoot"])
+  const assessorReview = readArtifactRecord(repository, pin.assessorReviewArtifactRoot, "factory-source-review-v1", ["authorIds", "implementationRoot", "reviewerId", "sourceCommit", "status", "unresolvedFindings", "reportArtifactRoot"])
+  const correction = readArtifactRecord(repository, pin.correctionArtifactRoot, "factory-assessment-correction-v1", ["reason", "executionEvidenceArtifactRoot", "historicalManifestArtifactRoot", "assessorReviewArtifactRoot", "failureArtifactRoot", "inputRoot", "priorCorrectionFailureArtifactRoot"])
+  if (execution.sourceReviewArtifactRoot !== pin.producerReviewArtifactRoot || execution.sourceCommit !== producerReview.sourceCommit || producerReview.implementationRoot !== pin.producerImplementationRoot || producerReview.status !== "passed" || producerReview.unresolvedFindings !== 0 || assessorReview.implementationRoot !== pin.assessmentImplementationRoot || assessorReview.status !== "passed" || assessorReview.unresolvedFindings !== 0 || correction.executionEvidenceArtifactRoot !== pin.executionArtifactRoot || correction.assessorReviewArtifactRoot !== pin.assessorReviewArtifactRoot || correction.inputRoot !== labRoot("factory-assessment-correction-input-v1", input)) return fail("HISTORICAL_LINEAGE")
+  const entries = DIAGNOSTIC_PILOT_BASES.map((base, index): DiagnosticPilotAssessedCandidate => {
+    const publication = readArtifactRecord(repository, base.publication as LabRoot, "factory-candidate-publication-v1", ["privacy", "candidate", "independenceReceipt", "supervisionReceiptRoot", "independenceStatus"])
+    const candidate = FactoryCandidateSchema.parse(publication.candidate)
+    if (publication.privacy !== "private_offline" || candidate.root !== base.candidateRoot || candidate.supervisionReceiptRoot !== publication.supervisionReceiptRoot || candidate.proposal.source.root !== base.source || !(input.candidateArtifactRoots as unknown[]).includes(base.publication) || !(input.supervisionArtifactRoots as unknown[]).includes(base.supervision) || !(input.terminalRoots as unknown[]).includes(base.terminal)) return fail("PUBLICATION_MEMBERSHIP")
+    if ((threshold.sourceRoots as unknown[])[index === 0 ? 0 : 2] !== base.source || (threshold.sourceRoots as unknown[]).filter((value: unknown) => value === base.source).length !== 1) return fail("THRESHOLD_SLOT")
+    const edges = assessment.baseEdges as Record<string, NumericComparison>
+    const required = index === 0 ? ["S01/S03", "S01/S05"] : ["S01/S03", "S03/S05"]
+    if (required.some((edge) => !edges[edge] || classifyNumericComparison(edges[edge], fit.threshold) !== "distinct")) return fail("ASSESSMENT_DISTINCT")
+    const start = validateFactoryAttemptStart(readAttempt(repository, base.start as LabRoot, "started"))
+    const terminal = validateFactoryAttemptLedger(start, validateFactoryAttemptTerminal(readAttempt(repository, base.start as LabRoot, "terminal")))
+    if (start.root !== base.start || start.candidateRoot !== candidate.proposal.packetRoot || terminal.root !== base.terminal || terminal.outputRoot !== base.supervision || terminal.disposition !== "unresolved") return fail("ATTEMPT_JOIN")
+    const retained = readFactorySupervisionArtifactRecords(repository, base.supervision as LabRoot, { maxBytes: base.supervisionBytes, maxRecords: base.supervisionRecords })
+    if (retained.descriptor.byteLength !== base.supervisionBytes || retained.descriptor.recordCount !== base.supervisionRecords || retained.descriptor.receiptRoot !== candidate.supervisionReceiptRoot) return fail("SUPERVISION_DESCRIPTOR")
+    const receipt = retained.records.find((entry) => entry.kind === "receipt")?.value as Record<string, unknown> | undefined
+    const identity = receipt?.candidateIdentity as Record<string, unknown> | undefined, admission = receipt?.admission as Record<string, unknown> | undefined
+    if (!identity || !admission || identity.sourceRoot !== base.source || identity.attemptRoot !== start.root || identity.budgetRoot !== start.budgetRoot || admission.sourceRoot !== base.source || admission.packetRoot !== candidate.proposal.packetRoot || admission.proposalRoot !== candidate.proposal.root || admission.validationRoot !== candidate.validation.root || retained.records.find((entry) => entry.kind === "execution")?.value && (retained.records.find((entry) => entry.kind === "execution")!.value as Record<string, unknown>).kind !== "completed") return fail("SUPERVISION_JOIN")
+    const packet = FactoryOraclePacketSchema.parse(parse(readFactoryArtifact(repository, base.packet as LabRoot)))
+    const proposal = FactoryProposalSchema.parse(parse(readFactoryArtifact(repository, base.proposal as LabRoot)))
+    const validation = FactoryValidationEvidenceSchema.parse(parse(readFactoryArtifact(repository, base.validation as LabRoot)))
+    const source = readFactoryArtifact(repository, base.source as LabRoot)
+    if (packet.root !== candidate.proposal.packetRoot || proposal.root !== candidate.proposal.root || validation.root !== candidate.validation.root || packet.source.root !== base.source || proposal.source.root !== base.source || byteRoot(source) !== base.source || source.byteLength !== candidate.proposal.source.byteLength) return fail("CLOSURE_JOIN")
+    const importEvidence = { sourcePhase: 264 as const, publicationArtifactRoot: base.publication, supervisionArtifactRoot: base.supervision, assessmentArtifactRoot: pin.artifactRoot, assessmentRoot: pin.assessmentRoot, thresholdArtifactRoot: pin.thresholdArtifactRoot, sourceSlot: base.slot, qualification: "base_distinct" as const }
+    const admissionFields = { schemaVersion: "league-candidate-import-v1" as const, privacy: "private_offline" as const, candidate, supervisionReceiptRoot: candidate.supervisionReceiptRoot, fingerprintRoot: labRoot("factory-fingerprint-roots-v1", candidate.fingerprints), lineageRoot: labRoot("factory-lineage-v1", candidate.lineage), tupleRoot: candidate.proposal.build.compatibilityTupleRoot, runtimeRoot: candidate.proposal.nativeLane.runtimeProfileRoot, provenanceRoot: labRoot("league-import-provenance-v1", importEvidence), attemptStart: start, attemptTerminal: terminal, importEvidence }
+    const admitted = LeagueCandidateAdmissionSchema.parse({ ...admissionFields, root: labRoot("league-candidate-import-v1", admissionFields) })
+    if (admitted.root !== base.admissionRoot) return fail("ADMISSION_ROOT")
+    const closure: FactoryCandidateClosure = { factoryRepository: repository, candidatePublicationArtifactRoot: base.publication as LabRoot, sourceArtifactRoot: base.source as LabRoot, packetArtifactRoot: base.packet as LabRoot, proposalArtifactRoot: base.proposal as LabRoot, validationArtifactRoot: base.validation as LabRoot }
+    const result = Object.freeze({ slot: base.slot, candidate, admission: admitted, closure: Object.freeze(closure), historicalStore: repository.directory }) as DiagnosticPilotAssessedCandidate
+    assessed.add(result)
+    return result
+  })
+  return Object.freeze(entries) as unknown as readonly [DiagnosticPilotAssessedCandidate, DiagnosticPilotAssessedCandidate]
+}
