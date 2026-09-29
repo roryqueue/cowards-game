@@ -8,7 +8,7 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 import { labRoot, LAB_ADMITTED_ROOTS } from "../../packages/strategy-lab/src/contracts.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
-import { createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
+import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime, closePlannerRuntime } from "./v1-38-planner-supervised-runtime.js"
 import type { LeanContainerMatchTransport, LeanContainerPersistentStreamFactory } from "./v1-38-lean-container-match-session.js"
 import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-match-session.js"
 
@@ -44,6 +44,10 @@ const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, 
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
 
 describe("planner selected-v1.19 host with injected transport only", () => {
+  it("rejects grantless and mixed one-cell lifetime requests before a container exists", () => {
+    expect(() => admitPlannerSupervisorLifetime({ budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake", oneCellLifetimeMs: 240_000 }, 2200)).toThrow("ONE_CELL_GRANT")
+    expect(() => admitPlannerSupervisorLifetime({ budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake", oneCellLifetimeMs: 240_000, oneCellLifetimeGrant: {} as never, pilotLifetimeMs: 240_000, pilotLifetimeGrant: {} as never }, 2200)).toThrow("ONE_CELL_GRANT")
+  })
   it("permits explicit benchmark lifetime past120s while retaining the Match deadline", () => {
     let now = 0
     vi.spyOn(performance, "now").mockImplementation(() => now)

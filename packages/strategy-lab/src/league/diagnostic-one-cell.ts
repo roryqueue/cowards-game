@@ -3,12 +3,11 @@ import { closeSync, constants, fsyncSync, linkSync, lstatSync, openSync, readFil
 import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
-import type { LabMatchExecution } from "../runtime-bridge.js"
+import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
 import {
   DIAGNOSTIC_PILOT_BASES,
   DIAGNOSTIC_PILOT_GEOMETRY,
   DIAGNOSTIC_PILOT_STAGES,
-  safeDiagnosticPilotCause,
   type DiagnosticPilotCause,
   type DiagnosticPilotOldEvidenceBaseline,
   type DiagnosticPilotStage,
@@ -42,7 +41,19 @@ export const DIAGNOSTIC_ONE_CELL_RESULT_PATH = ".planning/artifacts/v1.38-phase-
 export const DIAGNOSTIC_ONE_CELL_STAGES = DIAGNOSTIC_PILOT_STAGES
 export type DiagnosticOneCellStageName = DiagnosticPilotStage
 export type DiagnosticOneCellCause = DiagnosticPilotCause
-export const safeDiagnosticOneCellCause = safeDiagnosticPilotCause
+const SAFE_CAUSES: Readonly<Record<string, DiagnosticOneCellCause>> = Object.freeze({
+  DIAGNOSTIC_ONE_CELL_CLI_WORKER_CANDIDATE: "worker_candidate",
+  DIAGNOSTIC_ONE_CELL_CLI_PILOT_REQUEST_BINDING: "pilot_request_binding",
+  DIAGNOSTIC_ONE_CELL_CLI_PILOT_MATCH_BINDING: "pilot_match_binding",
+  DIAGNOSTIC_ONE_CELL_EVIDENCE_ROW_CAP: "evidence_row_cap",
+  DIAGNOSTIC_ONE_CELL_EVIDENCE_OUTCOME_CAP: "evidence_outcome_cap",
+  DIAGNOSTIC_ONE_CELL_EVIDENCE_CAP: "evidence_cap",
+  DIAGNOSTIC_ONE_CELL_CLI_WORKER_MISSING_EVIDENCE: "worker_missing_evidence",
+  DIAGNOSTIC_ONE_CELL_CLI_WORKER_CELL_REOPEN: "worker_cell_reopen",
+  DIAGNOSTIC_ONE_CELL_LEDGER_CAP: "ledger_cap",
+  DIAGNOSTIC_ONE_CELL_LEDGER_OVERWRITE: "ledger_overwrite",
+})
+export const safeDiagnosticOneCellCause = (error: unknown): DiagnosticOneCellCause => error instanceof Error ? SAFE_CAUSES[error.message] ?? "unknown_internal" : "unknown_internal"
 
 export const DIAGNOSTIC_ONE_CELL_CAPACITY = freezeLabValue({
   version: "diagnostic-one-cell-capacity-v3",
@@ -189,6 +200,8 @@ export interface DiagnosticOneCellLedger {
   readonly hasUncertainPublication: () => boolean
   readonly writeStart: (start: DiagnosticOneCellStart) => void
   readonly readStart: (root: LabRoot) => unknown | null
+  readonly writeRunAttempt: (start: DiagnosticOneCellStart) => DiagnosticOneCellRunPermit
+  readonly readRunAttempt: (root: LabRoot) => unknown | null
   readonly writeStage: (stage: DiagnosticOneCellStage) => void
   readonly readStage: (root: LabRoot, ordinal: number) => unknown | null
   readonly writeTerminal: (terminal: DiagnosticOneCellTerminal) => void
@@ -198,9 +211,11 @@ export interface DiagnosticOneCellLedger {
   readonly listNames: () => readonly string[]
 }
 const opened = new WeakSet<object>()
-const FILE = /^diagnostic-one-cell-([a-f0-9]{64})\.(started|terminal|stage-[0-5])\.json$/u
+const runPermits = new WeakMap<object, { readonly startRoot: LabRoot; readonly ledger: DiagnosticOneCellLedger; consumed: boolean }>()
+export interface DiagnosticOneCellRunPermit { readonly schemaVersion: "diagnostic-one-cell-run-permit-v3"; readonly startRoot: LabRoot; toJSON(): never }
+const FILE = /^diagnostic-one-cell-([a-f0-9]{64})\.(started|run-attempt|terminal|stage-[0-5])\.json$/u
 const EVIDENCE = /^diagnostic-one-cell-([a-f0-9]{64})\.evidence-([a-f0-9]{64})\.bin$/u
-const TEMP = /^diagnostic-one-cell-[a-f0-9]{64}\.(?:(?:started|terminal|stage-[0-5])\.json|evidence-[a-f0-9]{64}\.bin)\.tmp-[0-9a-f-]{36}$/u
+const TEMP = /^diagnostic-one-cell-[a-f0-9]{64}\.(?:(?:started|run-attempt|terminal|stage-[0-5])\.json|evidence-[a-f0-9]{64}\.bin)\.tmp-[0-9a-f-]{36}$/u
 export const openDiagnosticOneCellLedger = (directory: string, fault?: { readonly beforeDirectorySync: (kind: "record" | "evidence") => void }): DiagnosticOneCellLedger => {
   const path = resolve(directory), stat = lstatSync(path)
   if (path !== resolve(DIAGNOSTIC_ONE_CELL_STORE) || basename(path) !== "league-265-one-cell-diagnostic-v3-20260929-a" || realpathSync(path) !== path || !stat.isDirectory() || (stat.mode & 0o777) !== 0o700) return fail("LEDGER_DIRECTORY")
@@ -250,11 +265,20 @@ export const openDiagnosticOneCellLedger = (directory: string, fault?: { readonl
     hasUncertainPublication: () => uncertain,
     writeStart(start: DiagnosticOneCellStart) { if (start.schemaVersion !== "diagnostic-one-cell-start-v3" || start.ordinal !== 0) return fail("LEDGER_START"); write("started", start.root, start) },
     readStart(id: LabRoot) { return read("started", id) },
+    writeRunAttempt(start: DiagnosticOneCellStart) {
+      if (!same(read("started", start.root), start) || read("terminal", start.root) !== null || read("run-attempt", start.root) !== null || read("stage-2", start.root) === null) return fail("LEDGER_RUN_ATTEMPT_PRECONDITION")
+      const fields = { schemaVersion: "diagnostic-one-cell-run-attempt-v3" as const, startRoot: start.root, cellRoot: start.cellRoot, allocationRoot: start.allocationRoot, ordinal: 0 as const, consumed: true as const }
+      write("run-attempt", start.root, { ...fields, root: labRoot("diagnostic-one-cell-run-attempt-v3", fields) })
+      const permit = Object.freeze({ schemaVersion: "diagnostic-one-cell-run-permit-v3" as const, startRoot: start.root, toJSON(): never { return fail("RUN_PERMIT_NON_SERIALIZABLE") } })
+      runPermits.set(permit, { startRoot: start.root, ledger, consumed: false })
+      return permit
+    },
+    readRunAttempt(id: LabRoot) { return read("run-attempt", id) },
     writeStage(stage: DiagnosticOneCellStage) {
       if (!root(stage.startRoot) || !read("started", stage.startRoot) || read("terminal", stage.startRoot)) return fail("LEDGER_STAGE_PRECONDITION")
-      const existing = DIAGNOSTIC_ONE_CELL_STAGES.filter((_, index) => read(`stage-${index}`, stage.startRoot) !== null).length
-      if (stage.ordinal !== existing || !same(stage, createDiagnosticOneCellStage({ root: stage.startRoot } as DiagnosticOneCellStart, existing, stage.stage))) return fail("LEDGER_STAGE_ORDER")
-      write(`stage-${existing}`, stage.startRoot, stage)
+      const entered = DIAGNOSTIC_ONE_CELL_STAGES.flatMap((_, index) => read(`stage-${index}`, stage.startRoot) === null ? [] : [index])
+      if (entered.some((index) => index >= stage.ordinal) || !same(stage, createDiagnosticOneCellStage({ root: stage.startRoot } as DiagnosticOneCellStart, stage.ordinal, stage.stage))) return fail("LEDGER_STAGE_ORDER")
+      write(`stage-${stage.ordinal}`, stage.startRoot, stage)
     },
     readStage(id: LabRoot, ordinal: number) { if (!integer(ordinal, 5)) return fail("LEDGER_STAGE_ORDINAL"); return read(`stage-${ordinal}`, id) },
     writeTerminal(terminal: DiagnosticOneCellTerminal) { if (!read("started", terminal.startRoot) || read("stage-5", terminal.startRoot) === null) return fail("LEDGER_TERMINAL_PRECONDITION"); write("terminal", terminal.startRoot, terminal) },
@@ -271,7 +295,7 @@ export const verifyDiagnosticOneCellLedger = (ledger: Pick<DiagnosticOneCellLedg
   const expected = admitDiagnosticOneCellStart(allocation, cell, start)
   const names = (ledger as DiagnosticOneCellLedger).listNames()
   if (names.some((name) => { const match = FILE.exec(name) ?? EVIDENCE.exec(name); return match ? `sha256:${match[1]}` !== expected.root : true })) return fail("LEDGER_FOREIGN_INVENTORY")
-  if (!same(ledger.readStart(expected.root), expected) || ledger.readTerminal(expected.root) !== null || (ledger as DiagnosticOneCellLedger).hasUncertainPublication()) return fail("PRECHARGE_ABSENT_OR_TERMINAL")
+  if (!same(ledger.readStart(expected.root), expected) || ledger.readTerminal(expected.root) !== null || (ledger as DiagnosticOneCellLedger).readRunAttempt(expected.root) !== null || (ledger as DiagnosticOneCellLedger).hasUncertainPublication()) return fail("PRECHARGE_ABSENT_OR_TERMINAL")
   return expected
 }
 const lifetimeGrants = new WeakSet<object>()
@@ -316,10 +340,14 @@ export const reopenDiagnosticOneCellLedger = (ledger: DiagnosticOneCellLedger, a
   const raw = ledger.readStart(start.root)
   if (raw === null) { if (names.length) return fail("LEDGER_ORPHAN"); return freezeLabValue({ retentionUncertain: uncertain, records: [] as readonly { start: DiagnosticOneCellStart; terminal: DiagnosticOneCellTerminal | null; processValidity: "process_valid" | "process_invalid" }[] }) }
   admitDiagnosticOneCellStart(admitted, cell, raw)
+  const attempt = ledger.readRunAttempt(start.root)
+  if (attempt !== null) {
+    const fields = { schemaVersion: "diagnostic-one-cell-run-attempt-v3" as const, startRoot: start.root, cellRoot: start.cellRoot, allocationRoot: start.allocationRoot, ordinal: 0 as const, consumed: true as const }
+    if (!exact(attempt, ["schemaVersion", "startRoot", "cellRoot", "allocationRoot", "ordinal", "consumed", "root"]) || !same(attempt, { ...fields, root: labRoot("diagnostic-one-cell-run-attempt-v3", fields) })) return fail("LEDGER_RUN_ATTEMPT_MISMATCH")
+  }
   for (let ordinal = 0; ordinal < 6; ordinal++) {
     const checkpoint = ledger.readStage(start.root, ordinal)
     if (checkpoint !== null) admitDiagnosticOneCellStage(start, checkpoint, ordinal)
-    else if (names.some((name) => name === `diagnostic-one-cell-${start.root.slice(7)}.stage-${ordinal + 1}.json`)) return fail("LEDGER_STAGE_GAP")
   }
   const terminalRaw = ledger.readTerminal(start.root)
   const terminal = terminalRaw === null ? null : admitDiagnosticOneCellTerminal(start, terminalRaw)
@@ -331,9 +359,16 @@ const CHUNK_BYTES = 131_072
 const INDEX_PAGE = 1_000
 const manifestKeys = ["schemaVersion", "allocationRoot", "cellRoot", "startRoot", "requestRoot", "tupleRoot", "runtimeRoot", "semanticGeometryHash", "executionKind", "transitionIndexRoots", "accountingIndexRoots", "transitionChunkCount", "accountingChunkCount", "outcomeRoots", "outcomeByteLength", "transitionCount", "accountingCount"] as const
 /** Retains every canonical runner row; the manifest is published last. */
-export const retainDiagnosticOneCellExecution = (ledger: DiagnosticOneCellLedger, allocation: DiagnosticOneCellAllocation, cell: DiagnosticOneCellCell, start: DiagnosticOneCellStart, execution: LabMatchExecution) => {
-  verifyDiagnosticOneCellLedger(ledger, allocation, cell, start)
+const retainDiagnosticOneCellExecution = (ledger: DiagnosticOneCellLedger, allocation: DiagnosticOneCellAllocation, cell: DiagnosticOneCellCell, start: DiagnosticOneCellStart, execution: LabMatchExecution) => {
+  admitDiagnosticOneCellStart(allocation, cell, start)
+  const reopened = reopenDiagnosticOneCellLedger(ledger, allocation)
+  if (reopened.retentionUncertain || reopened.records.length !== 1 || reopened.records[0]!.start.root !== start.root || ledger.readRunAttempt(start.root) === null || ledger.readStage(start.root, 3) === null || ledger.readTerminal(start.root) !== null) return fail("EVIDENCE_PRECONDITION")
   if (execution.privacy !== "private_offline" || execution.transitions.length > 1_010_000 || execution.accounting.length > 49_600) return fail("EVIDENCE_EXECUTION")
+  if (execution.kind === "completed") {
+    const last = execution.transitions.at(-1)
+    if (!last || execution.accounting.length < 1 || !last.terminalStatus || !execution.result.state.outcome || JSON.stringify(last.terminalStatus) !== JSON.stringify(execution.result.state.outcome) || JSON.stringify(execution.result.events) !== JSON.stringify(execution.transitions.flatMap((record) => record.events))) return fail("EVIDENCE_INCOMPLETE_MATCH")
+    for (let index = 1; index < execution.transitions.length; index++) if (execution.transitions[index - 1]!.afterMachineHash !== execution.transitions[index]!.beforeMachineHash) return fail("EVIDENCE_TRANSITION_CHAIN")
+  }
   let artifactBytes = 0, artifactRecords = 0
   const seen = new Set<LabRoot>()
   const write = (data: Uint8Array) => { const identity = ledger.writeEvidence(start.root, data); if (!seen.has(identity)) { seen.add(identity); artifactBytes += data.length; artifactRecords++ } return identity }
@@ -358,6 +393,29 @@ export const retainDiagnosticOneCellExecution = (ledger: DiagnosticOneCellLedger
   const evidenceRoot = write(manifestBytes)
   return freezeLabValue({ evidenceRoot, artifactBytes, artifactRecords })
 }
+/** The only complete-manifest producer invokes the unchanged canonical Match
+ * bridge in this function. A caller cannot retain an invented success object. */
+export const runAndRetainCanonicalDiagnosticOneCell = async (input: {
+  readonly ledger: DiagnosticOneCellLedger
+  readonly allocation: DiagnosticOneCellAllocation
+  readonly cell: DiagnosticOneCellCell
+  readonly start: DiagnosticOneCellStart
+  readonly runPermit: DiagnosticOneCellRunPermit
+  readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]
+  readonly providers: Parameters<typeof runCanonicalLabMatch>[0]["providers"]
+  readonly onKernelEntry: () => void
+  readonly onEvidenceStart: () => void
+}) => {
+  const permit = runPermits.get(input.runPermit)
+  if (!permit || permit.ledger !== input.ledger || permit.startRoot !== input.start.root || permit.consumed || input.ledger.readRunAttempt(input.start.root) === null) return fail("CANONICAL_RUN_PERMIT")
+  permit.consumed = true
+  input.onKernelEntry()
+  const execution = await runCanonicalLabMatch({ match: input.match, providers: input.providers })
+  input.onEvidenceStart()
+  const retained = retainDiagnosticOneCellExecution(input.ledger, input.allocation, input.cell, input.start, execution)
+  const disposition = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result) ? "system_failure" as const : execution.accounting.some((entry) => !entry.result.ok) ? "player_violation" as const : "success" as const
+  return Object.freeze({ executionKind: execution.kind, disposition, processValidity: disposition === "success" ? "process_valid" as const : "process_invalid" as const, cleanupComplete: execution.kind !== "failure" || execution.failure.code !== "LAB_CLEANUP_INCOMPLETE", transitionCount: execution.transitions.length, accountingCount: execution.accounting.length, ...retained })
+}
 /** Reopens all referenced bytes and requires an exact no-orphan execution graph. */
 export const verifyRetainedDiagnosticOneCellExecution = (ledger: DiagnosticOneCellLedger, allocation: DiagnosticOneCellAllocation, cell: DiagnosticOneCellCell, start: DiagnosticOneCellStart, evidenceRoot: LabRoot) => {
   admitDiagnosticOneCellAllocation(allocation); admitDiagnosticOneCellCell(allocation, cell); admitDiagnosticOneCellStart(allocation, cell, start)
@@ -374,7 +432,8 @@ export const verifyRetainedDiagnosticOneCellExecution = (ledger: DiagnosticOneCe
     if (roots.length !== expected) return fail("EVIDENCE_INDEX_COUNT")
     return roots
   }
-  let systemFailure = false, playerViolation = false, outputBytes = 0
+  let systemFailure = false, playerViolation = false, outputBytes = 0, previousMachineHash: string | null = null, finalTerminalStatus: unknown = null
+  const replayEvents: unknown[] = []
   const countRows = (roots: LabRoot[], accounting: boolean): number => {
     let count = 0, carry = Buffer.alloc(0)
     for (const identity of roots) {
@@ -384,7 +443,13 @@ export const verifyRetainedDiagnosticOneCellExecution = (ledger: DiagnosticOneCe
         if (!line.length) return fail("EVIDENCE_ROW")
         const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(line)) as unknown
         if (!value || typeof value !== "object" || Array.isArray(value)) return fail("EVIDENCE_ROW")
-        if (accounting) {
+        if (!accounting) {
+          const transition = value as Record<string, unknown>
+          if (!exact(transition, ["transitionKind", "semanticTupleId", "semanticTuple", "coordinates", "classification", "events", "beforeState", "afterState", "beforeStateHash", "afterStateHash", "beforeMachineHash", "afterMachineHash", "terminalStatus", "failureStatus"]) || typeof transition.semanticTupleId !== "string" || !root(transition.beforeStateHash) || !root(transition.afterStateHash) || !root(transition.beforeMachineHash) || !root(transition.afterMachineHash) || !Array.isArray(transition.events) || transition.failureStatus !== null || previousMachineHash !== null && transition.beforeMachineHash !== previousMachineHash || finalTerminalStatus !== null) return fail("EVIDENCE_TRANSITION")
+          previousMachineHash = transition.afterMachineHash
+          finalTerminalStatus = transition.terminalStatus
+          replayEvents.push(...transition.events)
+        } else {
           const row = value as Record<string, unknown>
           if (row.charged !== true || row.completed !== true || !integer(row.outputBytes, 262_144) || !row.identity || typeof row.identity !== "object" || (row.identity as Record<string, unknown>).attemptRoot !== start.root || (row.identity as Record<string, unknown>).budgetRoot !== allocation.root || (row.identity as Record<string, unknown>).tupleRoot !== allocation.tupleRoot || (row.identity as Record<string, unknown>).runtimeLimitsRoot !== allocation.runtimeRoot || !row.result || typeof row.result !== "object" || typeof (row.result as Record<string, unknown>).ok !== "boolean") return fail("EVIDENCE_ACCOUNTING")
           outputBytes += row.outputBytes
@@ -401,30 +466,68 @@ export const verifyRetainedDiagnosticOneCellExecution = (ledger: DiagnosticOneCe
   const transitionCount = countRows(index(manifest.transitionIndexRoots, manifest.transitionChunkCount as number), false)
   const accountingCount = countRows(index(manifest.accountingIndexRoots, manifest.accountingChunkCount as number), true)
   if (transitionCount !== manifest.transitionCount || accountingCount !== manifest.accountingCount) return fail("EVIDENCE_COUNTS")
+  if (manifest.executionKind === "completed" && (transitionCount < 1 || accountingCount < 1 || finalTerminalStatus === null)) return fail("EVIDENCE_INCOMPLETE_MATCH")
   if (!manifest.outcomeRoots.every(root)) return fail("EVIDENCE_OUTCOME_ROOT")
   const outcomeBytes = Buffer.concat((manifest.outcomeRoots as LabRoot[]).map((identity) => Buffer.from(read(identity))))
   if (outcomeBytes.length !== manifest.outcomeByteLength) return fail("EVIDENCE_OUTCOME_BYTES")
   const outcome = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(outcomeBytes)) as unknown
-  if (!exact(outcome, manifest.executionKind === "completed" ? ["kind", "privacy", "state", "eventsRoot"] : ["kind", "privacy", "failure", "unchangedState"]) || outcome.kind !== manifest.executionKind || outcome.privacy !== "private_offline" || manifest.executionKind === "completed" && (!root(outcome.eventsRoot) || !outcome.state)) return fail("EVIDENCE_OUTCOME")
+  if (!exact(outcome, manifest.executionKind === "completed" ? ["kind", "privacy", "state", "eventsRoot"] : ["kind", "privacy", "failure", "unchangedState"]) || outcome.kind !== manifest.executionKind || outcome.privacy !== "private_offline" || manifest.executionKind === "completed" && (!root(outcome.eventsRoot) || !outcome.state || typeof outcome.state !== "object" || (outcome.state as Record<string, unknown>).outcome === undefined || JSON.stringify((outcome.state as Record<string, unknown>).outcome) !== JSON.stringify(finalTerminalStatus) || outcome.eventsRoot !== labRoot("diagnostic-one-cell-result-events-v3", replayEvents))) return fail("EVIDENCE_OUTCOME")
   const prefix = `diagnostic-one-cell-${start.root.slice(7)}.evidence-`
   const inventory = ledger.listNames().filter((name) => name.startsWith(prefix))
   if (inventory.length !== seen.size || inventory.some((name) => { const match = EVIDENCE.exec(name); return !match || !seen.has(`sha256:${match[2]}` as LabRoot) })) return fail("EVIDENCE_ORPHAN")
   return freezeLabValue({ artifactBytes, artifactRecords, transitionCount, accountingCount, outputBytes, disposition: manifest.executionKind === "failure" || systemFailure ? "system_failure" as const : playerViolation ? "player_violation" as const : "success" as const })
 }
 
-export const createDiagnosticOneCellResult = (allocation: DiagnosticOneCellAllocation, ledger: DiagnosticOneCellLedger | null, elapsedMilliseconds: number, containerAbsence: boolean) => {
+/** A failed write may leave already-published chunks. Root the exact surviving
+ * inventory, never silently call it a complete Match or refund the charge. */
+export const retainDiagnosticOneCellPartialEvidence = (ledger: DiagnosticOneCellLedger, start: DiagnosticOneCellStart) => {
+  const prefix = `diagnostic-one-cell-${start.root.slice(7)}.evidence-`
+  const entries = ledger.listNames().filter((name) => name.startsWith(prefix)).map((name) => {
+    const match = EVIDENCE.exec(name)
+    if (!match || `sha256:${match[1]}` !== start.root) return fail("PARTIAL_INVENTORY")
+    const identity = `sha256:${match[2]}` as LabRoot, bytes = ledger.readEvidence(start.root, identity)
+    return { root: identity, byteLength: bytes.length }
+  })
+  if (entries.length > DIAGNOSTIC_ONE_CELL_CAPACITY.maxRecords - 1) return fail("PARTIAL_CAP")
+  const descriptor = { schemaVersion: "diagnostic-one-cell-partial-evidence-v3" as const, startRoot: start.root, entries }
+  const data = encode(descriptor)
+  const evidenceRoot = ledger.writeEvidence(start.root, data)
+  if (entries.some((entry) => entry.root === evidenceRoot)) return fail("PARTIAL_SELF_REFERENCE")
+  return freezeLabValue({ evidenceRoot, artifactBytes: entries.reduce((sum, entry) => sum + entry.byteLength, data.length), artifactRecords: entries.length + 1 })
+}
+export const verifyRetainedDiagnosticOneCellPartialEvidence = (ledger: DiagnosticOneCellLedger, start: DiagnosticOneCellStart, evidenceRoot: LabRoot) => {
+  const data = ledger.readEvidence(start.root, evidenceRoot), descriptor = parse(data)
+  if (!exact(descriptor, ["schemaVersion", "startRoot", "entries"]) || descriptor.schemaVersion !== "diagnostic-one-cell-partial-evidence-v3" || descriptor.startRoot !== start.root || !Array.isArray(descriptor.entries)) return fail("PARTIAL_SCHEMA")
+  let artifactBytes = data.length
+  const seen = new Set<LabRoot>([evidenceRoot])
+  for (const entry of descriptor.entries) {
+    if (!exact(entry, ["root", "byteLength"]) || !root(entry.root) || !integer(entry.byteLength, 131_072) || entry.byteLength < 1 || seen.has(entry.root)) return fail("PARTIAL_ENTRY")
+    const bytes = ledger.readEvidence(start.root, entry.root)
+    if (bytes.length !== entry.byteLength) return fail("PARTIAL_BYTES")
+    seen.add(entry.root); artifactBytes += bytes.length
+  }
+  const prefix = `diagnostic-one-cell-${start.root.slice(7)}.evidence-`
+  const names = ledger.listNames().filter((name) => name.startsWith(prefix))
+  if (names.length !== seen.size || names.some((name) => { const match = EVIDENCE.exec(name); return !match || !seen.has(`sha256:${match[2]}` as LabRoot) })) return fail("PARTIAL_ORPHAN")
+  return freezeLabValue({ artifactBytes, artifactRecords: seen.size, disposition: "system_failure" as const, complete: false as const })
+}
+
+export const createDiagnosticOneCellResult = (allocation: DiagnosticOneCellAllocation, ledger: DiagnosticOneCellLedger | null, elapsedMilliseconds: number, watchdogStatus: "process_valid" | "process_invalid" | "safe_no_start", containerAbsence: boolean) => {
   const admitted = admitDiagnosticOneCellAllocation(allocation)
-  if (!integer(elapsedMilliseconds, 600_000) || typeof containerAbsence !== "boolean") return fail("RESULT_INPUT")
+  if (!integer(elapsedMilliseconds, 600_000) || !["process_valid", "process_invalid", "safe_no_start"].includes(watchdogStatus) || typeof containerAbsence !== "boolean") return fail("RESULT_INPUT")
   const state = ledger === null ? null : reopenDiagnosticOneCellLedger(ledger, admitted)
   const entry = state?.records[0], terminal = entry?.terminal
-  let manifest: ReturnType<typeof verifyRetainedDiagnosticOneCellExecution> | null = null
+  let manifest: ReturnType<typeof verifyRetainedDiagnosticOneCellExecution> | ReturnType<typeof verifyRetainedDiagnosticOneCellPartialEvidence> | null = null
   if (terminal?.evidenceRoot && ledger && entry) {
     const cell = createDiagnosticOneCellCell(admitted, 0)
-    manifest = verifyRetainedDiagnosticOneCellExecution(ledger, admitted, cell, entry.start, terminal.evidenceRoot)
+    const header = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(ledger.readEvidence(entry.start.root, terminal.evidenceRoot))) as Record<string, unknown>
+    manifest = header.schemaVersion === "diagnostic-one-cell-execution-manifest-v3" ? verifyRetainedDiagnosticOneCellExecution(ledger, admitted, cell, entry.start, terminal.evidenceRoot) : header.schemaVersion === "diagnostic-one-cell-partial-evidence-v3" ? verifyRetainedDiagnosticOneCellPartialEvidence(ledger, entry.start, terminal.evidenceRoot) : fail("RESULT_EVIDENCE_SCHEMA")
     if (manifest.disposition !== terminal.disposition || manifest.artifactBytes !== terminal.artifactBytes || manifest.artifactRecords !== terminal.artifactRecords) return fail("RESULT_EVIDENCE_MISMATCH")
   }
-  const processValid = !!terminal && terminal.processValidity === "process_valid" && terminal.disposition === "success" && !!manifest && manifest.disposition === "success" && terminal.cleanupComplete && containerAbsence && !state?.retentionUncertain
+  const cell = createDiagnosticOneCellCell(admitted, 0), start = createDiagnosticOneCellStart(admitted, cell)
+  const completeStages = !!ledger && DIAGNOSTIC_ONE_CELL_STAGES.every((_, ordinal) => ledger.readStage(start.root, ordinal) !== null)
+  const processValid = watchdogStatus === "process_valid" && !!terminal && terminal.processValidity === "process_valid" && terminal.disposition === "success" && !!manifest && !("complete" in manifest) && manifest.disposition === "success" && terminal.cleanupComplete && containerAbsence && completeStages && !state?.retentionUncertain
   if (terminal?.processValidity === "process_valid" && !processValid) return fail("RESULT_FALSE_SUCCESS")
-  const fields = { schemaVersion: "diagnostic-one-cell-result-v3" as const, privacy: "private_offline" as const, evidenceClass: "diagnostic_only" as const, allocationRoot: admitted.root, gateRoot: admitted.gateRoot, oldEvidenceBaseline: admitted.oldEvidenceBaseline, elapsedMilliseconds, chargedCount: entry ? 1 as const : 0 as const, startRoot: entry?.start.root ?? null, terminalRoot: terminal?.root ?? null, evidenceRoot: terminal?.evidenceRoot ?? null, containerAbsence, processValidity: processValid ? "process_valid" as const : "process_invalid" as const, leagueRequirementsEvidence: false as const, freezeAuthorized: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
+  const fields = { schemaVersion: "diagnostic-one-cell-result-v3" as const, privacy: "private_offline" as const, evidenceClass: "diagnostic_only" as const, allocationRoot: admitted.root, gateRoot: admitted.gateRoot, oldEvidenceBaseline: admitted.oldEvidenceBaseline, elapsedMilliseconds, watchdogStatus, chargedCount: entry ? 1 as const : 0 as const, startRoot: entry?.start.root ?? null, terminalRoot: terminal?.root ?? null, evidenceRoot: terminal?.evidenceRoot ?? null, containerAbsence, processValidity: processValid ? "process_valid" as const : "process_invalid" as const, leagueRequirementsEvidence: false as const, freezeAuthorized: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
   return freezeLabValue({ ...fields, root: labRoot("diagnostic-one-cell-result-v3", fields) })
 }

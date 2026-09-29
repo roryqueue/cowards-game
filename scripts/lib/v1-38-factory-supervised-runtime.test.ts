@@ -45,6 +45,12 @@ describe("selected factory supervised runtime adapter", () => {
     const { allocation, start, grant, binding } = validOneCellGrant()
     expect(admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: allocation.root, attemptRoot: start.root, ...binding, oneCellLifetimeGrant: grant })).toBe(240_000)
     expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("9"), attemptRoot: start.root, ...binding, oneCellLifetimeGrant: grant })).toThrow()
+    expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: allocation.root, attemptRoot: start.root, ...binding, oneCellLifetimeGrant: grant, pilotLifetimeGrant: {} as never })).toThrow("LIFETIME_GRANT_CONFLICT")
+    const { admission } = admitted()
+    const createRuntime = vi.fn((options: any) => ({ identity: { revisionId: options.revision.id, sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } } }))
+    createFactorySupervisedRuntime({ admission, sourceBytes, attemptRoot: start.root, budgetRoot: allocation.root, containerName: binding.containerName, ownershipLabel: binding.ownershipLabel, factoryLifetimeMs: 240_000, oneCellLifetimeGrant: grant, createRuntime })
+    expect(createRuntime.mock.calls[0]![0].oneCellLifetimeMs).toBe(240_000)
+    expect(createRuntime.mock.calls[0]![0].pilotLifetimeMs).toBeUndefined()
   })
   it("builds the exact authored TypeScript revision and wraps selected adapter identity", () => {
     const { admission } = admitted()

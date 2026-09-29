@@ -9,7 +9,7 @@ import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.
 import { createLeagueCellTerminal, deriveLeagueResultEventRoot, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCellSchema, type LeagueCell, type LeagueCellTerminal } from "./contracts.js"
 import { publishLeagueCellTerminal, recordLeagueCellStart, type LeagueCellStart, type LeagueRepository } from "./repository.js"
 import { admitDiagnosticPilotAllocation, admitDiagnosticPilotCell, createDiagnosticPilotStart, diagnosticPilotContainerIdentity, requireDiagnosticPilotAssessedCandidate, requireDiagnosticPilotLifetimeGrant, verifyDiagnosticPilotLedger, type DiagnosticPilotAllocation, type DiagnosticPilotAssessedCandidate, type DiagnosticPilotCell, type DiagnosticPilotLedger, type DiagnosticPilotLifetimeGrant, type DiagnosticPilotStart } from "./diagnostic-pilot.js"
-import { admitDiagnosticOneCellAllocation, admitDiagnosticOneCellCell, createDiagnosticOneCellStart, diagnosticOneCellContainerIdentity, requireDiagnosticOneCellLifetimeGrant, verifyDiagnosticOneCellLedger, type DiagnosticOneCellAllocation, type DiagnosticOneCellCell, type DiagnosticOneCellLedger, type DiagnosticOneCellLifetimeGrant, type DiagnosticOneCellStart } from "./diagnostic-one-cell.js"
+import { admitDiagnosticOneCellAllocation, admitDiagnosticOneCellCell, createDiagnosticOneCellStart, diagnosticOneCellContainerIdentity, requireDiagnosticOneCellLifetimeGrant, runAndRetainCanonicalDiagnosticOneCell, verifyDiagnosticOneCellLedger, type DiagnosticOneCellAllocation, type DiagnosticOneCellCell, type DiagnosticOneCellLedger, type DiagnosticOneCellLifetimeGrant, type DiagnosticOneCellStart } from "./diagnostic-one-cell.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`LEAGUE_CONNECTED_RUNNER_${code}`) }
@@ -281,7 +281,7 @@ export const closeDiagnosticOneCellIssuedProvider = (value: DiagnosticOneCellIss
 }
 /** The only v3 Match bridge; it calls the unchanged canonical transition engine. */
 export const runDiagnosticOneCellCell = async (input: Readonly<{
-  ledger: Pick<DiagnosticOneCellLedger, "readStart" | "readTerminal">
+  ledger: DiagnosticOneCellLedger
   allocation: DiagnosticOneCellAllocation
   cell: DiagnosticOneCellCell
   start: DiagnosticOneCellStart
@@ -289,21 +289,18 @@ export const runDiagnosticOneCellCell = async (input: Readonly<{
   bottom: DiagnosticOneCellIssuedProvider
   top: DiagnosticOneCellIssuedProvider
   match: Parameters<typeof runCanonicalLabMatch>[0]["match"]
-  onKernelEntry?: () => void
-  beforeReturn?: (execution: LabMatchExecution) => void
-}>): Promise<Readonly<{ disposition: "success" | "system_failure" | "player_violation"; processValidity: "process_valid" | "process_invalid"; evidenceRoot: LabRoot; transitionCount: number; accountingCount: number; cleanupComplete: boolean }>> => {
+  onKernelEntry: () => void
+  onEvidenceStart: () => void
+}>): Promise<Readonly<{ disposition: "success" | "system_failure" | "player_violation"; processValidity: "process_valid" | "process_invalid"; evidenceRoot: LabRoot; artifactBytes: number; artifactRecords: number; transitionCount: number; accountingCount: number; cleanupComplete: boolean }>> => {
   const allocation = admitDiagnosticOneCellAllocation(input.allocation), cell = admitDiagnosticOneCellCell(allocation, input.cell)
   const start = verifyDiagnosticOneCellLedger(input.ledger, allocation, cell, input.start)
   if (input.requestRoot !== cell.requestRoot || input.bottom === input.top) return fail("ONE_CELL_MATCH_REQUEST")
   const bottom = requireOneCellIssued(input.bottom, allocation, cell, start, "bottom"), top = requireOneCellIssued(input.top, allocation, cell, start, "top")
   const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
   if (!smoke || input.match.seed !== allocation.seed || labRoot("diagnostic-one-cell-arena-v3", input.match.arenaVariant) !== labRoot("diagnostic-one-cell-arena-v3", smoke) || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || input.match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || input.match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || input.match.bottomStrategyRevisionId !== bottom.identity.revisionId || input.match.topStrategyRevisionId !== top.identity.revisionId) return fail("ONE_CELL_MATCH_BINDING")
-  input.onKernelEntry?.()
-  const execution = await runCanonicalLabMatch({ match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top } })
-  const disposition = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result) ? "system_failure" as const : execution.accounting.some((entry) => !entry.result.ok) ? "player_violation" as const : "success" as const
-  const evidenceRoot = labRoot("diagnostic-one-cell-execution-v3", { startRoot: start.root, cellRoot: cell.root, disposition, kind: execution.kind, transitionCount: execution.transitions.length, accountingCount: execution.accounting.length })
-  input.beforeReturn?.(execution)
-  return Object.freeze({ disposition, processValidity: disposition === "success" ? "process_valid" as const : "process_invalid" as const, evidenceRoot, transitionCount: execution.transitions.length, accountingCount: execution.accounting.length, cleanupComplete: execution.kind !== "failure" || execution.failure.code !== "LAB_CLEANUP_INCOMPLETE" })
+  const runPermit = input.ledger.writeRunAttempt(start)
+  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top }, onKernelEntry: input.onKernelEntry, onEvidenceStart: input.onEvidenceStart })
+  return Object.freeze({ disposition: retained.disposition, processValidity: retained.processValidity, evidenceRoot: retained.evidenceRoot, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords, transitionCount: retained.transitionCount, accountingCount: retained.accountingCount, cleanupComplete: retained.cleanupComplete })
 }
 
 const requireIssued = (value: LeagueIssuedProvider, cell: LeagueCell, start: LeagueCellStart): FactorySupervisionProvider => {

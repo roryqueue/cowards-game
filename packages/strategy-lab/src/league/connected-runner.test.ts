@@ -130,7 +130,7 @@ historicalIt("binds a distinct v3 precharge and opaque handles; rejects both old
   expect(bottom.identity.attemptRoot).toBe(start.root)
   expect(top.identity.budgetRoot).toBe(allocation.root)
   expect(() => JSON.stringify(bottom)).toThrow("NON_SERIALIZABLE")
-  const request = { ledger, allocation, cell, start, requestRoot: cell.requestRoot, bottom, top, match: {} as never }
+  const request = { ledger, allocation, cell, start, requestRoot: cell.requestRoot, bottom, top, match: {} as never, onKernelEntry: () => {}, onEvidenceStart: () => {} }
   await expect(runDiagnosticOneCellCell({ ...request, bottom: { ...bottom } as never })).rejects.toThrow("UNISSUED_PROVIDER")
   await expect(runDiagnosticOneCellCell({ ...request, bottom: top as never })).rejects.toThrow("ONE_CELL_MATCH_REQUEST")
   const old = createDiagnosticPilotAllocation({ sourceClosureRoot: root("old-source"), implementationRoot: root("old-implementation"), gateRoot: root("old-gate"), oldEvidenceBaseline: baseline })
