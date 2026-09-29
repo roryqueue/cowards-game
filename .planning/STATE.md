@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 Plan08 source-only gate complete; Plan09 conditional diagnostic pilot pending, with no new allocation or Match yet
+stopped_at: Phase265 Plan09 one-shot diagnostic stopped process-invalid after one charged cell; no retry or empirical authority
 last_updated: "2026-09-29"
 last_activity: 2026-09-29
-last_activity_desc: Plan265-08 exact-source diagnostic route independently reviewed and signed; no pilot allocation or Match created
+last_activity_desc: Plan265-09 distinct allocation consumed; retained one charged system-failure cell and three unused slots, with old evidence unchanged
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,12 @@ total_plans_in_phase: 9
 ---
 
 # State: Coward's Game
+
+## Current Session Continuity — 2026-09-29 Plan265-09 terminal diagnostic
+
+The signed Plan08 gate passed on unchanged source closure. Plan09 created exactly one separate diagnostic-only allocation, root `sha256:8d642cdc20c4e0ff718a78bf0a38b4fe06cc4a3f4a8cee26969d86ad96bd49bc`, after recording five old-evidence digests. Standalone read-only preflight passed, then exactly one `run` invocation returned `process_invalid`. The rooted result `sha256:af7aa261ebc7cd38cf893ea24c7b6c7a7986999125fe6a0eea853d893277f732` and read-only verifier show one charged ordinal-0 `system_failure` after 59,980 ms, 78,097 ms overall, complete cleanup/owned-container absence, zero evidence bytes/records, two ledger inodes, and ordinals 1–3 unused. The retained allowlisted code has no finer stage; provider issuance and `MATCH_KERNEL` entry cannot be proved or disproved. The verifier exits 1 for process validity, so Plan09 remains incomplete and cannot be rerun. All three old JSON digests and both old repository tree digests equal their pre-run baselines; the consumed Plan07 route remains separate and immutable.
+
+Phase265 stays at 7/9 completed plans. LEAG-01–09 remain pending; no Phase266 freeze, formation, holdout, counted, public, production or gameplay-rule authority follows. A new technical diagnosis or empirical route needs separately approved and independently reviewed exact source, not a retry or reinterpretation of this allocation.
 
 ## Current Session Continuity — 2026-09-29 Plan265-08 source-only closeout
 
@@ -1256,9 +1262,9 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-29T19:35:20Z
-Stopped at: Completed Plan265-08 source-only diagnostic route; Plan265-09 conditional pilot remains pending
-Resume file: .planning/phases/265-serious-current-rules-league-and-development-red-team/265-09-PLAN.md
+Last session: 2026-09-29T19:40:57Z
+Stopped at: Plan265-09 one-shot diagnostic terminal process-invalid; no retry or empirical authority
+Resume file: .planning/phases/265-serious-current-rules-league-and-development-red-team/265-09-SUMMARY.md
 
 ### Blockers
 
