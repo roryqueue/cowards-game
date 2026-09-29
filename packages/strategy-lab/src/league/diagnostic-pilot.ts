@@ -166,14 +166,22 @@ export interface DiagnosticPilotLedger {
   readonly writeTerminal: (terminal: DiagnosticPilotTerminal) => void
   readonly readTerminal: (startRoot: LabRoot) => unknown | null
   readonly listNames: () => readonly string[]
+  readonly writeEvidence?: (startRoot: LabRoot, bytes: Uint8Array) => LabRoot
+  readonly readEvidence?: (startRoot: LabRoot, evidenceRoot: LabRoot) => Uint8Array
 }
 const openedLedgers = new WeakSet<object>()
 const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation): void => {
   const allowed = allocation.cells.map((_, ordinal) => createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal)).root)
   const names = ledger.listNames()
-  if (names.length > allowed.length * 2 || new Set(names).size !== names.length) return fail("LEDGER_INVENTORY")
+  if (names.length > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes || new Set(names).size !== names.length) return fail("LEDGER_INVENTORY")
   const present: number[] = []
   for (const name of names) {
+    const evidence = /^diagnostic-pilot-([a-f0-9]{64})\.evidence-([a-f0-9]{64})\.bin$/u.exec(name)
+    if (evidence) {
+      if (!allowed.includes(`sha256:${evidence[1]}` as LabRoot) || !ledger.readStart(`sha256:${evidence[1]}` as LabRoot) || !ledger.readEvidence) return fail("LEDGER_FOREIGN_EVIDENCE")
+      ledger.readEvidence(`sha256:${evidence[1]}` as LabRoot, `sha256:${evidence[2]}` as LabRoot)
+      continue
+    }
     const match = /^diagnostic-pilot-([a-f0-9]{64})\.(started|terminal)\.json$/u.exec(name)
     if (!match) return fail("LEDGER_UNKNOWN_FILE")
     const ordinal = allowed.indexOf(`sha256:${match[1]}` as LabRoot)
@@ -200,6 +208,30 @@ export const verifyDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, 
   if (ledger.readTerminal(expected.root) !== null) return fail("PRECHARGE_ALREADY_TERMINAL")
   return expected
 }
+const lifetimeGrants = new WeakSet<object>()
+export interface DiagnosticPilotLifetimeGrant {
+  readonly allocationRoot: LabRoot
+  readonly cellRoot: LabRoot
+  readonly startRoot: LabRoot
+  readonly seat: "bottom" | "top"
+  readonly containerName: string
+  readonly ownershipLabel: string
+  readonly ceilingMilliseconds: 240000
+  toJSON(): never
+}
+export const createDiagnosticPilotLifetimeGrant = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, start: DiagnosticPilotStart, seat: "bottom" | "top"): DiagnosticPilotLifetimeGrant => {
+  const admitted = verifyDiagnosticPilotLedger(ledger, allocation, cell, start)
+  const container = diagnosticPilotContainerIdentity(allocation, cell, seat)
+  const grant = Object.freeze({ allocationRoot: allocation.root, cellRoot: cell.root, startRoot: admitted.root, seat, containerName: container.containerName, ownershipLabel: container.ownershipLabel, ceilingMilliseconds: 240_000 as const, toJSON(): never { return fail("GRANT_NON_SERIALIZABLE") } })
+  lifetimeGrants.add(grant)
+  return grant
+}
+export const requireDiagnosticPilotLifetimeGrant = (value: unknown, binding: { readonly allocationRoot: LabRoot; readonly cellRoot: LabRoot; readonly startRoot: LabRoot; readonly seat: "bottom" | "top"; readonly containerName: string; readonly ownershipLabel: string; readonly lifetimeMilliseconds: number }): DiagnosticPilotLifetimeGrant => {
+  if (!value || typeof value !== "object" || !lifetimeGrants.has(value)) return fail("GRANT_UNISSUED")
+  const grant = value as DiagnosticPilotLifetimeGrant
+  if (grant.allocationRoot !== binding.allocationRoot || grant.cellRoot !== binding.cellRoot || grant.startRoot !== binding.startRoot || grant.seat !== binding.seat || grant.containerName !== binding.containerName || grant.ownershipLabel !== binding.ownershipLabel || grant.ceilingMilliseconds !== 240_000 || !Number.isSafeInteger(binding.lifetimeMilliseconds) || binding.lifetimeMilliseconds < 1 || binding.lifetimeMilliseconds > grant.ceilingMilliseconds) return fail("GRANT_BINDING")
+  return grant
+}
 export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation): Readonly<{ issued: false; records: readonly { start: DiagnosticPilotStart; terminal: DiagnosticPilotTerminal | null; processValidity: "process_invalid" | "process_valid" }[] }> => {
   if (!openedLedgers.has(ledger) || (ledger as DiagnosticPilotLedger).directory !== resolve(DIAGNOSTIC_PILOT_STORE)) return fail("UNTRUSTED_LEDGER")
   inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation))
@@ -210,6 +242,11 @@ export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, 
     const terminalRaw = ledger.readTerminal(start.root)
     if (terminalRaw === null) return { start, terminal: null, processValidity: "process_invalid" as const }
     const terminal = admitDiagnosticPilotTerminal(start, terminalRaw)
+    if (terminal.evidenceRoot !== null) {
+      const reader = (ledger as DiagnosticPilotLedger).readEvidence
+      if (!reader) return fail("EVIDENCE_READER")
+      reader(start.root, terminal.evidenceRoot)
+    }
     return { start, terminal, processValidity: terminal.processValidity }
   }).filter((entry): entry is NonNullable<typeof entry> => entry !== null)
   if (records.some((entry, index) => entry.start.ordinal !== index)) return fail("NONPREFIX_LEDGER")
@@ -239,8 +276,42 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
     try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
     const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd) } finally { closeSync(dirFd) }
   }
-  for (const name of readdirSync(path)) if (!/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal)\.json$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
-  const ledger = Object.freeze({ directory: path, writeStart(start: DiagnosticPilotStart) { write("started", start.root, start) }, readStart(id: LabRoot) { return read("started", id) }, writeTerminal(terminal: DiagnosticPilotTerminal) { if (!read("started", terminal.startRoot)) return fail("TERMINAL_UNCHARGED"); write("terminal", terminal.startRoot, terminal) }, readTerminal(id: LabRoot) { return read("terminal", id) }, listNames() { return readdirSync(path).sort() } })
+  let retainedBytes = 0, retainedRecords = 0
+  const perStart = new Map<LabRoot, { bytes: number; records: number }>()
+  for (const name of readdirSync(path)) {
+    if (!/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal)\.json$/u.test(name) && !/^diagnostic-pilot-[a-f0-9]{64}\.evidence-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
+    const entry = lstatSync(join(path, name))
+    if (!entry.isFile() || entry.nlink !== 1 || entry.size < 1 || entry.size > 262_144) return fail("LEDGER_FILE")
+    retainedBytes += entry.size; retainedRecords++
+    const evidence = /^diagnostic-pilot-([a-f0-9]{64})\.evidence-[a-f0-9]{64}\.bin$/u.exec(name)
+    if (evidence) { const id = `sha256:${evidence[1]}` as LabRoot, prior = perStart.get(id) ?? { bytes: 0, records: 0 }; prior.bytes += entry.size; prior.records++; perStart.set(id, prior) }
+  }
+  if (retainedBytes > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || retainedRecords > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || [...perStart.values()].some((entry) => entry.bytes > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || entry.records > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords)) return fail("LEDGER_CAP")
+  const ledger = Object.freeze({ directory: path, writeStart(start: DiagnosticPilotStart) { write("started", start.root, start) }, readStart(id: LabRoot) { return read("started", id) }, writeTerminal(terminal: DiagnosticPilotTerminal) { if (!read("started", terminal.startRoot)) return fail("TERMINAL_UNCHARGED"); write("terminal", terminal.startRoot, terminal) }, readTerminal(id: LabRoot) { return read("terminal", id) }, listNames() { return readdirSync(path).sort() },
+    writeEvidence(startRoot: LabRoot, bytes: Uint8Array): LabRoot {
+      if (!root(startRoot) || !(bytes instanceof Uint8Array) || bytes.length < 1 || bytes.length > 131_072 || !read("started", startRoot)) return fail("EVIDENCE_INPUT")
+      const identity = byteRoot(bytes), target = join(path, `diagnostic-pilot-${startRoot.slice(7)}.evidence-${identity.slice(7)}.bin`)
+      const spent = perStart.get(startRoot) ?? { bytes: 0, records: 0 }
+      if (spent.records + 2 > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || spent.records + 2 > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes || spent.bytes + bytes.length + DIAGNOSTIC_PILOT_ARTIFACT_CEILING.terminalReserveBytes > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || retainedRecords + 2 > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || retainedBytes + bytes.length + DIAGNOSTIC_PILOT_ARTIFACT_CEILING.terminalReserveBytes > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes) return fail("EVIDENCE_CAP")
+      try { const prior = lstatSync(target); if (prior.isFile() && prior.nlink === 1 && prior.size === bytes.length && byteRoot(readFileSync(target)) === identity) return identity; return fail("EVIDENCE_COLLISION") } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error }
+      const temporary = `${target}.tmp-${randomUUID()}`
+      const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
+      try { let offset = 0; while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset); fsyncSync(fd) } finally { closeSync(fd) }
+      try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
+      const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd) } finally { closeSync(dirFd) }
+      retainedBytes += bytes.length; retainedRecords++
+      spent.bytes += bytes.length; spent.records++; perStart.set(startRoot, spent)
+      return identity
+    },
+    readEvidence(startRoot: LabRoot, evidenceRoot: LabRoot): Uint8Array {
+      if (!root(startRoot) || !root(evidenceRoot) || !read("started", startRoot)) return fail("EVIDENCE_ROOT")
+      const file = join(path, `diagnostic-pilot-${startRoot.slice(7)}.evidence-${evidenceRoot.slice(7)}.bin`), stat = lstatSync(file)
+      if (!stat.isFile() || stat.nlink !== 1 || stat.size < 1 || stat.size > 131_072) return fail("EVIDENCE_FILE")
+      const bytes = readFileSync(file)
+      if (byteRoot(bytes) !== evidenceRoot) return fail("EVIDENCE_HASH")
+      return bytes
+    },
+  })
   openedLedgers.add(ledger)
   return ledger
 }

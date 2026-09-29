@@ -18,6 +18,7 @@ import {
   createDiagnosticPilotCell,
   createDiagnosticPilotStart,
   createDiagnosticPilotTerminal,
+  createDiagnosticPilotLifetimeGrant,
   openDiagnosticPilotLedger,
   readDiagnosticPilotAssessedPair,
   reopenDiagnosticPilotLedger,
@@ -101,7 +102,11 @@ historicalIt("reopens one durable pilot charge before either issuance in both or
       } as FactorySupervisionProvider
     },
   }
-  const issue = (entry: typeof assessed[number]) => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start, requestRoot: cell.requestRoot, assessed: entry })
+  const issue = (entry: typeof assessed[number]) => {
+    const seat = cell.bottomCandidateRoot === entry.candidate.root ? "bottom" : "top"
+    const pilotLifetimeGrant = createDiagnosticPilotLifetimeGrant(ledger, allocated, cell, start, seat)
+    return issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start, requestRoot: cell.requestRoot, assessed: entry, pilotLifetimeGrant })
+  }
   expect(() => issue(assessed[0])).toThrow("PRECHARGE_ABSENT")
   expect(log).not.toContain("pilot-provider")
   ledger.writeStart(start)
@@ -126,9 +131,10 @@ historicalIt("reopens one durable pilot charge before either issuance in both or
   const providerIndexes = log.flatMap((entry, index) => entry === "pilot-provider" ? [index] : [])
   expect(providerIndexes).toHaveLength(4)
   for (const index of providerIndexes) expect(log[index - 1]).toBe(`reopen:${start.root}`)
-  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: { ...allocated, evidenceClass: "empirical" } as never, cell, start, requestRoot: cell.requestRoot, assessed: assessed[0] })).toThrow("ALLOCATION_MISMATCH")
-  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start: { ...start, root: labRoot("pilot-test", "wrong") }, requestRoot: cell.requestRoot, assessed: assessed[0] })).toThrow("START_MISMATCH")
-  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start, requestRoot: cell.requestRoot, assessed: { ...assessed[0] } })).toThrow("UNAUTHENTICATED_CLOSURE")
+  const pilotLifetimeGrant = createDiagnosticPilotLifetimeGrant(ledger, allocated, cell, start, "bottom")
+  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: { ...allocated, evidenceClass: "empirical" } as never, cell, start, requestRoot: cell.requestRoot, assessed: assessed[0], pilotLifetimeGrant })).toThrow("ALLOCATION_MISMATCH")
+  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start: { ...start, root: labRoot("pilot-test", "wrong") }, requestRoot: cell.requestRoot, assessed: assessed[0], pilotLifetimeGrant })).toThrow("START_MISMATCH")
+  expect(() => issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository, ledger, allocation: allocated, cell, start, requestRoot: cell.requestRoot, assessed: { ...assessed[0] }, pilotLifetimeGrant })).toThrow("UNAUTHENTICATED_CLOSURE")
   expect(log.filter((entry) => entry === "pilot-provider")).toHaveLength(4)
   expect(CANONICAL_ARENA_CATALOG_V1_37.arenas.some((arena) => arena.id === "arena:smoke:v1")).toBe(true)
   const failed = createDiagnosticPilotTerminal(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 1, artifactBytes: 0, artifactRecords: 0, code: "system_failure" })

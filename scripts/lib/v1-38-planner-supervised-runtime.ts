@@ -6,6 +6,7 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { createSelectedCurrentRuntimeFromRevisionV119 } from "../../packages/runtime-js/src/executor.js"
 import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harness.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
 
@@ -30,6 +31,9 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   invocationLimit?: number;
   /** Benchmark only: the coordinator's remaining overall budget, not Match time. */
   benchmarkLifetimeMs?: number;
+  /** A distinct, durable-precharge-bound pilot exception; never benchmark mode. */
+  pilotLifetimeMs?: number;
+  pilotLifetimeGrant?: DiagnosticPilotLifetimeGrant;
 }
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
@@ -51,7 +55,12 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
   let stopped = false; let pending: LeanTimingBinding | undefined; let observed: LeanTimingObservation | undefined; let observedTransportMs = 0
   const began = performance.now()
   const limit = options.invocationLimit ?? 24800
-  const lifetime = options.benchmarkLifetimeMs ?? 120000
+  if ((options.pilotLifetimeGrant === undefined) !== (options.pilotLifetimeMs === undefined)) throw new TypeError("LAB_RUNTIME_PILOT_GRANT")
+  if (options.pilotLifetimeGrant !== undefined) {
+    if (options.benchmarkLifetimeMs !== undefined || observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_PILOT_MODE")
+    requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.pilotLifetimeMs! })
+  }
+  const lifetime = options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120000
   if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3600000 || (options.benchmarkLifetimeMs !== undefined && (!observerHarness || limit !== 2200))) throw new TypeError("LAB_RUNTIME_LIFETIME")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
   const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {

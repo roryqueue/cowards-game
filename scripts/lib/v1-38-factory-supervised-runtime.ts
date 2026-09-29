@@ -4,6 +4,7 @@ import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { FactoryAdmission, FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
 import type { LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime-bridge.js"
+import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import { createPlannerSupervisedRuntime, type PlannerSupervisedRuntime, type PlannerSupervisedRuntimeOptions } from "./v1-38-planner-supervised-runtime.js"
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_RUNTIME_${code}`) }
@@ -16,6 +17,7 @@ export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedR
   readonly image?: string
   /** Factory allocation lifetime. Kept separate from the Phase 263 benchmark-only option. */
   readonly factoryLifetimeMs?: number
+  readonly pilotLifetimeGrant?: DiagnosticPilotLifetimeGrant
   readonly createRuntime?: (options: PlannerSupervisedRuntimeOptions) => PlannerSupervisedRuntime
 }
 
@@ -39,10 +41,13 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   if (!revision.validation.valid || revision.sourceHash !== admission.sourceRoot.slice(7) || revision.sourceBytes !== options.sourceBytes.byteLength || revision.runtime.language.id !== "typescript" || revision.runtime.abiVersion !== admission.nativeLane.runtimeAbi || revision.runtime.adapter.id !== "runtime-js-container-subprocess") return fail("REVISION_BINDING")
   const createRuntime = options.createRuntime ?? createPlannerSupervisedRuntime
   const factoryLifetimeMs = options.factoryLifetimeMs ?? 120_000
-  if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > 120_000) return fail("LIFETIME")
+  if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > (options.pilotLifetimeGrant ? 240_000 : 120_000)) return fail("LIFETIME")
+  if (options.pilotLifetimeGrant !== undefined) {
+    requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: factoryLifetimeMs })
+  }
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options
-  const selected = createRuntime({ ...runtimeOptions, revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
+  const selected = createRuntime({ ...runtimeOptions, ...(options.pilotLifetimeGrant === undefined ? {} : { pilotLifetimeMs: factoryLifetimeMs }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
   let identity: FactorySupervisionProvider["identity"]
   try {
     if (selected.identity.sourceRoot !== admission.sourceRoot || selected.identity.runtimeLimitsRoot !== admission.nativeLane.runtimeProfileRoot || selected.identity.attemptRoot !== options.attemptRoot || selected.identity.budgetRoot !== options.budgetRoot || selected.identity.image !== (options.image ?? LAB_ADMITTED_ROOTS.image)) return fail("SELECTED_IDENTITY")

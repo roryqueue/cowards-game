@@ -8,7 +8,7 @@ import { readFactoryArtifact, type FactoryRepository } from "../factory/reposito
 import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
 import { createLeagueCellTerminal, deriveLeagueResultEventRoot, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCellSchema, type LeagueCell, type LeagueCellTerminal } from "./contracts.js"
 import { publishLeagueCellTerminal, recordLeagueCellStart, type LeagueCellStart, type LeagueRepository } from "./repository.js"
-import { admitDiagnosticPilotAllocation, admitDiagnosticPilotCell, createDiagnosticPilotStart, requireDiagnosticPilotAssessedCandidate, verifyDiagnosticPilotLedger, type DiagnosticPilotAllocation, type DiagnosticPilotAssessedCandidate, type DiagnosticPilotCell, type DiagnosticPilotLedger, type DiagnosticPilotStart } from "./diagnostic-pilot.js"
+import { admitDiagnosticPilotAllocation, admitDiagnosticPilotCell, createDiagnosticPilotStart, diagnosticPilotContainerIdentity, requireDiagnosticPilotAssessedCandidate, requireDiagnosticPilotLifetimeGrant, verifyDiagnosticPilotLedger, type DiagnosticPilotAllocation, type DiagnosticPilotAssessedCandidate, type DiagnosticPilotCell, type DiagnosticPilotLedger, type DiagnosticPilotLifetimeGrant, type DiagnosticPilotStart } from "./diagnostic-pilot.js"
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u
 const fail = (code: string): never => { throw new TypeError(`LEAGUE_CONNECTED_RUNNER_${code}`) }
@@ -32,7 +32,7 @@ export interface FactorySupervisedRuntimeHost {
     attemptRoot: LabRoot
     budgetRoot: LabRoot
     executableRoot: LabRoot
-    pilotLifetimeGrant?: unknown
+    pilotLifetimeGrant?: DiagnosticPilotLifetimeGrant
   }>) => FactorySupervisionProvider
 }
 
@@ -130,7 +130,7 @@ export const issueDiagnosticPilotProviderFromFactoryCandidate = (input: Readonly
   start: DiagnosticPilotStart
   requestRoot: LabRoot
   assessed: DiagnosticPilotAssessedCandidate
-  pilotLifetimeGrant?: unknown
+  pilotLifetimeGrant: DiagnosticPilotLifetimeGrant
 }>): Readonly<DiagnosticPilotIssuedProvider> => {
   const allocation = admitDiagnosticPilotAllocation(input.allocation)
   const cell = admitDiagnosticPilotCell(allocation, input.cell)
@@ -140,6 +140,8 @@ export const issueDiagnosticPilotProviderFromFactoryCandidate = (input: Readonly
   const pin = allocation.candidateRoots.includes(assessed.candidate.root) && allocation.candidateAdmissionRoots.includes(assessed.admission.root)
   const seat = cell.bottomCandidateRoot === assessed.candidate.root ? "bottom" : cell.topCandidateRoot === assessed.candidate.root ? "top" : null
   if (!pin || !seat || assessed.admission.candidate.root !== assessed.candidate.root || assessed.admission.tupleRoot !== cell.tupleRoot || assessed.admission.runtimeRoot !== cell.runtimeRoot || assessed.candidate.proposal.build.compatibilityTupleRoot !== cell.tupleRoot || assessed.candidate.proposal.nativeLane.runtimeProfileRoot !== cell.runtimeRoot) return fail("PILOT_CANDIDATE_BINDING")
+  const container = diagnosticPilotContainerIdentity(allocation, cell, seat)
+  requireDiagnosticPilotLifetimeGrant(input.pilotLifetimeGrant, { allocationRoot: allocation.root, cellRoot: cell.root, startRoot: start.root, seat, containerName: container.containerName, ownershipLabel: container.ownershipLabel, lifetimeMilliseconds: 240_000 })
   const closure = readCandidateClosure(assessed.closure)
   if (closure.candidate.root !== assessed.candidate.root || closure.candidate.supervisionReceiptRoot !== assessed.candidate.supervisionReceiptRoot) return fail("PILOT_CLOSURE_BINDING")
   const sourceAdmission = admitFactory({ packet: closure.packet, proposal: closure.proposal, sourceBytes: closure.sourceBytes, repository: input.factoryRepository })
@@ -148,7 +150,7 @@ export const issueDiagnosticPilotProviderFromFactoryCandidate = (input: Readonly
   const revision = buildStrategyRevision({ source: new TextDecoder("utf-8", { fatal: true }).decode(closure.sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
   if (!revision.validation.valid || !revision.metadata.sourceArtifact || revision.sourceHash !== admission.sourceRoot.slice(7)) return fail("PILOT_EXECUTABLE_BUILD")
   const executableRoot = `sha256:${revision.metadata.sourceArtifact.hash}` as LabRoot
-  const provider = input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, executableRoot, ...(input.pilotLifetimeGrant === undefined ? {} : { pilotLifetimeGrant: input.pilotLifetimeGrant }) })
+  const provider = input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, executableRoot, pilotLifetimeGrant: input.pilotLifetimeGrant })
   const identity = provider?.identity
   if (!identity || identity.revisionId !== revision.id || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.attemptRoot !== start.root || identity.budgetRoot !== allocation.root || identity.executableRoot !== executableRoot) { provider?.close(); return fail("PILOT_PROVIDER_IDENTITY") }
   const handle = Object.freeze({ candidateRoot: closure.candidate.root, startRoot: start.root, allocationRoot: allocation.root, cellRoot: cell.root, requestRoot: cell.requestRoot, seat, producerBuildRoot: closure.candidate.proposal.build.buildRoot, identity: freezeLabValue(structuredClone(identity)), [pilotHandleSymbol]: true as const, toJSON(): never { return fail("PILOT_HANDLE_NON_SERIALIZABLE") } }) as DiagnosticPilotIssuedProvider
@@ -161,6 +163,16 @@ const requirePilotIssued = (value: DiagnosticPilotIssuedProvider, allocation: Di
   const provider = privateProviders.get(value), binding = pilotIssueBindings.get(value)
   if (!provider || !binding || binding.seat !== seat || binding.allocationRoot !== allocation.root || binding.cellRoot !== cell.root || binding.startRoot !== start.root || binding.requestRoot !== cell.requestRoot || binding.candidate.root !== value.candidateRoot || labRoot("diagnostic-pilot-provider-identity-v1", provider.identity) !== labRoot("diagnostic-pilot-provider-identity-v1", value.identity)) return fail("PILOT_ISSUED_BINDING")
   return provider
+}
+
+/** Issuance can fail before canonical Match entry; only this module can unwrap
+ * and close an already issued pilot provider. Never expose the real provider. */
+export const closeDiagnosticPilotIssuedProvider = (value: DiagnosticPilotIssuedProvider): boolean => {
+  if (!value || !pilotIssuedProviders.has(value)) return fail("PILOT_UNISSUED_PROVIDER")
+  const provider = privateProviders.get(value)
+  if (!provider) return fail("PILOT_MISSING_PROVIDER")
+  const closed = provider.close()
+  return closed.cleanupComplete && !closed.orphanedChild
 }
 
 /** Private canonical bridge only. No legacy journal, payoff, meta-solver or
