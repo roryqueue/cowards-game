@@ -33,9 +33,18 @@ import {
   type DiagnosticPilotSourceGate,
   diagnosticPilotSourceClosure,
   diagnosticPilotRequiredGateCommands,
+  checkRetainedDiagnosticPilotV1Contract,
+  admitDiagnosticPilotHistoricalVerdict,
 } from "./run-v1-38-diagnostic-pilot.js"
 
 describe("diagnostic pilot source-only watchdog and gate", () => {
+  it("reopens the consumed historical verdict with exact typed process-invalid accounting", () => {
+    const verdict = checkRetainedDiagnosticPilotV1Contract()
+    expect(verdict).toMatchObject({ processValidity: "process_invalid", chargedCount: 1, slots: [{ ordinal: 0, status: "system_failure" }, { ordinal: 1, status: "unused" }, { ordinal: 2, status: "unused" }, { ordinal: 3, status: "unused" }] })
+    expect(() => admitDiagnosticPilotHistoricalVerdict({ ...verdict, chargedCount: 0 })).toThrow()
+    expect(() => admitDiagnosticPilotHistoricalVerdict({ ...verdict, oldEvidenceBaseline: { ...(verdict.oldEvidenceBaseline as Record<string, unknown>), oldResult: labRoot("test", "changed") } })).toThrow()
+    expect(() => admitDiagnosticPilotHistoricalVerdict({ ...verdict, sourceClosureRoot: labRoot("test", "current") })).toThrow()
+  }, 120_000)
   it("places a preemptive kill before both hard deadlines with independent cleanup reserve", () => {
     const schedule = computeDiagnosticPilotDeadlines({ overallStartedAt: 1000, cellStartedAt: 2000 })
     expect(schedule.cellHardAt).toBe(242_000)

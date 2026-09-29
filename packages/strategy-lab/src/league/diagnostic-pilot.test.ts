@@ -31,6 +31,9 @@ import {
   admitDiagnosticPilotTerminalV2,
   safeDiagnosticPilotCause,
   admitDiagnosticPilotProspectiveCapacity,
+  createDiagnosticPilotFailureDiagnosis,
+  reopenProspectiveDiagnosticPilotLedger,
+  createDiagnosticPilotProspectiveResult,
 } from "./diagnostic-pilot.js"
 
 const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
@@ -66,6 +69,27 @@ describe("diagnostic-only pilot identity and precharge", () => {
     expect(admitDiagnosticPilotProspectiveCapacity({ retainedBytes: cap - 600_000, retainedRecords: 20, retainedInodes: 20, incomingBytes: 128, completedStages: 0, maxBytes: cap, maxRecords: 100, maxInodes: 100 })).toBe(true)
     expect(() => admitDiagnosticPilotProspectiveCapacity({ retainedBytes: cap - 300_000, retainedRecords: 20, retainedInodes: 20, incomingBytes: 128, completedStages: 0, maxBytes: cap, maxRecords: 100, maxInodes: 100 })).toThrow()
     expect(() => admitDiagnosticPilotProspectiveCapacity({ retainedBytes: 0, retainedRecords: 90, retainedInodes: 90, incomingBytes: 128, completedStages: 0, maxBytes: cap, maxRecords: 100, maxInodes: 100 })).toThrow()
+  })
+
+  it("retains a monotone prospective failure while the historical reader rejects version mixing", () => {
+    const testRoot = realpathSync(mkdtempSync(join(tmpdir(), "diagnostic-pilot-v2-test-")))
+    temporaryRoots.push(testRoot)
+    mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+    mkdirSync(join(testRoot, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 })
+    process.chdir(testRoot)
+    const admitted = allocation(), start = createDiagnosticPilotStart(admitted, createDiagnosticPilotCell(admitted, 0)), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+    ledger.writeStart(start)
+    ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 0, "bottom_issuance"))
+    ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 5, "terminal_publication"))
+    ledger.writeFailureDiagnosis!(createDiagnosticPilotFailureDiagnosis(start, "unknown_internal"))
+    const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, admitted)
+    expect(reopened.records[0]).toMatchObject({ lastEnteredStage: "terminal_publication", cause: "unknown_internal", processValidity: "process_invalid", terminal: null })
+    expect(() => reopenDiagnosticPilotLedger(ledger, admitted)).toThrow(/LEDGER_VERSION_MIX/u)
+    const result = createDiagnosticPilotProspectiveResult(admitted, ledger)
+    expect(result.schemaVersion).toBe("diagnostic-pilot-result-v2")
+    expect(result.slots[0]).toMatchObject({ status: "start_only", lastEnteredStage: "terminal_publication" })
+    expect(result.runAllowed).toBe(false)
+    expect(() => ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 2, "pre_kernel_binding"))).toThrow(/STAGE_ORDER/u)
   })
   it("admits exactly four canonical S01/S03 Smoke conditions under a distinct root", () => {
     const admitted = admitDiagnosticPilotAllocation(allocation())

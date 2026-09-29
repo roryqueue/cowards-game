@@ -43,6 +43,12 @@ const SUMMARY_PATH = ".planning/phases/265-serious-current-rules-league-and-deve
 const REVIEWER_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAcpzAUH2RHdz8JHphGFB4FVxFn96nGLNf6ug7jpxuoms=\n-----END PUBLIC KEY-----"
 const ALLOCATION_PATH = ".planning/artifacts/v1.38-phase-265-diagnostic-pilot-allocation.json"
 const RESULT_PATH = ".planning/artifacts/v1.38-phase-265-diagnostic-pilot-result.json"
+const PINNED_V1_SOURCE_COMMIT = "a2e34fe0e959356fa76b293c97584c909677ce82"
+const PINNED_V1_GATE_ROOT = "sha256:a6848166b539d9885aed10825a1c3f36731b7fc32474abf0dea2a38eef5e5a76"
+const PINNED_V1_SOURCE_ROOT = "sha256:86d157dd8ca42de29a55e966e223263f9bf96eac21afa531489fe7d82c543059"
+const PINNED_V1_ALLOCATION_ROOT = "sha256:8d642cdc20c4e0ff718a78bf0a38b4fe06cc4a3f4a8cee26969d86ad96bd49bc"
+const PINNED_V1_RESULT_ROOT = "sha256:af7aa261ebc7cd38cf893ea24c7b6c7a7986999125fe6a0eea853d893277f732"
+const PINNED_V1_BASELINE: DiagnosticPilotOldEvidenceBaseline = Object.freeze({ oldAllocationV2: "sha256:23ce066bb245814b995632712ceb101a4e60490654c6bc98557f0d39ea0541a4", oldAllocationUnversioned: "sha256:17a3a7b9ea45ad2c6b1bbe2f335810e499bf0f592d596aae2662beb148cdda96", oldResult: "sha256:c7475bbe9858d5179e176f636280042bb4d545e2f38482cbf03bf55e3f7da969", oldLeagueTree: "sha256:54c59d1bf2c86c826fd6bd5a4d07e2ac3677be2176ee5a3ae37babed3e21ae26", oldFactoryTree: "sha256:42c367d887f561827ecc3e2a28221fb02e094b3a3ff6dbc7e5fe16ef32392605" })
 const OLD_EVIDENCE_PATHS = Object.freeze({
   oldAllocationV2: ".planning/artifacts/v1.38-phase-265-allocation-v2.json",
   oldAllocationUnversioned: ".planning/artifacts/v1.38-phase-265-allocation.json",
@@ -175,6 +181,49 @@ export const checkDiagnosticPilotGate = (options: { readonly gatePath?: string; 
   if (identity !== labRoot("diagnostic-pilot-source-gate-v1", body)) return fail("GATE_ROOT")
   if (typeof raw.signatureBase64 !== "string" || !/^[A-Za-z0-9+/]{86}==$/u.test(raw.signatureBase64) || !verifySignature(null, diagnosticPilotGateSigningPayload(raw as unknown as DiagnosticPilotSourceGate), createPublicKey(REVIEWER_PUBLIC_KEY_PEM), Buffer.from(raw.signatureBase64, "base64"))) return fail("GATE_REVIEWER_SIGNATURE")
   return raw as unknown as DiagnosticPilotSourceGate
+}
+
+/** Authenticate every historical Git blob before supplying it to the old
+ * source gate. Current repaired source is never substituted for Plan 08 bytes. */
+export const readPinnedDiagnosticPilotV1Source = (): Readonly<Record<string, Uint8Array>> => {
+  const commit = spawnSync("git", ["rev-parse", "--verify", `${PINNED_V1_SOURCE_COMMIT}^{commit}`], { encoding: "utf8", maxBuffer: 1024 })
+  if (commit.status !== 0 || commit.stderr !== "" || commit.stdout.trim() !== PINNED_V1_SOURCE_COMMIT) return fail("PINNED_COMMIT")
+  const files: Record<string, Uint8Array> = {}
+  for (const path of DIAGNOSTIC_PILOT_SOURCE_FILES) {
+    const object = spawnSync("git", ["rev-parse", `${PINNED_V1_SOURCE_COMMIT}:${path}`], { encoding: "utf8", maxBuffer: 1024 })
+    const show = spawnSync("git", ["show", `${PINNED_V1_SOURCE_COMMIT}:${path}`], { encoding: "buffer", maxBuffer: 4_194_304 })
+    if (object.status !== 0 || object.stderr !== "" || !/^[0-9a-f]{40,64}\n$/u.test(object.stdout) || show.status !== 0 || show.stderr?.length || !show.stdout || show.stdout.length < 1) return fail("PINNED_BLOB")
+    const recomputed = spawnSync("git", ["hash-object", "--stdin"], { input: show.stdout, encoding: "utf8", maxBuffer: 1024 })
+    if (recomputed.status !== 0 || recomputed.stderr !== "" || recomputed.stdout !== object.stdout) return fail("PINNED_BLOB_HASH")
+    files[path] = show.stdout
+  }
+  return Object.freeze(files)
+}
+export const checkDiagnosticPilotHistoricalGate = (): DiagnosticPilotSourceGate => {
+  const gate = checkDiagnosticPilotGate({ sourceFiles: readPinnedDiagnosticPilotV1Source() })
+  if (gate.root !== PINNED_V1_GATE_ROOT || gate.sourceClosureRoot !== PINNED_V1_SOURCE_ROOT || gate.reviewSha256 !== "sha256:065b4f940a768883951be212eb593e68cbd932c9ba6f202f266b1c2b6b32ae27") return fail("PINNED_GATE")
+  return gate
+}
+export const verifyRetainedDiagnosticPilotV1 = async () => {
+  const gate = checkDiagnosticPilotHistoricalGate()
+  const allocation = readExactAllocation(ALLOCATION_PATH, gate)
+  if (allocation.root !== PINNED_V1_ALLOCATION_ROOT || JSON.stringify(allocation.oldEvidenceBaseline) !== JSON.stringify(PINNED_V1_BASELINE)) return fail("HISTORICAL_ALLOCATION")
+  const result = await verifyDiagnosticPilotResult(allocation, RESULT_PATH)
+  if (!("root" in result)) return fail("HISTORICAL_ATTEMPT_ONLY")
+  if (result.root !== PINNED_V1_RESULT_ROOT) return fail("HISTORICAL_RESULT")
+  const fields = { sourceCommit: PINNED_V1_SOURCE_COMMIT, sourceClosureRoot: gate.sourceClosureRoot, gateRoot: gate.root, reviewSha256: gate.reviewSha256, allocationRoot: allocation.root, resultRoot: result.root, oldEvidenceBaseline: allocation.oldEvidenceBaseline, processValidity: result.processValidity, chargedCount: result.chargedCount, slots: result.slots.map((slot) => ({ ordinal: slot.ordinal, status: slot.status })) }
+  return { schemaVersion: "diagnostic-pilot-historical-verdict-v1" as const, ...fields, root: labRoot("diagnostic-pilot-historical-verdict-v1", fields) }
+}
+export const admitDiagnosticPilotHistoricalVerdict = (value: unknown) => {
+  if (!exact(value, ["schemaVersion", "sourceCommit", "sourceClosureRoot", "gateRoot", "reviewSha256", "allocationRoot", "resultRoot", "oldEvidenceBaseline", "processValidity", "chargedCount", "slots", "root"]) || value.schemaVersion !== "diagnostic-pilot-historical-verdict-v1" || value.sourceCommit !== PINNED_V1_SOURCE_COMMIT || value.sourceClosureRoot !== PINNED_V1_SOURCE_ROOT || value.gateRoot !== PINNED_V1_GATE_ROOT || value.reviewSha256 !== "sha256:065b4f940a768883951be212eb593e68cbd932c9ba6f202f266b1c2b6b32ae27" || value.allocationRoot !== PINNED_V1_ALLOCATION_ROOT || value.resultRoot !== PINNED_V1_RESULT_ROOT || JSON.stringify(value.oldEvidenceBaseline) !== JSON.stringify(PINNED_V1_BASELINE) || value.processValidity !== "process_invalid" || value.chargedCount !== 1 || !Array.isArray(value.slots) || value.slots.length !== 4 || value.slots.some((slot, index) => !exact(slot, ["ordinal", "status"]) || slot.ordinal !== index || slot.status !== (index === 0 ? "system_failure" : "unused"))) return fail("HISTORICAL_VERDICT")
+  const { root: identity, schemaVersion: _schema, ...body } = value
+  if (identity !== labRoot("diagnostic-pilot-historical-verdict-v1", body)) return fail("HISTORICAL_VERDICT_ROOT")
+  return value
+}
+export const checkRetainedDiagnosticPilotV1Contract = () => {
+  const child = spawnSync(resolve("node_modules/.bin/tsx"), [fileURLToPath(import.meta.url), "verify-retained-v1"], { encoding: "utf8", maxBuffer: 262_144, timeout: 120_000, env: { ...process.env, DIAGNOSTIC_PILOT_SOURCE_ONLY: "1" } })
+  if (child.status !== 1 || child.signal !== null || child.error || child.stderr !== "" || !child.stdout?.endsWith("\n") || child.stdout.trim().split("\n").length !== 1) return fail("HISTORICAL_VERIFIER_EXIT")
+  return admitDiagnosticPilotHistoricalVerdict(JSON.parse(child.stdout))
 }
 
 /** The reserve is additive: two providers, each with 2-second stream close,
@@ -743,6 +792,8 @@ const main = async (args: readonly string[]) => {
   if (command === "prepare") { const paths = parsePilotPaths(args.slice(1), ["gate", "allocation", "factory-repository", "repository"]); const gate = checkDiagnosticPilotGate({ gatePath: paths.gate }); requireCompletedDiagnosticPilotSourcePlan(); if (existsSync(paths.repository!) || existsSync(RESULT_PATH)) return fail("PREPARE_PRIOR_STATE"); const allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: gate.sourceClosureRoot, implementationRoot: gate.sourceClosureRoot, gateRoot: gate.root, oldEvidenceBaseline: readDiagnosticPilotOldEvidenceBaseline() }); durableCreate(paths.allocation!, allocation); process.stdout.write(JSON.stringify({ allocationRoot: allocation.root, prepared: true, empiricalAuthority: false }) + "\n"); return }
   if (command === "preflight") { const paths = parsePilotPaths(args.slice(1), ["gate", "allocation", "factory-repository", "repository"]); const gate = checkDiagnosticPilotGate({ gatePath: paths.gate }); requireCompletedDiagnosticPilotSourcePlan(); if (existsSync(RESULT_PATH)) return fail("PREFLIGHT_PRIOR_ATTEMPT"); const allocation = readExactAllocation(paths.allocation!, gate); verifyDiagnosticPilotOldEvidenceBaseline(allocation); const capacity = preflightDiagnosticPilot(gate); const reader = measureDiagnosticPilotReader(); if (reader > gate.readerCeilingMilliseconds) return fail("PREFLIGHT_READER_LATENCY"); const host = await observeDiagnosticPilotHost(allocation); process.stdout.write(JSON.stringify({ capacity, host, readerMilliseconds: reader, consuming: false }) + "\n"); return }
   if (command === "verify-retained") { const paths = parsePilotPaths(args.slice(1), ["gate", "allocation", "result", "repository", "factory-repository"]); const gate = checkDiagnosticPilotGate({ gatePath: paths.gate }); const allocation = readExactAllocation(paths.allocation!, gate); const outcome = await verifyDiagnosticPilotResult(allocation, paths.result); process.stdout.write(JSON.stringify(outcome) + "\n"); if (outcome.processValidity !== "process_valid") process.exitCode = 1; return }
+  if (command === "verify-retained-v1") { if (args.length !== 1) return fail("ARGUMENTS"); const verdict = await verifyRetainedDiagnosticPilotV1(); process.stdout.write(JSON.stringify(verdict) + "\n"); process.exitCode = 1; return }
+  if (command === "check-retained-v1-contract") { if (args.length !== 1) return fail("ARGUMENTS"); const verdict = checkRetainedDiagnosticPilotV1Contract(); process.stdout.write(JSON.stringify(verdict) + "\n"); return }
   if (command === "run") {
     const overallStartedAt = performance.now()
     const paths = parsePilotPaths(args.slice(1), ["gate", "allocation", "result", "repository", "factory-repository"])

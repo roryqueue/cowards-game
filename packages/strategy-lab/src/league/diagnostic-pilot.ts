@@ -156,6 +156,81 @@ export const admitDiagnosticPilotTerminal = (start: DiagnosticPilotStart, value:
   return expected
 }
 
+/** Prospective-only diagnostics. These domains deliberately cannot be admitted
+ * as v1 terminals or retroactively added to the consumed Plan 09 result. */
+export const DIAGNOSTIC_PILOT_STAGES = Object.freeze(["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write", "terminal_publication"] as const)
+export type DiagnosticPilotStage = typeof DIAGNOSTIC_PILOT_STAGES[number]
+export type DiagnosticPilotCause = "worker_candidate" | "pilot_request_binding" | "pilot_match_binding" | "evidence_row_cap" | "evidence_outcome_cap" | "evidence_cap" | "worker_missing_evidence" | "worker_cell_reopen" | "ledger_cap" | "ledger_overwrite" | "unknown_internal"
+const SAFE_CAUSES: Readonly<Record<string, DiagnosticPilotCause>> = Object.freeze({
+  DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE: "worker_candidate",
+  DIAGNOSTIC_PILOT_PILOT_REQUEST_BINDING: "pilot_request_binding",
+  DIAGNOSTIC_PILOT_PILOT_MATCH_BINDING: "pilot_match_binding",
+  DIAGNOSTIC_PILOT_CLI_EVIDENCE_ROW_CAP: "evidence_row_cap",
+  DIAGNOSTIC_PILOT_CLI_EVIDENCE_OUTCOME_CAP: "evidence_outcome_cap",
+  DIAGNOSTIC_PILOT_EVIDENCE_CAP: "evidence_cap",
+  DIAGNOSTIC_PILOT_CLI_WORKER_MISSING_EVIDENCE: "worker_missing_evidence",
+  DIAGNOSTIC_PILOT_CLI_WORKER_CELL_REOPEN: "worker_cell_reopen",
+  DIAGNOSTIC_PILOT_LEDGER_CAP: "ledger_cap",
+  DIAGNOSTIC_PILOT_LEDGER_OVERWRITE: "ledger_overwrite",
+})
+const causeValues = new Set<DiagnosticPilotCause>([...Object.values(SAFE_CAUSES), "unknown_internal"])
+export const safeDiagnosticPilotCause = (error: unknown): DiagnosticPilotCause => error instanceof Error ? SAFE_CAUSES[error.message] ?? "unknown_internal" : "unknown_internal"
+export interface DiagnosticPilotStageCheckpoint { readonly schemaVersion: "diagnostic-pilot-stage-checkpoint-v1"; readonly startRoot: LabRoot; readonly ordinal: number; readonly stage: DiagnosticPilotStage; readonly root: LabRoot }
+export const createDiagnosticPilotStageCheckpoint = (start: DiagnosticPilotStart, ordinal: number, stage: DiagnosticPilotStage): Readonly<DiagnosticPilotStageCheckpoint> => {
+  if (!root(start.root) || !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= DIAGNOSTIC_PILOT_STAGES.length || DIAGNOSTIC_PILOT_STAGES[ordinal] !== stage) return fail("STAGE_ORDER")
+  const base = { schemaVersion: "diagnostic-pilot-stage-checkpoint-v1" as const, startRoot: start.root, ordinal, stage }
+  return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-stage-checkpoint-v1", base) })
+}
+export const admitDiagnosticPilotStageCheckpoint = (start: DiagnosticPilotStart, value: unknown, ordinal: number): Readonly<DiagnosticPilotStageCheckpoint> => {
+  if (!exactLabKeys(value, ["schemaVersion", "startRoot", "ordinal", "stage", "root"])) return fail("STAGE_KEYS")
+  const expected = createDiagnosticPilotStageCheckpoint(start, ordinal, (value as unknown as DiagnosticPilotStageCheckpoint).stage)
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("STAGE_MISMATCH")
+  return expected
+}
+export interface DiagnosticPilotTerminalV2 extends Omit<DiagnosticPilotTerminal, "schemaVersion"> { readonly schemaVersion: "diagnostic-pilot-terminal-v2"; readonly lastEnteredStage: DiagnosticPilotStage | "unknown"; readonly cause: DiagnosticPilotCause }
+export const createDiagnosticPilotTerminalV2 = (start: DiagnosticPilotStart, fields: Omit<DiagnosticPilotTerminalV2, "schemaVersion" | "root" | "startRoot">): Readonly<DiagnosticPilotTerminalV2> => {
+  if (fields.lastEnteredStage !== "unknown" && !DIAGNOSTIC_PILOT_STAGES.includes(fields.lastEnteredStage) || !causeValues.has(fields.cause)) return fail("TERMINAL_V2_FIELDS")
+  const { lastEnteredStage, cause, ...legacyFields } = fields
+  createDiagnosticPilotTerminal(start, legacyFields)
+  const base = { schemaVersion: "diagnostic-pilot-terminal-v2" as const, startRoot: start.root, ...legacyFields, lastEnteredStage, cause }
+  return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-terminal-v2", base) })
+}
+export const admitDiagnosticPilotTerminalV2 = (start: DiagnosticPilotStart, value: unknown): Readonly<DiagnosticPilotTerminalV2> => {
+  if (!exactLabKeys(value, ["schemaVersion", "root", "startRoot", "disposition", "processValidity", "evidenceRoot", "cleanupComplete", "elapsedMilliseconds", "artifactBytes", "artifactRecords", "code", "lastEnteredStage", "cause"])) return fail("TERMINAL_V2_KEYS")
+  const candidate = value as unknown as DiagnosticPilotTerminalV2
+  if (candidate.schemaVersion !== "diagnostic-pilot-terminal-v2" || candidate.startRoot !== start.root) return fail("TERMINAL_V2_START")
+  const { root: _root, schemaVersion: _schema, startRoot: _start, ...fields } = candidate
+  const expected = createDiagnosticPilotTerminalV2(start, fields)
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("TERMINAL_V2_MISMATCH")
+  return expected
+}
+
+/** Peak accounting includes the incoming atomic temp+link, all as-yet-absent
+ * immutable markers, one emergency terminal and one bounded diagnosis. */
+export const admitDiagnosticPilotProspectiveCapacity = (input: { readonly retainedBytes: number; readonly retainedRecords: number; readonly retainedInodes: number; readonly incomingBytes: number; readonly completedStages: number; readonly maxBytes: number; readonly maxRecords: number; readonly maxInodes: number }): true => {
+  if (Object.values(input).some((value) => !Number.isSafeInteger(value) || value < 0) || input.completedStages > 6 || input.incomingBytes < 1 || input.incomingBytes > 131_072) return fail("PROSPECTIVE_CAP_INPUT")
+  const remaining = 6 - input.completedStages
+  const peakBytes = input.retainedBytes + 2 * input.incomingBytes + remaining * 512 + 262_144 + 65_536
+  const peakInodes = input.retainedInodes + 2 + remaining * 2 + 2 + 2
+  const peakRecords = input.retainedRecords + 1 + remaining + 2
+  if (peakBytes > input.maxBytes || peakInodes > input.maxInodes || peakRecords > input.maxRecords) return fail("PROSPECTIVE_CAP")
+  return true
+}
+export interface DiagnosticPilotFailureDiagnosis { readonly schemaVersion: "diagnostic-pilot-failed-terminal-diagnosis-v1"; readonly startRoot: LabRoot; readonly lastEnteredStage: "terminal_publication"; readonly cause: DiagnosticPilotCause; readonly root: LabRoot }
+export const createDiagnosticPilotFailureDiagnosis = (start: DiagnosticPilotStart, cause: DiagnosticPilotCause): Readonly<DiagnosticPilotFailureDiagnosis> => {
+  if (!root(start.root) || !causeValues.has(cause)) return fail("DIAGNOSIS_CAUSE")
+  const base = { schemaVersion: "diagnostic-pilot-failed-terminal-diagnosis-v1" as const, startRoot: start.root, lastEnteredStage: "terminal_publication" as const, cause }
+  return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-failed-terminal-diagnosis-v1", base) })
+}
+export const admitDiagnosticPilotFailureDiagnosis = (start: DiagnosticPilotStart, value: unknown): Readonly<DiagnosticPilotFailureDiagnosis> => {
+  if (!exactLabKeys(value, ["schemaVersion", "startRoot", "lastEnteredStage", "cause", "root"])) return fail("DIAGNOSIS_KEYS")
+  const candidate = value as unknown as DiagnosticPilotFailureDiagnosis
+  if (candidate.schemaVersion !== "diagnostic-pilot-failed-terminal-diagnosis-v1" || candidate.startRoot !== start.root || candidate.lastEnteredStage !== "terminal_publication") return fail("DIAGNOSIS_FIELDS")
+  const expected = createDiagnosticPilotFailureDiagnosis(start, candidate.cause)
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("DIAGNOSIS_ROOT")
+  return expected
+}
+
 /** Per provider: 24,800 output envelopes of <=262,144 bytes; two providers,
  * canonical transition/descriptor overhead and atomic temporary files are
  * separately reserved. A local failure cap prevents an unbounded diagnostic. */
@@ -178,10 +253,16 @@ export interface DiagnosticPilotLedger {
   readonly listNames: () => readonly string[]
   readonly writeEvidence?: (startRoot: LabRoot, bytes: Uint8Array) => LabRoot
   readonly readEvidence?: (startRoot: LabRoot, evidenceRoot: LabRoot) => Uint8Array
+  readonly writeStageCheckpoint?: (checkpoint: DiagnosticPilotStageCheckpoint) => void
+  readonly readStageCheckpoint?: (startRoot: LabRoot, ordinal: number) => unknown | null
+  readonly writeTerminalV2?: (terminal: DiagnosticPilotTerminalV2) => void
+  readonly readTerminalV2?: (startRoot: LabRoot) => unknown | null
+  readonly writeFailureDiagnosis?: (diagnosis: DiagnosticPilotFailureDiagnosis) => void
+  readonly readFailureDiagnosis?: (startRoot: LabRoot) => unknown | null
 }
 const openedLedgers = new WeakSet<object>()
-const TEMPORARY = /^diagnostic-pilot-([a-f0-9]{64})\.(?:(?:started|terminal)\.json|evidence-[a-f0-9]{64}\.bin)\.tmp-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
-const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation, allowTemporary = false): boolean => {
+const TEMPORARY = /^diagnostic-pilot-([a-f0-9]{64})\.(?:(?:started|terminal|terminal-v2|failed-terminal-diagnosis|stage-[0-5])\.json|evidence-[a-f0-9]{64}\.bin)\.tmp-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
+const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation, allowTemporary = false, prospective = false): boolean => {
   const allowed = allocation.cells.map((_, ordinal) => createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal)).root)
   const names = ledger.listNames()
   if (names.length > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes || new Set(names).size !== names.length) return fail("LEDGER_INVENTORY")
@@ -193,6 +274,31 @@ const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocati
       if (!allowed.includes(`sha256:${temporary[1]}` as LabRoot)) return fail("LEDGER_FOREIGN_TEMPORARY")
       if (!allowTemporary) return fail("LEDGER_UNCERTAIN_TEMPORARY")
       uncertain = true
+      continue
+    }
+    const stage = /^diagnostic-pilot-([a-f0-9]{64})\.stage-([0-5])\.json$/u.exec(name)
+    if (stage) {
+      if (!prospective || !ledger.readStageCheckpoint) return fail("LEDGER_VERSION_MIX")
+      const ordinal = allowed.indexOf(`sha256:${stage[1]}` as LabRoot), sequence = Number(stage[2])
+      if (ordinal < 0 || !ledger.readStart(allowed[ordinal]!)) return fail("LEDGER_FOREIGN_STAGE")
+      const start = createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal))
+      admitDiagnosticPilotStageCheckpoint(start, ledger.readStageCheckpoint(start.root, sequence), sequence)
+      continue
+    }
+    const prospectiveTerminal = /^diagnostic-pilot-([a-f0-9]{64})\.(terminal-v2|failed-terminal-diagnosis)\.json$/u.exec(name)
+    if (prospectiveTerminal) {
+      if (!prospective) return fail("LEDGER_VERSION_MIX")
+      const ordinal = allowed.indexOf(`sha256:${prospectiveTerminal[1]}` as LabRoot)
+      if (ordinal < 0 || !ledger.readStart(allowed[ordinal]!)) return fail("LEDGER_FOREIGN_TERMINAL")
+      const start = createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal))
+      if (!ledger.readStageCheckpoint?.(start.root, 5)) return fail("LEDGER_TERMINAL_STAGE")
+      if (prospectiveTerminal[2] === "terminal-v2") {
+        if (!ledger.readTerminalV2) return fail("LEDGER_V2_READER")
+        admitDiagnosticPilotTerminalV2(start, ledger.readTerminalV2(start.root))
+      } else {
+        if (!ledger.readFailureDiagnosis) return fail("LEDGER_DIAGNOSIS_READER")
+        admitDiagnosticPilotFailureDiagnosis(start, ledger.readFailureDiagnosis(start.root))
+      }
       continue
     }
     const evidence = /^diagnostic-pilot-([a-f0-9]{64})\.evidence-([a-f0-9]{64})\.bin$/u.exec(name)
@@ -213,19 +319,21 @@ const inspectDiagnosticPilotInventory = (ledger: DiagnosticPilotLedger, allocati
   if (present.some((ordinal, index) => ordinal !== index)) return fail("LEDGER_NONPREFIX")
   for (const ordinal of present.slice(0, -1)) {
     const cell = createDiagnosticPilotCell(allocation, ordinal), start = createDiagnosticPilotStart(allocation, cell)
-    const raw = ledger.readTerminal(start.root), terminal = raw === null ? null : admitDiagnosticPilotTerminal(start, raw)
+    const old = ledger.readTerminal(start.root), next = prospective ? ledger.readTerminalV2?.(start.root) ?? null : null
+    if (old !== null && next !== null) return fail("LEDGER_VERSION_MIX")
+    const terminal = old !== null ? admitDiagnosticPilotTerminal(start, old) : next !== null ? admitDiagnosticPilotTerminalV2(start, next) : null
     if (!terminal || terminal.disposition !== "success" || terminal.processValidity !== "process_valid") return fail("LEDGER_PRIOR_NONPASS")
   }
   return uncertain
 }
 export const verifyDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, "readStart" | "readTerminal">, allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, start: DiagnosticPilotStart): Readonly<DiagnosticPilotStart> => {
   if (!openedLedgers.has(ledger) || (ledger as DiagnosticPilotLedger).directory !== resolve(DIAGNOSTIC_PILOT_STORE)) return fail("UNTRUSTED_LEDGER")
-  inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation))
+  inspectDiagnosticPilotInventory(ledger as DiagnosticPilotLedger, admitDiagnosticPilotAllocation(allocation), false, true)
   const expected = admitDiagnosticPilotStart(allocation, cell, start)
   const persisted = ledger.readStart(expected.root)
   if (!persisted) return fail("PRECHARGE_ABSENT")
   admitDiagnosticPilotStart(allocation, cell, persisted)
-  if (ledger.readTerminal(expected.root) !== null) return fail("PRECHARGE_ALREADY_TERMINAL")
+  if (ledger.readTerminal(expected.root) !== null || (ledger as DiagnosticPilotLedger).readTerminalV2?.(expected.root) != null) return fail("PRECHARGE_ALREADY_TERMINAL")
   return expected
 }
 const lifetimeGrants = new WeakSet<object>()
@@ -273,13 +381,46 @@ export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, 
   return freezeLabValue({ issued: false as const, retentionUncertain, records })
 }
 
+export const reopenProspectiveDiagnosticPilotLedger = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation) => {
+  if (!openedLedgers.has(ledger) || ledger.directory !== resolve(DIAGNOSTIC_PILOT_STORE) || !ledger.readStageCheckpoint || !ledger.readTerminalV2 || !ledger.readFailureDiagnosis) return fail("UNTRUSTED_PROSPECTIVE_LEDGER")
+  const uncertain = inspectDiagnosticPilotInventory(ledger, admitDiagnosticPilotAllocation(allocation), true, true)
+  const records = allocation.cells.map((_, ordinal) => {
+    const start = createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal))
+    if (!ledger.readStart(start.root)) return null
+    admitDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal), ledger.readStart(start.root))
+    if (ledger.readTerminal(start.root) !== null) return fail("PROSPECTIVE_LEGACY_TERMINAL")
+    const stages: DiagnosticPilotStageCheckpoint[] = []
+    for (let sequence = 0; sequence < 6; sequence++) {
+      const raw = ledger.readStageCheckpoint!(start.root, sequence)
+      if (raw === null) continue
+      stages.push(admitDiagnosticPilotStageCheckpoint(start, raw, sequence))
+    }
+    const terminalRaw = ledger.readTerminalV2!(start.root)
+    const terminal = terminalRaw === null ? null : admitDiagnosticPilotTerminalV2(start, terminalRaw)
+    const diagnosisRaw = ledger.readFailureDiagnosis!(start.root)
+    const diagnosis = diagnosisRaw === null ? null : admitDiagnosticPilotFailureDiagnosis(start, diagnosisRaw)
+    const lastEnteredStage = stages.at(-1)?.stage ?? "unknown"
+    if (terminal && (terminal.lastEnteredStage !== lastEnteredStage || terminal.cause !== "unknown_internal" && terminal.disposition === "success")) return fail("PROSPECTIVE_TERMINAL_STAGE")
+    if (diagnosis && lastEnteredStage !== "terminal_publication") return fail("PROSPECTIVE_DIAGNOSIS_STAGE")
+    return { start, stages, lastEnteredStage, cause: terminal?.cause ?? diagnosis?.cause ?? "unknown_internal", terminal, diagnosis, processValidity: uncertain || diagnosis || !terminal ? "process_invalid" as const : terminal.processValidity }
+  }).filter((value): value is NonNullable<typeof value> => value !== null)
+  if (records.some((entry, ordinal) => entry.start.ordinal !== ordinal)) return fail("PROSPECTIVE_NONPREFIX")
+  return freezeLabValue({ retentionUncertain: uncertain, records })
+}
+
+export const createDiagnosticPilotProspectiveResult = (allocation: DiagnosticPilotAllocation, ledger: DiagnosticPilotLedger) => {
+  const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
+  const fields = { schemaVersion: "diagnostic-pilot-result-v2" as const, allocationRoot: allocation.root, legacyGateRoot: allocation.gateRoot, processValidity: "process_invalid" as const, chargedCount: reopened.records.length, slots: allocation.cells.map((_, ordinal) => { const row = reopened.records[ordinal]; return row ? { ordinal, status: row.terminal?.disposition ?? "start_only", lastEnteredStage: row.lastEnteredStage, cause: row.cause, terminalRoot: row.terminal?.root ?? null, diagnosisRoot: row.diagnosis?.root ?? null } : { ordinal, status: "unused", lastEnteredStage: "unknown", cause: "unknown_internal", terminalRoot: null, diagnosisRoot: null } }), empiricalAuthority: false as const, runAllowed: false as const, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
+  return freezeLabValue({ ...fields, root: labRoot("diagnostic-pilot-result-v2", fields) })
+}
+
 /** Real repository adapter is defined here, but Plan 08 never creates or opens
  * the reserved pilot directory. Tests inject DiagnosticPilotLedger fakes. */
 export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLedger => {
   const path = resolve(directory), stat = lstatSync(path)
   if (path !== resolve(DIAGNOSTIC_PILOT_STORE) || basename(path) !== "league-265-diagnostic-pilot-20260923-a" || realpathSync(path) !== path || !stat.isDirectory() || (stat.mode & 0o777) !== 0o700) return fail("LEDGER_DIRECTORY")
-  const filename = (kind: "started" | "terminal", id: LabRoot) => join(path, `diagnostic-pilot-${id.slice(7)}.${kind}.json`)
-  const read = (kind: "started" | "terminal", id: LabRoot) => {
+  const filename = (kind: string, id: LabRoot) => join(path, `diagnostic-pilot-${id.slice(7)}.${kind}.json`)
+  const read = (kind: string, id: LabRoot) => {
     if (!root(id)) return fail("LEDGER_ROOT")
     const file = filename(kind, id)
     let stat
@@ -287,7 +428,7 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
     if (!stat.isFile() || stat.nlink !== 1 || stat.size < 1 || stat.size > 262_144) return fail("LEDGER_FILE")
     return parse(readFileSync(file))
   }
-  const write = (kind: "started" | "terminal", id: LabRoot, value: unknown) => {
+  const write = (kind: string, id: LabRoot, value: unknown) => {
     const data = canonicalBytes(value), target = filename(kind, id)
     if (read(kind, id) !== null) return fail("LEDGER_OVERWRITE")
     const temporary = `${target}.tmp-${randomUUID()}`
@@ -295,22 +436,55 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
     try { let written = 0; while (written < data.length) written += writeSync(fd, data, written, data.length - written); fsyncSync(fd) } finally { closeSync(fd) }
     try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
     const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd) } finally { closeSync(dirFd) }
+    retainedBytes += data.length; retainedRecords++
+    const spent = perStart.get(id) ?? { bytes: 0, records: 0 }
+    spent.bytes += data.length; spent.records++; perStart.set(id, spent)
   }
   let retainedBytes = 0, retainedRecords = 0
   const perStart = new Map<LabRoot, { bytes: number; records: number }>()
   for (const name of readdirSync(path)) {
     const temporary = TEMPORARY.test(name)
-    if (!temporary && !/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal)\.json$/u.test(name) && !/^diagnostic-pilot-[a-f0-9]{64}\.evidence-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
+    if (!temporary && !/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal|terminal-v2|failed-terminal-diagnosis|stage-[0-5])\.json$/u.test(name) && !/^diagnostic-pilot-[a-f0-9]{64}\.evidence-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
     const entry = lstatSync(join(path, name))
     if (!entry.isFile() || entry.nlink !== 1 || (!temporary && entry.size < 1) || entry.size > 262_144 || (temporary && (entry.mode & 0o777) !== 0o600)) return fail("LEDGER_FILE")
     retainedBytes += entry.size; retainedRecords++
-    const evidence = /^diagnostic-pilot-([a-f0-9]{64})\.evidence-[a-f0-9]{64}\.bin$/u.exec(name)
-    if (evidence) { const id = `sha256:${evidence[1]}` as LabRoot, prior = perStart.get(id) ?? { bytes: 0, records: 0 }; prior.bytes += entry.size; prior.records++; perStart.set(id, prior) }
+    const owned = /^diagnostic-pilot-([a-f0-9]{64})\./u.exec(name)
+    if (owned) { const id = `sha256:${owned[1]}` as LabRoot, prior = perStart.get(id) ?? { bytes: 0, records: 0 }; prior.bytes += entry.size; prior.records++; perStart.set(id, prior) }
   }
   if (retainedBytes > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || retainedRecords > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || [...perStart.values()].some((entry) => entry.bytes > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || entry.records > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords)) return fail("LEDGER_CAP")
+  const prospectiveCapacity = (id: LabRoot, bytes: number, completedStages: number) => {
+    const spent = perStart.get(id) ?? { bytes: 0, records: 0 }
+    admitDiagnosticPilotProspectiveCapacity({ retainedBytes: spent.bytes, retainedRecords: spent.records, retainedInodes: spent.records, incomingBytes: bytes, completedStages, maxBytes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes, maxRecords: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords, maxInodes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes })
+    admitDiagnosticPilotProspectiveCapacity({ retainedBytes, retainedRecords, retainedInodes: retainedRecords, incomingBytes: bytes, completedStages, maxBytes: 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes, maxRecords: 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords, maxInodes: 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes })
+  }
   const ledger = Object.freeze({ directory: path, writeStart(start: DiagnosticPilotStart) { write("started", start.root, start) }, readStart(id: LabRoot) { return read("started", id) }, writeTerminal(terminal: DiagnosticPilotTerminal) { if (!read("started", terminal.startRoot)) return fail("TERMINAL_UNCHARGED"); write("terminal", terminal.startRoot, terminal) }, readTerminal(id: LabRoot) { return read("terminal", id) }, listNames() { return readdirSync(path).sort() },
+    writeStageCheckpoint(checkpoint: DiagnosticPilotStageCheckpoint) {
+      if (!read("started", checkpoint.startRoot) || read("terminal", checkpoint.startRoot) || read("terminal-v2", checkpoint.startRoot)) return fail("STAGE_UNCHARGED_OR_TERMINAL")
+      const admitted = createDiagnosticPilotStageCheckpoint({ root: checkpoint.startRoot } as DiagnosticPilotStart, checkpoint.ordinal, checkpoint.stage)
+      if (checkpoint.root !== admitted.root) return fail("STAGE_ORDER")
+      const existingStages = DIAGNOSTIC_PILOT_STAGES.flatMap((_, ordinal) => read(`stage-${ordinal}`, checkpoint.startRoot) === null ? [] : [ordinal])
+      if (existingStages.some((ordinal) => ordinal >= checkpoint.ordinal)) return fail("STAGE_ORDER")
+      prospectiveCapacity(checkpoint.startRoot, canonicalBytes(checkpoint).length, existingStages.length)
+      write(`stage-${checkpoint.ordinal}`, checkpoint.startRoot, checkpoint)
+    },
+    readStageCheckpoint(id: LabRoot, ordinal: number) { if (!Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= 6) return fail("STAGE_ORDINAL"); return read(`stage-${ordinal}`, id) },
+    writeTerminalV2(terminal: DiagnosticPilotTerminalV2) {
+      if (!read("started", terminal.startRoot) || !read("stage-5", terminal.startRoot) || read("terminal", terminal.startRoot) || read("terminal-v2", terminal.startRoot)) return fail("TERMINAL_V2_PRECONDITION")
+      admitDiagnosticPilotTerminalV2({ root: terminal.startRoot } as DiagnosticPilotStart, terminal)
+      write("terminal-v2", terminal.startRoot, terminal)
+    },
+    readTerminalV2(id: LabRoot) { return read("terminal-v2", id) },
+    writeFailureDiagnosis(diagnosis: DiagnosticPilotFailureDiagnosis) {
+      if (!read("started", diagnosis.startRoot) || !read("stage-5", diagnosis.startRoot)) return fail("DIAGNOSIS_PRECONDITION")
+      admitDiagnosticPilotFailureDiagnosis({ root: diagnosis.startRoot } as DiagnosticPilotStart, diagnosis)
+      prospectiveCapacity(diagnosis.startRoot, canonicalBytes(diagnosis).length, 6)
+      write("failed-terminal-diagnosis", diagnosis.startRoot, diagnosis)
+    },
+    readFailureDiagnosis(id: LabRoot) { return read("failed-terminal-diagnosis", id) },
     writeEvidence(startRoot: LabRoot, bytes: Uint8Array): LabRoot {
       if (!root(startRoot) || !(bytes instanceof Uint8Array) || bytes.length < 1 || bytes.length > 131_072 || !read("started", startRoot)) return fail("EVIDENCE_INPUT")
+      const completedStages = DIAGNOSTIC_PILOT_STAGES.filter((_, ordinal) => read(`stage-${ordinal}`, startRoot) !== null).length
+      if (completedStages) prospectiveCapacity(startRoot, bytes.length, completedStages)
       const identity = byteRoot(bytes), target = join(path, `diagnostic-pilot-${startRoot.slice(7)}.evidence-${identity.slice(7)}.bin`)
       const spent = perStart.get(startRoot) ?? { bytes: 0, records: 0 }
       if (spent.records + 2 > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || spent.records + 2 > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes || spent.bytes + bytes.length + DIAGNOSTIC_PILOT_ARTIFACT_CEILING.terminalReserveBytes > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || retainedRecords + 2 > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || retainedBytes + bytes.length + DIAGNOSTIC_PILOT_ARTIFACT_CEILING.terminalReserveBytes > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes) return fail("EVIDENCE_CAP")
