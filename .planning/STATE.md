@@ -5,15 +5,15 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 Plan10 source-only failure-classification and IPC repair; Plan09 run consumed process-invalid with no retry authority
+stopped_at: Phase265 Plan10 source-only repair complete under non-authorizing signed gate; Plan07 and Plan09 remain consumed process-invalid with no retry authority
 last_updated: "2026-09-29"
 last_activity: 2026-09-29
-last_activity_desc: Plan265-09 failure diagnosed without rerun; Plan265-10 source-only repair passed independent plan check
+last_activity_desc: Plan265-10 source-only repair independently reviewed, twelve exact checks passed, signed gate verified; Phase265 empirical gate remains blocked
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 33
 current_plan: 10
 total_plans_in_phase: 10
@@ -29,12 +29,20 @@ evidence chunk, so neither provider issuance nor `MATCH_KERNEL` entry can be
 inferred. A separate deterministic source defect sends `done` without
 `cell-complete` after a catch terminal and can leave the parent active. The
 diagnosis is committed in `.planning/debug/phase-265-pilot-failure.md`.
-Plan265-10 now has an independent passing plan check for source-only, versioned
-allowlisted stage/cause retention, idempotent terminal-to-parent IPC, pinned
-historical v1 verification, and a new non-authorizing exact-source gate. No
-source repair, new allocation, provider, Strategy, model or Match has run under
-Plan10 yet. Plan07 and Plan09 remain separately consumed and non-retryable;
-LEAG-01–09 and Phase266 freeze remain blocked.
+Plan265-10's source-only repair is complete at source commit `1ebf10ae`, closure
+`sha256:d985d51e82ae23dd805fc55bca3ee048ba37c77d7129c33b11c79d101357d41e`.
+It adds bounded allowlisted stage/cause retention, truthful terminal-before-IPC
+and parent reconciliation, and pinned read-only historical v1 verification.
+Independent zero-actionable review, twelve passing exact-source commands
+(including 29/29 files and 357/357 CI tests), and signed gate root
+`sha256:5cf7974145be0fd6d665dc28127aa83fff1b29ce1749dc5b2d6dc4d04bdad6d1`
+authorize no run or empirical result. The old Plan08 gate and all five old
+baselines reopen unchanged; Plan09 remains one charged `system_failure`, three
+unused slots, `process_invalid`. No new allocation, repository reservation,
+provider, Strategy, model, Match, Docker run or preflight occurred in Plan10.
+Plan07 and Plan09 remain separately consumed and non-retryable. Phase265 is
+8/10 plans complete but empirically incomplete; LEAG-01–09 and Phase266 real
+freeze, formation, holdout, counted, public and production routes remain blocked.
 
 ## Current Session Continuity — 2026-09-29 Plan265-09 terminal diagnostic
 
@@ -829,6 +837,8 @@ Progress: [██░░░░░░░░] 22% (2 of 9 milestone phases complete
 
 ## Performance Metrics
 
+**Plan265-10 source-only closeout (3 tasks, 2h 2m, six changed source/test/boundary files plus three signed-review artifacts):** Independent final review reports zero actionable findings on closure `sha256:d985d51e82ae23dd805fc55bca3ee048ba37c77d7129c33b11c79d101357d41e`. All twelve exact commands passed, including focused 5-file/68-test, complete 29-file/357-test, privacy 4-file/122-test, TypeScript/build/boundaries and pinned typed historical verification. Gate `sha256:5cf7974145be0fd6d665dc28127aa83fff1b29ce1749dc5b2d6dc4d04bdad6d1` has every empirical/downstream authority flag false. No run or LEAG requirement was credited.
+
 **Plan265-08 source-only closeout (3 tasks, 10 changed deliverable files, 6d 9h 35m elapsed across paused sessions):** Focused 5-file/40-test, full Phase265 29-file/357-test, and privacy-marker 4-file/101-test commands passed. Strict TypeScript/build and all five boundary commands passed; signed gate root `sha256:a6848166b539d9885aed10825a1c3f36731b7fc32474abf0dea2a38eef5e5a76` has no empirical authority. No pilot allocation, reservation or Match exists.
 
 **Plan-144 source-only closeout:** Final source80936682 passed23/23 tests in592.22s, including the472.395s six-mode/two-root/two-process proof with zero producer guards. Independent V3 review is clean; summary8bb3dbb8 is one addition after reports0ac4c15d. Source/test/runtime byte identity permits full-proof reuse only with fresh later-descendant source-only, absence, ancestry and focused predicate/stage checks. Targeted tsc exits2 on406 unchanged baseline diagnostics, zero new. No requirement, v10 publication or execution authority is created.
@@ -1277,9 +1287,9 @@ The route-specific entries below are retained as chronological context only. The
 
 ## Session Continuity
 
-Last session: 2026-09-29T19:40:57Z
-Stopped at: Plan265-09 one-shot diagnostic terminal process-invalid; no retry or empirical authority
-Resume file: .planning/phases/265-serious-current-rules-league-and-development-red-team/265-09-SUMMARY.md
+Last session: 2026-09-29T22:04:18Z
+Stopped at: Plan265-10 source-only gate complete; Phase265 empirical work remains blocked with no retry or run authority
+Resume file: .planning/phases/265-serious-current-rules-league-and-development-red-team/265-10-SUMMARY.md
 
 ### Blockers
 
