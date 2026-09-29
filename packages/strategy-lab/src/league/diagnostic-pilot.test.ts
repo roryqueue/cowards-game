@@ -34,6 +34,7 @@ import {
   createDiagnosticPilotFailureDiagnosis,
   reopenProspectiveDiagnosticPilotLedger,
   createDiagnosticPilotProspectiveResult,
+  admitDiagnosticPilotProspectiveResult,
 } from "./diagnostic-pilot.js"
 
 const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
@@ -56,7 +57,7 @@ describe("diagnostic-only pilot identity and precharge", () => {
     expect(safeDiagnosticPilotCause(new TypeError("DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE"))).toBe("worker_candidate")
     expect(safeDiagnosticPilotCause(new Error("DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE /private/secret"))).toBe("unknown_internal")
     expect(safeDiagnosticPilotCause({ message: "DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE", source: "secret" })).toBe("unknown_internal")
-    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 10, artifactBytes: 0, artifactRecords: 0, code: "system_failure", lastEnteredStage: "top_issuance", cause: "worker_candidate" })
+    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 10, artifactBytes: 0, artifactRecords: 0, code: "system_failure", lastEnteredStage: "top_issuance", failureStage: "top_issuance", cause: "worker_candidate" })
     expect(admitDiagnosticPilotTerminalV2(start, terminal)).toEqual(terminal)
     expect(() => admitDiagnosticPilotTerminalV2(start, { ...terminal, stack: "private" })).toThrow()
     expect(() => admitDiagnosticPilotTerminalV2(start, { ...terminal, cause: "raw private error" })).toThrow()
@@ -89,7 +90,23 @@ describe("diagnostic-only pilot identity and precharge", () => {
     expect(result.schemaVersion).toBe("diagnostic-pilot-result-v2")
     expect(result.slots[0]).toMatchObject({ status: "start_only", lastEnteredStage: "terminal_publication" })
     expect(result.runAllowed).toBe(false)
+    expect(admitDiagnosticPilotProspectiveResult(admitted, ledger, result)).toEqual(result)
+    expect(() => admitDiagnosticPilotProspectiveResult(admitted, ledger, { ...result, counted: true })).toThrow()
     expect(() => ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 2, "pre_kernel_binding"))).toThrow(/STAGE_ORDER/u)
+  })
+  it("treats an interrupted atomic checkpoint link as uncertain and never invents its stage", () => {
+    const testRoot = realpathSync(mkdtempSync(join(tmpdir(), "diagnostic-pilot-stage-link-test-")))
+    temporaryRoots.push(testRoot)
+    mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+    const directory = join(testRoot, DIAGNOSTIC_PILOT_STORE)
+    mkdirSync(directory, { mode: 0o700 })
+    process.chdir(testRoot)
+    const admitted = allocation(), start = createDiagnosticPilotStart(admitted, createDiagnosticPilotCell(admitted, 0)), ledger = openDiagnosticPilotLedger(directory)
+    ledger.writeStart(start)
+    writeFileSync(join(directory, `diagnostic-pilot-${start.root.slice(7)}.stage-0.json.tmp-${randomUUID()}`), Buffer.from("interrupted link"), { mode: 0o600 })
+    const reopened = reopenProspectiveDiagnosticPilotLedger(openDiagnosticPilotLedger(directory), admitted)
+    expect(reopened.retentionUncertain).toBe(true)
+    expect(reopened.records[0]).toMatchObject({ lastEnteredStage: "unknown", processValidity: "process_invalid", terminal: null })
   })
   it("admits exactly four canonical S01/S03 Smoke conditions under a distinct root", () => {
     const admitted = admitDiagnosticPilotAllocation(allocation())

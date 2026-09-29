@@ -11,15 +11,23 @@ import {
   DIAGNOSTIC_PILOT_STORE,
   admitDiagnosticPilotAllocation,
   admitDiagnosticPilotCell,
+  admitDiagnosticPilotStart,
   createDiagnosticPilotAllocation,
   createDiagnosticPilotCell,
   createDiagnosticPilotStart,
   createDiagnosticPilotTerminal,
+  createDiagnosticPilotTerminalV2,
+  createDiagnosticPilotStageCheckpoint,
+  createDiagnosticPilotFailureDiagnosis,
+  admitDiagnosticPilotTerminalV2,
+  admitDiagnosticPilotTerminal,
   createDiagnosticPilotLifetimeGrant,
   diagnosticPilotContainerIdentity,
   openDiagnosticPilotLedger,
   readDiagnosticPilotAssessedPair,
   reopenDiagnosticPilotLedger,
+  reopenProspectiveDiagnosticPilotLedger,
+  safeDiagnosticPilotCause,
   type DiagnosticPilotAllocation,
   type DiagnosticPilotCell,
   type DiagnosticPilotOldEvidenceBaseline,
@@ -27,7 +35,7 @@ import {
 import { labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { closeDiagnosticPilotIssuedProvider, issueDiagnosticPilotProviderFromFactoryCandidate, runDiagnosticPilotCell, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
-import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
+import { CANONICAL_ARENA_CATALOG_V1_37, admitCanonicalJsonValue } from "@cowards/spec"
 import { leaguePlayerId } from "../packages/strategy-lab/src/league/matrix.js"
 import type { LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
 import type { DiagnosticPilotLedger, DiagnosticPilotStart } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
@@ -49,6 +57,10 @@ const PINNED_V1_SOURCE_ROOT = "sha256:86d157dd8ca42de29a55e966e223263f9bf96eac21
 const PINNED_V1_ALLOCATION_ROOT = "sha256:8d642cdc20c4e0ff718a78bf0a38b4fe06cc4a3f4a8cee26969d86ad96bd49bc"
 const PINNED_V1_RESULT_ROOT = "sha256:af7aa261ebc7cd38cf893ea24c7b6c7a7986999125fe6a0eea853d893277f732"
 const PINNED_V1_BASELINE: DiagnosticPilotOldEvidenceBaseline = Object.freeze({ oldAllocationV2: "sha256:23ce066bb245814b995632712ceb101a4e60490654c6bc98557f0d39ea0541a4", oldAllocationUnversioned: "sha256:17a3a7b9ea45ad2c6b1bbe2f335810e499bf0f592d596aae2662beb148cdda96", oldResult: "sha256:c7475bbe9858d5179e176f636280042bb4d545e2f38482cbf03bf55e3f7da969", oldLeagueTree: "sha256:54c59d1bf2c86c826fd6bd5a4d07e2ac3677be2176ee5a3ae37babed3e21ae26", oldFactoryTree: "sha256:42c367d887f561827ecc3e2a28221fb02e094b3a3ff6dbc7e5fe16ef32392605" })
+const REPAIR_GATE_PATH = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-10-SOURCE-GATE.json"
+const REPAIR_REVIEW_PATH = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-10-SOURCE-REVIEW.md"
+const REPAIR_AUTHOR_ID = "/root/execute_265_10"
+const REPAIR_REVIEWER_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAtn7dYhP7UW/FiRzCa2iUJMYO1+r2+VXeevOBBhI7j7U=\n-----END PUBLIC KEY-----"
 const OLD_EVIDENCE_PATHS = Object.freeze({
   oldAllocationV2: ".planning/artifacts/v1.38-phase-265-allocation-v2.json",
   oldAllocationUnversioned: ".planning/artifacts/v1.38-phase-265-allocation.json",
@@ -224,6 +236,79 @@ export const checkRetainedDiagnosticPilotV1Contract = () => {
   const child = spawnSync(resolve("node_modules/.bin/tsx"), [fileURLToPath(import.meta.url), "verify-retained-v1"], { encoding: "utf8", maxBuffer: 262_144, timeout: 120_000, env: { ...process.env, DIAGNOSTIC_PILOT_SOURCE_ONLY: "1" } })
   if (child.status !== 1 || child.signal !== null || child.error || child.stderr !== "" || !child.stdout?.endsWith("\n") || child.stdout.trim().split("\n").length !== 1) return fail("HISTORICAL_VERIFIER_EXIT")
   return admitDiagnosticPilotHistoricalVerdict(JSON.parse(child.stdout))
+}
+export const DIAGNOSTIC_PILOT_REPAIR_SOURCE_FILES = Object.freeze([
+  "packages/strategy-lab/src/league/diagnostic-pilot.ts",
+  "packages/strategy-lab/src/league/diagnostic-pilot.test.ts",
+  "packages/strategy-lab/src/league/connected-runner.ts",
+  "packages/strategy-lab/src/league/connected-runner.test.ts",
+  "scripts/run-v1-38-diagnostic-pilot.ts",
+  "scripts/run-v1-38-diagnostic-pilot.test.ts",
+  "scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
+  "pnpm-lock.yaml",
+  ".github/workflows/ci.yml",
+])
+const repairCanonicalBytes = (value: unknown): Uint8Array => {
+  const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
+  if (!admitted.ok || admitted.canonicalByteLength < 1 || admitted.canonicalByteLength > 262_144) return fail("REPAIR_CANONICAL")
+  return admitted.canonicalBytes
+}
+export const diagnosticPilotRepairSourceClosure = (read: (path: string) => Uint8Array = (path) => readNoFollowFile(path, 4_194_304)) => {
+  const sourceFiles = DIAGNOSTIC_PILOT_REPAIR_SOURCE_FILES.map((path) => ({ path, sha256: sha(read(path)) }))
+  return { sourceFiles, sourceClosureRoot: labRoot("diagnostic-pilot-repair-source-closure-v1", sourceFiles) }
+}
+export const diagnosticPilotRepairRequiredCommands = (): readonly string[] => Object.freeze([
+  "./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/league/connected-runner.test.ts packages/strategy-lab/src/league/diagnostic-pilot.test.ts scripts/run-v1-38-diagnostic-pilot.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts scripts/lib/v1-38-planner-supervised-runtime.test.ts",
+  ...diagnosticPilotRequiredGateCommands().slice(1),
+  "./node_modules/.bin/tsx scripts/run-v1-38-diagnostic-pilot.ts check-retained-v1-contract",
+])
+export interface DiagnosticPilotRepairSourceGate {
+  readonly schemaVersion: "diagnostic-pilot-repair-source-gate-v1"
+  readonly sourceFiles: readonly { readonly path: string; readonly sha256: LabRoot }[]
+  readonly sourceClosureRoot: LabRoot
+  readonly reviewPath: typeof REPAIR_REVIEW_PATH
+  readonly reviewSha256: LabRoot
+  readonly reviewerId: string
+  readonly authorId: typeof REPAIR_AUTHOR_ID
+  readonly actionableFindings: 0
+  readonly commands: readonly { readonly command: string; readonly exitCode: 0 }[]
+  readonly historicalCompatibility: ReturnType<typeof checkRetainedDiagnosticPilotV1Contract>
+  readonly oldEvidenceBaseline: DiagnosticPilotOldEvidenceBaseline
+  readonly empiricalAuthority: false
+  readonly runAllowed: false
+  readonly leagueRequirementsEvidence: false
+  readonly freezeAuthorized: false
+  readonly formationAuthorized: false
+  readonly holdoutAuthorized: false
+  readonly counted: false
+  readonly public: false
+  readonly productionAuthorized: false
+  readonly signatureBase64: string
+  readonly root: LabRoot
+}
+export const diagnosticPilotRepairGateSigningPayload = (body: Omit<DiagnosticPilotRepairSourceGate, "signatureBase64" | "root">): Uint8Array => repairCanonicalBytes({ domain: "diagnostic-pilot-repair-source-gate-signature-v1", ...body })
+export const diagnosticPilotRepairReviewerFingerprint = (): LabRoot => sha(createPublicKey(REPAIR_REVIEWER_PUBLIC_KEY_PEM).export({ type: "spki", format: "der" }))
+export const checkDiagnosticPilotRepairGate = (options: { readonly gatePath?: string; readonly sourceFiles?: Readonly<Record<string, Uint8Array>>; readonly reviewBytes?: Uint8Array } = {}): DiagnosticPilotRepairSourceGate => {
+  const path = options.gatePath ?? REPAIR_GATE_PATH
+  const raw = JSON.parse(readNoFollowFile(path, 262_144).toString("utf8")) as unknown
+  const keys = ["schemaVersion", "sourceFiles", "sourceClosureRoot", "reviewPath", "reviewSha256", "reviewerId", "authorId", "actionableFindings", "commands", "historicalCompatibility", "oldEvidenceBaseline", "empiricalAuthority", "runAllowed", "leagueRequirementsEvidence", "freezeAuthorized", "formationAuthorized", "holdoutAuthorized", "counted", "public", "productionAuthorized", "signatureBase64", "root"]
+  if (!exact(raw, keys) || raw.schemaVersion !== "diagnostic-pilot-repair-source-gate-v1" || raw.reviewPath !== REPAIR_REVIEW_PATH || raw.authorId !== REPAIR_AUTHOR_ID || typeof raw.reviewerId !== "string" || raw.reviewerId.length < 2 || raw.reviewerId === raw.authorId || raw.actionableFindings !== 0 || !root(raw.root) || [raw.empiricalAuthority, raw.runAllowed, raw.leagueRequirementsEvidence, raw.freezeAuthorized, raw.formationAuthorized, raw.holdoutAuthorized, raw.counted, raw.public, raw.productionAuthorized].some((flag) => flag !== false)) return fail("REPAIR_GATE_SCHEMA")
+  const source = diagnosticPilotRepairSourceClosure((file) => options.sourceFiles === undefined ? readNoFollowFile(file, 4_194_304) : options.sourceFiles[file] ?? fail("REPAIR_SOURCE_MISSING"))
+  if (JSON.stringify(raw.sourceFiles) !== JSON.stringify(source.sourceFiles) || raw.sourceClosureRoot !== source.sourceClosureRoot) return fail("REPAIR_SOURCE_DRIFT")
+  const review = options.reviewBytes ?? readNoFollowFile(REPAIR_REVIEW_PATH, 262_144)
+  const fingerprint = diagnosticPilotRepairReviewerFingerprint()
+  const reviewText = Buffer.from(review).toString("utf8")
+  if (raw.reviewSha256 !== sha(review) || !reviewText.includes(source.sourceClosureRoot) || !reviewText.includes(`Reviewer: ${raw.reviewerId}`) || !reviewText.includes("Actionable findings: 0") || !reviewText.includes(`Public key fingerprint: ${fingerprint}`)) return fail("REPAIR_REVIEW")
+  const required = diagnosticPilotRepairRequiredCommands()
+  if (!Array.isArray(raw.commands) || raw.commands.length !== required.length || raw.commands.some((entry, index) => !exact(entry, ["command", "exitCode"]) || entry.command !== required[index] || entry.exitCode !== 0)) return fail("REPAIR_COMMANDS")
+  const historical = admitDiagnosticPilotHistoricalVerdict(raw.historicalCompatibility)
+  if (JSON.stringify(raw.oldEvidenceBaseline) !== JSON.stringify(PINNED_V1_BASELINE) || JSON.stringify(historical.oldEvidenceBaseline) !== JSON.stringify(raw.oldEvidenceBaseline)) return fail("REPAIR_BASELINE")
+  const { root: identity, signatureBase64, ...body } = raw
+  if (typeof signatureBase64 !== "string" || !/^[A-Za-z0-9+/]{86}==$/u.test(signatureBase64) || identity !== labRoot("diagnostic-pilot-repair-source-gate-v1", { ...body, signatureBase64 })) return fail("REPAIR_GATE_ROOT")
+  if (!verifySignature(null, diagnosticPilotRepairGateSigningPayload(body as Omit<DiagnosticPilotRepairSourceGate, "signatureBase64" | "root">), createPublicKey(REPAIR_REVIEWER_PUBLIC_KEY_PEM), Buffer.from(signatureBase64, "base64"))) return fail("REPAIR_SIGNATURE")
+  const fresh = checkRetainedDiagnosticPilotV1Contract()
+  if (JSON.stringify(fresh) !== JSON.stringify(historical)) return fail("REPAIR_HISTORICAL_DRIFT")
+  return raw as unknown as DiagnosticPilotRepairSourceGate
 }
 
 /** The reserve is additive: two providers, each with 2-second stream close,
@@ -588,24 +673,149 @@ const waitForCellPermission = (allocation: DiagnosticPilotAllocation, cell: Diag
   }
   process.on("message", receive)
 })
+export interface DiagnosticPilotWorkerExecution {
+  readonly disposition: "success" | "system_failure" | "player_violation"
+  readonly processValidity: "process_valid" | "process_invalid"
+  readonly evidenceRoot: LabRoot | null
+  readonly artifactBytes: number
+  readonly artifactRecords: number
+  readonly cleanupComplete: boolean
+}
+/** Injected private worker seam. It has no provider/Match constructor of its
+ * own; production supplies the existing two issuers and canonical adapter. */
+export const runDiagnosticPilotWorkerCell = async <T>(input: {
+  readonly allocation: DiagnosticPilotAllocation; readonly cell: DiagnosticPilotCell; readonly start: DiagnosticPilotStart; readonly ledger: DiagnosticPilotLedger
+  readonly now: () => number; readonly cellStartedAt: number
+  readonly issue: (seat: "bottom" | "top") => T
+  readonly execute: (bottom: T, top: T, enteredKernel: () => void, enteredEvidence: () => void) => Promise<DiagnosticPilotWorkerExecution>
+  readonly close: (handle: T) => boolean
+  readonly cleanup: () => Promise<boolean>
+  readonly send: (message: PilotMessage) => boolean
+  readonly beforeTerminalWrite?: () => void
+  readonly afterTerminalWrite?: () => void
+}): Promise<"continue" | "stop"> => {
+  const { allocation, cell, start, ledger } = input
+  if (!ledger.writeTerminalV2 || !ledger.readTerminalV2 || !ledger.writeStageCheckpoint || !ledger.readStageCheckpoint) return fail("WORKER_V2_LEDGER")
+  let bottom: T | null = null, top: T | null = null, completionAttempted = false, publicationAttempted = false, atPublication = false
+  let lastWorkStage: "unknown" | "bottom_issuance" | "top_issuance" | "pre_kernel_binding" | "kernel_or_callback" | "first_evidence_write" = "unknown"
+  const checkpoint = (ordinal: number) => {
+    if (!ledger.writeStageCheckpoint || !ledger.readStageCheckpoint) return fail("STAGE_LEDGER")
+    if (ledger.readStageCheckpoint(start.root, ordinal) === null) ledger.writeStageCheckpoint(createDiagnosticPilotStageCheckpoint(start, ordinal, ["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write", "terminal_publication"][ordinal] as Parameters<typeof createDiagnosticPilotStageCheckpoint>[2]))
+    if (ordinal < 5) lastWorkStage = ["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write"][ordinal] as typeof lastWorkStage
+  }
+  const elapsed = () => Math.min(DIAGNOSTIC_PILOT_CELL_MS, Math.max(0, Math.ceil(input.now() - input.cellStartedAt)))
+  const reopenedTerminal = () => {
+    const raw = ledger.readTerminalV2?.(start.root)
+    if (raw === null || raw === undefined) return null
+    const terminal = admitDiagnosticPilotTerminalV2(start, raw)
+    const state = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
+    const reopened = state.records.find((entry) => entry.start.root === start.root)
+    if (!reopened || reopened.terminal?.root !== terminal.root || state.retentionUncertain) return fail("WORKER_CELL_REOPEN")
+    if (terminal.evidenceRoot !== null) {
+      if (!ledger.readEvidence) return fail("WORKER_EVIDENCE_READER")
+      const header = JSON.parse(Buffer.from(ledger.readEvidence(start.root, terminal.evidenceRoot)).toString("utf8")) as { schemaVersion?: string }
+      const evidence = header.schemaVersion === "diagnostic-pilot-execution-manifest-v1" ? verifyRetainedDiagnosticPilotExecution(ledger, start, terminal.evidenceRoot) : header.schemaVersion === "diagnostic-pilot-partial-evidence-v1" ? verifyRetainedDiagnosticPilotPartialEvidence(ledger, start, terminal.evidenceRoot) : fail("WORKER_EVIDENCE_SCHEMA")
+      if (evidence.artifactBytes !== terminal.artifactBytes || evidence.artifactRecords !== terminal.artifactRecords || "disposition" in evidence && evidence.disposition !== terminal.disposition) return fail("WORKER_EVIDENCE_MISMATCH")
+    } else if (ledger.listNames().some((name) => name.startsWith(`diagnostic-pilot-${start.root.slice(7)}.evidence-`))) return fail("WORKER_UNROOTED_EVIDENCE")
+    return terminal
+  }
+  const sendCompletion = (terminal: ReturnType<typeof createDiagnosticPilotTerminalV2>, forceStop = false): "continue" | "stop" => {
+    if (completionAttempted) return "stop"
+    completionAttempted = true
+    if (!input.send({ kind: "cell-complete", ordinal: cell.ordinal })) return "stop"
+    if (forceStop || terminal.disposition !== "success" || terminal.processValidity !== "process_valid") { input.send({ kind: "done", status: "process_invalid" }); return "stop" }
+    return "continue"
+  }
+  try {
+    checkpoint(0)
+    bottom = input.issue("bottom")
+    checkpoint(1)
+    top = input.issue("top")
+    checkpoint(2)
+    const result = await input.execute(bottom, top, () => checkpoint(3), () => checkpoint(4))
+    const cleaned = await input.cleanup()
+    if (elapsed() >= DIAGNOSTIC_PILOT_CELL_MS) return fail("WORKER_CELL_DEADLINE")
+    checkpoint(5)
+    atPublication = true
+    const valid = cleaned && result.cleanupComplete && result.processValidity === "process_valid"
+    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: valid ? result.disposition : result.disposition === "success" ? "uncertain" : result.disposition, processValidity: valid ? "process_valid" : "process_invalid", evidenceRoot: result.evidenceRoot, cleanupComplete: cleaned && result.cleanupComplete, elapsedMilliseconds: elapsed(), artifactBytes: result.artifactBytes, artifactRecords: result.artifactRecords, code: !cleaned || !result.cleanupComplete ? "cleanup_incomplete" : result.disposition === "success" && !valid ? "system_failure" : result.disposition === "success" ? "completed" : result.disposition, lastEnteredStage: "terminal_publication", failureStage: "unknown", cause: "unknown_internal" })
+    publicationAttempted = true
+    input.beforeTerminalWrite?.()
+    ledger.writeTerminalV2?.(terminal)
+    input.afterTerminalWrite?.()
+    const verified = reopenedTerminal()
+    if (!verified || verified.root !== terminal.root) return fail("WORKER_CELL_REOPEN")
+    return sendCompletion(verified)
+  } catch (error) {
+    if (completionAttempted) return "stop"
+    let closeComplete = true
+    for (const handle of [bottom, top]) if (handle !== null) { try { if (!input.close(handle)) closeComplete = false } catch { closeComplete = false } }
+    let cleaned = false
+    try { cleaned = await input.cleanup() } catch { /* uncertain cleanup remains invalid */ }
+    let existing: ReturnType<typeof reopenedTerminal> = null
+    try { existing = reopenedTerminal() } catch { return "stop" }
+    if (existing) { try { return sendCompletion(existing, true) } catch { return "stop" } }
+    try { checkpoint(5) } catch { return "stop" }
+    if (publicationAttempted) {
+      try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(error))) } catch { /* no durable cause can be claimed */ }
+      return "stop"
+    }
+    let partial: ReturnType<typeof retainDiagnosticPilotPartialEvidence>
+    try { partial = retainDiagnosticPilotPartialEvidence(ledger, start) } catch { partial = { evidenceRoot: null, artifactBytes: 0, artifactRecords: 0 } }
+    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: cleaned && closeComplete ? "system_failure" : "uncertain", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: cleaned && closeComplete, elapsedMilliseconds: elapsed(), artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code: cleaned && closeComplete ? "system_failure" : "cleanup_incomplete", lastEnteredStage: "terminal_publication", failureStage: atPublication ? "terminal_publication" : lastWorkStage, cause: safeDiagnosticPilotCause(error) })
+    publicationAttempted = true
+    try { ledger.writeTerminalV2?.(terminal) } catch { try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(error))) } catch { /* start-only remains invalid */ }; return "stop" }
+    try { const verified = reopenedTerminal(); if (verified?.root !== terminal.root) return "stop"; return sendCompletion(verified) } catch { return "stop" }
+  }
+}
 type DiagnosticPilotReconciliationCode = "cell_deadline" | "overall_deadline" | "cleanup_incomplete" | "publication_uncertain"
 export const parseDiagnosticPilotTimeoutPayload = (value: unknown): { allocation: DiagnosticPilotAllocation; cell: DiagnosticPilotCell; code: DiagnosticPilotReconciliationCode; elapsedMilliseconds: number } => {
   if (!exact(value, ["allocation", "cell", "code", "elapsedMilliseconds"]) || !["cell_deadline", "overall_deadline", "cleanup_incomplete", "publication_uncertain"].includes(String(value.code)) || !Number.isSafeInteger(value.elapsedMilliseconds) || (value.elapsedMilliseconds as number) < 0 || (value.elapsedMilliseconds as number) > DIAGNOSTIC_PILOT_CELL_MS) return fail("WRITER_INPUT")
   const allocation = admitDiagnosticPilotAllocation(value.allocation)
   return { allocation, cell: admitDiagnosticPilotCell(allocation, value.cell), code: value.code as DiagnosticPilotReconciliationCode, elapsedMilliseconds: value.elapsedMilliseconds as number }
 }
-const writeDiagnosticPilotTimeout = (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, code: DiagnosticPilotReconciliationCode, elapsedMilliseconds: number): "written" | "no_start" => {
+export const writeDiagnosticPilotTimeout = (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, code: DiagnosticPilotReconciliationCode, elapsedMilliseconds: number): "written" | "no_start" | "already_terminal" => {
   const admitted = admitDiagnosticPilotCell(admitDiagnosticPilotAllocation(allocation), cell)
   const start = createDiagnosticPilotStart(allocation, admitted)
   const ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
-  const inventory = reopenDiagnosticPilotLedger(ledger, allocation)
-  if (ledger.readStart(start.root) === null) return inventory.retentionUncertain ? fail("TIMEOUT_UNCERTAIN_TEMPORARY") : "no_start"
-  if (ledger.readTerminal(start.root) !== null) return fail("TIMEOUT_ALREADY_TERMINAL")
+  if (ledger.readStart(start.root) === null) return "no_start"
+  admitDiagnosticPilotStart(allocation, admitted, ledger.readStart(start.root))
+  const old = ledger.readTerminal(start.root), next = ledger.readTerminalV2?.(start.root)
+  if (old !== null && next !== null) return fail("TIMEOUT_VERSION_MIX")
+  if (old !== null) { admitDiagnosticPilotTerminal(start, old); return "already_terminal" }
+  if (next !== null && next !== undefined) { admitDiagnosticPilotTerminalV2(start, next); return "already_terminal" }
+  if (ledger.readStageCheckpoint?.(start.root, 5) === null) ledger.writeStageCheckpoint?.(createDiagnosticPilotStageCheckpoint(start, 5, "terminal_publication"))
   const partial = retainDiagnosticPilotPartialEvidence(ledger, start)
-  ledger.writeTerminal(createDiagnosticPilotTerminal(start, { disposition: code === "cleanup_incomplete" || code === "publication_uncertain" ? "uncertain" : "timeout", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: code !== "cleanup_incomplete", elapsedMilliseconds, artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code }))
-  const reopened = reopenDiagnosticPilotLedger(ledger, allocation)
+  ledger.writeTerminalV2?.(createDiagnosticPilotTerminalV2(start, { disposition: code === "cleanup_incomplete" || code === "publication_uncertain" ? "uncertain" : "timeout", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: code !== "cleanup_incomplete", elapsedMilliseconds, artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code, lastEnteredStage: "terminal_publication", failureStage: "terminal_publication", cause: "unknown_internal" }))
+  const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
   if (reopened.retentionUncertain || reopened.records.find((entry) => entry.start.root === start.root)?.terminal?.code !== code) return fail("TIMEOUT_REOPEN")
   return "written"
+}
+
+export const probeRetainedDiagnosticPilotTerminal = (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell): "verified" | "absent" | "uncertain" => {
+  try {
+    const admitted = admitDiagnosticPilotCell(admitDiagnosticPilotAllocation(allocation), cell)
+    const start = createDiagnosticPilotStart(allocation, admitted)
+    const ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+    const rawStart = ledger.readStart(start.root)
+    if (rawStart === null) return "absent"
+    admitDiagnosticPilotStart(allocation, admitted, rawStart)
+    const old = ledger.readTerminal(start.root), next = ledger.readTerminalV2?.(start.root)
+    if (old !== null && next !== null) return "uncertain"
+    if (old === null && (next === null || next === undefined)) return reopenProspectiveDiagnosticPilotLedger(ledger, allocation).retentionUncertain ? "uncertain" : "absent"
+    const terminal = old !== null ? admitDiagnosticPilotTerminal(start, old) : admitDiagnosticPilotTerminalV2(start, next)
+    if (next !== null && next !== undefined) {
+      const state = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
+      if (state.retentionUncertain || state.records.find((entry) => entry.start.root === start.root)?.terminal?.root !== terminal.root) return "uncertain"
+    }
+    if (terminal.evidenceRoot !== null) {
+      if (!ledger.readEvidence) return "uncertain"
+      const header = JSON.parse(Buffer.from(ledger.readEvidence(start.root, terminal.evidenceRoot)).toString("utf8")) as { schemaVersion?: string }
+      const evidence = header.schemaVersion === "diagnostic-pilot-execution-manifest-v1" ? verifyRetainedDiagnosticPilotExecution(ledger, start, terminal.evidenceRoot) : header.schemaVersion === "diagnostic-pilot-partial-evidence-v1" ? verifyRetainedDiagnosticPilotPartialEvidence(ledger, start, terminal.evidenceRoot) : null
+      if (!evidence || evidence.artifactBytes !== terminal.artifactBytes || evidence.artifactRecords !== terminal.artifactRecords || "disposition" in evidence && evidence.disposition !== terminal.disposition) return "uncertain"
+    } else if (ledger.listNames().some((name) => name.startsWith(`diagnostic-pilot-${start.root.slice(7)}.evidence-`))) return "uncertain"
+    return "verified"
+  } catch { return "uncertain" }
 }
 
 /** Private worker only: it is never invoked by source-only commands or tests.
@@ -637,53 +847,38 @@ const runDiagnosticPilotWorker = async (allocationPath: string): Promise<void> =
     preflightDiagnosticPilot(gate, "reserved")
     await observeDiagnosticPilotHost(allocation)
     ledger.writeStart(start)
-    let bottom: ReturnType<typeof issueDiagnosticPilotProviderFromFactoryCandidate> | null = null
-    let top: ReturnType<typeof issueDiagnosticPilotProviderFromFactoryCandidate> | null = null
-    try {
-      const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
-      if (!smoke) return fail("WORKER_SMOKE")
-      const host: FactorySupervisedRuntimeHost = { createFactorySupervisedRuntime: (request) => {
-        if (!request.pilotLifetimeGrant) return fail("WORKER_LIFETIME_GRANT")
-        const grant = request.pilotLifetimeGrant
-        const { executableRoot: _executableRoot, ...runtimeRequest } = request
-        return createFactorySupervisedRuntime({ ...runtimeRequest, matchId: `diagnostic-pilot-${start.root.slice(7, 27)}`, containerName: grant.containerName, ownershipLabel: grant.ownershipLabel, image: allocation.image, invocationLimit: 24_800, factoryLifetimeMs: 240_000 })
-      } }
-      const byRoot = new Map(assessed.map((entry) => [entry.candidate.root, entry]))
-      const issue = (seat: "bottom" | "top") => {
+    const host: FactorySupervisedRuntimeHost = { createFactorySupervisedRuntime: (request) => {
+      if (!request.pilotLifetimeGrant) return fail("WORKER_LIFETIME_GRANT")
+      const grant = request.pilotLifetimeGrant
+      const { executableRoot: _executableRoot, ...runtimeRequest } = request
+      return createFactorySupervisedRuntime({ ...runtimeRequest, matchId: `diagnostic-pilot-${start.root.slice(7, 27)}`, containerName: grant.containerName, ownershipLabel: grant.ownershipLabel, image: allocation.image, invocationLimit: 24_800, factoryLifetimeMs: 240_000 })
+    } }
+    const byRoot = new Map(assessed.map((entry) => [entry.candidate.root, entry]))
+    const response = await runDiagnosticPilotWorkerCell({ ledger, allocation, cell, start, cellStartedAt, now: () => performance.now(),
+      issue: (seat) => {
         const candidateRoot = seat === "bottom" ? cell.bottomCandidateRoot : cell.topCandidateRoot
         const candidate = byRoot.get(candidateRoot)
         if (!candidate) return fail("WORKER_CANDIDATE")
         const pilotLifetimeGrant = createDiagnosticPilotLifetimeGrant(ledger, allocation, cell, start, seat)
         return issueDiagnosticPilotProviderFromFactoryCandidate({ host, factoryRepository: historicalRepository, ledger, allocation, cell, start, requestRoot: cell.requestRoot, assessed: candidate, pilotLifetimeGrant })
-      }
-      bottom = issue("bottom")
-      top = issue("top")
-      const match = { matchId: `diagnostic-pilot-${start.root.slice(7, 27)}`, seed: allocation.seed, arenaVariant: smoke, bottomPlayerId: leaguePlayerId(cell.bottomCandidateRoot), topPlayerId: leaguePlayerId(cell.topCandidateRoot), initialInitiativePlayerId: leaguePlayerId(cell.initialInitiativeCandidateRoot), bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }
-      let retained: ReturnType<typeof retainDiagnosticPilotExecution> | null = null
-      const result = await runDiagnosticPilotCell({ ledger, allocation, cell, start, requestRoot: cell.requestRoot, bottom, top, match, beforeReturn: (execution) => { retained = retainDiagnosticPilotExecution(ledger, start, execution) } })
-      const cleaned = await cleanupDiagnosticPilotContainers(allocation, cell)
-      const elapsedMilliseconds = Math.ceil(performance.now() - cellStartedAt)
-      if (elapsedMilliseconds >= 240_000) return fail("WORKER_CELL_DEADLINE")
-      if (!retained) return fail("WORKER_MISSING_EVIDENCE")
-      const evidence = retained as ReturnType<typeof retainDiagnosticPilotExecution>
-      const terminal = createDiagnosticPilotTerminal(start, { disposition: result.disposition, processValidity: result.processValidity, evidenceRoot: evidence.evidenceRoot, cleanupComplete: cleaned && result.cleanupComplete, elapsedMilliseconds, artifactBytes: evidence.artifactBytes, artifactRecords: evidence.artifactRecords, code: result.disposition === "success" ? "completed" : result.disposition })
-      ledger.writeTerminal(terminal)
-      const reopenedCell = reopenDiagnosticPilotLedger(ledger, allocation)
-      const retainedCell = verifyRetainedDiagnosticPilotExecution(ledger, start, evidence.evidenceRoot)
-      if (reopenedCell.retentionUncertain || reopenedCell.records[ordinal]?.terminal?.root !== terminal.root || retainedCell.disposition !== terminal.disposition || retainedCell.artifactBytes !== evidence.artifactBytes || retainedCell.artifactRecords !== evidence.artifactRecords) return fail("WORKER_CELL_REOPEN")
-      process.send({ kind: "cell-complete", ordinal } satisfies PilotMessage)
-      if (result.disposition !== "success" || !cleaned) { process.send({ kind: "done", status: "process_invalid" } satisfies PilotMessage); return }
-    } catch {
-      if (bottom) closeDiagnosticPilotIssuedProvider(bottom)
-      if (top) closeDiagnosticPilotIssuedProvider(top)
-      const cleaned = await cleanupDiagnosticPilotContainers(allocation, cell)
-      const elapsedMilliseconds = Math.min(240_000, Math.max(0, Math.ceil(performance.now() - cellStartedAt)))
-      try { const partial = retainDiagnosticPilotPartialEvidence(ledger, start); ledger.writeTerminal(createDiagnosticPilotTerminal(start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: cleaned, elapsedMilliseconds, artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code: cleaned ? "system_failure" : "cleanup_incomplete" })) } catch { /* start-only remains process-invalid */ }
-      process.send({ kind: "done", status: "process_invalid" } satisfies PilotMessage)
-      return
-    }
+      },
+      execute: async (bottom, top, enteredKernel, enteredEvidence) => {
+        const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
+        if (!smoke) return fail("WORKER_SMOKE")
+        const match = { matchId: `diagnostic-pilot-${start.root.slice(7, 27)}`, seed: allocation.seed, arenaVariant: smoke, bottomPlayerId: leaguePlayerId(cell.bottomCandidateRoot), topPlayerId: leaguePlayerId(cell.topCandidateRoot), initialInitiativePlayerId: leaguePlayerId(cell.initialInitiativeCandidateRoot), bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }
+        let retained: ReturnType<typeof retainDiagnosticPilotExecution> | null = null
+        const result = await runDiagnosticPilotCell({ ledger, allocation, cell, start, requestRoot: cell.requestRoot, bottom, top, match, onKernelEntry: enteredKernel, beforeReturn: (execution) => { enteredEvidence(); retained = retainDiagnosticPilotExecution(ledger, start, execution) } })
+        if (!retained) return fail("WORKER_MISSING_EVIDENCE")
+        const evidence = retained as ReturnType<typeof retainDiagnosticPilotExecution>
+        return { ...result, evidenceRoot: evidence.evidenceRoot, artifactBytes: evidence.artifactBytes, artifactRecords: evidence.artifactRecords }
+      },
+      close: closeDiagnosticPilotIssuedProvider,
+      cleanup: () => cleanupDiagnosticPilotContainers(allocation, cell),
+      send: (message) => process.send?.(message) === true,
+    })
+    if (response === "stop") return
   }
-  const final = reopenDiagnosticPilotLedger(ledger, allocation)
+  const final = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
   if (final.retentionUncertain || final.records.length !== 4 || final.records.some((entry) => entry.terminal?.disposition !== "success" || entry.terminal.processValidity !== "process_valid" || !entry.terminal.evidenceRoot)) return fail("WORKER_FINAL_REOPEN")
   for (const entry of final.records) {
     const evidence = verifyRetainedDiagnosticPilotExecution(ledger, entry.start, entry.terminal!.evidenceRoot!)
@@ -697,13 +892,24 @@ export interface PilotWatchdogHost {
   readonly now: () => number
   readonly spawnWorker: (allocationPath: string, sessionToken: string) => ChildProcess
   readonly cleanup: (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell) => Promise<boolean>
-  readonly publishTimeout: (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, code: DiagnosticPilotReconciliationCode, elapsedMilliseconds: number) => Promise<"written" | "no_start" | "uncertain">
+  readonly probeTerminal?: (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell) => Promise<"verified" | "absent" | "uncertain">
+  readonly publishTimeout: (allocation: DiagnosticPilotAllocation, cell: DiagnosticPilotCell, code: DiagnosticPilotReconciliationCode, elapsedMilliseconds: number) => Promise<"written" | "no_start" | "already_terminal" | "uncertain">
   readonly killGroup: (child: ChildProcess) => void
 }
 const defaultHost: PilotWatchdogHost = {
   now: () => performance.now(),
   spawnWorker: (allocationPath, sessionToken) => spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), "worker", allocationPath], { detached: true, stdio: ["ignore", "ignore", "ignore", "ipc"], env: { PATH: process.env.PATH ?? "", NODE_ENV: "production", DIAGNOSTIC_PILOT_SESSION_TOKEN: sessionToken } }),
   cleanup: (allocation, cell) => cleanupDiagnosticPilotContainers(allocation, cell),
+  probeTerminal: (allocation, cell) => new Promise((resolveProbe) => {
+    const payload = Buffer.from(JSON.stringify({ allocation, cell }), "utf8").toString("base64")
+    const probe = spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), "terminal-probe", payload], { stdio: ["ignore", "pipe", "ignore"], env: { PATH: process.env.PATH ?? "", NODE_ENV: "production" }, shell: false })
+    let output = "", settled = false
+    const settle = (result: "verified" | "absent" | "uncertain") => { if (settled) return; settled = true; clearTimeout(timer); resolveProbe(result) }
+    const timer = setTimeout(() => { probe.kill("SIGKILL"); settle("uncertain") }, 2_000)
+    probe.stdout?.on("data", (bytes: Buffer) => { output += bytes.toString("utf8"); if (output.length > 32) { probe.kill("SIGKILL"); settle("uncertain") } })
+    probe.on("error", () => settle("uncertain"))
+    probe.on("close", (status) => settle(status === 0 && (output === "verified\n" || output === "absent\n" || output === "uncertain\n") ? output.trim() as "verified" | "absent" | "uncertain" : "uncertain"))
+  }),
   publishTimeout: (allocation, cell, code, elapsedMilliseconds) => new Promise((resolvePublication) => {
     const payload = Buffer.from(JSON.stringify({ allocation, cell, code, elapsedMilliseconds }), "utf8").toString("base64")
     const writer = spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), "terminal-writer", payload], { stdio: ["ignore", "pipe", "ignore"], env: { PATH: process.env.PATH ?? "", NODE_ENV: "production" }, shell: false })
@@ -711,7 +917,7 @@ const defaultHost: PilotWatchdogHost = {
     const timer = setTimeout(() => { if (settled) return; settled = true; failed = true; writer.kill("SIGKILL"); resolvePublication("uncertain") }, 5_000)
     writer.stdout?.on("data", (bytes: Buffer) => { output += bytes.toString("utf8"); if (output.length > 64) { failed = true; writer.kill("SIGKILL") } })
     writer.on("error", () => { failed = true })
-    writer.on("close", (status) => { if (settled) return; settled = true; clearTimeout(timer); resolvePublication(!failed && status === 0 && (output === "written\n" || output === "no_start\n") ? output.trim() as "written" | "no_start" : "uncertain") })
+    writer.on("close", (status) => { if (settled) return; settled = true; clearTimeout(timer); resolvePublication(!failed && status === 0 && (output === "written\n" || output === "no_start\n" || output === "already_terminal\n") ? output.trim() as "written" | "no_start" | "already_terminal" : "uncertain") })
   }),
   killGroup: (child) => { if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGKILL") } catch { child.kill("SIGKILL") } } },
 }
@@ -736,7 +942,10 @@ export const runDiagnosticPilotWatchdog = (allocationPath: string, host: PilotWa
       void (async () => {
         let clean = false
         try { clean = await host.cleanup(current.allocation, current.cell) } catch { /* publish uncertain charge */ }
-        let publication: "written" | "no_start" | "uncertain" = "uncertain"
+        let probe: "verified" | "absent" | "uncertain" = "absent"
+        try { probe = await host.probeTerminal?.(current.allocation, current.cell) ?? "absent" } catch { probe = "uncertain" }
+        if (probe !== "absent") { settle("process_invalid"); return }
+        let publication: "written" | "no_start" | "already_terminal" | "uncertain" = "uncertain"
         try { publication = await host.publishTimeout(current.allocation, current.cell, clean ? code : "cleanup_incomplete", Math.min(DIAGNOSTIC_PILOT_CELL_MS, Math.max(0, Math.ceil(host.now() - current.startedAt)))) } catch { /* start-only remains invalid */ }
         settle(clean && publication === "no_start" && completed === 0 ? "safe_no_start" : "process_invalid")
       })()
@@ -788,6 +997,7 @@ const runDiagnosticPilotAuxiliary = (kind: "attempt-writer" | "result-writer", p
 const main = async (args: readonly string[]) => {
   const command = args[0]
   if (command === "check-gate") { const paths = parsePilotPaths(args.slice(1), ["gate"]); checkDiagnosticPilotGate({ gatePath: paths.gate }); process.stdout.write("diagnostic-pilot-gate: pass\n"); return }
+  if (command === "check-repair-gate") { if (args.length !== 3 || args[1] !== "--gate" || resolve(args[2]!) !== resolve(REPAIR_GATE_PATH)) return fail("REPAIR_GATE_PATH"); const gate = checkDiagnosticPilotRepairGate({ gatePath: args[2] }); process.stdout.write(JSON.stringify({ root: gate.root, sourceClosureRoot: gate.sourceClosureRoot, empiricalAuthority: false, runAllowed: false }) + "\n"); return }
   if (command === "measure-targeted-reader") { process.stdout.write(JSON.stringify({ elapsedMilliseconds: measureDiagnosticPilotReader(), sourceOnly: true, empiricalAuthority: false }) + "\n"); return }
   if (command === "prepare") { const paths = parsePilotPaths(args.slice(1), ["gate", "allocation", "factory-repository", "repository"]); const gate = checkDiagnosticPilotGate({ gatePath: paths.gate }); requireCompletedDiagnosticPilotSourcePlan(); if (existsSync(paths.repository!) || existsSync(RESULT_PATH)) return fail("PREPARE_PRIOR_STATE"); const allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: gate.sourceClosureRoot, implementationRoot: gate.sourceClosureRoot, gateRoot: gate.root, oldEvidenceBaseline: readDiagnosticPilotOldEvidenceBaseline() }); durableCreate(paths.allocation!, allocation); process.stdout.write(JSON.stringify({ allocationRoot: allocation.root, prepared: true, empiricalAuthority: false }) + "\n"); return }
   if (command === "preflight") { const paths = parsePilotPaths(args.slice(1), ["gate", "allocation", "factory-repository", "repository"]); const gate = checkDiagnosticPilotGate({ gatePath: paths.gate }); requireCompletedDiagnosticPilotSourcePlan(); if (existsSync(RESULT_PATH)) return fail("PREFLIGHT_PRIOR_ATTEMPT"); const allocation = readExactAllocation(paths.allocation!, gate); verifyDiagnosticPilotOldEvidenceBaseline(allocation); const capacity = preflightDiagnosticPilot(gate); const reader = measureDiagnosticPilotReader(); if (reader > gate.readerCeilingMilliseconds) return fail("PREFLIGHT_READER_LATENCY"); const host = await observeDiagnosticPilotHost(allocation); process.stdout.write(JSON.stringify({ capacity, host, readerMilliseconds: reader, consuming: false }) + "\n"); return }
@@ -810,6 +1020,7 @@ const main = async (args: readonly string[]) => {
   if (command === "attempt-writer") { if (!args[1]) return fail("ATTEMPT_WRITER_INPUT"); const payload = JSON.parse(Buffer.from(args[1], "base64").toString("utf8")) as unknown; if (!exact(payload, ["gatePath", "allocationPath", "resultPath"]) || payload.resultPath !== RESULT_PATH || payload.gatePath !== GATE_PATH || payload.allocationPath !== ALLOCATION_PATH) return fail("ATTEMPT_WRITER_INPUT"); const gate = checkDiagnosticPilotGate({ gatePath: payload.gatePath }); requireCompletedDiagnosticPilotSourcePlan(); const allocation = readExactAllocation(payload.allocationPath, gate); reserveDiagnosticPilotAttempt(payload.resultPath, allocation); process.stdout.write("ok\n"); return }
   if (command === "result-writer") { if (!args[1]) return fail("RESULT_WRITER_INPUT"); const payload = JSON.parse(Buffer.from(args[1], "base64").toString("utf8")) as unknown; if (!exact(payload, ["gatePath", "allocationPath", "resultPath", "elapsedMilliseconds", "watchdogStatus"]) || payload.resultPath !== RESULT_PATH || payload.gatePath !== GATE_PATH || payload.allocationPath !== ALLOCATION_PATH || !["safe_no_start", "process_valid", "process_invalid"].includes(String(payload.watchdogStatus))) return fail("RESULT_WRITER_INPUT"); const gate = checkDiagnosticPilotGate({ gatePath: payload.gatePath }); const allocation = readExactAllocation(payload.allocationPath, gate); await publishDiagnosticPilotResult(allocation, payload.elapsedMilliseconds as number, payload.watchdogStatus as "safe_no_start" | "process_valid" | "process_invalid"); process.stdout.write("ok\n"); return }
   if (command === "terminal-writer") { if (!args[1]) return fail("WRITER_INPUT"); const decoded = parseDiagnosticPilotTimeoutPayload(JSON.parse(Buffer.from(args[1], "base64").toString("utf8")) as unknown); const outcome = writeDiagnosticPilotTimeout(decoded.allocation, decoded.cell, decoded.code, decoded.elapsedMilliseconds); process.stdout.write(`${outcome}\n`); return }
+  if (command === "terminal-probe") { if (args.length !== 2) return fail("PROBE_INPUT"); const raw = JSON.parse(Buffer.from(args[1]!, "base64").toString("utf8")) as unknown; if (!exact(raw, ["allocation", "cell"])) return fail("PROBE_INPUT"); const allocation = admitDiagnosticPilotAllocation(raw.allocation), cell = admitDiagnosticPilotCell(allocation, raw.cell); process.stdout.write(`${probeRetainedDiagnosticPilotTerminal(allocation, cell)}\n`); return }
   return fail("COMMAND")
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) void main(process.argv.slice(2)).catch((error: unknown) => { process.stderr.write(`${error instanceof Error ? error.message : "DIAGNOSTIC_PILOT_UNKNOWN"}\n`); process.exitCode = 1 })

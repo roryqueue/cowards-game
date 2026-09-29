@@ -192,6 +192,7 @@ export const runDiagnosticPilotCell = async (input: Readonly<{
   bottom: DiagnosticPilotIssuedProvider
   top: DiagnosticPilotIssuedProvider
   match: Parameters<typeof runCanonicalLabMatch>[0]["match"]
+  onKernelEntry?: () => void
   beforeReturn?: (execution: LabMatchExecution) => void
 }>): Promise<Readonly<{ disposition: "success" | "system_failure" | "player_violation"; processValidity: "process_valid" | "process_invalid"; evidenceRoot: LabRoot; transitionCount: number; accountingCount: number; cleanupComplete: boolean }>> => {
   const allocation = admitDiagnosticPilotAllocation(input.allocation), cell = admitDiagnosticPilotCell(allocation, input.cell)
@@ -200,6 +201,7 @@ export const runDiagnosticPilotCell = async (input: Readonly<{
   const bottom = requirePilotIssued(input.bottom, allocation, cell, start, "bottom"), top = requirePilotIssued(input.top, allocation, cell, start, "top")
   const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
   if (!smoke || input.match.seed !== allocation.seed || labRoot("diagnostic-pilot-arena-v1", input.match.arenaVariant) !== labRoot("diagnostic-pilot-arena-v1", smoke) || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || input.match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || input.match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || input.match.bottomStrategyRevisionId !== bottom.identity.revisionId || input.match.topStrategyRevisionId !== top.identity.revisionId) return fail("PILOT_MATCH_BINDING")
+  input.onKernelEntry?.()
   const execution = await runCanonicalLabMatch({ match: input.match, providers: { [input.match.bottomPlayerId]: bottom, [input.match.topPlayerId]: top } })
   const disposition = execution.kind === "failure" || execution.accounting.some((entry) => !entry.result.ok && "systemFailure" in entry.result) ? "system_failure" as const : execution.accounting.some((entry) => !entry.result.ok) ? "player_violation" as const : "success" as const
   const evidenceRoot = labRoot("diagnostic-pilot-execution-v1", { startRoot: start.root, cellRoot: cell.root, disposition, kind: execution.kind, transitionCount: execution.transitions.length, accountingCount: execution.accounting.length })

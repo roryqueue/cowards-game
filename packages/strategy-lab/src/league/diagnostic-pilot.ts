@@ -187,16 +187,16 @@ export const admitDiagnosticPilotStageCheckpoint = (start: DiagnosticPilotStart,
   if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("STAGE_MISMATCH")
   return expected
 }
-export interface DiagnosticPilotTerminalV2 extends Omit<DiagnosticPilotTerminal, "schemaVersion"> { readonly schemaVersion: "diagnostic-pilot-terminal-v2"; readonly lastEnteredStage: DiagnosticPilotStage | "unknown"; readonly cause: DiagnosticPilotCause }
+export interface DiagnosticPilotTerminalV2 extends Omit<DiagnosticPilotTerminal, "schemaVersion"> { readonly schemaVersion: "diagnostic-pilot-terminal-v2"; readonly lastEnteredStage: DiagnosticPilotStage | "unknown"; readonly failureStage: DiagnosticPilotStage | "unknown"; readonly cause: DiagnosticPilotCause }
 export const createDiagnosticPilotTerminalV2 = (start: DiagnosticPilotStart, fields: Omit<DiagnosticPilotTerminalV2, "schemaVersion" | "root" | "startRoot">): Readonly<DiagnosticPilotTerminalV2> => {
-  if (fields.lastEnteredStage !== "unknown" && !DIAGNOSTIC_PILOT_STAGES.includes(fields.lastEnteredStage) || !causeValues.has(fields.cause)) return fail("TERMINAL_V2_FIELDS")
-  const { lastEnteredStage, cause, ...legacyFields } = fields
+  if (fields.lastEnteredStage !== "unknown" && !DIAGNOSTIC_PILOT_STAGES.includes(fields.lastEnteredStage) || fields.failureStage !== "unknown" && !DIAGNOSTIC_PILOT_STAGES.includes(fields.failureStage) || !causeValues.has(fields.cause)) return fail("TERMINAL_V2_FIELDS")
+  const { lastEnteredStage, failureStage, cause, ...legacyFields } = fields
   createDiagnosticPilotTerminal(start, legacyFields)
-  const base = { schemaVersion: "diagnostic-pilot-terminal-v2" as const, startRoot: start.root, ...legacyFields, lastEnteredStage, cause }
+  const base = { schemaVersion: "diagnostic-pilot-terminal-v2" as const, startRoot: start.root, ...legacyFields, lastEnteredStage, failureStage, cause }
   return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-terminal-v2", base) })
 }
 export const admitDiagnosticPilotTerminalV2 = (start: DiagnosticPilotStart, value: unknown): Readonly<DiagnosticPilotTerminalV2> => {
-  if (!exactLabKeys(value, ["schemaVersion", "root", "startRoot", "disposition", "processValidity", "evidenceRoot", "cleanupComplete", "elapsedMilliseconds", "artifactBytes", "artifactRecords", "code", "lastEnteredStage", "cause"])) return fail("TERMINAL_V2_KEYS")
+  if (!exactLabKeys(value, ["schemaVersion", "root", "startRoot", "disposition", "processValidity", "evidenceRoot", "cleanupComplete", "elapsedMilliseconds", "artifactBytes", "artifactRecords", "code", "lastEnteredStage", "failureStage", "cause"])) return fail("TERMINAL_V2_KEYS")
   const candidate = value as unknown as DiagnosticPilotTerminalV2
   if (candidate.schemaVersion !== "diagnostic-pilot-terminal-v2" || candidate.startRoot !== start.root) return fail("TERMINAL_V2_START")
   const { root: _root, schemaVersion: _schema, startRoot: _start, ...fields } = candidate
@@ -216,16 +216,16 @@ export const admitDiagnosticPilotProspectiveCapacity = (input: { readonly retain
   if (peakBytes > input.maxBytes || peakInodes > input.maxInodes || peakRecords > input.maxRecords) return fail("PROSPECTIVE_CAP")
   return true
 }
-export interface DiagnosticPilotFailureDiagnosis { readonly schemaVersion: "diagnostic-pilot-failed-terminal-diagnosis-v1"; readonly startRoot: LabRoot; readonly lastEnteredStage: "terminal_publication"; readonly cause: DiagnosticPilotCause; readonly root: LabRoot }
+export interface DiagnosticPilotFailureDiagnosis { readonly schemaVersion: "diagnostic-pilot-failed-terminal-diagnosis-v1"; readonly startRoot: LabRoot; readonly lastEnteredStage: "terminal_publication"; readonly failureStage: "terminal_publication"; readonly cause: DiagnosticPilotCause; readonly root: LabRoot }
 export const createDiagnosticPilotFailureDiagnosis = (start: DiagnosticPilotStart, cause: DiagnosticPilotCause): Readonly<DiagnosticPilotFailureDiagnosis> => {
   if (!root(start.root) || !causeValues.has(cause)) return fail("DIAGNOSIS_CAUSE")
-  const base = { schemaVersion: "diagnostic-pilot-failed-terminal-diagnosis-v1" as const, startRoot: start.root, lastEnteredStage: "terminal_publication" as const, cause }
+  const base = { schemaVersion: "diagnostic-pilot-failed-terminal-diagnosis-v1" as const, startRoot: start.root, lastEnteredStage: "terminal_publication" as const, failureStage: "terminal_publication" as const, cause }
   return freezeLabValue({ ...base, root: labRoot("diagnostic-pilot-failed-terminal-diagnosis-v1", base) })
 }
 export const admitDiagnosticPilotFailureDiagnosis = (start: DiagnosticPilotStart, value: unknown): Readonly<DiagnosticPilotFailureDiagnosis> => {
-  if (!exactLabKeys(value, ["schemaVersion", "startRoot", "lastEnteredStage", "cause", "root"])) return fail("DIAGNOSIS_KEYS")
+  if (!exactLabKeys(value, ["schemaVersion", "startRoot", "lastEnteredStage", "failureStage", "cause", "root"])) return fail("DIAGNOSIS_KEYS")
   const candidate = value as unknown as DiagnosticPilotFailureDiagnosis
-  if (candidate.schemaVersion !== "diagnostic-pilot-failed-terminal-diagnosis-v1" || candidate.startRoot !== start.root || candidate.lastEnteredStage !== "terminal_publication") return fail("DIAGNOSIS_FIELDS")
+  if (candidate.schemaVersion !== "diagnostic-pilot-failed-terminal-diagnosis-v1" || candidate.startRoot !== start.root || candidate.lastEnteredStage !== "terminal_publication" || candidate.failureStage !== "terminal_publication") return fail("DIAGNOSIS_FIELDS")
   const expected = createDiagnosticPilotFailureDiagnosis(start, candidate.cause)
   if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("DIAGNOSIS_ROOT")
   return expected
@@ -400,7 +400,7 @@ export const reopenProspectiveDiagnosticPilotLedger = (ledger: DiagnosticPilotLe
     const diagnosisRaw = ledger.readFailureDiagnosis!(start.root)
     const diagnosis = diagnosisRaw === null ? null : admitDiagnosticPilotFailureDiagnosis(start, diagnosisRaw)
     const lastEnteredStage = stages.at(-1)?.stage ?? "unknown"
-    if (terminal && (terminal.lastEnteredStage !== lastEnteredStage || terminal.cause !== "unknown_internal" && terminal.disposition === "success")) return fail("PROSPECTIVE_TERMINAL_STAGE")
+    if (terminal && (terminal.lastEnteredStage !== lastEnteredStage || terminal.failureStage !== "unknown" && !stages.some((checkpoint) => checkpoint.stage === terminal.failureStage) || terminal.cause !== "unknown_internal" && terminal.disposition === "success")) return fail("PROSPECTIVE_TERMINAL_STAGE")
     if (diagnosis && lastEnteredStage !== "terminal_publication") return fail("PROSPECTIVE_DIAGNOSIS_STAGE")
     return { start, stages, lastEnteredStage, cause: terminal?.cause ?? diagnosis?.cause ?? "unknown_internal", terminal, diagnosis, processValidity: uncertain || diagnosis || !terminal ? "process_invalid" as const : terminal.processValidity }
   }).filter((value): value is NonNullable<typeof value> => value !== null)
@@ -410,8 +410,15 @@ export const reopenProspectiveDiagnosticPilotLedger = (ledger: DiagnosticPilotLe
 
 export const createDiagnosticPilotProspectiveResult = (allocation: DiagnosticPilotAllocation, ledger: DiagnosticPilotLedger) => {
   const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
-  const fields = { schemaVersion: "diagnostic-pilot-result-v2" as const, allocationRoot: allocation.root, legacyGateRoot: allocation.gateRoot, processValidity: "process_invalid" as const, chargedCount: reopened.records.length, slots: allocation.cells.map((_, ordinal) => { const row = reopened.records[ordinal]; return row ? { ordinal, status: row.terminal?.disposition ?? "start_only", lastEnteredStage: row.lastEnteredStage, cause: row.cause, terminalRoot: row.terminal?.root ?? null, diagnosisRoot: row.diagnosis?.root ?? null } : { ordinal, status: "unused", lastEnteredStage: "unknown", cause: "unknown_internal", terminalRoot: null, diagnosisRoot: null } }), empiricalAuthority: false as const, runAllowed: false as const, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
+  const allSuccess = !reopened.retentionUncertain && reopened.records.length === allocation.cells.length && reopened.records.every((row) => row.terminal?.disposition === "success" && row.terminal.processValidity === "process_valid" && row.terminal.cleanupComplete && row.terminal.evidenceRoot !== null && row.diagnosis === null)
+  const fields = { schemaVersion: "diagnostic-pilot-result-v2" as const, allocationRoot: allocation.root, legacyGateRoot: allocation.gateRoot, processValidity: allSuccess ? "process_valid" as const : "process_invalid" as const, chargedCount: reopened.records.length, slots: allocation.cells.map((_, ordinal) => { const row = reopened.records[ordinal]; return row ? { ordinal, status: row.terminal?.disposition ?? "start_only", lastEnteredStage: row.lastEnteredStage, failureStage: row.terminal?.failureStage ?? row.diagnosis?.failureStage ?? "unknown", cause: row.cause, terminalRoot: row.terminal?.root ?? null, diagnosisRoot: row.diagnosis?.root ?? null } : { ordinal, status: "unused", lastEnteredStage: "unknown", failureStage: "unknown", cause: "unknown_internal", terminalRoot: null, diagnosisRoot: null } }), empiricalAuthority: false as const, runAllowed: false as const, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
   return freezeLabValue({ ...fields, root: labRoot("diagnostic-pilot-result-v2", fields) })
+}
+export const admitDiagnosticPilotProspectiveResult = (allocation: DiagnosticPilotAllocation, ledger: DiagnosticPilotLedger, value: unknown) => {
+  if (!exactLabKeys(value, ["schemaVersion", "allocationRoot", "legacyGateRoot", "processValidity", "chargedCount", "slots", "empiricalAuthority", "runAllowed", "leagueRequirementsEvidence", "formationAuthorized", "holdoutAuthorized", "counted", "public", "productionAuthorized", "root"]) || value.schemaVersion !== "diagnostic-pilot-result-v2") return fail("PROSPECTIVE_RESULT_KEYS")
+  const expected = createDiagnosticPilotProspectiveResult(allocation, ledger)
+  if (byteRoot(canonicalBytes(value)) !== byteRoot(canonicalBytes(expected))) return fail("PROSPECTIVE_RESULT_MISMATCH")
+  return expected
 }
 
 /** Real repository adapter is defined here, but Plan 08 never creates or opens

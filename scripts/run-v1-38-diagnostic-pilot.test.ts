@@ -11,6 +11,7 @@ import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
 import { admitFactorySupervisorLifetime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { admitPlannerSupervisorLifetime } from "./lib/v1-38-planner-supervised-runtime.js"
+import { checkDiagnosticPilotBoundaries } from "./check-v1-38-diagnostic-pilot-boundaries.js"
 import {
   DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_MS,
   computeDiagnosticPilotDeadlines,
@@ -36,9 +37,21 @@ import {
   checkRetainedDiagnosticPilotV1Contract,
   admitDiagnosticPilotHistoricalVerdict,
   runDiagnosticPilotWorkerCell,
+  writeDiagnosticPilotTimeout,
+  probeRetainedDiagnosticPilotTerminal,
+  checkDiagnosticPilotRepairGate,
+  diagnosticPilotRepairSourceClosure,
+  diagnosticPilotRepairRequiredCommands,
+  diagnosticPilotRepairReviewerFingerprint,
+  DIAGNOSTIC_PILOT_REPAIR_SOURCE_FILES,
 } from "./run-v1-38-diagnostic-pilot.js"
 
 describe("diagnostic pilot source-only watchdog and gate", () => {
+  it("denies prospective diagnostic records in public and Go paths", () => {
+    const result = checkDiagnosticPilotBoundaries({ files: { "apps/web/src/leak.ts": 'export const leaked = "diagnostic-pilot-terminal-v2"' }, goFiles: { "apps/go-backend/leak.go": 'const leaked = "diagnostic-pilot-result-v2"' } })
+    expect(result.violations).toContainEqual({ path: "apps/web/src/leak.ts", rule: "prospective-diagnostic-public-leak" })
+    expect(result.violations).toContainEqual({ path: "apps/go-backend/leak.go", rule: "prospective-diagnostic-go-leak" })
+  })
   it("completes an injected top-issuance catch only after one v2 terminal reopen", async () => {
     const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-worker-catch-test-")))
     try {
@@ -53,7 +66,7 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
       expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }, { kind: "done", status: "process_invalid" }])
       const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]!
       expect(reopened.stages.map((row) => row.stage)).toEqual(["bottom_issuance", "top_issuance", "terminal_publication"])
-      expect(reopened.terminal).toMatchObject({ disposition: "system_failure", cause: "worker_candidate", lastEnteredStage: "terminal_publication" })
+      expect(reopened.terminal).toMatchObject({ disposition: "system_failure", cause: "worker_candidate", lastEnteredStage: "terminal_publication", failureStage: "top_issuance" })
       expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
     } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
   })
@@ -72,6 +85,102 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
       expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
     } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
   })
+  it("preserves an already-durable success but never promotes its post-write fault to overall success", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-success-postwrite-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-success-postwrite", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const sent: unknown[] = [], execution = { kind: "completed", privacy: "private_offline", result: { state: { testOnly: true }, events: [] }, transitions: [], accounting: [] } as unknown as LabMatchExecution
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async (_bottom, _top, enteredKernel, enteredEvidence) => { enteredKernel(); enteredEvidence(); const retained = retainDiagnosticPilotExecution(ledger, start, execution); return { disposition: "success", processValidity: "process_valid", evidenceRoot: retained.evidenceRoot, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords, cleanupComplete: true } }, close: () => true, cleanup: async () => true, afterTerminalWrite: () => { throw new Error("postwrite") }, send: (message) => { sent.push(message); return true } })
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal?.disposition).toBe("success")
+      expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }, { kind: "done", status: "process_invalid" }])
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("distinguishes all six injected durable failure stages without retaining raw errors", async () => {
+    for (const target of ["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write", "terminal_publication"] as const) {
+      const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-stage-test-")))
+      try {
+        mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+        const id = labRoot("pilot-stage", target), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+        const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+        ledger.writeStart(start)
+        const secret = "raw source /private/host StrategyMemory SoldierMemory objective"
+        await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 10, cellStartedAt: 0,
+          issue: (seat) => { if (target === `${seat}_issuance`) throw new Error(secret); return seat },
+          execute: async (_bottom, _top, enteredKernel, enteredEvidence) => { if (target === "pre_kernel_binding") throw new Error(secret); enteredKernel(); if (target === "kernel_or_callback") throw new Error(secret); enteredEvidence(); if (target === "first_evidence_write") throw new Error(secret); return { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, artifactBytes: 0, artifactRecords: 0, cleanupComplete: true } },
+          close: () => true, cleanup: async () => true, beforeTerminalWrite: target === "terminal_publication" ? () => { throw new Error(secret) } : undefined, send: () => true })
+        const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]!
+        expect(reopened.lastEnteredStage).toBe("terminal_publication")
+        if (target === "terminal_publication") { expect(reopened.terminal).toBeNull(); expect(reopened.diagnosis?.failureStage).toBe(target) }
+        else expect(reopened.terminal?.failureStage).toBe(target)
+        expect(reopened.cause).toBe("unknown_internal")
+        expect(JSON.stringify(reopened)).not.toContain(secret)
+      } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+    }
+  })
+
+  it("attempts both issued-handle closes and exact-owner cleanup when each close throws", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-close-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-close", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const closes: string[] = [], sent: unknown[] = [], cleanup = vi.fn(async () => true)
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected") }, close: (handle) => { closes.push(handle); throw new Error("close fault") }, cleanup, send: (message) => { sent.push(message); return true } })
+      expect(closes).toEqual(["bottom", "top"])
+      expect(cleanup).toHaveBeenCalledTimes(1)
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal).toMatchObject({ cleanupComplete: false, disposition: "uncertain", processValidity: "process_invalid" })
+      expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }, { kind: "done", status: "process_invalid" }])
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("does not send done after an injected cell-complete IPC failure", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-ipc-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-ipc", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const sent: unknown[] = []
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected") }, close: () => true, cleanup: async () => true, send: (message) => { sent.push(message); return false } })
+      expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }])
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal?.disposition).toBe("system_failure")
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("keeps one durable charge when the done IPC send fails after completion", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-done-ipc-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-done-ipc", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const sent: unknown[] = []
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected") }, close: () => true, cleanup: async () => true, send: (message) => { sent.push(message); return message.kind !== "done" } })
+      expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }, { kind: "done", status: "process_invalid" }])
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal?.disposition).toBe("system_failure")
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("leaves a durable terminal present but uncertain when terminal reopen faults", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-reopen-fault-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-reopen-fault", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const sent: unknown[] = []
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger: { ...ledger, readTerminalV2: (root) => { const terminal = ledger.readTerminalV2!(root); if (terminal) throw new Error("injected reopen fault"); return null } }, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected worker fault") }, close: () => true, cleanup: async () => true, send: (message) => { sent.push(message); return true } })
+      expect(sent).toEqual([])
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal?.disposition).toBe("system_failure")
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
 
   it("probes a durable terminal before parent timeout publication after lost worker IPC", async () => {
     const id = labRoot("pilot-parent-probe", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
@@ -83,12 +192,50 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
     expect(await pending).toBe("process_invalid")
     expect(publishTimeout).not.toHaveBeenCalled()
   })
+  it("rechecks an exact durable terminal at timeout-write time without overwriting it", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-timeout-race-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-timeout-race", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected") }, close: () => true, cleanup: async () => true, send: () => true })
+      const terminal = ledger.readTerminalV2!(start.root)
+      expect(probeRetainedDiagnosticPilotTerminal(allocation, cell)).toBe("verified")
+      expect(writeDiagnosticPilotTimeout(allocation, cell, "publication_uncertain", 2)).toBe("already_terminal")
+      expect(ledger.readTerminalV2!(start.root)).toEqual(terminal)
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
   it("reopens the consumed historical verdict with exact typed process-invalid accounting", () => {
     const verdict = checkRetainedDiagnosticPilotV1Contract()
     expect(verdict).toMatchObject({ processValidity: "process_invalid", chargedCount: 1, slots: [{ ordinal: 0, status: "system_failure" }, { ordinal: 1, status: "unused" }, { ordinal: 2, status: "unused" }, { ordinal: 3, status: "unused" }] })
     expect(() => admitDiagnosticPilotHistoricalVerdict({ ...verdict, chargedCount: 0 })).toThrow()
     expect(() => admitDiagnosticPilotHistoricalVerdict({ ...verdict, oldEvidenceBaseline: { ...(verdict.oldEvidenceBaseline as Record<string, unknown>), oldResult: labRoot("test", "changed") } })).toThrow()
     expect(() => admitDiagnosticPilotHistoricalVerdict({ ...verdict, sourceClosureRoot: labRoot("test", "current") })).toThrow()
+  }, 120_000)
+  it("rejects forged repair keys, stale source/review, omitted commands, malformed history and authority flips", () => {
+    const directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-repair-gate-test-")))
+    try {
+      const path = join(directory, "gate.json")
+      const bytes = Object.fromEntries(DIAGNOSTIC_PILOT_REPAIR_SOURCE_FILES.map((file) => [file, Buffer.from(`test:${file}`)])) as Record<string, Uint8Array>
+      const source = diagnosticPilotRepairSourceClosure((file) => bytes[file]!)
+      const review = Buffer.from(`Reviewer: test-reviewer\nSource closure: ${source.sourceClosureRoot}\nPublic key fingerprint: ${diagnosticPilotRepairReviewerFingerprint()}\nActionable findings: 0\n`)
+      const history = checkRetainedDiagnosticPilotV1Contract()
+      const body = { schemaVersion: "diagnostic-pilot-repair-source-gate-v1", sourceFiles: source.sourceFiles, sourceClosureRoot: source.sourceClosureRoot, reviewPath: ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-10-SOURCE-REVIEW.md", reviewSha256: `sha256:${createHash("sha256").update(review).digest("hex")}`, reviewerId: "test-reviewer", authorId: "/root/execute_265_10", actionableFindings: 0, commands: diagnosticPilotRepairRequiredCommands().map((command) => ({ command, exitCode: 0 })), historicalCompatibility: history, oldEvidenceBaseline: history.oldEvidenceBaseline, empiricalAuthority: false, runAllowed: false, leagueRequirementsEvidence: false, freezeAuthorized: false, formationAuthorized: false, holdoutAuthorized: false, counted: false, public: false, productionAuthorized: false }
+      const signatureBase64 = Buffer.alloc(64).toString("base64")
+      const write = (value: Record<string, unknown>) => writeFileSync(path, JSON.stringify(value))
+      const gate = { ...body, signatureBase64, root: labRoot("diagnostic-pilot-repair-source-gate-v1", { ...body, signatureBase64 }) }
+      write(gate)
+      expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: review })).toThrow(/REPAIR_SIGNATURE/u)
+      expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: { ...bytes, [source.sourceFiles[0]!.path]: Buffer.from("changed") }, reviewBytes: review })).toThrow(/REPAIR_SOURCE_DRIFT/u)
+      expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: Buffer.from("changed review") })).toThrow(/REPAIR_REVIEW/u)
+      write({ ...gate, commands: gate.commands.slice(1) }); expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: review })).toThrow(/REPAIR_COMMANDS/u)
+      write({ ...gate, commands: [{ command: gate.commands[0]!.command, exitCode: 1 }, ...gate.commands.slice(1)] }); expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: review })).toThrow(/REPAIR_COMMANDS/u)
+      write({ ...gate, historicalCompatibility: { ...history, chargedCount: 0 } }); expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: review })).toThrow(/HISTORICAL_VERDICT/u)
+      write({ ...gate, runAllowed: true }); expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: review })).toThrow(/REPAIR_GATE_SCHEMA/u)
+      write({ ...gate, signatureBase64: Buffer.alloc(64, 1).toString("base64") }); expect(() => checkDiagnosticPilotRepairGate({ gatePath: path, sourceFiles: bytes, reviewBytes: review })).toThrow()
+    } finally { rmSync(directory, { recursive: true, force: true }) }
   }, 120_000)
   it("places a preemptive kill before both hard deadlines with independent cleanup reserve", () => {
     const schedule = computeDiagnosticPilotDeadlines({ overallStartedAt: 1000, cellStartedAt: 2000 })
