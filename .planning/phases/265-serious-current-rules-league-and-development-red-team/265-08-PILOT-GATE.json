@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "diagnostic-pilot-source-gate-v1",
+  "sourceFiles": [
+    {
+      "path": "packages/strategy-lab/src/league/diagnostic-pilot.ts",
+      "sha256": "sha256:7ce45452aa93b21ffc91f1349be561379ee38541682c767965c4d4aec3e72de6"
+    },
+    {
+      "path": "packages/strategy-lab/src/league/diagnostic-pilot.test.ts",
+      "sha256": "sha256:dc6e9fa3030122ba5527fdd98e0bcad72399edbbfa279aa749769d736ea9758c"
+    },
+    {
+      "path": "packages/strategy-lab/src/league/connected-runner.ts",
+      "sha256": "sha256:10c9e66460f4d2529a7298f1d304208426e8ef5afbec785929d01e6b73ae0e05"
+    },
+    {
+      "path": "scripts/lib/v1-38-factory-supervised-runtime.ts",
+      "sha256": "sha256:5e6ad8fb0306ab265b8c9292259f22b546359e0793814d340b405fb0ca6d9ca0"
+    },
+    {
+      "path": "scripts/lib/v1-38-planner-supervised-runtime.ts",
+      "sha256": "sha256:e24dea49cfa03fed3a34cce87ee60485df8421a025435a3909890aff18f77ff8"
+    },
+    {
+      "path": "scripts/run-v1-38-diagnostic-pilot.ts",
+      "sha256": "sha256:651b84ce1b17a2638a41f1754d80ca9984302ea86a9549a698c8ca41a383a982"
+    },
+    {
+      "path": "scripts/run-v1-38-diagnostic-pilot.test.ts",
+      "sha256": "sha256:4e540e8d1e10e12a5f611fa058d3af4773a3af79e526a4bab301cd47f007b506"
+    },
+    {
+      "path": "scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
+      "sha256": "sha256:cc7557306ab552924a813bccc62a39b683d064894df5cde736bec45521926e13"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "sha256": "sha256:2347f6343c1665c52d60fce292a221dcdb78cd1bdce3ae9176021f6d8b75d180"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "sha256:b02c04cbd7f4b6808153c3a6657df965b78712752bd801118be31b49cf9e186a"
+    }
+  ],
+  "sourceClosureRoot": "sha256:86d157dd8ca42de29a55e966e223263f9bf96eac21afa531489fe7d82c543059",
+  "reviewPath": ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-08-PILOT-SOURCE-REVIEW.md",
+  "reviewSha256": "sha256:065b4f940a768883951be212eb593e68cbd932c9ba6f202f266b1c2b6b32ae27",
+  "reviewerId": "/root/execute_265_08/review_265_08_source",
+  "authorId": "/root/execute_265_08",
+  "actionableFindings": 0,
+  "commands": [
+    {
+      "command": "./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/league/diagnostic-pilot.test.ts packages/strategy-lab/src/league/connected-runner.test.ts scripts/run-v1-38-diagnostic-pilot.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts scripts/lib/v1-38-planner-supervised-runtime.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/league/contracts.test.ts packages/strategy-lab/src/league/identity.test.ts packages/strategy-lab/src/league/matrix.test.ts packages/strategy-lab/src/league/solver.test.ts packages/strategy-lab/src/league/repository.test.ts packages/strategy-lab/src/league/connected-runner.test.ts packages/strategy-lab/src/league/psro.test.ts packages/strategy-lab/src/league/selection.test.ts packages/strategy-lab/src/league/red-team.test.ts packages/strategy-lab/src/league/report.test.ts packages/strategy-lab/src/league/fixtures.test.ts packages/strategy-lab/src/league/integration.test.ts scripts/run-v1-38-serious-league.test.ts scripts/check-v1-38-serious-league-boundaries.test.ts scripts/check-v1-38-lab-boundaries.test.ts scripts/check-v1-38-factory-boundaries.test.ts packages/strategy-lab/src/runtime-bridge.test.ts packages/strategy-lab/src/runner-invariance.test.ts packages/strategy-lab/src/factory/repository.test.ts packages/strategy-lab/src/factory/fingerprint.test.ts packages/strategy-lab/src/factory/admission.test.ts packages/strategy-lab/src/factory/supervision-artifacts.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts packages/strategy-lab/src/league/allocation.test.ts scripts/lib/v1-38-league-authoring.test.ts scripts/lib/v1-38-league-response-runtime.test.ts scripts/assess-v1-38-factory-independence.test.ts scripts/v1-38-factory-execution-evidence.test.ts scripts/v1-38-factory-assessment-correction.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsc --noEmit -p packages/strategy-lab/tsconfig.json",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --types node --skipLibCheck scripts/lib/v1-38-factory-supervised-runtime.ts scripts/lib/v1-38-planner-supervised-runtime.ts scripts/run-v1-38-diagnostic-pilot.ts scripts/run-v1-38-diagnostic-pilot.test.ts scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json --pretty false",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-serious-league-boundaries.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-lab-boundaries.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec tsx scripts/check-service-boundary-imports.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "./node_modules/.bin/vitest run --maxWorkers=1 scripts/check-v1-38-serious-league-boundaries.test.ts scripts/check-v1-38-lab-boundaries.test.ts scripts/check-v1-38-factory-boundaries.test.ts scripts/run-v1-38-diagnostic-pilot.test.ts",
+      "exitCode": 0
+    }
+  ],
+  "readerSamplesMilliseconds": [
+    14739,
+    14013,
+    14057
+  ],
+  "readerCeilingMilliseconds": 44739,
+  "capacityVersion": "diagnostic-pilot-capacity-v1",
+  "watchdogVersion": "diagnostic-pilot-watchdog-v1",
+  "empiricalAuthority": false,
+  "signatureBase64": "HMdNEnChyiXcqKLmYJeH4qQi8OKXlGe1aD+y//M6CBu33Oy3RzjyPsxcwY41AmTPJ8CAKvKRG1A7uI8ptgkhDw==",
+  "root": "sha256:a6848166b539d9885aed10825a1c3f36731b7fc32474abf0dea2a38eef5e5a76"
+}
