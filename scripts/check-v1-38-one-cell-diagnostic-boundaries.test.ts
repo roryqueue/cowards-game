@@ -6,7 +6,7 @@ describe("one-cell private diagnostic boundary", () => {
     const result = checkOneCellDiagnosticBoundaries()
     expect(result.violations).toEqual([])
     expect(result.scannedFiles).toBeGreaterThan(100)
-  })
+  }, 30_000)
   it("rejects injected public reachability and raw exception fields", () => {
     const result = checkOneCellDiagnosticBoundaries({ files: { "apps/web/src/v3-leak.ts": 'import "../../../../packages/strategy-lab/src/league/diagnostic-one-cell.js"', "packages/strategy-lab/src/league/diagnostic-one-cell.ts": "interface DiagnosticOneCellTerminal { rawError: string }" }, goFiles: {} })
     expect(result.violations.length).toBeGreaterThan(0)

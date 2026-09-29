@@ -3,7 +3,7 @@ import { closeSync, constants, fsyncSync, linkSync, lstatSync, openSync, readFil
 import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137 } from "@cowards/spec"
 import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
-import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
+import { type runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
 import { runDiagnosticOneCellCanonicalFromBridge, type DiagnosticOneCellBridgePermit } from "./connected-runner.js"
 import {
   DIAGNOSTIC_PILOT_BASES,
