@@ -5,21 +5,36 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 Plan09 one-shot diagnostic stopped process-invalid after one charged cell; no retry or empirical authority
+stopped_at: Phase265 Plan10 source-only failure-classification and IPC repair; Plan09 run consumed process-invalid with no retry authority
 last_updated: "2026-09-29"
 last_activity: 2026-09-29
-last_activity_desc: Plan265-09 distinct allocation consumed; retained one charged system-failure cell and three unused slots, with old evidence unchanged
+last_activity_desc: Plan265-09 failure diagnosed without rerun; Plan265-10 source-only repair passed independent plan check
 progress:
   total_phases: 9
   completed_phases: 3
-  total_plans: 9
+  total_plans: 10
   completed_plans: 7
   percent: 33
-current_plan: 9
-total_plans_in_phase: 9
+current_plan: 10
+total_plans_in_phase: 10
 ---
 
 # State: Coward's Game
+
+## Current Session Continuity — 2026-09-29 Plan265-10 source-only repair
+
+The Plan265-09 initiating exception is not recoverable from its immutable
+`system_failure` result: the worker catch discarded stage/cause before any
+evidence chunk, so neither provider issuance nor `MATCH_KERNEL` entry can be
+inferred. A separate deterministic source defect sends `done` without
+`cell-complete` after a catch terminal and can leave the parent active. The
+diagnosis is committed in `.planning/debug/phase-265-pilot-failure.md`.
+Plan265-10 now has an independent passing plan check for source-only, versioned
+allowlisted stage/cause retention, idempotent terminal-to-parent IPC, pinned
+historical v1 verification, and a new non-authorizing exact-source gate. No
+source repair, new allocation, provider, Strategy, model or Match has run under
+Plan10 yet. Plan07 and Plan09 remain separately consumed and non-retryable;
+LEAG-01–09 and Phase266 freeze remain blocked.
 
 ## Current Session Continuity — 2026-09-29 Plan265-09 terminal diagnostic
 
