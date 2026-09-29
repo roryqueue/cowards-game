@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn, type ChildProcess } from "node:child_process"
 import { describe, expect, it, vi } from "vitest"
-import { DIAGNOSTIC_PILOT_STORE, createDiagnosticPilotAllocation, createDiagnosticPilotCell, createDiagnosticPilotStart, createDiagnosticPilotTerminal, createDiagnosticPilotLifetimeGrant, diagnosticPilotContainerIdentity, openDiagnosticPilotLedger, type DiagnosticPilotLedger } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
+import { DIAGNOSTIC_PILOT_STORE, createDiagnosticPilotAllocation, createDiagnosticPilotCell, createDiagnosticPilotStart, createDiagnosticPilotTerminal, createDiagnosticPilotLifetimeGrant, diagnosticPilotContainerIdentity, openDiagnosticPilotLedger, reopenProspectiveDiagnosticPilotLedger, type DiagnosticPilotLedger } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import type { LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
@@ -35,9 +35,54 @@ import {
   diagnosticPilotRequiredGateCommands,
   checkRetainedDiagnosticPilotV1Contract,
   admitDiagnosticPilotHistoricalVerdict,
+  runDiagnosticPilotWorkerCell,
 } from "./run-v1-38-diagnostic-pilot.js"
 
 describe("diagnostic pilot source-only watchdog and gate", () => {
+  it("completes an injected top-issuance catch only after one v2 terminal reopen", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-worker-catch-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-worker-catch", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const sent: unknown[] = [], closed: string[] = []
+      const disposition = await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 10, cellStartedAt: 0, issue: (seat) => { if (seat === "top") throw new TypeError("DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE"); return seat }, execute: async () => { throw new Error("must not execute") }, close: (handle) => { closed.push(handle); return true }, cleanup: async () => true, send: (message) => { sent.push(message); return true } })
+      expect(disposition).toBe("stop")
+      expect(closed).toEqual(["bottom"])
+      expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }, { kind: "done", status: "process_invalid" }])
+      const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]!
+      expect(reopened.stages.map((row) => row.stage)).toEqual(["bottom_issuance", "top_issuance", "terminal_publication"])
+      expect(reopened.terminal).toMatchObject({ disposition: "system_failure", cause: "worker_candidate", lastEnteredStage: "terminal_publication" })
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("preserves a terminal written before an injected post-write fault without a second charge", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-postwrite-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-postwrite", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      const sent: unknown[] = []
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 10, cellStartedAt: 0, issue: (seat) => seat, execute: async (_bottom, _top, enteredKernel, enteredEvidence) => { enteredKernel(); enteredEvidence(); return { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, artifactBytes: 0, artifactRecords: 0, cleanupComplete: true } }, close: () => true, cleanup: async () => true, afterTerminalWrite: () => { throw new Error("injected postwrite") }, send: (message) => { sent.push(message); return true } })
+      expect(sent).toEqual([{ kind: "cell-complete", ordinal: 0 }, { kind: "done", status: "process_invalid" }])
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal?.disposition).toBe("system_failure")
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("probes a durable terminal before parent timeout publication after lost worker IPC", async () => {
+    const id = labRoot("pilot-parent-probe", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+    const cell = createDiagnosticPilotCell(allocation, 0), child = Object.assign(new EventEmitter(), { pid: 4545, send: vi.fn() }) as unknown as ChildProcess
+    const publishTimeout = vi.fn(async () => "written" as const)
+    const pending = runDiagnosticPilotWatchdog("injected-only", { now: () => 1_000, spawnWorker: () => child, killGroup: () => undefined, cleanup: async () => true, probeTerminal: async () => "verified" as const, publishTimeout })
+    child.emit("message", { kind: "cell-request", allocation, cell })
+    child.emit("exit", 1, null)
+    expect(await pending).toBe("process_invalid")
+    expect(publishTimeout).not.toHaveBeenCalled()
+  })
   it("reopens the consumed historical verdict with exact typed process-invalid accounting", () => {
     const verdict = checkRetainedDiagnosticPilotV1Contract()
     expect(verdict).toMatchObject({ processValidity: "process_invalid", chargedCount: 1, slots: [{ ordinal: 0, status: "system_failure" }, { ordinal: 1, status: "unused" }, { ordinal: 2, status: "unused" }, { ordinal: 3, status: "unused" }] })
