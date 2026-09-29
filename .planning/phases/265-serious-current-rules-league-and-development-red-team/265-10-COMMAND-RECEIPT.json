@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "diagnostic-pilot-repair-command-receipt-v1",
+  "sourceCommit": "1ebf10ae9325fd11048c33e5bbc3c20d29a08836",
+  "sourceClosureRoot": "sha256:d985d51e82ae23dd805fc55bca3ee048ba37c77d7129c33b11c79d101357d41e",
+  "reviewSha256": "sha256:fed426185b54043d8ee16839369befa4d69047887f9d8bfd948194a5dca64f7f",
+  "reviewerId": "/root/review_265_10_source_root",
+  "commands": [
+    {
+      "command": "./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/league/connected-runner.test.ts packages/strategy-lab/src/league/diagnostic-pilot.test.ts scripts/run-v1-38-diagnostic-pilot.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts scripts/lib/v1-38-planner-supervised-runtime.test.ts",
+      "exitCode": 0,
+      "summary": {
+        "testFilesPassed": 5,
+        "testsPassed": 68,
+        "durationSeconds": 68.75
+      }
+    },
+    {
+      "command": "./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/league/contracts.test.ts packages/strategy-lab/src/league/identity.test.ts packages/strategy-lab/src/league/matrix.test.ts packages/strategy-lab/src/league/solver.test.ts packages/strategy-lab/src/league/repository.test.ts packages/strategy-lab/src/league/connected-runner.test.ts packages/strategy-lab/src/league/psro.test.ts packages/strategy-lab/src/league/selection.test.ts packages/strategy-lab/src/league/red-team.test.ts packages/strategy-lab/src/league/report.test.ts packages/strategy-lab/src/league/fixtures.test.ts packages/strategy-lab/src/league/integration.test.ts scripts/run-v1-38-serious-league.test.ts scripts/check-v1-38-serious-league-boundaries.test.ts scripts/check-v1-38-lab-boundaries.test.ts scripts/check-v1-38-factory-boundaries.test.ts packages/strategy-lab/src/runtime-bridge.test.ts packages/strategy-lab/src/runner-invariance.test.ts packages/strategy-lab/src/factory/repository.test.ts packages/strategy-lab/src/factory/fingerprint.test.ts packages/strategy-lab/src/factory/admission.test.ts packages/strategy-lab/src/factory/supervision-artifacts.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts packages/strategy-lab/src/league/allocation.test.ts scripts/lib/v1-38-league-authoring.test.ts scripts/lib/v1-38-league-response-runtime.test.ts scripts/assess-v1-38-factory-independence.test.ts scripts/v1-38-factory-execution-evidence.test.ts scripts/v1-38-factory-assessment-correction.test.ts",
+      "exitCode": 0,
+      "summary": {
+        "testFilesPassed": 29,
+        "testsPassed": 357,
+        "durationSeconds": 2094.9
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsc --noEmit -p packages/strategy-lab/tsconfig.json",
+      "exitCode": 0,
+      "summary": {
+        "kind": "typecheck"
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --types node --skipLibCheck scripts/lib/v1-38-factory-supervised-runtime.ts scripts/lib/v1-38-planner-supervised-runtime.ts scripts/run-v1-38-diagnostic-pilot.ts scripts/run-v1-38-diagnostic-pilot.test.ts scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
+      "exitCode": 0,
+      "summary": {
+        "kind": "strict_script_typecheck"
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsc -b packages/strategy-lab/tsconfig.json --pretty false",
+      "exitCode": 0,
+      "summary": {
+        "kind": "strategy_lab_build"
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-serious-league-boundaries.ts",
+      "exitCode": 0,
+      "summary": {
+        "scannedFiles": 1341,
+        "violations": 0
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-lab-boundaries.ts",
+      "exitCode": 0,
+      "summary": {
+        "scannedFiles": 1341,
+        "violations": 0
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-factory-boundaries.ts",
+      "exitCode": 0,
+      "summary": {
+        "scannedFiles": 1341,
+        "violations": 0
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
+      "exitCode": 0,
+      "summary": {
+        "scannedFiles": 1341,
+        "violations": 0
+      }
+    },
+    {
+      "command": "pnpm exec tsx scripts/check-service-boundary-imports.ts",
+      "exitCode": 0,
+      "summary": {
+        "strictOffenses": 0,
+        "ownershipOffenses": 0,
+        "reportOnlyOffenses": 19
+      }
+    },
+    {
+      "command": "./node_modules/.bin/vitest run --maxWorkers=1 scripts/check-v1-38-serious-league-boundaries.test.ts scripts/check-v1-38-lab-boundaries.test.ts scripts/check-v1-38-factory-boundaries.test.ts scripts/run-v1-38-diagnostic-pilot.test.ts",
+      "exitCode": 0,
+      "summary": {
+        "testFilesPassed": 4,
+        "testsPassed": 122,
+        "durationSeconds": 29.1
+      }
+    },
+    {
+      "command": "./node_modules/.bin/tsx scripts/run-v1-38-diagnostic-pilot.ts check-retained-v1-contract",
+      "exitCode": 0,
+      "summary": {
+        "historicalVerdictRoot": "sha256:61cfce38b4b3b506626e9528bb5ef65ea4820c158e566a86b0a0464cd4955e45",
+        "processValidity": "process_invalid",
+        "chargedCount": 1,
+        "unusedSlots": 3
+      }
+    }
+  ],
+  "historicalVerdictRoot": "sha256:61cfce38b4b3b506626e9528bb5ef65ea4820c158e566a86b0a0464cd4955e45",
+  "empiricalAuthority": false,
+  "runAllowed": false,
+  "leagueRequirementsEvidence": false,
+  "freezeAuthorized": false,
+  "formationAuthorized": false,
+  "holdoutAuthorized": false,
+  "counted": false,
+  "public": false,
+  "productionAuthorized": false,
+  "root": "sha256:38b93ec2861d9426267da9dbfaf56e21d9d49ea7b48f838c978c18f2379601b5"
+}
