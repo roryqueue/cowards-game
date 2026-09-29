@@ -1,12 +1,30 @@
 import { createHash } from "node:crypto"
-import { describe, expect, it, vi } from "vitest"
+import { mkdtempSync, mkdirSync, realpathSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { admitFactory, authorizeFactorySupervision } from "../../packages/strategy-lab/src/factory/admission.js"
 import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidationFixture } from "../../packages/strategy-lab/src/factory/contracts.js"
 import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
-import { createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
+import { DIAGNOSTIC_ONE_CELL_STORE, createDiagnosticOneCellAllocation, createDiagnosticOneCellCell, createDiagnosticOneCellStart, createDiagnosticOneCellLifetimeGrant, diagnosticOneCellContainerIdentity, openDiagnosticOneCellLedger } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
+import { admitFactorySupervisorLifetime, createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
+const originalCwd = process.cwd()
+const temporaryRoots: string[] = []
+afterEach(() => { process.chdir(originalCwd); for (const path of temporaryRoots.splice(0)) rmSync(path, { recursive: true, force: true }); vi.restoreAllMocks() })
+const validOneCellGrant = () => {
+  const path = realpathSync(mkdtempSync(join(tmpdir(), "one-cell-lifetime-test-")))
+  temporaryRoots.push(path); mkdirSync(join(path, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(path, DIAGNOSTIC_ONE_CELL_STORE), { mode: 0o700 }); process.chdir(path)
+  const oldEvidenceBaseline = { oldAllocationV2: root("1"), oldAllocationUnversioned: root("2"), oldResult: root("3"), oldLeagueTree: root("4"), oldFactoryTree: root("5") }
+  const allocation = createDiagnosticOneCellAllocation({ sourceClosureRoot: root("6"), implementationRoot: root("7"), gateRoot: root("8"), oldEvidenceBaseline })
+  const cell = createDiagnosticOneCellCell(allocation, 0), start = createDiagnosticOneCellStart(allocation, cell), ledger = openDiagnosticOneCellLedger(DIAGNOSTIC_ONE_CELL_STORE)
+  ledger.writeStart(start)
+  const binding = diagnosticOneCellContainerIdentity(allocation, cell, "bottom")
+  const grant = createDiagnosticOneCellLifetimeGrant(ledger, allocation, cell, start, "bottom")
+  return { allocation, cell, start, grant, binding }
+}
 const sourceBytes = new TextEncoder().encode("export default {selectActivations(){return {activationOrders:[],strategyMemory:{}}},soldierBrain(){return {action:{type:'TURN_TO_STONE'},soldierMemory:{}}}}")
 const sourceRoot = `sha256:${createHash("sha256").update(sourceBytes).digest("hex")}` as LabRoot
 const admitted = () => {
@@ -18,6 +36,16 @@ const admitted = () => {
 }
 
 describe("selected factory supervised runtime adapter", () => {
+  it("never treats an unissued v3 object as 240-second authority", () => {
+    expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("5"), attemptRoot: root("4"), containerName: "fake", ownershipLabel: "fake", oneCellLifetimeGrant: { schemaVersion: "diagnostic-one-cell-lifetime-grant-v3", cellRoot: root("6") } as never })).toThrow()
+    expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("5"), attemptRoot: root("4"), containerName: "fake", ownershipLabel: "fake" })).toThrow()
+    expect(admitFactorySupervisorLifetime({ factoryLifetimeMs: 120_000, budgetRoot: root("5"), attemptRoot: root("4"), containerName: "ordinary", ownershipLabel: "ordinary" })).toBe(120_000)
+  })
+  it("admits only the issued v3 charge-bound 240-second grant", () => {
+    const { allocation, start, grant, binding } = validOneCellGrant()
+    expect(admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: allocation.root, attemptRoot: start.root, ...binding, oneCellLifetimeGrant: grant })).toBe(240_000)
+    expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("9"), attemptRoot: start.root, ...binding, oneCellLifetimeGrant: grant })).toThrow()
+  })
   it("builds the exact authored TypeScript revision and wraps selected adapter identity", () => {
     const { admission } = admitted()
     const createRuntime = vi.fn((options: any) => ({ identity: { revisionId: options.revision.id, sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } } }))
