@@ -60,7 +60,7 @@ const PINNED_V1_BASELINE: DiagnosticPilotOldEvidenceBaseline = Object.freeze({ o
 const REPAIR_GATE_PATH = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-10-SOURCE-GATE.json"
 const REPAIR_REVIEW_PATH = ".planning/phases/265-serious-current-rules-league-and-development-red-team/265-10-SOURCE-REVIEW.md"
 const REPAIR_AUTHOR_ID = "/root/execute_265_10"
-const REPAIR_REVIEWER_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAtn7dYhP7UW/FiRzCa2iUJMYO1+r2+VXeevOBBhI7j7U=\n-----END PUBLIC KEY-----"
+const REPAIR_REVIEWER_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAUxpql4iRtDPzNKhsUEwxR1VCNydjKE82epOJ7GuFutY=\n-----END PUBLIC KEY-----"
 const OLD_EVIDENCE_PATHS = Object.freeze({
   oldAllocationV2: ".planning/artifacts/v1.38-phase-265-allocation-v2.json",
   oldAllocationUnversioned: ".planning/artifacts/v1.38-phase-265-allocation.json",
