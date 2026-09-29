@@ -325,6 +325,7 @@ export const DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS = Object.freeze({
   schedulerAndFilesystemMarginMilliseconds: 7_000,
 })
 export const DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_MS = DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.providerCount * (DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.streamCloseMilliseconds + DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.removeMilliseconds + DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.inspectBeforeMilliseconds + DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.inspectAfterMilliseconds) + DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.processGroupKillMilliseconds + DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.terminalWriterAndFsyncMilliseconds + DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS.schedulerAndFilesystemMarginMilliseconds
+export const DIAGNOSTIC_PILOT_TERMINAL_PROBE_MS = 2_000
 export const DIAGNOSTIC_PILOT_OVERALL_MS = 1_800_000
 export const DIAGNOSTIC_PILOT_CELL_MS = 240_000
 export const computeDiagnosticPilotDeadlines = (input: { readonly overallStartedAt: number; readonly cellStartedAt: number }) => {
@@ -696,11 +697,15 @@ export const runDiagnosticPilotWorkerCell = async <T>(input: {
 }): Promise<"continue" | "stop"> => {
   const { allocation, cell, start, ledger } = input
   if (!ledger.writeTerminalV2 || !ledger.readTerminalV2 || !ledger.writeStageCheckpoint || !ledger.readStageCheckpoint) return fail("WORKER_V2_LEDGER")
-  let bottom: T | null = null, top: T | null = null, completionAttempted = false, publicationAttempted = false, atPublication = false
+  let bottom: T | null = null, top: T | null = null, completionAttempted = false, normalTerminalWriteCompleted = false, publicationAttempted = false, atPublication = false, cleanupEntered = false
+  let checkpointInProgress = false, pendingCheckpointOrdinal = -1
   let lastWorkStage: "unknown" | "bottom_issuance" | "top_issuance" | "pre_kernel_binding" | "kernel_or_callback" | "first_evidence_write" = "unknown"
   const checkpoint = (ordinal: number) => {
     if (!ledger.writeStageCheckpoint || !ledger.readStageCheckpoint) return fail("STAGE_LEDGER")
+    checkpointInProgress = true
+    pendingCheckpointOrdinal = ordinal
     if (ledger.readStageCheckpoint(start.root, ordinal) === null) ledger.writeStageCheckpoint(createDiagnosticPilotStageCheckpoint(start, ordinal, ["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write", "terminal_publication"][ordinal] as Parameters<typeof createDiagnosticPilotStageCheckpoint>[2]))
+    checkpointInProgress = false
     if (ordinal < 5) lastWorkStage = ["bottom_issuance", "top_issuance", "pre_kernel_binding", "kernel_or_callback", "first_evidence_write"][ordinal] as typeof lastWorkStage
   }
   const elapsed = () => Math.min(DIAGNOSTIC_PILOT_CELL_MS, Math.max(0, Math.ceil(input.now() - input.cellStartedAt)))
@@ -733,28 +738,40 @@ export const runDiagnosticPilotWorkerCell = async <T>(input: {
     top = input.issue("top")
     checkpoint(2)
     const result = await input.execute(bottom, top, () => checkpoint(3), () => checkpoint(4))
+    cleanupEntered = true
     const cleaned = await input.cleanup()
     if (elapsed() >= DIAGNOSTIC_PILOT_CELL_MS) return fail("WORKER_CELL_DEADLINE")
-    checkpoint(5)
     atPublication = true
+    checkpoint(5)
     const valid = cleaned && result.cleanupComplete && result.processValidity === "process_valid"
     const terminal = createDiagnosticPilotTerminalV2(start, { disposition: valid ? result.disposition : result.disposition === "success" ? "uncertain" : result.disposition, processValidity: valid ? "process_valid" : "process_invalid", evidenceRoot: result.evidenceRoot, cleanupComplete: cleaned && result.cleanupComplete, elapsedMilliseconds: elapsed(), artifactBytes: result.artifactBytes, artifactRecords: result.artifactRecords, code: !cleaned || !result.cleanupComplete ? "cleanup_incomplete" : result.disposition === "success" && !valid ? "system_failure" : result.disposition === "success" ? "completed" : result.disposition, lastEnteredStage: "terminal_publication", failureStage: "unknown", cause: "unknown_internal" })
     publicationAttempted = true
     input.beforeTerminalWrite?.()
     ledger.writeTerminalV2?.(terminal)
+    normalTerminalWriteCompleted = true
     input.afterTerminalWrite?.()
     const verified = reopenedTerminal()
     if (!verified || verified.root !== terminal.root) return fail("WORKER_CELL_REOPEN")
     return sendCompletion(verified)
   } catch (error) {
     if (completionAttempted) return "stop"
+    const failedCheckpointOrdinal = checkpointInProgress ? pendingCheckpointOrdinal : -1
     let closeComplete = true
     for (const handle of [bottom, top]) if (handle !== null) { try { if (!input.close(handle)) closeComplete = false } catch { closeComplete = false } }
     let cleaned = false
     try { cleaned = await input.cleanup() } catch { /* uncertain cleanup remains invalid */ }
     let existing: ReturnType<typeof reopenedTerminal> = null
-    try { existing = reopenedTerminal() } catch { return "stop" }
-    if (existing) { try { return sendCompletion(existing, true) } catch { return "stop" } }
+    try { existing = reopenedTerminal() } catch {
+      if (publicationAttempted && !normalTerminalWriteCompleted) try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(error))) } catch { /* terminal-present uncertainty remains invalid */ }
+      return "stop"
+    }
+    if (existing) {
+      if (!normalTerminalWriteCompleted) {
+        if (publicationAttempted) try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(error))) } catch { /* a failed diagnosis claims no cause */ }
+        return "stop"
+      }
+      try { return sendCompletion(existing, true) } catch { return "stop" }
+    }
     try { checkpoint(5) } catch { return "stop" }
     if (publicationAttempted) {
       try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(error))) } catch { /* no durable cause can be claimed */ }
@@ -762,9 +779,12 @@ export const runDiagnosticPilotWorkerCell = async <T>(input: {
     }
     let partial: ReturnType<typeof retainDiagnosticPilotPartialEvidence>
     try { partial = retainDiagnosticPilotPartialEvidence(ledger, start) } catch { partial = { evidenceRoot: null, artifactBytes: 0, artifactRecords: 0 } }
-    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: cleaned && closeComplete ? "system_failure" : "uncertain", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: cleaned && closeComplete, elapsedMilliseconds: elapsed(), artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code: cleaned && closeComplete ? "system_failure" : "cleanup_incomplete", lastEnteredStage: "terminal_publication", failureStage: atPublication ? "terminal_publication" : lastWorkStage, cause: safeDiagnosticPilotCause(error) })
+    // A write that threw after link but before directory fsync is observable
+    // yet not proved durable. Its failure stage is unknown even on readback.
+    const durableFailureStage: typeof lastWorkStage | "terminal_publication" = failedCheckpointOrdinal >= 0 ? "unknown" : atPublication ? "terminal_publication" : cleanupEntered ? "unknown" : lastWorkStage
+    const terminal = createDiagnosticPilotTerminalV2(start, { disposition: cleaned && closeComplete ? "system_failure" : "uncertain", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: cleaned && closeComplete, elapsedMilliseconds: elapsed(), artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code: cleaned && closeComplete ? "system_failure" : "cleanup_incomplete", lastEnteredStage: "terminal_publication", failureStage: durableFailureStage, cause: safeDiagnosticPilotCause(error) })
     publicationAttempted = true
-    try { ledger.writeTerminalV2?.(terminal) } catch { try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(error))) } catch { /* start-only remains invalid */ }; return "stop" }
+    try { ledger.writeTerminalV2?.(terminal) } catch (publicationError) { try { ledger.writeFailureDiagnosis?.(createDiagnosticPilotFailureDiagnosis(start, safeDiagnosticPilotCause(publicationError))) } catch { /* start-only remains invalid */ }; return "stop" }
     try { const verified = reopenedTerminal(); if (verified?.root !== terminal.root) return "stop"; return sendCompletion(verified) } catch { return "stop" }
   }
 }
@@ -786,7 +806,7 @@ export const writeDiagnosticPilotTimeout = (allocation: DiagnosticPilotAllocatio
   if (next !== null && next !== undefined) { admitDiagnosticPilotTerminalV2(start, next); return "already_terminal" }
   if (ledger.readStageCheckpoint?.(start.root, 5) === null) ledger.writeStageCheckpoint?.(createDiagnosticPilotStageCheckpoint(start, 5, "terminal_publication"))
   const partial = retainDiagnosticPilotPartialEvidence(ledger, start)
-  ledger.writeTerminalV2?.(createDiagnosticPilotTerminalV2(start, { disposition: code === "cleanup_incomplete" || code === "publication_uncertain" ? "uncertain" : "timeout", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: code !== "cleanup_incomplete", elapsedMilliseconds, artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code, lastEnteredStage: "terminal_publication", failureStage: "terminal_publication", cause: "unknown_internal" }))
+  ledger.writeTerminalV2?.(createDiagnosticPilotTerminalV2(start, { disposition: code === "cleanup_incomplete" || code === "publication_uncertain" ? "uncertain" : "timeout", processValidity: "process_invalid", evidenceRoot: partial.evidenceRoot, cleanupComplete: code !== "cleanup_incomplete", elapsedMilliseconds, artifactBytes: partial.artifactBytes, artifactRecords: partial.artifactRecords, code, lastEnteredStage: "terminal_publication", failureStage: "unknown", cause: "unknown_internal" }))
   const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
   if (reopened.retentionUncertain || reopened.records.find((entry) => entry.start.root === start.root)?.terminal?.code !== code) return fail("TIMEOUT_REOPEN")
   return "written"
@@ -814,7 +834,10 @@ export const probeRetainedDiagnosticPilotTerminal = (allocation: DiagnosticPilot
       const evidence = header.schemaVersion === "diagnostic-pilot-execution-manifest-v1" ? verifyRetainedDiagnosticPilotExecution(ledger, start, terminal.evidenceRoot) : header.schemaVersion === "diagnostic-pilot-partial-evidence-v1" ? verifyRetainedDiagnosticPilotPartialEvidence(ledger, start, terminal.evidenceRoot) : null
       if (!evidence || evidence.artifactBytes !== terminal.artifactBytes || evidence.artifactRecords !== terminal.artifactRecords || "disposition" in evidence && evidence.disposition !== terminal.disposition) return "uncertain"
     } else if (ledger.listNames().some((name) => name.startsWith(`diagnostic-pilot-${start.root.slice(7)}.evidence-`))) return "uncertain"
-    return "verified"
+    // A fresh read-only process cannot attest whether v2's directory fsync
+    // returned in the writer. Presence blocks a second writer but is not proof
+    // of durable publication, so this probe never promotes it to verified.
+    return next !== null && next !== undefined ? "uncertain" : "verified"
   } catch { return "uncertain" }
 }
 
@@ -905,7 +928,7 @@ const defaultHost: PilotWatchdogHost = {
     const probe = spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), "terminal-probe", payload], { stdio: ["ignore", "pipe", "ignore"], env: { PATH: process.env.PATH ?? "", NODE_ENV: "production" }, shell: false })
     let output = "", settled = false
     const settle = (result: "verified" | "absent" | "uncertain") => { if (settled) return; settled = true; clearTimeout(timer); resolveProbe(result) }
-    const timer = setTimeout(() => { probe.kill("SIGKILL"); settle("uncertain") }, 2_000)
+    const timer = setTimeout(() => { probe.kill("SIGKILL"); settle("uncertain") }, DIAGNOSTIC_PILOT_TERMINAL_PROBE_MS)
     probe.stdout?.on("data", (bytes: Buffer) => { output += bytes.toString("utf8"); if (output.length > 32) { probe.kill("SIGKILL"); settle("uncertain") } })
     probe.on("error", () => settle("uncertain"))
     probe.on("close", (status) => settle(status === 0 && (output === "verified\n" || output === "absent\n" || output === "uncertain\n") ? output.trim() as "verified" | "absent" | "uncertain" : "uncertain"))
@@ -940,10 +963,12 @@ export const runDiagnosticPilotWatchdog = (allocationPath: string, host: PilotWa
       if (timer) clearTimeout(timer)
       timer = setTimeout(() => settle("process_invalid"), DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_MS)
       void (async () => {
+        // The read-only probe overlaps exact-owner cleanup, preserving every
+        // component of the original 30-second reserve, including its 7s margin.
+        const probePromise = Promise.resolve().then(() => host.probeTerminal?.(current.allocation, current.cell) ?? "absent").catch(() => "uncertain" as const)
         let clean = false
         try { clean = await host.cleanup(current.allocation, current.cell) } catch { /* publish uncertain charge */ }
-        let probe: "verified" | "absent" | "uncertain" = "absent"
-        try { probe = await host.probeTerminal?.(current.allocation, current.cell) ?? "absent" } catch { probe = "uncertain" }
+        const probe = await probePromise
         if (probe !== "absent") { settle("process_invalid"); return }
         let publication: "written" | "no_start" | "already_terminal" | "uncertain" = "uncertain"
         try { publication = await host.publishTimeout(current.allocation, current.cell, clean ? code : "cleanup_incomplete", Math.min(DIAGNOSTIC_PILOT_CELL_MS, Math.max(0, Math.ceil(host.now() - current.startedAt)))) } catch { /* start-only remains invalid */ }

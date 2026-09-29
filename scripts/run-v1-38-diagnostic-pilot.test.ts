@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn, type ChildProcess } from "node:child_process"
 import { describe, expect, it, vi } from "vitest"
-import { DIAGNOSTIC_PILOT_STORE, createDiagnosticPilotAllocation, createDiagnosticPilotCell, createDiagnosticPilotStart, createDiagnosticPilotTerminal, createDiagnosticPilotLifetimeGrant, diagnosticPilotContainerIdentity, openDiagnosticPilotLedger, reopenProspectiveDiagnosticPilotLedger, type DiagnosticPilotLedger } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
+import { DIAGNOSTIC_PILOT_STORE, createDiagnosticPilotAllocation, createDiagnosticPilotCell, createDiagnosticPilotStart, createDiagnosticPilotTerminal, createDiagnosticPilotStageCheckpoint, createDiagnosticPilotLifetimeGrant, diagnosticPilotContainerIdentity, openDiagnosticPilotLedger, reopenProspectiveDiagnosticPilotLedger, type DiagnosticPilotLedger } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import type { LabMatchExecution } from "../packages/strategy-lab/src/runtime-bridge.js"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 const testBaseline = Object.fromEntries(["oldAllocationV2", "oldAllocationUnversioned", "oldResult", "oldLeagueTree", "oldFactoryTree"].map((key) => [key, labRoot("pilot-test-old-baseline", key)])) as { oldAllocationV2: `sha256:${string}`; oldAllocationUnversioned: `sha256:${string}`; oldResult: `sha256:${string}`; oldLeagueTree: `sha256:${string}`; oldFactoryTree: `sha256:${string}` }
@@ -14,6 +14,8 @@ import { admitPlannerSupervisorLifetime } from "./lib/v1-38-planner-supervised-r
 import { checkDiagnosticPilotBoundaries } from "./check-v1-38-diagnostic-pilot-boundaries.js"
 import {
   DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_MS,
+  DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS,
+  DIAGNOSTIC_PILOT_TERMINAL_PROBE_MS,
   computeDiagnosticPilotDeadlines,
   canStartDiagnosticPilotCell,
   checkDiagnosticPilotGate,
@@ -138,6 +140,72 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
     } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
   })
 
+  it("does not mislabel a cleanup fault as first evidence write", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-cleanup-stage-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-cleanup-stage", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      let cleanupCalls = 0
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async (_bottom, _top, enteredKernel, enteredEvidence) => { enteredKernel(); enteredEvidence(); return { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, artifactBytes: 0, artifactRecords: 0, cleanupComplete: true } }, close: () => true, cleanup: async () => { if (++cleanupCalls === 1) throw new Error("injected cleanup fault"); return true }, send: () => true })
+      expect(cleanupCalls).toBe(2)
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]?.terminal).toMatchObject({ failureStage: "unknown", processValidity: "process_invalid" })
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("leaves an unretained terminal-publication checkpoint start-only", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-checkpoint-fault-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-checkpoint-fault", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger: { ...ledger, writeStageCheckpoint: (marker) => { if (marker.ordinal === 5) throw new Error("injected atomic link fault"); ledger.writeStageCheckpoint!(marker) } }, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async (_bottom, _top, enteredKernel, enteredEvidence) => { enteredKernel(); enteredEvidence(); return { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, artifactBytes: 0, artifactRecords: 0, cleanupComplete: true } }, close: () => true, cleanup: async () => true, send: () => true })
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]).toMatchObject({ lastEnteredStage: "unknown", cause: "unknown_internal", terminal: null, processValidity: "process_invalid" })
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it("does not claim a checkpoint whose directory sync faulted after link", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-linked-checkpoint-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-linked-checkpoint", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE, { beforeDirectorySync: (_kind, _usage, target) => { if (target.endsWith("stage-3.json")) throw new Error("injected post-link sync fault") } })
+      ledger.writeStart(start)
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async (_bottom, _top, enteredKernel) => { enteredKernel(); throw new Error("must not continue") }, close: () => true, cleanup: async () => true, send: () => true })
+      const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]
+      expect(reopened?.stages.some((marker) => marker.stage === "kernel_or_callback")).toBe(true)
+      expect(reopened).toMatchObject({ lastEnteredStage: "unknown", terminal: null, processValidity: "process_invalid" })
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("suppresses completion when a terminal write links then throws before directory sync", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-terminal-link-fault-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-terminal-link-fault", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE, { beforeDirectorySync: (_kind, _usage, target) => { if (target.endsWith("terminal-v2.json")) throw new Error("injected directory sync fault") } })
+      ledger.writeStart(start)
+      const sent: unknown[] = []
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async (_bottom, _top, enteredKernel, enteredEvidence) => { enteredKernel(); enteredEvidence(); return { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, artifactBytes: 0, artifactRecords: 0, cleanupComplete: true } }, close: () => true, cleanup: async () => true, send: (message) => { sent.push(message); return true } })
+      expect(sent).toEqual([])
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+      expect(reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]).toMatchObject({ terminal: { disposition: "system_failure" }, diagnosis: { failureStage: "terminal_publication", cause: "unknown_internal" }, processValidity: "process_invalid" })
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("diagnoses the catch terminal-write failure, not the earlier issuer failure", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-publication-cause-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-publication-cause", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger: { ...ledger, writeTerminalV2: () => { throw new Error("DIAGNOSTIC_PILOT_LEDGER_CAP") } }, now: () => 1, cellStartedAt: 0, issue: () => { throw new Error("DIAGNOSTIC_PILOT_CLI_WORKER_CANDIDATE") }, execute: async () => { throw new Error("must not execute") }, close: () => true, cleanup: async () => true, send: () => true })
+      const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation).records[0]
+      expect(reopened).toMatchObject({ cause: "ledger_cap", terminal: null, processValidity: "process_invalid", diagnosis: { failureStage: "terminal_publication", cause: "ledger_cap" } })
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+
   it("does not send done after an injected cell-complete IPC failure", async () => {
     const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-ipc-test-")))
     try {
@@ -192,6 +260,21 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
     expect(await pending).toBe("process_invalid")
     expect(publishTimeout).not.toHaveBeenCalled()
   })
+  it("overlaps the read-only terminal probe with cleanup inside the unchanged reserve", async () => {
+    const id = labRoot("pilot-overlapped-probe", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+    const cell = createDiagnosticPilotCell(allocation, 0), child = Object.assign(new EventEmitter(), { pid: 5656, send: vi.fn() }) as unknown as ChildProcess
+    let releaseCleanup: (() => void) | undefined
+    const cleanupGate = new Promise<void>((resolve) => { releaseCleanup = resolve })
+    const probeTerminal = vi.fn(async () => "verified" as const), publishTimeout = vi.fn(async () => "written" as const)
+    const pending = runDiagnosticPilotWatchdog("injected-only", { now: () => 1_000, spawnWorker: () => child, killGroup: () => undefined, cleanup: async () => { await cleanupGate; return true }, probeTerminal, publishTimeout })
+    child.emit("message", { kind: "cell-request", allocation, cell })
+    child.emit("exit", 1, null)
+    await Promise.resolve()
+    expect(probeTerminal).toHaveBeenCalledTimes(1)
+    releaseCleanup?.()
+    expect(await pending).toBe("process_invalid")
+    expect(publishTimeout).not.toHaveBeenCalled()
+  })
   it("rechecks an exact durable terminal at timeout-write time without overwriting it", async () => {
     const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-timeout-race-test-")))
     try {
@@ -201,9 +284,50 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
       ledger.writeStart(start)
       await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected") }, close: () => true, cleanup: async () => true, send: () => true })
       const terminal = ledger.readTerminalV2!(start.root)
-      expect(probeRetainedDiagnosticPilotTerminal(allocation, cell)).toBe("verified")
+      expect(probeRetainedDiagnosticPilotTerminal(allocation, cell)).toBe("uncertain")
       expect(writeDiagnosticPilotTimeout(allocation, cell, "publication_uncertain", 2)).toBe("already_terminal")
       expect(ledger.readTerminalV2!(start.root)).toEqual(terminal)
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("treats a fresh read-only v2 probe after lost IPC as uncertain and never publishes timeout", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-fresh-probe-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-fresh-probe", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      await runDiagnosticPilotWorkerCell({ allocation, cell, start, ledger, now: () => 1, cellStartedAt: 0, issue: (seat) => seat, execute: async () => { throw new Error("injected") }, close: () => true, cleanup: async () => true, send: () => false })
+      expect(probeRetainedDiagnosticPilotTerminal(allocation, cell)).toBe("uncertain")
+      const child = Object.assign(new EventEmitter(), { pid: 6767, send: vi.fn() }) as unknown as ChildProcess
+      const publishTimeout = vi.fn(async () => "written" as const)
+      const pending = runDiagnosticPilotWatchdog("injected-only", { now: () => 1_000, spawnWorker: () => child, killGroup: () => undefined, cleanup: async () => true, probeTerminal: async () => probeRetainedDiagnosticPilotTerminal(allocation, cell), publishTimeout })
+      child.emit("message", { kind: "cell-request", allocation, cell })
+      child.emit("exit", 1, null)
+      expect(await pending).toBe("process_invalid")
+      expect(publishTimeout).not.toHaveBeenCalled()
+      expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
+    } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
+  })
+  it("publishes one timeout after a lost worker with a synced stage-only prefix", async () => {
+    const originalCwd = process.cwd(), directory = realpathSync(mkdtempSync(join(tmpdir(), "pilot-stage-only-timeout-test-")))
+    try {
+      mkdirSync(join(directory, ".strategy-lab"), { mode: 0o700 }); mkdirSync(join(directory, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 }); process.chdir(directory)
+      const id = labRoot("pilot-stage-only-timeout", "source"), allocation = createDiagnosticPilotAllocation({ sourceClosureRoot: id, implementationRoot: id, gateRoot: id, oldEvidenceBaseline: testBaseline })
+      const cell = createDiagnosticPilotCell(allocation, 0), start = createDiagnosticPilotStart(allocation, cell), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+      ledger.writeStart(start)
+      ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 0, "bottom_issuance"))
+      expect(probeRetainedDiagnosticPilotTerminal(allocation, cell)).toBe("absent")
+      const child = Object.assign(new EventEmitter(), { pid: 7878, send: vi.fn() }) as unknown as ChildProcess
+      const publishTimeout = vi.fn(async (...args: Parameters<typeof writeDiagnosticPilotTimeout>) => writeDiagnosticPilotTimeout(...args))
+      const pending = runDiagnosticPilotWatchdog("injected-only", { now: () => 1_000, spawnWorker: () => child, killGroup: () => undefined, cleanup: async () => true, probeTerminal: async () => probeRetainedDiagnosticPilotTerminal(allocation, cell), publishTimeout })
+      child.emit("message", { kind: "cell-request", allocation, cell })
+      child.emit("exit", 1, null)
+      expect(await pending).toBe("process_invalid")
+      expect(publishTimeout).toHaveBeenCalledTimes(1)
+      const reopened = reopenProspectiveDiagnosticPilotLedger(openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE), allocation).records[0]
+      expect(reopened?.stages.map((marker) => marker.stage)).toEqual(["bottom_issuance", "terminal_publication"])
+      expect(reopened?.terminal).toMatchObject({ code: "publication_uncertain", failureStage: "unknown", processValidity: "process_invalid" })
       expect(ledger.listNames().filter((name) => name.endsWith("terminal-v2.json"))).toHaveLength(1)
     } finally { process.chdir(originalCwd); rmSync(directory, { recursive: true, force: true }) }
   })
@@ -238,6 +362,11 @@ describe("diagnostic pilot source-only watchdog and gate", () => {
     } finally { rmSync(directory, { recursive: true, force: true }) }
   }, 120_000)
   it("places a preemptive kill before both hard deadlines with independent cleanup reserve", () => {
+    const reserve = DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_COMPONENTS
+    expect(reserve.providerCount * (reserve.streamCloseMilliseconds + reserve.removeMilliseconds + reserve.inspectBeforeMilliseconds + reserve.inspectAfterMilliseconds) + reserve.processGroupKillMilliseconds + reserve.terminalWriterAndFsyncMilliseconds + reserve.schedulerAndFilesystemMarginMilliseconds).toBe(30_000)
+    expect(reserve.schedulerAndFilesystemMarginMilliseconds).toBe(7_000)
+    expect(DIAGNOSTIC_PILOT_TERMINAL_PROBE_MS).toBeLessThanOrEqual(reserve.providerCount * (reserve.streamCloseMilliseconds + reserve.removeMilliseconds + reserve.inspectBeforeMilliseconds + reserve.inspectAfterMilliseconds))
+    expect(DIAGNOSTIC_PILOT_WATCHDOG_RESERVE_MS).toBe(30_000)
     const schedule = computeDiagnosticPilotDeadlines({ overallStartedAt: 1000, cellStartedAt: 2000 })
     expect(schedule.cellHardAt).toBe(242_000)
     expect(schedule.overallHardAt).toBe(1_801_000)

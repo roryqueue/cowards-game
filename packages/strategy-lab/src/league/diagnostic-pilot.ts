@@ -246,6 +246,7 @@ export const DIAGNOSTIC_PILOT_ARTIFACT_CEILING = freezeLabValue({
 
 export interface DiagnosticPilotLedger {
   readonly directory: string
+  readonly hasUncertainPublication?: () => boolean
   readonly writeStart: (start: DiagnosticPilotStart) => void
   readonly readStart: (startRoot: LabRoot) => unknown | null
   readonly writeTerminal: (terminal: DiagnosticPilotTerminal) => void
@@ -383,7 +384,7 @@ export const reopenDiagnosticPilotLedger = (ledger: Pick<DiagnosticPilotLedger, 
 
 export const reopenProspectiveDiagnosticPilotLedger = (ledger: DiagnosticPilotLedger, allocation: DiagnosticPilotAllocation) => {
   if (!openedLedgers.has(ledger) || ledger.directory !== resolve(DIAGNOSTIC_PILOT_STORE) || !ledger.readStageCheckpoint || !ledger.readTerminalV2 || !ledger.readFailureDiagnosis) return fail("UNTRUSTED_PROSPECTIVE_LEDGER")
-  const uncertain = inspectDiagnosticPilotInventory(ledger, admitDiagnosticPilotAllocation(allocation), true, true)
+  const uncertain = inspectDiagnosticPilotInventory(ledger, admitDiagnosticPilotAllocation(allocation), true, true) || ledger.hasUncertainPublication?.() === true
   const records = allocation.cells.map((_, ordinal) => {
     const start = createDiagnosticPilotStart(allocation, createDiagnosticPilotCell(allocation, ordinal))
     if (!ledger.readStart(start.root)) return null
@@ -399,19 +400,23 @@ export const reopenProspectiveDiagnosticPilotLedger = (ledger: DiagnosticPilotLe
     const terminal = terminalRaw === null ? null : admitDiagnosticPilotTerminalV2(start, terminalRaw)
     const diagnosisRaw = ledger.readFailureDiagnosis!(start.root)
     const diagnosis = diagnosisRaw === null ? null : admitDiagnosticPilotFailureDiagnosis(start, diagnosisRaw)
-    const lastEnteredStage = stages.at(-1)?.stage ?? "unknown"
+    const lastEnteredStage = terminal || diagnosis ? stages.at(-1)?.stage ?? "unknown" : "unknown"
     if (terminal && (terminal.lastEnteredStage !== lastEnteredStage || terminal.failureStage !== "unknown" && !stages.some((checkpoint) => checkpoint.stage === terminal.failureStage) || terminal.cause !== "unknown_internal" && terminal.disposition === "success")) return fail("PROSPECTIVE_TERMINAL_STAGE")
     if (diagnosis && lastEnteredStage !== "terminal_publication") return fail("PROSPECTIVE_DIAGNOSIS_STAGE")
-    return { start, stages, lastEnteredStage, cause: terminal?.cause ?? diagnosis?.cause ?? "unknown_internal", terminal, diagnosis, processValidity: uncertain || diagnosis || !terminal ? "process_invalid" as const : terminal.processValidity }
+    return { start, stages, lastEnteredStage, cause: diagnosis?.cause ?? terminal?.cause ?? "unknown_internal", terminal, diagnosis, processValidity: "process_invalid" as const }
   }).filter((value): value is NonNullable<typeof value> => value !== null)
   if (records.some((entry, ordinal) => entry.start.ordinal !== ordinal)) return fail("PROSPECTIVE_NONPREFIX")
+  // A well-formed stage-only prefix is not a terminal: the parent may publish
+  // a bounded timeout, whose successful directory sync seals that prefix.
   return freezeLabValue({ retentionUncertain: uncertain, records })
 }
 
 export const createDiagnosticPilotProspectiveResult = (allocation: DiagnosticPilotAllocation, ledger: DiagnosticPilotLedger) => {
   const reopened = reopenProspectiveDiagnosticPilotLedger(ledger, allocation)
-  const allSuccess = !reopened.retentionUncertain && reopened.records.length === allocation.cells.length && reopened.records.every((row) => row.terminal?.disposition === "success" && row.terminal.processValidity === "process_valid" && row.terminal.cleanupComplete && row.terminal.evidenceRoot !== null && row.diagnosis === null)
-  const fields = { schemaVersion: "diagnostic-pilot-result-v2" as const, allocationRoot: allocation.root, legacyGateRoot: allocation.gateRoot, processValidity: allSuccess ? "process_valid" as const : "process_invalid" as const, chargedCount: reopened.records.length, slots: allocation.cells.map((_, ordinal) => { const row = reopened.records[ordinal]; return row ? { ordinal, status: row.terminal?.disposition ?? "start_only", lastEnteredStage: row.lastEnteredStage, failureStage: row.terminal?.failureStage ?? row.diagnosis?.failureStage ?? "unknown", cause: row.cause, terminalRoot: row.terminal?.root ?? null, diagnosisRoot: row.diagnosis?.root ?? null } : { ordinal, status: "unused", lastEnteredStage: "unknown", failureStage: "unknown", cause: "unknown_internal", terminalRoot: null, diagnosisRoot: null } }), empiricalAuthority: false as const, runAllowed: false as const, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
+  // This generic ledger can authenticate record roots, not the full private
+  // execution manifest. Plan 10 has no prospective result writer or run gate;
+  // a future positive verdict requires separately reviewed evidence admission.
+  const fields = { schemaVersion: "diagnostic-pilot-result-v2" as const, allocationRoot: allocation.root, legacyGateRoot: allocation.gateRoot, processValidity: "process_invalid" as const, chargedCount: reopened.records.length, slots: allocation.cells.map((_, ordinal) => { const row = reopened.records[ordinal]; return row ? { ordinal, status: row.terminal?.disposition ?? "start_only", lastEnteredStage: row.lastEnteredStage, failureStage: row.terminal?.failureStage ?? row.diagnosis?.failureStage ?? "unknown", cause: row.cause, terminalRoot: row.terminal?.root ?? null, diagnosisRoot: row.diagnosis?.root ?? null } : { ordinal, status: "unused", lastEnteredStage: "unknown", failureStage: "unknown", cause: "unknown_internal", terminalRoot: null, diagnosisRoot: null } }), empiricalAuthority: false as const, runAllowed: false as const, leagueRequirementsEvidence: false as const, formationAuthorized: false as const, holdoutAuthorized: false as const, counted: false as const, public: false as const, productionAuthorized: false as const }
   return freezeLabValue({ ...fields, root: labRoot("diagnostic-pilot-result-v2", fields) })
 }
 export const admitDiagnosticPilotProspectiveResult = (allocation: DiagnosticPilotAllocation, ledger: DiagnosticPilotLedger, value: unknown) => {
@@ -423,7 +428,7 @@ export const admitDiagnosticPilotProspectiveResult = (allocation: DiagnosticPilo
 
 /** Real repository adapter is defined here, but Plan 08 never creates or opens
  * the reserved pilot directory. Tests inject DiagnosticPilotLedger fakes. */
-export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLedger => {
+export const openDiagnosticPilotLedger = (directory: string, testFault?: { readonly beforeDirectorySync: (kind: "record" | "evidence", usage: Readonly<{ bytes: number; records: number; ownedBytes: number; ownedRecords: number }>, target: string) => void }): DiagnosticPilotLedger => {
   const path = resolve(directory), stat = lstatSync(path)
   if (path !== resolve(DIAGNOSTIC_PILOT_STORE) || basename(path) !== "league-265-diagnostic-pilot-20260923-a" || realpathSync(path) !== path || !stat.isDirectory() || (stat.mode & 0o777) !== 0o700) return fail("LEDGER_DIRECTORY")
   const filename = (kind: string, id: LabRoot) => join(path, `diagnostic-pilot-${id.slice(7)}.${kind}.json`)
@@ -435,20 +440,40 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
     if (!stat.isFile() || stat.nlink !== 1 || stat.size < 1 || stat.size > 262_144) return fail("LEDGER_FILE")
     return parse(readFileSync(file))
   }
+  let retainedBytes = 0, retainedRecords = 0, temporaryUncertain = false, directorySyncUncertain = false
+  const perStart = new Map<LabRoot, { bytes: number; records: number }>()
+  const atomicWrite = (target: string, id: LabRoot, data: Uint8Array, kind: "record" | "evidence") => {
+    if (temporaryUncertain || directorySyncUncertain && !target.endsWith(".failed-terminal-diagnosis.json")) return fail("LEDGER_PUBLICATION_UNCERTAIN")
+    const temporary = `${target}.tmp-${randomUUID()}`
+    let temporaryExists = false, linked = false, directorySynced = false
+    try {
+      const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
+      temporaryExists = true
+      try { let written = 0; while (written < data.length) written += writeSync(fd, data, written, data.length - written); fsyncSync(fd) } finally { closeSync(fd) }
+      linkSync(temporary, target)
+      linked = true
+      // Count immediately after link. A later unlink/directory-fsync failure
+      // leaves a real target in inventory; subsequent capacity cannot omit it.
+      retainedBytes += data.length; retainedRecords++
+      const spent = perStart.get(id) ?? { bytes: 0, records: 0 }
+      spent.bytes += data.length; spent.records++; perStart.set(id, spent)
+      unlinkSync(temporary)
+      temporaryExists = false
+      // Disposable test ledgers can inject the link-success/fsync-failure gap.
+      // Production passes no hook; it cannot replace or suppress real fsync.
+      testFault?.beforeDirectorySync(kind, { bytes: retainedBytes, records: retainedRecords, ownedBytes: spent.bytes, ownedRecords: spent.records }, target)
+      const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd); directorySynced = true } finally { closeSync(dirFd) }
+    } catch (error) {
+      if (linked && !directorySynced) directorySyncUncertain = true
+      if (temporaryExists) try { unlinkSync(temporary) } catch { temporaryUncertain = true }
+      throw error
+    }
+  }
   const write = (kind: string, id: LabRoot, value: unknown) => {
     const data = canonicalBytes(value), target = filename(kind, id)
     if (read(kind, id) !== null) return fail("LEDGER_OVERWRITE")
-    const temporary = `${target}.tmp-${randomUUID()}`
-    const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
-    try { let written = 0; while (written < data.length) written += writeSync(fd, data, written, data.length - written); fsyncSync(fd) } finally { closeSync(fd) }
-    try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
-    const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd) } finally { closeSync(dirFd) }
-    retainedBytes += data.length; retainedRecords++
-    const spent = perStart.get(id) ?? { bytes: 0, records: 0 }
-    spent.bytes += data.length; spent.records++; perStart.set(id, spent)
+    atomicWrite(target, id, data, "record")
   }
-  let retainedBytes = 0, retainedRecords = 0
-  const perStart = new Map<LabRoot, { bytes: number; records: number }>()
   for (const name of readdirSync(path)) {
     const temporary = TEMPORARY.test(name)
     if (!temporary && !/^diagnostic-pilot-[a-f0-9]{64}\.(?:started|terminal|terminal-v2|failed-terminal-diagnosis|stage-[0-5])\.json$/u.test(name) && !/^diagnostic-pilot-[a-f0-9]{64}\.evidence-[a-f0-9]{64}\.bin$/u.test(name)) return fail("LEDGER_UNKNOWN_FILE")
@@ -464,7 +489,7 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
     admitDiagnosticPilotProspectiveCapacity({ retainedBytes: spent.bytes, retainedRecords: spent.records, retainedInodes: spent.records, incomingBytes: bytes, completedStages, maxBytes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes, maxRecords: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords, maxInodes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes })
     admitDiagnosticPilotProspectiveCapacity({ retainedBytes, retainedRecords, retainedInodes: retainedRecords, incomingBytes: bytes, completedStages, maxBytes: 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes, maxRecords: 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords, maxInodes: 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes })
   }
-  const ledger = Object.freeze({ directory: path, writeStart(start: DiagnosticPilotStart) { write("started", start.root, start) }, readStart(id: LabRoot) { return read("started", id) }, writeTerminal(terminal: DiagnosticPilotTerminal) { if (!read("started", terminal.startRoot)) return fail("TERMINAL_UNCHARGED"); write("terminal", terminal.startRoot, terminal) }, readTerminal(id: LabRoot) { return read("terminal", id) }, listNames() { return readdirSync(path).sort() },
+  const ledger = Object.freeze({ directory: path, hasUncertainPublication() { return temporaryUncertain || directorySyncUncertain }, writeStart(start: DiagnosticPilotStart) { write("started", start.root, start) }, readStart(id: LabRoot) { return read("started", id) }, writeTerminal(terminal: DiagnosticPilotTerminal) { if (!read("started", terminal.startRoot)) return fail("TERMINAL_UNCHARGED"); write("terminal", terminal.startRoot, terminal) }, readTerminal(id: LabRoot) { return read("terminal", id) }, listNames() { return readdirSync(path).sort() },
     writeStageCheckpoint(checkpoint: DiagnosticPilotStageCheckpoint) {
       if (!read("started", checkpoint.startRoot) || read("terminal", checkpoint.startRoot) || read("terminal-v2", checkpoint.startRoot)) return fail("STAGE_UNCHARGED_OR_TERMINAL")
       const admitted = createDiagnosticPilotStageCheckpoint({ root: checkpoint.startRoot } as DiagnosticPilotStart, checkpoint.ordinal, checkpoint.stage)
@@ -496,13 +521,7 @@ export const openDiagnosticPilotLedger = (directory: string): DiagnosticPilotLed
       const spent = perStart.get(startRoot) ?? { bytes: 0, records: 0 }
       if (spent.records + 2 > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || spent.records + 2 > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes || spent.bytes + bytes.length + DIAGNOSTIC_PILOT_ARTIFACT_CEILING.terminalReserveBytes > DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes || retainedRecords + 2 > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords || retainedBytes + bytes.length + DIAGNOSTIC_PILOT_ARTIFACT_CEILING.terminalReserveBytes > 4 * DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes) return fail("EVIDENCE_CAP")
       try { const prior = lstatSync(target); if (prior.isFile() && prior.nlink === 1 && prior.size === bytes.length && byteRoot(readFileSync(target)) === identity) return identity; return fail("EVIDENCE_COLLISION") } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error }
-      const temporary = `${target}.tmp-${randomUUID()}`
-      const fd = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
-      try { let offset = 0; while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset); fsyncSync(fd) } finally { closeSync(fd) }
-      try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
-      const dirFd = openSync(path, constants.O_RDONLY); try { fsyncSync(dirFd) } finally { closeSync(dirFd) }
-      retainedBytes += bytes.length; retainedRecords++
-      spent.bytes += bytes.length; spent.records++; perStart.set(startRoot, spent)
+      atomicWrite(target, startRoot, bytes, "evidence")
       return identity
     },
     readEvidence(startRoot: LabRoot, evidenceRoot: LabRoot): Uint8Array {

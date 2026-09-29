@@ -14,6 +14,7 @@ import { issueDiagnosticPilotProviderFromFactoryCandidate, issueLeagueProviderFr
 import {
   DIAGNOSTIC_PILOT_PHASE264_STORE,
   DIAGNOSTIC_PILOT_STORE,
+  DIAGNOSTIC_PILOT_ARTIFACT_CEILING,
   admitDiagnosticPilotAllocation,
   createDiagnosticPilotAllocation,
   createDiagnosticPilotCell,
@@ -107,6 +108,67 @@ describe("diagnostic-only pilot identity and precharge", () => {
     const reopened = reopenProspectiveDiagnosticPilotLedger(openDiagnosticPilotLedger(directory), admitted)
     expect(reopened.retentionUncertain).toBe(true)
     expect(reopened.records[0]).toMatchObject({ lastEnteredStage: "unknown", processValidity: "process_invalid", terminal: null })
+  })
+  it("preserves a durable failed-publication cause when a later timeout terminal is unknown", () => {
+    const testRoot = realpathSync(mkdtempSync(join(tmpdir(), "diagnostic-pilot-diagnosis-test-")))
+    temporaryRoots.push(testRoot)
+    mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+    mkdirSync(join(testRoot, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 })
+    process.chdir(testRoot)
+    const admitted = allocation(), start = createDiagnosticPilotStart(admitted, createDiagnosticPilotCell(admitted, 0)), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+    ledger.writeStart(start)
+    ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 5, "terminal_publication"))
+    ledger.writeFailureDiagnosis!(createDiagnosticPilotFailureDiagnosis(start, "worker_candidate"))
+    ledger.writeTerminalV2!(createDiagnosticPilotTerminalV2(start, { disposition: "uncertain", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: false, elapsedMilliseconds: 1, artifactBytes: 0, artifactRecords: 0, code: "publication_uncertain", lastEnteredStage: "terminal_publication", failureStage: "terminal_publication", cause: "unknown_internal" }))
+    expect(reopenProspectiveDiagnosticPilotLedger(ledger, admitted).records[0]).toMatchObject({ cause: "worker_candidate", processValidity: "process_invalid" })
+  })
+  it("does not promote four rooted but malformed success evidence blobs to process-valid", () => {
+    const testRoot = realpathSync(mkdtempSync(join(tmpdir(), "diagnostic-pilot-false-success-test-")))
+    temporaryRoots.push(testRoot)
+    mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+    mkdirSync(join(testRoot, DIAGNOSTIC_PILOT_STORE), { mode: 0o700 })
+    process.chdir(testRoot)
+    const admitted = allocation(), ledger = openDiagnosticPilotLedger(DIAGNOSTIC_PILOT_STORE)
+    for (let ordinal = 0; ordinal < 4; ordinal++) {
+      const start = createDiagnosticPilotStart(admitted, createDiagnosticPilotCell(admitted, ordinal))
+      ledger.writeStart(start)
+      ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 5, "terminal_publication"))
+      const bytes = Buffer.from('{"schemaVersion":"diagnostic-pilot-execution-manifest-v1","malformed":true}')
+      const evidenceRoot = ledger.writeEvidence!(start.root, bytes)
+      ledger.writeTerminalV2!(createDiagnosticPilotTerminalV2(start, { disposition: "success", processValidity: "process_valid", evidenceRoot, cleanupComplete: true, elapsedMilliseconds: 1, artifactBytes: bytes.length, artifactRecords: 1, code: "completed", lastEnteredStage: "terminal_publication", failureStage: "unknown", cause: "unknown_internal" }))
+    }
+    const result = createDiagnosticPilotProspectiveResult(admitted, ledger)
+    expect(result.processValidity).toBe("process_invalid")
+    expect(result.slots.every((slot) => slot.status === "success")).toBe(true)
+  })
+  it("accounts a linked record or evidence target before an injected directory-sync failure", () => {
+    for (const faultKind of ["record", "evidence"] as const) {
+      const testRoot = realpathSync(mkdtempSync(join(tmpdir(), `diagnostic-pilot-${faultKind}-sync-test-`)))
+      temporaryRoots.push(testRoot)
+      mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+      const directory = join(testRoot, DIAGNOSTIC_PILOT_STORE)
+      mkdirSync(directory, { mode: 0o700 })
+      process.chdir(testRoot)
+      let armed = false
+      const usages: { kind: string; bytes: number; records: number; ownedBytes: number; ownedRecords: number }[] = []
+      const admitted = allocation(), start = createDiagnosticPilotStart(admitted, createDiagnosticPilotCell(admitted, 0))
+      const ledger = openDiagnosticPilotLedger(directory, { beforeDirectorySync: (kind, usage) => { usages.push({ kind, ...usage }); if (armed && kind === faultKind) { armed = false; throw new Error("injected directory sync fault") } } })
+      ledger.writeStart(start)
+      const before = usages.at(-1)!
+      armed = true
+      if (faultKind === "record") expect(() => ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 0, "bottom_issuance"))).toThrow("injected directory sync fault")
+      else expect(() => ledger.writeEvidence!(start.root, Buffer.from("first-evidence"))).toThrow("injected directory sync fault")
+      const linked = usages.at(-1)!
+      expect(linked.ownedRecords).toBe(before.ownedRecords + 1)
+      expect(linked.ownedBytes).toBeGreaterThan(before.ownedBytes)
+      expect(ledger.listNames().some((name) => faultKind === "record" ? name.endsWith("stage-0.json") : name.endsWith(".bin"))).toBe(true)
+      expect(ledger.listNames().filter((name) => name.includes(".tmp-"))).toHaveLength(0)
+      expect(ledger.hasUncertainPublication?.()).toBe(true)
+      if (faultKind === "record") expect(() => ledger.writeStageCheckpoint!(createDiagnosticPilotStageCheckpoint(start, 1, "top_issuance"))).toThrow("LEDGER_PUBLICATION_UNCERTAIN")
+      else expect(() => ledger.writeEvidence!(start.root, Buffer.from("second-evidence"))).toThrow("LEDGER_PUBLICATION_UNCERTAIN")
+      expect(usages.at(-1)!.ownedRecords).toBe(linked.ownedRecords)
+      expect(() => admitDiagnosticPilotProspectiveCapacity({ retainedBytes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes - 300_000 + linked.ownedBytes, retainedRecords: 1, retainedInodes: 1, incomingBytes: 128, completedStages: 0, maxBytes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxBytes, maxRecords: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxRecords, maxInodes: DIAGNOSTIC_PILOT_ARTIFACT_CEILING.maxInodes })).toThrow()
+    }
   })
   it("admits exactly four canonical S01/S03 Smoke conditions under a distinct root", () => {
     const admitted = admitDiagnosticPilotAllocation(allocation())
