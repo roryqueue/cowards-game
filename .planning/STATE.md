@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 opt-in canonical full-history source gate timed out in setup; prior fourteen tests pass, six new checks did not run, source-only performance diagnosis continues without Match authority
+last_activity_desc: Phase266 Plan06 canonical history setup now completes; third source gate is 18/20 with two unchanged-deadline failures, minimal call-local reader repair under verification without Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -28,20 +28,23 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 ## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
 
 An uncommitted, opt-in canonical-terminal v3 history extension above `2224e60b`
-has a failed first source-test epoch. The combined serial gate passed the
-existing fourteen factory-history tests, but its new shared setup exceeded the
-predeclared 600000 ms deadline; all six new assertions were skipped. Total
-duration was 953.85 seconds. Construction eventually printed an actual
-unchanged-assessor `affirmed` disposition, separation
-`0.05203982688887587` and three distinct base edges, but these diagnostics do
-not establish a passing v3 suite, successful historical reopening or complete
-parent-history qualification. Extra-strict scoped non-emitting TypeScript and
-lab boundaries (1357 files, zero violations) pass. The failed epoch is retained
-in `266-06-PARTIAL-HANDOFF.md`; bounded source-only performance diagnosis is
-continuing, with no timeout, numeric, workload or admission-bound relaxation.
-No operational Match or prospective route was opened, and the source remains
-unmerged and unpushed. The latest independently reviewed source checkpoint
-remains the following one-workload constituent.
+retains three failed bounded source-test epochs in `266-06-PARTIAL-HANDOFF.md`.
+The first two skipped six new checks after setup exceeded its unchanged
+600000 ms deadline (953.85 and 890.11 seconds total). After narrow private
+fixed-token encoder reuse, the third setup finished within that ceiling and
+the gate ran all checks: 18/20 pass in 1550.26 seconds, but test2 exceeded its
+unchanged 5000 ms default and complete-history reopening exceeded its unchanged
+600000 ms bound. Ordinary/historical assessment reopening and denial checks
+pass; the timed-out complete-history check is not claimed green. The actual
+unchanged assessor remains `affirmed`, separation `0.05203982688887587`, with
+three distinct base edges; these source-fixture diagnostics grant no authority.
+Codec tests (39/39), affected wrapper/fingerprint tests (42/42), extra-strict
+non-emitting TypeScript and lab boundaries (1357 files, zero violations) pass.
+A minimal file-private call-local reader/test redundancy repair is now under
+verification, without cross-call caching or changed validation, deadlines,
+numeric/control/workload data or policy bounds. No operational Match or new
+route was opened. Source remains uncommitted, unmerged and unpushed; the latest
+independently reviewed checkpoint remains the following one-workload constituent.
 
 The latest separate, unmerged and unpushed source checkpoint is `2224e60b`,
 recorded in `266-06-PARTIAL-HANDOFF.md` and

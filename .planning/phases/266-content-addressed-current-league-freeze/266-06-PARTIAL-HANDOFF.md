@@ -53,6 +53,106 @@ occurred. Prior evidence and authorizations remain unchanged. The latest
 independently reviewed source remains `2224e60b`; no Task3 gate, Plan06 summary,
 checked whole map, Plan02 consumption or empirical authority follows.
 
+### Second bounded epoch and narrow performance diagnosis
+
+A v3-only fixture repair issues each sibling's actual compact paired commitment
+once per pair and reuses those issuer-authenticated objects for both fingerprint
+publications. The ordinary fingerprint API still checks their private WeakSet
+issuance; own-receipt, stream, publication and assessor validation are unchanged.
+Default/v1/v2 retain their ordinary paired-receipt path. This statically removes
+96 duplicate full execution-commitment traversals across 24 pairs, without
+changing prescribed data or carrying a favorable assessment forward. The
+repaired history source hash is
+`9719f7b5a2659e3437498efa823b634694924b749a76fa2d9898d3d1e0684bb3`;
+the six-test file remains `e705536ac0725a4b1a828d614b849dc4f86b5f930532bdbec651924f9d08bb1d`.
+
+Root reran the same serial two-file command on those bytes. It exited 1 after
+890.11 seconds: old 14/14 still pass, but the same 600000 ms setup deadline
+again expired and all six new tests were skipped. Actual unchanged-assessor
+diagnostics, separation and classifications remained the same. This second
+epoch is also failed, not a historical-reader or complete-history pass. Scoped
+extra-strict non-emitting TypeScript, whitespace and lab boundaries remain
+green (1357 files, zero violations). No active test/verifier remained after
+its terminal outcome. Aggregate timings do not establish a causal speedup or
+operational wall-clock compliance.
+
+One separate coordinated source-only CPU profile constructed the existing
+standalone fixed mock workload and immediately removed its generated store.
+Construction took 12186 ms, with 24 requests, 145 kernel calls and 1182891
+retained bytes. Exclusive profile samples were dominated by TextEncoder
+(5528 ms) and canonical-JSON routines (3300 ms), with fsync at 854 ms. These
+are host source-test observations under Node 26, not the approved native
+provider or runtime identity and not a charged empirical sample. No raw source,
+requests, memory or Chronicle was emitted as diagnostics.
+
+The next source-only repair is restricted to privately reusing the nine fixed
+ASCII JSON punctuation/null/boolean byte chunks in the shared host encoder,
+which currently re-encodes every occurrence. There is no caller-data, number,
+string or key cache. Fresh final-output copying, exact canonical bytes, corpus
+hashes/errors, grammar, sort order, admission and every profile/limit must stay
+unchanged and be retested; buffer-mutation and exact byte-boundary canaries
+are required. This is a narrow implementation-allocation deviation discovered
+by fixture profiling, not a rule/resource/authority revision. Its source stays
+isolated and unmerged; no changed source pass or independent approval is yet
+claimed. No new 48-workload gate will start until the small canonical checks
+pass. No deadline is raised, and both failed epochs remain retained above.
+
+### Third bounded epoch and call-local reader repair
+
+The nine private ASCII chunks were implemented without caching caller data or
+exposing shared buffers. Root's five codec suites passed 39/39 in 10.56 seconds,
+including every golden byte/hash/error corpus vector, returned-buffer poisoning
+and exact byte-limit canaries. The successful corpus root remains
+`f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0`;
+enumeration root remains
+`0a70be7877b11ffa3d1147c3efaa7ad38fc114fca1c3ee2028900baf786e8ef7`.
+The workload/supervision/fingerprint suites also passed 42/42 in 46.80 seconds.
+The encoder source/test hashes are respectively
+`25019df901dabc1ef7c0a364bbf5cb030f3c5b6863f397b8000c175dc49040f0`
+and `4d3cdf98bf8a44b700c0ea070d0797672852258f39a624220a4a1fbdfcf92488`.
+Strict non-emitting TypeScript and the 1357-file lab boundary scan pass.
+
+The third same-command history epoch exited 1 after 1550.26 seconds: 18/20
+tests passed, with two deadline failures. Setup now finished within its original
+600000 ms ceiling; all six new checks actually ran. Canonical starts and false
+authority flags passed; the actual assessor remained affirmed with identical
+diagnostics; ordinary/historical assessment reopening passed in 164336 ms;
+changed charged-parent and absent-tail refusals passed. Test2 exceeded its
+unchanged 5000 ms default (31331 ms), and the complete-history check exceeded
+its unchanged 600000 ms bound (648103 ms). Although the latter's actual collector
+returned 96 journals and 48 supervision parents and its byte-snapshot assertions
+finished, it is a failed bounded gate, not a passing complete-history test.
+The previous two failed epochs are not superseded or concealed.
+
+The next minimal source repair returns the already validated stream alongside
+its parent entries through a file-private helper. Each complete-history or
+imported-candidate consumer validates its own stream anew, then uses that
+same invocation's immutable descriptor/records instead of immediately reopening
+it again. This removes 96 redundant full-stream reads for the 48-workload history,
+without a caller-supplied cache, cross-call cache, trusted brand, atomic-snapshot
+claim, changed physical-set check or skipped admission/parent validation.
+The public supervision inspector still returns only its frozen entry array;
+the sibling-pair path is unchanged. Test2 retains one explicit live-issuance
+canary, all 48 usage/fingerprint bindings and every candidate trace join; it
+avoids 47 repeated whole-receipt hashes and 888 repeated request encodings
+already checked by the actual wrapper/helper. No deadline, data or policy moves.
+The new parent-context/test hashes are respectively
+`19e710e1021b1a7d73d80c2fc8d5d3202e3eafba2192c39851ee87fb9a771923`
+and `9efb9dbe9414124da1f2c6a187cd18b1310bcbbbec2543ec96369041cc1dde05`.
+The history/encoder source bytes remain pinned above. Root's public parent-context
+and canonical supervision suites now pass 40/40 in 153.46 seconds, including
+import joins, physical-orphan/change/absent-byte refusals and unbranded public
+entry output. Fresh five-file extra-strict non-emitting TypeScript, whitespace
+and lab boundaries pass (1357 files, zero violations). An initial convenience
+command used a nonexistent `check:lab-boundaries` package script; that invocation
+is not a passed gate. The actual `pnpm exec tsx scripts/check-v1-38-lab-boundaries.ts`
+command separately exited 0. The fourth unchanged-deadline two-file history
+gate is now running alone; neither its result nor independent approval is
+claimed before completion.
+All five source files remain uncommitted, unmerged and unpushed; the latest
+reviewed source is still `2224e60b`. This is source-only performance repair,
+not operational evidence, Plan06/Task3 completion or a prospective run route.
+
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
