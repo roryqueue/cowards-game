@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 four actual-format response-parent gaps repaired and independently reviewed; 109 affected tests pass, canonical unit contrast remains unresolved, positive-map and Plan12 empirical authority remain blocked
+last_activity_desc: Phase266 Plan06 canonical matrix constituent checked and independently reviewed; synthetic numeric affirmation correctly denied complete-history qualification, whole-map and Plan12 empirical authority remain blocked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -25,27 +25,35 @@ total_plans_in_phase: 12
 
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
-## Current Session Continuity — 2026-09-29 prospective one-cell route planning
+## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
 
 Phase266 Plan06 has a separate isolated, source-only partial checkpoint at
-`762cf03f`, recorded in `266-06-PARTIAL-HANDOFF.md` and
-`266-06-PRELIMINARY-REVIEW.762cf03f.md`. Composition, closed producer registry,
-read-only retained-intake repair and three-store reconciliation are implemented.
-Four further ordinary response-parent gaps are repaired: successful grouped
-fan-in, final-role snapshot/round custody, actual absent-target final packets,
-and the intervening tactical corpus. Four affected suites passed 109/109 tests
-in 656.66 seconds; extra-strict eight-file TypeScript and lab boundaries pass.
-Two separate bounded independent reviews report zero actionable findings.
-An optional canonical partial unit-observation contrast improves synthetic
-control separation to 0.04631254054447387 but still misses the unchanged 0.05
-gate; the actual assessor remains unresolved, with no threshold or base edges.
-Neither source fixtures nor review results are empirical evidence. It remains
-unmerged and non-authorizing: the complete positive-map
-fixture and final full-suite/source gate are still open. Plan02 cannot
-consume a checked map and no real absence/freeze operation is open. The
-remaining fixture work needs no new external-custody or product decision.
-Plan265-11 source-only adapter work is complete; Plan12 still requires exact new
-operator authority before any allocation or live host observation.
+`c6da2bf8`, recorded in `266-06-PARTIAL-HANDOFF.md` and
+`266-06-PRELIMINARY-REVIEW.c6da2bf8.md`. The previous actual-format response
+repairs and 109-test gate remain historical evidence. A new injected 24-cell
+matrix uses complete unchanged-kernel transitions from the canonical
+sixteen-Soldier start, exact mock custody/journals, solver/round targets and the
+actual tactical reader. Its initial suite passed 13/15; two test-harness
+warnings were independently reviewed and repaired. The three affected checks
+then passed, including exact byte stability across all three generated stores.
+Root's full factory fixture file passed 14/14. Extra-strict ten-file TypeScript
+and lab boundaries pass; bounded independent reviews have no unresolved
+actionable findings.
+
+An optional v2 partial-unit variant now passes the unchanged numeric assessor
+with separation 0.053231312603537306 and distinct base edges. That is NOT a
+qualifying history: sixteen callbacks omit canonical outcomes, and both the
+actual production outcome projector and full-history parent collector correctly
+reject them. No fake outcome or weakened gate was added; default/v1 data remain
+unchanged and unresolved. Neither fixture constitutes empirical evidence.
+The source remains unmerged and non-authorizing; fully qualifying history,
+three imports, the full retained league graph/physical union, positive whole-map
+derivation and final applicable-suite/source gate remain open. Plan02 cannot
+consume a checked map and no real absence/freeze operation is open. Plan265-11
+is complete; Plan12 still requires exact new operator authority before any
+allocation or live host observation. Consumed Plan07/09 routes are unchanged.
+
+## Current Session Continuity — 2026-09-29 prospective one-cell route planning
 
 The source-only Plan265-10 repair is complete and pushed, but its signed gate has
 `empiricalAuthority:false` and `runAllowed:false`. Research for any next route

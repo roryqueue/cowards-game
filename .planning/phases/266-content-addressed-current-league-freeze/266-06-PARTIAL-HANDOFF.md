@@ -4,7 +4,51 @@
 
 ## Latest isolated checkpoint — 2026-09-30
 
-The clean, unmerged and unpushed `codex/phase266-context` branch is now at
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`c6da2bf8f6abe317854d1fdc738fd1ecc4572589` (tree
+`4ae7ab0734611610eb1fdc91134f11709aab8bd3`). Four fixture hashes, exact test
+epochs and bounded independent reviews are recorded in
+`266-06-PRELIMINARY-REVIEW.c6da2bf8.md`. Production collectors, frozen policies
+and Plan265-11/12 source are unchanged; main receives Markdown only.
+
+The optional v2 local-unit prefix adds canonical owner `ACTION_EMITTED` without
+memory/private payloads or invented outcomes. Its unchanged-assessor numeric
+separation is 0.053231312603537306 and all three base edges classify distinct.
+This does not qualify a complete history: sixteen partial callbacks omit
+WIN/DRAW outcomes. The actual production projector and full-history collector
+correctly refuse them. That refusal is not a defect to bypass; no fake DRAW or
+failure fallback was added. Default/v1 data remain unchanged and unresolved.
+Lifecycle fields are illustrative, not proof of reachability from edge start.
+
+A new injected-only 24-cell matrix constituent retains complete pure-kernel
+transitions from the canonical sixteen-Soldier start with fixed mock effects,
+exact mock identities, journals, terminals, snapshot/solver/round targets and
+actual tactical corpus/context reopening. Admissions are explicitly unassessed;
+mock behavior is not claimed as admitted Strategy behavior. There is no
+operational Match runner, provider/guest/source evaluation, real allocation,
+reservation, preflight or fabricated import/run-complete authority.
+
+The matrix's first full suite passed 13/15 in 1110.34 seconds. Two retained
+test-harness failures were corrected without runtime/policy changes; exactly
+the three affected tests passed in 622.31 seconds, including byte-stable
+filenames/lengths/digests across all three generated stores. Extra-strict
+ten-file TypeScript, whitespace and lab boundaries pass (1350 files, zero
+violations). Independent bounded reviews leave no actionable findings.
+Root's complete factory fixture gate is recorded in the checkpoint review.
+
+Remaining work requires genuinely qualifying full factory history and three
+imports, the complete prospective four-round/eleven-job retained graph,
+probes/cells/response conditions/final evaluations/payoff/report and exact
+three-store union, then positive whole-map derivation/rederivation and final
+applicable-suite/source review. Do not attach synthetic terminal outcomes to
+independent local-unit excerpts or treat numerical affirmation as qualification.
+No Plan06 summary/final gate, Plan02 consumption, real inventory/absence/freeze,
+formation, holdout, counted/public/production or operational Match is open.
+Plan265-12's exact new operator checkpoint and consumed routes are unchanged.
+
+### Earlier 762cf03f checkpoint
+
+The clean, unmerged and unpushed `codex/phase266-context` branch was at
 `762cf03ff9c6e59aace7c918a2273990088e6866` (tree
 `a0bd148f30d0f992476ebdb9a7de0d1d2d79eae4`). Exact six-file hashes, two
 separate bounded independent reviews and root's affected gate are recorded in
