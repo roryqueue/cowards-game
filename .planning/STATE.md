@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 canonical history setup now completes; third source gate is 18/20 with two unchanged-deadline failures, minimal call-local reader repair under verification without Match authority
+last_activity_desc: Phase266 Plan06 canonical factory-history constituent passes 20/20 and independent five-file review at c87dc92c; isolated source only, no whole-map or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -27,26 +27,32 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 
 ## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
 
-An uncommitted, opt-in canonical-terminal v3 history extension above `2224e60b`
-retains three failed bounded source-test epochs in `266-06-PARTIAL-HANDOFF.md`.
-The first two skipped six new checks after setup exceeded its unchanged
-600000 ms deadline (953.85 and 890.11 seconds total). After narrow private
-fixed-token encoder reuse, the third setup finished within that ceiling and
-the gate ran all checks: 18/20 pass in 1550.26 seconds, but test2 exceeded its
-unchanged 5000 ms default and complete-history reopening exceeded its unchanged
-600000 ms bound. Ordinary/historical assessment reopening and denial checks
-pass; the timed-out complete-history check is not claimed green. The actual
-unchanged assessor remains `affirmed`, separation `0.05203982688887587`, with
-three distinct base edges; these source-fixture diagnostics grant no authority.
-Codec tests (39/39), affected wrapper/fingerprint tests (42/42), extra-strict
-non-emitting TypeScript and lab boundaries (1357 files, zero violations) pass.
-A minimal file-private call-local reader/test redundancy repair is now under
-verification, without cross-call caching or changed validation, deadlines,
-numeric/control/workload data or policy bounds. No operational Match or new
-route was opened. Source remains uncommitted, unmerged and unpushed; the latest
-independently reviewed checkpoint remains the following one-workload constituent.
+The latest clean, isolated, unmerged and unpushed source checkpoint is
+`c87dc92ceda32fcda36c0ab908af90ed0ec12b38`, tree
+`9f963fae28dfbd43d85d7cabe84c845e45427009`, direct parent `2224e60b`.
+Root's serial history gate passes 20/20 in 1362.32 seconds, including all six
+new opt-in canonical-terminal v3 checks. Test2 takes 836 ms within its original
+5000 ms default; ordinary/historical reopening takes 164007 ms; complete history
+takes 490658 ms within its original 600000 ms ceiling, returns 96 journals and
+48 supervision parents, and preserves generated store bytes. The actual unchanged
+assessor derives `affirmed`, separation `0.05203982688887587` and three distinct
+base edges anew; these fixed-mock source results are not empirical qualification.
+Reader/supervision 40/40, codec 39/39, extra-strict five-file non-emitting TypeScript,
+whitespace and lab boundaries (1357 files, zero violations) pass. Independent
+standard-depth five-file review in `266-06-PRELIMINARY-REVIEW.c87dc92c.md` is
+scoped clean with zero actionable findings; root QA was not independently rerun.
+All three earlier failed bounded epochs remain in `266-06-PARTIAL-HANDOFF.md`.
+Private fixed-token and call-local validated-stream reuse remove redundant work
+without changed bytes, deadlines, numeric/control data, policy or parent/physical
+validation; no caller-data/cross-call cache or atomic-snapshot claim is added.
+Source/compiler/native/custody/allocation/clock/import/whole-map/empirical proof
+remains false or unverified. Three assessed base imports with matching retained
+league parents, positive whole-map/rederivation, physical union and Task3's full
+suite/final review remain open. No Plan06 summary, Plan02 consumption, operational
+Match or prospective route follows. Main receives safe Markdown only; Plan265-12
+and consumed allocations are unchanged. The earlier one-workload constituent follows.
 
-The latest separate, unmerged and unpushed source checkpoint is `2224e60b`,
+The preceding separate, unmerged and unpushed source checkpoint was `2224e60b`,
 recorded in `266-06-PARTIAL-HANDOFF.md` and
 `266-06-PRELIMINARY-REVIEW.2224e60b.md`. One fixed-effect canonical factory
 workload now routes twenty candidate mock invocations through the actual

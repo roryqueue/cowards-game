@@ -1,8 +1,62 @@
 # Plan 266-06 source-only partial handoff
 
-**Disposition:** incomplete, non-authorizing. No checked parent map, real-store scan, absence receipt, freeze root, Match, formation, holdout, counted or public action.
+**Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
-## Uncommitted v3 history extension — failed first source gate, 2026-09-30
+## Latest isolated checkpoint — canonical factory history, 2026-09-30
+
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`c87dc92ceda32fcda36c0ab908af90ed0ec12b38`, tree
+`9f963fae28dfbd43d85d7cabe84c845e45427009`, direct parent `2224e60b`.
+The exact five-file hashes and independent standard-depth review are retained
+in `266-06-PRELIMINARY-REVIEW.c87dc92c.md` (report SHA-256
+`b65ef6db93c47122943ecfdc8b28e7863e0fbb750056cf9a13572bcb5571082c`).
+Review is scoped clean, with zero actionable findings. Root ceased related
+reads, edits and tests during the review; the reviewer authenticated every
+complete pinned file and ran no duplicate constructor, suite or assessor.
+Reported test outcomes are root QA, not independent reproductions.
+
+Root's fourth same-command serial history gate passes 20/20 in 1362.32 seconds,
+including all six new canonical v3 checks. Its setup and complete-history check
+both finish within their original 600000 ms ceilings. Test2 takes 836 ms within
+its unchanged 5000 ms default; ordinary/historical reopening takes 164007 ms,
+and the actual complete-history collector takes 490658 ms, returning 96 journals
+and 48 supervision entries with unchanged generated filenames, lengths and
+hashes. Charged-parent and missing-tail negatives refuse without reader repair.
+The actual unchanged assessor freshly affirms the fixed mocks with empty reasons,
+separation `0.05203982688887587` and three distinct base edges. Earlier partial
+v1/v2 observations remain unable to satisfy the production terminal projector.
+All three earlier failed epochs are retained below, not converted into passes.
+
+Public parent-context and canonical-supervision suites pass 40/40 in 153.46
+seconds at these exact hashes. Five codec suites pass 39/39 in 10.56 seconds at
+the unchanged encoder hashes, including the 70-vector golden corpus, exact
+errors/limits and output-buffer mutation isolation. Extra-strict five-file
+non-emitting TypeScript, whitespace and lab boundaries pass (1357 files, zero
+violations). These are selected constituent source checks, not Task3's full
+applicable repository suite or a causal/operational runtime benchmark.
+
+The fixed 48-workload history now exercises genuine unchanged-kernel terminal
+outcomes, actual wrapper bookkeeping, ordinary stream/usage/journal writers,
+new numeric assessment and historical reopening. It does not verify the inert
+Strategy source, compiler, native provider, synthetic custody/review/allocation
+roots or bookkeeping clocks. Its top-level operational/source/empirical/import/
+whole-map authority flags remain false. Private fixed-token encoder reuse and
+same-call validated-stream reuse preserve exact bytes, parent and physical-set
+validation; there is no caller-data/cross-call cache, trusted serialized flag,
+atomic-snapshot guarantee or changed deadline, numeric/control data or policy.
+
+Next safe source work is an actual assessed S01/S03/S05 import/closure roster
+using this generated history, followed by matching retained league-matrix and
+response/corpus/graph parents. The existing legacy matrix is bound to different
+unassessed source/admission roots and cannot be relabelled or spliced into this
+history. Positive whole-map derivation/rederivation, exact three-store union and
+Task3's full applicable suite/final review remain open. No Plan06 summary or
+Plan02 consumption is authorized by this preliminary checkpoint. Main receives
+safe Markdown only; Phase265 Plan11/12 gates and consumed Plan07/09 remain
+unchanged. No operational Match, route, live preflight, provider/Strategy/model,
+real-store scan, holdout opening, formation or counted/public action occurred.
+
+## Earlier uncommitted v3 epochs — retained failures, 2026-09-30
 
 The opt-in `structural_canonical_terminal_v3` extension is isolated above
 `2224e60b`, not committed, merged, pushed or independently approved. Its first
@@ -102,7 +156,7 @@ pass. No deadline is raised, and both failed epochs remain retained above.
 The nine private ASCII chunks were implemented without caching caller data or
 exposing shared buffers. Root's five codec suites passed 39/39 in 10.56 seconds,
 including every golden byte/hash/error corpus vector, returned-buffer poisoning
-and exact byte-limit canaries. The successful corpus root remains
+and exact byte-limit canaries. The golden 70-vector corpus root remains
 `f658a8bcb6bd4457b2eb52b6628f7fc6ff4ca36661f685ab28d7b60c8b2722c0`;
 enumeration root remains
 `0a70be7877b11ffa3d1147c3efaa7ad38fc114fca1c3ee2028900baf786e8ef7`.
@@ -153,7 +207,7 @@ All five source files remain uncommitted, unmerged and unpushed; the latest
 reviewed source is still `2224e60b`. This is source-only performance repair,
 not operational evidence, Plan06/Task3 completion or a prospective run route.
 
-## Latest isolated checkpoint — 2026-09-30
+## Earlier 2224e60b one-workload checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `2224e60bf02b22cd0c29181463a0f44ec4ff8c11` (tree
