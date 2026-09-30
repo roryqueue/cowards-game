@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 canonical-terminal factory constituent checked; 13 focused tests pass and two scoped review defects are closed, whole-map and Plan12 empirical authority remain blocked
+last_activity_desc: Phase266 Plan06 one-workload canonical factory supervision stream checked; seven focused tests pass and scoped review is clean, full history and whole-map and Plan12 empirical authority remain blocked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -27,7 +27,30 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 
 ## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
 
-The latest separate, unmerged source checkpoint is `a9cde354`, recorded in
+The latest separate, unmerged and unpushed source checkpoint is `2224e60b`,
+recorded in `266-06-PARTIAL-HANDOFF.md` and
+`266-06-PRELIMINARY-REVIEW.2224e60b.md`. One fixed-effect canonical factory
+workload now routes twenty candidate mock invocations through the actual
+supervision wrapper, with four unchanged fixed-opponent effects and a genuine
+pure-kernel WIN. The ordinary writer retains 337 records in five linked chunks
+(1,182,891 bytes); actual stream reopening and the partial parent inspector
+agree, and a recorded-effect replay checks the retained execution. Root's
+focused gate passes 7/7 in 24.04 seconds; owned extra-strict TypeScript and lab
+boundaries pass (1356 files, zero violations). Fresh independent two-file
+source review has zero actionable findings. Wrapper bypass, wrong identities
+or parents and corrupt/missing chunks refuse without reader repair.
+The issued in-memory mock-wrapper receipt is bookkeeping, not native-provider
+or Strategy behavior proof. Manifest/allocation references and clocks are
+explicitly synthetic and unverified; the terminal remains unresolved. No
+operational Match, allocation, live preflight, native provider, Strategy/model
+execution, private holdout or real-store scan occurred. This is neither a
+qualifying 48-workload history, assessor approval, three imports, a checked
+whole map, Task3 approval nor empirical authority. Main receives Markdown only;
+Plan265-11/12 gates and consumed routes remain unchanged.
+
+### Earlier a9cde354 canonical-terminal checkpoint
+
+The preceding separate, unmerged source checkpoint is `a9cde354`, recorded in
 `266-06-PARTIAL-HANDOFF.md` and `266-06-PRELIMINARY-REVIEW.a9cde354.md`.
 Two injected fixed-effect factory workloads now use the ordinary factory Match
 builder, unchanged canonical sixteen-Soldier edge start, pure kernel and actual

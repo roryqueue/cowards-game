@@ -5,6 +5,66 @@
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`2224e60bf02b22cd0c29181463a0f44ec4ff8c11` (tree
+`1b6639034ed406aa03c8fc02664870d5dc561985`, parent
+`a9cde354467a82b0bb3d508318c8f8446fe7bdcc`). The two new canonical
+factory-supervision fixture hashes and zero-actionable independent standard-depth
+review are recorded in `266-06-PRELIMINARY-REVIEW.2224e60b.md`.
+Production collectors, frozen policies and Plan265-11/12 source are unchanged;
+main receives only safe Markdown checkpoints and preliminary reviews.
+
+The new constituent closes a fixture integration gap: returning a terminal
+helper's execution directly bypasses the actual supervision wrapper's candidate
+trace collection. Each of the twenty candidate mock effects now goes through
+that wrapper's actual invocation and issuer verification. Four unchanged
+fixed-opponent effects remain supplied by the pure helper; the opponent mock
+container never invokes. The ordinary first fresh-cell declaration (S01/A,
+bottom, candidate initiative, smoke) retains canonical sixteen-Soldier edge
+start, 24 effects, 145 actual kernel calls, 121 transitions, twenty wrapper
+traces and a genuine fixed-opponent WIN projected to `top`. Mock recipe behavior
+is not behavior of the inert emitted Strategy source.
+
+The actual ordinary stream writer retains 337 records in five linked chunks,
+1,182,891 bytes. Reopening authenticates the execution, wrapper traces, physical
+parents, workload/ingestion/start/accounting/usage/unresolved-terminal joins and
+exact journal/ledger bytes. The partial parent inspector returns unbranded
+parents, not a checked map. One recorded-effect replay agrees with the retained
+execution. Wrapper bypass, unissued receipt copies, wrong identity/parents and
+corrupt or missing tail chunks refuse without reader repair; successful
+reopening preserves generated filenames, lengths and hashes.
+
+Root's exact-byte focused gate passes 7/7 in 24.04 seconds (21.58 seconds of
+tests); standalone reopening takes 6.556 seconds and recorded replay 2.933
+seconds. The owner's sole epoch also passes 7/7 in 24.00 seconds. Owned
+extra-strict non-emitting TypeScript, whitespace and lab boundaries pass
+(1356 files, zero violations). Prior heavy fixture suites were not rerun or
+claimed as fresh evidence. These timings are source-test costs, not empirical
+Match/provider or wall-clock-compliance samples.
+
+The genuinely issued in-memory wrapper receipt proves mock bookkeeping only.
+Manifest/allocation/protocol roots and 1000/1001 clocks are synthetic and
+explicitly unverified; no fresh manifest or authoring allocation is issued.
+The terminal remains `unresolved` with `pending_retained_group`. Every top-level
+source/compiler/supervision/import/fresh-manifest/assessment/wall-clock/
+whole-map/empirical authority flag remains false or unverified. Only a generated
+temporary fixture repository was written and removed by teardown. No operational
+Match, allocation, reservation, live preflight, native runtime provider,
+guest/Strategy/model execution, real private-store scan, holdout, formation,
+counted, public or production action occurred.
+
+Next safe source work is a complete 48-workload producer-compatible history
+whose canonical outcomes and unchanged actual assessor derive qualification
+anew. The old v2 partial-unit numerical affirmation cannot be carried over to
+these different retained streams. Three actual assessed imports and the full
+retained league graph/physical union, positive derivation/rederivation and
+Task3's full applicable suite/final review remain open. This one-workload
+constituent completes neither Plan06 nor Task3 and does not let Plan02 consume
+a checked map. Plan265-12's exact new operator checkpoint and consumed
+Plan07/09 routes remain unchanged; all empirical/freeze routes remain closed.
+
+### Earlier a9cde354 canonical-terminal checkpoint
+
+The isolated branch was at
 `a9cde354467a82b0bb3d508318c8f8446fe7bdcc` (tree
 `96b02017591240593c39b55ab7a7376aaec78aa9`, parent `003b0d9f`). The two
 canonical factory-workload fixture hashes and fresh independent standard-depth
