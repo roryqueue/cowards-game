@@ -5,12 +5,64 @@
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
-`88b7d695c0d43e1b2a43bfec5c123e8db0ce1485` (tree
-`b8529544d940fe40261f9dc64e9923706057b62e`, parent `c6da2bf8`). The two new
-fixture hashes and independent standard-depth review are recorded in
-`266-06-PRELIMINARY-REVIEW.88b7d695.md`; review has zero actionable findings.
+`a9cde354467a82b0bb3d508318c8f8446fe7bdcc` (tree
+`96b02017591240593c39b55ab7a7376aaec78aa9`, parent `003b0d9f`). The two
+canonical factory-workload fixture hashes and fresh independent standard-depth
+review are recorded in `266-06-PRELIMINARY-REVIEW.a9cde354.md`; review has zero
+actionable findings. Its initial review at `003b0d9f` is retained unchanged:
+sparse sequences could falsely pass replay equality and outer metadata getters
+could execute before admission. Dense own-index validation, implementation-owned
+indexed comparison and descriptor-first admission now close both findings.
 Production collectors, frozen policies and Plan265-11/12 source are unchanged;
-main receives only this Markdown checkpoint and the preliminary review.
+main receives only safe Markdown checkpoints and preliminary reviews.
+
+The new constituent builds two fixed-effect source-test workloads with the
+ordinary factory Match builder: bottom MOVE-inward on the smoke arena and top
+LEFT-turn on standard-cross, with their original side/initiative/seed bindings.
+Both begin at the unchanged canonical sixteen-Soldier edge rank, retain real
+pure-kernel transitions and end in a genuine fixed-opponent WIN accepted by
+the unchanged production outcome projector. FAILED/MAX_PHASES/absent outcomes
+remain refusals. Each has 24 mock requests (20 candidate/4 opponent), 145 actual
+advance/resume kernel calls and 121 transitions; exact recorded-effect replay
+is green. Canonical ABI/Actions, board geometry, actual fixed-opponent effects,
+identity/input/ordinal/result/byte accounting and x=2/unconditional controls are
+checked. Mock recipe behavior is not behavior of the inert admitted source.
+
+Root's corrected focused file passes 13/13 in 9.99 seconds, including hostile
+binding/evidence substitutions, all three sparse execution sequences and
+accessor/hidden/symbol/prototype/overridden-method refusals. The positive replay
+test takes 5.710 seconds; grouped hostile canaries take 111 milliseconds. An
+earlier owner repair epoch passed 12/13 in 23.48 seconds with a grouped negative
+exceeding its ordinary five-second deadline. All containers and row descriptors
+are now inspected before row encoding/replay; that deadline was not widened.
+Owned extra-strict non-emitting TypeScript, whitespace and fresh lab boundaries
+pass (1354 files, zero violations). These are separate retained source-test
+epochs, not empirical runtime-cost samples or operational runs.
+
+The helper retains its 24-request/512-actual-call fixture ceilings; the production
+256-invocation/120-second workload policy is unchanged and wall-clock compliance
+is not certified. Every source/compiler/supervision/import/whole-map/empirical
+authority flag remains false. No evidence repository, allocation, reservation, live
+preflight, runtime provider, guest/Strategy/model execution, actual private-store
+scan or operational Match occurred. No favorable outcome or numeric affirmation
+is fabricated. Default/v1/v2 factory history and its assessor are untouched.
+
+Next safe source work is a producer-compatible, genuinely qualifying complete
+48-workload history using canonical terminal callbacks, then three imports.
+The whole-map frontier also retains eleven produced response arms, all probes
+and canonical cells, final evaluation/report/result/markers and exact three-store
+union, then positive derivation/rederivation and Task3's full applicable suite
+and final source review. This increment does not complete Plan06 or let Plan02
+consume a checked map. Plan265-12's exact new operator checkpoint and consumed
+Plan07/09 routes are unchanged; freeze, formation, holdout, counted/public and
+production remain closed.
+
+### Earlier 88b7d695 metadata checkpoint
+
+The isolated branch was at `88b7d695c0d43e1b2a43bfec5c123e8db0ce1485` (tree
+`b8529544d940fe40261f9dc64e9923706057b62e`, parent `c6da2bf8`). Its two fixture
+hashes and zero-actionable independent review remain recorded in
+`266-06-PRELIMINARY-REVIEW.88b7d695.md`.
 
 The new data-only round/target constituent derives four ordinary declarations
 and advances plus eleven role-exact packets from one unchanged 24-row matrix
@@ -31,24 +83,6 @@ kernel replay and factory suites were not rerun or claimed as new evidence.
 No operational route, allocation, reservation, live preflight, kernel, provider,
 guest/Strategy/model execution, real private-store scan or Match ran for this
 new constituent. All generated metadata stores were cleaned by test teardown.
-
-The next safe source work still needs genuine canonical terminal factory
-callbacks and producer-compatible full history before any imported qualification.
-A pure recorded-effects fixture may rebuild exact factory workloads, fixed
-opponent and bound inert issuer accounting; matrix streams cannot be relabelled
-as factory streams. Actual kernel WIN/DRAW and the production outcome projector
-are required, not fabricated terminal fields or MAX_PHASES_EXCEEDED fallback.
-Default/v1/v2 data and the unchanged assessor must remain intact. This is a
-source-test design, not an approved operational retry or assurance claim;
-runtime cost and numeric affirmation remain unmeasured.
-
-The whole-map frontier also retains eleven produced response arms, all probes
-and canonical cells, final evaluation/report/result/markers and exact three-store
-union, then positive derivation/rederivation and Task3's full applicable suite
-and final source review. This increment does not complete Plan06 or let Plan02
-consume a checked map. Plan265-12's exact new operator checkpoint and consumed
-Plan07/09 routes are unchanged; freeze, formation, holdout, counted/public and
-production remain closed.
 
 ### Earlier c6da2bf8 checkpoint
 

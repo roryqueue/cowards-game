@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 unassessed round-target metadata constituent checked and independently reviewed; 19 focused tests pass, whole-map and Plan12 empirical authority remain blocked
+last_activity_desc: Phase266 Plan06 canonical-terminal factory constituent checked; 13 focused tests pass and two scoped review defects are closed, whole-map and Plan12 empirical authority remain blocked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -26,6 +26,27 @@ total_plans_in_phase: 12
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
 ## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
+
+The latest separate, unmerged source checkpoint is `a9cde354`, recorded in
+`266-06-PARTIAL-HANDOFF.md` and `266-06-PRELIMINARY-REVIEW.a9cde354.md`.
+Two injected fixed-effect factory workloads now use the ordinary factory Match
+builder, unchanged canonical sixteen-Soldier edge start, pure kernel and actual
+production terminal projector. Each retains 24 mock requests, 145 actual kernel
+calls and 121 transitions, ending in a genuine fixed-opponent WIN. Their
+recorded-effect replays agree; no Strategy source or runtime provider ran.
+The initial scoped review found sparse-array false replay equality and
+accessor-before-admission defects. Both are repaired and independently closed
+on the new exact source, with the failing `003b0d9f` review preserved.
+Root's corrected focused gate passes 13/13 in 9.99 seconds, owned extra-strict
+TypeScript and lab boundaries pass (1354 files, zero violations), and fresh
+two-file review has zero actionable findings. An earlier 12/13 repair epoch's
+grouped negative timeout is retained; ordering was corrected without raising
+that timeout or changing any frozen policy. This is neither qualifying full
+factory history nor source/compiler/supervision/import proof, a checked whole
+map, Task3 approval or empirical evidence. Main receives safe Markdown only;
+Plan265-11/12 gates and all consumed routes remain unchanged.
+
+### Earlier 88b7d695 metadata checkpoint
 
 Phase266 Plan06 has a separate isolated, source-only partial checkpoint at
 `88b7d695`, recorded in `266-06-PARTIAL-HANDOFF.md` and
