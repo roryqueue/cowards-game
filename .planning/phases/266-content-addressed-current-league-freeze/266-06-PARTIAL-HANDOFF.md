@@ -5,15 +5,24 @@
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
-`8dfc080e894f7b6e45e5e3954f1f8570a2bfce9a`. Since the earlier checkpoint
+`5a77f29818c9fbf7b40959d230d10db421df0089`. Since the earlier checkpoint
 below, synthetic parent joins have been added for 64-object declarations,
 calibration attempt/journal pairs, successful supervision streams, Phase 264
 sibling pairing, candidate-evidence imports, and the full initial imported
-candidate roster selected from an authenticated Phase 265 run-start. Every
+candidate roster selected from an authenticated Phase 265 run-start, successful
+response target/source-copy parents, later-round accepted-counter ancestry,
+and chronological probe-ledger replay. Historical Git reads now strip
+inherited Git environment variables, disable replacement objects, and reject
+replacement refs and graft paths. Every
 helper still returns `issued:false`; a content hash or observed read alone never
-grants ownership. The latest focused tests passed 25/25, strict source/test
+grants ownership. The latest focused tests passed 28/28, strict source/test
 TypeScript passed, the private lab boundary scan found zero violations across
 1,343 files, and `git diff --check` passed. These are source-only fixture checks.
+
+An independent preliminary review of `51fcde8b` found two gaps: inherited Git
+history overrides and a ledger snapshot that could omit earlier charges. The
+candidate repairs are committed at `f508a809` and `5a77f298`; a fresh independent
+review is pending. This is not the final Plan 06 source gate.
 
 The full Phase 265 response/result union, independently reopened empirical
 outcome, complete producer-kind registry, three-store physical-set equality
