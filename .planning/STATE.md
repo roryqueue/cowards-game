@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 isolated composition and read-only repairs independently reviewed with 111 passing focused tests; Plan12 authority and empirical gate remain blocked
+last_activity_desc: Phase266 Plan06 isolated grouped-journal and opponent-copy defects closed with 98 passing affected tests plus four canonical inert-history checks; full positive-map and Plan12 empirical authority remain blocked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -28,12 +28,17 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 ## Current Session Continuity — 2026-09-29 prospective one-cell route planning
 
 Phase266 Plan06 has a separate isolated, source-only partial checkpoint at
-`acf5fa53`, recorded in `266-06-PARTIAL-HANDOFF.md` and its exact preliminary
-review. Composition, closed producer registry, read-only retained-intake repair
-and three-store reconciliation are implemented; 111/111 focused tests and
-extra-strict TypeScript pass with zero new bounded-review findings. It remains
-unmerged and non-authorizing: complete positive-map and accepted-after-terminal
-fixtures and the final full-suite/source gate are still open. Plan02 cannot
+`2dc5ed32`, recorded in `266-06-PARTIAL-HANDOFF.md` and the `52fe8bb9` preliminary
+review's follow-on checkpoint. Composition, closed producer registry,
+read-only retained-intake repair and three-store reconciliation are implemented.
+Complete accepted-after-terminal model/teacher/tactical fixtures exposed and
+closed grouped-journal and omitted opponent admission-copy defects; the three
+affected suites passed 98/98 tests. Four additional canonical-Action/Chronicle/ABI
+inert-history tests pass with the actual assessor truthfully unresolved and no
+threshold. Extra-strict TypeScript and lab boundaries pass; both bounded
+independent reviews report zero new actionable findings. It remains unmerged
+and non-authorizing: the complete positive-map
+fixture and final full-suite/source gate are still open. Plan02 cannot
 consume a checked map and no real absence/freeze operation is open. The
 remaining fixture work needs no new external-custody or product decision.
 Plan265-11 source-only adapter work is complete; Plan12 still requires exact new

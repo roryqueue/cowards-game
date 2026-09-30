@@ -4,6 +4,46 @@
 
 ## Latest isolated checkpoint — 2026-09-30
 
+The clean, unmerged and unpushed `codex/phase266-context` branch is now at
+`2dc5ed325b8891e41bdc27c6c2690aacac1dcf23` (tree
+`4f4e60e08841d53e4b3f14410883d31f8defc4f9`). Exact source hashes, test epochs
+and bounded independent reviews are recorded in
+`266-06-PRELIMINARY-REVIEW.52fe8bb9.md`, including its follow-on checkpoint.
+
+The complete accepted-after-terminal model, teacher and tactical fixtures now
+pass with hostile substitutions and byte-stable read-only reopening. They
+exposed and closed two genuine collector defects: grouped transport wrappers
+hid the producer-start link from the journal join, and six retained opponent
+packet/proposal/validation copies were omitted from the expected physical union.
+The repairs preserve transport-only ancestry, exact journals, byte validation,
+orphan refusal and all non-authorizing boundaries. Three affected suites passed
+98/98 tests in 485.20 seconds at `52fe8bb9`; their dependencies are unchanged at
+the latest checkpoint.
+
+The new 48-workload factory-history constituent retains 96 journals and all
+supervision/publication parents, with byte-stable ordinary/historical reopening.
+A realism audit corrected noncanonical mock Action/Chronicle names and ABI
+input shapes; the corrected fixture explicitly parses canonical Actions,
+Chronicle payloads and 25-cell awareness inputs. Its four focused tests passed
+in 87.51 seconds on the latest two-file hashes. It is truthfully unresolved:
+the unchanged assessor rejects insufficient control separation and publishes
+no threshold or base edges. These 102 passing checks do not establish a
+positive complete history, checked map or empirical result.
+
+Extra-strict eight-file TypeScript and the fresh lab boundary scan pass (zero
+violations over 1,348 files). Independent bounded reviews of the eight-path
+repair checkpoint and two-file canonical-fixture follow-on report zero new
+actionable findings. They are not Task 3's final source approval.
+
+The remaining ordinary source task is a genuinely assessor-derived separated
+synthetic control history, followed by complete whole-map derivation/rederivation
+and Task 3's full applicable suite/final source review. Do not force an affirmed
+result, weaken policy, scan actual private stores or let Plan02 consume this
+partial checkpoint. Plan265-12's exact operator checkpoint and the consumed
+allocations remain unchanged; no Match, freeze, formation or holdout action ran.
+
+### Earlier acf5fa53 checkpoint
+
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `acf5fa53613ebd4349253920a25353636db3e7f5` (tree
 `00d2a0c96b9614ecf8607469838f2bdc4de74a64`). The latest exact-source
@@ -92,13 +132,13 @@ that edge. Top-level checked-map/registry composition and the separate
 response-authoring evidence union are now implemented in the isolated branch;
 synthetic fixtures cannot promote the actual process-invalid run.
 
-Remaining source validation work is ordinary fixture coverage, not an
+At that checkpoint, remaining source validation work was ordinary fixture coverage, not an
 external-custody or product decision: build a complete injected Phase 264
 48-workload assessed history and exact prospective Phase 265 graph through
 the real retained-format writers/readers, then exercise a positive whole-map
-derivation/rederivation and hostile physical-object substitutions. Also prove
-the accepted-after-terminal failure union through its complete three-arm
-fixture. Keep the empirical assessment/source pins and all validators intact;
+derivation/rederivation and hostile physical-object substitutions. The complete
+accepted-after-terminal three-arm fixture has since passed at the latest
+checkpoint above. Keep the empirical assessment/source pins and all validators intact;
 never hardcode an affirmed result or weaken the live runner's fixture refusal.
 Only after these gaps close may the final applicable suite and exact-source
 review be recorded as Task 3's gate. Plan 02 cannot consume this partial work
