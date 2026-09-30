@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 canonical matrix constituent checked and independently reviewed; synthetic numeric affirmation correctly denied complete-history qualification, whole-map and Plan12 empirical authority remain blocked
+last_activity_desc: Phase266 Plan06 unassessed round-target metadata constituent checked and independently reviewed; 19 focused tests pass, whole-map and Plan12 empirical authority remain blocked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -28,8 +28,19 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 ## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
 
 Phase266 Plan06 has a separate isolated, source-only partial checkpoint at
-`c6da2bf8`, recorded in `266-06-PARTIAL-HANDOFF.md` and
-`266-06-PRELIMINARY-REVIEW.c6da2bf8.md`. The previous actual-format response
+`88b7d695`, recorded in `266-06-PARTIAL-HANDOFF.md` and
+`266-06-PRELIMINARY-REVIEW.88b7d695.md`. Its new data-only constituent derives
+four ordinary round declarations/advances and eleven role-exact target packets
+from one unchanged matrix descriptor. Nineteen focused tests pass, including
+hostile metadata substitutions, final-role feedback exclusion and byte-stable
+ordinary packet reopening. Owned extra-strict TypeScript and lab boundaries
+pass (1352 files, zero violations); independent scoped review has zero findings.
+This verifies only metadata/transport/source-byte joins: external cell replay,
+payoffs, solver numerics, corpus observations, compiler provenance, source
+qualification and full graph closure remain explicitly unverified. No kernel,
+provider, Strategy, model or operational Match ran for this new constituent.
+
+At the earlier `c6da2bf8` checkpoint, the previous actual-format response
 repairs and 109-test gate remain historical evidence. A new injected 24-cell
 matrix uses complete unchanged-kernel transitions from the canonical
 sixteen-Soldier start, exact mock custody/journals, solver/round targets and the

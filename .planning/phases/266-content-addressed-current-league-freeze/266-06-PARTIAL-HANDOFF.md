@@ -5,6 +5,54 @@
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`88b7d695c0d43e1b2a43bfec5c123e8db0ce1485` (tree
+`b8529544d940fe40261f9dc64e9923706057b62e`, parent `c6da2bf8`). The two new
+fixture hashes and independent standard-depth review are recorded in
+`266-06-PRELIMINARY-REVIEW.88b7d695.md`; review has zero actionable findings.
+Production collectors, frozen policies and Plan265-11/12 source are unchanged;
+main receives only this Markdown checkpoint and the preliminary review.
+
+The new data-only round/target constituent derives four ordinary declarations
+and advances plus eleven role-exact packets from one unchanged 24-row matrix
+descriptor. It authenticates small retained-matrix transport and metadata,
+source bytes and packet/proposal/validation joins. Final teacher/model packets
+omit development targets and tactical feedback. There is no external-cell
+replay, numerical solver recomputation, corpus-observation replay, source
+qualification, compiler provenance, full graph closure or checked-map brand.
+Fixtures and outputs remain explicitly UNASSESSED, partial and non-authorizing.
+
+Root's focused file passed 19/19 tests in 17.37 seconds after replacing an inert
+unexecuted WAIT example with canonical TURN_TO_STONE. Two passes over eleven
+ordinary published/reopened packets left generated store names, byte lengths
+and hashes unchanged. The reopening assertion uses a bounded 30-second harness
+deadline; no runtime policy changed. Owned extra-strict non-emitting TypeScript,
+whitespace and lab boundaries pass (1352 files, zero violations). Prior heavy
+kernel replay and factory suites were not rerun or claimed as new evidence.
+No operational route, allocation, reservation, live preflight, kernel, provider,
+guest/Strategy/model execution, real private-store scan or Match ran for this
+new constituent. All generated metadata stores were cleaned by test teardown.
+
+The next safe source work still needs genuine canonical terminal factory
+callbacks and producer-compatible full history before any imported qualification.
+A pure recorded-effects fixture may rebuild exact factory workloads, fixed
+opponent and bound inert issuer accounting; matrix streams cannot be relabelled
+as factory streams. Actual kernel WIN/DRAW and the production outcome projector
+are required, not fabricated terminal fields or MAX_PHASES_EXCEEDED fallback.
+Default/v1/v2 data and the unchanged assessor must remain intact. This is a
+source-test design, not an approved operational retry or assurance claim;
+runtime cost and numeric affirmation remain unmeasured.
+
+The whole-map frontier also retains eleven produced response arms, all probes
+and canonical cells, final evaluation/report/result/markers and exact three-store
+union, then positive derivation/rederivation and Task3's full applicable suite
+and final source review. This increment does not complete Plan06 or let Plan02
+consume a checked map. Plan265-12's exact new operator checkpoint and consumed
+Plan07/09 routes are unchanged; freeze, formation, holdout, counted/public and
+production remain closed.
+
+### Earlier c6da2bf8 checkpoint
+
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `c6da2bf8f6abe317854d1fdc738fd1ecc4572589` (tree
 `4ae7ab0734611610eb1fdc91134f11709aab8bd3`). Four fixture hashes, exact test
 epochs and bounded independent reviews are recorded in
