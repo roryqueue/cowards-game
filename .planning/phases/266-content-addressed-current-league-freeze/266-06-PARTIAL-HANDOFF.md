@@ -2,6 +2,57 @@
 
 **Disposition:** incomplete, non-authorizing. No checked parent map, real-store scan, absence receipt, freeze root, Match, formation, holdout, counted or public action.
 
+## Uncommitted v3 history extension — failed first source gate, 2026-09-30
+
+The opt-in `structural_canonical_terminal_v3` extension is isolated above
+`2224e60b`, not committed, merged, pushed or independently approved. Its first
+exact-byte epoch used:
+
+```sh
+pnpm exec vitest run scripts/fixtures/current-freeze-factory-history-fixture.test.ts scripts/fixtures/current-freeze-canonical-factory-history-fixture.test.ts --maxWorkers=1 --reporter=verbose --disableConsoleIntercept
+```
+
+The command exited 1 after 953.85 seconds: the existing fixture file passed
+14/14, while the new suite failed its shared `beforeAll` setup's predeclared
+600000 ms deadline and skipped all six new tests. No complete-history reader,
+historical assessment reopening, per-cell assertion or new denial check is
+claimed green from that epoch. No test or verifier remains active after the
+command's terminal outcome.
+
+The constructor eventually emitted bounded source-unit diagnostics: actual
+unchanged-assessor status `affirmed`, frozen numeric fit, separation
+`0.05203982688887587` and all three base edges `distinct`. These are diagnostic
+observations, not a passing suite or authority to carry the old v2 affirmation
+forward. The complete-history parent gate remains unverified. Each prescribed
+fixed mock cell ended with a production-projected fixed-opponent WIN; the
+observed request/call/trace counts were 24/145/20 for 32 base/identity cells,
+23/142/19 for eight x=2 controls, and 16/119/12 for eight all-STONE controls.
+Those are synthetic source-test costs, not empirical runtime or charged Match
+samples. They do not authenticate inert Strategy behavior, native provider
+execution, compiler provenance, synthetic review/allocation roots or clocks.
+
+The authenticated uncommitted file hashes for this failed epoch are:
+
+- `scripts/fixtures/current-freeze-factory-history-fixture.ts`:
+  `b1c8872338e5aa38b4b63d2c8751e71c471ca6da30fcb9fb9f81d6db1d58d411`.
+- `scripts/fixtures/current-freeze-canonical-factory-history-fixture.test.ts`:
+  `e705536ac0725a4b1a828d614b849dc4f86b5f930532bdbec651924f9d08bb1d`.
+
+Owned extra-strict non-emitting TypeScript and whitespace pass; lab boundaries
+pass with 1357 files and zero violations. The optional unused-symbol probe
+failed on nine pre-existing transitive diagnostics, none in the owned scope;
+it is not represented as a passed selected gate. Source-only performance
+diagnosis may address repeated fixture work, but must not hide this failed
+epoch, enlarge or evade its setup deadline, change prescribed observations or
+numeric/source/control data, or relax the 24-request/512-kernel-call fixture
+ceilings and unchanged 256-invocation/120000 ms workload metadata.
+
+No operational Match, allocation, retry route, live preflight, native provider,
+Strategy/model execution, holdout opening or formation/public/counted action
+occurred. Prior evidence and authorizations remain unchanged. The latest
+independently reviewed source remains `2224e60b`; no Task3 gate, Plan06 summary,
+checked whole map, Plan02 consumption or empirical authority follows.
+
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at

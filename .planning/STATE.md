@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 one-workload canonical factory supervision stream checked; seven focused tests pass and scoped review is clean, full history and whole-map and Plan12 empirical authority remain blocked
+last_activity_desc: Phase266 Plan06 opt-in canonical full-history source gate timed out in setup; prior fourteen tests pass, six new checks did not run, source-only performance diagnosis continues without Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -26,6 +26,22 @@ total_plans_in_phase: 12
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
 ## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
+
+An uncommitted, opt-in canonical-terminal v3 history extension above `2224e60b`
+has a failed first source-test epoch. The combined serial gate passed the
+existing fourteen factory-history tests, but its new shared setup exceeded the
+predeclared 600000 ms deadline; all six new assertions were skipped. Total
+duration was 953.85 seconds. Construction eventually printed an actual
+unchanged-assessor `affirmed` disposition, separation
+`0.05203982688887587` and three distinct base edges, but these diagnostics do
+not establish a passing v3 suite, successful historical reopening or complete
+parent-history qualification. Extra-strict scoped non-emitting TypeScript and
+lab boundaries (1357 files, zero violations) pass. The failed epoch is retained
+in `266-06-PARTIAL-HANDOFF.md`; bounded source-only performance diagnosis is
+continuing, with no timeout, numeric, workload or admission-bound relaxation.
+No operational Match or prospective route was opened, and the source remains
+unmerged and unpushed. The latest independently reviewed source checkpoint
+remains the following one-workload constituent.
 
 The latest separate, unmerged and unpushed source checkpoint is `2224e60b`,
 recorded in `266-06-PARTIAL-HANDOFF.md` and
