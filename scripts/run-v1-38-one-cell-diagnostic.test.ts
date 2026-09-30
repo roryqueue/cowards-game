@@ -20,9 +20,11 @@ import {
   ONE_CELL_REVIEWER_PUBLIC_KEY_PEM,
   ONE_CELL_SELECTOR_ATTEMPT_PATHS,
   ONE_CELL_SOURCE_FILES,
+  ONE_CELL_REQUIRED_WORKSPACE_LINKS,
   admitOneCellPreflightDisposition,
   admitOneCellPublisherCompletion,
   canStartOneCell,
+  completeOneCellParentPublisherObservation,
   createOneCellPreflightAttempt,
   createOneCellPreflightDisposition,
   createOneCellParentPermit,
@@ -40,6 +42,7 @@ import {
   oneCellSourcePaths,
   oneCellSourceTreeFiles,
   checkOneCellSourceGate,
+  checkOneCellWorkspaceResolution,
   checkOneCellExactOwnersAbsent,
   requireAdmittedOneCellPreflight,
   requireOneCellPublisherCommit,
@@ -105,6 +108,62 @@ describe("source-only one-cell v3 command contracts", () => {
     const latePermit = createOneCellParentPermit({ selector: "prepare", status: "finished", token: "11111111-2222-3333-4444-555555555555", gateRoot, authorizationRoot, allocationRoot, context: { pendingRoot: allocationRoot, stageTranscript: ["source", "approval", "history", "reservation"], childElapsedMilliseconds: 299_000, parentElapsedBeforePublisherMilliseconds: 324_990 } })
     expect(() => createOneCellPublisherReceipt(latePermit, allocationRoot, 11)).toThrow("DEADLINE")
     expect(() => createOneCellParentObservation(permit, receipt, 330_001)).toThrow("DEADLINE")
+  })
+
+  it("admits a parent witness only after timely receipt fsync, final IPC and clean publisher exit", () => {
+    store(); mkdirSync(".planning/artifacts", { recursive: true })
+    const gateRoot = hash("gate"), authorizationRoot = hash("authorization"), allocationRoot = hash("allocation")
+    const token = "11111111-2222-3333-4444-555555555555"
+    const permit = createOneCellParentPermit({ selector: "prepare", status: "finished", token, gateRoot, authorizationRoot, allocationRoot, context: { pendingRoot: allocationRoot, stageTranscript: ["source", "approval", "history", "reservation"], childElapsedMilliseconds: 12, parentElapsedBeforePublisherMilliseconds: 14 } })
+    const receipt = createOneCellPublisherReceipt(permit, allocationRoot, 20)
+    writeFileSync(ONE_CELL_PARENT_PERMIT_PATHS.prepare, JSON.stringify(permit))
+    writeFileSync(ONE_CELL_PUBLISHER_RECEIPT_PATHS.prepare, JSON.stringify(receipt))
+    let loads = 0, writes = 0, simulatedClock = 42
+    const operations = { loadCheckedCommit: () => { loads++; return { permit, receipt } }, writeObservationAndFsync: (observation: ReturnType<typeof createOneCellParentObservation>) => { writes++; simulatedClock = 330_001; writeFileSync(ONE_CELL_PARENT_OBSERVATION_PATHS.prepare, JSON.stringify(observation)) } }
+    const clean = { timedOut: false, exitCode: 0, ready: true, done: true, observedElapsedMilliseconds: 42 }
+    // The receipt's fsync may return too late, or publication may lose its
+    // final IPC/crash afterward. None of these may even read the commit or
+    // write a parent witness, despite a surviving receipt.
+    for (const invalid of [{ ...clean, observedElapsedMilliseconds: 330_001 }, { ...clean, done: false }, { ...clean, exitCode: 1 }, { ...clean, timedOut: true }]) {
+      expect(() => completeOneCellParentPublisherObservation("prepare", "finished", token, allocationRoot, invalid, operations)).toThrow("UNKNOWN_OR_LATE")
+    }
+    expect(loads).toBe(0); expect(writes).toBe(0)
+    expect(() => requireOneCellPublisherCommit("prepare", allocationRoot, gateRoot, authorizationRoot, allocationRoot)).toThrow()
+    // A parent crash after the observed event but before witness publication
+    // leaves the same ineligible receipt-only state.
+    expect(() => completeOneCellParentPublisherObservation("prepare", "finished", token, allocationRoot, clean, { ...operations, writeObservationAndFsync: () => { throw new Error("injected-parent-crash") } })).toThrow("injected-parent-crash")
+    expect(() => requireOneCellPublisherCommit("prepare", allocationRoot, gateRoot, authorizationRoot, allocationRoot)).toThrow()
+    const observation = completeOneCellParentPublisherObservation("prepare", "finished", token, allocationRoot, clean, operations)
+    expect(simulatedClock).toBe(330_001) // injected slow witness fsync returns after the event deadline
+    expect(observation.observedElapsedMilliseconds).toBe(42)
+    expect(requireOneCellPublisherCommit("prepare", allocationRoot, gateRoot, authorizationRoot, allocationRoot)).toEqual(receipt)
+  })
+
+  it("keeps a late receipt-fsync publisher ineligible even when its receipt bytes survive", () => {
+    store(); mkdirSync(".planning/artifacts", { recursive: true })
+    const gateRoot = hash("gate"), authorizationRoot = hash("authorization"), allocationRoot = hash("allocation")
+    const token = "11111111-2222-3333-4444-555555555555"
+    const permit = createOneCellParentPermit({ selector: "prepare", status: "finished", token, gateRoot, authorizationRoot, allocationRoot, context: { pendingRoot: allocationRoot, stageTranscript: ["source", "approval", "history", "reservation"], childElapsedMilliseconds: 12, parentElapsedBeforePublisherMilliseconds: 14 } })
+    let parentElapsed = 20
+    publishOneCellCommitSequence(permit, allocationRoot, 0, {
+      recheckPending: () => allocationRoot,
+      writePermit: () => writeFileSync(ONE_CELL_PARENT_PERMIT_PATHS.prepare, JSON.stringify(permit)),
+      writeCanonicalAndFsync: () => {},
+      now: () => 20,
+      writeReceiptAndFsync: (receipt) => {
+        writeFileSync(ONE_CELL_PUBLISHER_RECEIPT_PATHS.prepare, JSON.stringify(receipt))
+        parentElapsed = 330_001 // injected blocking receipt fsync returns after the selector deadline
+      },
+    })
+    expect(existsSync(ONE_CELL_PUBLISHER_RECEIPT_PATHS.prepare)).toBe(true)
+    let witnessWrites = 0
+    expect(() => completeOneCellParentPublisherObservation("prepare", "finished", token, allocationRoot, { timedOut: false, exitCode: 0, ready: true, done: true, observedElapsedMilliseconds: parentElapsed }, {
+      loadCheckedCommit: () => { throw new Error("late publisher must not be read") },
+      writeObservationAndFsync: () => { witnessWrites++ },
+    })).toThrow("UNKNOWN_OR_LATE")
+    expect(witnessWrites).toBe(0)
+    expect(existsSync(ONE_CELL_PARENT_OBSERVATION_PATHS.prepare)).toBe(false)
+    expect(() => requireOneCellPublisherCommit("prepare", allocationRoot, gateRoot, authorizationRoot, allocationRoot)).toThrow()
   })
 
   it("rejects aliased parent permit and receipt paths without following them", () => {
@@ -212,9 +271,14 @@ describe("source-only one-cell v3 command contracts", () => {
   })
 
   it("proves hard setup maxima leave the 240-second cell and 30-second reserve inside ten minutes", () => {
+    expect(ONE_CELL_OPERATION_BUDGET.selectorLatchMilliseconds).toBe(40_000)
     expect(ONE_CELL_OPERATION_BUDGET.readerMilliseconds).toBe(44_739)
     expect(ONE_CELL_OPERATION_BUDGET.attemptMilliseconds).toBe(25_000)
+    expect(ONE_CELL_OPERATION_BUDGET.publisherMilliseconds).toBe(25_000)
+    expect(ONE_CELL_OPERATION_BUDGET.publisherExitReserveMilliseconds).toBe(5_000)
     expect(verifyOneCellComponentBudget(ONE_CELL_OPERATION_BUDGET)).toBe(30_261)
+    expect(300_000 + ONE_CELL_OPERATION_BUDGET.cellMilliseconds + ONE_CELL_OPERATION_BUDGET.publicationMilliseconds + ONE_CELL_OPERATION_BUDGET.publisherMilliseconds + ONE_CELL_OPERATION_BUDGET.publisherExitReserveMilliseconds).toBe(ONE_CELL_OPERATION_BUDGET.overallMilliseconds)
+    expect(300_000 + ONE_CELL_OPERATION_BUDGET.cellMilliseconds + ONE_CELL_OPERATION_BUDGET.cleanupReserveMilliseconds).toBeLessThanOrEqual(ONE_CELL_OPERATION_BUDGET.overallMilliseconds)
     expect(canStartOneCell(0, 0)).toBe(true)
     expect(canStartOneCell(300_000, 0)).toBe(true)
     expect(canStartOneCell(300_001, 0)).toBe(false)
@@ -253,6 +317,13 @@ describe("source-only one-cell v3 command contracts", () => {
     expect(oneCellSourceTreeFiles(root)).toEqual([join(root, "a.ts")])
     symlinkSync("a.ts", join(root, "alias.ts"))
     expect(() => oneCellSourceTreeFiles(root)).toThrow("SOURCE_TREE_ALIAS")
+  })
+
+  it("rejects a foreign workspace package resolution despite unchanged signed source bytes", () => {
+    expect(checkOneCellWorkspaceResolution()).toBe(true)
+    for (const [link] of ONE_CELL_REQUIRED_WORKSPACE_LINKS) {
+      expect(() => checkOneCellWorkspaceResolution((path) => path === link ? "/tmp/foreign-cowards-engine" : realpathSync(path))).toThrow("WORKSPACE_PACKAGE_ALIAS")
+    }
   })
 
   it("independently rechecks exact owner absence without removing a container", async () => {

@@ -1,6 +1,6 @@
 import { createHash, createPublicKey, randomUUID, verify as verifySignature } from "node:crypto"
 import { spawn, spawnSync, type ChildProcess } from "node:child_process"
-import { constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, statfsSync, writeSync } from "node:fs"
+import { constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, realpathSync, renameSync, statfsSync, writeSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { performance } from "node:perf_hooks"
@@ -63,6 +63,7 @@ const readExact = (actual: string, expected: string): unknown => { if (resolve(a
 
 /** Hard maxima are measured from run command entry, not from provider issuance. */
 export const ONE_CELL_OPERATION_BUDGET = Object.freeze({
+  selectorLatchMilliseconds: 40_000,
   sourceCheckMilliseconds: 30_000,
   approvalCheckMilliseconds: 10_000,
   oldTreeHashMilliseconds: 75_000,
@@ -72,16 +73,25 @@ export const ONE_CELL_OPERATION_BUDGET = Object.freeze({
   filesystemMilliseconds: 25_000,
   reservationMilliseconds: 25_000,
   publicationMilliseconds: 30_000,
+  publisherMilliseconds: 25_000,
+  publisherExitReserveMilliseconds: 5_000,
   cellMilliseconds: 240_000,
   cleanupReserveMilliseconds: 30_000,
   overallMilliseconds: 600_000,
 })
 export const verifyOneCellComponentBudget = (budget: { readonly [K in keyof typeof ONE_CELL_OPERATION_BUDGET]: number }): number => {
   const entries = Object.entries(budget)
-  if (entries.some(([, value]) => !Number.isSafeInteger(value) || value <= 0) || budget.readerMilliseconds !== 44_739 || budget.cellMilliseconds !== 240_000 || budget.cleanupReserveMilliseconds !== 30_000 || budget.overallMilliseconds !== 600_000) return fail("BUDGET_FIELDS")
+  if (entries.some(([, value]) => !Number.isSafeInteger(value) || value <= 0) || budget.selectorLatchMilliseconds !== 40_000 || budget.readerMilliseconds !== 44_739 || budget.publisherMilliseconds !== 25_000 || budget.publisherExitReserveMilliseconds !== 5_000 || budget.cellMilliseconds !== 240_000 || budget.cleanupReserveMilliseconds !== 30_000 || budget.overallMilliseconds !== 600_000) return fail("BUDGET_FIELDS")
   const setup = budget.sourceCheckMilliseconds + budget.approvalCheckMilliseconds + budget.oldTreeHashMilliseconds + budget.attemptMilliseconds + budget.readerMilliseconds + budget.memoryDockerMilliseconds + budget.filesystemMilliseconds + budget.reservationMilliseconds + budget.publicationMilliseconds
   const margin = budget.overallMilliseconds - setup - budget.cellMilliseconds - budget.cleanupReserveMilliseconds
-  if (margin <= 0 || setup - budget.readerMilliseconds > 285_261) return fail("BUDGET_EXCEEDED")
+  const preCellConfigured = budget.selectorLatchMilliseconds + setup - budget.publicationMilliseconds
+  // If the latch plus all configured pre-cell maxima exceed the 300s entry
+  // ceiling, the parent denies the cell. A positive path can therefore spend
+  // at most 300s before the 240s cell+normal cleanup and 30s child pending
+  // publication, then 25s publisher and 5s final-IPC reserve. A failed cell
+  // instead gets only the separate <=30s emergency cleanup reserve.
+  const gatedPreCell = Math.min(300_000, preCellConfigured)
+  if (margin <= 0 || setup - budget.readerMilliseconds > 285_261 || gatedPreCell + budget.cellMilliseconds + budget.publicationMilliseconds + budget.publisherMilliseconds + budget.publisherExitReserveMilliseconds > budget.overallMilliseconds || gatedPreCell + budget.cellMilliseconds + budget.cleanupReserveMilliseconds > budget.overallMilliseconds) return fail("BUDGET_EXCEEDED")
   return margin
 }
 /** Publication is post-cell work, so retain its own 30-second slot after the
@@ -142,7 +152,7 @@ const defaultOneCellSupervisorHost: OneCellSupervisorHost = {
  * in synchronous Git, filesystem, memory or publication work. */
 export const superviseOneCellLive = async (selector: OneCellLiveSelector, args: readonly string[], host: OneCellSupervisorHost = defaultOneCellSupervisorHost, commandStartedAt: number = host.now()): Promise<void> => {
   const startedAt = commandStartedAt
-  const latchRemaining = Math.max(1, Math.min(40_000, (selector === "run" ? 600_000 : 300_000) - (host.now() - startedAt)))
+  const latchRemaining = Math.max(1, Math.min(ONE_CELL_OPERATION_BUDGET.selectorLatchMilliseconds, (selector === "run" ? 600_000 : 300_000) - (host.now() - startedAt)))
   if (!await host.latch(selector, latchRemaining) || host.now() - startedAt >= (selector === "run" ? 600_000 : 300_000)) return fail("LIVE_SELECTOR_ATTEMPT_INVALID")
   const token = randomUUID(), child = host.spawn(token, selector, args)
   if (!child.pid || child.pid < 2) return fail("LIVE_SUPERVISOR_PID")
@@ -369,6 +379,25 @@ export const oneCellSourcePaths = (): readonly string[] => Object.freeze([...new
   ...oneCellPackageDirectories().map((directory) => `${directory}/package.json`),
   "package.json", "pnpm-workspace.yaml", "tsconfig.base.json", "tsconfig.json", "vitest.config.ts", "turbo.json",
 ])].sort())
+export const ONE_CELL_REQUIRED_WORKSPACE_LINKS = Object.freeze([
+  ["node_modules/@cowards/spec", "packages/spec"],
+  ["packages/strategy-lab/node_modules/@cowards/engine", "packages/engine"],
+  ["packages/strategy-lab/node_modules/@cowards/runtime-js", "packages/runtime-js"],
+  ["packages/strategy-lab/node_modules/@cowards/spec", "packages/spec"],
+  ["packages/runtime-js/node_modules/@cowards/engine", "packages/engine"],
+  ["packages/runtime-js/node_modules/@cowards/runtime-supervisor", "packages/runtime-supervisor"],
+  ["packages/runtime-js/node_modules/@cowards/spec", "packages/spec"],
+  ["packages/runtime-supervisor/node_modules/@cowards/spec", "packages/spec"],
+  ["packages/engine/node_modules/@cowards/spec", "packages/spec"],
+] as const)
+/** Source closure bytes are meaningful only if workspace imports resolve to
+ * those same source trees. Checked at source-gate reopening in every selector. */
+export const checkOneCellWorkspaceResolution = (resolveLink: (path: string) => string = (path) => realpathSync(path)) => {
+  for (const [link, target] of ONE_CELL_REQUIRED_WORKSPACE_LINKS) {
+    if (!lstatSync(link).isSymbolicLink() || !lstatSync(target).isDirectory() || resolveLink(link) !== realpathSync(target)) return fail("WORKSPACE_PACKAGE_ALIAS")
+  }
+  return true
+}
 export const oneCellSourceClosure = (read: (path: string) => Uint8Array = (path) => readNoFollow(path, 32_000_000)) => {
   const sourceFiles = oneCellSourcePaths().map((path) => ({ path, sha256: sha(read(path)) }))
   return { sourceFiles, sourceClosureRoot: labRoot("diagnostic-one-cell-source-closure-v3", sourceFiles) }
@@ -430,6 +459,7 @@ export const checkOneCellHistoricalSourceOnly = () => {
 }
 export const checkOneCellSourceGate = (gatePath: string = ONE_CELL_GATE_PATH, read: (path: string) => Uint8Array = (path) => readNoFollow(path, 32_000_000)) => {
   if (resolve(gatePath) !== resolve(ONE_CELL_GATE_PATH)) return fail("SOURCE_GATE_PATH")
+  checkOneCellWorkspaceResolution()
   const gate = JSON.parse(Buffer.from(read(gatePath)).toString("utf8")) as unknown
   if (!exact(gate, ["schemaVersion", "sourceFiles", "sourceClosureRoot", "reviewPath", "reviewSha256", "receiptPath", "receiptSha256", "reviewerId", "authorId", "actionableFindings", "commandsPassed", "historicalContinuity", "empiricalAuthority", "runAllowed", "leagueRequirementsEvidence", "freezeAuthorized", "formationAuthorized", "holdoutAuthorized", "counted", "public", "productionAuthorized", "signatureBase64", "root"])) return fail("SOURCE_GATE_KEYS")
   const { signatureBase64, root: gateRoot, ...fields } = gate
@@ -503,6 +533,27 @@ export const createOneCellParentObservation = (permit: ReturnType<typeof createO
 export const admitOneCellPublisherCompletion = (selector: OneCellLiveSelector, input: { readonly timedOut: boolean; readonly exitCode: number | null; readonly ready: boolean; readonly done: boolean; readonly observedElapsedMilliseconds: number }): number => {
   if (input.timedOut || input.exitCode !== 0 || !input.ready || !input.done || !Number.isSafeInteger(input.observedElapsedMilliseconds) || input.observedElapsedMilliseconds < 0 || input.observedElapsedMilliseconds > (selector === "run" ? 600_000 : 330_000)) return fail("PARENT_PUBLICATION_UNKNOWN_OR_LATE")
   return input.observedElapsedMilliseconds
+}
+/** The parent's observed post-fsync IPC and clean exit are the deadline event.
+ * The witness writer is deliberately after that event: its own fsync is proof
+ * of the observation, not an additional way to extend the deadline. */
+export const completeOneCellParentPublisherObservation = (
+  selector: OneCellLiveSelector,
+  status: "finished" | "prestart_denied",
+  token: string,
+  pendingRoot: LabRoot,
+  outcome: Parameters<typeof admitOneCellPublisherCompletion>[1],
+  operations: {
+    readonly loadCheckedCommit: () => { readonly permit: ReturnType<typeof createOneCellParentPermit>; readonly receipt: ReturnType<typeof createOneCellPublisherReceipt> }
+    readonly writeObservationAndFsync: (observation: ReturnType<typeof createOneCellParentObservation>) => void
+  },
+) => {
+  const observedElapsedMilliseconds = admitOneCellPublisherCompletion(selector, outcome)
+  const { permit, receipt } = operations.loadCheckedCommit()
+  if (permit.token !== token || permit.status !== status || permit.pendingRoot !== pendingRoot || receipt.token !== token) return fail("PARENT_PUBLICATION_TOKEN_OR_STATUS")
+  const observation = createOneCellParentObservation(permit, receipt, observedElapsedMilliseconds)
+  operations.writeObservationAndFsync(observation)
+  return observation
 }
 const checkOneCellPublisherCore = (selector: OneCellLiveSelector, canonicalRoot: LabRoot, gateRoot: LabRoot, authorizationRoot: LabRoot, allocationRoot: LabRoot) => {
   const rawPermit = readExact(ONE_CELL_PARENT_PERMIT_PATHS[selector], ONE_CELL_PARENT_PERMIT_PATHS[selector])
@@ -976,7 +1027,7 @@ export const reopenOneCellPublishedCommit = (selector: OneCellLiveSelector, pend
 const publishOneCellWithWatchdog = async (selector: OneCellLiveSelector, status: "finished" | "prestart_denied", commandStartedAt: number, context: OneCellPublisherContext): Promise<void> => {
   const token = randomUUID(), limit = selector === "run" ? 600_000 : 330_000
   const parentElapsedBeforePublisherMilliseconds = Math.ceil(performance.now() - commandStartedAt)
-  const remaining = Math.min(25_000, limit - parentElapsedBeforePublisherMilliseconds - 5_000)
+  const remaining = Math.min(ONE_CELL_OPERATION_BUDGET.publisherMilliseconds, limit - parentElapsedBeforePublisherMilliseconds - ONE_CELL_OPERATION_BUDGET.publisherExitReserveMilliseconds)
   if (remaining <= 0) return fail("PARENT_PUBLICATION_RESERVE")
   const child = spawn(resolve("node_modules/.bin/tsx"), [fileURLToPath(import.meta.url), "--internal-publish-v3", token, selector, status], { stdio: ["ignore", "pipe", "pipe", "ipc"], env: { PATH: process.env.PATH ?? "", TMPDIR: process.env.TMPDIR ?? "" }, shell: false, detached: true, windowsHide: true })
   if (!child.pid || child.pid < 2) return fail("PARENT_PUBLICATION_PID")
@@ -994,17 +1045,18 @@ const publishOneCellWithWatchdog = async (selector: OneCellLiveSelector, status:
       kill()
     })
   })
-  const observedElapsedMilliseconds = admitOneCellPublisherCompletion(selector, { timedOut, exitCode, ready, done, observedElapsedMilliseconds: Math.ceil(performance.now() - commandStartedAt) })
   // Only after the parent has observed post-receipt IPC and clean exit within
   // the selector deadline may it fsync the rooted witness. A crash during that
   // write leaves receipt-only state permanently ineligible. The witness fsync
   // is retained proof of the prior timed event, not another timed event.
-  const gate = checkOneCellSourceGate(), authorization = requireOneCellAuthorization(gate)
-  const allocation = selector === "prepare" ? prospectiveAllocation(gate) : readOneCellAllocation(gate)
-  const { permit, receipt } = checkOneCellPublisherCore(selector, context.pendingRoot, gate.root, authorization.root, allocation.root)
-  if (permit.token !== token || permit.status !== status || permit.pendingRoot !== context.pendingRoot) return fail("PARENT_PUBLICATION_TOKEN_OR_STATUS")
-  const observation = createOneCellParentObservation(permit, receipt, observedElapsedMilliseconds)
-  durableCreate(ONE_CELL_PARENT_OBSERVATION_PATHS[selector], observation)
+  completeOneCellParentPublisherObservation(selector, status, token, context.pendingRoot, { timedOut, exitCode, ready, done, observedElapsedMilliseconds: Math.ceil(performance.now() - commandStartedAt) }, {
+    loadCheckedCommit: () => {
+      const gate = checkOneCellSourceGate(), authorization = requireOneCellAuthorization(gate)
+      const allocation = selector === "prepare" ? prospectiveAllocation(gate) : readOneCellAllocation(gate)
+      return checkOneCellPublisherCore(selector, context.pendingRoot, gate.root, authorization.root, allocation.root)
+    },
+    writeObservationAndFsync: (observation) => durableCreate(ONE_CELL_PARENT_OBSERVATION_PATHS[selector], observation),
+  })
 }
 const waitOneCellPublisherPermission = (token: string): Promise<OneCellPublisherInstruction> => new Promise((resolveGo, rejectGo) => {
   if (!process.send || !process.connected) { rejectGo(new TypeError("DIAGNOSTIC_ONE_CELL_CLI_PUBLISHER_PARENT")); return }
