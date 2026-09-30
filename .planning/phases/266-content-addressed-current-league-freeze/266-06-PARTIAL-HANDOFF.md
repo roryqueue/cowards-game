@@ -21,8 +21,32 @@ TypeScript passed, the private lab boundary scan found zero violations across
 
 An independent preliminary review of `51fcde8b` found two gaps: inherited Git
 history overrides and a ledger snapshot that could omit earlier charges. The
-candidate repairs are committed at `f508a809` and `5a77f298`; a fresh independent
-review is pending. This is not the final Plan 06 source gate.
+repairs at `f508a809` and `5a77f298` have now passed an independent preliminary
+rereview by `/root/review_266_06_repairs`: both findings are closed, with zero
+remaining actionable findings in that limited scope. The exact reviewed source
+is `5a77f29818c9fbf7b40959d230d10db421df0089`, tree
+`d8b70b83e02991924b7c0d0705a91d844cdcff90`; parent-context source SHA-256
+`2b580d00a57e8968878155d7f40856cd3fdbe335181b0fe4fb4a63000cef7820`
+and test SHA-256
+`0fff0dec01fd04336553f4b75e04527aa638ab3d7c72f97401f7fd5749f56550`.
+The reviewer reran 28/28 focused tests, strict source TypeScript including
+`noUncheckedIndexedAccess`, strict source-plus-tests TypeScript, injected Git
+environment redirect checks, and whitespace checks. Enabling the extra
+`noUncheckedIndexedAccess` option on the test file also identifies two unchanged
+test-only TS2532 byte-mutation assertions at lines 1961 and 1982; this is not a
+source compilation failure. This limited rereview is not the final Plan 06
+source gate and does not establish a checked map, physical completeness or
+empirical validity.
+
+The read-only remaining-scope audit found ordinary missing composition work,
+not a missing external-custody prerequisite: the affirmed Phase 264 correction
+and Phase 265 response formats retain their parent anchors. The high-dependency
+league `record-links` format is an unlabeled union, however, so it cannot prove a
+particular direct semantic cell-start edge. Composition must preserve the
+journal/start/result bijection and terminal recomputation instead of inventing
+that edge. Source-only work now proceeds on the top-level checked-map/registry
+composition and the separate response-authoring evidence union in the isolated
+branch; synthetic fixtures cannot promote the actual process-invalid run.
 
 The full Phase 265 response/result union, independently reopened empirical
 outcome, complete producer-kind registry, three-store physical-set equality
