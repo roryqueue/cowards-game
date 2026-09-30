@@ -38,6 +38,27 @@ source compilation failure. This limited rereview is not the final Plan 06
 source gate and does not establish a checked map, physical completeness or
 empirical validity.
 
+### Retained-intake non-mutation repair
+
+The subsequent source-only audit found a real read-only violation:
+`readFactoryIngestion` could reopen an accepted human/external intake through
+ordinary admission, silently recreating a missing retained source, packet or
+proposal. Four focused regressions reproduced that behavior before the repair.
+Commit `c5ee96d6f167c09f6524c7b540f9a8b4c18cc067` (tree
+`a9b90f64e08b9f597017b8c7de33e87ae121875e`) adds
+`reopenFactorySourceAdmission`: validation runs without a repository, then all
+three exact physical artifacts must already exist and pass digest/length
+checks. Missing or corrupt bytes are denied without publication or repair;
+initial intake admission remains unchanged. This is a necessary source-only
+Plan 06 read-boundary repair, not a new empirical route.
+
+`/root/review_266_06_repairs` independently reviewed the exact five-file delta
+with zero actionable findings. All three affected suites passed 32/32 tests,
+strict non-emitting package TypeScript and whitespace checks passed, and the
+scoped files matched the pinned commit. The source-only lab boundary check
+also passed with zero violations over 1,344 files. This remains isolated,
+unmerged and non-authorizing; the final complete-map gate is still open.
+
 The read-only remaining-scope audit found ordinary missing composition work,
 not a missing external-custody prerequisite: the affirmed Phase 264 correction
 and Phase 265 response formats retain their parent anchors. The high-dependency
