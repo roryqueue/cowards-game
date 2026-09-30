@@ -1,6 +1,6 @@
 import { createHash, createPublicKey, randomUUID, verify as verifySignature } from "node:crypto"
 import { spawn, spawnSync, type ChildProcess } from "node:child_process"
-import { constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, renameSync, statfsSync, writeSync } from "node:fs"
+import { constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, readdirSync, renameSync, statfsSync, writeSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { performance } from "node:perf_hooks"
@@ -66,6 +66,7 @@ export const ONE_CELL_OPERATION_BUDGET = Object.freeze({
   sourceCheckMilliseconds: 30_000,
   approvalCheckMilliseconds: 10_000,
   oldTreeHashMilliseconds: 75_000,
+  attemptMilliseconds: 25_000,
   readerMilliseconds: 44_739,
   memoryDockerMilliseconds: 35_000,
   filesystemMilliseconds: 25_000,
@@ -78,7 +79,7 @@ export const ONE_CELL_OPERATION_BUDGET = Object.freeze({
 export const verifyOneCellComponentBudget = (budget: { readonly [K in keyof typeof ONE_CELL_OPERATION_BUDGET]: number }): number => {
   const entries = Object.entries(budget)
   if (entries.some(([, value]) => !Number.isSafeInteger(value) || value <= 0) || budget.readerMilliseconds !== 44_739 || budget.cellMilliseconds !== 240_000 || budget.cleanupReserveMilliseconds !== 30_000 || budget.overallMilliseconds !== 600_000) return fail("BUDGET_FIELDS")
-  const setup = budget.sourceCheckMilliseconds + budget.approvalCheckMilliseconds + budget.oldTreeHashMilliseconds + budget.readerMilliseconds + budget.memoryDockerMilliseconds + budget.filesystemMilliseconds + budget.reservationMilliseconds + budget.publicationMilliseconds
+  const setup = budget.sourceCheckMilliseconds + budget.approvalCheckMilliseconds + budget.oldTreeHashMilliseconds + budget.attemptMilliseconds + budget.readerMilliseconds + budget.memoryDockerMilliseconds + budget.filesystemMilliseconds + budget.reservationMilliseconds + budget.publicationMilliseconds
   const margin = budget.overallMilliseconds - setup - budget.cellMilliseconds - budget.cleanupReserveMilliseconds
   if (margin <= 0 || setup - budget.readerMilliseconds > 285_261) return fail("BUDGET_EXCEEDED")
   return margin
@@ -104,7 +105,7 @@ const ONE_CELL_STAGE_LIMIT: Readonly<Record<OneCellLiveStage, number>> = Object.
   source: ONE_CELL_OPERATION_BUDGET.sourceCheckMilliseconds,
   approval: ONE_CELL_OPERATION_BUDGET.approvalCheckMilliseconds,
   history: ONE_CELL_OPERATION_BUDGET.oldTreeHashMilliseconds,
-  attempt: ONE_CELL_OPERATION_BUDGET.reservationMilliseconds,
+  attempt: ONE_CELL_OPERATION_BUDGET.attemptMilliseconds,
   reader: ONE_CELL_OPERATION_BUDGET.readerMilliseconds,
   filesystem: ONE_CELL_OPERATION_BUDGET.filesystemMilliseconds,
   memory_docker: ONE_CELL_OPERATION_BUDGET.memoryDockerMilliseconds,
@@ -331,6 +332,11 @@ export const ONE_CELL_PUBLISHER_RECEIPT_PATHS = Object.freeze({
   preflight: ".planning/artifacts/v1.38-phase-265-one-cell-diagnostic-preflight-publisher-receipt-v3.json",
   run: ".planning/artifacts/v1.38-phase-265-one-cell-diagnostic-run-publisher-receipt-v3.json",
 } as const)
+export const ONE_CELL_PARENT_OBSERVATION_PATHS = Object.freeze({
+  prepare: ".planning/artifacts/v1.38-phase-265-one-cell-diagnostic-prepare-parent-observation-v3.json",
+  preflight: ".planning/artifacts/v1.38-phase-265-one-cell-diagnostic-preflight-parent-observation-v3.json",
+  run: ".planning/artifacts/v1.38-phase-265-one-cell-diagnostic-run-parent-observation-v3.json",
+} as const)
 export const ONE_CELL_REVIEWER_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAJRvawNm1BgHmt9AaLeCYYIEdnpjMQdn9BlSKAHvmD9o=\n-----END PUBLIC KEY-----"
 export const ONE_CELL_SOURCE_FILES = Object.freeze([
   "packages/strategy-lab/src/league/diagnostic-one-cell.ts", "packages/strategy-lab/src/league/diagnostic-one-cell.test.ts",
@@ -344,8 +350,27 @@ export const ONE_CELL_SOURCE_FILES = Object.freeze([
   "scripts/lib/v1-38-darwin-headroom.ts", "packages/strategy-lab/src/factory/repository.ts", "packages/strategy-lab/src/contracts.ts",
   "pnpm-lock.yaml", ".github/workflows/ci.yml",
 ] as const)
-export const oneCellSourceClosure = (read: (path: string) => Uint8Array = (path) => readNoFollow(path)) => {
-  const sourceFiles = ONE_CELL_SOURCE_FILES.map((path) => ({ path, sha256: sha(read(path)) }))
+const oneCellPackageDirectories = (): readonly string[] => Object.freeze(readdirSync("packages", { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => `packages/${entry.name}`).sort())
+export const oneCellTransitiveSourceTrees = (): readonly string[] => Object.freeze(["scripts", ...oneCellPackageDirectories().map((directory) => `${directory}/src`).filter((directory) => existsSync(directory))])
+export const oneCellSourceTreeFiles = (directory: string): string[] => {
+  if (!lstatSync(directory).isDirectory()) return fail("SOURCE_TREE_DIRECTORY")
+  const files: string[] = []
+  for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {
+    const path = `${directory}/${entry.name}`
+    if (entry.isDirectory()) files.push(...oneCellSourceTreeFiles(path))
+    else if (!entry.isFile()) return fail("SOURCE_TREE_ALIAS")
+    else if (/\.(?:ts|tsx|js|mjs|cjs|json)$/u.test(entry.name)) files.push(path)
+  }
+  return files
+}
+export const oneCellSourcePaths = (): readonly string[] => Object.freeze([...new Set([
+  ...ONE_CELL_SOURCE_FILES,
+  ...oneCellTransitiveSourceTrees().flatMap(oneCellSourceTreeFiles),
+  ...oneCellPackageDirectories().map((directory) => `${directory}/package.json`),
+  "package.json", "pnpm-workspace.yaml", "tsconfig.base.json", "tsconfig.json", "vitest.config.ts", "turbo.json",
+])].sort())
+export const oneCellSourceClosure = (read: (path: string) => Uint8Array = (path) => readNoFollow(path, 32_000_000)) => {
+  const sourceFiles = oneCellSourcePaths().map((path) => ({ path, sha256: sha(read(path)) }))
   return { sourceFiles, sourceClosureRoot: labRoot("diagnostic-one-cell-source-closure-v3", sourceFiles) }
 }
 export const oneCellRequiredGateCommands = (): readonly string[] => {
@@ -403,7 +428,7 @@ export const checkOneCellHistoricalSourceOnly = () => {
   if (pilotAllocation.root !== "sha256:8d642cdc20c4e0ff718a78bf0a38b4fe06cc4a3f4a8cee26969d86ad96bd49bc" || pilotResult.root !== "sha256:af7aa261ebc7cd38cf893ea24c7b6c7a7986999125fe6a0eea853d893277f732") return fail("PILOT_HISTORY")
   return Object.freeze({ historicalV1Root: verdict.root, historicalV2GateRoot: gateRoot, oldEvidenceBaseline: baseline })
 }
-export const checkOneCellSourceGate = (gatePath: string = ONE_CELL_GATE_PATH, read: (path: string) => Uint8Array = (path) => readNoFollow(path)) => {
+export const checkOneCellSourceGate = (gatePath: string = ONE_CELL_GATE_PATH, read: (path: string) => Uint8Array = (path) => readNoFollow(path, 32_000_000)) => {
   if (resolve(gatePath) !== resolve(ONE_CELL_GATE_PATH)) return fail("SOURCE_GATE_PATH")
   const gate = JSON.parse(Buffer.from(read(gatePath)).toString("utf8")) as unknown
   if (!exact(gate, ["schemaVersion", "sourceFiles", "sourceClosureRoot", "reviewPath", "reviewSha256", "receiptPath", "receiptSha256", "reviewerId", "authorId", "actionableFindings", "commandsPassed", "historicalContinuity", "empiricalAuthority", "runAllowed", "leagueRequirementsEvidence", "freezeAuthorized", "formationAuthorized", "holdoutAuthorized", "counted", "public", "productionAuthorized", "signatureBase64", "root"])) return fail("SOURCE_GATE_KEYS")
@@ -427,7 +452,7 @@ export const checkOneCellSourceGate = (gatePath: string = ONE_CELL_GATE_PATH, re
   return Object.freeze({ ...gate, root: gateRoot, sourceClosureRoot: closure.sourceClosureRoot, empiricalAuthority: false as const, runAllowed: false as const })
 }
 
-const exactDestinations = Object.freeze({ allocation: DIAGNOSTIC_ONE_CELL_ALLOCATION_PATH, allocationPending: ONE_CELL_ALLOCATION_PENDING_PATH, prepareSelectorAttempt: ONE_CELL_SELECTOR_ATTEMPT_PATHS.prepare, preflightAttempt: DIAGNOSTIC_ONE_CELL_PREFLIGHT_ATTEMPT_PATH, preflightSelectorAttempt: ONE_CELL_SELECTOR_ATTEMPT_PATHS.preflight, preflightDisposition: DIAGNOSTIC_ONE_CELL_PREFLIGHT_DISPOSITION_PATH, preflightPending: ONE_CELL_PREFLIGHT_PENDING_PATH, runSelectorAttempt: ONE_CELL_SELECTOR_ATTEMPT_PATHS.run, result: DIAGNOSTIC_ONE_CELL_RESULT_PATH, resultPending: ONE_CELL_RESULT_PENDING_PATH, prepareParentPermit: ONE_CELL_PARENT_PERMIT_PATHS.prepare, preflightParentPermit: ONE_CELL_PARENT_PERMIT_PATHS.preflight, runParentPermit: ONE_CELL_PARENT_PERMIT_PATHS.run, preparePublisherReceipt: ONE_CELL_PUBLISHER_RECEIPT_PATHS.prepare, preflightPublisherReceipt: ONE_CELL_PUBLISHER_RECEIPT_PATHS.preflight, runPublisherReceipt: ONE_CELL_PUBLISHER_RECEIPT_PATHS.run, store: DIAGNOSTIC_ONE_CELL_STORE })
+const exactDestinations = Object.freeze({ allocation: DIAGNOSTIC_ONE_CELL_ALLOCATION_PATH, allocationPending: ONE_CELL_ALLOCATION_PENDING_PATH, prepareSelectorAttempt: ONE_CELL_SELECTOR_ATTEMPT_PATHS.prepare, preflightAttempt: DIAGNOSTIC_ONE_CELL_PREFLIGHT_ATTEMPT_PATH, preflightSelectorAttempt: ONE_CELL_SELECTOR_ATTEMPT_PATHS.preflight, preflightDisposition: DIAGNOSTIC_ONE_CELL_PREFLIGHT_DISPOSITION_PATH, preflightPending: ONE_CELL_PREFLIGHT_PENDING_PATH, runSelectorAttempt: ONE_CELL_SELECTOR_ATTEMPT_PATHS.run, result: DIAGNOSTIC_ONE_CELL_RESULT_PATH, resultPending: ONE_CELL_RESULT_PENDING_PATH, prepareParentPermit: ONE_CELL_PARENT_PERMIT_PATHS.prepare, preflightParentPermit: ONE_CELL_PARENT_PERMIT_PATHS.preflight, runParentPermit: ONE_CELL_PARENT_PERMIT_PATHS.run, preparePublisherReceipt: ONE_CELL_PUBLISHER_RECEIPT_PATHS.prepare, preflightPublisherReceipt: ONE_CELL_PUBLISHER_RECEIPT_PATHS.preflight, runPublisherReceipt: ONE_CELL_PUBLISHER_RECEIPT_PATHS.run, prepareParentObservation: ONE_CELL_PARENT_OBSERVATION_PATHS.prepare, preflightParentObservation: ONE_CELL_PARENT_OBSERVATION_PATHS.preflight, runParentObservation: ONE_CELL_PARENT_OBSERVATION_PATHS.run, store: DIAGNOSTIC_ONE_CELL_STORE })
 const exactBounds = Object.freeze({ cellMilliseconds: 240_000, overallMilliseconds: 600_000, cleanupReserveMilliseconds: 30_000, maxChargedCells: 1, retries: 0, evidenceClass: "diagnostic_only", privacy: "private_offline", leagueRequirementsEvidence: false, freezeAuthorized: false, formationAuthorized: false, holdoutAuthorized: false, counted: false, public: false, productionAuthorized: false })
 const oneCellCanonicalPath = (selector: OneCellLiveSelector): string => selector === "prepare" ? DIAGNOSTIC_ONE_CELL_ALLOCATION_PATH : selector === "preflight" ? DIAGNOSTIC_ONE_CELL_PREFLIGHT_DISPOSITION_PATH : DIAGNOSTIC_ONE_CELL_RESULT_PATH
 const oneCellPendingPath = (selector: OneCellLiveSelector): string => selector === "prepare" ? ONE_CELL_ALLOCATION_PENDING_PATH : selector === "preflight" ? ONE_CELL_PREFLIGHT_PENDING_PATH : ONE_CELL_RESULT_PENDING_PATH
@@ -447,7 +472,7 @@ export const createOneCellParentPermit = (input: { readonly selector: OneCellLiv
 export const createOneCellPublisherReceipt = (permit: ReturnType<typeof createOneCellParentPermit>, canonicalRoot: LabRoot, publisherElapsedMilliseconds: number) => {
   const deadlineMilliseconds = permit.selector === "run" ? 600_000 : 330_000
   if (!root(canonicalRoot) || canonicalRoot !== permit.pendingRoot || !Number.isSafeInteger(publisherElapsedMilliseconds) || publisherElapsedMilliseconds < 0 || publisherElapsedMilliseconds > 25_000 || permit.parentElapsedBeforePublisherMilliseconds + publisherElapsedMilliseconds > deadlineMilliseconds - 5_000) return fail("PUBLISHER_RECEIPT_DEADLINE")
-  const fields = { schemaVersion: "diagnostic-one-cell-publisher-receipt-v3" as const, selector: permit.selector, status: permit.status, permitRoot: permit.root, token: permit.token, pendingRoot: permit.pendingRoot, canonicalRoot, canonicalPath: oneCellCanonicalPath(permit.selector), publisherElapsedMilliseconds, overallCommitBoundMilliseconds: deadlineMilliseconds, fsyncComplete: true as const }
+  const fields = { schemaVersion: "diagnostic-one-cell-publisher-receipt-v3" as const, selector: permit.selector, status: permit.status, permitRoot: permit.root, token: permit.token, pendingRoot: permit.pendingRoot, canonicalRoot, canonicalPath: oneCellCanonicalPath(permit.selector), publisherElapsedMilliseconds, overallCommitBoundMilliseconds: deadlineMilliseconds, canonicalFsyncComplete: true as const }
   return Object.freeze({ ...fields, root: labRoot("diagnostic-one-cell-publisher-receipt-v3", fields) })
 }
 /** Called only after the canonical file and directory fsync returned. A slow
@@ -469,17 +494,35 @@ export const publishOneCellCommitSequence = (permit: ReturnType<typeof createOne
   const receipt = prepareOneCellPublisherReceiptAfterCanonicalFsync(permit, canonicalRoot, publisherStartedAt, operations.now)
   operations.writeReceiptAndFsync(receipt)
 }
-export const requireOneCellPublisherCommit = (selector: OneCellLiveSelector, canonicalRoot: LabRoot, gateRoot: LabRoot, authorizationRoot: LabRoot, allocationRoot: LabRoot): ReturnType<typeof createOneCellPublisherReceipt> => {
+export const createOneCellParentObservation = (permit: ReturnType<typeof createOneCellParentPermit>, receipt: ReturnType<typeof createOneCellPublisherReceipt>, observedElapsedMilliseconds: number) => {
+  const deadlineMilliseconds = permit.selector === "run" ? 600_000 : 330_000
+  if (receipt.permitRoot !== permit.root || receipt.selector !== permit.selector || receipt.status !== permit.status || receipt.canonicalRoot !== permit.pendingRoot || !Number.isSafeInteger(observedElapsedMilliseconds) || observedElapsedMilliseconds < permit.parentElapsedBeforePublisherMilliseconds + receipt.publisherElapsedMilliseconds || observedElapsedMilliseconds > deadlineMilliseconds) return fail("PARENT_OBSERVATION_DEADLINE_OR_JOIN")
+  const fields = { schemaVersion: "diagnostic-one-cell-parent-observation-v3" as const, selector: permit.selector, status: permit.status, token: permit.token, permitRoot: permit.root, canonicalRoot: receipt.canonicalRoot, receiptRoot: receipt.root, pendingRoot: permit.pendingRoot, publisherExitCode: 0 as const, finalPublishCompleteIpc: true as const, observedElapsedMilliseconds, deadlineMilliseconds, event: "receipt_fsync_then_ipc_clean_exit" as const }
+  return Object.freeze({ ...fields, root: labRoot("diagnostic-one-cell-parent-observation-v3", fields) })
+}
+export const admitOneCellPublisherCompletion = (selector: OneCellLiveSelector, input: { readonly timedOut: boolean; readonly exitCode: number | null; readonly ready: boolean; readonly done: boolean; readonly observedElapsedMilliseconds: number }): number => {
+  if (input.timedOut || input.exitCode !== 0 || !input.ready || !input.done || !Number.isSafeInteger(input.observedElapsedMilliseconds) || input.observedElapsedMilliseconds < 0 || input.observedElapsedMilliseconds > (selector === "run" ? 600_000 : 330_000)) return fail("PARENT_PUBLICATION_UNKNOWN_OR_LATE")
+  return input.observedElapsedMilliseconds
+}
+const checkOneCellPublisherCore = (selector: OneCellLiveSelector, canonicalRoot: LabRoot, gateRoot: LabRoot, authorizationRoot: LabRoot, allocationRoot: LabRoot) => {
   const rawPermit = readExact(ONE_CELL_PARENT_PERMIT_PATHS[selector], ONE_CELL_PARENT_PERMIT_PATHS[selector])
   if (!exact(rawPermit, ["schemaVersion", "selector", "status", "token", "gateRoot", "authorizationRoot", "allocationRoot", "pendingRoot", "stageTranscript", "stageTranscriptRoot", "childElapsedMilliseconds", "parentElapsedBeforePublisherMilliseconds", "childExitCode", "finalIpc", "root"])) return fail("PARENT_PERMIT_KEYS")
   const context = { pendingRoot: rawPermit.pendingRoot as LabRoot, stageTranscript: rawPermit.stageTranscript as readonly OneCellLiveStage[], childElapsedMilliseconds: rawPermit.childElapsedMilliseconds as number, parentElapsedBeforePublisherMilliseconds: rawPermit.parentElapsedBeforePublisherMilliseconds as number }
   const expectedPermit = createOneCellParentPermit({ selector, status: rawPermit.status as "finished" | "prestart_denied", token: rawPermit.token as string, gateRoot, authorizationRoot, allocationRoot, context })
   if (!same(rawPermit, expectedPermit) || expectedPermit.pendingRoot !== canonicalRoot) return fail("PARENT_PERMIT_MISMATCH")
   const rawReceipt = readExact(ONE_CELL_PUBLISHER_RECEIPT_PATHS[selector], ONE_CELL_PUBLISHER_RECEIPT_PATHS[selector])
-  if (!exact(rawReceipt, ["schemaVersion", "selector", "status", "permitRoot", "token", "pendingRoot", "canonicalRoot", "canonicalPath", "publisherElapsedMilliseconds", "overallCommitBoundMilliseconds", "fsyncComplete", "root"])) return fail("PUBLISHER_RECEIPT_KEYS")
+  if (!exact(rawReceipt, ["schemaVersion", "selector", "status", "permitRoot", "token", "pendingRoot", "canonicalRoot", "canonicalPath", "publisherElapsedMilliseconds", "overallCommitBoundMilliseconds", "canonicalFsyncComplete", "root"])) return fail("PUBLISHER_RECEIPT_KEYS")
   const expectedReceipt = createOneCellPublisherReceipt(expectedPermit, canonicalRoot, rawReceipt.publisherElapsedMilliseconds as number)
   if (!same(rawReceipt, expectedReceipt)) return fail("PUBLISHER_RECEIPT_MISMATCH")
-  return expectedReceipt
+  return { permit: expectedPermit, receipt: expectedReceipt }
+}
+export const requireOneCellPublisherCommit = (selector: OneCellLiveSelector, canonicalRoot: LabRoot, gateRoot: LabRoot, authorizationRoot: LabRoot, allocationRoot: LabRoot): ReturnType<typeof createOneCellPublisherReceipt> => {
+  const { permit, receipt } = checkOneCellPublisherCore(selector, canonicalRoot, gateRoot, authorizationRoot, allocationRoot)
+  const rawObservation = readExact(ONE_CELL_PARENT_OBSERVATION_PATHS[selector], ONE_CELL_PARENT_OBSERVATION_PATHS[selector])
+  if (!exact(rawObservation, ["schemaVersion", "selector", "status", "token", "permitRoot", "canonicalRoot", "receiptRoot", "pendingRoot", "publisherExitCode", "finalPublishCompleteIpc", "observedElapsedMilliseconds", "deadlineMilliseconds", "event", "root"])) return fail("PARENT_OBSERVATION_KEYS")
+  const expectedObservation = createOneCellParentObservation(permit, receipt, rawObservation.observedElapsedMilliseconds as number)
+  if (!same(rawObservation, expectedObservation)) return fail("PARENT_OBSERVATION_MISMATCH")
+  return receipt
 }
 const prospectiveAllocation = (gate: { readonly root: LabRoot; readonly sourceClosureRoot: LabRoot }) => createDiagnosticOneCellAllocation({ sourceClosureRoot: gate.sourceClosureRoot, implementationRoot: gate.sourceClosureRoot, gateRoot: gate.root, oldEvidenceBaseline: readDiagnosticPilotOldEvidenceBaseline() })
 export const oneCellOperatorLiteral = (gate: { readonly root: LabRoot; readonly sourceClosureRoot: LabRoot }): string => {
@@ -902,8 +945,8 @@ const publishOneCellAfterSupervision = async (selector: OneCellLiveSelector, sta
     writeReceiptAndFsync: (receipt) => durableCreate(ONE_CELL_PUBLISHER_RECEIPT_PATHS.run, receipt),
   })
 }
-/** Receipt is the single durable publisher commit point. This is read-only and
- * safe to rerun after lost final IPC; it never repairs a missing receipt. */
+/** Parent observation is the eligibility commit point. This is read-only and
+ * never repairs missing IPC, receipt or witness evidence. */
 export const reopenOneCellPublishedCommit = (selector: OneCellLiveSelector, pendingRoot: LabRoot): boolean => {
   try {
     if (!root(pendingRoot)) return false
@@ -951,14 +994,17 @@ const publishOneCellWithWatchdog = async (selector: OneCellLiveSelector, status:
       kill()
     })
   })
-  if (timedOut || exitCode !== 0 || !ready || !done || performance.now() - commandStartedAt > limit) {
-    // The receipt, not final IPC, is the durable commit point. A lost reply
-    // after its fsync is classified by read-only exact join; no second write.
-    if (performance.now() - commandStartedAt >= limit) return fail("PARENT_PUBLICATION_DEADLINE")
-    const remainingReopen = Math.max(1, Math.min(5_000, limit - (performance.now() - commandStartedAt)))
-    const reopened = spawnSync(resolve("node_modules/.bin/tsx"), [fileURLToPath(import.meta.url), "--internal-reopen-v3", selector, context.pendingRoot], { encoding: "utf8", env: { PATH: process.env.PATH ?? "", TMPDIR: process.env.TMPDIR ?? "" }, stdio: ["ignore", "pipe", "pipe"], timeout: remainingReopen, maxBuffer: 4096 })
-    if (reopened.status !== 0 || reopened.signal !== null || reopened.error || reopened.stdout !== "committed\n") return fail("PARENT_PUBLICATION_UNKNOWN_REOPEN_REQUIRED")
-  }
+  const observedElapsedMilliseconds = admitOneCellPublisherCompletion(selector, { timedOut, exitCode, ready, done, observedElapsedMilliseconds: Math.ceil(performance.now() - commandStartedAt) })
+  // Only after the parent has observed post-receipt IPC and clean exit within
+  // the selector deadline may it fsync the rooted witness. A crash during that
+  // write leaves receipt-only state permanently ineligible. The witness fsync
+  // is retained proof of the prior timed event, not another timed event.
+  const gate = checkOneCellSourceGate(), authorization = requireOneCellAuthorization(gate)
+  const allocation = selector === "prepare" ? prospectiveAllocation(gate) : readOneCellAllocation(gate)
+  const { permit, receipt } = checkOneCellPublisherCore(selector, context.pendingRoot, gate.root, authorization.root, allocation.root)
+  if (permit.token !== token || permit.status !== status || permit.pendingRoot !== context.pendingRoot) return fail("PARENT_PUBLICATION_TOKEN_OR_STATUS")
+  const observation = createOneCellParentObservation(permit, receipt, observedElapsedMilliseconds)
+  durableCreate(ONE_CELL_PARENT_OBSERVATION_PATHS[selector], observation)
 }
 const waitOneCellPublisherPermission = (token: string): Promise<OneCellPublisherInstruction> => new Promise((resolveGo, rejectGo) => {
   if (!process.send || !process.connected) { rejectGo(new TypeError("DIAGNOSTIC_ONE_CELL_CLI_PUBLISHER_PARENT")); return }
