@@ -402,11 +402,23 @@ export const oneCellSourceClosure = (read: (path: string) => Uint8Array = (path)
   const sourceFiles = oneCellSourcePaths().map((path) => ({ path, sha256: sha(read(path)) }))
   return { sourceFiles, sourceClosureRoot: labRoot("diagnostic-one-cell-source-closure-v3", sourceFiles) }
 }
+export const oneCellVitestCommandFiles = (command: string, inspect: (path: string) => { readonly isFile: () => boolean; readonly nlink: number } = (path) => { const entry = lstatSync(path); return { isFile: () => entry.isFile(), nlink: Number(entry.nlink) } }): readonly string[] => {
+  if (!command.startsWith("./node_modules/.bin/vitest run --maxWorkers=1 ")) return Object.freeze([])
+  const files = command.split(/\s+/u).filter((part) => part.endsWith(".test.ts"))
+  if (!files.length || new Set(files).size !== files.length) return fail("GATE_TEST_FILE_SET")
+  for (const file of files) {
+    if (!/^(?:packages|scripts)\/[a-zA-Z0-9_./-]+\.test\.ts$/u.test(file) || file.includes("..")) return fail("GATE_TEST_FILE_PATH")
+    let entry: { readonly isFile: () => boolean; readonly nlink: number }
+    try { entry = inspect(file) } catch { return fail("GATE_TEST_FILE_ABSENT") }
+    if (!entry.isFile() || entry.nlink !== 1) return fail("GATE_TEST_FILE_ALIAS")
+  }
+  return Object.freeze(files)
+}
 export const oneCellRequiredGateCommands = (): readonly string[] => {
   const ci = readNoFollow(".github/workflows/ci.yml").toString("utf8").split("\n")
   const leagueLine = ci.find((line) => line.includes("vitest run --maxWorkers=1 packages/strategy-lab/src/league/contracts.test.ts"))?.trim()
   if (!leagueLine || (leagueLine.match(/\.test\.ts/gu) ?? []).length !== 29) return fail("CI_29_SUITE_DRIFT")
-  return Object.freeze([
+  const commands = [
     "./node_modules/.bin/vitest run --maxWorkers=1 packages/strategy-lab/src/league/diagnostic-one-cell.test.ts packages/strategy-lab/src/league/connected-runner.test.ts scripts/run-v1-38-one-cell-diagnostic.test.ts scripts/check-v1-38-one-cell-diagnostic-boundaries.test.ts scripts/lib/v1-38-factory-supervised-runtime.test.ts scripts/lib/v1-38-planner-supervised-runtime.test.ts",
     leagueLine,
     "./node_modules/.bin/tsc --noEmit -p packages/strategy-lab/tsconfig.json",
@@ -418,9 +430,22 @@ export const oneCellRequiredGateCommands = (): readonly string[] => {
     "./node_modules/.bin/tsx scripts/check-v1-38-diagnostic-pilot-boundaries.ts",
     "./node_modules/.bin/tsx scripts/check-v1-38-one-cell-diagnostic-boundaries.ts",
     "pnpm exec tsx scripts/check-service-boundary-imports.ts",
-    "./node_modules/.bin/vitest run --maxWorkers=1 scripts/check-v1-38-serious-league-boundaries.test.ts scripts/check-v1-38-lab-boundaries.test.ts scripts/check-v1-38-factory-boundaries.test.ts scripts/check-v1-38-diagnostic-pilot-boundaries.test.ts scripts/check-v1-38-one-cell-diagnostic-boundaries.test.ts",
+    "./node_modules/.bin/vitest run --maxWorkers=1 scripts/check-v1-38-serious-league-boundaries.test.ts scripts/check-v1-38-lab-boundaries.test.ts scripts/check-v1-38-factory-boundaries.test.ts scripts/run-v1-38-diagnostic-pilot.test.ts scripts/check-v1-38-one-cell-diagnostic-boundaries.test.ts",
     "./node_modules/.bin/tsx scripts/run-v1-38-one-cell-diagnostic.ts check-history-source-only-v3",
-  ])
+  ]
+  for (const command of commands) for (const file of command.split(/\s+/u).filter((part) => part.endsWith(".ts"))) {
+    if (!/^(?:packages|scripts)\/[a-zA-Z0-9_./-]+\.ts$/u.test(file) || file.includes("..")) return fail("GATE_SOURCE_COMMAND_PATH")
+    let entry: { readonly isFile: () => boolean; readonly nlink: number }
+    try { entry = lstatSync(file) } catch { return fail("GATE_SOURCE_COMMAND_ABSENT") }
+    if (!entry.isFile() || entry.nlink !== 1) return fail("GATE_SOURCE_COMMAND_ALIAS")
+  }
+  if ([oneCellVitestCommandFiles(commands[0]!).length, oneCellVitestCommandFiles(commands[1]!).length, oneCellVitestCommandFiles(commands[11]!).length].join(",") !== "6,29,5") return fail("GATE_TEST_FILE_COUNT")
+  return Object.freeze(commands)
+}
+export const isOneCellCommandReceiptEntry = (entry: unknown, command: string): boolean => {
+  if (!exact(entry, ["command", "exitCode", "testCount", "testFileCount", "executedTestFiles"]) || entry.command !== command || entry.exitCode !== 0 || !Number.isSafeInteger(entry.testCount) || !Number.isSafeInteger(entry.testFileCount) || !Array.isArray(entry.executedTestFiles)) return false
+  const requiredFiles = oneCellVitestCommandFiles(command)
+  return entry.testFileCount === requiredFiles.length && same(entry.executedTestFiles, requiredFiles) && (entry.testCount as number) >= requiredFiles.length
 }
 export const oneCellGateSigningPayload = (fields: Record<string, unknown>): Uint8Array => Buffer.from(JSON.stringify({ domain: "diagnostic-one-cell-source-gate-signature-v3", fields }), "utf8")
 const PLAN10_COMMIT = "1ebf10ae9325fd11048c33e5bbc3c20d29a08836"
@@ -472,7 +497,7 @@ export const checkOneCellSourceGate = (gatePath: string = ONE_CELL_GATE_PATH, re
   const receipt = JSON.parse(Buffer.from(read(ONE_CELL_RECEIPT_PATH)).toString("utf8")) as unknown
   if (!exact(receipt, ["schemaVersion", "sourceClosureRoot", "commands", "historicalV1Root", "historicalV2GateRoot", "complete", "root"]) || receipt.schemaVersion !== "diagnostic-one-cell-command-receipt-v3" || receipt.sourceClosureRoot !== closure.sourceClosureRoot || receipt.historicalV2GateRoot !== "sha256:5cf7974145be0fd6d665dc28127aa83fff1b29ce1749dc5b2d6dc4d04bdad6d1" || !root(receipt.historicalV1Root) || receipt.complete !== true || !Array.isArray(receipt.commands)) return fail("SOURCE_GATE_RECEIPT")
   const commands = oneCellRequiredGateCommands()
-  if (receipt.commands.length !== commands.length || receipt.commands.some((entry, index) => !exact(entry, ["command", "exitCode", "testCount"]) || entry.command !== commands[index] || entry.exitCode !== 0 || !Number.isSafeInteger(entry.testCount) || (entry.testCount as number) < (new Set([0, 1, 11]).has(index) ? 1 : 0))) return fail("SOURCE_GATE_COMMANDS")
+  if (receipt.commands.length !== commands.length || receipt.commands.some((entry, index) => !isOneCellCommandReceiptEntry(entry, commands[index]!))) return fail("SOURCE_GATE_COMMANDS")
   const { root: receiptRoot, ...receiptBody } = receipt
   if (receiptRoot !== labRoot("diagnostic-one-cell-command-receipt-v3", receiptBody)) return fail("SOURCE_GATE_RECEIPT_ROOT")
   if (!verifySignature(null, oneCellGateSigningPayload(fields), createPublicKey(ONE_CELL_REVIEWER_PUBLIC_KEY_PEM), Buffer.from(signatureBase64, "base64"))) return fail("SOURCE_GATE_SIGNATURE")

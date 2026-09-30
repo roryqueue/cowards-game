@@ -35,6 +35,8 @@ import {
   executeOneCellPreflightOnce,
   observeOneCellHost,
   oneCellRequiredGateCommands,
+  oneCellVitestCommandFiles,
+  isOneCellCommandReceiptEntry,
   oneCellOperatorLiteral,
   prepareOneCellPublisherReceiptAfterCanonicalFsync,
   publishOneCellCommitSequence,
@@ -292,7 +294,7 @@ describe("source-only one-cell v3 command contracts", () => {
     const reviewerId = "independent-reviewer", authorId = "source-author"
     const fingerprint = digest(createPublicKey(ONE_CELL_REVIEWER_PUBLIC_KEY_PEM).export({ type: "spki", format: "der" }) as Buffer)
     const review = Buffer.from(`Reviewer: ${reviewerId}\nActionable findings: 0\nPublic key fingerprint: ${fingerprint}\nSource closure: ${closure.sourceClosureRoot}\n`)
-    const receiptFields = { schemaVersion: "diagnostic-one-cell-command-receipt-v3", sourceClosureRoot: closure.sourceClosureRoot, commands: oneCellRequiredGateCommands().map((command) => ({ command, exitCode: 0, testCount: 1 })), historicalV1Root: hash("history"), historicalV2GateRoot: "sha256:5cf7974145be0fd6d665dc28127aa83fff1b29ce1749dc5b2d6dc4d04bdad6d1", complete: true }
+    const receiptFields = { schemaVersion: "diagnostic-one-cell-command-receipt-v3", sourceClosureRoot: closure.sourceClosureRoot, commands: oneCellRequiredGateCommands().map((command) => { const executedTestFiles = oneCellVitestCommandFiles(command); return { command, exitCode: 0, testCount: Math.max(1, executedTestFiles.length), testFileCount: executedTestFiles.length, executedTestFiles } }), historicalV1Root: hash("history"), historicalV2GateRoot: "sha256:5cf7974145be0fd6d665dc28127aa83fff1b29ce1749dc5b2d6dc4d04bdad6d1", complete: true }
     const receipt = Buffer.from(JSON.stringify({ ...receiptFields, root: labRoot("diagnostic-one-cell-command-receipt-v3", receiptFields) }))
     const fields = { schemaVersion: "diagnostic-one-cell-source-gate-v3", sourceFiles: closure.sourceFiles, sourceClosureRoot: closure.sourceClosureRoot, reviewPath: ONE_CELL_REVIEW_PATH, reviewSha256: digest(review), receiptPath: ONE_CELL_RECEIPT_PATH, receiptSha256: digest(receipt), reviewerId, authorId, actionableFindings: 0, commandsPassed: true, historicalContinuity: true, empiricalAuthority: false, runAllowed: false, leagueRequirementsEvidence: false, freezeAuthorized: false, formationAuthorized: false, holdoutAuthorized: false, counted: false, public: false, productionAuthorized: false }
     const signatureBase64 = Buffer.alloc(64).toString("base64")
@@ -305,6 +307,22 @@ describe("source-only one-cell v3 command contracts", () => {
       expect(oneCellSourcePaths()).toContain(dependency)
       expect(() => checkOneCellSourceGate(ONE_CELL_GATE_PATH, (path) => path === dependency ? Buffer.from("mutated implementation") : read(path))).toThrow("SOURCE_GATE_DRIFT")
     }
+  })
+
+  it("requires existing regular Vitest files and exact observed suite sets in the signed command receipt", () => {
+    const commands = oneCellRequiredGateCommands()
+    const focused = oneCellVitestCommandFiles(commands[0]!), ci = oneCellVitestCommandFiles(commands[1]!), boundaries = oneCellVitestCommandFiles(commands[11]!)
+    expect([focused.length, ci.length, boundaries.length]).toEqual([6, 29, 5])
+    expect(boundaries).toContain("scripts/run-v1-38-diagnostic-pilot.test.ts")
+    expect(commands[11]).not.toContain("scripts/check-v1-38-diagnostic-pilot-boundaries.test.ts")
+    expect(() => oneCellVitestCommandFiles(commands[11]!.replace("scripts/run-v1-38-diagnostic-pilot.test.ts", "scripts/check-v1-38-diagnostic-pilot-boundaries.test.ts"))).toThrow("GATE_TEST_FILE_ABSENT")
+    expect(() => oneCellVitestCommandFiles(commands[11]!, (path) => path === boundaries[0] ? { isFile: () => false, nlink: 1 } : { isFile: () => true, nlink: 1 })).toThrow("GATE_TEST_FILE_ALIAS")
+    const complete = { command: commands[11]!, exitCode: 0, testCount: 87, testFileCount: boundaries.length, executedTestFiles: boundaries }
+    expect(isOneCellCommandReceiptEntry(complete, commands[11]!)).toBe(true)
+    expect(isOneCellCommandReceiptEntry({ ...complete, testFileCount: 4, executedTestFiles: boundaries.slice(0, 4) }, commands[11]!)).toBe(false)
+    expect(isOneCellCommandReceiptEntry({ ...complete, testCount: 1 }, commands[11]!)).toBe(false)
+    expect(isOneCellCommandReceiptEntry({ ...complete, executedTestFiles: [...boundaries].reverse() }, commands[11]!)).toBe(false)
+    expect(isOneCellCommandReceiptEntry({ ...complete, executedTestFiles: [...boundaries, "scripts/foreign.test.ts"] }, commands[11]!)).toBe(false)
   })
 
   it("recomputes code-tree membership and rejects added aliases", () => {
