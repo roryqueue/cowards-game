@@ -28,7 +28,7 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 ## Current Session Continuity — 2026-09-29 prospective one-cell route planning
 
 Phase266 Plan06 has a separate isolated, source-only partial checkpoint at
-`6c459e68`, recorded in `266-06-PARTIAL-HANDOFF.md`. It is unmerged and
+`8dfc080e`, recorded in `266-06-PARTIAL-HANDOFF.md`. It is unmerged and
 non-authorizing: no complete independently expected factory/league/response
 object set or future reviewed Phase265 source epoch is available, so Plan02
 cannot consume a checked map and no real absence/freeze operation is open.

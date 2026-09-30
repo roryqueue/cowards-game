@@ -2,6 +2,29 @@
 
 **Disposition:** incomplete, non-authorizing. No checked parent map, real-store scan, absence receipt, freeze root, Match, formation, holdout, counted or public action.
 
+## Latest isolated checkpoint — 2026-09-30
+
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`8dfc080e894f7b6e45e5e3954f1f8570a2bfce9a`. Since the earlier checkpoint
+below, synthetic parent joins have been added for 64-object declarations,
+calibration attempt/journal pairs, successful supervision streams, Phase 264
+sibling pairing, candidate-evidence imports, and the full initial imported
+candidate roster selected from an authenticated Phase 265 run-start. Every
+helper still returns `issued:false`; a content hash or observed read alone never
+grants ownership. The latest focused tests passed 25/25, strict source/test
+TypeScript passed, the private lab boundary scan found zero violations across
+1,343 files, and `git diff --check` passed. These are source-only fixture checks.
+
+The full Phase 265 response/result union, independently reopened empirical
+outcome, complete producer-kind registry, three-store physical-set equality
+and orphan rejection, integrated checked-map rederivation, and independent
+exact-source review remain open. No real private store was scanned. Plan 02
+cannot consume this partial map and Plan 04 cannot claim a valid freeze. Source
+work continues in the isolated branch without changing the Phase 265
+authorization or either consumed allocation.
+
+## Earlier 6c459e68 checkpoint — historical context
+
 The isolated `codex/phase266-context` worktree is clean at commit `6c459e68f3da6b828071254fa30e13f20cbb5310`; it has not been merged or pushed. It contains source-only primitives for post-digest repository read observation, no-follow direct journal reopening, the consumed Plan 265-07 historical Git source roots and emitter roster, three-store physical-set comparison, league graph/execution-stream expansion, factory candidate closure, payoff/report/author-raw parent links, run marker/reservation joins, response success/failure journal expected pairs, an invocation-scoped original-Phase-264 readiness not-reached proof, and candidate-publication to fingerprint-evidence/graph-node side-object joins. The consumed historical source is a mechanics fixture only: the checker intentionally refuses a later source epoch pending its own independent review.
 
 Focused parent-context tests passed 22/22 at the latest candidate-side checkpoint; strict standalone TypeScript and the lab boundary scan passed (0 violations/1,343 files). Repository observer suites passed 12/12 and package TypeScript build passed before the later joins. The full suite and final independent Plan 06 review were not run on the latest checkpoint; these partial checks must not be promoted to a Plan 06 pass.
