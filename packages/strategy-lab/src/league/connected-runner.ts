@@ -279,11 +279,15 @@ const requireDiagnosticOneCellOpaquePair = (input: { readonly allocation: Diagno
   const start = createDiagnosticOneCellStart(allocation, cell)
   if (input.start.root !== start.root || input.bottom === input.top) return fail("ONE_CELL_MATCH_REQUEST")
   const bottom = requireOneCellIssued(input.bottom, allocation, cell, start, "bottom"), top = requireOneCellIssued(input.top, allocation, cell, start, "top")
+  // The caller retains its input object and its kernel-entry callback runs
+  // after this admission. Only a detached, deeply frozen snapshot may cross
+  // that callback boundary into the canonical Match bridge.
+  const match = freezeLabValue(structuredClone(input.match))
   const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")
-  if (!smoke || input.match.seed !== allocation.seed || labRoot("diagnostic-one-cell-arena-v3", input.match.arenaVariant) !== labRoot("diagnostic-one-cell-arena-v3", smoke) || input.match.bottomPlayerId === input.match.topPlayerId || input.match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || input.match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || input.match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || input.match.bottomStrategyRevisionId !== bottom.identity.revisionId || input.match.topStrategyRevisionId !== top.identity.revisionId) return fail("ONE_CELL_MATCH_BINDING")
-  return Object.freeze({ bottom, top })
+  if (!smoke || !exact(match, ["matchId", "seed", "arenaVariant", "bottomPlayerId", "topPlayerId", "initialInitiativePlayerId", "bottomStrategyRevisionId", "topStrategyRevisionId"]) || match.matchId !== `one-cell-${cell.requestRoot.slice(7)}` || match.seed !== allocation.seed || labRoot("diagnostic-one-cell-arena-v3", match.arenaVariant) !== labRoot("diagnostic-one-cell-arena-v3", smoke) || match.bottomPlayerId === match.topPlayerId || match.bottomPlayerId !== `league-${cell.bottomCandidateRoot.slice(7)}` || match.topPlayerId !== `league-${cell.topCandidateRoot.slice(7)}` || match.initialInitiativePlayerId !== `league-${cell.initialInitiativeCandidateRoot.slice(7)}` || match.bottomStrategyRevisionId !== bottom.identity.revisionId || match.topStrategyRevisionId !== top.identity.revisionId) return fail("ONE_CELL_MATCH_BINDING")
+  return Object.freeze({ bottom, top, match, matchRoot: labRoot("diagnostic-one-cell-admitted-match-v3", match) })
 }
-const oneCellBridgePermits = new WeakMap<object, { readonly bottom: FactorySupervisionProvider; readonly top: FactorySupervisionProvider; readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; consumed: boolean }>()
+const oneCellBridgePermits = new WeakMap<object, { readonly bottom: FactorySupervisionProvider; readonly top: FactorySupervisionProvider; readonly match: Parameters<typeof runCanonicalLabMatch>[0]["match"]; readonly matchRoot: LabRoot; consumed: boolean }>()
 export interface DiagnosticOneCellBridgePermit { readonly schemaVersion: "diagnostic-one-cell-bridge-permit-v3"; toJSON(): never }
 /** The bridge does not return unwrapped providers. This one-shot operation is
  * callable only with a token created inside runDiagnosticOneCellCell. */
@@ -291,6 +295,7 @@ export const runDiagnosticOneCellCanonicalFromBridge = async (value: DiagnosticO
   const binding = value && oneCellBridgePermits.get(value)
   if (!binding || binding.consumed) return fail("ONE_CELL_BRIDGE_PERMIT")
   binding.consumed = true
+  if (labRoot("diagnostic-one-cell-admitted-match-v3", binding.match) !== binding.matchRoot) return fail("ONE_CELL_BRIDGE_MATCH_DRIFT")
   return runCanonicalLabMatch({ match: binding.match, providers: { [binding.match.bottomPlayerId]: binding.bottom, [binding.match.topPlayerId]: binding.top } })
 }
 export const closeDiagnosticOneCellIssuedProvider = (value: DiagnosticOneCellIssuedProvider): boolean => {
@@ -310,7 +315,7 @@ export const runDiagnosticOneCellCell = async (input: Readonly<{
   bottom: DiagnosticOneCellIssuedProvider
   top: DiagnosticOneCellIssuedProvider
   match: Parameters<typeof runCanonicalLabMatch>[0]["match"]
-  onKernelEntry: () => void
+  onKernelEntry: (admittedMatch: Parameters<typeof runCanonicalLabMatch>[0]["match"]) => void
   onEvidenceStart: () => void
 }>): Promise<Readonly<{ disposition: "success" | "system_failure" | "player_violation"; processValidity: "process_valid" | "process_invalid"; evidenceRoot: LabRoot; artifactBytes: number; artifactRecords: number; transitionCount: number; accountingCount: number; cleanupComplete: boolean }>> => {
   const allocation = admitDiagnosticOneCellAllocation(input.allocation), cell = admitDiagnosticOneCellCell(allocation, input.cell)
@@ -319,8 +324,8 @@ export const runDiagnosticOneCellCell = async (input: Readonly<{
   const providers = requireDiagnosticOneCellOpaquePair({ allocation, cell, start, match: input.match, bottom: input.bottom, top: input.top })
   const runPermit = input.ledger.writeRunAttempt(start)
   const bridgePermit = Object.freeze({ schemaVersion: "diagnostic-one-cell-bridge-permit-v3" as const, toJSON(): never { return fail("ONE_CELL_BRIDGE_PERMIT_NON_SERIALIZABLE") } })
-  oneCellBridgePermits.set(bridgePermit, { ...providers, match: input.match, consumed: false })
-  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, bridgePermit, onKernelEntry: input.onKernelEntry, onEvidenceStart: input.onEvidenceStart })
+  oneCellBridgePermits.set(bridgePermit, { ...providers, consumed: false })
+  const retained = await runAndRetainCanonicalDiagnosticOneCell({ ledger: input.ledger, allocation, cell, start, runPermit, bridgePermit, onKernelEntry: () => input.onKernelEntry(providers.match), onEvidenceStart: input.onEvidenceStart })
   return Object.freeze({ disposition: retained.disposition, processValidity: retained.processValidity, evidenceRoot: retained.evidenceRoot, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords, transitionCount: retained.transitionCount, accountingCount: retained.accountingCount, cleanupComplete: retained.cleanupComplete })
 }
 

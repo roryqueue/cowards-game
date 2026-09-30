@@ -146,3 +146,44 @@ historicalIt("binds a distinct v3 precharge and opaque handles; rejects both old
   await expect(runAndRetainCanonicalDiagnosticOneCell({ ledger, allocation, cell, start, runPermit, bridgePermit: {} as never, onKernelEntry: () => {}, onEvidenceStart: () => {} })).rejects.toThrow("ONE_CELL_BRIDGE_PERMIT")
   await expect(runAndRetainCanonicalDiagnosticOneCell({ ledger, allocation, cell, start, runPermit, bridgePermit: {} as never, onKernelEntry: () => {}, onEvidenceStart: () => {} })).rejects.toThrow("RUN_PERMIT")
 }, 60_000)
+
+historicalIt("snapshots the admitted v3 Match before a mutating kernel-entry callback, without running a Match", async () => {
+  const testRoot = temporary("one-cell-match-snapshot-test-")
+  mkdirSync(join(testRoot, ".strategy-lab"), { mode: 0o700 })
+  mkdirSync(join(testRoot, DIAGNOSTIC_ONE_CELL_STORE), { mode: 0o700 })
+  process.chdir(testRoot)
+  const baseline = { oldAllocationV2: root("snapshot-old-v2"), oldAllocationUnversioned: root("snapshot-old-v1"), oldResult: root("snapshot-old-result"), oldLeagueTree: root("snapshot-old-league"), oldFactoryTree: root("snapshot-old-factory") }
+  const allocation = createDiagnosticOneCellAllocation({ sourceClosureRoot: root("snapshot-one-source"), implementationRoot: root("snapshot-one-implementation"), gateRoot: root("snapshot-one-gate"), oldEvidenceBaseline: baseline })
+  const cell = createDiagnosticOneCellCell(allocation, 0), start = createDiagnosticOneCellStart(allocation, cell), ledger = openDiagnosticOneCellLedger(DIAGNOSTIC_ONE_CELL_STORE)
+  const repository = createFactoryRepository(historicalPath), pair = readDiagnosticPilotAssessedPair(repository), host = providerHost()
+  ledger.writeStart(start)
+  for (let ordinal = 0; ordinal < 3; ordinal++) ledger.writeStage(createDiagnosticOneCellStage(start, ordinal, ["bottom_issuance", "top_issuance", "pre_kernel_binding"][ordinal] as never))
+  const issue = (entry: typeof pair[number]) => {
+    const seat = entry.candidate.root === cell.bottomCandidateRoot ? "bottom" : "top"
+    return issueDiagnosticOneCellProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation, cell, start, requestRoot: cell.requestRoot, assessed: entry, oneCellLifetimeGrant: createDiagnosticOneCellLifetimeGrant(ledger, allocation, cell, start, seat) })
+  }
+  const bottom = issue(pair[0]), top = issue(pair[1])
+  const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((entry) => entry.id === "arena:smoke:v1")!
+  const mutableMatch = { matchId: `one-cell-${cell.requestRoot.slice(7)}`, seed: String(allocation.seed), arenaVariant: structuredClone(smoke), bottomPlayerId: `league-${cell.bottomCandidateRoot.slice(7)}`, topPlayerId: `league-${cell.topCandidateRoot.slice(7)}`, initialInitiativePlayerId: `league-${cell.initialInitiativeCandidateRoot.slice(7)}`, bottomStrategyRevisionId: bottom.identity.revisionId, topStrategyRevisionId: top.identity.revisionId }
+  const originalArenaRoot = labRoot("diagnostic-one-cell-arena-v3", mutableMatch.arenaVariant)
+  let callbackEntered = false
+  await expect(runDiagnosticOneCellCell({ ledger, allocation, cell, start, requestRoot: cell.requestRoot, bottom, top, match: mutableMatch, onKernelEntry(admittedMatch) {
+    callbackEntered = true
+    expect(admittedMatch).not.toBe(mutableMatch)
+    expect(admittedMatch.arenaVariant).not.toBe(mutableMatch.arenaVariant)
+    mutableMatch.seed = "forged-seed"
+    mutableMatch.arenaVariant.initialBounds.minX = 99
+    mutableMatch.arenaVariant.terrainStones.push({ x: 2, y: 2 })
+    ;(mutableMatch as Record<string, unknown>).startingFormation = "forged-bracket"
+    expect(admittedMatch.seed).toBe(allocation.seed)
+    expect(labRoot("diagnostic-one-cell-arena-v3", admittedMatch.arenaVariant)).toBe(originalArenaRoot)
+    expect(Object.isFrozen(admittedMatch)).toBe(true)
+    expect(Object.isFrozen(admittedMatch.arenaVariant.initialBounds)).toBe(true)
+    expect(Object.isFrozen(admittedMatch.arenaVariant.terrainStones)).toBe(true)
+    expect(Object.hasOwn(admittedMatch, "startingFormation")).toBe(false)
+    throw new Error("STOP_BEFORE_CANONICAL_MATCH")
+  }, onEvidenceStart: () => { throw new Error("evidence must not begin") } })).rejects.toThrow("STOP_BEFORE_CANONICAL_MATCH")
+  expect(callbackEntered).toBe(true)
+  expect(ledger.readRunAttempt(start.root)).not.toBeNull()
+  expect(ledger.listNames().some((name) => name.includes(".evidence-"))).toBe(false)
+}, 60_000)
