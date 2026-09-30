@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 isolated source-only parent-map checkpoint documented; Plan12 human-only authority and Phase265 empirical gate remain blocked
+last_activity_desc: Phase266 Plan06 isolated composition and read-only repairs independently reviewed with 111 passing focused tests; Plan12 authority and empirical gate remain blocked
 progress:
   total_phases: 9
   completed_phases: 3
@@ -28,10 +28,14 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 ## Current Session Continuity — 2026-09-29 prospective one-cell route planning
 
 Phase266 Plan06 has a separate isolated, source-only partial checkpoint at
-`5a77f298`, recorded in `266-06-PARTIAL-HANDOFF.md`. It is unmerged and
-non-authorizing: no complete independently expected factory/league/response
-object set or future reviewed Phase265 source epoch is available, so Plan02
-cannot consume a checked map and no real absence/freeze operation is open.
+`acf5fa53`, recorded in `266-06-PARTIAL-HANDOFF.md` and its exact preliminary
+review. Composition, closed producer registry, read-only retained-intake repair
+and three-store reconciliation are implemented; 111/111 focused tests and
+extra-strict TypeScript pass with zero new bounded-review findings. It remains
+unmerged and non-authorizing: complete positive-map and accepted-after-terminal
+fixtures and the final full-suite/source gate are still open. Plan02 cannot
+consume a checked map and no real absence/freeze operation is open. The
+remaining fixture work needs no new external-custody or product decision.
 Plan265-11 source-only adapter work is complete; Plan12 still requires exact new
 operator authority before any allocation or live host observation.
 

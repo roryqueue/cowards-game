@@ -5,8 +5,31 @@
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
-`5a77f29818c9fbf7b40959d230d10db421df0089`. Since the earlier checkpoint
-below, synthetic parent joins have been added for 64-object declarations,
+`acf5fa53613ebd4349253920a25353636db3e7f5` (tree
+`00d2a0c96b9614ecf8607469838f2bdc4de74a64`). The latest exact-source
+checks and bounded independent review are recorded in
+`266-06-PRELIMINARY-REVIEW.acf5fa53.md`. The composed map/checker and closed
+producer-kind registry now exist in source, including the full Phase 264
+publication union and Phase 265 response-authoring/failure branches. Expected
+objects come from authenticated producer parents, separately from observed
+reads, and are reconciled against all three physical stores. Consumer checks
+rederive the WeakSet-branded map. All outputs remain non-authorizing.
+
+The seven affected suites passed 111/111 tests on this exact checkpoint;
+strict source-plus-test TypeScript, including `noUncheckedIndexedAccess` and
+`exactOptionalPropertyTypes`, and the lab boundary check passed (zero
+violations across 1,345 files). The independent bounded rereview found zero
+new actionable findings and closed the embedded receipt/fingerprint join
+finding. This is not the final Plan 06 source gate: the full positive
+checked-map fixture and accepted-after-terminal three-arm fixture remain
+unproven, and the serialized full applicable suite has not been run. No real
+private store was scanned. Do not merge this source into main while the exact
+Plan265-12 source gate awaits operator authority; no gate or consumed route
+has been regenerated or reinterpreted.
+
+### Earlier 5a77f298 checkpoint and limited review
+
+At the preceding checkpoint, synthetic parent joins were added for 64-object declarations,
 calibration attempt/journal pairs, successful supervision streams, Phase 264
 sibling pairing, candidate-evidence imports, and the full initial imported
 candidate roster selected from an authenticated Phase 265 run-start, successful
@@ -33,8 +56,8 @@ The reviewer reran 28/28 focused tests, strict source TypeScript including
 `noUncheckedIndexedAccess`, strict source-plus-tests TypeScript, injected Git
 environment redirect checks, and whitespace checks. Enabling the extra
 `noUncheckedIndexedAccess` option on the test file also identifies two unchanged
-test-only TS2532 byte-mutation assertions at lines 1961 and 1982; this is not a
-source compilation failure. This limited rereview is not the final Plan 06
+test-only TS2532 byte-mutation assertions at lines 1961 and 1982; these were
+subsequently corrected, and the latest extra-strict checks pass. This limited rereview is not the final Plan 06
 source gate and does not establish a checked map, physical completeness or
 empirical validity.
 
@@ -63,19 +86,24 @@ The read-only remaining-scope audit found ordinary missing composition work,
 not a missing external-custody prerequisite: the affirmed Phase 264 correction
 and Phase 265 response formats retain their parent anchors. The high-dependency
 league `record-links` format is an unlabeled union, however, so it cannot prove a
-particular direct semantic cell-start edge. Composition must preserve the
+particular direct semantic cell-start edge. Composition preserves the
 journal/start/result bijection and terminal recomputation instead of inventing
-that edge. Source-only work now proceeds on the top-level checked-map/registry
-composition and the separate response-authoring evidence union in the isolated
-branch; synthetic fixtures cannot promote the actual process-invalid run.
+that edge. Top-level checked-map/registry composition and the separate
+response-authoring evidence union are now implemented in the isolated branch;
+synthetic fixtures cannot promote the actual process-invalid run.
 
-The full Phase 265 response/result union, independently reopened empirical
-outcome, complete producer-kind registry, three-store physical-set equality
-and orphan rejection, integrated checked-map rederivation, and independent
-exact-source review remain open. No real private store was scanned. Plan 02
-cannot consume this partial map and Plan 04 cannot claim a valid freeze. Source
-work continues in the isolated branch without changing the Phase 265
-authorization or either consumed allocation.
+Remaining source validation work is ordinary fixture coverage, not an
+external-custody or product decision: build a complete injected Phase 264
+48-workload assessed history and exact prospective Phase 265 graph through
+the real retained-format writers/readers, then exercise a positive whole-map
+derivation/rederivation and hostile physical-object substitutions. Also prove
+the accepted-after-terminal failure union through its complete three-arm
+fixture. Keep the empirical assessment/source pins and all validators intact;
+never hardcode an affirmed result or weaken the live runner's fixture refusal.
+Only after these gaps close may the final applicable suite and exact-source
+review be recorded as Task 3's gate. Plan 02 cannot consume this partial work
+and Plan 04 cannot claim a valid freeze. Source work stays isolated without
+changing Phase 265 authorization or either consumed allocation.
 
 ## Earlier 6c459e68 checkpoint — historical context
 
