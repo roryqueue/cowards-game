@@ -4,13 +4,13 @@
 
 Phase264 is independently complete: 5/5 truths, all11 requirements, 7/7 private acceptance checks, complete validation/security/evaluation coverage and exact retained affirmative assessment reopening. All48workloads/24pairs completed; this proves the frozen development-independence criterion, not competitive strength. Phase265 has9/12 plans complete: Plan265-07's sole full-league run and Plan265-09's sole diagnostic pilot run were both consumed `process_invalid`, with no retry authority. Plans265-08/10/11 completed only source-only work under distinct independent signed gates with no empirical or run authority; none satisfies LEAG-01–09 or unlocks Phase266. Plan265-12 requires fresh exact human authority before any allocation or live preflight. Phases262/263 stay complete; old failures, consumed allocations and36locks remain unchanged. Formation still requiresPhase266 freeze. All older dispatch sections below are historical.
 
-## Current D-34L.2 consolidated closeout outcome — 2026-09-09
+## Historical D-34L.2 closeout snapshot — 2026-09-09
 
 Plan262-203 implemented the isolated 2 CPU/256 MB, 120-second-cell/60-minute-outer profile and obtained independent seven-category source review with zero unresolved findings. Main consumed its sole preflight: `non_pass/docker_unavailable`, zero samples/lifecycles/Matches. The service was restored afterward, but no preflight was repeated and no Match was admitted. ADMIT-03 and Phase262 remain incomplete; Phase263 cannot begin. A fresh preflight requires explicit renewed authority. Plans175/176 remain superseded unexecuted; all consumed history and 36 locks are preserved. Older dispatch carriers below are historical and must not be followed.
 
 <!-- phase-262-closeout-current: {"decision":"D-34L.2-approved-retry","activeChain":[],"terminalPlan":"262-203","supersededUnexecuted":["262-175","262-176"],"cpu":2,"memoryMb":256,"cellDeadlineMs":120000,"outerDeadlineMs":3600000,"preflightsConsumed":2,"freshPreflightsAllowed":0,"matchesRun":24,"result":"pass","phase262Complete":true,"phase263Eligible":true} -->
 
-## Approved D-34L.1 lean execution closure — 2026-09-01
+## Historical D-34L.1 lean execution closure — 2026-09-01
 
 Plan200 consumed attempt 8 of 10 with one diagnostic-v5 and localized the first failure to `advanced:vanguard-pressure:selectActivations:sample:1`, coarse `session_failure`; cleanup incompleteness was secondary. Read-only exact reproduction then showed a valid receipt=1, close=1, exit=1, exitCode=0 lifecycle rejected only because Node delivered exit before the MessagePort receipt. Removing only that order rejection passed 50/50 in memory.
 
@@ -18,7 +18,7 @@ Plan201 is the sole next action. It removes only the `exitBeforeReceipt` orderin
 
 <!-- phase-262-lean-direct-roadmap: {"schemaVersion":"v1.38-phase-262-final-event-order-repair-plan-v1","decision":"D-34L.1","activeChain":["262-201","262-202","262-175","262-176"],"inactiveUnexecutedPlans":["262-194","262-196"],"waves":{"262-201":168,"262-202":169,"262-175":170,"262-176":171},"nextAction":"dispatch-262-201-event-order-repair-and-diagnostic-v6","diagnosticV5Root":"sha256:3c2c3954c5a4aaedf3ad06b30c264aa9eec0849892579c1f8569c266a9abce07","diagnosticV5Stage":"advanced:vanguard-pressure:selectActivations:sample:1","rootCause":"exit_before_receipt_order_rejection","attemptsAuthorized":10,"attemptsConsumed":8,"plan201DiagnosticAttemptOrdinal":9,"plan202PreflightAttemptOrdinal":10,"attemptsRemainingIfPlan202Denies":0,"minimumRapidExitStressPerProtocol":50,"preflightInvocationsPlan201":0,"matchInvocationsPlans201202":0,"preflightRequiredBeforeMarker":true,"correctiveInvocationsAllowed":1,"correctiveInvocationsConsumed":0,"recoveryAuthorized":false,"successorLockCount":36,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"archiveAuthorized":false,"tagAuthorized":false} -->
 
-## Reviewed D-34L result — 2026-09-01
+## Historical reviewed D-34L result — 2026-09-01
 
 The sole `lean_runner_feasibility_v1` invocation has been independently adjudicated as `non_pass`.
 
@@ -28,7 +28,7 @@ Historical full-matrix evidence remains immutable `exhausted` at fresh `0/540`, 
 
 <!-- phase-262-lean-roadmap-tracking: {"schemaVersion":"v1.38-phase-262-lean-final-tracking-v1","surface":"roadmap","admit03":"blocked","phase262Complete":false,"phase263PlanningEligible":false,"phase263ExecutionEligible":false,"authority":{"archiveAuthorized":false,"candidateSearchAuthorized":false,"countedPlayAuthorized":false,"formationMaterializationAuthorized":false,"foundationActivationAuthorized":false,"gameplayChangeAuthorized":false,"holdoutOpeningAuthorized":false,"phase263ExecutionAuthorized":false,"phase263PlanningAuthorized":false,"productAuthorized":false,"productionAuthorized":false,"publicAuthorized":false,"tagAuthorized":false}} -->
 
-## Active D-34L lean admission contract — 2026-09-01
+## Historical D-34L lean admission contract — 2026-09-01
 
 The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prerequisite. It freezes one existing Starter/Advanced fixture pair across three canonical arena labels, both sides, and both initiative parities: 12 unique cells executed twice serially, exactly 24 charged Matches, and a 15-minute outer limit. The historical full-matrix result remains immutable `exhausted` at fresh `0/540`, with no reproduction and `reinterpreted:false`. The lean gate is pending, not passed; Plan 262-149 is the sole next action and may create only source and tests. Phase 263 planning/execution and every candidate, formation, holdout, public, product, production, counted-play, gameplay-change, archive, release, and tag authority remain false.
 

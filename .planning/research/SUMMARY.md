@@ -1,5 +1,20 @@
 # Project Research Summary
 
+## Current verified handoff — 2026-09-30
+
+Phases 262–264 are independently complete. Phase 265 remains empirically
+incomplete: the full allocation-v2 route and the separately approved four-cell
+diagnostic route each ended `process_invalid` after one charged cell. Neither
+may be retried, repaired into a success, or reused. Plan 265-11's distinct
+source-only one-cell adapter passed its independent review and signed source
+gate; Plan 265-12 still needs fresh exact prospective operator authorization
+before any allocation or live preflight. No new Match authority follows from
+this research handoff. Phase 266 source-only work is isolated and incomplete;
+no valid current-league freeze, formation materialization, holdout opening,
+public or counted play is available. Older prospective dispatch statements
+below are historical, not current authority. See `STATE.md` and the individual
+consumed-route summaries for the authoritative outcomes.
+
 ## Approved prospective Phase 265 amendment — 2026-09-22
 
 The operator approved the complete `265-LEAN-RUN-DECISION.md` proposal, recorded in commit `06cdb050`. Existing Plan 265-07 now implements that prospective amendment: start with exactly the three genuinely assessed S01/S03/S05 bases, exclude nine mechanics controls, and grow toward twelve through slots 3,3,3,0. The final twelve-Strategy, six-family, five-independent-core and three-distinct-finalist gates are unchanged. The exact eleven-attempt, zero-retry resource vector and new human/external `authorized_zero` dispositions are in `265-LEAN-RUN-DECISION.md` and `265-LEAN-AMENDMENT.md`. One live run is conditional on independent source review, full validation and a passing data-only capacity receipt; approval alone dispatches nothing. Legacy policies, prior evidence, canonical rules/runtime/privacy, the current-league-before-formation sequence, unopened holdout, equal-profile budgets and audit/archive/tag requirements remain unchanged. Earlier contradictory routing below is historical, not active authority.
