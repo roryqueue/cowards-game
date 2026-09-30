@@ -5,6 +5,50 @@
 ## Latest isolated checkpoint — 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is now at
+`762cf03ff9c6e59aace7c918a2273990088e6866` (tree
+`a0bd148f30d0f992476ebdb9a7de0d1d2d79eae4`). Exact six-file hashes, two
+separate bounded independent reviews and root's affected gate are recorded in
+`266-06-PRELIMINARY-REVIEW.762cf03f.md`.
+
+Four actual-format response gaps are now repaired: successful grouped result
+fan-in; final teacher/model snapshot-derived round custody; their genuine
+absent-`targets[]` packet shape; and the tactical corpus published between the
+red-team and production starts. Exact jobs, admissions, independent evaluations,
+conditions, corpus parents and development targets remain checked. Transport
+wrappers never confer semantic ancestry, and partial inspectors stay unbranded
+`issued:false`. Full retained semantic replay, source/history, physical union,
+journal and orphan gates remain prerequisites of a checked context.
+
+Root's serialized four-suite gate passed 109/109 tests in 656.66 seconds.
+Extra-strict eight-file TypeScript, whitespace and lab boundaries pass (zero
+violations over 1,348 files). The two new bounded static reviews found zero
+actionable findings; neither is final Plan06 approval.
+
+The default unresolved factory-history fixture is preserved. An optional S01
+partial mid-Match unit-observation variant has coherent side-on boundary pushes,
+STONE contrasts, canonical Actions/Chronicle/ABI, terrain and board bounds.
+Eight independent excerpts are not a starting rank, formation, full GameState,
+complete kernel transition, reachable Match, replay or empirical performance.
+It omits outcomes and truthfully retains the existing unscored fingerprint
+`failure` mapping. Exactly one variant constructor/unchanged-assessor diagnostic
+and four pure unit tests passed; its generated temporary store was cleaned.
+The actual assessor remains unresolved: separation 0.04631254054447387 is still
+below the unchanged 0.05 requirement. No threshold or base edges were produced,
+and no post-measurement favorable expectation was introduced.
+
+Remaining source work is an actually assessor-affirmed 48-workload synthetic
+history, three genuine imports, the complete prospective four-round/11-job
+retained graph, all probes/cells/payoff/report and the exact three-store union,
+then positive whole-map derivation/rederivation and the full applicable suite
+with final exact-source review. Do not force affirmation or downgrade any gate.
+No Plan06 summary/final source gate, Plan02 consumption or real absence/freeze
+operation is open. Plan265-12's exact new operator checkpoint and all consumed
+routes remain unchanged. Main receives only this safe documentation checkpoint;
+no new Match, preflight, provider/Strategy/model, formation or holdout ran.
+
+### Earlier 2dc5ed32 checkpoint
+
+The clean, unmerged and unpushed `codex/phase266-context` branch was at
 `2dc5ed325b8891e41bdc27c6c2690aacac1dcf23` (tree
 `4f4e60e08841d53e4b3f14410883d31f8defc4f9`). Exact source hashes, test epochs
 and bounded independent reviews are recorded in
