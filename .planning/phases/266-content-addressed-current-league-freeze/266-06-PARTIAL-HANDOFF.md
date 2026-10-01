@@ -2,7 +2,78 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
-## Latest isolated checkpoint — assessed three-base imports, 2026-09-30
+## Latest isolated checkpoint — matching assessed matrix, 2026-09-30
+
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`fa588338ff99dca907316ed95a15142fc9d53520`, tree
+`149100d2549a9cb946f603d33fe0f1ba4691d30a`, direct parent `d795581b`.
+The exact two-new-file hashes and independent standard-depth static review are
+retained in `266-06-PRELIMINARY-REVIEW.fa588338.md` (report SHA-256
+`82c91a0149bd2d51dba536d94977901fa3845910e15855ccb25a1d906797be5a`).
+Review is scoped clean with zero actionable findings. Root and the owner ceased
+all related reads, edits and tests during review; both complete pinned files and
+necessary unchanged contracts were read. No duplicate test, fixture, assessor,
+replay or private-store action ran. A report-only wording correction identifies
+the actual one-test-file command; source pins, results and disposition are
+unchanged. QA below is root-reported, not independently reproduced.
+
+Root's sole serialized command for this new two-source-file constituent passes
+5/5 in 1201.10 seconds:
+
+```sh
+pnpm exec vitest run scripts/fixtures/current-freeze-assessed-matrix-fixture.test.ts --maxWorkers=1 --reporter=verbose --disableConsoleIntercept
+```
+
+One prescribed v3 history, one actual assessed-import reader epoch and one new
+matching matrix form three serial setup stages, each within the established
+600000 ms harness ceiling. No favorable-result search or repeated history occurs
+inside this gate. Identity assertions take 20 ms, canonical starts/outcome/
+accounting checks 56 ms, actual matrix/tactical reopening 147846 ms, imported
+identity substitution denials 1218 ms and missing/corrupt parent denials 3111 ms.
+The earlier 8/8 import gate below is a separate epoch, not a new aggregate or
+full applicable repository pass. Initial four new test-plumbing TypeScript
+errors were corrected before freezing; root's exact two-file extra-strict
+non-emitting gate passes. Staged whitespace and lab boundaries pass (1360 files,
+zero violations). No old fixture, reader, policy, encoder or test file changed.
+
+The new constructor composes the held actual S01/S03/S05 synthetic imports with
+the existing canonical matrix recipe. Only the injected prospective declaration's
+output-directory metadata differs; amendment, imports, roles/jobs, seeds, probes,
+rules and resource vectors remain exact. Its fresh temporary root contains
+distinct league and response-factory stores; the supplied generated history is
+never written or removed. Exceptional cleanup targets only that exact new root;
+successful cleanup is caller-controlled and test teardown owns both generated
+roots. The old unassessed matrix and legacy round-target contract remain intact.
+
+Ordinary generated writers retain 24 complete fixed-effect pure-kernel cells,
+canonical sixteen-Soldier edge starts with terrain inside bounds, 24 genuine
+WIN outcomes and 552 mock-accounting entries. Imported admission/source/
+publication identities join population, cells, starts, payoff snapshot, solver,
+round, tactical target and corpus. The actual unchanged matrix verifier checks
+graph/journal/accounting/outcome reconstruction and invokes the real tactical
+reader once; its authenticated result is reused without a duplicate replay.
+The supplied history is byte-stable across construction, and all three generated
+stores retain identical filenames, lengths and hashes across reading. Identity
+substitutions and missing/corrupt generated allocation-parent bytes refuse
+without repair; the deliberate exact-byte corruption is restored in `finally`.
+
+Fixed `TURN_TO_STONE` effects are not the behavior of the imported emitted source.
+Source/compiler/native/custody/clock/allocation/operational/whole-map/empirical/
+freeze authority remains false or unverified, and inherited job evidence roots
+remain unretained placeholders. Generated cell-start journals do not constitute
+an operational reservation, run-start or complete-run record. Forbidden runtime,
+provider, serious-league, preflight and live-host-observation APIs are unused.
+No operational Match, prospective route, Strategy/model, real-store scan, holdout,
+formation, public or counted action occurred. Main receives safe Markdown only;
+Plan265-11/12 and consumed Plan07/09 remain unchanged.
+
+Remaining safe composition is the full eleven-target response/probe/evaluation/
+report/marker graph and historical source/review parents, then positive checked-map
+derivation/rederivation, exact complete three-store union and Task3's full
+applicable suite/final review. No Plan06 summary, Plan02 consumption or actual
+current-league freeze follows from these preliminary constituents.
+
+## Earlier isolated checkpoint — assessed three-base imports, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `d795581bfb6f962362570771294654f40d55cdaa`, tree

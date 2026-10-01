@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 assessed three-base import constituent passes 8/8 and independent two-file review at d795581b; isolated source only, no whole-map or Match authority
+last_activity_desc: Phase266 Plan06 matching assessed matrix/tactical constituent passes 5/5 and independent two-file review at fa588338; isolated source only, no whole-map or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -25,7 +25,38 @@ total_plans_in_phase: 12
 
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
-## Current Session Continuity — 2026-09-30 isolated assessed-import checkpoint
+## Current Session Continuity — 2026-09-30 isolated assessed-matrix checkpoint
+
+The latest clean, isolated, unmerged and unpushed source checkpoint is
+`fa588338ff99dca907316ed95a15142fc9d53520`, tree
+`149100d2549a9cb946f603d33fe0f1ba4691d30a`, direct parent `d795581b`.
+Two new files compose the preceding actual synthetic imports with the unchanged
+canonical matrix constructor/verifier. Only injected declaration output-directory
+metadata changes; imports, amendment, eleven jobs and every frozen policy/resource
+remain exact. One separately generated league/response-store pair retains a
+matching 24-cell fixed-effect matrix, snapshot, solver, round and tactical corpus.
+Root's sole new-test-file gate passes 5/5 in 1201.10 seconds. One history, one
+actual import-reader epoch and one matrix are staged serially, each within the
+unchanged 600000 ms harness ceiling. Actual matrix/tactical reopening takes
+147846 ms. Canonical sixteen-Soldier starts/terrain bounds, 24 genuine pure-kernel
+WIN outcomes and 552 mock-accounting entries pass; emitted Strategy behavior is
+not tested. Imported source/admission/publication substitutions and missing/corrupt
+generated parents refuse without reader repair. The supplied generated history
+stays unchanged across construction; all three generated stores are byte-stable
+across reads. Extra-strict two-file non-emitting TypeScript, staged whitespace and
+lab boundaries pass (1360 files, zero violations). Independent standard-depth
+review in `266-06-PRELIMINARY-REVIEW.fa588338.md` is scoped clean with zero
+actionable findings; root QA was not independently rerun. The earlier 8/8 import
+gate is retained separately, not presented as a new aggregate/full-source gate.
+Response/probe/evaluation/report/marker and historical source/review parents,
+positive whole-map/rederivation, exact complete three-store union and Task3's full
+suite/final review remain open. No Plan06 summary, Plan02 consumption, empirical
+qualification or current-league freeze follows. Main receives safe Markdown
+only; Plan265-12 and consumed allocations remain unchanged. No operational
+Match, allocation/reservation/live preflight, provider/Strategy/model, actual
+private-store scan, holdout, formation or public/counted action occurred.
+
+## Earlier Session Continuity — 2026-09-30 assessed-import checkpoint
 
 The latest clean, isolated, unmerged and unpushed source checkpoint is
 `d795581bfb6f962362570771294654f40d55cdaa`, tree
