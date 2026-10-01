@@ -2,6 +2,12 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Current live-entry status (2026-10-01): fresh allocation-v3 preparation passed
+and is published at root80e2409f. Root's unique entry started at22:29UTC,
+PID46045; static checks precede fresh capacity and any Match/model dispatch.
+No capacity pass or empirical result is claimed yet. See STATE.md and
+265-07-EMPIRICAL-PREPARATION-v7.md; do not duplicate this active entry.
+
 Latest operator decision (2026-10-01): the fresh bounded private full-league route is approved, with standing approval for future fresh runs under the same limits. Plan 265-07 preparation resumes; new source-bound packets/allocation and passing capacity still precede dispatch. No consumed route is revived and no formation/holdout/public/counted authority is added. See 265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md; earlier approval-pending snapshots below are historical.
 
 **Latest source closeout:** Same-Plan265-07 incremental review fixed and retired obsolete pilot/V3 runtime extensions. Independent exact re-review acceptsaccb76c5; the complete frozen-source gate passes29suites/367tests, required types/build and boundaries, with root's separate98/98focused pass. No further live Match ran. The first successful diagnostic remains terminal/diagnostic-only; one plain-English approval of a fresh full-league route remains pending. Source readiness is not empirical phase completion. See265-PROSPECTIVE-LEAGUE-GATE.md and265-PROSPECTIVE-LEAGUE-READINESS.md.

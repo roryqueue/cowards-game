@@ -1,8 +1,9 @@
 # Phase 265 Plan 07 — fresh prospective v3 preparation
 
 Status (2026-10-01): data-only historical admission and capacity-input admission
-passed; fresh canonical allocation published. No new live dispatch, capacity
-receipt, reservation, Match, model turn or league result yet.
+passed; fresh canonical allocation published. Root entry started once at
+2026-10-01T22:29:13.977Z (PID46045), static validation before capacity. No new
+capacity receipt, run reservation, Match, model turn or league result yet.
 The human's fresh-run and standing same-scope approval is recorded in
 265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md. This is additive continuation of
 Plan 07, not revival of allocation-v2 or the terminal diagnostic envelope.
@@ -33,10 +34,10 @@ Unrooted prospective allocation input raw hash:
 `3f5f6eacede018ef44cf0862192abe05d84b4978f0e74f5db94f722cabcfb6f2`.
 
 Packet compilation and allocation-input construction exited 0. Compilation
-published 45 inert private factory records; none was dispatched. A single
-`prepare-prospective` invocation now reopens the genuine retained S01/S03/S05
-bases. It must finish before rooted allocation publication and capacity input
-construction. No positive result is inferred from its continued execution.
+published 45 inert private factory records; none was dispatched. The single
+`prepare-prospective` invocation reopened the genuine retained S01/S03/S05
+bases and passed before allocation publication and capacity input construction,
+as recorded below.
 
 ## Source-only preparation corrections
 

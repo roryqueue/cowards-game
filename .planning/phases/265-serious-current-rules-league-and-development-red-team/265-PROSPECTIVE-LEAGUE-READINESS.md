@@ -1,12 +1,18 @@
 ---
 phase: 265
-status: operator-approved-fresh-preparation-capacity-still-required
+status: fresh-v3-root-entry-active-static-validation-before-capacity
 date: 2026-10-01
 empirical_authority: false
-fresh_allocation_created: false
+fresh_allocation_created: true
 ---
 
 # Next league run: what is fixed, what is still needed
+
+Current status: historical preparation and pinned capacity-input construction
+passed. Fresh allocation-v3 root80e2409f is published. Root entered once at
+2026-10-01T22:29:13.977Z (PID46045); static checks still precede the fresh host
+observation and reservation. Entry is not capacity admission or a Match.
+See STATE.md and 265-07-EMPIRICAL-PREPARATION-v7.md. Do not duplicate it.
 
 Latest decision: direct human approval on 2026-10-01 grants this fresh bounded
 private league route; the subsequent blanket approval covers future fresh

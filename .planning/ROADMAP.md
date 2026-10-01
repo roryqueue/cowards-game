@@ -2,6 +2,12 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Current entry (2026-10-01): source-bound allocation-v3 preparation passed and
+the root entry is active at PID46045 since22:29UTC, static checks before fresh
+capacity/dispatch. No capacity pass, Match or full-league result is claimed.
+Plan265-07 remains the active plan, not a new numbered route. See STATE.md and
+265-07-EMPIRICAL-PREPARATION-v7.md. Do not duplicate the active entry.
+
 Latest operator decision (2026-10-01): a fresh private full-league route under the existing limits is approved, including future fresh same-scope runs without repeat approval. Existing Plan 265-07 preparation resumes; source-bound allocation and passing capacity remain prerequisites. Old routes stay terminal; plan/requirement progress and freeze-before-formation do not change. See 265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md.
 
 Latest source-only closeout: reviewedaccb76c5 passes the complete29-suite367-test gate, required types/build and all boundaries. Legacy diagnostic runtime extensions are retired with zero scoped re-review findings. No further live Match or new allocation occurred; prospective full-league approval remains pending. This does not change12/14plan progress, unmet LEAG requirements or the Phase266-before-formation gate. Details:265-PROSPECTIVE-LEAGUE-GATE.md.

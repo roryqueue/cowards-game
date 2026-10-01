@@ -2,6 +2,12 @@
 
 ## Current approved handoff — 2026-10-01
 
+Fresh v3 preparation now passes; allocation root80e2409f is published. The
+unique root entry is active at PID46045 since22:29UTC, static validation before
+fresh capacity/dispatch. No capacity pass or empirical result is claimed yet.
+The active entry must not be duplicated. See STATE.md and
+265-07-EMPIRICAL-PREPARATION-v7.md.
+
 Phases 262–264 remain independently complete. Phase 265's first retry-v4
 diagnostic succeeded and its sequence is terminal after one charged Match;
 four unused ordinals cannot resume. Current source is independently reviewed
