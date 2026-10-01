@@ -72,12 +72,12 @@ const validateStart = (value: unknown): Readonly<LeagueCellStart> => {
   return freezeLabValue({ root: item.root, cellRoot: item.cellRoot, allocationRoot: item.allocationRoot }) as LeagueCellStart
 }
 
-const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array, terminal = false): void => {
+const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array, terminal = false, synchronizeDirectory = true): void => {
   const directory = safeDirectory(repository.directory), target = join(directory, name)
   const existing = lstatSafe(target)
   if (existing) {
     if (!existing.isFile() || bytesRoot(boundedRead(target)) !== bytesRoot(bytes)) return fail("OVERWRITE")
-    repository.durability.syncDirectory(directory)
+    if (synchronizeDirectory) repository.durability.syncDirectory(directory)
     return
   }
   repository.beforePublication?.({ target, byteLength: bytes.byteLength, terminal })
@@ -86,7 +86,7 @@ const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array, t
   const descriptor = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
   try { let offset = 0; while (offset < bytes.byteLength) offset += writeSync(descriptor, bytes, offset, bytes.byteLength - offset); fsyncSync(descriptor) } finally { closeSync(descriptor) }
   try { linkSync(temporary, target) } finally { unlinkSync(temporary) }
-  repository.durability.syncDirectory(directory)
+  if (synchronizeDirectory) repository.durability.syncDirectory(directory)
 }
 
 export const createLeagueRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string; readonly beforePublication?: LeagueRepository["beforePublication"] } = {}): Readonly<LeagueRepository> =>
@@ -96,6 +96,23 @@ export const createLeagueRepository = (directory: string, options: { readonly sy
 export const publishLeagueArtifact = (repository: LeagueRepository, bytes: Uint8Array): LabRoot => {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > CAP) return fail("ARTIFACT")
   const root = bytesRoot(bytes); atomic(repository, artifactName(root), bytes); return root
+}
+/** Private graph dependencies only. Every new file is individually fsynced;
+ * their names share a directory barrier before the parent can be published.
+ * Incomplete groups remain uncommitted residue; charges are never refunded.
+ * Single-artifact/journal publication retains its existing barrier semantics. */
+export const publishLeagueArtifactDependencies = (repository: LeagueRepository, dependencies: readonly Uint8Array[]): readonly LabRoot[] => {
+  if (!Array.isArray(dependencies)) return fail("ARTIFACT")
+  if (dependencies.length === 0) return Object.freeze([] as LabRoot[])
+  const roots: LabRoot[] = []
+  for (const bytes of dependencies) {
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > CAP) return fail("ARTIFACT")
+    const root = bytesRoot(bytes)
+    atomic(repository, artifactName(root), bytes, false, false)
+    roots.push(root)
+  }
+  repository.durability.syncDirectory(safeDirectory(repository.directory))
+  return Object.freeze(roots)
 }
 export const readLeagueArtifact = (repository: LeagueRepository, root: LabRoot): Uint8Array => {
   const bytes = boundedRead(join(safeDirectory(repository.directory), artifactName(root)))

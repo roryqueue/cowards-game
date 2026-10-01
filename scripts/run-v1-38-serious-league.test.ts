@@ -28,6 +28,85 @@ import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, val
 const directories: string[] = []
 afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
+describe("graph dependency durability", () => {
+  const limits = { maxArtifactBytes: 2_000_000, maxArtifactRecords: 100 }
+  const digest = (bytes: Uint8Array) => `sha256:${createHash("sha256").update(bytes).digest("hex")}` as const
+  const expectedArtifacts = (value: unknown) => {
+    const encoded = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
+    if (!encoded.ok) throw Error("invalid injected value")
+    const chunkRoot = digest(encoded.canonicalBytes)
+    const node = { schemaVersion: "league-record-chunk-v1", ordinal: 0, previousRoot: null, bytesRoot: chunkRoot, byteLength: encoded.canonicalByteLength }
+    const nodeBytes = admitCanonicalJsonValue(node, { profile: "canonical-manifest" })
+    if (!nodeBytes.ok) throw Error("invalid injected node")
+    const body = { schemaVersion: "league-record-v1", privacy: "private_offline", kind: "runtime-invocation", byteLength: encoded.canonicalByteLength, recordRoot: chunkRoot, chunkCount: 1, tailRoot: digest(nodeBytes.canonicalBytes), links: [] }
+    const descriptor = admitCanonicalJsonValue({ ...body, root: labRoot("league-record-v1", body) }, { profile: "canonical-manifest" })
+    if (!descriptor.ok) throw Error("invalid injected descriptor")
+    return { roots: [chunkRoot, digest(nodeBytes.canonicalBytes), digest(descriptor.canonicalBytes)], bytes: [encoded.canonicalBytes, nodeBytes.canonicalBytes, descriptor.canonicalBytes] }
+  }
+  it("keeps exact artifact bytes, charges and dependency-before-descriptor barriers", () => {
+    const value = { ordinal: 1 }, expected = expectedArtifacts(value), events: string[] = []
+    const base = createLeagueRepository(temporary())
+    const repository = createLeagueRepository(base.directory, {
+      beforePublication({ target }) { events.push(`charge:${target.split("/").at(-1)}`) },
+      syncDirectory(directory) {
+        const files = readdirSync(directory).sort()
+        events.push(`barrier:${files.length}`)
+        if (files.length === 2) expect(files).not.toContain(`league-artifact-${expected.roots[2]!.slice(7)}.bin`)
+        base.durability.syncDirectory(directory)
+      },
+    })
+    const graph = new LeagueRecordGraph(repository, limits)
+    expect(graph.append("runtime-invocation", value)).toBe(expected.roots[2])
+    expect(events).toEqual([
+      ...expected.roots.slice(0, 2).map((root) => `charge:league-artifact-${root.slice(7)}.bin`),
+      "barrier:2", `charge:league-artifact-${expected.roots[2]!.slice(7)}.bin`, "barrier:3",
+    ])
+    for (const [index, root] of expected.roots.entries()) expect(new Uint8Array(readFileSync(join(repository.directory, `league-artifact-${root.slice(7)}.bin`)))).toEqual(expected.bytes[index])
+    expect(readLeagueRecordGraph(repository, graph.latestRoot!, limits).get(graph.latestRoot!)!.value).toEqual(value)
+  })
+  it.each(["dependency", "descriptor"] as const)("keeps charges and does not advance head after %s barrier failure", (stage) => {
+    const base = createLeagueRepository(temporary()), input = allocationFixture()
+    const allocation = createLeagueExecutionAllocation(input), budget = new LeagueRetentionBudget(allocation)
+    let barriers = 0
+    const repository = createLeagueRepository(base.directory, {
+      beforePublication: budget.beforePublication,
+      syncDirectory(directory) {
+        barriers++
+        if (barriers === (stage === "dependency" ? 1 : 2)) throw Error(`injected ${stage} barrier failure`)
+        base.durability.syncDirectory(directory)
+      },
+    })
+    const graph = new LeagueRecordGraph(repository, limits, budget), expected = expectedArtifacts({ ordinal: 1 })
+    expect(() => graph.append("runtime-invocation", { ordinal: 1 })).toThrow(`injected ${stage} barrier failure`)
+    expect(graph.latestRoot).toBeNull()
+    expect(budget.usage).toMatchObject({ workRecords: stage === "dependency" ? 2 : 3, terminalRecords: 0, exhausted: false })
+    expect(readdirSync(base.directory)).toHaveLength(stage === "dependency" ? 2 : 3)
+    expect(readdirSync(base.directory).includes(`league-artifact-${expected.roots[2]!.slice(7)}.bin`)).toBe(stage === "descriptor")
+    // Residual files are inspection evidence, not a returned/credited graph head.
+  })
+  it("does not advance an existing head when the next dependency group is refused", () => {
+    const base = createLeagueRepository(temporary())
+    let refuse = false
+    const repository = createLeagueRepository(base.directory, { beforePublication() { if (refuse) throw Error("injected refusal") } })
+    const graph = new LeagueRecordGraph(repository, limits), prior = graph.append("runtime-invocation", { ordinal: 1 })
+    refuse = true
+    expect(() => graph.append("runtime-invocation", { ordinal: 2 })).toThrow("injected refusal")
+    expect(graph.latestRoot).toBe(prior)
+    expect(readLeagueRecordGraph(base, prior, limits).size).toBe(1)
+  })
+  it("preserves per-artifact barriers for large invocation and other record kinds", () => {
+    for (const [kind, value, expected] of [
+      ["runtime-invocation", { text: "A".repeat(140000) }, 5],
+      ["runtime-cleanup", { closed: true }, 3],
+    ] as const) {
+      const base = createLeagueRepository(temporary()); let barriers = 0
+      const repository = createLeagueRepository(base.directory, { syncDirectory(directory) { barriers++; base.durability.syncDirectory(directory) } })
+      const graph = new LeagueRecordGraph(repository, limits), root = graph.append(kind, value)
+      expect(barriers).toBe(expected)
+      expect(readLeagueRecordGraph(base, root, limits).get(root)!.value).toEqual(value)
+    }
+  })
+})
 describe("retained supervisor diagnostics", () => {
   it("retains only an exact reviewed runtime failure code", () => {
     expect(retainedSupervisorFailureDiagnostic(new TypeError("FACTORY_RUNTIME_REQUEST_IDENTITY"))).toEqual({ error: "TypeError", supervisorCode: "FACTORY_RUNTIME_REQUEST_IDENTITY" })

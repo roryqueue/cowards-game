@@ -8,7 +8,7 @@ import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATAL
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
-import { createLeagueRepository, publishLeagueArtifact, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository, type ReopenedLeagueEvidence } from "../packages/strategy-lab/src/league/repository.js"
+import { createLeagueRepository, publishLeagueArtifact, publishLeagueArtifactDependencies, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository, type ReopenedLeagueEvidence } from "../packages/strategy-lab/src/league/repository.js"
 import { enumerateLeagueCells, admitCompletePayoffSnapshot, assertLeaguePayoffCapacity, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
 import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagueCell, deriveLeagueMatchExecutionTerminal, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { solveLeagueSnapshot } from "../packages/strategy-lab/src/league/solver.js"
@@ -131,7 +131,18 @@ export class LeagueRecordGraph {
     }
     else if (this.writtenBytes + size + reserve.bytes > this.limits.maxArtifactBytes || this.records + pending.length + reserve.records > this.limits.maxArtifactRecords) return fail("RETENTION_BUDGET")
     this.writtenBytes += size; this.records += pending.length
-    for (const artifact of pending) publishLeagueArtifact(this.repository, artifact)
+    if (kind === "runtime-invocation" && streamArtifacts.length === 0 && ordinal === 1) {
+      // Only the measured single-chunk hot path: individually fsynced payload
+      // and chunk node share a directory barrier BEFORE the graph descriptor.
+      // Its unchanged single-artifact path has its own final barrier. A failed
+      // group leaves uncommitted residue, never a credited head or a refund.
+      publishLeagueArtifactDependencies(this.repository, pending.slice(0, -1))
+      publishLeagueArtifact(this.repository, descriptor)
+    } else {
+      // Stream/large records, journals, starts, terminals and every other kind
+      // preserve the original per-artifact publication/barrier sequence.
+      for (const artifact of pending) publishLeagueArtifact(this.repository, artifact)
+    }
     this.latestRoot = bytesRoot(descriptor)
     return this.latestRoot
   }
