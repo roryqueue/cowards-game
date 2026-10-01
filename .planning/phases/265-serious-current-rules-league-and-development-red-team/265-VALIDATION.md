@@ -8,12 +8,31 @@ created: 2026-09-14
 updated: 2026-10-01
 source_reviewed: e440763a
 source_gate: retry-v4-88-tests-both-types-boundaries-pass-full-phase-gate-not-repeated
-empirical_validation: consumed-old-routes-process-invalid-new-approved-diagnostic-envelope-pending
+empirical_validation: retry-v4-first-diagnostic-process-valid-full-league-incomplete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Plan14 actual diagnostic closeout — 2026-10-01
+
+Exactly one main-orchestrator harness invocation stopped on its first valid
+private diagnostic. Own fresh preflight admitted6200basispoints; cell75373ms,
+parent93739ms, complete cleanup/container absence. Four ordinals remain unused
+and cannot resume this terminal envelope. Root and independent retained reviewer
+each ran the exact `check-retained` command, exit0; historical hashes match,
+all public/counting/formation/holdout/LEAG authority flags remain false.
+
+Actual semantic reopening checks1473canonical transitions,500runtime accounting
+rows,81915output bytes and4114384artifact bytes/85evidence records. Root's
+read-only positional scan checks2946state views:16canonical edge-rank Soldiers
+on12x12initial bounds, zero active Soldier/terrain positions outside bounds.
+No browser/UI or competition-strength claim follows. Exact roots/coverage are
+in265-14-SUMMARY.md and265-14-RETAINED-REVIEW.md.
+
+Plans13/14 are complete only for source/diagnostic accounting. Full-phase
+Nyquist remains partial/false and all nine LEAG requirements remain open.
 
 ### Plan13 bounded retry source validation — 2026-10-01
 
@@ -30,7 +49,7 @@ rerun QA;1013source/config paths are closure-bound, not individually inspected.
 | 265-13 T1 | Genuine canonical effect/resume producer/reader fixtures, lossless row/blob codec, mutation negatives, finite causes and single-use candidate/runtime-bound grants | Focused source suite passes |
 | 265-13 T2 | Adapter/worker module-injected handoff, fake-host/constructor denial, truthful failure stages, five-ordinal serial/preflight/stop policy | Focused source suite passes |
 | 265-13 T3 |1013-path source closure, exact independent accepted review and required-command binding | Read-only source checker exits0 |
-| 265-14 T1–3 | Approved prospective envelope, actual fresh preflight/diagnostic sequence and retained reopen | Pending; no live operation yet |
+| 265-14 T1–3 | Approved prospective envelope, actual fresh preflight/diagnostic sequence and retained reopen | Complete: first diagnostic process-valid, four unused, independent retained check passed |
 
 The package-to-host import introduced during repair was rejected by the scanner,
 then corrected by moving only the new v4 operational modules/tests to the host

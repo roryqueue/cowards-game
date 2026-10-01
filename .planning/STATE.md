@@ -4,16 +4,16 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: in_progress
-stopped_at: Phase265 Plan13 exact host-layer source accepted; Plan14 begins approved five-attempt diagnostic envelope
+status: blocked
+stopped_at: Phase265 Plan14 first diagnostic process-valid and sequence terminal; fresh prospective full-league allocation required
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Final source e440763a passes88tests, bothtypes, unchangedboundaryscan and independent review; no live attempt yet
+last_activity_desc: One valid diagnostic, complete cleanup, four unused; root and independent retained checks pass, full-league requirements remain open
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 33
 current_plan: 14
 total_plans_in_phase: 14
@@ -22,6 +22,22 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current Session Continuity — 2026-10-01 prospective five-retry envelope
+
+**Terminal diagnostic outcome:** Plan14 is complete. The single main-orchestrator
+harness invocation passed attempt1's fresh preflight at6200basispoints and
+retained one process-valid S01/S03 Smoke Match, complete cleanup and container
+absence. Cell75373ms, parent93739ms, no timeout. The sequence stopped first-valid;
+ordinals2–5 are unused and cannot resume. Root and independent reviewer each
+ran the exact read-only retained checker, exit0, with protected history unchanged.
+Sequence root is `sha256:b33c1b27ffe9ae5929c2bff9eea2ab090369fa2f6ff721fc6ae3e60666f8dcf7`.
+Result root is `sha256:6a81f21a9fe89fc082f956ae1b2f03281c16b4ea73390de006eaba3f4f58593d`.
+Actual1473canonical transitions/500runtime accounting calls semantically reopen;
+2946state views have zero active Soldier/terrain bounds violations and the
+initial16Soldiers use unchanged canonical edge ranks on12x12Smoke.
+Phase265 is12/14plans complete, all LEAG-01–09unchecked and actual Phase266
+freeze still blocked. Further Matches need a fresh prospective full-league
+allocation; no extra literal/custody ritual or old-route revival is required.
+All source-preparation and approval-pending statements below are history.
 
 Plan13 is complete at `e440763a75c0e66beb402548681a9acfddad9b24`, source closure
 `sha256:4fb9963bd4c61d219b3b72e261f8a75f5d48b547824a13c5c3be72734941d159`.

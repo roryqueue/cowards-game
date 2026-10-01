@@ -7,6 +7,8 @@ score: 0/5 roadmap must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 empirical_authority: false
+latest_follow_up: 2026-10-01
+latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
     status: failed
@@ -53,6 +55,34 @@ gaps:
 ---
 
 # Phase 265: Serious Current-Rules League and Development Red Team — Verification
+
+## Latest main-observed follow-up — 2026-10-01
+
+The original independent report and its absence statements below are historical
+snapshots. Old full-league/pilot/v3 routes exist but are consumed process-invalid.
+The newly authorized Plan14 serial envelope now closes on its first attempt:
+one private process-valid S01/S03 Smoke diagnostic, complete cleanup/container
+absence and four unused slots. Root and the independent retained reviewer each
+ran the exact read-only checker, exit0, against the same sequence root
+`sha256:b33c1b27ffe9ae5929c2bff9eea2ab090369fa2f6ff721fc6ae3e60666f8dcf7`.
+All protected historical hashes match; all downstream authority flags are false.
+
+Final diagnostic sourcee440763a has independently accepted ten-file review,
+88/88focused tests, both TypeScript checks,18/18legacy continuity and zero
+unchanged-boundary-scan violations. Actual evidence semantically reopens1473
+canonical transitions/500runtime accounting rows. Root's read-only realism scan
+finds16canonical edge-start Soldiers and zero active Soldier/terrain bound
+violations across2946state views. See265-13/14-SUMMARY.md and the fresh retained
+review for exact roots, commands, coverage and reviewer attribution.
+
+**Goal-backward verdict remains `gaps_found`,0/5 empirical criteria.** One
+diagnostic condition is not a complete balanced league, solved snapshot,
+response/red-team campaign, portfolio or finalist result. All LEAG-01–09 remain
+unchecked; source/protocol validation cannot promote the diagnostic to league
+evidence. Actual Phase266 freeze and formation/holdout remain blocked. This is
+a main follow-up with independently reviewed retained evidence, not a replacement
+independent full-phase verification or an override. Further Matches require a
+new prospective full-league allocation; the diagnostic sequence cannot resume.
 
 **Phase goal:** Researchers can inspect a complete, independently attacked current-rules empirical game and obtain a bounded portfolio and robust-pure outcome without hiding counters or sparse evidence.
 

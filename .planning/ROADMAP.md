@@ -2,7 +2,7 @@
 
 ## Current verified progress — Phases262–264 complete
 
-Phase264 is independently complete: 5/5 truths, all11 requirements and7/7 private acceptance checks. Phase265 is11/14 plans complete. Its old full-league, pilot and one-cell v3 runs remain consumed process-invalid. The operator has approved up to five fresh serial one-cell diagnostics through independently checked Plans265-13/14; none is consumed yet. Source-only Plan13 corrects state-chain validation across the canonical pending-effect handoff in a new v4 adapter without changing the kernel or historical v3 evidence. Independent exact-source review and a fresh passing preflight per attempt precede execution. All fixed bounds, private evidence, stop conditions and no-LEAG/downstream limits remain. Phase266 real freeze and all formation/holdout work stay blocked on the complete league; old artifacts and36locks remain immutable. Older dispatch sections are historical.
+Phase264 is independently complete:5/5truths, all11requirements and7/7private acceptance checks. Phase265 is12/14plans complete. Plans13/14 now close with accepted source and one PROCESS_VALID private S01/S03 Smoke diagnostic after fresh preflight. Complete cleanup/container absence, first-valid stop and four unused ordinals are independently verified. Old full-league/pilot/v3 failures stay immutable. All fixed bounds and no-LEAG/downstream limits remain: a fresh prospective full-league allocation is still required. Phase266 realfreeze and all formation/holdout stay blocked on the complete independently attacked league. Older dispatch sections are historical.
 
 ## Historical D-34L.2 closeout snapshot — 2026-09-09
 
@@ -943,7 +943,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
   4. Structural and behavioral diversity gates yield a diverse pure portfolio kept separate from the diagnostic mixture, and a precommitted rule either selects a deployable robust pure finalist from mixture, pure, counter, probe, invariance, legality, privacy, and runtime evidence or records `no robust pure finalist found`.
   5. Provisional leaders receive the full frozen automated, model, human, and external development-red-team budget; successful counters enter the declared response loop, failed attacks remain charged evidence, and no leader may depend materially on side, initiative, duplicate arenas, opaque identities, source or Soldier order, invalid output, runtime failure, or tie-break artifacts.
 
-**Plans:** 11/14 complete. Plan265-13 is source-complete at independently accepted `e440763a`, with88/88tests, bothtypes and unchangedboundaryscan passing. Plan14 captures the existing five-attempt approval once and runs the reviewed serial diagnostic harness with fresh per-attempt preflight. No new attempt is consumed at source closeout. Historical Plans07/09/12 remain process-invalid with one charge each, not LEAG credit or renewed old-route authority. Plans10/11 source repairs and old gates retain their original source/epoch scope. Independent goal verification remains partial; all LEAG requirements unchecked and Phase266 real freeze blocked.
+**Plans:**12/14complete. Plan13 source is independently accepted at `e440763a`,88/88tests/bothtypes/unchangedboundaryscan pass. Plan14's approved envelope stopped at its first process-valid diagnostic: one charge, complete cleanup/container absence, four unused slots; root and independent retained checks pass. Historical Plans07/09/12 remain process-invalid with one charge each, not LEAG credit or renewed authority. Further Matches require a fresh prospective full-league allocation. All LEAG requirements remain unchecked and Phase266 realfreeze blocked.
 
 **Wave1 — private contracts**
 - [x] 265-01-PLAN.md — Strict rooted contracts, canonical entrant-relative payoff projection and identities.
@@ -977,7 +977,7 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 - [x] 265-13-PLAN.md — Additive gameplay-state evidence-chain repair, genuine supervised adapter/grant, shared five-attempt harness, transitive source closure and independent review; source-complete at e440763a, no live operation.
 
 **Wave10 — prospectively approved five-attempt diagnostic envelope**
-- [ ] 265-14-PLAN.md — Capture actual approval once, use fresh per-attempt preflight and distinct roots, stop first valid diagnostic or fail-closed condition; no old-route reuse, LEAG credit or downstream authority.
+- [x] 265-14-PLAN.md — Approved serial diagnostic envelope stopped at its first process-valid result; one charge, complete cleanup/container absence, four unused, independent retained check passed. No LEAG/downstream credit or envelope reuse.
 
 Cross-cutting constraints: canonical unchanged kernel and supervised hostile-source execution only; private immutable evidence with complete charged accounting; no Phase264 allocation/waiver reuse; no sparse payoff imputation; no formation, holdout opening, public/counting, production or rules changes. Mixtures remain diagnostic, pure finalists remain separately selected, and honest metagame/no-finalist failure is distinct from process failure.
 
@@ -1071,7 +1071,7 @@ Cross-cutting constraints: canonical unchanged kernel and supervised hostile-sou
 | 262. Foundation Admission, Measurement, Custody, and Containment Contract | Plan203 approved retry passed | Complete; independently verified16/16 | 2026-09-09 |
 | 263. Legal Planner and Deterministic Runner Feasibility | 7/7 | Complete; independently verified10/10 | 2026-09-13 |
 | 264. Immutable Factory, Independent Oracles, and Quarantined Intake | 8/8 | Complete — 5/5 truths,11/11 requirements,7/7 private UAT | 2026-09-14 |
-| 265. Serious Current-Rules League and Development Red Team | 11/14 | Plan13 source accepted; Plan14 approved bounded diagnostics pending; LEAG-01–09 unmet | - |
+| 265. Serious Current-Rules League and Development Red Team | 12/14 | First retry-v4 diagnostic valid; fresh full-league allocation needed; LEAG-01–09 unmet | - |
 | 266. Content-Addressed Current-League Freeze | 0/6 | Plan06 isolated source-only work remains partial; real freeze awaits complete Phase265 evidence | - |
 | 267. Post-Freeze Formation Boundary and Production Unreachability | 0/TBD | Discussion complete; awaits Phase266 freeze | - |
 | 268. Equal-Compute Retraining and Branch Freezes | 0/TBD | Discussion complete; awaits Phase267 | - |
