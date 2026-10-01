@@ -2,6 +2,40 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
+## Preserved payoff-parent pre-review epoch — 2026-10-01
+
+Isolated source `c7418124b24df0cbfe7d6905a13bb8acc0d2015b`, tree
+`6557d4f8899a1588f6fed52b7fd5afa3ef987f78`, parent `141d0aa7`, adds the
+127-line retained payoff helper and three shared checks. Helper SHA-256
+`282371799444676cea96e3055079fb94ce9ef2199c928f443fe981c18f9a80af`;
+638-line test SHA-256
+`a353f6e6f63f7a277361dcdd104015ece5bddd15c36c993c140bb3ca5b760012`.
+Root's sole serialized shared-setup suite passes 16/16, exit 0, in 1472.60
+seconds; positive payoff reading takes 49987 ms, genuine order/snapshot/parent/
+hash-valid substitution denials 3940 ms under default 5000 ms, and matrix-only
+head/missing-byte denials 92915 ms under existing 600000 ms. All thirteen prior
+checks and deadlines remain unchanged. Extra-strict noEmit TypeScript and
+whitespace pass; lab scan sees 1363 files and zero violations.
+
+Fresh complete two-file independent static review is **issues_found**, CR-01:
+caller-held factory/league `onVerifiedArtifactRead` callbacks may mutate a
+generated store during the claimed read-only operation. Exact report
+`266-06-PRELIMINARY-REVIEW.c7418124.md`, SHA-256
+`15fb1b12c05730eb1075535543bf63ff1bc05d15a830849e4ff73fccbe0f1a88`,
+and the ordinary-path 16/16 epoch remain preserved, not relabeled clean.
+Reviewer executed no callbacks, readers or QA. After release, the owner froze
+a +52-line two-file repair: helper rejects own/hidden/inherited/accessor
+observer-property presence across all supplied repositories before artifact
+reads; one default-deadline check covers 32 inert clones, never-called getters/
+observers/readers and unchanged three-store bytes. New helper SHA-256
+`796d2bbe2262815c000a8fc1851a8c24af2fac29a35de748d8b8b838b236da2f`;
+new test SHA-256
+`3cbd6f53c251423baed22e3062f246a6f21cda7254207907b68e964bafd608ab`.
+Repair source is not yet gated or approved. Root will run the sole fresh
+serialized affected suite and obtain a separately pinned independent review.
+No source integration, full Task3, Plan02 consumption or operational authority
+follows; Plan265-12 and all consumed-route/privacy/formation bounds remain exact.
+
 ## Latest isolated checkpoint — retained assessed probe constituent, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at

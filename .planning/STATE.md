@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Phase266 Plan06 retained synthetic solver-payoff parent check in progress from reviewed 141d0aa7; source-only constituent, no new gate or Match authority
+last_activity_desc: Phase266 Plan06 payoff-parent pre-review gate passes 16/16 at c7418124 but independent review finds caller-observer read-only blocker; scoped repair frozen pending fresh gate/review
 progress:
   total_phases: 9
   completed_phases: 3
@@ -23,15 +23,21 @@ total_plans_in_phase: 12
 
 ## Current Session Continuity — 2026-10-01 isolated retained payoff-parent check
 
-No verifier or fixture gate was active at resume. The warm source owner is
-adding a read-only solver-payoff constituent over the existing generated
-24-cell matrix and 28-journal probe head in the isolated Phase266 worktree.
-Scope is one new fixture adapter and appended shared-fixture tests; no second
-constructor, kernel work or replay is added by this adapter. Exact graph,
-journal and matrix membership must authenticate the stored payoff bytes; a
-hash-valid substitution must not become payoff evidence. The existing 13-check
-gate at `141d0aa7` applies only to its old source epoch. New source is ungated
-until root's serialized fixture gate and a fresh independent two-file review.
+No verifier or fixture gate was active at resume. The isolated source checkpoint
+`c7418124b24df0cbfe7d6905a13bb8acc0d2015b` adds a payoff-parent constituent
+over the existing generated 24-cell matrix and full 28-journal probe head.
+Root's serialized shared-setup gate passes 16/16 in 1472.60 seconds, strict
+non-emitting TypeScript/whitespace pass, and lab boundaries pass (1363 files,
+zero violations). These are preserved pre-review results, not source approval.
+Fresh independent review `266-06-PRELIMINARY-REVIEW.c7418124.md` (SHA-256
+`15fb1b12c05730eb1075535543bf63ff1bc05d15a830849e4ff73fccbe0f1a88`)
+finds CR-01: caller repository read callbacks can mutate stores while the new
+helper reports read-only. The owner has released a scoped two-file repair:
+reject own/hidden/inherited/accessor observers before artifact readers, with
+32 inert clone-denial canaries. New bytes are ungated pending root's fresh
+serialized 17-check gate and a fresh independently pinned review; the earlier
+16/16 pass and issues-found report remain unchanged. No new constructor,
+kernel work or replay is added by the payoff adapter itself.
 Plan06 remains partial, the isolated source stays unmerged/unpushed, and main
 receives safe continuity Markdown only. Plan265-12 still requires prospective
 human authority; consumed Plan07/09, private holdout, freeze-before-formation,
