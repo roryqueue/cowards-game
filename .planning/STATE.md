@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Phase266 Plan06 payoff-parent pre-review gate passes 16/16 at c7418124 but independent review finds caller-observer read-only blocker; scoped repair frozen pending fresh gate/review
+last_activity_desc: Phase266 Plan06 callback-presence repair passes 17/17 at f1a38213 but rereview finds late observer-installation bypass; captured callback-free read-view repair pending fresh gate/review
 progress:
   total_phases: 9
   completed_phases: 3
@@ -36,7 +36,18 @@ helper reports read-only. The owner has released a scoped two-file repair:
 reject own/hidden/inherited/accessor observers before artifact readers, with
 32 inert clone-denial canaries. New bytes are ungated pending root's fresh
 serialized 17-check gate and a fresh independently pinned review; the earlier
-16/16 pass and issues-found report remain unchanged. No new constructor,
+16/16 pass and issues-found report remain unchanged. The first repair at
+`f1a38213be2a2d996df58a178edc976cb0cfac24` passes 17/17 in 1453.16 seconds,
+including 32 early observer denials, but independent rereview
+`266-06-PRELIMINARY-REVIEW.f1a38213.md` (SHA-256
+`9e0edbd38f4705cc5504d4e8d180f42b4f563eb930385b30d618407c44ac1b15`)
+finds a residual CR-01: a caller directory getter can install a callback after
+the presence check. That epoch is not closure evidence. The second scoped
+repair captures own data/string directory descriptors, rejects getters before
+evaluation, and uses fresh frozen null-prototype directory-only read views.
+All original repository capabilities are excluded from artifact reads; 32 new
+inert getter/late-observer canaries and boundary view-shape assertions await
+root's fresh serialized 18-check gate and independent review. No new constructor,
 kernel work or replay is added by the payoff adapter itself.
 Plan06 remains partial, the isolated source stays unmerged/unpushed, and main
 receives safe continuity Markdown only. Plan265-12 still requires prospective

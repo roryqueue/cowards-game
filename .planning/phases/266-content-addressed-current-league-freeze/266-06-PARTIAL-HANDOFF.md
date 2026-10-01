@@ -4,6 +4,40 @@
 
 ## Preserved payoff-parent pre-review epoch — 2026-10-01
 
+### Preserved first callback repair and second repair in flight
+
+The first +52-line repair is committed separately at
+`f1a38213be2a2d996df58a178edc976cb0cfac24`, tree
+`412d990b11d9d7aeb4140fff012ef554d4412442`, parent `c7418124`.
+Root's fresh serialized gate passes 17/17, exit 0, in 1453.16 seconds.
+The 32 observer denials take 1161 ms under unchanged default 5000 ms;
+payoff positive 46551 ms, semantic negatives 2666 ms, stale-head/missing-byte
+denials 86108 ms. Strict non-emitting TypeScript/whitespace and lab boundaries
+pass (1363 files, zero violations). Fresh complete-file independent rereview
+is **issues_found**: CR-01 remains because a mutable caller repository's
+directory getter can install an observer after the absence check. Report
+`266-06-PRELIMINARY-REVIEW.f1a38213.md`, SHA-256
+`9e0edbd38f4705cc5504d4e8d180f42b4f563eb930385b30d618407c44ac1b15`.
+No getter/callback/reader/QA ran during review. Both issues reports and the
+16/16 and 17/17 pre-review epochs remain unchanged, not relabeled closed.
+
+After release, the owner freezes a second scoped repair: all repository
+directories are captured from own data/string descriptors before evaluation;
+inherited/accessor directory fields reject without invoking getters. All
+directory/path joins use captured strings and artifact readers receive fresh
+frozen null-prototype directory-only views, never caller repositories/options.
+Candidate closures are rebuilt as five-root metadata with the local factory
+view. No constructor, mkdir or store is added. The existing single positive
+read gains spy-only read-view assertions; one default-deadline check adds 32
+inert directory/late-installation denials with never-called getters/observers/
+readers and unchanged three-store snapshots. Helper 155 lines, SHA-256
+`b27ce57671d0d5ae2ce49624b9e7f522b6f4488019a2b426e457a7ede1de2fc9`;
+test 751 lines, SHA-256
+`dd4981cab33331e7ee11a53037c74c29343e18e99ef66db392203beba05bb430`.
+Typing/whitespace pass, but root's fresh serial 18-check gate and independent
+review remain pending. Every authority, operational and milestone gate remains
+unchanged; main receives safe Markdown only.
+
 Isolated source `c7418124b24df0cbfe7d6905a13bb8acc0d2015b`, tree
 `6557d4f8899a1588f6fed52b7fd5afa3ef987f78`, parent `141d0aa7`, adds the
 127-line retained payoff helper and three shared checks. Helper SHA-256
