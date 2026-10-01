@@ -1,5 +1,6 @@
 import { CANONICAL_ARENA_CATALOG_V1_37, defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "@cowards/runtime-js"
+import { MATCH_KERNEL } from "@cowards/engine"
 import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
 import { admitFactory, authorizeFactorySupervision, type FactoryAdmission, type FactorySupervisionProvider } from "../factory/admission.js"
 import type { FactoryRepository } from "../factory/repository.js"
@@ -7,7 +8,7 @@ import type { FactoryCandidate } from "../factory/contracts.js"
 import { readCandidateClosure } from "./connected-runner.js"
 import { requireDiagnosticPilotAssessedCandidate, type DiagnosticPilotAssessedCandidate } from "./diagnostic-pilot.js"
 import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
-import { admitDiagnosticRetryV4Allocation, admitDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, requireDiagnosticRetryV4LifetimeGrant, runAndRetainCanonicalDiagnosticRetryV4, verifyDiagnosticRetryV4Ledger, type DiagnosticRetryV4Allocation, type DiagnosticRetryV4Cell, type DiagnosticRetryV4Ledger, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4Start, type DiagnosticRetryV4RunPermit } from "./diagnostic-retry-v4.js"
+import { admitDiagnosticRetryV4Allocation, admitDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, runAndRetainCanonicalDiagnosticRetryV4, verifyDiagnosticRetryV4Ledger, type DiagnosticRetryV4Allocation, type DiagnosticRetryV4Cell, type DiagnosticRetryV4Ledger, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4Start, type DiagnosticRetryV4RunPermit, type DiagnosticRetryV4RuntimeBinding, type DiagnosticRetryV4GrantBinding } from "./diagnostic-retry-v4.js"
 const fail = (code: string): never => { throw new TypeError(`DIAGNOSTIC_RETRY_V4_${code}`) }
 const exact = (value: unknown, keys: readonly string[]) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join(",") === [...keys].sort().join(",")
 export interface DiagnosticRetryV4RuntimeHost {
@@ -18,6 +19,53 @@ const privateProviders = new WeakMap<object, FactorySupervisionProvider>()
 const retryV4IssueBindings = new WeakMap<object, Readonly<{ admission: FactoryAdmission; candidate: FactoryCandidate; seat: "bottom" | "top"; allocationRoot: LabRoot; cellRoot: LabRoot; startRoot: LabRoot; requestRoot: LabRoot }>>()
 const consumedRetryV4Issuances = new Map<LabRoot, Set<"bottom" | "top">>()
 const retryV4HandleSymbol = Symbol("diagnostic-retry-v4-issued-provider")
+const lifetimeGrants = new WeakMap<object, {
+  ledger: DiagnosticRetryV4Ledger; allocation: DiagnosticRetryV4Allocation; cell: DiagnosticRetryV4Cell; start: DiagnosticRetryV4Start;
+  active: boolean; factoryClaimed: boolean; plannerClaimed: boolean;
+}>()
+export const requireDiagnosticRetryV4LifetimeGrant = (value: unknown, binding: DiagnosticRetryV4GrantBinding): DiagnosticRetryV4LifetimeGrant => {
+  if (!value || typeof value !== "object" || !lifetimeGrants.has(value)) return fail("GRANT_UNISSUED")
+  const issuance = lifetimeGrants.get(value)!
+  if (!issuance.active) return fail("GRANT_INACTIVE")
+  verifyDiagnosticRetryV4Ledger(issuance.ledger, issuance.allocation, issuance.cell, issuance.start)
+  const grant = value as DiagnosticRetryV4LifetimeGrant
+  if (grant.schemaVersion !== "diagnostic-retry-lifetime-grant-v4" || grant.allocationRoot !== binding.allocationRoot || grant.cellRoot !== binding.cellRoot || grant.startRoot !== binding.startRoot || grant.seat !== binding.seat || grant.containerName !== binding.containerName || grant.ownershipLabel !== binding.ownershipLabel || !Number.isSafeInteger(binding.lifetimeMilliseconds) || binding.lifetimeMilliseconds < 1 || binding.lifetimeMilliseconds > 240_000 || labRoot("diagnostic-retry-grant-runtime-v4", grant.runtime) !== labRoot("diagnostic-retry-grant-runtime-v4", binding.runtime)) return fail("GRANT_BINDING")
+  return grant
+}
+export const claimDiagnosticRetryV4LifetimeGrant = (value: unknown, binding: DiagnosticRetryV4GrantBinding, layer: "factory" | "planner"): DiagnosticRetryV4LifetimeGrant => {
+  const grant = requireDiagnosticRetryV4LifetimeGrant(value, binding), issuance = lifetimeGrants.get(grant)!
+  if (layer === "factory") {
+    if (issuance.factoryClaimed || issuance.plannerClaimed) return fail("GRANT_FACTORY_REUSED")
+    issuance.factoryClaimed = true
+  } else if (layer === "planner") {
+    if (!issuance.factoryClaimed || issuance.plannerClaimed) return fail("GRANT_PLANNER_REUSED")
+    issuance.plannerClaimed = true
+  } else return fail("GRANT_LAYER")
+  return grant
+}
+/** Only the assessed candidate issuer can mint; this object expires when its
+ * one synchronous factory→planner construction returns or throws. */
+const constructGrantedProvider = (input: {
+  ledger: DiagnosticRetryV4Ledger; allocation: DiagnosticRetryV4Allocation; cell: DiagnosticRetryV4Cell; start: DiagnosticRetryV4Start;
+  seat: "bottom" | "top"; runtime: DiagnosticRetryV4RuntimeBinding;
+  construct: (grant: DiagnosticRetryV4LifetimeGrant) => FactorySupervisionProvider;
+}): FactorySupervisionProvider => {
+  const owner = diagnosticRetryV4ContainerIdentity(input.allocation, input.cell, input.seat)
+  const grant: DiagnosticRetryV4LifetimeGrant = Object.freeze({
+    schemaVersion: "diagnostic-retry-lifetime-grant-v4", allocationRoot: input.allocation.root, cellRoot: input.cell.root, startRoot: input.start.root,
+    seat: input.seat, ...owner, ceilingMilliseconds: 240_000, runtime: freezeLabValue(structuredClone(input.runtime)),
+    toJSON(): never { return fail("GRANT_NON_SERIALIZABLE") },
+  })
+  const issuance = { ledger: input.ledger, allocation: input.allocation, cell: input.cell, start: input.start, active: true, factoryClaimed: false, plannerClaimed: false }
+  lifetimeGrants.set(grant, issuance)
+  let provider: FactorySupervisionProvider | undefined
+  try {
+    provider = input.construct(grant)
+    if (!issuance.factoryClaimed || !issuance.plannerClaimed) return fail("GRANT_CONSTRUCTION_UNCLAIMED")
+    return provider
+  } catch (error) { provider?.close(); throw error }
+  finally { issuance.active = false }
+}
 export interface DiagnosticRetryV4IssuedProvider {
   readonly candidateRoot: LabRoot
   readonly startRoot: LabRoot
@@ -34,13 +82,12 @@ export interface DiagnosticRetryV4IssuedProvider {
 export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = (input: Readonly<{
   host: DiagnosticRetryV4RuntimeHost
   factoryRepository: FactoryRepository
-  ledger: Pick<DiagnosticRetryV4Ledger, "readStart" | "readTerminal">
+  ledger: DiagnosticRetryV4Ledger
   allocation: DiagnosticRetryV4Allocation
   cell: DiagnosticRetryV4Cell
   start: DiagnosticRetryV4Start
   requestRoot: LabRoot
   assessed: DiagnosticPilotAssessedCandidate
-  retryV4LifetimeGrant: DiagnosticRetryV4LifetimeGrant
 }>): Readonly<DiagnosticRetryV4IssuedProvider> => {
   const allocation = admitDiagnosticRetryV4Allocation(input.allocation), cell = admitDiagnosticRetryV4Cell(allocation, input.cell)
   const start = verifyDiagnosticRetryV4Ledger(input.ledger, allocation, cell, input.start)
@@ -49,12 +96,10 @@ export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = (input: Readon
   const pin = allocation.candidateRoots.includes(assessed.candidate.root) && allocation.candidateAdmissionRoots.includes(assessed.admission.root)
   const seat = cell.bottomCandidateRoot === assessed.candidate.root ? "bottom" : cell.topCandidateRoot === assessed.candidate.root ? "top" : null
   if (!pin || !seat || assessed.admission.candidate.root !== assessed.candidate.root || assessed.admission.tupleRoot !== cell.tupleRoot || assessed.admission.runtimeRoot !== cell.runtimeRoot || assessed.candidate.proposal.build.compatibilityTupleRoot !== cell.tupleRoot || assessed.candidate.proposal.nativeLane.runtimeProfileRoot !== cell.runtimeRoot) return fail("RETRY_V4_CANDIDATE_BINDING")
-  const container = diagnosticRetryV4ContainerIdentity(allocation, cell, seat)
-  requireDiagnosticRetryV4LifetimeGrant(input.retryV4LifetimeGrant, { allocationRoot: allocation.root, cellRoot: cell.root, startRoot: start.root, seat, containerName: container.containerName, ownershipLabel: container.ownershipLabel, lifetimeMilliseconds: 240_000 })
   const closure = readCandidateClosure(assessed.closure)
   if (closure.candidate.root !== assessed.candidate.root || closure.candidate.supervisionReceiptRoot !== assessed.candidate.supervisionReceiptRoot) return fail("RETRY_V4_CLOSURE_BINDING")
   const sourceAdmission = admitFactory({ packet: closure.packet, proposal: closure.proposal, sourceBytes: closure.sourceBytes, })
-  const admission = authorizeFactorySupervision({ sourceAdmission, validation: closure.validation, repository: input.factoryRepository })
+  const admission = authorizeFactorySupervision({ sourceAdmission, validation: closure.validation })
   const defaults = defaultRuntimeMetadata("typescript")
   const revision = buildStrategyRevision({ source: new TextDecoder("utf-8", { fatal: true }).decode(closure.sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
   if (!revision.validation.valid || !revision.metadata.sourceArtifact || revision.sourceHash !== admission.sourceRoot.slice(7)) return fail("RETRY_V4_EXECUTABLE_BUILD")
@@ -62,9 +107,15 @@ export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = (input: Readon
   const consumed = consumedRetryV4Issuances.get(start.root) ?? new Set<"bottom" | "top">()
   if (consumed.has(seat)) return fail("RETRY_V4_SEAT_ALREADY_ISSUED")
   consumed.add(seat); consumedRetryV4Issuances.set(start.root, consumed)
-  const provider = input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, executableRoot, retryV4LifetimeGrant: input.retryV4LifetimeGrant })
+  const runtime: DiagnosticRetryV4RuntimeBinding = { candidateRoot: assessed.candidate.root, admissionRoot: assessed.admission.root, factoryAuthorizationRoot: admission.authorizationRoot,
+    factoryPacketRoot: admission.packetRoot, factoryProposalRoot: admission.proposalRoot, factoryValidationRoot: admission.validationRoot,
+    sourceRoot: admission.sourceRoot, revisionId: revision.id, executableRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: cell.tupleRoot,
+    runtimeLimitsRoot: cell.runtimeRoot, image: allocation.image }
+  const provider = constructGrantedProvider({ ledger: input.ledger, allocation, cell, start, seat, runtime,
+    construct: (retryV4LifetimeGrant) => input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, executableRoot, retryV4LifetimeGrant }),
+  })
   const identity = provider?.identity
-  if (!identity || identity.revisionId !== revision.id || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.attemptRoot !== start.root || identity.budgetRoot !== allocation.root || identity.executableRoot !== executableRoot) { provider?.close(); return fail("RETRY_V4_PROVIDER_IDENTITY") }
+  if (!identity || identity.revisionId !== revision.id || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.tupleId !== MATCH_KERNEL.tupleId || identity.image !== allocation.image || identity.attemptRoot !== start.root || identity.budgetRoot !== allocation.root || identity.executableRoot !== executableRoot) { provider?.close(); return fail("RETRY_V4_PROVIDER_IDENTITY") }
   const handle = Object.freeze({ candidateRoot: closure.candidate.root, startRoot: start.root, allocationRoot: allocation.root, cellRoot: cell.root, requestRoot: cell.requestRoot, seat, producerBuildRoot: closure.candidate.proposal.build.buildRoot, identity: freezeLabValue(structuredClone(identity)), [retryV4HandleSymbol]: true as const, toJSON(): never { return fail("RETRY_V4_HANDLE_NON_SERIALIZABLE") } }) as DiagnosticRetryV4IssuedProvider
   retryV4IssuedProviders.add(handle); privateProviders.set(handle, provider); retryV4IssueBindings.set(handle, Object.freeze({ admission, candidate: closure.candidate, seat, allocationRoot: allocation.root, cellRoot: cell.root, startRoot: start.root, requestRoot: cell.requestRoot }))
   return handle

@@ -18,7 +18,7 @@ import {
   admitDiagnosticRetryV4Allocation, createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell,
   createDiagnosticRetryV4Start, createDiagnosticRetryV4Stage, createDiagnosticRetryV4Terminal,
   createDiagnosticRetryV4Result, diagnosticRetryV4ContainerIdentity, openDiagnosticRetryV4Ledger,
-  issueDiagnosticRetryV4LifetimeGrant, retainDiagnosticRetryV4PartialEvidence, safeDiagnosticRetryV4Cause,
+  retainDiagnosticRetryV4PartialEvidence, safeDiagnosticRetryV4Cause,
   type DiagnosticRetryV4Allocation, type DiagnosticRetryV4Ledger,
 } from "../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
 import {
@@ -270,7 +270,6 @@ export const executeDiagnosticRetryV4Worker = async (a: DiagnosticRetryV4Allocat
   // the last actually entered issuance/kernel/evidence boundary.
   ledger.writeStart(start)
   process.send?.({ kind: "started", startRoot: start.root })
-  checkpoint(0); checkpoint(1); checkpoint(2)
   const runPermit = ledger.writeRunAttempt(start)
   let execution: Awaited<ReturnType<typeof runAuthorizedDiagnosticRetryV4>> | null = null
   let cause: ReturnType<typeof safeDiagnosticRetryV4Cause> = "unknown_internal"
@@ -281,12 +280,13 @@ export const executeDiagnosticRetryV4Worker = async (a: DiagnosticRetryV4Allocat
       matchId: `retry-v4-${cell.requestRoot.slice(7)}`, containerName: retryV4LifetimeGrant.containerName, ownershipLabel: retryV4LifetimeGrant.ownershipLabel,
     }) }
     for (const seat of ["bottom", "top"] as const) {
+      checkpoint(seat === "bottom" ? 0 : 1)
       const assessed = pair.find((v) => v.candidate.root === (seat === "bottom" ? cell.bottomCandidateRoot : cell.topCandidateRoot))
       if (!assessed) return fail("WORKER_CANDIDATE")
-      const retryV4LifetimeGrant = issueDiagnosticRetryV4LifetimeGrant(ledger, a, cell, start, seat)
-      handles.push(issueDiagnosticRetryV4ProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation: a, cell, start, requestRoot: cell.requestRoot, assessed, retryV4LifetimeGrant }))
+      handles.push(issueDiagnosticRetryV4ProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation: a, cell, start, requestRoot: cell.requestRoot, assessed }))
     }
     const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((v) => v.id === "arena:smoke:v1")!
+    checkpoint(2)
     execution = await runAuthorizedDiagnosticRetryV4({ ledger, allocation: a, cell, start, runPermit, requestRoot: cell.requestRoot,
       bottom: handles[0]!, top: handles[1]!, match: { matchId: `retry-v4-${cell.requestRoot.slice(7)}`, seed: a.seed, arenaVariant: smoke,
         bottomPlayerId: `league-${cell.bottomCandidateRoot.slice(7)}`, topPlayerId: `league-${cell.topCandidateRoot.slice(7)}`,

@@ -2,17 +2,19 @@ import { createHash } from "node:crypto"
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
 import { MATCH_KERNEL } from "@cowards/engine"
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
 import { runCanonicalLabMatch, type LabRuntimeEvidence, type LabSupervisedProvider } from "../runtime-bridge.js"
+import * as diagnosticApi from "./diagnostic-retry-v4.js"
+import { runDiagnosticRetryV4CanonicalFromBridge } from "./diagnostic-retry-v4-bridge.js"
+vi.mock("./diagnostic-retry-v4-bridge.js", async (original) => ({ ...await original<typeof import("./diagnostic-retry-v4-bridge.js")>(), runDiagnosticRetryV4CanonicalFromBridge: vi.fn() }))
 import {
   createDiagnosticRetryV4Allocation, admitDiagnosticRetryV4Allocation,
   createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, createDiagnosticRetryV4Stage,
   openDiagnosticRetryV4Ledger, reopenDiagnosticRetryV4Ledger,
-  issueDiagnosticRetryV4LifetimeGrant, requireDiagnosticRetryV4LifetimeGrant,
-  diagnosticRetryV4ContainerIdentity, retainDiagnosticRetryV4Execution,
+  requireDiagnosticRetryV4LifetimeGrant, verifyDiagnosticRetryV4Ledger,
   verifyRetainedDiagnosticRetryV4Execution, safeDiagnosticRetryV4Cause,
   runAndRetainCanonicalDiagnosticRetryV4, createDiagnosticRetryV4Terminal,
   type DiagnosticRetryV4Ledger,
@@ -59,6 +61,12 @@ const kernelFixture = async (f: ReturnType<typeof setup>) => {
   return execution
 }
 
+/** Dependency injection exists only in this test module. Production exposes no
+ * result mint or complete retainer. The real wrapper consumes its durable permit. */
+const retainFixture = async (f: ReturnType<typeof setup>, execution: Awaited<ReturnType<typeof kernelFixture>>) => {
+  vi.mocked(runDiagnosticRetryV4CanonicalFromBridge).mockResolvedValueOnce(execution)
+  return runAndRetainCanonicalDiagnosticRetryV4({ ledger: f.ledger, allocation: f.a, cell: f.cell, start: f.start, runPermit: f.runPermit, bridgePermit: {} as never, onKernelEntry: () => {}, onEvidenceStart: () => {} })
+}
 /** Reroot a mutation rather than relying on an easy byte-hash mismatch. All
  * physical fixture bytes stay untouched; the reader sees a complete overlay. */
 const mutateRetained = (f: ReturnType<typeof setup>, evidenceRoot: LabRoot, mutate: (rows: Record<string, unknown>[]) => void) => {
@@ -104,7 +112,7 @@ describe("retry-v4 source-only evidence and durable grant contracts", () => {
 
   it("retains and reopens genuine canonical effect/resume rows despite machine-hash gaps", async () => {
     const f = setup(), execution = await kernelFixture(f)
-    const retained = retainDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, execution)
+    const retained = await retainFixture(f, execution)
     expect(verifyRetainedDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, retained.evidenceRoot)).toMatchObject({ disposition: "success", transitionCount: execution.transitions.length, accountingCount: execution.accounting.length, artifactBytes: retained.artifactBytes, artifactRecords: retained.artifactRecords })
     const initial = MATCH_KERNEL.createMachineV119({ matchId: "board-fixture", seed: f.a.seed, arenaVariant: CANONICAL_ARENA_CATALOG_V1_37.arenas.find((arena) => arena.id === "arena:smoke:v1")!, bottomPlayerId: "bottom", topPlayerId: "top", bottomStrategyRevisionId: "fixture-bottom", topStrategyRevisionId: "fixture-top", initialInitiativePlayerId: "bottom" }).initialState
     expect(initial.soldiers).toHaveLength(16)
@@ -119,14 +127,17 @@ describe("retry-v4 source-only evidence and durable grant contracts", () => {
     const f = setup(), execution = await kernelFixture(f)
     const mutated = structuredClone(execution)
     ;(mutated.transitions[1] as { beforeStateHash: string }).beforeStateHash = hash("wrong-state")
-    expect(() => retainDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, mutated)).toThrow("EVIDENCE_TRANSITION_CHAIN")
-    const retained = retainDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, execution)
+    const invalid = setup(2)
+    await expect(retainFixture(invalid, mutated)).rejects.toThrow("EVIDENCE_TRANSITION_CHAIN")
+    process.chdir(originalCwd)
+    process.chdir(join(f.ledger.directory, "../.."))
+    const retained = await retainFixture(f, execution)
     const overlay = mutateRetained(f, retained.evidenceRoot, (rows) => { rows[1]!.beforeStateHash = hash("wrong-state") })
     expect(() => verifyRetainedDiagnosticRetryV4Execution(overlay.ledger, f.a, f.cell, f.start, overlay.mutatedRoot)).toThrow("EVIDENCE_TRANSITION")
   })
 
   it.each(["machine-hash", "schema", "events", "terminal"])("rejects hash-valid %s mutation without discarding other checks", async (fault) => {
-    const f = setup(), execution = await kernelFixture(f), retained = retainDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, execution)
+    const f = setup(), execution = await kernelFixture(f), retained = await retainFixture(f, execution)
     const overlay = mutateRetained(f, retained.evidenceRoot, (rows) => {
       if (fault === "machine-hash") rows[0]!.beforeMachineHash = "invalid"
       if (fault === "schema") rows[0]!.privateMemory = "must not be admitted"
@@ -137,33 +148,26 @@ describe("retry-v4 source-only evidence and durable grant contracts", () => {
   })
 
   it("rejects orphan and missing evidence and accounting identity substitutions", async () => {
-    const f = setup(), execution = await kernelFixture(f), retained = retainDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, execution)
+    const f = setup(), execution = await kernelFixture(f), retained = await retainFixture(f, execution)
     const wrongAccounting = structuredClone(execution)
     wrongAccounting.accounting[0]!.identity.attemptRoot = hash("different-attempt")
     const g = setup(2)
     const adjusted = structuredClone(wrongAccounting)
     for (const row of adjusted.accounting) row.identity.budgetRoot = g.a.root
-    expect(() => retainDiagnosticRetryV4Execution(g.ledger, g.a, g.cell, g.start, adjusted)).toThrow("EVIDENCE_ACCOUNTING")
+    await expect(retainFixture(g, adjusted)).rejects.toThrow("EVIDENCE_ACCOUNTING")
+    process.chdir(join(f.ledger.directory, "../.."))
     expect(() => verifyRetainedDiagnosticRetryV4Execution({ ...f.ledger, readEvidence: () => { throw Error("missing bytes") } }, f.a, f.cell, f.start, retained.evidenceRoot)).toThrow("missing bytes")
     f.ledger.writeEvidence(f.start.root, Buffer.from("unreferenced unit fixture"))
     expect(() => verifyRetainedDiagnosticRetryV4Execution(f.ledger, f.a, f.cell, f.start, retained.evidenceRoot)).toThrow("EVIDENCE_ORPHAN")
   })
 
-  it("requires real charged-ledger issuance, rejects copied/wrong-seat/over-ceiling/stale grants", () => {
-    const f = setup(), grant = issueDiagnosticRetryV4LifetimeGrant(f.ledger, f.a, f.cell, f.start, "bottom")
-    const binding = { allocationRoot: f.a.root, cellRoot: f.cell.root, startRoot: f.start.root, seat: "bottom" as const, ...diagnosticRetryV4ContainerIdentity(f.a, f.cell, "bottom"), lifetimeMilliseconds: 240000 }
-    expect(requireDiagnosticRetryV4LifetimeGrant(grant, binding)).toBe(grant)
-    expect(() => requireDiagnosticRetryV4LifetimeGrant({ ...grant }, binding)).toThrow("GRANT_UNISSUED")
-    expect(() => requireDiagnosticRetryV4LifetimeGrant({ ...grant, schemaVersion: "diagnostic-one-cell-lifetime-grant-v3" }, binding)).toThrow("GRANT_UNISSUED")
-    expect(() => requireDiagnosticRetryV4LifetimeGrant(grant, { ...binding, lifetimeMilliseconds: 240001 })).toThrow("GRANT_BINDING")
-    expect(() => requireDiagnosticRetryV4LifetimeGrant(grant, { ...binding, seat: "top" })).toThrow("GRANT_BINDING")
-    expect(() => requireDiagnosticRetryV4LifetimeGrant(grant, { ...binding, allocationRoot: hash("another") })).toThrow("GRANT_BINDING")
-    expect(() => JSON.stringify(grant)).toThrow("NON_SERIALIZABLE")
+  it("exposes neither a complete producer nor a lifetime mint, and rejects unissued claims", () => {
+    expect("retainDiagnosticRetryV4Execution" in diagnosticApi).toBe(false)
+    expect("issueDiagnosticRetryV4LifetimeGrant" in diagnosticApi).toBe(false)
+    const f = setup()
+    expect(() => requireDiagnosticRetryV4LifetimeGrant({ schemaVersion: "diagnostic-retry-lifetime-grant-v4" }, {} as never)).toThrow("GRANT_UNISSUED")
+    expect(() => requireDiagnosticRetryV4LifetimeGrant({ schemaVersion: "diagnostic-one-cell-lifetime-grant-v3" }, {} as never)).toThrow("GRANT_UNISSUED")
     expect(() => f.ledger.writeRunAttempt(f.start)).toThrow("PRECONDITION")
-    for (const index of [4, 5]) f.ledger.writeStage(createDiagnosticRetryV4Stage(f.start, index, ["first_evidence_write", "terminal_publication"][index - 4] as never))
-    f.ledger.writeTerminal(createDiagnosticRetryV4Terminal(f.start, { disposition: "system_failure", processValidity: "process_invalid", evidenceRoot: null, cleanupComplete: true, elapsedMilliseconds: 1, artifactBytes: 0, artifactRecords: 0, code: "system_failure", lastEnteredStage: "terminal_publication", failureStage: "kernel_or_callback", cause: "unknown_internal" }))
-    expect(() => requireDiagnosticRetryV4LifetimeGrant(grant, binding)).toThrow("PRECHARGE_ABSENT_OR_TERMINAL")
-    expect(reopenDiagnosticRetryV4Ledger(f.ledger, f.a).records[0]!.processValidity).toBe("process_invalid")
   })
 
   it("burns a run permit before callback failure and rejects synthetic or reused permits", async () => {
@@ -186,12 +190,12 @@ describe("retry-v4 source-only evidence and durable grant contracts", () => {
     mkdirSync(a.store, { mode: 0o700 })
     const ordinary = openDiagnosticRetryV4Ledger(a.store)
     ordinary.writeStart(start)
-    expect(() => issueDiagnosticRetryV4LifetimeGrant(ordinary, a, cell, start, "bottom")).toThrow("PRECHARGE_ABSENT_OR_TERMINAL")
+    expect(() => verifyDiagnosticRetryV4Ledger(ordinary, a, cell, start)).toThrow("PRECHARGE_ABSENT_OR_TERMINAL")
     for (let index = 0; index < 3; index++) ordinary.writeStage(createDiagnosticRetryV4Stage(start, index, ["bottom_issuance", "top_issuance", "pre_kernel_binding"][index] as never))
     const uncertain = openDiagnosticRetryV4Ledger(a.store, { beforeDirectorySync: () => { throw Error("injected fsync refusal") } })
     expect(() => uncertain.writeRunAttempt(start)).toThrow("injected fsync refusal")
     expect(uncertain.hasUncertainPublication()).toBe(true)
-    expect(() => issueDiagnosticRetryV4LifetimeGrant(uncertain, a, cell, start, "bottom")).toThrow("PRECHARGE_ABSENT_OR_TERMINAL")
+    expect(() => verifyDiagnosticRetryV4Ledger(uncertain, a, cell, start)).toThrow("PRECHARGE_ABSENT_OR_TERMINAL")
     expect(() => uncertain.writeRunAttempt(start)).toThrow("PRECONDITION")
     expect(f.a.attemptOrdinal).toBe(1)
   })

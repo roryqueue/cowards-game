@@ -282,7 +282,7 @@ export const openDiagnosticRetryV4Ledger = (directory: string, fault?: { readonl
     writeStart(start: DiagnosticRetryV4Start) { if (start.schemaVersion !== "diagnostic-retry-start-v4" || start.ordinal !== 0) return fail("LEDGER_START"); write("started", start.root, start) },
     readStart(id: LabRoot) { return read("started", id) },
     writeRunAttempt(start: DiagnosticRetryV4Start) {
-      if (!same(read("started", start.root), start) || read("terminal", start.root) !== null || read("run-attempt", start.root) !== null || read("stage-2", start.root) === null) return fail("LEDGER_RUN_ATTEMPT_PRECONDITION")
+      if (!same(read("started", start.root), start) || read("terminal", start.root) !== null || read("run-attempt", start.root) !== null) return fail("LEDGER_RUN_ATTEMPT_PRECONDITION")
       const fields = { schemaVersion: "diagnostic-retry-run-attempt-v4" as const, startRoot: start.root, cellRoot: start.cellRoot, allocationRoot: start.allocationRoot, ordinal: 0 as const, consumed: true as const }
       write("run-attempt", start.root, { ...fields, root: labRoot("diagnostic-retry-run-attempt-v4", fields) })
       const permit = Object.freeze({ schemaVersion: "diagnostic-retry-run-permit-v4" as const, startRoot: start.root, toJSON(): never { return fail("RUN_PERMIT_NON_SERIALIZABLE") } })
@@ -316,9 +316,9 @@ export const verifyDiagnosticRetryV4Ledger = (ledger: Pick<DiagnosticRetryV4Ledg
   if (!same((ledger as DiagnosticRetryV4Ledger).readRunAttempt(expected.root), { ...fields, root: labRoot("diagnostic-retry-run-attempt-v4", fields) })) return fail("LEDGER_RUN_ATTEMPT_MISMATCH")
   return expected
 }
-const lifetimeGrants = new WeakMap<object, { ledger: DiagnosticRetryV4Ledger; allocation: DiagnosticRetryV4Allocation; cell: DiagnosticRetryV4Cell; start: DiagnosticRetryV4Start }>()
 export interface DiagnosticRetryV4LifetimeGrant {
   readonly schemaVersion: "diagnostic-retry-lifetime-grant-v4"
+  readonly runtime: DiagnosticRetryV4RuntimeBinding
   readonly allocationRoot: LabRoot
   readonly cellRoot: LabRoot
   readonly startRoot: LabRoot
@@ -333,19 +333,31 @@ export const diagnosticRetryV4ContainerIdentity = (allocation: DiagnosticRetryV4
   if (seat !== "bottom" && seat !== "top") return fail("CONTAINER_SEAT")
   return freezeLabValue({ containerName: `cg-v138-retryv4-${admitted.root.slice(7, 27)}-${seat}`, ownershipLabel: `diagnostic-retry-${admitted.root.slice(7)}` })
 }
-export const issueDiagnosticRetryV4LifetimeGrant = (ledger: DiagnosticRetryV4Ledger, allocation: DiagnosticRetryV4Allocation, cell: DiagnosticRetryV4Cell, start: DiagnosticRetryV4Start, seat: "bottom" | "top"): DiagnosticRetryV4LifetimeGrant => {
-  const admitted = verifyDiagnosticRetryV4Ledger(ledger, allocation, cell, start), container = diagnosticRetryV4ContainerIdentity(allocation, cell, seat)
-  const grant = Object.freeze({ schemaVersion: "diagnostic-retry-lifetime-grant-v4" as const, allocationRoot: allocation.root, cellRoot: cell.root, startRoot: admitted.root, seat, containerName: container.containerName, ownershipLabel: container.ownershipLabel, ceilingMilliseconds: 240_000 as const, toJSON(): never { return fail("GRANT_NON_SERIALIZABLE") } })
-  lifetimeGrants.set(grant, { ledger, allocation, cell, start })
-  return grant
+export { requireDiagnosticRetryV4LifetimeGrant, claimDiagnosticRetryV4LifetimeGrant } from "./diagnostic-retry-v4-bridge.js"
+export interface DiagnosticRetryV4RuntimeBinding {
+  readonly candidateRoot: LabRoot
+  readonly admissionRoot: LabRoot
+  readonly factoryAuthorizationRoot: LabRoot
+  readonly factoryPacketRoot: LabRoot
+  readonly factoryProposalRoot: LabRoot
+  readonly factoryValidationRoot: LabRoot
+  readonly sourceRoot: LabRoot
+  readonly revisionId: string
+  readonly executableRoot: LabRoot
+  readonly tupleId: string
+  readonly tupleRoot: LabRoot
+  readonly runtimeLimitsRoot: LabRoot
+  readonly image: string
 }
-export const requireDiagnosticRetryV4LifetimeGrant = (value: unknown, binding: { readonly allocationRoot: LabRoot; readonly cellRoot: LabRoot; readonly startRoot: LabRoot; readonly seat: "bottom" | "top"; readonly containerName: string; readonly ownershipLabel: string; readonly lifetimeMilliseconds: number }): DiagnosticRetryV4LifetimeGrant => {
-  if (!value || typeof value !== "object" || !lifetimeGrants.has(value)) return fail("GRANT_UNISSUED")
-  const retained = lifetimeGrants.get(value)!
-  verifyDiagnosticRetryV4Ledger(retained.ledger, retained.allocation, retained.cell, retained.start)
-  const grant = value as DiagnosticRetryV4LifetimeGrant
-  if (grant.schemaVersion !== "diagnostic-retry-lifetime-grant-v4" || grant.allocationRoot !== binding.allocationRoot || grant.cellRoot !== binding.cellRoot || grant.startRoot !== binding.startRoot || grant.seat !== binding.seat || grant.containerName !== binding.containerName || grant.ownershipLabel !== binding.ownershipLabel || grant.ceilingMilliseconds !== 240_000 || !integer(binding.lifetimeMilliseconds, grant.ceilingMilliseconds) || binding.lifetimeMilliseconds === 0) return fail("GRANT_BINDING")
-  return grant
+export interface DiagnosticRetryV4GrantBinding {
+  readonly allocationRoot: LabRoot
+  readonly cellRoot: LabRoot
+  readonly startRoot: LabRoot
+  readonly seat: "bottom" | "top"
+  readonly containerName: string
+  readonly ownershipLabel: string
+  readonly lifetimeMilliseconds: number
+  readonly runtime: DiagnosticRetryV4RuntimeBinding
 }
 export const reopenDiagnosticRetryV4Ledger = (ledger: DiagnosticRetryV4Ledger, allocation: DiagnosticRetryV4Allocation) => {
   if (!opened.has(ledger) || ledger.directory !== resolve(allocation.store)) return fail("UNTRUSTED_LEDGER")
@@ -382,7 +394,7 @@ const CHUNK_BYTES = 131_072
 const INDEX_PAGE = 1_000
 const manifestKeys = ["schemaVersion", "allocationRoot", "cellRoot", "startRoot", "requestRoot", "tupleRoot", "runtimeRoot", "semanticGeometryHash", "executionKind", "transitionIndexRoots", "accountingIndexRoots", "transitionChunkCount", "accountingChunkCount", "outcomeRoots", "outcomeByteLength", "transitionCount", "accountingCount"] as const
 /** Retains every canonical runner row; the manifest is published last. */
-export const retainDiagnosticRetryV4Execution = (ledger: DiagnosticRetryV4Ledger, allocation: DiagnosticRetryV4Allocation, cell: DiagnosticRetryV4Cell, start: DiagnosticRetryV4Start, execution: LabMatchExecution) => {
+const retainDiagnosticRetryV4Execution = (ledger: DiagnosticRetryV4Ledger, allocation: DiagnosticRetryV4Allocation, cell: DiagnosticRetryV4Cell, start: DiagnosticRetryV4Start, execution: LabMatchExecution) => {
   admitDiagnosticRetryV4Start(allocation, cell, start)
   const reopened = reopenDiagnosticRetryV4Ledger(ledger, allocation)
   if (reopened.retentionUncertain || reopened.records.length !== 1 || reopened.records[0]!.start.root !== start.root || ledger.readRunAttempt(start.root) === null || ledger.readStage(start.root, 3) === null || ledger.readTerminal(start.root) !== null) return fail("EVIDENCE_PRECONDITION")

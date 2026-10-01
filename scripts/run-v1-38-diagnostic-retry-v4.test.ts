@@ -1,17 +1,28 @@
 import { EventEmitter } from "node:events"
+import { spawn } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, lstatSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
+import { createFactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
+import { readDiagnosticPilotAssessedPair } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
+import { issueDiagnosticRetryV4ProviderFromFactoryCandidate, runAuthorizedDiagnosticRetryV4 } from "../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js"
 import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, createDiagnosticRetryV4Stage, createDiagnosticRetryV4Terminal, openDiagnosticRetryV4Ledger, retainDiagnosticRetryV4PartialEvidence } from "../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
 import {
   RETRY_V4_BOUNDS, RETRY_V4_REQUIRED_COMMANDS, diagnosticRetryV4SourceClosure, diagnosticRetryV4SourcePaths,
   parseDiagnosticRetryV4Review, createDiagnosticRetryV4Envelope, createDiagnosticRetryV4AllocationSet,
   admitDiagnosticRetryV4Envelope, createDiagnosticRetryV4PreflightAttempt, createDiagnosticRetryV4PreflightDisposition,
   requireDiagnosticRetryV4Preflight, decideDiagnosticRetryV4Next, runDiagnosticRetryV4Sequence,
-  cleanupDiagnosticRetryV4ExactOwners, durableRetryV4Create, superviseDiagnosticRetryV4Attempt, runDiagnosticRetryV4Live, checkDiagnosticRetryV4Retained, main,
+  cleanupDiagnosticRetryV4ExactOwners, durableRetryV4Create, superviseDiagnosticRetryV4Attempt, runDiagnosticRetryV4Live, checkDiagnosticRetryV4Retained, executeDiagnosticRetryV4Worker, main,
 } from "./run-v1-38-diagnostic-retry-v4.js"
+
+// Test-module-only dependency injection: worker stages and durable records are
+// real; candidate/provider/child paths cannot contact a host or execute source.
+vi.mock("node:child_process", async (original) => ({ ...await original<typeof import("node:child_process")>(), spawn: vi.fn(() => { throw Error("unit host spawn forbidden") }) }))
+vi.mock("../packages/strategy-lab/src/factory/repository.js", async (original) => ({ ...await original<typeof import("../packages/strategy-lab/src/factory/repository.js")>(), createFactoryRepository: vi.fn() }))
+vi.mock("../packages/strategy-lab/src/league/diagnostic-pilot.js", async (original) => ({ ...await original<typeof import("../packages/strategy-lab/src/league/diagnostic-pilot.js")>(), readDiagnosticPilotAssessedPair: vi.fn() }))
+vi.mock("../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js", async (original) => ({ ...await original<typeof import("../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js")>(), issueDiagnosticRetryV4ProviderFromFactoryCandidate: vi.fn(), runAuthorizedDiagnosticRetryV4: vi.fn(), closeDiagnosticRetryV4IssuedProvider: vi.fn(() => true) }))
 
 const originalCwd = process.cwd(), temporary: string[] = []
 afterEach(() => { process.chdir(originalCwd); for (const path of temporary.splice(0)) rmSync(path, { recursive: true, force: true }); vi.restoreAllMocks() })
@@ -23,6 +34,40 @@ const observation = { fileSystemBytes: "30000000000", fileSystemInodes: "5000000
 const envelope = () => createDiagnosticRetryV4Envelope({ authorizationMessage: "Actual direct user message: up to 5 retries.", sourceClosureRoot: hash("source"), closureRoot: hash("closure"), reviewHash: hash("review"), implementationRoot: hash("implementation"), closurePath: "closure.json", reviewPath: "review.md", historical: { oldEvidenceBaseline, historicalFiles: [{ path: "historical.json", sha256: hash("old") }], historicalRoot: hash("history") } })
 
 describe("single retry-v4 harness with injected source-only fixtures", () => {
+  it.each([ ["candidate-read", -1, "unknown"], ["bottom", 0, "bottom_issuance"], ["top", 1, "top_issuance"], ["pre-kernel", 2, "pre_kernel_binding"], ["kernel", 3, "kernel_or_callback"] ] as const)("retains only actually entered stages on injected %s failure", async (fault, last, failureStage) => {
+    temp(); mkdirSync(".strategy-lab", { mode: 0o700 })
+    const a = allocation(), cell = createDiagnosticRetryV4Cell(a, 0), start = createDiagnosticRetryV4Start(a, cell)
+    mkdirSync(a.store, { mode: 0o700 }); mkdirSync(join(a.store, "control"), { mode: 0o700 })
+    durableRetryV4Create(join(a.store, "control/preflight-attempt.json"), createDiagnosticRetryV4PreflightAttempt(a))
+    durableRetryV4Create(join(a.store, "control/preflight.json"), createDiagnosticRetryV4PreflightDisposition(a, observation))
+    vi.mocked(createFactoryRepository).mockReturnValue({} as never)
+    vi.mocked(readDiagnosticPilotAssessedPair).mockImplementation(() => {
+      if (fault === "candidate-read") throw Error("injected private failure")
+      return a.candidateRoots.map((root) => ({ candidate: { root } })) as never
+    })
+    vi.mocked(issueDiagnosticRetryV4ProviderFromFactoryCandidate).mockImplementation((input) => {
+      const seat = input.assessed.candidate.root === cell.bottomCandidateRoot ? "bottom" : "top"
+      if (fault === seat) throw Error("injected private failure")
+      return { identity: { revisionId: `inert-${seat}` } } as never
+    })
+    vi.mocked(runAuthorizedDiagnosticRetryV4).mockImplementation(async (input) => {
+      if (fault === "kernel") input.onKernelEntry({} as never)
+      throw Error("injected private failure")
+    })
+    vi.mocked(spawn).mockImplementation((command, args) => {
+      if (command !== "docker" || args?.[0] !== "inspect") throw Error("unit host spawn forbidden")
+      const child = new EventEmitter() as any
+      child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = vi.fn()
+      queueMicrotask(() => { child.stderr.emit("data", Buffer.from(`Error: No such object: ${args.at(-1)}\n`)); child.emit("close", 1, null) })
+      return child
+    })
+    await executeDiagnosticRetryV4Worker(a)
+    const ledger = openDiagnosticRetryV4Ledger(a.store)
+    expect(ledger.readRunAttempt(start.root)).not.toBeNull()
+    for (let i = 0; i <= 4; i++) expect(ledger.readStage(start.root, i) !== null).toBe(i <= last)
+    expect(ledger.readStage(start.root, 5)).not.toBeNull()
+    expect(ledger.readTerminal(start.root)).toMatchObject({ failureStage, lastEnteredStage: "terminal_publication", processValidity: "process_invalid", cleanupComplete: true, cause: "unknown_internal" })
+  })
   it("is import-safe and fixes five attempts and all unchanged bounds", () => {
     expect(RETRY_V4_BOUNDS).toEqual({ maxAttempts: 5, cellMilliseconds: 240000, runEntryMilliseconds: 600000, cleanupMilliseconds: 30000 })
     expect(typeof main).toBe("function")

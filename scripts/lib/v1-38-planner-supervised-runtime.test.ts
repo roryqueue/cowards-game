@@ -47,7 +47,7 @@ describe("planner selected-v1.19 host with injected transport only", () => {
   it("rejects forged, grantless, and mixed v4 lifetime requests without constructing a container", () => {
     const binding = { budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake" }
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000 }, 24800)).toThrow("RETRY_V4_GRANT")
-    expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never }, 24800)).toThrow("UNISSUED")
+    expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never }, 24800)).toThrow("RETRY_V4_IDENTITY")
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never, oneCellLifetimeMs: 240_000, oneCellLifetimeGrant: {} as never }, 24800)).toThrow("RETRY_V4_GRANT")
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never, transport: fixture().transport }, 24800)).toThrow("RETRY_V4_MODE")
   })

@@ -9,7 +9,6 @@ import { factoryOraclePacketFixture, factoryProposalFromPacket, factoryValidatio
 import { deriveFactoryOraclePacketRoot } from "../../packages/strategy-lab/src/factory/identity.js"
 import { DIAGNOSTIC_ONE_CELL_STORE, createDiagnosticOneCellAllocation, createDiagnosticOneCellCell, createDiagnosticOneCellStart, createDiagnosticOneCellLifetimeGrant, diagnosticOneCellContainerIdentity, openDiagnosticOneCellLedger } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
 import { admitFactorySupervisorLifetime, createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
-import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, createDiagnosticRetryV4Stage, issueDiagnosticRetryV4LifetimeGrant, diagnosticRetryV4ContainerIdentity, openDiagnosticRetryV4Ledger } from "../../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
 
 const root = (letter: string): LabRoot => `sha256:${letter.repeat(64)}` as LabRoot
 const originalCwd = process.cwd()
@@ -37,27 +36,11 @@ const admitted = () => {
 }
 
 describe("selected factory supervised runtime adapter", () => {
-  it("passes only the distinct durable v4 charged grant to the planner with its 240s ceiling", () => {
-    const path = realpathSync(mkdtempSync(join(tmpdir(), "retry-v4-lifetime-test-")))
-    temporaryRoots.push(path); process.chdir(path); mkdirSync(".strategy-lab", { mode: 0o700 })
-    const oldEvidenceBaseline = { oldAllocationV2: root("1"), oldAllocationUnversioned: root("2"), oldResult: root("3"), oldLeagueTree: root("4"), oldFactoryTree: root("5") }
-    const allocation = createDiagnosticRetryV4Allocation({ attemptOrdinal: 1, envelopeRoot: root("9"), sourceClosureRoot: root("6"), implementationRoot: root("7"), gateRoot: root("8"), oldEvidenceBaseline })
-    mkdirSync(allocation.store, { mode: 0o700 })
-    const cell = createDiagnosticRetryV4Cell(allocation, 0), start = createDiagnosticRetryV4Start(allocation, cell), ledger = openDiagnosticRetryV4Ledger(allocation.store)
-    ledger.writeStart(start)
-    expect(() => issueDiagnosticRetryV4LifetimeGrant(ledger, allocation, cell, start, "bottom")).toThrow()
-    for (const [ordinal, stage] of ["bottom_issuance", "top_issuance", "pre_kernel_binding"].entries()) ledger.writeStage(createDiagnosticRetryV4Stage(start, ordinal, stage as never))
-    ledger.writeRunAttempt(start)
-    const grant = issueDiagnosticRetryV4LifetimeGrant(ledger, allocation, cell, start, "bottom"), binding = diagnosticRetryV4ContainerIdentity(allocation, cell, "bottom")
-    const opts = { budgetRoot: allocation.root, attemptRoot: start.root, ...binding, retryV4LifetimeGrant: grant, factoryLifetimeMs: 240_000 }
-    expect(admitFactorySupervisorLifetime(opts)).toBe(240_000)
-    for (const change of [{ retryV4LifetimeGrant: { ...grant } }, { attemptRoot: root("1") }, { budgetRoot: root("1") }, { factoryLifetimeMs: 240_001 }, { pilotLifetimeGrant: {} }, { oneCellLifetimeGrant: {} }]) expect(() => admitFactorySupervisorLifetime({ ...opts, ...change } as never)).toThrow()
-    const { admission } = admitted()
-    const createRuntime = vi.fn((options: any) => ({ identity: { revisionId: options.revision.id, sourceRoot, executableRoot: root("1"), tupleId: "tuple", tupleRoot: root("2"), image: options.image, harnessRoot: root("3"), budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, runtimeLimitsRoot: admission.nativeLane.runtimeProfileRoot }, invoke() { throw new Error("not invoked") }, verify() { return true }, close() { return { cleanupComplete: true, orphanedChild: false } } }))
-    createFactorySupervisedRuntime({ admission, sourceBytes, ...opts, createRuntime })
-    expect(createRuntime.mock.calls[0]![0]).toMatchObject({ retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: grant })
-    expect(createRuntime.mock.calls[0]![0].oneCellLifetimeMs).toBeUndefined()
-    expect(createRuntime.mock.calls[0]![0].pilotLifetimeMs).toBeUndefined()
+  it("rejects fabricated or mixed v4 construction grants before runtime creation", () => {
+    const binding = { budgetRoot: root("1"), attemptRoot: root("2"), containerName: "fake", ownershipLabel: "fake" }
+    expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240000, retryV4LifetimeGrant: {} as never })).toThrow()
+    expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240001, retryV4LifetimeGrant: {} as never })).toThrow("LIFETIME")
+    expect(() => admitFactorySupervisorLifetime({ ...binding, retryV4LifetimeGrant: {} as never, oneCellLifetimeGrant: {} as never })).toThrow("LIFETIME_GRANT_CONFLICT")
   })
   it("never treats an unissued v3 object as 240-second authority", () => {
     expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("5"), attemptRoot: root("4"), containerName: "fake", ownershipLabel: "fake", oneCellLifetimeGrant: { schemaVersion: "diagnostic-one-cell-lifetime-grant-v3", cellRoot: root("6") } as never })).toThrow()
