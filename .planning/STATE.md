@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 fresh private league approved; preparing new source-bound allocation and capacity inputs
+stopped_at: Phase265 fresh allocation-v3 prepared and published; live same-process capacity entry next
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Human approved fresh bounded league and future same-scope prospective runs; source gate passed, preparation active, no live dispatch yet
+last_activity_desc: Historical admission and pinned capacity-input construction passed; allocation-v3 published, no live dispatch yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -31,11 +31,14 @@ unchanged. Each fresh route requires its own source-bound preparation and
 passing capacity chain; no consumed route resumes. Old allocation-v2 and
 diagnostic-v4 remain terminal. No fresh Match or model authoring has started.
 
-Root owns allocation/capacity/live dispatch. The existing executor performs
-read-only command/input preparation; no duplicate live executor or verifier is
+Root owns allocation/capacity/live dispatch. Data-only historical admission
+passed, all eleven source-bound packets are reviewed, and fresh canonical
+allocation-v3 is published at root80e2409f. The pinned inherited capacity input
+passes its typed reader; it is not a host observation or capacity receipt.
+See 265-07-EMPIRICAL-PREPARATION-v7.md. No duplicate live executor or verifier is
 active. Source review and the complete 29-suite/367-test gate remain accepted.
-Fresh source-bound packets/disclosure/capacity inputs must be prepared under
-the accepted current identities before the new route can reserve or dispatch.
+The unchanged CLI must complete static checks and fresh same-process capacity
+admission before this route can reserve or dispatch.
 Phase 265 stays 12/14 plans complete and all LEAG requirements remain pending.
 Freeze-before-formation, private holdout and no-public/no-counted bounds remain.
 

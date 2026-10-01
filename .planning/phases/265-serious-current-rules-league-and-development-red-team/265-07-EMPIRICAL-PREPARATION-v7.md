@@ -1,7 +1,8 @@
 # Phase 265 Plan 07 — fresh prospective v3 preparation
 
-Status (2026-10-01): data-only historical admission active; no new live dispatch,
-capacity receipt, reservation, Match, model turn or league result yet.
+Status (2026-10-01): data-only historical admission and capacity-input admission
+passed; fresh canonical allocation published. No new live dispatch, capacity
+receipt, reservation, Match, model turn or league result yet.
 The human's fresh-run and standing same-scope approval is recorded in
 265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md. This is additive continuation of
 Plan 07, not revival of allocation-v2 or the terminal diagnostic envelope.
@@ -72,6 +73,27 @@ Reviewed guarded run wrapper raw hash:
 `88559375cd8e3ba99f5a5aec032a3da3eb4077cb39c2d6833c93ec38b3a97cdb`.
 
 ## Admission and authority boundary
+
+The single historical `prepare-prospective` invocation exited 0 after about
+22 minutes. Its returned allocation root is
+`sha256:80e2409f330b45d53ff565d9630a52b0b0767b1f9f4fd77c6705175d4044e0d7`,
+amendment root
+`sha256:15e6b231cc8f81d1e19c2e1dde74bcd6f0ec038f4ffafa55ff64c33f4b691201`.
+The exclusive private allocation and canonical published
+`.planning/artifacts/v1.38-phase-265-allocation-v3.json` have identical raw hash
+`e11048647a1ad0f6b7cc01bbe8973b585b78e8ddad2584a4c1aed3d6b778848b`
+(21,847 bytes). Neither old allocation nor historical evidence was edited.
+
+Repaired `capacity-input` exited 0. Reconciliation raw hash:
+`1d35b7ea819b6a7b6e1353e675f403b9338599de78522be336c0c42f65b2b1b9`.
+Capacity-input raw hash:
+`b8ebac67f6d4284918889ac6760005b482b2fcdbeb3bee06999b991e5fe0c43b`.
+Root separately admitted the canonical allocation and capacity input through
+their existing schema/semantic readers; no host observation or receipt was
+created. The unchanged projection is 167,418,829,480 physical bytes and
+7,237,174 records; including terminal/free-space reserves requires at least
+210,368,502,440 free filesystem bytes at live admission. The unchanged process
+headroom is 1 GiB. These are planned costs/floors, not host measurements.
 
 Historical capacity quantities are representative inherited measurements, not
 new current-league measurements or host observations. Current source-bound
