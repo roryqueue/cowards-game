@@ -1,7 +1,7 @@
 ## VERIFICATION PASSED
 
-**Phase:** 265 — Serious Current-Rules League and Development Red Team  
-**Plans verified:** 265-13, 265-14  
+**Phase:** 265 — Serious Current-Rules League and Development Red Team
+**Plans verified:** 265-13, 265-14
 **Status:** Prior blockers resolved; plans now specify a reviewed v4 supervised handoff and bounded diagnostic sequence.
 
 ### Recheck of prior blockers

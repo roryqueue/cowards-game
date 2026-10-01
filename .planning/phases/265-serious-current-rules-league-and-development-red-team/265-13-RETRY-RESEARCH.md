@@ -1,7 +1,7 @@
 # Phase 265: Bounded One-Cell Retry Envelope - Research
 
-**Researched:** 2026-10-01  
-**Domain:** Source-level correction and bounded private diagnostic retry orchestration  
+**Researched:** 2026-10-01
+**Domain:** Source-level correction and bounded private diagnostic retry orchestration
 **Confidence:** HIGH for repository behavior and user-approved bounds; MEDIUM for the recommended source correction pending its tests and independent review
 
 <user_constraints>
@@ -209,5 +209,5 @@ No external runtime/service/package dependency is introduced. Source-only tests 
 - Architecture: HIGH for current flow from direct source inspection; MEDIUM for state-hash chain recommendation pending test and independent review.
 - Pitfalls: HIGH — consumed state, protocol boundary, and safe-cause gap are documented in current source/planning evidence.
 
-**Research date:** 2026-10-01  
+**Research date:** 2026-10-01
 **Valid until:** 2026-10-08 (bounded operational approval, host/preflight observations and attempt count are time-sensitive)
