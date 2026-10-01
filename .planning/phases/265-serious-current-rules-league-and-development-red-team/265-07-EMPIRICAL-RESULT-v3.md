@@ -38,10 +38,12 @@ inspection: both `league-c6d37cc3107e7b9ec1-0` and `...-1` returned
 NoSuchContainer from the reachable daemon. No container was created, stopped,
 removed or retried by that check.
 
-Root's one ordinary `verify-retained` invocation is active (session73144), with
-the exact allocation/head/repositories and no capacity flags. Its pass is not
-claimed before it returns. Compact closed-graph reads passed separately; they
-are not replacements for full retained verification.
+Root's one ordinary `verify-retained` invocation (session73144) completed
+exit0 with the exact allocation/head/repositories and no capacity flags. Its
+returned projection is issued=false, empirical, process_invalid and
+empiricalRequirementsComplete=false, with the exact allocation/head above.
+This authenticates the failed prefix; it is not competitive success or LEAG
+completion. No Strategy, Match, provider or model ran during verification.
 
 The unchanged120-second supervisor lifetime starts before runtime construction
 and includes kernel, invocation and synchronous durable league-recording time.
@@ -52,7 +54,7 @@ these costs before proposing a behavior-preserving repair. No timing extension,
 deferred durability, weakened capacity gate, cache-policy change, fresh Match or
 new allocation follows merely from diagnosis.
 
-Source remains the accepted accb76c5 epoch during retained verification. The
+Source remained the accepted accb76c5 epoch throughout retained verification. The
 isolated Phase266 fixture foundation is locally checkpointed ataccae66f,
 untested/unmerged/unpushed, with complete-context positive joins still missing.
 It establishes no freeze or phase completion. Phases262–264 remain complete;

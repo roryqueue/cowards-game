@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 allocation-v3 consumed process-invalid; unique retained verifier and source-only lifetime diagnosis active
+stopped_at: Phase265 allocation-v3 failure authenticated; source-only dependency-barrier repair active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Fresh capacity passed, one charged cell stopped on120s runtime lifetime; preserve terminalv3, profile source-only before fresh route
+last_activity_desc: Unique retained verifier exited0 authenticating failed prefix; isolated same-bounds repair and fault tests active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -28,8 +28,10 @@ Fresh league-v3 is TERMINAL process-invalid after one charged cell at
 FACTORY_RUNTIME_LIFETIME_EXHAUSTED under the unchanged120-second lifetime.
 Head root82b6929c; allocation root80e2409f. The actual external result-v3 is
 published and must remain immutable. Root's unique read-only retained verifier
-session73144 is active; do not duplicate it. No live executor is active.
-GSD Debug source-only lifetime diagnosis/profiling is active; no deadline,
+session73144 completed exit0, returning process_invalid / issued=false /
+empiricalRequirementsComplete=false. Do not repeat it. No live executor is active.
+GSD Debug source-only lifetime diagnosis/profiling is complete; isolated
+dependency-barrier repair and fault tests are active. No deadline,
 durability, capacity, resource, gameplay or privacy bound changes. See
 265-07-EMPIRICAL-RESULT-v3.md and debug/phase265-league-lifetime-v3.md.
 
