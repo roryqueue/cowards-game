@@ -49,12 +49,33 @@ describe("planner selected-v1.19 host with injected transport only", () => {
     const binding = { budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake" }
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000 }, 24800)).toThrow("RETRY_V4_GRANT")
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never }, 24800)).toThrow("RETRY_V4_IDENTITY")
-    expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never, oneCellLifetimeMs: 240_000, oneCellLifetimeGrant: {} as never }, 24800)).toThrow("RETRY_V4_GRANT")
+    expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never, oneCellLifetimeMs: 240_000, oneCellLifetimeGrant: {} as never }, 24800)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never, transport: fixture().transport }, 24800)).toThrow("RETRY_V4_MODE")
   })
   it("rejects grantless and mixed one-cell lifetime requests before a container exists", () => {
-    expect(() => admitPlannerSupervisorLifetime({ budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake", oneCellLifetimeMs: 240_000 }, 2200)).toThrow("ONE_CELL_GRANT")
-    expect(() => admitPlannerSupervisorLifetime({ budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake", oneCellLifetimeMs: 240_000, oneCellLifetimeGrant: {} as never, pilotLifetimeMs: 240_000, pilotLifetimeGrant: {} as never }, 2200)).toThrow("ONE_CELL_GRANT")
+    expect(() => admitPlannerSupervisorLifetime({ budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake", oneCellLifetimeMs: 240_000 }, 2200)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+    expect(() => admitPlannerSupervisorLifetime({ budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake", oneCellLifetimeMs: 240_000, oneCellLifetimeGrant: {} as never, pilotLifetimeMs: 240_000, pilotLifetimeGrant: {} as never }, 2200)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+  })
+  it.each(["pilotLifetimeGrant", "pilotLifetimeMs", "oneCellLifetimeGrant", "oneCellLifetimeMs"])("rejects retired %s before revision, grant, transport, observer or session work", (key) => {
+    const touched = vi.fn(() => { throw Error("must not read") }), transport = vi.fn(), streamFactory = vi.fn()
+    for (const value of [undefined, null, {}, 240000]) {
+      const opts = Object.defineProperties({ [key]: value, transport, streamFactory, retryV4LifetimeGrant: {} }, { revision: { get: touched }, observerHarness: { get: touched }, benchmarkLifetimeMs: { get: touched } })
+      for (let attempt = 0; attempt < 2; attempt++) {
+        expect(() => admitPlannerSupervisorLifetime(opts as never, 2200)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+        expect(() => createPlannerSupervisedRuntime(opts as never)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+      }
+    }
+    const inherited = Object.create({ [key]: undefined })
+    expect(() => admitPlannerSupervisorLifetime(inherited, 2200)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+    expect(() => createPlannerSupervisedRuntime(inherited)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+    const accessor = Object.defineProperty({}, key, { get: touched })
+    expect(() => createPlannerSupervisedRuntime(accessor as never)).toThrow("RETIRED_DIAGNOSTIC_LIFETIME")
+    expect(touched).not.toHaveBeenCalled(); expect(transport).not.toHaveBeenCalled(); expect(streamFactory).not.toHaveBeenCalled()
+  })
+  it("keeps the ordinary 120-second and explicit benchmark lifetime admissions distinct", () => {
+    const binding = { budgetRoot: root, attemptRoot: root, containerName: "ordinary", ownershipLabel: "ordinary" }
+    expect(admitPlannerSupervisorLifetime(binding, 24800)).toBe(120000)
+    expect(admitPlannerSupervisorLifetime({ ...binding, benchmarkLifetimeMs: 180000, observerHarness: { source: WORKER_HARNESS_SOURCE, machineRoot: root, expectedRoot: root } }, 2200)).toBe(180000)
   })
   it("permits explicit benchmark lifetime past120s while retaining the Match deadline", () => {
     let now = 0

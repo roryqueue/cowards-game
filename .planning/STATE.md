@@ -4,22 +4,51 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Phase265 Plan14 first diagnostic process-valid and sequence terminal; fresh prospective full-league allocation required
+status: executing
+stopped_at: Phase265 Plan07 legacy extension source repair released; exact independent re-review and complete gate pending
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: One valid diagnostic, complete cleanup, four unused; root and independent retained checks pass, full-league requirements remain open
+last_activity_desc: Legacy extension repair passes98focused tests and existing types/boundaries; re-review/fullgate next, no further live work
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 14
   completed_plans: 12
   percent: 33
-current_plan: 14
+current_plan: 7
 total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Active safe continuation — prospective full-league source readiness
+
+Diagnostic closeout is committed and pushed at197676d3. Root has requested one
+plain-English conditional approval of a fresh full-league allocation under the
+existing11328-Match/240000-model-token/150-GiB/96-hour/zero-retry bounds. No
+response, new full-league allocation, capacity observation or Match has occurred.
+
+An incremental review from prior full-league source4eb48e4d to currente440763a
+finds one actionable blocker in legacy pilot/V3 diagnostic lifetime grants:
+reusable tokens and caller constructor injection permit issuance before durable
+charge. The ordinary full-league stream/charge/replay path has no scoped finding.
+Root interrupted the pending29-suite gate after10:48.72, exit130, with no
+completed test counts; later build/types/boundaries did not run. All processes
+exited and source roots stayed unchanged during that epoch. This is not a pass.
+
+Same-Plan07 source review/fix work now retires those obsolete live lifetime
+extensions at both shared supervisor boundaries, preserving historical data,
+ordinary league120000-ms behavior, V4 single-use issuance and benchmark behavior.
+Independent re-review and the complete source gate follow; no new numbered
+plan, retry, literal checkpoint or old-route authority is created. All LEAG
+requirements and actualPhase266 freeze remain incomplete. Details are in
+265-PROSPECTIVE-LEAGUE-READINESS.md and its issues-found source review.
+
+The narrow four-file repair is released with98/98focused tests in30.14seconds,
+package/production/exact existing strict-script types and all boundary checks
+passing. The additional wider strict supervisor-test check is explicitly
+nonpassing on older fixture/transitive typing, not a relaxed phase gate.
+Independent exact-source re-review and a fresh complete29-suite gate remain.
 
 ## Current Session Continuity — 2026-10-01 prospective five-retry envelope
 
