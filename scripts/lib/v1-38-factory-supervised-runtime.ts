@@ -6,7 +6,7 @@ import type { FactoryAdmission, FactorySupervisionProvider } from "../../package
 import type { LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import { requireDiagnosticOneCellLifetimeGrant, type DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
-import { claimDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4RuntimeBinding } from "../../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
+import { claimDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4RuntimeBinding } from "./v1-38-diagnostic-retry-v4.js"
 import { createPlannerSupervisedRuntime, type PlannerSupervisedRuntime, type PlannerSupervisedRuntimeOptions } from "./v1-38-planner-supervised-runtime.js"
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_RUNTIME_${code}`) }
@@ -51,6 +51,7 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
  */
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
   const supplied = options as unknown as Record<string, unknown>
+  if (options.retryV4LifetimeGrant !== undefined && Object.prototype.hasOwnProperty.call(supplied, "createRuntime")) return fail("RETRY_V4_CONSTRUCTOR_OVERRIDE")
   if (["benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => Object.prototype.hasOwnProperty.call(supplied, key))) return fail("UNSUPPORTED_OPTION")
   const admission = options.admission
   if (admission.nativeLane.language !== "typescript" || admission.nativeLane.translation !== "none") return fail("UNSUPPORTED_NATIVE_LANE")

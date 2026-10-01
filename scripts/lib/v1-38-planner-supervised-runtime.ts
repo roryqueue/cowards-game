@@ -8,7 +8,7 @@ import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harn
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import { requireDiagnosticOneCellLifetimeGrant, type DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
-import { claimDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4RuntimeBinding } from "../../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
+import { claimDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4RuntimeBinding } from "./v1-38-diagnostic-retry-v4.js"
 import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
 
@@ -69,6 +69,7 @@ export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRu
 }
 
 export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntimeOptions): PlannerSupervisedRuntime => {
+  if (options.retryV4LifetimeGrant !== undefined && ["observerHarness", "transport", "streamFactory", "benchmarkLifetimeMs"].some((key) => Object.prototype.hasOwnProperty.call(options, key))) throw new TypeError("LAB_RUNTIME_RETRY_V4_CONSTRUCTOR_OVERRIDE")
   const observerHarness = options.observerHarness && freezeLabValue({ ...options.observerHarness })
   const provenance = options.transport || options.streamFactory ? "synthetic_transport" as const : "supervised_container" as const
   const revision = StrategyRevisionSchema.parse(options.revision)

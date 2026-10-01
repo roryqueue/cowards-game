@@ -4,12 +4,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { CANONICAL_ARENA_CATALOG_V1_37 } from "@cowards/spec"
-import { MATCH_KERNEL } from "@cowards/engine"
-import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
-import { runCanonicalLabMatch, type LabRuntimeEvidence, type LabSupervisedProvider } from "../runtime-bridge.js"
-import * as diagnosticApi from "./diagnostic-retry-v4.js"
-import { runDiagnosticRetryV4CanonicalFromBridge } from "./diagnostic-retry-v4-bridge.js"
-vi.mock("./diagnostic-retry-v4-bridge.js", async (original) => ({ ...await original<typeof import("./diagnostic-retry-v4-bridge.js")>(), runDiagnosticRetryV4CanonicalFromBridge: vi.fn() }))
+import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { runCanonicalLabMatch, type LabRuntimeEvidence, type LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
+import * as diagnosticApi from "./v1-38-diagnostic-retry-v4.js"
+import { runDiagnosticRetryV4CanonicalFromBridge } from "./v1-38-diagnostic-retry-v4-bridge.js"
+vi.mock("./v1-38-diagnostic-retry-v4-bridge.js", async (original) => ({ ...await original<typeof import("./v1-38-diagnostic-retry-v4-bridge.js")>(), runDiagnosticRetryV4CanonicalFromBridge: vi.fn() }))
 import {
   createDiagnosticRetryV4Allocation, admitDiagnosticRetryV4Allocation,
   createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, createDiagnosticRetryV4Stage,
@@ -18,7 +18,7 @@ import {
   verifyRetainedDiagnosticRetryV4Execution, safeDiagnosticRetryV4Cause,
   runAndRetainCanonicalDiagnosticRetryV4, createDiagnosticRetryV4Terminal,
   type DiagnosticRetryV4Ledger,
-} from "./diagnostic-retry-v4.js"
+} from "./v1-38-diagnostic-retry-v4.js"
 
 const originalCwd = process.cwd(), temporaryRoots: string[] = []
 afterEach(() => { process.chdir(originalCwd); for (const path of temporaryRoots.splice(0)) rmSync(path, { recursive: true, force: true }) })

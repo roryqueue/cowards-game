@@ -192,6 +192,17 @@ No external runtime/service/package dependency is introduced. Source-only tests 
 
 ## Sources
 
+### Implementation feedback — host ownership correction
+
+Independent source review requires the new issuer to construct the real
+factory/planner supervisors rather than trust a caller-provided host. Root's
+boundary scan rejects importing host scripts from the private lab package.
+Therefore the new v4 evidence/adapter pair and its tests live in `scripts/lib`,
+which already owns supervision and operational orchestration. The lab package,
+canonical kernel/bridge and scanner policy stay unchanged. This is a source
+layout correction within Plan13, not a new route, rule or authority boundary.
+The complete source closure and fresh review must cover the relocated files.
+
 ### Primary (HIGH confidence)
 - `265-12-SUMMARY.md` — exact consumed attempt disposition, charge, cleanup, bounds, and remaining authority.
 - `265-12-SOURCE-DIAGNOSIS.md` — limits on the historical 158-byte evidence and unknown initiating cause.

@@ -2,9 +2,9 @@ import { createHash, randomUUID } from "node:crypto"
 import { closeSync, constants, fsyncSync, linkSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync } from "node:fs"
 import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATALOG_V1_37, createSetScenarioV137, validateCanonicalTransition, type CanonicalKernelSemanticTransition } from "@cowards/spec"
-import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../contracts.js"
-import { type runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
-import { runDiagnosticRetryV4CanonicalFromBridge, type DiagnosticRetryV4BridgePermit } from "./diagnostic-retry-v4-bridge.js"
+import { exactLabKeys, freezeLabValue, LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { type runCanonicalLabMatch, type LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
+import { runDiagnosticRetryV4CanonicalFromBridge, type DiagnosticRetryV4BridgePermit } from "./v1-38-diagnostic-retry-v4-bridge.js"
 import {
   DIAGNOSTIC_PILOT_BASES,
   DIAGNOSTIC_PILOT_GEOMETRY,
@@ -12,7 +12,7 @@ import {
   type DiagnosticPilotCause,
   type DiagnosticPilotOldEvidenceBaseline,
   type DiagnosticPilotStage,
-} from "./diagnostic-pilot.js"
+} from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 
 /** Distinct prospective v4 records never reuse the consumed v3 ledger. */
 const fail = (code: string): never => { throw new TypeError(`DIAGNOSTIC_RETRY_V4_${code}`) }
@@ -333,7 +333,7 @@ export const diagnosticRetryV4ContainerIdentity = (allocation: DiagnosticRetryV4
   if (seat !== "bottom" && seat !== "top") return fail("CONTAINER_SEAT")
   return freezeLabValue({ containerName: `cg-v138-retryv4-${admitted.root.slice(7, 27)}-${seat}`, ownershipLabel: `diagnostic-retry-${admitted.root.slice(7)}` })
 }
-export { requireDiagnosticRetryV4LifetimeGrant, claimDiagnosticRetryV4LifetimeGrant } from "./diagnostic-retry-v4-bridge.js"
+export { requireDiagnosticRetryV4LifetimeGrant, claimDiagnosticRetryV4LifetimeGrant } from "./v1-38-diagnostic-retry-v4-bridge.js"
 export interface DiagnosticRetryV4RuntimeBinding {
   readonly candidateRoot: LabRoot
   readonly admissionRoot: LabRoot

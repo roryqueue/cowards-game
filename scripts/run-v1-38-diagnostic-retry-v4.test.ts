@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { labRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createFactoryRepository } from "../packages/strategy-lab/src/factory/repository.js"
 import { readDiagnosticPilotAssessedPair } from "../packages/strategy-lab/src/league/diagnostic-pilot.js"
-import { issueDiagnosticRetryV4ProviderFromFactoryCandidate, runAuthorizedDiagnosticRetryV4 } from "../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js"
-import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, createDiagnosticRetryV4Stage, createDiagnosticRetryV4Terminal, openDiagnosticRetryV4Ledger, retainDiagnosticRetryV4PartialEvidence } from "../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
+import { issueDiagnosticRetryV4ProviderFromFactoryCandidate, runAuthorizedDiagnosticRetryV4 } from "./lib/v1-38-diagnostic-retry-v4-bridge.js"
+import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, createDiagnosticRetryV4Stage, createDiagnosticRetryV4Terminal, openDiagnosticRetryV4Ledger, retainDiagnosticRetryV4PartialEvidence } from "./lib/v1-38-diagnostic-retry-v4.js"
 import {
   RETRY_V4_BOUNDS, RETRY_V4_REQUIRED_COMMANDS, diagnosticRetryV4SourceClosure, diagnosticRetryV4SourcePaths,
   parseDiagnosticRetryV4Review, createDiagnosticRetryV4Envelope, createDiagnosticRetryV4AllocationSet,
@@ -22,7 +22,7 @@ import {
 vi.mock("node:child_process", async (original) => ({ ...await original<typeof import("node:child_process")>(), spawn: vi.fn(() => { throw Error("unit host spawn forbidden") }) }))
 vi.mock("../packages/strategy-lab/src/factory/repository.js", async (original) => ({ ...await original<typeof import("../packages/strategy-lab/src/factory/repository.js")>(), createFactoryRepository: vi.fn() }))
 vi.mock("../packages/strategy-lab/src/league/diagnostic-pilot.js", async (original) => ({ ...await original<typeof import("../packages/strategy-lab/src/league/diagnostic-pilot.js")>(), readDiagnosticPilotAssessedPair: vi.fn() }))
-vi.mock("../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js", async (original) => ({ ...await original<typeof import("../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js")>(), issueDiagnosticRetryV4ProviderFromFactoryCandidate: vi.fn(), runAuthorizedDiagnosticRetryV4: vi.fn(), closeDiagnosticRetryV4IssuedProvider: vi.fn(() => true) }))
+vi.mock("./lib/v1-38-diagnostic-retry-v4-bridge.js", async (original) => ({ ...await original<typeof import("./lib/v1-38-diagnostic-retry-v4-bridge.js")>(), issueDiagnosticRetryV4ProviderFromFactoryCandidate: vi.fn(), runAuthorizedDiagnosticRetryV4: vi.fn(), closeDiagnosticRetryV4IssuedProvider: vi.fn(() => true) }))
 
 const originalCwd = process.cwd(), temporary: string[] = []
 afterEach(() => { process.chdir(originalCwd); for (const path of temporary.splice(0)) rmSync(path, { recursive: true, force: true }); vi.restoreAllMocks() })
@@ -45,7 +45,7 @@ describe("single retry-v4 harness with injected source-only fixtures", () => {
       if (fault === "candidate-read") throw Error("injected private failure")
       return a.candidateRoots.map((root) => ({ candidate: { root } })) as never
     })
-    vi.mocked(issueDiagnosticRetryV4ProviderFromFactoryCandidate).mockImplementation((input) => {
+    vi.mocked(issueDiagnosticRetryV4ProviderFromFactoryCandidate).mockImplementation(async (input) => {
       const seat = input.assessed.candidate.root === cell.bottomCandidateRoot ? "bottom" : "top"
       if (fault === seat) throw Error("injected private failure")
       return { identity: { revisionId: `inert-${seat}` } } as never
@@ -127,7 +127,8 @@ describe("single retry-v4 harness with injected source-only fixtures", () => {
   it("enumerates all scripts and package sources/configs, with canonical sorting", () => {
     const paths = diagnosticRetryV4SourcePaths()
     expect(paths).toEqual([...paths].sort())
-    for (const path of ["scripts/run-v1-38-diagnostic-retry-v4.ts", "scripts/run-v1-38-diagnostic-retry-v4.test.ts", "packages/engine/src/kernel/step.ts", "packages/strategy-lab/src/runtime-bridge.ts", "packages/strategy-lab/tsconfig.json", "packages/strategy-lab/package.json", "pnpm-lock.yaml", "tsconfig.base.json", "tsconfig.json"]) expect(paths).toContain(path)
+    for (const path of ["scripts/run-v1-38-diagnostic-retry-v4.ts", "scripts/run-v1-38-diagnostic-retry-v4.test.ts", "scripts/lib/v1-38-diagnostic-retry-v4.ts", "scripts/lib/v1-38-diagnostic-retry-v4.test.ts", "scripts/lib/v1-38-diagnostic-retry-v4-bridge.ts", "scripts/lib/v1-38-diagnostic-retry-v4-bridge.test.ts", "packages/engine/src/kernel/step.ts", "packages/strategy-lab/src/runtime-bridge.ts", "packages/strategy-lab/tsconfig.json", "packages/strategy-lab/package.json", "pnpm-lock.yaml", "tsconfig.base.json", "tsconfig.json"]) expect(paths).toContain(path)
+    expect(paths.some((path) => path.startsWith("packages/strategy-lab/src/league/diagnostic-retry-v4"))).toBe(false)
     expect(paths.some((p) => p.endsWith("SOURCE-REVIEW.md"))).toBe(false)
   })
   it("binds independent structured Markdown review and exact successful command receipts", () => {

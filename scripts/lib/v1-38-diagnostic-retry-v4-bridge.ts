@@ -1,19 +1,17 @@
 import { CANONICAL_ARENA_CATALOG_V1_37, defaultRuntimeMetadata } from "@cowards/spec"
-import { buildStrategyRevision } from "@cowards/runtime-js"
-import { MATCH_KERNEL } from "@cowards/engine"
-import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
-import { admitFactory, authorizeFactorySupervision, type FactoryAdmission, type FactorySupervisionProvider } from "../factory/admission.js"
-import type { FactoryRepository } from "../factory/repository.js"
-import type { FactoryCandidate } from "../factory/contracts.js"
-import { readCandidateClosure } from "./connected-runner.js"
-import { requireDiagnosticPilotAssessedCandidate, type DiagnosticPilotAssessedCandidate } from "./diagnostic-pilot.js"
-import { runCanonicalLabMatch, type LabMatchExecution } from "../runtime-bridge.js"
-import { admitDiagnosticRetryV4Allocation, admitDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, runAndRetainCanonicalDiagnosticRetryV4, verifyDiagnosticRetryV4Ledger, type DiagnosticRetryV4Allocation, type DiagnosticRetryV4Cell, type DiagnosticRetryV4Ledger, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4Start, type DiagnosticRetryV4RunPermit, type DiagnosticRetryV4RuntimeBinding, type DiagnosticRetryV4GrantBinding } from "./diagnostic-retry-v4.js"
+import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
+import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
+import { admitFactory, authorizeFactorySupervision, type FactoryAdmission, type FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
+import type { FactoryRepository } from "../../packages/strategy-lab/src/factory/repository.js"
+import type { FactoryCandidate } from "../../packages/strategy-lab/src/factory/contracts.js"
+import { readCandidateClosure } from "../../packages/strategy-lab/src/league/connected-runner.js"
+import { requireDiagnosticPilotAssessedCandidate, type DiagnosticPilotAssessedCandidate } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
+import { runCanonicalLabMatch, type LabMatchExecution } from "../../packages/strategy-lab/src/runtime-bridge.js"
+import { createFactorySupervisedRuntime } from "./v1-38-factory-supervised-runtime.js"
+import { admitDiagnosticRetryV4Allocation, admitDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, diagnosticRetryV4ContainerIdentity, runAndRetainCanonicalDiagnosticRetryV4, verifyDiagnosticRetryV4Ledger, type DiagnosticRetryV4Allocation, type DiagnosticRetryV4Cell, type DiagnosticRetryV4Ledger, type DiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4Start, type DiagnosticRetryV4RunPermit, type DiagnosticRetryV4RuntimeBinding, type DiagnosticRetryV4GrantBinding } from "./v1-38-diagnostic-retry-v4.js"
 const fail = (code: string): never => { throw new TypeError(`DIAGNOSTIC_RETRY_V4_${code}`) }
 const exact = (value: unknown, keys: readonly string[]) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join(",") === [...keys].sort().join(",")
-export interface DiagnosticRetryV4RuntimeHost {
-  readonly createFactorySupervisedRuntime: (input: Readonly<{ admission: FactoryAdmission; sourceBytes: Uint8Array; attemptRoot: LabRoot; budgetRoot: LabRoot; executableRoot: LabRoot; retryV4LifetimeGrant: DiagnosticRetryV4LifetimeGrant }>) => FactorySupervisionProvider
-}
 const retryV4IssuedProviders = new WeakSet<object>()
 const privateProviders = new WeakMap<object, FactorySupervisionProvider>()
 const retryV4IssueBindings = new WeakMap<object, Readonly<{ admission: FactoryAdmission; candidate: FactoryCandidate; seat: "bottom" | "top"; allocationRoot: LabRoot; cellRoot: LabRoot; startRoot: LabRoot; requestRoot: LabRoot }>>()
@@ -79,8 +77,7 @@ export interface DiagnosticRetryV4IssuedProvider {
   toJSON(): never
 }
 /** Distinct v4 issuance; no consumed pilot or v3 handle is accepted. */
-export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = (input: Readonly<{
-  host: DiagnosticRetryV4RuntimeHost
+export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = async (input: Readonly<{
   factoryRepository: FactoryRepository
   ledger: DiagnosticRetryV4Ledger
   allocation: DiagnosticRetryV4Allocation
@@ -88,7 +85,8 @@ export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = (input: Readon
   start: DiagnosticRetryV4Start
   requestRoot: LabRoot
   assessed: DiagnosticPilotAssessedCandidate
-}>): Readonly<DiagnosticRetryV4IssuedProvider> => {
+}>): Promise<Readonly<DiagnosticRetryV4IssuedProvider>> => {
+  if (!exact(input, ["factoryRepository", "ledger", "allocation", "cell", "start", "requestRoot", "assessed"])) return fail("RETRY_V4_ISSUER_OPTIONS")
   const allocation = admitDiagnosticRetryV4Allocation(input.allocation), cell = admitDiagnosticRetryV4Cell(allocation, input.cell)
   const start = verifyDiagnosticRetryV4Ledger(input.ledger, allocation, cell, input.start)
   if (input.requestRoot !== cell.requestRoot || start.root !== createDiagnosticRetryV4Start(allocation, cell).root) return fail("RETRY_V4_REQUEST_BINDING")
@@ -112,7 +110,8 @@ export const issueDiagnosticRetryV4ProviderFromFactoryCandidate = (input: Readon
     sourceRoot: admission.sourceRoot, revisionId: revision.id, executableRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: cell.tupleRoot,
     runtimeLimitsRoot: cell.runtimeRoot, image: allocation.image }
   const provider = constructGrantedProvider({ ledger: input.ledger, allocation, cell, start, seat, runtime,
-    construct: (retryV4LifetimeGrant) => input.host.createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, executableRoot, retryV4LifetimeGrant }),
+    construct: (retryV4LifetimeGrant) => createFactorySupervisedRuntime({ admission, sourceBytes: new Uint8Array(closure.sourceBytes), attemptRoot: start.root, budgetRoot: allocation.root, retryV4LifetimeGrant,
+      factoryLifetimeMs: 240_000, image: allocation.image, matchId: `retry-v4-${cell.requestRoot.slice(7)}`, containerName: retryV4LifetimeGrant.containerName, ownershipLabel: retryV4LifetimeGrant.ownershipLabel }),
   })
   const identity = provider?.identity
   if (!identity || identity.revisionId !== revision.id || identity.sourceRoot !== admission.sourceRoot || identity.factoryPacketRoot !== admission.packetRoot || identity.factoryProposalRoot !== admission.proposalRoot || identity.factoryValidationRoot !== admission.validationRoot || identity.runtimeLimitsRoot !== cell.runtimeRoot || identity.tupleRoot !== cell.tupleRoot || identity.tupleId !== MATCH_KERNEL.tupleId || identity.image !== allocation.image || identity.attemptRoot !== start.root || identity.budgetRoot !== allocation.root || identity.executableRoot !== executableRoot) { provider?.close(); return fail("RETRY_V4_PROVIDER_IDENTITY") }

@@ -41,6 +41,7 @@ describe("selected factory supervised runtime adapter", () => {
     expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240000, retryV4LifetimeGrant: {} as never })).toThrow()
     expect(() => admitFactorySupervisorLifetime({ ...binding, factoryLifetimeMs: 240001, retryV4LifetimeGrant: {} as never })).toThrow("LIFETIME")
     expect(() => admitFactorySupervisorLifetime({ ...binding, retryV4LifetimeGrant: {} as never, oneCellLifetimeGrant: {} as never })).toThrow("LIFETIME_GRANT_CONFLICT")
+    expect(() => createFactorySupervisedRuntime({ ...binding, admission: admitted().admission, sourceBytes, retryV4LifetimeGrant: {} as never, createRuntime: vi.fn() })).toThrow("RETRY_V4_CONSTRUCTOR_OVERRIDE")
   })
   it("never treats an unissued v3 object as 240-second authority", () => {
     expect(() => admitFactorySupervisorLifetime({ factoryLifetimeMs: 240_000, budgetRoot: root("5"), attemptRoot: root("4"), containerName: "fake", ownershipLabel: "fake", oneCellLifetimeGrant: { schemaVersion: "diagnostic-one-cell-lifetime-grant-v3", cellRoot: root("6") } as never })).toThrow()

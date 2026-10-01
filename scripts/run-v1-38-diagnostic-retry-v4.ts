@@ -11,7 +11,6 @@ import { DIAGNOSTIC_PILOT_PHASE264_STORE, readDiagnosticPilotAssessedPair } from
 import { readDiagnosticPilotOldEvidenceBaseline } from "./run-v1-38-diagnostic-pilot.js"
 // Pure enumeration only: no v3 selector, gate, token or operational function is called.
 import { oneCellSourcePaths, checkOneCellWorkspaceResolution } from "./run-v1-38-one-cell-diagnostic.js"
-import { createFactorySupervisedRuntime } from "./lib/v1-38-factory-supervised-runtime.js"
 import { MEMORY_PRESSURE_Q_REQUEST, parseMemoryPressureQ } from "./lib/v1-38-darwin-headroom.js"
 import {
   DIAGNOSTIC_RETRY_V4_CAPACITY, DIAGNOSTIC_RETRY_V4_SEED, DIAGNOSTIC_RETRY_V4_STAGES,
@@ -20,11 +19,11 @@ import {
   createDiagnosticRetryV4Result, diagnosticRetryV4ContainerIdentity, openDiagnosticRetryV4Ledger,
   retainDiagnosticRetryV4PartialEvidence, safeDiagnosticRetryV4Cause,
   type DiagnosticRetryV4Allocation, type DiagnosticRetryV4Ledger,
-} from "../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
+} from "./lib/v1-38-diagnostic-retry-v4.js"
 import {
   issueDiagnosticRetryV4ProviderFromFactoryCandidate, closeDiagnosticRetryV4IssuedProvider,
-  runAuthorizedDiagnosticRetryV4, type DiagnosticRetryV4RuntimeHost, type DiagnosticRetryV4IssuedProvider,
-} from "../packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.js"
+  runAuthorizedDiagnosticRetryV4, type DiagnosticRetryV4IssuedProvider,
+} from "./lib/v1-38-diagnostic-retry-v4-bridge.js"
 
 const fail = (code: string): never => { throw new TypeError(`DIAGNOSTIC_RETRY_V4_CLI_${code}`) }
 const hash = (bytes: Uint8Array | string): LabRoot => `sha256:${createHash("sha256").update(bytes).digest("hex")}`
@@ -56,8 +55,8 @@ export const RETRY_V4_REVIEW_PATH = ".planning/phases/265-serious-current-rules-
 export const RETRY_V4_REPOSITORY = ".strategy-lab/league-265-retry-v4"
 export const RETRY_V4_BOUNDS = Object.freeze({ maxAttempts: 5, cellMilliseconds: 240_000, runEntryMilliseconds: 600_000, cleanupMilliseconds: 30_000 })
 export const RETRY_V4_TEST_FILES = Object.freeze([
-  "packages/strategy-lab/src/league/diagnostic-retry-v4.test.ts",
-  "packages/strategy-lab/src/league/diagnostic-retry-v4-bridge.test.ts",
+  "scripts/lib/v1-38-diagnostic-retry-v4.test.ts",
+  "scripts/lib/v1-38-diagnostic-retry-v4-bridge.test.ts",
   "scripts/lib/v1-38-factory-supervised-runtime.test.ts",
   "scripts/lib/v1-38-planner-supervised-runtime.test.ts",
   "scripts/run-v1-38-diagnostic-retry-v4.test.ts",
@@ -65,7 +64,7 @@ export const RETRY_V4_TEST_FILES = Object.freeze([
 export const RETRY_V4_REQUIRED_COMMANDS = Object.freeze([
   `pnpm exec vitest run --maxWorkers=1 ${RETRY_V4_TEST_FILES.join(" ")}`,
   "pnpm exec tsc --noEmit -p packages/strategy-lab/tsconfig.json",
-  "pnpm exec tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --skipLibCheck --types node scripts/run-v1-38-diagnostic-retry-v4.ts scripts/run-v1-38-diagnostic-retry-v4.test.ts scripts/lib/v1-38-factory-supervised-runtime.ts scripts/lib/v1-38-planner-supervised-runtime.ts",
+  "pnpm exec tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --skipLibCheck --types node scripts/run-v1-38-diagnostic-retry-v4.ts scripts/run-v1-38-diagnostic-retry-v4.test.ts scripts/lib/v1-38-diagnostic-retry-v4.ts scripts/lib/v1-38-diagnostic-retry-v4.test.ts scripts/lib/v1-38-diagnostic-retry-v4-bridge.ts scripts/lib/v1-38-diagnostic-retry-v4-bridge.test.ts scripts/lib/v1-38-factory-supervised-runtime.ts scripts/lib/v1-38-planner-supervised-runtime.ts",
 ])
 const configs = (directory: string): string[] => readdirSync(directory, { withFileTypes: true }).flatMap((e) => e.isFile() && /^tsconfig.*\.json$/u.test(e.name) ? [join(directory, e.name).replace(/^\.\//u, "")] : [])
 export const diagnosticRetryV4SourcePaths = (): readonly string[] => Object.freeze([...new Set([
@@ -275,15 +274,11 @@ export const executeDiagnosticRetryV4Worker = async (a: DiagnosticRetryV4Allocat
   let cause: ReturnType<typeof safeDiagnosticRetryV4Cause> = "unknown_internal"
   try {
     const repository = createFactoryRepository(DIAGNOSTIC_PILOT_PHASE264_STORE), pair = readDiagnosticPilotAssessedPair(repository)
-    const host: DiagnosticRetryV4RuntimeHost = { createFactorySupervisedRuntime: ({ admission, sourceBytes, attemptRoot, budgetRoot, retryV4LifetimeGrant }) => createFactorySupervisedRuntime({
-      admission, sourceBytes, attemptRoot, budgetRoot, retryV4LifetimeGrant, factoryLifetimeMs: 240_000,
-      matchId: `retry-v4-${cell.requestRoot.slice(7)}`, containerName: retryV4LifetimeGrant.containerName, ownershipLabel: retryV4LifetimeGrant.ownershipLabel,
-    }) }
     for (const seat of ["bottom", "top"] as const) {
       checkpoint(seat === "bottom" ? 0 : 1)
       const assessed = pair.find((v) => v.candidate.root === (seat === "bottom" ? cell.bottomCandidateRoot : cell.topCandidateRoot))
       if (!assessed) return fail("WORKER_CANDIDATE")
-      handles.push(issueDiagnosticRetryV4ProviderFromFactoryCandidate({ host, factoryRepository: repository, ledger, allocation: a, cell, start, requestRoot: cell.requestRoot, assessed }))
+      handles.push(await issueDiagnosticRetryV4ProviderFromFactoryCandidate({ factoryRepository: repository, ledger, allocation: a, cell, start, requestRoot: cell.requestRoot, assessed }))
     }
     const smoke = CANONICAL_ARENA_CATALOG_V1_37.arenas.find((v) => v.id === "arena:smoke:v1")!
     checkpoint(2)

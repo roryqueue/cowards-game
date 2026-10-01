@@ -45,6 +45,7 @@ const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") 
 
 describe("planner selected-v1.19 host with injected transport only", () => {
   it("rejects forged, grantless, and mixed v4 lifetime requests without constructing a container", () => {
+    for (const key of ["observerHarness", "transport", "streamFactory", "benchmarkLifetimeMs"]) expect(() => createPlannerSupervisedRuntime({ ...options(), retryV4LifetimeGrant: {} as never, [key]: undefined })).toThrow("RETRY_V4_CONSTRUCTOR_OVERRIDE")
     const binding = { budgetRoot: root, attemptRoot: root, containerName: "fake", ownershipLabel: "fake" }
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000 }, 24800)).toThrow("RETRY_V4_GRANT")
     expect(() => admitPlannerSupervisorLifetime({ ...binding, retryV4LifetimeMs: 240_000, retryV4LifetimeGrant: {} as never }, 24800)).toThrow("RETRY_V4_IDENTITY")
