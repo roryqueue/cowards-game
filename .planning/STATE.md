@@ -29,11 +29,17 @@ Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97
 
 Resume checks find no active verifier or test and no interrupted GSD agent.
 The prior reviewed `f10e0a84` checkpoint remains isolated and non-authorizing.
-`/root/response_closure_266_06` owns only a new assessed-probe fixture and shared
-matrix-test additions for one synthetic `repeat_restart` receipt: two pairs,
-four fixed pure-kernel arms, ordinary retained graph/journal/accounting writers
-and readers, no second history/import/matrix setup. Source is still being
-authored; its root-owned gate and fresh independent review are pending. No
+The owner released only a new assessed-probe fixture and shared matrix-test
+additions for one synthetic `repeat_restart` receipt: two pairs, four fixed
+pure-kernel arms, ordinary retained graph/journal/accounting writers and readers,
+no second history/import/matrix setup. Root's first frozen gate passes 12/13,
+then fails the hostile-source canary: its hard-coded replacement can be the
+invocation's original source, making the supposed substitution a no-op. The
+failed epoch is retained in the partial handoff, not treated as a pass. Root
+repaired only that test to select and assert a genuinely different imported
+source. Its unchanged 5000 ms default, helper, old nine checks and policies
+remain exact. Non-emitting TypeScript, whitespace and lab boundaries pass;
+one fresh serialized gate is active and fresh independent review is pending. No
 operational Match, route, allocation/live preflight, provider/Strategy/model,
 holdout or formation action is open; Plan265-12 and consumed Plan07/09 remain
 unchanged. The prior complete source checkpoint below is not a pass for these

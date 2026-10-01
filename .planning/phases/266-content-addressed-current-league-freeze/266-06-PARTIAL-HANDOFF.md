@@ -2,6 +2,40 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
+## In-flight probe constituent — preserved first gate, 2026-09-30
+
+The source branch remains at reviewed `f10e0a84`, with exactly two uncommitted
+paths: new `current-freeze-assessed-probe-fixture.ts` and shared matrix-test
+additions. The released helper SHA-256 is
+`1d86f2e220a412f53a3a262976c1ad372c7db2247cf2dbfaf522eab92c88b9e1`;
+first test SHA-256 is
+`262c1f5653986475fdeb61d7253331fc6fad73a21fd99d7c5e124edfd2b80aba`.
+Root's sole serialized first gate exits 1: 12/13 pass in 1414.93 seconds. The
+actual retained probe graph/journal/invocation reopening and four recorded-arm
+checks pass in 57142 ms, but the final hostile-source assertion reports
+`expected [Function] to throw an error` after 56974 ms. That failed epoch and
+its original 5000 ms default remain recorded; it is not a successful gate.
+
+The hard-coded third imported source can equal the first invocation's source.
+Consequently that supposed negative is a no-op and reaches the expensive
+positive reopening. Root repairs only the test to choose an actually different
+imported source and independently assert inequality before attempting denial.
+No helper, production reader, policy, setup or existing nine checks/deadlines
+change. Repaired test SHA-256 is
+`e1beb69e12f3daf71e73a1d76f39f7fa9fdaaeaa822db6e63e266bc2a8fd85d3`.
+Extra-strict two-file non-emitting TypeScript, whitespace and lab boundaries
+pass (1362 files, zero violations). One fresh serialized shared-setup gate is
+active; fresh complete-file independent review and source commit remain pending.
+
+The first gate measured four fixed source-fixture arms, two pairs, 23 mock
+accounting entries and 213 pure-kernel step calls per arm, within unchanged
+24/512 fixture caps. Its source-derived receipt has matching paired gameplay
+roots, but no emitted Strategy behavior or empirical invariance is verified.
+All four arms are confined to the held generated league; supplied generated
+history and response bytes remain unchanged. No actual Match, operational
+probe/provider, route, allocation/live preflight, holdout, formation, public,
+counted or production action occurred. No Task3 or whole-map pass is claimed.
+
 ## Latest isolated checkpoint — assessed round-target repair, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
