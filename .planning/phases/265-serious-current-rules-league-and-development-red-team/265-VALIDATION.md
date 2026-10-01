@@ -6,14 +6,32 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-01
-source_reviewed: e440763a
-source_gate: retry-v4-88-tests-both-types-boundaries-pass-full-phase-gate-not-repeated
+source_reviewed: accb76c5
+source_gate: complete29suite367test-existing-types-and-boundaries-pass
 empirical_validation: retry-v4-first-diagnostic-process-valid-full-league-incomplete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Complete current prospective-league source gate — 2026-10-01
+
+At reviewed source accb76c5, HEAD 5822abb0, the exact named combined gate passes
+29/29 suites and 367/367 tests in 2106.00 seconds. Package build, exact 14-path strict
+script types, all three 1353-file/zero-violation source scans and service checks
+(zero strict/ownership offenses, 19 existing report-only entries) pass. Entire
+fail-fast chain exits 0 in 35:40.36; source/HEAD are unchanged before/after.
+The incremental legacy-extension blocker is independently closed. Root's own
+98/98 focused tests pass in 30.00 seconds. All QA has exited; no live dispatch or
+historical/private evidence mutation occurred. See 265-PROSPECTIVE-LEAGUE-GATE.md.
+
+The extra wider strict supervisor-test check remains nonpassing on older
+fixture/transitive typing and is preserved in the fix note. Whole-phase
+Nyquist remains partial/false: the successful diagnostic and source gate do
+not satisfy the missing complete actual league or authorize a fresh allocation.
+One plain-English prospective full-league approval is pending; no new allocation
+or fresh capacity chain exists. Earlier pending-gate entries below are history.
 
 ### Prospective full-league gate interrupted for source review repair
 

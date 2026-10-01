@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: executing
-stopped_at: Phase265 Plan07 incremental source review accepted; complete league source gate next, fresh-allocation approval pending
+status: blocked
+stopped_at: Phase265 source readiness complete; awaiting separately approved fresh full-league route, no active verifier
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Repair pushed ataccb76c5, root98tests pass and independent re-review zero findings; fullgate next, no further live work
+last_activity_desc: Full29suite367test gate/types/boundaries pass on unchanged reviewed source; diagnostic valid/terminal, fresh league approval pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,32 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Active safe continuation — prospective full-league source readiness
+## Latest source closeout — awaiting one prospective league decision
+
+The exact complete source gate passes 29/29 suites and 367/367 tests in 2106.00s;
+package build, strict 14-path affected-script types, all three 1353-file/zero-
+violation scanners and service checks pass. Whole fail-fast chain exits 0 in
+35:40.36. Source/HEAD stayed unchanged at 5822abb0 through proof; all QA has exited.
+The independent four-file re-review accepts source accb76c5 with zero actionable
+findings; root separately passes 98/98 focused tests in 30.00s. The wider extra
+strict supervisor-test check's older typing limitation remains recorded, not
+called green. See 265-PROSPECTIVE-LEAGUE-GATE.md for exact scope and roots.
+
+The first diagnostic was process-valid, clean and independently reopened; its
+envelope is terminal with four unused ordinals. All old failed/consumed routes
+and source epochs stay immutable. No diagnostic can count toward the league.
+All LEAG-01–09 remain unchecked; Phase 265 stays 12/14 plans complete and Phase 266
+actual freeze/formation/holdout remain blocked on the real complete league.
+
+The one plain-English conditional request for a FRESH full-league route remains
+unanswered: existing 11,328-Match reservation, 240,000 model tokens, 150 GiB evidence,
+96-hour stop and zero retries. Existing 120-second Match and all other scope/
+policy limits stay unchanged. No new allocation, host capacity observation,
+Match/model authoring or budget increase exists. Do not dispatch before clear
+prospective human approval and the new allocation/capacity chain. No further
+literal, custody ceremony or numbered plan is required just to make that choice.
+
+## Historical safe continuation — source readiness now superseded above
 
 Diagnostic closeout is committed and pushed at197676d3. Root has requested one
 plain-English conditional approval of a fresh full-league allocation under the

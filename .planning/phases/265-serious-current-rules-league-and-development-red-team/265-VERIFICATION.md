@@ -9,6 +9,7 @@ overrides_applied: 0
 empirical_authority: false
 latest_follow_up: 2026-10-01
 latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
+latest_source_gate: accb76c53511f23facc04e4c6a671fc3e628f3ab
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
     status: failed

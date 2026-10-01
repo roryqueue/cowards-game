@@ -2,6 +2,8 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Latest source-only closeout: reviewedaccb76c5 passes the complete29-suite367-test gate, required types/build and all boundaries. Legacy diagnostic runtime extensions are retired with zero scoped re-review findings. No further live Match or new allocation occurred; prospective full-league approval remains pending. This does not change12/14plan progress, unmet LEAG requirements or the Phase266-before-formation gate. Details:265-PROSPECTIVE-LEAGUE-GATE.md.
+
 Phase264 is independently complete:5/5truths, all11requirements and7/7private acceptance checks. Phase265 is12/14plans complete. Plans13/14 now close with accepted source and one PROCESS_VALID private S01/S03 Smoke diagnostic after fresh preflight. Complete cleanup/container absence, first-valid stop and four unused ordinals are independently verified. Old full-league/pilot/v3 failures stay immutable. All fixed bounds and no-LEAG/downstream limits remain: a fresh prospective full-league allocation is still required. Phase266 realfreeze and all formation/holdout stay blocked on the complete independently attacked league. Older dispatch sections are historical.
 
 ## Historical D-34L.2 closeout snapshot — 2026-09-09
