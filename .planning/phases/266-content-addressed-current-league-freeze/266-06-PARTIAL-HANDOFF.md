@@ -2,7 +2,70 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
-## Latest isolated checkpoint — canonical factory history, 2026-09-30
+## Latest isolated checkpoint — assessed three-base imports, 2026-09-30
+
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`d795581bfb6f962362570771294654f40d55cdaa`, tree
+`8adfdea8a81e9db62182b816236e59144a95c496`, direct parent `c87dc92c`.
+The exact two-file hashes and independent standard-depth static review are
+retained in `266-06-PRELIMINARY-REVIEW.d795581b.md` (report SHA-256
+`1cedaa8baf27b34c47eb76a85097df725c52f606af50f1aec4630d0e27724982`).
+Review is scoped clean with zero actionable findings. Root and the source owner
+ceased all related reads, edits and tests during review; the reviewer read both
+complete pinned files and the necessary unchanged contracts, authenticated the
+pins and ran no duplicate fixture, suite or assessor. QA below is root-reported,
+not independently reproduced. Constructor, encoder, parent-reader and frozen
+policy source remains unchanged from the preceding checkpoint.
+
+Root's sole serial gate for this delta passes 8/8 in 1517.89 seconds:
+
+```sh
+pnpm exec vitest run scripts/fixtures/current-freeze-canonical-factory-history-fixture.test.ts --maxWorkers=1 --reporter=verbose --disableConsoleIntercept
+```
+
+It reuses one prescribed 48-workload v3 history, preserves all six preceding
+checks and original deadlines, and adds two import/declaration checks. Existing
+test2 takes 836 ms, ordinary/historical reopening takes 164895 ms, and complete
+history takes 492945 ms within its unchanged 600000 ms ceiling. The new actual
+reader/import operation takes 349530 ms within that same predeclared ceiling;
+cheap substitution denials take 510 ms. No second constructor, favorable-result
+search or old-history suite rerun occurs in this gate. All earlier failed
+bounded epochs and independent reports remain unchanged below.
+
+The new helper selects the first prescribed A/smoke/bottom/candidate-initiative
+publication for each S01/S03/S05, deriving the selection from the retained
+manifest/workload/source roster, assessment, terminal and supervision parents.
+The ordinary initial-candidate reader and all three actual importers invoke the
+real historical verifier four times in total, without a substituted callback or
+cached affirmation. All three imports are `base_distinct`; exact assessment,
+threshold, publication, supervision, start/terminal, source and fingerprint
+closure joins pass the actual imported-parent inspector (eight entries each).
+Generated filenames, lengths and SHA-256 values stay unchanged. Wrong closure
+publication, nested source, assessment, supervision, control-slot/publication
+evidence and duplicate roster substitutions refuse at the actual boundaries.
+
+The full ordinary eleven-job prospective declaration binds these imports using
+the unchanged policy and `evidenceClass:"injected_fixture"`. It exists in memory
+only; request/disclosure/provenance/review roots are explicitly unretained,
+unverified placeholders. No output directory, capacity, reservation, preflight,
+marker, run-start or publication is created. Forbidden operational/store APIs
+are instrumented and unused. Root-owned extra-strict two-file non-emitting
+TypeScript and whitespace pass; lab boundaries pass with 1358 files and zero
+violations. This is a scoped source gate, not Task3's full applicable suite,
+an operational benchmark or source/compiler/native/custody/clock proof.
+
+Next safe source work is a matching retained league matrix/corpus bound to these
+actual synthetic imports, followed by the eleven response targets/arms, probes,
+independent evaluation, report/marker and historical source/review parents.
+Do not relabel the existing legacy unassessed matrix or relax its round-target
+contract. Positive checked-map derivation/rederivation, exact three-store union
+and Task3's full suite/final review remain open. No Plan06 summary, Plan02
+consumption or empirical/freeze/import execution authority follows. Main receives
+safe Markdown only; Plan265-11/12 and consumed Plan07/09 remain unchanged. No
+operational Match, prospective route, live preflight, provider/Strategy/model,
+real-store scan, private holdout, formation, public or counted action occurred.
+
+## Earlier isolated checkpoint — canonical factory history, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `c87dc92ceda32fcda36c0ab908af90ed0ec12b38`, tree

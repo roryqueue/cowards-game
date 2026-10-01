@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 canonical factory-history constituent passes 20/20 and independent five-file review at c87dc92c; isolated source only, no whole-map or Match authority
+last_activity_desc: Phase266 Plan06 assessed three-base import constituent passes 8/8 and independent two-file review at d795581b; isolated source only, no whole-map or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -25,7 +25,38 @@ total_plans_in_phase: 12
 
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
-## Current Session Continuity — 2026-09-30 isolated Plan266-06 source checkpoint
+## Current Session Continuity — 2026-09-30 isolated assessed-import checkpoint
+
+The latest clean, isolated, unmerged and unpushed source checkpoint is
+`d795581bfb6f962362570771294654f40d55cdaa`, tree
+`8adfdea8a81e9db62182b816236e59144a95c496`, direct parent `c87dc92c`.
+Root's single canonical-history suite passes 8/8 in 1517.89 seconds, preserving
+all six preceding checks and their deadlines and adding two assessed-import
+checks on the same generated v3 history. The actual ordinary initial-candidate
+reader and all three actual importers perform four independent historical
+verifications, deriving S01/S03/S05 `base_distinct` imports. Their exact retained
+publication, assessment, threshold, supervision, start/terminal, source and
+fingerprint joins reopen through the real parent inspector (eight entries each).
+The new operation takes 349530 ms within its 600000 ms ceiling; substitution
+negatives take 510 ms. Generated filenames, lengths and hashes remain unchanged.
+An ordinary frozen-policy eleven-job prospective declaration is in-memory
+`injected_fixture` schema metadata only; its job evidence roots are explicitly
+unretained placeholders. No allocation, capacity, reservation, preflight,
+directory, marker or run-start is issued. Extra-strict two-file non-emitting
+TypeScript, whitespace and lab boundaries pass (1358 files, zero violations).
+Independent standard-depth two-file review in
+`266-06-PRELIMINARY-REVIEW.d795581b.md` is scoped clean with zero actionable
+findings; root QA was not independently rerun. Actual synthetic import joins
+are now validated, not operational/source/compiler/native/custody/clock or
+empirical qualification. A matching retained league matrix/corpus and response
+graph, positive whole-map/rederivation, exact three-store union and Task3's full
+suite/final review remain open. No Plan06 summary or Plan02 consumption follows.
+Main receives safe Markdown only; Plan265-12 and consumed allocations remain
+unchanged. No operational Match, route, provider/Strategy/model, private holdout,
+formation or public/counted action occurred. The preceding history checkpoint
+follows.
+
+## Earlier Session Continuity — 2026-09-30 canonical factory-history checkpoint
 
 The latest clean, isolated, unmerged and unpushed source checkpoint is
 `c87dc92ceda32fcda36c0ab908af90ed0ec12b38`, tree
