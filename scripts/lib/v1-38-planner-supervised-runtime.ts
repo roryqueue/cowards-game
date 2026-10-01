@@ -8,6 +8,7 @@ import { WORKER_HARNESS_SOURCE } from "../../packages/runtime-js/src/worker-harn
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import { requireDiagnosticOneCellLifetimeGrant, type DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
+import { requireDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
 import type { LabKernelRequest, LabRuntimeEvidence, LabRuntimeIdentity, LabSupervisedProvider } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, type LeanContainerMatchSessionOptions, type LeanTimingBinding, type LeanTimingObservation } from "./v1-38-lean-container-match-session.js"
 
@@ -38,11 +39,18 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   /** Distinct v3 diagnostic exception, never the consumed pilot capability. */
   oneCellLifetimeMs?: number;
   oneCellLifetimeGrant?: DiagnosticOneCellLifetimeGrant;
+  retryV4LifetimeMs?: number;
+  retryV4LifetimeGrant?: DiagnosticRetryV4LifetimeGrant;
 }
 
 /** Pure bound used before any container construction; testable with an inert
  * durable pilot grant without creating a provider or Match. */
-export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "oneCellLifetimeGrant" | "oneCellLifetimeMs" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">, invocationLimit: number): number => {
+export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "oneCellLifetimeGrant" | "oneCellLifetimeMs" | "retryV4LifetimeGrant" | "retryV4LifetimeMs" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">, invocationLimit: number): number => {
+  if ((options.retryV4LifetimeGrant === undefined) !== (options.retryV4LifetimeMs === undefined) || options.retryV4LifetimeGrant && (options.pilotLifetimeGrant || options.oneCellLifetimeGrant)) throw new TypeError("LAB_RUNTIME_RETRY_V4_GRANT")
+  if (options.retryV4LifetimeGrant !== undefined) {
+    if (options.benchmarkLifetimeMs !== undefined || options.observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_RETRY_V4_MODE")
+    requireDiagnosticRetryV4LifetimeGrant(options.retryV4LifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.retryV4LifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.retryV4LifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.retryV4LifetimeMs! })
+  }
   if ((options.pilotLifetimeGrant === undefined) !== (options.pilotLifetimeMs === undefined)) throw new TypeError("LAB_RUNTIME_PILOT_GRANT")
   if ((options.oneCellLifetimeGrant === undefined) !== (options.oneCellLifetimeMs === undefined) || options.pilotLifetimeGrant && options.oneCellLifetimeGrant) throw new TypeError("LAB_RUNTIME_ONE_CELL_GRANT")
   if (options.pilotLifetimeGrant !== undefined) {
@@ -53,7 +61,7 @@ export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRu
     if (options.benchmarkLifetimeMs !== undefined || options.observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_ONE_CELL_MODE")
     requireDiagnosticOneCellLifetimeGrant(options.oneCellLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.oneCellLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.oneCellLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: options.oneCellLifetimeMs! })
   }
-  const lifetime = options.oneCellLifetimeMs ?? options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120_000
+  const lifetime = options.retryV4LifetimeMs ?? options.oneCellLifetimeMs ?? options.pilotLifetimeMs ?? options.benchmarkLifetimeMs ?? 120_000
   if (!Number.isFinite(lifetime) || lifetime <= 0 || lifetime > 3_600_000 || (options.benchmarkLifetimeMs !== undefined && (!options.observerHarness || invocationLimit !== 2_200))) throw new TypeError("LAB_RUNTIME_LIFETIME")
   return lifetime
 }

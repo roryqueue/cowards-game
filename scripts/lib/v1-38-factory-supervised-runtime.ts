@@ -6,6 +6,7 @@ import type { FactoryAdmission, FactorySupervisionProvider } from "../../package
 import type { LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { requireDiagnosticPilotLifetimeGrant, type DiagnosticPilotLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-pilot.js"
 import { requireDiagnosticOneCellLifetimeGrant, type DiagnosticOneCellLifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-one-cell.js"
+import { requireDiagnosticRetryV4LifetimeGrant, type DiagnosticRetryV4LifetimeGrant } from "../../packages/strategy-lab/src/league/diagnostic-retry-v4.js"
 import { createPlannerSupervisedRuntime, type PlannerSupervisedRuntime, type PlannerSupervisedRuntimeOptions } from "./v1-38-planner-supervised-runtime.js"
 
 const fail = (code: string): never => { throw new TypeError(`FACTORY_RUNTIME_${code}`) }
@@ -20,14 +21,19 @@ export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedR
   readonly factoryLifetimeMs?: number
   readonly pilotLifetimeGrant?: DiagnosticPilotLifetimeGrant
   readonly oneCellLifetimeGrant?: DiagnosticOneCellLifetimeGrant
+  readonly retryV4LifetimeGrant?: DiagnosticRetryV4LifetimeGrant
   readonly createRuntime?: (options: PlannerSupervisedRuntimeOptions) => PlannerSupervisedRuntime
 }
 
 /** Pure lifetime admission shared by real construction and injected tests. */
-export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRuntimeOptions, "factoryLifetimeMs" | "pilotLifetimeGrant" | "oneCellLifetimeGrant" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">): number => {
+export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRuntimeOptions, "factoryLifetimeMs" | "pilotLifetimeGrant" | "oneCellLifetimeGrant" | "retryV4LifetimeGrant" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">): number => {
   const factoryLifetimeMs = options.factoryLifetimeMs ?? 120_000
   if (options.pilotLifetimeGrant && options.oneCellLifetimeGrant) return fail("LIFETIME_GRANT_CONFLICT")
-  if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > (options.pilotLifetimeGrant || options.oneCellLifetimeGrant ? 240_000 : 120_000)) return fail("LIFETIME")
+  if (options.retryV4LifetimeGrant && (options.pilotLifetimeGrant || options.oneCellLifetimeGrant)) return fail("LIFETIME_GRANT_CONFLICT")
+  if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > (options.pilotLifetimeGrant || options.oneCellLifetimeGrant || options.retryV4LifetimeGrant ? 240_000 : 120_000)) return fail("LIFETIME")
+  if (options.retryV4LifetimeGrant !== undefined) {
+    requireDiagnosticRetryV4LifetimeGrant(options.retryV4LifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.retryV4LifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.retryV4LifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: factoryLifetimeMs })
+  }
   if (options.pilotLifetimeGrant !== undefined) {
     requireDiagnosticPilotLifetimeGrant(options.pilotLifetimeGrant, { allocationRoot: options.budgetRoot, cellRoot: options.pilotLifetimeGrant.cellRoot, startRoot: options.attemptRoot, seat: options.pilotLifetimeGrant.seat, containerName: options.containerName, ownershipLabel: options.ownershipLabel, lifetimeMilliseconds: factoryLifetimeMs })
   }
@@ -59,7 +65,7 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
   const factoryLifetimeMs = admitFactorySupervisorLifetime(options)
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options
-  const selected = createRuntime({ ...runtimeOptions, ...(options.pilotLifetimeGrant === undefined ? {} : { pilotLifetimeMs: factoryLifetimeMs }), ...(options.oneCellLifetimeGrant === undefined ? {} : { oneCellLifetimeMs: factoryLifetimeMs }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
+  const selected = createRuntime({ ...runtimeOptions, ...(options.pilotLifetimeGrant === undefined ? {} : { pilotLifetimeMs: factoryLifetimeMs }), ...(options.oneCellLifetimeGrant === undefined ? {} : { oneCellLifetimeMs: factoryLifetimeMs }), ...(options.retryV4LifetimeGrant === undefined ? {} : { retryV4LifetimeMs: factoryLifetimeMs }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })
   let identity: FactorySupervisionProvider["identity"]
   try {
     if (selected.identity.sourceRoot !== admission.sourceRoot || selected.identity.runtimeLimitsRoot !== admission.nativeLane.runtimeProfileRoot || selected.identity.attemptRoot !== options.attemptRoot || selected.identity.budgetRoot !== options.budgetRoot || selected.identity.image !== (options.image ?? LAB_ADMITTED_ROOTS.image)) return fail("SELECTED_IDENTITY")
