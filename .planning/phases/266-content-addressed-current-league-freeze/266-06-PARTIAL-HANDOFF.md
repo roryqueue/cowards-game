@@ -2,7 +2,118 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
-## Latest isolated checkpoint — matching assessed matrix, 2026-09-30
+## Latest isolated checkpoint — assessed round-target repair, 2026-09-30
+
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`f10e0a84ed04a1a95e85a2530f70d719f39b9f9f`, tree
+`036385672976bd7dac4e85f220d3f3f5c5449048`, direct parent
+`c6e585917f6c8fa39d26df4c04a2f0ed2885fd73`. The exact two complete-file hashes
+and fresh independent standard-depth review are retained in
+`266-06-PRELIMINARY-REVIEW.f10e0a84.md` (report SHA-256
+`8220a20b56d079b93475488809f8ba159f0748813e4a1dc7eadf58690976dd81`).
+CR-01 is closed with zero remaining actionable findings in that scope. Root and
+the owner/scoper ceased related reads, edits and tests during independent review;
+the reviewer ran no duplicate QA or fixture/store reader. QA below is root's
+source-test result, not independent reproduction or Task3 completion.
+
+### Preserved initial epoch and repair
+
+Initial source commit `c6e585917f6c8fa39d26df4c04a2f0ed2885fd73`, tree
+`0379f1d97ef3811f1fb5481632d85689ab1ffa19`, direct parent `fa588338`, passed the
+eight-check ordinary-path gate in 1238.22 seconds. Metadata creation took
+37612 ms, later tactical reopening 36658 ms and cheap denials 1018 ms. The
+independent issues-found report `266-06-PRELIMINARY-REVIEW.c6e58591.md` remains
+unchanged (SHA-256
+`5e928ad5de99629173c326d3f6e75819d165fed7dc3ce4a5a7b70b7f37448d92`). It found
+one BLOCKER: the new source-copy writer could preserve an original admission
+but reopen another genuine candidate's same-history closure, then label that
+second source with the first candidate. Passing ordinary-path tests did not
+cover or excuse that inconsistency. No operational authority was bypassed.
+
+The isolated repair changes only the new round-target helper and shared matrix
+test. Every candidate admission is parsed and every actual retained closure is
+reopened before the first publication. Candidate/publication/source root, actual
+digest, exact length, encoding, tuple/runtime and repository joins must agree.
+Only the locally retained validated bytes and parsed admission are used in the
+subsequent copy pass. A new default-deadline canary preserves the original
+admission/publication while substituting a genuine full closure, source alone,
+publication alone or the last row's closure. All four refuse before any writer
+call and leave the generated history, league and response stores byte-stable.
+Its error assertion cannot be satisfied by the writer spy's own throw.
+
+The optional added no-unused TypeScript probe in the initial epoch exited 2 on
+ten existing transitive unused declarations, none in the two owned paths. That
+probe is retained as a failure; it is not a passed selected gate, was not rerun
+for the repair, and caused no unrelated source edits. Established extra-strict
+non-emitting checks pass at both source epochs.
+
+### Exact repaired source gate
+
+Root's one serialized command on the repaired frozen bytes passes 9/9, exit 0,
+in 1256.58 seconds:
+
+```sh
+pnpm exec vitest run scripts/fixtures/current-freeze-assessed-matrix-fixture.test.ts --maxWorkers=1 --reporter=verbose --disableConsoleIntercept
+```
+
+It constructs one prescribed v3 history, one actual assessed-import reader epoch
+and one matching matrix in the existing shared setup. No second constructor or
+favorable-result search occurs within either gate. Original five checks and all
+setup/test deadlines remain unchanged. Their new durations are 24 ms, 58 ms,
+actual matrix/tactical reopening 139424 ms, identity denials 1259 ms and missing/
+corrupt physical-parent denials 3051 ms. The CR-01 canary takes 1331 ms within
+the original 5000 ms default; metadata construction takes 37205 ms and later
+tactical reopening 36882 ms within the predeclared 600000 ms ceilings; remaining
+cheap denials take 1020 ms. Root-owned two-file extra-strict non-emitting
+TypeScript, staged whitespace and lab boundaries pass (1361 files, zero
+violations). All earlier gates remain separate epochs, not a new aggregate or
+full applicable repository pass.
+
+The metadata branch uses unchanged `declareLeagueRound`/`advanceLeagueRound`
+over ordinals 0–3, always with empty admissions and the same assessed population/
+snapshot/solver. Only ordinal3 requests data-only closure. Eleven packets match
+ordinary job roles: nine development targets with exact seeds/weights, two final
+roles without development/tactical feedback and with null authoring targets.
+Jobs0/3/6 are tactical. Round0's existing corpus is retained; the actual builder
+creates distinct round1/2 corpora over the same canonical cells, and the real
+reader reopens each later context once. The existing matrix target is not changed
+or relabelled. Zero accepted counters and eleven unfilled slots are explicit.
+
+Only the held generated response store receives metadata/source-copy/corpus
+writes (`storeWritten:true`). Supplied history and league bytes stay unchanged;
+all three generated stores are byte-stable across readers. Fixed pure-kernel
+24 WINs/552 accounting are unchanged, not emitted Strategy behavior. No actual
+response or terminal, real league closure, probe/evaluation/report/marker,
+source/compiler/native/custody/clock, whole-map/empirical/freeze qualification
+is claimed. Existing policy, runtime, gameplay, privacy and formation-absence
+bounds remain exact. No operational Match, prospective route, reservation/live
+preflight, native/provider/Strategy/model/human execution, actual private-store
+scan, holdout, formation, public, counted or production action occurred. Main
+receives safe Markdown only; Plan265-11/12 and consumed Plan07/09 remain unchanged.
+
+### Next safe source unit and still-open gates
+
+Read-only scoping identifies one retained `repeat_restart` probe receipt for one
+assessed candidate/declared round as a possible next constituent. Unchanged
+policy requires two pairs/four fresh fixed pure-kernel probe-cell arms, actual
+imported source/start/accounting identities, ordinary graph/start/terminal
+writers and actual retained probe-invocation checks. Suggested ownership is a
+new `current-freeze-assessed-probe-fixture.ts` and shared-setup assertions, with
+no second history/import/matrix constructor. This is a source-unit suggestion,
+not authority for operational Matches, allocation, preflight or a new route.
+
+System-failure terminals remain `process_invalid`; a pre-start refusal or
+fabricated catch record cannot substitute for positive response/evaluation/
+report parents. No fresh population/snapshot is needed for that isolated probe
+on the unchanged-population branch; a genuinely accepted counter would require
+one. Actual response arms, independent evaluation/report/markers, unretained
+job evidence and historical source/review parents remain unproved. Positive
+checked-map derivation/rederivation, exact complete three-store union and full
+Task3 suite/final review still remain open. Do not write Plan06 SUMMARY/final
+SOURCE-REVIEW, consume Plan02 or claim real current-league freeze from these
+preliminary constituents.
+
+## Earlier isolated checkpoint — matching assessed matrix, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `fa588338ff99dca907316ed95a15142fc9d53520`, tree

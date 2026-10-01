@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 matching assessed matrix/tactical constituent passes 5/5 and independent two-file review at fa588338; isolated source only, no whole-map or Match authority
+last_activity_desc: Phase266 Plan06 eleven-role round metadata passes 9/9 after CR-01 repair and fresh two-file review at f10e0a84; isolated source only, no whole-map or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -25,7 +25,46 @@ total_plans_in_phase: 12
 
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
-## Current Session Continuity — 2026-09-30 isolated assessed-matrix checkpoint
+## Current Session Continuity — 2026-09-30 isolated assessed round-target repair
+
+The latest clean, isolated, unmerged and unpushed source checkpoint is
+`f10e0a84ed04a1a95e85a2530f70d719f39b9f9f`, tree
+`036385672976bd7dac4e85f220d3f3f5c5449048`, direct parent `c6e58591`.
+The held assessed matrix now composes eleven ordinary-role target packets,
+four unchanged-population empty-admission metadata rounds and distinct round1/2
+tactical corpora from the same retained canonical cells. Nine development
+packets carry their exact targets/weights; two independent-role packets contain
+no development feedback and have null authoring targets. Zero counters are
+accepted and all eleven response slots remain unfilled; a data-only closed round
+is not actual league closure. Only generated response-store metadata is written.
+
+The first source epoch `c6e58591` passed 8/8 in 1238.22 seconds, but independent
+review found CR-01: a genuine same-history closure swap could associate one
+candidate with another's source. That issues-found report remains immutable.
+The repair rejoins every admission/physical closure/publication/source digest
+and length/tuple/runtime/repository before any publication, then copies retained
+validated bytes. Four hostile closure substitutions, including a last-row swap,
+now refuse with zero writer calls and unchanged bytes in all three stores.
+Root's new sole serial shared-setup gate passes 9/9 in 1256.58 seconds; the new
+canary takes 1331 ms within its original 5000 ms default. Metadata creation and
+later tactical reopening take 37205/36882 ms within the unchanged 600000 ms
+ceilings. Original checks, constructors, data, policies and deadlines remain
+unchanged. Extra-strict two-file non-emitting TypeScript, whitespace and lab
+boundaries pass (1361 files, zero violations). The optional earlier no-unused
+probe's ten existing transitive diagnostics remain recorded, not claimed green.
+
+Fresh standard-depth complete two-file review in
+`266-06-PRELIMINARY-REVIEW.f10e0a84.md` closes CR-01 with zero remaining actionable
+findings. Root QA was not independently rerun. Both prior epochs/reports remain
+in the partial handoff; main receives safe Markdown only. Actual response,
+probe/evaluation/report/marker and historical source/review parents, positive
+whole-map/rederivation, exact complete three-store union and full Task3 remain
+open. No Plan06 summary, Plan02 consumption, qualification or freeze follows.
+Plan265-12 and consumed Plan07/09 remain unchanged. No operational Match, route,
+reservation/live preflight, native/provider/Strategy/model, real private-store
+scan, holdout, formation, public, counted or production action occurred.
+
+## Earlier Session Continuity — 2026-09-30 isolated assessed-matrix checkpoint
 
 The latest clean, isolated, unmerged and unpushed source checkpoint is
 `fa588338ff99dca907316ed95a15142fc9d53520`, tree
