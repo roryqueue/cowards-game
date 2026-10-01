@@ -6,9 +6,9 @@ current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
-last_updated: "2026-09-30"
-last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 retained synthetic probe constituent passes 13/13 after no-op canary repair and fresh two-file review at 141d0aa7; isolated source only, no whole-map or Match authority
+last_updated: "2026-10-01"
+last_activity: 2026-10-01
+last_activity_desc: Phase266 Plan06 retained synthetic solver-payoff parent check in progress from reviewed 141d0aa7; source-only constituent, no new gate or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,22 @@ total_plans_in_phase: 12
 ---
 
 # State: Coward's Game
+
+## Current Session Continuity — 2026-10-01 isolated retained payoff-parent check
+
+No verifier or fixture gate was active at resume. The warm source owner is
+adding a read-only solver-payoff constituent over the existing generated
+24-cell matrix and 28-journal probe head in the isolated Phase266 worktree.
+Scope is one new fixture adapter and appended shared-fixture tests; no second
+constructor, kernel work or replay is added by this adapter. Exact graph,
+journal and matrix membership must authenticate the stored payoff bytes; a
+hash-valid substitution must not become payoff evidence. The existing 13-check
+gate at `141d0aa7` applies only to its old source epoch. New source is ungated
+until root's serialized fixture gate and a fresh independent two-file review.
+Plan06 remains partial, the isolated source stays unmerged/unpushed, and main
+receives safe continuity Markdown only. Plan265-12 still requires prospective
+human authority; consumed Plan07/09, private holdout, freeze-before-formation,
+and no operational Match/public/counting/production boundaries are unchanged.
 
 ## Current Session Continuity — 2026-09-29 Plan265-11 source-only closeout
 
