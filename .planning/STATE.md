@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 Plan13 independent review found three source blockers; autonomous fixes underway, five diagnostic attempts remain untouched
+stopped_at: Phase265 Plan13 re-review found one residual injected-host bypass; autonomous repair pass2 underway, five diagnostic attempts remain untouched
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: New lossless state-chain evidence and retry source passes68tests and bothtypes; independent review blocks exported producer, grant scope/reuse and prewritten failure stages
+last_activity_desc: Repair pass1 passes84tests and bothtypes; independent re-review resolves original three blockers but requires genuine supervisor construction
 progress:
   total_phases: 9
   completed_phases: 3
@@ -42,6 +42,15 @@ grants need private assessed-candidate binding and single-use construction, and
 failure stages are written before their actual operations. The issues-found
 review/closure remain committed history; source fixes and re-review precede any
 operational envelope, allocation or preflight. No live attempt is consumed.
+
+Repair checkpoint `1e23231f` passes root's 84/84 focused tests in 28.97 seconds,
+both TypeScript checks, 18/18 legacy continuity tests and the 1353-file boundary
+scan with zero violations. Independent re-review resolves the three original
+findings but finds one remaining public issuer path that trusts a caller-supplied
+supervisor host. Repair pass2 binds production construction to the genuine
+supervisor and confines injection to test modules. The rejected review and
+closure are preserved as `.1e23231f` history; canonical current review/closure
+paths remain absent and execution stays closed. All five attempts remain unused.
 
 Static source analysis identifies a concrete producer/reader defect: the
 canonical bridge does not record the intermediate pending-effect machine, so
