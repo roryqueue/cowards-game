@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 allocation-v3 failure authenticated; source-only dependency-barrier repair active
+stopped_at: Phase265 small-invocation repair independently reviewed; complete source gate53203 active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Unique retained verifier exited0 authenticating failed prefix; isolated same-bounds repair and fault tests active
+last_activity_desc: Review clean,19focused tests pass,50same hashes and~12percent sampled savings; full unchanged CI source gate active before fresh route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,15 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — consumed league-v3 diagnosis
+
+Repair source e28f29a0 is committed/pushed with independent deep review
+(zero findings).19 focused tests and build pass;50 source-only benchmark
+records preserve all original hashes with~12percent sampled write-time savings.
+The unchanged complete source gate is active as session53203 at1595efb3.
+Do not duplicate it or edit source during it. This is not a Match timing proof,
+capacity admission, fresh allocation, LEAG completion or a freeze. See
+265-07-DEPENDENCY-BARRIER-PROOF-v1.md. No new human approval is required for
+the eventual distinct same-bounds route, but every technical gate still applies.
 
 Fresh league-v3 is TERMINAL process-invalid after one charged cell at
 2026-10-01T22:52:59.983Z. Capacity passed, then soldierBrain failed with
