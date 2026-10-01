@@ -2,9 +2,93 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
-## In-flight probe constituent — preserved first gate, 2026-09-30
+## Latest isolated checkpoint — retained assessed probe constituent, 2026-09-30
 
-The source branch remains at reviewed `f10e0a84`, with exactly two uncommitted
+The clean, unmerged and unpushed `codex/phase266-context` branch is at
+`141d0aa79823dc7d131fd7f70f371c606634b0a9`, tree
+`2ef022951f1a4797faea4be2dd286072bdc62384`, direct parent
+`f10e0a84ed04a1a95e85a2530f70d719f39b9f9f`. The exact two complete-file pins
+and fresh independent standard-depth static review are retained in
+`266-06-PRELIMINARY-REVIEW.141d0aa7.md` (SHA-256
+`77eedef9cb13c987958f1b65f008a82047d14f1e28def19214ae7a84e5d9dede`).
+Review finds zero actionable findings. Root and owner ceased all related
+reads/edits/tests during review; no reviewer QA or store reader ran. Source is
+clean and every author/review freeze is released; no test or verifier is active.
+
+The new 322-line helper SHA-256 is
+`1d86f2e220a412f53a3a262976c1ad372c7db2247cf2dbfaf522eab92c88b9e1`
+(blob `56513eab21cd289fa7c82ac30527c443ef79282a`). The 545-line shared test
+SHA-256 is
+`e1beb69e12f3daf71e73a1d76f39f7fa9fdaaeaa822db6e63e266bc2a8fd85d3`
+(blob `71c552380d8d0736be509451a59a160d6f0f6722`). Delta is exactly those two
+files, +476 lines. Existing history/import/matrix/round-target helpers, policy,
+encoder, parent reader, prior nine checks and all existing deadlines stay exact.
+
+### Exact repaired source gate
+
+Root's one fresh serialized shared-setup gate passes 13/13, exit 0, in 1330.22
+seconds, after the preserved failed canary epoch below:
+
+```sh
+pnpm exec vitest run scripts/fixtures/current-freeze-assessed-matrix-fixture.test.ts --maxWorkers=1 --reporter=verbose --disableConsoleIntercept
+```
+
+One prescribed generated history, actual assessed-import reader epoch and
+matching matrix are reused by all checks, staged serially within unchanged
+600000 ms setup ceilings. The new prewrite first/last same-history closure
+denials take 1295 ms; four-arm construction takes 26342 ms; actual retained
+graph/journal/invocation reopening and four recorded-arm checks take 60584 ms;
+hostile condition/source/accounting/arm/result-root denials take 2151 ms under
+the unchanged 5000 ms default. Construction/reopening retain the existing
+600000 ms ceilings. No deadline relaxation or cached pass substitutes for work.
+
+Prior checks now take 21/57 ms, actual matrix/tactical reopening 143886 ms,
+identity denials 1282 ms, missing/corrupt parent denials 3349 ms, round-target
+closure denials 1426 ms, metadata construction 38247 ms, later actual tactical
+reopening 38631 ms and remaining cheap denials 1095 ms. Earlier 9/9 and import/
+history gates remain separate epochs, not a new aggregate or full Task3 gate.
+Root's exact extra-strict two-file non-emitting TypeScript, whitespace and lab
+boundaries pass (1362 files, zero violations); none was independently rerun.
+
+### Scope of the new retained constituent
+
+All three actual candidate admissions/physical closures/publications/source
+digests and lengths/tuple/runtime/repositories are validated before the first
+write. The prescribed S01 candidate and round0 supply one `repeat_restart`
+receipt, unchanged two-pair policy, ordinary probe condition/request domains and
+four genuinely fresh fixed `TURN_TO_STONE` pure-kernel arms. Each has canonical
+sixteen-Soldier edge starts and terrain inside arena bounds, 23 mock accounting
+entries and 213 actual kernel step calls within fixed 24/512 fixture caps.
+Local revision metadata derives identities but does not evaluate emitted Strategy
+source or verify compiler/native behavior. Cleanup records are explicitly inert
+mock bookkeeping, not observed child-process cleanup.
+
+Actual ordinary graph/start/terminal/ledger writers retain the declared round,
+four arms and recomputed receipt in the held generated league only. Actual graph,
+28-journal bijection and four retained invocation-reader calls reopen the records;
+fixed recorded-arm checks independently reconstruct accounting/transitions/state/
+events and terminals before ordinary receipt recomputation. Population/snapshot
+do not change. Supplied generated history/response remain unchanged across
+construction; all three stores remain byte-stable across reads. Operational
+guards, including `LeagueConnectedSession.execute`, are never invoked. The
+source-derived paired gameplay commitments match, but empirical Strategy
+invariance is explicitly unverified.
+
+One candidate/round/family receipt is not complete probe coverage. Actual
+response arms, independent evaluation/report/markers, issued job evidence and
+historical source/review parents, qualifying operational history, positive
+whole-map derivation/rederivation, exact complete three-store union and full
+Task3 still remain open. No final Plan06 SUMMARY/SOURCE-REVIEW, Plan02
+consumption, qualification or real freeze is justified. All empirical, compiler/
+native/custody/clock, actual response/league closure and operational authorities
+remain denied. No operational Match/provider/Strategy/model/human execution, prospective
+route, allocation/reservation/live preflight, actual private-store scan, holdout,
+formation, public, counted or production action occurred. Main receives safe
+Markdown only; Plan265-11/12 and consumed Plan07/09 remain unchanged.
+
+### Preserved first probe epoch and canary repair
+
+At the first epoch the source branch remained at reviewed `f10e0a84`, with exactly two uncommitted
 paths: new `current-freeze-assessed-probe-fixture.ts` and shared matrix-test
 additions. The released helper SHA-256 is
 `1d86f2e220a412f53a3a262976c1ad372c7db2247cf2dbfaf522eab92c88b9e1`;
@@ -24,8 +108,9 @@ No helper, production reader, policy, setup or existing nine checks/deadlines
 change. Repaired test SHA-256 is
 `e1beb69e12f3daf71e73a1d76f39f7fa9fdaaeaa822db6e63e266bc2a8fd85d3`.
 Extra-strict two-file non-emitting TypeScript, whitespace and lab boundaries
-pass (1362 files, zero violations). One fresh serialized shared-setup gate is
-active; fresh complete-file independent review and source commit remain pending.
+pass (1362 files, zero violations). The subsequent fresh gate, source commit
+and independent review are recorded above; this original failed epoch remains
+failed and is not a substitute for their exact repaired-byte results.
 
 The first gate measured four fixed source-fixture arms, two pairs, 23 mock
 accounting entries and 213 pure-kernel step calls per arm, within unchanged
@@ -36,7 +121,7 @@ history and response bytes remain unchanged. No actual Match, operational
 probe/provider, route, allocation/live preflight, holdout, formation, public,
 counted or production action occurred. No Task3 or whole-map pass is claimed.
 
-## Latest isolated checkpoint — assessed round-target repair, 2026-09-30
+## Earlier isolated checkpoint — assessed round-target repair, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `f10e0a84ed04a1a95e85a2530f70d719f39b9f9f`, tree
@@ -125,9 +210,9 @@ preflight, native/provider/Strategy/model/human execution, actual private-store
 scan, holdout, formation, public, counted or production action occurred. Main
 receives safe Markdown only; Plan265-11/12 and consumed Plan07/09 remain unchanged.
 
-### Next safe source unit and still-open gates
+### Historical next-source recommendation and still-open gates
 
-Read-only scoping identifies one retained `repeat_restart` probe receipt for one
+The preceding read-only scoping identified one retained `repeat_restart` probe receipt for one
 assessed candidate/declared round as a possible next constituent. Unchanged
 policy requires two pairs/four fresh fixed pure-kernel probe-cell arms, actual
 imported source/start/accounting identities, ordinary graph/start/terminal
@@ -135,6 +220,8 @@ writers and actual retained probe-invocation checks. Suggested ownership is a
 new `current-freeze-assessed-probe-fixture.ts` and shared-setup assertions, with
 no second history/import/matrix constructor. This is a source-unit suggestion,
 not authority for operational Matches, allocation, preflight or a new route.
+The latest checkpoint above now implements that isolated constituent, not the
+remaining complete-coverage, response/evaluation/report or whole-map gates.
 
 System-failure terminals remain `process_invalid`; a pre-start refusal or
 fabricated catch record cannot substitute for positive response/evaluation/

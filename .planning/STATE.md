@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-09-30"
 last_activity: 2026-09-30
-last_activity_desc: Phase266 Plan06 eleven-role round metadata passes 9/9 after CR-01 repair and fresh two-file review at f10e0a84; isolated source only, no whole-map or Match authority
+last_activity_desc: Phase266 Plan06 retained synthetic probe constituent passes 13/13 after no-op canary repair and fresh two-file review at 141d0aa7; isolated source only, no whole-map or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -25,29 +25,48 @@ total_plans_in_phase: 12
 
 Plan265-11 is complete at source commit `78807fb441fab426402f6c7073f2058f5d57b97b`, closure `sha256:daf31901017d9a503288b59961c3ba7a54071b34271b8a566548ec1ffd53dee2`. Its independent review has zero actionable findings, all thirteen source-only commands pass (including 29/29 CI files and 361/361 tests), and read-only verification reopens signed gate `sha256:e2d974a2dfd58cd99d33c937f842ebb36894e79ad23fb846a709f0e7e9dedf99`. The gate grants no empirical or run authority. No v3 allocation, live preflight, provider, Strategy or Match occurred. Plan12 is a genuine human-only checkpoint for a fresh exact one-cell authorization; generic prior autonomy does not open it. Plan07/09 remain consumed process-invalid. Phase265 is 9/12 plans complete but LEAG-01–09 unmet; no Phase266 real freeze, formation, holdout, counted, public or production action is open.
 
-## In-flight source-only continuity — 2026-09-30 probe constituent
-
-Resume checks find no active verifier or test and no interrupted GSD agent.
-The prior reviewed `f10e0a84` checkpoint remains isolated and non-authorizing.
-The owner released only a new assessed-probe fixture and shared matrix-test
-additions for one synthetic `repeat_restart` receipt: two pairs, four fixed
-pure-kernel arms, ordinary retained graph/journal/accounting writers and readers,
-no second history/import/matrix setup. Root's first frozen gate passes 12/13,
-then fails the hostile-source canary: its hard-coded replacement can be the
-invocation's original source, making the supposed substitution a no-op. The
-failed epoch is retained in the partial handoff, not treated as a pass. Root
-repaired only that test to select and assert a genuinely different imported
-source. Its unchanged 5000 ms default, helper, old nine checks and policies
-remain exact. Non-emitting TypeScript, whitespace and lab boundaries pass;
-one fresh serialized gate is active and fresh independent review is pending. No
-operational Match, route, allocation/live preflight, provider/Strategy/model,
-holdout or formation action is open; Plan265-12 and consumed Plan07/09 remain
-unchanged. The prior complete source checkpoint below is not a pass for these
-new bytes, full Task3 or whole-map/store closure.
-
-## Current Session Continuity — 2026-09-30 isolated assessed round-target repair
+## Current Session Continuity — 2026-09-30 isolated retained probe constituent
 
 The latest clean, isolated, unmerged and unpushed source checkpoint is
+`141d0aa79823dc7d131fd7f70f371c606634b0a9`, tree
+`2ef022951f1a4797faea4be2dd286072bdc62384`, direct parent `f10e0a84`.
+One S01/round0 synthetic `repeat_restart` receipt contains two pairs/four fresh
+fixed pure-kernel arms. Actual ordinary graph/start/terminal/ledger writers and
+retained journal/invocation readers join the held imported source identities;
+no second history/import/matrix setup or operational executor runs. Each arm
+has 23 mock accounting entries and 213 actual kernel step calls within fixed
+24/512 fixture caps. Canonical sixteen-Soldier edge starts and genuine outcome
+consistency pass; matching paired roots are not emitted Strategy invariance.
+Only the held generated league receives four arms and declared-round/probe
+metadata. It now has 28 synthetic journals; population/snapshot and supplied
+history/response remain unchanged; all three stores are byte-stable across reads.
+
+The first gate fails 12/13 in 1414.93 seconds because a hard-coded source
+substitution is a no-op. That failed epoch remains in the partial handoff.
+Root changes only the canary to choose and assert a genuinely different source;
+helper, prior nine checks, policies and deadlines remain exact. The sole fresh
+serialized shared-setup gate passes 13/13, exit 0, in 1330.22 seconds. New
+prewrite closure denials take 1295 ms, construction 26342 ms, actual retained
+graph/journal/four invocation-reader checks and recorded-arm reopening 60584 ms,
+and hostile condition/source/accounting/arm/result-root denials 2151 ms within
+their unchanged 5000 ms default. Extra-strict two-file non-emitting TypeScript,
+whitespace and lab boundaries pass (1362 files, zero violations).
+
+Fresh complete two-file standard-depth static review in
+`266-06-PRELIMINARY-REVIEW.141d0aa7.md` has zero actionable findings; root QA is
+not independently reproduced. Review/owner freezes are released and no verifier
+or test is active. Main receives safe Markdown only. Actual response,
+evaluation/report/marker and historical source/review parents, complete probe
+coverage, positive whole-map/rederivation, exact complete three-store union and
+full Task3 remain open. No final Plan06 summary/review, Plan02 consumption or
+real freeze follows. Plan265-12 exact human approval and consumed Plan07/09 stay
+unchanged. No operational Match, route, allocation/reservation/live preflight,
+provider/Strategy/model, real private-store scan, holdout, formation, public,
+counted or production action occurred.
+
+## Earlier Session Continuity — 2026-09-30 isolated assessed round-target repair
+
+The preceding clean, isolated, unmerged and unpushed source checkpoint is
 `f10e0a84ed04a1a95e85a2530f70d719f39b9f9f`, tree
 `036385672976bd7dac4e85f220d3f3f5c5449048`, direct parent `c6e58591`.
 The held assessed matrix now composes eleven ordinary-role target packets,
