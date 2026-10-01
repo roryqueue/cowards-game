@@ -1,12 +1,19 @@
 ---
 phase: 265
-status: source-ready-awaiting-fresh-route-approval-not-authorizing
+status: operator-approved-fresh-preparation-capacity-still-required
 date: 2026-10-01
 empirical_authority: false
 fresh_allocation_created: false
 ---
 
 # Next league run: what is fixed, what is still needed
+
+Latest decision: direct human approval on 2026-10-01 grants this fresh bounded
+private league route; the subsequent blanket approval covers future fresh
+routes of the same scope without repeat questions. See
+265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md. The earlier pending-approval text
+below is history. Source-bound preparation and fresh capacity admission still
+precede execution; consumed routes and every downstream boundary stay closed.
 
 The approved five-retry diagnostic envelope is terminal after its first valid
 Match. Four unused ordinals are not a pool for league work. The old full-league

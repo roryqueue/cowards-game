@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Phase265 source readiness complete; awaiting separately approved fresh full-league route, no active verifier
+status: executing
+stopped_at: Phase265 fresh private league approved; preparing new source-bound allocation and capacity inputs
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Full29suite367test gate/types/boundaries pass on unchanged reviewed source; diagnostic valid/terminal, fresh league approval pending
+last_activity_desc: Human approved fresh bounded league and future same-scope prospective runs; source gate passed, preparation active, no live dispatch yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,25 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Latest source closeout — awaiting one prospective league decision
+## Current approved continuation — fresh private league preparation
+
+On 2026-10-01 the human approved the fresh private full-league proposal and then
+blanket-approved future runs of this same bounded kind without repeat approval.
+See 265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md. The existing 96-hour stop,
+11,328-Match reservation, 240,000 model tokens, 150 GiB and zero retries remain
+unchanged. Each fresh route requires its own source-bound preparation and
+passing capacity chain; no consumed route resumes. Old allocation-v2 and
+diagnostic-v4 remain terminal. No fresh Match or model authoring has started.
+
+Root owns allocation/capacity/live dispatch. The existing executor performs
+read-only command/input preparation; no duplicate live executor or verifier is
+active. Source review and the complete 29-suite/367-test gate remain accepted.
+Fresh source-bound packets/disclosure/capacity inputs must be prepared under
+the accepted current identities before the new route can reserve or dispatch.
+Phase 265 stays 12/14 plans complete and all LEAG requirements remain pending.
+Freeze-before-formation, private holdout and no-public/no-counted bounds remain.
+
+## Historical source closeout — approval checkpoint now resolved above
 
 The exact complete source gate passes 29/29 suites and 367/367 tests in 2106.00s;
 package build, strict 14-path affected-script types, all three 1353-file/zero-
