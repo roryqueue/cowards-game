@@ -2,6 +2,15 @@
 
 ## Current approved handoff — 2026-10-01
 
+Latest outcome: fresh league-v3 passed capacity and stopped process-invalid
+after one charged cell with FACTORY_RUNTIME_LIFETIME_EXHAUSTED (120seconds).
+Unique retained verification and source-only GSD Debug cost diagnosis continue.
+Old and v3 consumed routes stay closed; standing human approval covers future
+distinct same-scope prospective routes after reviewed repairs/new allocation/
+fresh capacity, without repeated approval. No league/freeze credit or bound
+change follows. See STATE.md and265-07-EMPIRICAL-RESULT-v3.md; entry text below
+is the preceding snapshot.
+
 Fresh v3 preparation now passes; allocation root80e2409f is published. The
 unique root entry is active at PID46045 since22:29UTC, static validation before
 fresh capacity/dispatch. No capacity pass or empirical result is claimed yet.

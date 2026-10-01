@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 fresh allocation-v3 root entry active; static validation precedes live capacity and dispatch
+stopped_at: Phase265 allocation-v3 consumed process-invalid; unique retained verifier and source-only lifetime diagnosis active
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Allocation-v3 root entry active since 22:29 UTC at PID46045; no capacity admission or fresh Match yet
+last_activity_desc: Fresh capacity passed, one charged cell stopped on120s runtime lifetime; preserve terminalv3, profile source-only before fresh route
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,30 @@ total_plans_in_phase: 14
 
 # State: Coward's Game
 
-## Current approved continuation — fresh private league preparation
+## Current continuation — consumed league-v3 diagnosis
+
+Fresh league-v3 is TERMINAL process-invalid after one charged cell at
+2026-10-01T22:52:59.983Z. Capacity passed, then soldierBrain failed with
+FACTORY_RUNTIME_LIFETIME_EXHAUSTED under the unchanged120-second lifetime.
+Head root82b6929c; allocation root80e2409f. The actual external result-v3 is
+published and must remain immutable. Root's unique read-only retained verifier
+session73144 is active; do not duplicate it. No live executor is active.
+GSD Debug source-only lifetime diagnosis/profiling is active; no deadline,
+durability, capacity, resource, gameplay or privacy bound changes. See
+265-07-EMPIRICAL-RESULT-v3.md and debug/phase265-league-lifetime-v3.md.
+
+Human standing approval covers future fresh same-scope prospective routes
+without repeat questions. It never revives this or any older consumed route.
+Any repaired source still needs independent review/source gates and a new
+immutable allocation with fresh passing capacity before a further Match.
+No human-only checkpoint has been identified by diagnosis yet. LEAG remains
+pending and Phase265 stays12/14plans complete; formation/holdout stay closed.
+
+The isolated Phase266 fixture-only draft is checkpointed locally ataccae66f;
+untested/unmerged/unpushed, still missing full positive derive/check joins.
+Its executor released ownership to root. It is not a freeze or phase completion.
+
+## Historical fresh entry — now consumed as recorded above
 
 **Active unique entry:** root launched the guarded prospective v3 run once at
 2026-10-01T22:29:13.977Z, PID46045, unified session3674. It is performing

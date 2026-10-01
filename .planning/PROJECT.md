@@ -2,6 +2,13 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+Latest outcome: fresh allocation-v3 passed capacity then stopped process-invalid
+after one charged cell on the unchanged120-second runtime lifetime. It is
+terminal; root's unique retained verifier and GSD Debug source-only cost
+diagnosis are active. No live execution or bound change is authorized by this
+failure. Standing approval covers future separately prepared same-scope routes
+without repeat approval. See STATE.md and265-07-EMPIRICAL-RESULT-v3.md.
+
 Current live-entry status (2026-10-01): fresh allocation-v3 preparation passed
 and is published at root80e2409f. Root's unique entry started at22:29UTC,
 PID46045; static checks precede fresh capacity and any Match/model dispatch.
@@ -38,7 +45,7 @@ The operator approved `lean_runner_feasibility_v1` as the active ADMIT-03 prereq
 
 **Shipped version:** v1.37 Rules Integrity and Strategy Evaluation Foundations on 2026-07-22
 **Release target:** v1.38 Competitive Strategy Factory and Adversarial League
-**Status:** Phases262–264 independently complete; Phase265 is12/14plans complete and empirically incomplete. Fresh full-league allocation-v3 is prepared and published, with one active root entry performing static validation before capacity/dispatch. Old consumed routes and the terminal successful diagnostic remain immutable; six of nine milestone phases remain.
+**Status:** Phases262–264 independently complete; Phase265 is12/14plans complete and empirically incomplete. Fresh full-league allocation-v3 is consumed process-invalid after one charged cell; unique retained verification and source-only lifetime diagnosis are active. All consumed routes and the terminal successful diagnostic remain immutable; six of nine milestone phases remain.
 **Last phase verification:** Phase 264 passed 5/5 truths and 11/11 requirements with no gaps. The milestone audit, archive, and tag remain pending.
 
 Coward's Game is a deterministic two-player programmable strategy game for the web. Players can author immutable Strategy Revisions, save account-owned revisions, fork credible Starter and Advanced Strategies, enter exhibitions or resettable trial ladder seasons, inspect fair standings and replay evidence, study saved gauntlet analytics, and trust that public outputs do not expose private Strategy data. The project now has generated TypeScript service contracts, selected service-backed public/player/account/ladder/workshop analytics reads, live PostgreSQL-backed Go ownership for normal backend orchestration and selected API routes, artifact-backed Go Starter/Advanced forks, runtime isolation readiness gates, supported counted TypeScript, Python, Rust, and Zig Strategy languages, source-language artifact provenance for TypeScript/Python, executable Rust and Zig WASM/WASI artifact-backed lanes, repeatable local topology diagnostics, and boundary drift monitors. Go owns normal job lifecycle, Match completion, Chronicle persistence handoff, MatchSet scoring/status refresh, selected exhibition creation, public MatchSet summary, public replay metadata, and selected public replay evidence while hostile Strategy execution remains behind the Strategy Execution Service / Runtime Broker boundary. TinyGo has a documented spike/defer recommendation and is not production-visible.

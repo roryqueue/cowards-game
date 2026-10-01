@@ -1,12 +1,20 @@
 ---
 phase: 265
-status: fresh-v3-root-entry-active-static-validation-before-capacity
+status: v3-consumed-process-invalid-source-only-lifetime-diagnosis-active
 date: 2026-10-01
 empirical_authority: false
 fresh_allocation_created: true
 ---
 
 # Next league run: what is fixed, what is still needed
+
+Latest outcome: fresh v3 passed capacity but stopped process-invalid after one
+charged cell with FACTORY_RUNTIME_LIFETIME_EXHAUSTED. It cannot resume or retry.
+Source-only GSD Debug cost diagnosis and root's unique retained verifier are
+active; no bound change is approved or inferred. The human's standing same-scope
+approval removes repeat operator questions for a distinct repaired prospective
+route, not source-review/allocation/capacity gates. See STATE.md and
+265-07-EMPIRICAL-RESULT-v3.md. Earlier entry descriptions below are historical.
 
 Current status: historical preparation and pinned capacity-input construction
 passed. Fresh allocation-v3 root80e2409f is published. Root entered once at

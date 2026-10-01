@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Latest outcome: allocation-v3 passed fresh capacity, then ended process-invalid
+after one charged cell at the frozen120-second runtime lifetime. Preserve it;
+unique read-only retained verification and source-only GSD Debug cost diagnosis
+continue under existing Plan265-07. Future fresh same-scope routes already have
+standing approval, but require repaired reviewed source/new allocation/fresh
+capacity, never old-route reuse. See STATE.md and265-07-EMPIRICAL-RESULT-v3.md.
+
 Current entry (2026-10-01): source-bound allocation-v3 preparation passed and
 the root entry is active at PID46045 since22:29UTC, static checks before fresh
 capacity/dispatch. No capacity pass, Match or full-league result is claimed.
