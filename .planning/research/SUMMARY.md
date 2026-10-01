@@ -1,6 +1,24 @@
 # Project Research Summary
 
-## Current verified handoff — 2026-09-30
+## Current approved handoff — 2026-10-01
+
+Phases 262–264 remain independently complete. Phase 265's first retry-v4
+diagnostic succeeded and its sequence is terminal after one charged Match;
+four unused ordinals cannot resume. Current source is independently reviewed
+at accb76c5 and passes the complete 29-suite/367-test gate, build, required types
+and boundaries. This is diagnostic/source evidence, not a complete league.
+
+The human approved the fresh private full-league proposal, then blanket-approved
+future fresh runs of that same scope without repeated approval. See
+265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md. The unchanged 96-hour stop,
+11,328-Match reservation, 240,000 exact-model tokens, 150 GiB and zero retries
+apply to each separately prepared route. Fresh source-bound preparation,
+allocation and passing capacity admission still precede dispatch. Historical
+allocation-v2 and diagnostic routes remain closed and immutable. No fresh
+Match has started. Phase 266 actual freeze, formation, holdout, public, counted
+and production boundaries remain closed. The older routing below is history.
+
+## Historical verified handoff — 2026-09-30
 
 Phases 262–264 are independently complete. Phase 265 remains empirically
 incomplete: the full allocation-v2 route and the separately approved four-cell

@@ -963,8 +963,8 @@ Cross-cutting constraints: private outputs, canonical engine and existing hostil
 **Wave4 — connected league, blocked on Wave3**
 - [x] 265-06-PLAN.md — All-channel red-team/invariance and allocation-gated private CLI.
 
-**Wave5 — complete-league route consumed; diagnostic source gate**
-- [ ] 265-07-PLAN.md — Source/CI proof, approved lean amendment and one conditional full-league allocation; the one run was consumed `process_invalid` after one charged cell. No retry or LEAG completion is available from this plan.
+**Wave5 — original complete-league route consumed; fresh approved route preparation**
+- [ ] 265-07-PLAN.md — Source/CI proof and approved lean amendment. Original allocation-v2 remains consumed `process_invalid` after one charged cell, with no retry or LEAG credit. The separately approved 2026-10-01 fresh route continues Task 3 additively after new source-bound preparation and capacity admission; it does not revive the original allocation. No LEAG completion exists yet.
 - [x] 265-08-PLAN.md — New diagnostic-only source/test/review gate; no allocation, Strategy, provider or Match in this plan.
 
 **Wave6 — conditional diagnostic pilot, blocked on Wave5 source gate**
