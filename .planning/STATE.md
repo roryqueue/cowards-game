@@ -33,6 +33,13 @@ bindings. The external run-result-v3 destination is reserved but contains no
 terminal result yet; do not stage or treat it as evidence before publication.
 No fresh Match/model call or capacity receipt is established by entry alone.
 
+Parallel safe preparation: the existing executor drafts only source/test-fixture
+changes in `/Users/roryquinlan/.codex/worktrees/phase266-context/cowards-game`
+for already planned266-06. It may not run tests, generate fixtures, access real
+evidence, merge, or alter main's active source epoch. This is an untested isolated
+draft, not Phase266 completion or a freeze. Root reviews/tests after the active
+league route is terminal; no other live executor or retained verifier is active.
+
 On 2026-10-01 the human approved the fresh private full-league proposal and then
 blanket-approved future runs of this same bounded kind without repeat approval.
 See 265-PROSPECTIVE-LEAGUE-APPROVAL-20261001.md. The existing 96-hour stop,
