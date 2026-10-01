@@ -8,7 +8,7 @@ status: in_progress
 stopped_at: Phase265 Plan11 source-only adapter independently reviewed and gated; Plan12 requires fresh exact human authorization before any allocation or live preflight
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Phase266 Plan06 callback-presence repair passes 17/17 at f1a38213 but rereview finds late observer-installation bypass; captured callback-free read-view repair pending fresh gate/review
+last_activity_desc: Phase266 Plan06 retained payoff-parent constituent passes 18/18 and fresh scoped-clean review at 9d0bc77e after two callback repairs; isolated source only, no whole-map or Match authority
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,7 +21,52 @@ total_plans_in_phase: 12
 
 # State: Coward's Game
 
-## Current Session Continuity — 2026-10-01 isolated retained payoff-parent check
+## Current Session Continuity — 2026-10-01 isolated retained payoff-parent closeout
+
+The latest clean, isolated, unmerged and unpushed source checkpoint is
+`9d0bc77e3e0300a882edb0f9de261bcd55f4300e`, tree
+`fd4a2ae20b6e19a99db71a225868ac3a96d9d391`, parent `f1a38213`.
+Root's sole fresh serialized shared-setup suite passes 18/18, exit 0, in
+1463.10 seconds. The payoff reader authenticates the full 28 graph/journal
+joins before selecting the exact 24-cell matrix and comparing its retained
+solver-payoff bytes through unchanged semantic and composed-parent readers.
+The reader adds no constructor, kernel, replay or assessor. Positive reads
+leave all three generated stores byte-stable. Hash-valid payoff substitution,
+wrong order/snapshot/parent, stale matrix-only head and missing bytes reject.
+
+Independent review caught caller observer inheritance, then late installation
+through a directory getter. Both issues-found reports and 16/16 and 17/17
+pre-review epochs remain immutable history. The final repair captures own
+data/string directories before evaluation, validates their identity, and passes
+only fresh frozen null-prototype directory-only views to physical readers.
+Thirty-two observer and thirty-two directory/late-installation canaries reject
+without getter/observer/reader calls or byte changes in 1078/1105 ms under the
+unchanged 5000-ms defaults. Positive payoff reading takes 44537 ms, semantic
+denials 2568 ms and stale-head/missing-byte checks 83774 ms within existing
+600000-ms ceilings. Strict extra non-emitting TypeScript/whitespace and lab
+boundaries pass (1363 files, zero violations).
+
+Fresh complete two-file independent standard-depth static review
+`266-06-PRELIMINARY-REVIEW.9d0bc77e.md` (SHA-256
+`2285a744864dfd77c743fdb644b980037d590e483a55dc86a9803d564bf60ab0`)
+is scoped-clean with zero actionable findings; root QA was not independently
+rerun. The narrow repository-callback boundary is closed, not arbitrary host
+JavaScript security certification. All author/review freezes are released and
+no verifier/test is active. Main receives safe Markdown only. Actual response,
+evaluation/report/marker and historical source/review parents, complete probe
+coverage, whole-map/rederivation, complete three-store union and full Task3
+remain open. No final Plan06 SUMMARY/SOURCE-REVIEW, Plan02 consumption or real
+freeze follows. Plan265-12 prospective human approval and consumed Plan07/09
+are unchanged. No operational Match, route, allocation/reservation/live
+preflight, provider/Strategy/model/human execution, actual private-store scan,
+holdout, formation, public, counted or production action occurred.
+
+At closeout, the main read-only `check-source-gate-v3` checker exits 0.
+Plan265-12 authorization and its v3 allocation are both absent; no prepare,
+preflight or run selector was invoked. The next real league observation remains
+a genuine prospective human checkpoint, not a safe source-test continuation.
+
+## Earlier Session Continuity — 2026-10-01 payoff-parent repair epochs
 
 No verifier or fixture gate was active at resume. The isolated source checkpoint
 `c7418124b24df0cbfe7d6905a13bb8acc0d2015b` adds a payoff-parent constituent

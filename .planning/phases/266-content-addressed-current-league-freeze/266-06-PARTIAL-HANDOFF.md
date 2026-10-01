@@ -2,6 +2,80 @@
 
 **Disposition:** incomplete, non-authorizing. No checked whole parent map, real-store scan, absence receipt, freeze root, operational Match, formation, holdout, counted or public action.
 
+## Latest isolated checkpoint — retained payoff-parent constituent, 2026-10-01
+
+Clean `codex/phase266-context` source remains isolated, unmerged and unpushed:
+`9d0bc77e3e0300a882edb0f9de261bcd55f4300e`, tree
+`fd4a2ae20b6e19a99db71a225868ac3a96d9d391`, parent
+`f1a38213be2a2d996df58a178edc976cb0cfac24`. Final +109/-20 delta changes
+only the two owned files. Helper 155 lines, blob
+`5e43833d8f321798e03ee90e309f60e6fe608328`, SHA-256
+`b27ce57671d0d5ae2ce49624b9e7f522b6f4488019a2b426e457a7ede1de2fc9`;
+test 751 lines, blob `25da94c0d21bfd963f7d624000259911777c9e83`, SHA-256
+`dd4981cab33331e7ee11a53037c74c29343e18e99ef66db392203beba05bb430`.
+
+Root's sole fresh serialized shared-setup gate passes 18/18, exit 0, in
+1463.10 seconds with the unchanged command:
+
+```sh
+pnpm exec vitest run scripts/fixtures/current-freeze-assessed-matrix-fixture.test.ts --maxWorkers=1 --reporter=verbose --disableConsoleIntercept
+```
+
+The existing one history/import/matrix setup and four fixed-effect probe arms
+are reused; no constructor, kernel, replay or assessor is added by the payoff
+reader. Full graph/start/result/persisted-journal joins reconcile all 28 cells
+before exact 24-cell matrix roster/order/snapshot payoff derivation and actual
+composed-parent authentication. Remaining four probes are not payoff members.
+Valid reads are byte-stable across all three generated stores. Hash-valid
+wrong payoff, reversed order, wrong snapshot/parent, stale matrix-only head and
+missing retained payoff bytes fail without recovery; controlled generated
+negative bytes are restored exactly in `finally`.
+
+Final positive payoff read takes 44537 ms and semantic negatives 2568 ms;
+stale-head/missing-byte checks 83774 ms; 32 observer canaries 1078 ms and 32
+directory/accessor/late-installation canaries 1105 ms. Default 5000-ms negative
+deadlines and existing 600000-ms serial ceilings remain exact. Earlier thirteen
+checks, setup, policy and helpers remain unchanged. The single positive payoff
+check gains only spy assertions on private reader-view shape; no extra read is
+added. Root extra-strict noEmit TypeScript/whitespace and lab boundaries pass
+(1363 files, zero violations).
+
+Fresh complete two-file independent standard-depth static review
+`266-06-PRELIMINARY-REVIEW.9d0bc77e.md`, SHA-256
+`2285a744864dfd77c743fdb644b980037d590e483a55dc86a9803d564bf60ab0`,
+is **scoped_clean**, zero actionable findings. Both CR-01 epochs below remain
+preserved; their passing suites are not relabeled closure evidence. The final
+repair captures own data/string directory descriptors, rejects getters before
+evaluation, validates all candidate/closure/path bindings and uses fresh frozen
+null-prototype directory-only factory/league read views. No caller callbacks,
+options or mutable repository fields reach artifact readers. Getters, observers
+and all artifact readers remain unused in early-denial canaries; no store bytes
+change. This closes the concrete callback boundary, not arbitrary host-JS
+certification. Root and owner ceased related work during review; reviewer ran
+no QA/callback/getter/store reader. Root evidence is reported, not reproduced.
+
+Author/review freezes are released; no test/verifier is active. Main receives
+safe Markdown only. No actual response, evaluation/report/markers, qualifying
+history source/review, complete probe coverage, positive whole-map/rederivation,
+complete three-store union or full Task3 is closed. No final Plan06 summary or
+source review, Plan02 consumption, real freeze or phase completion follows.
+All empirical/operational/compiler/native/custody/clock/holdout/formation/public/
+counted authorities remain denied. Plan265-12 exact prospective human authority
+and consumed Plan07/09 remain unchanged. No new operational Match, route,
+allocation, reservation, live preflight, provider/Strategy/model/human execution
+or actual private-store scan occurred.
+
+Closeout main read-only source-gate checker exits 0:
+
+```sh
+./node_modules/.bin/tsx scripts/run-v1-38-one-cell-diagnostic.ts check-source-gate-v3 --gate .planning/phases/265-serious-current-rules-league-and-development-red-team/265-11-SOURCE-GATE.json
+```
+
+Metadata-only existence checks confirm Plan265-12 authorization and v3
+allocation absent. No prepare/preflight/run selector or live capacity
+observation is attempted. Human approval remains necessary before any real
+league cell; this source-only constituent does not supply it.
+
 ## Preserved payoff-parent pre-review epoch — 2026-10-01
 
 ### Preserved first callback repair and second repair in flight
@@ -70,7 +144,7 @@ serialized affected suite and obtain a separately pinned independent review.
 No source integration, full Task3, Plan02 consumption or operational authority
 follows; Plan265-12 and all consumed-route/privacy/formation bounds remain exact.
 
-## Latest isolated checkpoint — retained assessed probe constituent, 2026-09-30
+## Earlier isolated checkpoint — retained assessed probe constituent, 2026-09-30
 
 The clean, unmerged and unpushed `codex/phase266-context` branch is at
 `141d0aa79823dc7d131fd7f70f371c606634b0a9`, tree
