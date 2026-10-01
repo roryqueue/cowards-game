@@ -32,6 +32,14 @@ capacity admission, fresh allocation, LEAG completion or a freeze. See
 265-07-DEPENDENCY-BARRIER-PROOF-v1.md. No new human approval is required for
 the eventual distinct same-bounds route, but every technical gate still applies.
 
+Fresh league-v4 drafts/helpers are independently reviewed: all11jobs accepted,
+canonical actual review timings; root compiled45 inert packet/disclosure rows.
+Namespace league-265-prospective-v4-20261001-a; source0496bca7 /implementation
+879aaa9b. No v4 allocation, capacity input/receipt or live entry exists yet.
+After gate53203 succeeds root prepares/publishes the distinct source-bound
+allocation and fresh same-process capacity chain under standing approval.
+See265-07-EMPIRICAL-PREPARATION-v8.md and265-07-PACKET-REVIEW-v8.md.
+
 Fresh league-v3 is TERMINAL process-invalid after one charged cell at
 2026-10-01T22:52:59.983Z. Capacity passed, then soldierBrain failed with
 FACTORY_RUNTIME_LIFETIME_EXHAUSTED under the unchanged120-second lifetime.
