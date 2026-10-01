@@ -5,15 +5,40 @@ status: partial
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
-updated: 2026-09-23
-source_reviewed: 36c49041
-source_gate: runner-76-tests-and-strict-types-pass-at-36c49041-full-phase-gate-not-repeated
-empirical_validation: one-shot-consumed-process-invalid-independent-retained-check-passed
+updated: 2026-10-01
+source_reviewed: e440763a
+source_gate: retry-v4-88-tests-both-types-boundaries-pass-full-phase-gate-not-repeated
+empirical_validation: consumed-old-routes-process-invalid-new-approved-diagnostic-envelope-pending
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+### Plan13 bounded retry source validation — 2026-10-01
+
+Final host-layer source `e440763a` passes root's exact five-file suite88/88 in
+30.13seconds, both package/expanded-script TypeScript commands,18/18legacy
+continuity checks in4.56seconds, and the unchanged1353-file lab scanner with
+zero violations. Exact commands/roots are recorded in `265-13-SUMMARY.md`.
+Fresh independent ten-file review closes all original findings and the later
+injected-host bypass; root's `check-source-closure` exits0. Reviewer did not
+rerun QA;1013source/config paths are closure-bound, not individually inspected.
+
+| Task | Automated seam | Result |
+|---|---|---|
+| 265-13 T1 | Genuine canonical effect/resume producer/reader fixtures, lossless row/blob codec, mutation negatives, finite causes and single-use candidate/runtime-bound grants | Focused source suite passes |
+| 265-13 T2 | Adapter/worker module-injected handoff, fake-host/constructor denial, truthful failure stages, five-ordinal serial/preflight/stop policy | Focused source suite passes |
+| 265-13 T3 |1013-path source closure, exact independent accepted review and required-command binding | Read-only source checker exits0 |
+| 265-14 T1–3 | Approved prospective envelope, actual fresh preflight/diagnostic sequence and retained reopen | Pending; no live operation yet |
+
+The package-to-host import introduced during repair was rejected by the scanner,
+then corrected by moving only the new v4 operational modules/tests to the host
+scripts layer. No scanner exception or rule/runtime change was made. Genuine
+kernel fixtures use inert effects; supervisor seams use test-module replacement,
+not actual Docker/Strategy execution. No operational attempt was consumed.
+Whole-phase Nyquist compliance stays false: LEAG-01–09 require complete actual
+league evidence, which neither this source gate nor bounded diagnostics provide.
 
 ### Post-run retained verification and source repair — 2026-09-23
 
