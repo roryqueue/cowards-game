@@ -1,5 +1,25 @@
 # Phase 265: Serious Current-Rules League and Development Red Team - Context
 
+## Approved prospective diagnostic retry amendment — 2026-10-01
+
+The operator states: `I authorize up to 5 retries, please continue`.
+This permits one fresh envelope of at most five additional serial private
+S01/S03 Smoke one-cell diagnostics, not reuse/refund of any consumed route.
+Plans265-13/14 define additive v4 source preparation and conditional execution.
+Capture the actual approval once after independent source review; introduce no
+repeat literal, external-custody or signing checkpoint.
+
+Keep the original v3 gameplay seed, assessed pair, arena/condition and every
+runtime/capacity/gameplay/privacy bound unchanged, including 240000-ms cell,
+600000-ms run-entry and 30000-ms cleanup reserve. Every attempt needs its own
+fresh admitted preflight, durable charge and distinct ordinal/root/store/owner.
+Stop first process-valid diagnostic, denied preflight, uncertain publication or
+integrity, unresolved cleanup or cap. Advance only from a fully reopened clean
+process-invalid terminal. Old artifacts/source routes remain history; no
+LEAG, full-league, freeze, formation, holdout, public, counted or production
+authority follows from these diagnostics. The canonical transition engine and
+freeze-before-formation sequence remain unchanged.
+
 ## Approved prospective Phase 265 amendment — 2026-09-22
 
 The operator approved the complete `265-LEAN-RUN-DECISION.md` proposal, recorded in commit `06cdb050`. Existing Plan 265-07 now implements that prospective amendment: start with exactly the three genuinely assessed S01/S03/S05 bases, exclude nine mechanics controls, and grow toward twelve through slots 3,3,3,0. The final twelve-Strategy, six-family, five-independent-core and three-distinct-finalist gates are unchanged. The exact eleven-attempt, zero-retry resource vector and new human/external `authorized_zero` dispositions are in `265-LEAN-RUN-DECISION.md` and `265-LEAN-AMENDMENT.md`. One live run is conditional on independent source review, full validation and a passing data-only capacity receipt; approval alone dispatches nothing. Legacy policies, prior evidence, canonical rules/runtime/privacy, the current-league-before-formation sequence, unopened holdout, equal-profile budgets and audit/archive/tag requirements remain unchanged. Earlier contradictory routing below is historical, not active authority.

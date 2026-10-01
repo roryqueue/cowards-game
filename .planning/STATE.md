@@ -5,23 +5,52 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 Plan12 authorized diagnostic consumed process-invalid after one charged cell; no retry or new Match authority remains
+stopped_at: Phase265 Plan13 source-only retry-v4 implementation; five additional diagnostic attempts prospectively approved, none consumed
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Plan265-12 fresh preflight admitted; one run consumed process-invalid; retained checker and scoped review complete, initiating cause unknown
+last_activity_desc: Fresh bounded five-retry envelope approved; additive research and independently checked Plans13/14 prepare state-chain repair before any live attempt
 progress:
   total_phases: 9
   completed_phases: 3
-  total_plans: 12
+  total_plans: 14
   completed_plans: 10
   percent: 33
-current_plan: 12
-total_plans_in_phase: 12
+current_plan: 13
+total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
 
-## Current Session Continuity — 2026-10-01 consumed one-cell v3 closeout
+## Current Session Continuity — 2026-10-01 prospective five-retry envelope
+
+The actual operator message, `I authorize up to 5 retries, please continue`,
+approves up to five additional serial private S01/S03 Smoke one-cell diagnostics.
+It does not revive or refund any consumed route. Plans265-13/14 and their
+additive research have passed independent plan review. Plan13 implements and
+tests a distinct v4 adapter and supervised grant path, then obtains independent
+exact-source review before Plan14 captures the message once and creates fresh
+operational evidence. No additional literal checkpoint is required.
+
+Static source analysis identifies a concrete producer/reader defect: the
+canonical bridge does not record the intermediate pending-effect machine, so
+adjacent machine hashes can differ despite continuous gameplay-state hashes.
+The new v4 producer and reopened reader will check gameplay-state continuity
+and retain individual machine hashes and all other integrity checks. This is
+not proof of the initiating exception or completed gameplay in the consumed v3
+result; those historical bytes and verdicts remain unchanged.
+
+Every new attempt requires its own fresh passing preflight and distinct ordinal,
+charge, root, store and owner. The original gameplay seed and all other bounds
+remain fixed: 240000-ms cell, 600000-ms per-run entry, 30000-ms cleanup reserve.
+Stop at the first process-valid diagnostic, denied preflight, integrity or
+publication uncertainty, unresolved cleanup, or five-attempt cap. Only a fully
+reopened clean process-invalid terminal can advance to the next ordinal.
+No new attempt, allocation, live preflight, provider or Match has occurred in
+this source-preparation stage. Phase265 is 10/14 plans complete; LEAG-01–09
+remain unchecked and Phase266 actual freeze is blocked. This authority grants
+no full league, formation, holdout, counted, public or production execution.
+
+## Earlier Session Continuity — 2026-10-01 consumed one-cell v3 closeout
 
 The operator supplied the exact Plan265-12 authorization over reviewed source
 `78807fb441fab426402f6c7073f2058f5d57b97b`. Exactly one prepare, one fresh
