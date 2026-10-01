@@ -1,6 +1,6 @@
 ---
 phase: 265
-status: repaired-pending-independent-review-and-complete-gate-not-authorizing
+status: source-review-accepted-complete-gate-pending-not-authorizing
 date: 2026-10-01
 empirical_authority: false
 fresh_allocation_created: false
@@ -84,7 +84,19 @@ types, the exact existing strict-script gate, strict production-supervisor types
 and all existing boundary scanners. An extra, wider strict supervisor-test
 command fails on older fixture/transitive typing; its limitation is preserved
 in265-PROSPECTIVE-LEAGUE-REVIEW-FIX.md, not relabeled a pass. Independent exact
-re-review and the full29-suite gate are still pending.
+re-review and the full29-suite gate were pending at repair handoff.
+
+Root separately passes98/98focused tests in30.00seconds on frozenaccb76c5.
+The independent four-file exact-source re-review accepts that commit with zero
+actionable findings and closes the original legacy-extension blocker. It is a
+scoped incremental review, not a new whole-phase/whole-closure certification.
+Current full-league source identity is:
+
+- implementation: sha256:13f7bac565847930d3e98f2bcc87bdd422a04a7f3e117b260100659bc21e1fff
+- source: sha256:6c7415bea047a677902c24deaa90c49cefa539e9629f8fda4829d1cce04f931b
+
+The exact complete29-suite/types/boundaries gate is the next safe action.
+No new full-league allocation or host capacity receipt exists yet.
 
 ## Human-only boundary
 

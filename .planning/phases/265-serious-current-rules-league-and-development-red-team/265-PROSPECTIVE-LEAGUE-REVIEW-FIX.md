@@ -2,7 +2,7 @@
 phase: 265
 plan: 07
 review_report: 265-PROSPECTIVE-LEAGUE-SOURCE-REVIEW.md
-status: fixed_pending_independent_review
+status: scoped_independent_review_accepted_full_gate_pending
 findings_addressed: 1
 source_only: true
 operational_authority: false
@@ -11,6 +11,12 @@ operational_authority: false
 # Same-Plan07 prospective-league source-review fix
 
 The incremental review's legacy pilot/v3 lifetime-extension blocker is repaired at the shared supervisor boundaries. This is author-produced fix evidence, not independent acceptance, a completed full-phase gate, or new live permission. No new numbered plan was created.
+
+Later root follow-up: sourceaccb76c5 is independently accepted in
+265-PROSPECTIVE-LEAGUE-REREVIEW.md with zero scoped actionable findings. Root's
+separate frozen-source focused run passes98/98in30.00seconds. The author evidence
+and additional strict-test limitation below are preserved; the complete phase
+gate is still pending and no empirical authority is granted.
 
 ## Repair
 

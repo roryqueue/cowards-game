@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 Plan07 legacy extension source repair released; exact independent re-review and complete gate pending
+stopped_at: Phase265 Plan07 incremental source review accepted; complete league source gate next, fresh-allocation approval pending
 last_updated: "2026-10-01"
 last_activity: 2026-10-01
-last_activity_desc: Legacy extension repair passes98focused tests and existing types/boundaries; re-review/fullgate next, no further live work
+last_activity_desc: Repair pushed ataccb76c5, root98tests pass and independent re-review zero findings; fullgate next, no further live work
 progress:
   total_phases: 9
   completed_phases: 3
@@ -49,6 +49,14 @@ package/production/exact existing strict-script types and all boundary checks
 passing. The additional wider strict supervisor-test check is explicitly
 nonpassing on older fixture/transitive typing, not a relaxed phase gate.
 Independent exact-source re-review and a fresh complete29-suite gate remain.
+
+The independent four-file re-review now accepts frozenaccb76c5 with zero
+actionable findings, closing the legacy-extension blocker. Root's own focused
+suite passes98/98in30.00seconds. Current full-league implementation root is
+sha256:13f7bac565847930d3e98f2bcc87bdd422a04a7f3e117b260100659bc21e1fff;
+source root is sha256:6c7415bea047a677902c24deaa90c49cefa539e9629f8fda4829d1cce04f931b.
+No fullgate pass is claimed yet. The completed V4 terminal retains its original
+source epoch and no historical closure is refreshed by this later source fix.
 
 ## Current Session Continuity — 2026-10-01 prospective five-retry envelope
 

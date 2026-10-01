@@ -17,6 +17,11 @@ empirical_validation: retry-v4-first-diagnostic-process-valid-full-league-incomp
 
 ### Prospective full-league gate interrupted for source review repair
 
+Root independently passes98/98focused tests in30.00seconds on frozenaccb76c5.
+Exact independent four-file incremental re-review accepts that source with zero
+actionable findings; the original legacy-extension blocker is closed. The new
+complete29-suite/types/boundaries gate remains pending, not a captured pass.
+
 Author-produced repair validation passes98/98focused tests in30.14seconds,
 package types, strict production-supervisor types, the exact existing strict
 affected-script gate, three1353-file/zero-violation scans and service boundary
