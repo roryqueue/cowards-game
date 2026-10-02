@@ -10,6 +10,8 @@ empirical_authority: false
 latest_follow_up: 2026-10-02
 latest_diagnostic_source: e440763a75c0e66beb402548681a9acfddad9b24
 latest_source_gate: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
+active_source_gate: unique-async28406-pending
+latest_source_review: 634b0e84896132a1a9ac5d855763b0793abfe1bc
 gaps:
   - truth: "Every frozen population has a complete condition-balanced payoff matrix, with process-invalid cells blocking meta-solving."
     status: failed
@@ -58,6 +60,15 @@ gaps:
 # Phase 265: Serious Current-Rules League and Development Red Team — Verification
 
 ## Current main-observed follow-up — 2026-10-02
+
+Current async source634b0e84 has clean independent reviewv4 after three bounded
+fix passes. Final9public failure-path tests/types pass; unique reviewed data-only
+profile78928 completes with exact hashes/all150file100DIRsyncs and ownedcleanup.
+Observed mean98.885ms vs107.548ms (~8.05%mean reduction) is not whole-Match proof.
+ONE unchanged full source gate28406 is ACTIVE; never duplicate it. Newv7 helpers
+are drafted source-only, with no capacity/Match yet. All5roadmap must-haves and
+LEAG requirements remain gaps; no freeze/formation/holdout is claimed. See
+ASYNC-DEPENDENCY-PROOF-v1. Captured source/planning-next paragraphs below are history.
 
 V6 terminal update: unique entry63193 ended05:04UTC process-invalid after
 5charged cells(4valid,1lifetime system failure), published result09002c67/

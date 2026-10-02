@@ -6,14 +6,23 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
-source_reviewed: dbf5daa24b0764f68124af2e475b9aa6135dc8ae
-source_gate: complete29suite382test-plus3tactical-types-boundaries-engine149-runtime277-pass
+source_reviewed: 634b0e84896132a1a9ac5d855763b0793abfe1bc
+source_gate: active-unique-async-source-gate28406-not-yet-complete
 empirical_validation: v6-consumed-process-invalid-five-cells-unique-retained-verifier-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+Current async repair634b0e84 has clean independent source reviewv4 and helper
+reviewv1. Final public-failure selection9tests/39.98s and strict types pass.
+Unique data-only profile78928 completes/cleanuptrue, exact hashes and all150file/
+100DIRsyncs intact; observed mean98.885ms vs107.548ms (~8.05%mean reduction).
+No whole-Match gain is proven. ONE unchanged full source gate28406 is ACTIVE,
+never duplicate. Newv7 helper drafting is inert; no capacity/Match route started.
+Full-phase Nyquist remainspartial/false; LEAG remains unverified. See
+ASYNC-DEPENDENCY-PROOF-v1. All captured source/planning-next notes below are history.
 
 V6 terminal update: unique entry63193 ended05:04UTC,5charged cells with4valid
 successes then1lifetime system failure. Actual result09002c67/headb21465c7 is
