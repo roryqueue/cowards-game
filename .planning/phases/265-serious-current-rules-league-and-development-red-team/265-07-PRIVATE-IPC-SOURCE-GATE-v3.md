@@ -1,4 +1,29 @@
-# Plan265-07 private IPC source gate v3 — active
+# Plan265-07 private IPC source gate v3 — complete
+
+Status: COMPLETE. Unique root59346 CLOSED exit0, PID17291 absent after actual
+terminal. All8 unchanged CI commands passed[3,4,1,2,5,6,7,8] at fixed63f1a1a,
+elapsed2228081ms, ended2026-10-02T20:20:20.599Z. No failure-terminal marker.
+Completion marker raw SHA-256: cf04142cd5f8c203ce3382df2de6717554ec71d9c35943e7432e75399bf6f369
+
+Actual root observations:
+
+- CI1:29/29files,510/510league/factory/runtime tests pass;1975.98s/tests1952.72s.
+- CI2:tactical20/20tests pass;210.11s/tests207.85s.
+- CI3:labbuild passes; CI4:unchanged strict14script check passes.
+- CI5/6/7:each1354files scanned, zero violations.
+- CI8:strict0/ownership0;19existing report-only offenses, not zeroalloffenses.
+
+Observed unique output59346/0c6d36/27026b/19de9d; completionraw independently
+hashed in b07d47. Source/review/CI/test pins guarded before/after every command.
+The initial helper-only commandconfiguration failure and v1/v2 failed gates
+remain disclosed/preserved, not reinterpreted as successes. Corrected localfixture
+does not weaken lifetime assertions or change any production behavior/bounds.
+WholePhase265 remains partial, every LEAG requirement open; this source gate
+does not complete a matrix, grant route/Match authority, freeze rules, open
+holdout or admit formation/public/counting/production. Next scoped source-goal
+verification; only after all applicable checks may fresh prospective private
+preparation proceed under existing approval. Older active-prefix snapshot below
+is historical, not current process state.
 
 Status: ACTIVE. ONE root session59346/PID17291, started2026-10-02T19:43:12.504Z.
 Fixed source63f1a1a380aa753d88e2825abef176b7306b3980, test-only olderfixture

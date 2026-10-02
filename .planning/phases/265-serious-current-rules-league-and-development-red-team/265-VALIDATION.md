@@ -7,13 +7,29 @@ wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
 source_reviewed: 63f1a1a380aa753d88e2825abef176b7306b3980
-source_gate: private-ipc-v3-59346-active-build3-strict4-pass-CI1-pending
+source_gate: private-ipc-v3-59346-complete-all8-pass-510league-20tactical
 empirical_validation: v10-consumed-process-invalid-one-cell-unique-retained-verifier28015-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+Scoped PRIVATE-IPC-DIAGNOSTICS-VERIFICATION-v2 PASSED4/4 boundedtruths after
+actual fullgate59346exit0; earlierregressionblocker closed, no overrides or
+newhuman items. Sourceacceptanceonly, not LEAG/wholephase. Source63f1a1a stays
+fixed for distinctfreshprivateV11preparation; finalhelperliteralpinreview/types,
+actualrequestreviews/compilation/allocation/freshsameprocesscapacity next.
+All consumedroutes/failures stayimmutable; no credit/counted/public/formation.
+
+NEW sourcegate59346 CLOSED exit0 all8unchangedCIcommands at fixed63f1a1a,
+ended20:20:20.599UTC/2228081ms; complete rawcf04142cd5f8c203ce3382df2de6717554ec71d9c35943e7432e75399bf6f369.
+510league/factory/runtime tests29files pass1975.98s;20tactical pass210.11s;
+build/strict14script pass; three1354-file scans0violations; service strict0/
+ownership0/19existingreport-only offenses. See finalPRIVATE-IPC-SOURCE-GATE-v3.
+Earlierfailedv1/v2 immutable, notwaived; scopedgoalVERIFICATION-v2 pending.
+WholephaseNyquistpartialfalse/everyLEAGopen; noempiricalMatch/capacity/allocation/
+retainedverifier/freeze/formation/holdout/public/counting/production credit.
 
 Root corrects older test-only fixture at63f1a1a; fullfactory8153exit0 all37pass,
 15.61s. Independentreviewv3 clean. ONE freshfullgate59346/PID17291 ACTIVE at
