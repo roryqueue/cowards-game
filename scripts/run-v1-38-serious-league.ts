@@ -8,7 +8,7 @@ import { admitCanonicalJsonBytes, admitCanonicalJsonValue, CANONICAL_ARENA_CATAL
 import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../packages/strategy-lab/src/contracts.js"
 import { createLeagueExecutionAllocation, admitAnyLeagueExecutionAllocation as admitLeagueExecutionAllocation, createProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, type AdmittedLeagueExecutionAllocation as LeagueExecutionAllocation, type ProspectiveLeagueExecutionAllocation, type LeagueCapacityReceipt, type LeagueCapacityContext } from "../packages/strategy-lab/src/league/allocation.js"
 import { createLeaguePopulation, createLeagueCell, createLeagueCellTerminal, createLeagueMixture, importAssessedFactoryCandidate, projectCanonicalKernelOutcomeToEntrantHalfPoints, LeagueCandidateAdmissionSchema, type LeagueCandidateAdmission, type LeagueCell, type LeagueCellTerminal } from "../packages/strategy-lab/src/league/contracts.js"
-import { createLeagueRepository, publishLeagueArtifact, publishLeagueArtifactDependencies, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository, type ReopenedLeagueEvidence } from "../packages/strategy-lab/src/league/repository.js"
+import { createLeagueRepository, publishLeagueArtifact, publishLeagueArtifactDependencies, publishLeagueArtifactDependenciesAsync, readLeagueArtifact, publishLeagueComposedArtifact, readLeagueComposedArtifact, recordLeagueCellStart, publishLeagueCellTerminal, reopenLeagueEvidence, type LeagueRepository, type ReopenedLeagueEvidence } from "../packages/strategy-lab/src/league/repository.js"
 import { enumerateLeagueCells, admitCompletePayoffSnapshot, assertLeaguePayoffCapacity, leaguePlayerId, type LeagueMatrix } from "../packages/strategy-lab/src/league/matrix.js"
 import { issueLeagueProviderFromFactoryCandidate, readCandidateClosure, runLeagueCell, deriveLeagueMatchExecutionTerminal, type FactoryCandidateClosure, type FactorySupervisedRuntimeHost } from "../packages/strategy-lab/src/league/connected-runner.js"
 import { solveLeagueSnapshot } from "../packages/strategy-lab/src/league/solver.js"
@@ -87,10 +87,18 @@ export class LeagueRetentionBudget {
 export class LeagueRecordGraph {
   private writtenBytes = 0
   private records = 0
+  private pending: Promise<void> | null = null
+  private retentionFailed = false
   latestRoot: LabRoot | null = null
   constructor(readonly repository: LeagueRepository, readonly limits: { maxArtifactBytes: number; maxArtifactRecords: number }, readonly budget?: LeagueRetentionBudget) {}
-  beforeDispatch() { this.budget?.beforeDispatch() }
+  private assertSettled() { if (this.pending) return fail("RETENTION_PENDING") }
+  /** Read-only settlement: no queued append/dispatch and no error replacement. */
+  async settlePending(): Promise<void> { const active = this.pending; if (active) await active.catch(() => {}) }
+  get invocationPending() { return this.pending !== null }
+  beforeDispatch() { this.assertSettled(); if (this.retentionFailed) return fail("RETENTION_DISPATCH_STOP"); this.budget?.beforeDispatch() }
   beforeInvocation(request: unknown) {
+    this.assertSettled()
+    if (this.retentionFailed) return fail("RETENTION_DISPATCH_STOP")
     if (!this.budget) return
     this.beforeDispatch()
     // Two request projections and two result projections, including worst-case
@@ -100,13 +108,33 @@ export class LeagueRecordGraph {
     this.budget.checkCapacity(bytes, 2 * Math.ceil(bytes / 131072) + 1)
   }
   append(kind: string, value: unknown, links: readonly LabRoot[] = [], reserve: { bytes: number; records: number } = { bytes: 0, records: 0 }): LabRoot {
+    this.assertSettled()
     if (this.budget?.exhausted && ["run-failure", "red-team-terminal", "red-team-process-failure", "response-production-failure", "response-runtime-cleanup", "response-runtime-invocation-failure", "response-match-execution-failure", "runtime-cleanup", "runtime-cleanup-failure", "runtime-invocation-failure", "cell-issuance-failure"].includes(kind)) {
       const preserveChargeLinks = ["cell-issuance-failure", "runtime-cleanup", "runtime-cleanup-failure", "runtime-invocation-failure"].includes(kind)
       return this.budget.terminal(() => this.publish(kind, value, preserveChargeLinks ? links : [], true))
     }
     return this.publish(kind, value, links, false, reserve)
   }
+  async appendInvocation(kind: string, value: unknown, links: readonly LabRoot[] = [], reserve: { bytes: number; records: number } = { bytes: 0, records: 0 }): Promise<LabRoot> {
+    this.assertSettled()
+    if (!["runtime-invocation", "response-runtime-invocation"].includes(kind)) return this.append(kind, value, links, reserve)
+    if (this.retentionFailed) return fail("RETENTION_DISPATCH_STOP")
+    const prepared = this.prepare(kind, value, links, false, reserve)
+    if (prepared.streamArtifacts.length !== 0 || prepared.ordinal !== 1) return this.publishPrepared(kind, prepared)
+    let release!: () => void
+    this.pending = new Promise<void>((resolve) => { release = resolve })
+    try {
+      await publishLeagueArtifactDependenciesAsync(this.repository, prepared.pending.slice(0, -1))
+      publishLeagueArtifact(this.repository, prepared.descriptor)
+      this.latestRoot = bytesRoot(prepared.descriptor)
+      return this.latestRoot
+    } catch (error) { this.retentionFailed = true; throw error }
+    finally { this.pending = null; release() }
+  }
   private publish(kind: string, value: unknown, links: readonly LabRoot[], terminal: boolean, reserve: { bytes: number; records: number } = { bytes: 0, records: 0 }): LabRoot {
+    return this.publishPrepared(kind, this.prepare(kind, value, links, terminal, reserve))
+  }
+  private prepare(kind: string, value: unknown, links: readonly LabRoot[], terminal: boolean, reserve: { bytes: number; records: number }): { pending: Uint8Array[]; descriptor: Uint8Array; streamArtifacts: readonly Uint8Array[]; ordinal: number } {
     let dependencies = [...new Set([...links, ...(this.latestRoot ? [this.latestRoot] : [])])].sort()
     while (dependencies.length > 128) { const groups: LabRoot[] = []; for (let i = 0; i < dependencies.length; i += 127) { const rows = dependencies.slice(i, i + 127); groups.push(this.publish("record-links", { count: rows.length }, rows, terminal)) }; dependencies = [...new Set(groups)].sort() }
     const admitted = admitCanonicalJsonValue(value, { profile: "canonical-manifest" })
@@ -131,6 +159,9 @@ export class LeagueRecordGraph {
     }
     else if (this.writtenBytes + size + reserve.bytes > this.limits.maxArtifactBytes || this.records + pending.length + reserve.records > this.limits.maxArtifactRecords) return fail("RETENTION_BUDGET")
     this.writtenBytes += size; this.records += pending.length
+    return { pending, descriptor, streamArtifacts, ordinal }
+  }
+  private publishPrepared(kind: string, { pending, descriptor, streamArtifacts, ordinal }: { pending: Uint8Array[]; descriptor: Uint8Array; streamArtifacts: readonly Uint8Array[]; ordinal: number }): LabRoot {
     if (kind === "runtime-invocation" && streamArtifacts.length === 0 && ordinal === 1) {
       // Only the measured single-chunk hot path: individually fsynced payload
       // and chunk node share a directory barrier BEFORE the graph descriptor.
