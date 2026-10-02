@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+ONE IPC full source gate95810 CLOSED pass453tests/build/types/scans/service
+strict0; correct-cwd core regressions engine149/runtime277 and privatehelper
+types pass. Fixeda98b5c2b/ea34d793/2bf94999. Freshv8 data-only draft43883 completes
+with11unexecuted/unreviewed requests. Distinct actual packet review follows
+before compile/allocation/capacity/Match. No phase/LEAG/freeze credit. See
+IPC-ERROR-PRESERVATION-SOURCE-GATE-v1; earlier active snapshots are historical.
+
 Plan07 bounded IPC source repair is fixed at a98b5c2b after genuine RED/GREEN
 proof for classification loss and strict incomplete failure-prefix replay.
 Independent source/helper reviews clean; focused guards and configured strict

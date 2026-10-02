@@ -1,5 +1,5 @@
 ---
-status: fixed_source_owned_whole_suite_passed_unique_full_gate_active
+status: source_defects_resolved_all_source_gates_passed_live_cause_unknown
 trigger: fresh v7 third charged Match failed with normalized MALFORMED_IPC
 created: 2026-10-02
 updated: 2026-10-02
@@ -14,10 +14,19 @@ test: two bounded synthetic RED/GREEN regressions only after independent plan
 check and root's specific execution dispatch
 expecting: preserve typed classifications and strictly mirror failed-prefix
 replay, keeping failure/no-retry/accounting/privacy without positive credit
-next_action: await root's ONE gate95810/PID91648 at fixed a98b5c2b;
-do not duplicate closed owned suite62868 or active fullgate
+next_action: actual freshv8 packet review after successful source gates;
+never duplicate closed owned suite62868,gate95810 or historical verifier66301
 
 ## Current proof update
+
+Final root gate95810 CLOSED exit0 at11:26:04.572UTC with450+3tests and all
+build/type/boundary commands passing. Configured privatehelper types and core
+build pass; correct-cwd engine149/runtime277 pass. An initial wrong-root-cwd
+unit command ENOENT is preserved honestly in SOURCE-GATE-v1; no source changed.
+Both source defects are resolved and independently reviewed; actual historical
+v7 transport cause remains unproven. Freshv8 data-only requests are drafted,
+not reviewed/executed. No empirical success or LEAG credit follows this repair.
+The active-gate proof paragraph below is a historical pre-completion snapshot.
 
 Independent corrected plan check passed; root dispatched the four-file repair.
 Both synthetic RED regressions failed before either production edit. Minimal
@@ -124,7 +133,8 @@ root_cause: planner overwrites typed subprocess codes; retained replay rejects
   the live incomplete charged failure prefix; v7 inner cause remains unproven
 fix: applied in four owned source/test files through a98b5c2b under Plan07
 verification: both RED/GREEN and focused guards/types pass; independent reviews
-  clean; ONE whole owned suite62868 CLOSED pass152/152; root full gate95810 active;
+  clean; ONE whole owned suite62868 CLOSED pass152/152; root full gate95810 CLOSED
+  pass453tests/build/types/scans; core regression/privatehelper types pass;
   historical unique retained66301 CLOSED exit1 and must never rerun
 files_changed: planner supervised runtime/test and serious league runner/test;
   supplemental planning/review/execution records only beyond that source scope
