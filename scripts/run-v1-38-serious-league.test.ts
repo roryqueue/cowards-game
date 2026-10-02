@@ -17,7 +17,7 @@ import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRe
 import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
-import { produceLeagueResponse, wrapLeagueProbeProvider } from "./lib/v1-38-league-response-runtime.js"
+import { produceLeagueResponse, wrapLeagueProbeProvider, verifyRetainedLeagueProbeInvocations } from "./lib/v1-38-league-response-runtime.js"
 import { positiveResponseFixture } from "./lib/v1-38-league-response-runtime.test.js"
 import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
@@ -583,7 +583,7 @@ describe("prospective CLI source-only gates", () => {
       const freshContext = failure === "stale after static" ? capacityContext : { ...capacityContext, filesystemDevice: "fresh-observed-device", freeFilesystemBytes: capacity.freeFilesystemBytes - 1024, availableMemoryBytes: capacity.availableMemoryBytes - 1024 }
       let now = 1001, staticReads = 0, observations = 0
       vi.spyOn(Date, "now").mockImplementation(() => now)
-      const timedFixture: LeagueFixtureSeams = { ...fixture, capacityContext: undefined, readCandidates() {
+      const timedFixture: LeagueFixtureSeams = { ...fixture, capacityContext: undefined as unknown as NonNullable<LeagueFixtureSeams["capacityContext"]>, readCandidates() {
         staticReads++; now += 300001
         if (failure === "static reader failure") throw Error("injected static reader failure")
         if (failure === "static closure failure") return candidates.map((row, index) => index ? row : { ...row, closure: candidates[1]!.closure })
@@ -844,6 +844,105 @@ describe("complete private league command", () => {
     expect(failed.value.terminal).toMatchObject({ disposition: "system_failure", projection: null })
     const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
     expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_invalid", empiricalRequirementsComplete: false })
+    const rewrite = (execution: any, alterRaw?: (row: any) => void) => {
+      // Rebuild the reachable NEW synthetic graph in dependency order. Both
+      // raw views and accounting are updated coherently; no old route is read.
+      const writer = new LeagueRecordGraph(repository, allocation.operations), roots = new Map<string, ReturnType<typeof labRoot>>()
+      let index = 0
+      for (const [root, node] of graph.entries()) {
+        const value = structuredClone(node.value)
+        if (node.kind === "cell-result") value.execution = execution
+        if (node.kind === "runtime-invocation") {
+          value.originalEvidence = structuredClone(execution.accounting[index])
+          value.admittedEvidence = structuredClone(execution.accounting[index++])
+          alterRaw?.(value)
+        }
+        roots.set(root, writer.append(node.kind, value, node.links.map((link) => roots.get(link) ?? link)))
+      }
+      return roots.get(result.headRoot)!
+    }
+    const coherent = (headRoot: ReturnType<typeof labRoot>, execution: any) => {
+      const altered = readLeagueRecordGraph(repository, headRoot, allocation.operations)
+      const raw = [...altered.values()].filter((row) => row.kind === "runtime-invocation").map((row) => row.value)
+      expect(verifyRetainedLeagueProbeInvocations(raw, execution.accounting, failed.value.options.transform, failed.value.match.arenaVariant.initialBounds)).toEqual({ issued: false })
+      expect(altered.roots("cell-result")).toHaveLength(1)
+      return { ...verify, headRoot }
+    }
+    const unchanged = structuredClone(failed.value.execution)
+    expect(verifyRetainedSeriousLeague(coherent(rewrite(unchanged), unchanged))).toMatchObject({ issued: false, processValidity: "process_invalid" })
+    const rejects = (name: string, change: (execution: any, last: any) => void, code = "RETAINED_INVOCATION", join = true) => {
+      const execution = structuredClone(failed.value.execution), last = execution.accounting.at(-1)
+      change(execution, last)
+      const headRoot = rewrite(execution), input = join ? coherent(headRoot, execution) : { ...verify, headRoot }
+      expect(() => verifyRetainedSeriousLeague(input), name).toThrow(`SERIOUS_LEAGUE_${code}`)
+    }
+    if (completedPrefix === 0) {
+      const resultCases: Array<[string, (result: any) => void]> = [
+        ["unknown code", (r) => { r.systemFailure.code = "UNRECOGNIZED" }],
+        ["missing code", (r) => { delete r.systemFailure.code }],
+        ["number code", (r) => { r.systemFailure.code = 1 }],
+        ["object code", (r) => { r.systemFailure.code = {} }],
+        ["retryable true", (r) => { r.systemFailure.retryable = true }],
+        ["missing retryable", (r) => { delete r.systemFailure.retryable }],
+        ["string retryable", (r) => { r.systemFailure.retryable = "false" }],
+        ["null retryable", (r) => { r.systemFailure.retryable = null }],
+        ["number retryable", (r) => { r.systemFailure.retryable = 0 }],
+        ["null failure", (r) => { r.systemFailure = null }],
+        ["array failure", (r) => { r.systemFailure = [] }],
+        ["primitive failure", (r) => { r.systemFailure = "SUBPROCESS_EXIT" }],
+        ["missing failure", (r) => { delete r.systemFailure }],
+        ["surplus failure", (r) => { r.systemFailure.extra = "private" }],
+        ["ok true", (r) => { r.ok = true }],
+        ["ok null", (r) => { r.ok = null }],
+        ["ok number", (r) => { r.ok = 0 }],
+        ["ok string", (r) => { r.ok = "false" }],
+        ["missing ok", (r) => { delete r.ok }],
+        ["player violation", (r) => { r.violation.type = "FORBIDDEN_CAPABILITY" }],
+        ["private violation text", (r) => { r.violation.message = "private" }],
+        ["missing violation type", (r) => { delete r.violation.type }],
+        ["missing violation message", (r) => { delete r.violation.message }],
+        ["missing violation", (r) => { delete r.violation }],
+        ["null violation", (r) => { r.violation = null }],
+        ["array violation", (r) => { r.violation = [] }],
+        ["surplus violation", (r) => { r.violation.extra = "private" }],
+        ["forbidden success payload", (r) => { r.value = { activationOrders: [] } }],
+        ["surplus result", (r) => { r.extra = "private" }],
+      ]
+      for (const [name, change] of resultCases) rejects(name, (_e, last) => change(last.result))
+      for (const result of [null, [], false]) rejects(`malformed result ${JSON.stringify(result)}`, (_e, last) => { last.result = result })
+      for (const value of [false, 1, "true", null]) rejects(`nontrue charged ${JSON.stringify(value)}`, (_e, last) => { last.charged = value })
+      for (const value of [0, "false", null]) rejects(`nonboolean completed ${JSON.stringify(value)}`, (_e, last) => { last.completed = value })
+      for (const value of [1, -1, 0.5, 262145]) rejects(`invalid incomplete outputBytes ${value}`, (_e, last) => { last.outputBytes = value })
+      rejects("incomplete COMPLETED execution", (e) => {
+        e.kind = "completed"; e.result = { state: e.unchangedState, events: [] }
+        // Supply every pure transition before the pending effect, so this
+        // reaches the completion guard rather than an absent-record failure.
+        let machine = MATCH_KERNEL.createMachineV119(failed.value.match)
+        for (let ordinal = 0; ordinal < 1000; ordinal++) {
+          const next = MATCH_KERNEL.stepMatch(machine, { kind: "advance" })
+          if (next.kind === "effect") break
+          if (next.kind === "failure") throw Error("unexpected synthetic prefix failure")
+          e.transitions.push(next.record); machine = next.machine
+        }
+      })
+      rejects("wrong requestId", (_e, last) => { last.requestId = "wrong" }, "RETAINED_INVOCATION", false)
+      rejects("wrong method", (_e, last) => { last.method = "soldierBrain" }, "RETAINED_INVOCATION", false)
+      rejects("wrong input root", (_e, last) => { last.inputRoot = labRoot("wrong", 0) }, "RETAINED_INVOCATION", false)
+      rejects("wrong provider ordinal", (_e, last) => { last.ordinal++ })
+      rejects("wrong failure cause", (e) => { e.failure.code = "WRONG" }, "RETAINED_FAILURE_CAUSE")
+      rejects("wrong failure classification", (e) => { e.failure.classification = "player_violation" }, "RETAINED_FAILURE_STATE")
+      rejects("noninitial failure state", (e) => { e.unchangedState.roundNumber = 2 }, "RETAINED_FAILURE_STATE")
+      rejects("nonempty failure transitions", (e) => { e.transitions = [{ synthetic: true }] }, "RETAINED_FAILURE_STATE")
+      for (const code of ["MALFORMED_IPC", "SPAWN_FAILED", "STDIO_CAP_EXCEEDED", "SUBPROCESS_SIGNAL"]) {
+        const execution = structuredClone(failed.value.execution); execution.accounting.at(-1).result.systemFailure.code = code
+        expect(verifyRetainedSeriousLeague(coherent(rewrite(execution), execution))).toMatchObject({ issued: false, processValidity: "process_invalid" })
+      }
+      const wrongJoin = rewrite(unchanged, (raw) => { raw.admittedEvidence.invocationRoot = labRoot("wrong-join", 0) })
+      expect(() => verifyRetainedSeriousLeague({ ...verify, headRoot: wrongJoin })).toThrow("RETAINED_RAW_ACCOUNTING")
+    } else {
+      rejects("trailing accounting after incomplete", (e, last) => { e.accounting.push(structuredClone(last)) }, "RETAINED_INVOCATION", false)
+      rejects("duplicate consumed invocation root", (e, last) => { last.invocationRoot = e.accounting[0].invocationRoot }, "RETAINED_INVOCATION", false)
+    }
   }, 120000)
   it("reopens charged player and system failures with no fabricated payoff and rejects tampered failure evidence", async () => {
     for (const classification of ["player_violation", "system_failure"] as const) {
@@ -967,7 +1066,7 @@ describe("complete private league command", () => {
       const retention = failAfterGrowth === "result-retention" ? { ...input.retention, appendInvocation: input.retention.appendInvocation?.bind(input.retention), settlePending: input.retention.settlePending?.bind(input.retention), get invocationPending() { return input.retention.invocationPending }, beforeDispatch: () => input.retention.beforeDispatch(), beforeInvocation: (request: unknown) => input.retention.beforeInvocation(request), append(kind: string, value: unknown, links: readonly string[] = []) {
         if (kind === "response-production-result") throw new Error("injected result retention failure")
         return input.retention.append(kind, value, links as never)
-      } } : input.retention
+      } } as typeof input.retention : input.retention
       return produceLeagueResponse({ ...input, retention, fixture: { ...productionFixture,
       host: { createFactorySupervisedRuntime(request) {
         const provider = productionFixture.host.createFactorySupervisedRuntime(request)
