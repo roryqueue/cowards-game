@@ -16,8 +16,8 @@ import { buildLeanAuthenticatedHarnessSource, createLeanContainerMatchSession, t
 
 export type PlannerPrivateDiagnostic = LeanPrivateFailureOrigin & Readonly<Pick<LabRuntimeEvidence, "identity" | "invocationRoot" | "requestId" | "method" | "inputRoot" | "ordinal">>
 // Constructor identity, not structural capabilities, grants private lookup.
-const privateDiagnostics = new WeakMap<object, WeakMap<object, PlannerPrivateDiagnostic>>()
-export const getPlannerPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence): PlannerPrivateDiagnostic | undefined => privateDiagnostics.get(provider)?.get(evidence)
+const privateDiagnostics = new WeakMap<object, (evidence: LabRuntimeEvidence) => PlannerPrivateDiagnostic | undefined>()
+export const getPlannerPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence): PlannerPrivateDiagnostic | undefined => privateDiagnostics.get(provider)?.(evidence)
 export const verifyPlannerPrivateDiagnostic = (provider: object, evidence: LabRuntimeEvidence, diagnostic: unknown): boolean => diagnostic !== undefined && getPlannerPrivateDiagnostic(provider, evidence) === diagnostic
 
 const rawRoot = (value: string | Uint8Array): LabRoot => `sha256:${createHash("sha256").update(value).digest("hex")}`
@@ -157,7 +157,7 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
       return e
     },
   }
-  privateDiagnostics.set(runtime, diagnostics)
+  privateDiagnostics.set(runtime, (evidence) => issued.has(evidence) ? diagnostics.get(evidence) : undefined)
   return runtime
 }
 export const closePlannerRuntime = (runtime: PlannerSupervisedRuntime) => runtime.close()

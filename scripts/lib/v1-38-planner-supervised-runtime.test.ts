@@ -1,6 +1,11 @@
 import { describe, expect, it, vi, afterEach } from "vitest"
+const nativeStreamMock = vi.hoisted(() => ({ worker: undefined as any }))
+vi.mock("node:worker_threads", async (original) => {
+  const actual = await original<typeof import("node:worker_threads")>()
+  return { ...actual, Worker: vi.fn(function (...args: any[]) { return nativeStreamMock.worker ?? Reflect.construct(actual.Worker, args) }) }
+})
 import { performance } from "node:perf_hooks"
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => { nativeStreamMock.worker = undefined; vi.restoreAllMocks() })
 import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
@@ -62,6 +67,27 @@ const fixture = (fault?: string) => {
 const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, budgetRoot: root, matchId: "phase263:match", containerName: "phase263-test", ownershipLabel: "owner:phase263-test", image: LAB_ADMITTED_ROOTS.image, ...fixture(fault) })
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
 describe("private IPC diagnostics injected planner", () => {
+  it.each(["timeout", "state"])("preserves actual native %s origin in one charged incomplete invocation", (fault) => {
+    let dispatches = 0, waits = 0
+    nativeStreamMock.worker = { postMessage(message: any) { if (message.type === "exchange") { dispatches++; Atomics.store(new Int32Array(message.control), 0, fault === "state" ? -6 : 0) } else Atomics.store(new Int32Array(message.control), 0, 1) }, terminate: vi.fn(async () => 0) }
+    vi.spyOn(Atomics, "wait").mockImplementation(() => ++waits === 2 && fault === "timeout" ? "timed-out" : "ok")
+    vi.spyOn(Atomics, "load").mockImplementation((view, index) => view.length === 1 ? 1 : view[index]!)
+    const opts = options(), host = createPlannerSupervisedRuntime({ ...opts, streamFactory: undefined }), e = host.invoke(request("selectActivations"), host.identity)
+    expect((plannerApi as any).getPlannerPrivateDiagnostic(host, e)).toMatchObject({ stage: "stream_exchange", reason: fault === "timeout" ? "wait_timeout" : "non_success_state" })
+    expect(e).toMatchObject({ charged: true, completed: false, outputBytes: 0, result: { ok: false, systemFailure: { code: "MALFORMED_IPC", retryable: false } } })
+    expect(host.accounting).toEqual([e]); expect(host.verify(e)).toBe(true)
+    expect(() => host.invoke(request("selectActivations", "next"), host.identity)).toThrow("LAB_RUNTIME_STOPPED")
+    expect(dispatches).toBe(1); expect(closePlannerRuntime(host)).toEqual({ cleanupComplete: true, orphanedChild: false })
+    expect(opts.calls.some((args) => args[0] === "rm")).toBe(true)
+  })
+  it("does not issue diagnostics from pre-issuance accounting when cleanup throws", () => {
+    const opts = options("request"), original = opts.transport
+    const host = createPlannerSupervisedRuntime({ ...opts, transport(command, args, config) { if (args[0] === "rm") throw Error("cleanup failed"); return original(command, args, config) } })
+    expect(() => host.invoke(request("selectActivations"), host.identity)).toThrow("cleanup failed")
+    const e = host.accounting[0]!
+    expect(host.verify(e)).toBe(false); expect((plannerApi as any).getPlannerPrivateDiagnostic(host, e)).toBeUndefined()
+    expect(opts.frames).toHaveLength(1)
+  })
   it.each(["request", "inner-surplus", "inner-malformed", "unknown", "primitive", "null", "forged-code", "forged-name", "unknown-typed-code", "typed-spawn"])("binds %s without changing failure accounting or classification", (fault) => {
     const opts = options(fault), host = createPlannerSupervisedRuntime(opts), e = host.invoke(request("selectActivations"), host.identity)
     const api = plannerApi as any, diagnostic = api.getPlannerPrivateDiagnostic?.(host, e)
