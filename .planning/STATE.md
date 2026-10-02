@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 freshv8 preparation complete; allocationd7366057 published; next unique entry with fresh same-process capacity, no Match yet
+stopped_at: Phase265 v8 entry42336 CLOSED setup ENOENT before capacity/dispatch; zero Matches; distinct freshv9 orchestration repair next
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: prepare3155 CLOSED exit0; staticcapacity9970 admitted without receipt; canonicalallocation22725 published d7366057
+last_activity_desc: unique v8 entry CLOSED exit1 at absent league directory; readonly diagnosis98963 reproduces ENOENT; no old entry retry or result repair
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,25 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — v8 setup failure closed, distinct v9 next
+
+ONE entry42336/PID94332 starts12:00:17.122UTC,ends12:00:17.369UTC,exit1:
+Error,resultPublishedfalse,noRetrytrue at entryc9157f5f/failurea6b217c4.
+Root omitted initialization of the exact new league-evidence directory;
+runner's read-only repository constructor refuses before static capacity/run.
+ONE read-only source diagnosis98963 reproduces Error/ENOENT/lstat on exactpath.
+No Match,provider,receipt,reservation,cell journal or head was issued. Reserved
+run-result-v8 is immutable EMPTY0bytes,not accepted JSON/evidence; do notstage,
+fill/delete/replace/reuse. No head exists for retained verifier; none may be
+invented. Entry/allocation/helpers remain consumed/closed and immutable.
+Source hold released; maina98b5c2b/ea34d793/2bf94999 remains unchanged. Next
+distinct freshv9 under standing same-bounds approval: new helper directory
+guard before entry/result markers, explicit NEW directory setup before publish,
+independent helper review/types and fresh request review/allocation/capacity.
+No duplicate full gate or oldroute retry; no repeat human literal. No LEAG/
+freeze/formation/holdout/public/count/production credit. See RESULT-v8.
+Earlier ready-entry snapshots below are historical.
 
 ## Current continuation — fresh v8 allocation published, live admission next
 

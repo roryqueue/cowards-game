@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+V8 entry42336 CLOSED exit1 before capacity/dispatch: missing NEW private league
+directory, read-only ENOENT diagnosis98963 confirms setup omission. Zero Matches,
+no head/receipt; reserved empty result is not evidence and remains untouched.
+Distinct freshv9 setup guard/review/preparation follows under standing approval,
+main source unchanged; no repeated closedgate/oldentry. No LEAG/freeze credit.
+See EMPIRICAL-RESULT-v8; earlier ready-entry snapshots are historical.
+
 Freshv8 unique prepare3155 completes atd7366057/raw64bdd513/24053B. Static
 capacity9970 admits inherited size quantities only at19395f1e,NOT a live receipt.
 Canonical publication22725 completes same d7366057 in newv8 allocation path.
