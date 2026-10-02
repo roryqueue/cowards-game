@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 sourcegate58270 CLOSED failed CI1; bounded older-test fixture correction next
+stopped_at: Phase265 fixture correction63f1a1a reviewed; ONE newsourcegate59346/PID17291 active
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: Sourcegate58270 failed one older undefined fixture reference;509pass1fail,no complete gate or live Match; repair/review/new gate next
+last_activity_desc: Fullfactory37pass/reviewv3clean; newgate59346 build3/strict4passed,CI1active,sourcefixed,noMatch/leaguecredit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,17 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+Root test-only correction63f1a1a of older undefinedfixture passes fullfactory
+37tests (8153exit0); independent REVIEW-v3 clean741a81d8. ONE freshfullgate59346/
+PID17291 ACTIVE from19:43:12.504UTC, fixedd42a6cf1/e5428d3c/source63f1a1a.
+CI3build/CI4strict passed;29fileCI1suite and remainingpending. No duplication,
+source edit or competingheavywork. V1/v2 gates remain immutablefailedhistory,
+VERIFICATION-v1 gaps_found notsourceacceptance. PrivateV11helpers mayonlydraft
+newpendinggatepins; no actualroute preparation/allocation/capacity/Match until
+applicablegates/goalverify pass. No newhuman checkpoint/boundsdecision; standing
+approval/600000 unchanged. LEAG/freeze incomplete, holdout unopened, formation/
+public/counting/production excluded. Older next/active snapshots below history.
 
 Sourcegate58270 CLOSED exit1 at19:36:23.692UTC;PID15219 absent. CI3/4passed;
 CI1=509pass1fail (factory test157 undefined buildFeasibilityCorpus, missed older

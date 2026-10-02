@@ -6,14 +6,22 @@ nyquist_compliant: false
 wave_0_complete: false
 created: 2026-09-14
 updated: 2026-10-02
-source_reviewed: 5d898accd715baf723fabe2b69fb13c930ebd358
-source_gate: private-ipc-v2-58270-closed-failed-CI1-509pass1fail-older-fixture-reference
+source_reviewed: 63f1a1a380aa753d88e2825abef176b7306b3980
+source_gate: private-ipc-v3-59346-active-build3-strict4-pass-CI1-pending
 empirical_validation: v10-consumed-process-invalid-one-cell-unique-retained-verifier28015-complete
 ---
 
 # Phase265 — Validation Strategy
 
 ## Latest captured results
+
+Root corrects older test-only fixture at63f1a1a; fullfactory8153exit0 all37pass,
+15.61s. Independentreviewv3 clean. ONE freshfullgate59346/PID17291 ACTIVE at
+fixed63f1a1a from19:43:12.504UTC; buildCI3/strict14scriptCI4 pass, CI1/remaining
+pending. Sourceheld/no duplicate or competingheavywork; no whole-gate pass or
+empiricalcredit yet. V1/v2failedhistory and VERIFICATION-v1gaps_found remain.
+See PRIVATE-IPC-SOURCE-GATE-v3 and FIXTURE-CORRECTION-v1. Fullphasepartialfalse,
+LEAG/freeze open; no Match/capacity/allocation/holdout/formation/public/counting.
 
 Sourcegate58270 CLOSED exit1 at19:36:23.692UTC, unchanged5d source; CI3/4passed,
 CI1 28/29files and509/510tests passed (1959.64s), one older factory lifetime
