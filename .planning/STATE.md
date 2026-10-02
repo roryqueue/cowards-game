@@ -115,13 +115,18 @@ immutable allocation with fresh passing capacity before a further Match.
 No human-only checkpoint has been identified by diagnosis yet. LEAG remains
 pending and Phase265 stays12/14plans complete; formation/holdout stay closed.
 
-The isolated Phase266 draft is checkpointed locally at4eac9a8a
+The isolated Phase266 draft is checkpointed locally at1161f62c (after4eac9a8a)
 (branch codex/phase266-context), unmerged/unpushed. Corrected historical adapter
 and immutable two-epoch source rosters have clean scoped independent reviews;
 strict no-emit checks pass. Only two Git-blob manifest tests ran:2passed,37skipped.
 Root's bounded loader1739 passed exact4eb identities with zero producer calls.
 Complete-positive derive/check joins, broader source gates and integrated review
-remain missing. No fixture generation or real operation ran. It is not a freeze
+remain missing. An attempted complete-history Vitest case failed after513.9s
+at its resolver harness boundary, not a producer join. Historical async hook
+scopes and a portable temporary-Git Node/tsx probe now have clean independent
+rereview. Root's final narrow test94715 passes1/39skipped in9.81s and strict
+two-file types93230 pass; no full fixture or freeze is established. Long fixture
+work is held during active v5. It is not a freeze
 or phase completion; main source stays fixed. Two unrelated package repository
 changes in that worktree remain untouched. No human-only checkpoint is needed.
 
