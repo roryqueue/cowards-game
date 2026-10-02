@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V11 independent 11-request review and inert compilation complete; root data-only allocation preparation active
+stopped_at: Phase265 V11 fresh allocation published; commit and push before unique root live entry and fresh same-process capacity
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: V11 review accepted 11/11; 45 inert records compiled; root prepare session51425 active, source63 fixed, no Match or LEAG credit
+last_activity_desc: V11 prepare51425, capacity-input57085 and publish99610 closed exit0; allocation69b5cd84 published, no live entry or Match yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,19 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V11 ROOT data-only prepare51425 CLOSED exit0. New admitted allocation root
+sha256:69b5cd84930b48c46602f676ea50ed8ea96981e2af6ccfd6d710d544083c0116,
+canonical raw sha256:67c8fe2d27efc8600198bcff59a6dfd1d47f107ac6982ca43527b3799e31e9f6.
+Capacity-input57085 CLOSED exit0: inherited historical sizing reconciled with
+current source/physical format, NOT a fresh receipt. Exact fresh league-evidence
+directory created and checked empty, realpath, nonsymlink,0700. Root exclusive
+publish99610 CLOSED exit0 at canonical allocation-v11. Commit/push before ONE
+root run-entry; fresh passing SAME-PROCESS capacity before charge/dispatch.
+No live entry, new capacity receipt, provider, model, Match or retained verifier
+yet. Source63/d42/e542 stays fixed through terminal and unique verifier. Older
+preparation-active notes below are history. All approved/frozen/private bounds
+unchanged; no LEAG/freeze/formation/holdout/public/counting/production credit.
 
 V11 fresh independent packet review COMPLETE: 11/11 accepted, review raw
 5ac28db4558b7d96401d2611597610e023de6265b02744aae1d19a4c465a4b8a.

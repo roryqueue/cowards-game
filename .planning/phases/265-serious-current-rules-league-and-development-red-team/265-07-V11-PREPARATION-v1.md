@@ -55,3 +55,29 @@ Root data-only prepare session51425 is ACTIVE. No completion, canonical
 allocation, fresh capacity receipt, live entry or Match is inferred. Remaining
 technical prerequisites and all private/freeze-before-formation boundaries
 above remain in force.
+
+## Actual prepared and published allocation
+
+ROOT data-only prepare51425 CLOSED exit0. The new prospective allocation has
+admitted root sha256:69b5cd84930b48c46602f676ea50ed8ea96981e2af6ccfd6d710d544083c0116
+and raw root sha256:67c8fe2d27efc8600198bcff59a6dfd1d47f107ac6982ca43527b3799e31e9f6
+(24548 bytes). It binds reviewed sourcee5428d3c/implementationd42a6cf1, approved
+per-Match600000ms, new v11 namespace, standing approvals and unchanged bounds.
+The multi-minute preparation re-verifies historical retained factory evidence;
+it performs no new Strategy, provider, model or Match execution.
+
+ROOT capacity-input57085 CLOSED exit0. Capacity reconciliation raw root is
+sha256:7a962d9bd3bd91e3f313286a1d591a76f6913400759f118ab1031ff5a6c45972;
+capacity-plan input raw root is
+sha256:051f72d3abab087bf5d8d1a12931f85c3bf39c6612c48685254d1b65f2c622bf.
+These are inherited historical static sizing plus current source/physical-format
+reconciliation, not fresh host measurement or a capacity receipt.
+
+Exact new private league-evidence directory was created with mode0700 and
+checked empty, nonsymlink and exact realpath. ROOT publish-allocation99610
+CLOSED exit0, exclusively writing .planning/artifacts/v1.38-phase-265-allocation-v11.json
+with the admitted/raw roots above and actual source gate completioncf04142c.
+The allocation must be committed/pushed before the unique root entry. Only that
+entry may perform fresh same-process capacity admission, and only a pass may
+charge/dispatch. No live entry or retained verifier started yet. All consumed
+history and no-LEAG/no-freeze/current-rules/private boundaries remain unchanged.
