@@ -17,7 +17,7 @@ import { runSeriousLeague, prepareSeriousLeague, readLeagueRecordGraph, verifyRe
 import { prepareLeagueExecutionStream, readLeagueExecutionStream } from "./lib/v1-38-league-execution-stream.js"
 import { createFactoryRepository, publishFactoryArtifact, recordFactoryAttemptStart, publishFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/repository.js"
 import { createFactoryAttemptStart, createFactoryAttemptTerminal } from "../packages/strategy-lab/src/factory/ledger.js"
-import { produceLeagueResponse } from "./lib/v1-38-league-response-runtime.js"
+import { produceLeagueResponse, wrapLeagueProbeProvider } from "./lib/v1-38-league-response-runtime.js"
 import { positiveResponseFixture } from "./lib/v1-38-league-response-runtime.test.js"
 import { executeLeagueAuthoring } from "./lib/v1-38-league-authoring.js"
 import { countLinkedResponseIterations } from "../packages/strategy-lab/src/league/selection.js"
@@ -26,12 +26,12 @@ import { advanceLeagueRound } from "../packages/strategy-lab/src/league/psro.js"
 import { prepareProspectiveSeriousLeague, preflightProspectiveSeriousLeague, validateProspectiveLeagueInitialCandidates, leagueCurrentSourceIdentity, leagueEffectiveAvailableMemoryBytes, observeLeagueAvailableMemoryBytes } from "./run-v1-38-serious-league.js"
 
 const directories: string[] = []
-const descriptorSyncFailure = vi.hoisted(() => ({ active: false }))
+const descriptorSyncFailure = vi.hoisted(() => ({ active: false, error: null as Error | null }))
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>()
-  return { ...actual, fsyncSync(fd: number) { if (descriptorSyncFailure.active && !actual.fstatSync(fd).isDirectory()) throw Error("descriptor file fsync failed"); return actual.fsyncSync(fd) } }
+  return { ...actual, fsyncSync(fd: number) { if (descriptorSyncFailure.active && !actual.fstatSync(fd).isDirectory()) throw descriptorSyncFailure.error ?? Error("descriptor file fsync failed"); return actual.fsyncSync(fd) } }
 })
-afterEach(() => { descriptorSyncFailure.active = false; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+afterEach(() => { descriptorSyncFailure.active = false; descriptorSyncFailure.error = null; vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 const temporary = () => { const directory = realpathSync(mkdtempSync(join(tmpdir(), "league-command-test-"))); directories.push(directory); return directory }
 const controlledGraphSyncs = () => {
   const pending: Array<(error?: Error) => Promise<void>> = []
@@ -59,8 +59,39 @@ describe("asynchronous invocation graph retention", () => {
     expect(snapshot(asyncBase.directory)).toEqual(before)
     await syncs.pending[1]!(); expect(barriers).toEqual([]); expect(graph.latestRoot).toBe(prior)
     await syncs.pending[0]!(); expect(await work).toBe(expected)
+    // A concurrent refusal is not a failure of the active legitimate write.
+    expect(() => graph.beforeDispatch()).not.toThrow(); expect(() => graph.beforeInvocation({})).not.toThrow()
     expect(barriers).toEqual([5, 6]); expect(snapshot(asyncBase.directory)).toEqual(snapshot(syncBase.directory)); expect(asyncCharges).toEqual(syncCharges)
     expect(readLeagueRecordGraph(asyncBase, expected, limits).get(expected)?.kind).toBe(kind)
+  })
+  it.each(["runtime-invocation", "response-runtime-invocation"])("CR-01 latches %s preparation and multi-chunk publication failures graph-wide", async (kind) => {
+    for (const boundary of ["file", "directory", "link-group", "canonical"] as const) {
+      const base = createLeagueRepository(temporary()), error = Error(`original ${boundary} failure`)
+      const budget = new LeagueRetentionBudget(createLeagueExecutionAllocation(allocationFixture()))
+      const repository = createLeagueRepository(base.directory, {
+        beforePublication(value) { budget.beforePublication(value); if (boundary === "link-group") throw error },
+        syncDirectory(directory) { if (boundary === "directory") throw error; base.durability.syncDirectory(directory) },
+      }), graph = new LeagueRecordGraph(repository, limits, budget)
+      if (boundary === "file") { descriptorSyncFailure.active = true; descriptorSyncFailure.error = error }
+      const links = boundary === "link-group" ? Array.from({ length: 129 }, (_, i) => labRoot("CR-01-links", i)) : []
+      const caught = await graph.appendInvocation(kind, boundary === "canonical" ? undefined : { text: "A".repeat(140000) }, links).catch((caught) => caught)
+      descriptorSyncFailure.active = false; descriptorSyncFailure.error = null
+      if (boundary === "canonical") expect(caught.message).toBe("SERIOUS_LEAGUE_CANONICAL")
+      else expect(caught).toBe(error)
+      expect(graph.latestRoot).toBeNull(); expect(graph.invocationPending).toBe(false)
+      expect(budget.usage).toMatchObject({ workRecords: boundary === "canonical" ? 0 : 1, terminalRecords: 0, exhausted: false })
+      const charges = { ...budget.usage }
+      expect(() => graph.beforeDispatch()).toThrow("RETENTION_DISPATCH_STOP")
+      expect(() => graph.beforeInvocation({})).toThrow("RETENTION_DISPATCH_STOP")
+      await expect(graph.appendInvocation(kind, {})).rejects.toThrow("RETENTION_DISPATCH_STOP")
+      let guestCalls = 0
+      // A fresh wrapper must consult the shared graph, not only its local latch.
+      const provider = { identity: {} as never, invoke() { guestCalls++; throw Error("guest must not run") }, verify() { return false }, close() { return { cleanupComplete: true, orphanedChild: false } } }
+      const other = wrapLeagueProbeProvider(provider, undefined, { minX: 0, maxX: 11 }, () => {}, (request) => graph.beforeInvocation(request), graph)
+      await expect(other.invoke({} as never, provider.identity)).rejects.toThrow("RETENTION_DISPATCH_STOP")
+      expect(guestCalls).toBe(0); expect(budget.usage).toEqual(charges)
+      expect(readdirSync(repository.directory).filter((name) => name.endsWith(".bin"))).toHaveLength(boundary === "directory" ? 1 : 0)
+    }
   })
   it("waits through sibling failure before gate/cleanup and stops dispatch without claiming budget exhaustion", async () => {
     const base = createLeagueRepository(temporary()), syncs = controlledGraphSyncs(), error = Error("dependency failed"), allocation = createLeagueExecutionAllocation(allocationFixture()), budget = new LeagueRetentionBudget(allocation)

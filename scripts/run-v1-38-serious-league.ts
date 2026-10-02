@@ -119,17 +119,17 @@ export class LeagueRecordGraph {
     this.assertSettled()
     if (!["runtime-invocation", "response-runtime-invocation"].includes(kind)) return this.append(kind, value, links, reserve)
     if (this.retentionFailed) return fail("RETENTION_DISPATCH_STOP")
-    const prepared = this.prepare(kind, value, links, false, reserve)
-    if (prepared.streamArtifacts.length !== 0 || prepared.ordinal !== 1) return this.publishPrepared(kind, prepared)
-    let release!: () => void
-    this.pending = new Promise<void>((resolve) => { release = resolve })
+    let release: (() => void) | undefined
     try {
+      const prepared = this.prepare(kind, value, links, false, reserve)
+      if (prepared.streamArtifacts.length !== 0 || prepared.ordinal !== 1) return this.publishPrepared(kind, prepared)
+      this.pending = new Promise<void>((resolve) => { release = resolve })
       await publishLeagueArtifactDependenciesAsync(this.repository, prepared.pending.slice(0, -1))
       publishLeagueArtifact(this.repository, prepared.descriptor)
       this.latestRoot = bytesRoot(prepared.descriptor)
       return this.latestRoot
     } catch (error) { this.retentionFailed = true; throw error }
-    finally { this.pending = null; release() }
+    finally { if (release) { this.pending = null; release() } }
   }
   private publish(kind: string, value: unknown, links: readonly LabRoot[], terminal: boolean, reserve: { bytes: number; records: number } = { bytes: 0, records: 0 }): LabRoot {
     return this.publishPrepared(kind, this.prepare(kind, value, links, terminal, reserve))
