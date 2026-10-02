@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 freshv9 reviewed pipeline; ONE data-only prepare75014 active, no Match or capacity receipt
+stopped_at: Phase265 freshv9 allocation published; new directory guard passed; commit/push before unique live entry
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v9 helper review and types pass; readonly missing-directory guard pass; eleven fresh requests independently accepted; unique data-only preparation active
+last_activity_desc: unique prepare75014 closed; exact new directory initialized and positive guard73111 passed; allocation34172 published, no Match or live receipt yet
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,23 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — fresh v9 canonical allocation, live admission next
+
+ONE data-only prepare75014 CLOSED exit0 at allocationcf217782, raw40c6d317/
+24053B. Static capacity-input85029 CLOSED exit0 atplan591f2067/6369B and
+reconciliation578e076e/4010B: inherited numeric sizing,receiptCreatedfalse,
+not fresh host observations. Root mkdir initialized only exact NEWv9 league-
+evidence directory AFTER draft+prepare,mode0700. Read-only positive guard73111
+CLOSED exit0, directoryempty/allentry-result-allocationmarkers absent before
+publication. ONE canonical publication34172 exits0 at new allocation-v9.json,
+same semanticcf217782/raw40c6d317. Commit/push BEFORE ONE live entry. Source
+fixeda98b5c2b/ea34d793/2bf94999 through route terminal and unique retained check;
+no competing CPU-heavy work. Fresh passing SAMEPROCESS capacity before any
+charge/dispatch remains mandatory. No Match/live receipt yet. Never duplicate
+completed preparation/publication or any oldclosedroute. Standing same-bounds
+approval applies; no repeat literal. No LEAG/freeze/formation/holdout/public/
+count/production credit. Earlier preparation-active snapshots historical.
 
 ## Current continuation — distinct v9 reviewed, data-only preparation active
 

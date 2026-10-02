@@ -1,7 +1,7 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: 07
-status: reviewed-v9-data-only-preparation-active
+status: reviewed-v9-prepared-directory-checked-allocation-published
 date: 2026-10-02
 empirical_authority: none
 ---
@@ -9,6 +9,20 @@ empirical_authority: none
 # Phase 265-07 — prospective league-v9 IPC-route preparation
 
 ## Actual root continuation
+
+ONE data-only prepare75014 CLOSED exit0 at semantic allocation
+`sha256:cf217782998520dd9ee0ee6a174fb727cf1bb062f3c7e7bf4b4cfc1bfdaf2189`,
+raw `40c6d3174a3776beefc83a20e362bb89b023c317f002fa186fa402d4ce8ddcd1`,
+24053bytes. Static capacity85029 CLOSED exit0 atplan591f2067/6369B and
+reconciliation578e076e/4010B,receiptCreatedfalse,inherited quantities only.
+Root explicitly initialized exact NEWv9 league-evidence directory AFTER
+draft+prepare. Positive read-only guard73111 passed:empty,0700,allcanonical
+allocation/result/entry markers absent before publication. ONE publication
+34172 CLOSED exit0 at canonical allocation-v9.json withsame semantic/rawroot.
+Root commits/pushes before unique liveentry. Source remains fixed through
+terminal/unique retained check; fresh same-process capacity must pass before
+charging/dispatch. No Match/livecapacityreceipt yet. These steps CLOSED,
+never repeat. The active-preparation paragraph below is historical.
 
 Independent helper review-v16 is clean at raw
 `92b88b50c8076e3e87f22f476687f0a5a892e952a9148bdc28e666aa31821ff2`.
