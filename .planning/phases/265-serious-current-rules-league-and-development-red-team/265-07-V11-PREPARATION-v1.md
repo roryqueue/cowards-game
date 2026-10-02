@@ -81,3 +81,14 @@ The allocation must be committed/pushed before the unique root entry. Only that
 entry may perform fresh same-process capacity admission, and only a pass may
 charge/dispatch. No live entry or retained verifier started yet. All consumed
 history and no-LEAG/no-freeze/current-rules/private boundaries remain unchanged.
+
+## Unique root entry started after publication
+
+Canonical allocation was committed in2e7d4d3b and pushed to origin/main before
+entry. ONE root session17028/PID21728 started at2026-10-02T20:56:12.968UTC.
+Actual private run-entry.json reports entry_started_static_validation_before_capacity,
+with exact source, allocation, completion, approval and private directory pins.
+No capacity pass, charge, Match, result or success is inferred from that marker.
+Poll only this existing process. Hold reviewed source fixed through terminal
+and its unique retained verification; avoid competing CPU-heavy work. Prior
+"not started" preparation snapshots above are history, not current status.

@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V11 fresh allocation published; commit and push before unique root live entry and fresh same-process capacity
+stopped_at: Phase265 V11 unique root entry17028/PID21728 active; static validation before fresh same-process capacity
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: V11 prepare51425, capacity-input57085 and publish99610 closed exit0; allocation69b5cd84 published, no live entry or Match yet
+last_activity_desc: V11 allocation69b5cd84 committed and pushed2e7d4d3b; unique entry17028/PID21728 active from20:56:12.968UTC, no capacity pass or Match inferred
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,16 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+ONE V11 root entry17028/PID21728 ACTIVE from2026-10-02T20:56:12.968UTC.
+Actual run-entry marker says entry_started_static_validation_before_capacity;
+no passing capacity, charge, dispatch, result or terminal is inferred. New
+allocation69b5cd84/raw67c8fe2d was committed/pushed in2e7d4d3b BEFORE entry.
+Poll ONLY this existing entry; never start a duplicate or retained verifier
+before actual terminal. Source63/d42/e542 fixed through terminal and exactly
+one retained verification. Avoid competing heavy work. Approved600000 and all
+other bounds/privacy/freeze-before-formation intact; standing approval applies.
+No LEAG/phase/freeze credit. Prior ready/preparation snapshots below history.
 
 V11 ROOT data-only prepare51425 CLOSED exit0. New admitted allocation root
 sha256:69b5cd84930b48c46602f676ea50ed8ea96981e2af6ccfd6d710d544083c0116,
