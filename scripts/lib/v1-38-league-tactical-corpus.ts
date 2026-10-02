@@ -5,7 +5,7 @@ import { LAB_ADMITTED_ROOTS, labRoot, type LabRoot } from "../../packages/strate
 import { deriveFactoryExecutionCommitment } from "../../packages/strategy-lab/src/factory/admission.js"
 import { createLeagueRepository, readLeagueArtifact, type LeagueRepository } from "../../packages/strategy-lab/src/league/repository.js"
 import { declareLeagueRound } from "../../packages/strategy-lab/src/league/psro.js"
-import type { AdmittedLeagueExecutionAllocation, LeagueResponseJob } from "../../packages/strategy-lab/src/league/allocation.js"
+import { isProspectiveLeagueExecutionAllocation, type AdmittedLeagueExecutionAllocation, type LeagueResponseJob } from "../../packages/strategy-lab/src/league/allocation.js"
 import { readFactoryArtifact, type FactoryRepository } from "../../packages/strategy-lab/src/factory/repository.js"
 import type { LabMatchExecution, LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime-bridge.js"
 import { createTacticalAdaptationCorpus, admitTacticalAdaptationCorpus, type TacticalAdaptationCorpus, type TacticalAdaptationObservation } from "../../packages/strategy-oracle-tactical/src/adaptation.js"
@@ -156,7 +156,7 @@ export const rehydrateLeagueTacticalCorpus = (value: unknown, readCell: Tactical
   })
 }
 
-export const isProspectiveTacticalJob = (allocation: AdmittedLeagueExecutionAllocation, job: LeagueResponseJob): boolean => allocation.schemaVersion === "league-prospective-execution-allocation-v1" && job.evaluationRole === "development_response" && [0, 3, 6].includes(allocation.rounds.flatMap((round) => round.jobs).findIndex((row) => row.id === job.id))
+export const isProspectiveTacticalJob = (allocation: AdmittedLeagueExecutionAllocation, job: LeagueResponseJob): boolean => isProspectiveLeagueExecutionAllocation(allocation) && job.evaluationRole === "development_response" && [0, 3, 6].includes(allocation.rounds.flatMap((round) => round.jobs).findIndex((row) => row.id === job.id))
 
 /** Rederive target roles/order and every input from its frozen current matrix. */
 export const readRetainedTacticalAuthoringContext = (repository: FactoryRepository, allocation: AdmittedLeagueExecutionAllocation, job: LeagueResponseJob, target: any) => {
