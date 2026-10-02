@@ -821,6 +821,30 @@ describe("complete private league command", () => {
     expect(verifyRetainedSeriousLeague({ repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates })).toMatchObject({ issued: false, processValidity: "process_invalid" })
     expect(readdirSync(repository.directory).filter((name) => name.endsWith(".started.json"))).toHaveLength(0)
   }, 60000)
+  it.each([0, 2])("reopens a NEW synthetic charged incomplete failure after %i completed effects", async (completedPrefix) => {
+    const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
+    const allocation = createLeagueExecutionAllocation({ ...base, outputDirectories: { league: repository.directory, responseFactory: null }, implementationRoot: factoryAssessmentImplementationRoot(), initialCandidatePublicationRoots: candidates.map((row) => row.publicationRoot).sort(), independenceReferencePublicationRoot: candidates[0]!.publicationRoot, operations: { ...base.operations, wallClockMilliseconds: 60000 } })
+    let calls = 0
+    const failingHost: LeagueFixtureSeams["host"] = { createFactorySupervisedRuntime(request) {
+      const provider = host.createFactorySupervisedRuntime(request), identity = { ...provider.identity, tupleId: MATCH_KERNEL.tupleId }, issued = new WeakSet<object>()
+      let ordinal = 0
+      return { ...provider, identity, invoke(request) {
+        const completed = calls++ < completedPrefix
+        const result = completed ? { ok: true, value: request.kind === "selectActivations" ? { activationOrders: [], strategyMemory: (request.input as any).strategyMemory } : { action: { type: "TURN_TO_STONE" }, soldierMemory: (request.input as any).soldierMemory } } : { ok: false, violation: { type: "INVALID_OUTPUT", message: "Runtime system failure" }, systemFailure: { code: "SUBPROCESS_EXIT", retryable: false } }
+        const evidence = { identity, requestId: request.requestId, method: request.kind, inputRoot: labRoot("runtime-input", request.input), ordinal: ordinal++, invocationRoot: labRoot("incomplete-failure-fixture-invocation", request), charged: true, completed, outputBytes: completed ? Buffer.byteLength(JSON.stringify(result)) : 0, result } as LabRuntimeEvidence
+        issued.add(evidence); return evidence
+      }, verify(evidence) { return issued.has(evidence) } }
+    } }
+    const result = await runSeriousLeague({ allocation, allocationRoot: allocation.root, repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, fixture: { candidates, host: failingHost, run: runCanonicalLabMatch } })
+    const graph = readLeagueRecordGraph(repository, result.headRoot, allocation.operations), failed = [...graph.values()].find((row) => row.kind === "cell-result")!
+    expect(calls).toBe(completedPrefix + 1)
+    expect(failed.value.execution).toMatchObject({ kind: "failure", transitions: [], failure: { classification: "system_failure", code: "LAB_SUPERVISOR_FAILURE" } })
+    expect(failed.value.execution.accounting).toHaveLength(completedPrefix + 1)
+    expect(failed.value.execution.accounting.at(-1)).toMatchObject({ charged: true, completed: false, outputBytes: 0 })
+    expect(failed.value.terminal).toMatchObject({ disposition: "system_failure", projection: null })
+    const verify = { repository, factoryRepository: candidates[0]!.factoryRepository, responseFactoryRepository: null, headRoot: result.headRoot, allocationRoot: allocation.root, limits: allocation.operations, fixtureCandidates: candidates }
+    expect(verifyRetainedSeriousLeague(verify)).toMatchObject({ issued: false, processValidity: "process_invalid", empiricalRequirementsComplete: false })
+  }, 120000)
   it("reopens charged player and system failures with no fabricated payoff and rejects tampered failure evidence", async () => {
     for (const classification of ["player_violation", "system_failure"] as const) {
       const candidates = [await candidate(1), await candidate(3)], base = allocationFixture(), repository = createLeagueRepository(temporary())
