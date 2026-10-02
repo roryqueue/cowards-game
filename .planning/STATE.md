@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: executing
-stopped_at: Phase265 unique v6 entry63193/PID70861 active after three process-valid cells
+stopped_at: Phase265 v6 consumed process-invalid after five cells; unique retained verifier65319 active
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: v6 fresh capacity passed04:52UTC; three cells process-valid and fourth charged; no full league result
+last_activity_desc: v6 ended05:04UTC with four valid cells then system failure; retained verifier65319 active
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,21 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current terminal continuation — v6 consumed; unique retained verifier active
+
+V6 entry63193 ended2026-10-02T05:04:02.930Z,process_invalid after5charged
+cells:4success/process_valid, then1system_failure/process_invalid. Actual
+result279bytes/raw09002c67,headb21465c7,allocation5c59970a is published.
+All ten exact expected route containers are absent by read-only inspection.
+Root's ONE ordinary retained verifier65319 is active at exact allocation/head/
+repositories and no capacity flags; never duplicate it. Main reviewed source
+dbf5daa2/70430463/2f008952 stays fixed and heavy tests/probes remain held.
+No LEAG completion/freeze/formation/holdout is claimed. Exact fifth-cell cause
+still needs safe diagnosis after retained closeout. No human-only checkpoint
+is identified; standing approval covers later distinct same-bounds routes,
+not reuse of this consumed route. See265-07-EMPIRICAL-RESULT-v6.md.
+The entry-active v6 and earlier snapshots below are historical.
 
 ## Current continuation — reviewed Unicode key encoder repair
 

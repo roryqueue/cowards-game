@@ -2,6 +2,13 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+V6 is now consumed process-invalid:5charged cells,4valid successes then1system
+failure, actual result09002c67/headb21465c7 published05:04UTC. All ten exact
+expected containers are absent. ONE ordinary retained verifier65319 is active,
+not a captured pass. Source dbf5daa2 stays fixed and heavy tests/probes held.
+No LEAG/freeze/formation/holdout credit. See265-07-EMPIRICAL-RESULT-v6.md.
+The following entry-active v6 and earlier source snapshots are historical.
+
 Current source continuation: reviewed key-encoder repairdbf5daa2 passes46focused
 tests, all8source-gate commands,149engine/277runtime tests and core types.
 Gate16883 is complete; do not repeat it. Implementation70430463/source2f008952

@@ -2,6 +2,16 @@
 
 ## Current approved handoff — 2026-10-02
 
+V6 ended05:04UTC process-invalid after5charged cells:4success/process_valid,
+then1system_failure. Actual result09002c67/headb21465c7 is published. All ten
+exact expected route containers are absent. Root's ONE ordinary retained
+verifier65319 is active with no capacity flags. Main sourcedbf5daa2 stays
+fixed; heavy tests/probes held until it closes. No LEAG/freeze/formation credit
+or exact fifth-cell diagnosis is claimed. Standing approval covers later
+distinct same-bounds routes after diagnosis/review/gates/new allocation/fresh
+capacity, never this consumed route's reuse. See EMPIRICAL-RESULT-v6.md.
+The entry-active v6 and earlier snapshots below are historical.
+
 Current v5 route ended process-invalid after three charged cells at
 2026-10-02T02:54:19.876Z. Two cells report process-valid success; the third
 teacher soldierBrain exhausted the unchanged120-second lifetime. Its one unique
