@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto"
 import { defaultRuntimeMetadata } from "@cowards/spec"
 import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
+import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, prospectiveLeagueRuntimeBinding, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { LAB_ADMITTED_ROOTS, freezeLabValue, labRoot, type LabRoot } from "../../packages/strategy-lab/src/contracts.js"
 import type { FactoryAdmission, FactorySupervisionProvider } from "../../packages/strategy-lab/src/factory/admission.js"
 import type { LabRuntimeEvidence } from "../../packages/strategy-lab/src/runtime-bridge.js"
@@ -32,8 +34,12 @@ export interface FactorySupervisedRuntimeOptions extends Omit<PlannerSupervisedR
 }
 
 /** Pure lifetime admission shared by real construction and injected tests. */
-export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRuntimeOptions, "factoryLifetimeMs" | "pilotLifetimeGrant" | "oneCellLifetimeGrant" | "retryV4LifetimeGrant" | "retryV4RuntimeBinding" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">): number => {
+export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRuntimeOptions, "factoryLifetimeMs" | "pilotLifetimeGrant" | "oneCellLifetimeGrant" | "retryV4LifetimeGrant" | "retryV4RuntimeBinding" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel" | "prospectiveLifetimeAuthority" | "prospectiveLifetimeMs"> & { matchId?: string; prospectiveRuntimeBinding?: ProspectiveLeagueRuntimeBinding }): number => {
   rejectRetiredDiagnosticLifetimeOptions(options)
+  if ("prospectiveLifetimeAuthority" in options || "prospectiveLifetimeMs" in options) {
+    if (!options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || options.factoryLifetimeMs !== undefined && options.factoryLifetimeMs !== 600000 || options.retryV4LifetimeGrant !== undefined || options.retryV4RuntimeBinding !== undefined || !options.prospectiveRuntimeBinding || !options.matchId || !options.containerName || !options.ownershipLabel) return fail("PROSPECTIVE_LIFETIME")
+    return claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: options.prospectiveRuntimeBinding }, options.prospectiveLifetimeMs, "factory")
+  }
   const factoryLifetimeMs = options.factoryLifetimeMs ?? 120_000
   if (!Number.isSafeInteger(factoryLifetimeMs) || factoryLifetimeMs < 1 || factoryLifetimeMs > (options.retryV4LifetimeGrant ? 240_000 : 120_000)) return fail("LIFETIME")
   if (options.retryV4LifetimeGrant !== undefined) {
@@ -51,6 +57,7 @@ export const admitFactorySupervisorLifetime = (options: Pick<FactorySupervisedRu
 export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntimeOptions): FactorySupervisionProvider => {
   rejectRetiredDiagnosticLifetimeOptions(options)
   const supplied = options as unknown as Record<string, unknown>
+  if (("prospectiveLifetimeAuthority" in options || "prospectiveLifetimeMs" in options) && (Object.prototype.hasOwnProperty.call(supplied, "createRuntime") && (!options.prospectiveLifetimeAuthority || !isProspectiveLeagueLifetimeFixture(options.prospectiveLifetimeAuthority)) || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => key in supplied))) return fail("PROSPECTIVE_CONSTRUCTOR_OVERRIDE")
   if (options.retryV4LifetimeGrant !== undefined && Object.prototype.hasOwnProperty.call(supplied, "createRuntime")) return fail("RETRY_V4_CONSTRUCTOR_OVERRIDE")
   if (["benchmarkLifetimeMs", "observerHarness", "transport", "streamFactory"].some((key) => Object.prototype.hasOwnProperty.call(supplied, key))) return fail("UNSUPPORTED_OPTION")
   const admission = options.admission
@@ -71,7 +78,8 @@ export const createFactorySupervisedRuntime = (options: FactorySupervisedRuntime
     tupleId: options.retryV4LifetimeGrant.runtime.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot,
     runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: options.image ?? LAB_ADMITTED_ROOTS.image,
   }
-  const factoryLifetimeMs = admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }) })
+  const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : prospectiveLeagueRuntimeBinding(admission, { ...options.prospectiveLifetimeAuthority.runtime, revisionId: revision.id, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, image: options.image ?? LAB_ADMITTED_ROOTS.image })
+  const factoryLifetimeMs = admitFactorySupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) })
   const began = performance.now()
   const { admission: _admission, sourceBytes: _sourceBytes, createRuntime: _createRuntime, factoryLifetimeMs: _factoryLifetimeMs, ...runtimeOptions } = options
   const selected = createRuntime({ ...runtimeOptions, ...(options.retryV4LifetimeGrant === undefined ? {} : { retryV4LifetimeMs: factoryLifetimeMs, retryV4RuntimeBinding: retryV4RuntimeBinding! }), revision, image: options.image ?? LAB_ADMITTED_ROOTS.image })

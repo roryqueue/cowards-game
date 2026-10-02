@@ -144,7 +144,7 @@ export interface ProspectiveLeagueExecutionAllocationInput extends LeagueExecuti
   readonly participantRoles: readonly Readonly<{ jobId: string; producer: "tactical" | "teacher" | "model"; authorAgentId: string; reviewerAgentId: string }>[]
 }
 export type ProspectiveLeagueExecutionAllocation = Readonly<ProspectiveLeagueExecutionAllocationInput & { schemaVersion: "league-prospective-execution-allocation-v1"; root: LabRoot }>
-export type AdmittedLeagueExecutionAllocation = LeagueExecutionAllocation | ProspectiveLeagueExecutionAllocation
+export type AdmittedLeagueExecutionAllocation = LeagueExecutionAllocation | AnyProspectiveLeagueExecutionAllocation
 export const createProspectiveLeagueExecutionAllocation = (input: ProspectiveLeagueExecutionAllocationInput): ProspectiveLeagueExecutionAllocation => {
   boundedDocument(input, [...keys, "amendment", "participantRoles"])
   const amendment = admitLeagueProspectiveAmendment(input.amendment), { amendment: _amendment, participantRoles, ...legacyShape } = input
@@ -171,8 +171,56 @@ export const admitProspectiveLeagueExecutionAllocation = (value: unknown): Prosp
   if (root !== admitted.root || schemaVersion !== admitted.schemaVersion) fail("PROSPECTIVE_IDENTITY")
   return admitted
 }
-/** Union reader for private consumers; the legacy exported admission stays V1-only. */
-export const admitAnyLeagueExecutionAllocation = (value: unknown): AdmittedLeagueExecutionAllocation => value && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === "league-prospective-execution-allocation-v1" ? admitProspectiveLeagueExecutionAllocation(value) : admitLeagueExecutionAllocation(value)
+/** Separately rooted successor; all v1 constraints are reused with only its
+ * enclosing elapsed value projected back to the historical vector. */
+export const LEAGUE_APPROVED_PROSPECTIVE_POLICY_V2 = freezeLabValue({ ...LEAGUE_APPROVED_PROSPECTIVE_POLICY, operations: { ...LEAGUE_APPROVED_PROSPECTIVE_POLICY.operations, perMatchMilliseconds: 600000 } })
+export type LeagueProspectiveAmendmentV2Input = Omit<LeagueProspectiveAmendmentInput, "policy"> & { readonly lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002"; readonly policy: typeof LEAGUE_APPROVED_PROSPECTIVE_POLICY_V2 }
+export type LeagueProspectiveAmendmentV2 = Readonly<LeagueProspectiveAmendmentV2Input & { schemaVersion: "league-prospective-measurement-amendment-v2"; root: LabRoot }>
+export const createLeagueProspectiveAmendmentV2 = (input: LeagueProspectiveAmendmentV2Input): LeagueProspectiveAmendmentV2 => {
+  boundedDocument(input, [...amendmentKeys, "lifetimeApproval"])
+  if (input.lifetimeApproval !== "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002" || !equal(input.policy, LEAGUE_APPROVED_PROSPECTIVE_POLICY_V2)) fail("PROSPECTIVE_POLICY")
+  const { lifetimeApproval: _approval, ...legacy } = input
+  createLeagueProspectiveAmendment({ ...legacy, policy: LEAGUE_APPROVED_PROSPECTIVE_POLICY })
+  const value = { schemaVersion: "league-prospective-measurement-amendment-v2" as const, ...input }
+  return freezeLabValue({ ...value, root: labRoot(value.schemaVersion, value) })
+}
+export const admitLeagueProspectiveAmendmentV2 = (value: unknown): LeagueProspectiveAmendmentV2 => {
+  boundedDocument(value, ["schemaVersion", "root", ...amendmentKeys, "lifetimeApproval"])
+  const { root, schemaVersion, ...body } = value as LeagueProspectiveAmendmentV2, admitted = createLeagueProspectiveAmendmentV2(body)
+  if (root !== admitted.root || schemaVersion !== admitted.schemaVersion) fail("PROSPECTIVE_IDENTITY")
+  return admitted
+}
+export type ProspectiveLeagueExecutionAllocationV2Input = Omit<ProspectiveLeagueExecutionAllocationInput, "amendment"> & { readonly amendment: LeagueProspectiveAmendmentV2 }
+export type ProspectiveLeagueExecutionAllocationV2 = Readonly<ProspectiveLeagueExecutionAllocationV2Input & { schemaVersion: "league-prospective-execution-allocation-v2"; root: LabRoot }>
+export type AnyProspectiveLeagueExecutionAllocation = ProspectiveLeagueExecutionAllocation | ProspectiveLeagueExecutionAllocationV2
+export const createProspectiveLeagueExecutionAllocationV2 = (input: ProspectiveLeagueExecutionAllocationV2Input): ProspectiveLeagueExecutionAllocationV2 => {
+  boundedDocument(input, [...keys, "amendment", "participantRoles"])
+  const amendment = admitLeagueProspectiveAmendmentV2(input.amendment)
+  if (!equal(input.operations, amendment.policy.operations)) fail("PROSPECTIVE_VECTOR")
+  const { root: _root, schemaVersion: _schema, lifetimeApproval: _approval, ...legacyAmendment } = amendment
+  createProspectiveLeagueExecutionAllocation({ ...input, operations: LEAGUE_APPROVED_PROSPECTIVE_POLICY.operations, amendment: createLeagueProspectiveAmendment({ ...legacyAmendment, policy: LEAGUE_APPROVED_PROSPECTIVE_POLICY }) })
+  const value = { schemaVersion: "league-prospective-execution-allocation-v2" as const, ...input }
+  return freezeLabValue({ ...value, root: labRoot(value.schemaVersion, value) })
+}
+export const admitProspectiveLeagueExecutionAllocationV2 = (value: unknown): ProspectiveLeagueExecutionAllocationV2 => {
+  boundedDocument(value, ["schemaVersion", "root", ...keys, "amendment", "participantRoles"])
+  const { root, schemaVersion, ...body } = value as ProspectiveLeagueExecutionAllocationV2, admitted = createProspectiveLeagueExecutionAllocationV2(body)
+  if (root !== admitted.root || schemaVersion !== admitted.schemaVersion) fail("PROSPECTIVE_IDENTITY")
+  return admitted
+}
+export const isProspectiveLeagueExecutionAllocation = (value: unknown): value is AnyProspectiveLeagueExecutionAllocation => value !== null && typeof value === "object" && "schemaVersion" in value && (value.schemaVersion === "league-prospective-execution-allocation-v1" || value.schemaVersion === "league-prospective-execution-allocation-v2")
+export const admitAnyLeagueExecutionAllocation = (value: unknown): AdmittedLeagueExecutionAllocation => {
+  if (value && typeof value === "object" && "schemaVersion" in value) {
+    if (value.schemaVersion === "league-prospective-execution-allocation-v1") return admitProspectiveLeagueExecutionAllocation(value)
+    if (value.schemaVersion === "league-prospective-execution-allocation-v2") return admitProspectiveLeagueExecutionAllocationV2(value)
+  }
+  return admitLeagueExecutionAllocation(value)
+}
+const admitAnyProspective = (value: unknown): AnyProspectiveLeagueExecutionAllocation => {
+  const allocation = admitAnyLeagueExecutionAllocation(value)
+  if (!isProspectiveLeagueExecutionAllocation(allocation)) return fail("PROSPECTIVE_IDENTITY")
+  return allocation
+}
 
 export interface ProspectiveTacticalProducerEnvelope {
   readonly originalRequestArtifactRoot: LabRoot; readonly targetArtifactRoot: LabRoot; readonly corpusArtifactRoot: LabRoot
@@ -186,7 +234,8 @@ const isProfiledTacticalInput = (value: unknown): value is Readonly<{ request: R
 }
 /** Reused by preflight and retained producer readers; no source or provider is executed. */
 export const assertProspectiveLeagueProducerRequest = (allocation: AdmittedLeagueExecutionAllocation, job: LeagueResponseJob, request: { producerIdentity?: unknown; producerInput?: unknown }) => {
-  if (allocation.schemaVersion !== "league-prospective-execution-allocation-v1") return
+  if (!isProspectiveLeagueExecutionAllocation(allocation)) return
+  allocation = admitAnyProspective(allocation)
   const role = allocation.participantRoles.find((role) => role.jobId === job.id) ?? fail("PROSPECTIVE_JOB")
   const ordinal = allocation.rounds.flatMap((round) => round.jobs).findIndex((candidate) => candidate.id === job.id)
   const profiled = role.producer === "tactical" && job.evaluationRole === "development_response" && [0, 3, 6].includes(ordinal)
@@ -227,8 +276,8 @@ export interface LeagueCapacityContext { readonly nowMilliseconds: number; reado
 export const LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES = 2 ** 30
 const capacityKeys = ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot", "measuredAtMilliseconds", "expiresAtMilliseconds", "filesystemDevice", "freeFilesystemBytes", "availableMemoryBytes", "processHeadroomBytes", "scale", "costs", "assumptions"] as const
 const capacityPlanKeys = ["allocationRoot", "amendmentRoot", "implementationRoot", "sourceRoot", "historicalAssessmentRoot", "processHeadroomBytes", "scale", "costs", "assumptions"] as const
-export const admitLeagueCapacityPlanInput = (value: unknown, allocationValue: ProspectiveLeagueExecutionAllocation): LeagueCapacityPlanInput => {
-  const allocation = admitProspectiveLeagueExecutionAllocation(allocationValue), amendment = allocation.amendment
+export const admitLeagueCapacityPlanInput = (value: unknown, allocationValue: AnyProspectiveLeagueExecutionAllocation): LeagueCapacityPlanInput => {
+  const allocation = admitAnyProspective(allocationValue), amendment = allocation.amendment
   boundedDocument(value, capacityPlanKeys)
   const input = value as LeagueCapacityPlanInput
   if (input.allocationRoot !== allocation.root || input.amendmentRoot !== amendment.root || input.implementationRoot !== allocation.implementationRoot || input.sourceRoot !== amendment.sourceRoot || input.historicalAssessmentRoot !== amendment.historicalAssessment.assessmentRoot) fail("CAPACITY_BINDING")
@@ -236,8 +285,8 @@ export const admitLeagueCapacityPlanInput = (value: unknown, allocationValue: Pr
   validateCapacityCosts(input, allocation)
   return freezeLabValue(input)
 }
-export const createLeagueCapacityReceipt = (input: LeagueCapacityReceiptInput, value: ProspectiveLeagueExecutionAllocation): LeagueCapacityReceipt => {
-  const allocation = admitProspectiveLeagueExecutionAllocation(value), amendment = allocation.amendment
+export const createLeagueCapacityReceipt = (input: LeagueCapacityReceiptInput, value: AnyProspectiveLeagueExecutionAllocation): LeagueCapacityReceipt => {
+  const allocation = admitAnyProspective(value), amendment = allocation.amendment
   boundedDocument(input, capacityKeys)
   const { measuredAtMilliseconds: _measured, expiresAtMilliseconds: _expires, filesystemDevice: _device, freeFilesystemBytes: _free, availableMemoryBytes: _memory, ...plan } = input
   admitLeagueCapacityPlanInput(plan, allocation)
@@ -246,7 +295,7 @@ export const createLeagueCapacityReceipt = (input: LeagueCapacityReceiptInput, v
   const body = { schemaVersion: "league-capacity-receipt-v1" as const, ...input }
   return freezeLabValue({ ...body, root: labRoot(body.schemaVersion, body) })
 }
-function validateCapacityCosts(input: LeagueCapacityPlanInput, allocation: ProspectiveLeagueExecutionAllocation): void {
+function validateCapacityCosts(input: LeagueCapacityPlanInput, allocation: AnyProspectiveLeagueExecutionAllocation): void {
   if (!equal(input.scale, { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 }) || !Array.isArray(input.assumptions) || !input.assumptions.length || input.assumptions.some((row) => typeof row !== "string" || !row.trim().length || row.length > 4096)) fail("CAPACITY_SCALE")
   if (!Array.isArray(input.costs) || input.costs.length !== 6 || input.costs.some((row, index) => !exact(row, ["category", "projectedBytes", "projectedRecords", "measurementRoot", "measurement"]) || row.category !== LEAGUE_CAPACITY_CATEGORIES[index] || !int(row.projectedBytes) || row.projectedBytes < 1 || !int(row.projectedRecords) || (row.category === "filesystem" ? row.projectedRecords !== 0 : row.projectedRecords < 1) || !isRoot(row.measurementRoot))) fail("CAPACITY_CATEGORIES")
   for (const [index, row] of input.costs.entries()) {
@@ -266,7 +315,7 @@ function validateCapacityCosts(input: LeagueCapacityPlanInput, allocation: Prosp
   const physicalBytes = input.costs.reduce((sum, row) => sum + row.projectedBytes, 0), limits = allocation.operations, margins = allocation.amendment.policy.capacity
   if (!int(logicalBytes) || !int(records) || !int(physicalBytes) || logicalBytes + margins.ordinaryMarginBytes > limits.maxArtifactBytes - limits.terminalReserveBytes || records + margins.ordinaryMarginRecords > limits.maxArtifactRecords - limits.terminalReserveRecords) fail("CAPACITY_MARGIN")
 }
-export const admitLeagueCapacityReceipt = (value: unknown, allocation: ProspectiveLeagueExecutionAllocation, current: LeagueCapacityContext): LeagueCapacityReceipt => {
+export const admitLeagueCapacityReceipt = (value: unknown, allocation: AnyProspectiveLeagueExecutionAllocation, current: LeagueCapacityContext): LeagueCapacityReceipt => {
   boundedDocument(value, ["schemaVersion", "root", ...capacityKeys])
   const { root, schemaVersion, ...body } = value as LeagueCapacityReceipt, receipt = createLeagueCapacityReceipt(body, allocation)
   if (receipt.root !== root || receipt.schemaVersion !== schemaVersion) fail("CAPACITY_IDENTITY")

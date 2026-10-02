@@ -12,6 +12,14 @@ import { admitFactorySupervisorLifetime, createFactorySupervisedRuntime } from "
 import { admitPlannerSupervisorLifetime, createPlannerSupervisedRuntime } from "./v1-38-planner-supervised-runtime.js"
 import { createDiagnosticRetryV4Allocation, createDiagnosticRetryV4Cell, createDiagnosticRetryV4Start, openDiagnosticRetryV4Ledger } from "./v1-38-diagnostic-retry-v4.js"
 import { issueDiagnosticRetryV4ProviderFromFactoryCandidate, closeDiagnosticRetryV4IssuedProvider } from "./v1-38-diagnostic-retry-v4-bridge.js"
+import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
+import { createProspectiveLeagueExecutionAllocationV2 } from "../../packages/strategy-lab/src/league/allocation.js"
+import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority, prospectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
+import { defaultRuntimeMetadata } from "@cowards/spec"
+import { buildStrategyRevision } from "../../packages/runtime-js/src/revision.js"
+import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
+import { wrapLeagueProbeProvider } from "./v1-38-league-response-runtime.js"
+import { buildFeasibilityCorpus } from "../../packages/strategy-lab/src/feasibility-protocol.js"
 // Only module-level unit injection; no caller constructor override is supplied
 // to v4 and no guest/container or real assessment operation is performed.
 vi.mock("./v1-38-planner-supervised-runtime.js", async (original) => ({ ...await original<typeof import("./v1-38-planner-supervised-runtime.js")>(), createPlannerSupervisedRuntime: vi.fn(() => { throw Error("unit container construction forbidden") }) }))
@@ -42,11 +50,70 @@ const admitted = () => {
   const proposal = factoryProposalFromPacket(packet), validation = factoryValidationFixture(proposal)
   return { packet, proposal, validation, admission: authorizeFactorySupervision({ sourceAdmission: admitFactory({ packet, proposal, sourceBytes }), validation }) }
 }
+let prospectiveOrdinal = 0
+const lifetimeGrant = () => {
+  const allocation = createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture()), { admission } = admitted(), defaults = defaultRuntimeMetadata("typescript")
+  const revision = buildStrategyRevision({ source: new TextDecoder().decode(sourceBytes), runtime: { ...defaults, adapter: { ...defaults.adapter, id: "runtime-js-container-subprocess" } } })
+  const value = { cellRoot: labRoot("lifetime-unit-cell", prospectiveOrdinal++), allocationRoot: allocation.root }, start = { ...value, root: labRoot("league-cell-start-v1", value) }
+  const binding = { budgetRoot: allocation.root, attemptRoot: start.root, matchId: `league-${start.root.slice(7, 31)}`, seat: "bottom" as const, containerName: `unit-${prospectiveOrdinal}`, ownershipLabel: "unit-private", runtime: prospectiveLeagueRuntimeBinding(admission, { revisionId: revision.id, sourceRoot, executableRoot: `sha256:${revision.metadata.sourceArtifact!.hash}` as LabRoot, tupleId: MATCH_KERNEL.tupleId, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image }) }
+  const charge = { kind: "cell-start" as const, root: labRoot("lifetime-unit-retained", start), value: start }
+  return { allocation, admission, binding, charge, authority: issueProspectiveLeagueLifetimeAuthority(allocation, charge, binding) }
+}
+describe("prospective lifetime issued factory authority", () => {
+  it("rejects forged, copied, crossed and reused nested layer claims", () => {
+    const { authority, binding } = lifetimeGrant()
+    const claim = (handle: any, changed = binding, layer: "factory" | "planner" = "factory") => claimProspectiveLeagueLifetimeAuthority(handle, changed, 600000, layer)
+    expect(() => claim({ ...authority })).toThrow("CLAIM_BINDING")
+    expect(() => claim(authority, binding, "planner")).toThrow("CLAIM_REUSED")
+    for (const field of ["budgetRoot", "attemptRoot", "matchId", "containerName", "ownershipLabel", "seat"] as const) expect(() => claim(authority, { ...binding, [field]: "crossed" } as never)).toThrow()
+    for (const key of Object.keys(binding.runtime)) expect(() => claim(authority, { ...binding, runtime: { ...binding.runtime, [key]: "crossed" } })).toThrow("CLAIM_BINDING")
+    expect(claim(authority)).toBe(600000)
+    expect(() => claim(authority)).toThrow("CLAIM_REUSED")
+    expect(claim(authority, binding, "planner")).toBe(600000)
+    expect(() => claim(authority, binding, "planner")).toThrow("CLAIM_REUSED")
+  })
+  it("threads both claims and counts setup plus awaited retention toward exact expiry", async () => {
+    const { authority, admission, binding } = lifetimeGrant(), close = vi.fn(() => ({ cleanupComplete: true, orphanedChild: false }))
+    let now = 0, calls = 0
+    vi.spyOn(performance, "now").mockImplementation(() => now)
+    const creator = vi.fn((options: any) => {
+      expect(admitPlannerSupervisorLifetime({ ...options, prospectiveRuntimeBinding: binding.runtime }, 24800)).toBe(600000)
+      now = 100000 // Nested setup belongs to the enclosing lifetime.
+      const identity = { ...binding.runtime, harnessRoot: root("a"), budgetRoot: binding.budgetRoot, attemptRoot: binding.attemptRoot }
+      return { identity, invoke(request: any) { calls++; return { identity, requestId: request.requestId, inputRoot: labRoot("runtime-input", request.input), invocationRoot: root("b"), method: request.kind, ordinal: 0, charged: true, completed: true, outputBytes: 2, result: { ok: true, value: { activationOrders: [], strategyMemory: {} } } } as never }, verify() { return true }, close, accounting: [], timing() { return undefined }, verifyTiming() { return false } }
+    })
+    const options = { admission, sourceBytes, ...binding, prospectiveLifetimeAuthority: authority, prospectiveLifetimeMs: 600000, factoryLifetimeMs: 600000, createRuntime: creator }
+    const runtime = createFactorySupervisedRuntime(options)
+    expect(() => createFactorySupervisedRuntime(options)).toThrow("CLAIM_REUSED"); expect(creator).toHaveBeenCalledOnce()
+    const wrapper = wrapLeagueProbeProvider(runtime, undefined, { minX: 0, maxX: 11 }, async () => { now = 600000 })
+    now = 599999
+    const input = buildFeasibilityCorpus().selectActivations[0]!.input
+    await wrapper.invoke({ kind: "selectActivations", requestId: "unit", input } as never, runtime.identity)
+    await expect(wrapper.invoke({ kind: "selectActivations", requestId: "next", input } as never, runtime.identity)).rejects.toThrow("LIFETIME_EXHAUSTED")
+    expect(calls).toBe(1); expect(close).toHaveBeenCalledOnce()
+  })
+  it("counts setup and post-invoke elapsed time and closes at the boundary", () => {
+    for (const stage of ["setup", "invoke"] as const) {
+      const { authority, admission, binding } = lifetimeGrant(), close = vi.fn(() => ({ cleanupComplete: true, orphanedChild: false })); let now = 0, calls = 0
+      vi.spyOn(performance, "now").mockImplementation(() => now)
+      const creator = (options: any) => {
+        admitPlannerSupervisorLifetime({ ...options, prospectiveRuntimeBinding: binding.runtime }, 24800)
+        if (stage === "setup") now = 600000
+        const identity = { ...binding.runtime, harnessRoot: root("a"), budgetRoot: binding.budgetRoot, attemptRoot: binding.attemptRoot }
+        return { identity, invoke() { calls++; now = 600000; return { identity } as never }, verify() { return true }, close, accounting: [], timing() { return undefined }, verifyTiming() { return false } }
+      }
+      const runtime = createFactorySupervisedRuntime({ admission, sourceBytes, ...binding, prospectiveLifetimeAuthority: authority, prospectiveLifetimeMs: 600000, createRuntime: creator })
+      expect(() => runtime.invoke({} as never, runtime.identity)).toThrow("LIFETIME_EXHAUSTED")
+      expect(calls).toBe(stage === "setup" ? 0 : 1); expect(close).toHaveBeenCalledOnce()
+      vi.restoreAllMocks()
+    }
+  })
+})
 
 describe("selected factory supervised runtime adapter", () => {
   it("prospective lifetime rejects scalar and forged handle before runtime construction", () => {
     const { admission } = admitted(), createRuntime = vi.fn()
-    const base = { admission, sourceBytes, budgetRoot: root("5"), attemptRoot: root("4"), createRuntime }
+    const base = { admission, sourceBytes, budgetRoot: root("5"), attemptRoot: root("4"), matchId: "unit", containerName: "unit", ownershipLabel: "unit", createRuntime }
     expect(() => createFactorySupervisedRuntime({ ...base, factoryLifetimeMs: 600000 })).toThrow()
     expect(() => createFactorySupervisedRuntime({ ...base, prospectiveLifetimeAuthority: {}, prospectiveLifetimeMs: 600000 } as never)).toThrow()
     expect(createRuntime).not.toHaveBeenCalled()

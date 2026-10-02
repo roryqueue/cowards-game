@@ -18,6 +18,9 @@ it("prospective lifetime rejects forged and partial authority without changing b
 })
 import type { LeanContainerMatchTransport, LeanContainerPersistentStreamFactory } from "./v1-38-lean-container-match-session.js"
 import { buildLeanAuthenticatedHarnessSource } from "./v1-38-lean-container-match-session.js"
+import { prospectiveLifetimeFixture } from "../../packages/strategy-lab/src/league/allocation.test.js"
+import { createProspectiveLeagueExecutionAllocationV2 } from "../../packages/strategy-lab/src/league/allocation.js"
+import { issueProspectiveLeagueLifetimeAuthority, claimProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 
 const source = "export default { selectActivations(input) { return { activationOrders: [], strategyMemory: input.strategyMemory }; }, soldierBrain(input) { return { action: { type: 'TURN_TO_STONE' }, soldierMemory: input.soldierMemory }; } };"
 const runtime = { ...defaultRuntimeMetadata("typescript"), adapter: { ...defaultRuntimeMetadata("typescript").adapter, id: "runtime-js-container-subprocess" as const } }
@@ -55,6 +58,24 @@ const fixture = (fault?: string) => {
 }
 const options = (fault?: string) => ({ revision: revision(), attemptRoot: root, budgetRoot: root, matchId: "phase263:match", containerName: "phase263-test", ownershipLabel: "owner:phase263-test", image: LAB_ADMITTED_ROOTS.image, ...fixture(fault) })
 const request = (method: "selectActivations" | "soldierBrain", id = "kernel:1") => ({ kind: method, requestId: id, semanticTupleId: MATCH_KERNEL.tupleId, coordinates: { phaseNumber: 1, roundNumber: 1, stage: "select_bottom", ordinal: 0 }, input: corpus[method][0]!.input }) as Parameters<ReturnType<typeof createPlannerSupervisedRuntime>["invoke"]>[0]
+it("prospective lifetime planner uses issued nested claim and includes synthetic session setup in exact expiry", () => {
+  const allocation = createProspectiveLeagueExecutionAllocationV2(prospectiveLifetimeFixture()), opts = options(), selected = opts.revision
+  const startValue = { cellRoot: labRoot("planner-lifetime", 1), allocationRoot: allocation.root }, start = { ...startValue, root: labRoot("league-cell-start-v1", startValue) }
+  const bound: ProspectiveLeagueRuntimeBinding = { revisionId: selected.id, sourceRoot: `sha256:${selected.sourceHash}`, executableRoot: `sha256:${selected.metadata.sourceArtifact!.hash}`, tupleId: MATCH_KERNEL.tupleId, tupleRoot: allocation.tupleRoot, runtimeLimitsRoot: allocation.runtimeRoot, image: allocation.operations.image, factoryAuthorizationRoot: root, factoryPacketRoot: root, factoryProposalRoot: root, factoryValidationRoot: root }
+  const binding = { budgetRoot: allocation.root, attemptRoot: start.root, matchId: `league-${start.root.slice(7, 31)}`, seat: "bottom" as const, containerName: opts.containerName, ownershipLabel: opts.ownershipLabel, runtime: bound }
+  const authority = issueProspectiveLeagueLifetimeAuthority(allocation, { kind: "cell-start", root: labRoot("planner-retained", start), value: start }, binding)
+  expect(claimProspectiveLeagueLifetimeAuthority(authority, binding, 600000, "factory")).toBe(600000)
+  let now = 0; vi.spyOn(performance, "now").mockImplementation(() => now)
+  const originalTransport = opts.transport
+  const selectedOptions = { ...opts, ...binding, prospectiveLifetimeAuthority: authority, prospectiveLifetimeMs: 600000, transport: ((command: any, args: any, transportOptions: any) => { if (args[0] === "create") now = 100000; return originalTransport(command, args, transportOptions) }) as typeof opts.transport }
+  const provider = createPlannerSupervisedRuntime(selectedOptions)
+  now = 599999; expect(provider.invoke(request("selectActivations"), provider.identity).result.ok).toBe(true)
+  now = 600000; expect(() => provider.invoke(request("selectActivations", "next"), provider.identity)).toThrow("LAB_RUNTIME_STOPPED")
+  expect(opts.calls.filter((args) => args[0] === "create")).toHaveLength(1)
+  expect(opts.calls.some((args) => args[0] === "rm")).toBe(true)
+  expect(() => createPlannerSupervisedRuntime(selectedOptions)).toThrow("CLAIM_REUSED")
+  expect(opts.calls.filter((args) => args[0] === "create")).toHaveLength(1)
+})
 
 describe("planner selected-v1.19 host with injected transport only", () => {
   it("preserves typed subprocess exit through the real lean-session ABI executor chain", () => {

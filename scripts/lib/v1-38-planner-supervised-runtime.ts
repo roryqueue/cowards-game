@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { claimProspectiveLeagueLifetimeAuthority, isProspectiveLeagueLifetimeFixture, type ProspectiveLeagueLifetimeAuthority, type ProspectiveLeagueRuntimeBinding } from "./v1-38-league-prospective-lifetime.js"
 import { performance } from "node:perf_hooks"
 import { DEFAULT_RUNTIME_LIMITS, StrategyRevisionSchema, StrategyInputV119Schema, SoldierBrainInputV119Schema, type StrategyRevision } from "@cowards/spec"
 import { MATCH_KERNEL } from "../../packages/engine/src/index.js"
@@ -46,11 +47,17 @@ export interface PlannerSupervisedRuntimeOptions extends Omit<LeanContainerMatch
   retryV4LifetimeMs?: number;
   retryV4LifetimeGrant?: DiagnosticRetryV4LifetimeGrant;
   retryV4RuntimeBinding?: DiagnosticRetryV4RuntimeBinding;
+  prospectiveLifetimeAuthority?: ProspectiveLeagueLifetimeAuthority;
+  prospectiveLifetimeMs?: number;
 }
 
 /** Pure lifetime admission; retired pilot/v3 option presence fails first. */
-export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "oneCellLifetimeGrant" | "oneCellLifetimeMs" | "retryV4LifetimeGrant" | "retryV4LifetimeMs" | "retryV4RuntimeBinding" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel">, invocationLimit: number): number => {
+export const admitPlannerSupervisorLifetime = (options: Pick<PlannerSupervisedRuntimeOptions, "pilotLifetimeGrant" | "pilotLifetimeMs" | "oneCellLifetimeGrant" | "oneCellLifetimeMs" | "retryV4LifetimeGrant" | "retryV4LifetimeMs" | "retryV4RuntimeBinding" | "benchmarkLifetimeMs" | "observerHarness" | "transport" | "streamFactory" | "budgetRoot" | "attemptRoot" | "containerName" | "ownershipLabel" | "prospectiveLifetimeAuthority" | "prospectiveLifetimeMs"> & { matchId?: string; prospectiveRuntimeBinding?: ProspectiveLeagueRuntimeBinding }, invocationLimit: number): number => {
   rejectRetiredDiagnosticLifetimeOptions(options)
+  if ("prospectiveLifetimeAuthority" in options || "prospectiveLifetimeMs" in options) {
+    if (!options.prospectiveLifetimeAuthority || options.prospectiveLifetimeMs !== 600000 || !options.prospectiveRuntimeBinding || !options.matchId || !options.containerName || !options.ownershipLabel || ["retryV4LifetimeGrant", "retryV4LifetimeMs", "retryV4RuntimeBinding", "benchmarkLifetimeMs", "observerHarness"].some((key) => key in options) || (options.transport !== undefined || options.streamFactory !== undefined) && !isProspectiveLeagueLifetimeFixture(options.prospectiveLifetimeAuthority)) throw new TypeError("LAB_RUNTIME_PROSPECTIVE_LIFETIME")
+    return claimProspectiveLeagueLifetimeAuthority(options.prospectiveLifetimeAuthority, { budgetRoot: options.budgetRoot, attemptRoot: options.attemptRoot, matchId: options.matchId, containerName: options.containerName, ownershipLabel: options.ownershipLabel, runtime: options.prospectiveRuntimeBinding }, options.prospectiveLifetimeMs, "planner")
+  }
   if ((options.retryV4LifetimeGrant === undefined) !== (options.retryV4LifetimeMs === undefined)) throw new TypeError("LAB_RUNTIME_RETRY_V4_GRANT")
   if (options.retryV4LifetimeGrant !== undefined) {
     if (options.benchmarkLifetimeMs !== undefined || options.observerHarness !== undefined || options.transport !== undefined || options.streamFactory !== undefined) throw new TypeError("LAB_RUNTIME_RETRY_V4_MODE")
@@ -87,7 +94,8 @@ export const createPlannerSupervisedRuntime = (options: PlannerSupervisedRuntime
     ...options.retryV4RuntimeBinding, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot,
     tupleId: identity.tupleId, tupleRoot: LAB_ADMITTED_ROOTS.tupleRoot, runtimeLimitsRoot: LAB_ADMITTED_ROOTS.runtimeLimitsRoot, image: identity.image,
   } as DiagnosticRetryV4RuntimeBinding
-  const lifetime = admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }) }, limit)
+  const prospectiveRuntimeBinding = options.prospectiveLifetimeAuthority === undefined ? undefined : { ...options.prospectiveLifetimeAuthority.runtime, sourceRoot: identity.sourceRoot, revisionId: identity.revisionId, executableRoot: identity.executableRoot, tupleId: identity.tupleId, tupleRoot: identity.tupleRoot, runtimeLimitsRoot: identity.runtimeLimitsRoot, image: identity.image }
+  const lifetime = admitPlannerSupervisorLifetime({ ...options, ...(retryV4RuntimeBinding === undefined ? {} : { retryV4RuntimeBinding }), ...(prospectiveRuntimeBinding === undefined ? {} : { prospectiveRuntimeBinding }) }, limit)
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 24800 || options.signal?.aborted) throw new TypeError("LAB_RUNTIME_ALLOCATION")
   const session = createLeanContainerMatchSession({ ...options, infrastructureProfile: "closeout", ...(observerHarness === undefined ? {} : { privateObserver: {
     harnessSource: harness,

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { LAB_ADMITTED_ROOTS, labRoot } from "../contracts.js"
 import { createLeagueExecutionAllocation, admitLeagueExecutionAllocation, type LeagueExecutionAllocationInput } from "./allocation.js"
 import { RED_TEAM_CHANNELS, LEAGUE_PROBES } from "./red-team.js"
-import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, LEAGUE_TACTICAL_CAPACITY_FLOORS, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput } from "./allocation.js"
+import { createLeagueProspectiveAmendment, admitLeagueProspectiveAmendment, createProspectiveLeagueExecutionAllocation, admitProspectiveLeagueExecutionAllocation, createLeagueCapacityReceipt, admitLeagueCapacityReceipt, admitLeagueCapacityPlanInput, assertProspectiveLeagueProducerRequest, LEAGUE_APPROVED_PROSPECTIVE_POLICY, LEAGUE_MINIMUM_PROCESS_HEADROOM_BYTES, LEAGUE_TACTICAL_CAPACITY_FLOORS, type LeagueProspectiveAmendmentInput, type ProspectiveLeagueExecutionAllocationInput, type LeagueCapacityReceiptInput, type AnyProspectiveLeagueExecutionAllocation } from "./allocation.js"
 
 const root = (text: string) => labRoot("allocation-test", text)
 const zero = { matches: 0, modelTokens: 0, effortMilliseconds: 0, reviewMilliseconds: 0, searchNodes: 0, teacherNodes: 0, distillationUnits: 0 }
@@ -47,10 +47,26 @@ export const prospectiveFixture = (): ProspectiveLeagueExecutionAllocationInput 
 export const prospectiveLifetimeFixture = () => {
   const input = prospectiveFixture(), { root: _root, schemaVersion: _schema, ...amendment } = input.amendment
   const policy = { ...amendment.policy, operations: { ...amendment.policy.operations, perMatchMilliseconds: 600000 } }
-  const create = (allocationApi as any).createLeagueProspectiveAmendmentV2 ?? createLeagueProspectiveAmendment
+  const create = allocationApi.createLeagueProspectiveAmendmentV2
   return { ...input, operations: policy.operations, amendment: create({ ...amendment, policy, lifetimeApproval: "265-PROSPECTIVE-LIFETIME-APPROVAL-20261002" }) }
 }
 describe("prospective lifetime allocation", () => {
+  it("rejects partial/extra/unknown policy documents and crossed capacity receipts", () => {
+    const input = prospectiveLifetimeFixture(), allocation = allocationApi.createProspectiveLeagueExecutionAllocationV2(input)
+    const { root: _root, schemaVersion: _schema, ...body } = input.amendment
+    for (const mutate of [(v: any) => delete v.lifetimeApproval, (v: any) => v.lifetimeApproval = "other", (v: any) => v.extra = 1, (v: any) => delete v.policy.operations.perMatchMilliseconds, (v: any) => v.policy.finalGates.population = 11]) {
+      const changed = structuredClone(body); mutate(changed); expect(() => allocationApi.createLeagueProspectiveAmendmentV2(changed)).toThrow()
+    }
+    for (const mutate of [(v: any) => v.schemaVersion = "unknown", (v: any) => v.amendment.sourceRoot = root("stale"), (v: any) => v.amendment.implementationRoot = root("crossed"), (v: any) => v.amendment.schemaVersion = "league-prospective-measurement-amendment-v1", (v: any) => v.extra = 1]) {
+      const changed = structuredClone(allocation); mutate(changed); expect(() => allocationApi.admitAnyLeagueExecutionAllocation(changed)).toThrow()
+    }
+    const v1 = createProspectiveLeagueExecutionAllocation(prospectiveFixture()), oldReceipt = createLeagueCapacityReceipt(capacityFixture(v1), v1), costs = capacityFixture(allocation), receipt = createLeagueCapacityReceipt(costs, allocation)
+    const context = { nowMilliseconds: 1001, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, filesystemDevice: costs.filesystemDevice, freeFilesystemBytes: costs.freeFilesystemBytes, availableMemoryBytes: costs.availableMemoryBytes }
+    expect(admitLeagueCapacityReceipt(receipt, allocation, context)).toEqual(receipt)
+    expect(() => admitLeagueCapacityReceipt(oldReceipt, allocation, context)).toThrow("CAPACITY_BINDING")
+    expect(() => admitLeagueCapacityReceipt(receipt, allocation, { ...context, sourceRoot: root("stale") })).toThrow("CAPACITY_STALE")
+    expect(() => assertProspectiveLeagueProducerRequest(allocation, allocation.rounds[0]!.jobs[1]!, { producerIdentity: "unapproved" })).toThrow("PROSPECTIVE_PRODUCER")
+  })
   it("admits separately rooted exact ten-minute policy and preserves historical caps", () => {
     const legacy = allocationFixture()
     expect(createLeagueExecutionAllocation({ ...legacy, operations: { ...legacy.operations, perMatchMilliseconds: 120000 } }).operations.perMatchMilliseconds).toBe(120000)
@@ -70,7 +86,7 @@ describe("prospective lifetime allocation", () => {
     expect(() => createProspectiveLeagueExecutionAllocation(input as never)).toThrow()
   })
 })
-export const capacityFixture = (allocation: any = createProspectiveLeagueExecutionAllocation(prospectiveFixture())): LeagueCapacityReceiptInput => ({
+export const capacityFixture = (allocation: AnyProspectiveLeagueExecutionAllocation = createProspectiveLeagueExecutionAllocation(prospectiveFixture())): LeagueCapacityReceiptInput => ({
   allocationRoot: allocation.root, amendmentRoot: allocation.amendment.root, implementationRoot: allocation.implementationRoot, sourceRoot: allocation.amendment.sourceRoot, historicalAssessmentRoot: allocation.amendment.historicalAssessment.assessmentRoot,
   measuredAtMilliseconds: 1000, expiresAtMilliseconds: 301000, filesystemDevice: "fixture-device", freeFilesystemBytes: 210 * 2 ** 30, availableMemoryBytes: 4 * 2 ** 30, processHeadroomBytes: 2 ** 30,
   scale: { matrixMatches: 960, probeMatches: 1800, responseMatches: 1872, responseExecutionCopies: 2 },
