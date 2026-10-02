@@ -2,6 +2,15 @@
 
 ## Current v1.38 progress — Phases262–264 complete
 
+The human approved the prospective private per-Match lifetime120000→600000ms
+on2026-10-02; every other bound remains unchanged. Checked Plan265-07 source
+amendment research/planning is next, before a distinct fresh allocation and
+passing same-process capacity. V9/unique verifier closed: five charged cells,
+four successes, one verified lifetime failure, no LEAG/freeze credit. No active
+entry/verifier; consumed history immutable, holdout unopened, formation gated,
+no public/counted/production authority. See STATE and
+265-PROSPECTIVE-LIFETIME-APPROVAL-20261002.md. Older snapshots below are history.
+
 V7 ended09:36:53UTC process-invalid after3charged cells,2validsuccesses then
 1systemfailure on first-request MALFORMED_IPC (not the prior lifetime error).
 Actual resultcc4521c5/head a29c0522 published; all6ownedcontainers absent.

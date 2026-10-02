@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: blocked
-stopped_at: Phase265 verified v9 lifetime failure; awaiting materially new private runtime-limit decision, not repeat route authorization
+status: in_progress
+stopped_at: Phase265 approved prospective private lifetime600000ms; bounded Plan07 source amendment research and planning
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: same-policy source assessment found no high-confidence substantial optimization; recommend prospective private per-Match limit120000→600000ms, unapproved/unapplied
+last_activity_desc: human approved prospective private per-Match limit120000→600000ms; other bounds and consumed history unchanged, source amendment pending
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,22 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current continuation — prospective ten-minute private limit approved
+
+The human approved the previously proposed prospective private per-Match
+elapsed lifetime120000→600000ms, including both private provider clocks and
+applicable admission. Approval is recorded in
+phases/265-serious-current-rules-league-and-development-red-team/265-PROSPECTIVE-LIFETIME-APPROVAL-20261002.md.
+Implementation remains pending: research/plan/check/execute/review/fix/validate
+as a bounded supplement to Plan07, not a new phase. All other bounds unchanged.
+No active entry or retained verifier. V9 and its unique verifier are closed;
+all consumed artifacts remain immutable and cannot be reopened or credited.
+Standing approval covers a distinct fresh same-scope route only after checked
+fixed source, new allocation and fresh passing same-process capacity. No
+repeat literal is needed. No LEAG/freeze credit, unopened holdout and no
+formation/public/counted/production authority. Earlier pending-decision and
+active-process snapshots below are historical, not current instructions.
 
 ## Current human-only decision — private runtime limit, no repeat literal
 

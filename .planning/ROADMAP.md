@@ -2,6 +2,14 @@
 
 ## Current verified progress — Phases262–264 complete
 
+The human approved prospective private per-Match lifetime120000→600000ms
+on2026-10-02, including both private provider clocks/admission and no other
+bound. Source amendment remains pending through a bounded checked Plan07
+supplement, then a distinct fresh same-scope route under standing approval.
+No active entry/verifier; consumed v9/history immutable, no LEAG/freeze credit,
+holdout unopened and formation/public/counting/production excluded. The
+pending-decision and active-process snapshots below are historical.
+
 Human-only resource decision pending: verifiedv9 actual120000ms provider
 lifetime exhaustion; no high-confidence substantial remaining same-policy
 optimization identified. Recommend prospective private limit600000ms (10min)

@@ -2,6 +2,17 @@
 
 ## Current approved handoff — 2026-10-02
 
+Prospective private per-Match elapsed lifetime120000→600000ms is now human
+approved; both factory/planner clocks and applicable admission must use an
+explicit prospective version, while legacy policies and consumed routes stay
+immutable. Every other bound/game rule remains unchanged. Bounded Plan265-07
+source amendment research/planning precedes implementation and independent
+review/gates, then a fresh immutable allocation and passing same-process
+capacity. V9 and its unique verifier are closed process-invalid with verified
+lifetime exhaustion (four successes of five charged cells), no league/freeze
+credit. No active entry/verifier, unopened holdout, no formation/public/counted/
+production authority. Older pending or live-process snapshots are history.
+
 V7 ended09:36:53UTC process-invalid after3charged cells,2validsuccesses and
 1first-request MALFORMED_IPC/retryablefalse systemfailure. Unlike earlier
 routes, this is not a reported lifetime-limit failure; exacttransportcause
