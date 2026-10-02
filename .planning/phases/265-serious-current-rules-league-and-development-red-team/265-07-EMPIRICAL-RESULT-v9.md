@@ -1,7 +1,7 @@
 ---
 phase: 265-serious-current-rules-league-and-development-red-team
 plan: 07
-status: consumed-process-invalid-retained-check-closed-source-only-diagnosis
+status: consumed-process-invalid-retained-check-closed-awaiting-resource-decision
 date: 2026-10-02
 empirical_requirements_complete: false
 ---
@@ -76,9 +76,25 @@ expire across awaited evidence retention. The frozen limit is not guest-only
 CPU time. The existing reviewed async writer preserves all three file syncs
 and both directory barriers; historical closed profiles measured about90%
 sync-inclusive append cost and8.05% async mean reduction, not a whole-Match
-guarantee. Further same-policy source optimization is under read-only review;
-changing lifetime, durability or resource bounds requires a new human decision,
-not reuse of standing same-bounds approval.
+guarantee. The completed read-only source assessment found no high-confidence
+substantial remaining same-policy optimization. Apparent repeated capacity,
+directory and file checks bracket independent preflight/write/charge boundaries;
+dropping/coalescing them is not an evidenced correction. CPU/serialization
+optimization is theoretically possible, not established as sufficient. Five
+cells do not prove universal infeasibility; repeatedly recreating unchanged
+routes is not a corrective step. Changing lifetime, durability or resource
+bounds requires a new human decision, not standing same-bounds approval.
+
+Recommended prospective-only resource delta, UNAPPROVED and UNAPPLIED:
+120000→600000ms private per-Match elapsed lifetime (2→10minutes), explicitly
+covering both private provider clocks/admission. Every other frozen bound,
+gameplay/kernel rule, privacy, holdout and freeze-before-formation condition
+remains. Legacy/historical policies and consumed routes are not reinterpreted.
+After human approval this requires a checked source amendment, independent
+review, validation, distinct immutable allocation and fresh capacity before
+new dispatch. No exact operator literal is needed and no completion guarantee
+is claimed. Alternatively the human can retain the current bound and select
+an honest feasibility-not-established stop; Phase265 cannot silently pass.
 
 Every v9 artifact and charged outcome remains immutable. No retry, overwrite,
 refund, re-credit, stale receipt, old-source reinterpretation, or success claim.

@@ -4,11 +4,11 @@ milestone: v1.38
 milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
-status: executing
-stopped_at: Phase265 v9 unique verifier84540 CLOSED exit0 authenticates process-invalid; actual lifetime exhaustion; read-only same-policy optimization assessment
+status: blocked
+stopped_at: Phase265 verified v9 lifetime failure; awaiting materially new private runtime-limit decision, not repeat route authorization
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: retained84540 closes issuedfalse/process_invalid; bounded failed payload90d5ccf8 proves FACTORY_RUNTIME_LIFETIME_EXHAUSTED; no route retry
+last_activity_desc: same-policy source assessment found no high-confidence substantial optimization; recommend prospective private per-Match limit120000→600000ms, unapproved/unapplied
 progress:
   total_phases: 9
   completed_phases: 3
@@ -20,6 +20,32 @@ total_plans_in_phase: 14
 ---
 
 # State: Coward's Game
+
+## Current human-only decision — private runtime limit, no repeat literal
+
+V9 and its ONE retained verifier are CLOSED. Actual failed payload90d5ccf8
+proves FACTORY_RUNTIME_LIFETIME_EXHAUSTED after4successful/1failed chargedcells.
+Read-only source assessment confirms both factory/planner monotonic clocks
+include runtime setup and awaited evidence-saving time. Existing async writer
+already overlaps dependency syncs while preserving all frozen barriers; no
+high-confidence substantial same-policy optimization was identified. This
+does NOT prove universal infeasibility from five cells, nor justify silently
+weakening checks. Another unchanged fresh run is not a corrective step.
+
+Recommended materially new resource decision: allow a DISTINCT prospective
+private league route with per-Match elapsed lifetime120000→600000ms (2→10min),
+including both relevant private provider clocks/admission, unchanged gameplay,
+engine, memory/CPU/invocation/source/output limits,96hoverall,attempts/Matches,
+durability,privacy,holdout and freeze-before-formation gates. Prospective-only:
+legacy/historical policies and every consumed artifact remain unchanged. This
+recommendation is UNAPPROVED and UNAPPLIED, not an allocation or assurance that
+a full league will pass. No code/bound change or new Match may be inferred.
+Human may approve this resource change or retain current bounds and choose an
+honest feasibility-not-established stop. No exact authorization literal is
+needed. After approval, continue checked same-plan GSD source amendment/review/
+validation and a new immutable route with fresh capacity; no priorroute retry.
+All safe diagnosis/closeout committed; no active entry/verifier, no LEAG/freeze
+credit. See EMPIRICAL-RESULT-v9. Stay quiet on unchanged pending decision.
 
 ## Current continuation — v9 failure authenticated, lifetime diagnosis
 

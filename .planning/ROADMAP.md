@@ -2,6 +2,13 @@
 
 ## Current verified progress — Phases262–264 complete
 
+Human-only resource decision pending: verifiedv9 actual120000ms provider
+lifetime exhaustion; no high-confidence substantial remaining same-policy
+optimization identified. Recommend prospective private limit600000ms (10min)
+with all other frozen bounds/gameplay/privacy unchanged. UNAPPROVED/UNAPPLIED;
+not another route literal or a success guarantee. No new Match/sourcebound
+change before human choice. Closedroutes immutable; LEAG/freeze incomplete.
+
 V9 unique retained84540 CLOSED exit0, authenticates process_invalid NOTsuccess.
 Bounded payload90d5ccf8 proves FACTORY_RUNTIME_LIFETIME_EXHAUSTED; sourcehold
 released for read-only substantial same-policy optimization assessment. No
