@@ -92,3 +92,16 @@ No capacity pass, charge, Match, result or success is inferred from that marker.
 Poll only this existing process. Hold reviewed source fixed through terminal
 and its unique retained verification; avoid competing CPU-heavy work. Prior
 "not started" preparation snapshots above are history, not current status.
+
+## First durable live cell-start observation
+
+Bounded live directory and safe start-metadata inspection observed one durable
+start and zero terminal cells, while root entry17028/PID21728 remains ACTIVE.
+Start identity562e167642faf2f2f88593be86d74ba6c187cfae37b00196ab7aa96262e32433
+binds allocation69b5cd84 and cellRoot9af9004136311dad5b8486e8d0ab0344040df302264f05e3a5b0383740e9ab87.
+Private artifact publication is advancing; raw Strategy/runtime payloads were
+not printed. No terminal outcome, completed Match, league credit or independent
+retained verification is inferred. Source and entry remain fixed/unique. The
+ordinary verifier after actual terminal must check the exact final capacity,
+allocation, run-start, result and head bindings; earlier empty-store snapshots
+are historical observations only.

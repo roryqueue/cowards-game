@@ -5,10 +5,10 @@ milestone_name: Competitive Strategy Factory and Adversarial League
 current_phase: 265
 current_phase_name: serious-current-rules-league-and-development-red-team
 status: in_progress
-stopped_at: Phase265 V11 unique root entry17028/PID21728 active; static validation before fresh same-process capacity
+stopped_at: Phase265 V11 unique root entry17028/PID21728 active; first durable cell start observed, no terminal yet
 last_updated: "2026-10-02"
 last_activity: 2026-10-02
-last_activity_desc: V11 allocation69b5cd84 committed and pushed2e7d4d3b; unique entry17028/PID21728 active from20:56:12.968UTC, no capacity pass or Match inferred
+last_activity_desc: V11 live evidence observed one durable cell start and zero terminal cells; same root entry17028 active, no result or LEAG credit
 progress:
   total_phases: 9
   completed_phases: 3
@@ -22,6 +22,17 @@ total_plans_in_phase: 14
 # State: Coward's Game
 
 ## Current continuation — prospective ten-minute private limit approved
+
+V11 first actual durable cell start OBSERVED at allocation69b5cd84: start-file
+league-cell-562e167642faf2f2f88593be86d74ba6c187cfae37b00196ab7aa96262e32433.started.json,
+cellRoot9af9004136311dad5b8486e8d0ab0344040df302264f05e3a5b0383740e9ab87.
+At this bounded live inspection: one started cell, zero terminal cells; private
+artifact publication is progressing. Entry17028/PID21728 remains ACTIVE. No
+terminal/result/retained verification or LEAG success is inferred. Do not scan
+or expose private payloads, duplicate entry, edit source, or run competing heavy
+work. Actual final capacity/run/head/receipt bindings will be checked by the
+unique retained verifier after terminal. Earlier empty-store/static-only notes
+below are history. All approved/frozen and privacy/formation/holdout bounds hold.
 
 ONE V11 root entry17028/PID21728 ACTIVE from2026-10-02T20:56:12.968UTC.
 Actual run-entry marker says entry_started_static_validation_before_capacity;
