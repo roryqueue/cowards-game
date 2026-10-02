@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
-import { closeSync, constants, fsyncSync, linkSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync } from "node:fs"
+import { closeSync, constants, fsync, fsyncSync, linkSync, lstatSync, openSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeSync } from "node:fs"
 import { basename, join, resolve } from "node:path"
 import { admitCanonicalJsonBytes, admitCanonicalJsonValue } from "@cowards/spec"
 import { freezeLabValue, labRoot, type LabRoot } from "../contracts.js"
@@ -40,10 +40,13 @@ const syncDirectory = (directory: string) => {
   const descriptor = openSync(safeDirectory(directory), constants.O_RDONLY)
   try { fsyncSync(descriptor) } finally { closeSync(descriptor) }
 }
+const syncFile = (descriptor: number): Promise<void> => new Promise((resolve, reject) => {
+  fsync(descriptor, (error) => { if (error) reject(error); else resolve() })
+})
 
 export interface LeagueRepository {
   readonly directory: string
-  readonly durability: Readonly<{ syncDirectory(directory: string): void }>
+  readonly durability: Readonly<{ syncDirectory(directory: string): void; syncFile(descriptor: number): Promise<void> }>
   readonly temporaryName: (target: string) => string
   /** terminal means an explicit failed terminal, not any terminal filename. */
   readonly beforePublication?: (publication: { target: string; byteLength: number; terminal: boolean }) => void
@@ -89,8 +92,8 @@ const atomic = (repository: LeagueRepository, name: string, bytes: Uint8Array, t
   if (synchronizeDirectory) repository.durability.syncDirectory(directory)
 }
 
-export const createLeagueRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly temporaryName?: (target: string) => string; readonly beforePublication?: LeagueRepository["beforePublication"] } = {}): Readonly<LeagueRepository> =>
-  freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory }, temporaryName: options.temporaryName ?? ((target) => `${target}.tmp-${randomUUID()}`), ...(options.beforePublication ? { beforePublication: options.beforePublication } : {}) }) as LeagueRepository
+export const createLeagueRepository = (directory: string, options: { readonly syncDirectory?: (directory: string) => void; readonly syncFile?: (descriptor: number) => Promise<void>; readonly temporaryName?: (target: string) => string; readonly beforePublication?: LeagueRepository["beforePublication"] } = {}): Readonly<LeagueRepository> =>
+  freezeLabValue({ directory: safeDirectory(directory), durability: { syncDirectory: options.syncDirectory ?? syncDirectory, syncFile: options.syncFile ?? syncFile }, temporaryName: options.temporaryName ?? ((target) => `${target}.tmp-${randomUUID()}`), ...(options.beforePublication ? { beforePublication: options.beforePublication } : {}) }) as LeagueRepository
 
 /** Raw private artifact identity is content-addressed; safe projections retain only its root. */
 export const publishLeagueArtifact = (repository: LeagueRepository, bytes: Uint8Array): LabRoot => {
@@ -112,6 +115,62 @@ export const publishLeagueArtifactDependencies = (repository: LeagueRepository, 
     roots.push(root)
   }
   repository.durability.syncDirectory(safeDirectory(repository.directory))
+  return Object.freeze(roots)
+}
+/** Only file fsync waits overlap. Neither publication nor error handoff can
+ * overtake the complete pair's settlement. Failed temporaries remain private
+ * inspection residue; no recovery, sweeping or accounting refund occurs. */
+export const publishLeagueArtifactDependenciesAsync = async (repository: LeagueRepository, dependencies: readonly Uint8Array[]): Promise<readonly LabRoot[]> => {
+  if (!Array.isArray(dependencies) || dependencies.length !== 2) return fail("ARTIFACT")
+  const directory = safeDirectory(repository.directory)
+  const copies = dependencies.map((bytes) => {
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > CAP) return fail("ARTIFACT")
+    return new Uint8Array(bytes)
+  })
+  const roots = copies.map(bytesRoot)
+  const fresh: Array<{ bytes: Uint8Array; target: string; temporary: string; descriptor?: number }> = []
+  const seen = new Set<LabRoot>()
+  for (const [index, root] of roots.entries()) {
+    if (seen.has(root)) continue
+    seen.add(root)
+    const bytes = copies[index]!, target = join(directory, artifactName(root)), existing = lstatSafe(target)
+    if (existing) {
+      if (!existing.isFile() || bytesRoot(boundedRead(target)) !== root) return fail("OVERWRITE")
+      continue
+    }
+    const temporary = repository.temporaryName(target)
+    if (!temporary.startsWith(`${target}.tmp-`) || basename(temporary) !== temporary.slice(directory.length + 1)) return fail("TEMPORARY")
+    fresh.push({ bytes, target, temporary })
+  }
+  // All prewrite accounting happens in input order in this synchronous turn.
+  for (const item of fresh) repository.beforePublication?.({ target: item.target, byteLength: item.bytes.byteLength, terminal: false })
+  const operations = fresh.map((item) => {
+    try {
+      const descriptor = openSync(item.temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600)
+      item.descriptor = descriptor
+      let offset = 0
+      while (offset < item.bytes.byteLength) {
+        const written = writeSync(descriptor, item.bytes, offset, item.bytes.byteLength - offset)
+        if (written < 1) return Promise.reject(new TypeError("LEAGUE_REPOSITORY_WRITE"))
+        offset += written
+      }
+      return repository.durability.syncFile(descriptor)
+    } catch (error) { return Promise.reject(error) }
+  })
+  const settlements = await Promise.allSettled(operations)
+  let failed = false, firstError: unknown
+  for (const result of settlements) if (result.status === "rejected" && !failed) { failed = true; firstError = result.reason }
+  for (const item of fresh) if (item.descriptor !== undefined) {
+    try { closeSync(item.descriptor) } catch (error) { if (!failed) { failed = true; firstError = error } }
+  }
+  if (failed) throw firstError
+  for (const item of fresh) {
+    let linkFailed = false, linkError: unknown
+    try { linkSync(item.temporary, item.target) } catch (error) { linkFailed = true; linkError = error }
+    try { unlinkSync(item.temporary) } catch (error) { if (!linkFailed) throw error }
+    if (linkFailed) throw linkError
+  }
+  repository.durability.syncDirectory(directory)
   return Object.freeze(roots)
 }
 export const readLeagueArtifact = (repository: LeagueRepository, root: LabRoot): Uint8Array => {

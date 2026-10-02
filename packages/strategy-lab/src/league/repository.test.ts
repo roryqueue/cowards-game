@@ -21,10 +21,17 @@ import {
 // throw at a selected fsync. This establishes syscall order/fail-closed return,
 // not a claim about simulated hardware power-loss persistence.
 const syncProbe = vi.hoisted(() => ({ active: false, events: [] as string[], failAt: 0 }))
+const asyncIoProbe = vi.hoisted(() => ({ fail: "", asyncSyncs: 0, closes: 0 }))
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>()
   return {
     ...actual,
+    fsync(fd: number, callback: (error: NodeJS.ErrnoException | null) => void) { asyncIoProbe.asyncSyncs++; return actual.fsync(fd, callback) },
+    openSync(...args: Parameters<typeof actual.openSync>) { if (asyncIoProbe.fail === "open" && String(args[0]).includes(".tmp-")) throw Error("open failed"); return actual.openSync(...args) },
+    writeSync(...args: Parameters<typeof actual.writeSync>) { if (asyncIoProbe.fail === "write") throw Error("write failed"); return actual.writeSync(...args) },
+    linkSync(...args: Parameters<typeof actual.linkSync>) { if (asyncIoProbe.fail === "link") throw Error("link failed"); return actual.linkSync(...args) },
+    unlinkSync(...args: Parameters<typeof actual.unlinkSync>) { if (asyncIoProbe.fail === "unlink") throw Error("unlink failed"); return actual.unlinkSync(...args) },
+    closeSync(fd: number) { asyncIoProbe.closes++; return actual.closeSync(fd) },
     fsyncSync(fd: number) {
       if (syncProbe.active) {
         syncProbe.events.push(actual.fstatSync(fd).isDirectory() ? "directory" : "file")
@@ -57,7 +64,7 @@ const terminal = (charged: LeagueCellStart, marker = "first") =>
     projection: null,
   })
 
-afterEach(() => { syncProbe.active = false; syncProbe.events = []; syncProbe.failAt = 0; for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
+afterEach(() => { syncProbe.active = false; syncProbe.events = []; syncProbe.failAt = 0; asyncIoProbe.fail = ""; asyncIoProbe.asyncSyncs = 0; asyncIoProbe.closes = 0; for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }) })
 
 const deferredSyncs = () => {
   const pending: Array<{ release(error?: Error): Promise<void> }> = []
@@ -92,6 +99,7 @@ describe("asynchronous dependency durability", () => {
     const result = publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")]).catch((error) => { settled = true; return error })
     await syncs.pending[index]!.release(errors[index]); await Promise.resolve()
     expect(settled).toBe(false); expect(readdirSync(base.directory)).toHaveLength(2)
+    expect(asyncIoProbe.closes).toBe(0)
     await syncs.pending[1 - index]!.release(errors[1 - index])
     expect(await result).toBe(errors[0]); expect(charges).toHaveLength(2)
     expect(readdirSync(base.directory).every((name) => name.includes(".tmp-"))).toBe(true)
@@ -101,6 +109,7 @@ describe("asynchronous dependency durability", () => {
     const repo = createLeagueRepository(base.directory, { beforePublication: ({ target }) => { charges.push(target) }, syncDirectory(directory) { barriers.push("directory"); base.durability.syncDirectory(directory) } })
     const first = Buffer.from("one"), second = Buffer.from("two"), third = Buffer.from("three")
     const roots = await publishLeagueArtifactDependenciesAsync(repo, [first, second])
+    expect(asyncIoProbe.asyncSyncs).toBe(2)
     expect(roots).toEqual([`sha256:${artifactDigest(first)}`, `sha256:${artifactDigest(second)}`]); expect(charges).toHaveLength(2)
     await publishLeagueArtifactDependenciesAsync(repo, [first, third]); expect(charges).toHaveLength(3)
     await publishLeagueArtifactDependenciesAsync(repo, [first, second]); expect(charges).toHaveLength(3)
@@ -145,6 +154,27 @@ describe("asynchronous dependency durability", () => {
     const repo = createLeagueRepository(base.directory, { syncDirectory() { throw error }, beforePublication: ({ target }) => { charges.push(target) } })
     await expect(publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")])).rejects.toBe(error)
     expect(charges).toHaveLength(2); expect(readdirSync(base.directory).filter((name) => !name.includes(".tmp-"))).toHaveLength(2)
+  })
+  it.each(["open", "write", "link", "unlink"])("retains both charges and propagates an explicit %s syscall failure", async (boundary) => {
+    const base = repository(), charges: string[] = []
+    const repo = createLeagueRepository(base.directory, { beforePublication: ({ target }) => { charges.push(target) } })
+    asyncIoProbe.fail = boundary
+    await expect(publishLeagueArtifactDependenciesAsync(repo, [Buffer.from("one"), Buffer.from("two")])).rejects.toThrow(`${boundary} failed`)
+    expect(charges).toHaveLength(2)
+    expect(asyncIoProbe.closes).toBe(boundary === "open" ? 0 : 2)
+    expect(readdirSync(base.directory).length).toBe(boundary === "open" ? 0 : boundary === "unlink" ? 3 : boundary === "link" ? 1 : 2)
+  })
+  it("waits for a launched sibling when an exclusive open fails", async () => {
+    const base = repository(), syncs = deferredSyncs(), bytes = [Buffer.from("one"), Buffer.from("two")]
+    const temporaryName = (target: string) => `${target}.tmp-00000000-0000-4000-8000-000000000000`
+    const collision = temporaryName(join(base.directory, `league-artifact-${artifactDigest(bytes[0]!)}.bin`))
+    writeFileSync(collision, "other owner")
+    let settled = false
+    const result = publishLeagueArtifactDependenciesAsync(createLeagueRepository(base.directory, { temporaryName, syncFile: syncs.syncFile }), bytes).catch((error) => { settled = true; return error })
+    expect(syncs.pending).toHaveLength(1); await Promise.resolve(); expect(settled).toBe(false)
+    expect(asyncIoProbe.closes).toBe(0)
+    await syncs.pending[0]!.release()
+    expect((await result).code).toBe("EEXIST"); expect(readFileSync(collision, "utf8")).toBe("other owner")
   })
 })
 
